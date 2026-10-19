@@ -16,7 +16,7 @@ bool is_readable_regular_file(const std::string& path)
 	return input.good();
 }
 
-} // namespace
+}
 
 std::string select_readable_ca_bundle(const std::string& compiled_default,
 	const std::vector<std::string>& fallback_candidates)

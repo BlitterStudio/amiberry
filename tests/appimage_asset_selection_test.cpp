@@ -15,7 +15,7 @@ void expect_equal(const std::string& actual, const std::string& expected, const 
 	std::exit(1);
 }
 
-} // namespace
+}
 
 int main()
 {

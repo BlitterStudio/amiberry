@@ -1,6 +1,4 @@
 #!/bin/sh
-# Behavioral test for prefix-relative installed resources. Requires a built
-# Linux or FreeBSD Amiberry binary and leaves the compiled install untouched.
 set -eu
 
 if [ -z "${AMIBERRY_BIN:-}" ]; then

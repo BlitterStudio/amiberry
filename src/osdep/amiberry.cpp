@@ -8850,15 +8850,12 @@ std::string get_data_directory(bool portable_mode)
 
 	const auto env_data_dir = getenv("AMIBERRY_DATA_DIR");
 
-	// 1: An explicit environment override always wins.
 	if (env_data_dir != nullptr && my_existsdir(env_data_dir))
 	{
 		write_log("Using data directory from AMIBERRY_DATA_DIR: %s\n", env_data_dir);
 		return {env_data_dir};
 	}
 
-	// 2: Prefer resources installed beside this executable. This keeps staged
-	// and relocated prefixes isolated from another Amiberry under /usr.
 	const auto& installed_roots = get_relocated_installed_resource_roots();
 	if (!installed_roots.data.empty() && directory_exists(installed_roots.data, "/data"))
 	{
@@ -8866,14 +8863,12 @@ std::string get_data_directory(bool portable_mode)
 		return join_path(installed_roots.data, "data");
 	}
 
-	// 3: Retain the configured system location for native package layouts.
 	if (directory_exists(AMIBERRY_DATADIR, "/data"))
 	{
 		write_log("Using data directory from " AMIBERRY_DATADIR "\n");
 		return std::string(AMIBERRY_DATADIR) + "/data/";
 	}
 
-	// 4: Fall back to build-tree resources beside the executable.
 	const auto executable_directory = get_desktop_executable_directory();
 	if (directory_exists(executable_directory, "/data"))
 	{
@@ -9120,6 +9115,7 @@ static std::string get_compiled_system_plugins_directory()
 #endif
 }
 
+#if defined(LIBRETRO) || defined(AMIBERRY_IOS) || defined(AMIBERRY_MACOS) || defined(__ANDROID__) || defined(_WIN32)
 static std::string get_system_plugins_directory()
 {
 #ifdef LIBRETRO
@@ -9141,15 +9137,10 @@ static std::string get_system_plugins_directory()
 	return prefix_with_application_directory_path("plugins/");
 #elif defined(_WIN32)
 	return get_windows_executable_directory() + "\\plugins";
-#else
-	const auto& installed_roots = get_relocated_installed_resource_roots();
-	return !installed_roots.plugins.empty()
-		? installed_roots.plugins : get_compiled_system_plugins_directory();
 #endif
 }
+#endif
 
-// This path was retained by legacy plugins_dir settings. Keep the compiled
-// location available for migration even when a relocated root takes precedence.
 static std::string get_legacy_system_plugins_directory()
 {
 	if (g_portable_mode)
@@ -9271,8 +9262,6 @@ std::vector<std::string> get_plugin_search_paths()
 #else
 		append_unique_path_candidate(candidates, get_system_plugins_directory());
 #endif
-		// Preserve the legacy executable-relative fallback. It remains last so
-		// user and installed locations retain precedence when they are available.
 #if (defined(__linux__) || defined(__FreeBSD__)) && !defined(LIBRETRO)
 		append_unique_path_candidate(candidates, join_path(get_portable_root_directory(), "plugins"));
 #endif

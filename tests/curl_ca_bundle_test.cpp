@@ -23,7 +23,7 @@ void write_bundle(const std::filesystem::path& path)
 	output << "test certificate bundle\n";
 }
 
-} // namespace
+}
 
 int main()
 {

@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# Build a native, reproducible-input AppImage from an installed Amiberry AppDir.
 set -euo pipefail
 
 fail() {

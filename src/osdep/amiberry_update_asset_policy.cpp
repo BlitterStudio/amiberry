@@ -56,7 +56,7 @@ bool is_hex_digest(const std::string& line, const size_t offset)
 	return true;
 }
 
-} // namespace
+}
 
 std::string select_linux_release_asset(const std::vector<std::string>& asset_names,
 	const linux_release_arch architecture, const linux_installation_kind installation_kind)
@@ -110,8 +110,7 @@ std::string find_release_asset_sha256(const std::string& sums, const std::string
 				{
 					--filename_end;
 				}
-				if (line.compare(filename_start, filename_end - filename_start, asset_name) == 0
-					&& filename_end - filename_start == asset_name.size())
+				if (line.compare(filename_start, filename_end - filename_start, asset_name) == 0)
 				{
 					return lowercase(line.substr(digest_start, 64));
 				}

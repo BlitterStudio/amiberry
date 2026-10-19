@@ -220,8 +220,12 @@ static void render_update_section()
 				else if (get_update_method() == UpdateMethod::NOTIFY_ONLY)
 				{
 					ImGui::SameLine();
-					if (AmigaButton("Open Download Page", ImVec2(BUTTON_WIDTH * 2.0f, BUTTON_HEIGHT)))
-						SDL_OpenURL(s_cached_update_info.release_url.c_str());
+					if (AmigaButton("Open Download", ImVec2(BUTTON_WIDTH * 2.0f, BUTTON_HEIGHT)))
+					{
+						const auto& url = s_cached_update_info.download_url.empty()
+							? s_cached_update_info.release_url : s_cached_update_info.download_url;
+						SDL_OpenURL(url.c_str());
+					}
 				}
 			}
 		}

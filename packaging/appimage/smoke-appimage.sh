@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-# Runtime smoke coverage for a packaged AppImage. It deliberately checks the
-# executable's reported behavior rather than its packaged source layout.
 set -euo pipefail
 
 usage() {
@@ -35,6 +33,11 @@ case "$mode" in
 esac
 
 image="$(cd "$(dirname "$image")" && pwd)/$(basename "$image")"
+candidate_home="${image}.home"
+if [[ -e "$candidate_home" ]]; then
+    echo "Refusing to reuse existing AppImage home directory: $candidate_home" >&2
+    exit 1
+fi
 chmod +x "$image"
 
 work="$(mktemp -d)"
@@ -143,9 +146,6 @@ run_override_dump() {
     ) > "$output"
 }
 
-# Exercise the AppImage runtime through a symlink from an unrelated working
-# directory. Initial HOME/XDG locations are temporary and the AppImage's own
-# environment must supply no Amiberry/XDG override.
 link="$work/Amiberry-link.AppImage"
 ln -s "$image" "$link"
 run_dump "$work/default-paths.txt" "$link" "$work/initial-home"
@@ -157,10 +157,8 @@ done
 
 # AppImage's documented sibling .home convention must redirect all writable
 # state when no explicit Amiberry or XDG variables are present.
-sibling_home="${image}.home"
-[[ ! -e "$sibling_home" ]] \
-    || { echo "Refusing to reuse existing AppImage home directory: $sibling_home" >&2; exit 1; }
-mkdir -p "$sibling_home"
+mkdir "$candidate_home"
+sibling_home="$candidate_home"
 run_dump "$work/home-paths.txt" "$image" "$work/initial-home"
 assert_appimage_paths "$work/home-paths.txt"
 for key in home_dir settings_dir config_path user_plugins_dir controllers_path whdboot_path \

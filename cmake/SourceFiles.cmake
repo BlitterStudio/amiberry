@@ -612,8 +612,6 @@ elseif(NOT IOS)
     )
 endif()
 
-# Keep install locations prefix-relative so staged and relocated install trees
-# can derive their resource roots from the running executable.
 foreach(AMIBERRY_INSTALL_DIR IN ITEMS BINDIR DATADIR LIBDIR)
     set(AMIBERRY_INSTALL_${AMIBERRY_INSTALL_DIR}_RELATIVE "${CMAKE_INSTALL_${AMIBERRY_INSTALL_DIR}}")
     if(IS_ABSOLUTE "${AMIBERRY_INSTALL_${AMIBERRY_INSTALL_DIR}_RELATIVE}")

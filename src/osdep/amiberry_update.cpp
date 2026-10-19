@@ -546,7 +546,6 @@ static bool parse_release_json(const nlohmann::json& rel, UpdateInfo& out)
 			}
 
 #ifdef _WIN32
-			// On Windows prefer .exe installer over .zip archive.
 			const bool is_installer = name.size() >= 4
 				&& to_lower(name.substr(name.size() - 4)) == ".exe";
 			if (!out.download_url.empty() && !is_installer) {

@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# Validate an AppDir before it is sealed into an AppImage.
 set -euo pipefail
 
 fail() {
@@ -101,9 +100,8 @@ for size in 64 128 256 512; do
     require_regular_file "$appdir/usr/share/icons/hicolor/${size}x${size}/apps/com.blitterstudio.amiberry.png"
 done
 
-# A relative symlink is fine; a link that escapes the AppDir or dangles is not.
 while IFS= read -r -d '' link; do
-    target="$(readlink -f -- "$link")" || fail "dangling symlink: ${link#"$appdir"/}"
+    target="$(readlink -e -- "$link")" || fail "dangling symlink: ${link#"$appdir"/}"
     case "$target" in
         "$appdir"|"$appdir"/*) ;;
         *) fail "symlink escapes AppDir: ${link#"$appdir"/} -> $target" ;;
@@ -188,7 +186,6 @@ for candidate in "${candidate_files[@]}"; do
 done
 ((${#elf_files[@]} > 0)) || fail "AppDir contains no ELF files"
 
-# Check dynamic plugins separately so a future change cannot accidentally omit them.
 for plugin in "$appdir/usr/lib/amiberry/libcapsimage.so" "$appdir/usr/lib/amiberry/libfloppybridge.so" "$appdir/usr/lib/amiberry/qemu-uae.so"; do
     check_elf_architecture "$plugin" || fail "plugin is not an ELF file: ${plugin#"$appdir"/}"
     check_closure "$plugin"
