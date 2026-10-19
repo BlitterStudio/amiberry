@@ -744,6 +744,194 @@ jobs:
           name: ${{ matrix.artifact_name }}
           path: amiberry-*.zip
 
+  build-appimage:
+    runs-on: ${{ matrix.runner }}
+    container: ubuntu:22.04
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      actions: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            runner: ubuntu-24.04
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+    steps:
+      - name: Install AppImage build prerequisites
+        run: |
+          apt-get update
+          apt-get install -y sudo git ca-certificates curl build-essential cmake ninja-build pkg-config patchelf binutils file dpkg xz-utils ripgrep python3 ffmpeg libflac-dev libmpeg2-4-dev libpng-dev libwebp-dev libasound2-dev libmpg123-dev libportmidi-dev libserialport-dev libenet-dev libpcap-dev libzstd-dev libcurl4-openssl-dev nlohmann-json3-dev libdbus-1-dev libavformat-dev libavcodec-dev libavutil-dev libswscale-dev libswresample-dev
+
+      - name: Check out repository code
+        uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - name: Install SDL3 and SDL3_image
+        id: sdl
+        # setup-sdl's v1 tag lags main; pin the reviewed main commit instead
+        # of tracking the mutable branch.
+        uses: libsdl-org/setup-sdl@4ebea449684c989388fe6bcea0460e300d13a5ae
+        with:
+          install-linux-dependencies: true
+          version: 3.4.16
+          version-sdl-image: 3.4.6
+          pre-release: false
+          discriminator: appimage-${{ matrix.arch }}-ubuntu-22.04
+
+      - name: Resolve AppImage version and channel
+        id: appimage
+        shell: bash
+        run: |
+          base_version=
+          while IFS= read -r line; do
+            if [[ "$line" =~ ^[[:space:]]*VERSION[[:space:]]+([0-9][0-9.]*) ]]; then
+              base_version="${BASH_REMATCH[1]}"
+              break
+            fi
+          done < CMakeLists.txt
+          [[ -n "$base_version" ]] || { echo "Could not determine CMake project version" >&2; exit 1; }
+
+          channel=stable
+          if [[ "$GITHUB_REF_TYPE" == tag && "$GITHUB_REF_NAME" == preview-v* ]]; then
+            version="${GITHUB_REF_NAME#preview-v}"
+            channel=preview
+          elif [[ "$GITHUB_REF_TYPE" == tag && "$GITHUB_REF_NAME" == v* ]]; then
+            version="${GITHUB_REF_NAME#v}"
+          else
+            version="${base_version}-ci.${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT}"
+          fi
+
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "channel=$channel" >> "$GITHUB_OUTPUT"
+
+      - name: Build AppImage
+        env:
+          LD_LIBRARY_PATH: ${{ steps.sdl.outputs.prefix }}/lib
+        run: |
+          packaging/appimage/build-appimage.sh \
+            --version "${{ steps.appimage.outputs.version }}" \
+            --channel "${{ steps.appimage.outputs.channel }}" \
+            --arch "${{ matrix.arch }}" \
+            --build-dir "build/appimage-${{ matrix.arch }}" \
+            --output-dir dist/appimage \
+            --cmake-arg "-DCMAKE_PREFIX_PATH=${{ steps.sdl.outputs.prefix }}"
+
+      - name: Upload AppImage artifact
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: amiberry-appimage-${{ matrix.arch }}
+          path: |
+            dist/appimage/Amiberry-*.AppImage
+            dist/appimage/Amiberry-*.AppImage.zsync
+          retention-days: 7
+
+  smoke-appimage-mount:
+    needs: [build-appimage]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            runner: ubuntu-24.04
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v6
+
+      - name: Download AppImage artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: amiberry-appimage-${{ matrix.arch }}
+          path: appimage
+
+      - name: Smoke test mounted AppImage
+        shell: bash
+        run: |
+          shopt -s nullglob
+          images=(appimage/*.AppImage)
+          [[ "${#images[@]}" == 1 ]] || { echo "Expected exactly one AppImage artifact" >&2; exit 1; }
+          bash packaging/appimage/smoke-appimage.sh --image "${images[0]}" --mode mount
+
+  smoke-appimage-extract:
+    needs: [build-appimage]
+    runs-on: ${{ matrix.runner }}
+    container: ${{ matrix.container }}
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      actions: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            runner: ubuntu-24.04
+            distribution: Fedora
+            container: fedora:latest
+          - arch: x86_64
+            runner: ubuntu-24.04
+            distribution: openSUSE Tumbleweed
+            container: opensuse/tumbleweed
+          - arch: x86_64
+            runner: ubuntu-24.04
+            distribution: Manjaro
+            container: manjarolinux/base:latest
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+            distribution: Fedora
+            container: fedora:latest
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+            distribution: openSUSE Tumbleweed
+            container: opensuse/tumbleweed
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+            distribution: Manjaro
+            container: manjarolinux/base:latest
+    steps:
+      - name: Install runtime prerequisites
+        shell: bash
+        run: |
+          case "${{ matrix.distribution }}" in
+            Fedora)
+              dnf install -y ca-certificates bash coreutils grep git libglvnd-opengl alsa-lib dbus-libs
+              ;;
+            "openSUSE Tumbleweed")
+              zypper --non-interactive install -y ca-certificates bash coreutils grep git libglvnd libasound2 libdbus-1-3 libcom_err2
+              ;;
+            Manjaro)
+              pacman -Syu --noconfirm --needed ca-certificates bash coreutils grep git libglvnd alsa-lib dbus
+              ;;
+          esac
+
+      - name: Check out repository code
+        uses: actions/checkout@v6
+
+      - name: Download AppImage artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: amiberry-appimage-${{ matrix.arch }}
+          path: appimage
+
+      - name: Smoke test extracted AppImage on ${{ matrix.distribution }}
+        shell: bash
+        run: |
+          shopt -s nullglob
+          images=(appimage/*.AppImage)
+          [[ "${#images[@]}" == 1 ]] || { echo "Expected exactly one AppImage artifact" >&2; exit 1; }
+          bash packaging/appimage/smoke-appimage.sh --image "${images[0]}" --mode extract
+
   build-fedora:
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 30
@@ -2058,7 +2246,7 @@ jobs:
           path: amiberry/libretro/amiberry_libretro.info
 
   create-release:
-    needs: [merge-macOS-universal, build-fedora, build-ubuntu, build-debian-amd64, build-debian-arm64, build-windows, build-windows-arm64, build-libretro]
+    needs: [merge-macOS-universal, build-appimage, smoke-appimage-mount, smoke-appimage-extract, build-fedora, build-ubuntu, build-debian-amd64, build-debian-arm64, build-windows, build-windows-arm64, build-libretro]
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     if: github.ref_type == 'tag' && (startsWith(github.ref_name, 'v') || startsWith(github.ref_name, 'preview-v'))
@@ -2081,7 +2269,7 @@ jobs:
       - name: Generate SHA256SUMS
         run: |
           cd artifacts
-          sha256sum amiberry-*.zip amiberry-*.exe amiberry-libretro-*.* amiberry_libretro.info Amiberry-*.dmg 2>/dev/null | tee SHA256SUMS
+          sha256sum amiberry-*.zip amiberry-*.exe amiberry-libretro-*.* amiberry_libretro.info Amiberry-*.dmg Amiberry-*.AppImage Amiberry-*.AppImage.zsync 2>/dev/null | tee SHA256SUMS
           cat SHA256SUMS
 
       - name: Create Release
@@ -2099,6 +2287,8 @@ jobs:
             artifacts/amiberry_libretro.info
             artifacts/amiberry-*.exe
             artifacts/Amiberry-*.dmg
+            artifacts/Amiberry-*.AppImage
+            artifacts/Amiberry-*.AppImage.zsync
             artifacts/SHA256SUMS
 
   update-repos:
