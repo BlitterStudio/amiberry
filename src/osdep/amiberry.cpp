@@ -5095,8 +5095,8 @@ static std::string get_relocated_installed_data_root();
 
 // Earlier versions persisted the derived floppy-sound location. A saved value
 // is a stale default only where Amiberry itself computed it: a known
-// installation root, an AppImage runtime mount, or an installation tree that
-// has since been moved away. Any other directory is a user choice.
+// installation root or an AppImage runtime directory. Any other directory is a
+// user choice, even when it is temporarily unavailable.
 static bool is_computed_floppy_sounds_dir(const std::string& path)
 {
 #if !defined(LIBRETRO) && !defined(AMIBERRY_IOS) && !defined(AMIBERRY_MACOS) && !defined(__ANDROID__) && !defined(_WIN32)
@@ -5115,24 +5115,18 @@ static bool is_computed_floppy_sounds_dir(const std::string& path)
 		|| is_floppy_sounds_of("/usr/local/share/amiberry"))
 		return true;
 
-	// Remaining candidates must have the installed <prefix>/<datadir>/amiberry/data/floppy_sounds shape.
+	// The AppImage runtime mounts or extracts the image to a fresh
+	// <tmp>/.mount_*/usr/<datadir>/amiberry directory on every launch.
 	const std::filesystem::path normalized_path(normalized);
-	const auto installed_suffix = (std::filesystem::path(get_configured_install_datadir())
+	const auto appdir_suffix = (std::filesystem::path("usr") / get_configured_install_datadir()
 		/ "amiberry" / "data" / "floppy_sounds").lexically_normal();
-	std::vector<std::filesystem::path> path_components(normalized_path.begin(), normalized_path.end());
-	std::vector<std::filesystem::path> suffix_components(installed_suffix.begin(), installed_suffix.end());
-	if (suffix_components.empty() || suffix_components.size() >= path_components.size()
+	const std::vector<std::filesystem::path> path_components(normalized_path.begin(), normalized_path.end());
+	const std::vector<std::filesystem::path> suffix_components(appdir_suffix.begin(), appdir_suffix.end());
+	if (suffix_components.size() >= path_components.size()
 		|| !std::equal(suffix_components.rbegin(), suffix_components.rend(), path_components.rbegin()))
 		return false;
-
-	// The AppImage runtime mounts or extracts the image to a fresh directory on every launch.
-	for (const auto& component : path_components)
-	{
-		const auto name = component.string();
-		if (name.rfind(".mount_", 0) == 0 || name.rfind("appimage_extracted_", 0) == 0)
-			return true;
-	}
-	return !my_existsdir(normalized.c_str());
+	const auto appdir_name = path_components[path_components.size() - suffix_components.size() - 1].string();
+	return appdir_name.rfind(".mount_", 0) == 0 || appdir_name.rfind("appimage_extracted_", 0) == 0;
 #else
 	(void)path;
 	return false;

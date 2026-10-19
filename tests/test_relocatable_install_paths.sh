@@ -90,11 +90,11 @@ printf 'plugins_dir=%s\n' "$installed_plugins" > "$config_file"
 	|| { echo "relocated plugin root was retained as a saved override" >&2; exit 1; }
 rm -f "$config_file"
 
-# A bundled floppy-sound path computed by an earlier launch is a stale default:
-# a moved installation tree that no longer exists, or an AppImage runtime mount.
-# Both the trailing-slash form Amiberry wrote and an older slashless form
-# migrate. An existing user directory keeps its setting, even when its name
-# ends in amiberry/data/floppy_sounds.
+# A bundled floppy-sound path computed by an earlier AppImage launch is a stale
+# default: the runtime mounts the image at a fresh .mount_* directory each
+# time. Both the trailing-slash form Amiberry wrote and an older slashless form
+# migrate. A user directory keeps its setting, even when its name ends in
+# amiberry/data/floppy_sounds or its volume is currently unavailable.
 expect_floppy_sounds()
 {
 	printf 'floppy_sounds_dir=%s\n' "$1" > "$config_file"
@@ -103,18 +103,18 @@ expect_floppy_sounds()
 		|| { echo "$3" >&2; exit 1; }
 }
 bundled_floppy_sounds="$installed_data/data/floppy_sounds/"
-moved_floppy_sounds="$work/previous-prefix/$datadir/amiberry/data/floppy_sounds"
+offline_floppy_sounds="$work/offline-media/$datadir/amiberry/data/floppy_sounds"
 mount_floppy_sounds="$work/.mount_previous/usr/$datadir/amiberry/data/floppy_sounds"
 media_floppy_sounds="$work/media/amiberry/data/floppy_sounds"
 media_installed_shape="$work/media/$datadir/amiberry/data/floppy_sounds"
 custom_floppy_sounds="$work/custom-floppy-sounds"
 mkdir -p "$mount_floppy_sounds" "$media_floppy_sounds" "$media_installed_shape" "$custom_floppy_sounds"
-expect_floppy_sounds "$moved_floppy_sounds/" "$bundled_floppy_sounds" \
-	"trailing-slash default from a moved installation was retained"
-expect_floppy_sounds "$moved_floppy_sounds" "$bundled_floppy_sounds" \
-	"slashless default from a moved installation was retained"
 expect_floppy_sounds "$mount_floppy_sounds/" "$bundled_floppy_sounds" \
-	"default from a previous AppImage mount was retained"
+	"trailing-slash default from a previous AppImage mount was retained"
+expect_floppy_sounds "$mount_floppy_sounds" "$bundled_floppy_sounds" \
+	"slashless default from a previous AppImage mount was retained"
+expect_floppy_sounds "$offline_floppy_sounds" "$offline_floppy_sounds" \
+	"unavailable explicit floppy-sound directory was discarded"
 expect_floppy_sounds "$media_floppy_sounds" "$media_floppy_sounds" \
 	"explicit amiberry/data/floppy_sounds directory was discarded"
 expect_floppy_sounds "$media_installed_shape" "$media_installed_shape" \
