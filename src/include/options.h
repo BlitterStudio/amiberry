@@ -738,6 +738,7 @@ struct uae_prefs {
 	int gfx_monitorblankdelay;
 	int gfx_rotation;
 	bool gfx_ntscpixels;
+	bool gfx_ntscpixelspal;
 	uae_u32 gfx_bordercolor;
 
 	struct gfx_filterdata gf[3];

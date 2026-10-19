@@ -667,6 +667,8 @@ void render_panel_display() {
         ShowHelpMarker(stretch_selected
             ? "Not available with the Stretch scaling method, which always fills the window."
             : "Apply Amiga display aspect correction to native display modes.");
+        AmigaCheckbox("Always stretch PAL as NTSC", &changed_prefs.gfx_ntscpixelspal);
+        ShowHelpMarker("Show PAL modes with NTSC vertical proportions. The bottom part of the PAL display is cut.\nExperimental: vertical positioning may need adjustment.");
         ImGui::AlignTextToFramePadding();
         ImGui::Text("Scaling method:");
         ImGui::SameLine();

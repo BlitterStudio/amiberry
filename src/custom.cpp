@@ -1711,6 +1711,13 @@ static void update_display_vars(void)
 	vb->inheight = maxv << vres2;
 	vb->inxoffset = 0;
 
+	if (currprefs.gfx_ntscpixelspal && (beamcon0 & BEAMCON0_PAL) && !(beamcon0 & BEAMCON0_VARBEAMEN)
+		&& (current_linear_vpos == 312 || current_linear_vpos == 313)) {
+		vb->inheight = (vb->inheight * 525) / 625;
+		vb->inheight += 3;
+		vb->inheight &= ~1;
+	}
+
 	if (currprefs.gfx_overscanmode >= OVERSCANMODE_ULTRA) {
 		linear_vpos_vb_end = 1;
 		linear_vpos_vb_start = 0;
