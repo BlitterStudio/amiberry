@@ -32,6 +32,7 @@ datadir="$(line_value install_datadir_relative "$work/original-paths.txt")"
 libdir="$(line_value install_libdir_relative "$work/original-paths.txt")"
 compiled_data_dir="$(line_value compiled_data_dir "$work/original-paths.txt")"
 compiled_data_dir="${compiled_data_dir%/}"
+compiled_resource_root="${compiled_data_dir%/*}"
 compiled_plugins_dir="$(line_value system_plugins_dir "$work/original-paths.txt")"
 [ -n "$bindir" ] || { echo "relative install bindir was not reported" >&2; exit 1; }
 [ -n "$datadir" ] || { echo "relative install datadir was not reported" >&2; exit 1; }
@@ -90,14 +91,19 @@ printf 'plugins_dir=%s\n' "$installed_plugins" > "$config_file"
 rm -f "$config_file"
 
 # A bundled floppy-sound path from a previous relocated root is a stale
-# computed default, whereas a user-selected directory remains an override.
+# computed default, whether the saved value has the trailing slash emitted by
+# Amiberry or comes from an older slashless configuration.
 stale_floppy_sounds="$work/previous-prefix/$datadir/amiberry/data/floppy_sounds"
 custom_floppy_sounds="$work/custom-floppy-sounds"
 mkdir -p "$stale_floppy_sounds" "$custom_floppy_sounds"
+printf 'floppy_sounds_dir=%s/\n' "$stale_floppy_sounds" > "$config_file"
+"$prefix/$bindir/amiberry" --dump-paths > "$work/stale-floppy-sounds-trailing-paths.txt"
+[ "$(line_value floppy_sounds_dir "$work/stale-floppy-sounds-trailing-paths.txt")" = "$installed_data/data/floppy_sounds/" ] \
+	|| { echo "trailing-slash bundled floppy-sound default was retained" >&2; exit 1; }
 printf 'floppy_sounds_dir=%s\n' "$stale_floppy_sounds" > "$config_file"
 "$prefix/$bindir/amiberry" --dump-paths > "$work/stale-floppy-sounds-paths.txt"
 [ "$(line_value floppy_sounds_dir "$work/stale-floppy-sounds-paths.txt")" = "$installed_data/data/floppy_sounds/" ] \
-	|| { echo "stale bundled floppy-sound default was retained" >&2; exit 1; }
+	|| { echo "slashless bundled floppy-sound default was retained" >&2; exit 1; }
 printf 'floppy_sounds_dir=%s\n' "$custom_floppy_sounds" > "$config_file"
 "$prefix/$bindir/amiberry" --dump-paths > "$work/explicit-floppy-sounds-paths.txt"
 [ "$(line_value floppy_sounds_dir "$work/explicit-floppy-sounds-paths.txt")" = "$custom_floppy_sounds" ] \
@@ -137,7 +143,7 @@ if [ -d "$compiled_data_dir" ]; then
 		|| { echo "missing relocated data did not fall back to the retained compiled installation" >&2; exit 1; }
 	for seed in controllers roms whdboot; do
 		case "$(line_value "${seed}_seed_source_0" "$work/missing-data-paths.txt")" in
-			"${compiled_data_dir%/}/$seed") ;;
+			"${compiled_resource_root%/}/$seed") ;;
 			*) echo "missing relocated data did not fall back to the compiled $seed seed source" >&2; exit 1 ;;
 		esac
 	done

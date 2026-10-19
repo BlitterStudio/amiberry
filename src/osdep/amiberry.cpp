@@ -5095,7 +5095,7 @@ static bool is_computed_floppy_sounds_dir(const std::string& path)
 	if (path.empty())
 		return false;
 
-	const auto normalized_path = std::filesystem::path(path).lexically_normal();
+	const auto normalized_path = std::filesystem::path(normalize_path_for_compare(path));
 	const auto parent = normalized_path.parent_path();
 	return normalized_path.filename() == "floppy_sounds"
 		&& parent.filename() == "data"
@@ -11740,9 +11740,12 @@ static std::vector<std::string> get_seed_source_candidates(const std::string& su
 		if (!candidate.empty() && my_existsdir(candidate.c_str()))
 			append_unique_path_candidate(candidates, candidate);
 	};
+	if (g_portable_mode)
+		append_existing_seed_directory(get_desktop_executable_directory());
 	append_existing_seed_directory(get_relocated_installed_resource_roots().data);
 	append_existing_seed_directory(AMIBERRY_DATADIR);
-	append_existing_seed_directory(get_desktop_executable_directory());
+	if (!g_portable_mode)
+		append_existing_seed_directory(get_desktop_executable_directory());
 	append_existing_seed_directory("/usr/share/amiberry");
 	if (include_usr_local_share)
 		append_existing_seed_directory("/usr/local/share/amiberry");

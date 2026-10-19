@@ -1,6 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+case "$(uname -s)" in
+    Linux) ;;
+    *)
+        echo "AppDir verifier test skipped outside Linux"
+        exit 0
+        ;;
+esac
+
 case "$(uname -m)" in
     x86_64|aarch64) ;;
     *)

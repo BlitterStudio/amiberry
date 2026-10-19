@@ -50,8 +50,15 @@ esac
 	|| { echo "AppImage portable marker was unexpectedly removed" >&2; exit 1; }
 
 unset APPIMAGE
+for seed in controllers roms whdboot; do
+	mkdir -p "$work/$seed"
+done
 "$work/Amiberry-test.AppImage" --dump-paths > "$work/installed-portable-paths.txt"
 [ "$(line_value portable_mode "$work/installed-portable-paths.txt")" = "1" ] \
 	|| { echo "writable installed portable mode ignored its marker" >&2; exit 1; }
+for seed in controllers roms whdboot; do
+	[ "$(line_value "${seed}_seed_source_0" "$work/installed-portable-paths.txt")" = "$work/$seed" ] \
+		|| { echo "installed portable mode did not prefer executable-relative $seed seeds" >&2; exit 1; }
+done
 
 printf 'AppImage portable mode policy test passed\n'
