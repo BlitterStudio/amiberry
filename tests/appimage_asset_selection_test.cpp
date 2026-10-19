@@ -55,6 +55,25 @@ int main()
 		"Amiberry-8.4.2-x86_64.AppImage",
 		"AppImage selection independent of asset order");
 
+	const std::string release_url = "https://github.com/BlitterStudio/amiberry/releases/tag/v8.4.2";
+	const std::string appimage_url = "https://github.com/BlitterStudio/amiberry/releases/download/v8.4.2/Amiberry-8.4.2-x86_64.AppImage";
+	expect_equal(
+		select_linux_notification_url(release_url, appimage_url,
+			linux_installation_kind::appimage),
+		appimage_url,
+		"AppImage notification direct download");
+	expect_equal(
+		select_linux_notification_url(release_url, appimage_url,
+			linux_installation_kind::native_package),
+		release_url,
+		"native package notification release page");
+	expect_equal(
+		select_linux_notification_url(release_url, "",
+			linux_installation_kind::appimage),
+		release_url,
+		"AppImage notification without selected download");
+
+
 	const std::string wanted = "Amiberry-8.4.2-x86_64.AppImage";
 	const std::string sums =
 		"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa  " + wanted + ".zsync\n"

@@ -1,6 +1,7 @@
 #!/bin/sh
 # AppImage mounts cannot host Amiberry's marker-based portable mode. The
-# runtime-provided sibling .home directory is the writable alternative.
+# runtime-provided sibling .home directory is the writable alternative, even
+# when a portable marker is present alongside the image.
 set -eu
 
 if [ -z "${AMIBERRY_BIN:-}" ]; then
@@ -25,6 +26,7 @@ export XDG_CONFIG_HOME="$work/config"
 export XDG_DATA_HOME="$work/data"
 export APPIMAGE="$work/Amiberry-test.AppImage"
 unset AMIBERRY_HOME_DIR AMIBERRY_CONFIG_DIR AMIBERRY_DATA_DIR AMIBERRY_PLUGINS_DIR
+touch "$work/amiberry.portable"
 
 line_value()
 {
@@ -44,7 +46,12 @@ case "$(line_value portable_toggle_unavailable_reason "$work/paths.txt")" in
 	*".home"*) ;;
 	*) echo "AppImage portable guidance did not mention the sibling .home convention" >&2; exit 1 ;;
 esac
-[ ! -e "$work/amiberry.portable" ] \
-	|| { echo "AppImage availability check wrote a portable marker" >&2; exit 1; }
+[ -e "$work/amiberry.portable" ] \
+	|| { echo "AppImage portable marker was unexpectedly removed" >&2; exit 1; }
+
+unset APPIMAGE
+"$work/Amiberry-test.AppImage" --dump-paths > "$work/installed-portable-paths.txt"
+[ "$(line_value portable_mode "$work/installed-portable-paths.txt")" = "1" ] \
+	|| { echo "writable installed portable mode ignored its marker" >&2; exit 1; }
 
 printf 'AppImage portable mode policy test passed\n'

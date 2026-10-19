@@ -1,6 +1,7 @@
 #include "amiberry_update_asset_policy.h"
 
 #include <algorithm>
+#include <cstdlib>
 #include <cctype>
 
 namespace {
@@ -57,6 +58,22 @@ bool is_hex_digest(const std::string& line, const size_t offset)
 }
 
 }
+
+linux_installation_kind get_linux_installation_kind()
+{
+	const auto* appimage = std::getenv("APPIMAGE");
+	return appimage != nullptr && appimage[0] != '\0'
+		? linux_installation_kind::appimage
+		: linux_installation_kind::native_package;
+}
+
+const std::string& select_linux_notification_url(const std::string& release_url,
+	const std::string& download_url, const linux_installation_kind installation_kind)
+{
+	return installation_kind == linux_installation_kind::appimage && !download_url.empty()
+		? download_url : release_url;
+}
+
 
 std::string select_linux_release_asset(const std::vector<std::string>& asset_names,
 	const linux_release_arch architecture, const linux_installation_kind installation_kind)

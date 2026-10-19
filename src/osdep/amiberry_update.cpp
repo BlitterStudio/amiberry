@@ -349,13 +349,6 @@ static linux_release_arch get_linux_release_arch()
 #endif
 }
 
-static linux_installation_kind get_linux_installation_kind()
-{
-	const auto* appimage = getenv("APPIMAGE");
-	return appimage != nullptr && appimage[0] != '\0'
-		? linux_installation_kind::appimage
-		: linux_installation_kind::native_package;
-}
 #else
 static std::string get_platform_asset_suffix()
 {

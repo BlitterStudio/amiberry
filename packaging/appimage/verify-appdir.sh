@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+# shellcheck source=dependencies.env
+source "$script_dir/dependencies.env"
+
 fail() {
     printf 'AppDir verification failed: %s\n' "$*" >&2
     exit 1
@@ -166,12 +170,42 @@ check_symbol_versions() {
     done < <(grep -oE 'GLIBC(XX)?_[0-9]+\.[0-9]+(\.[0-9]+)?' <<<"$version_info" | sort -u)
 }
 
+is_host_runtime_library() {
+    local library_pattern
+    for library_pattern in "${APPIMAGE_HOST_LIBRARY_PATTERNS[@]}"; do
+        # shellcheck disable=SC2053 # Matching the shared glob is intentional.
+        [[ "$1" == $library_pattern ]] && return 0
+    done
+    return 1
+}
+
 check_closure() {
-    local elf="$1" closure
-    closure="$(env -u LD_LIBRARY_PATH ldd "$elf" 2>&1)" || fail "ldd failed for ${elf#"$appdir"/}: $closure"
+    local elf="$1" closure closure_entry dependency_name dependency_path resolved_path
+    closure="$(LD_LIBRARY_PATH="$appdir/usr/lib:$appdir/usr/lib/amiberry" ldd "$elf" 2>&1)" \
+        || fail "ldd failed for ${elf#"$appdir"/}: $closure"
     if grep -Fq 'not found' <<<"$closure"; then
         fail "unresolved library closure for ${elf#"$appdir"/}: $closure"
     fi
+
+    while IFS= read -r closure_entry; do
+        if [[ "$closure_entry" =~ ^[[:space:]]*([^[:space:]]+)[[:space:]]+\=\>[[:space:]]+(/[^[:space:]]+) ]]; then
+            dependency_name="${BASH_REMATCH[1]}"
+            dependency_path="${BASH_REMATCH[2]}"
+        elif [[ "$closure_entry" =~ ^[[:space:]]*(/[^[:space:]]+) ]]; then
+            dependency_path="${BASH_REMATCH[1]}"
+            dependency_name="$(basename "$dependency_path")"
+        else
+            continue
+        fi
+
+        is_host_runtime_library "$dependency_name" && continue
+        resolved_path="$(readlink -f -- "$dependency_path")" \
+            || fail "cannot resolve dependency for ${elf#"$appdir"/}: $dependency_name -> $dependency_path"
+        case "$resolved_path" in
+            "$appdir"|"$appdir"/*) ;;
+            *) fail "non-excluded dependency for ${elf#"$appdir"/} resolves outside AppDir: $dependency_name -> $resolved_path" ;;
+        esac
+    done <<<"$closure"
 }
 
 mapfile -d '' candidate_files < <(find "$appdir" -type f -print0)
@@ -192,11 +226,9 @@ for plugin in "$appdir/usr/lib/amiberry/libcapsimage.so" "$appdir/usr/lib/amiber
 done
 
 while IFS= read -r -d '' bundled_library; do
-    case "$(basename "$bundled_library")" in
-        libc.so.*|libm.so.*|libpthread.so.*|librt.so.*|libdl.so.*|ld-linux*.so*|libstdc++.so.*|libgcc_s.so.*|libGL.so.*|libGLX.so.*|libEGL.so.*|libGLES*.so.*|libdrm.so.*|libgbm.so.*|libvulkan.so.*|libX*.so.*|libxcb*.so.*|libwayland-*.so.*|libasound.so.*|libpulse.so.*|libjack.so.*|libpipewire-*.so.*|libspa-*.so.*|libsndio.so.*|libdbus-1.so.*)
-            fail "forbidden bundled host runtime library: ${bundled_library#"$appdir"/}"
-            ;;
-    esac
+    if is_host_runtime_library "$(basename "$bundled_library")"; then
+        fail "forbidden bundled host runtime library: ${bundled_library#"$appdir"/}"
+    fi
 done < <(find "$appdir" \( -type f -o -type l \) -name 'lib*.so*' -print0)
 
 printf 'AppDir verification passed: %s (%s)\n' "$appdir" "$arch"

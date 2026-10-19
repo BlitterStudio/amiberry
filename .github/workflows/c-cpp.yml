@@ -715,7 +715,9 @@ jobs:
           LD_LIBRARY_PATH: ${{ steps.sdl.outputs.prefix }}/lib
         run: |
           sudo apt-get install -y ripgrep python3 ffmpeg
-          tests/run_tests.sh build/amiberry
+          # Retain the compiled /usr installation while relocation tests run its copied binary.
+          sudo cmake --install build
+          tests/run_tests.sh /usr/bin/amiberry
 
       - name: Verify QEMU-UAE plugin in DEB
         run: |
@@ -810,7 +812,7 @@ jobs:
         env:
           LD_LIBRARY_PATH: ${{ steps.sdl.outputs.prefix }}/lib
         run: |
-          packaging/appimage/build-appimage.sh \
+          bash packaging/appimage/build-appimage.sh \
             --version "${{ steps.appimage.outputs.version }}" \
             --channel "${{ steps.appimage.outputs.channel }}" \
             --arch "${{ matrix.arch }}" \

@@ -30,6 +30,9 @@ line_value()
 bindir="$(line_value install_bindir_relative "$work/original-paths.txt")"
 datadir="$(line_value install_datadir_relative "$work/original-paths.txt")"
 libdir="$(line_value install_libdir_relative "$work/original-paths.txt")"
+compiled_data_dir="$(line_value compiled_data_dir "$work/original-paths.txt")"
+compiled_data_dir="${compiled_data_dir%/}"
+compiled_plugins_dir="$(line_value system_plugins_dir "$work/original-paths.txt")"
 [ -n "$bindir" ] || { echo "relative install bindir was not reported" >&2; exit 1; }
 [ -n "$datadir" ] || { echo "relative install datadir was not reported" >&2; exit 1; }
 [ -n "$libdir" ] || { echo "relative install libdir was not reported" >&2; exit 1; }
@@ -53,9 +56,10 @@ chmod +x "$prefix/$bindir/amiberry"
 	|| { echo "relocated data root was not selected" >&2; exit 1; }
 [ "$(line_value data_dir "$work/relocated-paths.txt")" = "$installed_data/data" ] \
 	|| { echo "data directory did not follow the relocated prefix" >&2; exit 1; }
+[ "$(line_value abr_path "$work/relocated-paths.txt")" = "$installed_data/data/abr/" ] \
+	|| { echo "ABR database path did not follow the relocated data directory" >&2; exit 1; }
 [ "$(line_value relocated_plugins_root "$work/relocated-paths.txt")" = "$installed_plugins" ] \
 	|| { echo "relocated plugin root was not selected" >&2; exit 1; }
-
 user_plugins="$(line_value user_plugins_dir "$work/relocated-paths.txt")"
 plugin_0="$(line_value plugin_search_path_0 "$work/relocated-paths.txt")"
 plugin_1="$(line_value plugin_search_path_1 "$work/relocated-paths.txt")"
@@ -85,6 +89,21 @@ printf 'plugins_dir=%s\n' "$installed_plugins" > "$config_file"
 	|| { echo "relocated plugin root was retained as a saved override" >&2; exit 1; }
 rm -f "$config_file"
 
+# A bundled floppy-sound path from a previous relocated root is a stale
+# computed default, whereas a user-selected directory remains an override.
+stale_floppy_sounds="$work/previous-prefix/$datadir/amiberry/data/floppy_sounds"
+custom_floppy_sounds="$work/custom-floppy-sounds"
+mkdir -p "$stale_floppy_sounds" "$custom_floppy_sounds"
+printf 'floppy_sounds_dir=%s\n' "$stale_floppy_sounds" > "$config_file"
+"$prefix/$bindir/amiberry" --dump-paths > "$work/stale-floppy-sounds-paths.txt"
+[ "$(line_value floppy_sounds_dir "$work/stale-floppy-sounds-paths.txt")" = "$installed_data/data/floppy_sounds/" ] \
+	|| { echo "stale bundled floppy-sound default was retained" >&2; exit 1; }
+printf 'floppy_sounds_dir=%s\n' "$custom_floppy_sounds" > "$config_file"
+"$prefix/$bindir/amiberry" --dump-paths > "$work/explicit-floppy-sounds-paths.txt"
+[ "$(line_value floppy_sounds_dir "$work/explicit-floppy-sounds-paths.txt")" = "$custom_floppy_sounds" ] \
+	|| { echo "explicit floppy-sound directory was not retained" >&2; exit 1; }
+rm -f "$config_file"
+
 mkdir -p "$work/environment-data" "$work/environment-plugins"
 AMIBERRY_DATA_DIR="$work/environment-data" \
 AMIBERRY_PLUGINS_DIR="$work/environment-plugins" \
@@ -98,6 +117,10 @@ rm -rf "$installed_plugins"
 "$prefix/$bindir/amiberry" --dump-paths > "$work/missing-plugin-paths.txt"
 [ -z "$(line_value relocated_plugins_root "$work/missing-plugin-paths.txt" || true)" ] \
 	|| { echo "missing relocated plugin root was reported as usable" >&2; exit 1; }
+if [ -d "$compiled_plugins_dir" ]; then
+	grep -F "=${compiled_plugins_dir%/}/" "$work/missing-plugin-paths.txt" | grep -q '^plugin_search_path_' \
+		|| { echo "missing relocated plugins did not fall back to the retained compiled installation" >&2; exit 1; }
+fi
 [ "$(line_value data_dir "$work/missing-plugin-paths.txt")" = "$installed_data/data" ] \
 	|| { echo "missing plugin root affected relocated data lookup" >&2; exit 1; }
 
@@ -108,5 +131,16 @@ rm -rf "$installed_data"
 	|| { echo "missing relocated data root was reported as usable" >&2; exit 1; }
 [ "$(line_value relocated_plugins_root "$work/missing-data-paths.txt")" = "$installed_plugins" ] \
 	|| { echo "missing data root affected relocated plugin lookup" >&2; exit 1; }
+if [ -d "$compiled_data_dir" ]; then
+	fallback_data_dir="$(line_value data_dir "$work/missing-data-paths.txt")"
+	[ "${fallback_data_dir%/}" = "$compiled_data_dir" ] \
+		|| { echo "missing relocated data did not fall back to the retained compiled installation" >&2; exit 1; }
+	for seed in controllers roms whdboot; do
+		case "$(line_value "${seed}_seed_source_0" "$work/missing-data-paths.txt")" in
+			"${compiled_data_dir%/}/$seed") ;;
+			*) echo "missing relocated data did not fall back to the compiled $seed seed source" >&2; exit 1 ;;
+		esac
+	done
+fi
 
 printf 'relocatable install paths behavioral test passed\n'

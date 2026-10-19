@@ -1067,6 +1067,7 @@ std::string harddrive_path;
 std::string cdrom_path;
 std::string logfile_path;
 std::string floppy_sounds_dir;
+static bool floppy_sounds_dir_is_default = true;
 std::string data_dir;
 std::string saveimage_dir;
 std::string savestate_dir;
@@ -5086,6 +5087,21 @@ static bool path_strings_match(const std::string& lhs, const std::string& rhs)
 	return normalize_path_for_compare(lhs) == normalize_path_for_compare(rhs);
 }
 
+// Earlier versions persisted this derived location. Treat the installed-data
+// shape as a stale default so a moved bundle recalculates it from its new root.
+
+static bool is_computed_floppy_sounds_dir(const std::string& path)
+{
+	if (path.empty())
+		return false;
+
+	const auto normalized_path = std::filesystem::path(path).lexically_normal();
+	const auto parent = normalized_path.parent_path();
+	return normalized_path.filename() == "floppy_sounds"
+		&& parent.filename() == "data"
+		&& parent.parent_path().filename() == "amiberry";
+}
+
 static std::string lowercase_path_for_compare(const std::string& path)
 {
 	auto normalized = normalize_path_for_compare(path);
@@ -5382,6 +5398,7 @@ static void clear_base_content_path_preserving_overrides()
 
 	const auto previous_retroarch_file = retroarch_file;
 	const auto previous_floppy_sounds_dir = floppy_sounds_dir;
+	const auto previous_floppy_sounds_dir_is_default = floppy_sounds_dir_is_default;
 	const auto previous_plugins_dir = plugins_dir;
 
 	base_content_path.clear();
@@ -5389,6 +5406,7 @@ static void clear_base_content_path_preserving_overrides()
 
 	retroarch_file = previous_retroarch_file;
 	floppy_sounds_dir = previous_floppy_sounds_dir;
+	floppy_sounds_dir_is_default = previous_floppy_sounds_dir_is_default;
 	plugins_dir = previous_plugins_dir;
 	apply_base_content_path_set(merge_base_content_path_overrides(get_current_base_content_path_set(),
 		previous_paths, previous_baseline_paths));
@@ -7272,6 +7290,7 @@ std::string get_floppy_sounds_path()
 void set_floppy_sounds_path(const std::string& newpath)
 {
 	floppy_sounds_dir = newpath;
+	floppy_sounds_dir_is_default = false;
 	macos_bookmark_store(newpath);
 }
 
@@ -7756,7 +7775,8 @@ bool save_amiberry_settings_with_result()
 	write_bool_option("relative_paths", relativepaths != 0);
 	write_path_option("base_content_path", base_content_path);
 	write_path_option("retroarch_config", retroarch_file);
-	write_path_option("floppy_sounds_dir", floppy_sounds_dir);
+	if (!floppy_sounds_dir_is_default)
+		write_path_option("floppy_sounds_dir", floppy_sounds_dir);
 	if (!plugins_dir.empty())
 		write_path_option("plugins_dir", plugins_dir);
 	write_managed_path_option(base_content_managed_path_options[0], config_path);
@@ -8048,7 +8068,20 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		ret |= cfgfile_string(option, value, "logfile_path", logfile_path);
 		ret |= cfgfile_string(option, value, "rom_path", rom_path);
 		ret |= cfgfile_string(option, value, "rp9_path", rp9_path);
-		ret |= cfgfile_string(option, value, "floppy_sounds_dir", floppy_sounds_dir);
+		std::string configured_floppy_sounds_dir;
+		if (cfgfile_string(option, value, "floppy_sounds_dir", configured_floppy_sounds_dir))
+		{
+			if (is_computed_floppy_sounds_dir(configured_floppy_sounds_dir))
+			{
+				legacy_migration_state.settings_rewrite_needed = true;
+			}
+			else
+			{
+				floppy_sounds_dir = configured_floppy_sounds_dir;
+				floppy_sounds_dir_is_default = false;
+			}
+			ret = 1;
+		}
 		ret |= cfgfile_string(option, value, "saveimage_dir", saveimage_dir);
 		ret |= cfgfile_string(option, value, "savestate_dir", savestate_dir);
 		ret |= cfgfile_string(option, value, "ripper_path", ripper_path);
@@ -12405,6 +12438,7 @@ static void init_amiberry_dirs(const bool portable_mode, const bool materialize_
 			floppy_sounds_dir += '/';
 #endif
 	}
+	floppy_sounds_dir_is_default = true;
 
 	default_base_content_paths = get_current_base_content_path_set();
 }
@@ -12439,9 +12473,12 @@ static void dump_resolved_paths(const bool write_dump_file)
 	append_line("home_dir", home_dir);
 	append_line("config_path", config_path);
 	append_line("data_dir", data_dir);
+	append_line("floppy_sounds_dir", floppy_sounds_dir);
+	append_line("abr_path", get_data_path() + "abr/");
 	append_line("install_bindir_relative", get_configured_install_bindir());
 	append_line("install_datadir_relative", get_configured_install_datadir());
 	append_line("install_libdir_relative", get_configured_install_libdir());
+	append_line("compiled_data_dir", join_path(AMIBERRY_DATADIR, "data"));
 	append_line("effective_ca_bundle", get_effective_ca_bundle());
 	const auto& installed_roots = get_relocated_installed_resource_roots();
 	append_line("install_prefix", installed_roots.prefix);
@@ -13384,8 +13421,8 @@ bool get_plugin_path(TCHAR* out, const int len, const TCHAR* path)
 		return TRUE;
 	}
 	if (strcmp(path, "abr") == 0) {
-		strncpy(out, data_dir.c_str(), len - 1);
-		strncat(out, "abr/", len - 1);
+		const auto abr_path = get_data_path() + "abr/";
+		strncpy(out, abr_path.c_str(), len - 1);
 		out[len - 1] = '\0';
 		return TRUE;
 	}

@@ -118,6 +118,30 @@ assert_appimage_paths() {
     done
 }
 
+check_packaged_plugin_closures() {
+    local extracted_appdir="$work/squashfs-root" plugin plugin_path closure
+
+    command -v ldd >/dev/null 2>&1 || { echo "ldd is required for AppImage plugin checks" >&2; exit 1; }
+    (
+        cd "$work"
+        env -u APPIMAGE_EXTRACT_AND_RUN -u LD_LIBRARY_PATH "$image" --appimage-extract >/dev/null
+    )
+    [[ -d "$extracted_appdir" ]] || { echo "AppImage extraction did not create $extracted_appdir" >&2; exit 1; }
+
+    for plugin in libcapsimage.so libfloppybridge.so qemu-uae.so; do
+        plugin_path="$extracted_appdir/usr/lib/amiberry/$plugin"
+        [[ -f "$plugin_path" ]] || { echo "Extracted AppImage is missing plugin: $plugin" >&2; exit 1; }
+        if ! closure="$(env -u LD_LIBRARY_PATH ldd "$plugin_path" 2>&1)"; then
+            echo "ldd failed for packaged plugin $plugin: $closure" >&2
+            exit 1
+        fi
+        if grep -Fq 'not found' <<<"$closure"; then
+            echo "Unresolved packaged plugin closure for $plugin: $closure" >&2
+            exit 1
+        fi
+    done
+}
+
 
 run_dump() {
     local output=$1 executable=$2 home=$3
@@ -148,6 +172,7 @@ run_override_dump() {
 
 link="$work/Amiberry-link.AppImage"
 ln -s "$image" "$link"
+check_packaged_plugin_closures
 run_dump "$work/default-paths.txt" "$link" "$work/initial-home"
 assert_appimage_paths "$work/default-paths.txt"
 for key in home_dir settings_dir config_path user_plugins_dir controllers_path whdboot_path \

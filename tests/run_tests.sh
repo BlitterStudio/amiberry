@@ -9,8 +9,8 @@
 # --behavioral-only mode requires a binary and skips static checks that need
 # development dependencies outside the configured build.
 #
-# Requirements: bash, a C++17 compiler, grep; ripgrep and python3 for the
-# tests that use them.
+# Requirements: bash, a C++17 compiler, grep, pkg-config, libcurl and OpenSSL;
+# ripgrep and python3 for the tests that use them.
 set -u
 # bash 3.2 (stock macOS) treats empty-array expansion under set -u as an
 # unbound variable; the ${arr[@]+...} idiom keeps the runner portable.

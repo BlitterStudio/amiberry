@@ -99,7 +99,7 @@ for command in curl sha256sum cmake ninja tar dpkg-deb find install patchelf rea
     command -v "$command" >/dev/null 2>&1 || fail "required command is unavailable: $command"
 done
 [[ -x "$repo_root/tests/run_tests.sh" ]] || fail "missing executable test runner: tests/run_tests.sh"
-[[ -x "$script_dir/verify-appdir.sh" ]] || fail "missing executable AppDir verifier: $script_dir/verify-appdir.sh"
+[[ -f "$script_dir/verify-appdir.sh" && -r "$script_dir/verify-appdir.sh" ]] || fail "missing readable AppDir verifier: $script_dir/verify-appdir.sh"
 
 mkdir -p "$build_dir" "$output_dir"
 build_dir="$(cd "$build_dir" && pwd -P)"
@@ -236,48 +236,26 @@ for plugin in libcapsimage.so libfloppybridge.so qemu-uae.so; do
     [[ -f "$appdir/usr/lib/amiberry/$plugin" ]] || fail "CMake install did not stage plugin: $plugin"
 done
 
-linuxdeploy_exclusions=(
-    --exclude-library 'ld-linux*.so*'
-    --exclude-library 'libc.so*'
-    --exclude-library 'libm.so*'
-    --exclude-library 'libpthread.so*'
-    --exclude-library 'librt.so*'
-    --exclude-library 'libdl.so*'
-    --exclude-library 'libstdc++.so*'
-    --exclude-library 'libgcc_s.so*'
-    --exclude-library 'libGL.so*'
-    --exclude-library 'libEGL.so*'
-    --exclude-library 'libGLES*.so*'
-    --exclude-library 'libdrm.so*'
-    --exclude-library 'libgbm.so*'
-    --exclude-library 'libvulkan.so*'
-    --exclude-library 'libX*.so*'
-    --exclude-library 'libwayland-*.so*'
-    --exclude-library 'libasound.so*'
-    --exclude-library 'libpulse.so*'
-    --exclude-library 'libjack.so*'
-    --exclude-library 'libpipewire-*.so*'
-    --exclude-library 'libsndio.so*'
-    --exclude-library 'libdbus-1.so*'
-)
+linuxdeploy_exclusions=()
+for library_pattern in "${APPIMAGE_HOST_LIBRARY_PATTERNS[@]}"; do
+    linuxdeploy_exclusions+=(--exclude-library "$library_pattern")
+done
 APPIMAGE_EXTRACT_AND_RUN=1 "$linuxdeploy" \
     --appdir "$appdir" \
     --desktop-file "$staged_desktop" \
     --icon-file "$icon_source" \
     --executable "$appdir/usr/bin/amiberry" \
-    --library "$appdir/usr/lib/amiberry/libcapsimage.so" \
-    --library "$appdir/usr/lib/amiberry/libfloppybridge.so" \
-    --library "$appdir/usr/lib/amiberry/qemu-uae.so" \
+    --deploy-deps-only "$appdir/usr/bin/amiberry" \
+    --deploy-deps-only "$appdir/usr/lib/amiberry/libcapsimage.so" \
+    --deploy-deps-only "$appdir/usr/lib/amiberry/libfloppybridge.so" \
+    --deploy-deps-only "$appdir/usr/lib/amiberry/qemu-uae.so" \
     "${linuxdeploy_exclusions[@]}"
 rm -f -- "$appdir/.DirIcon"
 ln -s com.blitterstudio.amiberry.png "$appdir/.DirIcon"
-# linuxdeploy copies explicit --library inputs into usr/lib. Amiberry loads these
-# plugins from usr/lib/amiberry, so retain only that canonical copy.
-rm -f -- "$appdir/usr/lib/libcapsimage.so" \
-    "$appdir/usr/lib/libfloppybridge.so" \
-    "$appdir/usr/lib/qemu-uae.so"
 
-"$script_dir/verify-appdir.sh" --arch "$arch" "$appdir"
+# Keep the installed plugin paths canonical. --deploy-deps-only updates their
+# RUNPATHs relative to usr/lib and deploys their private closures there.
+bash "$script_dir/verify-appdir.sh" --arch "$arch" "$appdir"
 
 zsync_root="$build_dir/zsync"
 rm -rf -- "$zsync_root"
@@ -304,4 +282,10 @@ update_information="gh-releases-zsync|BlitterStudio|amiberry|${update_tag}|Amibe
 )
 [[ -s "$image" ]] || fail "appimagetool did not create $image"
 [[ -s "${image}.zsync" ]] || fail "appimagetool did not create ${image}.zsync; ensure update information and pinned zsyncmake are usable"
+embedded_update_information="$("$image" --appimage-updateinfo)" \
+    || fail "cannot read embedded update information from $image"
+[[ "$embedded_update_information" == "$update_information" ]] \
+    || fail "embedded update information does not match the requested channel and architecture"
+grep -Fx "Filename: $image_name" "${image}.zsync" >/dev/null \
+    || fail "zsync sidecar does not describe $image_name"
 printf 'Created %s and %s.zsync\n' "$image" "$image"
