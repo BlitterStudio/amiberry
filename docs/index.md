@@ -137,7 +137,10 @@ sudo apt install amiberry</code></pre>
       <a href="https://copr.fedorainfracloud.org/coprs/midwan/amiberry/">COPR</a> ·
       <a href="https://flathub.org/apps/com.blitterstudio.amiberry">Flatpak</a> ·
       <a href="https://aur.archlinux.org/packages/amiberry">AUR</a> ·
-      <a href="https://github.com/BlitterStudio/amiberry/releases/latest">.deb/.rpm</a>
+      <a href="https://github.com/BlitterStudio/amiberry/releases/latest">.deb/.rpm/AppImage</a>
+    </p>
+    <p class="platform-alt">
+      For a no-install download, run the release AppImage matching your CPU; see the <a href="/linux-packages#appimage">Linux package guide</a>.
     </p>
   </div>
 

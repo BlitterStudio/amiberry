@@ -77,7 +77,7 @@ curl -fsSL https://packages.amiberry.com/install.sh | sudo sh
 sudo apt install amiberry
 ```
 
-Also available via [PPA](https://launchpad.net/~midwan-a/+archive/ubuntu/amiberry) · [COPR](https://copr.fedorainfracloud.org/coprs/midwan/amiberry/) · [Flatpak](https://flathub.org/apps/com.blitterstudio.amiberry) · [AUR](https://aur.archlinux.org/packages/amiberry) · [.deb/.rpm](https://github.com/BlitterStudio/amiberry/releases/latest)
+Also available via [PPA](https://launchpad.net/~midwan-a/+archive/ubuntu/amiberry) · [COPR](https://copr.fedorainfracloud.org/coprs/midwan/amiberry/) · [Flatpak](https://flathub.org/apps/com.blitterstudio.amiberry) · [AUR](https://aur.archlinux.org/packages/amiberry) · [.deb/.rpm/AppImage](https://github.com/BlitterStudio/amiberry/releases/latest). For a no-install Linux download, use the release AppImage matching your CPU; see the [Linux package guide](docs/linux-packages.md).
 
 ### macOS
 

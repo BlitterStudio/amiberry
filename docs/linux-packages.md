@@ -87,6 +87,42 @@ sudo dnf update amiberry
 
 ---
 
+## AppImage
+
+Each GitHub release publishes `Amiberry-<version>-x86_64.AppImage` for Intel and AMD systems and `Amiberry-<version>-aarch64.AppImage` for 64-bit ARM systems, with a corresponding `.zsync` file for each image. Download the matching image from the [GitHub releases page](https://github.com/BlitterStudio/amiberry/releases/latest), make it executable, and run it:
+
+```bash
+chmod +x Amiberry-<version>-x86_64.AppImage
+./Amiberry-<version>-x86_64.AppImage
+```
+
+Replace `x86_64` with `aarch64` on 64-bit ARM. AppImage is a single-file, no-install option and lets stable and preview releases run side by side. Native packages remain the best choice for system integration and distribution-managed updates; Flatpak is the broad fallback and sandboxed option.
+
+AppImage mount mode needs working FUSE. The image has a static runtime and does not require the legacy `libfuse2` package; do not install it just for Amiberry. If FUSE is unavailable, run without mounting:
+
+```bash
+./Amiberry-<version>-x86_64.AppImage --appimage-extract-and-run
+```
+
+AppImages require glibc 2.35 or newer. On an older distribution, use Flatpak or a supported native package rather than replacing the system glibc.
+
+### Portable home and updates
+
+To keep configuration and writable data beside a specific image, create a sibling directory named for the complete image filename before its first launch:
+
+```bash
+mkdir Amiberry-8.4.1-x86_64.AppImage.home
+./Amiberry-8.4.1-x86_64.AppImage
+```
+
+AppImage managers can integrate the image and use its `.zsync` file for updates. The Amiberry Linux updater only notifies about updates; it does not update an AppImage itself.
+
+### AppImage troubleshooting
+
+If normal launch reports a FUSE or mount error, use `--appimage-extract-and-run` as shown above. If it reports an unsupported GLIBC version, use Flatpak or a supported native package; never replace the system glibc.
+
+---
+
 ## Supported Distributions
 
 | Distribution | Version | Repository suite | Architectures |
