@@ -679,8 +679,10 @@ if(NOT ANDROID AND NOT WIN32
     # which is PIE-compatible.
     target_compile_options(${PROJECT_NAME} PRIVATE -fno-pie)
     # Only toolchains that link PIE by default use -no-pie; clang before 24
-    # doesn't on FreeBSD and warns that it is unused.
+    # doesn't on FreeBSD and warns that it is unused. Checked on every
+    # configure, as CMake doesn't notice a compiler upgraded in place.
     include(CheckCXXSourceCompiles)
+    unset(LINKER_USES_NO_PIE CACHE)
     set(CMAKE_REQUIRED_LINK_OPTIONS -no-pie)
     check_cxx_source_compiles("int main() { return 0; }" LINKER_USES_NO_PIE
         FAIL_REGEX "unused.*-no-pie")
