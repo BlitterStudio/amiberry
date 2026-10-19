@@ -1,6 +1,8 @@
 #include "amiberry_update_asset_policy.h"
 
 #include <cstdlib>
+#include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -84,6 +86,35 @@ int main()
 		"exact checksum filename matching");
 	expect_equal(find_release_asset_sha256(sums, "missing.AppImage"), "",
 		"missing checksum filename");
+
+	const auto root = std::filesystem::temp_directory_path() / "amiberry-appimage-payload-test";
+	std::error_code error;
+	std::filesystem::remove_all(root, error);
+	std::filesystem::create_directories(root / "mount" / "usr" / "bin");
+	std::filesystem::create_directories(root / "native" / "bin");
+	std::ofstream(root / "mount" / "usr" / "bin" / "amiberry") << "payload\n";
+	std::ofstream(root / "native" / "bin" / "amiberry") << "native\n";
+	const auto appimage = (root / "Amiberry.AppImage").string();
+	const auto appdir = (root / "mount").string();
+	const auto payload = (root / "mount" / "usr" / "bin" / "amiberry").string();
+	const auto native = (root / "native" / "bin" / "amiberry").string();
+	const auto expect_payload = [](const bool actual, const bool expected, const char* scenario)
+	{
+		expect_equal(actual ? "appimage" : "native", expected ? "appimage" : "native", scenario);
+	};
+	expect_payload(is_appimage_payload(appimage.c_str(), appdir.c_str(), payload), true,
+		"executable inside APPDIR");
+	expect_payload(is_appimage_payload(appimage.c_str(), (appdir + "/").c_str(), payload), true,
+		"APPDIR with trailing separator");
+	expect_payload(is_appimage_payload(appimage.c_str(), appdir.c_str(), native), false,
+		"inherited AppImage environment outside APPDIR");
+	expect_payload(is_appimage_payload(appimage.c_str(), (root / "mount-other").string().c_str(), payload), false,
+		"sibling directory sharing the APPDIR prefix");
+	expect_payload(is_appimage_payload(appimage.c_str(), nullptr, payload), false,
+		"APPIMAGE without APPDIR");
+	expect_payload(is_appimage_payload(nullptr, appdir.c_str(), payload), false,
+		"APPDIR without APPIMAGE");
+	std::filesystem::remove_all(root, error);
 
 	std::cout << "AppImage asset selection policy test passed\n";
 	return 0;

@@ -1,7 +1,8 @@
 #!/bin/sh
 # AppImage mounts cannot host Amiberry's marker-based portable mode. The
 # runtime-provided sibling .home directory is the writable alternative, even
-# when a portable marker is present alongside the image.
+# when a portable marker is present alongside the image. A native binary that
+# merely inherits another AppImage's environment keeps its own portable mode.
 set -eu
 
 if [ -z "${AMIBERRY_BIN:-}" ]; then
@@ -25,6 +26,8 @@ export HOME="$work/home"
 export XDG_CONFIG_HOME="$work/config"
 export XDG_DATA_HOME="$work/data"
 export APPIMAGE="$work/Amiberry-test.AppImage"
+# The runtime points APPDIR at the image payload containing the executable.
+export APPDIR="$work"
 unset AMIBERRY_HOME_DIR AMIBERRY_CONFIG_DIR AMIBERRY_DATA_DIR AMIBERRY_PLUGINS_DIR
 touch "$work/amiberry.portable"
 
@@ -49,7 +52,17 @@ esac
 [ -e "$work/amiberry.portable" ] \
 	|| { echo "AppImage portable marker was unexpectedly removed" >&2; exit 1; }
 
-unset APPIMAGE
+# An AppImage frontend that launches a native Amiberry passes on its own
+# APPIMAGE and APPDIR; the executable does not live in that payload.
+mkdir -p "$work/frontend.AppDir"
+APPIMAGE="$work/Frontend.AppImage" APPDIR="$work/frontend.AppDir" \
+	"$work/Amiberry-test.AppImage" --dump-paths > "$work/inherited-paths.txt"
+[ "$(line_value portable_mode "$work/inherited-paths.txt")" = "1" ] \
+	|| { echo "inherited AppImage environment disabled native portable mode" >&2; exit 1; }
+[ "$(line_value portable_toggle_available "$work/inherited-paths.txt")" = "1" ] \
+	|| { echo "inherited AppImage environment disabled the portable toggle" >&2; exit 1; }
+
+unset APPIMAGE APPDIR
 for seed in controllers roms whdboot; do
 	mkdir -p "$work/$seed"
 done

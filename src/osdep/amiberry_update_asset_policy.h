@@ -16,6 +16,11 @@ enum class linux_installation_kind
 	appimage
 };
 
+// The AppImage runtime exports APPIMAGE and APPDIR to its payload, and every
+// child process inherits them. Only an executable inside APPDIR belongs to the
+// image; a native Amiberry launched by an AppImage frontend does not.
+bool is_appimage_payload(const char* appimage, const char* appdir,
+	const std::string& executable_path);
 linux_installation_kind get_linux_installation_kind();
 
 const std::string& select_linux_notification_url(const std::string& release_url,

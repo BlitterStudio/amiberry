@@ -90,24 +90,37 @@ printf 'plugins_dir=%s\n' "$installed_plugins" > "$config_file"
 	|| { echo "relocated plugin root was retained as a saved override" >&2; exit 1; }
 rm -f "$config_file"
 
-# A bundled floppy-sound path from a previous relocated root is a stale
-# computed default, whether the saved value has the trailing slash emitted by
-# Amiberry or comes from an older slashless configuration.
-stale_floppy_sounds="$work/previous-prefix/$datadir/amiberry/data/floppy_sounds"
+# A bundled floppy-sound path computed by an earlier launch is a stale default:
+# a moved installation tree that no longer exists, or an AppImage runtime mount.
+# Both the trailing-slash form Amiberry wrote and an older slashless form
+# migrate. An existing user directory keeps its setting, even when its name
+# ends in amiberry/data/floppy_sounds.
+expect_floppy_sounds()
+{
+	printf 'floppy_sounds_dir=%s\n' "$1" > "$config_file"
+	"$prefix/$bindir/amiberry" --dump-paths > "$work/floppy-sounds-paths.txt"
+	[ "$(line_value floppy_sounds_dir "$work/floppy-sounds-paths.txt")" = "$2" ] \
+		|| { echo "$3" >&2; exit 1; }
+}
+bundled_floppy_sounds="$installed_data/data/floppy_sounds/"
+moved_floppy_sounds="$work/previous-prefix/$datadir/amiberry/data/floppy_sounds"
+mount_floppy_sounds="$work/.mount_previous/usr/$datadir/amiberry/data/floppy_sounds"
+media_floppy_sounds="$work/media/amiberry/data/floppy_sounds"
+media_installed_shape="$work/media/$datadir/amiberry/data/floppy_sounds"
 custom_floppy_sounds="$work/custom-floppy-sounds"
-mkdir -p "$stale_floppy_sounds" "$custom_floppy_sounds"
-printf 'floppy_sounds_dir=%s/\n' "$stale_floppy_sounds" > "$config_file"
-"$prefix/$bindir/amiberry" --dump-paths > "$work/stale-floppy-sounds-trailing-paths.txt"
-[ "$(line_value floppy_sounds_dir "$work/stale-floppy-sounds-trailing-paths.txt")" = "$installed_data/data/floppy_sounds/" ] \
-	|| { echo "trailing-slash bundled floppy-sound default was retained" >&2; exit 1; }
-printf 'floppy_sounds_dir=%s\n' "$stale_floppy_sounds" > "$config_file"
-"$prefix/$bindir/amiberry" --dump-paths > "$work/stale-floppy-sounds-paths.txt"
-[ "$(line_value floppy_sounds_dir "$work/stale-floppy-sounds-paths.txt")" = "$installed_data/data/floppy_sounds/" ] \
-	|| { echo "slashless bundled floppy-sound default was retained" >&2; exit 1; }
-printf 'floppy_sounds_dir=%s\n' "$custom_floppy_sounds" > "$config_file"
-"$prefix/$bindir/amiberry" --dump-paths > "$work/explicit-floppy-sounds-paths.txt"
-[ "$(line_value floppy_sounds_dir "$work/explicit-floppy-sounds-paths.txt")" = "$custom_floppy_sounds" ] \
-	|| { echo "explicit floppy-sound directory was not retained" >&2; exit 1; }
+mkdir -p "$mount_floppy_sounds" "$media_floppy_sounds" "$media_installed_shape" "$custom_floppy_sounds"
+expect_floppy_sounds "$moved_floppy_sounds/" "$bundled_floppy_sounds" \
+	"trailing-slash default from a moved installation was retained"
+expect_floppy_sounds "$moved_floppy_sounds" "$bundled_floppy_sounds" \
+	"slashless default from a moved installation was retained"
+expect_floppy_sounds "$mount_floppy_sounds/" "$bundled_floppy_sounds" \
+	"default from a previous AppImage mount was retained"
+expect_floppy_sounds "$media_floppy_sounds" "$media_floppy_sounds" \
+	"explicit amiberry/data/floppy_sounds directory was discarded"
+expect_floppy_sounds "$media_installed_shape" "$media_installed_shape" \
+	"existing explicit directory with the installed layout was discarded"
+expect_floppy_sounds "$custom_floppy_sounds" "$custom_floppy_sounds" \
+	"explicit floppy-sound directory was not retained"
 rm -f "$config_file"
 
 mkdir -p "$work/environment-data" "$work/environment-plugins"
@@ -148,5 +161,17 @@ if [ -d "$compiled_data_dir" ]; then
 		esac
 	done
 fi
+
+# A development build outside any installation layout seeds from the resources
+# beside it, even when the compiled installation prefix also exists.
+devbuild="$work/devbuild"
+mkdir -p "$devbuild/controllers" "$devbuild/roms" "$devbuild/whdboot"
+cp "$AMIBERRY_BIN" "$devbuild/amiberry"
+chmod +x "$devbuild/amiberry"
+"$devbuild/amiberry" --dump-paths > "$work/devbuild-paths.txt"
+for seed in controllers roms whdboot; do
+	[ "$(line_value "${seed}_seed_source_0" "$work/devbuild-paths.txt")" = "$devbuild/$seed" ] \
+		|| { echo "development build did not prefer its own $seed seeds" >&2; exit 1; }
+done
 
 printf 'relocatable install paths behavioral test passed\n'

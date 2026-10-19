@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <cstdlib>
 #include <cctype>
+#include <filesystem>
+#include <system_error>
 
 namespace {
 
@@ -59,12 +61,36 @@ bool is_hex_digest(const std::string& line, const size_t offset)
 
 }
 
+bool is_appimage_payload(const char* appimage, const char* appdir,
+	const std::string& executable_path)
+{
+	if (appimage == nullptr || appimage[0] == '\0' || appdir == nullptr || appdir[0] == '\0'
+		|| executable_path.empty())
+		return false;
+
+	std::error_code error;
+	auto root = std::filesystem::weakly_canonical(appdir, error);
+	if (error || root.empty())
+		return false;
+	if (!root.has_filename())
+		root = root.parent_path();
+	const auto executable = std::filesystem::weakly_canonical(executable_path, error);
+	if (error)
+		return false;
+
+	const auto relative = executable.lexically_relative(root);
+	return !relative.empty() && relative != "." && *relative.begin() != "..";
+}
+
 linux_installation_kind get_linux_installation_kind()
 {
-	const auto* appimage = std::getenv("APPIMAGE");
-	return appimage != nullptr && appimage[0] != '\0'
-		? linux_installation_kind::appimage
-		: linux_installation_kind::native_package;
+#if defined(__linux__)
+	std::error_code error;
+	const auto executable = std::filesystem::read_symlink("/proc/self/exe", error);
+	if (!error && is_appimage_payload(std::getenv("APPIMAGE"), std::getenv("APPDIR"), executable.string()))
+		return linux_installation_kind::appimage;
+#endif
+	return linux_installation_kind::native_package;
 }
 
 const std::string& select_linux_notification_url(const std::string& release_url,
