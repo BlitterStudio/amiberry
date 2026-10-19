@@ -226,7 +226,6 @@ bool lof_store; // real bit in custom registers
 bool lof_display; // what display device thinks
 static bool lof_detect, lof_pdetect;
 static bool lof_detect_vsync;
-static bool lof_mode;
 static bool lol;
 static bool linetoggle;
 static int next_lineno;
@@ -1711,6 +1710,13 @@ static void update_display_vars(void)
 	}
 	vb->inheight = maxv << vres2;
 	vb->inxoffset = 0;
+
+	if (currprefs.gfx_ntscpixelspal && (beamcon0 & BEAMCON0_PAL) && !(beamcon0 & BEAMCON0_VARBEAMEN)
+		&& (current_linear_vpos == 312 || current_linear_vpos == 313)) {
+		vb->inheight = (vb->inheight * 525) / 625;
+		vb->inheight += 3;
+		vb->inheight &= ~1;
+	}
 
 	if (currprefs.gfx_overscanmode >= OVERSCANMODE_ULTRA) {
 		linear_vpos_vb_end = 1;
@@ -6641,21 +6647,18 @@ static void trigger_vsync_line(void)
 		} else {
 			lof_display = lof_detect;
 		}
-		lof_display ^= lof_mode;
 	} else if (currprefs.cs_hvcsync == HVSYNC_HVSYNC || currprefs.cs_hvcsync == HVSYNC_HVSYNC_SYNC) {
 		if (beamcon0 & BEAMCON0_VARVSYEN) {
 			lof_display = lof_pdetect;
 		} else {
 			lof_display = lof_detect;
 		}
-		lof_display ^= lof_mode;
 	} else {
 		if (beamcon0 & BEAMCON0_VARCSYEN) {
 			lof_display = lof_pdetect;
 		} else {
 			lof_display = lof_detect;
 		}
-		lof_display ^= lof_mode;
 	}
 	reset_autoscale();
 	virtual_vsync_check();
@@ -6931,7 +6934,6 @@ void custom_reset(bool hardreset, bool keyboardreset)
 			}
 
 			lof_store = lof_display = 0;
-			lof_mode = ntsc ? 0 : 1;
 		}
 
 		clxdat = 0;
@@ -10229,8 +10231,7 @@ static void check_vsyncs_fast(void)
 					vsync_mark(0);
 				}
 				agnus_vsync_on();
-				lof_detect = 0;
-				lof_mode = 1;
+				lof_detect = 1;
 				update_lof_detect();
 			}
 			if (linear_vpos_reset) {
@@ -10243,8 +10244,7 @@ static void check_vsyncs_fast(void)
 				vsync_mark(1);
 			}
 			agnus_vsync_on();
-			lof_detect = 1;
-			lof_mode = 1;
+			lof_detect = 0;
 			update_lof_detect();
 		}
 		if (vpos == 5) {
@@ -10255,22 +10255,20 @@ static void check_vsyncs_fast(void)
 		}
 	} else {
 		// NTSC
-		if (vpos == 3 && lof_store) {
-			if (!agnus_vsync && !beamcon0_has_vsync) {
-				vsync_mark(0);
-			}
-			agnus_vsync_on();
-			lof_detect = 1;
-			lof_mode = 0;
-			update_lof_detect();
-		}
 		if (vpos == 3 && !lof_store) {
 			if (!agnus_vsync && !beamcon0_has_vsync) {
 				vsync_mark(0);
 			}
 			agnus_vsync_on();
 			lof_detect = 0;
-			lof_mode = 0;
+			update_lof_detect();
+		}
+		if (vpos == 3 && lof_store) {
+			if (!agnus_vsync && !beamcon0_has_vsync) {
+				vsync_mark(0);
+			}
+			agnus_vsync_on();
+			lof_detect = 1;
 			update_lof_detect();
 		}
 		if (vpos == 6) {
@@ -11666,8 +11664,7 @@ static void check_hsyncs_hardwired(void)
 					vsync_mark(0);
 				}
 				agnus_vsync_on();
-				lof_detect = 0;
-				lof_mode = 1;
+				lof_detect = 1;
 				update_lof_detect();
 #ifdef DEBUGGER
 				if (debug_dma) {
@@ -11698,8 +11695,7 @@ static void check_hsyncs_hardwired(void)
 					vsync_mark(1);
 				}
 				agnus_vsync_on();
-				lof_detect = 1;
-				lof_mode = 1;
+				lof_detect = 0;
 				update_lof_detect();
 #ifdef DEBUGGER
 				if (debug_dma) {
@@ -11725,13 +11721,12 @@ static void check_hsyncs_hardwired(void)
 
 		// Vertical SYNC
 		if (is_shs) { // SHS
-			if (vpos == 3 && lof_store) {
+			if (vpos == 3 && !lof_store) {
 				if (!agnus_vsync && !beamcon0_has_vsync) {
 					vsync_mark(0);
 				}
 				agnus_vsync_on();
-				lof_detect = 1;
-				lof_mode = 0;
+				lof_detect = 0;
 				update_lof_detect();
 #ifdef DEBUGGER
 				if (debug_dma) {
@@ -11739,7 +11734,7 @@ static void check_hsyncs_hardwired(void)
 				}
 #endif
 			}
-			if (vpos == 6 && lof_store) {
+			if (vpos == 6 && !lof_store) {
 				if (agnus_vsync && !beamcon0_has_vsync && currprefs.cs_ciaatod == 0) {
 					ciaa_tod_maybe_inc(0);
 				}
@@ -11753,13 +11748,12 @@ static void check_hsyncs_hardwired(void)
 			check_vidsyncs();
 		}
 		if (is_cen) { // HCENTER
-			if (vpos == 3 && !lof_store) {
+			if (vpos == 3 && lof_store) {
 				if (!agnus_vsync && !beamcon0_has_vsync) {
 					vsync_mark(0);
 				}
 				agnus_vsync_on();
-				lof_detect = 0;
-				lof_mode = 0;
+				lof_detect = 1;
 				update_lof_detect();
 #ifdef DEBUGGER
 				if (debug_dma) {
@@ -11767,7 +11761,7 @@ static void check_hsyncs_hardwired(void)
 				}
 #endif
 			}
-			if (vpos == 6 && !lof_store) {
+			if (vpos == 6 && lof_store) {
 				if (agnus_vsync && !beamcon0_has_vsync && currprefs.cs_ciaatod == 0) {
 					ciaa_tod_maybe_inc(0);
 				}

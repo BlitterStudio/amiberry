@@ -2678,6 +2678,7 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 	cfgfile_dwrite(f, _T("gfx_rotation"), _T("%d"), p->gfx_rotation);
 	cfgfile_dwrite(f, _T("gfx_bordercolor"), _T("0x%08x"), p->gfx_bordercolor);
 	cfgfile_dwrite_bool(f, _T("gfx_ntscpixels"), p->gfx_ntscpixels);
+	cfgfile_dwrite_bool(f, _T("gfx_ntscpixelspal"), p->gfx_ntscpixelspal);
 
 	for (int j = 0; j < MAX_FILTERDATA; j++) {
 		struct gfx_filterdata *gf = &p->gf[j];
@@ -4022,6 +4023,7 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 		|| cfgfile_intval(option, value, _T("gfx_monitorblankdelay"), &p->gfx_monitorblankdelay, 1)
 		|| cfgfile_intval(option, value, _T("gfx_bordercolor"), &p->gfx_bordercolor, 1)
 		|| cfgfile_yesno(option, value, _T("gfx_ntscpixels"), &p->gfx_ntscpixels)
+		|| cfgfile_yesno(option, value, _T("gfx_ntscpixelspal"), &p->gfx_ntscpixelspal)
 
 		|| cfgfile_intval (option, value, _T("floppy0sound"), &p->floppyslots[0].dfxclick, 1)
 		|| cfgfile_intval (option, value, _T("floppy1sound"), &p->floppyslots[1].dfxclick, 1)
@@ -6736,12 +6738,14 @@ static int cfgfile_parse_hardware (struct uae_prefs *p, const TCHAR *option, TCH
 		if (cfgfile_string(option, value, tmp, tmpbuf, sizeof tmpbuf / sizeof(TCHAR))) {
 			rbc->rtgmem_type = 0;
 			rbc->rtg_index = i;
+			// walk the board table: board IDs can have gaps
 			for (int j = 0;; j++) {
-				const int id = gfxboard_get_id_from_index(j);
-				if (id < 0)
+				int id = gfxboard_get_id_from_index(j);
+				if (id < 0) {
 					break;
+				}
 				const TCHAR *t = gfxboard_get_configname(id);
-				if (!_tcsicmp(t, tmpbuf)) {
+				if (t && !_tcsicmp(t, tmpbuf)) {
 					rbc->rtgmem_type = id;
 					break;
 				}
@@ -9302,7 +9306,8 @@ void default_prefs (struct uae_prefs *p, bool reset, int type)
 		f->enable = true;
 	}
 	p->gf[2].enable = false;
-	p->gfx_ntscpixels = 1;
+	p->gfx_ntscpixels = true;
+	p->gfx_ntscpixelspal = false;
 
 	p->rtg_horiz_zoom_mult = 1.0;
 	p->rtg_vert_zoom_mult = 1.0;
