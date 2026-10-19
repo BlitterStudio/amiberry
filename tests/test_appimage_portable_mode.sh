@@ -18,6 +18,9 @@ case "$(uname -s)" in
 		;;
 esac
 
+. tests/lib/copied_binary.sh
+keep_copied_binary_libraries
+
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 cp "$AMIBERRY_BIN" "$work/Amiberry-test.AppImage"
