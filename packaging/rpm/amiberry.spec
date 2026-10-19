@@ -2,7 +2,7 @@
 %global debug_package %{nil}
 
 Name:           amiberry
-Version:        8.4.1
+Version:        8.4.2
 Release:        1%{?dist}
 Summary:        Optimized Amiga emulator for ARM64, AMD64 and RISC-V platforms
 
@@ -94,6 +94,17 @@ fi
 %{_mandir}/man1/amiberry.1.gz
 
 %changelog
+* Mon Oct 19 2026 Dimitris Panokostas <midwan@gmail.com> - 8.4.2-1
+- Bugfix release v8.4.2
+- Linux AppImages for x86_64 and aarch64; Ubuntu 26.10 packages; install.sh stops on unpublished apt suites
+- Multithreaded CPU: restored JIT performance and fixed keyboard reset crashes and missed reset holds
+- WHDBooter: exact SHA1 matches win, outdated game databases are refreshed, and 68030/68040 CPU and cycle-exact settings from the database are applied
+- Fixed FPS adj. in the Display panel, Chipset Extra changes on hard reset, live .uaem toggle and Host Only cursor hotspot drift
+- IPC: Windows named pipe support, GDB monitor commands, no longer limited to one request per frame
+- ZZ9000: WebP, FLAC, Ogg Vorbis, WebM and MPEG-2 services
+- Merged WinUAE display, NTSC long field and GDB monitor updates; new Always stretch PAL as NTSC option
+- Android: device-shaped RTG modes, AAudio at 48 kHz with a configurable sound buffer, steady stick mouse speed
+
 * Wed Oct 14 2026 Dimitris Panokostas <midwan@gmail.com> - 8.4.1-1
 - Bugfix release v8.4.1
 - Libretro: save states load through the regular restore path, auto-loaded states apply after boot, left stick moves the mouse in Joystick As Mouse

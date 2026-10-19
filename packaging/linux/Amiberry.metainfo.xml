@@ -67,6 +67,11 @@
         </screenshot>
     </screenshots>
     <releases>
+        <release version="8.4.2" date="2026-10-19">
+            <description>
+                <p>Bugfix release: Linux AppImages for x86_64 and aarch64, and packages for Ubuntu 26.10. The multithreaded CPU option runs at full JIT speed again and no longer crashes on a keyboard reset. WHDBooter prefers exact SHA1 matches, refreshes outdated game databases on upgrade, and applies the 68030, 68040 and cycle-exact settings from the database. Fixed the FPS adjustment in the Display panel, Chipset Extra changes on reboot, the .uaem metadata option while running, and the Host Only cursor hotspot drifting during slow movement. Adds IPC control on Windows, GDB monitor commands over IPC, ZZ9000 WebP, FLAC, Ogg Vorbis, WebM and MPEG-2 services, an option to stretch PAL as NTSC, and the latest WinUAE updates.</p>
+            </description>
+        </release>
         <release version="8.4.1" date="2026-10-14">
             <description>
                 <p>Bugfix release: RetroArch save states load reliably, including auto-loaded states, and restore mounted directory paths; libretro Joystick As Mouse moves the pointer with the left stick. Fixed the Host Only cursor losing its lower half on the right side of native screens, ROM folder handling with relative paths, configuration strings such as hardfile geometry truncated on save, cache-inhibited MMU pages, file renames while files are open, and A2024, Graffiti and genlock overscan handling. Adds an optional GDB remote debugging server, MacPorts support on macOS, FreeBSD packages with each release, GLES-only and USE_PPC=OFF build fixes, libavcodec-extra support in DEB packages, updated AROS ROMs, and the latest WinUAE updates.</p>
