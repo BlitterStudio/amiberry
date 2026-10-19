@@ -765,7 +765,8 @@ jobs:
       - name: Install AppImage build prerequisites
         run: |
           apt-get update
-          apt-get install -y sudo git ca-certificates curl build-essential cmake ninja-build pkg-config patchelf binutils file dpkg xz-utils ripgrep python3 ffmpeg libflac-dev libmpeg2-4-dev libpng-dev libwebp-dev libasound2-dev libmpg123-dev libportmidi-dev libserialport-dev libenet-dev libpcap-dev libzstd-dev libcurl4-openssl-dev nlohmann-json3-dev libdbus-1-dev libavformat-dev libavcodec-dev libavutil-dev libswscale-dev libswresample-dev
+          # setup-sdl lists SDL releases with the GitHub CLI.
+          apt-get install -y sudo git gh ca-certificates curl build-essential cmake ninja-build pkg-config patchelf binutils file dpkg xz-utils ripgrep python3 ffmpeg libflac-dev libmpeg2-4-dev libpng-dev libwebp-dev libasound2-dev libmpg123-dev libportmidi-dev libserialport-dev libenet-dev libpcap-dev libzstd-dev libcurl4-openssl-dev nlohmann-json3-dev libdbus-1-dev libavformat-dev libavcodec-dev libavutil-dev libswscale-dev libswresample-dev
 
       - name: Check out repository code
         uses: actions/checkout@v6
