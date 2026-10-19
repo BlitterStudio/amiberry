@@ -4,22 +4,21 @@ if(CMAKE_CROSSCOMPILING)
 endif()
 
 # Sets <out> to the command that runs the compiler CMake uses for <lang>,
-# without launchers given with it in CC/CXX but with any flags given there
-# (with CC="ccache distcc clang -m32", CMAKE_C_COMPILER is ccache and
-# "distcc clang -m32" is ARG1, so this gives "clang;-m32").
+# without launchers given with it in CC/CXX (with CC="ccache distcc clang -m32",
+# CMAKE_C_COMPILER is ccache and "distcc clang -m32" is ARG1, so this gives
+# "clang;-m32").
 function(get_probe_command lang out)
-    set(words "${CMAKE_${lang}_COMPILER}")
+    set(command "${CMAKE_${lang}_COMPILER}")
     if(CMAKE_${lang}_COMPILER_ARG1)
         separate_arguments(arg1 UNIX_COMMAND "${CMAKE_${lang}_COMPILER_ARG1}")
-        list(APPEND words ${arg1})
+        list(APPEND command ${arg1})
     endif()
-    set(command "")
-    foreach(word IN LISTS words)
-        if(word MATCHES "^-")
-            list(APPEND command "${word}")
-        else()
-            set(command "${word}")
+    foreach(word IN LISTS command)
+        get_filename_component(name "${word}" NAME)
+        if(NOT name MATCHES "^(ccache|sccache|distcc|icecc|buildcache)$")
+            break()
         endif()
+        list(REMOVE_AT command 0)
     endforeach()
     set(${out} "${command}" PARENT_SCOPE)
 endfunction()
@@ -181,9 +180,11 @@ foreach(lang C CXX)
     endif()
 endforeach()
 
-# Applied globally, so bundled libraries are built for this CPU too
+# Applied globally, so bundled libraries are built for this CPU too. Not to
+# Debug, which multi-config generators can build from the same configuration.
+set(not_debug "$<NOT:$<CONFIG:Debug>>")
 if(C_FLAGS STREQUAL CXX_FLAGS)
-    add_compile_options(${C_FLAGS})
+    add_compile_options("$<${not_debug}:${C_FLAGS}>")
     list(JOIN C_FLAGS " " APPLIED_FLAGS)
     # Show clang's -Xclang -target-feature -Xclang +x/-x as just +x/-x
     string(REPLACE "SHELL:-Xclang -target-feature -Xclang " "" APPLIED_FLAGS "${APPLIED_FLAGS}")
@@ -191,8 +192,8 @@ if(C_FLAGS STREQUAL CXX_FLAGS)
 else()
     # CC and CXX are different compilers or versions
     add_compile_options(
-        "$<$<COMPILE_LANGUAGE:C>:${C_FLAGS}>"
-        "$<$<COMPILE_LANGUAGE:CXX,OBJCXX>:${CXX_FLAGS}>"
+        "$<$<AND:$<COMPILE_LANGUAGE:C>,${not_debug}>:${C_FLAGS}>"
+        "$<$<AND:$<COMPILE_LANGUAGE:CXX,OBJCXX>,${not_debug}>:${CXX_FLAGS}>"
     )
     foreach(lang C CXX)
         list(JOIN ${lang}_FLAGS " " APPLIED_FLAGS)
