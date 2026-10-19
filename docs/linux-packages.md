@@ -3,8 +3,9 @@
 Amiberry provides a self-hosted APT/YUM package repository at `packages.amiberry.com`,
 allowing you to install and receive automatic updates through your system's package manager.
 
-> **Alternative**: Amiberry is also available on [Flathub](https://flathub.org/apps/com.blitterstudio.amiberry),
-> which works on all major Linux distributions without any additional configuration.
+> **Alternatives**: Amiberry is also available on [Flathub](https://flathub.org/apps/com.blitterstudio.amiberry),
+> which works on all major Linux distributions without any additional configuration, and as a
+> no-install [AppImage](#appimage) for x86_64 and aarch64 from every GitHub release.
 
 ---
 
@@ -120,6 +121,10 @@ AppImage managers can integrate the image and use its `.zsync` file for updates.
 ### AppImage troubleshooting
 
 If normal launch reports a FUSE or mount error, use `--appimage-extract-and-run` as shown above. If it reports an unsupported GLIBC version, use Flatpak or a supported native package; never replace the system glibc.
+
+If it reports a missing `libOpenGL.so.0`, `libwayland-client.so.0`, `libasound.so.2` or `libdbus-1.so.3`, install your distribution's OpenGL (libglvnd), Wayland client, ALSA and D-Bus runtime packages. The AppImage deliberately uses these from the host so it works with your graphics drivers and sound server.
+
+The AppImage uses your system's certificate store for update checks and downloads. If your trust store lives somewhere non-standard, point `SSL_CERT_FILE` (or `CURL_CA_BUNDLE`) at the CA bundle before launching the image.
 
 ---
 
