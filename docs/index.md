@@ -137,10 +137,10 @@ sudo apt install amiberry</code></pre>
       <a href="https://copr.fedorainfracloud.org/coprs/midwan/amiberry/">COPR</a> ·
       <a href="https://flathub.org/apps/com.blitterstudio.amiberry">Flatpak</a> ·
       <a href="https://aur.archlinux.org/packages/amiberry">AUR</a> ·
-      <a href="https://github.com/BlitterStudio/amiberry/releases/latest">.deb/.rpm/AppImage</a>
+      <a href="https://github.com/BlitterStudio/amiberry/releases/latest">.deb/.rpm</a>
     </p>
     <p class="platform-alt">
-      For a no-install download, run the release AppImage matching your CPU; see the <a href="/linux-packages#appimage">Linux package guide</a>.
+      <strong>AppImage:</strong> no installation needed. Download the <code>x86_64</code> or <code>aarch64</code> AppImage from <a href="https://github.com/BlitterStudio/amiberry/releases/latest">Releases</a>, make it executable with <code>chmod +x</code> and run it. Requires glibc 2.35 or newer; see the <a href="/linux-packages#appimage">AppImage guide</a>.
     </p>
   </div>
 
@@ -189,9 +189,13 @@ Windows release binaries are signed through SignPath with a certificate provided
 Guides, tutorials, and references to help you get the most out of Amiberry.
 
 <div class="resource-grid">
-  <a href="https://github.com/BlitterStudio/amiberry/wiki/First-Installation" class="resource-link">
+  <a href="https://github.com/BlitterStudio/amiberry/wiki/Quick-start-guide" class="resource-link">
     <span class="resource-icon">🚀</span>
     Getting Started
+  </a>
+  <a href="/linux-packages" class="resource-link">
+    <span class="resource-icon">🐧</span>
+    Linux Packages &amp; AppImage
   </a>
   <a href="https://github.com/BlitterStudio/amiberry/wiki" class="resource-link">
     <span class="resource-icon">📘</span>

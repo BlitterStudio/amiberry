@@ -77,7 +77,16 @@ curl -fsSL https://packages.amiberry.com/install.sh | sudo sh
 sudo apt install amiberry
 ```
 
-Also available via [PPA](https://launchpad.net/~midwan-a/+archive/ubuntu/amiberry) · [COPR](https://copr.fedorainfracloud.org/coprs/midwan/amiberry/) · [Flatpak](https://flathub.org/apps/com.blitterstudio.amiberry) · [AUR](https://aur.archlinux.org/packages/amiberry) · [.deb/.rpm/AppImage](https://github.com/BlitterStudio/amiberry/releases/latest). For a no-install Linux download, use the release AppImage matching your CPU; see the [Linux package guide](docs/linux-packages.md).
+Also available via [PPA](https://launchpad.net/~midwan-a/+archive/ubuntu/amiberry) · [COPR](https://copr.fedorainfracloud.org/coprs/midwan/amiberry/) · [Flatpak](https://flathub.org/apps/com.blitterstudio.amiberry) · [AUR](https://aur.archlinux.org/packages/amiberry) · [.deb/.rpm](https://github.com/BlitterStudio/amiberry/releases/latest).
+
+**AppImage (no installation):** each release includes `Amiberry-<version>-x86_64.AppImage` for Intel/AMD and `Amiberry-<version>-aarch64.AppImage` for 64-bit ARM. Download the one for your CPU from [Releases](https://github.com/BlitterStudio/amiberry/releases/latest), then:
+
+```bash
+chmod +x Amiberry-<version>-x86_64.AppImage
+./Amiberry-<version>-x86_64.AppImage
+```
+
+The AppImage needs glibc 2.35 or newer (Ubuntu 22.04 or later). See the [AppImage guide](https://amiberry.com/linux-packages#appimage) for running without FUSE, keeping data beside the image, and updates.
 
 ### macOS
 
@@ -124,7 +133,7 @@ Release binaries are signed through SignPath. See the [Code signing policy](http
 
 ## Documentation
 
-- **[Getting Started](https://github.com/BlitterStudio/amiberry/wiki/First-Installation)** — First installation guide
+- **[Getting Started](https://github.com/BlitterStudio/amiberry/wiki/Quick-start-guide)** — Quick start guide
 - **[Full Wiki](https://github.com/BlitterStudio/amiberry/wiki)** — Complete documentation
 - **[Build from Source](https://github.com/BlitterStudio/amiberry/wiki/Compile-from-source)** — Compile for your platform
 - **[Troubleshooting](https://github.com/BlitterStudio/amiberry/wiki/Troubleshooting)** — Common issues and solutions
