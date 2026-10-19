@@ -1,15 +1,11 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.20)
 
-# Enforce modern CMake behavior for find_package and policy resolution
-if(POLICY CMP0074)
-    cmake_policy(SET CMP0074 NEW)
-endif()
-if(POLICY CMP0091)
-    cmake_policy(SET CMP0091 NEW) # MSVC runtime selection
-endif()
 if(POLICY CMP0177)
     cmake_policy(SET CMP0177 NEW) # Normalize install() DESTINATION paths
 endif()
+
+# Before project(), which otherwise creates it empty
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE BOOL "Export compile_commands.json")
 
 project(amiberry
     VERSION 8.4.1
@@ -24,9 +20,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
-# IDE & Tooling support
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE BOOL "Export compile_commands.json" FORCE)
-set(CMAKE_POSITION_INDEPENDENT_CODE ON CACHE BOOL "Enable PIC for all targets" FORCE)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON CACHE BOOL "Enable PIC for all targets")
 
 # Prevent in-tree builds
 if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_CURRENT_BINARY_DIR)
@@ -68,7 +62,7 @@ option(USE_JIT           "Enable 68K JIT recompiler (x86_64 and AArch64)" ON)
 option(WITH_LTO          "Enable Link Time Optimization" OFF)
 option(WITH_PGO_GENERATE "Generate profile data for Profile-Guided Optimization" OFF)
 option(WITH_PGO_USE      "Use profile data for Profile-Guided Optimization" OFF)
-option(WITH_OPTIMIZE     "Enable GCC native CPU optimizations" OFF)
+option(WITH_OPTIMIZE     "Enable native CPU optimizations" OFF)
 option(BUNDLE_SDL        "Bundle SDL3 shared libraries into the package (for distros without SDL3)" OFF)
 set(PGO_PROFILE_DIR "" CACHE PATH "Directory containing Profile-Guided Optimization data")
 set(QEMU_UAE_PLUGIN "" CACHE FILEPATH "Path to a prebuilt qemu-uae plugin artifact to bundle")
@@ -197,9 +191,6 @@ file(WRITE "${CMAKE_BINARY_DIR}/amiberry-product-version.txt" "${AMIBERRY_PRODUC
 if(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
     list(APPEND AMIBERRY_PLATFORM_LINK_DIRS /usr/local/lib)
     find_library(LIBUSB_LIBRARY NAMES usb PATHS /usr/lib REQUIRED)
-    if(NOT LIBUSB_LIBRARY)
-        message(FATAL_ERROR "libusb not found in /usr/lib")
-    endif()
 endif()
 
 # Install system and packaging

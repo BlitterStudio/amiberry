@@ -678,7 +678,16 @@ if(NOT ANDROID AND NOT WIN32
     # Linux/macOS x86-64 use RIP-relative + anchor-based allocation,
     # which is PIE-compatible.
     target_compile_options(${PROJECT_NAME} PRIVATE -fno-pie)
-    target_link_options(${PROJECT_NAME} PRIVATE -no-pie)
+    # Only toolchains that link PIE by default use -no-pie; clang before 24
+    # doesn't on FreeBSD and warns that it is unused.
+    include(CheckCXXSourceCompiles)
+    set(CMAKE_REQUIRED_LINK_OPTIONS -no-pie)
+    check_cxx_source_compiles("int main() { return 0; }" LINKER_USES_NO_PIE
+        FAIL_REGEX "unused.*-no-pie")
+    unset(CMAKE_REQUIRED_LINK_OPTIONS)
+    if(LINKER_USES_NO_PIE)
+        target_link_options(${PROJECT_NAME} PRIVATE -no-pie)
+    endif()
 elseif(NOT IOS
         AND CMAKE_SYSTEM_NAME STREQUAL "Darwin"
         AND USE_JIT
