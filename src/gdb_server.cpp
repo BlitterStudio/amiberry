@@ -80,7 +80,7 @@ void listen_local(int port)
 	address.sin_family = AF_INET;
 	address.sin_port = htons(static_cast<unsigned short>(port));
 	address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-	if (!nonblocking(listener) || bind(listener, reinterpret_cast<sockaddr*>(&address), sizeof(address)) || listen(listener, 1)) {
+	if (!nonblocking(listener) || ::bind(listener, reinterpret_cast<sockaddr*>(&address), sizeof(address)) || listen(listener, 1)) {
 		close_socket(listener);
 		listener = invalid_socket;
 		write_log(_T("WinUAE GDB: cannot listen on 127.0.0.1:%d\n"), port);
