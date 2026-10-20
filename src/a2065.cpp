@@ -514,7 +514,7 @@ static void gotfunc2(void *devv, const uae_u8 *databuf, int len)
 		size = 65536 - rmd2;
 		int swap = data_byteswap();
 		for (i = 0; i < size && insize < len; i++, insize++) {
-			put_ram_byte(addr + (i ^ swap), data[insize]);
+			put_ram_byte((addr + i) ^ swap, data[insize]);
 		}
 		if (insize >= len) {
 			rmd1 |= RX_ENP;
@@ -738,7 +738,7 @@ static void do_transmit (void)
 				size = MAX_PACKET_SIZE;
 			int swap = data_byteswap();
 			for (i = 0; i < size; i++) {
-				transmitbuffer[outsize++] = get_ram_byte(addr + (i ^ swap));
+				transmitbuffer[outsize++] = get_ram_byte((addr + i) ^ swap);
 			}
 			if (size < 60 && (csr[4] & 0x0800)) { // APAD_XMT
 				while (size < 60) {
@@ -995,7 +995,9 @@ static void chip_wput (uaecptr addr, uae_u16 v)
 				csr[0] |= CSR0_IDON;
 				csr[0] &= ~(CSR0_RXON | CSR0_TXON | CSR0_STOP);
 				am_initialized = 1;
-				csr[3] = 0;
+				// Am7990: only STOP clears CSR3, so BSWP survives INIT
+				if (AM79C960)
+					csr[3] = 0;
 				if (log_a2065)
 					write_log(_T("7990: INIT. %04X -> %04X -> %04X\n"), oreg, v, csr[0]);
 			}
@@ -1029,11 +1031,8 @@ static void chip_wput (uaecptr addr, uae_u16 v)
 					csr[3] &= 0x4000 | 0x1000 | 0x800 | 0x400 | 0x200 | 0x100 | 0x10 | 8;
 				} else {
 					csr[3] &= 7;
+					dbyteswap = (csr[3] & CSR3_BSWP) ? 1 : 0;
 				}
-			}
-			dbyteswap = 0;
-			if (!AM79C960) {
-				dbyteswap = (csr[3] & CSR3_BSWP) ? 1 : 0;
 			}
 			break;
 
