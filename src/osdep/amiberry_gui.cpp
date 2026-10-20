@@ -4,6 +4,7 @@
 #include <cstring>
 #include <cstdlib>
 #include <cstdarg>
+#include <cmath>
 #include <fstream>
 #include <algorithm>
 #include <vector>
@@ -1928,6 +1929,40 @@ void save_mapping_to_file(const std::string& mapping)
 	}
 }
 
+struct gui_status_colors
+{
+	amiberry_gui_color warning;
+	amiberry_gui_color error;
+	amiberry_gui_color success;
+};
+
+// Status text needs dark shades on light window backgrounds and bright ones
+// on dark backgrounds to stay legible (#2485).
+static gui_status_colors default_status_colors(const bool dark_background)
+{
+	if (dark_background)
+		return { { 255, 153, 51 }, { 255, 102, 102 }, { 77, 255, 77 } };
+	return { { 120, 50, 0 }, { 140, 0, 0 }, { 0, 80, 0 } };
+}
+
+static void set_status_colors(const gui_status_colors& status)
+{
+	gui_theme.warning_color = status.warning;
+	gui_theme.error_color = status.error;
+	gui_theme.success_color = status.success;
+}
+
+// True when white text contrasts better than black on this color (WCAG
+// relative luminance below the 0.179 crossover point).
+static bool is_dark_color(const amiberry_gui_color& c)
+{
+	auto linear = [](const uint8_t v) {
+		const double s = v / 255.0;
+		return s <= 0.04045 ? s / 12.92 : std::pow((s + 0.055) / 1.055, 2.4);
+	};
+	return 0.2126 * linear(c.r) + 0.7152 * linear(c.g) + 0.0722 * linear(c.b) < 0.179;
+}
+
 void load_default_theme()
 {
 	gui_theme.font_name = "AmigaTopaz.ttf";
@@ -1950,6 +1985,8 @@ void load_default_theme()
 	gui_theme.table_header_color = { 160, 160, 160 };
 	// Modal
 	gui_theme.modal_dim_color = { 0, 0, 0 };
+	// Status text
+	set_status_colors(default_status_colors(false));
 	// Font rendering
 	// Legacy
 	gui_theme.selector_inactive = { 170, 170, 170 };
@@ -1979,6 +2016,8 @@ void load_default_dark_theme()
 	gui_theme.table_header_color = { 40, 40, 45 };
 	// Modal
 	gui_theme.modal_dim_color = { 0, 0, 0 };
+	// Status text
+	set_status_colors(default_status_colors(true));
 	// Font rendering
 	// Legacy
 	gui_theme.selector_inactive = { 32, 32, 37 };
@@ -2025,6 +2064,9 @@ bool save_theme(const std::string& theme_filename)
 		write_color("button_hover_color", gui_theme.button_hover_color);
 		write_color("table_header_color", gui_theme.table_header_color);
 		write_color("modal_dim_color", gui_theme.modal_dim_color);
+		write_color("warning_color", gui_theme.warning_color);
+		write_color("error_color", gui_theme.error_color);
+		write_color("success_color", gui_theme.success_color);
 		// Legacy fields for backward compatibility
 		write_color("selector_inactive", gui_theme.selector_inactive);
 		write_color("background_color", gui_theme.background_color);
@@ -2054,9 +2096,12 @@ void load_theme(const std::string& theme_filename)
 	{
 		auto read_color = [](const std::string& value, amiberry_gui_color& c) {
 			const std::vector<int> rgb = parse_color_string(value);
-			if (rgb.size() >= 3)
-				c = { (uint8_t)rgb[0], (uint8_t)rgb[1], (uint8_t)rgb[2] };
+			if (rgb.size() < 3)
+				return false;
+			c = { (uint8_t)rgb[0], (uint8_t)rgb[1], (uint8_t)rgb[2] };
+			return true;
 		};
+		bool has_warning = false, has_error = false, has_success = false;
 
 		std::string line;
 		while (std::getline(file_input, line))
@@ -2079,11 +2124,21 @@ void load_theme(const std::string& theme_filename)
 			else if (key == "button_hover_color") read_color(value, gui_theme.button_hover_color);
 			else if (key == "table_header_color") read_color(value, gui_theme.table_header_color);
 			else if (key == "modal_dim_color") read_color(value, gui_theme.modal_dim_color);
+			else if (key == "warning_color") has_warning = read_color(value, gui_theme.warning_color);
+			else if (key == "error_color") has_error = read_color(value, gui_theme.error_color);
+			else if (key == "success_color") has_success = read_color(value, gui_theme.success_color);
 			// Legacy fields
 			else if (key == "selector_inactive") read_color(value, gui_theme.selector_inactive);
 			else if (key == "background_color") read_color(value, gui_theme.background_color);
 			else if (key == "foreground_color") read_color(value, gui_theme.foreground_color);
 		}
 		file_input.close();
+
+		// Theme files saved before the status colors existed: pick the set
+		// that stays legible on this theme's window background.
+		const gui_status_colors status = default_status_colors(is_dark_color(gui_theme.base_color));
+		if (!has_warning) gui_theme.warning_color = status.warning;
+		if (!has_error) gui_theme.error_color = status.error;
+		if (!has_success) gui_theme.success_color = status.success;
 	}
 }

@@ -535,6 +535,12 @@ void render_panel_themes()
 		ImGui::SeparatorText("Overlay");
 		ColorRow("Modal dim", gui_theme.modal_dim_color);
 
+		ImGui::TableNextColumn();
+		ImGui::SeparatorText("Status text");
+		ColorRow("Warning", gui_theme.warning_color);
+		ColorRow("Error", gui_theme.error_color);
+		ColorRow("Success", gui_theme.success_color);
+
 		ImGui::EndTable();
 	}
 
@@ -659,12 +665,12 @@ void render_panel_themes()
 		if (name_protected)
 		{
 			ImGui::SameLine();
-			ImGui::TextColored(ImVec4(1.0f, 0.3f, 0.3f, 1.0f), "Cannot overwrite built-in presets");
+			ImGui::TextColored(GetErrorTextColor(), "Cannot overwrite built-in presets");
 		}
 		if (name_has_path_sep)
 		{
 			ImGui::SameLine();
-			ImGui::TextColored(ImVec4(1.0f, 0.3f, 0.3f, 1.0f), "Name must not contain path separators");
+			ImGui::TextColored(GetErrorTextColor(), "Name must not contain path separators");
 		}
 
 		ImGui::SameLine();

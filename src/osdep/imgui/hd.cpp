@@ -981,7 +981,7 @@ static void ShowCreateHardfileModal()
         ImGui::Separator();
 
         if (!create_hdf_error.empty()) {
-            ImGui::TextColored(ImVec4(1.0f, 0.4f, 0.4f, 1.0f), "%s", create_hdf_error.c_str());
+            ImGui::TextColored(GetErrorTextColor(), "%s", create_hdf_error.c_str());
             ImGui::Separator();
         }
 
@@ -1119,13 +1119,13 @@ static void ShowAddHardDriveModal()
             access_denied = (drive_flags[selected_drive_idx] & HDF_DRIVEFLAG_ACCESS_DENIED) != 0;
         }
         if (is_mounted) {
-            ImGui::TextColored(ImVec4(1.0f, 0.6f, 0.2f, 1.0f), "Warning: selected device is mounted by the host.");
+            ImGui::TextColored(GetWarningTextColor(), "Warning: selected device is mounted by the host.");
 #ifdef AMIBERRY_MACOS
-            ImGui::TextColored(ImVec4(1.0f, 0.6f, 0.2f, 1.0f), "macOS: unmount the drive before attaching (diskutil unmountDisk).");
+            ImGui::TextColored(GetWarningTextColor(), "macOS: unmount the drive before attaching (diskutil unmountDisk).");
 #endif
         }
         if (access_denied) {
-            ImGui::TextColored(ImVec4(1.0f, 0.4f, 0.4f, 1.0f), "Warning: Amiberry cannot currently open this device.");
+            ImGui::TextColored(GetErrorTextColor(), "Warning: Amiberry cannot currently open this device.");
 #ifdef AMIBERRY_MACOS
             ImGui::TextWrapped("macOS denied raw /dev access for this disk. Amiberry will automatically prompt for authorization to attach eligible unmounted disks.");
 #endif
@@ -1206,7 +1206,7 @@ static void ShowAddHardDriveModal()
         ImGui::TextWrapped("%s", hdf_info_text2.c_str());
         if (!harddrive_modal_error.empty()) {
             ImGui::Separator();
-            ImGui::TextColored(ImVec4(1.0f, 0.4f, 0.4f, 1.0f), "%s", harddrive_modal_error.c_str());
+            ImGui::TextColored(GetErrorTextColor(), "%s", harddrive_modal_error.c_str());
         }
         ImGui::Separator();
 

@@ -566,6 +566,7 @@ static const char* help_text_themes =
 	"- Borders: Border and separator line colors\n"
 	"- Tables: Table header background\n"
 	"- Overlay: Modal dim color (darkens the screen behind popups)\n"
+	"- Status text: Warning, error and success message colors\n"
 	"Color changes are previewed immediately in the GUI.\n"
 	"\n"
 	"Actions\n"
