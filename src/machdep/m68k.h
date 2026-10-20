@@ -446,7 +446,7 @@ static inline int cctrue(int cc)
 
 #endif /* SAHF_SETO_PROFITABLE */
 
-#elif defined(CPU_riscv64) || defined(CPU_loongarch64) || defined(CPU_arm) || defined(CPU_AARCH64)
+#elif defined(CPU_riscv64) || defined(CPU_loongarch64) || defined(CPU_arm) || defined(CPU_AARCH64) || defined(CPU_powerpc)
 
 #ifdef __cplusplus
 # include <cstdlib>
@@ -461,7 +461,7 @@ static inline int cctrue(int cc)
  * name on every host, matching WinUAE's ARM64 definition.
  */
 struct flag_struct {
-#if defined(CPU_riscv64) || defined(CPU_loongarch64) || defined(CPU_AARCH64)
+#if defined(CPU_riscv64) || defined(CPU_loongarch64) || defined(CPU_AARCH64) || (defined(CPU_powerpc) && defined(CPU_64_BIT))
 	union {
 		uae_u64 cznv;
 		uae_u64 nzcv;
