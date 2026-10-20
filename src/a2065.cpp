@@ -290,14 +290,28 @@ static int mcfilter (const uae_u8 *data)
 	return 1; // just allow everything
 }
 
+// A2065: the chip sees the board RAM at $8000-$FFFF (Linux a2065.c,
+// NetBSD if_le.c, Commodore a2065.device all hand it $8000-based
+// addresses). On a real board a chip address with A15 clear never
+// reaches the RAM: the chip completes the cycle (no MERR) but owns no
+// descriptor and nothing is sent or received. Model that as reads of 0
+// and dropped writes.
+static bool chip_ram_ok(uae_u32 offset)
+{
+	return AM79C960 || (offset & RAM_OFFSET);
+}
 static uae_u16 get_ram_word_volatile(uae_u32 offset)
 {
 	volatile const uae_u8 *ram = boardram;
+	if (!chip_ram_ok(offset))
+		return 0;
 	return ((uae_u16)ram[offset & RAM_MASK] << 8) |
 		ram[(offset + 1) & RAM_MASK];
 }
 static uae_u8 get_ram_byte(uae_u32 offset)
 {
+	if (!chip_ram_ok(offset))
+		return 0;
 	return boardram[offset & RAM_MASK];
 }
 static uae_u16 get_ram_word(uae_u32 offset)
@@ -306,12 +320,23 @@ static uae_u16 get_ram_word(uae_u32 offset)
 }
 static void put_ram_byte(uae_u32 offset, uae_u8 v)
 {
+	if (!chip_ram_ok(offset))
+		return;
 	boardram[offset & RAM_MASK] = v;
 }
 static void put_ram_word(uae_u32 offset, uae_u16 v)
 {
 	put_ram_byte(offset, v >> 8);
 	put_ram_byte(offset + 1, (uae_u8)v);
+}
+// Frame data byte order. Am7990 BSWP=1: even address on D15-D8 (68000
+// order). BSWP=0: even address on D7-D0, so each word of frame data is
+// swapped on the wire. Descriptors and init block are never swapped.
+static int data_byteswap(void)
+{
+	if (AM79C960)
+		return abyteswap;
+	return abyteswap ^ (dbyteswap ? 0 : 1);
 }
 
 static void log_packet(const uae_u8 *p, int size)
@@ -460,7 +485,6 @@ static void gotfunc2(void *devv, const uae_u8 *databuf, int len)
 		rmd2 = get_ram_word(off + 4);
 		rmd3 = get_ram_word(off + 6);
 		addr = rmd0 | ((rmd1 & 0xff) << 16);
-		addr &= RAM_MASK;
 
 		if (!(rmd1 & RX_OWN)) {
 			write_log (_T("7990: RECEIVE BUFFER ERROR\n"));
@@ -488,9 +512,9 @@ static void gotfunc2(void *devv, const uae_u8 *databuf, int len)
 		}
 
 		size = 65536 - rmd2;
-		uae_u8 *pr = boardram + addr;
+		int swap = data_byteswap();
 		for (i = 0; i < size && insize < len; i++, insize++) {
-			pr[(i ^ abyteswap) & RAM_MASK] = data[insize];
+			put_ram_byte(addr + (i ^ swap), data[insize]);
 		}
 		if (insize >= len) {
 			rmd1 |= RX_ENP;
@@ -699,7 +723,6 @@ static void do_transmit (void)
 		tmd2 = get_ram_word(off + 4);
 		tmd3 = get_ram_word(off + 6);
 		addr = tmd0 | ((tmd1 & 0xff) << 16);
-		addr &= RAM_MASK;
 
 		if (!(tmd1 & TX_OWN)) {
 			tmd3 |= TX_BUFF | TX_UFLO;
@@ -713,9 +736,9 @@ static void do_transmit (void)
 			size = 65536 - tmd2;
 			if (size > MAX_PACKET_SIZE)
 				size = MAX_PACKET_SIZE;
-			uae_u8 *pm = boardram + addr;
+			int swap = data_byteswap();
 			for (i = 0; i < size; i++) {
-				transmitbuffer[outsize++] = pm[(i ^ abyteswap) & RAM_MASK];
+				transmitbuffer[outsize++] = get_ram_byte(addr + (i ^ swap));
 			}
 			if (size < 60 && (csr[4] & 0x0800)) { // APAD_XMT
 				while (size < 60) {
@@ -817,8 +840,10 @@ static void a2065_hsync_handler(void)
 
 static void chip_init_mask(void)
 {
-	am_rdr_rdra &= RAM_MASK;
-	am_tdr_tdra &= RAM_MASK;
+	if (AM79C960) {
+		am_rdr_rdra &= RAM_MASK;
+		am_tdr_tdra &= RAM_MASK;
+	}
 	tdr_offset = rdr_offset = 0;
 }
 
@@ -850,7 +875,7 @@ static void chip_init2(void)
 static void chip_init (void)
 {
 	uae_u32 iaddr = ((csr[2] & 0xff) << 16) | csr[1];
-	int off = iaddr & RAM_MASK;
+	uae_u32 off = iaddr;
 
 	write_log (_T("7990: Initialization block2:\n"));
 	for (int i = 0; i < 24; i++)
@@ -867,12 +892,12 @@ static void chip_init (void)
 	am_rdr_rdra = am_rdr & 0x00fffff8;
 	am_tdr_tdra = am_tdr & 0x00fffff8;
 
-	fakemac[0] = get_ram_byte(3);
-	fakemac[1] = get_ram_byte(2);
-	fakemac[2] = get_ram_byte(5);
-	fakemac[3] = get_ram_byte(4);
-	fakemac[4] = get_ram_byte(7);
-	fakemac[5] = get_ram_byte(6);
+	fakemac[0] = get_ram_byte(off + 3);
+	fakemac[1] = get_ram_byte(off + 2);
+	fakemac[2] = get_ram_byte(off + 5);
+	fakemac[3] = get_ram_byte(off + 4);
+	fakemac[4] = get_ram_byte(off + 7);
+	fakemac[5] = get_ram_byte(off + 6);
 
 	chip_init2();
 }
