@@ -12408,10 +12408,14 @@ static void seed_default_rom_files_if_needed()
 static void refresh_builtin_theme_presets()
 {
 	// Always regenerate built-in theme presets so they include any new fields.
+	// The presets are built in gui_theme, so put the active theme back after:
+	// this also runs from the Paths panel while the GUI is showing it.
+	const amiberry_gui_theme active_theme = gui_theme;
 	load_default_theme();
 	save_theme("Default.theme");
 	load_default_dark_theme();
 	save_theme("Dark.theme");
+	gui_theme = active_theme;
 }
 
 void create_missing_amiberry_folders()
