@@ -24,7 +24,7 @@ library    | lastest version | category | LoC | description
 --------------------- | ---- | -------- | --- | --------------------------------
 **[stb_vorbis.c](stb_vorbis.c)** | 1.22 | audio | 5584 | decode ogg vorbis files from file/memory to float/16-bit signed output
 **[stb_hexwave.h](stb_hexwave.h)** | 0.5 | audio | 680 | audio waveform synthesizer
-**[stb_image.h](stb_image.h)** | 2.29 | graphics | 7985 | image loading/decoding from file/memory: JPG, PNG, TGA, BMP, PSD, GIF, HDR, PIC
+**[stb_image.h](stb_image.h)** | 2.30 | graphics | 7988 | image loading/decoding from file/memory: JPG, PNG, TGA, BMP, PSD, GIF, HDR, PIC
 **[stb_truetype.h](stb_truetype.h)** | 1.26 | graphics | 5077 | parse, decode, and rasterize characters from truetype fonts
 **[stb_image_write.h](stb_image_write.h)** | 1.16 | graphics | 1724 | image writing to disk: PNG, TGA, BMP
 **[stb_image_resize2.h](stb_image_resize2.h)** | 2.04 | graphics | 10325 | resize images larger/smaller with good quality
