@@ -10932,25 +10932,77 @@ static bool rewrite_legacy_configuration_path_text(std::string& text,
 	return changed;
 }
 
+static constexpr const char* configuration_migration_backup_tag = ".amiberry-case-migration";
+
 static std::filesystem::path get_unique_configuration_migration_backup_path(
 	const std::filesystem::path& config_file)
 {
 	auto candidate = config_file;
-	candidate += ".amiberry-case-migration.bak";
+	candidate += std::string(configuration_migration_backup_tag) + ".bak";
 	if (!path_exists_quietly(candidate.string()))
 		return candidate;
 
 	for (int suffix = 1; suffix < 1000; ++suffix)
 	{
 		candidate = config_file;
-		candidate += ".amiberry-case-migration-" + std::to_string(suffix) + ".bak";
+		candidate += std::string(configuration_migration_backup_tag) + "-" + std::to_string(suffix) + ".bak";
 		if (!path_exists_quietly(candidate.string()))
 			return candidate;
 	}
 
 	candidate = config_file;
-	candidate += ".amiberry-case-migration-last.bak";
+	candidate += std::string(configuration_migration_backup_tag) + "-last.bak";
 	return candidate;
+}
+
+// Matches the names get_unique_configuration_migration_backup_path() produces for config_name.
+static bool is_configuration_migration_backup_of(const std::string& file_name, const std::string& config_name)
+{
+	const auto prefix = config_name + configuration_migration_backup_tag;
+	const std::string extension = ".bak";
+	if (file_name.size() < prefix.size() + extension.size()
+		|| file_name.compare(0, prefix.size(), prefix) != 0
+		|| file_name.compare(file_name.size() - extension.size(), extension.size(), extension) != 0)
+		return false;
+
+	const auto suffix = file_name.substr(prefix.size(), file_name.size() - prefix.size() - extension.size());
+	if (suffix.empty() || suffix == "-last")
+		return true;
+	// Numbered backups run from 1 to 999 without leading zeros.
+	if (suffix.size() < 2 || suffix.size() > 4 || suffix[0] != '-' || suffix[1] == '0')
+		return false;
+	return std::all_of(suffix.begin() + 1, suffix.end(), [](unsigned char c) { return std::isdigit(c) != 0; });
+}
+
+bool remove_configuration_file(const std::string& config_file)
+{
+	const std::filesystem::path config_path_entry(config_file);
+	std::error_code ec;
+	if (!std::filesystem::remove(config_path_entry, ec) || ec)
+	{
+		write_log("Failed to delete configuration %s: %s\n", config_file.c_str(),
+			ec ? ec.message().c_str() : "file not found");
+		return false;
+	}
+
+	// The path migration backups belong to this configuration; nothing else reads them.
+	const auto config_name = config_path_entry.filename().string();
+	std::filesystem::directory_iterator iterator(config_path_entry.parent_path(), ec);
+	if (ec)
+		return true;
+	for (const std::filesystem::directory_iterator end; iterator != end; iterator.increment(ec))
+	{
+		if (ec)
+			break;
+		std::error_code entry_ec;
+		if (!iterator->is_regular_file(entry_ec) || entry_ec
+			|| !is_configuration_migration_backup_of(iterator->path().filename().string(), config_name))
+			continue;
+		if (!std::filesystem::remove(iterator->path(), entry_ec) || entry_ec)
+			write_log("Failed to delete configuration backup %s: %s\n", iterator->path().string().c_str(),
+				entry_ec ? entry_ec.message().c_str() : "file not found");
+	}
+	return true;
 }
 
 static bool backup_configuration_file_for_path_migration(const std::filesystem::path& config_file)
@@ -11345,6 +11397,28 @@ static int run_path_migration_selftest_cli()
 		&& !std::filesystem::exists(case_variant_source);
 	settings_dir = original_settings_dir;
 
+	// Deleting a configuration removes its own migration backups and no other file.
+	const bool backup_created = std::filesystem::exists(backup_file);
+	const auto numbered_backup = default_config.string() + ".amiberry-case-migration-1.bak";
+	const auto last_backup = default_config.string() + ".amiberry-case-migration-last.bak";
+	const auto other_config_backup = (std::filesystem::path(paths.config_path)
+		/ "default-2.uae.amiberry-case-migration.bak").string();
+	const auto padded_lookalike = default_config.string() + ".amiberry-case-migration-01.bak";
+	const bool delete_fixture_written = write_selftest_text_file(numbered_backup, "backup\n")
+		&& write_selftest_text_file(last_backup, "backup\n")
+		&& write_selftest_text_file(other_config_backup, "backup\n")
+		&& write_selftest_text_file(padded_lookalike, "backup\n");
+	const bool delete_test_ok = backup_created
+		&& delete_fixture_written
+		&& remove_configuration_file(default_config.string())
+		&& !std::filesystem::exists(default_config)
+		&& !std::filesystem::exists(backup_file)
+		&& !std::filesystem::exists(numbered_backup)
+		&& !std::filesystem::exists(last_backup)
+		&& std::filesystem::exists(other_config_backup)
+		&& std::filesystem::exists(padded_lookalike)
+		&& std::filesystem::exists(protected_config);
+
 	const bool ok = read_ok
 		&& !path_rewrite_failed
 		&& migrated == 1
@@ -11355,23 +11429,23 @@ static int run_path_migration_selftest_cli()
 		&& migrated_default.find(legacy_rom + "/kick.rom") == std::string::npos
 		&& migrated_default.find(legacy_harddrives + "/system.hdf") == std::string::npos
 		&& migrated_protected == protected_text
-		&& std::filesystem::exists(backup_file)
 		&& case_only_test_ok
 		&& verification_rollback_test_ok
 		&& settings_test_ok
 		&& rename_test_ok
 		&& split_test_ok
-		&& case_variant_test_ok;
+		&& case_variant_test_ok
+		&& delete_test_ok;
 
 	if (!ok)
 	{
 		fprintf(stderr, "path migration selftest: failed\n");
-		fprintf(stderr, "migrated=%d read_ok=%d path_failed=%d case_only_ok=%d rollback_ok=%d settings_ok=%d rename_ok=%d split_ok=%d case_ok=%d root=%s\n",
+		fprintf(stderr, "migrated=%d read_ok=%d path_failed=%d case_only_ok=%d rollback_ok=%d settings_ok=%d rename_ok=%d split_ok=%d case_ok=%d delete_ok=%d root=%s\n",
 			migrated, read_ok ? 1 : 0, path_rewrite_failed ? 1 : 0,
 			case_only_test_ok ? 1 : 0,
 			verification_rollback_test_ok ? 1 : 0,
 			settings_test_ok ? 1 : 0, rename_test_ok ? 1 : 0, split_test_ok ? 1 : 0,
-			case_variant_test_ok ? 1 : 0,
+			case_variant_test_ok ? 1 : 0, delete_test_ok ? 1 : 0,
 			root.string().c_str());
 		return 1;
 	}

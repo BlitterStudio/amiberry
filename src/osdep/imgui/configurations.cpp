@@ -466,7 +466,7 @@ void render_panel_configurations()
 
 		if (AmigaButton(ICON_FA_CHECK " Yes", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
 		{
-			remove(ConfigFilesList[selected]->FullPath);
+			remove_configuration_file(ConfigFilesList[selected]->FullPath);
 			ReadConfigFileList();
 			grouped_view = rebuild_config_groups(groups);
 			selected = -1;
