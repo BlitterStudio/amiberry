@@ -389,7 +389,7 @@ void render_plugin_paths_settings(const char* id)
 		ImGui::EndPopup();
 	}
 	if (!install_status.empty())
-		ImGui::TextColored(install_failed ? ImVec4(1.0f, 0.3f, 0.3f, 1.0f) : ImVec4(0.3f, 1.0f, 0.3f, 1.0f), "%s", install_status.c_str());
+		ImGui::TextColored(install_failed ? GetErrorTextColor() : GetSuccessTextColor(), "%s", install_status.c_str());
 	ImGui::PopID();
 }
 
@@ -482,7 +482,7 @@ void render_panel_paths()
 		const bool exists = path_exists_cached(id, path, is_file);
 
 		if (!exists) {
-			ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 0, 0, 255));
+			ImGui::PushStyleColor(ImGuiCol_Text, GetErrorTextColor());
 		}
 
 		// Use a local buffer for InputText to avoid constness/temporary issues
@@ -534,7 +534,7 @@ void render_panel_paths()
 
 		const bool exists = path_exists_cached(id, path, false);
 		if (!exists)
-			ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 0, 0, 255));
+			ImGui::PushStyleColor(ImGuiCol_Text, GetErrorTextColor());
 
 		char buffer[MAX_DPATH];
 		strncpy(buffer, path.c_str(), MAX_DPATH);
@@ -671,7 +671,7 @@ void render_panel_paths()
 	ImGui::SetNextItemWidth(input_width);
 	const bool base_content_exists = path_exists_cached("BASE_CONTENT", s_base_content_path_input, false);
 	if (!base_content_exists)
-		ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 0, 0, 255));
+		ImGui::PushStyleColor(ImGuiCol_Text, GetErrorTextColor());
 
 	char base_content_buffer[MAX_DPATH];
 	strncpy(base_content_buffer, s_base_content_path_input.c_str(), MAX_DPATH);
@@ -877,7 +877,7 @@ void render_panel_paths()
 			{
 				std::lock_guard<std::mutex> lock(s_whdboot_mutex);
 				if (s_whdboot_result_is_error)
-					ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 100, 100, 255));
+					ImGui::PushStyleColor(ImGuiCol_Text, GetErrorTextColor());
 				ImGui::TextWrapped("%s", s_whdboot_result_msg.c_str());
 				if (s_whdboot_result_is_error)
 					ImGui::PopStyleColor();
@@ -916,7 +916,7 @@ void render_panel_paths()
 			{
 				std::lock_guard<std::mutex> lock(s_controllers_mutex);
 				if (s_controllers_result_is_error)
-					ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 100, 100, 255));
+					ImGui::PushStyleColor(ImGuiCol_Text, GetErrorTextColor());
 				ImGui::TextWrapped("%s", s_controllers_result_msg.c_str());
 				if (s_controllers_result_is_error)
 					ImGui::PopStyleColor();

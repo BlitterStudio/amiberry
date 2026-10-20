@@ -514,6 +514,11 @@ static bool parse_rgb_csv(const std::string& s, int& r, int& g, int& b) {
 	return true;
 }
 
+static ImVec4 gui_color_to_vec4(const amiberry_gui_color& c) { return rgb_to_vec4(c.r, c.g, c.b); }
+ImVec4 GetWarningTextColor() { return gui_color_to_vec4(gui_theme.warning_color); }
+ImVec4 GetErrorTextColor() { return gui_color_to_vec4(gui_theme.error_color); }
+ImVec4 GetSuccessTextColor() { return gui_color_to_vec4(gui_theme.success_color); }
+
 void apply_imgui_theme()
 {
 	auto c = [](const amiberry_gui_color& col) { return rgb_to_vec4(col.r, col.g, col.b); };
@@ -1043,7 +1048,7 @@ void RenderFloppyDriveResetNotice()
 	if (!emulating)
 		return;
 
-	ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.6f, 0.2f, 1.0f));
+	ImGui::PushStyleColor(ImGuiCol_Text, GetWarningTextColor());
 	ImGui::TextWrapped(ICON_FA_CIRCLE_INFO " Changes to connected floppy drives require resetting the emulated Amiga before AmigaOS can detect them.");
 	ImGui::PopStyleColor();
 	ImGui::Spacing();
@@ -2872,7 +2877,7 @@ void run_gui()
 			ImGui::Spacing();
 			if (!legacy_cleanup_error_message.empty())
 			{
-				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.70f, 0.10f, 0.10f, 1.0f));
+				ImGui::PushStyleColor(ImGuiCol_Text, GetErrorTextColor());
 				ImGui::TextWrapped("%s", legacy_cleanup_error_message.c_str());
 				ImGui::PopStyleColor();
 				ImGui::Spacing();

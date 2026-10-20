@@ -1385,6 +1385,10 @@ struct amiberry_gui_theme
 	amiberry_gui_color table_header_color;
 	// Modal overlay
 	amiberry_gui_color modal_dim_color;
+	// Status text (warnings, errors, success messages)
+	amiberry_gui_color warning_color;
+	amiberry_gui_color error_color;
+	amiberry_gui_color success_color;
 
 	// Legacy fields (kept for backward compatibility with old .theme files)
 	amiberry_gui_color selector_inactive;

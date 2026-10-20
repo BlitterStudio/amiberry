@@ -83,6 +83,10 @@ bool AmigaRadioButton(const char* label, int* v, int v_button);
 void ShowHelpMarker(const char* desc);
 void RenderFloppyDriveResetNotice();
 
+// Status text colors from the active GUI theme
+ImVec4 GetWarningTextColor();
+ImVec4 GetErrorTextColor();
+ImVec4 GetSuccessTextColor();
 
 void render_panel_play();
 bool play_has_content_selection();
