@@ -1952,15 +1952,64 @@ static void set_status_colors(const gui_status_colors& status)
 	gui_theme.success_color = status.success;
 }
 
-// True when white text contrasts better than black on this color (WCAG
-// relative luminance below the 0.179 crossover point).
-static bool is_dark_color(const amiberry_gui_color& c)
+static double relative_luminance(const amiberry_gui_color& c)
 {
 	auto linear = [](const uint8_t v) {
 		const double s = v / 255.0;
 		return s <= 0.04045 ? s / 12.92 : std::pow((s + 0.055) / 1.055, 2.4);
 	};
-	return 0.2126 * linear(c.r) + 0.7152 * linear(c.g) + 0.0722 * linear(c.b) < 0.179;
+	return 0.2126 * linear(c.r) + 0.7152 * linear(c.g) + 0.0722 * linear(c.b);
+}
+
+static double contrast_ratio(const amiberry_gui_color& a, const amiberry_gui_color& b)
+{
+	const double la = relative_luminance(a);
+	const double lb = relative_luminance(b);
+	return (std::max(la, lb) + 0.05) / (std::min(la, lb) + 0.05);
+}
+
+// Shift a status color toward black or white until it is legible against
+// both the window and input field backgrounds, taking whichever direction
+// needs the smaller change so as much of the hue as possible survives.
+// The goal is WCAG AA contrast (4.5:1). Mid-tone backgrounds cap what any
+// text can reach (even black or white manages only about 4.5:1 on mid grey),
+// and chasing that cap would wash all three colors out to the same white or
+// black, so the goal is also limited to 75% of the best black/white contrast.
+static amiberry_gui_color legible_status_color(const amiberry_gui_color& hue,
+	const amiberry_gui_color& base, const amiberry_gui_color& frame)
+{
+	constexpr int steps = 100;
+	auto worst_contrast = [&](const amiberry_gui_color& c) {
+		return std::min(contrast_ratio(c, base), contrast_ratio(c, frame));
+	};
+	auto mix = [&](const int level, const int step) {
+		auto channel = [&](const uint8_t v) {
+			return static_cast<uint8_t>(std::lround(v + (level - v) * static_cast<double>(step) / steps));
+		};
+		return amiberry_gui_color{ channel(hue.r), channel(hue.g), channel(hue.b) };
+	};
+
+	const double reachable = std::max(worst_contrast({ 0, 0, 0 }), worst_contrast({ 255, 255, 255 }));
+	const double target_contrast = std::min(4.5, 0.75 * reachable);
+
+	// Fully mixed (step == steps) is pure black or white, so at least one
+	// direction always meets the target.
+	int best_step = steps + 1;
+	amiberry_gui_color best = hue;
+	for (const int level : { 0, 255 })
+	{
+		for (int step = 0; step < best_step; step++)
+		{
+			const amiberry_gui_color candidate = mix(level, step);
+			if (worst_contrast(candidate) >= target_contrast)
+			{
+				best_step = step;
+				best = candidate;
+				break;
+			}
+		}
+	}
+	return best;
 }
 
 void load_default_theme()
@@ -2134,11 +2183,15 @@ void load_theme(const std::string& theme_filename)
 		}
 		file_input.close();
 
-		// Theme files saved before the status colors existed: pick the set
-		// that stays legible on this theme's window background.
-		const gui_status_colors status = default_status_colors(is_dark_color(gui_theme.base_color));
-		if (!has_warning) gui_theme.warning_color = status.warning;
-		if (!has_error) gui_theme.error_color = status.error;
-		if (!has_success) gui_theme.success_color = status.success;
+		// Theme files saved before the status colors existed: derive them
+		// from the saturated (dark theme) hues so they stay legible on this
+		// theme's own backgrounds.
+		const gui_status_colors hues = default_status_colors(true);
+		if (!has_warning)
+			gui_theme.warning_color = legible_status_color(hues.warning, gui_theme.base_color, gui_theme.frame_color);
+		if (!has_error)
+			gui_theme.error_color = legible_status_color(hues.error, gui_theme.base_color, gui_theme.frame_color);
+		if (!has_success)
+			gui_theme.success_color = legible_status_color(hues.success, gui_theme.base_color, gui_theme.frame_color);
 	}
 }
