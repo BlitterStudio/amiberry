@@ -7700,8 +7700,8 @@ static int cfgfile_load_2 (struct uae_prefs *p, const TCHAR *filename, bool real
 				cfgfile_path (line1b, line2b, _T("config_all_path"), p->config_all_path, sizeof p->config_all_path / sizeof(TCHAR));
 				cfgfile_string (line1b, line2b, _T("config_window_title"), p->config_window_title, sizeof p->config_window_title / sizeof (TCHAR));
 				// boxart checks
-				cfgfile_string(line1b, line2b, _T("floppy0"), p->floppyslots[0].df, sizeof p->floppyslots[0].df / sizeof(TCHAR));
-				cfgfile_resolve_path_load(p->floppyslots[0].df, MAX_DPATH, PATH_FLOPPY);
+				if (cfgfile_string(line1b, line2b, _T("floppy0"), p->floppyslots[0].df, sizeof p->floppyslots[0].df / sizeof(TCHAR)))
+					cfgfile_resolve_path_load(p->floppyslots[0].df, MAX_DPATH, PATH_FLOPPY);
 				TCHAR tmp[MAX_DPATH];
 				if (!p->mountitems && (cfgfile_string(line1b, line2b, _T("hardfile2"), tmp, sizeof tmp / sizeof(TCHAR)) || cfgfile_string(line1b, line2b, _T("filesystem2"), tmp, sizeof tmp / sizeof(TCHAR)))) {
 					const TCHAR *s = _tcschr(tmp, ':');
