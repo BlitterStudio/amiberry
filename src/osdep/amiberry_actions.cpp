@@ -66,14 +66,16 @@ bool execute(const request& r, void*, std::string* error)
 		return true;
 
 	case kind::insert_swapper_entry:
-		// Eject the entry from any drive that already holds it, then insert
-		// it into the requested drive. The list read is the pending one, so
-		// an entry just stored through amiberry_actions_set_swapper_entry
-		// (or the GUI's swapper panel) is insertable immediately; until this
-		// API, the IPC DISKSWAP read the effective list, which lags
-		// those edits until the next configuration change.
+		// Eject the entry from any drive that holds it, then insert it into
+		// the requested drive. Both the list and the drives read are the
+		// pending ones, so swapper actions posted back to back compose in
+		// posting order, and an entry just stored through
+		// amiberry_actions_set_swapper_entry (or the GUI's swapper panel)
+		// is insertable immediately; until this API, the IPC DISKSWAP read
+		// the effective list and drives, which lag those changes until the
+		// next configuration change.
 		for (int i = 0; i < AMIBERRY_ACTIONS_FLOPPY_DRIVES; i++) {
-			if (!_tcscmp(currprefs.floppyslots[i].df, changed_prefs.dfxlist[r.drive]))
+			if (!_tcscmp(changed_prefs.floppyslots[i].df, changed_prefs.dfxlist[r.drive]))
 				changed_prefs.floppyslots[i].df[0] = 0;
 		}
 		_tcscpy(changed_prefs.floppyslots[r.number].df, changed_prefs.dfxlist[r.drive]);
@@ -104,6 +106,13 @@ bool execute(const request& r, void*, std::string* error)
 		return true;
 
 	case kind::resume:
+		// The settings GUI (and other higher-priority holders) pause at a
+		// higher priority than this action may lift; emulation would stay
+		// paused, so the action fails instead of reporting success.
+		if (pause_emulation > 3) {
+			*error = "Emulation is paused by the settings GUI; close it to resume";
+			return false;
+		}
 		resumepaused(3);
 		activationtoggle(0, false);
 		return true;
