@@ -123,8 +123,10 @@ flags are rejected exactly as on the card.
 
 The console service (`0x8200`) encodes the live RTG framebuffer into RFB tile
 updates for remote-console clients. It converts BGRA8888 or RGB565
-framebuffers to big-endian RGB565 tiles, refuses RGB555, and compresses tiles
-with zlib when that makes them smaller.
+framebuffers to big-endian RGB565 tiles, encodes 8-bit screens (reported as
+INDEX8 surfaces) as CLUT8 tiles, refuses RGB555, and compresses tiles with
+zlib when that makes them smaller. Tiles are always raw; the card's optional
+XOR and copy-rectangle layers are not produced.
 
 ## Not emulated
 
@@ -153,5 +155,12 @@ with MP2, AC-3 and LPCM audio (up to 1280x720), WebM VP8/Vorbis and
 VP9/Opus, Matroska with MPEG-1, MPEG-2 and VP8 video, a 1920x1080 VP9 clip,
 FLAC and Ogg Vorbis through AHI and through on-card output, animated WebP,
 and preloaded playback; `zz9k-view` showed lossy, lossless and animated WebP.
-The WebP picture DataType and the sound DataType, the console encoder,
-Zorro II and warm reset still need guest checks.
+A later run on a disposable copy of the same system, with drivers master
+(`zz9k.library` 2.33, ZZPlay 0.6), passed the remaining checks: the WebP
+picture DataType and the FLAC and Ogg Vorbis sound DataType decode correctly,
+the console encoder's decoded tiles match the screen pixel for pixel, ZZPlay
+reports the presentation path and card profile from status pages 4 and 5, and
+a warm reset during media, audio and network sessions recovers all of them.
+On a 4 MB Zorro II board with a 1024x768 16-bit Workbench, `zz9k-archive`,
+`zz9k-view`, MHI, AHI and on-card audio work, and ZZPlay refuses video files
+because Zorro II video sessions are not advertised.
