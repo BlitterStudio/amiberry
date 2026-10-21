@@ -1853,9 +1853,12 @@ static void zz_sdk_update_framebuffer(zz9000_state *data)
 {
 	if (!data->sdk)
 		return;
+	// As the card's color_mode_surface_format(): an 8-bit CLUT screen is the
+	// INDEX8 surface (4), not UNKNOWN — CLUT8 console clients key on it.
 	const uae_u32 format = data->color_mode == ZZ_COLOR_BGRA32 ? 7 :
 		data->color_mode == ZZ_COLOR_RGB565 ? 1 :
-		data->color_mode == ZZ_COLOR_RGB555 ? 6 : 0;
+		data->color_mode == ZZ_COLOR_RGB555 ? 6 :
+		data->color_mode == ZZ_COLOR_CLUT ? 4 : 0;
 	const uae_u32 bpp = zz_bytes_per_pixel(data->color_mode);
 	// RTG offsets are relative to VRAM, which starts after the register aperture.
 	const uae_u32 framebuffer_offset = data->pan_offset <=
