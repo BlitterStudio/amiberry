@@ -104,6 +104,27 @@ class Connection:
                 buf += chunk
         return buf.decode(errors="replace").rstrip("\n")
 
+    def pipeline(self, lines):
+        """Sends several requests in one write, so the server handles them in
+        one pass, and returns their replies."""
+        data = "".join(line + "\n" for line in lines).encode()
+        buf = b""
+        if IS_WINDOWS:
+            self._pipe.write(data)
+            while buf.count(b"\n") < len(lines):
+                chunk = self._pipe.read(65536)
+                if not chunk:
+                    break
+                buf += chunk
+        else:
+            self._sock.sendall(data)
+            while buf.count(b"\n") < len(lines):
+                chunk = self._sock.recv(65536)
+                if not chunk:
+                    break
+                buf += chunk
+        return buf.decode(errors="replace").splitlines()
+
     def close(self):
         (self._pipe if IS_WINDOWS else self._sock).close()
 
@@ -240,6 +261,27 @@ def main():
               and f"Floppy0={adf}" not in control.request("GET_STATUS"))
         check("INSERTCD with empty path is accepted",
               control.request("INSERTCD\t\t") == "OK")
+
+        # Swapper inserts handled in one pass compose in order: the second
+        # sees the first one's pending insert and moves the disk instead of
+        # leaving it in both drives.
+        swap_cfg = os.path.join(work, "swapper.uae")
+        with open(swap_cfg, "w") as f:
+            f.write(f"diskimage0={adf}\n")
+        check("LOAD_CONFIG stores a swapper entry",
+              control.request(f"LOAD_CONFIG\t{swap_cfg}") == "OK")
+        replies = control.pipeline(["DISKSWAP\t0\t0", "DISKSWAP\t0\t1"])
+        status = control.request("GET_STATUS")
+        check("pipelined DISKSWAP replies OK", replies == ["OK", "OK"], str(replies))
+        check("second DISKSWAP moves the disk",
+              f"Floppy1={adf}" in status and f"Floppy0={adf}" not in status, status)
+
+        # An empty value is a real settings value; a trailing tab keeps it.
+        reply = control.request("SETTINGS_SET\tppc_model\t")
+        check("SETTINGS_SET keeps a trailing empty value",
+              not reply.startswith("ERROR\tUsage"), reply)
+        check("SETTINGS_RESET_SESSION after the empty value",
+              control.request("SETTINGS_RESET_SESSION") == "OK")
 
         check("QUIT answered", control.request("QUIT") == "OK")
         control.close()
