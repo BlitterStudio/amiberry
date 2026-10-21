@@ -488,6 +488,9 @@ static std::string HandleGetStatus(const std::vector<std::string>& args)
 	if (!currprefs.ipc_disable_logging) {
 		std::cout << "IPC: Received GET_STATUS" << std::endl;
 	}
+	// Handlers run on the emulator's main thread; refresh first so the
+	// snapshot reflects earlier commands in this same pass.
+	amiberry_actions_run_pending();
 	amiberry_actions_status status;
 	amiberry_actions_get_status(&status);
 	std::vector<std::string> responses;
@@ -1525,6 +1528,7 @@ static std::string HandleGetLEDStatus(const std::vector<std::string>& args)
 	if (!currprefs.ipc_disable_logging) {
 		std::cout << "IPC: Received GET_LED_STATUS" << std::endl;
 	}
+	amiberry_actions_run_pending();
 	amiberry_actions_status snapshot;
 	amiberry_actions_get_status(&snapshot);
 	std::vector<std::string> responses;
@@ -3296,14 +3300,13 @@ static std::string HandleHelp(const std::vector<std::string>& args)
 // === Settings edit session commands ===
 // One session owned by the IPC server, executed on the main thread like
 // every other handler. Lazily opened; SETTINGS_RESET_SESSION discards it.
+// One session for the whole IPC server (all clients share it). It is
+// reopened whenever it holds no uncommitted SETTINGS_SET edits, so a
+// configuration loaded or changed through any other command (LOAD_CONFIG,
+// SET_CONFIG, the GUI) is what the next SETTINGS_* command sees, and it is
+// closed after SETTINGS_COMMIT and SETTINGS_RESET_SESSION.
 static amiberry_settings_session* ipc_settings_session;
-
-static amiberry_settings_session* settings_session()
-{
-	if (!ipc_settings_session)
-		ipc_settings_session = amiberry_settings_session_open();
-	return ipc_settings_session;
-}
+static bool ipc_settings_dirty;
 
 static void close_settings_session()
 {
@@ -3311,6 +3314,18 @@ static void close_settings_session()
 		amiberry_settings_session_close(ipc_settings_session);
 		ipc_settings_session = nullptr;
 	}
+	ipc_settings_dirty = false;
+}
+
+static amiberry_settings_session* settings_session()
+{
+	if (ipc_settings_session && !ipc_settings_dirty)
+		close_settings_session();
+	if (!ipc_settings_session) {
+		ipc_settings_session = amiberry_settings_session_open();
+		ipc_settings_dirty = false;
+	}
+	return ipc_settings_session;
 }
 
 static std::string settings_status_message(amiberry_settings_status status,
@@ -3369,6 +3384,7 @@ static std::string HandleSettingsSet(const std::vector<std::string>& args)
 	if (status != AMIBERRY_SETTINGS_OK) {
 		return make_response(false, {settings_status_message(status, args[0], args[1])});
 	}
+	ipc_settings_dirty = true;
 	return make_response(true);
 }
 
@@ -3419,6 +3435,7 @@ static std::string HandleSettingsCommit(const std::vector<std::string>& args)
 	}
 	bool changed = false;
 	const amiberry_apply_class apply = amiberry_settings_commit(session, &changed);
+	close_settings_session();
 	if (changed) {
 		// Like SET_CONFIG: make the running emulation pick up what changed.
 		set_config_changed();

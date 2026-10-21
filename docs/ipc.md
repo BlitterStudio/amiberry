@@ -207,7 +207,10 @@ The `SETTINGS_*` commands expose one edit session of the shared settings
 layer (`src/osdep/settings/amiberry_settings.h`), so a controller can edit
 the pending configuration end to end with validation and commit semantics
 instead of the handful of `SET_CONFIG` options. Like every command they run
-on the emulation thread.
+on the emulation thread. The session belongs to the IPC server as a whole
+and is shared by every connected controller: one controller's COMMIT
+commits every controller's staged edits, and one's RESET_SESSION discards
+them all. Coordinate controllers accordingly.
 
 - `SETTINGS_GET <id>` replies `OK <id>=<value>` with the value in `.uae`
   spelling. Unknown option IDs reply `ERROR Unknown option: <id>`.
@@ -222,11 +225,15 @@ on the emulation thread.
   replies `OK changed=<true|false> apply=<live|reset|restart>`, the
   strongest apply class among the changed options. When something changed it
   also signals the running emulation like `SET_CONFIG` does, so live options
-  take effect at once. The session stays open and continues from the stored
-  state.
-- `SETTINGS_RESET_SESSION` discards the session's uncommitted edits; the
-  next `SETTINGS_*` command opens a fresh one from the current pending
-  configuration.
+  take effect at once. The session is closed afterwards.
+- `SETTINGS_RESET_SESSION` discards the session's uncommitted edits.
+
+A session that holds no uncommitted `SETTINGS_SET` edits is reopened from
+the current pending configuration at the next `SETTINGS_*` command, so a
+configuration loaded or changed any other way (`LOAD_CONFIG`, `SET_CONFIG`,
+the GUI) is what subsequent `SETTINGS_GET` and `SETTINGS_SET` see. Staged
+edits are never dropped behind the controller's back: while any uncommitted
+`SETTINGS_SET` exists, the session stays open and isolated.
 
 Option IDs and values are exactly the `.uae` keys and spellings the layer
 defines; `amiberry_settings_count()`/`amiberry_settings_at()` list them.
