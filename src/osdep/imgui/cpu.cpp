@@ -259,11 +259,24 @@ void render_panel_cpu() {
         ImGui::EndDisabled();
 
         ImGui::BeginDisabled(!available(o.fpu_softfloat, ctx));
+#ifdef MSVC_LONG_DOUBLE
+        static const settings::definition& fpu_long_double = settings::require("fpu_msvc_long_double");
+        const char* fpu_mode_items[] = { "Host (64-bit)", "Host (80-bit)", "Softfloat (80-bit)" };
+        const int softfloat_idx = 2;
+        int fpu_mode_idx = settings::get_bool(o.fpu_softfloat, changed_prefs) ? softfloat_idx
+            : settings::get_bool(fpu_long_double, changed_prefs) ? 1 : 0;
+#else
         const char* fpu_mode_items[] = { "Host (64-bit)", "Softfloat (80-bit)" };
-        int fpu_mode_idx = settings::get_bool(o.fpu_softfloat, changed_prefs) ? 1 : 0;
+        const int softfloat_idx = 1;
+        int fpu_mode_idx = settings::get_bool(o.fpu_softfloat, changed_prefs) ? softfloat_idx : 0;
+#endif
         ImGui::SetNextItemWidth(slider_width);
         if (ImGui::Combo("##FPUMode", &fpu_mode_idx, fpu_mode_items, IM_ARRAYSIZE(fpu_mode_items))) {
-            settings::set_bool(o.fpu_softfloat, changed_prefs, ctx, fpu_mode_idx == 1);
+            settings::set_bool(o.fpu_softfloat, changed_prefs, ctx, fpu_mode_idx == softfloat_idx);
+#ifdef MSVC_LONG_DOUBLE
+            if (fpu_mode_idx != softfloat_idx)
+                settings::set_bool(fpu_long_double, changed_prefs, ctx, fpu_mode_idx == 1);
+#endif
         }
         AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
         ShowHelpMarker(o.fpu_softfloat.descriptor.help);

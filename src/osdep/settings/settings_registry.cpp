@@ -211,6 +211,8 @@ amiberry_settings_status set(const definition& d, uae_prefs& p, const context& c
 	const amiberry_settings_status status = check_value(d, p, ctx, text, v);
 	if (status != AMIBERRY_SETTINGS_OK)
 		return status;
+	if (d.accepts && !d.accepts(p, v))
+		return AMIBERRY_SETTINGS_INVALID_VALUE;
 	d.set(p, v);
 	return AMIBERRY_SETTINGS_OK;
 }

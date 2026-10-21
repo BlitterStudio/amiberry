@@ -31,7 +31,15 @@ int emulating;
 // uae_prefs is too large for the stack.
 static uae_prefs test_prefs;
 
-void fixup_prefs_preview(uae_prefs* p) { fixup_cpu(p); }
+// Besides the real fixup_cpu(), the stand-in applies fixup_prefs()'s rule
+// that a 24-bit address space removes Z3 RAM, so commit is tested on an
+// adjustment outside the CPU options.
+void fixup_prefs_preview(uae_prefs* p)
+{
+	fixup_cpu(p);
+	if (p->address_space_24)
+		p->z3fastmem[0].size = 0;
+}
 void error_log(const TCHAR*, ...) {}
 // Controlled by the tests: whether the selected accelerator board is 32-bit
 // only, and the address of a UAE boot ROM the configuration needs (0: none).
@@ -400,6 +408,31 @@ void check_fixup_consistency()
 	p.mmu_model = 0;
 	p.mmu_ec = true;
 	CHECK(value_of(p, "mmu_model") == "0");
+
+	// JIT caches below 128 KB are turned off by fixup_cpu(), so they are
+	// refused; the JIT inhibit flag makes the JIT unavailable.
+	if (jit_compiled()) {
+		reset_prefs(p);
+		p.cpu_cycle_exact = p.cpu_memory_cycle_exact = p.blitter_cycle_exact = false;
+		p.cpu_model = 68020;
+		p.address_space_24 = false;
+		CHECK(set(p, "cachesize", "64") == AMIBERRY_SETTINGS_INVALID_VALUE);
+		CHECK(set(p, "cachesize", "128") == AMIBERRY_SETTINGS_OK);
+		CHECK(survives("cachesize"));
+		p.cachesize_inhibit = true;
+		CHECK(!available(p, "cachesize"));
+	}
+
+	// Turning softfloat off leaves the host 80-bit mode of MSVC long double
+	// builds alone.
+	reset_prefs(p);
+	p.fpu_model = 68881;
+	p.fpu_mode = -1;
+	CHECK(set(p, "fpu_softfloat", "false") == AMIBERRY_SETTINGS_OK);
+	CHECK(p.fpu_mode == -1);
+	CHECK(set(p, "fpu_softfloat", "true") == AMIBERRY_SETTINGS_OK);
+	CHECK(set(p, "fpu_softfloat", "false") == AMIBERRY_SETTINGS_OK);
+	CHECK(p.fpu_mode == 0);
 }
 
 void check_rejections()
@@ -526,6 +559,23 @@ void check_session()
 	CHECK(amiberry_settings_set(session, "cpu_threaded", "true") == AMIBERRY_SETTINGS_OK);
 	CHECK(amiberry_settings_commit(session, &changed) == AMIBERRY_APPLY_RESTART);
 	CHECK(changed && changed_prefs.cpu_thread);
+
+	// Re-submitting an unchanged restart-only option with a live change
+	// does not ask for a restart.
+	CHECK(amiberry_settings_set(session, "cpu_threaded", "true") == AMIBERRY_SETTINGS_OK);
+	CHECK(amiberry_settings_set(session, "amiberry.cpu_idle", "0") == AMIBERRY_SETTINGS_UNAVAILABLE); // real speed
+	CHECK(amiberry_settings_set(session, "cpu_speed", "max") == AMIBERRY_SETTINGS_OK);
+	CHECK(amiberry_settings_commit(session, &changed) == AMIBERRY_APPLY_LIVE);
+	CHECK(changed && changed_prefs.m68k_speed < 0);
+
+	// Commit stores what the fixups adjust outside the session's options:
+	// 24-bit addressing removes Z3 RAM.
+	CHECK(amiberry_settings_set(session, "cpu_threaded", "false") == AMIBERRY_SETTINGS_OK);
+	CHECK(amiberry_settings_commit(session, &changed) == AMIBERRY_APPLY_RESTART);
+	changed_prefs.z3fastmem[0].size = 16 * 1024 * 1024;
+	CHECK(amiberry_settings_set(session, "cpu_24bit_addressing", "true") == AMIBERRY_SETTINGS_OK);
+	CHECK(amiberry_settings_commit(session, &changed) == AMIBERRY_APPLY_RESTART);
+	CHECK(changed && changed_prefs.address_space_24 && changed_prefs.z3fastmem[0].size == 0);
 
 	double min, max;
 	CHECK(amiberry_settings_get_range(session, "cpu_throttle", &min, &max));

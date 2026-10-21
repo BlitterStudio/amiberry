@@ -16,9 +16,10 @@
 // exists in every build (always unavailable without the JIT) so
 // configurations keep round-tripping.
 #ifdef MAX_JIT_CACHE
-static_assert(MAX_JIT_CACHE == 16384, "update max_jit_cache");
+static_assert(MAX_JIT_CACHE == 16384 && MIN_JIT_CACHE == 128, "update the JIT cache bounds");
 #endif
 constexpr int max_jit_cache = 16384;
+constexpr int min_jit_cache = 128;
 
 #include "settings_definitions.h"
 
@@ -359,10 +360,32 @@ void get_fpu_softfloat(const uae_prefs& p, char* out, size_t size)
 	write_bool(out, size, p.fpu_mode > 0);
 }
 
+// Turning softfloat off restores host floating point; it leaves the host
+// 80-bit mode of MSVC long double builds alone.
 void set_fpu_softfloat(uae_prefs& p, const value& v)
 {
-	p.fpu_mode = v.number != 0 ? 1 : 0;
+	if (v.number != 0)
+		p.fpu_mode = 1;
+	else if (p.fpu_mode > 0)
+		p.fpu_mode = 0;
 }
+
+#ifdef MSVC_LONG_DOUBLE
+// Host 80-bit floating point only exists in MSVC long double builds, where
+// cfgfile reads and writes fpu_msvc_long_double.
+void get_fpu_msvc_long_double(const uae_prefs& p, char* out, size_t size)
+{
+	write_bool(out, size, p.fpu_mode < 0);
+}
+
+void set_fpu_msvc_long_double(uae_prefs& p, const value& v)
+{
+	if (v.number != 0)
+		p.fpu_mode = -1;
+	else if (p.fpu_mode < 0)
+		p.fpu_mode = 0;
+}
+#endif
 
 // The JIT FPU emulates the FPU with host floating point, so softfloat is
 // unavailable while a JIT that fixup_cpu() keeps has its FPU on.
@@ -625,6 +648,12 @@ bool cachesize_available(const uae_prefs& p, const context&)
 	return jit_possible(p);
 }
 
+// fixup_cpu() turns caches below MIN_JIT_CACHE back into no JIT.
+bool cachesize_accepts(const uae_prefs&, const value& v)
+{
+	return v.number == 0 || v.number >= min_jit_cache;
+}
+
 void get_compfpu(const uae_prefs& p, char* out, size_t size)
 {
 	write_bool(out, size, p.compfpu);
@@ -778,6 +807,12 @@ const definition definitions[] = {
 			"FPU precision mode. Softfloat is most accurate but slowest.",
 			AMIBERRY_APPLY_LIVE, "false", "Softfloat is not available when the JIT emulates the FPU."),
 		get_fpu_softfloat, set_fpu_softfloat, fpu_softfloat_available, nullptr, nullptr},
+#ifdef MSVC_LONG_DOUBLE
+	{BOOL_OPTION("fpu_msvc_long_double", "fpu", "Host FPU (80-bit)",
+			"Use the host's 80-bit floating point for the FPU.",
+			AMIBERRY_APPLY_LIVE, "false", nullptr),
+		get_fpu_msvc_long_double, set_fpu_msvc_long_double, has_fpu, nullptr, nullptr},
+#endif
 	{BOOL_OPTION("fpu_no_unimplemented", "fpu", "No unimplemented FPU emulation",
 			"Do not emulate the FPU instructions the CPU traps as unimplemented.",
 			AMIBERRY_APPLY_LIVE, "false", "Unimplemented instruction emulation is always on with the JIT."),
@@ -825,7 +860,7 @@ const definition definitions[] = {
 			"Just-In-Time compilation cache in KB; 0 turns the JIT off. Greatly speeds up CPU emulation but reduces compatibility.",
 			AMIBERRY_SETTING_INT, AMIBERRY_APPLY_LIVE, 0, max_jit_cache, 1, "0",
 			"The JIT needs a 68020 or later, is not available in cycle-exact modes, and needs at least 128 KB."),
-		get_cachesize, set_cachesize, cachesize_available, nullptr, nullptr},
+		get_cachesize, set_cachesize, cachesize_available, nullptr, nullptr, cachesize_accepts},
 	{BOOL_OPTION("compfpu", "jit", "JIT FPU support",
 			"Enable JIT compilation for FPU instructions.",
 			AMIBERRY_APPLY_LIVE, compfpu_default, nullptr),

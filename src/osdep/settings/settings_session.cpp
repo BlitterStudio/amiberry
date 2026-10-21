@@ -198,22 +198,35 @@ amiberry_apply_class amiberry_settings_commit(amiberry_settings_session* session
 	if (resolved) {
 		// Store what validation promised: the session's changes merged with
 		// the current pending configuration and resolved by the core's
-		// fixups.
+		// fixups, including what they adjust in other domains (24-bit
+		// addressing removes Z3 RAM). resolved is changed_prefs as it is
+		// now plus exactly those changes, so copying it whole reverts
+		// nothing made elsewhere.
 		fixup_prefs_preview(resolved);
-		for (size_t i = 0; i < amiberry_settings::definition_count(); i++) {
-			const definition& d = amiberry_settings::definition_at(i);
-			// An option counts when its value changes, or when the caller set
-			// it and its setter changed fields without a value of their own
-			// (re-selecting a JIT memory access mode aligns the other modes).
-			if (!same_value(d, changed_prefs, *resolved) || session->touched[i]) {
-				if (d.descriptor.apply > strongest)
-					strongest = d.descriptor.apply;
+		any = std::memcmp(static_cast<const void*>(&changed_prefs), static_cast<const void*>(resolved),
+			sizeof(uae_prefs)) != 0;
+		if (any) {
+			bool value_changed = false;
+			for (size_t i = 0; i < amiberry_settings::definition_count(); i++) {
+				const definition& d = amiberry_settings::definition_at(i);
+				if (!same_value(d, changed_prefs, *resolved)) {
+					value_changed = true;
+					if (d.descriptor.apply > strongest)
+						strongest = d.descriptor.apply;
+				}
 			}
+			// Only fields without a value of their own changed (re-selecting
+			// a JIT memory access mode aligns the other modes): the options
+			// the caller set account for them.
+			if (!value_changed) {
+				for (size_t i = 0; i < amiberry_settings::definition_count(); i++) {
+					const definition& d = amiberry_settings::definition_at(i);
+					if (session->touched[i] && d.descriptor.apply > strongest)
+						strongest = d.descriptor.apply;
+				}
+			}
+			copy_into(changed_prefs, *resolved);
 		}
-		for (size_t i = 0; i < amiberry_settings::domain_count(); i++)
-			any |= amiberry_settings::domain_at(i).commit(changed_prefs, *resolved, changed_prefs);
-		if (!any)
-			strongest = AMIBERRY_APPLY_LIVE;
 		copy_into(*session->working, *resolved);
 		copy_into(*session->base, *resolved);
 		session->touched.assign(session->touched.size(), false);

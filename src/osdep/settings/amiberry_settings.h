@@ -138,19 +138,26 @@ typedef struct amiberry_settings_adjustment {
 } amiberry_settings_adjustment;
 
 /*
- * Runs the core's configuration fixups on a copy of the session and reports
- * every option they would change. Writes at most capacity entries and
- * returns the total number found; the session itself is not modified.
+ * Merges the session's changes into the current pending configuration
+ * (changes made elsewhere since the session last read it included), runs
+ * the core's configuration fixups on a copy of that and reports every
+ * option they would change. Writes at most capacity entries, zero-filled
+ * past each string, and returns the total number found; the session itself
+ * is not modified. Settings that do not have an option of their own yet
+ * are adjusted by commit but not reported.
  */
 AMIBERRY_SETTINGS_API size_t amiberry_settings_validate(const amiberry_settings_session *session,
 	amiberry_settings_adjustment *adjustments, size_t capacity);
 
 /*
- * Applies the adjustments amiberry_settings_validate() reports to the
- * session and stores it in the pending configuration. It does not signal a
- * running emulation. *changed tells whether any option differed from the
- * pending configuration; the result is the strongest apply class among
- * those that did (AMIBERRY_APPLY_LIVE when none did).
+ * Stores the session in the pending configuration exactly as validation
+ * resolved it: the session's changes, changes made elsewhere since, and
+ * every adjustment the fixups make for them. The session continues from
+ * the stored configuration. It does not signal a running emulation.
+ * *changed tells whether the pending configuration changed; the result is
+ * the strongest apply class among the options that did (or, when only
+ * settings without a value of their own changed, among the options the
+ * caller set), AMIBERRY_APPLY_LIVE when nothing changed.
  */
 AMIBERRY_SETTINGS_API amiberry_apply_class amiberry_settings_commit(amiberry_settings_session *session, bool *changed);
 

@@ -42,6 +42,9 @@ struct definition {
 	bool (*choice_available)(const uae_prefs& p, std::string_view choice);
 	// nullptr: the descriptor's static range.
 	void (*range)(const uae_prefs& p, double& min, double& max);
+	// nullptr: every value within the range and step. Otherwise rejects
+	// values the core would not keep (a JIT cache below 128 KB).
+	bool (*accepts)(const uae_prefs& p, const value& v);
 };
 
 struct domain {
