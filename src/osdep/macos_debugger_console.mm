@@ -244,13 +244,14 @@ static AmiberryDebuggerConsoleController* ensure_controller()
 	[scroll_view setBackgroundColor:[NSColor textBackgroundColor]];
 	output_scroll_view_ = scroll_view;
 
-	output_view_ = [[NSTextView alloc] initWithFrame:scroll_frame];
+	const NSSize content_size = [scroll_view contentSize];
+	output_view_ = [[NSTextView alloc] initWithFrame:NSMakeRect(0.0, 0.0, content_size.width, content_size.height)];
 	[output_view_ setEditable:NO];
 	[output_view_ setSelectable:YES];
 	[output_view_ setVerticallyResizable:YES];
 	[output_view_ setHorizontallyResizable:NO];
 	[output_view_ setAutoresizingMask:NSViewWidthSizable];
-	[output_view_ setMinSize:NSMakeSize(0.0, scroll_frame.size.height)];
+	[output_view_ setMinSize:NSMakeSize(0.0, content_size.height)];
 	[output_view_ setMaxSize:NSMakeSize(CGFLOAT_MAX, CGFLOAT_MAX)];
 	[output_view_ setRichText:NO];
 	[output_view_ setImportsGraphics:NO];
@@ -261,7 +262,7 @@ static AmiberryDebuggerConsoleController* ensure_controller()
 	[output_view_ setDrawsBackground:YES];
 	[output_view_ setTextContainerInset:NSMakeSize(6.0, 6.0)];
 	[[output_view_ textContainer] setWidthTracksTextView:YES];
-	[[output_view_ textContainer] setContainerSize:NSMakeSize(scroll_frame.size.width, CGFLOAT_MAX)];
+	[[output_view_ textContainer] setContainerSize:NSMakeSize(content_size.width, CGFLOAT_MAX)];
 	if (mono_font) {
 		[output_view_ setFont:mono_font];
 	}
@@ -300,9 +301,11 @@ static AmiberryDebuggerConsoleController* ensure_controller()
 		return YES;
 	}
 
+	// documentVisibleRect is in the document view's coordinate system, so
+	// compare against its bounds, not its frame (which is in clip view space).
 	const NSRect visible_rect = [clip_view documentVisibleRect];
 	const CGFloat max_visible_y = NSMaxY(visible_rect);
-	const CGFloat max_document_y = NSMaxY([output_view_ frame]);
+	const CGFloat max_document_y = NSMaxY([output_view_ bounds]);
 	return max_document_y - max_visible_y <= kAutoScrollEpsilon;
 }
 
