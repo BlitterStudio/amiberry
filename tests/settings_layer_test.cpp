@@ -1505,6 +1505,25 @@ void check_machine_session()
 	CHECK(changed_prefs.fastmem[0].size == 0x400000);
 	CHECK(changed_prefs.fastmem[0].manufacturer == 0x1234);
 	CHECK(changed_prefs.fastmem[1].size == 0x100000);
+
+	// Chip RAM above 512 KB adds only ECS Agnus to the session's chipset;
+	// committing it keeps a chipset chosen elsewhere meanwhile.
+	CHECK(amiberry_settings_set(session, "chipset", "ocs") == AMIBERRY_SETTINGS_OK);
+	CHECK(amiberry_settings_set(session, "chipmem_size", "1") == AMIBERRY_SETTINGS_OK);
+	amiberry_settings_commit(session, &changed);
+	CHECK(value_of(changed_prefs, "chipset") == "ocs");
+	CHECK(amiberry_settings_set(session, "chipmem_size", "4") == AMIBERRY_SETTINGS_OK);
+	CHECK(set(changed_prefs, "chipset", "aga") == AMIBERRY_SETTINGS_OK); // meanwhile
+	CHECK(amiberry_settings_commit(session, &changed) == AMIBERRY_APPLY_RESET && changed);
+	CHECK(value_of(changed_prefs, "chipset") == "aga");
+	CHECK(changed_prefs.chipmem.size == 0x200000);
+	// Without the concurrent choice the session's ECS Agnus still lands.
+	CHECK(amiberry_settings_set(session, "chipset", "ocs") == AMIBERRY_SETTINGS_OK);
+	CHECK(amiberry_settings_set(session, "chipmem_size", "1") == AMIBERRY_SETTINGS_OK);
+	amiberry_settings_commit(session, &changed);
+	CHECK(amiberry_settings_set(session, "chipmem_size", "2") == AMIBERRY_SETTINGS_OK);
+	amiberry_settings_commit(session, &changed);
+	CHECK(value_of(changed_prefs, "chipset") == "ecs_agnus" && changed_prefs.chipmem.size == 0x100000);
 	amiberry_settings_session_close(session);
 }
 

@@ -213,7 +213,7 @@ static ramboard *get_selected_ramboard(int idx) {
 // dependent changes (ECS Agnus for chip RAM above 512 KB, the chip RAM /
 // Z2 fast conflict, the Zorro III window, the accelerator board mirror)
 // instead of the panel.
-static void set_ram_size(int idx, uae_u32 size) {
+static amiberry_settings_status set_ram_size(int idx, uae_u32 size) {
     const ram_options& o = options();
     const settings::context ctx{emulating != 0};
     const settings::definition* option = nullptr;
@@ -265,11 +265,23 @@ static void set_ram_size(int idx, uae_u32 size) {
     }
 
     if (!option)
-        return;
+        return AMIBERRY_SETTINGS_UNKNOWN_ID;
     if (numeric)
-        settings::set_number(*option, changed_prefs, ctx, number);
-    else
-        settings::set(*option, changed_prefs, ctx, value);
+        return settings::set_number(*option, changed_prefs, ctx, number);
+    return settings::set(*option, changed_prefs, ctx, value);
+}
+
+// A RAM slider moved from position from to position to: stores that size,
+// or, when the layer refuses it (1.5 MB under the JIT, 1.8 MB slow RAM with
+// Gayle, sizes beyond the Zorro III window), the nearest size past it in
+// the direction of the move that is accepted. Nothing changes when there is
+// none, so the slider never shows a size the configuration does not hold.
+static void move_ram_slider(int idx, int from, int to, const int* msi, int count) {
+    const int step = to >= from ? 1 : -1;
+    for (int pos = to; pos >= 0 && pos < count; pos += step) {
+        if (set_ram_size(idx, memsizes[msi[pos]]) == AMIBERRY_SETTINGS_OK)
+            return;
+    }
 }
 
 // WinUAE sync: get_ramboard_name with size info like addadvancedram()
@@ -365,36 +377,41 @@ void render_panel_ram() {
     BeginGroupBox("Memory Settings");
 
     int chip_idx = get_mem_index(changed_prefs.chipmem.size, msi_chip, 7);
+    const int chip_from = chip_idx;
     if (RamControl("Chip:", &chip_idx, msi_chip, 7)) {
-        set_ram_size(ADVANCED_RAM_CHIP, memsizes[msi_chip[chip_idx]]);
+        move_ram_slider(ADVANCED_RAM_CHIP, chip_from, chip_idx, msi_chip, 7);
     }
     ShowHelpMarker("Main memory accessible by all Amiga custom chips. A500 had 512KB, A1200 had 2MB. More than 512KB requires ECS Agnus.");
 
     int fast_idx = get_mem_index(changed_prefs.fastmem[0].size, msi_fast, 9);
+    const int fast_from = fast_idx;
     if (RamControl("Z2 Fast:", &fast_idx, msi_fast, 9)) {
-        set_ram_size(ADVANCED_RAM_Z2_BASE, memsizes[msi_fast[fast_idx]]);
+        move_ram_slider(ADVANCED_RAM_Z2_BASE, fast_from, fast_idx, msi_fast, 9);
     }
     ShowHelpMarker("Zorro II expansion memory. Not accessible by custom chips. 16-bit, max 8MB. Incompatible with Chip RAM > 2MB.");
 
     int mbhigh_idx = get_mem_index(changed_prefs.mbresmem_high.size, msi_mb, 9);
+    const int mbhigh_from = mbhigh_idx;
     if (RamControl("Processor slot:", &mbhigh_idx, msi_mb, 9)) {
-        set_ram_size(ADVANCED_RAM_CPUSLOT, memsizes[msi_mb[mbhigh_idx]]);
+        move_ram_slider(ADVANCED_RAM_CPUSLOT, mbhigh_from, mbhigh_idx, msi_mb, 9);
         if (currprefs.mbresmem_high.size != changed_prefs.mbresmem_high.size)
             disable_resume();
     }
     ShowHelpMarker("Fast RAM on CPU accelerator cards installed in the processor slot. Not accessible by custom chips.");
 
     int mblow_idx = get_mem_index(changed_prefs.mbresmem_low.size, msi_mb, 8);
+    const int mblow_from = mblow_idx;
     if (RamControl("Motherboard Fast:", &mblow_idx, msi_mb, 8)) {
-        set_ram_size(ADVANCED_RAM_MBLOW, memsizes[msi_mb[mblow_idx]]);
+        move_ram_slider(ADVANCED_RAM_MBLOW, mblow_from, mblow_idx, msi_mb, 8);
         if (currprefs.mbresmem_low.size != changed_prefs.mbresmem_low.size)
             disable_resume();
     }
     ShowHelpMarker("Fast RAM on the motherboard (A3000/A4000). Not accessible by custom chips.");
 
     int slow_idx = get_mem_index(changed_prefs.bogomem.size, msi_bogo, 5);
+    const int slow_from = slow_idx;
     if (RamControl("Slow:", &slow_idx, msi_bogo, 5)) {
-        set_ram_size(ADVANCED_RAM_SLOW, memsizes[msi_bogo[slow_idx]]);
+        move_ram_slider(ADVANCED_RAM_SLOW, slow_from, slow_idx, msi_bogo, 5);
     }
     ShowHelpMarker("512KB expansion in A500/A2000 'trapdoor' slot (Ranger RAM). Accessible by custom chips but slower than Chip RAM.");
 
@@ -403,15 +420,17 @@ void render_panel_ram() {
 
     int z3fast_count = can_have_1gb() ? 12 : 11;
     int z3_idx = get_mem_index(changed_prefs.z3fastmem[0].size, msi_z3fast, z3fast_count);
+    const int z3_from = z3_idx;
     if (RamControl("Z3 Fast:", &z3_idx, msi_z3fast, z3fast_count)) {
-        set_ram_size(ADVANCED_RAM_Z3_BASE, memsizes[msi_z3fast[z3_idx]]);
+        move_ram_slider(ADVANCED_RAM_Z3_BASE, z3_from, z3_idx, msi_z3fast, z3fast_count);
     }
     ShowHelpMarker("Zorro III expansion memory. 32-bit, used with 68030+ CPUs. Requires 32-bit addressing mode. Not accessible by custom chips.");
 
     int z3chip_count = can_have_1gb() ? 10 : 9;
     int z3chip_idx = get_mem_index(changed_prefs.z3chipmem.size, msi_z3chip, z3chip_count);
+    const int z3chip_from = z3chip_idx;
     if (RamControl("32-bit Chip:", &z3chip_idx, msi_z3chip, z3chip_count)) {
-        set_ram_size(ADVANCED_RAM_Z3CHIP, memsizes[msi_z3chip[z3chip_idx]]);
+        move_ram_slider(ADVANCED_RAM_Z3CHIP, z3chip_from, z3chip_idx, msi_z3chip, z3chip_count);
     }
     ShowHelpMarker("Extended Chip RAM accessible by custom chips. Requires 32-bit addressing mode. Used in advanced configurations.");
     ImGui::EndDisabled();
@@ -563,11 +582,12 @@ void render_panel_ram() {
              ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - BUTTON_WIDTH * 0.6f - ImGui::GetStyle().ItemSpacing.x);
 
              int current_size_idx = get_mem_index(rb->size, current_msi, msi_count);
+             const int size_from = current_size_idx;
 
              if (ImGui::SliderInt("##AdvSlider", &current_size_idx, 0, msi_count - 1, "", ImGuiSliderFlags_AlwaysClamp)) {
                  // The layer's setter applies the board's dependent changes
                  // (ECS Agnus, the chip/Z2 conflict, the Z3 window).
-                 set_ram_size(current_advanced_ram_idx, memsizes[current_msi[current_size_idx]]);
+                 move_ram_slider(current_advanced_ram_idx, size_from, current_size_idx, current_msi, msi_count);
              }
             AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), false);
             ShowHelpMarker("Size of the selected memory board. Available sizes depend on the type of memory.");

@@ -1040,11 +1040,28 @@ const definition definitions[] = {
 		get_denisemodel, set_denisemodel, custom_chipset, nullptr, nullptr},
 };
 
+// The chipset option replaces the whole selection, while chip RAM above
+// 512 KB only adds ECS Agnus (set_chipmem_size). A session that changed no
+// other bit merges just that one, so a chipset chosen elsewhere meanwhile
+// (AGA, say) survives; a session that chose a chipset commits all of it.
+static bool commit_chipset_mask(const uae_prefs& base, const uae_prefs& from, uae_prefs& to)
+{
+	const unsigned int changed = base.chipset_mask ^ from.chipset_mask;
+	if (changed & ~static_cast<unsigned int>(CSMASK_ECS_AGNUS))
+		return commit_field(base.chipset_mask, from.chipset_mask, to.chipset_mask);
+	if (!changed)
+		return false;
+	const unsigned int merged = (to.chipset_mask & ~static_cast<unsigned int>(CSMASK_ECS_AGNUS))
+		| (from.chipset_mask & CSMASK_ECS_AGNUS);
+	const bool wrote = merged != to.chipset_mask;
+	to.chipset_mask = merged;
+	return wrote;
+}
+
 bool commit_chipset(const uae_prefs& base, const uae_prefs& from, uae_prefs& to)
 {
-	bool wrote = false;
+	bool wrote = commit_chipset_mask(base, from, to);
 #define FIELD(f) wrote |= commit_field(base.f, from.f, to.f)
-	FIELD(chipset_mask);
 	FIELD(ntscmode);
 	FIELD(chipset_refreshrate);
 	FIELD(cpu_cycle_exact);

@@ -556,7 +556,6 @@ bool commit_memory(const uae_prefs& base, const uae_prefs& from, uae_prefs& to)
 	FIELD(mem25bit.size);
 	FIELD(z3_mapping_mode);
 	FIELD(z3autoconfig_start);
-	FIELD(chipset_mask); // the chip RAM setters may add ECS Agnus
 #undef FIELD
 	return wrote;
 }

@@ -9768,6 +9768,9 @@ static int bip_a3000 (struct uae_prefs *p, int config, int compa, int romcheck)
 static int bip_a4000 (struct uae_prefs *p, int config, int compa, int romcheck)
 {
 	int roms[11];
+	// The accelerator firmware a configuration needs counts as much as the
+	// Kickstart: the result tells callers whether every ROM was found.
+	int board_rom = 1;
 
 	roms[0] = 16;
 	roms[1] = 31;
@@ -9803,7 +9806,7 @@ static int bip_a4000 (struct uae_prefs *p, int config, int compa, int romcheck)
 		cpuboard_setboard(p, BOARD_CYBERSTORM, BOARD_CYBERSTORM_SUB_PPC);
 		p->cpuboardmem1.size = 128 * 1024 * 1024;
 		int roms_ppc[] = { 98, 326, 327, -1 };
-		configure_rom(p, roms_ppc, romcheck);
+		board_rom = configure_rom(p, roms_ppc, romcheck);
 #endif
 		break;
 	}
@@ -9823,7 +9826,8 @@ static int bip_a4000 (struct uae_prefs *p, int config, int compa, int romcheck)
 	p->cpu_idle = 150;
 	p->cs_compatible = CP_A4000;
 	built_in_chipset_prefs (p);
-	return configure_rom (p, roms, romcheck);
+	const int kickstart = configure_rom (p, roms, romcheck);
+	return kickstart && board_rom;
 }
 static int bip_a4000t (struct uae_prefs *p, int config, int compa, int romcheck)
 {
@@ -10045,6 +10049,8 @@ static int bip_a1200 (struct uae_prefs *p, int config, int compa, int romcheck)
 {
 	int roms[8];
 	int roms_bliz[4];
+	// The Blizzard firmware counts as much as the Kickstart (see bip_a4000).
+	int board_rom = 1;
 
 	buildin_default_prefs_68020 (p);
 	roms[0] = 11;
@@ -10078,7 +10084,7 @@ static int bip_a1200 (struct uae_prefs *p, int config, int compa, int romcheck)
 		p->cpu_model = 68030;
 		p->cs_rtc = 1;
 		roms_bliz[0] = 89;
-		configure_rom(p, roms_bliz, romcheck);
+		board_rom = configure_rom(p, roms_bliz, romcheck);
 		break;
 		case 3:
 		cpuboard_setboard(p, BOARD_BLIZZARD, BOARD_BLIZZARD_SUB_1260);
@@ -10087,7 +10093,7 @@ static int bip_a1200 (struct uae_prefs *p, int config, int compa, int romcheck)
 		p->fpu_model = 68040;
 		p->cs_rtc = 1;
 		roms_bliz[0] = 90;
-		configure_rom(p, roms_bliz, romcheck);
+		board_rom = configure_rom(p, roms_bliz, romcheck);
 		break;
 		case 4:
 		cpuboard_setboard(p, BOARD_BLIZZARD, BOARD_BLIZZARD_SUB_1260);
@@ -10096,7 +10102,7 @@ static int bip_a1200 (struct uae_prefs *p, int config, int compa, int romcheck)
 		p->fpu_model = 68060;
 		p->cs_rtc = 1;
 		roms_bliz[0] = 90;
-		configure_rom(p, roms_bliz, romcheck);
+		board_rom = configure_rom(p, roms_bliz, romcheck);
 		break;
 #ifdef WITH_PPC
 		case 5:
@@ -10112,7 +10118,7 @@ static int bip_a1200 (struct uae_prefs *p, int config, int compa, int romcheck)
 		roms_bliz[0] = 100;
 		roms_bliz[1] = 329;
 		roms_bliz[2] = 330;
-		configure_rom(p, roms_bliz, romcheck);
+		board_rom = configure_rom(p, roms_bliz, romcheck);
 		break;
 #endif
 #else
@@ -10124,7 +10130,8 @@ static int bip_a1200 (struct uae_prefs *p, int config, int compa, int romcheck)
 		default: break;
 	}
 	set_68020_compa (p, compa, 0);
-	return configure_rom (p, roms, romcheck);
+	const int kickstart = configure_rom (p, roms, romcheck);
+	return kickstart && board_rom;
 }
 
 static int bip_a600 (struct uae_prefs *p, int config, int compa, int romcheck)
