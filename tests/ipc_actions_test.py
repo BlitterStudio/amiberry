@@ -298,7 +298,7 @@ def main():
         # instead of replacing the first after both replied OK.
         replies = control.pipeline([f"LOADSTATE\t{state}", f"LOADSTATE\t{state}"])
         check("pipelined LOADSTATE: first OK, second refused",
-              replies == ["OK", "ERROR\tA state restore is already pending"], str(replies))
+              replies == ["OK", "ERROR\tA state save or restore is already pending"], str(replies))
 
         check("QUIT answered", control.request("QUIT") == "OK")
         control.close()

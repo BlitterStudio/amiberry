@@ -156,8 +156,13 @@ private:
 				done_order_.pop_front();
 			}
 		} catch (const std::bad_alloc&) {
-			// The result is dropped; the action still happened. The id will
-			// report PENDING forever, which no caller treats as failure.
+			// The result cannot be stored, but the action has run: retire
+			// its id so a poll reports it unknown instead of pending
+			// forever. Actions finish in posting order, so every lower id
+			// has finished too and keeps whatever result it stored; erase
+			// and the assignment do not allocate.
+			results_.erase(id);
+			retired_below_ = std::max(retired_below_, id);
 		}
 	}
 

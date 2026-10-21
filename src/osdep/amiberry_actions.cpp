@@ -43,15 +43,19 @@ amiberry_actions::action_queue& queue()
 	return instance;
 }
 
-// savestate_state and savestate_fname describe a single restore (or rewind)
-// that the next vsync starts and savestate_restore_finish() clears. State
-// actions that would replace or redirect it fail until it has run.
-bool restore_pending(std::string* error)
+// savestate_state and savestate_fname describe a single state operation:
+// a restore (or rewind) that the next vsync starts, or a save the guest's
+// statefile_save option or the debugger queued for savestate_check(). State
+// actions would replace or redirect it (a save rewrites savestate_fname and
+// clears savestate_state, a load overwrites both), so they fail until it
+// has run.
+bool state_operation_pending(std::string* error)
 {
-	if (!(savestate_state & (STATE_DORESTORE | STATE_RESTORE | STATE_DOREWIND | STATE_REWIND))) {
+	if (!(savestate_state & (STATE_SAVE | STATE_DOSAVE | STATE_DORESTORE | STATE_RESTORE
+			| STATE_DOREWIND | STATE_REWIND))) {
 		return false;
 	}
-	*error = "A state restore is already pending";
+	*error = "A state save or restore is already pending";
 	return true;
 }
 
@@ -169,8 +173,8 @@ bool execute(const request& r, void*, std::string* error)
 			return false;
 		}
 		// Saving rewrites savestate_fname, which would redirect a pending
-		// restore to the file just saved.
-		if (restore_pending(error)) {
+		// restore or save to the file just saved.
+		if (state_operation_pending(error)) {
 			return false;
 		}
 		if (r.k == kind::save_state) {
@@ -195,10 +199,10 @@ bool execute(const request& r, void*, std::string* error)
 		if (debugger_holds_cpu(error, "Cannot load state while the debugger has the CPU stopped; resume first")) {
 			return false;
 		}
-		// savestate_state/savestate_fname hold one restore; a second load
+		// savestate_state/savestate_fname hold one operation; a second load
 		// in the same drain would replace the first after both reported
-		// success, so it fails until the pending restore has run.
-		if (restore_pending(error)) {
+		// success, so it fails until the pending one has run.
+		if (state_operation_pending(error)) {
 			return false;
 		}
 		// A restore is scheduled for the next vsync and starts with a reset,
@@ -222,8 +226,8 @@ bool execute(const request& r, void*, std::string* error)
 			return false;
 		}
 		// savestate_quick() writes savestate_fname even when the slot is
-		// empty, so a pending restore is checked before calling it.
-		if (restore_pending(error)) {
+		// empty, so a pending operation is checked before calling it.
+		if (state_operation_pending(error)) {
 			return false;
 		}
 		// 0 means there was nothing to load (no usable state file name, or
