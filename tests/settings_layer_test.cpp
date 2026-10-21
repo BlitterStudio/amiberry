@@ -266,16 +266,18 @@ void check_dependent_changes()
 	CHECK(set(p, "cpu_speed", "real") == AMIBERRY_SETTINGS_OK);
 	CHECK(p.m68k_speed == 0);
 
-	// Turning the JIT on leaves cycle-exact mode, and a 68040/060 JIT leaves
-	// More compatible.
+	// Turning the JIT on leaves cycle-exact mode. A 68040/060 JIT greys out
+	// More compatible but keeps its value for when the JIT is off again.
 	if (jit_compiled()) {
 		reset_prefs(p);
 		CHECK(set(p, "cpu_model", "68040") == AMIBERRY_SETTINGS_OK);
 		CHECK(p.cpu_compatible);
 		CHECK(set(p, "cachesize", "8192") == AMIBERRY_SETTINGS_OK);
 		CHECK(!p.cpu_cycle_exact && !p.cpu_memory_cycle_exact && !p.blitter_cycle_exact);
-		CHECK(!p.cpu_compatible);
 		CHECK(!available(p, "cpu_compatible"));
+		CHECK(set(p, "cachesize", "0") == AMIBERRY_SETTINGS_OK);
+		CHECK(available(p, "cpu_compatible") && p.cpu_compatible);
+		CHECK(set(p, "cachesize", "8192") == AMIBERRY_SETTINGS_OK);
 		CHECK(set(p, "comp_trustbyte", "indirect") == AMIBERRY_SETTINGS_OK);
 		CHECK(p.comptrustbyte == 1 && p.comptrustword == 1 && p.comptrustlong == 1 && p.comptrustnaddr == 1);
 		p.comptrustlong = 0; // a configuration can set them separately

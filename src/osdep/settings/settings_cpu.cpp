@@ -537,8 +537,10 @@ void get_cachesize(const uae_prefs& p, char* out, size_t size)
 }
 
 // Turning the JIT on leaves cycle-exact modes and turns the JIT FPU on
-// unless softfloat is selected; a 68040 or 68060 JIT cannot run in More
-// compatible mode.
+// unless softfloat is selected. A 68040/060 JIT cannot run in More
+// compatible mode, but the option keeps its value while greyed out so that
+// turning the JIT off again restores it; the core fixup clears it when the
+// configuration is applied, and validation reports that.
 void set_cachesize(uae_prefs& p, const value& v)
 {
 	const bool enabling = p.cachesize == 0 && v.number > 0;
@@ -549,8 +551,6 @@ void set_cachesize(uae_prefs& p, const value& v)
 		p.cpu_memory_cycle_exact = false;
 		p.compfpu = p.fpu_mode <= 0;
 	}
-	if (p.cachesize && p.cpu_model >= 68040)
-		p.cpu_compatible = false;
 }
 
 bool cachesize_available(const uae_prefs& p, const context&)

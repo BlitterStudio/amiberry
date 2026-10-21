@@ -857,7 +857,7 @@ void fixup_prefs (struct uae_prefs *p, bool userconfig)
 }
 
 #ifdef AMIBERRY
-bool fixup_prefs_preview_active;
+thread_local bool fixup_prefs_preview_active;
 
 void fixup_prefs_preview(struct uae_prefs *p)
 {

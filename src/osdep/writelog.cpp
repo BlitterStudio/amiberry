@@ -933,6 +933,10 @@ void write_log(const char* format, ...)
 	va_list parms;
 	const bool has_libretro_log = false;
 
+	// A settings preview runs the configuration fixups only to report what
+	// they would change; their log lines would repeat on every preview.
+	if (fixup_prefs_preview_active)
+		return;
 #ifndef __ANDROID__
 	if (!has_libretro_log && !amiberry_options.write_logfile && !console_logging && !debugfile
 		&& !startup_log_capture)
