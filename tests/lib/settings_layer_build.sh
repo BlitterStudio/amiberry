@@ -17,10 +17,13 @@ settings_layer_compile() {
 		rm -f "$fixup"
 		return 1
 	fi
+	# -O1: GCC emits unused static functions from the core headers at -O0,
+	# and those reference emulator globals the harness does not link.
 	# shellcheck disable=SC2046,SC2086
-	${CXX:-c++} -std=c++17 -Isrc -Isrc/include -Isrc/osdep -Isrc/threaddep \
+	${CXX:-c++} -std=c++17 -O1 -Isrc -Isrc/include -Isrc/osdep -Isrc/threaddep \
 		${SETTINGS_LAYER_DEFINES--DWITH_PPC -DUSE_PCEM} $(pkg-config --cflags sdl3) \
-		-o "$out" tests/settings_layer_test.cpp "$fixup" src/osdep/settings/settings_*.cpp
+		-o "$out" tests/settings_layer_test.cpp "$fixup" src/osdep/settings/settings_*.cpp \
+		$(pkg-config --libs sdl3)
 	local status=$?
 	rm -f "$fixup"
 	return $status
