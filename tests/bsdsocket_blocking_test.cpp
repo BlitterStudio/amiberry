@@ -177,11 +177,16 @@ static void test_full_send_buffer_times_out()
 	if (pipe(abort_pipe) != 0)
 		exit(2);
 
-	/* The peer never reads, so filling the buffer makes send block. */
+	/* The peer never reads, so filling the buffer makes send block. Data
+	   still in flight to the peer frees send space after a fill, so the
+	   buffer is refilled until, after a pause, not even a byte fits. */
 	fcntl(pair.client, F_SETFL, fcntl(pair.client, F_GETFL) | O_NONBLOCK);
 	static char chunk[65536];
-	while (send(pair.client, chunk, sizeof(chunk), 0) > 0) {
-	}
+	do {
+		while (send(pair.client, chunk, sizeof(chunk), 0) > 0) {
+		}
+		usleep(20000);
+	} while (send(pair.client, chunk, 1, 0) > 0);
 
 	const wait_clock::time_point start = wait_clock::now();
 	const wait_clock::time_point deadline = start + milliseconds(150);
