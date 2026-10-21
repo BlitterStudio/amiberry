@@ -201,6 +201,43 @@ Amiberry MCP controller currently uses 50 ms between press/move/release
 phases), but that timing and the raw button-mask sequence are private
 implementation details rather than public API parameters.
 
+## Settings edit session
+
+The `SETTINGS_*` commands expose one edit session of the shared settings
+layer (`src/osdep/settings/amiberry_settings.h`), so a controller can edit
+the pending configuration end to end with validation and commit semantics
+instead of the handful of `SET_CONFIG` options. Like every command they run
+on the emulation thread. The session belongs to the IPC server as a whole
+and is shared by every connected controller: one controller's COMMIT
+commits every controller's staged edits, and one's RESET_SESSION discards
+them all. Coordinate controllers accordingly.
+
+- `SETTINGS_GET <id>` replies `OK <id>=<value>` with the value in `.uae`
+  spelling. Unknown option IDs reply `ERROR Unknown option: <id>`.
+- `SETTINGS_SET <id> <value>` stores a checked value in the session and
+  applies the dependent changes the GUI applies. Invalid or unavailable
+  values reply `ERROR` with the reason.
+- `SETTINGS_VALIDATE` runs the core's configuration fixups as a preview and
+  replies `OK` with one field per adjustment they would make
+  (`<id>=<requested>-><adjusted> (<reason>)`), or `OK none`. The session is
+  not modified and nothing is logged.
+- `SETTINGS_COMMIT` stores the session into the pending configuration and
+  replies `OK changed=<true|false> apply=<live|reset|restart>`, the
+  strongest apply class among the changed options. When something changed it
+  also signals the running emulation like `SET_CONFIG` does, so live options
+  take effect at once. The session is closed afterwards.
+- `SETTINGS_RESET_SESSION` discards the session's uncommitted edits.
+
+A session that holds no uncommitted `SETTINGS_SET` edits is reopened from
+the current pending configuration at the next `SETTINGS_*` command, so a
+configuration loaded or changed any other way (`LOAD_CONFIG`, `SET_CONFIG`,
+the GUI) is what subsequent `SETTINGS_GET` and `SETTINGS_SET` see. Staged
+edits are never dropped behind the controller's back: while any uncommitted
+`SETTINGS_SET` exists, the session stays open and isolated.
+
+Option IDs and values are exactly the `.uae` keys and spellings the layer
+defines; `amiberry_settings_count()`/`amiberry_settings_at()` list them.
+
 ## Debugger monitor
 
 `MONITOR <text>` runs the same command text as GDB `monitor <text>`. The
@@ -271,7 +308,7 @@ attaching GDB with `watch remove`, `dma-watch remove`, `condition remove`,
 `exception-mask 0`, `process-break clear`, `history off`, `guest-output off`
 followed by `guest-output clear`, `watch clear-events`, and `input release`.
 The last captured exception (`exception`) does not block GDB; it is dropped
-when that GDB client detaches. D-Bus does not expose `MONITOR`.
+when that GDB client detaches.
 
 ## Validation status
 

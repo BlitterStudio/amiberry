@@ -261,11 +261,31 @@ struct DownloadContext {
 	std::atomic<bool>* cancel_flag = nullptr;
 };
 
-static std::thread s_update_thread;
+// The shared state is declared before the thread holder so it is destroyed
+// after it: statics are destroyed in reverse declaration order, and the
+// holder's destructor joins the thread, which must still find every shared
+// object alive.
 static std::mutex s_update_mutex;
 static std::atomic<bool> s_update_running{false};
 static std::atomic<bool> s_update_cancel{false};
 static UpdateInfo s_update_result;
+
+// A plain std::thread would call std::terminate() at exit when the process
+// ends while a check is still running (for example when graphics
+// initialization fails and main() returns without uae_quit(), so nothing
+// joins it). Cancelling and joining is safe here: curl's progress callback
+// checks s_update_cancel, so a transfer in flight stops on its own. If the
+// thread was never started or already joined, there is nothing to do.
+static struct UpdateThread {
+	std::thread thread;
+	~UpdateThread()
+	{
+		if (thread.joinable()) {
+			s_update_cancel.store(true);
+			thread.join();
+		}
+	}
+} s_update_thread;
 
 #ifdef _WIN32
 static std::string s_windows_restart_script;
@@ -482,7 +502,9 @@ static bool http_get(const std::string& url, std::string& response_body, long& h
 }
 #endif // AMIBERRY_HAS_CURL
 
-static bool parse_release_json(const nlohmann::json& rel, UpdateInfo& out)
+// cancel_flag stops the SHA256SUMS request too, so cancelling the update
+// check (or exiting) never waits for that transfer to time out.
+static bool parse_release_json(const nlohmann::json& rel, UpdateInfo& out, std::atomic<bool>* cancel_flag)
 {
 	if (!rel.is_object()) {
 		return false;
@@ -584,8 +606,9 @@ static bool parse_release_json(const nlohmann::json& rel, UpdateInfo& out)
 		std::string sums_body;
 		long sums_code = 0;
 #ifdef AMIBERRY_HAS_CURL
-		if (http_get(sha256_url, sums_body, sums_code, nullptr) && sums_code >= 200 && sums_code < 300) {
+		if (http_get(sha256_url, sums_body, sums_code, cancel_flag) && sums_code >= 200 && sums_code < 300) {
 #else
+		(void)cancel_flag;
 		if (false) {
 #endif
 			out.sha256_expected = find_release_asset_sha256(sums_body, out.asset_name);
@@ -623,7 +646,7 @@ static bool read_release(UpdateChannel channel, UpdateInfo& out, std::atomic<boo
 	}
 
 	if (channel == UpdateChannel::Stable) {
-		if (!parse_release_json(doc, out)) {
+		if (!parse_release_json(doc, out, cancel_flag)) {
 			out.error_message = "GitHub latest release payload missing fields";
 			return false;
 		}
@@ -642,7 +665,7 @@ static bool read_release(UpdateChannel channel, UpdateInfo& out, std::atomic<boo
 		if (rel.contains("draft") && rel["draft"].is_boolean() && rel["draft"].get<bool>()) {
 			continue;
 		}
-		if (parse_release_json(rel, out)) {
+		if (parse_release_json(rel, out, cancel_flag)) {
 			return true;
 		}
 	}
@@ -1404,11 +1427,11 @@ void start_async_update_check(UpdateChannel channel)
 	s_update_running.store(true);
 	s_update_cancel.store(false);
 
-	if (s_update_thread.joinable()) {
-		s_update_thread.join();
+	if (s_update_thread.thread.joinable()) {
+		s_update_thread.thread.join();
 	}
 
-	s_update_thread = std::thread([channel]() {
+	s_update_thread.thread = std::thread([channel]() {
 		UpdateInfo result = check_for_updates(channel);
 		{
 			std::lock_guard<std::mutex> lock(s_update_mutex);
@@ -1425,8 +1448,8 @@ bool is_update_check_running()
 
 UpdateInfo get_async_update_result()
 {
-	if (s_update_thread.joinable() && !s_update_running.load()) {
-		s_update_thread.join();
+	if (s_update_thread.thread.joinable() && !s_update_running.load()) {
+		s_update_thread.thread.join();
 	}
 	std::lock_guard<std::mutex> lock(s_update_mutex);
 	return s_update_result;
@@ -1435,8 +1458,8 @@ UpdateInfo get_async_update_result()
 void cancel_async_update_check()
 {
 	s_update_cancel.store(true);
-	if (s_update_thread.joinable()) {
-		s_update_thread.join();
+	if (s_update_thread.thread.joinable()) {
+		s_update_thread.thread.join();
 	}
 	s_update_running.store(false);
 }

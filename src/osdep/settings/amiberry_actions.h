@@ -1,0 +1,168 @@
+/*
+ * Amiberry runtime actions and status: the platform-neutral C API for
+ * everything a front end does while the emulator runs, as opposed to the
+ * configuration editing covered by amiberry_settings.h.
+ *
+ * Actions are the operations the built-in GUI and the IPC transport
+ * expose today: inserting and ejecting media, disk swapper control, resets,
+ * pause and resume, save states, screenshots and quitting. They can be
+ * posted from ANY thread: native front ends have their own UI threads
+ * (SwiftUI, WinUI, GTK), and the emulator must never be driven from
+ * anywhere but its main thread. Posted actions wait in a queue that the
+ * emulator's main thread drains in order, between frames, while the GUI is
+ * open, and while a GDB client or the native debugger has the CPU stopped
+ * (the debugger window, or its terminal console while IPC is enabled; a
+ * terminal console without IPC blocks on its input).
+ *
+ * Status is a snapshot of the running emulator (run state, drive LEDs and
+ * activity, inserted media) that the main thread refreshes at every drain
+ * point under a lock; it can be copied from any thread at any time.
+ *
+ * Strings are NUL-terminated UTF-8. bool is the C99 one-byte type. The
+ * header is strict C99 so every language with a C foreign-function
+ * interface can bind it.
+ */
+#pragma once
+
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+
+/*
+ * Same export convention as amiberry_settings.h: a build that ships the
+ * actions in a shared library defines AMIBERRY_ACTIONS_EXPORT while
+ * compiling it, and the front end defines AMIBERRY_ACTIONS_IMPORT on
+ * Windows.
+ */
+#if defined(_WIN32)
+#if defined(AMIBERRY_ACTIONS_EXPORT)
+#define AMIBERRY_ACTIONS_API __declspec(dllexport)
+#elif defined(AMIBERRY_ACTIONS_IMPORT)
+#define AMIBERRY_ACTIONS_API __declspec(dllimport)
+#else
+#define AMIBERRY_ACTIONS_API
+#endif
+#elif defined(__GNUC__)
+#define AMIBERRY_ACTIONS_API __attribute__((visibility("default")))
+#else
+#define AMIBERRY_ACTIONS_API
+#endif
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#define AMIBERRY_ACTIONS_API_VERSION 1
+
+/* Largest MAX_DPATH (PATH_MAX) any supported platform builds with, so every
+   media path the emulator can store fits, NUL included. */
+#define AMIBERRY_ACTIONS_PATH_MAX 4096
+#define AMIBERRY_ACTIONS_FLOPPY_DRIVES 4
+#define AMIBERRY_ACTIONS_SWAPPER_ENTRIES 20
+
+typedef enum amiberry_run_state {
+	AMIBERRY_RUN_STATE_STOPPED = 0, /* no emulation is running */
+	AMIBERRY_RUN_STATE_RUNNING = 1,
+	AMIBERRY_RUN_STATE_PAUSED = 2   /* host pause, not a guest program */
+} amiberry_run_state;
+
+/* Returned by amiberry_actions_poll(). */
+typedef enum amiberry_action_result {
+	AMIBERRY_ACTION_PENDING = 0, /* queued or executing */
+	AMIBERRY_ACTION_DONE = 1,    /* finished successfully */
+	AMIBERRY_ACTION_FAILED = 2,  /* finished with an error */
+	AMIBERRY_ACTION_UNKNOWN = 3  /* unknown id, or result already retired */
+} amiberry_action_result;
+
+typedef struct amiberry_drive_status {
+	bool motor_on;          /* drive LED: the motor is spinning */
+	bool writing;           /* motor_on and writing data */
+	bool disabled;          /* the drive is disabled */
+	bool media_requested;   /* the pending configuration inserts media */
+	char media_path[AMIBERRY_ACTIONS_PATH_MAX]; /* pending media path, "" when none */
+} amiberry_drive_status;
+
+typedef struct amiberry_actions_status {
+	amiberry_run_state run_state;
+	bool paused;            /* the raw pause flag, as GET_STATUS reports it */
+	bool power_led;
+	bool caps_lock;
+	int hd_activity;        /* hard drive LED level, -1 when there is none */
+	int cd_activity;        /* CD LED level, -1 when there is none */
+	amiberry_drive_status floppy[AMIBERRY_ACTIONS_FLOPPY_DRIVES];
+	bool cd_requested;      /* the pending configuration inserts a CD */
+	char cd_path[AMIBERRY_ACTIONS_PATH_MAX]; /* pending CD path, "" when none */
+	char config_description[256]; /* pending configuration description */
+	unsigned revision;      /* increased by every main-thread refresh */
+} amiberry_actions_status;
+
+/*
+ * Post a runtime action. Callable from any thread. Actions execute in
+ * posting order on the emulator's main thread; each makes exactly the
+ * changes the built-in GUI and the IPC transport make today.
+ *
+ * The return value identifies the action for amiberry_actions_poll() and is
+ * non-zero unless the action was rejected on the spot: an argument out of
+ * range, a NULL path or one too long for the emulator, or a queue already
+ * holding AMIBERRY_ACTIONS_MAX_PENDING actions (the main thread is not
+ * draining). Rejected actions never execute. An empty path is accepted:
+ * for a floppy or CD it empties the drive, as the IPC commands always did;
+ * for a state file or screenshot the action fails when it runs.
+ *
+ * reset: hard resets like a power cycle, keyboard like the Ctrl-Amiga-Amiga
+ * key combination. save_state/load_state take a state file path;
+ * save_state_slot/load_state_slot use the quick-save slots 0-9.
+ */
+#define AMIBERRY_ACTIONS_MAX_PENDING 1024
+
+typedef uint64_t amiberry_action_id;
+
+AMIBERRY_ACTIONS_API amiberry_action_id amiberry_actions_insert_floppy(int drive, const char *path);
+AMIBERRY_ACTIONS_API amiberry_action_id amiberry_actions_eject_floppy(int drive);
+AMIBERRY_ACTIONS_API amiberry_action_id amiberry_actions_set_swapper_entry(int index, const char *path);
+AMIBERRY_ACTIONS_API amiberry_action_id amiberry_actions_insert_swapper_entry(int index, int drive);
+AMIBERRY_ACTIONS_API amiberry_action_id amiberry_actions_insert_cd(const char *path);
+AMIBERRY_ACTIONS_API amiberry_action_id amiberry_actions_eject_cd(void);
+AMIBERRY_ACTIONS_API amiberry_action_id amiberry_actions_reset(bool hard, bool keyboard);
+AMIBERRY_ACTIONS_API amiberry_action_id amiberry_actions_pause(void);
+AMIBERRY_ACTIONS_API amiberry_action_id amiberry_actions_resume(void);
+AMIBERRY_ACTIONS_API amiberry_action_id amiberry_actions_save_state(const char *path);
+AMIBERRY_ACTIONS_API amiberry_action_id amiberry_actions_load_state(const char *path);
+AMIBERRY_ACTIONS_API amiberry_action_id amiberry_actions_save_state_slot(int slot);
+AMIBERRY_ACTIONS_API amiberry_action_id amiberry_actions_load_state_slot(int slot);
+AMIBERRY_ACTIONS_API amiberry_action_id amiberry_actions_screenshot(const char *path);
+AMIBERRY_ACTIONS_API amiberry_action_id amiberry_actions_quit(void);
+
+/*
+ * Ask what became of a posted action. Callable from any thread; polling
+ * CONSUMES the result, so exactly one poll sees DONE or FAILED and later
+ * polls see AMIBERRY_ACTION_UNKNOWN. Results are kept for the most recent
+ * AMIBERRY_ACTIONS_MAX_PENDING completions, then retired. On FAILED the
+ * error text (UTF-8, possibly empty) is copied into error_buffer,
+ * truncated to fit; error_buffer may be NULL.
+ */
+AMIBERRY_ACTIONS_API amiberry_action_result amiberry_actions_poll(amiberry_action_id id,
+	char *error_buffer, size_t size);
+
+/*
+ * Main thread only: execute the queued actions in order and refresh the
+ * status snapshot. The emulator calls this between frames and while the
+ * GUI is open; transports that already run on the main thread call it to
+ * execute what they just posted. Returns the number of actions executed.
+ */
+AMIBERRY_ACTIONS_API size_t amiberry_actions_run_pending(void);
+
+/* Copy the current status snapshot. Callable from any thread. */
+AMIBERRY_ACTIONS_API void amiberry_actions_get_status(amiberry_actions_status *out);
+
+/*
+ * Copy the pending disk-swapper entry `index`
+ * (0..AMIBERRY_ACTIONS_SWAPPER_ENTRIES-1); "" when the entry is unset.
+ * Callable from any thread.
+ */
+AMIBERRY_ACTIONS_API void amiberry_actions_get_swapper_entry(int index,
+	char *buffer, size_t size);
+
+#ifdef __cplusplus
+}
+#endif

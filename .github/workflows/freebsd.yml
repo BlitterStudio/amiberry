@@ -89,15 +89,13 @@ jobs:
             cc --version
             pkg -vv | sed -n '/^Repositories:/,$p'
 
-            # Exercise DBus linking on both releases. Native optimization
-            # (-mcpu=native) runs on 15.1 except for release tags, whose
-            # packages must run on any CPU. Build and stage outside the synced
-            # workspace so the action's copyback returns only the package,
-            # not the build tree.
+            # Native optimization (-mcpu=native) runs on 15.1 except for
+            # release tags, whose packages must run on any CPU. Build and
+            # stage outside the synced workspace so the action's copyback
+            # returns only the package, not the build tree.
             cmake -S . -B /tmp/build-freebsd -G Ninja \
               -DCMAKE_BUILD_TYPE=Release \
               -DCMAKE_INSTALL_PREFIX=/usr/local \
-              -DUSE_DBUS=ON \
               -DWITH_OPTIMIZE=${{ matrix.release == '15.1' && github.ref_type != 'tag' && 'ON' || 'OFF' }}
             cmake --build /tmp/build-freebsd --parallel 4
 

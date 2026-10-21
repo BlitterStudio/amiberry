@@ -43,6 +43,8 @@
 #include "macos_window.h"
 #include "amiberry_rp9.h"
 #include "amiberry_gui_pacing.h"
+#include "settings/amiberry_actions.h"
+#include "amiberry_actions_host.h"
 
 #ifdef USE_IMGUI
 #include "imgui.h"
@@ -2090,7 +2092,19 @@ void run_gui()
 
 	// Main loop
 	while (gui_running) {
-		const uint64_t frame_start = SDL_GetPerformanceCounter();
+		// Runtime actions posted from other threads keep running (and the
+		// status snapshot stays fresh) while the GUI is open. A reset, quit
+		// or state load among them only marks the request (quit_program);
+		// the emulation loop carries it out after the GUI closes, so leave
+		// the loop the way the GUI's own Reboot, Quit and Load State
+		// buttons do. Only a request made by this drain counts (the GUI can
+		// open with one pending), counted rather than read from
+		// quit_program, which a second identical request leaves unchanged.
+		const unsigned long requests_before = amiberry_actions_emulation_requests();
+		amiberry_actions_run_pending();
+		if (amiberry_actions_emulation_requests() != requests_before)
+			gui_running = false;
+ 		const uint64_t frame_start = SDL_GetPerformanceCounter();
 		while (SDL_PollEvent(&gui_event)) {
 			if (ControllerMap_HandleEvent(gui_event)) {
 				continue;

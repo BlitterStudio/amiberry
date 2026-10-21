@@ -72,6 +72,7 @@
 #include "amiberry_update.h"
 #include "amiberry_curl.h"
 #include "amiberry_update_asset_policy.h"
+#include "settings/amiberry_actions.h"
 #include "clipboard.h"
 #include "dpi_handler.hpp"
 #include "gui_layout_scale.h"
@@ -128,9 +129,6 @@ struct gpiod_line* lineYellow; // Yellow LED
 #endif
 #endif
 
-#ifdef USE_DBUS
-#include "amiberry_dbus.h"
-#endif
 #ifdef USE_IPC_SOCKET
 #include "amiberry_ipc.h"
 #endif
@@ -4517,12 +4515,13 @@ bool handle_events()
 		flush_macos_synthetic_mouse_releases();
 #endif
 
-#ifdef USE_DBUS
-	DBusHandle();
-#endif
 #ifdef USE_IPC_SOCKET
 	Amiberry::IPC::IPCHandle();
 #endif
+	// Runtime actions posted from other threads (native front ends, IPC)
+	// run here, in order, between frames; this also refreshes the status
+	// snapshot. Runs in every handle_events() pass, including while paused.
+	amiberry_actions_run_pending();
 
 	if (pause_emulation)
 	{
@@ -13171,10 +13170,6 @@ int amiberry_main(int argc, char* argv[])
 
 
 
-#ifdef USE_DBUS
-	if (!early_dump_mode)
-		DBusSetup();
-#endif
 #ifdef USE_IPC_SOCKET
 	if (!early_dump_mode)
 		Amiberry::IPC::IPCSetup();

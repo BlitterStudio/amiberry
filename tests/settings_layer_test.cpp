@@ -23,6 +23,13 @@
 #include <cstring>
 #include <string>
 
+#include "settings/settings_actions_queue.h"
+
+#include <atomic>
+#include <map>
+#include <mutex>
+#include <thread>
+
 // The globals and core functions the layer and fixup_cpu() use. The
 // stand-in preview runs the real CPU fixup, the part of fixup_prefs() the
 // CPU options depend on.
@@ -688,8 +695,140 @@ void emit_roundtrip()
 
 } // namespace
 
+// === Runtime action queue (settings/settings_actions_queue.h) ===
+// The queue the emulator drains on its main thread: ordering, cross-thread
+// posting, completion bookkeeping and bounded retention.
+
+struct queue_log {
+	std::mutex mutex;
+	std::vector<int> executed; // the `number` of each executed request
+	std::vector<std::string> errors;
+};
+
+static bool log_executor(const amiberry_actions::request& r, void* context, std::string* error)
+{
+	auto* log = static_cast<queue_log*>(context);
+	std::lock_guard<std::mutex> lock(log->mutex);
+	log->executed.push_back(r.number);
+	if (r.flag_a) {
+		*error = "requested failure";
+		return false;
+	}
+	return true;
+}
+
+static void check_action_queue()
+{
+	amiberry_actions::action_queue queue;
+	queue_log log;
+
+	// Posting assigns increasing non-zero ids; a request stays pending
+	// until run_pending() executes it.
+	const auto first = queue.post(amiberry_actions::kind::pause, 0, 1, false, false, nullptr);
+	const auto second = queue.post(amiberry_actions::kind::resume, 0, 2, false, false, nullptr);
+	CHECK(first != 0 && second == first + 1);
+	CHECK(queue.poll(first, nullptr) == 0);
+
+	// Actions execute in posting order on the caller of run_pending().
+	CHECK(queue.run_pending(log_executor, &log) == 2);
+	CHECK(log.executed.size() == 2 && log.executed[0] == 1 && log.executed[1] == 2);
+
+	// Polling consumes the result: done once, unknown afterwards. A failed
+	// action reports its error text.
+	CHECK(queue.poll(first, nullptr) == 1);
+	CHECK(queue.poll(first, nullptr) == 3);
+	std::string error;
+	const auto failing = queue.post(amiberry_actions::kind::pause, 0, 3, true, false, nullptr);
+	queue.run_pending(log_executor, &log);
+	CHECK(queue.poll(failing, &error) == 2);
+	CHECK(error == "requested failure");
+	CHECK(queue.poll(failing, nullptr) == 3);
+
+	// Unknown ids (never assigned, or zero) never report pending.
+	CHECK(queue.poll(999999, nullptr) == 3);
+	CHECK(queue.poll(0, nullptr) == 3);
+
+	// The queue refuses more than max_pending requests; run_pending drains
+	// them all and executes each exactly once.
+	size_t accepted = 0;
+	for (int i = 0; i < amiberry_actions::action_queue::max_pending + 10; i++) {
+		if (queue.post(amiberry_actions::kind::pause, 0, 5000 + i, false, false, nullptr) != 0)
+			accepted++;
+	}
+	CHECK(accepted == amiberry_actions::action_queue::max_pending);
+	CHECK(queue.run_pending(log_executor, &log) == accepted);
+	CHECK(log.executed.size() == 2 + 1 + accepted);
+
+	// A pass runs only what was queued when it started: an action posted
+	// while it runs (a front end that keeps posting) waits for the next
+	// pass instead of keeping the emulator thread in this one.
+	struct reposting {
+		amiberry_actions::action_queue* queue;
+		int runs = 0;
+	} repost{&queue};
+	const auto reposting_executor = [](const amiberry_actions::request&, void* context, std::string*) {
+		auto* state = static_cast<reposting*>(context);
+		state->runs++;
+		state->queue->post(amiberry_actions::kind::pause, 0, 0, false, false, nullptr);
+		return true;
+	};
+	queue.post(amiberry_actions::kind::pause, 0, 0, false, false, nullptr);
+	CHECK(queue.run_pending(reposting_executor, &repost) == 1 && repost.runs == 1);
+	CHECK(queue.has_pending());
+	CHECK(queue.run_pending(reposting_executor, &repost) == 1 && repost.runs == 2);
+	const auto ignore = [](const amiberry_actions::request&, void*, std::string*) { return true; };
+	CHECK(queue.run_pending(ignore, nullptr) == 1);
+	CHECK(!queue.has_pending());
+
+	// Posts from other threads interleave safely and keep their order per
+	// the single executor: everything posted runs exactly once.
+	std::vector<std::thread> posters;
+	std::atomic<int> posted{0};
+	for (int t = 0; t < 4; t++) {
+		posters.emplace_back([&queue, &posted, t]() {
+			for (int i = 0; i < 250; i++) {
+				if (queue.post(amiberry_actions::kind::pause, 0, 20000 + t * 1000 + i,
+					false, false, nullptr) != 0)
+					posted.fetch_add(1);
+			}
+		});
+	}
+	for (auto& thread : posters)
+		thread.join();
+	CHECK(posted.load() == 1000);
+	CHECK(queue.run_pending(log_executor, &log) == 1000);
+	std::map<int, int> seen;
+	{
+		std::lock_guard<std::mutex> lock(log.mutex);
+		for (int number : log.executed)
+			seen[number]++;
+	}
+	CHECK(seen.size() == 3 + accepted + 1000); // 1,2,3 + queued + threaded
+	for (const auto& entry : seen)
+		CHECK(entry.second == 1);
+
+	// Results are retained for the most recent max_results completions;
+	// older unconsumed results retire to unknown.
+	amiberry_actions::action_queue retiring;
+	queue_log retiring_log;
+	uint64_t oldest = 0;
+	for (int round = 0; round < 11; round++) {
+		for (int i = 0; i < 100; i++) {
+			const auto id = retiring.post(amiberry_actions::kind::pause, 0, i,
+				false, false, nullptr);
+			if (round == 0 && i == 0)
+				oldest = id;
+		}
+		retiring.run_pending(log_executor, &retiring_log);
+	}
+	CHECK(retiring_log.executed.size() == 1100);
+	CHECK(retiring.poll(oldest, nullptr) == 3);
+}
+
 int main(int argc, char** argv)
 {
+	check_action_queue();
+
 	if (argc > 1 && !std::strcmp(argv[1], "--emit-roundtrip")) {
 		emit_roundtrip();
 		return failures ? 1 : 0;

@@ -653,6 +653,25 @@ void savestate_restore_memory(const uae_u8 *data, size_t size)
 #endif
 
 
+// Whether restore_state() accepts the file: it opens and begins with an
+// AmigaStateFile header chunk, the only checks after which it proceeds.
+// A restore starts with a reset whether or not the file then loads, so
+// front ends check this before scheduling one.
+bool savestate_is_state_file (const TCHAR *filename)
+{
+	struct zfile *f = zfile_fopen (filename, _T("rb"), ZFD_NORMAL);
+	if (!f)
+		return false;
+	TCHAR name[5];
+	unsigned int len, totallen;
+	size_t filepos;
+	uae_u8 *chunk = restore_chunk (f, name, &len, &totallen, &filepos);
+	const bool valid = chunk && !_tcsncmp (name, _T("ASF "), 4);
+	xfree (chunk);
+	zfile_fclose (f);
+	return valid;
+}
+
 void restore_state (const TCHAR *filename)
 {
 	struct zfile *f;
@@ -1401,7 +1420,7 @@ int save_state (const TCHAR *filename, const TCHAR *description)
 	return v;
 }
 
-void savestate_quick(int slot, int save)
+int savestate_quick(int slot, int save)
 {
 	if (path_statefile[0]) {
 		_tcscpy(savestate_fname, path_statefile);
@@ -1418,7 +1437,7 @@ void savestate_quick(int slot, int save)
 		}
 		if (i <= 0) {
 			write_log (_T("savestate name skipped '%s'\n"), savestate_fname);
-			return;
+			return 0;
 		}
 	}
 	_tcscpy (savestate_fname + i, _T(".uss"));
@@ -1431,19 +1450,26 @@ void savestate_quick(int slot, int save)
 		savestate_flags |= SAVESTATE_DOCOMPRESS;
 		savestate_flags |= SAVESTATE_NODIALOGS;
 		savestate_flags |= SAVESTATE_ALWAYSUSEPATH;
-		save_state (savestate_fname, _T(""));
+		const int saved = save_state (savestate_fname, _T(""));
 #ifdef AMIBERRY
 		if (create_screenshot())
 			save_thumb(screenshot_filename);
 #endif
+		return saved;
 	} else {
 		if (!zfile_exists (savestate_fname)) {
 			write_log (_T("staterestore, file '%s' not found\n"), savestate_fname);
-			return;
+			return 0;
+		}
+		// The restore resets the machine whether or not the file loads.
+		if (!savestate_is_state_file (savestate_fname)) {
+			write_log (_T("staterestore, '%s' is not a state file\n"), savestate_fname);
+			return 0;
 		}
 		savestate_state = STATE_DORESTORE;
 		savestate_flags |= SAVESTATE_ALWAYSUSEPATH;
 		write_log (_T("staterestore starting '%s'\n"), savestate_fname);
+		return 1;
 	}
 }
 

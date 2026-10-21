@@ -25,6 +25,7 @@ BEHAVIORAL_TESTS=(
 	"test_dump_config.sh"
 	"test_appimage_portable_mode.sh"
 	"test_ipc_transport.sh"
+	"test_ipc_actions.sh"
 	"test_plugin_search_paths.sh"
 	"test_relocatable_install_paths.sh"
 	"test_relative_paths.sh"

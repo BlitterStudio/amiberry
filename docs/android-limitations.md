@@ -13,7 +13,7 @@ These build options are forced off for Android in `CMakeLists.txt`:
 - **Genlock video, camera input, and ZZ9000 FFmpeg/WebP codecs** — `USE_VIDEOGRAB`, `USE_FFMPEG`, and `USE_WEBP` are off.
 - **uaenet** — the pcap and TAP backends are not available. The built-in SLIRP stack and `bsdsocket.library` emulation are still included.
 - **PowerPC** — `USE_PPC` and the QEMU-UAE plugin loader (`USE_QEMU_PPC`) are off.
-- **D-Bus, IPC socket, and GPIO LEDs** — `USE_DBUS`, `USE_IPC_SOCKET`, and `USE_GPIOD` are off.
+- **IPC socket and GPIO LEDs** — `USE_IPC_SOCKET` and `USE_GPIOD` are off.
 
 MIDI is built with PortMidi's null backend, so no host MIDI devices are available. Portable mode and the built-in updater are not offered on Android; updates come through Google Play.
 

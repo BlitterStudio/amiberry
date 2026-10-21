@@ -13,7 +13,7 @@
 
 namespace Amiberry::IPC {
 
-// Command names (same as DBus for consistency)
+// Command names
 constexpr char const* CMD_QUIT = "QUIT";
 constexpr char const* CMD_PAUSE = "PAUSE";
 constexpr char const* CMD_RESUME = "RESUME";
@@ -54,6 +54,13 @@ constexpr char const* CMD_SET_GUI_AUTOMATION_CONFIG = "SET_GUI_AUTOMATION_CONFIG
 constexpr char const* CMD_SEND_MOUSE_ABS_GUARDED = "SEND_MOUSE_ABS_GUARDED";
 constexpr char const* CMD_RELEASE_MOUSE_BUTTONS = "RELEASE_MOUSE_BUTTONS";
 constexpr char const* CMD_PING = "PING";
+
+// Settings edit session (one session owned by the IPC server)
+constexpr char const* CMD_SETTINGS_GET = "SETTINGS_GET";
+constexpr char const* CMD_SETTINGS_SET = "SETTINGS_SET";
+constexpr char const* CMD_SETTINGS_VALIDATE = "SETTINGS_VALIDATE";
+constexpr char const* CMD_SETTINGS_COMMIT = "SETTINGS_COMMIT";
+constexpr char const* CMD_SETTINGS_RESET_SESSION = "SETTINGS_RESET_SESSION";
 constexpr char const* CMD_HELP = "HELP";
 
 // Joystick, Quicksave, LED status, etc.

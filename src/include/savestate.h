@@ -265,6 +265,7 @@ extern void restore_ar_finish(void);
 extern void savestate_initsave(const TCHAR *filename, int docompress, int nodialogs, bool save);
 extern int save_state(const TCHAR *filename, const TCHAR *description);
 extern void restore_state(const TCHAR *filename);
+extern bool savestate_is_state_file(const TCHAR *filename);
 #ifdef LIBRETRO
 extern int save_state_internal(struct zfile *f, const TCHAR *description, int comp, bool savepath);
 extern void savestate_restore_memory(const uae_u8 *data, size_t size);
@@ -299,7 +300,10 @@ STATIC_INLINE bool isrestore(void)
 	return savestate_state == STATE_RESTORE || savestate_state == STATE_REWIND;
 }
 
-extern void savestate_quick(int slot, int save);
+/* Returns the save_state() result when saving (non-zero on success), 1 when
+   the restore was scheduled, and 0 when nothing was done (no usable state
+   file name, or the state file to load does not exist). */
+extern int savestate_quick(int slot, int save);
 
 extern void savestate_capture(int);
 extern void savestate_free(void);
