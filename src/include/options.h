@@ -1318,9 +1318,11 @@ extern void drawbridge_update_profiles(struct uae_prefs* prefs);
 #define DRAWBRIDGE_OPTION_AUTODETECT_COMPORT 0x04
 #define DRAWBRIDGE_OPTION_DRIVE_CABLE 0x08
 #define DRAWBRIDGE_OPTION_SMARTSPEED 0x10
+#define DRAWBRIDGE_OPTION_SHUGART 0x20
 extern int drawbridge_driver_count(bool refresh);
 extern const char* drawbridge_driver_name(int index);
 extern unsigned int drawbridge_driver_options(int index);
+extern void drawbridge_check_prefs_changed();
 #endif
 
 extern void check_prefs_changed_custom(void);

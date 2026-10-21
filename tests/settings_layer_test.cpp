@@ -123,13 +123,14 @@ int enumerate_sound_devices() { return sound_device_count; }
 // Two FloppyBridge drivers: the first supports everything, the second
 // needs a serial port and supports nothing else.
 static int drawbridge_drivers = 2;
+static bool drawbridge_shugart = true;
 int drawbridge_driver_count(bool) { return drawbridge_drivers; }
 const char* drawbridge_driver_name(int index) { return index == 0 ? "DrawBridge" : "Greaseweazle"; }
 unsigned int drawbridge_driver_options(int index)
 {
 	if (index < 0 || index >= drawbridge_drivers)
 		return 0;
-	return index == 0 ? 0x1f : DRAWBRIDGE_OPTION_COMPORT;
+	return index == 0 ? (drawbridge_shugart ? 0x3f : 0x1f) : DRAWBRIDGE_OPTION_COMPORT;
 }
 
 // The memory window the memory domain clamps against; the real value is
@@ -2215,6 +2216,11 @@ void check_floppy_domain()
 	CHECK(set(p, "amiberry.drawbridge_serial_port", "/dev/ttyUSB0") == AMIBERRY_SETTINGS_OK);
 	CHECK(set(p, "amiberry.drawbridge_drive_cable", "5") == AMIBERRY_SETTINGS_OK);
 	CHECK(set(p, "amiberry.drawbridge_drive_cable", "6") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	// Shugart lines need a driver with Shugart mode.
+	drawbridge_shugart = false;
+	CHECK(!choice_available(p, "amiberry.drawbridge_drive_cable", "2"));
+	CHECK(choice_available(p, "amiberry.drawbridge_drive_cable", "1"));
+	drawbridge_shugart = true;
 	CHECK(set(p, "amiberry.drawbridge_driver", "1") == AMIBERRY_SETTINGS_OK);
 	CHECK(!available(p, "amiberry.drawbridge_serial_autodetect"));
 	CHECK(!available(p, "amiberry.drawbridge_smartspeed") && !available(p, "amiberry.drawbridge_drive_cable"));
@@ -2253,9 +2259,10 @@ void check_storage_domain()
 	CHECK(set(p, "cdimage0", std::string(MAX_DPATH, 'a').c_str()) == AMIBERRY_SETTINGS_INVALID_VALUE);
 
 	// Automounting host drives needs the SCSI device layer, which the
-	// fixup turns on.
+	// fixup turns on from the final value: the setter leaves it alone.
 	p.scsi = 0;
-	CHECK(set(p, "amiberry.map_cd_drives", "true") == AMIBERRY_SETTINGS_OK && p.scsi == 1);
+	CHECK(set(p, "amiberry.map_cd_drives", "true") == AMIBERRY_SETTINGS_OK && p.automount_cddrives);
+	CHECK(set(p, "amiberry.map_cd_drives", "false") == AMIBERRY_SETTINGS_OK && p.scsi == 0);
 	CHECK(set(p, "cd_speed", "0") == AMIBERRY_SETTINGS_OK && p.cd_speed == 0);
 	CHECK(set(p, "cd_speed", "50") == AMIBERRY_SETTINGS_INVALID_VALUE);
 

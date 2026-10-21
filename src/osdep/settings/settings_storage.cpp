@@ -84,13 +84,12 @@ void get_map_cd_drives(const uae_prefs& p, char* out, size_t size)
 	write_bool(out, size, p.automount_cddrives);
 }
 
-// target_fixup_options() turns on the SCSI device layer the automounted
-// drives need.
+// The SCSI device layer the automounted drives need is turned on by
+// target_fixup_options() from the final value, so turning the option on and
+// off again leaves it as it was.
 void set_map_cd_drives(uae_prefs& p, const value& v)
 {
 	p.automount_cddrives = v.number != 0;
-	if (p.automount_cddrives && !p.scsi)
-		p.scsi = 1;
 }
 
 // ------------------------------------------------------------ filesystem
@@ -168,7 +167,6 @@ bool commit_storage(const uae_prefs& base, const uae_prefs& from, uae_prefs& to,
 	FIELD(cdslots[0].type);
 	FIELD(cd_speed);
 	FIELD(automount_cddrives);
-	FIELD(scsi); // the automount option turns it on
 	FIELD(filesys_custom_uaefsdb);
 	FIELD(filesys_no_uaefsdb);
 #undef FIELD

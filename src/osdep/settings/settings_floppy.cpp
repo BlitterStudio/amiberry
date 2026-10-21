@@ -318,6 +318,14 @@ const amiberry_setting_choice drive_cable_choices[] = {
 	{"5", "Drive 3 (SHUGART)"},
 };
 
+// The IBM PC drive A/B lines work with any driver that has a cable option;
+// the Shugart drive 0-3 lines need a driver that supports Shugart mode
+// (FloppyBridge refuses them otherwise).
+bool drive_cable_choice_available(const uae_prefs& p, std::string_view choice)
+{
+	return choice == "0" || choice == "1" || (driver_options(p) & DRAWBRIDGE_OPTION_SHUGART) != 0;
+}
+
 void get_drawbridge_drive_cable(const uae_prefs& p, char* out, size_t size)
 {
 	write_int(out, size, p.drawbridge_drive_cable);
@@ -410,8 +418,8 @@ const definition definitions[] = {
 	{CHOICE_OPTION("amiberry.drawbridge_drive_cable", "drawbridge", "Drive cable",
 			"Which drive select line of the cable the real drive is on.",
 			AMIBERRY_APPLY_LIVE, "0", drive_cable_choices, driver_constraint),
-		get_drawbridge_drive_cable, set_drawbridge_drive_cable, drive_cable_available, nullptr,
-		nullptr, nullptr, nullptr},
+		get_drawbridge_drive_cable, set_drawbridge_drive_cable, drive_cable_available,
+		drive_cable_choice_available, nullptr, nullptr, nullptr},
 };
 
 bool commit_floppy(const uae_prefs& base, const uae_prefs& from, uae_prefs& to,

@@ -13587,7 +13587,8 @@ static_assert(DRAWBRIDGE_OPTION_AUTOCACHE == FloppyBridgeAPI::ConfigOption_AutoC
 	&& DRAWBRIDGE_OPTION_COMPORT == FloppyBridgeAPI::ConfigOption_ComPort
 	&& DRAWBRIDGE_OPTION_AUTODETECT_COMPORT == FloppyBridgeAPI::ConfigOption_AutoDetectComport
 	&& DRAWBRIDGE_OPTION_DRIVE_CABLE == FloppyBridgeAPI::ConfigOption_DriveABCable
-	&& DRAWBRIDGE_OPTION_SMARTSPEED == FloppyBridgeAPI::ConfigOption_SmartSpeed,
+	&& DRAWBRIDGE_OPTION_SMARTSPEED == FloppyBridgeAPI::ConfigOption_SmartSpeed
+	&& DRAWBRIDGE_OPTION_SHUGART == FloppyBridgeAPI::ConfigOption_SupportsShugartMode,
 	"DRAWBRIDGE_OPTION_* must match FloppyBridgeAPI::ConfigOption_*");
 
 static std::vector<FloppyBridgeAPI::DriverInformation>& drawbridge_drivers()
@@ -13629,6 +13630,29 @@ unsigned int drawbridge_driver_options(int index)
 		return drawbridge_drivers()[index].configOptions;
 #endif
 	return 0;
+}
+
+// Applies DrawBridge changes to the running configuration and the
+// FloppyBridge profiles. Called when the GUI closes and from the floppy
+// code's per-frame change check, so a change committed through the settings
+// layer while running reaches the hardware too.
+void drawbridge_check_prefs_changed()
+{
+	if (currprefs.drawbridge_driver == changed_prefs.drawbridge_driver &&
+		currprefs.drawbridge_serial_auto == changed_prefs.drawbridge_serial_auto &&
+		_tcsicmp(currprefs.drawbridge_serial_port, changed_prefs.drawbridge_serial_port) == 0 &&
+		currprefs.drawbridge_smartspeed == changed_prefs.drawbridge_smartspeed &&
+		currprefs.drawbridge_autocache == changed_prefs.drawbridge_autocache &&
+		currprefs.drawbridge_drive_cable == changed_prefs.drawbridge_drive_cable)
+		return;
+	currprefs.drawbridge_driver = changed_prefs.drawbridge_driver;
+	currprefs.drawbridge_serial_auto = changed_prefs.drawbridge_serial_auto;
+	_tcscpy(currprefs.drawbridge_serial_port, changed_prefs.drawbridge_serial_port);
+	currprefs.drawbridge_smartspeed = changed_prefs.drawbridge_smartspeed;
+	currprefs.drawbridge_autocache = changed_prefs.drawbridge_autocache;
+	currprefs.drawbridge_drive_cable = changed_prefs.drawbridge_drive_cable;
+	if (quit_program != UAE_QUIT)
+		drawbridge_update_profiles(&currprefs);
 }
 
 // The serialization logic here is taken from FloppyBridge.cpp -> void BridgeConfig::toString(char** serialisedOptions)

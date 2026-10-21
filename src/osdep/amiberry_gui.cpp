@@ -807,22 +807,7 @@ static void gui_to_prefs(void)
 	memcpy(&currprefs.mountconfig, &changed_prefs.mountconfig, MOUNT_CONFIG_SIZE * sizeof(struct uaedev_config_info));
 
 #ifdef AMIBERRY
-	if (currprefs.drawbridge_driver != changed_prefs.drawbridge_driver ||
-		currprefs.drawbridge_serial_auto != changed_prefs.drawbridge_serial_auto ||
-		_tcsicmp(currprefs.drawbridge_serial_port, changed_prefs.drawbridge_serial_port) != 0 ||
-		currprefs.drawbridge_smartspeed != changed_prefs.drawbridge_smartspeed ||
-		currprefs.drawbridge_autocache != changed_prefs.drawbridge_autocache ||
-		currprefs.drawbridge_drive_cable != changed_prefs.drawbridge_drive_cable)
-	{
-		currprefs.drawbridge_driver = changed_prefs.drawbridge_driver;
-		currprefs.drawbridge_serial_auto = changed_prefs.drawbridge_serial_auto;
-		_tcscpy(currprefs.drawbridge_serial_port, changed_prefs.drawbridge_serial_port);
-		currprefs.drawbridge_smartspeed = changed_prefs.drawbridge_smartspeed;
-		currprefs.drawbridge_autocache = changed_prefs.drawbridge_autocache;
-		currprefs.drawbridge_drive_cable = changed_prefs.drawbridge_drive_cable;
-		if (quit_program != UAE_QUIT)
-			drawbridge_update_profiles(&currprefs);
-	}
+	drawbridge_check_prefs_changed();
 #endif
 
 	fixup_prefs(&changed_prefs, true);

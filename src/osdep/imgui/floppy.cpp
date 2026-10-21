@@ -380,8 +380,10 @@ static void drawbridge_combo(const char* id, const settings::definition& d,
             if (is_selected)
                 ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
             ImGui::PushID(static_cast<int>(n));
+            ImGui::BeginDisabled(!settings::is_choice_available(d, changed_prefs, ctx, choices.items[n].value));
             if (ImGui::Selectable(choices.items[n].label, is_selected))
                 settings::set(d, changed_prefs, ctx, choices.items[n].value);
+            ImGui::EndDisabled();
             ImGui::PopID();
             if (is_selected) {
                 ImGui::PopStyleColor();

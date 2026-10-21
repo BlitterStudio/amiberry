@@ -3408,6 +3408,9 @@ static void floppybridge_getsetprofile(int i)
 
 static void DISK_check_change (void)
 {
+#ifdef AMIBERRY
+	drawbridge_check_prefs_changed();
+#endif
 	if (currprefs.floppy_speed != changed_prefs.floppy_speed)
 		currprefs.floppy_speed = changed_prefs.floppy_speed;
 	if (currprefs.floppy_read_only != changed_prefs.floppy_read_only)
