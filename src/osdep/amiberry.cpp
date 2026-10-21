@@ -72,6 +72,7 @@
 #include "amiberry_update.h"
 #include "amiberry_curl.h"
 #include "amiberry_update_asset_policy.h"
+#include "settings/amiberry_actions.h"
 #include "clipboard.h"
 #include "dpi_handler.hpp"
 #include "gui_layout_scale.h"
@@ -4523,6 +4524,10 @@ bool handle_events()
 #ifdef USE_IPC_SOCKET
 	Amiberry::IPC::IPCHandle();
 #endif
+	// Runtime actions posted from other threads (native front ends, IPC)
+	// run here, in order, between frames; this also refreshes the status
+	// snapshot. Runs in every handle_events() pass, including while paused.
+	amiberry_actions_run_pending();
 
 	if (pause_emulation)
 	{

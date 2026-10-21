@@ -43,6 +43,7 @@
 #include "macos_window.h"
 #include "amiberry_rp9.h"
 #include "amiberry_gui_pacing.h"
+#include "settings/amiberry_actions.h"
 
 #ifdef USE_IMGUI
 #include "imgui.h"
@@ -2090,7 +2091,10 @@ void run_gui()
 
 	// Main loop
 	while (gui_running) {
-		const uint64_t frame_start = SDL_GetPerformanceCounter();
+		// Runtime actions posted from other threads keep running (and the
+		// status snapshot stays fresh) while the GUI is open.
+		amiberry_actions_run_pending();
+ 		const uint64_t frame_start = SDL_GetPerformanceCounter();
 		while (SDL_PollEvent(&gui_event)) {
 			if (ControllerMap_HandleEvent(gui_event)) {
 				continue;
