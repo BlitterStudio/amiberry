@@ -1173,10 +1173,14 @@ static std::string HandleSetFolder(const std::vector<std::string>& args)
 	if (folder < 0) {
 		return make_response(false, {"Usage: SET_FOLDER <folder> <path>"});
 	}
-	if (amiberry_folder_set(static_cast<amiberry_folder>(folder), args[1].c_str()) != AMIBERRY_SETTINGS_OK) {
+	switch (amiberry_folder_set(static_cast<amiberry_folder>(folder), args[1].c_str())) {
+	case AMIBERRY_SETTINGS_OK:
+		return make_response(true);
+	case AMIBERRY_SETTINGS_UNAVAILABLE:
+		return make_response(false, {"Folder could not be stored (access or settings file): " + args[1]});
+	default:
 		return make_response(false, {"Invalid path: " + args[1]});
 	}
-	return make_response(true);
 }
 
 static std::string HandleFrameAdvance(const std::vector<std::string>& args)

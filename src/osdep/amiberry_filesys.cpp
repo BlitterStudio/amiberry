@@ -1751,6 +1751,14 @@ void my_set_time_explicit(struct my_openfile_s* mos) noexcept
 	struct stat old_st{};
 	const bool have_old_mode = (stat(target.c_str(), &old_st) == 0);
 
+	/* A file the process may not write stays as it is, as with fopen("w"):
+	   replacing it needs only the directory's permission, which would
+	   bypass a deliberately read-only file. */
+	if (have_old_mode && access(target.c_str(), W_OK) != 0) {
+		write_log("my_save_file_atomic: '%s' is not writable: %s\n", target.c_str(), strerror(errno));
+		return false;
+	}
+
 	/* Unique temp in the SAME directory as the target (so rename(2) is atomic
 	   and on the same filesystem). mkstemp creates it 0600 and unique, which
 	   avoids both a world-readable window and any PID-reuse collision. */

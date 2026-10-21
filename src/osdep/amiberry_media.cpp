@@ -169,7 +169,8 @@ bool storable_path(const char* path)
 		if (static_cast<unsigned char>(path[i]) < 0x20 || path[i] == 0x7f)
 			return false;
 	}
-	return path[0] != ' ' && path[length - 1] != ' ';
+	// Only what the API can return: its strings are UTF-8.
+	return path[0] != ' ' && path[length - 1] != ' ' && valid_utf8(path);
 }
 
 // The absolute spelling of a path, so a list entry is a full path whatever
