@@ -1132,14 +1132,24 @@ void refresh_sound_devices()
 	num_sound_devices = 0;
 	num_record_devices = 0;
 	enumerate_sound_devices();
+	bool playing_device_lost = false;
 	for (int k = 0; k < 2; k++) {
 		if (!playback[k].empty()) {
 			const int card = find_sound_device(sound_devices, playback[k]);
 			prefs[k]->soundcard = card >= 0 ? card : 0;
+			if (card < 0 && prefs[k] == &currprefs)
+				playing_device_lost = true;
 		}
 		if (!recording[k].empty())
 			prefs[k]->samplersoundcard = find_sound_device(record_devices, recording[k]);
 	}
+	// The stream is still attached to a device that is gone. Both
+	// configurations fall back to the first device, which the audio change
+	// check cannot see (the indices can be equal), so the stream is reset
+	// the way a lost device is: the reset path reopens it on currprefs'
+	// device.
+	if (playing_device_lost)
+		set_reset(sdp);
 }
 
 static int set_master_volume(int volume, int mute)

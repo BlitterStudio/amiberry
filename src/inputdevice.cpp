@@ -6259,6 +6259,14 @@ int send_input_event (int nr, int state, int max, int autofire)
 
 static void inputdevice_checkconfig (void)
 {
+#ifdef AMIBERRY
+	// Amiberry: multi-mouse mode changes the host mouse list. The Input
+	// panel and the GUI exit re-enumerate when it changes; a change made
+	// any other way while running (a settings layer commit) is applied
+	// here. inputdevice_mouse_reinit() copies the mode into currprefs.
+	if (currprefs.input_multi_mouse != changed_prefs.input_multi_mouse)
+		inputdevice_mouse_reinit(&changed_prefs);
+#endif
 	bool changed = false;
 	for (int i = 0; i < MAX_JPORTS; i++) {
 		if (currprefs.jports[i].id != changed_prefs.jports[i].id ||

@@ -78,26 +78,49 @@ void gfx_display_range(const uae_prefs&, double& min, double& max)
 std::vector<std::string> display_choice_storage;
 std::vector<std::string> display_choice_values;
 std::vector<amiberry_setting_choice> display_choice_items;
+// What the list was built from, so it is rebuilt only when the host's
+// displays change: callers hold the returned items while they check
+// choices, which calls the hook again.
+std::vector<std::string> display_names;
+std::vector<bool> display_primary;
+
+bool display_list_current()
+{
+	const int count = host_display_count();
+	if (display_choice_items.empty() || static_cast<size_t>(count) != display_names.size())
+		return false;
+	for (int i = 0; i < count; i++) {
+		if (display_names[i] != Displays[i].monitorname || display_primary[i] != Displays[i].primary)
+			return false;
+	}
+	return true;
+}
 
 void gfx_display_dynamic_choices(const uae_prefs&, choice_list& out)
 {
-	display_choice_storage.clear();
-	display_choice_values.clear();
-	display_choice_values.emplace_back("0");
-	display_choice_storage.emplace_back("Primary");
-	for (int i = 0; i < host_display_count(); i++) {
-		std::string label = Displays[i].monitorname;
-		if (Displays[i].primary)
-			label += " (Primary)";
-		display_choice_values.push_back(std::to_string(i + 1));
-		display_choice_storage.push_back(std::move(label));
-	}
-	// Build the items only after every value and label has its final
-	// storage, so the pointers stay valid while the vectors grow.
-	display_choice_items.clear();
-	for (size_t i = 0; i < display_choice_values.size(); i++) {
-		display_choice_items.push_back({display_choice_values[i].c_str(),
-			display_choice_storage[i].c_str()});
+	if (!display_list_current()) {
+		display_choice_storage.clear();
+		display_choice_values.clear();
+		display_names.clear();
+		display_primary.clear();
+		display_choice_values.emplace_back("0");
+		display_choice_storage.emplace_back("Primary");
+		for (int i = 0; i < host_display_count(); i++) {
+			display_names.emplace_back(Displays[i].monitorname);
+			display_primary.push_back(Displays[i].primary);
+			std::string label = Displays[i].monitorname;
+			if (Displays[i].primary)
+				label += " (Primary)";
+			display_choice_values.push_back(std::to_string(i + 1));
+			display_choice_storage.push_back(std::move(label));
+		}
+		// Build the items only after every value and label has its final
+		// storage, so the pointers stay valid while the vectors grow.
+		display_choice_items.clear();
+		for (size_t i = 0; i < display_choice_values.size(); i++) {
+			display_choice_items.push_back({display_choice_values[i].c_str(),
+				display_choice_storage[i].c_str()});
+		}
 	}
 	out.items = display_choice_items.data();
 	out.count = display_choice_items.size();
@@ -270,9 +293,13 @@ void get_gfx_vsync_picasso(const uae_prefs& p, char* out, size_t size)
 	write_choice(out, size, CHOICES(vsync_choices), p.gfx_apmode[APMODE_RTG].gfx_vsync);
 }
 
+// The panel always cleared the sync mode: fixup_prefs_dimensions() sets
+// the lagless mode again while RTG vsync is on, and a mode left from an
+// earlier vsync would still read as lagless after it is turned off.
 void set_gfx_vsync_picasso(uae_prefs& p, const value& v)
 {
 	p.gfx_apmode[APMODE_RTG].gfx_vsync = choice_index(CHOICES(vsync_choices), v.text);
+	p.gfx_apmode[APMODE_RTG].gfx_vsyncmode = 0;
 	clear_soundcard_for_vsync(p);
 }
 
@@ -500,9 +527,13 @@ void get_displaydata(const uae_prefs& p, char* out, size_t size, int index)
 void set_displaydata(uae_prefs& p, const value& v, int index)
 {
 	struct chipset_refresh& cr = p.cr[index];
+	// A CSV is parsed whatever its rate (a locked entry the reader loaded
+	// can hold rate 0, and the getter returns it as a CSV); only a bare 0
+	// resets the entry.
+	const bool csv = v.text.find(',') != std::string_view::npos;
 	const double rate = displaydata_rate_of(v.text);
-	if (rate > 0) {
-		if (v.text.find(',') == std::string_view::npos) {
+	if (csv || rate > 0) {
+		if (!csv) {
 			cr.rate = static_cast<float>(rate);
 		} else {
 			const std::string text(v.text);

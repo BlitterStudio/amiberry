@@ -81,13 +81,45 @@ void soundcard_dynamic_choices(const uae_prefs&, choice_list& out)
 	out.count = soundcard_choice_items.size();
 }
 
+// The device a configuration selects, by name; empty for none.
+std::string soundcard_name(int card)
+{
+	if (card < 0 || card >= MAX_SOUND_DEVICES || !sound_devices[card] || !sound_devices[card]->cfgname)
+		return {};
+	return sound_devices[card]->cfgname;
+}
+
+struct session_selection {
+	uae_prefs* prefs;
+	std::string device;
+};
+
 void refresh_soundcard_choices()
 {
 	// Re-read the host device list: enumerate_sound_devices() only
 	// queries while its table is empty, so the refresh clears it first.
 	// Without this, a device connected after start-up stayed invisible
-	// until the next restart.
+	// until the next restart. refresh_sound_devices() finds the pending
+	// and current configurations' devices again by name; open sessions
+	// select by index too, so theirs are found again the same way (a
+	// device that is gone falls back to the first one, as there).
+	std::vector<session_selection> selections;
+	for_each_session_config([](uae_prefs& p, void* context) {
+		static_cast<std::vector<session_selection>*>(context)->push_back({&p, soundcard_name(p.soundcard)});
+	}, &selections);
 	refresh_sound_devices();
+	for (const session_selection& s : selections) {
+		if (s.device.empty())
+			continue;
+		int card = 0;
+		for (int i = 0; i < MAX_SOUND_DEVICES && sound_devices[i]; i++) {
+			if (sound_devices[i]->cfgname && s.device == sound_devices[i]->cfgname) {
+				card = i;
+				break;
+			}
+		}
+		s.prefs->soundcard = card;
+	}
 	build_soundcard_choices();
 }
 

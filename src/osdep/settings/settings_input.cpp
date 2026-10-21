@@ -650,7 +650,14 @@ bool commit_input(const uae_prefs& base, const uae_prefs& from, uae_prefs& to,
 	FIELD(input_joymouse_speed);
 	FIELD(input_joymouse_multiplier);
 	FIELD(input_mouse_speed);
-	FIELD(input_mouse_untrap);
+	// Independent flags of two options (magic_mouse, amiberry.middle_mouse):
+	// only the bits the session changed are merged, so a flag changed
+	// elsewhere meanwhile is kept.
+	if (const int changed = base.input_mouse_untrap ^ from.input_mouse_untrap) {
+		const int merged = (to.input_mouse_untrap & ~changed) | (from.input_mouse_untrap & changed);
+		wrote |= merged != to.input_mouse_untrap;
+		to.input_mouse_untrap = merged;
+	}
 	FIELD(input_magic_mouse_cursor);
 	FIELD(tablet_library);
 	FIELD(input_tablet);

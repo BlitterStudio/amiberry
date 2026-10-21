@@ -102,7 +102,14 @@ static struct sound_device test_sound_devices[2] = {
 };
 struct sound_device* sound_devices[MAX_SOUND_DEVICES] = { &test_sound_devices[0],
 	&test_sound_devices[1] };
-void refresh_sound_devices() {}
+// A refresh can reorder the host's devices; swap_sound_devices simulates a
+// device ahead of the selected one going away and coming back after it.
+static bool swap_sound_devices = false;
+void refresh_sound_devices()
+{
+	if (swap_sound_devices)
+		std::swap(sound_devices[0], sound_devices[1]);
+}
 static int sound_device_count = 2;
 int enumerate_sound_devices() { return sound_device_count; }
 
@@ -1799,6 +1806,15 @@ void check_display_domain()
 	CHECK(set(p, "displaydata_ntsc", "301") == AMIBERRY_SETTINGS_INVALID_VALUE);
 	CHECK(set(p, "displaydata_ntsc", "fast") == AMIBERRY_SETTINGS_INVALID_VALUE);
 	CHECK(set(p, "displaydata_ntsc", "0.5") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	// A loaded entry can hold rate 0 with other fields: its CSV is parsed,
+	// not taken for the bare 0 that resets the entry.
+	CHECK(set(p, "displaydata_pal", "0,locked,pal,lace") == AMIBERRY_SETTINGS_OK);
+	CHECK(p.cr[CHIPSET_REFRESH_PAL].locked && p.cr[CHIPSET_REFRESH_PAL].lace == 1);
+	{
+		const std::string zero_rate = value_of(p, "displaydata_pal");
+		CHECK(set(p, "displaydata_pal", zero_rate.c_str()) == AMIBERRY_SETTINGS_OK);
+		CHECK(value_of(p, "displaydata_pal") == zero_rate);
+	}
 	// RTG vsync's 50/60 Hz switching is the same as standard there.
 	CHECK(!choice_available(p, "gfx_vsync_picasso", "autoswitch"));
 	// Commands longer than the entry's field are dropped, not overflowed.
@@ -1934,6 +1950,33 @@ void check_sound_domain()
 	CHECK(set(p, "sound_output", "normal") == AMIBERRY_SETTINGS_OK);
 	CHECK(p.soundcard == 0);
 
+	// An open session's device is found again by name after a refresh
+	// reorders the host's devices.
+	reset_prefs(changed_prefs);
+	changed_prefs.soundcard_default = false;
+	amiberry_settings_session* session = amiberry_settings_session_open();
+	CHECK(amiberry_settings_set(session, "amiberry.soundcard", "1") == AMIBERRY_SETTINGS_OK); // headset
+	swap_sound_devices = true;
+	amiberry_settings_refresh_choices();
+	swap_sound_devices = false;
+	char card[AMIBERRY_SETTINGS_VALUE_MAX];
+	CHECK(amiberry_settings_get(session, "amiberry.soundcard", card, sizeof card) == AMIBERRY_SETTINGS_OK);
+	CHECK(std::strcmp(card, "0") == 0);
+	amiberry_settings_session_close(session);
+	std::swap(sound_devices[0], sound_devices[1]);
+	amiberry_settings_refresh_choices();
+
+	// Turning RTG vsync off clears the lagless mode the fixup left, so the
+	// device check no longer sees it.
+	reset_prefs(p);
+	p.address_space_24 = false;
+	p.rtgboards[0].rtgmem_size = 8;
+	p.gfx_apmode[APMODE_RTG].gfx_fullscreen = GFX_FULLWINDOW;
+	p.gfx_apmode[APMODE_RTG].gfx_vsync = 1;
+	p.gfx_apmode[APMODE_RTG].gfx_vsyncmode = 1;
+	CHECK(set(p, "gfx_vsync_picasso", "false") == AMIBERRY_SETTINGS_OK);
+	CHECK(p.gfx_apmode[APMODE_RTG].gfx_vsyncmode == 0);
+
 	// The filter's "fixedonly" spelling is reported, never offered.
 	reset_prefs(p);
 	p.sound_filter = 3;
@@ -2000,6 +2043,18 @@ void check_input_domain()
 	CHECK(p.input_mouse_untrap == (MOUSEUNTRAP_MIDDLEBUTTON | MOUSEUNTRAP_MAGIC));
 	CHECK(set(p, "amiberry.middle_mouse", "false") == AMIBERRY_SETTINGS_OK);
 	CHECK(p.input_mouse_untrap == MOUSEUNTRAP_MAGIC);
+	// The two flags commit independently: a session that turned Magic
+	// Mouse off keeps a middle-button change made elsewhere meanwhile.
+	{
+		changed_prefs = p;
+		amiberry_settings_session* session = amiberry_settings_session_open();
+		CHECK(amiberry_settings_set(session, "magic_mouse", "false") == AMIBERRY_SETTINGS_OK);
+		changed_prefs.input_mouse_untrap |= MOUSEUNTRAP_MIDDLEBUTTON; // meanwhile
+		bool committed = false;
+		amiberry_settings_commit(session, &committed);
+		CHECK(committed && changed_prefs.input_mouse_untrap == MOUSEUNTRAP_MIDDLEBUTTON);
+		amiberry_settings_session_close(session);
+	}
 
 	// Tablet options follow the absolute mouse mode.
 	CHECK(!available(p, "magic_mousecursor") && !available(p, "tablet_library"));

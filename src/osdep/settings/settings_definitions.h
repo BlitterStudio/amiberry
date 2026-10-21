@@ -120,6 +120,10 @@ constexpr size_t max_value_length = 4096;
 choice_list choices_of(const definition& d, const uae_prefs& p);
 // Re-reads every host device list the layer enumerates. Main thread only.
 void refresh_dynamic_choices();
+// Calls visit for every configuration an open session holds (working
+// copy, base and preset snapshots), for host device refreshes that must
+// find the devices those configurations select again. Main thread only.
+void for_each_session_config(void (*visit)(uae_prefs& p, void* context), void* context);
 
 const domain& cpu_domain();
 const domain& chipset_domain();
