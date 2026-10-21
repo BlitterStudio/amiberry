@@ -5,6 +5,7 @@
 #ifdef USE_DBUS
 
 #include "amiberry_dbus.h"
+#include "settings/amiberry_actions.h"
 #include <iostream>
 #include <cstring>
 #include "inputdevice.h"
@@ -42,26 +43,34 @@ static void SendReply(DBusMessage* msg, bool status, const std::vector<std::stri
 	}
 }
 
+// Runtime actions go through the shared actions API; DBusHandle() runs on
+// the emulator's main thread, so a posted action can run at once.
+static void RunPosted(amiberry_action_id id)
+{
+	amiberry_actions_run_pending();
+	char error[512];
+	amiberry_actions_poll(id, error, sizeof error);
+}
+
 static void HandleQuit(DBusMessage* msg)
 {
 	std::cout << "DBUS: Received QUIT" << std::endl;
+	const amiberry_action_id id = amiberry_actions_quit();
 	SendReply(msg, true);  // Send reply before quitting
-	uae_quit();
+	RunPosted(id);
 }
 
 static void HandlePause(DBusMessage* msg)
 {
 	std::cout << "DBUS: Received PAUSE" << std::endl;
-	setpaused(3);
-	activationtoggle(0, true);
+	RunPosted(amiberry_actions_pause());
 	SendReply(msg, true);
 }
 
 static void HandleResume(DBusMessage* msg)
 {
 	std::cout << "DBUS: Received RESUME" << std::endl;
-	resumepaused(3);
-	activationtoggle(0, false);
+	RunPosted(amiberry_actions_resume());
 	SendReply(msg, true);
 }
 
@@ -99,7 +108,7 @@ static void HandleReset(DBusMessage* msg)
 
 	if (status)
 	{
-		uae_reset(hard, keyboard);
+		RunPosted(amiberry_actions_reset(hard, keyboard));
 	}
 
 	SendReply(msg, status);
@@ -121,8 +130,7 @@ static void HandleScreenshot(DBusMessage* msg)
 	}
 	else if (filename)
 	{
-		create_screenshot();
-		save_thumb(filename);
+		RunPosted(amiberry_actions_screenshot(filename));
 	}
 	else
 	{
@@ -153,9 +161,8 @@ static void HandleSavestate(DBusMessage* msg)
 		if (!statefilename || !configfilename) {
 			status = false;
 		} else {
-			savestate_initsave(statefilename, 1, true, true);
-			save_state(statefilename, "...");
-			
+			RunPosted(amiberry_actions_save_state(statefilename));
+
 			strncpy(changed_prefs.description, "autosave", sizeof(changed_prefs.description));
 			cfgfile_save(&changed_prefs, configfilename, 0);
 		}
@@ -190,12 +197,7 @@ static void HandleDiskSwap(DBusMessage* msg)
 
 		if ((disknum >= 0) && (disknum < MAX_SPARE_DRIVES) && (drivenum >= 0) && (drivenum <= 3))
 		{
-			for (int i = 0; i < 4; i++) {
-				if (!_tcscmp(currprefs.floppyslots[i].df, currprefs.dfxlist[disknum]))
-					changed_prefs.floppyslots[i].df[0] = 0;
-			}
-			_tcscpy(changed_prefs.floppyslots[drivenum].df, currprefs.dfxlist[disknum]);
-			set_config_changed();
+			RunPosted(amiberry_actions_insert_swapper_entry(disknum, drivenum));
 		}
 		else
 		{
@@ -275,10 +277,7 @@ static void HandleInsertFloppy(DBusMessage* msg)
 
 		if ((drivenum >= 0) && (drivenum <= 3))
 		{
-			_tcsncpy(changed_prefs.floppyslots[drivenum].df, diskpathstr, MAX_DPATH);
-			changed_prefs.floppyslots[drivenum].df[MAX_DPATH - 1] = 0;
-			set_last_active_config_from_media(diskpathstr);
-			set_config_changed();
+			RunPosted(amiberry_actions_insert_floppy(drivenum, diskpathstr));
 		}
 		else
 		{
@@ -309,13 +308,7 @@ static void HandleInsertCD(DBusMessage* msg)
 	}
 	else
 	{
-		_tcsncpy(changed_prefs.cdslots[0].name, diskpathstr, MAX_DPATH);
-		changed_prefs.cdslots[0].name[MAX_DPATH - 1] = 0;
-		changed_prefs.cdslots[0].inuse = true;
-		set_last_active_config_from_media(diskpathstr);
-
-		std::cout << "CD Type: " << changed_prefs.cdslots[0].type << "\n";
-		set_config_changed();
+		RunPosted(amiberry_actions_insert_cd(diskpathstr));
 	}
 
 	SendReply(msg, status);
@@ -327,16 +320,19 @@ static void HandleGetStatus(DBusMessage* msg)
 	bool status = true;
 	std::vector<std::string> responses;
 
+	amiberry_actions_status status;
+	amiberry_actions_get_status(&status);
+
 	// Paused
-	responses.push_back(std::string("Paused=") + (pause_emulation ? "true" : "false"));
-	
+	responses.push_back(std::string("Paused=") + (status.paused ? "true" : "false"));
+
 	// Config
-	responses.push_back(std::string("Config=") + changed_prefs.description);
-	
+	responses.push_back(std::string("Config=") + status.config_description);
+
 	// Floppies
-	for(int i=0; i<4; ++i) {
-		if (changed_prefs.floppyslots[i].df[0])
-			responses.push_back(std::string("Floppy") + std::to_string(i) + "=" + changed_prefs.floppyslots[i].df);
+	for (int i = 0; i < AMIBERRY_ACTIONS_FLOPPY_DRIVES; ++i) {
+		if (status.floppy[i].media_path[0])
+			responses.push_back(std::string("Floppy") + std::to_string(i) + "=" + status.floppy[i].media_path);
 	}
 	
 	SendReply(msg, status, responses);
@@ -550,8 +546,7 @@ static void HandleLoadState(DBusMessage* msg)
 	else
 	{
 		// Set up the state restore
-		savestate_state = STATE_DORESTORE;
-		_tcscpy(savestate_fname, statepath);
+		RunPosted(amiberry_actions_load_state(statepath));
 		std::cout << "DBUS: Will restore state from: " << statepath << std::endl;
 	}
 
