@@ -163,6 +163,16 @@ bool save_settings()
 	}
 }
 
+// The folder the state files are in: the configuration's statefile_path
+// override names a state file, whose folder is the one in effect.
+std::string state_folder()
+{
+	const std::string path = get_savestate_path();
+	if (path == get_savestate_folder())
+		return path;
+	return to_utf8(from_utf8(path).parent_path());
+}
+
 std::vector<std::string>* recent_list(amiberry_media_list list)
 {
 	switch (list) {
@@ -270,7 +280,7 @@ std::vector<media_entry> build_list(amiberry_media_list list)
 	case AMIBERRY_MEDIA_SAVESTATES:
 		// The folder in effect: a configuration's statefile_path overrides
 		// the save states folder.
-		entries = folder_files(get_savestate_path(), ".uss");
+		entries = folder_files(state_folder(), ".uss");
 		break;
 	default:
 		break;
@@ -370,6 +380,10 @@ amiberry_settings_status amiberry_media_add_recent(amiberry_media_list list, con
 		// What is stored is the absolute spelling, which must fit too.
 		const std::string absolute = absolute_path(path);
 		if (!storable_path(absolute.c_str()))
+			return AMIBERRY_SETTINGS_INVALID_VALUE;
+		// A folder is not media (fopen opens one on POSIX).
+		std::error_code ec;
+		if (std::filesystem::is_directory(from_utf8(absolute), ec))
 			return AMIBERRY_SETTINGS_INVALID_VALUE;
 		// The settings loader keeps only recent entries it can open, so an
 		// entry that cannot be opened now would vanish at the next start.

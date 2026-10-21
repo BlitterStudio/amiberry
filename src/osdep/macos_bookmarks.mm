@@ -326,30 +326,10 @@ bool macos_bookmark_store(const std::string& path)
 			return false;
 		}
 
-		// A bookmark this call replaces (stored, but not active: it did not
-		// resolve at startup) is put back when the call fails. Copied, not
-		// referenced: replacing it releases the dictionary's reference.
-		NSData* stored = s_bookmark_data[key];
-		NSData* previous = stored ? [NSData dataWithData:stored] : nil;
-		auto put_back = [&]() {
-			if (previous)
-				s_bookmark_data[key] = previous;
-			else
-				[s_bookmark_data removeObjectForKey:key];
-		};
-		s_bookmark_data[key] = data;
-		// A bookmark that is not on disk is gone after a restart: callers
-		// must not keep a path they could not reopen then.
-		if (!save_bookmarks_plist())
-		{
-			write_log("Security bookmarks: could not save the bookmark for '%s'\n", dir_path.c_str());
-			put_back();
-			return false;
-		}
-
 		// Start access through the bookmark itself, as a restart will: the
 		// security scope belongs to the URL the bookmark resolves to. A
-		// folder this process cannot use is not kept.
+		// folder this process cannot use is not kept. Done before anything
+		// is stored, so a failure leaves the store (and its file) as it was.
 		BOOL stale = NO;
 		NSError* resolve_error = nil;
 		NSURL* scoped = [NSURL URLByResolvingBookmarkData:data
@@ -361,8 +341,26 @@ bool macos_bookmark_store(const std::string& path)
 		{
 			write_log("Security bookmarks: startAccess failed for new bookmark '%s'\n",
 				dir_path.c_str());
-			put_back();
-			save_bookmarks_plist();
+			return false;
+		}
+
+		// A bookmark this call replaces (stored, but not active: it did not
+		// resolve at startup) is put back when it cannot be saved. Copied,
+		// not referenced: replacing it releases the dictionary's reference.
+		NSData* stored = s_bookmark_data[key];
+		NSData* previous = stored ? [NSData dataWithData:stored] : nil;
+		s_bookmark_data[key] = data;
+		// A bookmark that is not on disk is gone after a restart: callers
+		// must not keep a path they could not reopen then. The file is
+		// written atomically, so a failed write leaves it as it was.
+		if (!save_bookmarks_plist())
+		{
+			write_log("Security bookmarks: could not save the bookmark for '%s'\n", dir_path.c_str());
+			[scoped stopAccessingSecurityScopedResource];
+			if (previous)
+				s_bookmark_data[key] = previous;
+			else
+				[s_bookmark_data removeObjectForKey:key];
 			return false;
 		}
 		s_active_urls[key] = scoped;

@@ -1749,7 +1749,7 @@ static bool copy_file_metadata(const char* target, int to_fd, const struct stat&
 	ssize_t size = flistxattr(from_fd, nullptr, 0);
 	if (size < 0) {
 		ok = errno == ENOTSUP; /* none on this filesystem */
-	} else if (size > 0) {
+	} else if (size > 0) try {
 		std::vector<char> names(static_cast<size_t>(size));
 		size = flistxattr(from_fd, names.data(), names.size());
 		ok = size >= 0;
@@ -1764,6 +1764,8 @@ static bool copy_file_metadata(const char* target, int to_fd, const struct stat&
 			length = fgetxattr(from_fd, name, value.data(), value.size());
 			ok = length >= 0 && fsetxattr(to_fd, name, value.data(), static_cast<size_t>(length), 0) == 0;
 		}
+	} catch (...) {
+		ok = false; /* out of memory: the caller saves in place */
 	}
 #endif
 	close(from_fd);
@@ -1774,42 +1776,72 @@ static bool copy_file_metadata(const char* target, int to_fd, const struct stat&
 #endif
 }
 
-/* Rewrites an existing file in place (truncate, write, fsync), for when no
-   temporary file can be created next to it. */
-static bool save_file_in_place(const char* target, const void* data, size_t len) noexcept
+/* Writes all of data to fd from its start, truncating it to that length. */
+static bool rewrite_fd(int fd, const char* data, size_t len) noexcept
 {
-	const int fd = open(target, O_WRONLY | O_TRUNC | O_CLOEXEC);
-	if (fd < 0) {
-		write_log("my_save_file_atomic: open '%s' in place failed: %s\n", target, strerror(errno));
+	if (lseek(fd, 0, SEEK_SET) != 0 || ftruncate(fd, 0) != 0)
 		return false;
-	}
-	const char* p = static_cast<const char*>(data);
 	size_t written = 0;
 	while (written < len) {
-		const ssize_t n = write(fd, p + written, len - written);
+		const ssize_t n = write(fd, data + written, len - written);
 		if (n < 0 && errno == EINTR)
 			continue;
-		if (n <= 0) {
-			write_log("my_save_file_atomic: in-place write '%s' failed at %zu/%zu bytes: %s\n",
-				target, written, len, n < 0 ? strerror(errno) : "no progress");
-			close(fd);
+		if (n <= 0)
 			return false;
-		}
 		written += static_cast<size_t>(n);
 	}
 	if (fsync(fd) != 0) {
 		const int e = errno;
-		if (e == EINVAL || e == EOPNOTSUPP
+		if (!(e == EINVAL || e == EOPNOTSUPP
 #if defined(ENOTSUP) && (ENOTSUP != EOPNOTSUPP)
 			|| e == ENOTSUP
 #endif
-			) {
-			write_log("my_save_file_atomic: in-place fsync '%s' unsupported (errno=%d), continuing\n", target, e);
-		} else {
-			write_log("my_save_file_atomic: in-place fsync '%s' failed: %s\n", target, strerror(e));
-			close(fd);
+			))
 			return false;
+	}
+	return true;
+}
+
+/* Rewrites an existing file in place, for when it cannot be replaced by a
+   new file (no temporary file next to it, metadata that cannot be carried
+   over, hard links that must keep sharing it). Not atomic, so the old
+   content is read first and written back if the new content cannot be;
+   the fallback is declined when the old content cannot be kept. */
+static bool save_file_in_place(const char* target, const void* data, size_t len) noexcept
+{
+	const int fd = open(target, O_RDWR | O_CLOEXEC);
+	if (fd < 0) {
+		write_log("my_save_file_atomic: open '%s' in place failed: %s\n", target, strerror(errno));
+		return false;
+	}
+	std::string old_content;
+	try {
+		char buffer[65536];
+		for (;;) {
+			const ssize_t n = read(fd, buffer, sizeof buffer);
+			if (n < 0 && errno == EINTR)
+				continue;
+			if (n < 0) {
+				write_log("my_save_file_atomic: reading '%s' failed: %s\n", target, strerror(errno));
+				close(fd);
+				return false;
+			}
+			if (n == 0)
+				break;
+			old_content.append(buffer, static_cast<size_t>(n));
 		}
+	} catch (...) {
+		write_log("my_save_file_atomic: no memory to keep '%s' while saving in place\n", target);
+		close(fd);
+		return false;
+	}
+	if (!rewrite_fd(fd, static_cast<const char*>(data), len)) {
+		const int e = errno;
+		const bool restored = rewrite_fd(fd, old_content.data(), old_content.size());
+		write_log("my_save_file_atomic: in-place save of '%s' failed: %s; old content %s\n",
+			target, strerror(e), restored ? "restored" : "could not be restored");
+		close(fd);
+		return false;
 	}
 	if (close(fd) != 0) {
 		write_log("my_save_file_atomic: in-place close '%s' failed: %s\n", target, strerror(errno));
@@ -1880,6 +1912,11 @@ static bool save_file_in_place(const char* target, const void* data, size_t len)
 		write_log("my_save_file_atomic: '%s' is not writable: %s\n", target.c_str(), strerror(errno));
 		return false;
 	}
+
+	/* A file with other hard links keeps its inode, so every link still
+	   shows the saved content, as with fopen("w"). */
+	if (have_old_mode && S_ISREG(old_st.st_mode) && old_st.st_nlink > 1)
+		return save_file_in_place(target.c_str(), data, len);
 
 	/* Unique temp in the SAME directory as the target (so rename(2) is atomic
 	   and on the same filesystem). mkstemp creates it 0600 and unique, which

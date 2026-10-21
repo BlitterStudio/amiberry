@@ -75,8 +75,9 @@ typedef enum amiberry_media_list {
 	AMIBERRY_MEDIA_CD_DRIVES,
 	AMIBERRY_MEDIA_CONFIGURATIONS, /* .uae files in the configurations folder */
 	AMIBERRY_MEDIA_SAVESTATES,     /* .uss files in the save states folder in
-	                                  effect: a configuration's statefile_path
-	                                  overrides AMIBERRY_FOLDER_SAVESTATES */
+	                                  effect: the folder of a configuration's
+	                                  statefile_path (a state file) overrides
+	                                  AMIBERRY_FOLDER_SAVESTATES */
 	AMIBERRY_MEDIA_LIST_COUNT
 } amiberry_media_list;
 
