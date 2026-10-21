@@ -789,9 +789,10 @@ static void prefs_to_gui()
 	copy_prefs(&currprefs, &changed_prefs);
 	set_reset_only_chipset_prefs(changed_prefs, pending_chipset);
 
-	/* filesys hack */
+	/* filesys hack: the whole list (an entry is a uaedev_config_data, larger
+	   than the uaedev_config_info the copy was once sized by) */
 	changed_prefs.mountitems = currprefs.mountitems;
-	memcpy(&changed_prefs.mountconfig, &currprefs.mountconfig, MOUNT_CONFIG_SIZE * sizeof(struct uaedev_config_info));
+	memcpy(&changed_prefs.mountconfig, &currprefs.mountconfig, sizeof changed_prefs.mountconfig);
 }
 
 static void gui_to_prefs(void)
@@ -804,7 +805,7 @@ static void gui_to_prefs(void)
 	}
 	/* filesys hack */
 	currprefs.mountitems = changed_prefs.mountitems;
-	memcpy(&currprefs.mountconfig, &changed_prefs.mountconfig, MOUNT_CONFIG_SIZE * sizeof(struct uaedev_config_info));
+	memcpy(&currprefs.mountconfig, &changed_prefs.mountconfig, sizeof currprefs.mountconfig);
 
 #ifdef AMIBERRY
 	drawbridge_check_prefs_changed();

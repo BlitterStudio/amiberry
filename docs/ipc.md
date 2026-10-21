@@ -227,13 +227,29 @@ them all. Coordinate controllers accordingly.
   also signals the running emulation like `SET_CONFIG` does, so live options
   take effect at once. The session is closed afterwards.
 - `SETTINGS_RESET_SESSION` discards the session's uncommitted edits.
+- `SETTINGS_MOUNTS` replies `OK` with one field per mounted drive
+  (directory, hardfile, CD or tape unit) in the order a `.uae` file lists
+  them, each spelled as the value of its `uaehfN` line, for example
+  `dir,rw,DH0:Work:/home/amiga/work,0`; `OK none` when there are none.
+- `SETTINGS_MOUNT_ADD <value>` appends a drive given in that spelling. It is
+  checked like the hard drive panel's additions: a malformed entry, a device
+  name in use, a controller without a free unit or an entry too long for a
+  configuration line replies `ERROR Invalid mount entry: <value>`, a full
+  list (50 drives) `ERROR The mount list is full`.
+- `SETTINGS_MOUNT_REPLACE <index> <value>` replaces drive `index` (from 0),
+  checked the same way; the drive keeps its place in the list.
+- `SETTINGS_MOUNT_REMOVE <index>` removes drive `index`; later drives move up.
 
-A session that holds no uncommitted `SETTINGS_SET` edits is reopened from
+Mount edits are staged in the session like `SETTINGS_SET` edits.
+`SETTINGS_COMMIT` stores the whole list and reports `apply=reset` when it
+changed: drives attach when the emulation resets.
+
+A session that holds no uncommitted edits is reopened from
 the current pending configuration at the next `SETTINGS_*` command, so a
 configuration loaded or changed any other way (`LOAD_CONFIG`, `SET_CONFIG`,
 the GUI) is what subsequent `SETTINGS_GET` and `SETTINGS_SET` see. Staged
 edits are never dropped behind the controller's back: while any uncommitted
-`SETTINGS_SET` exists, the session stays open and isolated.
+`SETTINGS_SET` or mount edit exists, the session stays open and isolated.
 
 Option IDs and values are exactly the `.uae` keys and spellings the layer
 defines; `amiberry_settings_count()`/`amiberry_settings_at()` list them.
