@@ -261,20 +261,31 @@ struct DownloadContext {
 	std::atomic<bool>* cancel_flag = nullptr;
 };
 
-// A plain std::thread here would call std::terminate() at exit when the
-// process ends while a check is still running (for example when graphics
-// initialization fails and main() returns without uae_quit(), so nothing
-// joins it). Detaching in the destructor lets the process exit cleanly; the
-// thread dies with it. Static destructors run after the atexit handlers, so
-// nothing of ours is torn down underneath the detached thread.
-static struct UpdateThread {
-	std::thread thread;
-	~UpdateThread() { if (thread.joinable()) thread.detach(); }
-} s_update_thread;
+// The shared state is declared before the thread holder so it is destroyed
+// after it: statics are destroyed in reverse declaration order, and the
+// holder's destructor joins the thread, which must still find every shared
+// object alive.
 static std::mutex s_update_mutex;
 static std::atomic<bool> s_update_running{false};
 static std::atomic<bool> s_update_cancel{false};
 static UpdateInfo s_update_result;
+
+// A plain std::thread would call std::terminate() at exit when the process
+// ends while a check is still running (for example when graphics
+// initialization fails and main() returns without uae_quit(), so nothing
+// joins it). Cancelling and joining is safe here: curl's progress callback
+// checks s_update_cancel, so a transfer in flight stops on its own. If the
+// thread was never started or already joined, there is nothing to do.
+static struct UpdateThread {
+	std::thread thread;
+	~UpdateThread()
+	{
+		if (thread.joinable()) {
+			s_update_cancel.store(true);
+			thread.join();
+		}
+	}
+} s_update_thread;
 
 #ifdef _WIN32
 static std::string s_windows_restart_script;
