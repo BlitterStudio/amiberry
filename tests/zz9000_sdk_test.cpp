@@ -237,10 +237,10 @@ int main(int argc, char **argv)
 	std::copy(mp3.begin(), mp3.end(), z3.sdk.buffer_data(audio_staging));
 	put32(payload, 131072);
 	reply = z3.call(0x0100, payload, 12);
-	const uint32_t compressed = get32(reply + 16);
+	uint32_t compressed = get32(reply + 16);
 	put32(payload, 262144);
 	reply = z3.call(0x0100, payload, 12);
-	const uint32_t pcm = get32(reply + 16);
+	uint32_t pcm = get32(reply + 16);
 	const int previous_rounding = std::fegetround();
 	assert(std::fesetround(FE_DOWNWARD) == 0);
 	reply = begin_audio(z3, compressed, 131072, pcm, 262144, 1, 32768);
@@ -264,13 +264,24 @@ int main(int argc, char **argv)
 	std::vector<uint8_t> little_pcm(z3.sdk.buffer_data(pcm),
 	                                z3.sdk.buffer_data(pcm) + 256);
 	put32(payload, compressed);
-	z3.call(0x0101, payload, 4, 2); // active ring is pinned
+	z3.call(0x0101, payload, 4); // audio rings are never pinned on the card
+	put32(payload, pcm);
+	z3.call(0x0101, payload, 4);
 	put32(payload, session);
 	put32(payload + 4, 0);
 	reply = z3.call(0x0507, payload, 8);
 	assert(get32(reply + 16) == session);
 	z3.call(0x0508, payload, 8);
 	z3.call(0x0506, payload, 8);
+	// The freed rings must be allocated again for the sessions below.
+	put32(payload, 131072);
+	put32(payload + 4, 16);
+	put32(payload + 8, 0);
+	reply = z3.call(0x0100, payload, 12);
+	compressed = get32(reply + 16);
+	put32(payload, 262144);
+	reply = z3.call(0x0100, payload, 12);
+	pcm = get32(reply + 16);
 	reply = begin_audio_ex(z3, 1, compressed, 131072, pcm, 262144, 1);
 	const uint32_t begin_ex_mp3_session = get32(reply + 16);
 	put32(payload, begin_ex_mp3_session);
@@ -381,10 +392,182 @@ int main(int argc, char **argv)
 	put32(payload + 16, 0);
 	reply = z2.call(0x0504, payload, 20);
 	assert(get32(reply + 24) == 44100 && get32(reply + 28) == 1);
+	assert(get32(reply + 56) > 0);
+	// A card-only PCM ring freed under an open session stays usable: the
+	// card keeps the ring address it resolved at BEGIN, and playback keeps
+	// pumping from it after the free.
+	put32(payload, 32 * 1024);
+	put32(payload + 4, 16);
+	put32(payload + 8, 2); // card-only PCM ring
+	reply = z2.call(0x0100, payload, 12);
+	const uint32_t z2_card_pcm = get32(reply + 16);
+	reply = begin_audio(z2, z2_compressed, 128 * 1024, z2_card_pcm,
+	                    32 * 1024, 1);
+	const uint32_t z2_card_session = get32(reply + 16);
+	assert(z2_card_session);
+	put32(payload, z2_card_session);
+	put32(payload + 4, z2_staging);
+	put32(payload + 8, 0);
+	put32(payload + 12, static_cast<uint32_t>(mono_mp3.size()));
+	put32(payload + 16, 0);
+	reply = z2.call(0x0504, payload, 20);
+	assert(get32(reply + 24) == 48000 && get32(reply + 28) == 2);
+	put32(payload, z2_card_pcm);
+	z2.call(0x0101, payload, 4);
+	put32(payload, z2_card_session);
+	put32(payload + 4, 0);
+	z2.call(0x0507, payload, 8); // bound; the pump reads the freed ring
+	z2.call(0x0508, payload, 8);
+	z2.call(0x0506, payload, 8);
+	{
+		// Firmware session semantics: four concurrent sessions, a fifth
+		// BEGIN answers NO_MEMORY; undecodable MP3 input never faults a
+		// session (minimp3 consumes nothing, the input ring fills and later
+		// feeds answer OK with BACKPRESSURE); FREE never pins audio rings;
+		// and PLAY binds one session at a time, answering BUSY for another.
+		std::vector<uint8_t> garbage(256 * 1024, 0xaa);
+		std::copy(garbage.begin(), garbage.end(),
+			z3.sdk.buffer_data(audio_staging));
+		put32(payload, 131072);
+		put32(payload + 4, 16);
+		put32(payload + 8, 0);
+		reply = z3.call(0x0100, payload, 12);
+		const uint32_t garbage_input = get32(reply + 16);
+		put32(payload, 262144);
+		reply = z3.call(0x0100, payload, 12);
+		const uint32_t garbage_pcm = get32(reply + 16);
+		reply = begin_audio(z3, garbage_input, 131072, garbage_pcm, 262144, 1);
+		const uint32_t garbage_session = get32(reply + 16);
+		assert(garbage_session);
+		for (uint32_t offset = 0; offset < garbage.size(); offset += 65536) {
+			put32(payload, garbage_session);
+			put32(payload + 4, audio_staging);
+			put32(payload + 8, offset);
+			put32(payload + 12, 65536);
+			put32(payload + 16, 0);
+			reply = z3.call(0x0504, payload, 20);
+			assert(get32(reply + 52) == 0); // nothing consumed
+			assert(get32(reply + 56) == 0); // nothing decoded
+			assert(offset < 131072 ? (get32(reply + 60) & 8) == 0 :
+				(get32(reply + 60) & 8) != 0);
+		}
+		put32(payload, garbage_input);
+		z3.call(0x0101, payload, 4);
+		put32(payload, garbage_pcm);
+		z3.call(0x0101, payload, 4);
+		auto alloc_rings = [&](uint32_t input_size) {
+			put32(payload, input_size);
+			put32(payload + 4, 16);
+			put32(payload + 8, 0);
+			reply = z3.call(0x0100, payload, 12);
+			const uint32_t input = get32(reply + 16);
+			put32(payload, 262144);
+			reply = z3.call(0x0100, payload, 12);
+			return std::make_pair(input, get32(reply + 16));
+		};
+		const auto [s2_input, s2_pcm] = alloc_rings(65536);
+		reply = begin_audio(z3, s2_input, 65536, s2_pcm, 262144, 1);
+		const uint32_t s2 = get32(reply + 16);
+		assert(s2 && s2 != garbage_session);
+		const auto [s3_input, s3_pcm] = alloc_rings(65536);
+#ifdef AMIBERRY_WITH_FFMPEG
+		const uint32_t s3_codec = 2; // FLAC through BeginEx
+#else
+		const uint32_t s3_codec = 1;
+#endif
+		reply = begin_audio_ex(z3, s3_codec, s3_input, 65536, s3_pcm, 262144, 1);
+		const uint32_t s3 = get32(reply + 16);
+		assert(s3 && s3 != s2 && s3 != garbage_session);
+		const auto [s4_input, s4_pcm] = alloc_rings(65536);
+		reply = begin_audio(z3, s4_input, 65536, s4_pcm, 262144, 1);
+		const uint32_t s4 = get32(reply + 16);
+		assert(s4);
+		const auto [s5_input, s5_pcm] = alloc_rings(65536);
+		uint8_t fifth[48] = {};
+		put32(fifth, s5_input);
+		put32(fifth + 4, 65536);
+		put32(fifth + 8, s5_pcm);
+		put32(fifth + 12, 262144);
+		put32(fifth + 24, 1);
+		z3.call(0x0503, fifth, 40, 6); // all four slots taken: NO_MEMORY
+		// Two sessions decode concurrently and independently: an MP3 fed
+		// in two chunks beside a full feed of another stream.
+		std::copy(mp3.begin(), mp3.end(), z3.sdk.buffer_data(audio_staging));
+		put32(payload, s2);
+		put32(payload + 4, audio_staging);
+		put32(payload + 8, 0);
+		put32(payload + 12, 7);
+		put32(payload + 16, 0);
+		reply = z3.call(0x0504, payload, 20);
+		assert(get32(reply + 56) == 0);
+#ifdef AMIBERRY_WITH_FFMPEG
+		std::ifstream s3_file(argv[4], std::ios::binary);
+		const std::vector<uint8_t> s3_bytes(std::istreambuf_iterator<char>{s3_file}, {});
+		std::copy(s3_bytes.begin(), s3_bytes.end(),
+			z3.sdk.buffer_data(audio_staging));
+		put32(payload, s3);
+		put32(payload + 4, audio_staging);
+		put32(payload + 8, 0);
+		put32(payload + 12, static_cast<uint32_t>(s3_bytes.size()));
+		put32(payload + 16, 1);
+		reply = z3.call(0x0504, payload, 20);
+		assert(get32(reply + 24) == 44100 && get32(reply + 28) == 1);
+		assert(get32(reply + 56) > 0);
+#else
+		std::copy(mono_mp3.begin(), mono_mp3.end(),
+			z3.sdk.buffer_data(audio_staging));
+		put32(payload, s3);
+		put32(payload + 4, audio_staging);
+		put32(payload + 8, 0);
+		put32(payload + 12, static_cast<uint32_t>(mono_mp3.size()));
+		put32(payload + 16, 1);
+		reply = z3.call(0x0504, payload, 20);
+		assert(get32(reply + 24) == 48000 && get32(reply + 28) == 2);
+		assert(get32(reply + 56) > 0);
+#endif
+		std::copy(mp3.begin(), mp3.end(), z3.sdk.buffer_data(audio_staging));
+		put32(payload, s2);
+		put32(payload + 4, audio_staging);
+		put32(payload + 8, 7);
+		put32(payload + 12, static_cast<uint32_t>(mp3.size() - 7));
+		put32(payload + 16, 1);
+		reply = z3.call(0x0504, payload, 20);
+		assert(get32(reply + 24) == 48000 && get32(reply + 28) == 2);
+		assert(get32(reply + 52) == mp3.size());
+		assert(get32(reply + 56) >= little_pcm.size());
+		assert(std::equal(little_pcm.begin(), little_pcm.end(),
+			z3.sdk.buffer_data(s2_pcm)));
+		// Playback binds one session; PLAY for another answers BUSY.
+		put32(payload, s2);
+		put32(payload + 4, 0);
+		z3.call(0x0507, payload, 8);
+		put32(payload, s3);
+		z3.call(0x0507, payload, 8, 2);
+		put32(payload, s2);
+		z3.call(0x0507, payload, 8); // idempotent for the bound session
+		z3.call(0x0508, payload, 8);
+		put32(payload, s3);
+		z3.call(0x0507, payload, 8);
+		z3.call(0x0508, payload, 8);
+		// Closing a session frees its slot even while others stay open.
+		put32(payload, garbage_session);
+		put32(payload + 4, 0);
+		z3.call(0x0506, payload, 8);
+		reply = begin_audio(z3, s5_input, 65536, s5_pcm, 262144, 1);
+		assert(get32(reply + 16));
+		for (const uint32_t session : {s2, s3, s4, get32(reply + 16)}) {
+			put32(payload, session);
+			put32(payload + 4, 0);
+			z3.call(0x0506, payload, 8);
+		}
+		for (const uint32_t handle : {s2_input, s2_pcm, s3_input, s3_pcm,
+			s4_input, s4_pcm, s5_input, s5_pcm}) {
+			put32(payload, handle);
+			z3.call(0x0101, payload, 4);
+		}
+	}
 #ifdef AMIBERRY_WITH_FFMPEG
 	const uint32_t ex_compressed = audio_staging;
-
-	assert(get32(reply + 56) > 0);
 
 	auto decode_ex = [&](const char *path, const char *reference_path, uint32_t codec,
 	                     uint32_t format, uint32_t rate, uint32_t channels,

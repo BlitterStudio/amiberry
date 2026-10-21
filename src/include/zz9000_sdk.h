@@ -51,7 +51,10 @@ private:
 		uint32_t board_offset = 0;
 		uint32_t length = 0;
 		uint32_t flags = 0;
-		std::vector<uint8_t> card_only;
+		// Card-only storage, shared so a session that resolved it keeps
+		// valid storage after the guest frees the buffer, like the card's
+		// cached ring addresses.
+		std::shared_ptr<std::vector<uint8_t>> card_only;
 	};
 	struct Audio;
 	struct Image;
@@ -73,7 +76,11 @@ private:
 	std::array<Buffer, 16> buffers_{};
 	uint32_t next_handle_ = 1;
 	uint16_t last_status_ = 0;
-	std::unique_ptr<Audio> audio_;
+	// The card runs SDK_MAX_AUDIO_STREAMS (4) concurrent audio stream
+	// sessions, keyed by session id; a fifth BEGIN/BEGIN_EX answers
+	// NO_MEMORY. One session at a time may be bound to playback (PLAY).
+	std::array<std::unique_ptr<Audio>, 4> audios_{};
+	uint32_t audio_playing_session_ = 0;
 	uint32_t next_audio_session_ = 1;
 	std::unique_ptr<Image> image_;
 	uint32_t next_image_session_ = 1;
@@ -100,10 +107,13 @@ private:
 	uint32_t surface_height(uint32_t handle) const;
 	uint32_t surface_pitch(uint32_t handle) const;
 	uint32_t surface_format(uint32_t handle) const;
+	Audio *find_audio(uint32_t session);
 	void close_audio();
-	void decode_audio(const uint8_t *input, uint32_t length);
+	void close_audio(Audio *audio);
+	void decode_audio(Audio &audio, const uint8_t *input, uint32_t length);
 	void pump_audio();
-	void audio_result(uint8_t *reply, uint16_t *reply_length);
+	void pump_audio(Audio &audio);
+	void audio_result(const Audio &audio, uint8_t *reply, uint16_t *reply_length);
 	void close_media();
 	void media_result(uint8_t *reply, uint16_t *reply_length,
 	                  uint32_t bytes_written = 0, uint32_t event_flags = 0);

@@ -42,15 +42,23 @@ and buffer on board reset or removal.
 ## Audio streams
 
 The audio-stream service implements begin, codec-aware begin (`BeginEx`),
-feed, read, play, stop, close and per-stream gain. MP3 sessions use mpg123;
-the legacy begin opcode and `BeginEx` with the MP3 codec produce identical
-PCM. FLAC (8 to 192 kHz, up to 24 bits, mono or stereo) and Ogg Vorbis (8 to
-96 kHz, mono or stereo) are decoded incrementally with FFmpeg as the guest
-feeds them, so large files are never held in host memory. As on the card,
-their input waits in the session's input ring until PCM space lets the
-decoder take it: a feed is refused only when it does not fit that ring, and
-`bytes_consumed` counts decoded input. FLAC sessions can return S16LE,
-S16BE or S32BE; Vorbis sessions return S16LE or S16BE.
+feed, read, play, stop, close and per-stream gain, and keeps up to four
+concurrent sessions like the card's four stream slots; a begin against a
+full table answers `NO_MEMORY`. MP3 sessions use mpg123; the legacy begin
+opcode and `BeginEx` with the MP3 codec produce identical PCM. FLAC (8 to
+192 kHz, up to 24 bits, mono or stereo) and Ogg Vorbis (8 to 96 kHz, mono
+or stereo) are decoded incrementally with FFmpeg as the guest feeds them,
+so large files are never held in host memory. As on the card, input waits
+in the session's input ring until PCM space lets the decoder take it: a
+feed is refused only when it does not fit that ring (still `OK`, with the
+BACKPRESSURE result flag), and `bytes_consumed` counts decoded input.
+Undecodable MP3 data never faults a session — the card's minimp3 consumes
+nothing and waits — and the input ring of any open session can be freed,
+because the session keeps the ring it resolved at begin. FLAC sessions can
+return S16LE, S16BE or S32BE; Vorbis sessions return S16LE or S16BE.
+Playback (`Play`) binds one session at a time; a `Play` for a different
+session while one is bound answers `BUSY`, exactly as the card's single
+output pump does.
 
 MHI's S16LE stream plays through the selected Amiberry playback device on a
 host output stream separate from the board's AHI path; the per-stream gain
