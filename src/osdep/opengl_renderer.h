@@ -196,7 +196,7 @@ private:
 	void restore_shader_parameters(const char* shader_name, bool rtg);
 	bool ensure_shader_resolve_target(int width, int height);
 	void destroy_shader_resolve_target();
-	void render_shader_resolve(int x, int y, int width, int height);
+	void render_shader_resolve(int x, int y, int width, int height, GLuint target_framebuffer);
 	void update_texture_filter(GLenum texture_filter);
 
 	// Private helper for external shader rendering

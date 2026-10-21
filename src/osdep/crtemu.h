@@ -210,6 +210,7 @@ struct crtemu_t {
 	CRTEMU_GLuint vertexbuffer_static;
 	CRTEMU_GLuint backbuffer;
 	CRTEMU_GLuint fbo_backbuffer;
+	CRTEMU_GLuint default_framebuffer; // Framebuffer receiving the final pass. 0 on desktop GL; iOS EAGL has no framebuffer 0, so the host sets SDL's UIKit view FBO here each frame
 
 	CRTEMU_GLuint accumulatetexture_a;
 	CRTEMU_GLuint accumulatetexture_b;
@@ -2098,7 +2099,9 @@ crtemu_t* crtemu_create( crtemu_type_t type, void* memctx, bool force_mobile ) {
 	crtemu->GenTextures( 1, &crtemu->blurtexture_b );
 	crtemu->GenFramebuffers( 1, &crtemu->blurbuffer_b );
 
-	crtemu->BindFramebuffer( CRTEMU_GL_FRAMEBUFFER, 0 );
+	// No BindFramebuffer(0) reset here: GenFramebuffers above does not change
+	// the binding, and re-binding 0 would detach iOS hosts from SDL's UIKit
+	// view framebuffer that must stay current for the caller's next draw.
 
 	crtemu->GenTextures( 1, &crtemu->frametexture );
 #ifndef CRTEMU_WEBGL
@@ -2250,7 +2253,7 @@ static void crtemu_internal_blur( crtemu_t* crtemu, CRTEMU_GLuint source, CRTEMU
 	crtemu->DrawArrays( CRTEMU_GL_TRIANGLE_FAN, 0, 4 );
 	crtemu->ActiveTexture( CRTEMU_GL_TEXTURE0 );
 	crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, 0 );
-	crtemu->BindFramebuffer( CRTEMU_GL_FRAMEBUFFER, 0 );
+	crtemu->BindFramebuffer( CRTEMU_GL_FRAMEBUFFER, crtemu->default_framebuffer );
 
 	crtemu->BindFramebuffer( CRTEMU_GL_FRAMEBUFFER, blurbuffer_a );
 	crtemu->UseProgram( crtemu->blur_shader );
@@ -2263,7 +2266,7 @@ static void crtemu_internal_blur( crtemu_t* crtemu, CRTEMU_GLuint source, CRTEMU
 	crtemu->DrawArrays( CRTEMU_GL_TRIANGLE_FAN, 0, 4 );
 	crtemu->ActiveTexture( CRTEMU_GL_TEXTURE0 );
 	crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, 0 );
-	crtemu->BindFramebuffer( CRTEMU_GL_FRAMEBUFFER, 0 );
+	crtemu->BindFramebuffer( CRTEMU_GL_FRAMEBUFFER, crtemu->default_framebuffer );
 }
 
 // Applies the CRT pass wrap mode to the texture bound on the active unit:
@@ -2323,7 +2326,7 @@ static void crtemu_internal_present( crtemu_t* crtemu, CRTEMU_U64 time_us, CRTEM
 			crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, 0 );
 		}
 
-		crtemu->BindFramebuffer( CRTEMU_GL_FRAMEBUFFER, 0 );
+		crtemu->BindFramebuffer( CRTEMU_GL_FRAMEBUFFER, crtemu->default_framebuffer );
 		crtemu->Viewport( viewport[ 0 ], viewport[ 1 ], viewport[ 2 ], viewport[ 3 ] );
 		crtemu->UseProgram( crtemu->copy_shader );
 		crtemu->Uniform1i( crtemu->loc_copy_tex0, 0 );
@@ -2404,7 +2407,7 @@ static void crtemu_internal_present( crtemu_t* crtemu, CRTEMU_U64 time_us, CRTEM
 		crtemu->DrawArrays( CRTEMU_GL_TRIANGLE_FAN, 0, 4 );
 		crtemu->ActiveTexture( CRTEMU_GL_TEXTURE0 );
 		crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, 0 );
-		crtemu->BindFramebuffer( CRTEMU_GL_FRAMEBUFFER, 0 );
+		crtemu->BindFramebuffer( CRTEMU_GL_FRAMEBUFFER, crtemu->default_framebuffer );
 		crtemu->Viewport( viewport[ 0 ], viewport[ 1 ], viewport[ 2 ], viewport[ 3 ] );
 	}
 
@@ -2433,7 +2436,7 @@ static void crtemu_internal_present( crtemu_t* crtemu, CRTEMU_U64 time_us, CRTEM
 		crtemu->BindFramebuffer( CRTEMU_GL_FRAMEBUFFER, crtemu->blurbuffer_b );
 		crtemu->FramebufferTexture2D( CRTEMU_GL_FRAMEBUFFER, CRTEMU_GL_COLOR_ATTACHMENT0, CRTEMU_GL_TEXTURE_2D, crtemu->blurtexture_b, 0 );
 
-		crtemu->BindFramebuffer( CRTEMU_GL_FRAMEBUFFER, 0 );
+		crtemu->BindFramebuffer( CRTEMU_GL_FRAMEBUFFER, crtemu->default_framebuffer );
 
 		// Seed accumulation buffers with current backbuffer content instead of leaving
 		// them black. This prevents black frames when resolution changes rapidly (e.g.
@@ -2458,7 +2461,7 @@ static void crtemu_internal_present( crtemu_t* crtemu, CRTEMU_U64 time_us, CRTEM
 
 		crtemu->ActiveTexture( CRTEMU_GL_TEXTURE0 );
 		crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, 0 );
-		crtemu->BindFramebuffer( CRTEMU_GL_FRAMEBUFFER, 0 );
+		crtemu->BindFramebuffer( CRTEMU_GL_FRAMEBUFFER, crtemu->default_framebuffer );
 	}
 
 	// Update cached dimensions (only needs to be done once, not duplicated)
@@ -2493,7 +2496,7 @@ static void crtemu_internal_present( crtemu_t* crtemu, CRTEMU_U64 time_us, CRTEM
 	crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, 0 );
 	crtemu->ActiveTexture( CRTEMU_GL_TEXTURE1 );
 	crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, 0 );
-	crtemu->BindFramebuffer( CRTEMU_GL_FRAMEBUFFER, 0 );
+	crtemu->BindFramebuffer( CRTEMU_GL_FRAMEBUFFER, crtemu->default_framebuffer );
 
 
 	// Store a copy of the accumulation buffer
@@ -2507,7 +2510,7 @@ static void crtemu_internal_present( crtemu_t* crtemu, CRTEMU_U64 time_us, CRTEM
 	crtemu->DrawArrays( CRTEMU_GL_TRIANGLE_FAN, 0, 4 );
 	crtemu->ActiveTexture( CRTEMU_GL_TEXTURE0 );
 	crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, 0 );
-	crtemu->BindFramebuffer( CRTEMU_GL_FRAMEBUFFER, 0 );
+	crtemu->BindFramebuffer( CRTEMU_GL_FRAMEBUFFER, crtemu->default_framebuffer );
 
 	// Blend accumulation and backbuffer
 	crtemu->BindFramebuffer( CRTEMU_GL_FRAMEBUFFER, crtemu->accumulatebuffer_a );
@@ -2524,7 +2527,7 @@ static void crtemu_internal_present( crtemu_t* crtemu, CRTEMU_U64 time_us, CRTEM
 	crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, 0 );
 	crtemu->ActiveTexture( CRTEMU_GL_TEXTURE1 );
 	crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, 0 );
-	crtemu->BindFramebuffer( CRTEMU_GL_FRAMEBUFFER, 0 );
+	crtemu->BindFramebuffer( CRTEMU_GL_FRAMEBUFFER, crtemu->default_framebuffer );
 
 
 	// Add slight blur to backbuffer (skip on mobile for performance - this is a subtle effect)
@@ -2541,7 +2544,7 @@ static void crtemu_internal_present( crtemu_t* crtemu, CRTEMU_U64 time_us, CRTEM
 
 
 	// Present to screen with CRT shader
-	crtemu->BindFramebuffer( CRTEMU_GL_FRAMEBUFFER, 0 );
+	crtemu->BindFramebuffer( CRTEMU_GL_FRAMEBUFFER, crtemu->default_framebuffer );
 
 	crtemu->Viewport( viewport[ 0 ], viewport[ 1 ], viewport[ 2 ], viewport[ 3 ] );
 
@@ -2663,7 +2666,7 @@ static void crtemu_internal_present( crtemu_t* crtemu, CRTEMU_U64 time_us, CRTEM
 	crtemu->ActiveTexture( CRTEMU_GL_TEXTURE2 );
 	crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, 0 );
 	crtemu->ActiveTexture( CRTEMU_GL_TEXTURE0 );
-	crtemu->BindFramebuffer( CRTEMU_GL_FRAMEBUFFER, 0 );
+	crtemu->BindFramebuffer( CRTEMU_GL_FRAMEBUFFER, crtemu->default_framebuffer );
 }
 
 

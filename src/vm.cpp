@@ -334,7 +334,9 @@ bool uae_vm_free(void *address, size_t size)
 
 void uae_vm_jit_write_protect(bool enable_execute_mode)
 {
-#if defined(__APPLE__) && defined(CPU_AARCH64)
+#if defined(__APPLE__) && defined(CPU_AARCH64) && !defined(AMIBERRY_IOS)
+	/* pthread_jit_write_protect_np is unavailable on iOS, where the JIT is
+	 * compiled out anyway (AMIBERRY_IOS in src/osdep/sysconfig.h). */
 	pthread_jit_write_protect_np(enable_execute_mode ? 1 : 0);
 #else
 	(void)enable_execute_mode;
