@@ -6,6 +6,7 @@
 #define AMIBERRY_ZZ9000_SDK_INTERNAL_H
 
 #include <cfenv>
+#include <chrono>
 #include <cstdint>
 
 namespace zz9000_sdk {
@@ -111,6 +112,23 @@ inline void put64(uint8_t *p, uint64_t value)
 inline uint32_t align_up(uint32_t value, uint32_t alignment)
 {
 	return (value + alignment - 1) & ~(alignment - 1);
+}
+
+// Monotonic host clock in microseconds, used by the media pipeline profiling
+// stages reported on status page 5.
+inline uint64_t monotonic_us()
+{
+	return static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::microseconds>(
+		std::chrono::steady_clock::now().time_since_epoch()).count());
+}
+
+// Mirrors the card's SDK_MEDIA_PACK_PAIR: two 16-bit geometry facts per
+// 64-bit status value. Signed coordinates travel as their two's-complement
+// pattern and are sign-extended by the reader (ZZ9K_MEDIA_PAIR_HI_S).
+inline uint64_t pack_pair(int32_t hi, int32_t lo)
+{
+	return (static_cast<uint64_t>(static_cast<uint16_t>(hi)) << 16) |
+		static_cast<uint16_t>(lo);
 }
 
 } // namespace zz9000_sdk

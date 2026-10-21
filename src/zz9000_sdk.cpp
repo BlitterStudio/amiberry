@@ -201,6 +201,12 @@ struct Engine::Media {
 	uint64_t video_pts = UINT64_MAX, audio_pts = UINT64_MAX;
 	uint64_t first_audio_pts = UINT64_MAX; // origin of the acknowledged-PCM clock
 	uint64_t format_base = 0; // pcm_produced when the current PCM format began
+	// Timeline origin (first container PTS) for status page 0; zero for the
+	// derived pl_mpeg clock, as the card's derived timelines report.
+	uint64_t pts_origin = UINT64_MAX;
+	uint64_t decoded_audio_pts = UINT64_MAX; // newest decoded audio, pages 0/1
+	uint64_t last_raw_audio_pts = UINT64_MAX; // newest raw chunk PTS, page 0
+	uint64_t presented_frames = 0, discarded_frames = 0; // status page 2
 	uint32_t sample_rate = 0, channels = 0;
 	uint32_t state = 1; // NEED_INPUT
 	uint32_t video_codec = 0, container = 0;
@@ -217,6 +223,13 @@ struct Engine::Media {
 	MediaAvAudio av_audio;
 	size_t av_audio_offset = 0;
 	std::vector<uint8_t> held_yuy2;
+	// Per-stage pipeline timing for status page 5, in ZZ9KMediaProfileStage
+	// order, cumulative for the session (a new Media starts at zero, like
+	// the card's profile reset at session begin). FFmpeg sessions merge the
+	// worker's own counters at status time; these hold the host-side work:
+	// the 0x0b08 present copy and the pl_mpeg decode and pack paths.
+	uint64_t profile_us[4] = {};
+	uint64_t profile_calls[4] = {};
 };
 
 Engine::Engine(uint8_t *board_memory, uint32_t board_size)
@@ -324,15 +337,37 @@ void Engine::set_framebuffer(uint32_t offset, uint32_t width, uint32_t height,
 }
 
 void Engine::set_overlay(uint32_t offset, uint32_t width, uint32_t height,
-	                     uint32_t pitch, uint32_t variant, bool active)
+                         uint32_t pitch, uint32_t variant, bool configured,
+                         bool active, const OverlayGeometry &geometry)
 {
-	if (!active || variant != 0 || !width || !height ||
-	    pitch < ((width + 1) / 2) * 4 || offset > board_size_ ||
-	    static_cast<uint64_t>(pitch) * height > board_size_ - offset) {
+	const uint64_t size = static_cast<uint64_t>(pitch) * height;
+	const bool geometry_valid = configured && width && height &&
+		variant == 0 && pitch >= ((width + 1) / 2) * 4 &&
+		offset <= board_size_ && size <= board_size_ - offset;
+	// Like a card overlay SET: geometry that cannot be scanned clears every
+	// fact, and an active overlay additionally needs a usable destination
+	// rect. A disabled but otherwise valid overlay keeps its geometry with
+	// the enable bit off, and releases the media session binding just as the
+	// card's SET does for an inactive overlay.
+	if (!geometry_valid || (active && (geometry.dst_w < 1 || geometry.dst_h < 1))) {
 		overlay_ = {};
 		return;
 	}
-	overlay_ = {offset, width, height, pitch, variant, active};
+	overlay_.offset = offset;
+	overlay_.width = width;
+	overlay_.height = height;
+	overlay_.pitch = pitch;
+	overlay_.variant = variant;
+	overlay_.dst_x = geometry.dst_x;
+	overlay_.dst_y = geometry.dst_y;
+	overlay_.dst_w = geometry.dst_w;
+	overlay_.dst_h = geometry.dst_h;
+	overlay_.screen_w = geometry.screen_w;
+	overlay_.screen_h = geometry.screen_h;
+	overlay_.configured = configured;
+	overlay_.active = configured && active;
+	if (!overlay_.active)
+		overlay_.presenting_session = 0;
 }
 
 Engine::Surface *Engine::find_surface(uint32_t handle)
@@ -437,6 +472,10 @@ void Engine::close_media()
 {
 	if (media_ && media_->decoder)
 		plm_destroy(media_->decoder);
+	// The card's overlay drops its direct-session binding when the media
+	// session closes (overlay_video_session_closed).
+	if (media_ && overlay_.presenting_session == media_->session)
+		overlay_.presenting_session = 0;
 	media_.reset();
 }
 
@@ -730,6 +769,12 @@ void Engine::pump_media_audio()
 				media_->av_audio_offset = 0;
 				if (!media_->av_decoder->pop_audio(media_->av_audio))
 					break;
+				if (media_->av_audio.pts != UINT64_MAX) {
+					media_->decoded_audio_pts = media_->av_audio.pts;
+					media_->last_raw_audio_pts = media_->av_audio.pts;
+					if (media_->pts_origin == UINT64_MAX)
+						media_->pts_origin = media_->av_audio.pts;
+				}
 			}
 			// A rate or channel change takes effect only once the guest has
 			// acknowledged all PCM in the old format; the clock then restarts
@@ -768,7 +813,16 @@ void Engine::pump_media_audio()
 		    media_->pcm_capacity || media_->pcm_produced - media_->pcm_acknowledged >=
 		    media_->pcm_high_water)
 			break;
+		const uint64_t audio_decode_start = monotonic_us();
 		plm_samples_t *samples = plm_decode_audio(media_->decoder);
+		if (samples) {
+			media_->profile_us[3] += monotonic_us() - audio_decode_start;
+			media_->profile_calls[3]++;
+			// pl_mpeg's audio clock is derived from the sample count; that
+			// is the newest-decoded-audio fact this decoder can report.
+			media_->decoded_audio_pts = static_cast<uint64_t>(
+				samples->time * 90000.0 + 0.5);
+		}
 		if (!samples)
 			break;
 		media_->sample_rate = static_cast<uint32_t>(plm_get_samplerate(media_->decoder));
@@ -863,6 +917,9 @@ uint16_t Engine::dispatch_media(uint16_t opcode, const uint8_t *request,
 			plm_set_audio_enabled(decoder, audio_codec == 1);
 			media_->input = input;
 			media_->decoder = decoder;
+			// pl_mpeg carries no container timestamps; the card's derived
+			// timelines report a zero origin on status page 0.
+			media_->pts_origin = 0;
 		}
 		media_result(reply, reply_length);
 		return ok;
@@ -962,6 +1019,8 @@ uint16_t Engine::dispatch_media(uint16_t opcode, const uint8_t *request,
 				media_->frame_rate_num = frame.frame_rate_num;
 				media_->frame_rate_den = frame.frame_rate_den;
 				media_->video_pts = frame.pts;
+				if (media_->pts_origin == UINT64_MAX && frame.pts != UINT64_MAX)
+					media_->pts_origin = frame.pts;
 			} else if (result == 0 && media_->eof) {
 				// All input has arrived and the worker is still decoding it
 				// (a short file can be fed whole before FFmpeg finishes
@@ -1010,7 +1069,10 @@ uint16_t Engine::dispatch_media(uint16_t opcode, const uint8_t *request,
 			media_result(reply, reply_length, 0, 1u << 8);
 			return busy;
 		}
+		const uint64_t decode_start = monotonic_us();
 		auto *frame = plm_decode_video(media_->decoder);
+		media_->profile_us[0] += monotonic_us() - decode_start;
+		media_->profile_calls[0]++;
 		if (frame) {
 			if (frame->width != media_->width || frame->height != media_->height)
 				return io_error;
@@ -1074,6 +1136,10 @@ uint16_t Engine::dispatch_media(uint16_t opcode, const uint8_t *request,
 			    overlay_.height < packed_height || (!media_->av && half))
 				return busy;
 			if (media_->av) {
+				// The card's PRESENT stage covers the core-0 hand-off of a
+				// decoded frame to the overlay; for an already-packed frame
+				// that hand-off is this copy into the emulated overlay plane.
+				const uint64_t present_start = monotonic_us();
 				for (uint32_t y = 0; y < packed_height; ++y) {
 					auto *dst = memory_at(overlay_.offset +
 						static_cast<size_t>(y) * overlay_.pitch);
@@ -1095,8 +1161,14 @@ uint16_t Engine::dispatch_media(uint16_t opcode, const uint8_t *request,
 						std::memcpy(dst, src, static_cast<size_t>(media_->width) * 2);
 					}
 				}
+				media_->profile_us[2] += monotonic_us() - present_start;
+				media_->profile_calls[2]++;
 			} else {
+				// A pl_mpeg frame is packed to YUY2 while presenting: the
+				// planar conversion below is the work the card times on
+				// core 1 as its pack stage.
 				const auto *frame = media_->held_frame;
+				const uint64_t pack_start = monotonic_us();
 				for (uint32_t y = 0; y < media_->height; ++y) {
 					auto *dst = memory_at(overlay_.offset +
 						static_cast<size_t>(y) * overlay_.pitch);
@@ -1110,12 +1182,38 @@ uint16_t Engine::dispatch_media(uint16_t opcode, const uint8_t *request,
 						dst += 4;
 					}
 				}
+				media_->profile_us[1] += monotonic_us() - pack_start;
+				media_->profile_calls[1]++;
 			}
+		}
+		// The card's PRESENT stage excludes the compose; for a pl_mpeg frame
+		// the hand-off that remains is the state flip below, timed here so
+		// present calls advance per frame as they do on the card.
+		if (opcode == 0x0b08 && !media_->av) {
+			const uint64_t present_start = monotonic_us();
+			media_->held = false;
+			media_->held_interlaced = false;
+			media_->held_frame = nullptr;
+			media_->state = 2;
+			media_->presented_frames++;
+			// This session now feeds the overlay, the fact the card reports
+			// as the presentation page's OWNED bit.
+			overlay_.presenting_session = media_->session;
+			media_->profile_us[2] += monotonic_us() - present_start;
+			media_->profile_calls[2]++;
+			media_result(reply, reply_length, 0, 1u << 9);
+			return ok;
 		}
 		media_->held = false;
 		media_->held_interlaced = false;
 		media_->held_frame = nullptr;
 		media_->state = 2;
+		if (opcode == 0x0b08) {
+			media_->presented_frames++;
+			overlay_.presenting_session = media_->session;
+		} else {
+			media_->discarded_frames++;
+		}
 		media_result(reply, reply_length, 0,
 			opcode == 0x0b08 ? 1u << 9 : 1u << 10);
 		return ok;
@@ -1124,39 +1222,85 @@ uint16_t Engine::dispatch_media(uint16_t opcode, const uint8_t *request,
 		if (request_length < 12 || be32(request + 8))
 			return bad_request;
 		const uint32_t page = be32(request + 4);
-		if (page > 3)
+		if (page > 5)
 			return bad_request;
 		put32(reply, media_->session);
 		put32(reply + 4, media_->state);
 		put32(reply + 8, page);
+		// Pages 0, 1 and 3 share the card's audio fact flags: AUDIO_READY
+		// once the decoder has produced PCM, BACKPRESSURE while staged PCM
+		// waits for the guest at or above the high-water mark. Media AX
+		// binding is not advertised here, so no BOUND/PLAYING/DRAINED/
+		// UNDERRUN bits appear.
+		const uint32_t audio_flags = (media_->sample_rate ? 1u << 7 : 0) |
+			(media_->audio_enabled && media_->pcm_capacity &&
+			 media_->pcm_produced - media_->pcm_acknowledged >=
+				media_->pcm_high_water ? 1u << 8 : 0);
 		if (page == 0) {
-			put32(reply + 12, 0);
-			put64(reply + 16, UINT64_MAX);
+			put32(reply + 12, audio_flags);
+			put64(reply + 16, media_->pts_origin);
 			put64(reply + 24, media_->video_pts);
-			put64(reply + 32, media_->audio_pts);
-			put64(reply + 40, media_->sample_rate ? 0 : UINT64_MAX);
+			put64(reply + 32, media_->decoded_audio_pts);
+			// pl_mpeg exposes no container timestamps; its derived audio
+			// clock runs from a zero basis, as the card's derived timelines
+			// do, so only an FFmpeg session can report the raw chunk PTS.
+			put64(reply + 40, media_->av ? media_->last_raw_audio_pts :
+				(media_->sample_rate ? 0 : UINT64_MAX));
 		} else if (page == 1) {
-			put32(reply + 12, media_->sample_rate ? 1u << 7 : 0);
+			put32(reply + 12, audio_flags);
 			put64(reply + 16, media_->pcm_produced);
 			put64(reply + 24, media_->pcm_acknowledged);
-			put64(reply + 32, media_->audio_pts);
+			put64(reply + 32, media_->decoded_audio_pts);
 			put64(reply + 40, media_->first_audio_pts);
 		} else if (page == 2) {
 			put32(reply + 12, 0);
 			put64(reply + 16, media_->bytes_accepted);
 			put64(reply + 24, media_->frame_number);
-			put64(reply + 32, media_->frame_number);
-			put64(reply + 40, 0);
+			put64(reply + 32, media_->presented_frames);
+			put64(reply + 40, media_->discarded_frames);
 		} else if (page == 3) {
 			const uint32_t frame_bytes = media_->channels ? media_->channels * 2 : 4;
 			const uint64_t retired = frame_bytes ? media_->pcm_acknowledged / frame_bytes : 0;
 			const uint64_t staged = frame_bytes ? media_->pcm_produced / frame_bytes : 0;
 			const uint64_t queued = staged >= retired ? staged - retired : 0;
-			put32(reply + 12, media_->sample_rate ? 1u << 7 : 0);
+			put32(reply + 12, audio_flags);
 			put64(reply + 16, retired);
 			put64(reply + 24, queued);
 			put64(reply + 32, staged);
+			// The emulator has no card-side audio DMA pump that could
+			// starve, so a session in this state reports zero underruns,
+			// exactly like a card whose pump never ran dry.
 			put64(reply + 40, 0);
+		} else if (page == 4) {
+			// The PIP emulates the FPGA overlay plane itself: zz9000.cpp
+			// scales the YUY2 source during scanout exactly as the PL plane
+			// does, and no card-local ARM shadow compositor exists here, so
+			// an active overlay always presents through the native path.
+			const bool active = overlay_.configured && overlay_.active;
+			put32(reply + 12, (overlay_.configured ? 1u : 0u) |
+				(active ? 2u | 4u : 0u) |
+				(overlay_.presenting_session != 0 &&
+				 overlay_.presenting_session == media_->session ? 8u : 0u));
+			put64(reply + 16, pack_pair(overlay_.width, overlay_.height));
+			put64(reply + 24, pack_pair(overlay_.dst_w, overlay_.dst_h));
+			// Signed origins travel as their 16-bit two's-complement
+			// pattern and are sign-extended by the reader.
+			put64(reply + 32, pack_pair(overlay_.dst_x, overlay_.dst_y));
+			put64(reply + 40, pack_pair(overlay_.screen_w, overlay_.screen_h));
+		} else {
+			// Per-stage timing as (microseconds << 32) | calls, cumulative
+			// for the session. NEON_PACK never applies: the host packs in
+			// scalar C++, unlike the card's optional NEON kernel.
+			put32(reply + 12, 0);
+			uint64_t av_us[4] = {}, av_calls[4] = {};
+			if (media_->av)
+				media_->av_decoder->profile_totals(av_us, av_calls);
+			for (uint32_t stage = 0; stage < 4; ++stage)
+				put64(reply + 16 + stage * 8,
+					(static_cast<uint64_t>(static_cast<uint32_t>(
+						media_->profile_us[stage] + av_us[stage])) << 32) |
+					static_cast<uint32_t>(media_->profile_calls[stage] +
+						av_calls[stage]));
 		}
 		*reply_length = 48;
 		return ok;

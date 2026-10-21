@@ -539,7 +539,13 @@ void run_webp_animation(Mailbox &mailbox, const std::vector<uint8_t> &image)
 	put32(request + 12, static_cast<uint32_t>(image.size())); put32(request + 16, 1);
 	const auto *reply = mailbox.call(0x0405, request, 48);
 	assert(get32(reply + 4) == 6 && get32(reply + 8) == 2 && get32(reply + 12) == 2);
-		mailbox.sdk.set_overlay(0x120000, 2, 2, 4, 0, true);
+		zz9000_sdk::Engine::OverlayGeometry overlay_geometry;
+		overlay_geometry.dst_w = 2;
+		overlay_geometry.dst_h = 2;
+		overlay_geometry.screen_w = 2;
+		overlay_geometry.screen_h = 2;
+		mailbox.sdk.set_overlay(0x120000, 2, 2, 4, 0, true, true,
+			overlay_geometry);
 		std::fill(std::begin(request), std::end(request), 0);
 		put32(request, session);
 		reply = mailbox.call(0x0408, request, 48);

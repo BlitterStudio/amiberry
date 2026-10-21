@@ -18,6 +18,12 @@ vorbis_long_ref="${TMPDIR:-/tmp}/zz9000_sdk_audio_vorbis_long.$$.s16le"
 flac_long="${TMPDIR:-/tmp}/zz9000_sdk_audio_flac_long.$$.flac"
 flac_long_ref="${TMPDIR:-/tmp}/zz9000_sdk_audio_flac_long.$$.s16le"
 trap 'rm -f "$out" "$mp3" "$mono_mp3" "$low_mp3" "$flac16" "$flac24" "$vorbis" "$flac16_ref" "$flac24_ref" "$vorbis_ref" "$picture_png" "$flac_picture" "$vorbis_long" "$vorbis_long_ref" "$flac_long" "$flac_long_ref"' EXIT
+# FFmpeg builds without libvorbis (Homebrew 9.x) still ship the native
+# experimental Vorbis encoder; it needs stereo input and -strict -2.
+vorbis_args=libvorbis
+if ! ffmpeg -hide_banner -encoders 2>/dev/null | grep -q libvorbis; then
+	vorbis_args='vorbis -strict -2'
+fi
 ffmpeg -nostdin -loglevel error -f lavfi -i 'sine=frequency=440:duration=0.35' \
   -ar 48000 -ac 2 -b:a 128k "$mp3"
 ffmpeg -nostdin -loglevel error -f lavfi -i 'sine=frequency=440:duration=0.2' \
@@ -29,16 +35,18 @@ ffmpeg -nostdin -loglevel error -f lavfi -i 'sine=frequency=330:duration=0.15' \
 ffmpeg -nostdin -loglevel error -f lavfi -i 'sine=frequency=550:duration=0.15' \
   -ar 48000 -ac 2 -c:a flac -sample_fmt s32 -bits_per_raw_sample 24 "$flac24"
 ffmpeg -nostdin -loglevel error -f lavfi -i 'sine=frequency=660:duration=0.15' \
-  -ar 32000 -ac 2 -c:a libvorbis "$vorbis"
+  -ar 32000 -ac 2 -c:a $vorbis_args "$vorbis"
 ffmpeg -nostdin -loglevel error -i "$flac16" -f s16be -acodec pcm_s16be "$flac16_ref"
 ffmpeg -nostdin -loglevel error -i "$flac24" -f s32be -acodec pcm_s32be "$flac24_ref"
-ffmpeg -nostdin -loglevel error -i "$vorbis" -f s16le -acodec pcm_s16le "$vorbis_ref"
+# atrim keeps the reference at the true input duration: decoders flush a
+# tail of padding samples past the last granule (the native encoder leaves
+# 320 extra samples; libvorbis leaves none), and the card trims at granule.
+ffmpeg -nostdin -loglevel error -i "$vorbis" -af atrim=end=0.15 -f s16le -acodec pcm_s16le "$vorbis_ref"
 # Noise keeps the Vorbis pages large, so PCM backpressure stops parsing
 # before the EOS page of a single EOF-marked feed.
 ffmpeg -nostdin -loglevel error -f lavfi -i 'anoisesrc=duration=2:color=pink:sample_rate=44100:amplitude=0.5' \
-  -ac 2 -c:a libvorbis "$vorbis_long"
-ffmpeg -nostdin -loglevel error -i "$vorbis_long" -f s16le -acodec pcm_s16le "$vorbis_long_ref"
-# White noise barely compresses, so one feed carries well over 128 KiB.
+  -ac 2 -c:a $vorbis_args "$vorbis_long"
+ffmpeg -nostdin -loglevel error -i "$vorbis_long" -af atrim=end=2 -f s16le -acodec pcm_s16le "$vorbis_long_ref"
 ffmpeg -nostdin -loglevel error -f lavfi -i 'anoisesrc=duration=3:color=white:sample_rate=44100:amplitude=0.5' \
   -ac 1 -c:a flac -sample_fmt s16 "$flac_long"
 ffmpeg -nostdin -loglevel error -i "$flac_long" -f s16le -acodec pcm_s16le "$flac_long_ref"

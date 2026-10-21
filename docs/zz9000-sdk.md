@@ -97,6 +97,20 @@ is not advertised, so ZZPlay plays the sound through guest AHI. Zorro II video
 sessions remain unadvertised because its video window aperture is not mapped
 for this path.
 
+The media status op (`0x0b0a`) answers all six card pages: timing (with the
+timeline origin), audio, counters (decoded, presented and discarded frames
+counted separately), audio output (zero underruns — there is no card-side
+DMA pump here to starve), the overlay presentation path, and per-stage
+profiling. The presentation page reports the PIP's flags and source,
+destination and screen geometry packed into 16-bit pairs; because the
+emulated PIP *is* the FPGA overlay plane, an active overlay always reports
+the native path, and ZZPlay names it "native 1:1" or "native scaled" rather
+than "card-local compositor". Profiling packs each stage as
+`(microseconds << 32) | calls` measured around the real FFmpeg/pl_mpeg
+decode, YUY2 pack, present copy and audio decode work; the NEON flag never
+appears because the host packs in scalar C++. Pages above five and nonzero
+flags are rejected exactly as on the card.
+
 ## Console encoder
 
 The console service (`0x8200`) encodes the live RTG framebuffer into RFB tile

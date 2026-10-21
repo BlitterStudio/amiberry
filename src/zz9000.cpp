@@ -1869,9 +1869,21 @@ static void zz_sdk_update_framebuffer(zz9000_state *data)
 	const uae_u32 overlay_offset = overlay.source_offset <=
 		data->card_size - ZZ9000_MEMORY_BASE ?
 		ZZ9000_MEMORY_BASE + overlay.source_offset : data->card_size;
+	// Full presentation-path facts for media status page 4: the PIP's
+	// destination rect and the screen mode it was configured against. A
+	// mode-stale overlay is not presenting, exactly as on the card.
+	zz9000_sdk::Engine::OverlayGeometry overlay_geometry;
+	overlay_geometry.dst_x = overlay.destination_x;
+	overlay_geometry.dst_y = overlay.destination_y;
+	overlay_geometry.dst_w = overlay.destination_width;
+	overlay_geometry.dst_h = overlay.destination_height;
+	overlay_geometry.screen_w = static_cast<uint32_t>(std::max(0, data->width));
+	overlay_geometry.screen_h = static_cast<uint32_t>(std::max(0, data->height));
 	data->sdk->set_overlay(overlay_offset, overlay.source_width,
 		overlay.source_height, overlay.source_pitch, overlay.variant,
-		overlay.active);
+		overlay.configured,
+		overlay.configured && overlay.active && !overlay.mode_stale,
+		overlay_geometry);
 }
 
 static void zz_write_register(zz9000_state *data, uae_u32 offset, uae_u16 value)

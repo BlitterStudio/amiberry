@@ -256,6 +256,16 @@ bool MediaAv::has_audio() const
 	return !audio_.empty();
 }
 
+void MediaAv::profile_totals(uint64_t microseconds[profile_stages],
+                             uint64_t calls[profile_stages]) const
+{
+	std::lock_guard<std::mutex> lock(mutex_);
+	for (uint32_t stage = 0; stage < profile_stages; ++stage) {
+		microseconds[stage] = profile_us_[stage];
+		calls[stage] = profile_calls_[stage];
+	}
+}
+
 int MediaAv::decode(MediaAvFrame &frame, uint32_t flags)
 {
 	std::unique_lock<std::mutex> lock(mutex_);
@@ -406,6 +416,16 @@ void MediaAv::worker_loop()
 		output_ready_.notify_all();
 		return true;
 	};
+	// Per-stage pipeline timing for media status page 5, matching the card's
+	// (microseconds << 32) | calls accumulators: 0 video decode, 1 YUY2 pack,
+	// 3 audio decode. Stage 2 (present) is timed by the caller around the
+	// 0x0b08 copy, not by this worker.
+	auto profile_record = [this](uint32_t stage, uint64_t start_us) {
+		const uint64_t elapsed = monotonic_us() - start_us;
+		std::lock_guard<std::mutex> lock(mutex_);
+		profile_us_[stage] += elapsed;
+		profile_calls_[stage]++;
+	};
 	// Only EAGAIN and EOF end a drain cleanly; any other negative return from
 	// FFmpeg is a decoding or demuxing error and fails the session.
 	auto drained = [](int result) {
@@ -414,7 +434,12 @@ void MediaAv::worker_loop()
 	auto drain_video = [&]() -> bool {
 		if (!state_->video) return true;
 		int result;
-		while ((result = avcodec_receive_frame(state_->video, state_->frame)) == 0) {
+		while (true) {
+			const uint64_t decode_start = monotonic_us();
+			result = avcodec_receive_frame(state_->video, state_->frame);
+			if (result != 0)
+				break;
+			profile_record(0, decode_start);
 			if (!frame_is_420(state_->frame) || state_->frame->width <= 0 ||
 				state_->frame->height <= 0 || state_->frame->width > 1920 ||
 				state_->frame->height > 1920 || (state_->frame->width & 1) ||
@@ -439,19 +464,23 @@ void MediaAv::worker_loop()
 			frame.interlaced = state_->frame->interlaced_frame != 0;
 			frame.keyframe = state_->frame->key_frame != 0;
 #endif
-			frame.yuy2.resize(static_cast<size_t>(frame.width) * frame.height * 2);
-			for (uint32_t y = 0; y < frame.height; ++y) {
-				const uint8_t *luma = state_->frame->data[0] +
-					static_cast<ptrdiff_t>(y) * state_->frame->linesize[0];
-				const uint8_t *cb = state_->frame->data[1] +
-					static_cast<ptrdiff_t>(y / 2) * state_->frame->linesize[1];
-				const uint8_t *cr = state_->frame->data[2] +
-					static_cast<ptrdiff_t>(y / 2) * state_->frame->linesize[2];
-				auto *dst = frame.yuy2.data() + static_cast<size_t>(y) * frame.width * 2;
-				for (uint32_t x = 0; x < frame.width; x += 2) {
-					dst[x * 2] = luma[x]; dst[x * 2 + 1] = cb[x / 2];
-					dst[x * 2 + 2] = luma[x + 1]; dst[x * 2 + 3] = cr[x / 2];
+			{
+				const uint64_t pack_start = monotonic_us();
+				frame.yuy2.resize(static_cast<size_t>(frame.width) * frame.height * 2);
+				for (uint32_t y = 0; y < frame.height; ++y) {
+					const uint8_t *luma = state_->frame->data[0] +
+						static_cast<ptrdiff_t>(y) * state_->frame->linesize[0];
+					const uint8_t *cb = state_->frame->data[1] +
+						static_cast<ptrdiff_t>(y / 2) * state_->frame->linesize[1];
+					const uint8_t *cr = state_->frame->data[2] +
+						static_cast<ptrdiff_t>(y / 2) * state_->frame->linesize[2];
+					auto *dst = frame.yuy2.data() + static_cast<size_t>(y) * frame.width * 2;
+					for (uint32_t x = 0; x < frame.width; x += 2) {
+						dst[x * 2] = luma[x]; dst[x * 2 + 1] = cb[x / 2];
+						dst[x * 2 + 2] = luma[x + 1]; dst[x * 2 + 3] = cr[x / 2];
+					}
 				}
+				profile_record(1, pack_start);
 			}
 			av_frame_unref(state_->frame);
 			if (!push_frame(std::move(frame))) return false;
@@ -461,7 +490,11 @@ void MediaAv::worker_loop()
 	auto drain_audio = [&]() -> bool {
 		if (!state_->audio) return true;
 		int result;
-		while ((result = avcodec_receive_frame(state_->audio, state_->frame)) == 0) {
+		while (true) {
+			const uint64_t audio_decode_start = monotonic_us();
+			result = avcodec_receive_frame(state_->audio, state_->frame);
+			if (result != 0)
+				break;
 			// As on the card, AC-3 is always downmixed to stereo (liba52 with
 			// A52_STEREO); the other codecs accept only mono or stereo.
 			const bool ac3 = audio_codec_ == audio_ac3;
@@ -513,6 +546,7 @@ void MediaAv::worker_loop()
 			audio.s16be.resize(static_cast<size_t>(count) * out_channels * 2);
 			for (size_t i = 0; i < audio.s16be.size(); i += 2)
 				std::swap(audio.s16be[i], audio.s16be[i + 1]);
+			profile_record(3, audio_decode_start);
 			if (!push_audio(std::move(audio))) return false;
 		}
 		return drained(result);

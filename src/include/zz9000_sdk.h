@@ -28,12 +28,22 @@ public:
 	uint16_t read_register(uint32_t offset) const;
 	bool write_register(uint32_t offset, uint16_t value);
 	// Offsets are within board_memory, including the 64 KiB register aperture.
+	// Presentation-path facts reported on media status page 4, mirroring the
+	// card's overlay_path_info: the PIP source and destination geometry plus
+	// the screen mode it was configured against.
+	struct OverlayGeometry {
+		int32_t dst_x = 0, dst_y = 0;
+		int32_t dst_w = 0, dst_h = 0;
+		uint32_t screen_w = 0, screen_h = 0;
+	};
 	void set_framebuffer(uint32_t offset, uint32_t width, uint32_t height,
 	                     uint32_t pitch, uint32_t format);
 	void set_overlay(uint32_t offset, uint32_t width, uint32_t height,
-	                 uint32_t pitch, uint32_t variant, bool active);
+	                 uint32_t pitch, uint32_t variant, bool configured,
+	                 bool active, const OverlayGeometry &geometry);
 	uint8_t *buffer_data(uint32_t handle);
 	uint32_t buffer_length(uint32_t handle) const;
+
 
 private:
 	struct Buffer {
@@ -72,6 +82,10 @@ private:
 	std::unique_ptr<ConsoleEncoder> console_;
 	struct Overlay {
 		uint32_t offset = 0, width = 0, height = 0, pitch = 0, variant = 0;
+		int32_t dst_x = 0, dst_y = 0, dst_w = 0, dst_h = 0;
+		uint32_t screen_w = 0, screen_h = 0;
+		uint32_t presenting_session = 0;
+		bool configured = false;
 		bool active = false;
 	} overlay_{};
 	std::array<Surface, 4> surfaces_{};

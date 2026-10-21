@@ -25,8 +25,14 @@ ac3_51="${TMPDIR:-/tmp}/zz9000_sdk_media_test.$$.ac3_51.vob"
 held="${TMPDIR:-/tmp}/zz9000_sdk_media_test.$$.held.vob"
 trap 'rm -f "$out" "$video" "$audio_only" "$vp8" "$vp9" "$mkv" "$ps" "$lpcm" "$audio_ac3" "$interlaced" "$large" "$large_odd_half" "$truncated" "$offset" "$mkv_pcm" "$mkv_mp3" "$mkv_pcm_big" "$switch_a" "$switch_b" "$switch" "$ac3_51" "$held"' EXIT
 ffmpeg -nostdin -loglevel error -y -f lavfi -i 'testsrc2=size=160x120:rate=25:duration=1' -f lavfi -i 'sine=frequency=440:sample_rate=44100:duration=1' -c:v mpeg1video -q:v 4 -c:a mp2 -b:a 128k -f mpeg "$video"
+# FFmpeg builds without libvorbis (Homebrew 9.x) still ship the native
+# experimental Vorbis encoder; it needs stereo input and -strict -2.
+vorbis_args=libvorbis
+if ! ffmpeg -hide_banner -encoders 2>/dev/null | grep -q libvorbis; then
+	vorbis_args='vorbis -strict -2'
+fi
 ffmpeg -nostdin -loglevel error -y -f lavfi -i 'sine=frequency=440:sample_rate=44100:duration=1' -c:a mp2 -b:a 128k -f mpeg "$audio_only"
-ffmpeg -nostdin -loglevel error -y -f lavfi -i 'testsrc2=size=160x120:rate=25:duration=3' -f lavfi -i 'sine=frequency=440:sample_rate=48000:duration=3' -c:v libvpx -deadline realtime -cpu-used 8 -c:a libvorbis "$vp8"
+ffmpeg -nostdin -loglevel error -y -f lavfi -i 'testsrc2=size=160x120:rate=25:duration=3' -f lavfi -i 'sine=frequency=440:sample_rate=48000:duration=3' -ac 2 -c:v libvpx -deadline realtime -cpu-used 8 -c:a $vorbis_args "$vp8"
 ffmpeg -nostdin -loglevel error -y -f lavfi -i 'testsrc2=size=160x120:rate=25:duration=3' -f lavfi -i 'sine=frequency=440:sample_rate=48000:duration=3' -c:v libvpx-vp9 -row-mt 1 -cpu-used 8 -c:a libopus "$vp9"
 ffmpeg -nostdin -loglevel error -y -f lavfi -i 'testsrc2=size=160x120:rate=25:duration=1' -f lavfi -i 'sine=frequency=44100:duration=1' -c:v mpeg2video -pix_fmt yuv420p -c:a mp2 "$mkv"
 # Matroska carries LPCM as A_PCM/INT/LIT and MPEG audio of any layer.
@@ -52,7 +58,7 @@ ffmpeg -nostdin -loglevel error -y -f lavfi -i 'testsrc2=size=1280x720:rate=10:d
 ffmpeg -nostdin -loglevel error -y -f lavfi -i 'testsrc2=size=1282x720:rate=10:duration=1' -c:v mpeg2video -pix_fmt yuv420p -an -f vob "$large_odd_half"
 dd if="$vp8" of="$truncated" bs=1 count=512 status=none
 # Timestamps starting at 5 s: the audio clock must keep that origin.
-ffmpeg -nostdin -loglevel error -y -f lavfi -i 'testsrc2=size=160x120:rate=25:duration=3' -f lavfi -i 'sine=frequency=440:sample_rate=48000:duration=3' -c:v libvpx -deadline realtime -cpu-used 8 -c:a libvorbis -output_ts_offset 5 "$offset"
+ffmpeg -nostdin -loglevel error -y -f lavfi -i 'testsrc2=size=160x120:rate=25:duration=3' -f lavfi -i 'sine=frequency=440:sample_rate=48000:duration=3' -ac 2 -c:v libvpx -deadline realtime -cpu-used 8 -c:a $vorbis_args -output_ts_offset 5 "$offset"
 # Four seconds of VOB: the muxer interleaves audio well behind its video.
 ffmpeg -nostdin -loglevel error -y -f lavfi -i 'testsrc2=size=160x120:rate=25:duration=4' -f lavfi -i 'sine=frequency=440:sample_rate=48000:duration=4' -ac 2 -c:v mpeg2video -pix_fmt yuv420p -c:a ac3 -f vob "$held"
 . tests/lib/zz9000_sdk_build.sh
