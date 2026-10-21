@@ -140,7 +140,10 @@ extern uae_sem_t slirp_sem2;
 
 static int slirp_receive_func(void *arg)
 {
-	slirp_thread_active = 1;
+	// uae_slirp_start() sets slirp_thread_active before starting this thread.
+	// Setting it again here lost a stop from a uae_slirp_end() that ran before
+	// the thread was scheduled (two board resets in a row on a guest reboot),
+	// and uae_slirp_end() then waited for this loop forever.
 	while (slirp_thread_active == 1) {
 		fd_set rfds, wfds, xfds;
 		int nfds;
