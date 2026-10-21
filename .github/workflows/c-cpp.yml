@@ -1058,6 +1058,8 @@ jobs:
               cpack -G DEB --config build/CPackConfig.cmake
               dpkg-deb -c /build/amiberry_*.deb | grep -E "/amiberry/qemu-uae\\.so$"
               dpkg-deb -I /build/amiberry_*.deb control | grep -E "Depends: .*libglib2\\.0-0"
+              dpkg-deb -I /build/amiberry_*.deb control | grep -E "Depends: .*libavcodec"
+              dpkg-deb -I /build/amiberry_*.deb control | grep -E "Depends: .*libwebpdemux"
             ' bash "$QEMU_PLUGIN"
 
       - name: Upload artifact
@@ -1119,7 +1121,9 @@ jobs:
             QEMU_PLUGIN="$1"
             test -f "$QEMU_PLUGIN"
             apt-get update
-            apt-get install -y libavformat-dev libavcodec-dev libavutil-dev libswscale-dev libswresample-dev libwebp-dev
+            # This job cross-compiles; the FFmpeg and WebP headers and libraries
+            # must be the arm64 ones, or CMake silently drops ZZ9000 media codecs.
+            apt-get install -y libavformat-dev:arm64 libavcodec-dev:arm64 libavutil-dev:arm64 libswscale-dev:arm64 libswresample-dev:arm64 libwebp-dev:arm64
             for needed in libglib-2.0.so.0 libgmodule-2.0.so.0 libz.so.1; do
               readelf -d "$QEMU_PLUGIN" | grep -F "Shared library: [$needed]"
             done
@@ -1128,6 +1132,8 @@ jobs:
             cpack -G DEB --config build/CPackConfig.cmake
             dpkg-deb -c /build/amiberry_*.deb | grep -E "/amiberry/qemu-uae\\.so$"
             dpkg-deb -I /build/amiberry_*.deb control | grep -E "Depends: .*libglib2\\.0-0"
+            dpkg-deb -I /build/amiberry_*.deb control | grep -E "Depends: .*libavcodec"
+            dpkg-deb -I /build/amiberry_*.deb control | grep -E "Depends: .*libwebpdemux"
           ' bash "$QEMU_PLUGIN"
 
     - name: Upload artifact
