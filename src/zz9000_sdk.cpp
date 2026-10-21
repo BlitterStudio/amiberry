@@ -560,13 +560,11 @@ void Engine::decode_audio(Audio &audio, const uint8_t *input, uint32_t length)
 		return;
 	HostNearestRounding host_rounding;
 	// Accepted input goes to mpg123's own staging, as the card's decode
-	// loop reads from its input ring. Consumption is accounted below only
-	// when PCM was produced: minimp3 consumes nothing until it finds a
-	// frame, so undecodable input alone never advances the session.
+	// loop reads from its input ring; consumption is read back from
+	// mpg123 after the decode pass below.
 	if (input && length)
 		(void)mpg123_feed(audio.decoder, input, length);
 	uint8_t decoded[16384];
-	uint32_t produced_this_pass = 0;
 	for (;;) {
 		const uint32_t used = audio.pcm_written - audio.pcm_read;
 		const uint32_t free = audio.pcm_capacity - used;
@@ -618,7 +616,6 @@ void Engine::decode_audio(Audio &audio, const uint8_t *input, uint32_t length)
 				std::memcpy(audio.pcm_ring, decoded + first, done - first);
 			audio.pcm_written += static_cast<uint32_t>(done);
 			audio.bytes_produced += static_cast<uint32_t>(done);
-			produced_this_pass += static_cast<uint32_t>(done);
 			audio.frames_decoded = audio.bytes_produced /
 				(audio.channels * 2 * audio.samples_per_frame);
 		}
@@ -762,8 +759,11 @@ void Engine::audio_result(const Audio &audio, uint8_t *reply,
 	const bool idle = !used && !audio.decoder_pending && output_drained;
 	const bool drained = audio.drain && idle;
 	const bool done = audio.eof && idle && retained == 0;
-	const bool needs_input = !audio.eof && !audio.drain && idle &&
-		(audio.codec_decoder || retained < 4096);
+	// Like audio_stream_needs_more_input, input demand ignores the
+	// playback tail still queued on the host: a playing client must be
+	// asked for more while the output is still sounding.
+	const bool needs_input = !audio.eof && !audio.drain && !used &&
+		!audio.decoder_pending && (audio.codec_decoder || retained < 4096);
 	const uint32_t state = audio.faulted ? 4 : done ? 3 :
 		(needs_input || drained) ? 1 : 2;
 	uint32_t flags = ((used || !output_drained) ? 2u : 0u) | (done ? 4u : 0u) |
@@ -2389,6 +2389,8 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 				}
 				audio->backpressure = false;
 				audio->drain = false;
+				if (audio->codec_decoder)
+					audio->codec_decoder->set_draining(false);
 				audio->bytes_fed += length;
 				if (flags & 1)
 					audio->eof = true;
@@ -2397,10 +2399,20 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 				audio->eof = true;
 				decode_audio(*audio, nullptr, 0);
 			}
+			// EOF ends any resumable drain (sdk_mailbox.c:4042-4045).
+			if (flags & 1)
+				audio->drain = false;
 			if (audio->codec_decoder && audio->faulted)
 				return audio->fault_status;
-			if (flags & 2)
+			if (flags & 2) {
 				audio->drain = true;
+				// The card holds no decoded PCM back; let the decoder
+				// publish what it kept for end-of-stream trimming.
+				if (audio->codec_decoder) {
+					audio->codec_decoder->set_draining(true);
+					decode_audio(*audio, nullptr, 0);
+				}
+			}
 		} else if (opcode == 0x0505) {
 			const uint32_t count = be32(request + 4);
 			if (be32(request + 8) || count > audio->pcm_written - audio->pcm_read)

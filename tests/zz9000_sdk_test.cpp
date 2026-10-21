@@ -642,6 +642,60 @@ int main(int argc, char **argv)
 		}
 	}
 	{
+		// Input demand ignores the playback tail still queued on the host
+		// (audio_stream_needs_more_input), and EOF ends a resumable drain
+		// (sdk_mailbox.c:4042-4045).
+		std::copy(mp3.begin(), mp3.end(), z3.sdk.buffer_data(audio_staging));
+		put32(payload, 131072);
+		put32(payload + 4, 16);
+		put32(payload + 8, 0);
+		reply = z3.call(0x0100, payload, 12);
+		const uint32_t input = get32(reply + 16);
+		put32(payload, 262144);
+		reply = z3.call(0x0100, payload, 12);
+		const uint32_t ring = get32(reply + 16);
+		reply = begin_audio(z3, input, 131072, ring, 262144, 1);
+		const uint32_t session = get32(reply + 16);
+		assert(session);
+		const auto feed = [&](uint32_t length, uint32_t flags) {
+			put32(payload, session);
+			put32(payload + 4, audio_staging);
+			put32(payload + 8, 0);
+			put32(payload + 12, length);
+			put32(payload + 16, flags);
+			return z3.call(0x0504, payload, 20);
+		};
+		feed(static_cast<uint32_t>(mp3.size()), 0);
+		put32(payload, session);
+		put32(payload + 4, 0);
+		z3.call(0x0507, payload, 8);
+		bool asked = false;
+		for (int attempt = 0; attempt < 100 && !asked; ++attempt) {
+			SDL_Delay(15);
+			reply = feed(0, 0);
+			if (get32(reply + 40) == get32(reply + 44)) {
+				assert(get32(reply + 60) & 2); // the tail is still sounding
+				assert(get32(reply + 20) == 1 && (get32(reply + 60) & 1));
+				asked = true;
+			}
+		}
+		assert(asked);
+		put32(payload, session);
+		put32(payload + 4, 0);
+		z3.call(0x0508, payload, 8);
+		feed(0, 2);
+		reply = feed(0, 1);
+		assert(get32(reply + 60) & 4);         // DONE
+		assert((get32(reply + 60) & 16) == 0); // EOF ended the drain
+		put32(payload, session);
+		put32(payload + 4, 0);
+		z3.call(0x0506, payload, 8);
+		put32(payload, input);
+		z3.call(0x0101, payload, 4);
+		put32(payload, ring);
+		z3.call(0x0101, payload, 4);
+	}
+	{
 		// An ID3v2 tag larger than the input ring is consumed as junk, so
 		// the stream still decodes every frame instead of stalling on
 		// BACKPRESSURE.
@@ -1091,6 +1145,66 @@ int main(int argc, char **argv)
 				(static_cast<uint16_t>(vorbis_long_ref[offset + 1]) << 8));
 			assert(std::abs(sample - expected) <= 4);
 		}
+	}
+	{
+		// A resumable drain publishes the PCM Vorbis holds back for EOS
+		// trimming; the card holds no decoded PCM back.
+		std::ifstream vorbis_file(argv[11], std::ios::binary);
+		const std::vector<uint8_t> bytes(std::istreambuf_iterator<char>{vorbis_file}, {});
+		assert(bytes.size() > 16384);
+		std::copy(bytes.begin(), bytes.end(), z3.sdk.buffer_data(audio_staging));
+		reply = begin_audio_ex(z3, 3, ex_compressed, 512 * 1024, pcm, 262144, 1);
+		const uint32_t session = get32(reply + 16);
+		assert(session);
+		put32(payload, session);
+		put32(payload + 4, audio_staging);
+		put32(payload + 8, 0);
+		// Everything but the EOS page: whole pages decode, nothing is trimmed.
+		size_t last_page = 0;
+		for (size_t offset = 0; offset + 27 <= bytes.size();) {
+			size_t page = 27u + bytes[offset + 26];
+			for (uint32_t i = 0; i < bytes[offset + 26]; ++i)
+				page += bytes[offset + 27 + i];
+			last_page = offset;
+			offset += page;
+		}
+		put32(payload + 12, static_cast<uint32_t>(last_page));
+		put32(payload + 16, 0);
+		reply = z3.call(0x0504, payload, 20);
+		// The card decodes staged input over time; READ with no credit
+		// drives the emulator's decoder until the staged input is used.
+		uint32_t before = get32(reply + 56);
+		for (int pass = 0; pass < 256; ++pass) {
+			put32(payload, session);
+			put32(payload + 4, 0);
+			put32(payload + 8, 0);
+			reply = z3.call(0x0505, payload, 12);
+			if (get32(reply + 56) == before && pass > 8)
+				break;
+			before = get32(reply + 56);
+		}
+		assert(before > 0);
+		put32(payload, session);
+		put32(payload + 4, audio_staging);
+		put32(payload + 8, 0);
+		put32(payload + 12, 0);
+		put32(payload + 16, 2);
+		reply = z3.call(0x0504, payload, 20);
+		assert(get32(reply + 56) == before + 4096 * 4);
+		put32(payload, session);
+		put32(payload + 4, get32(reply + 40) - get32(reply + 44));
+		put32(payload + 8, 0);
+		z3.call(0x0505, payload, 12);
+		put32(payload, session);
+		put32(payload + 4, audio_staging);
+		put32(payload + 8, 0);
+		put32(payload + 12, 0);
+		put32(payload + 16, 2);
+		reply = z3.call(0x0504, payload, 20);
+		assert(get32(reply + 20) == 1 && (get32(reply + 60) & 16));
+		put32(payload, session);
+		put32(payload + 4, 0);
+		z3.call(0x0506, payload, 8);
 	}
 	{
 		// Over 128 KiB of FLAC in one feed: parsed incrementally, not refused.

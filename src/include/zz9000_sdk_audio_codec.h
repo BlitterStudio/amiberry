@@ -28,6 +28,8 @@ public:
 	const uint8_t *pcm_data() const;
 	size_t pcm_size() const;
 	bool has_pending() const;
+	// A resumable drain is in progress: publish PCM held back for trimming.
+	void set_draining(bool draining);
 	void consume_pcm(size_t length);
 	struct Impl;
 
