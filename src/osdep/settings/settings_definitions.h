@@ -67,6 +67,19 @@ bool commit_field(const T& base, const T& from, T& to)
 	return true;
 }
 
+// Runs the body of a C entry point. No C++ exception (std::bad_alloc while
+// building the option index or a session) may cross into C, Swift, C# or
+// Kotlin callers, so a failure returns the entry point's error value.
+template <typename T, typename F>
+T no_throw(T fallback, F&& body) noexcept
+{
+	try {
+		return body();
+	} catch (...) {
+		return fallback;
+	}
+}
+
 const domain& cpu_domain();
 
 size_t domain_count();

@@ -252,22 +252,26 @@ extern "C" {
 
 size_t amiberry_settings_count(void)
 {
-	return amiberry_settings::definition_count();
+	return amiberry_settings::no_throw<size_t>(0, [] { return amiberry_settings::definition_count(); });
 }
 
 const amiberry_setting_descriptor* amiberry_settings_at(size_t index)
 {
-	if (index >= amiberry_settings::definition_count())
-		return nullptr;
-	return &amiberry_settings::definition_at(index).descriptor;
+	return amiberry_settings::no_throw<const amiberry_setting_descriptor*>(nullptr,
+		[index]() -> const amiberry_setting_descriptor* {
+			if (index >= amiberry_settings::definition_count())
+				return nullptr;
+			return &amiberry_settings::definition_at(index).descriptor;
+		});
 }
 
 const amiberry_setting_descriptor* amiberry_settings_find(const char* id)
 {
-	if (!id)
-		return nullptr;
-	const amiberry_settings::definition* d = amiberry_settings::find(id);
-	return d ? &d->descriptor : nullptr;
+	return amiberry_settings::no_throw<const amiberry_setting_descriptor*>(nullptr,
+		[id]() -> const amiberry_setting_descriptor* {
+			const amiberry_settings::definition* d = id ? amiberry_settings::find(id) : nullptr;
+			return d ? &d->descriptor : nullptr;
+		});
 }
 
 }

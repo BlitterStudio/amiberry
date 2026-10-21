@@ -7,6 +7,7 @@
 #include "newcpu.h"
 #include "cpuboard.h"
 #include "x86.h"
+#include "autoconf.h"
 #ifdef WITH_PPC
 #include "uae/ppc.h"
 #endif
@@ -21,6 +22,7 @@ constexpr int max_jit_cache = 16384;
 
 #include "settings_definitions.h"
 
+#include <algorithm>
 #include <cstdio>
 #include <cstring>
 
@@ -65,7 +67,7 @@ void write_choice(char* out, size_t size, const amiberry_setting_choice* choices
 bool jit_possible(const uae_prefs& p)
 {
 #ifdef JIT
-	return p.cpu_model >= 68020 && !p.address_space_24 && !p.mmu_model;
+	return p.cpu_model >= 68020 && !p.address_space_24 && !p.mmu_model && !p.cachesize_inhibit;
 #else
 	(void)p;
 	return false;
@@ -75,6 +77,39 @@ bool jit_possible(const uae_prefs& p)
 bool jit_enabled(const uae_prefs& p)
 {
 	return jit_possible(p) && p.cachesize;
+}
+
+// Availability must match what fixup_cpu() keeps, so these follow its
+// order. The JIT cache size its More compatible and MMU checks see: none
+// without the JIT compiled in, when inhibited, or below a 68020.
+int jit_cache_for_cpu_checks(const uae_prefs& p)
+{
+#ifdef JIT
+	if (p.cachesize_inhibit || p.cpu_model < 68020)
+		return 0;
+	return p.cachesize;
+#else
+	(void)p;
+	return 0;
+#endif
+}
+
+// The cache size its later checks see (unimplemented instructions,
+// softfloat, data cache), after it turns the JIT off for memory
+// cycle-exact mode.
+int effective_jit_cache(const uae_prefs& p)
+{
+	return p.cpu_memory_cycle_exact ? 0 : jit_cache_for_cpu_checks(p);
+}
+
+// need_uae_boot_rom() also records the boot ROM type in a global that the
+// running emulation reads; an availability check must not change it.
+bool uae_boot_rom_needed(const uae_prefs& p)
+{
+	const int boot_rom_type = uae_boot_rom_type;
+	const bool needed = need_uae_boot_rom(const_cast<uae_prefs*>(&p)) != 0;
+	uae_boot_rom_type = boot_rom_type;
+	return needed;
 }
 
 bool jit_enabled_option(const uae_prefs& p, const context&)
@@ -114,7 +149,9 @@ void get_cpu_model(const uae_prefs& p, char* out, size_t size)
 // Switching the CPU resets the MMU and data cache, keeps an FPU the new CPU
 // can use, and picks the matching addressing mode and cycle-exact speed. A
 // CPU below the 68040 has no internal FPU, so one carried over from a
-// 68040/060 becomes a 68881.
+// 68040/060 becomes a 68881. Below a 68020 the JIT cannot run, and its
+// cache size is cleared as fixup_cpu() would, so no greyed-out JIT state
+// keeps other options unavailable.
 void set_cpu_model(uae_prefs& p, const value& v)
 {
 	const int cpu = static_cast<int>(v.number);
@@ -129,6 +166,7 @@ void set_cpu_model(uae_prefs& p, const value& v)
 	case 68000:
 	case 68010:
 		p.address_space_24 = true;
+		p.cachesize = 0;
 		if (p.cpu_compatible || p.cpu_memory_cycle_exact)
 			p.fpu_model = 0;
 		else if (p.fpu_model && p.fpu_model != 68882)
@@ -173,7 +211,9 @@ void set_address_space_24(uae_prefs& p, const value& v)
 
 bool address_space_24_available(const uae_prefs& p, const context&)
 {
-	return p.cpu_model <= 68030 && p.cachesize == 0;
+	if (p.cpu_model >= 68020 && p.cpuboard_type && cpuboard_32bit(const_cast<uae_prefs*>(&p)))
+		return false;
+	return p.cpu_model <= 68030 && jit_cache_for_cpu_checks(p) == 0;
 }
 
 void get_cpu_compatible(const uae_prefs& p, char* out, size_t size)
@@ -190,7 +230,7 @@ void set_cpu_compatible(uae_prefs& p, const value& v)
 
 bool cpu_compatible_available(const uae_prefs& p, const context&)
 {
-	return !p.cpu_memory_cycle_exact && !(p.cachesize && p.cpu_model >= 68040);
+	return !p.cpu_memory_cycle_exact && !(jit_cache_for_cpu_checks(p) && p.cpu_model >= 68040);
 }
 
 void get_cpu_no_unimplemented(const uae_prefs& p, char* out, size_t size)
@@ -205,7 +245,7 @@ void set_cpu_no_unimplemented(uae_prefs& p, const value& v)
 
 bool cpu_no_unimplemented_available(const uae_prefs& p, const context&)
 {
-	return p.cpu_model == 68060 && p.cachesize == 0;
+	return p.cpu_model == 68060 && effective_jit_cache(p) == 0;
 }
 
 void get_cpu_data_cache(const uae_prefs& p, char* out, size_t size)
@@ -218,9 +258,12 @@ void set_cpu_data_cache(uae_prefs& p, const value& v)
 	p.cpu_data_cache = v.number != 0;
 }
 
+// Data cache emulation needs More compatible, no JIT, a 68030 or later, and
+// either no UAE boot ROM or the indirect one (uaeboard 3).
 bool cpu_data_cache_available(const uae_prefs& p, const context&)
 {
-	return p.cpu_model >= 68030 && p.cachesize == 0 && p.cpu_compatible;
+	return p.cpu_model >= 68030 && effective_jit_cache(p) == 0 && p.cpu_compatible
+		&& (p.uaeboard == 3 || !uae_boot_rom_needed(p));
 }
 
 // ---------------------------------------------------------------- MMU
@@ -261,7 +304,7 @@ void set_mmu_model(uae_prefs& p, const value& v)
 
 bool mmu_model_available(const uae_prefs& p, const context&)
 {
-	return p.cpu_model >= 68030 && p.cachesize == 0;
+	return p.cpu_model >= 68030 && jit_cache_for_cpu_checks(p) == 0;
 }
 
 bool mmu_model_choice_available(const uae_prefs& p, std::string_view choice)
@@ -293,8 +336,11 @@ bool fpu_model_choice_available(const uae_prefs& p, std::string_view choice)
 {
 	if (choice == "0")
 		return true;
+	// A 68000/010 only keeps an external FPU outside More compatible and
+	// cycle-exact modes.
 	if (choice == "68881" || choice == "68882")
-		return p.cpu_model < 68040 && (p.cpu_model >= 68020 || !p.cpu_compatible);
+		return p.cpu_model < 68040
+			&& (p.cpu_model >= 68020 || (!p.cpu_compatible && !p.cpu_memory_cycle_exact));
 	return mmu_choice_cpu(choice) == p.cpu_model;
 }
 
@@ -319,10 +365,10 @@ void set_fpu_softfloat(uae_prefs& p, const value& v)
 }
 
 // The JIT FPU emulates the FPU with host floating point, so softfloat is
-// unavailable while it is on (fixup_cpu() would switch softfloat off).
+// unavailable while a JIT that fixup_cpu() keeps has its FPU on.
 bool fpu_softfloat_available(const uae_prefs& p, const context&)
 {
-	return p.fpu_model > 0 && !(p.cachesize && p.compfpu);
+	return p.fpu_model > 0 && !(effective_jit_cache(p) && p.compfpu);
 }
 
 void get_fpu_no_unimplemented(const uae_prefs& p, char* out, size_t size)
@@ -337,7 +383,7 @@ void set_fpu_no_unimplemented(uae_prefs& p, const value& v)
 
 bool fpu_no_unimplemented_available(const uae_prefs& p, const context&)
 {
-	return p.fpu_model > 0 && p.cachesize == 0;
+	return p.fpu_model > 0 && effective_jit_cache(p) == 0;
 }
 
 // ---------------------------------------------------------------- CPU speed
@@ -347,9 +393,15 @@ const amiberry_setting_choice cpu_speed_choices[] = {
 	{"real", "Approximate A500/A1200 or cycle-exact"},
 };
 
+// cfgfile reads cpu_speed=N as N cycle units and writes such a speed as
+// finegrain_cpu_speed; report it as the number cpu_speed would take rather
+// than as "real", so writing the value back cannot silently change it.
 void get_cpu_speed(const uae_prefs& p, char* out, size_t size)
 {
-	std::snprintf(out, size, "%s", p.m68k_speed < 0 ? "max" : "real");
+	if (p.m68k_speed > 0)
+		std::snprintf(out, size, "%d", std::max(1, (p.m68k_speed + CYCLE_UNIT / 2) / CYCLE_UNIT));
+	else
+		std::snprintf(out, size, "%s", p.m68k_speed < 0 ? "max" : "real");
 }
 
 void set_cpu_speed(uae_prefs& p, const value& v)
@@ -582,7 +634,7 @@ void get_compfpu(const uae_prefs& p, char* out, size_t size)
 void set_compfpu(uae_prefs& p, const value& v)
 {
 	p.compfpu = v.number != 0;
-	if (p.compfpu && p.cachesize)
+	if (p.compfpu && effective_jit_cache(p))
 		p.fpu_mode = 0;
 }
 

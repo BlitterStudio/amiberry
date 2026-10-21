@@ -78,6 +78,8 @@ bool same_value(const definition& d, const uae_prefs& a, const uae_prefs& b)
 
 extern "C" {
 
+// Once a session exists the option index is built, so the other session
+// calls cannot throw: they check the session before looking options up.
 amiberry_settings_session* amiberry_settings_session_open(void)
 {
 	auto* session = new (std::nothrow) amiberry_settings_session;
@@ -85,11 +87,14 @@ amiberry_settings_session* amiberry_settings_session_open(void)
 		return nullptr;
 	session->working = allocate_copy(changed_prefs);
 	session->base = allocate_copy(changed_prefs);
-	if (!session->working || !session->base) {
+	const bool sized = session->working && session->base && amiberry_settings::no_throw(false, [session] {
+		session->touched.assign(amiberry_settings::definition_count(), false);
+		return true;
+	});
+	if (!sized) {
 		amiberry_settings_session_close(session);
 		return nullptr;
 	}
-	session->touched.assign(amiberry_settings::definition_count(), false);
 	return session;
 }
 
@@ -105,8 +110,8 @@ void amiberry_settings_session_close(amiberry_settings_session* session)
 amiberry_settings_status amiberry_settings_get(const amiberry_settings_session* session,
 	const char* id, char* buffer, size_t size)
 {
-	const definition* d = lookup(id);
-	if (!session || !d)
+	const definition* d = session ? lookup(id) : nullptr;
+	if (!d)
 		return AMIBERRY_SETTINGS_UNKNOWN_ID;
 	return amiberry_settings::get(*d, *session->working, buffer, size);
 }
@@ -114,8 +119,8 @@ amiberry_settings_status amiberry_settings_get(const amiberry_settings_session* 
 amiberry_settings_status amiberry_settings_set(amiberry_settings_session* session,
 	const char* id, const char* value)
 {
-	const definition* d = lookup(id);
-	if (!session || !d)
+	const definition* d = session ? lookup(id) : nullptr;
+	if (!d)
 		return AMIBERRY_SETTINGS_UNKNOWN_ID;
 	if (!value)
 		return AMIBERRY_SETTINGS_INVALID_VALUE;
@@ -127,23 +132,23 @@ amiberry_settings_status amiberry_settings_set(amiberry_settings_session* sessio
 
 bool amiberry_settings_is_available(const amiberry_settings_session* session, const char* id)
 {
-	const definition* d = lookup(id);
-	return session && d && amiberry_settings::is_available(*d, *session->working, current_context());
+	const definition* d = session ? lookup(id) : nullptr;
+	return d && amiberry_settings::is_available(*d, *session->working, current_context());
 }
 
 bool amiberry_settings_choice_is_available(const amiberry_settings_session* session,
 	const char* id, const char* value)
 {
-	const definition* d = lookup(id);
-	return session && d && value
+	const definition* d = session ? lookup(id) : nullptr;
+	return d && value
 		&& amiberry_settings::is_choice_available(*d, *session->working, current_context(), value);
 }
 
 bool amiberry_settings_get_range(const amiberry_settings_session* session, const char* id,
 	double* min, double* max)
 {
-	const definition* d = lookup(id);
-	if (!session || !d || !min || !max)
+	const definition* d = session ? lookup(id) : nullptr;
+	if (!d || !min || !max)
 		return false;
 	if (d->descriptor.type != AMIBERRY_SETTING_INT && d->descriptor.type != AMIBERRY_SETTING_REAL)
 		return false;

@@ -211,7 +211,9 @@ void render_panel_cpu() {
         }
         ShowHelpMarker("Enable full MMU emulation. Required for some operating systems.");
         ImGui::SameLine();
-        bool mmu_ec = changed_prefs.mmu_ec;
+        // EC only means something with an MMU model selected; a stale flag
+        // left by a configuration without one shows as unticked.
+        bool mmu_ec = changed_prefs.mmu_model != 0 && changed_prefs.mmu_ec;
         if (AmigaCheckbox("EC", &mmu_ec)) {
             settings::set(o.mmu_model, changed_prefs, ctx, mmu_ec ? ec_mmu : full_mmu);
         }
@@ -290,7 +292,7 @@ void render_panel_cpu() {
             settings::set(o.cpu_speed, changed_prefs, ctx, "max");
         }
         ShowHelpMarker("Run the CPU as fast as your host system allows.");
-        if (AmigaRadioButton("Approximate A500/A1200 or cycle-exact", has_value(o.cpu_speed, "real"))) {
+        if (AmigaRadioButton("Approximate A500/A1200 or cycle-exact", !has_value(o.cpu_speed, "max"))) {
             settings::set(o.cpu_speed, changed_prefs, ctx, "real");
         }
         ShowHelpMarker("Match original Amiga CPU speed. Required for most games.");

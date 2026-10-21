@@ -33,14 +33,24 @@ static uae_prefs test_prefs;
 
 void fixup_prefs_preview(uae_prefs* p) { fixup_cpu(p); }
 void error_log(const TCHAR*, ...) {}
-bool cpuboard_32bit(uae_prefs*) { return false; }
+// Controlled by the tests: whether the selected accelerator board is 32-bit
+// only, and the address of a UAE boot ROM the configuration needs (0: none).
+static bool board_is_32bit;
+static uaecptr boot_rom_address;
+int uae_boot_rom_type;
+bool cpuboard_32bit(uae_prefs*) { return board_is_32bit; }
 bool cpuboard_is_ppc_accelerator(uae_prefs*) { return false; }
 void cpuboard_setboard(uae_prefs* p, int type, int subtype)
 {
 	p->cpuboard_type = type;
 	p->cpuboard_subtype = subtype;
 }
-uaecptr need_uae_boot_rom(uae_prefs*) { return 0; }
+// Like the real one, records the boot ROM type in a global.
+uaecptr need_uae_boot_rom(uae_prefs*)
+{
+	uae_boot_rom_type = boot_rom_address ? 1 : 0;
+	return boot_rom_address;
+}
 bool is_ppc_cpu(uae_prefs*) { return false; }
 int is_x86_cpu(uae_prefs*) { return 0; }
 
@@ -261,8 +271,8 @@ void check_dependent_changes()
 	p.m68k_speed_throttle = -500;
 	CHECK(set(p, "cpu_speed", "max") == AMIBERRY_SETTINGS_OK);
 	CHECK(p.m68k_speed_throttle == 0);
-	p.m68k_speed = 3; // finegrain_cpu_speed reads as "real"
-	CHECK(value_of(p, "cpu_speed") == "real");
+	p.m68k_speed = 3 * CYCLE_UNIT; // cpu_speed=3
+	CHECK(value_of(p, "cpu_speed") == "3");
 	CHECK(set(p, "cpu_speed", "real") == AMIBERRY_SETTINGS_OK);
 	CHECK(p.m68k_speed == 0);
 
@@ -298,6 +308,98 @@ void check_dependent_changes()
 	reset_prefs(p);
 	p.m68k_speed = -1;
 	CHECK(set(p, "cpu_x86_throttle", "500") == AMIBERRY_SETTINGS_UNAVAILABLE); // no bridgeboard
+}
+
+// Every option offered as available must survive fixup_cpu(): a value the
+// core would clear at once is unavailable, so neither the panel nor an API
+// client can choose it.
+void check_fixup_consistency()
+{
+	uae_prefs& p = test_prefs;
+	auto survives = [&p](const char* id) {
+		uae_prefs* copy = static_cast<uae_prefs*>(std::malloc(sizeof(uae_prefs)));
+		std::memcpy(static_cast<void*>(copy), static_cast<const void*>(&p), sizeof p);
+		fixup_cpu(copy);
+		const bool same = value_of(*copy, id) == value_of(p, id);
+		std::free(copy);
+		return same;
+	};
+
+	// 24-bit addressing with a 32-bit-only accelerator board.
+	reset_prefs(p);
+	p.cpu_cycle_exact = p.cpu_memory_cycle_exact = p.blitter_cycle_exact = false;
+	p.cpu_model = 68030;
+	p.address_space_24 = false;
+	p.cpuboard_type = 1;
+	board_is_32bit = true;
+	CHECK(!available(p, "cpu_24bit_addressing"));
+	board_is_32bit = false;
+	CHECK(available(p, "cpu_24bit_addressing"));
+	CHECK(set(p, "cpu_24bit_addressing", "true") == AMIBERRY_SETTINGS_OK);
+	CHECK(survives("cpu_24bit_addressing"));
+	p.cpuboard_type = 0;
+	p.address_space_24 = false;
+
+	// Data cache emulation needs no UAE boot ROM or the indirect one, and the
+	// check must not change the boot ROM type the running emulation uses.
+	uae_boot_rom_type = 7;
+	boot_rom_address = 0xf00000;
+	CHECK(!available(p, "cpu_data_cache"));
+	CHECK(uae_boot_rom_type == 7);
+	p.uaeboard = 3;
+	CHECK(available(p, "cpu_data_cache"));
+	CHECK(set(p, "cpu_data_cache", "true") == AMIBERRY_SETTINGS_OK);
+	CHECK(survives("cpu_data_cache"));
+	p.uaeboard = 0;
+	boot_rom_address = 0;
+	CHECK(available(p, "cpu_data_cache"));
+	CHECK(survives("cpu_data_cache"));
+
+	// A 68000 in memory cycle-exact mode cannot keep an external FPU even
+	// without More compatible.
+	reset_prefs(p);
+	p.cpu_compatible = false;
+	CHECK(!choice_available(p, "fpu_model", "68881"));
+
+	// A JIT left behind by a switch to a 68000 is cleared, so it cannot keep
+	// softfloat and the other JIT-gated options unavailable.
+	if (jit_compiled()) {
+		reset_prefs(p);
+		p.cpu_cycle_exact = p.cpu_memory_cycle_exact = p.blitter_cycle_exact = false;
+		p.cpu_compatible = false;
+		CHECK(set(p, "cpu_model", "68020") == AMIBERRY_SETTINGS_OK);
+		CHECK(set(p, "cpu_24bit_addressing", "false") == AMIBERRY_SETTINGS_OK);
+		CHECK(set(p, "fpu_model", "68881") == AMIBERRY_SETTINGS_OK);
+		CHECK(set(p, "cachesize", "8192") == AMIBERRY_SETTINGS_OK);
+		CHECK(p.compfpu);
+		CHECK(!available(p, "fpu_softfloat")); // the JIT FPU is on
+		CHECK(set(p, "cpu_model", "68000") == AMIBERRY_SETTINGS_OK);
+		CHECK(p.cachesize == 0 && p.fpu_model == 68881);
+		CHECK(available(p, "fpu_softfloat"));
+		CHECK(set(p, "fpu_softfloat", "true") == AMIBERRY_SETTINGS_OK);
+		CHECK(survives("fpu_softfloat"));
+
+		// Turning the JIT FPU on switches softfloat off, as fixup_cpu() would.
+		CHECK(set(p, "cpu_model", "68020") == AMIBERRY_SETTINGS_OK);
+		CHECK(set(p, "cpu_24bit_addressing", "false") == AMIBERRY_SETTINGS_OK);
+		CHECK(set(p, "cachesize", "8192") == AMIBERRY_SETTINGS_OK);
+		CHECK(!p.compfpu); // softfloat kept the JIT FPU off
+		CHECK(set(p, "compfpu", "true") == AMIBERRY_SETTINGS_OK);
+		CHECK(p.fpu_mode == 0);
+	}
+
+	// A speed set with cpu_speed=N reads back as N, not as "real", and
+	// writing it back is refused rather than silently changing the speed.
+	reset_prefs(p);
+	p.m68k_speed = 5 * CYCLE_UNIT;
+	CHECK(value_of(p, "cpu_speed") == "5");
+	CHECK(set(p, "cpu_speed", "5") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	CHECK(p.m68k_speed == 5 * CYCLE_UNIT);
+
+	// An EC flag without an MMU model reads as no MMU.
+	p.mmu_model = 0;
+	p.mmu_ec = true;
+	CHECK(value_of(p, "mmu_model") == "0");
 }
 
 void check_rejections()
@@ -541,6 +643,7 @@ int main(int argc, char** argv)
 	check_dependent_changes();
 	check_rejections();
 	check_session();
+	check_fixup_consistency();
 	if (failures) {
 		std::fprintf(stderr, "settings layer: %d check(s) failed\n", failures);
 		return 1;
