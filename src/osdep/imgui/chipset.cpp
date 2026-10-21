@@ -293,10 +293,22 @@ void render_panel_chipset() {
 
             ImGui::SetNextItemWidth(-ImGui::GetStyle().ItemSpacing.x * 2);
             int optimization_idx = choice_index_of(o.display_optimizations);
-            if (ImGui::Combo("##Optimizations", &optimization_idx, o.display_optimizations.descriptor.choices,
-                             static_cast<int>(o.display_optimizations.descriptor.choice_count))) {
-                settings::set(o.display_optimizations, changed_prefs, ctx,
-                              o.display_optimizations.descriptor.choices[optimization_idx].value);
+            if (ImGui::BeginCombo("##Optimizations",
+                                  o.display_optimizations.descriptor.choices[optimization_idx].label)) {
+                for (int n = 0; n < static_cast<int>(o.display_optimizations.descriptor.choice_count); n++) {
+                    const bool is_selected = (optimization_idx == n);
+                    if (is_selected)
+                        ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+                    if (ImGui::Selectable(o.display_optimizations.descriptor.choices[n].label, is_selected)) {
+                        settings::set(o.display_optimizations, changed_prefs, ctx,
+                                      o.display_optimizations.descriptor.choices[n].value);
+                    }
+                    if (is_selected) {
+                        ImGui::PopStyleColor();
+                        ImGui::SetItemDefaultFocus();
+                    }
+                }
+                ImGui::EndCombo();
             }
             AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
 

@@ -159,15 +159,18 @@ void get_fastmem_size_k(const uae_prefs& p, char* out, size_t size)
 void set_fastmem_size_k(uae_prefs& p, const value& v)
 {
 	const int kb = static_cast<int>(v.number);
+	uae_u32 size = p.fastmem[0].size;
 	if (kb == 0) {
-		if (p.fastmem[0].size < 0x100000)
-			p.fastmem[0].size = 0;
+		if (size < 0x100000)
+			size = 0;
 	} else {
-		p.fastmem[0].size = static_cast<uae_u32>(kb) * 1024;
+		size = static_cast<uae_u32>(kb) * 1024;
 	}
-	if (p.fastmem[0].size > 0)
-		sync_cpuboard_mem(p);
+	// The shared setter keeps the chip RAM conflict and the accelerator
+	// board mirror consistent, exactly like a MB-sized change.
+	set_fastmem_size(p, &p.fastmem[0], size);
 }
+
 // key is the board number in the option name (fastmem2_size is board 1,
 // because cfgfile numbers boards from the second), index the fastmem[]
 // slot it stores.
@@ -187,12 +190,14 @@ void set_fastmem_size_k(uae_prefs& p, const value& v)
 	void set_fastmem##key##_size_k(uae_prefs& p, const value& v) \
 	{ \
 		const int kb = static_cast<int>(v.number); \
+		uae_u32 size = p.fastmem[index].size; \
 		if (kb == 0) { \
-			if (p.fastmem[index].size < 0x100000) \
-				p.fastmem[index].size = 0; \
+			if (size < 0x100000) \
+				size = 0; \
 		} else { \
-			p.fastmem[index].size = static_cast<uae_u32>(kb) * 1024; \
+			size = static_cast<uae_u32>(kb) * 1024; \
 		} \
+		set_fastmem_size(p, &p.fastmem[index], size); \
 	}
 
 FASTMEM_BOARD(2, 1)

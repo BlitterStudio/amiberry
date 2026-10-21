@@ -7,6 +7,70 @@
 #include "uae.h"
 #include "gui/gui_handling.h"
 #include "pcem/paths.h"
+#include "settings/settings_definitions.h"
+
+#include <cstdio>
+
+namespace settings = amiberry_settings;
+
+namespace {
+
+// The options this panel edits. The shared settings layer owns their
+// availability rules (MapROM vs. an accelerator board, the UAE board only
+// while the emulator is stopped) and stores the paths verbatim.
+struct rom_options {
+    const settings::definition& kickstart_rom_file = settings::require("kickstart_rom_file");
+    const settings::definition& kickstart_ext_rom_file = settings::require("kickstart_ext_rom_file");
+    const settings::definition& cart_file = settings::require("cart_file");
+    const settings::definition& boot_rom_uae = settings::require("boot_rom_uae");
+    const settings::definition& uaeboard = settings::require("uaeboard");
+    const settings::definition& flash_file = settings::require("flash_file");
+    const settings::definition& rtc_file = settings::require("rtc_file");
+    const settings::definition& maprom = settings::require("maprom");
+    const settings::definition& kickshifter = settings::require("kickshifter");
+};
+
+const rom_options& options()
+{
+    static const rom_options o;
+    return o;
+}
+
+bool available(const settings::definition& d, const settings::context& ctx)
+{
+    return settings::is_available(d, changed_prefs, ctx);
+}
+
+bool has_value(const settings::definition& d, const char* v)
+{
+    char current[AMIBERRY_SETTINGS_VALUE_MAX];
+    settings::get(d, changed_prefs, current, sizeof current);
+    return std::strcmp(current, v) == 0;
+}
+
+// Index of the choice the configuration holds, clamped for display when a
+// configuration from a file holds a value this build does not know.
+int choice_index_of(const settings::definition& d)
+{
+    const amiberry_setting_descriptor& desc = d.descriptor;
+    for (size_t i = 0; i < desc.choice_count; i++) {
+        char current[AMIBERRY_SETTINGS_VALUE_MAX];
+        settings::get(d, changed_prefs, current, sizeof current);
+        if (std::strcmp(current, desc.choices[i].value) == 0)
+            return static_cast<int>(i);
+    }
+    return 0;
+}
+
+// A checkbox for a BOOL option, greyed out while unavailable.
+void option_checkbox(const char* label, const settings::definition& d, const settings::context& ctx)
+{
+    ImGui::BeginDisabled(!available(d, ctx));
+    bool checked = settings::get_bool(d, changed_prefs);
+    if (AmigaCheckbox(label, &checked))
+        settings::set_bool(d, changed_prefs, ctx, checked);
+    ImGui::EndDisabled();
+}
 
 struct RomListEntry {
 	std::string name;
@@ -17,7 +81,6 @@ struct RomListEntry {
 static std::vector<RomListEntry> main_rom_list;
 static std::vector<RomListEntry> ext_rom_list;
 static std::vector<RomListEntry> cart_rom_list;
-static bool roms_initialized = false;
 static int customromselectnum = 0;
 
 enum class RomPickType {
@@ -49,27 +112,35 @@ static void update_rom_list(std::vector<RomListEntry>& list, int romtype_mask) {
 	}
 }
 
-static void InitializeROMLists() {
-	if (roms_initialized) return;
+// Build the ROM combo lists once, and rebuild them whenever the ROM scan
+// changes (e.g. after a rescan) so a new ROM appears without re-entering
+// the GUI - like the chipset keyboard list.
+static void refresh_rom_lists() {
+	static int cached_rom_gen = -1;
+	const int rom_gen = romlist_get_generation();
+	if (rom_gen == cached_rom_gen)
+		return;
 	update_rom_list(main_rom_list, ROMTYPE_KICK | ROMTYPE_KICKCD32);
 	update_rom_list(ext_rom_list, ROMTYPE_EXTCD32 | ROMTYPE_EXTCDTV | ROMTYPE_ARCADIABIOS | ROMTYPE_ALG);
 	update_rom_list(cart_rom_list, ROMTYPE_FREEZER | ROMTYPE_ARCADIAGAME | ROMTYPE_CD32CART);
-	roms_initialized = true;
+	cached_rom_gen = rom_gen;
 }
 
-static bool RomCombo(const char* label, char* current_path, int max_len, std::vector<RomListEntry>& list, char* ident = nullptr, int ident_len = 0) {
+// A combo over the scanned ROMs of one type. Returns the entry the user
+// picked (the caller stores it through the settings layer); the preview
+// shows the entry name, or the raw path for a file outside the scan.
+static const RomListEntry* RomCombo(const char* label, const char* current_path,
+                                    std::vector<RomListEntry>& list) {
 	std::string preview_value = "Select ROM...";
-	bool match_found = false;
-	bool value_changed = false;
-	
+	const RomListEntry* selected = nullptr;
+
 	for (const auto& entry : list) {
 		if (entry.path == current_path) {
 			preview_value = entry.name;
-			match_found = true;
 			break;
 		}
 	}
-	if (!match_found && current_path[0]) {
+	if (preview_value == "Select ROM..." && current_path[0]) {
 		preview_value = current_path;
 	}
 
@@ -83,11 +154,7 @@ static bool RomCombo(const char* label, char* current_path, int max_len, std::ve
 
 			ImGui::PushID(entry.path.c_str());
 			if (ImGui::Selectable(entry.name.c_str(), is_selected)) {
-				strncpy(current_path, entry.path.c_str(), max_len);
-				if (ident && ident_len > 0) {
-					strncpy(ident, entry.ident.c_str(), ident_len);
-				}
-				value_changed = true;
+				selected = &entry;
 			}
 			ImGui::PopID();
 
@@ -99,12 +166,31 @@ static bool RomCombo(const char* label, char* current_path, int max_len, std::ve
 		}
 		ImGui::EndCombo();
 	}
-	return value_changed;
+	return selected;
 }
+
+// Re-sync the cartridge identifier with the newly picked file: a scanned
+// dump carries its romdata configname, anything else gets a clean slate so
+// a stale ident can't mis-type an unrecognized ROM.
+static void sync_cartident(const std::string& path) {
+	std::string cartident;
+	for (const auto& entry : cart_rom_list) {
+		if (entry.path == path) {
+			cartident = entry.ident;
+			break;
+		}
+	}
+	snprintf(changed_prefs.cartident, sizeof(changed_prefs.cartident), "%s", cartident.c_str());
+}
+
+} // namespace
 
 void render_panel_rom()
 {
-	InitializeROMLists();
+	const rom_options& o = options();
+	const settings::context ctx{emulating != 0};
+
+	refresh_rom_lists();
 	ImGui::Indent(4.0f);
 
 	const float browse_btn_w = SMALL_BUTTON_WIDTH;
@@ -114,7 +200,10 @@ void render_panel_rom()
 	// Main ROM
 	ImGui::Text("Main ROM File:");
 	ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - browse_btn_w - spacing * 2);
-	if (RomCombo("##MainRomCombo", changed_prefs.romfile, MAX_DPATH, main_rom_list)) {
+	if (const RomListEntry* entry = RomCombo("##MainRomCombo", changed_prefs.romfile, main_rom_list)) {
+		settings::set(o.kickstart_rom_file, changed_prefs, ctx, entry->path.c_str());
+		// The kickstart version is core run-time state, not configuration;
+		// refresh it on interaction like fixup_prefs does on apply.
 		read_kickstart_version(&changed_prefs);
 	}
 	AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
@@ -130,7 +219,8 @@ void render_panel_rom()
 	// Extended ROM
 	ImGui::Text("Extended ROM File:");
 	ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - browse_btn_w - spacing * 2);
-	RomCombo("##ExtRomCombo", changed_prefs.romextfile, MAX_DPATH, ext_rom_list);
+	if (const RomListEntry* entry = RomCombo("##ExtRomCombo", changed_prefs.romextfile, ext_rom_list))
+		settings::set(o.kickstart_ext_rom_file, changed_prefs, ctx, entry->path.c_str());
 	AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
 	if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", changed_prefs.romextfile);
 	ImGui::SameLine();
@@ -140,17 +230,17 @@ void render_panel_rom()
 		OpenFileDialogKey("ROM", "Select Extended ROM", ".rom,.bin,.a1000,.a500,.a600,.a1200,.a3000,.a4000,.cdtv,.cd32", get_rom_path());
 	}
 
-    bool maprom_disabled = (changed_prefs.cpuboard_type != 0);
-    ImGui::BeginDisabled(maprom_disabled);
-	if (AmigaCheckbox("MapROM emulation", (bool*)&changed_prefs.maprom)) {
-		if (changed_prefs.maprom)
-			changed_prefs.maprom = 0x0f000000;
+	// MapROM is the address token the configuration writes (0x0f000000 on).
+	bool maprom_on = !has_value(o.maprom, "0x0");
+	ImGui::BeginDisabled(!available(o.maprom, ctx));
+	if (AmigaCheckbox("MapROM emulation", &maprom_on)) {
+		settings::set(o.maprom, changed_prefs, ctx, maprom_on ? "0x0f000000" : "0x0");
 	}
 	ShowHelpMarker("Map the ROM into fast RAM for faster access");
-    ImGui::EndDisabled();
+	ImGui::EndDisabled();
 
 	ImGui::SameLine();
-	AmigaCheckbox("ShapeShifter support", &changed_prefs.kickshifter);
+	option_checkbox("ShapeShifter support", o.kickshifter, ctx);
 	ShowHelpMarker("Enable support for the ShapeShifter Mac emulator");
 	ImGui::Spacing();
 	EndGroupBox("System ROM Settings");
@@ -163,12 +253,12 @@ void render_panel_rom()
 		// Just changed selection, fields will update automatically in next frame based on selection
 	}
 	AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
-	
+
 	romboard* rb = &changed_prefs.romboards[customromselectnum];
-	
+
 	ImGui::SameLine();
 	ImGui::Text("Address range");
-	
+
 	// Address From
 	char addr_from[16];
 	snprintf(addr_from, sizeof(addr_from), "%08x", rb->start_address);
@@ -186,7 +276,7 @@ void render_panel_rom()
 		strcpy(addr_to, "00000000");
 	else
 		snprintf(addr_to, sizeof(addr_to), "%08x", rb->end_address);
-		
+
 	ImGui::SameLine();
 	ImGui::SetNextItemWidth(BUTTON_WIDTH);
 	if (ImGui::InputText("##AddressRangeTo", addr_to, 16, ImGuiInputTextFlags_CharsHexadecimal)) {
@@ -212,8 +302,11 @@ void render_panel_rom()
 	static bool custom_cart_local_edit = false;
 	ImGui::Text("Cartridge ROM File:");
 	ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - browse_btn_w - spacing * 2);
-	if (RomCombo("##CartRomCombo", changed_prefs.cartfile, MAX_DPATH, cart_rom_list, changed_prefs.cartident, sizeof(changed_prefs.cartident)))
+	if (const RomListEntry* entry = RomCombo("##CartRomCombo", changed_prefs.cartfile, cart_rom_list)) {
+		settings::set(o.cart_file, changed_prefs, ctx, entry->path.c_str());
+		sync_cartident(entry->path);
 		custom_cart_local_edit = true;
+	}
 	AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
 	if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", changed_prefs.cartfile);
 	ImGui::SameLine();
@@ -277,26 +370,23 @@ void render_panel_rom()
 
 	BeginGroupBox("Advanced UAE expansion board/Boot ROM Settings");
 	const char* uae_items[] = { "ROM disabled", "Original UAE (FS + F0 ROM)", "New UAE (64k + F0 ROM)", "New UAE (128k, ROM, Direct)", "New UAE (128k, ROM, Indirect)" };
-	
-	int current_uaeboard_idx = 0;
-	if (changed_prefs.boot_rom == 1) {
-		current_uaeboard_idx = 0; // Disabled
-	} else {
-		current_uaeboard_idx = changed_prefs.uaeboard + 1;
-	}
-	
-	bool uae_enabled = !emulating;
-	
-	ImGui::BeginDisabled(!uae_enabled);
+
+	// One combo for the two configuration keys: entry 0 disables both,
+	// entry 1 keeps the automatic boot ROM without a board, and the rest
+	// pick a board with the automatic ROM.
+	int current_uaeboard_idx = has_value(o.boot_rom_uae, "disabled") ? 0
+		: choice_index_of(o.uaeboard) + 1;
+
+	ImGui::BeginDisabled(!available(o.uaeboard, ctx));
 	ImGui::Text("Board Type:");
 	ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - spacing * 2);
 	if (ImGui::Combo("##BoardTypeCombo", &current_uaeboard_idx, uae_items, IM_ARRAYSIZE(uae_items))) {
 		if (current_uaeboard_idx > 0) {
-			changed_prefs.uaeboard = current_uaeboard_idx - 1;
-			changed_prefs.boot_rom = 0;
+			settings::set(o.uaeboard, changed_prefs, ctx, o.uaeboard.descriptor.choices[current_uaeboard_idx - 1].value);
+			settings::set(o.boot_rom_uae, changed_prefs, ctx, "automatic");
 		} else {
-			changed_prefs.uaeboard = 0;
-			changed_prefs.boot_rom = 1;
+			settings::set(o.uaeboard, changed_prefs, ctx, "disabled");
+			settings::set(o.boot_rom_uae, changed_prefs, ctx, "disabled");
 		}
 	}
 	AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
@@ -312,37 +402,26 @@ void render_panel_rom()
 	if (ConsumeFileDialogResultKey("ROM", file_dialog_result)) {
 		switch(current_pick_type) {
 			case RomPickType::Main:
-				strncpy(changed_prefs.romfile, file_dialog_result.c_str(), MAX_DPATH);
+				settings::set(o.kickstart_rom_file, changed_prefs, ctx, file_dialog_result.c_str());
 				read_kickstart_version(&changed_prefs);
 				break;
 			case RomPickType::Extended:
-				strncpy(changed_prefs.romextfile, file_dialog_result.c_str(), MAX_DPATH);
+				settings::set(o.kickstart_ext_rom_file, changed_prefs, ctx, file_dialog_result.c_str());
 				break;
-			case RomPickType::Cartridge: {
-				strncpy(changed_prefs.cartfile, file_dialog_result.c_str(), MAX_DPATH);
+			case RomPickType::Cartridge:
+				settings::set(o.cart_file, changed_prefs, ctx, file_dialog_result.c_str());
+				sync_cartident(file_dialog_result);
 				custom_cart_enabled = true;
 				custom_cart_local_edit = true;
-				// Re-sync the identifier with the newly picked file: a scanned
-				// dump carries its romdata configname, anything else gets a clean
-				// slate so a stale ident can't mis-type an unrecognized ROM.
-				std::string cartident;
-				for (const auto& entry : cart_rom_list) {
-					if (entry.path == file_dialog_result) {
-						cartident = entry.ident;
-						break;
-					}
-				}
-				snprintf(changed_prefs.cartident, sizeof(changed_prefs.cartident), "%s", cartident.c_str());
 				break;
-			}
 			case RomPickType::Flash:
-				strncpy(changed_prefs.flashfile, file_dialog_result.c_str(), MAX_DPATH);
+				settings::set(o.flash_file, changed_prefs, ctx, file_dialog_result.c_str());
 				break;
 			case RomPickType::RTC:
-				strncpy(changed_prefs.rtcfile, file_dialog_result.c_str(), MAX_DPATH);
+				settings::set(o.rtc_file, changed_prefs, ctx, file_dialog_result.c_str());
 				break;
 			case RomPickType::Custom:
-				if (rb) strncpy(rb->lf.loadfile, file_dialog_result.c_str(), MAX_DPATH);
+				if (rb) snprintf(rb->lf.loadfile, MAX_DPATH, "%s", file_dialog_result.c_str());
 				break;
 			default:
 				break;

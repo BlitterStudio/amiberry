@@ -3,404 +3,415 @@
 #include "imgui.h"
 #include "imgui_panels.h"
 #include "gui/gui_handling.h"
+#include "settings/settings_definitions.h"
 
-// WinUAE-like helper to disable controls
-static void BeginDisableableGroup(bool disabled)
+#include <cstdio>
+
+namespace settings = amiberry_settings;
+
+namespace {
+
+// The options this panel edits. The shared settings layer owns their
+// availability rules and the dependent changes a new value implies.
+struct adv_chipset_options {
+    const settings::definition& chipset_compatible = settings::require("chipset_compatible");
+    const settings::definition& rtc = settings::require("rtc");
+    const settings::definition& rtc_adjust = settings::require("chipset_rtc_adjust");
+    const settings::definition& ciaatod = settings::require("ciaatod");
+    const settings::definition& cia_overlay = settings::require("cia_overlay");
+    const settings::definition& a1000ram = settings::require("a1000ram");
+    const settings::definition& df0idhw = settings::require("df0idhw");
+    const settings::definition& cd32cd = settings::require("cd32cd");
+    const settings::definition& cd32c2p = settings::require("cd32c2p");
+    const settings::definition& cd32nvram = settings::require("cd32nvram");
+    const settings::definition& cdtvcd = settings::require("cdtvcd");
+    const settings::definition& cdtvram = settings::require("cdtvram");
+    const settings::definition& cdtvcr = settings::require("cdtv-cr");
+    const settings::definition& ide = settings::require("ide");
+    const settings::definition& pcmcia = settings::require("pcmcia");
+    const settings::definition& ksmirror_e0 = settings::require("ksmirror_e0");
+    const settings::definition& ksmirror_a8 = settings::require("ksmirror_a8");
+    const settings::definition& color_burst = settings::require("color_burst");
+    const settings::definition& resetwarning = settings::require("resetwarning");
+    const settings::definition& z3_autoconfig = settings::require("z3_autoconfig");
+    const settings::definition& ciaa_type = settings::require("ciaa_type");
+    const settings::definition& cia_todbug = settings::require("cia_todbug");
+    const settings::definition& bytecustomwritebug = settings::require("cs_bytecustomwritebug");
+    const settings::definition& memory_pattern = settings::require("memory_pattern");
+    const settings::definition& chip1m = settings::require("1mchipjumper");
+    const settings::definition& rom_is_slow = settings::require("rom_is_slow");
+    const settings::definition& toshiba_gary = settings::require("toshiba_gary");
+    const settings::definition& unmapped_address_space = settings::require("unmapped_address_space");
+    const settings::definition& eclocksync = settings::require("eclocksync");
+    const settings::definition& scsi_a3000 = settings::require("scsi_a3000");
+    const settings::definition& scsi_a4000t = settings::require("scsi_a4000t");
+    const settings::definition& ramsey = settings::require("ramsey");
+    const settings::definition& fatgary = settings::require("fatgary");
+    const settings::definition& agnusrev = settings::require("agnusrev");
+    const settings::definition& agnusmodel = settings::require("agnusmodel");
+    const settings::definition& agnussize = settings::require("agnussize");
+    const settings::definition& deniserev = settings::require("deniserev");
+    const settings::definition& denisemodel = settings::require("denisemodel");
+};
+
+const adv_chipset_options& options()
 {
-	if (disabled) ImGui::BeginDisabled();
+    static const adv_chipset_options o;
+    return o;
 }
 
-static void EndDisableableGroup(bool disabled)
+bool available(const settings::definition& d, const settings::context& ctx)
 {
-	if (disabled) ImGui::EndDisabled();
+    return settings::is_available(d, changed_prefs, ctx);
 }
+
+bool has_value(const settings::definition& d, const char* v)
+{
+    char current[AMIBERRY_SETTINGS_VALUE_MAX];
+    settings::get(d, changed_prefs, current, sizeof current);
+    return std::strcmp(current, v) == 0;
+}
+
+// Index of the choice the configuration holds, clamped for display when a
+// configuration from a file holds a value this build does not know.
+int choice_index_of(const settings::definition& d)
+{
+    const amiberry_setting_descriptor& desc = d.descriptor;
+    for (size_t i = 0; i < desc.choice_count; i++) {
+        char current[AMIBERRY_SETTINGS_VALUE_MAX];
+        settings::get(d, changed_prefs, current, sizeof current);
+        if (std::strcmp(current, desc.choices[i].value) == 0)
+            return static_cast<int>(i);
+    }
+    return 0;
+}
+
+// A checkbox for a BOOL option, greyed out while the option is unavailable.
+void option_checkbox(const char* label, const settings::definition& d, const settings::context& ctx)
+{
+    ImGui::BeginDisabled(!available(d, ctx));
+    bool checked = settings::get_bool(d, changed_prefs);
+    if (AmigaCheckbox(label, &checked))
+        settings::set_bool(d, changed_prefs, ctx, checked);
+    ImGui::EndDisabled();
+}
+
+// A radio button for one choice of a CHOICE option, greyed out when the
+// configuration checks would not keep that value.
+void option_radio(const char* label, const settings::definition& d, const settings::context& ctx,
+                  const char* v)
+{
+    ImGui::BeginDisabled(!settings::is_choice_available(d, changed_prefs, ctx, v));
+    if (AmigaRadioButton(label, has_value(d, v)))
+        settings::set(d, changed_prefs, ctx, v);
+    ImGui::EndDisabled();
+}
+
+// A combo over a CHOICE option's values; refused choices are greyed out
+// instead of silently snapping back to what the configuration checks keep.
+void option_combo(const char* label, const settings::definition& d, const settings::context& ctx,
+                  float width)
+{
+    const int current = choice_index_of(d);
+    ImGui::BeginDisabled(!available(d, ctx));
+    ImGui::SetNextItemWidth(width);
+    if (ImGui::BeginCombo(label, d.descriptor.choices[current].label)) {
+        for (int n = 0; n < static_cast<int>(d.descriptor.choice_count); n++) {
+            const bool selectable = settings::is_choice_available(d, changed_prefs, ctx,
+                d.descriptor.choices[n].value);
+            const ImGuiSelectableFlags flags = selectable
+                ? ImGuiSelectableFlags_None : ImGuiSelectableFlags_Disabled;
+            const bool is_selected = (current == n);
+            if (is_selected)
+                ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+            if (ImGui::Selectable(d.descriptor.choices[n].label, is_selected, flags))
+                settings::set(d, changed_prefs, ctx, d.descriptor.choices[n].value);
+            if (is_selected) {
+                ImGui::PopStyleColor();
+                ImGui::SetItemDefaultFocus();
+            }
+        }
+        ImGui::EndCombo();
+    }
+    AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
+    ImGui::EndDisabled();
+}
+
+// The hex revision inputs of the Chipset Revision group: an enable checkbox
+// (on writes the power-up default revision, off the -1 override marker)
+// with the revision input sub-disabled while off.
+void revision_control(const char* label, const char* id, const settings::definition& d,
+                      const settings::context& ctx, int enable_rev,
+                      const char* help_enable, const char* help_rev)
+{
+    bool enabled = settings::get_number(d, changed_prefs) >= 0;
+    ImGui::BeginDisabled(!available(d, ctx));
+    if (AmigaCheckbox(label, &enabled))
+        settings::set_number(d, changed_prefs, ctx, enabled ? enable_rev : -1);
+    ImGui::EndDisabled();
+    ShowHelpMarker(help_enable);
+
+    ImGui::SameLine();
+    ImGui::BeginDisabled(!(enabled && available(d, ctx)));
+    ImGui::SetNextItemWidth(BUTTON_WIDTH);
+    int v = static_cast<int>(settings::get_number(d, changed_prefs));
+    if (ImGui::InputInt(id, &v, 0, 0, ImGuiInputTextFlags_CharsHexadecimal))
+        settings::set_number(d, changed_prefs, ctx, v);
+    AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), true);
+    ImGui::EndDisabled();
+    ShowHelpMarker(help_rev);
+}
+
+} // namespace
 
 void render_panel_adv_chipset()
 {
-	// Global padding for the whole panel
-	ImGui::Indent(4.0f);
+    const adv_chipset_options& o = options();
+    const settings::context ctx{emulating != 0};
 
-	ImGui::Text("Compatible Settings");
-	ImGui::SameLine();
-	bool compatible = changed_prefs.cs_compatible != 0;
-	if (AmigaCheckbox("##CompatibleSettings", &compatible))
-	{
-		if (compatible) {
-			if (!changed_prefs.cs_compatible)
-				changed_prefs.cs_compatible = CP_GENERIC;
-		} else {
-			changed_prefs.cs_compatible = 0;
-		}
-		built_in_chipset_prefs(&changed_prefs);
-	}
-	ShowHelpMarker("Force safe defaults for all chipset settings to maximize compatibility");
-	
-	// Most controls are disabled if Compatible Settings is ON
-	bool controls_disabled = compatible;
+    // Global padding for the whole panel
+    ImGui::Indent(4.0f);
 
-	BeginGroupBox("Battery Backed Up Real Time Clock");
-	{
-		AmigaRadioButton("None", &changed_prefs.cs_rtc, 0);
-		ShowHelpMarker("No real-time clock");
-		ImGui::SameLine();
-		AmigaRadioButton("MSM6242B", &changed_prefs.cs_rtc, 1);
-		ShowHelpMarker("MSM6242B RTC chip (used in A2000)");
-		ImGui::SameLine();
-		AmigaRadioButton("RF5C01A", &changed_prefs.cs_rtc, 2);
-		ShowHelpMarker("RF5C01A RTC chip (used in A3000/A4000)");
-		ImGui::SameLine();
-		AmigaRadioButton("A2000 MSM6242B", &changed_prefs.cs_rtc, 3);
-		ShowHelpMarker("MSM6242B with A2000-specific behavior");
-		
-		BeginDisableableGroup(controls_disabled);
-		ImGui::SameLine();
-		ImGui::AlignTextToFramePadding();
-		ImGui::Text("Adj:");
-		ImGui::SameLine();
-		ImGui::SetNextItemWidth(BUTTON_WIDTH);
-		ImGui::InputInt("##RTCAdjust", &changed_prefs.cs_rtc_adjust, 1, 10);
-		AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), true);
-		ShowHelpMarker("RTC time adjustment in seconds");
-		EndDisableableGroup(controls_disabled);
-		ImGui::Spacing();
-	}
-	EndGroupBox("Battery Backed Up Real Time Clock");
+    // Compatible Settings maps to the chipset extra: every option below is
+    // unavailable (greyed out) while an extra is active, because selecting
+    // it rewrites the advanced chipset options.
+    ImGui::Text("Compatible Settings");
+    ImGui::SameLine();
+    bool compatible = !has_value(o.chipset_compatible, "-");
+    if (AmigaCheckbox("##CompatibleSettings", &compatible))
+        settings::set(o.chipset_compatible, changed_prefs, ctx, compatible ? "Generic" : "-");
+    ShowHelpMarker("Force safe defaults for all chipset settings to maximize compatibility");
 
-	BeginGroupBox("CIA-A TOD Clock Source");
-	{
-		BeginDisableableGroup(controls_disabled);
-		AmigaRadioButton("Vertical Sync", &changed_prefs.cs_ciaatod, 0);
-		ShowHelpMarker("CIA Time of Day clock from vertical blank interrupt");
-		ImGui::SameLine();
-		AmigaRadioButton("Power Supply 50Hz", &changed_prefs.cs_ciaatod, 1);
-		ShowHelpMarker("CIA TOD clock from 50Hz power line frequency");
-		ImGui::SameLine();
-		AmigaRadioButton("Power Supply 60Hz", &changed_prefs.cs_ciaatod, 2);
-		ShowHelpMarker("CIA TOD clock from 60Hz power line frequency");
-		EndDisableableGroup(controls_disabled);
-		ImGui::Spacing();
-	}
-	EndGroupBox("CIA-A TOD Clock Source");
+    BeginGroupBox("Battery Backed Up Real Time Clock");
+    {
+        option_radio("None", o.rtc, ctx, "none");
+        ShowHelpMarker("No real-time clock");
+        ImGui::SameLine();
+        option_radio("MSM6242B", o.rtc, ctx, "MSM6242B");
+        ShowHelpMarker("MSM6242B RTC chip (used in A2000)");
+        ImGui::SameLine();
+        option_radio("RF5C01A", o.rtc, ctx, "RP5C01A");
+        ShowHelpMarker("RF5C01A RTC chip (used in A3000/A4000)");
+        ImGui::SameLine();
+        option_radio("A2000 MSM6242B", o.rtc, ctx, "MSM6242B_A2000");
+        ShowHelpMarker("MSM6242B with A2000-specific behavior");
 
-	BeginGroupBox("Chipset Features");
-	{
-		BeginDisableableGroup(controls_disabled);
-		
-		// Use SizingFixedFit so each column is sized to its widest content.
-		// Without this, the table stretches to the full window width, which
-		// creates huge horizontal gaps between the 3 checkbox columns when the
-		// GUI window is resized wider than the default (see issue #1970).
-		if (ImGui::BeginTable("FeaturesTable", 3, ImGuiTableFlags_SizingFixedFit))
-		{
-			// Add some spacing between columns for readability
-			ImGui::TableSetupColumn("c1", ImGuiTableColumnFlags_WidthFixed);
-			ImGui::TableSetupColumn("c2", ImGuiTableColumnFlags_WidthFixed);
-			ImGui::TableSetupColumn("c3", ImGuiTableColumnFlags_WidthFixed);
-			ImGui::TableNextColumn();
-			AmigaCheckbox("CIA ROM Overlay", &changed_prefs.cs_ciaoverlay);
-			ShowHelpMarker("Enable CIA-based Kickstart ROM overlay mechanism");
-			ImGui::TableNextColumn();
-			AmigaCheckbox("A1000 Boot RAM/ROM", &changed_prefs.cs_a1000ram);
-			ShowHelpMarker("Enable A1000-style boot RAM at $C00000");
-			ImGui::TableNextColumn();
-			AmigaCheckbox("DF0: ID Hardware", &changed_prefs.cs_df0idhw);
-			ShowHelpMarker("Enable DF0 drive ID hardware detection");
+        ImGui::SameLine();
+        ImGui::AlignTextToFramePadding();
+        ImGui::Text("Adj:");
+        ImGui::SameLine();
+        ImGui::BeginDisabled(!available(o.rtc_adjust, ctx));
+        ImGui::SetNextItemWidth(BUTTON_WIDTH);
+        int adjust = static_cast<int>(settings::get_number(o.rtc_adjust, changed_prefs));
+        if (ImGui::InputInt("##RTCAdjust", &adjust, 1, 10))
+            settings::set_number(o.rtc_adjust, changed_prefs, ctx, adjust);
+        AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), true);
+        ImGui::EndDisabled();
+        ShowHelpMarker("RTC time adjustment in seconds");
+        ImGui::Spacing();
+    }
+    EndGroupBox("Battery Backed Up Real Time Clock");
 
-			ImGui::TableNextColumn();
-			AmigaCheckbox("CD32 CD", &changed_prefs.cs_cd32cd);
-			ShowHelpMarker("Enable CD32 CD-ROM drive");
-			ImGui::TableNextColumn();
-			AmigaCheckbox("CD32 C2P", &changed_prefs.cs_cd32c2p);
-			ShowHelpMarker("Enable CD32 chunky-to-planar hardware acceleration");
-			ImGui::TableNextColumn();
-			AmigaCheckbox("CD32 NVRAM", &changed_prefs.cs_cd32nvram);
-			ShowHelpMarker("Enable CD32 non-volatile RAM for saved data");
+    BeginGroupBox("CIA-A TOD Clock Source");
+    {
+        option_radio("Vertical Sync", o.ciaatod, ctx, "vblank");
+        ShowHelpMarker("CIA Time of Day clock from vertical blank interrupt");
+        ImGui::SameLine();
+        option_radio("Power Supply 50Hz", o.ciaatod, ctx, "50hz");
+        ShowHelpMarker("CIA TOD clock from 50Hz power line frequency");
+        ImGui::SameLine();
+        option_radio("Power Supply 60Hz", o.ciaatod, ctx, "60hz");
+        ShowHelpMarker("CIA TOD clock from 60Hz power line frequency");
+        ImGui::Spacing();
+    }
+    EndGroupBox("CIA-A TOD Clock Source");
 
-			ImGui::TableNextColumn();
-			AmigaCheckbox("CDTV CD", &changed_prefs.cs_cdtvcd);
-			ShowHelpMarker("Enable CDTV CD-ROM drive");
-			ImGui::TableNextColumn();
-			AmigaCheckbox("CDTV SRAM", &changed_prefs.cs_cdtvram);
-			ShowHelpMarker("Enable CDTV static RAM for saved data");
-			ImGui::TableNextColumn();
-			AmigaCheckbox("CDTV-CR", &changed_prefs.cs_cdtvcr);
-			ShowHelpMarker("Enable CDTV card reader");
+    BeginGroupBox("Chipset Features");
+    {
+        // Use SizingFixedFit so each column is sized to its widest content.
+        // Without this, the table stretches to the full window width, which
+        // creates huge horizontal gaps between the 3 checkbox columns when the
+        // GUI window is resized wider than the default (see issue #1970).
+        if (ImGui::BeginTable("FeaturesTable", 3, ImGuiTableFlags_SizingFixedFit))
+        {
+            // Add some spacing between columns for readability
+            ImGui::TableSetupColumn("c1", ImGuiTableColumnFlags_WidthFixed);
+            ImGui::TableSetupColumn("c2", ImGuiTableColumnFlags_WidthFixed);
+            ImGui::TableSetupColumn("c3", ImGuiTableColumnFlags_WidthFixed);
+            ImGui::TableNextColumn();
+            option_checkbox("CIA ROM Overlay", o.cia_overlay, ctx);
+            ShowHelpMarker("Enable CIA-based Kickstart ROM overlay mechanism");
+            ImGui::TableNextColumn();
+            option_checkbox("A1000 Boot RAM/ROM", o.a1000ram, ctx);
+            ShowHelpMarker("Enable A1000-style boot RAM at $C00000");
+            ImGui::TableNextColumn();
+            option_checkbox("DF0: ID Hardware", o.df0idhw, ctx);
+            ShowHelpMarker("Enable DF0 drive ID hardware detection");
 
-			ImGui::TableNextColumn();
-			bool ide_a600 = (changed_prefs.cs_ide & 1) != 0;
-			if (AmigaCheckbox("A600/A1200 IDE", &ide_a600)) {
-				if (ide_a600) changed_prefs.cs_ide = 1; else if (changed_prefs.cs_ide == 1) changed_prefs.cs_ide = 0;
-			}
-			ShowHelpMarker("Enable A600/A1200 Gayle IDE controller");
-			ImGui::TableNextColumn();
-			bool ide_a4000 = (changed_prefs.cs_ide & 2) != 0;
-			if (AmigaCheckbox("A4000/A4000T IDE", &ide_a4000)) {
-				if (ide_a4000) changed_prefs.cs_ide = 2; else if (changed_prefs.cs_ide == 2) changed_prefs.cs_ide = 0;
-			}
-			ShowHelpMarker("Enable A4000/A4000T IDE controller");
-			ImGui::TableNextColumn();
-			bool pcmcia = changed_prefs.cs_pcmcia != 0;
-			if (AmigaCheckbox("PCMCIA", &pcmcia)) changed_prefs.cs_pcmcia = pcmcia;
-			ShowHelpMarker("Enable PCMCIA slot (A600/A1200)");
+            ImGui::TableNextColumn();
+            option_checkbox("CD32 CD", o.cd32cd, ctx);
+            ShowHelpMarker("Enable CD32 CD-ROM drive");
+            ImGui::TableNextColumn();
+            option_checkbox("CD32 C2P", o.cd32c2p, ctx);
+            ShowHelpMarker("Enable CD32 chunky-to-planar hardware acceleration");
+            ImGui::TableNextColumn();
+            option_checkbox("CD32 NVRAM", o.cd32nvram, ctx);
+            ShowHelpMarker("Enable CD32 non-volatile RAM for saved data");
 
-			ImGui::TableNextColumn();
-			AmigaCheckbox("ROM Mirror (E0)", &changed_prefs.cs_ksmirror_e0);
-			ShowHelpMarker("Enable Kickstart ROM mirror at $E00000");
-			ImGui::TableNextColumn();
-			AmigaCheckbox("ROM Mirror (A8)", &changed_prefs.cs_ksmirror_a8);
-			ShowHelpMarker("Enable Kickstart ROM mirror at $A80000");
-			ImGui::TableNextColumn();
-			AmigaCheckbox("Composite color burst", &changed_prefs.cs_color_burst);
-			ShowHelpMarker("Enable color burst signal on composite video output");
+            ImGui::TableNextColumn();
+            option_checkbox("CDTV CD", o.cdtvcd, ctx);
+            ShowHelpMarker("Enable CDTV CD-ROM drive");
+            ImGui::TableNextColumn();
+            option_checkbox("CDTV SRAM", o.cdtvram, ctx);
+            ShowHelpMarker("Enable CDTV static RAM for saved data");
+            ImGui::TableNextColumn();
+            option_checkbox("CDTV-CR", o.cdtvcr, ctx);
+            ShowHelpMarker("Enable CDTV card reader");
 
-			ImGui::TableNextColumn();
-			AmigaCheckbox("KB Reset Warning", &changed_prefs.cs_resetwarning);
-			ShowHelpMarker("Show warning when keyboard reset is pressed");
-			ImGui::TableNextColumn();
-			bool z3auto = changed_prefs.cs_z3autoconfig != 0;
-			if (AmigaCheckbox("Z3 Autoconfig", &z3auto)) changed_prefs.cs_z3autoconfig = z3auto;
-			ShowHelpMarker("Enable Zorro III AutoConfig for expansion boards");
-			ImGui::TableNextColumn();
-			bool cia_new = changed_prefs.cs_ciatype[0];
-			if (AmigaCheckbox("CIA 391078-01", &cia_new)) {
-				changed_prefs.cs_ciatype[0] = changed_prefs.cs_ciatype[1] = cia_new;
-			}
-			ShowHelpMarker("Use newer CIA chip revision 391078-01");
+            // The IDE controller is one configuration key (ide=) with the two
+            // hardware variants as values, so the checkboxes exclude each
+            // other exactly like the configuration they store.
+            ImGui::TableNextColumn();
+            bool ide_a600 = has_value(o.ide, "a600/a1200");
+            if (AmigaCheckbox("A600/A1200 IDE", &ide_a600)) {
+                if (ide_a600)
+                    settings::set(o.ide, changed_prefs, ctx, "a600/a1200");
+                else if (has_value(o.ide, "a600/a1200"))
+                    settings::set(o.ide, changed_prefs, ctx, "none");
+            }
+            ShowHelpMarker("Enable A600/A1200 Gayle IDE controller");
+            ImGui::TableNextColumn();
+            bool ide_a4000 = has_value(o.ide, "a4000");
+            if (AmigaCheckbox("A4000/A4000T IDE", &ide_a4000)) {
+                if (ide_a4000)
+                    settings::set(o.ide, changed_prefs, ctx, "a4000");
+                else if (has_value(o.ide, "a4000"))
+                    settings::set(o.ide, changed_prefs, ctx, "none");
+            }
+            ShowHelpMarker("Enable A4000/A4000T IDE controller");
+            ImGui::TableNextColumn();
+            option_checkbox("PCMCIA", o.pcmcia, ctx);
+            ShowHelpMarker("Enable PCMCIA slot (A600/A1200)");
 
-			ImGui::TableNextColumn();
-			AmigaCheckbox("CIA TOD bug", &changed_prefs.cs_ciatodbug);
-			ShowHelpMarker("Emulate CIA Time of Day hardware bug");
-			ImGui::TableNextColumn();
-			AmigaCheckbox("Custom register byte write bug", &changed_prefs.cs_bytecustomwritebug);
-			ShowHelpMarker("Emulate byte write bug in custom chip registers");
-			ImGui::TableNextColumn();
-			AmigaCheckbox("Power up memory pattern", &changed_prefs.cs_memorypatternfill);
-			ShowHelpMarker("Fill memory with pattern on power-up like real hardware");
+            ImGui::TableNextColumn();
+            option_checkbox("ROM Mirror (E0)", o.ksmirror_e0, ctx);
+            ShowHelpMarker("Enable Kickstart ROM mirror at $E00000");
+            ImGui::TableNextColumn();
+            option_checkbox("ROM Mirror (A8)", o.ksmirror_a8, ctx);
+            ShowHelpMarker("Enable Kickstart ROM mirror at $A80000");
+            ImGui::TableNextColumn();
+            option_checkbox("Composite color burst", o.color_burst, ctx);
+            ShowHelpMarker("Enable color burst signal on composite video output");
 
-			ImGui::TableNextColumn();
-			bool chip1m = changed_prefs.cs_1mchipjumper || changed_prefs.chipmem.size >= 0x100000;
-			bool disable_1m = changed_prefs.chipmem.size >= 0x100000;
-			ImGui::BeginDisabled(disable_1m);
-			if (AmigaCheckbox("1M Chip / 0.5M+0.5M", &chip1m)) changed_prefs.cs_1mchipjumper = chip1m;
-			ImGui::EndDisabled();
-			ShowHelpMarker("Jumper for 1MB chip RAM or 512KB+512KB configuration");
+            ImGui::TableNextColumn();
+            option_checkbox("KB Reset Warning", o.resetwarning, ctx);
+            ShowHelpMarker("Show warning when keyboard reset is pressed");
+            ImGui::TableNextColumn();
+            option_checkbox("Z3 Autoconfig", o.z3_autoconfig, ctx);
+            ShowHelpMarker("Enable Zorro III AutoConfig for expansion boards");
+            ImGui::TableNextColumn();
+            // The single checkbox sets both CIA sockets, like the panel always did.
+            bool cia_new = has_value(o.ciaa_type, "391078-01");
+            if (AmigaCheckbox("CIA 391078-01", &cia_new))
+                settings::set(o.ciaa_type, changed_prefs, ctx, cia_new ? "391078-01" : "default");
+            ShowHelpMarker("Use newer CIA chip revision 391078-01");
 
-			ImGui::TableNextColumn();
-			AmigaCheckbox("KS ROM has Chip RAM speed", &changed_prefs.cs_romisslow);
-			ShowHelpMarker("Kickstart ROM runs at Chip RAM speed instead of faster");
+            ImGui::TableNextColumn();
+            option_checkbox("CIA TOD bug", o.cia_todbug, ctx);
+            ShowHelpMarker("Emulate CIA Time of Day hardware bug");
+            ImGui::TableNextColumn();
+            option_checkbox("Custom register byte write bug", o.bytecustomwritebug, ctx);
+            ShowHelpMarker("Emulate byte write bug in custom chip registers");
+            ImGui::TableNextColumn();
+            option_checkbox("Power up memory pattern", o.memory_pattern, ctx);
+            ShowHelpMarker("Fill memory with pattern on power-up like real hardware");
 
-			ImGui::TableNextColumn();
-			AmigaCheckbox("Toshiba Gary", &changed_prefs.cs_toshibagary);
-			ShowHelpMarker("Use Toshiba Gary instead of Commodore Gary");
+            ImGui::TableNextColumn();
+            ImGui::BeginDisabled(!available(o.chip1m, ctx));
+            // With 1 MB chip RAM or more the core fixes the jumper on, so the
+            // checkbox reflects that even while greyed out.
+            bool chip1m = settings::get_bool(o.chip1m, changed_prefs)
+                || changed_prefs.chipmem.size >= 0x100000;
+            if (AmigaCheckbox("1M Chip / 0.5M+0.5M", &chip1m))
+                settings::set_bool(o.chip1m, changed_prefs, ctx, chip1m);
+            ImGui::EndDisabled();
+            ShowHelpMarker("Jumper for 1MB chip RAM or 512KB+512KB configuration");
 
-			ImGui::EndTable();
-		}
-		
-		ImGui::Spacing();
-		
-		// Combos with Labels on Left
-		const char* unmapped_items[] = { "Floating", "Zero", "FF" };
-		ImGui::AlignTextToFramePadding();
-		ImGui::Text("Unmapped address space:");
-		ImGui::SameLine();
-		ImGui::SetNextItemWidth(BUTTON_WIDTH);
-		if (ImGui::BeginCombo("##Unmapped", unmapped_items[changed_prefs.cs_unmapped_space])) {
-			for (int n = 0; n < IM_ARRAYSIZE(unmapped_items); n++) {
-				const bool is_selected = (changed_prefs.cs_unmapped_space == n);
-				if (is_selected)
-					ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
-				if (ImGui::Selectable(unmapped_items[n], is_selected)) {
-					changed_prefs.cs_unmapped_space = n;
-				}
-				if (is_selected) {
-					ImGui::PopStyleColor();
-					ImGui::SetItemDefaultFocus();
-				}
-			}
-			ImGui::EndCombo();
-		}
-		AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
-		ShowHelpMarker("What value unmapped memory reads return");
+            ImGui::TableNextColumn();
+            option_checkbox("KS ROM has Chip RAM speed", o.rom_is_slow, ctx);
+            ShowHelpMarker("Kickstart ROM runs at Chip RAM speed instead of faster");
 
-		ImGui::SameLine(0, 20); // Keep reasonable spacing between separate control groups
-		
-		const char* ciasync_items[] = { "Autoselect", "68000", "Gayle", "68000 Alternate" };
-		ImGui::AlignTextToFramePadding();
-		ImGui::Text("CIA E-Clock Sync:");
-		ImGui::SameLine();
-		ImGui::SetNextItemWidth(BUTTON_WIDTH);
-		if (ImGui::BeginCombo("##CiaSync", ciasync_items[changed_prefs.cs_eclocksync])) {
-			for (int n = 0; n < IM_ARRAYSIZE(ciasync_items); n++) {
-				const bool is_selected = (changed_prefs.cs_eclocksync == n);
-				if (is_selected)
-					ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
-				if (ImGui::Selectable(ciasync_items[n], is_selected)) {
-					changed_prefs.cs_eclocksync = n;
-				}
-				if (is_selected) {
-					ImGui::PopStyleColor();
-					ImGui::SetItemDefaultFocus();
-				}
-			}
-			ImGui::EndCombo();
-		}
-		AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
-		ShowHelpMarker("CIA E-Clock synchronization method");
-		EndDisableableGroup(controls_disabled);
-		ImGui::Spacing();
-	}
-	EndGroupBox("Chipset Features");
+            ImGui::TableNextColumn();
+            option_checkbox("Toshiba Gary", o.toshiba_gary, ctx);
+            ShowHelpMarker("Use Toshiba Gary instead of Commodore Gary");
 
-	BeginGroupBox("Internal SCSI Hardware");
-	{
-		BeginDisableableGroup(controls_disabled);
-		// Reduce spacing for checkbox groups if desired, but default is usually fine here
-		bool scsi_a3000 = (changed_prefs.cs_mbdmac & 1) != 0;
-		if (AmigaCheckbox("A3000 WD33C93 SCSI", &scsi_a3000))
-		{
-			if (scsi_a3000) changed_prefs.cs_mbdmac |= 1; else changed_prefs.cs_mbdmac &= ~1;
-		}
-		ShowHelpMarker("Enable A3000 built-in WD33C93 SCSI controller");
-		ImGui::SameLine(0, 50);
-		bool scsi_a4000 = (changed_prefs.cs_mbdmac & 2) != 0;
-		if (AmigaCheckbox("A4000T NCR53C710 SCSI", &scsi_a4000))
-		{
-			if (scsi_a4000) changed_prefs.cs_mbdmac |= 2; else changed_prefs.cs_mbdmac &= ~2;
-		}
-		ShowHelpMarker("Enable A4000T built-in NCR53C710 SCSI controller");
-		EndDisableableGroup(controls_disabled);
-		ImGui::Spacing();
-	}
-	EndGroupBox("Internal SCSI Hardware");
+            ImGui::EndTable();
+        }
 
-	BeginGroupBox("Chipset Revision");
-	{
-		BeginDisableableGroup(controls_disabled);
+        ImGui::Spacing();
 
-		// Ramsey
-		{
-			bool ramsey_en = changed_prefs.cs_ramseyrev >= 0;
-			if (AmigaCheckbox("Ramsey revision:", &ramsey_en)) changed_prefs.cs_ramseyrev = ramsey_en ? 0x0f : -1;
-			ShowHelpMarker("Enable Ramsey memory controller with specific revision");
-			ImGui::SameLine();
-			ImGui::BeginDisabled(!ramsey_en);
-			ImGui::SetNextItemWidth(BUTTON_WIDTH);
-			int v = changed_prefs.cs_ramseyrev;
-			if (ImGui::InputInt("##RamseyRev", &v, 0, 0, ImGuiInputTextFlags_CharsHexadecimal)) changed_prefs.cs_ramseyrev = v;
-			AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), true);
-			ShowHelpMarker("Ramsey revision number (hexadecimal)");
-			ImGui::EndDisabled();
-		}
+        // Combos with Labels on Left
+        ImGui::AlignTextToFramePadding();
+        ImGui::Text("Unmapped address space:");
+        ImGui::SameLine();
+        option_combo("##Unmapped", o.unmapped_address_space, ctx, BUTTON_WIDTH);
+        ShowHelpMarker("What value unmapped memory reads return");
 
-		// Fat Gary
-		{
-			bool gary_en = changed_prefs.cs_fatgaryrev >= 0;
-			if (AmigaCheckbox("Fat Gary revision:", &gary_en)) changed_prefs.cs_fatgaryrev = gary_en ? 0x00 : -1;
-			ShowHelpMarker("Enable Fat Gary chip with specific revision");
-			ImGui::SameLine();
-			ImGui::BeginDisabled(!gary_en);
-			ImGui::SetNextItemWidth(BUTTON_WIDTH);
-			int v = changed_prefs.cs_fatgaryrev;
-			if (ImGui::InputInt("##GaryRev", &v, 0, 0, ImGuiInputTextFlags_CharsHexadecimal)) changed_prefs.cs_fatgaryrev = v;
-			AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), true);
-			ShowHelpMarker("Fat Gary revision number (hexadecimal)");
-			ImGui::EndDisabled();
-		}
+        ImGui::SameLine(0, 20); // Keep reasonable spacing between separate control groups
 
-		// Agnus
-		{
-			bool agnus_en = changed_prefs.cs_agnusrev >= 0;
-			if (AmigaCheckbox("Agnus/Alice model:", &agnus_en)) changed_prefs.cs_agnusrev = agnus_en ? 0 : -1;
-			ShowHelpMarker("Enable Agnus/Alice chip with specific revision");
-			ImGui::SameLine();
-			ImGui::BeginDisabled(!agnus_en);
-			ImGui::SetNextItemWidth(BUTTON_WIDTH);
-			int v = changed_prefs.cs_agnusrev;
-			if (ImGui::InputInt("##AgnusRev", &v, 0, 0, ImGuiInputTextFlags_CharsHexadecimal)) changed_prefs.cs_agnusrev = v;
-			AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), true);
-			ShowHelpMarker("Agnus/Alice revision number (hexadecimal)");
-			ImGui::EndDisabled();
+        ImGui::AlignTextToFramePadding();
+        ImGui::Text("CIA E-Clock Sync:");
+        ImGui::SameLine();
+        option_combo("##CiaSync", o.eclocksync, ctx, BUTTON_WIDTH);
+        ShowHelpMarker("CIA E-Clock synchronization method");
+        ImGui::Spacing();
+    }
+    EndGroupBox("Chipset Features");
 
-			ImGui::SameLine();
-			const char* agnus_models[] = { "Auto", "Velvet", "A1000" };
-			ImGui::SetNextItemWidth(BUTTON_WIDTH);
-			if (ImGui::BeginCombo("##AgnusModel", agnus_models[changed_prefs.cs_agnusmodel])) {
-				for (int n = 0; n < IM_ARRAYSIZE(agnus_models); n++) {
-					const bool is_selected = (changed_prefs.cs_agnusmodel == n);
-					if (is_selected)
-						ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
-					if (ImGui::Selectable(agnus_models[n], is_selected)) {
-						changed_prefs.cs_agnusmodel = n;
-					}
-					if (is_selected) {
-						ImGui::PopStyleColor();
-						ImGui::SetItemDefaultFocus();
-					}
-				}
-				ImGui::EndCombo();
-			}
-			AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
-			ShowHelpMarker("Agnus/Alice model variant");
+    BeginGroupBox("Internal SCSI Hardware");
+    {
+        option_checkbox("A3000 WD33C93 SCSI", o.scsi_a3000, ctx);
+        ShowHelpMarker("Enable A3000 built-in WD33C93 SCSI controller");
+        ImGui::SameLine(0, 50);
+        option_checkbox("A4000T NCR53C710 SCSI", o.scsi_a4000t, ctx);
+        ShowHelpMarker("Enable A4000T built-in NCR53C710 SCSI controller");
+        ImGui::Spacing();
+    }
+    EndGroupBox("Internal SCSI Hardware");
 
-			ImGui::SameLine();
-			const char* agnus_sizes[] = { "Auto", "512k", "1M", "2M" };
-			ImGui::SetNextItemWidth(BUTTON_WIDTH);
-			if (ImGui::BeginCombo("##AgnusSize", agnus_sizes[changed_prefs.cs_agnussize])) {
-				for (int n = 0; n < IM_ARRAYSIZE(agnus_sizes); n++) {
-					const bool is_selected = (changed_prefs.cs_agnussize == n);
-					if (is_selected)
-						ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
-					if (ImGui::Selectable(agnus_sizes[n], is_selected)) {
-						changed_prefs.cs_agnussize = n;
-					}
-					if (is_selected) {
-						ImGui::PopStyleColor();
-						ImGui::SetItemDefaultFocus();
-					}
-				}
-				ImGui::EndCombo();
-			}
-			AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
-			ShowHelpMarker("Agnus/Alice addressable memory size");
-		}
+    BeginGroupBox("Chipset Revision");
+    {
+        revision_control("Ramsey revision:", "##RamseyRev", o.ramsey, ctx, 0x0f,
+            "Enable Ramsey memory controller with specific revision",
+            "Ramsey revision number (hexadecimal)");
 
-		// Denise
-		{
-			bool denise_en = changed_prefs.cs_deniserev >= 0;
-			if (AmigaCheckbox("Denise/Lisa model:", &denise_en)) changed_prefs.cs_deniserev = denise_en ? 0 : -1;
-			ShowHelpMarker("Enable Denise/Lisa chip with specific revision");
-			ImGui::SameLine();
-			ImGui::BeginDisabled(!denise_en);
-			ImGui::SetNextItemWidth(BUTTON_WIDTH);
-			int v = changed_prefs.cs_deniserev;
-			if (ImGui::InputInt("##DeniseRev", &v, 0, 0, ImGuiInputTextFlags_CharsHexadecimal)) changed_prefs.cs_deniserev = v;
-			AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), true);
-			ShowHelpMarker("Denise/Lisa revision number (hexadecimal)");
-			ImGui::EndDisabled();
+        revision_control("Fat Gary revision:", "##GaryRev", o.fatgary, ctx, 0x00,
+            "Enable Fat Gary chip with specific revision",
+            "Fat Gary revision number (hexadecimal)");
 
-			ImGui::SameLine();
-			const char* denise_models[] = { "Auto", "Velvet", "A1000 No-EHB", "A1000" };
-			ImGui::SetNextItemWidth(BUTTON_WIDTH);
-			if (ImGui::BeginCombo("##DeniseModel", denise_models[changed_prefs.cs_denisemodel])) {
-				for (int n = 0; n < IM_ARRAYSIZE(denise_models); n++) {
-					const bool is_selected = (changed_prefs.cs_denisemodel == n);
-					if (is_selected)
-						ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
-					if (ImGui::Selectable(denise_models[n], is_selected)) {
-						changed_prefs.cs_denisemodel = n;
-					}
-					if (is_selected) {
-						ImGui::PopStyleColor();
-						ImGui::SetItemDefaultFocus();
-					}
-				}
-				ImGui::EndCombo();
-			}
-			AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
-			ShowHelpMarker("Denise/Lisa model variant");
-		}
-		EndDisableableGroup(controls_disabled);
-		ImGui::Spacing();
-	}
-	EndGroupBox("Chipset Revision");
+        // Agnus/Alice
+        {
+            revision_control("Agnus/Alice model:", "##AgnusRev", o.agnusrev, ctx, 0,
+                "Enable Agnus/Alice chip with specific revision",
+                "Agnus/Alice revision number (hexadecimal)");
+            ImGui::SameLine();
+            option_combo("##AgnusModel", o.agnusmodel, ctx, BUTTON_WIDTH);
+            ShowHelpMarker("Agnus/Alice model variant");
+            ImGui::SameLine();
+            option_combo("##AgnusSize", o.agnussize, ctx, BUTTON_WIDTH);
+            ShowHelpMarker("Agnus/Alice addressable memory size");
+        }
+
+        // Denise/Lisa
+        {
+            revision_control("Denise/Lisa model:", "##DeniseRev", o.deniserev, ctx, 0,
+                "Enable Denise/Lisa chip with specific revision",
+                "Denise/Lisa revision number (hexadecimal)");
+            ImGui::SameLine();
+            option_combo("##DeniseModel", o.denisemodel, ctx, BUTTON_WIDTH);
+            ShowHelpMarker("Denise/Lisa model variant");
+        }
+        ImGui::Spacing();
+    }
+    EndGroupBox("Chipset Revision");
 }
