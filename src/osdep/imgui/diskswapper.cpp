@@ -4,6 +4,7 @@
 #include "gui/gui_handling.h"
 #include "imgui_panels.h"
 #include "target.h"
+#include "disk.h"
 
 static int diskswapper_target_slot = -1;
 
@@ -70,7 +71,7 @@ void render_panel_diskswapper()
 
             if (AmigaButton(drive_btn, ImVec2(-1, 0)))
             {
-                disk_swap(i, 1);
+                disk_swap(i);
                 add_file_to_mru_list(lstMRUDiskList, std::string(changed_prefs.dfxlist[i]));
             }
 
@@ -82,10 +83,17 @@ void render_panel_diskswapper()
 
     if (AmigaButton(ICON_FA_TRASH_CAN " Remove All", ImVec2(BUTTON_WIDTH * 1.5f, BUTTON_HEIGHT)))
     {
+        // A listed disk that is in a drive is ejected (disk_eject clears
+        // both configurations, so reopening the GUI does not bring it
+        // back), then the entry is cleared. Clearing first used to make
+        // disk_swap() miss the drive and eject DF0 instead when every
+        // drive held a disk.
         for (int row = 0; row < MAX_SPARE_DRIVES; ++row)
         {
+            const int drive = disk_in_drive(row);
+            if (drive >= 0)
+                disk_eject(drive);
             changed_prefs.dfxlist[row][0] = 0;
-            disk_swap(row, -1);
         }
     }
     

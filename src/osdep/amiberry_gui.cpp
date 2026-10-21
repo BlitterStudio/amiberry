@@ -128,13 +128,17 @@ std::string get_full_path_from_disk_list(std::string element)
 	return full_path;
 }
 
+// Most recently used first: a path already listed moves to the front, an
+// empty path (a drive emptied by a configuration load) is not a file, and
+// the list keeps MAX_MRU_LIST entries.
 void add_file_to_mru_list(std::vector<std::string>& vec, const std::string& file)
 {
-	// Check if the string already exists in the vector
-	if (std::find(vec.begin(), vec.end(), file) == vec.end()) {
-		// The string does not exist in the vector, so add it at the first position
-		vec.insert(vec.begin(), file);
-	}
+	if (file.empty())
+		return;
+	const auto it = std::find(vec.begin(), vec.end(), file);
+	if (it != vec.end())
+		vec.erase(it);
+	vec.insert(vec.begin(), file);
 
 	while (vec.size() > MAX_MRU_LIST)
 		vec.pop_back();

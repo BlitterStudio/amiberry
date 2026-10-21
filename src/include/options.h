@@ -355,6 +355,13 @@ struct chipset_refresh
 void write_chipset_refresh_entry(const struct chipset_refresh* cr, int index, TCHAR* out,
 	size_t size);
 void parse_chipset_refresh_entry(const TCHAR* value, struct chipset_refresh* cr);
+// One cdimageN value: the writer (path already converted for saving, then
+// ",delay:" and the unit type when they are not the defaults; truncating
+// to size TCHARs) and the reader's parser (every field of the slot; the
+// path is not resolved against the relative-path base). cfgfile and the
+// shared settings layer both use them.
+void write_cdimage_entry(const struct cdslot* cd, const TCHAR* path, TCHAR* out, size_t size);
+void parse_cdimage_entry(const TCHAR* entry, struct cdslot* cd);
 
 #define APMODE_NATIVE 0
 #define APMODE_RTG 1
@@ -1303,6 +1310,17 @@ extern void whdload_set_host_writes_enabled(bool enabled);
 extern void cd_auto_prefs(struct uae_prefs* prefs, char* filepath);
 extern void symlink_roms(struct uae_prefs* prefs);
 extern void drawbridge_update_profiles(struct uae_prefs* prefs);
+// The FloppyBridge drivers, in driver-index order (the drawbridge_driver
+// value): 0 drivers when the library is not available. refresh re-reads
+// the library's list. The option bits are FloppyBridgeAPI::ConfigOption_*.
+#define DRAWBRIDGE_OPTION_AUTOCACHE 0x01
+#define DRAWBRIDGE_OPTION_COMPORT 0x02
+#define DRAWBRIDGE_OPTION_AUTODETECT_COMPORT 0x04
+#define DRAWBRIDGE_OPTION_DRIVE_CABLE 0x08
+#define DRAWBRIDGE_OPTION_SMARTSPEED 0x10
+extern int drawbridge_driver_count(bool refresh);
+extern const char* drawbridge_driver_name(int index);
+extern unsigned int drawbridge_driver_options(int index);
 #endif
 
 extern void check_prefs_changed_custom(void);

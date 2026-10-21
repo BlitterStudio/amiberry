@@ -238,7 +238,6 @@ static const TCHAR *dongles[] =
 	nullptr
 };
 static const TCHAR *cdmodes[] = { _T("disabled"), _T(""), _T("image"), _T("ioctl"), _T("spti"), _T("aspi"), nullptr };
-static const TCHAR *cdconmodes[] = { _T(""), _T("uae"), _T("ide"), _T("scsi"), _T("cdtv"), _T("cd32"), nullptr };
 static const TCHAR *genlockmodes[] = { _T("none"), _T("noise"), _T("testcard"), _T("image"), _T("video"), _T("stream"), _T("ld"), _T("sony_ld"), _T("pioneer_ld"), nullptr};
 static const TCHAR *ppc_implementations[] = {
 	_T("auto"),
@@ -2344,6 +2343,107 @@ void parse_chipset_refresh_entry(const TCHAR *value, struct chipset_refresh *cr)
 	xfree(se);
 }
 
+void write_cdimage_entry(const struct cdslot *cd, const TCHAR *path, TCHAR *out, size_t size)
+{
+	_sntprintf(out, size, _T("%s"), path);
+	out[size - 1] = 0;
+	if (cd->type != SCSI_UNIT_DEFAULT || _tcschr(cd->name, ',') || cd->delayed) {
+		//for escaping some day..
+		//TCHAR *n = cfgfile_escape(tmp2, _T(","), true, true);
+		cfgfile_append_optionf(out, size, _T(","));
+		if (cd->delayed) {
+			cfgfile_append_optionf(out, size, _T("delay"));
+			cfgfile_append_optionf(out, size, _T(":"));
+		}
+		if (cd->type != SCSI_UNIT_DEFAULT) {
+			cfgfile_append_optionf(out, size, _T("%s"), cdmodes[cd->type + 1]);
+		}
+	}
+}
+
+void parse_cdimage_entry(const TCHAR *entry, struct cdslot *cd)
+{
+	if (!_tcsicmp (entry, _T("autodetect"))) {
+		cd->type = SCSI_UNIT_DEFAULT;
+		cd->inuse = true;
+		cd->name[0] = 0;
+		return;
+	}
+	std::basic_string<TCHAR> copy(entry);
+	TCHAR *value = &copy[0];
+	cd->delayed = false;
+	TCHAR *path = value;
+	TCHAR *next = _tcsrchr(value, ',');
+	if (value[0] == '\"') {
+		const TCHAR *end;
+		TCHAR *n = cfgfile_unescape(value, &end, 0, true);
+		if (n) {
+			path = n;
+			next = _tcsrchr(value + (end - value), ',');
+		}
+	} else {
+		if (next) {
+			TCHAR *dot = _tcsrchr(value, '.');
+			// assume '.' = file extension, if ',' is earlier, assume it is part of file name, not extra string.
+			if (dot && dot > value && dot > next) {
+				next = nullptr;
+			}
+		}
+	}
+	int type = SCSI_UNIT_DEFAULT;
+	for (;;) {
+		if (!next)
+			break;
+		*next++ = 0;
+		TCHAR *next2 = _tcschr (next, ':');
+		if (next2)
+			*next2++ = 0;
+		if (!_tcsicmp (next, _T("delay"))) {
+			cd->delayed = true;
+			next = next2;
+			if (!next)
+				break;
+			next2 = _tcschr (next, ':');
+			if (next2)
+				*next2++ = 0;
+		}
+		type = match_string (cdmodes, next);
+		if (type < 0)
+			type = SCSI_UNIT_DEFAULT;
+		else
+			type--;
+		// The connection mode and unit number that may follow are
+		// read past; nothing stores them.
+		next = next2;
+		if (!next)
+			break;
+		next2 = _tcschr (next, ':');
+		if (next2)
+			*next2++ = 0;
+		next = next2;
+		if (!next)
+			break;
+		next2 = _tcschr (next, ':');
+		if (next2)
+			*next2++ = 0;
+	}
+	if (_tcslen(path) > 0) {
+		_tcsncpy (cd->name, path, sizeof(cd->name) / sizeof (TCHAR));
+	}
+	cd->name[sizeof(cd->name) / sizeof(TCHAR) - 1] = 0;
+	cd->inuse = true;
+	cd->type = type;
+	if (path[0] == 0 || !_tcsicmp(path, _T("empty")) || !_tcscmp(path, _T("."))) {
+		cd->name[0] = 0;
+#ifndef AMIBERRY // Don't disable the CD drive
+		cd->inuse = false;
+#endif
+	}
+	if (path != value) {
+		xfree(path);
+	}
+}
+
 void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 {
 	struct strlist *sl;
@@ -2504,23 +2604,10 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 
 	for (i = 0; i < MAX_TOTAL_SCSI_DEVICES; i++) {
 		if (p->cdslots[i].name[0] || p->cdslots[i].inuse) {
-			TCHAR tmp2[MAX_DPATH];
+			TCHAR path[MAX_DPATH], tmp2[MAX_DPATH];
 			_sntprintf (tmp, sizeof tmp, _T("cdimage%d"), i);
-			cfgfile_to_path_save(p->cdslots[i].name, tmp2, PATH_CD);
-			if (p->cdslots[i].type != SCSI_UNIT_DEFAULT || _tcschr (p->cdslots[i].name, ',') || p->cdslots[i].delayed) {
-				//for escaping some day..
-				//TCHAR *n = cfgfile_escape(tmp2, _T(","), true, true);
-				//_tcscpy(tmp2, n);
-				//xfree(n);
-				cfgfile_append_optionf(tmp2, sizeof tmp2 / sizeof(TCHAR), _T(","));
-				if (p->cdslots[i].delayed) {
-					cfgfile_append_optionf(tmp2, sizeof tmp2 / sizeof(TCHAR), _T("delay"));
-					cfgfile_append_optionf(tmp2, sizeof tmp2 / sizeof(TCHAR), _T(":"));
-				}
-				if (p->cdslots[i].type != SCSI_UNIT_DEFAULT) {
-					cfgfile_append_optionf(tmp2, sizeof tmp2 / sizeof(TCHAR), _T("%s"), cdmodes[p->cdslots[i].type + 1]);
-				}
-			}
+			cfgfile_to_path_save(p->cdslots[i].name, path, PATH_CD);
+			write_cdimage_entry(&p->cdslots[i], path, tmp2, sizeof tmp2 / sizeof(TCHAR));
 			cfgfile_write_str (f, tmp, tmp2);
 		}
 	}
@@ -3981,90 +4068,10 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 		TCHAR tmp[20];
 		_sntprintf (tmp, sizeof tmp, _T("cdimage%d"), i);
 		if (!_tcsicmp (option, tmp)) {
-			if (!_tcsicmp (value, _T("autodetect"))) {
-				p->cdslots[i].type = SCSI_UNIT_DEFAULT;
-				p->cdslots[i].inuse = true;
-				p->cdslots[i].name[0] = 0;
-			} else {
-				p->cdslots[i].delayed = false;
-				TCHAR *path = value;
-				TCHAR *next = _tcsrchr(value, ',');
-				if (value[0] == '\"') {
-					const TCHAR *end;
-					TCHAR *n = cfgfile_unescape(value, &end, 0, true);
-					if (n) {
-						path = n;
-						next = _tcsrchr(value + (end - value), ',');
-					}
-				} else {
-					if (next) {
-						TCHAR *dot = _tcsrchr(value, '.');
-						// assume '.' = file extension, if ',' is earlier, assume it is part of file name, not extra string.
-						if (dot && dot > value && dot > next) {
-							next = nullptr;
-						}
-					}
-				}
-				int type = SCSI_UNIT_DEFAULT;
-				int mode = 0;
-				int unitnum = 0;
-				for (;;) {
-					if (!next)
-						break;
-					*next++ = 0;
-					TCHAR *next2 = _tcschr (next, ':');
-					if (next2)
-						*next2++ = 0;
-					if (!_tcsicmp (next, _T("delay"))) {
-						p->cdslots[i].delayed = true;
-						next = next2;
-						if (!next)
-							break;
-						next2 = _tcschr (next, ':');
-						if (next2)
-							*next2++ = 0;
-					}
-					type = match_string (cdmodes, next);
-					if (type < 0)
-						type = SCSI_UNIT_DEFAULT;
-					else
-						type--;
-					next = next2;
-					if (!next)
-						break;
-					next2 = _tcschr (next, ':');
-					if (next2)
-						*next2++ = 0;
-					mode = match_string (cdconmodes, next);
-					if (mode < 0)
-						mode = 0;
-					next = next2;
-					if (!next)
-						break;
-					next2 = _tcschr (next, ':');
-					if (next2)
-						*next2++ = 0;
-					cfgfile_intval (option, next, tmp, &unitnum, 1);
-				}
-				if (_tcslen(path) > 0) {
-					_tcsncpy (p->cdslots[i].name, path, sizeof(p->cdslots[i].name) / sizeof (TCHAR));
-				}
-				p->cdslots[i].name[sizeof(p->cdslots[i].name) / sizeof(TCHAR) - 1] = 0;
+			parse_cdimage_entry(value, &p->cdslots[i]);
 #ifdef AMIBERRY
-				target_resolve_relative_path(p->cdslots[i].name, sizeof(p->cdslots[i].name) / sizeof(TCHAR));
+			target_resolve_relative_path(p->cdslots[i].name, sizeof(p->cdslots[i].name) / sizeof(TCHAR));
 #endif
-				p->cdslots[i].inuse = true;
-				p->cdslots[i].type = type;
-				if (path[0] == 0 || !_tcsicmp(path, _T("empty")) || !_tcscmp(path, _T("."))) {
-					p->cdslots[i].name[0] = 0;
-#ifndef AMIBERRY // Don't disable the CD drive
-					p->cdslots[i].inuse = false;
-#endif
-				}
-				if (path != value) {
-					xfree(path);
-				}
-			}
 			// disable all following units
 			i++;
 			while (i < MAX_TOTAL_SCSI_DEVICES) {

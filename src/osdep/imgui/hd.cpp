@@ -13,6 +13,9 @@
 #include "blkdev.h"
 #include "rommgr.h"
 #include "uae.h"
+#include "settings/settings_definitions.h"
+
+namespace settings = amiberry_settings;
 
 // Enum for Dialog Modes (Modals)
 enum class HDDialogMode {
@@ -46,7 +49,6 @@ static bool show_tape_modal = false;
 
 static int create_hdf_size_mb = 100;
 static bool create_hdf_dynamic = false;
-static bool create_hdf_rdb = false;
 static std::string create_hdf_error;
 static std::string harddrive_modal_error;
 
@@ -203,17 +205,14 @@ static bool ValidatePhysicalDriveSelection(const uaedev_config_info& ci, std::st
     return false;
 }
 
+// Host drives are listed separately, so only image files enter the CD
+// history, with the same order and size as every other history (the
+// panel used to cap this one at 10 while other CD paths allowed 40).
 static void AddToMruCdList(const std::string& path)
 {
-    if (path.empty() || IsCdDevicePath(path))
+    if (IsCdDevicePath(path))
         return;
-
-    auto it = std::find(lstMRUCDList.begin(), lstMRUCDList.end(), path);
-    if (it != lstMRUCDList.end())
-        lstMRUCDList.erase(it);
-    lstMRUCDList.insert(lstMRUCDList.begin(), path);
-    if (lstMRUCDList.size() > 10)
-        lstMRUCDList.resize(10);
+    add_file_to_mru_list(lstMRUCDList, path);
 }
 
 static std::string GetCdImageBrowseStartPath(const std::string& currentPath)
@@ -469,9 +468,34 @@ static void RenderActionButtons()
     ImGui::EndDisabled();
 }
 
+// The CD options this panel edits, through the shared settings layer.
+static const settings::definition& cd_image_option()
+{
+    static const settings::definition& d = settings::require("cdimage0");
+    return d;
+}
+
+// Stores a CD image or host drive in the writer's spelling, so a path with
+// a comma keeps its name whole.
+static void set_cd_image(const char* path, int type)
+{
+    cdslot cd{};
+    _tcsncpy(cd.name, path, MAX_DPATH - 1);
+    cd.type = type;
+    TCHAR value[MAX_DPATH + 32];
+    write_cdimage_entry(&cd, cd.name, value, sizeof value / sizeof(TCHAR));
+    settings::set(cd_image_option(), changed_prefs, settings::context{emulating != 0}, value);
+}
+
 static void RenderCDSection()
 {
-    AmigaCheckbox("CDFS automount CD/DVD drives", &changed_prefs.automount_cddrives);
+    static const settings::definition& map_cd_drives = settings::require("amiberry.map_cd_drives");
+    static const settings::definition& cd_speed = settings::require("cd_speed");
+    const settings::context ctx{emulating != 0};
+
+    bool automount = settings::get_bool(map_cd_drives, changed_prefs);
+    if (AmigaCheckbox("CDFS automount CD/DVD drives", &automount))
+        settings::set_bool(map_cd_drives, changed_prefs, ctx, automount);
     ShowHelpMarker("Automatically mount CD/DVD drives in the system");
     ImGui::SameLine();
     ImGui::Dummy(ImVec2(20, 0));
@@ -479,7 +503,7 @@ static void RenderCDSection()
 
     bool turbo = (changed_prefs.cd_speed == 0);
     if (AmigaCheckbox("Turbo CD speed", &turbo)) {
-        changed_prefs.cd_speed = turbo ? 0 : 100;
+        settings::set(cd_speed, changed_prefs, ctx, turbo ? "0" : "100");
     }
     ShowHelpMarker("Read CDs faster than real hardware");
     
@@ -487,15 +511,10 @@ static void RenderCDSection()
 
     if (BeginGroupBox("CD Drive / Image", true)) {
     
+    // "empty" is a drive without a disc; "" removes the drive.
     bool cd_enabled = changed_prefs.cdslots[0].inuse;
     if (AmigaCheckbox("CD drive/image", &cd_enabled)) {
-        changed_prefs.cdslots[0].inuse = cd_enabled;
-        if (!cd_enabled) {
-            changed_prefs.cdslots[0].type = SCSI_UNIT_DISABLED;
-            changed_prefs.cdslots[0].name[0] = 0;
-        } else {
-            changed_prefs.cdslots[0].type = SCSI_UNIT_DEFAULT;
-        }
+        settings::set(cd_image_option(), changed_prefs, ctx, cd_enabled ? "empty" : "");
     }
 
     ImGui::BeginDisabled(!cd_enabled);
@@ -519,9 +538,7 @@ static void RenderCDSection()
             const bool is_selected = (cd_name && strcmp(cd_name, drive.c_str()) == 0);
             if (is_selected) current_in_list = true;
             if (ImGui::Selectable(drive.c_str(), is_selected)) {
-                au_copy(changed_prefs.cdslots[0].name, MAX_DPATH, drive.c_str());
-                changed_prefs.cdslots[0].inuse = true;
-                changed_prefs.cdslots[0].type = SCSI_UNIT_IOCTL;
+                set_cd_image(drive.c_str(), SCSI_UNIT_IOCTL);
             }
             if (is_selected) ImGui::SetItemDefaultFocus();
             ImGui::PopID();
@@ -534,9 +551,7 @@ static void RenderCDSection()
             const bool is_selected = (cd_name && strcmp(cd_name, path.c_str()) == 0);
             if (is_selected) current_in_list = true;
             if (ImGui::Selectable(path.c_str(), is_selected)) {
-                au_copy(changed_prefs.cdslots[0].name, MAX_DPATH, path.c_str());
-                changed_prefs.cdslots[0].inuse = true;
-                changed_prefs.cdslots[0].type = SCSI_UNIT_DEFAULT;
+                set_cd_image(path.c_str(), SCSI_UNIT_DEFAULT);
                 selected_mru_path = path;
             }
             if (is_selected) ImGui::SetItemDefaultFocus();
@@ -568,8 +583,7 @@ static void RenderCDSection()
     ShowHelpMarker("Physical devices require OS permission to read /dev/...");
     ImGui::SameLine();
     if (AmigaButton(ICON_FA_EJECT " Eject", ImVec2(BUTTON_WIDTH, 0))) {
-        changed_prefs.cdslots[0].name[0] = 0;
-        changed_prefs.cdslots[0].type = SCSI_UNIT_DEFAULT;
+        settings::set(cd_image_option(), changed_prefs, ctx, "empty");
     }
     ImGui::SameLine();
     if (AmigaButton("...")) {
@@ -585,9 +599,7 @@ static void RenderCDSection()
     std::string result_path;
     if (ConsumeFileDialogResultKey("HD_CD_SLOT", result_path)) {
         if (!result_path.empty()) {
-             au_copy(changed_prefs.cdslots[0].name, MAX_DPATH, result_path.c_str());
-             changed_prefs.cdslots[0].inuse = true;
-             changed_prefs.cdslots[0].type = SCSI_UNIT_DEFAULT;
+             set_cd_image(result_path.c_str(), SCSI_UNIT_DEFAULT);
              AddToMruCdList(result_path);
              set_last_active_config_from_media(result_path.c_str());
         }
@@ -904,7 +916,12 @@ static void ShowEditFilesysHardfileModal()
         ImGui::Text("Boot priority:");
         ImGui::SameLine();
         ImGui::SetNextItemWidth(BUTTON_WIDTH);
-        ImGui::InputInt("##BootPri", &current_hfdlg.ci.bootpri);
+        // -128 is "not bootable" and -129 "not mounted automatically"
+        // (BOOTPRI_NOAUTOBOOT, BOOTPRI_NOAUTOMOUNT), as in the volume
+        // dialog; anything outside -129..127 is not a boot priority.
+        int hd_bootpri = current_hfdlg.ci.bootpri;
+        if (ImGui::InputInt("##BootPri", &hd_bootpri))
+            current_hfdlg.ci.bootpri = std::clamp(hd_bootpri, BOOTPRI_NOAUTOMOUNT, 127);
         AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), true);
         ShowHelpMarker("Boot priority (-128 to 127, higher boots first)");
 
@@ -945,8 +962,6 @@ static void ShowCreateHardfileModal()
         AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), true);
         AmigaCheckbox("Dynamic VHD", &create_hdf_dynamic);
         ShowHelpMarker("Create a dynamic VHD container instead of a raw HDF file");
-        AmigaCheckbox("RDB Mode", &create_hdf_rdb);
-        ShowHelpMarker("Create with Rigid Disk Block (partitionable)");
         ImGui::EndGroup();
 
         ImGui::Separator();
@@ -1569,13 +1584,20 @@ void render_panel_hd()
     RenderCDSection();
     ImGui::Spacing();
 
-    AmigaCheckbox("Create .uaem metadata files", &changed_prefs.filesys_custom_uaefsdb);
+    static const settings::definition& custom_uaefsdb = settings::require("filesys_custom_uaefsdb");
+    static const settings::definition& no_fsdb = settings::require("filesys_no_fsdb");
+    const settings::context fs_ctx{emulating != 0};
+    bool uaem = settings::get_bool(custom_uaefsdb, changed_prefs);
+    if (AmigaCheckbox("Create .uaem metadata files", &uaem))
+        settings::set_bool(custom_uaefsdb, changed_prefs, fs_ctx, uaem);
     ShowHelpMarker("When enabled, .uaem sidecar files are created alongside files in host directories to store Amiga file attributes, comments, and timestamps. Disable to prevent .uaem file creation.");
     ImGui::SameLine();
     ImGui::Dummy(ImVec2(20, 0));
     ImGui::SameLine();
-    ImGui::BeginDisabled(emulating);
-    AmigaCheckbox("Disable UAEFSDB", &changed_prefs.filesys_no_uaefsdb);
+    ImGui::BeginDisabled(!settings::is_available(no_fsdb, changed_prefs, fs_ctx));
+    bool no_uaefsdb = settings::get_bool(no_fsdb, changed_prefs);
+    if (AmigaCheckbox("Disable UAEFSDB", &no_uaefsdb))
+        settings::set_bool(no_fsdb, changed_prefs, fs_ctx, no_uaefsdb);
     ImGui::EndDisabled();
     ShowHelpMarker("When enabled, _UAEFSDB.___ binary metadata files are not created in host directories. This also disables filename translation for characters not supported by the host filesystem. Can only be changed while emulation is stopped.");
     ImGui::Spacing();

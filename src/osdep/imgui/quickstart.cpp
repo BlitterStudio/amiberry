@@ -38,7 +38,26 @@ static void qs_invalidate_wp_cache(int num)
 }
 
 // Quickstart MRU display helpers/state
-static bool qs_ignore_list_change = false;
+// The CD drive's image or host drive, stored through the settings layer in
+// the configuration writer's spelling (so a path with a comma keeps its
+// name whole); "empty" keeps the drive without a disc.
+static void qs_set_cd(const char* path, int type)
+{
+    cdslot cd{};
+    _tcsncpy(cd.name, path, MAX_DPATH - 1);
+    cd.type = type;
+    TCHAR value[MAX_DPATH + 32];
+    write_cdimage_entry(&cd, cd.name, value, sizeof value / sizeof(TCHAR));
+    amiberry_settings::set(amiberry_settings::require("cdimage0"), changed_prefs,
+        amiberry_settings::context{emulating != 0}, value);
+}
+
+static void qs_set_cd_empty()
+{
+    amiberry_settings::set(amiberry_settings::require("cdimage0"), changed_prefs,
+        amiberry_settings::context{emulating != 0}, "empty");
+}
+
 static std::vector<std::string> qs_disk_display;
 static std::vector<std::string> qs_cd_display;
 static std::vector<std::string> qs_whd_display;
@@ -303,18 +322,30 @@ void render_panel_quickstart() {
         char label[64];
         snprintf(label, sizeof(label), "DF%d:", i);
 
+        namespace settings = amiberry_settings;
+        const settings::context ctx{emulating != 0};
+        char option_id[32];
+        std::snprintf(option_id, sizeof option_id, "floppy%dtype", i);
+        const settings::definition& type_option = settings::require(option_id);
+        std::snprintf(option_id, sizeof option_id, "floppy%dsubtype", i);
+        const settings::definition& mode_option = settings::require(option_id);
+        std::snprintf(option_id, sizeof option_id, "floppy%d", i);
+        const settings::definition& image_option = settings::require(option_id);
+
         bool drive_enabled = changed_prefs.floppyslots[i].dfxtype != DRV_NONE;
         bool disk_present = std::strlen(changed_prefs.floppyslots[i].df) > 0;
 
-        // 1. Checkbox DFx:
+        // 1. Checkbox DFx: disabling also removes the disk, as Quickstart
+        // always did (the image is cleared first: a disabled drive has none
+        // to set).
         if (!is_editable) ImGui::BeginDisabled();
         if (AmigaCheckbox(label, &drive_enabled)) {
             clear_play_content_if_quickstart_source();
             if (drive_enabled) {
-                changed_prefs.floppyslots[i].dfxtype = DRV_35_DD;
+                settings::set(type_option, changed_prefs, ctx, "0");
             } else {
-                changed_prefs.floppyslots[i].dfxtype = DRV_NONE;
-                changed_prefs.floppyslots[i].df[0] = 0;
+                settings::set(image_option, changed_prefs, ctx, "");
+                settings::set(type_option, changed_prefs, ctx, "-1");
             }
         }
         if (!is_editable) ImGui::EndDisabled();
@@ -345,48 +376,46 @@ void render_panel_quickstart() {
 
         ImGui::SameLine();
 
-        // 3. Drive Type Combo
-        int nn = fromdfxtype(i, changed_prefs.floppyslots[i].dfxtype, changed_prefs.floppyslots[i].dfxsubtype);
-        int selectedFloppyType = nn + 1;
+        // 3. Drive Type Combo. The entries are floppy_drive_types[]: 0 is
+        // Disabled, the rest follow fromdfxtype() (the FB entries select
+        // FloppyBridge and a mode). A type outside the list (a PC drive
+        // from a WinUAE configuration) shows as such instead of indexing
+        // past it.
+        const int nn = fromdfxtype(i, changed_prefs.floppyslots[i].dfxtype, changed_prefs.floppyslots[i].dfxsubtype);
+        const int selectedFloppyType = nn + 1 >= 0 && nn + 1 < IM_ARRAYSIZE(floppy_drive_types) ? nn + 1 : -1;
+        char unknown_type[32];
+        std::snprintf(unknown_type, sizeof unknown_type, "Type %d", changed_prefs.floppyslots[i].dfxtype);
         ImGui::SetNextItemWidth(BUTTON_WIDTH);
         snprintf(label, sizeof(label), "##QSFloppyType%d", i);
         if (!drive_enabled) ImGui::BeginDisabled();
-        if (ImGui::BeginCombo(label, floppy_drive_types[selectedFloppyType])) {
+        if (ImGui::BeginCombo(label, selectedFloppyType >= 0 ? floppy_drive_types[selectedFloppyType] : unknown_type)) {
             for (int n = 0; n < IM_ARRAYSIZE(floppy_drive_types); n++) {
+                int sub = 0;
+                const int dfxtype = n == 0 ? DRV_NONE : todfxtype(i, n - 1, &sub);
+                // Quickstart leaves HD drives out for the A500-A1200.
+                if (quickstart_model <= 4 && dfxtype == DRV_35_HD)
+                    continue;
+                char type_value[16];
+                std::snprintf(type_value, sizeof type_value, "%d", dfxtype);
                 const bool is_selected = (selectedFloppyType == n);
                 if (is_selected)
                     ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
-                // Filter out HD options for models that don't support it in Quickstart
-                bool allowed = true;
-                if (quickstart_model <= 4) { // A500-A1200
-                     int sub = 0;
-                     int dfxtype = todfxtype(i, n - 1, &sub);
-                     if (dfxtype == DRV_35_HD)
-                         allowed = false;
+                ImGui::BeginDisabled(!settings::is_choice_available(type_option, changed_prefs, ctx, type_value));
+                if (ImGui::Selectable(floppy_drive_types[n], is_selected)) {
+                    clear_play_content_if_quickstart_source();
+                    if (dfxtype == DRV_NONE)
+                        settings::set(image_option, changed_prefs, ctx, "");
+                    if (settings::set(type_option, changed_prefs, ctx, type_value) == AMIBERRY_SETTINGS_OK
+                        && dfxtype == DRV_FB) {
+                        char mode[8];
+                        std::snprintf(mode, sizeof mode, "%d", sub);
+                        settings::set(mode_option, changed_prefs, ctx, mode);
+                    }
                 }
-
-                if (allowed) {
-                    if (ImGui::Selectable(floppy_drive_types[n], is_selected)) {
-                        clear_play_content_if_quickstart_source();
-                        selectedFloppyType = n;
-                        int sub = 0;
-                        int dfxtype = todfxtype(i, selectedFloppyType - 1, &sub);
-                        changed_prefs.floppyslots[i].dfxtype = dfxtype;
-                        changed_prefs.floppyslots[i].dfxsubtype = sub;
-    
-                        if (dfxtype == DRV_FB) {
-                            TCHAR tmp[32];
-                            _sntprintf(tmp, sizeof tmp, _T("%d:%s"), selectedFloppyType - 5,
-                                       drivebridgeModes[selectedFloppyType - 6].data());
-                            _tcscpy(changed_prefs.floppyslots[i].dfxsubtypeid, tmp);
-                        } else {
-                            changed_prefs.floppyslots[i].dfxsubtypeid[0] = 0;
-                        }
-                    }
-                    if (is_selected) {
-                        ImGui::PopStyleColor();
-                        ImGui::SetItemDefaultFocus();
-                    }
+                ImGui::EndDisabled();
+                if (is_selected) {
+                    ImGui::PopStyleColor();
+                    ImGui::SetItemDefaultFocus();
                 }
             }
             ImGui::EndCombo();
@@ -466,7 +495,7 @@ void render_panel_quickstart() {
                         disk_eject(i);
                         changed_prefs.floppyslots[i].df[0] = 0;
                         qs_invalidate_wp_cache(i);
-                    } else if (!qs_ignore_list_change && combo_index > 0 && combo_index <= static_cast<int>(
+                    } else if (combo_index > 0 && combo_index <= static_cast<int>(
                                    lstMRUDiskList.size())) {
                         std::string element = get_full_path_from_disk_list(qs_disk_display[combo_index - 1]);
                         if (element != changed_prefs.floppyslots[i].df) {
@@ -530,8 +559,7 @@ void render_panel_quickstart() {
         if (!cd_controls_enabled) ImGui::BeginDisabled();
         if (AmigaButton(ICON_FA_EJECT " Eject", ImVec2(eject_button_width, 0))) {
             play_clear_content_selection();
-            changed_prefs.cdslots[0].name[0] = 0;
-            changed_prefs.cdslots[0].type = SCSI_UNIT_DEFAULT;
+            qs_set_cd_empty();
         }
         if (!cd_controls_enabled) ImGui::EndDisabled();
 
@@ -577,22 +605,17 @@ void render_panel_quickstart() {
                     play_clear_content_selection();
                     combo_index = n;
                     if (combo_index == 0) {
-                        changed_prefs.cdslots[0].name[0] = 0;
-                        changed_prefs.cdslots[0].type = SCSI_UNIT_DEFAULT;
-                    } else if (!qs_ignore_list_change && combo_index > 0 && combo_index <= static_cast<int>(
+                        qs_set_cd_empty();
+                    } else if (combo_index > 0 && combo_index <= static_cast<int>(
                                    qs_cd_display.size())) {
                         const std::string &selected = qs_cd_display[combo_index - 1];
                         if (selected.rfind("/dev/", 0) == 0) {
-                            std::strncpy(changed_prefs.cdslots[0].name, selected.c_str(), MAX_DPATH);
-                            changed_prefs.cdslots[0].inuse = true;
-                            changed_prefs.cdslots[0].type = SCSI_UNIT_IOCTL;
+                            qs_set_cd(selected.c_str(), SCSI_UNIT_IOCTL);
                         } else {
                             std::string element = get_full_path_from_disk_list(selected);
                             if (element != changed_prefs.cdslots[0].name) {
-                                std::strncpy(changed_prefs.cdslots[0].name, element.c_str(), MAX_DPATH);
+                                qs_set_cd(element.c_str(), SCSI_UNIT_DEFAULT);
                                 DISK_history_add(changed_prefs.cdslots[0].name, -1, HISTORY_CD, 0);
-                                changed_prefs.cdslots[0].inuse = true;
-                                changed_prefs.cdslots[0].type = SCSI_UNIT_DEFAULT;
                                 set_last_active_config_from_media(element.c_str());
                             }
                         }
@@ -655,7 +678,7 @@ void render_panel_quickstart() {
                 combo_whd_index = n;
                 if (combo_whd_index == 0) {
                     whdload_prefs.whdload_filename.clear();
-                } else if (!qs_ignore_list_change && combo_whd_index > 0 && combo_whd_index <= static_cast<int>(
+                } else if (combo_whd_index > 0 && combo_whd_index <= static_cast<int>(
                                qs_whd_display.size())) {
                     std::string element = get_full_path_from_disk_list(qs_whd_display[combo_whd_index - 1]);
                     if (element != whdload_prefs.whdload_filename) {
@@ -750,9 +773,7 @@ void render_panel_quickstart() {
             } else if (qs_pending_cd) {
                 if (!filePath.empty()) {
                     if (std::strncmp(changed_prefs.cdslots[0].name, filePath.c_str(), MAX_DPATH) != 0) {
-                        std::strncpy(changed_prefs.cdslots[0].name, filePath.c_str(), MAX_DPATH);
-                        changed_prefs.cdslots[0].inuse = true;
-                        changed_prefs.cdslots[0].type = SCSI_UNIT_DEFAULT;
+                        qs_set_cd(filePath.c_str(), SCSI_UNIT_DEFAULT);
                         add_file_to_mru_list(lstMRUCDList, filePath);
                         set_last_active_config_from_media(filePath.c_str());
                     }

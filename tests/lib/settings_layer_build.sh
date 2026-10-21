@@ -31,22 +31,29 @@ settings_layer_compile() {
 		rm -f "$fixup" "$chipfix" "$refresh"
 		return 1
 	fi
-	# The displaydata options are exactly the entry the configuration writer
-	# emits and the reader parses, so the writer and parser (with the
-	# cfgfile helpers they use) are sliced out of src/cfgfile.cpp too.
+	# The displaydata and cdimage options are exactly the entries the
+	# configuration writer emits and the reader parses, so the writers and
+	# parsers (with the cfgfile helpers they use) are sliced out of
+	# src/cfgfile.cpp too.
 	{
-		printf '%s\n' '#include "sysconfig.h"' '#include "sysdeps.h"' '#include "options.h"' '#include "custom.h"' '#include <cstdarg>'
+		printf '%s\n' '#include "sysconfig.h"' '#include "sysdeps.h"' '#include "options.h"' '#include "custom.h"' '#include "blkdev.h"' '#include <cstdarg>' '#include <string>'
+		grep '^static const TCHAR \*cdmodes\[\] = ' src/cfgfile.cpp
+		awk '/^static int match_string \(/ { copy = 1 } copy { print } copy && /^}$/ { exit }' src/cfgfile.cpp
 		# cfgfile_unescape and its two-argument overload.
 		awk '/^static TCHAR \*cfgfile_unescape\(const TCHAR \*s, const TCHAR \*\*endpos, TCHAR separator, bool min\)$/ { copy = 1 } copy { print } copy && /^}$/ && ++closed == 2 { exit }' src/cfgfile.cpp
 		awk '/^static TCHAR \*cfgfile_escape \(/ { copy = 1 } copy { print } copy && /^}$/ { exit }' src/cfgfile.cpp
 		awk '/^static void cfgfile_append_optionf\(.*\)$/ { copy = 1 } copy { print } copy && /^}$/ { exit }' src/cfgfile.cpp
 		awk '/^void write_chipset_refresh_entry\(/ { copy = 1 } copy { print } copy && /^}$/ { exit }' src/cfgfile.cpp
 		awk '/^void parse_chipset_refresh_entry\(/ { copy = 1 } copy { print } copy && /^}$/ { exit }' src/cfgfile.cpp
+		awk '/^void write_cdimage_entry\(/ { copy = 1 } copy { print } copy && /^}$/ { exit }' src/cfgfile.cpp
+		awk '/^void parse_cdimage_entry\(/ { copy = 1 } copy { print } copy && /^}$/ { exit }' src/cfgfile.cpp
 	} > "$refresh"
 	local fn
-	for fn in 'static TCHAR \*cfgfile_unescape(const TCHAR \*s, const TCHAR \*\*endpos)$' \
+	for fn in 'static const TCHAR \*cdmodes' 'static int match_string' \
+		'static TCHAR \*cfgfile_unescape(const TCHAR \*s, const TCHAR \*\*endpos)$' \
 		'static TCHAR \*cfgfile_escape' 'static void cfgfile_append_optionf' \
-		'void write_chipset_refresh_entry' 'void parse_chipset_refresh_entry'; do
+		'void write_chipset_refresh_entry' 'void parse_chipset_refresh_entry' \
+		'void write_cdimage_entry' 'void parse_cdimage_entry'; do
 		if ! grep -q "^$fn" "$refresh"; then
 			echo "settings layer test: '$fn' was not found in src/cfgfile.cpp" >&2
 			rm -f "$fixup" "$chipfix" "$refresh"

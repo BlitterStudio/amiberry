@@ -6498,7 +6498,11 @@ void target_save_options(zfile* f, uae_prefs* p)
 	cfgfile_target_dwrite_str(f, _T("screenshot"), p->screenshot);
 	cfgfile_target_dwrite_str(f, _T("debugger_trigger"), p->debugger_trigger);
 
-	if (p->drawbridge_driver > 0)
+	// Driver 0 is a real driver (the first one), so the block is written
+	// whenever any option differs from its default, not only for driver 1
+	// and up: driver 0's serial port, speed and cable settings were lost.
+	if (p->drawbridge_driver != 0 || !p->drawbridge_serial_auto || p->drawbridge_serial_port[0]
+		|| p->drawbridge_smartspeed || p->drawbridge_autocache || p->drawbridge_drive_cable != 0)
 	{
 		cfgfile_target_dwrite(f, _T("drawbridge_driver"), _T("%d"), p->drawbridge_driver);
 		cfgfile_target_dwrite_bool(f, _T("drawbridge_serial_autodetect"), p->drawbridge_serial_auto);
@@ -13576,6 +13580,55 @@ bool get_plugin_path(TCHAR* out, const int len, const TCHAR* path)
 	}
 	out[0] = '\0';
 	return false;
+}
+
+#ifdef FLOPPYBRIDGE
+static_assert(DRAWBRIDGE_OPTION_AUTOCACHE == FloppyBridgeAPI::ConfigOption_AutoCache
+	&& DRAWBRIDGE_OPTION_COMPORT == FloppyBridgeAPI::ConfigOption_ComPort
+	&& DRAWBRIDGE_OPTION_AUTODETECT_COMPORT == FloppyBridgeAPI::ConfigOption_AutoDetectComport
+	&& DRAWBRIDGE_OPTION_DRIVE_CABLE == FloppyBridgeAPI::ConfigOption_DriveABCable
+	&& DRAWBRIDGE_OPTION_SMARTSPEED == FloppyBridgeAPI::ConfigOption_SmartSpeed,
+	"DRAWBRIDGE_OPTION_* must match FloppyBridgeAPI::ConfigOption_*");
+
+static std::vector<FloppyBridgeAPI::DriverInformation>& drawbridge_drivers()
+{
+	static std::vector<FloppyBridgeAPI::DriverInformation> drivers;
+	return drivers;
+}
+static bool drawbridge_drivers_read = false;
+#endif
+
+int drawbridge_driver_count(bool refresh)
+{
+#ifdef FLOPPYBRIDGE
+	if (refresh || !drawbridge_drivers_read) {
+		drawbridge_drivers().clear();
+		if (FloppyBridgeAPI::isAvailable())
+			FloppyBridgeAPI::getDriverList(drawbridge_drivers());
+		drawbridge_drivers_read = true;
+	}
+	return static_cast<int>(drawbridge_drivers().size());
+#else
+	return 0;
+#endif
+}
+
+const char* drawbridge_driver_name(int index)
+{
+#ifdef FLOPPYBRIDGE
+	if (index >= 0 && index < drawbridge_driver_count(false))
+		return drawbridge_drivers()[index].name;
+#endif
+	return "";
+}
+
+unsigned int drawbridge_driver_options(int index)
+{
+#ifdef FLOPPYBRIDGE
+	if (index >= 0 && index < drawbridge_driver_count(false))
+		return drawbridge_drivers()[index].configOptions;
+#endif
+	return 0;
 }
 
 // The serialization logic here is taken from FloppyBridge.cpp -> void BridgeConfig::toString(char** serialisedOptions)

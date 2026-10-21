@@ -417,7 +417,7 @@ extern void SetLastLoadedConfig(const char* filename);
 extern void set_last_active_config(const char* filename);
 extern void set_last_active_config_from_media(const char* filename);
 extern void disk_selection(const int shortcut, uae_prefs* prefs);
-extern int disk_swap(int entry, int mode);
+extern int disk_swap(int entry);
 extern int disk_in_drive(int entry);
 extern int populate_diskswapper_from_archive(const TCHAR *path, struct uae_prefs *prefs);
 

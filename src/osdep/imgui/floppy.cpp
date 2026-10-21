@@ -5,45 +5,89 @@
 #include "gui/gui_handling.h"
 #include "imgui_panels.h"
 #include "disk.h"
+#include "settings/settings_definitions.h"
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include <string>
 #include <vector>
 
-#ifdef FLOPPYBRIDGE
-#include "floppybridge_lib.h"
-static std::vector<FloppyBridgeAPI::DriverInformation> driver_list;
-static bool drawbridge_initialized = false;
-#endif
+namespace settings = amiberry_settings;
 
-static const char* drive_speed_list[] = {"Turbo", "100% (compatible)", "200%", "400%", "800%"};
-static const int drive_speed_values[] = {0, 100, 200, 400, 800};
 static constexpr const char* floppy_file_filter =
     "All Supported Files (*.adf,*.adz,*.dms,*.ipf,*.zip,*.7z,*.lha,*.lzh,*.lzx,*.fdi,*.scp,*.wrp,*.dsq,*.gz,*.xz,*.hdf,*.img)"
     "{.adf,.adz,.dms,.ipf,.zip,.7z,.lha,.lzh,.lzx,.fdi,.scp,.wrp,.dsq,.gz,.xz,.hdf,.img},All Files (*){.*}";
 
-static const char* drive_cable_list[] = {
-	"Drive A (IBM PC)",
-	"Drive B (IBM PC)",
-	"Drive 0 (SHUGART)",
-	"Drive 1 (SHUGART)",
-	"Drive 2 (SHUGART)",
-	"Drive 3 (SHUGART)"
+namespace {
+
+// The options this panel edits. The shared settings layer owns their
+// spellings, availability rules and the dependent changes a new value
+// implies (the FloppyBridge profile a drive type selects).
+struct floppy_options {
+    const settings::definition* type[4] = {
+        &settings::require("floppy0type"), &settings::require("floppy1type"),
+        &settings::require("floppy2type"), &settings::require("floppy3type"),
+    };
+    const settings::definition* subtype[4] = {
+        &settings::require("floppy0subtype"), &settings::require("floppy1subtype"),
+        &settings::require("floppy2subtype"), &settings::require("floppy3subtype"),
+    };
+    const settings::definition& speed = settings::require("floppy_speed");
+    const settings::definition& driver = settings::require("amiberry.drawbridge_driver");
+    const settings::definition& serial_auto = settings::require("amiberry.drawbridge_serial_autodetect");
+    const settings::definition& serial_port = settings::require("amiberry.drawbridge_serial_port");
+    const settings::definition& smartspeed = settings::require("amiberry.drawbridge_smartspeed");
+    const settings::definition& autocache = settings::require("amiberry.drawbridge_autocache");
+    const settings::definition& drive_cable = settings::require("amiberry.drawbridge_drive_cable");
 };
 
-// Mode strings referenced in PanelFloppy.cpp
-static const std::vector<std::string> floppy_bridge_modes = { "Normal", "Compatible", "Turbo", "Stalling" };
+const floppy_options& options()
+{
+    static const floppy_options o;
+    return o;
+}
 
-// Full list of drive types matching gui_handling.h (excluding "Disabled" as we have a checkbox)
-static const char* drive_types[] = {
-    "3.5\" DD",
-    "3.5\" HD",
-    "5.25\" (40)",
-    "5.25\" (80)", 
-    "3.5\" ESCOM",
-    "FB: Normal",
-    "FB: Compatible",
-    "FB: Turbo",
-    "FB: Stalling"
+// The type combo merges the drive type and the FloppyBridge mode, as the
+// panel always did: the first entries are drive types (floppyNtype
+// values), the FB entries select type 8 and a mode (floppyNsubtype).
+struct drive_type_entry {
+    const char* label;
+    const char* type;
+    const char* mode; // FloppyBridge mode, or nullptr
 };
+
+const drive_type_entry drive_types[] = {
+    {"3.5\" DD", "0", nullptr},
+    {"3.5\" HD", "1", nullptr},
+    {"5.25\" (40)", "2", nullptr},
+    {"5.25\" (80)", "7", nullptr},
+    {"3.5\" ESCOM", "3", nullptr},
+    {"FB: Normal", "8", "0"},
+    {"FB: Compatible", "8", "1"},
+    {"FB: Turbo", "8", "2"},
+    {"FB: Stalling", "8", "3"},
+};
+
+int drive_type_index(int drive)
+{
+    const floppyslot& slot = changed_prefs.floppyslots[drive];
+    char type[16];
+    std::snprintf(type, sizeof type, "%d", slot.dfxtype);
+    for (int n = 0; n < IM_ARRAYSIZE(drive_types); n++) {
+        if (std::strcmp(drive_types[n].type, type) != 0)
+            continue;
+        if (!drive_types[n].mode || std::atoi(drive_types[n].mode) == slot.dfxsubtype)
+            return n;
+    }
+    return -1;
+}
+
+bool available(const settings::definition& d, const settings::context& ctx)
+{
+    return settings::is_available(d, changed_prefs, ctx);
+}
+
+} // namespace
 
 enum class FloppyDialogMode {
     None,
@@ -172,14 +216,16 @@ static void RenderDriveSlot(const int i)
         
         // 1. Enabled Checkbox
         ImGui::TableNextColumn();
+        const floppy_options& o = options();
+        const settings::context ctx{emulating != 0};
         bool drive_enabled = changed_prefs.floppyslots[i].dfxtype != DRV_NONE;
         char label[8];
         snprintf(label, sizeof(label), "DF%d:", i);
         if (AmigaCheckbox(label, &drive_enabled)) {
              if (drive_enabled && changed_prefs.floppyslots[i].dfxtype == DRV_NONE)
-                 changed_prefs.floppyslots[i].dfxtype = DRV_35_DD;
+                 settings::set(*o.type[i], changed_prefs, ctx, "0");
              else if (!drive_enabled)
-                 changed_prefs.floppyslots[i].dfxtype = DRV_NONE;
+                 settings::set(*o.type[i], changed_prefs, ctx, "-1");
         }
         ShowHelpMarker(i == 0
             ? "Enable/disable floppy drive. DF0: is the boot drive. Changes made while emulation is running require resetting the emulated Amiga before AmigaOS can detect them."
@@ -189,32 +235,30 @@ static void RenderDriveSlot(const int i)
 
         // 2. Type Dropdown
         ImGui::TableNextColumn();
-        int type_idx = fromdfxtype(i, changed_prefs.floppyslots[i].dfxtype, changed_prefs.floppyslots[i].dfxsubtype);
-        
+        const int type_idx = drive_type_index(i);
+
         ImGui::SetNextItemWidth(-ImGui::GetStyle().ItemSpacing.x - 6.0f);
-        const char* type_name = (type_idx >= 0 && type_idx < IM_ARRAYSIZE(drive_types)) ? drive_types[type_idx] : "Disabled";
+        // A disabled drive, or a type this panel does not list (a PC
+        // bridgeboard drive from a WinUAE configuration), shows as such.
+        char unknown_type[32];
+        if (changed_prefs.floppyslots[i].dfxtype == DRV_NONE)
+            std::snprintf(unknown_type, sizeof unknown_type, "Disabled");
+        else
+            std::snprintf(unknown_type, sizeof unknown_type, "Type %d", changed_prefs.floppyslots[i].dfxtype);
+        const char* type_name = type_idx >= 0 ? drive_types[type_idx].label : unknown_type;
         if (ImGui::BeginCombo("##FloppyTypeCombo", type_name)) {
             for (int n = 0; n < IM_ARRAYSIZE(drive_types); n++) {
+                const drive_type_entry& entry = drive_types[n];
                 const bool is_selected = (type_idx == n);
                 if (is_selected)
                     ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
-                if (ImGui::Selectable(drive_types[n], is_selected)) {
-                    type_idx = n;
-                    int sub;
-                    int dfxtype = todfxtype(i, type_idx, &sub);
-                    changed_prefs.floppyslots[i].dfxtype = dfxtype;
-                    changed_prefs.floppyslots[i].dfxsubtype = sub;
-
-                    if (dfxtype == DRV_FB) {
-                        if (type_idx >= 5 && (type_idx - 5) < 4) {
-                            TCHAR tmp[32];
-                            _sntprintf(tmp, sizeof tmp, _T("%d:%s"), type_idx - 4, floppy_bridge_modes[type_idx - 5].c_str());
-                            _tcscpy(changed_prefs.floppyslots[i].dfxsubtypeid, tmp);
-                        }
-                    } else {
-                        changed_prefs.floppyslots[i].dfxsubtypeid[0] = 0;
-                    }
+                ImGui::BeginDisabled(!settings::is_choice_available(*o.type[i], changed_prefs, ctx, entry.type));
+                if (ImGui::Selectable(entry.label, is_selected)
+                    && settings::set(*o.type[i], changed_prefs, ctx, entry.type) == AMIBERRY_SETTINGS_OK
+                    && entry.mode) {
+                    settings::set(*o.subtype[i], changed_prefs, ctx, entry.mode);
                 }
+                ImGui::EndDisabled();
                 if (is_selected) {
                     ImGui::PopStyleColor();
                     ImGui::SetItemDefaultFocus();
@@ -227,6 +271,10 @@ static void RenderDriveSlot(const int i)
 
         // 3. WP Checkbox
         ImGui::TableNextColumn();
+        // As in Quickstart: the global read-only floppy option makes
+        // disk_setwriteprotect() refuse, and without a disk there is
+        // nothing to protect.
+        ImGui::BeginDisabled(changed_prefs.floppy_read_only || !changed_prefs.floppyslots[i].df[0]);
         bool wp = cached_disk_getwriteprotect(&changed_prefs, changed_prefs.floppyslots[i].df, i);
         if (AmigaCheckbox("Write Protected", &wp)) {
             disk_setwriteprotect(&changed_prefs, i, changed_prefs.floppyslots[i].df, wp);
@@ -237,6 +285,7 @@ static void RenderDriveSlot(const int i)
             }
             DISK_reinsert(i);
         }
+        ImGui::EndDisabled();
         ShowHelpMarker("Prevent writing to the disk image");
 
         // 4. Info Button
@@ -311,35 +360,28 @@ static void RenderDriveSlot(const int i)
 }
 
 #ifdef FLOPPYBRIDGE
-static void RenderDrawBridge()
+// A combo over a layer CHOICE option, its static or host-enumerated list.
+static void drawbridge_combo(const char* id, const settings::definition& d,
+    const settings::context& ctx, const char* empty_label)
 {
-    if (BeginGroupBox("DrawBridge (FloppyBridge)", true, false)) {
-
-    // --- Driver Selection ---
-    ImGui::AlignTextToFramePadding();
-    ImGui::Text("DrawBridge driver:");
-    ImGui::SameLine();
-    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 6.0f);
-
-    std::string current_driver = "Select Driver...";
-    if (changed_prefs.drawbridge_driver >= 0 && changed_prefs.drawbridge_driver < driver_list.size()) {
-        current_driver = driver_list[changed_prefs.drawbridge_driver].name;
-    } else if (driver_list.empty()) {
-        current_driver = "No drivers found";
+    char current[AMIBERRY_SETTINGS_VALUE_MAX];
+    settings::get(d, changed_prefs, current, sizeof current);
+    const settings::choice_list choices = settings::choices_of(d, changed_prefs);
+    const char* preview = current;
+    for (size_t n = 0; n < choices.count; n++) {
+        if (!std::strcmp(current, choices.items[n].value))
+            preview = choices.items[n].label;
     }
-
-    if (ImGui::BeginCombo("##DBDriver", current_driver.c_str())) {
-        if (driver_list.empty()) {
-            ImGui::Selectable("No drivers found", false, ImGuiSelectableFlags_Disabled);
-        }
-        for (int i = 0; i < driver_list.size(); ++i) {
-            bool is_selected = (changed_prefs.drawbridge_driver == i);
+    if (choices.count == 0)
+        preview = empty_label;
+    if (ImGui::BeginCombo(id, preview)) {
+        for (size_t n = 0; n < choices.count; n++) {
+            const bool is_selected = !std::strcmp(current, choices.items[n].value);
             if (is_selected)
                 ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
-            ImGui::PushID(i);
-            if (ImGui::Selectable(driver_list[i].name, is_selected)) {
-                 changed_prefs.drawbridge_driver = i;
-            }
+            ImGui::PushID(static_cast<int>(n));
+            if (ImGui::Selectable(choices.items[n].label, is_selected))
+                settings::set(d, changed_prefs, ctx, choices.items[n].value);
             ImGui::PopID();
             if (is_selected) {
                 ImGui::PopStyleColor();
@@ -349,62 +391,65 @@ static void RenderDrawBridge()
         ImGui::EndCombo();
     }
     AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
+}
+
+static void drawbridge_checkbox(const char* label, const settings::definition& d,
+    const settings::context& ctx)
+{
+    ImGui::BeginDisabled(!available(d, ctx));
+    bool checked = settings::get_bool(d, changed_prefs);
+    if (AmigaCheckbox(label, &checked))
+        settings::set_bool(d, changed_prefs, ctx, checked);
+    ImGui::EndDisabled();
+}
+
+// The DrawBridge options; the layer enables each one by what the selected
+// driver supports.
+static void RenderDrawBridge()
+{
+    if (BeginGroupBox("DrawBridge (FloppyBridge)", true, false)) {
+    const floppy_options& o = options();
+    const settings::context ctx{emulating != 0};
+
+    // --- Driver Selection ---
+    ImGui::AlignTextToFramePadding();
+    ImGui::Text("DrawBridge driver:");
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 6.0f);
+    drawbridge_combo("##DBDriver", o.driver, ctx, "No drivers found");
     ShowHelpMarker("Select the DrawBridge hardware driver for connecting real Amiga floppy drives");
 
     ImGui::SameLine();
     if (AmigaButton(ICON_FA_ARROWS_ROTATE " Refresh")) {
-        FloppyBridgeAPI::getDriverList(driver_list);
+        settings::refresh_dynamic_choices();
     }
     ShowHelpMarker("Refresh the list of available DrawBridge drivers");
 
-    unsigned int config_options = 0;
-    if (changed_prefs.drawbridge_driver >= 0 && changed_prefs.drawbridge_driver < driver_list.size()) {
-       config_options = driver_list[changed_prefs.drawbridge_driver].configOptions;
-    }
-
     // --- Serial Port ---
-    bool auto_serial_supported = (config_options & FloppyBridgeAPI::ConfigOption_AutoDetectComport) != 0;
-    ImGui::BeginDisabled(!auto_serial_supported);
-    bool auto_serial = changed_prefs.drawbridge_serial_auto;
-    if(AmigaCheckbox("DrawBridge: Auto-Detect serial port", &auto_serial))
-        changed_prefs.drawbridge_serial_auto = auto_serial;
+    drawbridge_checkbox("DrawBridge: Auto-Detect serial port", o.serial_auto, ctx);
     ShowHelpMarker("Automatically detect which serial port the DrawBridge is connected to");
-    ImGui::EndDisabled();
 
-    // Serial port selection enabled if supported AND (auto is supported OR auto is disabled) - wait, logical check matching old GUI:
-    // Old GUI: chkDBSerialAuto->setEnabled(true) if ConfigOption_AutoDetectComport.
-    // cboDBSerialPort->setEnabled(!chkDBSerialAuto->isSelected()); if ConfigOption_ComPort supported.
-    bool serial_port_supported = (config_options & FloppyBridgeAPI::ConfigOption_ComPort) != 0;
-    ImGui::BeginDisabled(!serial_port_supported || changed_prefs.drawbridge_serial_auto);
+    ImGui::BeginDisabled(!available(o.serial_port, ctx));
     ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.5f);
-
-    std::string current_port = "none";
-    if (changed_prefs.drawbridge_serial_port[0] != 0) {
-        current_port = changed_prefs.drawbridge_serial_port;
-    }
-
-    // Fetch serial ports dynamically if needed, accessing the global vector
+    const std::string current_port = changed_prefs.drawbridge_serial_port;
+    // The host's serial ports, as the Misc panel lists them.
     extern std::vector<std::string> serial_ports;
-
-    if (ImGui::BeginCombo("##DBSerial", current_port.c_str())) {
-        bool is_none_selected = (changed_prefs.drawbridge_serial_port[0] == 0);
+    if (ImGui::BeginCombo("##DBSerial", current_port.empty() ? "none" : current_port.c_str())) {
+        const bool is_none_selected = current_port.empty();
         if (is_none_selected)
             ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
-        if (ImGui::Selectable("none", is_none_selected)) {
-            changed_prefs.drawbridge_serial_port[0] = 0;
-        }
+        if (ImGui::Selectable("none", is_none_selected))
+            settings::set(o.serial_port, changed_prefs, ctx, "");
         if (is_none_selected) {
             ImGui::PopStyleColor();
             ImGui::SetItemDefaultFocus();
         }
-
         for (const auto& port : serial_ports) {
-            bool is_selected = (current_port == port);
+            const bool is_selected = (current_port == port);
             if (is_selected)
                 ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
-            if (ImGui::Selectable(port.c_str(), is_selected)) {
-                _sntprintf(changed_prefs.drawbridge_serial_port, 256, "%s", port.c_str());
-            }
+            if (ImGui::Selectable(port.c_str(), is_selected))
+                settings::set(o.serial_port, changed_prefs, ctx, port);
             if (is_selected) {
                 ImGui::PopStyleColor();
                 ImGui::SetItemDefaultFocus();
@@ -416,48 +461,19 @@ static void RenderDrawBridge()
     ShowHelpMarker("Select which serial port the DrawBridge hardware is connected to");
     ImGui::EndDisabled();
 
-    // --- Smart Speed ---
-    bool smart_speed_supported = (config_options & FloppyBridgeAPI::ConfigOption_SmartSpeed) != 0;
-    ImGui::BeginDisabled(!smart_speed_supported);
-    bool smart_speed = changed_prefs.drawbridge_smartspeed;
-    if (AmigaCheckbox("DrawBridge: Smart Speed (Dynamically switch on Turbo)", &smart_speed))
-        changed_prefs.drawbridge_smartspeed = smart_speed;
+    // --- Smart Speed and Auto Cache ---
+    drawbridge_checkbox("DrawBridge: Smart Speed (Dynamically switch on Turbo)", o.smartspeed, ctx);
     ShowHelpMarker("Automatically speed up disk access when possible without breaking compatibility");
-    ImGui::EndDisabled();
-
-    // --- Auto Cache ---
-    bool auto_cache_supported = (config_options & FloppyBridgeAPI::ConfigOption_AutoCache) != 0;
-    ImGui::BeginDisabled(!auto_cache_supported);
-    bool auto_cache = changed_prefs.drawbridge_autocache;
-    if (AmigaCheckbox("DrawBridge: Auto-Cache (Cache disk data while drive is idle)", &auto_cache))
-        changed_prefs.drawbridge_autocache = auto_cache;
+    drawbridge_checkbox("DrawBridge: Auto-Cache (Cache disk data while drive is idle)", o.autocache, ctx);
     ShowHelpMarker("Cache track data from the real floppy when the drive is idle to improve performance");
-    ImGui::EndDisabled();
 
     // --- Drive Cable ---
-    bool drive_cable_supported = (config_options & FloppyBridgeAPI::ConfigOption_DriveABCable) != 0;
-    ImGui::BeginDisabled(!drive_cable_supported);
+    ImGui::BeginDisabled(!available(o.drive_cable, ctx));
     ImGui::AlignTextToFramePadding();
     ImGui::Text("DrawBridge: Drive cable:");
     ImGui::SameLine();
     ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.5f);
-    int cable_idx = changed_prefs.drawbridge_drive_cable;
-    if (ImGui::BeginCombo("##DBCable", drive_cable_list[cable_idx])) {
-        for (int n = 0; n < IM_ARRAYSIZE(drive_cable_list); n++) {
-            const bool is_selected = (cable_idx == n);
-            if (is_selected)
-                ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
-            if (ImGui::Selectable(drive_cable_list[n], is_selected)) {
-                changed_prefs.drawbridge_drive_cable = n;
-            }
-            if (is_selected) {
-                ImGui::PopStyleColor();
-                ImGui::SetItemDefaultFocus();
-            }
-        }
-        ImGui::EndCombo();
-    }
-    AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
+    drawbridge_combo("##DBCable", o.drive_cable, ctx, "");
     ShowHelpMarker("Select drive cable type: IBM PC (A/B) or SHUGART (0-3) standard");
     ImGui::EndDisabled();
     ImGui::Spacing();
@@ -468,12 +484,8 @@ static void RenderDrawBridge()
 
 void render_panel_floppy()
 {
-#ifdef FLOPPYBRIDGE
-    if (!drawbridge_initialized) {
-        FloppyBridgeAPI::getDriverList(driver_list);
-        drawbridge_initialized = true;
-    }
-#endif
+    const floppy_options& o = options();
+    const settings::context ctx{emulating != 0};
 
     ImGui::Indent(4.0f);
     
@@ -492,19 +504,29 @@ void render_panel_floppy()
     // ---------------------------------------------------------
     // EMULATION SPEED
     // ---------------------------------------------------------
+    // The slider walks the layer's speed steps. A configuration can hold
+    // another speed (50% from a hand-edited file): the label shows that
+    // value until the slider is moved, instead of claiming 100%.
     BeginGroupBox("Floppy Drive Emulation Speed");
-    
-    int speed_idx = 1; 
-    for(int i=0; i<5; ++i) {
-        if (changed_prefs.floppy_speed == drive_speed_values[i]) {
-            speed_idx = i;
-            break;
-        }
+
+    const amiberry_setting_descriptor& speed_desc = o.speed.descriptor;
+    char current_speed[AMIBERRY_SETTINGS_VALUE_MAX];
+    settings::get(o.speed, changed_prefs, current_speed, sizeof current_speed);
+    int speed_idx = -1;
+    for (size_t n = 0; n < speed_desc.choice_count; n++) {
+        if (!std::strcmp(current_speed, speed_desc.choices[n].value))
+            speed_idx = static_cast<int>(n);
     }
-    
+    char speed_label[32];
+    if (speed_idx >= 0)
+        std::snprintf(speed_label, sizeof speed_label, "%s", speed_desc.choices[speed_idx].label);
+    else
+        std::snprintf(speed_label, sizeof speed_label, "%s%%", current_speed);
+    int slider_idx = speed_idx >= 0 ? speed_idx : 1;
+
     ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.6f);
-    if (ImGui::SliderInt("##SpeedSlider", &speed_idx, 0, 4, "")) {
-        changed_prefs.floppy_speed = drive_speed_values[speed_idx];
+    if (ImGui::SliderInt("##SpeedSlider", &slider_idx, 0, static_cast<int>(speed_desc.choice_count) - 1, "")) {
+        settings::set(o.speed, changed_prefs, ctx, speed_desc.choices[slider_idx].value);
     }
     AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), false);
     ShowHelpMarker("Floppy drive speed: 100% = real Amiga speed, higher = faster loading. Turbo speed may break copy protections");
@@ -512,9 +534,7 @@ void render_panel_floppy()
     
     ImGui::BeginDisabled();
     ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x - 6.0f);
-    char speed_label[32];
-    strncpy(speed_label, drive_speed_list[speed_idx], 32);
-    ImGui::InputText("##SpeedLabel", speed_label, 32, ImGuiInputTextFlags_ReadOnly);
+    ImGui::InputText("##SpeedLabel", speed_label, sizeof speed_label, ImGuiInputTextFlags_ReadOnly);
     ImGui::EndDisabled();
     ImGui::Spacing();
     EndGroupBox("Floppy Drive Emulation Speed");

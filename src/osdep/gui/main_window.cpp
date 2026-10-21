@@ -944,7 +944,7 @@ int disk_in_drive(int entry)
 	return -1;
 }
 
-int disk_swap(int entry, int mode)
+int disk_swap(int entry)
 {
 	int drv, i, drvs[4] = { -1, -1, -1, -1 };
 
@@ -954,11 +954,6 @@ int disk_swap(int entry, int mode)
 			drvs[drv] = i;
 	}
 	if ((drv = disk_in_drive(entry)) >= 0) {
-		if (mode < 0) {
-			changed_prefs.floppyslots[drv].df[0] = 0;
-			return 1;
-		}
-
 		if (_tcscmp(changed_prefs.floppyslots[drv].df, currprefs.floppyslots[drv].df)) {
 			_tcscpy(changed_prefs.floppyslots[drv].df, currprefs.floppyslots[drv].df);
 			disk_insert(drv, changed_prefs.floppyslots[drv].df);

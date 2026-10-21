@@ -120,6 +120,17 @@ void refresh_sound_devices()
 }
 static int sound_device_count = 2;
 int enumerate_sound_devices() { return sound_device_count; }
+// Two FloppyBridge drivers: the first supports everything, the second
+// needs a serial port and supports nothing else.
+static int drawbridge_drivers = 2;
+int drawbridge_driver_count(bool) { return drawbridge_drivers; }
+const char* drawbridge_driver_name(int index) { return index == 0 ? "DrawBridge" : "Greaseweazle"; }
+unsigned int drawbridge_driver_options(int index)
+{
+	if (index < 0 || index >= drawbridge_drivers)
+		return 0;
+	return index == 0 ? 0x1f : DRAWBRIDGE_OPTION_COMPORT;
+}
 
 // The memory window the memory domain clamps against; the real value is
 // host-dependent, the tests use the common 512 MB reservation.
@@ -296,6 +307,16 @@ void reset_prefs(uae_prefs& p)
 	p.vkbd_transparency = 0;
 	strcpy(p.vkbd_language, "US");
 	strcpy(p.vkbd_toggle, "guide");
+
+	// Floppies (default_prefs) and DrawBridge (target_default_options).
+	p.floppyslots[0].dfxtype = DRV_35_DD;
+	p.floppyslots[1].dfxtype = DRV_35_DD;
+	p.floppyslots[2].dfxtype = DRV_NONE;
+	p.floppyslots[3].dfxtype = DRV_NONE;
+	p.floppy_speed = 100;
+	p.drawbridge_serial_auto = true;
+	p.cd_speed = 100;
+	p.filesys_custom_uaefsdb = true;
 }
 
 std::string value_of(const uae_prefs& p, const char* id)
@@ -2141,6 +2162,106 @@ void check_onscreen_domain()
 	CHECK(!available(p, "amiberry.vkbd_toggle"));
 }
 
+void check_floppy_domain()
+{
+	uae_prefs& p = test_prefs;
+	reset_prefs(p);
+
+	// A disabled drive has no image to set.
+	CHECK(available(p, "floppy0") && !available(p, "floppy2"));
+	CHECK(set(p, "floppy0", "/disks/wb.adf") == AMIBERRY_SETTINGS_OK);
+	CHECK(std::strcmp(p.floppyslots[0].df, "/disks/wb.adf") == 0);
+	CHECK(set(p, "floppy2", "/disks/wb.adf") == AMIBERRY_SETTINGS_UNAVAILABLE);
+	// A path that does not fit the field is refused, not truncated.
+	const std::string too_long(MAX_DPATH, 'a');
+	CHECK(set(p, "floppy0", too_long.c_str()) == AMIBERRY_SETTINGS_INVALID_VALUE);
+	CHECK(set(p, "diskimage19", too_long.c_str()) == AMIBERRY_SETTINGS_INVALID_VALUE);
+	CHECK(set(p, "diskimage19", "/disks/game2.adf") == AMIBERRY_SETTINGS_OK);
+	CHECK(std::strcmp(p.dfxlist[19], "/disks/game2.adf") == 0);
+
+	// Drive types are the raw cfgfile numbers; the PC bridgeboard types
+	// are reported but not offered.
+	CHECK(set(p, "floppy1type", "7") == AMIBERRY_SETTINGS_OK && p.floppyslots[1].dfxtype == DRV_525_DD);
+	CHECK(set(p, "floppy1type", "4") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	p.floppyslots[1].dfxtype = DRV_PC_525_ONLY_40;
+	CHECK(value_of(p, "floppy1type") == "4");
+	CHECK(set(p, "floppy2type", "1") == AMIBERRY_SETTINGS_OK && available(p, "floppy2"));
+
+	// FloppyBridge: switching to it picks the Normal profile, the mode
+	// option writes the profile ID, and leaving it clears both.
+	CHECK(!available(p, "floppy0subtype"));
+	CHECK(set(p, "floppy0type", "8") == AMIBERRY_SETTINGS_OK);
+	CHECK(p.floppyslots[0].dfxsubtype == 0 && std::strcmp(p.floppyslots[0].dfxsubtypeid, "1:Normal") == 0);
+	CHECK(available(p, "floppy0subtype"));
+	CHECK(set(p, "floppy0subtype", "2") == AMIBERRY_SETTINGS_OK);
+	CHECK(std::strcmp(p.floppyslots[0].dfxsubtypeid, "3:Turbo") == 0);
+	CHECK(set(p, "floppy0type", "8") == AMIBERRY_SETTINGS_OK); // re-selected
+	CHECK(p.floppyslots[0].dfxsubtype == 2);
+	CHECK(set(p, "floppy0type", "1") == AMIBERRY_SETTINGS_OK);
+	CHECK(p.floppyslots[0].dfxsubtype == 0 && p.floppyslots[0].dfxsubtypeid[0] == 0);
+
+	// The drive speed offers the panel's steps and reports others as-is.
+	CHECK(set(p, "floppy_speed", "0") == AMIBERRY_SETTINGS_OK && p.floppy_speed == 0);
+	CHECK(set(p, "floppy_speed", "300") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	p.floppy_speed = 50;
+	CHECK(value_of(p, "floppy_speed") == "50");
+
+	// DrawBridge options follow what the selected driver supports.
+	reset_prefs(p);
+	CHECK(settings::choices_of(settings::require("amiberry.drawbridge_driver"), p).count == 2);
+	CHECK(available(p, "amiberry.drawbridge_serial_autodetect"));
+	CHECK(!available(p, "amiberry.drawbridge_serial_port")); // detected
+	CHECK(set(p, "amiberry.drawbridge_serial_autodetect", "false") == AMIBERRY_SETTINGS_OK);
+	CHECK(set(p, "amiberry.drawbridge_serial_port", "/dev/ttyUSB0") == AMIBERRY_SETTINGS_OK);
+	CHECK(set(p, "amiberry.drawbridge_drive_cable", "5") == AMIBERRY_SETTINGS_OK);
+	CHECK(set(p, "amiberry.drawbridge_drive_cable", "6") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	CHECK(set(p, "amiberry.drawbridge_driver", "1") == AMIBERRY_SETTINGS_OK);
+	CHECK(!available(p, "amiberry.drawbridge_serial_autodetect"));
+	CHECK(!available(p, "amiberry.drawbridge_smartspeed") && !available(p, "amiberry.drawbridge_drive_cable"));
+	p.drawbridge_serial_auto = true; // without detection the port is chosen by hand
+	CHECK(available(p, "amiberry.drawbridge_serial_port"));
+	CHECK(set(p, "amiberry.drawbridge_driver", "2") == AMIBERRY_SETTINGS_INVALID_VALUE);
+}
+
+void check_storage_domain()
+{
+	uae_prefs& p = test_prefs;
+	reset_prefs(p);
+
+	// No line means no drive; a drive without a disc reads as "empty", the
+	// reader's other spelling for the empty value the writer saves.
+	CHECK(value_of(p, "cdimage0") == "");
+	CHECK(set(p, "cdimage0", "empty") == AMIBERRY_SETTINGS_OK);
+	CHECK(p.cdslots[0].inuse && !p.cdslots[0].name[0]);
+	CHECK(value_of(p, "cdimage0") == "empty");
+	CHECK(set(p, "cdimage0", "/cd/game.iso") == AMIBERRY_SETTINGS_OK);
+	CHECK(std::strcmp(p.cdslots[0].name, "/cd/game.iso") == 0 && p.cdslots[0].type == SCSI_UNIT_DEFAULT);
+	CHECK(value_of(p, "cdimage0") == "/cd/game.iso");
+	// A host drive and the delay flag use the writer's suffixes.
+	CHECK(set(p, "cdimage0", "/dev/disk4,delay:ioctl") == AMIBERRY_SETTINGS_OK);
+	CHECK(p.cdslots[0].type == SCSI_UNIT_IOCTL && p.cdslots[0].delayed);
+	CHECK(value_of(p, "cdimage0") == "/dev/disk4,delay:ioctl");
+	// A comma in the file name keeps the path whole.
+	CHECK(set(p, "cdimage0", "/cd/a,b.iso,") == AMIBERRY_SETTINGS_OK);
+	CHECK(std::strcmp(p.cdslots[0].name, "/cd/a,b.iso") == 0);
+	CHECK(value_of(p, "cdimage0") == "/cd/a,b.iso,");
+	CHECK(set(p, "cdimage0", "") == AMIBERRY_SETTINGS_OK);
+	CHECK(!p.cdslots[0].inuse && value_of(p, "cdimage0") == "");
+	CHECK(set(p, "cdimage0", std::string(MAX_DPATH, 'a').c_str()) == AMIBERRY_SETTINGS_INVALID_VALUE);
+
+	// Automounting host drives needs the SCSI device layer, which the
+	// fixup turns on.
+	p.scsi = 0;
+	CHECK(set(p, "amiberry.map_cd_drives", "true") == AMIBERRY_SETTINGS_OK && p.scsi == 1);
+	CHECK(set(p, "cd_speed", "0") == AMIBERRY_SETTINGS_OK && p.cd_speed == 0);
+	CHECK(set(p, "cd_speed", "50") == AMIBERRY_SETTINGS_INVALID_VALUE);
+
+	// The metadata mode cannot change under mounted volumes.
+	const settings::context running{true};
+	CHECK(available(p, "filesys_no_fsdb") && !available(p, "filesys_no_fsdb", running));
+	CHECK(available(p, "filesys_custom_uaefsdb", running));
+}
+
 } // namespace
 
 // === Runtime action queue (settings/settings_actions_queue.h) ===
@@ -2297,6 +2418,8 @@ int main(int argc, char** argv)
 	check_sound_domain();
 	check_input_domain();
 	check_onscreen_domain();
+	check_floppy_domain();
+	check_storage_domain();
 	if (failures) {
 		std::fprintf(stderr, "settings layer: %d check(s) failed\n", failures);
 		return 1;
