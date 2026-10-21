@@ -10,6 +10,7 @@
 
 #include "settings/amiberry_actions.h"
 #include "settings/settings_actions_queue.h"
+#include "amiberry_actions_host.h"
 
 #include "options.h"
 #include "memory.h"
@@ -42,6 +43,10 @@ amiberry_actions::action_queue& queue()
 	static amiberry_actions::action_queue instance;
 	return instance;
 }
+
+// Main thread only (the executor and the GUI loop).
+unsigned long emulation_requests = 0; // resets, quits and state loads executed
+bool pause_after_gui = false;         // a PAUSE executed while the GUI held its pause
 
 // savestate_state and savestate_fname describe a single state operation:
 // a restore (or rewind) that the next vsync starts, or a save the guest's
@@ -102,6 +107,7 @@ bool restore_blocked(std::string* error)
 void begin_restore()
 {
 	uae_reset(0, 0);
+	emulation_requests++;
 }
 
 // The strings are the ones the IPC transport replies with; it forwards them
@@ -167,11 +173,13 @@ bool execute(const request& r, void*, std::string* error)
 			: r.flag_b ? -UAE_RESET_KEYBOARD : -UAE_RESET;
 		if (quit_program == 0) {
 			uae_reset(r.flag_a, r.flag_b);
+			emulation_requests++;
 			return true;
 		}
 		if (quit_program <= -UAE_RESET && quit_program >= -UAE_RESET_HARD) {
 			if (requested < quit_program)
 				quit_program = requested;
+			emulation_requests++;
 			return true;
 		}
 		*error = "The emulator is quitting";
@@ -179,16 +187,31 @@ bool execute(const request& r, void*, std::string* error)
 	}
 
 	case kind::pause:
+		// The settings GUI pauses at a higher priority (7) and releases its
+		// pause when it closes, which would resume emulation behind this
+		// action's back. Emulation is paused now; the request is kept and
+		// re-applied when the GUI closes (amiberry_actions_gui_closed).
+		if (pause_emulation == 7) {
+			pause_after_gui = true;
+			return true;
+		}
 		setpaused(3);
 		activationtoggle(0, true);
 		return true;
 
 	case kind::resume:
-		// The settings GUI (and other higher-priority holders) pause at a
-		// higher priority than this action may lift; emulation would stay
-		// paused, so the action fails instead of reporting success.
+		// A pause requested while the GUI was open is simply dropped.
+		if (pause_emulation == 7 && pause_after_gui) {
+			pause_after_gui = false;
+			return true;
+		}
+		// The settings GUI and the pause key pause at a higher priority
+		// than this action may lift; emulation would stay paused, so the
+		// action fails instead of reporting success.
 		if (pause_emulation > 3) {
-			*error = "Emulation is paused by the settings GUI; close it to resume";
+			*error = pause_emulation == 7
+				? "Emulation is paused by the settings GUI; close it to resume"
+				: "Emulation is paused by the pause key; press it to resume";
 			return false;
 		}
 		resumepaused(3);
@@ -271,6 +294,7 @@ bool execute(const request& r, void*, std::string* error)
 
 	case kind::quit:
 		uae_quit();
+		emulation_requests++;
 		return true;
 	}
 	*error = "unknown action";
@@ -503,3 +527,17 @@ void amiberry_actions_get_swapper_entry(int index, char* buffer, size_t size)
 }
 
 } // extern "C"
+
+unsigned long amiberry_actions_emulation_requests()
+{
+	return emulation_requests;
+}
+
+void amiberry_actions_gui_closed()
+{
+	if (!pause_after_gui)
+		return;
+	pause_after_gui = false;
+	setpaused(3);
+	activationtoggle(0, true);
+}
