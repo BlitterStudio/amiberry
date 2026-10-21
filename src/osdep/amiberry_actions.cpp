@@ -118,9 +118,17 @@ bool execute(const request& r, void*, std::string* error)
 #endif
 		if (r.k == kind::save_state) {
 			savestate_initsave(r.path.c_str(), 1, true, true);
-			save_state(r.path.c_str(), "...");
-		} else {
-			savestate_quick(r.number, 1);
+			// save_state() returns 0 when the file cannot be written (or -1
+			// while a filesystem is active); the transports must not report
+			// success, and SAVESTATE must not write its companion config,
+			// when no usable state was saved.
+			if (save_state(r.path.c_str(), "...") <= 0) {
+				*error = "Failed to save state to: " + r.path;
+				return false;
+			}
+		} else if (savestate_quick(r.number, 1) <= 0) {
+			*error = "Failed to save quick-save slot " + std::to_string(r.number);
+			return false;
 		}
 		return true;
 
@@ -130,7 +138,12 @@ bool execute(const request& r, void*, std::string* error)
 		return true;
 
 	case kind::load_state_slot:
-		savestate_quick(r.number, 0);
+		// 0 means there was nothing to load (no usable state file name, or
+		// the slot's file does not exist); the restore was not scheduled.
+		if (savestate_quick(r.number, 0) == 0) {
+			*error = "No state file for quick-save slot " + std::to_string(r.number);
+			return false;
+		}
 		return true;
 
 	case kind::screenshot:

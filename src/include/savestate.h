@@ -299,7 +299,10 @@ STATIC_INLINE bool isrestore(void)
 	return savestate_state == STATE_RESTORE || savestate_state == STATE_REWIND;
 }
 
-extern void savestate_quick(int slot, int save);
+/* Returns the save_state() result when saving (non-zero on success), 1 when
+   the restore was scheduled, and 0 when nothing was done (no usable state
+   file name, or the state file to load does not exist). */
+extern int savestate_quick(int slot, int save);
 
 extern void savestate_capture(int);
 extern void savestate_free(void);

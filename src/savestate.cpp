@@ -1401,7 +1401,7 @@ int save_state (const TCHAR *filename, const TCHAR *description)
 	return v;
 }
 
-void savestate_quick(int slot, int save)
+int savestate_quick(int slot, int save)
 {
 	if (path_statefile[0]) {
 		_tcscpy(savestate_fname, path_statefile);
@@ -1418,7 +1418,7 @@ void savestate_quick(int slot, int save)
 		}
 		if (i <= 0) {
 			write_log (_T("savestate name skipped '%s'\n"), savestate_fname);
-			return;
+			return 0;
 		}
 	}
 	_tcscpy (savestate_fname + i, _T(".uss"));
@@ -1431,19 +1431,21 @@ void savestate_quick(int slot, int save)
 		savestate_flags |= SAVESTATE_DOCOMPRESS;
 		savestate_flags |= SAVESTATE_NODIALOGS;
 		savestate_flags |= SAVESTATE_ALWAYSUSEPATH;
-		save_state (savestate_fname, _T(""));
+		const int saved = save_state (savestate_fname, _T(""));
 #ifdef AMIBERRY
 		if (create_screenshot())
 			save_thumb(screenshot_filename);
 #endif
+		return saved;
 	} else {
 		if (!zfile_exists (savestate_fname)) {
 			write_log (_T("staterestore, file '%s' not found\n"), savestate_fname);
-			return;
+			return 0;
 		}
 		savestate_state = STATE_DORESTORE;
 		savestate_flags |= SAVESTATE_ALWAYSUSEPATH;
 		write_log (_T("staterestore starting '%s'\n"), savestate_fname);
+		return 1;
 	}
 }
 

@@ -213,6 +213,17 @@ def main():
         check("SAVESTATE replies OK", control.request(f"SAVESTATE\t{state}\t{cfg}") == "OK")
         check("state file written", os.path.exists(state))
         check("LOADSTATE replies OK", control.request(f"LOADSTATE\t{state}") == "OK")
+        # A save that cannot write its file fails the action: no success
+        # reply, and no companion config either.
+        bad_state = os.path.join(work, "no-such-dir", "state.uss")
+        bad_cfg = os.path.join(work, "bad-state.uae")
+        check("SAVESTATE reports a write failure",
+              control.request(f"SAVESTATE\t{bad_state}\t{bad_cfg}").startswith("ERROR\t"),
+              control.request(f"SAVESTATE\t{bad_state}\t{bad_cfg}"))
+        check("failed SAVESTATE writes no config", not os.path.exists(bad_cfg))
+        check("QUICKLOAD of an empty slot fails",
+              control.request("QUICKLOAD\t9").startswith("ERROR\t"),
+              control.request("QUICKLOAD\t9"))
         shot = os.path.join(work, "shot.png")
         check("SCREENSHOT replies OK with the path",
               control.request(f"SCREENSHOT\t{shot}") == f"OK\t{shot}")
