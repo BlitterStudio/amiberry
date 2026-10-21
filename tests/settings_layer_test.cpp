@@ -89,6 +89,15 @@ static romdata test_cart_rom = [] {
 static romlist test_rom_list[] = {{const_cast<TCHAR*>("/roms/ar3.rom"), &test_cart_rom}};
 int romlist_count() { return 1; }
 romlist* romlist_getit() { return test_rom_list; }
+// The scanned ALG/Arcadia games (one, unless a test removes it).
+static bool arcadia_game_installed = true;
+romlist** getarcadiaroms(int)
+{
+	auto** list = static_cast<romlist**>(std::calloc(2, sizeof(romlist*)));
+	if (list && arcadia_game_installed)
+		list[0] = &test_rom_list[0];
+	return list;
+}
 
 // Preset engine stand-in: the harness cannot link cfgfile.cpp, so it
 // records the request and applies a few marker fields the Quickstart
@@ -1235,6 +1244,17 @@ void check_machine_fixup_rules()
 	CHECK(set(p, "fastmem2_size_k", "896") == AMIBERRY_SETTINGS_INVALID_VALUE);
 	CHECK(set(p, "fastmem3_size_k", "128") == AMIBERRY_SETTINGS_OK && p.fastmem[2].size == 0x20000);
 	CHECK(set(p, "fastmem_size_k", "256") == AMIBERRY_SETTINGS_OK && p.fastmem[0].size == 0x40000);
+	// Boards up to 256 KB fit next to chip RAM above 2 MB; bigger ones in
+	// the first two slots push it back to 2 MB.
+	reset_prefs(p);
+	p.address_space_24 = false;
+	CHECK(set(p, "chipmem_size", "8") == AMIBERRY_SETTINGS_OK);
+	CHECK(set(p, "fastmem_size_k", "256") == AMIBERRY_SETTINGS_OK);
+	CHECK(value_of(p, "chipmem_size") == "8");
+	CHECK(set(p, "fastmem3_size", "1") == AMIBERRY_SETTINGS_OK);
+	CHECK(value_of(p, "chipmem_size") == "8");
+	CHECK(set(p, "fastmem2_size_k", "512") == AMIBERRY_SETTINGS_OK);
+	CHECK(value_of(p, "chipmem_size") == "4");
 
 	// Wait for Blitter goes with 68000/010 cycle-exact modes, from either
 	// side.
@@ -1340,6 +1360,11 @@ void check_presets()
 	const amiberry_settings_preset* a1200 = amiberry_settings_preset_find("a1200");
 	CHECK(a1200 && a1200->compatibility_max == 4);
 	CHECK(amiberry_settings_preset_find("a500")->compatibility_max == 3);
+	// Only the levels each builder implements.
+	CHECK(amiberry_settings_preset_find("a3000")->compatibility_max == 1);
+	CHECK(amiberry_settings_preset_find("a4000")->compatibility_max == 0);
+	CHECK(amiberry_settings_preset_find("a4000t")->compatibility_max == 0);
+	CHECK(amiberry_settings_preset_find("macrosystem")->compatibility_max == 0);
 	CHECK(amiberry_settings_preset_config_label(a1200, -1) == nullptr);
 	CHECK(amiberry_settings_preset_config_label(a1200, 1)
 		&& std::strstr(amiberry_settings_preset_config_label(a1200, 1), "4 MB Fast"));
@@ -1394,6 +1419,12 @@ void check_presets()
 	CHECK(!amiberry_settings_preset_rom_installed("a500", 99));
 	CHECK(amiberry_settings_preset_rom_installed("arcadia", 0));
 	CHECK(stub_preview_calls == preview_calls + 2);
+	// The ALG/Arcadia builders succeed with only the BIOS; no game means
+	// the preset is not installed.
+	arcadia_game_installed = false;
+	CHECK(!amiberry_settings_preset_rom_installed("arcadia", 0));
+	CHECK(!amiberry_settings_preset_rom_installed("alg", 0));
+	arcadia_game_installed = true;
 	CHECK(changed_prefs.cpu_model == 68000 && changed_prefs.kbd_led_num == 0);
 }
 
@@ -1464,6 +1495,16 @@ void check_machine_session()
 	CHECK(amiberry_settings_set(session, "kickstart_rom_file", long_b) == AMIBERRY_SETTINGS_OK);
 	CHECK(amiberry_settings_commit(session, &changed) == AMIBERRY_APPLY_RESET);
 	CHECK(changed_prefs.romfile[100] == 'b');
+
+	// A RAM size committed from a session leaves the rest of every board
+	// to whoever edited it meanwhile (the RAM panel's board editor).
+	CHECK(amiberry_settings_set(session, "fastmem_size", "4") == AMIBERRY_SETTINGS_OK);
+	changed_prefs.fastmem[0].manufacturer = 0x1234;
+	changed_prefs.fastmem[1].size = 0x100000;
+	CHECK(amiberry_settings_commit(session, &changed) == AMIBERRY_APPLY_RESET && changed);
+	CHECK(changed_prefs.fastmem[0].size == 0x400000);
+	CHECK(changed_prefs.fastmem[0].manufacturer == 0x1234);
+	CHECK(changed_prefs.fastmem[1].size == 0x100000);
 	amiberry_settings_session_close(session);
 }
 

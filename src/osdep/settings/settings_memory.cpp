@@ -15,10 +15,10 @@
 
 #include "settings_definitions.h"
 
+#include <charconv>
 #include <cstdio>
 #include <cstring>
 #include <cstdlib>
-#include <string>
 
 namespace amiberry_settings {
 
@@ -27,6 +27,16 @@ namespace {
 void write_int(char* out, size_t size, int v)
 {
 	std::snprintf(out, size, "%d", v);
+}
+
+// The number a choice value spells. The registry has matched it against
+// the option's table before the hooks run; parsing in place keeps the
+// availability hooks free of allocations, which the C API relies on.
+long long choice_number(std::string_view choice)
+{
+	long long value = 0;
+	std::from_chars(choice.data(), choice.data() + choice.size(), value);
+	return value;
 }
 
 int choice_index(const amiberry_setting_choice* choices, size_t count, std::string_view text)
@@ -109,7 +119,7 @@ void set_chipmem_size(uae_prefs& p, const value& v)
 // above 2 MB into 2 MB next to a Zorro II RTG board.
 bool chipmem_choice_available(const uae_prefs& p, std::string_view choice)
 {
-	const int units = std::atoi(std::string(choice).c_str());
+	const long long units = choice_number(choice);
 	if (units == 3 && jit_cache_after_fixup_cpu(p))
 		return false;
 	if (units > 4) {
@@ -170,7 +180,7 @@ bool slow_ram_capped_by_gayle(const uae_prefs& p)
 // becomes 1 MB under the JIT.
 bool bogomem_choice_available(const uae_prefs& p, std::string_view choice)
 {
-	const int units = std::atoi(std::string(choice).c_str());
+	const long long units = choice_number(choice);
 	if (units == 7)
 		return !slow_ram_capped_by_gayle(p);
 	if (units == 6)
@@ -180,13 +190,16 @@ bool bogomem_choice_available(const uae_prefs& p, std::string_view choice)
 
 // ------------------------------------------------------------- Z2 fast RAM
 
-// Enabling Z2 fast RAM shrinks chip RAM to 2 MB (same conflict as above,
-// from the other side). The board-sync keeps an accelerator board that
-// mirrors fastmem[0] consistent, the way the panel did every frame.
+// A Z2 fast RAM board in the first two slots larger than 256 KB shrinks
+// chip RAM to 2 MB: fixup_prefs() treats exactly that combination as the
+// chip/Z2 window conflict (smaller boards fit next to large chip RAM). The
+// board-sync keeps an accelerator board that mirrors fastmem[0] consistent,
+// the way the panel did every frame.
 void set_fastmem_size(uae_prefs& p, ramboard* board, uae_u32 size)
 {
 	board->size = size;
-	if (size > 0 && p.chipmem.size > 0x200000)
+	const bool conflict_slot = board == &p.fastmem[0] || board == &p.fastmem[1];
+	if (conflict_slot && size > 262144 && p.chipmem.size > 0x200000)
 		p.chipmem.size = 0x200000;
 	if (board == &p.fastmem[0])
 		sync_cpuboard_mem(p);
@@ -315,7 +328,7 @@ Z3MEM_BOARD(4)
 // them silently, up to the 1 GB entry of can_have_1gb() hosts).
 bool z3mem_choice_available(const uae_prefs&, std::string_view choice)
 {
-	const double mb = std::atof(std::string(choice).c_str());
+	const double mb = static_cast<double>(choice_number(choice));
 	return mb * 1024 * 1024 <= static_cast<double>(max_z3fastmem);
 }
 
@@ -395,7 +408,7 @@ void set_megachipmem_size(uae_prefs& p, const value& v)
 
 bool megachipmem_choice_available(const uae_prefs&, std::string_view choice)
 {
-	const double mb = std::atof(std::string(choice).c_str());
+	const double mb = static_cast<double>(choice_number(choice));
 	return mb * 1024 * 1024 <= static_cast<double>(max_z3fastmem);
 }
 
@@ -521,20 +534,26 @@ const definition definitions[] = {
 		get_z3mapping, set_z3mapping, z3_possible, nullptr, nullptr},
 };
 
+// The memory options only ever change sizes, so only the sizes are merged:
+// the rest of each board (manufacturer, manual addresses, autoconfig data)
+// may be edited elsewhere, by the RAM panel's board editor for example, and
+// a session must not copy its stale board over those edits.
 bool commit_memory(const uae_prefs& base, const uae_prefs& from, uae_prefs& to)
 {
 	bool wrote = false;
 #define FIELD(f) wrote |= commit_field(base.f, from.f, to.f)
-	FIELD(chipmem);
-	FIELD(bogomem);
-	FIELD(fastmem);
-	FIELD(z3fastmem);
-	FIELD(mbresmem_low);
-	FIELD(mbresmem_high);
-	FIELD(z3chipmem);
-	FIELD(cpuboardmem1);
-	FIELD(cpuboardmem2);
-	FIELD(mem25bit);
+	FIELD(chipmem.size);
+	FIELD(bogomem.size);
+	for (int i = 0; i < MAX_RAM_BOARDS; i++) {
+		FIELD(fastmem[i].size);
+		FIELD(z3fastmem[i].size);
+	}
+	FIELD(mbresmem_low.size);
+	FIELD(mbresmem_high.size);
+	FIELD(z3chipmem.size);
+	FIELD(cpuboardmem1.size);
+	FIELD(cpuboardmem2.size);
+	FIELD(mem25bit.size);
 	FIELD(z3_mapping_mode);
 	FIELD(z3autoconfig_start);
 	FIELD(chipset_mask); // the chip RAM setters may add ECS Agnus

@@ -956,6 +956,8 @@ bool commit_cpu(const uae_prefs& base, const uae_prefs& from, uae_prefs& to)
 	FIELD(blitter_cycle_exact);
 	FIELD(ppc_mode);
 	FIELD(ppc_model);
+	FIELD(cpuboard_type); // the automatic PPC configuration installs a board
+	FIELD(cpuboard_subtype);
 	FIELD(ppc_implementation);
 	FIELD(ppc_cpu_idle);
 	FIELD(x86_speed_throttle);

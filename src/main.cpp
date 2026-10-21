@@ -855,12 +855,22 @@ void fixup_prefs (struct uae_prefs *p, bool userconfig)
 thread_local bool fixup_prefs_preview_active;
 
 namespace {
-// Sets fixup_prefs_preview_active for one preview and clears it however the
-// preview ends: the settings layer catches exceptions at its C boundary,
-// and the flag must not stay set on the emulator thread afterwards.
+// One preview: sets fixup_prefs_preview_active and, however the preview
+// ends (the settings layer catches exceptions at its C boundary), clears it
+// and puts back the global change flag. The target defaults a preset
+// preview applies configure the default ports through
+// inputdevice_joyport_config(), which calls set_config_changed(); a
+// preview must not make the running emulator process a change.
 struct preview_scope {
+	const int changed = config_changed;
+	const int changed_flags = config_changed_flags;
 	preview_scope() { fixup_prefs_preview_active = true; }
-	~preview_scope() { fixup_prefs_preview_active = false; }
+	~preview_scope()
+	{
+		fixup_prefs_preview_active = false;
+		config_changed = changed;
+		config_changed_flags = changed_flags;
+	}
 	preview_scope(const preview_scope&) = delete;
 	preview_scope& operator=(const preview_scope&) = delete;
 };
@@ -1507,21 +1517,40 @@ static void parse_cmdline (int argc, TCHAR **argv)
 				TCHAR spec[64] = {};
 				_tcsncpy(spec, txt, sizeof spec / sizeof(TCHAR) - 1);
 				xfree(txt);
+				TCHAR original[64];
+				_tcscpy(original, spec);
+				// model[:config[:compatibility]]: every part must parse
+				// completely and lie within the preset's ranges, so a typo
+				// cannot silently produce another machine.
+				auto parse_part = [](const TCHAR* text, int& out) {
+					if (!text[0])
+						return false;
+					TCHAR* end = nullptr;
+					const long value = _tcstol(text, &end, 10);
+					if (*end || value < 0 || value > 255)
+						return false;
+					out = static_cast<int>(value);
+					return true;
+				};
 				TCHAR* config_part = _tcschr(spec, ':');
-				int config = 0;
-				int compatibility = 1;
+				TCHAR* compa_part = nullptr;
 				if (config_part) {
 					*config_part++ = 0;
-					TCHAR* compa_part = _tcschr(config_part, ':');
-					if (compa_part) {
+					compa_part = _tcschr(config_part, ':');
+					if (compa_part)
 						*compa_part++ = 0;
-						compatibility = _tstoi(compa_part);
-					}
-					config = _tstoi(config_part);
 				}
-				const int model = amiberry_settings::preset_model_index(spec);
-				if (model < 0) {
-					write_log(_T("Unknown preset '%s' for '--apply-preset'.\n"), spec);
+				const amiberry_settings_preset* preset = amiberry_settings_preset_find(spec);
+				int config = 0;
+				int compatibility = preset ? std::min(1, preset->compatibility_max) : 0;
+				int model = -1;
+				const bool valid = preset
+					&& (!config_part || parse_part(config_part, config))
+					&& (!compa_part || parse_part(compa_part, compatibility))
+					&& amiberry_settings::check_preset(spec, config, compatibility, model) == AMIBERRY_SETTINGS_OK;
+				if (!valid) {
+					write_log(_T("Invalid preset '%s' for '--apply-preset' (model[:config[:compatibility]] within the preset's ranges).\n"),
+						original);
 					cmdline_missing_operand = true;
 				} else {
 					amiberry_settings::apply_preset(currprefs, model, config, compatibility, false);

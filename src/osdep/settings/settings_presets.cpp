@@ -11,6 +11,7 @@
 #include "blkdev.h"
 #include "disk.h"
 #include "memory.h"
+#include "rommgr.h"
 
 #include "settings_definitions.h"
 
@@ -138,14 +139,26 @@ const char* const macrosystem_configs[] = {
 	nullptr,
 };
 
-// The compatibility slider. Models routed to set_68020_compa (A1200=4,
-// CD32=8) support level 4 (JIT); the 68000 models top out at level 3 (see
-// set_68000_compa in cfgfile.cpp). The old amodels compalevels column
-// disagreed with this and with the engine (A3000 claimed 2, A4000 1) and
-// is gone; these are the levels the engine actually implements.
+// The compatibility slider: the levels each builder in cfgfile.cpp actually
+// implements. A1200 and CD32 go through set_68020_compa (up to 4, the JIT),
+// the 68000 machines (and ALG/Arcadia) through set_68000_compa (up to 3),
+// bip_a3000 only tells cycle-exact (0) from the rest, and the A4000,
+// A4000T and Macrosystem builders ignore the level.
 int compatibility_max(int model)
 {
-	return model == 4 || model == 8 ? 4 : 3;
+	switch (model) {
+	case 4: // A1200
+	case 8: // CD32
+		return 4;
+	case 5: // A3000
+		return 1;
+	case 6: // A4000
+	case 7: // A4000T
+	case 12: // Macrosystem
+		return 0;
+	default:
+		return 3;
+	}
 }
 
 const preset_model presets[] = {
@@ -221,60 +234,6 @@ const std::vector<amiberry_settings_preset>& completed_presets()
 	}();
 	return completed;
 }
-
-// Every field the presets write that the CPU, chipset, memory and ROM
-// domains do not already commit, so a preset applied to a session survives
-// commit. uae_prefs is never freed field by field, so whole-struct commits
-// are safe.
-bool commit_machine(const uae_prefs& base, const uae_prefs& from, uae_prefs& to)
-{
-	bool wrote = false;
-#define FIELD(f) wrote |= commit_field(base.f, from.f, to.f)
-	FIELD(floppyslots);
-	FIELD(nr_floppies);
-	FIELD(floppy_speed);
-	FIELD(produce_sound);
-	FIELD(sound_filter);
-	FIELD(sound_filter_type);
-	FIELD(sound_volume_cd);
-	FIELD(scsi);
-	FIELD(uaeserial);
-	FIELD(socket_emu);
-	FIELD(clipboard_sharing);
-	FIELD(cpu060_revision);
-	FIELD(fpu_revision);
-	FIELD(turbo_emulation);
-	FIELD(turbo_emulation_limit);
-	FIELD(catweasel);
-	FIELD(tod_hack);
-	FIELD(cpuboard_type);
-	FIELD(cpuboard_subtype);
-	FIELD(cpuboard_settings);
-	FIELD(cpuboardmem2);
-	FIELD(rtgboards);
-	FIELD(expansionboard);
-	FIELD(cdslots);
-	FIELD(jports);
-	FIELD(gfx_monitor);
-	FIELD(picasso96_nocustom);
-	FIELD(cart_internal);
-	FIELD(ne2000pciname);
-	FIELD(ne2000pcmcianame);
-	FIELD(a2065name);
-	FIELD(zz9000net_name);
-	FIELD(zz9000_int2);
-	FIELD(prtname);
-	FIELD(sername);
-	FIELD(mountitems);
-	FIELD(debug_mem);
-	FIELD(ntscmode); // the ALG preset switches TV standard per game
-#undef FIELD
-	return wrote;
-}
-
-const domain machine = {
-	nullptr, 0, commit_machine,
-};
 
 } // namespace
 
@@ -412,7 +371,9 @@ const char* machine_preset_compatibility_label(int level)
 // with romcheck = 0 never raises the missing-ROM dialog, get_nvram_path and
 // cpuboard_setboard write the copy, and the target defaults leave the
 // global drawing, WHDLoad and FloppyBridge state alone. Its return value
-// tells whether every ROM the configuration needs is in the scanned list.
+// tells whether every ROM the configuration needs is in the scanned list,
+// except the ALG/Arcadia game itself: their builders succeed with only the
+// BIOS, so the game list is checked too.
 bool machine_preset_rom_installed(const char* id, int config)
 {
 	const preset_model* preset = id ? find_preset(id) : nullptr;
@@ -424,8 +385,13 @@ bool machine_preset_rom_installed(const char* id, int config)
 	if (!scratch)
 		return false;
 	std::memcpy(static_cast<void*>(scratch), static_cast<const void*>(&changed_prefs), sizeof(uae_prefs));
-	const bool installed = built_in_prefs_preview(scratch, preset->model, config, 1) != 0;
+	bool installed = built_in_prefs_preview(scratch, preset->model, config, 1) != 0;
 	std::free(scratch);
+	if (installed && (preset->model == 10 || preset->model == 11)) {
+		romlist** games = getarcadiaroms(preset->model == 10 ? 1 : 0);
+		installed = games && games[0];
+		xfree(games);
+	}
 	return installed;
 }
 
@@ -440,11 +406,6 @@ amiberry_settings_status check_preset(const char* id, int config, int compatibil
 		return AMIBERRY_SETTINGS_UNAVAILABLE;
 	model = preset->model;
 	return AMIBERRY_SETTINGS_OK;
-}
-
-const domain& machine_domain()
-{
-	return machine;
 }
 
 } // namespace amiberry_settings

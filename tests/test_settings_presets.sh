@@ -58,12 +58,12 @@ check a1000:0:1     chipset=a1000 chipset_compatible=A1000
 check a1200:0:1     cpu_model=68020 chipset=aga chipset_compatible=A1200 chipmem_size=4
 check a1200:1:1     fastmem_size=4
 check a3000:0:1     cpu_model=68030 fpu_model=68882 chipset=ecs chipset_compatible=A3000 a3000mem_size=8
-check a4000:0:1     cpu_model=68030 chipset=aga chipset_compatible=A4000
-check a4000:1:1     cpu_model=68040
-check a4000t:1:1    cpu_model=68040 chipset_compatible=A4000T
+check a4000:0:0     cpu_model=68030 chipset=aga chipset_compatible=A4000
+check a4000:1:0     cpu_model=68040
+check a4000t:1:0    cpu_model=68040 chipset_compatible=A4000T
 check cd32:0:1      cpu_model=68020 chipset=aga chipset_compatible=CD32
 check cdtv:0:1      cpu_model=68000 chipset_compatible=CDTV
-check macrosystem:0:1 cpu_model=68060 chipset_compatible=DraCo
+check macrosystem:0:0 cpu_model=68060 chipset_compatible=DraCo
 # Note: bip_cd32/bip_cdtv return before their config switch when the
 # machine ROMs are not installed, so their per-config extras (FMV,
 # Cubo, 8 MB fast RAM) are ROM-dependent and covered by the harness
@@ -73,14 +73,18 @@ check macrosystem:0:1 cpu_model=68060 chipset_compatible=DraCo
 # second (floppy1type=-1; the DD type is the writer's default and omitted),
 # HD models get the HD drive; CD machines get no floppy and a CD drive.
 check a500:0:1      floppy1type=-1
-check a4000:0:1     floppy0type=1 floppy1type=-1
+check a4000:0      floppy0type=1 floppy1type=-1
 check cd32:0:1      floppy0type=-1 floppy1type=-1 cdimage0=
 
-# Unknown presets must be rejected.
-if "$AMIBERRY_BIN" --dump-config --apply-preset nope:0:0 > "$work/bad.txt" 2>/dev/null; then
-	echo "unknown preset was accepted" >&2
-	failures=$((failures + 1))
-fi
+# Unknown presets, configurations and compatibility levels out of the
+# preset's range, and malformed numbers must be rejected rather than
+# quietly producing another machine.
+for bad in nope:0:0 a1200:99:1 a1200:x a1200:1:1junk a4000:0:1 a1200:0:5 a1200: a1200:-1; do
+	if "$AMIBERRY_BIN" --dump-config --apply-preset "$bad" > "$work/bad.txt" 2>/dev/null; then
+		echo "invalid preset '$bad' was accepted" >&2
+		failures=$((failures + 1))
+	fi
+done
 
 if ((failures > 0)); then
 	echo "settings presets: $failures failure(s)" >&2

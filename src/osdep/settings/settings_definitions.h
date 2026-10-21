@@ -92,7 +92,6 @@ const domain& cpu_domain();
 const domain& chipset_domain();
 const domain& memory_domain();
 const domain& rom_domain();
-const domain& machine_domain();
 
 // The Quickstart constraints that complete built_in_prefs(); applies model,
 // config and compatibility level exactly like the Quickstart panel (which
