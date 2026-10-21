@@ -664,6 +664,13 @@ static void check_changes (int unitnum)
 		changed = true;
 	if (!changed && changed_prefs.cdslots[unitnum].name[0] == 0 && changed_prefs.cdslots[unitnum].inuse != currprefs.cdslots[unitnum].inuse)
 		changed = true;
+#ifdef AMIBERRY
+	// Amiberry: switching between an image and a host drive (the unit
+	// type) reopens the unit too; the type used to stay as it was until
+	// the emulation restarted, so a host drive was opened as an image.
+	if (!changed && changed_prefs.cdslots[unitnum].type != currprefs.cdslots[unitnum].type)
+		changed = true;
+#endif
 
 	if (changed) {
 		bool wasimage = currprefs.cdslots[unitnum].name[0] != 0;
@@ -673,6 +680,12 @@ static void check_changes (int unitnum)
 		_tcscpy (st->newimagefile, changed_prefs.cdslots[unitnum].name);
 		changed_prefs.cdslots[unitnum].name[0] = currprefs.cdslots[unitnum].name[0] = 0;
 		currprefs.cdslots[unitnum].inuse = changed_prefs.cdslots[unitnum].inuse;
+#ifdef AMIBERRY
+		// The reopened unit uses the new type; the startup delay only
+		// matters when the emulation starts, but is kept in step too.
+		currprefs.cdslots[unitnum].type = changed_prefs.cdslots[unitnum].type;
+		currprefs.cdslots[unitnum].delayed = changed_prefs.cdslots[unitnum].delayed;
+#endif
 		int pollmode = 0;
 		st->imagechangetime = 3 * 50;
 		struct device_info di;

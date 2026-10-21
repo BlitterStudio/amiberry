@@ -134,7 +134,8 @@ const definition definitions[] = {
 	{STRING_OPTION("cdimage0", "cd", "CD drive",
 			"The CD drive's image or host drive, then optional fields (,image ,ioctl ,delay:). "
 			"Empty for no CD drive, \"empty\" for a drive without a disc.",
-			AMIBERRY_APPLY_LIVE, "", nullptr),
+			AMIBERRY_APPLY_LIVE, "",
+			"A change of disc or host drive applies at once; the startup delay (delay:) when the emulation starts."),
 		get_cdimage0, set_cdimage0, nullptr, nullptr, nullptr, cdimage_fits, nullptr},
 	{CHOICE_OPTION("cd_speed", "cd", "CD speed",
 			"Normal CD drive speed, or Turbo to read without the drive's delays.",

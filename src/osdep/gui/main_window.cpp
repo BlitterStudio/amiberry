@@ -932,6 +932,10 @@ int populate_diskswapper_from_archive(const TCHAR *path, struct uae_prefs *prefs
 		_tcsncpy(prefs->dfxlist[i], state.images[i].c_str(), MAX_DPATH - 1);
 		prefs->dfxlist[i][MAX_DPATH - 1] = '\0';
 	}
+	// DISK_check_change copies the pending list into the running
+	// configuration only on a change.
+	if (prefs == &changed_prefs)
+		set_config_changed();
 	return count;
 }
 
