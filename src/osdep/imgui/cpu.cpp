@@ -258,25 +258,37 @@ void render_panel_cpu() {
         ShowHelpMarker(o.fpu_strict.descriptor.help);
         ImGui::EndDisabled();
 
+        // The host modes stay selectable with the JIT FPU; only softfloat is
+        // refused then.
         ImGui::BeginDisabled(!available(o.fpu_softfloat, ctx));
 #ifdef MSVC_LONG_DOUBLE
         static const settings::definition& fpu_long_double = settings::require("fpu_msvc_long_double");
         const char* fpu_mode_items[] = { "Host (64-bit)", "Host (80-bit)", "Softfloat (80-bit)" };
         const int softfloat_idx = 2;
-        int fpu_mode_idx = settings::get_bool(o.fpu_softfloat, changed_prefs) ? softfloat_idx
+        const int fpu_mode_idx = settings::get_bool(o.fpu_softfloat, changed_prefs) ? softfloat_idx
             : settings::get_bool(fpu_long_double, changed_prefs) ? 1 : 0;
 #else
         const char* fpu_mode_items[] = { "Host (64-bit)", "Softfloat (80-bit)" };
         const int softfloat_idx = 1;
-        int fpu_mode_idx = settings::get_bool(o.fpu_softfloat, changed_prefs) ? softfloat_idx : 0;
+        const int fpu_mode_idx = settings::get_bool(o.fpu_softfloat, changed_prefs) ? softfloat_idx : 0;
 #endif
+        const bool softfloat_possible = settings::is_choice_available(o.fpu_softfloat, changed_prefs, ctx, "true");
         ImGui::SetNextItemWidth(slider_width);
-        if (ImGui::Combo("##FPUMode", &fpu_mode_idx, fpu_mode_items, IM_ARRAYSIZE(fpu_mode_items))) {
-            settings::set_bool(o.fpu_softfloat, changed_prefs, ctx, fpu_mode_idx == softfloat_idx);
+        if (ImGui::BeginCombo("##FPUMode", fpu_mode_items[fpu_mode_idx])) {
+            for (int i = 0; i < IM_ARRAYSIZE(fpu_mode_items); i++) {
+                const ImGuiSelectableFlags flags = i == softfloat_idx && !softfloat_possible
+                    ? ImGuiSelectableFlags_Disabled : ImGuiSelectableFlags_None;
+                if (ImGui::Selectable(fpu_mode_items[i], i == fpu_mode_idx, flags)) {
+                    settings::set_bool(o.fpu_softfloat, changed_prefs, ctx, i == softfloat_idx);
 #ifdef MSVC_LONG_DOUBLE
-            if (fpu_mode_idx != softfloat_idx)
-                settings::set_bool(fpu_long_double, changed_prefs, ctx, fpu_mode_idx == 1);
+                    if (i != softfloat_idx)
+                        settings::set_bool(fpu_long_double, changed_prefs, ctx, i == 1);
 #endif
+                }
+                if (i == fpu_mode_idx)
+                    ImGui::SetItemDefaultFocus();
+            }
+            ImGui::EndCombo();
         }
         AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
         ShowHelpMarker(o.fpu_softfloat.descriptor.help);

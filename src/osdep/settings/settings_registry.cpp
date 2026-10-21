@@ -178,9 +178,22 @@ bool is_available(const definition& d, const uae_prefs& p, const context& ctx)
 bool is_choice_available(const definition& d, const uae_prefs& p, const context& ctx,
 	std::string_view choice)
 {
-	if (!is_available(d, p, ctx) || !is_choice(d, choice))
+	if (!is_available(d, p, ctx))
 		return false;
-	return !d.choice_available || d.choice_available(p, choice);
+	value v{choice, 0};
+	if (d.descriptor.type == AMIBERRY_SETTING_BOOL) {
+		if (choice != "true" && choice != "false")
+			return false;
+		v.number = choice == "true" ? 1 : 0;
+	} else {
+		if (!is_choice(d, choice))
+			return false;
+		if (d.choice_available && !d.choice_available(p, choice))
+			return false;
+		if (!parse_number(choice, true, v.number))
+			v.number = 0;
+	}
+	return !d.accepts || d.accepts(p, v);
 }
 
 void get_range(const definition& d, const uae_prefs& p, double& min, double& max)

@@ -380,10 +380,16 @@ void check_fixup_consistency()
 		CHECK(set(p, "fpu_model", "68881") == AMIBERRY_SETTINGS_OK);
 		CHECK(set(p, "cachesize", "8192") == AMIBERRY_SETTINGS_OK);
 		CHECK(p.compfpu);
-		CHECK(!available(p, "fpu_softfloat")); // the JIT FPU is on
+		// The JIT FPU refuses softfloat but keeps host floating point
+		// selectable.
+		CHECK(available(p, "fpu_softfloat"));
+		CHECK(!choice_available(p, "fpu_softfloat", "true"));
+		CHECK(choice_available(p, "fpu_softfloat", "false"));
+		CHECK(set(p, "fpu_softfloat", "true") == AMIBERRY_SETTINGS_INVALID_VALUE);
+		CHECK(set(p, "fpu_softfloat", "false") == AMIBERRY_SETTINGS_OK);
 		CHECK(set(p, "cpu_model", "68000") == AMIBERRY_SETTINGS_OK);
 		CHECK(p.cachesize == 0 && p.fpu_model == 68881);
-		CHECK(available(p, "fpu_softfloat"));
+		CHECK(choice_available(p, "fpu_softfloat", "true"));
 		CHECK(set(p, "fpu_softfloat", "true") == AMIBERRY_SETTINGS_OK);
 		CHECK(survives("fpu_softfloat"));
 

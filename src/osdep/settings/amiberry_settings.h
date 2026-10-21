@@ -124,6 +124,8 @@ AMIBERRY_SETTINGS_API amiberry_settings_status amiberry_settings_set(amiberry_se
 	const char *id, const char *value);
 
 AMIBERRY_SETTINGS_API bool amiberry_settings_is_available(const amiberry_settings_session *session, const char *id);
+/* Whether a CHOICE or BOOL option accepts this value now ("true"/"false" for
+   BOOL): a front end greys out the values that return false. */
 AMIBERRY_SETTINGS_API bool amiberry_settings_choice_is_available(const amiberry_settings_session *session,
 	const char *id, const char *value);
 /* The range an INT or REAL option accepts now; false for other types. */

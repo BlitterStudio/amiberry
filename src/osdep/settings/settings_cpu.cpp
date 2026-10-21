@@ -387,11 +387,12 @@ void set_fpu_msvc_long_double(uae_prefs& p, const value& v)
 }
 #endif
 
-// The JIT FPU emulates the FPU with host floating point, so softfloat is
-// unavailable while a JIT that fixup_cpu() keeps has its FPU on.
-bool fpu_softfloat_available(const uae_prefs& p, const context&)
+// The JIT FPU emulates the FPU with host floating point, so softfloat cannot
+// be switched on while a JIT that fixup_cpu() keeps has its FPU on.
+// Switching it off (to a host mode) is always possible.
+bool fpu_softfloat_accepts(const uae_prefs& p, const value& v)
 {
-	return p.fpu_model > 0 && !(effective_jit_cache(p) && p.compfpu);
+	return v.number == 0 || !(effective_jit_cache(p) && p.compfpu);
 }
 
 void get_fpu_no_unimplemented(const uae_prefs& p, char* out, size_t size)
@@ -806,7 +807,7 @@ const definition definitions[] = {
 	{BOOL_OPTION("fpu_softfloat", "fpu", "Softfloat FPU (80-bit)",
 			"FPU precision mode. Softfloat is most accurate but slowest.",
 			AMIBERRY_APPLY_LIVE, "false", "Softfloat is not available when the JIT emulates the FPU."),
-		get_fpu_softfloat, set_fpu_softfloat, fpu_softfloat_available, nullptr, nullptr},
+		get_fpu_softfloat, set_fpu_softfloat, has_fpu, nullptr, nullptr, fpu_softfloat_accepts},
 #ifdef MSVC_LONG_DOUBLE
 	{BOOL_OPTION("fpu_msvc_long_double", "fpu", "Host FPU (80-bit)",
 			"Use the host's 80-bit floating point for the FPU.",
