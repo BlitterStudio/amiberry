@@ -90,7 +90,15 @@ int inputdevice_get_device_total(int type)
 	return type == IDTYPE_JOYSTICK ? joystick_total : type == IDTYPE_MOUSE ? mouse_total : 0;
 }
 const TCHAR* inputdevice_get_device_name(int, int) { return "Test Device"; }
-const TCHAR* inputdevice_get_device_unique_name(int, int) { return "test-unique"; }
+// Joysticks have unique names (swap_joysticks reorders them, as a hotplug
+// can); other devices share one.
+static bool swap_joysticks = false;
+const TCHAR* inputdevice_get_device_unique_name(int type, int index)
+{
+	if (type == IDTYPE_JOYSTICK && (index == 0 || index == 1))
+		return (index == 0) != swap_joysticks ? "pad-a" : "pad-b";
+	return "test-unique";
+}
 struct didata di_joystick[MAX_INPUT_DEVICES];
 bool joystick_refresh_needed;
 void inputdevice_validate_jports_prefs_only(uae_prefs*, int) {}
@@ -2068,6 +2076,39 @@ void check_input_domain()
 	// The configuration stores a mode and mouse map for ports 1 and 2 only.
 	CHECK(settings::find("joyport1mode") && settings::find("joyport1mousemap"));
 	CHECK(!settings::find("joyport2mode") && !settings::find("joyport3mousemap"));
+
+	// A port's settings merge one by one: a session's autofire change keeps
+	// a mode changed elsewhere meanwhile.
+	{
+		reset_prefs(changed_prefs);
+		amiberry_settings_session* session = amiberry_settings_session_open();
+		CHECK(amiberry_settings_set(session, "joyport1autofire", "normal") == AMIBERRY_SETTINGS_OK);
+		changed_prefs.jports[1].mode = JSEM_MODE_GAMEPAD; // meanwhile
+		bool committed = false;
+		amiberry_settings_commit(session, &committed);
+		CHECK(committed && changed_prefs.jports[1].autofire == 1
+			&& changed_prefs.jports[1].mode == JSEM_MODE_GAMEPAD);
+		amiberry_settings_session_close(session);
+	}
+
+	// An open session's joystick follows its device when the host list is
+	// reordered.
+	{
+		reset_prefs(changed_prefs);
+		joystick_total = 2;
+		amiberry_settings_refresh_choices();
+		amiberry_settings_session* session = amiberry_settings_session_open();
+		CHECK(amiberry_settings_set(session, "joyport1", "joy1") == AMIBERRY_SETTINGS_OK); // pad-b
+		swap_joysticks = true;
+		amiberry_settings_refresh_choices();
+		char port[AMIBERRY_SETTINGS_VALUE_MAX];
+		CHECK(amiberry_settings_get(session, "joyport1", port, sizeof port) == AMIBERRY_SETTINGS_OK);
+		CHECK(std::strcmp(port, "joy0") == 0);
+		amiberry_settings_session_close(session);
+		swap_joysticks = false;
+		joystick_total = 1;
+		amiberry_settings_refresh_choices();
+	}
 }
 
 void check_onscreen_domain()
@@ -2093,6 +2134,9 @@ void check_onscreen_domain()
 	CHECK(set(p, "amiberry.vkbd_toggle", "leftshoulder") == AMIBERRY_SETTINGS_OK);
 	CHECK(set(p, "amiberry.vkbd_toggle", "") == AMIBERRY_SETTINGS_OK);
 	CHECK(value_of(p, "amiberry.vkbd_toggle") == "");
+	// A binding longer than the field is refused, not truncated.
+	CHECK(set(p, "amiberry.vkbd_toggle", std::string(sizeof p.vkbd_toggle, 'a').c_str())
+		== AMIBERRY_SETTINGS_INVALID_VALUE);
 	CHECK(set(p, "amiberry.use_retroarch_vkbd", "true") == AMIBERRY_SETTINGS_OK);
 	CHECK(!available(p, "amiberry.vkbd_toggle"));
 }

@@ -682,8 +682,11 @@ bool commit_sound(const uae_prefs& base, const uae_prefs& from, uae_prefs& to,
 	FIELD(sound_filter_type);
 	FIELD(sound_stereo_swap_paula);
 	FIELD(sound_stereo_swap_ahi);
-	FIELD(dfxclickvolume_disk);
-	FIELD(dfxclickvolume_empty);
+	// One option per drive, merged one by one.
+	for (int i = 0; i < 4; i++) {
+		FIELD(dfxclickvolume_disk[i]);
+		FIELD(dfxclickvolume_empty[i]);
+	}
 #undef FIELD
 	for (int i = 0; i < 4; i++)
 		wrote |= commit_field(base.floppyslots[i].dfxclick, from.floppyslots[i].dfxclick,

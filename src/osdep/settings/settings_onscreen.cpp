@@ -107,7 +107,14 @@ void get_vkbd_toggle(const uae_prefs& p, char* out, size_t size)
 void set_vkbd_toggle(uae_prefs& p, const value& v)
 {
 	std::snprintf(p.vkbd_toggle, sizeof p.vkbd_toggle, "%.*s",
-		static_cast<int>(sizeof p.vkbd_toggle - 1), v.text.data());
+		static_cast<int>(v.text.size()), v.text.data());
+}
+
+// A binding that does not fit the field is refused rather than truncated
+// into a different one.
+bool vkbd_toggle_fits(const uae_prefs& p, const value& v)
+{
+	return v.text.size() < sizeof p.vkbd_toggle;
 }
 
 bool vkbd_toggle_available(const uae_prefs& p, const context&)
@@ -159,7 +166,7 @@ const definition definitions[] = {
 			"unbinds it.",
 			AMIBERRY_APPLY_LIVE, vkbd_toggle_default,
 			"Needs the on-screen keyboard enabled and the RetroArch Vkbd button off."),
-		get_vkbd_toggle, set_vkbd_toggle, vkbd_toggle_available, nullptr, nullptr, nullptr},
+		get_vkbd_toggle, set_vkbd_toggle, vkbd_toggle_available, nullptr, nullptr, vkbd_toggle_fits},
 	{BOOL_OPTION("amiberry.use_retroarch_vkbd", "onscreen", "Use RetroArch Vkbd button",
 			"Use the front end's RetroArch keyboard button instead of a custom toggle.",
 			AMIBERRY_APPLY_LIVE, "false", nullptr),

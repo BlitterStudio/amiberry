@@ -6273,6 +6273,9 @@ static void inputdevice_checkconfig (void)
 			currprefs.jports[i].mode != changed_prefs.jports[i].mode ||
 			currprefs.jports[i].submode != changed_prefs.jports[i].submode ||
 			currprefs.jports[i].autofire != changed_prefs.jports[i].autofire ||
+#ifdef AMIBERRY
+			currprefs.jports[i].mousemap != changed_prefs.jports[i].mousemap ||
+#endif
 			_tcscmp(currprefs.jports_custom[i].custom, changed_prefs.jports_custom[i].custom))
 				changed = true;
 	}
@@ -6288,6 +6291,9 @@ static void inputdevice_checkconfig (void)
 		currprefs.input_autoswitchleftright != changed_prefs.input_autoswitchleftright ||
 		currprefs.input_device_match_mask != changed_prefs.input_device_match_mask ||
 		currprefs.input_mouse_speed != changed_prefs.input_mouse_speed ||
+#ifdef AMIBERRY
+		currprefs.input_joystick_up_button != changed_prefs.input_joystick_up_button ||
+#endif
 		currprefs.input_tablet != changed_prefs.input_tablet) {
 			const bool refresh_tablet_session = input_acquired
 				&& currprefs.input_tablet != changed_prefs.input_tablet
@@ -6305,6 +6311,9 @@ static void inputdevice_checkconfig (void)
 			currprefs.input_autoswitch = changed_prefs.input_autoswitch;
 			currprefs.input_autoswitchleftright = changed_prefs.input_autoswitchleftright;
 			currprefs.input_device_match_mask = changed_prefs.input_device_match_mask;
+#ifdef AMIBERRY
+			currprefs.input_joystick_up_button = changed_prefs.input_joystick_up_button;
+#endif
 
 			if (currprefs.input_tablet != changed_prefs.input_tablet) {
 				currprefs.input_tablet = changed_prefs.input_tablet;

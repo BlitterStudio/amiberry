@@ -1010,7 +1010,10 @@ bool commit_display(const uae_prefs& base, const uae_prefs& from, uae_prefs& to,
 	FIELD(gfx_resolution);
 	FIELD(gfx_overscanmode);
 	FIELD(gfx_autoresolution);
-	FIELD(cr);
+	// Each entry is its own option (displaydata_pal, displaydata_ntsc), so
+	// they are merged one by one.
+	for (int i = 0; i < MAX_CHIPSET_REFRESH_TOTAL; i++)
+		FIELD(cr[i]);
 	FIELD(cr_selected);
 	FIELD(gfx_luminance);
 	FIELD(gfx_contrast);

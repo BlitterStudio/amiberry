@@ -490,8 +490,9 @@ int check_prefs_changed_gfx()
 
 	bool changed = false;
 	for (int i = 0; i < MAX_CHIPSET_REFRESH_TOTAL; i++) {
-		if (currprefs.cr[i].rate != changed_prefs.cr[i].rate ||
-			currprefs.cr[i].locked != changed_prefs.cr[i].locked) {
+		// Every field of an entry (lace, vsync, resolution, commands...)
+		// can change, not only the rate and lock the panel edits.
+		if (std::memcmp(&currprefs.cr[i], &changed_prefs.cr[i], sizeof(struct chipset_refresh)) != 0) {
 			memcpy(&currprefs.cr[i], &changed_prefs.cr[i], sizeof(struct chipset_refresh));
 			changed = true;
 		}

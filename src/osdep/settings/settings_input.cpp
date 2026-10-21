@@ -118,12 +118,16 @@ std::vector<std::string> port_choice_tokens;
 std::vector<std::string> port_choice_labels;
 std::vector<amiberry_setting_choice> port_choice_items;
 
+void remap_session_ports();
+
 void port_dynamic_choices(const uae_prefs&, choice_list& out)
 {
 	// The joystick list is rebuilt after a device change (the input system
 	// sets joystick_refresh_needed, and this is the one consumer that
 	// clears it again); the first use builds it.
 	if (!port_devices_valid || joystick_refresh_needed) {
+		if (port_devices_valid)
+			remap_session_ports(); // the host's devices changed
 		free_port_devices();
 		build_port_devices();
 		joystick_refresh_needed = false;
@@ -147,6 +151,7 @@ void port_dynamic_choices(const uae_prefs&, choice_list& out)
 
 void refresh_port_choices()
 {
+	remap_session_ports();
 	free_port_devices();
 	joystick_refresh_needed = true;
 }
@@ -201,6 +206,36 @@ void get_joyport(const uae_prefs& p, char* out, size_t size, int port)
 // configuration: store the device, then let the core's port validation
 // resolve duplicate assignments and device identities. The prefs-only
 // validation keeps session copies free of global device state.
+// The host device a port id names (a joystick or a mouse); type is -1 for
+// the others (keyboard layouts, custom, none).
+int port_device_type(int id, int& index)
+{
+	if (id >= JSEM_JOYS && id < JSEM_MICE) {
+		index = id - JSEM_JOYS;
+		return IDTYPE_JOYSTICK;
+	}
+	if (id >= JSEM_MICE && id < JSEM_END) {
+		index = id - JSEM_MICE;
+		return IDTYPE_MOUSE;
+	}
+	index = -1;
+	return -1;
+}
+
+// A port remembers which device it holds by name, as the configuration
+// does (joyportN_friendlyname/_name), so a device list that changes order
+// can be matched again (remap_session_ports).
+void set_port_identity(jport& jp)
+{
+	int index;
+	const int type = port_device_type(jp.id, index);
+	const TCHAR* name = type >= 0 ? inputdevice_get_device_name(type, index) : nullptr;
+	const TCHAR* unique = type >= 0 ? inputdevice_get_device_unique_name(type, index) : nullptr;
+	_sntprintf(jp.idc.name, MAX_JPORT_NAME, _T("%s"), name ? name : _T(""));
+	_sntprintf(jp.idc.configname, MAX_JPORT_CONFIG, _T("%s"), unique ? unique : _T(""));
+	jp.idc.shortid[0] = 0;
+}
+
 void set_joyport(uae_prefs& p, const value& v, int port)
 {
 	bool ok = false;
@@ -208,7 +243,41 @@ void set_joyport(uae_prefs& p, const value& v, int port)
 	if (!ok)
 		return;
 	p.jports[port].id = id;
+	set_port_identity(p.jports[port]);
 	inputdevice_validate_jports_prefs_only(&p, port);
+}
+
+// After the host's device list changed, an open session's port id may name
+// a different device at the same index. Each port holding a joystick or a
+// mouse is matched again by the device's unique name; a device that is gone
+// leaves the port empty rather than on whichever device took its index.
+// The live configurations are matched by the input system itself.
+void remap_session_ports()
+{
+	for_each_session_config([](uae_prefs& p, void*) {
+		for (int port = 0; port < MAX_JPORTS; port++) {
+			jport& jp = p.jports[port];
+			int index;
+			const int type = port_device_type(jp.id, index);
+			if (type < 0 || !jp.idc.configname[0])
+				continue;
+			const int base = type == IDTYPE_JOYSTICK ? JSEM_JOYS : JSEM_MICE;
+			int found = -1;
+			for (int d = 0; d < inputdevice_get_device_total(type); d++) {
+				const TCHAR* unique = inputdevice_get_device_unique_name(type, d);
+				if (unique && !_tcscmp(unique, jp.idc.configname)) {
+					found = d;
+					break;
+				}
+			}
+			if (found >= 0) {
+				jp.id = base + found;
+			} else {
+				jp.id = JPORT_NONE;
+				jp.idc = {};
+			}
+		}
+	}, nullptr);
 }
 
 const amiberry_setting_choice autofire_choices[] = {
@@ -625,7 +694,8 @@ const definition definitions[] = {
 		nullptr},
 	{BOOL_OPTION("tablet_library", "input", "Tablet.library emulation",
 			"Emulate the Amiga tablet.library for graphics tablets.",
-			AMIBERRY_APPLY_LIVE, "false", "Needs the virtual mouse driver installed."),
+			AMIBERRY_APPLY_RESET, "false",
+			"Needs the virtual mouse driver installed. AmigaOS sees the library after a reset."),
 		get_tablet_library, set_tablet_library, tablet_option_available, nullptr, nullptr,
 		nullptr},
 	{CHOICE_OPTION("absolute_mouse", "input", "Tablet mode",
@@ -640,8 +710,24 @@ bool commit_input(const uae_prefs& base, const uae_prefs& from, uae_prefs& to,
 {
 	bool wrote = false;
 #define FIELD(f) wrote |= commit_field(base.f, from.f, to.f)
-	for (int i = 0; i < MAX_JPORTS; i++)
-		wrote |= commit_field(base.jports[i], from.jports[i], to.jports[i]);
+	// Each port's settings are separate options, so they are merged one by
+	// one: a session that changed a port's autofire keeps a mode changed
+	// elsewhere meanwhile. The device is its id with its identity.
+	for (int i = 0; i < MAX_JPORTS; i++) {
+		const jport& b = base.jports[i];
+		const jport& f = from.jports[i];
+		jport& t = to.jports[i];
+		if (b.id != f.id || std::memcmp(&b.idc, &f.idc, sizeof b.idc) != 0) {
+			wrote |= t.id != f.id || std::memcmp(&t.idc, &f.idc, sizeof t.idc) != 0;
+			t.id = f.id;
+			t.idc = f.idc;
+		}
+		wrote |= commit_field(b.mode, f.mode, t.mode);
+		wrote |= commit_field(b.submode, f.submode, t.submode);
+		wrote |= commit_field(b.autofire, f.autofire, t.autofire);
+		wrote |= commit_field(b.mousemap, f.mousemap, t.mousemap);
+		wrote |= commit_field(b.nokeyboardoverride, f.nokeyboardoverride, t.nokeyboardoverride);
+	}
 	FIELD(input_autoswitch);
 	FIELD(input_multi_mouse);
 	FIELD(input_joystick_up_button);
