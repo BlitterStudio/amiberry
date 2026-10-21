@@ -28,7 +28,10 @@ ffmpeg -nostdin -loglevel error -y -f lavfi -i 'testsrc2=size=160x120:rate=25:du
 # FFmpeg builds without libvorbis (Homebrew 9.x) still ship the native
 # experimental Vorbis encoder; it needs stereo input and -strict -2.
 vorbis_args=libvorbis
-if ! ffmpeg -hide_banner -encoders 2>/dev/null | grep -q libvorbis; then
+# Capture the list first: with pipefail, grep -q closing the pipe early makes
+# ffmpeg die of SIGPIPE, which would read as "no libvorbis".
+encoders=$(ffmpeg -hide_banner -encoders 2>/dev/null)
+if ! grep -q libvorbis <<<"$encoders"; then
 	vorbis_args='vorbis -strict -2'
 fi
 ffmpeg -nostdin -loglevel error -y -f lavfi -i 'sine=frequency=440:sample_rate=44100:duration=1' -c:a mp2 -b:a 128k -f mpeg "$audio_only"

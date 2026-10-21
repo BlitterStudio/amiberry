@@ -22,7 +22,10 @@ trap 'rm -f "$out" "$mp3" "$mono_mp3" "$low_mp3" "$flac16" "$flac24" "$vorbis" "
 # FFmpeg builds without libvorbis (Homebrew 9.x) still ship the native
 # experimental Vorbis encoder; it needs stereo input and -strict -2.
 vorbis_args=libvorbis
-if ! ffmpeg -hide_banner -encoders 2>/dev/null | grep -q libvorbis; then
+# Capture the list first: with pipefail, grep -q closing the pipe early makes
+# ffmpeg die of SIGPIPE, which would read as "no libvorbis".
+encoders=$(ffmpeg -hide_banner -encoders 2>/dev/null)
+if ! grep -q libvorbis <<<"$encoders"; then
 	vorbis_args='vorbis -strict -2'
 fi
 ffmpeg -nostdin -loglevel error -f lavfi -i 'sine=frequency=440:duration=0.35' \

@@ -37,7 +37,10 @@ data = b'\x89PNG\r\n\x1a\n' + chunk(b'IHDR', struct.pack('>IIBBBBB', 4, 3, 8, 6,
 open(sys.argv[1], 'wb').write(data)
 PY
 ffmpeg -nostdin -loglevel error -y -i "$png" -frames:v 1 "$jpeg"
-if ffmpeg -hide_banner -encoders 2>/dev/null | grep -q libwebp; then
+# Capture the list first: with pipefail, grep -q closing the pipe early makes
+# ffmpeg die of SIGPIPE and the test fail even when the encoder exists.
+encoders=$(ffmpeg -hide_banner -encoders 2>/dev/null)
+if grep -q libwebp <<<"$encoders"; then
 	ffmpeg -nostdin -loglevel error -y -i "$png" -frames:v 1 -c:v libwebp "$webp_lossy"
 	ffmpeg -nostdin -loglevel error -y -i "$png" -frames:v 1 -c:v libwebp -lossless 1 "$webp_lossless"
 	ffmpeg -nostdin -loglevel error -y -i "$alpha_png" -frames:v 1 -c:v libwebp -lossless 1 -pix_fmt bgra "$webp_alpha"
