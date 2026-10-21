@@ -201,6 +201,36 @@ Amiberry MCP controller currently uses 50 ms between press/move/release
 phases), but that timing and the raw button-mask sequence are private
 implementation details rather than public API parameters.
 
+## Settings edit session
+
+The `SETTINGS_*` commands expose one edit session of the shared settings
+layer (`src/osdep/settings/amiberry_settings.h`), so a controller can edit
+the pending configuration end to end with validation and commit semantics
+instead of the handful of `SET_CONFIG` options. Like every command they run
+on the emulation thread.
+
+- `SETTINGS_GET <id>` replies `OK <id>=<value>` with the value in `.uae`
+  spelling. Unknown option IDs reply `ERROR Unknown option: <id>`.
+- `SETTINGS_SET <id> <value>` stores a checked value in the session and
+  applies the dependent changes the GUI applies. Invalid or unavailable
+  values reply `ERROR` with the reason.
+- `SETTINGS_VALIDATE` runs the core's configuration fixups as a preview and
+  replies `OK` with one field per adjustment they would make
+  (`<id>=<requested>-><adjusted> (<reason>)`), or `OK none`. The session is
+  not modified and nothing is logged.
+- `SETTINGS_COMMIT` stores the session into the pending configuration and
+  replies `OK changed=<true|false> apply=<live|reset|restart>`, the
+  strongest apply class among the changed options. When something changed it
+  also signals the running emulation like `SET_CONFIG` does, so live options
+  take effect at once. The session stays open and continues from the stored
+  state.
+- `SETTINGS_RESET_SESSION` discards the session's uncommitted edits; the
+  next `SETTINGS_*` command opens a fresh one from the current pending
+  configuration.
+
+Option IDs and values are exactly the `.uae` keys and spellings the layer
+defines; `amiberry_settings_count()`/`amiberry_settings_at()` list them.
+
 ## Debugger monitor
 
 `MONITOR <text>` runs the same command text as GDB `monitor <text>`. The

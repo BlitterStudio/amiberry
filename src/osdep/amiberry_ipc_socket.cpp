@@ -6,6 +6,8 @@
 #ifdef USE_IPC_SOCKET
 
 #include "amiberry_ipc.h"
+#include "settings/amiberry_actions.h"
+#include "settings/amiberry_settings.h"
 #include "sysdeps.h"
 #include "amiberry_gfx.h"
 #include "options.h"
@@ -223,12 +225,38 @@ static std::string guarded_input_response(
 		applied, amiberry_gui_guarded_response_fields(response));
 }
 
-// Command handlers - reusing logic from DBus implementation
+// Command handlers. Runtime actions go through the shared actions API: the
+// handler posts the action and runs it at once (IPC handlers already run on
+// the emulator's main thread), so the reply reports what the action did.
+
+static bool run_posted(amiberry_action_id id, std::string* error)
+{
+	char message[512];
+	message[0] = 0;
+	amiberry_actions_run_pending();
+	const amiberry_action_result result =
+		amiberry_actions_poll(id, message, sizeof message);
+	if (error)
+		*error = message;
+	return result == AMIBERRY_ACTION_DONE;
+}
+
+static std::string run_posted_reply(amiberry_action_id id)
+{
+	std::string error;
+	if (id != 0 && run_posted(id, &error))
+		return make_response(true);
+	return make_response(false, {error.empty() ? "Action was not executed" : error});
+}
+
 static std::string HandleQuit(const std::vector<std::string>& args)
 {
 	if (!currprefs.ipc_disable_logging) {
 		std::cout << "IPC: Received QUIT" << std::endl;
 	}
+	// Posted now, executed by IPCHandle() after this pass has written the
+	// reply, exactly like the old deferred uae_quit().
+	amiberry_actions_quit();
 	ipc_quit_requested = true;
 	return make_response(true);
 }
@@ -238,9 +266,7 @@ static std::string HandlePause(const std::vector<std::string>& args)
 	if (!currprefs.ipc_disable_logging) {
 		std::cout << "IPC: Received PAUSE" << std::endl;
 	}
-	setpaused(3);
-	activationtoggle(0, true);
-	return make_response(true);
+	return run_posted_reply(amiberry_actions_pause());
 }
 
 static std::string HandleResume(const std::vector<std::string>& args)
@@ -248,9 +274,7 @@ static std::string HandleResume(const std::vector<std::string>& args)
 	if (!currprefs.ipc_disable_logging) {
 		std::cout << "IPC: Received RESUME" << std::endl;
 	}
-	resumepaused(3);
-	activationtoggle(0, false);
-	return make_response(true);
+	return run_posted_reply(amiberry_actions_resume());
 }
 
 static std::string HandleReset(const std::vector<std::string>& args)
@@ -273,8 +297,7 @@ static std::string HandleReset(const std::vector<std::string>& args)
 		}
 	}
 
-	uae_reset(hard, keyboard);
-	return make_response(true);
+	return run_posted_reply(amiberry_actions_reset(hard, keyboard));
 }
 
 static std::string HandleScreenshot(const std::vector<std::string>& args)
@@ -311,13 +334,10 @@ static std::string HandleScreenshot(const std::vector<std::string>& args)
 			amiberry_gui_actionable_fields(args[0], snapshot));
 	}
 
-	if (!create_screenshot()) {
-		return make_response(false, {"Failed to create screenshot"});
-	}
-
-	int ret = save_thumb(args[0]);
-	if (ret == 0) {
-		return make_response(false, {"Failed to save screenshot to: " + args[0]});
+	std::string error;
+	const amiberry_action_id id = amiberry_actions_screenshot(args[0].c_str());
+	if (id == 0 || !run_posted(id, &error)) {
+		return make_response(false, {error.empty() ? "Action was not executed" : error});
 	}
 
 	return make_response(true, {args[0]});
@@ -340,8 +360,11 @@ static std::string HandleSavestate(const std::vector<std::string>& args)
 		return make_response(false, {"Path exceeds maximum length"});
 	}
 
-	savestate_initsave(args[0].c_str(), 1, true, true);
-	save_state(args[0].c_str(), "...");
+	std::string error;
+	const amiberry_action_id id = amiberry_actions_save_state(args[0].c_str());
+	if (id == 0 || !run_posted(id, &error)) {
+		return make_response(false, {error.empty() ? "Action was not executed" : error});
+	}
 
 	strncpy(changed_prefs.description, "autosave", sizeof(changed_prefs.description));
 	cfgfile_save(&changed_prefs, args[1].c_str(), 0);
@@ -361,9 +384,7 @@ static std::string HandleLoadState(const std::vector<std::string>& args)
 		return make_response(false, {"Path exceeds maximum length"});
 	}
 
-	savestate_state = STATE_DORESTORE;
-	_tcscpy(savestate_fname, args[0].c_str());
-	return make_response(true);
+	return run_posted_reply(amiberry_actions_load_state(args[0].c_str()));
 }
 
 static std::string HandleDiskSwap(const std::vector<std::string>& args)
@@ -387,14 +408,7 @@ static std::string HandleDiskSwap(const std::vector<std::string>& args)
 		return make_response(false, {"Invalid disk or drive number"});
 	}
 
-	for (int i = 0; i < 4; i++) {
-		if (!_tcscmp(currprefs.floppyslots[i].df, currprefs.dfxlist[disknum]))
-			changed_prefs.floppyslots[i].df[0] = 0;
-	}
-	_tcscpy(changed_prefs.floppyslots[drivenum].df, currprefs.dfxlist[disknum]);
-	set_config_changed();
-
-	return make_response(true);
+	return run_posted_reply(amiberry_actions_insert_swapper_entry(disknum, drivenum));
 }
 
 static std::string HandleQueryDiskSwap(const std::vector<std::string>& args)
@@ -451,12 +465,7 @@ static std::string HandleInsertFloppy(const std::vector<std::string>& args)
 		return make_response(false, {"Drive number must be 0-3"});
 	}
 
-	_tcsncpy(changed_prefs.floppyslots[drivenum].df, args[0].c_str(), MAX_DPATH);
-	changed_prefs.floppyslots[drivenum].df[MAX_DPATH - 1] = 0;
-	set_last_active_config_from_media(args[0].c_str());
-	set_config_changed();
-
-	return make_response(true);
+	return run_posted_reply(amiberry_actions_insert_floppy(drivenum, args[0].c_str()));
 }
 
 static std::string HandleInsertCD(const std::vector<std::string>& args)
@@ -471,13 +480,7 @@ static std::string HandleInsertCD(const std::vector<std::string>& args)
 		return make_response(false, {"Path exceeds maximum length"});
 	}
 
-	_tcsncpy(changed_prefs.cdslots[0].name, args[0].c_str(), MAX_DPATH);
-	changed_prefs.cdslots[0].name[MAX_DPATH - 1] = 0;
-	changed_prefs.cdslots[0].inuse = true;
-	set_last_active_config_from_media(args[0].c_str());
-	set_config_changed();
-
-	return make_response(true);
+	return run_posted_reply(amiberry_actions_insert_cd(args[0].c_str()));
 }
 
 static std::string HandleGetStatus(const std::vector<std::string>& args)
@@ -485,14 +488,16 @@ static std::string HandleGetStatus(const std::vector<std::string>& args)
 	if (!currprefs.ipc_disable_logging) {
 		std::cout << "IPC: Received GET_STATUS" << std::endl;
 	}
+	amiberry_actions_status status;
+	amiberry_actions_get_status(&status);
 	std::vector<std::string> responses;
 
-	responses.push_back(std::string("Paused=") + (pause_emulation ? "true" : "false"));
-	responses.push_back(std::string("Config=") + changed_prefs.description);
+	responses.push_back(std::string("Paused=") + (status.paused ? "true" : "false"));
+	responses.push_back(std::string("Config=") + status.config_description);
 
-	for (int i = 0; i < 4; ++i) {
-		if (changed_prefs.floppyslots[i].df[0])
-			responses.push_back(std::string("Floppy") + std::to_string(i) + "=" + changed_prefs.floppyslots[i].df);
+	for (int i = 0; i < AMIBERRY_ACTIONS_FLOPPY_DRIVES; ++i) {
+		if (status.floppy[i].media_path[0])
+			responses.push_back(std::string("Floppy") + std::to_string(i) + "=" + status.floppy[i].media_path);
 	}
 
 	return make_response(true, responses);
@@ -895,8 +900,7 @@ static std::string HandleEjectFloppy(const std::vector<std::string>& args)
 		return make_response(false, {"Drive number must be 0-3"});
 	}
 
-	disk_eject(drivenum);
-	return make_response(true);
+	return run_posted_reply(amiberry_actions_eject_floppy(drivenum));
 }
 
 static std::string HandleEjectCD(const std::vector<std::string>& args)
@@ -905,11 +909,7 @@ static std::string HandleEjectCD(const std::vector<std::string>& args)
 		std::cout << "IPC: Received EJECT_CD" << std::endl;
 	}
 
-	changed_prefs.cdslots[0].name[0] = 0;
-	changed_prefs.cdslots[0].inuse = false;
-	set_config_changed();
-
-	return make_response(true);
+	return run_posted_reply(amiberry_actions_eject_cd());
 }
 
 static std::string HandleSetVolume(const std::vector<std::string>& args)
@@ -1369,7 +1369,11 @@ static std::string HandleQuickSave(const std::vector<std::string>& args)
 		}
 	}
 
-	savestate_quick(slot, 1);  // 1 = save
+	std::string error;
+	const amiberry_action_id id = amiberry_actions_save_state_slot(slot);
+	if (id == 0 || !run_posted(id, &error)) {
+		return make_response(false, {error.empty() ? "Action was not executed" : error});
+	}
 	return make_response(true, {"Saved to slot " + std::to_string(slot)});
 }
 
@@ -1390,7 +1394,11 @@ static std::string HandleQuickLoad(const std::vector<std::string>& args)
 		}
 	}
 
-	savestate_quick(slot, 0);  // 0 = load
+	std::string error;
+	const amiberry_action_id id = amiberry_actions_load_state_slot(slot);
+	if (id == 0 || !run_posted(id, &error)) {
+		return make_response(false, {error.empty() ? "Action was not executed" : error});
+	}
 	return make_response(true, {"Loading from slot " + std::to_string(slot)});
 }
 
@@ -1517,27 +1525,28 @@ static std::string HandleGetLEDStatus(const std::vector<std::string>& args)
 	if (!currprefs.ipc_disable_logging) {
 		std::cout << "IPC: Received GET_LED_STATUS" << std::endl;
 	}
+	amiberry_actions_status snapshot;
+	amiberry_actions_get_status(&snapshot);
 	std::vector<std::string> responses;
 
 	// Power LED
-	responses.push_back("power=" + std::to_string(gui_data.powerled));
+	responses.push_back("power=" + std::to_string(snapshot.power_led ? 1 : 0));
 
 	// Floppy drive LEDs (DF0-DF3)
-	for (int i = 0; i < 4; ++i) {
-		bool motor_on = gui_data.drives[i].drive_motor;
-		bool writing = gui_data.drives[i].drive_writing;
-		std::string status = motor_on ? (writing ? "writing" : "reading") : "off";
+	for (int i = 0; i < AMIBERRY_ACTIONS_FLOPPY_DRIVES; ++i) {
+		const auto& drive = snapshot.floppy[i];
+		std::string status = drive.motor_on ? (drive.writing ? "writing" : "reading") : "off";
 		responses.push_back("df" + std::to_string(i) + "=" + status);
 	}
 
 	// HD LED
-	responses.push_back("hd=" + std::to_string(gui_data.hd));
+	responses.push_back("hd=" + std::to_string(snapshot.hd_activity));
 
 	// CD LED
-	responses.push_back("cd=" + std::to_string(gui_data.cd));
+	responses.push_back("cd=" + std::to_string(snapshot.cd_activity));
 
 	// Caps Lock
-	responses.push_back("caps=" + std::to_string(gui_data.capslock ? 1 : 0));
+	responses.push_back("caps=" + std::to_string(snapshot.caps_lock ? 1 : 0));
 
 	return make_response(true, responses);
 }
@@ -3275,10 +3284,160 @@ static std::string HandleHelp(const std::vector<std::string>& args)
 	commands.emplace_back("GET_DRIVE_STATE [drive], GET_AUDIO_STATE, GET_DMA_STATE");
 #endif
 	commands.emplace_back("GET_VERSION, PING, HELP");
+	commands.emplace_back("SETTINGS_GET <id>");
+	commands.emplace_back("SETTINGS_SET <id> <value>");
+	commands.emplace_back("SETTINGS_VALIDATE");
+	commands.emplace_back("SETTINGS_COMMIT");
+	commands.emplace_back("SETTINGS_RESET_SESSION");
 	return make_response(true, commands);
 }
 
 // Initialize command handlers
+// === Settings edit session commands ===
+// One session owned by the IPC server, executed on the main thread like
+// every other handler. Lazily opened; SETTINGS_RESET_SESSION discards it.
+static amiberry_settings_session* ipc_settings_session;
+
+static amiberry_settings_session* settings_session()
+{
+	if (!ipc_settings_session)
+		ipc_settings_session = amiberry_settings_session_open();
+	return ipc_settings_session;
+}
+
+static void close_settings_session()
+{
+	if (ipc_settings_session) {
+		amiberry_settings_session_close(ipc_settings_session);
+		ipc_settings_session = nullptr;
+	}
+}
+
+static std::string settings_status_message(amiberry_settings_status status,
+	const std::string& id, const std::string& value)
+{
+	switch (status) {
+	case AMIBERRY_SETTINGS_OK:
+		return "OK";
+	case AMIBERRY_SETTINGS_UNKNOWN_ID:
+		return "Unknown option: " + id;
+	case AMIBERRY_SETTINGS_INVALID_VALUE:
+		return "Invalid value for " + id + ": " + value;
+	case AMIBERRY_SETTINGS_UNAVAILABLE:
+		return "Option unavailable now: " + id;
+	case AMIBERRY_SETTINGS_BUFFER_TOO_SMALL:
+		return "Value too long";
+	}
+	return "Settings error";
+}
+
+static std::string HandleSettingsGet(const std::vector<std::string>& args)
+{
+	if (!currprefs.ipc_disable_logging) {
+		std::cout << "IPC: Received SETTINGS_GET" << std::endl;
+	}
+	if (args.size() < 1) {
+		return make_response(false, {"Usage: SETTINGS_GET <id>"});
+	}
+	amiberry_settings_session* session = settings_session();
+	if (!session) {
+		return make_response(false, {"Out of memory"});
+	}
+	char value[AMIBERRY_SETTINGS_VALUE_MAX];
+	const amiberry_settings_status status =
+		amiberry_settings_get(session, args[0].c_str(), value, sizeof value);
+	if (status != AMIBERRY_SETTINGS_OK) {
+		return make_response(false, {settings_status_message(status, args[0], "")});
+	}
+	return make_response(true, {args[0] + "=" + value});
+}
+
+static std::string HandleSettingsSet(const std::vector<std::string>& args)
+{
+	if (!currprefs.ipc_disable_logging) {
+		std::cout << "IPC: Received SETTINGS_SET" << std::endl;
+	}
+	if (args.size() < 2) {
+		return make_response(false, {"Usage: SETTINGS_SET <id> <value>"});
+	}
+	amiberry_settings_session* session = settings_session();
+	if (!session) {
+		return make_response(false, {"Out of memory"});
+	}
+	const amiberry_settings_status status =
+		amiberry_settings_set(session, args[0].c_str(), args[1].c_str());
+	if (status != AMIBERRY_SETTINGS_OK) {
+		return make_response(false, {settings_status_message(status, args[0], args[1])});
+	}
+	return make_response(true);
+}
+
+static std::string HandleSettingsValidate(const std::vector<std::string>& args)
+{
+	if (!currprefs.ipc_disable_logging) {
+		std::cout << "IPC: Received SETTINGS_VALIDATE" << std::endl;
+	}
+	amiberry_settings_session* session = settings_session();
+	if (!session) {
+		return make_response(false, {"Out of memory"});
+	}
+	const size_t option_count = amiberry_settings_count();
+	std::vector<amiberry_settings_adjustment> adjustments(option_count);
+	const size_t found = amiberry_settings_validate(session,
+		adjustments.empty() ? nullptr : adjustments.data(), adjustments.size());
+	if (found == 0) {
+		return make_response(true, {"none"});
+	}
+	std::vector<std::string> fields;
+	for (size_t i = 0; i < found && i < adjustments.size(); ++i) {
+		fields.push_back(std::string(adjustments[i].id)
+			+ "=" + adjustments[i].requested
+			+ "->" + adjustments[i].adjusted
+			+ " (" + (adjustments[i].reason ? adjustments[i].reason : "") + ")");
+	}
+	return make_response(true, fields);
+}
+
+static const char* apply_class_name(amiberry_apply_class apply)
+{
+	switch (apply) {
+	case AMIBERRY_APPLY_LIVE: return "live";
+	case AMIBERRY_APPLY_RESET: return "reset";
+	case AMIBERRY_APPLY_RESTART: return "restart";
+	}
+	return "restart";
+}
+
+static std::string HandleSettingsCommit(const std::vector<std::string>& args)
+{
+	if (!currprefs.ipc_disable_logging) {
+		std::cout << "IPC: Received SETTINGS_COMMIT" << std::endl;
+	}
+	amiberry_settings_session* session = settings_session();
+	if (!session) {
+		return make_response(false, {"Out of memory"});
+	}
+	bool changed = false;
+	const amiberry_apply_class apply = amiberry_settings_commit(session, &changed);
+	if (changed) {
+		// Like SET_CONFIG: make the running emulation pick up what changed.
+		set_config_changed();
+	}
+	return make_response(true, {
+		std::string("changed=") + (changed ? "true" : "false"),
+		std::string("apply=") + apply_class_name(apply)
+	});
+}
+
+static std::string HandleSettingsResetSession(const std::vector<std::string>& args)
+{
+	if (!currprefs.ipc_disable_logging) {
+		std::cout << "IPC: Received SETTINGS_RESET_SESSION" << std::endl;
+	}
+	close_settings_session();
+	return make_response(true);
+}
+
 static void InitHandlers()
 {
 	if (!command_handlers.empty()) return;
@@ -3323,6 +3482,11 @@ static void InitHandlers()
 	command_handlers[CMD_SEND_MOUSE_ABS_GUARDED] = HandleSendMouseAbsGuarded;
 	command_handlers[CMD_RELEASE_MOUSE_BUTTONS] = HandleReleaseMouseButtons;
 	command_handlers[CMD_PING] = HandlePing;
+	command_handlers[CMD_SETTINGS_GET] = HandleSettingsGet;
+	command_handlers[CMD_SETTINGS_SET] = HandleSettingsSet;
+	command_handlers[CMD_SETTINGS_VALIDATE] = HandleSettingsValidate;
+	command_handlers[CMD_SETTINGS_COMMIT] = HandleSettingsCommit;
+	command_handlers[CMD_SETTINGS_RESET_SESSION] = HandleSettingsResetSession;
 	command_handlers[CMD_HELP] = HandleHelp;
 
 	command_handlers[CMD_QUICKSAVE] = HandleQuickSave;
@@ -4272,6 +4436,7 @@ void Amiberry::IPC::IPCCleanUp()
 	}
 #endif
 
+	close_settings_session();
 	ipc_active = false;
 }
 
@@ -4351,7 +4516,9 @@ void Amiberry::IPC::IPCHandle()
 
 	if (ipc_quit_requested) {
 		ipc_quit_requested = false;
-		uae_quit();
+		// Executes the quit action HandleQuit posted (and anything queued
+		// before it), after the replies have been written.
+		amiberry_actions_run_pending();
 	}
 }
 
