@@ -265,6 +265,7 @@ extern void restore_ar_finish(void);
 extern void savestate_initsave(const TCHAR *filename, int docompress, int nodialogs, bool save);
 extern int save_state(const TCHAR *filename, const TCHAR *description);
 extern void restore_state(const TCHAR *filename);
+extern bool savestate_is_state_file(const TCHAR *filename);
 #ifdef LIBRETRO
 extern int save_state_internal(struct zfile *f, const TCHAR *description, int comp, bool savepath);
 extern void savestate_restore_memory(const uae_u8 *data, size_t size);

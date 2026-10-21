@@ -238,6 +238,13 @@ def main():
         missing = os.path.join(work, "missing.uss")
         check("LOADSTATE of a missing file fails",
               control.request(f"LOADSTATE\t{missing}").startswith("ERROR\tState file not found"))
+        # So does a file restore_state() would reject (no AmigaStateFile
+        # header): its restore would reset the guest and load nothing.
+        bogus = os.path.join(work, "bogus.uss")
+        with open(bogus, "wb") as f:
+            f.write(b"NOT A STATE FILE" * 4)
+        check("LOADSTATE of a non-state file fails",
+              control.request(f"LOADSTATE\t{bogus}").startswith("ERROR\tNot a state file"))
         # A save that cannot write its file fails the action: no success
         # reply, and no companion config either.
         bad_state = os.path.join(work, "no-such-dir", "state.uss")

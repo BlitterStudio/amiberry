@@ -167,11 +167,15 @@ bool execute(const request& r, void*, std::string* error)
 			return false;
 		}
 		// A restore is scheduled for the next vsync and starts with a reset,
-		// which happens even when the file then cannot be opened; check it
-		// first so a missing or empty path fails without touching the guest
-		// (the quick-load branch has always done the same).
+		// which happens even when restore_state() then rejects the file;
+		// check what it checks (the file opens and has the AmigaStateFile
+		// header) first, so a bad path fails without touching the guest.
 		if (r.path.empty() || !zfile_exists(r.path.c_str())) {
 			*error = "State file not found: " + r.path;
+			return false;
+		}
+		if (!savestate_is_state_file(r.path.c_str())) {
+			*error = "Not a state file: " + r.path;
 			return false;
 		}
 		savestate_state = STATE_DORESTORE;
@@ -185,7 +189,8 @@ bool execute(const request& r, void*, std::string* error)
 			return false;
 		}
 		// 0 means there was nothing to load (no usable state file name, or
-		// the slot's file does not exist); the restore was not scheduled.
+		// the slot's file is missing or not a state file); the restore was
+		// not scheduled.
 		if (savestate_quick(r.number, 0) == 0) {
 			*error = "No state file for quick-save slot " + std::to_string(r.number);
 			return false;
