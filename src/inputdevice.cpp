@@ -6264,8 +6264,12 @@ static void inputdevice_checkconfig (void)
 	// panel and the GUI exit re-enumerate when it changes; a change made
 	// any other way while running (a settings layer commit) is applied
 	// here. inputdevice_mouse_reinit() copies the mode into currprefs.
-	if (currprefs.input_multi_mouse != changed_prefs.input_multi_mouse)
+	if (currprefs.input_multi_mouse != changed_prefs.input_multi_mouse) {
 		inputdevice_mouse_reinit(&changed_prefs);
+		// The mice a port can select changed; the settings layer's port
+		// list is rebuilt from this flag, as after the Input panel's toggle.
+		joystick_refresh_needed = true;
+	}
 #endif
 	bool changed = false;
 	for (int i = 0; i < MAX_JPORTS; i++) {

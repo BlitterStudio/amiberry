@@ -696,15 +696,20 @@ void render_panel_input() {
         ImGui::AlignTextToFramePadding();
         ImGui::Text("Magic Mouse cursor:");
         ImGui::SameLine();
-        const char *magic_items[] = {"Both", "Native only", "Host only"};
 
         ImGui::BeginDisabled(!available(o.magic_mousecursor, ctx));
         {
+            // The values are words (both, native, host): the current one is
+            // matched as text.
             const amiberry_setting_descriptor& mm_desc = o.magic_mousecursor.descriptor;
-            const int cursor = static_cast<int>(settings::get_number(o.magic_mousecursor,
-                changed_prefs));
-            const char* preview = cursor >= 0 && cursor < static_cast<int>(mm_desc.choice_count)
-                ? mm_desc.choices[cursor].label : magic_items[0];
+            char current[AMIBERRY_SETTINGS_VALUE_MAX];
+            settings::get(o.magic_mousecursor, changed_prefs, current, sizeof current);
+            int cursor = -1;
+            for (size_t n = 0; n < mm_desc.choice_count; n++) {
+                if (!std::strcmp(current, mm_desc.choices[n].value))
+                    cursor = static_cast<int>(n);
+            }
+            const char* preview = cursor >= 0 ? mm_desc.choices[cursor].label : current;
             if (ImGui::BeginCombo("##MagicMouse", preview)) {
                 for (size_t n = 0; n < mm_desc.choice_count; n++) {
                     const bool is_selected = cursor == static_cast<int>(n);
