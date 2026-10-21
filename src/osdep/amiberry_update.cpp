@@ -261,7 +261,16 @@ struct DownloadContext {
 	std::atomic<bool>* cancel_flag = nullptr;
 };
 
-static std::thread s_update_thread;
+// A plain std::thread here would call std::terminate() at exit when the
+// process ends while a check is still running (for example when graphics
+// initialization fails and main() returns without uae_quit(), so nothing
+// joins it). Detaching in the destructor lets the process exit cleanly; the
+// thread dies with it. Static destructors run after the atexit handlers, so
+// nothing of ours is torn down underneath the detached thread.
+static struct UpdateThread {
+	std::thread thread;
+	~UpdateThread() { if (thread.joinable()) thread.detach(); }
+} s_update_thread;
 static std::mutex s_update_mutex;
 static std::atomic<bool> s_update_running{false};
 static std::atomic<bool> s_update_cancel{false};
@@ -1404,11 +1413,11 @@ void start_async_update_check(UpdateChannel channel)
 	s_update_running.store(true);
 	s_update_cancel.store(false);
 
-	if (s_update_thread.joinable()) {
-		s_update_thread.join();
+	if (s_update_thread.thread.joinable()) {
+		s_update_thread.thread.join();
 	}
 
-	s_update_thread = std::thread([channel]() {
+	s_update_thread.thread = std::thread([channel]() {
 		UpdateInfo result = check_for_updates(channel);
 		{
 			std::lock_guard<std::mutex> lock(s_update_mutex);
@@ -1425,8 +1434,8 @@ bool is_update_check_running()
 
 UpdateInfo get_async_update_result()
 {
-	if (s_update_thread.joinable() && !s_update_running.load()) {
-		s_update_thread.join();
+	if (s_update_thread.thread.joinable() && !s_update_running.load()) {
+		s_update_thread.thread.join();
 	}
 	std::lock_guard<std::mutex> lock(s_update_mutex);
 	return s_update_result;
@@ -1435,8 +1444,8 @@ UpdateInfo get_async_update_result()
 void cancel_async_update_check()
 {
 	s_update_cancel.store(true);
-	if (s_update_thread.joinable()) {
-		s_update_thread.join();
+	if (s_update_thread.thread.joinable()) {
+		s_update_thread.thread.join();
 	}
 	s_update_running.store(false);
 }
