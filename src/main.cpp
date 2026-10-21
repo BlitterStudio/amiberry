@@ -46,7 +46,9 @@
 #include "native2amiga.h"
 #include "savestate.h"
 #include "blkdev.h"
+#ifndef LIBRETRO
 #include "osdep/settings/settings_definitions.h"
+#endif
 #include "consolehook.h"
 #include "gfxboard.h"
 #ifdef WITH_LUA
@@ -1469,9 +1471,12 @@ static void parse_cmdline (int argc, TCHAR **argv)
 				}
 			}
 		}
+#ifndef LIBRETRO
 		// Applies a Quickstart preset (model[:config[:compatibility]], for
 		// example a1200:1:1) through the shared settings layer; combined
 		// with --dump-config it shows the configuration the preset produces.
+		// The libretro core has no settings layer; RetroArch chooses models
+		// through its own core options.
 		else if (_tcscmp(argv[i], _T("--apply-preset")) == 0) {
 			if (i + 1 == argc) {
 				write_log(_T("Missing argument for '--apply-preset' option.\n"));
@@ -1504,6 +1509,7 @@ static void parse_cmdline (int argc, TCHAR **argv)
 				}
 			}
 		}
+#endif
 		else if (_tcscmp(argv[i], _T("--statefile")) == 0) {
 			if (i + 1 == argc) {
 				write_log(_T("Missing argument for '--statefile' option.\n"));
