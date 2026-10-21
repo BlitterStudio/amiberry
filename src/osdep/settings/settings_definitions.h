@@ -83,7 +83,46 @@ T no_throw(T fallback, F&& body) noexcept
 	}
 }
 
+// Large enough for any value a descriptor can produce, including paths
+// (uae_prefs stores paths as MAX_DPATH, 4096 bytes). Public adjustment
+// reports stay limited to AMIBERRY_SETTINGS_VALUE_MAX and truncate.
+constexpr size_t max_value_length = 4096;
+
 const domain& cpu_domain();
+const domain& chipset_domain();
+const domain& memory_domain();
+const domain& rom_domain();
+const domain& machine_domain();
+
+// The Quickstart constraints that complete built_in_prefs(); applies model,
+// config and compatibility level exactly like the Quickstart panel (which
+// historically ran these steps in src/osdep/imgui/quickstart.cpp).
+void apply_preset(uae_prefs& p, int model, int config, int compatibility);
+
+// The Quickstart model table: index <-> stable preset ID. Negative for an
+// unknown ID; nullptr for an out-of-range model.
+int preset_model_index(std::string_view id);
+const char* preset_id(int model);
+
+// WinUAE copycpuboardmem(tomem = true): keeps the accelerator board RAM in
+// sync with the memory subsystem the user edited, so the core fixup (which
+// copies the other way) does not undo the edit.
+void sync_cpuboard_mem(uae_prefs& p);
+
+// Machine presets (settings_presets.cpp). The public C wrappers live next
+// to the implementations; amiberry_settings_preset_apply lives in
+// settings_session.cpp because it owns the session.
+size_t machine_preset_count();
+const amiberry_settings_preset* machine_preset_at(size_t index);
+const amiberry_settings_preset* machine_preset_find(const char* id);
+const char* machine_preset_config_label(const amiberry_settings_preset* preset, int config);
+const char* machine_preset_compatibility_label(int level);
+bool machine_preset_rom_installed(const char* id, int config);
+amiberry_settings_status apply_preset_checked(uae_prefs& p, const char* id, int config,
+	int compatibility);
+
+// Whether a and b hold the same value for d (full length, for paths).
+bool values_equal(const definition& d, const uae_prefs& a, const uae_prefs& b);
 
 size_t domain_count();
 const domain& domain_at(size_t index);

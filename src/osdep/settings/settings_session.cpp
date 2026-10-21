@@ -67,11 +67,8 @@ uae_prefs* merge_with_pending(const amiberry_settings_session& session)
 
 bool same_value(const definition& d, const uae_prefs& a, const uae_prefs& b)
 {
-	char va[AMIBERRY_SETTINGS_VALUE_MAX] = {};
-	char vb[AMIBERRY_SETTINGS_VALUE_MAX] = {};
-	d.get(a, va, sizeof va);
-	d.get(b, vb, sizeof vb);
-	return std::strcmp(va, vb) == 0;
+	// Full length, so two paths that share a prefix still differ.
+	return amiberry_settings::values_equal(d, a, b);
 }
 
 } // namespace
@@ -237,4 +234,12 @@ amiberry_apply_class amiberry_settings_commit(amiberry_settings_session* session
 	return strongest;
 }
 
+
+amiberry_settings_status amiberry_settings_preset_apply(amiberry_settings_session* session,
+	const char* id, int config, int compatibility)
+{
+	if (!session)
+		return AMIBERRY_SETTINGS_UNKNOWN_ID;
+	return amiberry_settings::apply_preset_checked(*session->working, id, config, compatibility);
+}
 }

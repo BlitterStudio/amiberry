@@ -58,7 +58,15 @@ typedef enum amiberry_setting_type {
 	AMIBERRY_SETTING_BOOL,   /* "true" or "false" */
 	AMIBERRY_SETTING_INT,    /* decimal integer within [min, max] */
 	AMIBERRY_SETTING_REAL,   /* decimal number within [min, max] */
-	AMIBERRY_SETTING_CHOICE  /* one of the descriptor's choice values */
+	AMIBERRY_SETTING_CHOICE, /* one of the descriptor's choice values */
+	/* Free-form .uae token. PATH is a file system path a front end can
+	   attach a file picker to; STRING is any other literal value, for
+	   example a hexadecimal address. These values may be longer than
+	   AMIBERRY_SETTINGS_VALUE_MAX: read them with a larger buffer (the
+	   get call reports AMIBERRY_SETTINGS_BUFFER_TOO_SMALL until it fits)
+	   and never through amiberry_settings_adjustment, which truncates. */
+	AMIBERRY_SETTING_PATH,
+	AMIBERRY_SETTING_STRING
 } amiberry_setting_type;
 
 typedef enum amiberry_apply_class {
@@ -162,6 +170,39 @@ AMIBERRY_SETTINGS_API size_t amiberry_settings_validate(const amiberry_settings_
  * caller set), AMIBERRY_APPLY_LIVE when nothing changed.
  */
 AMIBERRY_SETTINGS_API amiberry_apply_class amiberry_settings_commit(amiberry_settings_session *session, bool *changed);
+
+
+/*
+ * Machine presets (the Quickstart models). A preset replaces most of the
+ * configuration exactly like the Quickstart panel does, so it must be
+ * followed by amiberry_settings_commit().
+ */
+typedef struct amiberry_settings_preset {
+	const char *id;          /* stable ID, for example "a500" */
+	const char *label;       /* display name */
+	int config_count;        /* number of configurations */
+	int compatibility_max;   /* highest compatibility level */
+} amiberry_settings_preset;
+
+AMIBERRY_SETTINGS_API size_t amiberry_settings_preset_count(void);
+/* NULL when index >= amiberry_settings_preset_count(). */
+AMIBERRY_SETTINGS_API const amiberry_settings_preset *amiberry_settings_preset_at(size_t index);
+/* NULL for an unknown ID. */
+AMIBERRY_SETTINGS_API const amiberry_settings_preset *amiberry_settings_preset_find(const char *id);
+/* NULL when config is out of range. */
+AMIBERRY_SETTINGS_API const char *amiberry_settings_preset_config_label(
+	const amiberry_settings_preset *preset, int config);
+/* NULL when level is out of range. */
+AMIBERRY_SETTINGS_API const char *amiberry_settings_preset_compatibility_label(int level);
+/* Whether every ROM the preset's configuration needs is present in the
+   scanned ROM list; never shows a dialog or modifies anything. */
+AMIBERRY_SETTINGS_API bool amiberry_settings_preset_rom_installed(const char *id, int config);
+/* Applies the preset to the session the way Quickstart does: built-in model
+   defaults plus the Quickstart constraints. INVALID_VALUE for an unknown
+   preset or configuration, UNAVAILABLE for a compatibility level out of
+   range. Commit afterwards to store the result. */
+AMIBERRY_SETTINGS_API amiberry_settings_status amiberry_settings_preset_apply(
+	amiberry_settings_session *session, const char *id, int config, int compatibility);
 
 #ifdef __cplusplus
 }
