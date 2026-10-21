@@ -152,17 +152,6 @@ bool set_folder_path(amiberry_folder folder, const std::string& path)
 	}
 }
 
-// Saves the emulator's settings; a save that throws (out of memory while
-// building the file) counts as failed, so callers undo their change.
-bool save_settings()
-{
-	try {
-		return save_amiberry_settings_with_result();
-	} catch (...) {
-		return false;
-	}
-}
-
 // The folder the state files are in: the configuration's statefile_path
 // override names a state file, whose folder is the one in effect.
 std::string state_folder()
@@ -333,7 +322,7 @@ amiberry_settings_status amiberry_folder_set(amiberry_folder folder, const char*
 		bool saved = false;
 		try {
 			set_folder_path(folder, path);
-			saved = save_settings();
+			saved = save_amiberry_settings_with_result();
 		} catch (...) {
 		}
 		if (!saved) {
@@ -341,7 +330,10 @@ amiberry_settings_status amiberry_folder_set(amiberry_folder folder, const char*
 				set_folder_path(folder, previous);
 			} catch (...) {
 			}
-			macos_bookmarks_restore(bookmarks);
+			// If even the bookmark file cannot be written, the grant for
+			// the folder the caller picked stays on disk (logged).
+			if (!macos_bookmarks_restore(bookmarks))
+				write_log("amiberry_folder_set: the access grant for '%s' could not be withdrawn\n", path);
 			return AMIBERRY_SETTINGS_UNAVAILABLE;
 		}
 		return AMIBERRY_SETTINGS_OK;
@@ -397,7 +389,7 @@ amiberry_settings_status amiberry_media_add_recent(amiberry_media_list list, con
 		bool saved = false;
 		try {
 			add_file_to_mru_list(*recent, absolute);
-			saved = save_settings();
+			saved = save_amiberry_settings_with_result();
 		} catch (...) {
 		}
 		if (!saved) {

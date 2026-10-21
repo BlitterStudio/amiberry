@@ -7597,7 +7597,7 @@ static std::string get_settings_path_for_save(const std::string& value)
 	return path;
 }
 
-bool save_amiberry_settings_with_result()
+static bool write_amiberry_settings()
 {
 	ensure_parent_directory_exists(amiberry_conf_file);
 	// Built in memory and written with my_save_file_atomic(), which
@@ -7891,6 +7891,19 @@ bool save_amiberry_settings_with_result()
 	}
 	
 	return my_save_file_atomic(amiberry_conf_file.c_str(), content.data(), content.size());
+}
+
+// Never throws: a save that cannot build the file (out of memory) fails
+// like one that cannot write it, for the GUI's event handlers and the
+// native API alike.
+bool save_amiberry_settings_with_result()
+{
+	try {
+		return write_amiberry_settings();
+	} catch (...) {
+		write_log("Could not build the settings file '%s'\n", amiberry_conf_file.c_str());
+		return false;
+	}
 }
 
 void save_amiberry_settings()

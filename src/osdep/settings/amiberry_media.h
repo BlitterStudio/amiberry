@@ -62,8 +62,9 @@ AMIBERRY_SETTINGS_API amiberry_settings_status amiberry_folder_get(amiberry_fold
  * one the settings file cannot store as written: longer than the host's
  * path limit less one (for the separator the folder gets) or 2495 bytes,
  * with a control character, or with a space at either end. UNAVAILABLE,
- * with nothing changed, when access to the folder cannot be kept or the
- * settings file cannot be written.
+ * with the folder unchanged and its new access grant withdrawn, when access
+ * to the folder cannot be kept or the settings file cannot be written (the
+ * grant stays only if the bookmark file cannot be written either).
  */
 AMIBERRY_SETTINGS_API amiberry_settings_status amiberry_folder_set(amiberry_folder folder,
 	const char *path);

@@ -440,13 +440,13 @@ macos_bookmarks_state macos_bookmarks_save_state()
 	return state;
 }
 
-void macos_bookmarks_restore(const macos_bookmarks_state& state)
+bool macos_bookmarks_restore(const macos_bookmarks_state& state)
 {
 	@autoreleasepool
 	{
 		std::lock_guard<std::mutex> lock(s_mutex);
 		if (!s_bookmark_data || !s_active_urls || !s_bookmarks_path)
-			return;
+			return true;
 
 		// Compared as C strings, so nothing here allocates on the C++ side
 		// and the restore cannot stop halfway.
@@ -468,7 +468,11 @@ void macos_bookmarks_restore(const macos_bookmarks_state& state)
 			s_bookmark_data[key] = [NSData dataWithBytes:bytes.data() length:bytes.size()];
 		}
 		if (!save_bookmarks_plist())
+		{
 			write_log("Security bookmarks: could not save the restored bookmarks\n");
+			return false;
+		}
+		return true;
 	}
 }
 

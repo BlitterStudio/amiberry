@@ -45,8 +45,9 @@ bool macos_bookmark_store(const std::string& path);
 macos_bookmarks_state macos_bookmarks_save_state();
 
 // Puts the store back as it was when state was taken: ends access started
-// since, restores the bookmark data and saves it.
-void macos_bookmarks_restore(const macos_bookmarks_state& state);
+// since, restores the bookmark data and saves it. False when the restored
+// store could not be written (the file keeps what it had).
+bool macos_bookmarks_restore(const macos_bookmarks_state& state);
 
 // Check whether the given path (or a file within a bookmarked directory)
 // is currently accessible via an active security-scoped bookmark.
@@ -70,7 +71,7 @@ inline macos_bookmarks_migration_result macos_bookmarks_init(
 inline void macos_bookmarks_shutdown() {}
 inline bool macos_bookmark_store(const std::string&) { return true; }
 inline macos_bookmarks_state macos_bookmarks_save_state() { return {}; }
-inline void macos_bookmarks_restore(const macos_bookmarks_state&) {}
+inline bool macos_bookmarks_restore(const macos_bookmarks_state&) { return true; }
 inline bool macos_bookmark_is_accessible(const std::string&) { return true; }
 inline std::vector<std::string> macos_bookmarks_list() { return {}; }
 inline void macos_bookmark_remove(const std::string&) {}
