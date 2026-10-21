@@ -932,6 +932,10 @@ int populate_diskswapper_from_archive(const TCHAR *path, struct uae_prefs *prefs
 		_tcsncpy(prefs->dfxlist[i], state.images[i].c_str(), MAX_DPATH - 1);
 		prefs->dfxlist[i][MAX_DPATH - 1] = '\0';
 	}
+	// DISK_check_change copies the pending list into the running
+	// configuration only on a change.
+	if (prefs == &changed_prefs)
+		set_config_changed();
 	return count;
 }
 
@@ -944,7 +948,7 @@ int disk_in_drive(int entry)
 	return -1;
 }
 
-int disk_swap(int entry, int mode)
+int disk_swap(int entry)
 {
 	int drv, i, drvs[4] = { -1, -1, -1, -1 };
 
@@ -954,11 +958,6 @@ int disk_swap(int entry, int mode)
 			drvs[drv] = i;
 	}
 	if ((drv = disk_in_drive(entry)) >= 0) {
-		if (mode < 0) {
-			changed_prefs.floppyslots[drv].df[0] = 0;
-			return 1;
-		}
-
 		if (_tcscmp(changed_prefs.floppyslots[drv].df, currprefs.floppyslots[drv].df)) {
 			_tcscpy(changed_prefs.floppyslots[drv].df, currprefs.floppyslots[drv].df);
 			disk_insert(drv, changed_prefs.floppyslots[drv].df);

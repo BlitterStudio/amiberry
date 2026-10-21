@@ -128,13 +128,17 @@ std::string get_full_path_from_disk_list(std::string element)
 	return full_path;
 }
 
+// Most recently used first: a path already listed moves to the front, an
+// empty path (a drive emptied by a configuration load) is not a file, and
+// the list keeps MAX_MRU_LIST entries.
 void add_file_to_mru_list(std::vector<std::string>& vec, const std::string& file)
 {
-	// Check if the string already exists in the vector
-	if (std::find(vec.begin(), vec.end(), file) == vec.end()) {
-		// The string does not exist in the vector, so add it at the first position
-		vec.insert(vec.begin(), file);
-	}
+	if (file.empty())
+		return;
+	const auto it = std::find(vec.begin(), vec.end(), file);
+	if (it != vec.end())
+		vec.erase(it);
+	vec.insert(vec.begin(), file);
 
 	while (vec.size() > MAX_MRU_LIST)
 		vec.pop_back();
@@ -803,22 +807,7 @@ static void gui_to_prefs(void)
 	memcpy(&currprefs.mountconfig, &changed_prefs.mountconfig, MOUNT_CONFIG_SIZE * sizeof(struct uaedev_config_info));
 
 #ifdef AMIBERRY
-	if (currprefs.drawbridge_driver != changed_prefs.drawbridge_driver ||
-		currprefs.drawbridge_serial_auto != changed_prefs.drawbridge_serial_auto ||
-		_tcsicmp(currprefs.drawbridge_serial_port, changed_prefs.drawbridge_serial_port) != 0 ||
-		currprefs.drawbridge_smartspeed != changed_prefs.drawbridge_smartspeed ||
-		currprefs.drawbridge_autocache != changed_prefs.drawbridge_autocache ||
-		currprefs.drawbridge_drive_cable != changed_prefs.drawbridge_drive_cable)
-	{
-		currprefs.drawbridge_driver = changed_prefs.drawbridge_driver;
-		currprefs.drawbridge_serial_auto = changed_prefs.drawbridge_serial_auto;
-		_tcscpy(currprefs.drawbridge_serial_port, changed_prefs.drawbridge_serial_port);
-		currprefs.drawbridge_smartspeed = changed_prefs.drawbridge_smartspeed;
-		currprefs.drawbridge_autocache = changed_prefs.drawbridge_autocache;
-		currprefs.drawbridge_drive_cable = changed_prefs.drawbridge_drive_cable;
-		if (quit_program != UAE_QUIT)
-			drawbridge_update_profiles(&currprefs);
-	}
+	drawbridge_check_prefs_changed();
 #endif
 
 	fixup_prefs(&changed_prefs, true);

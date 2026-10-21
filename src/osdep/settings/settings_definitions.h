@@ -133,6 +133,8 @@ const domain& display_domain();
 const domain& sound_domain();
 const domain& input_domain();
 const domain& onscreen_domain();
+const domain& floppy_domain();
+const domain& storage_domain();
 
 // target_fixup_options() resets an SDL sound device to the first one while
 // a screen uses the lagless vsync mode (fixup_prefs_dimensions() turns RTG

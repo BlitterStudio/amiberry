@@ -297,11 +297,13 @@ set(SOURCE_FILES
         src/osdep/settings/settings_presets.cpp
         src/osdep/settings/settings_cpu.cpp
         src/osdep/settings/settings_display.cpp
+        src/osdep/settings/settings_floppy.cpp
         src/osdep/settings/settings_input.cpp
         src/osdep/settings/settings_onscreen.cpp
         src/osdep/settings/settings_registry.cpp
         src/osdep/settings/settings_session.cpp
         src/osdep/settings/settings_sound.cpp
+        src/osdep/settings/settings_storage.cpp
         src/osdep/gui/main_window.cpp
         src/osdep/imgui_overlay.cpp
         src/osdep/imgui_osk.cpp
