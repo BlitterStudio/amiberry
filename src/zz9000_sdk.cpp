@@ -126,15 +126,20 @@ void rgba_to_yuv422cgx(const uint8_t *rgba, uint32_t width, uint32_t height,
 struct Engine::Audio {
 	uint32_t session = 0;
 	uint32_t codec = 1;
-	uint32_t mp3_handle = 0;
-	uint32_t pcm_handle = 0;
-	uint32_t mp3_capacity = 0;
 	uint32_t pcm_capacity = 0;
+	uint32_t mp3_capacity = 0;
+	// PCM ring resolved once at begin, like the card's pcm_ring_addr, so a
+	// FREE_SHARED of the ring cannot dangle it. pcm_ring_owned keeps
+	// card-only storage alive for the session's lifetime.
+	uint8_t *pcm_ring = nullptr;
+	std::shared_ptr<std::vector<uint8_t>> pcm_ring_owned;
 	uint32_t pcm_written = 0;
 	uint32_t pcm_read = 0;
-	// Compressed bytes the decoder has taken out of the input ring. MP3 counts
-	// a feed as consumed when it is accepted; FLAC/Vorbis keep undecoded input
-	// in the ring, as the card does, and count it as it is decoded.
+	// Compressed bytes the decoder has taken out of the input ring.
+	// MP3 counts input as consumed only when it produced PCM, as the
+	// card's minimp3 loop does (no frame found -> nothing consumed);
+	// FLAC/Vorbis count input as it is decoded. bytes_fed - bytes_consumed
+	// is the input waiting in the ring.
 	uint32_t bytes_consumed = 0;
 	uint32_t bytes_fed = 0;
 	uint32_t bytes_produced = 0;
@@ -201,6 +206,12 @@ struct Engine::Media {
 	uint64_t video_pts = UINT64_MAX, audio_pts = UINT64_MAX;
 	uint64_t first_audio_pts = UINT64_MAX; // origin of the acknowledged-PCM clock
 	uint64_t format_base = 0; // pcm_produced when the current PCM format began
+	// Timeline origin (first container PTS) for status page 0; zero for the
+	// derived pl_mpeg clock, as the card's derived timelines report.
+	uint64_t pts_origin = UINT64_MAX;
+	uint64_t decoded_audio_pts = UINT64_MAX; // newest decoded audio, pages 0/1
+	uint64_t last_raw_audio_pts = UINT64_MAX; // newest raw chunk PTS, page 0
+	uint64_t presented_frames = 0, discarded_frames = 0; // status page 2
 	uint32_t sample_rate = 0, channels = 0;
 	uint32_t state = 1; // NEED_INPUT
 	uint32_t video_codec = 0, container = 0;
@@ -217,6 +228,13 @@ struct Engine::Media {
 	MediaAvAudio av_audio;
 	size_t av_audio_offset = 0;
 	std::vector<uint8_t> held_yuy2;
+	// Per-stage pipeline timing for status page 5, in ZZ9KMediaProfileStage
+	// order, cumulative for the session (a new Media starts at zero, like
+	// the card's profile reset at session begin). FFmpeg sessions merge the
+	// worker's own counters at status time; these hold the host-side work:
+	// the 0x0b08 present copy and the pl_mpeg decode and pack paths.
+	uint64_t profile_us[4] = {};
+	uint64_t profile_calls[4] = {};
 };
 
 Engine::Engine(uint8_t *board_memory, uint32_t board_size)
@@ -324,15 +342,37 @@ void Engine::set_framebuffer(uint32_t offset, uint32_t width, uint32_t height,
 }
 
 void Engine::set_overlay(uint32_t offset, uint32_t width, uint32_t height,
-	                     uint32_t pitch, uint32_t variant, bool active)
+                         uint32_t pitch, uint32_t variant, bool configured,
+                         bool active, const OverlayGeometry &geometry)
 {
-	if (!active || variant != 0 || !width || !height ||
-	    pitch < ((width + 1) / 2) * 4 || offset > board_size_ ||
-	    static_cast<uint64_t>(pitch) * height > board_size_ - offset) {
+	const uint64_t size = static_cast<uint64_t>(pitch) * height;
+	const bool geometry_valid = configured && width && height &&
+		variant == 0 && pitch >= ((width + 1) / 2) * 4 &&
+		offset <= board_size_ && size <= board_size_ - offset;
+	// Like a card overlay SET: geometry that cannot be scanned clears every
+	// fact, and an active overlay additionally needs a usable destination
+	// rect. A disabled but otherwise valid overlay keeps its geometry with
+	// the enable bit off, and releases the media session binding just as the
+	// card's SET does for an inactive overlay.
+	if (!geometry_valid || (active && (geometry.dst_w < 1 || geometry.dst_h < 1))) {
 		overlay_ = {};
 		return;
 	}
-	overlay_ = {offset, width, height, pitch, variant, active};
+	overlay_.offset = offset;
+	overlay_.width = width;
+	overlay_.height = height;
+	overlay_.pitch = pitch;
+	overlay_.variant = variant;
+	overlay_.dst_x = geometry.dst_x;
+	overlay_.dst_y = geometry.dst_y;
+	overlay_.dst_w = geometry.dst_w;
+	overlay_.dst_h = geometry.dst_h;
+	overlay_.screen_w = geometry.screen_w;
+	overlay_.screen_h = geometry.screen_h;
+	overlay_.configured = configured;
+	overlay_.active = configured && active;
+	if (!overlay_.active)
+		overlay_.presenting_session = 0;
 }
 
 Engine::Surface *Engine::find_surface(uint32_t handle)
@@ -412,8 +452,8 @@ uint8_t *Engine::buffer_data(uint32_t handle)
 	auto *buffer = find_buffer(handle);
 	if (!buffer)
 		return nullptr;
-	return buffer->card_only.empty()
-		? memory_at(buffer->board_offset) : buffer->card_only.data();
+	return buffer->card_only
+		? buffer->card_only->data() : memory_at(buffer->board_offset);
 }
 
 uint32_t Engine::buffer_length(uint32_t handle) const
@@ -422,157 +462,207 @@ uint32_t Engine::buffer_length(uint32_t handle) const
 	return buffer ? buffer->length : 0;
 }
 
+Engine::Audio *Engine::find_audio(uint32_t session)
+{
+	if (!session)
+		return nullptr;
+	for (auto &audio : audios_)
+		if (audio && audio->session == session)
+			return audio.get();
+	return nullptr;
+}
+
+void Engine::close_audio(Audio *audio)
+{
+	if (!audio)
+		return;
+#ifdef ZZ9000_SDK_AUDIO
+	if (audio->output)
+		SDL_DestroyAudioStream(audio->output);
+	if (audio->decoder)
+		mpg123_delete(audio->decoder);
+#endif
+	// Closing a bound stream implies stop, as the card's CLOSE does.
+	if (audio_playing_session_ == audio->session)
+		audio_playing_session_ = 0;
+	const auto slot = std::find_if(audios_.begin(), audios_.end(),
+		[audio](const std::unique_ptr<Audio> &a) { return a.get() == audio; });
+	if (slot != audios_.end())
+		slot->reset();
+}
+
 void Engine::close_audio()
 {
-#ifdef ZZ9000_SDK_AUDIO
-	if (audio_ && audio_->output)
-		SDL_DestroyAudioStream(audio_->output);
-	if (audio_ && audio_->decoder)
-		mpg123_delete(audio_->decoder);
-#endif
-	audio_.reset();
+	for (auto &audio : audios_)
+		close_audio(audio.get());
+	audio_playing_session_ = 0;
 }
 
 void Engine::close_media()
 {
 	if (media_ && media_->decoder)
 		plm_destroy(media_->decoder);
+	// The card's overlay drops its direct-session binding when the media
+	// session closes (overlay_video_session_closed).
+	if (media_ && overlay_.presenting_session == media_->session)
+		overlay_.presenting_session = 0;
 	media_.reset();
 }
 
-void Engine::decode_audio(const uint8_t *input, uint32_t length)
+void Engine::decode_audio(Audio &audio, const uint8_t *input, uint32_t length)
 {
-	if (!audio_ || audio_->faulted)
+	if (audio.faulted)
 		return;
-	if (audio_->codec_decoder) {
+	if (audio.codec_decoder) {
 		if (input && length)
-			audio_->codec_decoder->append(input, length);
+			audio.codec_decoder->append(input, length);
 		// The decoder keeps up to one ring of PCM of its own. When the ring
 		// had room, that PCM moves first and a second pass lets the decoder
 		// take more input, so freed ring space reaches the input ring at once,
 		// as it does on the card.
 		for (int pass = 0; pass < 2; ++pass) {
-			const uint16_t status = audio_->codec_decoder->decode(audio_->eof);
+			const uint16_t status = audio.codec_decoder->decode(audio.eof);
 			if (status != ok) {
-				audio_->faulted = true;
-				audio_->fault_status = status;
+				audio.faulted = true;
+				audio.fault_status = status;
 				return;
 			}
-			if (audio_->codec_decoder->sample_rate()) {
-				audio_->sample_rate = audio_->codec_decoder->sample_rate();
-				audio_->channels = audio_->codec_decoder->channels();
+			if (audio.codec_decoder->sample_rate()) {
+				audio.sample_rate = audio.codec_decoder->sample_rate();
+				audio.channels = audio.codec_decoder->channels();
 			}
-			const uint32_t used = audio_->pcm_written - audio_->pcm_read;
-			const uint32_t free = audio_->pcm_capacity - used;
+			const uint32_t used = audio.pcm_written - audio.pcm_read;
+			const uint32_t free = audio.pcm_capacity - used;
 			const uint32_t bytes = static_cast<uint32_t>(
-				std::min<size_t>(audio_->codec_decoder->pcm_size(), free));
+				std::min<size_t>(audio.codec_decoder->pcm_size(), free));
 			if (!bytes)
 				break;
-			auto *ring = buffer_data(audio_->pcm_handle);
-			if (!ring) {
-				audio_->faulted = true;
-				return;
-			}
-			const uint32_t pos = audio_->pcm_written % audio_->pcm_capacity;
-			const uint32_t first = std::min<uint32_t>(bytes, audio_->pcm_capacity - pos);
-			const auto *decoded = audio_->codec_decoder->pcm_data();
-			std::memcpy(ring + pos, decoded, first);
+			const uint32_t pos = audio.pcm_written % audio.pcm_capacity;
+			const uint32_t first = std::min<uint32_t>(bytes, audio.pcm_capacity - pos);
+			const auto *decoded = audio.codec_decoder->pcm_data();
+			std::memcpy(audio.pcm_ring + pos, decoded, first);
 			if (bytes > first)
-				std::memcpy(ring, decoded + first, bytes - first);
-			audio_->codec_decoder->consume_pcm(bytes);
-			audio_->pcm_written += bytes;
-			audio_->bytes_produced += bytes;
-			const uint32_t frame_bytes = audio_->channels *
-				(audio_->sample_format == pcm_s32be ? 4 : 2);
-			audio_->frames_decoded = frame_bytes ? audio_->bytes_produced / frame_bytes : 0;
+				std::memcpy(audio.pcm_ring, decoded + first, bytes - first);
+			audio.codec_decoder->consume_pcm(bytes);
+			audio.pcm_written += bytes;
+			audio.bytes_produced += bytes;
+			const uint32_t frame_bytes = audio.channels *
+				(audio.sample_format == pcm_s32be ? 4 : 2);
+			audio.frames_decoded = frame_bytes ? audio.bytes_produced / frame_bytes : 0;
 		}
-		audio_->decoder_pending = audio_->codec_decoder->has_pending();
-		audio_->bytes_consumed = audio_->bytes_fed -
-			static_cast<uint32_t>(audio_->codec_decoder->input_size());
+		audio.decoder_pending = audio.codec_decoder->has_pending();
+		audio.bytes_consumed = audio.bytes_fed -
+			static_cast<uint32_t>(audio.codec_decoder->input_size());
 		return;
 	}
 #ifdef ZZ9000_SDK_AUDIO
-	if (!audio_ || !audio_->decoder || audio_->faulted)
+	if (!audio.decoder)
 		return;
 	HostNearestRounding host_rounding;
+	// Accepted input goes to mpg123's own staging, as the card's decode
+	// loop reads from its input ring; consumption is read back from
+	// mpg123 after the decode pass below.
+	if (input && length)
+		(void)mpg123_feed(audio.decoder, input, length);
 	uint8_t decoded[16384];
-	const unsigned char *source = input;
-	size_t source_length = length;
 	for (;;) {
-		const uint32_t used = audio_->pcm_written - audio_->pcm_read;
-		const uint32_t free = audio_->pcm_capacity - used;
+		const uint32_t used = audio.pcm_written - audio.pcm_read;
+		const uint32_t free = audio.pcm_capacity - used;
 		if (free < 8192) {
-			audio_->decoder_pending = true;
+			audio.decoder_pending = true;
 			break;
 		}
 		size_t done = 0;
 		const size_t output_size = std::min<size_t>(free & ~3u, sizeof decoded);
-		const int rc = mpg123_decode(audio_->decoder, source, source_length,
+		const int rc = mpg123_decode(audio.decoder, nullptr, 0,
 			decoded, output_size, &done);
-		source = nullptr;
-		source_length = 0;
 		if (rc == MPG123_NEW_FORMAT) {
 			long rate = 0;
 			int channels = 0;
 			int encoding = 0;
-			if (mpg123_getformat(audio_->decoder, &rate, &channels, &encoding) != MPG123_OK ||
+			if (mpg123_getformat(audio.decoder, &rate, &channels, &encoding) != MPG123_OK ||
 			    rate <= 0 || (channels != 1 && channels != 2) ||
 			    encoding != MPG123_ENC_SIGNED_16 ||
-			    (audio_->sample_rate &&
-			     (audio_->sample_rate != static_cast<uint32_t>(rate) ||
-			      audio_->channels != static_cast<uint32_t>(channels)))) {
-				audio_->faulted = true;
+			    (audio.sample_rate &&
+			     (audio.sample_rate != static_cast<uint32_t>(rate) ||
+			      audio.channels != static_cast<uint32_t>(channels)))) {
+				audio.faulted = true;
 				break;
 			}
-			audio_->sample_rate = static_cast<uint32_t>(rate);
-			audio_->channels = static_cast<uint32_t>(channels);
-			if (audio_->sample_format == pcm_s16be) {
+			audio.sample_rate = static_cast<uint32_t>(rate);
+			audio.channels = static_cast<uint32_t>(channels);
+			if (audio.sample_format == pcm_s16be) {
 				mpg123_frameinfo2 info{};
-				if (mpg123_info2(audio_->decoder, &info) != MPG123_OK) {
-					audio_->faulted = true;
+				if (mpg123_info2(audio.decoder, &info) != MPG123_OK) {
+					audio.faulted = true;
 					break;
 				}
-				audio_->samples_per_frame = info.layer == 1 ? 384 :
+				audio.samples_per_frame = info.layer == 1 ? 384 :
 					(info.layer == 3 && info.version != MPG123_1_0 ? 576 : 1152);
 			}
 		}
 		if (done) {
-			if (!audio_->channels) {
-				audio_->faulted = true;
+			if (!audio.channels) {
+				audio.faulted = true;
 				break;
 			}
-			if (audio_->sample_format == pcm_s16be)
+			if (audio.sample_format == pcm_s16be)
 				for (size_t i = 0; i + 1 < done; i += 2)
 					std::swap(decoded[i], decoded[i + 1]);
-			auto *ring = buffer_data(audio_->pcm_handle);
-			if (!ring) {
-				audio_->faulted = true;
-				break;
-			}
-			const uint32_t pos = audio_->pcm_written % audio_->pcm_capacity;
-			const uint32_t first = std::min<uint32_t>(done, audio_->pcm_capacity - pos);
-			std::memcpy(ring + pos, decoded, first);
+			const uint32_t pos = audio.pcm_written % audio.pcm_capacity;
+			const uint32_t first = std::min<uint32_t>(done, audio.pcm_capacity - pos);
+			std::memcpy(audio.pcm_ring + pos, decoded, first);
 			if (done > first)
-				std::memcpy(ring, decoded + first, done - first);
-			audio_->pcm_written += static_cast<uint32_t>(done);
-			audio_->bytes_produced += static_cast<uint32_t>(done);
-			audio_->frames_decoded = audio_->bytes_produced /
-				(audio_->channels * 2 * audio_->samples_per_frame);
+				std::memcpy(audio.pcm_ring, decoded + first, done - first);
+			audio.pcm_written += static_cast<uint32_t>(done);
+			audio.bytes_produced += static_cast<uint32_t>(done);
+			audio.frames_decoded = audio.bytes_produced /
+				(audio.channels * 2 * audio.samples_per_frame);
 		}
 		if (rc == MPG123_NEW_FORMAT)
 			continue;
 		if (rc == MPG123_NEED_MORE || (rc == MPG123_OK && !done)) {
-			audio_->decoder_pending = false;
+			audio.decoder_pending = false;
 			break;
 		}
 		if (rc == MPG123_OK)
 			continue;
 		if (rc == MPG123_DONE) {
-			audio_->decoder_pending = false;
+			audio.decoder_pending = false;
 			break;
 		}
-		audio_->faulted = true;
+		// A decode error on content (a failed resync and friends) cannot
+		// fault an MP3 session on the card: minimp3 keeps scanning for a
+		// frame and waits for more input.
+		audio.decoder_pending = false;
 		break;
+	}
+	// The card consumes scanned junk rather than staging it: with no
+	// frame found, mp3d_find_frame returns the bytes it walked
+	// (minimp3.h:1705) and mp3dec_decode_frame reports them consumed
+	// (minimp3.h:1734), so garbage, ID3v2 data and junk tails all count
+	// as consumed. Account everything mpg123 has taken, every pass.
+	long fill = 0;
+	double fill_real = 0.0;
+	if (mpg123_getstate(audio.decoder, MPG123_BUFFERFILL, &fill,
+		&fill_real) == MPG123_OK && fill >= 0 &&
+		static_cast<uint64_t>(fill) <= audio.bytes_fed) {
+		const uint32_t consumed = audio.bytes_fed -
+			static_cast<uint32_t>(fill);
+		if (consumed > audio.bytes_consumed)
+			audio.bytes_consumed = consumed;
+	}
+	// An unparsable tail is dropped rather than held forever: at EOF the
+	// card discards input that will not decode (sdk_mailbox.c:3839-3844),
+	// and a no-progress pass whose retained input already satisfies the
+	// card's 4 KiB decode gate (audio_stream_decode_may_run) can only be
+	// holding junk -- a complete frame is never that large. Reopen the
+	// feed so mpg123 forgets it.
+	const uint32_t retained = audio.bytes_fed - audio.bytes_consumed;
+	if (retained && !audio.decoder_pending &&
+	    (audio.eof || retained >= 4096)) {
+		audio.bytes_consumed = audio.bytes_fed;
+		mpg123_open_feed(audio.decoder);
 	}
 #else
 	(void)input;
@@ -580,97 +670,117 @@ void Engine::decode_audio(const uint8_t *input, uint32_t length)
 #endif
 }
 
-void Engine::pump_audio()
+void Engine::pump_audio(Audio &audio)
 {
 #ifdef ZZ9000_SDK_AUDIO
-	if (!audio_)
-		return;
 	const auto now = std::chrono::steady_clock::now();
-	if (now < audio_->next_pump)
+	if (now < audio.next_pump)
 		return;
-	audio_->next_pump = now + std::chrono::milliseconds(10);
-	if (audio_->output) {
+	audio.next_pump = now + std::chrono::milliseconds(10);
+	if (audio.output) {
 		const bool paused = sound_paused();
-		if (paused != audio_->paused) {
-			SDL_ClearAudioStream(audio_->output);
+		if (paused != audio.paused) {
+			SDL_ClearAudioStream(audio.output);
 			if (paused)
-				SDL_PauseAudioStreamDevice(audio_->output);
+				SDL_PauseAudioStreamDevice(audio.output);
 			else
-				SDL_ResumeAudioStreamDevice(audio_->output);
-			audio_->paused = paused;
+				SDL_ResumeAudioStreamDevice(audio.output);
+			audio.paused = paused;
 		}
 		const float master = (100 - std::clamp(currprefs.sound_volume_master, 0, 100)) / 100.0f;
 		const float board = (100 - std::clamp(currprefs.sound_volume_board, 0, 100)) / 100.0f;
 		const float gain = sound_muted() ? 0.0f :
-			master * board * static_cast<float>(audio_->stream_gain) / 128.0f;
-		if (gain != audio_->gain && SDL_SetAudioStreamGain(audio_->output, gain))
-			audio_->gain = gain;
+			master * board * static_cast<float>(audio.stream_gain) / 128.0f;
+		if (gain != audio.gain && SDL_SetAudioStreamGain(audio.output, gain))
+			audio.gain = gain;
 	}
-	if (audio_->decoder_pending &&
-	    audio_->pcm_capacity - (audio_->pcm_written - audio_->pcm_read) >= 8192)
-		decode_audio(nullptr, 0);
-	if (!audio_->playing || !audio_->output)
+	if (audio.decoder_pending &&
+	    audio.pcm_capacity - (audio.pcm_written - audio.pcm_read) >= 8192)
+		decode_audio(audio, nullptr, 0);
+	if (!audio.playing || !audio.output)
 		return;
-	const int queued = SDL_GetAudioStreamQueued(audio_->output);
+	const int queued = SDL_GetAudioStreamQueued(audio.output);
 	if (queued < 0) {
-		audio_->faulted = true;
+		audio.faulted = true;
 		return;
 	}
-	const int rate = audio_->sample_rate ? static_cast<int>(audio_->sample_rate) : 48000;
-	const int channels = audio_->channels ? static_cast<int>(audio_->channels) : 2;
+	const int rate = audio.sample_rate ? static_cast<int>(audio.sample_rate) : 48000;
+	const int channels = audio.channels ? static_cast<int>(audio.channels) : 2;
 	const int max_queued = rate * channels;
 	if (queued >= max_queued)
 		return;
-	uint32_t available = audio_->pcm_written - audio_->pcm_read;
+	uint32_t available = audio.pcm_written - audio.pcm_read;
 	available = std::min<uint32_t>(available, 16384);
 	available = std::min<uint32_t>(available, static_cast<uint32_t>(max_queued - queued));
 	if (!available)
 		return;
-	const uint32_t pos = audio_->pcm_read % audio_->pcm_capacity;
-	const uint32_t first = std::min(available, audio_->pcm_capacity - pos);
-	const auto *ring = buffer_data(audio_->pcm_handle);
-	if (!ring || !SDL_PutAudioStreamData(audio_->output, ring + pos, first)) {
-		audio_->faulted = true;
+	const uint32_t pos = audio.pcm_read % audio.pcm_capacity;
+	const uint32_t first = std::min(available, audio.pcm_capacity - pos);
+	if (!SDL_PutAudioStreamData(audio.output, audio.pcm_ring + pos, first)) {
+		audio.faulted = true;
 		return;
 	}
-	audio_->pcm_read += first;
+	audio.pcm_read += first;
 	if (available > first) {
-		if (!SDL_PutAudioStreamData(audio_->output, ring, available - first))
-			audio_->faulted = true;
+		if (!SDL_PutAudioStreamData(audio.output, audio.pcm_ring, available - first))
+			audio.faulted = true;
 		else
-			audio_->pcm_read += available - first;
+			audio.pcm_read += available - first;
 	}
 #endif
 }
 
-void Engine::audio_result(uint8_t *reply, uint16_t *reply_length)
+void Engine::pump_audio()
 {
-	if (!audio_)
-		return;
-	const uint32_t used = audio_->pcm_written - audio_->pcm_read;
+	for (auto &audio : audios_)
+		if (audio)
+			pump_audio(*audio);
+}
+
+void Engine::audio_result(const Audio &audio, uint8_t *reply,
+                          uint16_t *reply_length)
+{
+	const uint32_t used = audio.pcm_written - audio.pcm_read;
+	// Input still waiting in the session's input ring; like the card's
+	// audio_stream_needs_more_input, MP3 waits for 4 KiB before decoding.
+	const uint32_t retained = audio.codec_decoder ?
+		static_cast<uint32_t>(audio.codec_decoder->input_size()) :
+		audio.bytes_fed - audio.bytes_consumed;
 	bool output_drained = true;
 #ifdef ZZ9000_SDK_AUDIO
-	if (audio_->output)
-		output_drained = SDL_GetAudioStreamQueued(audio_->output) <= 0;
+	if (audio.output)
+		output_drained = SDL_GetAudioStreamQueued(audio.output) <= 0;
 #endif
-	const bool drained = !used && !audio_->decoder_pending && output_drained;
-	const bool done = audio_->eof && drained;
-	const uint32_t state = audio_->faulted ? 4 : done ? 3 : used ? 2 : 1;
+	// EOF/DONE needs the input ring empty, as on the card. A resumable
+	// drain completes while a partial frame is still retained: the card
+	// sets drain_input_complete as soon as the decoder blocks on an
+	// incomplete frame (audio_stream_drain_input_done) and reports
+	// DRAINED with the NEED_INPUT state (audio_stream_transient_drained).
+	const bool idle = !used && !audio.decoder_pending && output_drained;
+	const bool drained = audio.drain && idle;
+	const bool done = audio.eof && idle && retained == 0;
+	// Like audio_stream_needs_more_input, input demand ignores the
+	// playback tail still queued on the host: a playing client must be
+	// asked for more while the output is still sounding.
+	const bool needs_input = !audio.eof && !audio.drain && !used &&
+		!audio.decoder_pending && (audio.codec_decoder || retained < 4096);
+	const uint32_t state = audio.faulted ? 4 : done ? 3 :
+		(needs_input || drained) ? 1 : 2;
 	uint32_t flags = ((used || !output_drained) ? 2u : 0u) | (done ? 4u : 0u) |
-		(audio_->backpressure ? 8u : 0u) | (audio_->drain && drained ? 16u : 0u);
-	if (!used && !audio_->eof && !audio_->decoder_pending)
+		(audio.backpressure ? 8u : 0u) | (drained ? 16u : 0u);
+	if (needs_input)
 		flags |= 1u;
-	put32(reply + 0, audio_->session);
+	put32(reply + 0, audio.session);
 	put32(reply + 4, state);
-	put32(reply + 8, audio_->sample_rate);
-	put32(reply + 12, audio_->channels);
-	put32(reply + 16, audio_->sample_format);
-	put32(reply + 20, audio_->bytes_consumed % audio_->mp3_capacity);
-	put32(reply + 24, audio_->pcm_written % audio_->pcm_capacity);
-	put32(reply + 28, audio_->pcm_read % audio_->pcm_capacity);
-	put32(reply + 32, audio_->frames_decoded);
-	put32(reply + 36, audio_->bytes_consumed);
-	put32(reply + 40, audio_->bytes_produced);
+	put32(reply + 8, audio.sample_rate);
+	put32(reply + 12, audio.channels);
+	put32(reply + 16, audio.sample_format);
+	put32(reply + 20, audio.bytes_consumed % audio.mp3_capacity);
+	put32(reply + 24, audio.pcm_written % audio.pcm_capacity);
+	put32(reply + 28, audio.pcm_read % audio.pcm_capacity);
+	put32(reply + 32, audio.frames_decoded);
+	put32(reply + 36, audio.bytes_consumed);
+	put32(reply + 40, audio.bytes_produced);
 	put32(reply + 44, flags);
 	*reply_length = 48;
 }
@@ -730,6 +840,12 @@ void Engine::pump_media_audio()
 				media_->av_audio_offset = 0;
 				if (!media_->av_decoder->pop_audio(media_->av_audio))
 					break;
+				if (media_->av_audio.pts != UINT64_MAX) {
+					media_->decoded_audio_pts = media_->av_audio.pts;
+					media_->last_raw_audio_pts = media_->av_audio.pts;
+					if (media_->pts_origin == UINT64_MAX)
+						media_->pts_origin = media_->av_audio.pts;
+				}
 			}
 			// A rate or channel change takes effect only once the guest has
 			// acknowledged all PCM in the old format; the clock then restarts
@@ -768,7 +884,16 @@ void Engine::pump_media_audio()
 		    media_->pcm_capacity || media_->pcm_produced - media_->pcm_acknowledged >=
 		    media_->pcm_high_water)
 			break;
+		const uint64_t audio_decode_start = monotonic_us();
 		plm_samples_t *samples = plm_decode_audio(media_->decoder);
+		if (samples) {
+			media_->profile_us[3] += monotonic_us() - audio_decode_start;
+			media_->profile_calls[3]++;
+			// pl_mpeg's audio clock is derived from the sample count; that
+			// is the newest-decoded-audio fact this decoder can report.
+			media_->decoded_audio_pts = static_cast<uint64_t>(
+				samples->time * 90000.0 + 0.5);
+		}
 		if (!samples)
 			break;
 		media_->sample_rate = static_cast<uint32_t>(plm_get_samplerate(media_->decoder));
@@ -863,6 +988,9 @@ uint16_t Engine::dispatch_media(uint16_t opcode, const uint8_t *request,
 			plm_set_audio_enabled(decoder, audio_codec == 1);
 			media_->input = input;
 			media_->decoder = decoder;
+			// pl_mpeg carries no container timestamps; the card's derived
+			// timelines report a zero origin on status page 0.
+			media_->pts_origin = 0;
 		}
 		media_result(reply, reply_length);
 		return ok;
@@ -962,6 +1090,12 @@ uint16_t Engine::dispatch_media(uint16_t opcode, const uint8_t *request,
 				media_->frame_rate_num = frame.frame_rate_num;
 				media_->frame_rate_den = frame.frame_rate_den;
 				media_->video_pts = frame.pts;
+				// The WebM backend's raw PTS tracks every accepted
+				// frame, video included (sdk_video_webm.c:763).
+				if (media_->video_codec == 3 || media_->video_codec == 4)
+					media_->last_raw_audio_pts = frame.pts;
+				if (media_->pts_origin == UINT64_MAX && frame.pts != UINT64_MAX)
+					media_->pts_origin = frame.pts;
 			} else if (result == 0 && media_->eof) {
 				// All input has arrived and the worker is still decoding it
 				// (a short file can be fed whole before FFmpeg finishes
@@ -1010,7 +1144,10 @@ uint16_t Engine::dispatch_media(uint16_t opcode, const uint8_t *request,
 			media_result(reply, reply_length, 0, 1u << 8);
 			return busy;
 		}
+		const uint64_t decode_start = monotonic_us();
 		auto *frame = plm_decode_video(media_->decoder);
+		media_->profile_us[0] += monotonic_us() - decode_start;
+		media_->profile_calls[0]++;
 		if (frame) {
 			if (frame->width != media_->width || frame->height != media_->height)
 				return io_error;
@@ -1074,6 +1211,10 @@ uint16_t Engine::dispatch_media(uint16_t opcode, const uint8_t *request,
 			    overlay_.height < packed_height || (!media_->av && half))
 				return busy;
 			if (media_->av) {
+				// The card's PRESENT stage covers the core-0 hand-off of a
+				// decoded frame to the overlay; for an already-packed frame
+				// that hand-off is this copy into the emulated overlay plane.
+				const uint64_t present_start = monotonic_us();
 				for (uint32_t y = 0; y < packed_height; ++y) {
 					auto *dst = memory_at(overlay_.offset +
 						static_cast<size_t>(y) * overlay_.pitch);
@@ -1095,8 +1236,14 @@ uint16_t Engine::dispatch_media(uint16_t opcode, const uint8_t *request,
 						std::memcpy(dst, src, static_cast<size_t>(media_->width) * 2);
 					}
 				}
+				media_->profile_us[2] += monotonic_us() - present_start;
+				media_->profile_calls[2]++;
 			} else {
+				// A pl_mpeg frame is packed to YUY2 while presenting: the
+				// planar conversion below is the work the card times on
+				// core 1 as its pack stage.
 				const auto *frame = media_->held_frame;
+				const uint64_t pack_start = monotonic_us();
 				for (uint32_t y = 0; y < media_->height; ++y) {
 					auto *dst = memory_at(overlay_.offset +
 						static_cast<size_t>(y) * overlay_.pitch);
@@ -1110,12 +1257,38 @@ uint16_t Engine::dispatch_media(uint16_t opcode, const uint8_t *request,
 						dst += 4;
 					}
 				}
+				media_->profile_us[1] += monotonic_us() - pack_start;
+				media_->profile_calls[1]++;
 			}
+		}
+		// The card's PRESENT stage excludes the compose; for a pl_mpeg frame
+		// the hand-off that remains is the state flip below, timed here so
+		// present calls advance per frame as they do on the card.
+		if (opcode == 0x0b08 && !media_->av) {
+			const uint64_t present_start = monotonic_us();
+			media_->held = false;
+			media_->held_interlaced = false;
+			media_->held_frame = nullptr;
+			media_->state = 2;
+			media_->presented_frames++;
+			// This session now feeds the overlay, the fact the card reports
+			// as the presentation page's OWNED bit.
+			overlay_.presenting_session = media_->session;
+			media_->profile_us[2] += monotonic_us() - present_start;
+			media_->profile_calls[2]++;
+			media_result(reply, reply_length, 0, 1u << 9);
+			return ok;
 		}
 		media_->held = false;
 		media_->held_interlaced = false;
 		media_->held_frame = nullptr;
 		media_->state = 2;
+		if (opcode == 0x0b08) {
+			media_->presented_frames++;
+			overlay_.presenting_session = media_->session;
+		} else {
+			media_->discarded_frames++;
+		}
 		media_result(reply, reply_length, 0,
 			opcode == 0x0b08 ? 1u << 9 : 1u << 10);
 		return ok;
@@ -1124,39 +1297,91 @@ uint16_t Engine::dispatch_media(uint16_t opcode, const uint8_t *request,
 		if (request_length < 12 || be32(request + 8))
 			return bad_request;
 		const uint32_t page = be32(request + 4);
-		if (page > 3)
+		if (page > 5)
 			return bad_request;
 		put32(reply, media_->session);
 		put32(reply + 4, media_->state);
 		put32(reply + 8, page);
+		// Pages 0, 1 and 3 share the card's audio fact flags: AUDIO_READY
+		// once the decoder has produced PCM, BACKPRESSURE while staged PCM
+		// waits for the guest at or above the high-water mark. Media AX
+		// binding is not advertised here, so no BOUND/PLAYING/DRAINED/
+		// UNDERRUN bits appear.
+		const uint32_t audio_flags = (media_->sample_rate ? 1u << 7 : 0) |
+			(media_->audio_enabled && media_->pcm_capacity &&
+			 media_->pcm_produced - media_->pcm_acknowledged >=
+				media_->pcm_high_water ? 1u << 8 : 0);
 		if (page == 0) {
-			put32(reply + 12, 0);
-			put64(reply + 16, UINT64_MAX);
+			put32(reply + 12, audio_flags);
+			put64(reply + 16, media_->pts_origin);
 			put64(reply + 24, media_->video_pts);
-			put64(reply + 32, media_->audio_pts);
-			put64(reply + 40, media_->sample_rate ? 0 : UINT64_MAX);
+			// The WebM backend reports the acknowledged-PCM audio clock
+			// here (audio_pts_at, sdk_video_webm.c:978-1012); the MPEG
+			// backends report the newest decoded audio PTS
+			// (sdk_video_mpeg2.c:2304).
+			put64(reply + 32, media_->video_codec == 3 ||
+				media_->video_codec == 4 ?
+				media_->audio_pts : media_->decoded_audio_pts);
+			// pl_mpeg exposes no container timestamps; its derived audio
+			// clock runs from a zero basis, as the card's derived timelines
+			// do, so only an FFmpeg session can report the raw chunk PTS.
+			put64(reply + 40, media_->av ? media_->last_raw_audio_pts :
+				(media_->sample_rate ? 0 : UINT64_MAX));
 		} else if (page == 1) {
-			put32(reply + 12, media_->sample_rate ? 1u << 7 : 0);
+			put32(reply + 12, audio_flags);
 			put64(reply + 16, media_->pcm_produced);
 			put64(reply + 24, media_->pcm_acknowledged);
-			put64(reply + 32, media_->audio_pts);
+			put64(reply + 32, media_->decoded_audio_pts);
 			put64(reply + 40, media_->first_audio_pts);
 		} else if (page == 2) {
 			put32(reply + 12, 0);
 			put64(reply + 16, media_->bytes_accepted);
 			put64(reply + 24, media_->frame_number);
-			put64(reply + 32, media_->frame_number);
-			put64(reply + 40, 0);
+			put64(reply + 32, media_->presented_frames);
+			put64(reply + 40, media_->discarded_frames);
 		} else if (page == 3) {
 			const uint32_t frame_bytes = media_->channels ? media_->channels * 2 : 4;
 			const uint64_t retired = frame_bytes ? media_->pcm_acknowledged / frame_bytes : 0;
 			const uint64_t staged = frame_bytes ? media_->pcm_produced / frame_bytes : 0;
 			const uint64_t queued = staged >= retired ? staged - retired : 0;
-			put32(reply + 12, media_->sample_rate ? 1u << 7 : 0);
+			put32(reply + 12, audio_flags);
 			put64(reply + 16, retired);
 			put64(reply + 24, queued);
 			put64(reply + 32, staged);
+			// The emulator has no card-side audio DMA pump that could
+			// starve, so a session in this state reports zero underruns,
+			// exactly like a card whose pump never ran dry.
 			put64(reply + 40, 0);
+		} else if (page == 4) {
+			// The PIP emulates the FPGA overlay plane itself: zz9000.cpp
+			// scales the YUY2 source during scanout exactly as the PL plane
+			// does, and no card-local ARM shadow compositor exists here, so
+			// an active overlay always presents through the native path.
+			const bool active = overlay_.configured && overlay_.active;
+			put32(reply + 12, (overlay_.configured ? 1u : 0u) |
+				(active ? 2u | 4u : 0u) |
+				(overlay_.presenting_session != 0 &&
+				 overlay_.presenting_session == media_->session ? 8u : 0u));
+			put64(reply + 16, pack_pair(overlay_.width, overlay_.height));
+			put64(reply + 24, pack_pair(overlay_.dst_w, overlay_.dst_h));
+			// Signed origins travel as their 16-bit two's-complement
+			// pattern and are sign-extended by the reader.
+			put64(reply + 32, pack_pair(overlay_.dst_x, overlay_.dst_y));
+			put64(reply + 40, pack_pair(overlay_.screen_w, overlay_.screen_h));
+		} else {
+			// Per-stage timing as (microseconds << 32) | calls, cumulative
+			// for the session. NEON_PACK never applies: the host packs in
+			// scalar C++, unlike the card's optional NEON kernel.
+			put32(reply + 12, 0);
+			uint64_t av_us[4] = {}, av_calls[4] = {};
+			if (media_->av)
+				media_->av_decoder->profile_totals(av_us, av_calls);
+			for (uint32_t stage = 0; stage < 4; ++stage)
+				put64(reply + 16 + stage * 8,
+					(static_cast<uint64_t>(static_cast<uint32_t>(
+						media_->profile_us[stage] + av_us[stage])) << 32) |
+					static_cast<uint32_t>(media_->profile_calls[stage] +
+						av_calls[stage]));
 		}
 		*reply_length = 48;
 		return ok;
@@ -1343,7 +1568,7 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 			while (candidate <= end && length <= end - candidate) {
 				bool overlap = false;
 				for (const auto &buffer : buffers_) {
-					if (buffer.handle && buffer.card_only.empty() &&
+					if (buffer.handle && !buffer.card_only &&
 					    candidate < buffer.board_offset + buffer.length &&
 					    buffer.board_offset < candidate + length) {
 						candidate = align_up(buffer.board_offset + buffer.length, alignment);
@@ -1360,8 +1585,10 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 				return no_memory;
 		}
 		try {
-			if (card_only)
-				free_slot->card_only.resize(length);
+			if (card_only) {
+				free_slot->card_only = std::make_shared<std::vector<uint8_t>>();
+				free_slot->card_only->resize(length);
+			}
 		} catch (...) {
 			*free_slot = {};
 			return no_memory;
@@ -1386,9 +1613,9 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 			return bad_handle;
 		if (image_ && image_->tile_handle == buffer->handle)
 			return busy;
-		if (audio_ && (audio_->mp3_handle == buffer->handle ||
-		              audio_->pcm_handle == buffer->handle))
-			return busy;
+		// The card refuses only pinned buffers here (sdk_mailbox.c:2510);
+		// audio stream rings are never pinned, and the media PCM ring and
+		// the image tile buffer are.
 		if (media_ && media_->pcm_handle == buffer->handle)
 			return busy;
 		*buffer = {};
@@ -2004,8 +2231,6 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 	if (opcode == 0x0503) {
 		if (request_length < 40)
 			return bad_request;
-		if (audio_)
-			return busy;
 		const auto *mp3 = find_buffer(be32(request));
 		const auto *pcm = find_buffer(be32(request + 8));
 		if (!mp3 || !pcm || mp3 == pcm)
@@ -2020,6 +2245,12 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 		    (be32(request + 24) != pcm_s16le &&
 		     be32(request + 24) != pcm_s16be))
 			return unsupported;
+		// The card keeps four stream slots and answers NO_MEMORY when they
+		// are all taken (sdk_mailbox.c:4950); it never answers BUSY here.
+		auto slot = std::find_if(audios_.begin(), audios_.end(),
+			[](const std::unique_ptr<Audio> &audio) { return !audio; });
+		if (slot == audios_.end())
+			return no_memory;
 		HostNearestRounding host_rounding;
 		static const bool mpg123_ready = mpg123_init() == MPG123_OK;
 		if (!mpg123_ready)
@@ -2029,7 +2260,12 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 		if (!decoder)
 			return no_memory;
 		const uint32_t sample_format = be32(request + 24);
-		bool configured = mpg123_format_none(decoder) == MPG123_OK;
+		// minimp3 on the card scans any amount of junk for a frame header
+		// and never reports it; let mpg123 resync without a limit and keep
+		// its diagnostics off the host's stderr.
+		bool configured = mpg123_format_none(decoder) == MPG123_OK &&
+			mpg123_param(decoder, MPG123_RESYNC_LIMIT, -1, 0.0) == MPG123_OK &&
+			mpg123_param(decoder, MPG123_ADD_FLAGS, MPG123_QUIET, 0.0) == MPG123_OK;
 		if (sample_format == pcm_s16le) {
 			configured = configured &&
 				mpg123_param(decoder, MPG123_FORCE_RATE, 48000, 0.0) == MPG123_OK &&
@@ -2047,15 +2283,18 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 			mpg123_delete(decoder);
 			return io_error;
 		}
-		audio_ = std::make_unique<Audio>();
-		audio_->session = next_audio_session_++;
-		audio_->mp3_handle = mp3->handle;
-		audio_->pcm_handle = pcm->handle;
-		audio_->mp3_capacity = mp3_capacity;
-		audio_->pcm_capacity = pcm_capacity;
-		audio_->sample_format = sample_format;
-		audio_->decoder = decoder;
-		audio_result(reply, reply_length);
+		*slot = std::make_unique<Audio>();
+		(*slot)->session = next_audio_session_++;
+		if (next_audio_session_ == 0)
+			next_audio_session_ = 1;
+		(*slot)->mp3_capacity = mp3_capacity;
+		(*slot)->pcm_capacity = pcm_capacity;
+		(*slot)->sample_format = sample_format;
+		(*slot)->pcm_ring = pcm->card_only ? pcm->card_only->data() :
+			memory_at(pcm->board_offset);
+		(*slot)->pcm_ring_owned = pcm->card_only;
+		(*slot)->decoder = decoder;
+		audio_result(**slot, reply, reply_length);
 		return ok;
 	}
 #endif
@@ -2073,8 +2312,6 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 #ifndef AMIBERRY_WITH_FFMPEG
 		return unsupported;
 #else
-		if (audio_)
-			return busy;
 		const auto *input = find_buffer(be32(request + 4));
 		const auto *pcm = find_buffer(be32(request + 12));
 		if (!input || !pcm || input == pcm)
@@ -2095,17 +2332,26 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 		    pcm_capacity > pcm->length || (pcm_capacity & 1) ||
 		    be32(request + 32) >= pcm_capacity || be32(request + 36) >= pcm_capacity)
 			return bad_request;
-		audio_ = std::make_unique<Audio>();
-		audio_->session = next_audio_session_++;
-		audio_->codec = codec;
-		audio_->mp3_handle = input->handle;
-		audio_->pcm_handle = pcm->handle;
-		audio_->mp3_capacity = input_capacity;
-		audio_->pcm_capacity = pcm_capacity;
-		audio_->sample_format = format;
-		audio_->codec_decoder = std::make_unique<AudioCodecDecoder>(codec, format,
-			audio_->pcm_capacity, input_capacity);
-		audio_result(reply, reply_length);
+		// Four slots, as the card's open_audio_stream has; a full table
+		// answers NO_MEMORY, never BUSY.
+		auto slot = std::find_if(audios_.begin(), audios_.end(),
+			[](const std::unique_ptr<Audio> &audio) { return !audio; });
+		if (slot == audios_.end())
+			return no_memory;
+		*slot = std::make_unique<Audio>();
+		(*slot)->session = next_audio_session_++;
+		if (next_audio_session_ == 0)
+			next_audio_session_ = 1;
+		(*slot)->codec = codec;
+		(*slot)->mp3_capacity = input_capacity;
+		(*slot)->pcm_capacity = pcm_capacity;
+		(*slot)->sample_format = format;
+		(*slot)->pcm_ring = pcm->card_only ? pcm->card_only->data() :
+			memory_at(pcm->board_offset);
+		(*slot)->pcm_ring_owned = pcm->card_only;
+		(*slot)->codec_decoder = std::make_unique<AudioCodecDecoder>(codec, format,
+			(*slot)->pcm_capacity, input_capacity);
+		audio_result(**slot, reply, reply_length);
 		return ok;
 #endif
 	}
@@ -2114,60 +2360,69 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 			                         opcode == 0x0505 ? 12 : 8;
 		if (request_length < needed)
 			return bad_request;
-		if (!audio_ || be32(request) != audio_->session)
+		auto *audio = find_audio(be32(request));
+		if (!audio)
 			return bad_handle;
 		if (opcode == 0x0504) {
 			const uint32_t length = be32(request + 12);
 			const uint32_t flags = be32(request + 16);
 			if ((flags & ~3u) || flags == 3 || ((flags & 2) && length))
 				return bad_request;
-			if (audio_->faulted)
-				return io_error;
+			if (audio->faulted)
+				return audio->fault_status;
 			if (length) {
 				const auto *source = find_buffer(be32(request + 4));
 				const uint32_t offset = be32(request + 8);
 				if (!source || offset > source->length || length > source->length - offset)
 					return bad_handle;
 				// The card refuses a feed only when its input ring has no
-				// room; FLAC/Vorbis input waits there until PCM space lets
-				// the decoder take it. MP3 sessions keep their one-feed model.
-				const uint32_t retained = audio_->codec_decoder ?
-					static_cast<uint32_t>(audio_->codec_decoder->input_size()) : 0;
-				const bool full = audio_->codec_decoder ?
-					length > audio_->mp3_capacity - std::min(retained, audio_->mp3_capacity) :
-					length > audio_->mp3_capacity || audio_->decoder_pending ||
-					    audio_->pcm_written - audio_->pcm_read > audio_->pcm_capacity - 8192;
-				if (full) {
-					audio_->backpressure = true;
-					audio_result(reply, reply_length);
+				// room; it then answers OK with BACKPRESSURE, never an
+				// error (audio_stream_feed_compute).
+				const uint32_t retained = audio->codec_decoder ?
+					static_cast<uint32_t>(audio->codec_decoder->input_size()) :
+					audio->bytes_fed - audio->bytes_consumed;
+				if (length > audio->mp3_capacity -
+				    std::min(retained, audio->mp3_capacity)) {
+					audio->backpressure = true;
+					audio_result(*audio, reply, reply_length);
 					return ok;
 				}
-				audio_->backpressure = false;
-				audio_->drain = false;
-				if (audio_->codec_decoder)
-					audio_->bytes_fed += length;
-				else
-					audio_->bytes_consumed += length;
-				if ((flags & 1) && audio_->codec_decoder)
-					audio_->eof = true;
-				decode_audio(buffer_data(source->handle) + offset, length);
+				audio->backpressure = false;
+				audio->drain = false;
+				if (audio->codec_decoder)
+					audio->codec_decoder->set_draining(false);
+				audio->bytes_fed += length;
+				if (flags & 1)
+					audio->eof = true;
+				decode_audio(*audio, buffer_data(source->handle) + offset, length);
+			} else if (flags & 1) {
+				audio->eof = true;
+				decode_audio(*audio, nullptr, 0);
 			}
-			if (flags & 1) {
-				audio_->eof = true;
-				if (audio_->codec_decoder)
-					decode_audio(nullptr, 0);
+			// EOF ends any resumable drain (sdk_mailbox.c:4042-4045).
+			if (flags & 1)
+				audio->drain = false;
+			if (flags & 2) {
+				audio->drain = true;
+				// The card holds no decoded PCM back; let the decoder
+				// publish what it kept for end-of-stream trimming.
+				if (audio->codec_decoder) {
+					audio->codec_decoder->set_draining(true);
+					decode_audio(*audio, nullptr, 0);
+				}
 			}
-			if (audio_->codec_decoder && audio_->faulted)
-				return audio_->fault_status;
-			if (flags & 2)
-				audio_->drain = true;
+			if (audio->codec_decoder && audio->faulted)
+				return audio->fault_status;
 		} else if (opcode == 0x0505) {
 			const uint32_t count = be32(request + 4);
-			if (be32(request + 8) || audio_->playing ||
-			    count > audio_->pcm_written - audio_->pcm_read)
+			if (be32(request + 8) || count > audio->pcm_written - audio->pcm_read)
 				return bad_request;
-			audio_->pcm_read += count;
-			decode_audio(nullptr, 0);
+			if (audio->faulted)
+				return audio->fault_status;
+			if (audio->playing)
+				return bad_request;
+			audio->pcm_read += count;
+			decode_audio(*audio, nullptr, 0);
 		} else {
 			if (be32(request + 4))
 				return bad_request;
@@ -2175,62 +2430,79 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 #ifndef ZZ9000_SDK_AUDIO
 				return unsupported;
 #else
-				if (audio_->faulted)
-					return io_error;
-				if (!audio_->sample_rate)
-					return bad_request;
-				if (audio_->sample_format != pcm_s16le)
-					return unsupported;
-				if (audio_->codec == 2 || audio_->codec == 3) {
-					if (audio_->channels != 1 && audio_->channels != 2)
+				if (audio->faulted) {
+					// An envelope rejection is the client's AHI fallback
+					// signal; corruption stays IO_ERROR.
+					if ((audio->codec == 2 || audio->codec == 3) &&
+					    audio->fault_status == unsupported)
 						return unsupported;
-					const uint32_t r = audio_->sample_rate;
+					return io_error;
+				}
+				// Already bound to this session: idempotent. Another
+				// session holds the single playback binding: BUSY, as the
+				// card's pump answers before any admission check
+				// (sdk_mailbox.c:4614).
+				if (audio_playing_session_ && audio_playing_session_ != audio->session)
+					return busy;
+				if (!audio->sample_rate)
+					return bad_request;
+				if (audio->sample_format != pcm_s16le)
+					return unsupported;
+				if (audio->codec == 2 || audio->codec == 3) {
+					if (audio->channels != 1 && audio->channels != 2)
+						return unsupported;
+					const uint32_t r = audio->sample_rate;
 					if (r != 8000 && r != 11025 && r != 12000 && r != 16000 && r != 22050 &&
 					    r != 24000 && r != 32000 && r != 44100 && r != 48000 && r != 88200 && r != 96000)
 						return unsupported;
 				}
-				if (!audio_->output) {
+				if (!audio->output) {
 					SDL_AudioSpec spec = {
 						SDL_AUDIO_S16LE,
-						static_cast<int>(audio_->channels ? audio_->channels : 2),
-						static_cast<int>(audio_->sample_rate ? audio_->sample_rate : 48000)
+						static_cast<int>(audio->channels ? audio->channels : 2),
+						static_cast<int>(audio->sample_rate ? audio->sample_rate : 48000)
 					};
 					const int selected = currprefs.soundcard;
 					const bool use_default = currprefs.soundcard_default || selected < 0 ||
 					    selected >= MAX_SOUND_DEVICES || !sound_devices[selected];
 					const auto device = use_default ? SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK :
 					    static_cast<SDL_AudioDeviceID>(sound_devices[selected]->id);
-					audio_->output = SDL_OpenAudioDeviceStream(device, &spec, nullptr, nullptr);
-					if (!audio_->output && !use_default)
-						audio_->output = SDL_OpenAudioDeviceStream(
+					audio->output = SDL_OpenAudioDeviceStream(device, &spec, nullptr, nullptr);
+					if (!audio->output && !use_default)
+						audio->output = SDL_OpenAudioDeviceStream(
 							SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, nullptr, nullptr);
-					if (!audio_->output)
+					if (!audio->output)
 						return io_error;
 					// A new stream starts at unity gain; force pump_audio()
 					// to apply the session's gain to it.
-					audio_->gain = -1.0f;
-					audio_->paused = sound_paused();
-					if (!audio_->paused)
-						SDL_ResumeAudioStreamDevice(audio_->output);
+					audio->gain = -1.0f;
+					audio->paused = sound_paused();
+					if (!audio->paused)
+						SDL_ResumeAudioStreamDevice(audio->output);
 				}
-				audio_->playing = true;
+				audio->playing = true;
+				audio_playing_session_ = audio->session;
 #endif
 			} else if (opcode == 0x0508) {
-				audio_->playing = false;
+				audio->playing = false;
+				if (audio_playing_session_ == audio->session)
+					audio_playing_session_ = 0;
 #ifdef ZZ9000_SDK_AUDIO
-				if (audio_->output) {
-					SDL_DestroyAudioStream(audio_->output);
-					audio_->output = nullptr;
+				if (audio->output) {
+					SDL_DestroyAudioStream(audio->output);
+					audio->output = nullptr;
 				}
 #endif
 			} else {
-				audio_result(reply, reply_length);
-				close_audio();
+				// CLOSE always succeeds, even for a faulted or
+				// backpressured session, and a bound session stops first.
+				audio_result(*audio, reply, reply_length);
+				close_audio(audio);
 				return ok;
 			}
 		}
 		pump_audio();
-		audio_result(reply, reply_length);
+		audio_result(*audio, reply, reply_length);
 		return ok;
 	}
 	if (opcode == 0x0515) {
@@ -2239,10 +2511,11 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 		const uint32_t gain = be32(request + 4);
 		if (be32(request + 8) || gain > 128)
 			return bad_request;
-		if (!audio_ || be32(request) != audio_->session)
+		auto *audio = find_audio(be32(request));
+		if (!audio)
 			return bad_request;
-		audio_->stream_gain = gain;
-		audio_result(reply, reply_length);
+		audio->stream_gain = gain;
+		audio_result(*audio, reply, reply_length);
 		return ok;
 	}
 #endif

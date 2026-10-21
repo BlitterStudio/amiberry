@@ -28,12 +28,22 @@ public:
 	uint16_t read_register(uint32_t offset) const;
 	bool write_register(uint32_t offset, uint16_t value);
 	// Offsets are within board_memory, including the 64 KiB register aperture.
+	// Presentation-path facts reported on media status page 4, mirroring the
+	// card's overlay_path_info: the PIP source and destination geometry plus
+	// the screen mode it was configured against.
+	struct OverlayGeometry {
+		int32_t dst_x = 0, dst_y = 0;
+		int32_t dst_w = 0, dst_h = 0;
+		uint32_t screen_w = 0, screen_h = 0;
+	};
 	void set_framebuffer(uint32_t offset, uint32_t width, uint32_t height,
 	                     uint32_t pitch, uint32_t format);
 	void set_overlay(uint32_t offset, uint32_t width, uint32_t height,
-	                 uint32_t pitch, uint32_t variant, bool active);
+	                 uint32_t pitch, uint32_t variant, bool configured,
+	                 bool active, const OverlayGeometry &geometry);
 	uint8_t *buffer_data(uint32_t handle);
 	uint32_t buffer_length(uint32_t handle) const;
+
 
 private:
 	struct Buffer {
@@ -41,7 +51,10 @@ private:
 		uint32_t board_offset = 0;
 		uint32_t length = 0;
 		uint32_t flags = 0;
-		std::vector<uint8_t> card_only;
+		// Card-only storage, shared so a session that resolved it keeps
+		// valid storage after the guest frees the buffer, like the card's
+		// cached ring addresses.
+		std::shared_ptr<std::vector<uint8_t>> card_only;
 	};
 	struct Audio;
 	struct Image;
@@ -63,7 +76,11 @@ private:
 	std::array<Buffer, 16> buffers_{};
 	uint32_t next_handle_ = 1;
 	uint16_t last_status_ = 0;
-	std::unique_ptr<Audio> audio_;
+	// The card runs SDK_MAX_AUDIO_STREAMS (4) concurrent audio stream
+	// sessions, keyed by session id; a fifth BEGIN/BEGIN_EX answers
+	// NO_MEMORY. One session at a time may be bound to playback (PLAY).
+	std::array<std::unique_ptr<Audio>, 4> audios_{};
+	uint32_t audio_playing_session_ = 0;
 	uint32_t next_audio_session_ = 1;
 	std::unique_ptr<Image> image_;
 	uint32_t next_image_session_ = 1;
@@ -72,6 +89,10 @@ private:
 	std::unique_ptr<ConsoleEncoder> console_;
 	struct Overlay {
 		uint32_t offset = 0, width = 0, height = 0, pitch = 0, variant = 0;
+		int32_t dst_x = 0, dst_y = 0, dst_w = 0, dst_h = 0;
+		uint32_t screen_w = 0, screen_h = 0;
+		uint32_t presenting_session = 0;
+		bool configured = false;
 		bool active = false;
 	} overlay_{};
 	std::array<Surface, 4> surfaces_{};
@@ -86,10 +107,13 @@ private:
 	uint32_t surface_height(uint32_t handle) const;
 	uint32_t surface_pitch(uint32_t handle) const;
 	uint32_t surface_format(uint32_t handle) const;
+	Audio *find_audio(uint32_t session);
 	void close_audio();
-	void decode_audio(const uint8_t *input, uint32_t length);
+	void close_audio(Audio *audio);
+	void decode_audio(Audio &audio, const uint8_t *input, uint32_t length);
 	void pump_audio();
-	void audio_result(uint8_t *reply, uint16_t *reply_length);
+	void pump_audio(Audio &audio);
+	void audio_result(const Audio &audio, uint8_t *reply, uint16_t *reply_length);
 	void close_media();
 	void media_result(uint8_t *reply, uint16_t *reply_length,
 	                  uint32_t bytes_written = 0, uint32_t event_flags = 0);

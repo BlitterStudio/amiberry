@@ -31,6 +31,7 @@ struct AudioCodecDecoder::Impl {
 	bool eof = false;
 	bool flushed = false;
 	bool blocked = false;
+	bool draining = false;
 	std::vector<uint8_t> input;
 	std::vector<uint8_t> output;
 	std::vector<uint8_t> packet;
@@ -569,13 +570,27 @@ uint32_t AudioCodecDecoder::channels() const { return impl_->channels; }
 const uint8_t *AudioCodecDecoder::pcm_data() const { return impl_->output.data(); }
 size_t AudioCodecDecoder::pcm_size() const
 {
+	// Vorbis keeps its newest 4096 frames back until EOF so they can be cut
+	// at the final granule. The card holds no decoded PCM back, so a
+	// resumable drain publishes them: all of them before the EOS page (none
+	// can belong to the last page), and up to the EOS granule after it.
 	if (impl_->codec == 3 && !impl_->flushed) {
 		const size_t frame_bytes = impl_->channels * (impl_->output_format == pcm_s32be ? 4 : 2);
-		const size_t trim_tail = 4096 * (frame_bytes ? frame_bytes : 4);
-		return impl_->output.size() > trim_tail ? (impl_->output.size() - trim_tail) : 0;
+		if (!impl_->draining) {
+			const size_t trim_tail = 4096 * (frame_bytes ? frame_bytes : 4);
+			return impl_->output.size() > trim_tail ? (impl_->output.size() - trim_tail) : 0;
+		}
+		if (impl_->vorbis_eos && impl_->vorbis_granule &&
+		    impl_->decoded_frames > impl_->vorbis_granule) {
+			const uint64_t granule_bytes = impl_->vorbis_granule * frame_bytes;
+			return granule_bytes > impl_->bytes_consumed ?
+				static_cast<size_t>(std::min<uint64_t>(impl_->output.size(),
+					granule_bytes - impl_->bytes_consumed)) : 0;
+		}
 	}
 	return impl_->output.size();
 }
+void AudioCodecDecoder::set_draining(bool draining) { impl_->draining = draining; }
 bool AudioCodecDecoder::has_pending() const
 {
 	return pcm_size() != 0 || (impl_->blocked && !impl_->flushed);

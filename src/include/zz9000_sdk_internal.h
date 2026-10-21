@@ -6,6 +6,7 @@
 #define AMIBERRY_ZZ9000_SDK_INTERNAL_H
 
 #include <cfenv>
+#include <chrono>
 #include <cstdint>
 
 namespace zz9000_sdk {
@@ -34,7 +35,8 @@ constexpr uint32_t max_surface_bytes = 32 * 1024 * 1024;
 
 inline uint32_t pixel_bytes(uint32_t format)
 {
-	return format == 7 ? 4 : (format == 1 || format == 6 ? 2 : 0);
+	return format == 7 ? 4 : (format == 1 || format == 6 ? 2 :
+		(format == 4 ? 1 : 0));
 }
 
 inline bool rect_valid(uint32_t x, uint32_t y, uint32_t width, uint32_t height,
@@ -45,9 +47,13 @@ inline bool rect_valid(uint32_t x, uint32_t y, uint32_t width, uint32_t height,
 }
 
 inline void write_pixel(uint8_t *dst, uint32_t format, uint8_t r, uint8_t g,
-	                    uint8_t b, uint8_t a = 255)
+                    uint8_t b, uint8_t a = 255)
 {
-	if (format == 7) {
+	if (format == 4) {
+		// INDEX8 stores the pen in the low byte, as the card's
+		// sdk_surface_put_pixel() does.
+		dst[0] = b;
+	} else if (format == 7) {
 		dst[0] = b; dst[1] = g; dst[2] = r; dst[3] = a;
 	} else {
 		const uint16_t value = format == 1 ?
@@ -111,6 +117,23 @@ inline void put64(uint8_t *p, uint64_t value)
 inline uint32_t align_up(uint32_t value, uint32_t alignment)
 {
 	return (value + alignment - 1) & ~(alignment - 1);
+}
+
+// Monotonic host clock in microseconds, used by the media pipeline profiling
+// stages reported on status page 5.
+inline uint64_t monotonic_us()
+{
+	return static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::microseconds>(
+		std::chrono::steady_clock::now().time_since_epoch()).count());
+}
+
+// Mirrors the card's SDK_MEDIA_PACK_PAIR: two 16-bit geometry facts per
+// 64-bit status value. Signed coordinates travel as their two's-complement
+// pattern and are sign-extended by the reader (ZZ9K_MEDIA_PAIR_HI_S).
+inline uint64_t pack_pair(int32_t hi, int32_t lo)
+{
+	return (static_cast<uint64_t>(static_cast<uint16_t>(hi)) << 16) |
+		static_cast<uint16_t>(lo);
 }
 
 } // namespace zz9000_sdk

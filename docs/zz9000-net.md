@@ -43,5 +43,7 @@ The A4000 test boot used writable copies of both real-machine hardfiles,
 `zz9000_net=slirp`, and `bsdsocket_emu=false`. The installed guest network
 stack carried traffic while ZZ9000AX audio played. The originals were not
 mounted by that test. The focused frame protocol test and Windows debug build
-passed. Longer bidirectional transfers, reset during traffic, TAP/pcap, Zorro
-II, and INT2 remain to be qualified.
+passed. A later run with drivers master moved 24 MiB to and from the host
+through Roadshow on INT6 and on INT2 while ZZ9000AX played, with byte-exact
+data and no driver errors, and recovered after a warm reset during a transfer.
+TAP and pcap backends remain to be qualified.

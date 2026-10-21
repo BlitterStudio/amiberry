@@ -173,22 +173,99 @@ int main()
 	put16(request + 24, 2);
 	put16(request + 26, 1);
 	z3.call(0x8200, request, 34);
-	// A converted row wider than the 32-bit source row would size the host
-	// shadow and snapshot from the request instead of the framebuffer.
-	console_request(request, output, 2, 2, 0xfffc, 2, 64, 2);
+	// D5: a converted RGB565 row may be wider than the 32-bit source row.
+	// The firmware bounds it only by >= 2*width, evenness (D4) and surface
+	// reachability, so bpr past the surface pitch is accepted and encoded
+	// from row-by-row reads of the surface, never past its length.
+	console_request(request, output, 2, 2, 12, 2, 4, 2);
+	reply = z3.call(0x8200, request, 34);
+	assert(get16(reply + 22) == 1);
+	assert(z3.sdk.buffer_data(output)[0] == 1);
+	// The same wide geometry again is an empty pass against the shadow.
+	console_request(request, output, 2, 2, 12, 2, 4, 2, 0);
+	reply = z3.call(0x8200, request, 34);
+	assert(get32(reply + 16) == 5 && get16(reply + 22) == 0);
+	// A row narrower than two bytes per pixel is still refused.
+	console_request(request, output, 2, 2, 2, 2, 4, 2);
 	z3.call(0x8200, request, 34, 4);
+	// D4: RGB565 needs an even bpr and an even tile width in bytes -- an
+	// odd row splits a pixel across rows, an odd tile across tiles.
+	console_request(request, output, 2, 2, 5, 2, 4, 2);
+	z3.call(0x8200, request, 34, 4);
+	console_request(request, output, 2, 2, 4, 2, 3, 2);
+	z3.call(0x8200, request, 34, 4);
+	// D2: an invalid band is checked after the reconfigure and snapshot, as
+	// in the firmware's rfb_encode_band(): INTERNAL_ERROR, session dropped.
+	console_request(request, output, 2, 2, 12, 2, 4, 2, 0);
+	put16(request + 22, 1);
+	put16(request + 24, 0);
+	z3.call(0x8200, request, 34, 65535);
+	console_request(request, output, 2, 2, 12, 2, 4, 2, 0);
+	put16(request + 24, 3);
+	z3.call(0x8200, request, 34, 65535);
+	// The dropped session restarts: a clean band 0 without a reset flag is
+	// still a fresh keyframe at sequence 0, not an incremental pass.
+	console_request(request, output, 2, 2, 12, 2, 4, 2, 0);
+	reply = z3.call(0x8200, request, 34);
+	assert(get16(reply + 22) == 1);
+	assert(get16(z3.sdk.buffer_data(output) + 2) == 0);
+	// D3: another output buffer is another owner.  The session and snapshot
+	// are dropped and the sequence restarts at 0; the new owner's first
+	// request may not begin past band 0.
+	const uint32_t second = z3.alloc(4096);
+	console_request(request, second, 2, 2, 12, 2, 4, 2, 0);
+	put16(request + 22, 1);
+	z3.call(0x8200, request, 34, 4);
+	// Its band 0 encodes a full frame from the zeroed shadow; the configure
+	// already happened, so no keyframe flag, but the sequence is new.
+	console_request(request, second, 2, 2, 12, 2, 4, 2, 0);
+	reply = z3.call(0x8200, request, 34);
+	assert(get16(reply + 22) == 0);
+	assert(get16(z3.sdk.buffer_data(second) + 2) == 0);
+	assert(get32(reply + 16) > 5);
+	// Returning to the first owner at band 0 is a reconfigure: a keyframe
+	// at sequence 0.
+	console_request(request, output, 2, 2, 12, 2, 4, 2, 0);
+	reply = z3.call(0x8200, request, 34);
+	assert(get16(reply + 22) == 1);
+	assert(get16(z3.sdk.buffer_data(output) + 2) == 0);
 
 	z3.sdk.set_framebuffer(0x10000, 2, 1, 4, 1);
 	const uint8_t rgb565[] = {0xf8, 0, 0, 0x1f};
 	std::memcpy(pixels, rgb565, sizeof(rgb565));
 	console_request(request, output, 2, 1, 4, 2, 4, 1);
 	reply = z3.call(0x8200, request, 34);
-	const uint8_t expected_rgb565[] = {1, 0, 0, 5, 3, 0, 0, 0, 0xf8, 0, 0, 0x1f, 0};
+	const uint8_t expected_rgb565[] = {1, 0, 0, 1, 3, 0, 0, 0, 0xf8, 0, 0, 0x1f, 0};
 	assert(get32(reply + 16) == sizeof(expected_rgb565));
 	assert(std::memcmp(z3.sdk.buffer_data(output), expected_rgb565, sizeof(expected_rgb565)) == 0);
+	// D4 on a native RGB565 surface: an odd tile width is refused there too.
+	console_request(request, output, 2, 1, 4, 2, 3, 1);
+	z3.call(0x8200, request, 34, 4);
 
 	z3.sdk.set_framebuffer(0x10000, 2, 1, 4, 6);
 	console_request(request, output, 2, 1, 4, 2, 4, 1);
+	z3.call(0x8200, request, 34, 4);
+
+	// D1: an 8-bit CLUT screen is the firmware's INDEX8 surface (4) in the
+	// 0x0202 reply, and CLUT8 encodes straight from it.
+	z3.sdk.set_framebuffer(0x10000, 2, 2, 2, 4);
+	const uint8_t clut[] = {10, 20, 30, 40};
+	std::memcpy(pixels, clut, sizeof(clut));
+	reply = z3.call(0x0202, request, 0);
+	assert(get32(reply + 24) == 2 && get32(reply + 28) == 2 &&
+		get32(reply + 32) == 2 && get32(reply + 36) == 4 &&
+		get32(reply + 44) == 4);
+	const uint32_t clut_output = z3.alloc(4096);
+	console_request(request, clut_output, 2, 2, 2, 1, 2, 2);
+	reply = z3.call(0x8200, request, 34);
+	const uint8_t expected_clut[] = {1, 0, 0, 0, 3, 0, 0, 0, 10, 20, 30, 40, 0};
+	assert(get32(reply + 16) == sizeof(expected_clut));
+	assert(get16(reply + 22) == 1);
+	assert(std::memcmp(z3.sdk.buffer_data(clut_output), expected_clut,
+		sizeof(expected_clut)) == 0);
+	// CLUT8 is not served from a non-INDEX8 surface.
+	z3.sdk.set_framebuffer(0x10000, 2, 1, 4, 1);
+	console_request(request, clut_output, 2, 1, 4, 1, 4, 1);
 	z3.call(0x8200, request, 34, 4);
 	return 0;
 }

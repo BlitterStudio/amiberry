@@ -67,16 +67,25 @@ uint16_t ConsoleEncoder::encode(const uint8_t *request, uint8_t *pixels,
 	*reply_length = 0;
 	if (!pixels || !output || !requested_capacity || requested_capacity > output_length)
 		return bad_handle;
-	// A converted RGB565 row is never wider than the 32-bit source row, which
-	// bounds the shadow and snapshot by the framebuffer's own size.
+	// The surface's own length, as the firmware's fb->length: the framebuffer
+	// (0x0202) and allocated surfaces (0x0200) both define it as pitch times
+	// height, and set_framebuffer() validated that the board holds it.
+	const auto surface_length = static_cast<uint64_t>(surface_pitch) * surface_height;
+	// Geometry the firmware's rfb_geom_ok() refuses, plus its surface match:
+	// CLUT8 is served from an INDEX8 (4) surface and RGB565 from RGB565 (1),
+	// or from BGRA8888 (7) converted into the snapshot.  A converted row is
+	// read from the surface row by row (width * 4 bytes each, within its
+	// length), so the host's bytes_per_row may exceed the surface pitch.
 	if (width != surface_width || height != surface_height || !width || !height ||
 		!pixel_bytes || depth != pixel_bytes * 8 || !tile_width || tile_width > 64 ||
-		!tile_height || tile_height > 64 || ty0 > ty1 || ty1 > tiles_y ||
+		!tile_height || tile_height > 64 ||
 		static_cast<uint64_t>(tiles_x) * tiles_y > 65536 ||
 		pitch < width * pixel_bytes ||
+		(format == rfb_format_rgb565 && ((pitch | tile_width) & 1)) ||
 		(!bgra_convert && (pitch != surface_pitch ||
-			(surface_format != (format == rfb_format_clut8 ? 0u : 1u))) ||
-		(bgra_convert && (surface_pitch < width * 4 || pitch > surface_pitch))))
+			surface_format != (format == rfb_format_clut8 ? 4u : 1u))) ||
+		(bgra_convert && surface_pitch < width * 4) ||
+		static_cast<uint64_t>(height) * surface_pitch > surface_length)
 		return bad_request;
 
 	const bool owner_changed = ready_ && owner != owner_;
@@ -100,9 +109,13 @@ uint16_t ConsoleEncoder::encode(const uint8_t *request, uint8_t *pixels,
 		tile_height_ = tile_height;
 		format_ = format;
 		// A new geometry voids the snapshot; a same-geometry reset (the
-		// viewer's refresh, which may arrive on any band) keeps it.
-		if (!geometry_same)
+		// viewer's refresh, which may arrive on any band) keeps it.  A new
+		// owner is a new session, which the firmware drops whole: the
+		// snapshot goes too and the sequence restarts at zero.
+		if (!geometry_same || owner_changed)
 			snapshot_.clear();
+		if (owner_changed)
+			sequence_ = 0;
 	}
 	// Band 0 copies the live framebuffer once per pass; every band of the
 	// pass encodes from that copy, as the firmware does.
@@ -132,6 +145,13 @@ uint16_t ConsoleEncoder::encode(const uint8_t *request, uint8_t *pixels,
 	}
 	if (snapshot_.size() != static_cast<size_t>(pitch) * height) {
 		return bad_request;
+	}
+	// The firmware validates the band inside rfb_encode_band(), after the
+	// reconfigure and the snapshot: an invalid band is an encoder fault that
+	// drops the session (INTERNAL_ERROR), not a BAD_REQUEST.
+	if (ty0 > ty1 || ty1 > tiles_y) {
+		reset();
+		return internal_error;
 	}
 
 	uint32_t used = 0;

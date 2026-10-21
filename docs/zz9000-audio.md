@@ -62,6 +62,8 @@ ZZ9000 board. Start an AHI application that selects ZZ9000AX. Useful
 Playback was verified with a real A4000 system image and its installed AHI
 subdriver: the guest booted, audio was heard, interrupt acknowledgements and
 SWAB kicks continued, and the TX sequence advanced beyond 1,250 with nonzero
-sample peaks. Capture has not been tested. The emulator currently models the
+sample peaks. `ZZAXDuplexTest` passed full-duplex capture (240,000 frames, no
+callback type errors) with no sampler selected and with the host microphone,
+whose samples reached the guest's WAV file. The emulator currently models the
 legacy AHI register path, without the SDK audio fabric or DSP parameter
 operations.

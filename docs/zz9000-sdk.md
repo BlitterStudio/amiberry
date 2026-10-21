@@ -42,15 +42,23 @@ and buffer on board reset or removal.
 ## Audio streams
 
 The audio-stream service implements begin, codec-aware begin (`BeginEx`),
-feed, read, play, stop, close and per-stream gain. MP3 sessions use mpg123;
-the legacy begin opcode and `BeginEx` with the MP3 codec produce identical
-PCM. FLAC (8 to 192 kHz, up to 24 bits, mono or stereo) and Ogg Vorbis (8 to
-96 kHz, mono or stereo) are decoded incrementally with FFmpeg as the guest
-feeds them, so large files are never held in host memory. As on the card,
-their input waits in the session's input ring until PCM space lets the
-decoder take it: a feed is refused only when it does not fit that ring, and
-`bytes_consumed` counts decoded input. FLAC sessions can return S16LE,
-S16BE or S32BE; Vorbis sessions return S16LE or S16BE.
+feed, read, play, stop, close and per-stream gain, and keeps up to four
+concurrent sessions like the card's four stream slots; a begin against a
+full table answers `NO_MEMORY`. MP3 sessions use mpg123; the legacy begin
+opcode and `BeginEx` with the MP3 codec produce identical PCM. FLAC (8 to
+192 kHz, up to 24 bits, mono or stereo) and Ogg Vorbis (8 to 96 kHz, mono
+or stereo) are decoded incrementally with FFmpeg as the guest feeds them,
+so large files are never held in host memory. As on the card, input waits
+in the session's input ring until PCM space lets the decoder take it: a
+feed is refused only when it does not fit that ring (still `OK`, with the
+BACKPRESSURE result flag), and `bytes_consumed` counts decoded input.
+Undecodable MP3 data never faults a session — the card's minimp3 consumes
+nothing and waits — and the input ring of any open session can be freed,
+because the session keeps the ring it resolved at begin. FLAC sessions can
+return S16LE, S16BE or S32BE; Vorbis sessions return S16LE or S16BE.
+Playback (`Play`) binds one session at a time; a `Play` for a different
+session while one is bound answers `BUSY`, exactly as the card's single
+output pump does.
 
 MHI's S16LE stream plays through the selected Amiberry playback device on a
 host output stream separate from the board's AHI path; the per-stream gain
@@ -97,12 +105,28 @@ is not advertised, so ZZPlay plays the sound through guest AHI. Zorro II video
 sessions remain unadvertised because its video window aperture is not mapped
 for this path.
 
+The media status op (`0x0b0a`) answers all six card pages: timing (with the
+timeline origin), audio, counters (decoded, presented and discarded frames
+counted separately), audio output (zero underruns — there is no card-side
+DMA pump here to starve), the overlay presentation path, and per-stage
+profiling. The presentation page reports the PIP's flags and source,
+destination and screen geometry packed into 16-bit pairs; because the
+emulated PIP *is* the FPGA overlay plane, an active overlay always reports
+the native path, and ZZPlay names it "native 1:1" or "native scaled" rather
+than "card-local compositor". Profiling packs each stage as
+`(microseconds << 32) | calls` measured around the real FFmpeg/pl_mpeg
+decode, YUY2 pack, present copy and audio decode work; the NEON flag never
+appears because the host packs in scalar C++. Pages above five and nonzero
+flags are rejected exactly as on the card.
+
 ## Console encoder
 
 The console service (`0x8200`) encodes the live RTG framebuffer into RFB tile
 updates for remote-console clients. It converts BGRA8888 or RGB565
-framebuffers to big-endian RGB565 tiles, refuses RGB555, and compresses tiles
-with zlib when that makes them smaller.
+framebuffers to big-endian RGB565 tiles, encodes 8-bit screens (reported as
+INDEX8 surfaces) as CLUT8 tiles, refuses RGB555, and compresses tiles with
+zlib when that makes them smaller. Tiles are always raw; the card's optional
+XOR and copy-rectangle layers are not produced.
 
 ## Not emulated
 
@@ -131,5 +155,12 @@ with MP2, AC-3 and LPCM audio (up to 1280x720), WebM VP8/Vorbis and
 VP9/Opus, Matroska with MPEG-1, MPEG-2 and VP8 video, a 1920x1080 VP9 clip,
 FLAC and Ogg Vorbis through AHI and through on-card output, animated WebP,
 and preloaded playback; `zz9k-view` showed lossy, lossless and animated WebP.
-The WebP picture DataType and the sound DataType, the console encoder,
-Zorro II and warm reset still need guest checks.
+A later run on a disposable copy of the same system, with drivers master
+(`zz9k.library` 2.33, ZZPlay 0.6), passed the remaining checks: the WebP
+picture DataType and the FLAC and Ogg Vorbis sound DataType decode correctly,
+the console encoder's decoded tiles match the screen pixel for pixel, ZZPlay
+reports the presentation path and card profile from status pages 4 and 5, and
+a warm reset during media, audio and network sessions recovers all of them.
+On a 4 MB Zorro II board with a 1024x768 16-bit Workbench, `zz9k-archive`,
+`zz9k-view`, MHI, AHI and on-card audio work, and ZZPlay refuses video files
+because Zorro II video sessions are not advertised.

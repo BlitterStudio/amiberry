@@ -47,6 +47,13 @@ public:
 	bool pop_audio(MediaAvAudio &audio);
 	/* True while decoded PCM is still queued for the guest ring. */
 	bool has_audio() const;
+	/* Cumulative per-stage pipeline timing for media status page 5, counted
+	 * by the worker around the FFmpeg work it performs: video decode,
+	 * YUY2 pack and audio decode, in ZZ9KMediaProfileStage order. The
+	 * present stage stays zero here; the caller times its own copy. */
+	static constexpr uint32_t profile_stages = 4;
+	void profile_totals(uint64_t microseconds[profile_stages],
+	                    uint64_t calls[profile_stages]) const;
 	bool header_ready() const;
 	bool failed() const;
 	bool worker_waiting() const;
@@ -70,6 +77,8 @@ private:
 	uint32_t audio_bytes_ = 0;
 	State *state_ = nullptr;
 	std::thread worker_;
+	uint64_t profile_us_[profile_stages] = {};
+	uint64_t profile_calls_[profile_stages] = {};
 	bool eof_ = false;
 	bool started_ = false;
 	bool header_ready_ = false;
