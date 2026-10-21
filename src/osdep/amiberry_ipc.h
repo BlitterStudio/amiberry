@@ -61,6 +61,9 @@ constexpr char const* CMD_SETTINGS_SET = "SETTINGS_SET";
 constexpr char const* CMD_SETTINGS_VALIDATE = "SETTINGS_VALIDATE";
 constexpr char const* CMD_SETTINGS_COMMIT = "SETTINGS_COMMIT";
 constexpr char const* CMD_SETTINGS_RESET_SESSION = "SETTINGS_RESET_SESSION";
+constexpr char const* CMD_LIST_MEDIA = "LIST_MEDIA";
+constexpr char const* CMD_GET_FOLDER = "GET_FOLDER";
+constexpr char const* CMD_SET_FOLDER = "SET_FOLDER";
 constexpr char const* CMD_HELP = "HELP";
 
 // Joystick, Quicksave, LED status, etc.

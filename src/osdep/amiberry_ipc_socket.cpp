@@ -7,6 +7,7 @@
 
 #include "amiberry_ipc.h"
 #include "settings/amiberry_actions.h"
+#include "settings/amiberry_media.h"
 #include "settings/amiberry_settings.h"
 #include "sysdeps.h"
 #include "amiberry_gfx.h"
@@ -36,6 +37,7 @@
 #include <iostream>
 #include <memory>
 #include <sstream>
+#include <cctype>
 #include <cstring>
 #include <map>
 #include <algorithm>
@@ -1042,32 +1044,132 @@ static std::string HandleListFloppies(const std::vector<std::string>& args)
 	return make_response(true, responses);
 }
 
+// The media lists and folders come from the media API (amiberry_media.h),
+// which native front ends use too.
+struct media_name {
+	const char* name;
+	int value;
+};
+
+static const media_name media_lists[] = {
+	{"RECENT_FLOPPIES", AMIBERRY_MEDIA_RECENT_FLOPPIES},
+	{"RECENT_CDS", AMIBERRY_MEDIA_RECENT_CDS},
+	{"RECENT_WHDLOAD", AMIBERRY_MEDIA_RECENT_WHDLOAD},
+	{"CD_DRIVES", AMIBERRY_MEDIA_CD_DRIVES},
+	{"CONFIGURATIONS", AMIBERRY_MEDIA_CONFIGURATIONS},
+	{"SAVESTATES", AMIBERRY_MEDIA_SAVESTATES},
+};
+
+static const media_name media_folders[] = {
+	{"ROMS", AMIBERRY_FOLDER_ROMS},
+	{"FLOPPIES", AMIBERRY_FOLDER_FLOPPIES},
+	{"CDS", AMIBERRY_FOLDER_CDS},
+	{"HARD_DRIVES", AMIBERRY_FOLDER_HARD_DRIVES},
+	{"CONFIGURATIONS", AMIBERRY_FOLDER_CONFIGURATIONS},
+	{"SAVESTATES", AMIBERRY_FOLDER_SAVESTATES},
+	{"SCREENSHOTS", AMIBERRY_FOLDER_SCREENSHOTS},
+	{"WHDLOAD_ARCHIVES", AMIBERRY_FOLDER_WHDLOAD_ARCHIVES},
+};
+
+template <size_t N>
+static int find_media_name(const media_name (&table)[N], const std::string& name)
+{
+	for (const media_name& entry : table) {
+		const size_t length = std::strlen(entry.name);
+		bool same = name.size() == length;
+		for (size_t i = 0; same && i < length; i++)
+			same = std::toupper(static_cast<unsigned char>(name[i])) == entry.name[i];
+		if (same)
+			return entry.value;
+	}
+	return -1;
+}
+
+// Copies a string the media API reports through get, growing the buffer
+// while it is too small (a folder path gets a trailing separator, so it can
+// exceed the host's path limit by one).
+template <typename Get>
+static bool media_string(Get get, std::string& out)
+{
+	std::vector<char> buffer(MAX_DPATH + 16);
+	for (;;) {
+		const amiberry_settings_status status = get(buffer.data(), buffer.size());
+		if (status == AMIBERRY_SETTINGS_OK) {
+			out = buffer.data();
+			return true;
+		}
+		if (status != AMIBERRY_SETTINGS_BUFFER_TOO_SMALL || buffer.size() >= 65536)
+			return false;
+		buffer.resize(buffer.size() * 2);
+	}
+}
+
+// The entries of a media list: paths, or names when names is set.
+static std::vector<std::string> media_entries(amiberry_media_list list, bool names)
+{
+	std::vector<std::string> entries;
+	const size_t count = amiberry_media_refresh(list);
+	for (size_t i = 0; i < count; i++) {
+		std::string entry;
+		const bool ok = media_string([&](char* buffer, size_t size) {
+			return names ? amiberry_media_entry(list, i, nullptr, 0, buffer, size)
+				: amiberry_media_entry(list, i, buffer, size, nullptr, 0);
+		}, entry);
+		if (ok)
+			entries.push_back(std::move(entry));
+	}
+	return entries;
+}
+
 static std::string HandleListConfigs(const std::vector<std::string>& args)
 {
 	if (!currprefs.ipc_disable_logging) {
 		std::cout << "IPC: Received LIST_CONFIGS" << std::endl;
 	}
-	std::vector<std::string> configs;
-
-	std::string config_path = get_configuration_path();
-	DIR* dir = opendir(config_path.c_str());
-	if (dir) {
-		struct dirent* entry;
-		while ((entry = readdir(dir)) != nullptr) {
-			std::string name = entry->d_name;
-			// Only list .uae files
-			if (name.length() > 4 && name.substr(name.length() - 4) == ".uae") {
-				configs.push_back(name);
-			}
-		}
-		closedir(dir);
-	}
-
+	const std::vector<std::string> configs = media_entries(AMIBERRY_MEDIA_CONFIGURATIONS, true);
 	if (configs.empty()) {
 		return make_response(true, {"<no configs found>"});
 	}
-
 	return make_response(true, configs);
+}
+
+static std::string HandleListMedia(const std::vector<std::string>& args)
+{
+	if (args.size() != 1) {
+		return make_response(false, {"Usage: LIST_MEDIA <RECENT_FLOPPIES|RECENT_CDS|RECENT_WHDLOAD|CD_DRIVES|CONFIGURATIONS|SAVESTATES>"});
+	}
+	const int list = find_media_name(media_lists, args[0]);
+	if (list < 0) {
+		return make_response(false, {"Unknown media list: " + args[0]});
+	}
+	return make_response(true, media_entries(static_cast<amiberry_media_list>(list), false));
+}
+
+static std::string HandleGetFolder(const std::vector<std::string>& args)
+{
+	const int folder = args.size() == 1 ? find_media_name(media_folders, args[0]) : -1;
+	if (folder < 0) {
+		return make_response(false, {"Usage: GET_FOLDER <ROMS|FLOPPIES|CDS|HARD_DRIVES|CONFIGURATIONS|SAVESTATES|SCREENSHOTS|WHDLOAD_ARCHIVES>"});
+	}
+	std::string path;
+	if (!media_string([&](char* buffer, size_t size) {
+			return amiberry_folder_get(static_cast<amiberry_folder>(folder), buffer, size);
+		}, path)) {
+		return make_response(false, {"Folder path could not be read"});
+	}
+	return make_response(true, {path});
+}
+
+static std::string HandleSetFolder(const std::vector<std::string>& args)
+{
+	const int folder = args.size() == 2 ? find_media_name(media_folders, args[0]) : -1;
+	if (folder < 0) {
+		return make_response(false, {"Usage: SET_FOLDER <folder> <path>"});
+	}
+	if (amiberry_folder_set(static_cast<amiberry_folder>(folder), args[1].c_str()) != AMIBERRY_SETTINGS_OK) {
+		return make_response(false, {"Invalid path: " + args[1]});
+	}
+	return make_response(true);
 }
 
 static std::string HandleFrameAdvance(const std::vector<std::string>& args)
@@ -3251,6 +3353,7 @@ static std::string HandleHelp(const std::vector<std::string>& args)
 	commands.emplace_back("DISKSWAP <disknum> <drive>, QUERYDISKSWAP <drive>");
 	commands.emplace_back("GET_STATUS, GET_CONFIG <opt>, SET_CONFIG <opt> <val>");
 	commands.emplace_back("LOAD_CONFIG <path>, LIST_CONFIGS");
+	commands.emplace_back("LIST_MEDIA <list>, GET_FOLDER <folder>, SET_FOLDER <folder> <path>");
 	commands.emplace_back("SET_VOLUME <0-100>, GET_VOLUME, MUTE, UNMUTE");
 	commands.emplace_back("SET_WARP <0|1>, GET_WARP, TOGGLE_FULLSCREEN");
 	commands.emplace_back("SET_DISPLAY_MODE <0-2>, GET_DISPLAY_MODE, TOGGLE_RTG");
@@ -3511,6 +3614,9 @@ static void InitHandlers()
 	command_handlers[CMD_SETTINGS_VALIDATE] = HandleSettingsValidate;
 	command_handlers[CMD_SETTINGS_COMMIT] = HandleSettingsCommit;
 	command_handlers[CMD_SETTINGS_RESET_SESSION] = HandleSettingsResetSession;
+	command_handlers[CMD_LIST_MEDIA] = HandleListMedia;
+	command_handlers[CMD_GET_FOLDER] = HandleGetFolder;
+	command_handlers[CMD_SET_FOLDER] = HandleSetFolder;
 	command_handlers[CMD_HELP] = HandleHelp;
 
 	command_handlers[CMD_QUICKSAVE] = HandleQuickSave;

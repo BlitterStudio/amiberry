@@ -294,6 +294,33 @@ def main():
         check("SETTINGS_RESET_SESSION after the empty value",
               control.request("SETTINGS_RESET_SESSION") == "OK")
 
+        # Folders and media lists come from the media API.
+        states = os.path.join(work, "states")
+        os.makedirs(states)
+        for name in ("b.uss", "a.USS", "notes.txt"):
+            open(os.path.join(states, name), "w").close()
+        check("SET_FOLDER SAVESTATES", control.request(f"SET_FOLDER\tSAVESTATES\t{states}") == "OK")
+        reply = control.request("GET_FOLDER\tsavestates")
+        check("GET_FOLDER returns the folder set",
+              reply.startswith("OK\t") and reply[3:].rstrip("/") == states, reply)
+        reply = control.request("LIST_MEDIA\tSAVESTATES")
+        expected = "OK\t" + os.path.join(states, "a.USS") + "\t" + os.path.join(states, "b.uss")
+        check("LIST_MEDIA lists the state files sorted, by extension only", reply == expected, reply)
+        check("LIST_MEDIA refuses an unknown list",
+              control.request("LIST_MEDIA\tBOGUS").startswith("ERROR"))
+        reply = control.request("SET_FOLDER\tROMS\t" + "a" * 5000)
+        check("SET_FOLDER refuses a path beyond the host's limit",
+              reply == "ERROR\tInvalid path: " + "a" * 5000, reply[:40])
+        # LIST_CONFIGS keeps answering with bare .uae names.
+        configs = os.path.join(work, "configs")
+        os.makedirs(configs)
+        for name in ("game.uae", "other.txt"):
+            open(os.path.join(configs, name), "w").close()
+        check("SET_FOLDER CONFIGURATIONS",
+              control.request(f"SET_FOLDER\tCONFIGURATIONS\t{configs}") == "OK")
+        reply = control.request("LIST_CONFIGS")
+        check("LIST_CONFIGS lists bare configuration names", reply == "OK\tgame.uae", reply)
+
         # One restore can be pending: a second load in the same pass fails
         # instead of replacing the first after both replied OK.
         replies = control.pipeline([f"LOADSTATE\t{state}", f"LOADSTATE\t{state}"])
