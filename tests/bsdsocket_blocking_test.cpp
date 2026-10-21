@@ -179,18 +179,17 @@ static void test_full_send_buffer_times_out()
 
 	/* The peer never reads, so filling the buffer makes send block. Data
 	   still in flight to the peer frees send space after a fill (an ACK can
-	   be delayed by tens of ms), so the buffer is refilled until, after a
-	   pause longer than any delayed ACK, select() no longer reports it
-	   writable: the condition the wait below relies on. */
+	   be delayed), so the buffer is refilled whenever space appears, until
+	   it has stayed unwritable through a whole quiet interval, far longer
+	   than a delayed ACK and than the wait below. */
 	fcntl(pair.client, F_SETFL, fcntl(pair.client, F_GETFL) | O_NONBLOCK);
 	static char chunk[65536];
-	wait_clock::time_point now;
+	wait_clock::time_point quiet_end;
 	do {
 		while (send(pair.client, chunk, sizeof(chunk), 0) > 0) {
 		}
-		usleep(250000);
-		now = wait_clock::now();
-	} while (wait_for_socket(pair.client, abort_pipe[0], false, &now) == wait_result::ready);
+		quiet_end = wait_clock::now() + milliseconds(750);
+	} while (wait_for_socket(pair.client, abort_pipe[0], false, &quiet_end) == wait_result::ready);
 
 	const wait_clock::time_point start = wait_clock::now();
 	const wait_clock::time_point deadline = start + milliseconds(150);
