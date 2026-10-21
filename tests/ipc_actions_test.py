@@ -297,7 +297,7 @@ def main():
         # Folders and media lists come from the media API.
         states = os.path.join(work, "states")
         os.makedirs(states)
-        for name in ("b.uss", "a.USS", "notes.txt"):
+        for name in ("b.uss", "a.USS", "notes.txt", "tab\there.uss"):
             open(os.path.join(states, name), "w").close()
         check("SET_FOLDER SAVESTATES", control.request(f"SET_FOLDER\tSAVESTATES\t{states}") == "OK")
         reply = control.request("GET_FOLDER\tsavestates")
@@ -305,7 +305,8 @@ def main():
               reply.startswith("OK\t") and reply[3:].rstrip("/") == states, reply)
         reply = control.request("LIST_MEDIA\tSAVESTATES")
         expected = "OK\t" + os.path.join(states, "a.USS") + "\t" + os.path.join(states, "b.uss")
-        check("LIST_MEDIA lists the state files sorted, by extension only", reply == expected, reply)
+        check("LIST_MEDIA lists the state files sorted, by extension only, without protocol delimiters",
+              reply == expected, reply)
         check("LIST_MEDIA refuses an unknown list",
               control.request("LIST_MEDIA\tBOGUS").startswith("ERROR"))
         reply = control.request("SET_FOLDER\tROMS\t" + "a" * 5000)

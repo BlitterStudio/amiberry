@@ -7600,30 +7600,31 @@ static std::string get_settings_path_for_save(const std::string& value)
 bool save_amiberry_settings_with_result()
 {
 	ensure_parent_directory_exists(amiberry_conf_file);
-	// Written to a temporary file that replaces the settings file only once
-	// it is complete, so a failed write (a full disk) never leaves a
-	// truncated settings file behind.
-	const std::string temporary = amiberry_conf_file + ".tmp";
-	auto* const f = uae_fopen(temporary.c_str(), "we");
-	if (!f)
-		return false;
+	// Built in memory and written with my_save_file_atomic(), which
+	// replaces the file only once the new one is complete (keeping its
+	// permissions, and on Windows its ACLs), so a failed write never
+	// leaves a truncated settings file behind.
+	std::string content;
 
 	char buffer[MAX_DPATH];
 
 	auto write_bool_option = [&](const char* name, const bool value) {
 		_sntprintf(buffer, MAX_DPATH, "%s=%s\n", name, value ? "yes" : "no");
-		fputs(buffer, f);
+		content += buffer;
 		};
 
 	auto write_int_option = [&](const char* name, const int value) {
 		_sntprintf(buffer, MAX_DPATH, "%s=%d\n", name, value);
-		fputs(buffer, f);
+		content += buffer;
 		};
 
 	// Written whole: a value cut at the buffer lost its newline, and the
 	// next setting was read as part of it.
 	auto write_string_option = [&](const char* name, const std::string& value) {
-		fprintf(f, "%s=%s\n", name, value.c_str());
+		content += name;
+		content += '=';
+		content += value;
+		content += '\n';
 		};
 
 	auto write_path_option = [&](const char* name, const std::string& value) {
@@ -7632,7 +7633,7 @@ bool save_amiberry_settings_with_result()
 
 	auto write_float_option = [&](const char* name, const float value) {
 		_sntprintf(buffer, MAX_DPATH, "%s=%f\n", name, value);
-		fputs(buffer, f);
+		content += buffer;
 		};
 
 	// Should the Quickstart Panel be the default when opening the GUI?
@@ -7813,7 +7814,7 @@ bool save_amiberry_settings_with_result()
 		_sntprintf(buffer, MAX_DPATH, "shader_parameter=%s|%s|%s|%.9g\n",
 			parameter.rtg ? "rtg" : "native", parameter.shader.c_str(),
 			parameter.name.c_str(), parameter.value);
-		fputs(buffer, f);
+		content += buffer;
 	}
 
 	// Show CRT bezel frame overlay
@@ -7866,7 +7867,7 @@ bool save_amiberry_settings_with_result()
 
 	// Recent disk entries (these are used in the dropdown controls)
 	_sntprintf(buffer, MAX_DPATH, "MRUDiskList=%zu\n", lstMRUDiskList.size());
-	fputs(buffer, f);
+	content += buffer;
 	for (auto& i : lstMRUDiskList)
 	{
 		write_path_option("Diskfile", i);
@@ -7874,7 +7875,7 @@ bool save_amiberry_settings_with_result()
 
 	// Recent CD entries (these are used in the dropdown controls)
 	_sntprintf(buffer, MAX_DPATH, "MRUCDList=%zu\n", lstMRUCDList.size());
-	fputs(buffer, f);
+	content += buffer;
 	for (auto& i : lstMRUCDList)
 	{
 		write_path_option("CDfile", i);
@@ -7883,28 +7884,13 @@ bool save_amiberry_settings_with_result()
 	// Recent WHDLoad entries (these are used in the dropdown controls)
 	// lstMRUWhdloadList
 	_sntprintf(buffer, MAX_DPATH, "MRUWHDLoadList=%zu\n", lstMRUWhdloadList.size());
-	fputs(buffer, f);
+	content += buffer;
 	for (auto& i : lstMRUWhdloadList)
 	{
 		write_path_option("WHDLoadfile", i);
 	}
 	
-	const bool write_ok = ferror(f) == 0;
-	const bool close_ok = fclose(f) == 0;
-	std::error_code ec;
-	// The new file takes over the old one's permissions, so a save never
-	// widens access to the settings and their recent-file history.
-	const auto existing = std::filesystem::status(amiberry_conf_file, ec);
-	if (!ec && std::filesystem::exists(existing))
-		std::filesystem::permissions(temporary, existing.permissions(), ec);
-	ec.clear();
-	if (write_ok && close_ok)
-		std::filesystem::rename(temporary, amiberry_conf_file, ec);
-	if (!write_ok || !close_ok || ec) {
-		std::filesystem::remove(temporary, ec);
-		return false;
-	}
-	return true;
+	return my_save_file_atomic(amiberry_conf_file.c_str(), content.data(), content.size());
 }
 
 void save_amiberry_settings()

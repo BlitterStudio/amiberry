@@ -151,6 +151,10 @@ bool has_extension(const std::filesystem::path& file, const char* extension)
 std::vector<media_entry> folder_files(const std::string& folder, const char* extension)
 {
 	std::vector<media_entry> files;
+	// An unset folder lists nothing (resolving it would list the working
+	// directory).
+	if (folder.empty())
+		return files;
 	std::error_code ec;
 	// Absolute, so entries are full paths whatever the working directory
 	// of the caller that reads them.
@@ -266,10 +270,14 @@ amiberry_settings_status amiberry_media_add_recent(amiberry_media_list list, con
 		std::vector<std::string>* recent = recent_list(list);
 		if (!recent || !storable_path(path))
 			return AMIBERRY_SETTINGS_INVALID_VALUE;
+		// What is stored is the absolute spelling, which must fit too.
+		const std::string absolute = absolute_path(path);
+		if (!storable_path(absolute.c_str()))
+			return AMIBERRY_SETTINGS_INVALID_VALUE;
 		// Saved at once, like a folder; a list that cannot be saved is put
 		// back and the failure reported.
 		const std::vector<std::string> previous = *recent;
-		add_file_to_mru_list(*recent, absolute_path(path));
+		add_file_to_mru_list(*recent, absolute);
 		if (!save_amiberry_settings_with_result()) {
 			*recent = previous;
 			return AMIBERRY_SETTINGS_UNAVAILABLE;

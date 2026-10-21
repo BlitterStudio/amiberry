@@ -1115,7 +1115,9 @@ static std::vector<std::string> media_entries(amiberry_media_list list, bool nam
 			return names ? amiberry_media_entry(list, i, nullptr, 0, buffer, size)
 				: amiberry_media_entry(list, i, buffer, size, nullptr, 0);
 		}, entry);
-		if (ok)
+		// A tab or line break would split the reply's fields or lines; such
+		// a name cannot be represented in this protocol and is left out.
+		if (ok && entry.find_first_of("\t\r\n") == std::string::npos)
 			entries.push_back(std::move(entry));
 	}
 	return entries;
