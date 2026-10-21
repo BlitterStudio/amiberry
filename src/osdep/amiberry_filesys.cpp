@@ -1715,8 +1715,22 @@ void my_set_time_explicit(struct my_openfile_s* mos) noexcept
 		if (resolved) {
 			target.assign(resolved);
 			free(resolved);
+		} else {
+			/* A dangling link: fopen("w") would have created its target, so
+			   write there too instead of replacing the link with a file. The
+			   link text is relative to the link's own directory. */
+			std::string link(static_cast<size_t>(lst.st_size > 0 ? lst.st_size : PATH_MAX), '\0');
+			const ssize_t n = readlink(target.c_str(), &link[0], link.size());
+			if (n > 0) {
+				link.resize(static_cast<size_t>(n));
+				if (link[0] != '/') {
+					const size_t slash = target.find_last_of('/');
+					if (slash != std::string::npos)
+						link = target.substr(0, slash + 1) + link;
+				}
+				target = link;
+			}
 		}
-		/* If realpath fails (e.g. dangling link) fall back to the link path. */
 	}
 
 	/* Preserve the existing file's mode so a private (e.g. 0600) config does
@@ -1760,8 +1774,16 @@ void my_set_time_explicit(struct my_openfile_s* mos) noexcept
 		written += (size_t)n;
 	}
 
-	/* Widen to the final mode only now that the full content is on the temp. */
-	const mode_t final_mode = have_old_mode ? (old_st.st_mode & 07777) : (mode_t)0644;
+	/* Widen to the final mode only now that the full content is on the temp.
+	   A new file gets what fopen("w") would have given it: 0666 less the
+	   process umask, so a restrictive umask keeps it private. */
+	mode_t new_file_mode = 0666;
+	{
+		const mode_t mask = umask(0);
+		umask(mask);
+		new_file_mode &= ~mask;
+	}
+	const mode_t final_mode = have_old_mode ? (old_st.st_mode & 07777) : new_file_mode;
 	if (fchmod(fd, final_mode) != 0) {
 		write_log("my_save_file_atomic: fchmod '%s' to 0%o failed: %s (continuing)\n",
 			tmpname, (unsigned)final_mode, strerror(errno));

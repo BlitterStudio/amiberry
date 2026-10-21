@@ -1159,6 +1159,11 @@ static std::string HandleGetFolder(const std::vector<std::string>& args)
 		}, path)) {
 		return make_response(false, {"Folder path could not be read"});
 	}
+	// A tab or line break would split the reply; such a path cannot be
+	// represented in this protocol.
+	if (path.find_first_of("\t\r\n") != std::string::npos) {
+		return make_response(false, {"Folder path contains a tab or line break"});
+	}
 	return make_response(true, {path});
 }
 

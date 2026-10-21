@@ -130,12 +130,13 @@ bool storable_path(const char* path)
 }
 
 // The absolute spelling of a path, so a list entry is a full path whatever
-// the working directory of the caller that reads it.
+// the working directory of the caller that reads it; empty when it cannot
+// be made absolute (the working directory is gone).
 std::string absolute_path(const std::string& path)
 {
 	std::error_code ec;
 	const std::filesystem::path absolute = std::filesystem::absolute(from_utf8(path), ec);
-	return ec ? path : to_utf8(absolute);
+	return ec ? std::string() : to_utf8(absolute);
 }
 
 bool has_extension(const std::filesystem::path& file, const char* extension)
@@ -177,8 +178,11 @@ std::vector<media_entry> build_list(amiberry_media_list list)
 	std::vector<media_entry> entries;
 	if (const std::vector<std::string>* recent = recent_list(list)) {
 		for (const std::string& path : *recent) {
-			if (!path.empty())
-				entries.push_back({absolute_path(path), file_name(path)});
+			// Recorded absolute; one that cannot be made absolute now is
+			// left out rather than listed relative.
+			const std::string absolute = path.empty() ? std::string() : absolute_path(path);
+			if (!absolute.empty())
+				entries.push_back({absolute, file_name(path)});
 		}
 		return entries;
 	}
