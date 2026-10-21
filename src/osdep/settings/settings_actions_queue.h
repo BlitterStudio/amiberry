@@ -71,16 +71,23 @@ public:
 		return next_id_++;
 	}
 
-	// Main thread only. Executes everything queued, in order, and stores one
-	// result per action. Never calls the executor with the queue locked.
+	// Main thread only. Executes everything queued when the pass starts, in
+	// order, and stores one result per action. Actions posted meanwhile wait
+	// for the next pass, so a front end that keeps posting cannot hold the
+	// emulator thread here. Never calls the executor with the queue locked.
 	size_t run_pending(executor_fn execute, void* context)
 	{
 		if (executing_)
 			return 0;
 		executing_ = true;
+		uint64_t last;
+		{
+			std::lock_guard<std::mutex> lock(mutex_);
+			last = last_assigned_;
+		}
 		size_t executed = 0;
 		request r;
-		while (pop(r)) {
+		while (pop(r, last)) {
 			std::string error;
 			bool ok;
 			try {
@@ -126,10 +133,10 @@ public:
 	}
 
 private:
-	bool pop(request& out)
+	bool pop(request& out, uint64_t last)
 	{
 		std::lock_guard<std::mutex> lock(mutex_);
-		if (pending_.empty())
+		if (pending_.empty() || pending_.front().id > last)
 			return false;
 		out = std::move(pending_.front());
 		pending_.pop_front();

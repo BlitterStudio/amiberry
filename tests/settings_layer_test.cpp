@@ -759,6 +759,27 @@ static void check_action_queue()
 	CHECK(queue.run_pending(log_executor, &log) == accepted);
 	CHECK(log.executed.size() == 2 + 1 + accepted);
 
+	// A pass runs only what was queued when it started: an action posted
+	// while it runs (a front end that keeps posting) waits for the next
+	// pass instead of keeping the emulator thread in this one.
+	struct reposting {
+		amiberry_actions::action_queue* queue;
+		int runs = 0;
+	} repost{&queue};
+	const auto reposting_executor = [](const amiberry_actions::request&, void* context, std::string*) {
+		auto* state = static_cast<reposting*>(context);
+		state->runs++;
+		state->queue->post(amiberry_actions::kind::pause, 0, 0, false, false, nullptr);
+		return true;
+	};
+	queue.post(amiberry_actions::kind::pause, 0, 0, false, false, nullptr);
+	CHECK(queue.run_pending(reposting_executor, &repost) == 1 && repost.runs == 1);
+	CHECK(queue.has_pending());
+	CHECK(queue.run_pending(reposting_executor, &repost) == 1 && repost.runs == 2);
+	const auto ignore = [](const amiberry_actions::request&, void*, std::string*) { return true; };
+	CHECK(queue.run_pending(ignore, nullptr) == 1);
+	CHECK(!queue.has_pending());
+
 	// Posts from other threads interleave safely and keep their order per
 	// the single executor: everything posted runs exactly once.
 	std::vector<std::thread> posters;

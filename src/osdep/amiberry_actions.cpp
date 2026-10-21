@@ -55,6 +55,23 @@ bool restore_pending(std::string* error)
 	return true;
 }
 
+// Whether the native debugger or a GDB client has the CPU stopped; state
+// actions need the CPU running (a save needs a consistent frame, a restore
+// starts at the next vsync).
+bool debugger_holds_cpu(std::string* error, const char* message)
+{
+#ifdef DEBUGGER
+	if (debugger_is_stopped() || gdb_server_halted()) {
+		*error = message;
+		return true;
+	}
+#else
+	(void)error;
+	(void)message;
+#endif
+	return false;
+}
+
 // The strings are the ones the IPC transport replies with; it forwards them
 // unchanged.
 bool execute(const request& r, void*, std::string* error)
@@ -109,9 +126,25 @@ bool execute(const request& r, void*, std::string* error)
 		set_config_changed();
 		return true;
 
-	case kind::reset:
-		uae_reset(r.flag_a, r.flag_b);
-		return true;
+	case kind::reset: {
+		// uae_reset() ignores a request while another reset or a quit is
+		// pending. Two resets in one drain combine into the stronger one
+		// (hard over keyboard over soft), which covers both requests; a
+		// reset behind a pending quit cannot happen and fails.
+		const int requested = r.flag_a ? -UAE_RESET_HARD
+			: r.flag_b ? -UAE_RESET_KEYBOARD : -UAE_RESET;
+		if (quit_program == 0) {
+			uae_reset(r.flag_a, r.flag_b);
+			return true;
+		}
+		if (quit_program <= -UAE_RESET && quit_program >= -UAE_RESET_HARD) {
+			if (requested < quit_program)
+				quit_program = requested;
+			return true;
+		}
+		*error = "The emulator is quitting";
+		return false;
+	}
 
 	case kind::pause:
 		setpaused(3);
@@ -132,12 +165,9 @@ bool execute(const request& r, void*, std::string* error)
 
 	case kind::save_state:
 	case kind::save_state_slot:
-#ifdef DEBUGGER
-		if (debugger_is_stopped() || gdb_server_halted()) {
-			*error = "Cannot save state while the debugger has the CPU stopped; resume or PAUSE first";
+		if (debugger_holds_cpu(error, "Cannot save state while the debugger has the CPU stopped; resume or PAUSE first")) {
 			return false;
 		}
-#endif
 		// Saving rewrites savestate_fname, which would redirect a pending
 		// restore to the file just saved.
 		if (restore_pending(error)) {
@@ -160,6 +190,11 @@ bool execute(const request& r, void*, std::string* error)
 		return true;
 
 	case kind::load_state:
+		// A restore runs at the next vsync, which the debugger and GDB stop
+		// loops never reach: it would stay pending until the CPU resumes.
+		if (debugger_holds_cpu(error, "Cannot load state while the debugger has the CPU stopped; resume first")) {
+			return false;
+		}
 		// savestate_state/savestate_fname hold one restore; a second load
 		// in the same drain would replace the first after both reported
 		// success, so it fails until the pending restore has run.
@@ -183,6 +218,9 @@ bool execute(const request& r, void*, std::string* error)
 		return true;
 
 	case kind::load_state_slot:
+		if (debugger_holds_cpu(error, "Cannot load state while the debugger has the CPU stopped; resume first")) {
+			return false;
+		}
 		// savestate_quick() writes savestate_fname even when the slot is
 		// empty, so a pending restore is checked before calling it.
 		if (restore_pending(error)) {
