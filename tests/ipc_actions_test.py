@@ -299,6 +299,10 @@ def main():
         os.makedirs(states)
         for name in ("b.uss", "a.USS", "notes.txt", "tab\there.uss"):
             open(os.path.join(states, name), "w").close()
+        try:  # not valid UTF-8, so not listed (APFS refuses such names)
+            open(os.path.join(os.fsencode(states), b"bad\xff.uss"), "w").close()
+        except OSError:
+            pass
         check("SET_FOLDER SAVESTATES", control.request(f"SET_FOLDER\tSAVESTATES\t{states}") == "OK")
         reply = control.request("GET_FOLDER\tsavestates")
         check("GET_FOLDER returns the folder set",

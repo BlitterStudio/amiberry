@@ -1716,12 +1716,18 @@ void my_set_time_explicit(struct my_openfile_s* mos) noexcept
 			target.assign(resolved);
 			free(resolved);
 		} else {
-			/* A dangling link: fopen("w") would have created its target, so
-			   write there too instead of replacing the link with a file. The
-			   link text is relative to the link's own directory. */
-			std::string link(static_cast<size_t>(lst.st_size > 0 ? lst.st_size : PATH_MAX), '\0');
-			const ssize_t n = readlink(target.c_str(), &link[0], link.size());
-			if (n > 0) {
+			/* A dangling link: fopen("w") would have created its final
+			   target, so write there too instead of replacing a link with a
+			   file. Each link's text is relative to its own directory; the
+			   chain is followed to its end (bounded like the kernel's). */
+			for (int hops = 0; hops < 40; hops++) {
+				struct stat hop{};
+				if (lstat(target.c_str(), &hop) != 0 || !S_ISLNK(hop.st_mode))
+					break;
+				std::string link(PATH_MAX, '\0');
+				const ssize_t n = readlink(target.c_str(), &link[0], link.size());
+				if (n <= 0)
+					break;
 				link.resize(static_cast<size_t>(n));
 				if (link[0] != '/') {
 					const size_t slash = target.find_last_of('/');
@@ -1776,12 +1782,21 @@ void my_set_time_explicit(struct my_openfile_s* mos) noexcept
 
 	/* Widen to the final mode only now that the full content is on the temp.
 	   A new file gets what fopen("w") would have given it: 0666 less the
-	   process umask, so a restrictive umask keeps it private. */
-	mode_t new_file_mode = 0666;
-	{
-		const mode_t mask = umask(0);
-		umask(mask);
-		new_file_mode &= ~mask;
+	   process umask, so a restrictive umask keeps it private.
+	   The umask is read back from a probe file the kernel creates with it
+	   (changing the process-wide umask, even briefly, would race other
+	   threads' file creation); the probe's name extends the unique temp's. */
+	mode_t new_file_mode = 0600;
+	if (!have_old_mode) {
+		const std::string probe = std::string(tmpname) + ".mode";
+		const int probe_fd = open(probe.c_str(), O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC, 0666);
+		struct stat probe_st{};
+		if (probe_fd >= 0) {
+			if (fstat(probe_fd, &probe_st) == 0)
+				new_file_mode = probe_st.st_mode & 0777;
+			close(probe_fd);
+			unlink(probe.c_str());
+		}
 	}
 	const mode_t final_mode = have_old_mode ? (old_st.st_mode & 07777) : new_file_mode;
 	if (fchmod(fd, final_mode) != 0) {

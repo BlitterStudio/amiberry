@@ -60,6 +60,38 @@ std::string to_utf8(const std::filesystem::path& path)
 	return std::string(text.begin(), text.end());
 }
 
+// Whether text is well-formed UTF-8 (no overlong forms, surrogates or code
+// points past U+10FFFF). POSIX file names are arbitrary bytes; the API
+// promises UTF-8, so names that are not are left out of the lists.
+bool valid_utf8(const std::string& text)
+{
+	const auto* p = reinterpret_cast<const unsigned char*>(text.data());
+	const auto* end = p + text.size();
+	while (p < end) {
+		const unsigned char c = *p++;
+		if (c < 0x80)
+			continue;
+		int extra;
+		unsigned int cp;
+		if (c >= 0xc2 && c <= 0xdf) { extra = 1; cp = c & 0x1f; }
+		else if (c >= 0xe0 && c <= 0xef) { extra = 2; cp = c & 0x0f; }
+		else if (c >= 0xf0 && c <= 0xf4) { extra = 3; cp = c & 0x07; }
+		else return false;
+		if (end - p < extra)
+			return false;
+		for (int i = 0; i < extra; i++) {
+			if ((p[i] & 0xc0) != 0x80)
+				return false;
+			cp = (cp << 6) | (p[i] & 0x3f);
+		}
+		p += extra;
+		if ((extra == 2 && (cp < 0x800 || (cp >= 0xd800 && cp <= 0xdfff)))
+			|| (extra == 3 && (cp < 0x10000 || cp > 0x10ffff)))
+			return false;
+	}
+	return true;
+}
+
 // The file name the host's path rules give (a backslash is a separator on
 // Windows only).
 std::string file_name(const std::string& path)
@@ -166,7 +198,8 @@ std::vector<media_entry> folder_files(const std::string& folder, const char* ext
 		if (!it->is_regular_file(ec) || !has_extension(it->path(), extension))
 			continue;
 		const std::string path = to_utf8(it->path());
-		files.push_back({path, file_name(path)});
+		if (valid_utf8(path))
+			files.push_back({path, file_name(path)});
 	}
 	std::sort(files.begin(), files.end(),
 		[](const media_entry& a, const media_entry& b) { return a.name < b.name; });
@@ -181,15 +214,17 @@ std::vector<media_entry> build_list(amiberry_media_list list)
 			// Recorded absolute; one that cannot be made absolute now is
 			// left out rather than listed relative.
 			const std::string absolute = path.empty() ? std::string() : absolute_path(path);
-			if (!absolute.empty())
+			if (!absolute.empty() && valid_utf8(absolute))
 				entries.push_back({absolute, file_name(path)});
 		}
 		return entries;
 	}
 	switch (list) {
 	case AMIBERRY_MEDIA_CD_DRIVES:
-		for (const std::string& drive : get_cd_drives())
-			entries.push_back({drive, drive});
+		for (const std::string& drive : get_cd_drives()) {
+			if (valid_utf8(drive))
+				entries.push_back({drive, drive});
+		}
 		break;
 	case AMIBERRY_MEDIA_CONFIGURATIONS:
 		entries = folder_files(get_configuration_path(), ".uae");
