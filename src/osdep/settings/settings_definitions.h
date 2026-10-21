@@ -50,17 +50,21 @@ struct domain {
 	// Copies to `to` every field this domain's options and their dependent
 	// changes write whose value differs between `from` and `base`, so a
 	// commit keeps dependent changes and leaves fields the session did not
-	// change as other code may have set them since.
-	void (*commit)(const uae_prefs& base, const uae_prefs& from, uae_prefs& to);
+	// change as other code may have set them since. `base` and `to` may be
+	// the same object. Returns whether it wrote anything.
+	bool (*commit)(const uae_prefs& base, const uae_prefs& from, uae_prefs& to);
 };
 
 // For domain commit functions: copies one field (scalar or array) when the
-// session changed it. Compares bytes, so floats compare exactly.
+// session changed it and reports whether it did. Compares bytes, so floats
+// compare exactly.
 template <typename T>
-void commit_field(const T& base, const T& from, T& to)
+bool commit_field(const T& base, const T& from, T& to)
 {
-	if (std::memcmp(&base, &from, sizeof(T)) != 0)
-		std::memcpy(&to, &from, sizeof(T));
+	if (std::memcmp(&base, &from, sizeof(T)) == 0)
+		return false;
+	std::memcpy(&to, &from, sizeof(T));
+	return true;
 }
 
 const domain& cpu_domain();
@@ -70,6 +74,8 @@ const domain& domain_at(size_t index);
 
 size_t definition_count();
 const definition& definition_at(size_t index);
+// The index of d in definition order.
+size_t position_of(const definition& d);
 const definition* find(std::string_view id);
 // For IDs compiled into a caller: aborts when the ID is unknown.
 const definition& require(std::string_view id);

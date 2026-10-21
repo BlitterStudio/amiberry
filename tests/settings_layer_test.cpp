@@ -370,6 +370,24 @@ void check_session()
 	CHECK(amiberry_settings_commit(session, &changed) == AMIBERRY_APPLY_LIVE);
 	CHECK(changed && changed_prefs.fpu_model == 68882 && changed_prefs.cpu_idle == 45);
 
+	// Changes made elsewhere are resolved together with the session's: an
+	// external switch to a 68040 turns the session's 68881 into the internal
+	// FPU, and validation says so before commit.
+	CHECK(amiberry_settings_set(session, "fpu_model", "68881") == AMIBERRY_SETTINGS_OK);
+	changed_prefs.cpu_model = 68040;
+	std::memset(adjustments, 0xa5, sizeof adjustments);
+	CHECK(amiberry_settings_validate(session, adjustments, 4) == 1);
+	CHECK(!std::strcmp(adjustments[0].id, "fpu_model"));
+	CHECK(!std::strcmp(adjustments[0].requested, "68881"));
+	CHECK(!std::strcmp(adjustments[0].adjusted, "68040"));
+	// No stack bytes leak through the fixed-size buffers.
+	for (size_t i = std::strlen(adjustments[0].adjusted); i < sizeof adjustments[0].adjusted; i++)
+		CHECK(adjustments[0].adjusted[i] == 0);
+	CHECK(amiberry_settings_commit(session, &changed) == AMIBERRY_APPLY_LIVE);
+	CHECK(changed && changed_prefs.cpu_model == 68040 && changed_prefs.fpu_model == 68040);
+	CHECK(amiberry_settings_get(session, "fpu_model", text, sizeof text) == AMIBERRY_SETTINGS_OK);
+	CHECK(!std::strcmp(text, "68040")); // the session continues from what it stored
+
 	// Dependent changes outside the option list are committed too.
 	if (jit_compiled()) {
 		CHECK(amiberry_settings_set(session, "cachesize", "4096") == AMIBERRY_SETTINGS_OK);
@@ -377,10 +395,27 @@ void check_session()
 		CHECK(changed_prefs.cachesize == 4096 && !changed_prefs.cpu_cycle_exact
 			&& !changed_prefs.blitter_cycle_exact);
 	}
+	amiberry_settings_session_close(session);
+
+	// Re-selecting the current JIT memory access mode aligns the other
+	// modes; that is a change even though the option's own value is not.
+	if (jit_compiled()) {
+		changed_prefs.comptrustbyte = 1;
+		changed_prefs.comptrustlong = 0;
+		session = amiberry_settings_session_open();
+		CHECK(amiberry_settings_set(session, "comp_trustbyte", "indirect") == AMIBERRY_SETTINGS_OK);
+		CHECK(amiberry_settings_commit(session, &changed) == AMIBERRY_APPLY_LIVE);
+		CHECK(changed && changed_prefs.comptrustlong == 1);
+		amiberry_settings_session_close(session);
+	}
 
 	// The strongest apply class among the changed options wins; an option
 	// that can only change while stopped is unavailable during emulation.
-	CHECK(amiberry_settings_set(session, "cachesize", "0") == AMIBERRY_SETTINGS_OK);
+	reset_prefs(changed_prefs);
+	changed_prefs.cpu_cycle_exact = changed_prefs.cpu_memory_cycle_exact = changed_prefs.blitter_cycle_exact = false;
+	changed_prefs.cpu_model = 68030;
+	changed_prefs.address_space_24 = false;
+	session = amiberry_settings_session_open();
 	CHECK(amiberry_settings_set(session, "cpu_compatible", "false") == AMIBERRY_SETTINGS_OK);
 	emulating = 1;
 	CHECK(!amiberry_settings_is_available(session, "cpu_threaded"));

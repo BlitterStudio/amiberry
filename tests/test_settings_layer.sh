@@ -14,3 +14,7 @@ ${CC:-cc} -std=c99 -Wall -Wextra -pedantic -Werror -Isrc/osdep/settings -fsyntax
 . tests/lib/settings_layer_build.sh
 settings_layer_compile "$out"
 "$out"
+# Builds without the JIT, PPC and PCem (iOS, RISC-V, -DUSE_JIT=OFF) must
+# hold the same rules.
+SETTINGS_LAYER_DEFINES="-DAMIBERRY_NO_JIT" settings_layer_compile "$out"
+"$out"

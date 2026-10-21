@@ -188,7 +188,7 @@ void render_panel_cpu() {
         ImGui::BeginDisabled(!available(o.cachesize, ctx));
         bool jit_box = changed_prefs.cachesize > 0;
         if (AmigaCheckbox("JIT", &jit_box)) {
-            settings::set_number(o.cachesize, changed_prefs, ctx, jit_box ? MAX_JIT_CACHE : 0);
+            settings::set_number(o.cachesize, changed_prefs, ctx, jit_box ? o.cachesize.descriptor.max : 0);
         }
         ShowHelpMarker("Just-In-Time compilation. Greatly speeds up CPU emulation but reduces compatibility.");
         ImGui::EndDisabled();

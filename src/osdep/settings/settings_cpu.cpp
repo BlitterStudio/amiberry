@@ -11,6 +11,14 @@
 #include "uae/ppc.h"
 #endif
 
+// newcpu.h only defines the JIT cache bounds in JIT builds; the option
+// exists in every build (always unavailable without the JIT) so
+// configurations keep round-tripping.
+#ifdef MAX_JIT_CACHE
+static_assert(MAX_JIT_CACHE == 16384, "update max_jit_cache");
+#endif
+constexpr int max_jit_cache = 16384;
+
 #include "settings_definitions.h"
 
 #include <cstdio>
@@ -310,6 +318,13 @@ void set_fpu_softfloat(uae_prefs& p, const value& v)
 	p.fpu_mode = v.number != 0 ? 1 : 0;
 }
 
+// The JIT FPU emulates the FPU with host floating point, so softfloat is
+// unavailable while it is on (fixup_cpu() would switch softfloat off).
+bool fpu_softfloat_available(const uae_prefs& p, const context&)
+{
+	return p.fpu_model > 0 && !(p.cachesize && p.compfpu);
+}
+
 void get_fpu_no_unimplemented(const uae_prefs& p, char* out, size_t size)
 {
 	write_bool(out, size, p.fpu_no_unimplemented);
@@ -563,9 +578,12 @@ void get_compfpu(const uae_prefs& p, char* out, size_t size)
 	write_bool(out, size, p.compfpu);
 }
 
+// Turning the JIT FPU on replaces softfloat, as the core fixup would.
 void set_compfpu(uae_prefs& p, const value& v)
 {
 	p.compfpu = v.number != 0;
+	if (p.compfpu && p.cachesize)
+		p.fpu_mode = 0;
 }
 
 // cfgfile only reads and writes compfpu in JIT FPU builds; the JIT is
@@ -707,7 +725,7 @@ const definition definitions[] = {
 	{BOOL_OPTION("fpu_softfloat", "fpu", "Softfloat FPU (80-bit)",
 			"FPU precision mode. Softfloat is most accurate but slowest.",
 			AMIBERRY_APPLY_LIVE, "false", "Softfloat is not available when the JIT emulates the FPU."),
-		get_fpu_softfloat, set_fpu_softfloat, has_fpu, nullptr, nullptr},
+		get_fpu_softfloat, set_fpu_softfloat, fpu_softfloat_available, nullptr, nullptr},
 	{BOOL_OPTION("fpu_no_unimplemented", "fpu", "No unimplemented FPU emulation",
 			"Do not emulate the FPU instructions the CPU traps as unimplemented.",
 			AMIBERRY_APPLY_LIVE, "false", "Unimplemented instruction emulation is always on with the JIT."),
@@ -753,7 +771,7 @@ const definition definitions[] = {
 		get_x86_throttle, set_x86_throttle, x86_throttle_available, nullptr, nullptr},
 	{NUMBER_OPTION("cachesize", "jit", "JIT cache size",
 			"Just-In-Time compilation cache in KB; 0 turns the JIT off. Greatly speeds up CPU emulation but reduces compatibility.",
-			AMIBERRY_SETTING_INT, AMIBERRY_APPLY_LIVE, 0, MAX_JIT_CACHE, 1, "0",
+			AMIBERRY_SETTING_INT, AMIBERRY_APPLY_LIVE, 0, max_jit_cache, 1, "0",
 			"The JIT needs a 68020 or later, is not available in cycle-exact modes, and needs at least 128 KB."),
 		get_cachesize, set_cachesize, cachesize_available, nullptr, nullptr},
 	{BOOL_OPTION("compfpu", "jit", "JIT FPU support",
@@ -782,9 +800,10 @@ const definition definitions[] = {
 		get_comp_trustbyte, set_comp_trustbyte, jit_enabled_option, nullptr, nullptr},
 };
 
-void commit_cpu(const uae_prefs& base, const uae_prefs& from, uae_prefs& to)
+bool commit_cpu(const uae_prefs& base, const uae_prefs& from, uae_prefs& to)
 {
-#define FIELD(f) commit_field(base.f, from.f, to.f)
+	bool wrote = false;
+#define FIELD(f) wrote |= commit_field(base.f, from.f, to.f)
 	FIELD(cpu_model);
 	FIELD(fpu_model);
 	FIELD(mmu_model);
@@ -821,6 +840,7 @@ void commit_cpu(const uae_prefs& base, const uae_prefs& from, uae_prefs& to)
 	FIELD(comptrustlong);
 	FIELD(comptrustnaddr);
 #undef FIELD
+	return wrote;
 }
 
 const domain cpu = {

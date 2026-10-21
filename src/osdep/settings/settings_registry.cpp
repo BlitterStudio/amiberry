@@ -29,6 +29,7 @@ const domain_list& domains()
 struct definition_index {
 	std::vector<const definition*> ordered;
 	std::unordered_map<std::string_view, const definition*> by_id;
+	std::unordered_map<const definition*, size_t> position;
 };
 
 const definition_index& definitions_index()
@@ -38,6 +39,7 @@ const definition_index& definitions_index()
 		for (const domain* dom : domains().items) {
 			for (size_t i = 0; i < dom->count; i++) {
 				const definition& d = dom->definitions[i];
+				result.position.emplace(&d, result.ordered.size());
 				result.ordered.push_back(&d);
 				if (!result.by_id.emplace(d.descriptor.id, &d).second) {
 					std::fprintf(stderr, "amiberry settings: duplicate option ID %s\n", d.descriptor.id);
@@ -143,6 +145,11 @@ size_t definition_count()
 const definition& definition_at(size_t index)
 {
 	return *definitions_index().ordered[index];
+}
+
+size_t position_of(const definition& d)
+{
+	return definitions_index().position.at(&d);
 }
 
 const definition* find(std::string_view id)

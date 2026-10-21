@@ -21,12 +21,18 @@ trap 'rm -rf "$work"' EXIT
 # Isolated environment: no user settings interfere with resolution.
 export HOME="$work"
 
-# Build the harness with the options the binary has: PPC emulation is a
-# build option (USE_PPC), and without it cfgfile ignores the PPC keys.
+# Build the harness with the options the binary has: PPC emulation and the
+# JIT are build options (USE_PPC, USE_JIT), and cfgfile or the fixups drop
+# their settings when they are compiled out.
 SETTINGS_LAYER_DEFINES="-DUSE_PCEM"
 "$AMIBERRY_BIN" --dump-config -s cpu_model=68060 -s ppc_model=automatic > "$work/ppc.txt" 2>/dev/null || true
 if grep -q '^ppc_model=' "$work/ppc.txt"; then
 	SETTINGS_LAYER_DEFINES="$SETTINGS_LAYER_DEFINES -DWITH_PPC"
+fi
+"$AMIBERRY_BIN" --dump-config -s cycle_exact=false -s cpu_model=68020 -s cpu_24bit_addressing=false \
+	-s cachesize=8192 > "$work/jit.txt" 2>/dev/null || true
+if ! grep -q '^cachesize=8192$' "$work/jit.txt"; then
+	SETTINGS_LAYER_DEFINES="$SETTINGS_LAYER_DEFINES -DAMIBERRY_NO_JIT"
 fi
 export SETTINGS_LAYER_DEFINES
 . tests/lib/settings_layer_build.sh
