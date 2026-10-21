@@ -2093,13 +2093,17 @@ void run_gui()
 	while (gui_running) {
 		// Runtime actions posted from other threads keep running (and the
 		// status snapshot stays fresh) while the GUI is open. A reset or
-		// quit among them only marks the request (quit_program < 0); the
-		// emulation loop consumes it after the GUI closes, so leave the loop
-		// the way the GUI's own Reboot and Quit buttons do. Only a request
-		// made by this drain counts: the GUI can open with one pending.
+		// quit among them only marks the request (quit_program < 0), and a
+		// state load only schedules the restore (STATE_DORESTORE); the
+		// emulation loop carries both out after the GUI closes, so leave
+		// the loop the way the GUI's own Reboot, Quit and Load State
+		// buttons do. Only a request made by this drain counts: the GUI can
+		// open with one pending.
 		const int quit_before_actions = quit_program;
+		const int state_before_actions = savestate_state;
 		amiberry_actions_run_pending();
-		if (quit_program < 0 && quit_program != quit_before_actions)
+		if ((quit_program < 0 && quit_program != quit_before_actions)
+			|| (savestate_state == STATE_DORESTORE && state_before_actions != STATE_DORESTORE))
 			gui_running = false;
  		const uint64_t frame_start = SDL_GetPerformanceCounter();
 		while (SDL_PollEvent(&gui_event)) {

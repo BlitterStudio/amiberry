@@ -61,7 +61,7 @@ bool state_operation_pending(std::string* error)
 
 // Whether the native debugger or a GDB client has the CPU stopped; state
 // actions need the CPU running (a save needs a consistent frame, a restore
-// starts at the next vsync).
+// needs the reset the stop loops do not process).
 bool debugger_holds_cpu(std::string* error, const char* message)
 {
 #ifdef DEBUGGER
@@ -74,6 +74,34 @@ bool debugger_holds_cpu(std::string* error, const char* message)
 	(void)message;
 #endif
 	return false;
+}
+
+// Why a state load cannot start now, if it cannot.
+bool restore_blocked(std::string* error)
+{
+	if (debugger_holds_cpu(error, "Cannot load state while the debugger has the CPU stopped; resume first")) {
+		return true;
+	}
+	// A quit discards the reset the restore runs in.
+	if (quit_program == UAE_QUIT || quit_program == -UAE_QUIT) {
+		*error = "The emulator is quitting";
+		return true;
+	}
+	// savestate_state/savestate_fname hold one operation; a second load in
+	// the same drain would replace the first after both reported success.
+	return state_operation_pending(error);
+}
+
+// A scheduled restore (STATE_DORESTORE) runs inside a reset: the emulation
+// loop's reset path restores the file. savestate_check() requests that
+// reset at the next vsync, but neither the settings GUI nor a paused
+// emulation runs one, so the restore would wait for the user. The action
+// requests the reset itself, as savestate_check()'s caller does; that also
+// ends a pause and closes the GUI (run_gui leaves on a new reset request).
+// A reset that is already pending carries the restore with it.
+void begin_restore()
+{
+	uae_reset(0, 0);
 }
 
 // The strings are the ones the IPC transport replies with; it forwards them
@@ -194,21 +222,13 @@ bool execute(const request& r, void*, std::string* error)
 		return true;
 
 	case kind::load_state:
-		// A restore runs at the next vsync, which the debugger and GDB stop
-		// loops never reach: it would stay pending until the CPU resumes.
-		if (debugger_holds_cpu(error, "Cannot load state while the debugger has the CPU stopped; resume first")) {
+		if (restore_blocked(error)) {
 			return false;
 		}
-		// savestate_state/savestate_fname hold one operation; a second load
-		// in the same drain would replace the first after both reported
-		// success, so it fails until the pending one has run.
-		if (state_operation_pending(error)) {
-			return false;
-		}
-		// A restore is scheduled for the next vsync and starts with a reset,
-		// which happens even when restore_state() then rejects the file;
-		// check what it checks (the file opens and has the AmigaStateFile
-		// header) first, so a bad path fails without touching the guest.
+		// A restore starts with a reset, which happens even when
+		// restore_state() then rejects the file; check what it checks (the
+		// file opens and has the AmigaStateFile header) first, so a bad
+		// path fails without touching the guest.
 		if (r.path.empty() || !zfile_exists(r.path.c_str())) {
 			*error = "State file not found: " + r.path;
 			return false;
@@ -219,15 +239,13 @@ bool execute(const request& r, void*, std::string* error)
 		}
 		savestate_state = STATE_DORESTORE;
 		_tcscpy(savestate_fname, r.path.c_str());
+		begin_restore();
 		return true;
 
 	case kind::load_state_slot:
-		if (debugger_holds_cpu(error, "Cannot load state while the debugger has the CPU stopped; resume first")) {
-			return false;
-		}
 		// savestate_quick() writes savestate_fname even when the slot is
 		// empty, so a pending operation is checked before calling it.
-		if (state_operation_pending(error)) {
+		if (restore_blocked(error)) {
 			return false;
 		}
 		// 0 means there was nothing to load (no usable state file name, or
@@ -237,6 +255,7 @@ bool execute(const request& r, void*, std::string* error)
 			*error = "No state file for quick-save slot " + std::to_string(r.number);
 			return false;
 		}
+		begin_restore();
 		return true;
 
 	case kind::screenshot:
