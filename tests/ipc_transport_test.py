@@ -131,7 +131,10 @@ def main():
     env.update({"HOME": work, "XDG_RUNTIME_DIR": work, "XDG_CONFIG_HOME": os.path.join(work, "config"),
                 "XDG_DATA_HOME": os.path.join(work, "data"), "AMIBERRY_HOME_DIR": os.path.join(work, "home"),
                 "LOCALAPPDATA": os.path.join(work, "local"), "APPDATA": os.path.join(work, "roaming"),
-                "SDL_VIDEODRIVER": "offscreen", "SDL_AUDIODRIVER": "dummy"})
+                # SDL's offscreen driver is EGL-based and cannot create even
+                # a plain window on macOS; the dummy driver can.
+                "SDL_VIDEODRIVER": "dummy" if sys.platform == "darwin" else "offscreen",
+                "SDL_AUDIODRIVER": "dummy"})
     env.pop("AMIBERRY_CONFIG_DIR", None)
 
     first = Emulator(binary, env)
