@@ -34,15 +34,6 @@ static bool p96_monitor_uses_hardware_rtg(const int monid)
 
 SDL_PixelFormat p96_get_host_pixel_format(const RGBFTYPE rgbfmt, const bool hardware_rtg)
 {
-#ifdef AMIBERRY_IOS
-	// iOS fixes the host format (gfx_platform_override_pixel_format: GLES
-	// cannot upload BGRA). Picasso96 must convert into that format too, or
-	// B8G8R8A8 modes and hardware boards would write BGRA into the RGBA
-	// surface and show red and blue swapped.
-	SDL_PixelFormat platform_format;
-	if (gfx_platform_override_pixel_format(&platform_format))
-		return platform_format;
-#endif
 	if (hardware_rtg || rgbfmt == RGBFB_B8G8R8A8) {
 		return SDL_PIXELFORMAT_ARGB8888;
 	}

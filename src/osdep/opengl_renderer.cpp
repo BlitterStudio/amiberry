@@ -161,6 +161,16 @@ bool OpenGLRenderer::init_context(SDL_Window* window)
 	write_log(_T("OpenGL Renderer: %hs\n"), renderer ? renderer : "unknown");
 	write_log(_T("OpenGL Version:  %hs\n"), version ? version : "unknown");
 	write_log(_T("GLSL Version:    %hs\n"), sl_ver ? sl_ver : "unknown");
+#ifdef AMIBERRY_IOS
+	// ARGB8888 frames (Picasso96 B8G8R8A8 modes and hardware boards) upload
+	// as GL_BGRA, which OpenGL ES accepts on iOS through
+	// APPLE_texture_format_BGRA8888 (every iOS device and the simulator).
+	{
+		const char* extensions = reinterpret_cast<const char*>(glGetString(GL_EXTENSIONS));
+		const bool bgra = extensions && strstr(extensions, "GL_APPLE_texture_format_BGRA8888");
+		write_log(_T("OpenGL ES BGRA uploads: %hs\n"), bgra ? "supported" : "NOT supported");
+	}
+#endif
 
 	// Initialize GL upload format from current SDL pixel format.
 	resolve_gl_pixel_format(pixel_format, m_gl_format.fmt, m_gl_format.type, m_gl_format.bpp);
