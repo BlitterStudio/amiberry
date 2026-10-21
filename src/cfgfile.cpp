@@ -2237,7 +2237,9 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 	if (p->romextident[0])
 		cfgfile_write_str (f, _T("kickstart_ext_rom="), p->romextident);
 
-	for (int rb = 0; i < MAX_ROM_BOARDS; i++) {
+	// rb must advance too: this loop wrote romboards[0] once per board and
+	// never saved boards 2-4.
+	for (int rb = 0; rb < MAX_ROM_BOARDS; rb++) {
 		cfgfile_writeromboard(p, f, rb, &p->romboards[rb]);
 	}
 
@@ -2969,6 +2971,14 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 	cfgfile_dwrite_bool(f, _T("a1000ram"), p->cs_a1000ram);
 	cfgfile_dwrite(f, _T("fatgary"), _T("%d"), p->cs_fatgaryrev);
 	cfgfile_dwrite(f, _T("ramsey"), _T("%d"), p->cs_ramseyrev);
+#ifdef AMIBERRY
+	// The chip revision overrides (Advanced Chipset hex fields) and the
+	// custom register byte write bug had no configuration key: they only
+	// survived while a preset or fixup set them.
+	cfgfile_dwrite(f, _T("agnusrev"), _T("%d"), p->cs_agnusrev);
+	cfgfile_dwrite(f, _T("deniserev"), _T("%d"), p->cs_deniserev);
+	cfgfile_dwrite_bool(f, _T("cs_bytecustomwritebug"), p->cs_bytecustomwritebug);
+#endif
 	cfgfile_dwrite_bool(f, _T("pcmcia"), p->cs_pcmcia);
 	cfgfile_dwrite_bool(f, _T("resetwarning"), p->cs_resetwarning);
 	cfgfile_dwrite_bool(f, _T("denise_noehb"), p->cs_denisemodel == DENISEMODEL_VELVET || p->cs_denisemodel == DENISEMODEL_A1000NOEHB);
@@ -6375,6 +6385,9 @@ static int cfgfile_parse_hardware (struct uae_prefs *p, const TCHAR *option, TCH
 		|| cfgfile_yesno(option, value, _T("resetwarning"), &p->cs_resetwarning)
 		|| cfgfile_yesno(option, value, _T("cia_todbug"), &p->cs_ciatodbug)
 		|| cfgfile_yesno(option, value, _T("z3_autoconfig"), &p->cs_z3autoconfig)
+#ifdef AMIBERRY
+		|| cfgfile_yesno(option, value, _T("cs_bytecustomwritebug"), &p->cs_bytecustomwritebug)
+#endif
 		|| cfgfile_yesno(option, value, _T("color_burst"), &p->cs_color_burst)
 		|| cfgfile_yesno(option, value, _T("toshiba_gary"), &p->cs_toshibagary)
 		|| cfgfile_yesno(option, value, _T("rom_is_slow"), &p->cs_romisslow)
@@ -6492,6 +6505,10 @@ static int cfgfile_parse_hardware (struct uae_prefs *p, const TCHAR *option, TCH
 		|| cfgfile_intval(option, value, _T("keyboard_handshake"), &p->cs_kbhandshake, 1)
 		|| cfgfile_intval(option, value, _T("eclockphase"), &p->cs_eclockphase, 1)
 		|| cfgfile_intval(option, value, _T("chipset_rtc_adjust"), &p->cs_rtc_adjust, 1)
+#ifdef AMIBERRY
+		|| cfgfile_intval(option, value, _T("agnusrev"), &p->cs_agnusrev, 1)
+		|| cfgfile_intval(option, value, _T("deniserev"), &p->cs_deniserev, 1)
+#endif
 		|| cfgfile_intval(option, value, _T("hsyncadjust"), &p->cs_hsyncadjust, 1)
 		|| cfgfile_intval(option, value, _T("vsyncadjust"), &p->cs_vsyncadjust, 1)
 		|| cfgfile_intval(option, value, _T("rndseed"), &p->seed, 1))
@@ -9564,8 +9581,10 @@ static void buildin_default_prefs (struct uae_prefs *p)
 	p->mbresmem_high.size = 0;
 	p->z3chipmem.size = 0;
 	for (int i = 0; i < MAX_RAM_BOARDS; i++) {
-		memset(p->fastmem, 0, sizeof(struct ramboard));
-		memset(p->z3fastmem, 0, sizeof(struct ramboard));
+		// Clear the board, not the array head: the old memset(p->fastmem, ...)
+		// only worked because [0] aliases the whole array.
+		memset(&p->fastmem[i], 0, sizeof(struct ramboard));
+		memset(&p->z3fastmem[i], 0, sizeof(struct ramboard));
 	}
 	for (auto& rtgboard : p->rtgboards) {
 		rtgboard.rtgmem_size = 0x00000000;
@@ -9749,6 +9768,9 @@ static int bip_a3000 (struct uae_prefs *p, int config, int compa, int romcheck)
 static int bip_a4000 (struct uae_prefs *p, int config, int compa, int romcheck)
 {
 	int roms[11];
+	// The accelerator firmware a configuration needs counts as much as the
+	// Kickstart: the result tells callers whether every ROM was found.
+	int board_rom = 1;
 
 	roms[0] = 16;
 	roms[1] = 31;
@@ -9784,7 +9806,7 @@ static int bip_a4000 (struct uae_prefs *p, int config, int compa, int romcheck)
 		cpuboard_setboard(p, BOARD_CYBERSTORM, BOARD_CYBERSTORM_SUB_PPC);
 		p->cpuboardmem1.size = 128 * 1024 * 1024;
 		int roms_ppc[] = { 98, 326, 327, -1 };
-		configure_rom(p, roms_ppc, romcheck);
+		board_rom = configure_rom(p, roms_ppc, romcheck);
 #endif
 		break;
 	}
@@ -9804,7 +9826,8 @@ static int bip_a4000 (struct uae_prefs *p, int config, int compa, int romcheck)
 	p->cpu_idle = 150;
 	p->cs_compatible = CP_A4000;
 	built_in_chipset_prefs (p);
-	return configure_rom (p, roms, romcheck);
+	const int kickstart = configure_rom (p, roms, romcheck);
+	return kickstart && board_rom;
 }
 static int bip_a4000t (struct uae_prefs *p, int config, int compa, int romcheck)
 {
@@ -10026,6 +10049,8 @@ static int bip_a1200 (struct uae_prefs *p, int config, int compa, int romcheck)
 {
 	int roms[8];
 	int roms_bliz[4];
+	// The Blizzard firmware counts as much as the Kickstart (see bip_a4000).
+	int board_rom = 1;
 
 	buildin_default_prefs_68020 (p);
 	roms[0] = 11;
@@ -10059,7 +10084,7 @@ static int bip_a1200 (struct uae_prefs *p, int config, int compa, int romcheck)
 		p->cpu_model = 68030;
 		p->cs_rtc = 1;
 		roms_bliz[0] = 89;
-		configure_rom(p, roms_bliz, romcheck);
+		board_rom = configure_rom(p, roms_bliz, romcheck);
 		break;
 		case 3:
 		cpuboard_setboard(p, BOARD_BLIZZARD, BOARD_BLIZZARD_SUB_1260);
@@ -10068,7 +10093,7 @@ static int bip_a1200 (struct uae_prefs *p, int config, int compa, int romcheck)
 		p->fpu_model = 68040;
 		p->cs_rtc = 1;
 		roms_bliz[0] = 90;
-		configure_rom(p, roms_bliz, romcheck);
+		board_rom = configure_rom(p, roms_bliz, romcheck);
 		break;
 		case 4:
 		cpuboard_setboard(p, BOARD_BLIZZARD, BOARD_BLIZZARD_SUB_1260);
@@ -10077,7 +10102,7 @@ static int bip_a1200 (struct uae_prefs *p, int config, int compa, int romcheck)
 		p->fpu_model = 68060;
 		p->cs_rtc = 1;
 		roms_bliz[0] = 90;
-		configure_rom(p, roms_bliz, romcheck);
+		board_rom = configure_rom(p, roms_bliz, romcheck);
 		break;
 #ifdef WITH_PPC
 		case 5:
@@ -10093,7 +10118,7 @@ static int bip_a1200 (struct uae_prefs *p, int config, int compa, int romcheck)
 		roms_bliz[0] = 100;
 		roms_bliz[1] = 329;
 		roms_bliz[2] = 330;
-		configure_rom(p, roms_bliz, romcheck);
+		board_rom = configure_rom(p, roms_bliz, romcheck);
 		break;
 #endif
 #else
@@ -10105,7 +10130,8 @@ static int bip_a1200 (struct uae_prefs *p, int config, int compa, int romcheck)
 		default: break;
 	}
 	set_68020_compa (p, compa, 0);
-	return configure_rom (p, roms, romcheck);
+	const int kickstart = configure_rom (p, roms, romcheck);
+	return kickstart && board_rom;
 }
 
 static int bip_a600 (struct uae_prefs *p, int config, int compa, int romcheck)
@@ -10495,7 +10521,7 @@ int built_in_prefs (struct uae_prefs *p, int model, int config, int compa, int r
 	return v;
 }
 
-static bool has_expansion_with_rtc(struct uae_prefs* p, int chiplimit)
+bool has_expansion_with_rtc(struct uae_prefs* p, int chiplimit)
 {
 	if (p->bogomem.size ||
 		p->chipmem.size > chiplimit ||

@@ -7,23 +7,43 @@
 #include "autoconf.h" // Required for memoryboards and expansion_get_autoconfig_info
 #include "rommgr.h"
 #include "expansion_display_name.h"
-#include "custom.h" // Required for CSMASK_ECS_AGNUS
+#include "settings/settings_definitions.h"
 
-// WinUAE sync: fix_values_memorydlg()
-// When Chip RAM > 2MB, fast RAM must be limited to max 256KB total across all boards
-static void fix_values_memorydlg()
+#include <cstdio>
+
+namespace settings = amiberry_settings;
+
+namespace {
+
+// The options this panel edits. The shared settings layer owns the
+// dependent changes a RAM size implies (ECS Agnus for chip RAM above
+// 512 KB, the 2 MB chip / Z2 fast conflict, the Zorro III window and the
+// accelerator board RAM mirror).
+struct ram_options {
+    const settings::definition& chipmem_size = settings::require("chipmem_size");
+    const settings::definition& bogomem_size = settings::require("bogomem_size");
+    const settings::definition& fastmem_size = settings::require("fastmem_size");
+    const settings::definition& fastmem_size_k = settings::require("fastmem_size_k");
+    const settings::definition& fastmem2_size = settings::require("fastmem2_size");
+    const settings::definition& fastmem2_size_k = settings::require("fastmem2_size_k");
+    const settings::definition& fastmem3_size = settings::require("fastmem3_size");
+    const settings::definition& fastmem3_size_k = settings::require("fastmem3_size_k");
+    const settings::definition& fastmem4_size = settings::require("fastmem4_size");
+    const settings::definition& fastmem4_size_k = settings::require("fastmem4_size_k");
+    const settings::definition& z3mem_size = settings::require("z3mem_size");
+    const settings::definition& z3mem2_size = settings::require("z3mem2_size");
+    const settings::definition& z3mem3_size = settings::require("z3mem3_size");
+    const settings::definition& z3mem4_size = settings::require("z3mem4_size");
+    const settings::definition& a3000mem_size = settings::require("a3000mem_size");
+    const settings::definition& mbresmem_size = settings::require("mbresmem_size");
+    const settings::definition& megachipmem_size = settings::require("megachipmem_size");
+    const settings::definition& z3mapping = settings::require("z3mapping");
+};
+
+const ram_options& options()
 {
-    if (changed_prefs.chipmem.size <= 0x200000)
-        return;
-    int total = 0;
-    for (int i = 0; i < MAX_RAM_BOARDS; i++) {
-        if (changed_prefs.fastmem[i].size > 262144)
-            changed_prefs.fastmem[i].size = 262144;
-        total += changed_prefs.fastmem[i].size;
-        if (total > 262144) {
-            changed_prefs.fastmem[i].size = 0;
-        }
-    }
+    static const ram_options o;
+    return o;
 }
 
 // Helper to find the index for a given size in an msi array
@@ -107,10 +127,10 @@ static bool RamControl(const char *label, int *current_index, const int *msi_arr
 
     // Calculate Layout Dimensions
     // Use scalable units based on BUTTON_WIDTH
-    float label_column_width = BUTTON_WIDTH * 1.5f; 
+    float label_column_width = BUTTON_WIDTH * 1.5f;
     float value_column_width = BUTTON_WIDTH;
     float padding = ImGui::GetStyle().ItemSpacing.x;
-    
+
     // Available width for the whole line
     float avail_width = ImGui::GetContentRegionAvail().x;
     // Slider takes remaining space
@@ -122,17 +142,17 @@ static bool RamControl(const char *label, int *current_index, const int *msi_arr
     ImGui::AlignTextToFramePadding();
     float current_x = ImGui::GetCursorPosX();
     float text_width = ImGui::CalcTextSize(label).x;
-    
+
     // Position cursor to right-align text within the label_column_width
     ImGui::SetCursorPosX(current_x + label_column_width - text_width - padding);
     ImGui::Text("%s", label);
-    
+
     // Move to start of Slider column
     ImGui::SameLine(current_x + label_column_width);
 
     // 2. Slider (Flexible Width)
     ImGui::SetNextItemWidth(slider_width);
-    if (ImGui::SliderInt("##slider", current_index, 0, count - 1, "")) {
+    if (ImGui::SliderInt("##slider", current_index, 0, count - 1, "", ImGuiSliderFlags_AlwaysClamp)) {
         changed = true;
     }
     AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), false);
@@ -187,6 +207,81 @@ static ramboard *get_selected_ramboard(int idx) {
     if (idx == ADVANCED_RAM_Z3CHIP)
         return &changed_prefs.z3chipmem;
     return nullptr;
+}
+
+// Store a RAM board size through the settings layer: the setters apply the
+// dependent changes (ECS Agnus for chip RAM above 512 KB, the chip RAM /
+// Z2 fast conflict, the Zorro III window, the accelerator board mirror)
+// instead of the panel.
+static amiberry_settings_status set_ram_size(int idx, uae_u32 size) {
+    const ram_options& o = options();
+    const settings::context ctx{emulating != 0};
+    const settings::definition* option = nullptr;
+    char value[32] = "";
+    double number = 0;
+    bool numeric = false;
+
+    if (idx == ADVANCED_RAM_CHIP) {
+        option = &o.chipmem_size; // stored in 512 KB units
+        std::snprintf(value, sizeof value, "%d", static_cast<int>(size / 0x80000));
+    } else if (idx == ADVANCED_RAM_SLOW) {
+        option = &o.bogomem_size; // stored in 256 KB units
+        std::snprintf(value, sizeof value, "%d", static_cast<int>(size / 0x40000));
+    } else if (idx >= ADVANCED_RAM_Z2_BASE && idx < ADVANCED_RAM_Z3_BASE) {
+        const int board = idx - ADVANCED_RAM_Z2_BASE;
+        static const settings::definition* const mb_options[] = {
+            &options().fastmem_size, &options().fastmem2_size,
+            &options().fastmem3_size, &options().fastmem4_size,
+        };
+        static const settings::definition* const kb_options[] = {
+            &options().fastmem_size_k, &options().fastmem2_size_k,
+            &options().fastmem3_size_k, &options().fastmem4_size_k,
+        };
+        if (size >= 0x100000 || size == 0) {
+            option = mb_options[board]; // stored in MB
+            std::snprintf(value, sizeof value, "%d", static_cast<int>(size / 0x100000));
+        } else {
+            option = kb_options[board]; // sub-1 MB boards are stored in KB
+            numeric = true;
+            number = static_cast<double>(size / 1024);
+        }
+    } else if (idx >= ADVANCED_RAM_Z3_BASE && idx < ADVANCED_RAM_CPUSLOT) {
+        const int board = idx - ADVANCED_RAM_Z3_BASE;
+        static const settings::definition* const options4[] = {
+            &options().z3mem_size, &options().z3mem2_size,
+            &options().z3mem3_size, &options().z3mem4_size,
+        };
+        option = options4[board]; // stored in MB
+        std::snprintf(value, sizeof value, "%d", static_cast<int>(size / 0x100000));
+    } else if (idx == ADVANCED_RAM_CPUSLOT) {
+        option = &o.mbresmem_size; // stored in MB
+        std::snprintf(value, sizeof value, "%d", static_cast<int>(size / 0x100000));
+    } else if (idx == ADVANCED_RAM_MBLOW) {
+        option = &o.a3000mem_size; // stored in MB
+        std::snprintf(value, sizeof value, "%d", static_cast<int>(size / 0x100000));
+    } else if (idx == ADVANCED_RAM_Z3CHIP) {
+        option = &o.megachipmem_size; // stored in MB
+        std::snprintf(value, sizeof value, "%d", static_cast<int>(size / 0x100000));
+    }
+
+    if (!option)
+        return AMIBERRY_SETTINGS_UNKNOWN_ID;
+    if (numeric)
+        return settings::set_number(*option, changed_prefs, ctx, number);
+    return settings::set(*option, changed_prefs, ctx, value);
+}
+
+// A RAM slider moved from position from to position to: stores that size,
+// or, when the layer refuses it (1.5 MB under the JIT, 1.8 MB slow RAM with
+// Gayle, sizes beyond the Zorro III window), the nearest size past it in
+// the direction of the move that is accepted. Nothing changes when there is
+// none, so the slider never shows a size the configuration does not hold.
+static void move_ram_slider(int idx, int from, int to, const int* msi, int count) {
+    const int step = to >= from ? 1 : -1;
+    for (int pos = to; pos >= 0 && pos < count; pos += step) {
+        if (set_ram_size(idx, memsizes[msi[pos]]) == AMIBERRY_SETTINGS_OK)
+            return;
+    }
 }
 
 // WinUAE sync: get_ramboard_name with size info like addadvancedram()
@@ -251,51 +346,72 @@ static void get_ramboard_name(int idx, char *buf, size_t bufsize, bool include_s
     }
 }
 
+bool has_value(const settings::definition& d, const char* v)
+{
+    char current[AMIBERRY_SETTINGS_VALUE_MAX];
+    settings::get(d, changed_prefs, current, sizeof current);
+    return std::strcmp(current, v) == 0;
+}
+
+// Index of the choice the configuration holds, clamped for display when a
+// configuration from a file holds a value this build does not know.
+int choice_index_of(const settings::definition& d)
+{
+    const amiberry_setting_descriptor& desc = d.descriptor;
+    for (size_t i = 0; i < desc.choice_count; i++) {
+        char current[AMIBERRY_SETTINGS_VALUE_MAX];
+        settings::get(d, changed_prefs, current, sizeof current);
+        if (std::strcmp(current, desc.choices[i].value) == 0)
+            return static_cast<int>(i);
+    }
+    return 0;
+}
+
+} // namespace
+
 void render_panel_ram() {
+    const ram_options& o = options();
+    const settings::context ctx{emulating != 0};
+
     ImGui::Indent(4.0f);
     BeginGroupBox("Memory Settings");
 
     int chip_idx = get_mem_index(changed_prefs.chipmem.size, msi_chip, 7);
+    const int chip_from = chip_idx;
     if (RamControl("Chip:", &chip_idx, msi_chip, 7)) {
-        changed_prefs.chipmem.size = memsizes[msi_chip[chip_idx]];
-        // WinUAE sync: Auto-enable ECS Agnus when Chip RAM > 512KB (OCS can't address more)
-        if (!(changed_prefs.chipset_mask & CSMASK_ECS_AGNUS) && changed_prefs.chipmem.size > 0x80000) {
-            changed_prefs.chipset_mask |= CSMASK_ECS_AGNUS;
-        }
-        // WinUAE sync: Chip RAM > 2MB conflicts with Z2 Fast RAM
-        if (changed_prefs.chipmem.size > 0x200000) {
-            fix_values_memorydlg();
-        }
+        move_ram_slider(ADVANCED_RAM_CHIP, chip_from, chip_idx, msi_chip, 7);
     }
     ShowHelpMarker("Main memory accessible by all Amiga custom chips. A500 had 512KB, A1200 had 2MB. More than 512KB requires ECS Agnus.");
 
     int fast_idx = get_mem_index(changed_prefs.fastmem[0].size, msi_fast, 9);
+    const int fast_from = fast_idx;
     if (RamControl("Z2 Fast:", &fast_idx, msi_fast, 9)) {
-        changed_prefs.fastmem[0].size = memsizes[msi_fast[fast_idx]];
-        if (changed_prefs.fastmem[0].size > 0 && changed_prefs.chipmem.size > 0x200000)
-            changed_prefs.chipmem.size = 0x200000;
+        move_ram_slider(ADVANCED_RAM_Z2_BASE, fast_from, fast_idx, msi_fast, 9);
     }
     ShowHelpMarker("Zorro II expansion memory. Not accessible by custom chips. 16-bit, max 8MB. Incompatible with Chip RAM > 2MB.");
 
     int mbhigh_idx = get_mem_index(changed_prefs.mbresmem_high.size, msi_mb, 9);
+    const int mbhigh_from = mbhigh_idx;
     if (RamControl("Processor slot:", &mbhigh_idx, msi_mb, 9)) {
-        changed_prefs.mbresmem_high.size = memsizes[msi_mb[mbhigh_idx]];
+        move_ram_slider(ADVANCED_RAM_CPUSLOT, mbhigh_from, mbhigh_idx, msi_mb, 9);
         if (currprefs.mbresmem_high.size != changed_prefs.mbresmem_high.size)
             disable_resume();
     }
     ShowHelpMarker("Fast RAM on CPU accelerator cards installed in the processor slot. Not accessible by custom chips.");
 
     int mblow_idx = get_mem_index(changed_prefs.mbresmem_low.size, msi_mb, 8);
+    const int mblow_from = mblow_idx;
     if (RamControl("Motherboard Fast:", &mblow_idx, msi_mb, 8)) {
-        changed_prefs.mbresmem_low.size = memsizes[msi_mb[mblow_idx]];
+        move_ram_slider(ADVANCED_RAM_MBLOW, mblow_from, mblow_idx, msi_mb, 8);
         if (currprefs.mbresmem_low.size != changed_prefs.mbresmem_low.size)
             disable_resume();
     }
     ShowHelpMarker("Fast RAM on the motherboard (A3000/A4000). Not accessible by custom chips.");
 
     int slow_idx = get_mem_index(changed_prefs.bogomem.size, msi_bogo, 5);
+    const int slow_from = slow_idx;
     if (RamControl("Slow:", &slow_idx, msi_bogo, 5)) {
-        changed_prefs.bogomem.size = memsizes[msi_bogo[slow_idx]];
+        move_ram_slider(ADVANCED_RAM_SLOW, slow_from, slow_idx, msi_bogo, 5);
     }
     ShowHelpMarker("512KB expansion in A500/A2000 'trapdoor' slot (Ranger RAM). Accessible by custom chips but slower than Chip RAM.");
 
@@ -304,19 +420,17 @@ void render_panel_ram() {
 
     int z3fast_count = can_have_1gb() ? 12 : 11;
     int z3_idx = get_mem_index(changed_prefs.z3fastmem[0].size, msi_z3fast, z3fast_count);
+    const int z3_from = z3_idx;
     if (RamControl("Z3 Fast:", &z3_idx, msi_z3fast, z3fast_count)) {
-        changed_prefs.z3fastmem[0].size = memsizes[msi_z3fast[z3_idx]];
-        if (changed_prefs.z3fastmem[0].size > max_z3fastmem)
-            changed_prefs.z3fastmem[0].size = max_z3fastmem;
+        move_ram_slider(ADVANCED_RAM_Z3_BASE, z3_from, z3_idx, msi_z3fast, z3fast_count);
     }
     ShowHelpMarker("Zorro III expansion memory. 32-bit, used with 68030+ CPUs. Requires 32-bit addressing mode. Not accessible by custom chips.");
 
     int z3chip_count = can_have_1gb() ? 10 : 9;
     int z3chip_idx = get_mem_index(changed_prefs.z3chipmem.size, msi_z3chip, z3chip_count);
+    const int z3chip_from = z3chip_idx;
     if (RamControl("32-bit Chip:", &z3chip_idx, msi_z3chip, z3chip_count)) {
-        changed_prefs.z3chipmem.size = memsizes[msi_z3chip[z3chip_idx]];
-        if (changed_prefs.z3chipmem.size > max_z3fastmem)
-            changed_prefs.z3chipmem.size = max_z3fastmem;
+        move_ram_slider(ADVANCED_RAM_Z3CHIP, z3chip_from, z3chip_idx, msi_z3chip, z3chip_count);
     }
     ShowHelpMarker("Extended Chip RAM accessible by custom chips. Requires 32-bit addressing mode. Used in advanced configurations.");
     ImGui::EndDisabled();
@@ -468,32 +582,12 @@ void render_panel_ram() {
              ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - BUTTON_WIDTH * 0.6f - ImGui::GetStyle().ItemSpacing.x);
 
              int current_size_idx = get_mem_index(rb->size, current_msi, msi_count);
+             const int size_from = current_size_idx;
 
-             if (ImGui::SliderInt("##AdvSlider", &current_size_idx, 0, msi_count - 1, "")) {
-                 rb->size = memsizes[current_msi[current_size_idx]];
-                 // WinUAE sync: specific logic ref checks
-                 if (current_advanced_ram_idx == ADVANCED_RAM_CHIP) {
-                     // Auto-enable ECS Agnus when Chip RAM > 512KB
-                     if (!(changed_prefs.chipset_mask & CSMASK_ECS_AGNUS) && rb->size > 0x80000) {
-                         changed_prefs.chipset_mask |= CSMASK_ECS_AGNUS;
-                     }
-                     // Chip RAM > 2MB conflicts with Z2 Fast RAM
-                     if (rb->size > 0x200000) {
-                         fix_values_memorydlg();
-                     }
-                 } else if (current_advanced_ram_idx >= ADVANCED_RAM_Z2_BASE && current_advanced_ram_idx < ADVANCED_RAM_Z3_BASE) {
-                     // Z2 Fast: if enabled and Chip > 2MB, reduce Chip
-                     if (rb->size > 0 && changed_prefs.chipmem.size > 0x200000)
-                         changed_prefs.chipmem.size = 0x200000;
-                 } else if (current_advanced_ram_idx >= ADVANCED_RAM_Z3_BASE && current_advanced_ram_idx < ADVANCED_RAM_CPUSLOT) {
-                     // Z3 Fast: enforce max limit
-                     if (rb->size > max_z3fastmem)
-                         rb->size = max_z3fastmem;
-                 } else if (current_advanced_ram_idx == ADVANCED_RAM_Z3CHIP) {
-                     // 32-bit Chip: enforce max limit
-                     if (rb->size > max_z3fastmem)
-                         rb->size = max_z3fastmem;
-                 }
+             if (ImGui::SliderInt("##AdvSlider", &current_size_idx, 0, msi_count - 1, "", ImGuiSliderFlags_AlwaysClamp)) {
+                 // The layer's setter applies the board's dependent changes
+                 // (ECS Agnus, the chip/Z2 conflict, the Z3 window).
+                 move_ram_slider(current_advanced_ram_idx, size_from, current_size_idx, current_msi, msi_count);
              }
             AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), false);
             ShowHelpMarker("Size of the selected memory board. Available sizes depend on the type of memory.");
@@ -514,7 +608,7 @@ void render_panel_ram() {
             ImGui::TableSetupColumn("Controls", ImGuiTableColumnFlags_WidthStretch, 2.0f);
             // Right column (flags) can be smaller
             ImGui::TableSetupColumn("Flags", ImGuiTableColumnFlags_WidthStretch, 1.0f);
-            
+
             ImGui::TableNextColumn();
 
             // Left Column: Inputs
@@ -524,7 +618,7 @@ void render_panel_ram() {
             ImGui::AlignTextToFramePadding();
             ImGui::Text("Manufacturer");
             ImGui::SameLine();
-            
+
             ImGui::BeginDisabled(!edit_ac);
             char manuf_buf[8];
             snprintf(manuf_buf, sizeof(manuf_buf), "%04X", rb->manufacturer);
@@ -556,13 +650,9 @@ void render_panel_ram() {
             ImGui::Text("Autoconfig data");
             ImGui::SameLine();
             ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-            
+
             // Format autoconfig bytes
             char autoconfig_buf[64] = "";
-            // Logic to fetch valid autoconfig data if rb->autoconfig is empty or we want to show default
-            // In WinUAE, it shows rb->autoconfig bytes.
-            // If they are all zero, it might try to fetch defaults.
-            // Let's format rb->autoconfig.
             char *p = autoconfig_buf;
             for (int i = 0; i < 16; i++) {
                  if (i > 0) {
@@ -662,8 +752,6 @@ void render_panel_ram() {
             if (!enable_board_select) ImGui::EndDisabled();
 
             // Address Range
-            // Always show label to keep layout stable? Or only when manual?
-            // WinUAE shows it disabled if not Manual.
             bool manual_active = rb->manual_config;
             ImGui::BeginDisabled(!manual_active);
             ImGui::AlignTextToFramePadding();
@@ -700,8 +788,6 @@ void render_panel_ram() {
 
             if (AmigaCheckbox("Edit Autoconfig data", &edit_ac)) {
                  rb->autoconfig_inuse = edit_ac;
-                 // If enabling, ensure autoconfig bytes are synced from current Manuf/Product if currently zero?
-                 // Or just trust the current state.
             }
             ShowHelpMarker("Enable editing of manufacturer and product IDs for custom RAM board identification.");
             if (AmigaCheckbox("Manual configuration", &rb->manual_config)) {
@@ -725,11 +811,24 @@ void render_panel_ram() {
             // Z3 Mapping Mode - Bottom Right
             ImGui::Spacing();
             ImGui::Text("Z3 mapping mode:");
-            const char *z3_mapping_items[] = {"Automatic (*)", "UAE", "Real"};
             ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
             ImGui::BeginDisabled(!z3_enabled);
-            ImGui::Combo("##Z3Mapping", &changed_prefs.z3_mapping_mode, z3_mapping_items,
-                         IM_ARRAYSIZE(z3_mapping_items));
+            int z3_mapping_idx = choice_index_of(o.z3mapping);
+            if (ImGui::BeginCombo("##Z3Mapping", o.z3mapping.descriptor.choices[z3_mapping_idx].label)) {
+                for (int n = 0; n < static_cast<int>(o.z3mapping.descriptor.choice_count); n++) {
+                    const bool is_selected = (z3_mapping_idx == n);
+                    if (is_selected)
+                        ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+                    if (ImGui::Selectable(o.z3mapping.descriptor.choices[n].label, is_selected)) {
+                        settings::set(o.z3mapping, changed_prefs, ctx, o.z3mapping.descriptor.choices[n].value);
+                    }
+                    if (is_selected) {
+                        ImGui::PopStyleColor();
+                        ImGui::SetItemDefaultFocus();
+                    }
+                }
+                ImGui::EndCombo();
+            }
             ImGui::EndDisabled();
             AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
             ShowHelpMarker("Z3 memory address mapping mode. Automatic uses optimal settings, UAE uses UAE-compatible layout, Real uses real Amiga addresses.");
@@ -739,6 +838,4 @@ void render_panel_ram() {
 
     }
     EndGroupBox("Advanced Memory Settings");
-
-    copycpuboardmem(true);
 }

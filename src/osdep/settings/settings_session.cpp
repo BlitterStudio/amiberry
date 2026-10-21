@@ -21,10 +21,22 @@ using amiberry_settings::definition;
 // prefs (copy_prefs): their pointer members still point into changed_prefs,
 // so they are never freed field by field, and only the scalar fields the
 // domains own are written back. touched marks the options the caller set.
+//
+// A preset replaces far more than the options (the target defaults of a
+// fresh configuration), so it is not merged field by field: the session
+// records it and replays it on the pending configuration the way Quickstart
+// applies it. pre_preset is working just before the last preset (its
+// changes from base are replayed first), after_preset working just after it
+// (changes made since are replayed on top).
 struct amiberry_settings_session {
 	uae_prefs* working = nullptr;
 	uae_prefs* base = nullptr;
 	std::vector<bool> touched;
+	int preset_model = -1; // none
+	int preset_config = 0;
+	int preset_compatibility = 0;
+	uae_prefs* pre_preset = nullptr;
+	uae_prefs* after_preset = nullptr;
 };
 
 namespace {
@@ -52,34 +64,73 @@ const definition* lookup(const char* id)
 	return id ? amiberry_settings::find(id) : nullptr;
 }
 
+void commit_domains(const amiberry_settings_session& session, const uae_prefs& base,
+	const uae_prefs& from, uae_prefs& to)
+{
+	const amiberry_settings::commit_info info{session.touched};
+	for (size_t i = 0; i < amiberry_settings::domain_count(); i++)
+		amiberry_settings::domain_at(i).commit(base, from, to, info);
+}
+
+void forget_preset(amiberry_settings_session& session)
+{
+	std::free(session.pre_preset);
+	std::free(session.after_preset);
+	session.pre_preset = session.after_preset = nullptr;
+	session.preset_model = -1;
+}
+
 // The pending configuration with the session's changes applied, so changes
 // made elsewhere since the session last read it are resolved together with
-// the session's. NULL when memory is exhausted.
+// the session's. A recorded preset is replayed between the changes made
+// before and after it. NULL when memory is exhausted (the preset's target
+// defaults use std::string).
 uae_prefs* merge_with_pending(const amiberry_settings_session& session)
 {
 	uae_prefs* merged = allocate_copy(changed_prefs);
-	if (merged) {
-		for (size_t i = 0; i < amiberry_settings::domain_count(); i++)
-			amiberry_settings::domain_at(i).commit(*session.base, *session.working, *merged);
+	if (!merged)
+		return nullptr;
+	if (session.preset_model < 0) {
+		commit_domains(session, *session.base, *session.working, *merged);
+		return merged;
 	}
+	commit_domains(session, *session.base, *session.pre_preset, *merged);
+	const bool applied = amiberry_settings::no_throw(false, [&session, merged] {
+		amiberry_settings::apply_preset(*merged, session.preset_model, session.preset_config,
+			session.preset_compatibility, true);
+		return true;
+	});
+	if (!applied) {
+		std::free(merged);
+		return nullptr;
+	}
+	commit_domains(session, *session.after_preset, *session.working, *merged);
 	return merged;
+}
+
+// fixup_prefs_preview() on p; false when it threw (parts of the core's
+// fixups and target options use std::string).
+bool resolve_preview(uae_prefs* p)
+{
+	return amiberry_settings::no_throw(false, [p] {
+		fixup_prefs_preview(p);
+		return true;
+	});
 }
 
 bool same_value(const definition& d, const uae_prefs& a, const uae_prefs& b)
 {
-	char va[AMIBERRY_SETTINGS_VALUE_MAX] = {};
-	char vb[AMIBERRY_SETTINGS_VALUE_MAX] = {};
-	d.get(a, va, sizeof va);
-	d.get(b, vb, sizeof vb);
-	return std::strcmp(va, vb) == 0;
+	// Full length, so two paths that share a prefix still differ.
+	return amiberry_settings::values_equal(d, a, b);
 }
 
 } // namespace
 
 extern "C" {
 
-// Once a session exists the option index is built, so the other session
-// calls cannot throw: they check the session before looking options up.
+// Every entry point returns its error value instead of letting a C++
+// exception (std::bad_alloc from a setter, a hook or the core's fixups)
+// cross into C, Swift, C# or Kotlin callers.
 amiberry_settings_session* amiberry_settings_session_open(void)
 {
 	auto* session = new (std::nothrow) amiberry_settings_session;
@@ -102,6 +153,7 @@ void amiberry_settings_session_close(amiberry_settings_session* session)
 {
 	if (!session)
 		return;
+	forget_preset(*session);
 	std::free(session->working);
 	std::free(session->base);
 	delete session;
@@ -110,50 +162,60 @@ void amiberry_settings_session_close(amiberry_settings_session* session)
 amiberry_settings_status amiberry_settings_get(const amiberry_settings_session* session,
 	const char* id, char* buffer, size_t size)
 {
-	const definition* d = session ? lookup(id) : nullptr;
-	if (!d)
-		return AMIBERRY_SETTINGS_UNKNOWN_ID;
-	return amiberry_settings::get(*d, *session->working, buffer, size);
+	return amiberry_settings::no_throw(AMIBERRY_SETTINGS_UNKNOWN_ID, [=] {
+		const definition* d = session ? lookup(id) : nullptr;
+		if (!d)
+			return AMIBERRY_SETTINGS_UNKNOWN_ID;
+		return amiberry_settings::get(*d, *session->working, buffer, size);
+	});
 }
 
 amiberry_settings_status amiberry_settings_set(amiberry_settings_session* session,
 	const char* id, const char* value)
 {
-	const definition* d = session ? lookup(id) : nullptr;
-	if (!d)
-		return AMIBERRY_SETTINGS_UNKNOWN_ID;
-	if (!value)
-		return AMIBERRY_SETTINGS_INVALID_VALUE;
-	const amiberry_settings_status status = amiberry_settings::set(*d, *session->working, current_context(), value);
-	if (status == AMIBERRY_SETTINGS_OK)
-		session->touched[amiberry_settings::position_of(*d)] = true;
-	return status;
+	return amiberry_settings::no_throw(AMIBERRY_SETTINGS_UNAVAILABLE, [=] {
+		const definition* d = session ? lookup(id) : nullptr;
+		if (!d)
+			return AMIBERRY_SETTINGS_UNKNOWN_ID;
+		if (!value)
+			return AMIBERRY_SETTINGS_INVALID_VALUE;
+		const amiberry_settings_status status = amiberry_settings::set(*d, *session->working, current_context(), value);
+		if (status == AMIBERRY_SETTINGS_OK)
+			session->touched[amiberry_settings::position_of(*d)] = true;
+		return status;
+	});
 }
 
 bool amiberry_settings_is_available(const amiberry_settings_session* session, const char* id)
 {
-	const definition* d = session ? lookup(id) : nullptr;
-	return d && amiberry_settings::is_available(*d, *session->working, current_context());
+	return amiberry_settings::no_throw(false, [=] {
+		const definition* d = session ? lookup(id) : nullptr;
+		return d && amiberry_settings::is_available(*d, *session->working, current_context());
+	});
 }
 
 bool amiberry_settings_choice_is_available(const amiberry_settings_session* session,
 	const char* id, const char* value)
 {
-	const definition* d = session ? lookup(id) : nullptr;
-	return d && value
-		&& amiberry_settings::is_choice_available(*d, *session->working, current_context(), value);
+	return amiberry_settings::no_throw(false, [=] {
+		const definition* d = session ? lookup(id) : nullptr;
+		return d && value
+			&& amiberry_settings::is_choice_available(*d, *session->working, current_context(), value);
+	});
 }
 
 bool amiberry_settings_get_range(const amiberry_settings_session* session, const char* id,
 	double* min, double* max)
 {
-	const definition* d = session ? lookup(id) : nullptr;
-	if (!d || !min || !max)
-		return false;
-	if (d->descriptor.type != AMIBERRY_SETTING_INT && d->descriptor.type != AMIBERRY_SETTING_REAL)
-		return false;
-	amiberry_settings::get_range(*d, *session->working, *min, *max);
-	return true;
+	return amiberry_settings::no_throw(false, [=] {
+		const definition* d = session ? lookup(id) : nullptr;
+		if (!d || !min || !max)
+			return false;
+		if (d->descriptor.type != AMIBERRY_SETTING_INT && d->descriptor.type != AMIBERRY_SETTING_REAL)
+			return false;
+		amiberry_settings::get_range(*d, *session->working, *min, *max);
+		return true;
+	});
 }
 
 size_t amiberry_settings_validate(const amiberry_settings_session* session,
@@ -167,7 +229,11 @@ size_t amiberry_settings_validate(const amiberry_settings_session* session,
 		std::free(requested);
 		return 0;
 	}
-	fixup_prefs_preview(resolved);
+	if (!resolve_preview(resolved)) {
+		std::free(requested);
+		std::free(resolved);
+		return 0;
+	}
 
 	size_t found = 0;
 	for (size_t i = 0; i < amiberry_settings::definition_count(); i++) {
@@ -202,7 +268,12 @@ amiberry_apply_class amiberry_settings_commit(amiberry_settings_session* session
 		// addressing removes Z3 RAM). resolved is changed_prefs as it is
 		// now plus exactly those changes, so copying it whole reverts
 		// nothing made elsewhere.
-		fixup_prefs_preview(resolved);
+		if (!resolve_preview(resolved)) {
+			std::free(resolved);
+			if (changed)
+				*changed = false;
+			return AMIBERRY_APPLY_LIVE;
+		}
 		any = std::memcmp(static_cast<const void*>(&changed_prefs), static_cast<const void*>(resolved),
 			sizeof(uae_prefs)) != 0;
 		if (any) {
@@ -225,11 +296,15 @@ amiberry_apply_class amiberry_settings_commit(amiberry_settings_session* session
 						strongest = d.descriptor.apply;
 				}
 			}
+			// A preset is a machine change, like Quickstart's.
+			if (session->preset_model >= 0 && AMIBERRY_APPLY_RESET > strongest)
+				strongest = AMIBERRY_APPLY_RESET;
 			copy_into(changed_prefs, *resolved);
 		}
 		copy_into(*session->working, *resolved);
 		copy_into(*session->base, *resolved);
 		session->touched.assign(session->touched.size(), false);
+		forget_preset(*session);
 		std::free(resolved);
 	}
 	if (changed)
@@ -237,4 +312,35 @@ amiberry_apply_class amiberry_settings_commit(amiberry_settings_session* session
 	return strongest;
 }
 
+// The preset is applied to the session's copy for get/is_available, and
+// recorded so validate and commit replay it on the pending configuration.
+amiberry_settings_status amiberry_settings_preset_apply(amiberry_settings_session* session,
+	const char* id, int config, int compatibility)
+{
+	if (!session)
+		return AMIBERRY_SETTINGS_UNKNOWN_ID;
+	int model = -1;
+	const amiberry_settings_status status = amiberry_settings::check_preset(id, config, compatibility, model);
+	if (status != AMIBERRY_SETTINGS_OK)
+		return status;
+	uae_prefs* pre = allocate_copy(*session->working);
+	uae_prefs* after = pre ? allocate_copy(*session->working) : nullptr;
+	const bool applied = after && amiberry_settings::no_throw(false, [=] {
+		amiberry_settings::apply_preset(*after, model, config, compatibility, true);
+		return true;
+	});
+	if (!applied) {
+		std::free(pre);
+		std::free(after);
+		return AMIBERRY_SETTINGS_UNAVAILABLE;
+	}
+	forget_preset(*session);
+	session->pre_preset = pre;
+	session->after_preset = after;
+	session->preset_model = model;
+	session->preset_config = config;
+	session->preset_compatibility = compatibility;
+	copy_into(*session->working, *after);
+	return AMIBERRY_SETTINGS_OK;
+}
 }

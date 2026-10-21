@@ -64,6 +64,7 @@
 #include <iterator>
 #include <sstream>
 #include "imgui/imgui_panels.h"
+#include "osdep/settings/settings_definitions.h"
 #include "imgui/imgui_help_text.h"
 #include "imgui/play_setup.h"
 #include "icons_fa.h"
@@ -1777,15 +1778,12 @@ void amiberry_gui_init()
 		raise_gui_window(mon->gui_window);
 #endif
 
-	// Quickstart models and configs initialization
+	// Quickstart models and configs initialization (preset table in the
+	// shared settings layer)
 	qs_models.clear();
-	for (const auto & amodel : amodels) {
-		qs_models.push_back(amodel.name);
-	}
-	qs_configs.clear();
-	for (const auto & config : amodels[quickstart_model].configs) {
-		qs_configs.push_back(config);
-	}
+	for (size_t i = 0; i < amiberry_settings_preset_count(); i++)
+		qs_models.push_back(amiberry_settings_preset_at(i)->label);
+	refresh_quickstart_config_list();
 }
 
 void amiberry_gui_halt()

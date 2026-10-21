@@ -10,6 +10,7 @@
 #include <cstddef>
 #include <cstring>
 #include <string_view>
+#include <vector>
 
 struct uae_prefs;
 
@@ -47,6 +48,14 @@ struct definition {
 	bool (*accepts)(const uae_prefs& p, const value& v);
 };
 
+// What a commit knows about the session besides its configurations: the
+// options its caller set (by definition position), so a domain can tell a
+// field the caller chose from one a dependent change wrote.
+struct commit_info {
+	const std::vector<bool>& touched;
+	bool was_set(const definition& d) const;
+};
+
 struct domain {
 	const definition* definitions;
 	size_t count;
@@ -55,7 +64,8 @@ struct domain {
 	// commit keeps dependent changes and leaves fields the session did not
 	// change as other code may have set them since. `base` and `to` may be
 	// the same object. Returns whether it wrote anything.
-	bool (*commit)(const uae_prefs& base, const uae_prefs& from, uae_prefs& to);
+	bool (*commit)(const uae_prefs& base, const uae_prefs& from, uae_prefs& to,
+		const commit_info& info);
 };
 
 // For domain commit functions: copies one field (scalar or array) when the
@@ -83,7 +93,66 @@ T no_throw(T fallback, F&& body) noexcept
 	}
 }
 
+// Large enough for any value a descriptor can produce, including paths
+// (uae_prefs stores paths as MAX_DPATH, 4096 bytes). Public adjustment
+// reports stay limited to AMIBERRY_SETTINGS_VALUE_MAX and truncate.
+constexpr size_t max_value_length = 4096;
+
 const domain& cpu_domain();
+const domain& chipset_domain();
+const domain& memory_domain();
+const domain& rom_domain();
+
+// The Quickstart constraints that complete built_in_prefs(); applies model,
+// config and compatibility level exactly like the Quickstart panel (which
+// historically ran these steps in src/osdep/imgui/quickstart.cpp). The
+// panel and --apply-preset apply to the live pending configuration and
+// reset the global defaults a configuration load resets; preview applies
+// to a copy (a session) and writes nothing but p.
+void apply_preset(uae_prefs& p, int model, int config, int compatibility, bool preview);
+
+// The Quickstart model table: index <-> stable preset ID. Negative for an
+// unknown ID; nullptr for an out-of-range model.
+int preset_model_index(std::string_view id);
+const char* preset_id(int model);
+
+// WinUAE copycpuboardmem(tomem = true): keeps the accelerator board RAM in
+// sync with the memory subsystem the user edited, so the core fixup (which
+// copies the other way) does not undo the edit.
+void sync_cpuboard_mem(uae_prefs& p);
+
+// The other direction, the copy fixup_prefs() makes: the accelerator
+// board RAM lands in the memory slot the board uses. Options that change
+// the board (the automatic PPC configuration) call it so the stored
+// configuration matches what the fixup resolves to.
+void mirror_cpuboard_mem(uae_prefs& p);
+
+// The JIT cache size the checks after fixup_cpu() see (0 when the JIT is
+// not compiled in, inhibited, below a 68020 or in memory cycle-exact
+// mode). The memory domain uses it for the sizes the JIT cannot map.
+int jit_cache_after_fixup_cpu(const uae_prefs& p);
+
+// fixup_prefs()'s RAM clamps that depend on other options (the JIT, the
+// Gayle/Gary address conflict). Setters of those options run it, so the RAM
+// options never show a size the fixup will change.
+void clamp_ram_for_fixups(uae_prefs& p);
+
+// Machine presets (settings_presets.cpp). The public C wrappers live next
+// to the implementations; amiberry_settings_preset_apply lives in
+// settings_session.cpp because it owns the session.
+size_t machine_preset_count();
+const amiberry_settings_preset* machine_preset_at(size_t index);
+const amiberry_settings_preset* machine_preset_find(const char* id);
+const char* machine_preset_config_label(const amiberry_settings_preset* preset, int config);
+const char* machine_preset_compatibility_label(int level);
+bool machine_preset_rom_installed(const char* id, int config);
+// Checks a public preset request and returns its built_in_prefs() model:
+// UNKNOWN_ID / INVALID_VALUE / UNAVAILABLE as amiberry_settings_preset_apply
+// reports them.
+amiberry_settings_status check_preset(const char* id, int config, int compatibility, int& model);
+
+// Whether a and b hold the same value for d (full length, for paths).
+bool values_equal(const definition& d, const uae_prefs& a, const uae_prefs& b);
 
 size_t domain_count();
 const domain& domain_at(size_t index);

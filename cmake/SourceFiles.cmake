@@ -291,6 +291,10 @@ set(SOURCE_FILES
         src/sounddep/sound.cpp
         src/threaddep/threading.cpp
         src/osdep/file_dialog.cpp
+        src/osdep/settings/settings_chipset.cpp
+        src/osdep/settings/settings_memory.cpp
+        src/osdep/settings/settings_rom.cpp
+        src/osdep/settings/settings_presets.cpp
         src/osdep/settings/settings_cpu.cpp
         src/osdep/settings/settings_registry.cpp
         src/osdep/settings/settings_session.cpp

@@ -1,6 +1,8 @@
+#include "sysconfig.h"
 #include "settings_definitions.h"
 
 #include <cerrno>
+#include <climits>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -15,13 +17,16 @@ namespace {
 // Function-local so the list is built on first use, never during another
 // translation unit's static initialisation.
 struct domain_list {
-	const domain* items[1];
+	const domain* items[4];
 };
 
 const domain_list& domains()
 {
 	static const domain_list list = {{
 		&cpu_domain(),
+		&chipset_domain(),
+		&memory_domain(),
+		&rom_domain(),
 	}};
 	return list;
 }
@@ -113,6 +118,20 @@ amiberry_settings_status check_value(const definition& d, const uae_prefs& p,
 			return AMIBERRY_SETTINGS_INVALID_VALUE;
 		return AMIBERRY_SETTINGS_OK;
 	}
+	case AMIBERRY_SETTING_PATH:
+		// Every path option is stored in a MAX_DPATH field, and MAX_DPATH
+		// follows the host's PATH_MAX (1024 on macOS): a longer path is
+		// refused rather than truncated into another file's name.
+		if (text.size() >= MAX_DPATH)
+			return AMIBERRY_SETTINGS_INVALID_VALUE;
+		v.text = text;
+		return AMIBERRY_SETTINGS_OK;
+	case AMIBERRY_SETTING_STRING:
+		// Free-form token: the setter validates.
+		if (text.size() >= max_value_length)
+			return AMIBERRY_SETTINGS_INVALID_VALUE;
+		v.text = text;
+		return AMIBERRY_SETTINGS_OK;
 	case AMIBERRY_SETTING_CHOICE:
 		if (!is_choice(d, text))
 			return AMIBERRY_SETTINGS_INVALID_VALUE;
@@ -123,6 +142,17 @@ amiberry_settings_status check_value(const definition& d, const uae_prefs& p,
 		return AMIBERRY_SETTINGS_OK;
 	}
 	return AMIBERRY_SETTINGS_INVALID_VALUE;
+}
+
+// Whether two configurations hold the same value for d, compared at full
+// length so two paths that share a prefix still differ.
+bool equal_values(const definition& d, const uae_prefs& a, const uae_prefs& b)
+{
+	char left[max_value_length];
+	char right[max_value_length];
+	d.get(a, left, sizeof left);
+	d.get(b, right, sizeof right);
+	return std::strcmp(left, right) == 0;
 }
 
 } // namespace
@@ -150,6 +180,12 @@ const definition& definition_at(size_t index)
 size_t position_of(const definition& d)
 {
 	return definitions_index().position.at(&d);
+}
+
+bool commit_info::was_set(const definition& d) const
+{
+	const size_t position = position_of(d);
+	return position < touched.size() && touched[position];
 }
 
 const definition* find(std::string_view id)
@@ -206,7 +242,7 @@ void get_range(const definition& d, const uae_prefs& p, double& min, double& max
 
 amiberry_settings_status get(const definition& d, const uae_prefs& p, char* out, size_t size)
 {
-	char text[AMIBERRY_SETTINGS_VALUE_MAX];
+	char text[max_value_length];
 	d.get(p, text, sizeof text);
 	const size_t length = std::strlen(text);
 	if (!out || length >= size)
@@ -259,6 +295,11 @@ amiberry_settings_status set_number(const definition& d, uae_prefs& p, const con
 	else
 		std::snprintf(text, sizeof text, "%lld", static_cast<long long>(std::llround(v)));
 	return set(d, p, ctx, text);
+}
+
+bool values_equal(const definition& d, const uae_prefs& a, const uae_prefs& b)
+{
+	return equal_values(d, a, b);
 }
 
 } // namespace amiberry_settings

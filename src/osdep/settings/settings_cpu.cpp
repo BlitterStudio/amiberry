@@ -172,6 +172,9 @@ void set_cpu_model(uae_prefs& p, const value& v)
 			p.fpu_model = 0;
 		else if (p.fpu_model && p.fpu_model != 68882)
 			p.fpu_model = 68881;
+		// fixup_prefs drops Wait for Blitter in 68000/010 cycle-exact modes.
+		if (p.cpu_memory_cycle_exact)
+			p.waiting_blits = 0;
 		break;
 	case 68020:
 	case 68030:
@@ -198,6 +201,8 @@ void set_cpu_model(uae_prefs& p, const value& v)
 		else
 			p.cpu_clock_multiplier = 8 * 256;
 	}
+	// A 68020 or better can run the JIT the RAM sizes depend on.
+	clamp_ram_for_fixups(p);
 }
 
 void get_address_space_24(const uae_prefs& p, char* out, size_t size)
@@ -540,8 +545,44 @@ void get_ppc_model(const uae_prefs& p, char* out, size_t size)
 
 void set_ppc_model(uae_prefs& p, const value& v)
 {
+	const bool automatic = v.text == "automatic";
+	const bool was_automatic = p.ppc_mode == 1;
 	p.ppc_model[0] = 0;
-	p.ppc_mode = v.text == "automatic" ? 1 : 0;
+	p.ppc_mode = automatic ? 1 : 0;
+	if (automatic) {
+		// fixup_cpu() installs the automatic PPC configuration: a CyberStorm
+		// PPC (a Blizzard PPC on A1200-like machines) with at least 8 MB of
+		// board RAM, which fixup_prefs() then mirrors into the processor
+		// slot. The setter makes the same changes, so the configuration it
+		// leaves behind is what the fixups resolve to anyway.
+		cpuboard_setboard(&p, BOARD_CYBERSTORM, BOARD_CYBERSTORM_SUB_PPC);
+		if (p.cs_compatible == CP_A1200) {
+			cpuboard_setboard(&p, BOARD_BLIZZARD, BOARD_BLIZZARD_SUB_PPC);
+		} else if (p.cs_compatible != CP_A4000 && p.cs_compatible != CP_A4000T
+			&& p.cs_compatible != CP_A3000 && p.cs_compatible != CP_A3000T) {
+			if ((p.cs_ide == IDE_A600A1200 || p.cs_pcmcia) && p.cs_mbdmac <= 0)
+				cpuboard_setboard(&p, BOARD_BLIZZARD, BOARD_BLIZZARD_SUB_PPC);
+		}
+		if (p.cpuboardmem1.size < 8 * 1024 * 1024)
+			p.cpuboardmem1.size = 8 * 1024 * 1024;
+	} else if (was_automatic) {
+		// Leaving the automatic configuration removes the board it
+		// installed, and the board RAM fixup_prefs() mirrored into the slot
+		// the board uses (read before the board is gone: without a board
+		// the memory type is unknown and the mirror would stay behind).
+		const int memtype = cpuboard_memorytype(&p);
+		p.cpuboard_type = 0;
+		p.cpuboard_subtype = 0;
+		p.cpuboardmem1.size = 0;
+		if (memtype == BOARD_MEMORY_HIGHMEM)
+			p.mbresmem_high.size = 0;
+		else if (memtype == BOARD_MEMORY_Z2)
+			p.fastmem[0].size = 0;
+		else if (memtype == BOARD_MEMORY_25BITMEM)
+			p.mem25bit.size = 0;
+		return;
+	}
+	mirror_cpuboard_mem(p);
 }
 
 bool ppc_model_available(const uae_prefs& p, const context&)
@@ -642,6 +683,7 @@ void set_cachesize(uae_prefs& p, const value& v)
 		p.cpu_memory_cycle_exact = false;
 		p.compfpu = p.fpu_mode <= 0;
 	}
+	clamp_ram_for_fixups(p);
 }
 
 bool cachesize_available(const uae_prefs& p, const context&)
@@ -888,7 +930,8 @@ const definition definitions[] = {
 		get_comp_trustbyte, set_comp_trustbyte, jit_enabled_option, nullptr, nullptr},
 };
 
-bool commit_cpu(const uae_prefs& base, const uae_prefs& from, uae_prefs& to)
+bool commit_cpu(const uae_prefs& base, const uae_prefs& from, uae_prefs& to,
+	const commit_info&)
 {
 	bool wrote = false;
 #define FIELD(f) wrote |= commit_field(base.f, from.f, to.f)
@@ -914,6 +957,8 @@ bool commit_cpu(const uae_prefs& base, const uae_prefs& from, uae_prefs& to)
 	FIELD(blitter_cycle_exact);
 	FIELD(ppc_mode);
 	FIELD(ppc_model);
+	FIELD(cpuboard_type); // the automatic PPC configuration installs a board
+	FIELD(cpuboard_subtype);
 	FIELD(ppc_implementation);
 	FIELD(ppc_cpu_idle);
 	FIELD(x86_speed_throttle);
@@ -940,6 +985,11 @@ const domain cpu = {
 const domain& cpu_domain()
 {
 	return cpu;
+}
+
+int jit_cache_after_fixup_cpu(const uae_prefs& p)
+{
+	return effective_jit_cache(p);
 }
 
 } // namespace amiberry_settings

@@ -611,6 +611,34 @@ struct stored_jport
 static struct stored_jport stored_jports[MAX_JPORTS][MAX_STORED_JPORTS];
 static uae_u32 stored_jport_cnt;
 
+struct inputdevice_port_memory
+{
+	int default_keyboard_layout[MAX_JPORTS];
+	struct stored_jport stored_jports[MAX_JPORTS][MAX_STORED_JPORTS];
+	uae_u32 stored_jport_cnt;
+};
+
+struct inputdevice_port_memory *inputdevice_port_memory_save(void)
+{
+	auto *saved = static_cast<struct inputdevice_port_memory *>(malloc(sizeof(struct inputdevice_port_memory)));
+	if (!saved)
+		return nullptr;
+	memcpy(saved->default_keyboard_layout, default_keyboard_layout, sizeof default_keyboard_layout);
+	memcpy(saved->stored_jports, stored_jports, sizeof stored_jports);
+	saved->stored_jport_cnt = stored_jport_cnt;
+	return saved;
+}
+
+void inputdevice_port_memory_restore(struct inputdevice_port_memory *saved)
+{
+	if (!saved)
+		return;
+	memcpy(default_keyboard_layout, saved->default_keyboard_layout, sizeof default_keyboard_layout);
+	memcpy(stored_jports, saved->stored_jports, sizeof stored_jports);
+	stored_jport_cnt = saved->stored_jport_cnt;
+	free(saved);
+}
+
 static uae_u32 inputdevice_get_unplugged_ports(void)
 {
 	uae_u32 ports = 0;

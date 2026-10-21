@@ -6160,11 +6160,16 @@ void target_default_options(uae_prefs* p, const int type)
 		//p->filesystem_mangle_reserved_names = true;
 	}
 
+	// Global state, not prefs: a settings preview (built_in_prefs_preview)
+	// computes defaults for a copy and must leave it alone.
+	const bool write_globals = !fixup_prefs_preview_active;
+	if (write_globals) {
 #ifdef LIBRETRO
-	multithread_enabled = false;
+		multithread_enabled = false;
 #else
-	multithread_enabled = true;
+		multithread_enabled = true;
 #endif
+	}
 
 	p->kbd_led_num = -1; // No status on numlock
 	p->kbd_led_scr = -1; // No status on scrollock
@@ -6275,7 +6280,8 @@ void target_default_options(uae_prefs* p, const int type)
 	p->drawbridge_drive_cable = 0;
 	p->drawbridge_driver = 0;
 
-	drawbridge_update_profiles(p);
+	if (write_globals)
+		drawbridge_update_profiles(p); // reconfigures the FloppyBridge drivers
 
 	p->alt_tab_release = false;
 	p->ctrl_alt_release = true;
@@ -6312,11 +6318,13 @@ void target_default_options(uae_prefs* p, const int type)
 	}
 #endif
 
-	whdload_prefs.button_wait = amiberry_options.default_whd_buttonwait;
-	whdload_prefs.show_splash = amiberry_options.default_whd_showsplash;
-	whdload_prefs.config_delay = amiberry_options.default_whd_configdelay;
-	whdload_prefs.write_cache = amiberry_options.default_whd_writecache;
-	whdload_prefs.quit_on_exit = amiberry_options.default_whd_quit_on_exit;
+	if (write_globals) {
+		whdload_prefs.button_wait = amiberry_options.default_whd_buttonwait;
+		whdload_prefs.show_splash = amiberry_options.default_whd_showsplash;
+		whdload_prefs.config_delay = amiberry_options.default_whd_configdelay;
+		whdload_prefs.write_cache = amiberry_options.default_whd_writecache;
+		whdload_prefs.quit_on_exit = amiberry_options.default_whd_quit_on_exit;
+	}
 
 	if (amiberry_options.default_soundcard > 0) p->soundcard = amiberry_options.default_soundcard;
 
@@ -13256,6 +13264,14 @@ int amiberry_main(int argc, char* argv[])
 			enumerate_sound_devices();
 		}
 		install_headless_display_fallback();
+		// fixup_prefs() clamps Zorro III memory against the reserved window
+		// (max_z3fastmem), which preinit_shm() computes on a normal start
+		// before any configuration is resolved. Without it the dump would
+		// report Z3 fake chip RAM and Z3 graphics card memory as corrected
+		// to zero; mirror the reservation so the dump resolves exactly like
+		// a normal start (the reservation is address space only and is
+		// released when the process exits).
+		preinit_shm();
 		// Resolving a WHDLoad autoload in dump mode must not prepare the
 		// host for a real boot: no booter temp tree, no save-data links.
 		whdload_set_host_writes_enabled(false);

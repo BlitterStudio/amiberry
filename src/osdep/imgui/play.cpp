@@ -12,6 +12,7 @@
 #include "amiberry_gfx.h"
 #include "amiberry_rp9.h"
 #include "gui/gui_handling.h"
+#include "osdep/settings/settings_definitions.h"
 #include "imgui_panels.h"
 #include "custom.h"
 #include "disk.h"
@@ -204,13 +205,17 @@ bool quickstart_override_changed()
 			quickstart_compa != quickstart_override_compa);
 }
 
-void refresh_quickstart_config_list()
+static void refresh_quickstart_config_list_impl()
 {
 	qs_configs.clear();
-	for (auto& config : amodels[quickstart_model].configs) {
-		if (config[0] == '\0')
-			break;
-		qs_configs.push_back(config);
+	const amiberry_settings_preset* preset = amiberry_settings_preset_find(
+		amiberry_settings::preset_id(quickstart_model));
+	if (!preset)
+		return;
+	for (int config = 0; config < preset->config_count; config++) {
+		const char* label = amiberry_settings_preset_config_label(preset, config);
+		if (label)
+			qs_configs.push_back(label);
 	}
 }
 
@@ -885,6 +890,11 @@ void render_content_picker()
 }
 
 } // namespace
+
+void refresh_quickstart_config_list()
+{
+	refresh_quickstart_config_list_impl();
+}
 
 void play_sync_screen_mode_cache(const int fullscreen)
 {
