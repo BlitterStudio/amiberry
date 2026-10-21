@@ -3,6 +3,16 @@
 #include <string>
 #include <vector>
 
+// What a macos_bookmark_store() call changed, so a caller whose own commit
+// then fails can put the bookmarks back with macos_bookmark_undo().
+struct macos_bookmark_change
+{
+	std::string key;
+	bool changed = false;
+	bool had_data = false;
+	std::vector<unsigned char> previous;
+};
+
 enum class macos_bookmarks_migration_result
 {
 	no_change,
@@ -27,8 +37,14 @@ void macos_bookmarks_shutdown();
 
 // Create and store a security-scoped bookmark for the given path.
 // If the path is a file, bookmarks its parent directory.
-// Returns true on success. Persists the bookmark data immediately.
-bool macos_bookmark_store(const std::string& path);
+// Returns true on success. Persists the bookmark data immediately. When
+// change is given it records what the call changed (nothing for a bookmark
+// that was already active).
+bool macos_bookmark_store(const std::string& path, macos_bookmark_change* change = nullptr);
+
+// Undoes what a successful macos_bookmark_store() recorded: ends the access
+// it started and restores the bookmark it replaced, or removes the new one.
+void macos_bookmark_undo(const macos_bookmark_change& change);
 
 // Check whether the given path (or a file within a bookmarked directory)
 // is currently accessible via an active security-scoped bookmark.
@@ -40,10 +56,6 @@ std::vector<std::string> macos_bookmarks_list();
 // Remove a stored bookmark for the given path.
 void macos_bookmark_remove(const std::string& path);
 
-// Whether a bookmark is stored for exactly this path (normalized as
-// macos_bookmark_store() does), not merely for a folder containing it.
-bool macos_bookmark_exists(const std::string& path);
-
 #else
 
 // No-op stubs for non-App-Store builds.
@@ -54,10 +66,10 @@ inline macos_bookmarks_migration_result macos_bookmarks_init(
 	return macos_bookmarks_migration_result::no_change;
 }
 inline void macos_bookmarks_shutdown() {}
-inline bool macos_bookmark_store(const std::string&) { return true; }
+inline bool macos_bookmark_store(const std::string&, macos_bookmark_change* = nullptr) { return true; }
+inline void macos_bookmark_undo(const macos_bookmark_change&) {}
 inline bool macos_bookmark_is_accessible(const std::string&) { return true; }
 inline std::vector<std::string> macos_bookmarks_list() { return {}; }
 inline void macos_bookmark_remove(const std::string&) {}
-inline bool macos_bookmark_exists(const std::string&) { return false; }
 
 #endif

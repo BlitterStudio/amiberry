@@ -278,8 +278,10 @@ void macos_bookmarks_shutdown()
 	}
 }
 
-bool macos_bookmark_store(const std::string& path)
+bool macos_bookmark_store(const std::string& path, macos_bookmark_change* change)
 {
+	if (change)
+		*change = macos_bookmark_change{};
 	if (path.empty())
 		return false;
 
@@ -324,13 +326,22 @@ bool macos_bookmark_store(const std::string& path)
 			return false;
 		}
 
+		// A bookmark this call replaces (stored, but not active: it did not
+		// resolve at startup) is put back when the call fails.
+		NSData* previous = s_bookmark_data[key];
+		auto put_back = [&]() {
+			if (previous)
+				s_bookmark_data[key] = previous;
+			else
+				[s_bookmark_data removeObjectForKey:key];
+		};
 		s_bookmark_data[key] = data;
 		// A bookmark that is not on disk is gone after a restart: callers
 		// must not keep a path they could not reopen then.
 		if (!save_bookmarks_plist())
 		{
 			write_log("Security bookmarks: could not save the bookmark for '%s'\n", dir_path.c_str());
-			[s_bookmark_data removeObjectForKey:key];
+			put_back();
 			return false;
 		}
 
@@ -348,11 +359,22 @@ bool macos_bookmark_store(const std::string& path)
 		{
 			write_log("Security bookmarks: startAccess failed for new bookmark '%s'\n",
 				dir_path.c_str());
-			[s_bookmark_data removeObjectForKey:key];
+			put_back();
 			save_bookmarks_plist();
 			return false;
 		}
 		s_active_urls[key] = scoped;
+		if (change)
+		{
+			change->key = dir_path;
+			change->changed = true;
+			change->had_data = previous != nil;
+			if (previous)
+			{
+				const auto* bytes = static_cast<const unsigned char*>(previous.bytes);
+				change->previous.assign(bytes, bytes + previous.length);
+			}
+		}
 
 		write_log("Security bookmarks: stored bookmark for '%s'\n", dir_path.c_str());
 		return true;
@@ -409,19 +431,30 @@ std::vector<std::string> macos_bookmarks_list()
 	return result;
 }
 
-bool macos_bookmark_exists(const std::string& path)
+void macos_bookmark_undo(const macos_bookmark_change& change)
 {
-	if (path.empty())
-		return false;
+	if (!change.changed)
+		return;
 
 	@autoreleasepool
 	{
 		std::lock_guard<std::mutex> lock(s_mutex);
-		if (!s_bookmark_data)
-			return false;
-		const std::string dir_path = normalize_to_directory(path);
-		NSString* key = [NSString stringWithUTF8String:dir_path.c_str()];
-		return s_bookmark_data[key] != nil;
+
+		if (!s_bookmark_data || !s_bookmarks_path)
+			return;
+
+		NSString* key = [NSString stringWithUTF8String:change.key.c_str()];
+		if (s_active_urls[key])
+		{
+			[s_active_urls[key] stopAccessingSecurityScopedResource];
+			[s_active_urls removeObjectForKey:key];
+		}
+		if (change.had_data)
+			s_bookmark_data[key] = [NSData dataWithBytes:change.previous.data() length:change.previous.size()];
+		else
+			[s_bookmark_data removeObjectForKey:key];
+		if (!save_bookmarks_plist())
+			write_log("Security bookmarks: could not save after undoing '%s'\n", change.key.c_str());
 	}
 }
 

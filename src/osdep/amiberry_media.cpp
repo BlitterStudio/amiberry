@@ -284,18 +284,17 @@ amiberry_settings_status amiberry_folder_set(amiberry_folder folder, const char*
 			return AMIBERRY_SETTINGS_INVALID_VALUE;
 		// The folder is granted before it is stored, so a sandboxed build
 		// never keeps a folder it cannot open after a restart.
-		const bool granted_before = macos_bookmark_exists(path);
-		if (!macos_bookmark_store(path))
+		macos_bookmark_change grant;
+		if (!macos_bookmark_store(path, &grant))
 			return AMIBERRY_SETTINGS_UNAVAILABLE;
 		// A folder that cannot be saved would revert at the next start:
-		// the change is undone and reported instead, including an access
-		// grant made for it here (one that predated the call is kept).
+		// the change is undone and reported instead, including whatever
+		// the grant changed (an access grant already active is kept).
 		const std::string previous = folder_path(folder);
 		set_folder_path(folder, path);
 		if (!save_settings()) {
 			set_folder_path(folder, previous);
-			if (!granted_before)
-				macos_bookmark_remove(path);
+			macos_bookmark_undo(grant);
 			return AMIBERRY_SETTINGS_UNAVAILABLE;
 		}
 		return AMIBERRY_SETTINGS_OK;

@@ -1696,6 +1696,38 @@ void my_set_time_explicit(struct my_openfile_s* mos) noexcept
 	return true;
 }
 #else
+/* Rewrites an existing file in place (truncate, write, fsync), for when no
+   temporary file can be created next to it. */
+static bool save_file_in_place(const char* target, const void* data, size_t len) noexcept
+{
+	const int fd = open(target, O_WRONLY | O_TRUNC | O_CLOEXEC);
+	if (fd < 0) {
+		write_log("my_save_file_atomic: open '%s' in place failed: %s\n", target, strerror(errno));
+		return false;
+	}
+	const char* p = static_cast<const char*>(data);
+	size_t written = 0;
+	while (written < len) {
+		const ssize_t n = write(fd, p + written, len - written);
+		if (n < 0 && errno == EINTR)
+			continue;
+		if (n <= 0) {
+			write_log("my_save_file_atomic: in-place write '%s' failed at %zu/%zu bytes: %s\n",
+				target, written, len, n < 0 ? strerror(errno) : "no progress");
+			close(fd);
+			return false;
+		}
+		written += static_cast<size_t>(n);
+	}
+	if (fsync(fd) != 0 && errno != EINVAL)
+		write_log("my_save_file_atomic: in-place fsync '%s' failed: %s (continuing)\n", target, strerror(errno));
+	if (close(fd) != 0) {
+		write_log("my_save_file_atomic: in-place close '%s' failed: %s\n", target, strerror(errno));
+		return false;
+	}
+	return true;
+}
+
 [[nodiscard]] bool my_save_file_atomic(const TCHAR* filename, const void* data, size_t len) noexcept
 {
 	if (!filename || !data) {
@@ -1765,7 +1797,13 @@ void my_set_time_explicit(struct my_openfile_s* mos) noexcept
 	std::string tmpl = target + ".tmp.XXXXXX";
 	const int fd = mkstemp(&tmpl[0]);
 	if (fd < 0) {
-		write_log("my_save_file_atomic: mkstemp('%s') failed: %s\n", tmpl.c_str(), strerror(errno));
+		const int e = errno;
+		write_log("my_save_file_atomic: mkstemp('%s') failed: %s\n", tmpl.c_str(), strerror(e));
+		/* A writable file in a folder that does not allow new entries is
+		   updated in place, as fopen("w") did: not atomic, but the only
+		   save that layout allows. */
+		if (have_old_mode && (e == EACCES || e == EPERM))
+			return save_file_in_place(target.c_str(), data, len);
 		return false;
 	}
 	const char* tmpname = tmpl.c_str();
