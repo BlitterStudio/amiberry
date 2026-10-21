@@ -23,12 +23,15 @@
 #include <cstring>
 #include <string>
 
-// The globals and core functions the layer and fixup_cpu() use.
+// The globals and core functions the layer and fixup_cpu() use. The
+// stand-in preview runs the real CPU fixup, the part of fixup_prefs() the
+// CPU options depend on.
 uae_prefs changed_prefs;
 int emulating;
 // uae_prefs is too large for the stack.
 static uae_prefs test_prefs;
 
+void fixup_prefs_preview(uae_prefs* p) { fixup_cpu(p); }
 void error_log(const TCHAR*, ...) {}
 bool cpuboard_32bit(uae_prefs*) { return false; }
 bool cpuboard_is_ppc_accelerator(uae_prefs*) { return false; }
@@ -233,8 +236,16 @@ void check_dependent_changes()
 	CHECK(value_of(p, "cpu_24bit_addressing") == "true");
 	CHECK(value_of(p, "cpu_multiplier") == "2");
 
-	// Switching the CPU resets the MMU, but setting the same CPU again is a
-	// no-op that keeps it.
+	// Without More compatible a 68000 keeps an external FPU, and an internal
+	// one carried over from a 68040 becomes a 68881.
+	p.cpu_compatible = false;
+	CHECK(set(p, "cpu_model", "68040") == AMIBERRY_SETTINGS_OK);
+	CHECK(set(p, "fpu_model", "68040") == AMIBERRY_SETTINGS_OK);
+	CHECK(set(p, "cpu_model", "68000") == AMIBERRY_SETTINGS_OK);
+	CHECK(value_of(p, "fpu_model") == "68881");
+
+	// Switching the CPU resets the MMU, but setting the same CPU again keeps
+	// it.
 	CHECK(set(p, "cpu_model", "68030") == AMIBERRY_SETTINGS_OK);
 	CHECK(set(p, "mmu_model", "68ec030") == AMIBERRY_SETTINGS_OK);
 	CHECK(p.mmu_model == 68030 && p.mmu_ec);
@@ -243,6 +254,17 @@ void check_dependent_changes()
 	CHECK(value_of(p, "mmu_model") == "68ec030");
 	CHECK(set(p, "cpu_model", "68060") == AMIBERRY_SETTINGS_OK);
 	CHECK(value_of(p, "mmu_model") == "0");
+
+	// Choosing the current speed mode or memory access mode again
+	// re-applies it, as a re-clicked radio button did in the panel.
+	p.m68k_speed = -1;
+	p.m68k_speed_throttle = -500;
+	CHECK(set(p, "cpu_speed", "max") == AMIBERRY_SETTINGS_OK);
+	CHECK(p.m68k_speed_throttle == 0);
+	p.m68k_speed = 3; // finegrain_cpu_speed reads as "real"
+	CHECK(value_of(p, "cpu_speed") == "real");
+	CHECK(set(p, "cpu_speed", "real") == AMIBERRY_SETTINGS_OK);
+	CHECK(p.m68k_speed == 0);
 
 	// Turning the JIT on leaves cycle-exact mode, and a 68040/060 JIT leaves
 	// More compatible.
@@ -256,6 +278,9 @@ void check_dependent_changes()
 		CHECK(!available(p, "cpu_compatible"));
 		CHECK(set(p, "comp_trustbyte", "indirect") == AMIBERRY_SETTINGS_OK);
 		CHECK(p.comptrustbyte == 1 && p.comptrustword == 1 && p.comptrustlong == 1 && p.comptrustnaddr == 1);
+		p.comptrustlong = 0; // a configuration can set them separately
+		CHECK(set(p, "comp_trustbyte", "indirect") == AMIBERRY_SETTINGS_OK);
+		CHECK(p.comptrustlong == 1);
 	}
 
 	// More compatible stays on in memory cycle-exact mode and drops the
@@ -290,6 +315,12 @@ void check_rejections()
 	p.cpu_model = 68030;
 	CHECK(set(p, "mmu_model", "68040") == AMIBERRY_SETTINGS_UNAVAILABLE); // other CPU's MMU
 	CHECK(value_of(p, "mmu_model") == "0");
+#ifdef WITH_PPC
+	// Manual PPC setups come from an accelerator board configuration; the
+	// option itself only switches automatic PPC on and off.
+	p.cpu_model = 68060;
+	CHECK(set(p, "ppc_model", "manual") == AMIBERRY_SETTINGS_INVALID_VALUE);
+#endif
 	char small[3];
 	CHECK(settings::get(settings::require("cpu_model"), p, small, sizeof small) == AMIBERRY_SETTINGS_BUFFER_TOO_SMALL);
 }
@@ -330,6 +361,12 @@ void check_session()
 	CHECK(changed_prefs.cpu_model == 68040);
 	CHECK(amiberry_settings_commit(session, &changed) == AMIBERRY_APPLY_LIVE);
 	CHECK(changed && changed_prefs.cpu_model == 68030);
+
+	// Fields the session did not change keep what other code set since.
+	changed_prefs.cpu_idle = 45;
+	CHECK(amiberry_settings_set(session, "fpu_model", "68882") == AMIBERRY_SETTINGS_OK);
+	CHECK(amiberry_settings_commit(session, &changed) == AMIBERRY_APPLY_LIVE);
+	CHECK(changed && changed_prefs.fpu_model == 68882 && changed_prefs.cpu_idle == 45);
 
 	// Dependent changes outside the option list are committed too.
 	if (jit_compiled()) {
@@ -387,67 +424,69 @@ void emit_roundtrip()
 		std::printf("E %s=%s %s\n", d.id, d.default_value, d.default_value);
 	}
 
+	// A failed set would quietly test a different configuration.
 	uae_prefs& p = test_prefs;
+	auto apply = [&p](const char* id, const char* v) { CHECK(set(p, id, v) == AMIBERRY_SETTINGS_OK); };
 	reset_prefs(p);
-	set(p, "cpu_model", "68020");
+	apply("cpu_model", "68020");
 	emit("a1200_cycle_exact", p);
 
 	reset_prefs(p);
-	set(p, "cpu_model", "68030");
-	set(p, "mmu_model", "68ec030");
-	set(p, "fpu_model", "68882");
-	set(p, "cpu_data_cache", "true");
-	set(p, "cpu_multiplier", "8");
+	apply("cpu_model", "68030");
+	apply("mmu_model", "68ec030");
+	apply("fpu_model", "68882");
+	apply("cpu_data_cache", "true");
+	apply("cpu_multiplier", "8");
 	emit("a3000_ec030", p);
 
 	reset_prefs(p);
-	set(p, "cpu_model", "68060");
-	set(p, "fpu_model", "68060");
-	set(p, "mmu_model", "68060");
-	set(p, "fpu_softfloat", "true");
-	set(p, "fpu_strict", "true");
-	set(p, "cpu_no_unimplemented", "true");
-	set(p, "fpu_no_unimplemented", "true");
+	apply("cpu_model", "68060");
+	apply("fpu_model", "68060");
+	apply("mmu_model", "68060");
+	apply("fpu_softfloat", "true");
+	apply("fpu_strict", "true");
+	apply("cpu_no_unimplemented", "true");
+	apply("fpu_no_unimplemented", "true");
 	emit("a4000_060_softfloat", p);
 
 	reset_prefs(p);
 	p.cpu_cycle_exact = p.cpu_memory_cycle_exact = p.blitter_cycle_exact = false;
-	set(p, "cpu_model", "68020");
-	set(p, "cpu_24bit_addressing", "false");
-	set(p, "cpu_multiplier", "4");
-	set(p, "cpu_throttle", "500");
+	apply("cpu_model", "68020");
+	apply("cpu_24bit_addressing", "false");
+	apply("cpu_multiplier", "4");
+	apply("cpu_throttle", "500");
 	emit("a1200_faster", p);
 
 	reset_prefs(p);
 	p.cpu_cycle_exact = p.cpu_memory_cycle_exact = p.blitter_cycle_exact = false;
-	set(p, "cpu_model", "68020");
-	set(p, "cpu_24bit_addressing", "false");
-	set(p, "cpu_compatible", "false");
-	set(p, "cpu_threaded", "true");
-	set(p, "cpu_speed", "max");
-	set(p, "amiberry.cpu_idle", "60");
+	apply("cpu_model", "68020");
+	apply("cpu_24bit_addressing", "false");
+	apply("cpu_compatible", "false");
+	apply("cpu_threaded", "true");
+	apply("cpu_speed", "max");
+	apply("amiberry.cpu_idle", "60");
 	emit("threaded_020", p);
 
 	if (jit_compiled()) {
 		reset_prefs(p);
-		set(p, "cpu_model", "68040");
-		set(p, "fpu_model", "68040");
-		set(p, "cachesize", "8192");
-		set(p, "comp_trustbyte", "indirect");
-		set(p, "comp_flushmode", "hard");
-		set(p, "comp_nf", "false");
-		set(p, "comp_catchfault", "false");
-		set(p, "comp_constjump", "false");
-		set(p, "cpu_speed", "max");
+		apply("cpu_model", "68040");
+		apply("fpu_model", "68040");
+		apply("cachesize", "8192");
+		apply("comp_trustbyte", "indirect");
+		apply("comp_flushmode", "hard");
+		apply("comp_nf", "false");
+		apply("comp_catchfault", "false");
+		apply("comp_constjump", "false");
+		apply("cpu_speed", "max");
 		emit("a4000_040_jit", p);
 	}
 
 #ifdef WITH_PPC
 	reset_prefs(p);
-	set(p, "cpu_model", "68060");
-	set(p, "ppc_model", "automatic");
-	set(p, "ppc_implementation", "pearpc");
-	set(p, "ppc_cpu_idle", "max");
+	apply("cpu_model", "68060");
+	apply("ppc_model", "automatic");
+	apply("ppc_implementation", "pearpc");
+	apply("ppc_cpu_idle", "max");
 	emit("ppc", p);
 #endif
 }

@@ -8,18 +8,27 @@
 #
 # Usage: AMIBERRY_BIN=<path-to-amiberry> tests/test_settings_roundtrip.sh
 set -euo pipefail
-cd "$(dirname "$0")/.."
-
 if [[ -z "${AMIBERRY_BIN:-}" ]]; then
 	echo "AMIBERRY_BIN must point to an amiberry binary" >&2
 	exit 2
 fi
+# The CI passes a relative path; it must survive the cd below.
+[[ "$AMIBERRY_BIN" == /* ]] || AMIBERRY_BIN="$PWD/$AMIBERRY_BIN"
+cd "$(dirname "$0")/.."
 
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 # Isolated environment: no user settings interfere with resolution.
 export HOME="$work"
 
+# Build the harness with the options the binary has: PPC emulation is a
+# build option (USE_PPC), and without it cfgfile ignores the PPC keys.
+SETTINGS_LAYER_DEFINES="-DUSE_PCEM"
+"$AMIBERRY_BIN" --dump-config -s cpu_model=68060 -s ppc_model=automatic > "$work/ppc.txt" 2>/dev/null || true
+if grep -q '^ppc_model=' "$work/ppc.txt"; then
+	SETTINGS_LAYER_DEFINES="$SETTINGS_LAYER_DEFINES -DWITH_PPC"
+fi
+export SETTINGS_LAYER_DEFINES
 . tests/lib/settings_layer_build.sh
 settings_layer_compile "$work/harness" 2> "$work/build.log" || { cat "$work/build.log" >&2; exit 1; }
 "$work/harness" --emit-roundtrip > "$work/scenarios.txt"

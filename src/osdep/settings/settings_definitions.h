@@ -8,6 +8,7 @@
 #include "amiberry_settings.h"
 
 #include <cstddef>
+#include <cstring>
 #include <string_view>
 
 struct uae_prefs;
@@ -31,7 +32,9 @@ struct definition {
 	// Writes the current value in .uae spelling.
 	void (*get)(const uae_prefs& p, char* out, size_t size);
 	// Stores a checked value and makes the dependent changes the option
-	// implies.
+	// implies. It is also called with the current value (a re-clicked radio
+	// button), so a dependent change that must only follow a real change
+	// checks the old value itself.
 	void (*set)(uae_prefs& p, const value& v);
 	// nullptr: always available.
 	bool (*available)(const uae_prefs& p, const context& ctx);
@@ -44,13 +47,21 @@ struct definition {
 struct domain {
 	const definition* definitions;
 	size_t count;
-	// The core fixup that resolves this domain's options before the
-	// emulator uses them. It must change nothing but the prefs it is given.
-	void (*fixup)(uae_prefs* p);
-	// Copies every field this domain's options and their dependent changes
-	// write, so a commit cannot drop a dependent change.
-	void (*commit)(const uae_prefs& from, uae_prefs& to);
+	// Copies to `to` every field this domain's options and their dependent
+	// changes write whose value differs between `from` and `base`, so a
+	// commit keeps dependent changes and leaves fields the session did not
+	// change as other code may have set them since.
+	void (*commit)(const uae_prefs& base, const uae_prefs& from, uae_prefs& to);
 };
+
+// For domain commit functions: copies one field (scalar or array) when the
+// session changed it. Compares bytes, so floats compare exactly.
+template <typename T>
+void commit_field(const T& base, const T& from, T& to)
+{
+	if (std::memcmp(&base, &from, sizeof(T)) != 0)
+		std::memcpy(&to, &from, sizeof(T));
+}
 
 const domain& cpu_domain();
 
@@ -69,8 +80,7 @@ bool is_choice_available(const definition& d, const uae_prefs& p, const context&
 void get_range(const definition& d, const uae_prefs& p, double& min, double& max);
 
 amiberry_settings_status get(const definition& d, const uae_prefs& p, char* out, size_t size);
-// Leaves p untouched unless it returns AMIBERRY_SETTINGS_OK. Setting the
-// current value again is a no-op, so dependent changes are not repeated.
+// Leaves p untouched unless it returns AMIBERRY_SETTINGS_OK.
 amiberry_settings_status set(const definition& d, uae_prefs& p, const context& ctx,
 	std::string_view text);
 

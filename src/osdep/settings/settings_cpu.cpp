@@ -79,6 +79,14 @@ bool has_fpu(const uae_prefs& p, const context&)
 	return p.fpu_model > 0;
 }
 
+// The JIT's preference check is the only code that copies fpu_strict into a
+// running configuration.
+#ifdef JIT
+constexpr amiberry_apply_class fpu_strict_apply = AMIBERRY_APPLY_LIVE;
+#else
+constexpr amiberry_apply_class fpu_strict_apply = AMIBERRY_APPLY_RESTART;
+#endif
+
 // ---------------------------------------------------------------- CPU
 
 const amiberry_setting_choice cpu_model_choices[] = {
@@ -96,10 +104,14 @@ void get_cpu_model(const uae_prefs& p, char* out, size_t size)
 }
 
 // Switching the CPU resets the MMU and data cache, keeps an FPU the new CPU
-// can use, and picks the matching addressing mode and cycle-exact speed.
+// can use, and picks the matching addressing mode and cycle-exact speed. A
+// CPU below the 68040 has no internal FPU, so one carried over from a
+// 68040/060 becomes a 68881.
 void set_cpu_model(uae_prefs& p, const value& v)
 {
 	const int cpu = static_cast<int>(v.number);
+	if (cpu == p.cpu_model)
+		return;
 	p.cpu_model = cpu;
 	p.mmu_model = 0;
 	p.mmu_ec = false;
@@ -108,9 +120,11 @@ void set_cpu_model(uae_prefs& p, const value& v)
 	switch (cpu) {
 	case 68000:
 	case 68010:
+		p.address_space_24 = true;
 		if (p.cpu_compatible || p.cpu_memory_cycle_exact)
 			p.fpu_model = 0;
-		p.address_space_24 = true;
+		else if (p.fpu_model && p.fpu_model != 68882)
+			p.fpu_model = 68881;
 		break;
 	case 68020:
 	case 68030:
@@ -421,7 +435,6 @@ bool cpu_threaded_available(const uae_prefs& p, const context& ctx)
 const amiberry_setting_choice ppc_model_choices[] = {
 	{"", "Disabled"},
 	{"automatic", "Automatic"},
-	{"manual", "Manual"},
 };
 
 void get_ppc_model(const uae_prefs& p, char* out, size_t size)
@@ -437,7 +450,7 @@ void get_ppc_model(const uae_prefs& p, char* out, size_t size)
 void set_ppc_model(uae_prefs& p, const value& v)
 {
 	p.ppc_model[0] = 0;
-	p.ppc_mode = v.text == "automatic" ? 1 : v.text == "manual" ? 2 : 0;
+	p.ppc_mode = v.text == "automatic" ? 1 : 0;
 }
 
 bool ppc_model_available(const uae_prefs& p, const context&)
@@ -689,7 +702,7 @@ const definition definitions[] = {
 		get_fpu_model, set_fpu_model, nullptr, fpu_model_choice_available, nullptr},
 	{BOOL_OPTION("fpu_strict", "fpu", "More compatible FPU",
 			"More accurate but slower FPU emulation.",
-			AMIBERRY_APPLY_LIVE, "false", nullptr),
+			fpu_strict_apply, "false", nullptr),
 		get_fpu_strict, set_fpu_strict, has_fpu, nullptr, nullptr},
 	{BOOL_OPTION("fpu_softfloat", "fpu", "Softfloat FPU (80-bit)",
 			"FPU precision mode. Softfloat is most accurate but slowest.",
@@ -761,7 +774,7 @@ const definition definitions[] = {
 		get_comp_nf, set_comp_nf, jit_enabled_option, nullptr, nullptr},
 	{BOOL_OPTION("comp_catchfault", "jit", "Catch exceptions",
 			"Catch memory access faults in compiled code.",
-			AMIBERRY_APPLY_LIVE, "true", jit_constraint),
+			AMIBERRY_APPLY_RESTART, "true", jit_constraint),
 		get_comp_catchfault, set_comp_catchfault, jit_enabled_option, nullptr, nullptr},
 	{CHOICE_OPTION("comp_trustbyte", "jit", "Memory access",
 			"Direct memory access is faster; indirect is slower but more compatible.",
@@ -769,47 +782,49 @@ const definition definitions[] = {
 		get_comp_trustbyte, set_comp_trustbyte, jit_enabled_option, nullptr, nullptr},
 };
 
-void commit_cpu(const uae_prefs& from, uae_prefs& to)
+void commit_cpu(const uae_prefs& base, const uae_prefs& from, uae_prefs& to)
 {
-	to.cpu_model = from.cpu_model;
-	to.fpu_model = from.fpu_model;
-	to.mmu_model = from.mmu_model;
-	to.mmu_ec = from.mmu_ec;
-	to.address_space_24 = from.address_space_24;
-	to.cpu_compatible = from.cpu_compatible;
-	to.int_no_unimplemented = from.int_no_unimplemented;
-	to.fpu_no_unimplemented = from.fpu_no_unimplemented;
-	to.cpu_data_cache = from.cpu_data_cache;
-	to.fpu_strict = from.fpu_strict;
-	to.fpu_mode = from.fpu_mode;
-	to.m68k_speed = from.m68k_speed;
-	to.m68k_speed_throttle = from.m68k_speed_throttle;
-	to.cpu_idle = from.cpu_idle;
-	to.cpu_clock_multiplier = from.cpu_clock_multiplier;
-	to.cpu_frequency = from.cpu_frequency;
-	to.cpu_thread = from.cpu_thread;
-	to.cpu_cycle_exact = from.cpu_cycle_exact;
-	to.cpu_memory_cycle_exact = from.cpu_memory_cycle_exact;
-	to.blitter_cycle_exact = from.blitter_cycle_exact;
-	to.ppc_mode = from.ppc_mode;
-	std::memcpy(to.ppc_model, from.ppc_model, sizeof to.ppc_model);
-	to.ppc_implementation = from.ppc_implementation;
-	to.ppc_cpu_idle = from.ppc_cpu_idle;
-	to.x86_speed_throttle = from.x86_speed_throttle;
-	to.cachesize = from.cachesize;
-	to.compfpu = from.compfpu;
-	to.comp_constjump = from.comp_constjump;
-	to.comp_hardflush = from.comp_hardflush;
-	to.compnf = from.compnf;
-	to.comp_catchfault = from.comp_catchfault;
-	to.comptrustbyte = from.comptrustbyte;
-	to.comptrustword = from.comptrustword;
-	to.comptrustlong = from.comptrustlong;
-	to.comptrustnaddr = from.comptrustnaddr;
+#define FIELD(f) commit_field(base.f, from.f, to.f)
+	FIELD(cpu_model);
+	FIELD(fpu_model);
+	FIELD(mmu_model);
+	FIELD(mmu_ec);
+	FIELD(address_space_24);
+	FIELD(cpu_compatible);
+	FIELD(int_no_unimplemented);
+	FIELD(fpu_no_unimplemented);
+	FIELD(cpu_data_cache);
+	FIELD(fpu_strict);
+	FIELD(fpu_mode);
+	FIELD(m68k_speed);
+	FIELD(m68k_speed_throttle);
+	FIELD(cpu_idle);
+	FIELD(cpu_clock_multiplier);
+	FIELD(cpu_frequency);
+	FIELD(cpu_thread);
+	FIELD(cpu_cycle_exact);
+	FIELD(cpu_memory_cycle_exact);
+	FIELD(blitter_cycle_exact);
+	FIELD(ppc_mode);
+	FIELD(ppc_model);
+	FIELD(ppc_implementation);
+	FIELD(ppc_cpu_idle);
+	FIELD(x86_speed_throttle);
+	FIELD(cachesize);
+	FIELD(compfpu);
+	FIELD(comp_constjump);
+	FIELD(comp_hardflush);
+	FIELD(compnf);
+	FIELD(comp_catchfault);
+	FIELD(comptrustbyte);
+	FIELD(comptrustword);
+	FIELD(comptrustlong);
+	FIELD(comptrustnaddr);
+#undef FIELD
 }
 
 const domain cpu = {
-	definitions, sizeof definitions / sizeof definitions[0], fixup_cpu, commit_cpu,
+	definitions, sizeof definitions / sizeof definitions[0], commit_cpu,
 };
 
 } // namespace

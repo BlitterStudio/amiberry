@@ -10865,6 +10865,11 @@ void error_log (const TCHAR *format, ...)
 		}
 		return;
 	}
+#ifdef AMIBERRY
+	// A settings preview must not log or grow the error list.
+	if (fixup_prefs_preview_active)
+		return;
+#endif
 
 	va_start (parms, format);
 	bufp = buffer;

@@ -1271,6 +1271,11 @@ extern void cfgfile_compatibility_romtype(struct uae_prefs* p);
 extern void cfgfile_compatibility_rtg(struct uae_prefs* p);
 #ifdef AMIBERRY
 extern void cfgfile_compatibility_rtg_pixelformat(struct uae_prefs* p);
+// Resolves p as fixup_prefs() does for a settings preview: no errors are
+// logged and no device, input, hotkey, boot ROM or Kickstart state outside
+// p changes. fixup_prefs_preview_active is true while it runs.
+extern void fixup_prefs_preview(struct uae_prefs* p);
+extern bool fixup_prefs_preview_active;
 #endif
 extern bool cfgfile_detect_art(struct uae_prefs* p, TCHAR* path);
 extern const TCHAR *cfgfile_getconfigdata(size_t *len);

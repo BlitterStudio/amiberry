@@ -472,6 +472,9 @@ void fixup_prefs (struct uae_prefs *p, bool userconfig)
 #endif
 	cfgfile_compatibility_romtype(p);
 
+#ifdef AMIBERRY
+	if (!fixup_prefs_preview_active)
+#endif
 	read_kickstart_version(p);
 
 	if (p->cpuboard_type && p->cpuboardmem1.size > cpuboard_maxmemory(p)) {
@@ -838,14 +841,34 @@ void fixup_prefs (struct uae_prefs *p, bool userconfig)
 	}
 
 	built_in_chipset_prefs (p);
+#ifdef AMIBERRY
+	if (!fixup_prefs_preview_active) {
+#endif
 	blkdev_fix_prefs (p);
 	inputdevice_fix_prefs(p, userconfig);
+#ifdef AMIBERRY
+	}
+#endif
 	target_fixup_options (p);
 #ifndef AMIBERRY
 	// This one caused crashes in some cases, and I don't think it's actually needed in Amiberry
 	cfgfile_createconfigstore(p);
 #endif
 }
+
+#ifdef AMIBERRY
+bool fixup_prefs_preview_active;
+
+void fixup_prefs_preview(struct uae_prefs *p)
+{
+	// fixup_cpu() can recompute the boot ROM type through need_uae_boot_rom().
+	const int boot_rom_type = uae_boot_rom_type;
+	fixup_prefs_preview_active = true;
+	fixup_prefs(p, true);
+	fixup_prefs_preview_active = false;
+	uae_boot_rom_type = boot_rom_type;
+}
+#endif
 
 int quit_program = 0;
 static int restart_program;

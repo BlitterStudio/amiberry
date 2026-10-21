@@ -306,7 +306,7 @@ void render_panel_cpu() {
         double throttle_min, throttle_max;
         settings::get_range(o.cpu_throttle, changed_prefs, throttle_min, throttle_max);
         if (ImGui::SliderInt("##CPU Speed", &speed_slider_val, static_cast<int>(throttle_min / 100),
-                static_cast<int>(throttle_max / 100), "%+d0%%")) {
+                static_cast<int>(throttle_max / 100), "%+d0%%", ImGuiSliderFlags_AlwaysClamp)) {
             settings::set_number(o.cpu_throttle, changed_prefs, ctx, speed_slider_val * 100.0);
         }
         AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), false);
@@ -317,7 +317,7 @@ void render_panel_cpu() {
         ImGui::Text("CPU Idle");
         ImGui::SameLine(slider_label_width);
         ImGui::SetNextItemWidth(slider_width);
-        if (ImGui::SliderInt("##CPU Idle", &idle_slider_val, 0, 10, "%d0%%")) {
+        if (ImGui::SliderInt("##CPU Idle", &idle_slider_val, 0, 10, "%d0%%", ImGuiSliderFlags_AlwaysClamp)) {
             settings::set_number(o.cpu_idle, changed_prefs, ctx,
                 idle_slider_val == 0 ? 0 : (12 - idle_slider_val) * 15);
         }
@@ -408,7 +408,8 @@ void render_panel_cpu() {
         ImGui::BeginDisabled(!available(o.ppc_cpu_idle, ctx));
         const amiberry_setting_descriptor& idle_desc = o.ppc_cpu_idle.descriptor;
         int ppc_idle = changed_prefs.ppc_cpu_idle;
-        if (ImGui::SliderInt("##PPC Idle", &ppc_idle, 0, static_cast<int>(idle_desc.choice_count) - 1)) {
+        if (ImGui::SliderInt("##PPC Idle", &ppc_idle, 0, static_cast<int>(idle_desc.choice_count) - 1, "%d",
+                ImGuiSliderFlags_AlwaysClamp)) {
             settings::set(o.ppc_cpu_idle, changed_prefs, ctx, idle_desc.choices[ppc_idle].value);
         }
         AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), false);
@@ -429,7 +430,7 @@ void render_panel_cpu() {
         int x86_speed_slider_val = static_cast<int>(changed_prefs.x86_speed_throttle / 100);
 
         ImGui::SetNextItemWidth(slider_width);
-        if (ImGui::SliderInt("##x86Speed", &x86_speed_slider_val, 0, 1000, "%+d0%%")) {
+        if (ImGui::SliderInt("##x86Speed", &x86_speed_slider_val, 0, 1000, "%+d0%%", ImGuiSliderFlags_AlwaysClamp)) {
             settings::set_number(o.x86_throttle, changed_prefs, ctx, x86_speed_slider_val * 100.0);
         }
         AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), false);
@@ -451,7 +452,7 @@ void render_panel_cpu() {
         // The checkbox in the CPU group turns the JIT on; the slider only
         // sizes a running JIT's cache.
         ImGui::BeginDisabled(!available(o.cachesize, ctx) || changed_prefs.cachesize == 0);
-        if (ImGui::SliderInt("##Cache size", &jit_slider_val, 0, 5)) {
+        if (ImGui::SliderInt("##Cache size", &jit_slider_val, 0, 5, "%d", ImGuiSliderFlags_AlwaysClamp)) {
             settings::set_number(o.cachesize, changed_prefs, ctx,
                 jit_slider_val == 0 ? 0 : 1024 << (jit_slider_val - 1)); // 1->1024, 2->2048... 5->16384
 

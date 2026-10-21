@@ -16,9 +16,11 @@ using amiberry_settings::definition;
 // The working copy is a byte copy of changed_prefs, the way the core copies
 // prefs (copy_prefs). Its pointer members still point into changed_prefs,
 // so it is never freed field by field, and only the scalar fields the
-// domains own are read or written back.
+// domains own are written back. base is the pending configuration as the
+// session last saw it; commit writes only what the session changed since.
 struct amiberry_settings_session {
 	uae_prefs* working;
+	uae_prefs* base;
 };
 
 namespace {
@@ -51,8 +53,9 @@ amiberry_settings_session* amiberry_settings_session_open(void)
 	if (!session)
 		return nullptr;
 	session->working = allocate_copy(changed_prefs);
-	if (!session->working) {
-		std::free(session);
+	session->base = allocate_copy(changed_prefs);
+	if (!session->working || !session->base) {
+		amiberry_settings_session_close(session);
 		return nullptr;
 	}
 	return session;
@@ -63,6 +66,7 @@ void amiberry_settings_session_close(amiberry_settings_session* session)
 	if (!session)
 		return;
 	std::free(session->working);
+	std::free(session->base);
 	std::free(session);
 }
 
@@ -120,8 +124,7 @@ size_t amiberry_settings_validate(const amiberry_settings_session* session,
 	uae_prefs* resolved = allocate_copy(*session->working);
 	if (!resolved)
 		return 0;
-	for (size_t i = 0; i < amiberry_settings::domain_count(); i++)
-		amiberry_settings::domain_at(i).fixup(resolved);
+	fixup_prefs_preview(resolved);
 
 	size_t found = 0;
 	for (size_t i = 0; i < amiberry_settings::definition_count(); i++) {
@@ -152,22 +155,26 @@ amiberry_apply_class amiberry_settings_commit(amiberry_settings_session* session
 	bool any = false;
 	if (session) {
 		// Store what validation promised: the values after the core's fixups.
-		for (size_t i = 0; i < amiberry_settings::domain_count(); i++)
-			amiberry_settings::domain_at(i).fixup(session->working);
+		fixup_prefs_preview(session->working);
 		for (size_t i = 0; i < amiberry_settings::definition_count(); i++) {
 			const definition& d = amiberry_settings::definition_at(i);
-			char pending[AMIBERRY_SETTINGS_VALUE_MAX];
+			char base[AMIBERRY_SETTINGS_VALUE_MAX];
 			char edited[AMIBERRY_SETTINGS_VALUE_MAX];
-			d.get(changed_prefs, pending, sizeof pending);
+			char pending[AMIBERRY_SETTINGS_VALUE_MAX];
+			d.get(*session->base, base, sizeof base);
 			d.get(*session->working, edited, sizeof edited);
-			if (std::strcmp(pending, edited) == 0)
+			d.get(changed_prefs, pending, sizeof pending);
+			// Only what the session changed is written, and it only counts
+			// when the pending configuration does not already hold it.
+			if (std::strcmp(base, edited) == 0 || std::strcmp(pending, edited) == 0)
 				continue;
 			any = true;
 			if (d.descriptor.apply > strongest)
 				strongest = d.descriptor.apply;
 		}
 		for (size_t i = 0; i < amiberry_settings::domain_count(); i++)
-			amiberry_settings::domain_at(i).commit(*session->working, changed_prefs);
+			amiberry_settings::domain_at(i).commit(*session->base, *session->working, changed_prefs);
+		std::memcpy(static_cast<void*>(session->base), static_cast<const void*>(session->working), sizeof(uae_prefs));
 	}
 	if (changed)
 		*changed = any;

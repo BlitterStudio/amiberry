@@ -123,17 +123,6 @@ amiberry_settings_status check_value(const definition& d, const uae_prefs& p,
 	return AMIBERRY_SETTINGS_INVALID_VALUE;
 }
 
-bool same_value(const definition& d, const uae_prefs& p, const value& v)
-{
-	char current[AMIBERRY_SETTINGS_VALUE_MAX];
-	d.get(p, current, sizeof current);
-	if (d.descriptor.type == AMIBERRY_SETTING_REAL) {
-		double number;
-		return parse_number(current, false, number) && number == v.number;
-	}
-	return v.text == current;
-}
-
 } // namespace
 
 size_t domain_count()
@@ -215,8 +204,7 @@ amiberry_settings_status set(const definition& d, uae_prefs& p, const context& c
 	const amiberry_settings_status status = check_value(d, p, ctx, text, v);
 	if (status != AMIBERRY_SETTINGS_OK)
 		return status;
-	if (!same_value(d, p, v))
-		d.set(p, v);
+	d.set(p, v);
 	return AMIBERRY_SETTINGS_OK;
 }
 
