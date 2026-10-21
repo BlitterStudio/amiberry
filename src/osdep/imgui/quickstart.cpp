@@ -119,7 +119,7 @@ void Quickstart_ApplyDefaults() {
     // set_68000_compa / set_68020_compa in cfgfile.cpp). The shared
     // settings layer owns built_in_prefs and the Quickstart constraints.
     amiberry_settings::apply_preset(changed_prefs, quickstart_model, quickstart_conf,
-                                    quickstart_compa);
+                                    quickstart_compa, false);
 }
 
 static void apply_quickstart_defaults_from_quickstart() {

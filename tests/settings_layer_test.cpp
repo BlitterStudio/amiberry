@@ -17,6 +17,8 @@
 #include "disk.h"
 #include "blkdev.h"
 #include "x86.h"
+#include "gfxboard.h"
+#include "rommgr.h"
 
 #include "settings/amiberry_settings.h"
 #include "settings/settings_definitions.h"
@@ -69,14 +71,34 @@ int is_x86_cpu(uae_prefs*) { return 0; }
 // host-dependent, the tests use the common 512 MB reservation.
 size_t max_z3fastmem = 512 * 1024 * 1024;
 int cpuboard_maxmemory(uae_prefs*) { return 128 * 1024 * 1024; }
-int cpuboard_memorytype(uae_prefs*) { return BOARD_MEMORY_HIGHMEM; }
+// Like the real one, no board has no memory type; the tests pick the type
+// a configured board uses.
+static int board_memory_type = BOARD_MEMORY_HIGHMEM;
+int cpuboard_memorytype(uae_prefs* p) { return p->cpuboard_type ? board_memory_type : 0; }
+// Zorro II for the UAE Z2 board type, Zorro III otherwise.
+int gfxboard_get_configtype(rtgboardconfig* rbc) { return rbc->rtgmem_type == GFXBOARD_UAE_Z2 ? 2 : 3; }
+
+// A scanned ROM list with one cartridge dump, for the cartridge ident.
+static romdata test_cart_rom = [] {
+	romdata rd{};
+	rd.name = "Action Replay III";
+	rd.configname = "AR3";
+	rd.type = ROMTYPE_AR;
+	return rd;
+}();
+static romlist test_rom_list[] = {{const_cast<TCHAR*>("/roms/ar3.rom"), &test_cart_rom}};
+int romlist_count() { return 1; }
+romlist* romlist_getit() { return test_rom_list; }
 
 // Preset engine stand-in: the harness cannot link cfgfile.cpp, so it
 // records the request and applies a few marker fields the Quickstart
-// constraints are known to react to. Both the layer and the frozen
-// reference implementation below run against this same stand-in, so the
-// test still proves the constraint move changed nothing.
+// constraints are known to react to, plus one target default outside every
+// option domain (kbd_led_num) the way a fresh configuration resets it.
+// Both the layer and the frozen reference implementation below run against
+// this same stand-in, so the test still proves the constraint move changed
+// nothing.
 static int stub_preset_model = -1, stub_preset_config = -1, stub_preset_compa = -1;
+static int stub_preview_calls;
 int built_in_prefs(uae_prefs* p, int model, int config, int compa, int romcheck)
 {
 	(void)romcheck;
@@ -88,7 +110,13 @@ int built_in_prefs(uae_prefs* p, int model, int config, int compa, int romcheck)
 	p->cdslots[0].inuse = true;
 	p->cdslots[0].type = SCSI_UNIT_DEFAULT;
 	p->jports[1].mode = 3;
+	p->kbd_led_num = -1;
 	return 1;
+}
+int built_in_prefs_preview(uae_prefs* p, int model, int config, int compa)
+{
+	stub_preview_calls++;
+	return built_in_prefs(p, model, config, compa, 0);
 }
 
 namespace settings = amiberry_settings;
@@ -688,7 +716,12 @@ void emit_roundtrip()
 
 	// A failed set would quietly test a different configuration.
 	uae_prefs& p = test_prefs;
-	auto apply = [&p](const char* id, const char* v) { CHECK(set(p, id, v) == AMIBERRY_SETTINGS_OK); };
+	auto apply = [&p](const char* id, const char* v) {
+		if (set(p, id, v) != AMIBERRY_SETTINGS_OK) {
+			std::fprintf(stderr, "round-trip scenario: setting %s=%s failed\n", id, v);
+			failures++;
+		}
+	};
 	reset_prefs(p);
 	apply("cpu_model", "68020");
 	emit("a1200_cycle_exact", p);
@@ -819,6 +852,42 @@ void emit_roundtrip()
 	apply("genlock_alpha", "true");
 	apply("genlock_aspect", "true");
 	emit("genlock", p);
+
+	// Values next to the fixup rules the layer mirrors: each must come back
+	// from the real fixup_prefs() unchanged.
+	reset_prefs(p);
+	apply("chipset_compatible", "A1200");
+	apply("bogomem_size", "6");
+	emit("a1200_slow_ram", p);
+
+	reset_prefs(p);
+	apply("chipset_compatible", "-");
+	apply("cpu_model", "68030");
+	apply("ide", "a4000");
+	apply("ramsey", "13");
+	emit("custom_a4000_ide", p);
+
+	reset_prefs(p);
+	p.cpu_cycle_exact = p.cpu_memory_cycle_exact = p.blitter_cycle_exact = false;
+	apply("waiting_blits", "automatic");
+	apply("cycle_exact", "true");
+	emit("cycle_exact_68000_blitter", p);
+
+	reset_prefs(p);
+	apply("uaeboard", "full_off");
+	apply("fastmem2_size_k", "128");
+	emit("uaeboard_nodiag", p);
+
+	if (jit_compiled()) {
+		reset_prefs(p);
+		apply("cpu_model", "68040");
+		apply("cycle_exact", "false");
+		apply("cpu_compatible", "false");
+		apply("cachesize", "8192");
+		apply("chipmem_size", "4");
+		apply("bogomem_size", "4");
+		emit("jit_ram", p);
+	}
 }
 
 // ---------------------------------------------------------------- machine
@@ -1089,6 +1158,143 @@ void reference_constraints(uae_prefs& p, int model, int conf, int compa)
 	}
 }
 
+// Values the fixups would change are not offered, setters make the changes
+// the fixups would, and the mirrors of fixup tables agree with the real ones.
+void check_machine_fixup_rules()
+{
+	uae_prefs& p = test_prefs;
+	static uae_prefs q; // uae_prefs is too large for the stack
+
+	// Slow RAM 1.8 MB is capped for the Gayle/Gary conflict after the
+	// chipset extra's table ran; the layer's mirror must agree with the real
+	// table for every extra, CPU class and IDE controller.
+	for (int cs = 0; cs <= CP_DRACO; cs++) {
+		for (const int cpu : {68000, 68020}) {
+			for (const int ide : {0, IDE_A600A1200}) {
+				reset_prefs(p);
+				p.cs_compatible = cs;
+				p.cpu_model = cpu;
+				p.cs_ide = ide;
+				p.cs_fatgaryrev = p.cs_ramseyrev = -1;
+				std::memcpy(static_cast<void*>(&q), static_cast<const void*>(&p), sizeof q);
+				built_in_chipset_prefs(&q);
+				q.cs_ide = ide; // fixup_prefs keeps the configured controller
+				const bool capped = q.cs_ide || q.cs_fatgaryrev >= 0 || q.cs_ramseyrev >= 0;
+				if (choice_available(p, "bogomem_size", "7") == capped) {
+					std::fprintf(stderr, "bogomem_size 7: chipset %d cpu %d ide %d disagrees with the table\n",
+						cs, cpu, ide);
+					failures++;
+				}
+			}
+		}
+	}
+	reset_prefs(p);
+	p.cs_compatible = 0;
+	p.cs_ide = 0;
+	p.cs_fatgaryrev = p.cs_ramseyrev = -1;
+	CHECK(choice_available(p, "bogomem_size", "7"));
+	p.cs_ramseyrev = 0x0f;
+	CHECK(!choice_available(p, "bogomem_size", "7"));
+
+	// The JIT cannot map 1.5 MB chip or slow RAM.
+	if (jit_compiled()) {
+		reset_prefs(p);
+		p.cpu_cycle_exact = p.cpu_memory_cycle_exact = p.blitter_cycle_exact = false;
+		p.cpu_model = 68020;
+		p.cachesize = 8192;
+		CHECK(!choice_available(p, "chipmem_size", "3"));
+		CHECK(!choice_available(p, "bogomem_size", "6"));
+		CHECK(choice_available(p, "chipmem_size", "4"));
+		p.cachesize = 0;
+		CHECK(choice_available(p, "chipmem_size", "3"));
+		CHECK(choice_available(p, "bogomem_size", "6"));
+	}
+
+	// Chip RAM above 2 MB and a Zorro II RTG board exclude each other.
+	reset_prefs(p);
+	p.rtgboards[0].rtgmem_size = 0x400000;
+	p.rtgboards[0].rtgmem_type = GFXBOARD_UAE_Z2;
+	CHECK(!choice_available(p, "chipmem_size", "8"));
+	CHECK(choice_available(p, "chipmem_size", "4"));
+	p.rtgboards[0].rtgmem_type = GFXBOARD_UAE_Z3;
+	CHECK(choice_available(p, "chipmem_size", "8"));
+
+	// An accelerator whose RAM is the Z2 board follows the chip RAM shrink,
+	// so the fixup's copy back does not undo it.
+	reset_prefs(p);
+	p.cpuboard_type = 1;
+	board_memory_type = BOARD_MEMORY_Z2;
+	p.fastmem[0].size = p.cpuboardmem1.size = 0x400000;
+	CHECK(set(p, "chipmem_size", "8") == AMIBERRY_SETTINGS_OK);
+	CHECK(p.fastmem[0].size <= 0x40000 && p.cpuboardmem1.size == p.fastmem[0].size);
+	board_memory_type = BOARD_MEMORY_HIGHMEM;
+
+	// Z2 boards below 1 MB must be a power of two of at least 64 KB.
+	reset_prefs(p);
+	CHECK(set(p, "fastmem_size_k", "192") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	CHECK(set(p, "fastmem2_size_k", "896") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	CHECK(set(p, "fastmem3_size_k", "128") == AMIBERRY_SETTINGS_OK && p.fastmem[2].size == 0x20000);
+	CHECK(set(p, "fastmem_size_k", "256") == AMIBERRY_SETTINGS_OK && p.fastmem[0].size == 0x40000);
+
+	// Wait for Blitter goes with 68000/010 cycle-exact modes, from either
+	// side.
+	reset_prefs(p);
+	p.cpu_cycle_exact = p.cpu_memory_cycle_exact = p.blitter_cycle_exact = false;
+	CHECK(set(p, "waiting_blits", "automatic") == AMIBERRY_SETTINGS_OK);
+	CHECK(set(p, "cycle_exact", "true") == AMIBERRY_SETTINGS_OK);
+	CHECK(value_of(p, "waiting_blits") == "disabled");
+	reset_prefs(p);
+	p.cpu_cycle_exact = p.cpu_memory_cycle_exact = p.blitter_cycle_exact = false;
+	CHECK(set(p, "cpu_model", "68020") == AMIBERRY_SETTINGS_OK);
+	CHECK(set(p, "cycle_exact", "memory") == AMIBERRY_SETTINGS_OK);
+	CHECK(set(p, "waiting_blits", "automatic") == AMIBERRY_SETTINGS_OK);
+	CHECK(set(p, "cpu_model", "68000") == AMIBERRY_SETTINGS_OK);
+	CHECK(value_of(p, "waiting_blits") == "disabled");
+
+	// The A4000 IDE controller keeps Gary and Ramsey on a custom chipset.
+	reset_prefs(p);
+	p.cs_compatible = 0;
+	p.cs_fatgaryrev = p.cs_ramseyrev = -1;
+	CHECK(set(p, "ide", "a4000") == AMIBERRY_SETTINGS_OK);
+	CHECK(p.cs_fatgaryrev == 0 && p.cs_ramseyrev == 0x0f);
+	CHECK(set(p, "ramsey", "-1") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	CHECK(set(p, "fatgary", "-1") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	CHECK(set(p, "ramsey", "13") == AMIBERRY_SETTINGS_OK);
+	CHECK(set(p, "ide", "none") == AMIBERRY_SETTINGS_OK);
+	CHECK(set(p, "ramsey", "-1") == AMIBERRY_SETTINGS_OK);
+
+	// Genlock cannot be on with A2024 or Graffiti emulation.
+	reset_prefs(p);
+	p.monitoremu = 1;
+	CHECK(!choice_available(p, "genlock", "true"));
+	CHECK(set(p, "genlock", "true") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	CHECK(set(p, "genlock", "false") == AMIBERRY_SETTINGS_OK);
+
+	// The cartridge ident follows the cartridge file.
+	reset_prefs(p);
+	CHECK(set(p, "cart_file", "/roms/ar3.rom") == AMIBERRY_SETTINGS_OK);
+	CHECK(std::strcmp(p.cartident, ":AR3") == 0);
+	CHECK(set(p, "cart_file", "/roms/unknown.rom") == AMIBERRY_SETTINGS_OK);
+	CHECK(p.cartident[0] == 0);
+
+	// The UAE board reports and stores the no-diagnostics spellings.
+	reset_prefs(p);
+	p.uaeboard = 2;
+	p.uaeboard_nodiag = true;
+	CHECK(value_of(p, "uaeboard") == "full_off");
+	CHECK(set(p, "uaeboard", "min") == AMIBERRY_SETTINGS_OK && p.uaeboard == 1 && !p.uaeboard_nodiag);
+	CHECK(set(p, "uaeboard", "full+indirect_off") == AMIBERRY_SETTINGS_OK
+		&& p.uaeboard == 3 && p.uaeboard_nodiag);
+
+	// MapROM takes one hexadecimal address.
+	reset_prefs(p);
+	CHECK(set(p, "maprom", "zz") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	CHECK(set(p, "maprom", "0x") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	CHECK(set(p, "maprom", "-1") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	CHECK(set(p, "maprom", "e00000") == AMIBERRY_SETTINGS_OK && p.maprom == 0xe00000);
+	CHECK(set(p, "maprom", "0x00f00000") == AMIBERRY_SETTINGS_OK && p.maprom == 0xf00000);
+}
+
 void check_presets()
 {
 	// Preset metadata: the panel's model list, configurations and
@@ -1118,7 +1324,7 @@ void check_presets()
 			for (int compa = 0; compa <= preset->compatibility_max; compa++) {
 				reset_prefs(test_prefs);
 				reset_prefs(reference);
-				settings::apply_preset(test_prefs, settings::preset_model_index(preset->id), conf, compa);
+				settings::apply_preset(test_prefs, settings::preset_model_index(preset->id), conf, compa, false);
 				reference_constraints(reference, settings::preset_model_index(preset->id), conf, compa);
 				if (std::memcmp(&test_prefs, &reference, sizeof(uae_prefs)) != 0) {
 					std::fprintf(stderr, "preset %s config %d compa %d differs from the Quickstart reference\n",
@@ -1127,22 +1333,34 @@ void check_presets()
 				}
 			}
 		}
-		// The engine saw the requested model (config-less presets never
-		// reach it, so the previous request is still in the record).
-		if (preset->config_count > 0)
-			CHECK(stub_preset_model == settings::preset_model_index(preset->id));
+		// Every model has a configuration (ALG and Arcadia apply the first
+		// game ROM, as Quickstart did) and the engine saw the model.
+		CHECK(preset->config_count > 0);
+		CHECK(stub_preset_model == settings::preset_model_index(preset->id));
 	}
+	CHECK(amiberry_settings_preset_find("alg")->config_count == 1);
+	CHECK(amiberry_settings_preset_find("arcadia")->config_count == 1);
 	// Out-of-range compatibility is clamped, not rejected, at this level.
 	reset_prefs(test_prefs);
-	settings::apply_preset(test_prefs, 4, 0, 99);
+	settings::apply_preset(test_prefs, 4, 0, 99, false);
 	CHECK(stub_preset_compa == 4);
+	// Live application (Quickstart, --apply-preset) runs the engine as a
+	// configuration load does; preview never does.
+	const int preview_calls = stub_preview_calls;
+	settings::apply_preset(test_prefs, 4, 0, 1, false);
+	CHECK(stub_preview_calls == preview_calls);
+	settings::apply_preset(test_prefs, 4, 0, 1, true);
+	CHECK(stub_preview_calls == preview_calls + 1);
 
 	// ROM availability cannot be tested against a real ROM scan here; it
-	// must at least reject unknown arguments and never touch the config.
+	// must reject unknown arguments, use the engine's preview (which
+	// leaves global state alone) and never touch the config.
 	reset_prefs(changed_prefs);
 	CHECK(!amiberry_settings_preset_rom_installed("nope", 0));
 	CHECK(!amiberry_settings_preset_rom_installed("a500", 99));
-	CHECK(changed_prefs.cpu_model == 68000);
+	CHECK(amiberry_settings_preset_rom_installed("arcadia", 0));
+	CHECK(stub_preview_calls == preview_calls + 2);
+	CHECK(changed_prefs.cpu_model == 68000 && changed_prefs.kbd_led_num == 0);
 }
 
 // AE for the machine domains: sessions commit preset-written fields and
@@ -1154,22 +1372,40 @@ void check_machine_session()
 
 	amiberry_settings_session* session = amiberry_settings_session_open();
 	CHECK(session);
-	// A preset through the C API: everything it writes must survive commit.
+	// A preset through the C API: everything it writes must survive commit,
+	// including the fresh-configuration defaults outside every option.
+	const int preview_calls = stub_preview_calls;
 	CHECK(amiberry_settings_preset_apply(session, "a1200", 1, 1) == AMIBERRY_SETTINGS_OK);
+	CHECK(stub_preview_calls > preview_calls); // never the live engine
 	CHECK(amiberry_settings_preset_apply(session, "nope", 0, 0) == AMIBERRY_SETTINGS_UNKNOWN_ID);
 	CHECK(amiberry_settings_preset_apply(session, "a1200", 99, 0) == AMIBERRY_SETTINGS_INVALID_VALUE);
 	CHECK(amiberry_settings_preset_apply(session, "a1200", 0, 5) == AMIBERRY_SETTINGS_UNAVAILABLE);
 	bool changed = false;
-	// The stub engine changes no option with a descriptor, so the class is
-	// LIVE here; with the real preset engine the CPU and chipset options
-	// push it to RESET. The commit must report a change either way.
-	CHECK(amiberry_settings_commit(session, &changed) >= AMIBERRY_APPLY_LIVE);
+	// The stub engine changes no option with a descriptor; a preset still
+	// commits as a machine change.
+	CHECK(amiberry_settings_commit(session, &changed) == AMIBERRY_APPLY_RESET);
 	CHECK(changed);
 
-	// The Quickstart constraints (floppy/CD/joystick) are committed too.
+	// The Quickstart constraints (floppy/CD/joystick) and the target
+	// defaults are committed too.
 	CHECK(changed_prefs.floppyslots[1].dfxtype == DRV_NONE);
 	CHECK(!changed_prefs.cdslots[0].inuse);
 	CHECK(changed_prefs.jports[1].mode == 0);
+	CHECK(changed_prefs.kbd_led_num == -1);
+
+	// The preset is replayed on the pending configuration: changes made
+	// before it survive where it does not write, changes made after it
+	// win, and changes made elsewhere meanwhile are kept.
+	reset_prefs(changed_prefs);
+	CHECK(amiberry_settings_set(session, "kickstart_rom_file", "/roms/before.rom") == AMIBERRY_SETTINGS_OK);
+	CHECK(amiberry_settings_preset_apply(session, "a500", 0, 1) == AMIBERRY_SETTINGS_OK);
+	CHECK(amiberry_settings_set(session, "chipset", "aga") == AMIBERRY_SETTINGS_OK);
+	changed_prefs.kbd_led_scr = 3; // another front end, meanwhile
+	CHECK(amiberry_settings_commit(session, &changed) == AMIBERRY_APPLY_RESET && changed);
+	CHECK(std::strcmp(changed_prefs.romfile, "/roms/before.rom") == 0);
+	CHECK(value_of(changed_prefs, "chipset") == "aga");
+	CHECK(changed_prefs.kbd_led_num == -1 && changed_prefs.kbd_led_scr == 3);
+	CHECK(changed_prefs.floppyslots[0].dfxtype == DRV_35_DD); // A500 constraint
 
 	// A machine option through a session: strongest class wins.
 	CHECK(amiberry_settings_set(session, "kickstart_rom_file", "/roms/kick31.rom")
@@ -1214,6 +1450,7 @@ int main(int argc, char** argv)
 	check_machine_availability();
 	check_machine_dependents();
 	check_machine_rejections();
+	check_machine_fixup_rules();
 	check_presets();
 	check_machine_session();
 	if (failures) {

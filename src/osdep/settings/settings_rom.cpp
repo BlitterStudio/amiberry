@@ -9,9 +9,11 @@
 #include "sysdeps.h"
 #include "options.h"
 #include "memory.h"
+#include "rommgr.h"
 
 #include "settings_definitions.h"
 
+#include <cctype>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -73,9 +75,26 @@ void get_cart_file(const uae_prefs& p, char* out, size_t size)
 	write_path(out, size, p.cartfile);
 }
 
+// cart= (cartident) is written after cart_file= and wins on load
+// (decode_rom_ident), so it follows the file: a scanned cartridge dump
+// carries its romdata configname, anything else clears it so a stale ident
+// cannot bring the previous cartridge back or mis-type an unknown ROM.
 void set_cart_file(uae_prefs& p, const value& v)
 {
 	set_path(p.cartfile, sizeof p.cartfile, v);
+	p.cartident[0] = 0;
+	const int count = romlist_count();
+	const romlist* const list = romlist_getit();
+	for (int i = 0; list && i < count; i++) {
+		const romlist& entry = list[i];
+		if (!entry.rd || !(entry.rd->type & (ROMTYPE_FREEZER | ROMTYPE_ARCADIAGAME | ROMTYPE_CD32CART)))
+			continue;
+		if (!entry.path || std::strcmp(entry.path, p.cartfile) != 0)
+			continue;
+		if (entry.rd->configname)
+			std::snprintf(p.cartident, sizeof p.cartident, ":%s", entry.rd->configname);
+		break;
+	}
 }
 
 void get_flash_file(const uae_prefs& p, char* out, size_t size)
@@ -107,17 +126,36 @@ void get_maprom(const uae_prefs& p, char* out, size_t size)
 	std::snprintf(out, size, "0x%x", p.maprom);
 }
 
-void set_maprom(uae_prefs& p, const value& v)
+// The whole value must be one hexadecimal number (with or without 0x)
+// that fits the 32-bit address.
+bool parse_maprom(std::string_view text, uae_u32& address)
 {
 	char buffer[max_value_length];
-	const size_t length = v.text.size() < sizeof buffer - 1 ? v.text.size() : sizeof buffer - 1;
-	std::memcpy(buffer, v.text.data(), length);
-	buffer[length] = 0;
+	if (text.empty() || text.size() >= sizeof buffer)
+		return false;
+	std::memcpy(buffer, text.data(), text.size());
+	buffer[text.size()] = 0;
+	if (buffer[0] == '-' || buffer[0] == '+' || std::isspace(static_cast<unsigned char>(buffer[0])))
+		return false;
 	char* end = nullptr;
-	unsigned long address = std::strtoul(buffer, &end, 16);
-	if (end == buffer)
-		return; // not a hexadecimal number; leave the option unchanged
-	p.maprom = static_cast<uae_u32>(address);
+	const unsigned long long parsed = std::strtoull(buffer, &end, 16);
+	if (end == buffer || *end != 0 || parsed > 0xffffffffULL)
+		return false;
+	address = static_cast<uae_u32>(parsed);
+	return true;
+}
+
+bool maprom_accepts(const uae_prefs&, const value& v)
+{
+	uae_u32 address;
+	return parse_maprom(v.text, address);
+}
+
+void set_maprom(uae_prefs& p, const value& v)
+{
+	uae_u32 address;
+	if (parse_maprom(v.text, address))
+		p.maprom = address;
 }
 
 // An accelerator board owns the maprom window; fixup_prefs clears maprom
@@ -141,25 +179,37 @@ void set_kickshifter(uae_prefs& p, const value& v)
 // ROM panel offers the five meaningful combinations as one combo: entry 0
 // disables both, entry 1 ("Original UAE") keeps the automatic boot ROM
 // without a board, and the rest pick the board with the automatic ROM,
-// exactly like the old panel mapped them.
+// exactly like the old panel mapped them. The *_off spellings are the same
+// boards without the diagnostics ROM (uaeboard_nodiag); cfgfile writes them
+// whenever that flag is set, so the getter reports them too.
 const amiberry_setting_choice uaeboard_choices[] = {
 	{"disabled", "Disabled"},
 	{"min", "New UAE (64k + F0 ROM)"},
 	{"full", "New UAE (128k, ROM, Direct)"},
 	{"full+indirect", "New UAE (128k, ROM, Indirect)"},
+	{"disabled_off", "Disabled, no diagnostics ROM"},
+	{"min_off", "New UAE (64k + F0 ROM), no diagnostics ROM"},
+	{"full_off", "New UAE (128k, ROM, Direct), no diagnostics ROM"},
+	{"full+indirect_off", "New UAE (128k, ROM, Indirect), no diagnostics ROM"},
 };
+
+constexpr int uaeboard_types = 4;
 
 void get_uaeboard(const uae_prefs& p, char* out, size_t size)
 {
 	int index = p.uaeboard;
-	if (index < 0 || static_cast<size_t>(index) >= sizeof uaeboard_choices / sizeof uaeboard_choices[0])
+	if (index < 0 || index >= uaeboard_types)
 		index = 0;
+	if (p.uaeboard_nodiag)
+		index += uaeboard_types;
 	std::snprintf(out, size, "%s", uaeboard_choices[index].value);
 }
 
 void set_uaeboard(uae_prefs& p, const value& v)
 {
-	p.uaeboard = choice_index(CHOICES(uaeboard_choices), v.text);
+	const int index = choice_index(CHOICES(uaeboard_choices), v.text);
+	p.uaeboard = index % uaeboard_types;
+	p.uaeboard_nodiag = index >= uaeboard_types;
 }
 
 const amiberry_setting_choice boot_rom_choices[] = {
@@ -236,7 +286,7 @@ const definition definitions[] = {
 			"Map the ROM into fast RAM (hexadecimal address, 0x0f000000 switches it on). The core relocates the window for the address space.",
 			AMIBERRY_APPLY_RESET, "0x0",
 			"UAE MapROM and accelerator board emulation are not compatible."),
-		get_maprom, set_maprom, maprom_available, nullptr, nullptr},
+		get_maprom, set_maprom, maprom_available, nullptr, nullptr, maprom_accepts},
 	{BOOL_OPTION("kickshifter", "rom", "ShapeShifter support",
 			"Enable support for the ShapeShifter Mac emulator.",
 			AMIBERRY_APPLY_RESET, "false", nullptr),

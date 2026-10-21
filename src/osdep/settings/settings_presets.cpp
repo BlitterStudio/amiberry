@@ -120,11 +120,15 @@ const char* const cdtv_configs[] = {
 	nullptr,
 };
 
+// bip_alg/bip_arcadia pick the config-th game ROM of the scan; Quickstart
+// always applied them with config 0, the first game found.
 const char* const alg_configs[] = {
+	"First installed game ROM",
 	nullptr,
 };
 
 const char* const arcadia_configs[] = {
+	"First installed game ROM",
 	nullptr,
 };
 
@@ -276,7 +280,7 @@ const domain machine = {
 
 // The Quickstart constraints that follow built_in_prefs(), moved verbatim
 // from Quickstart_ApplyDefaults (src/osdep/imgui/quickstart.cpp).
-void apply_preset(uae_prefs& p, int model, int config, int compatibility)
+void apply_preset(uae_prefs& p, int model, int config, int compatibility, bool preview)
 {
 	const int max_compa = compatibility_max(model);
 	if (compatibility < 0)
@@ -284,7 +288,10 @@ void apply_preset(uae_prefs& p, int model, int config, int compatibility)
 	if (compatibility > max_compa)
 		compatibility = max_compa;
 
-	built_in_prefs(&p, model, config, compatibility, 0);
+	if (preview)
+		built_in_prefs_preview(&p, model, config, compatibility);
+	else
+		built_in_prefs(&p, model, config, compatibility, 0);
 
 	// Enforce constraints similar to WinUAE
 	if (model <= 4) { // A500, A500+, A600, A1000, A1200
@@ -401,11 +408,11 @@ const char* machine_preset_compatibility_label(int level)
 	return compatibility_labels[level];
 }
 
-// built_in_prefs() applied to a scratch copy is side-effect free: it only
-// writes the copy (configure_rom with romcheck = 0 never raises the
-// missing-ROM dialog; get_nvram_path and cpuboard_setboard write the copy),
-// so its return value tells whether every ROM the configuration needs is in
-// the scanned ROM list.
+// built_in_prefs_preview() only writes the copy it is given: configure_rom
+// with romcheck = 0 never raises the missing-ROM dialog, get_nvram_path and
+// cpuboard_setboard write the copy, and the target defaults leave the
+// global drawing, WHDLoad and FloppyBridge state alone. Its return value
+// tells whether every ROM the configuration needs is in the scanned list.
 bool machine_preset_rom_installed(const char* id, int config)
 {
 	const preset_model* preset = id ? find_preset(id) : nullptr;
@@ -417,16 +424,12 @@ bool machine_preset_rom_installed(const char* id, int config)
 	if (!scratch)
 		return false;
 	std::memcpy(static_cast<void*>(scratch), static_cast<const void*>(&changed_prefs), sizeof(uae_prefs));
-	const bool installed = built_in_prefs(scratch, preset->model, config, 1, 0) != 0;
+	const bool installed = built_in_prefs_preview(scratch, preset->model, config, 1) != 0;
 	std::free(scratch);
 	return installed;
 }
 
-// Applies a preset to a configuration after checking the arguments; returns
-// UNKNOWN_ID / INVALID_VALUE / UNAVAILABLE so the public
-// amiberry_settings_preset_apply can pass them through.
-amiberry_settings_status apply_preset_checked(uae_prefs& p, const char* id, int config,
-	int compatibility)
+amiberry_settings_status check_preset(const char* id, int config, int compatibility, int& model)
 {
 	const preset_model* preset = id ? find_preset(id) : nullptr;
 	if (!preset)
@@ -435,7 +438,7 @@ amiberry_settings_status apply_preset_checked(uae_prefs& p, const char* id, int 
 		return AMIBERRY_SETTINGS_INVALID_VALUE;
 	if (compatibility < 0 || compatibility > compatibility_max(preset->model))
 		return AMIBERRY_SETTINGS_UNAVAILABLE;
-	apply_preset(p, preset->model, config, compatibility);
+	model = preset->model;
 	return AMIBERRY_SETTINGS_OK;
 }
 
@@ -448,6 +451,8 @@ const domain& machine_domain()
 
 extern "C" {
 
+// The descriptors are built on first use (a std::vector) and the ROM check
+// runs core code that uses std::string; nothing may throw across the C API.
 size_t amiberry_settings_preset_count(void)
 {
 	return amiberry_settings::machine_preset_count();
@@ -455,18 +460,22 @@ size_t amiberry_settings_preset_count(void)
 
 const amiberry_settings_preset* amiberry_settings_preset_at(size_t index)
 {
-	return amiberry_settings::machine_preset_at(index);
+	return amiberry_settings::no_throw<const amiberry_settings_preset*>(nullptr, [index] {
+		return amiberry_settings::machine_preset_at(index);
+	});
 }
 
 const amiberry_settings_preset* amiberry_settings_preset_find(const char* id)
 {
-	return amiberry_settings::machine_preset_find(id);
+	return amiberry_settings::no_throw<const amiberry_settings_preset*>(nullptr, [id] {
+		return amiberry_settings::machine_preset_find(id);
+	});
 }
 
 const char* amiberry_settings_preset_config_label(const amiberry_settings_preset* preset,
 	int config)
 {
-	if (!preset)
+	if (!preset || !preset->id)
 		return nullptr;
 	return amiberry_settings::machine_preset_config_label(preset, config);
 }
@@ -478,7 +487,9 @@ const char* amiberry_settings_preset_compatibility_label(int level)
 
 bool amiberry_settings_preset_rom_installed(const char* id, int config)
 {
-	return amiberry_settings::machine_preset_rom_installed(id, config);
+	return amiberry_settings::no_throw(false, [id, config] {
+		return amiberry_settings::machine_preset_rom_installed(id, config);
+	});
 }
 
 } // extern "C"

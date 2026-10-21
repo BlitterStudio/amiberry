@@ -172,6 +172,9 @@ void set_cpu_model(uae_prefs& p, const value& v)
 			p.fpu_model = 0;
 		else if (p.fpu_model && p.fpu_model != 68882)
 			p.fpu_model = 68881;
+		// fixup_prefs drops Wait for Blitter in 68000/010 cycle-exact modes.
+		if (p.cpu_memory_cycle_exact)
+			p.waiting_blits = 0;
 		break;
 	case 68020:
 	case 68030:
@@ -561,10 +564,21 @@ void set_ppc_model(uae_prefs& p, const value& v)
 		if (p.cpuboardmem1.size < 8 * 1024 * 1024)
 			p.cpuboardmem1.size = 8 * 1024 * 1024;
 	} else if (was_automatic) {
-		// Leaving the automatic configuration removes the board it installed.
+		// Leaving the automatic configuration removes the board it
+		// installed, and the board RAM fixup_prefs() mirrored into the slot
+		// the board uses (read before the board is gone: without a board
+		// the memory type is unknown and the mirror would stay behind).
+		const int memtype = cpuboard_memorytype(&p);
 		p.cpuboard_type = 0;
 		p.cpuboard_subtype = 0;
 		p.cpuboardmem1.size = 0;
+		if (memtype == BOARD_MEMORY_HIGHMEM)
+			p.mbresmem_high.size = 0;
+		else if (memtype == BOARD_MEMORY_Z2)
+			p.fastmem[0].size = 0;
+		else if (memtype == BOARD_MEMORY_25BITMEM)
+			p.mem25bit.size = 0;
+		return;
 	}
 	mirror_cpuboard_mem(p);
 }
@@ -965,6 +979,11 @@ const domain cpu = {
 const domain& cpu_domain()
 {
 	return cpu;
+}
+
+int jit_cache_after_fixup_cpu(const uae_prefs& p)
+{
+	return effective_jit_cache(p);
 }
 
 } // namespace amiberry_settings

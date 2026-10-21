@@ -863,6 +863,14 @@ void fixup_prefs_preview(struct uae_prefs *p)
 	fixup_prefs_preview_active = false;
 	uae_boot_rom_type = boot_rom_type;
 }
+
+int built_in_prefs_preview(struct uae_prefs *p, int model, int config, int compa)
+{
+	fixup_prefs_preview_active = true;
+	const int result = built_in_prefs(p, model, config, compa, 0);
+	fixup_prefs_preview_active = false;
+	return result;
+}
 #endif
 
 int quit_program = 0;
@@ -1505,7 +1513,7 @@ static void parse_cmdline (int argc, TCHAR **argv)
 					write_log(_T("Unknown preset '%s' for '--apply-preset'.\n"), spec);
 					cmdline_missing_operand = true;
 				} else {
-					amiberry_settings::apply_preset(currprefs, model, config, compatibility);
+					amiberry_settings::apply_preset(currprefs, model, config, compatibility, false);
 				}
 			}
 		}

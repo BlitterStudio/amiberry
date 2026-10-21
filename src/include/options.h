@@ -1277,8 +1277,12 @@ extern void cfgfile_compatibility_rtg_pixelformat(struct uae_prefs* p);
 // Resolves p as fixup_prefs() does for a settings preview: nothing is logged
 // and no device, input, hotkey, boot ROM or Kickstart state outside p
 // changes. fixup_prefs_preview_active is true on the calling thread while
-// it runs.
+// a preview runs.
 extern void fixup_prefs_preview(struct uae_prefs* p);
+// built_in_prefs(p, model, config, compa, 0) for a settings preview: only p
+// changes. The target defaults it applies leave the multithreaded drawing
+// flag, the WHDLoad defaults and the FloppyBridge drivers alone.
+extern int built_in_prefs_preview(struct uae_prefs* p, int model, int config, int compa);
 extern thread_local bool fixup_prefs_preview_active;
 #endif
 extern bool cfgfile_detect_art(struct uae_prefs* p, TCHAR* path);

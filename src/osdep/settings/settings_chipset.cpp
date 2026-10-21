@@ -163,6 +163,9 @@ void set_cycle_exact(uae_prefs& p, const value& v)
 		p.cpu_compatible = true;
 	}
 	p.immediate_blits = false;
+	// fixup_prefs drops Wait for Blitter in 68000/010 cycle-exact modes.
+	if (p.cpu_model <= 68010)
+		p.waiting_blits = 0;
 	p.cachesize = 0;
 	p.gfx_framerate = 1;
 }
@@ -370,6 +373,13 @@ void get_genlock(const uae_prefs& p, char* out, size_t size)
 void set_genlock(uae_prefs& p, const value& v)
 {
 	p.genlock = v.number != 0;
+}
+
+// fixup_prefs() turns genlock off while A2024 or Graffiti emulation is on
+// (they cannot be active together).
+bool genlock_accepts(const uae_prefs& p, const value& v)
+{
+	return v.number == 0 || !p.monitoremu;
 }
 
 const amiberry_setting_choice genlockmode_choices[] = {
@@ -595,9 +605,18 @@ void get_ide(const uae_prefs& p, char* out, size_t size)
 	write_choice(out, size, CHOICES(ide_choices), index);
 }
 
+// With a custom chipset the A4000 IDE controller brings Gary and Ramsey
+// with it: fixup_prefs() raises a disabled Fat Gary to revision 0 and a
+// disabled Ramsey to 0x0f, so the setter does the same.
 void set_ide(uae_prefs& p, const value& v)
 {
 	p.cs_ide = v.text == "a600/a1200" ? IDE_A600A1200 : v.text == "a4000" ? IDE_A4000 : 0;
+	if (p.cs_compatible == 0 && p.cs_ide == IDE_A4000) {
+		if (p.cs_fatgaryrev < 0)
+			p.cs_fatgaryrev = 0;
+		if (p.cs_ramseyrev < 0)
+			p.cs_ramseyrev = 0x0f;
+	}
 }
 
 void get_scsi_a3000(const uae_prefs& p, char* out, size_t size)
@@ -696,6 +715,13 @@ void get_fatgary(const uae_prefs& p, char* out, size_t size)
 void set_fatgary(uae_prefs& p, const value& v)
 {
 	p.cs_fatgaryrev = static_cast<int>(v.number);
+}
+
+// fixup_prefs() keeps Gary and Ramsey present while the A4000 IDE
+// controller is configured on a custom chipset (see set_ide).
+bool gary_ramsey_accepts(const uae_prefs& p, const value& v)
+{
+	return v.number >= 0 || !(p.cs_compatible == 0 && p.cs_ide == IDE_A4000);
 }
 
 void get_agnusrev(const uae_prefs& p, char* out, size_t size)
@@ -865,7 +891,7 @@ const definition definitions[] = {
 	{BOOL_OPTION("genlock", "genlock", "Genlock connected",
 			"Connect a genlock device for video overlay mixing.",
 			AMIBERRY_APPLY_RESET, "false", nullptr),
-		get_genlock, set_genlock, nullptr, nullptr, nullptr},
+		get_genlock, set_genlock, nullptr, nullptr, nullptr, genlock_accepts},
 	{CHOICE_OPTION("genlockmode", "genlock", "Genlock source",
 			"What the genlock overlays on the Amiga video signal.",
 			AMIBERRY_APPLY_RESET, "none", genlockmode_choices,
@@ -880,7 +906,7 @@ const definition definitions[] = {
 			AMIBERRY_APPLY_RESET, "", nullptr),
 		get_genlock_video_file, set_genlock_video_file, genlock_video_file_available, nullptr, nullptr},
 	{NUMBER_OPTION("genlock_mix", "genlock", "Genlock mix",
-			"How much of the genlock source is mixed in, in steps of 25 (percent).",
+			"Weight (of 256) of the Amiga picture where the genlock source shows through: 0 shows the source alone; each step of 25 blends in about 10% more of the Amiga picture.",
 			AMIBERRY_SETTING_INT, AMIBERRY_APPLY_RESET, 0, 255, 25, "0", nullptr),
 		get_genlock_mix, set_genlock_mix, genlock_group, nullptr, nullptr},
 	{BOOL_OPTION("genlock_alpha", "genlock", "Include alpha channels",
@@ -981,11 +1007,11 @@ const definition definitions[] = {
 	{NUMBER_OPTION("ramsey", "adv_chipset", "Ramsey revision",
 			"Ramsey memory controller revision (hexadecimal); -1 disables the revision override.",
 			AMIBERRY_SETTING_INT, AMIBERRY_APPLY_LIVE, -1, 255, 1, "-1", custom_constraint),
-		get_ramsey, set_ramsey, custom_chipset, nullptr, nullptr},
+		get_ramsey, set_ramsey, custom_chipset, nullptr, nullptr, gary_ramsey_accepts},
 	{NUMBER_OPTION("fatgary", "adv_chipset", "Fat Gary revision",
 			"Fat Gary chip revision (hexadecimal); -1 disables the revision override.",
 			AMIBERRY_SETTING_INT, AMIBERRY_APPLY_LIVE, -1, 255, 1, "-1", custom_constraint),
-		get_fatgary, set_fatgary, custom_chipset, nullptr, nullptr},
+		get_fatgary, set_fatgary, custom_chipset, nullptr, nullptr, gary_ramsey_accepts},
 	{NUMBER_OPTION("agnusrev", "adv_chipset", "Agnus/Alice revision",
 			"Agnus/Alice chip revision (hexadecimal); -1 disables the revision override.",
 			AMIBERRY_SETTING_INT, AMIBERRY_APPLY_LIVE, -1, 255, 1, "-1", custom_constraint),

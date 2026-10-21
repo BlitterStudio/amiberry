@@ -198,9 +198,14 @@ AMIBERRY_SETTINGS_API const char *amiberry_settings_preset_compatibility_label(i
    scanned ROM list; never shows a dialog or modifies anything. */
 AMIBERRY_SETTINGS_API bool amiberry_settings_preset_rom_installed(const char *id, int config);
 /* Applies the preset to the session the way Quickstart does: built-in model
-   defaults plus the Quickstart constraints. INVALID_VALUE for an unknown
-   preset or configuration, UNAVAILABLE for a compatibility level out of
-   range. Commit afterwards to store the result. */
+   defaults (including the defaults of a fresh configuration outside the
+   options) plus the Quickstart constraints. Validate and commit replay it on
+   the pending configuration, after the session's earlier changes and before
+   its later ones. UNKNOWN_ID for an unknown preset or a NULL session,
+   INVALID_VALUE for a configuration out of range, UNAVAILABLE for a
+   compatibility level out of range or when memory is exhausted. Commit
+   afterwards to store the result; a preset commits at least
+   AMIBERRY_APPLY_RESET. */
 AMIBERRY_SETTINGS_API amiberry_settings_status amiberry_settings_preset_apply(
 	amiberry_settings_session *session, const char *id, int config, int compatibility);
 

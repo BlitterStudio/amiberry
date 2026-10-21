@@ -96,6 +96,20 @@ void option_checkbox(const char* label, const settings::definition& d, const set
     ImGui::EndDisabled();
 }
 
+// A checkbox that stores one value of a CHOICE option (off_value when
+// cleared), greyed out while the option, or the value a click would store,
+// is unavailable.
+void value_checkbox(const char* label, const settings::definition& d, const settings::context& ctx,
+                    const char* on_value, const char* off_value)
+{
+    bool checked = has_value(d, on_value);
+    ImGui::BeginDisabled(!available(d, ctx)
+        || !settings::is_choice_available(d, changed_prefs, ctx, checked ? off_value : on_value));
+    if (AmigaCheckbox(label, &checked))
+        settings::set(d, changed_prefs, ctx, checked ? on_value : off_value);
+    ImGui::EndDisabled();
+}
+
 // A radio button for one choice of a CHOICE option, greyed out when the
 // configuration checks would not keep that value.
 void option_radio(const char* label, const settings::definition& d, const settings::context& ctx,
@@ -145,7 +159,10 @@ void revision_control(const char* label, const char* id, const settings::definit
                       const char* help_enable, const char* help_rev)
 {
     bool enabled = settings::get_number(d, changed_prefs) >= 0;
-    ImGui::BeginDisabled(!available(d, ctx));
+    // The A4000 IDE controller keeps Gary and Ramsey present; disabling
+    // them (-1) is refused then.
+    const bool can_disable = !d.accepts || d.accepts(changed_prefs, settings::value{"-1", -1});
+    ImGui::BeginDisabled(!available(d, ctx) || (enabled && !can_disable));
     if (AmigaCheckbox(label, &enabled))
         settings::set_number(d, changed_prefs, ctx, enabled ? enable_rev : -1);
     ImGui::EndDisabled();
@@ -272,22 +289,10 @@ void render_panel_adv_chipset()
             // hardware variants as values, so the checkboxes exclude each
             // other exactly like the configuration they store.
             ImGui::TableNextColumn();
-            bool ide_a600 = has_value(o.ide, "a600/a1200");
-            if (AmigaCheckbox("A600/A1200 IDE", &ide_a600)) {
-                if (ide_a600)
-                    settings::set(o.ide, changed_prefs, ctx, "a600/a1200");
-                else if (has_value(o.ide, "a600/a1200"))
-                    settings::set(o.ide, changed_prefs, ctx, "none");
-            }
+            value_checkbox("A600/A1200 IDE", o.ide, ctx, "a600/a1200", "none");
             ShowHelpMarker("Enable A600/A1200 Gayle IDE controller");
             ImGui::TableNextColumn();
-            bool ide_a4000 = has_value(o.ide, "a4000");
-            if (AmigaCheckbox("A4000/A4000T IDE", &ide_a4000)) {
-                if (ide_a4000)
-                    settings::set(o.ide, changed_prefs, ctx, "a4000");
-                else if (has_value(o.ide, "a4000"))
-                    settings::set(o.ide, changed_prefs, ctx, "none");
-            }
+            value_checkbox("A4000/A4000T IDE", o.ide, ctx, "a4000", "none");
             ShowHelpMarker("Enable A4000/A4000T IDE controller");
             ImGui::TableNextColumn();
             option_checkbox("PCMCIA", o.pcmcia, ctx);
@@ -311,9 +316,7 @@ void render_panel_adv_chipset()
             ShowHelpMarker("Enable Zorro III AutoConfig for expansion boards");
             ImGui::TableNextColumn();
             // The single checkbox sets both CIA sockets, like the panel always did.
-            bool cia_new = has_value(o.ciaa_type, "391078-01");
-            if (AmigaCheckbox("CIA 391078-01", &cia_new))
-                settings::set(o.ciaa_type, changed_prefs, ctx, cia_new ? "391078-01" : "default");
+            value_checkbox("CIA 391078-01", o.ciaa_type, ctx, "391078-01", "default");
             ShowHelpMarker("Use newer CIA chip revision 391078-01");
 
             ImGui::TableNextColumn();

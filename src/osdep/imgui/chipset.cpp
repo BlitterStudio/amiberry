@@ -7,6 +7,7 @@
 #include "specialmonitors.h"
 #include "settings/settings_definitions.h"
 
+#include <algorithm>
 #include <vector>
 #include <string>
 
@@ -461,13 +462,13 @@ void render_panel_chipset() {
         AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
         ImGui::SameLine();
 
+        // genlock_mix is the Amiga picture's weight (of 256) where the
+        // genlock source shows through: 0 is the source alone ("100%").
         const char *genlock_mix_items[] = {"100%", "90%", "80%", "70%", "60%", "50%", "40%", "30%", "20%", "10%", "0%"};
-        int genlock_mix_index = 10 - changed_prefs.genlock_mix / 25;
-        if (genlock_mix_index < 0)
-            genlock_mix_index = 0;
+        int genlock_mix_index = std::clamp(changed_prefs.genlock_mix / 25, 0, IM_ARRAYSIZE(genlock_mix_items) - 1);
         ImGui::SetNextItemWidth(BUTTON_WIDTH);
         if (ImGui::Combo("##GenlockMix", &genlock_mix_index, genlock_mix_items, IM_ARRAYSIZE(genlock_mix_items))) {
-            settings::set_number(o.genlock_mix, changed_prefs, ctx, (10 - genlock_mix_index) * 25);
+            settings::set_number(o.genlock_mix, changed_prefs, ctx, genlock_mix_index * 25);
         }
         AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
 

@@ -75,7 +75,6 @@ void option_checkbox(const char* label, const settings::definition& d, const set
 struct RomListEntry {
 	std::string name;
 	std::string path;
-	std::string ident;
 };
 
 static std::vector<RomListEntry> main_rom_list;
@@ -106,7 +105,7 @@ static void update_rom_list(std::vector<RomListEntry>& list, int romtype_mask) {
 			const char* name = rl[i].rd->name;
 			const char* path = rl[i].path;
 			if (path && *path) {
-				list.push_back({ name ? name : path, path, rl[i].rd->configname ? (std::string(":") + rl[i].rd->configname) : "" });
+				list.push_back({ name ? name : path, path });
 			}
 		}
 	}
@@ -167,20 +166,6 @@ static const RomListEntry* RomCombo(const char* label, const char* current_path,
 		ImGui::EndCombo();
 	}
 	return selected;
-}
-
-// Re-sync the cartridge identifier with the newly picked file: a scanned
-// dump carries its romdata configname, anything else gets a clean slate so
-// a stale ident can't mis-type an unrecognized ROM.
-static void sync_cartident(const std::string& path) {
-	std::string cartident;
-	for (const auto& entry : cart_rom_list) {
-		if (entry.path == path) {
-			cartident = entry.ident;
-			break;
-		}
-	}
-	snprintf(changed_prefs.cartident, sizeof(changed_prefs.cartident), "%s", cartident.c_str());
 }
 
 } // namespace
@@ -304,7 +289,6 @@ void render_panel_rom()
 	ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - browse_btn_w - spacing * 2);
 	if (const RomListEntry* entry = RomCombo("##CartRomCombo", changed_prefs.cartfile, cart_rom_list)) {
 		settings::set(o.cart_file, changed_prefs, ctx, entry->path.c_str());
-		sync_cartident(entry->path);
 		custom_cart_local_edit = true;
 	}
 	AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
@@ -373,19 +357,25 @@ void render_panel_rom()
 
 	// One combo for the two configuration keys: entry 0 disables both,
 	// entry 1 keeps the automatic boot ROM without a board, and the rest
-	// pick a board with the automatic ROM.
+	// pick a board with the automatic ROM. The uaeboard choices list the
+	// four boards, then the same four without the diagnostics ROM; the
+	// combo keeps whichever variant the configuration uses.
+	constexpr int board_types = 4;
+	const int uaeboard_choice = choice_index_of(o.uaeboard);
+	const int nodiag_offset = uaeboard_choice >= board_types ? board_types : 0;
 	int current_uaeboard_idx = has_value(o.boot_rom_uae, "disabled") ? 0
-		: choice_index_of(o.uaeboard) + 1;
+		: uaeboard_choice % board_types + 1;
 
 	ImGui::BeginDisabled(!available(o.uaeboard, ctx));
 	ImGui::Text("Board Type:");
 	ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - spacing * 2);
 	if (ImGui::Combo("##BoardTypeCombo", &current_uaeboard_idx, uae_items, IM_ARRAYSIZE(uae_items))) {
+		const amiberry_setting_choice* const boards = o.uaeboard.descriptor.choices + nodiag_offset;
 		if (current_uaeboard_idx > 0) {
-			settings::set(o.uaeboard, changed_prefs, ctx, o.uaeboard.descriptor.choices[current_uaeboard_idx - 1].value);
+			settings::set(o.uaeboard, changed_prefs, ctx, boards[current_uaeboard_idx - 1].value);
 			settings::set(o.boot_rom_uae, changed_prefs, ctx, "automatic");
 		} else {
-			settings::set(o.uaeboard, changed_prefs, ctx, "disabled");
+			settings::set(o.uaeboard, changed_prefs, ctx, boards[0].value);
 			settings::set(o.boot_rom_uae, changed_prefs, ctx, "disabled");
 		}
 	}
@@ -410,7 +400,6 @@ void render_panel_rom()
 				break;
 			case RomPickType::Cartridge:
 				settings::set(o.cart_file, changed_prefs, ctx, file_dialog_result.c_str());
-				sync_cartident(file_dialog_result);
 				custom_cart_enabled = true;
 				custom_cart_local_edit = true;
 				break;

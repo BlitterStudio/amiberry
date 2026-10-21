@@ -11,11 +11,14 @@
 #include "memory.h"
 #include "cpuboard.h"
 #include "custom.h"
+#include "gfxboard.h"
 
 #include "settings_definitions.h"
 
 #include <cstdio>
 #include <cstring>
+#include <cstdlib>
+#include <string>
 
 namespace amiberry_settings {
 
@@ -88,6 +91,8 @@ void get_chipmem_size(const uae_prefs& p, char* out, size_t size)
 
 // More than 512 KB chip RAM needs an ECS Agnus (WinUAE values_to_chipsetdlg
 // logic the RAM panel applied), and more than 2 MB pushes Z2 fast RAM out.
+// An accelerator whose RAM is the Z2 board mirrors fastmem[0], and the
+// fixup copies the board back over it, so the board follows the shrink.
 void set_chipmem_size(uae_prefs& p, const value& v)
 {
 	const int units = static_cast<int>(v.number);
@@ -96,6 +101,25 @@ void set_chipmem_size(uae_prefs& p, const value& v)
 	if (p.chipmem.size > 0x80000 && !(p.chipset_mask & CSMASK_ECS_AGNUS))
 		p.chipset_mask |= CSMASK_ECS_AGNUS;
 	clamp_fast_for_chip(p);
+	if (cpuboard_memorytype(&p) == BOARD_MEMORY_Z2)
+		sync_cpuboard_mem(p);
+}
+
+// fixup_prefs() turns 1.5 MB chip RAM into 2 MB under the JIT, and chip RAM
+// above 2 MB into 2 MB next to a Zorro II RTG board.
+bool chipmem_choice_available(const uae_prefs& p, std::string_view choice)
+{
+	const int units = std::atoi(std::string(choice).c_str());
+	if (units == 3 && jit_cache_after_fixup_cpu(p))
+		return false;
+	if (units > 4) {
+		for (const auto& board : p.rtgboards) {
+			if (board.rtgmem_size
+				&& gfxboard_get_configtype(const_cast<rtgboardconfig*>(&board)) == 2)
+				return false;
+		}
+	}
+	return true;
 }
 
 // ---------------------------------------------------------------- slow RAM
@@ -116,6 +140,42 @@ void get_bogomem_size(const uae_prefs& p, char* out, size_t size)
 void set_bogomem_size(uae_prefs& p, const value& v)
 {
 	p.bogomem.size = static_cast<uae_u32>(v.number) * 0x40000;
+}
+
+// Whether fixup_prefs() caps slow RAM at 1.5 MB for the Gayle/Gary address
+// conflict. It checks after built_in_chipset_prefs() has applied the
+// chipset extra (which keeps the configured IDE controller), so the Gary
+// and Ramsey revisions are the ones the extra installs. Mirrors the table
+// in cfgfile.cpp; the settings harness runs both against each other.
+bool slow_ram_capped_by_gayle(const uae_prefs& p)
+{
+	if (p.cs_ide)
+		return true;
+	switch (p.cs_compatible) {
+	case 0:
+		return p.cs_fatgaryrev >= 0 || p.cs_ramseyrev >= 0;
+	case CP_GENERIC:
+		return p.cpu_model >= 68020;
+	case CP_A3000:
+	case CP_A3000T:
+	case CP_A4000:
+	case CP_A4000T:
+		return true;
+	default:
+		return false;
+	}
+}
+
+// 1.8 MB slow RAM becomes 1.5 MB under the Gayle/Gary conflict, and 1.5 MB
+// becomes 1 MB under the JIT.
+bool bogomem_choice_available(const uae_prefs& p, std::string_view choice)
+{
+	const int units = std::atoi(std::string(choice).c_str());
+	if (units == 7)
+		return !slow_ram_capped_by_gayle(p);
+	if (units == 6)
+		return !jit_cache_after_fixup_cpu(p);
+	return true;
 }
 
 // ------------------------------------------------------------- Z2 fast RAM
@@ -369,17 +429,28 @@ constexpr double no_range = 0;
 const char* const z3_constraint =
 	"Needs 32-bit addressing, and is limited by the reserved Zorro III window.";
 
+const char* const fastmem_k_constraint =
+	"Boards below 1 MB must be 64, 128, 256 or 512 KB.";
+
+// fixup_prefs() zeroes Z2 boards that are not a power of two of at least
+// 64 KB.
+bool fastmem_size_k_accepts(const uae_prefs&, const value& v)
+{
+	const int kb = static_cast<int>(v.number);
+	return kb == 0 || (kb >= 64 && (kb & (kb - 1)) == 0);
+}
+
 const definition definitions[] = {
 	{CHOICE_OPTION("chipmem_size", "memory", "Chip RAM",
 			"Main memory accessible by all custom chips. A500 had 512 KB, A1200 2 MB; more than 512 KB requires ECS Agnus.",
 			AMIBERRY_APPLY_RESET, "1", chipmem_size_choices,
-			"More than 2 MB excludes Zorro II fast RAM; sizes must be powers of two (1.5 MB allowed)."),
-		get_chipmem_size, set_chipmem_size, nullptr, nullptr, nullptr},
+			"More than 2 MB excludes Zorro II fast RAM and Zorro II RTG boards; 1.5 MB is not available with the JIT."),
+		get_chipmem_size, set_chipmem_size, nullptr, chipmem_choice_available, nullptr},
 	{CHOICE_OPTION("bogomem_size", "memory", "Slow RAM",
 			"512 KB expansion in the A500/A2000 trapdoor slot (Ranger RAM): accessible by custom chips but slower.",
 			AMIBERRY_APPLY_RESET, "2", bogomem_size_choices,
-			"Only none, 512 KB, 1M, 1.5M and 1.8M exist on real hardware."),
-		get_bogomem_size, set_bogomem_size, nullptr, nullptr, nullptr},
+			"1.8 MB conflicts with Gayle, Gary or Ramsey; 1.5 MB is not available with the JIT."),
+		get_bogomem_size, set_bogomem_size, nullptr, bogomem_choice_available, nullptr},
 	{CHOICE_OPTION("fastmem_size", "memory", "Z2 Fast RAM",
 			"Zorro II expansion memory. 16-bit, not accessible by custom chips, max 8 MB.",
 			AMIBERRY_APPLY_RESET, "0", fastmem_size_choices,
@@ -387,32 +458,32 @@ const definition definitions[] = {
 		get_fastmem_size, set_fastmem_size, nullptr, nullptr, nullptr},
 	{NUMBER_OPTION("fastmem_size_k", "memory", "Z2 Fast RAM (KB)",
 			"Zorro II fast RAM below 1 MB, in KB (written as fastmem_size_k). 0 clears a sub-1 MB board.",
-			AMIBERRY_SETTING_INT, AMIBERRY_APPLY_RESET, 0, 896, 64, "0", nullptr),
-		get_fastmem_size_k, set_fastmem_size_k, nullptr, nullptr, nullptr},
+			AMIBERRY_SETTING_INT, AMIBERRY_APPLY_RESET, 0, 512, 64, "0", fastmem_k_constraint),
+		get_fastmem_size_k, set_fastmem_size_k, nullptr, nullptr, nullptr, fastmem_size_k_accepts},
 	{CHOICE_OPTION("fastmem2_size", "memory", "Z2 Fast RAM board 2",
 			"Second Zorro II fast RAM board.",
 			AMIBERRY_APPLY_RESET, "0", fastmem_size_choices, nullptr),
 		get_fastmem2_size, set_fastmem2_size, nullptr, nullptr, nullptr},
 	{NUMBER_OPTION("fastmem2_size_k", "memory", "Z2 Fast RAM board 2 (KB)",
 			"Second Zorro II fast RAM board below 1 MB, in KB.",
-			AMIBERRY_SETTING_INT, AMIBERRY_APPLY_RESET, 0, 896, 64, "0", nullptr),
-		get_fastmem2_size_k, set_fastmem2_size_k, nullptr, nullptr, nullptr},
+			AMIBERRY_SETTING_INT, AMIBERRY_APPLY_RESET, 0, 512, 64, "0", fastmem_k_constraint),
+		get_fastmem2_size_k, set_fastmem2_size_k, nullptr, nullptr, nullptr, fastmem_size_k_accepts},
 	{CHOICE_OPTION("fastmem3_size", "memory", "Z2 Fast RAM board 3",
 			"Third Zorro II fast RAM board.",
 			AMIBERRY_APPLY_RESET, "0", fastmem_size_choices, nullptr),
 		get_fastmem3_size, set_fastmem3_size, nullptr, nullptr, nullptr},
 	{NUMBER_OPTION("fastmem3_size_k", "memory", "Z2 Fast RAM board 3 (KB)",
 			"Third Zorro II fast RAM board below 1 MB, in KB.",
-			AMIBERRY_SETTING_INT, AMIBERRY_APPLY_RESET, 0, 896, 64, "0", nullptr),
-		get_fastmem3_size_k, set_fastmem3_size_k, nullptr, nullptr, nullptr},
+			AMIBERRY_SETTING_INT, AMIBERRY_APPLY_RESET, 0, 512, 64, "0", fastmem_k_constraint),
+		get_fastmem3_size_k, set_fastmem3_size_k, nullptr, nullptr, nullptr, fastmem_size_k_accepts},
 	{CHOICE_OPTION("fastmem4_size", "memory", "Z2 Fast RAM board 4",
 			"Fourth Zorro II fast RAM board.",
 			AMIBERRY_APPLY_RESET, "0", fastmem_size_choices, nullptr),
 		get_fastmem4_size, set_fastmem4_size, nullptr, nullptr, nullptr},
 	{NUMBER_OPTION("fastmem4_size_k", "memory", "Z2 Fast RAM board 4 (KB)",
 			"Fourth Zorro II fast RAM board below 1 MB, in KB.",
-			AMIBERRY_SETTING_INT, AMIBERRY_APPLY_RESET, 0, 896, 64, "0", nullptr),
-		get_fastmem4_size_k, set_fastmem4_size_k, nullptr, nullptr, nullptr},
+			AMIBERRY_SETTING_INT, AMIBERRY_APPLY_RESET, 0, 512, 64, "0", fastmem_k_constraint),
+		get_fastmem4_size_k, set_fastmem4_size_k, nullptr, nullptr, nullptr, fastmem_size_k_accepts},
 	{CHOICE_OPTION("z3mem_size", "memory", "Z3 Fast RAM",
 			"Zorro III expansion memory. 32-bit, used with 68030+ CPUs; not accessible by custom chips.",
 			AMIBERRY_APPLY_RESET, "0", z3mem_size_choices, z3_constraint),

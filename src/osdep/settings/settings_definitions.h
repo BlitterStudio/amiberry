@@ -96,8 +96,11 @@ const domain& machine_domain();
 
 // The Quickstart constraints that complete built_in_prefs(); applies model,
 // config and compatibility level exactly like the Quickstart panel (which
-// historically ran these steps in src/osdep/imgui/quickstart.cpp).
-void apply_preset(uae_prefs& p, int model, int config, int compatibility);
+// historically ran these steps in src/osdep/imgui/quickstart.cpp). The
+// panel and --apply-preset apply to the live pending configuration and
+// reset the global defaults a configuration load resets; preview applies
+// to a copy (a session) and writes nothing but p.
+void apply_preset(uae_prefs& p, int model, int config, int compatibility, bool preview);
 
 // The Quickstart model table: index <-> stable preset ID. Negative for an
 // unknown ID; nullptr for an out-of-range model.
@@ -115,6 +118,11 @@ void sync_cpuboard_mem(uae_prefs& p);
 // configuration matches what the fixup resolves to.
 void mirror_cpuboard_mem(uae_prefs& p);
 
+// The JIT cache size the checks after fixup_cpu() see (0 when the JIT is
+// not compiled in, inhibited, below a 68020 or in memory cycle-exact
+// mode). The memory domain uses it for the sizes the JIT cannot map.
+int jit_cache_after_fixup_cpu(const uae_prefs& p);
+
 // Machine presets (settings_presets.cpp). The public C wrappers live next
 // to the implementations; amiberry_settings_preset_apply lives in
 // settings_session.cpp because it owns the session.
@@ -124,8 +132,10 @@ const amiberry_settings_preset* machine_preset_find(const char* id);
 const char* machine_preset_config_label(const amiberry_settings_preset* preset, int config);
 const char* machine_preset_compatibility_label(int level);
 bool machine_preset_rom_installed(const char* id, int config);
-amiberry_settings_status apply_preset_checked(uae_prefs& p, const char* id, int config,
-	int compatibility);
+// Checks a public preset request and returns its built_in_prefs() model:
+// UNKNOWN_ID / INVALID_VALUE / UNAVAILABLE as amiberry_settings_preset_apply
+// reports them.
+amiberry_settings_status check_preset(const char* id, int config, int compatibility, int& model);
 
 // Whether a and b hold the same value for d (full length, for paths).
 bool values_equal(const definition& d, const uae_prefs& a, const uae_prefs& b);
