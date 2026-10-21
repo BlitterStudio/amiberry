@@ -1494,16 +1494,18 @@ void check_machine_session()
 	CHECK(amiberry_settings_commit(session, &changed) == AMIBERRY_APPLY_RESET);
 	CHECK(changed && std::strcmp(changed_prefs.romfile, "/roms/kick31.rom") == 0);
 
-	// Two paths that share a 63-character prefix still differ.
-	char long_a[settings::max_value_length], long_b[settings::max_value_length];
-	std::memset(long_a, 'a', sizeof long_a - 1);
-	std::memset(long_b, 'a', sizeof long_b - 1);
-	long_a[sizeof long_a - 1] = long_b[sizeof long_b - 1] = 0;
+	// Two paths that share a 63-character prefix still differ, at the
+	// longest length the field holds; one more character is refused
+	// (MAX_DPATH follows the host's PATH_MAX), not truncated.
+	const std::string long_a(MAX_DPATH - 1, 'a');
+	std::string long_b = long_a;
 	long_b[100] = 'b';
-	CHECK(amiberry_settings_set(session, "kickstart_rom_file", long_a) == AMIBERRY_SETTINGS_OK);
-	CHECK(amiberry_settings_set(session, "kickstart_rom_file", long_b) == AMIBERRY_SETTINGS_OK);
+	CHECK(amiberry_settings_set(session, "kickstart_rom_file", long_a.c_str()) == AMIBERRY_SETTINGS_OK);
+	CHECK(amiberry_settings_set(session, "kickstart_rom_file", long_b.c_str()) == AMIBERRY_SETTINGS_OK);
 	CHECK(amiberry_settings_commit(session, &changed) == AMIBERRY_APPLY_RESET);
-	CHECK(changed_prefs.romfile[100] == 'b');
+	CHECK(changed_prefs.romfile[100] == 'b' && std::strlen(changed_prefs.romfile) == MAX_DPATH - 1);
+	CHECK(amiberry_settings_set(session, "kickstart_rom_file", (long_a + "a").c_str())
+		== AMIBERRY_SETTINGS_INVALID_VALUE);
 
 	// A RAM size committed from a session leaves the rest of every board
 	// to whoever edited it meanwhile (the RAM panel's board editor).

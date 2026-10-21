@@ -64,7 +64,9 @@ typedef enum amiberry_setting_type {
 	   example a hexadecimal address. These values may be longer than
 	   AMIBERRY_SETTINGS_VALUE_MAX: read them with a larger buffer (the
 	   get call reports AMIBERRY_SETTINGS_BUFFER_TOO_SMALL until it fits)
-	   and never through amiberry_settings_adjustment, which truncates. */
+	   and never through amiberry_settings_adjustment, which truncates.
+	   A PATH longer than the host's path limit (PATH_MAX, 1024 bytes on
+	   macOS) is refused with AMIBERRY_SETTINGS_INVALID_VALUE. */
 	AMIBERRY_SETTING_PATH,
 	AMIBERRY_SETTING_STRING
 } amiberry_setting_type;

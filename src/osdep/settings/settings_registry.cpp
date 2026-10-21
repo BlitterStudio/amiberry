@@ -1,6 +1,8 @@
+#include "sysconfig.h"
 #include "settings_definitions.h"
 
 #include <cerrno>
+#include <climits>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -117,9 +119,15 @@ amiberry_settings_status check_value(const definition& d, const uae_prefs& p,
 		return AMIBERRY_SETTINGS_OK;
 	}
 	case AMIBERRY_SETTING_PATH:
+		// Every path option is stored in a MAX_DPATH field, and MAX_DPATH
+		// follows the host's PATH_MAX (1024 on macOS): a longer path is
+		// refused rather than truncated into another file's name.
+		if (text.size() >= MAX_DPATH)
+			return AMIBERRY_SETTINGS_INVALID_VALUE;
+		v.text = text;
+		return AMIBERRY_SETTINGS_OK;
 	case AMIBERRY_SETTING_STRING:
-		// Free-form token: the setter validates. Length is capped so a
-		// path always fits the field it is stored in.
+		// Free-form token: the setter validates.
 		if (text.size() >= max_value_length)
 			return AMIBERRY_SETTINGS_INVALID_VALUE;
 		v.text = text;
