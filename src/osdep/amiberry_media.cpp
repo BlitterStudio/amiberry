@@ -106,6 +106,16 @@ std::vector<std::string>* recent_list(amiberry_media_list list)
 	}
 }
 
+// The longest path a folder or recent entry may have: it must fit the
+// path fields (MAX_DPATH) and, with its setting name, one line of the
+// settings file, which is read back in CONFIG_BLEN pieces.
+constexpr size_t max_stored_path = MAX_DPATH < CONFIG_BLEN - 64 ? MAX_DPATH : CONFIG_BLEN - 64;
+
+bool storable_path(const char* path)
+{
+	return path && path[0] && std::strlen(path) < max_stored_path;
+}
+
 bool has_extension(const std::filesystem::path& file, const char* extension)
 {
 	std::string ext = to_utf8(file.extension());
@@ -178,7 +188,7 @@ amiberry_settings_status amiberry_folder_set(amiberry_folder folder, const char*
 	return amiberry_settings::no_throw(AMIBERRY_SETTINGS_INVALID_VALUE, [=] {
 		if (folder < 0 || folder >= AMIBERRY_FOLDER_COUNT)
 			return AMIBERRY_SETTINGS_UNKNOWN_ID;
-		if (!path || !path[0] || std::strlen(path) >= MAX_DPATH)
+		if (!storable_path(path))
 			return AMIBERRY_SETTINGS_INVALID_VALUE;
 		// The folder is granted before it is stored, so a sandboxed build
 		// never keeps a folder it cannot open after a restart.
@@ -223,9 +233,16 @@ amiberry_settings_status amiberry_media_add_recent(amiberry_media_list list, con
 {
 	return amiberry_settings::no_throw(AMIBERRY_SETTINGS_INVALID_VALUE, [=] {
 		std::vector<std::string>* recent = recent_list(list);
-		if (!recent || !path || !path[0] || std::strlen(path) >= MAX_DPATH)
+		if (!recent || !storable_path(path))
 			return AMIBERRY_SETTINGS_INVALID_VALUE;
+		// Saved at once, like a folder; a list that cannot be saved is put
+		// back and the failure reported.
+		const std::vector<std::string> previous = *recent;
 		add_file_to_mru_list(*recent, path);
+		if (!save_amiberry_settings_with_result()) {
+			*recent = previous;
+			return AMIBERRY_SETTINGS_UNAVAILABLE;
+		}
 		return AMIBERRY_SETTINGS_OK;
 	});
 }

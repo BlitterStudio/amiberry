@@ -325,7 +325,14 @@ bool macos_bookmark_store(const std::string& path)
 		}
 
 		s_bookmark_data[key] = data;
-		save_bookmarks_plist();
+		// A bookmark that is not on disk is gone after a restart: callers
+		// must not keep a path they could not reopen then.
+		if (!save_bookmarks_plist())
+		{
+			write_log("Security bookmarks: could not save the bookmark for '%s'\n", dir_path.c_str());
+			[s_bookmark_data removeObjectForKey:key];
+			return false;
+		}
 
 		// Start access immediately
 		if (![url startAccessingSecurityScopedResource])

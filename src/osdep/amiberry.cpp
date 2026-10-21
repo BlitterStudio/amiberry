@@ -7616,9 +7616,10 @@ bool save_amiberry_settings_with_result()
 		fputs(buffer, f);
 		};
 
+	// Written whole: a value cut at the buffer lost its newline, and the
+	// next setting was read as part of it.
 	auto write_string_option = [&](const char* name, const std::string& value) {
-		_sntprintf(buffer, MAX_DPATH, "%s=%s\n", name, value.c_str());
-		fputs(buffer, f);
+		fprintf(f, "%s=%s\n", name, value.c_str());
 		};
 
 	auto write_path_option = [&](const char* name, const std::string& value) {
