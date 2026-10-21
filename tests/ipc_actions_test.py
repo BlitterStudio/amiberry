@@ -234,6 +234,11 @@ def main():
         check("SAVESTATE replies OK", control.request(f"SAVESTATE\t{state}\t{cfg}") == "OK")
         check("state file written", os.path.exists(state))
         check("LOADSTATE replies OK", control.request(f"LOADSTATE\t{state}") == "OK")
+        # A missing state file fails before a restore (and its reset) is
+        # scheduled; master replied OK and then reset the guest.
+        missing = os.path.join(work, "missing.uss")
+        check("LOADSTATE of a missing file fails",
+              control.request(f"LOADSTATE\t{missing}").startswith("ERROR\tState file not found"))
         # A save that cannot write its file fails the action: no success
         # reply, and no companion config either.
         bad_state = os.path.join(work, "no-such-dir", "state.uss")

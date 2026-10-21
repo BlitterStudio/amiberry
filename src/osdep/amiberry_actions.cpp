@@ -20,6 +20,7 @@
 #include "uae.h"
 #include "target.h"
 #include "inputdevice.h"
+#include "zfile.h"
 #ifdef DEBUGGER
 #include "debug.h"
 #include "gdb_server.h"
@@ -142,6 +143,14 @@ bool execute(const request& r, void*, std::string* error)
 		return true;
 
 	case kind::load_state:
+		// A restore is scheduled for the next vsync and starts with a reset,
+		// which happens even when the file then cannot be opened; check it
+		// first so a missing or empty path fails without touching the guest
+		// (the quick-load branch has always done the same).
+		if (r.path.empty() || !zfile_exists(r.path.c_str())) {
+			*error = "State file not found: " + r.path;
+			return false;
+		}
 		savestate_state = STATE_DORESTORE;
 		_tcscpy(savestate_fname, r.path.c_str());
 		return true;
