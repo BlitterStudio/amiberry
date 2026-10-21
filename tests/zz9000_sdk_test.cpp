@@ -69,6 +69,9 @@ struct Mailbox {
 		const auto *reply = mb + 128 + 64 * 64 + completion_head * 64;
 		assert(get32(reply) == request_id);
 		assert(get16(reply + 4) == opcode);
+		if (get16(reply + 6) != expected_status)
+			fprintf(stderr, "status mismatch: opcode=0x%04x expected=%u got=%u\n",
+				opcode, expected_status, get16(reply + 6));
 		assert(get16(reply + 6) == expected_status);
 		completion_head = (completion_head + 1) % 64;
 		put32(mb + 36, completion_head);
@@ -1202,6 +1205,45 @@ int main(int argc, char **argv)
 		put32(payload + 16, 2);
 		reply = z3.call(0x0504, payload, 20);
 		assert(get32(reply + 20) == 1 && (get32(reply + 60) & 16));
+		// After the EOS page, a drain publishes PCM up to the EOS granule.
+		uint64_t granule = 0;
+		for (int i = 7; i >= 0; --i)
+			granule = (granule << 8) | bytes[last_page + 6 + i];
+		put32(payload, session);
+		put32(payload + 4, audio_staging);
+		put32(payload + 8, static_cast<uint32_t>(last_page));
+		put32(payload + 12, static_cast<uint32_t>(bytes.size() - last_page));
+		put32(payload + 16, 0);
+		reply = z3.call(0x0504, payload, 20);
+		const auto read_all = [&] {
+			// The reply carries ring positions; equal positions with the
+			// PCM flag set mean a full ring.
+			const auto available = [&] {
+				const uint32_t write = get32(reply + 40), read = get32(reply + 44);
+				if (write == read)
+					return (get32(reply + 60) & 2) ? 262144u : 0u;
+				return (write - read + 262144u) % 262144u;
+			};
+			uint32_t produced = get32(reply + 56);
+			for (int pass = 0; pass < 512; ++pass) {
+				put32(payload, session);
+				put32(payload + 4, available());
+				put32(payload + 8, 0);
+				reply = z3.call(0x0505, payload, 12);
+				if (get32(reply + 56) == produced && !available() && pass > 8)
+					break;
+				produced = get32(reply + 56);
+			}
+			return produced;
+		};
+		read_all();
+		put32(payload, session);
+		put32(payload + 4, audio_staging);
+		put32(payload + 8, 0);
+		put32(payload + 12, 0);
+		put32(payload + 16, 2);
+		reply = z3.call(0x0504, payload, 20);
+		assert(read_all() == granule * 4);
 		put32(payload, session);
 		put32(payload + 4, 0);
 		z3.call(0x0506, payload, 8);

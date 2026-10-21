@@ -2402,8 +2402,6 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 			// EOF ends any resumable drain (sdk_mailbox.c:4042-4045).
 			if (flags & 1)
 				audio->drain = false;
-			if (audio->codec_decoder && audio->faulted)
-				return audio->fault_status;
 			if (flags & 2) {
 				audio->drain = true;
 				// The card holds no decoded PCM back; let the decoder
@@ -2413,6 +2411,8 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 					decode_audio(*audio, nullptr, 0);
 				}
 			}
+			if (audio->codec_decoder && audio->faulted)
+				return audio->fault_status;
 		} else if (opcode == 0x0505) {
 			const uint32_t count = be32(request + 4);
 			if (be32(request + 8) || count > audio->pcm_written - audio->pcm_read)

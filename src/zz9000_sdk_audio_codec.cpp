@@ -571,14 +571,22 @@ const uint8_t *AudioCodecDecoder::pcm_data() const { return impl_->output.data()
 size_t AudioCodecDecoder::pcm_size() const
 {
 	// Vorbis keeps its newest 4096 frames back until EOF so they can be cut
-	// at the final granule. A resumable drain before the EOS page releases
-	// them: none of those frames can belong to the last page, and the card
-	// holds no decoded PCM back.
-	if (impl_->codec == 3 && !impl_->flushed &&
-	    !(impl_->draining && !impl_->vorbis_eos)) {
+	// at the final granule. The card holds no decoded PCM back, so a
+	// resumable drain publishes them: all of them before the EOS page (none
+	// can belong to the last page), and up to the EOS granule after it.
+	if (impl_->codec == 3 && !impl_->flushed) {
 		const size_t frame_bytes = impl_->channels * (impl_->output_format == pcm_s32be ? 4 : 2);
-		const size_t trim_tail = 4096 * (frame_bytes ? frame_bytes : 4);
-		return impl_->output.size() > trim_tail ? (impl_->output.size() - trim_tail) : 0;
+		if (!impl_->draining) {
+			const size_t trim_tail = 4096 * (frame_bytes ? frame_bytes : 4);
+			return impl_->output.size() > trim_tail ? (impl_->output.size() - trim_tail) : 0;
+		}
+		if (impl_->vorbis_eos && impl_->vorbis_granule &&
+		    impl_->decoded_frames > impl_->vorbis_granule) {
+			const uint64_t granule_bytes = impl_->vorbis_granule * frame_bytes;
+			return granule_bytes > impl_->bytes_consumed ?
+				static_cast<size_t>(std::min<uint64_t>(impl_->output.size(),
+					granule_bytes - impl_->bytes_consumed)) : 0;
+		}
 	}
 	return impl_->output.size();
 }
