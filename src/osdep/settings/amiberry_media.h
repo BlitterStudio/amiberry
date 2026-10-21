@@ -16,7 +16,10 @@
  * Every call runs on the emulator's main thread, like the settings session
  * calls. Strings are UTF-8 and copied into caller buffers; a buffer that is
  * too small gets AMIBERRY_SETTINGS_BUFFER_TOO_SMALL and is left empty. Files
- * whose names are not valid UTF-8 are left out of the lists.
+ * whose names are not valid UTF-8 are left out of the lists. On Windows the
+ * emulator opens paths through the active code page, so unless that code
+ * page is UTF-8, paths beyond ASCII are refused and left out of the lists
+ * (and a folder holding one reads as UNAVAILABLE).
  *
  * The API belongs to the standalone emulator: the libretro core does not
  * build it, because a libretro front end owns its folders and media.
