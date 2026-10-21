@@ -46,6 +46,7 @@
 #include "native2amiga.h"
 #include "savestate.h"
 #include "blkdev.h"
+#include "osdep/settings/settings_definitions.h"
 #include "consolehook.h"
 #include "gfxboard.h"
 #ifdef WITH_LUA
@@ -1041,6 +1042,9 @@ void usage()
 	std::cout << " --download-whdboot         Download/update WHDBooter files and exit." << '\n';
 	std::cout << " -f <file>                  Load a configuration file." << '\n';
 	std::cout << " --config <file>            " << '\n';
+	std::cout << " --apply-preset <preset>[:<config>[:<compatibility>]]" << '\n';
+	std::cout << "                            Apply a Quickstart preset (for example a1200:1:1) through" << '\n';
+	std::cout << "                            the shared settings layer. Combine with --dump-config." << '\n';
 	std::cout << " --model <Amiga Model>      Amiga model to emulate, from the QuickStart options." << '\n';
 	std::cout << "                            Available options are: A1000, A500, A500P, A600, A2000, A3000, A1200, A4000, CD32 and CDTV.\n" <<
 		'\n';
@@ -1462,6 +1466,41 @@ static void parse_cmdline (int argc, TCHAR **argv)
 				else if (_tcscmp(txt, _T("CDTV")) == 0)
 				{
 					bip_cdtv(&currprefs, -1);
+				}
+			}
+		}
+		// Applies a Quickstart preset (model[:config[:compatibility]], for
+		// example a1200:1:1) through the shared settings layer; combined
+		// with --dump-config it shows the configuration the preset produces.
+		else if (_tcscmp(argv[i], _T("--apply-preset")) == 0) {
+			if (i + 1 == argc) {
+				write_log(_T("Missing argument for '--apply-preset' option.\n"));
+				cmdline_missing_operand = true;
+			}
+			else
+			{
+				auto* const txt = parsetextpath(argv[++i]);
+				TCHAR spec[64] = {};
+				_tcsncpy(spec, txt, sizeof spec / sizeof(TCHAR) - 1);
+				xfree(txt);
+				TCHAR* config_part = _tcschr(spec, ':');
+				int config = 0;
+				int compatibility = 1;
+				if (config_part) {
+					*config_part++ = 0;
+					TCHAR* compa_part = _tcschr(config_part, ':');
+					if (compa_part) {
+						*compa_part++ = 0;
+						compatibility = _tstoi(compa_part);
+					}
+					config = _tstoi(config_part);
+				}
+				const int model = amiberry_settings::preset_model_index(spec);
+				if (model < 0) {
+					write_log(_T("Unknown preset '%s' for '--apply-preset'.\n"), spec);
+					cmdline_missing_operand = true;
+				} else {
+					amiberry_settings::apply_preset(currprefs, model, config, compatibility);
 				}
 			}
 		}

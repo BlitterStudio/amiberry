@@ -98,6 +98,7 @@ void render_panel_paths();
 void render_plugin_paths_settings(const char* id);
 void render_panel_quickstart();
 void Quickstart_ApplyDefaults(); // Helper to apply quickstart model defaults
+void refresh_quickstart_config_list(); // Rebuild the Quickstart configuration list from the preset table
 void render_panel_configurations();
 void render_panel_cpu();
 void render_panel_chipset();

@@ -7,6 +7,7 @@
 #include "disk.h"
 #include "imgui_panels.h"
 #include "uae.h"
+#include "osdep/settings/settings_definitions.h"
 
 std::vector<const char *> qs_models;
 std::vector<const char *> qs_configs;
@@ -104,88 +105,21 @@ static void qs_set_control_state(int model, bool &df1_visible, bool &cd_visible,
     }
 }
 
-// Maximum compatibility-slider level per Quickstart model. Models routed to
-// set_68020_compa (A1200=4, CD32=8) support level 4 (JIT); the 68000 models
-// top out at level 3 (see set_68000_compa in cfgfile.cpp).
-static int qs_compa_max(const int model) {
-    return (model == 4 || model == 8) ? 4 : 3;
+// Maximum compatibility-slider level per Quickstart model; the layer's
+// preset table owns the tiers (set_68020_compa models reach level 4).
+static int qs_compa_max(const int model)
+{
+    const amiberry_settings_preset* preset = amiberry_settings_preset_find(
+        amiberry_settings::preset_id(model));
+    return preset ? preset->compatibility_max : 3;
 }
 
 void Quickstart_ApplyDefaults() {
     // Compatibility tier: 0 = full cycle-exact ... 3/4 = fastest (see
-    // set_68000_compa / set_68020_compa in cfgfile.cpp)
-    if (quickstart_compa < 0)
-        quickstart_compa = 0;
-    if (quickstart_compa > qs_compa_max(quickstart_model))
-        quickstart_compa = qs_compa_max(quickstart_model);
-    built_in_prefs(&changed_prefs, quickstart_model, quickstart_conf, quickstart_compa, 0);
-
-    // Enforce constraints similar to WinUAE
-    if (quickstart_model <= 4) { // A500, A500+, A600, A1000, A1200
-        // Force DF0 to DD if it was set to HD
-        if (changed_prefs.floppyslots[0].dfxtype == DRV_35_HD)
-            changed_prefs.floppyslots[0].dfxtype = DRV_35_DD;
-        
-        // Disable other drives for these stock models if needed, 
-        // but built_in_prefs usually handles it. 
-        // We just ensure DF0 isn't HD.
-    }
-
-    switch (quickstart_model) {
-        case 0: // A500
-        case 1: // A500+
-        case 2: // A600
-        case 3: // A1000
-        case 4: // A1200
-        case 5: // A3000
-            // df0 always active
-            // Ensure type is DD for A500-A1200 (Cases 0-4) handled above, 
-            // A3000 (Case 5) can have HD, so we don't force it to DD here.
-            if (changed_prefs.floppyslots[0].dfxtype == DRV_NONE)
-                changed_prefs.floppyslots[0].dfxtype = DRV_35_DD;
-            
-            changed_prefs.floppyslots[1].dfxtype = DRV_NONE;
-
-            // No CD available
-            changed_prefs.cdslots[0].inuse = false;
-            changed_prefs.cdslots[0].type = SCSI_UNIT_DISABLED;
-
-            // Set joystick port to Default
-            changed_prefs.jports[1].mode = 0;
-            break;
-        case 6: // A4000
-        case 7: // A4000T
-        case 12: // Macrosystem
-            // df0 always active
-            if (changed_prefs.floppyslots[0].dfxtype == DRV_NONE)
-                changed_prefs.floppyslots[0].dfxtype = DRV_35_HD;
-            changed_prefs.floppyslots[1].dfxtype = DRV_NONE;
-
-            // No CD available
-            changed_prefs.cdslots[0].inuse = false;
-            changed_prefs.cdslots[0].type = SCSI_UNIT_DISABLED;
-
-            // Set joystick port to Default
-            changed_prefs.jports[1].mode = 0;
-            break;
-
-        case 8: // CD32
-        case 9: // CDTV
-        case 10: // American Laser Games / Picmatic
-        case 11: // Arcadia Multi Select system
-            // No floppy drive available, CD available
-            changed_prefs.floppyslots[0].dfxtype = DRV_NONE;
-            changed_prefs.floppyslots[1].dfxtype = DRV_NONE;
-            changed_prefs.cdslots[0].inuse = true;
-            changed_prefs.cdslots[0].type = SCSI_UNIT_DEFAULT;
-            changed_prefs.gfx_monitor[0].gfx_size.width = 720;
-            changed_prefs.gfx_monitor[0].gfx_size.height = 568;
-            // Set joystick port to CD32 mode
-            changed_prefs.jports[1].mode = 7;
-            break;
-        default:
-            break;
-    }
+    // set_68000_compa / set_68020_compa in cfgfile.cpp). The shared
+    // settings layer owns built_in_prefs and the Quickstart constraints.
+    amiberry_settings::apply_preset(changed_prefs, quickstart_model, quickstart_conf,
+                                    quickstart_compa);
 }
 
 static void apply_quickstart_defaults_from_quickstart() {
@@ -271,12 +205,7 @@ void render_panel_quickstart() {
                 ImGui::PushID(i);
                 if (ImGui::Selectable(qs_models[i], is_selected)) {
                     quickstart_model = i;
-                    qs_configs.clear();
-                    for (auto &config: amodels[quickstart_model].configs) {
-                        if (config[0] == '\0')
-                            break;
-                        qs_configs.push_back(config);
-                    }
+                    refresh_quickstart_config_list();
                     quickstart_conf = 0;
                     apply_quickstart_defaults_from_quickstart();
                 }
@@ -292,11 +221,12 @@ void render_panel_quickstart() {
         AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
 
         ImGui::SameLine();
-        bool ntsc = changed_prefs.ntscmode != 0;
-        if (AmigaCheckbox("NTSC", &ntsc)) {
-            changed_prefs.ntscmode = ntsc;
-            changed_prefs.chipset_refreshrate = ntsc ? 60 : 50;
-        }
+        static const amiberry_settings::definition& ntsc_option =
+            amiberry_settings::require("ntsc");
+        const amiberry_settings::context ctx{emulating != 0};
+        bool ntsc = amiberry_settings::get_bool(ntsc_option, changed_prefs);
+        if (AmigaCheckbox("NTSC", &ntsc))
+            amiberry_settings::set_bool(ntsc_option, changed_prefs, ctx, ntsc);
         ShowHelpMarker("Use NTSC video mode (60Hz) instead of PAL (50Hz)");
 
         // Configuration row
@@ -337,13 +267,9 @@ void render_panel_quickstart() {
         ImGui::AlignTextToFramePadding();
         ImGui::TextUnformatted("Compatibility:");
         ImGui::TableSetColumnIndex(1);
-        static const char* compa_labels[] = {
-            "Best compatibility (cycle-exact)",
-            "Good compatibility (approximate)",
-            "Less compatible (faster CPU)",
-            "Low compatibility (fastest CPU)",
-            "Low compatibility (JIT)"
-        };
+        const char* compa_labels[5];
+        for (int level = 0; level <= qs_compa_max(4); level++)
+            compa_labels[level] = amiberry_settings_preset_compatibility_label(level);
         const int compa_max = qs_compa_max(quickstart_model);
         if (quickstart_compa > compa_max)
             quickstart_compa = compa_max;
