@@ -207,7 +207,10 @@ std::vector<media_entry> folder_files(const std::string& folder, const char* ext
 	if (ec)
 		return files;
 	for (std::filesystem::directory_iterator it(base, ec), end; !ec && it != end; it.increment(ec)) {
-		if (!it->is_regular_file(ec) || !has_extension(it->path(), extension))
+		// Its own error code: an entry that cannot be examined (a dangling
+		// link) is skipped without ending the scan.
+		std::error_code entry_ec;
+		if (!it->is_regular_file(entry_ec) || !has_extension(it->path(), extension))
 			continue;
 		const std::string path = to_utf8(it->path());
 		if (valid_utf8(path))
@@ -284,17 +287,18 @@ amiberry_settings_status amiberry_folder_set(amiberry_folder folder, const char*
 			return AMIBERRY_SETTINGS_INVALID_VALUE;
 		// The folder is granted before it is stored, so a sandboxed build
 		// never keeps a folder it cannot open after a restart.
-		macos_bookmark_change grant;
-		if (!macos_bookmark_store(path, &grant))
+		const macos_bookmarks_state bookmarks = macos_bookmarks_save_state();
+		if (!macos_bookmark_store(path))
 			return AMIBERRY_SETTINGS_UNAVAILABLE;
 		// A folder that cannot be saved would revert at the next start:
-		// the change is undone and reported instead, including whatever
-		// the grant changed (an access grant already active is kept).
+		// the change is undone and reported instead. The bookmark store is
+		// put back last, as the folder setters also grant the folder they
+		// set, the previous one included.
 		const std::string previous = folder_path(folder);
 		set_folder_path(folder, path);
 		if (!save_settings()) {
 			set_folder_path(folder, previous);
-			macos_bookmark_undo(grant);
+			macos_bookmarks_restore(bookmarks);
 			return AMIBERRY_SETTINGS_UNAVAILABLE;
 		}
 		return AMIBERRY_SETTINGS_OK;

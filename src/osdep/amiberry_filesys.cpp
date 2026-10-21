@@ -1719,8 +1719,20 @@ static bool save_file_in_place(const char* target, const void* data, size_t len)
 		}
 		written += static_cast<size_t>(n);
 	}
-	if (fsync(fd) != 0 && errno != EINVAL)
-		write_log("my_save_file_atomic: in-place fsync '%s' failed: %s (continuing)\n", target, strerror(errno));
+	if (fsync(fd) != 0) {
+		const int e = errno;
+		if (e == EINVAL || e == EOPNOTSUPP
+#if defined(ENOTSUP) && (ENOTSUP != EOPNOTSUPP)
+			|| e == ENOTSUP
+#endif
+			) {
+			write_log("my_save_file_atomic: in-place fsync '%s' unsupported (errno=%d), continuing\n", target, e);
+		} else {
+			write_log("my_save_file_atomic: in-place fsync '%s' failed: %s\n", target, strerror(e));
+			close(fd);
+			return false;
+		}
+	}
 	if (close(fd) != 0) {
 		write_log("my_save_file_atomic: in-place close '%s' failed: %s\n", target, strerror(errno));
 		return false;
@@ -1794,7 +1806,22 @@ static bool save_file_in_place(const char* target, const void* data, size_t len)
 	/* Unique temp in the SAME directory as the target (so rename(2) is atomic
 	   and on the same filesystem). mkstemp creates it 0600 and unique, which
 	   avoids both a world-readable window and any PID-reuse collision. */
-	std::string tmpl = target + ".tmp.XXXXXX";
+	/* The temporary name extends the target's, so a long file name is
+	   shortened to keep it (and the ".mode" probe below) within the
+	   file-name limit. */
+	static constexpr char tmp_suffix[] = ".tmp.XXXXXX";
+	constexpr size_t reserved = sizeof(tmp_suffix) - 1 + 5; /* ".mode" */
+#ifdef NAME_MAX
+	constexpr size_t name_max = NAME_MAX;
+#else
+	constexpr size_t name_max = 255;
+#endif
+	const size_t name_slash = target.find_last_of('/');
+	const size_t name_start = name_slash == std::string::npos ? 0 : name_slash + 1;
+	std::string tmpl = target;
+	if (tmpl.size() - name_start > name_max - reserved)
+		tmpl.resize(name_start + (name_max - reserved));
+	tmpl += tmp_suffix;
 	const int fd = mkstemp(&tmpl[0]);
 	if (fd < 0) {
 		const int e = errno;

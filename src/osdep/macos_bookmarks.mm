@@ -278,10 +278,8 @@ void macos_bookmarks_shutdown()
 	}
 }
 
-bool macos_bookmark_store(const std::string& path, macos_bookmark_change* change)
+bool macos_bookmark_store(const std::string& path)
 {
-	if (change)
-		*change = macos_bookmark_change{};
 	if (path.empty())
 		return false;
 
@@ -327,8 +325,10 @@ bool macos_bookmark_store(const std::string& path, macos_bookmark_change* change
 		}
 
 		// A bookmark this call replaces (stored, but not active: it did not
-		// resolve at startup) is put back when the call fails.
-		NSData* previous = s_bookmark_data[key];
+		// resolve at startup) is put back when the call fails. Copied, not
+		// referenced: replacing it releases the dictionary's reference.
+		NSData* stored = s_bookmark_data[key];
+		NSData* previous = stored ? [NSData dataWithData:stored] : nil;
 		auto put_back = [&]() {
 			if (previous)
 				s_bookmark_data[key] = previous;
@@ -364,17 +364,6 @@ bool macos_bookmark_store(const std::string& path, macos_bookmark_change* change
 			return false;
 		}
 		s_active_urls[key] = scoped;
-		if (change)
-		{
-			change->key = dir_path;
-			change->changed = true;
-			change->had_data = previous != nil;
-			if (previous)
-			{
-				const auto* bytes = static_cast<const unsigned char*>(previous.bytes);
-				change->previous.assign(bytes, bytes + previous.length);
-			}
-		}
 
 		write_log("Security bookmarks: stored bookmark for '%s'\n", dir_path.c_str());
 		return true;
@@ -431,30 +420,50 @@ std::vector<std::string> macos_bookmarks_list()
 	return result;
 }
 
-void macos_bookmark_undo(const macos_bookmark_change& change)
+macos_bookmarks_state macos_bookmarks_save_state()
 {
-	if (!change.changed)
-		return;
-
+	macos_bookmarks_state state;
 	@autoreleasepool
 	{
 		std::lock_guard<std::mutex> lock(s_mutex);
+		if (!s_bookmark_data || !s_active_urls)
+			return state;
+		for (NSString* key in s_bookmark_data)
+		{
+			NSData* data = s_bookmark_data[key];
+			const auto* bytes = static_cast<const unsigned char*>(data.bytes);
+			state.data[[key UTF8String]].assign(bytes, bytes + data.length);
+		}
+		for (NSString* key in s_active_urls)
+			state.active.insert([key UTF8String]);
+	}
+	return state;
+}
 
-		if (!s_bookmark_data || !s_bookmarks_path)
+void macos_bookmarks_restore(const macos_bookmarks_state& state)
+{
+	@autoreleasepool
+	{
+		std::lock_guard<std::mutex> lock(s_mutex);
+		if (!s_bookmark_data || !s_active_urls || !s_bookmarks_path)
 			return;
 
-		NSString* key = [NSString stringWithUTF8String:change.key.c_str()];
-		if (s_active_urls[key])
+		for (NSString* key in [s_active_urls allKeys])
 		{
-			[s_active_urls[key] stopAccessingSecurityScopedResource];
-			[s_active_urls removeObjectForKey:key];
+			if (state.active.count([key UTF8String]) == 0)
+			{
+				[s_active_urls[key] stopAccessingSecurityScopedResource];
+				[s_active_urls removeObjectForKey:key];
+			}
 		}
-		if (change.had_data)
-			s_bookmark_data[key] = [NSData dataWithBytes:change.previous.data() length:change.previous.size()];
-		else
-			[s_bookmark_data removeObjectForKey:key];
+		[s_bookmark_data removeAllObjects];
+		for (const auto& [path, bytes] : state.data)
+		{
+			NSString* key = [NSString stringWithUTF8String:path.c_str()];
+			s_bookmark_data[key] = [NSData dataWithBytes:bytes.data() length:bytes.size()];
+		}
 		if (!save_bookmarks_plist())
-			write_log("Security bookmarks: could not save after undoing '%s'\n", change.key.c_str());
+			write_log("Security bookmarks: could not save the restored bookmarks\n");
 	}
 }
 
