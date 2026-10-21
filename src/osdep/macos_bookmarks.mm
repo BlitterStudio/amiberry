@@ -334,16 +334,25 @@ bool macos_bookmark_store(const std::string& path)
 			return false;
 		}
 
-		// Start access immediately
-		if (![url startAccessingSecurityScopedResource])
+		// Start access through the bookmark itself, as a restart will: the
+		// security scope belongs to the URL the bookmark resolves to. A
+		// folder this process cannot use is not kept.
+		BOOL stale = NO;
+		NSError* resolve_error = nil;
+		NSURL* scoped = [NSURL URLByResolvingBookmarkData:data
+			options:NSURLBookmarkResolutionWithSecurityScope
+			relativeToURL:nil
+			bookmarkDataIsStale:&stale
+			error:&resolve_error];
+		if (!scoped || ![scoped startAccessingSecurityScopedResource])
 		{
 			write_log("Security bookmarks: startAccess failed for new bookmark '%s'\n",
 				dir_path.c_str());
+			[s_bookmark_data removeObjectForKey:key];
+			save_bookmarks_plist();
+			return false;
 		}
-		else
-		{
-			s_active_urls[key] = url;
-		}
+		s_active_urls[key] = scoped;
 
 		write_log("Security bookmarks: stored bookmark for '%s'\n", dir_path.c_str());
 		return true;

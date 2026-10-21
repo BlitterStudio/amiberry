@@ -60,10 +60,11 @@ std::string to_utf8(const std::filesystem::path& path)
 	return std::string(text.begin(), text.end());
 }
 
+// The file name the host's path rules give (a backslash is a separator on
+// Windows only).
 std::string file_name(const std::string& path)
 {
-	const size_t slash = path.find_last_of("/\\");
-	return slash == std::string::npos ? path : path.substr(slash + 1);
+	return to_utf8(from_utf8(path).filename());
 }
 
 std::string folder_path(amiberry_folder folder)
@@ -130,7 +131,12 @@ std::vector<media_entry> folder_files(const std::string& folder, const char* ext
 {
 	std::vector<media_entry> files;
 	std::error_code ec;
-	for (std::filesystem::directory_iterator it(from_utf8(folder), ec), end; !ec && it != end; it.increment(ec)) {
+	// Absolute, so entries are full paths whatever the working directory
+	// of the caller that reads them.
+	const std::filesystem::path base = std::filesystem::absolute(from_utf8(folder), ec);
+	if (ec)
+		return files;
+	for (std::filesystem::directory_iterator it(base, ec), end; !ec && it != end; it.increment(ec)) {
 		if (!it->is_regular_file(ec) || !has_extension(it->path(), extension))
 			continue;
 		const std::string path = to_utf8(it->path());

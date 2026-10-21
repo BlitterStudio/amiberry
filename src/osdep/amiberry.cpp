@@ -7600,7 +7600,11 @@ static std::string get_settings_path_for_save(const std::string& value)
 bool save_amiberry_settings_with_result()
 {
 	ensure_parent_directory_exists(amiberry_conf_file);
-	auto* const f = uae_fopen(amiberry_conf_file.c_str(), "we");
+	// Written to a temporary file that replaces the settings file only once
+	// it is complete, so a failed write (a full disk) never leaves a
+	// truncated settings file behind.
+	const std::string temporary = amiberry_conf_file + ".tmp";
+	auto* const f = uae_fopen(temporary.c_str(), "we");
 	if (!f)
 		return false;
 
@@ -7887,7 +7891,14 @@ bool save_amiberry_settings_with_result()
 	
 	const bool write_ok = ferror(f) == 0;
 	const bool close_ok = fclose(f) == 0;
-	return write_ok && close_ok;
+	std::error_code ec;
+	if (write_ok && close_ok)
+		std::filesystem::rename(temporary, amiberry_conf_file, ec);
+	if (!write_ok || !close_ok || ec) {
+		std::filesystem::remove(temporary, ec);
+		return false;
+	}
+	return true;
 }
 
 void save_amiberry_settings()
