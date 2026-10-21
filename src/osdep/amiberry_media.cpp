@@ -21,6 +21,10 @@
 #include <system_error>
 #include <vector>
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 namespace {
 
 struct media_entry {
@@ -89,6 +93,25 @@ bool valid_utf8(const std::string& text)
 			|| (extra == 3 && (cp < 0x10000 || cp > 0x10ffff)))
 			return false;
 	}
+	return true;
+}
+
+// Whether the core can use path: UTF-8, as the API promises, and on Windows
+// one the core's narrow file calls can open. Those take the bytes in the
+// active code page, so a path beyond ASCII only works where that code page
+// is UTF-8.
+bool usable_path(const std::string& path)
+{
+	if (!valid_utf8(path))
+		return false;
+#ifdef _WIN32
+	if (GetACP() != CP_UTF8) {
+		for (const char c : path) {
+			if (static_cast<unsigned char>(c) >= 0x80)
+				return false;
+		}
+	}
+#endif
 	return true;
 }
 
@@ -170,7 +193,7 @@ bool storable_path(const char* path)
 			return false;
 	}
 	// Only what the API can return: its strings are UTF-8.
-	return path[0] != ' ' && path[length - 1] != ' ' && valid_utf8(path);
+	return path[0] != ' ' && path[length - 1] != ' ' && usable_path(path);
 }
 
 // The absolute spelling of a path, so a list entry is a full path whatever
@@ -213,7 +236,7 @@ std::vector<media_entry> folder_files(const std::string& folder, const char* ext
 		if (!it->is_regular_file(entry_ec) || !has_extension(it->path(), extension))
 			continue;
 		const std::string path = to_utf8(it->path());
-		if (valid_utf8(path))
+		if (usable_path(path))
 			files.push_back({path, file_name(path)});
 	}
 	std::sort(files.begin(), files.end(),
@@ -229,7 +252,7 @@ std::vector<media_entry> build_list(amiberry_media_list list)
 			// Recorded absolute; one that cannot be made absolute now is
 			// left out rather than listed relative.
 			const std::string absolute = path.empty() ? std::string() : absolute_path(path);
-			if (!absolute.empty() && valid_utf8(absolute))
+			if (!absolute.empty() && usable_path(absolute))
 				entries.push_back({absolute, file_name(path)});
 		}
 		return entries;
@@ -237,7 +260,7 @@ std::vector<media_entry> build_list(amiberry_media_list list)
 	switch (list) {
 	case AMIBERRY_MEDIA_CD_DRIVES:
 		for (const std::string& drive : get_cd_drives()) {
-			if (valid_utf8(drive))
+			if (usable_path(drive))
 				entries.push_back({drive, drive});
 		}
 		break;
@@ -265,9 +288,9 @@ amiberry_settings_status amiberry_folder_get(amiberry_folder folder, char* buffe
 		if (folder < 0 || folder >= AMIBERRY_FOLDER_COUNT)
 			return AMIBERRY_SETTINGS_UNKNOWN_ID;
 		// A folder set outside the API (an old settings file, the GUI) can
-		// hold bytes that are not UTF-8, which this API never returns.
+		// hold a path this API would not accept, which it never returns.
 		const std::string path = folder_path(folder);
-		if (!valid_utf8(path)) {
+		if (!usable_path(path)) {
 			if (buffer && size)
 				buffer[0] = 0;
 			return AMIBERRY_SETTINGS_UNAVAILABLE;
@@ -285,19 +308,29 @@ amiberry_settings_status amiberry_folder_set(amiberry_folder folder, const char*
 		// so a folder leaves room for it.
 		if (!storable_path(path) || std::strlen(path) + 1 >= max_stored_path)
 			return AMIBERRY_SETTINGS_INVALID_VALUE;
+		// Everything that can throw before the grant is done first; after
+		// it, any failure (a throw included) undoes the change.
+		const std::string previous = folder_path(folder);
+		const macos_bookmarks_state bookmarks = macos_bookmarks_save_state();
 		// The folder is granted before it is stored, so a sandboxed build
 		// never keeps a folder it cannot open after a restart.
-		const macos_bookmarks_state bookmarks = macos_bookmarks_save_state();
 		if (!macos_bookmark_store(path))
 			return AMIBERRY_SETTINGS_UNAVAILABLE;
 		// A folder that cannot be saved would revert at the next start:
 		// the change is undone and reported instead. The bookmark store is
 		// put back last, as the folder setters also grant the folder they
 		// set, the previous one included.
-		const std::string previous = folder_path(folder);
-		set_folder_path(folder, path);
-		if (!save_settings()) {
-			set_folder_path(folder, previous);
+		bool saved = false;
+		try {
+			set_folder_path(folder, path);
+			saved = save_settings();
+		} catch (...) {
+		}
+		if (!saved) {
+			try {
+				set_folder_path(folder, previous);
+			} catch (...) {
+			}
 			macos_bookmarks_restore(bookmarks);
 			return AMIBERRY_SETTINGS_UNAVAILABLE;
 		}
@@ -346,10 +379,15 @@ amiberry_settings_status amiberry_media_add_recent(amiberry_media_list list, con
 		fclose(file);
 		// Saved at once, like a folder; a list that cannot be saved is put
 		// back and the failure reported.
-		const std::vector<std::string> previous = *recent;
-		add_file_to_mru_list(*recent, absolute);
-		if (!save_settings()) {
-			*recent = previous;
+		std::vector<std::string> previous = *recent;
+		bool saved = false;
+		try {
+			add_file_to_mru_list(*recent, absolute);
+			saved = save_settings();
+		} catch (...) {
+		}
+		if (!saved) {
+			recent->swap(previous); // cannot throw
 			return AMIBERRY_SETTINGS_UNAVAILABLE;
 		}
 		return AMIBERRY_SETTINGS_OK;

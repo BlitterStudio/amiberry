@@ -1,6 +1,8 @@
 #ifdef MACOS_APP_STORE
 
 #import <Foundation/Foundation.h>
+#include <algorithm>
+#include <cstring>
 #include <string>
 #include <vector>
 #include <mutex>
@@ -448,9 +450,14 @@ void macos_bookmarks_restore(const macos_bookmarks_state& state)
 		if (!s_bookmark_data || !s_active_urls || !s_bookmarks_path)
 			return;
 
+		// Compared as C strings, so nothing here allocates on the C++ side
+		// and the restore cannot stop halfway.
 		for (NSString* key in [s_active_urls allKeys])
 		{
-			if (state.active.count([key UTF8String]) == 0)
+			const char* name = [key UTF8String];
+			const bool was_active = std::any_of(state.active.begin(), state.active.end(),
+				[name](const std::string& active) { return std::strcmp(active.c_str(), name) == 0; });
+			if (!was_active)
 			{
 				[s_active_urls[key] stopAccessingSecurityScopedResource];
 				[s_active_urls removeObjectForKey:key];

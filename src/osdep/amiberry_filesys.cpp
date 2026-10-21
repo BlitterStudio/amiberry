@@ -18,6 +18,12 @@
 #ifndef _WIN32
 #include <unistd.h>
 #endif
+#ifdef __APPLE__
+#include <copyfile.h>
+#include <sys/acl.h>
+#elif defined(__linux__)
+#include <sys/xattr.h>
+#endif
 #include <algorithm>
 #include <list>
 #include <memory>
@@ -1696,6 +1702,78 @@ void my_set_time_explicit(struct my_openfile_s* mos) noexcept
 	return true;
 }
 #else
+/* Removes the temporary file, which can carry an ACL copied from the
+   target that denies its deletion (macOS); that ACL is dropped first. */
+static void remove_temp(const char* tmpname) noexcept
+{
+	if (unlink(tmpname) == 0)
+		return;
+#ifdef __APPLE__
+	if (errno == EACCES || errno == EPERM) {
+		const int fd = open(tmpname, O_RDONLY | O_CLOEXEC);
+		if (fd >= 0) {
+			acl_t none = acl_init(0);
+			if (none) {
+				acl_set_fd_np(fd, none, ACL_TYPE_EXTENDED);
+				acl_free(none);
+			}
+			close(fd);
+			if (unlink(tmpname) == 0)
+				return;
+		}
+	}
+#endif
+	write_log("my_save_file_atomic: could not remove '%s': %s\n", tmpname, strerror(errno));
+}
+
+/* Gives the temporary file that replaces target the target's owner, group,
+   ACLs and extended attributes (security labels included), which a new
+   inode does not inherit. False when they cannot all be reproduced. */
+static bool copy_file_metadata(const char* target, int to_fd, const struct stat& target_st) noexcept
+{
+	struct stat to_st{};
+	if (fstat(to_fd, &to_st) != 0)
+		return false;
+	if ((to_st.st_uid != target_st.st_uid || to_st.st_gid != target_st.st_gid)
+		&& fchown(to_fd, target_st.st_uid, target_st.st_gid) != 0)
+		return false;
+#if defined(__APPLE__) || defined(__linux__)
+	const int from_fd = open(target, O_RDONLY | O_CLOEXEC);
+	if (from_fd < 0)
+		return false;
+	bool ok = true;
+#if defined(__APPLE__)
+	ok = fcopyfile(from_fd, to_fd, nullptr, COPYFILE_ACL | COPYFILE_XATTR) == 0;
+#else
+	/* ACLs and security labels are extended attributes on Linux. */
+	ssize_t size = flistxattr(from_fd, nullptr, 0);
+	if (size < 0) {
+		ok = errno == ENOTSUP; /* none on this filesystem */
+	} else if (size > 0) {
+		std::vector<char> names(static_cast<size_t>(size));
+		size = flistxattr(from_fd, names.data(), names.size());
+		ok = size >= 0;
+		for (ssize_t at = 0; ok && at < size; at += static_cast<ssize_t>(strlen(&names[at])) + 1) {
+			const char* name = &names[at];
+			ssize_t length = fgetxattr(from_fd, name, nullptr, 0);
+			if (length < 0) {
+				ok = false;
+				break;
+			}
+			std::vector<char> value(static_cast<size_t>(length));
+			length = fgetxattr(from_fd, name, value.data(), value.size());
+			ok = length >= 0 && fsetxattr(to_fd, name, value.data(), static_cast<size_t>(length), 0) == 0;
+		}
+	}
+#endif
+	close(from_fd);
+	return ok;
+#else
+	(void)target;
+	return true;
+#endif
+}
+
 /* Rewrites an existing file in place (truncate, write, fsync), for when no
    temporary file can be created next to it. */
 static bool save_file_in_place(const char* target, const void* data, size_t len) noexcept
@@ -1878,6 +1956,16 @@ static bool save_file_in_place(const char* target, const void* data, size_t len)
 			unlink(probe.c_str());
 		}
 	}
+	/* The new inode replaces the old file, so it carries the old file's
+	   metadata; where that cannot be reproduced, the file is updated in
+	   place instead, as fopen("w") did. */
+	if (have_old_mode && !copy_file_metadata(target.c_str(), fd, old_st)) {
+		write_log("my_save_file_atomic: metadata of '%s' cannot be carried over (errno=%d), saving in place\n",
+			target.c_str(), errno);
+		close(fd);
+		remove_temp(tmpname);
+		return save_file_in_place(target.c_str(), data, len);
+	}
 	const mode_t final_mode = have_old_mode ? (old_st.st_mode & 07777) : new_file_mode;
 	if (fchmod(fd, final_mode) != 0) {
 		write_log("my_save_file_atomic: fchmod '%s' to 0%o failed: %s (continuing)\n",
@@ -1895,20 +1983,26 @@ static bool save_file_in_place(const char* target, const void* data, size_t len)
 		} else {
 			write_log("my_save_file_atomic: fsync '%s' failed: %s\n", tmpname, strerror(e));
 			close(fd);
-			unlink(tmpname);
+			remove_temp(tmpname);
 			return false;
 		}
 	}
 	if (close(fd) != 0) {
 		write_log("my_save_file_atomic: close '%s' failed: %s\n", tmpname, strerror(errno));
-		unlink(tmpname);
+		remove_temp(tmpname);
 		return false;
 	}
 
 	if (rename(tmpname, target.c_str()) != 0) {
+		const int e = errno;
 		write_log("my_save_file_atomic: rename '%s' -> '%s' failed: %s\n",
-			tmpname, target.c_str(), strerror(errno));
-		unlink(tmpname);
+			tmpname, target.c_str(), strerror(e));
+		remove_temp(tmpname);
+		/* A writable file that may not be replaced (an ACL denying its
+		   deletion, a sticky folder) is updated in place, as fopen("w")
+		   did. */
+		if (have_old_mode && (e == EACCES || e == EPERM))
+			return save_file_in_place(target.c_str(), data, len);
 		return false;
 	}
 
