@@ -182,7 +182,7 @@ static const TCHAR *flushmode[] = { _T("soft"), _T("hard"), nullptr };
 static const TCHAR *kbleds[] = { _T("none"), _T("POWER"), _T("DF0"), _T("DF1"), _T("DF2"), _T("DF3"), _T("HD"), _T("CD"), _T("DFx"), nullptr };
 static const TCHAR *onscreenleds[] = { _T("false"), _T("true"), _T("rtg"), _T("both"), nullptr };
 static const TCHAR *soundfiltermode1[] = { _T("off"), _T("emulated"), _T("on"), _T("fixedonly"), nullptr };
-static const TCHAR *soundfiltermode2[] = { _T("standard"), _T("enhanced"), nullptr };
+static const TCHAR *soundfiltermode2[] = { _T("standard"), _T("enhanced"), _T("fixedonly"), nullptr };
 static const TCHAR *lorestype1[] = { _T("lores"), _T("hires"), _T("superhires"), nullptr };
 static const TCHAR *lorestype2[] = { _T("true"), _T("false"), nullptr };
 static const TCHAR *loresmode[] = { _T("normal"), _T("filtered"), nullptr };
@@ -2147,6 +2147,203 @@ static void cfgfile_writeramboard(struct uae_prefs *prefs, struct zfile *f, cons
 	}
 }
 
+
+// One chipset refresh entry in the configuration's displaydata CSV format,
+// written into out (size TCHARs, always terminated, truncated if needed).
+// The save path and the shared settings layer both use it, so the layer
+// reports exactly the value the writer emits for an entry.
+void write_chipset_refresh_entry(const struct chipset_refresh* cr, int index, TCHAR* out,
+	size_t size)
+{
+	if (size == 0)
+		return;
+	out[0] = 0;
+	if (cr->rate == 0)
+		cfgfile_append_optionf(out, size, _T("0"));
+	else
+		cfgfile_append_optionf(out, size, _T("%f"), cr->rate);
+	if (cr->label[0] > 0 && index < MAX_CHIPSET_REFRESH)
+		cfgfile_append_optionf(out, size, _T(",t=%s"), cr->label);
+	if (cr->horiz > 0)
+		cfgfile_append_optionf(out, size, _T(",h=%d"), cr->horiz);
+	if (cr->vert > 0)
+		cfgfile_append_optionf(out, size, _T(",v=%d"), cr->vert);
+	if (cr->locked)
+		cfgfile_append_optionf(out, size, _T(",locked"));
+	if (cr->ntsc == 1)
+		cfgfile_append_optionf(out, size, _T(",ntsc"));
+	else if (cr->ntsc == 0)
+		cfgfile_append_optionf(out, size, _T(",pal"));
+	else if (cr->ntsc == 2)
+		cfgfile_append_optionf(out, size, _T(",custom"));
+	if (cr->lace > 0)
+		cfgfile_append_optionf(out, size, _T(",lace"));
+	else if (cr->lace == 0)
+		cfgfile_append_optionf(out, size, _T(",nlace"));
+	if ((cr->resolution & 7) != 7) {
+		if (cr->resolution & 1)
+			cfgfile_append_optionf(out, size, _T(",lores"));
+		if (cr->resolution & 2)
+			cfgfile_append_optionf(out, size, _T(",hires"));
+		if (cr->resolution & 4)
+			cfgfile_append_optionf(out, size, _T(",shres"));
+		// The reader splits entries at commas; without one, "rpct=" ran
+		// into the previous flag and both were lost on load.
+		if (cr->resolution_pct > 0 && cr->resolution_pct < 100)
+			cfgfile_append_optionf(out, size, _T(",rpct=%d"), cr->resolution_pct);
+	}
+	if (cr->framelength > 0)
+		cfgfile_append_optionf(out, size, _T(",lof"));
+	else if (cr->framelength == 0)
+		cfgfile_append_optionf(out, size, _T(",shf"));
+	if (cr->vsync > 0)
+		cfgfile_append_optionf(out, size, _T(",vsync"));
+	else if (cr->vsync == 0)
+		cfgfile_append_optionf(out, size, _T(",nvsync"));
+	if (cr->rtg)
+		cfgfile_append_optionf(out, size, _T(",rtg"));
+	if (cr->exit)
+		cfgfile_append_optionf(out, size, _T(",exit"));
+	if (cr->defaultdata)
+		cfgfile_append_optionf(out, size, _T(",default"));
+	if (cr->filterprofile[0]) {
+		TCHAR *se = cfgfile_escape(cr->filterprofile, _T(","), true, false);
+		cfgfile_append_optionf(out, size, _T(",filter=%s"), se);
+		xfree(se);
+	}
+	if (cr->commands[0]) {
+		// The commands are stored one per line; the entry lists them
+		// comma-separated after cmd=, without the last line's separator.
+		const size_t start = _tcslen(out);
+		cfgfile_append_optionf(out, size, _T(",cmd=%s"), cr->commands);
+		const size_t length = _tcslen(out);
+		for (size_t j = start; j < length; j++) {
+			if (out[j] == '\n')
+				out[j] = ',';
+		}
+		if (length > start && out[length - 1] == ',')
+			out[length - 1] = 0;
+	}
+}
+
+// Parses one displaydata CSV entry the way the configuration reader does
+// into the fields of cr it describes (everything but inuse and index); the
+// reader and the shared settings layer both use it.
+void parse_chipset_refresh_entry(const TCHAR *value, struct chipset_refresh *cr)
+{
+	TCHAR tmpbuf[CONFIG_BLEN];
+	_tcsncpy (tmpbuf, value, sizeof tmpbuf / sizeof (TCHAR) - 1);
+	tmpbuf[sizeof tmpbuf / sizeof (TCHAR) - 1] = '\0';
+
+	int vert = -1, horiz = -1, lace = -1, ntsc = -1, framelength = -1, vsync = -1, hres = 0;
+	bool locked = false, rtg = false, exit = false;
+	bool cmdmode = false, defaultdata = false;
+	float rate = -1;
+	int rpct = 0;
+	// cmd is copied into cr->commands, so it is sized like it: the
+	// accumulation below drops commands that would not fit.
+	TCHAR cmd[sizeof cr->commands / sizeof(TCHAR)], filter[64] = { 0 }, label[16] = { 0 };
+	TCHAR *tmpp = tmpbuf;
+	TCHAR *end = tmpbuf + _tcslen (tmpbuf);
+	cmd[0] = 0;
+	for (;;) {
+		TCHAR *next = _tcschr (tmpp, ',');
+		TCHAR *equals = _tcschr (tmpp, '=');
+
+		if (!next)
+			next = end;
+		if (equals == nullptr || equals > next)
+			equals = nullptr;
+		else
+			equals++;
+		*next = 0;
+
+		if (cmdmode) {
+			if (_tcslen(cmd) + _tcslen(tmpp) + 2 < sizeof(cmd) / sizeof(TCHAR)) {
+				_tcscat(cmd, tmpp);
+				_tcscat(cmd, _T("\n"));
+			}
+		} else {
+			if (!_tcsnicmp(tmpp, _T("cmd="), 4)) {
+				cmdmode = true;
+				tmpp += 4;
+			}
+			if (rate < 0)
+				rate = static_cast<float>(_tstof(tmpp));
+			else if (!_tcsnicmp(tmpp, _T("v="), 2))
+				vert = _tstol(equals);
+			else if (!_tcsnicmp(tmpp, _T("h="), 2))
+				horiz = _tstol(equals);
+			else if (!_tcsnicmp(tmpp, _T("t="), 2))
+				_tcsncpy(label, equals, sizeof label / sizeof(TCHAR) - 1);
+			else if (!_tcsnicmp(tmpp, _T("filter="), 7))
+				_tcsncpy(filter, equals, sizeof filter / sizeof(TCHAR) - 1);
+			else if (!_tcsnicmp(tmpp, _T("rpct="), 5))
+				rpct = _tstol(equals);
+			else if (equals) {
+				if (_tcslen(cmd) + _tcslen (tmpp) + 2 < sizeof (cmd) / sizeof (TCHAR)) {
+					_tcscat(cmd, tmpp);
+					_tcscat(cmd, _T("\n"));
+				}
+			}
+			if (!_tcsnicmp(tmpp, _T("locked"), 4))
+				locked = true;
+			if (!_tcsnicmp(tmpp, _T("nlace"), 5))
+				lace = 0;
+			if (!_tcsnicmp(tmpp, _T("lace"), 4))
+				lace = 1;
+			if (!_tcsnicmp(tmpp, _T("lores"), 5))
+				hres |= 1 << RES_LORES;
+			if (!_tcsnicmp(tmpp, _T("hires"), 5))
+				hres |= 1 << RES_HIRES;
+			if (!_tcsnicmp(tmpp, _T("shres"), 5))
+				hres |= 1 << RES_SUPERHIRES;
+			if (!_tcsnicmp(tmpp, _T("nvsync"), 5))
+				vsync = 0;
+			if (!_tcsnicmp(tmpp, _T("vsync"), 4))
+				vsync = 1;
+			if (!_tcsnicmp(tmpp, _T("ntsc"), 4))
+				ntsc = 1;
+			if (!_tcsnicmp(tmpp, _T("pal"), 3))
+				ntsc = 0;
+			if (!_tcsnicmp(tmpp, _T("custom"), 6))
+				ntsc = 2;
+			if (!_tcsnicmp(tmpp, _T("lof"), 3))
+				framelength = 1;
+			if (!_tcsnicmp(tmpp, _T("shf"), 3))
+				framelength = 0;
+			if (!_tcsnicmp(tmpp, _T("rtg"), 3))
+				rtg = true;
+			if (!_tcsnicmp(tmpp, _T("exit"), 4))
+				exit = true;
+			if (!_tcsnicmp(tmpp, _T("default"), 7))
+				defaultdata = true;
+		}
+		tmpp = next;
+		if (tmpp >= end)
+			break;
+		tmpp++;
+	}
+	cr->horiz = horiz;
+	cr->vert = vert;
+	cr->lace = lace;
+	cr->resolution = hres ? hres : 1 + 2 + 4;
+	cr->resolution_pct = rpct;
+	cr->ntsc = ntsc;
+	cr->vsync = vsync;
+	cr->locked = locked;
+	cr->rtg = rtg;
+	cr->exit = exit;
+	cr->framelength = framelength;
+	cr->rate = rate;
+	cr->defaultdata = defaultdata;
+	_tcscpy(cr->commands, cmd);
+	_tcscpy(cr->label, label);
+	TCHAR *se = cfgfile_unescape(filter, nullptr);
+	_tcscpy(cr->filterprofile, se);
+	xfree(se);
+}
+
 void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 {
 	struct strlist *sl;
@@ -2878,67 +3075,7 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 		if (!cr->inuse)
 			continue;
 		cr->index = i;
-		if (cr->rate == 0)
-			_tcscpy(tmp, _T("0"));
-		else
-			_sntprintf (tmp, sizeof tmp / sizeof(TCHAR), _T("%f"), cr->rate);
-		if (cr->label[0] > 0 && i < MAX_CHIPSET_REFRESH)
-			cfgfile_append_optionf(tmp, sizeof tmp / sizeof(TCHAR), _T(",t=%s"), cr->label);
-		if (cr->horiz > 0)
-			cfgfile_append_optionf(tmp, sizeof tmp / sizeof(TCHAR), _T(",h=%d"), cr->horiz);
-		if (cr->vert > 0)
-			cfgfile_append_optionf(tmp, sizeof tmp / sizeof(TCHAR), _T(",v=%d"), cr->vert);
-		if (cr->locked)
-			_tcscat (tmp, _T(",locked"));
-		if (cr->ntsc == 1)
-			_tcscat (tmp, _T(",ntsc"));
-		else if (cr->ntsc == 0)
-			_tcscat (tmp, _T(",pal"));
-		else if (cr->ntsc == 2)
-			_tcscat(tmp, _T(",custom"));
-		if (cr->lace > 0)
-			_tcscat (tmp, _T(",lace"));
-		else if (cr->lace == 0)
-			_tcscat (tmp, _T(",nlace"));
-		if ((cr->resolution & 7) != 7) {
-			if (cr->resolution & 1)
-				_tcscat(tmp, _T(",lores"));
-			if (cr->resolution & 2)
-				_tcscat(tmp, _T(",hires"));
-			if (cr->resolution & 4)
-				_tcscat(tmp, _T(",shres"));
-			if (cr->resolution_pct > 0 && cr->resolution_pct < 100)
-				cfgfile_append_optionf(tmp, sizeof tmp / sizeof(TCHAR), _T("rpct=%d"), cr->resolution_pct);
-		}
-		if (cr->framelength > 0)
-			_tcscat (tmp, _T(",lof"));
-		else if (cr->framelength == 0)
-			_tcscat (tmp, _T(",shf"));
-		if (cr->vsync > 0)
-			_tcscat (tmp, _T(",vsync"));
-		else if (cr->vsync == 0)
-			_tcscat (tmp, _T(",nvsync"));
-		if (cr->rtg)
-			_tcscat (tmp, _T(",rtg"));
-		if (cr->exit)
-			_tcscat(tmp, _T(",exit"));
-		if (cr->defaultdata)
-			_tcscat(tmp, _T(",default"));
-		if (cr->filterprofile[0]) {
-			TCHAR *se = cfgfile_escape(cr->filterprofile, _T(","), true, false);
-			cfgfile_append_optionf(tmp, sizeof tmp / sizeof(TCHAR), _T(",filter=%s"), se);
-			xfree(se);
-		}
-		if (cr->commands[0]) {
-			TCHAR *cmd = tmp + _tcslen(tmp);
-			_tcscat (tmp, _T(",cmd="));
-			_tcscat (tmp, cr->commands);
-			for (int j = 0; j < _tcslen(cmd); j++) {
-				if (cmd[j] == '\n')
-					cmd[j] = ',';
-			}
-			cmd[_tcslen(cmd) - 1] = 0;
-		}
+		write_chipset_refresh_entry(cr, i, tmp, sizeof tmp / sizeof(TCHAR));
 		if (i == CHIPSET_REFRESH_PAL) {
 			if (cr->locked)
 				cfgfile_dwrite (f, _T("displaydata_pal"), tmp);
@@ -4881,129 +5018,39 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 	}
 
 	if (_tcscmp (option, _T("displaydata")) == 0 || _tcscmp (option, _T("displaydata_pal")) == 0 || _tcscmp (option, _T("displaydata_ntsc")) == 0) {
-		_tcsncpy (tmpbuf, value, sizeof tmpbuf / sizeof (TCHAR) - 1);
-		tmpbuf[sizeof tmpbuf / sizeof (TCHAR) - 1] = '\0';
-
-		int vert = -1, horiz = -1, lace = -1, ntsc = -1, framelength = -1, vsync = -1, hres = 0;
-		bool locked = false, rtg = false, exit = false;
-		bool cmdmode = false, defaultdata = false;
-		float rate = -1;
-		int rpct = 0;
-		TCHAR cmd[MAX_DPATH], filter[64] = { 0 }, label[16] = { 0 };
-		TCHAR *tmpp = tmpbuf;
-		TCHAR *end = tmpbuf + _tcslen (tmpbuf);
-		cmd[0] = 0;
-		for (;;) {
-			TCHAR *next = _tcschr (tmpp, ',');
-			TCHAR *equals = _tcschr (tmpp, '=');
-
-			if (!next)
-				next = end;
-			if (equals == nullptr || equals > next)
-				equals = nullptr;
-			else
-				equals++;
-			*next = 0;
-
-			if (cmdmode) {
-				if (_tcslen(cmd) + _tcslen(tmpp) + 2 < sizeof(cmd) / sizeof(TCHAR)) {
-					_tcscat(cmd, tmpp);
-					_tcscat(cmd, _T("\n"));
-				}
-			} else {
-				if (!_tcsnicmp(tmpp, _T("cmd="), 4)) {
-					cmdmode = true;
-					tmpp += 4;
-				}
-				if (rate < 0)
-					rate = static_cast<float>(_tstof(tmpp));
-				else if (!_tcsnicmp(tmpp, _T("v="), 2))
-					vert = _tstol(equals);
-				else if (!_tcsnicmp(tmpp, _T("h="), 2))
-					horiz = _tstol(equals);
-				else if (!_tcsnicmp(tmpp, _T("t="), 2))
-					_tcsncpy(label, equals, sizeof label / sizeof(TCHAR) - 1);
-				else if (!_tcsnicmp(tmpp, _T("filter="), 7))
-					_tcsncpy(filter, equals, sizeof filter / sizeof(TCHAR) - 1);
-				else if (!_tcsnicmp(tmpp, _T("rpct="), 5))
-					rpct = _tstol(equals);
-				else if (equals) {
-					if (_tcslen(cmd) + _tcslen (tmpp) + 2 < sizeof (cmd) / sizeof (TCHAR)) {
-						_tcscat(cmd, tmpp);
-						_tcscat(cmd, _T("\n"));
-					}
-				}
-				if (!_tcsnicmp(tmpp, _T("locked"), 4))
-					locked = true;
-				if (!_tcsnicmp(tmpp, _T("nlace"), 5))
-					lace = 0;
-				if (!_tcsnicmp(tmpp, _T("lace"), 4))
-					lace = 1;
-				if (!_tcsnicmp(tmpp, _T("lores"), 5))
-					hres |= 1 << RES_LORES;
-				if (!_tcsnicmp(tmpp, _T("hires"), 5))
-					hres |= 1 << RES_HIRES;
-				if (!_tcsnicmp(tmpp, _T("shres"), 5))
-					hres |= 1 << RES_SUPERHIRES;
-				if (!_tcsnicmp(tmpp, _T("nvsync"), 5))
-					vsync = 0;
-				if (!_tcsnicmp(tmpp, _T("vsync"), 4))
-					vsync = 1;
-				if (!_tcsnicmp(tmpp, _T("ntsc"), 4))
-					ntsc = 1;
-				if (!_tcsnicmp(tmpp, _T("pal"), 3))
-					ntsc = 0;
-				if (!_tcsnicmp(tmpp, _T("custom"), 6))
-					ntsc = 2;
-				if (!_tcsnicmp(tmpp, _T("lof"), 3))
-					framelength = 1;
-				if (!_tcsnicmp(tmpp, _T("shf"), 3))
-					framelength = 0;
-				if (!_tcsnicmp(tmpp, _T("rtg"), 3))
-					rtg = true;
-				if (!_tcsnicmp(tmpp, _T("exit"), 4))
-					exit = true;
-				if (!_tcsnicmp(tmpp, _T("default"), 7))
-					defaultdata = true;
-			}
-			tmpp = next;
-			if (tmpp >= end)
-				break;
-			tmpp++;
-		}
+		struct chipset_refresh parsed = {};
+		parse_chipset_refresh_entry(value, &parsed);
 		for (int i = 0; i < MAX_CHIPSET_REFRESH; i++) {
 			struct chipset_refresh *cr = &p->cr[i];
 			if (_tcscmp (option, _T("displaydata_pal")) == 0) {
 				i = CHIPSET_REFRESH_PAL;
 				cr = &p->cr[i];
 				cr->inuse = false;
-				_tcscpy (label, _T("PAL"));
+				_tcscpy (parsed.label, _T("PAL"));
 			} else if (_tcscmp (option, _T("displaydata_ntsc")) == 0) {
 				i = CHIPSET_REFRESH_NTSC;
 				cr = &p->cr[i];
 				cr->inuse = false;
-				_tcscpy (label, _T("NTSC"));
+				_tcscpy (parsed.label, _T("NTSC"));
 			}
 			if (!cr->inuse) {
 				cr->inuse = true;
-				cr->horiz = horiz;
-				cr->vert = vert;
-				cr->lace = lace;
-				cr->resolution = hres ? hres : 1 + 2 + 4;
-				cr->resolution_pct = rpct;
-				cr->ntsc = ntsc;
-				cr->vsync = vsync;
-				cr->locked = locked;
-				cr->rtg = rtg;
-				cr->exit = exit;
-				cr->framelength = framelength;
-				cr->rate = rate;
-				cr->defaultdata = defaultdata;
-				_tcscpy(cr->commands, cmd);
-				_tcscpy(cr->label, label);
-				TCHAR *se = cfgfile_unescape(filter, nullptr);
-				_tcscpy(cr->filterprofile, se);
-				xfree(se);
+				cr->horiz = parsed.horiz;
+				cr->vert = parsed.vert;
+				cr->lace = parsed.lace;
+				cr->resolution = parsed.resolution;
+				cr->resolution_pct = parsed.resolution_pct;
+				cr->ntsc = parsed.ntsc;
+				cr->vsync = parsed.vsync;
+				cr->locked = parsed.locked;
+				cr->rtg = parsed.rtg;
+				cr->exit = parsed.exit;
+				cr->framelength = parsed.framelength;
+				cr->rate = parsed.rate;
+				cr->defaultdata = parsed.defaultdata;
+				_tcscpy(cr->commands, parsed.commands);
+				_tcscpy(cr->label, parsed.label);
+				_tcscpy(cr->filterprofile, parsed.filterprofile);
 				break;
 			}
 		}
@@ -9569,7 +9616,9 @@ static void buildin_default_prefs (struct uae_prefs *p)
 	p->cpuboard_type = 0;
 	p->cpuboard_subtype = 0;
 #ifdef AMIBERRY
-	p->sound_volume_cd = 0;
+	// Same CD audio volume as default_prefs(): the quickstart presets
+	// reset a configuration the same way a plain reset does.
+	p->sound_volume_cd = 20;
 #endif
 	p->chipmem.size = 0x00080000;
 	p->chipmem.chipramtiming = true;

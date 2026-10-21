@@ -10869,7 +10869,8 @@ static void inputdevice_get_previous_joy(struct uae_prefs *p, int portnum, bool 
 	}
 }
 
-void inputdevice_validate_jports (struct uae_prefs *p, int changedport, bool *fixedports)
+static void validate_jports (struct uae_prefs *p, int changedport, bool *fixedports,
+	bool record_usage)
 {
 	for (int i = 0; i < MAX_JPORTS; i++) {
 		fixjport (&p->jports[i], 0, changedport == i);
@@ -10919,7 +10920,8 @@ void inputdevice_validate_jports (struct uae_prefs *p, int changedport, bool *fi
 						memcpy(&p->jports[k].id, jp, sizeof(struct jport));
 						if (fixjport(&p->jports[k], 0, false))
 							continue;
-						inputdevice_set_newest_used_device(k, &p->jports[k]);
+						if (record_usage)
+							inputdevice_set_newest_used_device(k, &p->jports[k]);
 						break;
 					}
 					if (jp)
@@ -10931,6 +10933,21 @@ void inputdevice_validate_jports (struct uae_prefs *p, int changedport, bool *fi
 		}
 	}
 }
+
+void inputdevice_validate_jports (struct uae_prefs *p, int changedport, bool *fixedports)
+{
+	validate_jports (p, changedport, fixedports, true);
+}
+
+#ifdef AMIBERRY
+// Amiberry: the shared settings layer stores edits in session copies of
+// the configuration, which must not touch global device state, so this
+// variant validates without updating the usage history.
+void inputdevice_validate_jports_prefs_only (struct uae_prefs *p, int changedport)
+{
+	validate_jports (p, changedport, nullptr, false);
+}
+#endif
 
 void inputdevice_joyport_keyboard_default(struct uae_prefs *p, const TCHAR *value, int portnum)
 {

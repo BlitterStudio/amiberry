@@ -17,7 +17,7 @@ namespace {
 // Function-local so the list is built on first use, never during another
 // translation unit's static initialisation.
 struct domain_list {
-	const domain* items[4];
+	const domain* items[8];
 };
 
 const domain_list& domains()
@@ -27,6 +27,10 @@ const domain_list& domains()
 		&chipset_domain(),
 		&memory_domain(),
 		&rom_domain(),
+		&display_domain(),
+		&sound_domain(),
+		&input_domain(),
+		&onscreen_domain(),
 	}};
 	return list;
 }
@@ -82,14 +86,36 @@ bool parse_number(std::string_view text, bool integer, double& out)
 	return true;
 }
 
-bool is_choice(const definition& d, std::string_view text)
+bool is_choice(const definition& d, const choice_list& choices, std::string_view text)
+ {
+	for (size_t i = 0; i < choices.count; i++) {
+		if (text == choices.items[i].value)
+ 			return true;
+ 	}
+ 	return false;
+ }
+} // namespace
+
+// The choices an option accepts now: the descriptor's static list, or the
+// host-dependent list when it has one.
+choice_list choices_of(const definition& d, const uae_prefs& p)
 {
-	for (size_t i = 0; i < d.descriptor.choice_count; i++) {
-		if (text == d.descriptor.choices[i].value)
-			return true;
-	}
-	return false;
+	if (!d.dynamic_choices)
+		return {d.descriptor.choices, d.descriptor.choice_count};
+	choice_list list{};
+	d.dynamic_choices(p, list);
+	return list;
 }
+
+// Re-reads every host device list the layer enumerates.
+void refresh_dynamic_choices()
+{
+	for (size_t i = 0; i < domain_count(); i++) {
+		if (domain_at(i).refresh_choices)
+			domain_at(i).refresh_choices();
+	}
+}
+namespace {
 
 // Checks text against the option's type and current range and fills v.
 amiberry_settings_status check_value(const definition& d, const uae_prefs& p,
@@ -132,14 +158,16 @@ amiberry_settings_status check_value(const definition& d, const uae_prefs& p,
 			return AMIBERRY_SETTINGS_INVALID_VALUE;
 		v.text = text;
 		return AMIBERRY_SETTINGS_OK;
-	case AMIBERRY_SETTING_CHOICE:
-		if (!is_choice(d, text))
+	case AMIBERRY_SETTING_CHOICE: {
+		const choice_list choices = choices_of(d, p);
+		if (!is_choice(d, choices, text))
 			return AMIBERRY_SETTINGS_INVALID_VALUE;
 		if (!is_choice_available(d, p, ctx, text))
 			return AMIBERRY_SETTINGS_UNAVAILABLE;
 		if (!parse_number(text, true, v.number))
 			v.number = 0;
 		return AMIBERRY_SETTINGS_OK;
+	}
 	}
 	return AMIBERRY_SETTINGS_INVALID_VALUE;
 }
@@ -222,7 +250,7 @@ bool is_choice_available(const definition& d, const uae_prefs& p, const context&
 			return false;
 		v.number = choice == "true" ? 1 : 0;
 	} else {
-		if (!is_choice(d, choice))
+		if (!is_choice(d, choices_of(d, p), choice))
 			return false;
 		if (d.choice_available && !d.choice_available(p, choice))
 			return false;

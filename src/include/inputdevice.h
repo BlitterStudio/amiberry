@@ -344,6 +344,11 @@ extern int inputdevice_joyport_config(struct uae_prefs *p, const TCHAR *value1, 
 extern void inputdevice_joyport_config_store(struct uae_prefs *p, const TCHAR *value, int portnum, int mode, int submode, int type);
 extern int inputdevice_getjoyportdevice (int port, int val);
 extern void inputdevice_validate_jports (struct uae_prefs *p, int changedport, bool *fixedports);
+#ifdef AMIBERRY
+// The shared settings layer's variant: validates a configuration (which
+// may be a session copy) without updating the device usage history.
+extern void inputdevice_validate_jports_prefs_only (struct uae_prefs *p, int changedport);
+#endif
 extern void inputdevice_fix_prefs(struct uae_prefs *p, bool userconfig);
 extern void inputdevice_jportcustom_fixup(struct uae_prefs *p, TCHAR*, int);
 extern void inputdevice_joyport_keyboard_default(struct uae_prefs *p, const TCHAR *value, int portnum);

@@ -348,6 +348,13 @@ struct chipset_refresh
 	TCHAR commands[256];
 	TCHAR filterprofile[64];
 };
+// One chipset refresh entry in the configuration's displaydata CSV format:
+// the writer (truncating to size TCHARs) and the reader's parser (every
+// field but inuse and index). cfgfile and the shared settings layer both
+// use them, so the layer's option value is exactly what the file holds.
+void write_chipset_refresh_entry(const struct chipset_refresh* cr, int index, TCHAR* out,
+	size_t size);
+void parse_chipset_refresh_entry(const TCHAR* value, struct chipset_refresh* cr);
 
 #define APMODE_NATIVE 0
 #define APMODE_RTG 1

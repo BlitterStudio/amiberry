@@ -218,6 +218,27 @@ bool amiberry_settings_get_range(const amiberry_settings_session* session, const
 	});
 }
 
+size_t amiberry_settings_choices(const amiberry_settings_session* session,
+	const char* id, const amiberry_setting_choice** choices)
+{
+	const definition* d = session ? lookup(id) : nullptr;
+	if (!d || !choices)
+		return 0;
+	return amiberry_settings::no_throw<size_t>(0, [&] {
+		const amiberry_settings::choice_list list =
+			amiberry_settings::choices_of(*d, *session->working);
+		*choices = list.items;
+		return list.count;
+	});
+}
+void amiberry_settings_refresh_choices(void)
+{
+	amiberry_settings::no_throw(0, [] {
+		amiberry_settings::refresh_dynamic_choices();
+		return 0;
+	});
+}
+
 size_t amiberry_settings_validate(const amiberry_settings_session* session,
 	amiberry_settings_adjustment* adjustments, size_t capacity)
 {
