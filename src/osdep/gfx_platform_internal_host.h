@@ -77,8 +77,18 @@ static inline void gfx_platform_set_window_title(SDL_Window* window, const char*
 
 static inline bool gfx_platform_override_pixel_format(SDL_PixelFormat* format)
 {
+#ifdef AMIBERRY_IOS
+	/* iOS renders through OpenGL ES, which cannot upload GL_BGRA data
+	 * (resolve_gl_pixel_format() maps ARGB8888 to GL_BGRA). Use the
+	 * RGBA byte-order host format so texture uploads stay on the
+	 * GL_RGBA path; the core writes RGBA natively via the format's
+	 * shift values. */
+	*format = SDL_PIXELFORMAT_ABGR8888;
+	return true;
+#else
 	(void)format;
 	return false;
+#endif
 }
 
 static inline bool gfx_platform_do_init(AmigaMonitor* mon)
