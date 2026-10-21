@@ -28,13 +28,11 @@ target_include_directories(amiberry_native_ui PUBLIC
 # executable's final link, and so amiberry_native_ui compiles with the same
 # toolchain platform/deployment settings as the rest of the app.
 target_link_libraries(${PROJECT_NAME} PRIVATE amiberry_native_ui)
-
 # Guards the startup hook call in src/osdep/main.cpp.
-
+target_compile_definitions(${PROJECT_NAME} PRIVATE AMIBERRY_NATIVE_APPLE_UI)
 # Link the executable with the C++ driver. CMake would otherwise drive the
 # final link with swiftc because of the Swift dependency, and swiftc rejects
 # the C/C++ compile flags on amiberry's link line (for example -pipe). The
 # Swift static library carries autolink notes for the Swift runtime, which
 # the Apple linker resolves from the toolchain.
 set_target_properties(${PROJECT_NAME} PROPERTIES LINKER_LANGUAGE CXX)
-target_compile_definitions(${PROJECT_NAME} PRIVATE AMIBERRY_NATIVE_APPLE_UI)

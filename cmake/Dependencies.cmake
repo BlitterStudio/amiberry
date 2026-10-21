@@ -553,9 +553,25 @@ elseif(IOS)
         target_link_libraries(${PROJECT_NAME} PRIVATE SDL3-static)
     endif()
     find_package(ZLIB REQUIRED)
-    find_package(PNG QUIET)
-    if(PNG_FOUND)
-        target_link_libraries(${PROJECT_NAME} PRIVATE PNG::PNG)
+    # libpng (same vendored build as Android): the genlock test card decodes
+    # its PNG in-process (src/specialmonitors.cpp), and iOS has no system
+    # libpng. Linked via the generic png_static target handling below.
+    set(PNG_SHARED OFF CACHE BOOL "Build shared lib" FORCE)
+    set(PNG_STATIC ON CACHE BOOL "Build static lib" FORCE)
+    set(PNG_TESTS OFF CACHE BOOL "Build tests" FORCE)
+    FetchContent_Declare(
+        libpng
+        GIT_REPOSITORY https://github.com/pnggroup/libpng.git
+        GIT_TAG        v1.6.43
+    )
+    FetchContent_MakeAvailable(libpng)
+    if(EXISTS "${libpng_SOURCE_DIR}")
+        target_include_directories(${PROJECT_NAME} PRIVATE "${libpng_SOURCE_DIR}")
+    endif()
+    # pnglibconf.h is generated into libpng's binary dir; include it so png.h
+    # can find it.
+    if(EXISTS "${libpng_BINARY_DIR}/pnglibconf.h")
+        target_include_directories(${PROJECT_NAME} PRIVATE "${libpng_BINARY_DIR}")
     endif()
 
     # nlohmann_json: header-only, fetch if not found
@@ -572,8 +588,23 @@ elseif(IOS)
     endif()
     target_link_libraries(${PROJECT_NAME} PRIVATE nlohmann_json::nlohmann_json)
 
-    # No FLAC, mpg123, or CURL on iOS
-    # - FLAC/mpg123: audio codec libs not needed (no CD audio ripping on mobile)
+    # FLAC (same vendored build as Android): CHD compressed-disk images use
+    # libFLAC (src/blkdev_cdimage.cpp, src/archivers/chd).
+    set(BUILD_PROGRAMS OFF CACHE BOOL "Build and install programs" FORCE)
+    set(BUILD_EXAMPLES OFF CACHE BOOL "Build and install examples" FORCE)
+    set(BUILD_TESTING OFF CACHE BOOL "Build and install tests" FORCE)
+    set(BUILD_DOCS OFF CACHE BOOL "Build and install doxygen documents" FORCE)
+    set(INSTALL_MANPAGES OFF CACHE BOOL "Install MAN pages" FORCE)
+    set(WITH_OGG OFF CACHE BOOL "ogg support" FORCE)
+    FetchContent_Declare(
+        flac
+        GIT_REPOSITORY https://github.com/xiph/flac.git
+        GIT_TAG        1.5.0
+    )
+    FetchContent_MakeAvailable(flac)
+
+    # No mpg123 or CURL on iOS
+    # - mpg123: audio codec lib not needed (no CD audio ripping on mobile)
     # - CURL: self-update is disabled on iOS
 else()
     find_package(SDL3 CONFIG REQUIRED)
