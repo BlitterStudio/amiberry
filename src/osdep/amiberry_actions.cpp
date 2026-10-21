@@ -161,8 +161,12 @@ unsigned status_revision = 0;
 // The pending disk swapper list, same locking as the snapshot. Only copied
 // when it changed, so the per-frame publish stays cheap.
 std::mutex swapper_mutex;
-TCHAR swapper_entries[AMIBERRY_ACTIONS_SWAPPER_ENTRIES][AMIBERRY_ACTIONS_PATH_MAX];
+TCHAR swapper_entries[MAX_SPARE_DRIVES][MAX_DPATH];
 bool swapper_valid = false;
+static_assert(MAX_SPARE_DRIVES == AMIBERRY_ACTIONS_SWAPPER_ENTRIES,
+	"the swapper mirror must have exactly the core's number of entries");
+static_assert(MAX_DPATH <= AMIBERRY_ACTIONS_PATH_MAX,
+	"the public path buffer must fit the core's MAX_DPATH");
 
 void copy_text(char* out, size_t size, const TCHAR* text)
 {
@@ -199,9 +203,11 @@ void publish_status()
 	}
 
 	if (!swapper_valid
-		|| std::memcmp(swapper_entries, changed_prefs.dfxlist, sizeof swapper_entries) != 0) {
+		|| std::memcmp(swapper_entries, changed_prefs.dfxlist,
+			sizeof changed_prefs.dfxlist) != 0) {
 		std::lock_guard<std::mutex> lock(swapper_mutex);
-		std::memcpy(swapper_entries, changed_prefs.dfxlist, sizeof swapper_entries);
+		std::memcpy(swapper_entries, changed_prefs.dfxlist,
+			sizeof changed_prefs.dfxlist);
 		swapper_valid = true;
 	}
 }
@@ -209,8 +215,10 @@ void publish_status()
 bool valid_path(const char* path)
 {
 	// The prefs fields the executors write are MAX_DPATH-sized; accept
-	// exactly what they can store, like the IPC handlers did.
-	return path && *path && std::strlen(path) < MAX_DPATH;
+	// exactly what they can store, like the IPC handlers did. An empty path
+	// is allowed: it is how the transports clear a media slot, exactly what
+	// writing an empty path to changed_prefs always did.
+	return path && std::strlen(path) < MAX_DPATH;
 }
 
 amiberry_action_id post(kind k, int drive = 0, int number = 0,
