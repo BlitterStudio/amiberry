@@ -1736,6 +1736,13 @@ void my_set_time_explicit(struct my_openfile_s* mos) noexcept
 				}
 				target = link;
 			}
+			/* A loop or an over-long chain: fopen("w") failed with ELOOP
+			   and left the links alone, so the save fails too. */
+			struct stat end{};
+			if (lstat(target.c_str(), &end) == 0 && S_ISLNK(end.st_mode)) {
+				write_log("my_save_file_atomic: too many symbolic links for '%s'\n", filename);
+				return false;
+			}
 		}
 	}
 

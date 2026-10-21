@@ -421,7 +421,9 @@ void macos_bookmark_remove(const std::string& path)
 		if (!s_bookmark_data || !s_bookmarks_path)
 			return;
 
-		NSString* key = [NSString stringWithUTF8String:path.c_str()];
+		// The key macos_bookmark_store() used for the same path.
+		const std::string dir_path = normalize_to_directory(path);
+		NSString* key = [NSString stringWithUTF8String:dir_path.c_str()];
 
 		// Stop accessing if active
 		if (s_active_urls[key])

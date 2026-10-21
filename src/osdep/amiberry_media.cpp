@@ -258,7 +258,9 @@ amiberry_settings_status amiberry_folder_set(amiberry_folder folder, const char*
 	return amiberry_settings::no_throw(AMIBERRY_SETTINGS_INVALID_VALUE, [=] {
 		if (folder < 0 || folder >= AMIBERRY_FOLDER_COUNT)
 			return AMIBERRY_SETTINGS_UNKNOWN_ID;
-		if (!storable_path(path))
+		// The core's folder getters append a separator in MAX_DPATH buffers,
+		// so a folder leaves room for it.
+		if (!storable_path(path) || std::strlen(path) + 1 >= max_stored_path)
 			return AMIBERRY_SETTINGS_INVALID_VALUE;
 		// The folder is granted before it is stored, so a sandboxed build
 		// never keeps a folder it cannot open after a restart.
@@ -313,6 +315,12 @@ amiberry_settings_status amiberry_media_add_recent(amiberry_media_list list, con
 		const std::string absolute = absolute_path(path);
 		if (!storable_path(absolute.c_str()))
 			return AMIBERRY_SETTINGS_INVALID_VALUE;
+		// The settings loader keeps only recent entries it can open, so an
+		// entry that cannot be opened now would vanish at the next start.
+		FILE* const file = uae_fopen(absolute.c_str(), "rbe");
+		if (!file)
+			return AMIBERRY_SETTINGS_INVALID_VALUE;
+		fclose(file);
 		// Saved at once, like a folder; a list that cannot be saved is put
 		// back and the failure reported.
 		const std::vector<std::string> previous = *recent;
