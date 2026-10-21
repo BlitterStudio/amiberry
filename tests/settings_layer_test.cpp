@@ -1255,6 +1255,15 @@ void check_machine_fixup_rules()
 	CHECK(value_of(p, "chipmem_size") == "8");
 	CHECK(set(p, "fastmem2_size_k", "512") == AMIBERRY_SETTINGS_OK);
 	CHECK(value_of(p, "chipmem_size") == "4");
+	// Raising chip RAM above 2 MB shrinks only the two conflicting boards.
+	reset_prefs(p);
+	p.address_space_24 = false;
+	p.fastmem[0].size = 0x400000;
+	p.fastmem[2].size = 0x100000;
+	p.fastmem[3].size = 0x200000;
+	CHECK(set(p, "chipmem_size", "8") == AMIBERRY_SETTINGS_OK);
+	CHECK(p.fastmem[0].size == 262144);
+	CHECK(p.fastmem[2].size == 0x100000 && p.fastmem[3].size == 0x200000);
 
 	// Wait for Blitter goes with 68000/010 cycle-exact modes, from either
 	// side.
@@ -1524,6 +1533,16 @@ void check_machine_session()
 	CHECK(amiberry_settings_set(session, "chipmem_size", "2") == AMIBERRY_SETTINGS_OK);
 	amiberry_settings_commit(session, &changed);
 	CHECK(value_of(changed_prefs, "chipset") == "ecs_agnus" && changed_prefs.chipmem.size == 0x100000);
+	// A chosen ECS Agnus is a chipset choice, though it differs from OCS by
+	// the bit chip RAM adds: it replaces a chipset chosen elsewhere.
+	CHECK(amiberry_settings_set(session, "chipmem_size", "1") == AMIBERRY_SETTINGS_OK);
+	CHECK(amiberry_settings_set(session, "chipset", "ocs") == AMIBERRY_SETTINGS_OK);
+	amiberry_settings_commit(session, &changed);
+	CHECK(amiberry_settings_set(session, "chipset", "ecs_agnus") == AMIBERRY_SETTINGS_OK);
+	CHECK(set(changed_prefs, "chipset", "aga") == AMIBERRY_SETTINGS_OK); // meanwhile
+	amiberry_settings_commit(session, &changed);
+	CHECK(changed);
+	CHECK(value_of(changed_prefs, "chipset") == "ecs_agnus");
 	amiberry_settings_session_close(session);
 }
 

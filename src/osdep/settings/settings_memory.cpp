@@ -56,13 +56,15 @@ void write_choice(char* out, size_t size, const amiberry_setting_choice* choices
 #define CHOICES(array) array, sizeof(array) / sizeof((array)[0])
 
 // WinUAE fix_values_memorydlg(): more than 2 MB chip RAM conflicts with the
-// Z2 fast RAM window, so the boards shrink to a 256 KB total.
+// Z2 fast RAM window, so the first two boards (the ones fixup_prefs() and
+// set_fastmem_size() check) shrink to a 256 KB total. Boards 3 and 4 are
+// left alone, as the reverse direction allows them.
 void clamp_fast_for_chip(uae_prefs& p)
 {
 	if (p.chipmem.size <= 0x200000)
 		return;
 	int total = 0;
-	for (int i = 0; i < MAX_RAM_BOARDS; i++) {
+	for (int i = 0; i < 2; i++) {
 		if (p.fastmem[i].size > 262144)
 			p.fastmem[i].size = 262144;
 		total += p.fastmem[i].size;
@@ -538,7 +540,8 @@ const definition definitions[] = {
 // the rest of each board (manufacturer, manual addresses, autoconfig data)
 // may be edited elsewhere, by the RAM panel's board editor for example, and
 // a session must not copy its stale board over those edits.
-bool commit_memory(const uae_prefs& base, const uae_prefs& from, uae_prefs& to)
+bool commit_memory(const uae_prefs& base, const uae_prefs& from, uae_prefs& to,
+	const commit_info&)
 {
 	bool wrote = false;
 #define FIELD(f) wrote |= commit_field(base.f, from.f, to.f)

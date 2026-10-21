@@ -347,6 +347,15 @@ extern void inputdevice_validate_jports (struct uae_prefs *p, int changedport, b
 extern void inputdevice_fix_prefs(struct uae_prefs *p, bool userconfig);
 extern void inputdevice_jportcustom_fixup(struct uae_prefs *p, TCHAR*, int);
 extern void inputdevice_joyport_keyboard_default(struct uae_prefs *p, const TCHAR *value, int portnum);
+// Configuring a joyport records process-global port memory: each port's
+// keyboard-layout fallback and the devices recently used in it.
+// Configuration previews save it first and restore it afterwards, so
+// building a preview leaves the running configuration's port memory alone.
+// Restoring frees the snapshot; a null snapshot (out of memory) restores
+// nothing.
+struct inputdevice_port_memory;
+extern struct inputdevice_port_memory *inputdevice_port_memory_save(void);
+extern void inputdevice_port_memory_restore(struct inputdevice_port_memory *saved);
 
 extern void inputdevice_init (void);
 extern void inputdevice_close (void);

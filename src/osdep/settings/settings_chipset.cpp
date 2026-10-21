@@ -1040,27 +1040,30 @@ const definition definitions[] = {
 		get_denisemodel, set_denisemodel, custom_chipset, nullptr, nullptr},
 };
 
-// The chipset option replaces the whole selection, while chip RAM above
-// 512 KB only adds ECS Agnus (set_chipmem_size). A session that changed no
-// other bit merges just that one, so a chipset chosen elsewhere meanwhile
-// (AGA, say) survives; a session that chose a chipset commits all of it.
-static bool commit_chipset_mask(const uae_prefs& base, const uae_prefs& from, uae_prefs& to)
+// A chipset choice replaces the whole selection. Otherwise the mask only
+// changed as a dependent change (chip RAM above 512 KB adds ECS Agnus in
+// set_chipmem_size), and only the bits that changed are merged, so a
+// chipset chosen elsewhere meanwhile (AGA, say) survives. The set options
+// tell the two apart: a chosen ECS Agnus changes the same single bit.
+static bool commit_chipset_mask(const uae_prefs& base, const uae_prefs& from, uae_prefs& to,
+	const commit_info& info)
 {
-	const unsigned int changed = base.chipset_mask ^ from.chipset_mask;
-	if (changed & ~static_cast<unsigned int>(CSMASK_ECS_AGNUS))
+	static const definition& chipset = require("chipset");
+	if (info.was_set(chipset))
 		return commit_field(base.chipset_mask, from.chipset_mask, to.chipset_mask);
+	const unsigned int changed = base.chipset_mask ^ from.chipset_mask;
 	if (!changed)
 		return false;
-	const unsigned int merged = (to.chipset_mask & ~static_cast<unsigned int>(CSMASK_ECS_AGNUS))
-		| (from.chipset_mask & CSMASK_ECS_AGNUS);
+	const unsigned int merged = (to.chipset_mask & ~changed) | (from.chipset_mask & changed);
 	const bool wrote = merged != to.chipset_mask;
 	to.chipset_mask = merged;
 	return wrote;
 }
 
-bool commit_chipset(const uae_prefs& base, const uae_prefs& from, uae_prefs& to)
+bool commit_chipset(const uae_prefs& base, const uae_prefs& from, uae_prefs& to,
+	const commit_info& info)
 {
-	bool wrote = commit_chipset_mask(base, from, to);
+	bool wrote = commit_chipset_mask(base, from, to, info);
 #define FIELD(f) wrote |= commit_field(base.f, from.f, to.f)
 	FIELD(ntscmode);
 	FIELD(chipset_refreshrate);

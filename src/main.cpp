@@ -857,19 +857,23 @@ thread_local bool fixup_prefs_preview_active;
 namespace {
 // One preview: sets fixup_prefs_preview_active and, however the preview
 // ends (the settings layer catches exceptions at its C boundary), clears it
-// and puts back the global change flag. The target defaults a preset
-// preview applies configure the default ports through
-// inputdevice_joyport_config(), which calls set_config_changed(); a
-// preview must not make the running emulator process a change.
+// and puts back the process globals a preview reaches. The target defaults
+// a preset preview applies configure the default ports through
+// inputdevice_joyport_config(), which calls set_config_changed() and
+// records port memory (keyboard-layout fallbacks, recently used devices);
+// a preview must neither make the running emulator process a change nor
+// alter that memory.
 struct preview_scope {
 	const int changed = config_changed;
 	const int changed_flags = config_changed_flags;
+	struct inputdevice_port_memory* const port_memory = inputdevice_port_memory_save();
 	preview_scope() { fixup_prefs_preview_active = true; }
 	~preview_scope()
 	{
 		fixup_prefs_preview_active = false;
 		config_changed = changed;
 		config_changed_flags = changed_flags;
+		inputdevice_port_memory_restore(port_memory);
 	}
 	preview_scope(const preview_scope&) = delete;
 	preview_scope& operator=(const preview_scope&) = delete;

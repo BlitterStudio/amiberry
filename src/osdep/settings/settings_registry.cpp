@@ -174,6 +174,12 @@ size_t position_of(const definition& d)
 	return definitions_index().position.at(&d);
 }
 
+bool commit_info::was_set(const definition& d) const
+{
+	const size_t position = position_of(d);
+	return position < touched.size() && touched[position];
+}
+
 const definition* find(std::string_view id)
 {
 	const auto& by_id = definitions_index().by_id;

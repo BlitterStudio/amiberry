@@ -64,10 +64,12 @@ const definition* lookup(const char* id)
 	return id ? amiberry_settings::find(id) : nullptr;
 }
 
-void commit_domains(const uae_prefs& base, const uae_prefs& from, uae_prefs& to)
+void commit_domains(const amiberry_settings_session& session, const uae_prefs& base,
+	const uae_prefs& from, uae_prefs& to)
 {
+	const amiberry_settings::commit_info info{session.touched};
 	for (size_t i = 0; i < amiberry_settings::domain_count(); i++)
-		amiberry_settings::domain_at(i).commit(base, from, to);
+		amiberry_settings::domain_at(i).commit(base, from, to, info);
 }
 
 void forget_preset(amiberry_settings_session& session)
@@ -89,10 +91,10 @@ uae_prefs* merge_with_pending(const amiberry_settings_session& session)
 	if (!merged)
 		return nullptr;
 	if (session.preset_model < 0) {
-		commit_domains(*session.base, *session.working, *merged);
+		commit_domains(session, *session.base, *session.working, *merged);
 		return merged;
 	}
-	commit_domains(*session.base, *session.pre_preset, *merged);
+	commit_domains(session, *session.base, *session.pre_preset, *merged);
 	const bool applied = amiberry_settings::no_throw(false, [&session, merged] {
 		amiberry_settings::apply_preset(*merged, session.preset_model, session.preset_config,
 			session.preset_compatibility, true);
@@ -102,7 +104,7 @@ uae_prefs* merge_with_pending(const amiberry_settings_session& session)
 		std::free(merged);
 		return nullptr;
 	}
-	commit_domains(*session.after_preset, *session.working, *merged);
+	commit_domains(session, *session.after_preset, *session.working, *merged);
 	return merged;
 }
 

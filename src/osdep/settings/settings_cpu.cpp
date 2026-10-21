@@ -930,7 +930,8 @@ const definition definitions[] = {
 		get_comp_trustbyte, set_comp_trustbyte, jit_enabled_option, nullptr, nullptr},
 };
 
-bool commit_cpu(const uae_prefs& base, const uae_prefs& from, uae_prefs& to)
+bool commit_cpu(const uae_prefs& base, const uae_prefs& from, uae_prefs& to,
+	const commit_info&)
 {
 	bool wrote = false;
 #define FIELD(f) wrote |= commit_field(base.f, from.f, to.f)

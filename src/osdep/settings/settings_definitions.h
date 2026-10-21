@@ -10,6 +10,7 @@
 #include <cstddef>
 #include <cstring>
 #include <string_view>
+#include <vector>
 
 struct uae_prefs;
 
@@ -47,6 +48,14 @@ struct definition {
 	bool (*accepts)(const uae_prefs& p, const value& v);
 };
 
+// What a commit knows about the session besides its configurations: the
+// options its caller set (by definition position), so a domain can tell a
+// field the caller chose from one a dependent change wrote.
+struct commit_info {
+	const std::vector<bool>& touched;
+	bool was_set(const definition& d) const;
+};
+
 struct domain {
 	const definition* definitions;
 	size_t count;
@@ -55,7 +64,8 @@ struct domain {
 	// commit keeps dependent changes and leaves fields the session did not
 	// change as other code may have set them since. `base` and `to` may be
 	// the same object. Returns whether it wrote anything.
-	bool (*commit)(const uae_prefs& base, const uae_prefs& from, uae_prefs& to);
+	bool (*commit)(const uae_prefs& base, const uae_prefs& from, uae_prefs& to,
+		const commit_info& info);
 };
 
 // For domain commit functions: copies one field (scalar or array) when the

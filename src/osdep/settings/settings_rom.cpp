@@ -297,7 +297,8 @@ const definition definitions[] = {
 		get_kickshifter, set_kickshifter, nullptr, nullptr, nullptr},
 };
 
-bool commit_rom(const uae_prefs& base, const uae_prefs& from, uae_prefs& to)
+bool commit_rom(const uae_prefs& base, const uae_prefs& from, uae_prefs& to,
+	const commit_info&)
 {
 	bool wrote = false;
 #define FIELD(f) wrote |= commit_field(base.f, from.f, to.f)
