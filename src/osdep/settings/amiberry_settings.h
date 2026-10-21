@@ -1,19 +1,48 @@
 /*
  * Amiberry shared settings layer: the platform-neutral C API every settings
- * UI uses (ImGui, native Apple and Android front ends, IPC).
+ * UI uses: ImGui, native front ends on macOS, iOS, Windows, Linux and
+ * Android, and IPC.
  *
  * An option is identified by its .uae configuration key, and its values use
  * the .uae spelling, so "cpu_model" = "68030" means exactly what the line
  * cpu_model=68030 means in a configuration file.
  *
+ * The API is plain C so any language with a C foreign-function interface can
+ * bind it (Swift, C++/WinRT, C# P/Invoke, Kotlin/JNI, GTK or Qt). Strings
+ * are NUL-terminated UTF-8; front ends that use UTF-16 convert at the
+ * boundary. Pointers returned by the API stay valid for the lifetime of the
+ * process unless a function says otherwise. bool is the C99 one-byte type
+ * (C# needs [MarshalAs(UnmanagedType.I1)]).
+ *
  * Descriptors are static and may be read from any thread. Every other call
  * must be made on the emulator's main thread: sessions read and write the
- * pending configuration and run the core's configuration fixups.
+ * pending configuration and run the core's configuration fixups. A front end
+ * with its own UI thread hands those calls to the emulator thread.
  */
 #pragma once
 
 #include <stdbool.h>
 #include <stddef.h>
+
+/*
+ * The core links the layer statically by default. A build that ships it in
+ * a shared library for a separate front end defines AMIBERRY_SETTINGS_EXPORT
+ * while compiling the library, and the front end defines
+ * AMIBERRY_SETTINGS_IMPORT on Windows.
+ */
+#if defined(_WIN32)
+#if defined(AMIBERRY_SETTINGS_EXPORT)
+#define AMIBERRY_SETTINGS_API __declspec(dllexport)
+#elif defined(AMIBERRY_SETTINGS_IMPORT)
+#define AMIBERRY_SETTINGS_API __declspec(dllimport)
+#else
+#define AMIBERRY_SETTINGS_API
+#endif
+#elif defined(__GNUC__)
+#define AMIBERRY_SETTINGS_API __attribute__((visibility("default")))
+#else
+#define AMIBERRY_SETTINGS_API
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -59,11 +88,11 @@ typedef struct amiberry_setting_descriptor {
 	const char *constraint;
 } amiberry_setting_descriptor;
 
-size_t amiberry_settings_count(void);
+AMIBERRY_SETTINGS_API size_t amiberry_settings_count(void);
 /* NULL when index >= amiberry_settings_count(). */
-const amiberry_setting_descriptor *amiberry_settings_at(size_t index);
+AMIBERRY_SETTINGS_API const amiberry_setting_descriptor *amiberry_settings_at(size_t index);
 /* NULL for an unknown ID. */
-const amiberry_setting_descriptor *amiberry_settings_find(const char *id);
+AMIBERRY_SETTINGS_API const amiberry_setting_descriptor *amiberry_settings_find(const char *id);
 
 typedef enum amiberry_settings_status {
 	AMIBERRY_SETTINGS_OK,
@@ -82,23 +111,23 @@ typedef enum amiberry_settings_status {
 typedef struct amiberry_settings_session amiberry_settings_session;
 
 /* NULL when memory is exhausted. */
-amiberry_settings_session *amiberry_settings_session_open(void);
-void amiberry_settings_session_close(amiberry_settings_session *session);
+AMIBERRY_SETTINGS_API amiberry_settings_session *amiberry_settings_session_open(void);
+AMIBERRY_SETTINGS_API void amiberry_settings_session_close(amiberry_settings_session *session);
 
 /*
  * The current value in .uae spelling. A CHOICE option can hold a value
  * outside its choice list when a configuration file set one.
  */
-amiberry_settings_status amiberry_settings_get(const amiberry_settings_session *session,
+AMIBERRY_SETTINGS_API amiberry_settings_status amiberry_settings_get(const amiberry_settings_session *session,
 	const char *id, char *buffer, size_t size);
-amiberry_settings_status amiberry_settings_set(amiberry_settings_session *session,
+AMIBERRY_SETTINGS_API amiberry_settings_status amiberry_settings_set(amiberry_settings_session *session,
 	const char *id, const char *value);
 
-bool amiberry_settings_is_available(const amiberry_settings_session *session, const char *id);
-bool amiberry_settings_choice_is_available(const amiberry_settings_session *session,
+AMIBERRY_SETTINGS_API bool amiberry_settings_is_available(const amiberry_settings_session *session, const char *id);
+AMIBERRY_SETTINGS_API bool amiberry_settings_choice_is_available(const amiberry_settings_session *session,
 	const char *id, const char *value);
 /* The range an INT or REAL option accepts now; false for other types. */
-bool amiberry_settings_get_range(const amiberry_settings_session *session, const char *id,
+AMIBERRY_SETTINGS_API bool amiberry_settings_get_range(const amiberry_settings_session *session, const char *id,
 	double *min, double *max);
 
 typedef struct amiberry_settings_adjustment {
@@ -113,7 +142,7 @@ typedef struct amiberry_settings_adjustment {
  * every option they would change. Writes at most capacity entries and
  * returns the total number found; the session itself is not modified.
  */
-size_t amiberry_settings_validate(const amiberry_settings_session *session,
+AMIBERRY_SETTINGS_API size_t amiberry_settings_validate(const amiberry_settings_session *session,
 	amiberry_settings_adjustment *adjustments, size_t capacity);
 
 /*
@@ -123,7 +152,7 @@ size_t amiberry_settings_validate(const amiberry_settings_session *session,
  * pending configuration; the result is the strongest apply class among
  * those that did (AMIBERRY_APPLY_LIVE when none did).
  */
-amiberry_apply_class amiberry_settings_commit(amiberry_settings_session *session, bool *changed);
+AMIBERRY_SETTINGS_API amiberry_apply_class amiberry_settings_commit(amiberry_settings_session *session, bool *changed);
 
 #ifdef __cplusplus
 }
