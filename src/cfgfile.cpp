@@ -2237,7 +2237,9 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 	if (p->romextident[0])
 		cfgfile_write_str (f, _T("kickstart_ext_rom="), p->romextident);
 
-	for (int rb = 0; i < MAX_ROM_BOARDS; i++) {
+	// rb must advance too: this loop wrote romboards[0] once per board and
+	// never saved boards 2-4.
+	for (int rb = 0; rb < MAX_ROM_BOARDS; rb++) {
 		cfgfile_writeromboard(p, f, rb, &p->romboards[rb]);
 	}
 
@@ -2969,6 +2971,14 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 	cfgfile_dwrite_bool(f, _T("a1000ram"), p->cs_a1000ram);
 	cfgfile_dwrite(f, _T("fatgary"), _T("%d"), p->cs_fatgaryrev);
 	cfgfile_dwrite(f, _T("ramsey"), _T("%d"), p->cs_ramseyrev);
+#ifdef AMIBERRY
+	// The chip revision overrides (Advanced Chipset hex fields) and the
+	// custom register byte write bug had no configuration key: they only
+	// survived while a preset or fixup set them.
+	cfgfile_dwrite(f, _T("agnusrev"), _T("%d"), p->cs_agnusrev);
+	cfgfile_dwrite(f, _T("deniserev"), _T("%d"), p->cs_deniserev);
+	cfgfile_dwrite_bool(f, _T("cs_bytecustomwritebug"), p->cs_bytecustomwritebug);
+#endif
 	cfgfile_dwrite_bool(f, _T("pcmcia"), p->cs_pcmcia);
 	cfgfile_dwrite_bool(f, _T("resetwarning"), p->cs_resetwarning);
 	cfgfile_dwrite_bool(f, _T("denise_noehb"), p->cs_denisemodel == DENISEMODEL_VELVET || p->cs_denisemodel == DENISEMODEL_A1000NOEHB);
@@ -6375,6 +6385,9 @@ static int cfgfile_parse_hardware (struct uae_prefs *p, const TCHAR *option, TCH
 		|| cfgfile_yesno(option, value, _T("resetwarning"), &p->cs_resetwarning)
 		|| cfgfile_yesno(option, value, _T("cia_todbug"), &p->cs_ciatodbug)
 		|| cfgfile_yesno(option, value, _T("z3_autoconfig"), &p->cs_z3autoconfig)
+#ifdef AMIBERRY
+		|| cfgfile_yesno(option, value, _T("cs_bytecustomwritebug"), &p->cs_bytecustomwritebug)
+#endif
 		|| cfgfile_yesno(option, value, _T("color_burst"), &p->cs_color_burst)
 		|| cfgfile_yesno(option, value, _T("toshiba_gary"), &p->cs_toshibagary)
 		|| cfgfile_yesno(option, value, _T("rom_is_slow"), &p->cs_romisslow)
@@ -6492,6 +6505,10 @@ static int cfgfile_parse_hardware (struct uae_prefs *p, const TCHAR *option, TCH
 		|| cfgfile_intval(option, value, _T("keyboard_handshake"), &p->cs_kbhandshake, 1)
 		|| cfgfile_intval(option, value, _T("eclockphase"), &p->cs_eclockphase, 1)
 		|| cfgfile_intval(option, value, _T("chipset_rtc_adjust"), &p->cs_rtc_adjust, 1)
+#ifdef AMIBERRY
+		|| cfgfile_intval(option, value, _T("agnusrev"), &p->cs_agnusrev, 1)
+		|| cfgfile_intval(option, value, _T("deniserev"), &p->cs_deniserev, 1)
+#endif
 		|| cfgfile_intval(option, value, _T("hsyncadjust"), &p->cs_hsyncadjust, 1)
 		|| cfgfile_intval(option, value, _T("vsyncadjust"), &p->cs_vsyncadjust, 1)
 		|| cfgfile_intval(option, value, _T("rndseed"), &p->seed, 1))
@@ -9564,8 +9581,10 @@ static void buildin_default_prefs (struct uae_prefs *p)
 	p->mbresmem_high.size = 0;
 	p->z3chipmem.size = 0;
 	for (int i = 0; i < MAX_RAM_BOARDS; i++) {
-		memset(p->fastmem, 0, sizeof(struct ramboard));
-		memset(p->z3fastmem, 0, sizeof(struct ramboard));
+		// Clear the board, not the array head: the old memset(p->fastmem, ...)
+		// only worked because [0] aliases the whole array.
+		memset(&p->fastmem[i], 0, sizeof(struct ramboard));
+		memset(&p->z3fastmem[i], 0, sizeof(struct ramboard));
 	}
 	for (auto& rtgboard : p->rtgboards) {
 		rtgboard.rtgmem_size = 0x00000000;

@@ -671,14 +671,6 @@ void fixup_prefs (struct uae_prefs *p, bool userconfig)
 		p->produce_sound = 0;
 	}
 
-	if ((p->z3fastmem[0].size || p->z3fastmem[1].size || p->z3fastmem[2].size || p->z3fastmem[3].size || p->z3chipmem.size) && p->address_space_24) {
-		error_log (_T("Z3 fast memory can't be used if address space is 24-bit."));
-		p->z3fastmem[0].size = 0;
-		p->z3fastmem[1].size = 0;
-		p->z3fastmem[2].size = 0;
-		p->z3fastmem[3].size = 0;
-		p->z3chipmem.size = 0;
-	}
 	for (auto& rtgboard : p->rtgboards)
 	{
 		if (rtgboard.rtgmem_size > 0 && rtgboard.rtgmem_type == GFXBOARD_UAE_Z3 && p->address_space_24) {
