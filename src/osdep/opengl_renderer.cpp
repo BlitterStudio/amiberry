@@ -919,11 +919,12 @@ void OpenGLRenderer::destroy_shader_resolve_target()
 }
 
 void OpenGLRenderer::render_shader_resolve(
-	const int x, const int y, const int width, const int height)
+	const int x, const int y, const int width, const int height,
+	const GLuint target_framebuffer)
 {
 	if (m_shader.resolve_texture == 0 || width <= 0 || height <= 0)
 		return;
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glBindFramebuffer(GL_FRAMEBUFFER, target_framebuffer);
 	if (!init_osd_shader())
 		return;
 
@@ -974,6 +975,25 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 			write_log("SDL_GL_MakeCurrent failed: %s\n", SDL_GetError());
 		}
 	}
+	// The window's own framebuffer. It is 0 everywhere except iOS, where GL
+	// contexts have no default framebuffer and SDL's UIKit view renders into
+	// a per-window FBO that SDL exposes as a window property. Every final
+	// pass below must target it instead of a hardcoded 0, or the whole
+	// present draws nowhere (the ImGui GUI is unaffected because its
+	// SDL_Renderer captures the same binding internally).
+	GLuint window_framebuffer = 0;
+#ifdef AMIBERRY_IOS
+	if (mon->amiga_window) {
+		const SDL_PropertiesID props = SDL_GetWindowProperties(mon->amiga_window);
+		window_framebuffer = static_cast<GLuint>(SDL_GetNumberProperty(props,
+			SDL_PROP_WINDOW_UIKIT_OPENGL_FRAMEBUFFER_NUMBER, 0));
+	}
+	if (window_framebuffer == 0) {
+		GLint bound = 0;
+		glGetIntegerv(GL_FRAMEBUFFER_BINDING, &bound);
+		window_framebuffer = static_cast<GLuint>(bound);
+	}
+#endif
 
 #if defined(__linux__)
 	// Probe only now that this renderer's context is current: earlier, the
@@ -1198,6 +1218,8 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 	const int glDestY = drawableHeight - final_rect.y - final_rect.h;
 
 	// Clear whenever the presentation leaves any part of the drawable uncovered.
+	glBindFramebuffer(GL_FRAMEBUFFER, window_framebuffer);
+
 	const AmiberryGfxRect drawable_area{0, 0, drawableWidth, drawableHeight};
 	if (!amiberry_gfx_rect_covers_area(final_rect, drawable_area)) {
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
@@ -1242,7 +1264,7 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 	const int shader_viewport_y = use_shader_resolve
 		? 0 : glDestY;
 	const GLuint shader_framebuffer = use_shader_resolve
-		? m_shader.resolve_framebuffer : 0;
+		? m_shader.resolve_framebuffer : window_framebuffer;
 	if (use_shader_resolve) {
 		glBindFramebuffer(GL_FRAMEBUFFER, shader_framebuffer);
 		glViewport(0, 0, shader_viewport_w, shader_viewport_h);
@@ -1322,6 +1344,10 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 			? begin_dmabuf_frame(surface, is_cropped ? crop_x : 0, is_cropped ? crop_y : 0, src_w, src_h)
 			: 0;
 
+		// The final CRT pass must land in the window's framebuffer (0 on
+		// desktop GL, SDL's UIKit view FBO on iOS).
+		m_shader.crtemu->default_framebuffer = window_framebuffer;
+
 		// crtemu_present expects attribute 0 to be enabled.
 		glEnableVertexAttribArray(0);
 		// Disable other attributes that might have been enabled by OSD or other passes
@@ -1348,7 +1374,8 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 	}
 
 	if (use_shader_resolve) {
-		render_shader_resolve(final_rect.x, glDestY, final_rect.w, final_rect.h);
+		render_shader_resolve(final_rect.x, glDestY, final_rect.w, final_rect.h,
+			window_framebuffer);
 	}
 
 	render_software_cursor(monid, final_rect.x, glDestY, final_rect.w, final_rect.h);

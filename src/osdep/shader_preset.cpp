@@ -1203,7 +1203,7 @@ void ShaderPreset::render(const unsigned char* pixels, int width, int height, in
 	if (!run_flip_pass(width, height)) {
 		// Flip pass failed (e.g. shader compile error); drop the frame
 		// rather than render an upside-down image.
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glBindFramebuffer(GL_FRAMEBUFFER, target_framebuffer);
 		return;
 	}
 
@@ -1226,7 +1226,7 @@ void ShaderPreset::render(const unsigned char* pixels, int width, int height, in
 		// Create/update FBO for this pass
 		if (!create_pass_fbo(i, input_w, input_h, viewport_w, viewport_h)) {
 			write_log("Failed to create FBO for pass %d, aborting render\n", i);
-			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+			glBindFramebuffer(GL_FRAMEBUFFER, target_framebuffer);
 			return;
 		}
 
@@ -1283,7 +1283,7 @@ void ShaderPreset::render(const unsigned char* pixels, int width, int height, in
 	set_framebuffer_srgb_enabled(false);
 	glBindVertexArray(0);
 	glBindTexture(GL_TEXTURE_2D, 0);
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glBindFramebuffer(GL_FRAMEBUFFER, target_framebuffer);
 }
 
 // ---- Parameter Management ----
