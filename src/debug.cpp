@@ -61,6 +61,9 @@
 #if defined(AMIBERRY) && defined(USE_IPC_SOCKET)
 #include "amiberry_ipc.h"
 #endif
+#ifdef AMIBERRY
+#include "osdep/settings/amiberry_actions.h"
+#endif
 #ifdef WITH_SOFTFLOAT
 #include "softfloat/softfloat.h"
 #endif
@@ -128,6 +131,9 @@ bool debugger_poll_external_control(void)
 #ifdef USE_IPC_SOCKET
 	Amiberry::IPC::IPCHandle();
 #endif
+	// The stop loops do not return to handle_events(), so actions posted by
+	// native front ends (reset, quit, media) are drained here as well.
+	amiberry_actions_run_pending();
 	if (quit_program) {
 		debugger_stopped.store(false, std::memory_order_release);
 		return true;
@@ -271,13 +277,15 @@ const char* debugger_last_stop_reason(void)
 }
 
 // The GDB stop loop does not return to handle_events(), so it calls this to
-// keep answering IPC (read-only MONITOR queries, status) while GDB holds the
-// CPU. MONITOR refuses state changes while a GDB client is connected.
+// keep answering IPC (read-only MONITOR queries, status) and to run actions
+// posted by native front ends while GDB holds the CPU. MONITOR refuses state
+// changes while a GDB client is connected.
 void debugger_service_ipc(void)
 {
 #ifdef USE_IPC_SOCKET
 	Amiberry::IPC::IPCHandle();
 #endif
+	amiberry_actions_run_pending();
 }
 
 #endif

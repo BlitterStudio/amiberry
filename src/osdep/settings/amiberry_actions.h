@@ -10,8 +10,9 @@
  * (SwiftUI, WinUI, GTK), and the emulator must never be driven from
  * anywhere but its main thread. Posted actions wait in a queue that the
  * emulator's main thread drains in order, between frames, while the GUI is
- * open, and (through the IPC transport) while the native debugger is
- * stopped.
+ * open, and while a GDB client or the native debugger has the CPU stopped
+ * (the debugger window, or its terminal console while IPC is enabled; a
+ * terminal console without IPC blocks on its input).
  *
  * Status is a snapshot of the running emulator (run state, drive LEDs and
  * activity, inserted media) that the main thread refreshes at every drain

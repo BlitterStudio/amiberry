@@ -233,7 +233,6 @@ def main():
         cfg = os.path.join(work, "state.uae")
         check("SAVESTATE replies OK", control.request(f"SAVESTATE\t{state}\t{cfg}") == "OK")
         check("state file written", os.path.exists(state))
-        check("LOADSTATE replies OK", control.request(f"LOADSTATE\t{state}") == "OK")
         # A missing state file fails before a restore (and its reset) is
         # scheduled; master replied OK and then reset the guest.
         missing = os.path.join(work, "missing.uss")
@@ -287,6 +286,12 @@ def main():
               not reply.startswith("ERROR\tUsage"), reply)
         check("SETTINGS_RESET_SESSION after the empty value",
               control.request("SETTINGS_RESET_SESSION") == "OK")
+
+        # One restore can be pending: a second load in the same pass fails
+        # instead of replacing the first after both replied OK.
+        replies = control.pipeline([f"LOADSTATE\t{state}", f"LOADSTATE\t{state}"])
+        check("pipelined LOADSTATE: first OK, second refused",
+              replies == ["OK", "ERROR\tA state restore is already pending"], str(replies))
 
         check("QUIT answered", control.request("QUIT") == "OK")
         control.close()

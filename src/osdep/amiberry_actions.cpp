@@ -43,6 +43,18 @@ amiberry_actions::action_queue& queue()
 	return instance;
 }
 
+// savestate_state and savestate_fname describe a single restore (or rewind)
+// that the next vsync starts and savestate_restore_finish() clears. State
+// actions that would replace or redirect it fail until it has run.
+bool restore_pending(std::string* error)
+{
+	if (!(savestate_state & (STATE_DORESTORE | STATE_RESTORE | STATE_DOREWIND | STATE_REWIND))) {
+		return false;
+	}
+	*error = "A state restore is already pending";
+	return true;
+}
+
 // The strings are the ones the IPC transport replies with; it forwards them
 // unchanged.
 bool execute(const request& r, void*, std::string* error)
@@ -126,6 +138,11 @@ bool execute(const request& r, void*, std::string* error)
 			return false;
 		}
 #endif
+		// Saving rewrites savestate_fname, which would redirect a pending
+		// restore to the file just saved.
+		if (restore_pending(error)) {
+			return false;
+		}
 		if (r.k == kind::save_state) {
 			savestate_initsave(r.path.c_str(), 1, true, true);
 			// save_state() returns 0 when the file cannot be written (or -1
@@ -143,6 +160,12 @@ bool execute(const request& r, void*, std::string* error)
 		return true;
 
 	case kind::load_state:
+		// savestate_state/savestate_fname hold one restore; a second load
+		// in the same drain would replace the first after both reported
+		// success, so it fails until the pending restore has run.
+		if (restore_pending(error)) {
+			return false;
+		}
 		// A restore is scheduled for the next vsync and starts with a reset,
 		// which happens even when the file then cannot be opened; check it
 		// first so a missing or empty path fails without touching the guest
@@ -156,6 +179,11 @@ bool execute(const request& r, void*, std::string* error)
 		return true;
 
 	case kind::load_state_slot:
+		// savestate_quick() writes savestate_fname even when the slot is
+		// empty, so a pending restore is checked before calling it.
+		if (restore_pending(error)) {
+			return false;
+		}
 		// 0 means there was nothing to load (no usable state file name, or
 		// the slot's file does not exist); the restore was not scheduled.
 		if (savestate_quick(r.number, 0) == 0) {
