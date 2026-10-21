@@ -1,0 +1,7 @@
+/* Exposes Amiberry's C settings API (src/osdep/settings/amiberry_settings.h)
+ * to Swift through the clang module importer. The header is consumed in
+ * place so Swift front ends can never drift from the C99 contract. */
+module AmiberrySettings {
+    header "../../src/osdep/settings/amiberry_settings.h"
+    export *
+}

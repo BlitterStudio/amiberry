@@ -520,10 +520,38 @@ if(ANDROID)
 
     # --- Existing dependencies ---
 elseif(IOS)
-    # iOS: SDL3 and SDL3_image must be pre-built and findable via CMAKE_FIND_ROOT_PATH.
-    # Most optional codecs and network libs are unavailable or unnecessary on iOS.
-    find_package(SDL3 CONFIG REQUIRED)
-    find_package(SDL3_image CONFIG REQUIRED)
+    # iOS: SDL3 and SDL3_image are built from source via FetchContent with the
+    # same pinned tags as the Android build, so a clean checkout configures for
+    # iOS with nothing but Xcode and the iOS SDK. Most optional codecs and
+    # network libs are unavailable or unnecessary on iOS.
+    include(FetchContent)
+    set(SDL_STATIC ON CACHE BOOL "Build SDL3 as a static library on iOS" FORCE)
+    set(SDL_SHARED OFF CACHE BOOL "Shared SDL3 is not usable in an iOS app bundle" FORCE)
+    FetchContent_Declare(
+        sdl3
+        GIT_REPOSITORY https://github.com/libsdl-org/SDL.git
+        GIT_TAG        release-3.4.16
+    )
+    # SDL_image defines BUILD_SHARED_LIBS (default ON) via cmake_dependent_option,
+    # which would make it expect a shared SDL3 (SDL3::SDL3-shared) that iOS does
+    # not build. Pin it OFF up front; iOS bundles only link static libraries.
+    # (capsimage is unaffected: it builds SHARED explicitly.)
+    set(BUILD_SHARED_LIBS OFF CACHE BOOL "iOS builds link static libraries" FORCE)
+    FetchContent_Declare(
+        sdl3_image
+        GIT_REPOSITORY https://github.com/libsdl-org/SDL_image.git
+        GIT_TAG        release-3.4.6
+    )
+    set(SDLIMAGE_AVIF OFF CACHE BOOL "Disable AVIF support in iOS vendored SDL_image" FORCE)
+    set(SDLIMAGE_PNG_LIBPNG OFF CACHE BOOL "Use SDL's PNG helpers instead of SDL_image's vendored libpng on iOS" FORCE)
+    FetchContent_MakeAvailable(sdl3 sdl3_image)
+    # SDL3_image's CONFIG package links SDL3 transitively; the FetchContent
+    # static targets may not, so link SDL3 explicitly.
+    if(TARGET SDL3::SDL3-static)
+        target_link_libraries(${PROJECT_NAME} PRIVATE SDL3::SDL3-static)
+    elseif(TARGET SDL3-static)
+        target_link_libraries(${PROJECT_NAME} PRIVATE SDL3-static)
+    endif()
     find_package(ZLIB REQUIRED)
     find_package(PNG QUIET)
     if(PNG_FOUND)

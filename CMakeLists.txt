@@ -6,6 +6,19 @@ endif()
 
 # Before project(), which otherwise creates it empty
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE BOOL "Export compile_commands.json")
+# Native Apple UI: must be parsed before project() so the deployment target
+# is part of the initial compiler flags (setting CMAKE_OSX_DEPLOYMENT_TARGET
+# after project() no longer changes -mmacosx-version-min). The option targets
+# the oldest systems with Swift Observation: iOS 17.0 / macOS 14.0. With the
+# option OFF nothing changes: no Swift, and platform defaults apply.
+option(AMIBERRY_NATIVE_APPLE_UI "Build the native Apple UI layer (Swift) into the app; macOS and iOS only" OFF)
+if(AMIBERRY_NATIVE_APPLE_UI AND NOT DEFINED CMAKE_OSX_DEPLOYMENT_TARGET)
+    if(DEFINED CMAKE_SYSTEM_NAME AND CMAKE_SYSTEM_NAME STREQUAL "iOS")
+        set(CMAKE_OSX_DEPLOYMENT_TARGET "17.0")
+    else()
+        set(CMAKE_OSX_DEPLOYMENT_TARGET "14.0")
+    endif()
+endif()
 
 project(amiberry
     VERSION 8.4.2
@@ -64,6 +77,17 @@ option(WITH_PGO_GENERATE "Generate profile data for Profile-Guided Optimization"
 option(WITH_PGO_USE      "Use profile data for Profile-Guided Optimization" OFF)
 option(WITH_OPTIMIZE     "Enable native CPU optimizations" OFF)
 option(BUNDLE_SDL        "Bundle SDL3 shared libraries into the package (for distros without SDL3)" OFF)
+# Native Apple UI is Apple-only; validated after project() sets APPLE/IOS.
+if(AMIBERRY_NATIVE_APPLE_UI AND NOT APPLE)
+    message(FATAL_ERROR "AMIBERRY_NATIVE_APPLE_UI requires an Apple platform (macOS or iOS)")
+endif()
+
+# Deployment target applied to the app target under the Xcode generator
+# (16.0 historically; the native UI requires iOS 17).
+set(AMIBERRY_IOS_DEPLOYMENT_TARGET "16.0")
+if(IOS AND AMIBERRY_NATIVE_APPLE_UI)
+    set(AMIBERRY_IOS_DEPLOYMENT_TARGET "17.0")
+endif()
 set(PGO_PROFILE_DIR "" CACHE PATH "Directory containing Profile-Guided Optimization data")
 set(QEMU_UAE_PLUGIN "" CACHE FILEPATH "Path to a prebuilt qemu-uae plugin artifact to bundle")
 set(QEMU_UAE_PLUGIN_DIR "" CACHE PATH "Directory containing the QEMU-UAE plugin artifact and any sidecar runtime files")
@@ -214,6 +238,12 @@ set(AMIBERRY_PACKAGE_METADATA_EXCLUDES
 include(cmake/StandardProjectSettings.cmake)
 include(cmake/SourceFiles.cmake)
 include(cmake/Dependencies.cmake)
+
+# Native Apple UI layer (Swift). Included after dependency discovery so the
+# Swift static library links into the fully-populated amiberry target.
+if(AMIBERRY_NATIVE_APPLE_UI)
+    include(cmake/AppleNativeUI.cmake)
+endif()
 
 # Install rules may need dependency targets, such as SDL3 and SDL3_image,
 # so include them after dependency discovery.

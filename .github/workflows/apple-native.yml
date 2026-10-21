@@ -1,0 +1,140 @@
+name: Apple native CI
+
+# Builds the Apple targets that C/C++ CI does not cover:
+#   - macOS with the native UI layer (Swift) enabled  (Ninja generator)
+#   - iOS simulator, arm64                            (Xcode generator)
+#   - iOS device, arm64, unsigned                      (Xcode generator)
+#
+# iOS builds fetch SDL3/SDL3_image from source (cmake/Dependencies.cmake),
+# so a clean checkout needs only Xcode — no prebuilt dependency SDKs.
+#
+# Local equivalents (run from the repository root):
+#   macOS native UI:
+#     cmake -B build -G Ninja -DAMIBERRY_NATIVE_APPLE_UI=ON
+#     cmake --build build
+#   iOS simulator:
+#     cmake -B build-ios-sim -G Xcode -DCMAKE_SYSTEM_NAME=iOS \
+#       -DCMAKE_OSX_SYSROOT=iphonesimulator -DCMAKE_OSX_ARCHITECTURES=arm64 \
+#       -DAMIBERRY_NATIVE_APPLE_UI=ON -DCMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED=NO
+#     cmake --build build-ios-sim --config Release
+#   iOS device (unsigned):
+#     cmake -B build-ios-dev -G Xcode -DCMAKE_SYSTEM_NAME=iOS \
+#       -DCMAKE_OSX_SYSROOT=iphoneos -DCMAKE_OSX_ARCHITECTURES=arm64 \
+#       -DAMIBERRY_NATIVE_APPLE_UI=ON \
+#       -DCMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED=NO \
+#       -DCMAKE_XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY=""
+#     cmake --build build-ios-dev --config Release
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [master]
+    tags:
+      - 'v*'
+      - 'preview-v*'
+    paths-ignore:
+      - '**.md'
+      - 'wiki/**'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/FUNDING.yml'
+      - '.github/CODE_OF_CONDUCT.md'
+      - '.github/CONTRIBUTING.md'
+  pull_request:
+    paths-ignore:
+      - '**.md'
+      - 'wiki/**'
+
+# Cancel older in-progress runs for the same branch/PR ref.
+# This reduces wasted CI minutes when multiple pushes happen quickly.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+# Set least-privilege defaults for all jobs
+permissions:
+  contents: read
+
+jobs:
+  build-macOS-native-ui:
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - name: Install dependencies (Homebrew)
+        run: |
+          brew update
+          brew install ninja || true
+          brew bundle || { sleep 10; brew bundle; }
+
+      - name: Build for macOS with the native UI layer
+        run: |
+          cmake -B build -G Ninja -DAMIBERRY_NATIVE_APPLE_UI=ON
+          cmake --build build -j"$(sysctl -n hw.ncpu)"
+
+      - name: Verify the Swift layer is linked in
+        run: |
+          # amiberry_native_ui_startup_log() prints this line from Swift at
+          # startup; the literal must be present in the linked executable.
+          strings build/Amiberry.app/Contents/MacOS/Amiberry \
+            | grep -F "[AmiberryNativeUI] settings layer ready"
+
+  build-iOS-simulator:
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - name: Build for the iOS simulator (arm64)
+        run: |
+          cmake -B build-ios-sim -G Xcode \
+            -DCMAKE_SYSTEM_NAME=iOS \
+            -DCMAKE_OSX_SYSROOT=iphonesimulator \
+            -DCMAKE_OSX_ARCHITECTURES=arm64 \
+            -DAMIBERRY_NATIVE_APPLE_UI=ON \
+            -DCMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED=NO
+          cmake --build build-ios-sim --config Release --parallel
+
+      - name: Verify the app bundle and Swift layer
+        run: |
+          app="$(find build-ios-sim -name Amiberry.app -type d | head -1)"
+          test -n "$app"
+          test -f "$app/Amiberry"
+          file "$app/Amiberry"
+          strings "$app/Amiberry" \
+            | grep -F "[AmiberryNativeUI] settings layer ready"
+
+  build-iOS-device:
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - name: Build for the iOS device (arm64, unsigned)
+        run: |
+          cmake -B build-ios-dev -G Xcode \
+            -DCMAKE_SYSTEM_NAME=iOS \
+            -DCMAKE_OSX_SYSROOT=iphoneos \
+            -DCMAKE_OSX_ARCHITECTURES=arm64 \
+            -DAMIBERRY_NATIVE_APPLE_UI=ON \
+            -DCMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED=NO \
+            -DCMAKE_XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY=""
+          cmake --build build-ios-dev --config Release --parallel
+
+      - name: Verify the unsigned app bundle
+        run: |
+          app="$(find build-ios-dev -name Amiberry.app -type d | head -1)"
+          test -n "$app"
+          test -f "$app/Amiberry"
+          # Unsigned CI build: the binary must not carry a code signature.
+          codesign --verify "$app/Amiberry" && exit 1 || echo "OK: unsigned"
+          file "$app/Amiberry"
