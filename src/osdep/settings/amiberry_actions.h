@@ -102,9 +102,11 @@ typedef struct amiberry_actions_status {
  *
  * The return value identifies the action for amiberry_actions_poll() and is
  * non-zero unless the action was rejected on the spot: an argument out of
- * range, a NULL/empty path where a path is required, or a queue already
+ * range, a NULL path or one too long for the emulator, or a queue already
  * holding AMIBERRY_ACTIONS_MAX_PENDING actions (the main thread is not
- * draining). Rejected actions never execute.
+ * draining). Rejected actions never execute. An empty path is accepted:
+ * for a floppy or CD it empties the drive, as the IPC commands always did;
+ * for a state file or screenshot the action fails when it runs.
  *
  * reset: hard resets like a power cycle, keyboard like the Ctrl-Amiga-Amiga
  * key combination. save_state/load_state take a state file path;
