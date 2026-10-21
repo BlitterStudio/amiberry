@@ -13,6 +13,9 @@
 #include "newcpu.h"
 #include "cpuboard.h"
 #include "autoconf.h"
+#include "custom.h"
+#include "disk.h"
+#include "blkdev.h"
 #include "x86.h"
 
 #include "settings/amiberry_settings.h"
@@ -62,6 +65,32 @@ uaecptr need_uae_boot_rom(uae_prefs*)
 bool is_ppc_cpu(uae_prefs*) { return false; }
 int is_x86_cpu(uae_prefs*) { return 0; }
 
+// The memory window the memory domain clamps against; the real value is
+// host-dependent, the tests use the common 512 MB reservation.
+size_t max_z3fastmem = 512 * 1024 * 1024;
+int cpuboard_maxmemory(uae_prefs*) { return 128 * 1024 * 1024; }
+int cpuboard_memorytype(uae_prefs*) { return BOARD_MEMORY_HIGHMEM; }
+
+// Preset engine stand-in: the harness cannot link cfgfile.cpp, so it
+// records the request and applies a few marker fields the Quickstart
+// constraints are known to react to. Both the layer and the frozen
+// reference implementation below run against this same stand-in, so the
+// test still proves the constraint move changed nothing.
+static int stub_preset_model = -1, stub_preset_config = -1, stub_preset_compa = -1;
+int built_in_prefs(uae_prefs* p, int model, int config, int compa, int romcheck)
+{
+	(void)romcheck;
+	stub_preset_model = model;
+	stub_preset_config = config;
+	stub_preset_compa = compa;
+	p->floppyslots[0].dfxtype = DRV_35_HD; // constraints must force DD on A500-class
+	p->floppyslots[1].dfxtype = DRV_35_DD;
+	p->cdslots[0].inuse = true;
+	p->cdslots[0].type = SCSI_UNIT_DEFAULT;
+	p->jports[1].mode = 3;
+	return 1;
+}
+
 namespace settings = amiberry_settings;
 
 namespace {
@@ -94,6 +123,23 @@ void reset_prefs(uae_prefs& p)
 #ifdef USE_JIT_FPU
 	p.compfpu = true;
 #endif
+	// The machine fields of default_prefs() (src/cfgfile.cpp).
+	p.chipset_mask = CSMASK_ECS_AGNUS;
+	p.collision_level = 3;
+	p.keyboard_nkro = true;
+	p.cs_compatible = CP_GENERIC;
+	p.cs_rtc = 2;
+	p.cs_ciaoverlay = true;
+	p.cs_ksmirror_e0 = true;
+	p.cs_df0idhw = true;
+	p.cs_resetwarning = true;
+	p.cs_memorypatternfill = true;
+	p.cs_fatgaryrev = -1;
+	p.cs_ramseyrev = -1;
+	p.cs_agnusrev = -1;
+	p.cs_deniserev = -1;
+	p.chipmem.size = 0x80000;
+	p.bogomem.size = 0x80000;
 }
 
 std::string value_of(const uae_prefs& p, const char* id)
@@ -151,6 +197,10 @@ void check_descriptors()
 			CHECK(v >= d->min && v <= d->max);
 			break;
 		}
+		case AMIBERRY_SETTING_PATH:
+		case AMIBERRY_SETTING_STRING:
+			// Free-form values only need a non-null default string.
+			break;
 		case AMIBERRY_SETTING_CHOICE: {
 			CHECK(d->choices && d->choice_count > 0);
 			bool found = false;
@@ -684,6 +734,413 @@ void emit_roundtrip()
 	apply("ppc_cpu_idle", "max");
 	emit("ppc", p);
 #endif
+
+	// Machine scenarios: chipset, memory and ROM option classes.
+	reset_prefs(p);
+	apply("chipset", "aga");
+	apply("collision_level", "sprites");
+	apply("keyboard_type", "a1200_6805");
+	apply("keyboard_nkro", "false");
+	apply("display_optimizations", "none");
+	apply("hvcsync", "csync");
+	apply("ntsc", "true");
+	emit("aga_ntsc", p);
+
+	reset_prefs(p);
+	apply("cpu_model", "68020");
+	p.cpu_cycle_exact = p.cpu_memory_cycle_exact = p.blitter_cycle_exact = false;
+	apply("cycle_exact", "memory");
+	apply("immediate_blits", "true");
+	emit("cycle_exact_memory", p);
+
+	reset_prefs(p);
+	apply("chipset_compatible", "A500");
+	emit("a500_compatible", p);
+
+	reset_prefs(p);
+	// The A600 extra enables the machine's IDE controller (ide=a600/a1200
+	// is written by the core); the layer's ide option itself stays greyed
+	// out under a chipset extra, exactly like the old panel.
+	apply("chipset_compatible", "A600");
+	apply("chipmem_size", "2");
+	emit("a600_compatible", p);
+
+	reset_prefs(p);
+	apply("cpu_model", "68030");
+	apply("cpu_24bit_addressing", "false");
+	apply("cycle_exact", "false");
+	apply("cpu_compatible", "false");
+	apply("chipmem_size", "4");
+	apply("bogomem_size", "0");
+	apply("fastmem_size", "8");
+	apply("z3mem_size", "128");
+	apply("z3mem2_size", "16");
+	apply("a3000mem_size", "8");
+	apply("mbresmem_size", "32");
+	apply("megachipmem_size", "32");
+	apply("z3mapping", "real");
+	emit("bigbox_ram", p);
+
+	reset_prefs(p);
+	apply("fastmem_size_k", "512");
+	emit("fastmem_kb", p);
+
+	reset_prefs(p);
+	apply("cpu_model", "68030");
+	apply("cpu_24bit_addressing", "false");
+	apply("cycle_exact", "false");
+	apply("cpu_compatible", "false");
+	apply("maprom", "0x0f000000");
+	apply("kickshifter", "true");
+	apply("uaeboard", "full");
+	emit("maprom_uaeboard", p);
+
+	reset_prefs(p);
+	apply("genlock", "true");
+	apply("genlockmode", "testcard");
+	apply("genlock_mix", "75");
+	apply("genlock_alpha", "true");
+	apply("genlock_aspect", "true");
+	emit("genlock", p);
+}
+
+// ---------------------------------------------------------------- machine
+
+// The availability rules the panels used to enforce with disabled widgets
+// (and, in three cases, with writes on every frame).
+void check_machine_availability()
+{
+	uae_prefs& p = test_prefs;
+	reset_prefs(p);
+	// Memory cycle-exact on a 68000 keeps the blitter waiting option off.
+	CHECK(!available(p, "waiting_blits"));
+	set(p, "cycle_exact", "false");
+	CHECK(available(p, "waiting_blits"));
+	CHECK(!available(p, "keyboard_nkro")); // default keyboard is UAE
+	set(p, "keyboard_type", "a500_6570-036");
+	CHECK(available(p, "keyboard_nkro"));
+	set(p, "keyboard_type", "a2000_8039");
+	CHECK(!available(p, "keyboard_nkro"));
+	set(p, "keyboard_type", "disconnected");
+	CHECK(available(p, "keyboard_nkro"));
+
+	set(p, "immediate_blits", "true");
+	CHECK(!available(p, "waiting_blits"));
+	set(p, "immediate_blits", "false");
+	CHECK(available(p, "waiting_blits"));
+
+	// Advanced chipset options are greyed out under a chipset extra.
+	CHECK(!available(p, "ciaatod"));
+	CHECK(!available(p, "ide"));
+	CHECK(!available(p, "pcmcia"));
+	CHECK(!available(p, "ramsey"));
+	CHECK(available(p, "rtc")); // the RTC radios stay usable
+	set(p, "chipset_compatible", "-");
+	CHECK(available(p, "ciaatod"));
+	CHECK(available(p, "ide"));
+	CHECK(available(p, "ramsey"));
+
+	// The 1M chip jumper only exists below 1 MB chip RAM.
+	CHECK(available(p, "1mchipjumper"));
+	set(p, "chipmem_size", "2");
+	CHECK(!available(p, "1mchipjumper"));
+
+	// Z3 memory needs 32-bit addressing.
+	CHECK(!available(p, "z3mem_size"));
+	CHECK(!available(p, "megachipmem_size"));
+	CHECK(!available(p, "z3mapping"));
+	CHECK(!choice_available(p, "z3mem_size", "512"));
+	set(p, "cpu_model", "68030"); // clears 24-bit addressing
+	CHECK(value_of(p, "cpu_24bit_addressing") == "false");
+	CHECK(available(p, "z3mem_size"));
+	CHECK(choice_available(p, "z3mem_size", "512"));
+	CHECK(!choice_available(p, "z3mem_size", "1024")); // above the 512 MB window
+
+	// MapROM conflicts with an accelerator board; the UAE board needs a
+	// stopped emulator.
+	CHECK(available(p, "maprom"));
+	CHECK(available(p, "uaeboard"));
+	p.cpuboard_type = 1;
+	CHECK(!available(p, "maprom"));
+	p.cpuboard_type = 0;
+	CHECK(!available(p, "uaeboard", settings::context{true}));
+
+	// The genlock group needs a genlock (or genlock effects).
+	CHECK(!available(p, "genlockmode"));
+	CHECK(!available(p, "genlock_mix"));
+	set(p, "genlock", "true");
+	CHECK(available(p, "genlockmode"));
+	CHECK(available(p, "genlock_mix"));
+	CHECK(choice_available(p, "genlockmode", "testcard"));
+	CHECK(!choice_available(p, "genlockmode", "video")); // VIDEOGRAB-only
+	set(p, "genlockmode", "image");
+	CHECK(available(p, "genlock_image"));
+	CHECK(!available(p, "genlock_video"));
+}
+
+// The dependent changes the RAM and Chipset panels made on interaction.
+void check_machine_dependents()
+{
+	uae_prefs& p = test_prefs;
+	reset_prefs(p);
+
+	// AGA implies both ECS chips; ECS Agnus follows chip RAM above 512 KB.
+	set(p, "chipset", "aga");
+	CHECK((p.chipset_mask & CSMASK_AGA) && (p.chipset_mask & CSMASK_ECS_AGNUS)
+		&& (p.chipset_mask & CSMASK_ECS_DENISE));
+	reset_prefs(p);
+	set(p, "chipset", "ocs");
+	CHECK(p.chipset_mask == CSMASK_OCS);
+	set(p, "chipmem_size", "2");
+	CHECK(p.chipset_mask & CSMASK_ECS_AGNUS);
+
+	// Chip RAM above 2 MB pushes Z2 fast RAM out; the other direction too.
+	// (chipmem_size counts 512 KB units: "8" is 4 MB, "16" is 8 MB.)
+	p.fastmem[0].size = 8 * 1024 * 1024;
+	set(p, "chipmem_size", "8");
+	CHECK(p.fastmem[0].size <= 262144);
+	set(p, "chipmem_size", "16");
+	CHECK(p.chipmem.size == 0x800000);
+	p.fastmem[0].size = 4 * 1024 * 1024;
+	set(p, "fastmem_size", "8");
+	CHECK(p.chipmem.size == 0x200000);
+
+	// Z3 memory above the reserved window is unavailable (the panel used
+	// to clamp the slider silently); inside it, it stores verbatim.
+	set(p, "cpu_model", "68030");
+	max_z3fastmem = 256 * 1024 * 1024;
+	CHECK(set(p, "z3mem_size", "512") == AMIBERRY_SETTINGS_UNAVAILABLE);
+	CHECK(set(p, "z3mem_size", "256") == AMIBERRY_SETTINGS_OK);
+	CHECK(p.z3fastmem[0].size == 256 * 1024 * 1024);
+	CHECK(set(p, "megachipmem_size", "512") == AMIBERRY_SETTINGS_UNAVAILABLE);
+	max_z3fastmem = 512 * 1024 * 1024;
+	set(p, "z3mem_size", "512");
+	CHECK(p.z3fastmem[0].size == 512 * 1024 * 1024);
+
+	// NTSC moves the output refresh rate, but only on a real change.
+	set(p, "ntsc", "true");
+	CHECK(p.ntscmode && p.chipset_refreshrate == 60.0f);
+	p.chipset_refreshrate = 57.0f;
+	set(p, "ntsc", "true"); // re-clicked
+	CHECK(p.chipset_refreshrate == 57.0f);
+	set(p, "ntsc", "false");
+	CHECK(!p.ntscmode && p.chipset_refreshrate == 50.0f);
+
+	// Blitter waiting and immediate blits exclude each other.
+	set(p, "immediate_blits", "true");
+	CHECK(p.waiting_blits == 0);
+	set(p, "immediate_blits", "false");
+	set(p, "waiting_blits", "always");
+	CHECK(!p.immediate_blits && p.waiting_blits == 3);
+
+	// Cycle exactness: memory on a 68020 applies the WinUAE dependents; off
+	// clears everything. (Memory exact needs a 68020: below that it is
+	// indistinguishable from full cycle exact and unavailable.)
+	reset_prefs(p);
+	set(p, "cpu_model", "68020");
+	p.cpu_cycle_exact = p.cpu_memory_cycle_exact = p.blitter_cycle_exact = false;
+	p.gfx_framerate = 2;
+	set(p, "cycle_exact", "memory");
+	CHECK(!p.cpu_cycle_exact && p.cpu_memory_cycle_exact && p.blitter_cycle_exact);
+	CHECK(p.m68k_speed == 0 && p.cpu_compatible && !p.immediate_blits && p.cachesize == 0
+		&& p.gfx_framerate == 1);
+	set(p, "cycle_exact", "true");
+	CHECK(p.cpu_cycle_exact && p.cpu_memory_cycle_exact && p.blitter_cycle_exact);
+	set(p, "cycle_exact", "false");
+	CHECK(!p.cpu_cycle_exact && !p.cpu_memory_cycle_exact && !p.blitter_cycle_exact);
+	CHECK(!choice_available(p, "cycle_exact", "memory") || p.cpu_model >= 68020);
+
+	// A chipset extra rewrites the advanced chipset options.
+	reset_prefs(p);
+	set(p, "chipset_compatible", "A500");
+	CHECK(!p.cs_df0idhw && !p.cs_resetwarning);
+
+	// Processor slot RAM syncs the accelerator board copy.
+	reset_prefs(p);
+	p.cpuboard_type = 1;
+	set(p, "mbresmem_size", "32");
+	CHECK(p.cpuboardmem1.size == 32 * 1024 * 1024);
+
+	// The UAE board combo stores board and boot ROM as the panel did.
+	set(p, "uaeboard", "full");
+	CHECK(p.uaeboard == 2 && p.boot_rom == 0);
+	CHECK(value_of(p, "boot_rom_uae") == "automatic");
+}
+
+void check_machine_rejections()
+{
+	uae_prefs& p = test_prefs;
+	reset_prefs(p);
+	CHECK(set(p, "chipset", "ocs_agnus") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	CHECK(set(p, "chipmem_size", "5") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	CHECK(set(p, "bogomem_size", "3") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	CHECK(set(p, "collision_level", "4") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	CHECK(set(p, "rtc", "RP5C01") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	CHECK(set(p, "hvcsync", "nope") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	// STRING values are validated by the setter: an unparseable maprom
+	// token is accepted but leaves the address unchanged.
+	set(p, "maprom", "0x00e00000");
+	set(p, "maprom", "not-hex");
+	CHECK(value_of(p, "maprom") == "0xe00000");
+	set(p, "genlock", "true");
+	CHECK(set(p, "genlock_mix", "30") == AMIBERRY_SETTINGS_INVALID_VALUE); // not a step
+	CHECK(set(p, "z3mem_size", "8") == AMIBERRY_SETTINGS_UNAVAILABLE); // 24-bit
+	CHECK(set(p, "keyboard_nkro", "false") == AMIBERRY_SETTINGS_UNAVAILABLE); // UAE keyboard
+	CHECK(set(p, "ide", "a4000") == AMIBERRY_SETTINGS_UNAVAILABLE); // chipset extra active
+	CHECK(set(p, "ciaatod", "50hz") == AMIBERRY_SETTINGS_UNAVAILABLE);
+}
+
+// The Quickstart constraints, frozen as they were in
+// src/osdep/imgui/quickstart.cpp before the move: the layer must reproduce
+// them exactly for every model, configuration and compatibility level.
+void reference_constraints(uae_prefs& p, int model, int conf, int compa)
+{
+	if (compa < 0)
+		compa = 0;
+	if (compa > ((model == 4 || model == 8) ? 4 : 3))
+		compa = (model == 4 || model == 8) ? 4 : 3;
+	built_in_prefs(&p, model, conf, compa, 0);
+	if (model <= 4) {
+		if (p.floppyslots[0].dfxtype == DRV_35_HD)
+			p.floppyslots[0].dfxtype = DRV_35_DD;
+	}
+	switch (model) {
+	case 0: case 1: case 2: case 3: case 4: case 5:
+		if (p.floppyslots[0].dfxtype == DRV_NONE)
+			p.floppyslots[0].dfxtype = DRV_35_DD;
+		p.floppyslots[1].dfxtype = DRV_NONE;
+		p.cdslots[0].inuse = false;
+		p.cdslots[0].type = SCSI_UNIT_DISABLED;
+		p.jports[1].mode = 0;
+		break;
+	case 6: case 7: case 12:
+		if (p.floppyslots[0].dfxtype == DRV_NONE)
+			p.floppyslots[0].dfxtype = DRV_35_HD;
+		p.floppyslots[1].dfxtype = DRV_NONE;
+		p.cdslots[0].inuse = false;
+		p.cdslots[0].type = SCSI_UNIT_DISABLED;
+		p.jports[1].mode = 0;
+		break;
+	case 8: case 9: case 10: case 11:
+		p.floppyslots[0].dfxtype = DRV_NONE;
+		p.floppyslots[1].dfxtype = DRV_NONE;
+		p.cdslots[0].inuse = true;
+		p.cdslots[0].type = SCSI_UNIT_DEFAULT;
+		p.gfx_monitor[0].gfx_size.width = 720;
+		p.gfx_monitor[0].gfx_size.height = 568;
+		p.jports[1].mode = 7;
+		break;
+	default:
+		break;
+	}
+}
+
+void check_presets()
+{
+	// Preset metadata: the panel's model list, configurations and
+	// compatibility tiers.
+	CHECK(amiberry_settings_preset_count() == 13);
+	CHECK(amiberry_settings_preset_at(13) == nullptr);
+	CHECK(amiberry_settings_preset_find("a1200") == amiberry_settings_preset_at(4));
+	CHECK(amiberry_settings_preset_find("nope") == nullptr);
+	const amiberry_settings_preset* a1200 = amiberry_settings_preset_find("a1200");
+	CHECK(a1200 && a1200->compatibility_max == 4);
+	CHECK(amiberry_settings_preset_find("a500")->compatibility_max == 3);
+	CHECK(amiberry_settings_preset_config_label(a1200, -1) == nullptr);
+	CHECK(amiberry_settings_preset_config_label(a1200, 1)
+		&& std::strstr(amiberry_settings_preset_config_label(a1200, 1), "4 MB Fast"));
+	CHECK(amiberry_settings_preset_compatibility_label(4)
+		&& std::strstr(amiberry_settings_preset_compatibility_label(4), "JIT"));
+	CHECK(amiberry_settings_preset_compatibility_label(5) == nullptr);
+	CHECK(settings::preset_model_index("cd32") == 8);
+	CHECK(std::strcmp(settings::preset_id(8), "cd32") == 0);
+
+	// Every preset applied through the layer equals the frozen Quickstart
+	// reference, byte for byte, for every configuration and tier.
+	static uae_prefs reference; // uae_prefs is too large for the stack
+	for (size_t i = 0; i < amiberry_settings_preset_count(); i++) {
+		const amiberry_settings_preset* preset = amiberry_settings_preset_at(i);
+		for (int conf = 0; conf < preset->config_count; conf++) {
+			for (int compa = 0; compa <= preset->compatibility_max; compa++) {
+				reset_prefs(test_prefs);
+				reset_prefs(reference);
+				settings::apply_preset(test_prefs, settings::preset_model_index(preset->id), conf, compa);
+				reference_constraints(reference, settings::preset_model_index(preset->id), conf, compa);
+				if (std::memcmp(&test_prefs, &reference, sizeof(uae_prefs)) != 0) {
+					std::fprintf(stderr, "preset %s config %d compa %d differs from the Quickstart reference\n",
+						preset->id, conf, compa);
+					failures++;
+				}
+			}
+		}
+		// The engine saw the requested model (config-less presets never
+		// reach it, so the previous request is still in the record).
+		if (preset->config_count > 0)
+			CHECK(stub_preset_model == settings::preset_model_index(preset->id));
+	}
+	// Out-of-range compatibility is clamped, not rejected, at this level.
+	reset_prefs(test_prefs);
+	settings::apply_preset(test_prefs, 4, 0, 99);
+	CHECK(stub_preset_compa == 4);
+
+	// ROM availability cannot be tested against a real ROM scan here; it
+	// must at least reject unknown arguments and never touch the config.
+	reset_prefs(changed_prefs);
+	CHECK(!amiberry_settings_preset_rom_installed("nope", 0));
+	CHECK(!amiberry_settings_preset_rom_installed("a500", 99));
+	CHECK(changed_prefs.cpu_model == 68000);
+}
+
+// AE for the machine domains: sessions commit preset-written fields and
+// report the strongest apply class.
+void check_machine_session()
+{
+	reset_prefs(changed_prefs);
+	changed_prefs.cpuboard_type = 1;
+
+	amiberry_settings_session* session = amiberry_settings_session_open();
+	CHECK(session);
+	// A preset through the C API: everything it writes must survive commit.
+	CHECK(amiberry_settings_preset_apply(session, "a1200", 1, 1) == AMIBERRY_SETTINGS_OK);
+	CHECK(amiberry_settings_preset_apply(session, "nope", 0, 0) == AMIBERRY_SETTINGS_UNKNOWN_ID);
+	CHECK(amiberry_settings_preset_apply(session, "a1200", 99, 0) == AMIBERRY_SETTINGS_INVALID_VALUE);
+	CHECK(amiberry_settings_preset_apply(session, "a1200", 0, 5) == AMIBERRY_SETTINGS_UNAVAILABLE);
+	bool changed = false;
+	// The stub engine changes no option with a descriptor, so the class is
+	// LIVE here; with the real preset engine the CPU and chipset options
+	// push it to RESET. The commit must report a change either way.
+	CHECK(amiberry_settings_commit(session, &changed) >= AMIBERRY_APPLY_LIVE);
+	CHECK(changed);
+
+	// The Quickstart constraints (floppy/CD/joystick) are committed too.
+	CHECK(changed_prefs.floppyslots[1].dfxtype == DRV_NONE);
+	CHECK(!changed_prefs.cdslots[0].inuse);
+	CHECK(changed_prefs.jports[1].mode == 0);
+
+	// A machine option through a session: strongest class wins.
+	CHECK(amiberry_settings_set(session, "kickstart_rom_file", "/roms/kick31.rom")
+		== AMIBERRY_SETTINGS_OK);
+	char path[settings::max_value_length] = {};
+	CHECK(amiberry_settings_get(session, "kickstart_rom_file", path, sizeof path)
+		== AMIBERRY_SETTINGS_OK);
+	CHECK(std::strcmp(path, "/roms/kick31.rom") == 0);
+	char tiny[4];
+	CHECK(amiberry_settings_get(session, "kickstart_rom_file", tiny, sizeof tiny)
+		== AMIBERRY_SETTINGS_BUFFER_TOO_SMALL);
+	CHECK(amiberry_settings_commit(session, &changed) == AMIBERRY_APPLY_RESET);
+	CHECK(changed && std::strcmp(changed_prefs.romfile, "/roms/kick31.rom") == 0);
+
+	// Two paths that share a 63-character prefix still differ.
+	char long_a[settings::max_value_length], long_b[settings::max_value_length];
+	std::memset(long_a, 'a', sizeof long_a - 1);
+	std::memset(long_b, 'a', sizeof long_b - 1);
+	long_a[sizeof long_a - 1] = long_b[sizeof long_b - 1] = 0;
+	long_b[100] = 'b';
+	CHECK(amiberry_settings_set(session, "kickstart_rom_file", long_a) == AMIBERRY_SETTINGS_OK);
+	CHECK(amiberry_settings_set(session, "kickstart_rom_file", long_b) == AMIBERRY_SETTINGS_OK);
+	CHECK(amiberry_settings_commit(session, &changed) == AMIBERRY_APPLY_RESET);
+	CHECK(changed_prefs.romfile[100] == 'b');
+	amiberry_settings_session_close(session);
 }
 
 } // namespace
@@ -700,6 +1157,11 @@ int main(int argc, char** argv)
 	check_rejections();
 	check_session();
 	check_fixup_consistency();
+	check_machine_availability();
+	check_machine_dependents();
+	check_machine_rejections();
+	check_presets();
+	check_machine_session();
 	if (failures) {
 		std::fprintf(stderr, "settings layer: %d check(s) failed\n", failures);
 		return 1;
