@@ -5,11 +5,65 @@
 #include "imgui_panels.h"
 #include "rommgr.h"
 #include "specialmonitors.h"
+#include "settings/settings_definitions.h"
 
 #include <vector>
 #include <string>
 
 #include "gui/gui_handling.h"
+
+namespace settings = amiberry_settings;
+
+namespace {
+
+// The options this panel edits. The shared settings layer owns their
+// availability rules and the dependent changes a new value implies.
+struct chipset_options {
+    const settings::definition& chipset = settings::require("chipset");
+    const settings::definition& ntsc = settings::require("ntsc");
+    const settings::definition& cycle_exact = settings::require("cycle_exact");
+    const settings::definition& immediate_blits = settings::require("immediate_blits");
+    const settings::definition& waiting_blits = settings::require("waiting_blits");
+    const settings::definition& keyboard_type = settings::require("keyboard_type");
+    const settings::definition& keyboard_nkro = settings::require("keyboard_nkro");
+    const settings::definition& display_optimizations = settings::require("display_optimizations");
+    const settings::definition& collision_level = settings::require("collision_level");
+    const settings::definition& chipset_compatible = settings::require("chipset_compatible");
+    const settings::definition& hvcsync = settings::require("hvcsync");
+    const settings::definition& genlock = settings::require("genlock");
+    const settings::definition& genlockmode = settings::require("genlockmode");
+    const settings::definition& genlock_image = settings::require("genlock_image");
+    const settings::definition& genlock_video = settings::require("genlock_video");
+    const settings::definition& genlock_mix = settings::require("genlock_mix");
+    const settings::definition& genlock_alpha = settings::require("genlock_alpha");
+    const settings::definition& genlock_aspect = settings::require("genlock_aspect");
+};
+
+const chipset_options& options()
+{
+    static const chipset_options o;
+    return o;
+}
+
+bool available(const settings::definition& d, const settings::context& ctx)
+{
+    return settings::is_available(d, changed_prefs, ctx);
+}
+
+bool has_value(const settings::definition& d, const char* v)
+{
+    char current[AMIBERRY_SETTINGS_VALUE_MAX];
+    settings::get(d, changed_prefs, current, sizeof current);
+    return std::strcmp(current, v) == 0;
+}
+
+// A checkbox for a BOOL option.
+void option_checkbox(const char* label, const settings::definition& d, const settings::context& ctx)
+{
+    bool checked = settings::get_bool(d, changed_prefs);
+    if (AmigaCheckbox(label, &checked))
+        settings::set_bool(d, changed_prefs, ctx, checked);
+}
 
 static std::vector<std::string> keyboard_items_strs;
 static std::vector<const char *> keyboard_items_ptr;
@@ -22,6 +76,9 @@ static void appendkbmcurom(std::string &s, bool hasrom) {
     }
 }
 
+// The keyboard combo lists the layer's keyboard_type choices; the entries
+// carry a "[ROM not found]" marker when the controller MCU ROM is missing,
+// so the labels are built here instead of using the descriptor's.
 static void init_lists() {
     keyboard_items_strs.clear();
     keyboard_items_strs.emplace_back("Keyboard disconnected");
@@ -79,8 +136,27 @@ static void init_lists() {
         special_monitor_ptr.push_back(s.c_str());
 }
 
+// Index of the choice the configuration holds, clamped for display when a
+// configuration from a file holds a value this build does not know.
+int choice_index_of(const settings::definition& d)
+{
+    const amiberry_setting_descriptor& desc = d.descriptor;
+    for (size_t i = 0; i < desc.choice_count; i++) {
+        char current[AMIBERRY_SETTINGS_VALUE_MAX];
+        settings::get(d, changed_prefs, current, sizeof current);
+        if (std::strcmp(current, desc.choices[i].value) == 0)
+            return static_cast<int>(i);
+    }
+    return 0;
+}
+
+} // namespace
+
 
 void render_panel_chipset() {
+    const chipset_options& o = options();
+    const settings::context ctx{emulating != 0};
+
     // Global padding for the whole panel
     ImGui::Indent(4.0f);
 
@@ -94,33 +170,6 @@ void render_panel_chipset() {
         cached_rom_gen = rom_gen;
     }
 
-    // Determine Chipset Selection Index (Logic from WinUAE values_to_chipsetdlg)
-    int chipset_selection = 0; // Default to OCS
-    switch (changed_prefs.chipset_mask) {
-        case CSMASK_A1000_NOEHB:
-            chipset_selection = 6;
-            break;
-        case CSMASK_A1000:
-            chipset_selection = 5;
-            break;
-        case CSMASK_OCS:
-            chipset_selection = 0;
-            break;
-        case CSMASK_ECS_AGNUS:
-            chipset_selection = 1;
-            break;
-        case CSMASK_ECS_DENISE:
-            chipset_selection = 2;
-            break;
-        case CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE:
-            chipset_selection = 3;
-            break;
-        case CSMASK_AGA:
-        case CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE | CSMASK_AGA:
-            chipset_selection = 4;
-            break;
-    }
-
     if (ImGui::BeginTable("chipset_table", 2, ImGuiTableFlags_None)) {
         ImGui::TableSetupColumn("left", ImGuiTableColumnFlags_WidthStretch, 0.56f);
         ImGui::TableSetupColumn("right", ImGuiTableColumnFlags_WidthStretch, 0.44f);
@@ -131,77 +180,60 @@ void render_panel_chipset() {
         // LEFT COLUMN
         BeginGroupBox("Chipset");
         {
-            // Chipset radios
+            // Chipset radios (the layer's chipset choices)
             ImGui::BeginGroup();
-            if (AmigaRadioButton("A1000 (No EHB)", &chipset_selection, 6))
-                changed_prefs.chipset_mask = CSMASK_A1000_NOEHB;
+            if (AmigaRadioButton("A1000 (No EHB)", has_value(o.chipset, "a1000_noehb")))
+                settings::set(o.chipset, changed_prefs, ctx, "a1000_noehb");
             ShowHelpMarker("Original A1000 chipset without Extra Half-Brite mode.");
-            if (AmigaRadioButton("OCS + OCS Denise", &chipset_selection, 0)) changed_prefs.chipset_mask = CSMASK_OCS;
+            if (AmigaRadioButton("OCS + OCS Denise", has_value(o.chipset, "ocs")))
+                settings::set(o.chipset, changed_prefs, ctx, "ocs");
             ShowHelpMarker("Original Chip Set with original Denise. Standard A500/A2000.");
-            if (AmigaRadioButton("ECS + OCS Denise", &chipset_selection, 1))
-                changed_prefs.chipset_mask = CSMASK_ECS_AGNUS;
+            if (AmigaRadioButton("ECS + OCS Denise", has_value(o.chipset, "ecs_agnus")))
+                settings::set(o.chipset, changed_prefs, ctx, "ecs_agnus");
             ShowHelpMarker("Enhanced Chip Set Agnus with original Denise.");
-            if (AmigaRadioButton("AGA", &chipset_selection, 4))
-                changed_prefs.chipset_mask = CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE | CSMASK_AGA;
+            if (AmigaRadioButton("AGA", has_value(o.chipset, "aga")))
+                settings::set(o.chipset, changed_prefs, ctx, "aga");
             ShowHelpMarker("Advanced Graphics Architecture. A1200/A4000 chipset.");
             ImGui::EndGroup();
 
             ImGui::SameLine();
 
             ImGui::BeginGroup();
-            if (AmigaRadioButton("A1000", &chipset_selection, 5)) changed_prefs.chipset_mask = CSMASK_A1000;
+            if (AmigaRadioButton("A1000", has_value(o.chipset, "a1000")))
+                settings::set(o.chipset, changed_prefs, ctx, "a1000");
             ShowHelpMarker("Original A1000 chipset with EHB support.");
-            if (AmigaRadioButton("OCS + ECS Denise", &chipset_selection, 2))
-                changed_prefs.chipset_mask = CSMASK_ECS_DENISE;
+            if (AmigaRadioButton("OCS + ECS Denise", has_value(o.chipset, "ecs_denise")))
+                settings::set(o.chipset, changed_prefs, ctx, "ecs_denise");
             ShowHelpMarker("Original Agnus with Enhanced Denise chip.");
-            if (AmigaRadioButton("Full ECS", &chipset_selection, 3))
-                changed_prefs.chipset_mask = CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE;
+            if (AmigaRadioButton("Full ECS", has_value(o.chipset, "ecs")))
+                settings::set(o.chipset, changed_prefs, ctx, "ecs");
             ShowHelpMarker("Full Enhanced Chip Set. A600/A3000.");
 
-            AmigaCheckbox("NTSC", &changed_prefs.ntscmode);
+            option_checkbox("NTSC", o.ntsc, ctx);
             ShowHelpMarker("Enable NTSC mode (60Hz)");
             ImGui::EndGroup();
 
             ImGui::Spacing();
 
-            bool cycle_exact = changed_prefs.cpu_cycle_exact;
-            if (AmigaCheckbox("Cycle Exact (Full)", &cycle_exact)) {
-                changed_prefs.cpu_cycle_exact = cycle_exact;
-                if (cycle_exact) {
-                    changed_prefs.cpu_memory_cycle_exact = true;
-                    changed_prefs.blitter_cycle_exact = true;
-                } else {
-                    if (changed_prefs.cpu_model < 68020) {
-                        changed_prefs.cpu_memory_cycle_exact = false;
-                        changed_prefs.blitter_cycle_exact = false;
-                    }
-                }
+            // The two cycle-exact checkboxes are views of the layer's
+            // composite cycle_exact choice: Full means true, DMA/Memory
+            // means anything but false (full cycle exact implies it).
+            bool full_exact = has_value(o.cycle_exact, "true");
+            if (AmigaCheckbox("Cycle Exact (Full)", &full_exact)) {
+                if (full_exact)
+                    settings::set(o.cycle_exact, changed_prefs, ctx, "true");
+                else
+                    settings::set(o.cycle_exact, changed_prefs, ctx,
+                        settings::is_choice_available(o.cycle_exact, changed_prefs, ctx, "memory")
+                            ? "memory" : "false");
             }
             ShowHelpMarker("Bit-perfect emulation. Requires fast CPU.");
 
-            bool memory_exact = changed_prefs.cpu_memory_cycle_exact;
-            // Disabled if CPU < 68020 (WinUAE logic)
-            ImGui::BeginDisabled(changed_prefs.cpu_model < 68020);
+            bool memory_exact = !has_value(o.cycle_exact, "false");
+            // Memory cycle exact is indistinguishable from full below a 68020.
+            ImGui::BeginDisabled(!settings::is_choice_available(o.cycle_exact, changed_prefs, ctx, "memory"));
             if (AmigaCheckbox("Cycle Exact (DMA/Memory)", &memory_exact)) {
-                changed_prefs.cpu_memory_cycle_exact = memory_exact;
-                changed_prefs.blitter_cycle_exact = memory_exact;
-                if (memory_exact) {
-                    // WinUAE logic: If Memory Exact enabled and CPU < 68020, force Full Exact
-                    if (changed_prefs.cpu_model < 68020) {
-                        changed_prefs.cpu_cycle_exact = true;
-                    }
-
-                    if (changed_prefs.cpu_model <= 68030) {
-                        changed_prefs.m68k_speed = 0;
-                        changed_prefs.cpu_compatible = 1;
-                    }
-                    changed_prefs.immediate_blits = false;
-                    changed_prefs.cachesize = 0;
-                    changed_prefs.gfx_framerate = 1;
-                } else {
-                    // WinUAE logic: If Memory Exact disabled, force Full Exact disabled
-                    changed_prefs.cpu_cycle_exact = false;
-                }
+                settings::set(o.cycle_exact, changed_prefs, ctx, memory_exact ? "memory" : "false");
             }
             ShowHelpMarker("Cycle-exact DMA and memory access emulation.");
             ImGui::EndDisabled();
@@ -212,19 +244,18 @@ void render_panel_chipset() {
         BeginGroupBox("Keyboard");
         {
             ImGui::SetNextItemWidth(BUTTON_WIDTH * 3.0f);
-            int kb_mode = changed_prefs.keyboard_mode + 1;
+            int kb_mode = choice_index_of(o.keyboard_type);
             if (ImGui::Combo("##Keyboard Layout", &kb_mode, keyboard_items_ptr.data(), keyboard_items_ptr.size())) {
-                changed_prefs.keyboard_mode = kb_mode - 1;
+                settings::set(o.keyboard_type, changed_prefs, ctx,
+                              o.keyboard_type.descriptor.choices[kb_mode].value);
             }
             AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
             ShowHelpMarker("Select keyboard controller emulation mode.");
 
             ImGui::Spacing();
-            bool disable_nkro = (changed_prefs.keyboard_mode == KB_UAE || changed_prefs.keyboard_mode == KB_A2000_8039);
-            if (disable_nkro) changed_prefs.keyboard_nkro = true;
 
-            ImGui::BeginDisabled(disable_nkro);
-            AmigaCheckbox("Keyboard N-key rollover", &changed_prefs.keyboard_nkro);
+            ImGui::BeginDisabled(!available(o.keyboard_nkro, ctx));
+            option_checkbox("Keyboard N-key rollover", o.keyboard_nkro, ctx);
             ShowHelpMarker("Allow multiple simultaneous key presses.");
             ImGui::Spacing();
             ImGui::EndDisabled();
@@ -236,19 +267,15 @@ void render_panel_chipset() {
         // RIGHT COLUMN
         BeginGroupBox("Options");
         {
-            if (AmigaCheckbox("Immediate Blitter", &changed_prefs.immediate_blits)) {
-                if (changed_prefs.immediate_blits) changed_prefs.waiting_blits = false;
-            }
+            option_checkbox("Immediate Blitter", o.immediate_blits, ctx);
             ShowHelpMarker("Blitter operations complete instantly. Faster but less accurate.");
 
-            bool disable_wait_blits = (changed_prefs.immediate_blits || (
-                                           changed_prefs.cpu_memory_cycle_exact && changed_prefs.cpu_model <= 68010));
-            if (disable_wait_blits) changed_prefs.waiting_blits = 0;
-            ImGui::BeginDisabled(disable_wait_blits);
-            bool wait_blits = changed_prefs.waiting_blits;
+            // Waiting for the blitter is a four-value option; the checkbox
+            // maps on to Automatic and off to Disabled.
+            ImGui::BeginDisabled(!available(o.waiting_blits, ctx));
+            bool wait_blits = !has_value(o.waiting_blits, "disabled");
             if (AmigaCheckbox("Wait for Blitter", &wait_blits)) {
-                changed_prefs.waiting_blits = wait_blits ? 1 : 0;
-                if (changed_prefs.waiting_blits) changed_prefs.immediate_blits = false;
+                settings::set(o.waiting_blits, changed_prefs, ctx, wait_blits ? "automatic" : "disabled");
             }
             ShowHelpMarker("CPU waits for Blitter to finish. More compatible than Immediate Blitter.");
             ImGui::EndDisabled();
@@ -260,44 +287,36 @@ void render_panel_chipset() {
             ShowHelpMarker("Run Denise graphics chip emulation on a separate thread.");
 
             ImGui::Spacing();
-            const char *optimization_items[] = {"Full", "Partial", "None"};
             ImGui::AlignTextToFramePadding();
             ImGui::Text("Optimizations");
             ShowHelpMarker("Keep at 'Full' for best compatibility.");
 
             ImGui::SetNextItemWidth(-ImGui::GetStyle().ItemSpacing.x * 2);
-            ImGui::Combo("##Optimizations", &changed_prefs.cs_optimizations, optimization_items,
-                         IM_ARRAYSIZE(optimization_items));
+            int optimization_idx = choice_index_of(o.display_optimizations);
+            if (ImGui::Combo("##Optimizations", &optimization_idx, o.display_optimizations.descriptor.choices,
+                             static_cast<int>(o.display_optimizations.descriptor.choice_count))) {
+                settings::set(o.display_optimizations, changed_prefs, ctx,
+                              o.display_optimizations.descriptor.choices[optimization_idx].value);
+            }
             AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
-
-            const char *chipset_items[] = {
-                "Custom", "Generic", "CDTV", "CDTV-CR", "CD32", "A500", "A500+", "A600", "A1000", "A1200", "A2000",
-                "A3000", "A3000T", "A4000", "A4000T", "Velvet", "Casablanca", "DraCo"
-            };
 
             ImGui::AlignTextToFramePadding();
             ImGui::Text("Chipset Extra");
             ShowHelpMarker("Select specialized chipset behavior.");
 
             ImGui::SetNextItemWidth(-ImGui::GetStyle().ItemSpacing.x * 2);
-
-            // Map cs_compatible value to index
-            int cs_compatible_idx = changed_prefs.cs_compatible;
-            if (cs_compatible_idx < 0 || cs_compatible_idx >= IM_ARRAYSIZE(chipset_items)) {
-                cs_compatible_idx = 0; // Default to Custom
-            }
-
+            int cs_compatible_idx = choice_index_of(o.chipset_compatible);
             if (ImGui::BeginCombo("##Chipset Extra",
-                                  (cs_compatible_idx >= 0 && cs_compatible_idx < IM_ARRAYSIZE(chipset_items))
-                                      ? chipset_items[cs_compatible_idx]
+                                  cs_compatible_idx < static_cast<int>(o.chipset_compatible.descriptor.choice_count)
+                                      ? o.chipset_compatible.descriptor.choices[cs_compatible_idx].label
                                       : "Unknown")) {
-                for (int n = 0; n < IM_ARRAYSIZE(chipset_items); n++) {
+                for (int n = 0; n < static_cast<int>(o.chipset_compatible.descriptor.choice_count); n++) {
                     const bool is_selected = (cs_compatible_idx == n);
                     if (is_selected)
                         ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
-                    if (ImGui::Selectable(chipset_items[n], is_selected)) {
-                        changed_prefs.cs_compatible = n;
-                        built_in_chipset_prefs(&changed_prefs);
+                    if (ImGui::Selectable(o.chipset_compatible.descriptor.choices[n].label, is_selected)) {
+                        settings::set(o.chipset_compatible, changed_prefs, ctx,
+                                      o.chipset_compatible.descriptor.choices[n].value);
                     }
                     if (is_selected) {
                         ImGui::PopStyleColor();
@@ -311,15 +330,15 @@ void render_panel_chipset() {
             ImGui::AlignTextToFramePadding();
             ImGui::Text("Monitor sync source:");
 
-            const char *sync_items[] = {"Combined", "CSync", "H/VSync"};
             ImGui::SetNextItemWidth(-ImGui::GetStyle().ItemSpacing.x * 2);
-            if (ImGui::BeginCombo("##SyncSource", sync_items[changed_prefs.cs_hvcsync])) {
-                for (int n = 0; n < IM_ARRAYSIZE(sync_items); n++) {
-                    const bool is_selected = (changed_prefs.cs_hvcsync == n);
+            int hvcsync_idx = choice_index_of(o.hvcsync);
+            if (ImGui::BeginCombo("##SyncSource", o.hvcsync.descriptor.choices[hvcsync_idx].label)) {
+                for (int n = 0; n < static_cast<int>(o.hvcsync.descriptor.choice_count); n++) {
+                    const bool is_selected = (hvcsync_idx == n);
                     if (is_selected)
                         ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
-                    if (ImGui::Selectable(sync_items[n], is_selected)) {
-                        changed_prefs.cs_hvcsync = n;
+                    if (ImGui::Selectable(o.hvcsync.descriptor.choices[n].label, is_selected)) {
+                        settings::set(o.hvcsync, changed_prefs, ctx, o.hvcsync.descriptor.choices[n].value);
                     }
                     if (is_selected) {
                         ImGui::PopStyleColor();
@@ -330,12 +349,17 @@ void render_panel_chipset() {
             }
             AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
 
+            // Video port display hardware: not a settings-layer option (the
+            // choice list is the run-time special monitor set).
+            int monitoremu_idx = changed_prefs.monitoremu;
+            if (monitoremu_idx < 0 || monitoremu_idx >= static_cast<int>(special_monitor_ptr.size()))
+                monitoremu_idx = 0;
             ImGui::AlignTextToFramePadding();
             ImGui::Text("Video port display hardware");
             ImGui::SetNextItemWidth(-ImGui::GetStyle().ItemSpacing.x * 2);
-            if (ImGui::BeginCombo("##VideoPort", special_monitor_ptr[changed_prefs.monitoremu])) {
+            if (ImGui::BeginCombo("##VideoPort", special_monitor_ptr[monitoremu_idx])) {
                 for (int n = 0; n < static_cast<int>(special_monitor_ptr.size()); n++) {
-                    const bool is_selected = (changed_prefs.monitoremu == n);
+                    const bool is_selected = (monitoremu_idx == n);
                     if (is_selected)
                         ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
                     if (ImGui::Selectable(special_monitor_ptr[n], is_selected)) {
@@ -361,10 +385,12 @@ void render_panel_chipset() {
     BeginGroupBox("Collision Level");
     {
         ImGui::BeginGroup();
-        AmigaRadioButton("None##Collision", &changed_prefs.collision_level, 0);
+        if (AmigaRadioButton("None##Collision", has_value(o.collision_level, "none")))
+            settings::set(o.collision_level, changed_prefs, ctx, "none");
         ShowHelpMarker("Disable all collision detection. Fastest.");
         ImGui::Spacing();
-        AmigaRadioButton("Sprites only", &changed_prefs.collision_level, 1);
+        if (AmigaRadioButton("Sprites only", has_value(o.collision_level, "sprites")))
+            settings::set(o.collision_level, changed_prefs, ctx, "sprites");
         ShowHelpMarker("Detect sprite-to-sprite collisions only.");
         ImGui::Spacing();
         ImGui::EndGroup();
@@ -374,10 +400,12 @@ void render_panel_chipset() {
         ImGui::SameLine();
 
         ImGui::BeginGroup();
-        AmigaRadioButton("Sprites and Sprites vs. Playfield", &changed_prefs.collision_level, 2);
+        if (AmigaRadioButton("Sprites and Sprites vs. Playfield", has_value(o.collision_level, "playfields")))
+            settings::set(o.collision_level, changed_prefs, ctx, "playfields");
         ShowHelpMarker("Detect sprite-to-sprite and sprite-to-playfield collisions.");
         ImGui::Spacing();
-        AmigaRadioButton("Full", &changed_prefs.collision_level, 3);
+        if (AmigaRadioButton("Full", has_value(o.collision_level, "full")))
+            settings::set(o.collision_level, changed_prefs, ctx, "full");
         ShowHelpMarker("Full collision detection including playfield-to-playfield. Default.");
         ImGui::Spacing();
         ImGui::EndGroup();
@@ -387,60 +415,58 @@ void render_panel_chipset() {
     // Genlock section
     BeginGroupBox("Genlock");
     {
-        AmigaCheckbox("Genlock connected", &changed_prefs.genlock);
+        option_checkbox("Genlock connected", o.genlock, ctx);
         ShowHelpMarker("Connect a genlock device for video overlay mixing.");
         ImGui::SameLine();
 
         bool genlock_enable = changed_prefs.genlock || changed_prefs.genlock_effects;
         ImGui::BeginDisabled(!genlock_enable);
 
-        const char *genlock_items[] = {
-            "-",
-            "Noise (built-in)",
-            "Test card (built-in)",
-            "Image file (png)",
-#ifdef VIDEOGRAB
-            "Video file",
-            "Capture device",
-            "American Laser Games/Picmatic LaserDisc Player",
-            "Sony LaserDisc Player",
-            "Pioneer LaserDisc Player"
-#endif
-        };
-        int genlock_selection = changed_prefs.genlock_image;
-        if (genlock_selection < 0 || genlock_selection >= IM_ARRAYSIZE(genlock_items)) {
-            genlock_selection = 0;
-            changed_prefs.genlock_image = 0;
-        }
+        int genlock_selection = choice_index_of(o.genlockmode);
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - BUTTON_WIDTH - ImGui::GetStyle().ItemSpacing.x - 3.0f);
-        if (ImGui::Combo("##Genlock", &genlock_selection, genlock_items, IM_ARRAYSIZE(genlock_items))) {
-            changed_prefs.genlock_image = genlock_selection;
+        if (ImGui::BeginCombo("##Genlock", o.genlockmode.descriptor.choices[genlock_selection].label)) {
+            for (int n = 0; n < static_cast<int>(o.genlockmode.descriptor.choice_count); n++) {
+                // The video sources need a VIDEOGRAB build; the layer marks
+                // them unavailable instead of the panel silently dropping
+                // the selection.
+                const bool selectable = settings::is_choice_available(o.genlockmode, changed_prefs, ctx,
+                    o.genlockmode.descriptor.choices[n].value);
+                const ImGuiSelectableFlags flags = selectable
+                    ? ImGuiSelectableFlags_None : ImGuiSelectableFlags_Disabled;
+                const bool is_selected = (genlock_selection == n);
+                if (is_selected)
+                    ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+                if (ImGui::Selectable(o.genlockmode.descriptor.choices[n].label, is_selected, flags)) {
+                    settings::set(o.genlockmode, changed_prefs, ctx, o.genlockmode.descriptor.choices[n].value);
+                }
+                if (is_selected) {
+                    ImGui::PopStyleColor();
+                    ImGui::SetItemDefaultFocus();
+                }
+            }
+            ImGui::EndCombo();
         }
         AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
         ImGui::SameLine();
 
         const char *genlock_mix_items[] = {"100%", "90%", "80%", "70%", "60%", "50%", "40%", "30%", "20%", "10%", "0%"};
-        int genlock_mix_index = changed_prefs.genlock_mix / 25;
+        int genlock_mix_index = 10 - changed_prefs.genlock_mix / 25;
+        if (genlock_mix_index < 0)
+            genlock_mix_index = 0;
         ImGui::SetNextItemWidth(BUTTON_WIDTH);
         if (ImGui::Combo("##GenlockMix", &genlock_mix_index, genlock_mix_items, IM_ARRAYSIZE(genlock_mix_items))) {
-            changed_prefs.genlock_mix = genlock_mix_index * 25;
-            if (changed_prefs.genlock_mix > 255) changed_prefs.genlock_mix = 255;
+            settings::set_number(o.genlock_mix, changed_prefs, ctx, (10 - genlock_mix_index) * 25);
         }
         AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
 
-        AmigaCheckbox("Include alpha channels in screenshots and video captures.", &changed_prefs.genlock_alpha);
-        bool genlock_aspect = changed_prefs.genlock_aspect > 0;
-        if (AmigaCheckbox("Keep aspect ratio", &genlock_aspect)) {
-            changed_prefs.genlock_aspect = genlock_aspect ? 1 : 0;
-        }
+        option_checkbox("Include alpha channels in screenshots and video captures.", o.genlock_alpha, ctx);
+        option_checkbox("Keep aspect ratio", o.genlock_aspect, ctx);
 
-        if (changed_prefs.genlock_image == 3
-#ifdef VIDEOGRAB
-            || changed_prefs.genlock_image == 4 || changed_prefs.genlock_image >= 6
-#endif
-        )
+        if (available(o.genlock_image, ctx) || available(o.genlock_video, ctx))
         // Image, Video or LaserDisc
         {
+            const settings::definition& file_option =
+                changed_prefs.genlock_image == 3 ? o.genlock_image : o.genlock_video;
             // Show File selector
             // Index 3 is Image, 4 and >= 6 are Video
             char *filename_ptr = (changed_prefs.genlock_image == 3)
@@ -464,7 +490,7 @@ void render_panel_chipset() {
 
             std::string filePath;
             if (ConsumeFileDialogResultKey("CHIPSET_FILE", filePath)) {
-                strncpy(filename_ptr, filePath.c_str(), MAX_DPATH);
+                settings::set(file_option, changed_prefs, ctx, filePath.c_str());
             }
         }
         ImGui::EndDisabled();
