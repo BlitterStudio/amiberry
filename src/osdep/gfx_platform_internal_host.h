@@ -81,8 +81,9 @@ static inline bool gfx_platform_override_pixel_format(SDL_PixelFormat* format)
 	/* iOS renders through OpenGL ES, which cannot upload GL_BGRA data
 	 * (resolve_gl_pixel_format() maps ARGB8888 to GL_BGRA). Use the
 	 * RGBA byte-order host format so texture uploads stay on the
-	 * GL_RGBA path; the core writes RGBA natively via the format's
-	 * shift values. */
+	 * GL_RGBA path: the chipset display writes it through the format's
+	 * shift values, and Picasso96 converts every RTG mode into it
+	 * (p96_get_host_pixel_format). */
 	*format = SDL_PIXELFORMAT_ABGR8888;
 	return true;
 #else

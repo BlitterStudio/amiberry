@@ -6,16 +6,21 @@ endif()
 
 # Before project(), which otherwise creates it empty
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE BOOL "Export compile_commands.json")
-# Native Apple UI: must be parsed before project() so the deployment target
-# is part of the initial compiler flags (setting CMAKE_OSX_DEPLOYMENT_TARGET
-# after project() no longer changes -mmacosx-version-min). The option targets
-# the oldest systems with Swift Observation: iOS 17.0 / macOS 14.0. With the
-# option OFF nothing changes: no Swift, and platform defaults apply.
+# Deployment target: must be set before project() so it is part of the
+# initial compiler flags of every target, including the dependencies built
+# from source (SDL3, SDL3_image, libpng, FLAC); setting it later no longer
+# changes -m*-version-min. iOS defaults to 16.0, or 17.0 with the native
+# UI, which targets the oldest systems with Swift Observation (iOS 17.0 /
+# macOS 14.0). macOS without the native UI keeps the platform default.
 option(AMIBERRY_NATIVE_APPLE_UI "Build the native Apple UI layer (Swift) into the app; macOS and iOS only" OFF)
-if(AMIBERRY_NATIVE_APPLE_UI AND NOT DEFINED CMAKE_OSX_DEPLOYMENT_TARGET)
+if(NOT DEFINED CMAKE_OSX_DEPLOYMENT_TARGET)
     if(DEFINED CMAKE_SYSTEM_NAME AND CMAKE_SYSTEM_NAME STREQUAL "iOS")
-        set(CMAKE_OSX_DEPLOYMENT_TARGET "17.0")
-    else()
+        if(AMIBERRY_NATIVE_APPLE_UI)
+            set(CMAKE_OSX_DEPLOYMENT_TARGET "17.0")
+        else()
+            set(CMAKE_OSX_DEPLOYMENT_TARGET "16.0")
+        endif()
+    elseif(AMIBERRY_NATIVE_APPLE_UI)
         set(CMAKE_OSX_DEPLOYMENT_TARGET "14.0")
     endif()
 endif()
@@ -82,12 +87,8 @@ if(AMIBERRY_NATIVE_APPLE_UI AND NOT APPLE)
     message(FATAL_ERROR "AMIBERRY_NATIVE_APPLE_UI requires an Apple platform (macOS or iOS)")
 endif()
 
-# Deployment target applied to the app target under the Xcode generator
-# (16.0 historically; the native UI requires iOS 17).
-set(AMIBERRY_IOS_DEPLOYMENT_TARGET "16.0")
-if(IOS AND AMIBERRY_NATIVE_APPLE_UI)
-    set(AMIBERRY_IOS_DEPLOYMENT_TARGET "17.0")
-endif()
+# Deployment target applied to the app target under the Xcode generator.
+set(AMIBERRY_IOS_DEPLOYMENT_TARGET "${CMAKE_OSX_DEPLOYMENT_TARGET}")
 set(PGO_PROFILE_DIR "" CACHE PATH "Directory containing Profile-Guided Optimization data")
 set(QEMU_UAE_PLUGIN "" CACHE FILEPATH "Path to a prebuilt qemu-uae plugin artifact to bundle")
 set(QEMU_UAE_PLUGIN_DIR "" CACHE PATH "Directory containing the QEMU-UAE plugin artifact and any sidecar runtime files")

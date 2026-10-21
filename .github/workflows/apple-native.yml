@@ -67,7 +67,8 @@ jobs:
       - name: Install dependencies (Homebrew)
         run: |
           brew update
-          brew install ninja || true
+          # cmake first: brew bundle can race on the cmake lock (see c-cpp.yml).
+          brew install cmake ninja || true
           brew bundle || { sleep 10; brew bundle; }
 
       - name: Build for macOS with the native UI layer
@@ -77,10 +78,11 @@ jobs:
 
       - name: Verify the Swift layer is linked in
         run: |
-          # amiberry_native_ui_startup_log() prints this line from Swift at
-          # startup; the literal must be present in the linked executable.
+          # amiberry_native_ui_startup_log() logs this format string from
+          # Swift at startup (os_log); it is in the linked executable only
+          # when the Swift layer is.
           strings build/Amiberry.app/Contents/MacOS/Amiberry \
-            | grep -F "[AmiberryNativeUI] settings layer ready"
+            | grep -F "settings layer ready: %{public}d options via C API"
 
   build-iOS-simulator:
     runs-on: macos-15
@@ -108,7 +110,7 @@ jobs:
           test -f "$app/Amiberry"
           file "$app/Amiberry"
           strings "$app/Amiberry" \
-            | grep -F "[AmiberryNativeUI] settings layer ready"
+            | grep -F "settings layer ready: %{public}d options via C API"
 
   build-iOS-device:
     runs-on: macos-15
