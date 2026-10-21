@@ -419,12 +419,25 @@ void MediaAv::worker_loop()
 	// Per-stage pipeline timing for media status page 5, matching the card's
 	// (microseconds << 32) | calls accumulators: 0 video decode, 1 YUY2 pack,
 	// 3 audio decode. Stage 2 (present) is timed by the caller around the
-	// 0x0b08 copy, not by this worker.
-	auto profile_record = [this](uint32_t stage, uint64_t start_us) {
+	// 0x0b08 copy, not by this worker. A decode stage counts one call per
+	// decoded frame but includes the avcodec_send_packet() time as well,
+	// because many FFmpeg decoders do their work there rather than in
+	// avcodec_receive_frame().
+	auto profile_add = [this](uint32_t stage, uint64_t start_us, bool call) {
 		const uint64_t elapsed = monotonic_us() - start_us;
 		std::lock_guard<std::mutex> lock(mutex_);
 		profile_us_[stage] += elapsed;
-		profile_calls_[stage]++;
+		if (call)
+			profile_calls_[stage]++;
+	};
+	auto profile_record = [&](uint32_t stage, uint64_t start_us) {
+		profile_add(stage, start_us, true);
+	};
+	auto send_timed = [&](AVCodecContext *codec, const AVPacket *packet, uint32_t stage) {
+		const uint64_t start = monotonic_us();
+		const int result = avcodec_send_packet(codec, packet);
+		profile_add(stage, start, false);
+		return result;
 	};
 	// Only EAGAIN and EOF end a drain cleanly; any other negative return from
 	// FFmpeg is a decoding or demuxing error and fails the session.
@@ -574,7 +587,7 @@ void MediaAv::worker_loop()
 			AVPacket *packet = pending_video.front();
 			pending_video.pop_front();
 			pending_video_bytes -= static_cast<size_t>(packet->size);
-			const int send = avcodec_send_packet(state_->video, packet);
+			const int send = send_timed(state_->video, packet, 0);
 			av_packet_free(&packet);
 			if (send < 0 || !drain_video()) return false;
 		}
@@ -594,7 +607,7 @@ void MediaAv::worker_loop()
 				pending_video.push_back(queued);
 			}
 		} else if (state_->packet->stream_index == state_->audio_stream) {
-			send = avcodec_send_packet(state_->audio, state_->packet);
+			send = send_timed(state_->audio, state_->packet, 3);
 		}
 		av_packet_unref(state_->packet);
 		if (send < 0 || !send_pending_video(true) || !drain_audio()) {
@@ -606,12 +619,12 @@ void MediaAv::worker_loop()
 	while (!pending_video.empty()) {
 		AVPacket *packet = pending_video.front();
 		pending_video.pop_front();
-		const int send = avcodec_send_packet(state_->video, packet);
+		const int send = send_timed(state_->video, packet, 0);
 		av_packet_free(&packet);
 		if (send < 0 || !drain_video()) { free_pending(); fail(); return; }
 	}
-	if (state_->video) avcodec_send_packet(state_->video, nullptr);
-	if (state_->audio) avcodec_send_packet(state_->audio, nullptr);
+	if (state_->video) send_timed(state_->video, nullptr, 0);
+	if (state_->audio) send_timed(state_->audio, nullptr, 3);
 	if (!drain_video() || !drain_audio()) { fail(); return; }
 	{
 		std::lock_guard<std::mutex> lock(mutex_);
