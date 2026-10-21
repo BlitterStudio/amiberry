@@ -9,18 +9,24 @@
  */
 
 import Foundation
+import os
 import AmiberrySettings
+
+private let nativeUILog = OSLog(subsystem: "com.blitterstudio.amiberry", category: "NativeUI")
 
 /*
  * Called from src/osdep/main.cpp before the emulator starts. The @_cdecl
  * attribute gives the function a plain C symbol so the C++ side can declare
- * it extern "C" without any generated header. It both directions-proves the
- * interop: C++ calls Swift, and Swift calls amiberry_settings_count() from
- * the C settings layer compiled into the executable.
+ * it extern "C" without any generated header. It proves the interop in both
+ * directions: C++ calls Swift, and Swift calls amiberry_settings_count()
+ * from the C settings layer compiled into the executable. The result goes
+ * to the unified log, never stdout: command-line modes such as
+ * --dump-config own stdout.
  */
 @_cdecl("amiberry_native_ui_startup_log")
 public func amiberryNativeUIStartupLog() -> Int32 {
 	let count = amiberry_settings_count()
-	print("[AmiberryNativeUI] settings layer ready: \(count) options via C API")
+	os_log("settings layer ready: %{public}d options via C API", log: nativeUILog, type: .info,
+		Int32(count))
 	return Int32(count)
 }
