@@ -10514,7 +10514,7 @@ int built_in_prefs (struct uae_prefs *p, int model, int config, int compa, int r
 	return v;
 }
 
-static bool has_expansion_with_rtc(struct uae_prefs* p, int chiplimit)
+bool has_expansion_with_rtc(struct uae_prefs* p, int chiplimit)
 {
 	if (p->bogomem.size ||
 		p->chipmem.size > chiplimit ||

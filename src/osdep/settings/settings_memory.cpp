@@ -500,4 +500,21 @@ void sync_cpuboard_mem(uae_prefs& p)
 		p.cpuboardmem1.size = maxmem;
 }
 
+// The copy fixup_prefs() makes after any accelerator board change: the
+// board RAM lands in the memory slot the board uses (main.cpp). Options
+// that install a board themselves run it, so the configuration they leave
+// behind is the one the fixup would resolve to anyway.
+void mirror_cpuboard_mem(uae_prefs& p)
+{
+	const int memtype = cpuboard_memorytype(&p);
+	if (memtype == BOARD_MEMORY_HIGHMEM)
+		p.mbresmem_high.size = p.cpuboardmem1.size;
+	else if (memtype == BOARD_MEMORY_Z2)
+		p.fastmem[0].size = p.cpuboardmem1.size;
+	else if (memtype == BOARD_MEMORY_25BITMEM)
+		p.mem25bit.size = p.cpuboardmem1.size;
+	else if (memtype == BOARD_MEMORY_CUSTOM_32)
+		p.mem25bit.size = 0;
+}
+
 } // namespace amiberry_settings

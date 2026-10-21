@@ -238,9 +238,20 @@ void get_keyboard_type(const uae_prefs& p, char* out, size_t size)
 	write_choice(out, size, CHOICES(keyboard_type_choices), index);
 }
 
+// The UAE and Cherry keyboards have no N-key rollover; the panel forced the
+// option on every frame while greyed out, the layer reports it unavailable.
+bool keyboard_nkro_available(const uae_prefs& p, const context&)
+{
+	return p.keyboard_mode != KB_UAE && p.keyboard_mode != KB_A2000_8039;
+}
+
 void set_keyboard_type(uae_prefs& p, const value& v)
 {
 	p.keyboard_mode = choice_index(CHOICES(keyboard_type_choices), v.text) - 1;
+	// The controllers without N-key rollover force it on (the panel wrote
+	// this every frame while the option was greyed out).
+	if (!keyboard_nkro_available(p, {}))
+		p.keyboard_nkro = true;
 }
 
 void get_keyboard_nkro(const uae_prefs& p, char* out, size_t size)
@@ -251,13 +262,6 @@ void get_keyboard_nkro(const uae_prefs& p, char* out, size_t size)
 void set_keyboard_nkro(uae_prefs& p, const value& v)
 {
 	p.keyboard_nkro = v.number != 0;
-}
-
-// The UAE and Cherry keyboards have no N-key rollover; the panel forced the
-// option on every frame while greyed out, the layer reports it unavailable.
-bool keyboard_nkro_available(const uae_prefs& p, const context&)
-{
-	return p.keyboard_mode != KB_UAE && p.keyboard_mode != KB_A2000_8039;
 }
 
 // ------------------------------------------------------- misc chipset options
@@ -481,6 +485,49 @@ const amiberry_setting_choice rtc_choices[] = {
 	{"RP5C01A", "RF5C01A"},
 	{"MSM6242B_A2000", "A2000 MSM6242B"},
 };
+
+// The RTC value a chipset extra forces: the cs_rtc column of
+// built_in_chipset_prefs() (cfgfile.cpp). While an extra is active
+// fixup_prefs() re-runs that table on every configuration, so of all the
+// RTC chips only the one the selected machine ships with survives; this
+// mirrors the table so choice availability can offer exactly that value.
+// The round-trip test guards the copy against drift.
+int rtc_of(const uae_prefs& p)
+{
+	switch (p.cs_compatible) {
+	case CP_GENERIC:
+		if (p.cpu_model >= 68020)
+			return 2; // big box-like: RP5C01A
+		if (p.cpu_compatible)
+			return has_expansion_with_rtc(const_cast<uae_prefs*>(&p), 0x80000) ? 1 : 0;
+		return 1; // sort of A500-like
+	case CP_CDTV:
+	case CP_CDTVCR:
+	case CP_A500P:
+	case CP_A2000:
+		return 1;
+	case CP_CD32:
+		return has_expansion_with_rtc(const_cast<uae_prefs*>(&p), 0x200000) ? 1 : 0;
+	case CP_A500:
+	case CP_A600:
+	case CP_A1000:
+		return has_expansion_with_rtc(const_cast<uae_prefs*>(&p), 0x100000) ? 1 : 0;
+	case CP_A3000:
+	case CP_A3000T:
+	case CP_A4000:
+	case CP_A4000T:
+		return 2;
+	default:
+		return p.cs_rtc; // Custom (and unlisted extras): untouched
+	}
+}
+
+bool rtc_choice_available(const uae_prefs& p, std::string_view choice)
+{
+	if (!p.cs_compatible)
+		return true; // Custom: every chip survives
+	return choice_index(CHOICES(rtc_choices), choice) == rtc_of(p);
+}
 
 void get_rtc(const uae_prefs& p, char* out, size_t size)
 {
@@ -847,8 +894,9 @@ const definition definitions[] = {
 
 	{CHOICE_OPTION("rtc", "adv_chipset", "Battery backed up real time clock",
 			"Real-time clock chip.",
-			AMIBERRY_APPLY_LIVE, "RP5C01A", rtc_choices, nullptr),
-		get_rtc, set_rtc, nullptr, nullptr, nullptr},
+			AMIBERRY_APPLY_LIVE, "MSM6242B", rtc_choices,
+			"With a chipset extra active, only the RTC chip of the selected machine survives the configuration checks."),
+		get_rtc, set_rtc, nullptr, rtc_choice_available, nullptr},
 	{NUMBER_OPTION("chipset_rtc_adjust", "adv_chipset", "RTC adjustment",
 			"Real-time clock adjustment in seconds.",
 			AMIBERRY_SETTING_INT, AMIBERRY_APPLY_RESET, -100000, 100000, 1, "0", custom_constraint),
@@ -861,7 +909,7 @@ const definition definitions[] = {
 	CUSTOM_BOOL("a1000ram", "adv_chipset", "A1000 Boot RAM/ROM",
 		"Enable A1000-style boot RAM at $C00000.", AMIBERRY_APPLY_RESET, "false", cs_a1000ram, custom_constraint),
 	CUSTOM_BOOL("df0idhw", "adv_chipset", "DF0: ID hardware",
-		"Enable DF0 drive ID hardware detection.", AMIBERRY_APPLY_LIVE, "true", cs_df0idhw, custom_constraint),
+		"Enable DF0 drive ID hardware detection.", AMIBERRY_APPLY_LIVE, "false", cs_df0idhw, custom_constraint),
 	CUSTOM_BOOL("cd32cd", "adv_chipset", "CD32 CD",
 		"Enable CD32 CD-ROM drive.", AMIBERRY_APPLY_LIVE, "false", cs_cd32cd, custom_constraint),
 	CUSTOM_BOOL("cd32c2p", "adv_chipset", "CD32 C2P",
@@ -881,9 +929,9 @@ const definition definitions[] = {
 	CUSTOM_BOOL("color_burst", "adv_chipset", "Composite color burst",
 		"Enable color burst signal on composite video output.", AMIBERRY_APPLY_LIVE, "false", cs_color_burst, custom_constraint),
 	CUSTOM_BOOL("resetwarning", "adv_chipset", "KB Reset Warning",
-		"Show warning when keyboard reset is pressed.", AMIBERRY_APPLY_RESET, "true", cs_resetwarning, custom_constraint),
+		"Show warning when keyboard reset is pressed.", AMIBERRY_APPLY_RESET, "false", cs_resetwarning, custom_constraint),
 	CUSTOM_BOOL("cia_todbug", "adv_chipset", "CIA TOD bug",
-		"Emulate CIA Time of Day hardware bug.", AMIBERRY_APPLY_RESET, "false", cs_ciatodbug, custom_constraint),
+		"Emulate CIA Time of Day hardware bug.", AMIBERRY_APPLY_RESET, "true", cs_ciatodbug, custom_constraint),
 	CUSTOM_BOOL("cs_bytecustomwritebug", "adv_chipset", "Custom register byte write bug",
 		"Emulate byte write bug in custom chip registers.", AMIBERRY_APPLY_LIVE, "false", cs_bytecustomwritebug, custom_constraint),
 	CUSTOM_BOOL("memory_pattern", "adv_chipset", "Power up memory pattern",

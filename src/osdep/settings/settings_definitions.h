@@ -109,6 +109,12 @@ const char* preset_id(int model);
 // copies the other way) does not undo the edit.
 void sync_cpuboard_mem(uae_prefs& p);
 
+// The other direction, the copy fixup_prefs() makes: the accelerator
+// board RAM lands in the memory slot the board uses. Options that change
+// the board (the automatic PPC configuration) call it so the stored
+// configuration matches what the fixup resolves to.
+void mirror_cpuboard_mem(uae_prefs& p);
+
 // Machine presets (settings_presets.cpp). The public C wrappers live next
 // to the implementations; amiberry_settings_preset_apply lives in
 // settings_session.cpp because it owns the session.

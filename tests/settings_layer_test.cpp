@@ -123,16 +123,21 @@ void reset_prefs(uae_prefs& p)
 #ifdef USE_JIT_FPU
 	p.compfpu = true;
 #endif
-	// The machine fields of default_prefs() (src/cfgfile.cpp).
+	// The machine fields of default_prefs() (src/cfgfile.cpp), resolved the
+	// way fixup_prefs() leaves them: with the Generic chipset extra the
+	// built-in chipset table rewrites the A500-like options (the default
+	// 512 KB slow RAM carries an RTC), and the resolved values are what the
+	// emulator settles on.
 	p.chipset_mask = CSMASK_ECS_AGNUS;
 	p.collision_level = 3;
 	p.keyboard_nkro = true;
 	p.cs_compatible = CP_GENERIC;
-	p.cs_rtc = 2;
+	p.cs_rtc = 1;
 	p.cs_ciaoverlay = true;
 	p.cs_ksmirror_e0 = true;
-	p.cs_df0idhw = true;
-	p.cs_resetwarning = true;
+	p.cs_df0idhw = false;
+	p.cs_resetwarning = false;
+	p.cs_ciatodbug = true;
 	p.cs_memorypatternfill = true;
 	p.cs_fatgaryrev = -1;
 	p.cs_ramseyrev = -1;
@@ -645,8 +650,13 @@ void check_session()
 // Prints a configuration for the round-trip test: the cycle-exact mode the
 // CPU options depend on, then every option in table order (which keeps
 // cpu_model ahead of fpu_model, whose value it resets when parsed). Only
-// available options are expected back: the writer omits some of the others,
-// for example the PPC options while PPC emulation is off.
+// values that survive the configuration checks are expected back: the
+// writer omits some unavailable options (the PPC options while PPC
+// emulation is off), and a held value the layer would refuse (the RTC of a
+// machine preset another option has since replaced) is not the value a
+// reload produces. Sub-1 MB RAM boards are represented by their *_size_k
+// key only; a zero one would reset a megabyte board the writer keeps in
+// <name>_size, a combination no saved configuration contains.
 void emit(const char* name, const uae_prefs& p)
 {
 	std::printf("S %s\n", name);
@@ -655,9 +665,16 @@ void emit(const char* name, const uae_prefs& p)
 	for (size_t i = 0; i < settings::definition_count(); i++) {
 		const settings::definition& d = settings::definition_at(i);
 		const std::string v = value_of(p, d.descriptor.id);
+		const bool size_k_view = std::strstr(d.descriptor.id, "_size_k") != nullptr;
+		if (size_k_view && v == "0")
+			continue;
 		std::printf("A %s=%s\n", d.descriptor.id, v.c_str());
-		if (settings::is_available(d, p, idle))
-			std::printf("E %s=%s %s\n", d.descriptor.id, v.c_str(), d.descriptor.default_value);
+		if (!settings::is_available(d, p, idle))
+			continue;
+		if ((d.descriptor.type == AMIBERRY_SETTING_CHOICE || d.descriptor.type == AMIBERRY_SETTING_BOOL)
+			&& !settings::is_choice_available(d, p, idle, v))
+			continue;
+		std::printf("E %s=%s %s\n", d.descriptor.id, v.c_str(), d.descriptor.default_value);
 	}
 }
 
@@ -834,11 +851,20 @@ void check_machine_availability()
 	CHECK(!available(p, "ide"));
 	CHECK(!available(p, "pcmcia"));
 	CHECK(!available(p, "ramsey"));
-	CHECK(available(p, "rtc")); // the RTC radios stay usable
+	// The RTC radios stay usable under an extra, but only the chip of the
+	// selected machine survives the configuration checks (fixup_prefs
+	// re-runs the built-in chipset table); the default 512 KB slow RAM
+	// carries an RTC, so Generic resolves to MSM6242B.
+	CHECK(available(p, "rtc"));
+	CHECK(choice_available(p, "rtc", "MSM6242B"));
+	CHECK(!choice_available(p, "rtc", "RP5C01A"));
+	CHECK(value_of(p, "rtc") == "MSM6242B");
+	CHECK(set(p, "rtc", "RP5C01A") == AMIBERRY_SETTINGS_UNAVAILABLE);
 	set(p, "chipset_compatible", "-");
 	CHECK(available(p, "ciaatod"));
 	CHECK(available(p, "ide"));
 	CHECK(available(p, "ramsey"));
+	CHECK(choice_available(p, "rtc", "RP5C01A"));
 
 	// The 1M chip jumper only exists below 1 MB chip RAM.
 	CHECK(available(p, "1mchipjumper"));
@@ -950,10 +976,25 @@ void check_machine_dependents()
 	CHECK(!p.cpu_cycle_exact && !p.cpu_memory_cycle_exact && !p.blitter_cycle_exact);
 	CHECK(!choice_available(p, "cycle_exact", "memory") || p.cpu_model >= 68020);
 
-	// A chipset extra rewrites the advanced chipset options.
+	// A chipset extra rewrites the advanced chipset options, and the RTC
+	// radios normalise to the machine's chip.
 	reset_prefs(p);
 	set(p, "chipset_compatible", "A500");
 	CHECK(!p.cs_df0idhw && !p.cs_resetwarning);
+	CHECK(p.cs_rtc == 1 && value_of(p, "rtc") == "MSM6242B");
+	set(p, "chipset_compatible", "A3000");
+	CHECK(value_of(p, "rtc") == "RP5C01A");
+
+	// Keyboards without N-key rollover force the option on (the panel
+	// wrote it every frame while the control was greyed out).
+	reset_prefs(p);
+	set(p, "keyboard_nkro", "false");
+	set(p, "keyboard_type", "UAE");
+	CHECK(p.keyboard_nkro);
+	set(p, "keyboard_type", "a500_6570-036");
+	CHECK(available(p, "keyboard_nkro"));
+	set(p, "keyboard_nkro", "false");
+	CHECK(!p.keyboard_nkro);
 
 	// Processor slot RAM syncs the accelerator board copy.
 	reset_prefs(p);
@@ -961,6 +1002,19 @@ void check_machine_dependents()
 	set(p, "mbresmem_size", "32");
 	CHECK(p.cpuboardmem1.size == 32 * 1024 * 1024);
 
+	// The automatic PPC configuration installs the accelerator board the
+	// fixups would (with its RAM mirrored into the processor slot), and
+	// leaving it removes the board again.
+#ifdef WITH_PPC
+	reset_prefs(p);
+	set(p, "cpu_model", "68060");
+	set(p, "ppc_model", "automatic");
+	CHECK(p.ppc_mode == 1 && p.cpuboardmem1.size == 8 * 1024 * 1024);
+	CHECK(p.mbresmem_high.size == 8 * 1024 * 1024);
+	CHECK(value_of(p, "mbresmem_size") == "8");
+	set(p, "ppc_model", "");
+	CHECK(p.ppc_mode == 0 && p.cpuboard_type == 0 && p.mbresmem_high.size == 0);
+#endif
 	// The UAE board combo stores board and boot ROM as the panel did.
 	set(p, "uaeboard", "full");
 	CHECK(p.uaeboard == 2 && p.boot_rom == 0);

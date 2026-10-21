@@ -540,8 +540,33 @@ void get_ppc_model(const uae_prefs& p, char* out, size_t size)
 
 void set_ppc_model(uae_prefs& p, const value& v)
 {
+	const bool automatic = v.text == "automatic";
+	const bool was_automatic = p.ppc_mode == 1;
 	p.ppc_model[0] = 0;
-	p.ppc_mode = v.text == "automatic" ? 1 : 0;
+	p.ppc_mode = automatic ? 1 : 0;
+	if (automatic) {
+		// fixup_cpu() installs the automatic PPC configuration: a CyberStorm
+		// PPC (a Blizzard PPC on A1200-like machines) with at least 8 MB of
+		// board RAM, which fixup_prefs() then mirrors into the processor
+		// slot. The setter makes the same changes, so the configuration it
+		// leaves behind is what the fixups resolve to anyway.
+		cpuboard_setboard(&p, BOARD_CYBERSTORM, BOARD_CYBERSTORM_SUB_PPC);
+		if (p.cs_compatible == CP_A1200) {
+			cpuboard_setboard(&p, BOARD_BLIZZARD, BOARD_BLIZZARD_SUB_PPC);
+		} else if (p.cs_compatible != CP_A4000 && p.cs_compatible != CP_A4000T
+			&& p.cs_compatible != CP_A3000 && p.cs_compatible != CP_A3000T) {
+			if ((p.cs_ide == IDE_A600A1200 || p.cs_pcmcia) && p.cs_mbdmac <= 0)
+				cpuboard_setboard(&p, BOARD_BLIZZARD, BOARD_BLIZZARD_SUB_PPC);
+		}
+		if (p.cpuboardmem1.size < 8 * 1024 * 1024)
+			p.cpuboardmem1.size = 8 * 1024 * 1024;
+	} else if (was_automatic) {
+		// Leaving the automatic configuration removes the board it installed.
+		p.cpuboard_type = 0;
+		p.cpuboard_subtype = 0;
+		p.cpuboardmem1.size = 0;
+	}
+	mirror_cpuboard_mem(p);
 }
 
 bool ppc_model_available(const uae_prefs& p, const context&)

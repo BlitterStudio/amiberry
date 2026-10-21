@@ -21,7 +21,7 @@ settings_layer_compile() {
 	# chipset domain depends on; it only writes the prefs it is given.
 	{
 		printf '%s\n' '#include "sysconfig.h"' '#include "sysdeps.h"' '#include "options.h"' '#include "custom.h"'
-		awk '/^static bool has_expansion_with_rtc\(struct uae_prefs\* p, int chiplimit\)$/ { copy = 1 } copy { print } copy && /^}$/ && ++closed == 2 { exit }' src/cfgfile.cpp
+		awk '/^bool has_expansion_with_rtc\(struct uae_prefs\* p, int chiplimit\)$/ { copy = 1 } copy { print } copy && /^}$/ && ++closed == 2 { exit }' src/cfgfile.cpp
 	} > "$chipfix"
 	if ! grep -q '^int built_in_chipset_prefs' "$chipfix"; then
 		echo "settings layer test: built_in_chipset_prefs() not found in src/cfgfile.cpp" >&2

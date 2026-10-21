@@ -13261,6 +13261,14 @@ int amiberry_main(int argc, char* argv[])
 			enumerate_sound_devices();
 		}
 		install_headless_display_fallback();
+		// fixup_prefs() clamps Zorro III memory against the reserved window
+		// (max_z3fastmem), which preinit_shm() computes on a normal start
+		// before any configuration is resolved. Without it the dump would
+		// report Z3 fake chip RAM and Z3 graphics card memory as corrected
+		// to zero; mirror the reservation so the dump resolves exactly like
+		// a normal start (the reservation is address space only and is
+		// released when the process exits).
+		preinit_shm();
 		// Resolving a WHDLoad autoload in dump mode must not prepare the
 		// host for a real boot: no booter temp tree, no save-data links.
 		whdload_set_host_writes_enabled(false);
