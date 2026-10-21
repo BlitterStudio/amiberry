@@ -255,8 +255,15 @@ static std::string HandleQuit(const std::vector<std::string>& args)
 		std::cout << "IPC: Received QUIT" << std::endl;
 	}
 	// Posted now, executed by IPCHandle() after this pass has written the
-	// reply, exactly like the old deferred uae_quit().
-	amiberry_actions_quit();
+	// reply, exactly like the old deferred uae_quit(). A full action queue
+	// rejects the post: this handler runs on the main thread, so drain the
+	// queue and try once more, and never acknowledge a quit that will not
+	// happen.
+	if (!amiberry_actions_quit()) {
+		amiberry_actions_run_pending();
+		if (!amiberry_actions_quit())
+			return make_response(false, {"Quit could not be queued"});
+	}
 	ipc_quit_requested = true;
 	return make_response(true);
 }
@@ -3598,6 +3605,12 @@ static std::string ProcessCommand(const std::string& line)
 	std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::toupper);
 
 	std::vector<std::string> args(parts.begin() + 1, parts.end());
+	// split() drops a trailing empty field, so `SETTINGS_SET\tppc_model\t`
+	// would lose its value. An empty string is a real settings value (for
+	// example ppc_model= turns PPC emulation off), so keep it for that
+	// command only; every other command parses exactly as before.
+	if (cmd == "SETTINGS_SET" && !line.empty() && line.back() == '\t')
+		args.emplace_back();
 
 	const auto it = command_handlers.find(cmd);
 	if (it != command_handlers.end()) {
