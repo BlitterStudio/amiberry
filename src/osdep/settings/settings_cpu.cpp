@@ -201,6 +201,8 @@ void set_cpu_model(uae_prefs& p, const value& v)
 		else
 			p.cpu_clock_multiplier = 8 * 256;
 	}
+	// A 68020 or better can run the JIT the RAM sizes depend on.
+	clamp_ram_for_fixups(p);
 }
 
 void get_address_space_24(const uae_prefs& p, char* out, size_t size)
@@ -681,6 +683,7 @@ void set_cachesize(uae_prefs& p, const value& v)
 		p.cpu_memory_cycle_exact = false;
 		p.compfpu = p.fpu_mode <= 0;
 	}
+	clamp_ram_for_fixups(p);
 }
 
 bool cachesize_available(const uae_prefs& p, const context&)

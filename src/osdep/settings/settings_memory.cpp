@@ -593,4 +593,19 @@ void mirror_cpuboard_mem(uae_prefs& p)
 		p.mem25bit.size = 0;
 }
 
+// fixup_prefs()'s RAM clamps that depend on other options, in its order:
+// 1.5 MB chip RAM becomes 2 MB under the JIT, slow RAM above 1.5 MB is
+// capped for the Gayle/Gary conflict, and 1.5 MB slow RAM becomes 1 MB
+// under the JIT.
+void clamp_ram_for_fixups(uae_prefs& p)
+{
+	const bool jit = jit_cache_after_fixup_cpu(p) != 0;
+	if (p.chipmem.size == 0x180000 && jit)
+		p.chipmem.size = 0x200000;
+	if (p.bogomem.size > 0x180000 && slow_ram_capped_by_gayle(p))
+		p.bogomem.size = 0x180000;
+	if (p.bogomem.size == 0x180000 && jit)
+		p.bogomem.size = 0x100000;
+}
+
 } // namespace amiberry_settings

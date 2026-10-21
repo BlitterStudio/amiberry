@@ -123,6 +123,11 @@ void mirror_cpuboard_mem(uae_prefs& p);
 // mode). The memory domain uses it for the sizes the JIT cannot map.
 int jit_cache_after_fixup_cpu(const uae_prefs& p);
 
+// fixup_prefs()'s RAM clamps that depend on other options (the JIT, the
+// Gayle/Gary address conflict). Setters of those options run it, so the RAM
+// options never show a size the fixup will change.
+void clamp_ram_for_fixups(uae_prefs& p);
+
 // Machine presets (settings_presets.cpp). The public C wrappers live next
 // to the implementations; amiberry_settings_preset_apply lives in
 // settings_session.cpp because it owns the session.

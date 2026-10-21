@@ -58,12 +58,15 @@ bool has_value(const settings::definition& d, const char* v)
     return std::strcmp(current, v) == 0;
 }
 
-// A checkbox for a BOOL option.
+// A checkbox for a BOOL option, greyed out while the value a click would
+// store is unavailable (genlock with A2024/Graffiti emulation).
 void option_checkbox(const char* label, const settings::definition& d, const settings::context& ctx)
 {
     bool checked = settings::get_bool(d, changed_prefs);
+    ImGui::BeginDisabled(!settings::is_choice_available(d, changed_prefs, ctx, checked ? "false" : "true"));
     if (AmigaCheckbox(label, &checked))
         settings::set_bool(d, changed_prefs, ctx, checked);
+    ImGui::EndDisabled();
 }
 
 static std::vector<std::string> keyboard_items_strs;

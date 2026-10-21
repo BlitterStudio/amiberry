@@ -154,8 +154,10 @@ void set_cycle_exact(uae_prefs& p, const value& v)
 	const bool memory = v.text != "false";
 	p.cpu_cycle_exact = full;
 	p.cpu_memory_cycle_exact = p.blitter_cycle_exact = memory;
-	if (!memory)
+	if (!memory) {
+		clamp_ram_for_fixups(p); // the JIT may run again
 		return;
+	}
 	if (p.cpu_model < 68020)
 		p.cpu_cycle_exact = true;
 	if (p.cpu_model <= 68030) {
@@ -335,6 +337,7 @@ void set_chipset_compatible(uae_prefs& p, const value& v)
 {
 	p.cs_compatible = choice_index(CHOICES(chipset_compatible_choices), v.text);
 	built_in_chipset_prefs(&p);
+	clamp_ram_for_fixups(p); // the extra's Gayle/Gary/Ramsey cap slow RAM
 }
 
 // hvcsync: all six values the configuration can hold; the old panel offered
@@ -617,6 +620,7 @@ void set_ide(uae_prefs& p, const value& v)
 		if (p.cs_ramseyrev < 0)
 			p.cs_ramseyrev = 0x0f;
 	}
+	clamp_ram_for_fixups(p);
 }
 
 void get_scsi_a3000(const uae_prefs& p, char* out, size_t size)
@@ -705,6 +709,7 @@ void get_ramsey(const uae_prefs& p, char* out, size_t size)
 void set_ramsey(uae_prefs& p, const value& v)
 {
 	p.cs_ramseyrev = static_cast<int>(v.number);
+	clamp_ram_for_fixups(p);
 }
 
 void get_fatgary(const uae_prefs& p, char* out, size_t size)
@@ -715,6 +720,7 @@ void get_fatgary(const uae_prefs& p, char* out, size_t size)
 void set_fatgary(uae_prefs& p, const value& v)
 {
 	p.cs_fatgaryrev = static_cast<int>(v.number);
+	clamp_ram_for_fixups(p);
 }
 
 // fixup_prefs() keeps Gary and Ramsey present while the A4000 IDE

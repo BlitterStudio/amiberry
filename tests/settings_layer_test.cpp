@@ -1276,6 +1276,40 @@ void check_machine_fixup_rules()
 	CHECK(std::strcmp(p.cartident, ":AR3") == 0);
 	CHECK(set(p, "cart_file", "/roms/unknown.rom") == AMIBERRY_SETTINGS_OK);
 	CHECK(p.cartident[0] == 0);
+	// Writing back the current path keeps an ident typed for a custom dump.
+	std::snprintf(p.cartident, sizeof p.cartident, ":DeMoNv1");
+	CHECK(set(p, "cart_file", "/roms/unknown.rom") == AMIBERRY_SETTINGS_OK);
+	CHECK(std::strcmp(p.cartident, ":DeMoNv1") == 0);
+
+	// Options that make a RAM size impossible change it the way the fixup
+	// would: the JIT turns 1.5 MB chip into 2 MB and 1.5 MB slow into 1 MB,
+	// and a chipset extra with Gayle/Gary caps 1.8 MB slow RAM at 1.5 MB.
+	if (jit_compiled()) {
+		reset_prefs(p);
+		p.cpu_cycle_exact = p.cpu_memory_cycle_exact = p.blitter_cycle_exact = false;
+		CHECK(set(p, "cpu_24bit_addressing", "false") == AMIBERRY_SETTINGS_OK);
+		CHECK(set(p, "cpu_model", "68020") == AMIBERRY_SETTINGS_OK);
+		CHECK(set(p, "chipmem_size", "3") == AMIBERRY_SETTINGS_OK);
+		CHECK(set(p, "bogomem_size", "6") == AMIBERRY_SETTINGS_OK);
+		CHECK(set(p, "cachesize", "8192") == AMIBERRY_SETTINGS_OK);
+		CHECK(value_of(p, "chipmem_size") == "4");
+		CHECK(value_of(p, "bogomem_size") == "4");
+	}
+	reset_prefs(p);
+	p.cs_compatible = 0;
+	p.cs_ide = 0;
+	p.cs_fatgaryrev = p.cs_ramseyrev = -1;
+	CHECK(set(p, "bogomem_size", "7") == AMIBERRY_SETTINGS_OK);
+	CHECK(set(p, "chipset_compatible", "A1200") == AMIBERRY_SETTINGS_OK);
+	CHECK(value_of(p, "bogomem_size") == "6");
+	reset_prefs(p);
+	p.cs_compatible = 0;
+	p.cs_ide = 0;
+	p.cs_fatgaryrev = p.cs_ramseyrev = -1;
+	CHECK(set(p, "bogomem_size", "7") == AMIBERRY_SETTINGS_OK);
+	CHECK(set(p, "ramsey", "15") == AMIBERRY_SETTINGS_OK);
+	CHECK(value_of(p, "bogomem_size") == "6");
+
 
 	// The UAE board reports and stores the no-diagnostics spellings.
 	reset_prefs(p);

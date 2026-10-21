@@ -854,22 +854,33 @@ void fixup_prefs (struct uae_prefs *p, bool userconfig)
 #ifdef AMIBERRY
 thread_local bool fixup_prefs_preview_active;
 
+namespace {
+// Sets fixup_prefs_preview_active for one preview and clears it however the
+// preview ends: the settings layer catches exceptions at its C boundary,
+// and the flag must not stay set on the emulator thread afterwards.
+struct preview_scope {
+	preview_scope() { fixup_prefs_preview_active = true; }
+	~preview_scope() { fixup_prefs_preview_active = false; }
+	preview_scope(const preview_scope&) = delete;
+	preview_scope& operator=(const preview_scope&) = delete;
+};
+}
+
 void fixup_prefs_preview(struct uae_prefs *p)
 {
 	// fixup_cpu() can recompute the boot ROM type through need_uae_boot_rom().
 	const int boot_rom_type = uae_boot_rom_type;
-	fixup_prefs_preview_active = true;
-	fixup_prefs(p, true);
-	fixup_prefs_preview_active = false;
+	{
+		preview_scope scope;
+		fixup_prefs(p, true);
+	}
 	uae_boot_rom_type = boot_rom_type;
 }
 
 int built_in_prefs_preview(struct uae_prefs *p, int model, int config, int compa)
 {
-	fixup_prefs_preview_active = true;
-	const int result = built_in_prefs(p, model, config, compa, 0);
-	fixup_prefs_preview_active = false;
-	return result;
+	preview_scope scope;
+	return built_in_prefs(p, model, config, compa, 0);
 }
 #endif
 

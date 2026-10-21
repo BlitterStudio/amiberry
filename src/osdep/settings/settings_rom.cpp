@@ -78,9 +78,13 @@ void get_cart_file(const uae_prefs& p, char* out, size_t size)
 // cart= (cartident) is written after cart_file= and wins on load
 // (decode_rom_ident), so it follows the file: a scanned cartridge dump
 // carries its romdata configname, anything else clears it so a stale ident
-// cannot bring the previous cartridge back or mis-type an unknown ROM.
+// cannot bring the previous cartridge back or mis-type an unknown ROM. Only
+// a real change does this: writing back the current path keeps an ident
+// typed for a custom dump.
 void set_cart_file(uae_prefs& p, const value& v)
 {
+	if (v.text == std::string_view(p.cartfile))
+		return;
 	set_path(p.cartfile, sizeof p.cartfile, v);
 	p.cartident[0] = 0;
 	const int count = romlist_count();
