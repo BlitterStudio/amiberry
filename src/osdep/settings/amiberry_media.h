@@ -48,8 +48,9 @@ AMIBERRY_SETTINGS_API amiberry_settings_status amiberry_folder_get(amiberry_fold
 /*
  * Points the folder at path and saves the emulator's settings file, as the
  * Paths panel does; on a Mac App Store build the folder is also granted
- * (amiberry_media_grant_access). INVALID_VALUE for an empty path or one
- * longer than the host's path limit.
+ * (amiberry_media_grant_access) first. INVALID_VALUE for an empty path or
+ * one longer than the host's path limit; UNAVAILABLE, with nothing changed,
+ * when access to the folder cannot be kept.
  */
 AMIBERRY_SETTINGS_API amiberry_settings_status amiberry_folder_set(amiberry_folder folder,
 	const char *path);

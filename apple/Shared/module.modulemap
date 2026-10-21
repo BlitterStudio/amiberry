@@ -1,7 +1,10 @@
-/* Exposes Amiberry's C settings API (src/osdep/settings/amiberry_settings.h)
- * to Swift through the clang module importer. The header is consumed in
- * place so Swift front ends can never drift from the C99 contract. */
+/* Exposes Amiberry's C APIs for native front ends (settings, runtime
+ * actions and status, media and folders; src/osdep/settings/) to Swift
+ * through the clang module importer. The headers are consumed in place so
+ * Swift front ends can never drift from the C99 contract. */
 module AmiberrySettings {
     header "../../src/osdep/settings/amiberry_settings.h"
+    header "../../src/osdep/settings/amiberry_actions.h"
+    header "../../src/osdep/settings/amiberry_media.h"
     export *
 }

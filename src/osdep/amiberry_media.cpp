@@ -161,8 +161,11 @@ amiberry_settings_status amiberry_folder_set(amiberry_folder folder, const char*
 			return AMIBERRY_SETTINGS_UNKNOWN_ID;
 		if (!path || !path[0] || std::strlen(path) >= MAX_DPATH)
 			return AMIBERRY_SETTINGS_INVALID_VALUE;
+		// The folder is granted before it is stored, so a sandboxed build
+		// never keeps a folder it cannot open after a restart.
+		if (!macos_bookmark_store(path))
+			return AMIBERRY_SETTINGS_UNAVAILABLE;
 		set_folder_path(folder, path);
-		macos_bookmark_store(path);
 		save_amiberry_settings();
 		return AMIBERRY_SETTINGS_OK;
 	});
