@@ -11,6 +11,10 @@ trap 'rm -f "$out" "$out.c"' EXIT
 printf '#include "amiberry_settings.h"\nint main(void) { return amiberry_settings_count() ? 0 : 1; }\n' > "$out.c"
 ${CC:-cc} -std=c99 -Wall -Wextra -pedantic -Werror -Isrc/osdep/settings -fsyntax-only "$out.c"
 
+# The runtime actions header carries the same C99 contract.
+printf '#include "amiberry_actions.h"\nint main(void) { amiberry_actions_status s; amiberry_actions_get_status(&s); return amiberry_actions_run_pending() ? 0 : 1; }\n' > "$out.c"
+${CC:-cc} -std=c99 -Wall -Wextra -pedantic -Werror -Isrc/osdep/settings -fsyntax-only "$out.c"
+
 . tests/lib/settings_layer_build.sh
 settings_layer_compile "$out"
 "$out"
