@@ -129,6 +129,17 @@ bool set_folder_path(amiberry_folder folder, const std::string& path)
 	}
 }
 
+// Saves the emulator's settings; a save that throws (out of memory while
+// building the file) counts as failed, so callers undo their change.
+bool save_settings()
+{
+	try {
+		return save_amiberry_settings_with_result();
+	} catch (...) {
+		return false;
+	}
+}
+
 std::vector<std::string>* recent_list(amiberry_media_list list)
 {
 	switch (list) {
@@ -249,7 +260,15 @@ amiberry_settings_status amiberry_folder_get(amiberry_folder folder, char* buffe
 	return amiberry_settings::no_throw(AMIBERRY_SETTINGS_UNKNOWN_ID, [=] {
 		if (folder < 0 || folder >= AMIBERRY_FOLDER_COUNT)
 			return AMIBERRY_SETTINGS_UNKNOWN_ID;
-		return copy_out(folder_path(folder), buffer, size);
+		// A folder set outside the API (an old settings file, the GUI) can
+		// hold bytes that are not UTF-8, which this API never returns.
+		const std::string path = folder_path(folder);
+		if (!valid_utf8(path)) {
+			if (buffer && size)
+				buffer[0] = 0;
+			return AMIBERRY_SETTINGS_UNAVAILABLE;
+		}
+		return copy_out(path, buffer, size);
 	});
 }
 
@@ -264,7 +283,7 @@ amiberry_settings_status amiberry_folder_set(amiberry_folder folder, const char*
 			return AMIBERRY_SETTINGS_INVALID_VALUE;
 		// The folder is granted before it is stored, so a sandboxed build
 		// never keeps a folder it cannot open after a restart.
-		const bool granted_before = macos_bookmark_is_accessible(path);
+		const bool granted_before = macos_bookmark_exists(path);
 		if (!macos_bookmark_store(path))
 			return AMIBERRY_SETTINGS_UNAVAILABLE;
 		// A folder that cannot be saved would revert at the next start:
@@ -272,7 +291,7 @@ amiberry_settings_status amiberry_folder_set(amiberry_folder folder, const char*
 		// grant made for it here (one that predated the call is kept).
 		const std::string previous = folder_path(folder);
 		set_folder_path(folder, path);
-		if (!save_amiberry_settings_with_result()) {
+		if (!save_settings()) {
 			set_folder_path(folder, previous);
 			if (!granted_before)
 				macos_bookmark_remove(path);
@@ -325,7 +344,7 @@ amiberry_settings_status amiberry_media_add_recent(amiberry_media_list list, con
 		// back and the failure reported.
 		const std::vector<std::string> previous = *recent;
 		add_file_to_mru_list(*recent, absolute);
-		if (!save_amiberry_settings_with_result()) {
+		if (!save_settings()) {
 			*recent = previous;
 			return AMIBERRY_SETTINGS_UNAVAILABLE;
 		}

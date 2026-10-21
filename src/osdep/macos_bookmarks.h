@@ -40,6 +40,10 @@ std::vector<std::string> macos_bookmarks_list();
 // Remove a stored bookmark for the given path.
 void macos_bookmark_remove(const std::string& path);
 
+// Whether a bookmark is stored for exactly this path (normalized as
+// macos_bookmark_store() does), not merely for a folder containing it.
+bool macos_bookmark_exists(const std::string& path);
+
 #else
 
 // No-op stubs for non-App-Store builds.
@@ -54,5 +58,6 @@ inline bool macos_bookmark_store(const std::string&) { return true; }
 inline bool macos_bookmark_is_accessible(const std::string&) { return true; }
 inline std::vector<std::string> macos_bookmarks_list() { return {}; }
 inline void macos_bookmark_remove(const std::string&) {}
+inline bool macos_bookmark_exists(const std::string&) { return false; }
 
 #endif

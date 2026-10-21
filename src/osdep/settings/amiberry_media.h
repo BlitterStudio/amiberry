@@ -45,7 +45,10 @@ typedef enum amiberry_folder {
 	AMIBERRY_FOLDER_COUNT
 } amiberry_folder;
 
-/* The folder's path. UNKNOWN_ID for a folder outside the enum. */
+/*
+ * The folder's path. UNKNOWN_ID for a folder outside the enum; UNAVAILABLE
+ * when the stored path is not valid UTF-8 (set outside this API).
+ */
 AMIBERRY_SETTINGS_API amiberry_settings_status amiberry_folder_get(amiberry_folder folder,
 	char *buffer, size_t size);
 

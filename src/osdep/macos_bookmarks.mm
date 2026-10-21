@@ -409,6 +409,22 @@ std::vector<std::string> macos_bookmarks_list()
 	return result;
 }
 
+bool macos_bookmark_exists(const std::string& path)
+{
+	if (path.empty())
+		return false;
+
+	@autoreleasepool
+	{
+		std::lock_guard<std::mutex> lock(s_mutex);
+		if (!s_bookmark_data)
+			return false;
+		const std::string dir_path = normalize_to_directory(path);
+		NSString* key = [NSString stringWithUTF8String:dir_path.c_str()];
+		return s_bookmark_data[key] != nil;
+	}
+}
+
 void macos_bookmark_remove(const std::string& path)
 {
 	if (path.empty())
