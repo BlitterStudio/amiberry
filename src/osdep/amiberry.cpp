@@ -6898,6 +6898,7 @@ std::string get_data_path()
 void get_saveimage_path(char* out, const int size, int dir)
 {
 	_tcsncpy(out, fix_trailing(saveimage_dir).c_str(), size - 1);
+	out[size - 1] = 0;
 }
 
 std::string get_configuration_path()
@@ -6925,6 +6926,7 @@ std::vector<std::string> get_base_content_missing_directories(const std::string&
 void get_configuration_path(char* out, const int size)
 {
 	_tcsncpy(out, fix_trailing(config_path).c_str(), size - 1);
+	out[size - 1] = 0;
 }
 
 void set_base_content_path(const std::string& newpath)
@@ -7196,6 +7198,7 @@ std::string get_rom_path()
 void get_rom_path(char* out, const int size)
 {
 	_tcsncpy(out, fix_trailing(rom_path).c_str(), size - 1);
+	out[size - 1] = 0;
 }
 
 void set_rom_path(const std::string& newpath)
@@ -7212,6 +7215,7 @@ std::string get_rp9_path()
 void get_rp9_path(char* out, const int size)
 {
 	_tcsncpy(out, fix_trailing(rp9_path).c_str(), size - 1);
+	out[size - 1] = 0;
 }
 
 void set_rp9_path(const std::string& newpath)
@@ -7234,10 +7238,12 @@ void set_saveimage_path(const std::string& newpath)
 void get_savestate_path(char* out, const int size)
 {
 	if (path_statefile[0]) {
-		_tcsncpy(out, path_statefile, size);
+		_tcsncpy(out, path_statefile, size - 1);
+		out[size - 1] = 0;
 		return;
 	}
 	_tcsncpy(out, fix_trailing(savestate_dir).c_str(), size - 1);
+	out[size - 1] = 0;
 }
 
 std::string get_savestate_path()
@@ -7262,6 +7268,7 @@ std::string get_ripper_path()
 void fetch_ripperpath(TCHAR* out, const int size)
 {
 	_tcsncpy(out, fix_trailing(ripper_path).c_str(), size - 1);
+	out[size - 1] = 0;
 }
 
 void set_ripper_path(const std::string& newpath)
@@ -7278,6 +7285,7 @@ std::string get_inputrecordings_path()
 void fetch_inputfilepath(TCHAR* out, const int size)
 {
 	_tcsncpy(out, fix_trailing(input_dir).c_str(), size - 1);
+	out[size - 1] = 0;
 }
 
 void set_inputrecordings_path(const std::string& newpath)
@@ -7289,6 +7297,7 @@ void set_inputrecordings_path(const std::string& newpath)
 void get_nvram_path(TCHAR* out, const int size)
 {
 	_tcsncpy(out, fix_trailing(nvram_dir).c_str(), size - 1);
+	out[size - 1] = 0;
 }
 
 std::string get_nvram_path()
@@ -7314,6 +7323,7 @@ std::string get_ini_file_path()
 void get_video_path(char* out, const int size)
 {
 	_tcsncpy(out, fix_trailing(video_dir).c_str(), size - 1);
+	out[size - 1] = 0;
 }
 
 std::string get_video_path()
@@ -7339,6 +7349,7 @@ std::string get_bezels_path()
 void get_floppy_sounds_path(char* out, const int size)
 {
 	_tcsncpy(out, fix_trailing(floppy_sounds_dir).c_str(), size - 1);
+	out[size - 1] = 0;
 }
 
 std::string get_floppy_sounds_path()

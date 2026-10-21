@@ -1616,6 +1616,20 @@ void my_set_time_explicit(struct my_openfile_s* mos) noexcept
 			}
 		}
 	}
+	/* A file the process may not write stays as it is, as with fopen("w"):
+	   ReplaceFile needs only read and delete access, which would bypass an
+	   ACL that denies writing the file. Opening for writing (without
+	   truncating) checks exactly what fopen("w") needed. */
+	if (GetFileAttributesA(target.c_str()) != INVALID_FILE_ATTRIBUTES) {
+		const HANDLE h = CreateFileA(target.c_str(), GENERIC_WRITE,
+			FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+			nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+		if (h == INVALID_HANDLE_VALUE) {
+			write_log("my_save_file_atomic: '%s' is not writable: %lu\n", target.c_str(), GetLastError());
+			return false;
+		}
+		CloseHandle(h);
+	}
 	/* Temp name unique per process, thread and call, so two concurrent saves to
 	   the same target never share a temp file. */
 	static volatile LONG s_tmpseq = 0;
@@ -1844,7 +1858,17 @@ static bool save_file_in_place(const char* target, const void* data, size_t len)
 		return false;
 	}
 	if (close(fd) != 0) {
-		write_log("my_save_file_atomic: in-place close '%s' failed: %s\n", target, strerror(errno));
+		/* A delayed write error (NFS, FUSE): the new content may or may not
+		   have landed, so the old content is written back. */
+		const int e = errno;
+		bool restored = false;
+		const int again = open(target, O_RDWR | O_CLOEXEC);
+		if (again >= 0) {
+			restored = rewrite_fd(again, old_content.data(), old_content.size());
+			restored = close(again) == 0 && restored;
+		}
+		write_log("my_save_file_atomic: in-place close '%s' failed: %s; old content %s\n",
+			target, strerror(e), restored ? "restored" : "could not be restored");
 		return false;
 	}
 	return true;
