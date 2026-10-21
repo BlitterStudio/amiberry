@@ -291,6 +291,9 @@ set(SOURCE_FILES
         src/sounddep/sound.cpp
         src/threaddep/threading.cpp
         src/osdep/file_dialog.cpp
+        src/osdep/settings/settings_cpu.cpp
+        src/osdep/settings/settings_registry.cpp
+        src/osdep/settings/settings_session.cpp
         src/osdep/gui/main_window.cpp
         src/osdep/imgui_overlay.cpp
         src/osdep/imgui_osk.cpp

@@ -28,6 +28,7 @@ BEHAVIORAL_TESTS=(
 	"test_plugin_search_paths.sh"
 	"test_relocatable_install_paths.sh"
 	"test_relative_paths.sh"
+	"test_settings_roundtrip.sh"
 )
 
 behavioral_only=0

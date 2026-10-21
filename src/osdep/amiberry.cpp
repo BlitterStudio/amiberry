@@ -6051,6 +6051,11 @@ void target_fixup_options(uae_prefs* p)
 		}
 	}
 #ifdef AMIBERRY
+	// Drawbridge profiles and hotkeys are global state; a settings preview
+	// leaves them alone.
+	if (fixup_prefs_preview_active)
+		return;
+
 	// Initialize Drawbridge if needed
 	for (const auto& floppyslot : p->floppyslots)
 	{
