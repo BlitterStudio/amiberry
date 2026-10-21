@@ -177,6 +177,27 @@ def main():
               control.request("SETTINGS_GET\tdefinitely_not_an_option")
               == "ERROR\tUnknown option: definitely_not_an_option")
 
+        # Status and settings must not serve data from before an earlier
+        # command in the same pass: LOAD_CONFIG changes the pending
+        # configuration directly, and the next GET_STATUS and SETTINGS_GET
+        # (the session holds no uncommitted edits) must see it at once.
+        loaded = os.path.join(work, "loaded.uae")
+        with open(loaded, "w") as f:
+            f.write("config_description=LoadedViaIPC\ncpu_model=68030\n")
+        check("LOAD_CONFIG applies", control.request(f"LOAD_CONFIG\t{loaded}") == "OK")
+        status = control.request("GET_STATUS")
+        check("GET_STATUS is fresh after LOAD_CONFIG",
+              "Config=LoadedViaIPC" in status, status)
+        check("SETTINGS_GET is fresh after LOAD_CONFIG",
+              control.request("SETTINGS_GET\tcpu_model") == "OK\tcpu_model=68030")
+        # A staged edit survives a load: the session stays open while it
+        # holds uncommitted SETs.
+        check("staged edit survives a load",
+              control.request("SETTINGS_SET\tcpu_model\t68020") == "OK"
+              and control.request(f"LOAD_CONFIG\t{loaded}") == "OK"
+              and control.request("SETTINGS_GET\tcpu_model") == "OK\tcpu_model=68020")
+
+
         # The classic action commands keep behaving as before.
         adf = os.path.join(work, "boot.adf")
         with open(adf, "wb") as f:
@@ -201,6 +222,13 @@ def main():
               control.request("RESET\tBOGUS") == "ERROR\tInvalid reset type")
         check("EJECT_FLOPPY range check unchanged",
               control.request("EJECT_FLOPPY\t9") == "ERROR\tDrive number must be 0-3")
+        # An empty path clears the slot, exactly as writing an empty path to
+        # the pending configuration always did.
+        check("INSERTFLOPPY with empty path clears the slot",
+              control.request("INSERTFLOPPY\t\t0") == "OK"
+              and f"Floppy0={adf}" not in control.request("GET_STATUS"))
+        check("INSERTCD with empty path is accepted",
+              control.request("INSERTCD\t\t") == "OK")
 
         check("QUIT answered", control.request("QUIT") == "OK")
         control.close()
