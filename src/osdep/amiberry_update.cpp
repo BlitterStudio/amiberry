@@ -502,7 +502,9 @@ static bool http_get(const std::string& url, std::string& response_body, long& h
 }
 #endif // AMIBERRY_HAS_CURL
 
-static bool parse_release_json(const nlohmann::json& rel, UpdateInfo& out)
+// cancel_flag stops the SHA256SUMS request too, so cancelling the update
+// check (or exiting) never waits for that transfer to time out.
+static bool parse_release_json(const nlohmann::json& rel, UpdateInfo& out, std::atomic<bool>* cancel_flag)
 {
 	if (!rel.is_object()) {
 		return false;
@@ -604,8 +606,9 @@ static bool parse_release_json(const nlohmann::json& rel, UpdateInfo& out)
 		std::string sums_body;
 		long sums_code = 0;
 #ifdef AMIBERRY_HAS_CURL
-		if (http_get(sha256_url, sums_body, sums_code, nullptr) && sums_code >= 200 && sums_code < 300) {
+		if (http_get(sha256_url, sums_body, sums_code, cancel_flag) && sums_code >= 200 && sums_code < 300) {
 #else
+		(void)cancel_flag;
 		if (false) {
 #endif
 			out.sha256_expected = find_release_asset_sha256(sums_body, out.asset_name);
@@ -643,7 +646,7 @@ static bool read_release(UpdateChannel channel, UpdateInfo& out, std::atomic<boo
 	}
 
 	if (channel == UpdateChannel::Stable) {
-		if (!parse_release_json(doc, out)) {
+		if (!parse_release_json(doc, out, cancel_flag)) {
 			out.error_message = "GitHub latest release payload missing fields";
 			return false;
 		}
@@ -662,7 +665,7 @@ static bool read_release(UpdateChannel channel, UpdateInfo& out, std::atomic<boo
 		if (rel.contains("draft") && rel["draft"].is_boolean() && rel["draft"].get<bool>()) {
 			continue;
 		}
-		if (parse_release_json(rel, out)) {
+		if (parse_release_json(rel, out, cancel_flag)) {
 			return true;
 		}
 	}
