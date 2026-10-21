@@ -2241,6 +2241,9 @@ void check_storage_domain()
 	CHECK(set(p, "cdimage0", "/dev/disk4,delay:ioctl") == AMIBERRY_SETTINGS_OK);
 	CHECK(p.cdslots[0].type == SCSI_UNIT_IOCTL && p.cdslots[0].delayed);
 	CHECK(value_of(p, "cdimage0") == "/dev/disk4,delay:ioctl");
+	// autodetect replaces the whole slot, the delay included.
+	CHECK(set(p, "cdimage0", "autodetect") == AMIBERRY_SETTINGS_OK);
+	CHECK(!p.cdslots[0].delayed && value_of(p, "cdimage0") == "empty");
 	// A comma in the file name keeps the path whole.
 	CHECK(set(p, "cdimage0", "/cd/a,b.iso,") == AMIBERRY_SETTINGS_OK);
 	CHECK(std::strcmp(p.cdslots[0].name, "/cd/a,b.iso") == 0);

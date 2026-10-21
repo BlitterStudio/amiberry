@@ -2364,8 +2364,11 @@ void write_cdimage_entry(const struct cdslot *cd, const TCHAR *path, TCHAR *out,
 void parse_cdimage_entry(const TCHAR *entry, struct cdslot *cd)
 {
 	if (!_tcsicmp (entry, _T("autodetect"))) {
+		// Every field of the slot is set, as for any other value: the
+		// settings layer parses into a slot that can hold a delayed drive.
 		cd->type = SCSI_UNIT_DEFAULT;
 		cd->inuse = true;
+		cd->delayed = false;
 		cd->name[0] = 0;
 		return;
 	}
