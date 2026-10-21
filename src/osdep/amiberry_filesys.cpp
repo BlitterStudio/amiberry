@@ -1586,7 +1586,7 @@ void my_set_time_explicit(struct my_openfile_s* mos) noexcept
  * save and leave the original file intact.
  */
 #ifdef _WIN32
-[[nodiscard]] bool my_save_file_atomic(const TCHAR* filename, const void* data, size_t len) noexcept
+static bool save_file_atomic(const TCHAR* filename, const void* data, size_t len)
 {
 	if (!filename || !data) {
 		write_log("my_save_file_atomic: null argument\n");
@@ -1785,8 +1785,10 @@ static bool copy_file_metadata(const char* target, int to_fd, const struct stat&
 	close(from_fd);
 	return ok;
 #else
+	/* No way here to carry ACLs or extended attributes over (FreeBSD and
+	   others): the caller updates the file in place, keeping them. */
 	(void)target;
-	return true;
+	return false;
 #endif
 }
 
@@ -1874,7 +1876,7 @@ static bool save_file_in_place(const char* target, const void* data, size_t len)
 	return true;
 }
 
-[[nodiscard]] bool my_save_file_atomic(const TCHAR* filename, const void* data, size_t len) noexcept
+static bool save_file_atomic(const TCHAR* filename, const void* data, size_t len)
 {
 	if (!filename || !data) {
 		write_log("my_save_file_atomic: null argument\n");
@@ -1965,10 +1967,10 @@ static bool save_file_in_place(const char* target, const void* data, size_t len)
 	if (fd < 0) {
 		const int e = errno;
 		write_log("my_save_file_atomic: mkstemp('%s') failed: %s\n", tmpl.c_str(), strerror(e));
-		/* A writable file in a folder that does not allow new entries is
-		   updated in place, as fopen("w") did: not atomic, but the only
-		   save that layout allows. */
-		if (have_old_mode && (e == EACCES || e == EPERM))
+		/* A writable file in a folder that does not allow new entries, or
+		   whose path leaves no room for the temporary name, is updated in
+		   place, as fopen("w") did: not atomic, but the only save left. */
+		if (have_old_mode && (e == EACCES || e == EPERM || e == ENAMETOOLONG))
 			return save_file_in_place(target.c_str(), data, len);
 		return false;
 	}
@@ -2093,6 +2095,18 @@ static bool save_file_in_place(const char* target, const void* data, size_t len)
 	return true;
 }
 #endif
+
+/* noexcept for its callers, while the helpers allocate (paths, the old
+   content an in-place save keeps): an allocation failure fails the save. */
+[[nodiscard]] bool my_save_file_atomic(const TCHAR* filename, const void* data, size_t len) noexcept
+{
+	try {
+		return save_file_atomic(filename, data, len);
+	} catch (...) {
+		write_log("my_save_file_atomic: out of memory saving '%s'\n", filename ? filename : "");
+		return false;
+	}
+}
 
 [[nodiscard]] uae_s64 my_lseek(struct my_openfile_s* mos, uae_s64 offset, int whence) noexcept
 {
