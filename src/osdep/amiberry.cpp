@@ -7247,6 +7247,13 @@ std::string get_savestate_path()
 	return fix_trailing(savestate_dir);
 }
 
+// The save states folder itself, without the configuration's
+// statefile_path override get_savestate_path() applies.
+std::string get_savestate_folder()
+{
+	return fix_trailing(savestate_dir);
+}
+
 std::string get_ripper_path()
 {
 	return fix_trailing(ripper_path);

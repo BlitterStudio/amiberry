@@ -50,7 +50,8 @@ AMIBERRY_SETTINGS_API amiberry_settings_status amiberry_folder_get(amiberry_fold
  * Paths panel does; on a Mac App Store build the folder is also granted
  * (amiberry_media_grant_access) first. INVALID_VALUE for an empty path or
  * one longer than the host's path limit; UNAVAILABLE, with nothing changed,
- * when access to the folder cannot be kept.
+ * when access to the folder cannot be kept or the settings file cannot be
+ * written.
  */
 AMIBERRY_SETTINGS_API amiberry_settings_status amiberry_folder_set(amiberry_folder folder,
 	const char *path);
@@ -61,7 +62,9 @@ typedef enum amiberry_media_list {
 	AMIBERRY_MEDIA_RECENT_WHDLOAD,
 	AMIBERRY_MEDIA_CD_DRIVES,
 	AMIBERRY_MEDIA_CONFIGURATIONS, /* .uae files in the configurations folder */
-	AMIBERRY_MEDIA_SAVESTATES,     /* .uss files in the save states folder */
+	AMIBERRY_MEDIA_SAVESTATES,     /* .uss files in the save states folder in
+	                                  effect: a configuration's statefile_path
+	                                  overrides AMIBERRY_FOLDER_SAVESTATES */
 	AMIBERRY_MEDIA_LIST_COUNT
 } amiberry_media_list;
 

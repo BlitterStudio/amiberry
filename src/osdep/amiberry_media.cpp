@@ -43,6 +43,23 @@ amiberry_settings_status copy_out(const std::string& text, char* buffer, size_t 
 	return AMIBERRY_SETTINGS_OK;
 }
 
+// Paths cross the API as UTF-8; on Windows the narrow std::filesystem
+// conversions use the ANSI code page instead.
+std::filesystem::path from_utf8(const std::string& text)
+{
+#ifdef __cpp_char8_t
+	return std::filesystem::path(std::u8string(text.begin(), text.end()));
+#else
+	return std::filesystem::u8path(text);
+#endif
+}
+
+std::string to_utf8(const std::filesystem::path& path)
+{
+	const auto text = path.u8string();
+	return std::string(text.begin(), text.end());
+}
+
 std::string file_name(const std::string& path)
 {
 	const size_t slash = path.find_last_of("/\\");
@@ -57,7 +74,7 @@ std::string folder_path(amiberry_folder folder)
 	case AMIBERRY_FOLDER_CDS: return get_cdrom_path();
 	case AMIBERRY_FOLDER_HARD_DRIVES: return get_harddrive_path();
 	case AMIBERRY_FOLDER_CONFIGURATIONS: return get_configuration_path();
-	case AMIBERRY_FOLDER_SAVESTATES: return get_savestate_path();
+	case AMIBERRY_FOLDER_SAVESTATES: return get_savestate_folder();
 	case AMIBERRY_FOLDER_SCREENSHOTS: return get_screenshot_path();
 	case AMIBERRY_FOLDER_WHDLOAD_ARCHIVES: return get_whdload_arch_path();
 	default: return {};
@@ -91,7 +108,7 @@ std::vector<std::string>* recent_list(amiberry_media_list list)
 
 bool has_extension(const std::filesystem::path& file, const char* extension)
 {
-	std::string ext = file.extension().string();
+	std::string ext = to_utf8(file.extension());
 	std::transform(ext.begin(), ext.end(), ext.begin(),
 		[](unsigned char c) { return static_cast<char>(std::tolower(c)); });
 	return ext == extension;
@@ -103,10 +120,10 @@ std::vector<media_entry> folder_files(const std::string& folder, const char* ext
 {
 	std::vector<media_entry> files;
 	std::error_code ec;
-	for (std::filesystem::directory_iterator it(folder, ec), end; !ec && it != end; it.increment(ec)) {
+	for (std::filesystem::directory_iterator it(from_utf8(folder), ec), end; !ec && it != end; it.increment(ec)) {
 		if (!it->is_regular_file(ec) || !has_extension(it->path(), extension))
 			continue;
-		const std::string path = it->path().string();
+		const std::string path = to_utf8(it->path());
 		files.push_back({path, file_name(path)});
 	}
 	std::sort(files.begin(), files.end(),
@@ -133,6 +150,8 @@ std::vector<media_entry> build_list(amiberry_media_list list)
 		entries = folder_files(get_configuration_path(), ".uae");
 		break;
 	case AMIBERRY_MEDIA_SAVESTATES:
+		// The folder in effect: a configuration's statefile_path overrides
+		// the save states folder.
 		entries = folder_files(get_savestate_path(), ".uss");
 		break;
 	default:
@@ -165,8 +184,14 @@ amiberry_settings_status amiberry_folder_set(amiberry_folder folder, const char*
 		// never keeps a folder it cannot open after a restart.
 		if (!macos_bookmark_store(path))
 			return AMIBERRY_SETTINGS_UNAVAILABLE;
+		// A folder that cannot be saved would revert at the next start:
+		// the change is undone and reported instead.
+		const std::string previous = folder_path(folder);
 		set_folder_path(folder, path);
-		save_amiberry_settings();
+		if (!save_amiberry_settings_with_result()) {
+			set_folder_path(folder, previous);
+			return AMIBERRY_SETTINGS_UNAVAILABLE;
+		}
 		return AMIBERRY_SETTINGS_OK;
 	});
 }

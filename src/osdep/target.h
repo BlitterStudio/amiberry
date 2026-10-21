@@ -181,6 +181,7 @@ extern std::string get_video_path();
 extern void set_video_path(const std::string& newpath);
 extern void set_screenshot_path(const std::string& newpath);
 extern std::string get_savestate_path();
+extern std::string get_savestate_folder();
 extern void set_savestate_path(const std::string& newpath);
 extern void set_themes_path(const std::string& newpath);
 extern void set_shaders_path(const std::string& newpath);
