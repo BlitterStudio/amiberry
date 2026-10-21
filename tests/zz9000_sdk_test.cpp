@@ -214,11 +214,8 @@ int main(int argc, char **argv)
 	assert(get32(reply + 20) == 0x061f0000);
 	assert(z3.sdk.buffer_data(get32(reply + 16)) == z3.board.data() + 0x06000000);
 #ifdef HAVE_MPG123
-#ifdef AMIBERRY_WITH_FFMPEG
-	assert(argc == 15);
-#else
-	assert(argc == 4);
-#endif
+	// The runner always passes every fixture; the ID3v2-tagged MP3 is last.
+	assert(argc == 16);
 	std::ifstream file(argv[1], std::ios::binary);
 	std::vector<uint8_t> mp3(std::istreambuf_iterator<char>{file}, {});
 	assert(!mp3.empty() && mp3.size() < 65536);
@@ -422,9 +419,11 @@ int main(int argc, char **argv)
 	{
 		// Firmware session semantics: four concurrent sessions, a fifth
 		// BEGIN answers NO_MEMORY; undecodable MP3 input never faults a
-		// session (minimp3 consumes nothing, the input ring fills and later
-		// feeds answer OK with BACKPRESSURE); FREE never pins audio rings;
-		// and PLAY binds one session at a time, answering BUSY for another.
+		// session, and the card consumes scanned junk rather than staging
+		// it (mp3d_find_frame returns the bytes it walked, minimp3.h:1705),
+		// so a garbage stream never reports BACKPRESSURE; FREE never pins
+		// audio rings; and PLAY binds one session at a time, answering BUSY
+		// for another.
 		std::vector<uint8_t> garbage(256 * 1024, 0xaa);
 		std::copy(garbage.begin(), garbage.end(),
 			z3.sdk.buffer_data(audio_staging));
@@ -446,10 +445,11 @@ int main(int argc, char **argv)
 			put32(payload + 12, 65536);
 			put32(payload + 16, 0);
 			reply = z3.call(0x0504, payload, 20);
-			assert(get32(reply + 52) == 0); // nothing consumed
+			// Every feed is OK, consumed (junk counts, as on the card)
+			// and never backpressured.
+			assert(get32(reply + 52) >= offset + 65536 - 4096);
 			assert(get32(reply + 56) == 0); // nothing decoded
-			assert(offset < 131072 ? (get32(reply + 60) & 8) == 0 :
-				(get32(reply + 60) & 8) != 0);
+			assert((get32(reply + 60) & 8) == 0);
 		}
 		put32(payload, garbage_input);
 		z3.call(0x0101, payload, 4);
@@ -541,6 +541,10 @@ int main(int argc, char **argv)
 		put32(payload, s2);
 		put32(payload + 4, 0);
 		z3.call(0x0507, payload, 8);
+		// The binding is checked before admission: a still-prebuffering
+		// session and a decodable one both answer BUSY, not BAD_REQUEST.
+		put32(payload, s4);
+		z3.call(0x0507, payload, 8, 2);
 		put32(payload, s3);
 		z3.call(0x0507, payload, 8, 2);
 		put32(payload, s2);
@@ -565,6 +569,125 @@ int main(int argc, char **argv)
 			put32(payload, handle);
 			z3.call(0x0101, payload, 4);
 		}
+	}
+	{
+		// Junk and a truncated final frame are consumed at EOF, so the
+		// stream reaches DONE once its PCM has been read; and a resumable
+		// drain reports DRAINED with the NEED_INPUT state while a partial
+		// frame is still retained (audio_stream_transient_drained).
+		const auto tail_session = [&](const std::vector<uint8_t> &bytes,
+		                              uint32_t feed_flags) {
+			std::copy(bytes.begin(), bytes.end(),
+				z3.sdk.buffer_data(audio_staging));
+			put32(payload, 131072);
+			put32(payload + 4, 16);
+			put32(payload + 8, 0);
+			reply = z3.call(0x0100, payload, 12);
+			const uint32_t input = get32(reply + 16);
+			put32(payload, 262144);
+			reply = z3.call(0x0100, payload, 12);
+			const uint32_t ring = get32(reply + 16);
+			reply = begin_audio(z3, input, 131072, ring, 262144, 1);
+			const uint32_t session = get32(reply + 16);
+			assert(session);
+			put32(payload, session);
+			put32(payload + 4, audio_staging);
+			put32(payload + 8, 0);
+			put32(payload + 12, static_cast<uint32_t>(bytes.size()));
+			put32(payload + 16, feed_flags);
+			reply = z3.call(0x0504, payload, 20);
+			assert(get32(reply + 56) > 0); // frames decoded before the tail
+			const uint32_t used = get32(reply + 40) - get32(reply + 44);
+			put32(payload, session);
+			put32(payload + 4, used);
+			put32(payload + 8, 0);
+			reply = z3.call(0x0505, payload, 12);
+			return std::make_pair(session, std::make_pair(input, ring));
+		};
+		std::vector<uint8_t> junk_tail(mp3);
+		junk_tail.insert(junk_tail.end(), 600, 0xab);
+		const auto [junk_session, junk_rings] = tail_session(junk_tail, 1);
+		assert(get32(reply + 60) & 4); // junk consumed: DONE at EOF
+		put32(payload, junk_session);
+		put32(payload + 4, 0);
+		z3.call(0x0506, payload, 8);
+		const uint32_t truncated_size = static_cast<uint32_t>(mp3.size() - 300);
+		const std::vector<uint8_t> truncated(mp3.begin(),
+			mp3.begin() + truncated_size);
+		const auto [trunc_session, trunc_rings] = tail_session(truncated, 1);
+		assert(get32(reply + 60) & 4); // incomplete tail dropped: DONE
+		put32(payload, trunc_session);
+		put32(payload + 4, 0);
+		z3.call(0x0506, payload, 8);
+		// DRAIN without EOF keeps the partial frame staged but reports
+		// DRAINED and NEED_INPUT.
+		const auto [drain_session, drain_rings] = tail_session(truncated, 0);
+		assert((get32(reply + 60) & 4) == 0); // no EOF: not DONE
+		put32(payload, drain_session);
+		put32(payload + 4, 0);
+		put32(payload + 8, 0);
+		put32(payload + 12, 0);
+		put32(payload + 16, 2); // DRAIN
+		reply = z3.call(0x0504, payload, 20);
+		assert(get32(reply + 20) == 1); // NEED_INPUT state
+		assert(get32(reply + 60) & 16); // DRAINED flag
+		put32(payload, drain_session);
+		put32(payload + 4, 0);
+		z3.call(0x0506, payload, 8);
+		for (const auto &rings : {junk_rings, trunc_rings, drain_rings}) {
+			put32(payload, rings.first);
+			z3.call(0x0101, payload, 4);
+			put32(payload, rings.second);
+			z3.call(0x0101, payload, 4);
+		}
+	}
+	{
+		// An ID3v2 tag larger than the input ring is consumed as junk, so
+		// the stream still decodes every frame instead of stalling on
+		// BACKPRESSURE.
+		const auto stream_frames = [&](const std::vector<uint8_t> &bytes) {
+			std::copy(bytes.begin(), bytes.end(),
+				z3.sdk.buffer_data(audio_staging));
+			put32(payload, 65536);
+			put32(payload + 4, 16);
+			put32(payload + 8, 0);
+			reply = z3.call(0x0100, payload, 12);
+			const uint32_t input = get32(reply + 16);
+			put32(payload, 262144);
+			reply = z3.call(0x0100, payload, 12);
+			const uint32_t pcm = get32(reply + 16);
+			reply = begin_audio(z3, input, 65536, pcm, 262144, 1);
+			const uint32_t session = get32(reply + 16);
+			assert(session);
+			for (uint32_t offset = 0; offset < bytes.size();) {
+				const uint32_t length = std::min<uint32_t>(32768,
+					static_cast<uint32_t>(bytes.size()) - offset);
+				put32(payload, session);
+				put32(payload + 4, audio_staging);
+				put32(payload + 8, offset);
+				put32(payload + 12, length);
+				put32(payload + 16, offset + length == bytes.size() ? 1 : 0);
+				reply = z3.call(0x0504, payload, 20);
+				assert((get32(reply + 60) & 8) == 0); // never backpressured
+				offset += length;
+			}
+			assert(get32(reply + 24) == 48000 && get32(reply + 28) == 2);
+			const uint32_t frames = get32(reply + 56);
+			put32(payload, session);
+			put32(payload + 4, 0);
+			z3.call(0x0506, payload, 8);
+			put32(payload, input);
+			z3.call(0x0101, payload, 4);
+			put32(payload, pcm);
+			z3.call(0x0101, payload, 4);
+			return frames;
+		};
+		std::ifstream id3_file(argv[15], std::ios::binary);
+		std::vector<uint8_t> id3_mp3(std::istreambuf_iterator<char>{id3_file}, {});
+		assert(id3_mp3.size() > 100 * 1024);
+		const uint32_t plain_frames = stream_frames(mp3);
+		assert(plain_frames > 0);
+		assert(stream_frames(id3_mp3) == plain_frames);
 	}
 #ifdef AMIBERRY_WITH_FFMPEG
 	const uint32_t ex_compressed = audio_staging;
@@ -681,6 +804,10 @@ int main(int argc, char **argv)
 		put32(payload + 12, static_cast<uint32_t>(bytes.size()));
 		put32(payload + 16, 0);
 		z3.call(0x0504, payload, 20, 3);
+		// READ answers the fault status, not a hardcoded IO_ERROR.
+		put32(payload + 4, 0);
+		put32(payload + 8, 0);
+		z3.call(0x0505, payload, 12, 3);
 		put32(payload, rejected_session);
 		put32(payload + 4, 0);
 		z3.call(0x0506, payload, 8);

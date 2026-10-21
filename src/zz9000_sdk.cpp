@@ -635,22 +635,37 @@ void Engine::decode_audio(Audio &audio, const uint8_t *input, uint32_t length)
 			break;
 		}
 		// A decode error on content (a failed resync and friends) cannot
-		// fault an MP3 session on the card: minimp3 finds no frame,
-		// consumes nothing and waits for more input.
+		// fault an MP3 session on the card: minimp3 keeps scanning for a
+		// frame and waits for more input.
 		audio.decoder_pending = false;
 		break;
 	}
-	if (produced_this_pass) {
-		long fill = 0;
-		double fill_real = 0.0;
-		if (mpg123_getstate(audio.decoder, MPG123_BUFFERFILL, &fill,
-			&fill_real) == MPG123_OK && fill >= 0 &&
-			static_cast<uint64_t>(fill) <= audio.bytes_fed) {
-			const uint32_t consumed = audio.bytes_fed -
-				static_cast<uint32_t>(fill);
-			if (consumed > audio.bytes_consumed)
-				audio.bytes_consumed = consumed;
-		}
+	// The card consumes scanned junk rather than staging it: with no
+	// frame found, mp3d_find_frame returns the bytes it walked
+	// (minimp3.h:1705) and mp3dec_decode_frame reports them consumed
+	// (minimp3.h:1734), so garbage, ID3v2 data and junk tails all count
+	// as consumed. Account everything mpg123 has taken, every pass.
+	long fill = 0;
+	double fill_real = 0.0;
+	if (mpg123_getstate(audio.decoder, MPG123_BUFFERFILL, &fill,
+		&fill_real) == MPG123_OK && fill >= 0 &&
+		static_cast<uint64_t>(fill) <= audio.bytes_fed) {
+		const uint32_t consumed = audio.bytes_fed -
+			static_cast<uint32_t>(fill);
+		if (consumed > audio.bytes_consumed)
+			audio.bytes_consumed = consumed;
+	}
+	// An unparsable tail is dropped rather than held forever: at EOF the
+	// card discards input that will not decode (sdk_mailbox.c:3839-3844),
+	// and a no-progress pass whose retained input already satisfies the
+	// card's 4 KiB decode gate (audio_stream_decode_may_run) can only be
+	// holding junk -- a complete frame is never that large. Reopen the
+	// feed so mpg123 forgets it.
+	const uint32_t retained = audio.bytes_fed - audio.bytes_consumed;
+	if (retained && !audio.decoder_pending &&
+	    (audio.eof || retained >= 4096)) {
+		audio.bytes_consumed = audio.bytes_fed;
+		mpg123_open_feed(audio.decoder);
 	}
 #else
 	(void)input;
@@ -730,8 +745,7 @@ void Engine::audio_result(const Audio &audio, uint8_t *reply,
 {
 	const uint32_t used = audio.pcm_written - audio.pcm_read;
 	// Input still waiting in the session's input ring; like the card's
-	// audio_stream_needs_more_input, MP3 waits for 4 KiB before decoding
-	// and never reports DONE while undecoded input is staged.
+	// audio_stream_needs_more_input, MP3 waits for 4 KiB before decoding.
 	const uint32_t retained = audio.codec_decoder ?
 		static_cast<uint32_t>(audio.codec_decoder->input_size()) :
 		audio.bytes_fed - audio.bytes_consumed;
@@ -740,15 +754,20 @@ void Engine::audio_result(const Audio &audio, uint8_t *reply,
 	if (audio.output)
 		output_drained = SDL_GetAudioStreamQueued(audio.output) <= 0;
 #endif
-	const bool drained = !used && !audio.decoder_pending && output_drained &&
-		retained == 0;
-	const bool done = audio.eof && drained;
-	const bool needs_input = !audio.eof && !audio.drain &&
-		!audio.decoder_pending && !used &&
+	// EOF/DONE needs the input ring empty, as on the card. A resumable
+	// drain completes while a partial frame is still retained: the card
+	// sets drain_input_complete as soon as the decoder blocks on an
+	// incomplete frame (audio_stream_drain_input_done) and reports
+	// DRAINED with the NEED_INPUT state (audio_stream_transient_drained).
+	const bool idle = !used && !audio.decoder_pending && output_drained;
+	const bool drained = audio.drain && idle;
+	const bool done = audio.eof && idle && retained == 0;
+	const bool needs_input = !audio.eof && !audio.drain && idle &&
 		(audio.codec_decoder || retained < 4096);
-	const uint32_t state = audio.faulted ? 4 : done ? 3 : needs_input ? 1 : 2;
+	const uint32_t state = audio.faulted ? 4 : done ? 3 :
+		(needs_input || drained) ? 1 : 2;
 	uint32_t flags = ((used || !output_drained) ? 2u : 0u) | (done ? 4u : 0u) |
-		(audio.backpressure ? 8u : 0u) | (audio.drain && drained ? 16u : 0u);
+		(audio.backpressure ? 8u : 0u) | (drained ? 16u : 0u);
 	if (needs_input)
 		flags |= 1u;
 	put32(reply + 0, audio.session);
@@ -1071,6 +1090,10 @@ uint16_t Engine::dispatch_media(uint16_t opcode, const uint8_t *request,
 				media_->frame_rate_num = frame.frame_rate_num;
 				media_->frame_rate_den = frame.frame_rate_den;
 				media_->video_pts = frame.pts;
+				// The WebM backend's raw PTS tracks every accepted
+				// frame, video included (sdk_video_webm.c:763).
+				if (media_->video_codec == 3 || media_->video_codec == 4)
+					media_->last_raw_audio_pts = frame.pts;
 				if (media_->pts_origin == UINT64_MAX && frame.pts != UINT64_MAX)
 					media_->pts_origin = frame.pts;
 			} else if (result == 0 && media_->eof) {
@@ -1292,7 +1315,13 @@ uint16_t Engine::dispatch_media(uint16_t opcode, const uint8_t *request,
 			put32(reply + 12, audio_flags);
 			put64(reply + 16, media_->pts_origin);
 			put64(reply + 24, media_->video_pts);
-			put64(reply + 32, media_->decoded_audio_pts);
+			// The WebM backend reports the acknowledged-PCM audio clock
+			// here (audio_pts_at, sdk_video_webm.c:978-1012); the MPEG
+			// backends report the newest decoded audio PTS
+			// (sdk_video_mpeg2.c:2304).
+			put64(reply + 32, media_->video_codec == 3 ||
+				media_->video_codec == 4 ?
+				media_->audio_pts : media_->decoded_audio_pts);
 			// pl_mpeg exposes no container timestamps; its derived audio
 			// clock runs from a zero basis, as the card's derived timelines
 			// do, so only an FFmpeg session can report the raw chunk PTS.
@@ -2231,7 +2260,12 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 		if (!decoder)
 			return no_memory;
 		const uint32_t sample_format = be32(request + 24);
-		bool configured = mpg123_format_none(decoder) == MPG123_OK;
+		// minimp3 on the card scans any amount of junk for a frame header
+		// and never reports it; let mpg123 resync without a limit and keep
+		// its diagnostics off the host's stderr.
+		bool configured = mpg123_format_none(decoder) == MPG123_OK &&
+			mpg123_param(decoder, MPG123_RESYNC_LIMIT, -1, 0.0) == MPG123_OK &&
+			mpg123_param(decoder, MPG123_ADD_FLAGS, MPG123_QUIET, 0.0) == MPG123_OK;
 		if (sample_format == pcm_s16le) {
 			configured = configured &&
 				mpg123_param(decoder, MPG123_FORCE_RATE, 48000, 0.0) == MPG123_OK &&
@@ -2335,16 +2369,15 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 			if ((flags & ~3u) || flags == 3 || ((flags & 2) && length))
 				return bad_request;
 			if (audio->faulted)
-				return io_error;
+				return audio->fault_status;
 			if (length) {
 				const auto *source = find_buffer(be32(request + 4));
 				const uint32_t offset = be32(request + 8);
 				if (!source || offset > source->length || length > source->length - offset)
 					return bad_handle;
 				// The card refuses a feed only when its input ring has no
-				// room: undecodable input is never consumed, so the ring
-				// fills and later feeds answer OK with BACKPRESSURE, never
-				// an error (audio_stream_feed_compute).
+				// room; it then answers OK with BACKPRESSURE, never an
+				// error (audio_stream_feed_compute).
 				const uint32_t retained = audio->codec_decoder ?
 					static_cast<uint32_t>(audio->codec_decoder->input_size()) :
 					audio->bytes_fed - audio->bytes_consumed;
@@ -2373,7 +2406,7 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 			if (be32(request + 8) || count > audio->pcm_written - audio->pcm_read)
 				return bad_request;
 			if (audio->faulted)
-				return io_error;
+				return audio->fault_status;
 			if (audio->playing)
 				return bad_request;
 			audio->pcm_read += count;
@@ -2393,6 +2426,12 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 						return unsupported;
 					return io_error;
 				}
+				// Already bound to this session: idempotent. Another
+				// session holds the single playback binding: BUSY, as the
+				// card's pump answers before any admission check
+				// (sdk_mailbox.c:4614).
+				if (audio_playing_session_ && audio_playing_session_ != audio->session)
+					return busy;
 				if (!audio->sample_rate)
 					return bad_request;
 				if (audio->sample_format != pcm_s16le)
@@ -2405,11 +2444,6 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 					    r != 24000 && r != 32000 && r != 44100 && r != 48000 && r != 88200 && r != 96000)
 						return unsupported;
 				}
-				// Already bound to this session: idempotent. Another
-				// session holds the single playback binding: BUSY, as the
-				// card's pump does (sdk_mailbox.c:4614).
-				if (audio_playing_session_ && audio_playing_session_ != audio->session)
-					return busy;
 				if (!audio->output) {
 					SDL_AudioSpec spec = {
 						SDL_AUDIO_S16LE,

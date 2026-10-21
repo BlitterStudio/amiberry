@@ -17,7 +17,8 @@ vorbis_long="${TMPDIR:-/tmp}/zz9000_sdk_audio_vorbis_long.$$.ogg"
 vorbis_long_ref="${TMPDIR:-/tmp}/zz9000_sdk_audio_vorbis_long.$$.s16le"
 flac_long="${TMPDIR:-/tmp}/zz9000_sdk_audio_flac_long.$$.flac"
 flac_long_ref="${TMPDIR:-/tmp}/zz9000_sdk_audio_flac_long.$$.s16le"
-trap 'rm -f "$out" "$mp3" "$mono_mp3" "$low_mp3" "$flac16" "$flac24" "$vorbis" "$flac16_ref" "$flac24_ref" "$vorbis_ref" "$picture_png" "$flac_picture" "$vorbis_long" "$vorbis_long_ref" "$flac_long" "$flac_long_ref"' EXIT
+id3_mp3="${TMPDIR:-/tmp}/zz9000_sdk_audio_id3_test.$$.mp3"
+trap 'rm -f "$out" "$mp3" "$mono_mp3" "$low_mp3" "$flac16" "$flac24" "$vorbis" "$flac16_ref" "$flac24_ref" "$vorbis_ref" "$picture_png" "$flac_picture" "$vorbis_long" "$vorbis_long_ref" "$flac_long" "$flac_long_ref" "$id3_mp3"' EXIT
 # FFmpeg builds without libvorbis (Homebrew 9.x) still ship the native
 # experimental Vorbis encoder; it needs stereo input and -strict -2.
 vorbis_args=libvorbis
@@ -53,6 +54,9 @@ ffmpeg -nostdin -loglevel error -i "$flac_long" -f s16le -acodec pcm_s16le "$fla
 ffmpeg -nostdin -loglevel error -f lavfi -i 'testsrc2=size=1024x1024:rate=1' -frames:v 1 "$picture_png"
 ffmpeg -nostdin -loglevel error -i "$flac16" -i "$picture_png" -map 0:a -map 1:v \
   -c:a copy -c:v png -disposition:v attached_pic "$flac_picture"
+# The cover art makes the ID3v2 tag larger than the test's input ring.
+ffmpeg -nostdin -loglevel error -i "$mp3" -i "$picture_png" -map 0:a -map 1:v \
+  -c:a copy -c:v png -disposition:v attached_pic -id3v2_version 3 "$id3_mp3"
 . tests/lib/zz9000_sdk_build.sh
 zz9000_sdk_compile "$out" tests/zz9000_sdk_test.cpp libmpg123 -DHAVE_MPG123
-SDL_AUDIODRIVER=dummy "$out" "$mp3" "$mono_mp3" "$low_mp3" "$flac16" "$flac24" "$vorbis" "$flac16_ref" "$flac24_ref" "$vorbis_ref" "$flac_picture" "$vorbis_long" "$vorbis_long_ref" "$flac_long" "$flac_long_ref"
+SDL_AUDIODRIVER=dummy "$out" "$mp3" "$mono_mp3" "$low_mp3" "$flac16" "$flac24" "$vorbis" "$flac16_ref" "$flac24_ref" "$vorbis_ref" "$flac_picture" "$vorbis_long" "$vorbis_long_ref" "$flac_long" "$flac_long_ref" "$id3_mp3"
