@@ -476,10 +476,11 @@ else ()
     message(STATUS "PCem support disabled")
 endif()
 
-# FloppyBridge plugin source (serial port — not available on iOS)
-if(NOT IOS)
-    list(APPEND SOURCE_FILES external/floppybridge/src/floppybridge_lib.cpp)
-endif()
+# FloppyBridge: the loader (floppybridge_lib.cpp, which talks to the plugin
+# dylib via dlopen) is always compiled in — disk.cpp and the floppy panel
+# reference FloppyBridgeAPI. On iOS the plugin itself is not built (no serial
+# ports); the loader reports no bridges available at runtime.
+list(APPEND SOURCE_FILES external/floppybridge/src/floppybridge_lib.cpp)
 
 # On Windows, swap POSIX-specific CHD files for Windows equivalents
 if(WIN32)
