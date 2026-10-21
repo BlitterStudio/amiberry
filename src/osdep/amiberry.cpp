@@ -129,9 +129,6 @@ struct gpiod_line* lineYellow; // Yellow LED
 #endif
 #endif
 
-#ifdef USE_DBUS
-#include "amiberry_dbus.h"
-#endif
 #ifdef USE_IPC_SOCKET
 #include "amiberry_ipc.h"
 #endif
@@ -4518,9 +4515,6 @@ bool handle_events()
 		flush_macos_synthetic_mouse_releases();
 #endif
 
-#ifdef USE_DBUS
-	DBusHandle();
-#endif
 #ifdef USE_IPC_SOCKET
 	Amiberry::IPC::IPCHandle();
 #endif
@@ -13176,10 +13170,6 @@ int amiberry_main(int argc, char* argv[])
 
 
 
-#ifdef USE_DBUS
-	if (!early_dump_mode)
-		DBusSetup();
-#endif
 #ifdef USE_IPC_SOCKET
 	if (!early_dump_mode)
 		Amiberry::IPC::IPCSetup();

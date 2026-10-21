@@ -3,7 +3,7 @@
  * everything a front end does while the emulator runs, as opposed to the
  * configuration editing covered by amiberry_settings.h.
  *
- * Actions are the operations the built-in GUI and the IPC/DBus transports
+ * Actions are the operations the built-in GUI and the IPC transport
  * expose today: inserting and ejecting media, disk swapper control, resets,
  * pause and resume, save states, screenshots and quitting. They can be
  * posted from ANY thread: native front ends have their own UI threads
@@ -98,7 +98,7 @@ typedef struct amiberry_actions_status {
 /*
  * Post a runtime action. Callable from any thread. Actions execute in
  * posting order on the emulator's main thread; each makes exactly the
- * changes the built-in GUI and the IPC/DBus transports make today.
+ * changes the built-in GUI and the IPC transport make today.
  *
  * The return value identifies the action for amiberry_actions_poll() and is
  * non-zero unless the action was rejected on the spot: an argument out of

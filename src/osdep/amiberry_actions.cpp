@@ -2,8 +2,8 @@
 // (settings/amiberry_actions.h). Front ends post actions from their own
 // threads; the emulator main thread drains them in order between frames and
 // while the GUI is open, which is where amiberry_actions_run_pending() is
-// called. The executors wrap exactly what the ImGui GUI and the IPC/DBus
-// transports did until now, so behaviour does not depend on the caller.
+// called. The executors wrap exactly what the ImGui GUI and the IPC
+// transport did until now, so behaviour does not depend on the caller.
 
 #include "sysconfig.h"
 #include "sysdeps.h"
@@ -70,7 +70,7 @@ bool execute(const request& r, void*, std::string* error)
 		// it into the requested drive. The list read is the pending one, so
 		// an entry just stored through amiberry_actions_set_swapper_entry
 		// (or the GUI's swapper panel) is insertable immediately; until this
-		// API, the IPC/DBus DISKSWAP read the effective list, which lags
+		// API, the IPC DISKSWAP read the effective list, which lags
 		// those edits until the next configuration change.
 		for (int i = 0; i < AMIBERRY_ACTIONS_FLOPPY_DRIVES; i++) {
 			if (!_tcscmp(currprefs.floppyslots[i].df, changed_prefs.dfxlist[r.drive]))

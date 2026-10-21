@@ -13,7 +13,7 @@
 
 namespace Amiberry::IPC {
 
-// Command names (same as DBus for consistency)
+// Command names
 constexpr char const* CMD_QUIT = "QUIT";
 constexpr char const* CMD_PAUSE = "PAUSE";
 constexpr char const* CMD_RESUME = "RESUME";

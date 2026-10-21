@@ -308,7 +308,7 @@ attaching GDB with `watch remove`, `dma-watch remove`, `condition remove`,
 `exception-mask 0`, `process-break clear`, `history off`, `guest-output off`
 followed by `guest-output clear`, `watch clear-events`, and `input release`.
 The last captured exception (`exception`) does not block GDB; it is dropped
-when that GDB client detaches. D-Bus does not expose `MONITOR`.
+when that GDB client detaches.
 
 ## Validation status
 
