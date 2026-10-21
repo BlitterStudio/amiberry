@@ -318,6 +318,8 @@ def main():
               reply == "ERROR\tInvalid path: " + "a" * 5000, reply[:40])
         reply = control.request("SET_FOLDER\tROMS\t/tmp/roms ")
         check("SET_FOLDER refuses a path the settings file would trim", reply.startswith("ERROR"), reply)
+        reply = control.request(f"SET_FOLDER\tROMS\t{os.path.join(states, 'b.uss')}")
+        check("SET_FOLDER refuses a file", reply.startswith("ERROR"), reply)
         # LIST_CONFIGS keeps answering with bare .uae names.
         configs = os.path.join(work, "configs")
         os.makedirs(configs)

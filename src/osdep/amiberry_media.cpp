@@ -159,7 +159,11 @@ std::string state_folder()
 	const std::string path = get_savestate_path();
 	if (path == get_savestate_folder())
 		return path;
-	return to_utf8(from_utf8(path).parent_path());
+	// Relative to the working directory, where savestate_quick() opens a
+	// relative one (a bare "slot.uss" has no parent of its own).
+	std::error_code ec;
+	const std::filesystem::path file = std::filesystem::absolute(from_utf8(path), ec);
+	return ec ? std::string() : to_utf8(file.parent_path());
 }
 
 std::vector<std::string>* recent_list(amiberry_media_list list)
@@ -306,6 +310,12 @@ amiberry_settings_status amiberry_folder_set(amiberry_folder folder, const char*
 		// The core's folder getters append a separator in MAX_DPATH buffers,
 		// so a folder leaves room for it.
 		if (!storable_path(path) || std::strlen(path) + 1 >= max_stored_path)
+			return AMIBERRY_SETTINGS_INVALID_VALUE;
+		// The emulator lists and opens every folder as a directory; one
+		// that does not exist yet is allowed.
+		std::error_code ec;
+		const auto status = std::filesystem::status(from_utf8(path), ec);
+		if (std::filesystem::exists(status) && !std::filesystem::is_directory(status))
 			return AMIBERRY_SETTINGS_INVALID_VALUE;
 		// Everything that can throw before the grant is done first; after
 		// it, any failure (a throw included) undoes the change.
