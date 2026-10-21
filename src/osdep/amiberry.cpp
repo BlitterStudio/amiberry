@@ -7892,6 +7892,12 @@ bool save_amiberry_settings_with_result()
 	const bool write_ok = ferror(f) == 0;
 	const bool close_ok = fclose(f) == 0;
 	std::error_code ec;
+	// The new file takes over the old one's permissions, so a save never
+	// widens access to the settings and their recent-file history.
+	const auto existing = std::filesystem::status(amiberry_conf_file, ec);
+	if (!ec && std::filesystem::exists(existing))
+		std::filesystem::permissions(temporary, existing.permissions(), ec);
+	ec.clear();
 	if (write_ok && close_ok)
 		std::filesystem::rename(temporary, amiberry_conf_file, ec);
 	if (!write_ok || !close_ok || ec) {

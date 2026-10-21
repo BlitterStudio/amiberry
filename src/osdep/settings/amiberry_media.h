@@ -49,8 +49,9 @@ AMIBERRY_SETTINGS_API amiberry_settings_status amiberry_folder_get(amiberry_fold
  * Points the folder at path and saves the emulator's settings file, as the
  * Paths panel does; on a Mac App Store build the folder is also granted
  * (amiberry_media_grant_access) first. INVALID_VALUE for an empty path or
- * one too long to store (the host's path limit, and at most 2495 bytes so
- * it fits a line of the settings file); UNAVAILABLE, with nothing changed,
+ * one the settings file cannot store as written (longer than the host's
+ * path limit or 2495 bytes, with a control character, or with a space at
+ * either end); UNAVAILABLE, with nothing changed,
  * when access to the folder cannot be kept or the settings file cannot be
  * written.
  */
@@ -86,9 +87,9 @@ AMIBERRY_SETTINGS_API amiberry_settings_status amiberry_media_entry(amiberry_med
 	size_t index, char *path, size_t path_size, char *name, size_t name_size);
 
 /*
- * Records path as the most recent entry of a recent list (floppies, CD
- * images, WHDLoad archives), as the panels do after a pick, and saves the
- * emulator's settings. INVALID_VALUE for another list or a path the folder
+ * Records path (made absolute) as the most recent entry of a recent list
+ * (floppies, CD images, WHDLoad archives), as the panels do after a pick,
+ * and saves the emulator's settings. INVALID_VALUE for another list or a path the folder
  * setter would refuse; UNAVAILABLE, with the list unchanged, when the
  * settings file cannot be written.
  */

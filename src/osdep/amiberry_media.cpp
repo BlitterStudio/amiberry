@@ -112,9 +112,30 @@ std::vector<std::string>* recent_list(amiberry_media_list list)
 // settings file, which is read back in CONFIG_BLEN pieces.
 constexpr size_t max_stored_path = MAX_DPATH < CONFIG_BLEN - 64 ? MAX_DPATH : CONFIG_BLEN - 64;
 
+// The settings file stores one value per line and trims trailing white
+// space when it reads it back, so a path with a line break, another control
+// character or white space at either end would not come back as written.
 bool storable_path(const char* path)
 {
-	return path && path[0] && std::strlen(path) < max_stored_path;
+	if (!path || !path[0])
+		return false;
+	const size_t length = std::strlen(path);
+	if (length >= max_stored_path)
+		return false;
+	for (size_t i = 0; i < length; i++) {
+		if (static_cast<unsigned char>(path[i]) < 0x20 || path[i] == 0x7f)
+			return false;
+	}
+	return path[0] != ' ' && path[length - 1] != ' ';
+}
+
+// The absolute spelling of a path, so a list entry is a full path whatever
+// the working directory of the caller that reads it.
+std::string absolute_path(const std::string& path)
+{
+	std::error_code ec;
+	const std::filesystem::path absolute = std::filesystem::absolute(from_utf8(path), ec);
+	return ec ? path : to_utf8(absolute);
 }
 
 bool has_extension(const std::filesystem::path& file, const char* extension)
@@ -153,7 +174,7 @@ std::vector<media_entry> build_list(amiberry_media_list list)
 	if (const std::vector<std::string>* recent = recent_list(list)) {
 		for (const std::string& path : *recent) {
 			if (!path.empty())
-				entries.push_back({path, file_name(path)});
+				entries.push_back({absolute_path(path), file_name(path)});
 		}
 		return entries;
 	}
@@ -198,14 +219,18 @@ amiberry_settings_status amiberry_folder_set(amiberry_folder folder, const char*
 			return AMIBERRY_SETTINGS_INVALID_VALUE;
 		// The folder is granted before it is stored, so a sandboxed build
 		// never keeps a folder it cannot open after a restart.
+		const bool granted_before = macos_bookmark_is_accessible(path);
 		if (!macos_bookmark_store(path))
 			return AMIBERRY_SETTINGS_UNAVAILABLE;
 		// A folder that cannot be saved would revert at the next start:
-		// the change is undone and reported instead.
+		// the change is undone and reported instead, including an access
+		// grant made for it here (one that predated the call is kept).
 		const std::string previous = folder_path(folder);
 		set_folder_path(folder, path);
 		if (!save_amiberry_settings_with_result()) {
 			set_folder_path(folder, previous);
+			if (!granted_before)
+				macos_bookmark_remove(path);
 			return AMIBERRY_SETTINGS_UNAVAILABLE;
 		}
 		return AMIBERRY_SETTINGS_OK;
@@ -244,7 +269,7 @@ amiberry_settings_status amiberry_media_add_recent(amiberry_media_list list, con
 		// Saved at once, like a folder; a list that cannot be saved is put
 		// back and the failure reported.
 		const std::vector<std::string> previous = *recent;
-		add_file_to_mru_list(*recent, path);
+		add_file_to_mru_list(*recent, absolute_path(path));
 		if (!save_amiberry_settings_with_result()) {
 			*recent = previous;
 			return AMIBERRY_SETTINGS_UNAVAILABLE;

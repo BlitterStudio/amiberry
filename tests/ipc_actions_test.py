@@ -311,6 +311,8 @@ def main():
         reply = control.request("SET_FOLDER\tROMS\t" + "a" * 5000)
         check("SET_FOLDER refuses a path beyond the host's limit",
               reply == "ERROR\tInvalid path: " + "a" * 5000, reply[:40])
+        reply = control.request("SET_FOLDER\tROMS\t/tmp/roms ")
+        check("SET_FOLDER refuses a path the settings file would trim", reply.startswith("ERROR"), reply)
         # LIST_CONFIGS keeps answering with bare .uae names.
         configs = os.path.join(work, "configs")
         os.makedirs(configs)
