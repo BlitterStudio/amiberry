@@ -48,7 +48,7 @@
 extern "C" {
 #endif
 
-#define AMIBERRY_SETTINGS_API_VERSION 1
+#define AMIBERRY_SETTINGS_API_VERSION 2
 
 /* Large enough for every value a descriptor can produce, including the
    terminating NUL. */
@@ -101,6 +101,7 @@ typedef struct amiberry_setting_descriptor {
 AMIBERRY_SETTINGS_API size_t amiberry_settings_count(void);
 /* NULL when index >= amiberry_settings_count(). */
 AMIBERRY_SETTINGS_API const amiberry_setting_descriptor *amiberry_settings_at(size_t index);
+
 /* NULL for an unknown ID. */
 AMIBERRY_SETTINGS_API const amiberry_setting_descriptor *amiberry_settings_find(const char *id);
 
@@ -123,6 +124,22 @@ typedef struct amiberry_settings_session amiberry_settings_session;
 /* NULL when memory is exhausted. */
 AMIBERRY_SETTINGS_API amiberry_settings_session *amiberry_settings_session_open(void);
 AMIBERRY_SETTINGS_API void amiberry_settings_session_close(amiberry_settings_session *session);
+
+/*
+ * Some CHOICE options enumerate devices connected to the host (audio
+ * devices, joysticks and mice) instead of a fixed list. For those,
+ * amiberry_settings_choices() returns the choices that can be selected
+ * now; a configuration may still hold a value outside the list (a device
+ * that is no longer connected), which amiberry_settings_get() reports
+ * as-is. Both calls, like every session call, run on the emulator's main
+ * thread; the returned pointer is valid until the next main-thread call
+ * of the layer. amiberry_settings_refresh_choices() re-reads the host
+ * device lists, for example when a device was connected.
+ */
+AMIBERRY_SETTINGS_API size_t amiberry_settings_choices(
+	const amiberry_settings_session *session, const char *id,
+	const amiberry_setting_choice **choices);
+AMIBERRY_SETTINGS_API void amiberry_settings_refresh_choices(void);
 
 /*
  * The current value in .uae spelling. A CHOICE option can hold a value

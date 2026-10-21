@@ -6526,6 +6526,11 @@ void target_save_options(zfile* f, uae_prefs* p)
 	cfgfile_target_dwrite(f, _T("vkbd_transparency"), "%d", p->vkbd_transparency);
 	cfgfile_target_dwrite_str(f, _T("vkbd_language"), p->vkbd_language);
 	cfgfile_target_dwrite_str(f, _T("vkbd_toggle"), p->vkbd_toggle);
+	// Legacy keys parsed from older configurations; written back so a
+	// round-trip through the current version keeps them.
+	cfgfile_target_dwrite_bool(f, _T("vkbd_hires"), p->vkbd_hires);
+	cfgfile_target_dwrite_bool(f, _T("vkbd_exit"), p->vkbd_exit);
+	cfgfile_target_dwrite_str(f, _T("vkbd_style"), p->vkbd_style);
 }
 
 void target_restart()

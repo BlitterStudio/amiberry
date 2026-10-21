@@ -19,6 +19,11 @@
 #include "x86.h"
 #include "gfxboard.h"
 #include "rommgr.h"
+#include "amiberry_gfx_mode.h"
+#include "amiberry_gfx.h"
+#include "inputdevice.h"
+#include "amiberry_input.h"
+#include "sounddep/sound.h"
 
 #include "settings/amiberry_settings.h"
 #include "settings/settings_definitions.h"
@@ -72,7 +77,49 @@ uaecptr need_uae_boot_rom(uae_prefs*)
 	return boot_rom_address;
 }
 bool is_ppc_cpu(uae_prefs*) { return false; }
-int is_x86_cpu(uae_prefs*) { return 0; }
+ int is_x86_cpu(uae_prefs*) { return 0; }
+
+// Host state the display, sound and input domains read: one test
+// joystick, one test mouse, two test audio devices, no extra monitors.
+bool kmsdrm_detected;
+struct MultiDisplay Displays[MAX_DISPLAYS + 1];
+int max_uae_width = 8192, max_uae_height = 8192;
+static int joystick_total = 1, mouse_total = 1;
+int inputdevice_get_device_total(int type)
+{
+	return type == IDTYPE_JOYSTICK ? joystick_total : type == IDTYPE_MOUSE ? mouse_total : 0;
+}
+const TCHAR* inputdevice_get_device_name(int, int) { return "Test Device"; }
+// Joysticks have unique names (swap_joysticks reorders them, as a hotplug
+// can); other devices share one.
+static bool swap_joysticks = false;
+const TCHAR* inputdevice_get_device_unique_name(int type, int index)
+{
+	if (type == IDTYPE_JOYSTICK && (index == 0 || index == 1))
+		return (index == 0) != swap_joysticks ? "pad-a" : "pad-b";
+	return "test-unique";
+}
+struct didata di_joystick[MAX_INPUT_DEVICES];
+bool joystick_refresh_needed;
+void inputdevice_validate_jports_prefs_only(uae_prefs*, int) {}
+static struct sound_device test_sound_devices[2] = {
+	{ {}, 0, const_cast<TCHAR*>("Test Speaker"), nullptr, const_cast<TCHAR*>("speaker"), nullptr,
+		0, SOUND_DEVICE_SDL },
+	{ {}, 1, const_cast<TCHAR*>("Test Headset"), nullptr, const_cast<TCHAR*>("headset"), nullptr,
+		0, SOUND_DEVICE_SDL },
+};
+struct sound_device* sound_devices[MAX_SOUND_DEVICES] = { &test_sound_devices[0],
+	&test_sound_devices[1] };
+// A refresh can reorder the host's devices; swap_sound_devices simulates a
+// device ahead of the selected one going away and coming back after it.
+static bool swap_sound_devices = false;
+void refresh_sound_devices()
+{
+	if (swap_sound_devices)
+		std::swap(sound_devices[0], sound_devices[1]);
+}
+static int sound_device_count = 2;
+int enumerate_sound_devices() { return sound_device_count; }
 
 // The memory window the memory domain clamps against; the real value is
 // host-dependent, the tests use the common 512 MB reservation.
@@ -151,7 +198,9 @@ int failures;
 
 const settings::context idle{false};
 
-// The CPU fields of default_prefs() (src/cfgfile.cpp).
+
+// The CPU, display, sound, input and on-screen fields of default_prefs()
+// (src/cfgfile.cpp) with the default amiberry.conf options.
 void reset_prefs(uae_prefs& p)
 {
 	std::memset(static_cast<void*>(&p), 0, sizeof p);
@@ -189,11 +238,69 @@ void reset_prefs(uae_prefs& p)
 	p.cs_deniserev = -1;
 	p.chipmem.size = 0x80000;
 	p.bogomem.size = 0x80000;
+
+	// Display (default_prefs plus target_default_options defaults).
+	p.gfx_monitor[0].gfx_size_win.width = 720;
+	p.gfx_monitor[0].gfx_size_win.height = 568;
+	p.gfx_resolution = 1;
+	p.gfx_vresolution = 1;
+	p.gfx_iscanlines = 1;
+	p.gfx_overscanmode = 3;
+	p.gfx_autoresolution_vga = true;
+	p.gfx_windowed_resize = true;
+	p.gfx_correct_aspect = 1;
+	p.scaling_method = -1;
+	p.cr_selected = -1;
+	for (int i = 0; i < 2; i++) {
+		struct chipset_refresh& cr = p.cr[i == 0 ? CHIPSET_REFRESH_PAL : CHIPSET_REFRESH_NTSC];
+		cr.index = i == 0 ? CHIPSET_REFRESH_PAL : CHIPSET_REFRESH_NTSC;
+		cr.rate = i == 0 ? 50.0f : 60.0f;
+		cr.horiz = cr.vert = cr.lace = cr.vsync = cr.framelength = -1;
+		cr.resolution = 7;
+		cr.ntsc = i;
+		cr.inuse = true;
+		strcpy(cr.label, i == 0 ? "PAL" : "NTSC");
+	}
+
+	// Sound.
+	p.produce_sound = 3;
+	p.sound_stereo = 1;
+	p.sound_stereo_separation = 7;
+	p.sound_freq = 44100;
+	p.sound_maxbsiz = 3072; // amiberry_options.default_sound_buffer, applied by target_default_options()
+	p.sound_interpol = 1;
+	p.sound_filter = 1;
+	p.sound_volume_cd = 20;
+	p.soundcard_default = true;
+	for (int i = 0; i < 4; i++) {
+		p.dfxclickvolume_disk[i] = 33;
+		p.dfxclickvolume_empty[i] = 33;
+	}
+
+	// Input (inputdevice_default_prefs plus target defaults).
+	p.input_joymouse_multiplier = 25;
+	p.input_joystick_deadzone = 33;
+	p.input_joymouse_speed = 10;
+	p.input_autofire_linecnt = 600;
+	p.input_autoswitch = true;
+	p.input_joystick_up_button = true;
+	p.input_mouse_speed = 100;
+	p.input_mouse_untrap = MOUSEUNTRAP_MIDDLEBUTTON;
+	p.jports[0].id = JSEM_MICE;
+	p.jports[1].id = JSEM_JOYS;
+	p.jports[2].id = JPORT_NONE;
+	p.jports[3].id = JPORT_NONE;
+
+	// On-screen controls (default_vkbd_transparency is 0: the 85 % default).
+	p.vkbd_touch_button = true;
+	p.vkbd_transparency = 0;
+	strcpy(p.vkbd_language, "US");
+	strcpy(p.vkbd_toggle, "guide");
 }
 
 std::string value_of(const uae_prefs& p, const char* id)
 {
-	char text[AMIBERRY_SETTINGS_VALUE_MAX];
+	char text[settings::max_value_length];
 	CHECK(settings::get(settings::require(id), p, text, sizeof text) == AMIBERRY_SETTINGS_OK);
 	return text;
 }
@@ -224,8 +331,12 @@ bool jit_compiled()
 }
 
 // Every descriptor is complete and its default is a value it accepts.
+// Options with host-dependent choices enumerate their list instead of a
+// static one.
 void check_descriptors()
 {
+	uae_prefs& defaults = test_prefs;
+	reset_prefs(defaults);
 	CHECK(amiberry_settings_count() == settings::definition_count());
 	CHECK(amiberry_settings_at(amiberry_settings_count()) == nullptr);
 	CHECK(amiberry_settings_find("no_such_option") == nullptr);
@@ -251,18 +362,23 @@ void check_descriptors()
 			// Free-form values only need a non-null default string.
 			break;
 		case AMIBERRY_SETTING_CHOICE: {
-			CHECK(d->choices && d->choice_count > 0);
+			const settings::definition& def = settings::definition_at(i);
+			if (!def.dynamic_choices)
+				CHECK(d->choices && d->choice_count > 0);
+			else
+				CHECK(!d->choices && d->choice_count == 0);
+			const settings::choice_list choices = settings::choices_of(def, defaults);
+			CHECK(choices.count > 0);
 			bool found = false;
-			for (size_t c = 0; c < d->choice_count; c++) {
-				CHECK(d->choices[c].value && d->choices[c].label);
-				found = found || !std::strcmp(d->choices[c].value, d->default_value);
+			for (size_t c = 0; c < choices.count; c++) {
+				CHECK(choices.items[c].value && choices.items[c].label);
+				found = found || !std::strcmp(choices.items[c].value, d->default_value);
 			}
 			CHECK(found);
 			break;
 		}
 		}
-	}
-
+		}
 	// The defaults are the values default_prefs() produces.
 	uae_prefs& p = test_prefs;
 	reset_prefs(p);
@@ -701,6 +817,15 @@ void check_session()
 // reload produces. Sub-1 MB RAM boards are represented by their *_size_k
 // key only; a zero one would reset a megabyte board the writer keeps in
 // <name>_size, a combination no saved configuration contains.
+// Options whose choices are the host's devices (ports, displays, sound
+// cards) are not expected back either: the binary resolves them against
+// the devices of the machine it runs on (a CI runner has no joystick),
+// not the harness's.
+bool host_dependent(const settings::definition& d)
+{
+	return d.dynamic_choices != nullptr;
+}
+
 void emit(const char* name, const uae_prefs& p)
 {
 	std::printf("S %s\n", name);
@@ -713,7 +838,7 @@ void emit(const char* name, const uae_prefs& p)
 		if (size_k_view && v == "0")
 			continue;
 		std::printf("A %s=%s\n", d.descriptor.id, v.c_str());
-		if (!settings::is_available(d, p, idle))
+		if (!settings::is_available(d, p, idle) || host_dependent(d))
 			continue;
 		if ((d.descriptor.type == AMIBERRY_SETTING_CHOICE || d.descriptor.type == AMIBERRY_SETTING_BOOL)
 			&& !settings::is_choice_available(d, p, idle, v))
@@ -726,8 +851,10 @@ void emit_roundtrip()
 {
 	std::printf("S defaults\n");
 	for (size_t i = 0; i < settings::definition_count(); i++) {
-		const amiberry_setting_descriptor& d = settings::definition_at(i).descriptor;
-		std::printf("E %s=%s %s\n", d.id, d.default_value, d.default_value);
+		const settings::definition& d = settings::definition_at(i);
+		if (host_dependent(d))
+			continue;
+		std::printf("E %s=%s %s\n", d.descriptor.id, d.descriptor.default_value, d.descriptor.default_value);
 	}
 
 	// A failed set would quietly test a different configuration.
@@ -1555,6 +1682,465 @@ void check_machine_session()
 	amiberry_settings_session_close(session);
 }
 
+// Every offered display value survives fixup_prefs_dimensions(), the
+// part of fixup_prefs() that owns the mode and sync rules.
+void check_display_domain()
+{
+	uae_prefs& p = test_prefs;
+	reset_prefs(p);
+	auto survives = [&p](const char* id) {
+		uae_prefs* copy = static_cast<uae_prefs*>(std::malloc(sizeof(uae_prefs)));
+		std::memcpy(static_cast<void*>(copy), static_cast<const void*>(&p), sizeof p);
+		fixup_prefs_dimensions(copy);
+		const bool same = value_of(*copy, id) == value_of(p, id);
+		std::free(copy);
+		return same;
+	};
+
+	// Windowed sizes are clamped to the fixup's range and step.
+	CHECK(available(p, "gfx_width_windowed"));
+	CHECK(set(p, "gfx_width_windowed", "722") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	CHECK(set(p, "gfx_width_windowed", "100") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	CHECK(set(p, "gfx_width_windowed", "1024") == AMIBERRY_SETTINGS_OK);
+	CHECK(survives("gfx_width_windowed"));
+	CHECK(value_of(p, "gfx_height_windowed") == "568");
+
+	// The host display applies to both screens, like the parser. The
+	// range follows the monitors connected now, so the test host borrows
+	// one before it can address a second display.
+	Displays[0].monitorname = const_cast<TCHAR*>("Test Monitor");
+	Displays[1].monitorname = const_cast<TCHAR*>("Test Second Monitor");
+	CHECK(set(p, "gfx_display", "1") == AMIBERRY_SETTINGS_OK);
+	CHECK(p.gfx_apmode[APMODE_NATIVE].gfx_display == 1 && p.gfx_apmode[APMODE_RTG].gfx_display == 1);
+	Displays[0].monitorname = Displays[1].monitorname = nullptr;
+	CHECK(!available(p, "gfx_display")); // no second monitor in the test host
+
+	// KMSDRM owns the mode and the sync options.
+	CHECK(available(p, "gfx_fullscreen_amiga") && available(p, "gfx_vsync"));
+	kmsdrm_detected = true;
+	CHECK(!available(p, "gfx_fullscreen_amiga") && !available(p, "gfx_vsync"));
+	CHECK(!available(p, "gfx_vrr_monitor") && !available(p, "gfx_width_windowed"));
+	kmsdrm_detected = false;
+
+	// The legacy exclusive value is reported but not offered: the parser
+	// and the setters turn it into full-window.
+	p.gfx_apmode[APMODE_NATIVE].gfx_fullscreen = GFX_FULLSCREEN;
+	CHECK(value_of(p, "gfx_fullscreen_amiga") == "true");
+	CHECK(!choice_available(p, "gfx_fullscreen_amiga", "true"));
+	CHECK(set(p, "gfx_fullscreen_amiga", "true") == AMIBERRY_SETTINGS_UNAVAILABLE);
+	CHECK(set(p, "gfx_fullscreen_amiga", "fullwindow") == AMIBERRY_SETTINGS_OK);
+	CHECK(survives("gfx_fullscreen_amiga"));
+
+	// Adaptive runs standard vsync under VRR.
+	CHECK(set(p, "gfx_vrr_monitor", "true") == AMIBERRY_SETTINGS_OK);
+	CHECK(value_of(p, "gfx_vsync") == "true" && p.gfx_apmode[0].gfx_vsyncmode == 0);
+	CHECK(set(p, "gfx_vsync", "autoswitch") == AMIBERRY_SETTINGS_OK);
+	CHECK(value_of(p, "gfx_vsync") == "autoswitch" && p.gfx_variable_sync == 1);
+	CHECK(survives("gfx_vsync"));
+
+	// RTG needs a board; a windowed RTG screen cannot vsync, so the
+	// choice is refused (fixup clears it) and switching RTG to a window
+	// clears what the core would clear.
+	CHECK(!available(p, "gfx_fullscreen_picasso") && !available(p, "gfx_vsync_picasso"));
+	p.address_space_24 = false;
+	p.rtgboards[0].rtgmem_size = 8;
+	CHECK(available(p, "gfx_fullscreen_picasso") && available(p, "gfx_vsync_picasso"));
+	CHECK(set(p, "gfx_fullscreen_picasso", "fullwindow") == AMIBERRY_SETTINGS_OK);
+	CHECK(set(p, "gfx_vsync_picasso", "true") == AMIBERRY_SETTINGS_OK);
+	CHECK(survives("gfx_vsync_picasso"));
+	CHECK(set(p, "gfx_fullscreen_picasso", "false") == AMIBERRY_SETTINGS_OK);
+	CHECK(value_of(p, "gfx_vsync_picasso") == "false");
+	CHECK(set(p, "gfx_fullscreen_picasso", "fullwindow") == AMIBERRY_SETTINGS_OK);
+	CHECK(choice_available(p, "gfx_vsync_picasso", "true"));
+	CHECK(set(p, "gfx_vsync_picasso", "true") == AMIBERRY_SETTINGS_OK);
+	CHECK(survives("gfx_vsync_picasso"));
+
+	// VGA autoswitching needs hires, line-doubled output; leaving that
+	// combination clears it as the panel did every frame.
+	CHECK(available(p, "gfx_autoresolution_vga"));
+	CHECK(set(p, "gfx_resolution", "lores") == AMIBERRY_SETTINGS_OK);
+	CHECK(!available(p, "gfx_autoresolution_vga") && !p.gfx_autoresolution_vga);
+	CHECK(set(p, "gfx_resolution", "hires") == AMIBERRY_SETTINGS_OK);
+	CHECK(set(p, "gfx_linemode", "none") == AMIBERRY_SETTINGS_OK);
+	CHECK(!p.gfx_autoresolution_vga);
+	CHECK(value_of(p, "gfx_linemode") == "none");
+	CHECK(set(p, "gfx_linemode", "double2") == AMIBERRY_SETTINGS_OK);
+	CHECK(p.gfx_vresolution == 1 && p.gfx_pscanlines == 0 && p.gfx_iscanlines == 1);
+
+	// Resolution autoswitch gates the manual resolution and line modes.
+	CHECK(set(p, "gfx_autoresolution", "10") == AMIBERRY_SETTINGS_OK);
+	CHECK(!available(p, "gfx_resolution") && !available(p, "gfx_linemode"));
+	CHECK(set(p, "gfx_autoresolution", "0") == AMIBERRY_SETTINGS_OK);
+	CHECK(available(p, "gfx_resolution") && available(p, "gfx_linemode"));
+	CHECK(value_of(p, "gfx_autoresolution") == "0");
+
+	// The display attributes clamp to the slider's tenths range.
+	CHECK(set(p, "gfx_luminance", "2500") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	CHECK(set(p, "gfx_luminance", "-2000") == AMIBERRY_SETTINGS_OK);
+	CHECK(set(p, "gfx_atari_palette_fix", "3to4bit") == AMIBERRY_SETTINGS_OK);
+	CHECK(value_of(p, "gfx_atari_palette_fix") == "3to4bit");
+
+	// Centering follows the overscan border, aspect correction the
+	// scaling method.
+	CHECK(available(p, "gfx_center_horizontal"));
+	CHECK(set(p, "gfx_overscanmode", "extreme") == AMIBERRY_SETTINGS_OK);
+	CHECK(!available(p, "gfx_center_horizontal") && !available(p, "gfx_center_vertical"));
+	CHECK(set(p, "gfx_overscanmode", "overscan") == AMIBERRY_SETTINGS_OK);
+	CHECK(available(p, "gfx_center_horizontal"));
+	CHECK(set(p, "amiberry.scaling_method", "3") == AMIBERRY_SETTINGS_OK);
+	CHECK(!available(p, "amiberry.gfx_correct_aspect"));
+	CHECK(set(p, "amiberry.scaling_method", "-1") == AMIBERRY_SETTINGS_OK);
+	CHECK(available(p, "amiberry.gfx_correct_aspect"));
+	CHECK(value_of(p, "amiberry.scaling_method") == "-1");
+
+	// The FPS adjustment locks and unlocks the PAL/NTSC entry; 0 follows
+	// the standard rate. The value is the entry's CSV as the writer emits
+	// it. A bare rate keeps the entry's other fields (the PAL binding: an
+	// entry without one would drive every video mode), and a full CSV
+	// round-trips (rpct included, which the writer used to glue onto the
+	// previous flag).
+	CHECK(set(p, "displaydata_pal", "59.9375") == AMIBERRY_SETTINGS_OK);
+	CHECK(value_of(p, "displaydata_pal") == "59.937500,locked,pal");
+	CHECK(p.cr[CHIPSET_REFRESH_PAL].locked && p.cr[CHIPSET_REFRESH_PAL].inuse);
+	CHECK(p.cr[CHIPSET_REFRESH_PAL].ntsc == 0);
+	CHECK(std::strcmp(p.cr[CHIPSET_REFRESH_PAL].label, "PAL") == 0);
+	CHECK(set(p, "displaydata_pal", "50.000000,locked,pal,lace,shres,rpct=50,vsync") == AMIBERRY_SETTINGS_OK);
+	CHECK(value_of(p, "displaydata_pal") == "50.000000,locked,pal,lace,shres,rpct=50,vsync");
+	CHECK(set(p, "displaydata_pal", "49.5") == AMIBERRY_SETTINGS_OK);
+	CHECK(value_of(p, "displaydata_pal") == "49.500000,locked,pal,lace,shres,rpct=50,vsync");
+	CHECK(set(p, "displaydata_pal", "0") == AMIBERRY_SETTINGS_OK);
+	CHECK(!p.cr[CHIPSET_REFRESH_PAL].locked && p.cr[CHIPSET_REFRESH_PAL].rate == 50.0f);
+	CHECK(value_of(p, "displaydata_pal") == "0");
+	CHECK(set(p, "displaydata_ntsc", "301") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	CHECK(set(p, "displaydata_ntsc", "fast") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	CHECK(set(p, "displaydata_ntsc", "0.5") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	// A loaded entry can hold rate 0 with other fields: its CSV is parsed,
+	// not taken for the bare 0 that resets the entry.
+	CHECK(set(p, "displaydata_pal", "0,locked,pal,lace") == AMIBERRY_SETTINGS_OK);
+	CHECK(p.cr[CHIPSET_REFRESH_PAL].locked && p.cr[CHIPSET_REFRESH_PAL].lace == 1);
+	{
+		const std::string zero_rate = value_of(p, "displaydata_pal");
+		CHECK(set(p, "displaydata_pal", zero_rate.c_str()) == AMIBERRY_SETTINGS_OK);
+		CHECK(value_of(p, "displaydata_pal") == zero_rate);
+	}
+	// RTG vsync's 50/60 Hz switching is the same as standard there.
+	CHECK(!choice_available(p, "gfx_vsync_picasso", "autoswitch"));
+	// Commands longer than the entry's field are dropped, not overflowed.
+	{
+		const std::string overlong = "50,cmd=" + std::string(400, 'a');
+		CHECK(set(p, "displaydata_pal", overlong.c_str()) == AMIBERRY_SETTINGS_OK);
+		CHECK(std::strlen(p.cr[CHIPSET_REFRESH_PAL].commands) < sizeof p.cr[CHIPSET_REFRESH_PAL].commands);
+		CHECK(p.cr[CHIPSET_REFRESH_PAL].filterprofile[0] == 0);
+	}
+
+	// An entry with a long command list and filter profile reads back in
+	// full and survives being set again (values are not limited to the
+	// public adjustment's 64 bytes).
+	reset_prefs(p);
+	struct chipset_refresh& cr = p.cr[CHIPSET_REFRESH_PAL];
+	cr.locked = true;
+	std::memset(cr.commands, 'c', 200); // the reader ends each command with a newline
+	cr.commands[200] = '\n';
+	cr.commands[201] = 0;
+	std::memset(cr.filterprofile, 'f', 60);
+	cr.filterprofile[60] = 0;
+	const std::string long_entry = value_of(p, "displaydata_pal");
+	CHECK(long_entry.size() > 260);
+	reset_prefs(p);
+	CHECK(set(p, "displaydata_pal", long_entry.c_str()) == AMIBERRY_SETTINGS_OK);
+	CHECK(std::strlen(p.cr[CHIPSET_REFRESH_PAL].commands) == 201);
+	CHECK(std::strlen(p.cr[CHIPSET_REFRESH_PAL].filterprofile) == 60);
+	CHECK(value_of(p, "displaydata_pal") == long_entry);
+
+	// target_fixup_options() clears centering under auto-crop.
+	reset_prefs(p);
+	p.gfx_overscanmode = OVERSCANMODE_OVERSCAN;
+	CHECK(available(p, "gfx_center_horizontal"));
+	p.gfx_auto_crop = true;
+	CHECK(!available(p, "gfx_center_horizontal") && !available(p, "gfx_center_vertical"));
+}
+
+void check_sound_domain()
+{
+	uae_prefs& p = test_prefs;
+	reset_prefs(p);
+
+	// Sound emulation: exact is the default and reachable; Disabled is
+	// refused in memory cycle-exact mode because the core raises it.
+	CHECK(value_of(p, "sound_output") == "exact");
+	CHECK(set(p, "sound_output", "normal") == AMIBERRY_SETTINGS_OK);
+	CHECK(set(p, "sound_output", "exact") == AMIBERRY_SETTINGS_OK);
+	CHECK(!choice_available(p, "sound_output", "none"));
+	p.cpu_memory_cycle_exact = false;
+	CHECK(choice_available(p, "sound_output", "none"));
+	CHECK(set(p, "sound_output", "none") == AMIBERRY_SETTINGS_OK);
+	CHECK(!available(p, "sound_auto") && !available(p, "sound_channels"));
+	CHECK(!available(p, "sound_stereo_separation"));
+	CHECK(set(p, "sound_output", "normal") == AMIBERRY_SETTINGS_OK);
+	CHECK(available(p, "sound_auto") && available(p, "sound_stereo_separation"));
+	CHECK(set(p, "sound_channels", "4ch") == AMIBERRY_SETTINGS_OK);
+	CHECK(value_of(p, "sound_channels") == "4ch");
+
+	// The audio device needs the system default off, sound on and more
+	// than one enumerated device.
+	CHECK(!available(p, "amiberry.soundcard"));
+	settings::choices_of(settings::require("amiberry.soundcard"), p);
+	CHECK(!available(p, "amiberry.soundcard")); // still the default device
+	CHECK(set(p, "amiberry.soundcard_default", "false") == AMIBERRY_SETTINGS_OK);
+	CHECK(available(p, "amiberry.soundcard"));
+	const settings::choice_list devices = settings::choices_of(
+		settings::require("amiberry.soundcard"), p);
+	CHECK(devices.count == 2);
+	CHECK(set(p, "amiberry.soundcard", "1") == AMIBERRY_SETTINGS_OK);
+	CHECK(value_of(p, "amiberry.soundcard") == "1");
+	sound_device_count = 1;
+	settings::refresh_dynamic_choices();
+	CHECK(!available(p, "amiberry.soundcard"));
+	sound_device_count = 2;
+	settings::refresh_dynamic_choices();
+	CHECK(available(p, "amiberry.soundcard"));
+
+	// The volumes are attenuation: 0 is full volume, 100 is silent.
+	CHECK(set(p, "sound_volume", "0") == AMIBERRY_SETTINGS_OK);
+	CHECK(value_of(p, "sound_volume") == "0");
+	CHECK(set(p, "sound_volume", "101") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	CHECK(set(p, "sound_volume_cd", "0") == AMIBERRY_SETTINGS_OK);
+
+	// The filter and its curve are two keys; the fixed-only curve
+	// round-trips through sound_filter_type.
+	CHECK(set(p, "sound_filter", "on") == AMIBERRY_SETTINGS_OK);
+	CHECK(set(p, "sound_filter_type", "fixedonly") == AMIBERRY_SETTINGS_OK);
+	CHECK(value_of(p, "sound_filter") == "on" && value_of(p, "sound_filter_type") == "fixedonly");
+
+	// The writer saves a delay of -1 as 0, so the range starts at 0; an
+	// off-list frequency keeps its value instead of a stale label.
+	CHECK(set(p, "sound_stereo_mixing_delay", "-1") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	CHECK(set(p, "sound_stereo_mixing_delay", "3") == AMIBERRY_SETTINGS_OK);
+	CHECK(value_of(p, "sound_stereo_mixing_delay") == "3");
+	CHECK(set(p, "sound_frequency", "8000") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	p.sound_freq = 8000;
+	CHECK(value_of(p, "sound_frequency") == "8000");
+	CHECK(set(p, "sound_frequency", "48000") == AMIBERRY_SETTINGS_OK);
+
+	// Drive clicks: external samples (a negative value) stay visible.
+	CHECK(set(p, "floppy1sound", "1") == AMIBERRY_SETTINGS_OK);
+	CHECK(value_of(p, "floppy1sound") == "1");
+	p.floppyslots[2].dfxclick = -1;
+	CHECK(value_of(p, "floppy2sound") == "-1");
+	CHECK(set(p, "floppy2sound", "1") == AMIBERRY_SETTINGS_OK);
+	CHECK(set(p, "floppy3soundvolume_empty", "50") == AMIBERRY_SETTINGS_OK);
+	CHECK(p.dfxclickvolume_empty[3] == 50);
+
+	// The buffer size offers the writer's exact sizes.
+	CHECK(set(p, "sound_max_buff", "16384") == AMIBERRY_SETTINGS_OK);
+	CHECK(set(p, "sound_max_buff", "5000") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	CHECK(set(p, "sound_max_buff", "0") == AMIBERRY_SETTINGS_OK);
+
+	// The lagless vsync mode RTG vsync turns into resets an SDL device to
+	// the first one, so only that one is offered then, and switching the
+	// mode on makes the change itself.
+	reset_prefs(p);
+	p.soundcard_default = false;
+	CHECK(choice_available(p, "amiberry.soundcard", "1"));
+	p.gfx_apmode[APMODE_RTG].gfx_fullscreen = GFX_FULLWINDOW;
+	p.gfx_apmode[APMODE_RTG].gfx_vsync = 1;
+	CHECK(!choice_available(p, "amiberry.soundcard", "1"));
+	CHECK(choice_available(p, "amiberry.soundcard", "0"));
+	p.gfx_apmode[APMODE_RTG].gfx_fullscreen = GFX_WINDOW; // vsync off in a window
+	CHECK(choice_available(p, "amiberry.soundcard", "1"));
+	p.soundcard = 1;
+	p.gfx_apmode[APMODE_RTG].gfx_fullscreen = GFX_FULLWINDOW;
+	settings::clear_soundcard_for_vsync(p);
+	CHECK(p.soundcard == 0);
+	// Turning sound on under that vsync mode resets the device as well.
+	p.soundcard = 1;
+	p.produce_sound = 0;
+	CHECK(set(p, "sound_output", "normal") == AMIBERRY_SETTINGS_OK);
+	CHECK(p.soundcard == 0);
+
+	// An open session's device is found again by name after a refresh
+	// reorders the host's devices.
+	reset_prefs(changed_prefs);
+	changed_prefs.soundcard_default = false;
+	amiberry_settings_session* session = amiberry_settings_session_open();
+	CHECK(amiberry_settings_set(session, "amiberry.soundcard", "1") == AMIBERRY_SETTINGS_OK); // headset
+	swap_sound_devices = true;
+	amiberry_settings_refresh_choices();
+	swap_sound_devices = false;
+	char card[AMIBERRY_SETTINGS_VALUE_MAX];
+	CHECK(amiberry_settings_get(session, "amiberry.soundcard", card, sizeof card) == AMIBERRY_SETTINGS_OK);
+	CHECK(std::strcmp(card, "0") == 0);
+	amiberry_settings_session_close(session);
+	std::swap(sound_devices[0], sound_devices[1]);
+	amiberry_settings_refresh_choices();
+
+	// Turning RTG vsync off clears the lagless mode the fixup left, so the
+	// device check no longer sees it.
+	reset_prefs(p);
+	p.address_space_24 = false;
+	p.rtgboards[0].rtgmem_size = 8;
+	p.gfx_apmode[APMODE_RTG].gfx_fullscreen = GFX_FULLWINDOW;
+	p.gfx_apmode[APMODE_RTG].gfx_vsync = 1;
+	p.gfx_apmode[APMODE_RTG].gfx_vsyncmode = 1;
+	CHECK(set(p, "gfx_vsync_picasso", "false") == AMIBERRY_SETTINGS_OK);
+	CHECK(p.gfx_apmode[APMODE_RTG].gfx_vsyncmode == 0);
+
+	// The filter's "fixedonly" spelling is reported, never offered.
+	reset_prefs(p);
+	p.sound_filter = 3;
+	CHECK(value_of(p, "sound_filter") == "fixedonly");
+	CHECK(!choice_available(p, "sound_filter", "fixedonly"));
+}
+
+void check_input_domain()
+{
+	uae_prefs& p = test_prefs;
+	reset_prefs(p);
+
+	// Port devices decode to the input system's ids and back.
+	CHECK(value_of(p, "joyport0") == "mouse");
+	CHECK(value_of(p, "joyport1") == "joy0");
+	CHECK(set(p, "joyport1", "kbd3") == AMIBERRY_SETTINGS_OK);
+	CHECK(p.jports[1].id == JSEM_KBDLAYOUT + 2);
+	CHECK(value_of(p, "joyport1") == "kbd3");
+	CHECK(set(p, "joyport2", "none") == AMIBERRY_SETTINGS_OK);
+	CHECK(set(p, "joyport3", "mouse") == AMIBERRY_SETTINGS_OK);
+	CHECK(p.jports[3].id == JSEM_MICE);
+	CHECK(set(p, "joyport1", "joy0") == AMIBERRY_SETTINGS_OK);
+	CHECK(set(p, "joyport1", "joy5") == AMIBERRY_SETTINGS_INVALID_VALUE); // one test joystick
+	p.jports[1].id = JSEM_JOYS + 5; // a configuration naming a disconnected device
+	CHECK(value_of(p, "joyport1") == "joy5");
+
+	// A custom mapping id from a configuration keeps its spelling.
+	p.jports[1].id = JSEM_CUSTOM;
+	CHECK(value_of(p, "joyport1") == "custom0");
+	p.jports[1].id = JSEM_JOYS;
+
+	// The mouse map needs a non-default mode; hotkey bits stay visible.
+	CHECK(!available(p, "joyport1mousemap"));
+	CHECK(set(p, "joyport1mode", "gamepad") == AMIBERRY_SETTINGS_OK);
+	CHECK(available(p, "joyport1mousemap"));
+	CHECK(set(p, "joyport1mousemap", "1") == AMIBERRY_SETTINGS_OK);
+	CHECK(value_of(p, "joyport1mousemap") == "1");
+	p.jports[1].mousemap = 3;
+	CHECK(value_of(p, "joyport1mousemap") == "3");
+
+	// Modes include the lightpen entry the old panel indexed past.
+	CHECK(set(p, "joyport1mode", "lightpen") == AMIBERRY_SETTINGS_OK);
+	CHECK(value_of(p, "joyport1mode") == "lightpen");
+	CHECK(p.jports[1].mode == 8);
+
+	// Autofire and the shared autofire rate.
+	CHECK(set(p, "joyport1autofire", "toggle") == AMIBERRY_SETTINGS_OK);
+	CHECK(value_of(p, "joyport1autofire") == "toggle");
+	CHECK(value_of(p, "input.autofire_speed") == "600");
+	CHECK(set(p, "input.autofire_speed", "1248") == AMIBERRY_SETTINGS_OK);
+
+	// The speeds offer the writer's exact values.
+	CHECK(set(p, "input.joymouse_speed_digital", "15") == AMIBERRY_SETTINGS_OK);
+	CHECK(set(p, "input.joymouse_speed_digital", "12") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	CHECK(set(p, "input.joymouse_speed_analog", "100") == AMIBERRY_SETTINGS_OK);
+	CHECK(set(p, "input.mouse_speed", "1001") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	CHECK(set(p, "input.mouse_speed", "0") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	CHECK(set(p, "input.mouse_speed", "150") == AMIBERRY_SETTINGS_OK);
+
+	// One untrap bitmask behind two keys.
+	CHECK(value_of(p, "amiberry.middle_mouse") == "true");
+	CHECK(value_of(p, "magic_mouse") == "false");
+	CHECK(set(p, "magic_mouse", "true") == AMIBERRY_SETTINGS_OK);
+	CHECK(p.input_mouse_untrap == (MOUSEUNTRAP_MIDDLEBUTTON | MOUSEUNTRAP_MAGIC));
+	CHECK(set(p, "amiberry.middle_mouse", "false") == AMIBERRY_SETTINGS_OK);
+	CHECK(p.input_mouse_untrap == MOUSEUNTRAP_MAGIC);
+	// The two flags commit independently: a session that turned Magic
+	// Mouse off keeps a middle-button change made elsewhere meanwhile.
+	{
+		changed_prefs = p;
+		amiberry_settings_session* session = amiberry_settings_session_open();
+		CHECK(amiberry_settings_set(session, "magic_mouse", "false") == AMIBERRY_SETTINGS_OK);
+		changed_prefs.input_mouse_untrap |= MOUSEUNTRAP_MIDDLEBUTTON; // meanwhile
+		bool committed = false;
+		amiberry_settings_commit(session, &committed);
+		CHECK(committed && changed_prefs.input_mouse_untrap == MOUSEUNTRAP_MIDDLEBUTTON);
+		amiberry_settings_session_close(session);
+	}
+
+	// Tablet options follow the absolute mouse mode.
+	CHECK(!available(p, "magic_mousecursor") && !available(p, "tablet_library"));
+	CHECK(set(p, "absolute_mouse", "mousehack") == AMIBERRY_SETTINGS_OK);
+	CHECK(available(p, "magic_mousecursor") && available(p, "tablet_library"));
+	CHECK(set(p, "magic_mousecursor", "host") == AMIBERRY_SETTINGS_OK);
+	CHECK(value_of(p, "magic_mousecursor") == "host");
+	CHECK(set(p, "absolute_mouse", "none") == AMIBERRY_SETTINGS_OK);
+	CHECK(p.input_tablet == 0);
+
+	// The configuration stores a mode and mouse map for ports 1 and 2 only.
+	CHECK(settings::find("joyport1mode") && settings::find("joyport1mousemap"));
+	CHECK(!settings::find("joyport2mode") && !settings::find("joyport3mousemap"));
+
+	// A port's settings merge one by one: a session's autofire change keeps
+	// a mode changed elsewhere meanwhile.
+	{
+		reset_prefs(changed_prefs);
+		amiberry_settings_session* session = amiberry_settings_session_open();
+		CHECK(amiberry_settings_set(session, "joyport1autofire", "normal") == AMIBERRY_SETTINGS_OK);
+		changed_prefs.jports[1].mode = JSEM_MODE_GAMEPAD; // meanwhile
+		bool committed = false;
+		amiberry_settings_commit(session, &committed);
+		CHECK(committed && changed_prefs.jports[1].autofire == 1
+			&& changed_prefs.jports[1].mode == JSEM_MODE_GAMEPAD);
+		amiberry_settings_session_close(session);
+	}
+
+	// An open session's joystick follows its device when the host list is
+	// reordered.
+	{
+		reset_prefs(changed_prefs);
+		joystick_total = 2;
+		amiberry_settings_refresh_choices();
+		amiberry_settings_session* session = amiberry_settings_session_open();
+		CHECK(amiberry_settings_set(session, "joyport1", "joy1") == AMIBERRY_SETTINGS_OK); // pad-b
+		swap_joysticks = true;
+		amiberry_settings_refresh_choices();
+		char port[AMIBERRY_SETTINGS_VALUE_MAX];
+		CHECK(amiberry_settings_get(session, "joyport1", port, sizeof port) == AMIBERRY_SETTINGS_OK);
+		CHECK(std::strcmp(port, "joy0") == 0);
+		amiberry_settings_session_close(session);
+		swap_joysticks = false;
+		joystick_total = 1;
+		amiberry_settings_refresh_choices();
+	}
+}
+
+void check_onscreen_domain()
+{
+	uae_prefs& p = test_prefs;
+	reset_prefs(p);
+
+	CHECK(available(p, "amiberry.onscreen_joystick"));
+	CHECK(!available(p, "amiberry.vkbd_numpad"));
+	CHECK(set(p, "amiberry.vkbd_enabled", "true") == AMIBERRY_SETTINGS_OK);
+	CHECK(available(p, "amiberry.vkbd_numpad"));
+	CHECK(value_of(p, "amiberry.vkbd_transparency") == "0");
+	CHECK(set(p, "amiberry.vkbd_transparency", "40") == AMIBERRY_SETTINGS_OK);
+	CHECK(value_of(p, "amiberry.vkbd_transparency") == "40");
+	CHECK(set(p, "amiberry.vkbd_language", "DE") == AMIBERRY_SETTINGS_OK);
+	CHECK(value_of(p, "amiberry.vkbd_language") == "DE");
+	p.vkbd_language[0] = 'I'; // an unknown layout from a configuration
+	p.vkbd_language[1] = 0;
+	CHECK(value_of(p, "amiberry.vkbd_language") == "I");
+
+	// The toggle is free-form text: keys, buttons and empty to unbind.
+	CHECK(value_of(p, "amiberry.vkbd_toggle") == "guide");
+	CHECK(set(p, "amiberry.vkbd_toggle", "leftshoulder") == AMIBERRY_SETTINGS_OK);
+	CHECK(set(p, "amiberry.vkbd_toggle", "") == AMIBERRY_SETTINGS_OK);
+	CHECK(value_of(p, "amiberry.vkbd_toggle") == "");
+	// A binding longer than the field is refused, not truncated.
+	CHECK(set(p, "amiberry.vkbd_toggle", std::string(sizeof p.vkbd_toggle, 'a').c_str())
+		== AMIBERRY_SETTINGS_INVALID_VALUE);
+	CHECK(set(p, "amiberry.use_retroarch_vkbd", "true") == AMIBERRY_SETTINGS_OK);
+	CHECK(!available(p, "amiberry.vkbd_toggle"));
+}
+
 } // namespace
 
 // === Runtime action queue (settings/settings_actions_queue.h) ===
@@ -1707,6 +2293,10 @@ int main(int argc, char** argv)
 	check_machine_fixup_rules();
 	check_presets();
 	check_machine_session();
+	check_display_domain();
+	check_sound_domain();
+	check_input_domain();
+	check_onscreen_domain();
 	if (failures) {
 		std::fprintf(stderr, "settings layer: %d check(s) failed\n", failures);
 		return 1;

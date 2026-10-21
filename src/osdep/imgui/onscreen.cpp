@@ -4,6 +4,7 @@
 #include "inputdevice.h"
 #include "amiberry_input.h"
 #include "target.h"
+#include "settings/settings_definitions.h"
 #include <string>
 #include <vector>
 #include <SDL3/SDL.h>
@@ -11,25 +12,53 @@
 #include "imgui_panels.h"
 #include "gui/gui_handling.h"
 
+namespace settings = amiberry_settings;
+
+namespace {
+
+// The options this panel edits. The shared settings layer owns their
+// availability rules and the dependent changes a new value implies.
+struct onscreen_options {
+    const settings::definition& onscreen_joystick = settings::require("amiberry.onscreen_joystick");
+    const settings::definition& vkbd_enabled = settings::require("amiberry.vkbd_enabled");
+    const settings::definition& vkbd_numpad = settings::require("amiberry.vkbd_numpad");
+    const settings::definition& vkbd_touch_button = settings::require("amiberry.vkbd_touch_button");
+    const settings::definition& vkbd_transparency = settings::require("amiberry.vkbd_transparency");
+    const settings::definition& vkbd_language = settings::require("amiberry.vkbd_language");
+    const settings::definition& vkbd_toggle = settings::require("amiberry.vkbd_toggle");
+    const settings::definition& use_retroarch_vkbd = settings::require("amiberry.use_retroarch_vkbd");
+};
+
+const onscreen_options& options()
+{
+    static const onscreen_options o;
+    return o;
+}
+
+bool available(const settings::definition& d, const settings::context& ctx)
+{
+    return settings::is_available(d, changed_prefs, ctx);
+}
+
 // Map SDL gamepad button enum to its config string name
 static const char* sdl_button_to_config_name(SDL_GamepadButton btn)
 {
 	switch (btn) {
-	case SDL_GAMEPAD_BUTTON_SOUTH:          return "a";
-	case SDL_GAMEPAD_BUTTON_EAST:           return "b";
-	case SDL_GAMEPAD_BUTTON_WEST:           return "x";
-	case SDL_GAMEPAD_BUTTON_NORTH:          return "y";
-	case SDL_GAMEPAD_BUTTON_BACK:           return "back";
-	case SDL_GAMEPAD_BUTTON_GUIDE:          return "guide";
-	case SDL_GAMEPAD_BUTTON_START:          return "start";
-	case SDL_GAMEPAD_BUTTON_LEFT_STICK:     return "leftstick";
-	case SDL_GAMEPAD_BUTTON_RIGHT_STICK:    return "rightstick";
-	case SDL_GAMEPAD_BUTTON_LEFT_SHOULDER:  return "leftshoulder";
+	case SDL_GAMEPAD_BUTTON_SOUTH: return "a";
+	case SDL_GAMEPAD_BUTTON_EAST: return "b";
+	case SDL_GAMEPAD_BUTTON_WEST: return "x";
+	case SDL_GAMEPAD_BUTTON_NORTH: return "y";
+	case SDL_GAMEPAD_BUTTON_BACK: return "back";
+	case SDL_GAMEPAD_BUTTON_GUIDE: return "guide";
+	case SDL_GAMEPAD_BUTTON_START: return "start";
+	case SDL_GAMEPAD_BUTTON_LEFT_STICK: return "leftstick";
+	case SDL_GAMEPAD_BUTTON_RIGHT_STICK: return "rightstick";
+	case SDL_GAMEPAD_BUTTON_LEFT_SHOULDER: return "leftshoulder";
 	case SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER: return "rightshoulder";
-	case SDL_GAMEPAD_BUTTON_DPAD_UP:        return "dpup";
-	case SDL_GAMEPAD_BUTTON_DPAD_DOWN:      return "dpdown";
-	case SDL_GAMEPAD_BUTTON_DPAD_LEFT:      return "dpleft";
-	case SDL_GAMEPAD_BUTTON_DPAD_RIGHT:     return "dpright";
+	case SDL_GAMEPAD_BUTTON_DPAD_UP: return "dpup";
+	case SDL_GAMEPAD_BUTTON_DPAD_DOWN: return "dpdown";
+	case SDL_GAMEPAD_BUTTON_DPAD_LEFT: return "dpleft";
+	case SDL_GAMEPAD_BUTTON_DPAD_RIGHT: return "dpright";
 	default: return nullptr;
 	}
 }
@@ -47,15 +76,23 @@ static const char* display_name_for_toggle(const char* cfg)
 	if (strcmp(cfg, "guide") == 0)          return "Gamepad Guide/Home";
 	if (strcmp(cfg, "start") == 0)          return "Gamepad Start/Menu";
 	if (strcmp(cfg, "leftstick") == 0)      return "Gamepad Left Stick";
-	if (strcmp(cfg, "rightstick") == 0)      return "Gamepad Right Stick";
+	if (strcmp(cfg, "rightstick") == 0)     return "Gamepad Right Stick";
 	if (strcmp(cfg, "leftshoulder") == 0)   return "Gamepad Left Shoulder";
-	if (strcmp(cfg, "rightshoulder") == 0)   return "Gamepad Right Shoulder";
+	if (strcmp(cfg, "rightshoulder") == 0)  return "Gamepad Right Shoulder";
 	if (strcmp(cfg, "dpup") == 0)           return "Gamepad D-Pad Up";
 	if (strcmp(cfg, "dpdown") == 0)         return "Gamepad D-Pad Down";
 	if (strcmp(cfg, "dpleft") == 0)         return "Gamepad D-Pad Left";
 	if (strcmp(cfg, "dpright") == 0)        return "Gamepad D-Pad Right";
 	return cfg; // keyboard key name or unknown — show as-is
 }
+
+// Store a captured toggle key or button through the settings layer.
+void set_toggle(const settings::definition& d, const settings::context& ctx, const char* value)
+{
+    settings::set(d, changed_prefs, ctx, value);
+}
+
+} // namespace
 
 // Hotkey Capture Popup
 static bool open_hotkey_popup = false;
@@ -67,6 +104,8 @@ static bool gamepad_initial_state[SDL_GAMEPAD_BUTTON_COUNT] = {};
 
 static void ShowHotkeyPopup()
 {
+	const settings::context ctx{emulating != 0};
+
 	if (open_hotkey_popup) {
 		ImGui::OpenPopup("Set On-Screen Keyboard Toggle");
 		open_hotkey_popup = false;
@@ -106,7 +145,7 @@ static void ShowHotkeyPopup()
 				}
 				const char* key_name = ImGui::GetKeyName(static_cast<ImGuiKey>(key));
 				if (key_name && key_name[0]) {
-					snprintf(changed_prefs.vkbd_toggle, sizeof(changed_prefs.vkbd_toggle), "%s", key_name);
+					set_toggle(options().vkbd_toggle, ctx, key_name);
 					ImGui::CloseCurrentPopup();
 					captured = true;
 					break;
@@ -129,7 +168,7 @@ static void ShowHotkeyPopup()
 								continue;
 							const char* name = sdl_button_to_config_name(static_cast<SDL_GamepadButton>(b));
 							if (name) {
-								snprintf(changed_prefs.vkbd_toggle, sizeof(changed_prefs.vkbd_toggle), "%s", name);
+								set_toggle(options().vkbd_toggle, ctx, name);
 								ImGui::CloseCurrentPopup();
 								captured = true;
 							}
@@ -155,73 +194,121 @@ void render_panel_onscreen()
 {
 	ImGui::Indent(4.0f);
 
-	// On-screen touch joystick (D-pad + fire buttons overlay)
-	bool osj_before = changed_prefs.onscreen_joystick;
-	AmigaCheckbox("On-screen Joystick", &changed_prefs.onscreen_joystick);
-	if (ImGui::IsItemHovered()) {
-		ImGui::SetTooltip("Show virtual D-pad and fire buttons for touchscreen control");
-	}
-	if (changed_prefs.onscreen_joystick != osj_before) {
+	const onscreen_options& o = options();
+	const settings::context ctx{emulating != 0};
+
+	// On-screen touch joystick (D-pad + fire buttons overlay). The overlay
+	// registers its own input device from currprefs, so the change applies
+	// at once, as the panel always did: the device can then be picked in
+	// the Input panel without emulating a frame first.
+	ImGui::BeginDisabled(!available(o.onscreen_joystick, ctx));
+	bool osj = settings::get_bool(o.onscreen_joystick, changed_prefs);
+	if (AmigaCheckbox("On-screen Joystick", &osj)
+		&& settings::set_bool(o.onscreen_joystick, changed_prefs, ctx, osj) == AMIBERRY_SETTINGS_OK) {
 		currprefs.onscreen_joystick = changed_prefs.onscreen_joystick;
 		import_joysticks();
 		inputdevice_config_change();
 		joystick_refresh_needed = true;
 	}
+	ImGui::EndDisabled();
+	if (ImGui::IsItemHovered()) {
+		ImGui::SetTooltip("Show virtual D-pad and fire buttons for touchscreen control");
+	}
 
 	ImGui::Separator();
 
-	AmigaCheckbox("On-screen Keyboard enabled", &changed_prefs.vkbd_enabled);
+	bool vkbd = settings::get_bool(o.vkbd_enabled, changed_prefs);
+	if (AmigaCheckbox("On-screen Keyboard enabled", &vkbd)) {
+		settings::set_bool(o.vkbd_enabled, changed_prefs, ctx, vkbd);
+	}
 	if (ImGui::IsItemHovered()) {
 		ImGui::SetTooltip("Show Amiga-style on-screen keyboard overlay during emulation");
 	}
 
-	ImGui::BeginDisabled(!changed_prefs.vkbd_enabled);
+	ImGui::BeginDisabled(!available(o.vkbd_numpad, ctx));
 
-	AmigaCheckbox("Include numeric keypad", &changed_prefs.vkbd_numpad);
+	bool numpad = settings::get_bool(o.vkbd_numpad, changed_prefs);
+	if (AmigaCheckbox("Include numeric keypad", &numpad)) {
+		settings::set_bool(o.vkbd_numpad, changed_prefs, ctx, numpad);
+	}
 	if (ImGui::IsItemHovered()) {
 		ImGui::SetTooltip("Include the Amiga numeric keypad; keys will be smaller to fit the full keyboard");
 	}
 
-	AmigaCheckbox("Keyboard button on On-screen Joystick", &changed_prefs.vkbd_touch_button);
+	ImGui::BeginDisabled(!available(o.vkbd_touch_button, ctx));
+	bool touch_button = settings::get_bool(o.vkbd_touch_button, changed_prefs);
+	if (AmigaCheckbox("Keyboard button on On-screen Joystick", &touch_button)) {
+		settings::set_bool(o.vkbd_touch_button, changed_prefs, ctx, touch_button);
+	}
+	ImGui::EndDisabled();
 	if (ImGui::IsItemHovered()) {
 		ImGui::SetTooltip("Show the KB touch button next to the fire buttons; the toggle button below works either way");
 	}
 
 	// Transparency slider
+	ImGui::BeginDisabled(!available(o.vkbd_transparency, ctx));
 	ImGui::AlignTextToFramePadding();
 	ImGui::Text("Transparency:");
 	ImGui::SameLine();
 	ImGui::SetNextItemWidth(BUTTON_WIDTH * 2);
-	int val = changed_prefs.vkbd_transparency;
-	if (ImGui::SliderInt("##Transparency", &val, 0, 100, "%d%%")) {
-		changed_prefs.vkbd_transparency = val;
+	int transparency = static_cast<int>(settings::get_number(o.vkbd_transparency, changed_prefs));
+	if (ImGui::SliderInt("##Transparency", &transparency, 0, 100, "%d%%", ImGuiSliderFlags_AlwaysClamp)) {
+		settings::set_number(o.vkbd_transparency, changed_prefs, ctx, transparency);
 	}
 	AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), false);
+	ImGui::EndDisabled();
 
 	// Keyboard layout
 	{
+		ImGui::BeginDisabled(!available(o.vkbd_language, ctx));
 		ImGui::AlignTextToFramePadding();
 		ImGui::Text("Layout:");
 		ImGui::SameLine();
 		ImGui::SetNextItemWidth(BUTTON_WIDTH * 2);
-		int current_lang = 0;
-		if (stricmp(changed_prefs.vkbd_language, "UK") == 0) current_lang = 1;
-		else if (stricmp(changed_prefs.vkbd_language, "DE") == 0) current_lang = 2;
-		else if (stricmp(changed_prefs.vkbd_language, "FR") == 0) current_lang = 3;
-		const char* lang_names[] = { "US", "UK", "DE", "FR" };
-		if (ImGui::Combo("##Layout", &current_lang, lang_names, 4)) {
-			strncpy(changed_prefs.vkbd_language, lang_names[current_lang], sizeof(changed_prefs.vkbd_language) - 1);
+		const amiberry_setting_descriptor& desc = o.vkbd_language.descriptor;
+		// An unknown language from a configuration stays visible; the
+		// combo then shows it as-is until the user picks a known one.
+		char current[AMIBERRY_SETTINGS_VALUE_MAX];
+		settings::get(o.vkbd_language, changed_prefs, current, sizeof current);
+		const char* preview = current;
+		int current_lang = -1;
+		for (size_t i = 0; i < desc.choice_count; i++) {
+			if (!stricmp(current, desc.choices[i].value)) {
+				current_lang = static_cast<int>(i);
+				preview = desc.choices[i].label;
+				break;
+			}
+		}
+		if (ImGui::BeginCombo("##Layout", preview)) {
+			for (size_t n = 0; n < desc.choice_count; n++) {
+				const bool is_selected = current_lang == static_cast<int>(n);
+				if (is_selected)
+					ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+				ImGui::PushID(static_cast<int>(n));
+				if (ImGui::Selectable(desc.choices[n].label, is_selected))
+					settings::set(o.vkbd_language, changed_prefs, ctx, desc.choices[n].value);
+				ImGui::PopID();
+				if (is_selected) {
+					ImGui::PopStyleColor();
+					ImGui::SetItemDefaultFocus();
+				}
+			}
+			ImGui::EndCombo();
 		}
 		AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
+		ImGui::EndDisabled();
 	}
+
 	ImGui::AlignTextToFramePadding();
 	ImGui::Text("Toggle button:");
 	ImGui::SameLine();
 
-	ImGui::BeginDisabled(changed_prefs.use_retroarch_vkbd);
+	ImGui::BeginDisabled(!available(o.vkbd_toggle, ctx));
 
 	ImGui::SetNextItemWidth(BUTTON_WIDTH * 2);
-	const char* display = display_name_for_toggle(changed_prefs.vkbd_toggle);
+	char toggle[AMIBERRY_SETTINGS_VALUE_MAX];
+	settings::get(o.vkbd_toggle, changed_prefs, toggle, sizeof toggle);
+	const char* display = display_name_for_toggle(toggle);
 	char buf[256];
 	snprintf(buf, sizeof(buf), "%s", display);
 	ImGui::InputText("##ToggleDisplay", buf, sizeof(buf), ImGuiInputTextFlags_ReadOnly);
@@ -232,12 +319,15 @@ void render_panel_onscreen()
 	}
 	ImGui::SameLine();
 	if (AmigaButton("X")) {
-		changed_prefs.vkbd_toggle[0] = '\0';
+		set_toggle(o.vkbd_toggle, ctx, "");
 	}
 
 	ImGui::EndDisabled(); // RetroArch disable
 
-	AmigaCheckbox("Use RetroArch Vkbd button", &changed_prefs.use_retroarch_vkbd);
+	bool retroarch = settings::get_bool(o.use_retroarch_vkbd, changed_prefs);
+	if (AmigaCheckbox("Use RetroArch Vkbd button", &retroarch)) {
+		settings::set_bool(o.use_retroarch_vkbd, changed_prefs, ctx, retroarch);
+	}
 
 	ImGui::EndDisabled(); // Enabled disable
 

@@ -9,6 +9,7 @@
 
 #include <cstddef>
 #include <cstring>
+#include <cstdio>
 #include <string_view>
 #include <vector>
 
@@ -18,6 +19,13 @@ namespace amiberry_settings {
 
 struct context {
 	bool emulating;
+};
+
+// The choices of one option at one moment: pointers to the descriptor's
+// static list, or to a list a dynamic_choices hook filled.
+struct choice_list {
+	const amiberry_setting_choice* items;
+	size_t count;
 };
 
 // A value that passed the type, range and choice checks. text is the .uae
@@ -46,6 +54,12 @@ struct definition {
 	// nullptr: every value within the range and step. Otherwise rejects
 	// values the core would not keep (a JIT cache below 128 KB).
 	bool (*accepts)(const uae_prefs& p, const value& v);
+	// nullptr: the choice list is the descriptor's static one. Otherwise
+	// enumerates the choices the host offers now (connected audio
+	// devices, joysticks and mice). Main thread only; the storage the
+	// returned items point into lives until the next call of the same
+	// hook.
+	void (*dynamic_choices)(const uae_prefs& p, choice_list& out);
 };
 
 // What a commit knows about the session besides its configurations: the
@@ -66,6 +80,9 @@ struct domain {
 	// the same object. Returns whether it wrote anything.
 	bool (*commit)(const uae_prefs& base, const uae_prefs& from, uae_prefs& to,
 		const commit_info& info);
+	// nullptr: no host-dependent choices. Re-reads the host device lists
+	// this domain's dynamic choices enumerate. Main thread only.
+	void (*refresh_choices)();
 };
 
 // For domain commit functions: copies one field (scalar or array) when the
@@ -98,10 +115,31 @@ T no_throw(T fallback, F&& body) noexcept
 // reports stay limited to AMIBERRY_SETTINGS_VALUE_MAX and truncate.
 constexpr size_t max_value_length = 4096;
 
+// The choices an option accepts now: the descriptor's static list, or the
+// host-dependent list when it has one. Main thread only.
+choice_list choices_of(const definition& d, const uae_prefs& p);
+// Re-reads every host device list the layer enumerates. Main thread only.
+void refresh_dynamic_choices();
+// Calls visit for every configuration an open session holds (working
+// copy, base and preset snapshots), for host device refreshes that must
+// find the devices those configurations select again. Main thread only.
+void for_each_session_config(void (*visit)(uae_prefs& p, void* context), void* context);
+
 const domain& cpu_domain();
 const domain& chipset_domain();
 const domain& memory_domain();
 const domain& rom_domain();
+const domain& display_domain();
+const domain& sound_domain();
+const domain& input_domain();
+const domain& onscreen_domain();
+
+// target_fixup_options() resets an SDL sound device to the first one while
+// a screen uses the lagless vsync mode (fixup_prefs_dimensions() turns RTG
+// vsync into it). Whether that happens to card, and the dependent change
+// the vsync and screen-mode setters make.
+bool soundcard_reset_by_vsync(const uae_prefs& p, int card);
+void clear_soundcard_for_vsync(uae_prefs& p);
 
 // The Quickstart constraints that complete built_in_prefs(); applies model,
 // config and compatibility level exactly like the Quickstart panel (which
@@ -181,5 +219,50 @@ double get_number(const definition& d, const uae_prefs& p);
 amiberry_settings_status set_bool(const definition& d, uae_prefs& p, const context& ctx, bool v);
 amiberry_settings_status set_number(const definition& d, uae_prefs& p, const context& ctx,
 	double v);
+
+// Writers the domains' get functions share.
+inline void write_bool(char* out, size_t size, bool v)
+{
+	std::snprintf(out, size, "%s", v ? "true" : "false");
+}
+
+inline void write_int(char* out, size_t size, int v)
+{
+	std::snprintf(out, size, "%d", v);
+}
+
+// cfgfile writes the throttle and refresh rate options with one decimal.
+inline void write_real(char* out, size_t size, float v)
+{
+	std::snprintf(out, size, "%.1f", v);
+}
+
+// Index of text in choices, or -1.
+inline int choice_index(const amiberry_setting_choice* choices, size_t count,
+	std::string_view text)
+{
+	for (size_t i = 0; i < count; i++) {
+		if (text == choices[i].value)
+			return static_cast<int>(i);
+	}
+	return -1;
+}
+
+inline int choice_index(const choice_list& choices, std::string_view text)
+{
+	return choice_index(choices.items, choices.count, text);
+}
+
+inline void write_choice(char* out, size_t size, const amiberry_setting_choice* choices,
+	size_t count, int index)
+{
+	std::snprintf(out, size, "%s",
+		index >= 0 && static_cast<size_t>(index) < count ? choices[index].value : "");
+}
+
+inline void write_choice(char* out, size_t size, const choice_list& choices, int index)
+{
+	write_choice(out, size, choices.items, choices.count, index);
+}
 
 } // namespace amiberry_settings

@@ -7,6 +7,7 @@
 
 #include "settings_definitions.h"
 
+#include <algorithm>
 #include <cstdlib>
 #include <cstring>
 #include <new>
@@ -40,6 +41,15 @@ struct amiberry_settings_session {
 };
 
 namespace {
+
+// Every open session, so a host device refresh can find the devices their
+// configurations select again (for_each_session_config). Main thread only,
+// like every session call.
+std::vector<amiberry_settings_session*>& open_sessions()
+{
+	static std::vector<amiberry_settings_session*> sessions;
+	return sessions;
+}
 
 uae_prefs* allocate_copy(const uae_prefs& source)
 {
@@ -140,6 +150,7 @@ amiberry_settings_session* amiberry_settings_session_open(void)
 	session->base = allocate_copy(changed_prefs);
 	const bool sized = session->working && session->base && amiberry_settings::no_throw(false, [session] {
 		session->touched.assign(amiberry_settings::definition_count(), false);
+		open_sessions().push_back(session);
 		return true;
 	});
 	if (!sized) {
@@ -153,6 +164,8 @@ void amiberry_settings_session_close(amiberry_settings_session* session)
 {
 	if (!session)
 		return;
+	auto& sessions = open_sessions();
+	sessions.erase(std::remove(sessions.begin(), sessions.end(), session), sessions.end());
 	forget_preset(*session);
 	std::free(session->working);
 	std::free(session->base);
@@ -215,6 +228,27 @@ bool amiberry_settings_get_range(const amiberry_settings_session* session, const
 			return false;
 		amiberry_settings::get_range(*d, *session->working, *min, *max);
 		return true;
+	});
+}
+
+size_t amiberry_settings_choices(const amiberry_settings_session* session,
+	const char* id, const amiberry_setting_choice** choices)
+{
+	const definition* d = session ? lookup(id) : nullptr;
+	if (!d || !choices)
+		return 0;
+	return amiberry_settings::no_throw<size_t>(0, [&] {
+		const amiberry_settings::choice_list list =
+			amiberry_settings::choices_of(*d, *session->working);
+		*choices = list.items;
+		return list.count;
+	});
+}
+void amiberry_settings_refresh_choices(void)
+{
+	amiberry_settings::no_throw(0, [] {
+		amiberry_settings::refresh_dynamic_choices();
+		return 0;
 	});
 }
 
@@ -344,3 +378,17 @@ amiberry_settings_status amiberry_settings_preset_apply(amiberry_settings_sessio
 	return AMIBERRY_SETTINGS_OK;
 }
 }
+
+namespace amiberry_settings {
+
+void for_each_session_config(void (*visit)(uae_prefs& p, void* context), void* context)
+{
+	for (amiberry_settings_session* session : open_sessions()) {
+		for (uae_prefs* p : {session->working, session->base, session->pre_preset, session->after_preset}) {
+			if (p)
+				visit(*p, context);
+		}
+	}
+}
+
+} // namespace amiberry_settings

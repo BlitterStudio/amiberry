@@ -25,6 +25,7 @@
 #include <SDL3/SDL.h>
 #include <cmath>
 #include <algorithm>
+#include <string>
 
 #include "sounddep/sound.h"
 #ifdef VIDEOGRAB
@@ -1079,6 +1080,76 @@ int enumerate_sound_devices()
 		}
 	}
 	return num_sound_devices;
+}
+
+static void free_sound_device_table(struct sound_device** table)
+{
+	for (int i = 0; i < MAX_SOUND_DEVICES; i++) {
+		if (struct sound_device* sd = table[i]) {
+			xfree(sd->name);
+			xfree(sd->alname);
+			xfree(sd->cfgname);
+			xfree(sd->prefix);
+			xfree(sd);
+			table[i] = nullptr;
+		}
+	}
+}
+
+// The configured device's name, to find it again after the tables change.
+static std::string sound_device_cfgname(struct sound_device** table, int index)
+{
+	if (index < 0 || index >= MAX_SOUND_DEVICES || !table[index] || !table[index]->cfgname)
+		return {};
+	return table[index]->cfgname;
+}
+
+static int find_sound_device(struct sound_device** table, const std::string& cfgname)
+{
+	for (int i = 0; !cfgname.empty() && i < MAX_SOUND_DEVICES && table[i]; i++) {
+		if (table[i]->cfgname && cfgname == table[i]->cfgname)
+			return i;
+	}
+	return -1;
+}
+
+void refresh_sound_devices()
+{
+	// enumerate_sound_devices() only queries the host while the table is
+	// empty, so clear both tables (with their heap-owned strings) first. The
+	// open device keeps copies of the values it uses, not pointers into
+	// them. Configurations select devices by index, so the selected devices
+	// are found again by name: a device that disappeared ahead of the
+	// selected one would otherwise shift the selection to another device.
+	struct uae_prefs* const prefs[] = { &changed_prefs, &currprefs };
+	std::string playback[2], recording[2];
+	for (int k = 0; k < 2; k++) {
+		playback[k] = sound_device_cfgname(sound_devices, prefs[k]->soundcard);
+		recording[k] = sound_device_cfgname(record_devices, prefs[k]->samplersoundcard);
+	}
+	free_sound_device_table(sound_devices);
+	free_sound_device_table(record_devices);
+	num_sound_devices = 0;
+	num_record_devices = 0;
+	enumerate_sound_devices();
+	bool playing_device_lost = false;
+	for (int k = 0; k < 2; k++) {
+		if (!playback[k].empty()) {
+			const int card = find_sound_device(sound_devices, playback[k]);
+			prefs[k]->soundcard = card >= 0 ? card : 0;
+			if (card < 0 && prefs[k] == &currprefs)
+				playing_device_lost = true;
+		}
+		if (!recording[k].empty())
+			prefs[k]->samplersoundcard = find_sound_device(record_devices, recording[k]);
+	}
+	// The stream is still attached to a device that is gone. Both
+	// configurations fall back to the first device, which the audio change
+	// check cannot see (the indices can be equal), so the stream is reset
+	// the way a lost device is: the reset path reopens it on currprefs'
+	// device.
+	if (playing_device_lost)
+		set_reset(sdp);
 }
 
 static int set_master_volume(int volume, int mute)

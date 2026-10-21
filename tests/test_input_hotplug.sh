@@ -154,7 +154,7 @@ if "if (p->jports_default[portnum] == 0)" not in port_config:
 port_selection = region_between(
 	input_panel,
 	"static void set_port_input_device(",
-	"const std::vector<InputDeviceOption>& get_input_device_options()",
+	"static int get_device_index(",
 )
 clear_selected = port_selection.find("amiberry_clear_port_joystick_custom_mapping(port_idx);")
 forget_selected = port_selection.find("inputdevice_forget_unplugged_device(port_idx);")

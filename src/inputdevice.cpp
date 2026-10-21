@@ -6259,12 +6259,27 @@ int send_input_event (int nr, int state, int max, int autofire)
 
 static void inputdevice_checkconfig (void)
 {
+#ifdef AMIBERRY
+	// Amiberry: multi-mouse mode changes the host mouse list. The Input
+	// panel and the GUI exit re-enumerate when it changes; a change made
+	// any other way while running (a settings layer commit) is applied
+	// here. inputdevice_mouse_reinit() copies the mode into currprefs.
+	if (currprefs.input_multi_mouse != changed_prefs.input_multi_mouse) {
+		inputdevice_mouse_reinit(&changed_prefs);
+		// The mice a port can select changed; the settings layer's port
+		// list is rebuilt from this flag, as after the Input panel's toggle.
+		joystick_refresh_needed = true;
+	}
+#endif
 	bool changed = false;
 	for (int i = 0; i < MAX_JPORTS; i++) {
 		if (currprefs.jports[i].id != changed_prefs.jports[i].id ||
 			currprefs.jports[i].mode != changed_prefs.jports[i].mode ||
 			currprefs.jports[i].submode != changed_prefs.jports[i].submode ||
 			currprefs.jports[i].autofire != changed_prefs.jports[i].autofire ||
+#ifdef AMIBERRY
+			currprefs.jports[i].mousemap != changed_prefs.jports[i].mousemap ||
+#endif
 			_tcscmp(currprefs.jports_custom[i].custom, changed_prefs.jports_custom[i].custom))
 				changed = true;
 	}
@@ -6280,6 +6295,9 @@ static void inputdevice_checkconfig (void)
 		currprefs.input_autoswitchleftright != changed_prefs.input_autoswitchleftright ||
 		currprefs.input_device_match_mask != changed_prefs.input_device_match_mask ||
 		currprefs.input_mouse_speed != changed_prefs.input_mouse_speed ||
+#ifdef AMIBERRY
+		currprefs.input_joystick_up_button != changed_prefs.input_joystick_up_button ||
+#endif
 		currprefs.input_tablet != changed_prefs.input_tablet) {
 			const bool refresh_tablet_session = input_acquired
 				&& currprefs.input_tablet != changed_prefs.input_tablet
@@ -6297,6 +6315,9 @@ static void inputdevice_checkconfig (void)
 			currprefs.input_autoswitch = changed_prefs.input_autoswitch;
 			currprefs.input_autoswitchleftright = changed_prefs.input_autoswitchleftright;
 			currprefs.input_device_match_mask = changed_prefs.input_device_match_mask;
+#ifdef AMIBERRY
+			currprefs.input_joystick_up_button = changed_prefs.input_joystick_up_button;
+#endif
 
 			if (currprefs.input_tablet != changed_prefs.input_tablet) {
 				currprefs.input_tablet = changed_prefs.input_tablet;
@@ -10869,7 +10890,8 @@ static void inputdevice_get_previous_joy(struct uae_prefs *p, int portnum, bool 
 	}
 }
 
-void inputdevice_validate_jports (struct uae_prefs *p, int changedport, bool *fixedports)
+static void validate_jports (struct uae_prefs *p, int changedport, bool *fixedports,
+	bool record_usage)
 {
 	for (int i = 0; i < MAX_JPORTS; i++) {
 		fixjport (&p->jports[i], 0, changedport == i);
@@ -10919,7 +10941,8 @@ void inputdevice_validate_jports (struct uae_prefs *p, int changedport, bool *fi
 						memcpy(&p->jports[k].id, jp, sizeof(struct jport));
 						if (fixjport(&p->jports[k], 0, false))
 							continue;
-						inputdevice_set_newest_used_device(k, &p->jports[k]);
+						if (record_usage)
+							inputdevice_set_newest_used_device(k, &p->jports[k]);
 						break;
 					}
 					if (jp)
@@ -10931,6 +10954,21 @@ void inputdevice_validate_jports (struct uae_prefs *p, int changedport, bool *fi
 		}
 	}
 }
+
+void inputdevice_validate_jports (struct uae_prefs *p, int changedport, bool *fixedports)
+{
+	validate_jports (p, changedport, fixedports, true);
+}
+
+#ifdef AMIBERRY
+// Amiberry: the shared settings layer stores edits in session copies of
+// the configuration, which must not touch global device state, so this
+// variant validates without updating the usage history.
+void inputdevice_validate_jports_prefs_only (struct uae_prefs *p, int changedport)
+{
+	validate_jports (p, changedport, nullptr, false);
+}
+#endif
 
 void inputdevice_joyport_keyboard_default(struct uae_prefs *p, const TCHAR *value, int portnum)
 {
