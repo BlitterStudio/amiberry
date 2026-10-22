@@ -118,12 +118,16 @@ enum AppFiles {
 		return trimmed == reserved || trimmed + ".uss" == reserved
 	}
 
-	/// The state file a typed name saves to, in `folder`: ".uss" added when
-	/// missing. nil for a name that is empty or holds a path separator.
+	/// The state file a typed name saves to, in `folder`, ending in ".uss"
+	/// as the emulator spells it (it adds ".uss" to any other ending, so
+	/// "Game.USS" would be saved as "Game.USS.uss"). nil for a name that is
+	/// empty or holds a path separator.
 	static func stateFile(named name: String, in folder: URL) -> URL? {
-		let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-		guard !trimmed.isEmpty, !trimmed.contains("/"), trimmed != ".", trimmed != ".." else { return nil }
-		let file = trimmed.lowercased().hasSuffix(".uss") ? trimmed : trimmed + ".uss"
-		return folder.appendingPathComponent(file)
+		var base = name.trimmingCharacters(in: .whitespacesAndNewlines)
+		if base.lowercased().hasSuffix(".uss") {
+			base.removeLast(4)
+		}
+		guard !base.isEmpty, !base.contains("/"), base != ".", base != ".." else { return nil }
+		return folder.appendingPathComponent(base + ".uss")
 	}
 }

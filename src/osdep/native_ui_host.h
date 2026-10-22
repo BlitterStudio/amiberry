@@ -33,6 +33,14 @@ void native_host_hide_keyboard();
 // settings loop.
 void native_host_request_autosave();
 void native_host_service_autosave();
+// Marks a native front end call made between frames (a hotkey's
+// requester), where its modal waits may write a requested autosave.
+struct native_host_between_frames {
+	native_host_between_frames();
+	~native_host_between_frames();
+	native_host_between_frames(const native_host_between_frames&) = delete;
+	native_host_between_frames& operator=(const native_host_between_frames&) = delete;
+};
 // The autosave state's path.
 std::string native_host_autosave_path();
 

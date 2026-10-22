@@ -46,6 +46,7 @@ void amiberry_native_ui_keyboard_toggle(void);
 void amiberry_native_ui_keyboard_hide(void);
 void amiberry_native_ui_background_task_begin(void);
 void amiberry_native_ui_background_task_end(void);
+void amiberry_native_ui_set_modal_wait_hook(void (*hook)(void));
 #endif
 bool amiberry_native_ui_choose_file(int kind, const char* title, const char* start_path,
 	char* chosen, size_t size);
@@ -131,6 +132,7 @@ void startup_notices()
 
 void native_host_run_settings()
 {
+	const native_host_between_frames between_frames;
 	startup_notices();
 	amiberry_native_ui_settings_show(emulating != 0);
 	while (amiberry_native_ui_settings_visible()) {
@@ -184,8 +186,17 @@ bool native_host_settings_open()
 	return amiberry_native_ui_settings_visible();
 }
 
+#ifdef AMIBERRY_IOS
+namespace {
+void modal_wait_hook();
+}
+#endif
+
 void native_host_install_menus()
 {
+#ifdef AMIBERRY_IOS
+	amiberry_native_ui_set_modal_wait_hook(modal_wait_hook);
+#endif
 	amiberry_native_ui_install_menus();
 }
 
@@ -218,16 +229,25 @@ std::string native_host_autosave_path()
 #ifdef AMIBERRY_IOS
 namespace {
 std::atomic<bool> autosave_requested{false};
+// Above zero while the main thread is between frames inside the native
+// front end (its settings loop, a hotkey's requester), where its modal
+// waits may write a requested autosave. Not inside a requester the
+// emulation asks for mid-instruction (gui_ask_disk).
+int between_frames = 0;
 
-void write_autosave()
+enum class autosave_result { done, later };
+
+autosave_result write_autosave()
 {
-	// Not over a state save or restore the emulation has yet to run, which
-	// share savestate_fname.
-	if (!emulating || savestate_state != 0)
-		return;
+	if (!emulating)
+		return autosave_result::done;
+	// Not over a state save or restore the emulation has yet to run (they
+	// share savestate_fname): after it.
+	if (savestate_state != 0)
+		return autosave_result::later;
 	const std::string path = native_host_autosave_path();
 	if (path.empty())
-		return;
+		return autosave_result::done;
 	// Written aside and moved over the last one only when complete: the
 	// system can end the app part-way, and a failed save keeps the last.
 	const std::string partial = path + ".partial";
@@ -242,9 +262,32 @@ void write_autosave()
 		write_log("Autosave to %s failed\n", path.c_str());
 		std::remove(partial.c_str());
 	}
+	return autosave_result::done;
+}
+
+// Called by the native modal waits (Files pickers, alerts) as they run the
+// run loop, which keeps the C++ loops from running.
+void modal_wait_hook()
+{
+	if (between_frames > 0)
+		native_host_service_autosave();
 }
 } // namespace
 #endif
+
+native_host_between_frames::native_host_between_frames()
+{
+#ifdef AMIBERRY_IOS
+	between_frames++;
+#endif
+}
+
+native_host_between_frames::~native_host_between_frames()
+{
+#ifdef AMIBERRY_IOS
+	between_frames--;
+#endif
+}
 
 void native_host_request_autosave()
 {
@@ -260,9 +303,8 @@ void native_host_request_autosave()
 void native_host_service_autosave()
 {
 #ifdef AMIBERRY_IOS
-	if (!autosave_requested.load())
+	if (!autosave_requested.load() || write_autosave() == autosave_result::later)
 		return;
-	write_autosave();
 	autosave_requested.store(false);
 	amiberry_native_ui_background_task_end();
 #endif

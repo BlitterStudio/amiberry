@@ -786,6 +786,8 @@ void request_disk_selection(const int shortcut, const bool close_gui, std::funct
 // The shortcuts' requesters on the native macOS front end.
 static void native_disk_selection(const int shortcut, uae_prefs* prefs)
 {
+	// A hotkey's requester: gui_display() runs between frames.
+	const native_host_between_frames between_frames;
 	std::string title, start, chosen;
 	native_host_file kind = native_host_file::floppy;
 	if (shortcut >= 0 && shortcut < 4) {

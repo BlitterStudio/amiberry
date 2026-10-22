@@ -64,8 +64,19 @@ enum BackgroundTask {
 	}
 }
 
+@_cdecl("amiberry_native_ui_set_modal_wait_hook")
+public func amiberryNativeUISetModalWaitHook(_ hook: (@convention(c) () -> Void)?) {
+	MainActor.assumeIsolated {
+		ModalWait.hook = hook
+	}
+}
+
 @MainActor
 enum ModalWait {
+	/// Run on every turn of a wait: the emulator's loops do not run
+	/// meanwhile, and a requested autosave must still be written.
+	static var hook: (@convention(c) () -> Void)?
+
 	/// Presents `controller` and runs the main run loop until `done` holds
 	/// or the controller is gone: never presented (UIKit refuses to present
 	/// from a controller that is being dismissed, and only logs it) or
@@ -77,6 +88,7 @@ enum ModalWait {
 		guard controller.presentingViewController != nil else { return false }
 		while !done(), controller.presentingViewController != nil {
 			_ = RunLoop.current.run(mode: .default, before: Date(timeIntervalSinceNow: 0.05))
+			hook?()
 		}
 		return true
 	}

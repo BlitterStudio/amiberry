@@ -165,14 +165,19 @@ final class SettingsWindowModel {
 	}
 
 	/// The state saved as the iOS app last went to the background, when
-	/// there is one and nothing runs yet.
+	/// there is one and nothing runs yet. Only the iOS app writes it (on a
+	/// Mac, a file of that name is the user's own).
 	var autosave: (path: String, date: Date)? {
+		#if os(iOS)
 		guard !emulating, let folder = try? MediaLibrary.path(of: .saveStates) else { return nil }
 		let path = URL(fileURLWithPath: folder).appendingPathComponent(AMIBERRY_AUTOSAVE_STATE_NAME).path
 		guard let attributes = try? FileManager.default.attributesOfItem(atPath: path),
 			let date = attributes[.modificationDate] as? Date
 		else { return nil }
 		return (path, date)
+		#else
+		return nil
+		#endif
 	}
 
 	/// Restores the autosave state: the emulation starts from it, and the

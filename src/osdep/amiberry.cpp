@@ -589,6 +589,10 @@ static bool SDLCALL app_lifecycle_watch(void*, SDL_Event* event)
 			background_pause.active = true;
 			background_pause.owned = pause_emulation == 0;
 			if (background_pause.owned) {
+				// setpaused() releases held host keys only when the flag is
+				// clear, which this sets ahead of it (no focus loss need
+				// come first, as with the Control Center).
+				wait_keyrelease();
 				pause_sound();
 				pause_emulation = 1;
 			}

@@ -191,6 +191,21 @@ final class AmigaKeyboardModel {
 		}
 	}
 
+	/// The system took the touch away (a system gesture, too many fingers):
+	/// nothing was typed. A plain key comes up; a modifier this touch
+	/// latched is let go; the other latched modifiers stay for the next key.
+	func touchCancelled(_ key: AmigaKey) {
+		switch key.behaviour {
+		case .plain:
+			guard down.contains(key.code) else { return }
+			send(key.code, pressed: false)
+		case .modifier, .toggle:
+			guard latched.contains(key.code) else { return }
+			latched.remove(key.code)
+			send(key.code, pressed: false)
+		}
+	}
+
 	/// Lets go of every key, latched modifiers included, when the keyboard
 	/// hides or the emulation stops taking input. Caps Lock stays as it is:
 	/// it is the Amiga's state, not a key held.

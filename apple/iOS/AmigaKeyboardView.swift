@@ -97,8 +97,10 @@ private struct KeyView: View {
 	let layout: String
 	let model: AmigaKeyboardModel
 	/// Resets when the touch ends or is cancelled (a system gesture, too
-	/// many fingers), which releases the key; onEnded alone misses cancels.
+	/// many fingers); onEnded alone misses cancels. `lifted` tells the two
+	/// apart: onEnded runs only for a touch that ended.
 	@GestureState private var touching = false
+	@State private var lifted = false
 
 	var body: some View {
 		let down = model.down.contains(key.code)
@@ -117,12 +119,19 @@ private struct KeyView: View {
 			.lineLimit(1)
 		}
 		.contentShape(Rectangle())
-		.gesture(DragGesture(minimumDistance: 0).updating($touching) { _, touching, _ in touching = true })
+		.gesture(
+			DragGesture(minimumDistance: 0)
+				.updating($touching) { _, touching, _ in touching = true }
+				.onEnded { _ in lifted = true }
+		)
 		.onChange(of: touching) {
 			if touching {
+				lifted = false
 				model.touchDown(key)
-			} else {
+			} else if lifted {
 				model.touchUp(key)
+			} else {
+				model.touchCancelled(key)
 			}
 		}
 		.accessibilityLabel(legend.label.isEmpty ? "Space" : legend.label)

@@ -82,6 +82,21 @@ final class AmigaKeyboardTests: XCTestCase {
 		XCTAssertEqual(posted.count, 2, "a key released by hiding is not released twice")
 	}
 
+	func testACancelledTouchTypesNothing() throws {
+		let keyboard = keyboard()
+		let shift = try key(0x60), a = try key(0x20)
+		keyboard.touchDown(shift)
+		keyboard.touchUp(shift)
+		keyboard.touchDown(a)
+		keyboard.touchCancelled(a)
+		XCTAssertEqual(keyboard.down, [0x60], "the latched Shift waits for a key that is typed")
+		let ctrl = try key(0x63)
+		keyboard.touchDown(ctrl)
+		keyboard.touchCancelled(ctrl)
+		XCTAssertFalse(keyboard.latched.contains(0x63), "a cancelled modifier touch latches nothing")
+		XCTAssertEqual(posted.suffix(2), [.key(code: 0x63, pressed: true), .key(code: 0x63, pressed: false)])
+	}
+
 	func testLayoutsChangeLegendsNotCodes() throws {
 		let y = try key(0x15), z = try key(0x31), three = try key(0x03)
 		XCTAssertEqual(AmigaKeyboardLayout.legend(of: y, layout: "DE").label, "Z")
@@ -134,7 +149,9 @@ final class AppFilesTests: XCTestCase {
 
 	func testStateNames() {
 		XCTAssertEqual(AppFiles.stateFile(named: " Game ", in: folder)?.lastPathComponent, "Game.uss")
-		XCTAssertEqual(AppFiles.stateFile(named: "Game.USS", in: folder)?.lastPathComponent, "Game.USS")
+		XCTAssertEqual(AppFiles.stateFile(named: "Game.USS", in: folder)?.lastPathComponent, "Game.uss",
+			"the emulator would save Game.USS as Game.USS.uss")
+		XCTAssertNil(AppFiles.stateFile(named: ".uss", in: folder))
 		XCTAssertNil(AppFiles.stateFile(named: "  ", in: folder))
 		XCTAssertNil(AppFiles.stateFile(named: "a/b", in: folder))
 		XCTAssertNil(AppFiles.stateFile(named: "..", in: folder))
