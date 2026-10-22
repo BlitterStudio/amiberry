@@ -6651,7 +6651,10 @@ static int target_parse_option_host(uae_prefs *p, const TCHAR *option, const TCH
 		|| cfgfile_string(option, value, "right_amiga", p->right_amiga, sizeof p->right_amiga)
 		|| cfgfile_string(option, value, "screenshot", p->screenshot, sizeof p->screenshot)
 		|| cfgfile_string(option, value, "debugger_trigger", p->debugger_trigger, sizeof p->debugger_trigger)
+		// Android launcher records (its joyport 1 choice and the preset it
+		// started from, "<id>:<configuration>"): accepted and not kept.
 		|| cfgfile_string(option, value, "android_joyport1", tmpbuf, sizeof tmpbuf)
+		|| cfgfile_string(option, value, "android_preset", tmpbuf, sizeof tmpbuf)
 		|| cfgfile_intval(option, value, _T("cpu_idle"), &p->cpu_idle, 1))
 		return 1;
 
