@@ -1186,6 +1186,15 @@ extern void cfgfile_target_dwrite_str_escape(struct zfile *f, const TCHAR *optio
 
 extern void cfgfile_backup(const TCHAR* path);
 extern struct uaedev_config_data* add_filesys_config(struct uae_prefs* p, int index, struct uaedev_config_info*);
+// The uaehfN value of mount entry index, the complete .uae spelling of the
+// entry; false when index is not an entry.
+extern bool cfgfile_mount_value(struct uae_prefs* p, int index, TCHAR* out, size_t size);
+// Whether mount entry index's lines fit the line length the configuration
+// loader reads, so the entry survives a save and a load.
+extern bool cfgfile_mount_entry_fits(struct uae_prefs* p, int index);
+// Parses a uaehfN value into ci without adding it; false when the value is
+// not a valid entry.
+extern bool cfgfile_parse_mount_value(struct uae_prefs* p, const TCHAR* value, struct uaedev_config_info* ci);
 extern bool get_hd_geometry(struct uaedev_config_info*);
 extern void uci_set_defaults(struct uaedev_config_info* uci, bool rdb);
 

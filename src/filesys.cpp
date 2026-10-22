@@ -1190,7 +1190,9 @@ int kill_filesys_unitconfig (struct uae_prefs *p, int nr)
 	} else {
 		pcmcia_disk_reinsert(p, &uci->ci, true);
 	}
-	while (nr < MOUNT_CONFIG_SIZE) {
+	/* The last entry has no successor to move down (reading one would run
+	   past the array). */
+	while (nr < MOUNT_CONFIG_SIZE - 1) {
 		memmove (&p->mountconfig[nr], &p->mountconfig[nr + 1], sizeof (struct uaedev_config_data));
 		nr++;
 	}

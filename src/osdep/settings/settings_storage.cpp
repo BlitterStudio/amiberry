@@ -1,5 +1,6 @@
 // CD and filesystem options: the CD drive's image, its speed, host CD
-// automounting and the filesystem metadata options.
+// automounting and the filesystem metadata options; the mount list (whose
+// session API lives with the session) commits with them.
 //
 // cdimage0 is the configuration's value for the first CD unit, in the
 // spelling the writer uses (the path, then ",delay:" and the unit type when
@@ -171,6 +172,13 @@ bool commit_storage(const uae_prefs& base, const uae_prefs& from, uae_prefs& to,
 	FIELD(filesys_custom_uaefsdb);
 	FIELD(filesys_no_uaefsdb);
 #undef FIELD
+	// The mount list as a whole: a session that changed it replaces it.
+	if (!same_mount_list(base, from)) {
+		to.mountitems = from.mountitems;
+		std::memcpy(static_cast<void*>(to.mountconfig), static_cast<const void*>(from.mountconfig),
+			sizeof to.mountconfig);
+		wrote = true;
+	}
 	return wrote;
 }
 
@@ -183,6 +191,18 @@ const domain storage = {
 const domain& storage_domain()
 {
 	return storage;
+}
+
+bool same_mount_list(const uae_prefs& a, const uae_prefs& b)
+{
+	if (a.mountitems != b.mountitems)
+		return false;
+	const int count = a.mountitems < MOUNT_CONFIG_SIZE ? a.mountitems : MOUNT_CONFIG_SIZE;
+	for (int i = 0; i < count; i++) {
+		if (std::memcmp(&a.mountconfig[i].ci, &b.mountconfig[i].ci, sizeof a.mountconfig[i].ci) != 0)
+			return false;
+	}
+	return true;
 }
 
 } // namespace amiberry_settings

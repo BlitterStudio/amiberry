@@ -39,6 +39,7 @@
 #include <cstring>
 #include <map>
 #include <algorithm>
+#include <cctype>
 #include <chrono>
 #include <mutex>
 #include <vector>
@@ -1569,10 +1570,13 @@ static std::string HandleListHarddrives(const std::vector<std::string>& args)
 	}
 	std::vector<std::string> responses;
 
-	// List mounted hardfiles from prefs
-	for (int i = 0; i < MAX_FILESYSTEM_UNITS; ++i) {
+	// List mounted hardfiles from prefs: the entries in use, not what a
+	// removed entry left behind past them.
+	const int count = std::min(currprefs.mountitems, MOUNT_CONFIG_SIZE);
+	for (int i = 0; i < count; ++i) {
 		struct uaedev_config_data *uci = &currprefs.mountconfig[i];
-		if (uci->ci.rootdir[0]) {
+		// A tab or line break would split the reply.
+		if (uci->ci.rootdir[0] && !std::strpbrk(uci->ci.rootdir, "\t\r\n")) {
 			std::string entry = "unit" + std::to_string(i) + "=";
 			if (uci->ci.type == UAEDEV_HDF) {
 				entry += "hdf:";
@@ -3300,6 +3304,10 @@ static std::string HandleHelp(const std::vector<std::string>& args)
 	commands.emplace_back("SETTINGS_VALIDATE");
 	commands.emplace_back("SETTINGS_COMMIT");
 	commands.emplace_back("SETTINGS_RESET_SESSION");
+	commands.emplace_back("SETTINGS_MOUNTS");
+	commands.emplace_back("SETTINGS_MOUNT_ADD <uaehf value>");
+	commands.emplace_back("SETTINGS_MOUNT_REPLACE <index> <uaehf value>");
+	commands.emplace_back("SETTINGS_MOUNT_REMOVE <index>");
 	return make_response(true, commands);
 }
 
@@ -3453,6 +3461,127 @@ static std::string HandleSettingsCommit(const std::vector<std::string>& args)
 	});
 }
 
+// A mount list index as SETTINGS_MOUNT_REPLACE and SETTINGS_MOUNT_REMOVE
+// take it: decimal digits only.
+static bool parse_mount_index(const std::string& text, size_t& index)
+{
+	if (text.empty() || text.size() > 4
+		|| !std::all_of(text.begin(), text.end(), [](unsigned char c) { return std::isdigit(c) != 0; }))
+		return false;
+	index = static_cast<size_t>(std::stoul(text));
+	return true;
+}
+
+static std::string mount_status_message(amiberry_settings_status status, const std::string& subject)
+{
+	switch (status) {
+	case AMIBERRY_SETTINGS_OK:
+		return "OK";
+	case AMIBERRY_SETTINGS_UNKNOWN_ID:
+		return "No mount entry " + subject;
+	case AMIBERRY_SETTINGS_INVALID_VALUE:
+		return "Invalid mount entry: " + subject;
+	case AMIBERRY_SETTINGS_UNAVAILABLE:
+		return "The mount list is full";
+	case AMIBERRY_SETTINGS_BUFFER_TOO_SMALL:
+		return "Mount entry too long";
+	}
+	return "Settings error";
+}
+
+static std::string HandleSettingsMounts(const std::vector<std::string>& args)
+{
+	if (!currprefs.ipc_disable_logging) {
+		std::cout << "IPC: Received SETTINGS_MOUNTS" << std::endl;
+	}
+	amiberry_settings_session* session = settings_session();
+	if (!session) {
+		return make_response(false, {"Out of memory"});
+	}
+	std::vector<std::string> entries;
+	const size_t count = amiberry_settings_mount_count(session);
+	for (size_t i = 0; i < count; ++i) {
+		char value[CONFIG_BLEN];
+		if (amiberry_settings_mount_get(session, i, value, sizeof value) != AMIBERRY_SETTINGS_OK) {
+			return make_response(false, {"Mount entry " + std::to_string(i) + " could not be read"});
+		}
+		const std::string entry = value;
+		// A tab or line break would split the reply; such an entry cannot
+		// be represented in this protocol.
+		if (entry.find_first_of("\t\r\n") != std::string::npos) {
+			return make_response(false, {"Mount entry " + std::to_string(i) + " contains a tab or line break"});
+		}
+		entries.push_back(entry);
+	}
+	if (entries.empty()) {
+		return make_response(true, {"none"});
+	}
+	return make_response(true, entries);
+}
+
+static std::string HandleSettingsMountAdd(const std::vector<std::string>& args)
+{
+	if (!currprefs.ipc_disable_logging) {
+		std::cout << "IPC: Received SETTINGS_MOUNT_ADD" << std::endl;
+	}
+	if (args.size() != 1) {
+		return make_response(false, {"Usage: SETTINGS_MOUNT_ADD <uaehf value>"});
+	}
+	amiberry_settings_session* session = settings_session();
+	if (!session) {
+		return make_response(false, {"Out of memory"});
+	}
+	const amiberry_settings_status status = amiberry_settings_mount_add(session, args[0].c_str());
+	if (status != AMIBERRY_SETTINGS_OK) {
+		return make_response(false, {mount_status_message(status, args[0])});
+	}
+	ipc_settings_dirty = true;
+	return make_response(true);
+}
+
+static std::string HandleSettingsMountReplace(const std::vector<std::string>& args)
+{
+	if (!currprefs.ipc_disable_logging) {
+		std::cout << "IPC: Received SETTINGS_MOUNT_REPLACE" << std::endl;
+	}
+	size_t index = 0;
+	if (args.size() != 2 || !parse_mount_index(args[0], index)) {
+		return make_response(false, {"Usage: SETTINGS_MOUNT_REPLACE <index> <uaehf value>"});
+	}
+	amiberry_settings_session* session = settings_session();
+	if (!session) {
+		return make_response(false, {"Out of memory"});
+	}
+	const amiberry_settings_status status = amiberry_settings_mount_replace(session, index, args[1].c_str());
+	if (status != AMIBERRY_SETTINGS_OK) {
+		return make_response(false, {mount_status_message(status,
+			status == AMIBERRY_SETTINGS_UNKNOWN_ID ? args[0] : args[1])});
+	}
+	ipc_settings_dirty = true;
+	return make_response(true);
+}
+
+static std::string HandleSettingsMountRemove(const std::vector<std::string>& args)
+{
+	if (!currprefs.ipc_disable_logging) {
+		std::cout << "IPC: Received SETTINGS_MOUNT_REMOVE" << std::endl;
+	}
+	size_t index = 0;
+	if (args.size() != 1 || !parse_mount_index(args[0], index)) {
+		return make_response(false, {"Usage: SETTINGS_MOUNT_REMOVE <index>"});
+	}
+	amiberry_settings_session* session = settings_session();
+	if (!session) {
+		return make_response(false, {"Out of memory"});
+	}
+	const amiberry_settings_status status = amiberry_settings_mount_remove(session, index);
+	if (status != AMIBERRY_SETTINGS_OK) {
+		return make_response(false, {mount_status_message(status, args[0])});
+	}
+	ipc_settings_dirty = true;
+	return make_response(true);
+}
+
 static std::string HandleSettingsResetSession(const std::vector<std::string>& args)
 {
 	if (!currprefs.ipc_disable_logging) {
@@ -3511,6 +3640,10 @@ static void InitHandlers()
 	command_handlers[CMD_SETTINGS_VALIDATE] = HandleSettingsValidate;
 	command_handlers[CMD_SETTINGS_COMMIT] = HandleSettingsCommit;
 	command_handlers[CMD_SETTINGS_RESET_SESSION] = HandleSettingsResetSession;
+	command_handlers[CMD_SETTINGS_MOUNTS] = HandleSettingsMounts;
+	command_handlers[CMD_SETTINGS_MOUNT_ADD] = HandleSettingsMountAdd;
+	command_handlers[CMD_SETTINGS_MOUNT_REPLACE] = HandleSettingsMountReplace;
+	command_handlers[CMD_SETTINGS_MOUNT_REMOVE] = HandleSettingsMountRemove;
 	command_handlers[CMD_HELP] = HandleHelp;
 
 	command_handlers[CMD_QUICKSAVE] = HandleQuickSave;
