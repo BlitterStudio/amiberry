@@ -25,6 +25,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.blitterstudio.amiberry.data.model.EmulatorSettings
 import com.blitterstudio.amiberry.R
 import com.blitterstudio.amiberry.ui.dpadVerticalMovesFocus
 import com.blitterstudio.amiberry.ui.viewmodel.SettingsViewModel
@@ -54,16 +55,17 @@ internal fun memoryAmountDisplayValue(kb: Int): MemoryAmountDisplay {
 fun MemoryTab(viewModel: SettingsViewModel) {
 	val settings = viewModel.settings
 	val noneLabel = stringResource(R.string.settings_option_none)
-	val chipOptions = listOf(1, 2, 4, 8, 16).map { value ->
-		value to formatMemory(value * 512, noneLabel)
+	// The sizes the emulator offers (settings schema), with localized labels.
+	val chipOptions = EmulatorSettings.chipRamOptions.map { it.first }.map { value ->
+		value to formatMemory(EmulatorSettings.chipRamKb(value), noneLabel)
 	}
-	val slowOptions = listOf(0, 2, 4, 6, 7).map { value ->
+	val slowOptions = EmulatorSettings.slowRamOptions.map { it.first }.map { value ->
 		value to if (value == 0) noneLabel else formatMemory(value * 256, noneLabel)
 	}
-	val z2FastOptions = listOf(0, 1, 2, 4, 8).map { value ->
+	val z2FastOptions = EmulatorSettings.fastRamOptions.map { it.first }.map { value ->
 		value to if (value == 0) noneLabel else stringResource(R.string.settings_memory_value_mb, value)
 	}
-	val z3FastOptions = listOf(0, 16, 32, 64, 128, 256, 512).map { value ->
+	val z3FastOptions = EmulatorSettings.z3RamOptions.map { it.first }.map { value ->
 		value to if (value == 0) noneLabel else stringResource(R.string.settings_memory_value_mb, value)
 	}
 
@@ -136,7 +138,7 @@ fun MemoryTab(viewModel: SettingsViewModel) {
 				Text(stringResource(R.string.settings_memory_summary_title), style = MaterialTheme.typography.titleMedium)
 				Spacer(modifier = Modifier.height(8.dp))
 
-				val chipKB = settings.chipRam * 512
+				val chipKB = EmulatorSettings.chipRamKb(settings.chipRam)
 				val slowKB = settings.slowRam * 256
 				val fastMB = settings.fastRam
 				val z3MB = settings.z3Ram

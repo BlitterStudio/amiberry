@@ -243,6 +243,7 @@ set(SOURCE_FILES
         src/osdep/amiberry_ipc_socket.cpp
         src/osdep/amiberry_actions.cpp
         src/osdep/amiberry_media.cpp
+        src/osdep/amiberry_settings_schema.cpp
         src/osdep/amiberry_filesys.cpp
         src/osdep/amiberry_input.cpp
         src/osdep/input_platform.cpp

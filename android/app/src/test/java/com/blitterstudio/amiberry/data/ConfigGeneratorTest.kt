@@ -87,9 +87,9 @@ class ConfigGeneratorTest {
 	// --- Conditional output ---
 
 	@Test
-	fun `generate omits FPU when fpuModel is 0`() {
-		val output = ConfigGenerator.generate(EmulatorSettings(fpuModel = 0))
-		assertNotContains(output, "fpu_model=")
+	fun `generate writes no FPU over a preset that has one`() {
+		val output = ConfigGenerator.generate(EmulatorSettings.fromModel(AmigaModel.A3000).copy(fpuModel = 0))
+		assertContainsLine(output.lines(), "fpu_model=0")
 	}
 
 	@Test
@@ -99,10 +99,9 @@ class ConfigGeneratorTest {
 	}
 
 	@Test
-	fun `generate omits JIT when cachesize is 0`() {
-		val output = ConfigGenerator.generate(EmulatorSettings(jitCacheSize = 0))
-		assertNotContains(output, "cachesize=")
-		assertNotContains(output, "compfpu=")
+	fun `generate writes the JIT off over a preset that has it on`() {
+		val output = ConfigGenerator.generate(EmulatorSettings.fromModel(AmigaModel.A4000).copy(jitCacheSize = 0))
+		assertContainsLine(output.lines(), "cachesize=0")
 	}
 
 	@Test
@@ -113,9 +112,9 @@ class ConfigGeneratorTest {
 	}
 
 	@Test
-	fun `generate omits z3mem when 0`() {
+	fun `generate writes no Z3 RAM explicitly`() {
 		val output = ConfigGenerator.generate(EmulatorSettings(z3Ram = 0))
-		assertNotContains(output, "z3mem_size=")
+		assertContainsLine(output.lines(), "z3mem_size=0")
 	}
 
 	@Test
@@ -125,16 +124,17 @@ class ConfigGeneratorTest {
 	}
 
 	@Test
-	fun `generate constrained cycle exact chipset settings without immediate blits`() {
+	fun `generate constrained cycle exact chipset settings`() {
 		val constrained = EmulatorSettingsConstraints.apply(
-			EmulatorSettings(cycleExact = true, immediateBlits = true),
+			EmulatorSettings(cycleExact = true, jitCacheSize = 8192),
 			hasTouchScreen = true
 		)
 		val output = ConfigGenerator.generate(constrained)
 		val lines = output.lines()
 
 		assertContainsLine(lines, "cycle_exact=true")
-		assertContainsLine(lines, "immediate_blits=false")
+		// The emulator turns the JIT off in cycle-exact mode.
+		assertContainsLine(lines, "cachesize=0")
 	}
 
 	@Test
@@ -444,14 +444,14 @@ class ConfigGeneratorTest {
 		val settings = EmulatorSettings.fromModel(AmigaModel.A4000)
 		val output = ConfigGenerator.generate(settings)
 
-		assertContains(output, "cpu_model=68040")
+		// The emulator's Quick Start A4000 (its first configuration).
+		assertContains(output, "cpu_model=68030")
 		assertContains(output, "cpu_compatible=false")
 		assertContains(output, "chipset=aga")
-		assertContains(output, "fpu_model=68040")
+		assertContains(output, "fpu_model=68882")
 		assertContains(output, "cachesize=16384")
-		assertContains(output, "compfpu=true")
+		assertContains(output, "cpu_speed=max")
 		assertContains(output, "chipmem_size=4")
-		assertContains(output, "fastmem_size=8")
 	}
 
 	// --- Round-trip with ConfigParser ---

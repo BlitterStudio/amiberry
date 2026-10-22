@@ -265,6 +265,7 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel(LocalContext.current
 							EmulatorLauncher.launchSettingsConfig(
 								context,
 								launchSettings.baseModel,
+								launchSettings.baseConfig,
 								configFile.absolutePath
 							)
 						}.onFailure {

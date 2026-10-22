@@ -70,7 +70,7 @@ class LaunchDiagnosticsTest {
 		)
 
 		assertEquals("QuickStart", entry.requestType)
-		assertEquals(listOf("--rescan-roms", "--model", "A500", "--config", "/tmp/.quickstart_settings.uae", "-G"), entry.args)
+		assertEquals(listOf("--rescan-roms", "--apply-preset", "a500:0:0", "--config", "/tmp/.quickstart_settings.uae", "-G"), entry.args)
 		assertEquals("/tmp/.quickstart_settings.uae", entry.configPath)
 		assertEquals(true, entry.trackSession)
 		assertEquals(123456789L, entry.startedAtEpochMs)

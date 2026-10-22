@@ -57,7 +57,7 @@ object SettingsChangeSummary {
 		EmulatorSettings.chipsetOptions.firstOrNull { it.first == value }?.second ?: value.uppercase()
 
 	private fun chipRam(value: Int): String =
-		EmulatorSettings.chipRamOptions.firstOrNull { it.first == value }?.second ?: "${value * 512} KB"
+		EmulatorSettings.chipRamOptions.firstOrNull { it.first == value }?.second ?: "${EmulatorSettings.chipRamKb(value)} KB"
 
 	private fun slowRam(value: Int): String =
 		EmulatorSettings.slowRamOptions.firstOrNull { it.first == value }?.second ?: "${value * 256} KB"

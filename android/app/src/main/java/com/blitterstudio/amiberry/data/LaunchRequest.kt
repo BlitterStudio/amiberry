@@ -12,21 +12,23 @@ sealed interface LaunchRequest {
 
 	data class SettingsConfig(
 		val model: AmigaModel,
-		val configPath: String
+		val configPath: String,
+		val presetConfig: Int = 0
 	) : LaunchRequest {
 		override fun toArgs(): Array<String> =
-			arrayOf("--rescan-roms", "--model", model.cmdArg, "--config", configPath, "-G")
+			arrayOf("--rescan-roms", "--apply-preset", model.presetArg(presetConfig), "--config", configPath, "-G")
 	}
 
 	data class QuickStart(
 		val model: AmigaModel,
+		val presetConfig: Int = 0,
 		val configPath: String? = null,
 		val floppy0: String? = null,
 		val floppy1: String? = null,
 		val cd: String? = null
 	) : LaunchRequest {
 		override fun toArgs(): Array<String> {
-			val args = mutableListOf("--rescan-roms", "--model", model.cmdArg)
+			val args = mutableListOf("--rescan-roms", "--apply-preset", model.presetArg(presetConfig))
 
 			configPath?.takeIf { it.isNotBlank() }?.let {
 				args.addAll(listOf("--config", it))

@@ -373,7 +373,8 @@ const char* machine_preset_compatibility_label(int level)
 // global drawing, WHDLoad and FloppyBridge state alone. Its return value
 // tells whether every ROM the configuration needs is in the scanned list,
 // except the ALG/Arcadia game itself: their builders succeed with only the
-// BIOS, so the game list is checked too.
+// BIOS and load the config-th ROM of getarcadiaroms() (every known one,
+// installed or not) if it is there, so that ROM is checked too.
 bool machine_preset_rom_installed(const char* id, int config)
 {
 	const preset_model* preset = id ? find_preset(id) : nullptr;
@@ -389,7 +390,10 @@ bool machine_preset_rom_installed(const char* id, int config)
 	std::free(scratch);
 	if (installed && (preset->model == 10 || preset->model == 11)) {
 		romlist** games = getarcadiaroms(preset->model == 10 ? 1 : 0);
-		installed = games && games[0];
+		int i = 0;
+		while (games && games[i] && i < config)
+			i++;
+		installed = games && games[i] && getromlistbyromdata(games[i]->rd) != nullptr;
 		xfree(games);
 	}
 	return installed;

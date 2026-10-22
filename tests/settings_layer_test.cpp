@@ -156,14 +156,20 @@ static romdata test_cart_rom = [] {
 static romlist test_rom_list[] = {{const_cast<TCHAR*>("/roms/ar3.rom"), &test_cart_rom}};
 int romlist_count() { return 1; }
 romlist* romlist_getit() { return test_rom_list; }
-// The scanned ALG/Arcadia games (one, unless a test removes it).
+// Like the core, getarcadiaroms() lists every known ALG/Arcadia game,
+// installed or not; getromlistbyromdata() finds the installed file. The one
+// game is installed unless a test removes it.
 static bool arcadia_game_installed = true;
 romlist** getarcadiaroms(int)
 {
 	auto** list = static_cast<romlist**>(std::calloc(2, sizeof(romlist*)));
-	if (list && arcadia_game_installed)
+	if (list)
 		list[0] = &test_rom_list[0];
 	return list;
+}
+romlist* getromlistbyromdata(const romdata* rd)
+{
+	return arcadia_game_installed && rd == test_rom_list[0].rd ? &test_rom_list[0] : nullptr;
 }
 
 // Preset engine stand-in: the harness cannot link cfgfile.cpp, so it

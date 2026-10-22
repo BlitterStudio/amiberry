@@ -198,6 +198,10 @@ android {
 
     testOptions {
         unitTests.returnDefaultValues = true
+        // The JVM tests read the schema from its source; the app reads the asset.
+        unitTests.all {
+            systemProperty 'amiberry.settingsSchema', file('src/main/settings/settings_schema.json').absolutePath
+        }
     }
 }
 
@@ -271,6 +275,12 @@ tasks.register('copyAssets', Copy) {
     }
     from('../../whdboot') {
         into 'whdboot'
+    }
+    // The shared settings layer's options, presets and CPU/chipset
+    // resolutions, generated from a desktop build
+    // (scripts/update_settings_schema.sh).
+    from('src/main/settings') {
+        include 'settings_schema.json'
     }
 }
 

@@ -106,7 +106,7 @@ object WhdLoadAutoConfig {
 		val baseModel = if (isAga || isCd32 || !a600Available) AmigaModel.A1200 else AmigaModel.A600
 		val selectedRoms = ModelRomAvailability.selectRomsForModel(baseModel, availableRoms)
 
-		var settings = EmulatorSettings.fromModel(baseModel).copy(
+		var settings = EmulatorSettings.fromModel(baseModel, selectedRoms.config).copy(
 			fastRam = 8,
 			romFile = selectedRoms.kick?.path.orEmpty(),
 			romExtFile = selectedRoms.ext?.path.orEmpty(),
@@ -155,12 +155,14 @@ object WhdLoadAutoConfig {
 		val cpu = hardware.stringOrNull("cpu")?.lowercase()
 		// Same rules as set_compatibility_settings(): AGA/CD32 keep a requested
 		// 68020, 68030 or 68040 and use a 68020 otherwise. Like cpu_type there,
-		// a 68040 comes with its internal FPU and a 68020 or 68030 with none.
+		// a 68040 comes with its internal FPU and a 68020 or 68030 with none,
+		// and every one of them with 32-bit addressing (the full CPU, not the
+		// EC variant the preset may have).
 		val cpu020to040 = cpu == "68020" || cpu == "68030" || cpu == "68040"
 		settings = when {
 			cpu020to040 || useAgaCpuProfile -> {
 				val model = if (cpu020to040) cpu.toInt() else 68020
-				settings.copy(cpuModel = model, fpuModel = if (model == 68040) 68040 else 0)
+				settings.copy(cpuModel = model, fpuModel = if (model == 68040) 68040 else 0, address24Bit = false)
 			}
 			(cpu == "68000" || cpu == "68010") && a600Available ->
 				settings.copy(cpuModel = cpu.toInt(), chipRam = 4)

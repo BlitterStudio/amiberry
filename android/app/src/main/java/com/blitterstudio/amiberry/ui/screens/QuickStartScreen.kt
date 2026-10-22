@@ -397,6 +397,7 @@ fun QuickStartScreen(
 									EmulatorLauncher.launchQuickStart(
 										context = context,
 										model = launchSettings.baseModel,
+										presetConfig = launchSettings.baseConfig,
 										floppyPath = launchSettings.floppy0.takeIf { it.isNotBlank() },
 										floppy1Path = launchSettings.floppy1.takeIf { it.isNotBlank() },
 										cdPath = launchSettings.cdImage.takeIf { it.isNotBlank() },
@@ -737,14 +738,14 @@ fun QuickStartScreen(
 													}
 												}
 												"quickstart" -> {
-													val model = AmigaModel.entries.firstOrNull { it.cmdArg == entry.optString("model") } ?: AmigaModel.A500
+													val model = AmigaModel.find(entry.optString("model")) ?: AmigaModel.A500
 													if (model in availableModels) {
 														val recentFloppy0 = entry.optString("df0")
 														val recentFloppy1 = entry.optString("df1")
 														val recentCd = entry.optString("cd")
 														val currentSettings = settingsViewModel.settings
 														scope.launchGuarded(launchGuard) {
-															val configFile = try {
+															val (configFile, presetConfig) = try {
 																withContext(Dispatchers.IO) {
 																	val settingsSnapshot = buildRecentQuickStartSettingsSnapshot(
 																		model = model,
@@ -754,7 +755,8 @@ fun QuickStartScreen(
 																		floppy1 = recentFloppy1,
 																		cdImage = recentCd
 																	)
-																	settingsViewModel.writeSettingsConfig(settingsSnapshot, AndroidLaunchConfig.QUICKSTART_CONFIG)
+																	settingsViewModel.writeSettingsConfig(settingsSnapshot, AndroidLaunchConfig.QUICKSTART_CONFIG) to
+																		settingsSnapshot.baseConfig
 																}
 															} catch (_: Exception) {
 																snackbarHostState.showSnackbar(configWriteFailedMessage)
@@ -763,6 +765,7 @@ fun QuickStartScreen(
 															EmulatorLauncher.launchQuickStart(
 																context,
 																model,
+																presetConfig = presetConfig,
 																floppyPath = recentFloppy0.takeIf { it.isNotBlank() },
 																floppy1Path = recentFloppy1.takeIf { it.isNotBlank() },
 																cdPath = recentCd.takeIf { it.isNotBlank() },
@@ -844,7 +847,7 @@ private fun RomReadinessSummary(diagnostics: RomReadinessDiagnostics) {
 			Text(
 				stringResource(
 					R.string.rom_readiness_available_models,
-					diagnostics.availableModels.joinToString { it.cmdArg }
+					diagnostics.availableModels.joinToString { it.displayName }
 				),
 				style = MaterialTheme.typography.bodySmall,
 				color = MaterialTheme.colorScheme.onErrorContainer
@@ -861,7 +864,7 @@ private fun RomReadinessSummary(diagnostics: RomReadinessDiagnostics) {
 			Text(
 				stringResource(
 					R.string.rom_readiness_missing_models,
-					diagnostics.missingCommonModels.joinToString { it.cmdArg }
+					diagnostics.missingCommonModels.joinToString { it.displayName }
 				),
 				style = MaterialTheme.typography.bodySmall,
 				color = MaterialTheme.colorScheme.onErrorContainer

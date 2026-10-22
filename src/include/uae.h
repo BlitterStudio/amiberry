@@ -16,6 +16,9 @@ extern void usage (void);
 extern void print_version();
 #ifdef AMIBERRY
 extern int dump_config_and_exit (int, TCHAR **);
+// --settings-schema[=<file>]: the shared settings layer as JSON on stdout;
+// with a file, only the options it lists (one ID per line).
+extern int settings_schema_and_exit (const char *option_list);
 // True while --dump-config resolves; gates console logging and other
 // side effects that must not run in dump mode.
 extern bool amiberry_dump_config_mode;

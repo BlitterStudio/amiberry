@@ -7,6 +7,8 @@ package com.blitterstudio.amiberry.data.model
 data class EmulatorSettings(
 	// Model base
 	val baseModel: AmigaModel = AmigaModel.A500,
+	/** The preset configuration of baseModel the emulator starts from (see ModelRomAvailability). */
+	val baseConfig: Int = 0,
 
 	// CPU
 	val cpuModel: Int = 68000,
@@ -25,7 +27,7 @@ data class EmulatorSettings(
 	val ntsc: Boolean = false,
 
 	// Memory (in config file units)
-	val chipRam: Int = 1,  // half-megabytes: 1=512KB, 2=1MB, 4=2MB, 8=4MB, 16=8MB
+	val chipRam: Int = 1,  // chipmem_size: -1=128KB, 0=256KB, else half-megabytes (1=512KB, 4=2MB); see chipRamKb
 	val slowRam: Int = 2,  // 256KB units: 0=none, 2=512KB, 4=1MB
 	val fastRam: Int = 0,  // megabytes
 	val z3Ram: Int = 0,  // megabytes
@@ -89,117 +91,60 @@ data class EmulatorSettings(
 		fun onScreenKeyboardAvailable(button: Boolean, toggle: String?): Boolean =
 			button || toggle != ""
 
-		/** Create settings from an AmigaModel with sensible defaults. */
-		fun fromModel(model: AmigaModel): EmulatorSettings {
-			return when (model) {
-				AmigaModel.A500 -> EmulatorSettings(
-					baseModel = model, cpuModel = 68000, chipset = "ocs",
-					chipRam = 1, slowRam = 2, fastRam = 0, cycleExact = true
-				)
-				AmigaModel.A500_PLUS -> EmulatorSettings(
-					baseModel = model, cpuModel = 68000, chipset = "ecs",
-					chipRam = 2, slowRam = 0, fastRam = 0, cycleExact = true
-				)
-				AmigaModel.A600 -> EmulatorSettings(
-					baseModel = model, cpuModel = 68000, chipset = "ecs",
-					chipRam = 2, slowRam = 0, fastRam = 0, cycleExact = true
-				)
-				AmigaModel.A1000 -> EmulatorSettings(
-					baseModel = model, cpuModel = 68000, chipset = "ocs",
-					chipRam = 1, slowRam = 0, fastRam = 0, cycleExact = true
-				)
-				AmigaModel.A2000 -> EmulatorSettings(
-					baseModel = model, cpuModel = 68000, chipset = "ocs",
-					chipRam = 1, slowRam = 2, fastRam = 0, cycleExact = true
-				)
-				AmigaModel.A1200 -> EmulatorSettings(
-					baseModel = model, cpuModel = 68020, chipset = "aga",
-					chipRam = 4, slowRam = 0, fastRam = 0, cpuSpeed = "real", cycleExact = true
-				)
-				AmigaModel.A3000 -> EmulatorSettings(
-					baseModel = model, cpuModel = 68030, chipset = "ecs",
-					chipRam = 4, slowRam = 0, fastRam = 8, address24Bit = false, cpuSpeed = "max"
-				)
-				AmigaModel.A4000 -> EmulatorSettings(
-					baseModel = model, cpuModel = 68040, chipset = "aga",
-					chipRam = 4, slowRam = 0, fastRam = 8, address24Bit = false,
-					fpuModel = 68040, cpuCompatible = false, cpuSpeed = "max",
-					jitCacheSize = 16384, jitFpu = true
-				)
-				AmigaModel.CD32 -> EmulatorSettings(
-					baseModel = model, cpuModel = 68020, chipset = "aga",
-					chipRam = 4, slowRam = 0, fastRam = 0, cpuSpeed = "real", cycleExact = true,
-					floppy0Type = -1, floppy1Type = -1
-				)
-				AmigaModel.CDTV -> EmulatorSettings(
-					baseModel = model, cpuModel = 68000, chipset = "ocs",
-					chipRam = 2, slowRam = 0, fastRam = 0, cycleExact = true,
-					floppy0Type = -1, floppy1Type = -1
-				)
-			}
+		/**
+		 * The settings one of a model's preset configurations sets (the
+		 * emulator's Quick Start configuration, read from the bundled settings
+		 * schema); the rest keep the launcher's defaults.
+		 */
+		fun fromModel(model: AmigaModel, config: Int = 0): EmulatorSettings {
+			val index = config.coerceIn(0, model.configs.size - 1)
+			val v = model.configs[index].values
+			val defaults = EmulatorSettings(baseModel = model, baseConfig = index)
+			fun int(id: String, fallback: Int) = v[id]?.toIntOrNull() ?: fallback
+			fun flag(id: String, fallback: Boolean) = v[id]?.let { it == "true" } ?: fallback
+			return defaults.copy(
+				cpuModel = int("cpu_model", defaults.cpuModel),
+				cpuCompatible = flag("cpu_compatible", defaults.cpuCompatible),
+				address24Bit = flag("cpu_24bit_addressing", defaults.address24Bit),
+				cpuSpeed = v["cpu_speed"]?.takeIf { it == "real" || it == "max" } ?: defaults.cpuSpeed,
+				fpuModel = int("fpu_model", defaults.fpuModel),
+				jitCacheSize = int("cachesize", defaults.jitCacheSize),
+				jitFpu = flag("compfpu", defaults.jitFpu),
+				chipset = v["chipset"] ?: defaults.chipset,
+				cycleExact = v["cycle_exact"]?.let { it != "false" } ?: defaults.cycleExact,
+				ntsc = flag("ntsc", defaults.ntsc),
+				chipRam = int("chipmem_size", defaults.chipRam),
+				slowRam = int("bogomem_size", defaults.slowRam),
+				fastRam = int("fastmem_size", defaults.fastRam),
+				z3Ram = int("z3mem_size", defaults.z3Ram),
+				floppy0Type = int("floppy0type", defaults.floppy0Type),
+				floppy1Type = int("floppy1type", defaults.floppy1Type)
+			)
 		}
 
-		val chipRamOptions = listOf(
-			1 to "512 KB",
-			2 to "1 MB",
-			4 to "2 MB",
-			8 to "4 MB",
-			16 to "8 MB"
-		)
 
-		val slowRamOptions = listOf(
-			0 to "None",
-			2 to "512 KB",
-			4 to "1 MB",
-			6 to "1.5 MB",
-			7 to "1.8 MB"
-		)
+		// The choices the emulator offers for these options (value, label),
+		// from the bundled settings schema.
+		private fun choices(id: String): List<Pair<String, String>> =
+			SettingsSchema.current?.options?.get(id)?.choices?.map { it.value to it.label }.orEmpty()
 
-		val fastRamOptions = listOf(
-			0 to "None",
-			1 to "1 MB",
-			2 to "2 MB",
-			4 to "4 MB",
-			8 to "8 MB"
-		)
+		private fun intChoices(id: String): List<Pair<Int, String>> =
+			choices(id).mapNotNull { (value, label) -> value.toIntOrNull()?.let { it to label } }
 
-		val z3RamOptions = listOf(
-			0 to "None",
-			16 to "16 MB",
-			32 to "32 MB",
-			64 to "64 MB",
-			128 to "128 MB",
-			256 to "256 MB",
-			512 to "512 MB"
-		)
+		val chipRamOptions: List<Pair<Int, String>> get() = intChoices("chipmem_size")
 
-		val cpuModels = listOf(68000, 68010, 68020, 68030, 68040, 68060)
-
-		val chipsetOptions = listOf(
-			"ocs" to "OCS",
-			"ecs_agnus" to "ECS Agnus",
-			"ecs_denise" to "ECS Denise",
-			"ecs" to "Full ECS",
-			"aga" to "AGA"
-		)
-
-		val soundOutputOptions = listOf(
-			"none" to "Disabled",
-			"interrupts" to "Emulated (no output)",
-			"normal" to "Normal",
-			"exact" to "Exact"
-		)
-
-		val soundChannelOptions = listOf(
-			"mono" to "Mono",
-			"stereo" to "Stereo",
-			"clonedstereo" to "Cloned stereo",
-			"4ch" to "4 channel",
-			"clonedstereo6ch" to "Cloned stereo 6 channel",
-			"6ch" to "6 channel",
-			"clonedstereo8ch" to "Cloned stereo 8 channel",
-			"8ch" to "8 channel",
-			"mixed" to "Mixed (75% stereo)"
-		)
+		/** The size of a chipmem_size value: -1 and 0 are 128 KB and 256 KB, the rest half megabytes. */
+		fun chipRamKb(value: Int): Int = when {
+			value < 0 -> 128
+			value == 0 -> 256
+			else -> value * 512
+		}
+		val slowRamOptions: List<Pair<Int, String>> get() = intChoices("bogomem_size")
+		val fastRamOptions: List<Pair<Int, String>> get() = intChoices("fastmem_size")
+		val z3RamOptions: List<Pair<Int, String>> get() = intChoices("z3mem_size")
+		val cpuModels: List<Int> get() = intChoices("cpu_model").map { it.first }
+		val chipsetOptions: List<Pair<String, String>> get() = choices("chipset")
+		val soundOutputOptions: List<Pair<String, String>> get() = choices("sound_output")
+		val soundChannelOptions: List<Pair<String, String>> get() = choices("sound_channels")
 	}
 }

@@ -168,7 +168,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 		selectedIntentPreset = null
 		val selectedRoms = ModelRomAvailability.selectRomsForModel(model, availableRoms.value)
 		val previousSettings = settings
-		val newSettings = EmulatorSettings.fromModel(model).copy(
+		val newSettings = EmulatorSettings.fromModel(model, selectedRoms.config).copy(
 			romFile = selectedRoms.kick?.path.orEmpty(),
 			romExtFile = selectedRoms.ext?.path.orEmpty(),
 			shader = previousSettings.shader,
@@ -281,6 +281,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 		val kickPath = selectedRoms.kick?.path ?: return
 		settings = applyConstraints(
 			settings.copy(
+				baseConfig = selectedRoms.config,
 				romFile = kickPath,
 				romExtFile = selectedRoms.ext?.path.orEmpty()
 			)

@@ -4,6 +4,7 @@ import com.blitterstudio.amiberry.data.model.AmigaModel
 import com.blitterstudio.amiberry.data.model.EmulatorSettings
 import com.blitterstudio.amiberry.data.model.EmulatorSettingsConstraints
 import com.blitterstudio.amiberry.data.model.HardDrive
+import com.blitterstudio.amiberry.data.model.SettingsSchema
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -27,12 +28,14 @@ class EmulatorSettingsTest {
 	}
 
 	@Test
-	fun `A4000 defaults have JIT enabled`() {
+	fun `A4000 defaults are the emulator's Quick Start A4000`() {
 		val s = EmulatorSettings.fromModel(AmigaModel.A4000)
-		assertEquals(68040, s.cpuModel)
-		assertTrue(s.jitCacheSize > 0)
-		assertTrue(s.jitFpu)
-		assertEquals(68040, s.fpuModel)
+		assertEquals(68030, s.cpuModel)
+		assertEquals("aga", s.chipset)
+		assertEquals(68882, s.fpuModel)
+		assertEquals(16384, s.jitCacheSize)
+		assertFalse(s.address24Bit)
+		assertEquals("max", s.cpuSpeed)
 	}
 
 	@Test
@@ -50,7 +53,7 @@ class EmulatorSettingsTest {
 		val s = EmulatorSettings.fromModel(AmigaModel.CDTV)
 		assertFalse(AmigaModel.CDTV.hasFloppy)
 		assertTrue(AmigaModel.CDTV.hasCd)
-		assertEquals("ocs", s.chipset)
+		assertEquals("ecs_agnus", s.chipset)
 		assertEquals(-1, s.floppy0Type)
 		assertEquals(-1, s.floppy1Type)
 	}
@@ -63,17 +66,17 @@ class EmulatorSettingsTest {
 			val s = EmulatorSettings.fromModel(model)
 			// 24-bit addressing models should not have Z3 RAM
 			if (s.address24Bit) {
-				assertEquals("${model.name}: 24-bit should have no Z3 RAM", 0, s.z3Ram)
+				assertEquals("${model.cmdArg}: 24-bit should have no Z3 RAM", 0, s.z3Ram)
 			}
 			// JIT requires 68020+
 			if (s.jitCacheSize > 0) {
-				assertTrue("${model.name}: JIT requires 68020+", s.cpuModel >= 68020)
+				assertTrue("${model.cmdArg}: JIT requires 68020+", s.cpuModel >= 68020)
 				if (s.cpuModel >= 68040) {
-					assertFalse("${model.name}: 68040+ JIT should disable compatible mode", s.cpuCompatible)
+					assertFalse("${model.cmdArg}: 68040+ JIT should disable compatible mode", s.cpuCompatible)
 				}
 			}
 			if (s.chipset == "aga") {
-				assertTrue("${model.name}: AGA requires 68020+", s.cpuModel >= 68020)
+				assertTrue("${model.cmdArg}: AGA requires 68020+", s.cpuModel >= 68020)
 			}
 		}
 	}
@@ -92,9 +95,8 @@ class EmulatorSettingsTest {
 	}
 
 	@Test
-	fun `z3RamOptions start with None`() {
+	fun `z3RamOptions start with none`() {
 		assertEquals(0, EmulatorSettings.z3RamOptions.first().first)
-		assertEquals("None", EmulatorSettings.z3RamOptions.first().second)
 	}
 
 	// --- Config key coverage ---
@@ -108,7 +110,7 @@ class EmulatorSettingsTest {
 	@Test
 	fun `AmigaModel displayNames are not blank`() {
 		for (model in AmigaModel.entries) {
-			assertTrue("${model.name} has blank displayName", model.displayName.isNotBlank())
+			assertTrue("${model.cmdArg} has blank displayName", model.displayName.isNotBlank())
 		}
 	}
 
@@ -258,18 +260,13 @@ class EmulatorSettingsTest {
 	}
 
 	@Test
-	fun `constraints map stale internal FPU to external FPU on 68020 and 68030`() {
-		val cpu020 = EmulatorSettingsConstraints.apply(
-			EmulatorSettings(cpuModel = 68020, fpuModel = 68040),
-			hasTouchScreen = true
-		)
-		val cpu030 = EmulatorSettingsConstraints.apply(
-			EmulatorSettings(cpuModel = 68030, fpuModel = 68060),
+	fun `constraints drop the FPU of a compatible 68000`() {
+		val constrained = EmulatorSettingsConstraints.apply(
+			EmulatorSettings(cpuModel = 68000, fpuModel = 68881, cpuCompatible = true),
 			hasTouchScreen = true
 		)
 
-		assertEquals(68881, cpu020.fpuModel)
-		assertEquals(68881, cpu030.fpuModel)
+		assertEquals(0, constrained.fpuModel)
 	}
 
 	@Test
@@ -300,39 +297,48 @@ class EmulatorSettingsTest {
 		)
 
 		assertFalse(constrained.cpuCompatible)
-		assertEquals("max", constrained.cpuSpeed)
-		assertTrue(constrained.jitFpu)
+		assertEquals(8192, constrained.jitCacheSize)
 	}
 
 	@Test
-	fun `constraints clear JIT FPU when 24-bit addressing disables JIT`() {
+	fun `constraints turn the JIT off in cycle-exact mode`() {
 		val constrained = EmulatorSettingsConstraints.apply(
 			EmulatorSettings(
+				chipset = "aga",
 				cpuModel = 68020,
-				address24Bit = true,
-				cpuCompatible = true,
-				jitCacheSize = 8192,
-				jitFpu = true
+				address24Bit = false,
+				cycleExact = true,
+				cpuCompatible = false,
+				jitCacheSize = 8192
 			),
 			hasTouchScreen = true
 		)
 
 		assertEquals(0, constrained.jitCacheSize)
-		assertFalse(constrained.jitFpu)
 		assertTrue(constrained.cpuCompatible)
 	}
 
 	@Test
-	fun `constraints clear 24-bit addressing when switching from 68020 to 68030`() {
+	fun `constraints clear 24-bit addressing on a 68040`() {
 		val constrained = EmulatorSettingsConstraints.apply(
 			EmulatorSettings(
-				cpuModel = 68030,
+				cpuModel = 68040,
 				address24Bit = true
 			),
 			hasTouchScreen = true
 		)
 
 		assertFalse(constrained.address24Bit)
+	}
+
+	@Test
+	fun `constraints keep 24-bit addressing on a 68030 (68EC030)`() {
+		val constrained = EmulatorSettingsConstraints.apply(
+			EmulatorSettings(chipset = "ecs", cpuModel = 68030, address24Bit = true),
+			hasTouchScreen = true
+		)
+
+		assertTrue(constrained.address24Bit)
 	}
 
 	@Test
@@ -349,32 +355,44 @@ class EmulatorSettingsTest {
 	}
 
 	@Test
-	fun `constraints disable immediate blits in cycle exact mode`() {
+	fun `constraints remove Z3 RAM a 24-bit CPU cannot reach`() {
 		val constrained = EmulatorSettingsConstraints.apply(
-			EmulatorSettings(
-				cycleExact = true,
-				immediateBlits = true
-			),
+			EmulatorSettings(cpuModel = 68000, address24Bit = true, z3Ram = 64),
 			hasTouchScreen = true
 		)
 
-		assertFalse(constrained.immediateBlits)
-		assertEquals("real", constrained.cpuSpeed)
+		assertEquals(0, constrained.z3Ram)
 	}
 
 	@Test
-	fun `constraints upgrade low-end CPU when AGA chipset is selected`() {
-		val constrained = EmulatorSettingsConstraints.apply(
-			EmulatorSettings(
-				chipset = "aga",
-				cpuModel = 68000,
-				fpuModel = 68882
-			),
-			hasTouchScreen = true
-		)
-
-		assertEquals(68020, constrained.cpuModel)
-		assertEquals(68882, constrained.fpuModel)
+	fun `constraints follow the emulator's resolution for every combination it lists`() {
+		val schema = SettingsSchema.current!!
+		val resolutions = schema.resolutions
+		val chipsets = listOf("ocs", "ecs", "aga")
+		for (chipset in chipsets) for (cpu in listOf(68000, 68010, 68020, 68030, 68040, 68060))
+			for (fpu in listOf(0, 68881, 68882, 68040, 68060)) for (a24 in listOf(true, false))
+				for (ce in listOf(false, true)) for (jit in listOf(0, 8192)) {
+					val requested = EmulatorSettings(
+						chipset = chipset, cpuModel = cpu, fpuModel = fpu, address24Bit = a24,
+						cycleExact = ce, jitCacheSize = jit
+					)
+					val expected = resolutions.resolve(
+						mapOf(
+							"chipset" to chipset, "cpu_model" to "$cpu", "fpu_model" to "$fpu",
+							"cpu_24bit_addressing" to "$a24", "cycle_exact" to "$ce",
+							"cachesize" to if (jit > 0) "8192" else "0", "z3mem_size" to "0",
+							"cpu_speed" to requested.cpuSpeed, "cpu_compatible" to "${requested.cpuCompatible}",
+							"compfpu" to "${requested.jitFpu}", "immediate_blits" to "${requested.immediateBlits}"
+						)
+					)!!
+					val actual = EmulatorSettingsConstraints.apply(requested, hasTouchScreen = true)
+					val label = "$chipset/$cpu/$fpu/$a24/$ce/$jit"
+					assertEquals(label, expected.getValue("cpu_model").toInt(), actual.cpuModel)
+					assertEquals(label, expected.getValue("fpu_model").toInt(), actual.fpuModel)
+					assertEquals(label, expected.getValue("cpu_24bit_addressing") == "true", actual.address24Bit)
+					assertEquals(label, expected.getValue("cpu_compatible") == "true", actual.cpuCompatible)
+					assertEquals(label, expected.getValue("cachesize") != "0", actual.jitCacheSize > 0)
+				}
 	}
 
 	@Test

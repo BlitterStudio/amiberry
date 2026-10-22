@@ -9,24 +9,6 @@ import java.io.File
 class SoundTabOptionsTest {
 
 	@Test
-	fun `sound channel options cover native config channel modes`() {
-		assertEquals(
-			listOf(
-				"mono",
-				"stereo",
-				"clonedstereo",
-				"4ch",
-				"clonedstereo6ch",
-				"6ch",
-				"clonedstereo8ch",
-				"8ch",
-				"mixed"
-			),
-			EmulatorSettings.soundChannelOptions.map { it.first }
-		)
-	}
-
-	@Test
 	fun `sound tab builds channel dropdown from model options`() {
 		val soundTab = File("src/main/java/com/blitterstudio/amiberry/ui/screens/settings/SoundTab.kt").readText()
 

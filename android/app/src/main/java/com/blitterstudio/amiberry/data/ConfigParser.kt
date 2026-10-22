@@ -39,7 +39,7 @@ object ConfigParser {
 		"joyport0mousemap", "joyport1mousemap",
 		"input.joymouse_speed_analog",
 		"amiberry.onscreen_joystick", "amiberry.vkbd_enabled", "amiberry.vkbd_touch_button", "amiberry.vkbd_numpad", "amiberry.vkbd_toggle", "input.default_osk",
-		"amiberry.android_joyport1",
+		"amiberry.android_joyport1", "amiberry.android_preset",
 		"use_gui", "config_description", "config_hardware_path"
 	)
 
@@ -110,8 +110,15 @@ object ConfigParser {
 		// vkbd_enabled is the native master switch; the KB touch button and the
 		// gamepad toggle are only reachable while it is on (see ConfigGenerator).
 		val keyboardAvailable = kv["amiberry.vkbd_enabled"]?.toBool(true) ?: kv["input.default_osk"].toBool(true)
+		// amiberry.android_preset is "<preset id>:<configuration>"; configurations
+		// written before it existed are recognised by their hardware.
+		val preset = kv["amiberry.android_preset"]
+		val presetModel = AmigaModel.find(preset?.substringBefore(':'))
+		val presetConfig = preset?.substringAfter(':', "")?.toIntOrNull()
+			?.takeIf { presetModel != null && it in presetModel.configs.indices } ?: 0
 		return EmulatorSettings(
-			baseModel = guessModel(kv),
+			baseModel = presetModel ?: guessModel(kv),
+			baseConfig = presetConfig,
 			cpuModel = kv["cpu_model"]?.toIntOrNull() ?: 68000,
 			cpuCompatible = kv["cpu_compatible"].toBool(true),
 			address24Bit = kv["cpu_24bit_addressing"].toBool(true),
