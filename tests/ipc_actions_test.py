@@ -486,6 +486,27 @@ def main():
                 time.sleep(0.05)
             check(f"emulation runs again (round {round_})", "Paused=false" in control.request("GET_STATUS"))
 
+        # CHOOSE_MEDIA shows a requester over the settings UI, which holds
+        # the emulation like OPEN_SETTINGS; a reset closes it. The native
+        # Apple front end's requester is a modal panel that IPC cannot
+        # answer (AMIBERRY_MODAL_REQUESTERS=1 skips that part).
+        check("CHOOSE_MEDIA refuses an unknown request",
+              control.request("CHOOSE_MEDIA\tDF7").startswith("ERROR\tUsage"))
+        if not os.environ.get("AMIBERRY_MODAL_REQUESTERS"):
+            check("CHOOSE_MEDIA DF0", control.request("CHOOSE_MEDIA\tDF0") == "OK")
+            deadline = time.monotonic() + 5
+            while "Paused=true" not in control.request("GET_STATUS") and time.monotonic() < deadline:
+                time.sleep(0.05)
+            check("the requester holds the emulation", "Paused=true" in control.request("GET_STATUS"))
+            reply = control.request("CHOOSE_MEDIA\tCD")
+            check("CHOOSE_MEDIA while a requester is open is refused",
+                  reply == "ERROR\tThe settings UI is open", reply)
+            check("RESET closes the requester", control.request("RESET") == "OK")
+            deadline = time.monotonic() + 5
+            while "Paused=false" not in control.request("GET_STATUS") and time.monotonic() < deadline:
+                time.sleep(0.05)
+            check("emulation runs after the requester", "Paused=false" in control.request("GET_STATUS"))
+
         # One restore can be pending: a second load in the same pass fails
         # instead of replacing the first after both replied OK.
         replies = control.pipeline([f"LOADSTATE\t{state}", f"LOADSTATE\t{state}"])

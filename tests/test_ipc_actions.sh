@@ -3,6 +3,8 @@
 # Starts a headless emulator; see tests/ipc_actions_test.py.
 #
 # Usage: AMIBERRY_BIN=<path-to-amiberry> tests/test_ipc_actions.sh
+# Set AMIBERRY_MODAL_REQUESTERS=1 for a native Apple UI build, whose file
+# requesters are modal panels that IPC cannot answer.
 set -eu
 
 if [ -z "${AMIBERRY_BIN:-}" ]; then

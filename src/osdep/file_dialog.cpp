@@ -249,12 +249,14 @@ namespace
 		return initialPath;
 	}
 
-	static void open_igfd_file_dialog(const char* key, const char* title, const char* filters, const std::string& initialPath)
+	static void open_igfd_file_dialog(const char* key, const char* title, const char* filters, const std::string& initialPath,
+		const bool saveMode)
 	{
 		IGFD::FileDialogConfig config;
 		config.path = resolve_dialog_initial_directory(initialPath);
 		config.countSelectionMax = 1;
-		config.flags = ImGuiFileDialogFlags_Modal;
+		// A save asks before replacing a file, as the system dialogs do.
+		config.flags = ImGuiFileDialogFlags_Modal | (saveMode ? ImGuiFileDialogFlags_ConfirmOverwrite : 0);
 		ImGuiFileDialog::Instance()->OpenDialog(key, title, filters, config);
 	}
 
@@ -405,7 +407,7 @@ void OpenFileDialogKey(const char* key, const char* title, const char* filters, 
 #endif
 	}
 
-	open_igfd_file_dialog(key, title, filters, initialPath);
+	open_igfd_file_dialog(key, title, filters, initialPath, saveMode);
 }
 
 bool ConsumeFileDialogResultKey(const char* key, std::string& outPath)
@@ -432,6 +434,14 @@ bool IsFileDialogOpenKey(const char* key)
 		return false;
 
 	return ImGuiFileDialog::Instance()->IsOpened(key);
+}
+
+void CloseFileDialogKey(const char* key)
+{
+	key = dialog_key_or_default(key);
+	s_results.erase(key);
+	if (ImGuiFileDialog::Instance()->IsOpened(key))
+		ImGuiFileDialog::Instance()->Close();
 }
 
 void OpenDirDialogKey(const char* key, const std::string& initialPath)
