@@ -46,7 +46,7 @@ object AndroidLaunchConfig {
 	): EmulatorSettings {
 		val selectedRoms = ModelRomAvailability.selectRomsForModel(model, roms)
 
-		return EmulatorSettings.fromModel(model).copy(
+		return EmulatorSettings.fromModel(model, selectedRoms.config).copy(
 			romFile = selectedRoms.kick?.path.orEmpty(),
 			romExtFile = selectedRoms.ext?.path.orEmpty(),
 			floppy0 = floppy0,

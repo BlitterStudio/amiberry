@@ -103,6 +103,14 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
+    // src/main/settings holds only settings_schema.json: the shared settings
+    // layer's options, presets and resolutions, generated from a desktop
+    // build (scripts/update_settings_schema.sh) and packaged as an asset.
+    sourceSets {
+        main {
+            assets.srcDir 'src/main/settings'
+        }
+    }
     namespace = 'com.blitterstudio.amiberry'
     compileSdk = 36
 
@@ -198,6 +206,10 @@ android {
 
     testOptions {
         unitTests.returnDefaultValues = true
+        // The JVM tests read the schema from its source; the app reads the asset.
+        unitTests.all {
+            systemProperty 'amiberry.settingsSchema', file('src/main/settings/settings_schema.json').absolutePath
+        }
     }
 }
 

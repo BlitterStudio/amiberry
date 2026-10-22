@@ -156,14 +156,44 @@ static romdata test_cart_rom = [] {
 static romlist test_rom_list[] = {{const_cast<TCHAR*>("/roms/ar3.rom"), &test_cart_rom}};
 int romlist_count() { return 1; }
 romlist* romlist_getit() { return test_rom_list; }
-// The scanned ALG/Arcadia games (one, unless a test removes it).
-static bool arcadia_game_installed = true;
-romlist** getarcadiaroms(int)
+// Like the core, getarcadiaroms() lists every known ALG game (type 1), or
+// every Arcadia BIOS and game (type 0, BIOS first), installed or not;
+// getromlistbyromdata() finds the installed file. The BIOS is installed;
+// the games are unless a test removes them.
+static romdata test_arcade_rom(const char* name, int type)
 {
-	auto** list = static_cast<romlist**>(std::calloc(2, sizeof(romlist*)));
-	if (list && arcadia_game_installed)
-		list[0] = &test_rom_list[0];
+	romdata rd{};
+	rd.name = name;
+	rd.type = type;
+	return rd;
+}
+static romdata test_alg_game = test_arcade_rom("ALG game", ROMTYPE_ALG);
+static romdata test_arcadia_bios = test_arcade_rom("Arcadia BIOS", ROMTYPE_ARCADIABIOS);
+static romdata test_arcadia_game = test_arcade_rom("Arcadia game", ROMTYPE_ARCADIAGAME);
+static romlist test_arcade_list[] = {
+	{const_cast<TCHAR*>("/roms/alg.rom"), &test_alg_game},
+	{const_cast<TCHAR*>("/roms/arcadia-bios.rom"), &test_arcadia_bios},
+	{const_cast<TCHAR*>("/roms/arcadia-game.rom"), &test_arcadia_game},
+};
+static bool arcadia_game_installed = true;
+romlist** getarcadiaroms(int type)
+{
+	auto** list = static_cast<romlist**>(std::calloc(3, sizeof(romlist*)));
+	if (list && type) {
+		list[0] = &test_arcade_list[0];
+	} else if (list) {
+		list[0] = &test_arcade_list[1];
+		list[1] = &test_arcade_list[2];
+	}
 	return list;
+}
+romlist* getromlistbyromdata(const romdata* rd)
+{
+	for (romlist& rl : test_arcade_list) {
+		if (rl.rd == rd && (rd == &test_arcadia_bios || arcadia_game_installed))
+			return &rl;
+	}
+	return nullptr;
 }
 
 // Preset engine stand-in: the harness cannot link cfgfile.cpp, so it
@@ -1646,7 +1676,18 @@ void check_presets()
 	arcadia_game_installed = false;
 	CHECK(!amiberry_settings_preset_rom_installed("arcadia", 0));
 	CHECK(!amiberry_settings_preset_rom_installed("alg", 0));
+	// Applied without a game, the builder is asked for no game at all
+	// rather than for the first known entry (an Arcadia BIOS).
+	settings::apply_preset(test_prefs, 11, 0, 1, false);
+	CHECK(stub_preset_config == -1);
 	arcadia_game_installed = true;
+	// With one, the configuration is the first installed game's index in
+	// getarcadiaroms(), past the Arcadia BIOS entries.
+	settings::apply_preset(test_prefs, 11, 0, 1, false);
+	CHECK(stub_preset_config == 1);
+	settings::apply_preset(test_prefs, 10, 0, 1, false);
+	CHECK(stub_preset_config == 0);
+	CHECK(settings::arcade_game_config(4) == -1);
 	CHECK(changed_prefs.cpu_model == 68000 && changed_prefs.kbd_led_num == 0);
 }
 

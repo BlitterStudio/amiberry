@@ -18,6 +18,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.blitterstudio.amiberry.data.model.SettingsSchema
 import com.blitterstudio.amiberry.data.AppPreferences
 import com.blitterstudio.amiberry.data.AssetExtraction
 import com.blitterstudio.amiberry.data.AssetExtractionFailureActions
@@ -56,6 +57,9 @@ class MainActivity : ComponentActivity() {
 	override fun onCreate(savedInstanceState: Bundle?) {
 		val splashScreen = installSplashScreen()
 		super.onCreate(savedInstanceState)
+		// The emulator's presets, option choices and CPU/chipset rules the
+		// launcher builds its screens and configurations from.
+		SettingsSchema.bundled(this)
 		enableEdgeToEdge()
 
 		// Keep the splash screen visible while assets are being extracted
@@ -148,6 +152,7 @@ class MainActivity : ComponentActivity() {
 			is IntentImportExecutor.Launch.QuickStart -> EmulatorLauncher.launchQuickStart(
 				context = this,
 				model = launch.model,
+				presetConfig = launch.presetConfig,
 				floppyPath = launch.floppyPath,
 				floppy1Path = launch.floppy1Path,
 				cdPath = launch.cdPath,

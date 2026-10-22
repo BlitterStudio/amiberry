@@ -6651,7 +6651,10 @@ static int target_parse_option_host(uae_prefs *p, const TCHAR *option, const TCH
 		|| cfgfile_string(option, value, "right_amiga", p->right_amiga, sizeof p->right_amiga)
 		|| cfgfile_string(option, value, "screenshot", p->screenshot, sizeof p->screenshot)
 		|| cfgfile_string(option, value, "debugger_trigger", p->debugger_trigger, sizeof p->debugger_trigger)
+		// Android launcher records (its joyport 1 choice and the preset it
+		// started from, "<id>:<configuration>"): accepted and not kept.
 		|| cfgfile_string(option, value, "android_joyport1", tmpbuf, sizeof tmpbuf)
+		|| cfgfile_string(option, value, "android_preset", tmpbuf, sizeof tmpbuf)
 		|| cfgfile_intval(option, value, _T("cpu_idle"), &p->cpu_idle, 1))
 		return 1;
 
@@ -13219,6 +13222,10 @@ int amiberry_main(int argc, char* argv[])
 	bool run_path_migration_selftest = false;
 	bool dump_paths = false;
 	bool dump_config = false;
+	bool settings_schema = false;
+#ifndef LIBRETRO
+	const char* settings_schema_options = nullptr;
+#endif
 	bool download_whdboot = false;
 	for (auto i = 1; i < argc; i++) {
 		if (_tcscmp(argv[i], _T("-h")) == 0 || _tcscmp(argv[i], _T("--help")) == 0)
@@ -13235,6 +13242,15 @@ int amiberry_main(int argc, char* argv[])
 			dump_paths = true;
 		if (_tcscmp(argv[i], _T("--dump-config")) == 0)
 			dump_config = true;
+#ifndef LIBRETRO
+		// The libretro core does not link the settings layer.
+		if (_tcscmp(argv[i], _T("--settings-schema")) == 0)
+			settings_schema = true;
+		if (_tcsncmp(argv[i], _T("--settings-schema="), 18) == 0) {
+			settings_schema = true;
+			settings_schema_options = argv[i] + 18;
+		}
+#endif
 		if (_tcscmp(argv[i], _T("--download-whdboot")) == 0)
 			download_whdboot = true;
 		if (_tcscmp(argv[i], _T("--rescan-roms")) == 0)
@@ -13246,7 +13262,7 @@ int amiberry_main(int argc, char* argv[])
 	// the serialized configuration; --log is therefore ignored in dump mode
 	// (file logging never initializes this early anyway). Reset it here,
 	// before any code path that can log.
-	if (dump_config)
+	if (dump_config || settings_schema)
 		console_logging = 0;
 	amiberry_dump_config_mode = dump_config;
 
@@ -13259,7 +13275,7 @@ int amiberry_main(int argc, char* argv[])
 	struct sigaction action{};
 #endif
 	mainthreadid = uae_thread_get_id(nullptr);
-	const bool early_dump_mode = dump_paths || dump_config;
+	const bool early_dump_mode = dump_paths || dump_config || settings_schema;
 
 
 
@@ -13299,6 +13315,22 @@ int amiberry_main(int argc, char* argv[])
 		dump_resolved_paths(false);
 		return 0;
 	}
+#ifndef LIBRETRO
+	if (settings_schema)
+	{
+		// Built-in defaults only, neither amiberry.conf nor the ROM
+		// inventory: the schema must not depend on the machine making it.
+		// default_prefs() needs the keyboard translation table, the core's
+		// checks a display list and the Zorro III window a normal start
+		// sets up before any configuration is resolved; quit_program keeps
+		// them from probing attached hardware.
+		keyboard_settrans();
+		install_headless_display_fallback();
+		preinit_shm();
+		quit_program = UAE_QUIT;
+		return settings_schema_and_exit(settings_schema_options);
+	}
+#endif
 	if (dump_config)
 	{
 		init_amiberry_dirs(portable_mode, false);

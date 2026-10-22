@@ -29,7 +29,7 @@ class QuickStartUiStateTest {
 		assertEquals("Amiga 1200", summary.model)
 		assertEquals("68030, 32-bit addressing", summary.cpu)
 		assertEquals("AGA", summary.chipset)
-		assertEquals("2 MB Chip", summary.memory)
+		assertEquals("2M Chip", summary.memory)
 		assertEquals("DF0: Workbench.adf, DF1: Extras.adf", summary.media)
 		assertEquals("On-screen keyboard", summary.controls)
 	}

@@ -14,11 +14,12 @@ object EmulatorLauncher {
 
 	/**
 	 * Launch emulation with a Quick Start model and optional media.
-	 * Uses --model + -0/-s for floppy/CD, plus -G to skip ImGui GUI.
+	 * Uses --apply-preset + -0/-s for floppy/CD, plus -G to skip ImGui GUI.
 	 */
 	fun launchQuickStart(
 		context: Context,
 		model: AmigaModel,
+		presetConfig: Int,
 		floppyPath: String? = null,
 		floppy1Path: String? = null,
 		cdPath: String? = null,
@@ -26,6 +27,7 @@ object EmulatorLauncher {
 	) {
 		val request = LaunchRequest.QuickStart(
 			model = model,
+			presetConfig = presetConfig,
 			configPath = configPath,
 			floppy0 = floppyPath,
 			floppy1 = floppy1Path,
@@ -70,8 +72,8 @@ object EmulatorLauncher {
 	 * This is intentionally not added to Recents because the backing config is
 	 * the transient .current_settings.uae file, not a user-saved configuration.
 	 */
-	fun launchSettingsConfig(context: Context, model: AmigaModel, configPath: String) {
-		launchRequest(context, LaunchRequest.SettingsConfig(model = model, configPath = configPath))
+	fun launchSettingsConfig(context: Context, model: AmigaModel, presetConfig: Int, configPath: String) {
+		launchRequest(context, LaunchRequest.SettingsConfig(model = model, configPath = configPath, presetConfig = presetConfig))
 	}
 
 	/**

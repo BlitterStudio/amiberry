@@ -186,6 +186,11 @@ const amiberry_settings_preset* machine_preset_find(const char* id);
 const char* machine_preset_config_label(const amiberry_settings_preset* preset, int config);
 const char* machine_preset_compatibility_label(int level);
 bool machine_preset_rom_installed(const char* id, int config);
+// bip_alg (model 10) and bip_arcadia (11) load the config-th entry of
+// getarcadiaroms(): every known ALG game, or every Arcadia BIOS and game,
+// installed or not. Their one preset configuration is the first installed
+// game; this is its builder index, or -1 (none installed, other models).
+int arcade_game_config(int model);
 // Checks a public preset request and returns its built_in_prefs() model:
 // UNKNOWN_ID / INVALID_VALUE / UNAVAILABLE as amiberry_settings_preset_apply
 // reports them.

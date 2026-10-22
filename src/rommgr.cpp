@@ -5,6 +5,7 @@
   *
   */ 
 
+#include <vector>
 #include "sysconfig.h"
 #include "sysdeps.h"
 
@@ -2526,6 +2527,8 @@ static void clean_path(TCHAR *s)
 	}
 }
 
+configure_rom_probe *configure_rom_probing;
+
 int configure_rom (struct uae_prefs *p, const int *rom, int msg)
 {
 	struct romdata *rd;
@@ -2534,6 +2537,14 @@ int configure_rom (struct uae_prefs *p, const int *rom, int msg)
 
 	if (rom[0] < 0)
 		return 1;
+	if (configure_rom_probing) {
+		std::vector<int> ids;
+		for (i = 0; rom[i] >= 0; i++)
+			ids.push_back (rom[i]);
+		configure_rom_probing->lists.push_back (ids);
+		const size_t call = configure_rom_probing->calls++;
+		return call < configure_rom_probing->answers.size () && configure_rom_probing->answers[call] ? 1 : 0;
+	}
 	i = 0;
 	while (rom[i] >= 0) {
 		rd = getromdatabyid (rom[i]);

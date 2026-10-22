@@ -27,7 +27,8 @@ object IntentImportExecutor {
 			val floppyPath: String?,
 			val floppy1Path: String?,
 			val cdPath: String?,
-			val configPath: String
+			val configPath: String,
+			val presetConfig: Int = 0
 		) : Launch
 
 		data class WhdLoad(
@@ -60,7 +61,8 @@ object IntentImportExecutor {
 		category: FileCategory,
 		importedPath: String,
 		configPath: String,
-		shaderOverride: String? = null
+		shaderOverride: String? = null,
+		presetConfig: Int = 0
 	): Launch? =
 		when (category) {
 			FileCategory.WHDLOAD_GAMES -> Launch.WhdLoad(
@@ -73,14 +75,16 @@ object IntentImportExecutor {
 				floppyPath = importedPath,
 				floppy1Path = null,
 				cdPath = null,
-				configPath = configPath
+				configPath = configPath,
+				presetConfig = presetConfig
 			)
 			FileCategory.CD_IMAGES -> Launch.QuickStart(
 				model = AmigaModel.CD32,
 				floppyPath = null,
 				floppy1Path = null,
 				cdPath = importedPath,
-				configPath = configPath
+				configPath = configPath,
+				presetConfig = presetConfig
 			)
 			FileCategory.ROMS,
 			FileCategory.HARD_DRIVES -> null
@@ -185,7 +189,9 @@ object IntentImportExecutor {
 					floppy0 = importedPath,
 					floppy1 = "",
 					cdImage = ""
-				).let { mediaLaunchFor(category, importedPath, it) }
+				).let { (configPath, presetConfig) ->
+					mediaLaunchFor(category, importedPath, configPath, presetConfig = presetConfig)
+				}
 				FileCategory.CD_IMAGES -> writeIntentQuickStartConfig(
 					context = context,
 					model = AmigaModel.CD32,
@@ -193,7 +199,9 @@ object IntentImportExecutor {
 					floppy0 = "",
 					floppy1 = "",
 					cdImage = importedPath
-				).let { mediaLaunchFor(category, importedPath, it) }
+				).let { (configPath, presetConfig) ->
+					mediaLaunchFor(category, importedPath, configPath, presetConfig = presetConfig)
+				}
 				FileCategory.ROMS,
 				FileCategory.HARD_DRIVES -> null
 			}
@@ -214,7 +222,7 @@ object IntentImportExecutor {
 		floppy0: String,
 		floppy1: String,
 		cdImage: String
-	): String {
+	): Pair<String, Int> {
 		val roms = FileManager.scanForCategory(context, FileCategory.ROMS)
 		val launchSettings = AndroidLaunchConfig.buildQuickStartSettingsSnapshot(
 			model = model,
@@ -224,7 +232,7 @@ object IntentImportExecutor {
 			floppy1 = floppy1,
 			cdImage = cdImage
 		)
-		return AndroidLaunchConfig.writeQuickStartConfig(context, launchSettings).absolutePath
+		return AndroidLaunchConfig.writeQuickStartConfig(context, launchSettings).absolutePath to launchSettings.baseConfig
 	}
 
 	private const val TAG = "Amiberry-IntentImport"

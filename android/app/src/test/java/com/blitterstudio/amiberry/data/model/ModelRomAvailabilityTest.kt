@@ -14,8 +14,8 @@ class ModelRomAvailabilityTest {
 		val models = ModelRomAvailability.availableModels(roms)
 
 		assertTrue(models.contains(AmigaModel.A500))
-		assertTrue(models.contains(AmigaModel.A500_PLUS))
-		assertTrue(models.contains(AmigaModel.A2000))
+		// The emulator's A500+ preset asks for its own 2.04 Kickstart.
+		assertFalse(models.contains(AmigaModel.A500_PLUS))
 		assertFalse(models.contains(AmigaModel.A600))
 		assertFalse(models.contains(AmigaModel.A1200))
 		assertFalse(models.contains(AmigaModel.CD32))
@@ -63,6 +63,32 @@ class ModelRomAvailabilityTest {
 		val selected = ModelRomAvailability.selectRomsForModel(AmigaModel.A500, roms)
 
 		assertEquals("/roms/a-kick13.rom", selected.kick?.path)
+	}
+
+	@Test
+	fun `a model is built from a later configuration when only its ROM is installed`() {
+		val kick12 = listOf(rom("kick12.rom", 0xa6ce1636L))
+		val a500 = ModelRomAvailability.selectRomsForModel(AmigaModel.A500, kick12)
+		assertEquals("/roms/kick12.rom", a500.kick?.path)
+		assertEquals("1.2 ROM", AmigaModel.A500.configs[a500.config].label.substringBefore(','))
+
+		val kick31 = listOf(rom("kick31-a3000.rom", 0xefb239ccL))
+		val a3000 = ModelRomAvailability.selectRomsForModel(AmigaModel.A3000, kick31)
+		assertEquals("/roms/kick31-a3000.rom", a3000.kick?.path)
+		assertTrue(AmigaModel.A3000.configs[a3000.config].label.startsWith("3.1 ROM"))
+	}
+
+	@Test
+	fun `the first configuration wins when its ROM is installed`() {
+		val roms = listOf(rom("kick12.rom", 0xa6ce1636L), rom("kick13.rom", 0xc4f0f55fL))
+		val selected = ModelRomAvailability.selectRomsForModel(AmigaModel.A500, roms)
+		assertEquals(0, selected.config)
+		assertEquals("/roms/kick13.rom", selected.kick?.path)
+	}
+
+	@Test
+	fun `an empty file is not a ROM`() {
+		assertFalse(ModelRomAvailability.isRecognizedRom(rom("empty.rom", 0L)))
 	}
 
 	private fun rom(name: String, crc32: Long, path: String = "/roms/$name") = AmigaFile(

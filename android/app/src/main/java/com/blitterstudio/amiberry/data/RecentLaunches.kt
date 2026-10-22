@@ -30,8 +30,16 @@ object RecentLaunches {
 	}
 
 	fun add(entries: List<JSONObject>, entry: JSONObject, maxItems: Int = MAX_ITEMS): List<JSONObject> {
-		val entryString = entry.toString()
-		return (listOf(entry) + entries.filterNot { it.toString() == entryString }).take(maxItems)
+		val identity = identity(entry)
+		return (listOf(entry) + entries.filterNot { identity(it) == identity }).take(maxItems)
+	}
+
+	// The same launch whatever model ID spelling it was stored with ("A500"
+	// before the launcher used the emulator's presets, "a500" since).
+	private fun identity(entry: JSONObject): String {
+		if (entry.optString("type") != "quickstart") return entry.toString()
+		val model = AmigaModel.find(entry.optString("model")) ?: return entry.toString()
+		return JSONObject(entry.toString()).put("model", model.cmdArg).toString()
 	}
 
 	fun available(
@@ -56,7 +64,7 @@ object RecentLaunches {
 				path.isNotBlank() && fileExists(path)
 			}
 			"quickstart" -> {
-				val model = AmigaModel.entries.firstOrNull { it.cmdArg == entry.optString("model") }
+				val model = AmigaModel.find(entry.optString("model"))
 				model in availableModels && MEDIA_KEYS.all { key ->
 					val path = entry.optString(key)
 					path.isBlank() || fileExists(path)
@@ -76,7 +84,7 @@ object RecentLaunches {
 				path.isNotBlank() && fileExists(path)
 			}
 			"quickstart" -> {
-				AmigaModel.entries.any { it.cmdArg == entry.optString("model") } &&
+				AmigaModel.find(entry.optString("model")) != null &&
 					MEDIA_KEYS.all { key ->
 						val path = entry.optString(key)
 						path.isBlank() || fileExists(path)
@@ -89,7 +97,7 @@ object RecentLaunches {
 	fun label(entry: JSONObject): String {
 		return when (entry.optString("type")) {
 			"quickstart" -> {
-				val modelName = entry.optString("model", "?")
+				val modelName = AmigaModel.find(entry.optString("model"))?.displayName ?: entry.optString("model", "?")
 				val media = MEDIA_KEYS
 					.mapNotNull { key -> fileName(entry.optString(key)).takeIf { it.isNotBlank() } }
 					.joinToString(", ")
@@ -138,7 +146,8 @@ object RecentLaunches {
 		left.size == right.size && left.zip(right).all { (a, b) -> a.toString() == b.toString() }
 
 	private fun quickStartDetails(entry: JSONObject): Details {
-		val modelName = entry.optString("model", "?")
+		val storedModel = entry.optString("model", "?")
+		val modelName = AmigaModel.find(storedModel)?.displayName ?: storedModel
 		val mediaDetails = MEDIA_KEYS
 			.mapNotNull { key ->
 				val name = fileName(entry.optString(key)).takeIf { it.isNotBlank() } ?: return@mapNotNull null

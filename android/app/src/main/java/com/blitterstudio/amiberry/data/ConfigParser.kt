@@ -39,11 +39,20 @@ object ConfigParser {
 		"joyport0mousemap", "joyport1mousemap",
 		"input.joymouse_speed_analog",
 		"amiberry.onscreen_joystick", "amiberry.vkbd_enabled", "amiberry.vkbd_touch_button", "amiberry.vkbd_numpad", "amiberry.vkbd_toggle", "input.default_osk",
-		"amiberry.android_joyport1",
+		"amiberry.android_joyport1", "amiberry.android_preset",
 		"use_gui", "config_description", "config_hardware_path"
 	)
 
 	private const val TAG = "Amiberry-ConfigParser"
+
+	private val LEGACY_MIXED_STEREO = listOf("sound_stereo_separation" to "7", "sound_stereo_mixing_delay" to "5")
+
+	private fun configKey(line: String): String? {
+		val trimmed = line.trim()
+		if (trimmed.startsWith(";")) return null
+		val eqIndex = trimmed.indexOf('=')
+		return if (eqIndex < 0) null else trimmed.substring(0, eqIndex).trim().lowercase()
+	}
 
 	fun parse(file: File): ParsedConfig {
 		if (!file.exists()) return ParsedConfig(EmulatorSettings(), emptyList(), "")
@@ -100,6 +109,19 @@ object ConfigParser {
 			}
 		}
 
+		// sound_channels=mixed is a legacy spelling the emulator loads as
+		// stereo with stereo separation 7 and a mixing delay of 5 (cfgfile.cpp);
+		// keep that sound on the next save. A later line for either still wins.
+		if (kvPairs["sound_channels"] == "mixed") {
+			kvPairs["sound_channels"] = "stereo"
+			val mixedLine = lines.indexOfLast { configKey(it) == "sound_channels" }
+			for ((key, value) in LEGACY_MIXED_STEREO) {
+				if (lines.drop(mixedLine + 1).any { configKey(it) == key }) continue
+				unknownLines.removeAll { configKey(it) == key }
+				unknownLines.add("$key=$value")
+			}
+		}
+
 		val settings = buildSettings(kvPairs, hardDrives)
 		val description = kvPairs["config_description"] ?: ""
 
@@ -110,8 +132,15 @@ object ConfigParser {
 		// vkbd_enabled is the native master switch; the KB touch button and the
 		// gamepad toggle are only reachable while it is on (see ConfigGenerator).
 		val keyboardAvailable = kv["amiberry.vkbd_enabled"]?.toBool(true) ?: kv["input.default_osk"].toBool(true)
+		// amiberry.android_preset is "<preset id>:<configuration>"; configurations
+		// written before it existed are recognised by their hardware.
+		val preset = kv["amiberry.android_preset"]
+		val presetModel = AmigaModel.find(preset?.substringBefore(':'))
+		val presetConfig = preset?.substringAfter(':', "")?.toIntOrNull()
+			?.takeIf { presetModel != null && it in presetModel.configs.indices } ?: 0
 		return EmulatorSettings(
-			baseModel = guessModel(kv),
+			baseModel = presetModel ?: guessModel(kv),
+			baseConfig = presetConfig,
 			cpuModel = kv["cpu_model"]?.toIntOrNull() ?: 68000,
 			cpuCompatible = kv["cpu_compatible"].toBool(true),
 			address24Bit = kv["cpu_24bit_addressing"].toBool(true),

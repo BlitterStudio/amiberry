@@ -1100,6 +1100,9 @@ void usage()
 	std::cout << " --dump-paths               Resolve startup paths, print them, and exit." << '\n';
 	std::cout << " --dump-config              Print the resolved configuration (defaults, config file and" << '\n';
 	std::cout << "                            command line options, after fixup_prefs) and exit." << '\n';
+	std::cout << " --settings-schema[=<file>] Print the shared settings layer's options (only the IDs" << '\n';
+	std::cout << "                            listed in <file>), presets and CPU/chipset resolutions" << '\n';
+	std::cout << "                            as JSON and exit." << '\n';
 	std::cout << " --download-whdboot         Download/update WHDBooter files and exit." << '\n';
 	std::cout << " -f <file>                  Load a configuration file." << '\n';
 	std::cout << " --config <file>            " << '\n';

@@ -57,7 +57,7 @@ class RecentLaunchesTest {
 	@Test
 	fun `labels match launch type and strip common file suffixes`() {
 		assertEquals(
-			"A500 \u2014 Workbench.adf, Extras.adf",
+			"Amiga 500 \u2014 Workbench.adf, Extras.adf",
 			RecentLaunches.label(quickstart(model = "A500", df0 = "/media/Workbench.adf", df1 = "/media/Extras.adf"))
 		)
 		assertEquals("Workbench", RecentLaunches.label(entry("config", path = "/configs/Workbench.uae")))
@@ -77,7 +77,7 @@ class RecentLaunchesTest {
 
 		assertEquals("Workbench.adf", quickstart.title)
 		assertEquals("Quick Start", quickstart.typeLabel)
-		assertEquals("A500 - DF0: Workbench.adf, DF1: Extras.adf", quickstart.detail)
+		assertEquals("Amiga 500 - DF0: Workbench.adf, DF1: Extras.adf", quickstart.detail)
 		assertEquals("Configuration", config.typeLabel)
 		assertEquals("/configs/Workbench.uae", config.detail)
 		assertEquals("WHDLoad", whdload.typeLabel)

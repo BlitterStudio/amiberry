@@ -18,7 +18,7 @@ class LaunchRequestTest {
 		).toArgs()
 
 		assertArrayEquals(
-			arrayOf("--rescan-roms", "--model", "A1200", "--config", path, "-G"),
+			arrayOf("--rescan-roms", "--apply-preset", "a1200:0:0", "--config", path, "-G"),
 			args
 		)
 	}
@@ -36,7 +36,7 @@ class LaunchRequestTest {
 		).toArgs()
 
 		assertArrayEquals(
-			arrayOf("--rescan-roms", "--model", "A500", "--config", configPath, "-0", "/tmp/game.adf", "-G"),
+			arrayOf("--rescan-roms", "--apply-preset", "a500:0:0", "--config", configPath, "-0", "/tmp/game.adf", "-G"),
 			args
 		)
 	}
@@ -49,7 +49,7 @@ class LaunchRequestTest {
 		).toArgs()
 
 		assertArrayEquals(
-			arrayOf("--rescan-roms", "--model", "A500", "--config", "/tmp/.quickstart_settings.uae", "-G"),
+			arrayOf("--rescan-roms", "--apply-preset", "a500:0:0", "--config", "/tmp/.quickstart_settings.uae", "-G"),
 			args
 		)
 	}
@@ -63,7 +63,7 @@ class LaunchRequestTest {
 		).toArgs()
 
 		assertArrayEquals(
-			arrayOf("--rescan-roms", "--model", "A500", "-0", "/tmp/game.adf", "-G"),
+			arrayOf("--rescan-roms", "--apply-preset", "a500:0:0", "-0", "/tmp/game.adf", "-G"),
 			args
 		)
 	}

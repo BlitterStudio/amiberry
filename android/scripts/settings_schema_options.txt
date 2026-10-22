@@ -1,0 +1,48 @@
+# The options android/app/src/main/settings/settings_schema.json describes:
+# the configuration keys the launcher writes (ConfigGenerator.kt) that the
+# shared settings layer defines. Regenerate the schema after changing this
+# list or the layer: android/scripts/update_settings_schema.sh.
+cpu_model
+cpu_24bit_addressing
+cpu_compatible
+fpu_model
+cpu_speed
+cachesize
+compfpu
+chipset
+ntsc
+cycle_exact
+immediate_blits
+collision_level
+chipmem_size
+bogomem_size
+fastmem_size
+z3mem_size
+kickstart_rom_file
+kickstart_ext_rom_file
+gfx_autoresolution
+amiberry.gfx_correct_aspect
+amiberry.scaling_method
+sound_output
+sound_channels
+sound_frequency
+sound_max_buff
+joyport0
+joyport1
+joyport0mousemap
+joyport1mousemap
+input.joymouse_speed_analog
+amiberry.onscreen_joystick
+amiberry.vkbd_enabled
+amiberry.vkbd_numpad
+amiberry.vkbd_touch_button
+amiberry.vkbd_toggle
+floppy0
+floppy0type
+floppy1
+floppy1type
+floppy2
+floppy2type
+floppy3
+floppy3type
+cdimage0

@@ -32,6 +32,7 @@ BEHAVIORAL_TESTS=(
 	"test_settings_roundtrip.sh"
 	"test_settings_presets.sh"
 	"test_settings_apply.sh"
+	"test_settings_schema.sh"
 )
 
 behavioral_only=0
