@@ -467,6 +467,25 @@ def main():
         reply = control.request("LIST_CONFIGS")
         check("LIST_CONFIGS lists bare configuration names", reply == "OK\tgame.uae", reply)
 
+        # OPEN_SETTINGS opens the settings UI at the next frame. It holds the
+        # emulation paused, IPC keeps answering, and a reset (an emulation
+        # request, as the GUI's Reboot) closes it. Twice: closing it must
+        # leave it openable again.
+        for round_ in (1, 2):
+            check(f"OPEN_SETTINGS (round {round_})", control.request("OPEN_SETTINGS") == "OK")
+            deadline = time.monotonic() + 5
+            while "Paused=true" not in control.request("GET_STATUS") and time.monotonic() < deadline:
+                time.sleep(0.05)
+            check(f"the settings UI holds the emulation while IPC keeps answering (round {round_})",
+                  "Paused=true" in control.request("GET_STATUS"))
+            check(f"OPEN_SETTINGS while it is open changes nothing (round {round_})",
+                  control.request("OPEN_SETTINGS") == "OK")
+            check(f"RESET from IPC closes the settings UI (round {round_})", control.request("RESET") == "OK")
+            deadline = time.monotonic() + 5
+            while "Paused=false" not in control.request("GET_STATUS") and time.monotonic() < deadline:
+                time.sleep(0.05)
+            check(f"emulation runs again (round {round_})", "Paused=false" in control.request("GET_STATUS"))
+
         # One restore can be pending: a second load in the same pass fails
         # instead of replacing the first after both replied OK.
         replies = control.pipeline([f"LOADSTATE\t{state}", f"LOADSTATE\t{state}"])

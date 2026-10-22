@@ -21,7 +21,9 @@
 #include "uae.h"
 #include "target.h"
 #include "inputdevice.h"
+#include "keyboard.h"
 #include "zfile.h"
+#include "xwin.h"
 #ifdef DEBUGGER
 #include "debug.h"
 #include "gdb_server.h"
@@ -35,6 +37,10 @@
 
 using amiberry_actions::kind;
 using amiberry_actions::request;
+
+#ifndef LIBRETRO
+extern int gui_active; // amiberry_gui.cpp: the settings UI is open
+#endif
 
 namespace {
 
@@ -374,6 +380,48 @@ bool execute(const request& r, void*, std::string* error)
 
 	case kind::apply_settings:
 		return apply_settings(r.number, error);
+
+	case kind::toggle_fullscreen:
+#ifdef LIBRETRO
+		*error = "The display is up to the libretro front end";
+		return false;
+#else
+		toggle_fullscreen(0, -1);
+		return true;
+#endif
+
+	case kind::open_settings:
+#ifdef LIBRETRO
+		*error = "The libretro core has no settings UI";
+		return false;
+#else
+		// The GUI hotkey's request; the emulation loop opens the settings
+		// UI at its next input check. Nothing to open while it is open
+		// already, or before an emulation runs (it is what shows then).
+		if (emulating && gui_active <= 0)
+			inputdevice_add_inputcode(AKS_ENTERGUI, 1, nullptr);
+		return true;
+#endif
+
+	case kind::choose_media:
+#ifdef LIBRETRO
+		*error = "The libretro core has no requesters";
+		return false;
+#else
+		// The hotkeys' requests: gui_display() pauses, releases input and
+		// shows the requester at the next input check. The settings UI has
+		// the media itself while it is open.
+		if (gui_active > 0) {
+			*error = "The settings UI is open";
+			return false;
+		}
+		if (emulating) {
+			static const int codes[] = {AKS_FLOPPY0, AKS_FLOPPY1, AKS_FLOPPY2, AKS_FLOPPY3,
+				AKS_STATERESTOREDIALOG, AKS_STATESAVEDIALOG, AKS_CD0};
+			inputdevice_add_inputcode(codes[r.number], 1, nullptr);
+		}
+		return true;
+#endif
 	}
 	*error = "unknown action";
 	return false;
@@ -557,6 +605,23 @@ amiberry_action_id amiberry_actions_quit(void)
 amiberry_action_id amiberry_actions_apply_settings(amiberry_apply_class apply)
 {
 	return post(kind::apply_settings, 0, static_cast<int>(apply));
+}
+
+amiberry_action_id amiberry_actions_toggle_fullscreen(void)
+{
+	return post(kind::toggle_fullscreen);
+}
+
+amiberry_action_id amiberry_actions_open_settings(void)
+{
+	return post(kind::open_settings);
+}
+
+amiberry_action_id amiberry_actions_choose_media(amiberry_media_request request)
+{
+	if (request < AMIBERRY_REQUEST_FLOPPY0 || request > AMIBERRY_REQUEST_CD)
+		return 0;
+	return post(kind::choose_media, 0, static_cast<int>(request));
 }
 
 amiberry_action_result amiberry_actions_poll(amiberry_action_id id,

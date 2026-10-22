@@ -274,6 +274,7 @@ final class EmulatorActionsTests: XCTestCase {
 		XCTAssertNil(EmulatorActions.post(.insertFloppy(drive: 9, path: "")))
 		XCTAssertNil(EmulatorActions.post(.saveStateSlot(10)))
 		XCTAssertNil(EmulatorActions.post(.insertSwapperEntry(index: EmulatorActions.swapperEntryCount, drive: 0)))
+		XCTAssertNil(EmulatorActions.post(.chooseMedia(.floppy(drive: 4))))
 	}
 
 	func testPostedActionsRunOnTheMainThreadInOrder() throws {
@@ -299,8 +300,11 @@ final class EmulatorActionsTests: XCTestCase {
 		let pump = ActionPump()
 		pump.start(interval: 0.005)
 		defer { pump.stop() }
-		// No emulation runs: applying settings is done at once.
+		// No emulation runs: applying settings is done at once, and there is
+		// no emulation to open settings or a requester over.
 		try await EmulatorActions.perform(.applySettings(.reset))
+		try await EmulatorActions.perform(.openSettings)
+		try await EmulatorActions.perform(.chooseMedia(.cd))
 		do {
 			try await EmulatorActions.perform(.loadState(path: "/nonexistent/state.uss"))
 			XCTFail("loading a missing state file failed")

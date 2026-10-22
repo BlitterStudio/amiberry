@@ -34,6 +34,34 @@ public enum EmulatorAction: Hashable, Sendable {
 	/// Brings the running emulation up to the pending configuration with
 	/// the apply class `SettingsSession.commit()` returned.
 	case applySettings(ApplyClass)
+	/// Switches the emulation display between window and full screen.
+	case toggleFullscreen
+	/// Opens the settings UI over a running emulation at its next frame;
+	/// done at once while it is open or no emulation runs.
+	case openSettings
+	/// Asks the user for a file over a running emulation and uses it, as
+	/// the media and state hotkeys do (the emulation pauses meanwhile).
+	case chooseMedia(MediaRequest)
+}
+
+/// What `EmulatorAction.chooseMedia` asks the user for.
+public enum MediaRequest: Hashable, Sendable {
+	/// A disk image for DF0: to DF3:.
+	case floppy(drive: Int)
+	case loadState
+	case saveState
+	case cd
+
+	var layerValue: amiberry_media_request? {
+		switch self {
+		case let .floppy(drive):
+			guard drive >= 0, drive < Int(AMIBERRY_ACTIONS_FLOPPY_DRIVES) else { return nil }
+			return amiberry_media_request(rawValue: AMIBERRY_REQUEST_FLOPPY0.rawValue + UInt32(drive))
+		case .loadState: return AMIBERRY_REQUEST_LOAD_STATE
+		case .saveState: return AMIBERRY_REQUEST_SAVE_STATE
+		case .cd: return AMIBERRY_REQUEST_CD
+		}
+	}
 }
 
 /// What became of a posted action.
@@ -103,6 +131,11 @@ public enum EmulatorActions {
 		case let .screenshot(path): id = amiberry_actions_screenshot(path)
 		case .quit: id = amiberry_actions_quit()
 		case let .applySettings(apply): id = amiberry_actions_apply_settings(apply.layerValue)
+		case .toggleFullscreen: id = amiberry_actions_toggle_fullscreen()
+		case .openSettings: id = amiberry_actions_open_settings()
+		case let .chooseMedia(request):
+			guard let value = request.layerValue else { return nil }
+			id = amiberry_actions_choose_media(value)
 		}
 		return id == 0 ? nil : ActionTicket(id: id, action: action)
 	}

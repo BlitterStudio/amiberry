@@ -153,6 +153,7 @@ def print_help():
   RESUME                    - Resume emulation
   RESET [HARD|SOFT]         - Reset emulation (default: SOFT)
   FRAME_ADVANCE [n]         - Advance n frames (when paused, default: 1)
+  OPEN_SETTINGS             - Open the settings UI over a running emulation
 
 === Floppy Disk ===
   INSERTFLOPPY <path> <drv> - Insert floppy in drive (0-3)

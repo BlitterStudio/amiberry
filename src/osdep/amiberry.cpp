@@ -92,6 +92,7 @@
 #include "amiberry_mouse_delta.h"
 #include "imgui_osk.h"
 #include "native_ui_tests.h"
+#include "native_ui_host.h"
 #ifdef __ANDROID__
 #include "android_touch_mouse.h"
 #endif
@@ -13561,6 +13562,9 @@ int amiberry_main(int argc, char* argv[])
 	write_log(_T("Enumeration done\n"));
 
 	osdep_platform_init_ui();
+#ifdef AMIBERRY_NATIVE_HOST
+	native_host_install_menus();
+#endif
 	keyboard_settrans();
 
 	open_led_console();

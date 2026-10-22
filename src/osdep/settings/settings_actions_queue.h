@@ -33,7 +33,10 @@ enum class kind {
 	load_state_slot,      // slot
 	screenshot,           // path
 	quit,
-	apply_settings        // number = amiberry_apply_class
+	apply_settings,       // number = amiberry_apply_class
+	toggle_fullscreen,
+	open_settings,
+	choose_media          // number = amiberry_media_request
 };
 
 struct request {

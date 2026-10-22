@@ -31,6 +31,9 @@
 #include "blkdev.h"
 #include "inputdevice.h"
 #include "xwin.h"
+#ifdef USE_IPC_SOCKET
+#include "amiberry_ipc.h"
+#endif
 #include "custom.h"
 #include "disk.h"
 #include "zfile.h"
@@ -2098,6 +2101,12 @@ void run_gui()
 		// open with one pending), counted rather than read from
 		// quit_program, which a second identical request leaves unchanged.
 		const unsigned long requests_before = amiberry_actions_emulation_requests();
+#ifdef USE_IPC_SOCKET
+		// IPC commands keep being answered while the GUI is open, as they
+		// are while the debugger has the CPU stopped; the actions they run
+		// count as requests made by this drain.
+		Amiberry::IPC::IPCHandle();
+#endif
 		amiberry_actions_run_pending();
 		if (amiberry_actions_emulation_requests() != requests_before)
 			gui_running = false;
