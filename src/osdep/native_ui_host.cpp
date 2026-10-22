@@ -144,7 +144,9 @@ void native_host_run_settings()
 		SDL_Event event;
 		if (SDL_WaitEventTimeout(&event, 16)) {
 			do {
-				if (event.type == SDL_EVENT_QUIT) {
+				if (event.type == SDL_EVENT_QUIT || event.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED) {
+					// Closing the emulation window quits, as it does while
+					// the emulation runs (handle_close_event).
 					uae_quit();
 					amiberry_native_ui_settings_dismiss();
 				} else if (event.type == SDL_EVENT_JOYSTICK_ADDED || event.type == SDL_EVENT_JOYSTICK_REMOVED) {

@@ -167,8 +167,20 @@ enum FilePanels {
 			panel.allowedContentTypes = [uss]
 		}
 		guard panel.runModal() == .OK, let url = panel.url else { return nil }
-		MediaLibrary.grantAccess(to: url.path)
-		return url.path
+		return granted(url.path)
+	}
+
+	/// The pick, when access to it could be kept for later launches (only
+	/// a Mac App Store build can fail to keep it).
+	private static func granted(_ path: String) -> String? {
+		guard MediaLibrary.grantAccess(to: path) else {
+			Alerts.show(
+				title: "Cannot Keep Access",
+				message: "Amiberry could not keep access to \u{201C}\(path)\u{201D} for later launches, so it was not used. Choose it again or pick another location.",
+				buttons: ["OK"])
+			return nil
+		}
+		return path
 	}
 
 	/// Asks for a folder; nil when cancelled.
@@ -182,8 +194,7 @@ enum FilePanels {
 		panel.allowsMultipleSelection = false
 		NSApplication.shared.activate(ignoringOtherApps: true)
 		guard panel.runModal() == .OK, let url = panel.url else { return nil }
-		MediaLibrary.grantAccess(to: url.path)
-		return url.path
+		return granted(url.path)
 	}
 
 	/// The folder to open a panel in: the path itself when it is a folder,

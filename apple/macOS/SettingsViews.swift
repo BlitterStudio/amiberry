@@ -217,8 +217,7 @@ struct NumberControl: View {
 			}
 		}
 		.onChange(of: draft) {
-			if let value = number(draft, in: range) {
-				save(value)
+			if let value = number(draft, in: range), save(value) {
 				model?.invalidDrafts[descriptor.id] = nil
 			} else {
 				if let original = valueBeforeEditing, original != store.value(of: descriptor.id) {
@@ -238,10 +237,12 @@ struct NumberControl: View {
 		descriptor.kind == .integer ? String(Int(number.rounded())) : String(number)
 	}
 
-	private func save(_ number: Double) {
+	/// False when the layer refuses the value (for example one off its step).
+	@discardableResult
+	private func save(_ number: Double) -> Bool {
 		let text = format(number)
-		guard Double(text) != Double(store.value(of: descriptor.id) ?? "") else { return }
-		store.set(text, for: descriptor.id)
+		guard Double(text) != Double(store.value(of: descriptor.id) ?? "") else { return true }
+		return store.set(text, for: descriptor.id)
 	}
 }
 
@@ -379,21 +380,39 @@ struct HardDrivesPage: View {
 		return "DH\(number)"
 	}
 
-	/// A uaehfN path field: quoted when it holds a comma.
-	private func field(_ path: String) -> String {
-		path.contains(",") ? "\"\(path)\"" : path
+	/// A uaehfN path field: quoted when it holds a comma or starts or ends
+	/// with a space, as the configuration writer does. nil for a path with a
+	/// double quote, which a mount entry cannot hold (its path field is read
+	/// without escapes, so a quote ends a quoted path).
+	static func mountField(_ path: String) -> String? {
+		guard !path.contains("\"") else { return nil }
+		guard path.contains(",") || path.hasPrefix(" ") || path.hasSuffix(" ") else {
+			return path
+		}
+		return "\"" + path + "\""
+	}
+
+	private func add(_ entry: (String) -> String, path: String) {
+		guard let field = HardDrivesPage.mountField(path) else {
+			model.notice = "\u{201C}\(path)\u{201D} cannot be mounted: a mounted path cannot contain a double quote."
+			return
+		}
+		model.notice = nil
+		model.store.addMount(entry(field))
 	}
 
 	private func addFolder() {
 		guard let path = FilePanels.chooseFolder(title: "Choose a folder to mount", startingAt: "") else { return }
 		let volume = URL(fileURLWithPath: path).lastPathComponent
 			.replacingOccurrences(of: ":", with: "_").replacingOccurrences(of: ",", with: "_")
-		model.store.addMount("dir,rw,\(freeDevice()):\(volume.isEmpty ? "Work" : volume):\(field(path)),0")
+		let device = freeDevice()
+		add({ "dir,rw,\(device):\(volume.isEmpty ? "Work" : volume):\($0),0" }, path: path)
 	}
 
 	private func addHardfile() {
 		guard let path = FilePanels.choose(.floppy, title: "Choose a hardfile to mount", startingAt: "") else { return }
-		model.store.addMount("hdf,rw,\(freeDevice()):\(field(path)),32,1,2,512,0,,uae0")
+		let device = freeDevice()
+		add({ "hdf,rw,\(device):\($0),32,1,2,512,0,,uae0" }, path: path)
 	}
 }
 

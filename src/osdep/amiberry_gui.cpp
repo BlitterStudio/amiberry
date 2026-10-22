@@ -667,6 +667,12 @@ static void apply_disk_selection(const int shortcut, uae_prefs* prefs, const std
 	}
 	else if (shortcut == 4)
 	{
+		// A restore starts with a reset even when the file is then refused:
+		// check what restore_state() checks first, as the action API does.
+		if (!zfile_exists(selected.c_str()) || !savestate_is_state_file(selected.c_str())) {
+			gui_message("Not a state file: %s", selected.c_str());
+			return;
+		}
 		// As the state hotkey's restore (AKS_STATERESTOREDIALOG): restore
 		// mode, which leaves an input recording alone.
 		savestate_initsave(selected.c_str(), 1, true, false);
@@ -708,6 +714,8 @@ static void apply_disk_selection(const int shortcut, uae_prefs* prefs, const std
 			changed_prefs.cdslots[0].type = SCSI_UNIT_DEFAULT;
 			add_file_to_mru_list(lstMRUCDList, selected);
 			set_last_active_config_from_media(selected.c_str());
+			// As AKS_CD0 with a path: the running emulation picks it up.
+			set_config_changed();
 		}
 	}
 }
@@ -1287,11 +1295,12 @@ void gui_message(const char* format, ...)
 	_vsntprintf(msg, sizeof(msg), format, parms);
 	va_end(parms);
 #if defined(AMIBERRY_NATIVE_HOST)
-	// Shown at once while the settings window is up (the main thread runs
-	// it); otherwise when it next opens, as the built-in GUI showed its
-	// message box. Worker threads (hard drives, PPC) report here too.
+	// Shown at once while the emulation is held for the settings window or
+	// a requester (on the main thread); otherwise when the settings window
+	// next opens, as the built-in GUI showed its message box. Worker threads
+	// (hard drives, PPC) report here too.
 	write_log(_T("%s\n"), msg);
-	if (is_mainthread() && native_host_settings_open())
+	if (is_mainthread() && (gui_active > 0 || native_host_settings_open()))
 		native_host_message("Message", msg);
 	else
 		native_host_message_deferred(msg);

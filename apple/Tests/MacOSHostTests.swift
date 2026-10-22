@@ -143,6 +143,27 @@ final class SettingsWindowModelTests: XCTestCase {
 		try model.store.commit()
 	}
 
+	func testMountFieldsAreSpelledAsTheWriterSpellsThem() {
+		XCTAssertEqual(HardDrivesPage.mountField("/Volumes/Work"), "/Volumes/Work")
+		XCTAssertEqual(HardDrivesPage.mountField("/a,b"), "\"/a,b\"")
+		XCTAssertEqual(HardDrivesPage.mountField("/a "), "\"/a \"")
+		XCTAssertNil(HardDrivesPage.mountField("/a\"b"))
+	}
+
+	func testMountedPathsWithCommasAreAccepted() throws {
+		let created = FileManager.default.temporaryDirectory.appendingPathComponent("a,b \(UUID().uuidString)")
+		try FileManager.default.createDirectory(at: created, withIntermediateDirectories: true)
+		defer { try? FileManager.default.removeItem(at: created) }
+		let real = try XCTUnwrap(realpath(created.path, nil))
+		defer { free(real) }
+		let path = String(cString: real)
+		let session = try SettingsSession()
+		let before = try session.mounts().count
+		try session.addMount("dir,rw,DH9:Work:\(try XCTUnwrap(HardDrivesPage.mountField(path))),0")
+		XCTAssertEqual(try session.mounts().count, before + 1)
+		XCTAssertTrue(try session.mounts().last?.contains("a,") ?? false)
+	}
+
 	func testErrorsReadAsSentences() {
 		XCTAssertEqual(SettingsWindowModel.describe(SettingsError.invalidValue(id: "cpu_model", value: "1")),
 			"CPU model: \u{201C}1\u{201D} is not a valid value.")
