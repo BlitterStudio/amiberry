@@ -57,10 +57,6 @@ final class SettingsWindowModelTests: XCTestCase {
 			post: { [weak self] in self?.posted.append($0); return true })
 	}
 
-	override func setUp() {
-		posted = []
-		dismissed = 0
-	}
 
 	func testStartCommitsAndCloses() throws {
 		let model = try model(emulating: false)
@@ -174,18 +170,19 @@ final class SettingsWindowModelTests: XCTestCase {
 
 @MainActor
 final class MenuCommandsTests: XCTestCase {
-	private var commands: MenuCommands!
+	// No setUp (nonisolated before Swift 6.2): XCTest makes an instance per
+	// test, so these start fresh for each.
+	private lazy var commands: MenuCommands = {
+		let commands = MenuCommands()
+		commands.post = { [weak self] in self?.posted.append($0) }
+		commands.runState = { [weak self] in self?.state ?? .stopped }
+		commands.settingsOpen = { [weak self] in self?.settingsOpen ?? false }
+		return commands
+	}()
 	private var posted: [EmulatorAction] = []
 	private var state = EmulatorStatus.RunState.running
 	private var settingsOpen = false
 
-	override func setUp() {
-		commands = MenuCommands()
-		posted = []
-		commands.post = { [weak self] in self?.posted.append($0) }
-		commands.runState = { [weak self] in self?.state ?? .stopped }
-		commands.settingsOpen = { [weak self] in self?.settingsOpen ?? false }
-	}
 
 	private func menu() -> NSMenu {
 		let main = NSMenu(title: "Main")
