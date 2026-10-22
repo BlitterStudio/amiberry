@@ -228,8 +228,12 @@ struct NumberControl: View {
 		}
 	}
 
+	/// The draft as a value of this option, or nil: a number in range, and
+	/// a whole one for an integer option (no rounding behind the user's back).
 	private func number(_ text: String, in range: ClosedRange<Double>) -> Double? {
-		guard let value = Double(text.trimmingCharacters(in: .whitespaces)), range.contains(value) else { return nil }
+		guard let value = Double(text.trimmingCharacters(in: .whitespaces)), range.contains(value),
+			descriptor.kind != .integer || value.rounded() == value
+		else { return nil }
 		return value
 	}
 

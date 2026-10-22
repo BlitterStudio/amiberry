@@ -289,5 +289,6 @@ final class MenuCommandsTests: XCTestCase {
 		XCTAssertFalse(commands.validateMenuItem(try item(main, "Media", "Insert CD\u{2026}")))
 		XCTAssertFalse(commands.validateMenuItem(try item(main, "Emulation", "Save State\u{2026}")))
 		XCTAssertTrue(commands.validateMenuItem(try item(main, "Emulation", "Reset")))
+		XCTAssertFalse(commands.validateMenuItem(pause), "the settings window holds the pause")
 	}
 }

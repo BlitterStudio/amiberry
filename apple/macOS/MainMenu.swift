@@ -180,7 +180,8 @@ final class MenuCommands: NSObject, NSMenuItemValidation {
 		switch menuItem.action {
 		case #selector(togglePause(_:)):
 			menuItem.title = state == .paused ? "Resume" : "Pause"
-			return state != .stopped
+			// The settings window holds its own pause; its Resume button ends it.
+			return state != .stopped && !settingsOpen()
 		case #selector(saveState(_:)), #selector(loadState(_:)), #selector(insertFloppy(_:)), #selector(insertCD(_:)):
 			return state != .stopped && !settingsOpen()
 		case #selector(reset(_:)), #selector(hardReset(_:)), #selector(quickSave(_:)), #selector(quickLoad(_:)),
