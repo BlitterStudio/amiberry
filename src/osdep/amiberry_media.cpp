@@ -178,8 +178,15 @@ std::vector<std::string>* recent_list(amiberry_media_list list)
 
 // The longest path a folder or recent entry may have: it must fit the
 // path fields (MAX_DPATH) and, with its setting name, one line of the
-// settings file, which is read back in CONFIG_BLEN pieces.
-constexpr size_t max_stored_path = MAX_DPATH < CONFIG_BLEN - 64 ? MAX_DPATH : CONFIG_BLEN - 64;
+// settings file, which is read back in CONFIG_BLEN pieces. On Windows the
+// emulator is not long-path aware (no longPathAware manifest entry, narrow
+// file calls), so a path must also stay within MAX_PATH there.
+constexpr size_t max_line_path = MAX_DPATH < CONFIG_BLEN - 64 ? MAX_DPATH : CONFIG_BLEN - 64;
+#ifdef _WIN32
+constexpr size_t max_stored_path = max_line_path < MAX_PATH ? max_line_path : MAX_PATH;
+#else
+constexpr size_t max_stored_path = max_line_path;
+#endif
 
 // The settings file stores one value per line and trims trailing white
 // space when it reads it back, so a path with a line break, another control
@@ -298,6 +305,9 @@ amiberry_settings_status amiberry_folder_get(amiberry_folder folder, char* buffe
 				buffer[0] = 0;
 			return AMIBERRY_SETTINGS_UNAVAILABLE;
 		}
+		// The path is the only output, so it must have somewhere to go.
+		if (!buffer)
+			return AMIBERRY_SETTINGS_BUFFER_TOO_SMALL;
 		return copy_out(path, buffer, size);
 	});
 }

@@ -7608,13 +7608,54 @@ static std::string get_settings_path_for_save(const std::string& value)
 	return path;
 }
 
+// Rewrites path with content in place, as the settings file was always
+// written (fopen "w"), so the file keeps its identity: symbolic and hard
+// links, owner, permissions, ACLs and extended attributes, and a special
+// file stays one. A regular file's old content is read first and written
+// back when the new content cannot be written, so a failed save reports
+// the failure with the file as it was. A file that cannot be read (write
+// permission only) is written without that backup, as before.
+static bool replace_file_contents(const std::string& path, const std::string& content)
+{
+	std::string old_content;
+	bool have_old = false;
+	std::error_code ec;
+	if (std::filesystem::is_regular_file(path, ec)) {
+		if (FILE* in = uae_fopen(path.c_str(), "rbe")) {
+			char block[16384];
+			size_t n;
+			while ((n = fread(block, 1, sizeof block, in)) > 0)
+				old_content.append(block, n);
+			const bool read_ok = ferror(in) == 0;
+			fclose(in);
+			// A file that cannot be read back whole is not risked.
+			if (!read_ok)
+				return false;
+			have_old = true;
+		}
+	}
+	auto write_all = [&path](const std::string& text, const char* mode) {
+		FILE* out = uae_fopen(path.c_str(), mode);
+		if (!out)
+			return false;
+		const bool written = fwrite(text.data(), 1, text.size(), out) == text.size() && fflush(out) == 0;
+		const bool closed = fclose(out) == 0;
+		return written && closed;
+	};
+	// Text mode, as before (line ends on Windows); the backup goes back
+	// byte for byte.
+	if (write_all(content, "we"))
+		return true;
+	if (have_old && !write_all(old_content, "wbe"))
+		write_log("Settings file '%s' could not be written, nor its previous content restored\n", path.c_str());
+	return false;
+}
+
 static bool write_amiberry_settings()
 {
 	ensure_parent_directory_exists(amiberry_conf_file);
-	// Built in memory and written with my_save_file_atomic(), which
-	// replaces the file only once the new one is complete (keeping its
-	// permissions, and on Windows its ACLs), so a failed write never
-	// leaves a truncated settings file behind.
+	// Built in memory first, so the file is only opened for writing once
+	// the whole content exists (replace_file_contents).
 	std::string content;
 
 	char buffer[MAX_DPATH];
@@ -7901,7 +7942,7 @@ static bool write_amiberry_settings()
 		write_path_option("WHDLoadfile", i);
 	}
 	
-	return my_save_file_atomic(amiberry_conf_file.c_str(), content.data(), content.size());
+	return replace_file_contents(amiberry_conf_file, content);
 }
 
 // Never throws: a save that cannot build the file (out of memory) fails

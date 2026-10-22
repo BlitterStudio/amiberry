@@ -18,12 +18,6 @@
 #ifndef _WIN32
 #include <unistd.h>
 #endif
-#ifdef __APPLE__
-#include <copyfile.h>
-#include <sys/acl.h>
-#elif defined(__linux__)
-#include <sys/xattr.h>
-#endif
 #include <algorithm>
 #include <list>
 #include <memory>
@@ -1586,7 +1580,7 @@ void my_set_time_explicit(struct my_openfile_s* mos) noexcept
  * save and leave the original file intact.
  */
 #ifdef _WIN32
-static bool save_file_atomic(const TCHAR* filename, const void* data, size_t len)
+[[nodiscard]] bool my_save_file_atomic(const TCHAR* filename, const void* data, size_t len) noexcept
 {
 	if (!filename || !data) {
 		write_log("my_save_file_atomic: null argument\n");
@@ -1609,32 +1603,12 @@ static bool save_file_atomic(const TCHAR* filename, const void* data, size_t len
 				CloseHandle(h);
 				if (n > 0 && n < sizeof(resolved)) {
 					const char* rp = resolved;
-					if (strncmp(rp, "\\\\?\\UNC\\", 8) == 0) {
-						/* \\?\UNC\server\share\... is \\server\share\... */
-						target.assign("\\\\");
-						target.append(rp + 8);
-					} else {
-						if (strncmp(rp, "\\\\?\\", 4) == 0)	/* strip the \\?\ prefix */
-							rp += 4;
-						target.assign(rp);
-					}
+					if (strncmp(rp, "\\\\?\\", 4) == 0)	/* strip the \\?\ prefix */
+						rp += 4;
+					target.assign(rp);
 				}
 			}
 		}
-	}
-	/* A file the process may not write stays as it is, as with fopen("w"):
-	   ReplaceFile needs only read and delete access, which would bypass an
-	   ACL that denies writing the file. Opening for writing (without
-	   truncating) checks exactly what fopen("w") needed. */
-	if (GetFileAttributesA(target.c_str()) != INVALID_FILE_ATTRIBUTES) {
-		const HANDLE h = CreateFileA(target.c_str(), GENERIC_WRITE,
-			FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-			nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
-		if (h == INVALID_HANDLE_VALUE) {
-			write_log("my_save_file_atomic: '%s' is not writable: %lu\n", target.c_str(), GetLastError());
-			return false;
-		}
-		CloseHandle(h);
 	}
 	/* Temp name unique per process, thread and call, so two concurrent saves to
 	   the same target never share a temp file. */
@@ -1722,180 +1696,7 @@ static bool save_file_atomic(const TCHAR* filename, const void* data, size_t len
 	return true;
 }
 #else
-/* Removes the temporary file, which can carry an ACL copied from the
-   target that denies its deletion (macOS); that ACL is dropped first. */
-static void remove_temp(const char* tmpname) noexcept
-{
-	if (unlink(tmpname) == 0)
-		return;
-#ifdef __APPLE__
-	if (errno == EACCES || errno == EPERM) {
-		const int fd = open(tmpname, O_RDONLY | O_CLOEXEC);
-		if (fd >= 0) {
-			acl_t none = acl_init(0);
-			if (none) {
-				acl_set_fd_np(fd, none, ACL_TYPE_EXTENDED);
-				acl_free(none);
-			}
-			close(fd);
-			if (unlink(tmpname) == 0)
-				return;
-		}
-	}
-#endif
-	write_log("my_save_file_atomic: could not remove '%s': %s\n", tmpname, strerror(errno));
-}
-
-/* Gives the temporary file that replaces target the target's owner, group,
-   ACLs and extended attributes (security labels included), which a new
-   inode does not inherit. False when they cannot all be reproduced. */
-static bool copy_file_metadata(const char* target, int to_fd, const struct stat& target_st) noexcept
-{
-	struct stat to_st{};
-	if (fstat(to_fd, &to_st) != 0)
-		return false;
-	if ((to_st.st_uid != target_st.st_uid || to_st.st_gid != target_st.st_gid)
-		&& fchown(to_fd, target_st.st_uid, target_st.st_gid) != 0)
-		return false;
-#if defined(__APPLE__) || defined(__linux__)
-	const int from_fd = open(target, O_RDONLY | O_CLOEXEC);
-	if (from_fd < 0)
-		return false;
-	bool ok = true;
-#if defined(__APPLE__)
-	ok = fcopyfile(from_fd, to_fd, nullptr, COPYFILE_ACL | COPYFILE_XATTR) == 0;
-#else
-	/* ACLs and security labels are extended attributes on Linux. */
-	ssize_t size = flistxattr(from_fd, nullptr, 0);
-	if (size < 0) {
-		ok = errno == ENOTSUP; /* none on this filesystem */
-	} else if (size > 0) try {
-		std::vector<char> names(static_cast<size_t>(size));
-		size = flistxattr(from_fd, names.data(), names.size());
-		ok = size >= 0;
-		for (ssize_t at = 0; ok && at < size; at += static_cast<ssize_t>(strlen(&names[at])) + 1) {
-			const char* name = &names[at];
-			ssize_t length = fgetxattr(from_fd, name, nullptr, 0);
-			if (length < 0) {
-				ok = false;
-				break;
-			}
-			std::vector<char> value(static_cast<size_t>(length));
-			length = fgetxattr(from_fd, name, value.data(), value.size());
-			ok = length >= 0 && fsetxattr(to_fd, name, value.data(), static_cast<size_t>(length), 0) == 0;
-		}
-	} catch (...) {
-		ok = false; /* out of memory: the caller saves in place */
-	}
-#endif
-	close(from_fd);
-	return ok;
-#else
-	/* No way here to carry ACLs or extended attributes over (FreeBSD and
-	   others): the caller updates the file in place, keeping them. */
-	(void)target;
-	return false;
-#endif
-}
-
-/* Writes all of data to fd from its start, truncating it to that length. */
-static bool rewrite_fd(int fd, const char* data, size_t len) noexcept
-{
-	if (lseek(fd, 0, SEEK_SET) != 0 || ftruncate(fd, 0) != 0)
-		return false;
-	size_t written = 0;
-	while (written < len) {
-		const ssize_t n = write(fd, data + written, len - written);
-		if (n < 0 && errno == EINTR)
-			continue;
-		if (n <= 0)
-			return false;
-		written += static_cast<size_t>(n);
-	}
-	if (fsync(fd) != 0) {
-		const int e = errno;
-		if (!(e == EINVAL || e == EOPNOTSUPP
-#if defined(ENOTSUP) && (ENOTSUP != EOPNOTSUPP)
-			|| e == ENOTSUP
-#endif
-			))
-			return false;
-	}
-	return true;
-}
-
-/* Rewrites an existing file in place, for when it cannot be replaced by a
-   new file (no temporary file next to it, metadata that cannot be carried
-   over, hard links that must keep sharing it). Not atomic, so the old
-   content is read first and written back if the new content cannot be;
-   the fallback is declined when the old content cannot be kept. */
-static bool save_file_in_place(const char* target, const void* data, size_t len) noexcept
-{
-	int fd = open(target, O_RDWR | O_CLOEXEC);
-	if (fd < 0 && errno == EACCES) {
-		/* A file this process may write but not read: written as
-		   fopen("w") wrote it, with no old content to put back (none can
-		   be read). */
-		fd = open(target, O_WRONLY | O_CLOEXEC);
-		if (fd >= 0) {
-			const bool written = rewrite_fd(fd, static_cast<const char*>(data), len);
-			const bool closed = close(fd) == 0;
-			if (!written || !closed)
-				write_log("my_save_file_atomic: in-place save of unreadable '%s' failed\n", target);
-			return written && closed;
-		}
-	}
-	if (fd < 0) {
-		write_log("my_save_file_atomic: open '%s' in place failed: %s\n", target, strerror(errno));
-		return false;
-	}
-	std::string old_content;
-	try {
-		char buffer[65536];
-		for (;;) {
-			const ssize_t n = read(fd, buffer, sizeof buffer);
-			if (n < 0 && errno == EINTR)
-				continue;
-			if (n < 0) {
-				write_log("my_save_file_atomic: reading '%s' failed: %s\n", target, strerror(errno));
-				close(fd);
-				return false;
-			}
-			if (n == 0)
-				break;
-			old_content.append(buffer, static_cast<size_t>(n));
-		}
-	} catch (...) {
-		write_log("my_save_file_atomic: no memory to keep '%s' while saving in place\n", target);
-		close(fd);
-		return false;
-	}
-	if (!rewrite_fd(fd, static_cast<const char*>(data), len)) {
-		const int e = errno;
-		const bool restored = rewrite_fd(fd, old_content.data(), old_content.size());
-		write_log("my_save_file_atomic: in-place save of '%s' failed: %s; old content %s\n",
-			target, strerror(e), restored ? "restored" : "could not be restored");
-		close(fd);
-		return false;
-	}
-	if (close(fd) != 0) {
-		/* A delayed write error (NFS, FUSE): the new content may or may not
-		   have landed, so the old content is written back. */
-		const int e = errno;
-		bool restored = false;
-		const int again = open(target, O_RDWR | O_CLOEXEC);
-		if (again >= 0) {
-			restored = rewrite_fd(again, old_content.data(), old_content.size());
-			restored = close(again) == 0 && restored;
-		}
-		write_log("my_save_file_atomic: in-place close '%s' failed: %s; old content %s\n",
-			target, strerror(e), restored ? "restored" : "could not be restored");
-		return false;
-	}
-	return true;
-}
-
-static bool save_file_atomic(const TCHAR* filename, const void* data, size_t len)
+[[nodiscard]] bool my_save_file_atomic(const TCHAR* filename, const void* data, size_t len) noexcept
 {
 	if (!filename || !data) {
 		write_log("my_save_file_atomic: null argument\n");
@@ -1914,35 +1715,8 @@ static bool save_file_atomic(const TCHAR* filename, const void* data, size_t len
 		if (resolved) {
 			target.assign(resolved);
 			free(resolved);
-		} else {
-			/* A dangling link: fopen("w") would have created its final
-			   target, so write there too instead of replacing a link with a
-			   file. Each link's text is relative to its own directory; the
-			   chain is followed to its end (bounded like the kernel's). */
-			for (int hops = 0; hops < 40; hops++) {
-				struct stat hop{};
-				if (lstat(target.c_str(), &hop) != 0 || !S_ISLNK(hop.st_mode))
-					break;
-				std::string link(PATH_MAX, '\0');
-				const ssize_t n = readlink(target.c_str(), &link[0], link.size());
-				if (n <= 0)
-					break;
-				link.resize(static_cast<size_t>(n));
-				if (link[0] != '/') {
-					const size_t slash = target.find_last_of('/');
-					if (slash != std::string::npos)
-						link = target.substr(0, slash + 1) + link;
-				}
-				target = link;
-			}
-			/* A loop or an over-long chain: fopen("w") failed with ELOOP
-			   and left the links alone, so the save fails too. */
-			struct stat end{};
-			if (lstat(target.c_str(), &end) == 0 && S_ISLNK(end.st_mode)) {
-				write_log("my_save_file_atomic: too many symbolic links for '%s'\n", filename);
-				return false;
-			}
 		}
+		/* If realpath fails (e.g. dangling link) fall back to the link path. */
 	}
 
 	/* Preserve the existing file's mode so a private (e.g. 0600) config does
@@ -1950,47 +1724,13 @@ static bool save_file_atomic(const TCHAR* filename, const void* data, size_t len
 	struct stat old_st{};
 	const bool have_old_mode = (stat(target.c_str(), &old_st) == 0);
 
-	/* A file the process may not write stays as it is, as with fopen("w"):
-	   replacing it needs only the directory's permission, which would
-	   bypass a deliberately read-only file. */
-	if (have_old_mode && access(target.c_str(), W_OK) != 0) {
-		write_log("my_save_file_atomic: '%s' is not writable: %s\n", target.c_str(), strerror(errno));
-		return false;
-	}
-
-	/* A file with other hard links keeps its inode, so every link still
-	   shows the saved content, as with fopen("w"). */
-	if (have_old_mode && S_ISREG(old_st.st_mode) && old_st.st_nlink > 1)
-		return save_file_in_place(target.c_str(), data, len);
-
 	/* Unique temp in the SAME directory as the target (so rename(2) is atomic
 	   and on the same filesystem). mkstemp creates it 0600 and unique, which
 	   avoids both a world-readable window and any PID-reuse collision. */
-	/* The temporary name extends the target's, so a long file name is
-	   shortened to keep it (and the ".mode" probe below) within the
-	   file-name limit. */
-	static constexpr char tmp_suffix[] = ".tmp.XXXXXX";
-	constexpr size_t reserved = sizeof(tmp_suffix) - 1 + 5; /* ".mode" */
-#ifdef NAME_MAX
-	constexpr size_t name_max = NAME_MAX;
-#else
-	constexpr size_t name_max = 255;
-#endif
-	const size_t name_slash = target.find_last_of('/');
-	const size_t name_start = name_slash == std::string::npos ? 0 : name_slash + 1;
-	std::string tmpl = target;
-	if (tmpl.size() - name_start > name_max - reserved)
-		tmpl.resize(name_start + (name_max - reserved));
-	tmpl += tmp_suffix;
+	std::string tmpl = target + ".tmp.XXXXXX";
 	const int fd = mkstemp(&tmpl[0]);
 	if (fd < 0) {
-		const int e = errno;
-		write_log("my_save_file_atomic: mkstemp('%s') failed: %s\n", tmpl.c_str(), strerror(e));
-		/* A writable file in a folder that does not allow new entries, or
-		   whose path leaves no room for the temporary name, is updated in
-		   place, as fopen("w") did: not atomic, but the only save left. */
-		if (have_old_mode && (e == EACCES || e == EPERM || e == ENAMETOOLONG))
-			return save_file_in_place(target.c_str(), data, len);
+		write_log("my_save_file_atomic: mkstemp('%s') failed: %s\n", tmpl.c_str(), strerror(errno));
 		return false;
 	}
 	const char* tmpname = tmpl.c_str();
@@ -2020,35 +1760,8 @@ static bool save_file_atomic(const TCHAR* filename, const void* data, size_t len
 		written += (size_t)n;
 	}
 
-	/* Widen to the final mode only now that the full content is on the temp.
-	   A new file gets what fopen("w") would have given it: 0666 less the
-	   process umask, so a restrictive umask keeps it private.
-	   The umask is read back from a probe file the kernel creates with it
-	   (changing the process-wide umask, even briefly, would race other
-	   threads' file creation); the probe's name extends the unique temp's. */
-	mode_t new_file_mode = 0600;
-	if (!have_old_mode) {
-		const std::string probe = std::string(tmpname) + ".mode";
-		const int probe_fd = open(probe.c_str(), O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC, 0666);
-		struct stat probe_st{};
-		if (probe_fd >= 0) {
-			if (fstat(probe_fd, &probe_st) == 0)
-				new_file_mode = probe_st.st_mode & 0777;
-			close(probe_fd);
-			unlink(probe.c_str());
-		}
-	}
-	/* The new inode replaces the old file, so it carries the old file's
-	   metadata; where that cannot be reproduced, the file is updated in
-	   place instead, as fopen("w") did. */
-	if (have_old_mode && !copy_file_metadata(target.c_str(), fd, old_st)) {
-		write_log("my_save_file_atomic: metadata of '%s' cannot be carried over (errno=%d), saving in place\n",
-			target.c_str(), errno);
-		close(fd);
-		remove_temp(tmpname);
-		return save_file_in_place(target.c_str(), data, len);
-	}
-	const mode_t final_mode = have_old_mode ? (old_st.st_mode & 07777) : new_file_mode;
+	/* Widen to the final mode only now that the full content is on the temp. */
+	const mode_t final_mode = have_old_mode ? (old_st.st_mode & 07777) : (mode_t)0644;
 	if (fchmod(fd, final_mode) != 0) {
 		write_log("my_save_file_atomic: fchmod '%s' to 0%o failed: %s (continuing)\n",
 			tmpname, (unsigned)final_mode, strerror(errno));
@@ -2065,26 +1778,20 @@ static bool save_file_atomic(const TCHAR* filename, const void* data, size_t len
 		} else {
 			write_log("my_save_file_atomic: fsync '%s' failed: %s\n", tmpname, strerror(e));
 			close(fd);
-			remove_temp(tmpname);
+			unlink(tmpname);
 			return false;
 		}
 	}
 	if (close(fd) != 0) {
 		write_log("my_save_file_atomic: close '%s' failed: %s\n", tmpname, strerror(errno));
-		remove_temp(tmpname);
+		unlink(tmpname);
 		return false;
 	}
 
 	if (rename(tmpname, target.c_str()) != 0) {
-		const int e = errno;
 		write_log("my_save_file_atomic: rename '%s' -> '%s' failed: %s\n",
-			tmpname, target.c_str(), strerror(e));
-		remove_temp(tmpname);
-		/* A writable file that may not be replaced (an ACL denying its
-		   deletion, a sticky folder) is updated in place, as fopen("w")
-		   did. */
-		if (have_old_mode && (e == EACCES || e == EPERM))
-			return save_file_in_place(target.c_str(), data, len);
+			tmpname, target.c_str(), strerror(errno));
+		unlink(tmpname);
 		return false;
 	}
 
@@ -2114,18 +1821,6 @@ static bool save_file_atomic(const TCHAR* filename, const void* data, size_t len
 	return true;
 }
 #endif
-
-/* noexcept for its callers, while the helpers allocate (paths, the old
-   content an in-place save keeps): an allocation failure fails the save. */
-[[nodiscard]] bool my_save_file_atomic(const TCHAR* filename, const void* data, size_t len) noexcept
-{
-	try {
-		return save_file_atomic(filename, data, len);
-	} catch (...) {
-		write_log("my_save_file_atomic: out of memory saving '%s'\n", filename ? filename : "");
-		return false;
-	}
-}
 
 [[nodiscard]] uae_s64 my_lseek(struct my_openfile_s* mos, uae_s64 offset, int whence) noexcept
 {

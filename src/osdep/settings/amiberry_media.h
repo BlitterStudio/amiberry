@@ -50,7 +50,8 @@ typedef enum amiberry_folder {
 
 /*
  * The folder's path. UNKNOWN_ID for a folder outside the enum; UNAVAILABLE
- * when the stored path is not valid UTF-8 (set outside this API).
+ * when the stored path is not valid UTF-8 (set outside this API);
+ * BUFFER_TOO_SMALL for a missing or too small buffer.
  */
 AMIBERRY_SETTINGS_API amiberry_settings_status amiberry_folder_get(amiberry_folder folder,
 	char *buffer, size_t size);
@@ -60,8 +61,8 @@ AMIBERRY_SETTINGS_API amiberry_settings_status amiberry_folder_get(amiberry_fold
  * Paths panel does; on a Mac App Store build the folder is also granted
  * (amiberry_media_grant_access) first. INVALID_VALUE for an empty path, an
  * existing file that is not a directory, or a path the settings file
- * cannot store as written: longer than the host's
- * path limit less one (for the separator the folder gets) or 2495 bytes,
+ * cannot store as written: longer than the host's path limit (MAX_PATH on
+ * Windows) less one, for the separator the folder gets, or 2495 bytes,
  * with a control character, or with a space at either end. UNAVAILABLE,
  * with the folder unchanged and its new access grant withdrawn, when access
  * to the folder cannot be kept or the settings file cannot be written (the
