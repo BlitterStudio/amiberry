@@ -220,6 +220,20 @@ def main():
         check("SETTINGS_MOUNT_ADD refuses a device name in use", reply.startswith("ERROR\tInvalid mount entry"), reply)
         reply = control.request("SETTINGS_MOUNT_ADD\tnot a mount")
         check("SETTINGS_MOUNT_ADD refuses a malformed entry", reply.startswith("ERROR\tInvalid mount entry"), reply)
+        reply = control.request("SETTINGS_MOUNT_ADD\tdir,rw,DH4")
+        check("SETTINGS_MOUNT_ADD refuses an entry missing its fields", reply.startswith("ERROR\tInvalid mount entry"), reply)
+        reply = control.request("SETTINGS_MOUNT_ADD\tcd8,ro,:,0,0,0,2048,0,,scsi2_a4091")
+        check("SETTINGS_MOUNT_ADD refuses a CD unit past the last", reply.startswith("ERROR\tInvalid mount entry"), reply)
+        reply = control.request(f"SETTINGS_MOUNT_ADD\tdir,rw,DH4:Bad\rVolume:{drive},0")
+        check("SETTINGS_MOUNT_ADD refuses a line break in a field", reply.startswith("ERROR\tInvalid mount entry"), reply)
+        # An unknown controller name reads as the UAE controller, as the
+        # loader reads it; a long one is no longer copied past its buffer.
+        reply = control.request(f'SETTINGS_MOUNT_ADD\thdf,rw,DH4:"{hdf}",32,1,2,512,0,,' + "u" * 2000)
+        check("SETTINGS_MOUNT_ADD reads a long unknown controller as UAE", reply == "OK", reply)
+        reply = control.request("SETTINGS_MOUNTS")
+        check("the long controller entry is stored as a UAE unit",
+              reply.split("\t")[-1] == f'hdf,rw,DH4:"{hdf}",32,1,2,512,0,,uae2', reply)
+        check("SETTINGS_MOUNT_REMOVE it again", control.request("SETTINGS_MOUNT_REMOVE\t2") == "OK")
         reply = control.request("SETTINGS_MOUNT_ADD\tdir,rw,DH5:Long:/" + "x" * 3000 + ",0")
         check("SETTINGS_MOUNT_ADD refuses an entry too long for its fields", reply.startswith("ERROR"), reply)
         if sys.platform == "darwin":

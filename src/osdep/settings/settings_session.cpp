@@ -4,6 +4,7 @@
 #include "sysdeps.h"
 #include "options.h"
 #include "target.h"
+#include "autoconf.h"
 
 #include "settings_definitions.h"
 
@@ -157,6 +158,16 @@ amiberry_settings_status put_mount(uae_prefs& p, int index, const char* value)
 	uaedev_config_info ci{};
 	if (!value || !cfgfile_parse_mount_value(&p, value, &ci))
 		return AMIBERRY_SETTINGS_INVALID_VALUE;
+	// The name the entry will have (add_filesys_config() shortens and
+	// cleans it only after its own duplicate check), compared without
+	// case as AmigaDOS compares device names.
+	validatedevicename(ci.devname, nullptr);
+	if (ci.devname[0]) {
+		for (int i = 0; i < p.mountitems && i < MOUNT_CONFIG_SIZE; i++) {
+			if (i != index && !_tcsicmp(p.mountconfig[i].ci.devname, ci.devname))
+				return AMIBERRY_SETTINGS_INVALID_VALUE;
+		}
+	}
 	uae_prefs* scratch = allocate_copy(p);
 	if (!scratch)
 		return AMIBERRY_SETTINGS_UNAVAILABLE;

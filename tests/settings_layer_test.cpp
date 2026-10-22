@@ -239,6 +239,12 @@ bool cfgfile_mount_value(uae_prefs* p, int index, TCHAR* out, size_t size)
 	std::snprintf(out, size, "dir,rw,%s:%s", p->mountconfig[index].ci.devname, p->mountconfig[index].ci.rootdir);
 	return true;
 }
+TCHAR* validatedevicename(TCHAR* s, const TCHAR*)
+{
+	if (std::strlen(s) > 30)
+		s[30] = 0; // the core's striplength(s, 30)
+	return s;
+}
 bool cfgfile_mount_entry_fits(uae_prefs* p, int index)
 {
 	return std::strlen(p->mountconfig[index].ci.rootdir) < stub_mount_line_max;
@@ -2349,6 +2355,13 @@ void check_mount_list()
 	// Refused like the panel refuses them: a device name in use, a value
 	// that is no entry, an entry too long for a configuration line.
 	CHECK(amiberry_settings_mount_add(session, "dir,rw,DH1:/other") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	// Device names compare as AmigaDOS compares them: without case, and as
+	// the name the entry gets (shortened to 30 characters).
+	CHECK(amiberry_settings_mount_add(session, "dir,rw,dh1:/other") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	const std::string long_name(30, 'L');
+	CHECK(amiberry_settings_mount_add(session, ("dir,rw," + long_name + "A:/a").c_str()) == AMIBERRY_SETTINGS_OK);
+	CHECK(amiberry_settings_mount_add(session, ("dir,rw," + long_name + "B:/b").c_str()) == AMIBERRY_SETTINGS_INVALID_VALUE);
+	CHECK(amiberry_settings_mount_remove(session, 3) == AMIBERRY_SETTINGS_OK);
 	CHECK(amiberry_settings_mount_add(session, "bogus") == AMIBERRY_SETTINGS_INVALID_VALUE);
 	CHECK(amiberry_settings_mount_add(session, nullptr) == AMIBERRY_SETTINGS_INVALID_VALUE);
 	CHECK(amiberry_settings_mount_add(session,
