@@ -163,45 +163,77 @@ struct ChoiceControl: View {
 	}
 }
 
-/// An integer or real option. Typed text is stored as soon as it reads as
-/// a number in range, so nothing typed is lost when the window closes.
+/// An integer or real option. Typed text is stored while it reads as a
+/// number in range, so nothing typed is lost when the window closes; text
+/// that does not puts back the value the field started with, and shows why.
 struct NumberControl: View {
 	let descriptor: SettingDescriptor
 	let store: SettingsStore
 	@State private var draft = ""
+	@State private var valueBeforeEditing: String?
+	@FocusState private var editing: Bool
 
 	var body: some View {
 		let range = store.range(for: descriptor.id) ?? descriptor.range ?? 0...0
 		let current = Double(store.value(of: descriptor.id) ?? "") ?? range.lowerBound
-		LabeledContent(descriptor.label) {
-			HStack(spacing: 6) {
-				TextField(descriptor.label, text: $draft)
+		let invalid = number(draft, in: range) == nil
+		VStack(alignment: .trailing, spacing: 2) {
+			LabeledContent(descriptor.label) {
+				HStack(spacing: 6) {
+					TextField(descriptor.label, text: $draft)
+						.labelsHidden()
+						.multilineTextAlignment(.trailing)
+						.frame(width: 90)
+						.focused($editing)
+						.foregroundStyle(invalid ? Color.red : Color.primary)
+					Stepper(
+						descriptor.label,
+						value: Binding(get: { current }, set: { save(min(max($0, range.lowerBound), range.upperBound)) }),
+						in: range, step: max(descriptor.step ?? 1, 0.0001)
+					)
 					.labelsHidden()
-					.multilineTextAlignment(.trailing)
-					.frame(width: 90)
-				Stepper(
-					descriptor.label,
-					value: Binding(get: { current }, set: { save(min(max($0, range.lowerBound), range.upperBound)) }),
-					in: range, step: max(descriptor.step ?? 1, 0.0001)
-				)
-				.labelsHidden()
+				}
+			}
+			if invalid {
+				Text("Enter a number from \(format(range.lowerBound)) to \(format(range.upperBound)).")
+					.font(.caption).foregroundStyle(.red)
 			}
 		}
 		.onAppear { draft = store.value(of: descriptor.id) ?? "" }
 		.onChange(of: store.revision) {
 			let stored = store.value(of: descriptor.id) ?? ""
-			if Double(draft) != Double(stored) {
+			if !editing, Double(draft) != Double(stored) {
 				draft = stored
 			}
 		}
+		.onChange(of: editing) {
+			if editing {
+				valueBeforeEditing = store.value(of: descriptor.id)
+			} else {
+				draft = store.value(of: descriptor.id) ?? ""
+				valueBeforeEditing = nil
+			}
+		}
 		.onChange(of: draft) {
-			guard let number = Double(draft.trimmingCharacters(in: .whitespaces)), range.contains(number) else { return }
-			save(number)
+			if let value = number(draft, in: range) {
+				save(value)
+			} else if let original = valueBeforeEditing, original != store.value(of: descriptor.id) {
+				store.set(original, for: descriptor.id)
+			}
 		}
 	}
 
+	private func number(_ text: String, in range: ClosedRange<Double>) -> Double? {
+		guard let value = Double(text.trimmingCharacters(in: .whitespaces)), range.contains(value) else { return nil }
+		return value
+	}
+
+	private func format(_ number: Double) -> String {
+		descriptor.kind == .integer ? String(Int(number.rounded())) : String(number)
+	}
+
 	private func save(_ number: Double) {
-		let text = descriptor.kind == .integer ? String(Int(number.rounded())) : String(number)
+		let text = format(number)
 		guard Double(text) != Double(store.value(of: descriptor.id) ?? "") else { return }
 		store.set(text, for: descriptor.id)
 	}

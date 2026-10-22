@@ -184,8 +184,17 @@ std::vector<std::string> deferred_messages;
 
 void native_host_message_deferred(const char* message)
 {
+	// A message repeated while the window is closed (a failing write
+	// reports every attempt) shows once; at most a few distinct ones wait.
+	constexpr size_t limit = 8;
+	const std::string text = message ? message : "";
 	std::lock_guard<std::mutex> lock(deferred_mutex);
-	deferred_messages.emplace_back(message ? message : "");
+	for (const auto& waiting : deferred_messages) {
+		if (waiting == text)
+			return;
+	}
+	if (deferred_messages.size() < limit)
+		deferred_messages.push_back(text);
 }
 
 void native_host_show_deferred_messages()
