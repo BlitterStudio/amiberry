@@ -33,6 +33,7 @@ BEHAVIORAL_TESTS=(
 	"test_settings_presets.sh"
 	"test_settings_apply.sh"
 	"test_settings_schema.sh"
+	"test_native_ui_bridge.sh"
 )
 
 behavioral_only=0

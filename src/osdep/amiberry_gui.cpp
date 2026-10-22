@@ -36,6 +36,7 @@
 #include "expansion_display_name.h"
 #include "amiberry_reset_chipset_prefs.h"
 #include "amiberry_actions_host.h"
+#include "native_ui_tests.h"
 #include "irenderer.h"
 #ifdef ARCADIA
 #include "arcadia.h"
@@ -849,6 +850,15 @@ int gui_init()
 	auto ret = 0;
 
 	read_rom_list(false);
+#ifdef AMIBERRY_NATIVE_UI_TESTS
+	// The bridge tests run where a settings UI would, then the emulator
+	// quits without starting emulation.
+	if (native_ui_tests_requested()) {
+		native_ui_tests_run();
+		quit_program = UAE_QUIT;
+		return -2;
+	}
+#endif
 
 	prefs_to_gui();
 	run_gui();

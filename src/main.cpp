@@ -1101,8 +1101,12 @@ void usage()
 	std::cout << " --dump-config              Print the resolved configuration (defaults, config file and" << '\n';
 	std::cout << "                            command line options, after fixup_prefs) and exit." << '\n';
 	std::cout << " --settings-schema[=<file>] Print the shared settings layer's options (only the IDs" << '\n';
-	std::cout << "                            listed in <file>), presets and CPU/chipset resolutions" << '\n';
-	std::cout << "                            as JSON and exit." << '\n';
+	std::cout << "                            listed in <file>), presets and resolution tables as" << '\n';
+	std::cout << "                            JSON and exit." << '\n';
+#ifdef AMIBERRY_NATIVE_UI_TESTS
+	std::cout << " --native-ui-tests=<bundle> Run the native UI bridge tests (an XCTest bundle) where" << '\n';
+	std::cout << "                            the GUI would open, and exit with their result." << '\n';
+#endif
 	std::cout << " --download-whdboot         Download/update WHDBooter files and exit." << '\n';
 	std::cout << " -f <file>                  Load a configuration file." << '\n';
 	std::cout << " --config <file>            " << '\n';
@@ -1676,6 +1680,12 @@ static void parse_cmdline (int argc, TCHAR **argv)
 		{
 			// already handled during the early platform startup scan
 		}
+#ifdef AMIBERRY_NATIVE_UI_TESTS
+		else if (_tcsncmp(argv[i], _T("--native-ui-tests="), 18) == 0)
+		{
+			// handled in amiberry_main(); the tests run in gui_init()
+		}
+#endif
 		else if (_tcscmp(argv[i], _T("-s")) == 0)
 		{
 			if (i + 1 == argc) {
