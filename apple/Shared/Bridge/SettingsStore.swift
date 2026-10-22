@@ -34,6 +34,9 @@ public final class SettingsStore {
 	@ObservationIgnored private var baselineValues: [String: String] = [:]
 	@ObservationIgnored private var baselineMounts: [String] = []
 	@ObservationIgnored private var presetApplied = false
+	/// Counts the commits that changed the pending configuration, so an
+	/// apply only clears `pendingApply` when nothing was committed after it.
+	@ObservationIgnored private var commitGeneration = 0
 
 	/// A store over a new session on the pending configuration.
 	public init() throws {
@@ -103,6 +106,7 @@ public final class SettingsStore {
 		let result = try session.commit()
 		if result.changed {
 			pendingApply = max(pendingApply ?? result.applyClass, result.applyClass)
+			commitGeneration += 1
 		}
 		reload()
 		markClean()
@@ -112,13 +116,15 @@ public final class SettingsStore {
 	/// Commits, then brings the running emulation up to every committed
 	/// change with the strongest apply class among them, and returns that
 	/// class (nil when nothing needed applying). After a failure or a
-	/// cancellation the changes stay pending, and the next call applies them.
+	/// cancellation the changes stay pending, and the next call applies
+	/// them; so do changes committed while this call waited.
 	@discardableResult
 	public func apply() async throws -> ApplyClass? {
 		try commit()
 		guard let apply = pendingApply else { return nil }
+		let generation = commitGeneration
 		try await EmulatorActions.perform(.applySettings(apply))
-		if pendingApply == apply {
+		if commitGeneration == generation {
 			pendingApply = nil
 		}
 		return apply

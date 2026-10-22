@@ -246,6 +246,26 @@ final class SettingsStoreTests: XCTestCase {
 		XCTAssertEqual(applied, .live)
 		XCTAssertNil(store.pendingApply)
 	}
+
+	func testChangesCommittedDuringAnApplyStayPending() async throws {
+		let store = try SettingsStore()
+		let current = try XCTUnwrap(store.value(of: "immediate_blits"))
+		let other = current == "true" ? "false" : "true"
+		XCTAssertTrue(store.set(other, for: "immediate_blits"))
+		// Nothing runs the action until the pump starts.
+		let first = Task { try await store.apply() }
+		try await Task.sleep(for: .milliseconds(20))
+		XCTAssertTrue(store.set(current, for: "immediate_blits"))
+		try store.commit()
+
+		let pump = ActionPump()
+		pump.start(interval: 0.005)
+		defer { pump.stop() }
+		_ = try await first.value
+		XCTAssertEqual(store.pendingApply, .live, "the later commit is not cleared by the earlier apply")
+		_ = try await store.apply()
+		XCTAssertNil(store.pendingApply)
+	}
 }
 
 @MainActor
