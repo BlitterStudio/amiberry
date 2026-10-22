@@ -194,6 +194,62 @@ int built_in_prefs_preview(uae_prefs* p, int model, int config, int compa)
 	return built_in_prefs(p, model, config, compa, 0);
 }
 
+// Mount list stand-ins: the harness cannot link cfgfile.cpp, so entries
+// use a reduced uaehfN spelling, "dir,rw,DEVICE:PATH", and the adder keeps
+// the hard drive panel's device-name and capacity checks. The session logic
+// around them (copies, placement, merging, apply class) is the layer's own;
+// the IPC test drives the real parser and writer.
+static size_t stub_mount_line_max = 200;
+bool cfgfile_parse_mount_value(uae_prefs*, const TCHAR* value, uaedev_config_info* ci)
+{
+	const char* prefix = "dir,rw,";
+	if (!value || std::strncmp(value, prefix, std::strlen(prefix)) != 0)
+		return false;
+	const char* device = value + std::strlen(prefix);
+	const char* colon = std::strchr(device, ':');
+	if (!colon || colon == device || static_cast<size_t>(colon - device) >= sizeof ci->devname
+		|| std::strlen(colon + 1) >= sizeof ci->rootdir)
+		return false;
+	std::memset(ci, 0, sizeof *ci);
+	ci->type = UAEDEV_DIR;
+	std::memcpy(ci->devname, device, static_cast<size_t>(colon - device));
+	std::strcpy(ci->rootdir, colon + 1);
+	return true;
+}
+uaedev_config_data* add_filesys_config(uae_prefs* p, int index, uaedev_config_info* ci)
+{
+	if (index >= 0)
+		return nullptr; // the layer only appends
+	for (int i = 0; i < p->mountitems; i++) {
+		if (!std::strcmp(p->mountconfig[i].ci.devname, ci->devname))
+			return nullptr;
+	}
+	if (p->mountitems >= MOUNT_CONFIG_SIZE)
+		return nullptr;
+	uaedev_config_data* uci = &p->mountconfig[p->mountitems++];
+	uci->configoffset = -1;
+	uci->unitnum = -1;
+	std::memcpy(&uci->ci, ci, sizeof *ci);
+	return uci;
+}
+bool cfgfile_mount_value(uae_prefs* p, int index, TCHAR* out, size_t size)
+{
+	if (index < 0 || index >= p->mountitems)
+		return false;
+	std::snprintf(out, size, "dir,rw,%s:%s", p->mountconfig[index].ci.devname, p->mountconfig[index].ci.rootdir);
+	return true;
+}
+TCHAR* validatedevicename(TCHAR* s, const TCHAR*)
+{
+	if (std::strlen(s) > 30)
+		s[30] = 0; // the core's striplength(s, 30)
+	return s;
+}
+bool cfgfile_mount_entry_fits(uae_prefs* p, int index)
+{
+	return std::strlen(p->mountconfig[index].ci.rootdir) < stub_mount_line_max;
+}
+
 namespace settings = amiberry_settings;
 
 namespace {
@@ -2272,6 +2328,93 @@ void check_storage_domain()
 	CHECK(available(p, "filesys_custom_uaefsdb", running));
 }
 
+// The mount list: edits stay in the session, are checked like the hard
+// drive panel's, and commit as a whole list that needs a reset.
+void check_mount_list()
+{
+	reset_prefs(changed_prefs);
+	changed_prefs.mountitems = 0;
+	// A drive the configuration already has, attached to a running unit,
+	// with injected icons (a filesystem_extra the spelling does not carry).
+	cfgfile_parse_mount_value(&changed_prefs, "dir,rw,DH0:/work", &changed_prefs.mountconfig[0].ci);
+	changed_prefs.mountconfig[0].ci.inject_icons = true;
+	changed_prefs.mountconfig[0].configoffset = 7;
+	changed_prefs.mountconfig[0].unitnum = 3;
+	changed_prefs.mountitems = 1;
+
+	amiberry_settings_session* session = amiberry_settings_session_open();
+	CHECK(session && amiberry_settings_mount_count(session) == 1);
+	char value[64];
+	CHECK(amiberry_settings_mount_get(session, 0, value, sizeof value) == AMIBERRY_SETTINGS_OK
+		&& !std::strcmp(value, "dir,rw,DH0:/work"));
+	CHECK(amiberry_settings_mount_get(session, 0, value, 4) == AMIBERRY_SETTINGS_BUFFER_TOO_SMALL);
+	CHECK(amiberry_settings_mount_get(session, 1, value, sizeof value) == AMIBERRY_SETTINGS_UNKNOWN_ID);
+
+	CHECK(amiberry_settings_mount_add(session, "dir,rw,DH1:/games") == AMIBERRY_SETTINGS_OK);
+	CHECK(amiberry_settings_mount_add(session, "dir,rw,DH2:/music") == AMIBERRY_SETTINGS_OK);
+	// Refused like the panel refuses them: a device name in use, a value
+	// that is no entry, an entry too long for a configuration line.
+	CHECK(amiberry_settings_mount_add(session, "dir,rw,DH1:/other") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	// Device names compare as AmigaDOS compares them: without case, and as
+	// the name the entry gets (shortened to 30 characters).
+	CHECK(amiberry_settings_mount_add(session, "dir,rw,dh1:/other") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	const std::string long_name(30, 'L');
+	CHECK(amiberry_settings_mount_add(session, ("dir,rw," + long_name + "A:/a").c_str()) == AMIBERRY_SETTINGS_OK);
+	CHECK(amiberry_settings_mount_add(session, ("dir,rw," + long_name + "B:/b").c_str()) == AMIBERRY_SETTINGS_INVALID_VALUE);
+	CHECK(amiberry_settings_mount_remove(session, 3) == AMIBERRY_SETTINGS_OK);
+	CHECK(amiberry_settings_mount_add(session, "bogus") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	CHECK(amiberry_settings_mount_add(session, nullptr) == AMIBERRY_SETTINGS_INVALID_VALUE);
+	CHECK(amiberry_settings_mount_add(session,
+		("dir,rw,DH3:/" + std::string(stub_mount_line_max, 'x')).c_str()) == AMIBERRY_SETTINGS_INVALID_VALUE);
+	CHECK(amiberry_settings_mount_count(session) == 3);
+
+	// Replacing keeps the entry's place, its running unit and what the
+	// spelling does not carry; its own device name stays usable, another
+	// entry's does not.
+	CHECK(amiberry_settings_mount_replace(session, 0, "dir,rw,DH0:/work2") == AMIBERRY_SETTINGS_OK);
+	CHECK(amiberry_settings_mount_replace(session, 0, "dir,rw,DH2:/clash") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	CHECK(amiberry_settings_mount_replace(session, 3, "dir,rw,DH9:/x") == AMIBERRY_SETTINGS_UNKNOWN_ID);
+	CHECK(amiberry_settings_mount_get(session, 0, value, sizeof value) == AMIBERRY_SETTINGS_OK
+		&& !std::strcmp(value, "dir,rw,DH0:/work2"));
+
+	// Removing moves the later entries up.
+	CHECK(amiberry_settings_mount_remove(session, 1) == AMIBERRY_SETTINGS_OK);
+	CHECK(amiberry_settings_mount_remove(session, 2) == AMIBERRY_SETTINGS_UNKNOWN_ID);
+	CHECK(amiberry_settings_mount_count(session) == 2);
+	CHECK(amiberry_settings_mount_get(session, 1, value, sizeof value) == AMIBERRY_SETTINGS_OK
+		&& !std::strcmp(value, "dir,rw,DH2:/music"));
+
+	// Nothing reaches the pending configuration before commit, which stores
+	// the whole list and asks for a reset.
+	CHECK(changed_prefs.mountitems == 1 && !std::strcmp(changed_prefs.mountconfig[0].ci.rootdir, "/work"));
+	bool changed = false;
+	CHECK(amiberry_settings_commit(session, &changed) == AMIBERRY_APPLY_RESET && changed);
+	CHECK(changed_prefs.mountitems == 2);
+	CHECK(!std::strcmp(changed_prefs.mountconfig[0].ci.rootdir, "/work2"));
+	CHECK(changed_prefs.mountconfig[0].ci.inject_icons);
+	CHECK(changed_prefs.mountconfig[0].configoffset == 7 && changed_prefs.mountconfig[0].unitnum == 3);
+	CHECK(!std::strcmp(changed_prefs.mountconfig[1].ci.devname, "DH2"));
+
+	// A session that leaves the list alone keeps what the panel changed
+	// since, and its other changes do not ask for a reset.
+	changed_prefs.mountitems = 1;
+	CHECK(amiberry_settings_set(session, "cd_speed", "0") == AMIBERRY_SETTINGS_OK);
+	CHECK(amiberry_settings_commit(session, &changed) != AMIBERRY_APPLY_RESET && changed);
+	CHECK(changed_prefs.mountitems == 1);
+	CHECK(amiberry_settings_mount_count(session) == 1);
+
+	// The list holds AMIBERRY_SETTINGS_MOUNT_MAX entries.
+	for (int i = 1; i < AMIBERRY_SETTINGS_MOUNT_MAX; i++)
+		CHECK(amiberry_settings_mount_add(session, ("dir,rw,X" + std::to_string(i) + ":/x").c_str()) == AMIBERRY_SETTINGS_OK);
+	CHECK(amiberry_settings_mount_count(session) == AMIBERRY_SETTINGS_MOUNT_MAX);
+	CHECK(amiberry_settings_mount_add(session, "dir,rw,FULL:/x") == AMIBERRY_SETTINGS_UNAVAILABLE);
+	CHECK(amiberry_settings_mount_remove(session, AMIBERRY_SETTINGS_MOUNT_MAX - 1) == AMIBERRY_SETTINGS_OK);
+	CHECK(amiberry_settings_mount_count(session) == AMIBERRY_SETTINGS_MOUNT_MAX - 1);
+	CHECK(amiberry_settings_mount_count(nullptr) == 0);
+	amiberry_settings_session_close(session);
+	changed_prefs.mountitems = 0;
+}
+
 } // namespace
 
 // === Runtime action queue (settings/settings_actions_queue.h) ===
@@ -2430,6 +2573,7 @@ int main(int argc, char** argv)
 	check_onscreen_domain();
 	check_floppy_domain();
 	check_storage_domain();
+	check_mount_list();
 	if (failures) {
 		std::fprintf(stderr, "settings layer: %d check(s) failed\n", failures);
 		return 1;

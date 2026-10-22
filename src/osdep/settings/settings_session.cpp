@@ -4,6 +4,7 @@
 #include "sysdeps.h"
 #include "options.h"
 #include "target.h"
+#include "autoconf.h"
 
 #include "settings_definitions.h"
 
@@ -132,6 +133,82 @@ bool same_value(const definition& d, const uae_prefs& a, const uae_prefs& b)
 {
 	// Full length, so two paths that share a prefix still differ.
 	return amiberry_settings::values_equal(d, a, b);
+}
+
+// Removes mount entry index from p without touching the running emulation
+// (kill_filesys_unitconfig() also detaches the drive): the session only
+// edits a configuration.
+void remove_mount(uae_prefs& p, int index)
+{
+	const int last = p.mountitems - 1;
+	std::memmove(static_cast<void*>(&p.mountconfig[index]), static_cast<const void*>(&p.mountconfig[index + 1]),
+		static_cast<size_t>(last - index) * sizeof p.mountconfig[0]);
+	std::memset(static_cast<void*>(&p.mountconfig[last]), 0, sizeof p.mountconfig[last]);
+	p.mountconfig[last].configoffset = -1;
+	p.mountconfig[last].unitnum = -1;
+	p.mountitems = last;
+}
+
+// Adds value to p the way the hard drive panel adds an entry
+// (add_filesys_config(), which refuses a device name in use or a
+// controller without a free unit), at the end or, when index is not
+// negative, in place of entry index. Leaves p alone unless it returns OK.
+amiberry_settings_status put_mount(uae_prefs& p, int index, const char* value)
+{
+	uaedev_config_info ci{};
+	if (!value || !cfgfile_parse_mount_value(&p, value, &ci))
+		return AMIBERRY_SETTINGS_INVALID_VALUE;
+	// The name the entry will have (add_filesys_config() shortens and
+	// cleans it only after its own duplicate check), compared without
+	// case as AmigaDOS compares device names.
+	validatedevicename(ci.devname, nullptr);
+	if (ci.devname[0]) {
+		for (int i = 0; i < p.mountitems && i < MOUNT_CONFIG_SIZE; i++) {
+			if (i != index && !_tcsicmp(p.mountconfig[i].ci.devname, ci.devname))
+				return AMIBERRY_SETTINGS_INVALID_VALUE;
+		}
+	}
+	uae_prefs* scratch = allocate_copy(p);
+	if (!scratch)
+		return AMIBERRY_SETTINGS_UNAVAILABLE;
+	uaedev_config_data replaced{};
+	if (index >= 0) {
+		replaced = scratch->mountconfig[index];
+		// What a uaehfN value does not carry stays with the entry.
+		if (ci.type == UAEDEV_DIR && replaced.ci.type == UAEDEV_DIR)
+			ci.inject_icons = replaced.ci.inject_icons;
+		remove_mount(*scratch, index);
+	}
+	if (!add_filesys_config(scratch, -1, &ci)) {
+		std::free(scratch);
+		return AMIBERRY_SETTINGS_INVALID_VALUE;
+	}
+	const int added = scratch->mountitems - 1;
+	if (index >= 0) {
+		// Back in the replaced entry's place, attached to the same unit.
+		uaedev_config_data entry = scratch->mountconfig[added];
+		std::memmove(static_cast<void*>(&scratch->mountconfig[index + 1]),
+			static_cast<const void*>(&scratch->mountconfig[index]),
+			static_cast<size_t>(added - index) * sizeof scratch->mountconfig[0]);
+		entry.configoffset = replaced.configoffset;
+		entry.unitnum = replaced.unitnum;
+		scratch->mountconfig[index] = entry;
+	}
+	// An entry whose line the loader would cut short would not survive a
+	// save and a load.
+	if (!cfgfile_mount_entry_fits(scratch, index >= 0 ? index : added)) {
+		std::free(scratch);
+		return AMIBERRY_SETTINGS_INVALID_VALUE;
+	}
+	copy_into(p, *scratch);
+	std::free(scratch);
+	return AMIBERRY_SETTINGS_OK;
+}
+
+bool valid_mount_index(const amiberry_settings_session* session, size_t index)
+{
+	return session && index < static_cast<size_t>(session->working->mountitems)
+		&& index < MOUNT_CONFIG_SIZE;
 }
 
 } // namespace
@@ -333,6 +410,9 @@ amiberry_apply_class amiberry_settings_commit(amiberry_settings_session* session
 			// A preset is a machine change, like Quickstart's.
 			if (session->preset_model >= 0 && AMIBERRY_APPLY_RESET > strongest)
 				strongest = AMIBERRY_APPLY_RESET;
+			// Drives are attached when the emulation resets.
+			if (!amiberry_settings::same_mount_list(changed_prefs, *resolved) && AMIBERRY_APPLY_RESET > strongest)
+				strongest = AMIBERRY_APPLY_RESET;
 			copy_into(changed_prefs, *resolved);
 		}
 		copy_into(*session->working, *resolved);
@@ -344,6 +424,57 @@ amiberry_apply_class amiberry_settings_commit(amiberry_settings_session* session
 	if (changed)
 		*changed = any;
 	return strongest;
+}
+
+size_t amiberry_settings_mount_count(const amiberry_settings_session* session)
+{
+	return session ? static_cast<size_t>(session->working->mountitems) : 0;
+}
+
+amiberry_settings_status amiberry_settings_mount_get(const amiberry_settings_session* session,
+	size_t index, char* buffer, size_t size)
+{
+	return amiberry_settings::no_throw(AMIBERRY_SETTINGS_UNKNOWN_ID, [=] {
+		if (!valid_mount_index(session, index))
+			return AMIBERRY_SETTINGS_UNKNOWN_ID;
+		TCHAR value[CONFIG_BLEN];
+		if (!cfgfile_mount_value(session->working, static_cast<int>(index), value, sizeof value / sizeof value[0]))
+			return AMIBERRY_SETTINGS_UNKNOWN_ID;
+		const size_t length = std::strlen(value);
+		if (!buffer || length >= size)
+			return AMIBERRY_SETTINGS_BUFFER_TOO_SMALL;
+		std::memcpy(buffer, value, length + 1);
+		return AMIBERRY_SETTINGS_OK;
+	});
+}
+
+amiberry_settings_status amiberry_settings_mount_add(amiberry_settings_session* session, const char* value)
+{
+	return amiberry_settings::no_throw(AMIBERRY_SETTINGS_UNAVAILABLE, [=] {
+		if (!session)
+			return AMIBERRY_SETTINGS_UNKNOWN_ID;
+		if (session->working->mountitems >= MOUNT_CONFIG_SIZE)
+			return AMIBERRY_SETTINGS_UNAVAILABLE;
+		return put_mount(*session->working, -1, value);
+	});
+}
+
+amiberry_settings_status amiberry_settings_mount_replace(amiberry_settings_session* session,
+	size_t index, const char* value)
+{
+	return amiberry_settings::no_throw(AMIBERRY_SETTINGS_UNAVAILABLE, [=] {
+		if (!valid_mount_index(session, index))
+			return AMIBERRY_SETTINGS_UNKNOWN_ID;
+		return put_mount(*session->working, static_cast<int>(index), value);
+	});
+}
+
+amiberry_settings_status amiberry_settings_mount_remove(amiberry_settings_session* session, size_t index)
+{
+	if (!valid_mount_index(session, index))
+		return AMIBERRY_SETTINGS_UNKNOWN_ID;
+	remove_mount(*session->working, static_cast<int>(index));
+	return AMIBERRY_SETTINGS_OK;
 }
 
 // The preset is applied to the session's copy for get/is_available, and

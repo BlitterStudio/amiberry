@@ -64,6 +64,10 @@ constexpr char const* CMD_SETTINGS_RESET_SESSION = "SETTINGS_RESET_SESSION";
 constexpr char const* CMD_LIST_MEDIA = "LIST_MEDIA";
 constexpr char const* CMD_GET_FOLDER = "GET_FOLDER";
 constexpr char const* CMD_SET_FOLDER = "SET_FOLDER";
+constexpr char const* CMD_SETTINGS_MOUNTS = "SETTINGS_MOUNTS";
+constexpr char const* CMD_SETTINGS_MOUNT_ADD = "SETTINGS_MOUNT_ADD";
+constexpr char const* CMD_SETTINGS_MOUNT_REPLACE = "SETTINGS_MOUNT_REPLACE";
+constexpr char const* CMD_SETTINGS_MOUNT_REMOVE = "SETTINGS_MOUNT_REMOVE";
 constexpr char const* CMD_HELP = "HELP";
 
 // Joystick, Quicksave, LED status, etc.

@@ -194,6 +194,10 @@ amiberry_settings_status check_preset(const char* id, int config, int compatibil
 // Whether a and b hold the same value for d (full length, for paths).
 bool values_equal(const definition& d, const uae_prefs& a, const uae_prefs& b);
 
+// Whether a and b mount the same drives: the same entries, in the same
+// order (the storage domain commits the list as a whole).
+bool same_mount_list(const uae_prefs& a, const uae_prefs& b);
+
 size_t domain_count();
 const domain& domain_at(size_t index);
 

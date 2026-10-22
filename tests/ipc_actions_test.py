@@ -198,6 +198,71 @@ def main():
               control.request("SETTINGS_GET\tdefinitely_not_an_option")
               == "ERROR\tUnknown option: definitely_not_an_option")
 
+        # The mount list: session edits through the real uaehfN parser and
+        # writer, committed as a whole list that needs a reset.
+        base = os.path.realpath(work)
+        drive = os.path.join(base, "drive dir")
+        os.makedirs(drive)
+        hdf = os.path.join(base, "disk,a.hdf")
+        with open(hdf, "wb") as f:
+            f.write(bytes(512 * 64))
+        check("SETTINGS_MOUNTS starts empty", control.request("SETTINGS_MOUNTS") == "OK\tnone")
+        check("SETTINGS_MOUNT_ADD a directory",
+              control.request(f"SETTINGS_MOUNT_ADD\tdir,rw,DH0:Work:{drive},0") == "OK")
+        check("SETTINGS_MOUNT_ADD a hardfile with a comma in its name",
+              control.request(f'SETTINGS_MOUNT_ADD\thdf,rw,DH1:"{hdf}",32,1,2,512,0,,uae0') == "OK")
+        reply = control.request("SETTINGS_MOUNTS")
+        # The second UAE unit moves to the next free unit number, as the
+        # hard drive panel numbers it.
+        check("SETTINGS_MOUNTS lists both in the file's spelling",
+              reply == f'OK\tdir,rw,DH0:Work:{drive},0\thdf,rw,DH1:"{hdf}",32,1,2,512,0,,uae1', reply)
+        reply = control.request(f"SETTINGS_MOUNT_ADD\tdir,rw,DH0:Other:{drive},0")
+        check("SETTINGS_MOUNT_ADD refuses a device name in use", reply.startswith("ERROR\tInvalid mount entry"), reply)
+        reply = control.request("SETTINGS_MOUNT_ADD\tnot a mount")
+        check("SETTINGS_MOUNT_ADD refuses a malformed entry", reply.startswith("ERROR\tInvalid mount entry"), reply)
+        reply = control.request("SETTINGS_MOUNT_ADD\tdir,rw,DH4")
+        check("SETTINGS_MOUNT_ADD refuses an entry missing its fields", reply.startswith("ERROR\tInvalid mount entry"), reply)
+        reply = control.request("SETTINGS_MOUNT_ADD\tcd8,ro,:,0,0,0,2048,0,,scsi2_a4091")
+        check("SETTINGS_MOUNT_ADD refuses a CD unit past the last", reply.startswith("ERROR\tInvalid mount entry"), reply)
+        reply = control.request(f"SETTINGS_MOUNT_ADD\tdir,rw,DH4:Bad\rVolume:{drive},0")
+        check("SETTINGS_MOUNT_ADD refuses a line break in a field", reply.startswith("ERROR\tInvalid mount entry"), reply)
+        # An unknown controller name reads as the UAE controller, as the
+        # loader reads it; a long one is no longer copied past its buffer.
+        reply = control.request(f'SETTINGS_MOUNT_ADD\thdf,rw,DH4:"{hdf}",32,1,2,512,0,,' + "u" * 2000)
+        check("SETTINGS_MOUNT_ADD reads a long unknown controller as UAE", reply == "OK", reply)
+        reply = control.request("SETTINGS_MOUNTS")
+        check("the long controller entry is stored as a UAE unit",
+              reply.split("\t")[-1] == f'hdf,rw,DH4:"{hdf}",32,1,2,512,0,,uae2', reply)
+        check("SETTINGS_MOUNT_REMOVE it again", control.request("SETTINGS_MOUNT_REMOVE\t2") == "OK")
+        reply = control.request("SETTINGS_MOUNT_ADD\tdir,rw,DH5:Long:/" + "x" * 3000 + ",0")
+        check("SETTINGS_MOUNT_ADD refuses an entry too long for its fields", reply.startswith("ERROR"), reply)
+        if sys.platform == "darwin":
+            # Each field fits, but the value is longer than the MAX_DPATH
+            # (PATH_MAX, 1024) buffer the loader reads a value into, so the
+            # drive would vanish after a save and a load.
+            value = 'hdf,rw,DH5:"/' + "y" * 700 + '",32,1,2,512,0,"/' + "z" * 400 + '",uae0'
+            reply = control.request("SETTINGS_MOUNT_ADD\t" + value)
+            check("SETTINGS_MOUNT_ADD refuses an entry the loader would empty", reply.startswith("ERROR"), reply)
+        check("SETTINGS_MOUNT_REPLACE",
+              control.request(f"SETTINGS_MOUNT_REPLACE\t0\tdir,ro,DH0:Work2:{drive},5") == "OK")
+        reply = control.request("SETTINGS_MOUNTS")
+        check("SETTINGS_MOUNT_REPLACE keeps the entry's place",
+              reply.startswith(f"OK\tdir,ro,DH0:Work2:{drive},5\thdf,"), reply)
+        check("SETTINGS_MOUNT_REMOVE", control.request("SETTINGS_MOUNT_REMOVE\t1") == "OK")
+        reply = control.request("SETTINGS_MOUNT_REMOVE\t9")
+        check("SETTINGS_MOUNT_REMOVE refuses a missing entry", reply == "ERROR\tNo mount entry 9", reply)
+        reply = control.request("SETTINGS_MOUNT_REMOVE\t-1")
+        check("SETTINGS_MOUNT_REMOVE refuses a malformed index", reply.startswith("ERROR\tUsage"), reply)
+        reply = control.request("SETTINGS_COMMIT")
+        check("SETTINGS_COMMIT stores the list and asks for a reset",
+              reply == "OK\tchanged=true\tapply=reset", reply)
+        reply = control.request("SETTINGS_MOUNTS")
+        check("the committed list is what a new session sees",
+              reply == f"OK\tdir,ro,DH0:Work2:{drive},5", reply)
+        check("SETTINGS_MOUNT_REMOVE the last entry", control.request("SETTINGS_MOUNT_REMOVE\t0") == "OK")
+        check("SETTINGS_COMMIT the empty list",
+              control.request("SETTINGS_COMMIT") == "OK\tchanged=true\tapply=reset")
+
         # Status and settings must not serve data from before an earlier
         # command in the same pass: LOAD_CONFIG changes the pending
         # configuration directly, and the next GET_STATUS and SETTINGS_GET

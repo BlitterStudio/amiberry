@@ -48,7 +48,7 @@
 extern "C" {
 #endif
 
-#define AMIBERRY_SETTINGS_API_VERSION 2
+#define AMIBERRY_SETTINGS_API_VERSION 3
 
 /* Large enough for every value a descriptor can produce, including the
    terminating NUL. */
@@ -227,6 +227,43 @@ AMIBERRY_SETTINGS_API bool amiberry_settings_preset_rom_installed(const char *id
    AMIBERRY_APPLY_RESET. */
 AMIBERRY_SETTINGS_API amiberry_settings_status amiberry_settings_preset_apply(
 	amiberry_settings_session *session, const char *id, int config, int compatibility);
+
+/*
+ * Mounted drives: directories, hardfiles, CD and tape units, in the order a
+ * configuration file lists them (at most AMIBERRY_SETTINGS_MOUNT_MAX). An
+ * entry is spelled as the value of its uaehfN line, for example
+ * "dir,rw,DH0:Work:/home/amiga/work,0" or
+ * "hdf,rw,DH1:/disks/system.hdf,32,1,2,512,0,,uae0"; get returns that
+ * spelling and add and replace take it. The edits stay in the session like
+ * every other change; commit reports a changed list as
+ * AMIBERRY_APPLY_RESET, as drives attach when the emulation resets.
+ */
+#define AMIBERRY_SETTINGS_MOUNT_MAX 50
+
+AMIBERRY_SETTINGS_API size_t amiberry_settings_mount_count(const amiberry_settings_session *session);
+/* UNKNOWN_ID for an index past the list. */
+AMIBERRY_SETTINGS_API amiberry_settings_status amiberry_settings_mount_get(
+	const amiberry_settings_session *session, size_t index, char *buffer, size_t size);
+/*
+ * Appends an entry, checked like the hard drive panel's: INVALID_VALUE for
+ * a value that is not an entry, a device name another entry uses, a
+ * controller without a free unit, a second CD with the same unit, or an
+ * entry too long for a configuration file line; UNAVAILABLE when the list
+ * is full.
+ */
+AMIBERRY_SETTINGS_API amiberry_settings_status amiberry_settings_mount_add(
+	amiberry_settings_session *session, const char *value);
+/*
+ * Replaces entry index, checked as add checks a new entry against the
+ * others. What a uaehfN value does not carry (a directory's injected
+ * icons) stays with the entry. UNKNOWN_ID for an index past the list.
+ */
+AMIBERRY_SETTINGS_API amiberry_settings_status amiberry_settings_mount_replace(
+	amiberry_settings_session *session, size_t index, const char *value);
+/* Removes entry index; the later entries move up. UNKNOWN_ID for an index
+   past the list. */
+AMIBERRY_SETTINGS_API amiberry_settings_status amiberry_settings_mount_remove(
+	amiberry_settings_session *session, size_t index);
 
 #ifdef __cplusplus
 }
