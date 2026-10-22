@@ -708,15 +708,17 @@ static bool apply_disk_selection(const int shortcut, uae_prefs* prefs, const std
 			gui_message("The state could not be saved to %s", path.c_str());
 			return false;
 		}
+		// The preview follows the saved state; an older thumbnail of the
+		// same name would show a state that is no longer there.
+		const auto filename = extract_filename(savestate_fname);
+		screenshot_filename = get_screenshot_path();
+		screenshot_filename += filename;
+		screenshot_filename = remove_file_extension(screenshot_filename);
+		screenshot_filename += ".png";
 		if (create_screenshot())
-		{
-			const auto filename = extract_filename(savestate_fname);
-			screenshot_filename = get_screenshot_path();
-			screenshot_filename += filename;
-			screenshot_filename = remove_file_extension(screenshot_filename);
-			screenshot_filename += ".png";
 			save_thumb(screenshot_filename);
-		}
+		else
+			std::remove(screenshot_filename.c_str());
 	}
 	else if (shortcut == 6)
 	{
