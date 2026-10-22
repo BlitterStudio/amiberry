@@ -16,3 +16,7 @@ unsigned long amiberry_actions_emulation_requests();
 // GUI held it is applied now, so emulation stays paused as the action
 // reported.
 void amiberry_actions_gui_closed();
+
+// Brings the active mount list up to the pending one, as the GUI does when
+// it closes: the core attaches drives from it at the next reset.
+void adopt_pending_mount_list();

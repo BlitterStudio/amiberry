@@ -95,10 +95,16 @@ void SDLRenderer::destroy_platform_renderer(AmigaMonitor* mon)
 		if (mon->gui_renderer == mon->amiga_renderer) {
 			// GUI is sharing this renderer - don't destroy
 		} else {
+			// The on-screen joystick's textures die with the renderer; it
+			// is set up again for the next one (gfx_window.cpp).
+			on_screen_joystick_quit();
 			SDL_DestroyRenderer(mon->amiga_renderer);
 			mon->amiga_renderer = nullptr;
 		}
 #else
+		// The on-screen joystick's textures die with the renderer; left
+		// pointing at them, its next set-up destroyed them a second time.
+		on_screen_joystick_quit();
 		SDL_DestroyRenderer(mon->amiga_renderer);
 		mon->amiga_renderer = nullptr;
 #endif

@@ -360,7 +360,7 @@ const char* const driver_constraint = "Needs a DrawBridge driver that supports i
 		get_floppy<n>, set_floppy<n>, drive_enabled<n>, nullptr, nullptr, nullptr, nullptr}, \
 	{CHOICE_OPTION("floppy" #n "type", "floppy", "DF" #n ": drive type", \
 			"Drive type of DF" #n ":, or Disabled. AmigaOS sees a change after a reset.", \
-			AMIBERRY_APPLY_RESET, type_default, drive_type_choices, \
+			AMIBERRY_APPLY_LIVE, type_default, drive_type_choices, \
 			"FloppyBridge needs a build with FloppyBridge support."), \
 		get_floppy_type<n>, set_floppy_type<n>, nullptr, floppy_type_choice_available, nullptr, \
 		nullptr, nullptr}, \

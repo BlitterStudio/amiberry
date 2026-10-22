@@ -28,6 +28,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "amiberry_settings.h"
+
 /*
  * Same export convention as amiberry_settings.h: a build that ships the
  * actions in a shared library defines AMIBERRY_ACTIONS_EXPORT while
@@ -52,7 +54,7 @@
 extern "C" {
 #endif
 
-#define AMIBERRY_ACTIONS_API_VERSION 1
+#define AMIBERRY_ACTIONS_API_VERSION 2
 
 /* Largest MAX_DPATH (PATH_MAX) any supported platform builds with, so every
    media path the emulator can store fits, NUL included. */
@@ -132,6 +134,19 @@ AMIBERRY_ACTIONS_API amiberry_action_id amiberry_actions_save_state_slot(int slo
 AMIBERRY_ACTIONS_API amiberry_action_id amiberry_actions_load_state_slot(int slot);
 AMIBERRY_ACTIONS_API amiberry_action_id amiberry_actions_screenshot(const char *path);
 AMIBERRY_ACTIONS_API amiberry_action_id amiberry_actions_quit(void);
+
+/*
+ * Brings the running emulation up to the pending configuration (what
+ * amiberry_settings_commit stored) the way the apply class commit returned
+ * needs: AMIBERRY_APPLY_LIVE has the emulation pick the changes up between
+ * frames; AMIBERRY_APPLY_RESET also attaches the committed mount list and
+ * hard-resets, as the GUI's Reboot does; AMIBERRY_APPLY_RESTART restarts
+ * the emulation with the pending configuration, without the built-in GUI.
+ * DONE at once while no emulation runs (it starts with the pending
+ * configuration); FAILED for another value or while the emulator is
+ * quitting.
+ */
+AMIBERRY_ACTIONS_API amiberry_action_id amiberry_actions_apply_settings(amiberry_apply_class apply);
 
 /*
  * Ask what became of a posted action. Callable from any thread; polling

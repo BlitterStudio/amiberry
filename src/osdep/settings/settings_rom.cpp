@@ -293,7 +293,7 @@ const definition definitions[] = {
 		get_maprom, set_maprom, maprom_available, nullptr, nullptr, maprom_accepts},
 	{BOOL_OPTION("kickshifter", "rom", "ShapeShifter support",
 			"Enable support for the ShapeShifter Mac emulator.",
-			AMIBERRY_APPLY_RESET, "false", nullptr),
+			AMIBERRY_APPLY_RESTART, "false", nullptr),
 		get_kickshifter, set_kickshifter, nullptr, nullptr, nullptr},
 };
 

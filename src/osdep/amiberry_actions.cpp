@@ -110,10 +110,85 @@ void begin_restore()
 	emulation_requests++;
 }
 
+} // namespace
+
+// The GUI's "filesys hack": the core attaches drives at a reset from the
+// active mount list, which only this copy brings up to the pending one.
+void adopt_pending_mount_list()
+{
+	currprefs.mountitems = changed_prefs.mountitems;
+	std::memcpy(static_cast<void*>(currprefs.mountconfig), static_cast<const void*>(changed_prefs.mountconfig),
+		sizeof currprefs.mountconfig);
+}
+
+namespace {
+
+// Brings the running emulation up to the pending configuration for an
+// apply class (amiberry_actions_apply_settings).
+bool apply_settings(int apply, std::string* error)
+{
+	if (apply != AMIBERRY_APPLY_LIVE && apply != AMIBERRY_APPLY_RESET && apply != AMIBERRY_APPLY_RESTART) {
+		*error = "Unknown apply class";
+		return false;
+	}
+	// First: a restart in progress also clears emulating, and what is
+	// committed now would not reach the emulation it starts.
+	const bool reset_pending = quit_program <= -UAE_RESET && quit_program >= -UAE_RESET_HARD;
+	if (quit_program != 0 && !reset_pending) {
+		*error = "The emulator is quitting";
+		return false;
+	}
+	// Nothing runs yet: the emulation starts with the pending configuration.
+	if (!emulating)
+		return true;
+#ifdef LIBRETRO
+	// Refused before anything is signalled, so the running configuration
+	// stays as it is.
+	if (apply == AMIBERRY_APPLY_RESTART) {
+		*error = "Restarting is up to the libretro front end";
+		return false;
+	}
+#endif
+	// What the running emulation picks up between frames.
+	set_config_changed();
+	if (apply == AMIBERRY_APPLY_LIVE)
+		return true;
+	if (apply == AMIBERRY_APPLY_RESET) {
+		// As the GUI does before its Reboot (gui_to_prefs): drives attach
+		// from the active mount list, and memory is rebuilt.
+		adopt_pending_mount_list();
+		memory_hardreset(2);
+		if (quit_program == 0)
+			uae_reset(1, 1);
+		else
+			quit_program = -UAE_RESET_HARD;
+		emulation_requests++;
+		return true;
+	}
+#ifndef LIBRETRO
+	uae_restart_with_pending_prefs();
+	emulation_requests++;
+#endif
+	return true;
+}
+
 // The strings are the ones the IPC transport replies with; it forwards them
 // unchanged.
 bool execute(const request& r, void*, std::string* error)
 {
+	// Once a restart is scheduled the running emulation is being replaced:
+	// what an action changed now would not reach the one that starts. A
+	// quit still wins over the restart.
+	if (uae_restart_pending()) {
+		if (r.k == kind::quit) {
+			uae_cancel_restart();
+			uae_quit();
+			emulation_requests++;
+			return true;
+		}
+		*error = "The emulator is restarting";
+		return false;
+	}
 	switch (r.k) {
 	case kind::insert_floppy:
 		_tcsncpy(changed_prefs.floppyslots[r.drive].df, r.path.c_str(), MAX_DPATH);
@@ -296,6 +371,9 @@ bool execute(const request& r, void*, std::string* error)
 		uae_quit();
 		emulation_requests++;
 		return true;
+
+	case kind::apply_settings:
+		return apply_settings(r.number, error);
 	}
 	*error = "unknown action";
 	return false;
@@ -474,6 +552,11 @@ amiberry_action_id amiberry_actions_screenshot(const char* path)
 amiberry_action_id amiberry_actions_quit(void)
 {
 	return post(kind::quit);
+}
+
+amiberry_action_id amiberry_actions_apply_settings(amiberry_apply_class apply)
+{
+	return post(kind::apply_settings, 0, static_cast<int>(apply));
 }
 
 amiberry_action_result amiberry_actions_poll(amiberry_action_id id,

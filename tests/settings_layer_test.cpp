@@ -44,6 +44,7 @@
 // stand-in preview runs the real CPU fixup, the part of fixup_prefs() the
 // CPU options depend on.
 uae_prefs changed_prefs;
+uae_prefs currprefs;
 int emulating;
 // uae_prefs is too large for the stack.
 static uae_prefs test_prefs;
@@ -782,10 +783,10 @@ void check_session()
 	CHECK(amiberry_settings_get(session, "cpu_24bit_addressing", text, sizeof text) == AMIBERRY_SETTINGS_OK);
 	CHECK(!std::strcmp(text, "true"));
 
-	// 24-bit addressing only reaches a running emulation on restart, so
-	// storing its adjustment needs a restart.
+	// 24-bit addressing only reaches a running emulation at a hard reset,
+	// so storing its adjustment needs one.
 	bool changed = false;
-	CHECK(amiberry_settings_commit(session, &changed) == AMIBERRY_APPLY_RESTART);
+	CHECK(amiberry_settings_commit(session, &changed) == AMIBERRY_APPLY_RESET);
 	CHECK(changed && changed_prefs.cpu_model == 68040 && !changed_prefs.address_space_24);
 	CHECK(amiberry_settings_validate(session, adjustments, 4) == 0);
 	CHECK(amiberry_settings_commit(session, &changed) == AMIBERRY_APPLY_LIVE);
@@ -873,7 +874,7 @@ void check_session()
 	CHECK(amiberry_settings_commit(session, &changed) == AMIBERRY_APPLY_RESTART);
 	changed_prefs.z3fastmem[0].size = 16 * 1024 * 1024;
 	CHECK(amiberry_settings_set(session, "cpu_24bit_addressing", "true") == AMIBERRY_SETTINGS_OK);
-	CHECK(amiberry_settings_commit(session, &changed) == AMIBERRY_APPLY_RESTART);
+	CHECK(amiberry_settings_commit(session, &changed) == AMIBERRY_APPLY_RESET);
 	CHECK(changed && changed_prefs.address_space_24 && changed_prefs.z3fastmem[0].size == 0);
 
 	double min, max;
@@ -2415,6 +2416,22 @@ void check_mount_list()
 	changed_prefs.mountitems = 0;
 }
 
+// get_active reads the configuration the emulation runs with, not the
+// pending one a commit stores.
+void check_active_values()
+{
+	reset_prefs(currprefs);
+	reset_prefs(changed_prefs);
+	currprefs.cpu_model = 68020;
+	changed_prefs.cpu_model = 68030;
+	char value[AMIBERRY_SETTINGS_VALUE_MAX];
+	CHECK(amiberry_settings_get_active("cpu_model", value, sizeof value) == AMIBERRY_SETTINGS_OK
+		&& !std::strcmp(value, "68020"));
+	CHECK(amiberry_settings_get_active("cpu_model", value, 3) == AMIBERRY_SETTINGS_BUFFER_TOO_SMALL);
+	CHECK(amiberry_settings_get_active("not_an_option", value, sizeof value) == AMIBERRY_SETTINGS_UNKNOWN_ID);
+	CHECK(amiberry_settings_get_active(nullptr, value, sizeof value) == AMIBERRY_SETTINGS_UNKNOWN_ID);
+}
+
 } // namespace
 
 // === Runtime action queue (settings/settings_actions_queue.h) ===
@@ -2574,6 +2591,7 @@ int main(int argc, char** argv)
 	check_floppy_domain();
 	check_storage_domain();
 	check_mount_list();
+	check_active_values();
 	if (failures) {
 		std::fprintf(stderr, "settings layer: %d check(s) failed\n", failures);
 		return 1;

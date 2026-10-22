@@ -32,7 +32,8 @@ enum class kind {
 	save_state_slot,      // slot
 	load_state_slot,      // slot
 	screenshot,           // path
-	quit
+	quit,
+	apply_settings        // number = amiberry_apply_class
 };
 
 struct request {
