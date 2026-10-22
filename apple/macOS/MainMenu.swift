@@ -17,6 +17,9 @@ final class MenuCommands: NSObject, NSMenuItemValidation {
 	var post: (EmulatorAction) -> Void = { _ = EmulatorActions.post($0) }
 	/// The emulator's run state; replaced by the tests.
 	var runState: () -> EmulatorStatus.RunState = { EmulatorStatus.current().runState }
+	/// Whether the settings window is up (it has the media then); replaced
+	/// by the tests.
+	var settingsOpen: () -> Bool = { SettingsWindowController.shared.isVisible }
 
 	static let emulationTitle = "Emulation"
 	static let mediaTitle = "Media"
@@ -150,9 +153,10 @@ final class MenuCommands: NSObject, NSMenuItemValidation {
 		case #selector(togglePause(_:)):
 			menuItem.title = state == .paused ? "Resume" : "Pause"
 			return state != .stopped
+		case #selector(saveState(_:)), #selector(loadState(_:)), #selector(insertFloppy(_:)), #selector(insertCD(_:)):
+			return state != .stopped && !settingsOpen()
 		case #selector(reset(_:)), #selector(hardReset(_:)), #selector(quickSave(_:)), #selector(quickLoad(_:)),
-			#selector(saveState(_:)), #selector(loadState(_:)), #selector(screenshot(_:)),
-			#selector(toggleFullscreen(_:)), #selector(insertFloppy(_:)), #selector(insertCD(_:)):
+			#selector(screenshot(_:)), #selector(toggleFullscreen(_:)):
 			return state != .stopped
 		default:
 			return true

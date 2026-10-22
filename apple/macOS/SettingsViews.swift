@@ -201,33 +201,32 @@ struct NumberControl: View {
 					.font(.caption).foregroundStyle(.red)
 			}
 		}
-		.onAppear { draft = store.value(of: descriptor.id) ?? "" }
+		.onAppear {
+			valueBeforeEditing = store.value(of: descriptor.id)
+			draft = model?.invalidDrafts[descriptor.id] ?? store.value(of: descriptor.id) ?? ""
+		}
 		.onChange(of: store.revision) {
 			let stored = store.value(of: descriptor.id) ?? ""
-			if !editing, Double(draft) != Double(stored) {
+			if !editing, model?.invalidDrafts[descriptor.id] == nil, Double(draft) != Double(stored) {
 				draft = stored
 			}
 		}
 		.onChange(of: editing) {
-			if editing {
+			if editing, model?.invalidDrafts[descriptor.id] == nil {
 				valueBeforeEditing = store.value(of: descriptor.id)
-			} else {
-				draft = store.value(of: descriptor.id) ?? ""
-				valueBeforeEditing = nil
 			}
 		}
 		.onChange(of: draft) {
 			if let value = number(draft, in: range) {
 				save(value)
-				model?.invalidFields.remove(descriptor.id)
+				model?.invalidDrafts[descriptor.id] = nil
 			} else {
 				if let original = valueBeforeEditing, original != store.value(of: descriptor.id) {
 					store.set(original, for: descriptor.id)
 				}
-				model?.invalidFields.insert(descriptor.id)
+				model?.invalidDrafts[descriptor.id] = draft
 			}
 		}
-		.onDisappear { model?.invalidFields.remove(descriptor.id) }
 	}
 
 	private func number(_ text: String, in range: ClosedRange<Double>) -> Double? {
@@ -250,6 +249,7 @@ struct NumberControl: View {
 struct TextControl: View {
 	let descriptor: SettingDescriptor
 	let store: SettingsStore
+	@Environment(SettingsWindowModel.self) private var model: SettingsWindowModel?
 	@State private var draft = ""
 
 	var body: some View {
@@ -266,16 +266,21 @@ struct TextControl: View {
 				}
 			}
 		}
-		.onAppear { draft = store.value(of: descriptor.id) ?? "" }
+		.onAppear { draft = model?.invalidDrafts[descriptor.id] ?? store.value(of: descriptor.id) ?? "" }
 		.onChange(of: store.revision) {
 			let stored = store.value(of: descriptor.id) ?? ""
-			if draft != stored && store.lastError == nil {
+			if draft != stored, model?.invalidDrafts[descriptor.id] == nil {
 				draft = stored
 			}
 		}
 		.onChange(of: draft) {
-			guard draft != store.value(of: descriptor.id) else { return }
-			store.set(draft, for: descriptor.id)
+			// Text the layer refuses stays in the field and keeps the window
+			// open until it is corrected.
+			if draft == store.value(of: descriptor.id) || store.set(draft, for: descriptor.id) {
+				model?.invalidDrafts[descriptor.id] = nil
+			} else {
+				model?.invalidDrafts[descriptor.id] = draft
+			}
 		}
 	}
 }
@@ -365,7 +370,7 @@ struct HardDrivesPage: View {
 	/// The first DHn device name the mounts do not use.
 	private func freeDevice() -> String {
 		let used = Set(model.store.mounts.compactMap { entry -> String? in
-			entry.split(separator: ",").dropFirst(2).first?.split(separator: ":").first.map(String.init)
+			entry.split(separator: ",").dropFirst(2).first?.split(separator: ":").first.map { $0.uppercased() }
 		})
 		var number = 0
 		while used.contains("DH\(number)") {

@@ -98,9 +98,10 @@ final class SettingsWindowModel {
 	var page: SettingsPage = .quickStart
 	/// The outcome of the last folder or mount change, when it failed.
 	var notice: String?
-	/// Options whose field holds text that is not a valid value; the
-	/// window does not close over them.
-	var invalidFields: Set<String> = []
+	/// Text typed into fields that is not a valid value, by option: the
+	/// window does not close over it, and the field shows it again when it
+	/// comes back into view.
+	var invalidDrafts: [String: String] = [:]
 
 	@ObservationIgnored private let dismiss: () -> Void
 	@ObservationIgnored private let post: (EmulatorAction) -> Bool
@@ -137,8 +138,8 @@ final class SettingsWindowModel {
 	func startOrResume() {
 		guard fieldsValid(), commit() else { return }
 		// What applies live reaches the emulation between frames.
-		if emulating {
-			_ = post(.applySettings(.live))
+		if emulating, !request(.applySettings(.live)) {
+			return
 		}
 		dismiss()
 	}
@@ -146,21 +147,29 @@ final class SettingsWindowModel {
 	/// Hard reset with the session's changes; changes that wait for a reset
 	/// come in with it.
 	func reset() {
-		guard fieldsValid(), commit() else { return }
-		_ = post(.applySettings(.reset))
+		guard fieldsValid(), commit(), request(.applySettings(.reset)) else { return }
 		dismiss()
 	}
 
 	/// Restart the emulation with the session's changes.
 	func restart() {
-		guard fieldsValid(), commit() else { return }
-		_ = post(.applySettings(.restart))
+		guard fieldsValid(), commit(), request(.applySettings(.restart)) else { return }
 		dismiss()
 	}
 
 	func quit() {
-		_ = post(.quit)
+		guard request(.quit) else { return }
 		dismiss()
+	}
+
+	/// Posts an action; when the emulator refuses it (a full queue), the
+	/// window stays open with a notice so the user can try again.
+	private func request(_ action: EmulatorAction) -> Bool {
+		guard post(action) else {
+			notice = "The emulator did not accept the request. Try again."
+			return false
+		}
+		return true
 	}
 
 	/// The window's close button: resume, or quit when nothing runs yet (as
@@ -181,8 +190,8 @@ final class SettingsWindowModel {
 	}
 
 	private func fieldsValid() -> Bool {
-		guard invalidFields.isEmpty else {
-			let labels = invalidFields.sorted().map { SettingsCatalog.descriptor(for: $0)?.label ?? $0 }
+		guard invalidDrafts.isEmpty else {
+			let labels = invalidDrafts.keys.sorted().map { SettingsCatalog.descriptor(for: $0)?.label ?? $0 }
 			notice = "Correct \(labels.joined(separator: ", ")) first."
 			return false
 		}

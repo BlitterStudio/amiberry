@@ -409,8 +409,13 @@ bool execute(const request& r, void*, std::string* error)
 		return false;
 #else
 		// The hotkeys' requests: gui_display() pauses, releases input and
-		// shows the requester at the next input check.
-		if (emulating && gui_active <= 0) {
+		// shows the requester at the next input check. The settings UI has
+		// the media itself while it is open.
+		if (gui_active > 0) {
+			*error = "The settings UI is open";
+			return false;
+		}
+		if (emulating) {
 			static const int codes[] = {AKS_FLOPPY0, AKS_FLOPPY1, AKS_FLOPPY2, AKS_FLOPPY3,
 				AKS_STATERESTOREDIALOG, AKS_STATESAVEDIALOG, AKS_CD0};
 			inputdevice_add_inputcode(codes[r.number], 1, nullptr);

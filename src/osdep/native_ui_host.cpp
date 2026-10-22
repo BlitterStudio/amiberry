@@ -14,6 +14,7 @@
 #include "gui/gui_handling.h"
 #include "amiberry_actions_host.h"
 #include "settings/amiberry_actions.h"
+#include "settings/amiberry_settings.h"
 #ifdef USE_IPC_SOCKET
 #include "amiberry_ipc.h"
 #endif
@@ -32,6 +33,7 @@ void amiberry_native_ui_settings_show(bool emulating);
 bool amiberry_native_ui_settings_visible(void);
 void amiberry_native_ui_settings_dismiss(void);
 void amiberry_native_ui_settings_commit(void);
+void amiberry_native_ui_settings_devices_changed(void);
 void amiberry_native_ui_install_menus(void);
 bool amiberry_native_ui_choose_file(int kind, const char* title, const char* start_path,
 	char* chosen, size_t size);
@@ -148,6 +150,9 @@ void native_host_run_settings()
 				} else if (event.type == SDL_EVENT_JOYSTICK_ADDED || event.type == SDL_EVENT_JOYSTICK_REMOVED) {
 					// As run_gui: controllers plugged in meanwhile are picked up.
 					handle_joy_device_event(event.jdevice.which, event.type == SDL_EVENT_JOYSTICK_REMOVED);
+					// The input choices list the host's devices.
+					amiberry_settings_refresh_choices();
+					amiberry_native_ui_settings_devices_changed();
 				}
 			} while (SDL_PollEvent(&event));
 		}

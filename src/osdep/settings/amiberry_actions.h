@@ -180,7 +180,8 @@ typedef enum amiberry_media_request {
  * hotkeys do, and uses it: the emulation pauses with input released while
  * the requester shows, at the next frame. DONE once requested (and at once
  * while no emulation runs, when it does nothing); 0 for a request outside
- * the enum. FAILED in a libretro core.
+ * the enum. FAILED while the settings UI is open (it has the media then)
+ * and in a libretro core.
  */
 AMIBERRY_ACTIONS_API amiberry_action_id amiberry_actions_choose_media(amiberry_media_request request);
 

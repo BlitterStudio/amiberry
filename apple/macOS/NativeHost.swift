@@ -42,6 +42,13 @@ public func amiberryNativeUISettingsCommit() {
 	}
 }
 
+@_cdecl("amiberry_native_ui_settings_devices_changed")
+public func amiberryNativeUISettingsDevicesChanged() {
+	MainActor.assumeIsolated {
+		SettingsWindowController.shared.model?.store.reload()
+	}
+}
+
 @_cdecl("amiberry_native_ui_install_menus")
 public func amiberryNativeUIInstallMenus() {
 	MainActor.assumeIsolated {

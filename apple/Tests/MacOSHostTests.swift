@@ -111,15 +111,25 @@ final class SettingsWindowModelTests: XCTestCase {
 
 	func testInvalidFieldsKeepTheWindowOpen() throws {
 		let model = try model(emulating: true)
-		model.invalidFields.insert("cpu_multiplier")
+		model.invalidDrafts["cpu_multiplier"] = "abc"
 		model.startOrResume()
 		model.reset()
 		XCTAssertEqual(dismissed, 0)
 		XCTAssertEqual(posted, [])
 		XCTAssertTrue(model.notice?.hasPrefix("Correct ") ?? false)
-		model.invalidFields.removeAll()
+		model.invalidDrafts.removeAll()
 		model.startOrResume()
 		XCTAssertEqual(dismissed, 1)
+	}
+
+	func testRefusedPostsKeepTheWindowOpen() throws {
+		let model = try SettingsWindowModel(
+			emulating: true, dismiss: { [weak self] in self?.dismissed += 1 }, post: { _ in false })
+		model.startOrResume()
+		model.reset()
+		model.quit()
+		XCTAssertEqual(dismissed, 0)
+		XCTAssertEqual(model.notice, "The emulator did not accept the request. Try again.")
 	}
 
 	func testExternalRequestsStoreTheEdits() throws {
@@ -146,12 +156,14 @@ final class MenuCommandsTests: XCTestCase {
 	private var commands: MenuCommands!
 	private var posted: [EmulatorAction] = []
 	private var state = EmulatorStatus.RunState.running
+	private var settingsOpen = false
 
 	override func setUp() {
 		commands = MenuCommands()
 		posted = []
 		commands.post = { [weak self] in self?.posted.append($0) }
 		commands.runState = { [weak self] in self?.state ?? .stopped }
+		commands.settingsOpen = { [weak self] in self?.settingsOpen ?? false }
 	}
 
 	private func menu() -> NSMenu {
@@ -250,5 +262,11 @@ final class MenuCommandsTests: XCTestCase {
 		XCTAssertFalse(commands.validateMenuItem(try item(main, "Emulation", "Reset")))
 		XCTAssertFalse(commands.validateMenuItem(try item(main, "Media", "Insert CD\u{2026}")))
 		XCTAssertTrue(commands.validateMenuItem(try item(main, "Media", "Eject CD")))
+		// The settings window has the media while it is up.
+		state = .paused
+		settingsOpen = true
+		XCTAssertFalse(commands.validateMenuItem(try item(main, "Media", "Insert CD\u{2026}")))
+		XCTAssertFalse(commands.validateMenuItem(try item(main, "Emulation", "Save State\u{2026}")))
+		XCTAssertTrue(commands.validateMenuItem(try item(main, "Emulation", "Reset")))
 	}
 }
