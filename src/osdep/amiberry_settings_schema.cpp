@@ -224,6 +224,11 @@ const char* rom_role(int id)
 // ROMs only when the main one was found. Each set lists the ROM lists that
 // were found on a path where the builder succeeded: one ROM from each list
 // of a set is what the configuration needs.
+//
+// The arcade boards' configuration is the first installed game (see
+// amiberry_settings::arcade_game_config), which depends on the machine:
+// their builder is probed without a game, and every set gets one request
+// listing every game.
 std::vector<std::vector<std::vector<int>>> preset_rom_sets(const char* id, int config)
 {
 	std::vector<std::vector<std::vector<int>>> sets;
@@ -232,6 +237,17 @@ std::vector<std::vector<std::vector<int>>> preset_rom_sets(const char* id, int c
 	if (model < 0 || !scratch) {
 		std::free(scratch);
 		return sets;
+	}
+	std::vector<int> games;
+	const bool arcade = model == 10 || model == 11;
+	if (arcade) {
+		romlist** list = getarcadiaroms(model == 10 ? 1 : 0);
+		for (int i = 0; list && list[i]; i++) {
+			if (list[i]->rd->type == (model == 10 ? ROMTYPE_ALG : ROMTYPE_ARCADIAGAME))
+				games.push_back(list[i]->rd->id);
+		}
+		xfree(list);
+		config = -1;
 	}
 	std::vector<std::vector<bool>> pending = {{}};
 	while (!pending.empty()) {
@@ -248,6 +264,8 @@ std::vector<std::vector<std::vector<int>>> preset_rom_sets(const char* id, int c
 				if (call < probe.answers.size() && probe.answers[call])
 					set.push_back(probe.lists[call]);
 			}
+			if (!games.empty())
+				set.push_back(games);
 			if (std::find(sets.begin(), sets.end(), set) == sets.end())
 				sets.push_back(set);
 		}
@@ -379,47 +397,81 @@ bool presets(std::string& out)
 	return true;
 }
 
-// What the emulator runs with when a configuration names a CPU and chipset
-// combination: for each combination of the inputs below, the values the
-// core's checks (fixup_prefs) leave after a configuration load, as the
-// Android launcher's configuration files are loaded. The "free" options
-// are not part of the combination; for each of them the row gives what
-// each of its values resolves to (the other free options at their
-// defaults), so a front end keeps its value unless the checks force one.
+// What the emulator runs with when a configuration names a combination of
+// values: for each combination of a table's inputs, the values the core's
+// checks (fixup_prefs) leave after a configuration load, as the Android
+// launcher's configuration files are loaded. The "free" options are not
+// part of the combination; for each of them the row gives what each of its
+// values resolves to (the other free options at their defaults), so a front
+// end keeps its value unless the checks force one. The context is loaded
+// before every combination and is not part of the table.
 struct field {
 	const char* id;
 	std::vector<const char*> values;
 };
 
-const std::vector<field>& resolution_inputs()
+using pairs = std::vector<std::pair<const char*, const char*>>;
+
+struct resolution_table {
+	const char* name;
+	std::vector<field> inputs;
+	std::vector<field> free;
+	pairs context;
+};
+
+// Every value of a choice descriptor, so new choices are covered.
+std::vector<const char*> choice_values(const char* id)
 {
-	static const std::vector<field> inputs = {
-		{"chipset", {"ocs", "ecs", "aga"}},
-		{"cpu_model", {"68000", "68010", "68020", "68030", "68040", "68060"}},
-		{"fpu_model", {"0", "68881", "68882", "68040", "68060"}},
-		{"cpu_24bit_addressing", {"true", "false"}},
-		{"cycle_exact", {"false", "true"}},
-		{"cachesize", {"0", "8192"}},
-		{"z3mem_size", {"0", "16"}},
-	};
-	return inputs;
+	std::vector<const char*> values;
+	const amiberry_setting_descriptor* d = amiberry_settings_find(id);
+	for (size_t c = 0; d && c < d->choice_count; c++)
+		values.push_back(d->choices[c].value);
+	return values;
 }
 
-const std::vector<field>& resolution_free()
+std::vector<resolution_table> resolution_tables()
 {
-	static const std::vector<field> free = {
-		{"cpu_speed", {"real", "max"}},
-		{"cpu_compatible", {"true", "false"}},
-		{"compfpu", {"false", "true"}},
-		{"immediate_blits", {"false", "true"}},
+	return {
+		// The CPU and chipset combination.
+		{"resolutions",
+			{
+				{"chipset", {"ocs", "ecs", "aga"}},
+				{"cpu_model", {"68000", "68010", "68020", "68030", "68040", "68060"}},
+				{"fpu_model", {"0", "68881", "68882", "68040", "68060"}},
+				{"cpu_24bit_addressing", {"true", "false"}},
+				{"cycle_exact", {"false", "true"}},
+				{"cachesize", {"0", "8192"}},
+				{"z3mem_size", {"0", "16"}},
+			},
+			{
+				{"cpu_speed", {"real", "max"}},
+				{"cpu_compatible", {"true", "false"}},
+				{"compfpu", {"false", "true"}},
+				{"immediate_blits", {"false", "true"}},
+			},
+			{}},
+		// Memory sizes against the chipset, the addressing and the JIT, on a
+		// 68020 the JIT can run on (the CPU table above says when it can).
+		// The board is an A500's, without Gary, Ramsey or Gayle: their 1.8 MB
+		// slow RAM conflict depends on the preset's hardware, which a front
+		// end leaves to the emulator.
+		{"memory_resolutions",
+			{
+				{"chipset", {"ocs", "ecs", "aga"}},
+				{"cpu_24bit_addressing", {"true", "false"}},
+				{"cachesize", {"0", "8192"}},
+				{"chipmem_size", choice_values("chipmem_size")},
+				{"bogomem_size", choice_values("bogomem_size")},
+				{"fastmem_size", choice_values("fastmem_size")},
+			},
+			{},
+			{{"chipset_compatible", "A500"}, {"cpu_model", "68020"}, {"cycle_exact", "false"}}},
 	};
-	return free;
 }
 
 // Loads id=value pairs into a fresh configuration, runs the core's checks
 // and reads ids back; empty strings for what cannot be read.
-bool resolve(const std::vector<std::pair<const char*, const char*>>& values,
-	const std::vector<const char*>& ids, std::vector<std::string>& out)
+bool resolve(const pairs& values, const std::vector<const char*>& ids, std::vector<std::string>& out)
 {
 	uae_prefs* p = static_cast<uae_prefs*>(std::calloc(1, sizeof(uae_prefs)));
 	if (!p)
@@ -444,15 +496,20 @@ bool resolve(const std::vector<std::pair<const char*, const char*>>& values,
 	return true;
 }
 
-bool resolutions(std::string& out)
+bool resolution(std::string& out, const resolution_table& table)
 {
-	const auto& inputs = resolution_inputs();
-	const auto& free = resolution_free();
+	const auto& inputs = table.inputs;
+	const auto& free = table.free;
 	std::vector<const char*> input_ids;
-	for (const field& f : inputs)
+	for (const field& f : inputs) {
+		if (f.values.empty())
+			return false;
 		input_ids.push_back(f.id);
+	}
 
-	out += ",\n\"resolutions\":{\"inputs\":[";
+	out += ",\n\"";
+	out += table.name;
+	out += "\":{\"inputs\":[";
 	for (size_t i = 0; i < inputs.size(); i++) {
 		if (i)
 			out += ',';
@@ -477,17 +534,17 @@ bool resolutions(std::string& out)
 	std::vector<std::string> resolved;
 	bool first_row = true;
 	for (;;) {
-		std::vector<std::pair<const char*, const char*>> request;
+		pairs request = table.context;
 		for (size_t i = 0; i < inputs.size(); i++)
 			request.emplace_back(inputs[i].id, inputs[i].values[pick[i]]);
 		if (!first_row)
 			out += ',';
 		first_row = false;
 		out += "\n[[";
-		for (size_t i = 0; i < request.size(); i++) {
+		for (size_t i = 0; i < inputs.size(); i++) {
 			if (i)
 				out += ',';
-			json_string(out, request[i].second);
+			json_string(out, inputs[i].values[pick[i]]);
 		}
 		out += "],[";
 		if (!resolve(request, input_ids, resolved))
@@ -530,6 +587,15 @@ bool resolutions(std::string& out)
 	return true;
 }
 
+bool resolutions(std::string& out)
+{
+	for (const resolution_table& table : resolution_tables()) {
+		if (!resolution(out, table))
+			return false;
+	}
+	return true;
+}
+
 } // namespace
 
 // Writes the schema to stdout; 0 on success.
@@ -543,7 +609,7 @@ int settings_schema_and_exit(const char* option_list)
 	out += ",\n";
 	options(out, option_list ? &only : nullptr);
 	if (!presets(out) || !resolutions(out)) {
-		std::fprintf(stderr, "--settings-schema: out of memory\n");
+		std::fprintf(stderr, "--settings-schema: out of memory or an empty resolution input\n");
 		return 1;
 	}
 	out += "\n}\n";

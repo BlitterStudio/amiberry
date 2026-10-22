@@ -121,8 +121,7 @@ const char* const cdtv_configs[] = {
 	nullptr,
 };
 
-// bip_alg/bip_arcadia pick the config-th game ROM of the scan; Quickstart
-// always applied them with config 0, the first game found.
+// The first installed game: see arcade_game_config().
 const char* const alg_configs[] = {
 	"First installed game ROM",
 	nullptr,
@@ -237,6 +236,24 @@ const std::vector<amiberry_settings_preset>& completed_presets()
 
 } // namespace
 
+int arcade_game_config(int model)
+{
+	if (model != 10 && model != 11)
+		return -1;
+	romlist** list = getarcadiaroms(model == 10 ? 1 : 0);
+	int found = -1;
+	for (int i = 0; list && list[i]; i++) {
+		const int type = list[i]->rd->type;
+		const bool game = model == 10 ? type == ROMTYPE_ALG : type == ROMTYPE_ARCADIAGAME;
+		if (game && getromlistbyromdata(list[i]->rd)) {
+			found = i;
+			break;
+		}
+	}
+	xfree(list);
+	return found;
+}
+
 // The Quickstart constraints that follow built_in_prefs(), moved verbatim
 // from Quickstart_ApplyDefaults (src/osdep/imgui/quickstart.cpp).
 void apply_preset(uae_prefs& p, int model, int config, int compatibility, bool preview)
@@ -246,6 +263,10 @@ void apply_preset(uae_prefs& p, int model, int config, int compatibility, bool p
 		compatibility = 0;
 	if (compatibility > max_compa)
 		compatibility = max_compa;
+	// The arcade boards' one configuration is their first installed game;
+	// with none, the builder loads no game (no index matches -1).
+	if (model == 10 || model == 11)
+		config = arcade_game_config(model);
 
 	if (preview)
 		built_in_prefs_preview(&p, model, config, compatibility);
@@ -373,8 +394,7 @@ const char* machine_preset_compatibility_label(int level)
 // global drawing, WHDLoad and FloppyBridge state alone. Its return value
 // tells whether every ROM the configuration needs is in the scanned list,
 // except the ALG/Arcadia game itself: their builders succeed with only the
-// BIOS and load the config-th ROM of getarcadiaroms() (every known one,
-// installed or not) if it is there, so that ROM is checked too.
+// BIOS, so a game must be installed too (arcade_game_config).
 bool machine_preset_rom_installed(const char* id, int config)
 {
 	const preset_model* preset = id ? find_preset(id) : nullptr;
@@ -386,16 +406,10 @@ bool machine_preset_rom_installed(const char* id, int config)
 	if (!scratch)
 		return false;
 	std::memcpy(static_cast<void*>(scratch), static_cast<const void*>(&changed_prefs), sizeof(uae_prefs));
-	bool installed = built_in_prefs_preview(scratch, preset->model, config, 1) != 0;
+	const bool arcade = preset->model == 10 || preset->model == 11;
+	const int game = arcade ? arcade_game_config(preset->model) : config;
+	bool installed = (!arcade || game >= 0) && built_in_prefs_preview(scratch, preset->model, game, 1) != 0;
 	std::free(scratch);
-	if (installed && (preset->model == 10 || preset->model == 11)) {
-		romlist** games = getarcadiaroms(preset->model == 10 ? 1 : 0);
-		int i = 0;
-		while (games && games[i] && i < config)
-			i++;
-		installed = games && games[i] && getromlistbyromdata(games[i]->rd) != nullptr;
-		xfree(games);
-	}
 	return installed;
 }
 

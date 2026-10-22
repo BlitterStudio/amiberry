@@ -20,7 +20,10 @@ class SettingsSchema(
 	val compatibilityLevels: List<String>,
 	/** The ROMs the presets can ask for, by ID. */
 	val roms: Map<Int, Rom>,
-	val resolutions: CpuChipsetResolutions
+	/** The CPU and chipset combinations. */
+	val resolutions: Resolutions,
+	/** Memory sizes against the chipset, the addressing and the JIT. */
+	val memoryResolutions: Resolutions
 ) {
 	/** One ROM a preset needs: the first installed of [ids] ([role] "kick", "ext" or "other"). */
 	data class RomRequest(val role: String, val ids: List<Int>)
@@ -29,9 +32,9 @@ class SettingsSchema(
 
 	/**
 	 * The Quick Start models: every preset that has a configuration, except
-	 * the arcade boards. Their builders load a game ROM chosen by
-	 * configuration index from every game the emulator knows, and run
-	 * without one when it is missing; the launcher has no game picker.
+	 * the arcade boards. Their configuration is the first installed game,
+	 * which also sets hardware (most ALG games are NTSC); the schema cannot
+	 * describe it, and the launcher's configuration would override it.
 	 */
 	val models: List<AmigaModel> by lazy {
 		presets
@@ -154,8 +157,9 @@ class SettingsSchema(
 				val rom = Rom(r.getInt("id"), r.getString("crc32").toLong(16), r.getString("role"), r.getString("name"))
 				roms[rom.id] = rom
 			}
-			val resolutions = CpuChipsetResolutions.parse(json.getJSONObject("resolutions"))
-			return SettingsSchema(options, presets, levels, roms, resolutions)
+			val resolutions = Resolutions.parse(json.getJSONObject("resolutions"))
+			val memoryResolutions = Resolutions.parse(json.getJSONObject("memory_resolutions"))
+			return SettingsSchema(options, presets, levels, roms, resolutions, memoryResolutions)
 		}
 
 		private fun JSONObject.toStringMap(): Map<String, String> {
@@ -169,13 +173,13 @@ class SettingsSchema(
 }
 
 /**
- * What the emulator runs with when a configuration names a CPU and chipset
- * combination: for each combination of [inputs], the values the core's
- * checks leave after a configuration load. The [free] options are not part
- * of the combination; for each the table says what each of its values
- * resolves to, so a value the checks do not force is kept.
+ * What the emulator runs with when a configuration names a combination of
+ * values: for each combination of [inputs], the values the core's checks
+ * leave after a configuration load. The [free] options are not part of the
+ * combination; for each the table says what each of its values resolves to,
+ * so a value the checks do not force is kept.
  */
-class CpuChipsetResolutions private constructor(
+class Resolutions private constructor(
 	val inputs: List<String>,
 	val free: Map<String, List<String>>,
 	private val rows: Map<List<String>, Row>
@@ -200,7 +204,7 @@ class CpuChipsetResolutions private constructor(
 	}
 
 	companion object {
-		fun parse(json: JSONObject): CpuChipsetResolutions {
+		fun parse(json: JSONObject): Resolutions {
 			fun JSONArray.strings() = List(length()) { getString(it) }
 			val inputs = json.getJSONArray("inputs").strings()
 			val freeArray = json.getJSONArray("free")
@@ -216,7 +220,7 @@ class CpuChipsetResolutions private constructor(
 				val freeValues = row.getJSONArray(2).let { a -> List(a.length()) { a.getJSONArray(it).strings() } }
 				rows[row.getJSONArray(0).strings()] = Row(row.getJSONArray(1).strings(), freeValues)
 			}
-			return CpuChipsetResolutions(inputs, free, rows)
+			return Resolutions(inputs, free, rows)
 		}
 	}
 }

@@ -49,11 +49,16 @@ assert all(c["rom_sets"] for p in schema["presets"] for c in p["configs"]), "eve
 rom_ids = {r["id"] for r in schema["roms"]}
 assert all(any(i in rom_ids for i in req["ids"])
            for p in schema["presets"] for c in p["configs"] for s in c["rom_sets"] for req in s), "rom table"
-res = schema["resolutions"]
-assert len(res["rows"]) > 0 and all(
-    len(r[0]) == len(res["inputs"]) and len(r[1]) == len(res["inputs"]) and len(r[2]) == len(res["free"])
-    and all(len(m) == len(f["values"]) for m, f in zip(r[2], res["free"]))
-    for r in res["rows"]), "resolutions"
+for table in ("resolutions", "memory_resolutions"):
+    res = schema[table]
+    assert len(res["rows"]) > 0 and all(
+        len(r[0]) == len(res["inputs"]) and len(r[1]) == len(res["inputs"]) and len(r[2]) == len(res["free"])
+        and all(len(m) == len(f["values"]) for m, f in zip(r[2], res["free"]))
+        for r in res["rows"]), table
+    combinations = 1
+    for count in (len(set(r[0][i] for r in res["rows"])) for i in range(len(res["inputs"]))):
+        combinations *= count
+    assert len({tuple(r[0]) for r in res["rows"]}) == len(res["rows"]) == combinations, table + " coverage"
 PY
 
 printf 'cpu_model\nnot_an_option\n' > "$work/bad.txt"
@@ -62,7 +67,12 @@ if "$AMIBERRY_BIN" --settings-schema="$work/bad.txt" > /dev/null 2>&1; then
 	exit 1
 fi
 
-"$AMIBERRY_BIN" --settings-schema="$settings/settings_schema_options.txt" > "$work/android.json"
+# The directory is an asset source of the Android app: nothing else in it.
+if [ "$(ls -A "$settings")" != "settings_schema.json" ]; then
+	echo "android/app/src/main/settings must hold only settings_schema.json" >&2
+	exit 1
+fi
+"$AMIBERRY_BIN" --settings-schema="$root/android/scripts/settings_schema_options.txt" > "$work/android.json"
 if ! cmp -s "$work/android.json" "$settings/settings_schema.json"; then
 	echo "android/app/src/main/settings/settings_schema.json is stale;" >&2
 	echo "regenerate it with android/scripts/update_settings_schema.sh" >&2

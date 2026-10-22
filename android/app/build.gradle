@@ -103,6 +103,14 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
+    // src/main/settings holds only settings_schema.json: the shared settings
+    // layer's options, presets and resolutions, generated from a desktop
+    // build (scripts/update_settings_schema.sh) and packaged as an asset.
+    sourceSets {
+        main {
+            assets.srcDir 'src/main/settings'
+        }
+    }
     namespace = 'com.blitterstudio.amiberry'
     compileSdk = 36
 
@@ -275,12 +283,6 @@ tasks.register('copyAssets', Copy) {
     }
     from('../../whdboot') {
         into 'whdboot'
-    }
-    // The shared settings layer's options, presets and CPU/chipset
-    // resolutions, generated from a desktop build
-    // (scripts/update_settings_schema.sh).
-    from('src/main/settings') {
-        include 'settings_schema.json'
     }
 }
 

@@ -355,6 +355,18 @@ class EmulatorSettingsTest {
 	}
 
 	@Test
+	fun `constraints give the emulator's 2 MB for 1_5 MB chip RAM with the JIT`() {
+		val a4000 = EmulatorSettings.fromModel(AmigaModel.A4000)
+		assertTrue(a4000.jitCacheSize > 0)
+
+		val withJit = EmulatorSettingsConstraints.apply(a4000.copy(chipRam = 3, fastRam = 0), hasTouchScreen = true)
+		assertEquals(4, withJit.chipRam)
+
+		val withoutJit = EmulatorSettingsConstraints.apply(a4000.copy(chipRam = 3, fastRam = 0, jitCacheSize = 0), hasTouchScreen = true)
+		assertEquals(3, withoutJit.chipRam)
+	}
+
+	@Test
 	fun `constraints remove Z3 RAM a 24-bit CPU cannot reach`() {
 		val constrained = EmulatorSettingsConstraints.apply(
 			EmulatorSettings(cpuModel = 68000, address24Bit = true, z3Ram = 64),

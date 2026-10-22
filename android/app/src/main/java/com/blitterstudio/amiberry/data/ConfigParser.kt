@@ -45,6 +45,15 @@ object ConfigParser {
 
 	private const val TAG = "Amiberry-ConfigParser"
 
+	private val LEGACY_MIXED_STEREO = listOf("sound_stereo_separation" to "7", "sound_stereo_mixing_delay" to "5")
+
+	private fun configKey(line: String): String? {
+		val trimmed = line.trim()
+		if (trimmed.startsWith(";")) return null
+		val eqIndex = trimmed.indexOf('=')
+		return if (eqIndex < 0) null else trimmed.substring(0, eqIndex).trim().lowercase()
+	}
+
 	fun parse(file: File): ParsedConfig {
 		if (!file.exists()) return ParsedConfig(EmulatorSettings(), emptyList(), "")
 
@@ -97,6 +106,19 @@ object ConfigParser {
 		for ((line, controller) in uaehfHdfLines) {
 			if (controller == null || controller !in adoptedControllers) {
 				unknownLines.add(line)
+			}
+		}
+
+		// sound_channels=mixed is a legacy spelling the emulator loads as
+		// stereo with stereo separation 7 and a mixing delay of 5 (cfgfile.cpp);
+		// keep that sound on the next save. A later line for either still wins.
+		if (kvPairs["sound_channels"] == "mixed") {
+			kvPairs["sound_channels"] = "stereo"
+			val mixedLine = lines.indexOfLast { configKey(it) == "sound_channels" }
+			for ((key, value) in LEGACY_MIXED_STEREO) {
+				if (lines.drop(mixedLine + 1).any { configKey(it) == key }) continue
+				unknownLines.removeAll { configKey(it) == key }
+				unknownLines.add("$key=$value")
 			}
 		}
 
