@@ -1,6 +1,8 @@
 #ifdef MACOS_APP_STORE
 
 #import <Foundation/Foundation.h>
+#include <algorithm>
+#include <cstring>
 #include <string>
 #include <vector>
 #include <mutex>
@@ -324,19 +326,44 @@ bool macos_bookmark_store(const std::string& path)
 			return false;
 		}
 
-		s_bookmark_data[key] = data;
-		save_bookmarks_plist();
-
-		// Start access immediately
-		if (![url startAccessingSecurityScopedResource])
+		// Start access through the bookmark itself, as a restart will: the
+		// security scope belongs to the URL the bookmark resolves to. A
+		// folder this process cannot use is not kept. Done before anything
+		// is stored, so a failure leaves the store (and its file) as it was.
+		BOOL stale = NO;
+		NSError* resolve_error = nil;
+		NSURL* scoped = [NSURL URLByResolvingBookmarkData:data
+			options:NSURLBookmarkResolutionWithSecurityScope
+			relativeToURL:nil
+			bookmarkDataIsStale:&stale
+			error:&resolve_error];
+		if (!scoped || ![scoped startAccessingSecurityScopedResource])
 		{
 			write_log("Security bookmarks: startAccess failed for new bookmark '%s'\n",
 				dir_path.c_str());
+			return false;
 		}
-		else
+
+		// A bookmark this call replaces (stored, but not active: it did not
+		// resolve at startup) is put back when it cannot be saved. Copied,
+		// not referenced: replacing it releases the dictionary's reference.
+		NSData* stored = s_bookmark_data[key];
+		NSData* previous = stored ? [NSData dataWithData:stored] : nil;
+		s_bookmark_data[key] = data;
+		// A bookmark that is not on disk is gone after a restart: callers
+		// must not keep a path they could not reopen then. The file is
+		// written atomically, so a failed write leaves it as it was.
+		if (!save_bookmarks_plist())
 		{
-			s_active_urls[key] = url;
+			write_log("Security bookmarks: could not save the bookmark for '%s'\n", dir_path.c_str());
+			[scoped stopAccessingSecurityScopedResource];
+			if (previous)
+				s_bookmark_data[key] = previous;
+			else
+				[s_bookmark_data removeObjectForKey:key];
+			return false;
 		}
+		s_active_urls[key] = scoped;
 
 		write_log("Security bookmarks: stored bookmark for '%s'\n", dir_path.c_str());
 		return true;
@@ -393,6 +420,62 @@ std::vector<std::string> macos_bookmarks_list()
 	return result;
 }
 
+macos_bookmarks_state macos_bookmarks_save_state()
+{
+	macos_bookmarks_state state;
+	@autoreleasepool
+	{
+		std::lock_guard<std::mutex> lock(s_mutex);
+		if (!s_bookmark_data || !s_active_urls)
+			return state;
+		for (NSString* key in s_bookmark_data)
+		{
+			NSData* data = s_bookmark_data[key];
+			const auto* bytes = static_cast<const unsigned char*>(data.bytes);
+			state.data[[key UTF8String]].assign(bytes, bytes + data.length);
+		}
+		for (NSString* key in s_active_urls)
+			state.active.insert([key UTF8String]);
+	}
+	return state;
+}
+
+bool macos_bookmarks_restore(const macos_bookmarks_state& state)
+{
+	@autoreleasepool
+	{
+		std::lock_guard<std::mutex> lock(s_mutex);
+		if (!s_bookmark_data || !s_active_urls || !s_bookmarks_path)
+			return true;
+
+		// Compared as C strings, so nothing here allocates on the C++ side
+		// and the restore cannot stop halfway.
+		for (NSString* key in [s_active_urls allKeys])
+		{
+			const char* name = [key UTF8String];
+			const bool was_active = std::any_of(state.active.begin(), state.active.end(),
+				[name](const std::string& active) { return std::strcmp(active.c_str(), name) == 0; });
+			if (!was_active)
+			{
+				[s_active_urls[key] stopAccessingSecurityScopedResource];
+				[s_active_urls removeObjectForKey:key];
+			}
+		}
+		[s_bookmark_data removeAllObjects];
+		for (const auto& [path, bytes] : state.data)
+		{
+			NSString* key = [NSString stringWithUTF8String:path.c_str()];
+			s_bookmark_data[key] = [NSData dataWithBytes:bytes.data() length:bytes.size()];
+		}
+		if (!save_bookmarks_plist())
+		{
+			write_log("Security bookmarks: could not save the restored bookmarks\n");
+			return false;
+		}
+		return true;
+	}
+}
+
 void macos_bookmark_remove(const std::string& path)
 {
 	if (path.empty())
@@ -405,7 +488,9 @@ void macos_bookmark_remove(const std::string& path)
 		if (!s_bookmark_data || !s_bookmarks_path)
 			return;
 
-		NSString* key = [NSString stringWithUTF8String:path.c_str()];
+		// The key macos_bookmark_store() used for the same path.
+		const std::string dir_path = normalize_to_directory(path);
+		NSString* key = [NSString stringWithUTF8String:dir_path.c_str()];
 
 		// Stop accessing if active
 		if (s_active_urls[key])

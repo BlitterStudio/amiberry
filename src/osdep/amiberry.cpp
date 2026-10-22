@@ -6898,6 +6898,7 @@ std::string get_data_path()
 void get_saveimage_path(char* out, const int size, int dir)
 {
 	_tcsncpy(out, fix_trailing(saveimage_dir).c_str(), size - 1);
+	out[size - 1] = 0;
 }
 
 std::string get_configuration_path()
@@ -6925,6 +6926,7 @@ std::vector<std::string> get_base_content_missing_directories(const std::string&
 void get_configuration_path(char* out, const int size)
 {
 	_tcsncpy(out, fix_trailing(config_path).c_str(), size - 1);
+	out[size - 1] = 0;
 }
 
 void set_base_content_path(const std::string& newpath)
@@ -7196,6 +7198,7 @@ std::string get_rom_path()
 void get_rom_path(char* out, const int size)
 {
 	_tcsncpy(out, fix_trailing(rom_path).c_str(), size - 1);
+	out[size - 1] = 0;
 }
 
 void set_rom_path(const std::string& newpath)
@@ -7212,6 +7215,7 @@ std::string get_rp9_path()
 void get_rp9_path(char* out, const int size)
 {
 	_tcsncpy(out, fix_trailing(rp9_path).c_str(), size - 1);
+	out[size - 1] = 0;
 }
 
 void set_rp9_path(const std::string& newpath)
@@ -7234,16 +7238,25 @@ void set_saveimage_path(const std::string& newpath)
 void get_savestate_path(char* out, const int size)
 {
 	if (path_statefile[0]) {
-		_tcsncpy(out, path_statefile, size);
+		_tcsncpy(out, path_statefile, size - 1);
+		out[size - 1] = 0;
 		return;
 	}
 	_tcsncpy(out, fix_trailing(savestate_dir).c_str(), size - 1);
+	out[size - 1] = 0;
 }
 
 std::string get_savestate_path()
 {
 	if (path_statefile[0])
 		return path_statefile;
+	return fix_trailing(savestate_dir);
+}
+
+// The save states folder itself, without the configuration's
+// statefile_path override get_savestate_path() applies.
+std::string get_savestate_folder()
+{
 	return fix_trailing(savestate_dir);
 }
 
@@ -7255,6 +7268,7 @@ std::string get_ripper_path()
 void fetch_ripperpath(TCHAR* out, const int size)
 {
 	_tcsncpy(out, fix_trailing(ripper_path).c_str(), size - 1);
+	out[size - 1] = 0;
 }
 
 void set_ripper_path(const std::string& newpath)
@@ -7271,6 +7285,7 @@ std::string get_inputrecordings_path()
 void fetch_inputfilepath(TCHAR* out, const int size)
 {
 	_tcsncpy(out, fix_trailing(input_dir).c_str(), size - 1);
+	out[size - 1] = 0;
 }
 
 void set_inputrecordings_path(const std::string& newpath)
@@ -7282,6 +7297,7 @@ void set_inputrecordings_path(const std::string& newpath)
 void get_nvram_path(TCHAR* out, const int size)
 {
 	_tcsncpy(out, fix_trailing(nvram_dir).c_str(), size - 1);
+	out[size - 1] = 0;
 }
 
 std::string get_nvram_path()
@@ -7307,6 +7323,7 @@ std::string get_ini_file_path()
 void get_video_path(char* out, const int size)
 {
 	_tcsncpy(out, fix_trailing(video_dir).c_str(), size - 1);
+	out[size - 1] = 0;
 }
 
 std::string get_video_path()
@@ -7332,6 +7349,7 @@ std::string get_bezels_path()
 void get_floppy_sounds_path(char* out, const int size)
 {
 	_tcsncpy(out, fix_trailing(floppy_sounds_dir).c_str(), size - 1);
+	out[size - 1] = 0;
 }
 
 std::string get_floppy_sounds_path()
@@ -7590,28 +7608,75 @@ static std::string get_settings_path_for_save(const std::string& value)
 	return path;
 }
 
-bool save_amiberry_settings_with_result()
+// Rewrites path with content in place, as the settings file was always
+// written (fopen "w"), so the file keeps its identity: symbolic and hard
+// links, owner, permissions, ACLs and extended attributes, and a special
+// file stays one. A regular file's old content is read first and written
+// back when the new content cannot be written, so a failed save reports
+// the failure with the file as it was. A file that cannot be read (write
+// permission only) is written without that backup, as before.
+static bool replace_file_contents(const std::string& path, const std::string& content)
+{
+	std::string old_content;
+	bool have_old = false;
+	std::error_code ec;
+	if (std::filesystem::is_regular_file(path, ec)) {
+		if (FILE* in = uae_fopen(path.c_str(), "rbe")) {
+			char block[16384];
+			size_t n;
+			while ((n = fread(block, 1, sizeof block, in)) > 0)
+				old_content.append(block, n);
+			const bool read_ok = ferror(in) == 0;
+			fclose(in);
+			// A file that cannot be read back whole is not risked.
+			if (!read_ok)
+				return false;
+			have_old = true;
+		}
+	}
+	auto write_all = [&path](const std::string& text, const char* mode) {
+		FILE* out = uae_fopen(path.c_str(), mode);
+		if (!out)
+			return false;
+		const bool written = fwrite(text.data(), 1, text.size(), out) == text.size() && fflush(out) == 0;
+		const bool closed = fclose(out) == 0;
+		return written && closed;
+	};
+	// Text mode, as before (line ends on Windows); the backup goes back
+	// byte for byte.
+	if (write_all(content, "we"))
+		return true;
+	if (have_old && !write_all(old_content, "wbe"))
+		write_log("Settings file '%s' could not be written, nor its previous content restored\n", path.c_str());
+	return false;
+}
+
+static bool write_amiberry_settings()
 {
 	ensure_parent_directory_exists(amiberry_conf_file);
-	auto* const f = uae_fopen(amiberry_conf_file.c_str(), "we");
-	if (!f)
-		return false;
+	// Built in memory first, so the file is only opened for writing once
+	// the whole content exists (replace_file_contents).
+	std::string content;
 
 	char buffer[MAX_DPATH];
 
 	auto write_bool_option = [&](const char* name, const bool value) {
 		_sntprintf(buffer, MAX_DPATH, "%s=%s\n", name, value ? "yes" : "no");
-		fputs(buffer, f);
+		content += buffer;
 		};
 
 	auto write_int_option = [&](const char* name, const int value) {
 		_sntprintf(buffer, MAX_DPATH, "%s=%d\n", name, value);
-		fputs(buffer, f);
+		content += buffer;
 		};
 
+	// Written whole: a value cut at the buffer lost its newline, and the
+	// next setting was read as part of it.
 	auto write_string_option = [&](const char* name, const std::string& value) {
-		_sntprintf(buffer, MAX_DPATH, "%s=%s\n", name, value.c_str());
-		fputs(buffer, f);
+		content += name;
+		content += '=';
+		content += value;
+		content += '\n';
 		};
 
 	auto write_path_option = [&](const char* name, const std::string& value) {
@@ -7620,7 +7685,7 @@ bool save_amiberry_settings_with_result()
 
 	auto write_float_option = [&](const char* name, const float value) {
 		_sntprintf(buffer, MAX_DPATH, "%s=%f\n", name, value);
-		fputs(buffer, f);
+		content += buffer;
 		};
 
 	// Should the Quickstart Panel be the default when opening the GUI?
@@ -7801,7 +7866,7 @@ bool save_amiberry_settings_with_result()
 		_sntprintf(buffer, MAX_DPATH, "shader_parameter=%s|%s|%s|%.9g\n",
 			parameter.rtg ? "rtg" : "native", parameter.shader.c_str(),
 			parameter.name.c_str(), parameter.value);
-		fputs(buffer, f);
+		content += buffer;
 	}
 
 	// Show CRT bezel frame overlay
@@ -7854,7 +7919,7 @@ bool save_amiberry_settings_with_result()
 
 	// Recent disk entries (these are used in the dropdown controls)
 	_sntprintf(buffer, MAX_DPATH, "MRUDiskList=%zu\n", lstMRUDiskList.size());
-	fputs(buffer, f);
+	content += buffer;
 	for (auto& i : lstMRUDiskList)
 	{
 		write_path_option("Diskfile", i);
@@ -7862,7 +7927,7 @@ bool save_amiberry_settings_with_result()
 
 	// Recent CD entries (these are used in the dropdown controls)
 	_sntprintf(buffer, MAX_DPATH, "MRUCDList=%zu\n", lstMRUCDList.size());
-	fputs(buffer, f);
+	content += buffer;
 	for (auto& i : lstMRUCDList)
 	{
 		write_path_option("CDfile", i);
@@ -7871,15 +7936,26 @@ bool save_amiberry_settings_with_result()
 	// Recent WHDLoad entries (these are used in the dropdown controls)
 	// lstMRUWhdloadList
 	_sntprintf(buffer, MAX_DPATH, "MRUWHDLoadList=%zu\n", lstMRUWhdloadList.size());
-	fputs(buffer, f);
+	content += buffer;
 	for (auto& i : lstMRUWhdloadList)
 	{
 		write_path_option("WHDLoadfile", i);
 	}
 	
-	const bool write_ok = ferror(f) == 0;
-	const bool close_ok = fclose(f) == 0;
-	return write_ok && close_ok;
+	return replace_file_contents(amiberry_conf_file, content);
+}
+
+// Never throws: a save that cannot build the file (out of memory) fails
+// like one that cannot write it, for the GUI's event handlers and the
+// native API alike.
+bool save_amiberry_settings_with_result()
+{
+	try {
+		return write_amiberry_settings();
+	} catch (...) {
+		write_log("Could not build the settings file '%s'\n", amiberry_conf_file.c_str());
+		return false;
+	}
 }
 
 void save_amiberry_settings()

@@ -15,6 +15,10 @@ ${CC:-cc} -std=c99 -Wall -Wextra -pedantic -Werror -Isrc/osdep/settings -fsyntax
 printf '#include "amiberry_actions.h"\nint main(void) { amiberry_actions_status s; amiberry_actions_get_status(&s); return amiberry_actions_run_pending() ? 0 : 1; }\n' > "$out.c"
 ${CC:-cc} -std=c99 -Wall -Wextra -pedantic -Werror -Isrc/osdep/settings -fsyntax-only "$out.c"
 
+# So does the media and folders header.
+printf '#include "amiberry_media.h"\nint main(void) { char p[8]; return amiberry_folder_get(AMIBERRY_FOLDER_ROMS, p, sizeof p) == AMIBERRY_SETTINGS_OK && amiberry_media_refresh(AMIBERRY_MEDIA_CONFIGURATIONS) ? 0 : 1; }\n' > "$out.c"
+${CC:-cc} -std=c99 -Wall -Wextra -pedantic -Werror -Isrc/osdep/settings -fsyntax-only "$out.c"
+
 . tests/lib/settings_layer_build.sh
 settings_layer_compile "$out"
 "$out"
