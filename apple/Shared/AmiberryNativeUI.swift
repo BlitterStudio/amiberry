@@ -3,9 +3,11 @@
  * Amiberry native Apple UI layer: shared Swift sources used by the
  * macOS (NSHostingController) and iOS (UIHostingController) front ends.
  *
- * The layer proves the mixed Swift/C++ link: it imports the C settings API
- * through the AmiberrySettings clang module (module.modulemap next to this
- * file) and exposes a C-callable entry point the emulator calls at startup.
+ * The layer imports the C settings, actions and media APIs through the
+ * AmiberrySettings clang module (module.modulemap next to this file) and
+ * exposes a C-callable entry point the emulator calls at startup. Bridge/
+ * is the typed Swift API the front ends use over those C APIs; apple/Tests
+ * tests it inside the emulator (tests/test_native_ui_bridge.sh).
  */
 
 import Foundation

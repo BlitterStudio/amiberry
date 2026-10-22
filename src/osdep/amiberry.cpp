@@ -91,6 +91,7 @@
 #include "amiberry_mouse_capture.h"
 #include "amiberry_mouse_delta.h"
 #include "imgui_osk.h"
+#include "native_ui_tests.h"
 #ifdef __ANDROID__
 #include "android_touch_mouse.h"
 #endif
@@ -13253,6 +13254,10 @@ int amiberry_main(int argc, char* argv[])
 #endif
 		if (_tcscmp(argv[i], _T("--download-whdboot")) == 0)
 			download_whdboot = true;
+#ifdef AMIBERRY_NATIVE_UI_TESTS
+		if (_tcsncmp(argv[i], _T("--native-ui-tests="), 18) == 0)
+			native_ui_tests_request(argv[i] + 18);
+#endif
 		if (_tcscmp(argv[i], _T("--rescan-roms")) == 0)
 			forceroms = 1;
 		if (_tcscmp(argv[i], _T("--perf-log")) == 0)
@@ -13653,6 +13658,10 @@ int amiberry_main(int argc, char* argv[])
 
 	if (host_poweroff)
 		target_shutdown();
+#ifdef AMIBERRY_NATIVE_UI_TESTS
+	if (native_ui_tests_requested())
+		return native_ui_tests_exit_status();
+#endif
 	return 0;
 }
 

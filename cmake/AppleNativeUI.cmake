@@ -1,11 +1,13 @@
 # Native Apple UI layer, enabled with -DAMIBERRY_NATIVE_APPLE_UI=ON.
 #
 # Compiles the shared Swift sources from apple/Shared into a static library
-# linked into the amiberry target. This proves mixed Swift/C++ linking with
-# both generators the project uses: Ninja (macOS) and Xcode (iOS). Swift
-# imports the C settings API through the clang module map in apple/Shared
-# (module AmiberrySettings) and exposes a C-callable startup hook
-# (amiberry_native_ui_startup_log) that src/osdep/main.cpp calls.
+# (Swift module AmiberryNativeUI) linked into the amiberry target. This
+# proves mixed Swift/C++ linking with both generators the project uses:
+# Ninja (macOS) and Xcode (iOS). Swift imports the C settings API through
+# the clang module map in apple/Shared (module AmiberrySettings) and exposes
+# a C-callable startup hook (amiberry_native_ui_startup_log) that
+# src/osdep/main.cpp calls. apple/Shared/Bridge is the typed Swift API over
+# the settings, actions and media C APIs that the SwiftUI front ends use.
 #
 # The settings API symbols live in the amiberry executable itself, so the
 # Swift archive links against them from the final executable link; no extra
@@ -15,6 +17,16 @@ enable_language(Swift)
 
 add_library(amiberry_native_ui STATIC
         apple/Shared/AmiberryNativeUI.swift
+        apple/Shared/Bridge/EmulatorActions.swift
+        apple/Shared/Bridge/LayerStrings.swift
+        apple/Shared/Bridge/MediaLibrary.swift
+        apple/Shared/Bridge/SettingsCatalog.swift
+        apple/Shared/Bridge/SettingsSession.swift
+        apple/Shared/Bridge/SettingsStore.swift
+)
+set_target_properties(amiberry_native_ui PROPERTIES
+        Swift_MODULE_NAME AmiberryNativeUI
+        Swift_LANGUAGE_VERSION 6
 )
 
 # apple/Shared contains module.modulemap; putting it on the include path lets
@@ -36,3 +48,52 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE AMIBERRY_NATIVE_APPLE_UI)
 # Swift static library carries autolink notes for the Swift runtime, which
 # the Apple linker resolves from the toolchain.
 set_target_properties(${PROJECT_NAME} PROPERTIES LINKER_LANGUAGE CXX)
+
+# Tests of the Swift bridge against the real layer (apple/Tests), for macOS
+# test builds only: an XCTest bundle that the emulator loads with
+# --native-ui-tests=<bundle> where the built-in GUI would open
+# (tests/test_native_ui_bridge.sh). The option also compiles that flag into
+# the emulator, so it is never set for a release build. The bundle is
+# linked against the executable (-bundle_loader) for the C APIs and carries
+# its own copy of the bridge, which the app only links as far as it uses it.
+option(AMIBERRY_NATIVE_UI_TESTS "Build the native UI bridge tests (macOS test builds only, never for release)" OFF)
+if(AMIBERRY_NATIVE_UI_TESTS)
+    if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
+        message(FATAL_ERROR "AMIBERRY_NATIVE_UI_TESTS runs the tests in the macOS app; iOS is not supported")
+    endif()
+    execute_process(
+            COMMAND xcrun --sdk macosx --show-sdk-platform-path
+            OUTPUT_VARIABLE AMIBERRY_MACOS_PLATFORM_PATH
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+            COMMAND_ERROR_IS_FATAL ANY)
+    set(AMIBERRY_XCTEST_FRAMEWORKS "${AMIBERRY_MACOS_PLATFORM_PATH}/Developer/Library/Frameworks")
+    set(AMIBERRY_XCTEST_LIBRARIES "${AMIBERRY_MACOS_PLATFORM_PATH}/Developer/usr/lib")
+
+    add_library(amiberry_native_ui_tests MODULE
+            apple/Tests/NativeUIBridgeTests.swift
+            apple/Tests/TestRunner.swift
+    )
+    set_target_properties(amiberry_native_ui_tests PROPERTIES
+            OUTPUT_NAME AmiberryNativeUITests
+            PREFIX ""
+            SUFFIX ".bundle"
+            Swift_MODULE_NAME AmiberryNativeUITests
+            Swift_LANGUAGE_VERSION 6
+    )
+    # XCTest and its Swift overlay ship with Xcode's macOS platform, not the SDK.
+    target_compile_options(amiberry_native_ui_tests PRIVATE
+            "SHELL:-F ${AMIBERRY_XCTEST_FRAMEWORKS}"
+            "SHELL:-I ${AMIBERRY_XCTEST_LIBRARIES}"
+    )
+    target_link_options(amiberry_native_ui_tests PRIVATE
+            "SHELL:-F ${AMIBERRY_XCTEST_FRAMEWORKS}"
+            "SHELL:-L ${AMIBERRY_XCTEST_LIBRARIES}"
+            "SHELL:-Xlinker -bundle_loader -Xlinker $<TARGET_FILE:${PROJECT_NAME}>"
+            "SHELL:-Xlinker -rpath -Xlinker ${AMIBERRY_XCTEST_FRAMEWORKS}"
+            "SHELL:-Xlinker -rpath -Xlinker ${AMIBERRY_XCTEST_LIBRARIES}"
+    )
+    target_link_libraries(amiberry_native_ui_tests PRIVATE amiberry_native_ui "-framework XCTest")
+    add_dependencies(amiberry_native_ui_tests ${PROJECT_NAME})
+    target_sources(${PROJECT_NAME} PRIVATE src/osdep/native_ui_tests.cpp)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE AMIBERRY_NATIVE_UI_TESTS)
+endif()

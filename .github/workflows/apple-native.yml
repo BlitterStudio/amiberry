@@ -1,7 +1,8 @@
 name: Apple native CI
 
 # Builds the Apple targets that C/C++ CI does not cover:
-#   - macOS with the native UI layer (Swift) enabled  (Ninja generator)
+#   - macOS with the native UI layer (Swift) enabled, and its bridge
+#     tests run inside the app                         (Ninja generator)
 #   - iOS simulator, arm64                            (Xcode generator)
 #   - iOS device, arm64, unsigned                      (Xcode generator)
 #
@@ -9,9 +10,10 @@ name: Apple native CI
 # so a clean checkout needs only Xcode — no prebuilt dependency SDKs.
 #
 # Local equivalents (run from the repository root):
-#   macOS native UI:
-#     cmake -B build -G Ninja -DAMIBERRY_NATIVE_APPLE_UI=ON
+#   macOS native UI, with the bridge tests (never for a release build):
+#     cmake -B build -G Ninja -DAMIBERRY_NATIVE_APPLE_UI=ON -DAMIBERRY_NATIVE_UI_TESTS=ON
 #     cmake --build build
+#     AMIBERRY_BIN=build/Amiberry.app/Contents/MacOS/Amiberry tests/test_native_ui_bridge.sh
 #   iOS simulator:
 #     cmake -B build-ios-sim -G Xcode -DCMAKE_SYSTEM_NAME=iOS \
 #       -DCMAKE_OSX_SYSROOT=iphonesimulator -DCMAKE_OSX_ARCHITECTURES=arm64 \
@@ -71,9 +73,9 @@ jobs:
           brew install cmake ninja || true
           brew bundle || { sleep 10; brew bundle; }
 
-      - name: Build for macOS with the native UI layer
+      - name: Build for macOS with the native UI layer and its tests
         run: |
-          cmake -B build -G Ninja -DAMIBERRY_NATIVE_APPLE_UI=ON
+          cmake -B build -G Ninja -DAMIBERRY_NATIVE_APPLE_UI=ON -DAMIBERRY_NATIVE_UI_TESTS=ON
           cmake --build build -j"$(sysctl -n hw.ncpu)"
 
       - name: Verify the Swift layer is linked in
@@ -83,6 +85,9 @@ jobs:
           # when the Swift layer is.
           strings build/Amiberry.app/Contents/MacOS/Amiberry \
             | grep -F "settings layer ready: %{public}d options via C API"
+
+      - name: Run the Swift bridge tests inside the app
+        run: AMIBERRY_BIN=build/Amiberry.app/Contents/MacOS/Amiberry sh tests/test_native_ui_bridge.sh
 
   build-iOS-simulator:
     runs-on: macos-15
