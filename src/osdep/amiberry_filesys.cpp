@@ -1609,9 +1609,15 @@ static bool save_file_atomic(const TCHAR* filename, const void* data, size_t len
 				CloseHandle(h);
 				if (n > 0 && n < sizeof(resolved)) {
 					const char* rp = resolved;
-					if (strncmp(rp, "\\\\?\\", 4) == 0)	/* strip the \\?\ prefix */
-						rp += 4;
-					target.assign(rp);
+					if (strncmp(rp, "\\\\?\\UNC\\", 8) == 0) {
+						/* \\?\UNC\server\share\... is \\server\share\... */
+						target.assign("\\\\");
+						target.append(rp + 8);
+					} else {
+						if (strncmp(rp, "\\\\?\\", 4) == 0)	/* strip the \\?\ prefix */
+							rp += 4;
+						target.assign(rp);
+					}
 				}
 			}
 		}
@@ -1825,7 +1831,20 @@ static bool rewrite_fd(int fd, const char* data, size_t len) noexcept
    the fallback is declined when the old content cannot be kept. */
 static bool save_file_in_place(const char* target, const void* data, size_t len) noexcept
 {
-	const int fd = open(target, O_RDWR | O_CLOEXEC);
+	int fd = open(target, O_RDWR | O_CLOEXEC);
+	if (fd < 0 && errno == EACCES) {
+		/* A file this process may write but not read: written as
+		   fopen("w") wrote it, with no old content to put back (none can
+		   be read). */
+		fd = open(target, O_WRONLY | O_CLOEXEC);
+		if (fd >= 0) {
+			const bool written = rewrite_fd(fd, static_cast<const char*>(data), len);
+			const bool closed = close(fd) == 0;
+			if (!written || !closed)
+				write_log("my_save_file_atomic: in-place save of unreadable '%s' failed\n", target);
+			return written && closed;
+		}
+	}
 	if (fd < 0) {
 		write_log("my_save_file_atomic: open '%s' in place failed: %s\n", target, strerror(errno));
 		return false;
