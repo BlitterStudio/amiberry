@@ -36,7 +36,8 @@ enum class kind {
 	apply_settings,       // number = amiberry_apply_class
 	toggle_fullscreen,
 	open_settings,
-	choose_media          // number = amiberry_media_request
+	choose_media,         // number = amiberry_media_request
+	key                   // number = Amiga key code, flag_a = pressed
 };
 
 struct request {

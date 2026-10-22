@@ -560,6 +560,66 @@ static void neutralize_touch_controls()
 #endif
 }
 
+#if !defined(__ANDROID__) && !defined(LIBRETRO)
+// SDL3 hands the app lifecycle events only to event watchers, in the call
+// stack that sends them; it never queues them. On iOS that is UIKit's
+// notification, on the main thread while the emulator pumps events between
+// frames, so the emulation can be paused (and saved) here. Android has its
+// own filter (android_touch_event_filter), a libretro core's front end owns
+// the lifecycle, and desktops send none of these.
+// SDL sends each of these events twice (scene and application).
+static struct {
+	bool active = false; // paused for the background
+	bool owned = false;  // ... by this: the emulation was running
+} background_pause;
+
+static bool SDLCALL app_lifecycle_watch(void*, SDL_Event* event)
+{
+	if (!is_mainthread())
+		return true;
+	switch (event->type) {
+	case SDL_EVENT_WILL_ENTER_BACKGROUND:
+		// The app is no longer active (the Control Center counts): touches
+		// end, and the emulation pauses unless the user paused it already.
+		neutralize_touch_controls();
+#ifdef AMIBERRY_NATIVE_HOST
+		native_host_hide_keyboard();
+#endif
+		if (!background_pause.active) {
+			background_pause.active = true;
+			background_pause.owned = pause_emulation == 0;
+			if (background_pause.owned) {
+				pause_sound();
+				pause_emulation = 1;
+			}
+		}
+		break;
+	case SDL_EVENT_DID_ENTER_BACKGROUND:
+#ifdef AMIBERRY_NATIVE_HOST
+		// The system may end the app from here on; the save is written
+		// between frames (this can run mid-frame, where the run loop is
+		// pumped for input).
+		native_host_request_autosave();
+#endif
+		break;
+	case SDL_EVENT_DID_ENTER_FOREGROUND:
+		neutralize_touch_controls();
+		if (background_pause.active) {
+			background_pause.active = false;
+			// Only the pause this set ends (not the settings UI's, say).
+			if (background_pause.owned && pause_emulation == 1) {
+				pause_emulation = 0;
+				resume_sound();
+			}
+		}
+		break;
+	default:
+		break;
+	}
+	return true;
+}
+#endif
+
 static void drain_pending_touch_neutralization()
 {
 #ifdef __ANDROID__
@@ -1837,6 +1897,9 @@ void target_inputdevice_unacquire(const bool full)
 	// Releases consumed by the GUI/background event loop cannot update OSK
 	// ownership. End the session before transferring input away from emulation.
 	imgui_osk_hide();
+#ifdef AMIBERRY_NATIVE_HOST
+	native_host_hide_keyboard();
+#endif
 #ifdef __ANDROID__
 	amiberry_android_touch_mouse_neutralize();
 	amiberry_android_clear_all_mouse_button_sources();
@@ -4202,22 +4265,8 @@ static void process_event(const SDL_Event& event)
 			handle_quit_event();
 			break;
 
-		case SDL_EVENT_WILL_ENTER_BACKGROUND:
-		case SDL_EVENT_DID_ENTER_BACKGROUND:
-			neutralize_touch_controls();
-			pause_sound();
-			pause_emulation = 1;
-			break;
-
-		case SDL_EVENT_WILL_ENTER_FOREGROUND:
-		case SDL_EVENT_DID_ENTER_FOREGROUND:
-			neutralize_touch_controls();
-#ifdef __ANDROID__
-			amiberry_android_clear_touch_drain();
-#endif
-			pause_emulation = 0;
-			resume_sound();
-			break;
+		// The app lifecycle events (background, foreground) never reach the
+		// queue in SDL3: see app_lifecycle_watch(), and Android's event filter.
 
 		case SDL_EVENT_CLIPBOARD_UPDATE:
 			handle_clipboard_update_event();
@@ -4325,7 +4374,11 @@ static void process_event(const SDL_Event& event)
 			if (on_screen_joystick_keyboard_tapped()) {
 				if (vkbd_allowed(0)) {
 					neutralize_touch_controls();
+#if defined(AMIBERRY_NATIVE_HOST) && defined(AMIBERRY_IOS)
+					native_host_toggle_keyboard();
+#else
 					imgui_osk_toggle();
+#endif
 				}
 			}
 			if (!consumed) {
@@ -4524,6 +4577,9 @@ bool handle_events()
 	// run here, in order, between frames; this also refreshes the status
 	// snapshot. Runs in every handle_events() pass, including while paused.
 	amiberry_actions_run_pending();
+#ifdef AMIBERRY_NATIVE_HOST
+	native_host_service_autosave();
+#endif
 
 	if (pause_emulation)
 	{
@@ -5566,8 +5622,40 @@ static bool path_chars_match(const TCHAR a, const TCHAR b)
 #endif
 }
 
+#ifdef AMIBERRY_IOS
+// The iOS app's container moves (reinstall, update, restore). A path stored
+// absolute in an earlier container of the app (before paths were stored
+// relative) is re-rooted at the current one: the part after
+// .../Containers/Data/Application/<id> is kept.
+static bool rebase_ios_container_path(TCHAR* path, const int size)
+{
+	static const std::string marker = "/Containers/Data/Application/";
+	const char* home = getenv("HOME");
+	if (!home || !home[0])
+		return false;
+	const std::string current = strip_trailing_separators(home);
+	const std::string text = path;
+	const auto at = text.find(marker);
+	if (at == std::string::npos || current.find(marker) == std::string::npos)
+		return false;
+	const auto id_end = text.find('/', at + marker.size());
+	if (id_end == std::string::npos)
+		return false;
+	const std::string rebased = current + text.substr(id_end);
+	if (rebased == text || text.compare(0, current.size(), current) == 0
+		|| rebased.size() >= static_cast<size_t>(size))
+		return false;
+	_tcscpy(path, rebased.c_str());
+	return true;
+}
+#endif
+
 bool target_resolve_relative_path(TCHAR* path, const int size)
 {
+#ifdef AMIBERRY_IOS
+	if (rebase_ios_container_path(path, size))
+		return true;
+#endif
 	if (!is_base_relative_path(path))
 		return false;
 	if (cmdline_path_mode)
@@ -7603,9 +7691,15 @@ void read_directory(const std::string& path, std::vector<std::string>* dirs, std
 
 // Portable installs store amiberry.conf paths relative to the executable directory when
 // relative paths are enabled, so the whole folder can move to another drive or mount point.
+// The iOS app does so always: its container moves.
 static std::string get_settings_path_for_save(const std::string& value)
 {
-	if (!g_portable_mode || !relativepaths || value.empty() || value.size() >= MAX_DPATH)
+#ifdef AMIBERRY_IOS
+	const bool relative_settings = true;
+#else
+	const bool relative_settings = g_portable_mode && relativepaths;
+#endif
+	if (!relative_settings || value.empty() || value.size() >= MAX_DPATH)
 		return value;
 	TCHAR path[MAX_DPATH];
 	_tcscpy(path, value.c_str());
@@ -8240,7 +8334,9 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		bool relative_paths_enabled = relativepaths != 0;
 		if (cfgfile_yesno(option, value, "relative_paths", &relative_paths_enabled))
 		{
+#ifndef AMIBERRY_IOS
 			relativepaths = relative_paths_enabled ? 1 : 0;
+#endif
 			ret = 1;
 		}
 		ret |= cfgfile_intval(option, value, "ROMs", &numROMs, 1);
@@ -13312,7 +13408,13 @@ int amiberry_main(int argc, char* argv[])
 	#endif
 	const bool portable_mode = g_portable_mode;
 	// Portable installs default to relative paths; amiberry.conf can override this.
+	// The iOS app's container moves (reinstall, update, restore), so it
+	// always stores paths relative to its home.
+#ifdef AMIBERRY_IOS
+	relativepaths = 1;
+#else
 	relativepaths = portable_mode ? 1 : 0;
+#endif
 	resolve_bootstrap_settings_paths(portable_mode, !early_dump_mode);
 	if (dump_paths)
 	{
@@ -13562,6 +13664,9 @@ int amiberry_main(int argc, char* argv[])
 	write_log(_T("Enumeration done\n"));
 
 	osdep_platform_init_ui();
+#if !defined(__ANDROID__) && !defined(LIBRETRO)
+	SDL_AddEventWatch(app_lifecycle_watch, nullptr);
+#endif
 #ifdef AMIBERRY_NATIVE_HOST
 	native_host_install_menus();
 #endif

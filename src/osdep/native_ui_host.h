@@ -1,11 +1,12 @@
 /*
- * The native macOS front end (apple/macOS, -DAMIBERRY_NATIVE_APPLE_UI=ON):
- * where the built-in GUI would show, the emulator calls these instead, so
- * the macOS app shows no ImGui. Other builds keep the built-in GUI.
+ * The native Apple front ends (apple/Shared/UI with apple/macOS or
+ * apple/iOS, -DAMIBERRY_NATIVE_APPLE_UI=ON): where the built-in GUI would
+ * show, the emulator calls these instead, so the Apple apps show no ImGui.
+ * Other builds keep the built-in GUI.
  */
 #pragma once
 
-#if defined(AMIBERRY_NATIVE_APPLE_UI) && defined(AMIBERRY_MACOS)
+#if defined(AMIBERRY_NATIVE_APPLE_UI) && (defined(AMIBERRY_MACOS) || defined(AMIBERRY_IOS))
 #define AMIBERRY_NATIVE_HOST 1
 
 #include <string>
@@ -14,8 +15,26 @@
 // run_gui(): queued actions and IPC keep running, and a reset, quit or
 // state load among them closes it as the built-in GUI's buttons do.
 void native_host_run_settings();
-// Installs the menu bar commands; once SDL has created the application.
+// Installs the front end's commands once SDL has created the application:
+// the menu bar on macOS, the emulation overlay (settings and keyboard
+// buttons) on iOS.
 void native_host_install_menus();
+// The native on-screen Amiga keyboard (iOS; nothing on macOS, which keeps
+// the built-in one until its GUI is compiled out): shown or hidden by its
+// hotkey and the on-screen joystick's keyboard button, hidden when input
+// leaves the emulation. Main thread only.
+void native_host_toggle_keyboard();
+void native_host_hide_keyboard();
+// The autosave state (iOS; nothing on macOS): the running emulation is
+// saved as the app goes to the background, where the system may end it, and
+// the settings UI offers to resume it. Requested from the lifecycle event
+// (main thread, which can be mid-frame), written by the service call at the
+// next point between frames: the emulation loop's handle_events() and the
+// settings loop.
+void native_host_request_autosave();
+void native_host_service_autosave();
+// The autosave state's path.
+std::string native_host_autosave_path();
 
 enum class native_host_file {
 	floppy,     // a disk image to insert

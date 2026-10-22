@@ -1,20 +1,23 @@
 /*
  * Copyright (C) 2026 BlitterStudio
- * The settings window's views. Every control is generated from a layer
- * descriptor, and availability, ranges and choices come from the session,
- * so no option rule is written here.
+ * The native settings views, shared by macOS and iOS. Every control is
+ * generated from a layer descriptor, and availability, ranges and choices
+ * come from the session, so no option rule is written here. File and folder
+ * requesters are each platform's FilePanels.
  */
 
-import AppKit
 import SwiftUI
 
 struct SettingsRootView: View {
 	@Bindable var model: SettingsWindowModel
 	@State private var search = ""
+	/// The sidebar's selection: nil when a collapsed split view (iPhone)
+	/// goes back to the list. The page shown stays model.page.
+	@State private var selection: SettingsPage?
 
 	var body: some View {
 		NavigationSplitView {
-			List(selection: $model.page) {
+			List(selection: $selection) {
 				ForEach(SettingsPage.sections(), id: \.title) { section in
 					Section(section.title) {
 						ForEach(section.pages) { page in
@@ -38,7 +41,15 @@ struct SettingsRootView: View {
 			FooterView(model: model)
 		}
 		.environment(model)
+		.onAppear { selection = model.page }
+		.onChange(of: selection) {
+			if let selection {
+				model.page = selection
+			}
+		}
+		#if os(macOS)
 		.frame(minWidth: 720, minHeight: 480)
+		#endif
 	}
 }
 
@@ -264,7 +275,7 @@ struct TextControl: View {
 					.labelsHidden()
 				if descriptor.kind == .path {
 					Button("Choose\u{2026}") {
-						if let path = FilePanels.choose(.floppy, title: descriptor.label, startingAt: draft) {
+						if let path = FilePanels.choose(.forOption(descriptor.id), title: descriptor.label, startingAt: draft) {
 							draft = path
 						}
 					}
@@ -299,6 +310,13 @@ struct QuickStartPage: View {
 	var body: some View {
 		let preset = MachinePresets.preset(for: presetID)
 		Form {
+			if let autosave = model.autosave {
+				Section {
+					Button("Resume Last Session") { model.resumeAutosave(autosave.path) }
+				} footer: {
+					Text("Saved \(autosave.date.formatted(date: .abbreviated, time: .shortened)), when Amiberry last went to the background.")
+				}
+			}
 			Section {
 				Picker("Model", selection: $presetID) {
 					ForEach(MachinePresets.all) { preset in
@@ -414,7 +432,7 @@ struct HardDrivesPage: View {
 	}
 
 	private func addHardfile() {
-		guard let path = FilePanels.choose(.floppy, title: "Choose a hardfile to mount", startingAt: "") else { return }
+		guard let path = FilePanels.choose(.hardfile, title: "Choose a hardfile to mount", startingAt: "") else { return }
 		let device = freeDevice()
 		add({ "hdf,rw,\(device):\($0),32,1,2,512,0,,uae0" }, path: path)
 	}
@@ -497,7 +515,10 @@ struct FooterView: View {
 			.font(.callout)
 			.lineLimit(2)
 			Spacer()
+			// An iOS app is not quit from inside (the system ends it).
+			#if os(macOS)
 			Button("Quit") { model.quit() }
+			#endif
 			if model.emulating {
 				if !(waiting[.restart] ?? []).isEmpty {
 					Button("Restart") { model.restart() }

@@ -42,6 +42,10 @@ public enum EmulatorAction: Hashable, Sendable {
 	/// Asks the user for a file over a running emulation and uses it, as
 	/// the media and state hotkeys do (the emulation pauses meanwhile).
 	case chooseMedia(MediaRequest)
+	/// Presses or releases a key of the emulated keyboard by Amiga raw key
+	/// code (0x00-0x7F), as an on-screen keyboard does; every press needs its
+	/// release. A press fails while nothing runs or the settings UI is open.
+	case key(code: Int, pressed: Bool)
 }
 
 /// What `EmulatorAction.chooseMedia` asks the user for.
@@ -136,6 +140,8 @@ public enum EmulatorActions {
 		case let .chooseMedia(request):
 			guard let value = request.layerValue else { return nil }
 			id = amiberry_actions_choose_media(value)
+		case let .key(code, pressed):
+			id = amiberry_actions_key(Int32(clamping: code), pressed)
 		}
 		return id == 0 ? nil : ActionTicket(id: id, action: action)
 	}

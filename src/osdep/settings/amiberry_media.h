@@ -48,6 +48,11 @@ typedef enum amiberry_folder {
 	AMIBERRY_FOLDER_COUNT
 } amiberry_folder;
 
+/* The state the iOS app saves in the save state folder as it goes to the
+   background, where the system may end it; its settings UI offers to
+   resume it. */
+#define AMIBERRY_AUTOSAVE_STATE_NAME "Autosave.uss"
+
 /*
  * The folder's path. UNKNOWN_ID for a folder outside the enum; UNAVAILABLE
  * when the stored path is not valid UTF-8 (set outside this API);
