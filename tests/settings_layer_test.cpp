@@ -198,8 +198,9 @@ romlist* getromlistbyromdata(const romdata* rd)
 
 // Preset engine stand-in: the harness cannot link cfgfile.cpp, so it
 // records the request and applies a few marker fields the Quickstart
-// constraints are known to react to, plus one target default outside every
-// option domain (kbd_led_num) the way a fresh configuration resets it.
+// constraints are known to react to, plus one field outside every option
+// domain (keyboard_leds[0]) as a fresh configuration's defaults would set
+// one.
 // Both the layer and the frozen reference implementation below run against
 // this same stand-in, so the test still proves the constraint move changed
 // nothing.
@@ -216,7 +217,7 @@ int built_in_prefs(uae_prefs* p, int model, int config, int compa, int romcheck)
 	p->cdslots[0].inuse = true;
 	p->cdslots[0].type = SCSI_UNIT_DEFAULT;
 	p->jports[1].mode = 3;
-	p->kbd_led_num = -1;
+	p->keyboard_leds[0] = 2;
 	return 1;
 }
 int built_in_prefs_preview(uae_prefs* p, int model, int config, int compa)
@@ -405,6 +406,20 @@ void reset_prefs(uae_prefs& p)
 	p.drawbridge_serial_auto = true;
 	p.cd_speed = 100;
 	p.filesys_custom_uaefsdb = true;
+
+	// Miscellaneous and priority (default_prefs, target_default_options
+	// and the built-in amiberry_options hotkeys).
+	p.start_gui = true;
+	p.capture_always = true;
+	p.ctrl_alt_release = true;
+	strcpy(p.open_gui, "F12");
+	strcpy(p.action_replay, "Pause");
+	p.kbd_led_num = p.kbd_led_scr = p.kbd_led_cap = -1;
+	p.active_capture_priority = 1;
+	p.minimized_pause = true;
+	p.minimized_nosound = true;
+	p.use_retroarch_quit = true;
+	p.use_retroarch_menu = true;
 }
 
 std::string value_of(const uae_prefs& p, const char* id)
@@ -1059,6 +1074,23 @@ void emit_roundtrip()
 	apply("chipset_compatible", "A500");
 	emit("a500_compatible", p);
 
+	// Miscellaneous and priority options away from their defaults: each
+	// must be read back as written (the writer and the parser agree).
+	reset_prefs(p);
+	apply("use_gui", "no");
+	apply("power_led_dim", "128");
+	apply("show_leds_rtg", "true");
+	apply("amiberry.inactive_minimize", "true");
+	apply("amiberry.use_retroarch_quit", "false");
+	apply("amiberry.screenshot", "LCtrl+F10");
+	apply("amiberry.open_gui", "");
+	apply("amiberry.kbd_led_num", "3");
+	apply("amiberry.minimized_input", "4");
+	apply("amiberry.minimized_priority", "2");
+	apply("amiberry.active_not_captured_nosound", "true");
+	apply("amiberry.active_not_captured_pause", "true");
+	emit("misc_priority", p);
+
 	reset_prefs(p);
 	// The A600 extra enables the machine's IDE controller (ide=a600/a1200
 	// is written by the core); the layer's ide option itself stays greyed
@@ -1688,7 +1720,7 @@ void check_presets()
 	settings::apply_preset(test_prefs, 10, 0, 1, false);
 	CHECK(stub_preset_config == 0);
 	CHECK(settings::arcade_game_config(4) == -1);
-	CHECK(changed_prefs.cpu_model == 68000 && changed_prefs.kbd_led_num == 0);
+	CHECK(changed_prefs.cpu_model == 68000 && changed_prefs.keyboard_leds[0] == 0);
 }
 
 // AE for the machine domains: sessions commit preset-written fields and
@@ -1719,7 +1751,7 @@ void check_machine_session()
 	CHECK(changed_prefs.floppyslots[1].dfxtype == DRV_NONE);
 	CHECK(!changed_prefs.cdslots[0].inuse);
 	CHECK(changed_prefs.jports[1].mode == 0);
-	CHECK(changed_prefs.kbd_led_num == -1);
+	CHECK(changed_prefs.keyboard_leds[0] == 2);
 
 	// The preset is replayed on the pending configuration: changes made
 	// before it survive where it does not write, changes made after it
@@ -1732,7 +1764,7 @@ void check_machine_session()
 	CHECK(amiberry_settings_commit(session, &changed) == AMIBERRY_APPLY_RESET && changed);
 	CHECK(std::strcmp(changed_prefs.romfile, "/roms/before.rom") == 0);
 	CHECK(value_of(changed_prefs, "chipset") == "aga");
-	CHECK(changed_prefs.kbd_led_num == -1 && changed_prefs.kbd_led_scr == 3);
+	CHECK(changed_prefs.keyboard_leds[0] == 2 && changed_prefs.kbd_led_scr == 3);
 	CHECK(changed_prefs.floppyslots[0].dfxtype == DRV_35_DD); // A500 constraint
 
 	// A machine option through a session: strongest class wins.

@@ -2020,6 +2020,19 @@ int dump_config_and_exit(int argc, TCHAR* argv[])
 			fprintf(stderr, "; corrections applied to the resolved configuration:\n%s", corrections);
 		xfree(corrections);
 	}
+	// Entries no parser took (the dump echoes them back as they were):
+	// reported, so a key the writer spells differently from the parser
+	// does not pass for a stored setting.
+	bool unknown_reported = false;
+	for (const struct strlist* line = currprefs.all_lines; line; line = line->next) {
+		if (!line->unknown)
+			continue;
+		if (!unknown_reported) {
+			fprintf(stderr, "; unknown configuration entries:\n");
+			unknown_reported = true;
+		}
+		fprintf(stderr, "%s=%s\n", line->option, line->value ? line->value : _T(""));
+	}
 	return 0;
 }
 #endif
