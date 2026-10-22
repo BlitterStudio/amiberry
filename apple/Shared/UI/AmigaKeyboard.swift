@@ -217,6 +217,20 @@ final class AmigaKeyboardModel {
 		}
 	}
 
+	/// Follows the emulation's Caps Lock (its LED), which a hardware
+	/// keyboard or a restored state can change: the key shows it, and the
+	/// next tap turns it the other way. Nothing is sent.
+	func syncCapsLock(_ on: Bool) {
+		guard latched.contains(AmigaKey.capsLock) != on else { return }
+		if on {
+			latched.insert(AmigaKey.capsLock)
+			down.insert(AmigaKey.capsLock)
+		} else {
+			latched.remove(AmigaKey.capsLock)
+			down.remove(AmigaKey.capsLock)
+		}
+	}
+
 	/// Lets go of every key, latched modifiers included, when the keyboard
 	/// hides or the emulation stops taking input. Caps Lock stays as it is:
 	/// it is the Amiga's state, not a key held.

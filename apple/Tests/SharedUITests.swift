@@ -69,6 +69,15 @@ final class AmigaKeyboardTests: XCTestCase {
 		XCTAssertEqual(posted.last, .key(code: AmigaKey.capsLock, pressed: false))
 	}
 
+	func testCapsLockFollowsTheEmulation() throws {
+		let keyboard = keyboard()
+		keyboard.syncCapsLock(true)
+		XCTAssertEqual(keyboard.down, [AmigaKey.capsLock])
+		XCTAssertTrue(posted.isEmpty, "following the LED sends nothing")
+		keyboard.touchDown(try key(AmigaKey.capsLock))
+		XCTAssertEqual(posted, [.key(code: AmigaKey.capsLock, pressed: false)], "one tap turns it off")
+	}
+
 	func testHidingReleasesHeldAndLatchedKeys() throws {
 		let keyboard = keyboard()
 		keyboard.touchDown(try key(0x64))

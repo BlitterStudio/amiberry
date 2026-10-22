@@ -169,6 +169,11 @@ struct OverlayView: View {
 			}
 		}
 		.ignoresSafeArea(.keyboard)
+		.onAppear { keyboard.syncCapsLock(state.status.status.capsLock) }
+		.onChange(of: state.status.status.capsLock) { keyboard.syncCapsLock(state.status.status.capsLock) }
+		// The emulation resuming (or starting) follows a settings apply, which
+		// runs after the settings screen closes: the options are read again.
+		.onChange(of: state.status.status.runState) { state.keyboardOptions = KeyboardOptions.active() }
 	}
 }
 
