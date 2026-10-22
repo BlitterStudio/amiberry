@@ -98,6 +98,9 @@ final class SettingsWindowModel {
 	var page: SettingsPage = .quickStart
 	/// The outcome of the last folder or mount change, when it failed.
 	var notice: String?
+	/// Options whose field holds text that is not a valid value; the
+	/// window does not close over them.
+	var invalidFields: Set<String> = []
 
 	@ObservationIgnored private let dismiss: () -> Void
 	@ObservationIgnored private let post: (EmulatorAction) -> Bool
@@ -132,7 +135,7 @@ final class SettingsWindowModel {
 
 	/// Start (or resume) with the session's changes.
 	func startOrResume() {
-		guard commit() else { return }
+		guard fieldsValid(), commit() else { return }
 		// What applies live reaches the emulation between frames.
 		if emulating {
 			_ = post(.applySettings(.live))
@@ -143,14 +146,14 @@ final class SettingsWindowModel {
 	/// Hard reset with the session's changes; changes that wait for a reset
 	/// come in with it.
 	func reset() {
-		guard commit() else { return }
+		guard fieldsValid(), commit() else { return }
 		_ = post(.applySettings(.reset))
 		dismiss()
 	}
 
 	/// Restart the emulation with the session's changes.
 	func restart() {
-		guard commit() else { return }
+		guard fieldsValid(), commit() else { return }
 		_ = post(.applySettings(.restart))
 		dismiss()
 	}
@@ -168,6 +171,22 @@ final class SettingsWindowModel {
 		} else {
 			quit()
 		}
+	}
+
+	/// A reset, quit or state load from the menu or IPC closes the window:
+	/// the edits are stored first (fields with invalid text keep their
+	/// previous value).
+	func commitForExternalRequest() {
+		_ = commit()
+	}
+
+	private func fieldsValid() -> Bool {
+		guard invalidFields.isEmpty else {
+			let labels = invalidFields.sorted().map { SettingsCatalog.descriptor(for: $0)?.label ?? $0 }
+			notice = "Correct \(labels.joined(separator: ", ")) first."
+			return false
+		}
+		return true
 	}
 
 	private func commit() -> Bool {

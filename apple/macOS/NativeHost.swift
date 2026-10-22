@@ -35,6 +35,13 @@ public func amiberryNativeUISettingsDismiss() {
 	}
 }
 
+@_cdecl("amiberry_native_ui_settings_commit")
+public func amiberryNativeUISettingsCommit() {
+	MainActor.assumeIsolated {
+		SettingsWindowController.shared.model?.commitForExternalRequest()
+	}
+}
+
 @_cdecl("amiberry_native_ui_install_menus")
 public func amiberryNativeUIInstallMenus() {
 	MainActor.assumeIsolated {

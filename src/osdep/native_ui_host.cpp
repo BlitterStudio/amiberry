@@ -31,6 +31,7 @@ extern "C" {
 void amiberry_native_ui_settings_show(bool emulating);
 bool amiberry_native_ui_settings_visible(void);
 void amiberry_native_ui_settings_dismiss(void);
+void amiberry_native_ui_settings_commit(void);
 void amiberry_native_ui_install_menus(void);
 bool amiberry_native_ui_choose_file(int kind, const char* title, const char* start_path,
 	char* chosen, size_t size);
@@ -127,8 +128,15 @@ void native_host_run_settings()
 		Amiberry::IPC::IPCHandle();
 #endif
 		amiberry_actions_run_pending();
-		if (amiberry_actions_emulation_requests() != requests_before)
+		if (amiberry_actions_emulation_requests() != requests_before) {
+			// A reset (or quit, or state load) from the menu or IPC closes
+			// the window as its own buttons do: with the edits stored, so a
+			// reset starts with them.
+			amiberry_native_ui_settings_commit();
 			break;
+		}
+		// Messages from worker threads while the window is up.
+		native_host_show_deferred_messages();
 		// Waiting for an SDL event also runs the application's event loop,
 		// which drives the settings window.
 		SDL_Event event;

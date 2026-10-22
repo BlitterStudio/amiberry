@@ -109,6 +109,30 @@ final class SettingsWindowModelTests: XCTestCase {
 		XCTAssertEqual(running.waiting[.reset]?.contains { $0.id == chip.id } ?? false, waitedBefore)
 	}
 
+	func testInvalidFieldsKeepTheWindowOpen() throws {
+		let model = try model(emulating: true)
+		model.invalidFields.insert("cpu_multiplier")
+		model.startOrResume()
+		model.reset()
+		XCTAssertEqual(dismissed, 0)
+		XCTAssertEqual(posted, [])
+		XCTAssertTrue(model.notice?.hasPrefix("Correct ") ?? false)
+		model.invalidFields.removeAll()
+		model.startOrResume()
+		XCTAssertEqual(dismissed, 1)
+	}
+
+	func testExternalRequestsStoreTheEdits() throws {
+		let model = try model(emulating: true)
+		let current = try XCTUnwrap(model.store.value(of: "immediate_blits"))
+		let other = current == "true" ? "false" : "true"
+		XCTAssertTrue(model.store.set(other, for: "immediate_blits"))
+		model.commitForExternalRequest()
+		XCTAssertEqual(try SettingsSession().value(of: "immediate_blits"), other)
+		XCTAssertTrue(model.store.set(current, for: "immediate_blits"))
+		try model.store.commit()
+	}
+
 	func testErrorsReadAsSentences() {
 		XCTAssertEqual(SettingsWindowModel.describe(SettingsError.invalidValue(id: "cpu_model", value: "1")),
 			"CPU model: \u{201C}1\u{201D} is not a valid value.")
@@ -197,6 +221,18 @@ final class MenuCommandsTests: XCTestCase {
 			.saveStateSlot(0), .chooseMedia(.saveState), .chooseMedia(.floppy(drive: 1)),
 			.ejectFloppy(drive: 2), .ejectCD, .toggleFullscreen, .chooseMedia(.loadState), .chooseMedia(.cd),
 		])
+	}
+
+	func testScreenshotNamesNeverOverwrite() throws {
+		let folder = FileManager.default.temporaryDirectory.appendingPathComponent("shots-\(UUID().uuidString)")
+		try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+		defer { try? FileManager.default.removeItem(at: folder) }
+		let now = Date()
+		let first = MenuCommands.screenshotPath(in: folder.path, at: now)
+		FileManager.default.createFile(atPath: first, contents: Data())
+		let second = MenuCommands.screenshotPath(in: folder.path, at: now)
+		XCTAssertNotEqual(first, second)
+		XCTAssertTrue(second.hasSuffix(" 2.png"))
 	}
 
 	func testPauseFollowsTheRunState() throws {

@@ -667,8 +667,9 @@ static void apply_disk_selection(const int shortcut, uae_prefs* prefs, const std
 	}
 	else if (shortcut == 4)
 	{
-		_tcscpy(savestate_fname, selected.c_str());
-		savestate_initsave(savestate_fname, 1, true, true);
+		// As the state hotkey's restore (AKS_STATERESTOREDIALOG): restore
+		// mode, which leaves an input recording alone.
+		savestate_initsave(selected.c_str(), 1, true, false);
 		savestate_state = STATE_DORESTORE;
 
 		const auto filename = extract_filename(savestate_fname);
@@ -684,8 +685,10 @@ static void apply_disk_selection(const int shortcut, uae_prefs* prefs, const std
 		if (path.size() < 4 || path.substr(path.size() - 4) != ".uss")
 			path += ".uss";
 
-		_tcscpy(savestate_fname, path.c_str());
-		save_state(savestate_fname, _T("Description!"));
+		// As the state hotkey's save (AKS_STATESAVEDIALOG): compressed, with
+		// the save's flags set up for this file.
+		savestate_initsave(path.c_str(), 1, true, true);
+		save_state(savestate_fname, STATE_SAVE_DESCRIPTION);
 		if (create_screenshot())
 		{
 			const auto filename = extract_filename(savestate_fname);

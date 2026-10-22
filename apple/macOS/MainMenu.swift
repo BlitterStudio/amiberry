@@ -114,9 +114,23 @@ final class MenuCommands: NSObject, NSMenuItemValidation {
 
 	@objc func screenshot(_ sender: Any?) {
 		let folder = (try? MediaLibrary.path(of: .screenshots)) ?? ""
-		let stamp = ISO8601DateFormatter.string(
-			from: Date(), timeZone: .current, formatOptions: [.withFullDate, .withTime])
-		post(.screenshot(path: URL(fileURLWithPath: folder).appendingPathComponent("amiberry-\(stamp).png").path))
+		post(.screenshot(path: MenuCommands.screenshotPath(in: folder, at: Date())))
+	}
+
+	/// A screenshot file name that names no existing file: the time to the
+	/// millisecond, then a number if that is taken.
+	static func screenshotPath(in folder: String, at date: Date) -> String {
+		let formatter = DateFormatter()
+		formatter.locale = Locale(identifier: "en_US_POSIX")
+		formatter.dateFormat = "yyyy-MM-dd 'at' HH.mm.ss.SSS"
+		let base = URL(fileURLWithPath: folder).appendingPathComponent("Amiberry \(formatter.string(from: date))")
+		var path = base.appendingPathExtension("png").path
+		var number = 2
+		while FileManager.default.fileExists(atPath: path) {
+			path = base.path + " \(number).png"
+			number += 1
+		}
+		return path
 	}
 
 	@objc func insertFloppy(_ sender: NSMenuItem) { post(.chooseMedia(.floppy(drive: sender.tag))) }

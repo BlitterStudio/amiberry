@@ -37,6 +37,7 @@ struct SettingsRootView: View {
 		.safeAreaInset(edge: .bottom, spacing: 0) {
 			FooterView(model: model)
 		}
+		.environment(model)
 		.frame(minWidth: 720, minHeight: 480)
 	}
 }
@@ -169,6 +170,7 @@ struct ChoiceControl: View {
 struct NumberControl: View {
 	let descriptor: SettingDescriptor
 	let store: SettingsStore
+	@Environment(SettingsWindowModel.self) private var model: SettingsWindowModel?
 	@State private var draft = ""
 	@State private var valueBeforeEditing: String?
 	@FocusState private var editing: Bool
@@ -217,10 +219,15 @@ struct NumberControl: View {
 		.onChange(of: draft) {
 			if let value = number(draft, in: range) {
 				save(value)
-			} else if let original = valueBeforeEditing, original != store.value(of: descriptor.id) {
-				store.set(original, for: descriptor.id)
+				model?.invalidFields.remove(descriptor.id)
+			} else {
+				if let original = valueBeforeEditing, original != store.value(of: descriptor.id) {
+					store.set(original, for: descriptor.id)
+				}
+				model?.invalidFields.insert(descriptor.id)
 			}
 		}
+		.onDisappear { model?.invalidFields.remove(descriptor.id) }
 	}
 
 	private func number(_ text: String, in range: ClosedRange<Double>) -> Double? {
