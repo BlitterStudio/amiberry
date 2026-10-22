@@ -48,7 +48,7 @@
 extern "C" {
 #endif
 
-#define AMIBERRY_SETTINGS_API_VERSION 3
+#define AMIBERRY_SETTINGS_API_VERSION 4
 
 /* Large enough for every value a descriptor can produce, including the
    terminating NUL. */
@@ -149,6 +149,13 @@ AMIBERRY_SETTINGS_API amiberry_settings_status amiberry_settings_get(const amibe
 	const char *id, char *buffer, size_t size);
 AMIBERRY_SETTINGS_API amiberry_settings_status amiberry_settings_set(amiberry_settings_session *session,
 	const char *id, const char *value);
+/*
+ * The value the running emulation uses now (the active configuration),
+ * which reaches the pending one's after amiberry_actions_apply_settings
+ * with the option's apply class. Same spelling and statuses as get.
+ */
+AMIBERRY_SETTINGS_API amiberry_settings_status amiberry_settings_get_active(const char *id,
+	char *buffer, size_t size);
 
 AMIBERRY_SETTINGS_API bool amiberry_settings_is_available(const amiberry_settings_session *session, const char *id);
 /* Whether a CHOICE or BOOL option accepts this value now ("true"/"false" for
@@ -182,7 +189,9 @@ AMIBERRY_SETTINGS_API size_t amiberry_settings_validate(const amiberry_settings_
  * Stores the session in the pending configuration exactly as validation
  * resolved it: the session's changes, changes made elsewhere since, and
  * every adjustment the fixups make for them. The session continues from
- * the stored configuration. It does not signal a running emulation.
+ * the stored configuration. It does not signal a running emulation:
+ * amiberry_actions_apply_settings (amiberry_actions.h) with the class
+ * returned brings the emulation up to it.
  * *changed tells whether the pending configuration changed; the result is
  * the strongest apply class among the options that did (or, when only
  * settings without a value of their own changed, among the options the

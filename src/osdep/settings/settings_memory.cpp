@@ -531,7 +531,7 @@ const definition definitions[] = {
 		get_megachipmem_size, set_megachipmem_size, z3_possible, megachipmem_choice_available, nullptr},
 	{CHOICE_OPTION("z3mapping", "memory", "Z3 mapping mode",
 			"Z3 memory address mapping. Automatic picks the best layout, UAE and Real match those address spaces.",
-			AMIBERRY_APPLY_RESET, "auto", z3mapping_choices,
+			AMIBERRY_APPLY_RESTART, "auto", z3mapping_choices,
 			"Needs 32-bit addressing."),
 		get_z3mapping, set_z3mapping, z3_possible, nullptr, nullptr},
 };

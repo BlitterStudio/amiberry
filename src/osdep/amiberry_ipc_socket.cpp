@@ -41,6 +41,7 @@
 #include <cstring>
 #include <map>
 #include <algorithm>
+#include <cmath>
 #include <cctype>
 #include <chrono>
 #include <mutex>
@@ -3418,6 +3419,10 @@ static std::string HandleHelp(const std::vector<std::string>& args)
 	commands.emplace_back("SETTINGS_VALIDATE");
 	commands.emplace_back("SETTINGS_COMMIT");
 	commands.emplace_back("SETTINGS_RESET_SESSION");
+	commands.emplace_back("SETTINGS_GET_ACTIVE <id>");
+	commands.emplace_back("SETTINGS_LIST");
+	commands.emplace_back("SETTINGS_DESCRIBE <id>");
+	commands.emplace_back("SETTINGS_APPLY <live|reset|restart>");
 	commands.emplace_back("SETTINGS_MOUNTS");
 	commands.emplace_back("SETTINGS_MOUNT_ADD <uaehf value>");
 	commands.emplace_back("SETTINGS_MOUNT_REPLACE <index> <uaehf value>");
@@ -3475,6 +3480,23 @@ static std::string settings_status_message(amiberry_settings_status status,
 	return "Settings error";
 }
 
+// Reads a setting into value with a buffer that grows until it fits: PATH
+// and STRING values can be longer than AMIBERRY_SETTINGS_VALUE_MAX.
+template <typename Get>
+static amiberry_settings_status read_setting(std::string& value, Get&& get)
+{
+	std::vector<char> buffer(AMIBERRY_SETTINGS_VALUE_MAX);
+	for (;;) {
+		const amiberry_settings_status status = get(buffer.data(), buffer.size());
+		if (status != AMIBERRY_SETTINGS_BUFFER_TOO_SMALL || buffer.size() >= 65536) {
+			if (status == AMIBERRY_SETTINGS_OK)
+				value = buffer.data();
+			return status;
+		}
+		buffer.resize(buffer.size() * 4);
+	}
+}
+
 static std::string HandleSettingsGet(const std::vector<std::string>& args)
 {
 	if (!currprefs.ipc_disable_logging) {
@@ -3487,9 +3509,10 @@ static std::string HandleSettingsGet(const std::vector<std::string>& args)
 	if (!session) {
 		return make_response(false, {"Out of memory"});
 	}
-	char value[AMIBERRY_SETTINGS_VALUE_MAX];
-	const amiberry_settings_status status =
-		amiberry_settings_get(session, args[0].c_str(), value, sizeof value);
+	std::string value;
+	const amiberry_settings_status status = read_setting(value, [&](char* buffer, size_t size) {
+		return amiberry_settings_get(session, args[0].c_str(), buffer, size);
+	});
 	if (status != AMIBERRY_SETTINGS_OK) {
 		return make_response(false, {settings_status_message(status, args[0], "")});
 	}
@@ -3696,6 +3719,134 @@ static std::string HandleSettingsMountRemove(const std::vector<std::string>& arg
 	return make_response(true);
 }
 
+static std::string HandleSettingsList(const std::vector<std::string>& args)
+{
+	if (!currprefs.ipc_disable_logging) {
+		std::cout << "IPC: Received SETTINGS_LIST" << std::endl;
+	}
+	std::vector<std::string> ids;
+	for (size_t i = 0; i < amiberry_settings_count(); ++i) {
+		ids.emplace_back(amiberry_settings_at(i)->id);
+	}
+	return make_response(true, ids);
+}
+
+static const char* setting_type_name(amiberry_setting_type type)
+{
+	switch (type) {
+	case AMIBERRY_SETTING_BOOL: return "bool";
+	case AMIBERRY_SETTING_INT: return "int";
+	case AMIBERRY_SETTING_REAL: return "real";
+	case AMIBERRY_SETTING_CHOICE: return "choice";
+	case AMIBERRY_SETTING_PATH: return "path";
+	case AMIBERRY_SETTING_STRING: return "string";
+	}
+	return "string";
+}
+
+// The shortest spelling that reads back as v, whole numbers without an
+// exponent (60000, 0.1, 1e-05).
+static std::string number_text(double v)
+{
+	char text[64];
+	if (v == std::floor(v) && std::fabs(v) < 1e15) {
+		std::snprintf(text, sizeof text, "%.0f", v);
+		return text;
+	}
+	for (int precision = 1; precision <= 17; ++precision) {
+		std::snprintf(text, sizeof text, "%.*g", precision, v);
+		if (std::strtod(text, nullptr) == v)
+			break;
+	}
+	return text;
+}
+
+static std::string HandleSettingsDescribe(const std::vector<std::string>& args)
+{
+	if (!currprefs.ipc_disable_logging) {
+		std::cout << "IPC: Received SETTINGS_DESCRIBE" << std::endl;
+	}
+	if (args.size() != 1) {
+		return make_response(false, {"Usage: SETTINGS_DESCRIBE <id>"});
+	}
+	const amiberry_setting_descriptor* d = amiberry_settings_find(args[0].c_str());
+	if (!d) {
+		return make_response(false, {"Unknown option: " + args[0]});
+	}
+	amiberry_settings_session* session = settings_session();
+	if (!session) {
+		return make_response(false, {"Out of memory"});
+	}
+	std::vector<std::string> fields;
+	fields.push_back(std::string("type=") + setting_type_name(d->type));
+	fields.push_back(std::string("apply=") + apply_class_name(d->apply));
+	fields.push_back(std::string("group=") + d->group);
+	fields.push_back(std::string("default=") + (d->default_value ? d->default_value : ""));
+	fields.push_back(std::string("available=")
+		+ (amiberry_settings_is_available(session, d->id) ? "true" : "false"));
+	double min = 0, max = 0;
+	if (amiberry_settings_get_range(session, d->id, &min, &max)) {
+		fields.push_back("min=" + number_text(min));
+		fields.push_back("max=" + number_text(max));
+		fields.push_back("step=" + number_text(d->step));
+	}
+	// The choices the option offers now, with whether each is available.
+	const amiberry_setting_choice* choices = nullptr;
+	const size_t count = amiberry_settings_choices(session, d->id, &choices);
+	for (size_t i = 0; i < count; ++i) {
+		const bool available = amiberry_settings_choice_is_available(session, d->id, choices[i].value);
+		fields.push_back(std::string(available ? "choice=" : "unavailable_choice=") + choices[i].value);
+	}
+	// A tab or line break in a field would split the reply.
+	for (const std::string& field : fields) {
+		if (field.find_first_of("\t\r\n") != std::string::npos) {
+			return make_response(false, {"Description of " + args[0] + " contains a tab or line break"});
+		}
+	}
+	return make_response(true, fields);
+}
+
+static std::string HandleSettingsGetActive(const std::vector<std::string>& args)
+{
+	if (!currprefs.ipc_disable_logging) {
+		std::cout << "IPC: Received SETTINGS_GET_ACTIVE" << std::endl;
+	}
+	if (args.size() < 1) {
+		return make_response(false, {"Usage: SETTINGS_GET_ACTIVE <id>"});
+	}
+	std::string value;
+	const amiberry_settings_status status = read_setting(value, [&](char* buffer, size_t size) {
+		return amiberry_settings_get_active(args[0].c_str(), buffer, size);
+	});
+	if (status != AMIBERRY_SETTINGS_OK) {
+		return make_response(false, {settings_status_message(status, args[0], "")});
+	}
+	return make_response(true, {args[0] + "=" + value});
+}
+
+static std::string HandleSettingsApply(const std::vector<std::string>& args)
+{
+	if (!currprefs.ipc_disable_logging) {
+		std::cout << "IPC: Received SETTINGS_APPLY" << std::endl;
+	}
+	if (args.size() != 1) {
+		return make_response(false, {"Usage: SETTINGS_APPLY <live|reset|restart>"});
+	}
+	std::string name = args[0];
+	std::transform(name.begin(), name.end(), name.begin(), ::tolower);
+	amiberry_apply_class apply;
+	if (name == "live") {
+		apply = AMIBERRY_APPLY_LIVE;
+	} else if (name == "reset") {
+		apply = AMIBERRY_APPLY_RESET;
+	} else if (name == "restart") {
+		apply = AMIBERRY_APPLY_RESTART;
+	} else {
+		return make_response(false, {"Usage: SETTINGS_APPLY <live|reset|restart>"});
+	}
+	return run_posted_reply(amiberry_actions_apply_settings(apply));
+}
+
 static std::string HandleSettingsResetSession(const std::vector<std::string>& args)
 {
 	if (!currprefs.ipc_disable_logging) {
@@ -3754,6 +3905,10 @@ static void InitHandlers()
 	command_handlers[CMD_SETTINGS_VALIDATE] = HandleSettingsValidate;
 	command_handlers[CMD_SETTINGS_COMMIT] = HandleSettingsCommit;
 	command_handlers[CMD_SETTINGS_RESET_SESSION] = HandleSettingsResetSession;
+	command_handlers[CMD_SETTINGS_GET_ACTIVE] = HandleSettingsGetActive;
+	command_handlers[CMD_SETTINGS_LIST] = HandleSettingsList;
+	command_handlers[CMD_SETTINGS_DESCRIBE] = HandleSettingsDescribe;
+	command_handlers[CMD_SETTINGS_APPLY] = HandleSettingsApply;
 	command_handlers[CMD_LIST_MEDIA] = HandleListMedia;
 	command_handlers[CMD_GET_FOLDER] = HandleGetFolder;
 	command_handlers[CMD_SET_FOLDER] = HandleSetFolder;

@@ -815,7 +815,7 @@ const definition definitions[] = {
 	// with a CPU model or mode change (prefs_changed_cpu()).
 	{BOOL_OPTION("cpu_24bit_addressing", "cpu", "24-bit addressing",
 			"Essential for A500/A1200 compatibility. Disable for Z3 RAM usage.",
-			AMIBERRY_APPLY_RESTART, "true",
+			AMIBERRY_APPLY_RESET, "true",
 			"24-bit addressing is not available on a 68040 or 68060, with the JIT, or with a 32-bit accelerator board."),
 		get_address_space_24, set_address_space_24, address_space_24_available, nullptr, nullptr},
 	{BOOL_OPTION("cpu_compatible", "cpu", "More compatible",

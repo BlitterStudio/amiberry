@@ -804,8 +804,7 @@ static void gui_to_prefs(void)
 		memory_hardreset(2);
 	}
 	/* filesys hack */
-	currprefs.mountitems = changed_prefs.mountitems;
-	memcpy(&currprefs.mountconfig, &changed_prefs.mountconfig, sizeof currprefs.mountconfig);
+	adopt_pending_mount_list();
 
 #ifdef AMIBERRY
 	drawbridge_check_prefs_changed();

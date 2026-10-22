@@ -260,6 +260,16 @@ amiberry_settings_status amiberry_settings_get(const amiberry_settings_session* 
 	});
 }
 
+amiberry_settings_status amiberry_settings_get_active(const char* id, char* buffer, size_t size)
+{
+	return amiberry_settings::no_throw(AMIBERRY_SETTINGS_UNKNOWN_ID, [=] {
+		const definition* d = lookup(id);
+		if (!d)
+			return AMIBERRY_SETTINGS_UNKNOWN_ID;
+		return amiberry_settings::get(*d, currprefs, buffer, size);
+	});
+}
+
 amiberry_settings_status amiberry_settings_set(amiberry_settings_session* session,
 	const char* id, const char* value)
 {

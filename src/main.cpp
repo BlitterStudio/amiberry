@@ -934,9 +934,24 @@ void uae_quit (void)
 	target_quit ();
 }
 
+// The configuration a restart with the pending configuration starts with.
+// Kept apart until the old emulation has shut down, which it does with the
+// active configuration it was built from.
+static struct uae_prefs restart_pending_prefs;
+static bool restart_with_pending;
+
+void uae_restart_with_pending_prefs (void)
+{
+	uae_restart (&currprefs, 0, nullptr);
+	copy_prefs (&changed_prefs, &restart_pending_prefs);
+	restart_with_pending = true;
+}
+
 /* 0 = normal, 1 = nogui, -1 = disable nogui, -2 = autorestart */
 void uae_restart(struct uae_prefs *p, int opengui, const TCHAR *cfgfile)
 {
+	// A later restart decides what it starts with.
+	restart_with_pending = false;
 	uae_quit ();
 	restart_program = opengui == -2 ? 4 : (opengui > 0 ? 1 : (opengui == 0 ? 2 : 3));
 	restart_config[0] = 0;
@@ -2198,6 +2213,10 @@ void real_main (int argc, TCHAR **argv)
 	default_config = 1;
 
 	while (restart_program) {
+		if (restart_with_pending) {
+			copy_prefs(&restart_pending_prefs, &currprefs);
+			restart_with_pending = false;
+		}
 		copy_prefs(&currprefs, &changed_prefs);
 		const auto ret = real_main2 (argc, argv);
 		if (ret == 0 && quit_to_gui)

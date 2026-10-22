@@ -30,10 +30,11 @@ def check(name, condition, detail=""):
 
 
 class Emulator:
-    def __init__(self, binary, env):
+    def __init__(self, binary, env, model="A500", options=()):
         self.output = []
+        extra = [arg for option in options for arg in ("-s", option)]
         self.proc = subprocess.Popen(
-            [binary, "--model", "A500", "-G", "--log"], env=env,
+            [binary, "--model", model, *extra, "-G", "--log"], env=env,
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL)
         threading.Thread(target=self._drain, daemon=True).start()
         deadline = time.monotonic() + 60
@@ -198,6 +199,52 @@ def main():
               control.request("SETTINGS_GET\tdefinitely_not_an_option")
               == "ERROR\tUnknown option: definitely_not_an_option")
 
+        # Discovery and the active configuration.
+        options = control.request("SETTINGS_LIST").split("\t")
+        check("SETTINGS_LIST lists the options", options[0] == "OK" and "cpu_model" in options[1:], options[:4])
+        fields = control.request("SETTINGS_DESCRIBE\tcpu_model").split("\t")
+        check("SETTINGS_DESCRIBE describes an option",
+              fields[0] == "OK" and "type=choice" in fields and "apply=live" in fields
+              and "group=cpu" in fields and "choice=68000" in fields, fields)
+        fields = control.request("SETTINGS_DESCRIBE\tgfx_monitorblankdelay").split("\t")
+        check("SETTINGS_DESCRIBE gives a range in whole numbers", "max=60000" in fields, fields)
+        check("SETTINGS_DESCRIBE refuses an unknown option",
+              control.request("SETTINGS_DESCRIBE\tnope").startswith("ERROR"))
+        # The committed CPU applies live, so the running value catches up.
+        pending = control.request("SETTINGS_GET\tcpu_model")
+        deadline = time.monotonic() + 3
+        while control.request("SETTINGS_GET_ACTIVE\tcpu_model") != pending and time.monotonic() < deadline:
+            time.sleep(0.05)
+        check("SETTINGS_GET_ACTIVE reads the running configuration",
+              control.request("SETTINGS_GET_ACTIVE\tcpu_model") == pending, pending)
+        # One commit that changes options the display check handles in
+        # different passes (the mouse capture block returns early) reaches
+        # all of them.
+        check("magic mouse and on-screen joystick set together",
+              control.request("SETTINGS_SET\tmagic_mouse\ttrue") == "OK"
+              and control.request("SETTINGS_SET\tamiberry.onscreen_joystick\ttrue") == "OK"
+              and control.request("SETTINGS_COMMIT").startswith("OK\tchanged=true"))
+        deadline = time.monotonic() + 3
+        while time.monotonic() < deadline and (
+                control.request("SETTINGS_GET_ACTIVE\tamiberry.onscreen_joystick")
+                != "OK\tamiberry.onscreen_joystick=true"):
+            time.sleep(0.05)
+        check("both reach the running emulation",
+              control.request("SETTINGS_GET_ACTIVE\tmagic_mouse") == "OK\tmagic_mouse=true"
+              and control.request("SETTINGS_GET_ACTIVE\tamiberry.onscreen_joystick")
+              == "OK\tamiberry.onscreen_joystick=true")
+        control.request("SETTINGS_SET\tmagic_mouse\tfalse")
+        control.request("SETTINGS_SET\tamiberry.onscreen_joystick\tfalse")
+        control.request("SETTINGS_COMMIT")
+        reply = control.request("SETTINGS_APPLY\tsometime")
+        check("SETTINGS_APPLY refuses an unknown class", reply.startswith("ERROR\tUsage"), reply)
+        # A path longer than the short value buffer still reads back.
+        long_rom = "/" + "r" * 300 + ".rom"
+        check("SETTINGS_GET reads a long path",
+              control.request(f"SETTINGS_SET\tkickstart_rom_file\t{long_rom}") == "OK"
+              and control.request("SETTINGS_GET\tkickstart_rom_file") == f"OK\tkickstart_rom_file={long_rom}")
+        control.request("SETTINGS_RESET_SESSION")
+
         # The mount list: session edits through the real uaehfN parser and
         # writer, committed as a whole list that needs a reset.
         base = os.path.realpath(work)
@@ -259,9 +306,31 @@ def main():
         reply = control.request("SETTINGS_MOUNTS")
         check("the committed list is what a new session sees",
               reply == f"OK\tdir,ro,DH0:Work2:{drive},5", reply)
+        # SETTINGS_APPLY reset makes the committed list the active one
+        # (LIST_HARDDRIVES reads it), which the core attaches at the hard
+        # reset it also performs: a reset-only change committed with it
+        # shows the reset ran.
+        check("the committed drive is not active before the reset",
+              control.request("LIST_HARDDRIVES") == "OK\t<no harddrives mounted>")
+        chip = control.request("SETTINGS_GET\tchipmem_size")
+        check("a reset-only change goes with it",
+              control.request("SETTINGS_SET\tchipmem_size\t4") == "OK"
+              and control.request("SETTINGS_COMMIT").startswith("OK\tchanged=true\tapply=reset"))
+        check("SETTINGS_APPLY reset", control.request("SETTINGS_APPLY\treset") == "OK")
+        reply = control.request("LIST_HARDDRIVES")
+        check("the committed drive is the active one", reply == f"OK\tunit0=dir:{drive} (readonly)", reply)
+        deadline = time.monotonic() + 5
+        while control.request("SETTINGS_GET_ACTIVE\tchipmem_size") != "OK\tchipmem_size=4" \
+                and time.monotonic() < deadline:
+            time.sleep(0.05)
+        check("the hard reset ran", control.request("SETTINGS_GET_ACTIVE\tchipmem_size") == "OK\tchipmem_size=4")
+        control.request(f"SETTINGS_SET\tchipmem_size\t{chip.split('=', 1)[1]}")
         check("SETTINGS_MOUNT_REMOVE the last entry", control.request("SETTINGS_MOUNT_REMOVE\t0") == "OK")
         check("SETTINGS_COMMIT the empty list",
               control.request("SETTINGS_COMMIT") == "OK\tchanged=true\tapply=reset")
+        check("SETTINGS_APPLY reset again", control.request("SETTINGS_APPLY\treset") == "OK")
+        check("the next reset makes the empty list active",
+              control.request("LIST_HARDDRIVES") == "OK\t<no harddrives mounted>")
 
         # Status and settings must not serve data from before an earlier
         # command in the same pass: LOAD_CONFIG changes the pending

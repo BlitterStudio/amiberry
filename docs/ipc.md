@@ -226,6 +226,19 @@ them all. Coordinate controllers accordingly.
   strongest apply class among the changed options. When something changed it
   also signals the running emulation like `SET_CONFIG` does, so live options
   take effect at once. The session is closed afterwards.
+- `SETTINGS_APPLY <live|reset|restart>` brings the running emulation up to
+  the pending configuration the way the class `SETTINGS_COMMIT` reported
+  needs: `live` signals it (as COMMIT already does), `reset` also attaches
+  the committed mount list and hard-resets as the GUI's Reboot does, and
+  `restart` restarts the emulation with the pending configuration, without
+  the GUI. Replies `OK` once done (at once while no emulation runs).
+- `SETTINGS_GET_ACTIVE <id>` replies `OK <id>=<value>` with the value the
+  running emulation uses now, which equals the committed one once applied.
+- `SETTINGS_LIST` replies `OK` with every option ID.
+- `SETTINGS_DESCRIBE <id>` replies `OK` with `type=`, `apply=`, `group=`,
+  `default=` and `available=` (now, in the session) fields; `min=`, `max=`
+  and `step=` for numbers; and one `choice=<value>` field per selectable
+  choice (`unavailable_choice=<value>` for one the session refuses now).
 - `SETTINGS_RESET_SESSION` discards the session's uncommitted edits.
 - `SETTINGS_MOUNTS` replies `OK` with one field per mounted drive
   (directory, hardfile, CD or tape unit) in the order a `.uae` file lists
