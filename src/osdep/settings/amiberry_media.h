@@ -63,10 +63,11 @@ AMIBERRY_SETTINGS_API amiberry_settings_status amiberry_folder_get(amiberry_fold
  * existing file that is not a directory, or a path the settings file
  * cannot store as written: longer than the host's path limit (MAX_PATH on
  * Windows) less one, for the separator the folder gets, or 2495 bytes,
- * with a control character, or with a space at either end. UNAVAILABLE,
- * with the folder unchanged and its new access grant withdrawn, when access
- * to the folder cannot be kept or the settings file cannot be written (the
- * grant stays only if the bookmark file cannot be written either).
+ * with a control character, or with a space at either end (outside
+ * Windows also a backslash at the end). UNAVAILABLE, with the folder
+ * unchanged and its new access grant withdrawn, when access to the folder
+ * cannot be kept or the settings file cannot be written (the grant stays
+ * only if the bookmark file cannot be written either).
  */
 AMIBERRY_SETTINGS_API amiberry_settings_status amiberry_folder_set(amiberry_folder folder,
 	const char *path);
@@ -104,9 +105,10 @@ AMIBERRY_SETTINGS_API amiberry_settings_status amiberry_media_entry(amiberry_med
  * Records path (made absolute) as the most recent entry of a recent list
  * (floppies, CD images, WHDLoad archives), as the panels do after a pick,
  * and saves the emulator's settings. INVALID_VALUE for another list, a path
- * the settings file cannot store as written, or a file that cannot be
- * opened (the settings file keeps only those); UNAVAILABLE, with the list
- * unchanged, when the settings file cannot be written.
+ * the settings file cannot store as written, a folder, FIFO or socket, or a
+ * file that cannot be opened (the settings file keeps only those);
+ * UNAVAILABLE, with the list unchanged, when the settings file cannot be
+ * written.
  */
 AMIBERRY_SETTINGS_API amiberry_settings_status amiberry_media_add_recent(amiberry_media_list list,
 	const char *path);

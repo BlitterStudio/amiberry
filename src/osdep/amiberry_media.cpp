@@ -321,6 +321,12 @@ amiberry_settings_status amiberry_folder_set(amiberry_folder folder, const char*
 		// so a folder leaves room for it.
 		if (!storable_path(path) || std::strlen(path) + 1 >= max_stored_path)
 			return AMIBERRY_SETTINGS_INVALID_VALUE;
+#ifndef _WIN32
+		// The folder getters treat a trailing backslash as the separator
+		// (fix_trailing), which on POSIX is part of the name instead.
+		if (path[std::strlen(path) - 1] == '\\')
+			return AMIBERRY_SETTINGS_INVALID_VALUE;
+#endif
 		// The emulator lists and opens every folder as a directory; one
 		// that does not exist yet is allowed.
 		std::error_code ec;
@@ -393,9 +399,13 @@ amiberry_settings_status amiberry_media_add_recent(amiberry_media_list list, con
 		const std::string absolute = absolute_path(path);
 		if (!storable_path(absolute.c_str()))
 			return AMIBERRY_SETTINGS_INVALID_VALUE;
-		// A folder is not media (fopen opens one on POSIX).
+		// A folder is not media (fopen opens one on POSIX), and opening a
+		// FIFO or socket would block or fail; files and devices (a CD
+		// drive) are media.
 		std::error_code ec;
-		if (std::filesystem::is_directory(from_utf8(absolute), ec))
+		const auto type = std::filesystem::status(from_utf8(absolute), ec).type();
+		if (type == std::filesystem::file_type::directory || type == std::filesystem::file_type::fifo
+			|| type == std::filesystem::file_type::socket)
 			return AMIBERRY_SETTINGS_INVALID_VALUE;
 		// The settings loader keeps only recent entries it can open, so an
 		// entry that cannot be opened now would vanish at the next start.
