@@ -8,6 +8,8 @@ void file_dialog_shutdown();
 void OpenFileDialogKey(const char* key, const char* title, const char* filters, const std::string& initialPath, bool saveMode = false);
 bool ConsumeFileDialogResultKey(const char* key, std::string& outPath);
 bool IsFileDialogOpenKey(const char* key);
+// Drops a file dialog's pending result and closes it if it is still open.
+void CloseFileDialogKey(const char* key);
 
 void OpenDirDialogKey(const char* key, const std::string& initialPath);
 bool ConsumeDirDialogResultKey(const char* key, std::string& outPath);

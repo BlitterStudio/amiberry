@@ -416,7 +416,11 @@ extern void invalidate_gui_window_size_init();
 extern void SetLastLoadedConfig(const char* filename);
 extern void set_last_active_config(const char* filename);
 extern void set_last_active_config_from_media(const char* filename);
-extern void disk_selection(const int shortcut, uae_prefs* prefs);
+// Asks for the file of a media or state hotkey (gui_display(0..6): DF0-DF3,
+// load state, save state, CD) with the GUI's requester and uses it;
+// close_gui leaves the GUI afterwards, unless the file could not be used
+// (the GUI stays to show why). after runs once the file was used.
+extern void request_disk_selection(int shortcut, bool close_gui, std::function<void()> after = nullptr);
 extern int disk_swap(int entry);
 extern int disk_in_drive(int entry);
 extern int populate_diskswapper_from_archive(const TCHAR *path, struct uae_prefs *prefs);

@@ -209,16 +209,17 @@ void render_panel_savestates() {
         ImGui::Spacing();
 
         if (AmigaButton(ICON_FA_UPLOAD " Load state...", ImVec2(file_btn_w, BUTTON_HEIGHT))) {
-            disk_selection(4, &changed_prefs);
-            current_state_num = 99;
-            last_state_num = 99;
-            gui_update();
-            ClearScreenshotTexture();
+            request_disk_selection(4, false, [] {
+                current_state_num = 99;
+                last_state_num = 99;
+                gui_update();
+                ClearScreenshotTexture();
+            });
         }
         ImGui::SameLine();
         if (AmigaButton(ICON_FA_FLOPPY_DISK " Save state...", ImVec2(file_btn_w, BUTTON_HEIGHT))) {
             if (emulating) {
-                disk_selection(5, &changed_prefs);
+                request_disk_selection(5, false, [] { ss_info_dirty = true; });
             } else {
                 ShowAlert("Saving state", "Emulation hasn't started yet.");
             }

@@ -398,6 +398,7 @@ set(IMGUI_GUI_FILES
 		src/osdep/imgui/hwinfo.cpp
 		src/osdep/imgui/input.cpp
 		src/osdep/imgui/io.cpp
+		src/osdep/imgui/media_request.cpp
 		src/osdep/imgui/misc.cpp
 		src/osdep/imgui/onscreen.cpp
 		src/osdep/imgui/paths.cpp

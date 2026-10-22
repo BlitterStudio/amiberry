@@ -14,7 +14,7 @@
 
 namespace settings = amiberry_settings;
 
-static constexpr const char* floppy_file_filter =
+const char* const floppy_file_filter =
     "All Supported Files (*.adf,*.adz,*.dms,*.ipf,*.zip,*.7z,*.lha,*.lzh,*.lzx,*.fdi,*.scp,*.wrp,*.dsq,*.gz,*.xz,*.hdf,*.img)"
     "{.adf,.adz,.dms,.ipf,.zip,.7z,.lha,.lzh,.lzx,.fdi,.scp,.wrp,.dsq,.gz,.xz,.hdf,.img},All Files (*){.*}";
 

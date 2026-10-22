@@ -3037,6 +3037,7 @@ void run_gui()
 		// Runtime requests, such as replacing a missing floppy referenced by a
 		// restored state, must be rendered independently of the active panel.
 		FloppyRecoveryDialog_Render();
+		MediaRequestDialog_Render();
 
 		// Pop touch-scrolling hover suppression colors
 		if (touch_scrolling) {
@@ -3093,6 +3094,7 @@ void run_gui()
 		}
 	}
 
+	MediaRequestDialog_Reset();
 	amiberry_gui_halt();
 
 	// Reset counter for access violations

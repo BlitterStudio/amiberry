@@ -434,6 +434,14 @@ bool IsFileDialogOpenKey(const char* key)
 	return ImGuiFileDialog::Instance()->IsOpened(key);
 }
 
+void CloseFileDialogKey(const char* key)
+{
+	key = dialog_key_or_default(key);
+	s_results.erase(key);
+	if (ImGuiFileDialog::Instance()->IsOpened(key))
+		ImGuiFileDialog::Instance()->Close();
+}
+
 void OpenDirDialogKey(const char* key, const std::string& initialPath)
 {
 	key = dialog_key_or_default(key);

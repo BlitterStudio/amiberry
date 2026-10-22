@@ -651,10 +651,11 @@ ConfigFileInfo* SearchConfigInList(const char* name)
 // What a shortcut's requester picked (gui_display(0..6)) takes effect as
 // the panels apply it: DF0-DF3 (0-3), a state to load (4), a state to save
 // (5) and the CD (6).
-static void apply_disk_selection(const int shortcut, uae_prefs* prefs, const std::string& selected)
+// false when the file could not be used (gui_message said why).
+static bool apply_disk_selection(const int shortcut, uae_prefs* prefs, const std::string& selected)
 {
 	if (selected.empty())
-		return;
+		return true;
 	if (shortcut >= 0 && shortcut < 4)
 	{
 		if (strncmp(prefs->floppyslots[shortcut].df, selected.c_str(), MAX_DPATH) != 0)
@@ -671,12 +672,14 @@ static void apply_disk_selection(const int shortcut, uae_prefs* prefs, const std
 		// check what restore_state() checks first, as the action API does.
 		if (!zfile_exists(selected.c_str()) || !savestate_is_state_file(selected.c_str())) {
 			gui_message("Not a state file: %s", selected.c_str());
-			return;
+			return false;
 		}
 		// As the state hotkey's restore (AKS_STATERESTOREDIALOG): restore
 		// mode, which leaves an input recording alone.
 		savestate_initsave(selected.c_str(), 1, true, false);
 		savestate_state = STATE_DORESTORE;
+		// Not a slot: gui_update() would put the slot's file back.
+		current_state_num = 99;
 
 		const auto filename = extract_filename(savestate_fname);
 		screenshot_filename = get_screenshot_path();
@@ -698,7 +701,7 @@ static void apply_disk_selection(const int shortcut, uae_prefs* prefs, const std
 		// no thumbnail then, which would look like a valid state's.
 		if (save_state(savestate_fname, STATE_SAVE_DESCRIPTION) <= 0) {
 			gui_message("The state could not be saved to %s", path.c_str());
-			return;
+			return false;
 		}
 		if (create_screenshot())
 		{
@@ -723,24 +726,43 @@ static void apply_disk_selection(const int shortcut, uae_prefs* prefs, const std
 			set_config_changed();
 		}
 	}
+	return true;
 }
 
-void disk_selection(const int shortcut, uae_prefs* prefs)
+#ifdef USE_IMGUI
+void request_disk_selection(const int shortcut, const bool close_gui, std::function<void()> after)
 {
-	// The built-in GUI has no requester here (lost with the move from
-	// Guisan): floppies and the CD keep what they hold (or get their
-	// folder), and the state shortcuts do nothing.
-	std::string selected;
-	if (shortcut >= 0 && shortcut < 4)
-		selected = strlen(prefs->floppyslots[shortcut].df) > 0
-			? std::string(prefs->floppyslots[shortcut].df) : get_floppy_path();
-	else if (shortcut == 6)
-		selected = prefs->cdslots[0].inuse && strlen(prefs->cdslots[0].name) > 0
-			? std::string(prefs->cdslots[0].name) : get_cdrom_browse_path();
-	else if (shortcut == 4)
-		savestate_fname[0] = 0;
-	apply_disk_selection(shortcut, prefs, selected);
+	std::string title, start;
+	const char* filters = floppy_file_filter;
+	bool save = false;
+	if (shortcut >= 0 && shortcut < 4) {
+		title = "Insert a disk image into DF" + std::to_string(shortcut) + ":";
+		start = changed_prefs.floppyslots[shortcut].df[0] ? changed_prefs.floppyslots[shortcut].df : get_floppy_path();
+	} else if (shortcut == 4 || shortcut == 5) {
+		title = shortcut == 4 ? "Load a state" : "Save the state";
+		filters = "Amiberry state files (*.uss){.uss},All Files (*){.*}";
+		save = shortcut == 5;
+		TCHAR folder[MAX_DPATH];
+		get_savestate_path(folder, sizeof folder / sizeof(TCHAR));
+		start = folder;
+	} else if (shortcut == 6) {
+		title = "Insert a CD image";
+		filters = "CD Images (*.cue,*.iso,*.ccd,*.mds,*.chd,*.nrg){.cue,.iso,.ccd,.mds,.chd,.nrg},All Files (*){.*}";
+		start = changed_prefs.cdslots[0].inuse && changed_prefs.cdslots[0].name[0] ? changed_prefs.cdslots[0].name
+			: get_cdrom_browse_path();
+	} else {
+		return;
+	}
+	MediaRequestDialog_Open(title.c_str(), filters, start, save, close_gui,
+		[shortcut, after = std::move(after)](const std::string& path) {
+			if (!apply_disk_selection(shortcut, &changed_prefs, path))
+				return false;
+			if (after)
+				after();
+			return true;
+		});
 }
+#endif
 
 #ifdef AMIBERRY_NATIVE_HOST
 // The shortcuts' requesters on the native macOS front end.
@@ -998,6 +1020,14 @@ void gui_display(int shortcut)
 		setmouseactive(0, 0);
 	}
 
+#if !defined(AMIBERRY_NATIVE_HOST) && defined(USE_IMGUI)
+	// A hotkey's requester shows over the GUI, which closes once it is
+	// answered.
+	if (shortcut >= 0 && shortcut <= 6) {
+		request_disk_selection(shortcut, true);
+		shortcut = -1;
+	}
+#endif
 	if (shortcut == -1)
 	{
 		prefs_to_gui();
@@ -1011,10 +1041,6 @@ void gui_display(int shortcut)
 	{
 #ifdef AMIBERRY_NATIVE_HOST
 		native_disk_selection(shortcut, &changed_prefs);
-#else
-		amiberry_gui_init();
-		disk_selection(shortcut, &changed_prefs);
-		amiberry_gui_halt();
 #endif
 	}
 

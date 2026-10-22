@@ -994,6 +994,29 @@ static std::string HandleOpenSettings(const std::vector<std::string>& args)
 	return run_posted_reply(amiberry_actions_open_settings());
 }
 
+static std::string HandleChooseMedia(const std::vector<std::string>& args)
+{
+	if (!currprefs.ipc_disable_logging) {
+		std::cout << "IPC: Received CHOOSE_MEDIA" << std::endl;
+	}
+	static const std::pair<const char*, amiberry_media_request> requests[] = {
+		{"DF0", AMIBERRY_REQUEST_FLOPPY0}, {"DF1", AMIBERRY_REQUEST_FLOPPY1},
+		{"DF2", AMIBERRY_REQUEST_FLOPPY2}, {"DF3", AMIBERRY_REQUEST_FLOPPY3},
+		{"LOADSTATE", AMIBERRY_REQUEST_LOAD_STATE}, {"SAVESTATE", AMIBERRY_REQUEST_SAVE_STATE},
+		{"CD", AMIBERRY_REQUEST_CD},
+	};
+	if (args.size() == 1) {
+		std::string name = args[0];
+		std::transform(name.begin(), name.end(), name.begin(),
+			[](unsigned char c) { return static_cast<char>(std::toupper(c)); });
+		for (const auto& [label, request] : requests) {
+			if (name == label)
+				return run_posted_reply(amiberry_actions_choose_media(request));
+		}
+	}
+	return make_response(false, {"Usage: CHOOSE_MEDIA <DF0|DF1|DF2|DF3|LOADSTATE|SAVESTATE|CD>"});
+}
+
 static std::string HandleSetWarp(const std::vector<std::string>& args)
 {
 	if (!currprefs.ipc_disable_logging) {
@@ -3379,6 +3402,7 @@ static std::string HandleHelp(const std::vector<std::string>& args)
 	commands.emplace_back("LIST_MEDIA <list>, GET_FOLDER <folder>, SET_FOLDER <folder> <path>");
 	commands.emplace_back("SET_VOLUME <0-100>, GET_VOLUME, MUTE, UNMUTE");
 	commands.emplace_back("SET_WARP <0|1>, GET_WARP, TOGGLE_FULLSCREEN, OPEN_SETTINGS");
+	commands.emplace_back("CHOOSE_MEDIA <DF0-DF3|LOADSTATE|SAVESTATE|CD>");
 	commands.emplace_back("SET_DISPLAY_MODE <0-2>, GET_DISPLAY_MODE, TOGGLE_RTG");
 	commands.emplace_back("SET_NTSC <0|1>, GET_NTSC, TOGGLE_STATUS_LINE");
 	commands.emplace_back("SET_SOUND_MODE <0-3>, GET_SOUND_MODE");
@@ -3900,6 +3924,7 @@ static void InitHandlers()
 	command_handlers[CMD_UNMUTE] = HandleUnmute;
 	command_handlers[CMD_TOGGLE_FULLSCREEN] = HandleToggleFullscreen;
 	command_handlers[CMD_OPEN_SETTINGS] = HandleOpenSettings;
+	command_handlers[CMD_CHOOSE_MEDIA] = HandleChooseMedia;
 	command_handlers[CMD_SET_WARP] = HandleSetWarp;
 	command_handlers[CMD_GET_WARP] = HandleGetWarp;
 	command_handlers[CMD_GET_VERSION] = HandleGetVersion;

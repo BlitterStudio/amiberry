@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include <vector>
 #include <string>
 #include "imgui.h"
@@ -109,6 +110,18 @@ void render_panel_floppy();
 void FloppyRecoveryDialog_Open(int drive, const char* initial_path);
 void FloppyRecoveryDialog_Render();
 bool FloppyRecoveryDialog_ConsumeResult(std::string& out_path);
+// A file requester over the GUI (media_request.cpp): done runs with the
+// chosen path and says whether it was used; close_gui leaves the GUI once
+// the requester is cancelled or its file used, as a hotkey's requester does
+// (a refused file keeps the GUI up to show its message).
+using MediaRequestDone = std::function<bool(const std::string& path)>;
+void MediaRequestDialog_Open(const char* title, const char* filters, const std::string& initial_path,
+	bool save, bool close_gui, MediaRequestDone done);
+void MediaRequestDialog_Render();
+// Drops an unanswered request when the GUI closes, so it does not come back
+// (and act on its old target) the next time the GUI opens.
+void MediaRequestDialog_Reset();
+extern const char* const floppy_file_filter;
 void render_panel_hd();
 void render_panel_expansions();
 void copycpuboardmem(bool tomem);
