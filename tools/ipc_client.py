@@ -154,7 +154,8 @@ def print_help():
   RESET [HARD|SOFT]         - Reset emulation (default: SOFT)
   FRAME_ADVANCE [n]         - Advance n frames (when paused, default: 1)
   OPEN_SETTINGS             - Open the settings UI over a running emulation
-  CHOOSE_MEDIA <what>       - Ask the user for a file (DF0-DF3, LOADSTATE, SAVESTATE, CD)
+  CHOOSE_MEDIA <what>       - Ask the user for a file (DF0-DF3, LOADSTATE, SAVESTATE, CD);
+                              a system file dialog holds IPC until it is answered
 
 === Floppy Disk ===
   INSERTFLOPPY <path> <drv> - Insert floppy in drive (0-3)

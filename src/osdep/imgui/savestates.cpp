@@ -209,17 +209,24 @@ void render_panel_savestates() {
         ImGui::Spacing();
 
         if (AmigaButton(ICON_FA_UPLOAD " Load state...", ImVec2(file_btn_w, BUTTON_HEIGHT))) {
-            request_disk_selection(4, false, [] {
-                current_state_num = 99;
-                last_state_num = 99;
-                gui_update();
-                ClearScreenshotTexture();
-            });
+            // As Load from Slot: restores into the running emulation and
+            // leaves the GUI, so nothing here can retarget the restore.
+            if (emulating) {
+                request_disk_selection(4, true);
+            } else {
+                ShowAlert("Loading savestate", "Emulation hasn't started yet.");
+            }
         }
         ImGui::SameLine();
         if (AmigaButton(ICON_FA_FLOPPY_DISK " Save state...", ImVec2(file_btn_w, BUTTON_HEIGHT))) {
             if (emulating) {
-                request_disk_selection(5, false, [] { ss_info_dirty = true; });
+                // The panel now shows the saved file, not a slot.
+                request_disk_selection(5, false, [] {
+                    current_state_num = 99;
+                    last_state_num = 99;
+                    ClearScreenshotTexture();
+                    ss_info_dirty = true;
+                });
             } else {
                 ShowAlert("Saving state", "Emulation hasn't started yet.");
             }

@@ -3402,7 +3402,7 @@ static std::string HandleHelp(const std::vector<std::string>& args)
 	commands.emplace_back("LIST_MEDIA <list>, GET_FOLDER <folder>, SET_FOLDER <folder> <path>");
 	commands.emplace_back("SET_VOLUME <0-100>, GET_VOLUME, MUTE, UNMUTE");
 	commands.emplace_back("SET_WARP <0|1>, GET_WARP, TOGGLE_FULLSCREEN, OPEN_SETTINGS");
-	commands.emplace_back("CHOOSE_MEDIA <DF0-DF3|LOADSTATE|SAVESTATE|CD>");
+	commands.emplace_back("CHOOSE_MEDIA <DF0-DF3|LOADSTATE|SAVESTATE|CD> (a system file dialog holds IPC until answered)");
 	commands.emplace_back("SET_DISPLAY_MODE <0-2>, GET_DISPLAY_MODE, TOGGLE_RTG");
 	commands.emplace_back("SET_NTSC <0|1>, GET_NTSC, TOGGLE_STATUS_LINE");
 	commands.emplace_back("SET_SOUND_MODE <0-3>, GET_SOUND_MODE");

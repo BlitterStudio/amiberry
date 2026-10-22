@@ -656,6 +656,11 @@ static bool apply_disk_selection(const int shortcut, uae_prefs* prefs, const std
 {
 	if (selected.empty())
 		return true;
+	// Every target is a MAX_DPATH buffer (a save also gains ".uss").
+	if (selected.size() + 4 >= MAX_DPATH) {
+		gui_message("The path is too long: %s", selected.c_str());
+		return false;
+	}
 	if (shortcut >= 0 && shortcut < 4)
 	{
 		if (strncmp(prefs->floppyslots[shortcut].df, selected.c_str(), MAX_DPATH) != 0)
