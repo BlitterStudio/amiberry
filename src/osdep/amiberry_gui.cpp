@@ -37,6 +37,10 @@
 #include "amiberry_reset_chipset_prefs.h"
 #include "amiberry_actions_host.h"
 #include "native_ui_tests.h"
+#include "native_ui_host.h"
+#ifdef AMIBERRY_NATIVE_HOST
+#include "settings/amiberry_media.h"
+#endif
 #include "irenderer.h"
 #ifdef ARCADIA
 #include "arcadia.h"
@@ -644,110 +648,132 @@ ConfigFileInfo* SearchConfigInList(const char* name)
 	return nullptr;
 }
 
-void disk_selection(const int shortcut, uae_prefs* prefs)
+// What a shortcut's requester picked (gui_display(0..6)) takes effect as
+// the panels apply it: DF0-DF3 (0-3), a state to load (4), a state to save
+// (5) and the CD (6).
+static void apply_disk_selection(const int shortcut, uae_prefs* prefs, const std::string& selected)
 {
-	// Select Floppy Disk Image
+	if (selected.empty())
+		return;
 	if (shortcut >= 0 && shortcut < 4)
 	{
-		std::string tmp;
-		if (strlen(prefs->floppyslots[shortcut].df) > 0)
-			tmp = std::string(prefs->floppyslots[shortcut].df);
-		else
-			tmp = get_floppy_path();
-
-		if (!tmp.empty())
+		if (strncmp(prefs->floppyslots[shortcut].df, selected.c_str(), MAX_DPATH) != 0)
 		{
-			if (strncmp(prefs->floppyslots[shortcut].df, tmp.c_str(), MAX_DPATH) != 0)
-			{
-				strncpy(prefs->floppyslots[shortcut].df, tmp.c_str(), MAX_DPATH);
-				disk_insert(shortcut, tmp.c_str());
-				add_file_to_mru_list(lstMRUDiskList, tmp);
-				set_last_active_config_from_media(tmp.c_str());
-			}
+			strncpy(prefs->floppyslots[shortcut].df, selected.c_str(), MAX_DPATH);
+			disk_insert(shortcut, selected.c_str());
+			add_file_to_mru_list(lstMRUDiskList, selected);
+			set_last_active_config_from_media(selected.c_str());
 		}
 	}
 	else if (shortcut == 4)
 	{
-		// Load a Save state
-		TCHAR tmp[MAX_DPATH];
-		get_savestate_path(tmp, sizeof tmp / sizeof(TCHAR));
+		_tcscpy(savestate_fname, selected.c_str());
+		savestate_initsave(savestate_fname, 1, true, true);
+		savestate_state = STATE_DORESTORE;
 
-		std::string selected;
+		const auto filename = extract_filename(savestate_fname);
+		screenshot_filename = get_screenshot_path();
+		screenshot_filename += filename;
+		screenshot_filename = remove_file_extension(screenshot_filename);
+		screenshot_filename += ".png";
+	}
+	else if (shortcut == 5)
+	{
+		std::string path = selected;
+		// ensure the selected filename ends with .uss
+		if (path.size() < 4 || path.substr(path.size() - 4) != ".uss")
+			path += ".uss";
 
-		if (!selected.empty())
+		_tcscpy(savestate_fname, path.c_str());
+		save_state(savestate_fname, _T("Description!"));
+		if (create_screenshot())
 		{
-			_tcscpy(savestate_fname, selected.c_str());
-			savestate_initsave(savestate_fname, 1, true, true);
-			savestate_state = STATE_DORESTORE;
-
 			const auto filename = extract_filename(savestate_fname);
 			screenshot_filename = get_screenshot_path();
 			screenshot_filename += filename;
 			screenshot_filename = remove_file_extension(screenshot_filename);
 			screenshot_filename += ".png";
-		}
-		else {
-			savestate_fname[0] = 0;
+			save_thumb(screenshot_filename);
 		}
 	}
-	else if (shortcut == 5)
-	{
-		// Save a state
-		TCHAR tmp[MAX_DPATH];
-		get_savestate_path(tmp, sizeof tmp / sizeof(TCHAR));
-
-		std::string selected;
-		if (!selected.empty())
-		{
-			// ensure the selected filename ends with .uss
-			if (selected.size() < 4 || selected.substr(selected.size() - 4) != ".uss")
-			{
-				selected += ".uss";
-			}
-
-			_tcscpy(savestate_fname, selected.c_str());
-			_tcscat(tmp, savestate_fname);
-			save_state(savestate_fname, _T("Description!"));
-			if (create_screenshot())
-			{
-				const auto filename = extract_filename(savestate_fname);
-				screenshot_filename = get_screenshot_path();
-				screenshot_filename += filename;
-				screenshot_filename = remove_file_extension(screenshot_filename);
-				screenshot_filename += ".png";
-				save_thumb(screenshot_filename);
-			}
-		}
-	}
-	// Select CD Image
 	else if (shortcut == 6)
 	{
-		std::string tmp;
-		if (prefs->cdslots[0].inuse && strlen(prefs->cdslots[0].name) > 0)
-			tmp = std::string(prefs->cdslots[0].name);
-		else
-			tmp = get_cdrom_browse_path();
-
-		if (!tmp.empty())
+		if (strncmp(prefs->cdslots[0].name, selected.c_str(), MAX_DPATH) != 0)
 		{
-			if (strncmp(prefs->cdslots[0].name, tmp.c_str(), MAX_DPATH) != 0)
-			{
-				strncpy(prefs->cdslots[0].name, tmp.c_str(), MAX_DPATH);
-				changed_prefs.cdslots[0].inuse = true;
-				changed_prefs.cdslots[0].type = SCSI_UNIT_DEFAULT;
-				add_file_to_mru_list(lstMRUCDList, tmp);
-				set_last_active_config_from_media(tmp.c_str());
-			}
+			strncpy(prefs->cdslots[0].name, selected.c_str(), MAX_DPATH);
+			changed_prefs.cdslots[0].inuse = true;
+			changed_prefs.cdslots[0].type = SCSI_UNIT_DEFAULT;
+			add_file_to_mru_list(lstMRUCDList, selected);
+			set_last_active_config_from_media(selected.c_str());
 		}
 	}
 }
+
+void disk_selection(const int shortcut, uae_prefs* prefs)
+{
+	// The built-in GUI has no requester here (lost with the move from
+	// Guisan): floppies and the CD keep what they hold (or get their
+	// folder), and the state shortcuts do nothing.
+	std::string selected;
+	if (shortcut >= 0 && shortcut < 4)
+		selected = strlen(prefs->floppyslots[shortcut].df) > 0
+			? std::string(prefs->floppyslots[shortcut].df) : get_floppy_path();
+	else if (shortcut == 6)
+		selected = prefs->cdslots[0].inuse && strlen(prefs->cdslots[0].name) > 0
+			? std::string(prefs->cdslots[0].name) : get_cdrom_browse_path();
+	else if (shortcut == 4)
+		savestate_fname[0] = 0;
+	apply_disk_selection(shortcut, prefs, selected);
+}
+
+#ifdef AMIBERRY_NATIVE_HOST
+// The shortcuts' requesters on the native macOS front end.
+static void native_disk_selection(const int shortcut, uae_prefs* prefs)
+{
+	std::string title, start, chosen;
+	native_host_file kind = native_host_file::floppy;
+	if (shortcut >= 0 && shortcut < 4) {
+		title = "Insert a disk image into DF" + std::to_string(shortcut) + ":";
+		start = prefs->floppyslots[shortcut].df[0] ? prefs->floppyslots[shortcut].df : get_floppy_path();
+	} else if (shortcut == 4 || shortcut == 5) {
+		kind = shortcut == 4 ? native_host_file::load_state : native_host_file::save_state;
+		title = shortcut == 4 ? "Load a state" : "Save the state";
+		TCHAR folder[MAX_DPATH];
+		get_savestate_path(folder, sizeof folder / sizeof(TCHAR));
+		start = folder;
+	} else {
+		kind = native_host_file::cd;
+		title = "Insert a CD image";
+		start = prefs->cdslots[0].inuse && prefs->cdslots[0].name[0] ? prefs->cdslots[0].name
+			: get_cdrom_browse_path();
+	}
+	if (!native_host_choose_file(kind, title, start, chosen))
+		return;
+	// Keeps the pick usable after a restart on a Mac App Store build.
+	amiberry_media_grant_access(chosen.c_str());
+	apply_disk_selection(shortcut, prefs, chosen);
+}
+#endif
 
 bool gui_ask_disk(const int drv, TCHAR* name, const int name_len)
 {
 	if (drv < 0 || drv >= 4 || !name || name_len <= 0)
 		return false;
 
-#ifdef USE_IMGUI
+#if defined(AMIBERRY_NATIVE_HOST)
+	std::string chosen;
+	if (!native_host_choose_file(native_host_file::floppy,
+			"The disk image for DF" + std::to_string(drv) + ": was not found. Locate it or a replacement.",
+			name, chosen))
+		return false;
+	if (chosen.length() >= static_cast<size_t>(name_len)) {
+		write_log(_T("Replacement disk path is too long.\n"));
+		return false;
+	}
+	amiberry_media_grant_access(chosen.c_str());
+	_tcscpy(name, chosen.c_str());
+	return true;
+#elif defined(USE_IMGUI)
 	static bool active;
 	if (active)
 		return false;
@@ -771,6 +797,17 @@ bool gui_ask_disk(const int drv, TCHAR* name, const int name_len)
 	return true;
 #else
 	return false;
+#endif
+}
+
+// The settings UI: the native window on macOS native UI builds, the
+// built-in (ImGui) GUI everywhere else.
+static void run_settings_ui()
+{
+#ifdef AMIBERRY_NATIVE_HOST
+	native_host_run_settings();
+#else
+	run_gui();
 #endif
 }
 
@@ -861,7 +898,7 @@ int gui_init()
 #endif
 
 	prefs_to_gui();
-	run_gui();
+	run_settings_ui();
 	gui_to_prefs();
 
 	if (quit_program < 0)
@@ -948,18 +985,21 @@ void gui_display(int shortcut)
 	if (shortcut == -1)
 	{
 		prefs_to_gui();
-		run_gui();
+		run_settings_ui();
 		gui_to_prefs();
 
 		gui_update();
 		gui_purge_events();
-		gui_active--;
 	}
 	else if (shortcut >= 0 && shortcut <= 6)
 	{
+#ifdef AMIBERRY_NATIVE_HOST
+		native_disk_selection(shortcut, &changed_prefs);
+#else
 		amiberry_gui_init();
 		disk_selection(shortcut, &changed_prefs);
 		amiberry_gui_halt();
+#endif
 	}
 
 	reset_sound();
@@ -1243,7 +1283,16 @@ void gui_message(const char* format, ...)
 	va_start(parms, format);
 	_vsntprintf(msg, sizeof(msg), format, parms);
 	va_end(parms);
-#ifdef USE_IMGUI
+#if defined(AMIBERRY_NATIVE_HOST)
+	// Shown at once while the settings window is up (the main thread runs
+	// it); otherwise when it next opens, as the built-in GUI showed its
+	// message box. Worker threads (hard drives, PPC) report here too.
+	write_log(_T("%s\n"), msg);
+	if (is_mainthread() && native_host_settings_open())
+		native_host_message("Message", msg);
+	else
+		native_host_message_deferred(msg);
+#elif defined(USE_IMGUI)
 	ShowMessageBox("Message", msg);
 #endif
 }

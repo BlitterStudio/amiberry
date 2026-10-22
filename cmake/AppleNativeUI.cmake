@@ -28,6 +28,18 @@ set_target_properties(amiberry_native_ui PROPERTIES
         Swift_MODULE_NAME AmiberryNativeUI
         Swift_LANGUAGE_VERSION 6
 )
+# The macOS front end: the settings window, menu bar commands, file
+# requesters and alerts the emulator shows instead of the built-in GUI
+# (src/osdep/native_ui_host.cpp).
+if(NOT CMAKE_SYSTEM_NAME STREQUAL "iOS")
+    target_sources(amiberry_native_ui PRIVATE
+            apple/macOS/MainMenu.swift
+            apple/macOS/NativeHost.swift
+            apple/macOS/SettingsModel.swift
+            apple/macOS/SettingsViews.swift
+    )
+    target_sources(${PROJECT_NAME} PRIVATE src/osdep/native_ui_host.cpp)
+endif()
 
 # apple/Shared contains module.modulemap; putting it on the include path lets
 # the Swift compiler discover the AmiberrySettings module (CMake passes
@@ -70,9 +82,12 @@ if(AMIBERRY_NATIVE_UI_TESTS)
     set(AMIBERRY_XCTEST_LIBRARIES "${AMIBERRY_MACOS_PLATFORM_PATH}/Developer/usr/lib")
 
     add_library(amiberry_native_ui_tests MODULE
+            apple/Tests/MacOSHostTests.swift
             apple/Tests/NativeUIBridgeTests.swift
             apple/Tests/TestRunner.swift
     )
+    # The macOS front end's types are internal; the tests use @testable import.
+    target_compile_options(amiberry_native_ui PRIVATE -enable-testing)
     set_target_properties(amiberry_native_ui_tests PROPERTIES
             OUTPUT_NAME AmiberryNativeUITests
             PREFIX ""

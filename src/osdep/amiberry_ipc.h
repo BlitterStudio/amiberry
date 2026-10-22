@@ -40,6 +40,7 @@ constexpr char const* CMD_GET_VOLUME = "GET_VOLUME";
 constexpr char const* CMD_MUTE = "MUTE";
 constexpr char const* CMD_UNMUTE = "UNMUTE";
 constexpr char const* CMD_TOGGLE_FULLSCREEN = "TOGGLE_FULLSCREEN";
+constexpr char const* CMD_OPEN_SETTINGS = "OPEN_SETTINGS";
 constexpr char const* CMD_SET_WARP = "SET_WARP";
 constexpr char const* CMD_GET_WARP = "GET_WARP";
 constexpr char const* CMD_GET_VERSION = "GET_VERSION";

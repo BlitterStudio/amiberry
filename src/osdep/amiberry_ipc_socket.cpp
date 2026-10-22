@@ -983,8 +983,15 @@ static std::string HandleToggleFullscreen(const std::vector<std::string>& args)
 	if (!currprefs.ipc_disable_logging) {
 		std::cout << "IPC: Received TOGGLE_FULLSCREEN" << std::endl;
 	}
-	toggle_fullscreen(0, -1);
-	return make_response(true);
+	return run_posted_reply(amiberry_actions_toggle_fullscreen());
+}
+
+static std::string HandleOpenSettings(const std::vector<std::string>& args)
+{
+	if (!currprefs.ipc_disable_logging) {
+		std::cout << "IPC: Received OPEN_SETTINGS" << std::endl;
+	}
+	return run_posted_reply(amiberry_actions_open_settings());
 }
 
 static std::string HandleSetWarp(const std::vector<std::string>& args)
@@ -3371,7 +3378,7 @@ static std::string HandleHelp(const std::vector<std::string>& args)
 	commands.emplace_back("LOAD_CONFIG <path>, LIST_CONFIGS");
 	commands.emplace_back("LIST_MEDIA <list>, GET_FOLDER <folder>, SET_FOLDER <folder> <path>");
 	commands.emplace_back("SET_VOLUME <0-100>, GET_VOLUME, MUTE, UNMUTE");
-	commands.emplace_back("SET_WARP <0|1>, GET_WARP, TOGGLE_FULLSCREEN");
+	commands.emplace_back("SET_WARP <0|1>, GET_WARP, TOGGLE_FULLSCREEN, OPEN_SETTINGS");
 	commands.emplace_back("SET_DISPLAY_MODE <0-2>, GET_DISPLAY_MODE, TOGGLE_RTG");
 	commands.emplace_back("SET_NTSC <0|1>, GET_NTSC, TOGGLE_STATUS_LINE");
 	commands.emplace_back("SET_SOUND_MODE <0-3>, GET_SOUND_MODE");
@@ -3892,6 +3899,7 @@ static void InitHandlers()
 	command_handlers[CMD_MUTE] = HandleMute;
 	command_handlers[CMD_UNMUTE] = HandleUnmute;
 	command_handlers[CMD_TOGGLE_FULLSCREEN] = HandleToggleFullscreen;
+	command_handlers[CMD_OPEN_SETTINGS] = HandleOpenSettings;
 	command_handlers[CMD_SET_WARP] = HandleSetWarp;
 	command_handlers[CMD_GET_WARP] = HandleGetWarp;
 	command_handlers[CMD_GET_VERSION] = HandleGetVersion;

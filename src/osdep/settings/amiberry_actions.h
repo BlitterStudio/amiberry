@@ -54,7 +54,7 @@
 extern "C" {
 #endif
 
-#define AMIBERRY_ACTIONS_API_VERSION 2
+#define AMIBERRY_ACTIONS_API_VERSION 3
 
 /* Largest MAX_DPATH (PATH_MAX) any supported platform builds with, so every
    media path the emulator can store fits, NUL included. */
@@ -147,6 +147,42 @@ AMIBERRY_ACTIONS_API amiberry_action_id amiberry_actions_quit(void);
  * quitting.
  */
 AMIBERRY_ACTIONS_API amiberry_action_id amiberry_actions_apply_settings(amiberry_apply_class apply);
+
+/*
+ * Switches the emulation display between window and full screen, as the
+ * full-screen hotkey does. FAILED in a libretro core, whose front end owns
+ * the display.
+ */
+AMIBERRY_ACTIONS_API amiberry_action_id amiberry_actions_toggle_fullscreen(void);
+
+/*
+ * Opens the settings UI (the built-in GUI, or the native one where a front
+ * end provides it) over a running emulation, as the GUI hotkey does; it
+ * opens at the next frame. DONE at once while the settings UI is already
+ * open or no emulation runs (the settings UI is what shows then). FAILED in
+ * a libretro core.
+ */
+AMIBERRY_ACTIONS_API amiberry_action_id amiberry_actions_open_settings(void);
+
+/* What amiberry_actions_choose_media asks the user for. */
+typedef enum amiberry_media_request {
+	AMIBERRY_REQUEST_FLOPPY0 = 0, /* a disk image for DF0: ... */
+	AMIBERRY_REQUEST_FLOPPY1,
+	AMIBERRY_REQUEST_FLOPPY2,
+	AMIBERRY_REQUEST_FLOPPY3,     /* ... DF3: */
+	AMIBERRY_REQUEST_LOAD_STATE,  /* a state file to load */
+	AMIBERRY_REQUEST_SAVE_STATE,  /* where to save the state */
+	AMIBERRY_REQUEST_CD           /* a CD image */
+} amiberry_media_request;
+
+/*
+ * Asks the user for a file over a running emulation, as the media and state
+ * hotkeys do, and uses it: the emulation pauses with input released while
+ * the requester shows, at the next frame. DONE once requested (and at once
+ * while no emulation runs, when it does nothing); 0 for a request outside
+ * the enum. FAILED in a libretro core.
+ */
+AMIBERRY_ACTIONS_API amiberry_action_id amiberry_actions_choose_media(amiberry_media_request request);
 
 /*
  * Ask what became of a posted action. Callable from any thread; polling

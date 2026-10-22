@@ -1,0 +1,147 @@
+/*
+ * Copyright (C) 2026 BlitterStudio
+ * Menu bar commands of the native macOS front end. Every command posts a
+ * runtime action, which the emulator runs between frames.
+ *
+ * Shortcuts use Control-Command: Command alone is the Amiga key, and the
+ * emulated programs need Amiga-letter combinations.
+ */
+
+import AppKit
+
+@MainActor
+final class MenuCommands: NSObject, NSMenuItemValidation {
+	static let shared = MenuCommands()
+
+	/// Posts an action; replaced by the tests.
+	var post: (EmulatorAction) -> Void = { _ = EmulatorActions.post($0) }
+	/// The emulator's run state; replaced by the tests.
+	var runState: () -> EmulatorStatus.RunState = { EmulatorStatus.current().runState }
+
+	static let emulationTitle = "Emulation"
+	static let mediaTitle = "Media"
+	static let viewTitle = "View"
+
+	/// Adds the commands to the menu bar SDL created: Settings in the
+	/// application menu, and Emulation, Media and View menus before Window.
+	/// Adding them again changes nothing.
+	func install(into mainMenu: NSMenu) {
+		guard !mainMenu.items.contains(where: { $0.submenu?.title == MenuCommands.emulationTitle }) else { return }
+
+		if let appMenu = mainMenu.items.first?.submenu {
+			// SDL's application menu has a Settings (Preferences) item of its
+			// own, with nothing behind it: it opens the settings window now.
+			if let existing = appMenu.items.first(where: { $0.keyEquivalent == "," }) {
+				existing.title = "Settings\u{2026}"
+				existing.target = self
+				existing.action = #selector(openSettings(_:))
+				existing.keyEquivalentModifierMask = [.command]
+			} else {
+				let settings = item("Settings\u{2026}", #selector(openSettings(_:)), key: ",", modifiers: [.command])
+				let index = appMenu.items.firstIndex(where: { $0.isSeparatorItem }).map { $0 + 1 } ?? appMenu.items.count
+				appMenu.insertItem(settings, at: index)
+				appMenu.insertItem(.separator(), at: index + 1)
+			}
+		}
+
+		let emulation = NSMenu(title: MenuCommands.emulationTitle)
+		emulation.addItem(item("Pause", #selector(togglePause(_:)), key: "p"))
+		emulation.addItem(item("Reset", #selector(reset(_:)), key: "r"))
+		emulation.addItem(item("Hard Reset", #selector(hardReset(_:)), key: "r", modifiers: [.control, .command, .shift]))
+		emulation.addItem(.separator())
+		emulation.addItem(item("Quick Save State", #selector(quickSave(_:)), key: "s"))
+		emulation.addItem(item("Quick Load State", #selector(quickLoad(_:)), key: "l"))
+		emulation.addItem(item("Save State\u{2026}", #selector(saveState(_:))))
+		emulation.addItem(item("Load State\u{2026}", #selector(loadState(_:))))
+		emulation.addItem(.separator())
+		emulation.addItem(item("Save Screenshot", #selector(screenshot(_:))))
+
+		let media = NSMenu(title: MenuCommands.mediaTitle)
+		for drive in 0..<EmulatorActions.floppyDriveCount {
+			let insert = item("Insert Disk in DF\(drive):\u{2026}", #selector(insertFloppy(_:)), key: "\(drive)")
+			insert.tag = drive
+			media.addItem(insert)
+		}
+		media.addItem(.separator())
+		for drive in 0..<EmulatorActions.floppyDriveCount {
+			let eject = item("Eject DF\(drive):", #selector(ejectFloppy(_:)))
+			eject.tag = drive
+			media.addItem(eject)
+		}
+		media.addItem(.separator())
+		media.addItem(item("Insert CD\u{2026}", #selector(insertCD(_:))))
+		media.addItem(item("Eject CD", #selector(ejectCD(_:))))
+
+		let view = NSMenu(title: MenuCommands.viewTitle)
+		view.addItem(item("Toggle Full Screen", #selector(toggleFullscreen(_:)), key: "f"))
+
+		let windowIndex = mainMenu.items.firstIndex { $0.submenu == NSApplication.shared.windowsMenu }
+			?? mainMenu.items.count
+		for (offset, menu) in [emulation, media, view].enumerated() {
+			let holder = NSMenuItem(title: menu.title, action: nil, keyEquivalent: "")
+			holder.submenu = menu
+			mainMenu.insertItem(holder, at: min(windowIndex + offset, mainMenu.items.count))
+		}
+	}
+
+	private func item(
+		_ title: String, _ action: Selector, key: String = "",
+		modifiers: NSEvent.ModifierFlags = [.control, .command]
+	) -> NSMenuItem {
+		let item = NSMenuItem(title: title, action: action, keyEquivalent: key)
+		item.keyEquivalentModifierMask = key.isEmpty ? [] : modifiers
+		item.target = self
+		return item
+	}
+
+	// MARK: Commands
+
+	@objc func openSettings(_ sender: Any?) { post(.openSettings) }
+
+	@objc func togglePause(_ sender: Any?) {
+		post(runState() == .paused ? .resume : .pause)
+	}
+
+	@objc func reset(_ sender: Any?) { post(.reset(hard: false, keyboard: false)) }
+	@objc func hardReset(_ sender: Any?) { post(.reset(hard: true, keyboard: false)) }
+	@objc func quickSave(_ sender: Any?) { post(.saveStateSlot(0)) }
+	@objc func quickLoad(_ sender: Any?) { post(.loadStateSlot(0)) }
+
+	// The requesters run where the hotkeys run them (gui_display), which
+	// pauses the emulation and releases input while they show.
+	@objc func saveState(_ sender: Any?) { post(.chooseMedia(.saveState)) }
+	@objc func loadState(_ sender: Any?) { post(.chooseMedia(.loadState)) }
+
+	@objc func screenshot(_ sender: Any?) {
+		let folder = (try? MediaLibrary.path(of: .screenshots)) ?? ""
+		let stamp = ISO8601DateFormatter.string(
+			from: Date(), timeZone: .current, formatOptions: [.withFullDate, .withTime])
+		post(.screenshot(path: URL(fileURLWithPath: folder).appendingPathComponent("amiberry-\(stamp).png").path))
+	}
+
+	@objc func insertFloppy(_ sender: NSMenuItem) { post(.chooseMedia(.floppy(drive: sender.tag))) }
+
+	@objc func ejectFloppy(_ sender: NSMenuItem) { post(.ejectFloppy(drive: sender.tag)) }
+
+	@objc func insertCD(_ sender: Any?) { post(.chooseMedia(.cd)) }
+
+	@objc func ejectCD(_ sender: Any?) { post(.ejectCD) }
+	@objc func toggleFullscreen(_ sender: Any?) { post(.toggleFullscreen) }
+
+	/// Emulation commands and the requesters need a running emulation (the
+	/// settings window has the media then); Pause reads Resume while paused.
+	func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
+		let state = runState()
+		switch menuItem.action {
+		case #selector(togglePause(_:)):
+			menuItem.title = state == .paused ? "Resume" : "Pause"
+			return state != .stopped
+		case #selector(reset(_:)), #selector(hardReset(_:)), #selector(quickSave(_:)), #selector(quickLoad(_:)),
+			#selector(saveState(_:)), #selector(loadState(_:)), #selector(screenshot(_:)),
+			#selector(toggleFullscreen(_:)), #selector(insertFloppy(_:)), #selector(insertCD(_:)):
+			return state != .stopped
+		default:
+			return true
+		}
+	}
+}
