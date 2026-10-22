@@ -198,7 +198,7 @@ public final class ActionPump {
 				timer.invalidate()
 			}
 		}
-		RunLoop.main.add(timer, forMode: .common)
+		RunLoop.main.add(timer, forMode: commonRunLoopModes)
 		self.timer = timer
 	}
 
@@ -315,7 +315,7 @@ public final class StatusMonitor {
 				timer.invalidate()
 			}
 		}
-		RunLoop.main.add(timer, forMode: .common)
+		RunLoop.main.add(timer, forMode: commonRunLoopModes)
 		self.timer = timer
 	}
 
@@ -331,3 +331,8 @@ public final class StatusMonitor {
 		}
 	}
 }
+
+/// The common run loop modes (kCFRunLoopCommonModes), so polling timers also
+/// fire during event tracking. Spelled out because `.common` does not
+/// resolve against the iOS 18 SDK in Swift 6.1.
+private let commonRunLoopModes = RunLoop.Mode("kCFRunLoopCommonModes")
