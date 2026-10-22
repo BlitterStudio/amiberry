@@ -192,6 +192,14 @@ bool execute(const request& r, void*, std::string* error)
 			emulation_requests++;
 			return true;
 		}
+		// A key release always goes through (amiberry_actions_key), so no
+		// key stays down in the emulation being replaced.
+#ifndef LIBRETRO
+		if (r.k == kind::key && !r.flag_a) {
+			inputdevice_do_keyboard(r.number, 0);
+			return true;
+		}
+#endif
 		*error = "The emulator is restarting";
 		return false;
 	}

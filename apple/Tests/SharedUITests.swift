@@ -95,6 +95,11 @@ final class AmigaKeyboardTests: XCTestCase {
 		keyboard.touchCancelled(ctrl)
 		XCTAssertFalse(keyboard.latched.contains(0x63), "a cancelled modifier touch latches nothing")
 		XCTAssertEqual(posted.suffix(2), [.key(code: 0x63, pressed: true), .key(code: 0x63, pressed: false)])
+		// A cancelled second tap leaves the latch on.
+		keyboard.touchDown(shift)
+		keyboard.touchCancelled(shift)
+		XCTAssertTrue(keyboard.latched.contains(0x60))
+		XCTAssertEqual(posted.suffix(2), [.key(code: 0x60, pressed: false), .key(code: 0x60, pressed: true)])
 	}
 
 	func testLayoutsChangeLegendsNotCodes() throws {

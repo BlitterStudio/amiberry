@@ -156,6 +156,9 @@ final class AmigaKeyboardModel {
 	private(set) var down: Set<Int> = []
 	/// Modifiers and Caps Lock held down by a tap.
 	private(set) var latched: Set<Int> = []
+	/// For a modifier or Caps Lock being touched: whether the touch latched
+	/// it (true) or let it go (false), undone if the touch is cancelled.
+	@ObservationIgnored private var toggledByTouch: [Int: Bool] = [:]
 
 	@ObservationIgnored private let post: (EmulatorAction) -> Void
 
@@ -170,18 +173,24 @@ final class AmigaKeyboardModel {
 			guard !down.contains(key.code) else { return }
 			send(key.code, pressed: true)
 		case .modifier, .toggle:
-			if latched.contains(key.code) {
-				latched.remove(key.code)
-				send(key.code, pressed: false)
-			} else {
-				latched.insert(key.code)
-				send(key.code, pressed: true)
-			}
+			let latching = !latched.contains(key.code)
+			toggledByTouch[key.code] = latching
+			setLatched(key.code, latching)
 		}
+	}
+
+	private func setLatched(_ code: Int, _ on: Bool) {
+		if on {
+			latched.insert(code)
+		} else {
+			latched.remove(code)
+		}
+		send(code, pressed: on)
 	}
 
 	/// The finger lifted (or left the key).
 	func touchUp(_ key: AmigaKey) {
+		toggledByTouch[key.code] = nil
 		guard key.behaviour == .plain, down.contains(key.code) else { return }
 		send(key.code, pressed: false)
 		// One key typed with the latched modifiers: they come up after it.
@@ -192,17 +201,19 @@ final class AmigaKeyboardModel {
 	}
 
 	/// The system took the touch away (a system gesture, too many fingers):
-	/// nothing was typed. A plain key comes up; a modifier this touch
-	/// latched is let go; the other latched modifiers stay for the next key.
+	/// nothing was typed. A plain key comes up; a modifier or Caps Lock goes
+	/// back to how it was before the touch; the other latched modifiers stay
+	/// for the next key.
 	func touchCancelled(_ key: AmigaKey) {
 		switch key.behaviour {
 		case .plain:
 			guard down.contains(key.code) else { return }
 			send(key.code, pressed: false)
 		case .modifier, .toggle:
-			guard latched.contains(key.code) else { return }
-			latched.remove(key.code)
-			send(key.code, pressed: false)
+			guard let latchedByTouch = toggledByTouch.removeValue(forKey: key.code),
+				latched.contains(key.code) == latchedByTouch
+			else { return }
+			setLatched(key.code, !latchedByTouch)
 		}
 	}
 
@@ -214,6 +225,7 @@ final class AmigaKeyboardModel {
 			send(code, pressed: false)
 		}
 		latched = latched.filter { $0 == AmigaKey.capsLock }
+		toggledByTouch.removeAll()
 	}
 
 	private func send(_ code: Int, pressed: Bool) {
