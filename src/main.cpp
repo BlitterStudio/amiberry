@@ -947,6 +947,17 @@ void uae_restart_with_pending_prefs (void)
 	restart_with_pending = true;
 }
 
+bool uae_restart_pending (void)
+{
+	return restart_program != 0;
+}
+
+void uae_cancel_restart (void)
+{
+	restart_program = 0;
+	restart_with_pending = false;
+}
+
 /* 0 = normal, 1 = nogui, -1 = disable nogui, -2 = autorestart */
 void uae_restart(struct uae_prefs *p, int opengui, const TCHAR *cfgfile)
 {

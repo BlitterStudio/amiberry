@@ -13,8 +13,8 @@ through SETTINGS_APPLY live, then reset, then restart, reading the value
 the running emulation uses (SETTINGS_GET_ACTIVE) after each step. The step
 at which the emulation takes the value up must be the option's declared
 apply class: a LIVE option is running after the live step, a RESET option
-only after the reset, a RESTART option only after the restart. Every
-option is put back afterwards.
+only after the reset, a RESTART option only after the restart. The whole
+configuration is put back afterwards.
 """
 
 import os
@@ -121,6 +121,40 @@ def change(ctl, option, value):
     return ctl.value("SETTINGS_GET", option)
 
 
+def snapshot(ctl, options):
+    return {option: ctl.value("SETTINGS_GET", option) for option in options}
+
+
+def restore(ctl, options, baseline):
+    """Sets every option back to its baseline value and applies that with
+    the class commit reports. Setters change other options, so it repeats
+    until nothing differs."""
+    changed = set()
+    for attempt in range(6):
+        current = snapshot(ctl, options)
+        # An option that is unavailable now has no effect and cannot be set
+        # (a CPU multiplier a CPU change wrote while the speed is "max").
+        differing = [o for o in options if current[o] != baseline[o]
+                     and ctl.describe(o).get("available") == "true"]
+        if not differing:
+            break
+        changed.update(differing)
+        # An option can only be set back while the ones it depends on still
+        # allow it (a CPU multiplier before the CPU speed that hides it),
+        # so the order alternates.
+        for option in (reversed(differing) if attempt % 2 == 0 else differing):
+            ctl.request(f"SETTINGS_SET\t{option}\t{baseline[option]}")
+        reply = ctl.request("SETTINGS_COMMIT")
+        apply = reply.rsplit("apply=", 1)[-1] if "apply=" in reply else "live"
+        settle(ctl, apply)
+    else:
+        raise RuntimeError("the configuration does not return to its baseline: " + ", ".join(
+            f"{o}={current[o]} (was {baseline[o]})" for o in differing))
+    # The running emulation catches up with what was restored.
+    for option in changed:
+        ctl.wait_active(option, baseline[option], 30)
+
+
 def settle(ctl, step):
     reply = ctl.request(f"SETTINGS_APPLY\t{step}")
     if reply != "OK":
@@ -149,6 +183,7 @@ def main():
     try:
         ctl = Controller(emu)
         options = ctl.fields("SETTINGS_LIST") or []
+        baseline = snapshot(ctl, options)
         for option in options:
             if only and option not in only:
                 continue
@@ -185,10 +220,13 @@ def main():
                 mismatches.append((option, declared, observed, original, target))
                 print(f"MISMATCH {option}: declared {declared}, running after {observed} ({original} -> {target})",
                       flush=True)
-            # Put it back with the step it needed (a restart when it never ran).
-            if change(ctl, option, original) is not None:
-                settle(ctl, observed or "restart")
-                ctl.wait_active(option, original, 30)
+            # Put the whole configuration back, dependent changes included,
+            # so the next option starts from the same machine.
+            restore(ctl, options, baseline)
+    except Exception:
+        # What the emulator said last explains a crash or a stuck restart.
+        sys.stderr.write("emulator output (last lines):\n" + "".join(emu.output[-60:]))
+        raise
     finally:
         emu.kill()
 

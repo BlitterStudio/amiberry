@@ -39,6 +39,9 @@ extern void uae_restart(struct uae_prefs*, int, const TCHAR*);
 // Restarts the emulation with the pending configuration (changed_prefs),
 // without the GUI: a plain restart starts from the active one.
 extern void uae_restart_with_pending_prefs(void);
+// Whether a restart is scheduled, and cancelling it (a quit after it).
+extern bool uae_restart_pending(void);
+extern void uae_cancel_restart(void);
 extern bool target_execute(const char* command);
 extern void target_reset (void);
 extern void target_addtorecent (const TCHAR*, int);

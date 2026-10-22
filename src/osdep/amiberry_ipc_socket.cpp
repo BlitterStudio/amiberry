@@ -3791,11 +3791,17 @@ static std::string HandleSettingsDescribe(const std::vector<std::string>& args)
 		fields.push_back("step=" + number_text(d->step));
 	}
 	// The choices the option offers now, with whether each is available.
+	// Copied first: the list may be rebuilt by the next layer call (host
+	// device lists are).
 	const amiberry_setting_choice* choices = nullptr;
 	const size_t count = amiberry_settings_choices(session, d->id, &choices);
+	std::vector<std::string> values;
 	for (size_t i = 0; i < count; ++i) {
-		const bool available = amiberry_settings_choice_is_available(session, d->id, choices[i].value);
-		fields.push_back(std::string(available ? "choice=" : "unavailable_choice=") + choices[i].value);
+		values.emplace_back(choices[i].value);
+	}
+	for (const std::string& value : values) {
+		const bool available = amiberry_settings_choice_is_available(session, d->id, value.c_str());
+		fields.push_back(std::string(available ? "choice=" : "unavailable_choice=") + value);
 	}
 	// A tab or line break in a field would split the reply.
 	for (const std::string& field : fields) {

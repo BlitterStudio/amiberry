@@ -141,6 +141,14 @@ bool apply_settings(int apply, std::string* error)
 	// Nothing runs yet: the emulation starts with the pending configuration.
 	if (!emulating)
 		return true;
+#ifdef LIBRETRO
+	// Refused before anything is signalled, so the running configuration
+	// stays as it is.
+	if (apply == AMIBERRY_APPLY_RESTART) {
+		*error = "Restarting is up to the libretro front end";
+		return false;
+	}
+#endif
 	// What the running emulation picks up between frames.
 	set_config_changed();
 	if (apply == AMIBERRY_APPLY_LIVE)
@@ -157,20 +165,30 @@ bool apply_settings(int apply, std::string* error)
 		emulation_requests++;
 		return true;
 	}
-#ifdef LIBRETRO
-	*error = "Restarting is up to the libretro front end";
-	return false;
-#else
+#ifndef LIBRETRO
 	uae_restart_with_pending_prefs();
 	emulation_requests++;
-	return true;
 #endif
+	return true;
 }
 
 // The strings are the ones the IPC transport replies with; it forwards them
 // unchanged.
 bool execute(const request& r, void*, std::string* error)
 {
+	// Once a restart is scheduled the running emulation is being replaced:
+	// what an action changed now would not reach the one that starts. A
+	// quit still wins over the restart.
+	if (uae_restart_pending()) {
+		if (r.k == kind::quit) {
+			uae_cancel_restart();
+			uae_quit();
+			emulation_requests++;
+			return true;
+		}
+		*error = "The emulator is restarting";
+		return false;
+	}
 	switch (r.k) {
 	case kind::insert_floppy:
 		_tcsncpy(changed_prefs.floppyslots[r.drive].df, r.path.c_str(), MAX_DPATH);
