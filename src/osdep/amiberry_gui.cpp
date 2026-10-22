@@ -696,15 +696,25 @@ static bool apply_disk_selection(const int shortcut, uae_prefs* prefs, const std
 	{
 		std::string path = selected;
 		// ensure the selected filename ends with .uss
-		if (path.size() < 4 || path.substr(path.size() - 4) != ".uss")
+		if (path.size() < 4 || path.substr(path.size() - 4) != ".uss") {
 			path += ".uss";
+			// The requester confirmed replacing what was picked, not this.
+			if (zfile_exists(path.c_str())) {
+				gui_message("%s already exists. Choose it to replace it.", path.c_str());
+				return false;
+			}
+		}
 
 		// As the state hotkey's save (AKS_STATESAVEDIALOG): compressed, with
 		// the save's flags set up for this file.
+		TCHAR previous[MAX_DPATH];
+		_tcscpy(previous, savestate_fname);
 		savestate_initsave(path.c_str(), 1, true, true);
 		// save_state() returns 0 (or less) when the file was not written;
-		// no thumbnail then, which would look like a valid state's.
+		// no thumbnail then, which would look like a valid state's. The
+		// state name stays what it was (the GUI's slot still means it).
 		if (save_state(savestate_fname, STATE_SAVE_DESCRIPTION) <= 0) {
+			_tcscpy(savestate_fname, previous);
 			gui_message("The state could not be saved to %s", path.c_str());
 			return false;
 		}
@@ -747,7 +757,10 @@ void request_disk_selection(const int shortcut, const bool close_gui, std::funct
 		start = changed_prefs.floppyslots[shortcut].df[0] ? changed_prefs.floppyslots[shortcut].df : get_floppy_path();
 	} else if (shortcut == 4 || shortcut == 5) {
 		title = shortcut == 4 ? "Load a state" : "Save the state";
-		filters = "Amiberry state files (*.uss){.uss},All Files (*){.*}";
+		// A save offers .uss only, so the dialog adds the extension and its
+		// overwrite check sees the file that is written.
+		filters = shortcut == 5 ? "Amiberry state files (*.uss){.uss}"
+			: "Amiberry state files (*.uss){.uss},All Files (*){.*}";
 		save = shortcut == 5;
 		TCHAR folder[MAX_DPATH];
 		get_savestate_path(folder, sizeof folder / sizeof(TCHAR));
@@ -856,16 +869,18 @@ static void run_settings_ui()
 #endif
 }
 
-static void prefs_to_gui()
+static void load_gui_theme()
 {
-	//
-	// GUI Theme section
-	//
 	if (amiberry_options.gui_theme[0])
 		load_theme(amiberry_options.gui_theme);
 	else
 		load_default_theme();
-	
+}
+
+static void prefs_to_gui()
+{
+	load_gui_theme();
+
 	// Hard-reset-only chipset settings would otherwise snap back to the
 	// running machine's values here, hiding a pending change (#2459).
 	const auto pending_chipset = get_reset_only_chipset_prefs(changed_prefs);
@@ -1027,17 +1042,25 @@ void gui_display(int shortcut)
 		setmouseactive(0, 0);
 	}
 
+	bool requester = false;
 #if !defined(AMIBERRY_NATIVE_HOST) && defined(USE_IMGUI)
 	// A hotkey's requester shows over the GUI, which closes once it is
 	// answered.
 	if (shortcut >= 0 && shortcut <= 6) {
 		request_disk_selection(shortcut, true);
 		shortcut = -1;
+		requester = true;
 	}
 #endif
 	if (shortcut == -1)
 	{
-		prefs_to_gui();
+		// A requester keeps changed_prefs as it is: changes not yet applied
+		// (another hotkey's, earlier in the same input pass) must survive
+		// it, as they did before the requester used the GUI.
+		if (requester)
+			load_gui_theme();
+		else
+			prefs_to_gui();
 		run_settings_ui();
 		gui_to_prefs();
 

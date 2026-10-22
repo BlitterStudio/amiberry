@@ -42,6 +42,9 @@ static void ShowAlert(const char *title, const char *message) {
 
 static ImTextureID savestate_screenshot_tex = ImTextureID_Invalid;
 static int savestate_screenshot_slot = -1;
+// Set where the preview cannot go at once (a requester's callback runs after
+// the panel queued its image for the frame); the panel drops it next frame.
+static bool savestate_preview_stale = false;
 
 static void ClearScreenshotTexture() {
     if (savestate_screenshot_tex != ImTextureID_Invalid) {
@@ -86,6 +89,10 @@ void render_panel_savestates() {
     if (current_state_num != last_state_num) {
         gui_update();
         last_state_num = current_state_num;
+        force_reload = true;
+    }
+    if (savestate_preview_stale) {
+        savestate_preview_stale = false;
         force_reload = true;
     }
 
@@ -224,7 +231,7 @@ void render_panel_savestates() {
                 request_disk_selection(5, false, [] {
                     current_state_num = 99;
                     last_state_num = 99;
-                    ClearScreenshotTexture();
+                    savestate_preview_stale = true;
                     ss_info_dirty = true;
                 });
             } else {
