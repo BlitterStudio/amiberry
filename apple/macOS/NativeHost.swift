@@ -116,6 +116,23 @@ public func amiberryNativeUIAlert(
 
 @MainActor
 enum Alerts {
+	/// An alert attached to the frontmost window as a sheet, which does not
+	/// block the caller (the emulation runs on); a modal alert when no window
+	/// is up.
+	static func showSheet(title: String, message: String) {
+		let alert = NSAlert()
+		alert.messageText = title
+		alert.informativeText = message
+		alert.addButton(withTitle: "OK")
+		let window = NSApplication.shared.keyWindow ?? NSApplication.shared.mainWindow
+			?? NSApplication.shared.windows.first { $0.isVisible && !($0 is NSPanel) }
+		guard let window, window.attachedSheet == nil else {
+			_ = show(title: title, message: message, buttons: ["OK"])
+			return
+		}
+		alert.beginSheetModal(for: window)
+	}
+
 	/// Runs a modal alert; returns the index of the button chosen and whether
 	/// the suppression checkbox was ticked.
 	@discardableResult

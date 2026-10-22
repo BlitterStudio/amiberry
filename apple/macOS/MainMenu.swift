@@ -13,8 +13,36 @@ import AppKit
 final class MenuCommands: NSObject, NSMenuItemValidation {
 	static let shared = MenuCommands()
 
-	/// Posts an action; replaced by the tests.
-	var post: (EmulatorAction) -> Void = { _ = EmulatorActions.post($0) }
+	/// Posts an action and reports its failure; replaced by the tests.
+	var post: (EmulatorAction) -> Void = { MenuCommands.postReportingFailure($0) }
+
+	/// Posts an action; when it is refused, or fails when it runs (an empty
+	/// quick-save slot, an unwritable screenshot folder), says so.
+	static func postReportingFailure(_ action: EmulatorAction) {
+		guard let ticket = EmulatorActions.post(action) else {
+			report(action, "The emulator did not accept the request. Try again.")
+			return
+		}
+		Task { @MainActor in
+			while true {
+				switch ticket.poll() {
+				case .pending:
+					try? await Task.sleep(for: .milliseconds(50))
+				case let .failed(message):
+					report(action, message.isEmpty ? "The command failed." : message)
+					return
+				case .done, .unknown:
+					return
+				}
+			}
+		}
+	}
+
+	/// A sheet on the emulation window, so the emulation keeps running
+	/// while it shows.
+	private static func report(_ action: EmulatorAction, _ message: String) {
+		Alerts.showSheet(title: "Command Failed", message: message)
+	}
 	/// The emulator's run state; replaced by the tests.
 	var runState: () -> EmulatorStatus.RunState = { EmulatorStatus.current().runState }
 	/// Whether the settings window is up (it has the media then); replaced

@@ -694,7 +694,12 @@ static void apply_disk_selection(const int shortcut, uae_prefs* prefs, const std
 		// As the state hotkey's save (AKS_STATESAVEDIALOG): compressed, with
 		// the save's flags set up for this file.
 		savestate_initsave(path.c_str(), 1, true, true);
-		save_state(savestate_fname, STATE_SAVE_DESCRIPTION);
+		// save_state() returns 0 (or less) when the file was not written;
+		// no thumbnail then, which would look like a valid state's.
+		if (save_state(savestate_fname, STATE_SAVE_DESCRIPTION) <= 0) {
+			gui_message("The state could not be saved to %s", path.c_str());
+			return;
+		}
 		if (create_screenshot())
 		{
 			const auto filename = extract_filename(savestate_fname);
