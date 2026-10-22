@@ -725,9 +725,7 @@ static bool apply_disk_selection(const int shortcut, uae_prefs* prefs, const std
 		screenshot_filename += filename;
 		screenshot_filename = remove_file_extension(screenshot_filename);
 		screenshot_filename += ".png";
-		if (create_screenshot())
-			save_thumb(screenshot_filename);
-		else
+		if (!create_screenshot() || !save_thumb(screenshot_filename))
 			std::remove(screenshot_filename.c_str());
 	}
 	else if (shortcut == 6)
