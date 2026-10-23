@@ -54,6 +54,11 @@ check_scenario()
 		failures=$((failures + 1))
 		return
 	fi
+	if grep -q 'unknown configuration entries' "$work/err.txt"; then
+		echo "$name: entries no parser took:" >&2
+		cat "$work/err.txt" >&2
+		failures=$((failures + 1))
+	fi
 	if grep -q 'corrections applied' "$work/err.txt"; then
 		echo "$name: the configuration was corrected:" >&2
 		cat "$work/err.txt" >&2

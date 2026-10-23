@@ -890,6 +890,11 @@ static void set_key_configs(const uae_prefs* p)
 		sync_controller_shortcuts(&did);
 }
 
+void target_hotkeys_changed(const uae_prefs* p)
+{
+	set_key_configs(p);
+}
+
 #ifndef _WIN32
 extern void signal_segv(int signum, siginfo_t* info, void* ptr);
 extern void signal_buserror(int signum, siginfo_t* info, void* ptr);
@@ -6698,6 +6703,10 @@ static int target_parse_option_host(uae_prefs *p, const TCHAR *option, const TCH
 		|| cfgfile_yesno(option, value, _T("blank_monitors"), &p->blankmonitors)
 		|| cfgfile_yesno(option, value, _T("active_nocapture_pause"), &p->active_nocapture_pause)
 		|| cfgfile_yesno(option, value, _T("active_nocapture_nosound"), &p->active_nocapture_nosound)
+		// The spellings the writer uses; the ones above are older.
+		|| cfgfile_yesno(option, value, _T("active_not_captured_pause"), &p->active_nocapture_pause)
+		|| cfgfile_yesno(option, value, _T("active_not_captured_nosound"), &p->active_nocapture_nosound)
+		|| cfgfile_yesno(option, value, _T("inactive_minimize"), &p->minimize_inactive)
 		|| cfgfile_yesno(option, value, _T("inactive_pause"), &p->inactive_pause)
 		|| cfgfile_yesno(option, value, _T("inactive_nosound"), &p->inactive_nosound)
 		|| cfgfile_intval(option, value, _T("inactive_input"), &p->inactive_input, 1)

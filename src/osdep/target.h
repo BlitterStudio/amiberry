@@ -96,6 +96,8 @@ extern int amiberry_get_active_input_monitor();
 extern int amiberry_resolve_active_input_monitor();
 
 extern amiberry_hotkey get_hotkey_from_config(const std::string& config_option);
+// Re-reads the keyboard shortcuts (open GUI, quit, screenshot ...) from p.
+extern void target_hotkeys_changed(const uae_prefs* p);
 extern amiberry_hotkey enter_gui_key;
 extern SDL_GamepadButton enter_gui_button;
 extern amiberry_hotkey quit_key;

@@ -236,6 +236,20 @@ def main():
         control.request("SETTINGS_SET\tmagic_mouse\tfalse")
         control.request("SETTINGS_SET\tamiberry.onscreen_joystick\tfalse")
         control.request("SETTINGS_COMMIT")
+        # A keyboard shortcut applies live: the running emulation listens
+        # for the new key.
+        check("screenshot shortcut set",
+              control.request("SETTINGS_SET\tamiberry.screenshot\tLCtrl+F10") == "OK"
+              and control.request("SETTINGS_COMMIT").startswith("OK\tchanged=true\tapply=live"))
+        deadline = time.monotonic() + 3
+        while time.monotonic() < deadline and (
+                control.request("SETTINGS_GET_ACTIVE\tamiberry.screenshot")
+                != "OK\tamiberry.screenshot=LCtrl+F10"):
+            time.sleep(0.05)
+        check("the shortcut reaches the running emulation",
+              control.request("SETTINGS_GET_ACTIVE\tamiberry.screenshot") == "OK\tamiberry.screenshot=LCtrl+F10")
+        control.request("SETTINGS_SET\tamiberry.screenshot\t")
+        control.request("SETTINGS_COMMIT")
         reply = control.request("SETTINGS_APPLY\tsometime")
         check("SETTINGS_APPLY refuses an unknown class", reply.startswith("ERROR\tUsage"), reply)
         # A path longer than the short value buffer still reads back.

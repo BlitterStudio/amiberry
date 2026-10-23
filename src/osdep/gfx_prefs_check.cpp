@@ -75,6 +75,36 @@ int check_prefs_changed_gfx()
 			service_transport_reset();
 	}
 
+#ifdef AMIBERRY
+	// Keyboard shortcuts: the running emulation listens for the new keys.
+	// Checked on every frame, as native_code is, rather than in the
+	// config_changed passes below: blocks there return early, and a change
+	// left for a later pass can run out of passes.
+	{
+		bool hotkeys_changed = false;
+		const auto copy_hotkey = [&hotkeys_changed](TCHAR* current, const TCHAR* changed, const size_t size) {
+			if (_tcscmp(current, changed)) {
+				_tcsncpy(current, changed, size - 1);
+				current[size - 1] = 0;
+				hotkeys_changed = true;
+			}
+		};
+#define COPY_HOTKEY(field) copy_hotkey(currprefs.field, changed_prefs.field, sizeof currprefs.field / sizeof(TCHAR))
+		COPY_HOTKEY(open_gui);
+		COPY_HOTKEY(quit_amiberry);
+		COPY_HOTKEY(action_replay);
+		COPY_HOTKEY(fullscreen_toggle);
+		COPY_HOTKEY(minimize);
+		COPY_HOTKEY(left_amiga);
+		COPY_HOTKEY(right_amiga);
+		COPY_HOTKEY(screenshot);
+		COPY_HOTKEY(debugger_trigger);
+#undef COPY_HOTKEY
+		if (hotkeys_changed)
+			target_hotkeys_changed(&currprefs);
+	}
+#endif
+
 	if (!config_changed && !display_change_requested)
 		return 0;
 
