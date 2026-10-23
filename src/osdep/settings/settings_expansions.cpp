@@ -206,7 +206,8 @@ bool settings_available(const uae_prefs& p, const context&)
 }
 
 // The configuration name list of a selector: its own name, then one per
-// position, each NUL-terminated, an empty one last.
+// position, each NUL-terminated, an empty one last. Only selectors have such
+// lists; a switch's names are plain strings (names_of).
 std::vector<const char*> split_names(const char* names)
 {
 	std::vector<const char*> out;
@@ -355,7 +356,8 @@ const expansionboardsettings* entry_of(const uae_prefs& p, const jumper_part& pa
 	const expansionboardsettings* table = jumpers(p);
 	for (int i = 0; table && table[i].name; i++) {
 		const expansionboardsettings& e = table[i];
-		if (e.type == part.type && !_tcsicmp(split_names(e.configname)[0], part.config.c_str())) {
+		// A selector's own name is its list's first string.
+		if (e.type == part.type && !_tcsicmp(e.configname, part.config.c_str())) {
 			index = i;
 			return table;
 		}
@@ -476,8 +478,11 @@ void collect_jumper_parts()
 				const expansionboardsettings& e = table[i];
 				if (e.type != EXPANSIONBOARD_CHECKBOX && e.type != EXPANSIONBOARD_MULTI)
 					continue;
-				const std::vector<const char*> configs = split_names(e.configname);
-				const std::vector<const char*> names = split_names(e.name);
+				const bool selector = e.type == EXPANSIONBOARD_MULTI;
+				const std::vector<const char*> configs = selector ? split_names(e.configname)
+					: std::vector<const char*>{e.configname};
+				const std::vector<const char*> names = selector ? split_names(e.name)
+					: std::vector<const char*>{e.name};
 				if (configs.empty() || names.empty())
 					continue;
 				jumper_part* part = find_part(configs[0], e.type);
