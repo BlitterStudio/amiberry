@@ -53,7 +53,7 @@ enum SettingsPage: Hashable, Identifiable {
 		let machine = ["cpu", "mmu", "fpu", "cpu_speed", "jit", "ppc", "x86", "chipset", "adv_chipset", "genlock",
 			"memory", "rom"]
 		let media = ["floppy", "diskswapper", "cd", "filesystem", "drawbridge"]
-		let host = ["display", "sound", "input", "onscreen"]
+		let host = ["display", "sound", "input", "onscreen", "misc", "priority"]
 		let known = Set(machine + media + host)
 		let present = Set(groups)
 		func pages(_ ids: [String]) -> [SettingsPage] { ids.filter(present.contains).map { .group($0) } }
@@ -82,6 +82,7 @@ enum SettingsPage: Hashable, Identifiable {
 		"genlock": "Genlock", "memory": "Memory", "rom": "ROMs", "floppy": "Floppy Drives",
 		"diskswapper": "Disk Swapper", "cd": "CD", "filesystem": "Filesystem", "drawbridge": "DrawBridge",
 		"display": "Display", "sound": "Sound", "input": "Input", "onscreen": "On-screen Controls",
+		"misc": "Miscellaneous", "priority": "Priority",
 	]
 
 	private static let groupSymbols: [String: String] = [
@@ -90,7 +91,7 @@ enum SettingsPage: Hashable, Identifiable {
 		"genlock": "tv", "memory": "memorychip", "rom": "doc.badge.gearshape", "floppy": "opticaldiscdrive",
 		"diskswapper": "arrow.triangle.2.circlepath", "cd": "opticaldisc", "filesystem": "folder.badge.gearshape",
 		"drawbridge": "cable.connector", "display": "display", "sound": "speaker.wave.2", "input": "gamecontroller",
-		"onscreen": "hand.tap",
+		"onscreen": "hand.tap", "misc": "slider.horizontal.3", "priority": "gauge.with.dots.needle.33percent",
 	]
 }
 
