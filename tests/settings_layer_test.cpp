@@ -1898,6 +1898,16 @@ void check_rtg_domain()
 	CHECK(set(p, "gfxcard_options", "monitor=1") == AMIBERRY_SETTINGS_OK);
 	CHECK(p.rtgboards[0].monitor_id == 1 && p.rtgboards[0].autoswitch && !p.rtgboards[0].initial_active);
 	CHECK(set(p, "gfxcard_options", "monitor=9") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	// The order is part of the entry under custom autoconfig sorting only.
+	p.autoconfig_custom_sort = true;
+	CHECK(set(p, "gfxcard_options", "order=3,monitor=1") == AMIBERRY_SETTINGS_OK);
+	CHECK(value_of(p, "gfxcard_options") == "order=3,monitor=1");
+	CHECK(set(p, "gfxcard_options", "monitor=1") == AMIBERRY_SETTINGS_OK);
+	CHECK(p.rtgboards[0].device_order == 0 && value_of(p, "gfxcard_options") == "monitor=1");
+	p.autoconfig_custom_sort = false;
+	p.rtgboards[0].device_order = 3;
+	CHECK(set(p, "gfxcard_options", "monitor=1") == AMIBERRY_SETTINGS_OK);
+	CHECK(p.rtgboards[0].device_order == 3); // not in the entry: kept
 	CHECK(set(p, "gfxcard_options", "sparkly") == AMIBERRY_SETTINGS_INVALID_VALUE);
 
 	// rtg_modes and its depths.

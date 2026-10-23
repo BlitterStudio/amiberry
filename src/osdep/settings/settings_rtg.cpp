@@ -336,8 +336,12 @@ void set_gfxcard_options(uae_prefs& p, const value& v)
 {
 	const parsed_options parsed = parse_gfxcard_options(v.text);
 	rtgboardconfig& rbc = board(p);
+	// The entry carries the order only under custom autoconfig sorting (as
+	// the writer spells it), where an entry without one means none.
 	if (parsed.order >= 0)
 		rbc.device_order = parsed.order;
+	else if (p.autoconfig_custom_sort)
+		rbc.device_order = 0;
 	rbc.monitor_id = parsed.monitor;
 	rbc.autoswitch = parsed.autoswitch;
 	set_initial_active(p, parsed.initial);

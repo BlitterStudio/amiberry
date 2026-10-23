@@ -9304,6 +9304,16 @@ void copy_inputdevice_prefs(const struct uae_prefs *src, struct uae_prefs *dst)
 	}
 }
 
+#ifdef AMIBERRY
+// Both the default configuration and the built-in machine ones (Quickstart,
+// presets, WHDLoad, --model) start with these.
+static void zz9000_default_prefs(struct uae_prefs *p)
+{
+	_tcscpy(p->zz9000net_name, _T("slirp"));
+	p->zz9000_int2 = false;
+}
+#endif
+
 void default_prefs (struct uae_prefs *p, bool reset, int type)
 {
 	int roms[] = { 6, 7, 8, 9, 10, 14, 5, 4, 3, 2, 1, -1 };
@@ -9601,10 +9611,7 @@ void default_prefs (struct uae_prefs *p, bool reset, int type)
 	p->rtgboards[0].rtgmem_size = 0x00000000;
 	p->rtgboards[0].rtgmem_type = GFXBOARD_UAE_Z3;
 #ifdef AMIBERRY
-	// Every configuration, not only the built-in default one: a machine
-	// chosen by model had a ZZ9000 without network otherwise.
-	_tcscpy(p->zz9000net_name, _T("slirp"));
-	p->zz9000_int2 = false;
+	zz9000_default_prefs(p);
 #endif
 	p->custom_memory_addrs[0] = 0;
 	p->custom_memory_sizes[0] = 0;
@@ -9833,6 +9840,9 @@ static void buildin_default_prefs (struct uae_prefs *p)
 	p->ne2000pciname[0] = 0;
 	p->ne2000pcmcianame[0] = 0;
 	p->a2065name[0] = 0;
+#ifdef AMIBERRY
+	zz9000_default_prefs(p);
+#endif
 
 	p->prtname[0] = 0;
 	p->sername[0] = 0;
