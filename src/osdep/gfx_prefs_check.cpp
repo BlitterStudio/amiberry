@@ -679,14 +679,19 @@ int check_prefs_changed_gfx()
 		currprefs.parallel_postscript_detection = changed_prefs.parallel_postscript_detection;
 		_tcscpy(currprefs.ghostscript_parameters, changed_prefs.ghostscript_parameters);
 #ifdef PARALLEL_PORT
-		//closeprinter();
+		// What the reset would do: close the old printer (or print file)
+		// and open the new one, so a printer picked while running prints.
+		initparallel();
 #endif
 	}
 	if (_tcscmp(currprefs.sername, changed_prefs.sername) ||
+		currprefs.use_serial != changed_prefs.use_serial ||
 		currprefs.serial_hwctsrts != changed_prefs.serial_hwctsrts ||
 		currprefs.serial_direct != changed_prefs.serial_direct ||
 		currprefs.serial_demand != changed_prefs.serial_demand) {
 		_tcscpy(currprefs.sername, changed_prefs.sername);
+		// Serial is on with a port: a port picked while running opens it.
+		currprefs.use_serial = changed_prefs.use_serial;
 		currprefs.serial_hwctsrts = changed_prefs.serial_hwctsrts;
 		currprefs.serial_demand = changed_prefs.serial_demand;
 		currprefs.serial_direct = changed_prefs.serial_direct;

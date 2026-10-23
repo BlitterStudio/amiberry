@@ -6716,9 +6716,6 @@ static int target_parse_option_host(uae_prefs *p, const TCHAR *option, const TCH
 		|| cfgfile_yesno(option, value, _T("minimized_pause"), &p->minimized_pause)
 		|| cfgfile_yesno(option, value, _T("minimized_nosound"), &p->minimized_nosound)
 		|| cfgfile_intval(option, value, _T("minimized_input"), &p->minimized_input, 1)
-		|| cfgfile_string(option, value, _T("midi_device"), p->midioutdev, sizeof p->midioutdev)
-		|| cfgfile_string(option, value, _T("midiout_device_name"), p->midioutdev, sizeof p->midioutdev)
-		|| cfgfile_string(option, value, _T("midiin_device_name"), p->midiindev, sizeof p->midiindev)
 		|| cfgfile_yesno(option, value, _T("midirouter"), &p->midirouter)
 		|| cfgfile_yesno(option, value, _T("right_control_is_right_win"), &p->right_control_is_right_win_key)
 		|| cfgfile_yesno(option, value, _T("always_on_top"), &p->main_alwaysontop)
@@ -6763,6 +6760,24 @@ static int target_parse_option_host(uae_prefs *p, const TCHAR *option, const TCH
 		|| cfgfile_string(option, value, "android_preset", tmpbuf, sizeof tmpbuf)
 		|| cfgfile_intval(option, value, _T("cpu_idle"), &p->cpu_idle, 1))
 		return 1;
+
+	// The MIDI device names, written escaped and as "none" when there is
+	// none (which the MIDI emulation would try to open as a device).
+	{
+		struct named_device { const TCHAR* name; TCHAR* field; int size; };
+		const named_device devices[] = {
+			{_T("midi_device"), p->midioutdev, static_cast<int>(sizeof p->midioutdev)},
+			{_T("midiout_device_name"), p->midioutdev, static_cast<int>(sizeof p->midioutdev)},
+			{_T("midiin_device_name"), p->midiindev, static_cast<int>(sizeof p->midiindev)},
+		};
+		for (const named_device& d : devices) {
+			if (cfgfile_string_escape(option, value, d.name, d.field, d.size)) {
+				if (!_tcsicmp(d.field, _T("none")))
+					d.field[0] = 0;
+				return 1;
+			}
+		}
+	}
 
 	if (cfgfile_string(option, value, _T("shader"), p->shader, sizeof p->shader)) {
 		if (!p->shader[0])
@@ -6952,6 +6967,9 @@ static int target_parse_option_host(uae_prefs *p, const TCHAR *option, const TCH
 	if (cfgfile_yesno(option, value, _T("start_not_captured"), &p->start_uncaptured))
 		return 1;
 	if (cfgfile_string(option, value, _T("serial_port"), &p->sername[0], sizeof p->sername / sizeof(TCHAR))) {
+		// "none" is no port, as the settings layer and the GUI spell it.
+		if (!_tcsicmp(p->sername, _T("none")))
+			p->sername[0] = 0;
 		if (p->sername[0])
 			p->use_serial = true;
 		else

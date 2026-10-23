@@ -6650,6 +6650,11 @@ static int cfgfile_parse_hardware (struct uae_prefs *p, const TCHAR *option, TCH
 #ifdef SERIAL_PORT
 	if (cfgfile_string(option, value, _T("serial_port"), p->sername, sizeof p->sername / sizeof(TCHAR)))
 	{
+#ifdef AMIBERRY
+		// "none" is no port, as the settings layer and the GUI spell it.
+		if (!_tcsicmp(p->sername, _T("none")))
+			p->sername[0] = 0;
+#endif
 		if (p->sername[0])
 			p->use_serial=true;
 		else

@@ -308,6 +308,7 @@ set(SOURCE_FILES
         src/osdep/settings/settings_boards.cpp
         src/osdep/settings/settings_expansions.cpp
         src/osdep/settings/settings_filter.cpp
+        src/osdep/settings/settings_io.cpp
         src/osdep/settings/settings_registry.cpp
         src/osdep/settings/settings_session.cpp
         src/osdep/settings/settings_sound.cpp
