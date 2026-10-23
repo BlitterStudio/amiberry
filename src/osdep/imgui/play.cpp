@@ -20,7 +20,7 @@
 #include "play_content_detection.h"
 #include "play_setup.h"
 #include "rommgr.h"
-#include "shader_catalog.h"
+#include "display_catalog.h"
 #include "target.h"
 
 namespace {

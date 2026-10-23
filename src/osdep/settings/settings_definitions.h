@@ -139,6 +139,11 @@ const domain& storage_domain();
 const domain& misc_domain();
 const domain& rtg_domain();
 const domain& expansions_domain();
+const domain& filter_domain();
+
+// Keeps the manual crop window and its offsets within the frame at the
+// render resolution (settings_filter.cpp).
+void fit_manual_crop(uae_prefs& p);
 
 // target_fixup_options() resets an SDL sound device to the first one while
 // a screen uses the lagless vsync mode (fixup_prefs_dimensions() turns RTG

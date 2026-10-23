@@ -445,6 +445,7 @@ void set_gfx_resolution(uae_prefs& p, const value& v)
 	p.gfx_resolution = choice_index(CHOICES(resolution_choices), v.text);
 	if (p.gfx_resolution < 1 || p.gfx_vresolution < 1)
 		p.gfx_autoresolution_vga = false;
+	fit_manual_crop(p);
 }
 
 bool resolution_available(const uae_prefs& p, const context&)
@@ -807,6 +808,7 @@ void set_gfx_linemode(uae_prefs& p, const value& v)
 	}
 	if (p.gfx_vresolution < 1)
 		p.gfx_autoresolution_vga = false;
+	fit_manual_crop(p);
 }
 
 bool linemode_available(const uae_prefs& p, const context&)

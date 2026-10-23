@@ -6103,6 +6103,9 @@ void target_fixup_options(uae_prefs* p)
 	{
 		// Make sure that Auto-Center is disabled
 		p->gfx_xcenter = p->gfx_ycenter = 0;
+		// One cropping at a time (a default_auto_crop application setting
+		// with a configuration's manual crop): the writer keeps auto crop.
+		p->gfx_manual_crop = false;
 	}
 	heal_unavailable_display_index(p->gfx_apmode[APMODE_NATIVE].gfx_display, "native");
 	heal_unavailable_display_index(p->gfx_apmode[APMODE_RTG].gfx_display, "RTG");
@@ -6278,8 +6281,6 @@ void target_default_options(uae_prefs* p, const int type)
 	p->gfx_monitor[0].gfx_size_win.height = amiberry_options.default_height;
 
 	p->gfx_manual_crop = false;
-	p->gfx_manual_crop_width = AMIGA_WIDTH_MAX << p->gfx_resolution;
-	p->gfx_manual_crop_height = AMIGA_HEIGHT_MAX << p->gfx_vresolution;
 	p->gfx_horizontal_offset = 0;
 	p->gfx_vertical_offset = 0;
 	if (amiberry_options.default_auto_crop)
@@ -6342,6 +6343,9 @@ void target_default_options(uae_prefs* p, const int type)
 		p->gfx_vresolution = VRES_NONDOUBLE;
 		p->gfx_pscanlines = 0;
 	}
+	// The whole frame at the default resolution and line mode.
+	p->gfx_manual_crop_width = AMIGA_WIDTH_MAX << p->gfx_resolution;
+	p->gfx_manual_crop_height = AMIGA_HEIGHT_MAX << p->gfx_vresolution;
 
 	if (amiberry_options.default_horizontal_centering)
 		p->gfx_xcenter = 2;
@@ -6566,11 +6570,10 @@ void target_save_options(zfile* f, uae_prefs* p)
 
 	cfgfile_target_dwrite(f, _T("gfx_horizontal_offset"), _T("%d"), p->gfx_horizontal_offset);
 	cfgfile_target_dwrite(f, _T("gfx_vertical_offset"), _T("%d"), p->gfx_vertical_offset);
-	if (p->gfx_auto_crop)
-	{
-		cfgfile_target_dwrite_bool(f, _T("gfx_auto_crop"), p->gfx_auto_crop);
-	}
-	else if (p->gfx_manual_crop)
+	// Written either way: a default_auto_crop application setting would
+	// otherwise turn auto crop back on for a configuration without it.
+	cfgfile_target_dwrite_bool(f, _T("gfx_auto_crop"), p->gfx_auto_crop);
+	if (!p->gfx_auto_crop && p->gfx_manual_crop)
 	{
 		cfgfile_target_dwrite_bool(f, _T("gfx_manual_crop"), p->gfx_manual_crop);
 		cfgfile_target_dwrite(f, _T("gfx_manual_crop_width"), _T("%d"), p->gfx_manual_crop_width);

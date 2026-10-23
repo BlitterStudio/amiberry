@@ -504,7 +504,7 @@ class ShaderCatalogTest {
 
 	@Test
 	fun kotlinCatalogContractIsPinnedToNativeSource() {
-		val nativeSource = File("../../src/osdep/imgui/shader_catalog.cpp").readText()
+		val nativeSource = File("../../src/osdep/display_catalog.cpp").readText()
 		val nativeBuiltIns = Regex(
 			"""builtin_shaders\[\]\s*=\s*\{([^}]+)}"""
 		).find(nativeSource)?.groupValues?.get(1)

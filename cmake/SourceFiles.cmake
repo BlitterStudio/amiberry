@@ -251,6 +251,7 @@ set(SOURCE_FILES
         src/osdep/display_modes.cpp
         src/osdep/gfx_colors.cpp
         src/osdep/gfx_prefs_check.cpp
+        src/osdep/display_catalog.cpp
         src/osdep/gl_overlays.cpp
         src/osdep/gfx_window.cpp
         src/osdep/renderer_factory.cpp
@@ -306,6 +307,7 @@ set(SOURCE_FILES
         src/osdep/settings/settings_rtg.cpp
         src/osdep/settings/settings_boards.cpp
         src/osdep/settings/settings_expansions.cpp
+        src/osdep/settings/settings_filter.cpp
         src/osdep/settings/settings_registry.cpp
         src/osdep/settings/settings_session.cpp
         src/osdep/settings/settings_sound.cpp
@@ -415,7 +417,6 @@ set(IMGUI_GUI_FILES
 		src/osdep/imgui/rom.cpp
 		src/osdep/imgui/rtg.cpp
 		src/osdep/imgui/savestates.cpp
-		src/osdep/imgui/shader_catalog.cpp
 		src/osdep/imgui/sound.cpp
 		src/osdep/imgui/themes.cpp
 		src/osdep/imgui/whdload.cpp
