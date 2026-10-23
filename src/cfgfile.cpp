@@ -3027,6 +3027,11 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 		struct gfx_filterdata *gf = &p->gf[j];
 		const TCHAR *ext = j == 0 ? NULL : (j == 1 ? _T("_rtg") : _T("_lace"));
 		cfgfile_dwrite_strarr(f, _T("gfx_filter_autoscale"), ext, j != GF_RTG ? autoscale : autoscale_rtg, gf->gfx_filter_autoscale);
+#if defined(AMIBERRY) && !defined(GFXFILTER)
+		// The renderers' integer scaling uses it without GFXFILTER (written
+		// in the GFXFILTER block below otherwise).
+		cfgfile_dwrite_strarr(f, _T("gfx_filter_autoscale_limit"), ext, autoscalelimit, gf->gfx_filter_integerscalelimit);
+#endif
 		cfgfile_dwrite_ext(f, _T("gfx_filter_vert_zoom_multf"), ext, _T("%f"), gf->gfx_filter_vert_zoom_mult);
 		cfgfile_dwrite_ext(f, _T("gfx_filter_horiz_zoom_multf"), ext, _T("%f"), gf->gfx_filter_horiz_zoom_mult);
 		cfgfile_dwrite_ext(f, _T("gfx_filter_left_border"), ext, _T("%d"), gf->gfx_filter_left_border);
@@ -4407,6 +4412,11 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 		struct gfx_filterdata *gf = &p->gf[j];
 		const TCHAR *ext = j == 0 ? NULL : (j == 1 ? _T("_rtg") : _T("_lace"));
 		if (cfgfile_strval (option, value, _T("gfx_filter_autoscale"), ext, &gf->gfx_filter_autoscale, j != GF_RTG ? autoscale : autoscale_rtg, 0)
+#if defined(AMIBERRY) && !defined(GFXFILTER)
+			// The renderers' integer scaling uses it without GFXFILTER
+			// (read in the GFXFILTER block below otherwise).
+			|| cfgfile_strval(option, value, _T("gfx_filter_autoscale_limit"), ext, &gf->gfx_filter_integerscalelimit, autoscalelimit, 0)
+#endif
 			|| cfgfile_floatval(option, value, _T("gfx_filter_vert_zoom_multf"), ext, &gf->gfx_filter_vert_zoom_mult)
 			|| cfgfile_floatval(option, value, _T("gfx_filter_horiz_zoom_multf"), ext, &gf->gfx_filter_horiz_zoom_mult)
 			|| cfgfile_intval(option, value, _T("gfx_filter_left_border"), ext, &gf->gfx_filter_left_border, 1)
@@ -9590,6 +9600,12 @@ void default_prefs (struct uae_prefs *p, bool reset, int type)
 	}
 	p->rtgboards[0].rtgmem_size = 0x00000000;
 	p->rtgboards[0].rtgmem_type = GFXBOARD_UAE_Z3;
+#ifdef AMIBERRY
+	// Every configuration, not only the built-in default one: a machine
+	// chosen by model had a ZZ9000 without network otherwise.
+	_tcscpy(p->zz9000net_name, _T("slirp"));
+	p->zz9000_int2 = false;
+#endif
 	p->custom_memory_addrs[0] = 0;
 	p->custom_memory_sizes[0] = 0;
 	p->custom_memory_addrs[1] = 0;
@@ -9817,10 +9833,6 @@ static void buildin_default_prefs (struct uae_prefs *p)
 	p->ne2000pciname[0] = 0;
 	p->ne2000pcmcianame[0] = 0;
 	p->a2065name[0] = 0;
-#ifdef AMIBERRY
-	_tcscpy(p->zz9000net_name, _T("slirp"));
-	p->zz9000_int2 = false;
-#endif
 
 	p->prtname[0] = 0;
 	p->sername[0] = 0;

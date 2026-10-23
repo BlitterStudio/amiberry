@@ -17,7 +17,7 @@ namespace {
 // Function-local so the list is built on first use, never during another
 // translation unit's static initialisation.
 struct domain_list {
-	const domain* items[11];
+	const domain* items[12];
 };
 
 const domain_list& domains()
@@ -34,6 +34,7 @@ const domain_list& domains()
 		&floppy_domain(),
 		&storage_domain(),
 		&misc_domain(),
+		&rtg_domain(),
 	}};
 	return list;
 }

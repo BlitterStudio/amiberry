@@ -127,7 +127,7 @@ bool chipmem_choice_available(const uae_prefs& p, std::string_view choice)
 	if (units > 4) {
 		for (const auto& board : p.rtgboards) {
 			if (board.rtgmem_size
-				&& gfxboard_get_configtype(const_cast<rtgboardconfig*>(&board)) == 2)
+				&& gfxboard_get_configtype_of(board.rtgmem_type) == 2)
 				return false;
 		}
 	}

@@ -15,6 +15,8 @@ extern int gfxboard_get_configtype (struct rtgboardconfig*);
 extern int gfxboard_is_registers (struct rtgboardconfig*);
 extern int gfxboard_get_vram_min (struct rtgboardconfig*);
 extern int gfxboard_get_vram_max (struct rtgboardconfig*);
+extern bool gfxboard_get_vram_range(int type, int *vmin, int *vmax);
+extern int gfxboard_get_configtype_of(int type);
 extern bool gfxboard_need_byteswap (struct rtgboardconfig*);
 extern int gfxboard_get_autoconfig_size(struct rtgboardconfig*);
 extern bool gfxboard_get_switcher(struct rtgboardconfig *rbc);
