@@ -76,6 +76,22 @@ check a500:0:1      floppy1type=-1
 check a4000:0      floppy0type=1 floppy1type=-1
 check cd32:0:1      floppy0type=-1 floppy1type=-1 cdimage0=
 
+# A preset starts from the machine's built-in configuration: options outside
+# its model facts go back to their defaults (the ZZ9000 network and INT2
+# once survived it).
+if "$AMIBERRY_BIN" --dump-config -s zz9000_net=none -s zz9000_int2=true --apply-preset a4000 \
+	> "$work/dump.txt" 2> "$work/err.txt"; then
+	for expected in zz9000_net=slirp zz9000_int2=false; do
+		if ! grep -qx "$expected" "$work/dump.txt"; then
+			echo "a4000 preset after other ZZ9000 settings: $expected expected, got '$(grep -m1 "^${expected%%=*}=" "$work/dump.txt")'" >&2
+			failures=$((failures + 1))
+		fi
+	done
+else
+	echo "a4000 preset after other ZZ9000 settings: --dump-config failed" >&2
+	failures=$((failures + 1))
+fi
+
 # Unknown presets, configurations and compatibility levels out of the
 # preset's range, and malformed numbers must be rejected rather than
 # quietly producing another machine.

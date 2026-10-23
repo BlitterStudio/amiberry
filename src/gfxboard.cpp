@@ -4878,6 +4878,19 @@ struct gfxboard_func *gfxboard_get_func(struct rtgboardconfig *rbc)
 	return b->func;
 }
 
+// The bus a board type sits on (2 Zorro II, 3 Zorro III, or the board's
+// own), without pointing an emulated board slot at it as
+// gfxboard_get_configtype does; 0 for an unknown type.
+int gfxboard_get_configtype_of(int type)
+{
+	if (type == GFXBOARD_UAE_Z2)
+		return 2;
+	if (type == GFXBOARD_UAE_Z3)
+		return 3;
+	const struct gfxboard *b = find_board(type);
+	return b ? b->configtype : 0;
+}
+
 int gfxboard_get_configtype(struct rtgboardconfig *rbc)
 {
 	int type = rbc->rtgmem_type;
@@ -4915,6 +4928,22 @@ int gfxboard_get_autoconfig_size(struct rtgboardconfig *rbc)
 	if (type == GFXBOARD_ID_PICASSO4_Z3)
 		return 32 * 1024 * 1024;
 	return -1;
+}
+
+// The VRAM a board type takes, in bytes; false for the UAE boards, which
+// have no fixed range. Unlike gfxboard_get_vram_min/max it leaves the
+// emulated boards alone (those point their slot at the type asked about),
+// so a settings UI may ask while the emulation runs.
+bool gfxboard_get_vram_range(int type, int *vmin, int *vmax)
+{
+	if (type < GFXBOARD_HARDWARE)
+		return false;
+	const struct gfxboard *b = find_board(type);
+	if (!b)
+		return false;
+	*vmin = b->vrammin;
+	*vmax = b->vrammax;
+	return true;
 }
 
 int gfxboard_get_vram_min (struct rtgboardconfig *rbc)

@@ -248,6 +248,12 @@ void devices_reset(int hardreset)
 #endif
 	// must be first
 	init_eventtab();
+#ifdef AMIBERRY
+	// The boards this reset brings in (expamem_reset() copies them in
+	// anyway): init_shm() and its autoconfig scans must lay memory out for
+	// them, not for the running ones.
+	expamem_bring_in_boards();
+#endif
 	init_shm();
 
 #ifdef GFXBOARD

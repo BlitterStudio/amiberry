@@ -43,7 +43,7 @@ bool rtg_available(const uae_prefs& p)
 {
 #ifdef PICASSO96
 	const bool addr_ok = !p.address_space_24
-		|| gfxboard_get_configtype(&const_cast<uae_prefs&>(p).rtgboards[0]) == 2;
+		|| gfxboard_get_configtype_of(p.rtgboards[0].rtgmem_type) == 2;
 	return (addr_ok && p.rtgboards[0].rtgmem_size)
 		|| p.rtgboards[0].rtgmem_type >= GFXBOARD_HARDWARE;
 #else
@@ -129,6 +129,18 @@ void gfx_display_dynamic_choices(const uae_prefs&, choice_list& out)
 void get_gfx_display(const uae_prefs& p, char* out, size_t size)
 {
 	write_int(out, size, p.gfx_apmode[APMODE_NATIVE].gfx_display);
+}
+
+void get_gfx_display_rtg(const uae_prefs& p, char* out, size_t size)
+{
+	write_int(out, size, p.gfx_apmode[APMODE_RTG].gfx_display);
+}
+
+// The RTG screen's own monitor (gfx_display_rtg, read after gfx_display,
+// which sets both).
+void set_gfx_display_rtg(uae_prefs& p, const value& v)
+{
+	p.gfx_apmode[APMODE_RTG].gfx_display = static_cast<int>(v.number);
 }
 
 // The panel used to write only the native index while the parser applies
@@ -821,6 +833,11 @@ const definition definitions[] = {
 			AMIBERRY_APPLY_LIVE, "0",
 			"Needs more than one connected monitor. Applies to the native and the RTG screen."),
 		get_gfx_display, set_gfx_display, gfx_display_available, nullptr, gfx_display_range,
+		nullptr, gfx_display_dynamic_choices},
+	{DYNAMIC_CHOICE_OPTION("gfx_display_rtg", "rtg", "RTG host display",
+			"Which connected monitor shows the RTG screen; the primary display when 0.",
+			AMIBERRY_APPLY_LIVE, "0", "Needs more than one connected monitor."),
+		get_gfx_display_rtg, set_gfx_display_rtg, gfx_display_available, nullptr, gfx_display_range,
 		nullptr, gfx_display_dynamic_choices},
 	{NUMBER_OPTION("gfx_width_windowed", "display", "Windowed width",
 			"Width of the emulator window in windowed mode.",

@@ -18,6 +18,8 @@
 #include "blkdev.h"
 #include "x86.h"
 #include "gfxboard.h"
+#include "rtgmodes.h"
+#include "ethernet.h"
 #include "rommgr.h"
 #include "amiberry_gfx_mode.h"
 #include "amiberry_gfx.h"
@@ -142,8 +144,62 @@ int cpuboard_maxmemory(uae_prefs*) { return 128 * 1024 * 1024; }
 // a configured board uses.
 static int board_memory_type = BOARD_MEMORY_HIGHMEM;
 int cpuboard_memorytype(uae_prefs* p) { return p->cpuboard_type ? board_memory_type : 0; }
-// Zorro II for the UAE Z2 board type, Zorro III otherwise.
-int gfxboard_get_configtype(rtgboardconfig* rbc) { return rbc->rtgmem_type == GFXBOARD_UAE_Z2 ? 2 : 3; }
+
+// A few entries of the core's board table, as gfxboard.cpp has them: the
+// two UAE boards, two hardware boards with a monitor switcher and one
+// without.
+struct test_board {
+	int id;
+	const char* name;
+	const char* maker;
+	const char* config;
+	int vram_min, vram_max;
+	bool switcher;
+	int bus; // configtype: 2 Zorro II, 3 Zorro III
+};
+static const test_board test_boards[] = {
+	{GFXBOARD_UAE_Z2, "UAE [Zorro II]", nullptr, "ZorroII", -1, -1, true, 2},
+	{GFXBOARD_UAE_Z3, "UAE [Zorro III]", nullptr, "ZorroIII", -1, -1, true, 3},
+	{GFXBOARD_ID_PICASSO2, "Picasso II [Zorro II]", "Village Tronic", "PicassoII", 0x100000, 0x200000, true, 2},
+	{GFXBOARD_ID_ZZ9000_Z3, "ZZ9000 [Zorro III]", "MNT Research", "ZZ9000_Z3", 0x8000000, 0x8000000, true, 3},
+	{GFXBOARD_ID_GD5446_PCI, "GD5446 [PCI]", "Cirrus Logic", "GD5446_PCI", 0x400000, 0x400000, false, BOARD_PCI},
+};
+static const test_board* find_test_board(int id)
+{
+	for (const auto& b : test_boards) {
+		if (b.id == id)
+			return &b;
+	}
+	return nullptr;
+}
+int gfxboard_get_id_from_index(int index)
+{
+	return index >= 0 && index < static_cast<int>(sizeof test_boards / sizeof test_boards[0])
+		? test_boards[index].id : -1;
+}
+const TCHAR* gfxboard_get_name(int id) { const test_board* b = find_test_board(id); return b ? b->name : nullptr; }
+const TCHAR* gfxboard_get_manufacturername(int id) { const test_board* b = find_test_board(id); return b ? b->maker : nullptr; }
+const TCHAR* gfxboard_get_configname(int id) { const test_board* b = find_test_board(id); return b ? b->config : nullptr; }
+bool gfxboard_get_switcher(rtgboardconfig* rbc) { const test_board* b = find_test_board(rbc->rtgmem_type); return !b || b->switcher; }
+int gfxboard_get_configtype_of(int type) { const test_board* b = find_test_board(type); return b ? b->bus : 0; }
+bool gfxboard_get_vram_range(int type, int* vmin, int* vmax)
+{
+	const test_board* b = find_test_board(type);
+	if (!b || type < GFXBOARD_HARDWARE)
+		return false;
+	*vmin = b->vram_min;
+	*vmax = b->vram_max;
+	return true;
+}
+// The host network driver every build has.
+static netdriverdata test_slirp = [] {
+	netdriverdata d{};
+	d.name = "slirp";
+	d.desc = "SLIRP User Mode NAT";
+	return d;
+}();
+static netdriverdata* test_net_drivers[] = {&test_slirp, nullptr};
+netdriverdata** target_ethernet_enumerate() { return test_net_drivers; }
 
 // A scanned ROM list with one cartridge dump, for the cartridge ident.
 static romdata test_cart_rom = [] {
@@ -420,6 +476,20 @@ void reset_prefs(uae_prefs& p)
 	p.minimized_nosound = true;
 	p.use_retroarch_quit = true;
 	p.use_retroarch_menu = true;
+
+	// RTG (default_prefs and target_default_options).
+	for (int i = 0; i < MAX_RTG_BOARDS; i++) {
+		p.rtgboards[i].rtg_index = i;
+		p.rtgboards[i].autoswitch = true;
+	}
+	p.rtgboards[0].rtgmem_type = GFXBOARD_UAE_Z3;
+	p.rtg_zerocopy = true;
+	p.rtg_hardwaresprite = true;
+	p.picasso96_modeflags = RGBFF_CLUT | RGBFF_R5G6B5PC | RGBFF_R8G8B8A8;
+	p.gf[GF_RTG].gfx_filter_autoscale = RTG_MODE_SCALE;
+	p.rtgscaleaspectratio = -1;
+	p.gfx_apmode[APMODE_RTG].gfx_backbuffers = 1;
+	strcpy(p.zz9000net_name, "slirp");
 }
 
 std::string value_of(const uae_prefs& p, const char* id)
@@ -950,6 +1020,12 @@ bool host_dependent(const settings::definition& d)
 	return d.dynamic_choices != nullptr;
 }
 
+// "key:part" options edit a part of a packed entry; the entry is checked.
+bool part_of_entry(const settings::definition& d)
+{
+	return std::strchr(d.descriptor.id, ':') != nullptr;
+}
+
 void emit(const char* name, const uae_prefs& p)
 {
 	std::printf("S %s\n", name);
@@ -959,7 +1035,7 @@ void emit(const char* name, const uae_prefs& p)
 		const settings::definition& d = settings::definition_at(i);
 		const std::string v = value_of(p, d.descriptor.id);
 		const bool size_k_view = std::strstr(d.descriptor.id, "_size_k") != nullptr;
-		if (size_k_view && v == "0")
+		if ((size_k_view && v == "0") || part_of_entry(d))
 			continue;
 		std::printf("A %s=%s\n", d.descriptor.id, v.c_str());
 		if (!settings::is_available(d, p, idle) || host_dependent(d))
@@ -976,7 +1052,7 @@ void emit_roundtrip()
 	std::printf("S defaults\n");
 	for (size_t i = 0; i < settings::definition_count(); i++) {
 		const settings::definition& d = settings::definition_at(i);
-		if (host_dependent(d))
+		if (host_dependent(d) || part_of_entry(d))
 			continue;
 		std::printf("E %s=%s %s\n", d.descriptor.id, d.descriptor.default_value, d.descriptor.default_value);
 	}
@@ -1090,6 +1166,30 @@ void emit_roundtrip()
 	apply("amiberry.active_not_captured_nosound", "true");
 	apply("amiberry.active_not_captured_pause", "true");
 	emit("misc_priority", p);
+
+	// An RTG board with non-default options (packed entries included).
+	reset_prefs(p);
+	apply("gfxcard_size", "4");
+	apply("gfxcard_type", "PicassoII");
+	apply("gfxcard_options:monitor", "1");
+	apply("gfxcard_options:initial", "true");
+	emit("rtg_hardware", p);
+	std::printf("E gfxcard_type=PicassoII ZorroIII\n");
+
+	reset_prefs(p);
+	apply("cycle_exact", "false");
+	apply("cpu_model", "68020");
+	apply("cpu_24bit_addressing", "false");
+	apply("gfxcard_size", "32");
+	apply("rtg_modes:24bit", "B8G8R8");
+	apply("rtg_modes:16bit", "all");
+	apply("gfxcard_multithread", "true");
+	apply("gfx_filter_autoscale_rtg", "integer");
+	apply("gfx_filter_autoscale_limit_rtg", "1/4");
+	apply("amiberry.rtg_vblank", "60");
+	apply("amiberry.rtg_scale_aspect_ratio", "0:0");
+	apply("gfx_backbuffers_rtg", "2");
+	emit("rtg_uae", p);
 
 	reset_prefs(p);
 	// The A600 extra enables the machine's IDE controller (ide=a600/a1200
@@ -1721,6 +1821,125 @@ void check_presets()
 	CHECK(stub_preset_config == 0);
 	CHECK(settings::arcade_game_config(4) == -1);
 	CHECK(changed_prefs.cpu_model == 68000 && changed_prefs.keyboard_leds[0] == 0);
+}
+
+// RTG: the board's options follow its type and memory, and the packed
+// entries (gfxcard_options, rtg_modes) agree with their parts.
+void check_rtg_domain()
+{
+	uae_prefs& p = test_prefs;
+	reset_prefs(p);
+	CHECK(!available(p, "rtg_modes:16bit"));
+	CHECK(value_of(p, "gfxcard_options") == "");
+
+	// 24-bit addressing (the 68000) leaves no room for a Zorro III board:
+	// turning the board on gives the UAE Zorro II one, at most 8 MB.
+	p.rtg_zerocopy = false;
+	CHECK(choice_available(p, "gfxcard_size", "8") && !choice_available(p, "gfxcard_size", "16"));
+	CHECK(set(p, "gfxcard_size", "4") == AMIBERRY_SETTINGS_OK);
+	CHECK(value_of(p, "gfxcard_type") == "ZorroII" && p.rtg_zerocopy);
+	CHECK(!choice_available(p, "gfxcard_type", "ZorroIII") && !choice_available(p, "gfxcard_type", "ZZ9000_Z3"));
+	CHECK(choice_available(p, "gfxcard_type", "PicassoII"));
+	// More than 2 MB chip RAM leaves no room for a Zorro II board.
+	p.chipmem.size = 0x400000;
+	CHECK(!choice_available(p, "gfxcard_type", "PicassoII"));
+	p.chipmem.size = 0x80000;
+
+	// Picking a board turns it on with the memory the GUI gave it.
+	reset_prefs(p);
+	p.rtg_zerocopy = false;
+	CHECK(available(p, "gfxcard_type"));
+	CHECK(set(p, "gfxcard_type", "ZorroIII") == AMIBERRY_SETTINGS_UNAVAILABLE); // 24-bit
+	CHECK(set(p, "gfxcard_type", "ZorroII") == AMIBERRY_SETTINGS_OK);
+	CHECK(value_of(p, "gfxcard_size") == "4" && p.rtg_zerocopy);
+	reset_prefs(p);
+	CHECK(set(p, "gfxcard_type", "PicassoII") == AMIBERRY_SETTINGS_OK);
+	CHECK(value_of(p, "gfxcard_size") == "1"); // its least
+	// Turning the board off resets what the configuration then omits.
+	CHECK(set(p, "gfxcard_options:initial", "true") == AMIBERRY_SETTINGS_OK);
+	CHECK(set(p, "gfxcard_size", "0") == AMIBERRY_SETTINGS_OK);
+	CHECK(!p.rtgboards[0].initial_active && p.rtgboards[0].autoswitch && p.rtgboards[0].monitor_id == 0);
+
+	// A UAE Zorro II board takes 1-8 MB.
+	reset_prefs(p);
+	p.cpu_model = 68020;
+	p.address_space_24 = false;
+	CHECK(set(p, "gfxcard_size", "16") == AMIBERRY_SETTINGS_OK);
+	CHECK(value_of(p, "gfxcard_type") == "ZorroIII");
+	CHECK(set(p, "gfxcard_type", "ZorroII") == AMIBERRY_SETTINGS_OK);
+	CHECK(value_of(p, "gfxcard_size") == "8"); // clamped to the board
+	CHECK(choice_available(p, "gfxcard_size", "8") && !choice_available(p, "gfxcard_size", "16"));
+	CHECK(available(p, "rtg_modes:32bit") && available(p, "gfxcard_zerocopy"));
+	CHECK(!available(p, "gfxcard_options:autoswitch")); // the UAE board always switches
+
+	// A hardware board: its own memory range, no UAE helpers.
+	p.rtg_hardwaresprite = true;
+	CHECK(set(p, "gfxcard_type", "PicassoII") == AMIBERRY_SETTINGS_OK);
+	CHECK(value_of(p, "gfxcard_size") == "2");
+	CHECK(choice_available(p, "gfxcard_size", "1") && !choice_available(p, "gfxcard_size", "4"));
+	CHECK(!p.rtg_hardwaresprite);
+	CHECK(!available(p, "rtg_modes:16bit") && !available(p, "gfxcard_multithread"));
+	CHECK(!available(p, "gfxcard_options:autoswitch")); // its own switcher
+	CHECK(!available(p, "zz9000_net"));
+	CHECK(set(p, "gfxcard_type", "GD5446_PCI") == AMIBERRY_SETTINGS_OK);
+	CHECK(available(p, "gfxcard_options:autoswitch"));
+	CHECK(set(p, "gfxcard_type", "ZZ9000_Z3") == AMIBERRY_SETTINGS_OK);
+	CHECK(value_of(p, "gfxcard_size") == "128" && available(p, "zz9000_net"));
+	CHECK(set(p, "gfxcard_type", "NoSuchBoard") == AMIBERRY_SETTINGS_INVALID_VALUE);
+
+	// gfxcard_options and its parts.
+	CHECK(set(p, "gfxcard_options:monitor", "2") == AMIBERRY_SETTINGS_OK);
+	CHECK(set(p, "gfxcard_options:autoswitch", "false") == AMIBERRY_SETTINGS_UNAVAILABLE); // ZZ9000 switches
+	p.rtgboards[0].autoswitch = false;
+	p.rtgboards[1].initial_active = true;
+	CHECK(set(p, "gfxcard_options:initial", "true") == AMIBERRY_SETTINGS_OK);
+	CHECK(!p.rtgboards[1].initial_active); // one board starts on its screen
+	CHECK(value_of(p, "gfxcard_options") == "monitor=2,noautoswitch,initial");
+	CHECK(set(p, "gfxcard_options", "monitor=1") == AMIBERRY_SETTINGS_OK);
+	CHECK(p.rtgboards[0].monitor_id == 1 && p.rtgboards[0].autoswitch && !p.rtgboards[0].initial_active);
+	CHECK(set(p, "gfxcard_options", "monitor=9") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	// The order is part of the entry under custom autoconfig sorting only.
+	p.autoconfig_custom_sort = true;
+	CHECK(set(p, "gfxcard_options", "order=3,monitor=1") == AMIBERRY_SETTINGS_OK);
+	CHECK(value_of(p, "gfxcard_options") == "order=3,monitor=1");
+	CHECK(set(p, "gfxcard_options", "monitor=1") == AMIBERRY_SETTINGS_OK);
+	CHECK(p.rtgboards[0].device_order == 0 && value_of(p, "gfxcard_options") == "monitor=1");
+	p.autoconfig_custom_sort = false;
+	p.rtgboards[0].device_order = 3;
+	CHECK(set(p, "gfxcard_options", "monitor=1") == AMIBERRY_SETTINGS_OK);
+	CHECK(p.rtgboards[0].device_order == 3); // not in the entry: kept
+	CHECK(set(p, "gfxcard_options", "sparkly") == AMIBERRY_SETTINGS_INVALID_VALUE);
+
+	// rtg_modes and its depths.
+	reset_prefs(p);
+	p.cpu_model = 68020;
+	p.address_space_24 = false;
+	CHECK(set(p, "gfxcard_size", "16") == AMIBERRY_SETTINGS_OK);
+	CHECK(value_of(p, "rtg_modes") == "0x112");
+	CHECK(value_of(p, "rtg_modes:8bit") == "CLUT" && value_of(p, "rtg_modes:24bit") == "none");
+	CHECK(set(p, "rtg_modes:24bit", "all") == AMIBERRY_SETTINGS_OK);
+	CHECK((p.picasso96_modeflags & (RGBFF_R8G8B8 | RGBFF_B8G8R8)) == (RGBFF_R8G8B8 | RGBFF_B8G8R8));
+	CHECK(set(p, "rtg_modes:16bit", "B5G5R5PC") == AMIBERRY_SETTINGS_OK);
+	CHECK(value_of(p, "rtg_modes:16bit") == "B5G5R5PC");
+	CHECK((p.picasso96_modeflags & RGBFF_R5G6B5PC) == 0);
+	CHECK(set(p, "rtg_modes", "0x2") == AMIBERRY_SETTINGS_OK && value_of(p, "rtg_modes:32bit") == "none");
+	CHECK(set(p, "rtg_modes", "purple") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	CHECK(set(p, "rtg_modes", "0112") == AMIBERRY_SETTINGS_OK && p.picasso96_modeflags == 112); // decimal, as parsed
+
+	// Turning the board off reads back as a configuration without it.
+	CHECK(set(p, "gfxcard_size", "0") == AMIBERRY_SETTINGS_OK);
+	CHECK(value_of(p, "gfxcard_type") == "ZorroIII");
+
+	CHECK(!available(p, "gfx_filter_autoscale_rtg")); // no RTG screen
+	p.gf[GF_RTG].gfx_filter_autoscale = RTG_MODE_INTEGER_SCALE;
+	CHECK(!available(p, "gfx_filter_autoscale_limit_rtg")); // nor its integer scale limit
+	p.gf[GF_RTG].gfx_filter_autoscale = RTG_MODE_SCALE;
+
+	// The integer scale limit follows integer scaling.
+	CHECK(set(p, "gfxcard_size", "16") == AMIBERRY_SETTINGS_OK);
+	CHECK(!available(p, "gfx_filter_autoscale_limit_rtg"));
+	CHECK(set(p, "gfx_filter_autoscale_rtg", "integer") == AMIBERRY_SETTINGS_OK);
+	CHECK(available(p, "gfx_filter_autoscale_limit_rtg"));
 }
 
 // AE for the machine domains: sessions commit preset-written fields and
@@ -2663,6 +2882,7 @@ int main(int argc, char** argv)
 	check_onscreen_domain();
 	check_floppy_domain();
 	check_storage_domain();
+	check_rtg_domain();
 	check_mount_list();
 	check_active_values();
 	if (failures) {

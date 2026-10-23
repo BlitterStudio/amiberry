@@ -2274,6 +2274,25 @@ uaecptr expansion_startaddress(struct uae_prefs *p, uaecptr addr, uae_u32 size)
 	return addr;
 }
 
+#ifdef AMIBERRY
+// What allocate_expamem() copies from changed_prefs before allocating the
+// boards, for a reset to call before it lays memory out (init_shm). Laid out
+// for the running boards, a board the reset brought in had no address yet,
+// or its old one: an RTG board that moved between Zorro III and Zorro II
+// kept its memory at the old address (a crash at the first access), and a
+// Zorro III RAM board turned on got the memory of chip RAM.
+void expamem_bring_in_boards(void)
+{
+	for (int i = 0; i < MAX_RTG_BOARDS; i++)
+		currprefs.rtgboards[i] = changed_prefs.rtgboards[i];
+	currprefs.z3chipmem.size = changed_prefs.z3chipmem.size;
+	for (int i = 0; i < MAX_RAM_BOARDS; i++) {
+		currprefs.fastmem[i].size = changed_prefs.fastmem[i].size;
+		currprefs.z3fastmem[i].size = changed_prefs.z3fastmem[i].size;
+	}
+}
+#endif
+
 static void allocate_expamem (void)
 {
 	for (int i = 0; i < MAX_RTG_BOARDS; i++) {

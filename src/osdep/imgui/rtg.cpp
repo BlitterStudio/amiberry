@@ -11,105 +11,58 @@
 
 #include "imgui_panels.h"
 #include "gui/gui_handling.h"
+#include "settings/settings_definitions.h"
 
-static std::vector<std::string> rtg_board_names;
-static bool rtg_boards_initialized = false;
-
-// Convert a byte size (power of 2, >= 1MB) to a slider index: 1MB=0, 2MB=1, 4MB=2, ...
-static int vram_bytes_to_slider(int bytes)
-{
-	if (bytes <= 0) return 0;
-	int mb = bytes >> 20;
-	if (mb <= 0) return 0;
-	int val = 0;
-	int temp = mb;
-	while (temp >>= 1) val++;
-	return val;
-}
+namespace settings = amiberry_settings;
 
 void render_panel_rtg() {
     ImGui::Indent(4.0f);
 
-    if (!rtg_boards_initialized) {
-        rtg_board_names.clear();
-        rtg_board_names.emplace_back("-");
-        int v = 0;
-        TCHAR tmp[256];
-        while (true) {
-            int index = gfxboard_get_id_from_index(v);
-            if (index < 0) break;
-            const TCHAR *n1 = gfxboard_get_name(index);
-            const TCHAR *n2 = gfxboard_get_manufacturername(index);
-            v++;
-            _tcscpy(tmp, n1);
-            if (n2) {
-                _tcscat(tmp, " (");
-                _tcscat(tmp, n2);
-                _tcscat(tmp, ")");
-            }
-            rtg_board_names.emplace_back(tmp);
-        }
-        rtg_boards_initialized = true;
-    }
-
-    std::vector<const char *> rtg_boards_c;
-    for (const auto &name: rtg_board_names) rtg_boards_c.push_back(name.c_str());
+    const settings::context ctx{emulating != 0};
+    const settings::definition& size_option = settings::require("gfxcard_size");
+    const settings::definition& type_option = settings::require("gfxcard_type");
 
     // --- RTG Board Selection ---
+    // The settings layer owns the board rules: which boards fit the machine
+    // (Zorro III needs 32-bit addressing, Zorro II at most 2 MB chip RAM),
+    // their memory ranges, and what turning a board on changes.
     ImGui::Text("RTG Graphics Card");
     ImGui::Separator();
 
     struct rtgboardconfig *rbc = &changed_prefs.rtgboards[0];
-    const bool rtg_was_enabled = rbc->rtgmem_size > 0 || rbc->rtgmem_type >= GFXBOARD_HARDWARE;
-
-    int current_board_idx = 0;
-    if (rbc->rtgmem_size > 0 || rbc->rtgmem_type >= GFXBOARD_HARDWARE) {
-        int v_idx = gfxboard_get_index_from_id(rbc->rtgmem_type);
-        if (v_idx >= 0) current_board_idx = v_idx + 1;
+    const settings::choice_list boards = settings::choices_of(type_option, changed_prefs);
+    char current_type[64] = "";
+    settings::get(type_option, changed_prefs, current_type, sizeof current_type);
+    const bool board_on = rbc->rtgmem_size > 0;
+    const char* preview = "-";
+    for (size_t i = 0; board_on && i < boards.count; i++) {
+        if (!strcmp(boards.items[i].value, current_type))
+            preview = boards.items[i].label;
     }
 
     ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.6f);
-    if (ImGui::Combo("##RTGBoardCombo", &current_board_idx, rtg_boards_c.data(), (int) rtg_boards_c.size())) {
-        if (current_board_idx == 0) {
-            rbc->rtgmem_type = 0;
-            rbc->rtgmem_size = 0;
-        } else {
-            int v_idx = current_board_idx - 1;
-            int new_type = gfxboard_get_id_from_index(v_idx);
-            rbc->rtgmem_type = new_type;
-
-            if (new_type >= GFXBOARD_HARDWARE) {
-                int vmin = gfxboard_get_vram_min(rbc);
-                int vmax = gfxboard_get_vram_max(rbc);
-                if (rbc->rtgmem_size == 0 && vmin > 0) {
-                    rbc->rtgmem_size = vmin;
-                }
-                if (vmax > 0 && rbc->rtgmem_size > vmax) {
-                    rbc->rtgmem_size = vmax;
-                }
-                if (vmin > 0 && rbc->rtgmem_size < vmin) {
-                    rbc->rtgmem_size = vmin;
-                }
-            } else {
-                if (rbc->rtgmem_size == 0) {
-                    if (new_type == GFXBOARD_UAE_Z2)
-                        rbc->rtgmem_size = 4 * 1024 * 1024;
-                    else
-                        rbc->rtgmem_size = 16 * 1024 * 1024;
-                }
-                if (new_type == GFXBOARD_UAE_Z2 && rbc->rtgmem_size > 8 * 1024 * 1024) {
-                    rbc->rtgmem_size = 8 * 1024 * 1024;
-                }
+    if (ImGui::BeginCombo("##RTGBoardCombo", preview)) {
+        if (ImGui::Selectable("-", !board_on)) {
+            settings::set(size_option, changed_prefs, ctx, "0");
+            // A second board, if any, moves into slot 0.
+            cfgfile_compatibility_rtg(&changed_prefs);
+        }
+        for (size_t i = 0; i < boards.count; i++) {
+            const bool fits = settings::is_choice_available(type_option, changed_prefs, ctx, boards.items[i].value);
+            ImGui::BeginDisabled(!fits);
+            if (ImGui::Selectable(boards.items[i].label, board_on && !strcmp(boards.items[i].value, current_type))) {
+                // Turns the board on too, with its default memory.
+                settings::set(type_option, changed_prefs, ctx, boards.items[i].value);
+                cfgfile_compatibility_rtg(&changed_prefs);
             }
+            ImGui::EndDisabled();
         }
-        const bool rtg_is_enabled = rbc->rtgmem_size > 0 || rbc->rtgmem_type >= GFXBOARD_HARDWARE;
-        if (!rtg_was_enabled && rtg_is_enabled && rbc->rtgmem_type < GFXBOARD_HARDWARE) {
-            changed_prefs.rtg_zerocopy = true;
-        }
-        cfgfile_compatibility_rtg(&changed_prefs);
+        ImGui::EndCombo();
     }
     AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
-    ShowHelpMarker("Select RTG graphics card to emulate (Picasso96, CyberGraphX compatible)");
+    ShowHelpMarker("Select RTG graphics card to emulate (Picasso96, CyberGraphX compatible). Zorro III boards need "
+        "32-bit addressing; Zorro II boards, at most 2 MB chip RAM.");
+    const int current_board_idx = board_on ? 1 : 0;
 
     if (rbc->rtgmem_type == GFXBOARD_ID_ZZ9000_Z2 ||
         rbc->rtgmem_type == GFXBOARD_ID_ZZ9000_Z3) {
@@ -195,50 +148,32 @@ void render_panel_rtg() {
         ImGui::TableNextColumn();
 
         // --- VRAM Section ---
-        // Calculate slider range from board hardware limits
-        int min_slider_val = 0;
-        int max_slider_val = 8; // 256MB default for UAE Z3/PCI
-
-        if (is_hw_board) {
-            int vmin = gfxboard_get_vram_min(rbc);
-            int vmax = gfxboard_get_vram_max(rbc);
-            if (vmin > 0) min_slider_val = vram_bytes_to_slider(vmin);
-            if (vmax > 0) max_slider_val = vram_bytes_to_slider(vmax);
-        } else if (rbc->rtgmem_type == GFXBOARD_UAE_Z2) {
-            max_slider_val = 3; // Z2 max 8MB
+        // The sizes the board takes, from the settings layer.
+        std::vector<int> sizes_mb;
+        for (int mb = 1; mb <= 256; mb *= 2) {
+            if (settings::is_choice_available(size_option, changed_prefs, ctx, std::to_string(mb).c_str()))
+                sizes_mb.push_back(mb);
         }
-
-        int vram_bytes = rbc->rtgmem_size;
-        int slider_val = vram_bytes_to_slider(vram_bytes);
-
-        // Clamp slider value to current range
-        if (slider_val > max_slider_val) slider_val = max_slider_val;
-        if (slider_val < min_slider_val) slider_val = min_slider_val;
-
-        // Also clamp the actual prefs value if it was out of range
-        int clamped_bytes = (1 << slider_val) * 1024 * 1024;
-        if (has_memory && clamped_bytes != vram_bytes) {
-            rbc->rtgmem_size = clamped_bytes;
+        const int current_mb = rbc->rtgmem_size / (1024 * 1024);
+        int slider_val = 0;
+        for (size_t i = 0; i < sizes_mb.size(); i++) {
+            if (sizes_mb[i] <= current_mb)
+                slider_val = static_cast<int>(i);
         }
+        const int max_slider_val = sizes_mb.empty() ? 0 : static_cast<int>(sizes_mb.size()) - 1;
 
-        // Display textual representation of the slider value
         char vram_label[32];
-        snprintf(vram_label, sizeof(vram_label), "%d MB", 1 << slider_val);
+        snprintf(vram_label, sizeof(vram_label), "%d MB", sizes_mb.empty() ? 0 : sizes_mb[slider_val]);
 
-        ImGui::BeginDisabled(current_board_idx == 0);
+        ImGui::BeginDisabled(current_board_idx == 0 || sizes_mb.empty());
         ImGui::Text("VRAM size:");
-        if (ImGui::SliderInt("##VRAMsizeSlider", &slider_val, min_slider_val, max_slider_val, vram_label)) {
-            rbc->rtgmem_size = (1 << slider_val) * 1024 * 1024;
-        }
+        if (ImGui::SliderInt("##VRAMsizeSlider", &slider_val, 0, max_slider_val, vram_label) && !sizes_mb.empty())
+            settings::set(size_option, changed_prefs, ctx, std::to_string(sizes_mb[slider_val]).c_str());
         AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), false);
-        if (is_hw_board) {
-            int vmin_mb = 1 << min_slider_val;
-            int vmax_mb = 1 << max_slider_val;
+        if (!sizes_mb.empty()) {
             char help[128];
-            snprintf(help, sizeof(help), "Video memory for this card (%d MB - %d MB)", vmin_mb, vmax_mb);
+            snprintf(help, sizeof(help), "Video memory for this card (%d MB - %d MB)", sizes_mb.front(), sizes_mb.back());
             ShowHelpMarker(help);
-        } else {
-            ShowHelpMarker("Video memory on the emulated RTG card. Zorro II max 8MB, Zorro III/PCI max 256MB");
         }
         ImGui::EndDisabled();
 
