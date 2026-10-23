@@ -140,6 +140,7 @@ const domain& misc_domain();
 const domain& rtg_domain();
 const domain& expansions_domain();
 const domain& filter_domain();
+const domain& io_domain();
 
 // Keeps the manual crop window and its offsets within the frame at the
 // render resolution (settings_filter.cpp).

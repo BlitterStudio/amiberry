@@ -847,6 +847,10 @@ int enumserialports (void)
 int enummidiports (void)
 {
 	int total = 0;
+	// The lists are rebuilt, as enumserialports() does (it runs again when a
+	// front end refreshes the host's devices).
+	midi_in_ports.clear();
+	midi_out_ports.clear();
 
 #ifdef WITH_MIDI
 #ifdef LIBRETRO

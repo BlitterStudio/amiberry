@@ -683,10 +683,13 @@ int check_prefs_changed_gfx()
 #endif
 	}
 	if (_tcscmp(currprefs.sername, changed_prefs.sername) ||
+		currprefs.use_serial != changed_prefs.use_serial ||
 		currprefs.serial_hwctsrts != changed_prefs.serial_hwctsrts ||
 		currprefs.serial_direct != changed_prefs.serial_direct ||
 		currprefs.serial_demand != changed_prefs.serial_demand) {
 		_tcscpy(currprefs.sername, changed_prefs.sername);
+		// Serial is on with a port: a port picked while running opens it.
+		currprefs.use_serial = changed_prefs.use_serial;
 		currprefs.serial_hwctsrts = changed_prefs.serial_hwctsrts;
 		currprefs.serial_demand = changed_prefs.serial_demand;
 		currprefs.serial_direct = changed_prefs.serial_direct;

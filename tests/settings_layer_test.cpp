@@ -214,6 +214,28 @@ const cpuboardtype cpuboards[] = {
 	{BOARD_CYBERSTORM, "Phase 5 - CyberStorm", test_cyberstorm_sub},
 	{0, nullptr}};
 
+// The host's serial ports (a device and the network entries the core always
+// lists), MIDI ports and audio inputs; enumerations count.
+std::vector<std::string> serial_ports = {"/dev/cu.usbserial", "TCP://0.0.0.0:1234"};
+std::vector<std::string> midi_in_ports = {"Keyboard In"};
+std::vector<std::string> midi_out_ports = {"Munt MT-32", "Synth Out"};
+static int io_enumerations;
+int enumserialports() { io_enumerations++; return static_cast<int>(serial_ports.size()); }
+// Like the real one: the lists are rebuilt, not appended to.
+int enummidiports()
+{
+	io_enumerations++;
+	midi_in_ports.clear();
+	midi_out_ports.clear();
+	midi_in_ports.emplace_back("Keyboard In");
+	midi_out_ports.emplace_back("Munt MT-32");
+	midi_out_ports.emplace_back("Synth Out");
+	return 2;
+}
+static struct sound_device test_record_device = { {}, 0, const_cast<TCHAR*>("Test Microphone"), nullptr,
+	const_cast<TCHAR*>("microphone"), nullptr, 0, SOUND_DEVICE_SDL };
+struct sound_device* record_devices[MAX_SOUND_DEVICES] = { &test_record_device };
+
 // The shaders and bezels folders: two built-in shaders and a preset, one
 // bezel image; an invalidate counts as a rescan.
 static int display_catalog_rescans;
@@ -615,6 +637,11 @@ void reset_prefs(uae_prefs& p)
 	p.gfx_manual_crop_width = AMIGA_WIDTH_MAX << p.gfx_resolution;
 	p.gfx_manual_crop_height = AMIGA_HEIGHT_MAX << p.gfx_vresolution;
 	p.cr_selected = -1;
+	// IO ports (default_prefs, target_default_options): serial flow control
+	// and status lines on, no sampler.
+	p.serial_hwctsrts = true;
+	p.serial_rtsctsdtrdtecd = true;
+	p.samplersoundcard = -1;
 	for (int i = 0; i < 2; i++) {
 		struct chipset_refresh& cr = p.cr[i == 0 ? CHIPSET_REFRESH_PAL : CHIPSET_REFRESH_NTSC];
 		cr.index = i == 0 ? CHIPSET_REFRESH_PAL : CHIPSET_REFRESH_NTSC;
@@ -1426,6 +1453,21 @@ void emit_roundtrip()
 	// built-in ones are on every host.
 	std::printf("E amiberry.shader=tv none\n");
 	std::printf("E amiberry.shader_rtg=pc none\n");
+
+	// IO: print to a folder, a serial port with its options, a dongle.
+	reset_prefs(p);
+	apply("amiberry.parallel_port:folder", "/tmp/prints");
+	apply("serial_port", "TCP://0.0.0.0:1234");
+	apply("serial_on_demand", "true");
+	apply("serial_hardware_ctsrts", "false");
+	apply("serial_ri", "true");
+	apply("serial_translate", "crlf_cr");
+	apply("uaeserial", "true");
+	apply("dongle", "leaderboard");
+	emit("io", p);
+	// The serial port is a host-dependent choice; the network entry is on
+	// every host.
+	std::printf("E serial_port=TCP://0.0.0.0:1234 none\n");
 
 	reset_prefs(p);
 	// The A600 extra enables the machine's IDE controller (ide=a600/a1200
@@ -2443,6 +2485,52 @@ void check_boards()
 	amiberry_settings_session_close(session);
 	CHECK(amiberry_settings_board_type_find(nullptr) == nullptr);
 	CHECK(amiberry_settings_board_type_at(amiberry_settings_board_type_count()) == nullptr);
+}
+
+// IO ports: the parallel port has a printer (or prints to a folder) or a
+// sampler; serial and MIDI options follow the port and device picked.
+void check_io_domain()
+{
+	uae_prefs& p = test_prefs;
+	reset_prefs(p);
+	CHECK(value_of(p, "amiberry.parallel_port") == "none" && value_of(p, "amiberry.parallel_port:folder") == "");
+	CHECK(set(p, "amiberry.parallel_port:folder", "/home/amiga/prints") == AMIBERRY_SETTINGS_OK);
+	CHECK(!strcmp(p.prtname, "FILE:/home/amiga/prints") && value_of(p, "amiberry.parallel_port") == "FILE:/home/amiga/prints");
+	CHECK(value_of(p, "amiberry.parallel_port:folder") == "/home/amiga/prints");
+	// A sampler takes the port from the printer, and the other way round.
+	CHECK(!available(p, "sampler_stereo"));
+	CHECK(set(p, "amiberry.samplersoundcard", "0") == AMIBERRY_SETTINGS_OK && p.prtname[0] == 0);
+	CHECK(available(p, "sampler_stereo"));
+	CHECK(set(p, "amiberry.parallel_port", "FILE:/tmp") == AMIBERRY_SETTINGS_OK && p.samplersoundcard == -1);
+	CHECK(set(p, "amiberry.parallel_port", "none") == AMIBERRY_SETTINGS_OK && p.prtname[0] == 0);
+	CHECK(set(p, "amiberry.parallel_port", std::string(MAX_DPATH, 'x').c_str()) == AMIBERRY_SETTINGS_INVALID_VALUE);
+	CHECK(set(p, "amiberry.samplersoundcard", "1") == AMIBERRY_SETTINGS_INVALID_VALUE); // one input
+
+	// Serial: the port turns serial on; its options need one.
+	CHECK(!available(p, "serial_on_demand") && value_of(p, "serial_port") == "none");
+	CHECK(set(p, "serial_port", "TCP://0.0.0.0:1234") == AMIBERRY_SETTINGS_OK && p.use_serial);
+	CHECK(set(p, "serial_translate", "crlf_cr") == AMIBERRY_SETTINGS_OK && p.serial_crlf == 1);
+	CHECK(set(p, "serial_hardware_ctsrts", "false") == AMIBERRY_SETTINGS_OK && !p.serial_hwctsrts);
+	CHECK(set(p, "serial_port", "/dev/nonexistent") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	CHECK(set(p, "serial_port", "none") == AMIBERRY_SETTINGS_OK && !p.use_serial && p.sername[0] == 0);
+
+	// MIDI: in needs out (and goes with it), the router needs in.
+	CHECK(!available(p, "amiberry.midiin_device_name") && !available(p, "amiberry.midirouter"));
+	CHECK(set(p, "amiberry.midiout_device_name", "Munt MT-32") == AMIBERRY_SETTINGS_OK);
+	CHECK(set(p, "amiberry.midiin_device_name", "Keyboard In") == AMIBERRY_SETTINGS_OK);
+	CHECK(set(p, "amiberry.midirouter", "true") == AMIBERRY_SETTINGS_OK);
+	CHECK(set(p, "amiberry.midiout_device_name", "none") == AMIBERRY_SETTINGS_OK && p.midiindev[0] == 0);
+
+	// The dongle, by the configuration's names; one beyond them reads as
+	// its number, as the writer spells it.
+	CHECK(set(p, "dongle", "leaderboard") == AMIBERRY_SETTINGS_OK && p.dongle == 2);
+	p.dongle = 40;
+	CHECK(value_of(p, "dongle") == "40");
+
+	// A host refresh lists the ports and MIDI devices again.
+	const int listed = io_enumerations;
+	settings::refresh_dynamic_choices();
+	CHECK(io_enumerations == listed + 2);
 }
 
 // Display filters: one cropping at a time, the window within the frame at
@@ -3569,6 +3657,7 @@ int main(int argc, char** argv)
 	check_expansions_domain();
 	check_boards();
 	check_filter_domain();
+	check_io_domain();
 	check_mount_list();
 	check_active_values();
 	if (failures) {

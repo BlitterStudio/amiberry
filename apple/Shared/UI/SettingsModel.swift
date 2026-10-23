@@ -53,7 +53,7 @@ enum SettingsPage: Hashable, Identifiable {
 		let machine = ["cpu", "mmu", "fpu", "cpu_speed", "jit", "ppc", "x86", "chipset", "adv_chipset", "genlock",
 			"memory", "accelerator", "rtg", "expansions", "rom"]
 		let media = ["floppy", "diskswapper", "cd", "filesystem", "drawbridge"]
-		let host = ["display", "filter", "sound", "input", "onscreen", "misc", "priority"]
+		let host = ["display", "filter", "sound", "input", "io", "onscreen", "misc", "priority"]
 		let known = Set(machine + media + host)
 		let present = Set(groups)
 		func pages(_ ids: [String]) -> [SettingsPage] { ids.filter(present.contains).map { .group($0) } }
@@ -84,6 +84,7 @@ enum SettingsPage: Hashable, Identifiable {
 		"display": "Display", "sound": "Sound", "input": "Input", "onscreen": "On-screen Controls",
 		"misc": "Miscellaneous", "priority": "Priority", "rtg": "RTG Board", "accelerator": "Accelerator Board",
 		"expansions": "Expansions", "filter": "Filters & Shaders",
+		"io": "IO Ports",
 	]
 
 	private static let groupSymbols: [String: String] = [
@@ -94,7 +95,7 @@ enum SettingsPage: Hashable, Identifiable {
 		"drawbridge": "cable.connector", "display": "display", "sound": "speaker.wave.2", "input": "gamecontroller",
 		"onscreen": "hand.tap", "misc": "slider.horizontal.3", "priority": "gauge.with.dots.needle.33percent",
 		"rtg": "rectangle.on.rectangle", "accelerator": "bolt.horizontal", "expansions": "puzzlepiece.extension",
-		"filter": "camera.filters",
+		"filter": "camera.filters", "io": "cable.connector.horizontal",
 	]
 }
 
