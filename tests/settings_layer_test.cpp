@@ -2109,6 +2109,21 @@ void check_expansions_domain()
 		CHECK(!changed);
 		CHECK(!std::memcmp(before, changed_prefs.expansionboard, sizeof before));
 		amiberry_settings_session_close(session);
+
+		// A board added elsewhere while a session is open survives the
+		// session's accelerator ROM change: boards merge one by one.
+		session = amiberry_settings_session_open();
+		CHECK(amiberry_settings_set(session, "cpuboard_rom_file", "/roms/other.rom") == AMIBERRY_SETTINGS_OK);
+		boardromconfig* added = get_device_rom_new(&changed_prefs, ROMTYPE_A2091, 0, &index);
+		CHECK(added != nullptr);
+		if (added)
+			std::strcpy(added->roms[0].romfile, "/roms/a2091.rom");
+		amiberry_settings_commit(session, &changed);
+		amiberry_settings_session_close(session);
+		brc = get_device_rom(&changed_prefs, ROMTYPE_CPUBOARD, 0, &index);
+		CHECK(brc && !std::strcmp(brc->roms[index].romfile, "/roms/other.rom"));
+		boardromconfig* kept = get_device_rom(&changed_prefs, ROMTYPE_A2091, 0, &index);
+		CHECK(kept && !std::strcmp(kept->roms[0].romfile, "/roms/a2091.rom"));
 	}
 
 	// The miscellaneous expansions.

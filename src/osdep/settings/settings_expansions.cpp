@@ -686,7 +686,7 @@ const definition fixed_definitions[] = {
 		cpuboard_type_choices},
 	{STRING_OPTION("cpuboard_settings", "accelerator", "Accelerator jumpers",
 			"The board's jumpers that are on, as the configuration writes them.",
-			AMIBERRY_APPLY_LIVE, "", "Only on boards with jumpers."),
+			AMIBERRY_APPLY_RESET, "", "Only on boards with jumpers."),
 		get_cpuboard_settings, set_cpuboard_settings, settings_available, nullptr, nullptr,
 		cpuboard_settings_accepts},
 	{CHOICE_OPTION("cpuboardmem1_size", "accelerator", "Accelerator memory",
@@ -713,6 +713,68 @@ const definition fixed_definitions[] = {
 		get_sana2, set_sana2, sana2_compiled, nullptr, nullptr},
 };
 
+// --------------------------------------------------------------- boards
+
+// The configuration's boards are entries keyed by board type and unit, in
+// any slot. Two entries are the same board configuration when everything
+// but where their ROMs point back to (their slot) matches.
+int board_slot(const uae_prefs& p, uae_u32 type, int unit)
+{
+	for (int i = 0; i < MAX_EXPANSION_BOARDS; i++) {
+		const boardromconfig& b = p.expansionboard[i];
+		if (b.device_type && (b.device_type & ROMTYPE_MASK) == (type & ROMTYPE_MASK) && b.device_num == unit)
+			return i;
+	}
+	return -1;
+}
+
+bool same_board(const boardromconfig& a, const boardromconfig& b)
+{
+	static boardromconfig x, y; // too large for the stack
+	x = a;
+	y = b;
+	for (int j = 0; j < MAX_BOARD_ROMS; j++)
+		x.roms[j].back = y.roms[j].back = nullptr;
+	return std::memcmp(&x, &y, sizeof x) == 0;
+}
+
+} // namespace
+
+// The boards a session added, changed or removed (from against base), and
+// only those, into to: boards edited elsewhere since keep their state.
+bool merge_boards(const uae_prefs& base, const uae_prefs& from, uae_prefs& to)
+{
+	bool wrote = false;
+	for (const boardromconfig& b : from.expansionboard) {
+		if (!b.device_type)
+			continue;
+		const int was = board_slot(base, b.device_type, b.device_num);
+		if (was >= 0 && same_board(base.expansionboard[was], b))
+			continue;
+		int slot = board_slot(to, b.device_type, b.device_num);
+		for (int i = 0; slot < 0 && i < MAX_EXPANSION_BOARDS; i++) {
+			if (!to.expansionboard[i].device_type)
+				slot = i;
+		}
+		if (slot < 0)
+			continue; // no room: the core could not have added it either
+		to.expansionboard[slot] = b;
+		wrote = true;
+	}
+	for (const boardromconfig& b : base.expansionboard) {
+		if (!b.device_type || board_slot(from, b.device_type, b.device_num) >= 0)
+			continue;
+		const int slot = board_slot(to, b.device_type, b.device_num);
+		if (slot >= 0) {
+			std::memset(static_cast<void*>(&to.expansionboard[slot]), 0, sizeof to.expansionboard[slot]);
+			wrote = true;
+		}
+	}
+	return wrote;
+}
+
+namespace {
+
 bool commit_expansions(const uae_prefs& base, const uae_prefs& from, uae_prefs& to, const commit_info&)
 {
 	bool wrote = false;
@@ -731,7 +793,7 @@ bool commit_expansions(const uae_prefs& base, const uae_prefs& from, uae_prefs& 
 	FIELD(fastmem[0].size);
 	FIELD(mem25bit.size);
 	FIELD(mbresmem_high.size);
-	FIELD(expansionboard);
+	wrote |= merge_boards(base, from, to);
 	FIELD(socket_emu);
 	FIELD(scsi);
 	FIELD(sana2);
@@ -758,7 +820,7 @@ const domain& build_domain()
 			const bool is_switch = part.type == EXPANSIONBOARD_CHECKBOX;
 			amiberry_setting_descriptor descriptor{part.id.c_str(), "accelerator", part.label.c_str(),
 				"A jumper of the accelerator board.",
-				is_switch ? AMIBERRY_SETTING_BOOL : AMIBERRY_SETTING_CHOICE, AMIBERRY_APPLY_LIVE,
+				is_switch ? AMIBERRY_SETTING_BOOL : AMIBERRY_SETTING_CHOICE, AMIBERRY_APPLY_RESET,
 				no_range, no_range, no_range, is_switch ? "false" : part.values[0].c_str(),
 				is_switch ? nullptr : part.choices.data(), is_switch ? 0 : part.choices.size(),
 				"Only on the boards that have this jumper."};
