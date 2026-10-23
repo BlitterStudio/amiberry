@@ -26,3 +26,13 @@ settings_layer_compile "$out"
 # hold the same rules.
 SETTINGS_LAYER_DEFINES="-DAMIBERRY_NO_JIT" settings_layer_compile "$out"
 "$out"
+# Once more under AddressSanitizer: the layer walks the core's static board
+# tables (NUL-separated name lists), where a wrong walk reads past a string
+# without failing a check. Skipped only when the toolchain has no runtime.
+printf 'int main(void) { return 0; }\n' > "$out.c"
+if ${CC:-cc} -fsanitize=address -o "$out" "$out.c" 2> /dev/null; then
+	CXX="${CXX:-c++} -fsanitize=address -fno-omit-frame-pointer" settings_layer_compile "$out"
+	ASAN_OPTIONS=detect_leaks=0 "$out"
+else
+	echo "settings layer test: no AddressSanitizer runtime, sanitized run skipped" >&2
+fi

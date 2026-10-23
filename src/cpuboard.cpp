@@ -1667,7 +1667,9 @@ void cpuboard_map(void)
 	if (is_magnum40(&currprefs)) {
 		map_banks(&blizzardio_bank, 0x0c0c0000 >> 16, 0x10000 >> 16, 0);
 	}
-	if (is_12gauge(&currprefs)) {
+	// Without board RAM its banks have no memory behind them (as the other
+	// boards, it maps none).
+	if (is_12gauge(&currprefs) && cpuboard_size) {
 		map_banks(&cpuboardmem1_bank, cpuboardmem1_bank.start >> 16, 0x01000000 >> 16, (cpuboard_size / 2) >> 16);
 		map_banks(&cpuboardmem2_bank, cpuboardmem2_bank.start >> 16, 0x01000000 >> 16, (cpuboard_size / 2) >> 16);
 	}
@@ -2142,13 +2144,17 @@ static void cpuboard_init_2(void)
 			mapped_malloc(&blizzardram_bank);
 		}
 
-		blizzardmaprom_bank.baseaddr = blizzardram_bank.baseaddr + cpuboard_size - 524288;
-		blizzardmaprom_bank.start = BLIZZARDMK2_MAPROM_BASE;
-		blizzardmaprom_bank.reserved_size = 524288;
-		blizzardmaprom_bank.mask = 524288 - 1;
-		blizzardmaprom_bank.flags |= ABFLAG_INDIRECT | ABFLAG_NOALLOC;
-		mapped_malloc(&blizzardmaprom_bank);
-		blizzardmaprom_bank_mapped = true;
+		// The MAPROM is the top 512 KB of the board RAM: none without it
+		// (as on the MK4), or it pointed below a NULL base.
+		if (cpuboard_size > 524288) {
+			blizzardmaprom_bank.baseaddr = blizzardram_bank.baseaddr + cpuboard_size - 524288;
+			blizzardmaprom_bank.start = BLIZZARDMK2_MAPROM_BASE;
+			blizzardmaprom_bank.reserved_size = 524288;
+			blizzardmaprom_bank.mask = 524288 - 1;
+			blizzardmaprom_bank.flags |= ABFLAG_INDIRECT | ABFLAG_NOALLOC;
+			mapped_malloc(&blizzardmaprom_bank);
+			blizzardmaprom_bank_mapped = true;
+		}
 
 		maprom_base = blizzardram_bank.reserved_size - 524288;
 
@@ -2166,13 +2172,17 @@ static void cpuboard_init_2(void)
 			mapped_malloc(&blizzardram_bank);
 		}
 
-		blizzardmaprom_bank.baseaddr = blizzardram_bank.baseaddr + cpuboard_size - 524288;
-		blizzardmaprom_bank.start = BLIZZARDMK3_MAPROM_BASE;
-		blizzardmaprom_bank.reserved_size = 524288;
-		blizzardmaprom_bank.mask = 524288 - 1;
-		blizzardmaprom_bank.flags |= ABFLAG_INDIRECT | ABFLAG_NOALLOC;
-		mapped_malloc(&blizzardmaprom_bank);
-		blizzardmaprom_bank_mapped = true;
+		// The MAPROM is the top 512 KB of the board RAM: none without it
+		// (as on the MK4), or it pointed below a NULL base.
+		if (cpuboard_size > 524288) {
+			blizzardmaprom_bank.baseaddr = blizzardram_bank.baseaddr + cpuboard_size - 524288;
+			blizzardmaprom_bank.start = BLIZZARDMK3_MAPROM_BASE;
+			blizzardmaprom_bank.reserved_size = 524288;
+			blizzardmaprom_bank.mask = 524288 - 1;
+			blizzardmaprom_bank.flags |= ABFLAG_INDIRECT | ABFLAG_NOALLOC;
+			mapped_malloc(&blizzardmaprom_bank);
+			blizzardmaprom_bank_mapped = true;
+		}
 
 		maprom_base = blizzardram_bank.reserved_size - 524288;
 

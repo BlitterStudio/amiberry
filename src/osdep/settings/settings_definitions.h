@@ -137,6 +137,7 @@ const domain& floppy_domain();
 const domain& storage_domain();
 const domain& misc_domain();
 const domain& rtg_domain();
+const domain& expansions_domain();
 
 // target_fixup_options() resets an SDL sound device to the first one while
 // a screen uses the lagless vsync mode (fixup_prefs_dimensions() turns RTG
@@ -168,6 +169,11 @@ void sync_cpuboard_mem(uae_prefs& p);
 // the board (the automatic PPC configuration) call it so the stored
 // configuration matches what the fixup resolves to.
 void mirror_cpuboard_mem(uae_prefs& p);
+
+// Merges the expansion board entries (expansionboard[], keyed by board type
+// and unit) a session changed from base into to, leaving the others as to
+// has them. Returns whether it wrote anything.
+bool merge_boards(const uae_prefs& base, const uae_prefs& from, uae_prefs& to);
 
 // The JIT cache size the checks after fixup_cpu() see (0 when the JIT is
 // not compiled in, inhibited, below a 68020 or in memory cycle-exact

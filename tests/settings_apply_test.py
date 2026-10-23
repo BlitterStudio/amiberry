@@ -30,6 +30,21 @@ STEPS = ("live", "reset", "restart")
 # test can drive headless: paths and free-form strings (ROM files and other
 # files that must exist).
 SKIP_TYPES = ("path", "string")
+# Options the core copies into the running configuration at once
+# (check_prefs_changed_*) while the hardware reads them only at a later
+# step: the running value changes early, the declared class is the step
+# that uses it. Prefix match; each with the step and why.
+TAKEN_UP_LATER = {
+    "cpuboard_settings": ("reset", "accelerator jumpers are read when the board is set up "
+                                   "(cpuboard_reset and the boards' init functions)"),
+}
+
+
+def taken_up_later(option, declared, observed):
+    for prefix, (step, _) in TAKEN_UP_LATER.items():
+        if option.startswith(prefix) and declared == step and observed == "live":
+            return True
+    return False
 
 
 class Controller:
@@ -216,7 +231,9 @@ def main():
                     break
             checked += 1
             declared = info.get("apply")
-            if observed != declared:
+            if observed != declared and taken_up_later(option, declared, observed):
+                print(f"later {option}: running after {observed}, used after {declared} (documented)")
+            elif observed != declared:
                 mismatches.append((option, declared, observed, original, target))
                 print(f"MISMATCH {option}: declared {declared}, running after {observed} ({original} -> {target})",
                       flush=True)

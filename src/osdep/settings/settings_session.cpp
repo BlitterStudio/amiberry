@@ -52,17 +52,37 @@ std::vector<amiberry_settings_session*>& open_sessions()
 	return sessions;
 }
 
+// A board ROM entry points back at its board (romconfig::back), which the
+// core follows from currprefs (expansion sorting, savestates). A byte copy
+// leaves those pointers where they were: a board a session added would point
+// into the session's freed copy once it reached changed_prefs. Every
+// configuration the layer copies points them at changed_prefs' board in
+// the same slot instead, the object that outlives sessions (and what
+// currprefs points at too), so copies of unchanged boards stay byte-equal.
+void rebind_board_roms(uae_prefs& p)
+{
+	for (size_t i = 0; i < MAX_EXPANSION_BOARDS; i++) {
+		for (romconfig& rom : p.expansionboard[i].roms) {
+			if (rom.back)
+				rom.back = &changed_prefs.expansionboard[i];
+		}
+	}
+}
+
 uae_prefs* allocate_copy(const uae_prefs& source)
 {
 	auto* copy = static_cast<uae_prefs*>(std::malloc(sizeof(uae_prefs)));
-	if (copy)
+	if (copy) {
 		std::memcpy(static_cast<void*>(copy), static_cast<const void*>(&source), sizeof(uae_prefs));
+		rebind_board_roms(*copy);
+	}
 	return copy;
 }
 
 void copy_into(uae_prefs& to, const uae_prefs& from)
 {
 	std::memcpy(static_cast<void*>(&to), static_cast<const void*>(&from), sizeof(uae_prefs));
+	rebind_board_roms(to);
 }
 
 context current_context()
@@ -223,6 +243,10 @@ amiberry_settings_session* amiberry_settings_session_open(void)
 	auto* session = new (std::nothrow) amiberry_settings_session;
 	if (!session)
 		return nullptr;
+	// changed_prefs' own boards may point elsewhere (a configuration loaded
+	// into another prefs and copied); normalised, the session's copies
+	// compare equal to it until something changes.
+	rebind_board_roms(changed_prefs);
 	session->working = allocate_copy(changed_prefs);
 	session->base = allocate_copy(changed_prefs);
 	const bool sized = session->working && session->base && amiberry_settings::no_throw(false, [session] {
@@ -381,6 +405,9 @@ amiberry_apply_class amiberry_settings_commit(amiberry_settings_session* session
 {
 	amiberry_apply_class strongest = AMIBERRY_APPLY_LIVE;
 	bool any = false;
+	// As at open: prefs byte-copied into changed_prefs since then may have
+	// brought their own board pointers.
+	rebind_board_roms(changed_prefs);
 	uae_prefs* resolved = session ? merge_with_pending(*session) : nullptr;
 	if (resolved) {
 		// Store what validation promised: the session's changes merged with
