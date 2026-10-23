@@ -1,8 +1,8 @@
 #!/bin/sh
-# Behavioral test: an RTG board that changes bus is brought in by a reset.
-# Starts a headless emulator; see tests/rtg_reset_test.py.
+# Behavioral test: expansion boards a reset brings in get memory of their own.
+# Starts emulators (on macOS one opens a window); see tests/board_reset_test.py.
 #
-# Usage: AMIBERRY_BIN=<path-to-amiberry> tests/test_rtg_reset.sh
+# Usage: AMIBERRY_BIN=<path-to-amiberry> tests/test_board_reset.sh
 set -eu
 
 if [ -z "${AMIBERRY_BIN:-}" ]; then
@@ -22,4 +22,4 @@ if [ -z "$python" ]; then
 	exit 1
 fi
 
-exec "$python" "$(dirname "$0")/rtg_reset_test.py" "$AMIBERRY_BIN"
+exec "$python" "$(dirname "$0")/board_reset_test.py" "$AMIBERRY_BIN"

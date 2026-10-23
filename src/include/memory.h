@@ -459,6 +459,9 @@ extern void rtarea_free(void);
 extern void rtarea_init_mem(void);
 extern void rtarea_setup(void);
 extern void expamem_reset(int);
+#ifdef AMIBERRY
+extern void expamem_bring_in_boards(void);
+#endif
 extern void expamem_next(addrbank *mapped, addrbank *next);
 extern void expamem_shutup(addrbank *mapped);
 extern bool expamem_z3hack(struct uae_prefs*);

@@ -248,14 +248,11 @@ void devices_reset(int hardreset)
 #endif
 	// must be first
 	init_eventtab();
-#if defined(AMIBERRY) && defined(PICASSO96)
-	// The RTG boards this reset brings in, which expamem_reset() copies in
-	// anyway: init_shm() and the autoconfig scans before that copy must lay
-	// memory out for them. With the running boards instead, a board that
-	// moved between Zorro III and Zorro II kept its memory at the old
-	// address and the new one mapped memory that was not there.
-	for (int i = 0; i < MAX_RTG_BOARDS; i++)
-		currprefs.rtgboards[i] = changed_prefs.rtgboards[i];
+#ifdef AMIBERRY
+	// The boards this reset brings in (expamem_reset() copies them in
+	// anyway): init_shm() and its autoconfig scans must lay memory out for
+	// them, not for the running ones.
+	expamem_bring_in_boards();
 #endif
 	init_shm();
 
