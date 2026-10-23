@@ -159,6 +159,34 @@ final class SettingsSessionTests: XCTestCase {
 			XCTAssertEqual($0 as? SettingsError, .unknownID("mount \(before.count)"))
 		}
 	}
+
+	func testBoardTypesDescribeTheirFields() throws {
+		XCTAssertFalse(BoardCatalog.types.isEmpty)
+		XCTAssertNil(BoardCatalog.type("cpuboard"), "the accelerator is not an expansion board")
+		let a2091 = try XCTUnwrap(BoardCatalog.type("a2091"))
+		XCTAssertTrue(a2091.categories.contains(.scsi))
+		XCTAssertGreaterThan(a2091.units, 1)
+		XCTAssertEqual(a2091.fields.first?.id, "enabled")
+		XCTAssertTrue(a2091.fields.contains { $0.id == "rom_file" && $0.kind == .path })
+		XCTAssertTrue(a2091.fields.allSatisfy { $0.applyClass == .restart })
+	}
+
+	func testBoardUnitsAreEditedInTheSession() throws {
+		let session = try SettingsSession()
+		XCTAssertEqual(try session.boardValue("enabled", type: "a2091", unit: 2), "false")
+		XCTAssertFalse(session.isBoardFieldAvailable("rom_file", type: "a2091", unit: 2))
+		try session.setBoardValue("true", field: "enabled", type: "a2091", unit: 2)
+		XCTAssertEqual(try session.boardValue("enabled", type: "a2091", unit: 2), "true")
+		XCTAssertTrue(session.isBoardFieldAvailable("rom_file", type: "a2091", unit: 2))
+		try session.setBoardValue("/roms/a2091.rom", field: "rom_file", type: "a2091", unit: 2)
+		XCTAssertEqual(try session.boardValue("rom_file", type: "a2091", unit: 2), "/roms/a2091.rom")
+		XCTAssertThrowsError(try session.setBoardValue("nope", field: "subtype", type: "a2091", unit: 2)) {
+			XCTAssertEqual($0 as? SettingsError, .invalidValue(id: "a2091 2 subtype", value: "nope"))
+		}
+		XCTAssertThrowsError(try session.boardValue("enabled", type: "a2091", unit: 99)) {
+			XCTAssertEqual($0 as? SettingsError, .unknownID("a2091 99 enabled"))
+		}
+	}
 }
 
 @MainActor

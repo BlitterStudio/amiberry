@@ -48,7 +48,7 @@
 extern "C" {
 #endif
 
-#define AMIBERRY_SETTINGS_API_VERSION 4
+#define AMIBERRY_SETTINGS_API_VERSION 5
 
 /* Large enough for every value a descriptor can produce, including the
    terminating NUL. */
@@ -273,6 +273,77 @@ AMIBERRY_SETTINGS_API amiberry_settings_status amiberry_settings_mount_replace(
    past the list. */
 AMIBERRY_SETTINGS_API amiberry_settings_status amiberry_settings_mount_remove(
 	amiberry_settings_session *session, size_t index);
+
+/*
+ * Expansion boards: SCSI, IDE and network controllers, bridgeboards, sound
+ * and graphics cards and the machines' built-in controllers, which a
+ * configuration lists by board type and unit ("a2091", "a2091-2"). The
+ * accelerator board is not one of them (the cpuboard_* options).
+ *
+ * A board type lists the fields a unit of it has, as setting descriptors:
+ * "enabled" (BOOL) first, then as the type has them "subtype" (CHOICE of
+ * the board's variants), "rom_file" (PATH), "scsi_id" (CHOICE "0"-"7"),
+ * "autoboot_disabled", "inserted" (a PCMCIA card), "dma24bit" (BOOL), and
+ * the board's own settings, "setting:<name>" (BOOL switch, CHOICE
+ * selector, STRING text). Units are numbered from 0, below the type's
+ * unit count.
+ *
+ * A session reads and edits units like options: the edits stay in the
+ * session, and commit reports changed boards as AMIBERRY_APPLY_RESTART
+ * (boards are built when the emulation starts). A ROM board enabled
+ * without a ROM file gets the scanned ROM of its type, or none (":NOROM",
+ * which the configuration keeps; the ROM is then picked through
+ * "rom_file"). Enabling a built-in controller switches the chipset field
+ * the machine has it as: the IDE controller ("ide"), A3000 or A4000T SCSI
+ * (one of the two) and the CD32 FMV cartridge on any machine, PCMCIA and
+ * the CDTV controllers through their options ("pcmcia", "cdtvcd",
+ * "cdtv-cr"), which a custom chipset has (the CDTV DMAC or the CDTV-CR).
+ */
+#define AMIBERRY_BOARD_INTERNAL      0x0001u /* built into a machine */
+#define AMIBERRY_BOARD_SCSI          0x0002u
+#define AMIBERRY_BOARD_IDE           0x0004u
+#define AMIBERRY_BOARD_SASI          0x0008u
+#define AMIBERRY_BOARD_CUSTOM        0x0010u /* other and UAE boards */
+#define AMIBERRY_BOARD_PCI_BRIDGE    0x0020u
+#define AMIBERRY_BOARD_X86_BRIDGE    0x0040u
+#define AMIBERRY_BOARD_RTG           0x0080u
+#define AMIBERRY_BOARD_SOUND         0x0100u
+#define AMIBERRY_BOARD_NETWORK       0x0200u
+#define AMIBERRY_BOARD_FLOPPY        0x0400u
+#define AMIBERRY_BOARD_X86_EXPANSION 0x0800u /* cards for a bridgeboard */
+
+typedef struct amiberry_settings_board_type {
+	const char *id;           /* configuration name, for example "a2091" */
+	const char *label;        /* display name */
+	const char *manufacturer; /* NULL when unknown */
+	unsigned int categories;  /* AMIBERRY_BOARD_* bits */
+	int units;                /* how many of it a configuration can have */
+	size_t field_count;
+} amiberry_settings_board_type;
+
+AMIBERRY_SETTINGS_API size_t amiberry_settings_board_type_count(void);
+/* NULL when index >= amiberry_settings_board_type_count(). */
+AMIBERRY_SETTINGS_API const amiberry_settings_board_type *amiberry_settings_board_type_at(size_t index);
+/* NULL for an unknown ID. */
+AMIBERRY_SETTINGS_API const amiberry_settings_board_type *amiberry_settings_board_type_find(const char *id);
+/* NULL when index >= type->field_count. */
+AMIBERRY_SETTINGS_API const amiberry_setting_descriptor *amiberry_settings_board_field_at(
+	const amiberry_settings_board_type *type, size_t index);
+
+/* UNKNOWN_ID for an unknown type or field or a unit out of range,
+   BUFFER_TOO_SMALL when the value does not fit. */
+AMIBERRY_SETTINGS_API amiberry_settings_status amiberry_settings_board_get(
+	const amiberry_settings_session *session, const char *type, int unit, const char *field,
+	char *buffer, size_t size);
+/* UNKNOWN_ID as get, INVALID_VALUE for a value the field does not take,
+   UNAVAILABLE for a field the unit does not have now (a field of a board
+   that is not enabled, a PCMCIA field of another variant) or a board the
+   configuration has no room for (20 boards). */
+AMIBERRY_SETTINGS_API amiberry_settings_status amiberry_settings_board_set(
+	amiberry_settings_session *session, const char *type, int unit, const char *field,
+	const char *value);
+AMIBERRY_SETTINGS_API bool amiberry_settings_board_field_available(
+	const amiberry_settings_session *session, const char *type, int unit, const char *field);
 
 #ifdef __cplusplus
 }

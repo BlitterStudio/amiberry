@@ -3463,6 +3463,10 @@ static std::string HandleHelp(const std::vector<std::string>& args)
 	commands.emplace_back("SETTINGS_MOUNT_ADD <uaehf value>");
 	commands.emplace_back("SETTINGS_MOUNT_REPLACE <index> <uaehf value>");
 	commands.emplace_back("SETTINGS_MOUNT_REMOVE <index>");
+	commands.emplace_back("SETTINGS_BOARDS");
+	commands.emplace_back("SETTINGS_BOARD_DESCRIBE <type> [field]");
+	commands.emplace_back("SETTINGS_BOARD_GET <type> <unit> <field>");
+	commands.emplace_back("SETTINGS_BOARD_SET <type> <unit> <field> <value>");
 	return make_response(true, commands);
 }
 
@@ -3797,6 +3801,134 @@ static std::string number_text(double v)
 	return text;
 }
 
+// Expansion boards: the board types, and the fields of a unit by type,
+// unit number and field ID (amiberry_settings_board_*).
+static std::string HandleSettingsBoards(const std::vector<std::string>& args)
+{
+	if (!currprefs.ipc_disable_logging) {
+		std::cout << "IPC: Received SETTINGS_BOARDS" << std::endl;
+	}
+	std::vector<std::string> ids;
+	for (size_t i = 0; i < amiberry_settings_board_type_count(); ++i) {
+		ids.emplace_back(amiberry_settings_board_type_at(i)->id);
+	}
+	return make_response(true, ids);
+}
+
+// A board unit number as the board commands take it: digits only.
+static bool parse_board_unit(const std::string& text, int& unit)
+{
+	if (text.empty() || text.size() > 2 || text.find_first_not_of("0123456789") != std::string::npos) {
+		return false;
+	}
+	unit = std::stoi(text);
+	return true;
+}
+
+static std::string HandleSettingsBoardDescribe(const std::vector<std::string>& args)
+{
+	if (!currprefs.ipc_disable_logging) {
+		std::cout << "IPC: Received SETTINGS_BOARD_DESCRIBE" << std::endl;
+	}
+	if (args.empty() || args.size() > 2) {
+		return make_response(false, {"Usage: SETTINGS_BOARD_DESCRIBE <type> [field]"});
+	}
+	const amiberry_settings_board_type* type = amiberry_settings_board_type_find(args[0].c_str());
+	if (!type) {
+		return make_response(false, {"Unknown board type: " + args[0]});
+	}
+	std::vector<std::string> fields;
+	if (args.size() == 1) {
+		fields.push_back(std::string("label=") + type->label);
+		fields.push_back(std::string("manufacturer=") + (type->manufacturer ? type->manufacturer : ""));
+		fields.push_back("units=" + std::to_string(type->units));
+		char categories[16];
+		std::snprintf(categories, sizeof categories, "0x%x", type->categories);
+		fields.push_back(std::string("categories=") + categories);
+		for (size_t i = 0; i < type->field_count; ++i) {
+			fields.push_back(std::string("field=") + amiberry_settings_board_field_at(type, i)->id);
+		}
+	} else {
+		const amiberry_setting_descriptor* d = nullptr;
+		for (size_t i = 0; i < type->field_count && !d; ++i) {
+			const amiberry_setting_descriptor* f = amiberry_settings_board_field_at(type, i);
+			if (args[1] == f->id) {
+				d = f;
+			}
+		}
+		if (!d) {
+			return make_response(false, {"Unknown field of " + args[0] + ": " + args[1]});
+		}
+		fields.push_back(std::string("type=") + setting_type_name(d->type));
+		fields.push_back(std::string("apply=") + apply_class_name(d->apply));
+		fields.push_back(std::string("label=") + d->label);
+		fields.push_back(std::string("default=") + (d->default_value ? d->default_value : ""));
+		for (size_t i = 0; i < d->choice_count; ++i) {
+			fields.push_back(std::string("choice=") + d->choices[i].value);
+		}
+	}
+	for (const std::string& field : fields) {
+		if (field.find_first_of("\t\r\n") != std::string::npos) {
+			return make_response(false, {"Description of " + args[0] + " contains a tab or line break"});
+		}
+	}
+	return make_response(true, fields);
+}
+
+static std::string HandleSettingsBoardGet(const std::vector<std::string>& args)
+{
+	if (!currprefs.ipc_disable_logging) {
+		std::cout << "IPC: Received SETTINGS_BOARD_GET" << std::endl;
+	}
+	int unit = 0;
+	if (args.size() != 3 || !parse_board_unit(args[1], unit)) {
+		return make_response(false, {"Usage: SETTINGS_BOARD_GET <type> <unit> <field>"});
+	}
+	amiberry_settings_session* session = settings_session();
+	if (!session) {
+		return make_response(false, {"Out of memory"});
+	}
+	std::string value;
+	amiberry_settings_status status = AMIBERRY_SETTINGS_OK;
+	const bool read = media_string([&](char* buffer, size_t size) {
+		status = amiberry_settings_board_get(session, args[0].c_str(), unit, args[2].c_str(), buffer, size);
+		return status;
+	}, value);
+	if (!read) {
+		return make_response(false, {status == AMIBERRY_SETTINGS_UNKNOWN_ID
+			? "Unknown board field: " + args[0] + " " + args[1] + " " + args[2] : "Value too long"});
+	}
+	if (value.find_first_of("\t\r\n") != std::string::npos) {
+		return make_response(false, {"Value of " + args[2] + " contains a tab or line break"});
+	}
+	const bool available = amiberry_settings_board_field_available(session, args[0].c_str(), unit, args[2].c_str());
+	return make_response(true, {args[2] + "=" + value, std::string("available=") + (available ? "true" : "false")});
+}
+
+static std::string HandleSettingsBoardSet(const std::vector<std::string>& args)
+{
+	if (!currprefs.ipc_disable_logging) {
+		std::cout << "IPC: Received SETTINGS_BOARD_SET" << std::endl;
+	}
+	int unit = 0;
+	if (args.size() != 4 || !parse_board_unit(args[1], unit)) {
+		return make_response(false, {"Usage: SETTINGS_BOARD_SET <type> <unit> <field> <value>"});
+	}
+	amiberry_settings_session* session = settings_session();
+	if (!session) {
+		return make_response(false, {"Out of memory"});
+	}
+	const amiberry_settings_status status =
+		amiberry_settings_board_set(session, args[0].c_str(), unit, args[2].c_str(), args[3].c_str());
+	if (status != AMIBERRY_SETTINGS_OK) {
+		return make_response(false, {status == AMIBERRY_SETTINGS_UNKNOWN_ID
+			? "Unknown board field: " + args[0] + " " + args[1] + " " + args[2]
+			: settings_status_message(status, args[2], args[3])});
+	}
+	ipc_settings_dirty = true;
+	return make_response(true);
+}
+
 static std::string HandleSettingsDescribe(const std::vector<std::string>& args)
 {
 	if (!currprefs.ipc_disable_logging) {
@@ -3960,6 +4092,10 @@ static void InitHandlers()
 	command_handlers[CMD_SETTINGS_MOUNT_ADD] = HandleSettingsMountAdd;
 	command_handlers[CMD_SETTINGS_MOUNT_REPLACE] = HandleSettingsMountReplace;
 	command_handlers[CMD_SETTINGS_MOUNT_REMOVE] = HandleSettingsMountRemove;
+	command_handlers[CMD_SETTINGS_BOARDS] = HandleSettingsBoards;
+	command_handlers[CMD_SETTINGS_BOARD_DESCRIBE] = HandleSettingsBoardDescribe;
+	command_handlers[CMD_SETTINGS_BOARD_GET] = HandleSettingsBoardGet;
+	command_handlers[CMD_SETTINGS_BOARD_SET] = HandleSettingsBoardSet;
 	command_handlers[CMD_HELP] = HandleHelp;
 
 	command_handlers[CMD_QUICKSAVE] = HandleQuickSave;
@@ -4056,9 +4192,10 @@ static std::string ProcessCommand(const std::string& line)
 	std::vector<std::string> args(parts.begin() + 1, parts.end());
 	// split() drops a trailing empty field, so `SETTINGS_SET\tppc_model\t`
 	// would lose its value. An empty string is a real settings value (for
-	// example ppc_model= turns PPC emulation off), so keep it for that
-	// command only; every other command parses exactly as before.
-	if (cmd == "SETTINGS_SET" && !line.empty() && line.back() == '\t')
+	// example ppc_model= turns PPC emulation off, an empty board rom_file a
+	// board without its ROM), so keep it for those commands only; every
+	// other command parses exactly as before.
+	if ((cmd == "SETTINGS_SET" || cmd == "SETTINGS_BOARD_SET") && !line.empty() && line.back() == '\t')
 		args.emplace_back();
 
 	const auto it = command_handlers.find(cmd);

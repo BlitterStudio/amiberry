@@ -195,6 +195,31 @@ public final class SettingsSession {
 		}
 	}
 
+	/// A field of an expansion board unit ("enabled", "rom_file",
+	/// "setting:<name>"; see `BoardType`).
+	public func boardValue(_ field: String, type: String, unit: Int) throws -> String {
+		let session = try session(type)
+		let (text, status) = readLayerString(capacity: 1024) {
+			amiberry_settings_board_get(session, type, Int32(clamping: unit), field, $0, $1)
+		}
+		try SettingsError.check(status, id: "\(type) \(unit) \(field)")
+		return text
+	}
+
+	/// Sets a field of an expansion board unit; enabling a built-in
+	/// controller sets the chipset option that has it.
+	public func setBoardValue(_ value: String, field: String, type: String, unit: Int) throws {
+		let session = try session(type)
+		try SettingsError.check(
+			amiberry_settings_board_set(session, type, Int32(clamping: unit), field, value),
+			id: "\(type) \(unit) \(field)", value: value)
+	}
+
+	public func isBoardFieldAvailable(_ field: String, type: String, unit: Int) -> Bool {
+		guard let handle else { return false }
+		return amiberry_settings_board_field_available(handle, type, Int32(clamping: unit), field)
+	}
+
 	public func addMount(_ entry: String) throws {
 		let session = try session("mount")
 		try SettingsError.check(amiberry_settings_mount_add(session, entry), id: "mount", value: entry)

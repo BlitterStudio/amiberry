@@ -257,6 +257,37 @@ Mount edits are staged in the session like `SETTINGS_SET` edits.
 `SETTINGS_COMMIT` stores the whole list and reports `apply=reset` when it
 changed: drives attach when the emulation resets.
 
+Expansion boards (SCSI, IDE and network controllers, bridgeboards, sound and
+graphics cards, and the machines' built-in controllers; the accelerator
+board is the `cpuboard_*` options) are edited by board type, unit and field:
+
+- `SETTINGS_BOARDS` replies `OK` with one field per board type, its
+  configuration name (`a2091`, `ide_mb`).
+- `SETTINGS_BOARD_DESCRIBE <type>` replies `label=`, `manufacturer=`,
+  `units=` (how many of it a configuration can have; units count from 0),
+  `categories=` (a hexadecimal mask of the `AMIBERRY_BOARD_*` bits in
+  `amiberry_settings.h`) and one `field=<id>` per field of a unit:
+  `enabled` first, then as the board has them `subtype`, `rom_file`,
+  `scsi_id`, `autoboot_disabled`, `inserted`, `dma24bit` and its own
+  settings, `setting:<name>`.
+- `SETTINGS_BOARD_DESCRIBE <type> <field>` replies the field's `type=`,
+  `apply=`, `label=`, `default=` and one `choice=<value>` per choice.
+- `SETTINGS_BOARD_GET <type> <unit> <field>` replies `<field>=<value>` and
+  `available=true|false` (a field of a unit that is not enabled, or one only
+  some variants have, is unavailable).
+- `SETTINGS_BOARD_SET <type> <unit> <field> <value>` stages a change.
+  Enabling a ROM board without a ROM file gives it the scanned ROM of its
+  type, or `:NOROM` (the board without its ROM, until one is set through
+  `rom_file`), so the configuration keeps it; an empty `rom_file` is a
+  board without its ROM. Enabling a built-in controller switches the
+  chipset field the machine has it as: the IDE controller, A3000 or A4000T
+  SCSI (one of the two) and the CD32 FMV cartridge on any machine, PCMCIA
+  and the CDTV controllers through their chipset options (`pcmcia`,
+  `cdtvcd`, `cdtv-cr`), which a custom chipset has.
+
+`SETTINGS_COMMIT` reports `apply=restart` when a board changed: boards are
+built when the emulation starts.
+
 A session that holds no uncommitted edits is reopened from
 the current pending configuration at the next `SETTINGS_*` command, so a
 configuration loaded or changed any other way (`LOAD_CONFIG`, `SET_CONFIG`,

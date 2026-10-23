@@ -304,6 +304,7 @@ set(SOURCE_FILES
         src/osdep/settings/settings_onscreen.cpp
         src/osdep/settings/settings_misc.cpp
         src/osdep/settings/settings_rtg.cpp
+        src/osdep/settings/settings_boards.cpp
         src/osdep/settings/settings_expansions.cpp
         src/osdep/settings/settings_registry.cpp
         src/osdep/settings/settings_session.cpp

@@ -205,66 +205,13 @@ bool settings_available(const uae_prefs& p, const context&)
 	return jumpers(p) != nullptr;
 }
 
-// The configuration name list of a selector: its own name, then one per
-// position, each NUL-terminated, an empty one last. Only selectors have such
-// lists; a switch's names are plain strings (names_of).
-std::vector<const char*> split_names(const char* names)
-{
-	std::vector<const char*> out;
-	for (const char* n = names; n && *n; n += std::strlen(n) + 1)
-		out.push_back(n);
-	return out;
-}
-
-// Where an entry's bits are in the settings word, as the core's codec lays
-// them out (cfgfile_read_rom_settings): a switch takes one bit, a selector
-// the bits its positions need, a text none.
-struct bit_field {
-	int shift;
-	int bits;
-};
-
-bit_field field_of(const expansionboardsettings* table, int index)
-{
-	int bitcnt = 0;
-	for (int i = 0; table[i].name; i++) {
-		const expansionboardsettings& e = table[i];
-		bitcnt += e.bitshift;
-		int bits = 0;
-		if (e.type == EXPANSIONBOARD_MULTI) {
-			const int items = static_cast<int>(split_names(e.configname).size()) - 1;
-			bits = 1;
-			for (int j = 0; j < 8; j++) {
-				if ((1 << j) >= items) {
-					bits = j;
-					break;
-				}
-			}
-		} else if (e.type == EXPANSIONBOARD_CHECKBOX) {
-			bits = 1;
-		}
-		if (i == index)
-			return {bitcnt, bits};
-		bitcnt += bits;
-	}
-	return {0, 0};
-}
-
-bool has_text_entries(const expansionboardsettings* table)
-{
-	for (int i = 0; table && table[i].name; i++) {
-		if (table[i].type == EXPANSIONBOARD_STRING)
-			return true;
-	}
-	return false;
-}
 
 // The core's reader writes a text entry's value to configtext whether or
 // not the text names it, so a table with one needs somewhere to put it.
 int read_settings(const expansionboardsettings* table, const char* text)
 {
 	TCHAR configtext[MAX_DPATH];
-	return cfgfile_read_rom_settings(table, text, has_text_entries(table) ? configtext : nullptr);
+	return cfgfile_read_rom_settings(table, text, has_text_settings(table) ? configtext : nullptr);
 }
 
 void get_cpuboard_settings(const uae_prefs& p, char* out, size_t size)
@@ -272,7 +219,7 @@ void get_cpuboard_settings(const uae_prefs& p, char* out, size_t size)
 	// As the writer: no entry while no jumper is set.
 	TCHAR text[MAX_DPATH] = "";
 	const expansionboardsettings* table = jumpers(p);
-	if (table && p.cpuboard_settings && !has_text_entries(table))
+	if (table && p.cpuboard_settings && !has_text_settings(table))
 		cfgfile_write_rom_settings(table, text, p.cpuboard_settings, nullptr);
 	std::snprintf(out, size, "%s", text);
 }
@@ -285,7 +232,7 @@ bool names_entry(const expansionboardsettings& e, std::string_view token)
 	if (e.type == EXPANSIONBOARD_CHECKBOX)
 		return same(e.configname);
 	if (e.type == EXPANSIONBOARD_MULTI) {
-		const std::vector<const char*> names = split_names(e.configname);
+		const std::vector<const char*> names = board_setting_names(e.configname);
 		for (size_t i = 1; i < names.size(); i++) {
 			if (same(names[i]))
 				return true;
@@ -299,7 +246,7 @@ bool names_entry(const expansionboardsettings& e, std::string_view token)
 bool cpuboard_settings_accepts(const uae_prefs& p, const value& v)
 {
 	const expansionboardsettings* table = jumpers(p);
-	if (!table || has_text_entries(table) || v.text.size() >= max_settings_text)
+	if (!table || has_text_settings(table) || v.text.size() >= max_settings_text)
 		return false;
 	size_t start = 0;
 	while (start <= v.text.size()) {
@@ -384,7 +331,7 @@ void get_jumper(const uae_prefs& p, char* out, size_t size)
 		std::snprintf(out, size, "%s", part.type == EXPANSIONBOARD_CHECKBOX ? "false" : part.values[0].c_str());
 		return;
 	}
-	const bit_field f = field_of(table, index);
+	const board_setting_bits f = board_setting_bits_of(table, index);
 	const int mask = (1 << f.bits) - 1;
 	int position = (p.cpuboard_settings >> f.shift) & mask;
 	if (table[index].invert)
@@ -395,7 +342,7 @@ void get_jumper(const uae_prefs& p, char* out, size_t size)
 	}
 	// The board's own positions (boards sharing a selector name may number
 	// theirs differently); out of range reads as the first, as the panel did.
-	const std::vector<const char*> names = split_names(table[index].configname);
+	const std::vector<const char*> names = board_setting_names(table[index].configname);
 	const size_t n = static_cast<size_t>(position) + 1;
 	std::snprintf(out, size, "%s", n < names.size() ? names[n] : names.size() > 1 ? names[1] : "");
 }
@@ -408,13 +355,13 @@ void set_jumper(uae_prefs& p, const value& v)
 	const expansionboardsettings* table = entry_of(p, part, index);
 	if (!table)
 		return;
-	const bit_field f = field_of(table, index);
+	const board_setting_bits f = board_setting_bits_of(table, index);
 	const int mask = (1 << f.bits) - 1;
 	int position = 0;
 	if (part.type == EXPANSIONBOARD_CHECKBOX) {
 		position = v.number != 0;
 	} else {
-		const std::vector<const char*> names = split_names(table[index].configname);
+		const std::vector<const char*> names = board_setting_names(table[index].configname);
 		for (size_t k = 1; k < names.size(); k++) {
 			if (v.text == names[k])
 				position = static_cast<int>(k - 1);
@@ -435,7 +382,7 @@ bool jumper_choice_available(const uae_prefs& p, std::string_view choice)
 	const expansionboardsettings* table = entry_of(p, part, index);
 	if (!table)
 		return false;
-	const std::vector<const char*> names = split_names(table[index].configname);
+	const std::vector<const char*> names = board_setting_names(table[index].configname);
 	for (size_t i = 1; i < names.size(); i++) {
 		if (choice == names[i])
 			return true;
@@ -479,9 +426,9 @@ void collect_jumper_parts()
 				if (e.type != EXPANSIONBOARD_CHECKBOX && e.type != EXPANSIONBOARD_MULTI)
 					continue;
 				const bool selector = e.type == EXPANSIONBOARD_MULTI;
-				const std::vector<const char*> configs = selector ? split_names(e.configname)
+				const std::vector<const char*> configs = selector ? board_setting_names(e.configname)
 					: std::vector<const char*>{e.configname};
-				const std::vector<const char*> names = selector ? split_names(e.name)
+				const std::vector<const char*> names = selector ? board_setting_names(e.name)
 					: std::vector<const char*>{e.name};
 				if (configs.empty() || names.empty())
 					continue;
@@ -744,6 +691,22 @@ bool same_board(const boardromconfig& a, const boardromconfig& b)
 }
 
 } // namespace
+
+bool same_boards(const uae_prefs& a, const uae_prefs& b)
+{
+	for (const boardromconfig& x : a.expansionboard) {
+		if (!x.device_type)
+			continue;
+		const int slot = board_slot(b, x.device_type, x.device_num);
+		if (slot < 0 || !same_board(x, b.expansionboard[slot]))
+			return false;
+	}
+	for (const boardromconfig& y : b.expansionboard) {
+		if (y.device_type && board_slot(a, y.device_type, y.device_num) < 0)
+			return false;
+	}
+	return true;
+}
 
 // The boards a session added, changed or removed (from against base), and
 // only those, into to: boards edited elsewhere since keep their state.
