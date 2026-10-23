@@ -124,7 +124,6 @@ void MediaRequestDialog_Reset();
 extern const char* const floppy_file_filter;
 void render_panel_hd();
 void render_panel_expansions();
-void copycpuboardmem(bool tomem);
 void render_panel_rtg();
 void render_panel_hwinfo();
 void render_panel_display();

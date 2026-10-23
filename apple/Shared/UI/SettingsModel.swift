@@ -51,7 +51,7 @@ enum SettingsPage: Hashable, Identifiable {
 	/// adds that has no place yet, so every option stays reachable.
 	static func sections(groups: [String] = SettingsCatalog.groups) -> [(title: String, pages: [SettingsPage])] {
 		let machine = ["cpu", "mmu", "fpu", "cpu_speed", "jit", "ppc", "x86", "chipset", "adv_chipset", "genlock",
-			"memory", "rtg", "rom"]
+			"memory", "accelerator", "rtg", "expansions", "rom"]
 		let media = ["floppy", "diskswapper", "cd", "filesystem", "drawbridge"]
 		let host = ["display", "sound", "input", "onscreen", "misc", "priority"]
 		let known = Set(machine + media + host)
@@ -82,7 +82,8 @@ enum SettingsPage: Hashable, Identifiable {
 		"genlock": "Genlock", "memory": "Memory", "rom": "ROMs", "floppy": "Floppy Drives",
 		"diskswapper": "Disk Swapper", "cd": "CD", "filesystem": "Filesystem", "drawbridge": "DrawBridge",
 		"display": "Display", "sound": "Sound", "input": "Input", "onscreen": "On-screen Controls",
-		"misc": "Miscellaneous", "priority": "Priority", "rtg": "RTG Board",
+		"misc": "Miscellaneous", "priority": "Priority", "rtg": "RTG Board", "accelerator": "Accelerator Board",
+		"expansions": "Expansions",
 	]
 
 	private static let groupSymbols: [String: String] = [
@@ -92,7 +93,7 @@ enum SettingsPage: Hashable, Identifiable {
 		"diskswapper": "arrow.triangle.2.circlepath", "cd": "opticaldisc", "filesystem": "folder.badge.gearshape",
 		"drawbridge": "cable.connector", "display": "display", "sound": "speaker.wave.2", "input": "gamecontroller",
 		"onscreen": "hand.tap", "misc": "slider.horizontal.3", "priority": "gauge.with.dots.needle.33percent",
-		"rtg": "rectangle.on.rectangle",
+		"rtg": "rectangle.on.rectangle", "accelerator": "bolt.horizontal", "expansions": "puzzlepiece.extension",
 	]
 }
 

@@ -1252,6 +1252,13 @@ extern int cfgfile_string(const std::string& option, const std::string& value, c
 extern int cfgfile_string_escape(const TCHAR* option, const TCHAR* value, const TCHAR* name, TCHAR* location, int maxsz);
 extern bool cfgfile_option_find(const TCHAR* s, const TCHAR* option);
 extern TCHAR* cfgfile_option_get(const TCHAR* s, const TCHAR* option);
+// A board's settings word <-> its configuration text ("maprom,scsikitii").
+// configtext receives a board's string settings; it may be NULL only for
+// tables without EXPANSIONBOARD_STRING entries. The writer appends to buf,
+// which must hold MAX_DPATH characters.
+struct expansionboardsettings;
+extern int cfgfile_read_rom_settings(const struct expansionboardsettings* ebs, const TCHAR* buf, TCHAR* configtext);
+extern void cfgfile_write_rom_settings(const struct expansionboardsettings* ebs, TCHAR* buf, int settings, const TCHAR* settingstring);
 extern TCHAR* cfgfile_subst_path(const TCHAR* path, const TCHAR* subst, const TCHAR* file);
 
 extern TCHAR* target_expand_environment(const TCHAR* path, TCHAR* out, int maxlen);

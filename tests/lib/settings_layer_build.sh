@@ -14,12 +14,20 @@ settings_layer_compile() {
 		# fixup_prefs() the display options answer to.
 		awk '/^static void fixup_prefs_dim2/ { copy = 1 } copy { print } copy && /^void fixup_prefs_dimensions/ { seen = 1 } seen && /^}$/ { exit }' src/main.cpp
 		awk '/^void fixup_cpu \(struct uae_prefs \*p\)$/ { copy = 1 } copy { print } copy && /^}$/ { exit }' src/main.cpp
+		# The accelerator board rules the expansions domain applies, as the
+		# core has them (over the harness's board table).
+		awk '/^bool cpuboard_is_ppc_accelerator_subtype\(int type, int subtype\)$/ { copy = 1 } copy { print } copy && /^}$/ { exit }' src/cpuboard.cpp
+		awk '/^int cpuboard_memorytype\(struct uae_prefs \*p\)$/ { copy = 1 } copy { print } copy && /^}$/ { exit }' src/cpuboard.cpp
+		awk '/^int cpuboard_maxmemory\(struct uae_prefs \*p\)$/ { copy = 1 } copy { print } copy && /^}$/ { exit }' src/cpuboard.cpp
+		awk '/^void cpuboard_set_cpu\(struct uae_prefs \*p\)$/ { copy = 1 } copy { print } copy && /^}$/ { exit }' src/cpuboard.cpp
 	} > "$fixup"
-	if ! grep -q '^void fixup_cpu' "$fixup"; then
-		echo "settings layer test: fixup_cpu() not found in src/main.cpp" >&2
-		rm -f "$fixup"
-		return 1
-	fi
+	for fn in 'void fixup_cpu' 'bool cpuboard_is_ppc_accelerator_subtype' 'int cpuboard_memorytype' 'int cpuboard_maxmemory' 'void cpuboard_set_cpu'; do
+		if ! grep -q "^$fn" "$fixup"; then
+			echo "settings layer test: '$fn' was not found in src/main.cpp or src/cpuboard.cpp" >&2
+			rm -f "$fixup"
+			return 1
+		fi
+	done
 	# built_in_chipset_prefs() is the chipset half of fixup_prefs the
 	# chipset domain depends on; it only writes the prefs it is given.
 	{
@@ -36,12 +44,20 @@ settings_layer_compile() {
 	# parsers (with the cfgfile helpers they use) are sliced out of
 	# src/cfgfile.cpp too.
 	{
-		printf '%s\n' '#include "sysconfig.h"' '#include "sysdeps.h"' '#include "options.h"' '#include "custom.h"' '#include "blkdev.h"' '#include <cstdarg>' '#include <string>'
+		printf '%s\n' '#include "sysconfig.h"' '#include "sysdeps.h"' '#include "options.h"' '#include "custom.h"' '#include "blkdev.h"' '#include "autoconf.h"' '#include <cstdarg>' '#include <string>'
 		grep '^static const TCHAR \*cdmodes\[\] = ' src/cfgfile.cpp
 		awk '/^static int match_string \(/ { copy = 1 } copy { print } copy && /^}$/ { exit }' src/cfgfile.cpp
 		# cfgfile_unescape and its two-argument overload.
 		awk '/^static TCHAR \*cfgfile_unescape\(const TCHAR \*s, const TCHAR \*\*endpos, TCHAR separator, bool min\)$/ { copy = 1 } copy { print } copy && /^}$/ && ++closed == 2 { exit }' src/cfgfile.cpp
+		awk '/^static TCHAR \*cfgfile_unescape_min\(const TCHAR \*s\)$/ { copy = 1 } copy { print } copy && /^}$/ { exit }' src/cfgfile.cpp
+		awk '/^static TCHAR \*cfgfile_option_find_it\(/ { copy = 1 } copy { print } copy && /^}$/ { exit }' src/cfgfile.cpp
+		awk '/^bool cfgfile_option_find\(/ { copy = 1 } copy { print } copy && /^}$/ { exit }' src/cfgfile.cpp
+		awk '/^TCHAR \*cfgfile_option_get\(/ { copy = 1 } copy { print } copy && /^}$/ { exit }' src/cfgfile.cpp
 		awk '/^static TCHAR \*cfgfile_escape \(/ { copy = 1 } copy { print } copy && /^}$/ { exit }' src/cfgfile.cpp
+		awk '/^static TCHAR \*cfgfile_escape_min\(/ { copy = 1 } copy { print } copy && /^}$/ { exit }' src/cfgfile.cpp
+		# The board settings codec cpuboard_settings is spelled with.
+		awk '/^int cfgfile_read_rom_settings\(/ { copy = 1 } copy { print } copy && /^}$/ { exit }' src/cfgfile.cpp
+		awk '/^void cfgfile_write_rom_settings\(/ { copy = 1 } copy { print } copy && /^}$/ { exit }' src/cfgfile.cpp
 		awk '/^static void cfgfile_append_optionf\(.*\)$/ { copy = 1 } copy { print } copy && /^}$/ { exit }' src/cfgfile.cpp
 		awk '/^void write_chipset_refresh_entry\(/ { copy = 1 } copy { print } copy && /^}$/ { exit }' src/cfgfile.cpp
 		awk '/^void parse_chipset_refresh_entry\(/ { copy = 1 } copy { print } copy && /^}$/ { exit }' src/cfgfile.cpp
@@ -52,6 +68,8 @@ settings_layer_compile() {
 	for fn in 'static const TCHAR \*cdmodes' 'static int match_string' \
 		'static TCHAR \*cfgfile_unescape(const TCHAR \*s, const TCHAR \*\*endpos)$' \
 		'static TCHAR \*cfgfile_escape' 'static void cfgfile_append_optionf' \
+		'static TCHAR \*cfgfile_unescape_min' 'static TCHAR \*cfgfile_option_find_it' 'bool cfgfile_option_find' 'TCHAR \*cfgfile_option_get' \
+		'static TCHAR \*cfgfile_escape_min' 'int cfgfile_read_rom_settings' 'void cfgfile_write_rom_settings' \
 		'void write_chipset_refresh_entry' 'void parse_chipset_refresh_entry' \
 		'void write_cdimage_entry' 'void parse_cdimage_entry'; do
 		if ! grep -q "^$fn" "$refresh"; then

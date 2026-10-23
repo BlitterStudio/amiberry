@@ -1,5 +1,5 @@
 #!/bin/sh
-# Behavioral test: expansion boards a reset brings in get memory of their own.
+# Behavioral test: expansion and accelerator boards get memory of their own, or none.
 # Starts emulators (on macOS one opens a window); see tests/board_reset_test.py.
 #
 # Usage: AMIBERRY_BIN=<path-to-amiberry> tests/test_board_reset.sh

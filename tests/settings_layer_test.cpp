@@ -61,13 +61,17 @@ void fixup_prefs_preview(uae_prefs* p)
 		p->z3fastmem[0].size = 0;
 }
 void error_log(const TCHAR*, ...) {}
+void write_log(const TCHAR*, ...) {}
 // Controlled by the tests: whether the selected accelerator board is 32-bit
 // only, and the address of a UAE boot ROM the configuration needs (0: none).
 static bool board_is_32bit;
 static uaecptr boot_rom_address;
 int uae_boot_rom_type;
 bool cpuboard_32bit(uae_prefs*) { return board_is_32bit; }
-bool cpuboard_is_ppc_accelerator(uae_prefs*) { return false; }
+bool cpuboard_is_ppc_accelerator(uae_prefs* p)
+{
+	return cpuboard_is_ppc_accelerator_subtype(p->cpuboard_type, p->cpuboard_subtype);
+}
 void cpuboard_setboard(uae_prefs* p, int type, int subtype)
 {
 	p->cpuboard_type = type;
@@ -139,11 +143,103 @@ unsigned int drawbridge_driver_options(int index)
 // The memory window the memory domain clamps against; the real value is
 // host-dependent, the tests use the common 512 MB reservation.
 size_t max_z3fastmem = 512 * 1024 * 1024;
-int cpuboard_maxmemory(uae_prefs*) { return 128 * 1024 * 1024; }
-// Like the real one, no board has no memory type; the tests pick the type
-// a configured board uses.
-static int board_memory_type = BOARD_MEMORY_HIGHMEM;
-int cpuboard_memorytype(uae_prefs* p) { return p->cpuboard_type ? board_memory_type : 0; }
+
+// The accelerator board table, laid out like the core's (expansion.cpp,
+// NCR9X builds): board IDs are table indices, Blizzard (9) and CyberStorm
+// (10) carry their PPC variants at the core's indices, and the variants the
+// round-trip scenarios use have the core's configuration names. Board 1
+// stands for the others; boards 2-8 have no variants here.
+static const expansionboardsettings test_maprom[] = {
+	{"MapROM", "maprom"}, {nullptr}};
+static const expansionboardsettings test_maprom_scsikit[] = {
+	{"MapROM", "maprom"}, {"SCSI Kit II", "scsikitii"}, {nullptr}};
+static const expansionboardsettings test_gvp_jumpers[] = {
+	{"Board disable (J5)", "disabled"}, {"SCSI Disable (J6)", "scsidisabled"}, {nullptr}};
+// Like the IVS Vector's: a selector, a switch, and an inverted switch one
+// bit further up.
+static const expansionboardsettings test_vector_jumpers[] = {
+	{"Memory (JP12)\0" "4M\0" "8M\0" "16M\0" "32M\0", "memory\0" "4m\0" "8m\0" "16m\0" "32m\0",
+		EXPANSIONBOARD_MULTI, false, 0},
+	{"Autoboot (JP20)", "autoboot", EXPANSIONBOARD_CHECKBOX, false, 0},
+	{"Burst (JP13)", "burst", EXPANSIONBOARD_CHECKBOX, true, 1},
+	{nullptr}};
+// Like the Apollo 12xx's: a "memory" switch, so the selector above becomes
+// "memory_choice".
+static const expansionboardsettings test_apollo_jumpers[] = {
+	{"SCSI", "scsi"}, {"Memory", "memory"}, {"Autoboot disable", "autoboot"},
+	{"Revision\0" "3\0" "4\0", "hwrev\0" "3\0" "4\0", EXPANSIONBOARD_MULTI, false, 0}, {nullptr}};
+// The same selector as the Apollo's, with other positions.
+static const expansionboardsettings test_z2_jumpers[] = {
+	{"Revision\0" "4\0" "5\0", "hwrev\0" "4\0" "5\0", EXPANSIONBOARD_MULTI, false, 0}, {nullptr}};
+static const cpuboardsubtype test_dummy_sub[] = {
+	{"-", "none", 0, 0, 0, nullptr, 0, 0, 0}, {nullptr}};
+static const cpuboardsubtype test_board1_sub[] = {
+	{"Test 030", "Test030", ROMTYPE_CPUBOARD, 0, 3, nullptr, 0, BOARD_MEMORY_HIGHMEM, 128 * 1024 * 1024, 0,
+		nullptr, nullptr, 0, 0, test_maprom},
+	{"Test 040", "Test040", ROMTYPE_CPUBOARD, 0, 4, nullptr, 0, BOARD_MEMORY_HIGHMEM, 64 * 1024 * 1024, 0,
+		nullptr, nullptr, 0, 0, test_gvp_jumpers},
+	{"Test Z2", "TestZ2", ROMTYPE_CPUBOARD, 0, 3, nullptr, 0, BOARD_MEMORY_Z2, 8 * 1024 * 1024, 0,
+		nullptr, nullptr, 0, 0, test_z2_jumpers},
+	{"Test 25-bit", "Test25", ROMTYPE_CPUBOARD, 0, 3, nullptr, 0, BOARD_MEMORY_25BITMEM, 128 * 1024 * 1024, 0,
+		nullptr, nullptr, 0, 0, test_vector_jumpers},
+	{"Test Apollo", "TestApollo", ROMTYPE_CPUBOARD, 0, 3, nullptr, 0, BOARD_MEMORY_HIGHMEM, 32 * 1024 * 1024, 0,
+		nullptr, nullptr, 0, 0, test_apollo_jumpers},
+	{nullptr}};
+static const cpuboardsubtype test_blizzard_sub[] = {
+	{"Blizzard 1230 I/II", "Blizzard1230II", ROMTYPE_CPUBOARD, 0, 3, nullptr, 0, BOARD_MEMORY_BLIZZARD_12xx,
+		64 * 1024 * 1024, 0, nullptr, nullptr, 0, 0, test_maprom_scsikit},
+	{"Blizzard 1230 III", "Blizzard1230III", ROMTYPE_CPUBOARD, 0, 3, nullptr, 0, BOARD_MEMORY_BLIZZARD_12xx,
+		32 * 1024 * 1024, 0, nullptr, nullptr, 0, 0, test_maprom},
+	{"Blizzard 1230 IV", "Blizzard1230IV", ROMTYPE_CPUBOARD, 0, 3, nullptr, 0, BOARD_MEMORY_BLIZZARD_12xx,
+		256 * 1024 * 1024, 0, nullptr, nullptr, 0, 0, test_maprom},
+	{"Blizzard 1260", "Blizzard1260", ROMTYPE_CPUBOARD, 0, 6, nullptr, 0, BOARD_MEMORY_BLIZZARD_12xx,
+		256 * 1024 * 1024, 0, nullptr, nullptr, 0, 0, test_maprom},
+	{"Blizzard 2060", "Blizzard2060", ROMTYPE_CPUBOARD, 0, 6, nullptr, 0, BOARD_MEMORY_HIGHMEM,
+		128 * 1024 * 1024, 0, nullptr, nullptr, 0, 0, test_maprom},
+	{"Blizzard PPC", "BlizzardPPC", ROMTYPE_CPUBOARD, 0, 4, nullptr, 0, BOARD_MEMORY_BLIZZARD_PPC,
+		256 * 1024 * 1024},
+	{nullptr}};
+static const cpuboardsubtype test_cyberstorm_sub[] = {
+	{"CyberStorm MK I", "CyberStormMK1", ROMTYPE_CPUBOARD, 0, 4, nullptr, 0, BOARD_MEMORY_HIGHMEM, 128 * 1024 * 1024},
+	{"CyberStorm MK II", "CyberStormMK2", ROMTYPE_CPUBOARD, 0, 4, nullptr, 0, BOARD_MEMORY_HIGHMEM, 128 * 1024 * 1024},
+	{"CyberStorm MK III", "CyberStormMK3", ROMTYPE_CPUBOARD, 0, 4, nullptr, 0, BOARD_MEMORY_HIGHMEM, 128 * 1024 * 1024},
+	{"CyberStorm PPC", "CyberStormPPC", ROMTYPE_CPUBOARD, 0, 4, nullptr, 0, BOARD_MEMORY_HIGHMEM, 128 * 1024 * 1024},
+	{nullptr}};
+const cpuboardtype cpuboards[] = {
+	{0, "-", test_dummy_sub}, {1, "Test Maker", test_board1_sub},
+	{2, "Board 2"}, {3, "Board 3"}, {4, "Board 4"}, {5, "Board 5"}, {6, "Board 6"}, {7, "Board 7"}, {8, "Board 8"},
+	{BOARD_BLIZZARD, "Phase 5 - Blizzard", test_blizzard_sub},
+	{BOARD_CYBERSTORM, "Phase 5 - CyberStorm", test_cyberstorm_sub},
+	{0, nullptr}};
+
+// The board ROM lookups, over the configuration's board list like the
+// core's (rommgr.cpp), for boards without a parent ROM type.
+boardromconfig* get_device_rom(uae_prefs* p, int romtype, int devnum, int* index)
+{
+	if (index)
+		*index = 0;
+	for (boardromconfig& brc : p->expansionboard) {
+		if (brc.device_type && (brc.device_type & ROMTYPE_MASK) == (romtype & ROMTYPE_MASK) && brc.device_num == devnum)
+			return &brc;
+	}
+	return nullptr;
+}
+boardromconfig* get_device_rom_new(uae_prefs* p, int romtype, int devnum, int* index)
+{
+	if (boardromconfig* brc = get_device_rom(p, romtype, devnum, index))
+		return brc;
+	for (boardromconfig& brc : p->expansionboard) {
+		if (!brc.device_type) {
+			std::memset(&brc, 0, sizeof brc);
+			brc.device_type = romtype;
+			brc.device_num = devnum;
+			for (romconfig& rom : brc.roms)
+				rom.back = &brc; // as device_rom_defaults()
+			return &brc;
+		}
+	}
+	return nullptr;
+}
 
 // A few entries of the core's board table, as gfxboard.cpp has them: the
 // two UAE boards, two hardware boards with a monitor switcher and one
@@ -1191,6 +1287,18 @@ void emit_roundtrip()
 	apply("gfx_backbuffers_rtg", "2");
 	emit("rtg_uae", p);
 
+	// An accelerator board with a jumper and memory, and the
+	// miscellaneous expansions.
+	reset_prefs(p);
+	apply("cpuboard_type", "Blizzard1230IV");
+	apply("cpuboard_settings:maprom", "true");
+	apply("cpuboardmem1_size", "64");
+	apply("cpuboard_rom_file", "/roms/blizzard1230iv.rom");
+	apply("bsdsocket_emu", "true");
+	apply("scsi", "scsi");
+	apply("sana2", "true");
+	emit("accelerator", p);
+
 	reset_prefs(p);
 	// The A600 extra enables the machine's IDE controller (ide=a600/a1200
 	// is written by the core); the layer's ide option itself stays greyed
@@ -1607,11 +1715,10 @@ void check_machine_fixup_rules()
 	// so the fixup's copy back does not undo it.
 	reset_prefs(p);
 	p.cpuboard_type = 1;
-	board_memory_type = BOARD_MEMORY_Z2;
+	p.cpuboard_subtype = 2; // Test Z2
 	p.fastmem[0].size = p.cpuboardmem1.size = 0x400000;
 	CHECK(set(p, "chipmem_size", "8") == AMIBERRY_SETTINGS_OK);
 	CHECK(p.fastmem[0].size <= 0x40000 && p.cpuboardmem1.size == p.fastmem[0].size);
-	board_memory_type = BOARD_MEMORY_HIGHMEM;
 
 	// Z2 boards below 1 MB must be a power of two of at least 64 KB.
 	reset_prefs(p);
@@ -1821,6 +1928,199 @@ void check_presets()
 	CHECK(stub_preset_config == 0);
 	CHECK(settings::arcade_game_config(4) == -1);
 	CHECK(changed_prefs.cpu_model == 68000 && changed_prefs.keyboard_leds[0] == 0);
+}
+
+// The accelerator board and the miscellaneous expansions.
+void check_expansions_domain()
+{
+	uae_prefs& p = test_prefs;
+	reset_prefs(p);
+
+	// No board: only the board choice, and none of what a board brings.
+	CHECK(value_of(p, "cpuboard_type") == "none");
+	CHECK(!available(p, "cpuboard_settings") && !available(p, "cpuboard_settings:maprom"));
+	CHECK(!available(p, "cpuboardmem1_size") && !available(p, "cpuboard_rom_file"));
+	CHECK(set(p, "cpuboard_type", "NoSuchBoard") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	CHECK(set(p, "cpuboard_type", "Blizzard1230IV") == AMIBERRY_SETTINGS_OK);
+	CHECK(value_of(p, "cpuboard_type") == "Blizzard1230IV" && p.cpuboard_type == BOARD_BLIZZARD);
+#ifdef WITH_PPC
+	CHECK(choice_available(p, "cpuboard_type", "BlizzardPPC"));
+#else
+	CHECK(!choice_available(p, "cpuboard_type", "BlizzardPPC"));
+	CHECK(!choice_available(p, "cpuboard_type", "CyberStormPPC"));
+#endif
+
+	// A board raises the CPU to the one it carries and leaves 24-bit
+	// addressing; its jumpers start off.
+	reset_prefs(p);
+	p.cpu_model = 68000;
+	p.address_space_24 = true;
+	CHECK(set(p, "cpuboard_type", "Test030") == AMIBERRY_SETTINGS_OK);
+	CHECK(p.cpuboard_type == 1 && p.cpuboard_subtype == 0);
+	CHECK(p.cpu_model == 68030 && !p.address_space_24);
+	CHECK(value_of(p, "cpuboard_settings") == "");
+	CHECK(available(p, "cpuboard_settings:maprom") && !available(p, "cpuboard_settings:scsikitii"));
+	CHECK(set(p, "cpuboard_settings:maprom", "true") == AMIBERRY_SETTINGS_OK);
+	CHECK(p.cpuboard_settings == 1 && value_of(p, "cpuboard_settings") == "maprom");
+	CHECK(value_of(p, "cpuboard_settings:maprom") == "true");
+	// Choosing the board again (a re-clicked control) keeps its jumpers.
+	CHECK(set(p, "cpuboard_type", "Test030") == AMIBERRY_SETTINGS_OK);
+	CHECK(p.cpuboard_settings == 1);
+
+	// The packed entry takes the variant's jumpers only.
+	CHECK(set(p, "cpuboard_settings", "maprom,bogus") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	CHECK(set(p, "cpuboard_settings", "scsikitii") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	CHECK(set(p, "cpuboard_settings", std::string(300, 'm').c_str()) == AMIBERRY_SETTINGS_INVALID_VALUE);
+	CHECK(set(p, "cpuboard_settings", "") == AMIBERRY_SETTINGS_OK && p.cpuboard_settings == 0);
+	CHECK(set(p, "cpuboard_settings", "MAPROM") == AMIBERRY_SETTINGS_OK && p.cpuboard_settings == 1);
+
+	// Two jumpers set one at a time (exact token match: "disabled" is not
+	// "scsidisabled").
+	CHECK(set(p, "cpuboard_type", "Test040") == AMIBERRY_SETTINGS_OK);
+	CHECK(p.cpuboard_settings == 0 && p.cpu_model == 68040);
+	CHECK(set(p, "cpuboard_settings:scsidisabled", "true") == AMIBERRY_SETTINGS_OK);
+	CHECK(value_of(p, "cpuboard_settings:disabled") == "false");
+	CHECK(set(p, "cpuboard_settings:disabled", "true") == AMIBERRY_SETTINGS_OK);
+	CHECK(value_of(p, "cpuboard_settings") == "disabled,scsidisabled");
+	CHECK(set(p, "cpuboard_settings:scsidisabled", "false") == AMIBERRY_SETTINGS_OK);
+	CHECK(value_of(p, "cpuboard_settings") == "disabled");
+
+	// Board memory: up to the board's most, mirrored into the memory slot
+	// the board uses; a smaller board cuts it down.
+	reset_prefs(p);
+	CHECK(set(p, "cpuboard_type", "Test030") == AMIBERRY_SETTINGS_OK);
+	CHECK(choice_available(p, "cpuboardmem1_size", "128") && !choice_available(p, "cpuboardmem1_size", "256"));
+	CHECK(set(p, "cpuboardmem1_size", "256") == AMIBERRY_SETTINGS_UNAVAILABLE);
+	CHECK(set(p, "cpuboardmem1_size", "128") == AMIBERRY_SETTINGS_OK);
+	CHECK(p.cpuboardmem1.size == 128 * 1024 * 1024 && p.mbresmem_high.size == 128 * 1024 * 1024);
+	CHECK(set(p, "cpuboard_type", "Test040") == AMIBERRY_SETTINGS_OK);
+	CHECK(p.cpuboardmem1.size == 64 * 1024 * 1024 && p.mbresmem_high.size == 64 * 1024 * 1024);
+
+	// The boot ROM: a new file drops the old file's ROM ident; the current
+	// one written back keeps it.
+	CHECK(set(p, "cpuboard_rom_file", "/roms/board.rom") == AMIBERRY_SETTINGS_OK);
+	int index = 0;
+	boardromconfig* brc = get_device_rom(&p, ROMTYPE_CPUBOARD, 0, &index);
+	CHECK(brc && !std::strcmp(brc->roms[index].romfile, "/roms/board.rom"));
+	if (brc) {
+		std::strcpy(brc->roms[index].romident, ":BOARDROM");
+		CHECK(set(p, "cpuboard_rom_file", "/roms/board.rom") == AMIBERRY_SETTINGS_OK);
+		CHECK(!std::strcmp(brc->roms[index].romident, ":BOARDROM"));
+		CHECK(set(p, "cpuboard_rom_file", "/roms/other.rom") == AMIBERRY_SETTINGS_OK);
+		CHECK(brc->roms[index].romident[0] == 0 && value_of(p, "cpuboard_rom_file") == "/roms/other.rom");
+	}
+
+	// No board again: no jumpers.
+	CHECK(set(p, "cpuboard_type", "none") == AMIBERRY_SETTINGS_OK);
+	CHECK(p.cpuboard_type == 0 && p.cpuboard_subtype == 0 && p.cpuboard_settings == 0);
+
+#ifdef WITH_PPC
+	// A PPC board is the manual PPC configuration; another board leaves it,
+	// and the automatic one too (which would put its own board back).
+	reset_prefs(p);
+	CHECK(set(p, "cpuboard_type", "BlizzardPPC") == AMIBERRY_SETTINGS_OK && p.ppc_mode == 2);
+	CHECK(set(p, "cpuboard_type", "Blizzard1260") == AMIBERRY_SETTINGS_OK && p.ppc_mode == 0);
+	p.ppc_mode = 1;
+	CHECK(set(p, "cpuboard_type", "Blizzard1230IV") == AMIBERRY_SETTINGS_OK && p.ppc_mode == 0);
+#endif
+
+	// Every switch and selector of every board has its part.
+	for (int t = 1; cpuboards[t].name; t++) {
+		for (int s = 0; cpuboards[t].subtypes && cpuboards[t].subtypes[s].name; s++) {
+			const expansionboardsettings* table = cpuboards[t].subtypes[s].settings;
+			for (int i = 0; table && table[i].name; i++) {
+				const std::string config = table[i].configname;
+				const settings::definition* d = settings::find("cpuboard_settings:" + config);
+				if (table[i].type == EXPANSIONBOARD_MULTI && d && d->descriptor.type != AMIBERRY_SETTING_CHOICE)
+					d = settings::find("cpuboard_settings:" + config + "_choice");
+				CHECK(d && d->descriptor.type == (table[i].type == EXPANSIONBOARD_MULTI
+					? AMIBERRY_SETTING_CHOICE : AMIBERRY_SETTING_BOOL));
+			}
+		}
+	}
+
+	// A selector and an inverted switch, set part by part and as the entry
+	// (the core's codec: 4 positions take 2 bits; burst sits one bit above
+	// autoboot and reads inverted).
+	reset_prefs(p);
+	CHECK(set(p, "cpuboard_type", "Test25") == AMIBERRY_SETTINGS_OK);
+	CHECK(available(p, "cpuboard_settings:memory_choice") && !available(p, "cpuboard_settings:memory"));
+	CHECK(value_of(p, "cpuboard_settings:memory_choice") == "4m");
+	CHECK(value_of(p, "cpuboard_settings:burst") == "true");
+	CHECK(set(p, "cpuboard_settings:memory_choice", "16m") == AMIBERRY_SETTINGS_OK && p.cpuboard_settings == 2);
+	CHECK(value_of(p, "cpuboard_settings") == "16m,burst");
+	CHECK(set(p, "cpuboard_settings:burst", "false") == AMIBERRY_SETTINGS_OK && p.cpuboard_settings == 0x12);
+	CHECK(value_of(p, "cpuboard_settings") == "16m");
+	CHECK(set(p, "cpuboard_settings", "8m,autoboot,burst") == AMIBERRY_SETTINGS_OK && p.cpuboard_settings == 5);
+	CHECK(value_of(p, "cpuboard_settings:memory_choice") == "8m" && value_of(p, "cpuboard_settings:autoboot") == "true");
+	CHECK(value_of(p, "cpuboard_settings") == "8m,autoboot,burst"); // its own spelling is accepted back
+	CHECK(set(p, "cpuboard_settings", "memory") == AMIBERRY_SETTINGS_INVALID_VALUE); // the selector, not a position
+	CHECK(set(p, "cpuboard_settings", "64m") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	CHECK(set(p, "cpuboard_settings", "") == AMIBERRY_SETTINGS_OK && p.cpuboard_settings == 0); // no entry
+	CHECK(value_of(p, "cpuboard_settings:burst") == "true");
+	CHECK(set(p, "cpuboard_type", "TestApollo") == AMIBERRY_SETTINGS_OK);
+	CHECK(available(p, "cpuboard_settings:memory") && !available(p, "cpuboard_settings:memory_choice"));
+	// A switch boards label differently is named after itself.
+	CHECK(!std::strcmp(settings::require("cpuboard_settings:autoboot").descriptor.label, "Autoboot jumper"));
+	CHECK(!std::strcmp(settings::require("cpuboard_settings:scsi").descriptor.label, "SCSI"));
+
+	// A selector two boards share, each with its own positions.
+	CHECK(value_of(p, "cpuboard_settings:hwrev") == "3");
+	CHECK(set(p, "cpuboard_settings:hwrev", "4") == AMIBERRY_SETTINGS_OK && value_of(p, "cpuboard_settings:hwrev") == "4");
+	CHECK(set(p, "cpuboard_type", "TestZ2") == AMIBERRY_SETTINGS_OK);
+	CHECK(!choice_available(p, "cpuboard_settings:hwrev", "3"));
+	CHECK(value_of(p, "cpuboard_settings:hwrev") == "4"); // its first position
+	CHECK(set(p, "cpuboard_settings:hwrev", "5") == AMIBERRY_SETTINGS_OK && p.cpuboard_settings == 1);
+	CHECK(value_of(p, "cpuboard_settings:hwrev") == "5" && value_of(p, "cpuboard_settings") == "5");
+
+	// The old board's RAM copy goes when the new board keeps its RAM
+	// elsewhere (the 25-bit slot has no option of its own).
+	reset_prefs(p);
+	CHECK(set(p, "cpuboard_type", "Test25") == AMIBERRY_SETTINGS_OK);
+	CHECK(set(p, "cpuboardmem1_size", "32") == AMIBERRY_SETTINGS_OK && p.mem25bit.size == 32 * 1024 * 1024);
+	CHECK(set(p, "cpuboard_type", "Test030") == AMIBERRY_SETTINGS_OK);
+	CHECK(p.mem25bit.size == 0 && p.mbresmem_high.size == 32 * 1024 * 1024);
+	CHECK(set(p, "cpuboard_type", "none") == AMIBERRY_SETTINGS_OK);
+	CHECK(p.mbresmem_high.size == 0 && p.mem25bit.size == 0);
+
+	// A ROM entry a session adds points at its board in changed_prefs, not
+	// into the session's freed copy.
+	reset_prefs(changed_prefs);
+	{
+		amiberry_settings_session* session = amiberry_settings_session_open();
+		CHECK(session);
+		CHECK(amiberry_settings_set(session, "cpuboard_type", "Test030") == AMIBERRY_SETTINGS_OK);
+		CHECK(amiberry_settings_set(session, "cpuboard_rom_file", "/roms/board.rom") == AMIBERRY_SETTINGS_OK);
+		bool changed = false;
+		amiberry_settings_commit(session, &changed);
+		CHECK(changed);
+		amiberry_settings_session_close(session);
+		int index = 0;
+		boardromconfig* brc = get_device_rom(&changed_prefs, ROMTYPE_CPUBOARD, 0, &index);
+		CHECK(brc && brc->roms[index].back == brc);
+
+		// With a board in changed_prefs, a session that changes nothing
+		// commits nothing, and leaves the boards as they are.
+		static boardromconfig before[MAX_EXPANSION_BOARDS];
+		std::memcpy(before, changed_prefs.expansionboard, sizeof before);
+		session = amiberry_settings_session_open();
+		changed = true;
+		amiberry_settings_commit(session, &changed);
+		CHECK(!changed);
+		CHECK(!std::memcmp(before, changed_prefs.expansionboard, sizeof before));
+		amiberry_settings_session_close(session);
+	}
+
+	// The miscellaneous expansions.
+	reset_prefs(p);
+	CHECK(value_of(p, "scsi") == "false" && value_of(p, "bsdsocket_emu") == "false");
+	p.automount_cddrives = true;
+	CHECK(!choice_available(p, "scsi", "false")); // mapped CD drives need it
+	p.automount_cddrives = false;
+	CHECK(set(p, "scsi", "scsi") == AMIBERRY_SETTINGS_OK && p.scsi == 2);
+	CHECK(set(p, "scsi", "true") == AMIBERRY_SETTINGS_OK && p.scsi == 1);
+	CHECK(set(p, "bsdsocket_emu", "true") == AMIBERRY_SETTINGS_OK && p.socket_emu);
+	CHECK(set(p, "sana2", "true") == AMIBERRY_SETTINGS_OK && p.sana2);
 }
 
 // RTG: the board's options follow its type and memory, and the packed
@@ -2883,6 +3183,7 @@ int main(int argc, char** argv)
 	check_floppy_domain();
 	check_storage_domain();
 	check_rtg_domain();
+	check_expansions_domain();
 	check_mount_list();
 	check_active_values();
 	if (failures) {

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Behavioral test: expansion boards a reset brings in get memory of their own.
+"""Behavioral test: expansion boards get memory of their own, or none.
 
 Usage: board_reset_test.py <amiberry binary>
 
@@ -10,6 +10,10 @@ new ones in, so:
   first access);
 - a Zorro III RAM board turned on got the memory of chip RAM (writes to the
   board changed chip RAM).
+
+And accelerator boards without board memory used to map memory that was not
+there: the Blizzard 1230 I/II and III MAPROM below a NULL base (cleared at
+every reset), the Twelve Gauge's RAM banks (read at boot).
 """
 
 import os
@@ -99,10 +103,30 @@ def check_ram(binary):
     return failures
 
 
+def check_accelerators(binary):
+    """Accelerator boards without board memory start and keep running."""
+    failures = []
+    for board in ("Blizzard1230II", "Blizzard1230III", "twelvegauge"):
+        emu = ipc.Emulator(binary, environment(False), "A1200", [f"cpuboard_type={board}"])
+        try:
+            control = ipc.Connection(emu.endpoint, 30)
+            time.sleep(2)
+            status = control.request("GET_STATUS")
+            if status.startswith("OK"):
+                print(f"ok   {board} without board memory runs")
+            else:
+                failures.append(f"{board} without board memory: {status}")
+        except OSError as e:
+            failures.append(f"{board} without board memory: the emulator went away ({e})")
+        finally:
+            emu.kill()
+    return failures
+
+
 def main():
     if len(sys.argv) != 2:
         sys.exit(__doc__)
-    failures = check_rtg(sys.argv[1]) + check_ram(sys.argv[1])
+    failures = check_rtg(sys.argv[1]) + check_ram(sys.argv[1]) + check_accelerators(sys.argv[1])
     for failure in failures:
         print(f"FAIL {failure}")
     if failures:

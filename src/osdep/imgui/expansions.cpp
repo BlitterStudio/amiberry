@@ -14,6 +14,9 @@
 #include "rommgr.h"
 #include "uae.h"
 #include "expansion_display_name.h"
+#include "settings/settings_definitions.h"
+
+namespace settings = amiberry_settings;
 
 // Categories for Expansion Boards (Matches WinUAE scsiromselectedmask)
 static const char *ExpansionCategories[] = {
@@ -55,36 +58,25 @@ enum RomDialogSource {
 };
 static RomDialogSource rom_dialog_source = ROM_DIALOG_NONE;
 
+// The accelerator rules (which variants this build emulates, what picking
+// one changes) are the settings layer's; a board is picked as one of its
+// variants.
 static bool is_accelerator_subtype_available(int type, int subtype)
 {
-#ifdef WITH_PPC
-    (void)type;
-    (void)subtype;
-    return true;
-#else
-    return !cpuboard_is_ppc_accelerator_subtype(type, subtype);
-#endif
+    const settings::context ctx{emulating != 0};
+    return settings::is_choice_available(settings::require("cpuboard_type"), changed_prefs, ctx,
+        cpuboards[type].subtypes[subtype].configname);
 }
 
 static bool is_accelerator_type_available(int type)
 {
-#ifdef WITH_PPC
-    (void)type;
-    return true;
-#else
-    if (type == 0 || !cpuboards[type].subtypes) {
+    if (type == 0 || !cpuboards[type].subtypes)
         return true;
-    }
-
-    bool has_subtypes = false;
     for (int i = 0; cpuboards[type].subtypes[i].name; i++) {
-        has_subtypes = true;
-        if (is_accelerator_subtype_available(type, i)) {
+        if (is_accelerator_subtype_available(type, i))
             return true;
-        }
     }
-    return !has_subtypes;
-#endif
+    return false;
 }
 
 static int get_available_accelerator_subtype(int type)
@@ -94,14 +86,19 @@ static int get_available_accelerator_subtype(int type)
         return default_subtype;
     }
 
-    if (cpuboards[type].subtypes) {
-        for (int i = 0; cpuboards[type].subtypes[i].name; i++) {
-            if (is_accelerator_subtype_available(type, i)) {
-                return i;
-            }
+    for (int i = 0; cpuboards[type].subtypes[i].name; i++) {
+        if (is_accelerator_subtype_available(type, i)) {
+            return i;
         }
     }
     return 0;
+}
+
+static void select_accelerator(int type, int subtype)
+{
+    const settings::context ctx{emulating != 0};
+    settings::set(settings::require("cpuboard_type"), changed_prefs, ctx,
+        type && cpuboards[type].subtypes ? cpuboards[type].subtypes[subtype].configname : "none");
 }
 
 static void sanitize_accelerator_selection()
@@ -117,48 +114,6 @@ static void sanitize_accelerator_selection()
         changed_prefs.ppc_cpu_idle = 0;
     }
 #endif
-}
-
-// WinUAE sync: copycpuboardmem() syncs CPU board memory with the appropriate memory subsystem
-void copycpuboardmem(bool tomem)
-{
-	int maxmem = cpuboard_maxmemory(&changed_prefs);
-	int memtype = cpuboard_memorytype(&changed_prefs);
-
-	if (tomem) {
-		// Copy from memory subsystems to cpuboardmem1
-		if (memtype == BOARD_MEMORY_Z2) {
-			changed_prefs.cpuboardmem1.size = changed_prefs.fastmem[0].size;
-		}
-		if (memtype == BOARD_MEMORY_25BITMEM) {
-			changed_prefs.cpuboardmem1.size = changed_prefs.mem25bit.size;
-		}
-		if (memtype == BOARD_MEMORY_HIGHMEM) {
-			changed_prefs.cpuboardmem1.size = changed_prefs.mbresmem_high.size;
-		}
-		// WinUAE sync: Enforce maximum memory limit for CPU board
-		if (changed_prefs.cpuboardmem1.size > static_cast<uae_u32>(maxmem)) {
-			changed_prefs.cpuboardmem1.size = maxmem;
-		}
-	} else {
-		// WinUAE sync: Enforce maximum memory limit before copying back
-		if (changed_prefs.cpuboardmem1.size > static_cast<uae_u32>(maxmem)) {
-			changed_prefs.cpuboardmem1.size = maxmem;
-		}
-		// Copy from cpuboardmem1 to memory subsystems
-		if (memtype == BOARD_MEMORY_Z2) {
-			changed_prefs.fastmem[0].size = changed_prefs.cpuboardmem1.size;
-		}
-		if (memtype == BOARD_MEMORY_25BITMEM) {
-			changed_prefs.mem25bit.size = changed_prefs.cpuboardmem1.size;
-		}
-		if (changed_prefs.cpuboard_type == 0) {
-			changed_prefs.mem25bit.size = 0;
-		}
-		if (memtype == BOARD_MEMORY_HIGHMEM) {
-			changed_prefs.mbresmem_high.size = changed_prefs.cpuboardmem1.size;
-		}
-	}
 }
 
 static int calculate_bit_shift(const expansionboardsettings *ebs, int item_idx)
@@ -803,17 +758,8 @@ void render_panel_expansions() {
                 const bool is_selected = (changed_prefs.cpuboard_type == i);
                 if (is_selected)
                     ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
-                if (ImGui::Selectable(cpuboards[i].name, is_selected)) {
-                    changed_prefs.cpuboard_type = i;
-                    changed_prefs.cpuboard_subtype = get_available_accelerator_subtype(i);
-                    changed_prefs.cpuboard_settings = 0;
-                    // WinUAE sync: Adjust ppc_mode based on CPU board type
-                    if (cpuboard_is_ppc_accelerator(&changed_prefs)) {
-                        changed_prefs.ppc_mode = 2;
-                    } else if (changed_prefs.ppc_mode == 2) {
-                        changed_prefs.ppc_mode = 0;
-                    }
-                    cpuboard_set_cpu(&changed_prefs);
+                if (ImGui::Selectable(cpuboards[i].name, is_selected) && !is_selected) {
+                    select_accelerator(i, i ? get_available_accelerator_subtype(i) : 0);
                 }
                 if (is_selected) {
                     ImGui::PopStyleColor();
@@ -840,10 +786,7 @@ void render_panel_expansions() {
                     if (is_selected)
                         ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
                     if (ImGui::Selectable(subtypes[i].name, is_selected)) {
-                        changed_prefs.cpuboard_subtype = i;
-                        // WinUAE sync: Reset settings when subtype changes, then update CPU configuration
-                        changed_prefs.cpuboard_settings = 0;
-                        cpuboard_set_cpu(&changed_prefs);
+                        select_accelerator(type, i);
                     }
                     if (is_selected) {
                         ImGui::PopStyleColor();
@@ -953,10 +896,12 @@ void render_panel_expansions() {
             }
         }
 
-        int max_mb = st->maxmemory >> 20;
+        const settings::context mem_ctx{emulating != 0};
+        const settings::definition& mem_option = settings::require("cpuboardmem1_size");
         int max_idx = 0;
         for (int i = 0; i < IM_ARRAYSIZE(mem_sizes); ++i) {
-            if (mem_sizes[i] <= max_mb) max_idx = i;
+            if (settings::is_choice_available(mem_option, changed_prefs, mem_ctx, std::to_string(mem_sizes[i])))
+                max_idx = i;
         }
 
         if (max_idx > 0) {
@@ -965,8 +910,8 @@ void render_panel_expansions() {
             // WinUAE sync: Memory slider enabled based on cpuboard_type > 0, not just !emulating
             ImGui::BeginDisabled(!gui_enabled || changed_prefs.cpuboard_type == 0);
             if (ImGui::SliderInt("##BoardMem", &current_idx, 0, max_idx, mem_labels[current_idx])) {
-                changed_prefs.cpuboardmem1.size = mem_sizes[current_idx] << 20;
-                copycpuboardmem(false);
+                // The layer puts the memory where the board has it.
+                settings::set(mem_option, changed_prefs, mem_ctx, std::to_string(mem_sizes[current_idx]));
             }
             AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), false);
             ShowHelpMarker("On-board memory provided by the accelerator. Faster than standard Fast RAM");
@@ -982,89 +927,61 @@ void render_panel_expansions() {
     if (st->settings) {
         ImGui::Separator();
         ImGui::Text("Jumper Settings:");
+        // Every switch and selector is a settings layer option, which owns
+        // the bit layout the configuration uses.
+        const settings::context jumper_ctx{emulating != 0};
         const expansionboardsettings *ebs = st->settings;
-        int settings_val = changed_prefs.cpuboard_settings;
-        int item_idx = 0;
-        while (ebs[item_idx].name) {
+        for (int item_idx = 0; ebs[item_idx].name; item_idx++) {
             const expansionboardsettings *s = &ebs[item_idx];
-            int current_bit_shift = calculate_bit_shift(ebs, item_idx);
+            if (s->type != EXPANSIONBOARD_CHECKBOX && s->type != EXPANSIONBOARD_MULTI)
+                continue;
+            // A selector's configuration name list starts with its own name.
+            const std::string jumper_id = std::string("cpuboard_settings:") + s->configname;
+            const settings::definition *jumper = settings::find(jumper_id);
+            if (s->type == EXPANSIONBOARD_MULTI && jumper && jumper->descriptor.type != AMIBERRY_SETTING_CHOICE)
+                jumper = settings::find(jumper_id + "_choice");
+            if (!jumper)
+                continue;
+            char current[64] = "";
+            settings::get(*jumper, changed_prefs, current, sizeof current);
 
             if (s->type == EXPANSIONBOARD_CHECKBOX) {
-                bool checked = (settings_val & (1 << current_bit_shift)) != 0;
-                if (s->invert) checked = !checked;
-                if (AmigaCheckbox(s->name, &checked)) {
-                    if (s->invert) checked = !checked;
-                    if (checked) settings_val |= (1 << current_bit_shift);
-                    else settings_val &= ~(1 << current_bit_shift);
-                    changed_prefs.cpuboard_settings = settings_val;
-                }
-            } else if (s->type == EXPANSIONBOARD_MULTI) {
-                // WinUAE sync: Use s->name for display (Label\0Option1\0Option2\0\0),
-                // fall back to s->configname if no options in name
-                std::vector<std::string> options;
-                std::string accel_label = "Settings";
-
-                if (s->name) {
-                    const char *pp = (const char *) s->name;
-                    if (*pp) {
-                        accel_label = pp;
-                        pp += strlen(pp) + 1;
-                        while (*pp) {
-                            options.emplace_back(pp);
-                            pp += strlen(pp) + 1;
-                        }
-                    }
-                }
-
-                if (options.empty() && s->configname) {
-                    const char *pp = (const char *) s->configname;
-                    while (*pp) {
-                        options.emplace_back(pp);
-                        pp += strlen(pp) + 1;
-                    }
-                }
-
-                int items_count = (int) options.size();
-                int bits = 1;
-                for (int b = 0; b < 8; b++) {
-                    if ((1 << b) >= items_count) {
-                        bits = b;
-                        break;
-                    }
-                }
-                int mask = (1 << bits) - 1;
-                int val = (settings_val >> current_bit_shift) & mask;
-                // WinUAE sync: Handle invert on read
-                if (s->invert) val ^= (1 << bits) - 1;
-
-                // Ensure val is within bounds
-                if (val >= items_count) val = 0;
-
-                if (ImGui::BeginCombo(accel_label.c_str(),
-                                      (items_count > val) ? options[val].c_str() : "Unknown")) {
-                    for (int opt_i = 0; opt_i < items_count; opt_i++) {
-                        const bool is_selected = (opt_i == val);
-                        if (is_selected)
-                            ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
-                        if (ImGui::Selectable(options[opt_i].c_str(), is_selected)) {
-                            val = opt_i;
-                            // WinUAE sync: Handle invert on write
-                            if (s->invert) val ^= (1 << bits) - 1;
-
-                            settings_val &= ~(mask << current_bit_shift);
-                            settings_val |= (val << current_bit_shift);
-                            changed_prefs.cpuboard_settings = settings_val;
-                        }
-                        if (is_selected) {
-                            ImGui::PopStyleColor();
-                            ImGui::SetItemDefaultFocus();
-                        }
-                    }
-                    ImGui::EndCombo();
-                }
-                AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
+                bool checked = !strcmp(current, "true");
+                if (AmigaCheckbox(s->name, &checked))
+                    settings::set(*jumper, changed_prefs, jumper_ctx, checked ? "true" : "false");
+                continue;
             }
-            item_idx++;
+
+            // This board's positions, as it names them ("Label\0Pos1\0...",
+            // "id\0pos1\0...").
+            std::vector<std::pair<const char *, const char *>> positions;
+            const char *label = s->name;
+            const char *nm = s->name + strlen(s->name) + 1;
+            for (const char *cfg = s->configname + strlen(s->configname) + 1; *cfg; cfg += strlen(cfg) + 1) {
+                positions.emplace_back(cfg, *nm ? nm : cfg);
+                if (*nm)
+                    nm += strlen(nm) + 1;
+            }
+            const char *preview = current;
+            for (const auto &pos : positions) {
+                if (!strcmp(pos.first, current))
+                    preview = pos.second;
+            }
+            if (ImGui::BeginCombo(label, preview)) {
+                for (const auto &pos : positions) {
+                    const bool is_selected = !strcmp(pos.first, current);
+                    if (is_selected)
+                        ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+                    if (ImGui::Selectable(pos.second, is_selected))
+                        settings::set(*jumper, changed_prefs, jumper_ctx, pos.first);
+                    if (is_selected) {
+                        ImGui::PopStyleColor();
+                        ImGui::SetItemDefaultFocus();
+                    }
+                }
+                ImGui::EndCombo();
+            }
+            AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
         }
     }
     EndGroupBox("Accelerator Board Settings");
