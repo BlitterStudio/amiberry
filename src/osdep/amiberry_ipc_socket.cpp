@@ -9,6 +9,7 @@
 #include "settings/amiberry_actions.h"
 #include "settings/amiberry_media.h"
 #include "settings/amiberry_settings.h"
+#include "settings/settings_definitions.h"
 #include "sysdeps.h"
 #include "amiberry_gfx.h"
 #include "options.h"
@@ -2529,6 +2530,8 @@ static std::string HandleSetLineMode(const std::vector<std::string>& args)
 		changed_prefs.gfx_pscanlines = 1;   // Enable scanlines
 		changed_prefs.gfx_iscanlines = 0;
 	}
+	// The manual crop window stays within the frame at the new line mode.
+	amiberry_settings::fit_manual_crop(changed_prefs);
 
 	set_config_changed();
 
@@ -2598,6 +2601,8 @@ static std::string HandleSetResolution(const std::vector<std::string>& args)
 	}
 
 	changed_prefs.gfx_resolution = res;
+	// The manual crop window stays within the frame at the new resolution.
+	amiberry_settings::fit_manual_crop(changed_prefs);
 	set_config_changed();
 
 	const char* res_names[] = {"lores", "hires", "superhires"};

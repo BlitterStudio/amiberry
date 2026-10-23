@@ -9,5 +9,5 @@ trap 'rm -f "$out"' EXIT
 	-Isrc -Isrc/osdep \
 	-o "$out" \
 	tests/shader_catalog_test.cpp \
-	src/osdep/imgui/shader_catalog.cpp
+	src/osdep/display_catalog.cpp
 "$out"

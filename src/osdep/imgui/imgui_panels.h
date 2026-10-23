@@ -19,7 +19,6 @@ extern ImTextureID about_logo_texture;
 // Shared catalogs used by panels that expose the same choices.
 const std::vector<std::string>& get_sound_device_names();
 const std::vector<std::string>& get_available_theme_names();
-const std::vector<std::string>& get_available_bezel_names();
 
 struct ComboOption
 {

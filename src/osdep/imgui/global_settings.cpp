@@ -13,7 +13,7 @@
 #include "target.h"
 #include "gui/gui_handling.h"
 #include "gui_layout_scale.h"
-#include "shader_catalog.h"
+#include "display_catalog.h"
 
 namespace {
 

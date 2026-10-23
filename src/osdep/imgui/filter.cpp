@@ -6,7 +6,8 @@
 #include "gui/gui_handling.h"
 #include "amiberry_gfx.h"
 #include "target.h"
-#include "shader_catalog.h"
+#include "display_catalog.h"
+#include "settings/settings_definitions.h"
 #include <algorithm>
 #include <filesystem>
 #include <vector>
@@ -18,73 +19,6 @@
 #include "shader_preset.h"
 #include "opengl_renderer.h"
 #endif
-
-// Bezel list storage
-static std::vector<std::string> bezel_names;
-static std::vector<const char*> bezel_items;
-static bool bezels_initialized = false;
-
-static void scan_bezels()
-{
-	bezel_names.clear();
-	bezel_items.clear();
-
-	bezel_names.emplace_back("none");
-
-	std::string bezels_dir = get_bezels_path();
-	if (!bezels_dir.empty()) {
-		namespace fs = std::filesystem;
-		fs::path base_path(bezels_dir);
-		try {
-			for (const auto& entry : fs::recursive_directory_iterator(base_path,
-				fs::directory_options::skip_permission_denied)) {
-				if (!entry.is_regular_file()) continue;
-
-				std::string ext = entry.path().extension().string();
-				std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
-				if (ext != ".png" && ext != ".jpg" && ext != ".jpeg") continue;
-
-				fs::path rel = fs::relative(entry.path(), base_path);
-				bezel_names.push_back(rel.generic_string());
-			}
-		} catch (...) {
-			// Directory doesn't exist or can't be read - ignore
-		}
-	}
-
-	std::sort(bezel_names.begin() + 1, bezel_names.end());
-
-	for (const auto& name : bezel_names) {
-		bezel_items.push_back(name.c_str());
-	}
-
-	bezels_initialized = true;
-}
-
-const std::vector<std::string>& get_available_bezel_names()
-{
-	if (!bezels_initialized)
-		scan_bezels();
-	return bezel_names;
-}
-
-static int find_bezel_index(const char* bezel_name)
-{
-	for (size_t i = 0; i < bezel_names.size(); i++) {
-		if (bezel_names[i] == bezel_name) return static_cast<int>(i);
-	}
-	return 0; // Default to "none"
-}
-
-static int find_shader_index(const std::vector<std::string>& shader_names, const char* shader_name)
-{
-	for (size_t i = 0; i < shader_names.size(); i++) {
-		if (shader_names[i] == shader_name) {
-			return static_cast<int>(i);
-		}
-	}
-	return -1;
-}
 
 static bool show_shader_params_popup = false;
 #ifdef USE_OPENGL
@@ -237,83 +171,96 @@ void render_panel_filter()
 	ImGui::Indent(4.0f);
 	const float spacing = ImGui::GetStyle().ItemSpacing.x;
 
-	const auto& shader_names = get_available_shader_names();
-
-	BeginGroupBox("Crop and Offset");
-	const bool auto_crop_on = changed_prefs.gfx_auto_crop;
-	const bool manual_crop_on = changed_prefs.gfx_manual_crop;
-	if (manual_crop_on) ImGui::BeginDisabled();
-	AmigaCheckbox("Auto Crop", &changed_prefs.gfx_auto_crop);
-	ShowHelpMarker("Automatically crop borders by scanning frame content.");
-	if (manual_crop_on) ImGui::EndDisabled();
-	ImGui::SameLine();
-	if (auto_crop_on) ImGui::BeginDisabled();
-	AmigaCheckbox("Manual Crop", &changed_prefs.gfx_manual_crop);
-	ShowHelpMarker("Manually set the visible display area size and position.");
-	if (auto_crop_on) ImGui::EndDisabled();
-	if (manual_crop_on) {
-		// Full-frame bounds at the active render resolution; a fixed 800/600
-		// would silently truncate a valid superhires crop just by rendering.
-		const int max_crop_w = AMIGA_WIDTH_MAX << changed_prefs.gfx_resolution;
-		const int max_crop_h = AMIGA_HEIGHT_MAX << changed_prefs.gfx_vresolution;
-		ImGui::AlignTextToFramePadding();
-		ImGui::Text("Width:");
-		ImGui::SameLine();
-		ImGui::SetNextItemWidth(BUTTON_WIDTH);
-		ImGui::SliderInt("##WCropSlider", &changed_prefs.gfx_manual_crop_width, 0, max_crop_w);
+	// The settings layer owns the rules: one cropping at a time, the window
+	// within the frame at the render resolution, the built-in bezel or a
+	// custom one, and the shaders and bezels the folders hold.
+	namespace settings = amiberry_settings;
+	const settings::context ctx{emulating != 0};
+	auto option = [](const char* id) -> const settings::definition& { return settings::require(id); };
+	auto value_of = [&](const char* id) {
+		char text[MAX_DPATH] = "";
+		settings::get(option(id), changed_prefs, text, sizeof text);
+		return std::string(text);
+	};
+	auto available = [&](const char* id) { return settings::is_available(option(id), changed_prefs, ctx); };
+	auto put = [&](const char* id, const std::string& value) { settings::set(option(id), changed_prefs, ctx, value); };
+	auto checkbox = [&](const char* id, const char* label) {
+		bool checked = value_of(id) == "true";
+		ImGui::BeginDisabled(!available(id));
+		const bool clicked = AmigaCheckbox(label, &checked);
+		if (clicked)
+			put(id, checked ? "true" : "false");
+		ImGui::EndDisabled();
+		return clicked;
+	};
+	// A slider and a number field over the option's current range.
+	auto number = [&](const char* id, const char* slider_id, const char* input_id, float slider_width) {
+		double min = 0, max = 0;
+		settings::get_range(option(id), changed_prefs, min, max);
+		int v = static_cast<int>(settings::get_number(option(id), changed_prefs));
+		ImGui::SetNextItemWidth(slider_width);
+		// Ctrl+Click can type past the slider's ends.
+		if (ImGui::SliderInt(slider_id, &v, static_cast<int>(min), static_cast<int>(max)))
+			settings::set_number(option(id), changed_prefs, ctx, std::clamp(v, static_cast<int>(min), static_cast<int>(max)));
 		AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), false);
 		ImGui::SameLine();
 		ImGui::SetNextItemWidth(BUTTON_WIDTH * 0.45f);
-		ImGui::InputInt("##WCropInput", &changed_prefs.gfx_manual_crop_width, 0);
+		int typed = v;
+		if (ImGui::InputInt(input_id, &typed, 0))
+			settings::set_number(option(id), changed_prefs, ctx, std::clamp(typed, static_cast<int>(min), static_cast<int>(max)));
 		AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), false);
+	};
+	// A combo over the option's choices (the folder's shaders or bezels);
+	// a configured name the folder no longer has still shows.
+	auto combo = [&](const char* id, const char* combo_id) {
+		const settings::definition& d = option(id);
+		const std::string current = value_of(id);
+		const settings::choice_list choices = settings::choices_of(d, changed_prefs);
+		bool changed = false;
+		if (ImGui::BeginCombo(combo_id, current.c_str())) {
+			for (size_t i = 0; i < choices.count; i++) {
+				const bool is_selected = current == choices.items[i].value;
+				if (ImGui::Selectable(choices.items[i].label, is_selected)) {
+					put(id, choices.items[i].value);
+					changed = true;
+				}
+				if (is_selected) ImGui::SetItemDefaultFocus();
+			}
+			ImGui::EndCombo();
+		}
+		AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
+		return changed;
+	};
+
+	BeginGroupBox("Crop and Offset");
+	checkbox("amiberry.gfx_auto_crop", "Auto Crop");
+	ShowHelpMarker("Automatically crop borders by scanning frame content.");
+	ImGui::SameLine();
+	checkbox("amiberry.gfx_manual_crop", "Manual Crop");
+	ShowHelpMarker("Manually set the visible display area size and position.");
+	if (available("amiberry.gfx_manual_crop_width")) {
+		ImGui::AlignTextToFramePadding();
+		ImGui::Text("Width:");
+		ImGui::SameLine();
+		number("amiberry.gfx_manual_crop_width", "##WCropSlider", "##WCropInput", BUTTON_WIDTH);
 		ImGui::SameLine();
 		ImGui::AlignTextToFramePadding();
 		ImGui::Text("Height:");
 		ImGui::SameLine();
-		ImGui::SetNextItemWidth(BUTTON_WIDTH);
-		ImGui::SliderInt("##HCropSlider", &changed_prefs.gfx_manual_crop_height, 0, max_crop_h);
-		AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), false);
-		ImGui::SameLine();
-		ImGui::SetNextItemWidth(BUTTON_WIDTH * 0.45f);
-		ImGui::InputInt("##HCropInput", &changed_prefs.gfx_manual_crop_height, 0);
-		AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), false);
-		changed_prefs.gfx_manual_crop_width = std::clamp(
-			changed_prefs.gfx_manual_crop_width, 0, max_crop_w);
-		changed_prefs.gfx_manual_crop_height = std::clamp(
-			changed_prefs.gfx_manual_crop_height, 0, max_crop_h);
-
+		number("amiberry.gfx_manual_crop_height", "##HCropSlider", "##HCropInput", BUTTON_WIDTH);
 
 		// Offsets position the manual crop window and are only consumed on
-		// the manual-crop render path, so keep them hidden otherwise. Bounds
-		// follow the surface: a WHDLoad-centered origin can legitimately sit
-		// well past the old fixed 80 at higher resolutions.
-		const int max_off_w = AMIGA_WIDTH_MAX << changed_prefs.gfx_resolution;
-		const int max_off_h = AMIGA_HEIGHT_MAX << changed_prefs.gfx_vresolution;
+		// the manual-crop render path, so they show with it.
 		ImGui::AlignTextToFramePadding();
 		ImGui::Text("H. Offset:");
 		ImGui::SameLine();
-		ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - spacing * 2 - BUTTON_WIDTH * 0.45f);
-		ImGui::SliderInt("##HOffsetSlider", &changed_prefs.gfx_horizontal_offset, -max_off_w, max_off_w);
-		AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), false);
-		ImGui::SameLine();
-		ImGui::SetNextItemWidth(BUTTON_WIDTH * 0.45f);
-		ImGui::InputInt("##HOffsetInput", &changed_prefs.gfx_horizontal_offset, 0);
-		AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), false);
-
+		number("amiberry.gfx_horizontal_offset", "##HOffsetSlider", "##HOffsetInput",
+			ImGui::GetContentRegionAvail().x - spacing * 2 - BUTTON_WIDTH * 0.45f);
 		ImGui::AlignTextToFramePadding();
 		ImGui::Text("V. Offset:");
 		ImGui::SameLine();
-		ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - spacing * 2 - BUTTON_WIDTH * 0.45f);
-		ImGui::SliderInt("##VOffsetSlider", &changed_prefs.gfx_vertical_offset, -max_off_h, max_off_h);
-		AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), false);
-		ImGui::SameLine();
-		ImGui::SetNextItemWidth(BUTTON_WIDTH * 0.45f);
-		ImGui::InputInt("##VOffsetInput", &changed_prefs.gfx_vertical_offset, 0);
-		AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), false);
-		changed_prefs.gfx_horizontal_offset = std::clamp(
-			changed_prefs.gfx_horizontal_offset, -max_off_w, max_off_w);
-		changed_prefs.gfx_vertical_offset = std::clamp(
-			changed_prefs.gfx_vertical_offset, -max_off_h, max_off_h);
+		number("amiberry.gfx_vertical_offset", "##VOffsetSlider", "##VOffsetInput",
+			ImGui::GetContentRegionAvail().x - spacing * 2 - BUTTON_WIDTH * 0.45f);
 	}
 	ImGui::Spacing();
 	EndGroupBox("Crop and Offset");
@@ -321,24 +268,9 @@ void render_panel_filter()
 	// Native Shader Selection
 	BeginGroupBox("Native Display Shader");
 	{
-		const int native_idx = find_shader_index(shader_names, changed_prefs.shader);
-		const char* native_preview = native_idx >= 0
-			? shader_names[native_idx].c_str() : changed_prefs.shader;
 		const float native_label_w = ImGui::CalcTextSize("Shader for native Amiga modes").x;
 		ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - native_label_w - spacing * 3);
-		if (ImGui::BeginCombo("##NativeShader", native_preview)) {
-			for (int i = 0; i < static_cast<int>(shader_names.size()); i++) {
-				bool is_selected = (i == native_idx);
-				if (ImGui::Selectable(shader_names[i].c_str(), is_selected)) {
-					strncpy(changed_prefs.shader, shader_names[i].c_str(),
-							sizeof(changed_prefs.shader) - 1);
-					changed_prefs.shader[sizeof(changed_prefs.shader) - 1] = '\0';
-				}
-				if (is_selected) ImGui::SetItemDefaultFocus();
-			}
-			ImGui::EndCombo();
-		}
-		AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
+		combo("amiberry.shader", "##NativeShader");
 		ShowHelpMarker("CRT shader applied to native Amiga chipset display modes.");
 		ImGui::SameLine();
 		ImGui::Text("Shader for native Amiga modes");
@@ -358,24 +290,9 @@ void render_panel_filter()
 	// RTG Shader Selection
 	BeginGroupBox("RTG Display Shader");
 	{
-		const int rtg_idx = find_shader_index(shader_names, changed_prefs.shader_rtg);
-		const char* rtg_preview = rtg_idx >= 0
-			? shader_names[rtg_idx].c_str() : changed_prefs.shader_rtg;
 		const float rtg_label_w = ImGui::CalcTextSize("Shader for RTG/Picasso modes").x;
 		ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - rtg_label_w - spacing * 3);
-		if (ImGui::BeginCombo("##RTGShader", rtg_preview)) {
-			for (int i = 0; i < static_cast<int>(shader_names.size()); i++) {
-				bool is_selected = (i == rtg_idx);
-				if (ImGui::Selectable(shader_names[i].c_str(), is_selected)) {
-					strncpy(changed_prefs.shader_rtg, shader_names[i].c_str(),
-							sizeof(changed_prefs.shader_rtg) - 1);
-					changed_prefs.shader_rtg[sizeof(changed_prefs.shader_rtg) - 1] = '\0';
-				}
-				if (is_selected) ImGui::SetItemDefaultFocus();
-			}
-			ImGui::EndCombo();
-		}
-		AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
+		combo("amiberry.shader_rtg", "##RTGShader");
 		ShowHelpMarker("CRT shader applied to RTG/Picasso96 graphics card display modes.");
 		ImGui::SameLine();
 		ImGui::Text("Shader for RTG/Picasso modes");
@@ -395,53 +312,28 @@ void render_panel_filter()
 	// Bezel Overlay
 	BeginGroupBox("Bezel Overlay");
 	{
-		// Built-in CRT bezel (disabled when custom bezel is active)
-		if (changed_prefs.use_custom_bezel) ImGui::BeginDisabled();
-		if (AmigaCheckbox("Built-in CRT bezel", &changed_prefs.use_bezel)) {
-			if (g_renderer) g_renderer->update_crtemu_bezel();
-		}
+		// The renderer shows a bezel change while the GUI is open.
+		if (checkbox("amiberry.use_bezel", "Built-in CRT bezel") && g_renderer)
+			g_renderer->update_crtemu_bezel();
 		ShowHelpMarker("Built-in CRT television bezel frame.\n"
 					   "Only works with built-in CRT shaders (tv, pc, 1084).\n"
 					   "Disabled when a custom bezel is selected.");
-		if (changed_prefs.use_custom_bezel) ImGui::EndDisabled();
 
 		ImGui::Spacing();
 
-		// Custom bezel overlay (disabled when built-in bezel is active)
-		if (changed_prefs.use_bezel) ImGui::BeginDisabled();
-
-		if (!bezels_initialized) scan_bezels();
-
-		int bezel_idx = find_bezel_index(changed_prefs.custom_bezel);
+		ImGui::BeginDisabled(!available("amiberry.custom_bezel"));
 		const float bezel_label_w = ImGui::CalcTextSize("Custom bezel overlay").x;
 		ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - bezel_label_w - spacing * 3);
-		if (ImGui::BeginCombo("##CustomBezel", bezel_items.empty() ? "none" : bezel_items[bezel_idx])) {
-			for (int i = 0; i < static_cast<int>(bezel_items.size()); i++) {
-				bool is_selected = (i == bezel_idx);
-				if (ImGui::Selectable(bezel_items[i], is_selected)) {
-					strncpy(changed_prefs.custom_bezel, bezel_names[i].c_str(),
-							sizeof(changed_prefs.custom_bezel) - 1);
-					changed_prefs.custom_bezel[sizeof(changed_prefs.custom_bezel) - 1] = '\0';
-					changed_prefs.use_custom_bezel = (strcmp(changed_prefs.custom_bezel, "none") != 0);
-					// If enabling custom bezel, disable built-in
-					if (changed_prefs.use_custom_bezel) {
-						changed_prefs.use_bezel = false;
-						if (g_renderer) g_renderer->update_crtemu_bezel();
-					}
-					if (g_renderer) g_renderer->update_custom_bezel();
-				}
-				if (is_selected) ImGui::SetItemDefaultFocus();
-			}
-			ImGui::EndCombo();
+		if (combo("amiberry.custom_bezel", "##CustomBezel") && g_renderer) {
+			g_renderer->update_crtemu_bezel();
+			g_renderer->update_custom_bezel();
 		}
-		AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
 		ShowHelpMarker("Select a custom bezel overlay image (PNG with transparency).\n"
 					   "Place bezel images in the Bezels directory.\n"
 					   "Works with all shader types.");
 		ImGui::SameLine();
 		ImGui::Text("Custom bezel overlay");
-
-		if (changed_prefs.use_bezel) ImGui::EndDisabled();
+		ImGui::EndDisabled();
 	}
 	EndGroupBox("Bezel Overlay");
 
@@ -451,7 +343,7 @@ void render_panel_filter()
 	// Rescan button
 	if (AmigaButton(ICON_FA_ARROWS_ROTATE " Rescan Shaders & Bezels", ImVec2(BUTTON_WIDTH * 2.0f, BUTTON_HEIGHT))) {
 		invalidate_shader_catalog();
-		bezels_initialized = false;
+		invalidate_bezel_catalog();
 	}
 	ImGui::SameLine();
 

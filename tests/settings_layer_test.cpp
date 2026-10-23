@@ -36,6 +36,8 @@
 #include <string>
 
 #include "settings/settings_actions_queue.h"
+#include "amiga_constants.h"
+#include "display_catalog.h"
 
 #include <atomic>
 #include <map>
@@ -211,6 +213,22 @@ const cpuboardtype cpuboards[] = {
 	{BOARD_BLIZZARD, "Phase 5 - Blizzard", test_blizzard_sub},
 	{BOARD_CYBERSTORM, "Phase 5 - CyberStorm", test_cyberstorm_sub},
 	{0, nullptr}};
+
+// The shaders and bezels folders: two built-in shaders and a preset, one
+// bezel image; an invalidate counts as a rescan.
+static int display_catalog_rescans;
+const std::vector<std::string>& get_available_shader_names()
+{
+	static const std::vector<std::string> names = {"none", "tv", "pc", "crt/crt-geom.glslp"};
+	return names;
+}
+void invalidate_shader_catalog() { display_catalog_rescans++; }
+const std::vector<std::string>& get_available_bezel_names()
+{
+	static const std::vector<std::string> names = {"none", "frames/arcade.png"};
+	return names;
+}
+void invalidate_bezel_catalog() { display_catalog_rescans++; }
 
 // A few entries of the core's expansion board table (expansion.cpp), laid
 // out like it: the accelerator (no expansion board), an A2091 with a 24-bit
@@ -588,6 +606,14 @@ void reset_prefs(uae_prefs& p)
 	p.gfx_windowed_resize = true;
 	p.gfx_correct_aspect = 1;
 	p.scaling_method = -1;
+	// The display filters (target_default_options, default application
+	// settings): no shader, no bezel, the manual crop window the whole
+	// frame at the render resolution.
+	strcpy(p.shader, "none");
+	strcpy(p.shader_rtg, "none");
+	strcpy(p.custom_bezel, "none");
+	p.gfx_manual_crop_width = AMIGA_WIDTH_MAX << p.gfx_resolution;
+	p.gfx_manual_crop_height = AMIGA_HEIGHT_MAX << p.gfx_vresolution;
 	p.cr_selected = -1;
 	for (int i = 0; i < 2; i++) {
 		struct chipset_refresh& cr = p.cr[i == 0 ? CHIPSET_REFRESH_PAL : CHIPSET_REFRESH_NTSC];
@@ -1384,6 +1410,22 @@ void emit_roundtrip()
 	apply("scsi", "scsi");
 	apply("sana2", "true");
 	emit("accelerator", p);
+
+	// Display filters: a manual crop window, shaders and the built-in bezel.
+	reset_prefs(p);
+	apply("amiberry.gfx_manual_crop", "true");
+	apply("amiberry.gfx_manual_crop_width", "640");
+	apply("amiberry.gfx_manual_crop_height", "512");
+	apply("amiberry.gfx_horizontal_offset", "-12");
+	apply("amiberry.gfx_vertical_offset", "8");
+	apply("amiberry.shader", "tv");
+	apply("amiberry.shader_rtg", "pc");
+	apply("amiberry.use_bezel", "true");
+	emit("filter", p);
+	// The shaders are host-dependent choices, skipped by emit(); the
+	// built-in ones are on every host.
+	std::printf("E amiberry.shader=tv none\n");
+	std::printf("E amiberry.shader_rtg=pc none\n");
 
 	reset_prefs(p);
 	// The A600 extra enables the machine's IDE controller (ide=a600/a1200
@@ -2401,6 +2443,67 @@ void check_boards()
 	amiberry_settings_session_close(session);
 	CHECK(amiberry_settings_board_type_find(nullptr) == nullptr);
 	CHECK(amiberry_settings_board_type_at(amiberry_settings_board_type_count()) == nullptr);
+}
+
+// Display filters: one cropping at a time, the window within the frame at
+// the render resolution, the shaders and bezels the folders hold, and the
+// built-in bezel or a custom one.
+void check_filter_domain()
+{
+	uae_prefs& p = test_prefs;
+	reset_prefs(p);
+	CHECK(value_of(p, "amiberry.gfx_manual_crop_width") == "754" && value_of(p, "amiberry.gfx_manual_crop_height") == "576");
+	CHECK(!available(p, "amiberry.gfx_manual_crop_width") && !available(p, "amiberry.gfx_horizontal_offset"));
+	CHECK(set(p, "amiberry.gfx_auto_crop", "true") == AMIBERRY_SETTINGS_OK);
+	CHECK(set(p, "amiberry.gfx_manual_crop", "true") == AMIBERRY_SETTINGS_UNAVAILABLE);
+	CHECK(set(p, "amiberry.gfx_auto_crop", "false") == AMIBERRY_SETTINGS_OK);
+	CHECK(set(p, "amiberry.gfx_manual_crop", "true") == AMIBERRY_SETTINGS_OK);
+	CHECK(!available(p, "amiberry.gfx_auto_crop"));
+	// The window: up to the frame at hires/double (754 x 576), offsets as far
+	// either way; a superhires frame is twice as wide.
+	CHECK(set(p, "amiberry.gfx_manual_crop_width", "700") == AMIBERRY_SETTINGS_OK && p.gfx_manual_crop_width == 700);
+	CHECK(set(p, "amiberry.gfx_manual_crop_width", "800") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	CHECK(set(p, "amiberry.gfx_manual_crop_height", "577") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	CHECK(set(p, "amiberry.gfx_horizontal_offset", "-754") == AMIBERRY_SETTINGS_OK);
+	CHECK(set(p, "amiberry.gfx_vertical_offset", "577") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	p.gfx_resolution = 2;
+	CHECK(set(p, "amiberry.gfx_manual_crop_width", "1400") == AMIBERRY_SETTINGS_OK);
+	CHECK(set(p, "amiberry.gfx_manual_crop_width", "1600") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	// Back at hires the window and offsets follow the narrower frame (and
+	// single lines the lower one).
+	p.gfx_horizontal_offset = 1400;
+	CHECK(set(p, "gfx_resolution", "hires") == AMIBERRY_SETTINGS_OK);
+	CHECK(p.gfx_manual_crop_width == 754 && p.gfx_horizontal_offset == 754);
+	CHECK(set(p, "gfx_linemode", "none") == AMIBERRY_SETTINGS_OK);
+	CHECK(p.gfx_manual_crop_height == 288);
+	// Auto crop clears the centering it would fight (target_fixup_options).
+	reset_prefs(p);
+	p.gfx_xcenter = p.gfx_ycenter = 2;
+	CHECK(set(p, "amiberry.gfx_auto_crop", "true") == AMIBERRY_SETTINGS_OK && !p.gfx_xcenter && !p.gfx_ycenter);
+
+	// Shaders from the folder's list; a configured one it lacks reads back.
+	CHECK(set(p, "amiberry.shader", "crt/crt-geom.glslp") == AMIBERRY_SETTINGS_OK && !strcmp(p.shader, "crt/crt-geom.glslp"));
+	CHECK(set(p, "amiberry.shader_rtg", "tv") == AMIBERRY_SETTINGS_OK && !strcmp(p.shader_rtg, "tv"));
+	CHECK(set(p, "amiberry.shader", "missing.glslp") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	strcpy(p.shader, "gone.glslp");
+	CHECK(value_of(p, "amiberry.shader") == "gone.glslp");
+
+	// A custom bezel image shows instead of the built-in bezel; "none" shows
+	// none. The built-in one turns the custom one off.
+	reset_prefs(p);
+	CHECK(!available(p, "amiberry.use_custom_bezel"));
+	CHECK(set(p, "amiberry.custom_bezel", "frames/arcade.png") == AMIBERRY_SETTINGS_OK);
+	CHECK(p.use_custom_bezel && !p.use_bezel && !available(p, "amiberry.use_bezel"));
+	CHECK(set(p, "amiberry.use_custom_bezel", "false") == AMIBERRY_SETTINGS_OK && available(p, "amiberry.use_bezel"));
+	CHECK(set(p, "amiberry.use_bezel", "true") == AMIBERRY_SETTINGS_OK && !p.use_custom_bezel);
+	CHECK(!available(p, "amiberry.custom_bezel"));
+	CHECK(set(p, "amiberry.use_bezel", "false") == AMIBERRY_SETTINGS_OK);
+	CHECK(set(p, "amiberry.custom_bezel", "none") == AMIBERRY_SETTINGS_OK && !p.use_custom_bezel);
+
+	// A host refresh rescans both folders.
+	const int rescans = display_catalog_rescans;
+	settings::refresh_dynamic_choices();
+	CHECK(display_catalog_rescans == rescans + 2);
 }
 
 // RTG: the board's options follow its type and memory, and the packed
@@ -3465,6 +3568,7 @@ int main(int argc, char** argv)
 	check_rtg_domain();
 	check_expansions_domain();
 	check_boards();
+	check_filter_domain();
 	check_mount_list();
 	check_active_values();
 	if (failures) {

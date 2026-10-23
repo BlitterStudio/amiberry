@@ -5,11 +5,12 @@
 #include <iostream>
 #include <string>
 
-#include "imgui/shader_catalog.h"
+#include "display_catalog.h"
 
 namespace {
 
 std::string shaders_path;
+std::string bezels_path;
 int failures;
 
 void expect(const bool condition, const char* message)
@@ -36,6 +37,11 @@ void create_file(const std::filesystem::path& path)
 std::string get_shaders_path()
 {
 	return shaders_path;
+}
+
+std::string get_bezels_path()
+{
+	return bezels_path;
 }
 
 int main()
@@ -75,6 +81,21 @@ int main()
 			"Changing the shader path must rescan automatically");
 		expect(!contains(get_available_shader_names(), "custom.glsl"),
 			"Changing the shader path must discard the previous catalog");
+
+		// The bezel catalog: "none" first, then the images by relative
+		// path, sorted; other files left out; cached until invalidated.
+		create_file(root / "bezels" / "zx.png");
+		create_file(root / "bezels" / "arcade" / "cab.JPG");
+		create_file(root / "bezels" / "readme.txt");
+		bezels_path = (root / "bezels").string();
+		const auto& bezels = get_available_bezel_names();
+		expect(bezels.size() == 3 && bezels[0] == "none", "Bezels must start with none");
+		expect(bezels.size() == 3 && bezels[1] == "arcade/cab.JPG" && bezels[2] == "zx.png",
+			"Bezel images must be listed by relative path, sorted");
+		create_file(root / "bezels" / "new.jpeg");
+		expect(!contains(get_available_bezel_names(), "new.jpeg"), "Bezels must stay cached until invalidated");
+		invalidate_bezel_catalog();
+		expect(contains(get_available_bezel_names(), "new.jpeg"), "Invalidating must find new bezels");
 	}
 	catch (const std::exception& error) {
 		std::cerr << error.what() << '\n';
