@@ -346,6 +346,49 @@ def main():
         check("the next reset makes the empty list active",
               control.request("LIST_HARDDRIVES") == "OK\t<no harddrives mounted>")
 
+        # Expansion boards: a unit edited in the session over the real board
+        # table, committed as a restart, and kept by the configuration
+        # writer (a board enabled without a ROM is saved as ":NOROM").
+        reply = control.request("SETTINGS_BOARDS")
+        types = reply.split("\t")
+        check("SETTINGS_BOARDS lists the expansion boards, not the accelerator",
+              types[0] == "OK" and "a2091" in types and "ide_mb" in types and "cpuboard" not in types, reply[:200])
+        reply = control.request("SETTINGS_BOARD_DESCRIBE\ta2091")
+        check("SETTINGS_BOARD_DESCRIBE lists the unit count and fields",
+              "\tunits=4\t" in reply and "\tfield=enabled\tfield=subtype\tfield=rom_file" in reply, reply)
+        reply = control.request("SETTINGS_BOARD_DESCRIBE\ta2091\tsubtype")
+        check("SETTINGS_BOARD_DESCRIBE describes a field",
+              reply.startswith("OK\ttype=choice\tapply=restart") and "\tchoice=dmac02" in reply, reply)
+        check("an A2091 unit starts disabled",
+              control.request("SETTINGS_BOARD_GET\ta2091\t1\tenabled") == "OK\tenabled=false\tavailable=true")
+        reply = control.request("SETTINGS_BOARD_SET\ta2091\t1\tsubtype\tdmac02")
+        check("a disabled unit has no variant to set", reply.startswith("ERROR\tOption unavailable"), reply)
+        check("SETTINGS_BOARD_SET enables the unit",
+              control.request("SETTINGS_BOARD_SET\ta2091\t1\tenabled\ttrue") == "OK")
+        check("SETTINGS_BOARD_SET picks its variant",
+              control.request("SETTINGS_BOARD_SET\ta2091\t1\tsubtype\tdmac02") == "OK")
+        check("SETTINGS_BOARD_SET takes an empty value (a board without its ROM)",
+              control.request("SETTINGS_BOARD_SET\ta2091\t1\trom_file\t") == "OK"
+              and control.request("SETTINGS_BOARD_GET\ta2091\t1\trom_file") == "OK\trom_file=\tavailable=true")
+        reply = control.request("SETTINGS_BOARD_GET\ta2091\t9\tenabled")
+        check("a unit past the board's count is refused", reply.startswith("ERROR\tUnknown board field"), reply)
+        reply = control.request("SETTINGS_COMMIT")
+        check("a changed board commits as a restart", reply == "OK\tchanged=true\tapply=restart", reply)
+        saved_state = os.path.join(work, "boards.uss")
+        saved_cfg = os.path.join(work, "boards.uae")
+        check("SAVESTATE writes the configuration",
+              control.request(f"SAVESTATE\t{saved_state}\t{saved_cfg}") == "OK" and os.path.exists(saved_cfg))
+        with open(saved_cfg, errors="replace") as f:
+            lines = f.read().splitlines()
+        check("the board is written with its ROM marker", "a2091-2_rom_file=:NOROM" in lines,
+              [line for line in lines if line.startswith("a2091")])
+        check("the board is written with its variant",
+              any(line.startswith("a2091-2_rom_options=") and "subtype=dmac02" in line for line in lines),
+              [line for line in lines if line.startswith("a2091")])
+        check("SETTINGS_BOARD_SET disables the unit again",
+              control.request("SETTINGS_BOARD_SET\ta2091\t1\tenabled\tfalse") == "OK"
+              and control.request("SETTINGS_COMMIT") == "OK\tchanged=true\tapply=restart")
+
         # Status and settings must not serve data from before an earlier
         # command in the same pass: LOAD_CONFIG changes the pending
         # configuration directly, and the next GET_STATUS and SETTINGS_GET

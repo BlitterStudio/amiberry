@@ -74,6 +74,10 @@ constexpr char const* CMD_SETTINGS_MOUNTS = "SETTINGS_MOUNTS";
 constexpr char const* CMD_SETTINGS_MOUNT_ADD = "SETTINGS_MOUNT_ADD";
 constexpr char const* CMD_SETTINGS_MOUNT_REPLACE = "SETTINGS_MOUNT_REPLACE";
 constexpr char const* CMD_SETTINGS_MOUNT_REMOVE = "SETTINGS_MOUNT_REMOVE";
+constexpr char const* CMD_SETTINGS_BOARDS = "SETTINGS_BOARDS";
+constexpr char const* CMD_SETTINGS_BOARD_DESCRIBE = "SETTINGS_BOARD_DESCRIBE";
+constexpr char const* CMD_SETTINGS_BOARD_GET = "SETTINGS_BOARD_GET";
+constexpr char const* CMD_SETTINGS_BOARD_SET = "SETTINGS_BOARD_SET";
 constexpr char const* CMD_HELP = "HELP";
 
 // Joystick, Quicksave, LED status, etc.

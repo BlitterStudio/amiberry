@@ -450,6 +450,9 @@ amiberry_apply_class amiberry_settings_commit(amiberry_settings_session* session
 			// Drives are attached when the emulation resets.
 			if (!amiberry_settings::same_mount_list(changed_prefs, *resolved) && AMIBERRY_APPLY_RESET > strongest)
 				strongest = AMIBERRY_APPLY_RESET;
+			// Boards are built when the emulation starts.
+			if (!amiberry_settings::same_boards(changed_prefs, *resolved) && AMIBERRY_APPLY_RESTART > strongest)
+				strongest = AMIBERRY_APPLY_RESTART;
 			copy_into(changed_prefs, *resolved);
 		}
 		copy_into(*session->working, *resolved);
@@ -512,6 +515,64 @@ amiberry_settings_status amiberry_settings_mount_remove(amiberry_settings_sessio
 		return AMIBERRY_SETTINGS_UNKNOWN_ID;
 	remove_mount(*session->working, static_cast<int>(index));
 	return AMIBERRY_SETTINGS_OK;
+}
+
+// The board catalog is built on first use (std::vector, std::string);
+// nothing may throw across the C API.
+size_t amiberry_settings_board_type_count(void)
+{
+	return amiberry_settings::no_throw(size_t{0}, [] { return amiberry_settings::board_type_count(); });
+}
+
+const amiberry_settings_board_type* amiberry_settings_board_type_at(size_t index)
+{
+	return amiberry_settings::no_throw(static_cast<const amiberry_settings_board_type*>(nullptr),
+		[index] { return amiberry_settings::board_type_at(index); });
+}
+
+const amiberry_settings_board_type* amiberry_settings_board_type_find(const char* id)
+{
+	return amiberry_settings::no_throw(static_cast<const amiberry_settings_board_type*>(nullptr),
+		[id] { return id ? amiberry_settings::board_type_find(id) : nullptr; });
+}
+
+const amiberry_setting_descriptor* amiberry_settings_board_field_at(const amiberry_settings_board_type* type,
+	size_t index)
+{
+	return amiberry_settings::no_throw(static_cast<const amiberry_setting_descriptor*>(nullptr),
+		[type, index] { return amiberry_settings::board_field_at(type, index); });
+}
+
+amiberry_settings_status amiberry_settings_board_get(const amiberry_settings_session* session, const char* type,
+	int unit, const char* field, char* buffer, size_t size)
+{
+	if (!session || !type || !field)
+		return AMIBERRY_SETTINGS_UNKNOWN_ID;
+	return amiberry_settings::no_throw(AMIBERRY_SETTINGS_UNKNOWN_ID, [=] {
+		return amiberry_settings::board_get(*session->working, type, unit, field, buffer, size);
+	});
+}
+
+amiberry_settings_status amiberry_settings_board_set(amiberry_settings_session* session, const char* type,
+	int unit, const char* field, const char* value)
+{
+	if (!session || !type || !field)
+		return AMIBERRY_SETTINGS_UNKNOWN_ID;
+	if (!value)
+		return AMIBERRY_SETTINGS_INVALID_VALUE;
+	return amiberry_settings::no_throw(AMIBERRY_SETTINGS_UNKNOWN_ID, [=] {
+		return amiberry_settings::board_set(*session->working, current_context(), type, unit, field, value);
+	});
+}
+
+bool amiberry_settings_board_field_available(const amiberry_settings_session* session, const char* type,
+	int unit, const char* field)
+{
+	if (!session || !type || !field)
+		return false;
+	return amiberry_settings::no_throw(false, [=] {
+		return amiberry_settings::board_field_available(*session->working, current_context(), type, unit, field);
+	});
 }
 
 // The preset is applied to the session's copy for get/is_available, and

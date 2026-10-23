@@ -14,6 +14,7 @@
 #include <vector>
 
 struct uae_prefs;
+struct expansionboardsettings;
 
 namespace amiberry_settings {
 
@@ -170,10 +171,42 @@ void sync_cpuboard_mem(uae_prefs& p);
 // configuration matches what the fixup resolves to.
 void mirror_cpuboard_mem(uae_prefs& p);
 
+// Board settings tables (expansionboardsettings, src/expansion.cpp), shared
+// by the accelerator jumpers and the expansion boards.
+// A selector's NUL-separated names: its own, then one per position. Only
+// selectors (EXPANSIONBOARD_MULTI) have such lists.
+std::vector<const char*> board_setting_names(const char* names);
+// Where entry index keeps its value in the settings word, as the core's
+// codec lays it out: a switch takes one bit, a selector the bits its
+// positions need, a text none.
+struct board_setting_bits {
+	int shift;
+	int bits;
+};
+board_setting_bits board_setting_bits_of(const expansionboardsettings* table, int index);
+// Whether the table has text settings (kept in romconfig::configtext).
+bool has_text_settings(const expansionboardsettings* table);
+
 // Merges the expansion board entries (expansionboard[], keyed by board type
 // and unit) a session changed from base into to, leaving the others as to
 // has them. Returns whether it wrote anything.
 bool merge_boards(const uae_prefs& base, const uae_prefs& from, uae_prefs& to);
+// Whether both list the same boards, configured the same.
+bool same_boards(const uae_prefs& a, const uae_prefs& b);
+
+// Expansion boards (amiberry_settings_board_*, settings_boards.cpp): the
+// board types, their fields, and units read and edited on any uae_prefs
+// (a session's copy, or changed_prefs for the ImGui panel). Main thread.
+size_t board_type_count();
+const amiberry_settings_board_type* board_type_at(size_t index);
+const amiberry_settings_board_type* board_type_find(std::string_view id);
+const amiberry_setting_descriptor* board_field_at(const amiberry_settings_board_type* type, size_t index);
+amiberry_settings_status board_get(const uae_prefs& p, std::string_view type, int unit, std::string_view field,
+	char* out, size_t size);
+amiberry_settings_status board_set(uae_prefs& p, const context& ctx, std::string_view type, int unit,
+	std::string_view field, std::string_view value);
+bool board_field_available(const uae_prefs& p, const context& ctx, std::string_view type, int unit,
+	std::string_view field);
 
 // The JIT cache size the checks after fixup_cpu() see (0 when the JIT is
 // not compiled in, inhibited, below a 68020 or in memory cycle-exact

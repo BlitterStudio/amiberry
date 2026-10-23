@@ -212,6 +212,40 @@ const cpuboardtype cpuboards[] = {
 	{BOARD_CYBERSTORM, "Phase 5 - CyberStorm", test_cyberstorm_sub},
 	{0, nullptr}};
 
+// A few entries of the core's expansion board table (expansion.cpp), laid
+// out like it: the accelerator (no expansion board), an A2091 with a 24-bit
+// DMA variant, a Zorro III SCSI board with an ID jumper and a switch, a
+// selector and a text setting, a PCMCIA card without a ROM, and the
+// built-in IDE controller.
+static const expansionsubromtype test_a2091_sub[] = {
+	{"DMAC-01", "dmac01", ROMTYPE_A2091, 0, 0, 0, false, 0},
+	{"DMAC-02", "dmac02", ROMTYPE_A2091, 0, 0, 0, false, EXPANSIONTYPE_DMA24},
+	{nullptr}};
+static const expansionboardsettings test_scsi_settings[] = {
+	{"Fast SCSI", "fast"},
+	{"Speed\0" "Slow\0" "Fast\0", "speed\0" "slow\0" "fast\0", EXPANSIONBOARD_MULTI, false, 0},
+	{"Name", "name", EXPANSIONBOARD_STRING, false, 0},
+	{nullptr}};
+const expansionromtype expansionroms[] = {
+	{"cpuboard", "Accelerator", "Accelerator", nullptr, nullptr, nullptr, nullptr, ROMTYPE_CPUBOARD, 0, 0, 0, true,
+		nullptr, 0, false, EXPANSIONTYPE_SCSI | EXPANSIONTYPE_IDE},
+	{"a2091", "A590/A2091", "Commodore", nullptr, nullptr, nullptr, nullptr, ROMTYPE_A2091, 0, 0, 2, false,
+		test_a2091_sub, 0, true, EXPANSIONTYPE_SCSI},
+	{"testscsi", "Test SCSI", "Tester", nullptr, nullptr, nullptr, nullptr, ROMTYPE_A4091, 0, 0, 3, true,
+		nullptr, 0, false, EXPANSIONTYPE_SCSI, 0, 0, 0, false, nullptr, true, 0, test_scsi_settings},
+	{"testpcmcia", "Test PCMCIA", nullptr, nullptr, nullptr, nullptr, nullptr, ROMTYPE_NE2KPCMCIA | ROMTYPE_NOT, 0, 0, 0,
+		true, nullptr, 0, false, EXPANSIONTYPE_NET | EXPANSIONTYPE_PCMCIA},
+	{"ide_mb", "A600/A1200/A4000 IDE", "Commodore", nullptr, nullptr, nullptr, nullptr, ROMTYPE_MB_IDE | ROMTYPE_NOT,
+		0, 0, BOARD_NONAUTOCONFIG_BEFORE, true, nullptr, 0, false, EXPANSIONTYPE_INTERNAL | EXPANSIONTYPE_IDE},
+	{"scsi_a3000", "A3000 SCSI", "Commodore", nullptr, nullptr, nullptr, nullptr, ROMTYPE_SCSI_A3000 | ROMTYPE_NOT,
+		0, 0, BOARD_NONAUTOCONFIG_AFTER_Z2, true, nullptr, 0, false, EXPANSIONTYPE_INTERNAL | EXPANSIONTYPE_SCSI},
+	{"scsi_a4000t", "A4000T SCSI", "Commodore", nullptr, nullptr, nullptr, nullptr, ROMTYPE_SCSI_A4000T | ROMTYPE_NOT,
+		0, 0, BOARD_NONAUTOCONFIG_BEFORE, true, nullptr, 0, false, EXPANSIONTYPE_INTERNAL | EXPANSIONTYPE_SCSI},
+	{"cd32fmv", "CD32 FMV", "Commodore", nullptr, nullptr, nullptr, nullptr, ROMTYPE_CD32CART, 0, 0,
+		BOARD_AUTOCONFIG_Z2, true, nullptr, 0, false, EXPANSIONTYPE_INTERNAL},
+	{nullptr}};
+void ethernet_updateselection() {}
+
 // The board ROM lookups, over the configuration's board list like the
 // core's (rommgr.cpp), for boards without a parent ROM type.
 boardromconfig* get_device_rom(uae_prefs* p, int romtype, int devnum, int* index)
@@ -224,6 +258,41 @@ boardromconfig* get_device_rom(uae_prefs* p, int romtype, int devnum, int* index
 	}
 	return nullptr;
 }
+void clear_device_rom(uae_prefs* p, int romtype, int devnum, bool delete_device)
+{
+	int index = 0;
+	boardromconfig* brc = get_device_rom(p, romtype, devnum, &index);
+	if (!brc)
+		return;
+	if (delete_device)
+		std::memset(static_cast<void*>(brc), 0, sizeof *brc);
+	else
+		std::memset(static_cast<void*>(&brc->roms[index]), 0, sizeof brc->roms[index]);
+}
+// The built-in controllers' entries follow their chipset fields, as the
+// core's cfgfile_compatibility_romtype() keeps them (addbcromtype): IDE on
+// cs_ide, A3000 or A4000T SCSI on cs_mbdmac 1 or 2 (neither for any other
+// value), the CD32 FMV cartridge on cs_cd32fmv, which then follows the
+// entry.
+static void addbcromtype(uae_prefs* p, int romtype, bool add, const TCHAR* romfile)
+{
+	if (!add) {
+		clear_device_rom(p, romtype, 0, true);
+		return;
+	}
+	boardromconfig* brc = get_device_rom_new(p, romtype, 0, nullptr);
+	if (brc && !brc->roms[0].romfile[0])
+		std::strcpy(brc->roms[0].romfile, romfile ? romfile : ":ENABLED");
+}
+void cfgfile_compatibility_romtype(uae_prefs* p)
+{
+	addbcromtype(p, ROMTYPE_MB_IDE, p->cs_ide != 0, nullptr);
+	addbcromtype(p, ROMTYPE_SCSI_A3000, p->cs_mbdmac == 1, nullptr);
+	addbcromtype(p, ROMTYPE_SCSI_A4000T, p->cs_mbdmac == 2, nullptr);
+	if (p->cs_cd32fmv)
+		addbcromtype(p, ROMTYPE_CD32CART, true, p->cartfile);
+	p->cs_cd32fmv = get_device_rom(p, ROMTYPE_CD32CART, 0, nullptr) != nullptr;
+}
 boardromconfig* get_device_rom_new(uae_prefs* p, int romtype, int devnum, int* index)
 {
 	if (boardromconfig* brc = get_device_rom(p, romtype, devnum, index))
@@ -233,8 +302,10 @@ boardromconfig* get_device_rom_new(uae_prefs* p, int romtype, int devnum, int* i
 			std::memset(&brc, 0, sizeof brc);
 			brc.device_type = romtype;
 			brc.device_num = devnum;
-			for (romconfig& rom : brc.roms)
+			for (romconfig& rom : brc.roms) {
 				rom.back = &brc; // as device_rom_defaults()
+				rom.device_id = 7;
+			}
 			return &brc;
 		}
 	}
@@ -305,8 +376,16 @@ static romdata test_cart_rom = [] {
 	rd.type = ROMTYPE_AR;
 	return rd;
 }();
-static romlist test_rom_list[] = {{const_cast<TCHAR*>("/roms/ar3.rom"), &test_cart_rom}};
-int romlist_count() { return 1; }
+// And an A2091 ROM, the ROM an A2091 enabled without one gets.
+static romdata test_a2091_rom = [] {
+	romdata rd{};
+	rd.name = "A590/A2091 SCSI boot ROM";
+	rd.type = ROMTYPE_A2091;
+	return rd;
+}();
+static romlist test_rom_list[] = {{const_cast<TCHAR*>("/roms/ar3.rom"), &test_cart_rom},
+	{const_cast<TCHAR*>("/roms/a2091.rom"), &test_a2091_rom}};
+int romlist_count() { return 2; }
 romlist* romlist_getit() { return test_rom_list; }
 // Like the core, getarcadiaroms() lists every known ALG game (type 1), or
 // every Arcadia BIOS and game (type 0, BIOS first), installed or not;
@@ -2138,6 +2217,176 @@ void check_expansions_domain()
 	CHECK(set(p, "sana2", "true") == AMIBERRY_SETTINGS_OK && p.sana2);
 }
 
+// Expansion boards: the board types the GUI offers, and units read and
+// edited by type, unit and field.
+std::string board_value(const uae_prefs& p, const char* type, int unit, const char* field)
+{
+	char text[MAX_DPATH];
+	if (settings::board_get(p, type, unit, field, text, sizeof text) != AMIBERRY_SETTINGS_OK)
+		return "<error>";
+	return text;
+}
+
+amiberry_settings_status board_set(uae_prefs& p, const char* type, int unit, const char* field, const char* value)
+{
+	return settings::board_set(p, settings::context{false}, type, unit, field, value);
+}
+
+bool board_available(const uae_prefs& p, const char* type, int unit, const char* field)
+{
+	return settings::board_field_available(p, settings::context{false}, type, unit, field);
+}
+
+std::vector<std::string> board_fields(const char* type)
+{
+	std::vector<std::string> ids;
+	const amiberry_settings_board_type* t = settings::board_type_find(type);
+	for (size_t i = 0; t && i < t->field_count; i++)
+		ids.emplace_back(settings::board_field_at(t, i)->id);
+	return ids;
+}
+
+void check_boards()
+{
+	uae_prefs& p = test_prefs;
+	reset_prefs(p);
+
+	// The catalog: every expansion board but the accelerator, with its
+	// categories, its unit count (Zorro II/III boards that are not single
+	// can be fitted several times) and the fields it has.
+	CHECK(settings::board_type_count() == 7 && !settings::board_type_find("cpuboard"));
+	const amiberry_settings_board_type* a2091 = settings::board_type_find("a2091");
+	CHECK(a2091 && a2091->units == MAX_AVAILABLE_DUPLICATE_EXPANSION_BOARDS);
+	CHECK(a2091 && a2091->categories == AMIBERRY_BOARD_SCSI && !std::strcmp(a2091->label, "A590/A2091"));
+	CHECK(settings::board_type_find("testscsi")->units == 1);
+	CHECK(settings::board_type_find("ide_mb")->categories == (AMIBERRY_BOARD_INTERNAL | AMIBERRY_BOARD_IDE));
+	CHECK(board_fields("a2091") == (std::vector<std::string>{"enabled", "subtype", "rom_file", "autoboot_disabled", "dma24bit"}));
+	CHECK(board_fields("testscsi")
+		== (std::vector<std::string>{"enabled", "rom_file", "scsi_id", "setting:fast", "setting:speed", "setting:name"}));
+	CHECK(board_fields("testpcmcia") == (std::vector<std::string>{"enabled", "inserted"}));
+	CHECK(settings::board_field_at(a2091, 1)->type == AMIBERRY_SETTING_CHOICE
+		&& settings::board_field_at(a2091, 1)->choice_count == 2);
+	CHECK(settings::board_field_at(a2091, 0)->apply == AMIBERRY_APPLY_RESTART);
+
+	// A unit without a board has nothing but its switch.
+	CHECK(board_value(p, "a2091", 0, "enabled") == "false");
+	CHECK(!board_available(p, "a2091", 0, "subtype"));
+	CHECK(board_set(p, "a2091", 0, "subtype", "dmac02") == AMIBERRY_SETTINGS_UNAVAILABLE);
+	CHECK(board_set(p, "a2091", 4, "enabled", "true") == AMIBERRY_SETTINGS_UNKNOWN_ID); // units 0-3
+	CHECK(board_set(p, "nosuchboard", 0, "enabled", "true") == AMIBERRY_SETTINGS_UNKNOWN_ID);
+	CHECK(board_set(p, "a2091", 0, "nosuchfield", "true") == AMIBERRY_SETTINGS_UNKNOWN_ID);
+	CHECK(board_set(p, "a2091", 0, "enabled", "yes") == AMIBERRY_SETTINGS_INVALID_VALUE);
+
+	// Enabled without a ROM file, it takes the scanned ROM of its type (what
+	// it loads anyway), so the configuration keeps the board.
+	CHECK(board_set(p, "a2091", 0, "enabled", "true") == AMIBERRY_SETTINGS_OK);
+	CHECK(board_value(p, "a2091", 0, "enabled") == "true");
+	CHECK(board_value(p, "a2091", 0, "rom_file") == "/roms/a2091.rom");
+	CHECK(board_value(p, "a2091", 0, "subtype") == "dmac01");
+	// 24-bit DMA comes with the DMAC-02 variant.
+	CHECK(!board_available(p, "a2091", 0, "dma24bit"));
+	CHECK(board_set(p, "a2091", 0, "subtype", "dmac02") == AMIBERRY_SETTINGS_OK);
+	CHECK(board_set(p, "a2091", 0, "dma24bit", "true") == AMIBERRY_SETTINGS_OK);
+	CHECK(board_set(p, "a2091", 0, "autoboot_disabled", "true") == AMIBERRY_SETTINGS_OK);
+	int index = 0;
+	boardromconfig* brc = get_device_rom(&p, ROMTYPE_A2091, 0, &index);
+	CHECK(brc && brc->roms[0].subtype == 1 && brc->roms[0].dma24bit && brc->roms[0].autoboot_disabled);
+	// No file is a board without its ROM; a new file drops the old ROM ident.
+	if (brc) {
+		std::strcpy(brc->roms[0].romident, ":A2091");
+		CHECK(board_set(p, "a2091", 0, "rom_file", "") == AMIBERRY_SETTINGS_OK);
+		CHECK(!std::strcmp(brc->roms[0].romfile, ":NOROM") && brc->roms[0].romident[0] == 0);
+		CHECK(board_value(p, "a2091", 0, "rom_file") == "");
+	}
+	// A second unit is a board of its own.
+	CHECK(board_set(p, "a2091", 3, "enabled", "true") == AMIBERRY_SETTINGS_OK);
+	CHECK(board_value(p, "a2091", 3, "subtype") == "dmac01");
+	CHECK(board_set(p, "a2091", 0, "enabled", "false") == AMIBERRY_SETTINGS_OK);
+	CHECK(!get_device_rom(&p, ROMTYPE_A2091, 0, &index) && get_device_rom(&p, ROMTYPE_A2091, 3, &index));
+
+	// A board without a scanned ROM keeps ":NOROM"; its ID jumper, switch,
+	// selector and text settings.
+	CHECK(board_set(p, "testscsi", 0, "enabled", "true") == AMIBERRY_SETTINGS_OK);
+	brc = get_device_rom(&p, ROMTYPE_A4091, 0, &index);
+	CHECK(brc && !std::strcmp(brc->roms[0].romfile, ":NOROM"));
+	CHECK(board_value(p, "testscsi", 0, "scsi_id") == "7");
+	CHECK(board_set(p, "testscsi", 0, "scsi_id", "6") == AMIBERRY_SETTINGS_OK);
+	CHECK(board_set(p, "testscsi", 0, "scsi_id", "8") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	CHECK(board_set(p, "testscsi", 0, "setting:fast", "true") == AMIBERRY_SETTINGS_OK);
+	CHECK(board_set(p, "testscsi", 0, "setting:speed", "fast") == AMIBERRY_SETTINGS_OK);
+	CHECK(board_set(p, "testscsi", 0, "setting:name", "Disk one") == AMIBERRY_SETTINGS_OK);
+	if (brc) {
+		// Switch bit 0, the 2-position selector one bit above it.
+		CHECK(brc->roms[0].device_id == 6 && brc->roms[0].device_settings == 3);
+		CHECK(!std::strcmp(brc->roms[0].configtext, "Disk one"));
+	}
+	CHECK(board_value(p, "testscsi", 0, "setting:speed") == "fast" && board_value(p, "testscsi", 0, "setting:name") == "Disk one");
+	CHECK(board_set(p, "testscsi", 0, "setting:name", std::string(ROMCONFIG_CONFIGTEXT_LEN, 'x').c_str())
+		== AMIBERRY_SETTINGS_INVALID_VALUE);
+
+	// A board without a ROM is enabled as the core marks it.
+	CHECK(board_set(p, "testpcmcia", 0, "enabled", "true") == AMIBERRY_SETTINGS_OK);
+	brc = get_device_rom(&p, ROMTYPE_NE2KPCMCIA, 0, &index);
+	CHECK(brc && !std::strcmp(brc->roms[0].romfile, ":ENABLED"));
+	CHECK(board_set(p, "testpcmcia", 0, "inserted", "true") == AMIBERRY_SETTINGS_OK && brc && brc->roms[0].inserted);
+
+	// The built-in IDE controller follows cs_ide on any machine (fixup_prefs
+	// keeps the user's over the machine's), as the machine's controller.
+	reset_prefs(p);
+	p.cs_compatible = CP_A4000;
+	CHECK(board_available(p, "ide_mb", 0, "enabled"));
+	CHECK(board_set(p, "ide_mb", 0, "enabled", "true") == AMIBERRY_SETTINGS_OK);
+	CHECK(p.cs_ide == IDE_A4000 && get_device_rom(&p, ROMTYPE_MB_IDE, 0, &index));
+	CHECK(board_value(p, "ide_mb", 0, "enabled") == "true");
+	CHECK(board_set(p, "ide_mb", 0, "enabled", "false") == AMIBERRY_SETTINGS_OK);
+	CHECK(p.cs_ide == 0 && !get_device_rom(&p, ROMTYPE_MB_IDE, 0, &index));
+	// Not on the Generic chipset, which sets them from the CPU.
+	p.cs_compatible = CP_GENERIC;
+	CHECK(!board_available(p, "ide_mb", 0, "enabled") && !board_available(p, "scsi_a3000", 0, "enabled"));
+	CHECK(board_available(p, "cd32fmv", 0, "enabled"));
+	p.cs_compatible = CP_A4000;
+	// A3000 or A4000T SCSI, one of the two (the core builds neither for a
+	// value other than 1 or 2), and enabled is what gets built.
+	CHECK(board_set(p, "scsi_a3000", 0, "enabled", "true") == AMIBERRY_SETTINGS_OK && p.cs_mbdmac == 1);
+	CHECK(board_set(p, "scsi_a4000t", 0, "enabled", "true") == AMIBERRY_SETTINGS_OK && p.cs_mbdmac == 2);
+	CHECK(board_value(p, "scsi_a3000", 0, "enabled") == "false" && board_value(p, "scsi_a4000t", 0, "enabled") == "true");
+	CHECK(board_set(p, "scsi_a3000", 0, "enabled", "false") == AMIBERRY_SETTINGS_OK && p.cs_mbdmac == 2); // not its own
+	CHECK(board_set(p, "scsi_a4000t", 0, "enabled", "false") == AMIBERRY_SETTINGS_OK && p.cs_mbdmac == 0);
+	p.cs_mbdmac = -1; // a generic chipset's 68000: no SCSI
+	cfgfile_compatibility_romtype(&p);
+	CHECK(board_value(p, "scsi_a3000", 0, "enabled") == "false" && board_value(p, "scsi_a4000t", 0, "enabled") == "false");
+	// The CD32 FMV cartridge: its flag goes with the entry, or the core
+	// would put the cartridge back.
+	reset_prefs(p);
+	std::strcpy(p.cartfile, "/roms/ar3.rom"); // another cartridge: not the FMV's ROM
+	CHECK(board_set(p, "cd32fmv", 0, "enabled", "true") == AMIBERRY_SETTINGS_OK && p.cs_cd32fmv);
+	brc = get_device_rom(&p, ROMTYPE_CD32CART, 0, &index);
+	CHECK(brc && !std::strcmp(brc->roms[0].romfile, ":NOROM"));
+	CHECK(board_set(p, "cd32fmv", 0, "enabled", "false") == AMIBERRY_SETTINGS_OK && !p.cs_cd32fmv);
+	cfgfile_compatibility_romtype(&p);
+	CHECK(!get_device_rom(&p, ROMTYPE_CD32CART, 0, &index));
+
+	// Through a session: the edits stay in it, and a commit with a changed
+	// board needs a restart; one without changes changes nothing.
+	reset_prefs(changed_prefs);
+	amiberry_settings_session* session = amiberry_settings_session_open();
+	CHECK(session);
+	char text[64];
+	CHECK(amiberry_settings_board_set(session, "a2091", 1, "enabled", "true") == AMIBERRY_SETTINGS_OK);
+	CHECK(amiberry_settings_board_get(session, "a2091", 1, "enabled", text, sizeof text) == AMIBERRY_SETTINGS_OK
+		&& !std::strcmp(text, "true"));
+	CHECK(amiberry_settings_board_get(session, "a2091", 1, "rom_file", text, 4) == AMIBERRY_SETTINGS_BUFFER_TOO_SMALL);
+	CHECK(amiberry_settings_board_set(session, "a2091", 1, "enabled", nullptr) == AMIBERRY_SETTINGS_INVALID_VALUE);
+	CHECK(!get_device_rom(&changed_prefs, ROMTYPE_A2091, 1, &index));
+	bool changed = false;
+	CHECK(amiberry_settings_commit(session, &changed) == AMIBERRY_APPLY_RESTART && changed);
+	CHECK(get_device_rom(&changed_prefs, ROMTYPE_A2091, 1, &index));
+	CHECK(amiberry_settings_commit(session, &changed) == AMIBERRY_APPLY_LIVE && !changed);
+	amiberry_settings_session_close(session);
+	CHECK(amiberry_settings_board_type_find(nullptr) == nullptr);
+	CHECK(amiberry_settings_board_type_at(amiberry_settings_board_type_count()) == nullptr);
+}
+
 // RTG: the board's options follow its type and memory, and the packed
 // entries (gfxcard_options, rtg_modes) agree with their parts.
 void check_rtg_domain()
@@ -3199,6 +3448,7 @@ int main(int argc, char** argv)
 	check_storage_domain();
 	check_rtg_domain();
 	check_expansions_domain();
+	check_boards();
 	check_mount_list();
 	check_active_values();
 	if (failures) {

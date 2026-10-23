@@ -230,3 +230,61 @@ public enum SettingsError: Error, Hashable, Sendable {
 		}
 	}
 }
+
+/// An expansion board type: SCSI, IDE and network controllers, bridgeboards,
+/// sound and graphics cards and the machines' built-in controllers. A unit
+/// of it has `fields`: "enabled" first, then as the type has them
+/// "subtype", "rom_file", "scsi_id", "autoboot_disabled", "inserted",
+/// "dma24bit" and the board's own "setting:<name>" fields.
+public struct BoardType: Hashable, Sendable, Identifiable {
+	public struct Categories: OptionSet, Hashable, Sendable {
+		public let rawValue: UInt32
+		public init(rawValue: UInt32) { self.rawValue = rawValue }
+		public static let builtIn = Categories(rawValue: AMIBERRY_BOARD_INTERNAL)
+		public static let scsi = Categories(rawValue: AMIBERRY_BOARD_SCSI)
+		public static let ide = Categories(rawValue: AMIBERRY_BOARD_IDE)
+		public static let sasi = Categories(rawValue: AMIBERRY_BOARD_SASI)
+		public static let custom = Categories(rawValue: AMIBERRY_BOARD_CUSTOM)
+		public static let pciBridge = Categories(rawValue: AMIBERRY_BOARD_PCI_BRIDGE)
+		public static let x86Bridge = Categories(rawValue: AMIBERRY_BOARD_X86_BRIDGE)
+		public static let rtg = Categories(rawValue: AMIBERRY_BOARD_RTG)
+		public static let sound = Categories(rawValue: AMIBERRY_BOARD_SOUND)
+		public static let network = Categories(rawValue: AMIBERRY_BOARD_NETWORK)
+		public static let floppy = Categories(rawValue: AMIBERRY_BOARD_FLOPPY)
+		public static let x86Expansion = Categories(rawValue: AMIBERRY_BOARD_X86_EXPANSION)
+	}
+
+	/// The configuration name, for example "a2091".
+	public let id: String
+	public let label: String
+	public let manufacturer: String?
+	public let categories: Categories
+	/// How many of it a configuration can have; units are numbered from 0.
+	public let units: Int
+	public let fields: [SettingDescriptor]
+
+	init(_ pointer: UnsafePointer<amiberry_settings_board_type>) {
+		let t = pointer.pointee
+		id = layerString(t.id)
+		label = layerString(t.label)
+		manufacturer = optionalLayerString(t.manufacturer)
+		categories = Categories(rawValue: UInt32(t.categories))
+		units = Int(t.units)
+		fields = (0..<t.field_count).compactMap { index in
+			amiberry_settings_board_field_at(pointer, index).map { SettingDescriptor($0.pointee) }
+		}
+	}
+}
+
+/// Every expansion board type, in the layer's order.
+public enum BoardCatalog {
+	public static let types: [BoardType] = {
+		(0..<amiberry_settings_board_type_count()).compactMap { index in
+			amiberry_settings_board_type_at(index).map { BoardType($0) }
+		}
+	}()
+
+	public static func type(_ id: String) -> BoardType? {
+		types.first { $0.id == id }
+	}
+}
