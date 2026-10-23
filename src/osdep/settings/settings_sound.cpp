@@ -92,7 +92,16 @@ std::string soundcard_name(int card)
 struct session_selection {
 	uae_prefs* prefs;
 	std::string device;
+	std::string sampler; // the parallel port sampler's audio input, if any
 };
+
+// The sampler's input a configuration selects, by name; empty for none.
+std::string sampler_name(int card)
+{
+	if (card < 0 || card >= MAX_SOUND_DEVICES || !record_devices[card] || !record_devices[card]->cfgname)
+		return {};
+	return record_devices[card]->cfgname;
+}
 
 void refresh_soundcard_choices()
 {
@@ -105,10 +114,22 @@ void refresh_soundcard_choices()
 	// device that is gone falls back to the first one, as there).
 	std::vector<session_selection> selections;
 	for_each_session_config([](uae_prefs& p, void* context) {
-		static_cast<std::vector<session_selection>*>(context)->push_back({&p, soundcard_name(p.soundcard)});
+		static_cast<std::vector<session_selection>*>(context)->push_back(
+			{&p, soundcard_name(p.soundcard), sampler_name(p.samplersoundcard)});
 	}, &selections);
 	refresh_sound_devices();
 	for (const session_selection& s : selections) {
+		// The sampler's input too, by name; one that is gone is no sampler.
+		if (!s.sampler.empty()) {
+			int input = -1;
+			for (int i = 0; i < MAX_SOUND_DEVICES && record_devices[i]; i++) {
+				if (record_devices[i]->cfgname && s.sampler == record_devices[i]->cfgname) {
+					input = i;
+					break;
+				}
+			}
+			s.prefs->samplersoundcard = input;
+		}
 		if (s.device.empty())
 			continue;
 		int card = 0;

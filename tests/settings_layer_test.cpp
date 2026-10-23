@@ -124,8 +124,10 @@ struct sound_device* sound_devices[MAX_SOUND_DEVICES] = { &test_sound_devices[0]
 static bool swap_sound_devices = false;
 void refresh_sound_devices()
 {
-	if (swap_sound_devices)
+	if (swap_sound_devices) {
 		std::swap(sound_devices[0], sound_devices[1]);
+		std::swap(record_devices[0], record_devices[1]);
+	}
 }
 static int sound_device_count = 2;
 int enumerate_sound_devices() { return sound_device_count; }
@@ -232,9 +234,11 @@ int enummidiports()
 	midi_out_ports.emplace_back("Synth Out");
 	return 2;
 }
-static struct sound_device test_record_device = { {}, 0, const_cast<TCHAR*>("Test Microphone"), nullptr,
-	const_cast<TCHAR*>("microphone"), nullptr, 0, SOUND_DEVICE_SDL };
-struct sound_device* record_devices[MAX_SOUND_DEVICES] = { &test_record_device };
+static struct sound_device test_record_devices[2] = {
+	{ {}, 0, const_cast<TCHAR*>("Test Microphone"), nullptr, const_cast<TCHAR*>("microphone"), nullptr, 0, SOUND_DEVICE_SDL },
+	{ {}, 1, const_cast<TCHAR*>("Test Line In"), nullptr, const_cast<TCHAR*>("linein"), nullptr, 0, SOUND_DEVICE_SDL },
+};
+struct sound_device* record_devices[MAX_SOUND_DEVICES] = { &test_record_devices[0], &test_record_devices[1] };
 
 // The shaders and bezels folders: two built-in shaders and a preset, one
 // bezel image; an invalidate counts as a rescan.
@@ -2504,7 +2508,7 @@ void check_io_domain()
 	CHECK(set(p, "amiberry.parallel_port", "FILE:/tmp") == AMIBERRY_SETTINGS_OK && p.samplersoundcard == -1);
 	CHECK(set(p, "amiberry.parallel_port", "none") == AMIBERRY_SETTINGS_OK && p.prtname[0] == 0);
 	CHECK(set(p, "amiberry.parallel_port", std::string(MAX_DPATH, 'x').c_str()) == AMIBERRY_SETTINGS_INVALID_VALUE);
-	CHECK(set(p, "amiberry.samplersoundcard", "1") == AMIBERRY_SETTINGS_INVALID_VALUE); // one input
+	CHECK(set(p, "amiberry.samplersoundcard", "2") == AMIBERRY_SETTINGS_INVALID_VALUE); // two inputs
 
 	// Serial: the port turns serial on; its options need one.
 	CHECK(!available(p, "serial_on_demand") && value_of(p, "serial_port") == "none");
@@ -3113,6 +3117,19 @@ void check_sound_domain()
 	CHECK(amiberry_settings_get(session, "amiberry.soundcard", card, sizeof card) == AMIBERRY_SETTINGS_OK);
 	CHECK(std::strcmp(card, "0") == 0);
 	amiberry_settings_session_close(session);
+	std::swap(sound_devices[0], sound_devices[1]);
+	std::swap(record_devices[0], record_devices[1]);
+	amiberry_settings_refresh_choices();
+	// So is its sampler's audio input.
+	session = amiberry_settings_session_open();
+	CHECK(amiberry_settings_set(session, "amiberry.samplersoundcard", "1") == AMIBERRY_SETTINGS_OK); // line in
+	swap_sound_devices = true;
+	amiberry_settings_refresh_choices();
+	swap_sound_devices = false;
+	CHECK(amiberry_settings_get(session, "amiberry.samplersoundcard", card, sizeof card) == AMIBERRY_SETTINGS_OK);
+	CHECK(std::strcmp(card, "0") == 0);
+	amiberry_settings_session_close(session);
+	std::swap(record_devices[0], record_devices[1]);
 	std::swap(sound_devices[0], sound_devices[1]);
 	amiberry_settings_refresh_choices();
 
