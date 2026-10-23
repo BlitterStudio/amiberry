@@ -562,6 +562,13 @@ amiberry_settings_status add_entry(uae_prefs& p, const board_type& t, int unit)
 amiberry_settings_status set_internal(uae_prefs& p, const context& ctx, const board_type& t, bool on)
 {
 	if (t.internal->option) {
+		// The core builds the CDTV DMAC only without the CDTV-CR (one or
+		// the other), so turning it on turns the CDTV-CR off.
+		if (on && is_type(t, ROMTYPE_CDTVDMAC) && p.cs_cdtvcr) {
+			const amiberry_settings_status status = set(require("cdtv-cr"), p, ctx, "false");
+			if (status != AMIBERRY_SETTINGS_OK)
+				return status;
+		}
 		const amiberry_settings_status status = set(require(t.internal->option), p, ctx, on ? "true" : "false");
 		if (status != AMIBERRY_SETTINGS_OK)
 			return status;

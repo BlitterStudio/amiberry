@@ -243,6 +243,10 @@ const expansionromtype expansionroms[] = {
 		0, 0, BOARD_NONAUTOCONFIG_BEFORE, true, nullptr, 0, false, EXPANSIONTYPE_INTERNAL | EXPANSIONTYPE_SCSI},
 	{"cd32fmv", "CD32 FMV", "Commodore", nullptr, nullptr, nullptr, nullptr, ROMTYPE_CD32CART, 0, 0,
 		BOARD_AUTOCONFIG_Z2, true, nullptr, 0, false, EXPANSIONTYPE_INTERNAL},
+	{"cdtvdmac", "CDTV DMAC", "Commodore", nullptr, nullptr, nullptr, nullptr, ROMTYPE_CDTVDMAC | ROMTYPE_NOT, 0, 0,
+		BOARD_AUTOCONFIG_Z2, true, nullptr, 0, false, EXPANSIONTYPE_INTERNAL},
+	{"cdtvcr", "CDTV-CR", "Commodore", nullptr, nullptr, nullptr, nullptr, ROMTYPE_CDTVCR | ROMTYPE_NOT, 0, 0,
+		BOARD_NONAUTOCONFIG_AFTER_Z2, true, nullptr, 0, false, EXPANSIONTYPE_INTERNAL},
 	{nullptr}};
 void ethernet_updateselection() {}
 
@@ -272,7 +276,8 @@ void clear_device_rom(uae_prefs* p, int romtype, int devnum, bool delete_device)
 // The built-in controllers' entries follow their chipset fields, as the
 // core's cfgfile_compatibility_romtype() keeps them (addbcromtype): IDE on
 // cs_ide, A3000 or A4000T SCSI on cs_mbdmac 1 or 2 (neither for any other
-// value), the CD32 FMV cartridge on cs_cd32fmv, which then follows the
+// value), the CDTV DMAC on cs_cdtvcd without cs_cdtvcr, the CDTV-CR on
+// cs_cdtvcr, the CD32 FMV cartridge on cs_cd32fmv, which then follows the
 // entry.
 static void addbcromtype(uae_prefs* p, int romtype, bool add, const TCHAR* romfile)
 {
@@ -289,6 +294,8 @@ void cfgfile_compatibility_romtype(uae_prefs* p)
 	addbcromtype(p, ROMTYPE_MB_IDE, p->cs_ide != 0, nullptr);
 	addbcromtype(p, ROMTYPE_SCSI_A3000, p->cs_mbdmac == 1, nullptr);
 	addbcromtype(p, ROMTYPE_SCSI_A4000T, p->cs_mbdmac == 2, nullptr);
+	addbcromtype(p, ROMTYPE_CDTVDMAC, p->cs_cdtvcd && !p->cs_cdtvcr, nullptr);
+	addbcromtype(p, ROMTYPE_CDTVCR, p->cs_cdtvcr, nullptr);
 	if (p->cs_cd32fmv)
 		addbcromtype(p, ROMTYPE_CD32CART, true, p->cartfile);
 	p->cs_cd32fmv = get_device_rom(p, ROMTYPE_CD32CART, 0, nullptr) != nullptr;
@@ -2254,7 +2261,7 @@ void check_boards()
 	// The catalog: every expansion board but the accelerator, with its
 	// categories, its unit count (Zorro II/III boards that are not single
 	// can be fitted several times) and the fields it has.
-	CHECK(settings::board_type_count() == 7 && !settings::board_type_find("cpuboard"));
+	CHECK(settings::board_type_count() == 9 && !settings::board_type_find("cpuboard"));
 	const amiberry_settings_board_type* a2091 = settings::board_type_find("a2091");
 	CHECK(a2091 && a2091->units == MAX_AVAILABLE_DUPLICATE_EXPANSION_BOARDS);
 	CHECK(a2091 && a2091->categories == AMIBERRY_BOARD_SCSI && !std::strcmp(a2091->label, "A590/A2091"));
@@ -2355,6 +2362,15 @@ void check_boards()
 	p.cs_mbdmac = -1; // a generic chipset's 68000: no SCSI
 	cfgfile_compatibility_romtype(&p);
 	CHECK(board_value(p, "scsi_a3000", 0, "enabled") == "false" && board_value(p, "scsi_a4000t", 0, "enabled") == "false");
+	// The CDTV DMAC or the CDTV-CR (the core builds no DMAC beside the
+	// CR), through their chipset options: a custom chipset.
+	reset_prefs(p);
+	CHECK(!board_available(p, "cdtvdmac", 0, "enabled"));
+	p.cs_compatible = 0;
+	CHECK(board_set(p, "cdtvcr", 0, "enabled", "true") == AMIBERRY_SETTINGS_OK && p.cs_cdtvcr);
+	CHECK(board_set(p, "cdtvdmac", 0, "enabled", "true") == AMIBERRY_SETTINGS_OK);
+	CHECK(p.cs_cdtvcd && !p.cs_cdtvcr && board_value(p, "cdtvdmac", 0, "enabled") == "true");
+	CHECK(board_value(p, "cdtvcr", 0, "enabled") == "false");
 	// The CD32 FMV cartridge: its flag goes with the entry, or the core
 	// would put the cartridge back.
 	reset_prefs(p);

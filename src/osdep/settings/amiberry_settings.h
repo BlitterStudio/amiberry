@@ -297,7 +297,7 @@ AMIBERRY_SETTINGS_API amiberry_settings_status amiberry_settings_mount_remove(
  * the machine has it as: the IDE controller ("ide"), A3000 or A4000T SCSI
  * (one of the two) and the CD32 FMV cartridge on any machine, PCMCIA and
  * the CDTV controllers through their options ("pcmcia", "cdtvcd",
- * "cdtv-cr"), which a custom chipset has.
+ * "cdtv-cr"), which a custom chipset has (the CDTV DMAC or the CDTV-CR).
  */
 #define AMIBERRY_BOARD_INTERNAL      0x0001u /* built into a machine */
 #define AMIBERRY_BOARD_SCSI          0x0002u
