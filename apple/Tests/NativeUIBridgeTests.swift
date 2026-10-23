@@ -275,6 +275,18 @@ final class EmulatorActionsTests: XCTestCase {
 		XCTAssertNil(EmulatorActions.post(.saveStateSlot(10)))
 		XCTAssertNil(EmulatorActions.post(.insertSwapperEntry(index: EmulatorActions.swapperEntryCount, drive: 0)))
 		XCTAssertNil(EmulatorActions.post(.chooseMedia(.floppy(drive: 4))))
+		XCTAssertNil(EmulatorActions.post(.key(code: 0x80, pressed: true)))
+		XCTAssertNil(EmulatorActions.post(.key(code: -1, pressed: false)))
+	}
+
+	/// The tests run where the settings UI would show, before any emulation:
+	/// a key press has nothing to reach, a release always goes through.
+	func testKeyPressesNeedARunningEmulation() throws {
+		let press = try XCTUnwrap(EmulatorActions.post(.key(code: 0x45, pressed: true)))
+		let release = try XCTUnwrap(EmulatorActions.post(.key(code: 0x45, pressed: false)))
+		ActionPump.runPending()
+		XCTAssertEqual(press.poll(), .failed("No emulation is running"))
+		XCTAssertEqual(release.poll(), .done)
 	}
 
 	func testPostedActionsRunOnTheMainThreadInOrder() throws {

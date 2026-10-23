@@ -54,7 +54,7 @@
 extern "C" {
 #endif
 
-#define AMIBERRY_ACTIONS_API_VERSION 3
+#define AMIBERRY_ACTIONS_API_VERSION 4
 
 /* Largest MAX_DPATH (PATH_MAX) any supported platform builds with, so every
    media path the emulator can store fits, NUL included. */
@@ -184,6 +184,20 @@ typedef enum amiberry_media_request {
  * and in a libretro core.
  */
 AMIBERRY_ACTIONS_API amiberry_action_id amiberry_actions_choose_media(amiberry_media_request request);
+
+/* Largest Amiga key code (raw keyboard code, 0x00-0x7F). */
+#define AMIBERRY_ACTIONS_MAX_AMIGA_KEY 0x7F
+
+/*
+ * Presses or releases a key of the emulated keyboard, by Amiga raw key code
+ * (0x00-0x7F, as the keyboard sends it: 0x45 Esc, 0x60 left Shift ...), as an
+ * on-screen keyboard does. A press reaches the emulation as the next keyboard
+ * event; every press needs its release. 0 for a code outside the range.
+ * A press FAILS while no emulation runs or the settings UI is open; a
+ * release always succeeds, so no key stays down. FAILED in a libretro core,
+ * whose front end owns the keyboard.
+ */
+AMIBERRY_ACTIONS_API amiberry_action_id amiberry_actions_key(int amiga_key, bool pressed);
 
 /*
  * Ask what became of a posted action. Callable from any thread; polling

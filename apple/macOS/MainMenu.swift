@@ -47,7 +47,7 @@ final class MenuCommands: NSObject, NSMenuItemValidation {
 	var runState: () -> EmulatorStatus.RunState = { EmulatorStatus.current().runState }
 	/// Whether the settings window is up (it has the media then); replaced
 	/// by the tests.
-	var settingsOpen: () -> Bool = { SettingsWindowController.shared.isVisible }
+	var settingsOpen: () -> Bool = { SettingsPresenter.shared.isVisible }
 
 	static let emulationTitle = "Emulation"
 	static let mediaTitle = "Media"

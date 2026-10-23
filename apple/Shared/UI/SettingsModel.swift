@@ -1,13 +1,20 @@
 /*
  * Copyright (C) 2026 BlitterStudio
- * The native macOS settings window: what the emulator shows instead of the
- * built-in GUI. Every option comes from the settings layer; the window
- * edits one session and commits it when the user starts or resumes.
+ * The native settings UI's model, shared by the macOS window and the iOS
+ * screen: what the emulator shows instead of the built-in GUI. Every option
+ * comes from the settings layer; the UI edits one session and commits it
+ * when the user starts or resumes.
  */
 
-import AppKit
+import AmiberrySettings
+import Foundation
 import Observation
 import SwiftUI
+#if os(macOS)
+import AppKit
+#else
+import UIKit
+#endif
 
 /// A page of the settings window.
 enum SettingsPage: Hashable, Identifiable {
@@ -157,6 +164,45 @@ final class SettingsWindowModel {
 		dismiss()
 	}
 
+	/// The state saved as the iOS app last went to the background, when
+	/// there is one and nothing runs yet. Only the iOS app writes it (on a
+	/// Mac, a file of that name is the user's own).
+	var autosave: (path: String, date: Date)? {
+		#if os(iOS)
+		guard !emulating, let folder = try? MediaLibrary.path(of: .saveStates) else { return nil }
+		let path = URL(fileURLWithPath: folder).appendingPathComponent(AMIBERRY_AUTOSAVE_STATE_NAME).path
+		guard let attributes = try? FileManager.default.attributesOfItem(atPath: path),
+			let date = attributes[.modificationDate] as? Date
+		else { return nil }
+		return (path, date)
+		#else
+		return nil
+		#endif
+	}
+
+	/// Restores the autosave state: the emulation starts from it, and the
+	/// screen closes as for any state load. A state the emulator refuses
+	/// leaves the screen up with the reason.
+	func resumeAutosave(_ path: String) {
+		guard let ticket = EmulatorActions.post(.loadState(path: path)) else {
+			notice = "The emulator did not accept the request. Try again."
+			return
+		}
+		Task { @MainActor [weak self] in
+			while true {
+				switch ticket.poll() {
+				case .pending:
+					try? await Task.sleep(for: .milliseconds(20))
+				case let .failed(message):
+					self?.notice = message
+					return
+				case .done, .unknown:
+					return
+				}
+			}
+		}
+	}
+
 	func quit() {
 		guard request(.quit) else { return }
 		dismiss()
@@ -200,7 +246,11 @@ final class SettingsWindowModel {
 
 	private func commit() -> Bool {
 		// A field still being edited stores its text as editing ends.
+		#if os(macOS)
 		NSApplication.shared.keyWindow?.makeFirstResponder(nil)
+		#else
+		UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+		#endif
 		do {
 			try store.commit()
 			return true
@@ -224,68 +274,5 @@ final class SettingsWindowModel {
 		case let .valueTooLong(id): return "\(SettingsCatalog.descriptor(for: id)?.label ?? id): the value is too long."
 		case .outOfMemory: return "Out of memory."
 		}
-	}
-}
-
-/// The settings window, shown by the emulator in place of the built-in GUI.
-@MainActor
-final class SettingsWindowController: NSObject, NSWindowDelegate {
-	static let shared = SettingsWindowController()
-
-	private var window: NSWindow?
-	private(set) var model: SettingsWindowModel?
-
-	/// Whether the window is presented, minimised or not; the emulator
-	/// waits until it is dismissed.
-	var isVisible: Bool { model != nil }
-
-	func show(emulating: Bool) {
-		let model: SettingsWindowModel
-		do {
-			model = try SettingsWindowModel(emulating: emulating, dismiss: { [weak self] in self?.dismiss() })
-		} catch {
-			Alerts.show(title: "Settings", message: SettingsWindowModel.describe(error), buttons: ["OK"])
-			return
-		}
-		let window = self.window ?? makeWindow()
-		window.contentViewController = NSHostingController(rootView: SettingsRootView(model: model))
-		window.title = emulating ? "Amiberry Settings" : "Amiberry"
-		if self.window == nil {
-			window.setContentSize(NSSize(width: 900, height: 620))
-			window.center()
-		}
-		self.window = window
-		self.model = model
-		NSApplication.shared.activate(ignoringOtherApps: true)
-		window.makeKeyAndOrderFront(nil)
-	}
-
-	func dismiss() {
-		window?.orderOut(nil)
-		window?.contentViewController = nil
-		model = nil
-	}
-
-	func windowShouldClose(_ sender: NSWindow) -> Bool {
-		model?.closeRequested()
-		return false
-	}
-
-	private func makeWindow() -> NSWindow {
-		let window = NSWindow(
-			contentRect: NSRect(x: 0, y: 0, width: 900, height: 620),
-			styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
-			backing: .buffered, defer: false)
-		window.isReleasedWhenClosed = false
-		window.setFrameAutosaveName("AmiberrySettings")
-		window.minSize = NSSize(width: 720, height: 480)
-		// Over a full-screen emulation the window shows on the emulation's
-		// Space, as the built-in GUI shows inside it.
-		window.collectionBehavior = [.fullScreenAuxiliary, .moveToActiveSpace]
-		// Ordering animations need the application's run loop, which the
-		// emulation loop only pumps for events: show and hide at once.
-		window.animationBehavior = .none
-		window.delegate = self
-		return window
 	}
 }

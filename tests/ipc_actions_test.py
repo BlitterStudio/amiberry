@@ -467,6 +467,24 @@ def main():
         reply = control.request("LIST_CONFIGS")
         check("LIST_CONFIGS lists bare configuration names", reply == "OK\tgame.uae", reply)
 
+        # SEND_KEY presses and releases Amiga keys through the key action:
+        # a press needs a running emulation without the settings UI over it,
+        # a release always goes through so no key stays down.
+        check("SEND_KEY press (Esc)", control.request("SEND_KEY\t69\t1") == "OK")
+        check("SEND_KEY release (Esc)", control.request("SEND_KEY\t69\t0") == "OK")
+        check("OPEN_SETTINGS for the key checks", control.request("OPEN_SETTINGS") == "OK")
+        deadline = time.monotonic() + 5
+        while "Paused=true" not in control.request("GET_STATUS") and time.monotonic() < deadline:
+            time.sleep(0.05)
+        reply = control.request("SEND_KEY\t69\t1")
+        check("SEND_KEY press under the settings UI is refused",
+              reply == "ERROR\tThe settings UI is open", reply)
+        check("SEND_KEY release under the settings UI", control.request("SEND_KEY\t69\t0") == "OK")
+        check("RESET closes the settings UI (key checks)", control.request("RESET") == "OK")
+        deadline = time.monotonic() + 5
+        while "Paused=false" not in control.request("GET_STATUS") and time.monotonic() < deadline:
+            time.sleep(0.05)
+
         # OPEN_SETTINGS opens the settings UI at the next frame. It holds the
         # emulation paused, IPC keeps answering, and a reset (an emulation
         # request, as the GUI's Reboot) closes it. Twice: closing it must

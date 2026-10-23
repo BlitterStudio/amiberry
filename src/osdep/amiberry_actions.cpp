@@ -192,6 +192,14 @@ bool execute(const request& r, void*, std::string* error)
 			emulation_requests++;
 			return true;
 		}
+		// A key release always goes through (amiberry_actions_key), so no
+		// key stays down in the emulation being replaced.
+#ifndef LIBRETRO
+		if (r.k == kind::key && !r.flag_a) {
+			inputdevice_do_keyboard(r.number, 0);
+			return true;
+		}
+#endif
 		*error = "The emulator is restarting";
 		return false;
 	}
@@ -422,6 +430,21 @@ bool execute(const request& r, void*, std::string* error)
 		}
 		return true;
 #endif
+
+	case kind::key:
+#ifdef LIBRETRO
+		*error = "The keyboard is up to the libretro front end";
+		return false;
+#else
+		// A release always goes through, so a key pressed before the
+		// emulation paused does not stay down.
+		if (r.flag_a && (!emulating || gui_active > 0)) {
+			*error = emulating ? "The settings UI is open" : "No emulation is running";
+			return false;
+		}
+		inputdevice_do_keyboard(r.number, r.flag_a ? 1 : 0);
+		return true;
+#endif
 	}
 	*error = "unknown action";
 	return false;
@@ -622,6 +645,13 @@ amiberry_action_id amiberry_actions_choose_media(amiberry_media_request request)
 	if (request < AMIBERRY_REQUEST_FLOPPY0 || request > AMIBERRY_REQUEST_CD)
 		return 0;
 	return post(kind::choose_media, 0, static_cast<int>(request));
+}
+
+amiberry_action_id amiberry_actions_key(int amiga_key, bool pressed)
+{
+	if (amiga_key < 0 || amiga_key > AMIBERRY_ACTIONS_MAX_AMIGA_KEY)
+		return 0;
+	return post(kind::key, 0, amiga_key, pressed);
 }
 
 amiberry_action_result amiberry_actions_poll(amiberry_action_id id,

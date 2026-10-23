@@ -52,6 +52,9 @@
 		<true/>
 		<key>UIRequiresFullScreen</key>
 		<true/>
+		<!-- Mouse and trackpad events reach SDL as mouse input (iPad). -->
+		<key>UIApplicationSupportsIndirectInputEvents</key>
+		<true/>
 		<key>CFBundleDocumentTypes</key>
 		<array>
 			<dict>

@@ -79,6 +79,7 @@
 #include "amiberry_gfx.h"
 #include "amiberry_input.h"
 #include "imgui_osk.h"
+#include "native_ui_host.h"
 #endif
 
 // 01 = host events
@@ -5678,8 +5679,13 @@ static bool inputdevice_handle_inputcode2(int monid, int code, int state, const 
 		set_config_changed();
 		break;
 	case AKS_OSK:
-		if (vkbd_allowed(0))
+		if (vkbd_allowed(0)) {
+#if defined(AMIBERRY_NATIVE_HOST) && defined(AMIBERRY_IOS)
+			native_host_toggle_keyboard();
+#else
 			imgui_osk_toggle();
+#endif
+		}
 		break;
 	case AKS_DISKSWAPPER_NEXT_INSERT0:
 		swapperslot++;

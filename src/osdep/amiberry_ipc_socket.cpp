@@ -822,6 +822,11 @@ static std::string HandleSendKey(const std::vector<std::string>& args)
 		return make_response(false, {"Invalid keycode or state"});
 	}
 
+	// Amiga keys go through the key action (a press needs a running
+	// emulation); higher codes are input events (AKS_*), as before.
+	if (keycode >= 0 && keycode <= AMIBERRY_ACTIONS_MAX_AMIGA_KEY)
+		return run_posted_reply(amiberry_actions_key(keycode, state != 0));
+
 	inputdevice_do_keyboard(keycode, state);
 
 	return make_response(true);

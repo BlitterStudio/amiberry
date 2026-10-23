@@ -1,6 +1,7 @@
 /*
- * C++ side of the native macOS front end (see native_ui_host.h); the
- * windows and menus are Swift (apple/macOS).
+ * C++ side of the native Apple front ends (see native_ui_host.h); the
+ * windows, menus and overlays are Swift (apple/Shared/UI, apple/macOS,
+ * apple/iOS).
  */
 #include "sysconfig.h"
 #include "sysdeps.h"
@@ -11,15 +12,19 @@
 #include "uae.h"
 #include "target.h"
 #include "perf_monitor.h"
+#include "savestate.h"
 #include "gui/gui_handling.h"
 #include "amiberry_actions_host.h"
 #include "settings/amiberry_actions.h"
 #include "settings/amiberry_settings.h"
+#include "settings/amiberry_media.h"
 #ifdef USE_IPC_SOCKET
 #include "amiberry_ipc.h"
 #endif
 
 #include <SDL3/SDL.h>
+#include <atomic>
+#include <cstdio>
 #include <cstring>
 #include <mutex>
 #include <string>
@@ -27,7 +32,8 @@
 
 extern int emulating;
 
-// Swift (apple/macOS/NativeHost.swift).
+// Swift (apple/Shared/UI/HostEntryPoints.swift and each platform's
+// NativeHost.swift).
 extern "C" {
 void amiberry_native_ui_settings_show(bool emulating);
 bool amiberry_native_ui_settings_visible(void);
@@ -35,6 +41,13 @@ void amiberry_native_ui_settings_dismiss(void);
 void amiberry_native_ui_settings_commit(void);
 void amiberry_native_ui_settings_devices_changed(void);
 void amiberry_native_ui_install_menus(void);
+#ifdef AMIBERRY_IOS
+void amiberry_native_ui_keyboard_toggle(void);
+void amiberry_native_ui_keyboard_hide(void);
+void amiberry_native_ui_background_task_begin(void);
+void amiberry_native_ui_background_task_end(void);
+void amiberry_native_ui_set_modal_wait_hook(void (*hook)(void));
+#endif
 bool amiberry_native_ui_choose_file(int kind, const char* title, const char* start_path,
 	char* chosen, size_t size);
 void amiberry_native_ui_message(const char* title, const char* message);
@@ -119,6 +132,7 @@ void startup_notices()
 
 void native_host_run_settings()
 {
+	const native_host_between_frames between_frames;
 	startup_notices();
 	amiberry_native_ui_settings_show(emulating != 0);
 	while (amiberry_native_ui_settings_visible()) {
@@ -130,6 +144,7 @@ void native_host_run_settings()
 		Amiberry::IPC::IPCHandle();
 #endif
 		amiberry_actions_run_pending();
+		native_host_service_autosave();
 		if (amiberry_actions_emulation_requests() != requests_before) {
 			// A reset (or quit, or state load) from the menu or IPC closes
 			// the window as its own buttons do: with the edits stored, so a
@@ -171,9 +186,128 @@ bool native_host_settings_open()
 	return amiberry_native_ui_settings_visible();
 }
 
+#ifdef AMIBERRY_IOS
+namespace {
+void modal_wait_hook();
+}
+#endif
+
 void native_host_install_menus()
 {
+#ifdef AMIBERRY_IOS
+	amiberry_native_ui_set_modal_wait_hook(modal_wait_hook);
+#endif
 	amiberry_native_ui_install_menus();
+}
+
+void native_host_toggle_keyboard()
+{
+#ifdef AMIBERRY_IOS
+	amiberry_native_ui_keyboard_toggle();
+#endif
+}
+
+void native_host_hide_keyboard()
+{
+#ifdef AMIBERRY_IOS
+	amiberry_native_ui_keyboard_hide();
+#endif
+}
+
+std::string native_host_autosave_path()
+{
+	// The save state folder (not the configuration's state file name).
+	std::vector<char> folder(AMIBERRY_ACTIONS_PATH_MAX);
+	if (amiberry_folder_get(AMIBERRY_FOLDER_SAVESTATES, folder.data(), folder.size()) != AMIBERRY_SETTINGS_OK)
+		return {};
+	std::string path = folder.data();
+	if (!path.empty() && path.back() != '/')
+		path += '/';
+	return path + AMIBERRY_AUTOSAVE_STATE_NAME;
+}
+
+#ifdef AMIBERRY_IOS
+namespace {
+std::atomic<bool> autosave_requested{false};
+// Above zero while the main thread is between frames inside the native
+// front end (its settings loop, a hotkey's requester), where its modal
+// waits may write a requested autosave. Not inside a requester the
+// emulation asks for mid-instruction (gui_ask_disk).
+int between_frames = 0;
+
+enum class autosave_result { done, later };
+
+autosave_result write_autosave()
+{
+	if (!emulating)
+		return autosave_result::done;
+	// Not over a state save or restore the emulation has yet to run (they
+	// share savestate_fname): after it.
+	if (savestate_state != 0)
+		return autosave_result::later;
+	const std::string path = native_host_autosave_path();
+	if (path.empty())
+		return autosave_result::done;
+	// Written aside and moved over the last one only when complete: the
+	// system can end the app part-way, and a failed save keeps the last.
+	const std::string partial = path + ".partial";
+	TCHAR previous[MAX_DPATH];
+	_tcscpy(previous, savestate_fname);
+	// Set up as a restore's (save = false): a save the user did not ask
+	// for keeps the rewind history and an input recording going.
+	savestate_initsave(partial.c_str(), 1, true, false);
+	const int saved = save_state(partial.c_str(), "Autosave");
+	_tcscpy(savestate_fname, previous);
+	if (saved <= 0 || std::rename(partial.c_str(), path.c_str()) != 0) {
+		write_log("Autosave to %s failed\n", path.c_str());
+		std::remove(partial.c_str());
+	}
+	return autosave_result::done;
+}
+
+// Called by the native modal waits (Files pickers, alerts) as they run the
+// run loop, which keeps the C++ loops from running.
+void modal_wait_hook()
+{
+	if (between_frames > 0)
+		native_host_service_autosave();
+}
+} // namespace
+#endif
+
+native_host_between_frames::native_host_between_frames()
+{
+#ifdef AMIBERRY_IOS
+	between_frames++;
+#endif
+}
+
+native_host_between_frames::~native_host_between_frames()
+{
+#ifdef AMIBERRY_IOS
+	between_frames--;
+#endif
+}
+
+void native_host_request_autosave()
+{
+#ifdef AMIBERRY_IOS
+	if (!emulating)
+		return;
+	// The app keeps running until the save is written.
+	if (!autosave_requested.exchange(true))
+		amiberry_native_ui_background_task_begin();
+#endif
+}
+
+void native_host_service_autosave()
+{
+#ifdef AMIBERRY_IOS
+	if (!autosave_requested.load() || write_autosave() == autosave_result::later)
+		return;
+	autosave_requested.store(false);
+	amiberry_native_ui_background_task_end();
+#endif
 }
 
 bool native_host_choose_file(native_host_file kind, const std::string& title,
