@@ -1789,6 +1789,32 @@ int amiberry_get_joystick_index(const TCHAR* configname)
 	return static_cast<int>(index);
 }
 
+// A custom control's event as the configuration names it: "none" is no
+// event (-1, which keeps the control from its default), anything else
+// unknown or empty the default (0).
+int custom_event_of(const TCHAR* value)
+{
+	const int event_index = find_inputevent(value);
+	if (event_index > -1)
+		return remap_event_list[event_index];
+	return !_tcsicmp(value, _T("none")) ? -1 : 0;
+}
+
+// How the configuration names a custom control's event (see
+// custom_event_of): "none" for -1, empty for the default.
+const TCHAR* custom_event_name(const int event)
+{
+	if (event < 0)
+		return _T("none");
+	if (event > 0) {
+		for (int i = 0; i < remap_event_list_size; ++i) {
+			if (remap_event_list[i] == event)
+				return inputdevice_get_eventinfo(event)->name;
+		}
+	}
+	return _T("");
+}
+
 bool load_custom_options(uae_prefs* p, const std::string& option, const TCHAR* value)
 {
 	// Only do this loop if the option starts with "joyport"
@@ -1816,8 +1842,7 @@ bool load_custom_options(uae_prefs* p, const std::string& option, const TCHAR* v
 					buffer = "joyport" + std::to_string(i) + "_amiberry_custom_" + mode + "_" + SDL_GetGamepadStringForButton(static_cast<SDL_GamepadButton>(n));
 					if (buffer == option)
 					{
-						const int event_index = find_inputevent(value);
-						const auto b = event_index > -1 ? remap_event_list[event_index] : 0;
+						const int b = custom_event_of(value);
 						if (m == 0)
 							mapping.amiberry_custom_none[n] = b;
 						else
@@ -1833,8 +1858,7 @@ bool load_custom_options(uae_prefs* p, const std::string& option, const TCHAR* v
 					buffer = "joyport" + std::to_string(i) + "_amiberry_custom_axis_" + mode + "_" + SDL_GetGamepadStringForAxis(static_cast<SDL_GamepadAxis>(n));
 					if (buffer == option)
 					{
-						const int event_index = find_inputevent(value);
-						const auto b = event_index > -1 ? remap_event_list[event_index] : 0;
+						const int b = custom_event_of(value);
 						if (m == 0)
 							mapping.amiberry_custom_axis_none[n] = b;
 						else
@@ -2408,8 +2432,10 @@ int input_get_default_joystick(struct uae_input_device* uid, int i, int port, in
 		const auto function_offset = n * REMAP_BUTTONS;
 		for (int button = 0; button < SDL_GAMEPAD_BUTTON_COUNT; button++)
 		{
+			// -1 is "none": the control does nothing (no event, 0),
+			// rather than the default it would otherwise get.
 			if (button_map[n][button])
-				setid(uid, i, ID_BUTTON_OFFSET + button + function_offset, 0, port, button_map[n][button], af, gp);
+				setid(uid, i, ID_BUTTON_OFFSET + button + function_offset, 0, port, std::max(button_map[n][button], 0), af, gp);
 		}
 
 		// Axis mapping, skip the first 2 (Horizontal / Vertical on Left stick)
@@ -2417,7 +2443,7 @@ int input_get_default_joystick(struct uae_input_device* uid, int i, int port, in
 		for (int axis = 2; axis < SDL_GAMEPAD_AXIS_COUNT; axis++)
 		{
 			if (axis_map[n][axis])
-				setid(uid, i, ID_AXIS_OFFSET + axis + function_offset, 0, port, axis_map[n][axis], af, gp);
+				setid(uid, i, ID_AXIS_OFFSET + axis + function_offset, 0, port, std::max(axis_map[n][axis], 0), af, gp);
 		}
 	}
 

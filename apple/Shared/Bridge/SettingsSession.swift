@@ -220,6 +220,41 @@ public final class SettingsSession {
 		return amiberry_settings_board_field_available(handle, type, Int32(clamping: unit), field)
 	}
 
+	/// The event a custom control of the joystick on a port triggers, alone
+	/// or with the hotkey button held: an event from
+	/// `CustomControlCatalog.events`, "none", or "" for the port mode's.
+	/// Throws `unavailable` while the port has no joystick.
+	public func customControl(_ control: String, port: Int, hotkey: Bool = false) throws -> String {
+		let session = try session(control)
+		let (text, status) = readLayerString(capacity: Int(AMIBERRY_SETTINGS_VALUE_MAX)) {
+			amiberry_settings_custom_control_get(session, Int32(clamping: port), hotkey, control, $0, $1)
+		}
+		try SettingsError.check(status, id: "port \(port) \(control)")
+		return text
+	}
+
+	/// Stages a custom control's event; commit applies it live.
+	public func setCustomControl(_ event: String, control: String, port: Int, hotkey: Bool = false) throws {
+		let session = try session(control)
+		try SettingsError.check(
+			amiberry_settings_custom_control_set(session, Int32(clamping: port), hotkey, control, event),
+			id: "port \(port) \(control)", value: event)
+	}
+
+	/// Whether the port's joystick has the control and no hotkey function
+	/// holds it.
+	public func isCustomControlAvailable(_ control: String, port: Int, hotkey: Bool = false) -> Bool {
+		guard let handle else { return false }
+		return amiberry_settings_custom_control_available(handle, Int32(clamping: port), hotkey, control)
+	}
+
+	/// The hotkey function holding the control ("hotkey", "quit", "menu",
+	/// "reset", "vkbd"), or nil.
+	public func customControlUse(_ control: String, port: Int, hotkey: Bool = false) -> String? {
+		guard let handle else { return nil }
+		return optionalLayerString(amiberry_settings_custom_control_use(handle, Int32(clamping: port), hotkey, control))
+	}
+
 	public func addMount(_ entry: String) throws {
 		let session = try session("mount")
 		try SettingsError.check(amiberry_settings_mount_add(session, entry), id: "mount", value: entry)

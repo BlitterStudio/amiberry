@@ -288,3 +288,33 @@ public enum BoardCatalog {
 		types.first { $0.id == id }
 	}
 }
+
+/// A gamepad button or axis of the joystick on a port, whose Amiga input
+/// event a configuration sets (custom controls).
+public struct CustomControl: Hashable, Sendable, Identifiable {
+	/// The configuration name, for example "a", "dpup" or "leftx".
+	public let id: String
+	public let label: String
+	public let isAxis: Bool
+}
+
+/// The custom controls and the input events they can trigger.
+public enum CustomControlCatalog {
+	public static let controls: [CustomControl] = {
+		(0..<amiberry_settings_custom_control_count()).compactMap { index in
+			amiberry_settings_custom_control_at(index).map {
+				CustomControl(id: layerString($0.pointee.id), label: layerString($0.pointee.label),
+					isAxis: $0.pointee.axis)
+			}
+		}
+	}()
+
+	/// The events by the names configurations use ("Space",
+	/// "Joy2 Fire/Mouse2 Left Button"); a control can also be "none" (does
+	/// nothing) or "" (does what the port's mode gives it).
+	public static let events: [String] = {
+		(0..<amiberry_settings_input_event_count()).compactMap { index in
+			amiberry_settings_input_event_at(index).map { layerString($0.pointee.value) }
+		}
+	}()
+}

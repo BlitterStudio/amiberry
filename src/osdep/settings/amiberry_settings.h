@@ -48,7 +48,7 @@
 extern "C" {
 #endif
 
-#define AMIBERRY_SETTINGS_API_VERSION 5
+#define AMIBERRY_SETTINGS_API_VERSION 6
 
 /* Large enough for every value a descriptor can produce, including the
    terminating NUL. */
@@ -344,6 +344,51 @@ AMIBERRY_SETTINGS_API amiberry_settings_status amiberry_settings_board_set(
 	const char *value);
 AMIBERRY_SETTINGS_API bool amiberry_settings_board_field_available(
 	const amiberry_settings_session *session, const char *type, int unit, const char *field);
+
+/*
+ * Custom controls: the Amiga input event each button and axis of the
+ * joystick on a port (0-3) triggers, alone or with the device's hotkey
+ * button held (hotkey). A configuration keeps them per port, for the
+ * device the port has.
+ *
+ * A control's value is an input event's configuration name from
+ * amiberry_settings_input_event_at(), "none" (the control does nothing),
+ * or "" (unset: the control does what the port's mode gives it, such as
+ * the joystick's fire button or the CD32 pad's colour buttons). A
+ * session keeps its edits until commit, which applies them live (and
+ * drops the edits for a port that has another device by then). A control
+ * is not available while the port has no joystick, the device lacks it,
+ * or a hotkey function holds it (custom_control_use names the function:
+ * "hotkey", "quit", "menu", "reset" or "vkbd").
+ */
+typedef struct amiberry_settings_custom_control {
+	const char *id;    /* configuration name: "a", "dpup", "leftx" */
+	const char *label; /* display name */
+	bool axis;
+} amiberry_settings_custom_control;
+
+AMIBERRY_SETTINGS_API size_t amiberry_settings_custom_control_count(void);
+/* NULL when index >= amiberry_settings_custom_control_count(). */
+AMIBERRY_SETTINGS_API const amiberry_settings_custom_control *amiberry_settings_custom_control_at(size_t index);
+AMIBERRY_SETTINGS_API size_t amiberry_settings_input_event_count(void);
+/* NULL when index >= amiberry_settings_input_event_count(). */
+AMIBERRY_SETTINGS_API const amiberry_setting_choice *amiberry_settings_input_event_at(size_t index);
+
+/* UNKNOWN_ID for an unknown control or a port out of range, UNAVAILABLE
+   while the port has no joystick, BUFFER_TOO_SMALL when the value does
+   not fit. */
+AMIBERRY_SETTINGS_API amiberry_settings_status amiberry_settings_custom_control_get(
+	const amiberry_settings_session *session, int port, bool hotkey, const char *control,
+	char *buffer, size_t size);
+/* UNKNOWN_ID as get, INVALID_VALUE for an unknown event, UNAVAILABLE for a
+   control that is not available. */
+AMIBERRY_SETTINGS_API amiberry_settings_status amiberry_settings_custom_control_set(
+	amiberry_settings_session *session, int port, bool hotkey, const char *control, const char *event);
+AMIBERRY_SETTINGS_API bool amiberry_settings_custom_control_available(
+	const amiberry_settings_session *session, int port, bool hotkey, const char *control);
+/* NULL when no hotkey function holds the control. */
+AMIBERRY_SETTINGS_API const char *amiberry_settings_custom_control_use(
+	const amiberry_settings_session *session, int port, bool hotkey, const char *control);
 
 #ifdef __cplusplus
 }

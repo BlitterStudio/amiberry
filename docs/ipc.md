@@ -288,6 +288,27 @@ board is the `cpuboard_*` options) are edited by board type, unit and field:
 `SETTINGS_COMMIT` reports `apply=restart` when a board changed: boards are
 built when the emulation starts.
 
+Custom controls set the Amiga input event each button and axis of the
+joystick on a port (0 to 3) triggers, alone (`none`) or with the device's
+hotkey button held (`hotkey`):
+
+- `SETTINGS_CUSTOM_CONTROLS` replies one `<control>=button|axis` per
+  control, by its configuration name (`a`, `dpup`, `leftx`).
+- `SETTINGS_INPUT_EVENTS` replies one field per event a control can
+  trigger, by the name configurations use (`Joy2 Fire/Mouse2 Left Button`,
+  `Space`).
+- `SETTINGS_CUSTOM_CONTROL_GET <port> <none|hotkey> <control>` replies
+  `<control>=<event>`, `available=true|false` and `use=` (the hotkey
+  function that holds the control: `hotkey`, `quit`, `menu`, `reset`,
+  `vkbd`, or empty). The event is `none` for a control set to do nothing,
+  and empty for one left to what the port's mode gives it. It fails while
+  the port has no joystick.
+- `SETTINGS_CUSTOM_CONTROL_SET <port> <none|hotkey> <control> <event>`
+  stages a change (an empty event resets the control); an unavailable
+  control (the device lacks it, or a hotkey function holds it) is refused.
+  `SETTINGS_COMMIT` applies the edits live, for the joystick each port has
+  then.
+
 A session that holds no uncommitted edits is reopened from
 the current pending configuration at the next `SETTINGS_*` command, so a
 configuration loaded or changed any other way (`LOAD_CONFIG`, `SET_CONFIG`,
