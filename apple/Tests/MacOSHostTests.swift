@@ -252,6 +252,26 @@ final class ROMImportTests: XCTestCase {
 		XCTAssertEqual(ROMImport.files(in: [single]), [single], "a file chosen is taken as it is")
 	}
 
+	func testEveryKeyInTheROMsFolderIsKept() throws {
+		let folder = try folder()
+		let roms = URL(fileURLWithPath: try MediaLibrary.path(of: .roms), isDirectory: true)
+		try FileManager.default.createDirectory(at: roms, withIntermediateDirectories: true)
+		addTeardownBlock {
+			for name in ["rom.key", "rom 2.key"] {
+				try? FileManager.default.removeItem(at: roms.appendingPathComponent(name))
+			}
+		}
+		// Two Amiga Forever sets' keys: the second is kept beside the first.
+		for contents in ["first key", "second key"] {
+			let key = folder.appendingPathComponent("rom.key")
+			try Data(contents.utf8).write(to: key)
+			_ = try AppFiles.importFile(key, into: roms)
+		}
+		XCTAssertEqual(try String(contentsOf: roms.appendingPathComponent("rom.key"), encoding: .utf8), "first key")
+		XCTAssertEqual(try String(contentsOf: roms.appendingPathComponent("rom 2.key"), encoding: .utf8), "second key")
+		_ = MediaLibrary.rescanROMs() // both decode (amiberry_media_add_rom_key); nothing to refuse
+	}
+
 	func testImportingWhatIsNoROMSaysSo() throws {
 		let folder = try folder()
 		let file = folder.appendingPathComponent("notarom.bin")

@@ -156,6 +156,14 @@ AMIBERRY_SETTINGS_API void amiberry_media_forget_current_configuration(void);
  */
 AMIBERRY_SETTINGS_API int amiberry_media_rescan_roms(void);
 
+/*
+ * Adds a ROM key file (Amiga Forever's rom.key, or another set's key kept
+ * beside it under another name) to the keys the next rescan decodes
+ * encrypted ROMs with; a missing file or a known key changes nothing. Main
+ * thread.
+ */
+AMIBERRY_SETTINGS_API void amiberry_media_add_rom_key(const char *path);
+
 AMIBERRY_SETTINGS_API amiberry_settings_status amiberry_media_configuration_info(const char *path,
 	char *description, size_t description_size, char *category, size_t category_size);
 

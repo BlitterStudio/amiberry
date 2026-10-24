@@ -205,6 +205,10 @@ final class LibraryModel {
 	func importROMs(_ urls: [URL]) {
 		// Cancelled.
 		guard !urls.isEmpty else { return }
+		// A chosen folder's access covers its files only while it is held
+		// (a Mac App Store build): held until they are copied.
+		let scoped = urls.filter { $0.startAccessingSecurityScopedResource() }
+		defer { scoped.forEach { $0.stopAccessingSecurityScopedResource() } }
 		let files = ROMImport.files(in: urls)
 		guard !files.isEmpty else {
 			romReport = "No ROM files were chosen."

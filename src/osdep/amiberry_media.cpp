@@ -12,6 +12,7 @@
 #include "settings/amiberry_media.h"
 #include "settings/settings_definitions.h"
 #include "macos_bookmarks.h"
+#include "rommgr.h"
 
 #include <algorithm>
 #include <cctype>
@@ -309,6 +310,16 @@ amiberry_settings_status amiberry_folder_get(amiberry_folder folder, char* buffe
 		if (!buffer)
 			return AMIBERRY_SETTINGS_BUFFER_TOO_SMALL;
 		return copy_out(path, buffer, size);
+	});
+}
+
+void amiberry_media_add_rom_key(const char* path)
+{
+	if (!path || !path[0])
+		return;
+	amiberry_settings::no_throw(0, [=] {
+		addkeyfile(path);
+		return 0;
 	});
 }
 
