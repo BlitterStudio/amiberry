@@ -341,11 +341,14 @@ struct ModelSections: View {
 	@State private var configuration: Int
 	@State private var compatibility = 1
 
-	/// A new machine's Quick Start shows the model it started from.
+	/// A new machine's Overview shows the model it started from. Set once
+	/// here: sections inside a Form appear again as they scroll into view.
 	init(model: SettingsWindowModel) {
 		self.model = model
-		_presetID = State(initialValue: model.newMachineModel?.id ?? MachinePresets.all.first?.id ?? "")
+		let id = model.newMachineModel?.id ?? MachinePresets.all.first?.id ?? ""
+		_presetID = State(initialValue: id)
 		_configuration = State(initialValue: model.newMachineModel?.configuration ?? 0)
+		_compatibility = State(initialValue: MachinePresets.defaultCompatibility(for: id))
 	}
 
 	var body: some View {
@@ -396,7 +399,6 @@ struct ModelSections: View {
 				.disabled(preset == nil)
 			}
 		}
-		.onAppear { compatibility = MachinePresets.defaultCompatibility(for: presetID) }
 	}
 }
 

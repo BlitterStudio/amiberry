@@ -18,7 +18,7 @@ import UIKit
 
 /// A page of the machine editor, organised around what users do rather
 /// than the layer's groups (see the U12 design note): each page lays out
-/// the groups it covers, and Advanced lists every option.
+/// the groups it covers, and All Settings lists every option.
 enum SettingsPage: String, Hashable, Identifiable, CaseIterable {
 	/// The model, Kickstart, memory, the first drives and the machine's name.
 	case overview
@@ -156,7 +156,7 @@ final class SettingsWindowModel {
 		}
 	}
 
-	/// A new machine from a model: the model is applied, and Quick Start
+	/// A new machine from a model: the model is applied, and the Overview
 	/// opens showing it.
 	func startNewMachine(preset id: String, configuration: Int) {
 		// A new machine is no saved file's: Settings over it later must not
