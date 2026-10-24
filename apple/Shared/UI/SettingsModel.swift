@@ -16,58 +16,78 @@ import AppKit
 import UIKit
 #endif
 
-/// A page of the settings window.
-enum SettingsPage: Hashable, Identifiable {
-	/// Machine presets.
-	case quickStart
-	/// The options of a layer group.
-	case group(String)
-	/// The mounted drives.
-	case hardDrives
-	/// The emulator's folders.
-	case paths
+/// A page of the machine editor, organised around what users do rather
+/// than the layer's groups (see the U12 design note): each page lays out
+/// the groups it covers, and All Settings lists every option.
+enum SettingsPage: String, Hashable, Identifiable, CaseIterable {
+	/// The model, Kickstart, memory, the first drives and the machine's name.
+	case overview
+	case hardware
+	case displaySound
+	case input
+	/// Floppy and CD drives, the swapper and the mounted hard drives.
+	case storage
+	case portsMisc
+	/// Every option, searchable.
+	case advanced
+	/// The emulator's content folders (until they move to the app settings).
+	case folders
 
 	var id: Self { self }
 
 	var title: String {
 		switch self {
-		case .quickStart: return "Quick Start"
-		case let .group(id): return SettingsPage.groupTitle(id)
-		case .hardDrives: return "Hard Drives"
-		case .paths: return "Paths"
+		case .overview: return "Overview"
+		case .hardware: return "Hardware"
+		case .displaySound: return "Display & Sound"
+		case .input: return "Input"
+		case .storage: return "Storage"
+		case .portsMisc: return "Ports & Misc"
+		case .advanced: return "All Settings"
+		case .folders: return "Folders"
 		}
 	}
 
 	var symbol: String {
 		switch self {
-		case .quickStart: return "sparkles"
-		case .hardDrives: return "externaldrive"
-		case .paths: return "folder"
-		case let .group(id): return SettingsPage.groupSymbols[id] ?? "slider.horizontal.3"
+		case .overview: return "sparkles"
+		case .hardware: return "cpu"
+		case .displaySound: return "display"
+		case .input: return "gamecontroller"
+		case .storage: return "opticaldiscdrive"
+		case .portsMisc: return "cable.connector.horizontal"
+		case .advanced: return "list.bullet.rectangle"
+		case .folders: return "folder"
 		}
 	}
 
-	/// The sidebar: machine, media and host pages, then any group the layer
-	/// adds that has no place yet, so every option stays reachable.
-	static func sections(groups: [String] = SettingsCatalog.groups) -> [(title: String, pages: [SettingsPage])] {
-		let machine = ["cpu", "mmu", "fpu", "cpu_speed", "jit", "ppc", "x86", "chipset", "adv_chipset", "genlock",
-			"memory", "accelerator", "rtg", "expansions", "rom"]
-		let media = ["floppy", "diskswapper", "cd", "filesystem", "drawbridge"]
-		let host = ["display", "filter", "sound", "input", "io", "onscreen", "misc", "config", "priority"]
-		let known = Set(machine + media + host)
-		let present = Set(groups)
-		func pages(_ ids: [String]) -> [SettingsPage] { ids.filter(present.contains).map { .group($0) } }
-		var sections: [(String, [SettingsPage])] = [
-			("Machine", [.quickStart] + pages(machine)),
-			("Media", pages(media) + [.hardDrives]),
-			("Host", pages(host) + [.paths]),
-		]
-		let other = groups.filter { !known.contains($0) }.map { SettingsPage.group($0) }
-		if !other.isEmpty {
-			sections.append(("Other", other))
+	/// The layer groups the page covers, in order; Advanced shows every
+	/// group the layer has.
+	var groups: [String] {
+		switch self {
+		case .overview: return ["config"]
+		case .hardware:
+			return ["cpu", "mmu", "fpu", "cpu_speed", "jit", "chipset", "adv_chipset", "memory", "rom",
+				"accelerator", "rtg", "expansions", "ppc", "x86", "genlock"]
+		case .displaySound: return ["display", "filter", "sound"]
+		case .input: return ["input", "onscreen"]
+		case .storage: return ["floppy", "diskswapper", "cd", "filesystem", "drawbridge"]
+		case .portsMisc: return ["io", "misc", "priority"]
+		case .advanced: return SettingsCatalog.groups
+		case .folders: return []
 		}
-		return sections
 	}
+
+	/// The sidebar, in order.
+	static let sidebar: [SettingsPage] = allCases
+
+	/// The pages that place groups (Advanced lists them all again).
+	static let placing: [SettingsPage] = [.overview, .hardware, .displaySound, .input, .storage, .portsMisc]
+
+	/// The options the Overview shows besides the model and the machine's
+	/// name: what defines a machine at a glance.
+	static let overviewOptions = ["kickstart_rom_file", "chipset", "chipmem_size", "bogomem_size", "fastmem_size",
+		"floppy0", "floppy1"]
 
 	static func groupTitle(_ id: String) -> String {
 		if let title = groupTitles[id] {
@@ -82,20 +102,9 @@ enum SettingsPage: Hashable, Identifiable {
 		"genlock": "Genlock", "memory": "Memory", "rom": "ROMs", "floppy": "Floppy Drives",
 		"diskswapper": "Disk Swapper", "cd": "CD", "filesystem": "Filesystem", "drawbridge": "DrawBridge",
 		"display": "Display", "sound": "Sound", "input": "Input", "onscreen": "On-screen Controls",
-		"misc": "Miscellaneous", "config": "Configuration", "priority": "Priority", "rtg": "RTG Board", "accelerator": "Accelerator Board",
-		"expansions": "Expansions", "filter": "Filters & Shaders",
+		"misc": "Miscellaneous", "config": "Machine", "priority": "Priority", "rtg": "RTG Board",
+		"accelerator": "Accelerator Board", "expansions": "Expansions", "filter": "Filters & Shaders",
 		"io": "IO Ports",
-	]
-
-	private static let groupSymbols: [String: String] = [
-		"cpu": "cpu", "mmu": "memorychip", "fpu": "function", "cpu_speed": "speedometer", "jit": "bolt",
-		"ppc": "cpu", "x86": "pc", "chipset": "square.grid.3x3", "adv_chipset": "gearshape.2",
-		"genlock": "tv", "memory": "memorychip", "rom": "doc.badge.gearshape", "floppy": "opticaldiscdrive",
-		"diskswapper": "arrow.triangle.2.circlepath", "cd": "opticaldisc", "filesystem": "folder.badge.gearshape",
-		"drawbridge": "cable.connector", "display": "display", "sound": "speaker.wave.2", "input": "gamecontroller",
-		"onscreen": "hand.tap", "misc": "slider.horizontal.3", "config": "text.document", "priority": "gauge.with.dots.needle.33percent",
-		"rtg": "rectangle.on.rectangle", "accelerator": "bolt.horizontal", "expansions": "puzzlepiece.extension",
-		"filter": "camera.filters", "io": "cable.connector.horizontal",
 	]
 }
 
@@ -107,7 +116,7 @@ final class SettingsWindowModel {
 	let store: SettingsStore
 	/// Whether an emulation runs under the window (resume) or starts after it.
 	let emulating: Bool
-	var page: SettingsPage = .quickStart
+	var page: SettingsPage = .overview
 	/// The outcome of the last folder or mount change, when it failed.
 	var notice: String?
 	/// Text typed into fields that is not a valid value, by option: the
@@ -143,11 +152,11 @@ final class SettingsWindowModel {
 		self.closeToLibrary = closeToLibrary
 		fromLibrary = closeToLibrary != nil
 		if emulating {
-			page = .group("cpu")
+			page = .hardware
 		}
 	}
 
-	/// A new machine from a model: the model is applied, and Quick Start
+	/// A new machine from a model: the model is applied, and the Overview
 	/// opens showing it.
 	func startNewMachine(preset id: String, configuration: Int) {
 		// A new machine is no saved file's: Settings over it later must not
@@ -155,7 +164,7 @@ final class SettingsWindowModel {
 		MediaLibrary.forgetCurrentConfiguration()
 		_ = store.applyPreset(id, configuration: configuration)
 		newMachineModel = (id, configuration)
-		page = .quickStart
+		page = .overview
 	}
 
 	/// The name the machine is saved under: its file name, or empty for a
