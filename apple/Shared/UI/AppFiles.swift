@@ -185,23 +185,21 @@ enum AppFiles {
 	}
 
 	/// The files a cue sheet's FILE lines name, as written (relative to the
-	/// sheet), each once.
+	/// sheet), each once. Read as the emulator's parsecue() reads them: the
+	/// words split at any white space, a quoted name runs to its closing
+	/// quote (or the end of the line).
 	static func cueTracks(_ sheet: String) -> [String] {
 		var tracks: [String] = []
 		for line in sheet.split(whereSeparator: \.isNewline) {
-			let text = line.trimmingCharacters(in: .whitespaces)
-			guard text.count > 5, text.prefix(5).uppercased() == "FILE " else { continue }
-			let rest = text.dropFirst(5).trimmingCharacters(in: .whitespaces)
-			let name: String
-			if rest.hasPrefix("\"") {
-				let quoted = rest.dropFirst()
-				guard let end = quoted.firstIndex(of: "\"") else { continue }
-				name = String(quoted[..<end])
-			} else {
-				name = rest.split(separator: " ").first.map(String.init) ?? ""
-			}
-			if !name.isEmpty, !tracks.contains(name) {
-				tracks.append(name)
+			var rest = line.drop(while: \.isWhitespace)
+			let directive = rest.prefix(while: { !$0.isWhitespace })
+			guard String(directive).caseInsensitiveCompare("FILE") == .orderedSame else { continue }
+			rest = rest.dropFirst(directive.count).drop(while: \.isWhitespace)
+			let name = rest.first == "\""
+				? rest.dropFirst().prefix(while: { $0 != "\"" })
+				: rest.prefix(while: { !$0.isWhitespace })
+			if !name.isEmpty, !tracks.contains(String(name)) {
+				tracks.append(String(name))
 			}
 		}
 		return tracks

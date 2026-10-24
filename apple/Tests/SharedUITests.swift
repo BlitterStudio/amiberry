@@ -162,15 +162,18 @@ final class AppFilesTests: XCTestCase {
 	}
 
 	func testCueSheetsNameTheirTracks() {
-		let sheet = """
-		REM a comment
-		FILE "Game (Track 1).bin" BINARY
-		  TRACK 01 MODE1/2352
-		file Track02.wav WAVE
-		FILE "Game (Track 1).bin" BINARY
-		FILE "unterminated BINARY
-		"""
-		XCTAssertEqual(AppFiles.cueTracks(sheet), ["Game (Track 1).bin", "Track02.wav"])
+		let sheet = "REM a comment\n"
+			+ "FILE \"Game (Track 1).bin\" BINARY\n"
+			+ "  TRACK 01 MODE1/2352\n"
+			+ "file Track02.wav WAVE\n"
+			+ "FILE\t\"Track03.bin\"\tBINARY\r\n"
+			+ "\tFILE Track04.wav\tWAVE\n"
+			+ "FILE \"Game (Track 1).bin\" BINARY\n"
+			+ "FILES are not tracks\n"
+			+ "FILE \"unterminated BINARY\n"
+		// As the emulator's parser: any white space, an open quote to the end.
+		XCTAssertEqual(AppFiles.cueTracks(sheet),
+			["Game (Track 1).bin", "Track02.wav", "Track03.bin", "Track04.wav", "unterminated BINARY"])
 	}
 
 	func testACueSheetComesWithItsTracksOrNotAtAll() throws {
