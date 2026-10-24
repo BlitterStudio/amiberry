@@ -381,6 +381,60 @@ bool execute(const request& r, void*, std::string* error)
 		}
 		return true;
 
+	case kind::load_config: {
+		// target_cfgfile_load() resets the configuration to the defaults
+		// before it reads the file, so a file it cannot read would leave
+		// the defaults behind; check it opens first.
+		const std::string extension = r.path.size() > 4 ? r.path.substr(r.path.size() - 4) : std::string();
+		const bool uae = _tcsicmp(extension.c_str(), ".uae") == 0;
+		if (!uae && _tcsicmp(extension.c_str(), ".rp9") != 0) {
+			*error = "Not a configuration file: " + r.path;
+			return false;
+		}
+		// cfgfile_load() retries a name it cannot open under the
+		// configuration directory (LOAD_CONFIG Games.uae). Resolve that
+		// here, so the checks below see the file the loader will read.
+		std::string path = r.path;
+		if (!zfile_exists(path.c_str())) {
+			TCHAR directory[MAX_DPATH];
+			get_configuration_path(directory, sizeof directory / sizeof(TCHAR));
+			const std::string fallback = std::string(directory) + path;
+			if (zfile_exists(fallback.c_str()))
+				path = fallback;
+		}
+		if (!zfile_exists(path.c_str())) {
+			*error = "Configuration file not found: " + r.path;
+			return false;
+		}
+		// target_cfgfile_load() resets the configuration before it opens a
+		// .uae, so a file that exists but cannot be opened (no permission)
+		// would still wipe it. Open it the way the loader does, first.
+		if (uae) {
+			zfile* file = zfile_fopen(path.c_str(), "r", ZFD_NORMAL);
+			if (!file) {
+				*error = "Failed to load configuration: " + r.path;
+				return false;
+			}
+			zfile_fclose(file);
+		}
+		// As the GUI's Load: the file becomes the pending configuration
+		// (the floppies it names are inserted at once).
+		if (!target_cfgfile_load(&changed_prefs, path.c_str(), CONFIG_TYPE_DEFAULT, 0)) {
+			*error = "Failed to load configuration: " + r.path;
+			return false;
+		}
+		set_config_changed();
+		return true;
+	}
+
+	case kind::save_config:
+		if (!cfgfile_save(&changed_prefs, r.path.c_str(), 0)) {
+			*error = "Failed to save configuration to: " + r.path;
+			return false;
+		}
+		set_last_active_config(r.path.c_str());
+		return true;
+
 	case kind::quit:
 		uae_quit();
 		emulation_requests++;
@@ -611,6 +665,20 @@ amiberry_action_id amiberry_actions_load_state_slot(int slot)
 	if (slot < 0 || slot > 9)
 		return 0;
 	return post(kind::load_state_slot, 0, slot);
+}
+
+amiberry_action_id amiberry_actions_load_config(const char* path)
+{
+	if (!valid_path(path))
+		return 0;
+	return post(kind::load_config, 0, 0, false, false, path);
+}
+
+amiberry_action_id amiberry_actions_save_config(const char* path)
+{
+	if (!valid_path(path))
+		return 0;
+	return post(kind::save_config, 0, 0, false, false, path);
 }
 
 amiberry_action_id amiberry_actions_screenshot(const char* path)

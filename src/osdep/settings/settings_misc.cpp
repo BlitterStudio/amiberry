@@ -163,6 +163,49 @@ HOTKEY_FIELD(debugger_trigger)
 
 #undef HOTKEY_FIELD
 
+// The configuration's description and category, as the Configurations panel
+// saves them: one line each (the writer does not escape them, so a line
+// break would split the entry), the category without surrounding spaces.
+bool fits_config_text(size_t size, const value& v)
+{
+	return v.text.size() < size && v.text.find_first_of("\r\n") == std::string_view::npos;
+}
+
+void get_description(const uae_prefs& p, char* out, size_t size)
+{
+	std::snprintf(out, size, "%s", p.description);
+}
+
+void set_description(uae_prefs& p, const value& v)
+{
+	std::snprintf(p.description, sizeof p.description, "%.*s", static_cast<int>(v.text.size()), v.text.data());
+}
+
+bool fits_description(const uae_prefs& p, const value& v)
+{
+	return fits_config_text(sizeof p.description, v);
+}
+
+void get_category(const uae_prefs& p, char* out, size_t size)
+{
+	std::snprintf(out, size, "%s", p.category);
+}
+
+void set_category(uae_prefs& p, const value& v)
+{
+	std::string_view text = v.text;
+	const auto first = text.find_first_not_of(" \t");
+	text = first == std::string_view::npos ? std::string_view() : text.substr(first);
+	const auto last = text.find_last_not_of(" \t");
+	text = last == std::string_view::npos ? std::string_view() : text.substr(0, last + 1);
+	std::snprintf(p.category, sizeof p.category, "%.*s", static_cast<int>(text.size()), text.data());
+}
+
+bool fits_category(const uae_prefs& p, const value& v)
+{
+	return fits_config_text(sizeof p.category, v);
+}
+
 // Which emulated LED a host keyboard lock light shows.
 const amiberry_setting_choice led_choices[] = {
 	{"-1", "None"},
@@ -430,6 +473,14 @@ const definition definitions[] = {
 			"Whether controllers reach the emulation while the window is minimized.",
 			AMIBERRY_APPLY_LIVE, "0", input_choices, nullptr),
 		get_minimized_input, set_minimized_input, nullptr, nullptr, nullptr, nullptr},
+	{STRING_OPTION("config_description", "config", "Description",
+			"A description of the configuration, shown with it in the configuration list.",
+			AMIBERRY_APPLY_LIVE, "UAE default configuration", nullptr),
+		get_description, set_description, nullptr, nullptr, nullptr, fits_description},
+	{STRING_OPTION("config_category", "config", "Category",
+			"The group the configuration list shows the configuration in; empty for none.",
+			AMIBERRY_APPLY_LIVE, "", nullptr),
+		get_category, set_category, nullptr, nullptr, nullptr, fits_category},
 };
 
 #undef BOOL_DEF
@@ -466,6 +517,8 @@ bool commit_misc(const uae_prefs& base, const uae_prefs& from, uae_prefs& to, co
 	FIELD(use_retroarch_quit);
 	FIELD(use_retroarch_menu);
 	FIELD(use_retroarch_reset);
+	FIELD(description);
+	FIELD(category);
 	FIELD(open_gui);
 	FIELD(quit_amiberry);
 	FIELD(action_replay);

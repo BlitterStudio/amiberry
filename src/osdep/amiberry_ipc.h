@@ -29,6 +29,7 @@ constexpr char const* CMD_GET_STATUS = "GET_STATUS";
 constexpr char const* CMD_GET_CONFIG = "GET_CONFIG";
 constexpr char const* CMD_SET_CONFIG = "SET_CONFIG";
 constexpr char const* CMD_LOAD_CONFIG = "LOAD_CONFIG";
+constexpr char const* CMD_SAVE_CONFIG = "SAVE_CONFIG";
 constexpr char const* CMD_SEND_KEY = "SEND_KEY";
 constexpr char const* CMD_READ_MEM = "READ_MEM";
 constexpr char const* CMD_WRITE_MEM = "WRITE_MEM";

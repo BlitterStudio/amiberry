@@ -32,6 +32,8 @@ enum class kind {
 	save_state_slot,      // slot
 	load_state_slot,      // slot
 	screenshot,           // path
+	load_config,          // path
+	save_config,          // path
 	quit,
 	apply_settings,       // number = amiberry_apply_class
 	toggle_fullscreen,

@@ -376,8 +376,14 @@ def main():
         check("a changed board commits as a restart", reply == "OK\tchanged=true\tapply=restart", reply)
         saved_state = os.path.join(work, "boards.uss")
         saved_cfg = os.path.join(work, "boards.uae")
+        check("a description is set for the saved state's companion configuration",
+              control.request("SETTINGS_SET\tconfig_description\tBoards") == "OK"
+              and control.request("SETTINGS_COMMIT") == "OK\tchanged=true\tapply=live")
+        description = "OK\tconfig_description=Boards"
         check("SAVESTATE writes the configuration",
               control.request(f"SAVESTATE\t{saved_state}\t{saved_cfg}") == "OK" and os.path.exists(saved_cfg))
+        check("SAVESTATE keeps the pending configuration's description",
+              control.request("SETTINGS_GET\tconfig_description") == description, description)
         with open(saved_cfg, errors="replace") as f:
             lines = f.read().splitlines()
         check("the board is written with its ROM marker", "a2091-2_rom_file=:NOROM" in lines,
@@ -421,6 +427,46 @@ def main():
               "Config=LoadedViaIPC" in status, status)
         check("SETTINGS_GET is fresh after LOAD_CONFIG",
               control.request("SETTINGS_GET\tcpu_model") == "OK\tcpu_model=68030")
+        check("the loaded description is the config_description option",
+              control.request("SETTINGS_GET\tconfig_description") == "OK\tconfig_description=LoadedViaIPC")
+        # A file that cannot be loaded leaves the pending configuration as it
+        # was (the loader starts from the defaults).
+        missing = os.path.join(work, "missing.uae")
+        reply = control.request(f"LOAD_CONFIG\t{missing}")
+        check("LOAD_CONFIG of a missing file fails", reply == f"ERROR\tConfiguration file not found: {missing}", reply)
+        reply = control.request(f"LOAD_CONFIG\t{work}")
+        check("LOAD_CONFIG of a folder fails", reply.startswith("ERROR\tNot a configuration file"), reply)
+        check("a failed load keeps the pending configuration",
+              control.request("SETTINGS_GET\tcpu_model") == "OK\tcpu_model=68030"
+              and control.request("SETTINGS_GET\tconfig_description") == "OK\tconfig_description=LoadedViaIPC")
+        # A bare name is found in the configuration directory, as the loader
+        # retries there.
+        configs = os.path.join(work, "home", "Configurations")
+        os.makedirs(configs, exist_ok=True)
+        with open(os.path.join(configs, "Games.uae"), "w") as f:
+            f.write("config_description=FromConfigDir\ncpu_model=68020\n")
+        check("LOAD_CONFIG finds a bare name in the configuration directory",
+              control.request("LOAD_CONFIG\tGames.uae") == "OK"
+              and control.request("SETTINGS_GET\tconfig_description") == "OK\tconfig_description=FromConfigDir")
+        check("LOAD_CONFIG restores the earlier file",
+              control.request(f"LOAD_CONFIG\t{loaded}") == "OK")
+        # SAVE_CONFIG writes the pending configuration, with what a session
+        # committed.
+        check("the description and category are set and committed",
+              control.request("SETTINGS_SET\tconfig_description\tSaved via IPC") == "OK"
+              and control.request("SETTINGS_SET\tconfig_category\t Demos ") == "OK"
+              and control.request("SETTINGS_COMMIT").startswith("OK\tchanged=true"))
+        saved_config = os.path.join(work, "saved.uae")
+        check("SAVE_CONFIG writes the file", control.request(f"SAVE_CONFIG\t{saved_config}") == "OK"
+              and os.path.exists(saved_config))
+        with open(saved_config, errors="replace") as f:
+            lines = f.read().splitlines()
+        check("the saved file has the description, the trimmed category and the machine",
+              "config_description=Saved via IPC" in lines and "config_category=Demos" in lines
+              and "cpu_model=68030" in lines, [line for line in lines if line.startswith(("config_", "cpu_model"))])
+        reply = control.request(f"SAVE_CONFIG\t{os.path.join(work, 'no-such-folder', 'x.uae')}")
+        check("SAVE_CONFIG to a folder that does not exist fails",
+              reply.startswith("ERROR\tFailed to save configuration to"), reply)
         # A staged edit survives a load: the session stays open while it
         # holds uncommitted SETs.
         check("staged edit survives a load",

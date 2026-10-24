@@ -684,6 +684,8 @@ void reset_prefs(uae_prefs& p)
 	p.serial_hwctsrts = true;
 	p.serial_rtsctsdtrdtecd = true;
 	p.samplersoundcard = -1;
+	// default_prefs() describes a fresh configuration.
+	std::strcpy(p.description, "UAE default configuration");
 	for (int i = 0; i < 2; i++) {
 		struct chipset_refresh& cr = p.cr[i == 0 ? CHIPSET_REFRESH_PAL : CHIPSET_REFRESH_NTSC];
 		cr.index = i == 0 ? CHIPSET_REFRESH_PAL : CHIPSET_REFRESH_NTSC;
@@ -1320,7 +1322,7 @@ void emit(const char* name, const uae_prefs& p)
 		if ((d.descriptor.type == AMIBERRY_SETTING_CHOICE || d.descriptor.type == AMIBERRY_SETTING_BOOL)
 			&& !settings::is_choice_available(d, p, idle, v))
 			continue;
-		std::printf("E %s=%s %s\n", d.descriptor.id, v.c_str(), d.descriptor.default_value);
+		std::printf("E %s=%s\t%s\n", d.descriptor.id, v.c_str(), d.descriptor.default_value);
 	}
 }
 
@@ -1331,7 +1333,7 @@ void emit_roundtrip()
 		const settings::definition& d = settings::definition_at(i);
 		if (host_dependent(d) || part_of_entry(d))
 			continue;
-		std::printf("E %s=%s %s\n", d.descriptor.id, d.descriptor.default_value, d.descriptor.default_value);
+		std::printf("E %s=%s\t%s\n", d.descriptor.id, d.descriptor.default_value, d.descriptor.default_value);
 	}
 
 	// A failed set would quietly test a different configuration.
@@ -1344,6 +1346,8 @@ void emit_roundtrip()
 	};
 	reset_prefs(p);
 	apply("cpu_model", "68020");
+	apply("config_description", "My A1200 setup, cycle-exact");
+	apply("config_category", "Games");
 	emit("a1200_cycle_exact", p);
 
 	reset_prefs(p);
@@ -1451,7 +1455,7 @@ void emit_roundtrip()
 	apply("gfxcard_options:monitor", "1");
 	apply("gfxcard_options:initial", "true");
 	emit("rtg_hardware", p);
-	std::printf("E gfxcard_type=PicassoII ZorroIII\n");
+	std::printf("E gfxcard_type=PicassoII\tZorroIII\n");
 
 	reset_prefs(p);
 	apply("cycle_exact", "false");
@@ -1493,8 +1497,8 @@ void emit_roundtrip()
 	emit("filter", p);
 	// The shaders are host-dependent choices, skipped by emit(); the
 	// built-in ones are on every host.
-	std::printf("E amiberry.shader=tv none\n");
-	std::printf("E amiberry.shader_rtg=pc none\n");
+	std::printf("E amiberry.shader=tv\tnone\n");
+	std::printf("E amiberry.shader_rtg=pc\tnone\n");
 
 	// IO: print to a folder, a serial port with its options, a dongle.
 	reset_prefs(p);
@@ -1509,7 +1513,7 @@ void emit_roundtrip()
 	emit("io", p);
 	// The serial port is a host-dependent choice; the network entry is on
 	// every host.
-	std::printf("E serial_port=TCP://0.0.0.0:1234 none\n");
+	std::printf("E serial_port=TCP://0.0.0.0:1234\tnone\n");
 
 	reset_prefs(p);
 	// The A600 extra enables the machine's IDE controller (ide=a600/a1200
@@ -2527,6 +2531,30 @@ void check_boards()
 	amiberry_settings_session_close(session);
 	CHECK(amiberry_settings_board_type_find(nullptr) == nullptr);
 	CHECK(amiberry_settings_board_type_at(amiberry_settings_board_type_count()) == nullptr);
+}
+
+// The configuration's description and category: one line each (the writer
+// does not escape them), the category without surrounding spaces.
+void check_config_text()
+{
+	uae_prefs& p = test_prefs;
+	reset_prefs(p);
+	CHECK(set(p, "config_description", "My A1200 setup") == AMIBERRY_SETTINGS_OK);
+	CHECK(value_of(p, "config_description") == "My A1200 setup");
+	CHECK(set(p, "config_description", "two\nlines") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	CHECK(set(p, "config_description", "two\rlines") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	CHECK(value_of(p, "config_description") == "My A1200 setup");
+	// Up to the field's 255 characters.
+	const std::string longest(255, 'x');
+	CHECK(set(p, "config_description", longest.c_str()) == AMIBERRY_SETTINGS_OK);
+	CHECK(value_of(p, "config_description") == longest);
+	CHECK(set(p, "config_description", (longest + "x").c_str()) == AMIBERRY_SETTINGS_INVALID_VALUE);
+	CHECK(set(p, "config_category", "  Games \t") == AMIBERRY_SETTINGS_OK);
+	CHECK(value_of(p, "config_category") == "Games");
+	CHECK(set(p, "config_category", "   ") == AMIBERRY_SETTINGS_OK);
+	CHECK(value_of(p, "config_category").empty());
+	CHECK(set(p, "config_category", "a\nb") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	reset_prefs(p);
 }
 
 // Custom controls: a session stages each port's mapping for the device the
@@ -3860,6 +3888,7 @@ int main(int argc, char** argv)
 	check_filter_domain();
 	check_io_domain();
 	check_custom_controls();
+	check_config_text();
 	check_mount_list();
 	check_active_values();
 	if (failures) {

@@ -30,6 +30,11 @@ public enum EmulatorAction: Hashable, Sendable {
 	case saveStateSlot(Int)
 	case loadStateSlot(Int)
 	case screenshot(path: String)
+	/// Makes a .uae file the pending configuration; it runs after
+	/// `applySettings(.restart)`, or when the emulation next starts.
+	case loadConfiguration(path: String)
+	/// Writes the pending configuration (what a session committed).
+	case saveConfiguration(path: String)
 	case quit
 	/// Brings the running emulation up to the pending configuration with
 	/// the apply class `SettingsSession.commit()` returned.
@@ -133,6 +138,8 @@ public enum EmulatorActions {
 		case let .saveStateSlot(slot): id = amiberry_actions_save_state_slot(Int32(clamping: slot))
 		case let .loadStateSlot(slot): id = amiberry_actions_load_state_slot(Int32(clamping: slot))
 		case let .screenshot(path): id = amiberry_actions_screenshot(path)
+		case let .loadConfiguration(path): id = amiberry_actions_load_config(path)
+		case let .saveConfiguration(path): id = amiberry_actions_save_config(path)
 		case .quit: id = amiberry_actions_quit()
 		case let .applySettings(apply): id = amiberry_actions_apply_settings(apply.layerValue)
 		case .toggleFullscreen: id = amiberry_actions_toggle_fullscreen()

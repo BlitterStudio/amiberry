@@ -133,6 +133,18 @@ AMIBERRY_ACTIONS_API amiberry_action_id amiberry_actions_load_state(const char *
 AMIBERRY_ACTIONS_API amiberry_action_id amiberry_actions_save_state_slot(int slot);
 AMIBERRY_ACTIONS_API amiberry_action_id amiberry_actions_load_state_slot(int slot);
 AMIBERRY_ACTIONS_API amiberry_action_id amiberry_actions_screenshot(const char *path);
+
+/*
+ * Configuration files, as the GUI's Configurations panel: load_config makes
+ * a .uae (or .rp9) file the pending configuration, inserting the floppies it
+ * names at once; the rest takes effect when the emulation next starts, or
+ * with amiberry_actions_apply_settings(AMIBERRY_APPLY_RESTART). FAILED for
+ * a file that is missing or not a configuration, which leaves the pending
+ * configuration as it was. save_config writes the pending configuration
+ * (what amiberry_settings_commit stored) to path.
+ */
+AMIBERRY_ACTIONS_API amiberry_action_id amiberry_actions_load_config(const char *path);
+AMIBERRY_ACTIONS_API amiberry_action_id amiberry_actions_save_config(const char *path);
 AMIBERRY_ACTIONS_API amiberry_action_id amiberry_actions_quit(void);
 
 /*

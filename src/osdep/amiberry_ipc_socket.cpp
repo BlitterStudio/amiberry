@@ -378,8 +378,13 @@ static std::string HandleSavestate(const std::vector<std::string>& args)
 		return make_response(false, {error.empty() ? "Action was not executed" : error});
 	}
 
+	// The companion configuration is described as an autosave; the pending
+	// configuration keeps its own description.
+	TCHAR description[sizeof changed_prefs.description];
+	std::memcpy(description, changed_prefs.description, sizeof description);
 	strncpy(changed_prefs.description, "autosave", sizeof(changed_prefs.description));
 	cfgfile_save(&changed_prefs, args[1].c_str(), 0);
+	std::memcpy(changed_prefs.description, description, sizeof description);
 
 	return make_response(true);
 }
@@ -797,13 +802,21 @@ static std::string HandleLoadConfig(const std::vector<std::string>& args)
 		return make_response(false, {"Path exceeds maximum length"});
 	}
 
-	int result = target_cfgfile_load(&changed_prefs, args[0].c_str(), CONFIG_TYPE_DEFAULT, 0);
-	if (result) {
-		set_config_changed();
-		return make_response(true);
-	} else {
-		return make_response(false, {"Failed to load config"});
+	return run_posted_reply(amiberry_actions_load_config(args[0].c_str()));
+}
+
+static std::string HandleSaveConfig(const std::vector<std::string>& args)
+{
+	if (!currprefs.ipc_disable_logging) {
+		std::cout << "IPC: Received SAVE_CONFIG" << std::endl;
 	}
+	if (args.size() != 1) {
+		return make_response(false, {"Usage: SAVE_CONFIG <configfile>"});
+	}
+	if (args[0].size() >= MAX_DPATH) {
+		return make_response(false, {"Path exceeds maximum length"});
+	}
+	return run_posted_reply(amiberry_actions_save_config(args[0].c_str()));
 }
 
 static std::string HandleSendKey(const std::vector<std::string>& args)
@@ -3408,7 +3421,7 @@ static std::string HandleHelp(const std::vector<std::string>& args)
 	commands.emplace_back("LIST_HARDDRIVES");
 	commands.emplace_back("DISKSWAP <disknum> <drive>, QUERYDISKSWAP <drive>");
 	commands.emplace_back("GET_STATUS, GET_CONFIG <opt>, SET_CONFIG <opt> <val>");
-	commands.emplace_back("LOAD_CONFIG <path>, LIST_CONFIGS");
+	commands.emplace_back("LOAD_CONFIG <path>, SAVE_CONFIG <path>, LIST_CONFIGS");
 	commands.emplace_back("LIST_MEDIA <list>, GET_FOLDER <folder>, SET_FOLDER <folder> <path>");
 	commands.emplace_back("SET_VOLUME <0-100>, GET_VOLUME, MUTE, UNMUTE");
 	commands.emplace_back("SET_WARP <0|1>, GET_WARP, TOGGLE_FULLSCREEN, OPEN_SETTINGS");
@@ -4158,6 +4171,7 @@ static void InitHandlers()
 	command_handlers[CMD_GET_CONFIG] = HandleGetConfig;
 	command_handlers[CMD_SET_CONFIG] = HandleSetConfig;
 	command_handlers[CMD_LOAD_CONFIG] = HandleLoadConfig;
+	command_handlers[CMD_SAVE_CONFIG] = HandleSaveConfig;
 	command_handlers[CMD_SEND_KEY] = HandleSendKey;
 	command_handlers[CMD_READ_MEM] = HandleReadMem;
 	command_handlers[CMD_WRITE_MEM] = HandleWriteMem;
