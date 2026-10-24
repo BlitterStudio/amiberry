@@ -2616,6 +2616,7 @@ void check_host_settings()
 	host_save_result = true;
 	// A path the conf loader would split or trim is refused.
 	CHECK(amiberry_host_settings_set("rom_path", "/roms ") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	CHECK(amiberry_host_settings_set("rom_path", " roms") == AMIBERRY_SETTINGS_INVALID_VALUE);
 	CHECK(amiberry_host_settings_set("rom_path", std::string(PATH_MAX, 'r').c_str()) == AMIBERRY_SETTINGS_INVALID_VALUE);
 	CHECK(amiberry_host_settings_get("rom_path", value, sizeof value) == AMIBERRY_SETTINGS_OK);
 	CHECK(!std::strcmp(value, "/roms"));

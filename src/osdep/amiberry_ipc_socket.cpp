@@ -840,6 +840,8 @@ static std::string HandleHostSettingsSet(const std::vector<std::string>& args)
 	const amiberry_settings_status status = amiberry_host_settings_set(args[0].c_str(), args[1].c_str());
 	if (status == AMIBERRY_SETTINGS_UNKNOWN_ID)
 		return make_response(false, {"Unknown host setting: " + args[0]});
+	if (status == AMIBERRY_SETTINGS_UNAVAILABLE)
+		return make_response(false, {"Folder could not be accessed: " + args[1]});
 	if (status != AMIBERRY_SETTINGS_OK)
 		return make_response(false, {"Invalid value for " + args[0] + ": " + args[1]});
 	return make_response(true);

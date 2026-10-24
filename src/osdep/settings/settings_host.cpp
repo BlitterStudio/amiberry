@@ -12,6 +12,7 @@
 #include "target.h"
 #include "gui_layout_scale.h"
 #include "amiberry_gfx_mode.h"
+#include "macos_bookmarks.h"
 
 #include "settings_definitions.h"
 
@@ -664,7 +665,10 @@ amiberry_settings_status host_settings_set(std::string_view id, std::string_view
 		// The loader reads amiberry.conf in CONFIG_BLEN chunks and trims
 		// trailing whitespace, so a longer line or a trailing space is not
 		// what the next start loads. "key=value\n" must fit the chunk.
-		if (!value.empty() && (value.back() == ' ' || value.back() == '\t'))
+		// The loader strips whitespace at both ends of a value, so a path
+		// with either does not come back as it was set.
+		if (!value.empty() && (value.front() == ' ' || value.front() == '\t'
+			|| value.back() == ' ' || value.back() == '\t'))
 			return AMIBERRY_SETTINGS_INVALID_VALUE;
 		if (value.size() + std::strlen(s->id) + 2 >= static_cast<size_t>(CONFIG_BLEN))
 			return AMIBERRY_SETTINGS_INVALID_VALUE;
@@ -672,7 +676,15 @@ amiberry_settings_status host_settings_set(std::string_view id, std::string_view
 		// copy keeps PATH_MAX - 1, so the stored path must leave both.
 		if (value.size() >= static_cast<size_t>(PATH_MAX) - 1)
 			return AMIBERRY_SETTINGS_INVALID_VALUE;
+		const std::string previous = s->path_get();
 		s->path_set(std::string(value));
+		// An App Store build needs a security-scoped bookmark for the folder
+		// (the setter asks for one and ignores the result). An empty path
+		// clears the folder and needs none. A failure puts the old folder back.
+		if (!value.empty() && !macos_bookmark_store(std::string(value))) {
+			s->path_set(previous);
+			return AMIBERRY_SETTINGS_UNAVAILABLE;
+		}
 		return AMIBERRY_SETTINGS_OK;
 	}
 	return AMIBERRY_SETTINGS_UNKNOWN_ID;
