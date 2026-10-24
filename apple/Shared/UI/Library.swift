@@ -177,6 +177,8 @@ struct LibraryView: View {
 	@State private var pendingDelete: Machine?
 	#if os(iOS)
 	@Environment(\.horizontalSizeClass) private var sizeClass
+	/// The app settings sheet (the Mac has its Settings window).
+	@State private var showingAppSettings = false
 	#endif
 
 	var body: some View {
@@ -199,6 +201,20 @@ struct LibraryView: View {
 			}
 		}
 		.disabled(model.busy || model.editing)
+		#if os(iOS)
+		// The Configurations folder may have changed meanwhile.
+		.sheet(isPresented: $showingAppSettings, onDismiss: { model.reload() }) {
+			NavigationStack {
+				AppSettingsView(model: AppSettingsModel())
+					.navigationTitle("Settings")
+					.toolbar {
+						ToolbarItem(placement: .confirmationAction) {
+							Button("Done") { showingAppSettings = false }
+						}
+					}
+			}
+		}
+		#endif
 		.confirmationDialog(
 			"Delete \u{201C}\(pendingDelete?.name ?? "")\u{201D}?",
 			isPresented: Binding(get: { pendingDelete != nil }, set: { if !$0 { pendingDelete = nil } }),
@@ -224,6 +240,7 @@ struct LibraryView: View {
 					.navigationTitle((filter ?? .all).title)
 					.toolbar {
 						ToolbarItem(placement: .topBarLeading) { categoryMenu }
+						ToolbarItem { appSettingsButton }
 						ToolbarItem { newMachineMenu }
 					}
 			}
@@ -251,6 +268,9 @@ struct LibraryView: View {
 			content
 				.navigationTitle((filter ?? .all).title)
 				.toolbar {
+					#if os(iOS)
+					ToolbarItem { appSettingsButton }
+					#endif
 					ToolbarItem { newMachineMenu }
 					ToolbarItem {
 						Button { model.reload() } label: { Label("Refresh", systemImage: "arrow.clockwise") }
@@ -258,6 +278,13 @@ struct LibraryView: View {
 				}
 		}
 	}
+
+	#if os(iOS)
+	private var appSettingsButton: some View {
+		Button { showingAppSettings = true } label: { Label("Settings", systemImage: "gearshape") }
+			.accessibilityIdentifier("library.settings")
+	}
+	#endif
 
 	private var newMachineMenu: some View {
 		Menu {

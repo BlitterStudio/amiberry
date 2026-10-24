@@ -59,8 +59,6 @@ struct PageView: View {
 			OverviewPage(model: model)
 		case .storage:
 			StoragePage(model: model)
-		case .folders:
-			PathsPage(model: model)
 		case .hardware:
 			Form {
 				GroupSections(groups: page.groups, store: model.store)
@@ -489,56 +487,6 @@ struct MountSections: View {
 		guard let path = FilePanels.choose(.hardfile, title: "Choose a hardfile to mount", startingAt: "") else { return }
 		let device = freeDevice()
 		add({ "hdf,rw,\(device):\($0),32,1,2,512,0,,uae0" }, path: path)
-	}
-}
-
-struct PathsPage: View {
-	let model: SettingsWindowModel
-	@State private var revision = 0
-
-	var body: some View {
-		Form {
-			Section {
-				ForEach(MediaFolder.allCases, id: \.self) { folder in
-					let path = (try? MediaLibrary.path(of: folder)) ?? ""
-					LabeledContent(PathsPage.title(folder)) {
-						HStack {
-							Text(path).lineLimit(1).truncationMode(.middle).foregroundStyle(.secondary)
-							Button("Choose\u{2026}") { choose(folder, from: path) }
-						}
-					}
-				}
-			} footer: {
-				Text("Folders are saved at once, for every configuration.")
-			}
-		}
-		.formStyle(.grouped)
-		.id(revision)
-	}
-
-	static func title(_ folder: MediaFolder) -> String {
-		switch folder {
-		case .roms: return "ROMs"
-		case .floppies: return "Floppies"
-		case .cds: return "CD images"
-		case .hardDrives: return "Hard drives"
-		case .configurations: return "Configurations"
-		case .saveStates: return "Save states"
-		case .screenshots: return "Screenshots"
-		case .whdloadArchives: return "WHDLoad archives"
-		}
-	}
-
-	private func choose(_ folder: MediaFolder, from path: String) {
-		guard let chosen = FilePanels.chooseFolder(title: "Choose the \(PathsPage.title(folder)) folder", startingAt: path)
-		else { return }
-		do {
-			try MediaLibrary.setPath(chosen, for: folder)
-			model.notice = nil
-		} catch {
-			model.notice = SettingsWindowModel.describe(error)
-		}
-		revision += 1
 	}
 }
 
