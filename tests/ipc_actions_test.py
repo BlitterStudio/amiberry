@@ -229,10 +229,10 @@ def main():
                 control.request("SETTINGS_GET_ACTIVE\tamiberry.onscreen_joystick")
                 != "OK\tamiberry.onscreen_joystick=true"):
             time.sleep(0.05)
+        active = (control.request("SETTINGS_GET_ACTIVE\tmagic_mouse"),
+                  control.request("SETTINGS_GET_ACTIVE\tamiberry.onscreen_joystick"))
         check("both reach the running emulation",
-              control.request("SETTINGS_GET_ACTIVE\tmagic_mouse") == "OK\tmagic_mouse=true"
-              and control.request("SETTINGS_GET_ACTIVE\tamiberry.onscreen_joystick")
-              == "OK\tamiberry.onscreen_joystick=true")
+              active == ("OK\tmagic_mouse=true", "OK\tamiberry.onscreen_joystick=true"), active)
         control.request("SETTINGS_SET\tmagic_mouse\tfalse")
         control.request("SETTINGS_SET\tamiberry.onscreen_joystick\tfalse")
         control.request("SETTINGS_COMMIT")
