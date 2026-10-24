@@ -188,6 +188,17 @@ final class AppFilesTests: XCTestCase {
 		XCTAssertTrue(FileManager.default.fileExists(atPath: target.appendingPathComponent("Game/audio/Track02.wav").path))
 		XCTAssertEqual(try AppFiles.importFile(cue, into: target), imported, "the same sheet again is not copied again")
 
+		// Another CD whose sheet reads the same: its own tracks, its own folder.
+		let other = folder.appendingPathComponent("other")
+		try FileManager.default.createDirectory(at: other.appendingPathComponent("audio"), withIntermediateDirectories: true)
+		let otherCue = file("other/Game.cue", "FILE \"Game.bin\" BINARY\nFILE audio/Track02.wav WAVE\n")
+		_ = file("other/Game.bin", "other data")
+		_ = file("other/audio/Track02.wav", "audio")
+		XCTAssertEqual(try AppFiles.importFile(otherCue, into: target), target.appendingPathComponent("Game 2/Game.cue").path)
+		XCTAssertEqual(try String(contentsOfFile: target.appendingPathComponent("Game 2/Game.bin").path, encoding: .utf8), "other data")
+		XCTAssertEqual(try String(contentsOfFile: target.appendingPathComponent("Game/Game.bin").path, encoding: .utf8), "data",
+			"the first CD keeps its tracks")
+
 		let lonely = file("source/Lonely.cue", "FILE \"Missing.bin\" BINARY\n")
 		XCTAssertThrowsError(try AppFiles.importFile(lonely, into: target)) { error in
 			XCTAssertEqual((error as? CueTracksUnreadable)?.tracks, ["Missing.bin"])

@@ -134,7 +134,8 @@ enum AppFiles {
 	/// file it names, which keep their places beside it. A sheet whose tracks
 	/// cannot be read from where it is (another app's folder grants the sheet
 	/// alone) is not imported. A folder of the same name holding the same
-	/// sheet is used as it is.
+	/// sheet and the same tracks is used as it is; two CDs whose sheets read
+	/// alike (disc.cue naming Track 01.bin) are told apart by their tracks.
 	private static func importCueSheet(_ url: URL, into folder: URL) throws -> String {
 		let manager = FileManager.default
 		let data = try Data(contentsOf: url)
@@ -173,7 +174,10 @@ enum AppFiles {
 				}
 				return sheet.path
 			}
-			if manager.contentsEqual(atPath: sheet.path, andPath: url.path) {
+			if manager.contentsEqual(atPath: sheet.path, andPath: url.path), tracks.allSatisfy({
+				manager.contentsEqual(atPath: candidate.appendingPathComponent($0).path,
+					andPath: source.appendingPathComponent($0).path)
+			}) {
 				return sheet.path
 			}
 			number += 1
