@@ -117,4 +117,18 @@ public enum MediaLibrary {
 	public static func grantAccess(to path: String) -> Bool {
 		amiberry_media_grant_access(path)
 	}
+
+	/// The description and category a configuration file declares, read
+	/// from its header; nil when the file cannot be read.
+	public static func configurationInfo(_ path: String) -> (description: String, category: String)? {
+		var description = [CChar](repeating: 0, count: 512)
+		var category = [CChar](repeating: 0, count: 512)
+		let status = description.withUnsafeMutableBufferPointer { d in
+			category.withUnsafeMutableBufferPointer { c in
+				amiberry_media_configuration_info(path, d.baseAddress, d.count, c.baseAddress, c.count)
+			}
+		}
+		guard status == AMIBERRY_SETTINGS_OK else { return nil }
+		return (decodedString(description), decodedString(category))
+	}
 }

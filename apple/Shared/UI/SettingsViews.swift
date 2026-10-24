@@ -490,6 +490,7 @@ struct PathsPage: View {
 
 struct FooterView: View {
 	let model: SettingsWindowModel
+	@State private var saving = false
 
 	var body: some View {
 		let waiting = model.waiting
@@ -517,8 +518,17 @@ struct FooterView: View {
 			Spacer()
 			// An iOS app is not quit from inside (the system ends it).
 			#if os(macOS)
-			Button("Quit") { model.quit() }
+			if !model.fromLibrary {
+				Button("Quit") { model.quit() }
+			}
 			#endif
+			if model.fromLibrary {
+				// Back to the Library, keeping the edits.
+				Button("Library") { model.closeRequested() }
+					.accessibilityIdentifier("editor.library")
+			}
+			Button("Save\u{2026}") { saving = true }
+				.accessibilityIdentifier("editor.save")
 			if model.emulating {
 				if !(waiting[.restart] ?? []).isEmpty {
 					Button("Restart") { model.restart() }
@@ -534,5 +544,57 @@ struct FooterView: View {
 		.padding(.horizontal, 16)
 		.padding(.vertical, 10)
 		.background(.bar)
+		.sheet(isPresented: $saving) {
+			SaveMachineSheet(model: model, isPresented: $saving)
+		}
+	}
+}
+
+/// Saves the machine under a name, with its description and category.
+struct SaveMachineSheet: View {
+	let model: SettingsWindowModel
+	@Binding var isPresented: Bool
+	@State private var name = ""
+	@State private var description = ""
+	@State private var category = ""
+	@State private var working = false
+
+	var body: some View {
+		VStack(alignment: .leading, spacing: 12) {
+			Text("Save Machine").font(.headline)
+			Form {
+				TextField("Name", text: $name)
+				TextField("Description", text: $description)
+				TextField("Category", text: $category)
+			}
+			if let notice = model.notice {
+				Text(notice).foregroundStyle(.red).font(.callout)
+			}
+			HStack {
+				Spacer()
+				Button("Cancel") { isPresented = false }
+					.keyboardShortcut(.cancelAction)
+				Button("Save") {
+					working = true
+					Task { @MainActor in
+						let saved = await model.save(name: name, description: description, category: category)
+						working = false
+						if saved {
+							isPresented = false
+						}
+					}
+				}
+				.keyboardShortcut(.defaultAction)
+				.disabled(working || name.trimmingCharacters(in: .whitespaces).isEmpty)
+				.accessibilityIdentifier("save.confirm")
+			}
+		}
+		.padding(20)
+		.frame(minWidth: 360)
+		.onAppear {
+			name = model.machineName
+			description = model.store.value(of: "config_description") ?? ""
+			category = model.store.value(of: "config_category") ?? ""
+		}
 	}
 }

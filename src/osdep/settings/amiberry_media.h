@@ -126,6 +126,16 @@ AMIBERRY_SETTINGS_API amiberry_settings_status amiberry_media_add_recent(amiberr
  */
 AMIBERRY_SETTINGS_API bool amiberry_media_grant_access(const char *path);
 
+/*
+ * The description and category a configuration file declares
+ * (config_description, config_category), read from its header without
+ * loading it, as the configurations list shows them. Either buffer may be
+ * NULL with size 0. UNKNOWN_ID for a file that cannot be read,
+ * BUFFER_TOO_SMALL when a value does not fit (up to 256 bytes each).
+ */
+AMIBERRY_SETTINGS_API amiberry_settings_status amiberry_media_configuration_info(const char *path,
+	char *description, size_t description_size, char *category, size_t category_size);
+
 #ifdef __cplusplus
 }
 #endif

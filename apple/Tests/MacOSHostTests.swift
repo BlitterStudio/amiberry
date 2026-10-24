@@ -47,6 +47,58 @@ final class SettingsPagesTests: XCTestCase {
 }
 
 @MainActor
+final class LibraryTests: XCTestCase {
+	func testLibraryListsSavedMachinesWithTheirMetadata() throws {
+		let folder = try MediaLibrary.path(of: .configurations)
+		let name = "library-\(UUID().uuidString)"
+		let file = URL(fileURLWithPath: folder).appendingPathComponent(name + ".uae")
+		try "config_description=Lotus II on an A500\nconfig_category=Games\n".write(to: file, atomically: true, encoding: .utf8)
+		defer { try? FileManager.default.removeItem(at: file) }
+		let library = LibraryModel(emulating: false, finish: {}, openEditor: { _, _ in })
+		let machine = try XCTUnwrap(library.machines.first { $0.name == name })
+		XCTAssertEqual(machine.description, "Lotus II on an A500")
+		XCTAssertEqual(machine.category, "Games")
+		XCTAssertTrue(library.categories.contains("Games"))
+		XCTAssertTrue(library.machines(in: "Games").contains(machine))
+		XCTAssertFalse(library.machines(in: "Nothing").contains(machine))
+		let view = NSHostingView(rootView: LibraryView(model: library))
+		view.frame = NSRect(x: 0, y: 0, width: 860, height: 560)
+		view.layoutSubtreeIfNeeded()
+	}
+
+	func testSaveDoesNotReplaceAnotherMachine() async throws {
+		let folder = try MediaLibrary.path(of: .configurations)
+		let name = "taken-\(UUID().uuidString)"
+		let file = URL(fileURLWithPath: folder).appendingPathComponent(name + ".uae")
+		try "config_description=Keep me\n".write(to: file, atomically: true, encoding: .utf8)
+		defer { try? FileManager.default.removeItem(at: file) }
+		let model = try SettingsWindowModel(emulating: false, dismiss: {}, post: { _ in true })
+		let saved = await model.save(name: name, description: "Other", category: "")
+		XCTAssertFalse(saved)
+		XCTAssertTrue(model.notice?.contains("already exists") ?? false, model.notice ?? "")
+		XCTAssertEqual(try String(contentsOf: file, encoding: .utf8), "config_description=Keep me\n")
+		// Nothing was committed either.
+		XCTAssertNotEqual(try SettingsSession.activeValue(of: "config_description"), "Other")
+		XCTAssertNotEqual(try SettingsSession().value(of: "config_description"), "Other")
+		let slashed = await model.save(name: "a/b", description: "", category: "")
+		XCTAssertFalse(slashed)
+		XCTAssertTrue(model.notice?.contains("cannot contain") ?? false, model.notice ?? "")
+	}
+
+	func testClosingAnEditorFromTheLibraryGoesBackToIt() throws {
+		var closed = 0
+		var dismissed = 0
+		let model = try SettingsWindowModel(
+			emulating: false, dismiss: { dismissed += 1 }, post: { _ in true },
+			machine: nil, closeToLibrary: { closed += 1 })
+		XCTAssertTrue(model.fromLibrary)
+		model.closeRequested()
+		XCTAssertEqual(closed, 1, "back to the Library")
+		XCTAssertEqual(dismissed, 0, "nothing quits or starts")
+	}
+}
+
+@MainActor
 final class SettingsWindowModelTests: XCTestCase {
 	private var posted: [EmulatorAction] = []
 	private var dismissed = 0

@@ -436,6 +436,15 @@ final class MediaLibraryTests: XCTestCase {
 		try "; bridge test\n".write(to: file, atomically: true, encoding: .utf8)
 		defer { try? FileManager.default.removeItem(at: file) }
 		XCTAssertTrue(MediaLibrary.entries(.configurations).contains { $0.name.hasPrefix("bridge-") && $0.path.hasSuffix(name) })
+		// The Library shows what a configuration declares, read from its header.
+		let described = URL(fileURLWithPath: configurations).appendingPathComponent("bridge-\(UUID().uuidString).uae")
+		try "config_description=Lotus II on an A500\nconfig_category=Games\ncpu_model=68000\n"
+			.write(to: described, atomically: true, encoding: .utf8)
+		defer { try? FileManager.default.removeItem(at: described) }
+		let info = try XCTUnwrap(MediaLibrary.configurationInfo(described.path))
+		XCTAssertEqual(info.description, "Lotus II on an A500")
+		XCTAssertEqual(info.category, "Games")
+		XCTAssertNil(MediaLibrary.configurationInfo(described.path + ".missing"))
 
 		let disk = FileManager.default.temporaryDirectory.appendingPathComponent("bridge-\(UUID().uuidString).adf")
 		FileManager.default.createFile(atPath: disk.path, contents: Data(count: 901_120))

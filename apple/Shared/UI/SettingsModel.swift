@@ -115,19 +115,88 @@ final class SettingsWindowModel {
 	/// comes back into view.
 	var invalidDrafts: [String: String] = [:]
 
+	/// The machine being edited, opened from the Library: nil for a new one.
+	let machine: Machine?
+	/// Whether the editor was opened from the Library (it closes back to it).
+	let fromLibrary: Bool
+
 	@ObservationIgnored private let dismiss: () -> Void
 	@ObservationIgnored private let post: (EmulatorAction) -> Bool
+	@ObservationIgnored private let closeToLibrary: (() -> Void)?
 
+	/// closeToLibrary, when the editor was opened from the Library, closes
+	/// the editor alone (the Library stays up); dismiss closes everything,
+	/// so the emulator starts or resumes.
 	init(
 		emulating: Bool, dismiss: @escaping () -> Void,
-		post: @escaping (EmulatorAction) -> Bool = { EmulatorActions.post($0) != nil }
+		post: @escaping (EmulatorAction) -> Bool = { EmulatorActions.post($0) != nil },
+		machine: Machine? = nil, closeToLibrary: (() -> Void)? = nil
 	) throws {
 		store = try SettingsStore()
 		self.emulating = emulating
 		self.dismiss = dismiss
 		self.post = post
+		self.machine = machine
+		self.closeToLibrary = closeToLibrary
+		fromLibrary = closeToLibrary != nil
 		if emulating {
 			page = .group("cpu")
+		}
+	}
+
+	/// The name the machine is saved under: its file name, or empty for a
+	/// new one.
+	var machineName: String { machine?.name ?? "" }
+
+	/// Saves the machine as a configuration in the configurations folder,
+	/// with its description and category: the session's edits are committed
+	/// first, so the file is what the editor shows. Returns whether it saved.
+	func save(name: String, description: String, category: String) async -> Bool {
+		let trimmed = name.trimmingCharacters(in: .whitespaces)
+		guard !trimmed.isEmpty else {
+			notice = "Enter a name for the machine."
+			return false
+		}
+		guard !trimmed.contains("/"), !trimmed.contains(":"), !trimmed.hasPrefix(".") else {
+			notice = "A name cannot contain / or :, or start with a dot."
+			return false
+		}
+		let folder: String
+		do {
+			folder = try MediaLibrary.path(of: .configurations)
+		} catch {
+			notice = SettingsWindowModel.describe(error)
+			return false
+		}
+		let path = URL(fileURLWithPath: folder).appendingPathComponent(trimmed + ".uae").path
+		// Saving over another machine replaces it: only the machine being
+		// edited is saved over in place. Checked before anything is
+		// committed, so a refused save changes nothing.
+		if trimmed != machine?.name, FileManager.default.fileExists(atPath: path) {
+			notice = "A machine named \u{201C}\(trimmed)\u{201D} already exists. Choose another name."
+			return false
+		}
+		guard fieldsValid() else { return false }
+		guard store.set(description, for: "config_description"), store.set(category, for: "config_category") else {
+			notice = store.lastError.map(SettingsWindowModel.describe) ?? "The description or category is not valid."
+			return false
+		}
+		guard commit() else { return false }
+		guard let ticket = EmulatorActions.post(.saveConfiguration(path: path)) else {
+			notice = "The emulator did not accept the request. Try again."
+			return false
+		}
+		while true {
+			switch ticket.poll() {
+			case .pending:
+				try? await Task.sleep(for: .milliseconds(20))
+			case let .failed(message):
+				notice = message
+				return false
+			case .done, .unknown:
+				notice = nil
+				return true
+			}
 		}
 	}
 
@@ -173,8 +242,13 @@ final class SettingsWindowModel {
 	/// there is one and nothing runs yet. Only the iOS app writes it (on a
 	/// Mac, a file of that name is the user's own).
 	var autosave: (path: String, date: Date)? {
+		emulating ? nil : SettingsWindowModel.autosaveState()
+	}
+
+	/// The iOS autosave state file and when it was written, when there is one.
+	static func autosaveState() -> (path: String, date: Date)? {
 		#if os(iOS)
-		guard !emulating, let folder = try? MediaLibrary.path(of: .saveStates) else { return nil }
+		guard let folder = try? MediaLibrary.path(of: .saveStates) else { return nil }
 		let path = URL(fileURLWithPath: folder).appendingPathComponent(AMIBERRY_AUTOSAVE_STATE_NAME).path
 		guard let attributes = try? FileManager.default.attributesOfItem(atPath: path),
 			let date = attributes[.modificationDate] as? Date
@@ -228,6 +302,11 @@ final class SettingsWindowModel {
 	func closeRequested() {
 		if emulating {
 			startOrResume()
+		} else if let closeToLibrary {
+			// Back to the Library, with the edits kept as the pending
+			// configuration.
+			guard fieldsValid(), commit() else { return }
+			closeToLibrary()
 		} else {
 			quit()
 		}

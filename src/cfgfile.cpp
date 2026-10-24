@@ -8190,6 +8190,17 @@ struct uae_prefs *cfgfile_open(const TCHAR *filename, int *type)
 
 void cfgfile_close(struct uae_prefs *p)
 {
+	if (!p)
+		return;
+	// The lines cfgfile_open() kept (comments, unknown entries).
+	struct strlist *s = p->all_lines;
+	while (s) {
+		struct strlist *next = s->next;
+		xfree(s->value);
+		xfree(s->option);
+		xfree(s);
+		s = next;
+	}
 	xfree(p);
 }
 
@@ -8197,10 +8208,9 @@ int cfgfile_get_description (struct uae_prefs *p, const TCHAR *filename, TCHAR *
 {
 	bool alloc = false;
 
-	if (!p) {
-		p = xmalloc(struct uae_prefs, 1);
-		alloc = true;
-	}
+	// Without a configuration, the file's header is read for it (the
+	// allocation the branch above used to make left an uninitialised one,
+	// whose garbage was copied out).
 	if (!p) {
 		alloc = true;
 		p = cfgfile_open(filename, type);
