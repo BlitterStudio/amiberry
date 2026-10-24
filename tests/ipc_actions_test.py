@@ -439,6 +439,17 @@ def main():
         check("a failed load keeps the pending configuration",
               control.request("SETTINGS_GET\tcpu_model") == "OK\tcpu_model=68030"
               and control.request("SETTINGS_GET\tconfig_description") == "OK\tconfig_description=LoadedViaIPC")
+        # A bare name is found in the configuration directory, as the loader
+        # retries there.
+        configs = os.path.join(work, "home", "Configurations")
+        os.makedirs(configs, exist_ok=True)
+        with open(os.path.join(configs, "Games.uae"), "w") as f:
+            f.write("config_description=FromConfigDir\ncpu_model=68020\n")
+        check("LOAD_CONFIG finds a bare name in the configuration directory",
+              control.request("LOAD_CONFIG\tGames.uae") == "OK"
+              and control.request("SETTINGS_GET\tconfig_description") == "OK\tconfig_description=FromConfigDir")
+        check("LOAD_CONFIG restores the earlier file",
+              control.request(f"LOAD_CONFIG\t{loaded}") == "OK")
         # SAVE_CONFIG writes the pending configuration, with what a session
         # committed.
         check("the description and category are set and committed",

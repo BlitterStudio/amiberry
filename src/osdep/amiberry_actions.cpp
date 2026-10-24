@@ -391,7 +391,18 @@ bool execute(const request& r, void*, std::string* error)
 			*error = "Not a configuration file: " + r.path;
 			return false;
 		}
-		if (!zfile_exists(r.path.c_str())) {
+		// cfgfile_load() retries a name it cannot open under the
+		// configuration directory (LOAD_CONFIG Games.uae). Resolve that
+		// here, so the checks below see the file the loader will read.
+		std::string path = r.path;
+		if (!zfile_exists(path.c_str())) {
+			TCHAR directory[MAX_DPATH];
+			get_configuration_path(directory, sizeof directory / sizeof(TCHAR));
+			const std::string fallback = std::string(directory) + path;
+			if (zfile_exists(fallback.c_str()))
+				path = fallback;
+		}
+		if (!zfile_exists(path.c_str())) {
 			*error = "Configuration file not found: " + r.path;
 			return false;
 		}
@@ -399,18 +410,7 @@ bool execute(const request& r, void*, std::string* error)
 		// .uae, so a file that exists but cannot be opened (no permission)
 		// would still wipe it. Open it the way the loader does, first.
 		if (uae) {
-			zfile* file = zfile_fopen(r.path.c_str(), "r", ZFD_NORMAL);
-			if (!file) {
-				*error = "Failed to load configuration: " + r.path;
-				return false;
-			}
-			zfile_fclose(file);
-		}
-		// target_cfgfile_load() resets the configuration before it opens the
-		// file, so a file that exists but cannot be opened (no permission)
-		// would still wipe it. Open it the way the loader does, first.
-		if (extension == ".uae" || extension == ".UAE") {
-			zfile* file = zfile_fopen(r.path.c_str(), "r", ZFD_NORMAL);
+			zfile* file = zfile_fopen(path.c_str(), "r", ZFD_NORMAL);
 			if (!file) {
 				*error = "Failed to load configuration: " + r.path;
 				return false;
@@ -419,7 +419,7 @@ bool execute(const request& r, void*, std::string* error)
 		}
 		// As the GUI's Load: the file becomes the pending configuration
 		// (the floppies it names are inserted at once).
-		if (!target_cfgfile_load(&changed_prefs, r.path.c_str(), CONFIG_TYPE_DEFAULT, 0)) {
+		if (!target_cfgfile_load(&changed_prefs, path.c_str(), CONFIG_TYPE_DEFAULT, 0)) {
 			*error = "Failed to load configuration: " + r.path;
 			return false;
 		}
