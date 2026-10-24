@@ -110,6 +110,9 @@ enum AppFiles {
 		}
 		let manager = FileManager.default
 		try manager.createDirectory(at: folder, withIntermediateDirectories: true)
+		if url.pathExtension.lowercased() == "cue" {
+			return try importCueSheet(url, into: folder)
+		}
 		let name = url.deletingPathExtension().lastPathComponent
 		let suffix = url.pathExtension.isEmpty ? "" : "." + url.pathExtension
 		var number = 1
@@ -124,6 +127,80 @@ enum AppFiles {
 			}
 			number += 1
 		}
+	}
+
+	/// A cue sheet is nothing without its tracks: it goes into a folder of
+	/// its own (track files are often all called "Track 01.bin") with every
+	/// file it names, which keep their places beside it. A sheet whose tracks
+	/// cannot be read from where it is (another app's folder grants the sheet
+	/// alone) is not imported. A folder of the same name holding the same
+	/// sheet is used as it is.
+	private static func importCueSheet(_ url: URL, into folder: URL) throws -> String {
+		let manager = FileManager.default
+		let data = try Data(contentsOf: url)
+		let tracks = cueTracks(String(data: data, encoding: .utf8) ?? String(decoding: data, as: UTF8.self))
+		let source = url.deletingLastPathComponent()
+		let stem = url.deletingPathExtension().lastPathComponent
+		var number = 1
+		while true {
+			let candidate = folder.appendingPathComponent(number == 1 ? stem : "\(stem) \(number)", isDirectory: true)
+			let sheet = candidate.appendingPathComponent(url.lastPathComponent)
+			if !manager.fileExists(atPath: candidate.path) {
+				try manager.createDirectory(at: candidate, withIntermediateDirectories: true)
+				do {
+					try manager.copyItem(at: url, to: sheet)
+					var unreadable: [String] = []
+					for track in tracks {
+						// Beside the sheet or under it only.
+						guard !track.hasPrefix("/"), !track.split(separator: "/").contains("..") else {
+							unreadable.append(track)
+							continue
+						}
+						let target = candidate.appendingPathComponent(track)
+						do {
+							try manager.createDirectory(at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
+							try manager.copyItem(at: source.appendingPathComponent(track), to: target)
+						} catch {
+							unreadable.append(track)
+						}
+					}
+					guard unreadable.isEmpty else {
+						throw CueTracksUnreadable(sheet: url.lastPathComponent, tracks: unreadable)
+					}
+				} catch {
+					try? manager.removeItem(at: candidate)
+					throw error
+				}
+				return sheet.path
+			}
+			if manager.contentsEqual(atPath: sheet.path, andPath: url.path) {
+				return sheet.path
+			}
+			number += 1
+		}
+	}
+
+	/// The files a cue sheet's FILE lines name, as written (relative to the
+	/// sheet), each once.
+	static func cueTracks(_ sheet: String) -> [String] {
+		var tracks: [String] = []
+		for line in sheet.split(whereSeparator: \.isNewline) {
+			let text = line.trimmingCharacters(in: .whitespaces)
+			guard text.count > 5, text.prefix(5).uppercased() == "FILE " else { continue }
+			let rest = text.dropFirst(5).trimmingCharacters(in: .whitespaces)
+			let name: String
+			if rest.hasPrefix("\"") {
+				let quoted = rest.dropFirst()
+				guard let end = quoted.firstIndex(of: "\"") else { continue }
+				name = String(quoted[..<end])
+			} else {
+				name = rest.split(separator: " ").first.map(String.init) ?? ""
+			}
+			if !name.isEmpty, !tracks.contains(name) {
+				tracks.append(name)
+			}
+		}
+		return tracks
 	}
 
 	/// Whether a typed state name is the autosave's
@@ -145,5 +222,15 @@ enum AppFiles {
 		}
 		guard !base.isEmpty, !base.contains("/"), base != ".", base != ".." else { return nil }
 		return folder.appendingPathComponent(base + ".uss")
+	}
+}
+
+/// A cue sheet whose track files cannot be read from where it is.
+struct CueTracksUnreadable: LocalizedError {
+	let sheet: String
+	let tracks: [String]
+
+	var errorDescription: String? {
+		"\u{201C}\(sheet)\u{201D} needs \(tracks.joined(separator: ", ")), which Amiberry cannot read from there. Copy the CD\u{2019}s whole folder into Amiberry\u{2019}s CDs folder with the Files app, or use the CD as one .chd or .iso file."
 	}
 }

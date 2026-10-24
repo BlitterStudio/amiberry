@@ -161,6 +161,43 @@ final class AppFilesTests: XCTestCase {
 		XCTAssertEqual(try String(contentsOfFile: first, encoding: .utf8), "one", "the earlier copy is kept")
 	}
 
+	func testCueSheetsNameTheirTracks() {
+		let sheet = """
+		REM a comment
+		FILE "Game (Track 1).bin" BINARY
+		  TRACK 01 MODE1/2352
+		file Track02.wav WAVE
+		FILE "Game (Track 1).bin" BINARY
+		FILE "unterminated BINARY
+		"""
+		XCTAssertEqual(AppFiles.cueTracks(sheet), ["Game (Track 1).bin", "Track02.wav"])
+	}
+
+	func testACueSheetComesWithItsTracksOrNotAtAll() throws {
+		let source = folder.appendingPathComponent("source")
+		let target = folder.appendingPathComponent("CDs")
+		try FileManager.default.createDirectory(at: source, withIntermediateDirectories: true)
+		let cue = file("source/Game.cue", "FILE \"Game.bin\" BINARY\nFILE audio/Track02.wav WAVE\n")
+		_ = file("source/Game.bin", "data")
+		try FileManager.default.createDirectory(at: source.appendingPathComponent("audio"), withIntermediateDirectories: true)
+		_ = file("source/audio/Track02.wav", "audio")
+
+		let imported = try AppFiles.importFile(cue, into: target)
+		XCTAssertEqual(imported, target.appendingPathComponent("Game/Game.cue").path, "in a folder of its own")
+		XCTAssertEqual(try String(contentsOfFile: target.appendingPathComponent("Game/Game.bin").path, encoding: .utf8), "data")
+		XCTAssertTrue(FileManager.default.fileExists(atPath: target.appendingPathComponent("Game/audio/Track02.wav").path))
+		XCTAssertEqual(try AppFiles.importFile(cue, into: target), imported, "the same sheet again is not copied again")
+
+		let lonely = file("source/Lonely.cue", "FILE \"Missing.bin\" BINARY\n")
+		XCTAssertThrowsError(try AppFiles.importFile(lonely, into: target)) { error in
+			XCTAssertEqual((error as? CueTracksUnreadable)?.tracks, ["Missing.bin"])
+		}
+		XCTAssertFalse(FileManager.default.fileExists(atPath: target.appendingPathComponent("Lonely").path),
+			"nothing is left of a sheet without its tracks")
+		let escaping = file("source/Escaping.cue", "FILE \"../secret.bin\" BINARY\n")
+		XCTAssertThrowsError(try AppFiles.importFile(escaping, into: target))
+	}
+
 	func testStateNames() {
 		XCTAssertEqual(AppFiles.stateFile(named: " Game ", in: folder)?.lastPathComponent, "Game.uss")
 		XCTAssertEqual(AppFiles.stateFile(named: "Game.USS", in: folder)?.lastPathComponent, "Game.uss",

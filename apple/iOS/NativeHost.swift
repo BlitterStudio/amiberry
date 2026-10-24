@@ -47,26 +47,41 @@ enum OpenedFiles {
 		let original = unsafeBitCast(method_getImplementation(method), to: Handler.self)
 		let wrapper: @convention(block) (AnyObject, NSURL) -> Void = { delegate, url in
 			let handed = MainActor.assumeIsolated { imported(url as URL) }
-			original(delegate, selector, (handed ?? url as URL) as NSURL)
+			switch handed {
+			case .original: original(delegate, selector, url)
+			case let .copy(copy): original(delegate, selector, copy as NSURL)
+			case .refused: break
+			}
 		}
 		method_setImplementation(method, imp_implementationWithBlock(wrapper))
 	}
 
-	/// The copy SDL plays, or nil to pass the URL on as it is (not a file to
-	/// play, already in Amiberry's folder, or the copy failed: the Library
-	/// then says so).
-	static func imported(_ url: URL) -> URL? {
-		guard QuickPlay.accepts(url) else { return nil }
+	enum Handed {
+		/// Passed on as it is: not a file to play, or already in Amiberry's
+		/// folder.
+		case original
+		/// The copy in Amiberry's folder.
+		case copy(URL)
+		/// Could not be copied in; the user has been told why.
+		case refused
+	}
+
+	static func imported(_ url: URL) -> Handed {
+		guard QuickPlay.accepts(url) else { return .original }
 		let inbox = AppFiles.contains(url) && url.deletingLastPathComponent().lastPathComponent == "Inbox"
 		if AppFiles.contains(url), !inbox {
-			return nil
+			return .original
 		}
-		guard let folder = try? AppFiles.folder(forMedia: url),
-			let copy = try? AppFiles.importFile(url, into: folder) else { return nil }
-		if inbox {
-			try? FileManager.default.removeItem(at: url)
+		do {
+			let copy = try AppFiles.importFile(url, into: AppFiles.folder(forMedia: url))
+			if inbox {
+				try? FileManager.default.removeItem(at: url)
+			}
+			return .copy(URL(fileURLWithPath: copy))
+		} catch {
+			Alerts.show(title: "Cannot Open", message: "\u{201C}\(url.lastPathComponent)\u{201D} could not be copied into Amiberry\u{2019}s folder: \(error.localizedDescription)", buttons: ["OK"])
+			return .refused
 		}
-		return URL(fileURLWithPath: copy)
 	}
 }
 
