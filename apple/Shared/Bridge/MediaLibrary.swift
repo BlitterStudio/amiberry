@@ -5,6 +5,7 @@
  */
 
 import AmiberrySettings
+import Foundation
 
 /// A folder the emulator uses.
 public enum MediaFolder: CaseIterable, Hashable, Sendable {
@@ -108,6 +109,21 @@ public enum MediaLibrary {
 	/// saves the emulator's settings.
 	public static func addRecent(_ path: String, to list: MediaList) throws {
 		try SettingsError.check(amiberry_media_add_recent(list.layerValue, path), id: "\(list)", value: path)
+	}
+
+	/// Rescans the ROMs folder after ROM files were added (setting the
+	/// folder rescans it too); the number of ROMs the scan recognised. Every
+	/// key file in the folder decodes first: another Amiga Forever set's key
+	/// is kept beside rom.key under another name ("rom 2.key").
+	@MainActor
+	public static func rescanROMs() -> Int {
+		if let folder = try? path(of: .roms),
+			let names = try? FileManager.default.contentsOfDirectory(atPath: folder) {
+			for name in names where name.lowercased().hasSuffix(".key") {
+				amiberry_media_add_rom_key((folder as NSString).appendingPathComponent(name))
+			}
+		}
+		return Int(amiberry_media_rescan_roms())
 	}
 
 	/// Keeps access to a file or folder the user picked across restarts (a

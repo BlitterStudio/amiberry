@@ -112,6 +112,17 @@ enum FilePanels {
 		return path
 	}
 
+	/// ROM files, or folders of them, to import; empty when cancelled.
+	static func chooseROMs(title: String) -> [URL] {
+		let panel = NSOpenPanel()
+		panel.message = title
+		panel.canChooseFiles = true
+		panel.canChooseDirectories = true
+		panel.allowsMultipleSelection = true
+		NSApplication.shared.activate(ignoringOtherApps: true)
+		return panel.runModal() == .OK ? panel.urls : []
+	}
+
 	/// Asks for a folder; nil when cancelled.
 	static func chooseFolder(title: String, startingAt startPath: String) -> String? {
 		let panel = NSOpenPanel()

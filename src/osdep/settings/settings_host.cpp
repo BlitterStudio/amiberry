@@ -690,6 +690,9 @@ amiberry_settings_status host_settings_set(std::string_view id, std::string_view
 			s->path_set(previous);
 			return AMIBERRY_SETTINGS_UNAVAILABLE;
 		}
+		// Another ROMs folder holds other ROMs (as the GUI's Paths panel).
+		if (std::strcmp(s->id, "rom_path") == 0 && previous != s->path_get())
+			rescan_roms();
 		return AMIBERRY_SETTINGS_OK;
 	}
 	return AMIBERRY_SETTINGS_UNKNOWN_ID;

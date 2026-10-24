@@ -29,6 +29,50 @@ struct Machine: Identifiable, Hashable {
 	}
 }
 
+/// ROM files to import: those chosen, and those of chosen folders the ROM
+/// scan reads (ROM-sized, with a ROM's extension), with Amiga Forever's
+/// rom.key, which decodes its encrypted ones.
+enum ROMImport {
+	static let largestROM = 2 * 1024 * 1024
+	/// As the emulator's scan takes them (isromext), and U plus a digit.
+	static let extensions: Set<String> = ["rom", "bin", "a1000", "a500", "a600", "a1200", "a3000", "a4000", "cdtv", "cd32", "roz"]
+
+	#if os(iOS)
+	static let prompt = "Choose Kickstart ROM files"
+	#else
+	static let prompt = "Choose Kickstart ROM files or a folder of them"
+	#endif
+
+	static func isScanned(_ file: URL) -> Bool {
+		let name = file.lastPathComponent.lowercased()
+		if name == "rom.key" {
+			return true
+		}
+		let ext = file.pathExtension.lowercased()
+		return extensions.contains(ext) || (ext.count >= 2 && ext.first == "u" && ext.dropFirst().first?.isNumber == true)
+	}
+
+	static func files(in urls: [URL]) -> [URL] {
+		urls.flatMap { url -> [URL] in
+			let scoped = url.startAccessingSecurityScopedResource()
+			defer {
+				if scoped {
+					url.stopAccessingSecurityScopedResource()
+				}
+			}
+			// Asked of the file: a folder's URL need not end in a slash.
+			guard (try? url.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory == true else { return [url] }
+			let keys: [URLResourceKey] = [.isRegularFileKey, .fileSizeKey]
+			guard let walk = FileManager.default.enumerator(at: url, includingPropertiesForKeys: keys,
+				options: [.skipsHiddenFiles, .skipsPackageDescendants]) else { return [] }
+			return walk.compactMap { $0 as? URL }.filter { file in
+				guard let values = try? file.resourceValues(forKeys: Set(keys)), values.isRegularFile == true else { return false }
+				return isScanned(file) && (values.fileSize ?? 0) <= largestROM
+			}
+		}
+	}
+}
+
 /// What can be played straight from a file (dropped, opened or chosen).
 enum QuickPlay {
 	static let extensions: Set<String> = ["adf", "adz", "dms", "ipf", "zip", "7z", "lha", "cue", "iso", "chd", "uae", "rp9"]
@@ -67,6 +111,11 @@ final class LibraryModel {
 	var editing = false
 	/// Whether an emulation runs (a machine played now restarts it).
 	let emulating: Bool
+	/// Whether a Kickstart ROM is installed: until one is, the Library says
+	/// machines boot the built-in AROS and offers to import ROMs.
+	private(set) var kickstartInstalled = true
+	/// What the last ROM import found.
+	var romReport: String?
 
 	@ObservationIgnored private let finish: () -> Void
 	@ObservationIgnored private let openEditor: (_ machine: Machine?, _ preset: (id: String, configuration: Int)?) -> Void
@@ -102,6 +151,10 @@ final class LibraryModel {
 			return Machine(path: entry.path, name: name, description: info?.description ?? "",
 				category: info?.category ?? "")
 		}
+		// ROMs copied into the ROMs folder meanwhile (with Files, or the
+		// Finder) count at once: the emulator rescans only at its first start.
+		_ = MediaLibrary.rescanROMs()
+		kickstartInstalled = MachinePresets.anyKickstartInstalled()
 	}
 
 	/// Loads the machine and starts it (restarts a running emulation).
@@ -144,6 +197,43 @@ final class LibraryModel {
 				return
 			}
 			finish()
+		}
+	}
+
+	/// Copies ROM files (and the ROM-sized files of folders) into the ROMs
+	/// folder and rescans it; says what the scan found.
+	func importROMs(_ urls: [URL]) {
+		// Cancelled.
+		guard !urls.isEmpty else { return }
+		// A chosen folder's access covers its files only while it is held
+		// (a Mac App Store build): held until they are copied.
+		let scoped = urls.filter { $0.startAccessingSecurityScopedResource() }
+		defer { scoped.forEach { $0.stopAccessingSecurityScopedResource() } }
+		let files = ROMImport.files(in: urls)
+		guard !files.isEmpty else {
+			romReport = "No ROM files were chosen."
+			return
+		}
+		// The list counts the built-in ROMs too: what is new is the difference.
+		let before = MediaLibrary.rescanROMs()
+		do {
+			let folder = URL(fileURLWithPath: try MediaLibrary.path(of: .roms), isDirectory: true)
+			for file in files {
+				_ = try AppFiles.importFile(file, into: folder)
+			}
+		} catch {
+			romReport = "The ROMs could not be copied: \(error.localizedDescription)"
+			return
+		}
+		let added = MediaLibrary.rescanROMs() - before
+		kickstartInstalled = MachinePresets.anyKickstartInstalled()
+		let runnable = MachinePresets.all.filter { MachinePresets.computerIDs.contains($0.id) && MachinePresets.isRunnable($0) }
+		if added <= 0 {
+			romReport = "No new ROMs found in those files."
+		} else if runnable.isEmpty {
+			romReport = "\(added) ROM\(added == 1 ? "" : "s") added, but no Kickstart: machines still boot AROS."
+		} else {
+			romReport = "Ready: " + runnable.map(\.label).joined(separator: ", ") + "."
 		}
 	}
 
@@ -300,6 +390,7 @@ struct LibraryView: View {
 			// An iPhone lists the machines at once; categories filter them.
 			NavigationStack {
 				content
+					.safeAreaInset(edge: .top, spacing: 0) { romNotice }
 					.navigationTitle((filter ?? .all).title)
 					.toolbar {
 						ToolbarItem(placement: .topBarLeading) { categoryMenu }
@@ -329,6 +420,7 @@ struct LibraryView: View {
 			.navigationTitle("Library")
 		} detail: {
 			content
+				.safeAreaInset(edge: .top, spacing: 0) { romNotice }
 				.navigationTitle((filter ?? .all).title)
 				.toolbar {
 					#if os(iOS)
@@ -342,6 +434,13 @@ struct LibraryView: View {
 		}
 	}
 
+	/// Under the toolbar, over the machines.
+	@ViewBuilder private var romNotice: some View {
+		if !model.kickstartInstalled || model.romReport != nil {
+			ROMNotice(model: model)
+		}
+	}
+
 	#if os(iOS)
 	private var appSettingsButton: some View {
 		Button { showingAppSettings = true } label: { Label("Settings", systemImage: "gearshape") }
@@ -352,8 +451,16 @@ struct LibraryView: View {
 	private var newMachineMenu: some View {
 		Menu {
 			ForEach(MachinePresets.all) { preset in
-				Button(preset.label) { model.newMachine(preset: preset.id) }
+				Button { model.newMachine(preset: preset.id) } label: {
+					if MachinePresets.isRunnable(preset) {
+						Text(preset.label)
+					} else {
+						Label("\(preset.label) (ROM not installed)", systemImage: "exclamationmark.triangle")
+					}
+				}
 			}
+			Divider()
+			Button("Import ROMs\u{2026}") { model.importROMs(FilePanels.chooseROMs(title: ROMImport.prompt)) }
 			Divider()
 			Button("Play a File\u{2026}") {
 				if let path = FilePanels.choose(.media, title: "Play a disk, CD, WHDLoad archive or configuration", startingAt: "") {
@@ -473,5 +580,41 @@ struct EmptyLibraryView: View {
 		}
 		.padding(32)
 		.frame(maxWidth: .infinity, maxHeight: .infinity)
+	}
+}
+
+/// Until a Kickstart is installed: what machines boot meanwhile, and the
+/// way to import ROMs; then what an import found.
+struct ROMNotice: View {
+	let model: LibraryModel
+
+	var body: some View {
+		HStack(alignment: .firstTextBaseline, spacing: 12) {
+			Image(systemName: model.kickstartInstalled ? "checkmark.circle" : "memorychip")
+				.foregroundStyle(model.kickstartInstalled ? Color.green : Color.orange)
+			VStack(alignment: .leading, spacing: 2) {
+				if !model.kickstartInstalled {
+					Text("No Kickstart ROMs").font(.headline)
+					Text("Machines boot the free AROS ROM. For the Amiga\u{2019}s own, import your Kickstart ROM files (from Amiga Forever or dumped from your Amiga).")
+						.foregroundStyle(.secondary)
+						.fixedSize(horizontal: false, vertical: true)
+				}
+				if let report = model.romReport {
+					Text(report).font(.callout)
+				}
+			}
+			Spacer(minLength: 8)
+			if !model.kickstartInstalled {
+				Button("Import ROMs\u{2026}") {
+					model.importROMs(FilePanels.chooseROMs(title: ROMImport.prompt))
+				}
+				.accessibilityIdentifier("library.importROMs")
+			} else {
+				Button("OK") { model.romReport = nil }
+			}
+		}
+		.padding(.horizontal, 16)
+		.padding(.vertical, 10)
+		.background(.bar)
 	}
 }

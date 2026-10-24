@@ -122,6 +122,10 @@ constexpr size_t max_value_length = 4096;
 choice_list choices_of(const definition& d, const uae_prefs& p);
 // Re-reads every host device list the layer enumerates. Main thread only.
 void refresh_dynamic_choices();
+// Rescans the ROMs folder (scan_roms, as the GUI's Rescan ROMs), its
+// rom.key first; the number of ROMs the scan recognised. The ROM choices
+// read the list as they are asked.
+int rescan_roms();
 // Calls visit for every configuration an open session holds (working
 // copy, base and preset snapshots), for host device refreshes that must
 // find the devices those configurations select again. Main thread only.
