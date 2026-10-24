@@ -192,6 +192,8 @@ void OpenGLRenderer::destroy_context()
 	amiberry_hw_vsync_pacing_set_blocking(false);
 	if (m_gl_context != nullptr)
 	{
+		on_screen_joystick_gl_context_destroyed(m_gl_context);
+		m_external_upload = {};
 		SDL_GL_DestroyContext(m_gl_context);
 		m_gl_context = nullptr;
 		m_vsync.current_interval = INVALID_SWAP_INTERVAL;
@@ -1451,12 +1453,15 @@ void OpenGLRenderer::render_external_shader(ExternalShader* shader, const int mo
 	// Per-shader frame counter — only ticks while this shader actually renders.
 	static int frame_count = 0;
 
-	// Per-shader texture upload cache. last_w/last_h/last_texture track whether
-	// we need a full glTexImage2D allocation or just a glTexSubImage2D upload.
-	// Reset when the shader program changes (i.e. user picked a different shader).
-	static GLuint last_shader_program = 0;
-	static int last_w = 0, last_h = 0;
-	static GLuint last_texture = 0;
+	// Per-shader texture upload cache: whether the texture needs a full
+	// glTexImage2D allocation or just a glTexSubImage2D upload. Reset when the
+	// shader program changes (another shader), and with the shaders and the
+	// context: a new context can hand out the same program and texture names,
+	// which would skip the allocation its texture needs.
+	GLuint& last_shader_program = m_external_upload.program;
+	int& last_w = m_external_upload.width;
+	int& last_h = m_external_upload.height;
+	GLuint& last_texture = m_external_upload.texture;
 	const GLuint current_program = shader->get_program();
 	if (current_program != last_shader_program) {
 		last_shader_program = current_program;
@@ -1590,6 +1595,7 @@ void OpenGLRenderer::destroy_shaders()
 
 	// Clear tracked name so next alloc_texture call will recreate
 	m_shader.loaded_name.clear();
+	m_external_upload = {};
 
 	// Early exit if no GL context exists (e.g., quitting before emulation started)
 	if (!has_context())

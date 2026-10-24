@@ -9,6 +9,10 @@ void on_screen_joystick_init(SDL_Renderer* renderer);
 
 // Clean up textures/surfaces and state.
 void on_screen_joystick_quit();
+// The renderer is destroying a GL context: the textures and shader made in
+// it go with it, so their names are forgotten (the next draw makes them in
+// the context then current).
+void on_screen_joystick_gl_context_destroyed(void* context);
 
 // Render the on-screen joystick controls using SDL renderer.
 // Call during the rendering frame, after the game screen is drawn.

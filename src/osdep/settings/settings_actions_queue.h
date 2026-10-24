@@ -35,6 +35,7 @@ enum class kind {
 	load_config,          // path
 	save_config,          // path
 	quit,
+	stop,                 // leave the running emulation for the settings UI
 	apply_settings,       // number = amiberry_apply_class
 	toggle_fullscreen,
 	open_settings,

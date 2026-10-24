@@ -441,6 +441,29 @@ bool execute(const request& r, void*, std::string* error)
 		emulation_requests++;
 		return true;
 
+	case kind::stop:
+#ifdef LIBRETRO
+		*error = "Stopping is up to the libretro front end";
+		return false;
+#else
+		if (quit_program == UAE_QUIT || quit_program == -UAE_QUIT) {
+			*error = "The emulator is quitting";
+			return false;
+		}
+		if (!emulating) {
+			*error = "No emulation is running";
+			return false;
+		}
+		// A state load not yet run (it waits for the reset the stop
+		// replaces) goes with the machine; left pending, it would load over
+		// the next one the Library starts.
+		if (savestate_state & (STATE_DORESTORE | STATE_RESTORE))
+			savestate_state = 0;
+		uae_restart(&currprefs, -1, nullptr);
+		emulation_requests++;
+		return true;
+#endif
+
 	case kind::apply_settings:
 		return apply_settings(r.number, error);
 
@@ -693,6 +716,11 @@ amiberry_action_id amiberry_actions_screenshot(const char* path)
 amiberry_action_id amiberry_actions_quit(void)
 {
 	return post(kind::quit);
+}
+
+amiberry_action_id amiberry_actions_stop(void)
+{
+	return post(kind::stop);
 }
 
 amiberry_action_id amiberry_actions_apply_settings(amiberry_apply_class apply)

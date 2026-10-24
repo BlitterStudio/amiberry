@@ -353,6 +353,15 @@ final class EmulatorActionsTests: XCTestCase {
 		XCTAssertEqual(release.poll(), .done)
 	}
 
+	/// Nothing runs where the tests do: there is no emulation to stop, and
+	/// the settings UI stays as it is.
+	func testStoppingNeedsARunningEmulation() throws {
+		let stop = try XCTUnwrap(EmulatorActions.post(.stop))
+		ActionPump.runPending()
+		XCTAssertEqual(stop.poll(), .failed("No emulation is running"))
+		XCTAssertEqual(EmulatorStatus.current().runState, .stopped)
+	}
+
 	func testPostedActionsRunOnTheMainThreadInOrder() throws {
 		let folder = FileManager.default.temporaryDirectory.appendingPathComponent("bridge-actions-\(UUID().uuidString)")
 		try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)

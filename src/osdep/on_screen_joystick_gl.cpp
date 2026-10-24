@@ -162,6 +162,15 @@ void osj_cleanup_gl_shader()
 	if (osj_gl_program) { glDeleteProgram(osj_gl_program); osj_gl_program = 0; }
 }
 
+void osj_forget_gl_shader()
+{
+	osj_gl_vbo = 0;
+	osj_gl_vao = 0;
+	osj_gl_program = 0;
+	osj_gl_tex_loc = -1;
+	osj_gl_alpha_loc = -1;
+}
+
 GLuint osj_get_gl_program() { return osj_gl_program; }
 GLuint osj_get_gl_vao() { return osj_gl_vao; }
 

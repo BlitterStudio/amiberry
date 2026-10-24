@@ -54,7 +54,7 @@
 extern "C" {
 #endif
 
-#define AMIBERRY_ACTIONS_API_VERSION 5
+#define AMIBERRY_ACTIONS_API_VERSION 6
 
 /* Largest MAX_DPATH (PATH_MAX) any supported platform builds with, so every
    media path the emulator can store fits, NUL included. */
@@ -147,6 +147,15 @@ AMIBERRY_ACTIONS_API amiberry_action_id amiberry_actions_screenshot(const char *
 AMIBERRY_ACTIONS_API amiberry_action_id amiberry_actions_load_config(const char *path);
 AMIBERRY_ACTIONS_API amiberry_action_id amiberry_actions_save_config(const char *path);
 AMIBERRY_ACTIONS_API amiberry_action_id amiberry_actions_quit(void);
+
+/*
+ * Stop the running emulation and open the settings UI with nothing running
+ * (the Library in the Apple apps, the built-in GUI elsewhere), as dropping a
+ * configuration on the GUI does. The running configuration stays the
+ * pending one. FAILED while nothing runs, while the emulator quits, and in
+ * the libretro core, whose front end owns the emulation's lifetime.
+ */
+AMIBERRY_ACTIONS_API amiberry_action_id amiberry_actions_stop(void);
 
 /*
  * Brings the running emulation up to the pending configuration (what

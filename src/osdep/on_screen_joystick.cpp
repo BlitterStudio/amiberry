@@ -845,17 +845,45 @@ static ControlType hit_test(int px, int py)
 }
 
 #ifdef USE_OPENGL
+// The GL context the textures and shader were made in. GL names belong to
+// one context: a context made after it hands the same numbers to its own
+// objects (the renderer's frame texture and programs), which deleting or
+// drawing with these names would hit instead.
+static SDL_GLContext osj_gl_context = nullptr;
+
+static void forget_osj_gl()
+{
+	gl_stick_base_tex = gl_knob_tex = gl_btn1_tex = gl_btn2_tex = gl_btnkb_tex = 0;
+	osj_forget_gl_shader();
+	osj_gl_initialized = false;
+	osj_gl_context = nullptr;
+}
+
 static void cleanup_osj_gl()
 {
-	if (gl_stick_base_tex) { glDeleteTextures(1, &gl_stick_base_tex); gl_stick_base_tex = 0; }
-	if (gl_knob_tex) { glDeleteTextures(1, &gl_knob_tex); gl_knob_tex = 0; }
-	if (gl_btn1_tex) { glDeleteTextures(1, &gl_btn1_tex); gl_btn1_tex = 0; }
-	if (gl_btn2_tex) { glDeleteTextures(1, &gl_btn2_tex); gl_btn2_tex = 0; }
-	if (gl_btnkb_tex) { glDeleteTextures(1, &gl_btnkb_tex); gl_btnkb_tex = 0; }
-	osj_cleanup_gl_shader();
-	osj_gl_initialized = false;
+	// Deleted only where they were made; elsewhere (or once that context is
+	// gone) they are forgotten.
+	if (osj_gl_context && osj_gl_context == SDL_GL_GetCurrentContext()) {
+		if (gl_stick_base_tex) glDeleteTextures(1, &gl_stick_base_tex);
+		if (gl_knob_tex) glDeleteTextures(1, &gl_knob_tex);
+		if (gl_btn1_tex) glDeleteTextures(1, &gl_btn1_tex);
+		if (gl_btn2_tex) glDeleteTextures(1, &gl_btn2_tex);
+		if (gl_btnkb_tex) glDeleteTextures(1, &gl_btnkb_tex);
+		osj_cleanup_gl_shader();
+	}
+	forget_osj_gl();
 }
 #endif // USE_OPENGL
+
+void on_screen_joystick_gl_context_destroyed(void* context)
+{
+#ifdef USE_OPENGL
+	if (context && context == osj_gl_context)
+		forget_osj_gl();
+#else
+	(void)context;
+#endif
+}
 
 // ---------------------------------------------------------------------------
 // Public API
@@ -1178,6 +1206,11 @@ void on_screen_joystick_redraw_gl(int drawable_w, int drawable_h,
 	const SDL_Rect btn2_rect = to_sdl_rect(layout_snapshot.fire2.visual);
 	const SDL_Rect btnkb_rect = to_sdl_rect(layout_snapshot.keyboard.visual);
 
+	// Made in the context drawing now; any from another are not usable here.
+	if (osj_gl_context != SDL_GL_GetCurrentContext()) {
+		cleanup_osj_gl();
+		osj_gl_context = SDL_GL_GetCurrentContext();
+	}
 	// Lazy-init GL resources
 	if (!osj_init_gl_shader()) return;
 

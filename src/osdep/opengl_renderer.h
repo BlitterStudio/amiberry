@@ -59,6 +59,15 @@ struct ShaderState {
 	int resolve_height = 0;
 };
 
+// What the external shader path last uploaded into, so a frame of the same
+// size only updates the texture; reset with the shaders and the context.
+struct ExternalUploadCache {
+	GLuint program = 0;
+	int width = 0;
+	int height = 0;
+	GLuint texture = 0;
+};
+
 // OpenGL overlay resources: OSD, bezel, software cursor (owned by OpenGLRenderer)
 struct GLOverlayState {
 	GLuint osd_texture = 0;
@@ -174,6 +183,7 @@ public:
 private:
 	SDL_GLContext m_gl_context = nullptr;
 	ShaderState m_shader;
+	ExternalUploadCache m_external_upload;
 	GLOverlayState m_overlay;
 	bool m_integer_scaling = false; // Integer scaling for native Amiga modes (scaling_method == 2)
 	bool m_stretch_to_fill = false; // Fill the render area, ignoring aspect (scaling_method == 3)
