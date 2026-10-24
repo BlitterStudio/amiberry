@@ -309,6 +309,14 @@ hotkey button held (`hotkey`):
   `SETTINGS_COMMIT` applies the edits live, for the joystick each port has
   then.
 
+Configuration files: `LOAD_CONFIG <path>` makes a `.uae` (or `.rp9`) file the
+pending configuration, inserting the floppies it names at once (the rest
+takes effect with `SETTINGS_APPLY restart`, or when the emulation next
+starts); a file that is missing or not a configuration fails and leaves the
+pending configuration as it was. `SAVE_CONFIG <path>` writes the pending
+configuration (`SETTINGS_COMMIT` first to include a session's edits). The
+options `config_description` and `config_category` describe it.
+
 A session that holds no uncommitted edits is reopened from
 the current pending configuration at the next `SETTINGS_*` command, so a
 configuration loaded or changed any other way (`LOAD_CONFIG`, `SET_CONFIG`,

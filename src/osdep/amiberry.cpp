@@ -952,8 +952,6 @@ bool install_fault_signal_handlers()
 #endif
 }
 
-extern void set_last_active_config(const char* filename);
-
 std::string home_dir;
 std::string current_dir;
 static bool g_portable_mode = false;

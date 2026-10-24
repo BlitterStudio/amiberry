@@ -245,6 +245,7 @@ extern void extract_path(const char* str, char* buffer);
 extern std::string extract_path(const std::string& filename);
 extern void remove_file_extension(char* filename);
 extern std::string remove_file_extension(const std::string& filename);
+extern void set_last_active_config(const char* filename);
 extern void set_last_active_config_from_media(const char* filename);
 extern void ReadConfigFileList();
 extern bool remove_configuration_file(const std::string& config_file);

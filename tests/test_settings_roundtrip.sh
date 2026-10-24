@@ -65,7 +65,8 @@ check_scenario()
 		failures=$((failures + 1))
 	fi
 	local pair default key value written
-	while read -r pair default; do
+	# "id=value<TAB>default": values can have spaces.
+	while IFS=$'\t' read -r pair default; do
 		key="${pair%%=*}"
 		value="${pair#*=}"
 		written="$(grep -m1 "^${key//./\\.}=" "$work/dump.txt" | cut -d= -f2- || true)"
