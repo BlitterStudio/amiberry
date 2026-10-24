@@ -59,6 +59,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
     )
 else()
     target_sources(amiberry_native_ui PRIVATE
+            apple/macOS/EmulationChrome.swift
             apple/macOS/MainMenu.swift
             apple/macOS/NativeHost.swift
             apple/macOS/SettingsWindow.swift

@@ -41,6 +41,9 @@ void amiberry_native_ui_settings_dismiss(void);
 void amiberry_native_ui_settings_commit(void);
 void amiberry_native_ui_settings_devices_changed(void);
 void amiberry_native_ui_install_menus(void);
+#ifdef AMIBERRY_MACOS
+void amiberry_native_ui_emulation_window(void* nswindow);
+#endif
 #ifdef AMIBERRY_IOS
 void amiberry_native_ui_keyboard_toggle(void);
 void amiberry_native_ui_keyboard_hide(void);
@@ -198,6 +201,19 @@ void native_host_install_menus()
 	amiberry_native_ui_set_modal_wait_hook(modal_wait_hook);
 #endif
 	amiberry_native_ui_install_menus();
+}
+
+void native_host_emulation_window_created(SDL_Window* window)
+{
+#ifdef AMIBERRY_MACOS
+	if (!window)
+		return;
+	if (void* nswindow = SDL_GetPointerProperty(SDL_GetWindowProperties(window),
+			SDL_PROP_WINDOW_COCOA_WINDOW_POINTER, nullptr))
+		amiberry_native_ui_emulation_window(nswindow);
+#else
+	(void)window;
+#endif
 }
 
 void native_host_toggle_keyboard()

@@ -19,6 +19,10 @@ void native_host_run_settings();
 // the menu bar on macOS, the emulation overlay (settings and keyboard
 // buttons) on iOS.
 void native_host_install_menus();
+// SDL has created the emulation window (macOS: its toolbar goes on;
+// nothing on iOS, where the overlay is installed once). Main thread only.
+struct SDL_Window;
+void native_host_emulation_window_created(SDL_Window* window);
 // The native on-screen Amiga keyboard (iOS; nothing on macOS, which keeps
 // the built-in one until its GUI is compiled out): shown or hidden by its
 // hotkey and the on-screen joystick's keyboard button, hidden when input

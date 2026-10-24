@@ -41,6 +41,7 @@
 #include "fsdb_host.h"
 #include "uae/types.h"
 #include "gl_context_ladder.h"
+#include "native_ui_host.h"
 
 #ifdef USE_OPENGL
 #include "gl_platform.h"
@@ -952,6 +953,9 @@ static int create_windows(struct AmigaMonitor* mon)
 		SDL_SetWindowFullscreen(mon->amiga_window, true);
 		SDL_SyncWindow(mon->amiga_window);
 	}
+#ifdef AMIBERRY_NATIVE_HOST
+	native_host_emulation_window_created(mon->amiga_window);
+#endif
 
 #ifdef __ANDROID__
 	// The Android activity surface is the client area; do not derive frame
