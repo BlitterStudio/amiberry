@@ -57,6 +57,23 @@ void gfx_DisplayChangeRequested(const int mode)
 	display_change_requested = mode;
 }
 
+// A change reaches this check for two vsyncs (set_config_changed(), then
+// config_check_vsync()), but the blocks below apply their part and return
+// early, so a commit that spans several blocks needs a pass for each. A block
+// that returned early asks for another pass; bounded, so a block whose
+// condition never settles cannot keep re-running, and reset once a pass
+// finds nothing left.
+static int extra_passes = 0;
+
+static int applied_part()
+{
+	if (extra_passes < 8) {
+		extra_passes++;
+		set_config_changed();
+	}
+	return 1;
+}
+
 int check_prefs_changed_gfx()
 {
 	int c = 0;
@@ -105,8 +122,10 @@ int check_prefs_changed_gfx()
 	}
 #endif
 
-	if (!config_changed && !display_change_requested)
+	if (!config_changed && !display_change_requested) {
+		extra_passes = 0;
 		return 0;
+	}
 
 	// Runtime config loads (IPC, D-Bus) change the active config name.
 	refreshtitle();
@@ -515,7 +534,7 @@ int check_prefs_changed_gfx()
 		if (setpause)
 			setpaused(1);
 
-		return 1;
+		return applied_part();
 	}
 
 	bool changed = false;
@@ -533,7 +552,7 @@ int check_prefs_changed_gfx()
 	if (currprefs.chipset_refreshrate != changed_prefs.chipset_refreshrate) {
 		currprefs.chipset_refreshrate = changed_prefs.chipset_refreshrate;
 		init_hz();
-		return 1;
+		return applied_part();
 	}
 
 	if (
@@ -558,7 +577,7 @@ int check_prefs_changed_gfx()
 		get_custom_limits(nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
 		fixup_prefs_dimensions(&changed_prefs);
 
-		return 1;
+		return applied_part();
 	}
 
 	//currprefs.win32_norecyclebin = changed_prefs.win32_norecyclebin;
@@ -656,7 +675,7 @@ int check_prefs_changed_gfx()
 #ifndef	_DEBUG
 		setpriority(currprefs.active_capture_priority);
 #endif
-		return 1;
+		return applied_part();
 	}
 
 	if (currprefs.samplersoundcard != changed_prefs.samplersoundcard ||
@@ -803,6 +822,7 @@ int check_prefs_changed_gfx()
 		return 1;
 	}
 
+	extra_passes = 0;
 	return 0;
 }
 
