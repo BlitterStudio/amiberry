@@ -47,6 +47,112 @@ final class SettingsPagesTests: XCTestCase {
 }
 
 @MainActor
+final class LibraryTests: XCTestCase {
+	func testLibraryListsSavedMachinesWithTheirMetadata() throws {
+		let folder = try MediaLibrary.path(of: .configurations)
+		let name = "library-\(UUID().uuidString)"
+		let file = URL(fileURLWithPath: folder).appendingPathComponent(name + ".uae")
+		try "config_description=Lotus II on an A500\nconfig_category=Games\n".write(to: file, atomically: true, encoding: .utf8)
+		defer { try? FileManager.default.removeItem(at: file) }
+		let library = LibraryModel(emulating: false, finish: {}, openEditor: { _, _ in })
+		let machine = try XCTUnwrap(library.machines.first { $0.name == name })
+		XCTAssertEqual(machine.description, "Lotus II on an A500")
+		XCTAssertEqual(machine.category, "Games")
+		XCTAssertTrue(library.categories.contains("Games"))
+		XCTAssertTrue(library.machines(in: "Games").contains(machine))
+		XCTAssertFalse(library.machines(in: "Nothing").contains(machine))
+		let view = NSHostingView(rootView: LibraryView(model: library))
+		view.frame = NSRect(x: 0, y: 0, width: 860, height: 560)
+		view.layoutSubtreeIfNeeded()
+	}
+
+	func testSaveDoesNotReplaceAnotherMachine() async throws {
+		let folder = try MediaLibrary.path(of: .configurations)
+		let name = "taken-\(UUID().uuidString)"
+		let file = URL(fileURLWithPath: folder).appendingPathComponent(name + ".uae")
+		try "config_description=Keep me\n".write(to: file, atomically: true, encoding: .utf8)
+		defer { try? FileManager.default.removeItem(at: file) }
+		let model = try SettingsWindowModel(emulating: false, dismiss: {}, post: { _ in true })
+		let saved = await model.save(name: name, description: "Other", category: "")
+		XCTAssertFalse(saved)
+		XCTAssertTrue(model.notice?.contains("already exists") ?? false, model.notice ?? "")
+		XCTAssertEqual(try String(contentsOf: file, encoding: .utf8), "config_description=Keep me\n")
+		// Nothing was committed either.
+		XCTAssertNotEqual(try SettingsSession.activeValue(of: "config_description"), "Other")
+		XCTAssertNotEqual(try SettingsSession().value(of: "config_description"), "Other")
+		let slashed = await model.save(name: "a/b", description: "", category: "")
+		XCTAssertFalse(slashed)
+		XCTAssertTrue(model.notice?.contains("cannot contain") ?? false, model.notice ?? "")
+	}
+
+	func testANewMachineShowsItsModelInQuickStart() throws {
+		let a1200 = try XCTUnwrap(MachinePresets.preset(for: "a1200"))
+		// The pending configuration was saved as a machine: it has that file.
+		let saved = FileManager.default.temporaryDirectory.appendingPathComponent("current-\(UUID().uuidString).uae")
+		defer { try? FileManager.default.removeItem(at: saved) }
+		XCTAssertNotNil(EmulatorActions.post(.saveConfiguration(path: saved.path)))
+		ActionPump.runPending()
+		XCTAssertEqual(MediaLibrary.currentConfiguration().map { URL(fileURLWithPath: $0).standardizedFileURL.path },
+			saved.standardizedFileURL.path)
+		let model = try SettingsWindowModel(emulating: false, dismiss: {}, post: { _ in true })
+		model.startNewMachine(preset: a1200.id, configuration: 0)
+		XCTAssertNil(MediaLibrary.currentConfiguration(), "a new machine is no saved file's")
+		XCTAssertEqual(model.page, .quickStart)
+		XCTAssertEqual(model.newMachineModel?.id, "a1200")
+		XCTAssertEqual(model.store.value(of: "chipset"), "aga")
+	}
+
+	func testTheLibraryWaitsWhileAnEditorIsOpen() {
+		var opened = 0
+		let library = LibraryModel(emulating: false, finish: {}, openEditor: { _, _ in opened += 1 })
+		library.editing = true
+		library.newMachine(preset: "a500")
+		XCTAssertEqual(opened, 0, "the open editor is not replaced")
+		library.editing = false
+		library.newMachine(preset: "a500")
+		XCTAssertEqual(opened, 1)
+	}
+
+	func testSavingAMachineInPlaceKeepsItsFile() async throws {
+		let folder = try MediaLibrary.path(of: .configurations)
+		let name = "Upper-\(UUID().uuidString)"
+		let file = URL(fileURLWithPath: folder).appendingPathComponent(name + ".UAE")
+		try "config_description=Old\n".write(to: file, atomically: true, encoding: .utf8)
+		defer { try? FileManager.default.removeItem(at: file) }
+		let machine = Machine(path: file.path, name: name, description: "Old", category: "")
+		let model = try SettingsWindowModel(emulating: false, dismiss: {}, post: { _ in true },
+			machine: machine, closeToLibrary: {})
+		// The save runs as an action: pump the queue as the emulator would.
+		let saving = Task { await model.save(name: name, description: "New", category: "") }
+		var saved: Bool?
+		for _ in 0..<200 where saved == nil {
+			ActionPump.runPending()
+			try await Task.sleep(for: .milliseconds(10))
+			if model.notice != nil || MediaLibrary.configurationInfo(file.path)?.description == "New" {
+				saved = await saving.value
+			}
+		}
+		XCTAssertEqual(saved, true, model.notice ?? "")
+		XCTAssertEqual(MediaLibrary.configurationInfo(file.path)?.description, "New")
+		// One file, spelled as before.
+		let names = try FileManager.default.contentsOfDirectory(atPath: folder).filter { $0.hasPrefix(name) }
+		XCTAssertEqual(names, [name + ".UAE"])
+	}
+
+	func testClosingAnEditorFromTheLibraryGoesBackToIt() throws {
+		var closed = 0
+		var dismissed = 0
+		let model = try SettingsWindowModel(
+			emulating: false, dismiss: { dismissed += 1 }, post: { _ in true },
+			machine: nil, closeToLibrary: { closed += 1 })
+		XCTAssertTrue(model.fromLibrary)
+		model.closeRequested()
+		XCTAssertEqual(closed, 1, "back to the Library")
+		XCTAssertEqual(dismissed, 0, "nothing quits or starts")
+	}
+}
+
+@MainActor
 final class SettingsWindowModelTests: XCTestCase {
 	private var posted: [EmulatorAction] = []
 	private var dismissed = 0

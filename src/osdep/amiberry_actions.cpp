@@ -433,6 +433,7 @@ bool execute(const request& r, void*, std::string* error)
 			return false;
 		}
 		set_last_active_config(r.path.c_str());
+		set_current_config_path(r.path.c_str());
 		return true;
 
 	case kind::quit:

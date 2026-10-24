@@ -88,7 +88,10 @@ final class EmulationOverlay {
 	}
 
 	func dismissSettings(_ controller: UIViewController?) {
-		controller?.dismiss(animated: false)
+		// From the controller that presented it: dismissing the screen
+		// itself would only close what it presents (the editor over the
+		// Library) and leave the screen up.
+		(controller?.presentingViewController ?? controller)?.dismiss(animated: false)
 		state.settingsVisible = false
 		state.keyboardOptions = KeyboardOptions.active()
 		// Hardware keys go back to the emulation.

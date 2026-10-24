@@ -126,6 +126,30 @@ AMIBERRY_SETTINGS_API amiberry_settings_status amiberry_media_add_recent(amiberr
  */
 AMIBERRY_SETTINGS_API bool amiberry_media_grant_access(const char *path);
 
+/*
+ * The description and category a configuration file declares
+ * (config_description, config_category), read from its header without
+ * loading it, as the configurations list shows them. Either buffer may be
+ * NULL with size 0. UNKNOWN_ID for a file that cannot be read,
+ * BUFFER_TOO_SMALL when a value does not fit (up to 256 bytes each).
+ */
+/*
+ * The configuration file the pending configuration was loaded from or last
+ * saved to (by the load and save actions, the GUI or the command line), as
+ * a full path; empty for a default configuration or an RP9 package.
+ * BUFFER_TOO_SMALL when it does not fit.
+ */
+AMIBERRY_SETTINGS_API amiberry_settings_status amiberry_media_current_configuration(char *path, size_t size);
+
+/*
+ * Forgets that file: the pending configuration becomes a new machine (one
+ * started from a model), which is no saved file's until it is saved.
+ */
+AMIBERRY_SETTINGS_API void amiberry_media_forget_current_configuration(void);
+
+AMIBERRY_SETTINGS_API amiberry_settings_status amiberry_media_configuration_info(const char *path,
+	char *description, size_t description_size, char *category, size_t category_size);
+
 #ifdef __cplusplus
 }
 #endif

@@ -45,6 +45,7 @@ target_sources(amiberry_native_ui PRIVATE
         apple/Shared/UI/HostEntryPoints.swift
         apple/Shared/UI/SettingsModel.swift
         apple/Shared/UI/SettingsViews.swift
+        apple/Shared/UI/Library.swift
 )
 if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
     target_sources(amiberry_native_ui PRIVATE

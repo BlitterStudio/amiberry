@@ -246,6 +246,10 @@ extern std::string extract_path(const std::string& filename);
 extern void remove_file_extension(char* filename);
 extern std::string remove_file_extension(const std::string& filename);
 extern void set_last_active_config(const char* filename);
+// The configuration file the pending configuration came from or was last
+// saved to; empty for a default or an RP9 package.
+extern void set_current_config_path(const char* filename);
+extern std::string get_current_config_path();
 extern void set_last_active_config_from_media(const char* filename);
 extern void ReadConfigFileList();
 extern bool remove_configuration_file(const std::string& config_file);

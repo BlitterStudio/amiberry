@@ -117,4 +117,32 @@ public enum MediaLibrary {
 	public static func grantAccess(to path: String) -> Bool {
 		amiberry_media_grant_access(path)
 	}
+
+	/// The configuration file the pending configuration came from or was
+	/// last saved to; nil for a default configuration or an RP9 package.
+	public static func currentConfiguration() -> String? {
+		let (text, status) = readLayerString(capacity: 1024) { amiberry_media_current_configuration($0, $1) }
+		guard status == AMIBERRY_SETTINGS_OK, !text.isEmpty else { return nil }
+		return text
+	}
+
+	/// Forgets the configuration file: the pending configuration becomes a
+	/// new machine.
+	public static func forgetCurrentConfiguration() {
+		amiberry_media_forget_current_configuration()
+	}
+
+	/// The description and category a configuration file declares, read
+	/// from its header; nil when the file cannot be read.
+	public static func configurationInfo(_ path: String) -> (description: String, category: String)? {
+		var description = [CChar](repeating: 0, count: 512)
+		var category = [CChar](repeating: 0, count: 512)
+		let status = description.withUnsafeMutableBufferPointer { d in
+			category.withUnsafeMutableBufferPointer { c in
+				amiberry_media_configuration_info(path, d.baseAddress, d.count, c.baseAddress, c.count)
+			}
+		}
+		guard status == AMIBERRY_SETTINGS_OK else { return nil }
+		return (decodedString(description), decodedString(category))
+	}
 }

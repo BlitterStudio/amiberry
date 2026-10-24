@@ -389,6 +389,39 @@ amiberry_settings_status amiberry_media_entry(amiberry_media_list list, size_t i
 	});
 }
 
+amiberry_settings_status amiberry_media_current_configuration(char* path, size_t size)
+{
+	return amiberry_settings::no_throw(AMIBERRY_SETTINGS_UNKNOWN_ID, [=] {
+		return copy_out(get_current_config_path(), path, size);
+	});
+}
+
+void amiberry_media_forget_current_configuration(void)
+{
+	amiberry_settings::no_throw(0, [] {
+		set_current_config_path(nullptr);
+		return 0;
+	});
+}
+
+amiberry_settings_status amiberry_media_configuration_info(const char* path,
+	char* description, size_t description_size, char* category, size_t category_size)
+{
+	return amiberry_settings::no_throw(AMIBERRY_SETTINGS_UNKNOWN_ID, [=] {
+		if (!path || !path[0])
+			return AMIBERRY_SETTINGS_UNKNOWN_ID;
+		uae_prefs* p = cfgfile_open(path, nullptr);
+		if (!p)
+			return AMIBERRY_SETTINGS_UNKNOWN_ID;
+		const std::string text = p->description;
+		const std::string group = p->category;
+		cfgfile_close(p);
+		const amiberry_settings_status description_status = copy_out(text, description, description_size);
+		const amiberry_settings_status category_status = copy_out(group, category, category_size);
+		return description_status != AMIBERRY_SETTINGS_OK ? description_status : category_status;
+	});
+}
+
 amiberry_settings_status amiberry_media_add_recent(amiberry_media_list list, const char* path)
 {
 	return amiberry_settings::no_throw(AMIBERRY_SETTINGS_INVALID_VALUE, [=] {
