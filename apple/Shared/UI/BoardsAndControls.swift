@@ -89,6 +89,7 @@ struct BoardUnitView: View {
 	let type: BoardType
 	let unit: Int
 	let store: SettingsStore
+	@Environment(SettingsWindowModel.self) private var model: SettingsWindowModel?
 
 	var body: some View {
 		DisclosureGroup {
@@ -97,7 +98,11 @@ struct BoardUnitView: View {
 			}
 			// A built-in controller stays while the machine has it.
 			Button("Remove Board", role: .destructive) {
-				store.setBoardValue("false", field: "enabled", type: type.id, unit: unit)
+				if store.setBoardValue("false", field: "enabled", type: type.id, unit: unit) {
+					// Text refused in its fields goes with the board.
+					let prefix = "board:\(type.id):\(unit):"
+					model?.invalidDrafts = (model?.invalidDrafts ?? [:]).filter { !$0.key.hasPrefix(prefix) }
+				}
 			}
 			.disabled(!store.isBoardFieldAvailable("enabled", type: type.id, unit: unit))
 		} label: {

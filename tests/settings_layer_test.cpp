@@ -2551,10 +2551,14 @@ void check_boards()
 	// Through a session: the edits stay in it, and a commit with a changed
 	// board needs a restart; one without changes changes nothing.
 	reset_prefs(changed_prefs);
+	reset_prefs(currprefs);
 	amiberry_settings_session* session = amiberry_settings_session_open();
 	CHECK(session);
+	CHECK(!amiberry_settings_boards_differ_from_active(session));
 	char text[64];
 	CHECK(amiberry_settings_board_set(session, "a2091", 1, "enabled", "true") == AMIBERRY_SETTINGS_OK);
+	// The running emulation does not have it until it restarts.
+	CHECK(amiberry_settings_boards_differ_from_active(session));
 	CHECK(amiberry_settings_board_get(session, "a2091", 1, "enabled", text, sizeof text) == AMIBERRY_SETTINGS_OK
 		&& !std::strcmp(text, "true"));
 	CHECK(amiberry_settings_board_get(session, "a2091", 1, "rom_file", text, 4) == AMIBERRY_SETTINGS_BUFFER_TOO_SMALL);
@@ -2564,13 +2568,17 @@ void check_boards()
 	CHECK(amiberry_settings_commit(session, &changed) == AMIBERRY_APPLY_RESTART && changed);
 	CHECK(get_device_rom(&changed_prefs, ROMTYPE_A2091, 1, &index));
 	CHECK(amiberry_settings_commit(session, &changed) == AMIBERRY_APPLY_LIVE && !changed);
+	CHECK(amiberry_settings_boards_differ_from_active(session)); // committed, not yet running
+	std::memcpy(static_cast<void*>(&currprefs), static_cast<const void*>(&changed_prefs), sizeof currprefs); // restarted
+	CHECK(!amiberry_settings_boards_differ_from_active(session));
+	CHECK(!amiberry_settings_boards_differ_from_active(nullptr));
 	amiberry_settings_session_close(session);
+	reset_prefs(currprefs);
 	CHECK(amiberry_settings_board_type_find(nullptr) == nullptr);
 	CHECK(amiberry_settings_board_type_at(amiberry_settings_board_type_count()) == nullptr);
 }
 
-// The configuration's description and category: one line each (the writer
-// does not escape them), the category without surrounding spaces.
+// Host settings: the Global Settings panel, process-wide, saved explicitly.
 void check_host_settings()
 {
 	CHECK(amiberry_host_settings_count() > 60);
@@ -2628,6 +2636,8 @@ void check_host_settings()
 	amiberry_options = {};
 }
 
+// The configuration's description and category: one line each (the writer
+// does not escape them), the category without surrounding spaces.
 void check_config_text()
 {
 	uae_prefs& p = test_prefs;

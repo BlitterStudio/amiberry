@@ -70,6 +70,15 @@ final class BoardsAndControlsTests: XCTestCase {
 		}
 	}
 
+	func testABoardChangeWaitsForARestart() throws {
+		let model = try SettingsWindowModel(emulating: true, dismiss: {}, post: { _ in true })
+		XCTAssertFalse(model.boardsWaitForRestart)
+		XCTAssertTrue(model.store.setBoardValue("true", field: "enabled", type: "a2091", unit: 0))
+		XCTAssertTrue(model.boardsWaitForRestart, "the running emulation has the board only after a restart")
+		XCTAssertTrue(model.store.setBoardValue("false", field: "enabled", type: "a2091", unit: 0))
+		XCTAssertFalse(model.boardsWaitForRestart)
+	}
+
 	func testCustomControlsNeedAJoystick() throws {
 		let store = try SettingsStore()
 		// The test host has no joystick on the joystick port.

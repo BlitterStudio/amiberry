@@ -563,8 +563,9 @@ struct FooterView: View {
 				if let reset = waiting[.reset], !reset.isEmpty {
 					Text("Waiting for a reset: \(reset.map(\.label).joined(separator: ", "))").foregroundStyle(.secondary)
 				}
-				if let restart = waiting[.restart], !restart.isEmpty {
-					Text("Waiting for a restart: \(restart.map(\.label).joined(separator: ", "))").foregroundStyle(.secondary)
+				let restartLabels = (waiting[.restart] ?? []).map(\.label) + (model.boardsWaitForRestart ? ["Expansion boards"] : [])
+				if !restartLabels.isEmpty {
+					Text("Waiting for a restart: \(restartLabels.joined(separator: ", "))").foregroundStyle(.secondary)
 				}
 			}
 			.font(.callout)
@@ -584,7 +585,7 @@ struct FooterView: View {
 			Button("Save\u{2026}") { saving = true }
 				.accessibilityIdentifier("editor.save")
 			if model.emulating {
-				if !(waiting[.restart] ?? []).isEmpty {
+				if !(waiting[.restart] ?? []).isEmpty || model.boardsWaitForRestart {
 					Button("Restart") { model.restart() }
 				}
 				Button("Reset") { model.reset() }

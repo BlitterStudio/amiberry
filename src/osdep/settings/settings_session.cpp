@@ -651,6 +651,15 @@ const char* amiberry_settings_custom_control_use(const amiberry_settings_session
 	});
 }
 
+bool amiberry_settings_boards_differ_from_active(const amiberry_settings_session* session)
+{
+	if (!session)
+		return false;
+	return amiberry_settings::no_throw(false, [session] {
+		return !amiberry_settings::same_boards(*session->working, currprefs);
+	});
+}
+
 // The preset is applied to the session's copy for get/is_available, and
 // recorded so validate and commit replay it on the pending configuration.
 amiberry_settings_status amiberry_settings_preset_apply(amiberry_settings_session* session,

@@ -232,6 +232,12 @@ final class SettingsWindowModel {
 		}
 	}
 
+	/// The expansion boards wait for a restart: the session's differ from
+	/// the running emulation's.
+	var boardsWaitForRestart: Bool {
+		emulating && store.boardsDifferFromActive
+	}
+
 	/// Options whose stored value the running emulation does not use yet,
 	/// by the step that brings them in (reset or restart).
 	var waiting: [ApplyClass: [SettingDescriptor]] {

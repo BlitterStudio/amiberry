@@ -48,7 +48,7 @@
 extern "C" {
 #endif
 
-#define AMIBERRY_SETTINGS_API_VERSION 7
+#define AMIBERRY_SETTINGS_API_VERSION 8
 
 /* Large enough for every value a descriptor can produce, including the
    terminating NUL. */
@@ -344,6 +344,9 @@ AMIBERRY_SETTINGS_API amiberry_settings_status amiberry_settings_board_set(
 	const char *value);
 AMIBERRY_SETTINGS_API bool amiberry_settings_board_field_available(
 	const amiberry_settings_session *session, const char *type, int unit, const char *field);
+/* Whether the session's expansion boards differ from the running
+   emulation's: they take effect when it restarts. */
+AMIBERRY_SETTINGS_API bool amiberry_settings_boards_differ_from_active(const amiberry_settings_session *session);
 
 /*
  * Custom controls: the Amiga input event each button and axis of the

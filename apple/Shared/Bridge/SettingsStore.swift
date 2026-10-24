@@ -120,6 +120,12 @@ public final class SettingsStore {
 		}
 	}
 
+	/// Whether the session's boards differ from the running emulation's.
+	public var boardsDifferFromActive: Bool {
+		_ = revision
+		return session.boardsDifferFromActive()
+	}
+
 	public func isBoardFieldAvailable(_ field: String, type: String, unit: Int) -> Bool {
 		_ = revision
 		return session.isBoardFieldAvailable(field, type: type, unit: unit)
