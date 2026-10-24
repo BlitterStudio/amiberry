@@ -1,4 +1,4 @@
-{"schema_version":1,"api_version":5,
+{"schema_version":1,"api_version":6,
 "options":[
 {"id":"cpu_model","group":"cpu","label":"CPU model","help":"CPU model. 68020+ are 32-bit; 68040/68060 include FPU and MMU. Higher models are faster.","type":"choice","apply":"live","default":"68000","choices":[{"value":"68000","label":"68000 (A500/A1000/A2000)"},{"value":"68010","label":"68010"},{"value":"68020","label":"68020 (A1200)"},{"value":"68030","label":"68030 (A3000/A4000)"},{"value":"68040","label":"68040"},{"value":"68060","label":"68060"}]},
 {"id":"cpu_24bit_addressing","group":"cpu","label":"24-bit addressing","help":"Essential for A500/A1200 compatibility. Disable for Z3 RAM usage.","type":"bool","apply":"reset","default":"true","constraint":"24-bit addressing is not available on a 68040 or 68060, with the JIT, or with a 32-bit accelerator board."},

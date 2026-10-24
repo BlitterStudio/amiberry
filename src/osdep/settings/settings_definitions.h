@@ -15,6 +15,7 @@
 
 struct uae_prefs;
 struct expansionboardsettings;
+struct amiberry_settings_custom_controls_stage;
 
 namespace amiberry_settings {
 
@@ -213,6 +214,25 @@ amiberry_settings_status board_set(uae_prefs& p, const context& ctx, std::string
 	std::string_view field, std::string_view value);
 bool board_field_available(const uae_prefs& p, const context& ctx, std::string_view type, int unit,
 	std::string_view field);
+
+// Custom controls (amiberry_settings_custom_control_*,
+// settings_custom_controls.cpp): edits are staged per port and applied to
+// the input code on commit, for the devices the ports have in p. Main
+// thread.
+size_t custom_control_count();
+const amiberry_settings_custom_control* custom_control_at(size_t index);
+size_t input_event_count();
+const amiberry_setting_choice* input_event_at(size_t index);
+amiberry_settings_custom_controls_stage* custom_controls_stage_new();
+void custom_controls_stage_free(amiberry_settings_custom_controls_stage* stage);
+void custom_controls_stage_clear(amiberry_settings_custom_controls_stage* stage);
+amiberry_settings_status custom_control_get(const amiberry_settings_custom_controls_stage* stage,
+	const uae_prefs& p, int port, bool hotkey, std::string_view control, char* out, size_t size);
+amiberry_settings_status custom_control_set(amiberry_settings_custom_controls_stage* stage,
+	const uae_prefs& p, int port, bool hotkey, std::string_view control, std::string_view event);
+bool custom_control_available(const uae_prefs& p, int port, bool hotkey, std::string_view control);
+const char* custom_control_use(const uae_prefs& p, int port, bool hotkey, std::string_view control);
+bool custom_controls_commit(amiberry_settings_custom_controls_stage* stage, uae_prefs& p);
 
 // The JIT cache size the checks after fixup_cpu() see (0 when the JIT is
 // not compiled in, inhibited, below a 68020 or in memory cycle-exact

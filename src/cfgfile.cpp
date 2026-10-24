@@ -2825,7 +2825,7 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 				buffer = "joyport" + std::to_string(i) + "_amiberry_custom_" + mode + "_" + SDL_GetGamepadStringForButton(static_cast<SDL_GamepadButton>(n));
 				const auto b = m == 0 ? mapping.amiberry_custom_none[n] : mapping.amiberry_custom_hotkey[n];
 
-				_tcscpy(tmp2, b > 0 ? _T(find_inputevent_name(b)) : _T(""));
+				_tcscpy(tmp2, custom_event_name(b));
 				cfgfile_dwrite_str(f, buffer.c_str(), tmp2);
 			}
 
@@ -2834,7 +2834,7 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 				buffer = "joyport" + std::to_string(i) + "_amiberry_custom_axis_" + mode + "_" + SDL_GetGamepadStringForAxis(static_cast<SDL_GamepadAxis>(n));
 				const auto b = m == 0 ? mapping.amiberry_custom_axis_none[n] : mapping.amiberry_custom_axis_hotkey[n];
 
-				_tcscpy(tmp2, b > 0 ? _T(find_inputevent_name(b)) : _T(""));
+				_tcscpy(tmp2, custom_event_name(b));
 				cfgfile_dwrite_str(f, buffer.c_str(), tmp2);
 			}
 		}

@@ -389,6 +389,25 @@ def main():
               control.request("SETTINGS_BOARD_SET\ta2091\t1\tenabled\tfalse") == "OK"
               and control.request("SETTINGS_COMMIT") == "OK\tchanged=true\tapply=restart")
 
+        # Custom controls: the controls and events are listed; without a
+        # joystick connected (headless), a port has none to edit.
+        reply = control.request("SETTINGS_CUSTOM_CONTROLS")
+        check("SETTINGS_CUSTOM_CONTROLS lists buttons, then axes",
+              reply.startswith("OK\ta=button\tb=button") and "\tleftx=axis" in reply, reply[:200])
+        reply = control.request("SETTINGS_INPUT_EVENTS")
+        check("SETTINGS_INPUT_EVENTS lists events by their configuration names",
+              reply.startswith("OK\t") and "\tSpace\t" in reply and "\tJoy2 Fire/Mouse2 Left Button\t" in reply,
+              reply[:200])
+        reply = control.request("SETTINGS_CUSTOM_CONTROL_GET\t1\tnone\ta")
+        check("a port without a joystick has no custom controls", reply == "ERROR\tPort 1 has no joystick", reply)
+        reply = control.request("SETTINGS_CUSTOM_CONTROL_GET\t1\tshift\ta")
+        check("the mode is none or hotkey", reply.startswith("ERROR\tUsage: SETTINGS_CUSTOM_CONTROL_GET"), reply)
+        reply = control.request("SETTINGS_CUSTOM_CONTROL_SET\t1\thotkey\ta\t")
+        check("SETTINGS_CUSTOM_CONTROL_SET takes an empty event (the control's default)",
+              reply == "ERROR\tControl a is not available on port 1", reply)
+        reply = control.request("SETTINGS_CUSTOM_CONTROL_SET\t1\tnone\ta\tFire")
+        check("an unknown event is refused", reply == "ERROR\tUnknown input event: Fire", reply)
+
         # Status and settings must not serve data from before an earlier
         # command in the same pass: LOAD_CONFIG changes the pending
         # configuration directly, and the next GET_STATUS and SETTINGS_GET

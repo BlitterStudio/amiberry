@@ -39,6 +39,7 @@ struct amiberry_settings_session {
 	int preset_compatibility = 0;
 	uae_prefs* pre_preset = nullptr;
 	uae_prefs* after_preset = nullptr;
+	amiberry_settings_custom_controls_stage* custom_controls = nullptr;
 };
 
 namespace {
@@ -251,6 +252,7 @@ amiberry_settings_session* amiberry_settings_session_open(void)
 	session->base = allocate_copy(changed_prefs);
 	const bool sized = session->working && session->base && amiberry_settings::no_throw(false, [session] {
 		session->touched.assign(amiberry_settings::definition_count(), false);
+		session->custom_controls = amiberry_settings::custom_controls_stage_new();
 		open_sessions().push_back(session);
 		return true;
 	});
@@ -270,6 +272,7 @@ void amiberry_settings_session_close(amiberry_settings_session* session)
 	forget_preset(*session);
 	std::free(session->working);
 	std::free(session->base);
+	amiberry_settings::custom_controls_stage_free(session->custom_controls);
 	delete session;
 }
 
@@ -460,6 +463,11 @@ amiberry_apply_class amiberry_settings_commit(amiberry_settings_session* session
 		session->touched.assign(session->touched.size(), false);
 		forget_preset(*session);
 		std::free(resolved);
+		// Custom controls apply live, for the devices the ports have now.
+		if (amiberry_settings::no_throw(false, [session] {
+				return amiberry_settings::custom_controls_commit(session->custom_controls, changed_prefs);
+			}))
+			any = true;
 	}
 	if (changed)
 		*changed = any;
@@ -572,6 +580,74 @@ bool amiberry_settings_board_field_available(const amiberry_settings_session* se
 		return false;
 	return amiberry_settings::no_throw(false, [=] {
 		return amiberry_settings::board_field_available(*session->working, current_context(), type, unit, field);
+	});
+}
+
+size_t amiberry_settings_custom_control_count(void)
+{
+	return amiberry_settings::no_throw(size_t{0}, [] { return amiberry_settings::custom_control_count(); });
+}
+
+const amiberry_settings_custom_control* amiberry_settings_custom_control_at(size_t index)
+{
+	return amiberry_settings::no_throw(static_cast<const amiberry_settings_custom_control*>(nullptr),
+		[index] { return amiberry_settings::custom_control_at(index); });
+}
+
+size_t amiberry_settings_input_event_count(void)
+{
+	return amiberry_settings::no_throw(size_t{0}, [] { return amiberry_settings::input_event_count(); });
+}
+
+const amiberry_setting_choice* amiberry_settings_input_event_at(size_t index)
+{
+	return amiberry_settings::no_throw(static_cast<const amiberry_setting_choice*>(nullptr),
+		[index] { return amiberry_settings::input_event_at(index); });
+}
+
+amiberry_settings_status amiberry_settings_custom_control_get(const amiberry_settings_session* session, int port,
+	bool hotkey, const char* control, char* buffer, size_t size)
+{
+	if (!session || !control)
+		return AMIBERRY_SETTINGS_UNKNOWN_ID;
+	if (!buffer || size == 0)
+		return AMIBERRY_SETTINGS_BUFFER_TOO_SMALL;
+	return amiberry_settings::no_throw(AMIBERRY_SETTINGS_UNKNOWN_ID, [=] {
+		return amiberry_settings::custom_control_get(session->custom_controls, *session->working, port, hotkey,
+			control, buffer, size);
+	});
+}
+
+amiberry_settings_status amiberry_settings_custom_control_set(amiberry_settings_session* session, int port,
+	bool hotkey, const char* control, const char* event)
+{
+	if (!session || !control)
+		return AMIBERRY_SETTINGS_UNKNOWN_ID;
+	if (!event)
+		return AMIBERRY_SETTINGS_INVALID_VALUE;
+	return amiberry_settings::no_throw(AMIBERRY_SETTINGS_UNKNOWN_ID, [=] {
+		return amiberry_settings::custom_control_set(session->custom_controls, *session->working, port, hotkey,
+			control, event);
+	});
+}
+
+bool amiberry_settings_custom_control_available(const amiberry_settings_session* session, int port, bool hotkey,
+	const char* control)
+{
+	if (!session || !control)
+		return false;
+	return amiberry_settings::no_throw(false, [=] {
+		return amiberry_settings::custom_control_available(*session->working, port, hotkey, control);
+	});
+}
+
+const char* amiberry_settings_custom_control_use(const amiberry_settings_session* session, int port, bool hotkey,
+	const char* control)
+{
+	if (!session || !control)
+		return nullptr;
+	return amiberry_settings::no_throw(static_cast<const char*>(nullptr), [=] {
+		return amiberry_settings::custom_control_use(*session->working, port, hotkey, control);
 	});
 }
 

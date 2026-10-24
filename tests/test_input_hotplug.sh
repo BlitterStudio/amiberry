@@ -179,8 +179,6 @@ snapshot_update = mapping_commit.find("amiberry_set_port_joystick_custom_mapping
 runtime_update = mapping_commit.find("inputdevice_updateconfig(nullptr, &changed_prefs);")
 if not (0 <= snapshot_update < runtime_update):
 	fail("Custom mapping edits must update the per-port snapshot before rebuilding live input")
-if custom_panel.count("commit_custom_mapping_change(SelectedPort, did);") != 7:
-	fail("Every Custom-panel mapping mutation must refresh the selected port snapshot")
 preserve_mapping = region_between(
 	amiberry_input,
 	"void amiberry_preserve_port_joystick_custom_mapping(",

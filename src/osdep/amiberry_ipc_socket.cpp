@@ -3472,6 +3472,10 @@ static std::string HandleHelp(const std::vector<std::string>& args)
 	commands.emplace_back("SETTINGS_BOARD_DESCRIBE <type> [field]");
 	commands.emplace_back("SETTINGS_BOARD_GET <type> <unit> <field>");
 	commands.emplace_back("SETTINGS_BOARD_SET <type> <unit> <field> <value>");
+	commands.emplace_back("SETTINGS_CUSTOM_CONTROLS");
+	commands.emplace_back("SETTINGS_INPUT_EVENTS");
+	commands.emplace_back("SETTINGS_CUSTOM_CONTROL_GET <port> <none|hotkey> <control>");
+	commands.emplace_back("SETTINGS_CUSTOM_CONTROL_SET <port> <none|hotkey> <control> <event>");
 	return make_response(true, commands);
 }
 
@@ -3934,6 +3938,106 @@ static std::string HandleSettingsBoardSet(const std::vector<std::string>& args)
 	return make_response(true);
 }
 
+// Custom controls (amiberry_settings_custom_control_*): the event each
+// button and axis of the joystick on a port triggers, alone ("none") or
+// with the hotkey button held ("hotkey").
+static std::string HandleSettingsCustomControls(const std::vector<std::string>& args)
+{
+	if (!currprefs.ipc_disable_logging) {
+		std::cout << "IPC: Received SETTINGS_CUSTOM_CONTROLS" << std::endl;
+	}
+	std::vector<std::string> controls;
+	for (size_t i = 0; i < amiberry_settings_custom_control_count(); ++i) {
+		const amiberry_settings_custom_control* c = amiberry_settings_custom_control_at(i);
+		controls.push_back(std::string(c->id) + (c->axis ? "=axis" : "=button"));
+	}
+	return make_response(true, controls);
+}
+
+static std::string HandleSettingsInputEvents(const std::vector<std::string>& args)
+{
+	if (!currprefs.ipc_disable_logging) {
+		std::cout << "IPC: Received SETTINGS_INPUT_EVENTS" << std::endl;
+	}
+	std::vector<std::string> events;
+	for (size_t i = 0; i < amiberry_settings_input_event_count(); ++i) {
+		events.emplace_back(amiberry_settings_input_event_at(i)->value);
+	}
+	return make_response(true, events);
+}
+
+// A custom control's port and mode as the commands take them.
+static bool parse_custom_control(const std::vector<std::string>& args, int& port, bool& hotkey)
+{
+	if (args[0].size() != 1 || args[0][0] < '0' || args[0][0] > '9' || (args[1] != "none" && args[1] != "hotkey")) {
+		return false;
+	}
+	port = args[0][0] - '0';
+	hotkey = args[1] == "hotkey";
+	return true;
+}
+
+static std::string HandleSettingsCustomControlGet(const std::vector<std::string>& args)
+{
+	if (!currprefs.ipc_disable_logging) {
+		std::cout << "IPC: Received SETTINGS_CUSTOM_CONTROL_GET" << std::endl;
+	}
+	int port = 0;
+	bool hotkey = false;
+	if (args.size() != 3 || !parse_custom_control(args, port, hotkey)) {
+		return make_response(false, {"Usage: SETTINGS_CUSTOM_CONTROL_GET <port> <none|hotkey> <control>"});
+	}
+	amiberry_settings_session* session = settings_session();
+	if (!session) {
+		return make_response(false, {"Out of memory"});
+	}
+	char value[AMIBERRY_SETTINGS_VALUE_MAX];
+	const amiberry_settings_status status =
+		amiberry_settings_custom_control_get(session, port, hotkey, args[2].c_str(), value, sizeof value);
+	if (status == AMIBERRY_SETTINGS_UNKNOWN_ID) {
+		return make_response(false, {"Unknown custom control: " + args[0] + " " + args[2]});
+	}
+	if (status == AMIBERRY_SETTINGS_UNAVAILABLE) {
+		return make_response(false, {"Port " + args[0] + " has no joystick"});
+	}
+	if (status != AMIBERRY_SETTINGS_OK) {
+		return make_response(false, {"Value too long"});
+	}
+	const bool available = amiberry_settings_custom_control_available(session, port, hotkey, args[2].c_str());
+	const char* use = amiberry_settings_custom_control_use(session, port, hotkey, args[2].c_str());
+	return make_response(true, {args[2] + "=" + value, std::string("available=") + (available ? "true" : "false"),
+		std::string("use=") + (use ? use : "")});
+}
+
+static std::string HandleSettingsCustomControlSet(const std::vector<std::string>& args)
+{
+	if (!currprefs.ipc_disable_logging) {
+		std::cout << "IPC: Received SETTINGS_CUSTOM_CONTROL_SET" << std::endl;
+	}
+	int port = 0;
+	bool hotkey = false;
+	if (args.size() != 4 || !parse_custom_control(args, port, hotkey)) {
+		return make_response(false, {"Usage: SETTINGS_CUSTOM_CONTROL_SET <port> <none|hotkey> <control> <event>"});
+	}
+	amiberry_settings_session* session = settings_session();
+	if (!session) {
+		return make_response(false, {"Out of memory"});
+	}
+	const amiberry_settings_status status =
+		amiberry_settings_custom_control_set(session, port, hotkey, args[2].c_str(), args[3].c_str());
+	if (status == AMIBERRY_SETTINGS_UNKNOWN_ID) {
+		return make_response(false, {"Unknown custom control: " + args[0] + " " + args[2]});
+	}
+	if (status == AMIBERRY_SETTINGS_INVALID_VALUE) {
+		return make_response(false, {"Unknown input event: " + args[3]});
+	}
+	if (status != AMIBERRY_SETTINGS_OK) {
+		return make_response(false, {"Control " + args[2] + " is not available on port " + args[0]});
+	}
+	ipc_settings_dirty = true;
+	return make_response(true);
+}
+
 static std::string HandleSettingsDescribe(const std::vector<std::string>& args)
 {
 	if (!currprefs.ipc_disable_logging) {
@@ -4101,6 +4205,10 @@ static void InitHandlers()
 	command_handlers[CMD_SETTINGS_BOARD_DESCRIBE] = HandleSettingsBoardDescribe;
 	command_handlers[CMD_SETTINGS_BOARD_GET] = HandleSettingsBoardGet;
 	command_handlers[CMD_SETTINGS_BOARD_SET] = HandleSettingsBoardSet;
+	command_handlers[CMD_SETTINGS_CUSTOM_CONTROLS] = HandleSettingsCustomControls;
+	command_handlers[CMD_SETTINGS_INPUT_EVENTS] = HandleSettingsInputEvents;
+	command_handlers[CMD_SETTINGS_CUSTOM_CONTROL_GET] = HandleSettingsCustomControlGet;
+	command_handlers[CMD_SETTINGS_CUSTOM_CONTROL_SET] = HandleSettingsCustomControlSet;
 	command_handlers[CMD_HELP] = HandleHelp;
 
 	command_handlers[CMD_QUICKSAVE] = HandleQuickSave;
@@ -4198,9 +4306,11 @@ static std::string ProcessCommand(const std::string& line)
 	// split() drops a trailing empty field, so `SETTINGS_SET\tppc_model\t`
 	// would lose its value. An empty string is a real settings value (for
 	// example ppc_model= turns PPC emulation off, an empty board rom_file a
-	// board without its ROM), so keep it for those commands only; every
-	// other command parses exactly as before.
-	if ((cmd == "SETTINGS_SET" || cmd == "SETTINGS_BOARD_SET") && !line.empty() && line.back() == '\t')
+	// board without its ROM, an empty custom control its default), so keep
+	// it for those commands only; every other command parses exactly as
+	// before.
+	if ((cmd == "SETTINGS_SET" || cmd == "SETTINGS_BOARD_SET" || cmd == "SETTINGS_CUSTOM_CONTROL_SET")
+		&& !line.empty() && line.back() == '\t')
 		args.emplace_back();
 
 	const auto it = command_handlers.find(cmd);

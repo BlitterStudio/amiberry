@@ -171,6 +171,26 @@ final class SettingsSessionTests: XCTestCase {
 		XCTAssertTrue(a2091.fields.allSatisfy { $0.applyClass == .restart })
 	}
 
+	func testCustomControlsNeedAJoystickOnThePort() throws {
+		let controls = CustomControlCatalog.controls
+		XCTAssertEqual(controls.first?.id, "a")
+		XCTAssertTrue(try XCTUnwrap(controls.first { $0.id == "leftx" }).isAxis)
+		XCTAssertTrue(CustomControlCatalog.events.contains("Space"))
+		let session = try SettingsSession()
+		// The test host has no joystick on port 1.
+		XCTAssertThrowsError(try session.customControl("a", port: 1)) {
+			XCTAssertEqual($0 as? SettingsError, .unavailable("port 1 a"))
+		}
+		XCTAssertFalse(session.isCustomControlAvailable("a", port: 1))
+		XCTAssertNil(session.customControlUse("a", port: 1))
+		XCTAssertThrowsError(try session.setCustomControl("Space", control: "a", port: 1)) {
+			XCTAssertEqual($0 as? SettingsError, .unavailable("port 1 a"))
+		}
+		XCTAssertThrowsError(try session.customControl("nope", port: 1)) {
+			XCTAssertEqual($0 as? SettingsError, .unknownID("port 1 nope"))
+		}
+	}
+
 	func testBoardUnitsAreEditedInTheSession() throws {
 		let session = try SettingsSession()
 		XCTAssertEqual(try session.boardValue("enabled", type: "a2091", unit: 2), "false")

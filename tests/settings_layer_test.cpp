@@ -111,6 +111,44 @@ const TCHAR* inputdevice_get_device_unique_name(int type, int index)
 struct didata di_joystick[MAX_INPUT_DEVICES];
 bool joystick_refresh_needed;
 void inputdevice_validate_jports_prefs_only(uae_prefs*, int) {}
+// Custom controls: three events, and the mappings the input code holds per
+// port (for the device it was set for, as the real store keys them).
+extern const int remap_event_list[] = { INPUTEVENT_JOY2_FIRE_BUTTON, INPUTEVENT_KEY_SPACE, INPUTEVENT_JOY2_UP };
+extern const int remap_event_list_size = 3;
+static const inputevent test_events[] = {
+	{ "JOY2_FIRE_BUTTON", "Joy2 Fire/Mouse2 Left Button" },
+	{ "KEY_SPACE", "Space" },
+	{ "JOY2_UP", "Joy2 Up" },
+};
+const inputevent* inputdevice_get_eventinfo(int evt)
+{
+	for (int i = 0; i < remap_event_list_size; i++) {
+		if (remap_event_list[i] == evt)
+			return &test_events[i];
+	}
+	return nullptr;
+}
+static controller_mapping test_port_mappings[MAX_JPORTS];
+static std::string test_port_mapping_devices[MAX_JPORTS];
+static int input_config_updates = 0;
+bool amiberry_get_port_joystick_custom_mapping(int portnum, const TCHAR*, const TCHAR* configname,
+	controller_mapping& mapping)
+{
+	if (portnum < 0 || portnum >= MAX_JPORTS || test_port_mapping_devices[portnum] != configname)
+		return false;
+	mapping = test_port_mappings[portnum];
+	return true;
+}
+void amiberry_set_port_joystick_custom_mapping(int portnum, const TCHAR*, const TCHAR* configname,
+	const controller_mapping& mapping)
+{
+	test_port_mappings[portnum] = mapping;
+	test_port_mapping_devices[portnum] = configname;
+}
+void inputdevice_updateconfig(struct uae_prefs*, struct uae_prefs*)
+{
+	input_config_updates++;
+}
 static struct sound_device test_sound_devices[2] = {
 	{ {}, 0, const_cast<TCHAR*>("Test Speaker"), nullptr, const_cast<TCHAR*>("speaker"), nullptr,
 		0, SOUND_DEVICE_SDL },
@@ -2491,6 +2529,152 @@ void check_boards()
 	CHECK(amiberry_settings_board_type_at(amiberry_settings_board_type_count()) == nullptr);
 }
 
+// Custom controls: a session stages each port's mapping for the device the
+// port has, and commit hands it to the input code live.
+void check_custom_controls()
+{
+	// The controls (buttons, then axes) and the events they can trigger.
+	CHECK(amiberry_settings_custom_control_count() == SDL_GAMEPAD_BUTTON_COUNT + SDL_GAMEPAD_AXIS_COUNT);
+	const amiberry_settings_custom_control* south = amiberry_settings_custom_control_at(0);
+	CHECK(south && !std::strcmp(south->id, "a") && !south->axis);
+	const amiberry_settings_custom_control* leftx = amiberry_settings_custom_control_at(SDL_GAMEPAD_BUTTON_COUNT);
+	CHECK(leftx && !std::strcmp(leftx->id, "leftx") && leftx->axis);
+	CHECK(!amiberry_settings_custom_control_at(amiberry_settings_custom_control_count()));
+	CHECK(amiberry_settings_input_event_count() == 3);
+	CHECK(!std::strcmp(amiberry_settings_input_event_at(1)->value, "Space"));
+	CHECK(!amiberry_settings_input_event_at(3));
+
+	// Port 1 has joystick 0, which has every control but Misc 1, and its
+	// D-pad on a hat. Back is its hotkey button, Start its quit button.
+	reset_prefs(changed_prefs);
+	changed_prefs.jports[1].id = JSEM_JOYS;
+	std::strcpy(changed_prefs.jports[1].idc.configname, "pad-a");
+	std::strcpy(changed_prefs.jports[1].idc.name, "Pad A");
+	didata& did = di_joystick[0];
+	for (int i = 0; i < SDL_GAMEPAD_BUTTON_COUNT; i++)
+		did.mapping.button[i] = i;
+	for (int i = 0; i < SDL_GAMEPAD_AXIS_COUNT; i++)
+		did.mapping.axis[i] = i;
+	did.mapping.button[SDL_GAMEPAD_BUTTON_MISC1] = -1;
+	did.mapping.button[SDL_GAMEPAD_BUTTON_DPAD_UP] = -1;
+	did.mapping.number_of_hats = 1;
+	did.mapping.hotkey_button = SDL_GAMEPAD_BUTTON_BACK;
+	did.mapping.quit_button = SDL_GAMEPAD_BUTTON_START;
+	did.mapping.menu_button = did.mapping.reset_button = did.mapping.vkbd_button = SDL_GAMEPAD_BUTTON_INVALID;
+	changed_prefs.use_retroarch_quit = true;
+	test_port_mappings[1] = controller_mapping{};
+	test_port_mapping_devices[1] = "pad-a";
+
+	amiberry_settings_session* session = amiberry_settings_session_open();
+	char value[AMIBERRY_SETTINGS_VALUE_MAX];
+	// A port without a joystick has no custom controls.
+	CHECK(amiberry_settings_custom_control_get(session, 0, false, "a", value, sizeof value) == AMIBERRY_SETTINGS_UNAVAILABLE);
+	CHECK(!amiberry_settings_custom_control_available(session, 0, false, "a"));
+	CHECK(amiberry_settings_custom_control_set(session, 0, false, "a", "Space") == AMIBERRY_SETTINGS_UNAVAILABLE);
+	// Nor does one naming a joystick that is not connected.
+	joystick_total = 0;
+	CHECK(amiberry_settings_custom_control_get(session, 1, false, "a", value, sizeof value) == AMIBERRY_SETTINGS_UNAVAILABLE);
+	CHECK(!amiberry_settings_custom_control_available(session, 1, false, "a"));
+	joystick_total = 1;
+	CHECK(amiberry_settings_custom_control_get(session, 4, false, "a", value, sizeof value) == AMIBERRY_SETTINGS_UNKNOWN_ID);
+	CHECK(amiberry_settings_custom_control_get(session, 1, false, "nope", value, sizeof value) == AMIBERRY_SETTINGS_UNKNOWN_ID);
+
+	// Unset controls are reported as such: what they do depends on the mode.
+	CHECK(amiberry_settings_custom_control_get(session, 1, false, "a", value, sizeof value) == AMIBERRY_SETTINGS_OK);
+	CHECK(!std::strcmp(value, ""));
+	CHECK(amiberry_settings_custom_control_set(session, 1, false, "a", "Space") == AMIBERRY_SETTINGS_OK);
+	CHECK(amiberry_settings_custom_control_set(session, 1, false, "b", "none") == AMIBERRY_SETTINGS_OK);
+	CHECK(amiberry_settings_custom_control_set(session, 1, true, "lefttrigger", "Joy2 Up") == AMIBERRY_SETTINGS_OK);
+	CHECK(amiberry_settings_custom_control_set(session, 1, false, "a", "Fire") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	CHECK(amiberry_settings_custom_control_get(session, 1, false, "a", value, sizeof value) == AMIBERRY_SETTINGS_OK);
+	CHECK(!std::strcmp(value, "Space"));
+	CHECK(amiberry_settings_custom_control_get(session, 1, false, "b", value, sizeof value) == AMIBERRY_SETTINGS_OK);
+	CHECK(!std::strcmp(value, "none"));
+	CHECK(amiberry_settings_custom_control_get(session, 1, false, "a", value, 5) == AMIBERRY_SETTINGS_BUFFER_TOO_SMALL);
+	// The edits stay in the session: the input code has none of them yet.
+	CHECK(test_port_mappings[1].amiberry_custom_none[SDL_GAMEPAD_BUTTON_SOUTH] == 0);
+
+	// A control the device lacks; a D-pad on a hat has its directions.
+	CHECK(!amiberry_settings_custom_control_available(session, 1, false, "misc1"));
+	CHECK(amiberry_settings_custom_control_set(session, 1, false, "misc1", "Space") == AMIBERRY_SETTINGS_UNAVAILABLE);
+	// No function holds it: it is no button (the unset on-screen keyboard
+	// button is no button either).
+	CHECK(amiberry_settings_custom_control_available(session, 1, false, "dpup"));
+	CHECK(!amiberry_settings_custom_control_use(session, 1, false, "dpup"));
+	// The hotkey button is held in both modes; the quit button only with
+	// the hotkey, while quitting by button is on.
+	CHECK(!std::strcmp(amiberry_settings_custom_control_use(session, 1, false, "back"), "hotkey"));
+	CHECK(amiberry_settings_custom_control_set(session, 1, false, "back", "Space") == AMIBERRY_SETTINGS_UNAVAILABLE);
+	CHECK(!amiberry_settings_custom_control_use(session, 1, false, "start"));
+	CHECK(!std::strcmp(amiberry_settings_custom_control_use(session, 1, true, "start"), "quit"));
+	CHECK(amiberry_settings_custom_control_set(session, 1, true, "start", "Space") == AMIBERRY_SETTINGS_UNAVAILABLE);
+	CHECK(amiberry_settings_set(session, "amiberry.use_retroarch_quit", "false") == AMIBERRY_SETTINGS_OK);
+	CHECK(!amiberry_settings_custom_control_use(session, 1, true, "start"));
+	CHECK(amiberry_settings_set(session, "amiberry.use_retroarch_quit", "true") == AMIBERRY_SETTINGS_OK);
+
+	// Commit hands the mapping to the input code live and rebuilds the
+	// input configuration.
+	const int updates = input_config_updates;
+	bool changed = false;
+	CHECK(amiberry_settings_commit(session, &changed) == AMIBERRY_APPLY_LIVE);
+	CHECK(changed);
+	CHECK(input_config_updates == updates + 1);
+	CHECK(test_port_mappings[1].amiberry_custom_none[SDL_GAMEPAD_BUTTON_SOUTH] == INPUTEVENT_KEY_SPACE);
+	CHECK(test_port_mappings[1].amiberry_custom_none[SDL_GAMEPAD_BUTTON_EAST] == -1);
+	CHECK(test_port_mappings[1].amiberry_custom_axis_hotkey[SDL_GAMEPAD_AXIS_LEFT_TRIGGER] == INPUTEVENT_JOY2_UP);
+	// Nothing staged: nothing to apply.
+	CHECK(amiberry_settings_commit(session, &changed) == AMIBERRY_APPLY_LIVE);
+	CHECK(!changed);
+	CHECK(input_config_updates == updates + 1);
+	// An empty event resets the control.
+	CHECK(amiberry_settings_custom_control_set(session, 1, false, "a", "") == AMIBERRY_SETTINGS_OK);
+	CHECK(amiberry_settings_commit(session, &changed) == AMIBERRY_APPLY_LIVE);
+	CHECK(changed);
+	CHECK(test_port_mappings[1].amiberry_custom_none[SDL_GAMEPAD_BUTTON_SOUTH] == 0);
+	CHECK(test_port_mappings[1].amiberry_custom_none[SDL_GAMEPAD_BUTTON_EAST] == -1);
+
+	// Commit applies only the controls the session set: one changed
+	// elsewhere meanwhile (a configuration loaded, the GUI) is kept.
+	CHECK(amiberry_settings_custom_control_set(session, 1, false, "a", "Space") == AMIBERRY_SETTINGS_OK);
+	test_port_mappings[1].amiberry_custom_none[SDL_GAMEPAD_BUTTON_WEST] = INPUTEVENT_JOY2_UP;
+	CHECK(amiberry_settings_custom_control_get(session, 1, false, "x", value, sizeof value) == AMIBERRY_SETTINGS_OK);
+	CHECK(!std::strcmp(value, "Joy2 Up"));
+	CHECK(amiberry_settings_commit(session, &changed) == AMIBERRY_APPLY_LIVE);
+	CHECK(changed);
+	CHECK(test_port_mappings[1].amiberry_custom_none[SDL_GAMEPAD_BUTTON_SOUTH] == INPUTEVENT_KEY_SPACE);
+	CHECK(test_port_mappings[1].amiberry_custom_none[SDL_GAMEPAD_BUTTON_WEST] == INPUTEVENT_JOY2_UP);
+	CHECK(test_port_mappings[1].amiberry_custom_none[SDL_GAMEPAD_BUTTON_EAST] == -1);
+
+	// Edits for a device the port no longer has when the session commits
+	// are dropped, not applied to the new one: another slot, or another
+	// pad in the same slot.
+	CHECK(amiberry_settings_custom_control_set(session, 1, false, "y", "Space") == AMIBERRY_SETTINGS_OK);
+	std::strcpy(changed_prefs.jports[1].idc.configname, "pad-b");
+	CHECK(amiberry_settings_commit(session, &changed) == AMIBERRY_APPLY_LIVE);
+	CHECK(test_port_mappings[1].amiberry_custom_none[SDL_GAMEPAD_BUTTON_NORTH] == 0);
+	CHECK(test_port_mapping_devices[1] == "pad-a");
+	std::strcpy(changed_prefs.jports[1].idc.configname, "pad-a");
+	CHECK(amiberry_settings_custom_control_set(session, 1, false, "y", "Space") == AMIBERRY_SETTINGS_OK);
+	std::strcpy(changed_prefs.jports[1].idc.name, "Pad B");
+	CHECK(amiberry_settings_commit(session, &changed) == AMIBERRY_APPLY_LIVE);
+	CHECK(test_port_mappings[1].amiberry_custom_none[SDL_GAMEPAD_BUTTON_NORTH] == 0);
+	amiberry_settings_session_close(session);
+
+	// Configurations spell "none" (a control set to do nothing) apart from
+	// an unset control (empty), and read both back.
+	CHECK(!std::strcmp(custom_event_name(-1), "none"));
+	CHECK(!std::strcmp(custom_event_name(0), ""));
+	CHECK(!std::strcmp(custom_event_name(INPUTEVENT_KEY_SPACE), "Space"));
+	CHECK(!std::strcmp(custom_event_name(INPUTEVENT_SPC_QUIT), "")); // not one a control can trigger
+	CHECK(custom_event_of("none") == -1);
+	CHECK(custom_event_of("None") == -1);
+	CHECK(custom_event_of("") == 0);
+	CHECK(custom_event_of("Space") == INPUTEVENT_KEY_SPACE);
+	CHECK(custom_event_of("Fire") == 0);
+	did = didata{};
+	reset_prefs(changed_prefs);
+}
+
 // IO ports: the parallel port has a printer (or prints to a folder) or a
 // sampler; serial and MIDI options follow the port and device picked.
 void check_io_domain()
@@ -3675,6 +3859,7 @@ int main(int argc, char** argv)
 	check_boards();
 	check_filter_domain();
 	check_io_domain();
+	check_custom_controls();
 	check_mount_list();
 	check_active_values();
 	if (failures) {
