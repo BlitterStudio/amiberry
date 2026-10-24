@@ -139,3 +139,44 @@ final class SettingsPresenter: NSObject, NSWindowDelegate {
 		return window
 	}
 }
+
+/// The app settings window (Cmd-,): the emulator's own settings, beside the
+/// Library, the editor or a running emulation.
+@MainActor
+final class AppSettingsWindow: NSObject, NSWindowDelegate {
+	static let shared = AppSettingsWindow()
+
+	private var window: NSWindow?
+
+	func show() {
+		let window = self.window ?? makeWindow()
+		window.contentViewController = NSHostingController(rootView: AppSettingsView(model: AppSettingsModel()))
+		self.window = window
+		NSApplication.shared.activate(ignoringOtherApps: true)
+		window.makeKeyAndOrderFront(nil)
+	}
+
+	func windowWillClose(_ notification: Notification) {
+		window?.contentViewController = nil
+		// The Configurations folder may have changed meanwhile.
+		SettingsPresenter.shared.library?.reload()
+	}
+
+	private func makeWindow() -> NSWindow {
+		let size = NSSize(width: 640, height: 600)
+		let window = NSWindow(
+			contentRect: NSRect(origin: .zero, size: size),
+			styleMask: [.titled, .closable, .miniaturizable, .resizable],
+			backing: .buffered, defer: false)
+		window.title = "Settings"
+		window.isReleasedWhenClosed = false
+		window.setContentSize(size)
+		window.center()
+		window.setFrameAutosaveName("AmiberryAppSettings")
+		window.minSize = NSSize(width: 520, height: 400)
+		window.collectionBehavior = [.fullScreenAuxiliary, .moveToActiveSpace]
+		window.animationBehavior = .none
+		window.delegate = self
+		return window
+	}
+}

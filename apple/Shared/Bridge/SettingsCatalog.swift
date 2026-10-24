@@ -307,6 +307,8 @@ public struct HostSetting: Hashable, Sendable, Identifiable {
 	public let label: String
 	public let kind: SettingDescriptor.Kind
 	public let defaultValue: String
+	/// The whole descriptor: help, choices and range.
+	public let descriptor: SettingDescriptor
 }
 
 /// The host settings, in the layer's order.
@@ -318,7 +320,7 @@ public enum HostSettings {
 				let descriptor = SettingDescriptor(d)
 				return HostSetting(id: descriptor.id, group: descriptor.group,
 					label: descriptor.label, kind: descriptor.kind,
-					defaultValue: descriptor.defaultValue)
+					defaultValue: descriptor.defaultValue, descriptor: descriptor)
 			}
 		}
 	}()

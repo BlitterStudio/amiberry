@@ -61,14 +61,15 @@ final class MenuCommands: NSObject, NSMenuItemValidation {
 
 		if let appMenu = mainMenu.items.first?.submenu {
 			// SDL's application menu has a Settings (Preferences) item of its
-			// own, with nothing behind it: it opens the settings window now.
+			// own, with nothing behind it: it opens the app settings now (the
+			// emulator's own settings; a machine's are in Emulation).
 			if let existing = appMenu.items.first(where: { $0.keyEquivalent == "," }) {
 				existing.title = "Settings\u{2026}"
 				existing.target = self
-				existing.action = #selector(openSettings(_:))
+				existing.action = #selector(openAppSettings(_:))
 				existing.keyEquivalentModifierMask = [.command]
 			} else {
-				let settings = item("Settings\u{2026}", #selector(openSettings(_:)), key: ",", modifiers: [.command])
+				let settings = item("Settings\u{2026}", #selector(openAppSettings(_:)), key: ",", modifiers: [.command])
 				let index = appMenu.items.firstIndex(where: { $0.isSeparatorItem }).map { $0 + 1 } ?? appMenu.items.count
 				appMenu.insertItem(settings, at: index)
 				appMenu.insertItem(.separator(), at: index + 1)
@@ -76,6 +77,8 @@ final class MenuCommands: NSObject, NSMenuItemValidation {
 		}
 
 		let emulation = NSMenu(title: MenuCommands.emulationTitle)
+		emulation.addItem(item("Machine Settings\u{2026}", #selector(openSettings(_:)), key: "e"))
+		emulation.addItem(.separator())
 		emulation.addItem(item("Pause", #selector(togglePause(_:)), key: "p"))
 		emulation.addItem(item("Reset", #selector(reset(_:)), key: "r"))
 		emulation.addItem(item("Hard Reset", #selector(hardReset(_:)), key: "r", modifiers: [.control, .command, .shift]))
@@ -128,6 +131,8 @@ final class MenuCommands: NSObject, NSMenuItemValidation {
 	// MARK: Commands
 
 	@objc func openSettings(_ sender: Any?) { post(.openSettings) }
+
+	@objc func openAppSettings(_ sender: Any?) { AppSettingsWindow.shared.show() }
 
 	@objc func togglePause(_ sender: Any?) {
 		post(runState() == .paused ? .resume : .pause)
@@ -187,6 +192,10 @@ final class MenuCommands: NSObject, NSMenuItemValidation {
 		case #selector(reset(_:)), #selector(hardReset(_:)), #selector(quickSave(_:)), #selector(quickLoad(_:)),
 			#selector(screenshot(_:)), #selector(toggleFullscreen(_:)):
 			return state != .stopped
+		case #selector(openSettings(_:)):
+			// The machine's editor opens over a running emulation; before one
+			// runs, the Library and its editor are what shows.
+			return state != .stopped && !settingsOpen()
 		default:
 			return true
 		}

@@ -30,8 +30,6 @@ enum SettingsPage: String, Hashable, Identifiable, CaseIterable {
 	case portsMisc
 	/// Every option, searchable.
 	case advanced
-	/// The emulator's content folders (until they move to the app settings).
-	case folders
 
 	var id: Self { self }
 
@@ -44,7 +42,6 @@ enum SettingsPage: String, Hashable, Identifiable, CaseIterable {
 		case .storage: return "Storage"
 		case .portsMisc: return "Ports & Misc"
 		case .advanced: return "All Settings"
-		case .folders: return "Folders"
 		}
 	}
 
@@ -57,7 +54,6 @@ enum SettingsPage: String, Hashable, Identifiable, CaseIterable {
 		case .storage: return "opticaldiscdrive"
 		case .portsMisc: return "cable.connector.horizontal"
 		case .advanced: return "list.bullet.rectangle"
-		case .folders: return "folder"
 		}
 	}
 
@@ -74,7 +70,6 @@ enum SettingsPage: String, Hashable, Identifiable, CaseIterable {
 		case .storage: return ["floppy", "diskswapper", "cd", "filesystem", "drawbridge"]
 		case .portsMisc: return ["io", "misc", "priority"]
 		case .advanced: return SettingsCatalog.groups
-		case .folders: return []
 		}
 	}
 

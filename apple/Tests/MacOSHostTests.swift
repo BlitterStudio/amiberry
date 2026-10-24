@@ -95,6 +95,34 @@ final class BoardsAndControlsTests: XCTestCase {
 }
 
 @MainActor
+final class AppSettingsTests: XCTestCase {
+	func testAppSettingsCoverEveryHostSetting() throws {
+		let model = AppSettingsModel()
+		let grouped = AppSettingsModel.groups.map(\.id)
+		for setting in HostSettings.all {
+			XCTAssertTrue(grouped.contains(setting.group), setting.id)
+			XCTAssertNotNil(model.values[setting.id], setting.id)
+		}
+		// Every group has a title of its own, not its ID.
+		for group in AppSettingsModel.groups {
+			XCTAssertFalse(group.title.hasPrefix("Global"), group.id)
+		}
+		let view = NSHostingView(rootView: AppSettingsView(model: model).frame(width: 640, height: 600))
+		view.frame = NSRect(x: 0, y: 0, width: 640, height: 600)
+		view.layoutSubtreeIfNeeded()
+	}
+
+	func testARefusedValueSaysWhy() throws {
+		let model = AppSettingsModel()
+		let deadzone = try XCTUnwrap(HostSettings.all.first { $0.id == "default_joystick_deadzone" })
+		let before = model.value(of: deadzone.id)
+		XCTAssertFalse(model.set("101", for: deadzone))
+		XCTAssertEqual(model.notice, "Joystick deadzone: \u{201C}101\u{201D} is not a valid value.")
+		XCTAssertEqual(model.value(of: deadzone.id), before)
+	}
+}
+
+@MainActor
 final class LibraryTests: XCTestCase {
 	func testLibraryListsSavedMachinesWithTheirMetadata() throws {
 		let folder = try MediaLibrary.path(of: .configurations)
@@ -367,8 +395,13 @@ final class MenuCommandsTests: XCTestCase {
 		XCTAssertEqual(main.items.map(\.title), ["Amiberry", "Emulation", "Media", "View"])
 		let settings = try item(main, "Amiberry", "Settings\u{2026}")
 		XCTAssertEqual(settings.keyEquivalent, ",")
-		let reset = try item(main, "Emulation", "Reset")
-		XCTAssertEqual(reset.keyEquivalentModifierMask, [.control, .command], "Command alone is the Amiga key")
+		// Command alone is the Amiga key: while an emulation runs, no menu
+		// item may take an Amiga-letter combination from it.
+		for menu in ["Emulation", "Media", "View"] {
+			for entry in try XCTUnwrap(main.items.first { $0.title == menu }?.submenu).items where !entry.keyEquivalent.isEmpty {
+				XCTAssertEqual(entry.keyEquivalentModifierMask.intersection([.control, .command]), [.control, .command], entry.title)
+			}
+		}
 	}
 
 	func testReusesTheSettingsItemSDLCreated() throws {
@@ -383,13 +416,13 @@ final class MenuCommandsTests: XCTestCase {
 		let commaItems = try XCTUnwrap(app.submenu).items.filter { $0.keyEquivalent == "," }
 		XCTAssertEqual(commaItems.count, 1, "one Settings item")
 		XCTAssertEqual(commaItems.first?.title, "Settings\u{2026}")
-		run(try XCTUnwrap(commaItems.first))
-		XCTAssertEqual(posted, [.openSettings])
+		// Cmd-, is the app settings; a machine's are in Emulation.
+		XCTAssertEqual(commaItems.first?.action, #selector(MenuCommands.openAppSettings(_:)))
 	}
 
 	func testCommandsPostTheirActions() throws {
 		let main = menu()
-		run(try item(main, "Amiberry", "Settings\u{2026}"))
+		run(try item(main, "Emulation", "Machine Settings\u{2026}"))
 		run(try item(main, "Emulation", "Reset"))
 		run(try item(main, "Emulation", "Hard Reset"))
 		run(try item(main, "Emulation", "Quick Save State"))
