@@ -48,6 +48,7 @@ target_sources(amiberry_native_ui PRIVATE
         apple/Shared/UI/Library.swift
         apple/Shared/UI/BoardsAndControls.swift
         apple/Shared/UI/AppSettings.swift
+        apple/Shared/UI/DesignedPages.swift
 )
 if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
     target_sources(amiberry_native_ui PRIVATE

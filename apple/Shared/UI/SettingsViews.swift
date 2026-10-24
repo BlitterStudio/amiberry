@@ -54,24 +54,27 @@ struct PageView: View {
 	let model: SettingsWindowModel
 
 	var body: some View {
+		// A page of its own identity: pages sharing a branch below must not
+		// share its scroll position or state.
+		content.id(page)
+	}
+
+	@ViewBuilder private var content: some View {
 		switch page {
 		case .overview:
 			OverviewPage(model: model)
-		case .storage:
-			StoragePage(model: model)
+		case .displaySound, .input, .storage:
+			Form {
+				DesignedSections(page: page, model: model)
+			}
+			.formStyle(.grouped)
 		case .hardware:
 			Form {
 				GroupSections(groups: page.groups, store: model.store)
 				BoardsSections(store: model.store)
 			}
 			.formStyle(.grouped)
-		case .input:
-			Form {
-				GroupSections(groups: page.groups, store: model.store)
-				CustomControlsSections(store: model.store)
-			}
-			.formStyle(.grouped)
-		case .displaySound, .portsMisc, .advanced:
+		case .portsMisc, .advanced:
 			Form {
 				GroupSections(groups: page.groups, store: model.store)
 			}
@@ -141,19 +144,6 @@ struct OverviewPage: View {
 				}
 			}
 			GroupSections(groups: SettingsPage.overview.groups, store: model.store)
-		}
-		.formStyle(.grouped)
-	}
-}
-
-/// The drives: floppies and the swapper, the CD, and the mounted hard drives.
-struct StoragePage: View {
-	let model: SettingsWindowModel
-
-	var body: some View {
-		Form {
-			GroupSections(groups: SettingsPage.storage.groups, store: model.store)
-			MountSections(model: model)
 		}
 		.formStyle(.grouped)
 	}

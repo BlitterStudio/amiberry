@@ -24,6 +24,28 @@ final class SettingsPagesTests: XCTestCase {
 		XCTAssertEqual(SettingsPage.groupTitle("future_group"), "Future Group")
 	}
 
+	func testDesignedPagesShowEachOptionOnce() throws {
+		for page in SettingsPage.placing {
+			guard let layout = page.layout else { continue }
+			let mine = Set(page.groups.flatMap(SettingsCatalog.descriptors(in:)).map(\.id))
+			let placed = layout.flatMap(\.ids)
+			XCTAssertEqual(Set(placed).count, placed.count, "\(page.title): an option placed twice")
+			for id in placed {
+				XCTAssertTrue(mine.contains(id), "\(page.title): \(id) is not an option of the page's groups")
+			}
+			XCTAssertEqual(Set(placed).union(page.unplaced.map(\.id)), mine, page.title)
+			XCTAssertTrue(Set(placed).isDisjoint(with: page.unplaced.map(\.id)), page.title)
+		}
+	}
+
+	func testTheSwapperShowsItsEntriesAndOneEmpty() {
+		let ids = (0..<20).map { "diskimage\($0)" }
+		XCTAssertEqual(SettingsPage.visibleEntries(ids) { _ in false }, ["diskimage0"])
+		XCTAssertEqual(SettingsPage.visibleEntries(ids) { $0 == "diskimage2" }, ["diskimage0", "diskimage1", "diskimage2", "diskimage3"],
+			"a gap keeps the entries after it")
+		XCTAssertEqual(SettingsPage.visibleEntries(ids) { _ in true }, ids, "all filled: no row past the last")
+	}
+
 	func testEveryPageRendersEveryOption() throws {
 		let model = try SettingsWindowModel(emulating: false, dismiss: {}, post: { _ in true })
 		for page in SettingsPage.sidebar {
