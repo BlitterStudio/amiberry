@@ -299,6 +299,48 @@ public struct CustomControl: Hashable, Sendable, Identifiable {
 }
 
 /// The custom controls and the input events they can trigger.
+/// A Global Settings entry (amiberry.conf): process-wide, saved explicitly
+/// with `HostSettings.save()`.
+public struct HostSetting: Hashable, Sendable, Identifiable {
+	public let id: String
+	public let group: String
+	public let label: String
+	public let kind: SettingDescriptor.Kind
+	public let defaultValue: String
+}
+
+/// The host settings, in the layer's order.
+public enum HostSettings {
+	public static let all: [HostSetting] = {
+		(0..<amiberry_host_settings_count()).compactMap { index in
+			amiberry_host_settings_at(index).map {
+				let d = $0.pointee
+				let descriptor = SettingDescriptor(d)
+				return HostSetting(id: descriptor.id, group: descriptor.group,
+					label: descriptor.label, kind: descriptor.kind,
+					defaultValue: descriptor.defaultValue)
+			}
+		}
+	}()
+
+	public static func value(of id: String) throws -> String {
+		let (text, status) = readLayerString(capacity: 4096) {
+			amiberry_host_settings_get(id, $0, $1)
+		}
+		try SettingsError.check(status, id: id)
+		return text
+	}
+
+	public static func set(_ value: String, for id: String) throws {
+		try SettingsError.check(amiberry_host_settings_set(id, value), id: id, value: value)
+	}
+
+	/// Writes amiberry.conf. False when the file could not be written.
+	public static func save() -> Bool {
+		amiberry_host_settings_save()
+	}
+}
+
 public enum CustomControlCatalog {
 	public static let controls: [CustomControl] = {
 		(0..<amiberry_settings_custom_control_count()).compactMap { index in

@@ -48,7 +48,7 @@
 extern "C" {
 #endif
 
-#define AMIBERRY_SETTINGS_API_VERSION 6
+#define AMIBERRY_SETTINGS_API_VERSION 7
 
 /* Large enough for every value a descriptor can produce, including the
    terminating NUL. */
@@ -389,6 +389,26 @@ AMIBERRY_SETTINGS_API bool amiberry_settings_custom_control_available(
 /* NULL when no hotkey function holds the control. */
 AMIBERRY_SETTINGS_API const char *amiberry_settings_custom_control_use(
 	const amiberry_settings_session *session, int port, bool hotkey, const char *control);
+
+/*
+ * Host settings: the Global Settings panel (amiberry.conf), not a
+ * configuration. They are process-wide, so there is no session: set
+ * changes the live value, and save writes amiberry.conf. An ID is the
+ * amiberry.conf key. A bool is "true" or "false"; a choice's value is the
+ * integer the file stores. A GUI scale outside 50-200 is clamped, as the
+ * file parser clamps it; the legacy full-screen mode 1 is full-window.
+ */
+AMIBERRY_SETTINGS_API size_t amiberry_host_settings_count(void);
+/* NULL when index >= amiberry_host_settings_count(). */
+AMIBERRY_SETTINGS_API const amiberry_setting_descriptor *amiberry_host_settings_at(size_t index);
+/* NULL for an unknown ID. */
+AMIBERRY_SETTINGS_API const amiberry_setting_descriptor *amiberry_host_settings_find(const char *id);
+AMIBERRY_SETTINGS_API amiberry_settings_status amiberry_host_settings_get(
+	const char *id, char *buffer, size_t size);
+AMIBERRY_SETTINGS_API amiberry_settings_status amiberry_host_settings_set(
+	const char *id, const char *value);
+/* Writes amiberry.conf. False when the file could not be written. */
+AMIBERRY_SETTINGS_API bool amiberry_host_settings_save(void);
 
 #ifdef __cplusplus
 }

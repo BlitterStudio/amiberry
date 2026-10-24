@@ -171,6 +171,22 @@ final class SettingsSessionTests: XCTestCase {
 		XCTAssertTrue(a2091.fields.allSatisfy { $0.applyClass == .restart })
 	}
 
+	func testHostSettingsAreProcessWide() throws {
+		XCTAssertGreaterThan(HostSettings.all.count, 60)
+		let deadzone = try XCTUnwrap(HostSettings.all.first { $0.id == "default_joystick_deadzone" })
+		XCTAssertEqual(deadzone.kind, .integer)
+		XCTAssertEqual(try HostSettings.value(of: "Quickstart"), "true")
+		try HostSettings.set("false", for: "Quickstart")
+		XCTAssertEqual(try HostSettings.value(of: "Quickstart"), "false")
+		try HostSettings.set("true", for: "Quickstart")
+		XCTAssertThrowsError(try HostSettings.set("yes", for: "Quickstart")) {
+			XCTAssertEqual($0 as? SettingsError, .invalidValue(id: "Quickstart", value: "yes"))
+		}
+		XCTAssertThrowsError(try HostSettings.value(of: "nope")) {
+			XCTAssertEqual($0 as? SettingsError, .unknownID("nope"))
+		}
+	}
+
 	func testCustomControlsNeedAJoystickOnThePort() throws {
 		let controls = CustomControlCatalog.controls
 		XCTAssertEqual(controls.first?.id, "a")

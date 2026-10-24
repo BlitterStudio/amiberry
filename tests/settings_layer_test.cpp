@@ -111,6 +111,41 @@ const TCHAR* inputdevice_get_device_unique_name(int type, int index)
 struct didata di_joystick[MAX_INPUT_DEVICES];
 bool joystick_refresh_needed;
 void inputdevice_validate_jports_prefs_only(uae_prefs*, int) {}
+// Host settings: the process-wide options and the content folders.
+struct amiberry_options amiberry_options;
+static int host_saves = 0;
+static bool host_save_result = true;
+bool save_amiberry_settings_with_result() { host_saves++; return host_save_result; }
+static std::map<std::string, std::string> host_paths;
+#define HOST_PATH(get, set, key) \
+	std::string get() { return host_paths[key]; } \
+	void set(const std::string& path) { host_paths[key] = path; }
+HOST_PATH(get_base_content_path, set_base_content_path, "base")
+HOST_PATH(get_configuration_path, set_configuration_path, "config")
+HOST_PATH(get_controllers_path, set_controllers_path, "controllers")
+HOST_PATH(get_retroarch_file, set_retroarch_file, "retroarch")
+HOST_PATH(get_whdbootpath, set_whdbootpath, "whdboot")
+HOST_PATH(get_whdload_arch_path, set_whdload_arch_path, "whdload")
+HOST_PATH(get_floppy_path, set_floppy_path, "floppy")
+HOST_PATH(get_harddrive_path, set_harddrive_path, "harddrive")
+HOST_PATH(get_cdrom_path, set_cdrom_path, "cdrom")
+HOST_PATH(get_logfile_path, set_logfile_path, "logfile")
+HOST_PATH(get_rom_path, set_rom_path, "rom")
+HOST_PATH(get_rp9_path, set_rp9_path, "rp9")
+HOST_PATH(get_floppy_sounds_path, set_floppy_sounds_path, "sounds")
+HOST_PATH(get_saveimage_path, set_saveimage_path, "saveimage")
+HOST_PATH(get_savestate_path, set_savestate_path, "savestate")
+HOST_PATH(get_ripper_path, set_ripper_path, "ripper")
+HOST_PATH(get_inputrecordings_path, set_inputrecordings_path, "recordings")
+HOST_PATH(get_screenshot_path, set_screenshot_path, "screenshot")
+HOST_PATH(get_nvram_path, set_nvram_path, "nvram")
+HOST_PATH(get_plugins_override_path, set_plugins_path, "plugins")
+HOST_PATH(get_video_path, set_video_path, "video")
+HOST_PATH(get_themes_path, set_themes_path, "themes")
+HOST_PATH(get_shaders_path, set_shaders_path, "shaders")
+HOST_PATH(get_bezels_path, set_bezels_path, "bezels")
+#undef HOST_PATH
+
 // Custom controls: three events, and the mappings the input code holds per
 // port (for the device it was set for, as the real store keys them).
 extern const int remap_event_list[] = { INPUTEVENT_JOY2_FIRE_BUTTON, INPUTEVENT_KEY_SPACE, INPUTEVENT_JOY2_UP };
@@ -2535,6 +2570,56 @@ void check_boards()
 
 // The configuration's description and category: one line each (the writer
 // does not escape them), the category without surrounding spaces.
+void check_host_settings()
+{
+	CHECK(amiberry_host_settings_count() > 60);
+	const amiberry_setting_descriptor* deadzone = amiberry_host_settings_find("default_joystick_deadzone");
+	CHECK(deadzone && deadzone->type == AMIBERRY_SETTING_INT && deadzone->min == 0 && deadzone->max == 100);
+	CHECK(!amiberry_host_settings_find("nope"));
+
+	char value[AMIBERRY_SETTINGS_VALUE_MAX];
+	CHECK(amiberry_host_settings_get("Quickstart", value, sizeof value) == AMIBERRY_SETTINGS_OK);
+	CHECK(!std::strcmp(value, "true"));
+	CHECK(amiberry_host_settings_set("Quickstart", "false") == AMIBERRY_SETTINGS_OK);
+	CHECK(!amiberry_options.quickstart_start);
+	CHECK(amiberry_host_settings_set("Quickstart", "yes") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	CHECK(amiberry_host_settings_set("default_joystick_deadzone", "101") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	CHECK(amiberry_host_settings_set("default_joystick_deadzone", "40") == AMIBERRY_SETTINGS_OK);
+	CHECK(amiberry_options.default_joystick_deadzone == 40);
+	// The legacy exclusive full-screen value is full-window.
+	CHECK(amiberry_host_settings_set("default_fullscreen_mode", "1") == AMIBERRY_SETTINGS_OK);
+	CHECK(amiberry_host_settings_get("default_fullscreen_mode", value, sizeof value) == AMIBERRY_SETTINGS_OK);
+	CHECK(!std::strcmp(value, "2"));
+	CHECK(amiberry_host_settings_set("default_fullscreen_mode", "3") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	// A GUI scale outside the range is clamped, as the file parser clamps it.
+	CHECK(amiberry_host_settings_set("gui_layout_scale", "10") == AMIBERRY_SETTINGS_OK);
+	CHECK(amiberry_options.gui_layout_scale_percent == 50);
+	CHECK(amiberry_host_settings_set("gui_layout_scale", "nan") == AMIBERRY_SETTINGS_OK);
+	CHECK(amiberry_options.gui_layout_scale_percent == 100);
+	// One line, within the field.
+	CHECK(amiberry_host_settings_set("default_open_gui_key", "two\nlines") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	CHECK(amiberry_host_settings_set("default_vkbd_language", "DE") == AMIBERRY_SETTINGS_OK);
+	CHECK(!std::strcmp(amiberry_options.default_vkbd_language, "DE"));
+	CHECK(amiberry_host_settings_set("default_vkbd_language", "ES") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	// A content folder.
+	CHECK(amiberry_host_settings_set("rom_path", "/roms") == AMIBERRY_SETTINGS_OK);
+	CHECK(amiberry_host_settings_get("rom_path", value, sizeof value) == AMIBERRY_SETTINGS_OK);
+	CHECK(!std::strcmp(value, "/roms"));
+	const int saves = host_saves;
+	CHECK(amiberry_host_settings_save());
+	CHECK(host_saves == saves + 1);
+	host_save_result = false;
+	CHECK(!amiberry_host_settings_save());
+	host_save_result = true;
+	// A path the conf loader would split or trim is refused.
+	CHECK(amiberry_host_settings_set("rom_path", "/roms ") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	CHECK(amiberry_host_settings_get("rom_path", value, sizeof value) == AMIBERRY_SETTINGS_OK);
+	CHECK(!std::strcmp(value, "/roms"));
+	const amiberry_setting_descriptor* delay = amiberry_host_settings_find("default_whd_configdelay");
+	CHECK(delay && delay->max == INT_MAX);
+	amiberry_options = {};
+}
+
 void check_config_text()
 {
 	uae_prefs& p = test_prefs;
@@ -3888,6 +3973,7 @@ int main(int argc, char** argv)
 	check_filter_domain();
 	check_io_domain();
 	check_custom_controls();
+	check_host_settings();
 	check_config_text();
 	check_mount_list();
 	check_active_values();

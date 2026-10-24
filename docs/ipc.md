@@ -309,6 +309,16 @@ hotkey button held (`hotkey`):
   `SETTINGS_COMMIT` applies the edits live, for the joystick each port has
   then.
 
+Host settings are the Global Settings panel (`amiberry.conf`), process-wide
+rather than part of a configuration:
+
+- `HOST_SETTINGS_LIST` replies one field per setting, its `amiberry.conf` key.
+- `HOST_SETTINGS_GET <id>` replies `<id>=<value>`. A bool is `true` or
+  `false`; a choice's value is the integer the file stores.
+- `HOST_SETTINGS_SET <id> <value>` changes the live value. A GUI scale
+  outside 50-200 is clamped; the legacy full-screen mode `1` is full-window.
+- `HOST_SETTINGS_SAVE` writes `amiberry.conf`.
+
 Configuration files: `LOAD_CONFIG <path>` makes a `.uae` (or `.rp9`) file the
 pending configuration, inserting the floppies it names at once (the rest
 takes effect with `SETTINGS_APPLY restart`, or when the emulation next

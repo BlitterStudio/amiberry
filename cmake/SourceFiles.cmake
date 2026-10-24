@@ -307,6 +307,7 @@ set(SOURCE_FILES
         src/osdep/settings/settings_rtg.cpp
         src/osdep/settings/settings_boards.cpp
         src/osdep/settings/settings_custom_controls.cpp
+        src/osdep/settings/settings_host.cpp
         src/osdep/settings/settings_expansions.cpp
         src/osdep/settings/settings_filter.cpp
         src/osdep/settings/settings_io.cpp
