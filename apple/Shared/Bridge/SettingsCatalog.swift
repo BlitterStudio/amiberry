@@ -323,6 +323,7 @@ public enum HostSettings {
 		}
 	}()
 
+	@MainActor
 	public static func value(of id: String) throws -> String {
 		let (text, status) = readLayerString(capacity: 4096) {
 			amiberry_host_settings_get(id, $0, $1)
@@ -331,11 +332,13 @@ public enum HostSettings {
 		return text
 	}
 
+	@MainActor
 	public static func set(_ value: String, for id: String) throws {
 		try SettingsError.check(amiberry_host_settings_set(id, value), id: id, value: value)
 	}
 
 	/// Writes amiberry.conf. False when the file could not be written.
+	@MainActor
 	public static func save() -> Bool {
 		amiberry_host_settings_save()
 	}

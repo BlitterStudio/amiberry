@@ -2601,6 +2601,9 @@ void check_host_settings()
 	CHECK(amiberry_options.gui_layout_scale_percent == 100);
 	// One line, within the field.
 	CHECK(amiberry_host_settings_set("default_open_gui_key", "two\nlines") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	CHECK(amiberry_host_settings_set("shader", "crt ") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	CHECK(amiberry_host_settings_get("shader", value, sizeof value) == AMIBERRY_SETTINGS_OK);
+	CHECK(!std::strcmp(value, "none"));
 	CHECK(amiberry_host_settings_set("default_vkbd_language", "DE") == AMIBERRY_SETTINGS_OK);
 	CHECK(!std::strcmp(amiberry_options.default_vkbd_language, "DE"));
 	CHECK(amiberry_host_settings_set("default_vkbd_language", "ES") == AMIBERRY_SETTINGS_INVALID_VALUE);

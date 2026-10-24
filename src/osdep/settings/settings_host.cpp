@@ -645,6 +645,11 @@ amiberry_settings_status host_settings_set(std::string_view id, std::string_view
 			return AMIBERRY_SETTINGS_OK;
 		}
 	case kind::text: {
+		// The loader strips whitespace at both ends, so a value with either
+		// comes back different (a shader name ending in a space, for one).
+		if (!value.empty() && (value.front() == ' ' || value.front() == '\t'
+			|| value.back() == ' ' || value.back() == '\t'))
+			return AMIBERRY_SETTINGS_INVALID_VALUE;
 		size_t text_size = 0;
 		char* field = text_of(s->id, text_size);
 		if (!field || value.size() >= text_size)
