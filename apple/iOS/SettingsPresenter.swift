@@ -98,7 +98,8 @@ final class SettingsPresenter {
 	private func showEditor() {
 		let model: SettingsWindowModel
 		do {
-			model = try SettingsWindowModel(emulating: true, dismiss: { [weak self] in self?.dismiss() })
+			model = try SettingsWindowModel(
+				emulating: true, dismiss: { [weak self] in self?.dismiss() }, machine: Machine.current())
 		} catch {
 			Alerts.show(title: "Settings", message: SettingsWindowModel.describe(error), buttons: ["OK"])
 			return

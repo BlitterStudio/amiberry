@@ -118,6 +118,14 @@ public enum MediaLibrary {
 		amiberry_media_grant_access(path)
 	}
 
+	/// The configuration file the pending configuration came from or was
+	/// last saved to; nil for a default configuration or an RP9 package.
+	public static func currentConfiguration() -> String? {
+		let (text, status) = readLayerString(capacity: 1024) { amiberry_media_current_configuration($0, $1) }
+		guard status == AMIBERRY_SETTINGS_OK, !text.isEmpty else { return nil }
+		return text
+	}
+
 	/// The description and category a configuration file declares, read
 	/// from its header; nil when the file cannot be read.
 	public static func configurationInfo(_ path: String) -> (description: String, category: String)? {

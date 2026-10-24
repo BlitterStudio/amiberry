@@ -15,6 +15,18 @@ struct Machine: Identifiable, Hashable {
 	let description: String
 	let category: String
 	var id: String { path }
+
+	/// The machine the pending configuration came from (loaded or saved),
+	/// when its file is still there.
+	@MainActor
+	static func current() -> Machine? {
+		guard let path = MediaLibrary.currentConfiguration(), FileManager.default.fileExists(atPath: path) else {
+			return nil
+		}
+		let info = MediaLibrary.configurationInfo(path)
+		let name = ((path as NSString).lastPathComponent as NSString).deletingPathExtension
+		return Machine(path: path, name: name, description: info?.description ?? "", category: info?.category ?? "")
+	}
 }
 
 @MainActor
@@ -25,6 +37,9 @@ final class LibraryModel {
 	var notice: String?
 	/// While a machine is being loaded.
 	private(set) var busy = false
+	/// While an editor opened from the Library is up: the Library waits, so
+	/// another load cannot replace the machine being edited.
+	var editing = false
 	/// Whether an emulation runs (a machine played now restarts it).
 	let emulating: Bool
 
@@ -66,6 +81,7 @@ final class LibraryModel {
 
 	/// Loads the machine and starts it (restarts a running emulation).
 	func play(_ machine: Machine) {
+		guard !editing else { return }
 		Task { @MainActor in
 			guard await run(.loadConfiguration(path: machine.path)) else { return }
 			if emulating, !(await run(.applySettings(.restart))) {
@@ -77,6 +93,7 @@ final class LibraryModel {
 
 	/// Loads the machine and opens the editor on it.
 	func edit(_ machine: Machine) {
+		guard !editing else { return }
 		Task { @MainActor in
 			guard await run(.loadConfiguration(path: machine.path)) else { return }
 			openEditor(machine, nil)
@@ -85,6 +102,7 @@ final class LibraryModel {
 
 	/// A new machine from a model: the editor opens with it applied.
 	func newMachine(preset: String? = nil, configuration: Int = 0) {
+		guard !editing else { return }
 		openEditor(nil, preset.map { ($0, configuration) })
 	}
 
@@ -164,7 +182,14 @@ struct LibraryView: View {
 	var body: some View {
 		navigation
 		.safeAreaInset(edge: .bottom, spacing: 0) {
-			if let notice = model.notice {
+			if model.editing {
+				Text("Close the editor to play or edit another machine.")
+					.foregroundStyle(.secondary)
+					.frame(maxWidth: .infinity, alignment: .leading)
+					.padding(.horizontal, 16)
+					.padding(.vertical, 8)
+					.background(.bar)
+			} else if let notice = model.notice {
 				Text(notice)
 					.foregroundStyle(.red)
 					.frame(maxWidth: .infinity, alignment: .leading)
@@ -173,7 +198,7 @@ struct LibraryView: View {
 					.background(.bar)
 			}
 		}
-		.disabled(model.busy)
+		.disabled(model.busy || model.editing)
 		.confirmationDialog(
 			"Delete \u{201C}\(pendingDelete?.name ?? "")\u{201D}?",
 			isPresented: Binding(get: { pendingDelete != nil }, set: { if !$0 { pendingDelete = nil } }),

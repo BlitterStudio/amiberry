@@ -389,6 +389,13 @@ amiberry_settings_status amiberry_media_entry(amiberry_media_list list, size_t i
 	});
 }
 
+amiberry_settings_status amiberry_media_current_configuration(char* path, size_t size)
+{
+	return amiberry_settings::no_throw(AMIBERRY_SETTINGS_UNKNOWN_ID, [=] {
+		return copy_out(get_current_config_path(), path, size);
+	});
+}
+
 amiberry_settings_status amiberry_media_configuration_info(const char* path,
 	char* description, size_t description_size, char* category, size_t category_size)
 {

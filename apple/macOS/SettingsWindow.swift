@@ -28,7 +28,7 @@ final class SettingsPresenter: NSObject, NSWindowDelegate {
 	/// the editor.
 	func show(emulating: Bool) {
 		if emulating {
-			showEditor(emulating: true, machine: nil, preset: nil)
+			showEditor(emulating: true, machine: Machine.current(), preset: nil)
 		} else {
 			showLibrary()
 		}
@@ -76,6 +76,9 @@ final class SettingsPresenter: NSObject, NSWindowDelegate {
 		window.title = emulating ? "Amiberry Settings" : (machine?.name ?? "New Machine")
 		self.window = window
 		self.model = model
+		if fromLibrary {
+			library?.editing = true
+		}
 		NSApplication.shared.activate(ignoringOtherApps: true)
 		window.makeKeyAndOrderFront(nil)
 	}
@@ -85,6 +88,7 @@ final class SettingsPresenter: NSObject, NSWindowDelegate {
 		window?.orderOut(nil)
 		window?.contentViewController = nil
 		model = nil
+		library?.editing = false
 		library?.reload()
 	}
 

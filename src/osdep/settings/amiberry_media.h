@@ -133,6 +133,14 @@ AMIBERRY_SETTINGS_API bool amiberry_media_grant_access(const char *path);
  * NULL with size 0. UNKNOWN_ID for a file that cannot be read,
  * BUFFER_TOO_SMALL when a value does not fit (up to 256 bytes each).
  */
+/*
+ * The configuration file the pending configuration was loaded from or last
+ * saved to (by the load and save actions, the GUI or the command line), as
+ * a full path; empty for a default configuration or an RP9 package.
+ * BUFFER_TOO_SMALL when it does not fit.
+ */
+AMIBERRY_SETTINGS_API amiberry_settings_status amiberry_media_current_configuration(char *path, size_t size);
+
 AMIBERRY_SETTINGS_API amiberry_settings_status amiberry_media_configuration_info(const char *path,
 	char *description, size_t description_size, char *category, size_t category_size);
 

@@ -94,6 +94,17 @@ final class LibraryTests: XCTestCase {
 		XCTAssertEqual(model.store.value(of: "chipset"), "aga")
 	}
 
+	func testTheLibraryWaitsWhileAnEditorIsOpen() {
+		var opened = 0
+		let library = LibraryModel(emulating: false, finish: {}, openEditor: { _, _ in opened += 1 })
+		library.editing = true
+		library.newMachine(preset: "a500")
+		XCTAssertEqual(opened, 0, "the open editor is not replaced")
+		library.editing = false
+		library.newMachine(preset: "a500")
+		XCTAssertEqual(opened, 1)
+	}
+
 	func testClosingAnEditorFromTheLibraryGoesBackToIt() throws {
 		var closed = 0
 		var dismissed = 0

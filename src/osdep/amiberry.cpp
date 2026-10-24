@@ -1221,6 +1221,9 @@ static bool legacy_cleanup_prompt_enabled = false;
 char last_loaded_config[MAX_DPATH] = {};
 char last_active_config[MAX_DPATH] = {};
 static bool last_loaded_config_is_automatic_default = false;
+// The configuration file the pending configuration was loaded from or last
+// saved to (full path); empty for a default or an RP9 package.
+static std::string current_config_path;
 
 int max_uae_width;
 int max_uae_height;
@@ -1309,6 +1312,23 @@ void set_last_loaded_config(const char* filename, const bool automatic_default)
 	extract_filename(filename, last_loaded_config);
 	remove_file_extension(last_loaded_config);
 	last_loaded_config_is_automatic_default = automatic_default;
+	set_current_config_path(automatic_default ? nullptr : filename);
+}
+
+void set_current_config_path(const char* filename)
+{
+	if (!filename || !filename[0]) {
+		current_config_path.clear();
+		return;
+	}
+	std::error_code ec;
+	const auto absolute = std::filesystem::absolute(std::filesystem::path(filename), ec);
+	current_config_path = ec ? std::string(filename) : absolute.lexically_normal().string();
+}
+
+std::string get_current_config_path()
+{
+	return current_config_path;
 }
 
 void set_last_active_config(const char* filename)
@@ -7579,6 +7599,7 @@ int target_cfgfile_load(uae_prefs* p, const char* filename, int type, const int 
 	if (is_rp9) {
 		last_loaded_config[0] = 0;
 		last_loaded_config_is_automatic_default = false;
+		set_current_config_path(nullptr);
 	} else {
 		set_last_loaded_config(filename, isdefault != 0);
 	}
