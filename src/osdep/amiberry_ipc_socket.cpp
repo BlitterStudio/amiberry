@@ -805,6 +805,55 @@ static std::string HandleLoadConfig(const std::vector<std::string>& args)
 	return run_posted_reply(amiberry_actions_load_config(args[0].c_str()));
 }
 
+// Host settings (amiberry.conf): process-wide, saved explicitly.
+static std::string HandleHostSettingsList(const std::vector<std::string>& args)
+{
+	if (!currprefs.ipc_disable_logging)
+		std::cout << "IPC: Received HOST_SETTINGS_LIST" << std::endl;
+	std::vector<std::string> ids;
+	for (size_t i = 0; i < amiberry_host_settings_count(); ++i)
+		ids.emplace_back(amiberry_host_settings_at(i)->id);
+	return make_response(true, ids);
+}
+
+static std::string HandleHostSettingsGet(const std::vector<std::string>& args)
+{
+	if (!currprefs.ipc_disable_logging)
+		std::cout << "IPC: Received HOST_SETTINGS_GET" << std::endl;
+	if (args.size() != 1)
+		return make_response(false, {"Usage: HOST_SETTINGS_GET <id>"});
+	char value[4096];
+	const amiberry_settings_status status = amiberry_host_settings_get(args[0].c_str(), value, sizeof value);
+	if (status == AMIBERRY_SETTINGS_UNKNOWN_ID)
+		return make_response(false, {"Unknown host setting: " + args[0]});
+	if (status != AMIBERRY_SETTINGS_OK)
+		return make_response(false, {"Value too long"});
+	return make_response(true, {std::string(args[0]) + "=" + value});
+}
+
+static std::string HandleHostSettingsSet(const std::vector<std::string>& args)
+{
+	if (!currprefs.ipc_disable_logging)
+		std::cout << "IPC: Received HOST_SETTINGS_SET" << std::endl;
+	if (args.size() != 2)
+		return make_response(false, {"Usage: HOST_SETTINGS_SET <id> <value>"});
+	const amiberry_settings_status status = amiberry_host_settings_set(args[0].c_str(), args[1].c_str());
+	if (status == AMIBERRY_SETTINGS_UNKNOWN_ID)
+		return make_response(false, {"Unknown host setting: " + args[0]});
+	if (status == AMIBERRY_SETTINGS_UNAVAILABLE)
+		return make_response(false, {"Folder could not be accessed: " + args[1]});
+	if (status != AMIBERRY_SETTINGS_OK)
+		return make_response(false, {"Invalid value for " + args[0] + ": " + args[1]});
+	return make_response(true);
+}
+
+static std::string HandleHostSettingsSave(const std::vector<std::string>& args)
+{
+	if (!currprefs.ipc_disable_logging)
+		std::cout << "IPC: Received HOST_SETTINGS_SAVE" << std::endl;
+	return amiberry_host_settings_save() ? make_response(true) : make_response(false, {"Failed to save host settings"});
+}
+
 static std::string HandleSaveConfig(const std::vector<std::string>& args)
 {
 	if (!currprefs.ipc_disable_logging) {
@@ -3422,6 +3471,7 @@ static std::string HandleHelp(const std::vector<std::string>& args)
 	commands.emplace_back("DISKSWAP <disknum> <drive>, QUERYDISKSWAP <drive>");
 	commands.emplace_back("GET_STATUS, GET_CONFIG <opt>, SET_CONFIG <opt> <val>");
 	commands.emplace_back("LOAD_CONFIG <path>, SAVE_CONFIG <path>, LIST_CONFIGS");
+	commands.emplace_back("HOST_SETTINGS_LIST, HOST_SETTINGS_GET <id>, HOST_SETTINGS_SET <id> <value>, HOST_SETTINGS_SAVE");
 	commands.emplace_back("LIST_MEDIA <list>, GET_FOLDER <folder>, SET_FOLDER <folder> <path>");
 	commands.emplace_back("SET_VOLUME <0-100>, GET_VOLUME, MUTE, UNMUTE");
 	commands.emplace_back("SET_WARP <0|1>, GET_WARP, TOGGLE_FULLSCREEN, OPEN_SETTINGS");
@@ -4172,6 +4222,10 @@ static void InitHandlers()
 	command_handlers[CMD_SET_CONFIG] = HandleSetConfig;
 	command_handlers[CMD_LOAD_CONFIG] = HandleLoadConfig;
 	command_handlers[CMD_SAVE_CONFIG] = HandleSaveConfig;
+	command_handlers[CMD_HOST_SETTINGS_LIST] = HandleHostSettingsList;
+	command_handlers[CMD_HOST_SETTINGS_GET] = HandleHostSettingsGet;
+	command_handlers[CMD_HOST_SETTINGS_SET] = HandleHostSettingsSet;
+	command_handlers[CMD_HOST_SETTINGS_SAVE] = HandleHostSettingsSave;
 	command_handlers[CMD_SEND_KEY] = HandleSendKey;
 	command_handlers[CMD_READ_MEM] = HandleReadMem;
 	command_handlers[CMD_WRITE_MEM] = HandleWriteMem;
@@ -4323,7 +4377,8 @@ static std::string ProcessCommand(const std::string& line)
 	// board without its ROM, an empty custom control its default), so keep
 	// it for those commands only; every other command parses exactly as
 	// before.
-	if ((cmd == "SETTINGS_SET" || cmd == "SETTINGS_BOARD_SET" || cmd == "SETTINGS_CUSTOM_CONTROL_SET")
+	if ((cmd == "SETTINGS_SET" || cmd == "SETTINGS_BOARD_SET" || cmd == "SETTINGS_CUSTOM_CONTROL_SET"
+		|| cmd == "HOST_SETTINGS_SET")
 		&& !line.empty() && line.back() == '\t')
 		args.emplace_back();
 

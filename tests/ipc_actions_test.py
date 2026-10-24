@@ -395,6 +395,23 @@ def main():
               control.request("SETTINGS_BOARD_SET\ta2091\t1\tenabled\tfalse") == "OK"
               and control.request("SETTINGS_COMMIT") == "OK\tchanged=true\tapply=restart")
 
+        # Host settings: process-wide, saved to amiberry.conf explicitly.
+        reply = control.request("HOST_SETTINGS_LIST")
+        check("HOST_SETTINGS_LIST names the amiberry.conf keys",
+              reply.startswith("OK\t") and "\tQuickstart\t" in reply and "\trom_path\t" in reply, reply[:200])
+        check("HOST_SETTINGS_GET reads a default",
+              control.request("HOST_SETTINGS_GET\tQuickstart") == "OK\tQuickstart=true")
+        check("HOST_SETTINGS_SET changes the live value",
+              control.request("HOST_SETTINGS_SET\tQuickstart\tfalse") == "OK"
+              and control.request("HOST_SETTINGS_GET\tQuickstart") == "OK\tQuickstart=false")
+        reply = control.request("HOST_SETTINGS_SET\tdefault_joystick_deadzone\t101")
+        check("HOST_SETTINGS_SET refuses a value outside the range",
+              reply == "ERROR\tInvalid value for default_joystick_deadzone: 101", reply)
+        check("HOST_SETTINGS_SET restores the default",
+              control.request("HOST_SETTINGS_SET\tQuickstart\ttrue") == "OK")
+        reply = control.request("HOST_SETTINGS_GET\tnope")
+        check("an unknown host setting is refused", reply == "ERROR\tUnknown host setting: nope", reply)
+
         # Custom controls: the controls and events are listed; without a
         # joystick connected (headless), a port has none to edit.
         reply = control.request("SETTINGS_CUSTOM_CONTROLS")
