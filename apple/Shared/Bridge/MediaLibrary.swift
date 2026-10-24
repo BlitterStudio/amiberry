@@ -126,6 +126,12 @@ public enum MediaLibrary {
 		return text
 	}
 
+	/// Forgets the configuration file: the pending configuration becomes a
+	/// new machine.
+	public static func forgetCurrentConfiguration() {
+		amiberry_media_forget_current_configuration()
+	}
+
 	/// The description and category a configuration file declares, read
 	/// from its header; nil when the file cannot be read.
 	public static func configurationInfo(_ path: String) -> (description: String, category: String)? {

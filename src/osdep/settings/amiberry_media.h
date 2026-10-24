@@ -141,6 +141,12 @@ AMIBERRY_SETTINGS_API bool amiberry_media_grant_access(const char *path);
  */
 AMIBERRY_SETTINGS_API amiberry_settings_status amiberry_media_current_configuration(char *path, size_t size);
 
+/*
+ * Forgets that file: the pending configuration becomes a new machine (one
+ * started from a model), which is no saved file's until it is saved.
+ */
+AMIBERRY_SETTINGS_API void amiberry_media_forget_current_configuration(void);
+
 AMIBERRY_SETTINGS_API amiberry_settings_status amiberry_media_configuration_info(const char *path,
 	char *description, size_t description_size, char *category, size_t category_size);
 

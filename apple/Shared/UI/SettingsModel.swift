@@ -150,6 +150,9 @@ final class SettingsWindowModel {
 	/// A new machine from a model: the model is applied, and Quick Start
 	/// opens showing it.
 	func startNewMachine(preset id: String, configuration: Int) {
+		// A new machine is no saved file's: Settings over it later must not
+		// offer to save it over the machine edited before.
+		MediaLibrary.forgetCurrentConfiguration()
 		_ = store.applyPreset(id, configuration: configuration)
 		newMachineModel = (id, configuration)
 		page = .quickStart

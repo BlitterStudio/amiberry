@@ -87,8 +87,16 @@ final class LibraryTests: XCTestCase {
 
 	func testANewMachineShowsItsModelInQuickStart() throws {
 		let a1200 = try XCTUnwrap(MachinePresets.preset(for: "a1200"))
+		// The pending configuration was saved as a machine: it has that file.
+		let saved = FileManager.default.temporaryDirectory.appendingPathComponent("current-\(UUID().uuidString).uae")
+		defer { try? FileManager.default.removeItem(at: saved) }
+		XCTAssertNotNil(EmulatorActions.post(.saveConfiguration(path: saved.path)))
+		ActionPump.runPending()
+		XCTAssertEqual(MediaLibrary.currentConfiguration().map { URL(fileURLWithPath: $0).standardizedFileURL.path },
+			saved.standardizedFileURL.path)
 		let model = try SettingsWindowModel(emulating: false, dismiss: {}, post: { _ in true })
 		model.startNewMachine(preset: a1200.id, configuration: 0)
+		XCTAssertNil(MediaLibrary.currentConfiguration(), "a new machine is no saved file's")
 		XCTAssertEqual(model.page, .quickStart)
 		XCTAssertEqual(model.newMachineModel?.id, "a1200")
 		XCTAssertEqual(model.store.value(of: "chipset"), "aga")
