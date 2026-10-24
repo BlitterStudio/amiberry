@@ -38,7 +38,7 @@ final class SettingsPresenter {
 
 	private var controller: UIViewController?
 	private let slot = EditorSlot()
-	private var library: LibraryModel?
+	private(set) var library: LibraryModel?
 	private var editorModel: SettingsWindowModel?
 
 	/// The editor's model, over the Library or the emulation.
@@ -84,12 +84,16 @@ final class SettingsPresenter {
 				emulating: false, dismiss: { [weak self] in self?.dismiss() }, machine: machine,
 				closeToLibrary: { [weak self] in
 					self?.slot.model = nil
+					self?.library?.editing = false
 					self?.library?.reload()
 				})
 			if let preset {
 				model.startNewMachine(preset: preset.id, configuration: preset.configuration)
 			}
 			slot.model = model
+			// As on the Mac: the Library waits while the editor is up, so a
+			// file opened meanwhile cannot replace the machine being edited.
+			library?.editing = true
 		} catch {
 			Alerts.show(title: "Settings", message: SettingsWindowModel.describe(error), buttons: ["OK"])
 		}

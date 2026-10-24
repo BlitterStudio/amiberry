@@ -6,6 +6,8 @@
  * and FilePanels (apple/macOS, apple/iOS).
  */
 
+import Foundation
+
 @_cdecl("amiberry_native_ui_settings_show")
 public func amiberryNativeUISettingsShow(_ emulating: Bool) {
 	MainActor.assumeIsolated {
@@ -38,6 +40,25 @@ public func amiberryNativeUISettingsCommit() {
 public func amiberryNativeUISettingsDevicesChanged() {
 	MainActor.assumeIsolated {
 		SettingsPresenter.shared.model?.store.reload()
+	}
+}
+
+/// A file opened with the app (the Dock icon, Finder's Open With, iOS's
+/// Open in) while the settings UI shows: the Library plays it.
+@_cdecl("amiberry_native_ui_open_file")
+public func amiberryNativeUIOpenFile(_ path: UnsafePointer<CChar>) {
+	let file = String(cString: path)
+	MainActor.assumeIsolated {
+		let url = URL(fileURLWithPath: file)
+		if let library = SettingsPresenter.shared.library {
+			library.quickPlay(url)
+		} else {
+			// The settings over a running emulation: once they close, the
+			// running machine takes the file as a drop (a disk goes in DF0:).
+			Alerts.show(title: "Close the Settings First",
+				message: "Close the settings, then open \u{201C}\(url.lastPathComponent)\u{201D} again.",
+				buttons: ["OK"])
+		}
 	}
 }
 

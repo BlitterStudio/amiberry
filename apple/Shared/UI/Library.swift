@@ -29,6 +29,31 @@ struct Machine: Identifiable, Hashable {
 	}
 }
 
+/// What can be played straight from a file (dropped, opened or chosen).
+enum QuickPlay {
+	static let extensions: Set<String> = ["adf", "adz", "dms", "ipf", "zip", "7z", "lha", "cue", "iso", "chd", "uae", "rp9"]
+
+	static func accepts(_ url: URL) -> Bool {
+		url.isFileURL && extensions.contains(url.pathExtension.lowercased())
+	}
+
+	/// The path the emulator plays. A Mac keeps access to the file itself
+	/// (granted for later launches on a Mac App Store build); an iOS app
+	/// only to its own files, so one from elsewhere is copied in first.
+	@MainActor
+	static func prepare(_ url: URL) throws -> String {
+		#if os(iOS)
+		if AppFiles.contains(url) {
+			return url.path
+		}
+		return try AppFiles.importFile(url, into: AppFiles.folder(forMedia: url))
+		#else
+		_ = MediaLibrary.grantAccess(to: url.path)
+		return url.path
+		#endif
+	}
+}
+
 @MainActor
 @Observable
 final class LibraryModel {
@@ -84,6 +109,37 @@ final class LibraryModel {
 		guard !editing else { return }
 		Task { @MainActor in
 			guard await run(.loadConfiguration(path: machine.path)) else { return }
+			if emulating, !(await run(.applySettings(.restart))) {
+				return
+			}
+			finish()
+		}
+	}
+
+	/// Quick play: the machine for a media file (a disk, CD, WHDLoad archive
+	/// or configuration) runs as a played machine does. The emulator picks
+	/// the machine (amiberry_actions_quick_play).
+	func quickPlay(_ url: URL) {
+		guard !editing else {
+			// Said now: the Library shows the editor's banner meanwhile.
+			Alerts.show(title: "Close the Editor First",
+				message: "\u{201C}\(url.lastPathComponent)\u{201D} would replace the machine being edited. Close the editor, then open the file again.",
+				buttons: ["OK"])
+			return
+		}
+		guard QuickPlay.accepts(url) else {
+			notice = "\u{201C}\(url.lastPathComponent)\u{201D} is not a disk, CD, WHDLoad archive or configuration."
+			return
+		}
+		let path: String
+		do {
+			path = try QuickPlay.prepare(url)
+		} catch {
+			notice = "\u{201C}\(url.lastPathComponent)\u{201D} could not be opened: \(error.localizedDescription)"
+			return
+		}
+		Task { @MainActor in
+			guard await run(.quickPlay(path: path)) else { return }
 			if emulating, !(await run(.applySettings(.restart))) {
 				return
 			}
@@ -201,6 +257,13 @@ struct LibraryView: View {
 			}
 		}
 		.disabled(model.busy || model.editing)
+		// Quick play: a disk, CD, WHDLoad archive or configuration dropped on
+		// the Library runs at once.
+		.dropDestination(for: URL.self) { urls, _ in
+			guard let url = urls.first(where: QuickPlay.accepts) else { return false }
+			model.quickPlay(url)
+			return true
+		}
 		#if os(iOS)
 		// The Configurations folder may have changed meanwhile.
 		.sheet(isPresented: $showingAppSettings, onDismiss: { model.reload() }) {
@@ -290,6 +353,12 @@ struct LibraryView: View {
 		Menu {
 			ForEach(MachinePresets.all) { preset in
 				Button(preset.label) { model.newMachine(preset: preset.id) }
+			}
+			Divider()
+			Button("Play a File\u{2026}") {
+				if let path = FilePanels.choose(.media, title: "Play a disk, CD, WHDLoad archive or configuration", startingAt: "") {
+					model.quickPlay(URL(fileURLWithPath: path))
+				}
 			}
 		} label: {
 			Label("New Machine", systemImage: "plus")

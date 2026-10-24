@@ -54,7 +54,7 @@
 extern "C" {
 #endif
 
-#define AMIBERRY_ACTIONS_API_VERSION 6
+#define AMIBERRY_ACTIONS_API_VERSION 7
 
 /* Largest MAX_DPATH (PATH_MAX) any supported platform builds with, so every
    media path the emulator can store fits, NUL included. */
@@ -146,6 +146,20 @@ AMIBERRY_ACTIONS_API amiberry_action_id amiberry_actions_screenshot(const char *
  */
 AMIBERRY_ACTIONS_API amiberry_action_id amiberry_actions_load_config(const char *path);
 AMIBERRY_ACTIONS_API amiberry_action_id amiberry_actions_save_config(const char *path);
+
+/*
+ * Quick play: makes the machine for a media file the pending configuration,
+ * as dropping it on the emulator does. A .uae or .rp9 loads as with
+ * load_config; a WHDLoad .lha gets the WHDLoad booter's machine; a CD image
+ * (.cue, .iso, .chd) a CD32 or CDTV; a disk image (.adf, .adz, .dms, .ipf,
+ * .zip, .7z) the configuration of the same name in the configurations
+ * folder, or else the Amiga 500 model with the disk in DF0:. Except for a
+ * configuration, the machine is a new one: nothing is its configuration
+ * file until it is saved. It runs when the emulation next starts, or after
+ * amiberry_actions_apply_settings(AMIBERRY_APPLY_RESTART). FAILED for a file
+ * that is missing or of another type, and in the libretro core.
+ */
+AMIBERRY_ACTIONS_API amiberry_action_id amiberry_actions_quick_play(const char *path);
 AMIBERRY_ACTIONS_API amiberry_action_id amiberry_actions_quit(void);
 
 /*

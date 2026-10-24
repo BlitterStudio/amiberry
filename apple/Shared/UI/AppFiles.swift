@@ -20,6 +20,9 @@ enum FileRequest: Int32 {
 	case rom
 	/// Any other file an option names.
 	case file
+	/// A file to play: a disk, CD, WHDLoad archive or configuration
+	/// (quick play); iOS keeps it in the folder its type belongs in.
+	case media
 
 	/// The request for an option holding a path.
 	static func forOption(_ id: String) -> FileRequest {
@@ -73,10 +76,23 @@ enum AppFiles {
 		case .loadState, .saveState: folder = .saveStates
 		case .hardfile: folder = .hardDrives
 		case .rom: folder = .roms
-		case .file:
+		case .file, .media:
 			// Next to the media folders (Documents/Amiberry/Imports).
 			let floppies = URL(fileURLWithPath: try MediaLibrary.path(of: .floppies), isDirectory: true)
 			return floppies.deletingLastPathComponent().appendingPathComponent("Imports", isDirectory: true)
+		}
+		return URL(fileURLWithPath: try MediaLibrary.path(of: folder), isDirectory: true)
+	}
+
+	/// The folder a file to play belongs in, by its type.
+	static func folder(forMedia url: URL) throws -> URL {
+		let folder: MediaFolder
+		switch url.pathExtension.lowercased() {
+		case "adf", "adz", "dms", "ipf", "zip", "7z": folder = .floppies
+		case "cue", "iso", "chd": folder = .cds
+		case "lha": folder = .whdloadArchives
+		case "uae", "rp9": folder = .configurations
+		default: return try self.folder(for: .media)
 		}
 		return URL(fileURLWithPath: try MediaLibrary.path(of: folder), isDirectory: true)
 	}

@@ -35,6 +35,9 @@ public enum EmulatorAction: Hashable, Sendable {
 	case loadConfiguration(path: String)
 	/// Writes the pending configuration (what a session committed).
 	case saveConfiguration(path: String)
+	/// Makes the machine for a media file (disk, CD, WHDLoad archive or
+	/// configuration) the pending configuration; it runs as a loaded one does.
+	case quickPlay(path: String)
 	case quit
 	/// Stops the running emulation and opens the Library with nothing
 	/// running; fails while nothing runs.
@@ -143,6 +146,7 @@ public enum EmulatorActions {
 		case let .screenshot(path): id = amiberry_actions_screenshot(path)
 		case let .loadConfiguration(path): id = amiberry_actions_load_config(path)
 		case let .saveConfiguration(path): id = amiberry_actions_save_config(path)
+		case let .quickPlay(path): id = amiberry_actions_quick_play(path)
 		case .quit: id = amiberry_actions_quit()
 		case .stop: id = amiberry_actions_stop()
 		case let .applySettings(apply): id = amiberry_actions_apply_settings(apply.layerValue)
