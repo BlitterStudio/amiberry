@@ -18,6 +18,9 @@ final class OverlayState {
 	/// Re-read when the settings screen closes, where they change.
 	var keyboardOptions = KeyboardOptions()
 	let status = StatusMonitor()
+	/// Where the overlay's controls are, in window coordinates: the window
+	/// keeps the touches there and passes the rest to the emulation.
+	@ObservationIgnored var controlFrames: [String: CGRect] = [:]
 
 	/// The emulation runs (or is paused) under nothing else.
 	var showsControls: Bool { status.status.runState != .stopped && !settingsVisible }
@@ -42,6 +45,7 @@ final class EmulationOverlay {
 		}
 		window.windowLevel = .normal + 1
 		window.backgroundColor = .clear
+		window.keepsTouch = { [state] point in state.controlFrames.values.contains { $0.contains(point) } }
 		let host = UIHostingController(rootView: OverlayView(state: state, keyboard: keyboard))
 		host.view.backgroundColor = .clear
 		host.view.isMultipleTouchEnabled = true
@@ -121,6 +125,10 @@ final class EmulationOverlay {
 /// Hands touches that hit none of its controls to the window below (the
 /// emulation's).
 final class PassthroughWindow: UIWindow {
+	/// Whether a point is on one of the overlay's SwiftUI controls, which
+	/// have no views of their own to hit.
+	var keepsTouch: (CGPoint) -> Bool = { _ in false }
+
 	override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
 		guard let hit = super.hitTest(point, with: event) else { return nil }
 		guard let root = rootViewController?.view else { return hit }
@@ -129,6 +137,11 @@ final class PassthroughWindow: UIWindow {
 		// SwiftUI answers for its whole hosting view; only a control under
 		// the point keeps the touch.
 		for subview in root.subviews.reversed() where subview.hitTest(subview.convert(point, from: root), with: event) != nil {
+			return hit
+		}
+		// SwiftUI draws its buttons without views of their own: the hosting
+		// view answers for them, so the controls' frames decide.
+		if keepsTouch(point) {
 			return hit
 		}
 		return hit === root ? nil : hit
@@ -157,6 +170,7 @@ struct OverlayView: View {
 						_ = EmulatorActions.post(.openSettings)
 					}
 				}
+				.overlayControl("buttons", state: state)
 				.padding(.top, 8)
 				.padding(.trailing, 12)
 			}
@@ -164,6 +178,7 @@ struct OverlayView: View {
 				VStack {
 					Spacer()
 					AmigaKeyboardView(model: keyboard, options: state.keyboardOptions)
+						.overlayControl("keyboard", state: state)
 				}
 				.transition(.move(edge: .bottom))
 			}
@@ -174,6 +189,14 @@ struct OverlayView: View {
 		// The emulation resuming (or starting) follows a settings apply, which
 		// runs after the settings screen closes: the options are read again.
 		.onChange(of: state.status.status.runState) { state.keyboardOptions = KeyboardOptions.active() }
+	}
+}
+
+extension View {
+	/// Marks a control of the overlay, so the window keeps the touches on it.
+	func overlayControl(_ id: String, state: OverlayState) -> some View {
+		onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { state.controlFrames[id] = $0 }
+			.onDisappear { state.controlFrames[id] = nil }
 	}
 }
 

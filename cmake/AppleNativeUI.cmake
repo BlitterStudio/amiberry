@@ -13,6 +13,12 @@
 # Swift archive links against them from the final executable link; no extra
 # library is needed.
 
+# Swift 6 for every Swift target. The targets also set Swift_LANGUAGE_VERSION,
+# but the Xcode generator of the CMake on the CI runners adds the default
+# language version (4) to OTHER_SWIFT_FLAGS after it, and the later
+# -swift-version wins: the iOS sources then compiled in Swift 4 mode, where
+# UIKit's API notes give the pre-4.2 spellings.
+set(CMAKE_Swift_LANGUAGE_VERSION 6)
 enable_language(Swift)
 
 add_library(amiberry_native_ui STATIC
