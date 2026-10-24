@@ -113,6 +113,32 @@ final class LibraryTests: XCTestCase {
 		XCTAssertEqual(opened, 1)
 	}
 
+	func testSavingAMachineInPlaceKeepsItsFile() async throws {
+		let folder = try MediaLibrary.path(of: .configurations)
+		let name = "Upper-\(UUID().uuidString)"
+		let file = URL(fileURLWithPath: folder).appendingPathComponent(name + ".UAE")
+		try "config_description=Old\n".write(to: file, atomically: true, encoding: .utf8)
+		defer { try? FileManager.default.removeItem(at: file) }
+		let machine = Machine(path: file.path, name: name, description: "Old", category: "")
+		let model = try SettingsWindowModel(emulating: false, dismiss: {}, post: { _ in true },
+			machine: machine, closeToLibrary: {})
+		// The save runs as an action: pump the queue as the emulator would.
+		let saving = Task { await model.save(name: name, description: "New", category: "") }
+		var saved: Bool?
+		for _ in 0..<200 where saved == nil {
+			ActionPump.runPending()
+			try await Task.sleep(for: .milliseconds(10))
+			if model.notice != nil || MediaLibrary.configurationInfo(file.path)?.description == "New" {
+				saved = await saving.value
+			}
+		}
+		XCTAssertEqual(saved, true, model.notice ?? "")
+		XCTAssertEqual(MediaLibrary.configurationInfo(file.path)?.description, "New")
+		// One file, spelled as before.
+		let names = try FileManager.default.contentsOfDirectory(atPath: folder).filter { $0.hasPrefix(name) }
+		XCTAssertEqual(names, [name + ".UAE"])
+	}
+
 	func testClosingAnEditorFromTheLibraryGoesBackToIt() throws {
 		var closed = 0
 		var dismissed = 0

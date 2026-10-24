@@ -182,7 +182,11 @@ final class SettingsWindowModel {
 			notice = SettingsWindowModel.describe(error)
 			return false
 		}
-		let path = URL(fileURLWithPath: folder).appendingPathComponent(trimmed + ".uae").path
+		// The machine being edited, saved under its own name, keeps its file
+		// as it is spelled (Workbench.UAE stays Workbench.UAE); any other
+		// name is a new file in the configurations folder.
+		let path = machine.flatMap { $0.name == trimmed ? $0.path : nil }
+			?? URL(fileURLWithPath: folder).appendingPathComponent(trimmed + ".uae").path
 		// Saving over another machine replaces it: only the machine being
 		// edited (its file, by full path) is saved over in place. Checked
 		// before anything is committed, so a refused save changes nothing.
