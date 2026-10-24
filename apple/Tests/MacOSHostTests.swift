@@ -11,22 +11,22 @@ import XCTest
 
 @MainActor
 final class SettingsPagesTests: XCTestCase {
-	func testEveryGroupHasOnePage() {
-		let pages = SettingsPage.sections().flatMap(\.pages)
-		XCTAssertEqual(Set(pages).count, pages.count, "no page twice")
+	func testEveryGroupHasOneSection() {
+		let placed = SettingsPage.placing.flatMap(\.groups)
+		XCTAssertEqual(Set(placed).count, placed.count, "no group in two sections")
 		for group in SettingsCatalog.groups {
-			XCTAssertTrue(pages.contains(.group(group)), group)
+			XCTAssertTrue(placed.contains(group), "\(group) has no section")
 		}
-		// A group the sidebar does not know yet still gets a page.
-		let sections = SettingsPage.sections(groups: SettingsCatalog.groups + ["future_group"])
-		XCTAssertEqual(sections.last?.title, "Other")
-		XCTAssertEqual(sections.last?.pages, [.group("future_group")])
+		XCTAssertEqual(Set(SettingsPage.advanced.groups), Set(SettingsCatalog.groups), "All Settings lists every group")
+		for id in SettingsPage.overviewOptions {
+			XCTAssertNotNil(SettingsCatalog.descriptor(for: id), id)
+		}
 		XCTAssertEqual(SettingsPage.groupTitle("future_group"), "Future Group")
 	}
 
 	func testEveryPageRendersEveryOption() throws {
 		let model = try SettingsWindowModel(emulating: false, dismiss: {}, post: { _ in true })
-		for page in SettingsPage.sections().flatMap(\.pages) {
+		for page in SettingsPage.sidebar {
 			let view = NSHostingView(rootView: PageView(page: page, model: model).frame(width: 700, height: 500))
 			view.frame = NSRect(x: 0, y: 0, width: 700, height: 500)
 			view.layoutSubtreeIfNeeded()
@@ -97,7 +97,7 @@ final class LibraryTests: XCTestCase {
 		let model = try SettingsWindowModel(emulating: false, dismiss: {}, post: { _ in true })
 		model.startNewMachine(preset: a1200.id, configuration: 0)
 		XCTAssertNil(MediaLibrary.currentConfiguration(), "a new machine is no saved file's")
-		XCTAssertEqual(model.page, .quickStart)
+		XCTAssertEqual(model.page, .overview)
 		XCTAssertEqual(model.newMachineModel?.id, "a1200")
 		XCTAssertEqual(model.store.value(of: "chipset"), "aga")
 	}
@@ -246,10 +246,10 @@ final class SettingsWindowModelTests: XCTestCase {
 	}
 
 	func testMountFieldsAreSpelledAsTheWriterSpellsThem() {
-		XCTAssertEqual(HardDrivesPage.mountField("/Volumes/Work"), "/Volumes/Work")
-		XCTAssertEqual(HardDrivesPage.mountField("/a,b"), "\"/a,b\"")
-		XCTAssertEqual(HardDrivesPage.mountField("/a "), "\"/a \"")
-		XCTAssertNil(HardDrivesPage.mountField("/a\"b"))
+		XCTAssertEqual(MountSections.mountField("/Volumes/Work"), "/Volumes/Work")
+		XCTAssertEqual(MountSections.mountField("/a,b"), "\"/a,b\"")
+		XCTAssertEqual(MountSections.mountField("/a "), "\"/a \"")
+		XCTAssertNil(MountSections.mountField("/a\"b"))
 	}
 
 	func testMountedPathsWithCommasAreAccepted() throws {
@@ -261,7 +261,7 @@ final class SettingsWindowModelTests: XCTestCase {
 		let path = String(cString: real)
 		let session = try SettingsSession()
 		let before = try session.mounts().count
-		try session.addMount("dir,rw,DH9:Work:\(try XCTUnwrap(HardDrivesPage.mountField(path))),0")
+		try session.addMount("dir,rw,DH9:Work:\(try XCTUnwrap(MountSections.mountField(path))),0")
 		XCTAssertEqual(try session.mounts().count, before + 1)
 		XCTAssertTrue(try session.mounts().last?.contains("a,") ?? false)
 	}

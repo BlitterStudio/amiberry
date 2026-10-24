@@ -18,12 +18,8 @@ struct SettingsRootView: View {
 	var body: some View {
 		NavigationSplitView {
 			List(selection: $selection) {
-				ForEach(SettingsPage.sections(), id: \.title) { section in
-					Section(section.title) {
-						ForEach(section.pages) { page in
-							Label(page.title, systemImage: page.symbol).tag(page)
-						}
-					}
+				ForEach(SettingsPage.sidebar) { page in
+					Label(page.title, systemImage: page.symbol).tag(page)
 				}
 			}
 			.navigationSplitViewColumnWidth(min: 190, ideal: 210)
@@ -59,14 +55,17 @@ struct PageView: View {
 
 	var body: some View {
 		switch page {
-		case .quickStart:
-			QuickStartPage(model: model)
-		case let .group(id):
-			GroupPage(group: id, store: model.store)
-		case .hardDrives:
-			HardDrivesPage(model: model)
-		case .paths:
+		case .overview:
+			OverviewPage(model: model)
+		case .storage:
+			StoragePage(model: model)
+		case .folders:
 			PathsPage(model: model)
+		case .hardware, .displaySound, .input, .portsMisc, .advanced:
+			Form {
+				GroupSections(groups: page.groups, store: model.store)
+			}
+			.formStyle(.grouped)
 		}
 	}
 }
@@ -102,16 +101,49 @@ struct SearchResultsView: View {
 	}
 }
 
-/// Every option of a layer group, in the layer's order.
-struct GroupPage: View {
-	let group: String
+/// A section per layer group, each with its options in the layer's order.
+struct GroupSections: View {
+	let groups: [String]
 	let store: SettingsStore
 
 	var body: some View {
-		Form {
-			ForEach(SettingsCatalog.descriptors(in: group)) { descriptor in
-				OptionRow(descriptor: descriptor, store: store)
+		ForEach(groups.filter { !SettingsCatalog.descriptors(in: $0).isEmpty }, id: \.self) { group in
+			Section(SettingsPage.groupTitle(group)) {
+				ForEach(SettingsCatalog.descriptors(in: group)) { descriptor in
+					OptionRow(descriptor: descriptor, store: store)
+				}
 			}
+		}
+	}
+}
+
+/// What defines the machine at a glance: its model, Kickstart, memory and
+/// first drives, and its name in the Library.
+struct OverviewPage: View {
+	let model: SettingsWindowModel
+
+	var body: some View {
+		Form {
+			ModelSections(model: model)
+			Section("At a glance") {
+				ForEach(SettingsPage.overviewOptions.compactMap(SettingsCatalog.descriptor(for:))) { descriptor in
+					OptionRow(descriptor: descriptor, store: model.store)
+				}
+			}
+			GroupSections(groups: SettingsPage.overview.groups, store: model.store)
+		}
+		.formStyle(.grouped)
+	}
+}
+
+/// The drives: floppies and the swapper, the CD, and the mounted hard drives.
+struct StoragePage: View {
+	let model: SettingsWindowModel
+
+	var body: some View {
+		Form {
+			GroupSections(groups: SettingsPage.storage.groups, store: model.store)
+			MountSections(model: model)
 		}
 		.formStyle(.grouped)
 	}
@@ -301,22 +333,27 @@ struct TextControl: View {
 	}
 }
 
-struct QuickStartPage: View {
+/// The model a machine starts from: picking one applies a preset, as the
+/// built-in Quickstart does.
+struct ModelSections: View {
 	let model: SettingsWindowModel
 	@State private var presetID: String
 	@State private var configuration: Int
 	@State private var compatibility = 1
 
-	/// A new machine's Quick Start shows the model it started from.
+	/// A new machine's Overview shows the model it started from. Set once
+	/// here: sections inside a Form appear again as they scroll into view.
 	init(model: SettingsWindowModel) {
 		self.model = model
-		_presetID = State(initialValue: model.newMachineModel?.id ?? MachinePresets.all.first?.id ?? "")
+		let id = model.newMachineModel?.id ?? MachinePresets.all.first?.id ?? ""
+		_presetID = State(initialValue: id)
 		_configuration = State(initialValue: model.newMachineModel?.configuration ?? 0)
+		_compatibility = State(initialValue: MachinePresets.defaultCompatibility(for: id))
 	}
 
 	var body: some View {
 		let preset = MachinePresets.preset(for: presetID)
-		Form {
+		Group {
 			if let autosave = model.autosave {
 				Section {
 					Button("Resume Last Session") { model.resumeAutosave(autosave.path) }
@@ -362,18 +399,17 @@ struct QuickStartPage: View {
 				.disabled(preset == nil)
 			}
 		}
-		.formStyle(.grouped)
-		.onAppear { compatibility = MachinePresets.defaultCompatibility(for: presetID) }
 	}
 }
 
-struct HardDrivesPage: View {
+/// The mounted hard drives (folders and hardfiles).
+struct MountSections: View {
 	let model: SettingsWindowModel
 
 	var body: some View {
 		let mounts = model.store.mounts
-		Form {
-			Section("Mounted drives") {
+		Group {
+			Section("Hard drives") {
 				if mounts.isEmpty {
 					Text("No drives are mounted.").foregroundStyle(.secondary)
 				}
@@ -394,7 +430,6 @@ struct HardDrivesPage: View {
 				Text("Drives attach when the emulation starts or resets.")
 			}
 		}
-		.formStyle(.grouped)
 	}
 
 	/// The first DHn device name the mounts do not use.
@@ -422,7 +457,7 @@ struct HardDrivesPage: View {
 	}
 
 	private func add(_ entry: (String) -> String, path: String) {
-		guard let field = HardDrivesPage.mountField(path) else {
+		guard let field = MountSections.mountField(path) else {
 			model.notice = "\u{201C}\(path)\u{201D} cannot be mounted: a mounted path cannot contain a double quote."
 			return
 		}
