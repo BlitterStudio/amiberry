@@ -7,6 +7,8 @@
 // Initialize the on-screen joystick GL shader program and VAO/VBO.
 // Returns true on success, false on shader compilation/link error.
 bool osj_init_gl_shader();
+// Drops the names without deleting: their context is gone or not current.
+void osj_forget_gl_shader();
 
 // Upload an SDL_Surface to a GL texture. Returns the texture ID (0 on failure).
 // Expects SDL_PIXELFORMAT_ABGR8888 surfaces (GL_RGBA + GL_UNSIGNED_BYTE).

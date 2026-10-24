@@ -2,9 +2,9 @@
  * Copyright (C) 2026 BlitterStudio
  * The native layer over the emulation on iOS: a window above SDL's that
  * passes touches through to the emulation except where its own controls
- * are. It holds the settings and keyboard buttons shown while an emulation
- * runs, the on-screen Amiga keyboard, and presents the settings screen,
- * alerts and file pickers.
+ * are. It holds the menu and keyboard buttons shown while an emulation
+ * runs, the running sheet the menu opens, the on-screen Amiga keyboard, and
+ * presents the settings screen, alerts and file pickers.
  */
 
 import SwiftUI
@@ -15,6 +15,8 @@ import UIKit
 final class OverlayState {
 	var keyboardVisible = false
 	var settingsVisible = false
+	/// The running sheet (drives, states, reset, settings, Library).
+	var runningSheetVisible = false
 	/// Re-read when the settings screen closes, where they change.
 	var keyboardOptions = KeyboardOptions()
 	let status = StatusMonitor()
@@ -168,9 +170,8 @@ struct OverlayView: View {
 							EmulationOverlay.shared.toggleKeyboard()
 						}
 					}
-					OverlayButton(symbol: "gearshape", label: "Settings", active: false) {
-						EmulationOverlay.shared.hideKeyboard()
-						_ = EmulatorActions.post(.openSettings)
+					OverlayButton(symbol: "ellipsis", label: "Menu", active: state.runningSheetVisible) {
+						state.runningSheetVisible = true
 					}
 				}
 				.overlayControl("buttons", state: state)
@@ -187,11 +188,22 @@ struct OverlayView: View {
 			}
 		}
 		.ignoresSafeArea(.keyboard)
+		.sheet(isPresented: Binding(get: { state.runningSheetVisible }, set: { state.runningSheetVisible = $0 })) {
+			RunningSheet(state: state) { state.runningSheetVisible = false }
+				.presentationDetents([.medium, .large])
+		}
 		.onAppear { keyboard.syncCapsLock(state.status.status.capsLock) }
 		.onChange(of: state.status.status.capsLock) { keyboard.syncCapsLock(state.status.status.capsLock) }
 		// The emulation resuming (or starting) follows a settings apply, which
 		// runs after the settings screen closes: the options are read again.
 		.onChange(of: state.status.status.runState) { state.keyboardOptions = KeyboardOptions.active() }
+		// The emulation went away another way (a hotkey opened the settings
+		// or stopped it): the sheet goes with it, not left over what follows.
+		.onChange(of: state.showsControls) {
+			if !state.showsControls {
+				state.runningSheetVisible = false
+			}
+		}
 	}
 }
 

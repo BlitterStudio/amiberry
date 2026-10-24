@@ -14,35 +14,7 @@ final class MenuCommands: NSObject, NSMenuItemValidation {
 	static let shared = MenuCommands()
 
 	/// Posts an action and reports its failure; replaced by the tests.
-	var post: (EmulatorAction) -> Void = { MenuCommands.postReportingFailure($0) }
-
-	/// Posts an action; when it is refused, or fails when it runs (an empty
-	/// quick-save slot, an unwritable screenshot folder), says so.
-	static func postReportingFailure(_ action: EmulatorAction) {
-		guard let ticket = EmulatorActions.post(action) else {
-			report(action, "The emulator did not accept the request. Try again.")
-			return
-		}
-		Task { @MainActor in
-			while true {
-				switch ticket.poll() {
-				case .pending:
-					try? await Task.sleep(for: .milliseconds(50))
-				case let .failed(message):
-					report(action, message.isEmpty ? "The command failed." : message)
-					return
-				case .done, .unknown:
-					return
-				}
-			}
-		}
-	}
-
-	/// A sheet on the emulation window, so the emulation keeps running
-	/// while it shows.
-	private static func report(_ action: EmulatorAction, _ message: String) {
-		Alerts.showSheet(title: "Command Failed", message: message)
-	}
+	var post: (EmulatorAction) -> Void = { ReportedActions.post($0) }
 	/// The emulator's run state; replaced by the tests.
 	var runState: () -> EmulatorStatus.RunState = { EmulatorStatus.current().runState }
 	/// Whether the settings window is up (it has the media then); replaced
@@ -89,6 +61,8 @@ final class MenuCommands: NSObject, NSMenuItemValidation {
 		emulation.addItem(item("Load State\u{2026}", #selector(loadState(_:))))
 		emulation.addItem(.separator())
 		emulation.addItem(item("Save Screenshot", #selector(screenshot(_:))))
+		emulation.addItem(.separator())
+		emulation.addItem(item("Return to Library", #selector(returnToLibrary(_:))))
 
 		let media = NSMenu(title: MenuCommands.mediaTitle)
 		for drive in 0..<EmulatorActions.floppyDriveCount {
@@ -139,6 +113,15 @@ final class MenuCommands: NSObject, NSMenuItemValidation {
 	}
 
 	@objc func reset(_ sender: Any?) { post(.reset(hard: false, keyboard: false)) }
+	/// Stops the machine for the Library; what it has not saved is lost,
+	/// so this asks first.
+	@objc func returnToLibrary(_ sender: Any?) {
+		let (button, _) = Alerts.show(title: "Return to the Library?",
+			message: "The machine stops. Anything it has not saved is lost.", buttons: ["Return to Library", "Cancel"])
+		if button == 0 {
+			post(.stop)
+		}
+	}
 	@objc func hardReset(_ sender: Any?) { post(.reset(hard: true, keyboard: false)) }
 	@objc func quickSave(_ sender: Any?) { post(.saveStateSlot(0)) }
 	@objc func quickLoad(_ sender: Any?) { post(.loadStateSlot(0)) }
@@ -192,6 +175,8 @@ final class MenuCommands: NSObject, NSMenuItemValidation {
 		case #selector(reset(_:)), #selector(hardReset(_:)), #selector(quickSave(_:)), #selector(quickLoad(_:)),
 			#selector(screenshot(_:)), #selector(toggleFullscreen(_:)):
 			return state != .stopped
+		case #selector(returnToLibrary(_:)):
+			return state != .stopped && !settingsOpen()
 		case #selector(openSettings(_:)):
 			// The machine's editor opens over a running emulation; before one
 			// runs, the Library and its editor are what shows.

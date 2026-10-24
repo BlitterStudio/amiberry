@@ -36,6 +36,9 @@ public enum EmulatorAction: Hashable, Sendable {
 	/// Writes the pending configuration (what a session committed).
 	case saveConfiguration(path: String)
 	case quit
+	/// Stops the running emulation and opens the Library with nothing
+	/// running; fails while nothing runs.
+	case stop
 	/// Brings the running emulation up to the pending configuration with
 	/// the apply class `SettingsSession.commit()` returned.
 	case applySettings(ApplyClass)
@@ -141,6 +144,7 @@ public enum EmulatorActions {
 		case let .loadConfiguration(path): id = amiberry_actions_load_config(path)
 		case let .saveConfiguration(path): id = amiberry_actions_save_config(path)
 		case .quit: id = amiberry_actions_quit()
+		case .stop: id = amiberry_actions_stop()
 		case let .applySettings(apply): id = amiberry_actions_apply_settings(apply.layerValue)
 		case .toggleFullscreen: id = amiberry_actions_toggle_fullscreen()
 		case .openSettings: id = amiberry_actions_open_settings()
