@@ -485,7 +485,20 @@ jobs:
 
       - name: Staple the notary receipt to the application bundle
         run: |
-          xcrun stapler staple universal-app/Amiberry.app
+          # Right after notarization is accepted, fetching the ticket from
+          # Apple's CloudKit service can fail ("The network connection was
+          # lost", error 68) until it has propagated: retry with a pause.
+          for attempt in 1 2 3 4 5 6; do
+            if xcrun stapler staple universal-app/Amiberry.app; then
+              break
+            fi
+            if [ "$attempt" -eq 6 ]; then
+              echo "::error::Stapling failed after $attempt attempts"
+              exit 1
+            fi
+            echo "Stapling failed (attempt $attempt); retrying in 30 seconds"
+            sleep 30
+          done
           rm Amiberry-${{ github.sha }}-macOS-universal.zip
 
       - name: Create DMG package
