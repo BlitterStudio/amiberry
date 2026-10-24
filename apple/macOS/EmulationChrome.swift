@@ -16,8 +16,14 @@ final class EmulationChrome: NSObject, NSToolbarDelegate, NSToolbarItemValidatio
 	private let monitor = StatusMonitor()
 	/// The fixed menus' entries, by menu title; filled as they open.
 	private var menuEntries: [String: [(String, AnyObject, Selector)]] = [:]
-	private var fullScreenObservers: [NSObjectProtocol] = []
-	private weak var emulationWindow: NSWindow?
+	/// Each emulation window's full-screen observers: an RTG screen on a
+	/// second emulated monitor has a window of its own.
+	private var watched: [ObjectIdentifier: (window: WeakWindow, observers: [NSObjectProtocol])] = [:]
+
+	private final class WeakWindow {
+		weak var window: NSWindow?
+		init(_ window: NSWindow) { self.window = window }
+	}
 
 	private enum Item {
 		static let drives = NSToolbarItem.Identifier("amiberry.drives")
@@ -59,17 +65,30 @@ final class EmulationChrome: NSObject, NSToolbarDelegate, NSToolbarItemValidatio
 	/// emulation gets the whole display. SDL is the window's delegate, so
 	/// this watches the notifications.
 	private func observeFullScreen(of window: NSWindow) {
+		let key = ObjectIdentifier(window)
 		let center = NotificationCenter.default
-		fullScreenObservers.forEach(center.removeObserver)
-		emulationWindow = window
-		fullScreenObservers = [
-			center.addObserver(forName: NSWindow.willEnterFullScreenNotification, object: window, queue: .main) { _ in
-				MainActor.assumeIsolated { EmulationChrome.shared.emulationWindow?.toolbar?.isVisible = false }
-			},
-			center.addObserver(forName: NSWindow.didExitFullScreenNotification, object: window, queue: .main) { _ in
-				MainActor.assumeIsolated { EmulationChrome.shared.emulationWindow?.toolbar?.isVisible = true }
-			},
-		]
+		func observe(_ name: Notification.Name, _ toolbarVisible: Bool?) -> NSObjectProtocol {
+			center.addObserver(forName: name, object: window, queue: .main) { _ in
+				MainActor.assumeIsolated { EmulationChrome.shared.windowChanged(key, toolbarVisible: toolbarVisible) }
+			}
+		}
+		watched[key]?.observers.forEach(center.removeObserver)
+		watched[key] = (WeakWindow(window), [
+			observe(NSWindow.willEnterFullScreenNotification, false),
+			observe(NSWindow.didExitFullScreenNotification, true),
+			// Closed (SDL destroys it): nothing more to watch.
+			observe(NSWindow.willCloseNotification, nil),
+		])
+	}
+
+	private func windowChanged(_ key: ObjectIdentifier, toolbarVisible: Bool?) {
+		guard let entry = watched[key] else { return }
+		if let toolbarVisible {
+			entry.window.window?.toolbar?.isVisible = toolbarVisible
+		} else {
+			entry.observers.forEach(NotificationCenter.default.removeObserver)
+			watched[key] = nil
+		}
 	}
 
 	// MARK: NSToolbarDelegate

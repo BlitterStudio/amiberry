@@ -173,10 +173,19 @@ final class EmulationChromeTests: XCTestCase {
 		EmulationChrome.shared.attach(to: window)
 		XCTAssertNotNil(window.toolbar)
 		XCTAssertEqual(window.contentRect(forFrameRect: window.frame), content, "same size and place")
+		// A second emulated monitor's window (an RTG screen) has its own.
+		let second = NSWindow(contentRect: NSRect(x: 300, y: 300, width: 640, height: 480),
+			styleMask: [.titled], backing: .buffered, defer: false)
+		second.isReleasedWhenClosed = false
+		defer { second.close() }
+		EmulationChrome.shared.attach(to: second)
 		NotificationCenter.default.post(name: NSWindow.willEnterFullScreenNotification, object: window)
 		XCTAssertEqual(window.toolbar?.isVisible, false, "full screen is the emulation's alone")
+		XCTAssertEqual(second.toolbar?.isVisible, true, "the other window keeps its toolbar")
 		NotificationCenter.default.post(name: NSWindow.didExitFullScreenNotification, object: window)
 		XCTAssertEqual(window.toolbar?.isVisible, true)
+		NotificationCenter.default.post(name: NSWindow.willEnterFullScreenNotification, object: second)
+		XCTAssertEqual(second.toolbar?.isVisible, false)
 	}
 
 	func testTheToolbarMenusShowEveryEntry() throws {
