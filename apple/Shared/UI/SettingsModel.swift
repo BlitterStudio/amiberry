@@ -351,9 +351,20 @@ final class SettingsWindowModel {
 		_ = commit()
 	}
 
+	/// The name of a field holding refused text: an option's label, or a
+	/// board unit's field ("board:<type>:<unit>:<field>").
+	static func draftLabel(_ key: String) -> String {
+		let parts = key.split(separator: ":", maxSplits: 3).map(String.init)
+		if parts.count == 4, parts[0] == "board", let type = BoardCatalog.type(parts[1]), let unit = Int(parts[2]) {
+			let field = type.fields.first { $0.id == parts[3] }?.label ?? parts[3]
+			return "\(type.units > 1 ? "\(type.label) #\(unit + 1)" : type.label) \(field)"
+		}
+		return SettingsCatalog.descriptor(for: key)?.label ?? key
+	}
+
 	private func fieldsValid() -> Bool {
 		guard invalidDrafts.isEmpty else {
-			let labels = invalidDrafts.keys.sorted().map { SettingsCatalog.descriptor(for: $0)?.label ?? $0 }
+			let labels = invalidDrafts.keys.sorted().map(SettingsWindowModel.draftLabel)
 			notice = "Correct \(labels.joined(separator: ", ")) first."
 			return false
 		}

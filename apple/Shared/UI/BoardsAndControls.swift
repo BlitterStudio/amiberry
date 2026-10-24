@@ -47,6 +47,7 @@ struct BoardsSections: View {
 						Menu(heading.title) {
 							ForEach(types) { type in
 								Button(type.manufacturer.map { "\(type.label) (\($0))" } ?? type.label) { add(type) }
+									.disabled(freeUnit(of: type) == nil)
 							}
 						}
 					}
@@ -68,10 +69,17 @@ struct BoardsSections: View {
 		}
 	}
 
-	/// Enables the type's first unit that is not in use.
+	/// The type's first unit not in use, when the machine can have it (a
+	/// built-in controller only on the machines that have it).
+	private func freeUnit(of type: BoardType) -> Int? {
+		guard let unit = (0..<type.units).first(where: { store.boardValue("enabled", type: type.id, unit: $0) != "true" }),
+			store.isBoardFieldAvailable("enabled", type: type.id, unit: unit)
+		else { return nil }
+		return unit
+	}
+
 	private func add(_ type: BoardType) {
-		guard let unit = (0..<type.units).first(where: { store.boardValue("enabled", type: type.id, unit: $0) != "true" })
-		else { return }
+		guard let unit = freeUnit(of: type) else { return }
 		store.setBoardValue("true", field: "enabled", type: type.id, unit: unit)
 	}
 }
@@ -87,9 +95,11 @@ struct BoardUnitView: View {
 			ForEach(type.fields.filter { $0.id != "enabled" }) { field in
 				BoardFieldRow(field: field, type: type, unit: unit, store: store)
 			}
+			// A built-in controller stays while the machine has it.
 			Button("Remove Board", role: .destructive) {
 				store.setBoardValue("false", field: "enabled", type: type.id, unit: unit)
 			}
+			.disabled(!store.isBoardFieldAvailable("enabled", type: type.id, unit: unit))
 		} label: {
 			VStack(alignment: .leading, spacing: 2) {
 				Text(type.units > 1 ? "\(type.label) #\(unit + 1)" : type.label)
@@ -107,7 +117,12 @@ struct BoardFieldRow: View {
 	let type: BoardType
 	let unit: Int
 	let store: SettingsStore
+	@Environment(SettingsWindowModel.self) private var model: SettingsWindowModel?
 	@State private var draft = ""
+
+	/// The key text the layer refused is kept under, so the window does not
+	/// close over it (as for option text fields).
+	private var draftKey: String { "board:\(type.id):\(unit):\(field.id)" }
 
 	var body: some View {
 		let available = store.isBoardFieldAvailable(field.id, type: type.id, unit: unit)
@@ -146,18 +161,30 @@ struct BoardFieldRow: View {
 				HStack(spacing: 6) {
 					TextField(field.label, text: $draft)
 						.labelsHidden()
-						.onSubmit { if !set(draft) { draft = value } }
 					if field.kind == .path {
 						Button("Choose\u{2026}") {
-							if let path = FilePanels.choose(.rom, title: field.label, startingAt: draft), set(path) {
+							if let path = FilePanels.choose(.rom, title: field.label, startingAt: draft) {
 								draft = path
 							}
 						}
 					}
 				}
 			}
-			.onAppear { draft = value }
-			.onChange(of: store.revision) { draft = value }
+			.onAppear { draft = model?.invalidDrafts[draftKey] ?? value }
+			.onChange(of: store.revision) {
+				if draft != value, model?.invalidDrafts[draftKey] == nil {
+					draft = value
+				}
+			}
+			// Stored as it is typed, as option text fields are; text the layer
+			// refuses stays in the field until it is corrected.
+			.onChange(of: draft) {
+				if draft == value || set(draft) {
+					model?.invalidDrafts[draftKey] = nil
+				} else {
+					model?.invalidDrafts[draftKey] = draft
+				}
+			}
 		}
 	}
 }

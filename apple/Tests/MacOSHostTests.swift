@@ -60,6 +60,10 @@ final class BoardsAndControlsTests: XCTestCase {
 		XCTAssertFalse(store.setBoardValue("nope", field: "subtype", type: "a2091", unit: 0))
 		XCTAssertNotNil(store.lastError)
 		XCTAssertTrue(store.setBoardValue("false", field: "enabled", type: "a2091", unit: 0))
+		// Refused text in a board field is named after the unit and field.
+		XCTAssertEqual(SettingsWindowModel.draftLabel("board:a2091:1:rom_file"),
+			"\(a2091.label) #2 \(a2091.fields.first { $0.id == "rom_file" }?.label ?? "")")
+		XCTAssertEqual(SettingsWindowModel.draftLabel("cpu_model"), SettingsCatalog.descriptor(for: "cpu_model")?.label)
 		// Every board type has a heading in the Add Board menu.
 		for type in BoardCatalog.types {
 			XCTAssertTrue(BoardsSections.categories.contains { $0.title == BoardsSections.category(of: type) }, type.id)
