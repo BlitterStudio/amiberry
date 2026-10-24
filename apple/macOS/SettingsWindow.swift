@@ -69,8 +69,7 @@ final class SettingsPresenter: NSObject, NSWindowDelegate {
 			return
 		}
 		if let preset {
-			_ = model.store.applyPreset(preset.id, configuration: preset.configuration)
-			model.page = .quickStart
+			model.startNewMachine(preset: preset.id, configuration: preset.configuration)
 		}
 		let window = self.window ?? makeWindow(autosave: "AmiberrySettings", size: NSSize(width: 900, height: 620))
 		window.contentViewController = NSHostingController(rootView: SettingsRootView(model: model))

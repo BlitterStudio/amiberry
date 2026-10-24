@@ -303,9 +303,16 @@ struct TextControl: View {
 
 struct QuickStartPage: View {
 	let model: SettingsWindowModel
-	@State private var presetID = MachinePresets.all.first?.id ?? ""
-	@State private var configuration = 0
+	@State private var presetID: String
+	@State private var configuration: Int
 	@State private var compatibility = 1
+
+	/// A new machine's Quick Start shows the model it started from.
+	init(model: SettingsWindowModel) {
+		self.model = model
+		_presetID = State(initialValue: model.newMachineModel?.id ?? MachinePresets.all.first?.id ?? "")
+		_configuration = State(initialValue: model.newMachineModel?.configuration ?? 0)
+	}
 
 	var body: some View {
 		let preset = MachinePresets.preset(for: presetID)

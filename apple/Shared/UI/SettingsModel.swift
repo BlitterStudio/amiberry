@@ -115,8 +115,11 @@ final class SettingsWindowModel {
 	/// comes back into view.
 	var invalidDrafts: [String: String] = [:]
 
-	/// The machine being edited, opened from the Library: nil for a new one.
-	let machine: Machine?
+	/// The machine being edited, opened from the Library: nil for a new one
+	/// until it is saved.
+	private(set) var machine: Machine?
+	/// The model a new machine started from, which Quick Start shows.
+	private(set) var newMachineModel: (id: String, configuration: Int)?
 	/// Whether the editor was opened from the Library (it closes back to it).
 	let fromLibrary: Bool
 
@@ -142,6 +145,14 @@ final class SettingsWindowModel {
 		if emulating {
 			page = .group("cpu")
 		}
+	}
+
+	/// A new machine from a model: the model is applied, and Quick Start
+	/// opens showing it.
+	func startNewMachine(preset id: String, configuration: Int) {
+		_ = store.applyPreset(id, configuration: configuration)
+		newMachineModel = (id, configuration)
+		page = .quickStart
 	}
 
 	/// The name the machine is saved under: its file name, or empty for a
@@ -170,9 +181,12 @@ final class SettingsWindowModel {
 		}
 		let path = URL(fileURLWithPath: folder).appendingPathComponent(trimmed + ".uae").path
 		// Saving over another machine replaces it: only the machine being
-		// edited is saved over in place. Checked before anything is
-		// committed, so a refused save changes nothing.
-		if trimmed != machine?.name, FileManager.default.fileExists(atPath: path) {
+		// edited (its file, by full path) is saved over in place. Checked
+		// before anything is committed, so a refused save changes nothing.
+		let sameFile = machine.map {
+			URL(fileURLWithPath: $0.path).standardizedFileURL.path == URL(fileURLWithPath: path).standardizedFileURL.path
+		} ?? false
+		if !sameFile, FileManager.default.fileExists(atPath: path) {
 			notice = "A machine named \u{201C}\(trimmed)\u{201D} already exists. Choose another name."
 			return false
 		}
@@ -195,6 +209,8 @@ final class SettingsWindowModel {
 				return false
 			case .done, .unknown:
 				notice = nil
+				// The editor now edits the machine just saved.
+				machine = Machine(path: path, name: trimmed, description: description, category: category)
 				return true
 			}
 		}

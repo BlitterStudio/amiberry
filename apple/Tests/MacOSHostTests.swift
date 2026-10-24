@@ -85,6 +85,15 @@ final class LibraryTests: XCTestCase {
 		XCTAssertTrue(model.notice?.contains("cannot contain") ?? false, model.notice ?? "")
 	}
 
+	func testANewMachineShowsItsModelInQuickStart() throws {
+		let a1200 = try XCTUnwrap(MachinePresets.preset(for: "a1200"))
+		let model = try SettingsWindowModel(emulating: false, dismiss: {}, post: { _ in true })
+		model.startNewMachine(preset: a1200.id, configuration: 0)
+		XCTAssertEqual(model.page, .quickStart)
+		XCTAssertEqual(model.newMachineModel?.id, "a1200")
+		XCTAssertEqual(model.store.value(of: "chipset"), "aga")
+	}
+
 	func testClosingAnEditorFromTheLibraryGoesBackToIt() throws {
 		var closed = 0
 		var dismissed = 0

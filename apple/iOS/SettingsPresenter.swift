@@ -87,8 +87,7 @@ final class SettingsPresenter {
 					self?.library?.reload()
 				})
 			if let preset {
-				_ = model.store.applyPreset(preset.id, configuration: preset.configuration)
-				model.page = .quickStart
+				model.startNewMachine(preset: preset.id, configuration: preset.configuration)
 			}
 			slot.model = model
 		} catch {
