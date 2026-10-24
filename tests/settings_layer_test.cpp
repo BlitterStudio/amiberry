@@ -511,6 +511,10 @@ static romdata test_a2091_rom = [] {
 static romlist test_rom_list[] = {{const_cast<TCHAR*>("/roms/ar3.rom"), &test_cart_rom},
 	{const_cast<TCHAR*>("/roms/a2091.rom"), &test_a2091_rom}};
 int romlist_count() { return 2; }
+static int rom_scans = 0;
+int scan_roms(int) { return ++rom_scans, 0; }
+static std::string loaded_key;
+void addkeyfile(const TCHAR* path) { loaded_key = path; }
 romlist* romlist_getit() { return test_rom_list; }
 // Like the core, getarcadiaroms() lists every known ALG game (type 1), or
 // every Arcadia BIOS and game (type 0, BIOS first), installed or not;
@@ -2615,10 +2619,16 @@ void check_host_settings()
 	CHECK(amiberry_host_settings_set("default_vkbd_language", "DE") == AMIBERRY_SETTINGS_OK);
 	CHECK(!std::strcmp(amiberry_options.default_vkbd_language, "DE"));
 	CHECK(amiberry_host_settings_set("default_vkbd_language", "ES") == AMIBERRY_SETTINGS_INVALID_VALUE);
-	// A content folder.
+	// A content folder. Another ROMs folder is rescanned, the same one not.
+	const int scans = rom_scans;
 	CHECK(amiberry_host_settings_set("rom_path", "/roms") == AMIBERRY_SETTINGS_OK);
 	CHECK(amiberry_host_settings_get("rom_path", value, sizeof value) == AMIBERRY_SETTINGS_OK);
 	CHECK(!std::strcmp(value, "/roms"));
+	CHECK(rom_scans == scans + 1);
+	CHECK(amiberry_host_settings_set("rom_path", "/roms") == AMIBERRY_SETTINGS_OK);
+	CHECK(rom_scans == scans + 1);
+	CHECK(amiberry_settings::rescan_roms() == romlist_count() && rom_scans == scans + 2);
+	CHECK(loaded_key == get_rom_path() + "rom.key"); // Amiga Forever's ROMs decode
 	const int saves = host_saves;
 	CHECK(amiberry_host_settings_save());
 	CHECK(host_saves == saves + 1);
@@ -2631,6 +2641,7 @@ void check_host_settings()
 	CHECK(amiberry_host_settings_set("rom_path", std::string(PATH_MAX, 'r').c_str()) == AMIBERRY_SETTINGS_INVALID_VALUE);
 	CHECK(amiberry_host_settings_get("rom_path", value, sizeof value) == AMIBERRY_SETTINGS_OK);
 	CHECK(!std::strcmp(value, "/roms"));
+	CHECK(rom_scans == scans + 2); // refused values change nothing
 	const amiberry_setting_descriptor* delay = amiberry_host_settings_find("default_whd_configdelay");
 	CHECK(delay && delay->max == INT_MAX);
 	amiberry_options = {};

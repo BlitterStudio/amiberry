@@ -266,10 +266,20 @@ enum FilePanels {
 		return url.path
 	}
 
+	/// ROM files to import (several at once); empty when cancelled. They are
+	/// copied into the ROMs folder as they are imported.
+	static func chooseROMs(title: String) -> [URL] {
+		pick(types: [.data], startingAt: "", many: true)
+	}
+
 	private static func pick(types: [UTType], startingAt startPath: String) -> URL? {
-		guard let presenter = EmulationOverlay.shared.presenter() else { return nil }
+		pick(types: types, startingAt: startPath, many: false).first
+	}
+
+	private static func pick(types: [UTType], startingAt startPath: String, many: Bool) -> [URL] {
+		guard let presenter = EmulationOverlay.shared.presenter() else { return [] }
 		let picker = UIDocumentPickerViewController(forOpeningContentTypes: types, asCopy: false)
-		picker.allowsMultipleSelection = false
+		picker.allowsMultipleSelection = many
 		picker.directoryURL = startDirectory(startPath)
 		// Answered with Open or Cancel only: a swipe would dismiss it without
 		// telling the delegate, and the wait would never end.
@@ -277,7 +287,7 @@ enum FilePanels {
 		let delegate = PickerDelegate()
 		picker.delegate = delegate
 		ModalWait.present(picker, from: presenter, animated: true) { delegate.finished }
-		return delegate.url
+		return delegate.urls
 	}
 
 	private static func chooseStateName(startingAt startPath: String) -> String? {
@@ -325,10 +335,10 @@ enum FilePanels {
 @MainActor
 private final class PickerDelegate: NSObject, UIDocumentPickerDelegate {
 	var finished = false
-	var url: URL?
+	var urls: [URL] = []
 
 	func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
-		url = urls.first
+		self.urls = urls
 		finished = true
 	}
 

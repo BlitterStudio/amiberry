@@ -4,6 +4,7 @@
 #include "sysdeps.h"
 #include "options.h"
 #include "target.h"
+#include "rommgr.h"
 #include "autoconf.h"
 
 #include "settings_definitions.h"
@@ -233,6 +234,21 @@ bool valid_mount_index(const amiberry_settings_session* session, size_t index)
 }
 
 } // namespace
+
+namespace amiberry_settings {
+
+int rescan_roms()
+{
+	// Amiga Forever's ROMs are encrypted: their rom.key, in the ROMs folder
+	// with them, decodes them. The scan reads no key itself, and the one
+	// loaded at the first start may predate the folder's (a missing file
+	// and a key already known change nothing).
+	addkeyfile((get_rom_path() + "rom.key").c_str());
+	scan_roms(0);
+	return romlist_count();
+}
+
+} // namespace amiberry_settings
 
 extern "C" {
 

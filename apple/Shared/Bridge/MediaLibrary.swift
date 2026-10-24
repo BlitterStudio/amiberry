@@ -110,6 +110,13 @@ public enum MediaLibrary {
 		try SettingsError.check(amiberry_media_add_recent(list.layerValue, path), id: "\(list)", value: path)
 	}
 
+	/// Rescans the ROMs folder after ROM files were added (setting the
+	/// folder rescans it too); the number of ROMs the scan recognised.
+	@MainActor
+	public static func rescanROMs() -> Int {
+		Int(amiberry_media_rescan_roms())
+	}
+
 	/// Keeps access to a file or folder the user picked across restarts (a
 	/// security-scoped bookmark on a Mac App Store build); false when that
 	/// failed. Elsewhere there is nothing to keep.

@@ -312,6 +312,11 @@ amiberry_settings_status amiberry_folder_get(amiberry_folder folder, char* buffe
 	});
 }
 
+int amiberry_media_rescan_roms(void)
+{
+	return amiberry_settings::no_throw(0, [] { return amiberry_settings::rescan_roms(); });
+}
+
 amiberry_settings_status amiberry_folder_set(amiberry_folder folder, const char* path)
 {
 	return amiberry_settings::no_throw(AMIBERRY_SETTINGS_INVALID_VALUE, [=] {
@@ -362,6 +367,10 @@ amiberry_settings_status amiberry_folder_set(amiberry_folder folder, const char*
 				write_log("amiberry_folder_set: the access grant for '%s' could not be withdrawn\n", path);
 			return AMIBERRY_SETTINGS_UNAVAILABLE;
 		}
+		// Another ROMs folder holds other ROMs, as the GUI's Paths panel
+		// rescans after its ROMs folder changes.
+		if (folder == AMIBERRY_FOLDER_ROMS && previous != path)
+			amiberry_settings::rescan_roms();
 		return AMIBERRY_SETTINGS_OK;
 	});
 }

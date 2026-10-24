@@ -147,6 +147,15 @@ AMIBERRY_SETTINGS_API amiberry_settings_status amiberry_media_current_configurat
  */
 AMIBERRY_SETTINGS_API void amiberry_media_forget_current_configuration(void);
 
+/*
+ * Rescans the ROMs folder, as the GUI's Rescan ROMs does, after ROM files
+ * were added or removed: the presets' availability
+ * (amiberry_settings_preset_rom_installed) follows. Setting the ROMs folder
+ * rescans it too. Returns the number of ROMs the scan recognised. Main
+ * thread.
+ */
+AMIBERRY_SETTINGS_API int amiberry_media_rescan_roms(void);
+
 AMIBERRY_SETTINGS_API amiberry_settings_status amiberry_media_configuration_info(const char *path,
 	char *description, size_t description_size, char *category, size_t category_size);
 

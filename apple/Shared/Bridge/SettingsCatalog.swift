@@ -192,6 +192,26 @@ public enum MachinePresets {
 		min(1, preset(for: id)?.compatibilityMax ?? 0)
 	}
 
+	/// The computers, which boot a Kickstart (not the CD consoles or the
+	/// arcade boards).
+	public static let computerIDs: Set<String> = ["a500", "a500plus", "a600", "a1000", "a1200", "a3000", "a4000", "a4000t"]
+
+	/// Whether some computer has every ROM of one of its configurations:
+	/// false until a Kickstart is installed (machines then boot the
+	/// built-in AROS ROM).
+	@MainActor
+	public static func anyKickstartInstalled() -> Bool {
+		all.filter { computerIDs.contains($0.id) }.contains { preset in
+			preset.configurations.indices.contains { isInstalled(preset, configuration: $0) }
+		}
+	}
+
+	/// Whether any configuration of the preset has every ROM it needs.
+	@MainActor
+	public static func isRunnable(_ preset: MachinePreset) -> Bool {
+		preset.configurations.indices.contains { isInstalled(preset, configuration: $0) }
+	}
+
 	/// Whether every ROM the configuration needs is in the emulator's ROM
 	/// list; never shows a dialog or changes anything.
 	@MainActor

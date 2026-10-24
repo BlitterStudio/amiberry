@@ -222,6 +222,57 @@ final class QuickPlayTests: XCTestCase {
 }
 
 @MainActor
+final class ROMImportTests: XCTestCase {
+	private func folder() throws -> URL {
+		let folder = FileManager.default.temporaryDirectory.appendingPathComponent("roms-\(UUID().uuidString)")
+		try FileManager.default.createDirectory(at: folder.appendingPathComponent("nested"), withIntermediateDirectories: true)
+		addTeardownBlock { try? FileManager.default.removeItem(at: folder) }
+		return folder
+	}
+
+	func testFoldersGiveTheirROMSizedFiles() throws {
+		let folder = try folder()
+		let create = { (name: String, size: Int) in
+			FileManager.default.createFile(atPath: folder.appendingPathComponent(name).path, contents: Data(count: size))
+		}
+		create("kick31.rom", 512 * 1024)
+		create("nested/kick13.rom", 256 * 1024)
+		create("rom.key", 1024)
+		create("kick.a1200", 512 * 1024)
+		create("cart.U1", 64 * 1024)
+		create("game.hdf", 3 * 1024 * 1024)
+		create("big.rom", 3 * 1024 * 1024)
+		create("readme.txt", 100)
+		create("disk.adf", 901_120)
+		create(".hidden.rom", 512 * 1024)
+		let names = ROMImport.files(in: [folder]).map(\.lastPathComponent).sorted()
+		XCTAssertEqual(names, ["cart.U1", "kick.a1200", "kick13.rom", "kick31.rom", "rom.key"],
+			"what the ROM scan reads, ROM-sized, and the key; not disks, text, hidden or oversized files")
+		let single = folder.appendingPathComponent("game.hdf")
+		XCTAssertEqual(ROMImport.files(in: [single]), [single], "a file chosen is taken as it is")
+	}
+
+	func testImportingWhatIsNoROMSaysSo() throws {
+		let folder = try folder()
+		let file = folder.appendingPathComponent("notarom.bin")
+		FileManager.default.createFile(atPath: file.path, contents: Data((0..<524_288).map { UInt8($0 % 251) }))
+		let roms = URL(fileURLWithPath: try MediaLibrary.path(of: .roms), isDirectory: true)
+		addTeardownBlock {
+			try? FileManager.default.removeItem(at: roms.appendingPathComponent("notarom.bin"))
+			_ = MediaLibrary.rescanROMs()
+		}
+		let model = LibraryModel(emulating: false, finish: {}, openEditor: { _, _ in })
+		XCTAssertFalse(model.kickstartInstalled, "the tests' home has no ROMs")
+		model.importROMs([])
+		XCTAssertNil(model.romReport, "cancelled: nothing to say")
+		model.importROMs([file])
+		XCTAssertEqual(model.romReport, "No new ROMs found in those files.")
+		XCTAssertFalse(model.kickstartInstalled)
+		XCTAssertTrue(FileManager.default.fileExists(atPath: roms.appendingPathComponent("notarom.bin").path))
+	}
+}
+
+@MainActor
 final class AppSettingsTests: XCTestCase {
 	func testAppSettingsCoverEveryHostSetting() throws {
 		let model = AppSettingsModel()
