@@ -161,6 +161,57 @@ final class AppFilesTests: XCTestCase {
 		XCTAssertEqual(try String(contentsOfFile: first, encoding: .utf8), "one", "the earlier copy is kept")
 	}
 
+	func testCueSheetsNameTheirTracks() {
+		let sheet = "REM a comment\n"
+			+ "FILE \"Game (Track 1).bin\" BINARY\n"
+			+ "  TRACK 01 MODE1/2352\n"
+			+ "file Track02.wav WAVE\n"
+			+ "FILE\t\"Track03.bin\"\tBINARY\r\n"
+			+ "\tFILE Track04.wav\tWAVE\n"
+			+ "FILE \"Game (Track 1).bin\" BINARY\n"
+			+ "FILES are not tracks\n"
+			+ "FILE \"unterminated BINARY\n"
+		// As the emulator's parser: any white space, an open quote to the end.
+		XCTAssertEqual(AppFiles.cueTracks(sheet),
+			["Game (Track 1).bin", "Track02.wav", "Track03.bin", "Track04.wav", "unterminated BINARY"])
+	}
+
+	func testACueSheetComesWithItsTracksOrNotAtAll() throws {
+		let source = folder.appendingPathComponent("source")
+		let target = folder.appendingPathComponent("CDs")
+		try FileManager.default.createDirectory(at: source, withIntermediateDirectories: true)
+		let cue = file("source/Game.cue", "FILE \"Game.bin\" BINARY\nFILE audio/Track02.wav WAVE\n")
+		_ = file("source/Game.bin", "data")
+		try FileManager.default.createDirectory(at: source.appendingPathComponent("audio"), withIntermediateDirectories: true)
+		_ = file("source/audio/Track02.wav", "audio")
+
+		let imported = try AppFiles.importFile(cue, into: target)
+		XCTAssertEqual(imported, target.appendingPathComponent("Game/Game.cue").path, "in a folder of its own")
+		XCTAssertEqual(try String(contentsOfFile: target.appendingPathComponent("Game/Game.bin").path, encoding: .utf8), "data")
+		XCTAssertTrue(FileManager.default.fileExists(atPath: target.appendingPathComponent("Game/audio/Track02.wav").path))
+		XCTAssertEqual(try AppFiles.importFile(cue, into: target), imported, "the same sheet again is not copied again")
+
+		// Another CD whose sheet reads the same: its own tracks, its own folder.
+		let other = folder.appendingPathComponent("other")
+		try FileManager.default.createDirectory(at: other.appendingPathComponent("audio"), withIntermediateDirectories: true)
+		let otherCue = file("other/Game.cue", "FILE \"Game.bin\" BINARY\nFILE audio/Track02.wav WAVE\n")
+		_ = file("other/Game.bin", "other data")
+		_ = file("other/audio/Track02.wav", "audio")
+		XCTAssertEqual(try AppFiles.importFile(otherCue, into: target), target.appendingPathComponent("Game 2/Game.cue").path)
+		XCTAssertEqual(try String(contentsOfFile: target.appendingPathComponent("Game 2/Game.bin").path, encoding: .utf8), "other data")
+		XCTAssertEqual(try String(contentsOfFile: target.appendingPathComponent("Game/Game.bin").path, encoding: .utf8), "data",
+			"the first CD keeps its tracks")
+
+		let lonely = file("source/Lonely.cue", "FILE \"Missing.bin\" BINARY\n")
+		XCTAssertThrowsError(try AppFiles.importFile(lonely, into: target)) { error in
+			XCTAssertEqual((error as? CueTracksUnreadable)?.tracks, ["Missing.bin"])
+		}
+		XCTAssertFalse(FileManager.default.fileExists(atPath: target.appendingPathComponent("Lonely").path),
+			"nothing is left of a sheet without its tracks")
+		let escaping = file("source/Escaping.cue", "FILE \"../secret.bin\" BINARY\n")
+		XCTAssertThrowsError(try AppFiles.importFile(escaping, into: target))
+	}
+
 	func testStateNames() {
 		XCTAssertEqual(AppFiles.stateFile(named: " Game ", in: folder)?.lastPathComponent, "Game.uss")
 		XCTAssertEqual(AppFiles.stateFile(named: "Game.USS", in: folder)?.lastPathComponent, "Game.uss",

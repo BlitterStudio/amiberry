@@ -14,7 +14,74 @@ import UniformTypeIdentifiers
 @_cdecl("amiberry_native_ui_install_menus")
 public func amiberryNativeUIInstallMenus() {
 	MainActor.assumeIsolated {
+		OpenedFiles.install()
 		EmulationOverlay.shared.install()
+	}
+}
+
+/// Files opened with the app (Open in, from Files or another app). iOS
+/// hands over a security-scoped URL; SDL passes on only its path, which no
+/// longer opens a file outside Amiberry's folder. So the file is copied into
+/// the folder its type belongs in while the URL still opens it, and SDL gets
+/// the copy. One iOS copied into Documents/Inbox, where the app cannot
+/// write, moves the same way.
+@MainActor
+enum OpenedFiles {
+	private static var installed = false
+
+	/// Wraps SDL's scene delegate's handleURL:, which both the URLs a launch
+	/// brings and those opened later go through. Before SDL's first event
+	/// pump, so the launch's are caught too.
+	static func install() {
+		guard !installed else { return }
+		installed = true
+		let selector = NSSelectorFromString("handleURL:")
+		guard let type = NSClassFromString("SDLUIKitSceneDelegate"),
+			let method = class_getInstanceMethod(type, selector) else {
+			// SDL renamed it: files from other apps then fail to open with a
+			// notice rather than silently.
+			NSLog("Amiberry: SDL's scene delegate has no handleURL:; files opened from other apps are not copied in")
+			return
+		}
+		typealias Handler = @convention(c) (AnyObject, Selector, NSURL) -> Void
+		let original = unsafeBitCast(method_getImplementation(method), to: Handler.self)
+		let wrapper: @convention(block) (AnyObject, NSURL) -> Void = { delegate, url in
+			let handed = MainActor.assumeIsolated { imported(url as URL) }
+			switch handed {
+			case .original: original(delegate, selector, url)
+			case let .copy(copy): original(delegate, selector, copy as NSURL)
+			case .refused: break
+			}
+		}
+		method_setImplementation(method, imp_implementationWithBlock(wrapper))
+	}
+
+	enum Handed {
+		/// Passed on as it is: not a file to play, or already in Amiberry's
+		/// folder.
+		case original
+		/// The copy in Amiberry's folder.
+		case copy(URL)
+		/// Could not be copied in; the user has been told why.
+		case refused
+	}
+
+	static func imported(_ url: URL) -> Handed {
+		guard QuickPlay.accepts(url) else { return .original }
+		let inbox = AppFiles.contains(url) && url.deletingLastPathComponent().lastPathComponent == "Inbox"
+		if AppFiles.contains(url), !inbox {
+			return .original
+		}
+		do {
+			let copy = try AppFiles.importFile(url, into: AppFiles.folder(forMedia: url))
+			if inbox {
+				try? FileManager.default.removeItem(at: url)
+			}
+			return .copy(URL(fileURLWithPath: copy))
+		} catch {
+			Alerts.show(title: "Cannot Open", message: "\u{201C}\(url.lastPathComponent)\u{201D} could not be copied into Amiberry\u{2019}s folder: \(error.localizedDescription)", buttons: ["OK"])
+			return .refused
+		}
 	}
 }
 
@@ -162,13 +229,20 @@ enum FilePanels {
 		if request == .saveState {
 			return chooseStateName(startingAt: startPath)
 		}
-		let types: [UTType] = request == .loadState ? [UTType(filenameExtension: "uss") ?? .data] : [.item]
+		let types: [UTType]
+		switch request {
+		case .loadState: types = [UTType(filenameExtension: "uss") ?? .data]
+		// What quick play takes, so nothing else is copied in.
+		case .media: types = QuickPlay.extensions.sorted().compactMap { UTType(filenameExtension: $0) }
+		default: types = [.item]
+		}
 		guard let url = pick(types: types, startingAt: startPath), !url.hasDirectoryPath else { return nil }
 		if AppFiles.contains(url) {
 			return url.path
 		}
 		do {
-			return try AppFiles.importFile(url, into: AppFiles.folder(for: request))
+			let folder = request == .media ? try AppFiles.folder(forMedia: url) : try AppFiles.folder(for: request)
+			return try AppFiles.importFile(url, into: folder)
 		} catch {
 			Alerts.show(
 				title: "Cannot Import",

@@ -20,6 +20,9 @@ enum FileRequest: Int32 {
 	case rom
 	/// Any other file an option names.
 	case file
+	/// A file to play: a disk, CD, WHDLoad archive or configuration
+	/// (quick play); iOS keeps it in the folder its type belongs in.
+	case media
 
 	/// The request for an option holding a path.
 	static func forOption(_ id: String) -> FileRequest {
@@ -73,10 +76,23 @@ enum AppFiles {
 		case .loadState, .saveState: folder = .saveStates
 		case .hardfile: folder = .hardDrives
 		case .rom: folder = .roms
-		case .file:
+		case .file, .media:
 			// Next to the media folders (Documents/Amiberry/Imports).
 			let floppies = URL(fileURLWithPath: try MediaLibrary.path(of: .floppies), isDirectory: true)
 			return floppies.deletingLastPathComponent().appendingPathComponent("Imports", isDirectory: true)
+		}
+		return URL(fileURLWithPath: try MediaLibrary.path(of: folder), isDirectory: true)
+	}
+
+	/// The folder a file to play belongs in, by its type.
+	static func folder(forMedia url: URL) throws -> URL {
+		let folder: MediaFolder
+		switch url.pathExtension.lowercased() {
+		case "adf", "adz", "dms", "ipf", "zip", "7z": folder = .floppies
+		case "cue", "iso", "chd": folder = .cds
+		case "lha": folder = .whdloadArchives
+		case "uae", "rp9": folder = .configurations
+		default: return try self.folder(for: .media)
 		}
 		return URL(fileURLWithPath: try MediaLibrary.path(of: folder), isDirectory: true)
 	}
@@ -94,6 +110,9 @@ enum AppFiles {
 		}
 		let manager = FileManager.default
 		try manager.createDirectory(at: folder, withIntermediateDirectories: true)
+		if url.pathExtension.lowercased() == "cue" {
+			return try importCueSheet(url, into: folder)
+		}
 		let name = url.deletingPathExtension().lastPathComponent
 		let suffix = url.pathExtension.isEmpty ? "" : "." + url.pathExtension
 		var number = 1
@@ -108,6 +127,82 @@ enum AppFiles {
 			}
 			number += 1
 		}
+	}
+
+	/// A cue sheet is nothing without its tracks: it goes into a folder of
+	/// its own (track files are often all called "Track 01.bin") with every
+	/// file it names, which keep their places beside it. A sheet whose tracks
+	/// cannot be read from where it is (another app's folder grants the sheet
+	/// alone) is not imported. A folder of the same name holding the same
+	/// sheet and the same tracks is used as it is; two CDs whose sheets read
+	/// alike (disc.cue naming Track 01.bin) are told apart by their tracks.
+	private static func importCueSheet(_ url: URL, into folder: URL) throws -> String {
+		let manager = FileManager.default
+		let data = try Data(contentsOf: url)
+		let tracks = cueTracks(String(data: data, encoding: .utf8) ?? String(decoding: data, as: UTF8.self))
+		let source = url.deletingLastPathComponent()
+		let stem = url.deletingPathExtension().lastPathComponent
+		var number = 1
+		while true {
+			let candidate = folder.appendingPathComponent(number == 1 ? stem : "\(stem) \(number)", isDirectory: true)
+			let sheet = candidate.appendingPathComponent(url.lastPathComponent)
+			if !manager.fileExists(atPath: candidate.path) {
+				try manager.createDirectory(at: candidate, withIntermediateDirectories: true)
+				do {
+					try manager.copyItem(at: url, to: sheet)
+					var unreadable: [String] = []
+					for track in tracks {
+						// Beside the sheet or under it only.
+						guard !track.hasPrefix("/"), !track.split(separator: "/").contains("..") else {
+							unreadable.append(track)
+							continue
+						}
+						let target = candidate.appendingPathComponent(track)
+						do {
+							try manager.createDirectory(at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
+							try manager.copyItem(at: source.appendingPathComponent(track), to: target)
+						} catch {
+							unreadable.append(track)
+						}
+					}
+					guard unreadable.isEmpty else {
+						throw CueTracksUnreadable(sheet: url.lastPathComponent, tracks: unreadable)
+					}
+				} catch {
+					try? manager.removeItem(at: candidate)
+					throw error
+				}
+				return sheet.path
+			}
+			if manager.contentsEqual(atPath: sheet.path, andPath: url.path), tracks.allSatisfy({
+				manager.contentsEqual(atPath: candidate.appendingPathComponent($0).path,
+					andPath: source.appendingPathComponent($0).path)
+			}) {
+				return sheet.path
+			}
+			number += 1
+		}
+	}
+
+	/// The files a cue sheet's FILE lines name, as written (relative to the
+	/// sheet), each once. Read as the emulator's parsecue() reads them: the
+	/// words split at any white space, a quoted name runs to its closing
+	/// quote (or the end of the line).
+	static func cueTracks(_ sheet: String) -> [String] {
+		var tracks: [String] = []
+		for line in sheet.split(whereSeparator: \.isNewline) {
+			var rest = line.drop(while: \.isWhitespace)
+			let directive = rest.prefix(while: { !$0.isWhitespace })
+			guard String(directive).caseInsensitiveCompare("FILE") == .orderedSame else { continue }
+			rest = rest.dropFirst(directive.count).drop(while: \.isWhitespace)
+			let name = rest.first == "\""
+				? rest.dropFirst().prefix(while: { $0 != "\"" })
+				: rest.prefix(while: { !$0.isWhitespace })
+			if !name.isEmpty, !tracks.contains(String(name)) {
+				tracks.append(String(name))
+			}
+		}
+		return tracks
 	}
 
 	/// Whether a typed state name is the autosave's
@@ -129,5 +224,15 @@ enum AppFiles {
 		}
 		guard !base.isEmpty, !base.contains("/"), base != ".", base != ".." else { return nil }
 		return folder.appendingPathComponent(base + ".uss")
+	}
+}
+
+/// A cue sheet whose track files cannot be read from where it is.
+struct CueTracksUnreadable: LocalizedError {
+	let sheet: String
+	let tracks: [String]
+
+	var errorDescription: String? {
+		"\u{201C}\(sheet)\u{201D} needs \(tracks.joined(separator: ", ")), which Amiberry cannot read from there. Copy the CD\u{2019}s whole folder into Amiberry\u{2019}s CDs folder with the Files app, or use the CD as one .chd or .iso file."
 	}
 }

@@ -34,6 +34,7 @@ enum class kind {
 	screenshot,           // path
 	load_config,          // path
 	save_config,          // path
+	quick_play,           // path
 	quit,
 	stop,                 // leave the running emulation for the settings UI
 	apply_settings,       // number = amiberry_apply_class

@@ -362,6 +362,37 @@ final class EmulatorActionsTests: XCTestCase {
 		XCTAssertEqual(EmulatorStatus.current().runState, .stopped)
 	}
 
+	/// Quick play picks the machine for a file: a disk goes in DF0: of a new
+	/// machine (no configuration file of its own), a CD image in the CD
+	/// drive; anything else, or nothing at all, is refused.
+	func testQuickPlayMakesTheMachineForAFile() throws {
+		let folder = FileManager.default.temporaryDirectory.appendingPathComponent("bridge-quick-\(UUID().uuidString)")
+		try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+		defer { try? FileManager.default.removeItem(at: folder) }
+		let disk = folder.appendingPathComponent("Quick Disk.adf").path
+		FileManager.default.createFile(atPath: disk, contents: Data(count: 901_120))
+		let cd = folder.appendingPathComponent("Quick CD.iso").path
+		FileManager.default.createFile(atPath: cd, contents: Data(count: 2048 * 32))
+		let text = folder.appendingPathComponent("notes.txt").path
+		FileManager.default.createFile(atPath: text, contents: Data("hello".utf8))
+
+		let wrong = try XCTUnwrap(EmulatorActions.post(.quickPlay(path: text)))
+		let missing = try XCTUnwrap(EmulatorActions.post(.quickPlay(path: folder.appendingPathComponent("gone.adf").path)))
+		let floppy = try XCTUnwrap(EmulatorActions.post(.quickPlay(path: disk)))
+		ActionPump.runPending()
+		XCTAssertEqual(wrong.poll(), .failed("Not a disk, CD, WHDLoad archive or configuration: \(text)"))
+		XCTAssertEqual(missing.poll(), .failed("File not found: \(folder.appendingPathComponent("gone.adf").path)"))
+		XCTAssertEqual(floppy.poll(), .done)
+		XCTAssertEqual(try SettingsSession().value(of: "floppy0"), disk)
+		XCTAssertNil(MediaLibrary.currentConfiguration(), "a new machine: saving it asks for a name")
+
+		let disc = try XCTUnwrap(EmulatorActions.post(.quickPlay(path: cd)))
+		ActionPump.runPending()
+		XCTAssertEqual(disc.poll(), .done)
+		// As the configuration writes it: the image and its type.
+		XCTAssertEqual(try SettingsSession().value(of: "cdimage0"), "\(cd),image")
+	}
+
 	func testPostedActionsRunOnTheMainThreadInOrder() throws {
 		let folder = FileManager.default.temporaryDirectory.appendingPathComponent("bridge-actions-\(UUID().uuidString)")
 		try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)

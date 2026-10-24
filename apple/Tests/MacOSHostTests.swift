@@ -209,6 +209,19 @@ final class EmulationChromeTests: XCTestCase {
 }
 
 @MainActor
+final class QuickPlayTests: XCTestCase {
+	func testQuickPlayTakesMediaAndConfigurations() {
+		for name in ["Game.ADF", "game.lha", "disc.iso", "disc.cue", "disc.chd", "Lotus.uae", "pack.rp9", "d.ipf", "d.dms", "d.adz", "d.zip", "d.7z"] {
+			XCTAssertTrue(QuickPlay.accepts(URL(fileURLWithPath: "/tmp/\(name)")), name)
+		}
+		for name in ["notes.txt", "state.uss", "kick.rom", "disk"] {
+			XCTAssertFalse(QuickPlay.accepts(URL(fileURLWithPath: "/tmp/\(name)")), name)
+		}
+		XCTAssertFalse(QuickPlay.accepts(URL(string: "https://example.com/game.adf")!), "a file, not a link")
+	}
+}
+
+@MainActor
 final class AppSettingsTests: XCTestCase {
 	func testAppSettingsCoverEveryHostSetting() throws {
 		let model = AppSettingsModel()

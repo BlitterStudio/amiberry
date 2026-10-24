@@ -29,8 +29,10 @@
 #include "gdb_server.h"
 #endif
 
+
 #include <cstdio>
 #include <algorithm>
+#include <vector>
 #include <cstring>
 #include <mutex>
 #include <string>
@@ -40,6 +42,17 @@ using amiberry_actions::request;
 
 #ifndef LIBRETRO
 extern int gui_active; // amiberry_gui.cpp: the settings UI is open
+#endif
+
+// main.cpp
+std::string get_filename_extension(const TCHAR* filename);
+#ifndef LIBRETRO
+// settings/settings_presets.cpp. (Its header brings <queue>, as <filesystem>
+// does, and std::queue collides with queue() below under sysdeps.h's using
+// namespace std.)
+namespace amiberry_settings {
+void apply_preset(uae_prefs& p, int model, int config, int compatibility, bool preview);
+}
 #endif
 
 namespace {
@@ -177,6 +190,112 @@ bool apply_settings(int apply, std::string* error)
 #endif
 	return true;
 }
+
+// A .uae or .rp9 file as the pending configuration, as the GUI's Load.
+bool load_config_file(const std::string& requested, std::string* error)
+{
+	// target_cfgfile_load() resets the configuration to the defaults
+	// before it reads the file, so a file it cannot read would leave
+	// the defaults behind; check it opens first.
+	const std::string extension = requested.size() > 4 ? requested.substr(requested.size() - 4) : std::string();
+	const bool uae = _tcsicmp(extension.c_str(), ".uae") == 0;
+	if (!uae && _tcsicmp(extension.c_str(), ".rp9") != 0) {
+		*error = "Not a configuration file: " + requested;
+		return false;
+	}
+	// cfgfile_load() retries a name it cannot open under the
+	// configuration directory (LOAD_CONFIG Games.uae). Resolve that
+	// here, so the checks below see the file the loader will read.
+	std::string path = requested;
+	if (!zfile_exists(path.c_str())) {
+		TCHAR directory[MAX_DPATH];
+		get_configuration_path(directory, sizeof directory / sizeof(TCHAR));
+		const std::string fallback = std::string(directory) + path;
+		if (zfile_exists(fallback.c_str()))
+			path = fallback;
+	}
+	if (!zfile_exists(path.c_str())) {
+		*error = "Configuration file not found: " + requested;
+		return false;
+	}
+	// target_cfgfile_load() resets the configuration before it opens a
+	// .uae, so a file that exists but cannot be opened (no permission)
+	// would still wipe it. Open it the way the loader does, first.
+	if (uae) {
+		zfile* file = zfile_fopen(path.c_str(), "r", ZFD_NORMAL);
+		if (!file) {
+			*error = "Failed to load configuration: " + requested;
+			return false;
+		}
+		zfile_fclose(file);
+	}
+	// As the GUI's Load: the file becomes the pending configuration
+	// (the floppies it names are inserted at once).
+	if (!target_cfgfile_load(&changed_prefs, path.c_str(), CONFIG_TYPE_DEFAULT, 0)) {
+		*error = "Failed to load configuration: " + requested;
+		return false;
+	}
+	set_config_changed();
+	return true;
+}
+
+#ifndef LIBRETRO
+// The machine for a media file as the pending configuration (quick play),
+// as the command line and a drop on the emulator choose it.
+bool quick_play(const std::string& path, std::string* error)
+{
+	const std::string extension = get_filename_extension(path.c_str());
+	const auto is = [&](const char* candidate) { return _tcsicmp(extension.c_str(), candidate) == 0; };
+	if (is(".uae") || is(".rp9"))
+		return load_config_file(path, error);
+	if (!zfile_exists(path.c_str())) {
+		*error = "File not found: " + path;
+		return false;
+	}
+	const bool lha = is(".lha");
+	const bool cd = is(".cue") || is(".iso") || is(".chd");
+	const bool floppy = is(".adf") || is(".adz") || is(".dms") || is(".ipf") || is(".zip") || is(".7z");
+	if (!lha && !cd && !floppy) {
+		*error = "Not a disk, CD, WHDLoad archive or configuration: " + path;
+		return false;
+	}
+	// A new machine: saving it asks for a name. Cleared first, so a
+	// configuration of the file's name that the WHDLoad and CD builders
+	// load stays the machine's file.
+	set_current_config_path(nullptr);
+	if (lha) {
+		add_file_to_mru_list(lstMRUWhdloadList, path);
+		whdload_prefs.whdload_filename = path;
+		whdload_auto_prefs(&changed_prefs, path.c_str());
+	} else if (cd) {
+		add_file_to_mru_list(lstMRUCDList, path);
+		std::vector<char> name(path.begin(), path.end());
+		name.push_back(0);
+		cd_auto_prefs(&changed_prefs, name.data());
+	} else {
+		// A configuration of the disk's name is the disk's machine.
+		TCHAR directory[MAX_DPATH];
+		get_configuration_path(directory, sizeof directory / sizeof(TCHAR));
+		const std::string config = std::string(directory) + remove_file_extension(extract_filename(path)) + ".uae";
+		if (zfile_exists(config.c_str()))
+			return load_config_file(config, error);
+		add_file_to_mru_list(lstMRUDiskList, path);
+		// The Amiga 500 model, as the Library's model card makes it.
+		amiberry_settings::apply_preset(changed_prefs, 0, 0, 1, true);
+		_tcsncpy(changed_prefs.floppyslots[0].df, path.c_str(), MAX_DPATH);
+		changed_prefs.floppyslots[0].df[MAX_DPATH - 1] = 0;
+		set_last_active_config_from_media(path.c_str());
+	}
+	set_config_changed();
+	return true;
+}
+#else
+bool quick_play(const std::string&, std::string* error)
+{
+	*error = "Quick play is up to the libretro front end";
+	return false;
+}
+#endif
 
 // The strings are the ones the IPC transport replies with; it forwards them
 // unchanged.
@@ -381,51 +500,11 @@ bool execute(const request& r, void*, std::string* error)
 		}
 		return true;
 
-	case kind::load_config: {
-		// target_cfgfile_load() resets the configuration to the defaults
-		// before it reads the file, so a file it cannot read would leave
-		// the defaults behind; check it opens first.
-		const std::string extension = r.path.size() > 4 ? r.path.substr(r.path.size() - 4) : std::string();
-		const bool uae = _tcsicmp(extension.c_str(), ".uae") == 0;
-		if (!uae && _tcsicmp(extension.c_str(), ".rp9") != 0) {
-			*error = "Not a configuration file: " + r.path;
-			return false;
-		}
-		// cfgfile_load() retries a name it cannot open under the
-		// configuration directory (LOAD_CONFIG Games.uae). Resolve that
-		// here, so the checks below see the file the loader will read.
-		std::string path = r.path;
-		if (!zfile_exists(path.c_str())) {
-			TCHAR directory[MAX_DPATH];
-			get_configuration_path(directory, sizeof directory / sizeof(TCHAR));
-			const std::string fallback = std::string(directory) + path;
-			if (zfile_exists(fallback.c_str()))
-				path = fallback;
-		}
-		if (!zfile_exists(path.c_str())) {
-			*error = "Configuration file not found: " + r.path;
-			return false;
-		}
-		// target_cfgfile_load() resets the configuration before it opens a
-		// .uae, so a file that exists but cannot be opened (no permission)
-		// would still wipe it. Open it the way the loader does, first.
-		if (uae) {
-			zfile* file = zfile_fopen(path.c_str(), "r", ZFD_NORMAL);
-			if (!file) {
-				*error = "Failed to load configuration: " + r.path;
-				return false;
-			}
-			zfile_fclose(file);
-		}
-		// As the GUI's Load: the file becomes the pending configuration
-		// (the floppies it names are inserted at once).
-		if (!target_cfgfile_load(&changed_prefs, path.c_str(), CONFIG_TYPE_DEFAULT, 0)) {
-			*error = "Failed to load configuration: " + r.path;
-			return false;
-		}
-		set_config_changed();
-		return true;
-	}
+	case kind::load_config:
+		return load_config_file(r.path, error);
+
+	case kind::quick_play:
+		return quick_play(r.path, error);
 
 	case kind::save_config:
 		if (!cfgfile_save(&changed_prefs, r.path.c_str(), 0)) {
@@ -697,6 +776,13 @@ amiberry_action_id amiberry_actions_load_config(const char* path)
 	if (!valid_path(path))
 		return 0;
 	return post(kind::load_config, 0, 0, false, false, path);
+}
+
+amiberry_action_id amiberry_actions_quick_play(const char* path)
+{
+	if (!valid_path(path))
+		return 0;
+	return post(kind::quick_play, 0, 0, false, false, path);
 }
 
 amiberry_action_id amiberry_actions_save_config(const char* path)

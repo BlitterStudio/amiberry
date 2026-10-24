@@ -41,6 +41,7 @@ void amiberry_native_ui_settings_dismiss(void);
 void amiberry_native_ui_settings_commit(void);
 void amiberry_native_ui_settings_devices_changed(void);
 void amiberry_native_ui_install_menus(void);
+void amiberry_native_ui_open_file(const char* path);
 #ifdef AMIBERRY_MACOS
 void amiberry_native_ui_emulation_window(void* nswindow);
 #endif
@@ -167,6 +168,10 @@ void native_host_run_settings()
 					// the emulation runs (handle_close_event).
 					uae_quit();
 					amiberry_native_ui_settings_dismiss();
+				} else if (event.type == SDL_EVENT_DROP_FILE && event.drop.data) {
+					// A file opened with the app (the Dock icon, Finder,
+					// iOS's Open in): the Library plays it.
+					amiberry_native_ui_open_file(event.drop.data);
 				} else if (event.type == SDL_EVENT_JOYSTICK_ADDED || event.type == SDL_EVENT_JOYSTICK_REMOVED) {
 					// As run_gui: controllers plugged in meanwhile are picked up.
 					handle_joy_device_event(event.jdevice.which, event.type == SDL_EVENT_JOYSTICK_REMOVED);
