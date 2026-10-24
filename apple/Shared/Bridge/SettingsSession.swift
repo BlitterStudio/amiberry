@@ -215,6 +215,13 @@ public final class SettingsSession {
 			id: "\(type) \(unit) \(field)", value: value)
 	}
 
+	/// Whether the session's boards differ from the running emulation's
+	/// (they take effect when it restarts).
+	public func boardsDifferFromActive() -> Bool {
+		guard let handle else { return false }
+		return amiberry_settings_boards_differ_from_active(handle)
+	}
+
 	public func isBoardFieldAvailable(_ field: String, type: String, unit: Int) -> Bool {
 		guard let handle else { return false }
 		return amiberry_settings_board_field_available(handle, type, Int32(clamping: unit), field)
