@@ -61,7 +61,19 @@ struct PageView: View {
 			StoragePage(model: model)
 		case .folders:
 			PathsPage(model: model)
-		case .hardware, .displaySound, .input, .portsMisc, .advanced:
+		case .hardware:
+			Form {
+				GroupSections(groups: page.groups, store: model.store)
+				BoardsSections(store: model.store)
+			}
+			.formStyle(.grouped)
+		case .input:
+			Form {
+				GroupSections(groups: page.groups, store: model.store)
+				CustomControlsSections(store: model.store)
+			}
+			.formStyle(.grouped)
+		case .displaySound, .portsMisc, .advanced:
 			Form {
 				GroupSections(groups: page.groups, store: model.store)
 			}

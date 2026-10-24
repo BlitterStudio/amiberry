@@ -47,6 +47,41 @@ final class SettingsPagesTests: XCTestCase {
 }
 
 @MainActor
+final class BoardsAndControlsTests: XCTestCase {
+	func testBoardsAreAddedAndRemovedThroughTheStore() throws {
+		let store = try SettingsStore()
+		let a2091 = try XCTUnwrap(BoardCatalog.type("a2091"))
+		XCTAssertEqual(BoardsSections.category(of: a2091), "SCSI")
+		XCTAssertEqual(store.boardValue("enabled", type: "a2091", unit: 0), "false")
+		XCTAssertFalse(store.hasChanges)
+		XCTAssertTrue(store.setBoardValue("true", field: "enabled", type: "a2091", unit: 0))
+		XCTAssertEqual(store.boardValue("enabled", type: "a2091", unit: 0), "true")
+		XCTAssertTrue(store.hasChanges, "a board edit is a change to commit")
+		XCTAssertFalse(store.setBoardValue("nope", field: "subtype", type: "a2091", unit: 0))
+		XCTAssertNotNil(store.lastError)
+		XCTAssertTrue(store.setBoardValue("false", field: "enabled", type: "a2091", unit: 0))
+		// Every board type has a heading in the Add Board menu.
+		for type in BoardCatalog.types {
+			XCTAssertTrue(BoardsSections.categories.contains { $0.title == BoardsSections.category(of: type) }, type.id)
+		}
+	}
+
+	func testCustomControlsNeedAJoystick() throws {
+		let store = try SettingsStore()
+		// The test host has no joystick on the joystick port.
+		XCTAssertNil(store.customControl("a", port: 1, hotkey: false))
+		XCTAssertFalse(store.setCustomControl("Space", control: "a", port: 1, hotkey: false))
+		XCTAssertFalse(store.hasChanges)
+		let model = try SettingsWindowModel(emulating: false, dismiss: {}, post: { _ in true })
+		for page in [SettingsPage.hardware, .input] {
+			let view = NSHostingView(rootView: PageView(page: page, model: model).frame(width: 700, height: 500))
+			view.frame = NSRect(x: 0, y: 0, width: 700, height: 500)
+			view.layoutSubtreeIfNeeded()
+		}
+	}
+}
+
+@MainActor
 final class LibraryTests: XCTestCase {
 	func testLibraryListsSavedMachinesWithTheirMetadata() throws {
 		let folder = try MediaLibrary.path(of: .configurations)

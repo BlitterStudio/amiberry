@@ -34,6 +34,9 @@ public final class SettingsStore {
 	@ObservationIgnored private var baselineValues: [String: String] = [:]
 	@ObservationIgnored private var baselineMounts: [String] = []
 	@ObservationIgnored private var presetApplied = false
+	/// Expansion board units or custom controls were edited: they are not
+	/// options, so the values do not show it.
+	@ObservationIgnored private var otherEdits = false
 	/// Counts the commits that changed the pending configuration, so an
 	/// apply only clears `pendingApply` when nothing was committed after it.
 	@ObservationIgnored private var commitGeneration = 0
@@ -99,6 +102,58 @@ public final class SettingsStore {
 		perform { try session.removeMount(at: index) }
 	}
 
+	// MARK: Expansion boards (see `BoardType`)
+
+	/// A field of a board unit; nil for a field or unit the type does not have.
+	public func boardValue(_ field: String, type: String, unit: Int) -> String? {
+		_ = revision
+		return try? session.boardValue(field, type: type, unit: unit)
+	}
+
+	/// Sets a field of a board unit; enabling a built-in controller sets the
+	/// chipset option that has it, which the store re-reads.
+	@discardableResult
+	public func setBoardValue(_ value: String, field: String, type: String, unit: Int) -> Bool {
+		perform {
+			try session.setBoardValue(value, field: field, type: type, unit: unit)
+			otherEdits = true
+		}
+	}
+
+	public func isBoardFieldAvailable(_ field: String, type: String, unit: Int) -> Bool {
+		_ = revision
+		return session.isBoardFieldAvailable(field, type: type, unit: unit)
+	}
+
+	// MARK: Custom controls
+
+	/// The event a control of the joystick on a port triggers ("" for what the
+	/// port's mode gives it, "none" for nothing); nil while the port has no
+	/// joystick.
+	public func customControl(_ control: String, port: Int, hotkey: Bool) -> String? {
+		_ = revision
+		return try? session.customControl(control, port: port, hotkey: hotkey)
+	}
+
+	@discardableResult
+	public func setCustomControl(_ event: String, control: String, port: Int, hotkey: Bool) -> Bool {
+		perform {
+			try session.setCustomControl(event, control: control, port: port, hotkey: hotkey)
+			otherEdits = true
+		}
+	}
+
+	public func isCustomControlAvailable(_ control: String, port: Int, hotkey: Bool) -> Bool {
+		_ = revision
+		return session.isCustomControlAvailable(control, port: port, hotkey: hotkey)
+	}
+
+	/// The hotkey function holding a control, or nil.
+	public func customControlUse(_ control: String, port: Int, hotkey: Bool) -> String? {
+		_ = revision
+		return session.customControlUse(control, port: port, hotkey: hotkey)
+	}
+
 	/// Stores the session in the pending configuration. What it changed
 	/// waits in `pendingApply` until `apply()` brings the emulation up to it.
 	@discardableResult
@@ -160,7 +215,7 @@ public final class SettingsStore {
 		if currentAdjustments != adjustments {
 			adjustments = currentAdjustments
 		}
-		let changed = presetApplied || values != baselineValues || mounts != baselineMounts
+		let changed = presetApplied || otherEdits || values != baselineValues || mounts != baselineMounts
 		if changed != hasChanges {
 			hasChanges = changed
 		}
@@ -171,6 +226,7 @@ public final class SettingsStore {
 		baselineValues = values
 		baselineMounts = mounts
 		presetApplied = false
+		otherEdits = false
 		hasChanges = false
 	}
 
