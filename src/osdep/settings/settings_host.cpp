@@ -15,6 +15,7 @@
 
 #include "settings_definitions.h"
 
+#include <cerrno>
 #include <climits>
 #include <cmath>
 #include <cstdio>
@@ -385,7 +386,7 @@ const std::vector<host_setting>& settings()
 		path("saveimage_dir", "Save data", "Default folder for save-data images.",
 			get_saveimage_path, set_saveimage_path),
 		path("savestate_dir", "Save states", "Default folder for emulator save states.",
-			get_savestate_path, set_savestate_path),
+			get_savestate_folder, set_savestate_path),
 		path("ripper_path", "Ripper", "Default output folder for ripper files.",
 			get_ripper_path, set_ripper_path),
 		path("inputrecordings_dir", "Input recordings", "Default folder for input recordings.",
@@ -618,9 +619,14 @@ amiberry_settings_status host_settings_set(std::string_view id, std::string_view
 			if (s->k == kind::integer) {
 				char* end = nullptr;
 				const std::string text(value);
-				number = static_cast<int>(std::strtol(text.c_str(), &end, 10));
-				if (!end || *end || end == text.c_str() || number < s->min || number > s->max)
+				errno = 0;
+				const long wide = std::strtol(text.c_str(), &end, 10);
+				// Narrowing before the check wraps a too-big value into range
+				// (4294967336 becomes 40), so the long is checked first.
+				if (!end || *end || end == text.c_str() || errno == ERANGE
+					|| wide < s->min || wide > s->max)
 					return AMIBERRY_SETTINGS_INVALID_VALUE;
+				number = static_cast<int>(wide);
 			} else {
 				number = std::atoi(std::string(value).c_str());
 			}
@@ -661,6 +667,10 @@ amiberry_settings_status host_settings_set(std::string_view id, std::string_view
 		if (!value.empty() && (value.back() == ' ' || value.back() == '\t'))
 			return AMIBERRY_SETTINGS_INVALID_VALUE;
 		if (value.size() + std::strlen(s->id) + 2 >= static_cast<size_t>(CONFIG_BLEN))
+			return AMIBERRY_SETTINGS_INVALID_VALUE;
+		// The folder getters add a trailing separator, and the search path
+		// copy keeps PATH_MAX - 1, so the stored path must leave both.
+		if (value.size() >= static_cast<size_t>(PATH_MAX) - 1)
 			return AMIBERRY_SETTINGS_INVALID_VALUE;
 		s->path_set(std::string(value));
 		return AMIBERRY_SETTINGS_OK;

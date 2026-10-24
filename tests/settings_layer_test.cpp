@@ -135,6 +135,7 @@ HOST_PATH(get_rp9_path, set_rp9_path, "rp9")
 HOST_PATH(get_floppy_sounds_path, set_floppy_sounds_path, "sounds")
 HOST_PATH(get_saveimage_path, set_saveimage_path, "saveimage")
 HOST_PATH(get_savestate_path, set_savestate_path, "savestate")
+std::string get_savestate_folder() { return host_paths["savestate"]; }
 HOST_PATH(get_ripper_path, set_ripper_path, "ripper")
 HOST_PATH(get_inputrecordings_path, set_inputrecordings_path, "recordings")
 HOST_PATH(get_screenshot_path, set_screenshot_path, "screenshot")
@@ -2584,6 +2585,8 @@ void check_host_settings()
 	CHECK(!amiberry_options.quickstart_start);
 	CHECK(amiberry_host_settings_set("Quickstart", "yes") == AMIBERRY_SETTINGS_INVALID_VALUE);
 	CHECK(amiberry_host_settings_set("default_joystick_deadzone", "101") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	CHECK(amiberry_host_settings_set("default_joystick_deadzone", "4294967336") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	CHECK(amiberry_options.default_joystick_deadzone == 33);
 	CHECK(amiberry_host_settings_set("default_joystick_deadzone", "40") == AMIBERRY_SETTINGS_OK);
 	CHECK(amiberry_options.default_joystick_deadzone == 40);
 	// The legacy exclusive full-screen value is full-window.
@@ -2613,6 +2616,7 @@ void check_host_settings()
 	host_save_result = true;
 	// A path the conf loader would split or trim is refused.
 	CHECK(amiberry_host_settings_set("rom_path", "/roms ") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	CHECK(amiberry_host_settings_set("rom_path", std::string(PATH_MAX, 'r').c_str()) == AMIBERRY_SETTINGS_INVALID_VALUE);
 	CHECK(amiberry_host_settings_get("rom_path", value, sizeof value) == AMIBERRY_SETTINGS_OK);
 	CHECK(!std::strcmp(value, "/roms"));
 	const amiberry_setting_descriptor* delay = amiberry_host_settings_find("default_whd_configdelay");
