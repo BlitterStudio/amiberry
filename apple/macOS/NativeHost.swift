@@ -15,6 +15,17 @@ public func amiberryNativeUIInstallMenus() {
 	}
 }
 
+/// SDL has created the emulation window (its NSWindow): the toolbar goes on.
+@_cdecl("amiberry_native_ui_emulation_window")
+public func amiberryNativeUIEmulationWindow(_ window: UnsafeMutableRawPointer) {
+	// The address crosses into the main actor; SDL calls on the main thread.
+	let address = UInt(bitPattern: window)
+	MainActor.assumeIsolated {
+		guard let pointer = UnsafeMutableRawPointer(bitPattern: address) else { return }
+		EmulationChrome.shared.attach(to: Unmanaged<NSWindow>.fromOpaque(pointer).takeUnretainedValue())
+	}
+}
+
 @MainActor
 enum Alerts {
 	/// An alert attached to the frontmost window as a sheet, which does not

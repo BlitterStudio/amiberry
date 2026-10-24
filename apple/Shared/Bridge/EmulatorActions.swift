@@ -253,6 +253,8 @@ public struct EmulatorStatus: Hashable, Sendable {
 	public let hardDriveActivity: Int?
 	/// The CD LED level; nil when there is no CD drive.
 	public let cdActivity: Int?
+	/// Frames per second in tenths, as the status line shows them.
+	public let fpsTenths: Int
 	public let floppies: [Drive]
 	public let cdRequested: Bool
 	public let cdPath: String
@@ -265,7 +267,7 @@ public struct EmulatorStatus: Hashable, Sendable {
 	public func hasSameState(as other: EmulatorStatus) -> Bool {
 		runState == other.runState && paused == other.paused && powerLED == other.powerLED
 			&& capsLock == other.capsLock && hardDriveActivity == other.hardDriveActivity
-			&& cdActivity == other.cdActivity && floppies == other.floppies && cdRequested == other.cdRequested
+			&& cdActivity == other.cdActivity && fpsTenths == other.fpsTenths && floppies == other.floppies && cdRequested == other.cdRequested
 			&& cdPath == other.cdPath && configDescription == other.configDescription
 	}
 
@@ -287,6 +289,7 @@ public struct EmulatorStatus: Hashable, Sendable {
 		capsLock = s.caps_lock
 		hardDriveActivity = s.hd_activity < 0 ? nil : Int(s.hd_activity)
 		cdActivity = s.cd_activity < 0 ? nil : Int(s.cd_activity)
+		fpsTenths = Int(s.fps_tenths)
 		floppies = withUnsafeBytes(of: s.floppy) { raw in
 			raw.bindMemory(to: amiberry_drive_status.self).map {
 				Drive(motorOn: $0.motor_on, writing: $0.writing, disabled: $0.disabled,

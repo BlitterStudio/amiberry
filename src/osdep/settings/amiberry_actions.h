@@ -54,7 +54,7 @@
 extern "C" {
 #endif
 
-#define AMIBERRY_ACTIONS_API_VERSION 4
+#define AMIBERRY_ACTIONS_API_VERSION 5
 
 /* Largest MAX_DPATH (PATH_MAX) any supported platform builds with, so every
    media path the emulator can store fits, NUL included. */
@@ -91,6 +91,7 @@ typedef struct amiberry_actions_status {
 	bool caps_lock;
 	int hd_activity;        /* hard drive LED level, -1 when there is none */
 	int cd_activity;        /* CD LED level, -1 when there is none */
+	int fps_tenths;         /* frames per second in tenths, as the status line shows them */
 	amiberry_drive_status floppy[AMIBERRY_ACTIONS_FLOPPY_DRIVES];
 	bool cd_requested;      /* the pending configuration inserts a CD */
 	char cd_path[AMIBERRY_ACTIONS_PATH_MAX]; /* pending CD path, "" when none */

@@ -4,6 +4,7 @@
  * layer: the settings window's pages and actions, and the menu commands.
  */
 
+import AmiberrySettings
 import AppKit
 @testable import AmiberryNativeUI
 import SwiftUI
@@ -113,6 +114,88 @@ final class BoardsAndControlsTests: XCTestCase {
 			view.frame = NSRect(x: 0, y: 0, width: 700, height: 500)
 			view.layoutSubtreeIfNeeded()
 		}
+	}
+}
+
+@MainActor
+final class EmulationChromeTests: XCTestCase {
+	private func status(disk: String, disabled: [Int] = [], cd: Int32 = -1) -> EmulatorStatus {
+		var raw = amiberry_actions_status()
+		raw.run_state = AMIBERRY_RUN_STATE_RUNNING
+		raw.cd_activity = cd
+		raw.hd_activity = -1
+		withUnsafeMutableBytes(of: &raw.floppy) { bytes in
+			let drives = bytes.bindMemory(to: amiberry_drive_status.self)
+			for index in drives.indices {
+				drives[index].disabled = disabled.contains(index)
+			}
+			withUnsafeMutableBytes(of: &drives[0].media_path) { path in
+				path.copyBytes(from: Array(disk.utf8) + [0])
+			}
+		}
+		return EmulatorStatus(raw)
+	}
+
+	func testTheDrivesMenuFollowsTheDrives() {
+		let menu = NSMenu()
+		DrivesMenu.fill(menu, status: status(disk: "/disks/Lotus.adf", disabled: [2, 3]),
+			swapper: ["/disks/Lotus.adf", "", "/disks/Lotus2.adf"] + Array(repeating: "", count: 17),
+			commands: MenuCommands.shared, swapperTarget: EmulationChrome.shared)
+		let titles = menu.items.map(\.title)
+		XCTAssertEqual(titles.filter { $0.hasPrefix("DF") }, ["DF0: Lotus.adf", "DF1: Empty"], "disabled drives are left out")
+		XCTAssertFalse(titles.contains { $0.hasPrefix("CD") }, "no CD drive, no CD entries")
+		let ejects = menu.items.filter { $0.title == "Eject" }
+		XCTAssertEqual(ejects.map(\.tag), [0, 1])
+		XCTAssertNotNil(ejects[0].action)
+		XCTAssertNil(ejects[1].action, "nothing to eject from an empty drive")
+		let swapper = try? XCTUnwrap(menu.items.last?.submenu)
+		XCTAssertEqual(swapper?.items.map(\.title), ["Lotus.adf", "Lotus2.adf"])
+		let into = swapper?.items.last?.submenu?.items
+		XCTAssertEqual(into?.map(\.title), ["Insert into DF0:", "Insert into DF1:"])
+		XCTAssertEqual(into?.last?.representedObject as? [Int], [2, 1])
+	}
+
+	func testTheDrivesMenuHasTheCDWhenThereIsOne() {
+		let menu = NSMenu()
+		DrivesMenu.fill(menu, status: status(disk: "", cd: 0), swapper: Array(repeating: "", count: 20),
+			commands: MenuCommands.shared, swapperTarget: EmulationChrome.shared)
+		XCTAssertTrue(menu.items.contains { $0.title == "CD Empty" })
+		XCTAssertNil(menu.items.first { $0.title == "Eject CD" }?.action)
+		XCTAssertEqual(menu.items.last?.submenu?.items.map(\.title), ["No Entries"])
+	}
+
+	func testTheToolbarKeepsTheContentWhereSDLPutIt() {
+		let window = NSWindow(contentRect: NSRect(x: 200, y: 200, width: 720, height: 568),
+			styleMask: [.titled, .closable, .miniaturizable], backing: .buffered, defer: false)
+		defer { window.close() }
+		window.isReleasedWhenClosed = false
+		let content = window.contentRect(forFrameRect: window.frame)
+		EmulationChrome.shared.attach(to: window)
+		XCTAssertNotNil(window.toolbar)
+		XCTAssertEqual(window.contentRect(forFrameRect: window.frame), content, "same size and place")
+		NotificationCenter.default.post(name: NSWindow.willEnterFullScreenNotification, object: window)
+		XCTAssertEqual(window.toolbar?.isVisible, false, "full screen is the emulation's alone")
+		NotificationCenter.default.post(name: NSWindow.didExitFullScreenNotification, object: window)
+		XCTAssertEqual(window.toolbar?.isVisible, true)
+	}
+
+	func testTheToolbarMenusShowEveryEntry() throws {
+		let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 720, height: 568),
+			styleMask: [.titled], backing: .buffered, defer: false)
+		window.isReleasedWhenClosed = false
+		defer { window.close() }
+		EmulationChrome.shared.attach(to: window)
+		let items = try XCTUnwrap(window.toolbar).items
+		let reset = try XCTUnwrap(items.first { $0.label == "Reset" } as? NSMenuToolbarItem)
+		// A pull-down's first item is its title: the commands follow it.
+		XCTAssertEqual(reset.menu.items.dropFirst().map(\.title), ["Reset", "Keyboard Reset", "Hard Reset"])
+		let state = try XCTUnwrap(items.first { $0.label == "State" } as? NSMenuToolbarItem)
+		XCTAssertEqual(state.menu.items.dropFirst().map(\.title).first, "Quick Save State")
+	}
+
+	func testTheFrameRateReadsInTenths() {
+		XCTAssertEqual(StatusLEDsView.fps(499), "49.9 fps")
+		XCTAssertEqual(StatusLEDsView.fps(0), "", "no rate before the first frames")
 	}
 }
 

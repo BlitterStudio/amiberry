@@ -536,6 +536,7 @@ void publish_status()
 	s.caps_lock = gui_data.capslock;
 	s.hd_activity = gui_data.hd;
 	s.cd_activity = gui_data.cd;
+	s.fps_tenths = gui_data.fps;
 	for (int i = 0; i < AMIBERRY_ACTIONS_FLOPPY_DRIVES; i++) {
 		s.floppy[i].motor_on = gui_data.drives[i].drive_motor;
 		s.floppy[i].writing = gui_data.drives[i].drive_writing;
