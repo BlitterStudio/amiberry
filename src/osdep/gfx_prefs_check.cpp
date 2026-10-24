@@ -781,10 +781,13 @@ int check_prefs_changed_gfx()
 		{
 			AmigaMonitor* mon = &AMonitors[0];
 			on_screen_joystick_init(mon->amiga_renderer);
-			int sw = 0, sh = 0;
-			if (g_renderer)
+			// Without a renderer (none could be created) there is nothing to
+			// lay the controls out on yet.
+			if (g_renderer) {
+				int sw = 0, sh = 0;
 				g_renderer->get_drawable_size(mon->amiga_window, &sw, &sh);
-			on_screen_joystick_update_layout(sw, sh, g_renderer->render_quad);
+				on_screen_joystick_update_layout(sw, sh, g_renderer->render_quad);
+			}
 			on_screen_joystick_set_enabled(true);
 		}
 		else
