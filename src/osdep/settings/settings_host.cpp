@@ -407,6 +407,8 @@ const std::vector<host_setting>& settings()
 		path("bezels_path", "Bezels", "Folder containing bezel overlay assets.",
 			get_bezels_path, set_bezels_path),
 
+		// Store builds are updated by the App Store: no update settings.
+#if !defined(AMIBERRY_IOS) && !defined(MACOS_APP_STORE)
 		choices_of("update_check", "global_updates", "Startup update check",
 			"Check for Amiberry updates on startup when the installation type supports it.",
 			"1", enabled_choices, sizeof enabled_choices / sizeof enabled_choices[0],
@@ -417,6 +419,7 @@ const std::vector<host_setting>& settings()
 			&amiberry_options::update_channel),
 		text("skipped_version", "global_updates", "Skipped version",
 			"Version string to skip during update checks. Empty stops skipping a version.", ""),
+#endif
 
 		boolean("perf_log", "global_advanced", "Performance log",
 			"Enable performance logging for diagnostics.", "false", &amiberry_options::perf_log),

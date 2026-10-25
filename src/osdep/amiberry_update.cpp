@@ -718,6 +718,9 @@ UpdateMethod get_update_method()
 	return UpdateMethod::NOTIFY_ONLY;
 #elif defined(_WIN32)
 	return UpdateMethod::SELF_UPDATE;
+#elif defined(MACOS_APP_STORE)
+	// The App Store updates the app; an app updating itself is refused.
+	return UpdateMethod::DISABLED;
 #elif defined(AMIBERRY_MACOS)
 	return UpdateMethod::SELF_UPDATE;
 #else
