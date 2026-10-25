@@ -58,6 +58,7 @@
 #include "savestate.h"
 #include "zfile.h"
 #include "7z/Sha256.h"
+#include "zarchive.h"
 #include "rtgmodes.h"
 #include "gfxboard.h"
 #include "devices.h"
@@ -12441,12 +12442,16 @@ static whdboot_lha_member whdboot_lha_lookup_member(const std::string& archive_p
 				const unsigned int size = size_bytes[0] | (size_bytes[1] << 8);
 				if (size == 0)
 					break;
-				if (size < 3 || extension_bytes + size > packed_size)
+				unsigned char content[256];
+				// Extensions carry a type byte and at most a name or a
+				// directory: anything longer than the buffer is refused, not
+				// read (the size is archive-controlled and 16-bit).
+				if (size < 3 || size > 2 + static_cast<unsigned int>(sizeof content)
+					|| extension_bytes + size > packed_size)
 				{
 					fclose(fp);
 					return info;
 				}
-				unsigned char content[256];
 				if (fread(content, 1, size - 2, fp) != size - 2)
 				{
 					fclose(fp);
@@ -12550,6 +12555,9 @@ static bool whdboot_extract_archive_member_to_file(const std::string& archive_pa
 		return false;
 	}
 
+	bool ok = false;
+	{
+	std::lock_guard<std::recursive_mutex> extraction_guard(zarchive_access_mutex);
 	struct zvolume* zv = zfile_fopen_archive(archive_path.c_str());
 	if (!zv)
 	{
@@ -12559,7 +12567,7 @@ static bool whdboot_extract_archive_member_to_file(const std::string& archive_pa
 
 	const std::string member_path = whdboot_archive_member_path(archive_path, member_name);
 	struct zfile* zf = zfile_open_archive(member_path.c_str(), 0);
-	bool ok = zf != nullptr;
+	ok = zf != nullptr;
 	if (ok)
 	{
 		const std::string temp_path = destination_path + ".new";
@@ -12627,6 +12635,7 @@ static bool whdboot_extract_archive_member_to_file(const std::string& archive_pa
 		}
 	}
 	zfile_fclose_archive(zv); // closes the member's zfile as well
+	} // the archive lock ends with the volume
 
 	if (ok)
 		write_log("WHDBooter - installed %s from %s\n", destination_path.c_str(), archive_path.c_str());

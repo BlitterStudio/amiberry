@@ -123,6 +123,7 @@ static struct zvolume *getzvolume (struct znode *parent, struct zfile *zf, unsig
 
 struct zfile *archive_access_select (struct znode *parent, struct zfile *zf, unsigned int id, int dodefault, int *retcode, int index)
 {
+	std::lock_guard<std::recursive_mutex> zarchive_guard(zarchive_access_mutex);
 	struct zvolume *zv;
 	struct znode *zn;
 	int zipcnt, first, select;
@@ -277,6 +278,7 @@ struct zfile *archive_access_arcacc_select (struct zfile *zf, unsigned int id, i
 
 void archive_access_scan (struct zfile *zf, zfile_callback zc, void *user, unsigned int id)
 {
+	std::lock_guard<std::recursive_mutex> zarchive_guard(zarchive_access_mutex);
 	struct zvolume *zv;
 	struct znode *zn;
 

@@ -3,6 +3,16 @@
 
 #include "uae/types.h"
 
+#include <mutex>
+
+/* Serialises the archive machinery: the global zvolume list and the
+ * archivers' decoder state (the LhA decoder keeps globals) are shared by
+ * the emulator's threads (mounted archives, the GUI) and by on-demand
+ * downloads extracting WHDLoad/JST/RTB files on a worker thread. Recursive:
+ * the entry points call each other.
+ */
+extern std::recursive_mutex zarchive_access_mutex;
+
 typedef uae_s64 (*ZFILEREAD)(void*, uae_u64, uae_u64, struct zfile*);
 typedef uae_s64 (*ZFILEWRITE)(const void*, uae_u64, uae_u64, struct zfile*);
 typedef uae_s64 (*ZFILESEEK)(struct zfile*, uae_s64, int);
