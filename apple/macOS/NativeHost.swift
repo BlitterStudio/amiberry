@@ -130,7 +130,64 @@ enum FilePanels {
 				buttons: ["OK"])
 			return nil
 		}
-		return path
+		return grantCompanions(of: path) ? path : nil
+	}
+
+	/// CD images whose sheet names files beside it: the tracks.
+	static let companionFormats: Set<String> = ["cue", "ccd", "mds"]
+
+	/// Whether the image reads files beside it: a CD's tracks, or the
+	/// rom.key an encrypted (Amiga Forever) Kickstart is decrypted with.
+	static func readsFilesBeside(_ url: URL) -> Bool {
+		let format = url.pathExtension.lowercased()
+		if companionFormats.contains(format) {
+			return true
+		}
+		guard format == "rom", let file = try? FileHandle(forReadingFrom: url) else { return false }
+		defer { try? file.close() }
+		return (try? file.read(upToCount: 11)) == Data("AMIROMTYPE1".utf8)
+	}
+
+	/// For an image that reads files beside it, the folder holding them as
+	/// well: picking a file grants a Mac App Store build that file only, so
+	/// when the folder cannot be read, the user is asked for it (once: it
+	/// is then kept). True when the files beside it can be read; elsewhere
+	/// the folder always can, and nothing is asked.
+	static func grantCompanions(of path: String) -> Bool {
+		let url = URL(fileURLWithPath: path)
+		guard readsFilesBeside(url) else { return true }
+		let folder = url.deletingLastPathComponent()
+		if (try? FileManager.default.contentsOfDirectory(atPath: folder.path)) != nil {
+			return true
+		}
+		let panel = NSOpenPanel()
+		panel.message = "\u{201C}\(url.lastPathComponent)\u{201D} uses the files beside it. Allow Amiberry to use the folder that holds them."
+		panel.prompt = "Allow"
+		panel.directoryURL = folder
+		panel.canChooseFiles = false
+		panel.canChooseDirectories = true
+		panel.allowsMultipleSelection = false
+		NSApplication.shared.activate(ignoringOtherApps: true)
+		guard panel.runModal() == .OK, let chosen = panel.url else { return false }
+		// The folder, or one holding it, however either is spelled (/tmp is
+		// /private/tmp).
+		let chosenPath = chosen.resolvingSymlinksInPath().standardizedFileURL.path
+		let folderPath = folder.resolvingSymlinksInPath().standardizedFileURL.path
+		guard folderPath == chosenPath || folderPath.hasPrefix(chosenPath.hasSuffix("/") ? chosenPath : chosenPath + "/") else {
+			Alerts.show(
+				title: "Not That Folder",
+				message: "Choose the folder that holds \u{201C}\(url.lastPathComponent)\u{201D}, or one that contains it.",
+				buttons: ["OK"])
+			return false
+		}
+		guard MediaLibrary.grantAccess(to: chosen.path) else {
+			Alerts.show(
+				title: "Cannot Keep Access",
+				message: "Amiberry could not keep access to \u{201C}\(chosen.path)\u{201D} for later launches, so the image was not used.",
+				buttons: ["OK"])
+			return false
+		}
+		return true
 	}
 
 	/// ROM files, or folders of them, to import; empty when cancelled.

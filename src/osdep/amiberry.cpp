@@ -4237,6 +4237,9 @@ static void handle_drop_file_event(const SDL_Event& event)
 {
 	const char* dropped_file = event.drop.data;
 	const auto ext = get_filename_extension(dropped_file);
+	// A drop grants a Mac App Store build the file for this run only; the
+	// bookmark keeps it usable after a restart (a no-op elsewhere).
+	macos_bookmark_store(dropped_file);
 
 	if (strcasecmp(ext.c_str(), ".uae") == 0 || strcasecmp(ext.c_str(), ".rp9") == 0)
 	{

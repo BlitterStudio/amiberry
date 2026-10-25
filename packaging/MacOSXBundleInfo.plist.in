@@ -32,6 +32,7 @@
         <true/>
         <key>NSHumanReadableCopyright</key>
         <string>${MACOSX_BUNDLE_COPYRIGHT}</string>
+        ${AMIBERRY_MACOS_STORE_PLIST_KEYS}
         <key>LSApplicationCategoryType</key>
         <string>public.app-category.games</string>
 		<key>CFBundleDocumentTypes</key>

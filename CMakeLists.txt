@@ -214,7 +214,14 @@ if(MACOS_APP_STORE)
     add_compile_definitions(MACOS_APP_STORE)
     set(USE_LIBSERIALPORT OFF CACHE BOOL "Serial port not available in App Store sandbox" FORCE)
     set(USE_IPC_SOCKET OFF CACHE BOOL "IPC socket not available in App Store sandbox" FORCE)
-    message(STATUS "Mac App Store build enabled: sandbox entitlements, serial/IPC disabled")
+    # FFmpeg brings its own OpenSSL, which the App Store's export compliance
+    # counts as non-exempt encryption; the store build goes without genlock
+    # video files and the ZZ9000 SDK's media codecs.
+    set(USE_FFMPEG OFF CACHE BOOL "FFmpeg is left out of Mac App Store builds" FORCE)
+    # Only the system's encryption is left (curl's HTTPS): exempt.
+    set(AMIBERRY_MACOS_STORE_PLIST_KEYS "<key>ITSAppUsesNonExemptEncryption</key>
+        <false/>")
+    message(STATUS "Mac App Store build enabled: sandbox entitlements, serial/IPC/FFmpeg disabled")
 endif()
 
 # Pre-release version suffix

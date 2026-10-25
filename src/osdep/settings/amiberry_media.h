@@ -120,8 +120,9 @@ AMIBERRY_SETTINGS_API amiberry_settings_status amiberry_media_add_recent(amiberr
 
 /*
  * Keeps access to a file or folder the user picked: on a Mac App Store
- * build it stores a security-scoped bookmark (for a file, of its folder) so
- * the path stays usable after a restart. Elsewhere there is nothing to keep
+ * build it stores a security-scoped bookmark (for a file, of its folder
+ * when the app can reach that, else of the file) so the path stays usable
+ * after a restart. Elsewhere there is nothing to keep
  * and it returns true. False when the bookmark could not be stored.
  */
 AMIBERRY_SETTINGS_API bool amiberry_media_grant_access(const char *path);
