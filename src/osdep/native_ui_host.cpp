@@ -45,9 +45,12 @@ void amiberry_native_ui_open_file(const char* path);
 #ifdef AMIBERRY_MACOS
 void amiberry_native_ui_emulation_window(void* nswindow);
 #endif
-#ifdef AMIBERRY_IOS
 void amiberry_native_ui_keyboard_toggle(void);
 void amiberry_native_ui_keyboard_hide(void);
+#ifdef AMIBERRY_MACOS
+bool amiberry_native_ui_keyboard_visible(void);
+#endif
+#ifdef AMIBERRY_IOS
 void amiberry_native_ui_background_task_begin(void);
 void amiberry_native_ui_background_task_end(void);
 void amiberry_native_ui_set_modal_wait_hook(void (*hook)(void));
@@ -223,16 +226,18 @@ void native_host_emulation_window_created(SDL_Window* window)
 
 void native_host_toggle_keyboard()
 {
-#ifdef AMIBERRY_IOS
 	amiberry_native_ui_keyboard_toggle();
+#ifdef AMIBERRY_MACOS
+	// Its keys are clicked: a captured mouse is let go while it shows, and
+	// the emulation runs on to take them ("pause when not captured" aside).
+	if (amiberry_native_ui_keyboard_visible())
+		setmouseinactive_running(0);
 #endif
 }
 
 void native_host_hide_keyboard()
 {
-#ifdef AMIBERRY_IOS
 	amiberry_native_ui_keyboard_hide();
-#endif
 }
 
 std::string native_host_autosave_path()

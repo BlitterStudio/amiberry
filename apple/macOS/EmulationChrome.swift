@@ -58,6 +58,7 @@ final class EmulationChrome: NSObject, NSToolbarDelegate, NSToolbarItemValidatio
 			window.setFrame(window.frameRect(forContentRect: content), display: true)
 		}
 		observeFullScreen(of: window)
+		MacKeyboard.shared.attach(to: window)
 		monitor.start()
 	}
 

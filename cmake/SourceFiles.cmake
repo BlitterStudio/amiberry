@@ -293,7 +293,6 @@ set(SOURCE_FILES
         src/qemuvga/vga.cpp
         src/sounddep/sound.cpp
         src/threaddep/threading.cpp
-        src/osdep/file_dialog.cpp
         src/osdep/settings/settings_chipset.cpp
         src/osdep/settings/settings_memory.cpp
         src/osdep/settings/settings_rom.cpp
@@ -315,9 +314,7 @@ set(SOURCE_FILES
         src/osdep/settings/settings_session.cpp
         src/osdep/settings/settings_sound.cpp
         src/osdep/settings/settings_storage.cpp
-        src/osdep/gui/main_window.cpp
-        src/osdep/imgui_overlay.cpp
-        src/osdep/imgui_osk.cpp
+        src/osdep/gui/gui_shared.cpp
         src/osdep/on_screen_joystick.cpp
         src/osdep/on_screen_joystick_gl.cpp
         src/newcpu.cpp
@@ -485,10 +482,19 @@ set(PCEM_SOURCE_FILES
         src/pcem/x87_timings.cpp
 )
 
-# ImGui GUI (always enabled)
-message(STATUS "Using ImGui for GUI")
-list(APPEND SOURCE_FILES external/ImGuiFileDialog/ImGuiFileDialog.cpp)
-list(APPEND SOURCE_FILES ${IMGUI_GUI_FILES})
+# The ImGui GUI and overlays: everywhere but the native Apple apps.
+if(AMIBERRY_IMGUI)
+    message(STATUS "Using ImGui for GUI")
+    list(APPEND SOURCE_FILES
+            src/osdep/gui/main_window.cpp
+            src/osdep/imgui_overlay.cpp
+            src/osdep/imgui_osk.cpp
+            src/osdep/file_dialog.cpp
+            external/ImGuiFileDialog/ImGuiFileDialog.cpp
+            ${IMGUI_GUI_FILES})
+else()
+    message(STATUS "Built without ImGui: the native Apple UI")
+endif()
 
 if (USE_PCEM)
     message(STATUS "PCem support enabled")
@@ -780,8 +786,9 @@ target_include_directories(${PROJECT_NAME} PRIVATE
         external/floppybridge/src
 )
 
-# ImGui include dirs (always enabled)
-target_include_directories(${PROJECT_NAME} PRIVATE external/imgui external/ImGuiFileDialog)
+if(AMIBERRY_IMGUI)
+    target_include_directories(${PROJECT_NAME} PRIVATE external/imgui external/ImGuiFileDialog)
+endif()
 
 # When bundling SDL3, set RPATH so the binary finds the co-installed shared libs.
 if(BUNDLE_SDL AND CMAKE_SYSTEM_NAME STREQUAL "Linux")

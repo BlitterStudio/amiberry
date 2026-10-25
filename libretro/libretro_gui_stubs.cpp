@@ -15,8 +15,9 @@ void flush_macos_synthetic_mouse_releases() {}
 // The libretro build doesn't include amiberry_gui.cpp, so provide the definition here.
 std::vector<std::string> serial_ports;
 
-// get_json_timestamp / get_xml_timestamp are defined in main_window.cpp (standalone GUI).
-// The libretro build doesn't include main_window.cpp, so provide stubs here.
+// get_json_timestamp / get_xml_timestamp are defined in gui/gui_shared.cpp
+// (the standalone builds). The libretro build doesn't include it, so provide
+// stubs here.
 std::string get_json_timestamp(const std::string& json_filename)
 {
 	(void)json_filename;

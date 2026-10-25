@@ -41,6 +41,7 @@ set_target_properties(amiberry_native_ui PROPERTIES
 # the settings screen, emulation overlay and on-screen keyboard on iOS.
 target_sources(amiberry_native_ui PRIVATE
         apple/Shared/UI/AmigaKeyboard.swift
+        apple/Shared/UI/AmigaKeyboardView.swift
         apple/Shared/UI/AppFiles.swift
         apple/Shared/UI/HostEntryPoints.swift
         apple/Shared/UI/SettingsModel.swift
@@ -53,7 +54,6 @@ target_sources(amiberry_native_ui PRIVATE
 )
 if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
     target_sources(amiberry_native_ui PRIVATE
-            apple/iOS/AmigaKeyboardView.swift
             apple/iOS/EmulationOverlay.swift
             apple/iOS/NativeHost.swift
             apple/iOS/RunningSheet.swift
@@ -62,6 +62,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
 else()
     target_sources(amiberry_native_ui PRIVATE
             apple/macOS/EmulationChrome.swift
+            apple/macOS/MacKeyboard.swift
             apple/macOS/MainMenu.swift
             apple/macOS/NativeHost.swift
             apple/macOS/SettingsWindow.swift

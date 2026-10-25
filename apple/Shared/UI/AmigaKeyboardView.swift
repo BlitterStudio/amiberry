@@ -35,6 +35,9 @@ struct KeyboardOptions: Equatable {
 struct AmigaKeyboardView: View {
 	let model: AmigaKeyboardModel
 	let options: KeyboardOptions
+	/// The tallest it gets: on iOS half the screen at most, so the
+	/// emulation stays in view.
+	var maxHeight: CGFloat = 280
 
 	private static let gap: CGFloat = 4
 	private static let separation: CGFloat = 10
@@ -67,8 +70,7 @@ struct AmigaKeyboardView: View {
 			.padding(Self.gap)
 			.frame(width: geometry.size.width, height: geometry.size.height)
 		}
-		// At most half the screen, so the emulation stays in view.
-		.frame(maxHeight: min(280, UIScreen.main.bounds.height / 2))
+		.frame(maxHeight: maxHeight)
 		.background(.ultraThinMaterial)
 		.opacity(options.opacity)
 	}

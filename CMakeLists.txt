@@ -13,6 +13,14 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE BOOL "Export compile_commands.json")
 # UI, which targets the oldest systems with Swift Observation (iOS 17.0 /
 # macOS 14.0). macOS without the native UI keeps the platform default.
 option(AMIBERRY_NATIVE_APPLE_UI "Build the native Apple UI layer (Swift) into the app; macOS and iOS only" OFF)
+# The built-in ImGui GUI and its overlays (the on-screen keyboard, the
+# overlay frame): the native Apple apps have their own and build without
+# ImGui; every other build has it.
+if(AMIBERRY_NATIVE_APPLE_UI)
+    set(AMIBERRY_IMGUI OFF)
+else()
+    set(AMIBERRY_IMGUI ON)
+endif()
 if(NOT DEFINED CMAKE_OSX_DEPLOYMENT_TARGET)
     if(DEFINED CMAKE_SYSTEM_NAME AND CMAKE_SYSTEM_NAME STREQUAL "iOS")
         if(AMIBERRY_NATIVE_APPLE_UI)
@@ -82,6 +90,9 @@ option(WITH_PGO_USE      "Use profile data for Profile-Guided Optimization" OFF)
 option(WITH_OPTIMIZE     "Enable native CPU optimizations" OFF)
 option(BUNDLE_SDL        "Bundle SDL3 shared libraries into the package (for distros without SDL3)" OFF)
 # Native Apple UI is Apple-only; validated after project() sets APPLE/IOS.
+if(AMIBERRY_NATIVE_APPLE_UI AND USE_VULKAN)
+    message(FATAL_ERROR "AMIBERRY_NATIVE_APPLE_UI builds without ImGui, which the Vulkan renderer's overlay needs: build it with USE_VULKAN=OFF")
+endif()
 if(AMIBERRY_NATIVE_APPLE_UI AND NOT APPLE)
     message(FATAL_ERROR "AMIBERRY_NATIVE_APPLE_UI requires an Apple platform (macOS or iOS)")
 endif()

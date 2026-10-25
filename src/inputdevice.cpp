@@ -5680,7 +5680,7 @@ static bool inputdevice_handle_inputcode2(int monid, int code, int state, const 
 		break;
 	case AKS_OSK:
 		if (vkbd_allowed(0)) {
-#if defined(AMIBERRY_NATIVE_HOST) && defined(AMIBERRY_IOS)
+#if defined(AMIBERRY_NATIVE_HOST)
 			native_host_toggle_keyboard();
 #else
 			imgui_osk_toggle();

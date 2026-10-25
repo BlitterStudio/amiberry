@@ -6,6 +6,7 @@ struct SDL_Renderer;
 struct ImFont;
 struct ImDrawData;
 
+#ifndef AMIBERRY_NO_IMGUI
 // Initialize the overlay ImGui context for rendering on top of the emulation display.
 // Call after the display and renderer context are fully set up.
 // gl_context may be nullptr if using SDL renderer backend.
@@ -51,5 +52,19 @@ bool imgui_overlay_is_vulkan();
 // Access the overlay fonts (returns nullptr if not initialized).
 ImFont* imgui_overlay_get_font();
 ImFont* imgui_overlay_get_font_small();
+#else
+// Built without ImGui (the native Apple apps): no overlay context; frames
+// begin and end with nothing drawn.
+inline void imgui_overlay_init(SDL_Window*, SDL_Renderer*, void*) {}
+inline void imgui_overlay_shutdown() {}
+inline bool imgui_overlay_is_initialized() { return false; }
+inline void imgui_overlay_begin_frame() {}
+inline void imgui_overlay_end_frame() {}
+inline ImDrawData* imgui_overlay_get_draw_data() { return nullptr; }
+inline void imgui_overlay_restore_context() {}
+inline bool imgui_overlay_is_vulkan() { return false; }
+inline ImFont* imgui_overlay_get_font() { return nullptr; }
+inline ImFont* imgui_overlay_get_font_small() { return nullptr; }
+#endif // AMIBERRY_NO_IMGUI
 
 #endif // IMGUI_OVERLAY_H

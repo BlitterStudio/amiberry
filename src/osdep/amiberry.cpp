@@ -2087,6 +2087,17 @@ void setmouseactive(const int monid, const int active)
 	setcursorshape(monid);
 }
 
+void setmouseinactive_running(const int monid)
+{
+	AmigaMonitor* mon = &AMonitors[monid];
+	monitor_off = 0;
+	clear_pending_mouse_capture();
+	if (osdep_platform_require_window_for_mouse() && !mon->amiga_window)
+		return;
+	setmouseactive2(mon, 0, false);
+	setcursorshape(monid);
+}
+
 static void amiberry_active(const AmigaMonitor* mon, const int is_minimized)
 {
 	monitor_off = 0;
@@ -4401,7 +4412,7 @@ static void process_event(const SDL_Event& event)
 			if (on_screen_joystick_keyboard_tapped()) {
 				if (vkbd_allowed(0)) {
 					neutralize_touch_controls();
-#if defined(AMIBERRY_NATIVE_HOST) && defined(AMIBERRY_IOS)
+#if defined(AMIBERRY_NATIVE_HOST)
 					native_host_toggle_keyboard();
 #else
 					imgui_osk_toggle();
