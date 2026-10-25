@@ -24,12 +24,17 @@ struct SettingsRootView: View {
 			}
 			.navigationSplitViewColumnWidth(min: 190, ideal: 210)
 		} detail: {
-			if search.trimmingCharacters(in: .whitespaces).isEmpty {
-				PageView(page: model.page, model: model)
-					.navigationTitle(model.page.title)
-			} else {
-				SearchResultsView(query: search, store: model.store)
-					.navigationTitle("Search")
+			Group {
+				if search.trimmingCharacters(in: .whitespaces).isEmpty {
+					PageView(page: model.page, model: model)
+						.navigationTitle(model.page.title)
+				} else {
+					SearchResultsView(query: search, store: model.store)
+						.navigationTitle("Search")
+				}
+			}
+			.safeAreaInset(edge: .top, spacing: 0) {
+				ApplyBanner(model: model)
 			}
 		}
 		.searchable(text: $search, placement: .sidebar, prompt: "Search all settings")
@@ -161,6 +166,13 @@ struct OptionRow: View {
 				.disabled(!available)
 			if !available, let constraint = descriptor.constraint {
 				Text(constraint).font(.caption).foregroundStyle(.secondary)
+			}
+			// What the emulator's checks will make of the value, where it is
+			// set (the footer lists them all, for the other pages').
+			if let adjustment = store.adjustments.first(where: { $0.optionID == descriptor.id }) {
+				Text(adjustment.sentence(for: descriptor, named: false))
+					.font(.caption)
+					.foregroundStyle(.orange)
 			}
 		}
 		.help(descriptor.help)
@@ -480,12 +492,73 @@ struct MountSections: View {
 	}
 }
 
+/// Over a running emulation, what the edits wait for: a reset or a restart
+/// brings them in. A restart covers a reset's too.
+struct ApplyBanner: View {
+	let model: SettingsWindowModel
+
+	var body: some View {
+		let waiting = model.waiting
+		let restart = (waiting[.restart] ?? []).map(\.label) + (model.boardsWaitForRestart ? ["Expansion boards"] : [])
+		let reset = (waiting[.reset] ?? []).map(\.label)
+		if !restart.isEmpty || !reset.isEmpty {
+			HStack(alignment: .firstTextBaseline, spacing: 10) {
+				Image(systemName: restart.isEmpty ? "arrow.counterclockwise.circle" : "arrow.triangle.2.circlepath.circle")
+					.foregroundStyle(.orange)
+					.accessibilityHidden(true)
+				VStack(alignment: .leading, spacing: 2) {
+					Text(restart.isEmpty ? "These changes take effect at a reset" : "These changes take effect when the machine restarts")
+						.font(.headline)
+					Text((restart + reset).joined(separator: ", "))
+						.foregroundStyle(.secondary)
+						.lineLimit(2)
+				}
+				.accessibilityElement(children: .combine)
+				Spacer(minLength: 8)
+				if restart.isEmpty {
+					Button("Reset Now") { model.reset() }
+						.accessibilityIdentifier("apply.reset")
+				} else {
+					Button("Restart Now") { model.restart() }
+						.accessibilityIdentifier("apply.restart")
+				}
+			}
+			.padding(.horizontal, 16)
+			.padding(.vertical, 10)
+			// Tinted bar material: the page scrolls under it, as under the
+			// footer, and must not show through.
+			.background(Color.orange.opacity(0.12))
+			.background(.bar)
+		}
+	}
+}
+
+extension SettingAdjustment {
+	/// "CPU model will be 68020 (A1200): …", or without the name next to
+	/// the option itself.
+	func sentence(for descriptor: SettingDescriptor?, named: Bool) -> String {
+		let value = descriptor?.displayValue(adjusted) ?? adjusted
+		let head = named ? "\(descriptor?.label ?? optionID) will be \(value)" : "Will be \(value)"
+		return head + (reason.map { ": \($0)" } ?? "")
+	}
+}
+
+extension SettingDescriptor {
+	/// A value as the controls show it: a choice's label, on or off.
+	func displayValue(_ value: String) -> String {
+		switch kind {
+		case .bool: return value == "true" ? "on" : "off"
+		case .choice: return choices.first { $0.value == value }?.label ?? value
+		default: return value
+		}
+	}
+}
+
 struct FooterView: View {
 	let model: SettingsWindowModel
 	@State private var saving = false
 
 	var body: some View {
-		let waiting = model.waiting
 		HStack(alignment: .center, spacing: 10) {
 			VStack(alignment: .leading, spacing: 2) {
 				if let error = model.store.lastError {
@@ -494,16 +567,8 @@ struct FooterView: View {
 					Text(notice).foregroundStyle(.red)
 				}
 				ForEach(model.store.adjustments) { adjustment in
-					let label = SettingsCatalog.descriptor(for: adjustment.optionID)?.label ?? adjustment.optionID
-					Text("\(label) will be \(adjustment.adjusted)\(adjustment.reason.map { ": \($0)" } ?? "")")
+					Text(adjustment.sentence(for: SettingsCatalog.descriptor(for: adjustment.optionID), named: true))
 						.foregroundStyle(.orange)
-				}
-				if let reset = waiting[.reset], !reset.isEmpty {
-					Text("Waiting for a reset: \(reset.map(\.label).joined(separator: ", "))").foregroundStyle(.secondary)
-				}
-				let restartLabels = (waiting[.restart] ?? []).map(\.label) + (model.boardsWaitForRestart ? ["Expansion boards"] : [])
-				if !restartLabels.isEmpty {
-					Text("Waiting for a restart: \(restartLabels.joined(separator: ", "))").foregroundStyle(.secondary)
 				}
 			}
 			.font(.callout)
@@ -523,9 +588,6 @@ struct FooterView: View {
 			Button("Save\u{2026}") { saving = true }
 				.accessibilityIdentifier("editor.save")
 			if model.emulating {
-				if !(waiting[.restart] ?? []).isEmpty || model.boardsWaitForRestart {
-					Button("Restart") { model.restart() }
-				}
 				Button("Reset") { model.reset() }
 				Button("Resume") { model.startOrResume() }
 					.keyboardShortcut(.defaultAction)

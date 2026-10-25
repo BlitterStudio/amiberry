@@ -47,6 +47,18 @@ final class SettingsPagesTests: XCTestCase {
 		XCTAssertEqual(SettingsPage.visibleEntries(ids) { _ in true }, ids, "all filled: no row past the last")
 	}
 
+	func testAdjustmentsReadAsTheControlsShowValues() throws {
+		let cpu = try XCTUnwrap(SettingsCatalog.descriptor(for: "cpu_model"))
+		let choice = try XCTUnwrap(cpu.choices.first { $0.value != $0.label }, "a choice whose label is not its value")
+		let adjusted = SettingAdjustment(optionID: cpu.id, requested: "", adjusted: choice.value, reason: "Needs a 32-bit CPU")
+		XCTAssertEqual(adjusted.sentence(for: cpu, named: true), "\(cpu.label) will be \(choice.label): Needs a 32-bit CPU")
+		XCTAssertEqual(adjusted.sentence(for: cpu, named: false), "Will be \(choice.label): Needs a 32-bit CPU")
+		let toggle = try XCTUnwrap(SettingsCatalog.descriptors.first { $0.kind == .bool })
+		let off = SettingAdjustment(optionID: toggle.id, requested: "true", adjusted: "false", reason: nil)
+		XCTAssertEqual(off.sentence(for: toggle, named: true), "\(toggle.label) will be off")
+		XCTAssertEqual(off.sentence(for: nil, named: true), "\(toggle.id) will be false", "an option the catalogue lacks reads raw")
+	}
+
 	func testEveryPageRendersEveryOption() throws {
 		let model = try SettingsWindowModel(emulating: false, dismiss: {}, post: { _ in true })
 		for page in SettingsPage.sidebar {
