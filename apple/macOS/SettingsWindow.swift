@@ -48,7 +48,7 @@ final class SettingsPresenter: NSObject, NSWindowDelegate {
 				self?.showEditor(emulating: false, machine: machine, preset: preset)
 			})
 		let window = libraryWindow ?? makeWindow(autosave: "AmiberryLibrary", size: NSSize(width: 860, height: 560))
-		window.contentViewController = NSHostingController(rootView: LibraryView(model: library))
+		window.contentViewController = NSHostingController(rootView: LibraryView(model: library).windowSize(.library))
 		window.title = "Amiberry"
 		libraryWindow = window
 		self.library = library
@@ -72,7 +72,7 @@ final class SettingsPresenter: NSObject, NSWindowDelegate {
 			model.startNewMachine(preset: preset.id, configuration: preset.configuration)
 		}
 		let window = self.window ?? makeWindow(autosave: "AmiberrySettings", size: NSSize(width: 900, height: 620))
-		window.contentViewController = NSHostingController(rootView: SettingsRootView(model: model))
+		window.contentViewController = NSHostingController(rootView: SettingsRootView(model: model).windowSize(.editor))
 		window.title = emulating ? "Amiberry Settings" : (machine?.name ?? "New Machine")
 		self.window = window
 		self.model = model
@@ -150,7 +150,7 @@ final class AppSettingsWindow: NSObject, NSWindowDelegate {
 
 	func show() {
 		let window = self.window ?? makeWindow()
-		window.contentViewController = NSHostingController(rootView: AppSettingsView(model: AppSettingsModel()))
+		window.contentViewController = NSHostingController(rootView: AppSettingsView(model: AppSettingsModel()).windowSize(.appSettings))
 		self.window = window
 		NSApplication.shared.activate(ignoringOtherApps: true)
 		window.makeKeyAndOrderFront(nil)
@@ -178,5 +178,25 @@ final class AppSettingsWindow: NSObject, NSWindowDelegate {
 		window.animationBehavior = .none
 		window.delegate = self
 		return window
+	}
+}
+
+/// The windows' sizes. A hosting controller sizes its window to the SwiftUI
+/// view's ideal size, each time its content is set: without one of their
+/// own, the Library came up taller than the screen and came back from an
+/// emulation 300 points wide.
+struct WindowSize {
+	let min: NSSize
+	let ideal: NSSize
+
+	static let library = WindowSize(min: NSSize(width: 720, height: 480), ideal: NSSize(width: 860, height: 560))
+	static let editor = WindowSize(min: NSSize(width: 720, height: 480), ideal: NSSize(width: 900, height: 620))
+	static let appSettings = WindowSize(min: NSSize(width: 520, height: 400), ideal: NSSize(width: 640, height: 600))
+}
+
+extension View {
+	func windowSize(_ size: WindowSize) -> some View {
+		frame(minWidth: size.min.width, idealWidth: size.ideal.width, maxWidth: .infinity,
+			minHeight: size.min.height, idealHeight: size.ideal.height, maxHeight: .infinity)
 	}
 }
