@@ -237,6 +237,19 @@ set(PROJECT_COMPANY_NAME "BlitterStudio")
 set(PROJECT_COMPANY_NAMESPACE "com.blitterstudio")
 file(WRITE "${CMAKE_BINARY_DIR}/amiberry-product-version.txt" "${AMIBERRY_PRODUCT_VERSION}\n")
 
+# Which catalogue distribution the Apple licences screen shows. The source
+# offer itself is generated at build time by cmake/SourceOffer.cmake, so it
+# always names the revision this binary was actually built from.
+if(IOS)
+    set(AMIBERRY_DISTRIBUTION "ios")
+elseif(MACOS_APP_STORE)
+    set(AMIBERRY_DISTRIBUTION "macos-store")
+elseif(APPLE)
+    set(AMIBERRY_DISTRIBUTION "macos")
+else()
+    set(AMIBERRY_DISTRIBUTION "other")
+endif()
+
 # FreeBSD-specific paths and libraries
 if(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
     list(APPEND AMIBERRY_PLATFORM_LINK_DIRS /usr/local/lib)

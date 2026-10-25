@@ -46,6 +46,11 @@ final class MenuCommands: NSObject, NSMenuItemValidation {
 				appMenu.insertItem(settings, at: index)
 				appMenu.insertItem(.separator(), at: index + 1)
 			}
+			if appMenu.items.contains(where: { $0.title == "Acknowledgements\u{2026}" }) == false {
+				let acknowledgements = item("Acknowledgements\u{2026}", #selector(openAcknowledgements(_:)))
+				let settingsIndex = appMenu.items.firstIndex { $0.action == #selector(openAppSettings(_:)) }
+				appMenu.insertItem(acknowledgements, at: (settingsIndex ?? appMenu.items.count - 1) + 1)
+			}
 		}
 
 		let emulation = NSMenu(title: MenuCommands.emulationTitle)
@@ -107,6 +112,8 @@ final class MenuCommands: NSObject, NSMenuItemValidation {
 	@objc func openSettings(_ sender: Any?) { post(.openSettings) }
 
 	@objc func openAppSettings(_ sender: Any?) { AppSettingsWindow.shared.show() }
+
+	@objc func openAcknowledgements(_ sender: Any?) { AcknowledgementsWindow.shared.show() }
 
 	@objc func togglePause(_ sender: Any?) {
 		post(runState() == .paused ? .resume : .pause)

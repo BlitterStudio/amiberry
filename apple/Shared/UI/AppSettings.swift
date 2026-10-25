@@ -109,6 +109,17 @@ struct AppSettingsView: View {
 					}
 				}
 			}
+			#if os(iOS)
+			Section {
+				NavigationLink {
+					LicencesView()
+						.navigationTitle("About & Licences")
+				} label: {
+					Label("About & Licences", systemImage: "info.circle")
+				}
+				.accessibilityIdentifier("settings.licences")
+			}
+			#endif
 		}
 		.formStyle(.grouped)
 		.onAppear { model.reload() }

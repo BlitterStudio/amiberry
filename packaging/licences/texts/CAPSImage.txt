@@ -1,0 +1,85 @@
+KryoFlux Products & Services Limited
+57 Warburton Road
+Twickenham, England TW2 6EW
+
+Non-Commercial Source Code License
+
+Copyright (c) 2002-2026 KryoFlux Products & Services Limited
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to use,
+copy, modify, and distribute the Software, subject to the following terms and
+conditions:
+
+1. Definitions
+
+"Commercial use" means any use of the Software primarily intended for or
+directed toward commercial advantage or monetary compensation, including but
+not limited to use in connection with a paid product, paid service, internal
+business operations, or any activity performed for the benefit of a business
+or organization in exchange for compensation.
+
+"Research use" means use of the Software for scholarly, scientific, technical,
+or experimental investigation, including reproducible research and evaluation,
+provided such use is not primarily intended for commercial advantage.
+
+"Educational use" means use of the Software for teaching, learning, academic
+instruction, coursework, classroom demonstrations, or other non-commercial
+educational activities.
+
+2. Grant of Rights
+
+Subject to compliance with this license, the copyright holder grants you a
+limited, non-exclusive, non-transferable, and revocable license to use, copy,
+modify, and distribute the Software solely for non-commercial, research, and
+educational purposes.
+
+3. Restrictions
+
+You may not:
+
+a. use the Software for any commercial purpose without prior written permission
+   from the copyright holder;
+
+b. sublicense, sell, lease, rent, or otherwise commercially exploit the
+   Software or any derivative work thereof;
+
+c. remove or alter any copyright, license, or attribution notices included with
+   the Software;
+
+d. distribute the Software or derivative works except in compliance with this
+   license.
+
+4. Redistribution
+
+You may redistribute the Software, with or without modifications, provided that
+this license text and all applicable copyright notices are included in all
+copies or substantial portions of the Software.
+
+5. Warranty Disclaimer
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT.
+
+6. Limitation of Liability
+
+IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES, OR
+OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE,
+ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
+
+7. Termination
+
+Any violation of this license automatically terminates the rights granted under
+this license. Upon termination, you must cease all use and distribution of the
+Software and any derivative works, except to the extent required by applicable
+law.
+
+8. Governing Law
+
+This license shall be governed by and construed in accordance with the laws of
+England and Wales, without regard to its conflict of laws principles.
+
+v1.00
+2026-05-28

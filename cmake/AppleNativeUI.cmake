@@ -52,6 +52,7 @@ target_sources(amiberry_native_ui PRIVATE
         apple/Shared/UI/AppSettings.swift
         apple/Shared/UI/DesignedPages.swift
         apple/Shared/UI/ReportedActions.swift
+        apple/Shared/UI/Licences.swift
 )
 if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
     target_sources(amiberry_native_ui PRIVATE
@@ -67,6 +68,7 @@ else()
             apple/macOS/MainMenu.swift
             apple/macOS/NativeHost.swift
             apple/macOS/SettingsWindow.swift
+            apple/macOS/AcknowledgementsWindow.swift
     )
 endif()
 target_sources(${PROJECT_NAME} PRIVATE src/osdep/native_ui_host.cpp)
@@ -115,6 +117,7 @@ if(AMIBERRY_NATIVE_UI_TESTS)
             apple/Tests/MacOSHostTests.swift
             apple/Tests/NativeUIBridgeTests.swift
             apple/Tests/SharedUITests.swift
+            apple/Tests/LicencesCatalogueTests.swift
             apple/Tests/TestRunner.swift
     )
     # The macOS front end's types are internal; the tests use @testable import.
