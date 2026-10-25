@@ -2142,6 +2142,14 @@ static void show_message(const char* text, unsigned duration_ms = 2000,
 	}
 }
 
+// WHDLoad/JST are not bundled with the core and it cannot download them:
+// this tells the user where the missing tool belongs (called from
+// amiberry_whdbooter.cpp).
+void libretro_show_whdboot_message(const char* text)
+{
+	show_message(text, 6000, RETRO_LOG_WARN);
+}
+
 static void notify_disk_change()
 {
 	if (disk_ejected) {

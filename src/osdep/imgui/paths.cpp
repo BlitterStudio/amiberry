@@ -82,7 +82,7 @@ static void start_whdboot_download()
 	s_whdboot_dl_now.store(0);
 	s_whdboot_dl_total.store(0);
 	s_whdboot_step.store(0);
-	s_whdboot_step_count.store(10);
+	s_whdboot_step_count.store(6);
 	{
 		std::lock_guard<std::mutex> lock(s_whdboot_mutex);
 		s_whdboot_status = "Starting...";
@@ -122,6 +122,11 @@ static void start_whdboot_download()
 			else if (result.outcome == whdboot_download_outcome::partial_failure)
 			{
 				s_whdboot_result_msg = "Some files failed to download.\nPlease check the log for details.";
+				s_whdboot_result_is_error = true;
+			}
+			else if (result.outcome == whdboot_download_outcome::busy)
+			{
+				s_whdboot_result_msg = "Another WHDBooter download is already running,\nor the machine is running. Stop it and try again.";
 				s_whdboot_result_is_error = true;
 			}
 			else
@@ -826,6 +831,12 @@ void render_panel_paths()
 		if (any_downloading)
 			ImGui::EndDisabled();
 	}
+
+	ImGui::Spacing();
+	ImGui::TextWrapped("WHDLoad by Bert Jahn is fetched from whdload.de; the kickstart "
+		"RTB files and JST from Aminet; AmiQuit, boot-data.zip and the WHDLoad "
+		"game database from the Amiberry project. WHDLoad, JST and the RTB files "
+		"are not bundled with Amiberry.");
 
 	const bool show_download_status =
 		s_whdboot_downloading.load() || s_whdboot_complete.load() || s_whdboot_failed.load()

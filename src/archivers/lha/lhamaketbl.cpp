@@ -27,8 +27,14 @@ void lha_make_table(short nchar, unsigned char bitlen[], short tablebits, unsign
 	}
 
 	/* count */
-	for (i = 0; i < nchar; i++)
+	for (i = 0; i < nchar; i++) {
+		/* count[] has 17 slots: a corrupt archive may carry any byte here. */
+		if (bitlen[i] > 16) {
+			error(_T("make_table()"), _T("Bad table (1)\n"));
+			return;
+		}
 		count[bitlen[i]]++;
+	}
 
 	/* calculate first code */
 	total = 0;
@@ -36,8 +42,10 @@ void lha_make_table(short nchar, unsigned char bitlen[], short tablebits, unsign
 		start[i] = total;
 		total += weight[i] * count[i];
 	}
-	if ((total & 0xffff) != 0)
+	if ((total & 0xffff) != 0) {
 		error(_T("make_table()"), _T("Bad table (5)\n"));
+		return;
+	}
 
 	/* shift data for make table. */
 	m = 16 - tablebits;
@@ -49,6 +57,9 @@ void lha_make_table(short nchar, unsigned char bitlen[], short tablebits, unsign
 	/* initialize */
 	j = start[tablebits + 1] >> m;
 	k = 1 << tablebits;
+	if (j > k)
+		j = k; /* a corrupt table can point past its end */
+	const int tblsize = k; /* k is reused as a bit length below */
 	if (j != 0)
 		for (i = j; i < k; i++)
 			table[i] = 0;
@@ -61,17 +72,29 @@ void lha_make_table(short nchar, unsigned char bitlen[], short tablebits, unsign
 		l = start[k] + weight[k];
 		if (k <= tablebits) {
 			/* code in table */
+			if (l > tblsize) { /* would write past table[] */
+					error(_T("make_table()"), _T("Bad table (6)\n"));
+				return;
+			}
 			for (i = start[k]; i < l; i++)
 				table[i] = j;
 		}
 		else {
 			/* code not in table */
+			if (start[k] >> (16 - tablebits) >= tblsize) { /* would point past table[] */
+					error(_T("make_table()"), _T("Bad table (7)\n"));
+				return;
+			}
 			p = &table[(i = start[k]) >> m];
 			i <<= tablebits;
 			n = k - tablebits;
 			/* make tree (n length) */
 			while (--n >= 0) {
 				if (*p == 0) {
+					if (avail >= 2 * NC - 1) { /* would write past the tree */
+						error(_T("make_table()"), _T("Bad table (8)\n"));
+						return;
+					}
 					h_right[avail] = h_left[avail] = 0;
 					*p = avail++;
 				}

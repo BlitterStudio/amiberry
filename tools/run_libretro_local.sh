@@ -107,7 +107,7 @@ cfg="$test_root/retroarch-test.cfg"
 
 mkdir -p "$kick_dir" "$save_dir/Amiberry" "$state_dir/Amiberry" "$content_dir" "$log_dir"
 
-if [[ "$refresh_assets" -eq 1 || ! -e "$system_dir/whdboot/WHDLoad" ]]; then
+if [[ "$refresh_assets" -eq 1 || ! -e "$system_dir/whdboot/boot-data.zip" ]]; then
 	rm -rf "$system_dir/whdboot"
 	cp -R "$repo_root/whdboot" "$system_dir/"
 fi

@@ -104,6 +104,9 @@ struct AppSettingsView: View {
 					ForEach(HostSettings.all.filter { $0.group == group.id }) { setting in
 						HostSettingRow(setting: setting, model: model)
 					}
+					if group.id == "global_whdload" {
+						WHDBootFilesRow()
+					}
 				}
 			}
 		}
@@ -201,6 +204,116 @@ struct HostSettingRow: View {
 		}
 		if let path, model.set(path, for: setting) {
 			draft = path
+		}
+	}
+}
+
+/// The WHDLoad group's on-demand files: WHDLoad by Bert Jahn (whdload.de),
+/// the kickstart RTB files (Aminet) and JST (Aminet) are not bundled with
+/// Amiberry — their licences forbid redistribution — so this downloads or
+/// updates them, with progress and cancellation, as the Paths panel's
+/// "Update WHDBooter files" button does.
+@MainActor
+@Observable
+private final class WHDBootFilesModel {
+	private(set) var status = WHDBootTools.status()
+	private(set) var running = false
+	private(set) var progressText: String?
+	private(set) var resultText: String?
+
+	/// One download at a time, shared with the Library: a second start (or
+	/// one while a machine runs) is refused with a reason.
+	func start() {
+		guard !running else { return }
+		guard let task = WHDBootDownloadController.shared.start(onProgress: { [weak self]
+			label, step, totalSteps, bytesDone, bytesTotal in
+			let text = WHDBootTools.progressText(label: label, step: step, totalSteps: totalSteps,
+				bytesDone: bytesDone, bytesTotal: bytesTotal)
+			Task { @MainActor in
+				self?.progressText = text
+			}
+		}) else {
+			resultText = WHDBootTools.status().emulationRunning
+				? "Stop the machine to download the WHDBooter files."
+				: "A WHDBooter download is already in progress."
+			return
+		}
+		running = true
+		progressText = nil
+		resultText = nil
+		Task { @MainActor in
+			finish(await task.value)
+		}
+	}
+
+	func cancel() {
+		WHDBootDownloadController.shared.cancel()
+	}
+
+	private func finish(_ outcome: WHDBootDownloadOutcome) {
+		running = false
+		status = WHDBootTools.status()
+		switch outcome {
+		case .success:
+			progressText = nil
+			resultText = "WHDBooter files updated."
+		case .partialFailure:
+			progressText = nil
+			resultText = "Some WHDBooter files failed to download. Check the log for details."
+		case .failure:
+			progressText = nil
+			resultText = "The WHDBooter files could not be downloaded. Check the log for details."
+		case .cancelled:
+			progressText = nil
+			resultText = "Download cancelled."
+		case .unavailable:
+			progressText = nil
+			resultText = "Downloads are not available in this build."
+		case .busy:
+			progressText = nil
+			resultText = "Another WHDBooter download is already running, or the machine is running."
+		}
+	}
+}
+
+private struct WHDBootFilesRow: View {
+	@State private var model = WHDBootFilesModel()
+
+	/// A machine that runs unpaused holds the archive state the download
+	/// uses (a paused machine, held by this settings window, is fine).
+	private var machineRunning: Bool {
+		WHDBootTools.status().emulationRunning
+	}
+
+	var body: some View {
+		VStack(alignment: .leading, spacing: 8) {
+			HStack {
+				Button(model.status.whdloadInstalled ? "Update WHDLoad Files" : "Download WHDLoad Files…") {
+					model.start()
+				}
+				.disabled(model.running || machineRunning)
+				if model.running {
+					Button("Cancel") { model.cancel() }
+					Spacer()
+					ProgressView()
+						.help("Downloading the WHDBooter files")
+				}
+			}
+			if machineRunning && !model.running {
+				Text("Stop the machine to download the WHDBooter files.")
+					.font(.footnote)
+					.foregroundStyle(.secondary)
+			}
+			if let progress = model.progressText {
+				Text(progress).font(.footnote).foregroundStyle(.secondary)
+			} else if let result = model.resultText {
+				Text(result).font(.footnote).foregroundStyle(.secondary)
+			}
+			Text("WHDLoad by Bert Jahn — whdload.de. Kickstart RTB files and JST — Aminet. "
+				+ "AmiQuit, the boot disk and the game database — the Amiberry project. "
+				+ "WHDLoad, JST and the RTB files are not bundled with Amiberry.")
+				.font(.footnote)
+				.foregroundStyle(.secondary)
 		}
 	}
 }

@@ -499,3 +499,40 @@ final class MediaLibraryTests: XCTestCase {
 		XCTAssertTrue(MediaLibrary.grantAccess(to: disk.path))
 	}
 }
+
+/// The on-demand WHDBoot tools (WHDLoad, JST, the kickstart RTB files) are
+/// not bundled with Amiberry: on this isolated home their status reads as
+/// not installed, while the API itself answers through the bridge.
+@MainActor
+final class WHDBootToolsTests: XCTestCase {
+	func testStatusReportsTheOnDemandToolsAsNotBundled() {
+		let status = WHDBootTools.status()
+		XCTAssertGreaterThanOrEqual(WHDBootTools.apiVersion, 1)
+		XCTAssertFalse(status.whdloadInstalled, "WHDLoad is not bundled with Amiberry")
+		XCTAssertFalse(status.jstInstalled, "JST is not bundled with Amiberry")
+	}
+	/// Quick play of a disk needs none of the on-demand WHDBoot tools: with
+	/// WHDLoad (and JST) not installed — they are not bundled — a floppy
+	/// quick play still runs; only a WHDLoad archive (.lha) is gated on them.
+	func testQuickPlayOfADiskNeverNeedsTheTools() throws {
+		var folder = FileManager.default.temporaryDirectory
+		folder.appendPathComponent("bridge-whd-adf-\(UUID().uuidString)")
+		try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+		defer { try? FileManager.default.removeItem(at: folder) }
+		XCTAssertFalse(WHDBootTools.status().whdloadInstalled, "WHDLoad is not bundled with Amiberry")
+		XCTAssertFalse(WHDBootTools.status().jstInstalled, "JST is not bundled with Amiberry")
+
+		let disk = folder.appendingPathComponent("Quick Disk.adf").path
+		FileManager.default.createFile(atPath: disk, contents: Data(count: 901_120))
+		let floppy = try XCTUnwrap(EmulatorActions.post(.quickPlay(path: disk)))
+		ActionPump.runPending()
+		XCTAssertEqual(floppy.poll(), .done)
+		XCTAssertEqual(try SettingsSession().value(of: "floppy0"), disk)
+
+		// The quick play fetched nothing.
+		let status = WHDBootTools.status()
+		XCTAssertFalse(status.whdloadInstalled)
+		XCTAssertFalse(status.jstInstalled)
+		XCTAssertFalse(status.emulationRunning, "no machine runs in the tests")
+	}
+}

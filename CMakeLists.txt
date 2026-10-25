@@ -201,8 +201,8 @@ if(QEMU_UAE_PLUGIN)
     message(STATUS "Bundling QEMU-UAE PPC plugin: ${QEMU_UAE_PLUGIN}")
 endif()
 
-# macOS helpers use Objective-C++ for Cocoa window activation.
-if(CMAKE_SYSTEM_NAME MATCHES "Darwin" AND NOT IOS)
+# macOS and iOS helpers use Objective-C++ (Cocoa windows, NSURLSession).
+if(CMAKE_SYSTEM_NAME MATCHES "Darwin")
     enable_language(OBJCXX)
 endif()
 

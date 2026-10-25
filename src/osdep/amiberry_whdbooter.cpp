@@ -32,6 +32,10 @@
 #include "zarchive.h"
 
 extern void set_last_active_config_from_media(const char* filename);
+#ifdef LIBRETRO
+// libretro.cpp: shows a message in the frontend (RETRO_ENVIRONMENT_SET_MESSAGE).
+extern void libretro_show_whdboot_message(const char* text);
+#endif
 extern std::string current_dir;
 
 // Use configs with 8MB Fast RAM, to make it likely
@@ -1863,6 +1867,46 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath, const bool prese
 
 	if (!whdload_host_writes_suppressed && std::filesystem::exists(whd_startup))
 	{
+		const char* boot_tool = amiberry_options.use_jst_instead_of_whd ? "JST" : "WHDLoad";
+		if (!std::filesystem::exists(whdbooter_path / boot_tool))
+		{
+			// WHDLoad (Bert Jahn, whdload.de), JST (freeware, Aminet) and the
+			// skick346 kickstart RTB files are not bundled with Amiberry: their
+			// licences forbid redistribution. They are downloaded only on
+			// request, so say what is missing, where it comes from and how to
+			// get it - worded for the front end in use - instead of fetching
+			// anything silently.
+			const char* boot_tool_source = amiberry_options.use_jst_instead_of_whd
+				? "JST (freeware) comes from Aminet (aminet.net/game/patch/jst.lha)"
+				: "WHDLoad by Bert Jahn comes from whdload.de";
+			char message[512];
+#if defined(LIBRETRO)
+			// The core cannot download anything: tell the user where the
+			// missing tool belongs.
+			snprintf(message, sizeof message, "%s is not installed. %s. Put it in '%s'.",
+				boot_tool, boot_tool_source, (whdbooter_path / boot_tool).string().c_str());
+			write_log("WHDBooter - %s\n", message);
+			libretro_show_whdboot_message(message);
+#elif defined(AMIBERRY_NATIVE_HOST)
+			snprintf(message, sizeof message,
+				"%s is not installed.\n%s.\nDownload it with App Settings \u2192 WHDLoad, "
+				"or the Paths panel's 'Update WHDBooter files' button.",
+				boot_tool, boot_tool_source);
+			write_log("WHDBooter - %s\n", message);
+			// Immediate where the main thread runs this (quick play, a
+			// drop); otherwise it waits for the next settings window.
+			if (is_mainthread())
+				native_host_message(boot_tool, message);
+			else
+				native_host_message_deferred(message);
+#else
+			snprintf(message, sizeof message,
+				"%s is not installed.\n%s.\nUse the Paths panel's 'Update WHDBooter files' button "
+				"or --download-whdboot to download it.", boot_tool, boot_tool_source);
+			write_log("WHDBooter - %s\n", message);
+			gui_message("%s", message);
+#endif
+		}
 		if (amiberry_options.use_jst_instead_of_whd)
 		{
 			create_link_or_copy(whdbooter_path / "JST", temp_base / "c" / "JST", "JST");

@@ -6,5 +6,6 @@ module AmiberrySettings {
     header "../../src/osdep/settings/amiberry_settings.h"
     header "../../src/osdep/settings/amiberry_actions.h"
     header "../../src/osdep/settings/amiberry_media.h"
+    header "../../src/osdep/settings/amiberry_whdboot.h"
     export *
 }
