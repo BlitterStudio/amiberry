@@ -8,6 +8,7 @@
 #define OSK_RIGHT  0x08
 #define OSK_BUTTON 0x10
 
+#ifndef AMIBERRY_NO_IMGUI
 // Initialize the on-screen keyboard. Call after imgui_overlay_init().
 void imgui_osk_init();
 
@@ -62,6 +63,26 @@ bool imgui_osk_hit_test(float screen_x, float screen_y);
 void imgui_osk_set_transparency(float alpha); // 0.0 = fully transparent, 1.0 = opaque
 void imgui_osk_set_language(const char* lang); // "US", "UK", "DE", "FR"
 void imgui_osk_set_numpad(bool enabled);
+#else
+// Built without ImGui (the native Apple apps, whose on-screen keyboard is
+// their own): no ImGui keyboard, never shown, consuming nothing.
+inline void imgui_osk_init() {}
+inline void imgui_osk_shutdown() {}
+inline void imgui_osk_toggle() {}
+inline void imgui_osk_hide() {}
+inline bool imgui_osk_is_active() { return false; }
+inline bool imgui_osk_should_render() { return false; }
+inline void imgui_osk_render() {}
+inline void imgui_osk_update() {}
+inline bool imgui_osk_process(int, int*, int*) { return false; }
+inline bool imgui_osk_handle_finger_down(float, float, int) { return false; }
+inline bool imgui_osk_handle_finger_up(float, float, int) { return false; }
+inline bool imgui_osk_handle_finger_motion(float, float, int) { return false; }
+inline bool imgui_osk_hit_test(float, float) { return false; }
+inline void imgui_osk_set_transparency(float) {}
+inline void imgui_osk_set_language(const char*) {}
+inline void imgui_osk_set_numpad(bool) {}
+#endif // AMIBERRY_NO_IMGUI
 
 // Which input surface an osk_control() update originates from. The input
 // layer accumulates one state per source so the generic/core emulated

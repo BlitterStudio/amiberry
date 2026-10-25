@@ -181,7 +181,8 @@ struct OverlayView: View {
 			if state.showsControls, state.keyboardVisible {
 				VStack {
 					Spacer()
-					AmigaKeyboardView(model: keyboard, options: state.keyboardOptions)
+					AmigaKeyboardView(model: keyboard, options: state.keyboardOptions,
+						maxHeight: min(280, UIScreen.main.bounds.height / 2))
 						.overlayControl("keyboard", state: state)
 				}
 				.transition(.move(edge: .bottom))

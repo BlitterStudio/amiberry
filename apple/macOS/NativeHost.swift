@@ -15,6 +15,27 @@ public func amiberryNativeUIInstallMenus() {
 	}
 }
 
+@_cdecl("amiberry_native_ui_keyboard_toggle")
+public func amiberryNativeUIKeyboardToggle() {
+	MainActor.assumeIsolated {
+		MacKeyboard.shared.toggle()
+	}
+}
+
+@_cdecl("amiberry_native_ui_keyboard_hide")
+public func amiberryNativeUIKeyboardHide() {
+	MainActor.assumeIsolated {
+		MacKeyboard.shared.hide()
+	}
+}
+
+@_cdecl("amiberry_native_ui_keyboard_visible")
+public func amiberryNativeUIKeyboardVisible() -> Bool {
+	MainActor.assumeIsolated {
+		MacKeyboard.shared.isVisible
+	}
+}
+
 /// SDL has created the emulation window (its NSWindow): the toolbar goes on.
 @_cdecl("amiberry_native_ui_emulation_window")
 public func amiberryNativeUIEmulationWindow(_ window: UnsafeMutableRawPointer) {

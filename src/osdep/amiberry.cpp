@@ -4401,7 +4401,7 @@ static void process_event(const SDL_Event& event)
 			if (on_screen_joystick_keyboard_tapped()) {
 				if (vkbd_allowed(0)) {
 					neutralize_touch_controls();
-#if defined(AMIBERRY_NATIVE_HOST) && defined(AMIBERRY_IOS)
+#if defined(AMIBERRY_NATIVE_HOST)
 					native_host_toggle_keyboard();
 #else
 					imgui_osk_toggle();

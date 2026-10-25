@@ -79,9 +79,7 @@ bool ctrl_state = false, shift_state = false, alt_state = false, win_state = fal
 int last_x = 0;
 int last_y = 0;
 
-bool gui_running = false;
 static int last_active_panel = 0;
-bool joystick_refresh_needed = false;
 
 // Touch-drag scrolling state (converts finger swipes to ImGui scroll wheel events)
 static bool touch_scrolling = false;
@@ -93,8 +91,6 @@ static SDL_FingerID touch_scroll_finger = 0;
 static bool clear_touch_hover_next_frame = false;
 #endif
 
-static TCHAR startup_title[MAX_STARTUP_TITLE] = _T("");
-static TCHAR startup_message[MAX_STARTUP_MESSAGE] = _T("");
 
 // Config dirty tracking: fingerprint key fields from changed_prefs at load/save,
 // compare each frame to detect unsaved modifications.
@@ -481,11 +477,6 @@ void gui_destroy_texture(ImTextureID tex)
 	SDL_DestroyTexture((SDL_Texture*)tex);
 }
 
-void target_startup_msg(const TCHAR* title, const TCHAR* msg)
-{
-	_tcsncpy(startup_title, title, MAX_STARTUP_TITLE);
-	_tcsncpy(startup_message, msg, MAX_STARTUP_MESSAGE);
-}
 
 // Forward declaration
 void apply_imgui_theme();
@@ -836,65 +827,6 @@ static int gui_create_rtarea_flag(uae_prefs* p)
 	return flag;
 }
 
-std::string get_json_timestamp(const std::string& json_filename)
-{
-	std::ifstream f(json_filename);
-	if (!f.is_open())
-		return "";
-
-	try
-	{
-		// Read only enough to find the timestamp fields near the top
-		// Parse the full file since nlohmann doesn't support partial parsing easily
-		nlohmann::json doc = nlohmann::json::parse(f, nullptr, false);
-		f.close();
-		if (doc.is_discarded())
-			return "";
-
-		// Prefer upstream_timestamp, fall back to generated
-		if (doc.contains("upstream_timestamp") && doc["upstream_timestamp"].is_string())
-			return doc["upstream_timestamp"].get<std::string>();
-		if (doc.contains("generated") && doc["generated"].is_string())
-			return doc["generated"].get<std::string>();
-	}
-	catch (...)
-	{
-		// Parse failed
-	}
-	return "";
-}
-
-std::string get_xml_timestamp(const std::string& xml_filename)
-{
-	std::string result;
-	tinyxml2::XMLDocument doc;
-	auto error = false;
-
-	auto* f = fopen(xml_filename.c_str(), _T("rb"));
-	if (f)
-	{
-		auto err = doc.LoadFile(f);
-		if (err != tinyxml2::XML_SUCCESS)
-		{
-			write_log(_T("Failed to parse '%s':  %d\n"), xml_filename.c_str(), err);
-			error = true;
-		}
-		fclose(f);
-	}
-	else
-	{
-		error = true;
-	}
-	if (!error)
-	{
-		auto* whdbooter = doc.FirstChildElement("whdbooter");
-		result = whdbooter->Attribute("timestamp");
-	}
-	if (!result.empty())
-		return result;
-	return "";
-}
-
 void gui_force_rtarea_hdchange()
 {
 	gui_rtarea_flags_onenter |= 2;
@@ -991,10 +923,6 @@ int disk_swap(int entry)
 	return 1;
 }
 
-void gui_restart()
-{
-	gui_running = false;
-}
 
 #ifdef USE_IMGUI
 // IMGUI runtime state and helpers

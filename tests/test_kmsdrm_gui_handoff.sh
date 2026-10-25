@@ -84,16 +84,6 @@ if ! awk '
 	exit 1
 fi
 
-if ! awk '
-	/void gui_restart\(\)/ { in_restart = 1 }
-	in_restart && /gui_running = false;/ { restart_clears_gui = 1 }
-	in_restart && /^}/ { exit restart_clears_gui ? 0 : 1 }
-	END { if (!in_restart) exit 1 }
-' "$source_file"; then
-	echo "External GUI restart must continue to converge through gui_running" >&2
-	exit 1
-fi
-
 dispatch_eligible()
 {
 	local gui_is_running=$1

@@ -740,8 +740,14 @@ if(ANDROID AND DEFINED sdl3_image_SOURCE_DIR)
     target_include_directories(${PROJECT_NAME} PRIVATE "${sdl3_image_SOURCE_DIR}/include")
 endif()
 
-# ImGui is always enabled
-target_compile_definitions(${PROJECT_NAME} PRIVATE USE_IMGUI)
+# ImGui: everywhere but the native Apple apps (AMIBERRY_IMGUI).
+if(AMIBERRY_IMGUI)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE USE_IMGUI)
+else()
+    # The ImGui overlay and on-screen keyboard calls become inert
+    # (imgui_overlay.h, imgui_osk.h).
+    target_compile_definitions(${PROJECT_NAME} PRIVATE AMIBERRY_NO_IMGUI)
+endif()
 
 set(libmt32emu_SHARED FALSE)
 add_subdirectory(external/mt32emu)
@@ -769,6 +775,12 @@ elseif(SDL3_IMAGE_LIBRARIES)
     set(_SDL_IMAGE_LIB ${SDL3_IMAGE_LIBRARIES})
 else()
     set(_SDL_IMAGE_LIB SDL3_image)
+endif()
+
+# SDL3 itself, which also reached the link through ImGui's static library
+# (the native Apple apps build without it). iOS links its static SDL3 above.
+if(NOT ANDROID AND NOT IOS AND TARGET SDL3::SDL3)
+    target_link_libraries(${PROJECT_NAME} PRIVATE SDL3::SDL3)
 endif()
 
 # Direct target linking preserves transitive includes and compile definitions.
@@ -862,16 +874,17 @@ if(ANDROID)
     target_link_libraries(${PROJECT_NAME} PRIVATE log android)
 endif()
 
-# ImGui is always enabled
-if(USE_OPENGL)
-    set(IMGUI_USE_OPENGL ON CACHE BOOL "Build ImGui OpenGL3 backend" FORCE)
+if(AMIBERRY_IMGUI)
+    if(USE_OPENGL)
+        set(IMGUI_USE_OPENGL ON CACHE BOOL "Build ImGui OpenGL3 backend" FORCE)
+    endif()
+    if(USE_VULKAN)
+        set(IMGUI_USE_VULKAN ON CACHE BOOL "Build ImGui Vulkan backend" FORCE)
+    endif()
+    set(IMGUI_USE_SDL3 ON CACHE BOOL "Build ImGui SDL3 backend" FORCE)
+    add_subdirectory(external/imgui)
+    target_link_libraries(${PROJECT_NAME} PRIVATE imgui)
 endif()
-if(USE_VULKAN)
-    set(IMGUI_USE_VULKAN ON CACHE BOOL "Build ImGui Vulkan backend" FORCE)
-endif()
-set(IMGUI_USE_SDL3 ON CACHE BOOL "Build ImGui SDL3 backend" FORCE)
-add_subdirectory(external/imgui)
-target_link_libraries(${PROJECT_NAME} PRIVATE imgui)
 
 # Native File Dialog Extended (NFD) — OS-native open/save/folder dialogs.
 # Excluded on Android (own Kotlin UI) and Haiku (unsupported by NFD).
