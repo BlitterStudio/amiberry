@@ -42,6 +42,10 @@ final class SettingsCatalogTests: XCTestCase {
 		XCTAssertFalse(MachinePresets.compatibilityLevels.isEmpty)
 		XCTAssertTrue(MachinePresets.all.allSatisfy { !$0.configurations.isEmpty })
 		XCTAssertTrue(MachinePresets.all.allSatisfy { $0.compatibilityMax < MachinePresets.compatibilityLevels.count })
+		// The common models come first; every preset is listed once.
+		XCTAssertEqual(MachinePresets.all.prefix(4).map(\.id), ["a500", "a1200", "cd32", "a4000"])
+		XCTAssertTrue(MachinePresets.computerIDs.isSubset(of: Set(MachinePresets.all.map(\.id))))
+		XCTAssertEqual(Set(MachinePresets.all.map(\.id)).count, MachinePresets.all.count)
 		// The test runs on an empty ROM folder.
 		XCTAssertFalse(MachinePresets.isInstalled(a500, configuration: 0))
 	}
