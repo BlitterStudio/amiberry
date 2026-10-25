@@ -19,8 +19,9 @@ struct LicenceEntry: Identifiable, Decodable, Sendable {
 	var licence: String
 	var licenceName: String
 	var url: String
-	/// File name under texts/, empty when the entry has only a URL.
-	var text: String
+	/// File names under texts/: one notice, or several when the licence
+	/// promises more than one (libjpeg-turbo's BSD and IJG notices).
+	var textFiles: [String]
 	var platforms: [String]
 	var note: String
 
@@ -39,7 +40,13 @@ struct LicenceEntry: Identifiable, Decodable, Sendable {
 		licence = try values.decodeIfPresent(String.self, forKey: .licence) ?? ""
 		licenceName = try values.decodeIfPresent(String.self, forKey: .licenceName) ?? licence
 		url = try values.decodeIfPresent(String.self, forKey: .url) ?? ""
-		text = try values.decodeIfPresent(String.self, forKey: .text) ?? ""
+		if let single = try? values.decodeIfPresent(String.self, forKey: .text) {
+			textFiles = single.isEmpty ? [] : [single]
+		} else if let list = try? values.decodeIfPresent([String].self, forKey: .text) {
+			textFiles = list
+		} else {
+			textFiles = []
+		}
 		platforms = try values.decodeIfPresent([String].self, forKey: .platforms) ?? []
 		note = try values.decodeIfPresent(String.self, forKey: .note) ?? ""
 	}
@@ -88,9 +95,10 @@ struct LicencesDocument: Sendable {
 		self.texts = texts
 	}
 
-	/// The licence text the entry names, or an empty string when it has none.
+	/// The entry's licence notices, joined for display; empty when it has
+	/// only a URL.
 	func licenceText(for entry: LicenceEntry) -> String {
-		guard !entry.text.isEmpty else { return "" }
+		guard !entry.textFiles.isEmpty else { return "" }
 		return texts[entry.id] ?? ""
 	}
 
@@ -130,17 +138,18 @@ enum LicencesLoader {
 		}
 		var texts: [String: String] = [:]
 		for entry in document.components + document.downloaded where ships(entry) {
-			var text = ""
-			if !entry.text.isEmpty {
-				text = LicencesDocument.readText(entry.text, in: directory)
-				if text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-					throw Failure(description: "\(entry.name) names a licence text that is missing (\(entry.text)).")
+			var parts: [String] = []
+			for name in entry.textFiles {
+				let part = LicencesDocument.readText(name, in: directory)
+				if part.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+					throw Failure(description: "\(entry.name) names a licence text that is missing (\(name)).")
 				}
+				parts.append(part)
 			}
-			if text.isEmpty && entry.url.isEmpty {
+			if parts.isEmpty && entry.url.isEmpty {
 				throw Failure(description: "\(entry.name) has neither a licence text nor a URL.")
 			}
-			texts[entry.id] = text
+			texts[entry.id] = parts.joined(separator: "\n\n")
 		}
 		return LicencesDocument(
 			source: offer, components: document.components, downloaded: document.downloaded,

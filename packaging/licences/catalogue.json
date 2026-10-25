@@ -696,7 +696,10 @@
       "licence": "BSD-3-Clause",
       "licence_name": "BSD 3-Clause License, or GPL-2.0",
       "url": "https://github.com/facebook/zstd",
-      "text": "BSD-3-Clause.txt",
+      "text": [
+        "BSD-3-Clause.txt",
+        "GPL-2.0.txt"
+      ],
       "platforms": [
         "macos",
         "macos-store"
@@ -808,7 +811,10 @@
       "licence": "MPL-2.0 OR GPL-2.0-or-later",
       "licence_name": "Mozilla Public License 2.0, or GNU GPL version 2 or later",
       "url": "https://github.com/RobSmithDev/FloppyDriveBridge",
-      "text": "MPL-2.0.txt",
+      "text": [
+        "MPL-2.0.txt",
+        "GPL-2.0.txt"
+      ],
       "platforms": [
         "macos",
         "macos-store"
@@ -892,7 +898,10 @@
       "licence": "BSD-3-Clause",
       "licence_name": "BSD 3-Clause License, with the IJG JPEG notice",
       "url": "https://github.com/libjpeg-turbo/libjpeg-turbo",
-      "text": "BSD-3-Clause.txt",
+      "text": [
+        "BSD-3-Clause.txt",
+        "IJG.txt"
+      ],
       "platforms": [
         "macos",
         "macos-store"

@@ -6,9 +6,9 @@
 # The file is rewritten only when its contents change, so an unchanged
 # tree does not dirty dependent steps every build.
 #
-# Tag rule: an exact `v[0-9]*` tag on a clean, non-pre-release HEAD names
-# the release; anything else names the commit (marked -dirty when the tree
-# has local changes). Without git, the revision is honestly unknown.
+# Tag rule: an exact `v[0-9]*` tag on a non-pre-release HEAD names the
+# release; anything else names the commit. A dirty tree never changes the
+# revision (URLs must stay valid); the separate dirty flag reports it.
 
 set(_saved_git_dir "$ENV{GIT_DIR}")
 unset(ENV{GIT_DIR})
@@ -56,9 +56,6 @@ if(_amiberry_git)
 		ERROR_QUIET)
 	if(_amiberry_status_result EQUAL 0 AND NOT _amiberry_status STREQUAL "")
 		set(_amiberry_dirty "true")
-		if(NOT AMIBERRY_SOURCE_REVISION STREQUAL "")
-			string(APPEND AMIBERRY_SOURCE_REVISION "-dirty")
-		endif()
 	elseif(NOT _amiberry_status_result EQUAL 0)
 		message(STATUS "Source offer: git status failed; dirtiness unknown")
 	endif()
