@@ -160,8 +160,12 @@ public struct MachinePreset: Hashable, Sendable, Identifiable {
 }
 
 public enum MachinePresets {
+	/// The most common models, listed first wherever models are listed (the
+	/// rest follow in the layer's order).
+	public static let commonIDs = ["a500", "a1200", "cd32", "a4000"]
+
 	public static let all: [MachinePreset] = {
-		(0..<amiberry_settings_preset_count()).compactMap { index in
+		let presets: [MachinePreset] = (0..<amiberry_settings_preset_count()).compactMap { index in
 			guard let preset = amiberry_settings_preset_at(index) else { return nil }
 			let configurations = (0..<Int(preset.pointee.config_count)).map {
 				layerString(amiberry_settings_preset_config_label(preset, Int32($0)))
@@ -170,6 +174,8 @@ public enum MachinePresets {
 				id: layerString(preset.pointee.id), label: layerString(preset.pointee.label),
 				configurations: configurations, compatibilityMax: Int(preset.pointee.compatibility_max))
 		}
+		let common = commonIDs.compactMap { id in presets.first { $0.id == id } }
+		return common + presets.filter { !commonIDs.contains($0.id) }
 	}()
 
 	/// The compatibility levels' labels, from the most compatible (0).
