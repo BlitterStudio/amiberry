@@ -2087,6 +2087,17 @@ void setmouseactive(const int monid, const int active)
 	setcursorshape(monid);
 }
 
+void setmouseinactive_running(const int monid)
+{
+	AmigaMonitor* mon = &AMonitors[monid];
+	monitor_off = 0;
+	clear_pending_mouse_capture();
+	if (osdep_platform_require_window_for_mouse() && !mon->amiga_window)
+		return;
+	setmouseactive2(mon, 0, false);
+	setcursorshape(monid);
+}
+
 static void amiberry_active(const AmigaMonitor* mon, const int is_minimized)
 {
 	monitor_off = 0;

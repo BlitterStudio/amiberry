@@ -117,6 +117,9 @@ extern int z3_base_adr;
 extern bool volatile flip_in_progress;
 
 extern void setmouseactive(int monid, int active);
+// Lets the mouse go without the "pause when not captured" option pausing the
+// emulation: the native on-screen keyboard's keys are clicked while it runs.
+extern void setmouseinactive_running(int monid);
 extern void minimizewindow(int monid);
 extern void updatemouseclip(struct AmigaMonitor*);
 extern void updatewinrect(struct AmigaMonitor*, bool);

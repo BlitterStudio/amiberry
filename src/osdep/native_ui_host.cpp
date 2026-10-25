@@ -228,9 +228,10 @@ void native_host_toggle_keyboard()
 {
 	amiberry_native_ui_keyboard_toggle();
 #ifdef AMIBERRY_MACOS
-	// Its keys are clicked: a captured mouse is let go while it shows.
+	// Its keys are clicked: a captured mouse is let go while it shows, and
+	// the emulation runs on to take them ("pause when not captured" aside).
 	if (amiberry_native_ui_keyboard_visible())
-		setmouseactive(0, 0);
+		setmouseinactive_running(0);
 #endif
 }
 
