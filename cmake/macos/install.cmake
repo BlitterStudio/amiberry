@@ -24,10 +24,14 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         ${CMAKE_SOURCE_DIR}/whdboot
         $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Resources/whdboot)
 
-add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        $<TARGET_FILE:CAPSImage>
-        $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Resources/plugins/$<TARGET_FILE_NAME:CAPSImage>)
+# CAPSImage's licence is non-commercial: Mac App Store builds (a paid app)
+# leave the IPF plugin out.
+if(NOT MACOS_APP_STORE)
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            $<TARGET_FILE:CAPSImage>
+            $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Resources/plugins/$<TARGET_FILE_NAME:CAPSImage>)
+endif()
 
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
@@ -189,8 +193,10 @@ if(MACOS_CODESIGN_BUNDLE)
 endif()
 
 if (NOT "${CMAKE_GENERATOR}" MATCHES "Xcode")
-    install(FILES $<TARGET_FILE:CAPSImage>
-            DESTINATION $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Resources/plugins/)
+    if(NOT MACOS_APP_STORE)
+        install(FILES $<TARGET_FILE:CAPSImage>
+                DESTINATION $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Resources/plugins/)
+    endif()
 
     install(FILES $<TARGET_FILE:floppybridge>
             DESTINATION $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Resources/plugins/)

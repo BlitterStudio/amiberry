@@ -93,6 +93,9 @@ enum QuickPlay {
 		return try AppFiles.importFile(url, into: AppFiles.folder(forMedia: url))
 		#else
 		_ = MediaLibrary.grantAccess(to: url.path)
+		guard FilePanels.grantCompanions(of: url.path) else {
+			throw CocoaError(.fileReadNoPermission)
+		}
 		return url.path
 		#endif
 	}

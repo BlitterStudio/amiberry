@@ -36,9 +36,11 @@ macos_bookmarks_migration_result macos_bookmarks_init(
 // Call at application exit.
 void macos_bookmarks_shutdown();
 
-// Create and store a security-scoped bookmark for the given path.
-// If the path is a file, bookmarks its parent directory.
-// Returns true on success. Persists the bookmark data immediately.
+// Create and store a security-scoped bookmark for the given path. For a
+// file, nothing when a bookmark already covers it; else its folder's when
+// the process can reach the folder, else the file's own (picking a file
+// grants the sandbox that file only). Returns true on success. Persists
+// the bookmark data immediately.
 bool macos_bookmark_store(const std::string& path);
 
 // A copy of the bookmark store, for macos_bookmarks_restore().
