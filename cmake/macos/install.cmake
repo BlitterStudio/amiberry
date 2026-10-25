@@ -3,6 +3,12 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         ${CMAKE_SOURCE_DIR}/controllers
         $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Resources/controllers)
 
+# The privacy manifest the Mac App Store requires.
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy
+        ${CMAKE_SOURCE_DIR}/packaging/PrivacyInfo.xcprivacy
+        $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Resources/PrivacyInfo.xcprivacy)
+
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_SOURCE_DIR}/data

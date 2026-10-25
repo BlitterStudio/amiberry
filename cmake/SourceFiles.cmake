@@ -595,8 +595,13 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 
 # Platform-specific bundle overrides
 if(IOS)
+    # The app icon: an asset catalog Xcode compiles (actool), which adds the
+    # icon entries to the Info.plist.
+    target_sources(${PROJECT_NAME} PRIVATE "${CMAKE_SOURCE_DIR}/packaging/ios/Assets.xcassets")
+    set_source_files_properties("${CMAKE_SOURCE_DIR}/packaging/ios/Assets.xcassets" PROPERTIES
+            MACOSX_PACKAGE_LOCATION Resources)
     set_target_properties(${PROJECT_NAME} PROPERTIES
-            MACOSX_BUNDLE_ICON_FILE "AppIcon"
+            XCODE_ATTRIBUTE_ASSETCATALOG_COMPILER_APPICON_NAME "AppIcon"
             MACOSX_BUNDLE_INFO_PLIST "${CMAKE_SOURCE_DIR}/packaging/ios/iOSBundleInfo.plist.in"
             XCODE_ATTRIBUTE_TARGETED_DEVICE_FAMILY "1,2"
             XCODE_ATTRIBUTE_IPHONEOS_DEPLOYMENT_TARGET "${AMIBERRY_IOS_DEPLOYMENT_TARGET}"
