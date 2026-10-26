@@ -36,6 +36,9 @@
 #include "archivers/wrp/warp.h"
 
 static struct zfile *zlist = 0;
+// zfiles are opened and closed on several threads (the emulator, a WHDBooter
+// download): the list of open handles is only touched under this lock.
+static std::mutex zlist_mutex;
 
 const TCHAR *uae_archive_extensions[] = { _T("zip"), _T("rar"), _T("7z"), _T("lha"), _T("lzh"), _T("lzx"), _T("tar"), NULL };
 
@@ -185,8 +188,11 @@ static struct zfile *zfile_create (struct zfile *prev, const TCHAR *originalname
 	if (!z)
 		return 0;
 	memset (z, 0, sizeof *z);
-	z->next = zlist;
-	zlist = z;
+	{
+		std::lock_guard<std::mutex> lock(zlist_mutex);
+		z->next = zlist;
+		zlist = z;
+	}
 	z->opencnt = 1;
 	if (prev && prev->originalname)
 		z->originalname = my_strdup(prev->originalname);
@@ -223,9 +229,15 @@ static int zfile_free (struct zfile *f)
 void zfile_exit (void)
 {
 	struct zfile *l;
-	while ((l = zlist)) {
-		zlist = l->next;
+	{
+		std::lock_guard<std::mutex> lock(zlist_mutex);
+		l = zlist;
+		zlist = nullptr;
+	}
+	while (l) {
+		struct zfile *next = l->next;
 		zfile_free (l);
+		l = next;
 	}
 }
 
@@ -251,27 +263,24 @@ int zfile_fclose (struct zfile *f)
 		zfile_fclose (f->archiveparent);
 		f->archiveparent = NULL;
 	}
-	struct zfile *pl = NULL;
-	struct zfile *nxt;
-	struct zfile *l  = zlist;
-	while (l != f) {
-		if (l == 0) {
-			write_log (_T("zfile: tried to free already freed or nonexisting filehandle!\n"));
-			return 1;
+	{
+		std::lock_guard<std::mutex> lock(zlist_mutex);
+		struct zfile *pl = NULL;
+		struct zfile *l = zlist;
+		while (l != f) {
+			if (l == 0) {
+				write_log (_T("zfile: tried to free already freed or nonexisting filehandle!\n"));
+				return 1;
+			}
+			pl = l;
+			l = l->next;
 		}
-		pl = l;
-		l = l->next;
+		if (!pl)
+			zlist = l->next;
+		else
+			pl->next = l->next;
 	}
-	if (l)
-		nxt = l->next;
-	int error = zfile_free (f);
-	if (l == 0)
-		return error;
-	if(!pl)
-		zlist = nxt;
-	else
-		pl->next = nxt;
-	return error;
+	return zfile_free (f);
 }
 
 static void removeext (TCHAR *s, const TCHAR *ext)
