@@ -28,13 +28,13 @@
 extern "C" {
 #endif
 
-#define AMIBERRY_WHDBOOT_API_VERSION 1
+#define AMIBERRY_WHDBOOT_API_VERSION 2
 
 typedef struct amiberry_whdboot_status {
 	bool whdload_installed;   /* WHDLoad, from whdload.de */
 	bool jst_installed;       /* JST, from Aminet */
 	bool rtb_files_installed; /* every kickstart RTB file the booter links */
-	bool amiquit_installed;
+	bool host_quit_installed;  /* host-quit (Host-Tools), which closes Amiberry */
 	bool boot_data_installed;
 	bool database_installed;
 	bool downloads_available; /* false where nothing can download (libretro) */
@@ -68,7 +68,7 @@ typedef enum amiberry_whdboot_download_result {
 /*
  * Downloads or updates the WHDBoot tools: WHDLoad is always re-fetched
  * from whdload.de; missing RTB files and a selected JST come from Aminet;
- * AmiQuit, boot-data.zip and the WHDLoad game database come from the
+ * host-quit, boot-data.zip and the WHDLoad game database come from the
  * Amiberry project's GitHub repository. Existing RTB files and JST are
  * never overwritten.
  */

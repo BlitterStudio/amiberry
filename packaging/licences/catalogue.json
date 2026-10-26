@@ -550,14 +550,14 @@
       ]
     },
     {
-      "id": "amiquit",
-      "name": "AmiQuit",
+      "id": "host-quit",
+      "name": "host-quit (Host-Tools)",
       "version": "",
-      "copyright": "The Amiberry project",
-      "licence": "Distributed under its authors' terms",
-      "licence_name": "Distributed under its authors' terms",
-      "url": "https://github.com/BlitterStudio/amiberry/blob/master/whdboot/AmiQuit",
-      "text": "",
+      "copyright": "2020-2026 Dimitris Panokostas",
+      "licence": "GPL-3.0-or-later",
+      "licence_name": "GNU General Public License, version 3 or later",
+      "url": "https://github.com/BlitterStudio/host-tools",
+      "text": "GPL-3.0.txt",
       "platforms": [
         "macos",
         "macos-store",
