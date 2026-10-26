@@ -12795,9 +12795,9 @@ whdboot_download_result download_whdboot_assets(
 	if (cancelled())
 		return result;
 
-	auto destination = join_path(whdboot_path, "AmiQuit");
-	do_download(++step, "AmiQuit",
-		"https://github.com/BlitterStudio/amiberry/blob/master/whdboot/AmiQuit?raw=true",
+	auto destination = join_path(whdboot_path, "host-quit");
+	do_download(++step, "host-quit",
+		"https://github.com/BlitterStudio/amiberry/blob/master/whdboot/host-quit?raw=true",
 		destination, false);
 	if (cancelled())
 		return result;
@@ -12903,7 +12903,7 @@ static bool whdboot_seed_files_missing_at(const std::string& root_path)
 	// Only files Amiberry still bundles may be required here: WHDLoad, JST
 	// and the skick346 RTB files are fetched on demand (whdload.de and
 	// Aminet), so demanding them would reseed on every start.
-	if (!file_exists(join_path(root_path, "AmiQuit")))
+	if (!file_exists(join_path(root_path, "host-quit")))
 		return true;
 
 	const auto boot_data_zip = join_path(root_path, "boot-data.zip");

@@ -119,6 +119,26 @@ static int safe_stoi(const std::string& s, const int default_val = 0)
 	catch (...) { return default_val; }
 }
 
+// The Amiga sees a host file without the owner execute bit as not
+// executable, and Android and Windows copy the tools instead of linking
+// them (a symlink's own permissions allow execution). Tools that were
+// downloaded, seeded or copied in without the bit must still run.
+static void ensure_executable(const std::filesystem::path& path)
+{
+#ifndef _WIN32
+	std::error_code ec;
+	if (!std::filesystem::is_regular_file(path, ec))
+		return;
+	std::filesystem::permissions(path,
+		std::filesystem::perms::owner_exec | std::filesystem::perms::group_exec | std::filesystem::perms::others_exec,
+		std::filesystem::perm_options::add, ec);
+	if (ec)
+		write_log("WHDBooter - Could not make %s executable: %s\n", path.string().c_str(), ec.message().c_str());
+#else
+	(void)path;
+#endif
+}
+
 static void create_link_or_copy(const std::filesystem::path& source, const std::filesystem::path& link_path, const char* name)
 {
 	if (std::filesystem::is_symlink(link_path) || std::filesystem::exists(link_path))
@@ -1616,7 +1636,7 @@ void create_startup_sequence()
 	// Launches utility program to quit the emulator (via a UAE trap in RTAREA)
 	if (whdload_prefs.quit_on_exit)
 	{
-		whd_bootscript << "DH0:C/AmiQuit\n";
+		whd_bootscript << "DH0:C/host-quit\n";
 	}
 
 	write_log("WHDBooter - Created Startup-Sequence  \n\n%s\n", whd_bootscript.str().c_str());
@@ -1909,14 +1929,17 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath, const bool prese
 		}
 		if (amiberry_options.use_jst_instead_of_whd)
 		{
+			ensure_executable(whdbooter_path / "JST");
 			create_link_or_copy(whdbooter_path / "JST", temp_base / "c" / "JST", "JST");
 		}
 		else
 		{
+			ensure_executable(whdbooter_path / "WHDLoad");
 			create_link_or_copy(whdbooter_path / "WHDLoad", temp_base / "c" / "WHDLoad", "WHDLoad");
 		}
 
-		create_link_or_copy(whdbooter_path / "AmiQuit", temp_base / "c" / "AmiQuit", "AmiQuit");
+		ensure_executable(whdbooter_path / "host-quit");
+		create_link_or_copy(whdbooter_path / "host-quit", temp_base / "c" / "host-quit", "host-quit");
 		create_link_or_copy(kickstart_path, temp_base / "devs" / "Kickstarts", "Kickstarts");
 	}
 #if DEBUG

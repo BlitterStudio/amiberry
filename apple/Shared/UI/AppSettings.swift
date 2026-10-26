@@ -321,7 +321,7 @@ private struct WHDBootFilesRow: View {
 				Text(result).font(.footnote).foregroundStyle(.secondary)
 			}
 			Text("WHDLoad by Bert Jahn — whdload.de. Kickstart RTB files and JST — Aminet. "
-				+ "AmiQuit, the boot disk and the game database — the Amiberry project. "
+				+ "host-quit, the boot disk and the game database — the Amiberry project. "
 				+ "WHDLoad, JST and the RTB files are not bundled with Amiberry.")
 				.font(.footnote)
 				.foregroundStyle(.secondary)

@@ -834,7 +834,7 @@ void render_panel_paths()
 
 	ImGui::Spacing();
 	ImGui::TextWrapped("WHDLoad by Bert Jahn is fetched from whdload.de; the kickstart "
-		"RTB files and JST from Aminet; AmiQuit, boot-data.zip and the WHDLoad "
+		"RTB files and JST from Aminet; host-quit, boot-data.zip and the WHDLoad "
 		"game database from the Amiberry project. WHDLoad, JST and the RTB files "
 		"are not bundled with Amiberry.");
 

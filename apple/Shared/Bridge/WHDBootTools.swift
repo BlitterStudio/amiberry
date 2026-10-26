@@ -16,7 +16,7 @@ public struct WHDBootStatus: Sendable {
 	public let whdloadInstalled: Bool
 	public let jstInstalled: Bool
 	public let rtbFilesInstalled: Bool
-	public let amiquitInstalled: Bool
+	public let hostQuitInstalled: Bool
 	public let bootDataInstalled: Bool
 	public let databaseInstalled: Bool
 	public let downloadsAvailable: Bool
@@ -133,7 +133,7 @@ public enum WHDBootTools {
 			whdloadInstalled: raw.whdload_installed,
 			jstInstalled: raw.jst_installed,
 			rtbFilesInstalled: raw.rtb_files_installed,
-			amiquitInstalled: raw.amiquit_installed,
+			hostQuitInstalled: raw.host_quit_installed,
 			bootDataInstalled: raw.boot_data_installed,
 			databaseInstalled: raw.database_installed,
 			downloadsAvailable: raw.downloads_available,

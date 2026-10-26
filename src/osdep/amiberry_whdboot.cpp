@@ -42,7 +42,7 @@ extern "C" void amiberry_whdboot_status_get(amiberry_whdboot_status* status)
 	status->emulation_running = whdboot_emulation_blocks_downloads();
 	status->whdload_installed = whdboot_file_exists("WHDLoad");
 	status->jst_installed = whdboot_file_exists("JST");
-	status->amiquit_installed = whdboot_file_exists("AmiQuit");
+	status->host_quit_installed = whdboot_file_exists("host-quit");
 	status->boot_data_installed = whdboot_file_exists("boot-data.zip")
 		|| whdboot_file_exists("boot-data");
 	status->database_installed = whdboot_file_exists("game-data/whdload_db.json")
