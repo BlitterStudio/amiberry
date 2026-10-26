@@ -28,9 +28,11 @@ final class AcknowledgementsWindow: NSObject, NSWindowDelegate {
 
 	private func makeWindow() -> NSWindow {
 		let size = WindowSize.acknowledgements.ideal
+		// Full-size content, as the Library's: without it the split view's
+		// detail slides under the toolbar once the window is resized.
 		let window = NSWindow(
 			contentRect: NSRect(origin: .zero, size: size),
-			styleMask: [.titled, .closable, .miniaturizable, .resizable],
+			styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
 			backing: .buffered, defer: false)
 		// The title shows in the toolbar's principal item (LicencesView); an
 		// NSWindow title would also render, truncated, in the sidebar's slot.
