@@ -937,7 +937,22 @@ static void sigsegv_handler(int signum, siginfo_t *info, void *context)
 	uae_u8 *i = (uae_u8 *) CONTEXT_PC(context);
 	uintptr_t address = (uintptr_t) info->si_addr;
 
-	if (i >= compiled_code && i <= current_compile_p) {
+	/* Only a PC inside the *currently allocated* translation cache is
+	 * JIT-compiled code. compiled_code is NULL while the JIT is off, and
+	 * alloc_cache() then leaves current_compile_p pointing at the freed
+	 * cache, so a "i >= compiled_code && i <= current_compile_p" test
+	 * degenerates to "i <= stale pointer" and accepts any address in the
+	 * program image (with PIE, .text sits below the JIT allocations).
+	 * A plain emulator-code fault must not be handled as a mistaken JIT
+	 * direct-memory access: patching it or redirecting it into
+	 * popall_do_nothing (an unwind stub only valid for the JIT's own
+	 * pushall frame) corrupts the stack and crashes with a cascade of
+	 * bogus faults. */
+	const bool in_jit_code = compiled_code != NULL
+		&& i >= compiled_code
+		&& i < compiled_code + (uintptr_t)cache_size * 1024;
+
+	if (in_jit_code) {
 		if (handle_access(address, context)) {
 			return;
 		}
