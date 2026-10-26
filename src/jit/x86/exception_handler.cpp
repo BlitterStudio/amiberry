@@ -16,9 +16,10 @@
 #endif
 #endif
 #include <signal.h>
-// backtrace() for the crash diagnostics: glibc and Apple only (MinGW has no
-// execinfo.h, Android's bionic only from API 33).
-#if defined(__GNUC__) && !defined(_WIN32) && !defined(__ANDROID__)
+// backtrace() for the crash diagnostics, where libc has it: glibc and Apple
+// (MinGW and musl have no execinfo.h, FreeBSD needs libexecinfo, Android's
+// bionic has it only from API 33).
+#if (defined(__linux__) && defined(__GLIBC__) && !defined(__ANDROID__)) || defined(__APPLE__)
 #define AMIBERRY_JIT_BACKTRACE 1
 #include <execinfo.h>
 #endif
