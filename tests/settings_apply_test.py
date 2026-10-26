@@ -224,6 +224,7 @@ def main():
                 continue
             observed = None
             for step in STEPS:
+                print(f"apply {option}={target} step {step}", flush=True)
                 settle(ctl, step)
                 wait = {"live": 1.0, "reset": 5.0, "restart": 30.0}[step]
                 if ctl.wait_active(option, target, wait) == target:
