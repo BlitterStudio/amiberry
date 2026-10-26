@@ -21,6 +21,15 @@
 set(CMAKE_Swift_LANGUAGE_VERSION 6)
 enable_language(Swift)
 
+# Xcode 26 (Swift 6.2) or newer. Swift 6.1 (Xcode 16) rejects valid
+# isolation code in these sources and crashes compiling others; App Store
+# submissions need Xcode 26 anyway.
+if(CMAKE_Swift_COMPILER_VERSION AND CMAKE_Swift_COMPILER_VERSION VERSION_LESS 6.2)
+    message(FATAL_ERROR "The native Apple UI needs Xcode 26 (Swift 6.2) or newer; "
+        "found Swift ${CMAKE_Swift_COMPILER_VERSION}. Select a newer Xcode with xcode-select, "
+        "or build without -DAMIBERRY_NATIVE_APPLE_UI=ON.")
+endif()
+
 add_library(amiberry_native_ui STATIC
         apple/Shared/AmiberryNativeUI.swift
         apple/Shared/Bridge/EmulatorActions.swift

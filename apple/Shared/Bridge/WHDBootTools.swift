@@ -107,9 +107,11 @@ public final class WHDBootDownloadController {
 		let download = WHDBootDownload()
 		download.onProgress = onProgress
 		current = download
-		return Task.detached { [weak self] in
+		// The controller is the process-wide one, so the task reaches it
+		// through `shared` rather than capturing `self` across actors.
+		return Task.detached {
 			let outcome = download.run()
-			await MainActor.run { self?.current = nil }
+			await MainActor.run { WHDBootDownloadController.shared.current = nil }
 			return outcome
 		}
 	}

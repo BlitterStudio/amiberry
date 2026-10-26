@@ -12315,8 +12315,6 @@ static bool whdboot_skick_rtbs_missing()
 // built-in GUI or the native settings window hold them) are fine.
 bool whdboot_emulation_blocks_downloads()
 {
-	extern int gui_active; // amiberry_gui.cpp: the built-in GUI is open
-
 	if (!emulating)
 		return false;
 	if (pause_emulation != 0)
@@ -12325,8 +12323,12 @@ bool whdboot_emulation_blocks_downloads()
 	if (native_host_settings_open())
 		return false;
 #endif
+#ifndef LIBRETRO
+	// The built-in GUI (amiberry_gui.cpp, not part of the libretro core).
+	extern int gui_active;
 	if (gui_active > 0)
 		return false;
+#endif
 	return true;
 }
 
