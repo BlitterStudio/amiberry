@@ -6060,7 +6060,9 @@ void target_run()
 
 void target_quit()
 {
-	cancel_async_update_check();
+	// A quit waits for the update check so the process exits cleanly; a
+	// restart replaces the session and must not block on the network.
+	cancel_async_update_check(!uae_restart_pending());
 
 #ifdef __ANDROID__
 	adpf_cleanup();

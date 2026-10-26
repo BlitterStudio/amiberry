@@ -78,4 +78,4 @@ bool is_update_check_running();
 UpdateInfo get_async_update_result();
 
 // Cancel any running async update check
-void cancel_async_update_check();
+void cancel_async_update_check(bool wait_for_finish = true);

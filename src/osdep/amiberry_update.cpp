@@ -1458,9 +1458,18 @@ UpdateInfo get_async_update_result()
 	return s_update_result;
 }
 
-void cancel_async_update_check()
+void cancel_async_update_check(bool wait_for_finish)
 {
 	s_update_cancel.store(true);
+	if (!wait_for_finish) {
+		// A restart does not need the check's result. The cancel flag
+		// aborts the transfer, but phases that never call the progress
+		// callback (DNS resolution) cannot be interrupted, so joining could
+		// block the restart on the network until the HTTP timeout. The
+		// thread stays owned and running: a later start_async_update_check()
+		// joins it once it is done, and a quit (or exit) joins it.
+		return;
+	}
 	if (s_update_thread.thread.joinable()) {
 		s_update_thread.thread.join();
 	}
