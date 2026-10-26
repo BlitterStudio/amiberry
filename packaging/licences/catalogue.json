@@ -417,12 +417,27 @@
     {
       "id": "aros-rom",
       "name": "AROS m68k ROM",
-      "version": "",
+      "version": "nightly 2026-10-13",
       "copyright": "The AROS Development Team",
       "licence": "APL-1.1",
       "licence_name": "AROS Public License, version 1.1",
-      "url": "https://aros.sourceforge.io/",
+      "url": "https://github.com/aros-development-team/AROS",
       "text": "APL.txt",
+      "platforms": [
+        "macos",
+        "macos-store",
+        "ios"
+      ]
+    },
+    {
+      "id": "aros-ram-handler",
+      "name": "AROS RAM disk handler (in the AROS m68k ROM)",
+      "version": "1.13",
+      "copyright": "2001-2008 Neil Cafferkey; 2011-2026 The AROS Development Team",
+      "licence": "LGPL-2.1-or-later",
+      "licence_name": "GNU Lesser General Public License, version 2.1 or later",
+      "url": "https://github.com/aros-development-team/AROS/tree/master/rom/filesys/ram",
+      "text": "LGPL-2.1.txt",
       "platforms": [
         "macos",
         "macos-store",
@@ -436,7 +451,7 @@
       "copyright": "The AROS Development Team",
       "licence": "APL-1.1",
       "licence_name": "AROS Public License, version 1.1",
-      "url": "https://aros.sourceforge.io/",
+      "url": "https://github.com/aros-development-team/AROS",
       "text": "APL.txt",
       "platforms": [
         "macos",
