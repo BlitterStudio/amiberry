@@ -777,7 +777,7 @@ int scan_roms(int show)
 	return cnt;
 }
 
-void cancel_async_update_check()
+void cancel_async_update_check(bool)
 {
 }
 
