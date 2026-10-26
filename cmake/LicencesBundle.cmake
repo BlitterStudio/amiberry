@@ -104,7 +104,10 @@ configure_file("${OFFER_FILE}" "${DEST_DIR}/source-offer.json" COPYONLY)
 # POST_BUILD codesign only runs on a relink, so sign here - but only when
 # the executable exists: on a clean build this step runs before the app
 # target and the first signing belongs to POST_BUILD.
-if(CODESIGN_HELPER AND CODESIGN_APP AND IS_DIRECTORY "${CODESIGN_APP}/Contents/MacOS")
+# The bundle is built once its executable is there: the folder alone is not
+# enough, since DEST_DIR (Contents/MacOS/../Resources/...) creates it.
+file(GLOB _bundle_executables LIST_DIRECTORIES false "${CODESIGN_APP}/Contents/MacOS/*")
+if(CODESIGN_HELPER AND CODESIGN_APP AND _bundle_executables)
 	execute_process(
 		COMMAND "${CMAKE_COMMAND}"
 			"-DAPP_BUNDLE=${CODESIGN_APP}"

@@ -34,14 +34,16 @@ add_custom_target(amiberry_licences_offer
         -DAMIBERRY_PRODUCT_VERSION=${AMIBERRY_PRODUCT_VERSION}
         -DPRERELEASE=${AMIBERRY_PRERELEASE_FLAG}
         -DAMIBERRY_DISTRIBUTION=${AMIBERRY_DISTRIBUTION}
-        -P ${CMAKE_SOURCE_DIR}/cmake/SourceOffer.cmake)
+        -P ${CMAKE_SOURCE_DIR}/cmake/SourceOffer.cmake
+        VERBATIM)
 add_custom_target(amiberry_licences_bundle ALL
         COMMAND ${CMAKE_COMMAND}
         -DSRC_DIR=${CMAKE_SOURCE_DIR}/packaging/licences
         -DDEST_DIR=${AMIBERRY_LICENCES_DIR}
         -DDISTRIBUTION=${AMIBERRY_DISTRIBUTION}
         -DOFFER_FILE=${CMAKE_BINARY_DIR}/amiberry-source-offer.json
-        -P ${CMAKE_SOURCE_DIR}/cmake/LicencesBundle.cmake)
+        -P ${CMAKE_SOURCE_DIR}/cmake/LicencesBundle.cmake
+        VERBATIM)
 add_dependencies(amiberry_licences_bundle amiberry_licences_offer)
 add_dependencies(${PROJECT_NAME} amiberry_licences_bundle)
 
