@@ -32,7 +32,9 @@ struct RunningSheet: View {
 							Label(state.keyboardVisible ? "Hide Keyboard" : "Show Keyboard", systemImage: "keyboard")
 						}
 					}
-					Toggle(isOn: Binding(get: { joystick }, set: setJoystick)) {
+					// A closure, not the method itself: Swift 6.1-6.3 crash converting a
+					// main-actor method into Binding's @isolated(any) setter.
+					Toggle(isOn: Binding(get: { joystick }, set: { setJoystick($0) })) {
 						Label("On-screen Joystick", systemImage: "gamecontroller")
 					}
 				}
