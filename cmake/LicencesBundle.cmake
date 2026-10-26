@@ -73,9 +73,18 @@ foreach(_text IN LISTS _texts)
 endforeach()
 string(SHA256 _bundle_hash "${_digest}")
 
+# The stamp is keyed to the destination: configurations that share a build
+# directory (Xcode Debug and Release) must not skip each other's copies,
+# and a matching stamp only counts while the destination still holds what
+# it recorded.
+set(_digest_input "${DEST_DIR}")
+string(SHA256 _dest_hash "${_digest_input}")
 get_filename_component(_offer_dir "${OFFER_FILE}" DIRECTORY)
-set(_stamp "${_offer_dir}/licences-${DISTRIBUTION}.stamp")
-if(EXISTS "${_stamp}")
+set(_stamp "${_offer_dir}/licences-${DISTRIBUTION}-${_dest_hash}.stamp")
+if(EXISTS "${_stamp}"
+		AND EXISTS "${DEST_DIR}/catalogue.json"
+		AND EXISTS "${DEST_DIR}/source-offer.json"
+		AND IS_DIRECTORY "${DEST_DIR}/texts")
 	file(READ "${_stamp}" _existing_stamp)
 	if(_existing_stamp STREQUAL _bundle_hash)
 		message(STATUS "Licences bundle unchanged (${DISTRIBUTION})")
@@ -91,9 +100,11 @@ endforeach()
 file(COPY "${SRC_DIR}/catalogue.json" DESTINATION "${DEST_DIR}")
 configure_file("${OFFER_FILE}" "${DEST_DIR}/source-offer.json" COPYONLY)
 
-# The copy changed a signed bundle. The executable's POST_BUILD codesign only
-# runs on a relink, so sign here (iOS: Xcode signs after this step anyway).
-if(CODESIGN_HELPER)
+# The copy changed an already-built, signed bundle. The executable's
+# POST_BUILD codesign only runs on a relink, so sign here - but only when
+# the executable exists: on a clean build this step runs before the app
+# target and the first signing belongs to POST_BUILD.
+if(CODESIGN_HELPER AND CODESIGN_APP AND IS_DIRECTORY "${CODESIGN_APP}/Contents/MacOS")
 	execute_process(
 		COMMAND "${CMAKE_COMMAND}"
 			"-DAPP_BUNDLE=${CODESIGN_APP}"

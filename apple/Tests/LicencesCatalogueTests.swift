@@ -11,7 +11,14 @@ import XCTest
 final class LicencesCatalogueTests: XCTestCase {
 	func testBundledCatalogueLoads() throws {
 		let document = try LicencesLoader.load()
-		XCTAssertEqual(document.source.distribution, "macos")
+		// The store build compiles this flag in; every other macOS build
+		// bundles the direct-download distribution.
+		#if MACOS_APP_STORE
+		let expected = "macos-store"
+		#else
+		let expected = "macos"
+		#endif
+		XCTAssertEqual(document.source.distribution, expected)
 		let amiberry = try XCTUnwrap(document.components.first { $0.id == "amiberry" })
 		XCTAssertTrue(document.ships(amiberry))
 	}
