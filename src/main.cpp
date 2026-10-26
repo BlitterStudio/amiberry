@@ -963,8 +963,11 @@ void uae_restart(struct uae_prefs *p, int opengui, const TCHAR *cfgfile)
 {
 	// A later restart decides what it starts with.
 	restart_with_pending = false;
-	uae_quit ();
+	// Set restart_program before uae_quit() so target_quit() can tell a
+	// restart from a real quit and avoid blocking work that only a quit
+	// needs (for example waiting for the update check's thread).
 	restart_program = opengui == -2 ? 4 : (opengui > 0 ? 1 : (opengui == 0 ? 2 : 3));
+	uae_quit ();
 	restart_config[0] = 0;
 	default_config = 0;
 	if (cfgfile)
