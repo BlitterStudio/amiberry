@@ -243,6 +243,7 @@ set(SOURCE_FILES
         src/osdep/amiberry_ipc_socket.cpp
         src/osdep/amiberry_actions.cpp
         src/osdep/amiberry_media.cpp
+        src/osdep/amiberry_whdboot.cpp
         src/osdep/amiberry_settings_schema.cpp
         src/osdep/amiberry_filesys.cpp
         src/osdep/amiberry_input.cpp
@@ -616,6 +617,8 @@ endif()
 
 # Select entitlements file based on build target
 if(IOS)
+    # iOS has no libcurl: download_file() comes from NSURLSession here.
+    target_sources(${PROJECT_NAME} PRIVATE src/osdep/amiberry_download_ios.mm)
     set(AMIBERRY_ENTITLEMENTS "${CMAKE_SOURCE_DIR}/packaging/ios/Amiberry.entitlements")
     set_target_properties(${PROJECT_NAME} PROPERTIES
         XCODE_ATTRIBUTE_CODE_SIGN_ENTITLEMENTS "${AMIBERRY_ENTITLEMENTS}"

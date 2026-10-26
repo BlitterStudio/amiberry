@@ -4,6 +4,7 @@
 #include <atomic>
 #include <functional>
 #include <string>
+#include <vector>
 #include "amiberry_gfx.h"
 #include "amiberry_input.h"
 #include "filesys.h"
@@ -372,7 +373,10 @@ enum class whdboot_download_outcome
 	success,
 	partial_failure,
 	failed,
-	cancelled
+	cancelled,
+	// Another download is running, or a machine is running that the
+	// extraction must not touch.
+	busy
 };
 
 struct whdboot_download_progress
@@ -394,6 +398,14 @@ struct whdboot_download_result
 extern whdboot_download_result download_whdboot_assets(
 	const std::function<bool(const whdboot_download_progress&)>& progress_cb,
 	std::atomic<bool>* cancel_flag);
+
+// WHDLoad (whdload.de), the kickstart RTB files (Aminet skick346) and JST
+// (Aminet) are not bundled with Amiberry and are fetched on demand.
+extern bool whdboot_can_download();
+extern const std::vector<std::string>& whdboot_skick_rtb_files();
+// True while a machine runs unpaused (the built-in GUI or the native
+// settings window hold a paused one): downloads wait until it does not.
+extern bool whdboot_emulation_blocks_downloads();
 
 extern int fromdfxtype(int num, int dfx, int subtype);
 extern int todfxtype(int num, int dfx, int* subtype);

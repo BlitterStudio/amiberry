@@ -29,6 +29,7 @@ add_library(amiberry_native_ui STATIC
         apple/Shared/Bridge/SettingsCatalog.swift
         apple/Shared/Bridge/SettingsSession.swift
         apple/Shared/Bridge/SettingsStore.swift
+        apple/Shared/Bridge/WHDBootTools.swift
 )
 set_target_properties(amiberry_native_ui PROPERTIES
         Swift_MODULE_NAME AmiberryNativeUI

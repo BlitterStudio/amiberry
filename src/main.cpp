@@ -1107,7 +1107,8 @@ void usage()
 	std::cout << " --native-ui-tests=<bundle> Run the native UI bridge tests (an XCTest bundle) where" << '\n';
 	std::cout << "                            the GUI would open, and exit with their result." << '\n';
 #endif
-	std::cout << " --download-whdboot         Download/update WHDBooter files and exit." << '\n';
+	std::cout << " --download-whdboot         Download/update the WHDBooter files and exit. WHDLoad" << '\n';
+	std::cout << "                            comes from whdload.de; the RTB files and JST from Aminet." << '\n';
 	std::cout << " -f <file>                  Load a configuration file." << '\n';
 	std::cout << " --config <file>            " << '\n';
 	std::cout << " --apply-preset <preset>[:<config>[:<compatibility>]]" << '\n';

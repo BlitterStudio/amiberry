@@ -119,6 +119,9 @@ final class LibraryModel {
 	private(set) var kickstartInstalled = true
 	/// What the last ROM import found.
 	var romReport: String?
+	/// While the WHDBooter files download (WHDLoad, RTB files, ...): the
+	/// line the Library shows; nil otherwise.
+	private(set) var downloadProgress: String?
 
 	@ObservationIgnored private let finish: () -> Void
 	@ObservationIgnored private let openEditor: (_ machine: Machine?, _ preset: (id: String, configuration: Int)?) -> Void
@@ -194,6 +197,23 @@ final class LibraryModel {
 			notice = "\u{201C}\(url.lastPathComponent)\u{201D} could not be opened: \(error.localizedDescription)"
 			return
 		}
+
+		// A WHDLoad archive boots through WHDLoad (or JST with "Use JST
+		// instead of WHDLoad" on), which is not bundled with Amiberry: its
+		// licence forbids redistribution. Offer the download before playing;
+		// nothing is fetched without the user asking for it. Other media
+		// (disks, CDs, configurations) never needs the tools.
+		if ["lha", "lzh"].contains(url.pathExtension.lowercased()),
+			let missingTool = missingWHDBootTool() {
+			offerWHDBootDownload(tool: missingTool) { [weak self] in
+				self?.startQuickPlay(path: path)
+			}
+			return
+		}
+		startQuickPlay(path: path)
+	}
+
+	private func startQuickPlay(path: String) {
 		Task { @MainActor in
 			guard await run(.quickPlay(path: path)) else { return }
 			if emulating, !(await run(.applySettings(.restart))) {
@@ -201,6 +221,77 @@ final class LibraryModel {
 			}
 			finish()
 		}
+	}
+
+	/// The WHDLoad tool the next boot needs and does not have: "WHDLoad",
+	/// "JST" (when it is selected instead) or nil when everything is in place.
+	private func missingWHDBootTool() -> String? {
+		let status = WHDBootTools.status()
+		guard status.downloadsAvailable else { return nil }
+		let useJST = (try? HostSettings.value(of: "use_jst_instead_of_whd")) == "true"
+		if useJST {
+			return status.jstInstalled ? nil : "JST"
+		}
+		return status.whdloadInstalled ? nil : "WHDLoad"
+	}
+
+	/// Asks for the on-demand WHDBoot files and downloads them; `then`
+	/// runs (with the files in place) only when the tool is installed.
+	private func offerWHDBootDownload(tool: String, then: @escaping () -> Void) {
+		if WHDBootTools.status().emulationRunning {
+			notice = "Stop the machine before downloading \(tool)."
+			return
+		}
+		let source = tool == "JST" ? "Aminet" : "whdload.de"
+		let (choice, _) = Alerts.show(title: "Download \(tool)?",
+			message: "\(tool) is needed to boot WHDLoad archives, but it is not installed. "
+				+ "\(tool) comes from \(source) and is not bundled with Amiberry.\n\n"
+				+ "Download it now, with the kickstart RTB files and the other WHDBooter files?",
+			buttons: ["Download", "Cancel"])
+		guard choice == 0 else { return }
+		Task { @MainActor in
+			guard await downloadWHDBootFiles(named: tool) else { return }
+			then()
+		}
+	}
+
+	/// Downloads the WHDBooter files, showing progress in the Library.
+	/// False when they failed (or were cancelled) and the tool is missing.
+	private func downloadWHDBootFiles(named tool: String) async -> Bool {
+		busy = true
+		defer { busy = false }
+		guard let task = WHDBootDownloadController.shared.start(onProgress: { [weak self]
+			label, step, totalSteps, bytesDone, bytesTotal in
+			let text = WHDBootTools.progressText(label: label, step: step, totalSteps: totalSteps,
+				bytesDone: bytesDone, bytesTotal: bytesTotal)
+			Task { @MainActor in
+				self?.downloadProgress = text
+			}
+		}) else {
+			downloadProgress = nil
+			notice = WHDBootTools.status().emulationRunning
+				? "Stop the machine before downloading \(tool)."
+				: "A WHDBooter download is already in progress."
+			return false
+		}
+		let outcome = await task.value
+		downloadProgress = nil
+		let status = WHDBootTools.status()
+		let installed = tool == "JST" ? status.jstInstalled : status.whdloadInstalled
+		if !installed {
+			if case .busy = outcome {
+				notice = "Stop the machine before downloading \(tool)."
+			} else {
+				let source = tool == "JST" ? "Aminet" : "whdload.de"
+				notice = "\(tool) could not be downloaded from \(source). "
+					+ "Try again from App Settings \u{2192} WHDLoad."
+			}
+			return false
+		}
+		if case .partialFailure = outcome {
+			notice = "Some WHDBooter files failed to download; \(tool) itself is installed."
+		}
+		return true
 	}
 
 	/// Copies ROM files (and the ROM-sized files of folders) into the ROMs
@@ -340,6 +431,16 @@ struct LibraryView: View {
 					.padding(.horizontal, 16)
 					.padding(.vertical, 8)
 					.background(.bar)
+			} else if let progress = model.downloadProgress {
+				HStack(spacing: 8) {
+					ProgressView()
+					Text("Downloading WHDBooter files: \(progress)")
+						.foregroundStyle(.secondary)
+				}
+				.frame(maxWidth: .infinity, alignment: .leading)
+				.padding(.horizontal, 16)
+				.padding(.vertical, 8)
+				.background(.bar)
 			} else if let notice = model.notice {
 				Text(notice)
 					.foregroundStyle(.red)

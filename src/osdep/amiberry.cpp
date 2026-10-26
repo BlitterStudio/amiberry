@@ -57,6 +57,8 @@
 #include "disk.h"
 #include "savestate.h"
 #include "zfile.h"
+#include "7z/Sha256.h"
+#include "zarchive.h"
 #include "rtgmodes.h"
 #include "gfxboard.h"
 #include "devices.h"
@@ -9076,18 +9078,9 @@ bool download_file(const std::string& source, const std::string& destination, bo
 	return false;
 }
 
-void download_rtb(const std::string& filename)
-{
-	const std::string destination_filename = "save-data/Kickstarts/" + filename;
-	const std::string destination = get_whdbootpath().append(destination_filename);
-	if (!file_exists(destination))
-	{
-		write_log("Downloading %s ...\n", destination.c_str());
-		const std::string url = "https://github.com/BlitterStudio/amiberry/blob/master/whdboot/save-data/Kickstarts/" + filename + "?raw=true";
-		download_file(url, destination, false);
-	}
-}
-#else // !AMIBERRY_HAS_CURL (no curl on this platform, e.g. iOS)
+// The skick346 helpers below download the RTB files from Aminet.
+#else // !AMIBERRY_HAS_CURL (no curl on this platform)
+#ifndef AMIBERRY_IOS
 bool download_file(const std::string& source, const std::string& destination, bool keep_backup)
 {
 	write_log("download_file: not available (no CURL)\n");
@@ -9100,10 +9093,9 @@ bool download_file(const std::string& source, const std::string& destination, bo
 	write_log("download_file: not available (no CURL)\n");
 	return false;
 }
-
-void download_rtb(const std::string& filename)
-{
-}
+#else
+// iOS implements download_file() with NSURLSession in amiberry_download_ios.mm.
+#endif // AMIBERRY_IOS
 #endif // AMIBERRY_HAS_CURL
 #else // LIBRETRO
 bool download_file(const std::string& source, const std::string& destination, bool keep_backup)
@@ -9119,9 +9111,7 @@ bool download_file(const std::string& source, const std::string& destination, bo
 	return false;
 }
 
-void download_rtb(const std::string& filename)
-{
-}
+// The skick346 helpers above download the RTB files from Aminet.
 #endif // LIBRETRO
 
 #ifdef AMIBERRY_IOS
@@ -12262,18 +12252,468 @@ static bool report_whdboot_download_progress(
 	return progress_cb(progress);
 }
 
+// WHDLoad (Bert Jahn, whdload.de), the Kickstart RTB files (Aminet,
+// skick346) and JST (Aminet) are not bundled with Amiberry: their licences
+// do not allow commercial redistribution. They are fetched on demand from
+// their authors' distribution points instead.
+static const char* const whdload_usr_url = "https://whdload.de/whdload/WHDLoad_usr.lha";
+static const char* const skick346_url = "https://aminet.net/util/boot/skick346.lha";
+// skick346.lha is frozen on Aminet: its SHA-256 is pinned so a corrupted
+// or impersonated download is refused before anything is decoded from it.
+static const char* const skick346_sha256 =
+	"02b4d01852d12ab391c6469064f917221a0f7319fd0b3ba6c359403ec1d59f96";
+static const char* const jst_url = "https://aminet.net/game/patch/jst.lha";
+
+bool whdboot_can_download()
+{
+#if defined(LIBRETRO)
+	return false;
+#elif defined(AMIBERRY_HAS_CURL) || defined(AMIBERRY_IOS)
+	return true;
+#else
+	return false;
+#endif
+}
+
+// The kickstart relocation files skick346.lha provides (the non-beta ones
+// the booter links). kick31034.A1000.RTB is not in skick346 and stays
+// bundled; kick33192.A500.RTB is byte-identical to skick346's
+// kick33180.A500.RTB and is created as its copy when missing.
+const std::vector<std::string>& whdboot_skick_rtb_files()
+{
+	static const std::vector<std::string> files = {
+		"kick33180.A500.RTB",
+		"kick34005.A500.RTB",
+		"kick37175.A500.RTB",
+		"kick36143.A3000.RTB",
+		"kick39106.A1200.RTB",
+		"kick40063.A600.RTB",
+		"kick40068.A1200.RTB",
+		"kick40068.A4000.RTB"
+	};
+	return files;
+}
+
+static std::string whdboot_rtb_destination(const std::string& filename)
+{
+	return join_path(whdboot_path, join_path("save-data/Kickstarts", filename));
+}
+
+static bool whdboot_skick_rtbs_missing()
+{
+	for (const auto& filename : whdboot_skick_rtb_files())
+	{
+		if (!file_exists(whdboot_rtb_destination(filename)))
+			return true;
+	}
+	return false;
+}
+
+// Whether a machine runs that the download's archive handling must not
+// touch: extracting uses the zfile/LhA global state a running emulation
+// reads its mounted archives through. Paused machines (the pause key, the
+// built-in GUI or the native settings window hold them) are fine.
+bool whdboot_emulation_blocks_downloads()
+{
+	extern int gui_active; // amiberry_gui.cpp: the built-in GUI is open
+
+	if (!emulating)
+		return false;
+	if (pause_emulation != 0)
+		return false;
+#ifdef AMIBERRY_NATIVE_HOST
+	if (native_host_settings_open())
+		return false;
+#endif
+	if (gui_active > 0)
+		return false;
+	return true;
+}
+
+// The LhA CRC (the one the archive headers store), computed over the
+// member's original bytes. Runs incrementally over chunks.
+static unsigned int whdboot_lha_crc16(const unsigned char* data, size_t length, unsigned int crc)
+{
+	for (size_t i = 0; i < length; i++)
+	{
+		crc ^= data[i];
+		for (int bit = 0; bit < 8; bit++)
+			crc = (crc & 1) ? (crc >> 1) ^ 0xA001 : crc >> 1;
+	}
+	return crc & 0xffff;
+}
+
+struct whdboot_lha_member
+{
+	bool found = false;
+	bool has_crc = false;
+	unsigned int crc = 0;
+	long long size = -1;
+};
+
+static void whdboot_normalize_archive_name(std::string& name)
+{
+	for (char& c : name)
+		if (c == '\\' || c == '\xff' || c == static_cast<char>(0xff))
+			c = '/';
+}
+
+// Walks the LhA headers of a local archive directly - level 0 (the Aminet
+// archives) and level 1 (whdload.de's WHDLoad_usr.lha), the layout
+// src/archivers/lha/header.cpp parses - and returns the member's stored
+// CRC and original size, so an extraction can be verified before it
+// replaces anything. Anything else (other header levels, unreadable
+// headers, a missing member) reports "not found", which makes the
+// extraction refuse: fail safe.
+static whdboot_lha_member whdboot_lha_lookup_member(const std::string& archive_path, const std::string& member_name)
+{
+	whdboot_lha_member info;
+	FILE* fp = fopen(archive_path.c_str(), "rb");
+	if (!fp)
+		return info;
+
+	std::string wanted = member_name;
+	whdboot_normalize_archive_name(wanted);
+	unsigned char base[1024];
+
+	for (;;)
+	{
+		const int header_size = fgetc(fp);
+		if (header_size == EOF || header_size == 0)
+			break; // end of the archive
+		if (header_size < 23 || header_size > 1000)
+			break; // implausible: refuse
+		if (fread(base, 1, header_size - 1, fp) != static_cast<size_t>(header_size - 1))
+			break;
+		// base[i] is the byte at file offset i + 1 (I_METHOD 2,
+		// I_PACKED_SIZE 7, I_ORIGINAL_SIZE 11, I_HEADER_LEVEL 20,
+		// I_NAME_LENGTH 21, I_NAME 22; the CRC follows the name).
+		const int level = base[19];
+		if (level != 0 && level != 1)
+			break;
+		unsigned int packed_size = base[6] | (base[7] << 8) | (base[8] << 16) | (static_cast<unsigned int>(base[9]) << 24);
+		const auto original_size = static_cast<long long>(base[10] | (base[11] << 8)
+			| (base[12] << 16) | (static_cast<long long>(base[13]) << 24));
+		const size_t name_length = base[20];
+		if (name_length == 0 || 22 + name_length > static_cast<size_t>(header_size))
+			break;
+		std::string name(reinterpret_cast<char*>(base) + 21, name_length);
+		whdboot_normalize_archive_name(name);
+
+		bool has_crc = false;
+		unsigned int crc = 0;
+		if (level == 0)
+		{
+			// The two bytes behind the base are the CRC of a classic
+			// level-0 header (an OS-extended one carries it inside).
+			const long extend = header_size - static_cast<long>(name_length) - 22;
+			if (extend >= 0)
+			{
+				has_crc = true;
+				unsigned char trailing[2];
+				if (fread(trailing, 1, 2, fp) != 2)
+					break;
+				if (header_size >= 24 + static_cast<int>(name_length))
+					crc = base[21 + name_length] | (base[22 + name_length] << 8);
+				else
+					crc = trailing[0] | (trailing[1] << 8);
+			}
+			else
+			{
+				unsigned char trailing[2];
+				if (fread(trailing, 1, 2, fp) != 2)
+					break;
+			}
+		}
+		else
+		{
+			// A level-1 header is followed by extension headers - each a
+			// 2-byte size N (counting itself), then N - 2 content bytes
+			// with a type first - until a zero size. Types 1 and 2 carry
+			// the file name and its directory; the packed size counts the
+			// extension bytes, so the payload is what remains.
+			unsigned int extension_bytes = 0;
+			std::string directory;
+			for (;;)
+			{
+				unsigned char size_bytes[2];
+				if (fread(size_bytes, 1, 2, fp) != 2)
+				{
+					fclose(fp);
+					return info;
+				}
+				const unsigned int size = size_bytes[0] | (size_bytes[1] << 8);
+				if (size == 0)
+					break;
+				unsigned char content[256];
+				// Extensions carry a type byte and at most a name or a
+				// directory: anything longer than the buffer is refused, not
+				// read (the size is archive-controlled and 16-bit).
+				if (size < 3 || size > 2 + static_cast<unsigned int>(sizeof content)
+					|| extension_bytes + size > packed_size)
+				{
+					fclose(fp);
+					return info;
+				}
+				if (fread(content, 1, size - 2, fp) != size - 2)
+				{
+					fclose(fp);
+					return info;
+				}
+				extension_bytes += size;
+				if (content[0] == 0x01) // the file name
+					name.assign(reinterpret_cast<char*>(content) + 1, size - 3);
+				else if (content[0] == 0x02) // its directory
+					directory.assign(reinterpret_cast<char*>(content) + 1, size - 3);
+			}
+			if (!directory.empty())
+			{
+				// The directory extension separates and terminates its
+				// path with 0xff; normalized, it already ends in '/'.
+				whdboot_normalize_archive_name(directory);
+				if (directory.back() != '/')
+					directory += '/';
+				name = directory + name;
+			}
+			whdboot_normalize_archive_name(name);
+			packed_size -= extension_bytes;
+			if (header_size >= 24 + static_cast<int>(name_length))
+			{
+				has_crc = true;
+				crc = base[21 + name_length] | (base[22 + name_length] << 8);
+			}
+		}
+
+		if (strcasecmp(name.c_str(), wanted.c_str()) == 0)
+		{
+			info.found = true;
+			info.has_crc = has_crc;
+			info.crc = crc;
+			info.size = original_size;
+			break;
+		}
+
+		if (fseek(fp, static_cast<long>(packed_size), SEEK_CUR) != 0)
+			break;
+	}
+
+	fclose(fp);
+	return info;
+}
+
+static std::string whdboot_file_sha256(const std::string& path)
+{
+	CSha256 sha;
+	Sha256_Init(&sha);
+
+	FILE* fp = fopen(path.c_str(), "rb");
+	if (!fp)
+		return {};
+	unsigned char buffer[65536];
+	size_t bytes;
+	while ((bytes = fread(buffer, 1, sizeof buffer, fp)) > 0)
+		Sha256_Update(&sha, buffer, static_cast<unsigned>(bytes));
+	const bool read_error = ferror(fp) != 0;
+	fclose(fp);
+	if (read_error)
+		return {};
+
+	unsigned char digest[SHA256_DIGEST_SIZE];
+	Sha256_Final(&sha, digest);
+	char hex[SHA256_DIGEST_SIZE * 2 + 1];
+	for (size_t i = 0; i < SHA256_DIGEST_SIZE; i++)
+		snprintf(hex + i * 2, 3, "%02x", digest[i]);
+	return hex;
+}
+
+// zfile builds its archive paths with the host separator: a '/' inside a
+// member name would not be found on Windows.
+static std::string whdboot_archive_member_path(const std::string& archive_path, const std::string& member_name)
+{
+	std::string member = member_name;
+	for (char& c : member)
+		if (c == '/')
+			c = FSDB_DIR_SEPARATOR;
+	return archive_path + FSDB_DIR_SEPARATOR_S + member;
+}
+
+// Extracts one member of an archive to destination_path, verifying what
+// was extracted (size and the header's CRC) before anything is replaced:
+// the member goes to a temporary file first and is renamed over the
+// destination only after it proved intact, so a corrupt download never
+// destroys the previous copy. allow_replace = false (the RTB and JST
+// rule: fetch once, never overwrite) extracts only when the destination
+// does not exist.
+static bool whdboot_extract_archive_member_to_file(const std::string& archive_path, const std::string& member_name,
+	const std::string& destination_path, const bool allow_replace)
+{
+	if (!allow_replace && file_exists(destination_path))
+		return true;
+
+	const whdboot_lha_member member = whdboot_lha_lookup_member(archive_path, member_name);
+	if (!member.found || member.size <= 0)
+	{
+		write_log("WHDBooter - could not verify %s in %s (member missing or unsupported header); keeping any previous copy\n",
+			member_name.c_str(), archive_path.c_str());
+		return false;
+	}
+
+	bool ok = false;
+	{
+	std::lock_guard<std::recursive_mutex> extraction_guard(zarchive_access_mutex);
+	struct zvolume* zv = zfile_fopen_archive(archive_path.c_str());
+	if (!zv)
+	{
+		write_log("WHDBooter - could not open archive %s\n", archive_path.c_str());
+		return false;
+	}
+
+	const std::string member_path = whdboot_archive_member_path(archive_path, member_name);
+	struct zfile* zf = zfile_open_archive(member_path.c_str(), 0);
+	ok = zf != nullptr;
+	if (ok)
+	{
+		const std::string temp_path = destination_path + ".new";
+		FILE* fp = fopen(temp_path.c_str(), "wb");
+		ok = fp != nullptr;
+		if (ok)
+		{
+			unsigned char buffer[65536];
+			size_t bytes;
+			while ((bytes = zfile_fread(buffer, 1, sizeof buffer, zf)) > 0)
+			{
+				if (fwrite(buffer, 1, bytes, fp) != bytes)
+				{
+					ok = false;
+					break;
+				}
+			}
+			fclose(fp);
+
+			if (ok)
+			{
+				// Verify the extracted bytes against the archive header.
+				FILE* verify = fopen(temp_path.c_str(), "rb");
+				ok = verify != nullptr;
+				if (ok)
+				{
+					unsigned int crc = 0;
+					long long total = 0;
+					while ((bytes = fread(buffer, 1, sizeof buffer, verify)) > 0)
+					{
+						crc = whdboot_lha_crc16(buffer, bytes, crc);
+						total += static_cast<long long>(bytes);
+					}
+					fclose(verify);
+					if (total != member.size)
+					{
+						write_log("WHDBooter - %s in %s is %lld bytes, expected %lld; keeping any previous copy\n",
+							member_name.c_str(), archive_path.c_str(), total, member.size);
+						ok = false;
+					}
+					else if (member.has_crc && crc != member.crc)
+					{
+						write_log("WHDBooter - CRC mismatch for %s in %s; keeping any previous copy\n",
+							member_name.c_str(), archive_path.c_str());
+						ok = false;
+					}
+				}
+			}
+
+			if (ok)
+			{
+				std::error_code rename_error;
+				// std::filesystem::rename replaces an existing destination
+				// on Windows as well.
+				std::filesystem::rename(temp_path, destination_path, rename_error);
+				if (rename_error)
+				{
+					write_log("WHDBooter - could not install %s: %s\n",
+						destination_path.c_str(), rename_error.message().c_str());
+					ok = false; // the previous copy stays in place
+				}
+			}
+			if (!ok)
+				std::remove(temp_path.c_str());
+		}
+	}
+	zfile_fclose_archive(zv); // closes the member's zfile as well
+	} // the archive lock ends with the volume
+
+	if (ok)
+		write_log("WHDBooter - installed %s from %s\n", destination_path.c_str(), archive_path.c_str());
+	return ok;
+}
+
+// Downloads one of the on-demand archives to archive_path (a scratch name
+// inside the WHDBoot folder; removed by the caller after extraction).
+static bool whdboot_fetch_archive(const int step, const int total_steps, const std::string& label,
+	const char* const url, const std::string& archive_path,
+	const std::function<bool(const whdboot_download_progress&)>& progress_cb,
+	std::atomic<bool>* cancel_flag)
+{
+	if (report_whdboot_download_progress(progress_cb, cancel_flag, step, total_steps, label, 0, 0))
+		return false;
+	write_log("Downloading %s ...\n", archive_path.c_str());
+	return download_file(url, archive_path, false,
+		[&](const int64_t dlnow, const int64_t dltotal)
+		{
+			return report_whdboot_download_progress(progress_cb, cancel_flag, step, total_steps,
+				label, dlnow, dltotal);
+		},
+		cancel_flag);
+}
+
+// One download at a time: the zfile/LhA state the extraction uses is not
+// re-entrant, and two runs would share the same scratch files.
+static std::atomic<bool> whdboot_download_active{ false };
+
 whdboot_download_result download_whdboot_assets(
 	const std::function<bool(const whdboot_download_progress&)>& progress_cb,
 	std::atomic<bool>* cancel_flag)
 {
-	constexpr int total_steps = 10;
 	whdboot_download_result result;
-	bool any_success = false;
-	bool any_failure = false;
+	if (!whdboot_can_download())
+	{
+		write_log("WHDBooter - downloads are not available in this build\n");
+		result.outcome = whdboot_download_outcome::failed;
+		return result;
+	}
+
+	bool expected = false;
+	if (!whdboot_download_active.compare_exchange_strong(expected, true))
+	{
+		write_log("WHDBooter - a download is already in progress\n");
+		result.outcome = whdboot_download_outcome::busy;
+		return result;
+	}
+	struct whdboot_download_guard
+	{
+		~whdboot_download_guard() { whdboot_download_active.store(false); }
+	} download_guard;
+
+	if (whdboot_emulation_blocks_downloads())
+	{
+		write_log("WHDBooter - a machine is running; stop it (or open the settings) before downloading\n");
+		result.outcome = whdboot_download_outcome::busy;
+		return result;
+	}
 
 	write_log("Downloading WHDBoot runtime assets into %s\n", whdboot_path.c_str());
+	write_log("WHDLoad comes from whdload.de, the RTB files and JST from Aminet\n");
 
 	ensure_whdboot_runtime_directories();
+
+	// WHDLoad is always re-fetched so an update installs new releases. The
+	// RTB files are fetched only while one is missing, JST only when it is
+	// selected and missing; existing files are never overwritten.
+	const bool jst_step = amiberry_options.use_jst_instead_of_whd
+		&& !file_exists(join_path(whdboot_path, "JST"));
+	const bool rtbs_step = whdboot_skick_rtbs_missing();
+	const int total_steps = 4 + (jst_step ? 1 : 0) + (rtbs_step ? 1 : 0);
+
+	bool any_success = false;
+	bool any_failure = false;
 
 	const auto do_download = [&](const int step, const std::string& label, const std::string& url,
 		const std::string& destination, const bool keep_backup, const bool record_failure = true) -> bool
@@ -12296,79 +12736,128 @@ whdboot_download_result download_whdboot_assets(
 		return ok;
 	};
 
+	const auto cancelled = [&]()
+	{
+		if (!should_cancel_whdboot_download(cancel_flag))
+			return false;
+		result.outcome = whdboot_download_outcome::cancelled;
+		return true;
+	};
+
 	int step = 0;
-	auto destination = join_path(whdboot_path, "WHDLoad");
-	do_download(++step, "WHDLoad",
-		"https://github.com/BlitterStudio/amiberry/blob/master/whdboot/WHDLoad?raw=true",
-		destination, false);
-	if (should_cancel_whdboot_download(cancel_flag))
-	{
-		result.outcome = whdboot_download_outcome::cancelled;
-		return result;
-	}
 
-	destination = join_path(whdboot_path, "JST");
-	do_download(++step, "JST",
-		"https://github.com/BlitterStudio/amiberry/blob/master/whdboot/JST?raw=true",
-		destination, false);
-	if (should_cancel_whdboot_download(cancel_flag))
+	// WHDLoad by Bert Jahn, from the author's site. The archive member
+	// WHDLoad/C/WHDLoad replaces the previous copy only after it was
+	// extracted and verified, so a failure keeps the old version.
 	{
-		result.outcome = whdboot_download_outcome::cancelled;
-		return result;
+		const auto archive = join_path(whdboot_path, "WHDLoad_usr.lha.download");
+		if (whdboot_fetch_archive(++step, total_steps, "WHDLoad (whdload.de)", whdload_usr_url,
+			archive, progress_cb, cancel_flag))
+		{
+			if (whdboot_extract_archive_member_to_file(archive, "WHDLoad/C/WHDLoad",
+				join_path(whdboot_path, "WHDLoad"), true))
+				any_success = true;
+			else
+				any_failure = true;
+		}
+		else if (!should_cancel_whdboot_download(cancel_flag))
+		{
+			any_failure = true;
+		}
+		std::remove(archive.c_str());
 	}
+	if (cancelled())
+		return result;
 
-	destination = join_path(whdboot_path, "AmiQuit");
+	// JST (freeware) only when "Use JST instead of WHDLoad" is enabled.
+	if (jst_step)
+	{
+		const auto archive = join_path(whdboot_path, "jst.lha.download");
+		if (whdboot_fetch_archive(++step, total_steps, "JST (Aminet)", jst_url,
+			archive, progress_cb, cancel_flag))
+		{
+			if (whdboot_extract_archive_member_to_file(archive, "jst_usr/bin/jst",
+				join_path(whdboot_path, "JST"), false))
+				any_success = true;
+			else
+				any_failure = true;
+		}
+		else if (!should_cancel_whdboot_download(cancel_flag))
+		{
+			any_failure = true;
+		}
+		std::remove(archive.c_str());
+	}
+	if (cancelled())
+		return result;
+
+	auto destination = join_path(whdboot_path, "AmiQuit");
 	do_download(++step, "AmiQuit",
 		"https://github.com/BlitterStudio/amiberry/blob/master/whdboot/AmiQuit?raw=true",
 		destination, false);
-	if (should_cancel_whdboot_download(cancel_flag))
-	{
-		result.outcome = whdboot_download_outcome::cancelled;
+	if (cancelled())
 		return result;
-	}
 
 	destination = join_path(whdboot_path, "boot-data.zip");
 	do_download(++step, "boot-data.zip",
 		"https://github.com/BlitterStudio/amiberry/blob/master/whdboot/boot-data.zip?raw=true",
 		destination, false);
-	if (should_cancel_whdboot_download(cancel_flag))
-	{
-		result.outcome = whdboot_download_outcome::cancelled;
+	if (cancelled())
 		return result;
-	}
 
-	const char* rtb_files[] = {
-		"kick33180.A500.RTB",
-		"kick34005.A500.RTB",
-		"kick40063.A600.RTB",
-		"kick40068.A1200.RTB",
-		"kick40068.A4000.RTB"
-	};
-	for (const auto& rtb : rtb_files)
+	// The kickstart relocation files, all from the one skick346.lha.
+	if (rtbs_step)
 	{
-		++step;
-		const auto rtb_dest_name = std::string("save-data/Kickstarts/") + rtb;
-		const auto rtb_destination = join_path(whdboot_path, rtb_dest_name);
-		if (file_exists(rtb_destination))
+		const auto archive = join_path(whdboot_path, "skick346.lha.download");
+		if (whdboot_fetch_archive(++step, total_steps, "Kickstart RTB files (Aminet)", skick346_url,
+			archive, progress_cb, cancel_flag))
 		{
-			report_whdboot_download_progress(progress_cb, cancel_flag, step, total_steps,
-				std::string(rtb) + " (already exists)", 0, 0);
-			if (should_cancel_whdboot_download(cancel_flag))
+			bool rtbs_ok = true;
+			// The archive is frozen: anything that does not hash to the
+			// pinned digest is refused before a byte is decoded from it.
+			const auto digest = whdboot_file_sha256(archive);
+			if (digest != skick346_sha256)
 			{
-				result.outcome = whdboot_download_outcome::cancelled;
-				return result;
+				write_log("WHDBooter - %s is not skick346.lha (SHA-256 %s, expected %s); not extracting\n",
+					archive.c_str(), digest.c_str(), skick346_sha256);
+				rtbs_ok = false;
 			}
-			continue;
+			else
+			{
+				for (const auto& rtb : whdboot_skick_rtb_files())
+				{
+					const auto rtb_destination = whdboot_rtb_destination(rtb);
+					if (file_exists(rtb_destination))
+						continue;
+					if (!whdboot_extract_archive_member_to_file(archive, "Kickstarts/" + rtb,
+						rtb_destination, false))
+						rtbs_ok = false;
+				}
+			}
+			if (rtbs_ok)
+				any_success = true;
+			else
+				any_failure = true;
 		}
-
-		const auto rtb_url = std::string("https://github.com/BlitterStudio/amiberry/blob/master/whdboot/save-data/Kickstarts/")
-			+ rtb + "?raw=true";
-		do_download(step, rtb, rtb_url, rtb_destination, false);
-		if (should_cancel_whdboot_download(cancel_flag))
+		else if (!should_cancel_whdboot_download(cancel_flag))
 		{
-			result.outcome = whdboot_download_outcome::cancelled;
-			return result;
+			any_failure = true;
 		}
+		std::remove(archive.c_str());
+	}
+	if (cancelled())
+		return result;
+
+	// skick346 carries no kick33192.A500.RTB of its own: it is the same
+	// file as kick33180.A500.RTB, so make the copy WHDLoad looks for.
+	const auto kick33180_path = whdboot_rtb_destination("kick33180.A500.RTB");
+	const auto kick33192_path = whdboot_rtb_destination("kick33192.A500.RTB");
+	if (file_exists(kick33180_path) && !file_exists(kick33192_path))
+	{
+		std::error_code copy_error;
+		std::filesystem::copy_file(kick33180_path, kick33192_path, copy_error);
+		if (!copy_error)
+			write_log("WHDBooter - created kick33192.A500.RTB (a copy of kick33180.A500.RTB)\n");
 	}
 
 	const auto json_destination = join_path(whdboot_path, "game-data/whdload_db.json");
@@ -12388,11 +12877,8 @@ whdboot_download_result download_whdboot_assets(
 			xml_destination, true, true);
 	}
 
-	if (should_cancel_whdboot_download(cancel_flag))
-	{
-		result.outcome = whdboot_download_outcome::cancelled;
+	if (cancelled())
 		return result;
-	}
 
 	const auto new_json_timestamp = get_json_timestamp(json_destination);
 	const auto new_xml_timestamp = get_xml_timestamp(xml_destination);
@@ -12410,10 +12896,9 @@ whdboot_download_result download_whdboot_assets(
 
 static bool whdboot_seed_files_missing_at(const std::string& root_path)
 {
-	if (!file_exists(join_path(root_path, "WHDLoad")))
-		return true;
-	if (!file_exists(join_path(root_path, "JST")))
-		return true;
+	// Only files Amiberry still bundles may be required here: WHDLoad, JST
+	// and the skick346 RTB files are fetched on demand (whdload.de and
+	// Aminet), so demanding them would reseed on every start.
 	if (!file_exists(join_path(root_path, "AmiQuit")))
 		return true;
 
@@ -12427,17 +12912,15 @@ static bool whdboot_seed_files_missing_at(const std::string& root_path)
 	if (!file_exists(json_destination) && !file_exists(xml_destination))
 		return true;
 
-	const char* required_rtb_files[] = {
-		"kick33180.A500.RTB",
-		"kick34005.A500.RTB",
-		"kick40063.A600.RTB",
-		"kick40068.A1200.RTB",
-		"kick40068.A4000.RTB"
+	// kick31034.A1000.RTB is not in skick346 and stays bundled.
+	// (kick33192.A500.RTB is skick346's kick33180.A500.RTB byte for byte;
+	// the download creates it as a copy.)
+	const char* bundled_rtb_files[] = {
+		"kick31034.A1000.RTB"
 	};
-	for (const auto* filename : required_rtb_files)
+	for (const auto* filename : bundled_rtb_files)
 	{
-		const auto destination = join_path(root_path, std::string("save-data/Kickstarts/") + filename);
-		if (!file_exists(destination))
+		if (!file_exists(join_path(root_path, std::string("save-data/Kickstarts/") + filename)))
 			return true;
 	}
 
@@ -12478,8 +12961,9 @@ static void seed_default_whdboot_files_if_needed()
 	if (!seed_missing_directory_contents_from_candidates(whdboot_path, source_candidates))
 #endif
 	{
-		write_log("No WHDLoad boot files found in bundled or system data locations\n");
-		write_log("Skipping automatic download during startup. Use the Paths panel or --download-whdboot to fetch them explicitly.\n");
+		write_log("WHDLoad, JST and the Kickstart RTB files are not bundled with Amiberry.\n");
+		write_log("Download them on demand with the Paths panel's 'Update WHDBooter files' button, "
+			"App Settings in the native apps, or --download-whdboot.\n");
 	}
 }
 
