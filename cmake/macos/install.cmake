@@ -9,6 +9,33 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         ${CMAKE_SOURCE_DIR}/packaging/PrivacyInfo.xcprivacy
         $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Resources/PrivacyInfo.xcprivacy)
 
+# Third-party licences and the GPL source offer. The offer is generated at
+# build time (always-run target, rewritten only when it changes) so it names
+# the revision this binary was built from even when HEAD moved without a
+# reconfigure; the bundle copy is its own always-run target so it also
+# refreshes when the executable does not relink. Both run before the
+# POST_BUILD codesign because the app target depends on them.
+set(AMIBERRY_LICENCES_DIR $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Resources/licences)
+# Computed here, not through $<BOOL:${VERSION_PRE_RELEASE}>: a non-numeric
+# pre-release string ("beta1") would make that generator expression false.
+if(VERSION_PRE_RELEASE)
+    set(AMIBERRY_PRERELEASE_FLAG 1)
+else()
+    set(AMIBERRY_PRERELEASE_FLAG 0)
+endif()
+add_custom_target(amiberry_licences_offer
+        COMMAND ${CMAKE_COMMAND}
+        -DSRC_DIR=${CMAKE_SOURCE_DIR}
+        -DOUT_FILE=${CMAKE_BINARY_DIR}/amiberry-source-offer.json
+        -DAMIBERRY_PRODUCT_VERSION=${AMIBERRY_PRODUCT_VERSION}
+        -DPRERELEASE=${AMIBERRY_PRERELEASE_FLAG}
+        -DAMIBERRY_DISTRIBUTION=${AMIBERRY_DISTRIBUTION}
+        -P ${CMAKE_SOURCE_DIR}/cmake/SourceOffer.cmake
+        VERBATIM)
+# The bundle copy target is defined after the codesign settings below: when
+# its copy changes a signed bundle it re-signs in the same step, so it needs
+# the codesign identity and entitlements.
+
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_SOURCE_DIR}/data
@@ -190,6 +217,39 @@ if(MACOS_CODESIGN_BUNDLE)
             -P "${CMAKE_SOURCE_DIR}/cmake/macos/codesign_bundle.cmake"
         COMMENT "Codesigning Amiberry app bundle"
         VERBATIM)
+
+    # The licences bundle copy. It runs even when the executable does not
+    # relink (so the POST_BUILD codesign above can be skipped while the
+    # signed bundle changed) and re-signs through the same script whenever
+    # its copy actually changed something.
+    add_custom_target(amiberry_licences_bundle ALL
+        COMMAND ${CMAKE_COMMAND}
+        -DSRC_DIR=${CMAKE_SOURCE_DIR}/packaging/licences
+        -DDEST_DIR=${AMIBERRY_LICENCES_DIR}
+        -DDISTRIBUTION=${AMIBERRY_DISTRIBUTION}
+        -DOFFER_FILE=${CMAKE_BINARY_DIR}/amiberry-source-offer.json
+        -DCODESIGN_HELPER=${CMAKE_SOURCE_DIR}/cmake/macos/codesign_bundle.cmake
+        -DCODESIGN_APP=$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>
+        -DCODESIGN_EXECUTABLE=${CODESIGN_EXECUTABLE}
+        -DCODESIGN_IDENTITY=${_amiberry_codesign_identity}
+        -DCODESIGN_OPTIONS=${MACOS_CODESIGN_OPTIONS}
+        -DCODESIGN_ENTITLEMENTS=${AMIBERRY_ENTITLEMENTS}
+        -P ${CMAKE_SOURCE_DIR}/cmake/LicencesBundle.cmake
+        VERBATIM)
+    add_dependencies(amiberry_licences_bundle amiberry_licences_offer)
+    add_dependencies(${PROJECT_NAME} amiberry_licences_bundle)
+else()
+    # Signing disabled: the same bundle step without the re-sign arguments.
+    add_custom_target(amiberry_licences_bundle ALL
+        COMMAND ${CMAKE_COMMAND}
+        -DSRC_DIR=${CMAKE_SOURCE_DIR}/packaging/licences
+        -DDEST_DIR=${AMIBERRY_LICENCES_DIR}
+        -DDISTRIBUTION=${AMIBERRY_DISTRIBUTION}
+        -DOFFER_FILE=${CMAKE_BINARY_DIR}/amiberry-source-offer.json
+        -P ${CMAKE_SOURCE_DIR}/cmake/LicencesBundle.cmake
+        VERBATIM)
+    add_dependencies(amiberry_licences_bundle amiberry_licences_offer)
+    add_dependencies(${PROJECT_NAME} amiberry_licences_bundle)
 endif()
 
 if (NOT "${CMAKE_GENERATOR}" MATCHES "Xcode")

@@ -1,0 +1,4 @@
+The files of this component shipped with Amiberry carry their author's
+public-domain dedication in their own headers (for example "Igor Pavlov :
+Public domain"). Those headers are the licence notice; this file only points
+at them.

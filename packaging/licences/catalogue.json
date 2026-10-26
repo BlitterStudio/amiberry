@@ -1,0 +1,1148 @@
+{
+  "components": [
+    {
+      "id": "amiberry",
+      "name": "Amiberry",
+      "version": "8.4.2",
+      "copyright": "2016-2026 Dimitris Panokostas and the Amiberry contributors",
+      "licence": "GPL-3.0-or-later",
+      "licence_name": "GNU General Public License, version 3 or later",
+      "url": "https://github.com/BlitterStudio/amiberry",
+      "text": "GPL-3.0.txt",
+      "platforms": [
+        "macos",
+        "macos-store",
+        "ios"
+      ]
+    },
+    {
+      "id": "winuae",
+      "name": "UAE / WinUAE emulation core",
+      "version": "",
+      "copyright": "Bernd Schmidt, Toni Wilen and many other UAE and WinUAE contributors",
+      "licence": "GPL-2.0-or-later",
+      "licence_name": "GNU General Public License, version 2 or later",
+      "url": "https://github.com/toniwilen/winuae",
+      "text": "GPL-2.0.txt",
+      "platforms": [
+        "macos",
+        "macos-store",
+        "ios"
+      ]
+    },
+    {
+      "id": "fs-uae-headers",
+      "name": "FS-UAE support headers",
+      "version": "",
+      "copyright": "2014 Frode Solheim",
+      "licence": "GPL-2.0-only",
+      "licence_name": "GNU General Public License, version 2 only",
+      "url": "https://fs-uae.net/",
+      "text": "GPL-2.0.txt",
+      "platforms": [
+        "macos",
+        "macos-store",
+        "ios"
+      ]
+    },
+    {
+      "id": "pearpc",
+      "name": "PearPC",
+      "version": "0.5",
+      "copyright": "2003-2006 Sebastian Biallas; 1999-2004 Stefan Weyergraf",
+      "licence": "GPL-2.0-only",
+      "licence_name": "GNU General Public License, version 2 only",
+      "url": "https://github.com/sebastianbiallas/pearpc",
+      "text": "GPL-2.0.txt",
+      "platforms": [
+        "macos",
+        "macos-store"
+      ]
+    },
+    {
+      "id": "pcem",
+      "name": "PCem / 86Box PC emulation",
+      "version": "",
+      "copyright": "Sarah Walker; Fred N. van Kempen; Miran Grca; and other PCem and 86Box authors",
+      "licence": "GPL-2.0-or-later",
+      "licence_name": "GNU General Public License, version 2 or later",
+      "url": "https://pcem-emulator.co.uk/",
+      "text": "GPL-2.0.txt",
+      "platforms": [
+        "macos",
+        "macos-store"
+      ]
+    },
+    {
+      "id": "dosbox-opl",
+      "name": "DOSBox OPL emulator",
+      "version": "",
+      "copyright": "2002-2010 The DOSBox Team",
+      "licence": "GPL-2.0-or-later",
+      "licence_name": "GNU General Public License, version 2 or later",
+      "url": "https://www.dosbox.com/",
+      "text": "GPL-2.0.txt",
+      "platforms": [
+        "macos",
+        "macos-store"
+      ]
+    },
+    {
+      "id": "altirra",
+      "name": "Altirra coprocessor library",
+      "version": "",
+      "copyright": "2009-2015 Avery Lee",
+      "licence": "GPL-2.0-or-later",
+      "licence_name": "GNU General Public License, version 2 or later",
+      "url": "https://www.virtualdub.org/altirra.html",
+      "text": "GPL-2.0.txt",
+      "platforms": [
+        "macos",
+        "macos-store",
+        "ios"
+      ]
+    },
+    {
+      "id": "softfloat",
+      "name": "SoftFloat",
+      "version": "2a",
+      "copyright": "John R. Hauser; portions 2006 Fabrice Bellard; later QEMU contributors",
+      "licence": "SoftFloat-2a",
+      "licence_name": "SoftFloat 2a licence, with BSD and GPL-2-or-later portions",
+      "url": "http://www.jhauser.us/arithmetic/SoftFloat.html",
+      "text": "SoftFloat-2a.txt",
+      "platforms": [
+        "macos",
+        "macos-store",
+        "ios"
+      ]
+    },
+    {
+      "id": "mt32emu",
+      "name": "mt32emu (munt)",
+      "version": "2.7.1",
+      "copyright": "Dean Beeler, Jerome Fisher, SergM and the munt contributors",
+      "licence": "LGPL-2.1-or-later",
+      "licence_name": "GNU Lesser General Public License, version 2.1 or later",
+      "url": "https://github.com/munt/munt",
+      "text": "LGPL-2.1.txt",
+      "platforms": [
+        "macos",
+        "macos-store",
+        "ios"
+      ]
+    },
+    {
+      "id": "smallsha1",
+      "name": "smallsha1",
+      "version": "",
+      "copyright": "2011 Micael Hildenborg",
+      "licence": "BSD-3-Clause",
+      "licence_name": "BSD 3-Clause License",
+      "url": "https://code.google.com/archive/p/smallsha1/",
+      "text": "BSD-3-Clause.txt",
+      "platforms": [
+        "macos",
+        "macos-store",
+        "ios"
+      ]
+    },
+    {
+      "id": "lzma-sdk",
+      "name": "LZMA SDK / 7-Zip",
+      "version": "16.04",
+      "copyright": "1999-2016 Igor Pavlov",
+      "licence": "Unlicense",
+      "licence_name": "Public domain (the author's dedication, as stated in the file headers)",
+      "url": "https://www.7-zip.org/sdk.html",
+      "text": "Public-domain.txt",
+      "platforms": [
+        "macos",
+        "macos-store",
+        "ios"
+      ]
+    },
+    {
+      "id": "xdms",
+      "name": "xDMS",
+      "version": "1.3",
+      "copyright": "Andre Rodrigues de la Rocha",
+      "licence": "Unlicense",
+      "licence_name": "Public domain (the author's dedication, as stated in the file headers)",
+      "url": "http://www.exotica.org.uk/",
+      "text": "Public-domain.txt",
+      "platforms": [
+        "macos",
+        "macos-store",
+        "ios"
+      ]
+    },
+    {
+      "id": "minizip",
+      "name": "mini unzip",
+      "version": "0.15 beta",
+      "copyright": "1998 Gilles Vollant",
+      "licence": "Zlib",
+      "licence_name": "zlib License",
+      "url": "http://www.winimage.com/zLibDll/unzip.htm",
+      "text": "Zlib.txt",
+      "platforms": [
+        "macos",
+        "macos-store",
+        "ios"
+      ]
+    },
+    {
+      "id": "kjmp2",
+      "name": "kjmp2",
+      "version": "1.1",
+      "copyright": "2006-2013 Martin J. Fiedler",
+      "licence": "Zlib",
+      "licence_name": "zlib-style licence (use for any purpose, retain the notice)",
+      "url": "https://keyj.emphy.de/",
+      "text": "Zlib.txt",
+      "platforms": [
+        "macos",
+        "macos-store",
+        "ios"
+      ]
+    },
+    {
+      "id": "lha",
+      "name": "LHa for UNIX",
+      "version": "1.14i",
+      "copyright": "Yooichi Tagawa; Nobutaka Watazaki; Masaru Oki; Tsugio Okamoto; Haruyasu Yoshizaki",
+      "licence": "Distributed under its authors' terms",
+      "licence_name": "Distributed under its authors' terms",
+      "url": "https://github.com/jca02266/lha",
+      "text": "",
+      "platforms": [
+        "macos",
+        "macos-store",
+        "ios"
+      ]
+    },
+    {
+      "id": "unlzx",
+      "name": "unlzx",
+      "version": "1.0",
+      "copyright": "Oliver Gantert; Stefano Coletta; Toni Wilen",
+      "licence": "Distributed under its authors' terms",
+      "licence_name": "Distributed under its authors' terms",
+      "url": "https://github.com/BlitterStudio/amiberry",
+      "text": "",
+      "platforms": [
+        "macos",
+        "macos-store",
+        "ios"
+      ]
+    },
+    {
+      "id": "warp",
+      "name": "Warp / unwarp decruncher (libxad)",
+      "version": "",
+      "copyright": "Dirk Stoecker (libxad)",
+      "licence": "Distributed under its authors' terms",
+      "licence_name": "Distributed under its authors' terms",
+      "url": "http://libxad.sourceforge.net/",
+      "text": "",
+      "platforms": [
+        "macos",
+        "macos-store",
+        "ios"
+      ]
+    },
+    {
+      "id": "chd",
+      "name": "libchdr / CHD (MAME)",
+      "version": "",
+      "copyright": "Aaron Giles and the MAME team",
+      "licence": "BSD-3-Clause",
+      "licence_name": "BSD 3-Clause License",
+      "url": "https://github.com/rtissera/libchdr",
+      "text": "BSD-3-Clause.txt",
+      "platforms": [
+        "macos",
+        "macos-store",
+        "ios"
+      ]
+    },
+    {
+      "id": "tms34010",
+      "name": "TMS34010 disassembler (MAME)",
+      "version": "",
+      "copyright": "Zsolt Vasvari and the MAME team",
+      "licence": "BSD-3-Clause",
+      "licence_name": "BSD 3-Clause License",
+      "url": "https://github.com/mamedev/mame",
+      "text": "BSD-3-Clause.txt",
+      "platforms": [
+        "macos",
+        "macos-store",
+        "ios"
+      ]
+    },
+    {
+      "id": "utf8proc",
+      "name": "utf8proc",
+      "version": "",
+      "copyright": "2014-2019 Steven G. Johnson, Jiahao Chen, Peter Colberg, Tony Kelman, Scott P. Jones, and other contributors; 2009 Public Software Group e. V., Berlin, Germany",
+      "licence": "MIT",
+      "licence_name": "MIT License",
+      "url": "https://github.com/JuliaStrings/utf8proc",
+      "text": "MIT.txt",
+      "platforms": [
+        "macos",
+        "macos-store",
+        "ios"
+      ]
+    },
+    {
+      "id": "mos6502",
+      "name": "mos6502",
+      "version": "",
+      "copyright": "Gianluca Ghettini",
+      "licence": "Distributed under its authors' terms",
+      "licence_name": "Distributed under its authors' terms",
+      "url": "https://github.com/gianlucag/mos6502",
+      "text": "",
+      "platforms": [
+        "macos",
+        "macos-store",
+        "ios"
+      ]
+    },
+    {
+      "id": "qemu",
+      "name": "QEMU-derived devices (VGA, slirp, SCSI)",
+      "version": "",
+      "copyright": "2004 Fabrice Bellard and the QEMU authors",
+      "licence": "MIT",
+      "licence_name": "MIT License",
+      "url": "https://www.qemu.org/",
+      "text": "MIT.txt",
+      "platforms": [
+        "macos",
+        "macos-store",
+        "ios"
+      ]
+    },
+    {
+      "id": "crtemu",
+      "name": "crtemu and crt_frame",
+      "version": "0.1",
+      "copyright": "2016 Mattias Gustavsson",
+      "licence": "MIT",
+      "licence_name": "MIT License, or the Unlicense, at the recipient's option",
+      "url": "https://github.com/mattiasgustavsson/libs",
+      "text": "MIT.txt",
+      "platforms": [
+        "macos",
+        "macos-store",
+        "ios"
+      ]
+    },
+    {
+      "id": "udisasm",
+      "name": "Universal Disassembler (udisasm)",
+      "version": "",
+      "copyright": "2017 bzt (bztsrc)",
+      "licence": "MIT",
+      "licence_name": "MIT License",
+      "url": "https://gitlab.com/bztsrc/udisasm",
+      "text": "MIT.txt",
+      "platforms": [
+        "macos",
+        "macos-store",
+        "ios"
+      ]
+    },
+    {
+      "id": "tinyxml2",
+      "name": "TinyXML-2",
+      "version": "11.0.0",
+      "copyright": "Lee Thomason",
+      "licence": "Zlib",
+      "licence_name": "zlib License",
+      "url": "https://github.com/leethomason/tinyxml2",
+      "text": "Zlib.txt",
+      "platforms": [
+        "macos",
+        "macos-store",
+        "ios"
+      ]
+    },
+    {
+      "id": "nlohmann-json-macos",
+      "name": "nlohmann/json",
+      "version": "",
+      "copyright": "2013-2026 Niels Lohmann",
+      "licence": "MIT",
+      "licence_name": "MIT License",
+      "url": "https://github.com/nlohmann/json",
+      "text": "MIT.txt",
+      "platforms": [
+        "macos",
+        "macos-store"
+      ]
+    },
+    {
+      "id": "nlohmann-json-ios",
+      "name": "nlohmann/json",
+      "version": "3.11.3",
+      "copyright": "2013-2024 Niels Lohmann",
+      "licence": "MIT",
+      "licence_name": "MIT License",
+      "url": "https://github.com/nlohmann/json",
+      "text": "MIT.txt",
+      "platforms": [
+        "ios"
+      ]
+    },
+    {
+      "id": "gamecontrollerdb",
+      "name": "SDL_GameControllerDB",
+      "version": "",
+      "copyright": "The SDL_GameControllerDB contributors",
+      "licence": "Zlib",
+      "licence_name": "zlib License",
+      "url": "https://github.com/mdqinc/SDL_GameControllerDB",
+      "text": "Zlib.txt",
+      "platforms": [
+        "macos",
+        "macos-store",
+        "ios"
+      ]
+    },
+    {
+      "id": "aros-rom",
+      "name": "AROS m68k ROM",
+      "version": "",
+      "copyright": "The AROS Development Team",
+      "licence": "APL-1.1",
+      "licence_name": "AROS Public License, version 1.1",
+      "url": "https://aros.sourceforge.io/",
+      "text": "APL.txt",
+      "platforms": [
+        "macos",
+        "macos-store",
+        "ios"
+      ]
+    },
+    {
+      "id": "aros-boot",
+      "name": "AROS m68k commands and libraries",
+      "version": "",
+      "copyright": "The AROS Development Team",
+      "licence": "APL-1.1",
+      "licence_name": "AROS Public License, version 1.1",
+      "url": "https://aros.sourceforge.io/",
+      "text": "APL.txt",
+      "platforms": [
+        "macos",
+        "macos-store",
+        "ios"
+      ]
+    },
+    {
+      "id": "xpk",
+      "name": "xpk client libraries",
+      "version": "",
+      "copyright": "The XPK authors",
+      "licence": "Distributed under its authors' terms",
+      "licence_name": "Distributed under its authors' terms",
+      "url": "https://aminet.net/util/pack",
+      "text": "",
+      "platforms": [
+        "macos",
+        "macos-store",
+        "ios"
+      ]
+    },
+    {
+      "id": "iff-library",
+      "name": "iff.library",
+      "version": "",
+      "copyright": "Christian A. Weber",
+      "licence": "Distributed under its authors' terms",
+      "licence_name": "Distributed under its authors' terms",
+      "url": "https://aminet.net/",
+      "text": "",
+      "platforms": [
+        "macos",
+        "macos-store",
+        "ios"
+      ]
+    },
+    {
+      "id": "explode-library",
+      "name": "explode.library",
+      "version": "",
+      "copyright": "S. Struijk and R. Brouwer",
+      "licence": "Distributed under its authors' terms",
+      "licence_name": "Distributed under its authors' terms",
+      "url": "https://aminet.net/",
+      "text": "",
+      "platforms": [
+        "macos",
+        "macos-store",
+        "ios"
+      ]
+    },
+    {
+      "id": "mmu-library",
+      "name": "68040.library (MMULib)",
+      "version": "",
+      "copyright": "Thomas Richter (THOR) and the MMU.lib authors",
+      "licence": "Distributed under its authors' terms",
+      "licence_name": "Distributed under its authors' terms",
+      "url": "https://aminet.net/util/libs/MMULib.lha",
+      "text": "",
+      "platforms": [
+        "macos",
+        "macos-store",
+        "ios"
+      ]
+    },
+    {
+      "id": "medplayer-library",
+      "name": "medplayer.library",
+      "version": "",
+      "copyright": "Teijo Kinnunen (MED)",
+      "licence": "Distributed under its authors' terms",
+      "licence_name": "Distributed under its authors' terms",
+      "url": "https://aminet.net/",
+      "text": "",
+      "platforms": [
+        "macos",
+        "macos-store",
+        "ios"
+      ]
+    },
+    {
+      "id": "ed",
+      "name": "ed",
+      "version": "",
+      "copyright": "Andrew Moore",
+      "licence": "Distributed under its authors' terms",
+      "licence_name": "Distributed under its authors' terms",
+      "url": "https://aminet.net/",
+      "text": "",
+      "platforms": [
+        "macos",
+        "macos-store",
+        "ios"
+      ]
+    },
+    {
+      "id": "amiquit",
+      "name": "AmiQuit",
+      "version": "",
+      "copyright": "The Amiberry project",
+      "licence": "Distributed under its authors' terms",
+      "licence_name": "Distributed under its authors' terms",
+      "url": "https://github.com/BlitterStudio/amiberry/blob/master/whdboot/AmiQuit",
+      "text": "",
+      "platforms": [
+        "macos",
+        "macos-store",
+        "ios"
+      ]
+    },
+    {
+      "id": "hrtmon",
+      "name": "HRTMon",
+      "version": "2.37",
+      "copyright": "Alain Malek (HRTmon); freezer support 2000-2015 Toni Wilen and 2003 Mark Cox",
+      "licence": "Distributed under its authors' terms",
+      "licence_name": "Distributed under its authors' terms",
+      "url": "https://github.com/toniwilen/winuae",
+      "text": "",
+      "platforms": [
+        "macos",
+        "macos-store",
+        "ios"
+      ]
+    },
+    {
+      "id": "sdl3-macos",
+      "name": "SDL",
+      "version": "",
+      "copyright": "1997-2026 Sam Lantinga and the SDL contributors",
+      "licence": "Zlib",
+      "licence_name": "zlib License",
+      "url": "https://github.com/libsdl-org/SDL",
+      "text": "Zlib.txt",
+      "platforms": [
+        "macos",
+        "macos-store"
+      ]
+    },
+    {
+      "id": "sdl3-ios",
+      "name": "SDL",
+      "version": "3.4.16",
+      "copyright": "1997-2026 Sam Lantinga and the SDL contributors",
+      "licence": "Zlib",
+      "licence_name": "zlib License",
+      "url": "https://github.com/libsdl-org/SDL",
+      "text": "Zlib.txt",
+      "platforms": [
+        "ios"
+      ]
+    },
+    {
+      "id": "sdl3-image-macos",
+      "name": "SDL_image",
+      "version": "",
+      "copyright": "1997-2026 Sam Lantinga and the SDL_image contributors",
+      "licence": "Zlib",
+      "licence_name": "zlib License",
+      "url": "https://github.com/libsdl-org/SDL_image",
+      "text": "Zlib.txt",
+      "platforms": [
+        "macos",
+        "macos-store"
+      ]
+    },
+    {
+      "id": "sdl3-image-ios",
+      "name": "SDL_image",
+      "version": "3.4.6",
+      "copyright": "1997-2026 Sam Lantinga and the SDL_image contributors",
+      "licence": "Zlib",
+      "licence_name": "zlib License",
+      "url": "https://github.com/libsdl-org/SDL_image",
+      "text": "Zlib.txt",
+      "platforms": [
+        "ios"
+      ]
+    },
+    {
+      "id": "stb",
+      "name": "stb",
+      "version": "",
+      "copyright": "2017 Sean Barrett",
+      "licence": "MIT",
+      "licence_name": "MIT License, or the Unlicense, at the recipient's option",
+      "url": "https://github.com/nothings/stb",
+      "text": "stb.txt",
+      "platforms": [
+        "ios"
+      ]
+    },
+    {
+      "id": "libpng-macos",
+      "name": "libpng",
+      "version": "",
+      "copyright": "The PNG Reference Library authors",
+      "licence": "Libpng",
+      "licence_name": "libpng License",
+      "url": "http://www.libpng.org/pub/png/libpng.html",
+      "text": "libpng.txt",
+      "platforms": [
+        "macos",
+        "macos-store"
+      ]
+    },
+    {
+      "id": "libpng-ios",
+      "name": "libpng",
+      "version": "1.6.43",
+      "copyright": "The PNG Reference Library authors",
+      "licence": "Libpng",
+      "licence_name": "libpng License",
+      "url": "http://www.libpng.org/pub/png/libpng.html",
+      "text": "libpng.txt",
+      "platforms": [
+        "ios"
+      ]
+    },
+    {
+      "id": "zlib",
+      "name": "zlib",
+      "version": "",
+      "copyright": "Jean-loup Gailly and Mark Adler",
+      "licence": "Zlib",
+      "licence_name": "zlib License",
+      "url": "https://zlib.net/",
+      "text": "Zlib.txt",
+      "platforms": [
+        "macos",
+        "macos-store",
+        "ios"
+      ]
+    },
+    {
+      "id": "flac",
+      "name": "FLAC",
+      "version": "",
+      "copyright": "Josh Coalson, the Xiph.Org Foundation and the FLAC authors",
+      "licence": "BSD-3-Clause",
+      "licence_name": "BSD 3-Clause License (Xiph BSD)",
+      "url": "https://github.com/xiph/flac",
+      "text": "BSD-3-Clause.txt",
+      "platforms": [
+        "macos",
+        "macos-store",
+        "ios"
+      ]
+    },
+    {
+      "id": "zstd",
+      "name": "Zstandard",
+      "version": "",
+      "copyright": "Meta Platforms, Inc. and affiliates (Facebook)",
+      "licence": "BSD-3-Clause",
+      "licence_name": "BSD 3-Clause License, or GPL-2.0",
+      "url": "https://github.com/facebook/zstd",
+      "text": [
+        "BSD-3-Clause.txt",
+        "GPL-2.0.txt"
+      ],
+      "platforms": [
+        "macos",
+        "macos-store"
+      ]
+    },
+    {
+      "id": "mpg123",
+      "name": "mpg123",
+      "version": "",
+      "copyright": "Michael Hipp, Thomas Orgis and the mpg123 authors",
+      "licence": "LGPL-2.1-or-later",
+      "licence_name": "GNU Lesser General Public License, version 2.1 or later",
+      "url": "https://www.mpg123.de/",
+      "text": "LGPL-2.1.txt",
+      "platforms": [
+        "macos",
+        "macos-store"
+      ]
+    },
+    {
+      "id": "portmidi",
+      "name": "PortMidi",
+      "version": "",
+      "copyright": "Roger B. Dannenberg and the PortMidi contributors",
+      "licence": "MIT",
+      "licence_name": "MIT License",
+      "url": "https://github.com/PortMidi/portmidi",
+      "text": "MIT.txt",
+      "platforms": [
+        "macos",
+        "macos-store"
+      ]
+    },
+    {
+      "id": "libmpeg2",
+      "name": "libmpeg2",
+      "version": "",
+      "copyright": "Michel Lespinasse, Aaron Holtzman and the libmpeg2 authors",
+      "licence": "GPL-2.0-or-later",
+      "licence_name": "GNU General Public License, version 2 or later",
+      "url": "https://libmpeg2.sourceforge.io/",
+      "text": "GPL-2.0.txt",
+      "platforms": [
+        "macos",
+        "macos-store"
+      ]
+    },
+    {
+      "id": "enet",
+      "name": "ENet",
+      "version": "",
+      "copyright": "Lee Salzman",
+      "licence": "MIT",
+      "licence_name": "MIT License",
+      "url": "https://github.com/lsalzman/enet",
+      "text": "MIT.txt",
+      "platforms": [
+        "macos",
+        "macos-store"
+      ]
+    },
+    {
+      "id": "libpcap",
+      "name": "libpcap",
+      "version": "",
+      "copyright": "The Tcpdump Group",
+      "licence": "BSD-3-Clause",
+      "licence_name": "BSD 3-Clause License",
+      "url": "https://www.tcpdump.org/",
+      "text": "BSD-3-Clause.txt",
+      "platforms": [
+        "macos",
+        "macos-store"
+      ]
+    },
+    {
+      "id": "curl",
+      "name": "curl",
+      "version": "",
+      "copyright": "Daniel Stenberg and many contributors",
+      "licence": "curl",
+      "licence_name": "curl License",
+      "url": "https://curl.se/",
+      "text": "curl.txt",
+      "platforms": [
+        "macos",
+        "macos-store"
+      ]
+    },
+    {
+      "id": "libwebp",
+      "name": "libwebp",
+      "version": "",
+      "copyright": "Google Inc.",
+      "licence": "BSD-3-Clause",
+      "licence_name": "BSD 3-Clause License",
+      "url": "https://chromium.googlesource.com/webm/libwebp",
+      "text": "BSD-3-Clause.txt",
+      "platforms": [
+        "macos",
+        "macos-store"
+      ]
+    },
+    {
+      "id": "floppybridge",
+      "name": "FloppyBridge",
+      "version": "",
+      "copyright": "2021-2024 Robert Smith",
+      "licence": "MPL-2.0 OR GPL-2.0-or-later",
+      "licence_name": "Mozilla Public License 2.0, or GNU GPL version 2 or later",
+      "url": "https://github.com/RobSmithDev/FloppyDriveBridge",
+      "text": [
+        "MPL-2.0.txt",
+        "GPL-2.0.txt"
+      ],
+      "platforms": [
+        "macos",
+        "macos-store"
+      ]
+    },
+    {
+      "id": "aom",
+      "name": "libaom",
+      "version": "",
+      "copyright": "Alliance for Open Media",
+      "licence": "BSD-2-Clause",
+      "licence_name": "BSD 2-Clause License",
+      "url": "https://aomedia.googlesource.com/aom/",
+      "text": "BSD-2-Clause.txt",
+      "platforms": [
+        "macos",
+        "macos-store"
+      ]
+    },
+    {
+      "id": "libavif",
+      "name": "libavif",
+      "version": "",
+      "copyright": "Joe Drago and the libavif contributors",
+      "licence": "BSD-2-Clause",
+      "licence_name": "BSD 2-Clause License",
+      "url": "https://github.com/AOMediaCodec/libavif",
+      "text": "BSD-2-Clause.txt",
+      "platforms": [
+        "macos",
+        "macos-store"
+      ]
+    },
+    {
+      "id": "dav1d",
+      "name": "dav1d",
+      "version": "",
+      "copyright": "VideoLAN and the dav1d authors",
+      "licence": "BSD-2-Clause",
+      "licence_name": "BSD 2-Clause License",
+      "url": "https://code.videolan.org/videolan/dav1d",
+      "text": "BSD-2-Clause.txt",
+      "platforms": [
+        "macos",
+        "macos-store"
+      ]
+    },
+    {
+      "id": "brotli",
+      "name": "Brotli",
+      "version": "",
+      "copyright": "Google Inc.",
+      "licence": "MIT",
+      "licence_name": "MIT License",
+      "url": "https://github.com/google/brotli",
+      "text": "MIT.txt",
+      "platforms": [
+        "macos",
+        "macos-store"
+      ]
+    },
+    {
+      "id": "highway",
+      "name": "Highway",
+      "version": "",
+      "copyright": "Google LLC",
+      "licence": "Apache-2.0",
+      "licence_name": "Apache License, version 2.0",
+      "url": "https://github.com/google/highway",
+      "text": "Apache-2.0.txt",
+      "platforms": [
+        "macos",
+        "macos-store"
+      ]
+    },
+    {
+      "id": "libjpeg-turbo",
+      "name": "libjpeg-turbo",
+      "version": "",
+      "copyright": "The libjpeg-turbo authors and the Independent JPEG Group",
+      "licence": "BSD-3-Clause",
+      "licence_name": "BSD 3-Clause License, with the IJG JPEG notice",
+      "url": "https://github.com/libjpeg-turbo/libjpeg-turbo",
+      "text": [
+        "BSD-3-Clause.txt",
+        "IJG.txt"
+      ],
+      "platforms": [
+        "macos",
+        "macos-store"
+      ]
+    },
+    {
+      "id": "jpeg-xl",
+      "name": "JPEG XL",
+      "version": "",
+      "copyright": "The JPEG XL authors",
+      "licence": "BSD-3-Clause",
+      "licence_name": "BSD 3-Clause License",
+      "url": "https://github.com/libjxl/libjxl",
+      "text": "BSD-3-Clause.txt",
+      "platforms": [
+        "macos",
+        "macos-store"
+      ]
+    },
+    {
+      "id": "lcms2",
+      "name": "Little CMS",
+      "version": "",
+      "copyright": "Marti Maria Saguer",
+      "licence": "MIT",
+      "licence_name": "MIT License",
+      "url": "https://github.com/mm2/Little-CMS",
+      "text": "MIT.txt",
+      "platforms": [
+        "macos",
+        "macos-store"
+      ]
+    },
+    {
+      "id": "xz",
+      "name": "XZ Utils",
+      "version": "",
+      "copyright": "The XZ Utils authors",
+      "licence": "0BSD",
+      "licence_name": "BSD Zero Clause License",
+      "url": "https://tukaani.org/xz/",
+      "text": "0BSD.txt",
+      "platforms": [
+        "macos",
+        "macos-store"
+      ]
+    },
+    {
+      "id": "libogg",
+      "name": "libogg",
+      "version": "",
+      "copyright": "The Xiph.Org Foundation",
+      "licence": "BSD-3-Clause",
+      "licence_name": "BSD 3-Clause License",
+      "url": "https://github.com/xiph/ogg",
+      "text": "BSD-3-Clause.txt",
+      "platforms": [
+        "macos",
+        "macos-store"
+      ]
+    },
+    {
+      "id": "libtiff",
+      "name": "libtiff",
+      "version": "",
+      "copyright": "Sam Leffler; Silicon Graphics, Inc.",
+      "licence": "libtiff",
+      "licence_name": "libtiff License",
+      "url": "https://libtiff.gitlab.io/libtiff/",
+      "text": "libtiff.txt",
+      "platforms": [
+        "macos",
+        "macos-store"
+      ]
+    },
+    {
+      "id": "vmaf",
+      "name": "VMAF",
+      "version": "",
+      "copyright": "Netflix, Inc. and contributors",
+      "licence": "BSD-2-Clause-Patent",
+      "licence_name": "BSD 2-Clause Plus Patent License",
+      "url": "https://github.com/Netflix/vmaf",
+      "text": "BSD-2-Clause-Patent.txt",
+      "platforms": [
+        "macos",
+        "macos-store"
+      ]
+    },
+    {
+      "id": "ffmpeg",
+      "name": "FFmpeg",
+      "version": "",
+      "copyright": "The FFmpeg developers",
+      "licence": "GPL-3.0-or-later",
+      "licence_name": "GNU General Public License, version 3 or later",
+      "url": "https://ffmpeg.org/",
+      "text": "GPL-3.0.txt",
+      "platforms": [
+        "macos"
+      ]
+    },
+    {
+      "id": "openssl",
+      "name": "OpenSSL",
+      "version": "",
+      "copyright": "The OpenSSL Project Authors",
+      "licence": "Apache-2.0",
+      "licence_name": "Apache License, version 2.0",
+      "url": "https://www.openssl.org/",
+      "text": "Apache-2.0.txt",
+      "platforms": [
+        "macos"
+      ]
+    },
+    {
+      "id": "x264",
+      "name": "x264",
+      "version": "",
+      "copyright": "VideoLAN and the x264 authors",
+      "licence": "GPL-2.0-or-later",
+      "licence_name": "GNU General Public License, version 2 or later",
+      "url": "https://code.videolan.org/videolan/x264",
+      "text": "GPL-2.0.txt",
+      "platforms": [
+        "macos"
+      ]
+    },
+    {
+      "id": "x265",
+      "name": "x265",
+      "version": "",
+      "copyright": "MulticoreWare and the x265 authors",
+      "licence": "GPL-2.0-or-later",
+      "licence_name": "GNU General Public License, version 2 or later",
+      "url": "https://bitbucket.org/multicoreware/x265_git",
+      "text": "GPL-2.0.txt",
+      "platforms": [
+        "macos"
+      ]
+    },
+    {
+      "id": "svt-av1",
+      "name": "SVT-AV1",
+      "version": "",
+      "copyright": "Alliance for Open Media and Intel",
+      "licence": "BSD-2-Clause-Patent",
+      "licence_name": "BSD 2-Clause Plus Patent License",
+      "url": "https://gitlab.com/AOMediaCodec/SVT-AV1",
+      "text": "BSD-2-Clause-Patent.txt",
+      "platforms": [
+        "macos"
+      ]
+    },
+    {
+      "id": "lame",
+      "name": "LAME",
+      "version": "",
+      "copyright": "The LAME project",
+      "licence": "LGPL-2.0-or-later",
+      "licence_name": "GNU Lesser General Public License, version 2 or later",
+      "url": "https://lame.sourceforge.io/",
+      "text": "LGPL-2.1.txt",
+      "platforms": [
+        "macos"
+      ]
+    },
+    {
+      "id": "opus",
+      "name": "Opus",
+      "version": "",
+      "copyright": "The Xiph.Org Foundation and the Opus authors",
+      "licence": "BSD-3-Clause",
+      "licence_name": "BSD 3-Clause License",
+      "url": "https://opus-codec.org/",
+      "text": "BSD-3-Clause.txt",
+      "platforms": [
+        "macos"
+      ]
+    },
+    {
+      "id": "libvpx",
+      "name": "libvpx",
+      "version": "",
+      "copyright": "The WebM Project authors",
+      "licence": "BSD-3-Clause",
+      "licence_name": "BSD 3-Clause License",
+      "url": "https://chromium.googlesource.com/webm/libvpx",
+      "text": "BSD-3-Clause.txt",
+      "platforms": [
+        "macos"
+      ]
+    },
+    {
+      "id": "libserialport",
+      "name": "libserialport",
+      "version": "",
+      "copyright": "Martin Ling, Uwe Hermann and the sigrok authors",
+      "licence": "LGPL-3.0-or-later",
+      "licence_name": "GNU Lesser General Public License, version 3 or later",
+      "url": "https://sigrok.org/wiki/Libserialport",
+      "text": "LGPL-3.0.txt",
+      "platforms": [
+        "macos"
+      ]
+    },
+    {
+      "id": "capsimage",
+      "name": "CAPSImage / IPF",
+      "version": "",
+      "copyright": "2002-2026 KryoFlux Products & Services Limited",
+      "licence": "LicenseRef-KryoFlux-NC",
+      "licence_name": "KryoFlux Non-Commercial Source Code License",
+      "url": "https://www.kryoflux.com/",
+      "text": "CAPSImage.txt",
+      "platforms": [
+        "macos"
+      ]
+    }
+  ],
+  "downloaded": [
+    {
+      "id": "whdload",
+      "name": "WHDLoad",
+      "copyright": "Bert Jahn",
+      "url": "https://whdload.de/",
+      "note": "Downloaded on request from the author's site. Not part of Amiberry, and not covered by Amiberry's licence."
+    },
+    {
+      "id": "skick-rtb",
+      "name": "SKick relocation files (RTB)",
+      "copyright": "Pavel Troller",
+      "url": "https://aminet.net/package/util/boot/skick346",
+      "note": "Downloaded on request. The kickstart relocation files (kick*.RTB) come from SKick 3.46 on Aminet. Not part of Amiberry."
+    },
+    {
+      "id": "jst",
+      "name": "JST (JOTD Startup)",
+      "copyright": "Jean-François Fabre and Ralf Huvendiek",
+      "url": "https://aminet.net/package/game/patch/jst",
+      "note": "Downloaded on request from Aminet game/patch/jst. Not part of Amiberry."
+    }
+  ]
+}

@@ -96,7 +96,7 @@ No personal data is collected or transmitted. Crash reports contain only anonymo
 
 ## Open Source
 
-Amiberry is open-source software released under the **GNU General Public License v3 (GPLv3)**. The complete source code is publicly available at [github.com/BlitterStudio/amiberry](https://github.com/BlitterStudio/amiberry), allowing full transparency into how the App operates.
+Amiberry is open-source software released under the **GNU General Public License v3 (GPLv3)**. The complete source code is publicly available at [github.com/BlitterStudio/amiberry](https://github.com/BlitterStudio/amiberry), allowing full transparency into how the App operates. The macOS and iOS apps include an Acknowledgements / About & Licences screen with the GPL text, a link to the exact source of that build, and the licence notices for the third-party components that build ships.
 
 ## Changes to This Policy
 

@@ -192,6 +192,7 @@ struct WindowSize {
 	static let library = WindowSize(min: NSSize(width: 720, height: 480), ideal: NSSize(width: 860, height: 560))
 	static let editor = WindowSize(min: NSSize(width: 720, height: 480), ideal: NSSize(width: 900, height: 620))
 	static let appSettings = WindowSize(min: NSSize(width: 520, height: 400), ideal: NSSize(width: 640, height: 600))
+	static let acknowledgements = WindowSize(min: NSSize(width: 860, height: 680), ideal: NSSize(width: 860, height: 680))
 }
 
 extension View {
