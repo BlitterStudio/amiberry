@@ -58,7 +58,7 @@ permissions:
 
 jobs:
   build-macOS-native-ui:
-    runs-on: macos-15
+    runs-on: macos-26
     timeout-minutes: 45
     steps:
       - name: Check out repository code
@@ -90,7 +90,7 @@ jobs:
         run: AMIBERRY_BIN=build/Amiberry.app/Contents/MacOS/Amiberry sh tests/test_native_ui_bridge.sh
 
   build-iOS-simulator:
-    runs-on: macos-15
+    runs-on: macos-26
     timeout-minutes: 45
     steps:
       - name: Check out repository code
@@ -118,7 +118,7 @@ jobs:
             | grep -F "settings layer ready: %{public}d options via C API"
 
   build-iOS-device:
-    runs-on: macos-15
+    runs-on: macos-26
     timeout-minutes: 45
     steps:
       - name: Check out repository code
