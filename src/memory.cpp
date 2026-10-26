@@ -109,6 +109,16 @@ static int bogomem_aliasing;
 /* The address space setting used during the last reset.  */
 static bool last_address_space_24;
 
+/* Whether the bank table is still laid out for a different address-space
+ * mode than the running configuration asks for (24-bit banks are mirrored
+ * through the whole 4G window, 32-bit ones are not). memory_reset() treats
+ * this switch as needing a hard reset; callers that apply configuration
+ * changes without one must check this and reset instead. */
+bool memory_address_space_rebuild_needed(void)
+{
+	return last_address_space_24 != currprefs.address_space_24;
+}
+
 addrbank *mem_banks[MEMORY_BANKS];
 
 /* This has two functions. It either holds a host address that, when added

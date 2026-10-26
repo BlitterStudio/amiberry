@@ -7241,6 +7241,18 @@ void m68k_go (int may_quit)
 			if (cpu_prefs_changed_flag & 1) {
 				uaecptr pc = m68k_getpc();
 				prefs_changed_cpu();
+				/* prefs_changed_cpu() copied address_space_24 into the
+				 * running configuration, but the bank table is still
+				 * laid out for the old address-space mode (24-bit banks
+				 * mirror through the whole 4G window, 32-bit ones do
+				 * not, and memory_reset() rebuilds it only on a hard
+				 * reset). Finish this mode change with a full reset so
+				 * nothing runs with the new mode on the old layout. */
+				if (memory_address_space_rebuild_needed()) {
+					quit_program = UAE_RESET_HARD;
+					cpu_prefs_changed_flag = 0;
+					continue;
+				}
 				fpu_modechange();
 				custom_cpuchange();
 				build_cpufunctbl();
