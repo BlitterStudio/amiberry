@@ -42,8 +42,10 @@ add_custom_target(amiberry_licences_bundle ALL
         -DDEST_DIR=${AMIBERRY_LICENCES_DIR}
         -DDISTRIBUTION=${AMIBERRY_DISTRIBUTION}
         -DOFFER_FILE=${CMAKE_BINARY_DIR}/amiberry-source-offer.json
-        -P ${CMAKE_SOURCE_DIR}/cmake/LicencesBundle.cmake
-        VERBATIM)
+        -P ${CMAKE_SOURCE_DIR}/cmake/LicencesBundle.cmake)
+# No VERBATIM here: DEST_DIR holds Xcode's ${EFFECTIVE_PLATFORM_NAME},
+# which VERBATIM would escape, copying the licences into a literal
+# "Release${EFFECTIVE_PLATFORM_NAME}/Amiberry.app" instead of the app.
 add_dependencies(amiberry_licences_bundle amiberry_licences_offer)
 add_dependencies(${PROJECT_NAME} amiberry_licences_bundle)
 
