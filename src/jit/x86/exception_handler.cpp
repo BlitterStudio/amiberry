@@ -16,6 +16,13 @@
 #endif
 #endif
 #include <signal.h>
+// backtrace() for the crash diagnostics, where libc has it: glibc and Apple
+// (MinGW and musl have no execinfo.h, FreeBSD needs libexecinfo, Android's
+// bionic has it only from API 33).
+#if (defined(__linux__) && defined(__GLIBC__) && !defined(__ANDROID__)) || defined(__APPLE__)
+#define AMIBERRY_JIT_BACKTRACE 1
+#include <execinfo.h>
+#endif
 
 #define SIG_READ 1
 #define SIG_WRITE 2
@@ -1002,6 +1009,31 @@ static void sigsegv_handler(int signum, siginfo_t *info, void *context)
 	} else {
 		write_log(_T("JIT: Caught SIGSEGV outside JIT code: access to %p at PC=%p\n"),
 			(void *)address, i);
+		/* The fault is in emulator code, not in the JIT: name the caller
+		 * and, when the address falls in the natmem window, the bank that
+		 * serves it, so the next occurrence identifies its source. Cold
+		 * path (the process is about to abort); backtrace_symbols_fd is
+		 * the async-signal-safe variant. */
+		{
+#ifdef AMIBERRY_JIT_BACKTRACE
+			void *frames[16];
+			int count = backtrace(frames, 16);
+			backtrace_symbols_fd(frames, count, 2);
+#endif
+			uintptr_t natmem_base = (uintptr_t)NATMEM_OFFSET;
+			if (address >= natmem_base && address < natmem_base + 0x100000000ULL) {
+				uae_u32 amiga_addr = (uae_u32)(address - natmem_base);
+				addrbank *ab = &get_mem_bank(amiga_addr);
+				write_log(_T("JIT: natmem+%08x bank=%s start=%08x mask=%08x "
+					"allocated=%zx baseaddr=%p direct_r=%p direct_w=%p\n"),
+					amiga_addr, ab->name ? ab->name : _T("<null>"),
+					ab->start, ab->mask, (size_t)ab->allocated_size,
+					ab->baseaddr, ab->baseaddr_direct_r, ab->baseaddr_direct_w);
+			}
+			write_log(_T("JIT: cachesize=%d cpu=%d as24=%d pc=%08x\n"),
+				currprefs.cachesize, currprefs.cpu_model,
+				currprefs.address_space_24, (unsigned)M68K_GETPC);
+		}
 	}
 
 	/* Call libc abort() directly. sysdeps.h redefines abort() to log and

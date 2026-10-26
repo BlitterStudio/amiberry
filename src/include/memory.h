@@ -10,6 +10,7 @@
 #define UAE_MEMORY_H
 
 extern void memory_reset(void);
+extern bool memory_address_space_rebuild_needed(void);
 extern void memory_restore(void);
 extern void a1000_reset(void);
 
