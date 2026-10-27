@@ -225,6 +225,7 @@ INCFLAGS += -I$(AMIBERRY_DIR)/src/osdep
 INCFLAGS += -I$(AMIBERRY_DIR)/src/threaddep
 INCFLAGS += -I$(AMIBERRY_DIR)/src/archivers
 INCFLAGS += -I$(AMIBERRY_DIR)/external/floppybridge/src
+INCFLAGS += -I$(AMIBERRY_DIR)/external/lhasa/lib
 INCFLAGS += -I$(LIBRETRO_DIR)
 INCFLAGS += -I$(LIBCO_DIR)
 INCFLAGS += -I$(LIBRETRO_COMMON)/include
@@ -524,17 +525,7 @@ SOURCES_ARCHIVE := $(AMIBERRY_DIR)/src/archivers/dms/crc_csum.cpp \
                   $(AMIBERRY_DIR)/src/archivers/dms/u_medium.cpp \
                   $(AMIBERRY_DIR)/src/archivers/dms/u_quick.cpp \
                   $(AMIBERRY_DIR)/src/archivers/dms/u_rle.cpp \
-                  $(AMIBERRY_DIR)/src/archivers/lha/crcio.cpp \
-                  $(AMIBERRY_DIR)/src/archivers/lha/dhuf.cpp \
-                  $(AMIBERRY_DIR)/src/archivers/lha/header.cpp \
-                  $(AMIBERRY_DIR)/src/archivers/lha/huf.cpp \
-                  $(AMIBERRY_DIR)/src/archivers/lha/larc.cpp \
-                  $(AMIBERRY_DIR)/src/archivers/lha/lhamaketbl.cpp \
-                  $(AMIBERRY_DIR)/src/archivers/lha/lharc.cpp \
-                  $(AMIBERRY_DIR)/src/archivers/lha/shuf.cpp \
-                  $(AMIBERRY_DIR)/src/archivers/lha/slide.cpp \
                   $(AMIBERRY_DIR)/src/archivers/lha/uae_lha.cpp \
-                  $(AMIBERRY_DIR)/src/archivers/lha/util.cpp \
                   $(AMIBERRY_DIR)/src/archivers/lzx/unlzx.cpp \
                   $(AMIBERRY_DIR)/src/archivers/mp2/kjmp2.cpp \
                   $(AMIBERRY_DIR)/src/archivers/wrp/warp.cpp \
@@ -740,7 +731,22 @@ INCFLAGS += -I$(MT32EMU_DIR)
 SOURCES_CXX += $(SOURCES_MT32EMU) $(AMIBERRY_DIR)/src/midiemu.cpp
 endif
 
-SOURCES_C := $(SOURCES_7Z) $(LIBCO_DIR)/libco.c $(SOURCES_LIBRETRO_COMMON)
+# Lhasa (ISC, vendored in external/lhasa): the decoders #include
+# bit_stream_reader.c, lh_new_decoder.c, pma_common.c and tree_decode.c.
+LHASA_DIR := $(AMIBERRY_DIR)/external/lhasa/lib
+SOURCES_LHASA := $(addprefix $(LHASA_DIR)/,crc16.c ext_header.c lha_decoder.c \
+                 lha_endian.c lha_file_header.c lha_input_stream.c \
+                 lha_basic_reader.c lha_reader.c macbinary.c null_decoder.c \
+                 lh1_decoder.c lh5_decoder.c lh6_decoder.c lh7_decoder.c \
+                 lhx_decoder.c lk7_decoder.c lz5_decoder.c lzs_decoder.c \
+                 pm1_decoder.c pm2_decoder.c)
+ifeq ($(platform), win)
+SOURCES_LHASA += $(LHASA_DIR)/lha_arch_win32.c
+else
+SOURCES_LHASA += $(LHASA_DIR)/lha_arch_unix.c
+endif
+
+SOURCES_C := $(SOURCES_7Z) $(SOURCES_LHASA) $(LIBCO_DIR)/libco.c $(SOURCES_LIBRETRO_COMMON)
 
 OBJECTS := $(SOURCES_CXX:.cpp=.o) $(SOURCES_C:.c=.o)
 

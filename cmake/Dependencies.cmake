@@ -763,6 +763,7 @@ endif()
 
 set(libmt32emu_SHARED FALSE)
 add_subdirectory(external/mt32emu)
+add_subdirectory(external/lhasa)
 if(NOT IOS)
     add_subdirectory(external/floppybridge)
 endif()
@@ -798,6 +799,7 @@ endif()
 # Direct target linking preserves transitive includes and compile definitions.
 target_link_libraries(${PROJECT_NAME} PRIVATE
     mt32emu
+    lhasa
     ZLIB::ZLIB
     nlohmann_json::nlohmann_json
     ${CMAKE_DL_LIBS}
