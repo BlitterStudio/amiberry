@@ -197,14 +197,14 @@
       ]
     },
     {
-      "id": "lha",
-      "name": "LHa for UNIX",
-      "version": "1.14i",
-      "copyright": "Yooichi Tagawa; Nobutaka Watazaki; Masaru Oki; Tsugio Okamoto; Haruyasu Yoshizaki",
-      "licence": "Distributed under its authors' terms",
-      "licence_name": "Distributed under its authors' terms",
-      "url": "https://github.com/jca02266/lha",
-      "text": "",
+      "id": "lhasa",
+      "name": "Lhasa (LHA archive decoding)",
+      "version": "0.6.0",
+      "copyright": "2011-2025 Simon Howard",
+      "licence": "ISC",
+      "licence_name": "ISC License",
+      "url": "https://github.com/fragglet/lhasa",
+      "text": "Lhasa-ISC.txt",
       "platforms": [
         "macos",
         "macos-store",
