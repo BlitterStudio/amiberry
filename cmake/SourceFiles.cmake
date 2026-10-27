@@ -192,7 +192,7 @@ set(SOURCE_FILES
         src/archivers/dms/u_quick.cpp
         src/archivers/dms/u_rle.cpp
         src/archivers/lha/uae_lha.cpp
-        src/archivers/lzx/unlzx.cpp
+        src/archivers/lzx/lzx.cpp
         src/archivers/mp2/kjmp2.cpp
         src/archivers/wrp/warp.cpp
         src/archivers/zip/unzip.cpp
