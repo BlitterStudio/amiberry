@@ -523,8 +523,7 @@ struct LibraryView: View {
 			.navigationSplitViewColumnWidth(min: 170, ideal: 200)
 			.navigationTitle("Library")
 		} detail: {
-			content
-				.safeAreaInset(edge: .top, spacing: 0) { romNotice }
+			detail
 				.navigationTitle((filter ?? .all).title)
 				.toolbar {
 					#if os(iOS)
@@ -536,6 +535,24 @@ struct LibraryView: View {
 					}
 				}
 		}
+	}
+
+	/// The detail column's content: the machines, with the ROM notice over
+	/// them. On iOS the notice is a safe-area inset over the machines; on
+	/// the Mac an inset on the split view's detail breaks its layout (the
+	/// columns lay out at an oversized ideal height, their top - the
+	/// sidebar's rows, the banner - above the visible window, and resizing
+	/// does not bring it back), so there it rides at the top of the stack.
+	@ViewBuilder private var detail: some View {
+		#if os(iOS)
+		content
+			.safeAreaInset(edge: .top, spacing: 0) { romNotice }
+		#else
+		VStack(spacing: 0) {
+			romNotice
+			content
+		}
+		#endif
 	}
 
 	/// Under the toolbar, over the machines.
@@ -701,6 +718,7 @@ struct ROMNotice: View {
 					Text("No Kickstart ROMs").font(.headline)
 					Text("Machines boot the free AROS ROM. For the Amiga\u{2019}s own, import your Kickstart ROM files (from Amiga Forever or dumped from your Amiga).")
 						.foregroundStyle(.secondary)
+						.lineLimit(4)
 						.fixedSize(horizontal: false, vertical: true)
 				}
 				if let report = model.romReport {

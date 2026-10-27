@@ -519,6 +519,18 @@ elseif(IOS)
     include(FetchContent)
     set(SDL_STATIC ON CACHE BOOL "Build SDL3 as a static library on iOS" FORCE)
     set(SDL_SHARED OFF CACHE BOOL "Shared SDL3 is not usable in an iOS app bundle" FORCE)
+    # iOS permission strings (ITMS-90683): Amiberry drives game controllers
+    # through GameController (SDL_INIT_GAMEPAD) and uses neither the raw
+    # SDL_hid API nor SDL's sensor API. SDL3's iOS hidapi backend is a
+    # Steam-Controller-over-Bluetooth implementation (CoreBluetooth) and its
+    # sensor backend is CoreMotion; leaving them enabled would reference
+    # CBCentralManager and CMMotionManager, which App Store processing then
+    # flags as requiring NSBluetoothAlwaysUsageDescription and motion
+    # permission. The camera (SDL_INIT_CAMERA, the genlock capture source)
+    # and audio capture (the sampler, the sound cards' recording input)
+    # are real features: their usage strings are in iOSBundleInfo.plist.in.
+    set(SDL_HIDAPI OFF CACHE BOOL "No raw HID on iOS: controllers come via GameController" FORCE)
+    set(SDL_SENSOR OFF CACHE BOOL "No SDL sensor API use on iOS (CoreMotion)" FORCE)
     FetchContent_Declare(
         sdl3
         GIT_REPOSITORY https://github.com/libsdl-org/SDL.git
