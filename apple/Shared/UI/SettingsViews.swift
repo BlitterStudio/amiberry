@@ -233,7 +233,7 @@ struct NumberControl: View {
 	var body: some View {
 		let range = store.range(for: descriptor.id) ?? descriptor.range ?? 0...0
 		let current = Double(store.value(of: descriptor.id) ?? "") ?? range.lowerBound
-		let invalid = number(draft, in: range) == nil
+		let invalid = !isStoredValue(draft) && number(draft, in: range) == nil
 		VStack(alignment: .trailing, spacing: 2) {
 			LabeledContent(descriptor.label) {
 				HStack(spacing: 6) {
@@ -272,6 +272,13 @@ struct NumberControl: View {
 			}
 		}
 		.onChange(of: draft) {
+			// The stored value as it is: a configuration can hold one outside
+			// the range the option has now (a crop height saved for double
+			// lines). It was not typed, so there is nothing to refuse.
+			if isStoredValue(draft) {
+				model?.invalidDrafts[descriptor.id] = nil
+				return
+			}
 			if let value = number(draft, in: range), save(value) {
 				model?.invalidDrafts[descriptor.id] = nil
 			} else {
@@ -281,6 +288,17 @@ struct NumberControl: View {
 				model?.invalidDrafts[descriptor.id] = draft
 			}
 		}
+	}
+
+	/// The draft is the option's stored value (as typed or as stored).
+	private func isStoredValue(_ text: String) -> Bool {
+		let stored = store.value(of: descriptor.id) ?? ""
+		let trimmed = text.trimmingCharacters(in: .whitespaces)
+		if trimmed == stored {
+			return true
+		}
+		guard let typed = Double(trimmed), let current = Double(stored) else { return false }
+		return typed == current
 	}
 
 	/// The draft as a value of this option, or nil: a number in range, and

@@ -72,6 +72,42 @@ final class SettingsPagesTests: XCTestCase {
 		root.layoutSubtreeIfNeeded()
 	}
 
+	// A configuration can hold a value outside an option's range today: a
+	// manual crop height above 288 saved before single-line output limited
+	// it, here with auto crop on so the window does not even apply. Showing
+	// it, on a page that is open when the configuration is loaded (so the
+	// field's text changes to it), must not count as an invalid entry that
+	// blocks closing.
+	func testAStoredValueOutsideTheRangeIsNotAnInvalidEntry() throws {
+		let file = FileManager.default.temporaryDirectory.appendingPathComponent("crop-\(UUID().uuidString).uae")
+		try "gfx_linemode=none\namiberry.gfx_auto_crop=true\namiberry.gfx_manual_crop_height=400\n"
+			.write(to: file, atomically: true, encoding: .utf8)
+		defer { try? FileManager.default.removeItem(at: file) }
+		// As the Library's Edit does: load the machine, then open the editor.
+		XCTAssertNotNil(EmulatorActions.post(.loadConfiguration(path: file.path)))
+		ActionPump.runPending()
+		let model = try SettingsWindowModel(emulating: false, dismiss: {}, post: { _ in true })
+		let id = "amiberry.gfx_manual_crop_height"
+		let page = try XCTUnwrap(SettingsPage.sidebar.first { $0.title.contains("Display") }, "the Display page")
+		// In a window (off screen) with the model in the environment, as in
+		// the editor: onAppear and onChange run there, and fields report to
+		// the model.
+		let window = NSWindow(contentRect: NSRect(x: -10000, y: -10000, width: 700, height: 2000),
+			styleMask: .borderless, backing: .buffered, defer: false)
+		window.isReleasedWhenClosed = false
+		defer { window.close() }
+		let view = NSHostingView(rootView: PageView(page: page, model: model)
+			.environment(model).frame(width: 700, height: 2000))
+		window.contentView = view
+		window.orderFrontRegardless()
+		view.layoutSubtreeIfNeeded()
+		RunLoop.main.run(until: Date().addingTimeInterval(0.2))
+		XCTAssertEqual(model.store.value(of: id), "400")
+		XCTAssertLessThan(try XCTUnwrap(model.store.range(for: id)).upperBound, 400, "the stored value is out of range")
+		XCTAssertEqual(model.invalidDrafts, [:], "nothing was typed")
+		XCTAssertEqual(model.store.value(of: id), "400", "showing the value leaves it alone")
+	}
+
 	func testSearchFindsOptionsByLabelHelpAndKey() {
 		XCTAssertTrue(SearchResultsView.matches("cpu_model").contains { $0.id == "cpu_model" })
 		XCTAssertTrue(SearchResultsView.matches("24-bit").contains { $0.id == "cpu_24bit_addressing" })
