@@ -140,7 +140,12 @@
 /* #define RETROPLATFORM */ /* Cloanto RetroPlayer support */
 #define WITH_CHD
 /* #define WITH_LUA */ /* lua scripting */
+// uaenative.library lets Amiga programs load native host libraries: code the
+// app didn't ship with, which App Store builds must not run (App Review
+// Guideline 2.5.2).
+#if !defined(AMIBERRY_IOS) && !defined(MACOS_APP_STORE)
 #define WITH_UAENATIVE
+#endif
 #define WITH_SLIRP
 #define WITH_BUILTIN_SLIRP
 #define WITH_TABLETLIBRARY
