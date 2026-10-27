@@ -35,7 +35,11 @@ if command -v xmllint >/dev/null 2>&1; then
 	xmllint --noout android/app/src/main/AndroidManifest.xml
 fi
 
+# A line holding only a ${...} placeholder is where CMake injects whole
+# keys (the Mac App Store keys); drop those lines so the template's own
+# XML is checked. Placeholders inside <string> values are valid as text.
 if command -v plutil >/dev/null 2>&1; then
-	plutil -lint packaging/MacOSXBundleInfo.plist.in >/dev/null
-	plutil -lint packaging/ios/iOSBundleInfo.plist.in >/dev/null
+	for plist in packaging/MacOSXBundleInfo.plist.in packaging/ios/iOSBundleInfo.plist.in; do
+		sed '/^[[:space:]]*\${[A-Za-z0-9_]*}[[:space:]]*$/d' "$plist" | plutil -lint - >/dev/null
+	done
 fi
