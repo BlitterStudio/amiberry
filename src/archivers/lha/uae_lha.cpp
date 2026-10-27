@@ -135,12 +135,6 @@ struct lha_extra_info {
 	unsigned long unix_time;
 	const unsigned char *comment;
 	size_t comment_len;
-	/* The stored file name (up to its NUL) and whether a directory
-	 * extension (0x02) gave the path: MacLHA names are rebuilt from them. */
-	const unsigned char *stored_name;
-	size_t stored_name_len;
-	bool has_dir_ext;
-	bool macos_level0;
 };
 
 static unsigned long lha_le32 (const unsigned char *p)
@@ -152,8 +146,6 @@ static unsigned long lha_le32 (const unsigned char *p)
 static void lha_name_comment (const unsigned char *name, size_t len, struct lha_extra_info *info)
 {
 	const unsigned char *nul = (const unsigned char *) memchr (name, 0, len);
-	info->stored_name = name;
-	info->stored_name_len = nul ? (size_t) (nul - name) : len;
 	if (nul && nul + 1 < name + len) {
 		info->comment = nul + 1;
 		info->comment_len = (size_t) (name + len - (nul + 1));
@@ -177,8 +169,6 @@ static void lha_scan_level0 (const unsigned char *raw, size_t raw_len, struct lh
 	if (22 + namelen <= raw_len)
 		lha_name_comment (raw + 22, namelen, info);
 	extend = (long) header_size - (long) namelen - 22;
-	if (extend >= 1 && 24 + namelen < raw_len && raw[24 + namelen] == 'm')
-		info->macos_level0 = true;
 	if (extend >= 1 + 11 && 24 + namelen + 6 <= raw_len) {
 		const unsigned char os = raw[24 + namelen];
 		if (os == 'U' || os == 'A') {
@@ -235,9 +225,6 @@ static void lha_scan_extensions (const LHAFileHeader *hdr, struct lha_extra_info
 		switch (raw[off + field_size]) {
 		case 0x01: /* filename */
 			lha_name_comment (content, content_len, info);
-			break;
-		case 0x02: /* directory */
-			info->has_dir_ext = true;
 			break;
 		case 0x40: /* operating-system file attribute */
 			if (content_len >= 2) {
@@ -318,35 +305,19 @@ static bool lha_has_crc (const LHAFileHeader *hdr)
 }
 
 /* "path/filename" of a member with '/' separators; directories have a
- * NULL filename and a path ending in '/'. */
-static char *lha_join (const char *path, const char *name, size_t namelen)
+ * NULL filename and a path ending in '/'. The vendored Lhasa has already
+ * converted MacLHA's ':' separators (convert_macos_name()). */
+static char *lha_member_name (const LHAFileHeader *hdr)
 {
-	size_t pathlen = strlen (path);
+	const char *path = hdr->path ? hdr->path : "";
+	const char *name = hdr->filename ? hdr->filename : "";
+	size_t pathlen = strlen (path), namelen = strlen (name);
 	char *out = xmalloc (char, pathlen + namelen + 1);
+
 	memcpy (out, path, pathlen);
 	memcpy (out + pathlen, name, namelen);
 	out[pathlen + namelen] = 0;
 	return out;
-}
-
-static char *lha_member_name (const LHAFileHeader *hdr, const struct lha_extra_info *info)
-{
-	/* MacLHA stores ':' as the separator and allows '/' in names: swap
-	 * them in the stored file name, as LHa for UNIX did, keeping the
-	 * directory a 0x02 extension gives. */
-	if ((hdr->os_type == LHA_OS_TYPE_MACOS || info->macos_level0) && info->stored_name) {
-		char *name = xmalloc (char, info->stored_name_len + 1);
-		char *out;
-		for (size_t i = 0; i < info->stored_name_len; i++) {
-			const char ch = (char) info->stored_name[i];
-			name[i] = ch == ':' ? '/' : ch == '/' ? ':' : ch;
-		}
-		out = lha_join (info->has_dir_ext && hdr->path ? hdr->path : "", name, info->stored_name_len);
-		xfree (name);
-		return out;
-	}
-	const char *name = hdr->filename ? hdr->filename : "";
-	return lha_join (hdr->path ? hdr->path : "", name, strlen (name));
 }
 
 /* The LhA CRC-16 (the value the archive headers store), over the
@@ -386,7 +357,7 @@ struct zvolume *archive_directory_lha (struct zfile *zf)
 
 		memset (&extra, 0, sizeof extra);
 		lha_scan_extensions (hdr, &extra);
-		member = lha_member_name (hdr, &extra);
+		member = lha_member_name (hdr);
 		/* The znode layer copies names into MAX_DPATH buffers after the
 		 * volume path (and may append ".1" to duplicates): skip a member
 		 * whose name can't fit, as the old parser rejected long names. */

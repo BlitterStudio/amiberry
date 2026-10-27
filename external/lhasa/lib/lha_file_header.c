@@ -305,6 +305,19 @@ static int parse_symlink(LHAFileHeader *header)
 	return split_header_filename(header);
 }
 
+// Amiberry change: swap MacLHA's ':' path separator and '/'.
+
+static void swap_mac_separators(char *s)
+{
+	for (; *s != '\0'; ++s) {
+		if (*s == ':') {
+			*s = '/';
+		} else if (*s == '/') {
+			*s = ':';
+		}
+	}
+}
+
 // Decode the path field in the header.
 
 static int process_level0_path(LHAFileHeader *header, uint8_t *data,
@@ -331,12 +344,18 @@ static int process_level0_path(LHAFileHeader *header, uint8_t *data,
 
 	// Convert MS-DOS path separators to Unix path separators.
 	// Amiberry change: also the 0xff separator LHa for UNIX writes in
-	// level 0/1 names, so a directory entry ending in it is recognised.
+	// level 0/1 names, so a directory entry ending in it is recognised;
+	// and MacLHA names use ':' as the separator and allow '/', so those
+	// two are swapped instead, as LHa for UNIX does.
 
-	for (i = 0; i < data_len; ++i) {
-		if (header->filename[i] == '\\'
-		 || (uint8_t) header->filename[i] == 0xff) {
-			header->filename[i] = '/';
+	if (header->os_type == LHA_OS_TYPE_MACOS) {
+		swap_mac_separators(header->filename);
+	} else {
+		for (i = 0; i < data_len; ++i) {
+			if (header->filename[i] == '\\'
+			 || (uint8_t) header->filename[i] == 0xff) {
+				header->filename[i] = '/';
+			}
 		}
 	}
 
@@ -677,7 +696,14 @@ static int decode_level0_header(LHAFileHeader **header, LHAInputStream *stream)
 	// OS type?
 
 	if ((*header)->header_level == 0) {
-		(*header)->os_type = LHA_OS_TYPE_UNKNOWN;
+		// Amiberry change: a MacLHA level 0 header's extended area is
+		// its OS byte alone; it selects the Mac name conversion.
+		if (header_len > LEVEL_0_MIN_HEADER_LEN + path_len
+		 && RAW_DATA(header, 24 + path_len) == LHA_OS_TYPE_MACOS) {
+			(*header)->os_type = LHA_OS_TYPE_MACOS;
+		} else {
+			(*header)->os_type = LHA_OS_TYPE_UNKNOWN;
+		}
 	} else {
 		(*header)->os_type = RAW_DATA(header, 24 + path_len);
 	}
@@ -933,6 +959,59 @@ static void collapse_path(char *filename)
 	*w = '\0';
 }
 
+// Amiberry change: MacLHA stores ':' as its path separator. Level 0/1
+// names are converted as they are decoded (process_level0_path()); a
+// level 2+ filename comes from the filename extension, which turned any
+// '/' into '_', so its ':' separators become '/' here and the directory
+// part moves onto the path from the directory extension.
+
+static int convert_macos_name(LHAFileHeader *header)
+{
+	char *name, *sep, *path;
+	size_t path_len, name_len;
+
+	if (header->filename == NULL) {
+		return 1;
+	}
+
+	name = header->filename;
+	swap_mac_separators(name);
+
+	sep = strrchr(name, '/');
+	if (sep == NULL) {
+		if (name[0] == '\0') {
+			free(name);
+			header->filename = NULL;
+		}
+		return 1;
+	}
+
+	// Move the "dir/" part onto the end of the path.
+
+	path_len = header->path != NULL ? strlen(header->path) : 0;
+	name_len = (size_t) (sep + 1 - name);
+	path = malloc(path_len + name_len + 1);
+	if (path == NULL) {
+		return 0;
+	}
+	if (path_len > 0) {
+		memcpy(path, header->path, path_len);
+	}
+	memcpy(path + path_len, name, name_len);
+	path[path_len + name_len] = '\0';
+	free(header->path);
+	header->path = path;
+
+	if (sep[1] == '\0') {
+		free(name);
+		header->filename = NULL;
+	} else {
+		memmove(name, sep + 1, strlen(sep + 1) + 1);
+	}
+
+	return 1;
+}
+
 LHAFileHeader *lha_file_header_read(LHAInputStream *stream)
 {
 	LHAFileHeader *header;
@@ -996,6 +1075,11 @@ LHAFileHeader *lha_file_header_read(LHAInputStream *stream)
 	}
 
 	if (!success) {
+		goto fail;
+	}
+
+	if (header->os_type == LHA_OS_TYPE_MACOS && header->header_level >= 2
+	 && !convert_macos_name(header)) {
 		goto fail;
 	}
 

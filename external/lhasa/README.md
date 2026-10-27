@@ -21,6 +21,11 @@ marked "Amiberry change" in the source:
 - `lha_input_stream_skip()` in `lib/lha_input_stream.c` consumes bytes
   still in the lead-in buffer before skipping in the stream: a first
   header shorter than the lead-in otherwise misaligns the next one.
+- MacLHA names use `:` as the path separator and allow `/`: Lhasa swaps
+  the two, as LHa for UNIX does, while decoding level 0/1 names
+  (`process_level0_path()`, with the Mac OS byte of a level 0 extended
+  area recognised in `decode_level0_header()`) and in level 2+ filenames
+  (`convert_macos_name()`), before headers are validated.
 
 The tree is otherwise unmodified.
 
