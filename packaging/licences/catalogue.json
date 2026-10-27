@@ -212,21 +212,6 @@
       ]
     },
     {
-      "id": "unlzx",
-      "name": "unlzx",
-      "version": "1.0",
-      "copyright": "David Tritscher; Erik Meusel; Stefano Coletta; Toni Wilen",
-      "licence": "Distributed under its authors' terms",
-      "licence_name": "Distributed under its authors' terms",
-      "url": "https://github.com/BlitterStudio/amiberry",
-      "text": "",
-      "platforms": [
-        "macos",
-        "macos-store",
-        "ios"
-      ]
-    },
-    {
       "id": "warp",
       "name": "Warp / unwarp decruncher (libxad)",
       "version": "",

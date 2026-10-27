@@ -526,7 +526,7 @@ SOURCES_ARCHIVE := $(AMIBERRY_DIR)/src/archivers/dms/crc_csum.cpp \
                   $(AMIBERRY_DIR)/src/archivers/dms/u_quick.cpp \
                   $(AMIBERRY_DIR)/src/archivers/dms/u_rle.cpp \
                   $(AMIBERRY_DIR)/src/archivers/lha/uae_lha.cpp \
-                  $(AMIBERRY_DIR)/src/archivers/lzx/unlzx.cpp \
+                  $(AMIBERRY_DIR)/src/archivers/lzx/lzx.cpp \
                   $(AMIBERRY_DIR)/src/archivers/mp2/kjmp2.cpp \
                   $(AMIBERRY_DIR)/src/archivers/wrp/warp.cpp \
                   $(AMIBERRY_DIR)/src/archivers/zip/unzip.cpp \

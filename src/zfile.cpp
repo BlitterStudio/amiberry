@@ -1073,6 +1073,95 @@ end:
 #endif
 
 #ifdef A_LZX
+/* Converts a PKD (DiskSqueeze) image of len bytes to an ADF. Returns NULL
+ * if it is not one, or is malformed or shorter than its header says. */
+static struct zfile *dsq_to_adf (struct zfile *z, struct zfile *zi, const uae_u8 *buf, int len)
+{
+	if (len < 32 || (memcmp (buf, "PKD\x13", 4) && memcmp (buf, "PKD\x11", 4)))
+		return NULL;
+	const int sectors = buf[18] / 2;
+	const int blocks = (buf[6] << 8) | buf[7];
+	const int blocksize = (buf[10] << 8) | buf[11];
+	const uae_u8 *bitmap = NULL;
+	uae_s64 off;
+
+	if (sectors == 0 || blocksize == 0) {
+		write_log (_T("DSQ: invalid geometry (%d sectors, %d-byte blocks)\n"), sectors, blocksize);
+		return NULL;
+	}
+	if (buf[3] == 0x13) {
+		off = 52;
+		if (len < off) {
+			write_log (_T("DSQ: truncated header\n"));
+			return NULL;
+		}
+		if (buf[off - 1] == 1) {
+			bitmap = &buf[off];
+			off += (blocks + 7) / 8;
+		} else if (buf[off - 1] > 1) {
+			write_log (_T("unknown DSQ extra header type %d\n"), buf[off - 1]);
+		}
+	} else {
+		off = 32;
+	}
+
+	uae_s64 size = (uae_s64)blocks * blocksize;
+	// some Amiga disk images are smaller than full adf for some reason
+	if (sectors == 11 && size < 1760 * 512)
+		size = 1760 * 512;
+
+	TCHAR *fn;
+	if (zfile_getfilename (zi) && _tcslen (zfile_getfilename (zi))) {
+		fn = xmalloc (TCHAR, (_tcslen (zfile_getfilename (zi)) + 5));
+		_tcscpy (fn, zfile_getfilename (zi));
+		_tcscat (fn, _T(".adf"));
+	} else {
+		fn = my_strdup (_T("dsq.adf"));
+	}
+	struct zfile *zo = zfile_fopen_empty (z, fn, size);
+	xfree (fn);
+	if (!zo)
+		return NULL;
+	uae_u8 *nullsector = xcalloc (uae_u8, blocksize);
+	bool ok = nullsector != NULL;
+	int seccnt = 0;
+	for (int i = 0; ok && i < blocks; i++) {
+		int bmoff = i - 2;
+		int boff = -1;
+		uae_u32 mask = 0;
+		if (bitmap) {
+			boff = (bmoff / 32) * 4;
+			if ((bitmap - buf) + boff + 4 > len) {
+				ok = false;
+				break;
+			}
+			mask = (bitmap[boff] << 24) | (bitmap[boff + 1] << 16) | (bitmap[boff + 2] << 8) | (bitmap[boff + 3]);
+		}
+		if (bmoff >= 0 && boff >= 0 && (mask & (1 << (bmoff & 31)))) {
+			zfile_fwrite (nullsector, blocksize, 1, zo);
+		} else {
+			if (off + blocksize > len) {
+				ok = false;
+				break;
+			}
+			zfile_fwrite (buf + off, blocksize, 1, zo);
+			off += blocksize;
+			seccnt++;
+		}
+		if ((i % sectors) == sectors - 1) {
+			off += seccnt * 16;
+			seccnt = 0;
+		}
+	}
+	xfree (nullsector);
+	if (!ok) {
+		write_log (_T("DSQ: '%s' is shorter than its header says\n"), zfile_getname (zi));
+		zfile_fclose (zo);
+		return NULL;
+	}
+	return zo;
+}
+
 static struct zfile *dsq (struct zfile *z, int lzx, int *retcode)
 {
 	struct zfile *zi = NULL;
@@ -1090,75 +1179,15 @@ static struct zfile *dsq (struct zfile *z, int lzx, int *retcode)
 		zi = z;
 	}
 	if (zi) {
-		uae_u8 *buf = zfile_getdata (zi, 0, -1, NULL);
-		if (!memcmp (buf, "PKD\x13", 4) || !memcmp (buf, "PKD\x11", 4)) {
-			TCHAR *fn;
-			int sectors = buf[18];
-			int reserved = buf[15];
-			int blocks = (buf[6] << 8) | buf[7];
-			int blocksize = (buf[10] << 8) | buf[11];
-			struct zfile *zo;
-			int size = blocks * blocksize;
-			int off;
-			int i;
-			uae_u8 *bitmap = NULL;
-			uae_u8 *nullsector;
-
-			nullsector = xcalloc (uae_u8, blocksize);
-			sectors /= 2;
-			if (buf[3] == 0x13) {
-				off = 52;
-				if (buf[off - 1] == 1) {
-					bitmap = &buf[off];
-					off += (blocks + 7) / 8;
-				} else if (buf[off - 1] > 1) {
-					write_log (_T("unknown DSQ extra header type %d\n"), buf[off - 1]);
-				}
-			} else {
-				off = 32;
-			}
-
-			// some Amiga disk images are smaller than full adf for some reason
-			if (sectors == 11 && size < 1760 * 512)
-				size = 1760 * 512;
-
-			if (zfile_getfilename (zi) && _tcslen (zfile_getfilename (zi))) {
-				fn = xmalloc (TCHAR, (_tcslen (zfile_getfilename (zi)) + 5));
-				_tcscpy (fn, zfile_getfilename (zi));
-				_tcscat (fn, _T(".adf"));
-			} else {
-				fn = my_strdup (_T("dsq.adf"));
-			}
-			zo = zfile_fopen_empty (z, fn, size);
-			xfree (fn);
-			int seccnt = 0;
-			for (i = 0; i < blocks; i++) {
-				int bmoff = i - 2;
-				int boff = -1;
-				uae_u32 mask = 0;
-				if (bitmap) {
-					boff = (bmoff / 32) * 4;
-					mask = (bitmap[boff] << 24) | (bitmap[boff + 1] << 16) | (bitmap[boff + 2] << 8) | (bitmap[boff + 3]);
-				}
-				if (bmoff >= 0 && boff >= 0 && (mask & (1 << (bmoff & 31)))) {
-					zfile_fwrite (nullsector, blocksize, 1, zo);
-				} else {
-					zfile_fwrite (buf + off, blocksize, 1, zo);
-					off += blocksize;
-					seccnt++;
-				}
-				if ((i % sectors) == sectors - 1) {
-					off += seccnt * 16;
-					seccnt = 0;
-				}
-			}
+		int len = 0;
+		uae_u8 *buf = zfile_getdata (zi, 0, -1, &len);
+		struct zfile *zo = buf ? dsq_to_adf (z, zi, buf, len) : NULL;
+		xfree (buf);
+		if (zo) {
 			zfile_fclose_archive (zv);
 			zfile_fclose (z);
-			xfree (buf);
-			xfree (nullsector);
 			return zo;
 		}
-		xfree (buf);
 	}
 	if (lzx)
 		zfile_fclose (zi);
@@ -2137,7 +2166,9 @@ struct zfile *zfile_dup (struct zfile *zf)
 	if (nzf->zipname)
 		nzf->zipname = my_strdup (zf->zipname);
 	nzf->zfdmask = zf->zfdmask;
-	nzf->mode = my_strdup (zf->mode);
+	// In-memory zfiles (archive members) have no mode.
+	if (zf->mode)
+		nzf->mode = my_strdup (zf->mode);
 	nzf->size = zf->size;
 	return nzf;
 }
