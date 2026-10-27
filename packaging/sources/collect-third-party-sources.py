@@ -115,11 +115,21 @@ def run(cmd: list[str], **kw) -> subprocess.CompletedProcess:
     return subprocess.run(cmd, capture_output=True, text=True, **kw)
 
 
-def curl(url: str, dest: Path, max_bytes: int | None = None) -> None:
+def curl(url: str, dest: Path, max_bytes: int | None = None, verified_later: bool = False) -> None:
     # No Authorization header here: these are public upstream/homebrew URLs;
     # authenticated requests go through github_api() only.
     cmd = ["curl", "-fsSL", "--retry", "3", "--connect-timeout", "30", url, "-o", str(dest)]
-    subprocess.run(cmd, check=True)
+    r = subprocess.run(cmd)
+    # curl exit 60: the server's certificate failed verification (upstream
+    # sites do let them expire; sigrok.org did at v8.5.0). When the caller
+    # checks the download against a known sha256 afterwards, that hash, not
+    # TLS, is what proves the file, so retry without certificate checks.
+    if r.returncode == 60 and verified_later:
+        print(f"    warning: TLS certificate check failed for {url}; "
+              f"retrying without it, the sha256 check still applies", file=sys.stderr)
+        r = subprocess.run(cmd[:1] + ["--insecure"] + cmd[1:])
+    if r.returncode != 0:
+        die(f"download failed (curl exit {r.returncode}): {url}")
     if not dest.is_file() or dest.stat().st_size == 0:
         die(f"download produced nothing: {url}")
     if max_bytes and dest.stat().st_size > max_bytes:
@@ -778,7 +788,7 @@ def cmd_assemble(args) -> None:
                 spec["url"], spec.get("tag"), spec.get("revision"), formula)
             dest = root / "components" / ver_dir / filename
             dest.parent.mkdir(parents=True, exist_ok=True)
-            curl(url, dest, max_bytes=800 * 1024 * 1024)
+            curl(url, dest, max_bytes=800 * 1024 * 1024, verified_later=bool(spec.get("checksum")))
             actual = verify_download(dest, spec.get("checksum"), formula)
             origin = (workdir / "origins" / f"{formula}-{keg_version}.origin").read_text().strip()
 
@@ -788,7 +798,7 @@ def cmd_assemble(args) -> None:
                 pname = purl.rsplit("/", 1)[-1].split("?")[0] or "patch"
                 pdest = root / "patches" / ver_dir / pname
                 pdest.parent.mkdir(parents=True, exist_ok=True)
-                curl(purl, pdest)
+                curl(purl, pdest, verified_later=bool(p["sha256"]))
                 psha, pstatus = verify_patch(pdest, p["sha256"], formula)
                 patches.append({
                     "source": purl,
