@@ -108,6 +108,31 @@ jobs:
         run: |
           cmake -B build -DQEMU_UAE_PLUGIN="$QEMU_UAE_PLUGIN" && cmake --build build -j$(sysctl -n hw.ncpu)
 
+      # GPL/LGPL compliance: record which Homebrew libraries this leg's build
+      # actually bundled, at the exact keg versions. The merge job turns the
+      # per-arch scans into the third-party source archive attached to the
+      # release. Tag builds only; PR/branch builds are untouched.
+      - name: Scan bundled third-party libraries (release tags)
+        if: github.ref_type == 'tag'
+        run: |
+          case "${{ matrix.arch }}" in
+            intel) scan_arch=x86_64 ;;
+            *) scan_arch=arm64 ;;
+          esac
+          python3 packaging/sources/collect-third-party-sources.py scan \
+            --app build/Amiberry.app \
+            --variant macos \
+            --arch "$scan_arch" \
+            --out "third-party-scan-${scan_arch}.json"
+
+      - name: Upload third-party scan for the release
+        if: github.ref_type == 'tag'
+        uses: actions/upload-artifact@v7
+        with:
+          name: third-party-scan-${{ matrix.arch }}
+          path: third-party-scan-*.json
+          retention-days: 1
+
       - name: Archive intermediate app bundle
         run: |
           tar -C build -czf Amiberry.app.tar.gz Amiberry.app
@@ -563,6 +588,38 @@ jobs:
         with:
           name: amiberry-macOS-universal
           path: Amiberry-*.dmg
+          retention-days: 7
+
+      # GPL/LGPL compliance: build the third-party source archive for this
+      # release from the per-arch scans of the two build legs, and offer it
+      # next to the DMG. Tag builds only.
+      - name: Download third-party scans
+        if: github.ref_type == 'tag'
+        uses: actions/download-artifact@v8
+        with:
+          pattern: third-party-scan-*
+          path: third-party-scans
+          merge-multiple: true
+
+      - name: Collect third-party sources for the release
+        if: github.ref_type == 'tag'
+        env:
+          # For homebrew-core history lookups when a pinned (e.g. Intel) keg
+          # is older than the current formula.
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 packaging/sources/collect-third-party-sources.py assemble \
+            --scan third-party-scans/third-party-scan-x86_64.json \
+            --scan third-party-scans/third-party-scan-arm64.json \
+            --tag "${{ github.ref_name }}" \
+            --out "amiberry-${{ github.ref_name }}-third-party-sources.tar.xz"
+
+      - name: Upload third-party sources for the release
+        if: github.ref_type == 'tag'
+        uses: actions/upload-artifact@v7
+        with:
+          name: amiberry-third-party-sources
+          path: amiberry-*-third-party-sources.tar.xz
           retention-days: 7
 
   build-ubuntu:
@@ -2298,7 +2355,7 @@ jobs:
       - name: Generate SHA256SUMS
         run: |
           cd artifacts
-          sha256sum amiberry-*.zip amiberry-*.exe amiberry-libretro-*.* amiberry_libretro.info Amiberry-*.dmg Amiberry-*.AppImage Amiberry-*.AppImage.zsync 2>/dev/null | tee SHA256SUMS
+          sha256sum amiberry-*.zip amiberry-*.exe amiberry-libretro-*.* amiberry_libretro.info Amiberry-*.dmg Amiberry-*.AppImage Amiberry-*.AppImage.zsync amiberry-*-third-party-sources.tar.xz 2>/dev/null | tee SHA256SUMS
           cat SHA256SUMS
 
       - name: Create Release
@@ -2318,6 +2375,7 @@ jobs:
             artifacts/Amiberry-*.dmg
             artifacts/Amiberry-*.AppImage
             artifacts/Amiberry-*.AppImage.zsync
+            artifacts/amiberry-*-third-party-sources.tar.xz
             artifacts/SHA256SUMS
 
   update-repos:
