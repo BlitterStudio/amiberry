@@ -2,9 +2,11 @@
  * Amiberry WHDBoot tools API.
  *
  * WHDLoad (by Bert Jahn, whdload.de), the kickstart RTB files (Aminet,
- * skick346) and JST (Aminet) are not bundled with Amiberry: their licences
- * do not permit commercial redistribution. This API tells a front end
- * which of them are installed and downloads or updates them from their
+ * skick346), JST (Aminet) and the optional Amiga libraries (the XPK packer
+ * stack, MMULib's 68040.library, explode.library and OctaMED's
+ * medplayer.library, all from Aminet) are not bundled with Amiberry: their
+ * licences do not permit commercial redistribution. This API tells a front
+ * end which of them are installed and downloads or updates them from their
  * authors' distribution points with progress and cancellation, as the
  * Paths panel's "Update WHDBooter files" button does.
  *
@@ -28,7 +30,7 @@
 extern "C" {
 #endif
 
-#define AMIBERRY_WHDBOOT_API_VERSION 2
+#define AMIBERRY_WHDBOOT_API_VERSION 3
 
 typedef struct amiberry_whdboot_status {
 	bool whdload_installed;   /* WHDLoad, from whdload.de */
@@ -37,6 +39,7 @@ typedef struct amiberry_whdboot_status {
 	bool host_quit_installed;  /* host-quit (Host-Tools), which closes Amiberry */
 	bool boot_data_installed;
 	bool database_installed;
+	bool libraries_installed;  /* the optional Amiga libraries (see above) */
 	bool downloads_available; /* false where nothing can download (libretro) */
 	bool emulation_running;   /* a machine runs unpaused: downloads wait */
 } amiberry_whdboot_status;
@@ -67,10 +70,10 @@ typedef enum amiberry_whdboot_download_result {
 
 /*
  * Downloads or updates the WHDBoot tools: WHDLoad is always re-fetched
- * from whdload.de; missing RTB files and a selected JST come from Aminet;
- * host-quit, boot-data.zip and the WHDLoad game database come from the
- * Amiberry project's GitHub repository. Existing RTB files and JST are
- * never overwritten.
+ * from whdload.de; missing RTB files, a selected JST and the optional
+ * Amiga libraries come from Aminet; host-quit, boot-data.zip and the
+ * WHDLoad game database come from the Amiberry project's GitHub
+ * repository. Existing RTB files, JST and libraries are never overwritten.
  */
 AMIBERRY_SETTINGS_API amiberry_whdboot_download_result amiberry_whdboot_download(
 	amiberry_whdboot_progress_fn progress, void *user);

@@ -1111,7 +1111,8 @@ void usage()
 	std::cout << "                            the GUI would open, and exit with their result." << '\n';
 #endif
 	std::cout << " --download-whdboot         Download/update the WHDBooter files and exit. WHDLoad" << '\n';
-	std::cout << "                            comes from whdload.de; the RTB files and JST from Aminet." << '\n';
+	std::cout << "                            comes from whdload.de; the RTB files, JST and the" << '\n';
+	std::cout << "                            optional Amiga libraries from Aminet." << '\n';
 	std::cout << " -f <file>                  Load a configuration file." << '\n';
 	std::cout << " --config <file>            " << '\n';
 	std::cout << " --apply-preset <preset>[:<config>[:<compatibility>]]" << '\n';

@@ -220,10 +220,12 @@ struct HostSettingRow: View {
 }
 
 /// The WHDLoad group's on-demand files: WHDLoad by Bert Jahn (whdload.de),
-/// the kickstart RTB files (Aminet) and JST (Aminet) are not bundled with
-/// Amiberry — their licences forbid redistribution — so this downloads or
-/// updates them, with progress and cancellation, as the Paths panel's
-/// "Update WHDBooter files" button does.
+/// the kickstart RTB files, JST and the optional Amiga libraries (the XPK
+/// packer stack, MMULib's 68040.library, explode.library and OctaMED's
+/// medplayer.library) from Aminet are not bundled with Amiberry — their
+/// licences forbid redistribution — so this downloads or updates them,
+/// with progress and cancellation, as the Paths panel's "Update WHDBooter
+/// files" button does.
 @MainActor
 @Observable
 private final class WHDBootFilesModel {
@@ -320,11 +322,20 @@ private struct WHDBootFilesRow: View {
 			} else if let result = model.resultText {
 				Text(result).font(.footnote).foregroundStyle(.secondary)
 			}
-			Text("WHDLoad by Bert Jahn — whdload.de. Kickstart RTB files and JST — Aminet. "
-				+ "host-quit, the boot disk and the game database — the Amiberry project. "
-				+ "WHDLoad, JST and the RTB files are not bundled with Amiberry.")
-				.font(.footnote)
-				.foregroundStyle(.secondary)
+		Text("WHDLoad by Bert Jahn — whdload.de. Kickstart RTB files, JST and the "
+			+ "optional Amiga libraries — the XPK packer stack by Dirk Stöcker, MMULib's "
+			+ "68040.library by Thomas Richter, explode.library by Struijk/Brouwer and "
+			+ "OctaMED's medplayer.library by Teijo Kinnunen — Aminet. "
+			+ "host-quit, the boot disk and the game database — the Amiberry project. "
+			+ "None of the downloaded files are bundled with or covered by Amiberry's "
+			+ "licence.")
+			.font(.footnote)
+			.foregroundStyle(.secondary)
+		Text(model.status.librariesInstalled
+			? "Optional libraries: installed."
+			: "Optional libraries: not installed yet — the download installs them.")
+			.font(.footnote)
+			.foregroundStyle(.secondary)
 		}
 	}
 }

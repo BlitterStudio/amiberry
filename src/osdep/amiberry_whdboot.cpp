@@ -1,8 +1,9 @@
 // The WHDBoot tools API (settings/amiberry_whdboot.h): which of the
 // on-demand WHDBooter files are installed, and downloading them. WHDLoad
-// (Bert Jahn, whdload.de), the kickstart RTB files (Aminet skick346) and
-// JST (Aminet) are not bundled with Amiberry, so the native front ends
-// offer the download the Paths panel's button performs.
+// (Bert Jahn, whdload.de), the kickstart RTB files (Aminet skick346), JST
+// and the optional Amiga libraries (Aminet) are not bundled with Amiberry,
+// so the native front ends offer the download the Paths panel's button
+// performs.
 
 #include "sysconfig.h"
 #include "sysdeps.h"
@@ -48,18 +49,19 @@ extern "C" void amiberry_whdboot_status_get(amiberry_whdboot_status* status)
 	status->database_installed = whdboot_file_exists("game-data/whdload_db.json")
 		|| whdboot_file_exists("game-data/whdload_db.xml");
 
+	// kick31034.A1000.RTB is not in skick346 and stays bundled.
+	// (kick33192.A500.RTB is skick346's kick33180.A500.RTB byte for
+	// byte; the download creates it as a copy, so it is not required.)
 	bool rtb_files_installed = true;
 	for (const auto& filename : whdboot_skick_rtb_files())
 	{
 		if (!whdboot_file_exists(std::filesystem::path("save-data") / "Kickstarts" / filename))
 			rtb_files_installed = false;
 	}
-	// kick31034.A1000.RTB is not in skick346 and stays bundled.
-	// (kick33192.A500.RTB is skick346's kick33180.A500.RTB byte for byte;
-	// the download creates it as a copy, so it is not required here.)
 	if (!whdboot_file_exists(std::filesystem::path("save-data") / "Kickstarts" / "kick31034.A1000.RTB"))
 		rtb_files_installed = false;
 	status->rtb_files_installed = rtb_files_installed;
+	status->libraries_installed = whdboot_optional_libraries_installed();
 }
 
 extern "C" amiberry_whdboot_download_result amiberry_whdboot_download(

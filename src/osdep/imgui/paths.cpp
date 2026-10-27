@@ -834,9 +834,12 @@ void render_panel_paths()
 
 	ImGui::Spacing();
 	ImGui::TextWrapped("WHDLoad by Bert Jahn is fetched from whdload.de; the kickstart "
-		"RTB files and JST from Aminet; host-quit, boot-data.zip and the WHDLoad "
-		"game database from the Amiberry project. WHDLoad, JST and the RTB files "
-		"are not bundled with Amiberry.");
+		"RTB files, JST and the optional Amiga libraries (the XPK packer stack by Dirk "
+		"Stöcker, MMULib's 68040.library by Thomas Richter, explode.library by "
+		"Struijk/Brouwer and OctaMED's medplayer.library by Teijo Kinnunen) from Aminet; "
+		"host-quit, boot-data.zip and the WHDLoad game database from the Amiberry "
+		"project. WHDLoad, JST, the RTB files and those libraries are not bundled with "
+		"Amiberry.");
 
 	const bool show_download_status =
 		s_whdboot_downloading.load() || s_whdboot_complete.load() || s_whdboot_failed.load()

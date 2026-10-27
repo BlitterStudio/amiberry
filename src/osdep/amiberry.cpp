@@ -12255,9 +12255,10 @@ static bool report_whdboot_download_progress(
 }
 
 // WHDLoad (Bert Jahn, whdload.de), the Kickstart RTB files (Aminet,
-// skick346) and JST (Aminet) are not bundled with Amiberry: their licences
-// do not allow commercial redistribution. They are fetched on demand from
-// their authors' distribution points instead.
+// skick346), JST (Aminet) and the optional Amiga libraries (see below) are
+// not bundled with Amiberry: their licences do not allow commercial
+// redistribution. They are fetched on demand from their authors'
+// distribution points instead.
 static const char* const whdload_usr_url = "https://whdload.de/whdload/WHDLoad_usr.lha";
 static const char* const skick346_url = "https://aminet.net/util/boot/skick346.lha";
 // skick346.lha is frozen on Aminet: its SHA-256 is pinned so a corrupted
@@ -12309,6 +12310,96 @@ static bool whdboot_skick_rtbs_missing()
 			return true;
 	}
 	return false;
+}
+
+// The optional Amiga libraries the booter mounts for WHDLoad and slaves:
+// the XPK stack (Dirk Stöcker), MMULib's 68040.library (Thomas Richter),
+// explode.library (Struijk/Brouwer) and OctaMED's medplayer.library
+// (Teijo Kinnunen, RBF Software). Their licences do not allow bundling
+// them with Amiberry either, so like WHDLoad and the RTB files they are
+// downloaded only on request from their authors' Aminet packages. The
+// frozen ones are pinned by SHA-256 so a corrupted or impersonated
+// download is refused before anything is decoded from it (MMULib, which
+// is updated in place, is not; see below). They install into the WHDBoot folder's
+// writable Libs drawer, which set_booter_drives mounts for the boot.
+static const char* const xpk_user_url = "https://aminet.net/util/pack/xpk_User.lha";
+static const char* const xpk_user_sha256 =
+	"ec48c2820e45e64e1c1970592f06dc32c64546a6c7d545b39c79b469012879f3";
+// MMULib.lha is re-uploaded in place on Aminet with every release, so a
+// pin would reject each new version: it is not pinned, and relies on the
+// HTTPS download plus each member's size and CRC check.
+static const char* const mmulib_url = "https://aminet.net/util/libs/MMULib.lha";
+static const char* const explode_url = "https://aminet.net/util/libs/explode-7.lha";
+static const char* const explode_sha256 =
+	"140f6b4190c5bf739a587aa3dc14a72b135e35ac22394cc0901001a4647f853a";
+// medplayer.library ships inside the OctaMED V5 tutorial disk 4, the
+// official Aminet copy of Teijo Kinnunen's player library.
+static const char* const medplayer_url = "https://aminet.net/docs/help/OctV5_Tut4.lha";
+static const char* const medplayer_sha256 =
+	"d6ec0581195b76a3c6b9955e921d431451cd56bbeb74f190c7ce2d7614fff89a";
+
+// The XPK client libraries xpk_User.lha carries in its Libs/compressors
+// drawer; xpkmaster.library looks for them in LIBS:Compressors.
+const std::vector<std::string>& whdboot_xpk_compressor_files()
+{
+	static const std::vector<std::string> files = {
+		"xpkCBR0.library", "xpkDLTA.library", "xpkDUKE.library", "xpkFAST.library",
+		"xpkFRLE.library", "xpkHFMN.library", "xpkHUFF.library", "xpkIMPL.library",
+		"xpkMASH.library", "xpkNONE.library", "xpkNUKE.library", "xpkRAKE.library",
+		"xpkRLEN.library", "xpkSHRI.library", "xpkSMPL.library", "xpkSQSH.library"
+	};
+	return files;
+}
+
+static std::string whdboot_library_destination(const std::string& filename)
+{
+	return join_path(whdboot_path, join_path("Libs", filename));
+}
+
+static bool whdboot_xpk_libraries_missing()
+{
+	if (!file_exists(whdboot_library_destination("xpkmaster.library")))
+		return true;
+	for (const auto& filename : whdboot_xpk_compressor_files())
+	{
+		if (!file_exists(whdboot_library_destination(join_path("Compressors", filename))))
+			return true;
+	}
+	return false;
+}
+
+// MMULib's 68040.library needs its mmu.library and 680x0.library.
+static const char* const whdboot_mmulib_files[] = {
+	"68040.library", "mmu.library", "680x0.library"
+};
+
+static bool whdboot_mmu_library_missing()
+{
+	for (const auto* filename : whdboot_mmulib_files)
+	{
+		if (!file_exists(whdboot_library_destination(filename)))
+			return true;
+	}
+	return false;
+}
+
+static bool whdboot_explode_library_missing()
+{
+	return !file_exists(whdboot_library_destination("explode.library"));
+}
+
+static bool whdboot_medplayer_library_missing()
+{
+	return !file_exists(whdboot_library_destination("medplayer.library"));
+}
+
+// True once every optional Amiga library the download installs is
+// present. Each of them is optional for a given game, so the status only
+// reports that none is missing.
+bool whdboot_optional_libraries_installed()
+{
+	return !whdboot_xpk_libraries_missing() && !whdboot_mmu_library_missing()
+		&& !whdboot_explode_library_missing() && !whdboot_medplayer_library_missing();
 }
 
 // Whether a machine runs that the download's archive handling must not
@@ -12668,6 +12759,45 @@ static bool whdboot_fetch_archive(const int step, const int total_steps, const s
 		cancel_flag);
 }
 
+// Downloads one of the optional-library archives and installs the members
+// listed, each CRC-verified and moved into place atomically. A frozen
+// archive is SHA-256-checked first, like skick346.lha (sha256 == nullptr
+// for one that is updated in place). Destinations that already exist are
+// left alone, so a library the user placed in the WHDBoot folder is never
+// overwritten; the caller only fetches while one of them is missing.
+static bool whdboot_install_pinned_library_archive(
+	const int step, const int total_steps, const std::string& label,
+	const char* const url, const char* const sha256, const char* const archive_name,
+	const std::vector<std::pair<std::string, std::string>>& members,
+	const std::function<bool(const whdboot_download_progress&)>& progress_cb,
+	std::atomic<bool>* cancel_flag)
+{
+	const auto archive = join_path(whdboot_path, archive_name);
+	bool ok = false;
+	if (whdboot_fetch_archive(step, total_steps, label, url, archive, progress_cb, cancel_flag))
+	{
+		const auto digest = sha256 ? whdboot_file_sha256(archive) : std::string();
+		if (sha256 && digest != sha256)
+		{
+			write_log("WHDBooter - %s is not the pinned %s (SHA-256 %s, expected %s); not extracting\n",
+				archive.c_str(), archive_name, digest.c_str(), sha256);
+		}
+		else
+		{
+			ok = true;
+			for (const auto& [member, destination] : members)
+			{
+				if (file_exists(destination))
+					continue;
+				if (!whdboot_extract_archive_member_to_file(archive, member, destination, false))
+					ok = false;
+			}
+		}
+	}
+	std::remove(archive.c_str());
+	return ok;
+}
+
 // One download at a time: the zfile/LhA state the extraction uses is not
 // re-entrant, and two runs would share the same scratch files.
 static std::atomic<bool> whdboot_download_active{ false };
@@ -12704,17 +12834,25 @@ whdboot_download_result download_whdboot_assets(
 	}
 
 	write_log("Downloading WHDBoot runtime assets into %s\n", whdboot_path.c_str());
-	write_log("WHDLoad comes from whdload.de, the RTB files and JST from Aminet\n");
+	write_log("WHDLoad comes from whdload.de; the RTB files, JST and the optional Amiga libraries from Aminet\n");
 
 	ensure_whdboot_runtime_directories();
 
 	// WHDLoad is always re-fetched so an update installs new releases. The
-	// RTB files are fetched only while one is missing, JST only when it is
-	// selected and missing; existing files are never overwritten.
+	// RTB files, JST and the optional Amiga libraries (XPK, MMULib's
+	// 68040.library, explode.library, medplayer.library) are fetched only
+	// while one is missing, JST only when it is selected; existing files
+	// are never overwritten.
 	const bool jst_step = amiberry_options.use_jst_instead_of_whd
 		&& !file_exists(join_path(whdboot_path, "JST"));
 	const bool rtbs_step = whdboot_skick_rtbs_missing();
-	const int total_steps = 4 + (jst_step ? 1 : 0) + (rtbs_step ? 1 : 0);
+	const bool xpk_step = whdboot_xpk_libraries_missing();
+	const bool mmu_step = whdboot_mmu_library_missing();
+	const bool explode_step = whdboot_explode_library_missing();
+	const bool medplayer_step = whdboot_medplayer_library_missing();
+	const int total_steps = 4 + (jst_step ? 1 : 0) + (rtbs_step ? 1 : 0)
+		+ (xpk_step ? 1 : 0) + (mmu_step ? 1 : 0)
+		+ (explode_step ? 1 : 0) + (medplayer_step ? 1 : 0);
 
 	bool any_success = false;
 	bool any_failure = false;
@@ -12863,6 +13001,78 @@ whdboot_download_result download_whdboot_assets(
 		if (!copy_error)
 			write_log("WHDBooter - created kick33192.A500.RTB (a copy of kick33180.A500.RTB)\n");
 	}
+
+	// The XPK master library and client set (Dirk Stöcker), fetched from
+	// Aminet while one of them is missing.
+	if (xpk_step)
+	{
+		ensure_directory_exists(join_path(whdboot_path, "Libs"));
+		ensure_directory_exists(join_path(whdboot_path, "Libs/Compressors"));
+		std::vector<std::pair<std::string, std::string>> members;
+		members.emplace_back("xpk_User/Libs/xpkmaster.library",
+			whdboot_library_destination("xpkmaster.library"));
+		for (const auto& filename : whdboot_xpk_compressor_files())
+		{
+			members.emplace_back("xpk_User/Libs/compressors/" + filename,
+				whdboot_library_destination(join_path("Compressors", filename)));
+		}
+		if (whdboot_install_pinned_library_archive(++step, total_steps, "XPK libraries (Aminet)",
+			xpk_user_url, xpk_user_sha256, "xpk_User.lha.download", members, progress_cb, cancel_flag))
+			any_success = true;
+		else if (!should_cancel_whdboot_download(cancel_flag))
+			any_failure = true;
+	}
+	if (cancelled())
+		return result;
+
+	// MMULib's 68040.library (Thomas Richter), the FPU-trap FPSP provider
+	// a 68040 setup expects in LIBS:, with the mmu.library and
+	// 680x0.library it opens.
+	if (mmu_step)
+	{
+		std::vector<std::pair<std::string, std::string>> members;
+		for (const auto* filename : whdboot_mmulib_files)
+			members.emplace_back(std::string("MMULib/Libs/") + filename, whdboot_library_destination(filename));
+		if (whdboot_install_pinned_library_archive(++step, total_steps, "68040.library (Aminet)",
+			mmulib_url, nullptr, "MMULib.lha.download", members, progress_cb, cancel_flag))
+			any_success = true;
+		else if (!should_cancel_whdboot_download(cancel_flag))
+			any_failure = true;
+	}
+	if (cancelled())
+		return result;
+
+	// explode.library (Struijk/Brouwer), which LoadSeg needs for
+	// TurboImploder-crunched executables.
+	if (explode_step)
+	{
+		const std::vector<std::pair<std::string, std::string>> members = {
+			{ "explode.library", whdboot_library_destination("explode.library") }
+		};
+		if (whdboot_install_pinned_library_archive(++step, total_steps, "explode.library (Aminet)",
+			explode_url, explode_sha256, "explode-7.lha.download", members, progress_cb, cancel_flag))
+			any_success = true;
+		else if (!should_cancel_whdboot_download(cancel_flag))
+			any_failure = true;
+	}
+	if (cancelled())
+		return result;
+
+	// OctaMED's medplayer.library (Teijo Kinnunen, RBF Software), which
+	// music-playing slaves expect in LIBS:.
+	if (medplayer_step)
+	{
+		const std::vector<std::pair<std::string, std::string>> members = {
+			{ "libs/medplayer.library", whdboot_library_destination("medplayer.library") }
+		};
+		if (whdboot_install_pinned_library_archive(++step, total_steps, "medplayer.library (Aminet)",
+			medplayer_url, medplayer_sha256, "OctV5_Tut4.lha.download", members, progress_cb, cancel_flag))
+			any_success = true;
+		else if (!should_cancel_whdboot_download(cancel_flag))
+			any_failure = true;
+	}
+	if (cancelled())
+		return result;
 
 	const auto json_destination = join_path(whdboot_path, "game-data/whdload_db.json");
 	const auto xml_destination = join_path(whdboot_path, "game-data/whdload_db.xml");
