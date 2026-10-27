@@ -36,6 +36,7 @@
 #include "ahi_v1.h"
 #include "picasso96.h"
 #include "uaenative.h"
+#include "uni_common.h"
 
 static long intcount;
 static int record_enabled;
@@ -512,6 +513,7 @@ uae_u32 REGPARAM2 ahi_demux (TrapContext *context)
 #endif
 		return 0;
 
+#ifdef WITH_UAENATIVE
 	case 100: // open dll
 		return uaenative_open_library(context, UNI_FLAG_COMPAT);
 
@@ -523,6 +525,13 @@ uae_u32 REGPARAM2 ahi_demux (TrapContext *context)
 
 	case 103: //close dll
 		return uaenative_close_library(context, UNI_FLAG_COMPAT);
+#else
+	case 100: // native libraries are not part of this build
+	case 101:
+	case 102:
+	case 103:
+		return UNI_ERROR_NOT_ENABLED;
+#endif
 
 	case 104: //screenlost
 		{
