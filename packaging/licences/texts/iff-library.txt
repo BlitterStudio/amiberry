@@ -1,0 +1,7 @@
+Libs/iff.library 23.2 (24.5.93) by Christian A. Weber.
+
+From the package README (Aminet, util/libs/iff.library-23), quoted verbatim
+including the original's spelling:
+
+  THIS PROGRAM IS IN THE PUBLIC DOMAIN. IT MAY BE FREELY DISTRUBUTED,
+  COPIED AND USED FOR COMMERCIAL OR NON-COMMERCIAL PURPOSES.
