@@ -1556,6 +1556,30 @@ static std::string selected_slave_sub_path()
 	return whdload_prefs.sub_path;
 }
 
+// A per-game config restores only the selected slave's filename (and, from
+// configs saved since, its whdload_slave_sub_path). Re-pair it with the
+// auto-detected slave it names, so a slave from a drawer other than the
+// default doesn't boot from the default's drawer: keep an exact
+// filename + drawer match, else take the first slave with that filename.
+static void reconcile_auto_detected_slave()
+{
+	auto& selected = whdload_prefs.selected_slave;
+	if (!selected.has_sub_path || selected.filename.empty())
+		return;
+	const whdload_slave* by_name = nullptr;
+	for (const auto& slave : whdload_prefs.slaves)
+	{
+		if (strcmpi(slave.filename.c_str(), selected.filename.c_str()) != 0)
+			continue;
+		if (slave.sub_path == selected.sub_path)
+			return;
+		if (!by_name)
+			by_name = &slave;
+	}
+	if (by_name)
+		selected.sub_path = by_name->sub_path;
+}
+
 // True when the WHDBoot folder's Libs drawer holds one of the optional
 // Amiga libraries the download installs (the XPK stack with its
 // Compressors drawer, MMULib's 68040.library, explode.library,
@@ -1594,9 +1618,16 @@ void create_startup_sequence()
 
 	// The libraries downloaded on demand are mounted as DH4:; appending
 	// the volume to LIBS: also puts its Compressors drawer within reach of
-	// xpkmaster.library as LIBS:Compressors.
+	// xpkmaster.library as LIBS:Compressors. The assign is guarded:
+	// DH4: is only mounted by set_booter_drives(), and a per-game config
+	// (or a script regenerated from the WHDLoad panel) may not have it, so
+	// a bare assign would stop the boot with an "insert volume" requester.
+	// "Assign DH4: EXISTS" only sets WARN when it is absent.
 	if (whdboot_downloaded_libraries_present())
-		whd_bootscript << "DH3:C/Assign LIBS: DH4: ADD\n";
+		whd_bootscript << "DH3:C/Assign >NIL: DH4: EXISTS\n"
+			"IF NOT WARN\n"
+			"DH3:C/Assign LIBS: DH4: ADD\n"
+			"ENDIF\n";
 
 	if (amiberry_options.use_jst_instead_of_whd)
 		whd_bootscript << "IF NOT EXISTS JST\n";
@@ -1921,6 +1952,7 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath, const bool prese
 		write_log("WHDBooter - %s found. Loading Config for WHDLoad options.\n", uae_config.c_str());
 		target_cfgfile_load(prefs, uae_config.c_str(), CONFIG_TYPE_DEFAULT, 0);
 		config_loaded = true;
+		reconcile_auto_detected_slave();
 	}
 	else if (preserve_quickstart_hardware && std::filesystem::exists(uae_config))
 	{
