@@ -6,9 +6,8 @@
  * exported function-pointer variables, so symbol names, signatures and
  * the PPCMemoryRegion layout below are binary ABI.
  *
- * In a UAE build the uae_ppc_* functions have C++ linkage; the ppc_cpu_*
- * prototypes are plain C++ declarations (no extern "C") so that PearPC's
- * C++ overloads such as ppc_cpu_init(uint32) remain compatible.
+ * In a UAE build the uae_ppc_* functions have C++ linkage, and the
+ * ppc_cpu_* prototypes are plain C++ declarations (no extern "C").
  *
  * Copyright (C) 2026 Dimitris Panokostas
  * SPDX-License-Identifier: GPL-3.0-or-later
@@ -37,8 +36,7 @@
 /* PPC_IMPLEMENTATION_*: values of the ppc_implementation preference */
 #define PPC_IMPLEMENTATION_AUTO 0
 #define PPC_IMPLEMENTATION_DUMMY 1
-#define PPC_IMPLEMENTATION_PEARPC 2
-#define PPC_IMPLEMENTATION_QEMU 3
+#define PPC_IMPLEMENTATION_QEMU 2
 
 /* PPC_STATE_*: values of the global ppc_state; callers test `if (ppc_state)`
  * so INACTIVE must be 0. */
@@ -71,25 +69,15 @@ static_assert(offsetof(PPCMemoryRegion, alias) == 2 * sizeof(uint32_t) + 2 * siz
 static_assert(sizeof(PPCMemoryRegion) == (sizeof(void *) == 8 ? 32 : 20), "PPCMemoryRegion ABI");
 #endif
 
-/* PPC CPU functions implemented by the plugin (or PearPC). Resolved by
- * name: ppc_cpu_init, ppc_cpu_map_memory, ppc_cpu_run_continuous,
+/* PPC CPU functions implemented by the plugin. Resolved by name:
+ * ppc_cpu_init, ppc_cpu_map_memory, ppc_cpu_run_continuous,
  * ppc_cpu_set_state, ppc_cpu_reset are required, ppc_cpu_flush_jit is
  * optional. */
 void PPCCALL ppc_cpu_version(int *major, int *minor, int *revision);
 bool PPCCALL ppc_cpu_init(const char *model, uint32_t hid1);
-bool PPCCALL ppc_cpu_init_pvr(uint32_t pvr);
-void PPCCALL ppc_cpu_close(void);
-void PPCCALL ppc_cpu_stop(void);
-void PPCCALL ppc_cpu_atomic_raise_ext_exception(void);
-void PPCCALL ppc_cpu_atomic_cancel_ext_exception(void);
 void PPCCALL ppc_cpu_map_memory(PPCMemoryRegion *regions, int count);
 void PPCCALL ppc_cpu_flush_jit(void);
-void PPCCALL ppc_cpu_set_pc(int cpu, uint32_t value);
 void PPCCALL ppc_cpu_run_continuous(void);
-void PPCCALL ppc_cpu_run_single(int count);
-uint64_t PPCCALL ppc_cpu_get_dec(void);
-void PPCCALL ppc_cpu_do_dec(int value);
-void PPCCALL ppc_cpu_pause(int pause);
 void PPCCALL ppc_cpu_reset(void);
 bool PPCCALL ppc_cpu_check_state(int state);
 void PPCCALL ppc_cpu_set_state(int state);
@@ -109,14 +97,11 @@ bool UAECALL uae_ppc_io_mem_read64(uint32_t addr, uint64_t *data);
 bool UAECALL uae_ppc_io_mem_write64(uint32_t addr, uint64_t data);
 
 void uae_ppc_get_model(const TCHAR **model, uint32_t *hid1);
-void uae_ppc_doze(void);
-void uae_ppc_crash(void);
 void uae_ppc_cpu_reboot(void);
 void uae_ppc_cpu_stop(void);
 void uae_ppc_interrupt(bool active);
 void uae_ppc_cpu_lock(void);
 bool uae_ppc_cpu_unlock(void);
-void uae_ppc_emulate(void);
 void uae_ppc_reset(bool hardreset);
 void uae_ppc_free(void);
 void uae_ppc_wakeup(void);
@@ -130,12 +115,8 @@ void uae_ppc_mark_code_cache_dirty(void);
 void uae_ppc_spinlock_get(void);
 void uae_ppc_spinlock_release(void);
 void uae_ppc_pause(int pause);
-#ifdef __cplusplus
-bool uae_ppc_direct_physical_memory_handle(uint32_t addr, uint8_t *&ptr);
-#endif
 
 extern volatile int ppc_state;
-extern int ppc_cycle_count;
 
 #else /* plugin build */
 

@@ -67,6 +67,24 @@ fi
 check "$work/def.txt" '^; --dump-config: resolved configuration'
 check "$work/def.txt" '^; configuration file: (built-in defaults)$'
 
+# PearPC was removed: a configuration that chose it resolves to the
+# automatic PPC implementation, and QEMU still round-trips. The option is
+# written only while PPC is on, and only by builds with PPC support: the
+# QEMU round trip tells whether this build has it.
+ppc='cpu_type=68060\nppc_model=automatic\n'
+printf "${ppc}ppc_implementation=qemu\n" > "$work/qemu.uae"
+"$bin" --dump-config -f "$work/qemu.uae" > "$work/qemu.txt" 2>/dev/null
+if grep -q '^ppc_implementation=' "$work/qemu.txt"; then
+	check "$work/qemu.txt" '^ppc_implementation=qemu$'
+	printf "${ppc}ppc_implementation=pearpc\n" > "$work/pearpc.uae"
+	"$bin" --dump-config -f "$work/pearpc.uae" > "$work/pearpc.txt" 2> "$work/pearpc_err.txt"
+	check "$work/pearpc.txt" '^ppc_implementation=auto$'
+	if grep -q 'Unknown value' "$work/pearpc_err.txt"; then
+		echo "ppc_implementation=pearpc was reported as an unknown value" >&2
+		exit 1
+	fi
+fi
+
 # Deterministic: two runs of the same config are byte-identical, so dumps
 # from two machines can be compared with diff.
 "$bin" --dump-config -f "$work/probe.uae" > "$work/out2.txt" 2>/dev/null

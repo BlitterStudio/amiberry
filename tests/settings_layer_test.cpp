@@ -9,6 +9,7 @@
 #include "sysconfig.h"
 #include "sysdeps.h"
 #include "options.h"
+#include "uae/ppc.h"
 #include "memory.h"
 #include "newcpu.h"
 #include "cpuboard.h"
@@ -1191,6 +1192,10 @@ void check_rejections()
 	// option itself only switches automatic PPC on and off.
 	p.cpu_model = 68060;
 	CHECK(set(p, "ppc_model", "manual") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	// The choices map to the stored values; PearPC is no longer offered.
+	CHECK(set(p, "ppc_implementation", "qemu") == AMIBERRY_SETTINGS_OK);
+	CHECK(p.ppc_implementation == PPC_IMPLEMENTATION_QEMU && value_of(p, "ppc_implementation") == "qemu");
+	CHECK(!choice_available(p, "ppc_implementation", "pearpc"));
 #endif
 	char small[3];
 	CHECK(settings::get(settings::require("cpu_model"), p, small, sizeof small) == AMIBERRY_SETTINGS_BUFFER_TOO_SMALL);
@@ -1444,7 +1449,7 @@ void emit_roundtrip()
 	reset_prefs(p);
 	apply("cpu_model", "68060");
 	apply("ppc_model", "automatic");
-	apply("ppc_implementation", "pearpc");
+	apply("ppc_implementation", "qemu");
 	apply("ppc_cpu_idle", "max");
 	emit("ppc", p);
 #endif

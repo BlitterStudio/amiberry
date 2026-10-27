@@ -594,7 +594,6 @@ bool ppc_model_available(const uae_prefs& p, const context&)
 const amiberry_setting_choice ppc_implementation_choices[] = {
 	{"auto", "Automatic"},
 	{"dummy", "Dummy"},
-	{"pearpc", "PearPC"},
 	{"qemu", "QEMU"},
 };
 
