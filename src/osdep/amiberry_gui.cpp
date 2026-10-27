@@ -2036,7 +2036,10 @@ void DisplayDiskInfo(int num)
 		linebuffer[w * 3 + 1 + w] = 0;
 		infotext.emplace_back(linebuffer);
 	}
+	// The ImGui window; native front ends build without it.
+#if !defined(AMIBERRY_NATIVE_HOST) && defined(USE_IMGUI)
 	ShowDiskInfo(title.c_str(), infotext);
+#endif
 }
 
 void save_mapping_to_file(const std::string& mapping)
