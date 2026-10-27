@@ -234,6 +234,40 @@ final class QuickPlayTests: XCTestCase {
 }
 
 @MainActor
+final class WindowHostingTests: XCTestCase {
+	private let autosave = "AmiberryWindowHostingTest"
+
+	override func tearDown() {
+		UserDefaults.standard.removeObject(forKey: "NSWindow Frame \(autosave)")
+		super.tearDown()
+	}
+
+	/// A dismissed editor's content must not stay alive with its window:
+	/// it owns the native settings session.
+	func testReleasedWindowContentIsFreed() {
+		let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 400, height: 300),
+			styleMask: [.titled, .closable], backing: .buffered, defer: true)
+		window.isReleasedWhenClosed = false
+		weak var hosted: NSHostingController<Text>?
+		autoreleasepool {
+			let controller = hostWindowContent(Text("content"))
+			hosted = controller
+			presentWindow(controller, in: window, autosave: autosave, size: NSSize(width: 400, height: 300))
+		}
+		RunLoop.main.run(until: Date().addingTimeInterval(0.1))
+		XCTAssertNotNil(hosted, "the window keeps its content while shown")
+
+		autoreleasepool {
+			window.orderOut(nil)
+			releaseWindowContent(window)
+			RunLoop.main.run(until: Date().addingTimeInterval(0.1))
+		}
+		XCTAssertNil(hosted, "released content is freed while the window object is kept")
+		XCTAssertNil(window.contentView)
+	}
+}
+
+@MainActor
 final class ROMImportTests: XCTestCase {
 	private func folder() throws -> URL {
 		let folder = FileManager.default.temporaryDirectory.appendingPathComponent("roms-\(UUID().uuidString)")

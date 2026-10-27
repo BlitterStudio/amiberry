@@ -21,7 +21,7 @@ final class AcknowledgementsWindow: NSObject, NSWindowDelegate {
 	}
 
 	func windowWillClose(_ notification: Notification) {
-		window?.contentViewController = nil
+		releaseWindowContent(window)
 	}
 
 	private func makeWindow() -> NSWindow {

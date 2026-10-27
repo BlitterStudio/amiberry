@@ -84,7 +84,7 @@ final class SettingsPresenter: NSObject, NSWindowDelegate {
 	/// Closes the editor alone; the Library shows the machines saved meanwhile.
 	private func closeEditor() {
 		window?.orderOut(nil)
-		window?.contentViewController = nil
+		releaseWindowContent(window)
 		model = nil
 		library?.editing = false
 		library?.reload()
@@ -93,10 +93,10 @@ final class SettingsPresenter: NSObject, NSWindowDelegate {
 	/// Closes every window: the emulator starts or resumes.
 	func dismiss() {
 		window?.orderOut(nil)
-		window?.contentViewController = nil
+		releaseWindowContent(window)
 		model = nil
 		libraryWindow?.orderOut(nil)
-		libraryWindow?.contentViewController = nil
+		releaseWindowContent(libraryWindow)
 		library = nil
 	}
 
@@ -151,7 +151,7 @@ final class AppSettingsWindow: NSObject, NSWindowDelegate {
 	}
 
 	func windowWillClose(_ notification: Notification) {
-		window?.contentViewController = nil
+		releaseWindowContent(window)
 		// The Configurations folder may have changed meanwhile.
 		SettingsPresenter.shared.library?.reload()
 	}
@@ -222,6 +222,16 @@ func presentWindow<V: View>(_ hosting: NSHostingController<V>, in window: NSWind
 		hosting.view.needsLayout = true
 		hosting.view.layoutSubtreeIfNeeded()
 	}
+}
+
+/// Drops a window's SwiftUI content installed by presentWindow, so the
+/// hierarchy and its models (an editor's native settings session) are
+/// released while the window object is kept for the next presentation.
+@MainActor
+func releaseWindowContent(_ window: NSWindow?) {
+	guard let window else { return }
+	window.contentView = nil
+	objc_setAssociatedObject(window, &hostedWindowControllerKey, nil, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
 }
 
 /// Hosts a window's SwiftUI content without sizing the window from it;
