@@ -625,7 +625,11 @@ static int decode_level0_header(LHAFileHeader **header, LHAInputStream *stream)
 			return 0;
 	}
 
-	if (header_len < min_len) {
+	// Amiberry change: the oldest level 0 headers omit the two-byte CRC
+	// after the path, so they are two bytes shorter than the minimum.
+
+	if (header_len < min_len
+	 && ((*header)->header_level != 0 || header_len + 2 < min_len)) {
 		return 0;
 	}
 
@@ -665,7 +669,8 @@ static int decode_level0_header(LHAFileHeader **header, LHAInputStream *stream)
 
 	path_len = RAW_DATA(header, 21);
 
-	if (min_len + path_len > header_len) {
+	if (min_len + path_len > header_len
+	 && ((*header)->header_level != 0 || min_len - 2 + path_len != header_len)) {
 		return 0;
 	}
 
@@ -683,9 +688,13 @@ static int decode_level0_header(LHAFileHeader **header, LHAInputStream *stream)
 		return 0;
 	}
 
-	// CRC field.
+	// CRC field (absent from the oldest level 0 headers: 0 then).
 
-	(*header)->crc = lha_decode_uint16(&RAW_DATA(header, 22 + path_len));
+	if (min_len + path_len <= header_len) {
+		(*header)->crc = lha_decode_uint16(&RAW_DATA(header, 22 + path_len));
+	} else {
+		(*header)->crc = 0;
+	}
 
 	// Level 0 headers can contain extended data through different schemes
 	// to the extended header system used in level 1+.
