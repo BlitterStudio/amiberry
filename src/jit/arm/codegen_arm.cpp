@@ -1109,6 +1109,30 @@ STATIC_INLINE void raw_fflags_into_flags(int r)
 	VMRS_CPSR();
 }
 
+/* FCMP fixup: d holds a-b. When both operands are infinities with the
+   same sign the subtraction produced NaN on the host, but a 6888x FCMP
+   compares them as ordered and equal: replace the NaN with a zero that
+   carries the destination's sign. A NaN operand keeps the NaN result so
+   it still compares unordered. */
+STATIC_INLINE void raw_fcmp_fixup_rrr(int d, int a, int b)
+{
+	VCMP64_dd(a, b); // V set if either operand is NaN
+	VMRS_CPSR();
+	uae_u32* branchadd_unordered = (uae_u32*)get_target();
+	BVS_i(0); // keep the NaN so it compares unordered
+
+	VCMP64_d0(d); // V clear if d is not NaN
+	VMRS_CPSR();
+	uae_u32* branchadd_ordered = (uae_u32*)get_target();
+	BVC_i(0); // ordered result, nothing to fix up
+
+	VMOV_F64_dimmF(SCRATCH_F64_1, 0x70); // 1.0
+	VDIV64_ddd(d, SCRATCH_F64_1, a); // 1/dest is a zero with the destination's sign
+
+	write_jmp_target(branchadd_unordered, (uintptr)get_target());
+	write_jmp_target(branchadd_ordered, (uintptr)get_target());
+}
+
 LOWFUNC(NONE,NONE,2,raw_fp_fscc_ri,(RW4 d, int cc))
 {
 	switch (cc) {

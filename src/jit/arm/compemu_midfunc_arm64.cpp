@@ -1186,6 +1186,20 @@ MIDFUNC(1,fflags_into_flags,())
 }
 MENDFUNC(1,fflags_into_flags,())
 
+MIDFUNC(3,fcmp_fixup_rrr,(FRW d, FR a, FR b))
+{
+	clobber_flags();
+	a = f_readreg(a);
+	b = f_readreg(b);
+	d = f_rmw(d);
+	raw_fcmp_fixup_rrr(d, a, b);
+	f_unlock(b);
+	f_unlock(a);
+	f_unlock(d);
+}
+MENDFUNC(3,fcmp_fixup_rrr,(FRW d, FR a, FR b))
+
+
 MIDFUNC(2,fp_from_exten_mr,(RR4 adr, FR s))
 {
 	clobber_flags();

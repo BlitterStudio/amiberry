@@ -1097,6 +1097,13 @@ static void fp_cmp(fpdata *a, fpdata *b)
 		}
 	} else {
 		v = a->fp - b->fp;
+		// The host subtraction yields NaN for equal-signed infinities,
+		// but a real 6888x FCMP compares them as ordered and equal
+		// (Z set, N per the destination's sign). NaN operands must
+		// still compare unordered.
+		if (!(v == v) && !fp_is_nan(a) && !fp_is_nan(b)) {
+			v = fp_is_neg(a) ? -0.0 : 0.0;
+		}
 		fp_clear_status();
 	}
 	a->fp = v;
