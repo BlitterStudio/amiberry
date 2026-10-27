@@ -361,34 +361,63 @@ def github_api(url: str, token: str | None) -> dict | list:
     return json.loads(r.stdout)
 
 
+def split_keg(keg_version: str) -> tuple[str, int]:
+    """'0.5.1_1' -> ('0.5.1', 1); 'r3222' -> ('r3222', 0).
+
+    A trailing _N on a keg directory is the formula's packaging revision
+    (revision N in the .rb), not part of the upstream version.
+    """
+    if "_" in keg_version:
+        upstream, _, suffix = keg_version.rpartition("_")
+        if suffix.isdigit():
+            return upstream, int(suffix)
+    return keg_version, 0
+
+
+def text_pkg_revision(rb_text: str) -> int | None:
+    """Top-level `revision N` stanza (packaging revision, not a git ref)."""
+    m = re.search(r'^  revision (\d+)$', rb_text, re.MULTILINE)
+    return int(m.group(1)) if m else None
+
+
 def formula_version(rb_text: str) -> str | None:
     m = re.search(r'^\s*version "([^"]+)"', rb_text, re.MULTILINE)
     return m.group(1) if m else None
-
 
 def fetch_formula_rb(formula: str, keg_version: str, formulae_dir: Path,
                      origin_dir: Path, token: str | None, brew: str) -> Path:
     """Download the homebrew-core formula file for exactly keg_version.
 
-    A formula's `version` is often implicit (derived from the stable URL),
-    so a text match alone is not enough: when the file carries no explicit
-    `version` stanza, brew's own parser decides whether it is the right one.
+    keg_version is the full keg directory name (e.g. 0.5.1_1); the formula's
+    upstream version *and* packaging revision must both match. A formula's
+    `version` is often implicit (derived from the stable URL), so a text
+    match alone is not enough: when the file carries no explicit `version`
+    stanza, brew's own parser decides whether it is the right one.
+
+    The file is stored under <formula>/<keg_version>/ so two builds with
+    different versions of the same formula (Intel + ARM legs) coexist.
     """
+    upstream, pkg_rev = split_keg(keg_version)
     core_path = formula_path_in_core(formula)
-    dest = formulae_dir / f"{formula}.rb"
+    dest = formulae_dir / formula / keg_version / f"{formula}.rb"
     dest.parent.mkdir(parents=True, exist_ok=True)
     origin_dir.mkdir(parents=True, exist_ok=True)
+    origin_file = origin_dir / f"{formula}-{keg_version}.origin"
+    probe_dir = origin_dir.parent / "probes" / formula / keg_version
+    probe_dir.mkdir(parents=True, exist_ok=True)
 
     def save(text: str, origin: str) -> None:
         dest.write_text(text)
-        (origin_dir / f"{formula}.origin").write_text(origin + "\n")
-
-    probe_dir = origin_dir.parent / "probes"
-    probe_dir.mkdir(parents=True, exist_ok=True)
+        origin_file.write_text(origin + "\n")
 
     def matches(text: str) -> bool:
-        if formula_version(text) is not None:
-            return formula_version(text) == keg_version
+        explicit = formula_version(text)
+        if explicit is not None:
+            if explicit != upstream:
+                return False
+            rev = text_pkg_revision(text)
+            # No `revision N` stanza means packaging revision 0.
+            return (rev if rev is not None else 0) == pkg_rev
         # No explicit version stanza: let brew derive it from the URL. The
         # probe must be named <formula>.rb so brew can derive the class name.
         probe = probe_dir / f"{formula}.rb"
@@ -397,7 +426,8 @@ def fetch_formula_rb(formula: str, keg_version: str, formulae_dir: Path,
             spec = parse_formula(probe, brew)
         except SystemExit:
             return False
-        return spec.get("version") == keg_version
+        return (spec.get("version") == upstream
+                and int(spec.get("pkg_revision") or 0) == pkg_rev)
 
     head_url = f"{CORE_RAW}/HEAD/{core_path}"
     r = run(["curl", "-fsSL", "--retry", "3", head_url])
@@ -438,13 +468,18 @@ def fetch_formula_rb(formula: str, keg_version: str, formulae_dir: Path,
         if matches(r.stdout):
             save(r.stdout, raw_url)
             return dest
-    die(f"{formula}: no homebrew-core revision found carrying version {keg_version} "
-        f"(checked {len(commits)} commits, {parsed} needed a brew parse). Pin a "
-        f"newer bottle or add the source URL to this archive manually.")
+    die(f"{formula}: no homebrew-core revision found carrying version {upstream} "
+        f"revision {pkg_rev} (checked {len(commits)} commits, {parsed} needed a "
+        f"brew parse). Pin a newer bottle or add the source URL to this "
+        f"archive manually.")
 
 
-def parse_formula_via_brew(rb_path: Path, brew: str) -> dict:
-    """url/checksum/licence straight from brew's own formula parser."""
+def parse_formula_via_brew(rb_path: Path, brew: str) -> "dict | None":
+    """url/checksum/licence straight from brew's own formula parser.
+
+    Returns None when brew cannot load the file (e.g. historical formulae
+    whose DSL today's brew rejects); the caller falls back to a regex parse.
+    """
     # Named so Homebrew can derive the class name; HOMEBREW_DEVELOPER in the
     # environment keeps `brew ruby` from flipping persistent developer mode on.
     named = rb_path.parent / rb_path.name
@@ -460,12 +495,13 @@ def parse_formula_via_brew(rb_path: Path, brew: str) -> dict:
         " checksum: (f.stable.checksum&.to_s rescue nil),"
         " tag: f.stable.specs[:tag],"
         " revision: f.stable.specs[:revision],"
+        " pkg_revision: f.revision,"
         " license: license,"
         " version: f.version.to_s}.to_json)"
     )
     r = run([brew, "ruby", "-e", code, str(named)], env={**os.environ, "HOMEBREW_DEVELOPER": "1"})
     if r.returncode != 0:
-        die(f"brew ruby could not parse {rb_path}: {r.stderr.strip()}")
+        return None
     return json.loads(r.stdout)
 
 
@@ -488,23 +524,72 @@ def parse_formula_via_regex(rb_path: Path) -> dict:
     licence = first(r'^  license "([^"]+)"$')
     if not url:
         die(f"could not parse a stable url from {rb_path}")
+    pkg_rev = text_pkg_revision(text)
     return {"url": url, "checksum": checksum, "tag": tag, "revision": revision,
+            "pkg_revision": pkg_rev if pkg_rev is not None else 0,
             "license": licence or "", "version": formula_version(text) or "", "parser": "regex"}
 
 
 def parse_formula(rb_path: Path, brew: str) -> dict:
-    try:
-        return parse_formula_via_brew(rb_path, brew)
-    except SystemExit:
-        info(f"brew could not parse {rb_path.name}; falling back to a regex parse")
-        return parse_formula_via_regex(rb_path)
+    spec = parse_formula_via_brew(rb_path, brew)
+    if spec is not None:
+        return spec
+    info(f"brew could not parse {rb_path.name} (historical DSL?); using a regex parse")
+    return parse_formula_via_regex(rb_path)
 
 
-PATCH_URL_RE = re.compile(r'patch\s+do\b.*?url\s+"([^"]+)"', re.DOTALL)
+PATCH_BLOCK_RE = re.compile(r'patch\s+do\b(?P<body>.*?)^\s*end\b', re.DOTALL | re.MULTILINE)
 
 
-def external_patch_urls(rb_text: str) -> list[str]:
-    return PATCH_URL_RE.findall(rb_text)
+def external_patches(rb_text: str) -> list[dict]:
+    """Homebrew `patch do ... end` blocks that carry data outside the .rb.
+
+    url-patches are downloaded from their declared URL (with the formula's
+    sha256); file-patches live in the homebrew-core repository itself under
+    the declared path (e.g. Patches/<formula>/foo.patch) and are fetched
+    from the same commit as the formula file. Inline __END__ DATA patches
+    are already inside the .rb we archive.
+    """
+    patches = []
+    for m in PATCH_BLOCK_RE.finditer(rb_text):
+        body = m.group("body")
+
+        def stanza(pattern):
+            s = re.search(pattern, body)
+            return s.group(1) if s else None
+
+        url = stanza(r'url\s+"([^"]+)"')
+        file = stanza(r'file\s+"([^"]+)"')
+        sha = stanza(r'sha256\s+"([0-9a-f]{64})"')
+        if url:
+            patches.append({"kind": "url", "url": url, "sha256": sha})
+        elif file:
+            patches.append({"kind": "file", "path": file, "sha256": sha})
+    return patches
+
+
+def patch_source_url(patch: dict, formula: str, formula_origin: str) -> str:
+    """Download URL for a patch block; needs the .rb's origin for file patches."""
+    if patch["kind"] == "url":
+        return patch["url"]
+    m = re.search(r'homebrew-core/([^/]+)/', formula_origin)
+    if not m:
+        die(f"{formula}: cannot locate the homebrew-core revision in "
+            f"'{formula_origin}' to fetch patch {patch['path']}")
+    return f"{CORE_RAW}/{m.group(1)}/{patch['path']}"
+
+
+def verify_patch(path: Path, expected: str | None, formula: str) -> tuple[str, str]:
+    """(sha256, status). A declared checksum that does not match fails assembly."""
+    actual = sha256_file(path)
+    if expected:
+        if actual != expected:
+            die(f"{formula}: patch sha256 mismatch for {path.name}\n"
+                f"  formula: {expected}\n  actual:  {actual}")
+        print(f"    patch sha256 OK ({expected[:16]}...)")
+        return actual, "verified against homebrew-core formula"
+    print(f"    patch sha256 recorded ({actual[:16]}...; none declared)")
+    return actual, "recorded (no checksum declared in the formula)"
 
 
 def source_download_target(url: str, tag: str | None, revision: str | None, formula: str) -> tuple[str, str]:
@@ -626,28 +711,41 @@ def cmd_assemble(args) -> None:
             comp = components[(formula, keg_version)]
             info(f"{formula} {keg_version} [{comp['licence']}] "
                  f"({', '.join(comp['variants'])}/{','.join(comp['archs'])})")
-            rb = fetch_formula_rb(formula, keg_version.split("_")[0],
+            # Everything this keg version contributes lives under its own
+            # directory so two builds with different versions of the same
+            # formula (Intel + ARM legs) never overwrite each other.
+            ver_dir = f"{formula}/{keg_version}"
+            rb = fetch_formula_rb(formula, keg_version,
                                   root / "homebrew-formulae", workdir / "origins",
                                   token, args.brew)
             spec = parse_formula(rb, args.brew)
             url, filename = source_download_target(
                 spec["url"], spec.get("tag"), spec.get("revision"), formula)
-            dest = root / "components" / filename
+            dest = root / "components" / ver_dir / filename
+            dest.parent.mkdir(parents=True, exist_ok=True)
             curl(url, dest, max_bytes=800 * 1024 * 1024)
             actual = verify_download(dest, spec.get("checksum"), formula)
+            origin = (workdir / "origins" / f"{formula}-{keg_version}.origin").read_text().strip()
 
             patches = []
-            rb_text = rb.read_text()
-            for purl in external_patch_urls(rb_text):
-                pname = f"{formula}-{purl.rsplit('/', 1)[-1]}"
-                pdest = root / "components" / pname
+            for p in external_patches(rb.read_text()):
+                purl = patch_source_url(p, formula, origin)
+                pname = purl.rsplit("/", 1)[-1].split("?")[0] or "patch"
+                pdest = root / "patches" / ver_dir / pname
+                pdest.parent.mkdir(parents=True, exist_ok=True)
                 curl(purl, pdest)
-                patches.append({"url": purl, "file": f"components/{pname}", "sha256": sha256_file(pdest)})
-                print(f"    patch {pname}")
+                psha, pstatus = verify_patch(pdest, p["sha256"], formula)
+                patches.append({
+                    "source": purl,
+                    "kind": p["kind"],
+                    "file": f"patches/{ver_dir}/{pname}",
+                    "sha256": psha,
+                    "sha256_status": pstatus,
+                })
 
             manifest_components.append({
                 "formula": formula,
-                "version": keg_version.split("_")[0],
+                "version": split_keg(keg_version)[0],
                 "keg_version": keg_version,
                 "licence": spec.get("license") or comp["licence"],
                 "homepage": comp["homepage"],
@@ -655,9 +753,9 @@ def cmd_assemble(args) -> None:
                 "source_sha256": actual,
                 "source_sha256_status": "verified against homebrew-core formula"
                 if spec.get("checksum") else "recorded (git archive; formula carries no checksum)",
-                "file": f"components/{filename}",
-                "formula_file": f"homebrew-formulae/{formula}.rb",
-                "formula_file_origin": (workdir / "origins" / f"{formula}.origin").read_text().strip(),
+                "file": f"components/{ver_dir}/{filename}",
+                "formula_file": f"homebrew-formulae/{ver_dir}/{formula}.rb",
+                "formula_file_origin": origin,
                 "formula_parser": spec.get("parser", "brew-ruby"),
                 "patches": patches,
                 "dylibs": comp["dylibs"],
@@ -698,11 +796,12 @@ def cmd_assemble(args) -> None:
             "",
             "This archive offers the exact corresponding source of every third-party",
             "GPL/LGPL library that the Apple binaries of this release were built",
-            "against (GPLv2 S3 / GPLv3 S6 / LGPL S4). Each entry under components/",
-            "is the upstream source tarball, checksum-verified against the exact",
-            "homebrew-core formula file copied under homebrew-formulae/ (which also",
-            "carries any patches Homebrew applied, as files under components/ when",
-            "they are external URLs, or inline in the .rb).",
+            "against (GPLv2 S3 / GPLv3 S6 / LGPL S4). Each components/<formula>/",
+            "entry is the upstream source tarball, checksum-verified against",
+            "the exact homebrew-core formula file under homebrew-formulae/,",
+            "with the patches Homebrew applied (external patch URLs and",
+            "homebrew-core file patches, sha256-verified where the formula",
+            "declares one) under patches/; inline DATA patches are in the .rb.",
             "",
             "Components whose source already ships in the Amiberry repository",
             "(external/) are covered by the tagged Amiberry source tree and are not",
