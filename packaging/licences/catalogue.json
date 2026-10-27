@@ -434,21 +434,6 @@
       ]
     },
     {
-      "id": "xpk",
-      "name": "xpk client libraries",
-      "version": "",
-      "copyright": "The XPK authors",
-      "licence": "Distributed under its authors' terms",
-      "licence_name": "Distributed under its authors' terms",
-      "url": "https://aminet.net/util/pack",
-      "text": "",
-      "platforms": [
-        "macos",
-        "macos-store",
-        "ios"
-      ]
-    },
-    {
       "id": "iff-library",
       "name": "iff.library",
       "version": "",
@@ -457,66 +442,6 @@
       "licence_name": "Public domain (commercial use permitted)",
       "url": "https://aminet.net/package/util/libs/iff.library-23",
       "text": "iff-library.txt",
-      "platforms": [
-        "macos",
-        "macos-store",
-        "ios"
-      ]
-    },
-    {
-      "id": "explode-library",
-      "name": "explode.library",
-      "version": "",
-      "copyright": "S. Struijk and R. Brouwer",
-      "licence": "Distributed under its authors' terms",
-      "licence_name": "Distributed under its authors' terms",
-      "url": "https://aminet.net/",
-      "text": "",
-      "platforms": [
-        "macos",
-        "macos-store",
-        "ios"
-      ]
-    },
-    {
-      "id": "mmu-library",
-      "name": "68040.library (MMULib)",
-      "version": "",
-      "copyright": "Thomas Richter (THOR) and the MMU.lib authors",
-      "licence": "Distributed under its authors' terms",
-      "licence_name": "Distributed under its authors' terms",
-      "url": "https://aminet.net/util/libs/MMULib.lha",
-      "text": "",
-      "platforms": [
-        "macos",
-        "macos-store",
-        "ios"
-      ]
-    },
-    {
-      "id": "medplayer-library",
-      "name": "medplayer.library",
-      "version": "",
-      "copyright": "Teijo Kinnunen (MED)",
-      "licence": "Distributed under its authors' terms",
-      "licence_name": "Distributed under its authors' terms",
-      "url": "https://aminet.net/",
-      "text": "",
-      "platforms": [
-        "macos",
-        "macos-store",
-        "ios"
-      ]
-    },
-    {
-      "id": "ed",
-      "name": "ed",
-      "version": "",
-      "copyright": "Andrew Moore",
-      "licence": "Distributed under its authors' terms",
-      "licence_name": "Distributed under its authors' terms",
-      "url": "https://aminet.net/",
-      "text": "",
       "platforms": [
         "macos",
         "macos-store",
@@ -1132,6 +1057,34 @@
       "copyright": "Jean-François Fabre and Ralf Huvendiek",
       "url": "https://aminet.net/package/game/patch/jst",
       "note": "Downloaded on request from Aminet game/patch/jst. Not part of Amiberry."
+    },
+    {
+      "id": "xpk",
+      "name": "XPK compression libraries (xpkmaster.library and its compressors)",
+      "copyright": "Dirk Stöcker, Urban Dominik Müller, Christian von Roques and the XPK authors",
+      "url": "https://aminet.net/package/util/pack/xpk_User",
+      "note": "Downloaded on request from Aminet util/pack/xpk_User. Not part of Amiberry."
+    },
+    {
+      "id": "mmu-library",
+      "name": "68040.library, mmu.library and 680x0.library (MMULib)",
+      "copyright": "Thomas Richter (THOR) and the MMU.lib authors",
+      "url": "https://aminet.net/package/util/libs/MMULib",
+      "note": "Downloaded on request from Aminet util/libs/MMULib. Not part of Amiberry."
+    },
+    {
+      "id": "explode-library",
+      "name": "explode.library",
+      "copyright": "P. Struijk and A. J. Brouwer; bug fix by Grzegorz Calkowski",
+      "url": "https://aminet.net/package/util/libs/explode-7",
+      "note": "Downloaded on request from Aminet util/libs/explode-7. Not part of Amiberry."
+    },
+    {
+      "id": "medplayer-library",
+      "name": "medplayer.library (OctaMED player)",
+      "copyright": "Teijo Kinnunen and RBF Software",
+      "url": "https://aminet.net/package/docs/help/OctV5_Tut4",
+      "note": "Downloaded on request from Aminet docs/help/OctV5_Tut4. Not part of Amiberry."
     }
   ]
 }

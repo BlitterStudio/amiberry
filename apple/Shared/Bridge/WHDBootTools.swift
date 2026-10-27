@@ -3,9 +3,9 @@
  * The WHDBoot tools API (src/osdep/settings/amiberry_whdboot.h): which of
  * the on-demand WHDBooter files are installed, and downloading them with
  * progress and cancellation. WHDLoad by Bert Jahn (whdload.de), the
- * kickstart RTB files (Aminet) and JST (Aminet) are not bundled with
- * Amiberry, so the front ends offer the download the Paths panel's
- * "Update WHDBooter files" button performs.
+ * kickstart RTB files, JST and the optional Amiga libraries (Aminet) are
+ * not bundled with Amiberry, so the front ends offer the download the
+ * Paths panel's "Update WHDBooter files" button performs.
  */
 
 import AmiberrySettings
@@ -19,6 +19,9 @@ public struct WHDBootStatus: Sendable {
 	public let hostQuitInstalled: Bool
 	public let bootDataInstalled: Bool
 	public let databaseInstalled: Bool
+	/// The optional Amiga libraries (XPK, 68040.library, explode.library,
+	/// medplayer.library) downloaded from Aminet.
+	public let librariesInstalled: Bool
 	public let downloadsAvailable: Bool
 	/// A machine runs unpaused: downloads must wait (the emulator refuses
 	/// them; this lets a front end say why up front).
@@ -136,6 +139,7 @@ public enum WHDBootTools {
 			hostQuitInstalled: raw.host_quit_installed,
 			bootDataInstalled: raw.boot_data_installed,
 			databaseInstalled: raw.database_installed,
+			librariesInstalled: raw.libraries_installed,
 			downloadsAvailable: raw.downloads_available,
 			emulationRunning: raw.emulation_running
 		)

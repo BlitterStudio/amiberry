@@ -399,10 +399,15 @@ extern whdboot_download_result download_whdboot_assets(
 	const std::function<bool(const whdboot_download_progress&)>& progress_cb,
 	std::atomic<bool>* cancel_flag);
 
-// WHDLoad (whdload.de), the kickstart RTB files (Aminet skick346) and JST
-// (Aminet) are not bundled with Amiberry and are fetched on demand.
+// WHDLoad (whdload.de), the kickstart RTB files (Aminet skick346), JST
+// (Aminet) and the optional Amiga libraries (XPK, MMULib's 68040.library,
+// explode.library, medplayer.library) are not bundled with Amiberry and
+// are fetched on demand.
 extern bool whdboot_can_download();
 extern const std::vector<std::string>& whdboot_skick_rtb_files();
+// True once every optional Amiga library above is installed in the
+// WHDBoot folder's Libs drawer.
+extern bool whdboot_optional_libraries_installed();
 // True while a machine runs unpaused (the built-in GUI or the native
 // settings window hold a paused one): downloads wait until it does not.
 extern bool whdboot_emulation_blocks_downloads();
