@@ -1,87 +1,27 @@
 /*
- * Common types used throughout the UAE source code
- * Copyright (C) 2014 Frode Solheim
+ * UAE core integer and character types.
  *
- * Licensed under the terms of the GNU General Public License version 2.
- * See the file 'COPYING' for full license text.
+ * Every translation unit in the emulator gets these either directly or
+ * through sysdeps.h. The uae_* names are real typedefs (never macros) and
+ * their underlying types are fixed: uae_s64/uae_u64 must be long long so
+ * that %lld/%llx formatting matches, and uae_s8/uae_u8/uae_char must be
+ * identical to the typedefs sysdeps.h makes before including this file.
+ *
+ * This header is self-contained: it must compile without sysconfig.h,
+ * without UAE defined and with none of the SIZEOF_* macros present, so it
+ * never tests SIZEOF_* and never includes emulator headers.
+ *
+ * Copyright (C) 2026 Dimitris Panokostas
+ * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
 #ifndef UAE_TYPES_H
 #define UAE_TYPES_H
 
-/* This file is intended to be included by external libraries as well,
- * so don't pull in too much UAE-specific stuff. */
-
-/* Define uae_ integer types. Prefer long long int for uae_x64 since we can
- * then use the %lld format specifier for both 32-bit and 64-bit instead of
- * the ugly PRIx64 macros. */
-
 #include <cstdint>
 
-typedef int8_t uae_s8;
-typedef uint8_t uae_u8;
-
-#if SIZEOF_SHORT == 2
-typedef unsigned short uae_u16;
-typedef short uae_s16;
-#elif SIZEOF_INT == 2
-typedef unsigned int uae_u16;
-typedef int uae_s16;
-#else
-#error No 2 byte type, you lose.
-#endif
-
-#if SIZEOF_INT == 4
-typedef unsigned int uae_u32;
-typedef int uae_s32;
-#elif SIZEOF_LONG == 4
-typedef unsigned long uae_u32;
-typedef long uae_s32;
-#else
-#error No 4 byte type, you lose.
-#endif
-
-#ifndef uae_s64
-typedef long long uae_s64;
-#endif
-#ifndef uae_u64
-typedef unsigned long long uae_u64;
-#endif
-
-#if SIZEOF_LONG_LONG == 8
-#define VAL64(a) (a ## LL)
-#define UVAL64(a) (a ## uLL)
-#elif SIZEOF___INT64 == 8
-#define uae_s64 __int64
-#define uae_u64 unsigned __int64
-#define VAL64(a) (a)
-#define UVAL64(a) (a)
-#elif SIZEOF_LONG == 8
-#define uae_s64 long;
-#define uae_u64 unsigned long;
-#define VAL64(a) (a ## l)
-#define UVAL64(a) (a ## ul)
-#endif
-
-/* Parts of the UAE/WinUAE code uses the bool type (from C++).
- * Including stdbool.h lets this be valid also when compiling with C. */
-
-#ifndef __cplusplus
-#include <stdbool.h>
-#endif
-
-/* Use uaecptr to represent 32-bit (or 24-bit) addresses into the Amiga
- * address space. This is a 32-bit unsigned int regardless of host arch. */
-
-typedef uae_u32 uaecptr;
-
-/* Define UAE character types. WinUAE uses TCHAR (typedef for wchar_t) for
- * many strings. FS-UAE always uses char-based strings in UTF-8 format.
- * Defining SIZEOF_TCHAR lets us determine whether to include overloaded
- * functions in some cases or not. */
-
-typedef char uae_char;
-
+/* TCHAR model. Amiberry uses narrow (UTF-8) strings everywhere; Windows
+ * builds do not define UNICODE, so <tchar.h> provides TCHAR as char. */
 #ifdef _WIN32
 #include <tchar.h>
 #ifdef UNICODE
@@ -94,25 +34,51 @@ typedef char TCHAR;
 #define SIZEOF_TCHAR 1
 #endif
 
+/* _T(x) must stay the single token x while TCHAR is char, so that the
+ * redefinitions in sysconfig.h and floppybridge_abstract.h (both guarded
+ * only by #ifndef _T or processed later without one) stay token-identical. */
 #ifndef _T
 #if SIZEOF_TCHAR == 1
 #define _T(x) x
 #else
-#define _T(x) Lx
+#define _T(x) L##x
 #endif
 #endif
 
+/* Fixed-width emulator types. short/int/long long are 16/32/64 bits on
+ * every supported target (ILP32, LP64 and LLP64 alike). */
+typedef signed char uae_s8;
+typedef unsigned char uae_u8;
+typedef signed short uae_s16;
+typedef unsigned short uae_u16;
+typedef signed int uae_s32;
+typedef unsigned int uae_u32;
+typedef long long uae_s64;
+typedef unsigned long long uae_u64;
+
+typedef char uae_char;
+
+/* Amiga address (32-bit address space, even on 64-bit hosts) */
+typedef uae_u32 uaecptr;
+
+/* Emulator cycle counter (events.h) */
+typedef signed long long evt_t;
+
+/* Booleans. FALSE must be exactly 0 because mameglue.h redefines it
+ * unguarded; TRUE is redefined as 1 by sysconfig.h first. */
 #ifndef FALSE
 #define FALSE 0
 #endif
 #ifndef TRUE
-#define TRUE (!FALSE)
+#define TRUE 1
 #endif
 
-typedef signed long long evt_t;
+/* 64-bit literal helpers */
+#define VAL64(a) a##LL
+#define UVAL64(a) a##ULL
 
-// Some more types from the original UAE code.
-// On Windows, these are already defined by <basetsd.h> (included via <windef.h>).
+/* Win32-style sized integers used by the MAME-derived sources. MinGW/MSVC
+ * already provide this group via <basetsd.h> (pulled in by <windows.h>). */
 #ifndef _BASETSD_H_
 typedef signed char INT8;
 typedef signed short INT16;
@@ -122,6 +88,15 @@ typedef unsigned char UINT8;
 typedef unsigned short UINT16;
 typedef unsigned int UINT32;
 typedef unsigned long long UINT64;
+#endif
+
+#ifdef __cplusplus
+static_assert(sizeof(uae_s8) == 1 && sizeof(uae_u8) == 1, "uae_s8/uae_u8 must be 8 bit");
+static_assert(sizeof(uae_s16) == 2 && sizeof(uae_u16) == 2, "uae_s16/uae_u16 must be 16 bit");
+static_assert(sizeof(uae_s32) == 4 && sizeof(uae_u32) == 4, "uae_s32/uae_u32 must be 32 bit");
+static_assert(sizeof(uae_s64) == 8 && sizeof(uae_u64) == 8, "uae_s64/uae_u64 must be 64 bit");
+static_assert(sizeof(evt_t) == 8, "evt_t must be 64 bit");
+static_assert(SIZEOF_TCHAR == 1, "Amiberry builds use narrow TCHAR only");
 #endif
 
 #endif /* UAE_TYPES_H */
