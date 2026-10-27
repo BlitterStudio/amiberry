@@ -36,7 +36,7 @@ Usage:
       --out third-party-scan-arm64.json
   collect-third-party-sources.py assemble \
       --scan third-party-scan-x86_64.json --scan third-party-scan-arm64.json \
-      --tag v8.4.2 --out amiberry-v8.4.2-third-party-sources.tar.xz
+      --tag v8.5.0 --out amiberry-v8.5.0-third-party-sources.tar.xz
 
 The Mac App Store (MACOS_APP_STORE=ON) and iOS builds are built outside this
 repository's CI; run `scan` for those bundles locally and pass the scan files

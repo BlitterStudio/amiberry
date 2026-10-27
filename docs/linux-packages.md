@@ -112,8 +112,8 @@ AppImages require glibc 2.35 or newer. On an older distribution, use Flatpak or 
 To keep configuration and writable data beside a specific image, create a sibling directory named for the complete image filename before its first launch:
 
 ```bash
-mkdir Amiberry-8.4.2-x86_64.AppImage.home
-./Amiberry-8.4.2-x86_64.AppImage
+mkdir Amiberry-8.5.0-x86_64.AppImage.home
+./Amiberry-8.5.0-x86_64.AppImage
 ```
 
 AppImage managers can integrate the image and use its `.zsync` file for updates. The Amiberry Linux updater only notifies about updates; it does not update an AppImage itself.

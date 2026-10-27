@@ -2,7 +2,7 @@
 %global debug_package %{nil}
 
 Name:           amiberry
-Version:        8.4.2
+Version:        8.5.0
 Release:        1%{?dist}
 Summary:        Optimized Amiga emulator for ARM64, AMD64 and RISC-V platforms
 
@@ -94,6 +94,14 @@ fi
 %{_mandir}/man1/amiberry.1.gz
 
 %changelog
+* Tue Oct 27 2026 Dimitris Panokostas <midwan@gmail.com> - 8.5.0-1
+- Release v8.5.0
+- WHDBooter: WHDLoad, JST, RTB files and the XPK, MMULib, explode and medplayer libraries are downloaded from their authors' sites; host-quit replaces AmiQuit
+- LhA archives read with Lhasa; LZX archives with a new decoder; an LZX archive in the ROMs folder no longer crashes the ROM scan
+- PearPC removed (PPC uses QEMU); DBus control removed in favour of IPC, with new SETTINGS_* commands
+- Fixed RTG Zorro II/III switch and Blizzard board crashes, a ZZ9000 slirp reboot hang and media/state hotkey requesters
+- Many configuration save/load fixes; third-party source archive published with each release
+
 * Mon Oct 19 2026 Dimitris Panokostas <midwan@gmail.com> - 8.4.2-1
 - Bugfix release v8.4.2
 - Linux AppImages for x86_64 and aarch64; Ubuntu 26.10 packages; install.sh stops on unpublished apt suites

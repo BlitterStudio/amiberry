@@ -67,6 +67,11 @@
         </screenshot>
     </screenshots>
     <releases>
+        <release version="8.5.0" date="2026-10-27">
+            <description>
+                <p>WHDBooter now downloads WHDLoad, JST, the Kickstart RTB files and the optional XPK, MMULib, explode and medplayer libraries from their authors' sites instead of bundling them, and host-quit replaces AmiQuit. LhA archives are read with Lhasa and LZX archives with a new decoder; an LZX archive in the ROMs folder no longer crashes the ROM scan. PearPC is removed (PPC uses QEMU) and DBus control is replaced by IPC, with new settings commands. Fixes crashes when switching RTG boards between Zorro II and III and on Blizzard boards without RAM, a ZZ9000 slirp hang on reboot, file requesters for the media and state hotkeys, and many configuration save and load issues. Each release now includes the source of its third-party libraries.</p>
+            </description>
+        </release>
         <release version="8.4.2" date="2026-10-19">
             <description>
                 <p>Bugfix release: Linux AppImages for x86_64 and aarch64, and packages for Ubuntu 26.10. The multithreaded CPU option runs at full JIT speed again and no longer crashes on a keyboard reset. WHDBooter prefers exact SHA1 matches, refreshes outdated game databases on upgrade, and applies the 68030, 68040 and cycle-exact settings from the database. Fixed the FPS adjustment in the Display panel, Chipset Extra changes on reboot, the .uaem metadata option while running, and the Host Only cursor hotspot drifting during slow movement. Adds IPC control on Windows, GDB monitor commands over IPC, ZZ9000 WebP, FLAC, Ogg Vorbis, WebM and MPEG-2 services, an option to stretch PAL as NTSC, and the latest WinUAE updates.</p>
