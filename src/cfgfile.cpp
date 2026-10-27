@@ -242,7 +242,6 @@ static const TCHAR *genlockmodes[] = { _T("none"), _T("noise"), _T("testcard"), 
 static const TCHAR *ppc_implementations[] = {
 	_T("auto"),
 	_T("dummy"),
-	_T("pearpc"),
 	_T("qemu"),
 	nullptr
 };
@@ -7110,6 +7109,11 @@ static int cfgfile_parse_hardware (struct uae_prefs *p, const TCHAR *option, TCH
 	}
 
 #ifdef WITH_PPC
+	// PearPC was removed: configurations that chose it get the automatic choice.
+	if (!_tcscmp(option, _T("ppc_implementation")) && !_tcsicmp(value, _T("pearpc"))) {
+		p->ppc_implementation = 0; // auto
+		return 1;
+	}
 	if (cfgfile_strval(option, value, _T("ppc_implementation"), &p->ppc_implementation, ppc_implementations, 0))
 		return 1;
 	if (cfgfile_string(option, value, _T("ppc_model"), tmpbuf, sizeof tmpbuf / sizeof(TCHAR))) {

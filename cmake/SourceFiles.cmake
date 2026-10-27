@@ -790,7 +790,6 @@ target_include_directories(${PROJECT_NAME} PRIVATE
         src/include
         src/threaddep
         src/archivers
-        src/ppc/pearpc
         external/floppybridge/src
 )
 
