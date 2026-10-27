@@ -1,0 +1,32 @@
+NOTICE - Amiberry's distribution of this copy of mt32emu
+=========================================================
+
+mt32emu (munt) is written by Dean Beeler, Jerome Fisher, SergM and the
+munt contributors, who license it under the GNU Lesser General Public
+License, version 2.1 or any later version (COPYING.LESSER.txt; the same
+grant is stated in each file header).
+
+Section 3 of the LGPL, version 2.1, lets the distributor of a given copy
+opt to apply the terms of the ordinary GNU General Public License
+instead of the LGPL, and - since a newer version than version 2 of the
+ordinary GPL has appeared - to specify that newer version. Amiberry
+applies that option to this copy:
+
+  The copy of mt32emu in this tree, as distributed in Amiberry's
+  applications and in Amiberry's corresponding source, is distributed
+  under the terms of the GNU General Public License, version 3 or any
+  later version. Where a notice in this tree refers to the LGPL, that
+  reference is superseded for this copy by this notice and refers to the
+  GNU General Public License, version 3 or later. No other change is
+  made to the authors' notices.
+
+The GPL, version 3 or later, accompanies this distribution as LICENSE at
+the root of the Amiberry source tree and as GPL-3.0.txt among the
+licence texts shown in the app; the LGPL text (COPYING.LESSER.txt) is
+kept alongside it because it is the licence that grants the section 3
+option exercised here.
+
+Consequence: the LGPL's sections 4 to 6 (the object-code/relink
+provisions for combined works) do not apply to this copy; GPL-3 section
+6 applies instead, and Amiberry satisfies it by offering the complete
+corresponding source of the exact tree that produced the binary.
