@@ -8,8 +8,11 @@ library for reading LHA (.lha/.lzh) archives.
 - Licence: ISC — see `COPYING.md`
 
 Only the library (`lib/`, including `lib/public/`) is vendored; upstream's
-command-line tools, tests and autotools build are not. The upstream tree is
-otherwise unmodified.
+command-line tools, tests and autotools build are not. One local change:
+`process_level0_path()` in `lib/lha_file_header.c` also converts the `0xff`
+path separator that LHa for UNIX writes in level 0/1 names (upstream only
+converts `\`), so directory entries ending in it are recognised. The tree
+is otherwise unmodified.
 
 Lhasa replaces the old LHa for UNIX 1.14i code that used to live in
 `src/archivers/lha/`: LHa for UNIX is non-free (its licence forbids

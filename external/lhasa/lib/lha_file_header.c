@@ -329,10 +329,13 @@ static int process_level0_path(LHAFileHeader *header, uint8_t *data,
 	memcpy(header->filename, data, data_len);
 	header->filename[data_len] = '\0';
 
-	// Convert MS-DOS path separators to Unix path separators.
+	// Convert MS-DOS path separators to Unix path separators. Amiberry
+	// change: also the 0xff separator LHa for UNIX writes in level 0/1
+	// names, so a directory entry ending in it is recognised as one.
 
 	for (i = 0; i < data_len; ++i) {
-		if (header->filename[i] == '\\') {
+		if (header->filename[i] == '\\'
+		 || (uint8_t) header->filename[i] == 0xff) {
 			header->filename[i] = '/';
 		}
 	}
