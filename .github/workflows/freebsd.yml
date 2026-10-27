@@ -1,21 +1,13 @@
 name: FreeBSD CI
 
+# The FreeBSD VM builds take long, so they run only for release tags (and
+# by hand), not on master pushes or pull requests.
 on:
   workflow_dispatch:
   push:
-    branches: [master]
     tags:
       - 'v*'
       - 'preview-v*'
-    paths-ignore:
-      - '**.md'
-      - 'wiki/**'
-      - '.github/ISSUE_TEMPLATE/**'
-      - '.github/FUNDING.yml'
-  pull_request:
-    paths-ignore:
-      - '**.md'
-      - 'wiki/**'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}

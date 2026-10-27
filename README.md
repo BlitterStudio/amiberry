@@ -114,7 +114,7 @@ pkg install amiberry
 Each Amiberry release also ships packages for FreeBSD 14 and 15 (amd64 and aarch64) on the [releases page](https://github.com/BlitterStudio/amiberry/releases/latest), which can be newer than the ports tree. Download the one matching your FreeBSD version and CPU, then install it with `pkg install`, which fetches the dependencies from your configured repository:
 
 ```bash
-pkg install ./amiberry-v8.4.2-freebsd15-amd64.pkg
+pkg install ./amiberry-v8.5.0-freebsd15-amd64.pkg
 ```
 
 These packages are built against the `quarterly` package branch, which is the default on FreeBSD. If your system uses `latest`, a dependency may have moved to a newer library version; use the ports package in that case.
