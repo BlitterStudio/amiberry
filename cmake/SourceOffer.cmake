@@ -47,9 +47,12 @@ if(_amiberry_git)
 	endif()
 
 	# --ignore-submodules: a worktree whose submodule checkout is missing
-	# must not make the dirty check fail.
+	# must not make the dirty check fail. --untracked-files=no: only tracked
+	# changes can enter the build (the CMake source lists name every file),
+	# so untracked leftovers such as in-tree build directories must not
+	# mark a clean checkout as containing local changes.
 	execute_process(
-		COMMAND "${_amiberry_git}" -C "${SRC_DIR}" status --porcelain --ignore-submodules=all
+		COMMAND "${_amiberry_git}" -C "${SRC_DIR}" status --porcelain --ignore-submodules=all --untracked-files=no
 		RESULT_VARIABLE _amiberry_status_result
 		OUTPUT_VARIABLE _amiberry_status
 		OUTPUT_STRIP_TRAILING_WHITESPACE

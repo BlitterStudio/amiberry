@@ -15,11 +15,9 @@ final class AcknowledgementsWindow: NSObject, NSWindowDelegate {
 
 	func show() {
 		let window = self.window ?? makeWindow()
-		window.contentViewController = NSHostingController(
-			rootView: LicencesView().windowSize(.acknowledgements))
 		self.window = window
-		NSApplication.shared.activate(ignoringOtherApps: true)
-		window.makeKeyAndOrderFront(nil)
+		presentWindow(hostWindowContent(LicencesView().windowSize(.acknowledgements)), in: window,
+			autosave: "AmiberryAcknowledgements", size: WindowSize.acknowledgements.ideal)
 	}
 
 	func windowWillClose(_ notification: Notification) {
@@ -27,24 +25,16 @@ final class AcknowledgementsWindow: NSObject, NSWindowDelegate {
 	}
 
 	private func makeWindow() -> NSWindow {
-		let size = WindowSize.acknowledgements.ideal
 		// Full-size content, as the Library's: without it the split view's
 		// detail slides under the toolbar once the window is resized.
 		let window = NSWindow(
-			contentRect: NSRect(origin: .zero, size: size),
+			contentRect: NSRect(origin: .zero, size: WindowSize.acknowledgements.ideal),
 			styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
 			backing: .buffered, defer: false)
 		// The title shows in the toolbar's principal item (LicencesView); an
 		// NSWindow title would also render, truncated, in the sidebar's slot.
 		window.title = ""
 		window.isReleasedWhenClosed = false
-		// Keep the size the user left the window at; min and ideal are the
-		// same, so a first open is the size the licence texts are laid out for.
-		if !window.setFrameUsingName("AmiberryAcknowledgements") {
-			window.setContentSize(size)
-			window.center()
-		}
-		window.setFrameAutosaveName("AmiberryAcknowledgements")
 		window.minSize = WindowSize.acknowledgements.min
 		window.collectionBehavior = [.fullScreenAuxiliary, .moveToActiveSpace]
 		window.animationBehavior = .none

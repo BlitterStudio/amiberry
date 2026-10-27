@@ -30,6 +30,12 @@
 		<string>public.app-category.games</string>
 		<key>ITSAppUsesNonExemptEncryption</key>
 		<false/>
+		<!-- The genlock capture source: the camera, through SDL3 (AVFoundation). -->
+		<key>NSCameraUsageDescription</key>
+		<string>Amiberry uses the camera when it is selected as a genlock capture source.</string>
+		<!-- The sampler and the emulated sound cards record through SDL3 (AVAudioSession). -->
+		<key>NSMicrophoneUsageDescription</key>
+		<string>Amiberry uses the microphone as the recording input of the sampler and the emulated sound cards.</string>
 		<key>LSRequiresIPhoneOS</key>
 		<true/>
 		<key>UILaunchScreen</key>
