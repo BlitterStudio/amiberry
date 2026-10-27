@@ -244,6 +244,20 @@ int lha_input_stream_read(LHAInputStream *stream, void *buf, size_t buf_len)
 
 int lha_input_stream_skip(LHAInputStream *stream, size_t bytes)
 {
+	// Amiberry change: a short first header can end inside the lead-in
+	// buffer; its remaining bytes belong to the member being skipped.
+
+	if (stream->leadin_len > 0) {
+		size_t n = bytes < stream->leadin_len ? bytes : stream->leadin_len;
+
+		empty_leadin(stream, n);
+		bytes -= n;
+
+		if (bytes == 0) {
+			return 1;
+		}
+	}
+
 	// If we have a dedicated skip function, use it; otherwise,
 	// the read function can be used to perform a skip.
 

@@ -387,6 +387,14 @@ struct zvolume *archive_directory_lha (struct zfile *zf)
 		memset (&extra, 0, sizeof extra);
 		lha_scan_extensions (hdr, &extra);
 		member = lha_member_name (hdr, &extra);
+		/* The znode layer copies names into MAX_DPATH buffers after the
+		 * volume path (and may append ".1" to duplicates): skip a member
+		 * whose name can't fit, as the old parser rejected long names. */
+		if (strlen (member) + (zv->root.fullname ? uaetcslen (zv->root.fullname) : 0) + 16 >= MAX_DPATH) {
+			write_log (_T("LHA: skipping a member with a %zu-byte name\n"), strlen (member));
+			xfree (member);
+			continue;
+		}
 		memset (&zai, 0, sizeof zai);
 		zai.name = au (member);
 		zai.size = (uae_s64) hdr->length;
