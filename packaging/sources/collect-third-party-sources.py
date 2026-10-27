@@ -86,6 +86,16 @@ EXTERNAL_PLUGINS = {
         "licence": "GPL-2.0-or-later",
     },
 }
+# Binaries the app bundles that are built from another BlitterStudio
+# repository: their corresponding source is that repository at the release
+# the binary names in its AmigaOS $VER string.
+OWN_PROJECT_BINARIES = {
+    "host-quit": {
+        "repo": "BlitterStudio/host-tools",
+        "binary": "whdboot/host-quit",
+        "version_re": rb"\$VER: Host-Quit (\d+(?:\.\d+)+)",
+    },
+}
 
 HOMEBREW_CORE = "Homebrew/homebrew-core"
 CORE_RAW = "https://raw.githubusercontent.com/Homebrew/homebrew-core"
@@ -194,6 +204,48 @@ def dylib_install_basename(path: Path) -> str:
     return lines[0].strip().rsplit("/", 1)[-1]
 
 
+def text_section_digest(path: Path) -> str | None:
+    """sha256 of a Mach-O's __TEXT,__text bytes. install_name_tool and
+    re-signing rewrite load commands and signatures, never the code, so the
+    bundled copy and the keg it came from share this digest. otool prints
+    "<address> <words...>" lines after a "(__TEXT,__text) section" header
+    (older versions: "Contents of (__TEXT,__text) section"); the addresses
+    are left out in case the section moved."""
+    r = run(["otool", "-s", "__TEXT", "__text", str(path)])
+    if r.returncode != 0:
+        return None
+    lines = r.stdout.splitlines()
+    for i, line in enumerate(lines):
+        if "(__TEXT,__text) section" in line:
+            words = [w for l in lines[i + 1:] for w in l.split()[1:]]
+            return hashlib.sha256(" ".join(words).encode()).hexdigest() if words else None
+    return None
+
+
+def keg_dylib(prefix: Path, formula: str, keg: str, name: str) -> Path | None:
+    lib = prefix / "Cellar" / formula / keg / "lib"
+    for p in [lib / name, *sorted(lib.glob(f"*/{name}"))]:
+        if p.exists():
+            return p
+    return None
+
+
+def bundled_keg(prefix: Path, formula: str, kegs: list[str], dylib: Path, name: str) -> str:
+    """Which of several installed kegs a bundled dylib was copied from."""
+    want = text_section_digest(dylib)
+    matches = []
+    if want:
+        for keg in kegs:
+            p = keg_dylib(prefix, formula, keg, name)
+            if p and text_section_digest(p) == want:
+                matches.append(keg)
+    if len(matches) != 1:
+        die(f"{formula}: cannot tell which installed keg {dylib.name} was copied from "
+            f"(kegs {kegs}; code matches {matches}). Remove the stale kegs or rebuild.")
+    print(f"    {formula}: kegs {kegs} installed; {dylib.name} matches {matches[0]}")
+    return matches[0]
+
+
 def catalogue_gpl_components(catalogue_path: Path, variants: list[str]) -> list[dict]:
     """GPL/LGPL components whose source already lives in the Amiberry repository."""
     if not catalogue_path.is_file():
@@ -252,7 +304,8 @@ def cmd_scan(args) -> None:
             entry["dylibs"].append(basename)
             continue
 
-        candidates = index.get(basename) or index.get(dylib_install_basename(dylib))
+        name = basename if index.get(basename) else dylib_install_basename(dylib)
+        candidates = index.get(name)
         if not candidates:
             unknown.append(f"{dylib.relative_to(app.parent)}")
             continue
@@ -262,11 +315,9 @@ def cmd_scan(args) -> None:
             continue
         formula_name = next(iter(candidates))[0]
         kegs = sorted(v for (f, v) in candidates if f == formula_name)
-        if len(kegs) > 1:
-            # Several kegs of the same formula are installed (mid-upgrade);
-            # the newest is what the build linked against.
-            print(f"    warning: multiple {formula_name} kegs {kegs}; assuming {kegs[-1]}")
-        keg_version = kegs[-1]
+        # Several kegs of the formula installed: check which one the bundled
+        # copy really came from rather than guessing from the versions.
+        keg_version = kegs[0] if len(kegs) == 1 else bundled_keg(prefix, formula_name, kegs, dylib, name)
         formula = formulas.get(formula_name)
         if formula is None:
             unknown.append(f"{dylib.relative_to(app.parent)} (formula {formula_name} not reported installed)")
@@ -538,7 +589,7 @@ def parse_formula(rb_path: Path, brew: str) -> dict:
     return parse_formula_via_regex(rb_path)
 
 
-PATCH_BLOCK_RE = re.compile(r'patch\s+do\b(?P<body>.*?)^\s*end\b', re.DOTALL | re.MULTILINE)
+PATCH_BLOCK_RE = re.compile(r'patch(?:\s+:p\d+)?\s+do\b(?P<body>.*?)^\s*end\b', re.DOTALL | re.MULTILINE)
 
 
 def external_patches(rb_text: str) -> list[dict]:
@@ -686,9 +737,13 @@ def cmd_assemble(args) -> None:
     formula_backed = {FORMULA_TO_CATALOGUE_ID.get(f) for (f, _v) in components}
     vendored = {"mt32emu", "floppybridge", "capsimage"}
     in_tree = []
+    own_ids = set()
     for c in catalogue_gpl_components(Path(args.catalogue), variants):
         if c["id"] in formula_backed:
             continue  # covered by gpl_components with its exact source
+        if c["id"] in OWN_PROJECT_BINARIES:
+            own_ids.add(c["id"])  # archived below from its own repository
+            continue
         in_tree.append({
             **c,
             "source": (f"https://github.com/BlitterStudio/amiberry/tree/"
@@ -762,8 +817,31 @@ def cmd_assemble(args) -> None:
                 "variants": comp["variants"],
                 "archs": comp["archs"],
             })
-
         source_root = Path(args.source_root)
+        own_components = []
+        for cid in sorted(own_ids):
+            meta = OWN_PROJECT_BINARIES[cid]
+            binary = source_root / meta["binary"]
+            m = re.search(meta["version_re"], binary.read_bytes()) if binary.is_file() else None
+            if not m:
+                die(f"{cid}: no version string in {binary}")
+            version = m.group(1).decode()
+            repo_name = meta["repo"].split("/")[1]
+            url = f"https://github.com/{meta['repo']}/archive/refs/tags/v{version}.tar.gz"
+            rel = f"components/{repo_name}/{version}/{repo_name}-{version}.tar.gz"
+            dest = root / rel
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            info(f"{cid} {version} from {meta['repo']} v{version}")
+            curl(url, dest)
+            own_components.append({
+                "component": cid,
+                "binary": meta["binary"],
+                "version": version,
+                "source_url": url,
+                "source_sha256": sha256_file(dest),
+                "file": rel,
+            })
+
         manifest = {
             "schema": 1,
             "generated_by": "packaging/sources/collect-third-party-sources.py",
@@ -781,6 +859,7 @@ def cmd_assemble(args) -> None:
                 for c in sorted(permissive.values(), key=lambda c: c["formula"])
             ],
             "in_tree_components": in_tree,
+            "own_project_components": own_components,
             "external_plugins": external,
             "unresolved_dylibs": unresolved,
         }
@@ -805,13 +884,17 @@ def cmd_assemble(args) -> None:
             "",
             "Components whose source already ships in the Amiberry repository",
             "(external/) are covered by the tagged Amiberry source tree and are not",
-            "duplicated here; see in_tree_components in manifest.json.",
+            "duplicated here; see in_tree_components in manifest.json. Binaries",
+            "built from other BlitterStudio repositories (host-quit, from",
+            "host-tools) come with the source of the release they report.",
             "",
             "Contents:",
         ]
         for c in manifest_components:
             lines.append(f"  {c['file']:<52} {c['formula']} {c['version']} [{c['licence']}] "
                          f"-> {', '.join(c['variants'])}")
+        for c in own_components:
+            lines.append(f"  {c['file']:<52} {c['component']} {c['version']} (BlitterStudio)")
         (root / "README.txt").write_text("\n".join(lines) + "\n")
 
         info(f"packing {out}")
