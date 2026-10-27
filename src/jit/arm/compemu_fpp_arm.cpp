@@ -897,6 +897,9 @@ void comp_fpp_opp (uae_u32 opcode, uae_u16 extra)
 			  case 0x38: /* FCMP */
 			    fmov_rr (FP_RESULT, dreg);
 			    fsub_rr (FP_RESULT, sreg);
+			    /* Equal-signed infinities subtract to NaN on the host; a
+			       6888x compares them as equal. Fix up the result. */
+			    fcmp_fixup_rrr (FP_RESULT, dreg, sreg);
 			    return;
 			  case 0x3a: /* FTST */
 			    fmov_rr (FP_RESULT, sreg);

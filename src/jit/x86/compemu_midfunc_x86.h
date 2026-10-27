@@ -256,4 +256,5 @@ DECLARE_MIDFUNC(frem_rr(FRW d, FR s));
 DECLARE_MIDFUNC(frem1_rr(FRW d, FR s));
 DECLARE_MIDFUNC(fdiv_rr(FRW d, FR s));
 DECLARE_MIDFUNC(fcmp_rr(FR d, FR s));
+DECLARE_MIDFUNC(fcmp_fixup_rrr(W2 tmp, FRW d, FR a, FR b));
 DECLARE_MIDFUNC(fflags_into_flags(W2 tmp));
