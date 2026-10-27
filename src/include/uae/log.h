@@ -1,98 +1,72 @@
 /*
- * Logging functions for use with UAE and external modules
- * Copyright (C) 2014 Frode Solheim
+ * UAE logging interface.
  *
- * Licensed under the terms of the GNU General Public License version 2.
- * See the file 'COPYING' for full license text.
+ * In a UAE build this declares uae_log() (the plugin-facing log entry point;
+ * plugins get it patched to write_log by uae_dlopen_patch_common) and
+ * write_log() itself. In a plugin build uae_log is an extern function
+ * pointer that the host fills in after dlopen.
+ *
+ * The macros below are brace-enclosed statement blocks; <cstdarg> and
+ * <cstdio> must be visible at the expansion site (sysdeps.h provides them).
+ *
+ * Copyright (C) 2026 Dimitris Panokostas
+ * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
 #ifndef UAE_LOG_H
 #define UAE_LOG_H
 
-/* This file is intended to be included by external libraries as well,
- * so don't pull in too much UAE-specific stuff. */
-
 #include "uae/api.h"
 #include "uae/attributes.h"
 #include "uae/types.h"
 
+/* Function-pointer type of the plugin-facing log hook. In plugin builds
+ * UAE exports `uae_log` as a data symbol of exactly this type. */
 typedef void (UAECALL *uae_log_function)(const char *format, ...) UAE_PRINTF_FORMAT(1, 2);
+
 #ifdef UAE
-//UAEAPI void UAECALL uae_log(const char *format, ...) UAE_PRINTF_FORMAT(1, 2);
+
+/* Never defined inside the tree: plugin-capable hosts patch the plugin's
+ * `uae_log` variable with write_log instead (dlopen.cpp). Declared so the
+ * stub macros below type-check in UAE builds. */
 void UAECALL uae_log(const char *format, ...) UAE_PRINTF_FORMAT(1, 2);
-#else
-extern uae_log_function uae_log;
-#endif
 
-#if 0
-void uae_warning(const char *format, ...) UAE_PRINTF_FORMAT(1, 2);
-void uae_error(const char *format, ...) UAE_PRINTF_FORMAT(1, 2);
-void uae_fatal(const char *format, ...) UAE_PRINTF_FORMAT(1, 2);
-#endif
-
-#define UAE_LOG_VA_ARGS(format, ap) \
-{ \
-	char buffer[1024]; \
-	vsnprintf(buffer, 1024, format, ap); \
-	uae_log("%s", buffer); \
-}
-
-#define UAE_LOG_VA_ARGS_FULL(format) \
-{ \
-	va_list ap; \
-	va_start(ap, format); \
-	UAE_LOG_VA_ARGS(format, ap); \
-	va_end(ap); \
-}
-
-/* Helpers to log use of stubbed functions */
-
-#ifdef _MSC_VER
-#define __func__ __FUNCTION__
-#endif
-
-#define UAE_LOG_STUB(format, ...) \
-{ \
-	uae_log(" -- stub -- %s " format "\n", __func__, ##__VA_ARGS__); \
-}
-
-#define UAE_LOG_STUB_MAX(max, format, ...) \
-{ \
-	static int log_stub_count = 0; \
-	if (log_stub_count < max) { \
-		LOG_STUB(format, ##__VA_ARGS__) \
-		if (++log_stub_count == max) { \
-			uae_log("    (ignoring further calls to %s)\n", __func__); \
-		} \
-	} \
-}
-
-#define UAE_STUB(format, ...) \
-{ \
-	UAE_LOG_STUB(format, ##__VA_ARGS__) \
-	printf(" -- stub -- %s " format "\n", __func__, ##__VA_ARGS__); \
-}
-
-/* UAE-specific functions */
-
-#ifdef UAE
-
-void write_log (const char *, ...) UAE_PRINTF_FORMAT(1, 2);
+void write_log(const char *format, ...) UAE_PRINTF_FORMAT(1, 2);
 #if SIZEOF_TCHAR != 1
-void write_log (const TCHAR *, ...) UAE_WPRINTF_FORMAT(1, 2);
+void write_log(const TCHAR *format, ...) UAE_PRINTF_FORMAT(1, 2);
 #endif
 
-#endif
+#else /* plugin build */
 
-/* Deprecated defines */
+extern uae_log_function uae_log;
 
-#ifdef UAE
+#endif /* UAE */
 
-#define STUB UAE_STUB
-#define LOG_STUB UAE_LOG_STUB
-#define LOG_STUB_MAX UAE_LOG_STUB_MAX
-#define VERBOSE_STUB STUB
+/* Format `format` with va_list `ap` into a 1024-byte buffer (truncating)
+ * and forward it to uae_log. */
+#define UAE_LOG_VA_ARGS(format, ap) \
+	{ \
+		char uae_log_buffer[1024]; \
+		vsnprintf(uae_log_buffer, sizeof(uae_log_buffer), format, ap); \
+		uae_log_buffer[sizeof(uae_log_buffer) - 1] = '\0'; \
+		uae_log("%s", uae_log_buffer); \
+	}
 
-#endif
+/* Same, for use inside a variadic function whose last named parameter
+ * is `format`. */
+#define UAE_LOG_VA_ARGS_FULL(format) \
+	{ \
+		va_list uae_log_ap; \
+		va_start(uae_log_ap, format); \
+		UAE_LOG_VA_ARGS(format, uae_log_ap); \
+		va_end(uae_log_ap); \
+	}
+
+/* Log a stub notice: " -- stub -- <function><format>\n". Works with zero
+ * variadic arguments. */
+#define UAE_LOG_STUB(format, ...) \
+	{ \
+		uae_log(" -- stub -- %s" format "\n", __func__, ##__VA_ARGS__); \
+	}
 
 #endif /* UAE_LOG_H */
