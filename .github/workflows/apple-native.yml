@@ -89,6 +89,135 @@ jobs:
       - name: Run the Swift bridge tests inside the app
         run: AMIBERRY_BIN=build/Amiberry.app/Contents/MacOS/Amiberry sh tests/test_native_ui_bridge.sh
 
+  # A native-UI Mac app to test outside the App Store: Release build for
+  # Apple Silicon with its dylibs bundled, signed with the Developer ID
+  # certificate the release build uses, notarized and stapled, uploaded as
+  # a zip. Master pushes and manual runs only (signing secrets, notary
+  # time); not part of any release. It has the release app's bundle ID, so
+  # it shares its settings.
+  package-macOS-native-ui:
+    if: github.event_name != 'pull_request'
+    runs-on: macos-26
+    timeout-minutes: 60
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - name: Install dependencies (Homebrew)
+        run: |
+          brew update
+          # cmake first: brew bundle can race on the cmake lock (see c-cpp.yml).
+          brew install cmake ninja || true
+          brew bundle || { sleep 10; brew bundle; }
+
+      - name: Build the native-UI app (Release, arm64)
+        run: |
+          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DAMIBERRY_NATIVE_APPLE_UI=ON
+          cmake --build build -j"$(sysctl -n hw.ncpu)"
+
+      - name: Verify the bundle is self-contained
+        run: |
+          set -euo pipefail
+          app=build/Amiberry.app
+          strings "$app/Contents/MacOS/Amiberry" \
+            | grep -F "settings layer ready: %{public}d options via C API"
+          bad=0
+          for bin in "$app/Contents/MacOS/Amiberry" "$app"/Contents/Frameworks/*.dylib "$app"/Contents/Resources/plugins/*.dylib; do
+            [ -f "$bin" ] || continue
+            [ -L "$bin" ] && continue
+            # A dylib's first otool -L line is its own install name: skip it.
+            own_id=$(otool -D "$bin" | sed -n 2p)
+            if otool -L "$bin" | tail -n +2 | awk '{print $1}' | grep -v -x -F "${own_id:-/}" | grep -E '/opt/homebrew|/usr/local|/opt/local'; then
+              echo "::error::$(basename "$bin") still references a package-manager path"
+              bad=1
+            fi
+            while read -r dep; do
+              [ "$dep" = "$own_id" ] && continue
+              name=${dep#@rpath/}; name=${name#@executable_path/../Frameworks/}
+              if [ ! -e "$app/Contents/Frameworks/$name" ]; then
+                echo "::error::$(basename "$bin") needs $name, which is not in Frameworks"
+                bad=1
+              fi
+            done < <(otool -L "$bin" | tail -n +2 | awk '{print $1}' | grep -E '^@rpath/|^@executable_path/\.\./Frameworks/' || true)
+          done
+          exit $bad
+
+      - name: Install the Apple certificate
+        env:
+          APPLE_DEVID_CERT_BASE64: ${{ secrets.APPLE_DEVID_CERT_BASE64 }}
+          APPLE_DEVID_CERT_P12_PASSWORD: ${{ secrets.APPLE_DEVID_CERT_P12_PASSWORD }}
+          APPLE_KEYCHAIN_PASSWORD: ${{ secrets.APPLE_KEYCHAIN_PASSWORD }}
+        run: |
+          set +x  # Mask output for security
+          CERTIFICATE_PATH=$RUNNER_TEMP/apple_devid_cert.p12
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+          echo -n "$APPLE_DEVID_CERT_BASE64" | base64 --decode -o $CERTIFICATE_PATH
+          security create-keychain -p $APPLE_KEYCHAIN_PASSWORD $KEYCHAIN_PATH
+          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+          security unlock-keychain -p $APPLE_KEYCHAIN_PASSWORD $KEYCHAIN_PATH
+          security import $CERTIFICATE_PATH -P $APPLE_DEVID_CERT_P12_PASSWORD -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+          security set-key-partition-list -S apple-tool:,apple: -s -k $APPLE_KEYCHAIN_PASSWORD $KEYCHAIN_PATH
+          security list-keychains -d user -s $KEYCHAIN_PATH
+
+      - name: Codesign the dylibs and the app
+        env:
+          CODESIGN_IDENTITY: ${{ secrets.APPLE_CODESIGN_IDENTITY }}
+        run: |
+          app=build/Amiberry.app
+          for file in "$app"/Contents/Frameworks/*.dylib "$app"/Contents/Resources/plugins/*.dylib; do
+            [ -f "$file" ] || continue
+            [ -L "$file" ] && continue
+            codesign -s "$CODESIGN_IDENTITY" -f -o runtime,hard "$file"
+          done
+          codesign -s "$CODESIGN_IDENTITY" -f -o runtime,hard --entitlements packaging/macos/Amiberry.entitlements "$app"
+          codesign --verify --deep --strict "$app"
+
+      - name: Notarize and staple
+        run: |
+          set -uo pipefail
+          ZIP="Amiberry-native-ui-notarize.zip"
+          ditto -c -k --keepParent build/Amiberry.app "$ZIP"
+          xcrun notarytool submit "$ZIP" --wait \
+            --apple-id "midwan@gmail.com" \
+            --password ${{ secrets.APPLE_NOTARY_APP_PASSWORD }} \
+            --team-id ${{ secrets.APPLE_TEAM_ID }} 2>&1 | tee notary.log
+          STATUS=${PIPESTATUS[0]}
+          SUBMISSION_ID=$(awk '/id:/ {print $2; exit}' notary.log)
+          if [ "$STATUS" -ne 0 ] || ! grep -q 'status: Accepted' notary.log; then
+            echo "::error::Notarization failed (notarytool exit=$STATUS)"
+            if [ -n "$SUBMISSION_ID" ]; then
+              xcrun notarytool log "$SUBMISSION_ID" \
+                --apple-id "midwan@gmail.com" \
+                --password ${{ secrets.APPLE_NOTARY_APP_PASSWORD }} \
+                --team-id ${{ secrets.APPLE_TEAM_ID }} || true
+            fi
+            exit 1
+          fi
+          rm "$ZIP"
+          for attempt in 1 2 3 4 5 6; do
+            xcrun stapler staple build/Amiberry.app && break
+            if [ "$attempt" -eq 6 ]; then
+              echo "::error::Stapling failed after $attempt attempts"
+              exit 1
+            fi
+            sleep 30
+          done
+
+      - name: Package the app
+        run: |
+          name="Amiberry-native-ui-$(git rev-parse --short=9 HEAD)-macOS-arm64"
+          ditto -c -k --keepParent build/Amiberry.app "$name.zip"
+          echo "NATIVE_UI_ZIP=$name" >> "$GITHUB_ENV"
+
+      - name: Upload the app
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ env.NATIVE_UI_ZIP }}
+          path: ${{ env.NATIVE_UI_ZIP }}.zip
+          retention-days: 14
+
   build-iOS-simulator:
     runs-on: macos-26
     timeout-minutes: 45
