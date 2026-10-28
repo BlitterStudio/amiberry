@@ -137,4 +137,13 @@ bool amiberry_settings_hotkey_takes_buttons(const char* id)
 	});
 }
 
+bool amiberry_settings_hotkey_takes_modifiers(const char* id)
+{
+	// The Amiga keys the host keyboard types are matched by key alone
+	// (normalize_host_key_scancode): a modifier with one would fire on the
+	// bare key too.
+	return !(id && (std::string_view(id) == "amiberry.left_amiga"
+		|| std::string_view(id) == "amiberry.right_amiga"));
+}
+
 } // extern "C"

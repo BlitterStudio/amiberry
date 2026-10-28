@@ -534,6 +534,12 @@ public enum HotkeyCatalog {
 		amiberry_settings_hotkey_takes_buttons(id)
 	}
 
+	/// Whether a modifier held with the key is part of the binding (the
+	/// Amiga key options are matched by key alone).
+	public static func takesModifiers(_ id: String) -> Bool {
+		amiberry_settings_hotkey_takes_modifiers(id)
+	}
+
 	/// The value for a key press: `usage` is the key's USB HID keyboard
 	/// usage, or 0 for a modifier key pressed alone (then `modifiers` holds
 	/// exactly that key). Nil for a key a shortcut cannot name, such as a

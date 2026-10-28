@@ -3061,6 +3061,11 @@ void check_hotkeys()
 	CHECK(!amiberry_settings_hotkey_takes_buttons("amiberry.right_amiga"));
 	CHECK(!amiberry_settings_hotkey_takes_buttons("cpu_model"));
 	CHECK(!amiberry_settings_hotkey_takes_buttons(nullptr));
+	// The Amiga keys are matched by key alone; the others take modifiers.
+	CHECK(amiberry_settings_hotkey_takes_modifiers("amiberry.quit_amiberry"));
+	CHECK(amiberry_settings_hotkey_takes_modifiers("default_open_gui_key"));
+	CHECK(!amiberry_settings_hotkey_takes_modifiers("amiberry.left_amiga"));
+	CHECK(!amiberry_settings_hotkey_takes_modifiers("amiberry.right_amiga"));
 
 	// A recorded value is stored as it is spelled.
 	uae_prefs& p = test_prefs;

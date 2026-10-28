@@ -98,17 +98,19 @@ struct HotkeyRecording {
 		}
 	}
 
-	mutating func press(usage: UInt32) -> Outcome {
+	mutating func press(usage: UInt32, withModifiers: Bool = true) -> Outcome {
 		if let modifier = Self.modifier(forUsage: usage) {
-			held.insert(modifier)
-			modifierPresses += 1
+			if withModifiers {
+				held.insert(modifier)
+				modifierPresses += 1
+			}
 			return .waiting
 		}
 		keyPressed = true
 		if usage == Self.escapeUsage, held.isEmpty {
 			return .cancel
 		}
-		return HotkeyCatalog.format(usage: usage, modifiers: held).map { Outcome.record($0) } ?? .waiting
+		return HotkeyCatalog.format(usage: usage, modifiers: withModifiers ? held : []).map { Outcome.record($0) } ?? .waiting
 	}
 
 	mutating func release(usage: UInt32) -> Outcome {
@@ -139,19 +141,16 @@ struct HotkeyField: View {
 	let value: String
 	/// Whether the menu offers the controller buttons.
 	let buttons: Bool
+	/// Whether a modifier held with the key is part of the binding; false
+	/// for one the emulator matches by key alone (the Amiga keys), where a
+	/// modifier would fire on the bare key too.
+	var modifiers = true
 	let set: (String) -> Void
 	@State private var id = UUID()
 	@State private var recording = HotkeyRecording()
 	#if os(macOS)
 	@State private var monitor = HotkeyKeyMonitor()
 	#endif
-
-	init(label: String, value: String, buttons: Bool, set: @escaping (String) -> Void) {
-		self.label = label
-		self.value = value
-		self.buttons = buttons
-		self.set = set
-	}
 
 	private var isRecording: Bool { HotkeyRecorderFocus.shared.owner == id }
 
@@ -244,14 +243,17 @@ struct HotkeyField: View {
 
 	private func handle(usage: UInt32, down: Bool) {
 		guard isRecording else { return }
-		switch down ? recording.press(usage: usage) : recording.release(usage: usage) {
-		case .waiting:
-			break
+		// A binding without modifiers ignores them: a modifier held with the
+		// key would be stored as part of it and fire on the bare key too.
+		let uses = down ? recording.press(usage: usage, withModifiers: modifiers) : recording.release(usage: usage)
+		switch uses {
 		case .record(let text):
 			stop()
 			set(text)
 		case .cancel:
 			stop()
+		case .waiting:
+			break
 		}
 	}
 

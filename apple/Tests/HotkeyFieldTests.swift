@@ -55,6 +55,18 @@ final class HotkeyFieldTests: XCTestCase {
 		XCTAssertEqual(recording.press(usage: 0x45), .record("LCtrl+F12"))
 	}
 
+	func testAKeyOnlyBindingRecordsTheKeyWithoutItsModifiers() {
+		// The Amiga keys are matched by key alone, so a modifier held with
+		// the key is not part of the binding (and a lone modifier is none).
+		var recording = HotkeyRecording()
+		XCTAssertEqual(recording.press(usage: 0xE0, withModifiers: false), .waiting)
+		XCTAssertEqual(recording.press(usage: 0x04, withModifiers: false), .record("A"))
+		XCTAssertFalse(HotkeyCatalog.takesModifiers("amiberry.left_amiga"))
+		XCTAssertFalse(HotkeyCatalog.takesModifiers("amiberry.right_amiga"))
+		XCTAssertTrue(HotkeyCatalog.takesModifiers("amiberry.quit_amiberry"))
+		XCTAssertTrue(HotkeyCatalog.takesModifiers("default_quit_key"))
+	}
+
 	func testALoneModifierRecordsWhenReleased() {
 		var recording = HotkeyRecording()
 		XCTAssertEqual(recording.press(usage: 0xE4), .waiting)

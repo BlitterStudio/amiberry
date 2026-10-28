@@ -463,6 +463,10 @@ AMIBERRY_SETTINGS_API size_t amiberry_settings_hotkey_buttons(const amiberry_set
    option or host setting; false for the Amiga key options, which only map
    a key, and for an ID that is not a hotkey. */
 AMIBERRY_SETTINGS_API bool amiberry_settings_hotkey_takes_buttons(const char *id);
+/* Whether a modifier held with the key is part of this hotkey's binding;
+   false for the Amiga key options, which the emulator matches by key
+   alone, so a front end records those without modifiers. */
+AMIBERRY_SETTINGS_API bool amiberry_settings_hotkey_takes_modifiers(const char *id);
 
 /*
  * Host settings: the Global Settings panel (amiberry.conf), not a

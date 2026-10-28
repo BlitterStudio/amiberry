@@ -433,6 +433,7 @@ struct HostSettingRow: View {
 			// the emulator also answers on a gamepad.
 			LabeledContent {
 				HotkeyField(label: setting.label, value: value, buttons: HotkeyCatalog.takesButtons(setting.id),
+					modifiers: HotkeyCatalog.takesModifiers(setting.id),
 					set: { model.set($0, for: setting) })
 					.labelsHidden()
 			} label: {
