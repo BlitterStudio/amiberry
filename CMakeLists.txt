@@ -264,6 +264,15 @@ if (WIN32)
     set(CMAKE_INSTALL_BINDIR ".")
     set(CMAKE_INSTALL_LIBDIR ".")
 endif()
+# Haiku packages install into /boot/system using the platform's own
+# hierarchy: data files under data/, documentation under documentation/,
+# man pages under documentation/man (GNUInstallDirs would otherwise use
+# the GNU share/ layout everywhere).
+if (CMAKE_SYSTEM_NAME STREQUAL "Haiku")
+    set(CMAKE_INSTALL_DATADIR "data" CACHE PATH "Object read-only architecture-independent data")
+    set(CMAKE_INSTALL_DOCDIR "documentation/packages/${PROJECT_NAME}" CACHE PATH "Documentation root")
+    set(CMAKE_INSTALL_MANDIR "documentation/man" CACHE PATH "Man documentation root")
+endif ()
 set(AMIBERRY_PACKAGE_METADATA_EXCLUDES
     PATTERN ".DS_Store" EXCLUDE
     PATTERN "._*" EXCLUDE
@@ -286,7 +295,7 @@ endif()
 
 # Install rules may need dependency targets, such as SDL3 and SDL3_image,
 # so include them after dependency discovery.
-if (CMAKE_SYSTEM_NAME STREQUAL "Linux" OR CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
+if (CMAKE_SYSTEM_NAME STREQUAL "Linux" OR CMAKE_SYSTEM_NAME STREQUAL "FreeBSD" OR CMAKE_SYSTEM_NAME STREQUAL "Haiku")
     include(cmake/linux/install.cmake)
 elseif (IOS)
     include(cmake/ios/install.cmake)
