@@ -1,0 +1,146 @@
+name: Haiku CI
+
+# The Haiku VM builds take long, so they run only for release tags (and
+# by hand), not on master pushes or pull requests.
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+      - 'preview-v*'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build-haiku:
+    name: Haiku r1beta6 / x86_64
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    # The VM action caches its VM images through the Actions cache,
+    # which requires actions: write (same grant as the c-cpp.yml jobs).
+    permissions:
+      contents: read
+      actions: write
+
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v6
+        with:
+          submodules: recursive
+          persist-credentials: false
+
+      - name: Build in Haiku
+        uses: vmactions/haiku-vm@4d49d1f4d8c265fe5b27c41aa98b7153255d9d4c # v1.1.6
+        with:
+          release: r1beta6
+          cpu: 4
+          mem: 8192
+          sync: rsync
+          prepare: |
+            set -eu
+            # HaikuPorts has no libserialport and no libpcap port that works
+            # for uaenet; the build turns both features off.
+            pkgman install -y \
+              cmake ninja git pkgconfig binutils coreutils \
+              gcc \
+              libsdl3_devel sdl3_image_devel \
+              flac_devel mpg123_devel libpng16_devel zlib_devel zstd_devel \
+              enet_devel portmidi_devel libmpeg2_devel \
+              nlohmann_json \
+              ffmpeg8_devel libwebp_devel libiconv_devel curl_devel mesa_devel
+          run: |
+            set -eu
+            uname -a
+
+            # The header-only nlohmann_json package installs its CMake config
+            # outside CMake's default search paths; point find_package at it.
+            json_config=$(find /boot/system -type f -name 'nlohmann_jsonConfig.cmake' 2>/dev/null | head -1)
+            echo "nlohmann_json config: ${json_config:-NOT FOUND}"
+            json_dir_args=
+            [ -z "$json_config" ] || json_dir_args="-Dnlohmann_json_DIR=$(dirname "$json_config")"
+
+            # Release packages must run on any x86_64 CPU: no WITH_OPTIMIZE.
+            # Build and stage outside the synced workspace so the action's
+            # copyback returns only the package, not the build tree.
+            # shellcheck disable=SC2086
+            cmake -S . -B /tmp/build-haiku -G Ninja \
+              -DCMAKE_BUILD_TYPE=Release \
+              -DCMAKE_INSTALL_PREFIX=/boot/system \
+              -DUSE_LIBSERIALPORT=OFF \
+              -DUSE_UAENET_PCAP=OFF \
+              $json_dir_args
+            cmake --build /tmp/build-haiku --parallel 4
+
+            # Stage through the normal install rules, including CAPSImage and
+            # floppybridge, and package the staged tree.
+            DESTDIR=/tmp/stage-haiku cmake --install /tmp/build-haiku
+            hpkg_file="amiberry-${{ github.ref_type == 'tag' && github.ref_name || github.sha }}-haiku-x86_64.hpkg"
+            sh .github/scripts/haiku-package.sh /tmp/build-haiku /tmp/stage-haiku "$hpkg_file"
+
+            # Install the package the way users will, then check it runs and
+            # finds its installed data (dump-paths prints the resolved dirs).
+            pkgman install -y "./$hpkg_file"
+            amiberry --version
+            amiberry --dump-paths | tee /tmp/dump-paths.txt
+            grep -q '/boot/system/data/amiberry/data' /tmp/dump-paths.txt
+            grep -q '/boot/system/lib/amiberry' /tmp/dump-paths.txt
+
+            # Headless smoke: start with the bundled AROS ROM under the dummy
+            # SDL drivers and let the timeout stop it; staying up for 20 s
+            # means the emulator core and its data are in working order.
+            SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy timeout 20 \
+              amiberry -r /boot/system/data/amiberry/roms/aros-rom.bin \
+              --log > /tmp/smoke.log 2>&1 || [ $? -eq 124 ]
+            tail -5 /tmp/smoke.log
+
+            pkgman uninstall -y amiberry
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: amiberry-haiku-x86_64
+          path: amiberry-*-haiku-x86_64.hpkg
+          if-no-files-found: error
+          retention-days: 7
+
+  attach-release:
+    name: Attach to release
+    needs: build-haiku
+    if: github.ref_type == 'tag' && (startsWith(github.ref_name, 'v') || startsWith(github.ref_name, 'preview-v'))
+    runs-on: ubuntu-24.04
+    # The script waits up to 120 minutes for c-cpp.yml to publish the release.
+    timeout-minutes: 150
+    permissions:
+      contents: write
+      actions: read
+    # FreeBSD and Haiku attach jobs rewrite the release's SHA256SUMS; the
+    # shared group (concurrency groups are repository-wide) serializes them
+    # so neither drops the other's entries.
+    concurrency:
+      group: release-assets-${{ github.ref_name }}
+      cancel-in-progress: false
+
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+          sparse-checkout: .github/scripts
+
+      - name: Download packages
+        uses: actions/download-artifact@v8
+        with:
+          pattern: amiberry-haiku-*
+          path: packages
+          merge-multiple: true
+
+      - name: Attach packages and checksums
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: bash .github/scripts/attach-release-assets.sh "${{ github.ref_name }}" '[[:space:]]\*?amiberry-.*-haiku-x86_64\.hpkg$' packages/*.hpkg

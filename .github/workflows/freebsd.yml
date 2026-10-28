@@ -121,6 +121,12 @@ jobs:
     permissions:
       contents: write
       actions: read
+    # FreeBSD and Haiku attach jobs rewrite the release's SHA256SUMS; the
+    # shared group (concurrency groups are repository-wide) serializes them
+    # so neither drops the other's entries.
+    concurrency:
+      group: release-assets-${{ github.ref_name }}
+      cancel-in-progress: false
 
     steps:
       - name: Check out repository code
@@ -140,4 +146,4 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
-        run: bash .github/scripts/attach-freebsd-release-assets.sh "${{ github.ref_name }}" packages/*.pkg
+        run: bash .github/scripts/attach-release-assets.sh "${{ github.ref_name }}" '[[:space:]]\*?amiberry-.*-freebsd[0-9]+-[[:alnum:]_]+\.pkg$' packages/*.pkg

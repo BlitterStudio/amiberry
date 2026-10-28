@@ -257,6 +257,16 @@ if(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
 endif()
 
 # Install system and packaging
+# Haiku packages install into /boot/system using the platform's own
+# hierarchy: data files under data/, documentation under documentation/,
+# man pages under documentation/man (GNUInstallDirs would otherwise use
+# the GNU share/ layout everywhere). Seed the cache before the include so
+# GNUInstallDirs adopts these instead of its GNU defaults.
+if (CMAKE_SYSTEM_NAME STREQUAL "Haiku")
+    set(CMAKE_INSTALL_DATADIR "data" CACHE PATH "Object read-only architecture-independent data")
+    set(CMAKE_INSTALL_DOCDIR "documentation/packages/${PROJECT_NAME}" CACHE PATH "Documentation root")
+    set(CMAKE_INSTALL_MANDIR "documentation/man" CACHE PATH "Man documentation root")
+endif ()
 include(GNUInstallDirs)
 if (WIN32)
     # Windows apps conventionally live directly under their install folder,
@@ -286,7 +296,7 @@ endif()
 
 # Install rules may need dependency targets, such as SDL3 and SDL3_image,
 # so include them after dependency discovery.
-if (CMAKE_SYSTEM_NAME STREQUAL "Linux" OR CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
+if (CMAKE_SYSTEM_NAME STREQUAL "Linux" OR CMAKE_SYSTEM_NAME STREQUAL "FreeBSD" OR CMAKE_SYSTEM_NAME STREQUAL "Haiku")
     include(cmake/linux/install.cmake)
 elseif (IOS)
     include(cmake/ios/install.cmake)

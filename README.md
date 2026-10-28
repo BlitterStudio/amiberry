@@ -127,6 +127,16 @@ cd /usr/ports/emulators/amiberry
 make install
 ```
 
+### Haiku
+
+Each release ships a Haiku (R1/beta) package for 64-bit x86 on the [releases page](https://github.com/BlitterStudio/amiberry/releases/latest). Download the `.hpkg` and install it with `pkgman`, which pulls the dependencies in from HaikuPorts, or just double-click the downloaded file:
+
+```bash
+pkgman install ./amiberry-v8.5.0-haiku-x86_64.hpkg
+```
+
+The package installs the binary into `/boot/system/bin`, its data into `/boot/system/data/amiberry`, and a Deskbar entry under Applications. All dependencies (SDL3, FFmpeg, and friends) come from HaikuPorts; there is no Amiberry recipe in HaikuPorts, so the release package is the only supported way to install it.
+
 ## Code Signing
 
 Release binaries are signed through SignPath. See the [Code signing policy](https://amiberry.com/code-signing-policy) for signing scope, release approval roles, and privacy notes.

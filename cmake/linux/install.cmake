@@ -197,14 +197,19 @@ install(DIRECTORY ${CMAKE_SOURCE_DIR}/roms
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/whdboot
         DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}
         ${AMIBERRY_PACKAGE_METADATA_EXCLUDES})
-# Install desktop file
-install(FILES ${CMAKE_SOURCE_DIR}/packaging/linux/Amiberry.desktop
-        DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
-# Install icons at multiple sizes for proper desktop integration
-foreach(_size 64 128 256 512)
-    install(FILES ${CMAKE_SOURCE_DIR}/packaging/linux/icons/${_size}x${_size}/amiberry.png
-            DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/${_size}x${_size}/apps)
-endforeach()
+# Desktop integration files: freedesktop-specific (.desktop, hicolor icons,
+# AppStream metainfo, shared-mime). Haiku has none of these; instead the
+# Deskbar link below is how users find the application.
+if(NOT CMAKE_SYSTEM_NAME STREQUAL "Haiku")
+    # Install desktop file
+    install(FILES ${CMAKE_SOURCE_DIR}/packaging/linux/Amiberry.desktop
+            DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
+    # Install icons at multiple sizes for proper desktop integration
+    foreach(_size 64 128 256 512)
+        install(FILES ${CMAKE_SOURCE_DIR}/packaging/linux/icons/${_size}x${_size}/amiberry.png
+                DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/${_size}x${_size}/apps)
+    endforeach()
+endif()
 
 install(FILES ${CMAKE_SOURCE_DIR}/debian/changelog.gz
         DESTINATION ${CMAKE_INSTALL_DOCDIR})
@@ -212,7 +217,19 @@ install(FILES ${CMAKE_SOURCE_DIR}/debian/copyright
         DESTINATION ${CMAKE_INSTALL_DOCDIR})
 install(FILES ${CMAKE_SOURCE_DIR}/packaging/linux/man/amiberry.1.gz
         DESTINATION ${CMAKE_INSTALL_MANDIR}/man1)
-install(FILES ${CMAKE_SOURCE_DIR}/packaging/linux/Amiberry.metainfo.xml
-        DESTINATION ${CMAKE_INSTALL_DATADIR}/metainfo)
-install(FILES ${CMAKE_SOURCE_DIR}/packaging/linux/mime/amiberry.xml
-        DESTINATION ${CMAKE_INSTALL_DATADIR}/mime/packages)
+
+if(CMAKE_SYSTEM_NAME STREQUAL "Haiku")
+    # Deskbar menu entry: a symlink under data/deskbar/menu/Applications/
+    # pointing back at the installed binary (standard Haiku packaging).
+    install(CODE "
+        file(MAKE_DIRECTORY \"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_DATADIR}/deskbar/menu/Applications\")
+        execute_process(COMMAND \"\${CMAKE_COMMAND}\" -E create_symlink
+                ../../../../bin/${PROJECT_NAME}
+                \"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_DATADIR}/deskbar/menu/Applications/${PROJECT_NAME}\")
+    ")
+else()
+    install(FILES ${CMAKE_SOURCE_DIR}/packaging/linux/Amiberry.metainfo.xml
+            DESTINATION ${CMAKE_INSTALL_DATADIR}/metainfo)
+    install(FILES ${CMAKE_SOURCE_DIR}/packaging/linux/mime/amiberry.xml
+            DESTINATION ${CMAKE_INSTALL_DATADIR}/mime/packages)
+endif()
