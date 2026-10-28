@@ -60,7 +60,7 @@
 #endif
 #endif
 
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__HAIKU__)
 #define ftello64 ftello
 #define fseeko64 fseeko
 #define fopen64 fopen
