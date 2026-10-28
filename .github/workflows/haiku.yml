@@ -8,8 +8,6 @@ on:
     tags:
       - 'v*'
       - 'preview-v*'
-    branches:
-      - 'ci/haiku-packages'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -65,10 +63,6 @@ jobs:
             echo "nlohmann_json config: ${json_config:-NOT FOUND}"
             json_dir_args=
             [ -z "$json_config" ] || json_dir_args="-Dnlohmann_json_DIR=$(dirname "$json_config")"
-
-            # Diagnostics for the first bring-up: where the HaikuPorts CMake
-            # package configs live.
-            find /boot/system -type f -name '*Config.cmake' 2>/dev/null | sort | sed -n '1,40p'
 
             # Release packages must run on any x86_64 CPU: no WITH_OPTIMIZE.
             # Build and stage outside the synced workspace so the action's
