@@ -50,7 +50,7 @@ jobs:
             pkgman install -y \
               cmake ninja git pkgconfig binutils coreutils \
               gcc \
-              libsdl3_devel libsdl3_image_devel \
+              libsdl3_devel sdl3_image_devel \
               flac_devel mpg123_devel libpng16_devel zlib_devel zstd_devel \
               enet_devel portmidi_devel libmpeg2_devel nlohmann_json_devel \
               ffmpeg8_devel libwebp_devel libiconv_devel curl_devel mesa_devel
