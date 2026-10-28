@@ -1151,29 +1151,14 @@ struct MachineCard: View {
 			}
 			HStack(spacing: 8) {
 				if !machine.category.isEmpty {
-					Text(machine.category)
-						.font(.caption)
-						.foregroundStyle(.secondary)
-						.lineLimit(1)
-						.padding(.horizontal, 8)
-						.padding(.vertical, 2)
-						.background(Capsule().fill(Color.primary.opacity(0.08)))
+					// The row's marks are each their own piece: one long
+					// expression there was more than the type-checker
+					// could do in reasonable time on every toolchain.
+					categoryBadge
 				}
 				Spacer(minLength: 0)
-				Button("Edit") { model.edit(machine) }
-					.buttonStyle(.bordered)
-					.controlSize(.small)
-					.accessibilityLabel("Edit \(machine.name)")
-					.accessibilityIdentifier("library.edit.\(machine.name)")
-				Button { model.play(machine) } label: {
-					Image(systemName: "play.circle.fill")
-						.font(.title)
-						.foregroundStyle(Color.accentColor)
-				}
-				.buttonStyle(.borderless)
-				.help("Play")
-				.accessibilityLabel("Play \(machine.name)")
-				.accessibilityIdentifier("library.play.\(machine.name)")
+				editButton
+				playButton
 			}
 		}
 		.padding(12)
@@ -1209,6 +1194,39 @@ struct MachineCard: View {
 		.accessibilityAction(named: "Duplicate", duplicate)
 		.accessibilityAction(named: "Rename", rename)
 		.accessibilityAction(named: Text(Self.deleteCommand), delete)
+	}
+
+	/// The card's play mark.
+	private var playButton: some View {
+		Button { model.play(machine) } label: {
+			Image(systemName: "play.circle.fill")
+				.font(.title)
+				.foregroundStyle(Color.accentColor)
+		}
+		.buttonStyle(.borderless)
+		.help("Play")
+		.accessibilityLabel("Play \(machine.name)")
+		.accessibilityIdentifier("library.play.\(machine.name)")
+	}
+
+	/// The machine's category, as a small badge beside the buttons.
+	private var categoryBadge: some View {
+		Text(machine.category)
+			.font(.caption)
+			.foregroundStyle(.secondary)
+			.lineLimit(1)
+			.padding(.horizontal, 8)
+			.padding(.vertical, 2)
+			.background(Capsule().fill(Color.primary.opacity(0.08)))
+	}
+
+	/// The card's Edit button.
+	private var editButton: some View {
+		Button("Edit") { model.edit(machine) }
+			.buttonStyle(.bordered)
+			.controlSize(.small)
+			.accessibilityLabel("Edit \(machine.name)")
+			.accessibilityIdentifier("library.edit.\(machine.name)")
 	}
 }
 
