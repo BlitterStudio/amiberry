@@ -249,6 +249,27 @@ enum FilePanels {
 		return granted(url.path)
 	}
 
+	/// Asks where a file the emulator writes goes (a clock or flash file),
+	/// which need not exist yet; nil when cancelled. The file is created
+	/// empty when it is new, as the emulator would on first use, so access
+	/// to it can be kept for later launches like any other pick.
+	static func chooseNewFile(title: String, startingAt startPath: String, defaultName: String) -> String? {
+		let panel = NSSavePanel()
+		panel.message = title
+		panel.directoryURL = startDirectory(startPath)
+		panel.nameFieldStringValue = startPath.isEmpty ? defaultName : (startPath as NSString).lastPathComponent
+		panel.canCreateDirectories = true
+		NSApplication.shared.activate(ignoringOtherApps: true)
+		guard panel.runModal() == .OK, let url = panel.url else { return nil }
+		if !FileManager.default.fileExists(atPath: url.path),
+			!FileManager.default.createFile(atPath: url.path, contents: nil) {
+			Alerts.show(title: "Cannot Create the File",
+				message: "Amiberry could not create \u{201C}\(url.path)\u{201D}. Choose another location.", buttons: ["OK"])
+			return nil
+		}
+		return granted(url.path)
+	}
+
 	/// The folder to open a panel in: the path itself when it is a folder,
 	/// else the folder holding it.
 	static func startDirectory(_ path: String) -> URL? {

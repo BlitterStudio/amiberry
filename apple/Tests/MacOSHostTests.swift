@@ -330,8 +330,11 @@ final class SettingsPagesTests: XCTestCase {
 		// option keeps its pop-up for it, rather than a switch showing off.
 		XCTAssertTrue(autoResolution.descriptor.showsAsSwitch("0"))
 		XCTAssertFalse(autoResolution.descriptor.showsAsSwitch("33"))
+		// The mouse map is on or off (the left stick), but a hotkey can leave
+		// the right stick's bit set: that value keeps the pop-up.
 		let mouseMap = try XCTUnwrap(SettingsCatalog.descriptor(for: "joyport0mousemap"))
-		XCTAssertFalse(mouseMap.isSwitch, "a stick mask (2 is the right stick) is no on/off value")
+		XCTAssertTrue(mouseMap.showsAsSwitch("1"))
+		XCTAssertFalse(mouseMap.showsAsSwitch("3"))
 	}
 
 	func testUnavailableOptionsHideOnlyWhereAPageSaysSo() throws {

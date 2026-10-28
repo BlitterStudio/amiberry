@@ -741,7 +741,10 @@ struct TextControl: View {
 				// Disks and ROMs are read: one that is gone is worth a flag.
 				// Other files may be ones the emulator writes (flash, clock).
 				warnsWhenMissing: request == .floppy || request == .rom,
-				accessibilityName: fullName)
+				accessibilityName: fullName,
+				newFile: FileRequest.newFileName(descriptor.id).map { name in
+					{ FilePanels.chooseNewFile(title: fullName, startingAt: path, defaultName: name) }
+				})
 		} else {
 			field
 		}

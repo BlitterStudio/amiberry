@@ -358,14 +358,14 @@ void set_joyport_mode(uae_prefs& p, const value& v, int port)
 	p.jports[port].mode = choice_index(CHOICES(port_mode_choices), v.text);
 }
 
-// Which analog sticks of the port's device move the mouse: a bitmask, bit 0
-// the left stick and bit 1 the right, which the mouse-map hotkeys toggle
-// one stick at a time (inputdevice.cpp AKS_MOUSEMAP_*).
+// Whether the left analog stick of the port's device moves the mouse. The
+// stored value is a bitmask the mouse-map hotkeys toggle per stick
+// (inputdevice.cpp AKS_MOUSEMAP_*), but input routing (amiberry_input.cpp)
+// maps only the left stick, for any value other than 0: the right stick has
+// no choice until it is routed. Another value reads back as stored.
 const amiberry_setting_choice mouse_map_choices[] = {
 	{"0", "None"},
 	{"1", "Left stick"},
-	{"2", "Right stick"},
-	{"3", "Both sticks"},
 };
 
 // The configuration reports the bitmask as-is.
@@ -676,14 +676,14 @@ const definition definitions[] = {
 			"Emulation mode of the Port 2 device.",
 			AMIBERRY_APPLY_LIVE, "", port_mode_choices, nullptr),
 		get_joyport1mode, set_joyport1mode, nullptr, nullptr, nullptr, nullptr},
-	{CHOICE_OPTION("joyport0mousemap", "input", "Port 1 mouse map",
-			"Drive the mouse with the analog stick of the Port 1 device.",
+	{CHOICE_OPTION("joyport0mousemap", "input", "Port 1 left stick as mouse",
+			"Move the mouse with the left analog stick of the Port 1 device.",
 			AMIBERRY_APPLY_LIVE, "0", mouse_map_choices,
 			"Only in a non-default port mode."),
 		get_joyport0mousemap, set_joyport0mousemap, joyport0_mousemap_available, nullptr,
 		nullptr, nullptr},
-	{CHOICE_OPTION("joyport1mousemap", "input", "Port 2 mouse map",
-			"Drive the mouse with the analog stick of the Port 2 device.",
+	{CHOICE_OPTION("joyport1mousemap", "input", "Port 2 left stick as mouse",
+			"Move the mouse with the left analog stick of the Port 2 device.",
 			AMIBERRY_APPLY_LIVE, "0", mouse_map_choices,
 			"Only in a non-default port mode."),
 		get_joyport1mousemap, set_joyport1mousemap, joyport1_mousemap_available, nullptr,

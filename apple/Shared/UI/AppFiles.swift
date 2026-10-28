@@ -40,6 +40,17 @@ enum FileRequest: Int32 {
 	static func namesFolder(_ id: String) -> Bool {
 		id.hasSuffix(":folder")
 	}
+
+	/// The file a new one is named when an option names a file the emulator
+	/// writes and creates when missing (the battery-backed clock, the CD32
+	/// flash memory), so it can be a new one; nil for the others.
+	static func newFileName(_ id: String) -> String? {
+		switch id {
+		case "rtc_file": return "Clock.rtc"
+		case "flash_file": return "Flash.nvr"
+		default: return nil
+		}
+	}
 }
 
 @MainActor

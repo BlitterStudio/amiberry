@@ -3955,9 +3955,8 @@ void check_input_domain()
 	CHECK(value_of(p, "joyport1mousemap") == "1");
 	p.jports[1].mousemap = 3;
 	CHECK(value_of(p, "joyport1mousemap") == "3");
-	// Every stick combination the hotkeys can leave is a listed choice.
-	CHECK(set(p, "joyport1mousemap", "2") == AMIBERRY_SETTINGS_OK && p.jports[1].mousemap == 2);
-	CHECK(set(p, "joyport1mousemap", "4") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	// Only the left stick is routed, so the right stick's bit is no choice.
+	CHECK(set(p, "joyport1mousemap", "2") == AMIBERRY_SETTINGS_INVALID_VALUE);
 
 	// Modes include the lightpen entry the old panel indexed past.
 	CHECK(set(p, "joyport1mode", "lightpen") == AMIBERRY_SETTINGS_OK);

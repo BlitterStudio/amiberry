@@ -31,6 +31,9 @@ struct PathField: View {
 	/// when the row shows a shorter one ("Image" under a "DF0:" section);
 	/// nil for the label.
 	var accessibilityName: String?
+	/// Asks for a file that need not exist yet (one the emulator writes,
+	/// such as the clock's), nil when the setting only takes existing ones.
+	var newFile: (() -> String?)?
 	@State private var targeted = false
 
 	var body: some View {
@@ -66,9 +69,25 @@ struct PathField: View {
 					.help("Remove")
 					.accessibilityLabel("Remove \(accessibilityName ?? label)")
 				}
-				Button("Choose\u{2026}") {
-					if let picked = choose() {
-						_ = set(picked)
+				if let newFile {
+					// Choose… picks an existing file; the menu also names a new one.
+					Menu("Choose\u{2026}") {
+						Button("New File\u{2026}") {
+							if let picked = newFile() {
+								_ = set(picked)
+							}
+						}
+					} primaryAction: {
+						if let picked = choose() {
+							_ = set(picked)
+						}
+					}
+					.fixedSize()
+				} else {
+					Button("Choose\u{2026}") {
+						if let picked = choose() {
+							_ = set(picked)
+						}
 					}
 				}
 			}
@@ -85,6 +104,13 @@ struct PathField: View {
 			Button("Choose\u{2026}") {
 				if let picked = choose() {
 					_ = set(picked)
+				}
+			}
+			if let newFile {
+				Button("New File\u{2026}") {
+					if let picked = newFile() {
+						_ = set(picked)
+					}
 				}
 			}
 			if !path.isEmpty {
