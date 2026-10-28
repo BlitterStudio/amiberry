@@ -259,10 +259,11 @@ bool quick_play(const std::string& path, std::string* error)
 		*error = "Not a disk, CD, WHDLoad archive or configuration: " + path;
 		return false;
 	}
-	// A new machine: saving it asks for a name. Cleared first, so a
+	// A new machine: saving it asks for a name, and the file names it
+	// meanwhile rather than the machine loaded before. Cleared first, so a
 	// configuration of the file's name that the WHDLoad and CD builders
 	// load stays the machine's file.
-	set_current_config_path(nullptr);
+	forget_loaded_config();
 	if (lha) {
 		add_file_to_mru_list(lstMRUWhdloadList, path);
 		whdload_prefs.whdload_filename = path;

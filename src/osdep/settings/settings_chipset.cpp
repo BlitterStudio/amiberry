@@ -386,7 +386,7 @@ bool genlock_accepts(const uae_prefs& p, const value& v)
 }
 
 const amiberry_setting_choice genlockmode_choices[] = {
-	{"none", "-"},
+	{"none", "None"},
 	{"noise", "Noise (built-in)"},
 	{"testcard", "Test card (built-in)"},
 	{"image", "Image file (png)"},
@@ -563,9 +563,9 @@ void set_rtc_adjust(uae_prefs& p, const value& v)
 }
 
 const amiberry_setting_choice ciaatod_choices[] = {
-	{"vblank", "Vertical Sync"},
-	{"50hz", "Power Supply 50Hz"},
-	{"60hz", "Power Supply 60Hz"},
+	{"vblank", "Vertical sync"},
+	{"50hz", "Power supply 50 Hz"},
+	{"60hz", "Power supply 60 Hz"},
 };
 
 void get_ciaatod(const uae_prefs& p, char* out, size_t size)
@@ -668,8 +668,8 @@ void set_chip1m(uae_prefs& p, const value& v)
 
 const amiberry_setting_choice unmapped_choices[] = {
 	{"floating", "Floating"},
-	{"zero", "Zero"},
-	{"one", "FF"},
+	{"zero", "All zeros"},
+	{"one", "All ones (FF)"},
 };
 
 void get_unmapped_space(const uae_prefs& p, char* out, size_t size)
@@ -683,10 +683,10 @@ void set_unmapped_space(uae_prefs& p, const value& v)
 }
 
 const amiberry_setting_choice eclocksync_choices[] = {
-	{"default", "Autoselect"},
+	{"default", "Automatic"},
 	{"68000", "68000"},
 	{"Gayle", "Gayle"},
-	{"68000_opt", "68000 Alternate"},
+	{"68000_opt", "68000 alternate"},
 };
 
 void get_eclocksync(const uae_prefs& p, char* out, size_t size)
@@ -751,7 +751,7 @@ void set_deniserev(uae_prefs& p, const value& v)
 }
 
 const amiberry_setting_choice agnusmodel_choices[] = {
-	{"default", "Auto"},
+	{"default", "Automatic"},
 	{"velvet", "Velvet"},
 	{"a1000", "A1000"},
 	{"ocs", "OCS"},
@@ -770,10 +770,10 @@ void set_agnusmodel(uae_prefs& p, const value& v)
 }
 
 const amiberry_setting_choice agnussize_choices[] = {
-	{"default", "Auto"},
-	{"512k", "512k"},
-	{"1m", "1M"},
-	{"2m", "2M"},
+	{"default", "Automatic"},
+	{"512k", "512 KB"},
+	{"1m", "1 MB"},
+	{"2m", "2 MB"},
 };
 
 void get_agnussize(const uae_prefs& p, char* out, size_t size)
@@ -787,9 +787,9 @@ void set_agnussize(uae_prefs& p, const value& v)
 }
 
 const amiberry_setting_choice denisemodel_choices[] = {
-	{"default", "Auto"},
+	{"default", "Automatic"},
 	{"velvet", "Velvet"},
-	{"a1000_noehb", "A1000 No-EHB"},
+	{"a1000_noehb", "A1000 (no EHB)"},
 	{"a1000", "A1000"},
 	{"ocs", "OCS"},
 	{"ecs", "ECS"},
@@ -842,6 +842,10 @@ constexpr double no_range = 0;
 	{id, group, label, help, AMIBERRY_SETTING_CHOICE, apply, no_range, no_range, no_range, def, CHOICES(choices), constraint}
 #define NUMBER_OPTION(id, group, label, help, type, apply, min, max, step, def, constraint) \
 	{id, group, label, help, type, apply, min, max, step, def, nullptr, 0, constraint}
+// A number with its unit and whether it is a level set by feel, which a
+// front end may show as a slider (amiberry_settings.h).
+#define MEASURED_OPTION(id, group, label, help, type, apply, min, max, step, def, constraint, unit, level) \
+	{id, group, label, help, type, apply, min, max, step, def, nullptr, 0, constraint, false, unit, 0, level}
 #define PATH_OPTION(id, group, label, help, apply, def, constraint) \
 	{id, group, label, help, AMIBERRY_SETTING_PATH, apply, no_range, no_range, no_range, def, nullptr, 0, constraint}
 
@@ -882,11 +886,11 @@ const definition definitions[] = {
 			"Chipset drawing optimizations. Keep at Full for best compatibility.",
 			AMIBERRY_APPLY_LIVE, "full", display_optimizations_choices, nullptr),
 		get_display_optimizations, set_display_optimizations, nullptr, nullptr, nullptr},
-	{CHOICE_OPTION("collision_level", "chipset", "Collision Level",
+	{CHOICE_OPTION("collision_level", "chipset", "Collision level",
 			"Sprite and playfield collision detection. Full is the most compatible.",
 			AMIBERRY_APPLY_LIVE, "full", collision_level_choices, nullptr),
 		get_collision_level, set_collision_level, nullptr, nullptr, nullptr},
-	{CHOICE_OPTION("chipset_compatible", "chipset", "Chipset Extra",
+	{CHOICE_OPTION("chipset_compatible", "chipset", "Chipset extra",
 			"Machine-specific chipset behaviour. Selecting one rewrites the advanced chipset options.",
 			AMIBERRY_APPLY_RESET, "Generic", chipset_compatible_choices, nullptr),
 		get_chipset_compatible, set_chipset_compatible, nullptr, nullptr, nullptr},
@@ -911,9 +915,9 @@ const definition definitions[] = {
 			"Video the genlock overlays (genlockmode=video or a LaserDisc source).",
 			AMIBERRY_APPLY_LIVE, "", nullptr),
 		get_genlock_video_file, set_genlock_video_file, genlock_video_file_available, nullptr, nullptr},
-	{NUMBER_OPTION("genlock_mix", "genlock", "Genlock mix",
+	{MEASURED_OPTION("genlock_mix", "genlock", "Genlock mix",
 			"Weight (of 256) of the Amiga picture where the genlock source shows through: 0 shows the source alone; each step of 25 blends in about 10% more of the Amiga picture.",
-			AMIBERRY_SETTING_INT, AMIBERRY_APPLY_LIVE, 0, 255, 25, "0", nullptr),
+			AMIBERRY_SETTING_INT, AMIBERRY_APPLY_LIVE, 0, 255, 25, "0", nullptr, nullptr, true),
 		get_genlock_mix, set_genlock_mix, genlock_group, nullptr, nullptr},
 	{BOOL_OPTION("genlock_alpha", "genlock", "Include alpha channels",
 			"Include alpha channels in screenshots and video captures.",
@@ -929,9 +933,9 @@ const definition definitions[] = {
 			AMIBERRY_APPLY_LIVE, "MSM6242B", rtc_choices,
 			"With a chipset extra active, only the RTC chip of the selected machine survives the configuration checks."),
 		get_rtc, set_rtc, nullptr, rtc_choice_available, nullptr},
-	{NUMBER_OPTION("chipset_rtc_adjust", "adv_chipset", "RTC adjustment",
+	{MEASURED_OPTION("chipset_rtc_adjust", "adv_chipset", "RTC adjustment",
 			"Real-time clock adjustment in seconds.",
-			AMIBERRY_SETTING_INT, AMIBERRY_APPLY_RESET, -100000, 100000, 1, "0", custom_constraint),
+			AMIBERRY_SETTING_INT, AMIBERRY_APPLY_RESET, -100000, 100000, 1, "0", custom_constraint, "s", false),
 		get_rtc_adjust, set_rtc_adjust, custom_chipset, nullptr, nullptr},
 	CUSTOM_CHOICE("ciaatod", "adv_chipset", "CIA-A TOD clock source",
 		"Time-of-day clock source: vertical blank or power line frequency.",
@@ -960,7 +964,7 @@ const definition definitions[] = {
 		"Enable Kickstart ROM mirror at $A80000.", AMIBERRY_APPLY_RESET, "false", cs_ksmirror_a8, custom_constraint),
 	CUSTOM_BOOL("color_burst", "adv_chipset", "Composite color burst",
 		"Enable color burst signal on composite video output.", AMIBERRY_APPLY_LIVE, "false", cs_color_burst, custom_constraint),
-	CUSTOM_BOOL("resetwarning", "adv_chipset", "KB Reset Warning",
+	CUSTOM_BOOL("resetwarning", "adv_chipset", "Keyboard reset warning",
 		"Show warning when keyboard reset is pressed.", AMIBERRY_APPLY_RESET, "false", cs_resetwarning, custom_constraint),
 	CUSTOM_BOOL("cia_todbug", "adv_chipset", "CIA TOD bug",
 		"Emulate CIA Time of Day hardware bug.", AMIBERRY_APPLY_RESET, "true", cs_ciatodbug, custom_constraint),
@@ -968,7 +972,7 @@ const definition definitions[] = {
 		"Emulate byte write bug in custom chip registers.", AMIBERRY_APPLY_LIVE, "false", cs_bytecustomwritebug, custom_constraint),
 	CUSTOM_BOOL("memory_pattern", "adv_chipset", "Power up memory pattern",
 		"Fill memory with pattern on power-up like real hardware.", AMIBERRY_APPLY_LIVE, "true", cs_memorypatternfill, custom_constraint),
-	CUSTOM_BOOL("rom_is_slow", "adv_chipset", "KS ROM has Chip RAM speed",
+	CUSTOM_BOOL("rom_is_slow", "adv_chipset", "Kickstart ROM has Chip RAM speed",
 		"Kickstart ROM runs at Chip RAM speed instead of faster.", AMIBERRY_APPLY_LIVE, "false", cs_romisslow, custom_constraint),
 	CUSTOM_BOOL("toshiba_gary", "adv_chipset", "Toshiba Gary",
 		"Use Toshiba Gary instead of Commodore Gary.", AMIBERRY_APPLY_LIVE, "false", cs_toshibagary, custom_constraint),
@@ -978,12 +982,12 @@ const definition definitions[] = {
 			"Enable the PCMCIA slot (A600/A1200).",
 			AMIBERRY_APPLY_LIVE, "false", custom_constraint),
 		get_pcmcia, set_pcmcia, custom_chipset, nullptr, nullptr},
-	{BOOL_OPTION("1mchipjumper", "adv_chipset", "1M Chip / 0.5M+0.5M",
+	{BOOL_OPTION("1mchipjumper", "adv_chipset", "1 MB Chip / 0.5 MB + 0.5 MB",
 			"Jumper for 1MB chip RAM or 512KB+512KB configuration.",
 			AMIBERRY_APPLY_RESET, "false",
 			"Only available with less than 1 MB chip RAM; the core fixes it on above that."),
 		get_chip1m, set_chip1m, chip1m_available, nullptr, nullptr},
-	{CHOICE_OPTION("ciaa_type", "adv_chipset", "CIA 391078-01",
+	{CHOICE_OPTION("ciaa_type", "adv_chipset", "CIA revision",
 			"Use the newer CIA chip revision 391078-01 in both sockets.",
 			AMIBERRY_APPLY_LIVE, "default", cia_type_choices, custom_constraint),
 		get_ciaa_type, set_ciaa_type, custom_chipset, nullptr, nullptr},
@@ -1006,7 +1010,7 @@ const definition definitions[] = {
 			"What unmapped memory reads return.",
 			AMIBERRY_APPLY_LIVE, "floating", unmapped_choices, custom_constraint),
 		get_unmapped_space, set_unmapped_space, custom_chipset, nullptr, nullptr},
-	{CHOICE_OPTION("eclocksync", "adv_chipset", "CIA E-Clock Sync",
+	{CHOICE_OPTION("eclocksync", "adv_chipset", "CIA E-clock sync",
 			"CIA E-Clock synchronization method.",
 			AMIBERRY_APPLY_LIVE, "default", eclocksync_choices, custom_constraint),
 		get_eclocksync, set_eclocksync, custom_chipset, nullptr, nullptr},
@@ -1135,6 +1139,7 @@ bool commit_chipset(const uae_prefs& base, const uae_prefs& from, uae_prefs& to,
 #undef BOOL_OPTION
 #undef CHOICE_OPTION
 #undef NUMBER_OPTION
+#undef MEASURED_OPTION
 #undef PATH_OPTION
 #undef CUSTOM_BOOL
 #undef CUSTOM_CHOICE

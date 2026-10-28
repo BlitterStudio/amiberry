@@ -504,6 +504,9 @@ void render_panel_sound() {
         const settings::definition& disk_volume = *o.floppy_volume_disk[selected_floppy_drive];
         const settings::definition& drive_sound = *o.floppy_sound[selected_floppy_drive];
 
+        // The volumes need the drive's sound on (the settings layer refuses
+        // them otherwise), so they grey out with it.
+        ImGui::BeginDisabled(!available(empty_volume, ctx));
         // Row 1: Slider | Value | Label
         ImGui::SetNextItemWidth(BUTTON_WIDTH);
         int dis_vol_empty = 100 - static_cast<int>(settings::get_number(empty_volume,
@@ -532,6 +535,7 @@ void render_panel_sound() {
         ImGui::AlignTextToFramePadding();
         ImGui::Text("Disk in drive");
         ShowHelpMarker("Volume for floppy drive sounds when a disk is being read");
+        ImGui::EndDisabled();
 
         // Row 3: Sound Dropdown | Drive Selector
         ImGui::Dummy(ImVec2(0, 10)); // Spacer

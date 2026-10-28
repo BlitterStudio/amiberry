@@ -33,7 +33,9 @@ final class AcknowledgementsWindow: NSObject, NSWindowDelegate {
 			backing: .buffered, defer: false)
 		// The title shows in the toolbar's principal item (LicencesView); an
 		// NSWindow title would also render, truncated, in the sidebar's slot.
-		window.title = ""
+		// It is kept, hidden, for the Window menu and Mission Control.
+		window.title = "Acknowledgements"
+		window.titleVisibility = .hidden
 		window.isReleasedWhenClosed = false
 		window.minSize = WindowSize.acknowledgements.min
 		window.collectionBehavior = [.fullScreenAuxiliary, .moveToActiveSpace]

@@ -3699,12 +3699,13 @@ static void apply_libretro_osk_options(void)
 	// poll path has no SDL event loop, so only a gamepad binding can drive
 	// the toggle here; anything that doesn't resolve to a pressable joypad
 	// button falls back to the default toggle so the OSK stays reachable:
-	// - a keyboard hotkey like "F12" doesn't resolve at all (the string
-	//   lookup only knows joypad button names), and
+	// - a keyboard hotkey like "F12" or "A" doesn't resolve at all (the
+	//   lookup only knows joypad button names, and the letter key "A" is
+	//   not read as the South button SDL names "a"), and
 	// - the standalone default "guide" is not in the frontend joypad action
 	//   space.
 	SDL_GamepadButton toggle = currprefs.vkbd_toggle[0]
-		? SDL_GetGamepadButtonFromString(currprefs.vkbd_toggle)
+		? gamepad_button_from_config(currprefs.vkbd_toggle)
 		: SDL_CONTROLLER_BUTTON_INVALID;
 	if (currprefs.vkbd_toggle[0] &&
 		(toggle == SDL_CONTROLLER_BUTTON_INVALID || !libretro_joypad_supports_button(toggle))) {

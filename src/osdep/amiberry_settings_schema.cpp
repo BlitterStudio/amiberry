@@ -76,6 +76,7 @@ const char* type_name(amiberry_setting_type type)
 	case AMIBERRY_SETTING_CHOICE: return "choice";
 	case AMIBERRY_SETTING_PATH: return "path";
 	case AMIBERRY_SETTING_STRING: return "string";
+	case AMIBERRY_SETTING_HOTKEY: return "hotkey";
 	}
 	return "string";
 }
@@ -164,6 +165,21 @@ void options(std::string& out, const std::set<std::string>* only)
 			json_number(out, d->max);
 			out += ",\"step\":";
 			json_number(out, d->step);
+			// Shown as min + max - value (a volume stored as attenuation).
+			if (d->reversed)
+				out += ",\"reversed\":true";
+			if (d->unit) {
+				out += ",\"unit\":";
+				json_string(out, d->unit);
+			}
+			// Shown as value / scale (a gamma stored in tenths).
+			if (d->scale != 0 && d->scale != 1) {
+				out += ",\"scale\":";
+				json_number(out, d->scale);
+			}
+			// A level a front end may show as a slider.
+			if (d->level)
+				out += ",\"level\":true";
 		}
 		if (d->constraint) {
 			out += ",\"constraint\":";

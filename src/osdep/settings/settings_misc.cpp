@@ -304,12 +304,14 @@ constexpr const char* inactive_constraint =
 	{id, group, label, help, AMIBERRY_SETTING_CHOICE, apply, 0, 0, 0, def, CHOICES(choices), constraint}
 #define STRING_OPTION(id, group, label, help, apply, def, constraint) \
 	{id, group, label, help, AMIBERRY_SETTING_STRING, apply, 0, 0, 0, def, nullptr, 0, constraint}
+#define HOTKEY_OPTION(id, group, label, help, apply, def, constraint) \
+	{id, group, label, help, AMIBERRY_SETTING_HOTKEY, apply, 0, 0, 0, def, nullptr, 0, constraint}
 
 #define BOOL_DEF(id, group, label, help, apply, def, field) \
 	{BOOL_OPTION(id, group, label, help, apply, def, nullptr), get_##field, set_##field, nullptr, nullptr, \
 		nullptr, nullptr}
 #define HOTKEY_DEF(id, label, help, def, field) \
-	{STRING_OPTION(id, "misc", label, help, AMIBERRY_APPLY_LIVE, def, nullptr), get_##field, set_##field, \
+	{HOTKEY_OPTION(id, "misc", label, help, AMIBERRY_APPLY_LIVE, def, nullptr), get_##field, set_##field, \
 		nullptr, nullptr, nullptr, fits_##field}
 
 const definition definitions[] = {
@@ -365,7 +367,7 @@ const definition definitions[] = {
 	BOOL_DEF("uae_hide_autoconfig", "misc", "Hide all UAE autoconfig boards",
 		"Hide the emulator's own expansion boards from the Amiga's autoconfig.",
 		AMIBERRY_APPLY_RESTART, "false", uae_hide_autoconfig),
-	BOOL_DEF("amiberry.right_control_is_right_win", "misc", "RCtrl = RAmiga",
+	BOOL_DEF("amiberry.right_control_is_right_win", "misc", "Right Ctrl as Right Amiga",
 		"Use the right Control key as the right Amiga key.",
 		AMIBERRY_APPLY_LIVE, "false", right_control_is_right_win_key),
 	{CHOICE_OPTION("power_led_dim", "misc", "Power LED when the audio filter is off",
@@ -407,11 +409,13 @@ const definition definitions[] = {
 	HOTKEY_DEF("amiberry.quit_amiberry", "Quit",
 		"Key or controller button that quits the emulator; empty unbinds it.", "", quit_amiberry),
 	HOTKEY_DEF("amiberry.action_replay", "Action Replay",
-		"Key that activates the Action Replay cartridge; empty uses Pause.", "Pause", action_replay),
+		"Key or controller button that activates the Action Replay cartridge; empty uses Pause.", "Pause",
+		action_replay),
 	HOTKEY_DEF("amiberry.fullscreen_toggle", "Full-window",
-		"Key that switches between window and full-window; empty unbinds it.", "", fullscreen_toggle),
+		"Key or controller button that switches between window and full-window; empty unbinds it.", "",
+		fullscreen_toggle),
 	HOTKEY_DEF("amiberry.minimize", "Minimize",
-		"Key that minimizes the emulator window; empty unbinds it.", "", minimize),
+		"Key or controller button that minimizes the emulator window; empty unbinds it.", "", minimize),
 	HOTKEY_DEF("amiberry.left_amiga", "Left Amiga",
 		"Key that acts as the left Amiga key; empty unbinds it.", "", left_amiga),
 	HOTKEY_DEF("amiberry.right_amiga", "Right Amiga",

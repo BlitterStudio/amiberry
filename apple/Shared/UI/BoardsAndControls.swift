@@ -161,6 +161,9 @@ struct BoardFieldRow: View {
 				in: range, step: field.step ?? 1) {
 				LabeledContent(field.label, value: value)
 			}
+		case .hotkey:
+			// No board field is a shortcut today; one would record keys only.
+			HotkeyField(label: field.label, value: value, buttons: false, set: { set($0) })
 		case .path, .string:
 			LabeledContent(field.label) {
 				HStack(spacing: 6) {

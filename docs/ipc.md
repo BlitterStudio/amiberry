@@ -237,8 +237,15 @@ them all. Coordinate controllers accordingly.
 - `SETTINGS_LIST` replies `OK` with every option ID.
 - `SETTINGS_DESCRIBE <id>` replies `OK` with `type=`, `apply=`, `group=`,
   `default=` and `available=` (now, in the session) fields; `min=`, `max=`
-  and `step=` for numbers; and one `choice=<value>` field per selectable
-  choice (`unavailable_choice=<value>` for one the session refuses now).
+  and `step=` for numbers, plus `reversed=true` for a number a front end
+  shows as min + max - value (a volume the file stores as attenuation, so
+  `sound_volume=0` is full volume), `unit=<unit>` for the unit of the shown
+  number (`%`, `KB`, `ms`, `s`, `px`, `scanlines`), `scale=<n>` for a number
+  shown as value / n (`gfx_gamma=125` with `scale=10` shows as 12.5, after
+  any reversal) and `level=true` for a level set by feel (a volume, the
+  brightness), which a front end may show as a slider over the range; and
+  one `choice=<value>` field per selectable choice
+  (`unavailable_choice=<value>` for one the session refuses now).
 - `SETTINGS_RESET_SESSION` discards the session's uncommitted edits.
 - `SETTINGS_MOUNTS` replies `OK` with one field per mounted drive
   (directory, hardfile, CD or tape unit) in the order a `.uae` file lists
@@ -310,13 +317,22 @@ hotkey button held (`hotkey`):
   then.
 
 Host settings are the Global Settings panel (`amiberry.conf`), process-wide
-rather than part of a configuration:
+rather than part of a configuration. The list depends on the build: the
+ImGui GUI's own settings (`Quickstart`, `gui_layout_scale`, `gui_theme`, …)
+are absent from builds without ImGui (the native Apple apps), `use_adpf`
+exists only on Android, and the update settings are absent from iOS and Mac
+App Store builds:
 
 - `HOST_SETTINGS_LIST` replies one field per setting, its `amiberry.conf` key.
 - `HOST_SETTINGS_GET <id>` replies `<id>=<value>`. A bool is `true` or
-  `false`; a choice's value is the integer the file stores.
+  `false`; a choice's value is the integer the file stores or, for the
+  default devices, the shaders, the custom bezel and the on-screen keyboard
+  layout, the token it stores. A hotkey setting takes the hotkey spelling
+  (`F12`, `LCtrl+F11`, a controller button such as `guide`).
 - `HOST_SETTINGS_SET <id> <value>` changes the live value. A GUI scale
   outside 50-200 is clamped; the legacy full-screen mode `1` is full-window.
+  Setting `custom_bezel` to an image also turns `use_custom_bezel` on and
+  `use_bezel` off; setting it to `none` turns `use_custom_bezel` off.
 - `HOST_SETTINGS_SAVE` writes `amiberry.conf`.
 
 Configuration files: `LOAD_CONFIG <path>` makes a `.uae` (or `.rp9`) file the

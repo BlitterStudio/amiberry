@@ -297,6 +297,7 @@ set(SOURCE_FILES
         src/osdep/settings/settings_rtg.cpp
         src/osdep/settings/settings_boards.cpp
         src/osdep/settings/settings_custom_controls.cpp
+        src/osdep/settings/settings_hotkeys.cpp
         src/osdep/settings/settings_host.cpp
         src/osdep/settings/settings_expansions.cpp
         src/osdep/settings/settings_filter.cpp
@@ -581,7 +582,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
         MACOSX_BUNDLE_BUNDLE_NAME "Amiberry"
         MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION}
         MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
-        MACOSX_BUNDLE_COPYRIGHT "(c) ${AMIBERRY_BUILD_YEAR} Dimitris Panokostas"
+        MACOSX_BUNDLE_COPYRIGHT "© ${AMIBERRY_BUILD_YEAR} Dimitris Panokostas"
 )
 
 # Platform-specific bundle overrides

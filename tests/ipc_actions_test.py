@@ -396,19 +396,21 @@ def main():
               and control.request("SETTINGS_COMMIT") == "OK\tchanged=true\tapply=restart")
 
         # Host settings: process-wide, saved to amiberry.conf explicitly.
+        # slow_host_warning is in every build (the ImGui GUI's own settings
+        # are not in the native Apple apps).
         reply = control.request("HOST_SETTINGS_LIST")
         check("HOST_SETTINGS_LIST names the amiberry.conf keys",
-              reply.startswith("OK\t") and "\tQuickstart\t" in reply and "\trom_path\t" in reply, reply[:200])
+              reply.startswith("OK\t") and "\tslow_host_warning\t" in reply and "\trom_path\t" in reply, reply[:200])
         check("HOST_SETTINGS_GET reads a default",
-              control.request("HOST_SETTINGS_GET\tQuickstart") == "OK\tQuickstart=true")
+              control.request("HOST_SETTINGS_GET\tslow_host_warning") == "OK\tslow_host_warning=true")
         check("HOST_SETTINGS_SET changes the live value",
-              control.request("HOST_SETTINGS_SET\tQuickstart\tfalse") == "OK"
-              and control.request("HOST_SETTINGS_GET\tQuickstart") == "OK\tQuickstart=false")
+              control.request("HOST_SETTINGS_SET\tslow_host_warning\tfalse") == "OK"
+              and control.request("HOST_SETTINGS_GET\tslow_host_warning") == "OK\tslow_host_warning=false")
         reply = control.request("HOST_SETTINGS_SET\tdefault_joystick_deadzone\t101")
         check("HOST_SETTINGS_SET refuses a value outside the range",
               reply == "ERROR\tInvalid value for default_joystick_deadzone: 101", reply)
         check("HOST_SETTINGS_SET restores the default",
-              control.request("HOST_SETTINGS_SET\tQuickstart\ttrue") == "OK")
+              control.request("HOST_SETTINGS_SET\tslow_host_warning\ttrue") == "OK")
         reply = control.request("HOST_SETTINGS_GET\tnope")
         check("an unknown host setting is refused", reply == "ERROR\tUnknown host setting: nope", reply)
 

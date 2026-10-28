@@ -10,6 +10,13 @@ import UniformTypeIdentifiers
 @_cdecl("amiberry_native_ui_install_menus")
 public func amiberryNativeUIInstallMenus() {
 	MainActor.assumeIsolated {
+		// The Library, editor, Settings and emulation windows each have a
+		// role of their own: none merges into another's tabs, and the Window
+		// menu offers no tab commands.
+		NSWindow.allowsAutomaticWindowTabbing = false
+		// View's Enter Full Screen is the emulator's; AppKit would otherwise
+		// add its own, which switches the window behind the emulator's back.
+		UserDefaults.standard.register(defaults: ["NSFullScreenMenuItemEverywhere": false])
 		guard let mainMenu = NSApplication.shared.mainMenu else { return }
 		MenuCommands.shared.install(into: mainMenu)
 	}
@@ -93,16 +100,16 @@ enum FilePanels {
 	/// nil when cancelled. The pick is granted for later launches (a
 	/// security-scoped bookmark on a Mac App Store build).
 	static func choose(_ request: FileRequest, title: String, startingAt startPath: String) -> String? {
-		let start = startDirectory(startPath)
+		// A ROM is looked for in the ROMs folder unless the option names one.
+		let romFolder = request == .rom && startPath.isEmpty ? (try? MediaLibrary.path(of: .roms)) : nil
+		let start = startDirectory(romFolder ?? startPath)
 		NSApplication.shared.activate(ignoringOtherApps: true)
 		if request == .saveState {
 			let panel = NSSavePanel()
 			panel.message = title
 			panel.directoryURL = start
-			panel.nameFieldStringValue = "state.uss"
-			if let uss = UTType(filenameExtension: "uss") {
-				panel.allowedContentTypes = [uss]
-			}
+			panel.nameFieldStringValue = saveStateName(machine: Machine.current()?.name, at: Date())
+			panel.allowedContentTypes = contentTypes(for: request)
 			panel.allowsOtherFileTypes = false
 			guard panel.runModal() == .OK, let url = panel.url else { return nil }
 			return url.path
@@ -113,11 +120,37 @@ enum FilePanels {
 		panel.canChooseFiles = true
 		panel.canChooseDirectories = false
 		panel.allowsMultipleSelection = false
-		if request == .loadState, let uss = UTType(filenameExtension: "uss") {
-			panel.allowedContentTypes = [uss]
-		}
+		// Folders stay navigable; only the files are filtered.
+		panel.allowedContentTypes = contentTypes(for: request)
 		guard panel.runModal() == .OK, let url = panel.url else { return nil }
 		return granted(url.path)
+	}
+
+	/// The files a panel offers: a state for the states, what Play a File
+	/// plays for it, and any file (empty) for the rest.
+	static func contentTypes(for request: FileRequest) -> [UTType] {
+		switch request {
+		case .loadState, .saveState:
+			return UTType(filenameExtension: "uss").map { [$0] } ?? []
+		case .media:
+			return QuickPlay.extensions.sorted().compactMap { UTType(filenameExtension: $0) }
+		default:
+			return []
+		}
+	}
+
+	/// A new save state's name: the machine it is of (or Amiberry) and when.
+	static func saveStateName(machine: String?, at date: Date) -> String {
+		let formatter = DateFormatter()
+		formatter.locale = Locale(identifier: "en_US_POSIX")
+		formatter.dateFormat = "yyyy-MM-dd HH.mm"
+		return "\(machine ?? "Amiberry") \(formatter.string(from: date)).uss"
+	}
+
+	/// A file or folder dropped on a setting, granted as a pick is; nil when
+	/// access to it could not be kept.
+	static func grantDropped(_ url: URL) -> String? {
+		granted(url.path)
 	}
 
 	/// The pick, when access to it could be kept for later launches (only
@@ -194,6 +227,7 @@ enum FilePanels {
 	static func chooseROMs(title: String) -> [URL] {
 		let panel = NSOpenPanel()
 		panel.message = title
+		panel.prompt = "Import"
 		panel.canChooseFiles = true
 		panel.canChooseDirectories = true
 		panel.allowsMultipleSelection = true

@@ -82,8 +82,8 @@ void set_vkbd_transparency(uae_prefs& p, const value& v)
 const amiberry_setting_choice language_choices[] = {
 	{"US", "US"},
 	{"UK", "UK"},
-	{"DE", "DE"},
-	{"FR", "FR"},
+	{"DE", "German"},
+	{"FR", "French"},
 };
 
 void get_vkbd_language(const uae_prefs& p, char* out, size_t size)
@@ -102,8 +102,8 @@ void get_vkbd_toggle(const uae_prefs& p, char* out, size_t size)
 	std::snprintf(out, size, "%s", p.vkbd_toggle);
 }
 
-// The value names an ImGui key or an SDL gamepad button, whichever the
-// capture popup recorded; empty unbinds the toggle.
+// The value names a key (an SDL scancode name, or the ImGui name the GUI's
+// capture popup records) or an SDL gamepad button; empty unbinds the toggle.
 void set_vkbd_toggle(uae_prefs& p, const value& v)
 {
 	std::snprintf(p.vkbd_toggle, sizeof p.vkbd_toggle, "%.*s",
@@ -128,17 +128,19 @@ bool vkbd_toggle_available(const uae_prefs& p, const context&)
 	{id, group, label, help, AMIBERRY_SETTING_BOOL, apply, 0, 0, 0, def, nullptr, 0, constraint}
 #define CHOICE_OPTION(id, group, label, help, apply, def, choices, constraint) \
 	{id, group, label, help, AMIBERRY_SETTING_CHOICE, apply, 0, 0, 0, def, CHOICES(choices), constraint}
-#define NUMBER_OPTION(id, group, label, help, apply, min, max, step, def, constraint) \
-	{id, group, label, help, AMIBERRY_SETTING_INT, apply, min, max, step, def, nullptr, 0, constraint}
-#define STRING_OPTION(id, group, label, help, apply, def, constraint) \
-	{id, group, label, help, AMIBERRY_SETTING_STRING, apply, 0, 0, 0, def, nullptr, 0, constraint}
+// A number shown with its unit (amiberry_settings.h).
+#define MEASURED_OPTION(id, group, label, help, apply, min, max, step, def, constraint, unit) \
+	{id, group, label, help, AMIBERRY_SETTING_INT, apply, min, max, step, def, nullptr, 0, constraint, \
+		false, unit}
+#define HOTKEY_OPTION(id, group, label, help, apply, def, constraint) \
+	{id, group, label, help, AMIBERRY_SETTING_HOTKEY, apply, 0, 0, 0, def, nullptr, 0, constraint}
 
 const definition definitions[] = {
-	{BOOL_OPTION("amiberry.onscreen_joystick", "onscreen", "On-screen Joystick",
+	{BOOL_OPTION("amiberry.onscreen_joystick", "onscreen", "On-screen joystick",
 			"Show the virtual D-pad and fire buttons for touchscreen control.",
 			AMIBERRY_APPLY_LIVE, "false", nullptr),
 		get_onscreen_joystick, set_onscreen_joystick, nullptr, nullptr, nullptr, nullptr},
-	{BOOL_OPTION("amiberry.vkbd_enabled", "onscreen", "On-screen Keyboard enabled",
+	{BOOL_OPTION("amiberry.vkbd_enabled", "onscreen", "On-screen keyboard",
 			"Show the Amiga-style on-screen keyboard overlay during emulation.",
 			AMIBERRY_APPLY_LIVE, "false", nullptr),
 		get_vkbd_enabled, set_vkbd_enabled, nullptr, nullptr, nullptr, nullptr},
@@ -146,14 +148,16 @@ const definition definitions[] = {
 			"Include the Amiga numeric keypad; keys will be smaller to fit the full keyboard.",
 			AMIBERRY_APPLY_LIVE, "false", "Needs the on-screen keyboard enabled."),
 		get_vkbd_numpad, set_vkbd_numpad, vkbd_option_available, nullptr, nullptr, nullptr},
-	{BOOL_OPTION("amiberry.vkbd_touch_button", "onscreen", "Keyboard button on On-screen Joystick",
+	{BOOL_OPTION("amiberry.vkbd_touch_button", "onscreen", "Keyboard button on the on-screen joystick",
 			"Show the KB touch button next to the fire buttons.",
 			AMIBERRY_APPLY_LIVE, "true", "Needs the on-screen keyboard enabled."),
 		get_vkbd_touch_button, set_vkbd_touch_button, vkbd_option_available, nullptr, nullptr,
 		nullptr},
-	{NUMBER_OPTION("amiberry.vkbd_transparency", "onscreen", "Transparency",
-			"Opacity of the on-screen keyboard in percent (100 is opaque); 0 uses the default of 85.",
-			AMIBERRY_APPLY_LIVE, 0, 100, 1, "0", "Needs the on-screen keyboard enabled."),
+	// 0 is not the transparent end of a scale but "the default", so this
+	// stays a number field rather than a level.
+	{MEASURED_OPTION("amiberry.vkbd_transparency", "onscreen", "On-screen keyboard opacity",
+			"Opacity of the on-screen keyboard (100% is opaque); 0 uses the default of 85%.",
+			AMIBERRY_APPLY_LIVE, 0, 100, 1, "0", "Needs the on-screen keyboard enabled.", "%"),
 		get_vkbd_transparency, set_vkbd_transparency, vkbd_option_available, nullptr, nullptr,
 		nullptr},
 	{CHOICE_OPTION("amiberry.vkbd_language", "onscreen", "Layout",
@@ -161,13 +165,13 @@ const definition definitions[] = {
 			AMIBERRY_APPLY_LIVE, "US", language_choices,
 			"Needs the on-screen keyboard enabled."),
 		get_vkbd_language, set_vkbd_language, vkbd_option_available, nullptr, nullptr, nullptr},
-	{STRING_OPTION("amiberry.vkbd_toggle", "onscreen", "Toggle button",
-			"Key or gamepad button that shows and hides the on-screen keyboard; empty "
+	{HOTKEY_OPTION("amiberry.vkbd_toggle", "onscreen", "Toggle button",
+			"Key or controller button that shows and hides the on-screen keyboard; empty "
 			"unbinds it.",
 			AMIBERRY_APPLY_LIVE, vkbd_toggle_default,
-			"Needs the on-screen keyboard enabled and the RetroArch Vkbd button off."),
+			"Needs the on-screen keyboard enabled and the RetroArch on-screen keyboard button off."),
 		get_vkbd_toggle, set_vkbd_toggle, vkbd_toggle_available, nullptr, nullptr, vkbd_toggle_fits},
-	{BOOL_OPTION("amiberry.use_retroarch_vkbd", "onscreen", "Use RetroArch Vkbd button",
+	{BOOL_OPTION("amiberry.use_retroarch_vkbd", "onscreen", "Use the RetroArch on-screen keyboard button",
 			"Use the front end's RetroArch keyboard button instead of a custom toggle.",
 			AMIBERRY_APPLY_LIVE, "false", nullptr),
 		get_use_retroarch_vkbd, set_use_retroarch_vkbd, nullptr, nullptr, nullptr, nullptr},

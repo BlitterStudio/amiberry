@@ -34,7 +34,7 @@ struct Prefs {
     int inactive_input = 0, input_contact_bounce = 0;
     int input_joystick_deadzone = 33, input_joymouse_deadzone = 33, input_joymouse_multiplier = 100;
 } currprefs, changed_prefs;
-struct Hotkey { int button = 0; } quit_key, action_replay_key, fullscreen_key, minimize_key, screenshot_key, debugger_key;
+struct Hotkey { int button = -1; } quit_key, action_replay_key, fullscreen_key, minimize_key, screenshot_key, debugger_key;
 struct Event { int type, data, unit = 1; };
 constexpr int MAX_INPUT_SUB_EVENT = 8, ID_AXIS_OFFSET = 64;
 using uae_u64 = unsigned long long;
@@ -87,7 +87,8 @@ void imgui_osk_hide() {
 }
 bool inputdevice_handle_inputcode_immediate(int, int) { return false; }
 char* my_strdup(const char* text) { return strdup(text); }
-void uae_quit() {} void minimizewindow(int) {} void joymousecounter(int) {}
+int quit_requests = 0;
+void uae_quit() { ++quit_requests; } void minimizewindow(int) {} void joymousecounter(int) {}
 int get_cycles() { return 0; }
 void write_log(const char*, ...) {}
 bool inputdevice_devicechange(Prefs*) { return true; }
@@ -308,7 +309,16 @@ int main() {
     active = true;
     button(0, SDL_GAMEPAD_BUTTON_RIGHT_STICK, true); // Global hotkeys outrank the open keyboard.
     assert(pending(AKS_ENTERDEBUGGER) == 1);
-    debugger_key.button = 0;
+    debugger_key.button = -1;
+
+    // South (button 0) is a valid shortcut button, distinct from "unbound" (-1).
+    reset_fixture();
+    quit_key.button = SDL_GAMEPAD_BUTTON_SOUTH;
+    quit_requests = 0;
+    button(0, SDL_GAMEPAD_BUTTON_SOUTH, true);
+    assert(quit_requests == 1 && joybutton[0] == 0);
+    button(0, SDL_GAMEPAD_BUTTON_SOUTH, false);
+    quit_key.button = -1;
 
     reset_fixture();
     di_joystick[0].mapping.lstick_axis_x_invert = true;

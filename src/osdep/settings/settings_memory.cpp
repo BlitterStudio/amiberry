@@ -84,11 +84,11 @@ const amiberry_setting_choice chipmem_size_choices[] = {
 	{"-1", "128 KB"},
 	{"0", "256 KB"},
 	{"1", "512 KB"},
-	{"2", "1M"},
-	{"3", "1.5M"},
-	{"4", "2M"},
-	{"8", "4M"},
-	{"16", "8M"},
+	{"2", "1 MB"},
+	{"3", "1.5 MB"},
+	{"4", "2 MB"},
+	{"8", "4 MB"},
+	{"16", "8 MB"},
 };
 
 void get_chipmem_size(const uae_prefs& p, char* out, size_t size)
@@ -137,11 +137,11 @@ bool chipmem_choice_available(const uae_prefs& p, std::string_view choice)
 // ---------------------------------------------------------------- slow RAM
 
 const amiberry_setting_choice bogomem_size_choices[] = {
-	{"0", "none"},
+	{"0", "None"},
 	{"2", "512 KB"},
-	{"4", "1M"},
-	{"6", "1.5M"},
-	{"7", "1.8M"},
+	{"4", "1 MB"},
+	{"6", "1.5 MB"},
+	{"7", "1.8 MB"},
 };
 
 void get_bogomem_size(const uae_prefs& p, char* out, size_t size)
@@ -208,11 +208,11 @@ void set_fastmem_size(uae_prefs& p, ramboard* board, uae_u32 size)
 }
 
 const amiberry_setting_choice fastmem_size_choices[] = {
-	{"0", "none"},
-	{"1", "1M"},
-	{"2", "2M"},
-	{"4", "4M"},
-	{"8", "8M"},
+	{"0", "None"},
+	{"1", "1 MB"},
+	{"2", "2 MB"},
+	{"4", "4 MB"},
+	{"8", "8 MB"},
 };
 
 void get_fastmem_size(const uae_prefs& p, char* out, size_t size)
@@ -278,22 +278,23 @@ void set_fastmem_size_k(uae_prefs& p, const value& v)
 FASTMEM_BOARD(2, 1)
 FASTMEM_BOARD(3, 2)
 FASTMEM_BOARD(4, 3)
+#undef FASTMEM_BOARD
 
 // ------------------------------------------------------------- Z3 fast RAM
 
 const amiberry_setting_choice z3mem_size_choices[] = {
-	{"0", "none"},
-	{"1", "1M"},
-	{"2", "2M"},
-	{"4", "4M"},
-	{"8", "8M"},
-	{"16", "16M"},
-	{"32", "32M"},
-	{"64", "64M"},
-	{"128", "128M"},
-	{"256", "256M"},
-	{"512", "512M"},
-	{"1024", "1G"},
+	{"0", "None"},
+	{"1", "1 MB"},
+	{"2", "2 MB"},
+	{"4", "4 MB"},
+	{"8", "8 MB"},
+	{"16", "16 MB"},
+	{"32", "32 MB"},
+	{"64", "64 MB"},
+	{"128", "128 MB"},
+	{"256", "256 MB"},
+	{"512", "512 MB"},
+	{"1024", "1 GB"},
 };
 
 void set_z3mem_size(uae_prefs& p, ramboard* board, uae_u32 size)
@@ -325,6 +326,7 @@ void set_z3mem_size_board0(uae_prefs& p, const value& v)
 Z3MEM_BOARD(2)
 Z3MEM_BOARD(3)
 Z3MEM_BOARD(4)
+#undef Z3MEM_BOARD
 
 // Sizes above the reserved Z3 window are unavailable (the panel clamped
 // them silently, up to the 1 GB entry of can_have_1gb() hosts).
@@ -337,14 +339,14 @@ bool z3mem_choice_available(const uae_prefs&, std::string_view choice)
 // ------------------------------------------------- motherboard / CPU slot
 
 const amiberry_setting_choice a3000mem_size_choices[] = {
-	{"0", "none"},
-	{"1", "1M"},
-	{"2", "2M"},
-	{"4", "4M"},
-	{"8", "8M"},
-	{"16", "16M"},
-	{"32", "32M"},
-	{"64", "64M"},
+	{"0", "None"},
+	{"1", "1 MB"},
+	{"2", "2 MB"},
+	{"4", "4 MB"},
+	{"8", "8 MB"},
+	{"16", "16 MB"},
+	{"32", "32 MB"},
+	{"64", "64 MB"},
 };
 
 void get_a3000mem_size(const uae_prefs& p, char* out, size_t size)
@@ -358,15 +360,15 @@ void set_a3000mem_size(uae_prefs& p, const value& v)
 }
 
 const amiberry_setting_choice mbresmem_size_choices[] = {
-	{"0", "none"},
-	{"1", "1M"},
-	{"2", "2M"},
-	{"4", "4M"},
-	{"8", "8M"},
-	{"16", "16M"},
-	{"32", "32M"},
-	{"64", "64M"},
-	{"128", "128M"},
+	{"0", "None"},
+	{"1", "1 MB"},
+	{"2", "2 MB"},
+	{"4", "4 MB"},
+	{"8", "8 MB"},
+	{"16", "16 MB"},
+	{"32", "32 MB"},
+	{"64", "64 MB"},
+	{"128", "128 MB"},
 };
 
 void get_mbresmem_size(const uae_prefs& p, char* out, size_t size)
@@ -385,16 +387,16 @@ void set_mbresmem_size(uae_prefs& p, const value& v)
 // ------------------------------------------------------------ 32-bit chip
 
 const amiberry_setting_choice megachipmem_size_choices[] = {
-	{"0", "none"},
-	{"16", "16M"},
-	{"32", "32M"},
-	{"64", "64M"},
-	{"128", "128M"},
-	{"256", "256M"},
-	{"384", "384M"},
-	{"512", "512M"},
-	{"768", "768M"},
-	{"1024", "1G"},
+	{"0", "None"},
+	{"16", "16 MB"},
+	{"32", "32 MB"},
+	{"64", "64 MB"},
+	{"128", "128 MB"},
+	{"256", "256 MB"},
+	{"384", "384 MB"},
+	{"512", "512 MB"},
+	{"768", "768 MB"},
+	{"1024", "1 GB"},
 };
 
 void get_megachipmem_size(const uae_prefs& p, char* out, size_t size)
@@ -417,7 +419,7 @@ bool megachipmem_choice_available(const uae_prefs&, std::string_view choice)
 // ------------------------------------------------------------- Z3 mapping
 
 const amiberry_setting_choice z3mapping_choices[] = {
-	{"auto", "Automatic (*)"},
+	{"auto", "Automatic"},
 	{"uae", "UAE"},
 	{"real", "Real"},
 };
@@ -438,8 +440,10 @@ constexpr double no_range = 0;
 
 #define CHOICE_OPTION(id, group, label, help, apply, def, choices, constraint) \
 	{id, group, label, help, AMIBERRY_SETTING_CHOICE, apply, no_range, no_range, no_range, def, CHOICES(choices), constraint}
-#define NUMBER_OPTION(id, group, label, help, type, apply, min, max, step, def, constraint) \
-	{id, group, label, help, type, apply, min, max, step, def, nullptr, 0, constraint}
+// A Zorro II board below 1 MB, sized in KB.
+#define KB_OPTION(id, group, label, help, apply, min, max, step, def, constraint) \
+	{id, group, label, help, AMIBERRY_SETTING_INT, apply, min, max, step, def, nullptr, 0, constraint, \
+		false, "KB"}
 
 const char* const z3_constraint =
 	"Needs 32-bit addressing, and is limited by the reserved Zorro III window.";
@@ -471,33 +475,33 @@ const definition definitions[] = {
 			AMIBERRY_APPLY_RESET, "0", fastmem_size_choices,
 			"More than 256 KB excludes chip RAM above 2 MB."),
 		get_fastmem_size, set_fastmem_size, nullptr, nullptr, nullptr},
-	{NUMBER_OPTION("fastmem_size_k", "memory", "Z2 Fast RAM (KB)",
-			"Zorro II fast RAM below 1 MB, in KB (written as fastmem_size_k). 0 clears a sub-1 MB board.",
-			AMIBERRY_SETTING_INT, AMIBERRY_APPLY_RESET, 0, 512, 64, "0", fastmem_k_constraint),
+	{KB_OPTION("fastmem_size_k", "memory", "Z2 Fast RAM below 1 MB",
+			"Zorro II fast RAM below 1 MB (written as fastmem_size_k). 0 clears a sub-1 MB board.",
+			AMIBERRY_APPLY_RESET, 0, 512, 64, "0", fastmem_k_constraint),
 		get_fastmem_size_k, set_fastmem_size_k, nullptr, nullptr, nullptr, fastmem_size_k_accepts},
 	{CHOICE_OPTION("fastmem2_size", "memory", "Z2 Fast RAM board 2",
 			"Second Zorro II fast RAM board.",
 			AMIBERRY_APPLY_RESET, "0", fastmem_size_choices, nullptr),
 		get_fastmem2_size, set_fastmem2_size, nullptr, nullptr, nullptr},
-	{NUMBER_OPTION("fastmem2_size_k", "memory", "Z2 Fast RAM board 2 (KB)",
-			"Second Zorro II fast RAM board below 1 MB, in KB.",
-			AMIBERRY_SETTING_INT, AMIBERRY_APPLY_RESET, 0, 512, 64, "0", fastmem_k_constraint),
+	{KB_OPTION("fastmem2_size_k", "memory", "Z2 Fast RAM board 2 below 1 MB",
+			"Second Zorro II fast RAM board below 1 MB.",
+			AMIBERRY_APPLY_RESET, 0, 512, 64, "0", fastmem_k_constraint),
 		get_fastmem2_size_k, set_fastmem2_size_k, nullptr, nullptr, nullptr, fastmem_size_k_accepts},
 	{CHOICE_OPTION("fastmem3_size", "memory", "Z2 Fast RAM board 3",
 			"Third Zorro II fast RAM board.",
 			AMIBERRY_APPLY_RESET, "0", fastmem_size_choices, nullptr),
 		get_fastmem3_size, set_fastmem3_size, nullptr, nullptr, nullptr},
-	{NUMBER_OPTION("fastmem3_size_k", "memory", "Z2 Fast RAM board 3 (KB)",
-			"Third Zorro II fast RAM board below 1 MB, in KB.",
-			AMIBERRY_SETTING_INT, AMIBERRY_APPLY_RESET, 0, 512, 64, "0", fastmem_k_constraint),
+	{KB_OPTION("fastmem3_size_k", "memory", "Z2 Fast RAM board 3 below 1 MB",
+			"Third Zorro II fast RAM board below 1 MB.",
+			AMIBERRY_APPLY_RESET, 0, 512, 64, "0", fastmem_k_constraint),
 		get_fastmem3_size_k, set_fastmem3_size_k, nullptr, nullptr, nullptr, fastmem_size_k_accepts},
 	{CHOICE_OPTION("fastmem4_size", "memory", "Z2 Fast RAM board 4",
 			"Fourth Zorro II fast RAM board.",
 			AMIBERRY_APPLY_RESET, "0", fastmem_size_choices, nullptr),
 		get_fastmem4_size, set_fastmem4_size, nullptr, nullptr, nullptr},
-	{NUMBER_OPTION("fastmem4_size_k", "memory", "Z2 Fast RAM board 4 (KB)",
-			"Fourth Zorro II fast RAM board below 1 MB, in KB.",
-			AMIBERRY_SETTING_INT, AMIBERRY_APPLY_RESET, 0, 512, 64, "0", fastmem_k_constraint),
+	{KB_OPTION("fastmem4_size_k", "memory", "Z2 Fast RAM board 4 below 1 MB",
+			"Fourth Zorro II fast RAM board below 1 MB.",
+			AMIBERRY_APPLY_RESET, 0, 512, 64, "0", fastmem_k_constraint),
 		get_fastmem4_size_k, set_fastmem4_size_k, nullptr, nullptr, nullptr, fastmem_size_k_accepts},
 	{CHOICE_OPTION("z3mem_size", "memory", "Z3 Fast RAM",
 			"Zorro III expansion memory. 32-bit, used with 68030+ CPUs; not accessible by custom chips.",
@@ -564,7 +568,7 @@ bool commit_memory(const uae_prefs& base, const uae_prefs& from, uae_prefs& to,
 }
 
 #undef CHOICE_OPTION
-#undef NUMBER_OPTION
+#undef KB_OPTION
 #undef CHOICES
 
 const domain memory = {

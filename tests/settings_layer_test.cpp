@@ -31,6 +31,7 @@
 #include "settings/amiberry_settings.h"
 #include "settings/settings_definitions.h"
 
+#include <cmath>
 #include <cstdlib>
 #include <cstdio>
 #include <cstring>
@@ -873,6 +874,7 @@ void check_descriptors()
 		}
 		case AMIBERRY_SETTING_PATH:
 		case AMIBERRY_SETTING_STRING:
+		case AMIBERRY_SETTING_HOTKEY:
 			// Free-form values only need a non-null default string.
 			break;
 		case AMIBERRY_SETTING_CHOICE: {
@@ -2652,6 +2654,126 @@ void check_host_settings()
 	amiberry_options = {};
 }
 
+// Host settings that pick what the host has list it as the editor does, and
+// keep a value the list cannot show now.
+void check_host_choices()
+{
+	const amiberry_setting_choice* list = nullptr;
+	auto listed = [&list](size_t count, const char* value) {
+		for (size_t i = 0; i < count; i++) {
+			if (!std::strcmp(list[i].value, value))
+				return true;
+		}
+		return false;
+	};
+	char value[AMIBERRY_SETTINGS_VALUE_MAX];
+
+	// A default device: the fallback first, then the joyport devices. The
+	// factory default (joy1) may name a joystick this host does not have,
+	// which would come first; the fallback is stored for this check.
+	const amiberry_setting_descriptor* controller = amiberry_host_settings_find("default_controller1");
+	CHECK(controller && controller->type == AMIBERRY_SETTING_CHOICE);
+	CHECK(amiberry_host_settings_set("default_controller1", "") == AMIBERRY_SETTINGS_OK);
+	size_t count = amiberry_host_settings_choices("default_controller1", &list);
+	CHECK(count > 2 && list && !std::strcmp(list[0].value, "") && !std::strcmp(list[0].label, "Automatic"));
+	CHECK(listed(count, "none") && listed(count, "mouse") && listed(count, "joy0"));
+	// A joystick that is not connected now is kept; what no device is, not.
+	CHECK(!listed(count, "joy7"));
+	// A value the host does not offer now comes first, named by the layer.
+	auto first_is = [&list](const char* id, const char* value, const char* label) {
+		const size_t n = amiberry_host_settings_choices(id, &list);
+		size_t seen = 0;
+		for (size_t i = 0; i < n; i++)
+			seen += !std::strcmp(list[i].value, value);
+		return n > 0 && seen == 1 && !std::strcmp(list[0].value, value) && !std::strcmp(list[0].label, label);
+	};
+	CHECK(amiberry_host_settings_set("default_controller1", "joy7") == AMIBERRY_SETTINGS_OK);
+	CHECK(amiberry_host_settings_get("default_controller1", value, sizeof value) == AMIBERRY_SETTINGS_OK);
+	CHECK(!std::strcmp(value, "joy7"));
+	CHECK(first_is("default_controller1", "joy7", "Joystick 8 (not connected)"));
+	CHECK(amiberry_host_settings_set("default_mouse2", "mouse3") == AMIBERRY_SETTINGS_OK);
+	CHECK(first_is("default_mouse2", "mouse3", "Mouse 4 (not connected)"));
+	// A listed value is not repeated.
+	CHECK(amiberry_host_settings_set("default_controller1", "joy0") == AMIBERRY_SETTINGS_OK);
+	count = amiberry_host_settings_choices("default_controller1", &list);
+	CHECK(!std::strcmp(list[0].value, "") && listed(count, "joy0"));
+	CHECK(amiberry_host_settings_set("default_controller1", "joystick") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	CHECK(amiberry_host_settings_set("default_mouse1", "mouse0") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	// A number no device can have is refused, not wrapped into one.
+	CHECK(amiberry_host_settings_set("default_controller1", "joy99999999999") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	CHECK(amiberry_host_settings_set("default_controller1", "joy4294967296") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	// So are the core parser's own tokens, as the file always took them,
+	// under readable names.
+	for (const char* token : {"custom", "custom1", "joydefault", "mousedefault"})
+		CHECK(amiberry_host_settings_set("default_controller2", token) == AMIBERRY_SETTINGS_OK);
+	CHECK(first_is("default_controller2", "mousedefault", "Default mouse"));
+	CHECK(amiberry_host_settings_set("default_controller2", "custom1") == AMIBERRY_SETTINGS_OK);
+	CHECK(first_is("default_controller2", "custom1", "Custom input mapping 2"));
+	CHECK(amiberry_host_settings_set("default_controller2", "customx") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	// A parallel port's empty default is no device, as is the joyports'
+	// "none": one None entry stands for both, the stored spelling.
+	CHECK(amiberry_host_settings_set("default_controller3", "") == AMIBERRY_SETTINGS_OK);
+	count = amiberry_host_settings_choices("default_controller3", &list);
+	CHECK(count > 2 && !std::strcmp(list[0].value, "") && !std::strcmp(list[0].label, "None"));
+	CHECK(!listed(count, "none") && listed(count, "mouse"));
+	CHECK(amiberry_host_settings_set("default_controller3", "none") == AMIBERRY_SETTINGS_OK);
+	count = amiberry_host_settings_choices("default_controller3", &list);
+	CHECK(count > 2 && !std::strcmp(list[0].value, "none") && !std::strcmp(list[0].label, "None"));
+	CHECK(!listed(count, "") && listed(count, "mouse"));
+
+	// The audio device: the system default, then the host's other devices.
+	count = amiberry_host_settings_choices("default_soundcard", &list);
+	CHECK(count >= 1 && list && !std::strcmp(list[0].value, "0") && !std::strcmp(list[0].label, "System default"));
+	for (size_t i = 1; i < count; i++)
+		CHECK(std::to_string(i) == list[i].value);
+	// An index whose device is unplugged now is kept.
+	CHECK(amiberry_host_settings_set("default_soundcard", "9") == AMIBERRY_SETTINGS_OK);
+	CHECK(amiberry_options.default_soundcard == 9);
+	CHECK(first_is("default_soundcard", "9", "Audio device 9 (not connected)"));
+	CHECK(amiberry_host_settings_set("default_soundcard", "256") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	CHECK(amiberry_host_settings_set("default_soundcard", "speaker") == AMIBERRY_SETTINGS_INVALID_VALUE);
+
+	// Static lists come through the same call; rates read in Hz.
+	count = amiberry_host_settings_choices("default_sound_frequency", &list);
+	CHECK(count == 5);
+	for (size_t i = 0; i < count; i++) {
+		const std::string label = list[i].label;
+		CHECK(label.size() > 3 && label.compare(label.size() - 3, 3, " Hz") == 0);
+	}
+	CHECK(listed(count, "44100"));
+	CHECK(amiberry_host_settings_find("default_sound_frequency")->choices[3].label == std::string("44,100 Hz"));
+
+	// Shaders and bezels: "none" once and first, then the catalog.
+	count = amiberry_host_settings_choices("shader_rtg", &list);
+	CHECK(count == 4 && !std::strcmp(list[0].value, "none") && listed(count, "crt/crt-geom.glslp"));
+	count = amiberry_host_settings_choices("custom_bezel", &list);
+	CHECK(count == 2 && !std::strcmp(list[0].value, "none") && !std::strcmp(list[1].value, "frames/arcade.png"));
+	CHECK(amiberry_host_settings_set("shader", "gone.glslp") == AMIBERRY_SETTINGS_OK);
+	CHECK(first_is("shader", "gone.glslp", "gone.glslp (not found)"));
+	// Picking a bezel shows it instead of the built-in one; none shows none.
+	amiberry_options.use_bezel = true;
+	CHECK(amiberry_host_settings_set("custom_bezel", "frames/arcade.png") == AMIBERRY_SETTINGS_OK);
+	CHECK(amiberry_options.use_custom_bezel && !amiberry_options.use_bezel);
+	CHECK(amiberry_host_settings_set("custom_bezel", "none") == AMIBERRY_SETTINGS_OK);
+	CHECK(!amiberry_options.use_custom_bezel && !amiberry_options.use_bezel);
+	// Empty names no image: refused, with nothing switched on.
+	CHECK(amiberry_host_settings_set("custom_bezel", "") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	CHECK(amiberry_host_settings_set("shader", "") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	CHECK(!amiberry_options.use_custom_bezel);
+
+	// Hotkeys are their own type and list nothing.
+	for (const char* id : {"default_open_gui_key", "default_quit_key", "default_ar_key",
+		"default_fullscreen_toggle_key", "default_vkbd_toggle"}) {
+		const amiberry_setting_descriptor* hotkey = amiberry_host_settings_find(id);
+		CHECK(hotkey && hotkey->type == AMIBERRY_SETTING_HOTKEY);
+		CHECK(amiberry_host_settings_choices(id, &list) == 0 && !list);
+	}
+	CHECK(amiberry_host_settings_choices("nope", &list) == 0 && !list);
+	amiberry_host_settings_refresh_choices();
+	CHECK(amiberry_host_settings_choices("default_mouse2", &list) > 2);
+	amiberry_options = {};
+}
+
 // The configuration's description and category: one line each (the writer
 // does not escape them), the category without surrounding spaces.
 void check_config_text()
@@ -2673,6 +2795,280 @@ void check_config_text()
 	CHECK(set(p, "config_category", "   ") == AMIBERRY_SETTINGS_OK);
 	CHECK(value_of(p, "config_category").empty());
 	CHECK(set(p, "config_category", "a\nb") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	reset_prefs(p);
+}
+
+// A hotkey value read the way get_hotkey_from_config() (amiberry.cpp) reads
+// it: modifier tokens before the last '+', then a key name for SDL, a
+// modifier token alone naming that modifier key.
+struct read_hotkey {
+	unsigned int modifiers;
+	SDL_Scancode scancode;
+};
+
+read_hotkey read_like_core(const std::string& value)
+{
+	static const struct {
+		const char* token;
+		unsigned int bit;
+		const char* key;
+	} modifiers[] = {
+		{"LCtrl", AMIBERRY_HOTKEY_LCTRL, "Left Ctrl"}, {"RCtrl", AMIBERRY_HOTKEY_RCTRL, "Right Ctrl"},
+		{"LShift", AMIBERRY_HOTKEY_LSHIFT, "Left Shift"}, {"RShift", AMIBERRY_HOTKEY_RSHIFT, "Right Shift"},
+		{"LAlt", AMIBERRY_HOTKEY_LALT, "Left Alt"}, {"RAlt", AMIBERRY_HOTKEY_RALT, "Right Alt"},
+		{"LGUI", AMIBERRY_HOTKEY_LGUI, "Left GUI"}, {"RGUI", AMIBERRY_HOTKEY_RGUI, "Right GUI"},
+	};
+	read_hotkey out{0, SDL_SCANCODE_UNKNOWN};
+	size_t start = 0;
+	for (size_t plus; (plus = value.find('+', start)) != std::string::npos; start = plus + 1) {
+		for (const auto& m : modifiers) {
+			if (value.compare(start, plus - start, m.token) == 0)
+				out.modifiers |= m.bit;
+		}
+	}
+	std::string key = value.substr(start);
+	for (const auto& m : modifiers) {
+		if (key == m.token)
+			key = m.key;
+	}
+	out.scancode = SDL_GetScancodeFromName(key.c_str());
+	return out;
+}
+
+// Volumes the configuration stores as attenuation read as volumes: they are
+// reversed (shown as min + max - value) and nothing else is, so a front end
+// turns around exactly these.
+void check_reversed_volumes()
+{
+	const char* volumes[] = {"sound_volume", "sound_volume_paula", "sound_volume_cd", "sound_volume_ahi",
+		"sound_volume_midi", "floppy0soundvolume_disk", "floppy3soundvolume_disk",
+		"floppy0soundvolume_empty", "floppy3soundvolume_empty"};
+	for (const char* id : volumes) {
+		const amiberry_setting_descriptor* d = amiberry_settings_find(id);
+		CHECK(d && d->reversed && d->type == AMIBERRY_SETTING_INT && d->min == 0 && d->max == 100);
+	}
+	// The stored value keeps the .uae meaning: 0 is full volume.
+	CHECK(!std::strcmp(amiberry_settings_find("sound_volume")->default_value, "0"));
+	size_t reversed = 0;
+	for (size_t i = 0; i < amiberry_settings_count(); i++) {
+		const amiberry_setting_descriptor* d = amiberry_settings_at(i);
+		if (d->reversed) {
+			reversed++;
+			CHECK(d->type == AMIBERRY_SETTING_INT);
+		}
+	}
+	// Master, Paula, CD, AHI, MIDI, and a disk and an empty volume per drive.
+	CHECK(reversed == 13);
+	for (size_t i = 0; i < amiberry_host_settings_count(); i++)
+		CHECK(!amiberry_host_settings_at(i)->reversed);
+}
+
+// Units, scales and levels: only numbers carry them, a level has a finite
+// range a slider can span, and a label does not repeat its unit.
+void check_number_metadata()
+{
+	auto check = [](const amiberry_setting_descriptor* d) {
+		const bool number = d->type == AMIBERRY_SETTING_INT || d->type == AMIBERRY_SETTING_REAL;
+		if (!number) {
+			CHECK(!d->unit && (d->scale == 0 || d->scale == 1) && !d->level);
+			return;
+		}
+		if (d->level)
+			CHECK(std::isfinite(d->min) && std::isfinite(d->max) && d->min < d->max);
+		CHECK(d->scale >= 0);
+		const std::string label = d->label;
+		for (const char* suffix : {"(%)", "(KB)", "(ms)", "(s)", "(seconds)", "(px)", "(scanlines)"}) {
+			const size_t n = std::strlen(suffix);
+			CHECK(label.size() < n || label.compare(label.size() - n, n, suffix) != 0);
+		}
+	};
+	for (size_t i = 0; i < amiberry_settings_count(); i++)
+		check(amiberry_settings_at(i));
+	for (size_t i = 0; i < amiberry_host_settings_count(); i++)
+		check(amiberry_host_settings_at(i));
+
+	auto find = [](const char* id) {
+		const amiberry_setting_descriptor* d = amiberry_settings_find(id);
+		CHECK(d != nullptr);
+		return d;
+	};
+	// Every volume is a level in percent.
+	size_t volumes = 0;
+	for (size_t i = 0; i < amiberry_settings_count(); i++) {
+		const amiberry_setting_descriptor* d = amiberry_settings_at(i);
+		if (d->reversed) {
+			volumes++;
+			CHECK(d->level && d->unit && !std::strcmp(d->unit, "%"));
+		}
+	}
+	CHECK(volumes == 13);
+	// The picture attributes are stored in tenths.
+	for (const char* id : {"gfx_luminance", "gfx_contrast", "gfx_gamma", "gfx_gamma_r", "gfx_gamma_g",
+		"gfx_gamma_b"}) {
+		const amiberry_setting_descriptor* d = find(id);
+		CHECK(d->scale == 10 && d->level && !d->unit);
+		CHECK(!std::strstr(d->help, "tenths"));
+	}
+	// The CPU speed adjustment is stored in tenths of a percent.
+	const amiberry_setting_descriptor* throttle = find("cpu_throttle");
+	CHECK(throttle->type == AMIBERRY_SETTING_REAL && throttle->scale == 10 && throttle->level);
+	CHECK(!std::strcmp(throttle->unit, "%") && !std::strcmp(throttle->label, "CPU speed adjustment"));
+	for (const char* id : {"amiberry.cpu_idle", "genlock_mix", "input.joystick_deadzone",
+		"sound_stereo_mixing_delay"})
+		CHECK(find(id)->level);
+	// A number that means "the default" at 0, or one people type, is no
+	// level.
+	for (const char* id : {"amiberry.vkbd_transparency", "input.mouse_speed", "cachesize"})
+		CHECK(!find(id)->level);
+	const struct { const char* id; const char* unit; } units[] = {
+		{"input.joystick_deadzone", "%"}, {"input.mouse_speed", "%"}, {"amiberry.vkbd_transparency", "%"},
+		{"cachesize", "KB"}, {"fastmem_size_k", "KB"}, {"fastmem4_size_k", "KB"},
+		{"gfx_monitorblankdelay", "ms"}, {"chipset_rtc_adjust", "s"}, {"gfx_width_windowed", "px"},
+		{"gfx_height_windowed", "px"}, {"amiberry.gfx_manual_crop_width", "px"},
+		{"amiberry.gfx_vertical_offset", "px"}, {"input.autofire_speed", "scanlines"},
+	};
+	for (const auto& u : units) {
+		const amiberry_setting_descriptor* d = find(u.id);
+		CHECK(d->unit && !std::strcmp(d->unit, u.unit));
+	}
+	CHECK(!std::strcmp(find("input.joystick_deadzone")->label, "Joystick dead zone"));
+
+	const struct { const char* id; const char* unit; bool level; } host_units[] = {
+		{"default_joystick_deadzone", "%", true}, {"input_default_mouse_speed", "%", false},
+		{"default_vkbd_transparency", "%", false}, {"default_whd_configdelay", "s", false},
+		{"default_width", "px", false}, {"default_height", "px", false},
+	};
+	for (const auto& u : host_units) {
+		const amiberry_setting_descriptor* d = amiberry_host_settings_find(u.id);
+		CHECK(d && d->unit && !std::strcmp(d->unit, u.unit) && d->level == u.level);
+	}
+	// The host default and the option it seeds read the same, and so do
+	// the choices they share.
+	CHECK(!std::strcmp(amiberry_host_settings_find("default_vkbd_transparency")->label,
+		find("amiberry.vkbd_transparency")->label));
+	const struct { const char* host; const char* option; } seeded[] = {
+		{"default_vkbd_language", "amiberry.vkbd_language"},
+		{"default_sound_frequency", "sound_frequency"},
+		{"default_sound_buffer", "sound_max_buff"},
+		{"default_stereo_separation", "sound_stereo_separation"},
+		{"default_scaling_method", "amiberry.scaling_method"},
+		{"default_gfx_autoresolution", "gfx_autoresolution"},
+	};
+	for (const auto& s : seeded) {
+		const amiberry_setting_descriptor* host = amiberry_host_settings_find(s.host);
+		const amiberry_setting_descriptor* option = find(s.option);
+		CHECK(host && host->choice_count && option->choice_count);
+		size_t shared = 0;
+		for (size_t h = 0; host && h < host->choice_count; h++) {
+			for (size_t o = 0; o < option->choice_count; o++) {
+				if (std::strcmp(host->choices[h].value, option->choices[o].value))
+					continue;
+				shared++;
+				CHECK(!std::strcmp(host->choices[h].label, option->choices[o].label));
+			}
+		}
+		CHECK(shared > 0);
+	}
+
+	// The disk swapper's entries are counted from 1, the drives from 0.
+	CHECK(!std::strcmp(find("diskimage0")->label, "Disk 1"));
+	CHECK(!std::strcmp(find("diskimage19")->label, "Disk 20"));
+	CHECK(!std::strcmp(find("floppy0")->label, "DF0: image"));
+}
+
+// Keyboard shortcuts: a key press the layer spells reads back as that key
+// with those modifiers, and the shortcut options are typed as hotkeys.
+void check_hotkeys()
+{
+	char value[AMIBERRY_SETTINGS_VALUE_MAX];
+	CHECK(amiberry_settings_hotkey_format(0x45, AMIBERRY_HOTKEY_LCTRL, value, sizeof value));
+	CHECK(!std::strcmp(value, "LCtrl+F12"));
+	CHECK(amiberry_settings_hotkey_format(0, AMIBERRY_HOTKEY_RCTRL, value, sizeof value));
+	CHECK(!std::strcmp(value, "RCtrl"));
+	// Ctrl, Shift, Alt, GUI, as the GUI's capture writes them, and the left
+	// key when both of one modifier are held.
+	CHECK(amiberry_settings_hotkey_format(SDL_SCANCODE_A,
+		AMIBERRY_HOTKEY_RGUI | AMIBERRY_HOTKEY_RALT | AMIBERRY_HOTKEY_LSHIFT | AMIBERRY_HOTKEY_RSHIFT,
+		value, sizeof value));
+	CHECK(!std::strcmp(value, "LShift+RAlt+RGUI+A"));
+	std::strcpy(value, "kept");
+	CHECK(!amiberry_settings_hotkey_format(SDL_SCANCODE_LCTRL, 0, value, sizeof value)); // a modifier key
+	CHECK(!amiberry_settings_hotkey_format(SDL_SCANCODE_RGUI, AMIBERRY_HOTKEY_LCTRL, value, sizeof value));
+	CHECK(!amiberry_settings_hotkey_format(0, 0, value, sizeof value));
+	CHECK(!amiberry_settings_hotkey_format(0, AMIBERRY_HOTKEY_LCTRL | AMIBERRY_HOTKEY_LALT, value, sizeof value));
+	CHECK(!amiberry_settings_hotkey_format(SDL_SCANCODE_KP_PLUS, 0, value, sizeof value)); // "Keypad +"
+	CHECK(!amiberry_settings_hotkey_format(0xa6, 0, value, sizeof value)); // reserved, no name
+	CHECK(!amiberry_settings_hotkey_format(SDL_SCANCODE_A, 0x100, value, sizeof value));
+	CHECK(!amiberry_settings_hotkey_format(SDL_SCANCODE_F12, AMIBERRY_HOTKEY_LCTRL, value, 9)); // "LCtrl+F12"
+	CHECK(!std::strcmp(value, "kept"));
+
+	// Every key it spells reads back as the key (or one SDL names alike,
+	// Return2 as Return) with the modifiers held.
+	const unsigned int held[] = {0, AMIBERRY_HOTKEY_LCTRL | AMIBERRY_HOTKEY_RALT,
+		AMIBERRY_HOTKEY_RSHIFT | AMIBERRY_HOTKEY_LGUI};
+	int spelled = 0;
+	for (unsigned int usage = SDL_SCANCODE_A; usage < SDL_SCANCODE_LCTRL; usage++) {
+		for (const unsigned int modifiers : held) {
+			if (!amiberry_settings_hotkey_format(usage, modifiers, value, sizeof value))
+				continue;
+			spelled++;
+			const read_hotkey read = read_like_core(value);
+			CHECK(read.modifiers == modifiers);
+			CHECK(read.scancode == static_cast<SDL_Scancode>(usage) || !std::strcmp(SDL_GetScancodeName(read.scancode),
+				SDL_GetScancodeName(static_cast<SDL_Scancode>(usage))));
+		}
+	}
+	CHECK(spelled > 3 * 100);
+	// A modifier alone binds that modifier key.
+	const struct {
+		unsigned int bit;
+		SDL_Scancode key;
+	} alone[] = {
+		{AMIBERRY_HOTKEY_LCTRL, SDL_SCANCODE_LCTRL}, {AMIBERRY_HOTKEY_RCTRL, SDL_SCANCODE_RCTRL},
+		{AMIBERRY_HOTKEY_LSHIFT, SDL_SCANCODE_LSHIFT}, {AMIBERRY_HOTKEY_RSHIFT, SDL_SCANCODE_RSHIFT},
+		{AMIBERRY_HOTKEY_LALT, SDL_SCANCODE_LALT}, {AMIBERRY_HOTKEY_RALT, SDL_SCANCODE_RALT},
+		{AMIBERRY_HOTKEY_LGUI, SDL_SCANCODE_LGUI}, {AMIBERRY_HOTKEY_RGUI, SDL_SCANCODE_RGUI},
+	};
+	for (const auto& m : alone) {
+		CHECK(amiberry_settings_hotkey_format(0, m.bit, value, sizeof value));
+		const read_hotkey read = read_like_core(value);
+		CHECK(read.modifiers == 0 && read.scancode == m.key);
+	}
+
+	// The controller buttons are SDL's, which the emulator reads back.
+	const amiberry_setting_choice* buttons = nullptr;
+	const size_t button_count = amiberry_settings_hotkey_buttons(&buttons);
+	CHECK(button_count == SDL_GAMEPAD_BUTTON_COUNT && buttons);
+	bool guide = false;
+	for (size_t i = 0; buttons && i < button_count; i++) {
+		CHECK(buttons[i].label && *buttons[i].label);
+		CHECK(SDL_GetGamepadButtonFromString(buttons[i].value) == static_cast<SDL_GamepadButton>(i));
+		guide = guide || (!std::strcmp(buttons[i].value, "guide") && !std::strcmp(buttons[i].label, "Guide"));
+	}
+	CHECK(guide);
+
+	const char* const shortcuts[] = {"amiberry.open_gui", "amiberry.quit_amiberry", "amiberry.action_replay",
+		"amiberry.fullscreen_toggle", "amiberry.minimize", "amiberry.left_amiga", "amiberry.right_amiga",
+		"amiberry.screenshot", "amiberry.debugger_trigger", "amiberry.vkbd_toggle"};
+	for (const char* id : shortcuts) {
+		const amiberry_setting_descriptor* d = amiberry_settings_find(id);
+		CHECK(d && d->type == AMIBERRY_SETTING_HOTKEY);
+	}
+	// The Amiga keys map a key only; the others answer a controller button.
+	CHECK(amiberry_settings_hotkey_takes_buttons("amiberry.open_gui"));
+	CHECK(amiberry_settings_hotkey_takes_buttons("amiberry.vkbd_toggle"));
+	CHECK(!amiberry_settings_hotkey_takes_buttons("amiberry.left_amiga"));
+	CHECK(!amiberry_settings_hotkey_takes_buttons("amiberry.right_amiga"));
+	CHECK(!amiberry_settings_hotkey_takes_buttons("cpu_model"));
+	CHECK(!amiberry_settings_hotkey_takes_buttons(nullptr));
+
+	// A recorded value is stored as it is spelled.
+	uae_prefs& p = test_prefs;
+	reset_prefs(p);
+	CHECK(set(p, "amiberry.right_amiga", "RCtrl") == AMIBERRY_SETTINGS_OK);
+	CHECK(value_of(p, "amiberry.right_amiga") == "RCtrl");
+	CHECK(set(p, "amiberry.open_gui", "guide") == AMIBERRY_SETTINGS_OK);
+	CHECK(value_of(p, "amiberry.open_gui") == "guide");
 	reset_prefs(p);
 }
 
@@ -3399,14 +3795,30 @@ void check_sound_domain()
 	CHECK(value_of(p, "sound_frequency") == "8000");
 	CHECK(set(p, "sound_frequency", "48000") == AMIBERRY_SETTINGS_OK);
 
-	// Drive clicks: external samples (a negative value) stay visible.
+	// Drive clicks: external samples (a negative value) stay visible as a
+	// named choice, but need a sample set no option picks, so they are
+	// not offered.
 	CHECK(set(p, "floppy1sound", "1") == AMIBERRY_SETTINGS_OK);
 	CHECK(value_of(p, "floppy1sound") == "1");
 	p.floppyslots[2].dfxclick = -1;
 	CHECK(value_of(p, "floppy2sound") == "-1");
 	CHECK(set(p, "floppy2sound", "1") == AMIBERRY_SETTINGS_OK);
+	CHECK(set(p, "floppy2sound", "-1") == AMIBERRY_SETTINGS_UNAVAILABLE);
+	CHECK(set(p, "floppy2sound", "2") == AMIBERRY_SETTINGS_INVALID_VALUE);
+	// A drive's click volumes only apply while its drive sound is on.
+	CHECK(value_of(p, "floppy3sound") == "0");
+	CHECK(!available(p, "floppy3soundvolume_disk") && !available(p, "floppy3soundvolume_empty"));
+	CHECK(set(p, "floppy3soundvolume_empty", "50") == AMIBERRY_SETTINGS_UNAVAILABLE);
+	CHECK(set(p, "floppy3sound", "1") == AMIBERRY_SETTINGS_OK);
+	CHECK(available(p, "floppy3soundvolume_disk") && available(p, "floppy3soundvolume_empty"));
+	CHECK(!available(p, "floppy0soundvolume_disk"));
 	CHECK(set(p, "floppy3soundvolume_empty", "50") == AMIBERRY_SETTINGS_OK);
 	CHECK(p.dfxclickvolume_empty[3] == 50);
+	// And while sound emulation is on.
+	CHECK(set(p, "sound_output", "none") == AMIBERRY_SETTINGS_OK);
+	CHECK(!available(p, "floppy3soundvolume_disk"));
+	CHECK(set(p, "sound_output", "normal") == AMIBERRY_SETTINGS_OK);
+	CHECK(available(p, "floppy3soundvolume_disk"));
 
 	// The buffer size offers the writer's exact sizes.
 	CHECK(set(p, "sound_max_buff", "16384") == AMIBERRY_SETTINGS_OK);
@@ -3500,10 +3912,39 @@ void check_input_domain()
 	CHECK(set(p, "joyport1", "joy5") == AMIBERRY_SETTINGS_INVALID_VALUE); // one test joystick
 	p.jports[1].id = JSEM_JOYS + 5; // a configuration naming a disconnected device
 	CHECK(value_of(p, "joyport1") == "joy5");
+	// The port's list starts with that device, once, named for what it is;
+	// the other ports and the connected list do not show it.
+	auto port_list_starts_with = [&p](const char* id, const char* value, const char* label) {
+		const settings::choice_list list = settings::choices_of(settings::require(id), p);
+		size_t seen = 0;
+		for (size_t i = 0; i < list.count; i++)
+			seen += !std::strcmp(list.items[i].value, value);
+		return list.count > 1 && seen == 1 && !std::strcmp(list.items[0].value, value)
+			&& !std::strcmp(list.items[0].label, label);
+	};
+	auto lists = [](const settings::choice_list& list, const char* value) {
+		for (size_t i = 0; i < list.count; i++) {
+			if (!std::strcmp(list.items[i].value, value))
+				return true;
+		}
+		return false;
+	};
+	CHECK(port_list_starts_with("joyport1", "joy5", "Joystick 6 (not connected)"));
+	CHECK(!lists(settings::choices_of(settings::require("joyport0"), p), "joy5"));
+	CHECK(!lists(settings::connected_port_devices(), "joy5"));
+	// Picking it again keeps it.
+	CHECK(set(p, "joyport1", "joy5") == AMIBERRY_SETTINGS_OK);
+	CHECK(value_of(p, "joyport1") == "joy5");
+	p.jports[3].id = JSEM_MICE + 2;
+	CHECK(port_list_starts_with("joyport3", "mouse2", "Mouse 3 (not connected)"));
+	// A connected device is not repeated at the top.
+	p.jports[3].id = JSEM_MICE;
+	CHECK(!std::strcmp(settings::choices_of(settings::require("joyport3"), p).items[0].value, "none"));
 
 	// A custom mapping id from a configuration keeps its spelling.
 	p.jports[1].id = JSEM_CUSTOM;
 	CHECK(value_of(p, "joyport1") == "custom0");
+	CHECK(port_list_starts_with("joyport1", "custom0", "Custom input mapping 1"));
 	p.jports[1].id = JSEM_JOYS;
 
 	// The mouse map needs a non-default mode; hotkey bits stay visible.
@@ -3514,6 +3955,9 @@ void check_input_domain()
 	CHECK(value_of(p, "joyport1mousemap") == "1");
 	p.jports[1].mousemap = 3;
 	CHECK(value_of(p, "joyport1mousemap") == "3");
+	// Every stick combination the hotkeys can leave is a listed choice.
+	CHECK(set(p, "joyport1mousemap", "2") == AMIBERRY_SETTINGS_OK && p.jports[1].mousemap == 2);
+	CHECK(set(p, "joyport1mousemap", "4") == AMIBERRY_SETTINGS_INVALID_VALUE);
 
 	// Modes include the lightpen entry the old panel indexed past.
 	CHECK(set(p, "joyport1mode", "lightpen") == AMIBERRY_SETTINGS_OK);
@@ -4007,7 +4451,11 @@ int main(int argc, char** argv)
 	check_filter_domain();
 	check_io_domain();
 	check_custom_controls();
+	check_hotkeys();
+	check_reversed_volumes();
+	check_number_metadata();
 	check_host_settings();
+	check_host_choices();
 	check_config_text();
 	check_mount_list();
 	check_active_values();

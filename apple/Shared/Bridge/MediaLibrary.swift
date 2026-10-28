@@ -35,6 +35,9 @@ public enum MediaList: CaseIterable, Hashable, Sendable {
 	case configurations
 	/// .uss files in the save states folder in effect, by name.
 	case saveStates
+	/// The Kickstart ROMs the last ROM scan recognised, named as the ROM
+	/// list names them ("KS ROM v3.1 (A1200)"), by name.
+	case kickstartROMs
 
 	var layerValue: amiberry_media_list {
 		switch self {
@@ -44,6 +47,7 @@ public enum MediaList: CaseIterable, Hashable, Sendable {
 		case .cdDrives: return AMIBERRY_MEDIA_CD_DRIVES
 		case .configurations: return AMIBERRY_MEDIA_CONFIGURATIONS
 		case .saveStates: return AMIBERRY_MEDIA_SAVESTATES
+		case .kickstartROMs: return AMIBERRY_MEDIA_KICKSTART_ROMS
 		}
 	}
 
@@ -109,6 +113,19 @@ public enum MediaLibrary {
 	/// saves the emulator's settings.
 	public static func addRecent(_ path: String, to list: MediaList) throws {
 		try SettingsError.check(amiberry_media_add_recent(list.layerValue, path), id: "\(list)", value: path)
+	}
+
+	/// Takes a path off a recent list, matched as `entries` spells its
+	/// entries, and saves the emulator's settings; the other entries keep
+	/// their order. A path the list does not hold changes nothing.
+	public static func removeRecent(_ path: String, from list: MediaList) throws {
+		try SettingsError.check(amiberry_media_remove_recent(list.layerValue, path), id: "\(list)", value: path)
+	}
+
+	/// Empties a recent list, leaving the others, and saves the emulator's
+	/// settings.
+	public static func clearRecent(_ list: MediaList) throws {
+		try SettingsError.check(amiberry_media_clear_recent(list.layerValue), id: "\(list)")
 	}
 
 	/// Rescans the ROMs folder after ROM files were added (setting the

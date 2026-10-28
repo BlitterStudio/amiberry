@@ -1,8 +1,9 @@
 /*
  * Copyright (C) 2026 BlitterStudio
- * The emulation window's toolbar: Drives, Pause, Reset, State, the status
- * LEDs and frame rate, Settings and Full Screen. SDL owns the window; the
- * toolbar sits in its title bar, so the emulation's drawable keeps its size.
+ * The emulation window's toolbar: Drives, Pause, Reset, State, Screenshot,
+ * the status LEDs and frame rate, Settings and Full Screen. SDL owns the
+ * window; the toolbar sits in its title bar, so the emulation's drawable
+ * keeps its size.
  */
 
 import AppKit
@@ -12,6 +13,13 @@ import SwiftUI
 final class EmulationChrome: NSObject, NSToolbarDelegate, NSToolbarItemValidation, NSMenuDelegate,
 	NSMenuItemValidation {
 	static let shared = EmulationChrome()
+	/// The emulation windows' toolbar: it marks a window as an emulation's.
+	static let toolbarIdentifier = "AmiberryEmulation"
+
+	/// Whether the window is an emulation's (it has the toolbar).
+	static func isEmulation(_ window: NSWindow?) -> Bool {
+		window?.toolbar?.identifier == toolbarIdentifier
+	}
 
 	private let monitor = StatusMonitor()
 	/// The fixed menus' entries, by menu title; filled as they open.
@@ -19,6 +27,9 @@ final class EmulationChrome: NSObject, NSToolbarDelegate, NSToolbarItemValidatio
 	/// Each emulation window's full-screen observers: an RTG screen on a
 	/// second emulated monitor has a window of its own.
 	private var watched: [ObjectIdentifier: (window: WeakWindow, observers: [NSObjectProtocol])] = [:]
+	/// Whether the toolbar keeps the user's layout in the defaults; the
+	/// tests turn it off so they read and write none of the user's.
+	var autosavesToolbar = true
 
 	private final class WeakWindow {
 		weak var window: NSWindow?
@@ -30,6 +41,7 @@ final class EmulationChrome: NSObject, NSToolbarDelegate, NSToolbarItemValidatio
 		static let pause = NSToolbarItem.Identifier("amiberry.pause")
 		static let reset = NSToolbarItem.Identifier("amiberry.reset")
 		static let state = NSToolbarItem.Identifier("amiberry.state")
+		static let screenshot = NSToolbarItem.Identifier("amiberry.screenshot")
 		static let status = NSToolbarItem.Identifier("amiberry.status")
 		static let settings = NSToolbarItem.Identifier("amiberry.settings")
 		static let fullScreen = NSToolbarItem.Identifier("amiberry.fullscreen")
@@ -39,10 +51,13 @@ final class EmulationChrome: NSObject, NSToolbarDelegate, NSToolbarItemValidatio
 	/// created full screen gets it too: it shows once the window is one.
 	func attach(to window: NSWindow) {
 		guard window.toolbar == nil else { return }
-		let toolbar = NSToolbar(identifier: "AmiberryEmulation")
+		let toolbar = NSToolbar(identifier: EmulationChrome.toolbarIdentifier)
 		toolbar.delegate = self
 		toolbar.displayMode = .iconOnly
-		toolbar.allowsUserCustomization = false
+		// Laid out as the user likes it (Customize Toolbar…, kept between
+		// launches); the defaults are what a new user sees.
+		toolbar.allowsUserCustomization = true
+		toolbar.autosavesConfiguration = autosavesToolbar
 		// Adding a toolbar must grow the frame around the content, not move
 		// or shrink it: SDL places the window by its content and saves where
 		// that is, so a shifted content would creep down at every creation.
@@ -54,12 +69,25 @@ final class EmulationChrome: NSObject, NSToolbarDelegate, NSToolbarItemValidatio
 		window.titleVisibility = .hidden
 		window.toolbar = toolbar
 		toolbar.isVisible = !fullScreen
+		retargetClose(of: window)
 		if window.styleMask.contains(.titled), !fullScreen, window.contentRect(forFrameRect: window.frame) != content {
 			window.setFrame(window.frameRect(forContentRect: content), display: true)
 		}
 		observeFullScreen(of: window)
 		MacKeyboard.shared.attach(to: window)
+		PauseOverlay.shared.attach(to: window, monitor: monitor)
 		monitor.start()
+		// SDL made the window key before the toolbar marked it as an
+		// emulation's, so the key-window change saw an ordinary window.
+		MenuCommands.shared.followKeyWindow(NSApplication.shared.keyWindow)
+	}
+
+	/// The close button asks to return to the Library, as Window › Close
+	/// does: SDL quits the emulator when its window closes.
+	private func retargetClose(of window: NSWindow) {
+		let close = window.standardWindowButton(.closeButton)
+		close?.target = MenuCommands.shared
+		close?.action = #selector(MenuCommands.returnToLibrary(_:))
 	}
 
 	/// Full screen (a Space; SDL's desktop full screen) has no toolbar: the
@@ -86,6 +114,10 @@ final class EmulationChrome: NSObject, NSToolbarDelegate, NSToolbarItemValidatio
 		guard let entry = watched[key] else { return }
 		if let toolbarVisible {
 			entry.window.window?.toolbar?.isVisible = toolbarVisible
+			// Leaving full screen can give the title bar new buttons.
+			if toolbarVisible, let window = entry.window.window {
+				retargetClose(of: window)
+			}
 		} else {
 			entry.observers.forEach(NotificationCenter.default.removeObserver)
 			watched[key] = nil
@@ -95,12 +127,13 @@ final class EmulationChrome: NSObject, NSToolbarDelegate, NSToolbarItemValidatio
 	// MARK: NSToolbarDelegate
 
 	func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
-		[Item.drives, Item.pause, Item.reset, Item.state, .flexibleSpace, Item.status, .flexibleSpace,
+		[Item.drives, Item.pause, Item.reset, Item.state, Item.screenshot, .flexibleSpace, Item.status, .flexibleSpace,
 		 Item.settings, Item.fullScreen]
 	}
 
 	func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
-		toolbarDefaultItemIdentifiers(toolbar)
+		[Item.drives, Item.pause, Item.reset, Item.state, Item.screenshot, Item.status, Item.settings, Item.fullScreen,
+		 .space, .flexibleSpace]
 	}
 
 	func toolbar(
@@ -118,16 +151,22 @@ final class EmulationChrome: NSObject, NSToolbarDelegate, NSToolbarItemValidatio
 		case Item.reset:
 			return menu(identifier, "arrow.counterclockwise", "Reset", "Reset the Amiga", [
 				("Reset", commands, #selector(MenuCommands.reset(_:))),
-				("Keyboard Reset", self, #selector(keyboardReset(_:))),
+				("Keyboard Reset", commands, #selector(MenuCommands.keyboardReset(_:))),
 				("Hard Reset", commands, #selector(MenuCommands.hardReset(_:))),
 			])
 		case Item.state:
-			return menu(identifier, "camera.on.rectangle", "State", "Save or load the machine's state", [
+			return menu(identifier, "clock.arrow.circlepath", "State", "Save or load the machine's state", [
 				("Quick Save State", commands, #selector(MenuCommands.quickSave(_:))),
 				("Quick Load State", commands, #selector(MenuCommands.quickLoad(_:))),
 				("Save State\u{2026}", commands, #selector(MenuCommands.saveState(_:))),
 				("Load State\u{2026}", commands, #selector(MenuCommands.loadState(_:))),
 			])
+		case Item.screenshot:
+			let item = button(identifier, "camera", "Screenshot", "Save a screenshot to the Screenshots folder",
+				#selector(screenshot(_:)))
+			// The menu bar has it too: a narrow window drops it first.
+			item.visibilityPriority = .low
+			return item
 		case Item.status:
 			let item = NSToolbarItem(itemIdentifier: identifier)
 			item.view = NSHostingView(rootView: StatusLEDsView(monitor: monitor))
@@ -172,13 +211,20 @@ final class EmulationChrome: NSObject, NSToolbarDelegate, NSToolbarItemValidatio
 
 	@objc func toggleFullscreen(_ sender: Any?) { MenuCommands.shared.toggleFullscreen(sender) }
 
-	@objc func keyboardReset(_ sender: Any?) {
-		MenuCommands.shared.post(.reset(hard: false, keyboard: true))
-	}
+	@objc func screenshot(_ sender: Any?) { MenuCommands.shared.screenshot(sender) }
 
 	@objc func insertSwapperEntry(_ sender: NSMenuItem) {
 		guard let target = sender.representedObject as? [Int], target.count == 2 else { return }
 		MenuCommands.shared.post(.insertSwapperEntry(index: target[0], drive: target[1]))
+	}
+
+	/// A recent disk or CD picked from the Drives menu: a floppy goes into
+	/// its drive, a CD into the CD drive.
+	@objc func insertRecent(_ sender: NSMenuItem) {
+		guard let target = sender.representedObject as? DrivesMenu.RecentInsert else { return }
+		MenuCommands.shared.post(target.drive.map { .insertFloppy(drive: $0, path: target.path) } ?? .insertCD(path: target.path))
+		// The pick goes to the top of its list, as Insert Disk… puts one.
+		try? MediaLibrary.addRecent(target.path, to: target.drive == nil ? .recentCDs : .recentFloppies)
 	}
 
 	// MARK: The Drives menu
@@ -190,7 +236,8 @@ final class EmulationChrome: NSObject, NSToolbarDelegate, NSToolbarItemValidatio
 		if menu.title == "Drives" {
 			DrivesMenu.fill(menu, status: EmulatorStatus.current(),
 				swapper: (0..<EmulatorActions.swapperEntryCount).map(EmulatorActions.swapperEntry),
-				commands: MenuCommands.shared, swapperTarget: self, pullDown: true)
+				commands: MenuCommands.shared, swapperTarget: self, pullDown: true,
+				recentDisks: DrivesMenu.recent(.recentFloppies), recentCDs: DrivesMenu.recent(.recentCDs))
 			return
 		}
 		menu.removeAllItems()
@@ -202,14 +249,13 @@ final class EmulationChrome: NSObject, NSToolbarDelegate, NSToolbarItemValidatio
 		}
 	}
 
-	/// This one's own entries, like the menu bar's: a reset needs a running
-	/// emulation, a swapper insert also the media the settings window holds.
+	/// This one's own entries, like the menu bar's: a swapper or recent
+	/// insert needs a running emulation and the media the settings window
+	/// holds.
 	func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
 		let state = EmulatorStatus.current().runState
 		switch menuItem.action {
-		case #selector(keyboardReset(_:)):
-			return state != .stopped
-		case #selector(insertSwapperEntry(_:)):
+		case #selector(insertSwapperEntry(_:)), #selector(insertRecent(_:)):
 			return state != .stopped && !SettingsPresenter.shared.isVisible
 		default:
 			return true
@@ -317,9 +363,28 @@ private struct LED: View {
 /// to insert into a drive.
 @MainActor
 enum DrivesMenu {
+	/// A recent medium and where it goes: a floppy drive, or the CD (nil).
+	final class RecentInsert: NSObject {
+		let drive: Int?
+		let path: String
+
+		init(drive: Int?, path: String) {
+			self.drive = drive
+			self.path = path
+		}
+	}
+
+	/// How many recent media each drive offers.
+	static let recentLimit = 10
+
+	/// The recent list's media that are still there, most recent first.
+	static func recent(_ list: MediaList) -> [String] {
+		MediaLibrary.entries(list).map(\.path).filter { FileManager.default.fileExists(atPath: $0) }
+	}
+
 	static func fill(
 		_ menu: NSMenu, status: EmulatorStatus, swapper: [String], commands: MenuCommands, swapperTarget: AnyObject,
-		pullDown: Bool = false
+		pullDown: Bool = false, recentDisks: [String] = [], recentCDs: [String] = []
 	) {
 		menu.removeAllItems()
 		if pullDown {
@@ -332,6 +397,7 @@ enum DrivesMenu {
 			header(menu, "DF\(drive):", status.floppies[drive].mediaPath)
 			let insert = entry(menu, "Insert Disk\u{2026}", commands, #selector(MenuCommands.insertFloppy(_:)))
 			insert.tag = drive
+			recentEntries(menu, recentDisks, drive: drive, target: swapperTarget)
 			let eject = entry(menu, "Eject", commands, #selector(MenuCommands.ejectFloppy(_:)))
 			eject.tag = drive
 			if status.floppies[drive].mediaPath.isEmpty {
@@ -342,6 +408,7 @@ enum DrivesMenu {
 		if status.cdActivity != nil || !status.cdPath.isEmpty {
 			header(menu, "CD", status.cdPath)
 			entry(menu, "Insert CD\u{2026}", commands, #selector(MenuCommands.insertCD(_:)))
+			recentEntries(menu, recentCDs, drive: nil, target: swapperTarget)
 			let eject = entry(menu, "Eject CD", commands, #selector(MenuCommands.ejectCD(_:)))
 			if status.cdPath.isEmpty {
 				eject.action = nil
@@ -377,6 +444,25 @@ enum DrivesMenu {
 		let item = NSMenuItem.sectionHeader(title: "\(name) \(path.isEmpty ? "Empty" : (path as NSString).lastPathComponent)")
 		item.toolTip = path.isEmpty ? nil : path
 		menu.addItem(item)
+	}
+
+	/// "Insert Recent", the drive's recent media to insert with one pick;
+	/// nothing when there are none.
+	private static func recentEntries(_ menu: NSMenu, _ paths: [String], drive: Int?, target: AnyObject) {
+		guard !paths.isEmpty else { return }
+		let holder = NSMenuItem(title: "Insert Recent", action: nil, keyEquivalent: "")
+		holder.indentationLevel = 1
+		let list = NSMenu(title: "Insert Recent")
+		for path in paths.prefix(recentLimit) {
+			let item = NSMenuItem(title: (path as NSString).lastPathComponent,
+				action: #selector(EmulationChrome.insertRecent(_:)), keyEquivalent: "")
+			item.target = target
+			item.toolTip = path
+			item.representedObject = RecentInsert(drive: drive, path: path)
+			list.addItem(item)
+		}
+		holder.submenu = list
+		menu.addItem(holder)
 	}
 
 	@discardableResult

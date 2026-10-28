@@ -4,7 +4,8 @@
 // value, and amiberry_host_settings_save() writes the file.
 //
 // An ID is the amiberry.conf key. A choice's value is the integer the file
-// stores. A bool is "true" or "false" (the file spells them yes and no).
+// stores, or the token for the default devices, shaders and bezel. A bool
+// is "true" or "false" (the file spells them yes and no).
 
 #include "sysconfig.h"
 #include "sysdeps.h"
@@ -36,26 +37,34 @@ const choice compatibility_choices[] = {
 };
 const choice line_mode_choices[] = {{"0", "Single"}, {"1", "Double"}, {"2", "Scanlines"}};
 const choice scaling_choices[] = {
-	{"-1", "Auto"}, {"0", "Nearest"}, {"1", "Linear"}, {"2", "Integer"}, {"3", "Stretch"},
+	{"-1", "Automatic"}, {"0", "Nearest"}, {"1", "Linear"}, {"2", "Integer"}, {"3", "Stretch"},
 };
 const choice enabled_choices[] = {{"0", "Disabled"}, {"1", "Enabled"}};
+const choice autoresolution_choices[] = {{"0", "Disabled"}, {"1", "Always on"}};
 const choice fullscreen_choices[] = {{"0", "Windowed"}, {"2", "Full-window"}};
 const choice stereo_choices[] = {
 	{"10", "100%"}, {"9", "90%"}, {"8", "80%"}, {"7", "70%"}, {"6", "60%"},
 	{"5", "50%"}, {"4", "40%"}, {"3", "30%"}, {"2", "20%"}, {"1", "10%"}, {"0", "0%"},
 };
 const choice frequency_choices[] = {
-	{"11025", "11025"}, {"22050", "22050"}, {"32000", "32000"}, {"44100", "44100"}, {"48000", "48000"},
+	{"11025", "11,025 Hz"}, {"22050", "22,050 Hz"}, {"32000", "32,000 Hz"}, {"44100", "44,100 Hz"},
+	{"48000", "48,000 Hz"},
 };
 const choice buffer_choices[] = {
-	{"0", "Min"}, {"1024", "1024"}, {"2048", "2048"}, {"3072", "3072"}, {"4096", "4096"},
+	{"0", "Minimum"}, {"1024", "1024"}, {"2048", "2048"}, {"3072", "3072"}, {"4096", "4096"},
 	{"6144", "6144"}, {"8192", "8192"}, {"12288", "12288"}, {"16384", "16384"},
 	{"32768", "32768"}, {"65536", "65536"},
 };
-const choice language_choices[] = {{"US", "US"}, {"UK", "UK"}, {"DE", "DE"}, {"FR", "FR"}};
+const choice language_choices[] = {{"US", "US"}, {"UK", "UK"}, {"DE", "German"}, {"FR", "French"}};
 const choice channel_choices[] = {{"0", "Stable"}, {"1", "Preview"}};
 
-enum class kind { boolean, integer, choice_list, text, real, path };
+enum class kind { boolean, integer, choice_list, text, hotkey, real, path };
+
+// Where a choice setting's list comes from: its own static list, or what
+// the host offers now, enumerated by the configuration options that pick
+// the same things (the joyport devices, the audio device, the shader and
+// bezel catalogs), so both editors list the same entries.
+enum class listing { fixed, port_device, sound_device, shader, bezel };
 
 struct host_setting {
 	const char* id;
@@ -76,6 +85,15 @@ struct host_setting {
 	void (*path_set)(const std::string&) = nullptr;
 	bool normalize_fullscreen = false;
 	bool clamp_scale = false;
+	listing list = listing::fixed;
+	// A port device's empty value: what the emulator uses when none is set.
+	const char* empty_label = nullptr;
+	// The empty value already means no device, so the list leaves out the
+	// joyports' "none", which means the same.
+	bool empty_is_none = false;
+	// The descriptor's unit and level (amiberry_settings.h).
+	const char* unit = nullptr;
+	bool level = false;
 };
 
 // The text fields, by address, so a pointer-to-member of differing array
@@ -130,6 +148,17 @@ host_setting integer(const char* id, const char* group, const char* label, const
 	return s;
 }
 
+// An integer setting shown with its unit; level: set by feel, so a front
+// end may show a slider.
+host_setting measured(const char* id, const char* group, const char* label, const char* help,
+	const char* def, int min, int max, int amiberry_options::* field, const char* unit, bool level)
+{
+	host_setting s = integer(id, group, label, help, def, min, max, field);
+	s.unit = unit;
+	s.level = level;
+	return s;
+}
+
 host_setting choices_of(const char* id, const char* group, const char* label, const char* help,
 	const char* def, const choice* items, size_t count, int amiberry_options::* field)
 {
@@ -144,6 +173,55 @@ host_setting text(const char* id, const char* group, const char* label, const ch
 	host_setting s{};
 	s.id = id; s.group = group; s.label = label; s.help = help; s.k = kind::text;
 	s.default_value = def;
+	return s;
+}
+
+// A key combination or controller button (the hotkey syntax).
+host_setting hotkey(const char* id, const char* group, const char* label, const char* help, const char* def)
+{
+	host_setting s = text(id, group, label, help, def);
+	s.k = kind::hotkey;
+	return s;
+}
+
+// A default port device: a joyport token, or empty for the fallback that
+// empty_label names.
+host_setting port_device(const char* id, const char* label, const char* help, const char* def,
+	const char* empty_label)
+{
+	host_setting s = text(id, "global_input", label, help, def);
+	s.k = kind::choice_list;
+	s.list = listing::port_device;
+	s.empty_label = empty_label;
+	return s;
+}
+
+// A parallel port's default device, where empty means no device.
+host_setting parallel_port_device(const char* id, const char* label, const char* help)
+{
+	host_setting s = port_device(id, label, help, "", "None");
+	s.empty_is_none = true;
+	return s;
+}
+
+// A shader or bezel from the catalogs, or "none".
+host_setting catalog(const char* id, const char* label, const char* help, listing list)
+{
+	host_setting s = text(id, "global_visual", label, help, "none");
+	s.k = kind::choice_list;
+	s.list = list;
+	return s;
+}
+
+// The default audio device: the index of a host device, 0 for the system
+// default. Any index the file can hold is kept, as the device it names may
+// only be unplugged now.
+host_setting sound_device(const char* id, const char* label, const char* help)
+{
+	host_setting s{};
+	s.id = id; s.group = "global_sound"; s.label = label; s.help = help; s.k = kind::choice_list;
+	s.default_value = "0"; s.min = 0; s.max = 255; s.integer = &amiberry_options::default_soundcard;
+	s.list = listing::sound_device;
 	return s;
 }
 
@@ -168,6 +246,9 @@ host_setting path(const char* id, const char* label, const char* help,
 const std::vector<host_setting>& settings()
 {
 	static const std::vector<host_setting> list = {
+		// The ImGui GUI's own settings: the native Apple apps have no ImGui
+		// (AMIBERRY_NO_IMGUI), so there they would change nothing.
+#ifndef AMIBERRY_NO_IMGUI
 		boolean("Quickstart", "global_startup", "Quickstart on startup",
 			"Open the Quickstart panel by default when the GUI starts without a loaded configuration.",
 			"true", &amiberry_options::quickstart_start),
@@ -184,27 +265,28 @@ const std::vector<host_setting>& settings()
 			"Default Quickstart compatibility level for built-in model presets.",
 			"0", compatibility_choices, sizeof compatibility_choices / sizeof compatibility_choices[0],
 			&amiberry_options::default_quickstart_compatibility),
+#endif
 
-		boolean("rctrl_as_ramiga", "global_input", "RCtrl as RAmiga",
+		boolean("rctrl_as_ramiga", "global_input", "Right Ctrl as Right Amiga",
 			"Map Right Control to the Right Amiga key by default.",
 			"false", &amiberry_options::rctrl_as_ramiga),
-		integer("input_default_mouse_speed", "global_input", "Default mouse speed",
-			"Mouse speed applied to new configurations (100 = normal).",
-			"100", 1, 1000, &amiberry_options::input_default_mouse_speed),
+		measured("input_default_mouse_speed", "global_input", "Default mouse speed",
+			"Mouse speed applied to new configurations (100% is normal).",
+			"100", 1, 1000, &amiberry_options::input_default_mouse_speed, "%", false),
 		boolean("input_keyboard_as_joystick_stop_keypresses", "global_input", "Keyboard joystick stops keypresses",
 			"Stop keyboard-as-joystick mappings from also generating Amiga key presses.",
 			"false", &amiberry_options::input_keyboard_as_joystick_stop_keypresses),
-		integer("default_joystick_deadzone", "global_input", "Joystick deadzone",
-			"Default joystick and joystick-mouse deadzone percentage.",
-			"33", 0, 100, &amiberry_options::default_joystick_deadzone),
-		text("default_open_gui_key", "global_input", "Open GUI key",
-			"Default keyboard shortcut for opening the GUI.", "F12"),
-		text("default_quit_key", "global_input", "Quit key",
-			"Default keyboard shortcut for quitting Amiberry.", ""),
-		text("default_ar_key", "global_input", "Action Replay key",
-			"Default keyboard shortcut for activating Action Replay or HRTmon.", "Pause"),
-		text("default_fullscreen_toggle_key", "global_input", "Full-window toggle key",
-			"Default keyboard shortcut for toggling windowed and full-window modes.", ""),
+		measured("default_joystick_deadzone", "global_input", "Joystick dead zone",
+			"Default analog stick dead zone for new configurations, as a percentage of full deflection.",
+			"33", 0, 100, &amiberry_options::default_joystick_deadzone, "%", true),
+		hotkey("default_open_gui_key", "global_input", "Open GUI key",
+			"Default key or controller button that opens the GUI.", "F12"),
+		hotkey("default_quit_key", "global_input", "Quit key",
+			"Default key or controller button that quits Amiberry.", ""),
+		hotkey("default_ar_key", "global_input", "Action Replay key",
+			"Default key or controller button that activates Action Replay or HRTmon.", "Pause"),
+		hotkey("default_fullscreen_toggle_key", "global_input", "Full-window toggle key",
+			"Default key or controller button that switches between windowed and full-window modes.", ""),
 		boolean("default_retroarch_quit", "global_input", "RetroArch quit",
 			"Enable the RetroArch-style quit button by default when a mapping exists.",
 			"true", &amiberry_options::default_retroarch_quit),
@@ -214,18 +296,25 @@ const std::vector<host_setting>& settings()
 		boolean("default_retroarch_reset", "global_input", "RetroArch reset",
 			"Enable the RetroArch-style reset button by default when a mapping exists.",
 			"false", &amiberry_options::default_retroarch_reset),
-		text("default_controller1", "global_input", "Controller 1",
-			"Default device for joystick port 2 in new configurations.", "joy1"),
-		text("default_controller2", "global_input", "Controller 2",
-			"Second controller, used on the mouse port by WHDLoad and CD32 autoboot.", "joy2"),
-		text("default_controller3", "global_input", "Controller 3",
-			"Default device for parallel joystick port 3 in new configurations.", ""),
-		text("default_controller4", "global_input", "Controller 4",
-			"Default device for parallel joystick port 4 in new configurations.", ""),
-		text("default_mouse1", "global_input", "Mouse 1",
-			"Default device for the mouse port in new configurations.", "mouse"),
-		text("default_mouse2", "global_input", "Mouse 2",
-			"Second mouse device, used on the joystick port for mouse-controlled WHDLoad content.", "joy0"),
+		// An empty device makes the emulator fall back, as amiberry.cpp's
+		// default options and the WHDLoad booter do; each list names the
+		// fallback.
+		port_device("default_controller1", "Controller 1",
+			"Default device for port 2, the joystick port, in new configurations and autobooted content. "
+			"Automatic uses the first joystick, or the second one for WHDLoad.", "joy1", "Automatic"),
+		port_device("default_controller2", "Controller 2",
+			"Second controller, used on port 1, the mouse port, by WHDLoad and CD32 autoboot. "
+			"Automatic keeps the mouse there.", "joy2", "Automatic"),
+		parallel_port_device("default_controller3", "Controller 3",
+			"Default device for parallel joystick port 3 in new configurations and WHDLoad autoboot."),
+		parallel_port_device("default_controller4", "Controller 4",
+			"Default device for parallel joystick port 4 in new configurations and WHDLoad autoboot."),
+		port_device("default_mouse1", "Mouse 1",
+			"Default device for port 1, the mouse port, in new configurations and mouse-controlled "
+			"autobooted content. Automatic uses the mouse.", "mouse", "Automatic"),
+		port_device("default_mouse2", "Mouse 2",
+			"Second mouse device, used on port 2, the joystick port, for mouse-controlled WHDLoad content. "
+			"Automatic uses the Controller 1 device.", "joy0", "Automatic"),
 
 		choices_of("default_line_mode", "global_display", "Line mode",
 			"Default native display line mode for new configurations.",
@@ -243,7 +332,7 @@ const std::vector<host_setting>& settings()
 			&amiberry_options::default_scaling_method),
 		choices_of("default_gfx_autoresolution", "global_display", "Auto resolution",
 			"Enable native display auto-resolution switching by default.",
-			"0", enabled_choices, sizeof enabled_choices / sizeof enabled_choices[0],
+			"0", autoresolution_choices, sizeof autoresolution_choices / sizeof autoresolution_choices[0],
 			&amiberry_options::default_gfx_autoresolution),
 		boolean("default_correct_aspect_ratio", "global_display", "Correct aspect ratio",
 			"Preserve the Amiga display aspect ratio by default.",
@@ -251,10 +340,12 @@ const std::vector<host_setting>& settings()
 		boolean("default_auto_crop", "global_display", "Auto crop",
 			"Enable automatic border crop by default.",
 			"false", &amiberry_options::default_auto_crop),
-		integer("default_width", "global_display", "Default width",
-			"Default native display window width.", "720", 1, 16384, &amiberry_options::default_width),
-		integer("default_height", "global_display", "Default height",
-			"Default native display window height.", "568", 1, 16384, &amiberry_options::default_height),
+		measured("default_width", "global_display", "Default width",
+			"Default native display window width.", "720", 1, 16384, &amiberry_options::default_width,
+			"px", false),
+		measured("default_height", "global_display", "Default height",
+			"Default native display window height.", "568", 1, 16384, &amiberry_options::default_height,
+			"px", false),
 		choices_of("default_fullscreen_mode", "global_display", "Screen mode",
 			"Default native and RTG screen mode. The legacy exclusive full-screen value is full-window.",
 			"0", fullscreen_choices, sizeof fullscreen_choices / sizeof fullscreen_choices[0],
@@ -282,9 +373,8 @@ const std::vector<host_setting>& settings()
 #endif
 			buffer_choices, sizeof buffer_choices / sizeof buffer_choices[0],
 			&amiberry_options::default_sound_buffer),
-		integer("default_soundcard", "global_sound", "Audio device",
-			"Default sound output device index. Zero uses the operating system default.",
-			"0", 0, 255, &amiberry_options::default_soundcard),
+		sound_device("default_soundcard", "Audio device",
+			"Default sound output device. System default follows the operating system's choice."),
 
 		boolean("default_whd_buttonwait", "global_whdload", "Button wait",
 			"Wait for a button press before starting WHDLoad games by default.",
@@ -292,9 +382,9 @@ const std::vector<host_setting>& settings()
 		boolean("default_whd_showsplash", "global_whdload", "Show splash",
 			"Show the WHDLoad splash screen by default.",
 			"true", &amiberry_options::default_whd_showsplash),
-		integer("default_whd_configdelay", "global_whdload", "Config delay",
-			"Default delay in seconds before starting a WHDLoad title.",
-			"0", 0, INT_MAX, &amiberry_options::default_whd_configdelay),
+		measured("default_whd_configdelay", "global_whdload", "Config delay",
+			"Default delay before starting a WHDLoad title.",
+			"0", 0, INT_MAX, &amiberry_options::default_whd_configdelay, "s", false),
 		boolean("default_whd_writecache", "global_whdload", "Write cache",
 			"Enable the WHDLoad write cache by default.",
 			"false", &amiberry_options::default_whd_writecache),
@@ -324,35 +414,41 @@ const std::vector<host_setting>& settings()
 			"false",
 #endif
 			&amiberry_options::default_vkbd_enabled),
-		integer("default_vkbd_transparency", "global_touch", "On-screen keyboard transparency",
-			"Default on-screen keyboard transparency percentage.",
-			"0", 0, 100, &amiberry_options::default_vkbd_transparency),
+		measured("default_vkbd_transparency", "global_touch", "On-screen keyboard opacity",
+			"Opacity of the on-screen keyboard in new configurations (100% is opaque); 0 uses the "
+			"default of 85%.",
+			"0", 0, 100, &amiberry_options::default_vkbd_transparency, "%", false),
 		language("default_vkbd_language", "global_touch", "On-screen keyboard layout",
 			"Default on-screen keyboard layout.", "US"),
-		text("default_vkbd_toggle", "global_touch", "On-screen keyboard toggle",
-			"Default controller button or key that toggles the on-screen keyboard.",
+		hotkey("default_vkbd_toggle", "global_touch", "On-screen keyboard toggle",
+			"Default key or controller button that shows and hides the on-screen keyboard.",
 #if defined(__ANDROID__) || defined(LIBRETRO)
 			"leftstick"),
 #else
 			"guide"),
 #endif
-		boolean("default_retroarch_vkbd", "global_touch", "Use RetroArch vkbd button",
-			"Use the RetroArch virtual keyboard button by default when a mapping exists.",
+		boolean("default_retroarch_vkbd", "global_touch", "RetroArch on-screen keyboard button",
+			"Use the RetroArch on-screen keyboard button by default when a mapping exists.",
 			"false", &amiberry_options::default_retroarch_vkbd),
 
+#ifndef AMIBERRY_NO_IMGUI
 		text("gui_theme", "global_visual", "GUI theme",
 			"Theme file loaded by the ImGui interface.", "Default.theme"),
-		text("shader", "global_visual", "Native shader",
-			"Default shader preset for native chipset modes. none disables it.", "none"),
-		text("shader_rtg", "global_visual", "RTG shader",
-			"Default shader preset for RTG modes. none disables it.", "none"),
+#endif
+		catalog("shader", "Native shader",
+			"Default shader for native chipset modes: a built-in CRT shader or a preset from the shaders folder.",
+			listing::shader),
+		catalog("shader_rtg", "RTG shader",
+			"Default shader for RTG modes: a built-in CRT shader or a preset from the shaders folder.",
+			listing::shader),
 		boolean("use_bezel", "global_visual", "Use bezel",
 			"Show the built-in CRT bezel overlay.", "false", &amiberry_options::use_bezel),
 		boolean("use_custom_bezel", "global_visual", "Use custom bezel",
 			"Show a bezel from the bezels folder instead of the built-in one.",
 			"false", &amiberry_options::use_custom_bezel),
-		text("custom_bezel", "global_visual", "Custom bezel",
-			"Bezel overlay from the bezels folder. none disables it.", "none"),
+		catalog("custom_bezel", "Custom bezel",
+			"Bezel image from the bezels folder. Picking one turns Use custom bezel on and the built-in "
+			"bezel off; None turns Use custom bezel off.", listing::bezel),
 
 		boolean("write_logfile", "global_paths", "Write logfile",
 			"Write emulator log output to the configured logfile.",
@@ -426,9 +522,11 @@ const std::vector<host_setting>& settings()
 		boolean("slow_host_warning", "global_advanced", "Slow host warning",
 			"Show warnings when Amiberry detects a slow host configuration.",
 			"true", &amiberry_options::slow_host_warning),
+#ifdef __ANDROID__
 		boolean("use_adpf", "global_advanced", "Android ADPF",
 			"Use Android Dynamic Performance Framework hints when available.",
 			"true", &amiberry_options::use_adpf),
+#endif
 		boolean("default_disable_cycle_exact", "global_advanced", "Disable cycle exact by default",
 			"Disable cycle-exact defaults for quickstart-style configurations.",
 			"false", &amiberry_options::default_disable_cycle_exact),
@@ -436,6 +534,7 @@ const std::vector<host_setting>& settings()
 	return list;
 }
 
+#ifndef AMIBERRY_NO_IMGUI
 // The GUI scale is a real, clamped the way the configuration parser clamps it.
 host_setting scale_setting()
 {
@@ -454,8 +553,10 @@ host_setting scale_setting()
 	s.max = gui_layout_scale_max_percent;
 	s.real = &amiberry_options::gui_layout_scale_percent;
 	s.clamp_scale = true;
+	s.unit = "%";
 	return s;
 }
+#endif
 
 const host_setting* find_setting(std::string_view id)
 {
@@ -463,10 +564,12 @@ const host_setting* find_setting(std::string_view id)
 		if (id == s.id)
 			return &s;
 	}
+#ifndef AMIBERRY_NO_IMGUI
 	if (id == "gui_layout_scale") {
 		static const host_setting scale = scale_setting();
 		return &scale;
 	}
+#endif
 	return nullptr;
 }
 
@@ -484,6 +587,7 @@ amiberry_setting_type setting_type(kind k)
 	case kind::real: return AMIBERRY_SETTING_REAL;
 	case kind::path: return AMIBERRY_SETTING_PATH;
 	case kind::text: return AMIBERRY_SETTING_STRING;
+	case kind::hotkey: return AMIBERRY_SETTING_HOTKEY;
 	}
 	return AMIBERRY_SETTING_STRING;
 }
@@ -500,17 +604,22 @@ std::vector<amiberry_setting_descriptor>& descriptors()
 			d.help = s.help;
 			d.type = setting_type(s.k);
 			d.apply = AMIBERRY_APPLY_LIVE;
-			d.min = s.min;
-			d.max = s.max;
+			// A choice's range is its list (the audio device keeps its
+			// index range for the setter only).
+			d.min = s.k == kind::choice_list ? 0 : s.min;
+			d.max = s.k == kind::choice_list ? 0 : s.max;
 			d.step = s.k == kind::integer || s.k == kind::real ? 1 : 0;
 			d.default_value = s.default_value;
 			d.choices = reinterpret_cast<const amiberry_setting_choice*>(s.choices);
 			d.choice_count = s.choice_count;
+			d.unit = s.unit;
+			d.level = s.level;
 			out.push_back(d);
 		};
 		for (const host_setting& s : settings())
 			add(s);
-		// The GUI scale sits after the other display defaults.
+#ifndef AMIBERRY_NO_IMGUI
+		// The GUI scale (ImGui's) sits after the other display defaults.
 		const host_setting scale = scale_setting();
 		auto at = out.begin();
 		for (auto it = out.begin(); it != out.end(); ++it) {
@@ -521,7 +630,9 @@ std::vector<amiberry_setting_descriptor>& descriptors()
 		d.id = scale.id; d.group = scale.group; d.label = scale.label; d.help = scale.help;
 		d.type = AMIBERRY_SETTING_REAL; d.apply = AMIBERRY_APPLY_LIVE;
 		d.min = scale.min; d.max = scale.max; d.step = 1; d.default_value = scale.default_value;
+		d.unit = scale.unit;
 		out.insert(at, d);
+#endif
 		return out;
 	}();
 	return list;
@@ -534,6 +645,133 @@ const choice* choice_named(const host_setting& s, std::string_view value)
 			return &s.choices[i];
 	}
 	return nullptr;
+}
+
+// The list a listed setting offers now. Entries point into the
+// configuration options' lists, this vector and the stored value's
+// strings, valid until the next main-thread call of the layer.
+std::vector<amiberry_setting_choice> listed_choices;
+std::string stored_value;
+std::string stored_label;
+
+choice_list enumerated(std::string_view option)
+{
+	return amiberry_settings::choices_of(require(option), changed_prefs);
+}
+
+// The stored value, read the way get reports it.
+std::string stored_text(const host_setting& s)
+{
+	if (s.integer)
+		return std::to_string(amiberry_options.*(s.integer));
+	size_t size = 0;
+	const char* text = text_of(s.id, size);
+	return text ? text : "";
+}
+
+void list_choices(const host_setting& s)
+{
+	listed_choices.clear();
+	switch (s.list) {
+	case listing::fixed:
+		break;
+	case listing::port_device: {
+		// The fallback first, then the devices the joyports offer. Where the
+		// fallback is no device, one entry stands for both spellings of
+		// it: the stored "none" while that is the value, else "".
+		size_t size = 0;
+		const bool none_stored = s.empty_is_none && !std::strcmp(text_of(s.id, size), "none");
+		listed_choices.push_back({none_stored ? "none" : "", s.empty_label});
+		const choice_list devices = connected_port_devices();
+		for (size_t i = 0; i < devices.count; i++) {
+			if (!s.empty_is_none || std::strcmp(devices.items[i].value, "none") != 0)
+				listed_choices.push_back(devices.items[i]);
+		}
+		break;
+	}
+	case listing::sound_device: {
+		// Index 0 stands for the system default here, as in the Global
+		// Settings panel, so the first host device is not listed by name.
+		listed_choices.push_back({"0", "System default"});
+		const choice_list devices = enumerated("amiberry.soundcard");
+		for (size_t i = 1; i < devices.count; i++)
+			listed_choices.push_back(devices.items[i]);
+		break;
+	}
+	case listing::shader:
+	case listing::bezel: {
+		listed_choices.push_back({"none", "None"});
+		const choice_list names = enumerated(s.list == listing::shader ? "amiberry.shader" : "amiberry.custom_bezel");
+		for (size_t i = 0; i < names.count; i++) {
+			if (std::strcmp(names.items[i].value, "none") != 0)
+				listed_choices.push_back(names.items[i]);
+		}
+		break;
+	}
+	}
+	// A stored value the list lacks comes first, named for what it is, so
+	// a front end shows the list as it is.
+	stored_value = stored_text(s);
+	for (const amiberry_setting_choice& c : listed_choices) {
+		if (stored_value == c.value)
+			return;
+	}
+	switch (s.list) {
+	case listing::port_device:
+		stored_label = port_device_label(stored_value);
+		break;
+	case listing::sound_device:
+		stored_label = "Audio device " + stored_value + " (not connected)";
+		break;
+	case listing::shader:
+	case listing::bezel:
+		stored_label = stored_value + " (not found)";
+		break;
+	case listing::fixed:
+		stored_label = stored_value;
+		break;
+	}
+	listed_choices.insert(listed_choices.begin(), {stored_value.c_str(), stored_label.c_str()});
+}
+
+// Text no setting of the file keeps as it was set: the loader strips
+// whitespace at both ends (a shader name ending in a space, for one).
+bool trimmed(std::string_view value)
+{
+	return value.empty() || (value.front() != ' ' && value.front() != '\t'
+		&& value.back() != ' ' && value.back() != '\t');
+}
+
+// The port device tokens the core's joyport parser (inputdevice_joyport_config)
+// reads besides the settings layer's: custom input mappings ("custom",
+// "customN") and the first joystick or mouse ("joydefault", "mousedefault").
+bool core_port_device_token(std::string_view value)
+{
+	if (value == "joydefault" || value == "mousedefault" || value == "custom")
+		return true;
+	if (value.substr(0, 6) != "custom" || value.size() == 6)
+		return false;
+	return value.find_first_not_of("0123456789", 6) == std::string_view::npos;
+}
+
+// Whether a text-backed choice setting takes value. A listed setting also
+// takes what its list cannot show now: a device that is not connected, a
+// shader or bezel no longer in its folder.
+bool text_choice_accepted(const host_setting& s, std::string_view value)
+{
+	switch (s.list) {
+	case listing::fixed:
+		return choice_named(s, value) != nullptr;
+	case listing::port_device:
+		return value.empty() || is_port_device_token(value) || core_port_device_token(value);
+	case listing::shader:
+	case listing::bezel:
+		// "none" is how no shader or bezel is spelled; empty names no file.
+		return !value.empty() && trimmed(value);
+	case listing::sound_device:
+		break;
+	}
+	return false;
 }
 
 } // namespace
@@ -579,7 +817,8 @@ amiberry_settings_status host_settings_get(std::string_view id, char* out, size_
 			value = text_of(s->id, text_size);
 		}
 		break;
-	case kind::text: {
+	case kind::text:
+	case kind::hotkey: {
 		size_t text_size = 0;
 		value = text_of(s->id, text_size);
 		break;
@@ -616,11 +855,13 @@ amiberry_settings_status host_settings_set(std::string_view id, std::string_view
 	case kind::integer:
 	case kind::choice_list:
 		if (s->integer) {
-			const choice* chosen = s->k == kind::choice_list ? choice_named(*s, value) : nullptr;
-			if (s->k == kind::choice_list && !chosen && !(s->id == std::string_view("default_fullscreen_mode") && value == "1"))
+			// The audio device takes any index in range, listed or not.
+			const bool ranged = s->k == kind::integer || s->list == listing::sound_device;
+			const choice* chosen = ranged ? nullptr : choice_named(*s, value);
+			if (!ranged && !chosen && !(s->id == std::string_view("default_fullscreen_mode") && value == "1"))
 				return AMIBERRY_SETTINGS_INVALID_VALUE;
 			int number = 0;
-			if (s->k == kind::integer) {
+			if (ranged) {
 				char* end = nullptr;
 				const std::string text(value);
 				errno = 0;
@@ -642,16 +883,23 @@ amiberry_settings_status host_settings_set(std::string_view id, std::string_view
 		{
 			size_t text_size = 0;
 			char* field = text_of(s->id, text_size);
-			if (!field || value.size() >= text_size || !choice_named(*s, value))
+			if (!field || value.size() >= text_size || !text_choice_accepted(*s, value))
 				return AMIBERRY_SETTINGS_INVALID_VALUE;
 			std::snprintf(field, text_size, "%.*s", static_cast<int>(value.size()), value.data());
+			// Picking a bezel shows it instead of the built-in one, and none
+			// shows none, as the Global Settings panel does.
+			if (s->list == listing::bezel) {
+				amiberry_options.use_custom_bezel = _tcsicmp(field, "none") != 0;
+				if (amiberry_options.use_custom_bezel)
+					amiberry_options.use_bezel = false;
+			}
 			return AMIBERRY_SETTINGS_OK;
 		}
-	case kind::text: {
+	case kind::text:
+	case kind::hotkey: {
 		// The loader strips whitespace at both ends, so a value with either
-		// comes back different (a shader name ending in a space, for one).
-		if (!value.empty() && (value.front() == ' ' || value.front() == '\t'
-			|| value.back() == ' ' || value.back() == '\t'))
+		// comes back different.
+		if (!trimmed(value))
 			return AMIBERRY_SETTINGS_INVALID_VALUE;
 		size_t text_size = 0;
 		char* field = text_of(s->id, text_size);
@@ -675,8 +923,7 @@ amiberry_settings_status host_settings_set(std::string_view id, std::string_view
 		// what the next start loads. "key=value\n" must fit the chunk.
 		// The loader strips whitespace at both ends of a value, so a path
 		// with either does not come back as it was set.
-		if (!value.empty() && (value.front() == ' ' || value.front() == '\t'
-			|| value.back() == ' ' || value.back() == '\t'))
+		if (!trimmed(value))
 			return AMIBERRY_SETTINGS_INVALID_VALUE;
 		if (value.size() + std::strlen(s->id) + 2 >= static_cast<size_t>(CONFIG_BLEN))
 			return AMIBERRY_SETTINGS_INVALID_VALUE;
@@ -699,6 +946,21 @@ amiberry_settings_status host_settings_set(std::string_view id, std::string_view
 		return AMIBERRY_SETTINGS_OK;
 	}
 	return AMIBERRY_SETTINGS_UNKNOWN_ID;
+}
+
+size_t host_settings_choices(std::string_view id, const amiberry_setting_choice** out)
+{
+	*out = nullptr;
+	const host_setting* s = find_setting(id);
+	if (!s || s->k != kind::choice_list)
+		return 0;
+	if (s->list == listing::fixed) {
+		*out = reinterpret_cast<const amiberry_setting_choice*>(s->choices);
+		return s->choice_count;
+	}
+	list_choices(*s);
+	*out = listed_choices.data();
+	return listed_choices.size();
 }
 
 bool host_settings_save()
@@ -739,6 +1001,26 @@ amiberry_settings_status amiberry_host_settings_set(const char* id, const char* 
 	if (!value)
 		return AMIBERRY_SETTINGS_INVALID_VALUE;
 	return amiberry_settings::host_settings_set(id, value);
+}
+
+size_t amiberry_host_settings_choices(const char* id, const amiberry_setting_choice** choices)
+{
+	if (!choices)
+		return 0;
+	*choices = nullptr;
+	if (!id)
+		return 0;
+	return amiberry_settings::no_throw<size_t>(0, [&] {
+		return amiberry_settings::host_settings_choices(id, choices);
+	});
+}
+
+void amiberry_host_settings_refresh_choices(void)
+{
+	amiberry_settings::no_throw(0, [] {
+		amiberry_settings::refresh_dynamic_choices();
+		return 0;
+	});
 }
 
 bool amiberry_host_settings_save(void)

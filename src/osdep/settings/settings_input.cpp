@@ -42,16 +42,16 @@ struct static_port_device {
 };
 
 constexpr static_port_device static_port_devices[] = {
-	{JPORT_NONE, "<none>"},
+	{JPORT_NONE, "None"},
 	{JSEM_KBDLAYOUT, "Keyboard Layout A (Numpad, 0/5=Fire, Decimal/DEL=2nd Fire)"},
 	{JSEM_KBDLAYOUT + 1, "Keyboard Layout B (Cursor, RCtrl/RAlt=Fire, RShift=2nd Fire)"},
 	{JSEM_KBDLAYOUT + 2, "Keyboard Layout C (WSAD, LAlt=Fire, LShift=2nd Fire)"},
 	{JSEM_KBDLAYOUT + 8, "Keyboard Layout D (Cursor, LCtrl/LAlt=Fire, LShift=2nd Fire)"},
 	{JSEM_KBDLAYOUT + 3, "Keyrah Layout (Cursor, Space/RAlt=Fire, RShift=2nd Fire)"},
-	{JSEM_KBDLAYOUT + 4, "Retroarch KBD as Joystick Player1"},
-	{JSEM_KBDLAYOUT + 5, "Retroarch KBD as Joystick Player2"},
-	{JSEM_KBDLAYOUT + 6, "Retroarch KBD as Joystick Player3"},
-	{JSEM_KBDLAYOUT + 7, "Retroarch KBD as Joystick Player4"},
+	{JSEM_KBDLAYOUT + 4, "RetroArch keyboard as joystick (player 1)"},
+	{JSEM_KBDLAYOUT + 5, "RetroArch keyboard as joystick (player 2)"},
+	{JSEM_KBDLAYOUT + 6, "RetroArch keyboard as joystick (player 3)"},
+	{JSEM_KBDLAYOUT + 7, "RetroArch keyboard as joystick (player 4)"},
 };
 
 // The token the configuration writer emits for a port device id, the same
@@ -114,13 +114,22 @@ void free_port_devices()
 	port_devices_valid = false;
 }
 
-std::vector<std::string> port_choice_tokens;
-std::vector<std::string> port_choice_labels;
-std::vector<amiberry_setting_choice> port_choice_items;
+// One list's storage: the strings are copied so the items stay valid
+// while the device list is rebuilt, until the next call for the same list.
+struct port_choice_storage {
+	std::vector<std::string> tokens;
+	std::vector<std::string> labels;
+	std::vector<amiberry_setting_choice> items;
+};
+
+// One per port, and one for the connected devices alone.
+port_choice_storage port_choice_lists[MAX_JPORTS + 1];
 
 void remap_session_ports();
 
-void port_dynamic_choices(const uae_prefs&, choice_list& out)
+void get_joyport(const uae_prefs& p, char* out, size_t size, int port);
+
+void update_port_devices()
 {
 	// The joystick list is rebuilt after a device change (the input system
 	// sets joystick_refresh_needed, and this is the one consumer that
@@ -132,21 +141,46 @@ void port_dynamic_choices(const uae_prefs&, choice_list& out)
 		build_port_devices();
 		joystick_refresh_needed = false;
 	}
+}
+
+// The connected devices, after stored when it names a device the list
+// lacks (nullptr: none).
+choice_list fill_port_choices(port_choice_storage& s, const char* stored)
+{
+	update_port_devices();
+	bool listed = stored == nullptr;
+	for (const auto& option : port_devices) {
+		if (!listed && option.token == stored)
+			listed = true;
+	}
 	// Fill the storage before taking pointers into it, so the pointers
 	// stay valid while the vectors grow.
-	port_choice_tokens.clear();
-	port_choice_labels.clear();
-	port_choice_items.clear();
+	s.tokens.clear();
+	s.labels.clear();
+	s.items.clear();
+	if (!listed) {
+		s.tokens.emplace_back(stored);
+		s.labels.push_back(port_device_label(stored));
+	}
 	for (const auto& option : port_devices) {
-		port_choice_tokens.push_back(option.token);
-		port_choice_labels.push_back(option.label);
+		s.tokens.push_back(option.token);
+		s.labels.push_back(option.label);
 	}
-	for (size_t i = 0; i < port_devices.size(); i++) {
-		port_choice_items.push_back({port_choice_tokens[i].c_str(),
-			port_choice_labels[i].c_str()});
-	}
-	out.items = port_choice_items.data();
-	out.count = port_choice_items.size();
+	for (size_t i = 0; i < s.tokens.size(); i++)
+		s.items.push_back({s.tokens[i].c_str(), s.labels[i].c_str()});
+	return {s.items.data(), s.items.size()};
+}
+
+// A port's list starts with the device the configuration holds when that
+// is not connected now, so a front end shows the list as it is.
+void port_dynamic_choices(const uae_prefs& p, choice_list& out, int port)
+{
+	// A device change remaps the ports first, so the stored device read
+	// next is the one the port holds after it.
+	update_port_devices();
+	char stored[32];
+	get_joyport(p, stored, sizeof stored, port);
+	out = fill_port_choices(port_choice_lists[port], stored);
 }
 
 void refresh_port_choices()
@@ -159,7 +193,11 @@ void refresh_port_choices()
 int decode_port_device(std::string_view text, bool& ok)
 {
 	ok = true;
+	// At most six digits: a longer number names no device, and would
+	// overflow the int.
 	auto number = [&](size_t offset) {
+		if (text.size() > offset + 6)
+			return -1;
 		int value = 0;
 		for (size_t i = offset; i < text.size(); i++) {
 			if (text[i] < '0' || text[i] > '9')
@@ -300,14 +338,14 @@ void set_joyport_autofire(uae_prefs& p, const value& v, int port)
 
 const amiberry_setting_choice port_mode_choices[] = {
 	{"", "Default"},
-	{"mouse", "Wheel Mouse"},
+	{"mouse", "Wheel mouse"},
 	{"mousenowheel", "Mouse"},
 	{"djoy", "Joystick"},
 	{"gamepad", "Gamepad"},
-	{"ajoy", "Analog Joystick"},
+	{"ajoy", "Analog joystick"},
 	{"cdtvjoy", "CDTV remote mouse"},
 	{"cd32joy", "CD32 pad"},
-	{"lightpen", "Lightpen"},
+	{"lightpen", "Light pen"},
 };
 
 void get_joyport_mode(const uae_prefs& p, char* out, size_t size, int port)
@@ -320,14 +358,17 @@ void set_joyport_mode(uae_prefs& p, const value& v, int port)
 	p.jports[port].mode = choice_index(CHOICES(port_mode_choices), v.text);
 }
 
+// Which analog sticks of the port's device move the mouse: a bitmask, bit 0
+// the left stick and bit 1 the right, which the mouse-map hotkeys toggle
+// one stick at a time (inputdevice.cpp AKS_MOUSEMAP_*).
 const amiberry_setting_choice mouse_map_choices[] = {
 	{"0", "None"},
-	{"1", "LStick"},
+	{"1", "Left stick"},
+	{"2", "Right stick"},
+	{"3", "Both sticks"},
 };
 
-// The stored value is a bitmask the hotkeys can toggle per stick; the
-// configuration reports it as-is, so 2 or 3 stays visible as its own
-// value even though the panel only writes None or LStick.
+// The configuration reports the bitmask as-is.
 void get_joyport_mousemap(const uae_prefs& p, char* out, size_t size, int port)
 {
 	write_int(out, size, p.jports[port].mousemap);
@@ -349,6 +390,10 @@ bool mousemap_available(const uae_prefs& p, const context&, int port)
 		get_joyport(p, out, size, n); \
 	} \
 	void set_joyport##n(uae_prefs& p, const value& v) { set_joyport(p, v, n); } \
+	void joyport##n##_choices(const uae_prefs& p, choice_list& out) \
+	{ \
+		port_dynamic_choices(p, out, n); \
+	} \
 	void get_joyport##n##autofire(const uae_prefs& p, char* out, size_t size) \
 	{ \
 		get_joyport_autofire(p, out, size, n); \
@@ -584,26 +629,29 @@ bool tablet_option_available(const uae_prefs& p, const context&)
 	{id, group, label, help, AMIBERRY_SETTING_CHOICE, apply, 0, 0, 0, def, CHOICES(choices), constraint}
 #define DYNAMIC_CHOICE_OPTION(id, group, label, help, apply, def, constraint) \
 	{id, group, label, help, AMIBERRY_SETTING_CHOICE, apply, 0, 0, 0, def, nullptr, 0, constraint}
-#define NUMBER_OPTION(id, group, label, help, apply, min, max, step, def, constraint) \
-	{id, group, label, help, AMIBERRY_SETTING_INT, apply, min, max, step, def, nullptr, 0, constraint}
+// A number shown with its unit; level: set by feel, so a front end may show
+// a slider.
+#define MEASURED_OPTION(id, group, label, help, apply, min, max, step, def, constraint, unit, level) \
+	{id, group, label, help, AMIBERRY_SETTING_INT, apply, min, max, step, def, nullptr, 0, constraint, \
+		false, unit, 0, level}
 
 const definition definitions[] = {
 	{DYNAMIC_CHOICE_OPTION("joyport0", "input", "Port 1 device",
 			"Input device for joyport 1, the mouse port.",
 			AMIBERRY_APPLY_LIVE, "mouse", nullptr),
-		get_joyport0, set_joyport0, nullptr, nullptr, nullptr, nullptr, port_dynamic_choices},
+		get_joyport0, set_joyport0, nullptr, nullptr, nullptr, nullptr, joyport0_choices},
 	{DYNAMIC_CHOICE_OPTION("joyport1", "input", "Port 2 device",
 			"Input device for joyport 2, the joystick port.",
 			AMIBERRY_APPLY_LIVE, "joy0", nullptr),
-		get_joyport1, set_joyport1, nullptr, nullptr, nullptr, nullptr, port_dynamic_choices},
+		get_joyport1, set_joyport1, nullptr, nullptr, nullptr, nullptr, joyport1_choices},
 	{DYNAMIC_CHOICE_OPTION("joyport2", "input", "Port 3 device",
 			"Input device for the parallel port adapter's first joyport.",
 			AMIBERRY_APPLY_LIVE, "none", nullptr),
-		get_joyport2, set_joyport2, nullptr, nullptr, nullptr, nullptr, port_dynamic_choices},
+		get_joyport2, set_joyport2, nullptr, nullptr, nullptr, nullptr, joyport2_choices},
 	{DYNAMIC_CHOICE_OPTION("joyport3", "input", "Port 4 device",
 			"Input device for the parallel port adapter's second joyport.",
 			AMIBERRY_APPLY_LIVE, "none", nullptr),
-		get_joyport3, set_joyport3, nullptr, nullptr, nullptr, nullptr, port_dynamic_choices},
+		get_joyport3, set_joyport3, nullptr, nullptr, nullptr, nullptr, joyport3_choices},
 	{CHOICE_OPTION("joyport0autofire", "input", "Port 1 autofire",
 			"Autofire for the Port 1 device.",
 			AMIBERRY_APPLY_LIVE, "none", autofire_choices, nullptr),
@@ -653,14 +701,14 @@ const definition definitions[] = {
 			AMIBERRY_APPLY_LIVE, "true", nullptr),
 		get_input_joystick_up_button, set_input_joystick_up_button, nullptr, nullptr, nullptr,
 		nullptr},
-	{NUMBER_OPTION("input.joystick_deadzone", "input", "Joystick dead zone",
+	{MEASURED_OPTION("input.joystick_deadzone", "input", "Joystick dead zone",
 			"Analog stick dead zone as a percentage of full deflection.",
-			AMIBERRY_APPLY_LIVE, 0, 100, 1, "33", nullptr),
+			AMIBERRY_APPLY_LIVE, 0, 100, 1, "33", nullptr, "%", true),
 		get_input_joystick_deadzone, set_input_joystick_deadzone, nullptr, nullptr, nullptr,
 		nullptr},
-	{NUMBER_OPTION("input.autofire_speed", "input", "Autofire rate",
+	{MEASURED_OPTION("input.autofire_speed", "input", "Autofire rate",
 			"Autofire period in scanlines; 1248 is fast, 3744 is slow, 0 is off.",
-			AMIBERRY_APPLY_LIVE, 0, 3744, 1, "600", nullptr),
+			AMIBERRY_APPLY_LIVE, 0, 3744, 1, "600", nullptr, "scanlines", false),
 		get_input_autofire_speed, set_input_autofire_speed, nullptr, nullptr, nullptr, nullptr},
 	{CHOICE_OPTION("input.joymouse_speed_digital", "input", "Digital joy-mouse speed",
 			"Mouse cursor speed when digital joystick directions drive the mouse.",
@@ -672,11 +720,11 @@ const definition definitions[] = {
 			AMIBERRY_APPLY_LIVE, "25", analog_speed_choices, nullptr),
 		get_input_joymouse_speed_analog, set_input_joymouse_speed_analog, nullptr, nullptr,
 		nullptr, nullptr},
-	{NUMBER_OPTION("input.mouse_speed", "input", "Mouse speed",
-			"Speed of the real mouse and touch pointer; 100 is normal. The core resets "
+	{MEASURED_OPTION("input.mouse_speed", "input", "Mouse speed",
+			"Speed of the real mouse and touch pointer; 100% is normal. The core resets "
 			"values outside 1 to 1000 to 100.",
 			AMIBERRY_APPLY_LIVE, 1, 1000, 1, "100",
-			"Between 1 and 1000; the core resets anything else to 100."),
+			"Between 1 and 1000; the core resets anything else to 100.", "%", false),
 		get_input_mouse_speed, set_input_mouse_speed, nullptr, nullptr, nullptr, nullptr},
 	{BOOL_OPTION("magic_mouse", "input", "Magic Mouse untrap",
 			"Release the mouse from the emulator window with the Magic Mouse button.",
@@ -761,6 +809,50 @@ const domain input = {
 const domain& input_domain()
 {
 	return input;
+}
+
+bool is_port_device_token(std::string_view text)
+{
+	bool ok = false;
+	decode_port_device(text, ok);
+	return ok;
+}
+
+choice_list connected_port_devices()
+{
+	return fill_port_choices(port_choice_lists[MAX_JPORTS], nullptr);
+}
+
+namespace {
+
+// The number a token ends in, from offset; 0 when it has none.
+int token_number(std::string_view token, size_t offset)
+{
+	int number = 0;
+	for (size_t i = offset; i < token.size() && number < 100000; i++)
+		number = number * 10 + (token[i] - '0');
+	return number;
+}
+
+} // namespace
+
+std::string port_device_label(std::string_view token)
+{
+	if (token == "joydefault")
+		return "Default joystick";
+	if (token == "mousedefault")
+		return "Default mouse";
+	if (token == "custom")
+		return "Custom input mapping";
+	if (token.substr(0, 6) == "custom")
+		return "Custom input mapping " + std::to_string(token_number(token, 6) + 1);
+	if (token.substr(0, 3) == "joy")
+		return "Joystick " + std::to_string(token_number(token, 3) + 1) + " (not connected)";
+	if (token.substr(0, 5) == "mouse")
+		return "Mouse " + std::to_string(token_number(token, 5) + 1) + " (not connected)";
+	if (token.substr(0, 3) == "kbd")
+		return "Keyboard layout " + std::to_string(token_number(token, 3));
+	return std::string(token);
 }
 
 } // namespace amiberry_settings
