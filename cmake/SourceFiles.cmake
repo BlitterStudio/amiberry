@@ -690,6 +690,14 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Haiku")
     target_compile_options(${PROJECT_NAME} PRIVATE -include arch/x86_64/signal.h)
 endif()
 
+# Haiku executables link non-PIE by default, and its linker rejects the
+# local-exec TLS relocations (R_X86_64_TPOFF32) our thread_local variables
+# produce when the main program is linked PIE. Keep the executable non-PIE;
+# the CAPSImage/floppybridge plugins stay PIC through the global setting.
+if(CMAKE_SYSTEM_NAME STREQUAL "Haiku")
+    set_target_properties(${PROJECT_NAME} PROPERTIES POSITION_INDEPENDENT_CODE OFF)
+endif()
+
 if (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64" OR CMAKE_SYSTEM_PROCESSOR MATCHES "arm64")
     target_compile_definitions(${PROJECT_NAME} PRIVATE CPU_AARCH64)
 elseif (CMAKE_SYSTEM_PROCESSOR MATCHES "arm")
