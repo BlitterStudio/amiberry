@@ -681,6 +681,15 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
         SOUND_PLATFORM_HEADER="sound_platform_internal_host.h"
 )
 
+# Haiku: <arch/x86_64/signal.h> declares `struct fpu_state` with members
+# named cs and ss. PCem's x86.h #defines cs/ds/es/ss as register macros,
+# which mangles that struct when a system header pulls signal.h in after
+# the PCem headers. Force the struct in first; its include guard keeps it
+# from being re-parsed under the macros.
+if(CMAKE_SYSTEM_NAME STREQUAL "Haiku")
+    target_compile_options(${PROJECT_NAME} PRIVATE -include arch/x86_64/signal.h)
+endif()
+
 if (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64" OR CMAKE_SYSTEM_PROCESSOR MATCHES "arm64")
     target_compile_definitions(${PROJECT_NAME} PRIVATE CPU_AARCH64)
 elseif (CMAKE_SYSTEM_PROCESSOR MATCHES "arm")

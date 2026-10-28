@@ -257,6 +257,16 @@ if(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
 endif()
 
 # Install system and packaging
+# Haiku packages install into /boot/system using the platform's own
+# hierarchy: data files under data/, documentation under documentation/,
+# man pages under documentation/man (GNUInstallDirs would otherwise use
+# the GNU share/ layout everywhere). Seed the cache before the include so
+# GNUInstallDirs adopts these instead of its GNU defaults.
+if (CMAKE_SYSTEM_NAME STREQUAL "Haiku")
+    set(CMAKE_INSTALL_DATADIR "data" CACHE PATH "Object read-only architecture-independent data")
+    set(CMAKE_INSTALL_DOCDIR "documentation/packages/${PROJECT_NAME}" CACHE PATH "Documentation root")
+    set(CMAKE_INSTALL_MANDIR "documentation/man" CACHE PATH "Man documentation root")
+endif ()
 include(GNUInstallDirs)
 if (WIN32)
     # Windows apps conventionally live directly under their install folder,
@@ -264,15 +274,6 @@ if (WIN32)
     set(CMAKE_INSTALL_BINDIR ".")
     set(CMAKE_INSTALL_LIBDIR ".")
 endif()
-# Haiku packages install into /boot/system using the platform's own
-# hierarchy: data files under data/, documentation under documentation/,
-# man pages under documentation/man (GNUInstallDirs would otherwise use
-# the GNU share/ layout everywhere).
-if (CMAKE_SYSTEM_NAME STREQUAL "Haiku")
-    set(CMAKE_INSTALL_DATADIR "data" CACHE PATH "Object read-only architecture-independent data")
-    set(CMAKE_INSTALL_DOCDIR "documentation/packages/${PROJECT_NAME}" CACHE PATH "Documentation root")
-    set(CMAKE_INSTALL_MANDIR "documentation/man" CACHE PATH "Man documentation root")
-endif ()
 set(AMIBERRY_PACKAGE_METADATA_EXCLUDES
     PATTERN ".DS_Store" EXCLUDE
     PATTERN "._*" EXCLUDE
