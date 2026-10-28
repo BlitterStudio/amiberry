@@ -62,13 +62,16 @@ find "$root" -type f | while IFS= read -r f; do
 	fi
 done
 
-# Libraries of the haiku base package; every other library must be provided
-# by an installed HaikuPorts package, which `requires lib:<name>` pulls in.
-system_libs=' libroot.so libbe.so libnetwork.so libbsd.so libgcc_s.so libstdc++.so libsupc++.so '
+# Libraries of the haiku base package (some carry Linux-style version
+# suffixes, so match on the stripped name); every other library must be
+# provided by an installed HaikuPorts package, which `requires lib:<name>`
+# pulls in.
+system_libs=' libroot libbe libnetwork libbsd libgcc_s libstdc++ libsupc++ '
 : > "$work/requires"
 for soname in $(LC_ALL=C sort -u "$work/needed"); do
+	lib=$(printf '%s' "$soname" | sed 's/\.so\.[0-9.]*$//; s/\.so$//')
 	case " $system_libs " in
-	*" $soname "*) continue ;;
+	*" $lib "*) continue ;;
 	esac
 	if find "$root/lib" -name "$soname" | grep -q .; then
 		continue # shipped inside this package
@@ -77,30 +80,31 @@ for soname in $(LC_ALL=C sort -u "$work/needed"); do
 		echo "error: no installed package provides $soname" >&2
 		exit 1
 	fi
-	printf 'lib:%s\n' "$(printf '%s' "$soname" | sed 's/\.so\.[0-9.]*$//; s/\.so$//')" >> "$work/requires"
+	printf 'lib:%s\n' "$lib" >> "$work/requires"
 done
 
 description=$(tr '\n' ' ' < "$src_dir/packaging/Description.txt" | tr -s ' ')
+tab=$(printf '\t')
 
 {
-	echo "name\t\tamiberry"
-	echo "version\t\t$hpkg_version"
-	echo "architecture\tx86_64"
-	echo 'summary\t\t"Optimized Amiga emulator"'
-	echo "description\t\"$description\""
-	echo 'packager\t"Dimitris Panokostas <midwan@gmail.com>"'
-	echo 'vendor\t\t"BlitterStudio"'
-	echo 'copyrights\t[ "The Amiberry contributors" ]'
-	echo 'licenses\t[ "GNU GPL v3" ]'
-	echo 'urls\t\t[ "https://amiberry.com", "https://github.com/BlitterStudio/amiberry" ]'
-	echo 'provides\t['
-	echo "\t\t\tamiberry = $hpkg_version"
-	echo "\t\t\tcmd:amiberry = $hpkg_version"
-	echo '\t\t]'
-	echo 'requires\t['
-	echo '\t\t\thaiku'
-	LC_ALL=C sort -u "$work/requires" | sed 's/^/\t\t\t/'
-	echo '\t\t]'
+	printf 'name\t\tamiberry\n'
+	printf 'version\t\t%s\n' "$hpkg_version"
+	printf 'architecture\tx86_64\n'
+	printf 'summary\t\t"Optimized Amiga emulator"\n'
+	printf 'description\t"%s"\n' "$description"
+	printf 'packager\t"Dimitris Panokostas <midwan@gmail.com>"\n'
+	printf 'vendor\t\t"BlitterStudio"\n'
+	printf 'copyrights\t[ "The Amiberry contributors" ]\n'
+	printf 'licenses\t[ "GNU GPL v3" ]\n'
+	printf 'urls\t\t[ "https://amiberry.com", "https://github.com/BlitterStudio/amiberry" ]\n'
+	printf 'provides\t[\n'
+	printf '\t\t\tamiberry = %s\n' "$hpkg_version"
+	printf '\t\t\tcmd:amiberry = %s\n' "$hpkg_version"
+	printf '\t\t]\n'
+	printf 'requires\t[\n'
+	printf '\t\t\thaiku\n'
+	LC_ALL=C sort -u "$work/requires" | sed "s/^/${tab}${tab}${tab}/"
+	printf '\t\t]\n'
 } > "$work/.PackageInfo"
 
 echo "--- .PackageInfo ---"
