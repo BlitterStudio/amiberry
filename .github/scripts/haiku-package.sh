@@ -94,17 +94,17 @@ tab=$(printf '\t')
 	printf 'description\t"%s"\n' "$description"
 	printf 'packager\t"Dimitris Panokostas <midwan@gmail.com>"\n'
 	printf 'vendor\t\t"BlitterStudio"\n'
-	printf 'copyrights\t[ "The Amiberry contributors" ]\n'
-	printf 'licenses\t[ "GNU GPL v3" ]\n'
-	printf 'urls\t\t[ "https://amiberry.com", "https://github.com/BlitterStudio/amiberry" ]\n'
-	printf 'provides\t[\n'
+	printf 'copyrights\t{ "The Amiberry contributors" }\n'
+	printf 'licenses\t{ "GNU GPL v3" }\n'
+	printf 'urls\t\t{\n\t\t\thttps://amiberry.com\n\t\t\thttps://github.com/BlitterStudio/amiberry\n\t\t}\n'
+	printf 'provides\t{\n'
 	printf '\t\t\tamiberry = %s\n' "$hpkg_version"
 	printf '\t\t\tcmd:amiberry = %s\n' "$hpkg_version"
-	printf '\t\t]\n'
-	printf 'requires\t[\n'
+	printf '\t\t}\n'
+	printf 'requires\t{\n'
 	printf '\t\t\thaiku\n'
 	LC_ALL=C sort -u "$work/requires" | sed "s/^/${tab}${tab}${tab}/"
-	printf '\t\t]\n'
+	printf '\t\t}\n'
 } > "$work/.PackageInfo"
 
 echo "--- .PackageInfo ---"
