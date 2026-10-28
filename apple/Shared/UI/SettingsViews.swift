@@ -776,7 +776,13 @@ struct TextControl: View {
 					}
 					Button("Choose\u{2026}") {
 						let title = SettingsCatalog.descriptor(for: descriptor.id)?.label ?? descriptor.label
-						if let path = FilePanels.choose(.forOption(descriptor.id), title: title, startingAt: draft) {
+						// A folder setting (Print to folder) picks a folder, as
+						// the Mac's row does.
+						let folder = FileRequest.namesFolder(descriptor.id)
+						let picked = folder
+							? FilePanels.chooseFolder(title: title, startingAt: draft)
+							: FilePanels.choose(.forOption(descriptor.id), title: title, startingAt: draft)
+						if let path = picked {
 							draft = path
 						}
 					}
