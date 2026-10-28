@@ -52,21 +52,34 @@ jobs:
               gcc \
               libsdl3_devel sdl3_image_devel \
               flac_devel mpg123_devel libpng16_devel zlib_devel zstd_devel \
-              enet_devel portmidi_devel libmpeg2_devel nlohmann_json_devel \
+              enet_devel portmidi_devel libmpeg2_devel \
+              nlohmann_json \
               ffmpeg8_devel libwebp_devel libiconv_devel curl_devel mesa_devel
           run: |
             set -eu
             uname -a
-            cc --version | head -1
+
+            # The header-only nlohmann_json package installs its CMake config
+            # outside CMake's default search paths; point find_package at it.
+            json_config=$(find /boot/system -type f -name 'nlohmann_jsonConfig.cmake' 2>/dev/null | head -1)
+            echo "nlohmann_json config: ${json_config:-NOT FOUND}"
+            json_dir_args=
+            [ -z "$json_config" ] || json_dir_args="-Dnlohmann_json_DIR=$(dirname "$json_config")"
+
+            # Diagnostics for the first bring-up: where the HaikuPorts CMake
+            # package configs live.
+            find /boot/system -type f -name '*Config.cmake' 2>/dev/null | sort | sed -n '1,40p'
 
             # Release packages must run on any x86_64 CPU: no WITH_OPTIMIZE.
             # Build and stage outside the synced workspace so the action's
             # copyback returns only the package, not the build tree.
+            # shellcheck disable=SC2086
             cmake -S . -B /tmp/build-haiku -G Ninja \
               -DCMAKE_BUILD_TYPE=Release \
               -DCMAKE_INSTALL_PREFIX=/boot/system \
               -DUSE_LIBSERIALPORT=OFF \
-              -DUSE_UAENET_PCAP=OFF
+              -DUSE_UAENET_PCAP=OFF \
+              $json_dir_args
             cmake --build /tmp/build-haiku --parallel 4
 
             # Stage through the normal install rules, including CAPSImage and
