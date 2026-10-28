@@ -10,7 +10,7 @@
  * ppc_cpu_* prototypes are plain C++ declarations (no extern "C").
  *
  * Copyright (C) 2026 Dimitris Panokostas
- * SPDX-License-Identifier: GPL-3.0-or-later
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #ifndef UAE_PPC_H

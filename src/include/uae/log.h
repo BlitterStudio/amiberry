@@ -10,7 +10,7 @@
  * <cstdio> must be visible at the expansion site (sysdeps.h provides them).
  *
  * Copyright (C) 2026 Dimitris Panokostas
- * SPDX-License-Identifier: GPL-3.0-or-later
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #ifndef UAE_LOG_H

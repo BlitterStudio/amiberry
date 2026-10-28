@@ -11,7 +11,7 @@
  * separation; uae_vm_free releases the whole allocation and ignores `size`.
  *
  * Copyright (C) 2026 Dimitris Panokostas
- * SPDX-License-Identifier: GPL-3.0-or-later
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #include "sysconfig.h"
