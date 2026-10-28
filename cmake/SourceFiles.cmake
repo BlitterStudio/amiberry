@@ -686,7 +686,7 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
 # which mangles that struct when a system header pulls signal.h in after
 # the PCem headers. Force the struct in first; its include guard keeps it
 # from being re-parsed under the macros.
-if(CMAKE_SYSTEM_NAME STREQUAL "Haiku")
+if(CMAKE_SYSTEM_NAME STREQUAL "Haiku" AND CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64|amd64")
     target_compile_options(${PROJECT_NAME} PRIVATE -include arch/x86_64/signal.h)
 endif()
 
