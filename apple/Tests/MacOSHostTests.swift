@@ -415,16 +415,22 @@ final class SettingsPagesTests: XCTestCase {
 			MediaEntry(path: "/ROMs/Forever/amiga-os-310-a1200.rom", name: "KS ROM v3.1 (A1200)"),
 		]
 		let scanned = KickstartROMControl.choices(roms: roms, current: "/ROMs/kick13.rom")
-		XCTAssertEqual(scanned.map(\.value), ["", "/ROMs/kick13.rom", "/ROMs/kick31.rom", "/ROMs/Forever/amiga-os-310-a1200.rom"])
+		XCTAssertEqual(scanned.map(\.value),
+			["", ":AROS", "/ROMs/kick13.rom", "/ROMs/kick31.rom", "/ROMs/Forever/amiga-os-310-a1200.rom"])
 		XCTAssertEqual(scanned.map(\.label), [
-			"AROS (built-in)", "KS ROM v1.3 (A500,A1000,A2000)",
+			"Automatic", "AROS (built-in)", "KS ROM v1.3 (A500,A1000,A2000)",
 			"KS ROM v3.1 (A1200) \u{2014} kick31.rom", "KS ROM v3.1 (A1200) \u{2014} amiga-os-310-a1200.rom",
 		], "a name two ROMs share says which file")
 		// A ROM picked outside the scan shows by its file name, after AROS.
 		let other = KickstartROMControl.choices(roms: roms, current: "/Elsewhere/my.rom")
-		XCTAssertEqual(other.prefix(2).map(\.value), ["", "/Elsewhere/my.rom"])
-		XCTAssertEqual(other[1].label, "my.rom")
-		XCTAssertEqual(KickstartROMControl.choices(roms: [], current: "").map(\.label), ["AROS (built-in)"])
+		XCTAssertEqual(other.prefix(3).map(\.value), ["", ":AROS", "/Elsewhere/my.rom"])
+		XCTAssertEqual(other[2].label, "my.rom")
+		XCTAssertEqual(KickstartROMControl.choices(roms: [], current: "").map(\.label), ["Automatic", "AROS (built-in)"])
+		// AROS is the explicit token: no file still looks for a kick.rom
+		// (memory.cpp), so choosing AROS must not store "".
+		XCTAssertEqual(KickstartROMControl.choices(roms: [], current: "").first { $0.label == "AROS (built-in)" }?.value, ":AROS")
+		XCTAssertEqual(KickstartROMControl.choices(roms: [], current: "/a.rp9:AROS").map(\.value), ["", "/a.rp9:AROS"],
+			"an RP9's built-in AROS is the AROS entry")
 	}
 }
 
@@ -843,6 +849,45 @@ final class LibraryTests: XCTestCase {
 		// One file, spelled as before.
 		let names = try FileManager.default.contentsOfDirectory(atPath: folder).filter { $0.hasPrefix(name) }
 		XCTAssertEqual(names, [name + ".UAE"])
+	}
+
+	func testAFailedSaveStillAsksAboutTheEditsOnClosing() async throws {
+		// A machine whose file cannot be written: in a read-only folder.
+		let folder = FileManager.default.temporaryDirectory.appendingPathComponent("readonly-\(UUID().uuidString)")
+		try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+		let file = folder.appendingPathComponent("Locked.uae")
+		try "config_description=Old\n".write(to: file, atomically: true, encoding: .utf8)
+		try FileManager.default.setAttributes([.posixPermissions: 0o444], ofItemAtPath: file.path)
+		try FileManager.default.setAttributes([.posixPermissions: 0o555], ofItemAtPath: folder.path)
+		defer {
+			try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: folder.path)
+			try? FileManager.default.setAttributes([.posixPermissions: 0o644], ofItemAtPath: file.path)
+			try? FileManager.default.removeItem(at: folder)
+		}
+		var closed = 0
+		let model = try SettingsWindowModel(emulating: false, dismiss: {}, post: { _ in true },
+			machine: Machine(path: file.path, name: "Locked", description: "Old", category: ""),
+			closeToLibrary: { closed += 1 })
+		var asked = 0
+		model.askAboutUnsavedChanges = { _ in
+			asked += 1
+			return .cancel
+		}
+		let saving = Task { await model.save(name: "Locked", description: "New", category: "") }
+		var saved: Bool?
+		for _ in 0..<200 where saved == nil {
+			ActionPump.runPending()
+			try await Task.sleep(for: .milliseconds(10))
+			if model.notice != nil {
+				saved = await saving.value
+			}
+		}
+		XCTAssertEqual(saved, false, "the file is read-only")
+		XCTAssertFalse(model.store.hasChanges, "the save committed the session")
+		XCTAssertTrue(model.hasUnsavedChanges, "but the file still lacks the edits")
+		model.closeRequested()
+		XCTAssertEqual(asked, 1, "closing asks before the edits are lost")
+		XCTAssertEqual(closed, 0, "Cancel keeps the editor open")
 	}
 
 	func testClosingAnEditorFromTheLibraryGoesBackToIt() throws {

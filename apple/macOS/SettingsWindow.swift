@@ -163,7 +163,7 @@ private struct EditedWindowMarker<Content: View>: View {
 	let content: Content
 
 	var body: some View {
-		content.onChange(of: model.store.hasChanges, initial: true) { _, changed in
+		content.onChange(of: model.hasUnsavedChanges, initial: true) { _, changed in
 			window?.isDocumentEdited = model.fromLibrary && changed
 		}
 	}

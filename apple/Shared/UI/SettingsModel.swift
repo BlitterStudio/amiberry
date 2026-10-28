@@ -313,6 +313,9 @@ final class SettingsWindowModel {
 			return false
 		}
 		guard commit() else { return false }
+		// The session is committed from here on, so its edits are no longer
+		// changes to it: until the file has them, they are still unsaved.
+		committedNotSaved = true
 		guard let ticket = EmulatorActions.post(.saveConfiguration(path: path)) else {
 			notice = "The emulator did not accept the request. Try again."
 			return false
@@ -326,12 +329,21 @@ final class SettingsWindowModel {
 				return false
 			case .done, .unknown:
 				notice = nil
+				committedNotSaved = false
 				// The editor now edits the machine just saved.
 				machine = Machine(path: path, name: trimmed, description: description, category: category)
 				return true
 			}
 		}
 	}
+
+	/// Edits a save committed but could not write to the machine's file
+	/// (a read-only folder, say): the session has them, the file not.
+	private(set) var committedNotSaved = false
+
+	/// Whether the machine's file lacks edits: the session's, or those a
+	/// failed save committed. Closing or starting asks about them.
+	var hasUnsavedChanges: Bool { store.hasChanges || committedNotSaved }
 
 	/// The expansion boards wait for a restart: the session's differ from
 	/// the running emulation's.
@@ -359,7 +371,7 @@ final class SettingsWindowModel {
 	/// later loads its file, where unsaved edits are gone.
 	func startOrResume() {
 		guard !savingBeforeLeaving else { return }
-		if !emulating, machine != nil, store.hasChanges, let ask = askAboutUnsavedChanges {
+		if !emulating, machine != nil, hasUnsavedChanges, let ask = askAboutUnsavedChanges {
 			switch ask(title) {
 			case .cancel:
 				return
@@ -458,7 +470,7 @@ final class SettingsWindowModel {
 			startOrResume()
 		} else if let closeToLibrary {
 			guard !savingBeforeLeaving else { return }
-			if store.hasChanges, let ask = askAboutUnsavedChanges {
+			if hasUnsavedChanges, let ask = askAboutUnsavedChanges {
 				switch ask(title) {
 				case .cancel:
 					return

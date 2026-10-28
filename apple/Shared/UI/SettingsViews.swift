@@ -586,9 +586,10 @@ struct LevelControl<Label: View>: View {
 	}
 }
 
-/// The Kickstart ROM as a pop-up: the built-in AROS ROM (no file), the
-/// ROMs the last scan of the ROMs folder recognised, by name, and Choose
-/// File… for another, which opens in the ROMs folder.
+/// The Kickstart ROM as a pop-up: Automatic (no file: a kick.rom in the
+/// usual places, else AROS), the built-in AROS ROM, the ROMs the last scan
+/// of the ROMs folder recognised, by name, and Choose File… for another,
+/// which opens in the ROMs folder.
 struct KickstartROMControl: View {
 	static let optionID = "kickstart_rom_file"
 	/// Choose File…'s tag: no path holds a NUL.
@@ -625,17 +626,22 @@ struct KickstartROMControl: View {
 		}
 	}
 
-	/// The pop-up's entries: AROS for no file (or the built-in AROS an RP9
-	/// names, ":AROS"); a file the scan did not list (one picked elsewhere)
-	/// by its name; then the scanned ROMs by name, those two ROMs share
-	/// followed by each one's file name.
+	/// The pop-up's entries: Automatic for no file; the built-in AROS ROM,
+	/// stored as memory.cpp's explicit ":AROS" (an RP9's "<path>:AROS"
+	/// reads as it too), since no file still looks for a kick.rom first; a
+	/// file the scan did not list (one picked elsewhere) by its name; then
+	/// the scanned ROMs by name, those two ROMs share followed by each
+	/// one's file name.
 	static func choices(roms: [MediaEntry], current: String) -> [SettingChoice] {
 		var counts: [String: Int] = [:]
 		for rom in roms {
 			counts[rom.name, default: 0] += 1
 		}
 		let builtIn = current.hasSuffix(":AROS")
-		var list = [SettingChoice(value: builtIn ? current : "", label: "AROS (built-in)")]
+		var list = [
+			SettingChoice(value: "", label: "Automatic"),
+			SettingChoice(value: builtIn ? current : ":AROS", label: "AROS (built-in)"),
+		]
 		if !current.isEmpty, !builtIn, !roms.contains(where: { $0.path == current }) {
 			list.append(SettingChoice(value: current, label: (current as NSString).lastPathComponent))
 		}
