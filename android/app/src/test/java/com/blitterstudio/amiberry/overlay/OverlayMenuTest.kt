@@ -48,8 +48,8 @@ class OverlayMenuTest {
 
 	@Test
 	fun `cancelling a confirmation goes back to the item that asked`() {
-		val confirm = OverlayMenu.HOME.open(OverlayPage.Confirm(ConfirmAction.QUIT), OverlayKeys.QUIT)
-		assertEquals(OverlayPage.Confirm(ConfirmAction.QUIT), confirm.page)
+		val confirm = OverlayMenu.HOME.open(OverlayPage.Confirm(ConfirmAction.Quit), OverlayKeys.QUIT)
+		assertEquals(OverlayPage.Confirm(ConfirmAction.Quit), confirm.page)
 		val home = confirm.back()!!
 		assertEquals(OverlayPage.Home, home.page)
 		assertEquals(OverlayKeys.QUIT, home.focus)

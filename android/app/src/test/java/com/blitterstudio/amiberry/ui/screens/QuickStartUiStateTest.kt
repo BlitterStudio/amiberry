@@ -69,6 +69,30 @@ class QuickStartUiStateTest {
 	}
 
 	@Test
+	fun `on a TV with no gamepad the controls summary names the remote, not the touch joystick`() {
+		val settings = EmulatorSettings.fromModel(AmigaModel.A500).copy(
+			onScreenJoystick = true,
+			onScreenKeyboardButton = true
+		)
+
+		val disk = QuickStartUiState.buildEffectiveSummary(
+			settings = settings,
+			launchMode = QuickStartLaunchMode.DISK,
+			selectedModelAvailable = true,
+			remoteDrivesPort2 = true
+		)
+		val whdload = QuickStartUiState.buildWhdLoadSummary(
+			launchSettings = settings.copy(onScreenKeyboardButton = false, onScreenKeyboardToggle = ""),
+			selectedWhdloadName = null,
+			perGameConfigName = null,
+			remoteDrivesPort2 = true
+		)
+
+		assertEquals("Remote as the Port 2 joystick, on-screen keyboard", disk.controls)
+		assertEquals("Remote as the Port 2 joystick", whdload.controls)
+	}
+
+	@Test
 	fun `whdload summary names the game's own configuration`() {
 		val summary = QuickStartUiState.buildWhdLoadSummary(
 			launchSettings = EmulatorSettings(),

@@ -11,7 +11,13 @@ import com.blitterstudio.amiberry.data.model.SettingsSchema
 object OverlaySettings {
 	const val ON_SCREEN_JOYSTICK = "amiberry.onscreen_joystick"
 	const val ON_SCREEN_KEYBOARD = "amiberry.vkbd_enabled"
+	const val PORT_1 = "joyport0"
+	const val PORT_2 = "joyport1"
 	const val SHADER = "amiberry.shader"
+	const val CD_VOLUME = "sound_volume_cd"
+
+	/** The Controls page's port devices (choices the layer lists at run time). */
+	val PORTS = listOf(PORT_1, PORT_2)
 
 	/** The Controls page's switches. */
 	val CONTROLS = listOf(ON_SCREEN_JOYSTICK, ON_SCREEN_KEYBOARD)
@@ -20,14 +26,21 @@ object OverlaySettings {
 	val SETTINGS = listOf(
 		"sound_volume",
 		"sound_volume_paula",
-		"sound_volume_cd",
+		CD_VOLUME,
 		"cpu_speed",
 		SHADER,
 		"amiberry.gfx_auto_crop"
 	)
 
 	/** Every option the menu reads. */
-	val ALL: List<String> = CONTROLS + SETTINGS
+	val ALL: List<String> = PORTS + CONTROLS + SETTINGS
+
+	/** The values of the two ports swapped, as [OverlayNative.changeSettings] sets them; null unless both are known. */
+	fun swappedPorts(settings: Map<String, SettingState>): Map<String, String>? {
+		val port1 = settings[PORT_1]?.value ?: return null
+		val port2 = settings[PORT_2]?.value ?: return null
+		return mapOf(PORT_1 to port2, PORT_2 to port1)
+	}
 
 	private const val APPLY_LIVE = "live"
 

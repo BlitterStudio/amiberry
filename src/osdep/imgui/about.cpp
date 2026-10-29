@@ -363,11 +363,19 @@ void render_panel_about()
 	ImGui::Separator();
 	ImGui::Spacing();
 
-	render_update_section();
+#ifdef __ANDROID__
+	// The app store updates the Android app.
+	constexpr bool show_update_section = false;
+#else
+	constexpr bool show_update_section = true;
+#endif
+	if (show_update_section) {
+		render_update_section();
 
-	ImGui::Spacing();
-	ImGui::Separator();
-	ImGui::Spacing();
+		ImGui::Spacing();
+		ImGui::Separator();
+		ImGui::Spacing();
+	}
 
 	static auto about_long_text =
 		"This program is free software: you can redistribute it and/or modify\n"

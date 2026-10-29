@@ -4,6 +4,28 @@ import com.blitterstudio.amiberry.data.model.EmulatorSettings
 
 object AndroidControlSettings {
 
+	/**
+	 * The controls a new installation starts with. Touch devices get the
+	 * on-screen joystick in port 2 and the keyboard's touch button; a TV
+	 * (leanback: its emulator and some boxes report a touchscreen they do
+	 * not have) draws no touch overlays over the picture, and port 2 is the
+	 * controller a touchless device gets (the remote drives it at run time
+	 * while no gamepad is connected, see overlay.RemoteJoystick).
+	 */
+	data class Defaults(
+		val joyport0: String,
+		val joyport1: String,
+		val onScreenJoystick: Boolean,
+		val onScreenKeyboardButton: Boolean
+	)
+
+	fun defaults(isTv: Boolean): Defaults =
+		if (isTv) {
+			Defaults(joyport0 = "mouse", joyport1 = "joy1", onScreenJoystick = false, onScreenKeyboardButton = false)
+		} else {
+			Defaults(joyport0 = "mouse", joyport1 = "onscreen_joy", onScreenJoystick = true, onScreenKeyboardButton = true)
+		}
+
 	/** Android control settings that a configuration sets, or lacks, as one unit. */
 	enum class Group {
 		JOYPORT0,

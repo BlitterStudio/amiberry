@@ -2,11 +2,17 @@ package com.blitterstudio.amiberry.data.model
 
 import com.blitterstudio.amiberry.R
 
-/** One changed setting: what it is called and how it reads before and after. */
+/**
+ * One changed setting: what it is called and how it reads before and after.
+ * [optionId] is the settings layer option the row shows, which a revert sets
+ * back; null for the launcher's own rows (model, compatibility, resolution,
+ * hard drives).
+ */
 data class SettingsChange(
 	val label: SettingText,
 	val before: SettingText,
-	val after: SettingText
+	val after: SettingText,
+	val optionId: String? = null
 )
 
 /**
@@ -99,8 +105,8 @@ object SettingsChangeSummary {
 	) {
 		val changes = mutableListOf<SettingsChange>()
 
-		private fun add(label: SettingText, old: SettingText, new: SettingText) {
-			if (old != new) changes += SettingsChange(label, old, new)
+		private fun add(label: SettingText, old: SettingText, new: SettingText, optionId: String? = null) {
+			if (old != new) changes += SettingsChange(label, old, new, optionId)
 		}
 
 		/** A launcher-only setting, named by a launcher string. */
@@ -112,14 +118,14 @@ object SettingsChangeSummary {
 
 		/** A layer option whose values the launcher names ([text]): devices, files, shaders. */
 		fun optionText(id: String, text: (EmulatorSettings) -> SettingText) {
-			add(label(id), text(before), text(after))
+			add(label(id), text(before), text(after), id)
 		}
 
 		/** A layer option compared by its stored value, shown as the controls show it. */
 		fun option(id: String, stored: (EmulatorSettings) -> String) {
 			val old = stored(before)
 			val new = stored(after)
-			if (old != new) changes += SettingsChange(label(id), value(id, old), value(id, new))
+			if (old != new) changes += SettingsChange(label(id), value(id, old), value(id, new), id)
 		}
 
 		private fun value(id: String, stored: String): SettingText {

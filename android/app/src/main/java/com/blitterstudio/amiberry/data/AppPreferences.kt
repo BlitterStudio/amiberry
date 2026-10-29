@@ -6,12 +6,15 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.core.content.edit
 import com.blitterstudio.amiberry.data.model.EmulatorSettings
 import com.blitterstudio.amiberry.data.model.EmulatorSettingsConstraints
+import com.blitterstudio.amiberry.ui.isTvDevice
 import org.json.JSONObject
 
 class AppPreferences private constructor(context: Context) {
 
 	private val prefs: SharedPreferences =
 		context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+
+	private val controlDefaults = AndroidControlSettings.defaults(isTv = isTvDevice(context))
 
 	init {
 		migrateLegacyKeyboardSwitch()
@@ -51,10 +54,10 @@ class AppPreferences private constructor(context: Context) {
 
 	fun rememberedAndroidControls(): EmulatorSettings =
 		EmulatorSettings(
-			joyport0 = prefs.getString(KEY_LAST_JOYPORT0, DEFAULT_JOYPORT0) ?: DEFAULT_JOYPORT0,
-			joyport1 = prefs.getString(KEY_LAST_JOYPORT1, DEFAULT_JOYPORT1) ?: DEFAULT_JOYPORT1,
-			onScreenJoystick = prefs.getBoolean(KEY_LAST_ON_SCREEN_JOYSTICK, DEFAULT_ON_SCREEN_JOYSTICK),
-			onScreenKeyboardButton = prefs.getBoolean(KEY_LAST_ON_SCREEN_KEYBOARD_BUTTON, DEFAULT_ON_SCREEN_KEYBOARD),
+			joyport0 = prefs.getString(KEY_LAST_JOYPORT0, controlDefaults.joyport0) ?: controlDefaults.joyport0,
+			joyport1 = prefs.getString(KEY_LAST_JOYPORT1, controlDefaults.joyport1) ?: controlDefaults.joyport1,
+			onScreenJoystick = prefs.getBoolean(KEY_LAST_ON_SCREEN_JOYSTICK, controlDefaults.onScreenJoystick),
+			onScreenKeyboardButton = prefs.getBoolean(KEY_LAST_ON_SCREEN_KEYBOARD_BUTTON, controlDefaults.onScreenKeyboardButton),
 			onScreenKeyboardNumpad = prefs.getBoolean(KEY_LAST_ON_SCREEN_KEYBOARD_NUMPAD, false),
 			onScreenKeyboardToggle = prefs.getString(KEY_LAST_ON_SCREEN_KEYBOARD_TOGGLE, null),
 			joyport0MouseMap = prefs.getBoolean(KEY_LAST_JOYPORT0_MOUSEMAP, false),
@@ -174,12 +177,22 @@ class AppPreferences private constructor(context: Context) {
 		prefs.edit { putBoolean(KEY_HAS_SEEN_WELCOME, seen) }
 	}
 
+	/** The optional All Files Access card in Files was dismissed ("Not now"). */
+	var storageAccessCardDismissed = mutableStateOf(prefs.getBoolean(KEY_STORAGE_ACCESS_CARD_DISMISSED, false))
+		private set
+
+	fun dismissStorageAccessCard() {
+		storageAccessCardDismissed.value = true
+		prefs.edit { putBoolean(KEY_STORAGE_ACCESS_CARD_DISMISSED, true) }
+	}
+
 	companion object {
 		private const val PREFS_NAME = "amiberry_prefs"
 		private const val KEY_DYNAMIC_COLOR = "use_dynamic_color"
 		private const val KEY_THEME_MODE = "theme_mode"
 		private const val KEY_HAS_SEEN_WELCOME = "has_seen_welcome"
 		private const val KEY_STORAGE_PERMISSION_REQUESTED = "storage_permission_requested"
+		private const val KEY_STORAGE_ACCESS_CARD_DISMISSED = "storage_access_card_dismissed"
 		private const val KEY_LAST_WHDLOAD = "last_whdload_path"
 		private const val KEY_CLASSIC_IN_GAME_MENU = "classic_in_game_menu"
 		private const val KEY_LAST_JOYPORT0 = "last_joyport0"
@@ -197,9 +210,6 @@ class AppPreferences private constructor(context: Context) {
 		private const val KEY_LAUNCH_COUNT = "emulator_launch_count"
 		private const val FIRST_REVIEW_LAUNCH = 5
 		private const val REVIEW_INTERVAL = 20
-		private const val DEFAULT_JOYPORT0 = "mouse"
-		private const val DEFAULT_JOYPORT1 = "onscreen_joy"
-		private const val DEFAULT_ON_SCREEN_JOYSTICK = true
 		private const val DEFAULT_ON_SCREEN_KEYBOARD = true
 
 		@Volatile

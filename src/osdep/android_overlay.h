@@ -5,7 +5,7 @@
  * gamepad's Start or Guide, the two-finger swipe, F12, the RetroArch combo,
  * the open_settings action), the emulator shows this menu instead, paused as
  * under the GUI. The built-in GUI stays for startup without -G, for the
- * media hotkeys' file requesters, as the menu's Advanced settings, and for
+ * media hotkeys' file requesters, as the menu's Classic settings window, and for
  * people who turn the menu off in the launcher.
  */
 #pragma once
@@ -30,5 +30,12 @@ android_overlay_result android_overlay_run();
 // Between frames (handle_events): shows the on-screen keyboard the menu's
 // Show keyboard asked for, once the emulation runs with the keyboard on.
 void android_overlay_service();
+
+// Once per frame (handle_msgpump): moves the port 2 joystick as the TV
+// remote's D-pad and OK are held. The activity turns this on for a TV with
+// no gamepad and hands those keys over (OverlayNative.remoteKey) while the
+// emulation runs; a key tapped between two frames is held for one frame,
+// so the Amiga sees it. Main thread.
+void android_remote_joystick_pump();
 
 #endif

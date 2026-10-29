@@ -418,8 +418,8 @@ bool fpu_no_unimplemented_available(const uae_prefs& p, const context&)
 // ---------------------------------------------------------------- CPU speed
 
 const amiberry_setting_choice cpu_speed_choices[] = {
-	{"max", "Fastest possible"},
-	{"real", "Approximate A500/A1200 or cycle-exact"},
+	{"max", "As fast as possible"},
+	{"real", "Original Amiga speed"},
 };
 
 // cfgfile reads cpu_speed=N as N cycle units and writes such a speed as
@@ -865,7 +865,7 @@ const definition definitions[] = {
 			AMIBERRY_APPLY_LIVE, "false", "Not available without an FPU, nor with the JIT, which always emulates them."),
 		get_fpu_no_unimplemented, set_fpu_no_unimplemented, fpu_no_unimplemented_available, nullptr, nullptr},
 	{CHOICE_OPTION("cpu_speed", "cpu_speed", "CPU speed",
-			"Fastest possible runs the CPU as fast as the host allows; the other mode matches original Amiga speed.",
+			"As fast as possible runs the CPU as fast as the host allows; original Amiga speed (approximate A500/A1200, or cycle-exact) is what most games need.",
 			AMIBERRY_APPLY_LIVE, "real", cpu_speed_choices, nullptr),
 		get_cpu_speed, set_cpu_speed, nullptr, nullptr, nullptr},
 	// Stored in tenths of a percent, shown in percent.

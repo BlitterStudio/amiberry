@@ -1,7 +1,5 @@
 package com.blitterstudio.amiberry.ui.screens
 
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -40,14 +38,24 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.semantics.selected
+import com.blitterstudio.amiberry.ui.contentEntryFocus
+import com.blitterstudio.amiberry.ui.dpadFocusable
+import com.blitterstudio.amiberry.ui.isTvDevice
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.produceState
@@ -62,6 +70,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
+import androidx.compose.ui.focus.onFocusChanged
 import com.blitterstudio.amiberry.ui.dpadTrailingPane
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -73,7 +82,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.blitterstudio.amiberry.R
 import com.blitterstudio.amiberry.data.AndroidLaunchConfig
 import com.blitterstudio.amiberry.data.AppPreferences
-import com.blitterstudio.amiberry.data.ConfigurationActions
 import com.blitterstudio.amiberry.data.EmulatorLauncher
 import com.blitterstudio.amiberry.data.FileManager
 import com.blitterstudio.amiberry.data.FilePickerFilters
@@ -87,6 +95,8 @@ import com.blitterstudio.amiberry.data.model.EmulatorSettings
 import com.blitterstudio.amiberry.data.model.FileCategory
 import com.blitterstudio.amiberry.data.model.ModelRomAvailability
 import com.blitterstudio.amiberry.data.model.RomReadinessDiagnostics
+import com.blitterstudio.amiberry.ui.components.rememberImportPicker
+import com.blitterstudio.amiberry.overlay.rememberRemoteDrivesPort2
 import com.blitterstudio.amiberry.ui.components.SettingsSummaryCard
 import com.blitterstudio.amiberry.ui.components.SummaryCard
 import com.blitterstudio.amiberry.ui.components.SummaryRow
@@ -102,8 +112,8 @@ import com.blitterstudio.amiberry.ui.viewmodel.SettingsViewModel
 import com.blitterstudio.amiberry.ui.components.MediaSelector
 import com.blitterstudio.amiberry.ui.components.settings.CompatibilityLevelRow
 import com.blitterstudio.amiberry.ui.components.settings.settingText
+import com.blitterstudio.amiberry.ui.components.settings.dpadMenuItemInitialFocus
 import com.blitterstudio.amiberry.ui.components.settings.settingsSchema
-import com.blitterstudio.amiberry.ui.components.StoragePermissionBanner
 import com.blitterstudio.amiberry.ui.navigation.Screen
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -181,6 +191,9 @@ fun QuickStartScreen(
 		RecentLaunches.items(allRecent, availableModels, recentFileExists)
 	}
 	val hasSeenWelcome by appPreferences.hasSeenWelcome
+	val tv = isTvDevice()
+	// The Controls summary names the remote when it would be the port 2 joystick.
+	val remoteDrivesPort2 = rememberRemoteDrivesPort2()
 	val quickStartModeFocusRequester = remember { FocusRequester() }
 	var requestQuickStartModeFocus by remember { mutableStateOf(false) }
 	LaunchedEffect(hasSeenWelcome, requestQuickStartModeFocus) {
@@ -188,6 +201,10 @@ fun QuickStartScreen(
 			quickStartModeFocusRequester.requestFocus()
 			requestQuickStartModeFocus = false
 		}
+	}
+	// The WHDLoad games launched lately, most recent first: the game list shows them first.
+	val recentWhdloadPaths = remember(allRecent) {
+		allRecent.filter { RecentLaunches.Type.of(it) == RecentLaunches.Type.WhdLoad }.map { it.optString("path") }
 	}
 
 	val selectedFloppyPath = settingsViewModel.settings.floppy0
@@ -201,10 +218,52 @@ fun QuickStartScreen(
 	val noCompatibleModelMessage = stringResource(R.string.quick_start_no_compatible_models_message)
 	val configWriteFailedMessage = stringResource(R.string.quick_start_config_write_failed)
 	val scanningMediaDescription = stringResource(R.string.quick_start_scanning_media)
+	val undoLabel = stringResource(R.string.action_undo)
+	fun ejectedMessage(change: SettingsViewModel.ModelChange, model: AmigaModel): String {
+		val floppies = change.droppedMedia.filter { it != MediaDrive.CD }
+		return listOfNotNull(
+			floppies.takeIf { it.isNotEmpty() }?.let { drives ->
+				context.getString(R.string.quick_start_media_ejected_no_floppy, drives.joinToString { it.label }, model.displayName)
+			},
+			context.getString(R.string.quick_start_media_ejected_no_cd, model.displayName)
+				.takeIf { MediaDrive.CD in change.droppedMedia }
+		).joinToString(" ")
+	}
+	/** The user picked [model]: its preset keeps the inserted media; a disk it has no drive for goes, with Undo. */
+	fun selectModel(model: AmigaModel) {
+		val change = settingsViewModel.applyModel(model)
+		if (change.droppedMedia.isEmpty()) return
+		scope.launch {
+			val result = snackbarHostState.showSnackbar(
+				message = ejectedMessage(change, model),
+				actionLabel = undoLabel,
+				duration = SnackbarDuration.Long
+			)
+			if (result == SnackbarResult.ActionPerformed) settingsViewModel.undoModelChange(change)
+		}
+	}
+	fun launchWhdload(whdloadPath: String) {
+		if (launchInProgress) return
+		val controlSettings = settingsViewModel.settings
+		scope.launchGuarded(launchGuard) {
+			val prepared = try {
+				withContext(Dispatchers.IO) {
+					AndroidLaunchConfig.prepareWhdLoad(context, whdloadPath, controlSettings)
+				}
+			} catch (_: Exception) {
+				snackbarHostState.showSnackbar(configWriteFailedMessage)
+				return@launchGuarded
+			}
+			EmulatorLauncher.launchWhdload(
+				context = context,
+				lhaPath = whdloadPath,
+				configPath = prepared.configFile.absolutePath,
+				shaderOverride = prepared.shaderOverride,
+				controlOverrides = prepared.controlOverrides
+			)
+		}
+	}
 	var floppyImportTarget by remember { mutableStateOf(0) }
-	fun actionMessage(message: ConfigurationActions.Message): String =
-		message.argument?.let { context.getString(message.stringRes, it) }
-			?: context.getString(message.stringRes)
 
 	LaunchedEffect(availableModels, modeAvailableModels, model, selectedLaunchMode) {
 		val selectableModels = if (selectedLaunchMode == QuickStartLaunchMode.DISK ||
@@ -217,7 +276,18 @@ fun QuickStartScreen(
 		// A model with its own Kickstart comes before one that would boot AROS.
 		val firstAvailableModel = selectableModels.firstOrNull { it !in arosModels } ?: selectableModels.firstOrNull()
 		if (firstAvailableModel != null && model !in selectableModels) {
+			// A mode change picks the model: media the new one has no drive for goes quietly
+			// (it belongs to the other mode).
 			settingsViewModel.applyModel(firstAvailableModel)
+		}
+	}
+
+	// A Kickstart imported in the Files tab replaces AROS in the Quick Start settings, as
+	// an import here does; a named configuration keeps the ROM it was saved with.
+	LaunchedEffect(roms) {
+		if (settingsViewModel.currentConfigName != null) return@LaunchedEffect
+		QuickStartUiState.withInstalledKickstart(settingsViewModel.settings, roms)?.let { updated ->
+			settingsViewModel.updateSettings { updated }
 		}
 	}
 
@@ -226,7 +296,8 @@ fun QuickStartScreen(
 		initialValue = null,
 		selectedLaunchMode,
 		selectedWhdloadGame,
-		settingsViewModel.settings
+		settingsViewModel.settings,
+		remoteDrivesPort2
 	) {
 		if (selectedLaunchMode != QuickStartLaunchMode.WHDLOAD) return@produceState
 		val game = selectedWhdloadGame
@@ -236,7 +307,8 @@ fun QuickStartScreen(
 			QuickStartUiState.buildWhdLoadSummary(
 				launchSettings = WhdLoadPerGameConfig.launch(perGameConfig, currentSettings).settings,
 				selectedWhdloadName = game?.name,
-				perGameConfigName = perGameConfig?.name
+				perGameConfigName = perGameConfig?.name,
+				remoteDrivesPort2 = remoteDrivesPort2
 			)
 		}
 	}
@@ -268,10 +340,11 @@ fun QuickStartScreen(
 		return context.getString(message.stringRes, message.argument)
 	}
 
-	val floppyPickerLauncher = rememberLauncherForActivityResult(
-		contract = ActivityResultContracts.OpenDocument()
-	) { uri ->
-		uri?.let {
+	val floppyPicker = rememberImportPicker(
+		mimeTypes = FilePickerFilters.mimeTypesFor(FileCategory.FLOPPIES),
+		extensions = FileCategory.FLOPPIES.extensions
+	) { uris ->
+		uris.first().let {
 			scope.launchImportGuarded(importGuard) {
 				val result = withContext(Dispatchers.IO) {
 					FileManager.importFileWithResult(context, it, FileCategory.FLOPPIES).also { importResult ->
@@ -294,10 +367,11 @@ fun QuickStartScreen(
 		}
 	}
 
-	val cdPickerLauncher = rememberLauncherForActivityResult(
-		contract = ActivityResultContracts.OpenDocument()
-	) { uri ->
-		uri?.let {
+	val cdPicker = rememberImportPicker(
+		mimeTypes = FilePickerFilters.mimeTypesFor(FileCategory.CD_IMAGES),
+		extensions = FileCategory.CD_IMAGES.extensions
+	) { uris ->
+		uris.first().let {
 			scope.launchImportGuarded(importGuard) {
 				val result = withContext(Dispatchers.IO) {
 					FileManager.importFileWithResult(context, it, FileCategory.CD_IMAGES).also { importResult ->
@@ -314,10 +388,11 @@ fun QuickStartScreen(
 		}
 	}
 
-	val romPickerLauncher = rememberLauncherForActivityResult(
-		contract = ActivityResultContracts.OpenDocument()
-	) { uri ->
-		uri?.let {
+	val romPicker = rememberImportPicker(
+		mimeTypes = FilePickerFilters.mimeTypesFor(FileCategory.ROMS),
+		extensions = FileCategory.ROMS.extensions
+	) { uris ->
+		uris.first().let {
 			scope.launchImportGuarded(importGuard) {
 				val result = withContext(Dispatchers.IO) {
 					FileManager.importFileWithResult(context, it, FileCategory.ROMS).also { importResult ->
@@ -339,10 +414,11 @@ fun QuickStartScreen(
 		}
 	}
 
-	val whdloadPickerLauncher = rememberLauncherForActivityResult(
-		contract = ActivityResultContracts.OpenDocument()
-	) { uri ->
-		uri?.let {
+	val whdloadPicker = rememberImportPicker(
+		mimeTypes = FilePickerFilters.mimeTypesFor(FileCategory.WHDLOAD_GAMES),
+		extensions = FileCategory.WHDLOAD_GAMES.extensions
+	) { uris ->
+		uris.first().let {
 			scope.launchImportGuarded(importGuard) {
 				val result = withContext(Dispatchers.IO) {
 					FileManager.importFileWithResult(context, it, FileCategory.WHDLOAD_GAMES).also { importResult ->
@@ -362,11 +438,21 @@ fun QuickStartScreen(
 		}
 	}
 
+	val twoPanes = windowWidthClass().showsTwoPanes
+	// Up from Start returns to the control last focused in the choices.
+	val launchColumnFocus = remember { FocusRequester() }
+	val startLabel = stringResource(if (launchInProgress) R.string.action_launching else R.string.action_start)
 	Scaffold(
 		snackbarHost = { SnackbarHost(snackbarHostState) },
 		topBar = {
 			TopAppBar(
 				title = { Text(stringResource(R.string.quick_start_title)) },
+				// A phone held sideways has little height: a lower bar leaves more for the choices.
+				expandedHeight = if (LocalConfiguration.current.screenHeightDp < COMPACT_HEIGHT_DP) {
+					COMPACT_TOP_BAR_HEIGHT
+				} else {
+					TopAppBarDefaults.TopAppBarExpandedHeight
+				},
 				actions = {
 					IconButton(
 						onClick = { navController?.navigate(Screen.About.route) },
@@ -390,24 +476,7 @@ fun QuickStartScreen(
 						when (selectedLaunchMode) {
 							QuickStartLaunchMode.WHDLOAD -> {
 								val whdloadPath = selectedWhdloadGame?.path ?: return@ExtendedFloatingActionButton
-								val controlSettings = settingsViewModel.settings
-								scope.launchGuarded(launchGuard) {
-									val prepared = try {
-										withContext(Dispatchers.IO) {
-											AndroidLaunchConfig.prepareWhdLoad(context, whdloadPath, controlSettings)
-										}
-									} catch (_: Exception) {
-										snackbarHostState.showSnackbar(configWriteFailedMessage)
-										return@launchGuarded
-									}
-									EmulatorLauncher.launchWhdload(
-										context = context,
-										lhaPath = whdloadPath,
-										configPath = prepared.configFile.absolutePath,
-										shaderOverride = prepared.shaderOverride,
-										controlOverrides = prepared.controlOverrides
-									)
-								}
+								launchWhdload(whdloadPath)
 							}
 							QuickStartLaunchMode.DISK,
 							QuickStartLaunchMode.CD -> {
@@ -439,7 +508,11 @@ fun QuickStartScreen(
 							QuickStartLaunchMode.RECENT -> Unit
 						}
 					},
-					modifier = Modifier.dpadFocusIndicator(),
+					modifier = Modifier
+						.focusProperties { up = launchColumnFocus }
+						.dpadFocusIndicator()
+						// The text slot alone left the button nameless to accessibility services.
+						.semantics { contentDescription = startLabel },
 					icon = {
 						if (launchInProgress) {
 							CircularProgressIndicator(
@@ -450,13 +523,7 @@ fun QuickStartScreen(
 							Icon(Icons.Default.PlayArrow, contentDescription = null)
 						}
 					},
-					text = {
-						Text(
-							stringResource(
-								if (launchInProgress) R.string.action_launching else R.string.action_start
-							)
-						)
-					}
+					text = { Text(startLabel) }
 				)
 			}
 		}
@@ -470,60 +537,38 @@ fun QuickStartScreen(
 				)
 			}
 		}
-		// Storage access, welcome and ROM notices: above the launch mode on a phone, above
-		// the summary in the right column on a wide window, so the launch mode stays at the top.
+		val importRom: () -> Unit = {
+			if (!importInProgress) romPicker.pickFiles()
+		}
+		val effectiveSummary = QuickStartUiState.buildEffectiveSummary(
+			settings = settingsViewModel.settings,
+			launchMode = selectedLaunchMode,
+			selectedModelAvailable = if (selectedLaunchMode == QuickStartLaunchMode.DISK ||
+				selectedLaunchMode == QuickStartLaunchMode.CD
+			) {
+				selectedModeModelAvailable
+			} else {
+				selectedModelAvailable
+			},
+			roms = roms,
+			fileExists = mediaFileExists,
+			remoteDrivesPort2 = remoteDrivesPort2
+		)
+		// The first-run card, ROM notices: above the launch mode on a phone, above the
+		// summary in the right column on a wide window, so the launch mode stays at the top.
 		val noticesSection: @Composable ColumnScope.() -> Unit = {
-			StoragePermissionBanner(
-				onMessage = { message ->
-					scope.launch { snackbarHostState.showSnackbar(actionMessage(message)) }
-				}
-			)
-
 			if (!hasSeenWelcome) {
-				Card(
-					modifier = Modifier.fillMaxWidth(),
-					colors = CardDefaults.cardColors(
-						containerColor = MaterialTheme.colorScheme.tertiaryContainer
-					)
-				) {
-					Column(modifier = Modifier.padding(16.dp)) {
-						Row(verticalAlignment = Alignment.CenterVertically) {
-							Icon(
-								Icons.Default.Info,
-								contentDescription = null,
-								modifier = Modifier.size(24.dp),
-								tint = MaterialTheme.colorScheme.onTertiaryContainer
-							)
-							Spacer(modifier = Modifier.width(8.dp))
-							Text(
-								stringResource(R.string.welcome_title),
-								style = MaterialTheme.typography.titleMedium,
-								color = MaterialTheme.colorScheme.onTertiaryContainer
-							)
-						}
-						Spacer(modifier = Modifier.height(8.dp))
-						Text(
-							text = stringResource(R.string.welcome_message),
-							style = MaterialTheme.typography.bodyMedium,
-							color = MaterialTheme.colorScheme.onTertiaryContainer
-						)
-						Spacer(modifier = Modifier.height(8.dp))
-						Row(
-							modifier = Modifier.fillMaxWidth(),
-							horizontalArrangement = Arrangement.End
-						) {
-							TextButton(
-								onClick = {
-									requestQuickStartModeFocus = true
-									appPreferences.setHasSeenWelcome(true)
-								},
-								modifier = Modifier.dpadFocusIndicator()
-							) {
-								Text(stringResource(R.string.welcome_dismiss))
-							}
-						}
+				WelcomeCard(
+					launchMode = selectedLaunchMode,
+					kickstartInstalled = availableModels.any { it !in arosModels },
+					importInProgress = importInProgress,
+					onImportRom = importRom,
+					afterImportFocus = quickStartModeFocusRequester,
+					onDismiss = {
+						requestQuickStartModeFocus = true
+						appPreferences.setHasSeenWelcome(true)
 					}
-				}
+				)
 			}
 
 			if (!hasRoms || availableModels.isEmpty()) {
@@ -565,11 +610,7 @@ fun QuickStartScreen(
 						RomReadinessSummary(romDiagnostics)
 						Spacer(modifier = Modifier.height(12.dp))
 						Button(
-							onClick = {
-								if (!importInProgress) {
-									romPickerLauncher.launch(FilePickerFilters.mimeTypesFor(FileCategory.ROMS))
-								}
-							},
+							onClick = importRom,
 							enabled = !importInProgress,
 							colors = ButtonDefaults.buttonColors(
 								containerColor = MaterialTheme.colorScheme.onErrorContainer,
@@ -587,58 +628,67 @@ fun QuickStartScreen(
 				}
 			}
 
-			if (selectedLaunchMode == QuickStartLaunchMode.WHDLOAD) {
-				if (QuickStartUiState.showsWhdLoadArosNotice(roms)) {
-					ArosFallbackNotice(
-						message = stringResource(R.string.quick_start_whdload_aros_notice),
-						importInProgress = importInProgress,
-						onImportRom = {
-							if (!importInProgress) {
-								romPickerLauncher.launch(FilePickerFilters.mimeTypesFor(FileCategory.ROMS))
-							}
-						}
-					)
-				}
-			} else if (QuickStartUiState.showsArosNotice(settingsViewModel.settings, selectedModelRoms, selectedLaunchMode)) {
-				ArosFallbackNotice(
-					message = stringResource(R.string.quick_start_aros_notice),
+			val diskOrCd = selectedLaunchMode == QuickStartLaunchMode.DISK || selectedLaunchMode == QuickStartLaunchMode.CD
+			when {
+				// The Kickstart the settings name was deleted: say so whatever else shows.
+				diskOrCd && effectiveSummary.romMissing -> ArosFallbackNotice(
+					message = stringResource(
+						if (effectiveSummary.romFallsBackToAros) {
+							R.string.quick_start_rom_missing_notice_aros
+						} else {
+							R.string.quick_start_rom_missing_notice
+						},
+						effectiveSummary.romFileName
+					),
 					importInProgress = importInProgress,
-					onImportRom = {
-						if (!importInProgress) {
-							romPickerLauncher.launch(FilePickerFilters.mimeTypesFor(FileCategory.ROMS))
-						}
-					}
+					onImportRom = importRom
 				)
+				// The first-run card already offers the Kickstart import.
+				!hasSeenWelcome -> Unit
+				// Which games boot AROS matters once there is one to start.
+				selectedLaunchMode == QuickStartLaunchMode.WHDLOAD -> {
+					if (selectedWhdloadGame != null && QuickStartUiState.showsWhdLoadArosNotice(roms)) {
+						ArosFallbackNotice(
+							message = stringResource(R.string.quick_start_whdload_aros_notice),
+							importInProgress = importInProgress,
+							onImportRom = importRom
+						)
+					}
+				}
+				QuickStartUiState.showsArosNotice(settingsViewModel.settings, selectedModelRoms, selectedLaunchMode) ->
+					ArosFallbackNotice(
+						message = stringResource(R.string.quick_start_aros_notice),
+						importInProgress = importInProgress,
+						onImportRom = importRom
+					)
 			}
 		}
 		// The launch mode and its media: the left column on a wide window.
 		val launchSection: @Composable ColumnScope.() -> Unit = {
+			val recentRowsAreEntry = selectedLaunchMode == QuickStartLaunchMode.RECENT && recentItems.isNotEmpty()
 			QuickStartModeSelector(
 				selectedMode = selectedLaunchMode,
 				onModeSelected = viewModel::selectLaunchMode,
-				focusRequester = quickStartModeFocusRequester
+				focusRequester = quickStartModeFocusRequester,
+				isContentEntry = !recentRowsAreEntry
 			)
 
 			when (selectedLaunchMode) {
 				QuickStartLaunchMode.WHDLOAD -> {
-					MediaSelector(
-						title = stringResource(R.string.quick_start_whdload_title),
-						icon = Icons.Default.SportsEsports,
-						items = whdloadGames,
-						selectedItem = selectedWhdloadGame,
-						selectedPath = selectedWhdloadGame?.path ?: "",
-						emptyText = stringResource(R.string.quick_start_no_whdload_games),
-						placeholder = stringResource(R.string.quick_start_select_game_placeholder),
-						helpText = stringResource(R.string.quick_start_whdload_help),
-						onItemSelected = { game -> viewModel.selectWhdload(game) },
-						onEject = { viewModel.selectWhdload(null) },
+					WhdLoadGameCard(
+						games = whdloadGames,
+						selectedGame = selectedWhdloadGame,
+						recentPaths = recentWhdloadPaths,
+						importInProgress = importInProgress,
 						onImport = {
 							if (!importInProgress) {
-								whdloadPickerLauncher.launch(FilePickerFilters.mimeTypesFor(FileCategory.WHDLOAD_GAMES))
+								whdloadPicker.pickFiles()
 							}
 						},
-						importInProgress = importInProgress,
-						displayName = { it.name.removeSuffix(".lha").removeSuffix(".lzx").removeSuffix(".lzh") }
+						onSelect = { game -> viewModel.selectWhdload(game) },
+						onClear = { viewModel.selectWhdload(null) },
+						// On a TV one OK on a game starts it, as a Recent row does.
+						onLaunch = if (tv && hasRoms) { game -> launchWhdload(game.path) } else null
 					)
 				}
 				QuickStartLaunchMode.DISK -> {
@@ -647,7 +697,8 @@ fun QuickStartScreen(
 						availableModels = modeAvailableModels,
 						selectedModelAvailable = selectedModeModelAvailable,
 						arosModels = arosModels,
-						onModelSelected = settingsViewModel::applyModel,
+						configName = settingsViewModel.currentConfigName,
+						onModelSelected = ::selectModel,
 						onLevelSelected = settingsViewModel::applyCompatibilityLevel
 					)
 					if (selectedModeModelAvailable && model.hasFloppy) {
@@ -667,7 +718,7 @@ fun QuickStartScreen(
 							onImport = {
 								if (!importInProgress) {
 									floppyImportTarget = 0
-									floppyPickerLauncher.launch(FilePickerFilters.mimeTypesFor(FileCategory.FLOPPIES))
+									floppyPicker.pickFiles()
 								}
 							},
 							importInProgress = importInProgress
@@ -690,7 +741,7 @@ fun QuickStartScreen(
 							onImport = {
 								if (!importInProgress) {
 									floppyImportTarget = 1
-									floppyPickerLauncher.launch(FilePickerFilters.mimeTypesFor(FileCategory.FLOPPIES))
+									floppyPicker.pickFiles()
 								}
 							},
 							importInProgress = importInProgress
@@ -698,36 +749,43 @@ fun QuickStartScreen(
 					}
 				}
 				QuickStartLaunchMode.CD -> {
-					ModelSelectorCard(
-						settings = settingsViewModel.settings,
-						availableModels = modeAvailableModels,
-						selectedModelAvailable = selectedModeModelAvailable,
-						arosModels = arosModels,
-						onModelSelected = settingsViewModel::applyModel,
-						onLevelSelected = settingsViewModel::applyCompatibilityLevel
-					)
-					if (selectedModeModelAvailable && model.hasCd) {
-						MediaSelector(
-							title = stringResource(R.string.quick_start_cd_image),
-							icon = Icons.Default.Album,
-							items = cds,
-							selectedItem = selectedCd,
-							selectedPath = selectedCdPath,
-							emptyText = stringResource(R.string.quick_start_no_cd_images),
-							onItemSelected = { file ->
-								settingsViewModel.updateSettings { s -> s.copy(cdImage = file.path) }
-							},
-							onEject = {
-								settingsViewModel.updateSettings { s -> s.copy(cdImage = "") }
-							},
-							onImport = {
-								if (!importInProgress) {
-									cdPickerLauncher.launch(FilePickerFilters.mimeTypesFor(FileCategory.CD_IMAGES))
-								}
-							},
-							importInProgress = importInProgress
+					if (modeAvailableModels.isEmpty()) {
+						// AROS cannot stand in for a CD32 or CDTV: name the ROMs they need.
+						CdRomsNeededCard(importInProgress = importInProgress, onImportRom = importRom)
+					} else {
+						ModelSelectorCard(
+							settings = settingsViewModel.settings,
+							availableModels = modeAvailableModels,
+							selectedModelAvailable = selectedModeModelAvailable,
+							arosModels = arosModels,
+							configName = settingsViewModel.currentConfigName,
+							onModelSelected = ::selectModel,
+							onLevelSelected = settingsViewModel::applyCompatibilityLevel
 						)
 					}
+					val cdModelReady = selectedModeModelAvailable && model.hasCd
+					// Without a CD model the picker still shows, disabled, so the way ahead is visible.
+					MediaSelector(
+						title = stringResource(R.string.quick_start_cd_image),
+						icon = Icons.Default.Album,
+						items = cds,
+						selectedItem = selectedCd?.takeIf { cdModelReady },
+						selectedPath = if (cdModelReady) selectedCdPath else "",
+						emptyText = stringResource(R.string.quick_start_no_cd_images),
+						onItemSelected = { file ->
+							settingsViewModel.updateSettings { s -> s.copy(cdImage = file.path) }
+						},
+						onEject = {
+							settingsViewModel.updateSettings { s -> s.copy(cdImage = "") }
+						},
+						onImport = {
+							if (!importInProgress) {
+								cdPicker.pickFiles()
+							}
+						},
+						importInProgress = importInProgress,
+						enabled = cdModelReady
+					)
 				}
 				QuickStartLaunchMode.RECENT -> {
 					QuickStartRecentSection(
@@ -747,27 +805,7 @@ fun QuickStartScreen(
 										)
 									}
 								}
-								"whdload" -> {
-									val whdloadPath = entry.optString("path")
-									val controlSettings = settingsViewModel.settings
-									scope.launchGuarded(launchGuard) {
-										val prepared = try {
-											withContext(Dispatchers.IO) {
-												AndroidLaunchConfig.prepareWhdLoad(context, whdloadPath, controlSettings)
-											}
-										} catch (_: Exception) {
-											snackbarHostState.showSnackbar(configWriteFailedMessage)
-											return@launchGuarded
-										}
-										EmulatorLauncher.launchWhdload(
-											context = context,
-											lhaPath = whdloadPath,
-											configPath = prepared.configFile.absolutePath,
-											shaderOverride = prepared.shaderOverride,
-											controlOverrides = prepared.controlOverrides
-										)
-									}
-								}
+								"whdload" -> launchWhdload(entry.optString("path"))
 								"rp9" -> {
 									val rp9Path = entry.optString("path")
 									val controlSettings = settingsViewModel.settings
@@ -819,36 +857,32 @@ fun QuickStartScreen(
 						onRemove = { entry -> appPreferences.removeRecentLaunch(entry) },
 						onClear = { appPreferences.clearRecentLaunches() },
 						// Nothing in the emptied section can hold focus: return it to the Recent mode button.
-						onEmptied = { quickStartModeFocusRequester.requestFocus() }
+						onEmptied = { quickStartModeFocusRequester.requestFocus() },
+						firstRowIsEntry = recentRowsAreEntry
 					)
 				}
 			}
 		}
+		// On a TV the summary takes focus (read-only), so the D-pad scrolls it all into view.
+		val summaryModifier = if (tv) Modifier.dpadFocusable() else Modifier
 		val summarySection: @Composable () -> Unit = {
-			if (selectedLaunchMode == QuickStartLaunchMode.WHDLOAD) {
-				whdloadSummary?.let { WhdLoadSummaryCard(it) }
-			} else {
-				SettingsSummaryCard(
+			when (selectedLaunchMode) {
+				QuickStartLaunchMode.WHDLOAD -> whdloadSummary?.let { WhdLoadSummaryCard(it, summaryModifier) }
+				// A Recent row starts with its own settings, not these.
+				QuickStartLaunchMode.RECENT -> Unit
+				QuickStartLaunchMode.DISK,
+				QuickStartLaunchMode.CD -> SettingsSummaryCard(
 					title = stringResource(R.string.quick_start_ready_title),
 					subtitle = stringResource(R.string.quick_start_ready_subtitle),
-					summary = QuickStartUiState.buildEffectiveSummary(
-						settings = settingsViewModel.settings,
-						launchMode = selectedLaunchMode,
-						selectedModelAvailable = if (selectedLaunchMode == QuickStartLaunchMode.DISK ||
-							selectedLaunchMode == QuickStartLaunchMode.CD
-						) {
-							selectedModeModelAvailable
-						} else {
-							selectedModelAvailable
-						},
-						roms = roms
-					)
+					summary = effectiveSummary,
+					modifier = summaryModifier
 				)
 			}
 		}
-		if (windowWidthClass().showsTwoPanes) {
+		// Nothing scrolls under Start: the scrolled area ends above it.
+		val startClearance = if (canStart) START_CLEARANCE else 0.dp
+		if (twoPanes) {
 			// Wide windows keep what Start launches in view beside the choices.
-			val launchColumnFocus = remember { FocusRequester() }
 			Row(
 				modifier = Modifier
 					.fillMaxSize()
@@ -863,19 +897,21 @@ fun QuickStartScreen(
 						.focusRequester(launchColumnFocus)
 						.focusRestorer()
 						.verticalScroll(rememberScrollState())
-						.padding(top = 16.dp, bottom = 120.dp),
+						.padding(vertical = 16.dp),
 					verticalArrangement = Arrangement.spacedBy(16.dp)
 				) {
 					scanningIndicator()
 					launchSection()
 				}
+				// Start sits over the bottom of this column.
 				Column(
 					modifier = Modifier
 						.weight(1f)
 						.fillMaxHeight()
+						.padding(bottom = startClearance)
 						.dpadTrailingPane(launchColumnFocus)
 						.verticalScroll(rememberScrollState())
-						.padding(top = 16.dp, bottom = 120.dp),
+						.padding(vertical = 16.dp),
 					verticalArrangement = Arrangement.spacedBy(16.dp)
 				) {
 					noticesSection()
@@ -887,8 +923,11 @@ fun QuickStartScreen(
 				modifier = Modifier
 					.fillMaxSize()
 					.padding(innerPadding)
+					.padding(bottom = startClearance)
+					.focusRequester(launchColumnFocus)
+					.focusRestorer()
 					.verticalScroll(rememberScrollState())
-					.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 120.dp),
+					.padding(16.dp),
 				verticalArrangement = Arrangement.spacedBy(16.dp)
 			) {
 				scanningIndicator()
@@ -899,6 +938,13 @@ fun QuickStartScreen(
 		}
 	}
 }
+
+/** A phone held sideways: Quick Start's top bar is lower there. */
+private const val COMPACT_HEIGHT_DP = 480
+private val COMPACT_TOP_BAR_HEIGHT = 48.dp
+
+/** The height Start (an extended FAB and its margin) covers at the bottom of the screen. */
+private val START_CLEARANCE = 88.dp
 
 @Composable
 private fun RomReadinessSummary(diagnostics: RomReadinessDiagnostics) {
@@ -956,48 +1002,37 @@ private fun RomReadinessSummary(diagnostics: RomReadinessDiagnostics) {
 private fun QuickStartModeSelector(
 	selectedMode: QuickStartLaunchMode,
 	onModeSelected: (QuickStartLaunchMode) -> Unit,
-	focusRequester: FocusRequester
+	focusRequester: FocusRequester,
+	/** The selected mode is where D-pad focus enters the screen. */
+	isContentEntry: Boolean
 ) {
 	OutlinedCard(modifier = Modifier.fillMaxWidth()) {
 		Column(
-			modifier = Modifier.padding(16.dp),
+			modifier = Modifier
+				.padding(16.dp)
+				.selectableGroup(),
 			verticalArrangement = Arrangement.spacedBy(8.dp)
 		) {
 			Text(
 				stringResource(R.string.quick_start_launch_mode_title),
 				style = MaterialTheme.typography.titleMedium
 			)
-			Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-				QuickStartModeButton(
-					mode = QuickStartLaunchMode.WHDLOAD,
-					selectedMode = selectedMode,
-					modifier = Modifier.weight(1f),
-					focusRequester = focusRequester,
-					onModeSelected = onModeSelected
-				)
-				QuickStartModeButton(
-					mode = QuickStartLaunchMode.DISK,
-					selectedMode = selectedMode,
-					modifier = Modifier.weight(1f),
-					focusRequester = focusRequester,
-					onModeSelected = onModeSelected
-				)
-			}
-			Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-				QuickStartModeButton(
-					mode = QuickStartLaunchMode.CD,
-					selectedMode = selectedMode,
-					modifier = Modifier.weight(1f),
-					focusRequester = focusRequester,
-					onModeSelected = onModeSelected
-				)
-				QuickStartModeButton(
-					mode = QuickStartLaunchMode.RECENT,
-					selectedMode = selectedMode,
-					modifier = Modifier.weight(1f),
-					focusRequester = focusRequester,
-					onModeSelected = onModeSelected
-				)
+			listOf(
+				listOf(QuickStartLaunchMode.WHDLOAD, QuickStartLaunchMode.DISK),
+				listOf(QuickStartLaunchMode.CD, QuickStartLaunchMode.RECENT)
+			).forEach { modes ->
+				Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+					modes.forEach { mode ->
+						QuickStartModeButton(
+							mode = mode,
+							selectedMode = selectedMode,
+							modifier = Modifier.weight(1f),
+							focusRequester = focusRequester,
+							isContentEntry = isContentEntry,
+							onModeSelected = onModeSelected
+						)
+					}
+				}
 			}
 		}
 	}
@@ -1009,6 +1044,7 @@ private fun QuickStartModeButton(
 	selectedMode: QuickStartLaunchMode,
 	modifier: Modifier,
 	focusRequester: FocusRequester,
+	isContentEntry: Boolean,
 	onModeSelected: (QuickStartLaunchMode) -> Unit
 ) {
 	val selected = mode == selectedMode
@@ -1019,7 +1055,10 @@ private fun QuickStartModeButton(
 		// The selected mode's button is where focus returns (Welcome dismissed, Recent emptied).
 		modifier = modifier
 			.then(if (selected) Modifier.focusRequester(focusRequester) else Modifier)
-			.dpadFocusIndicator(),
+			.then(if (selected && isContentEntry) Modifier.contentEntryFocus() else Modifier)
+			.dpadFocusIndicator()
+			// The colours alone showed which mode is chosen; accessibility services read this.
+			.semantics { this.selected = mode == selectedMode },
 		colors = if (selected) ButtonDefaults.buttonColors() else ButtonDefaults.outlinedButtonColors(),
 		elevation = if (selected) ButtonDefaults.buttonElevation() else null,
 		border = if (selected) null else ButtonDefaults.outlinedButtonBorder(enabled = true)
@@ -1049,7 +1088,11 @@ private fun QuickStartLaunchMode.icon(): ImageVector = when (this) {
 	QuickStartLaunchMode.RECENT -> Icons.Default.History
 }
 
-/** The model to start, and the compatibility level of its preset. */
+/**
+ * The model to start, and the compatibility level of its preset. Each model reads as one
+ * spec line; once the machine was edited, what differs from the preset replaces it, and
+ * the open configuration is named with Reset to preset.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ModelSelectorCard(
@@ -1058,10 +1101,13 @@ private fun ModelSelectorCard(
 	selectedModelAvailable: Boolean,
 	/** Available models whose Kickstart is not installed, which boot AROS. */
 	arosModels: Set<AmigaModel>,
+	/** The saved configuration the settings came from; null for Quick Start's own. */
+	configName: String?,
 	onModelSelected: (AmigaModel) -> Unit,
 	onLevelSelected: (Int) -> Unit
 ) {
 	val model = settings.baseModel
+	val edits = remember(settings) { QuickStartUiState.presetEdits(settings) }
 	OutlinedCard(modifier = Modifier.fillMaxWidth()) {
 		Column(modifier = Modifier.padding(16.dp)) {
 			Text(stringResource(R.string.quick_start_amiga_model), style = MaterialTheme.typography.titleMedium)
@@ -1088,10 +1134,10 @@ private fun ModelSelectorCard(
 						.fillMaxWidth(),
 					supportingText = {
 						Text(
-							if (selectedModelAvailable) {
-								model.description
-							} else {
-								stringResource(R.string.quick_start_no_compatible_models_help)
+							when {
+								!selectedModelAvailable -> stringResource(R.string.quick_start_no_compatible_models_help)
+								edits.isNotEmpty() -> presetEditsText(edits)
+								else -> QuickStartUiState.modelSpec(model)
 							}
 						)
 					}
@@ -1103,27 +1149,58 @@ private fun ModelSelectorCard(
 					availableModels.forEach { availableModel ->
 						DropdownMenuItem(
 							text = {
-								Column {
-									Text(availableModel.displayName)
+								Column(
+									modifier = Modifier.padding(vertical = 8.dp),
+									verticalArrangement = Arrangement.spacedBy(2.dp)
+								) {
+									Text(availableModel.displayName, style = MaterialTheme.typography.bodyLarge)
 									Text(
-										availableModel.description,
+										QuickStartUiState.modelSpec(availableModel),
 										style = MaterialTheme.typography.bodySmall,
 										color = MaterialTheme.colorScheme.onSurfaceVariant
 									)
 									if (availableModel in arosModels) {
+										val needed = QuickStartUiState.romsNeeded(availableModel)
 										Text(
-											stringResource(R.string.quick_start_model_boots_aros),
+											if (needed.isEmpty()) {
+												stringResource(R.string.quick_start_model_boots_aros)
+											} else {
+												stringResource(R.string.quick_start_model_needs_rom, needed.joinToString(" + "))
+											},
 											style = MaterialTheme.typography.bodySmall,
 											color = MaterialTheme.colorScheme.onSurfaceVariant
 										)
 									}
 								}
 							},
+							modifier = Modifier.dpadMenuItemInitialFocus(availableModel == model),
 							onClick = {
 								onModelSelected(availableModel)
 								modelExpanded = false
 							}
 						)
+					}
+				}
+			}
+			if (selectedModelAvailable && (configName != null || edits.isNotEmpty())) {
+				Row(
+					modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+					verticalAlignment = Alignment.CenterVertically
+				) {
+					Text(
+						configName?.let { stringResource(R.string.quick_start_model_using_config, it) }
+							?: stringResource(R.string.quick_start_model_edited_title),
+						style = MaterialTheme.typography.bodySmall,
+						color = MaterialTheme.colorScheme.onSurfaceVariant,
+						modifier = Modifier.weight(1f)
+					)
+					if (edits.isNotEmpty()) {
+						TextButton(
+							onClick = { onModelSelected(model) },
+							modifier = Modifier.dpadFocusIndicator()
+						) {
+							Text(stringResource(R.string.action_reset_to_preset))
+						}
 					}
 				}
 			}
@@ -1138,13 +1215,138 @@ private fun ModelSelectorCard(
 	}
 }
 
+/** "Edited: CPU model 68030, Z3 Fast RAM 64 MB, +2 more": what differs from the preset. */
+@Composable
+private fun presetEditsText(edits: List<PresetEdit>): String {
+	val shown = edits.take(MAX_EDITS_SHOWN).map { "${it.label} ${settingText(it.value)}" }
+	val list = shown.joinToString(", ")
+	return stringResource(
+		R.string.quick_start_model_edited,
+		if (edits.size > shown.size) stringResource(R.string.quick_start_model_edited_more, list, edits.size - shown.size) else list
+	)
+}
+
+private const val MAX_EDITS_SHOWN = 3
+
+/**
+ * The first-run card: two short steps, the second for the launch mode chosen, then Got it.
+ * The Kickstart step offers the import until one is installed; [afterImportFocus] takes
+ * D-pad focus when the import button leaves.
+ */
+@Composable
+private fun WelcomeCard(
+	launchMode: QuickStartLaunchMode,
+	kickstartInstalled: Boolean,
+	importInProgress: Boolean,
+	onImportRom: () -> Unit,
+	afterImportFocus: FocusRequester,
+	onDismiss: () -> Unit
+) {
+	Card(
+		modifier = Modifier.fillMaxWidth(),
+		colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer)
+	) {
+		Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+			val textColor = MaterialTheme.colorScheme.onTertiaryContainer
+			Text(stringResource(R.string.welcome_title), style = MaterialTheme.typography.titleMedium, color = textColor)
+			Text(
+				stringResource(
+					R.string.welcome_step,
+					1,
+					stringResource(if (kickstartInstalled) R.string.welcome_step_kickstart_done else R.string.welcome_step_kickstart)
+				),
+				style = MaterialTheme.typography.bodyMedium,
+				color = textColor
+			)
+			Text(
+				stringResource(
+					R.string.welcome_step,
+					2,
+					stringResource(
+						when (launchMode) {
+							QuickStartLaunchMode.WHDLOAD -> R.string.welcome_step_whdload
+							QuickStartLaunchMode.DISK -> R.string.welcome_step_disk
+							QuickStartLaunchMode.CD -> R.string.welcome_step_cd
+							QuickStartLaunchMode.RECENT -> R.string.welcome_step_recent
+						}
+					)
+				),
+				style = MaterialTheme.typography.bodyMedium,
+				color = textColor
+			)
+			// The import button leaves once a Kickstart is installed. If the import ran from
+			// it, D-pad focus goes back to the launch mode rather than dropping to the rail.
+			var importHadFocus by remember { mutableStateOf(false) }
+			LaunchedEffect(kickstartInstalled) {
+				if (kickstartInstalled && importHadFocus) {
+					importHadFocus = false
+					afterImportFocus.requestFocus()
+				}
+			}
+			Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+				if (!kickstartInstalled) {
+					Button(
+						onClick = onImportRom,
+						enabled = !importInProgress,
+						modifier = Modifier
+							.onFocusChanged { if (it.isFocused) importHadFocus = true }
+							.dpadFocusIndicator()
+					) {
+						Text(stringResource(if (importInProgress) R.string.action_importing else R.string.action_import_rom))
+					}
+				}
+				Spacer(modifier = Modifier.weight(1f))
+				TextButton(onClick = onDismiss, modifier = Modifier.dpadFocusIndicator()) {
+					Text(stringResource(R.string.welcome_dismiss))
+				}
+			}
+		}
+	}
+}
+
+/**
+ * CD mode without a CD model: the CD32 and CDTV need their own ROMs, which AROS does
+ * not replace; each is named as the emulator's ROM list names it.
+ */
+@Composable
+private fun CdRomsNeededCard(importInProgress: Boolean, onImportRom: () -> Unit) {
+	val cdModels = remember { AmigaModel.entries.filter { it.hasCd } }
+	Card(
+		modifier = Modifier.fillMaxWidth(),
+		colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+	) {
+		Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+			val textColor = MaterialTheme.colorScheme.onSecondaryContainer
+			Text(stringResource(R.string.quick_start_cd_roms_title), style = MaterialTheme.typography.titleMedium, color = textColor)
+			Text(stringResource(R.string.quick_start_cd_roms_message), style = MaterialTheme.typography.bodyMedium, color = textColor)
+			cdModels.forEach { cdModel ->
+				val needed = QuickStartUiState.romsNeeded(cdModel)
+				if (needed.isNotEmpty()) {
+					Text(
+						stringResource(R.string.quick_start_cd_roms_model, cdModel.displayName, needed.joinToString(" + ")),
+						style = MaterialTheme.typography.bodyMedium,
+						color = textColor
+					)
+				}
+			}
+			Row(modifier = Modifier.fillMaxWidth()) {
+				Button(onClick = onImportRom, enabled = !importInProgress, modifier = Modifier.dpadFocusIndicator()) {
+					Text(stringResource(if (importInProgress) R.string.action_importing else R.string.action_import_rom))
+				}
+				Spacer(modifier = Modifier.weight(1f))
+			}
+		}
+	}
+}
+
 /** A WHDLoad launch: WHDBooter's hardware choice is named, not previewed; the rest is the launcher's. */
 @Composable
-private fun WhdLoadSummaryCard(summary: QuickStartWhdLoadSummary) {
+private fun WhdLoadSummaryCard(summary: QuickStartWhdLoadSummary, modifier: Modifier = Modifier) {
 	val schema = settingsSchema()
 	SummaryCard(
 		title = stringResource(R.string.quick_start_ready_title),
-		subtitle = stringResource(R.string.quick_start_ready_subtitle)
+		subtitle = stringResource(R.string.quick_start_ready_subtitle),
+		modifier = modifier
 	) {
 		SummaryRow(stringResource(R.string.quick_start_summary_media), summary.media)
 		SummaryRow(

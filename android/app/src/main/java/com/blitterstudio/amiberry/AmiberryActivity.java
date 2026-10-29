@@ -3,6 +3,8 @@ package com.blitterstudio.amiberry;
 import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.KeyEvent;
 import android.view.WindowManager;
 import android.window.OnBackInvokedCallback;
@@ -10,7 +12,11 @@ import android.window.OnBackInvokedDispatcher;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
+import com.blitterstudio.amiberry.overlay.EmulationHints;
 import com.blitterstudio.amiberry.overlay.OverlayHost;
+import com.blitterstudio.amiberry.overlay.RemoteJoystick;
+import com.blitterstudio.amiberry.overlay.RemoteJoystickHost;
+import com.blitterstudio.amiberry.ui.FocusUtilsKt;
 import org.libsdl.app.SDLActivity;
 
 /**
@@ -27,14 +33,24 @@ import org.libsdl.app.SDLActivity;
  * SDL_SCANCODE_AC_BACK, closes the on-screen keyboard first, then uses Back
  * as the GUI shortcut, which opens the in-game menu (OverlayHost) over a
  * running emulation.
+ *
+ * On a TV with no gamepad the remote's D-pad and OK are the port 2 joystick
+ * (RemoteJoystickHost).  As the emulation starts, a one-time hint says how
+ * to open the menu, and on such a TV what the remote does (EmulationHints).
  */
 public class AmiberryActivity extends SDLActivity {
 	// Messages from src/osdep/android_overlay.cpp (SDL_SendAndroidMessage).
 	private static final int COMMAND_SHOW_OVERLAY = COMMAND_USER + 1;
 	private static final int COMMAND_HIDE_OVERLAY = COMMAND_USER + 2;
+	/** How long after the start the first hint shows. */
+	private static final long HINT_DELAY_MS = 2500;
 
 	private OnBackInvokedCallback backCallback;
 	private OverlayHost overlay;
+	private RemoteJoystickHost remote;
+	/** The emulation started (-G) and its first hint is due or shown. */
+	private boolean hintsReady;
+	private final Handler hints = new Handler(Looper.getMainLooper());
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -43,6 +59,15 @@ public class AmiberryActivity extends SDLActivity {
 		if (!mBrokenLibraries && mLayout != null) {
 			overlay = new OverlayHost(this, mLayout, mSurface);
 			overlay.onCreate(savedInstanceState);
+			remote = new RemoteJoystickHost(this, this::showHintIfNew);
+			remote.start();
+			if (startsEmulation()) {
+				// Once the emulation shows, not over the black start-up screen.
+				hints.postDelayed(() -> {
+					hintsReady = true;
+					showHintIfNew();
+				}, HINT_DELAY_MS);
+			}
 		}
 		registerBackCallback();
 		enterImmersiveMode();
@@ -101,7 +126,16 @@ public class AmiberryActivity extends SDLActivity {
 
 	@Override
 	public boolean dispatchKeyEvent(KeyEvent event) {
-		if (overlay != null && overlay.isShowing() && overlay.onKeyEvent(event)) {
+		// A remote key's release goes where its press went, even if the menu
+		// opened meanwhile, so the joystick never stays held.
+		if (remote != null && event.getAction() == KeyEvent.ACTION_UP && remote.onKeyEvent(event)) {
+			return true;
+		}
+		if (overlay != null && overlay.isShowing()) {
+			if (overlay.onKeyEvent(event)) {
+				return true;
+			}
+		} else if (remote != null && remote.onKeyEvent(event)) {
 			return true;
 		}
 		return super.dispatchKeyEvent(event);
@@ -156,6 +190,10 @@ public class AmiberryActivity extends SDLActivity {
 	protected void onDestroy() {
 		final boolean finishing = isFinishing();
 		unregisterBackCallback();
+		hints.removeCallbacksAndMessages(null);
+		if (remote != null) {
+			remote.stop();
+		}
 		if (overlay != null) {
 			overlay.onDestroy();
 		}
@@ -204,6 +242,17 @@ public class AmiberryActivity extends SDLActivity {
 
 		getOnBackInvokedDispatcher().unregisterOnBackInvokedCallback(backCallback);
 		backCallback = null;
+	}
+
+	/** -G: the launcher starts the emulation rather than the classic settings window. */
+	private boolean startsEmulation() {
+		return java.util.Arrays.asList(getArguments()).contains("-G");
+	}
+
+	private void showHintIfNew() {
+		if (hintsReady && !isFinishing()) {
+			EmulationHints.INSTANCE.showIfNew(this, RemoteJoystick.INSTANCE.isActive(), FocusUtilsKt.isTvDevice(this));
+		}
 	}
 
 	private void dispatchBackToSdl() {

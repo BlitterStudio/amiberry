@@ -152,7 +152,13 @@ object IntentImportExecutor {
 		import: IntentImport.Classification.Media
 	): PreparedImport {
 		return when (val result = FileManager.importFileWithResult(context, uri, import.category)) {
-			is FileManager.ImportResult.Imported -> prepareImportedMedia(context, result.path, result.safeName, import.category)
+			is FileManager.ImportResult.Imported -> prepareImportedMedia(
+				context,
+				result.path,
+				result.safeName,
+				import.category,
+				ImportFeedback.fromImportResult(result)
+			)
 			is FileManager.ImportResult.Unsupported -> PreparedImport(
 				ImportFeedback.unsupportedFileType(result.extension)
 			)
@@ -166,11 +172,11 @@ object IntentImportExecutor {
 		context: Context,
 		importedPath: String,
 		importedName: String,
-		category: FileCategory
+		category: FileCategory,
+		feedback: ImportFeedback.Message
 	): PreparedImport {
 		return try {
 			FileRepository.getInstance(context).rescanCategory(category)
-			val feedback = ImportFeedback.fileImported(importedName)
 			val currentSettings = AndroidLaunchConfig.loadLastSessionSettings(context)
 			val launch = when (category) {
 				FileCategory.WHDLOAD_GAMES -> {

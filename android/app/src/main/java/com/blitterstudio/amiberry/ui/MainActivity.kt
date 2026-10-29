@@ -1,5 +1,6 @@
 package com.blitterstudio.amiberry.ui
 
+import android.app.ActivityManager
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -14,10 +15,14 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
+import com.blitterstudio.amiberry.ui.viewmodel.SettingsViewModel
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.blitterstudio.amiberry.AmiberryActivity
+import com.blitterstudio.amiberry.R
 import com.blitterstudio.amiberry.data.model.SettingsSchema
 import com.blitterstudio.amiberry.data.AppPreferences
 import com.blitterstudio.amiberry.data.AssetExtraction
@@ -57,6 +62,21 @@ class MainActivity : ComponentActivity() {
 	override fun onCreate(savedInstanceState: Bundle?) {
 		val splashScreen = installSplashScreen()
 		super.onCreate(savedInstanceState)
+		if (EmulatorResumeRecovery.isDuplicateLauncher(
+				isTaskRoot = isTaskRoot,
+				restoring = savedInstanceState != null,
+				emulatorRunning = isEmulatorRunning()
+			)
+		) {
+			// A second launcher over a paused game would show a false crash dialog and
+			// orphan the emulator on Back: return to the game instead.
+			if (intent?.action == Intent.ACTION_VIEW) {
+				Toast.makeText(this, R.string.msg_quit_emulation_to_open_file, Toast.LENGTH_LONG).show()
+			}
+			bringEmulatorToFront()
+			finish()
+			return
+		}
 		// The emulator's presets, option choices and CPU/chipset rules the
 		// launcher builds its screens and configurations from.
 		SettingsSchema.bundled(this)
@@ -362,7 +382,9 @@ class MainActivity : ComponentActivity() {
 		// before checking for crashes. Clean exit takes priority.
 		val hadTrackedSession = EmulatorLauncher.hasSessionMarker(this)
 		val wasCleanExit = EmulatorLauncher.checkAndClearCleanExit(this)
-		val wasCrash = !wasCleanExit && EmulatorLauncher.checkAndClearCrashMarker(this)
+		// The session marker of an emulator that is still running is no crash: leave it.
+		val wasCrash = EmulatorResumeRecovery.shouldCheckForCrash(wasCleanExit, isEmulatorRunning()) &&
+			EmulatorLauncher.checkAndClearCrashMarker(this)
 		val decision = EmulatorResumeRecovery.decide(
 			wasCleanExit = wasCleanExit,
 			wasCrash = wasCrash,
@@ -382,11 +404,32 @@ class MainActivity : ComponentActivity() {
 			}
 		}
 		emulatorWasLaunched = decision.keepLaunchTracked
+		// The on-screen controls turned in the in-game menu (the emulator
+		// records them only while its menu, not this activity, is in front).
+		ViewModelProvider(this)[SettingsViewModel::class.java].adoptInGameControls()
 	}
 
 	/** Called by EmulatorLauncher before starting the SDL activity. */
 	fun markEmulatorLaunched() {
 		emulatorWasLaunched = true
+	}
+
+	/** The emulator runs in its own process (":sdl", see the manifest). */
+	private fun isEmulatorRunning(): Boolean {
+		val activityManager = getSystemService(ActivityManager::class.java) ?: return false
+		val emulatorProcess = "$packageName$EMULATOR_PROCESS_SUFFIX"
+		return activityManager.runningAppProcesses.orEmpty().any { it.processName == emulatorProcess }
+	}
+
+	/** Bring the task the emulator runs in to the front when it is not this one. */
+	private fun bringEmulatorToFront() {
+		val activityManager = getSystemService(ActivityManager::class.java) ?: return
+		activityManager.appTasks
+			.firstOrNull { task ->
+				val info = runCatching { task.taskInfo }.getOrNull() ?: return@firstOrNull false
+				info.taskId != taskId && info.topActivity?.className == AmiberryActivity::class.java.name
+			}
+			?.moveToFront()
 	}
 
 	private fun requestInAppReview() {
@@ -473,5 +516,6 @@ class MainActivity : ComponentActivity() {
 
 	companion object {
 		private const val TAG = "Amiberry-Main"
+		private const val EMULATOR_PROCESS_SUFFIX = ":sdl"
 	}
 }

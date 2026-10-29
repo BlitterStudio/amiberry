@@ -1,7 +1,5 @@
 package com.blitterstudio.amiberry.ui.screens.settings
 
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -65,6 +63,7 @@ import com.blitterstudio.amiberry.data.model.FileCategory
 import com.blitterstudio.amiberry.data.model.LauncherChoices
 import com.blitterstudio.amiberry.data.model.ModelRomAvailability
 import com.blitterstudio.amiberry.data.model.RomIdentity
+import com.blitterstudio.amiberry.ui.components.rememberImportPicker
 import com.blitterstudio.amiberry.ui.components.settings.SchemaChoiceRow
 import com.blitterstudio.amiberry.ui.components.settings.SettingSwitchRow
 import com.blitterstudio.amiberry.ui.components.settings.SupportingText
@@ -73,6 +72,8 @@ import com.blitterstudio.amiberry.ui.components.settings.schemaOption
 import com.blitterstudio.amiberry.ui.ImportInFlightGuard
 import com.blitterstudio.amiberry.ui.dpadFocusIndicator
 import com.blitterstudio.amiberry.ui.dpadArrowsMoveFocus
+import com.blitterstudio.amiberry.ui.dpadFieldFocusIndicator
+import com.blitterstudio.amiberry.ui.components.settings.dpadMenuItemInitialFocus
 import com.blitterstudio.amiberry.ui.dpadVerticalMovesFocus
 import com.blitterstudio.amiberry.ui.rememberDpadTypingGate
 import com.blitterstudio.amiberry.ui.launchImportGuarded
@@ -408,6 +409,7 @@ private fun FileDropdown(
 					trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
 					modifier = Modifier
 						.then(fieldModifier)
+						.dpadFieldFocusIndicator()
 						.dpadArrowsMoveFocus()
 						.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
 						.fillMaxWidth()
@@ -418,6 +420,7 @@ private fun FileDropdown(
 				) {
 					DropdownMenuItem(
 						text = { Text(emptyLabel) },
+						modifier = Modifier.dpadMenuItemInitialFocus(selectedPath.isEmpty()),
 						onClick = {
 							onClear()
 							expanded = false
@@ -426,6 +429,7 @@ private fun FileDropdown(
 					extraPaths.forEach { path ->
 						DropdownMenuItem(
 							text = { Text(pathLabel(path)) },
+							modifier = Modifier.dpadMenuItemInitialFocus(path == selectedPath),
 							onClick = {
 								onSelect(path)
 								expanded = false
@@ -435,6 +439,7 @@ private fun FileDropdown(
 					files.forEach { file ->
 						DropdownMenuItem(
 							text = { Text(fileLabel(file)) },
+							modifier = Modifier.dpadMenuItemInitialFocus(file.path == selectedPath),
 							onClick = {
 								onSelect(file.path)
 								expanded = false
@@ -495,10 +500,11 @@ private fun FloppyDriveRow(
 				onClear = onClear
 			)
 
-			val importLauncher = rememberLauncherForActivityResult(
-				ActivityResultContracts.OpenDocument()
-			) { uri ->
-				uri?.let {
+			val importPicker = rememberImportPicker(
+				mimeTypes = FilePickerFilters.mimeTypesFor(FileCategory.FLOPPIES),
+				extensions = FileCategory.FLOPPIES.extensions
+			) { uris ->
+				uris.first().let {
 					scope.launchImportGuarded(importGuard) {
 						val result = withContext(Dispatchers.IO) {
 							FileManager.importFileWithResult(context, it, FileCategory.FLOPPIES).also { importResult ->
@@ -513,7 +519,7 @@ private fun FloppyDriveRow(
 				}
 			}
 			TextButton(
-				onClick = { importLauncher.launch(FilePickerFilters.mimeTypesFor(FileCategory.FLOPPIES)) },
+				onClick = importPicker::pickFiles,
 				enabled = !importInProgress,
 				// Full width so D-pad Up/Down reach it: the focus search weighs the distance
 				// between centres, and a short left-aligned button between two full-width
@@ -591,10 +597,11 @@ private fun HardDriveRow(
 				.then(if (fieldFocus != null) Modifier.focusRequester(fieldFocus) else Modifier)
 		)
 
-		val importLauncher = rememberLauncherForActivityResult(
-			ActivityResultContracts.OpenDocument()
-		) { uri ->
-			uri?.let {
+		val importPicker = rememberImportPicker(
+			mimeTypes = FilePickerFilters.mimeTypesFor(FileCategory.HARD_DRIVES),
+			extensions = FileCategory.HARD_DRIVES.extensions
+		) { uris ->
+			uris.first().let {
 				scope.launchImportGuarded(importGuard) {
 					val result = withContext(Dispatchers.IO) {
 						FileManager.importFileWithResult(context, it, FileCategory.HARD_DRIVES).also { importResult ->
@@ -609,7 +616,7 @@ private fun HardDriveRow(
 			}
 		}
 		TextButton(
-			onClick = { importLauncher.launch(FilePickerFilters.mimeTypesFor(FileCategory.HARD_DRIVES)) },
+			onClick = importPicker::pickFiles,
 			enabled = !importInProgress,
 			// Full width so D-pad Up/Down reach it (see the floppy import button).
 			modifier = Modifier.fillMaxWidth().dpadFocusIndicator()

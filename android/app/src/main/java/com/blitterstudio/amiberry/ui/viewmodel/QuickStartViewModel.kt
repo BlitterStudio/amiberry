@@ -11,7 +11,9 @@ import com.blitterstudio.amiberry.data.AppPreferences
 import com.blitterstudio.amiberry.data.FileRepository
 import com.blitterstudio.amiberry.data.model.AmigaFile
 import com.blitterstudio.amiberry.data.model.FileCategory
+import com.blitterstudio.amiberry.data.RecentLaunches
 import com.blitterstudio.amiberry.ui.screens.QuickStartLaunchMode
+import com.blitterstudio.amiberry.ui.screens.QuickStartUiState
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
@@ -26,12 +28,15 @@ class QuickStartViewModel(
 	var selectedWhdload by mutableStateOf<AmigaFile?>(null)
 		private set
 
+	/** The mode the user picked (kept across recreation); until then, [defaultLaunchMode]. */
 	var selectedLaunchMode by mutableStateOf(
-		QuickStartLaunchMode.fromName(
-			savedStateHandle[SELECTED_LAUNCH_MODE_KEY] ?: QuickStartLaunchMode.WHDLOAD.name
-		)
+		savedStateHandle.get<String>(SELECTED_LAUNCH_MODE_KEY)?.let(QuickStartLaunchMode::fromName)
+			?: defaultLaunchMode()
 	)
 		private set
+
+	private val modeChosen: Boolean
+		get() = savedStateHandle.contains(SELECTED_LAUNCH_MODE_KEY)
 
 	val availableFloppies: StateFlow<List<AmigaFile>> = repository.floppies
 	val availableCds: StateFlow<List<AmigaFile>> = repository.cdImages
@@ -42,6 +47,8 @@ class QuickStartViewModel(
 		viewModelScope.launch {
 			repository.rescan()
 			restoreWhdloadSelection()
+			// The scan may have found the first WHDLoad games.
+			if (!modeChosen) selectedLaunchMode = defaultLaunchMode()
 		}
 		// Clear stale WHDLoad selection when the file list changes
 		// (e.g., after a file is deleted in FileManager while this screen is live)
@@ -55,6 +62,11 @@ class QuickStartViewModel(
 			}
 		}
 	}
+
+	private fun defaultLaunchMode(): QuickStartLaunchMode = QuickStartUiState.defaultLaunchMode(
+		hasRecent = prefs.recentLaunches.value.any { RecentLaunches.Type.of(it) != RecentLaunches.Type.Unknown },
+		hasWhdloadGames = repository.whdloadGames.value.isNotEmpty()
+	)
 
 	private fun restoreWhdloadSelection() {
 		val savedPath = prefs.lastWhdloadPath

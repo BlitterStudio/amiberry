@@ -18,15 +18,17 @@ These build options are forced off for Android in `CMakeLists.txt`:
 MIDI is built with PortMidi's null backend, so no host MIDI devices are available. Portable mode and the built-in updater are not offered on Android; updates come through Google Play.
 
 ### Shaders
-The Android launcher's **Native Shader** list offers the built-in shaders (`none`, `tv`, `pc`, `lite`, `1084`) plus any `.glslp` presets and top-level `.glsl` files found in `Visuals/Shaders`. The built-in CRT effect switches to lighter shader and blur variants on mobile GPUs.
+The Android launcher's **Native screen shader** list offers the built-in shaders (`none`, `tv`, `pc`, `lite`, `1084`) plus any `.glslp` presets and top-level `.glsl` files found in `Visuals/Shaders`. The built-in CRT effect switches to lighter shader and blur variants on mobile GPUs.
 
 ### Model presets
-The launcher writes the whole machine a Quick Start model builds into its configuration (chipset extras such as the A3000's SCSI and Ramsey or the CD32's Akiko included), at the **Compatibility** level picked next to the model; new models start at the approximate level, as on the desktop. The CD32, CDTV and DraCo NVRAM files are kept in the emulator's `NVRAM` folder between launches. A few parts of a preset are not settings the launcher can write:
+The launcher writes the whole machine a Quick Start model builds into its configuration (chipset extras such as the A3000's SCSI and Ramsey or the CD32's Akiko included), at the **Compatibility** level picked next to the model; new models start at the approximate level, as on the desktop. In Settings the model is the **Amiga model** on the CPU tab; **Review changes** lists what an unsaved new configuration changes from its model's preset (or an open configuration from its saved file), with a Revert per option. The overflow menu's **Quick setups** (Pixel perfect, Touch controls) set display and control options in one go. The CD32, CDTV and DraCo NVRAM files are kept in the emulator's `NVRAM` folder between launches. A few parts of a preset are not settings the launcher can write:
 - the 64 KB SRAM card of the CDTV "Floppy drive and 64KB SRAM card" configuration;
 - the CD drive of a CD32 or CDTV started without a disc.
 
+Changing the model keeps the inserted disks and CD. A medium the new model has no drive for (floppies on a CD32, a CD on an A500) is ejected, and a message offers Undo. Quick Start opens in **Recent** once something was launched, in **WHDLoad** when games are installed, and in **Disk** otherwise.
+
 ### Settings coverage
-The launcher's Settings tabs show every option of the shared settings layer that means something on Android: each tab's own controls first, then one section per settings group (CPU, MMU, FPU, CPU speed, JIT; Chipset, Advanced Chipset and Genlock, which start collapsed; Memory and ROMs; Display and Filters; Sound; Input and On-screen Controls; Floppy, CD and Filesystem), and a **Misc** tab for the miscellaneous options, expansions and the protection dongle. An option that is unavailable in the current machine is dimmed, and its section says why once. The second to fourth memory boards of a kind appear once the board before is fitted. Configured in the desktop GUI only, for now:
+The launcher's Settings tabs show every option of the shared settings layer that means something on Android: each tab's own controls first, then one section per settings group (CPU, MMU, FPU, CPU speed, JIT; Chipset, Advanced chipset and Genlock, which start collapsed; Memory and ROMs; Display and Filters; Sound; Autofire, controllers and mouse, and On-screen controls; Floppy, CD and Filesystem), and a **Misc** tab for the miscellaneous options, expansions and the protection dongle. An option that is unavailable in the current machine is dimmed, and its section says why once. The second to fourth memory boards of a kind appear once the board before is fitted. Configured in the classic settings window only, for now:
 - RTG and accelerator boards (the board type is not yet in the launcher), and their memory and options;
 - the disk swapper list, joystick ports 3 and 4, custom bezel images and the RTG shader;
 - hotkeys.
@@ -46,11 +48,15 @@ The Android build supports:
 
 ## Storage
 
-Amiberry can use the `MANAGE_EXTERNAL_STORAGE` (All Files Access) permission to access ROM images, disk images, and game archives in user-chosen directories. It is not requested at startup. On Android 11 and newer, the launcher shows a **Limited file access** banner with a **Grant Access** button that opens the system permission screen. Without the permission, the app works within its scoped storage directory, and imports through the system file picker still copy files there:
+Imports copy files into the app's scoped storage directory, each into the folder of its kind (an `.adf` to `Floppies`, an `.lha` to `LHA`) whichever Files category is open:
 
 ```
 /storage/emulated/0/Android/data/com.blitterstudio.amiberry/files/
 ```
+
+Files ▸ ⋮ ▸ **Storage location** shows this path (with **Copy path**, except on TV). Importing a `.lha`/`.lzh` that holds no `.slave` file warns that it is not a WHDLoad game.
+
+Imports use the system document picker. Where none exists (Google TV resolves it to a stub that only says "You don't have an app that can do this"), and from Files ▸ Import ▸ **Browse device storage** on other devices, the launcher opens its own browser of internal storage, Downloads and USB drives. That browser needs the `MANAGE_EXTERNAL_STORAGE` (All Files Access) permission (READ_EXTERNAL_STORAGE on Android 10). It is not requested at startup: the Files tab shows an optional, dismissible card, and the browser explains the permission before opening the system grant screen, then opens by itself once the user returns with it granted.
 
 ## Performance Notes
 
@@ -75,13 +81,21 @@ A WHDLoad launch follows the same rule. WHDBooter chooses the hardware when the 
 
 For WHDLoad launches, the launcher's port choices also override the default controllers and mice in `amiberry.conf` (`default_controller1`–`4`, `default_mouse1`/`2`), which WHDBooter would otherwise assign.
 
+The red **Hide** key in the top-right corner of the keyboard, above the arrow keys, closes it like Back or East. Tap it, or move focus onto it (Right from Help, or Up from Bksp) and press South. In portrait the keyboard docks at the bottom and the Amiga picture moves into the free space above it, so the keyboard covers as little of the picture as possible. The picture moves back when the keyboard closes. Landscape placement does not change.
+
+## Android TV and the In-Game Menu
+
+On Android TV (a leanback device) a new installation starts without the touch overlays: no on-screen joystick and no KB button, with Port 2 set to a controller. While no gamepad is connected, the remote's D-pad moves the Port 2 joystick and OK fires; Back still opens the menu. This is decided while the emulation runs, so configurations saved on a TV are the same as anywhere else, and connecting a gamepad hands Port 2 back to the configuration's device. A one-time hint says what the remote does; on other devices a one-time hint says that Back opens the menu.
+
+The in-game menu's **Controls** page shows the Port 1 and Port 2 devices, with **Swap ports**. Port changes there apply to the session; the on-screen joystick and keyboard switches are kept for the next launch. The **Settings** page's changes apply to the session only. Reset, Hard reset, Quit and saving over a used state slot ask first, with Cancel focused. The menu's **Classic settings window** opens the built-in settings window, with every option.
+
 ## Desktop-Style Use on ChromeOS
 
 On large-screen/desktop-class devices (Chromebooks, freeform windowing), Amiberry launches as a landscape tablet-size window; on phone-standard launches these preferences are inert and behavior is unchanged. Physical-keyboard users on QWERTZ-style layouts get correct key mapping (the physical key positions are passed through and the AmigaOS keymap performs the layout mapping), and synthetic Enter events generated by a light touchpad tap are filtered out so they never reach the emulated machine.
 
 ## Launcher Layout on Wide Screens
 
-The launcher adapts to the window width (Material 3 window size classes). From 600 dp (a tablet held upright) the navigation rail replaces the bottom bar, and Settings and Files list their tabs and categories down the left beside the content. From 840 dp (a landscape tablet, a Chromebook window, Android TV) Configurations shows the list beside the selected configuration's summary and actions, and Quick Start shows the launch mode and media beside the notices and current settings. A phone keeps the single-column layout, also when held sideways. With a D-pad, Left and Right move between the panes.
+The launcher adapts to the window width (Material 3 window size classes). From 600 dp (a tablet held upright) the navigation rail replaces the bottom bar, and Settings and Files list their tabs and categories down the left beside the content. From 840 dp (a landscape tablet, a Chromebook window, Android TV) Configurations shows the list beside the selected configuration's summary and actions, and Quick Start shows the launch mode and media beside the notices and current settings. A phone keeps the single-column layout, also when held sideways. With a D-pad, Left and Right move between the panes, and Right from the navigation rail always enters the tab's content; in Settings the page follows the category focus rests on, and Right enters the page at its first control. Open dropdowns start on their current value. On Android TV, focus starts in Quick Start's content, OK on a game in the WHDLoad game list starts it, body and help text is 1.2 times larger, the focus ring is a thicker light outline, and Configurations offers no Share (no TV app takes a shared file).
 
 ## RTG Display Modes
 

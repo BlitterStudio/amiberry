@@ -1,8 +1,6 @@
 package com.blitterstudio.amiberry.ui.components
 
-import android.content.Intent
-import android.net.Uri
-import android.os.Build
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -18,33 +16,43 @@ import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.blitterstudio.amiberry.R
+import com.blitterstudio.amiberry.data.AppPreferences
 import com.blitterstudio.amiberry.data.ConfigurationActions
+import com.blitterstudio.amiberry.data.DocumentPickerAvailability
 import com.blitterstudio.amiberry.data.StoragePermissionActions
 import com.blitterstudio.amiberry.ui.dpadFocusIndicator
 import com.blitterstudio.amiberry.ui.hasFullStorageAccess
+
 /**
- * Displays an informational banner when the app does not have full storage access.
- * Includes a button to open system settings so the user can grant the permission.
- * Renders nothing if permission is already granted or on Android 10 and below.
+ * The optional All Files Access card: imports work without it (through the document
+ * picker), and the access only lets the in-app browser read this device's folders and
+ * USB drives. Without a document picker (Google TV) that browser is the only way in, and
+ * the card says so. "Not now" hides it for good; renders nothing once access is granted.
+ * [onGrant] replaces the default (open the grant screen), e.g. to open the browser after.
  */
 @Composable
 fun StoragePermissionBanner(
 	modifier: Modifier = Modifier,
+	onGrant: (() -> Unit)? = null,
 	onMessage: (ConfigurationActions.Message) -> Unit = {}
 ) {
-	if (!StoragePermissionActions.shouldShowBanner(hasFullStorageAccess())) return
-
 	val context = LocalContext.current
+	val preferences = remember { AppPreferences.getInstance(context) }
+	val dismissed by preferences.storageAccessCardDismissed
+	if (!StoragePermissionActions.shouldShowBanner(hasFullStorageAccess(), dismissed)) return
+	val hasDocumentPicker = remember { DocumentPickerAvailability.canOpenDocuments(context) }
 
 	OutlinedCard(modifier = modifier.fillMaxWidth()) {
 		Row(
-			modifier = Modifier.padding(16.dp),
+			modifier = Modifier.padding(start = 16.dp, top = 12.dp, end = 8.dp, bottom = 4.dp),
 			verticalAlignment = Alignment.Top
 		) {
 			Icon(
@@ -56,39 +64,38 @@ fun StoragePermissionBanner(
 			Spacer(modifier = Modifier.width(12.dp))
 			Column(modifier = Modifier.weight(1f)) {
 				Text(
-					text = stringResource(R.string.storage_permission_banner_title),
+					text = stringResource(R.string.storage_access_card_title),
 					style = MaterialTheme.typography.titleSmall
 				)
 				Text(
-					text = stringResource(R.string.storage_permission_banner_message),
+					text = stringResource(
+						if (hasDocumentPicker) R.string.storage_access_card_message else R.string.storage_access_card_message_no_picker
+					),
 					style = MaterialTheme.typography.bodySmall,
 					color = MaterialTheme.colorScheme.onSurfaceVariant
 				)
-				TextButton(
-					onClick = {
-						val opened = StoragePermissionActions
-							.permissionRequests(context.packageName, Build.VERSION.SDK_INT)
-							.any { request ->
-								val intent = Intent(request.action).apply {
-									request.dataUri?.let { data = Uri.parse(it) }
-								}
-
-								runCatching {
-									context.startActivity(intent)
-								}.isSuccess
-							}
-
-						if (!opened) {
-							try {
-								onMessage(StoragePermissionActions.openSettingsFailedMessage())
-							} catch (_: Exception) {
-								// Message delivery is owned by the parent screen; keep the banner resilient.
-							}
-						}
-					},
-					modifier = Modifier.dpadFocusIndicator()
+				Row(
+					modifier = Modifier.fillMaxWidth(),
+					horizontalArrangement = Arrangement.End
 				) {
-					Text(stringResource(R.string.storage_permission_banner_action))
+					TextButton(
+						onClick = { preferences.dismissStorageAccessCard() },
+						modifier = Modifier.dpadFocusIndicator()
+					) {
+						Text(stringResource(R.string.storage_access_card_not_now))
+					}
+					TextButton(
+						onClick = {
+							if (onGrant != null) {
+								onGrant()
+							} else if (!openAllFilesAccessSettings(context)) {
+								onMessage(StoragePermissionActions.openSettingsFailedMessage())
+							}
+						},
+						modifier = Modifier.dpadFocusIndicator()
+					) {
+						Text(stringResource(R.string.storage_permission_banner_action))
+					}
 				}
 			}
 		}

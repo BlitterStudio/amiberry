@@ -33,5 +33,8 @@ enum class FileCategory(
 			val lower = ext.lowercase()
 			return entries.firstOrNull { lower in it.extensions }
 		}
+
+		/** Every extension some category imports. */
+		val allExtensions: Set<String> by lazy { entries.flatMapTo(mutableSetOf()) { it.extensions } }
 	}
 }

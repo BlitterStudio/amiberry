@@ -18,6 +18,19 @@
 #include "imgui_osk_font.h"
 #endif
 
+// Touch-first keyboard chrome for the Android app: a visible Hide key (the
+// only other way out is the undiscoverable Back button) and docking under the
+// picture in portrait, see imgui_osk_bottom_inset_fraction(). Desktop and
+// libretro keep the original keyboard. Tests may predefine it to exercise
+// either variant.
+#ifndef AMIBERRY_OSK_TOUCH_CHROME
+#if defined(__ANDROID__) && !defined(LIBRETRO)
+#define AMIBERRY_OSK_TOUCH_CHROME 1
+#else
+#define AMIBERRY_OSK_TOUCH_CHROME 0
+#endif
+#endif
+
 // Font accessors declared in imgui_overlay.h
 
 // ============================================================
@@ -33,7 +46,12 @@ enum OskKeyType {
 	KEY_RETURN,
 	KEY_ARROW,
 	KEY_NUMPAD,
+	KEY_HIDE,       // hides the keyboard; sends nothing to the guest
 };
+
+// Key code of the Hide key: not an AK_* code, so press_key()/release_key()
+// ignore it and the release hides the keyboard instead.
+static constexpr int OSK_ACTION_HIDE = -2;
 
 // ============================================================
 // Key definition structure
@@ -164,6 +182,12 @@ static const OskKeyDef s_keys_us[] = {
 	{AR_X,       ROW_SPACE, 1.0f, KEY_H, AK_LF, "<", nullptr, KEY_ARROW},
 	{AR_X + 1.0f,ROW_SPACE, 1.0f, KEY_H, AK_DN, "v", nullptr, KEY_ARROW},
 	{AR_X + 2.0f,ROW_SPACE, 1.0f, KEY_H, AK_RT, ">", nullptr, KEY_ARROW},
+#if AMIBERRY_OSK_TOUCH_CHROME
+	// Hide key above the arrow cluster: the free top-right corner in both the
+	// compact and the numpad layout, reachable by touch and by D-pad (Up from
+	// Bksp, Right from Help).
+	{AR_X + 1.0f, ROW_FUNC, 1.0f, FUNC_H, OSK_ACTION_HIDE, "Hide", nullptr, KEY_HIDE},
+#endif
 
 	// ---- Optional numpad ----
 	// Row 0: ( ) / *
@@ -195,7 +219,7 @@ static const OskKeyDef s_keys_us[] = {
 	{NP_X + 2.0f,ROW_SHIFT, 1.0f, KEY_H, AK_NPDEL, ".", nullptr, KEY_NUMPAD},
 };
 
-static constexpr int NUM_MAIN_KEYS = 78;
+static constexpr int NUM_MAIN_KEYS = 78 + AMIBERRY_OSK_TOUCH_CHROME;
 static constexpr int NUM_NUMPAD_KEYS = 18;
 static constexpr int NUM_KEYS = sizeof(s_keys_us) / sizeof(s_keys_us[0]);
 static_assert(NUM_MAIN_KEYS + NUM_NUMPAD_KEYS == NUM_KEYS, "Unexpected on-screen keyboard layout size");
@@ -314,6 +338,7 @@ static ImU32 col_key_arrow;
 static ImU32 col_key_numpad;
 static ImU32 col_key_space;
 static ImU32 col_key_return;
+static ImU32 col_key_hide;
 
 static void init_colors()
 {
@@ -335,6 +360,7 @@ static void init_colors()
 	col_key_numpad     = IM_COL32(206, 192, 168, 255);   // slightly cooler beige
 	col_key_space      = IM_COL32(236, 224, 200, 255);   // space bar (lighter)
 	col_key_return     = IM_COL32(206, 192, 168, 255);   // return key
+	col_key_hide       = IM_COL32(150, 56, 44, 255);     // muted red (Hide)
 }
 
 // ============================================================
@@ -473,6 +499,7 @@ static ImU32 get_key_color(const OskKeyDef& key)
 	case KEY_RETURN:    return col_key_return;
 	case KEY_ARROW:     return col_key_arrow;
 	case KEY_NUMPAD:    return col_key_numpad;
+	case KEY_HIDE:      return col_key_hide;
 	default:            return col_key_normal;
 	}
 }
@@ -605,7 +632,7 @@ static void draw_key(ImDrawList* dl, const OskKeyDef& key, int key_index,
 	if (is_pressed)
 		// Pressed keys now glow bright amber — dark text reads better.
 		label_col = apply_alpha(col_key_label, alpha);
-	else if (is_sticky || key.type == KEY_FUNCTION)
+	else if (is_sticky || key.type == KEY_FUNCTION || key.type == KEY_HIDE)
 		label_col = apply_alpha(col_key_label_dark, alpha);
 	else
 		label_col = apply_alpha(col_key_label, alpha);
@@ -1090,6 +1117,23 @@ bool imgui_osk_should_render()
 	return s_visible || s_animating;
 }
 
+float imgui_osk_bottom_inset_fraction(const int width, const int height)
+{
+#if AMIBERRY_OSK_TOUCH_CHROME
+	// Portrait only: in landscape the picture is pillarboxed to the full
+	// height, so there is no free space above the keyboard to move it into.
+	if (!s_initialized || !imgui_osk_should_render() || width <= 0 || height <= width)
+		return 0.0f;
+	// The plate spans KB_HEIGHT_FRAC of the window and is s_anim_progress
+	// of the way in, so the picture follows the slide animation both ways.
+	return KB_HEIGHT_FRAC * s_anim_progress;
+#else
+	(void)width;
+	(void)height;
+	return 0.0f;
+#endif
+}
+
 void imgui_osk_set_transparency(float alpha)
 {
 	s_transparency = alpha;
@@ -1236,6 +1280,8 @@ bool imgui_osk_hit_test(float screen_x, float screen_y)
 
 static void press_key(int ak_code)
 {
+	if (ak_code == OSK_ACTION_HIDE)
+		return; // acts on release, never reaches the guest
 	if (is_modifier_key(ak_code)) {
 		// Toggle sticky modifier
 		if (s_sticky_keys.count(ak_code)) {
@@ -1252,6 +1298,8 @@ static void press_key(int ak_code)
 
 static void release_key(int ak_code)
 {
+	if (ak_code == OSK_ACTION_HIDE)
+		return; // the caller hides the keyboard
 	if (!is_modifier_key(ak_code)) {
 		inputdevice_do_keyboard(ak_code, 0);
 
@@ -1323,7 +1371,11 @@ bool imgui_osk_handle_finger_up(float screen_x, float screen_y, int finger_id)
 	s_pressed_keys.erase(key_idx);
 
 	if (key_idx >= 0 && key_idx < active_key_count()) {
-		release_key(s_keys_us[key_idx].ak_code);
+		const int ak_code = s_keys_us[key_idx].ak_code;
+		release_key(ak_code);
+		// Lifting the finger on Hide hides the keyboard, exactly like Back.
+		if (ak_code == OSK_ACTION_HIDE)
+			imgui_osk_hide();
 	}
 	return true;
 }
@@ -1576,11 +1628,13 @@ bool imgui_osk_process(int state, int* keycode, int* pressed)
 	// Button press/release
 	if (s_focused_key >= 0 && s_focused_key < active_key_count()) {
 		int ak = s_keys_us[s_focused_key].ak_code;
+		// The Hide key sends no guest key, so it reports none either.
+		const int reported = ak == OSK_ACTION_HIDE ? 0 : ak;
 
 		if (rising & OSK_BUTTON) {
 			s_pressed_keys.insert(s_focused_key);
 			press_key(ak);
-			*keycode = ak;
+			*keycode = reported;
 			*pressed = 1;
 			return true;
 		}
@@ -1588,8 +1642,16 @@ bool imgui_osk_process(int state, int* keycode, int* pressed)
 		if (falling & OSK_BUTTON) {
 			s_pressed_keys.erase(s_focused_key);
 			release_key(ak);
-			*keycode = ak;
+			*keycode = reported;
 			*pressed = 0;
+
+			if (ak == OSK_ACTION_HIDE) {
+				// Hide like Back. Focus returns to the first key so the next
+				// South after reopening types instead of hiding again.
+				s_focused_key = 0;
+				imgui_osk_hide();
+				return true;
+			}
 
 			// Directions whose rising edges were suppressed while the key was
 			// held are replayed now — one step, then armed repeat; directions

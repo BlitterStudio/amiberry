@@ -7,7 +7,13 @@ sealed interface MediaTarget {
 }
 
 /** What a confirmation page asks about. */
-enum class ConfirmAction { HARD_RESET, QUIT }
+sealed interface ConfirmAction {
+	data object Reset : ConfirmAction
+	data object HardReset : ConfirmAction
+	data object Quit : ConfirmAction
+	/** Saving over the state in a used slot. */
+	data class Overwrite(val slot: SlotState) : ConfirmAction
+}
 
 /** The menu's pages. */
 sealed interface OverlayPage {
@@ -72,6 +78,9 @@ object OverlayKeys {
 	const val HARD_RESET = "hard_reset"
 	const val ADVANCED = "advanced"
 	const val QUIT = "quit"
+	const val SWAP_PORTS = "swap_ports"
+
+	fun save(slot: Int): String = "save_$slot"
 
 	fun insert(target: MediaTarget): String = when (target) {
 		is MediaTarget.Floppy -> "insert_df${target.drive}"

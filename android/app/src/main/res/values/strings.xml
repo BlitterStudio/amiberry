@@ -17,11 +17,9 @@
     <string name="tab_storage">Storage</string>
     <string name="tab_misc">Misc</string>
 
-    <string name="settings_title">Settings</string>
     <string name="quick_start_title">Quick Start</string>
-    <string name="file_manager_title">File Manager</string>
-    <string name="configurations_title">Saved Configurations</string>
-    <string name="configurations_refresh">Refresh configurations</string>
+    <string name="file_manager_title">Files</string>
+    <string name="configurations_title">Saved configurations</string>
 
     <string name="more_options">More options</string>
     <string name="action_start">Start</string>
@@ -34,37 +32,33 @@
     <string name="action_delete">Delete</string>
     <string name="action_duplicate">Duplicate</string>
     <string name="action_launch">Launch</string>
-    <string name="action_edit_config">Edit Config</string>
-    <string name="action_advanced">Advanced</string>
-    <string name="action_save_as">Save As…</string>
-    <string name="action_edit_advanced_imgui">Edit in Advanced mode (ImGui)</string>
-    <string name="action_eject">Eject</string>
+    <string name="action_edit_config">Edit</string>
+    <string name="action_advanced">Classic settings window</string>
+    <string name="action_save_as">Save as…</string>
+    <string name="action_edit_advanced_imgui">Edit in the classic settings window</string>
     <string name="action_share">Share</string>
     <string name="action_clear_search">Clear search</string>
     <string name="action_dismiss">Dismiss</string>
     <string name="action_done">Done</string>
-    <string name="action_review_changes">Review Changes</string>
+    <string name="action_review_changes">Review changes</string>
     <string name="action_launch_named">Launch %1$s</string>
     <string name="action_edit_named">Edit %1$s</string>
-    <string name="action_delete_named">Delete %1$s</string>
     <string name="action_eject_named">Eject %1$s</string>
     <string name="action_more_for_named">More options for %1$s</string>
 
-    <string name="label_configuration_name">Configuration Name</string>
+    <string name="label_configuration_name">Configuration name</string>
     <string name="label_configuration_description">Description (optional)</string>
-    <string name="dialog_save_config_title">Save Configuration</string>
+    <string name="dialog_save_config_title">Save configuration</string>
     <string name="dialog_save_config_message">Enter a name for this configuration.</string>
     <string name="settings_new_configuration">New configuration</string>
     <string name="settings_unsaved_changes">Unsaved changes</string>
-    <string name="settings_presets_title">Presets</string>
-    <string name="settings_preset_select">Choose a preset</string>
     <string name="settings_compatibility_level">Compatibility</string>
     <string name="settings_compatibility_level_help">How exactly the model\'s preset emulates the machine: more exact is slower.</string>
     <string name="settings_compatibility_level_custom">Custom (edited)</string>
-    <string name="settings_preset_pixel_perfect">Pixel Perfect</string>
-    <string name="settings_preset_pixel_perfect_desc">Integer scaling with resolution autoswitch.</string>
-    <string name="settings_preset_touch_controls">Touch Controls</string>
-    <string name="settings_preset_touch_controls_desc">Enable on-screen joystick and keyboard.</string>
+    <string name="settings_preset_pixel_perfect">Pixel perfect</string>
+    <string name="settings_preset_pixel_perfect_desc">Sharp, evenly sized pixels: integer scaling with resolution autoswitch.</string>
+    <string name="settings_preset_touch_controls">Touch controls</string>
+    <string name="settings_preset_touch_controls_desc">Turns on the on-screen joystick and keyboard.</string>
     <string name="settings_adjustments_title">Settings adjusted</string>
     <string name="settings_adjustments_more">And %1$d more.</string>
     <string name="settings_adjustment_aga_cpu">AGA chipset requires a 68020 or newer CPU.</string>
@@ -75,13 +69,12 @@
     <string name="dialog_overwrite_config_title">Overwrite configuration?</string>
     <string name="dialog_overwrite_config_message">A configuration named “%1$s” already exists. Overwrite it?</string>
     <string name="action_overwrite">Overwrite</string>
-    <string name="action_discard">Discard</string>
     <string name="dialog_unsaved_changes_title">Unsaved changes</string>
     <string name="dialog_unsaved_changes_message">Save your changes to “%1$s” before leaving?</string>
-    <string name="dialog_review_changes_title">Review Changes</string>
+    <string name="dialog_review_changes_title">Review changes</string>
     <string name="dialog_review_changes_empty">Only preserved advanced settings changed.</string>
-    <string name="dialog_review_changes_row">%1$s -> %2$s</string>
-    <string name="dialog_delete_config_title">Delete Configuration</string>
+    <string name="dialog_review_changes_row">%1$s → %2$s</string>
+    <string name="dialog_delete_config_title">Delete configuration</string>
     <string name="dialog_delete_config_message">Delete “%1$s”? This cannot be undone.</string>
 
     <string name="msg_invalid_config_name">Invalid configuration name</string>
@@ -89,20 +82,19 @@
     <string name="msg_failed_save_config">Failed to save configuration</string>
     <string name="msg_saved_configuration">Saved “%1$s”</string>
     <string name="msg_rom_required_before_start">Import/select a Kickstart ROM before starting.</string>
-    <string name="msg_game_imported">Game imported</string>
     <string name="msg_path_copied">Path copied</string>
     <string name="msg_failed_load_config">Failed to load configuration</string>
     <string name="msg_failed_delete_config">Failed to delete configuration</string>
     <string name="msg_failed_duplicate_config">Failed to duplicate configuration</string>
     <string name="msg_failed_share_config">Failed to share configuration</string>
     <string name="msg_failed_launch_config">Failed to launch configuration</string>
-    <string name="msg_failed_launch_advanced">Failed to open Advanced mode</string>
+    <string name="msg_failed_launch_advanced">Could not open the classic settings window</string>
     <string name="msg_config_duplicated_as">Duplicated as “%1$s”</string>
     <string name="msg_link_open_failed">No app can open this link</string>
     <string name="msg_support_info_copied">Support info copied</string>
 
     <string name="configurations_empty_title">No configurations saved yet</string>
-    <string name="configurations_empty_message">Configure settings and launch emulation to generate config files, or use the Advanced (ImGui) interface to create them.</string>
+    <string name="configurations_empty_message">Set up a machine in Settings and choose Save to keep it here. Configurations saved in the classic settings window appear here too.</string>
     <string name="configurations_no_search_results">No matching configurations</string>
     <string name="configurations_search_help">Try another search term or filter.</string>
     <string name="configurations_search_label">Search configurations</string>
@@ -112,19 +104,18 @@
     <string name="configurations_detail_machine">Machine</string>
     <string name="configurations_detail_loading">Reading configuration…</string>
     <string name="configurations_detail_unreadable">This configuration could not be read.</string>
-    <string name="configurations_detail_open_in_settings">Open in Settings</string>
+    <string name="configurations_detail_open_in_settings">Loaded in Settings</string>
     <string name="summary_no_media">No media inserted</string>
 
     <string name="quick_start_recent_title">Recent</string>
     <string name="quick_start_recent_empty">No recent launches yet.</string>
-    <string name="quick_start_launch_mode_title">Launch Mode</string>
+    <string name="quick_start_launch_mode_title">Launch mode</string>
     <string name="quick_start_mode_whdload">WHDLoad</string>
     <string name="quick_start_mode_disk">Disk</string>
     <string name="quick_start_mode_cd">CD</string>
     <string name="quick_start_mode_recent">Recent</string>
-    <string name="quick_start_ready_title">Current Settings</string>
+    <string name="quick_start_ready_title">Current settings</string>
     <string name="quick_start_ready_subtitle">These are the settings that will be used for this launch mode.</string>
-    <string name="quick_start_model_summary">Model: %1$s</string>
     <string name="quick_start_summary_model">Model</string>
     <string name="quick_start_summary_cpu">CPU</string>
     <string name="quick_start_summary_chipset">Chipset</string>
@@ -135,35 +126,26 @@
     <string name="quick_start_whdload_hardware_whdbooter">Chosen by WHDBooter when the game starts</string>
     <string name="quick_start_whdload_hardware_per_game">From the game\'s own configuration, %1$s</string>
     <string name="quick_start_whdload_aros_notice">The A1200 Kickstart is not installed: WHDLoad games that WHDBooter runs on the A1200 boot the free AROS ROM instead.</string>
-    <string name="quick_start_media_whdload">WHDLoad game selected</string>
-    <string name="quick_start_media_floppy_cd">Floppy and CD selected</string>
-    <string name="quick_start_media_floppy">Floppy selected</string>
-    <string name="quick_start_media_cd">CD selected</string>
-    <string name="quick_start_media_none">No media selected</string>
-    <string name="quick_start_no_rom_warning">No Kickstart ROM found. Import one from File Manager before launch.</string>
     <string name="quick_start_no_compatible_models">No compatible models found</string>
     <string name="quick_start_no_compatible_models_help">Import a supported Kickstart ROM to enable model selection.</string>
     <string name="quick_start_no_compatible_models_message">No recognized Kickstart ROM matches the Quick Start models. Import a supported model ROM or use a saved configuration.</string>
     <string name="quick_start_config_write_failed">Failed to write Quick Start settings</string>
-    <string name="setup_required_title">ROM Setup Required</string>
+    <string name="setup_required_title">ROM setup required</string>
     <string name="setup_required_message">An Amiga Kickstart ROM is required to start the emulator. Please import a valid ROM file.</string>
     <string name="action_import_rom">Import ROM</string>
-    <string name="action_import_roms">Import ROMs</string>
-    <string name="action_import_rom_folder">Import ROM folder</string>
     <string name="action_import_files">Import files</string>
     <string name="action_import_folder">Import folder</string>
     <string name="file_manager_import_category">Import %1$s</string>
-    <string name="configurations_empty_cta">Create Initial Configuration</string>
-    <string name="quick_start_amiga_model">Amiga Model</string>
-    <string name="quick_start_floppy_df0">Floppy Disk (DF0)</string>
-    <string name="quick_start_floppy_df1">Floppy Disk (DF1)</string>
+    <string name="configurations_empty_cta">Open Settings</string>
+    <string name="quick_start_amiga_model">Amiga model</string>
+    <string name="quick_start_floppy_df0">Floppy disk (DF0)</string>
+    <string name="quick_start_floppy_df1">Floppy disk (DF1)</string>
     <string name="quick_start_no_floppy_images">No floppy images found</string>
-    <string name="quick_start_cd_image">CD Image</string>
+    <string name="quick_start_cd_image">CD image</string>
     <string name="quick_start_no_cd_images">No CD images found</string>
-    <string name="quick_start_whdload_title">WHDLoad Game</string>
+    <string name="quick_start_whdload_title">WHDLoad game</string>
     <string name="quick_start_whdload_help">Select a game to launch: WHDBooter sets up the machine for it when it starts</string>
     <string name="quick_start_no_whdload_games">No WHDLoad games found. Import .lha, .lzh or .lzx files to get started.</string>
-    <string name="quick_start_select_game_placeholder">(select a game)</string>
     <string name="quick_start_scanning_media">Scanning media</string>
     <string name="rom_readiness_scanned">ROMs scanned: %1$d</string>
     <string name="rom_readiness_recognized">Recognized Kickstart ROMs: %1$d</string>
@@ -175,19 +157,15 @@
     <string name="file_manager_tab_roms">ROMs</string>
     <string name="file_manager_tab_whdload">WHDLoad</string>
     <string name="file_manager_tab_floppies">Floppies</string>
-    <string name="file_manager_tab_hard_drives">Hard Drives</string>
+    <string name="file_manager_tab_hard_drives">Hard drives</string>
     <string name="file_manager_tab_cds">CDs</string>
-    <string name="file_manager_app_storage">App Storage</string>
     <string name="file_manager_copy_path">Copy path</string>
     <string name="file_manager_refresh">Refresh files</string>
     <string name="file_manager_no_files_found">No %1$s found</string>
-    <string name="file_manager_empty_help">Tap + to import files, or copy them to:\n%1$s/%2$s/</string>
-    <string name="file_manager_empty_help_with_extensions">Tap + to import %3$s files, or copy them to:\n%1$s/%2$s/</string>
     <string name="file_manager_no_search_results">No matching files</string>
     <string name="file_manager_search_help">Try a different search term or clear the search.</string>
     <string name="file_manager_scanning_files">Scanning files</string>
     <string name="file_manager_importing_files">Importing files</string>
-    <string name="msg_imported_successfully">Imported successfully</string>
     <string name="msg_imported_multiple">Imported %1$d of %2$d files</string>
     <string name="msg_imported_multiple_with_failures">Imported %1$d of %2$d files (%3$d unsupported, %4$d failed)</string>
     <string name="msg_imported_none">No files imported (%1$d unsupported, %2$d failed)</string>
@@ -205,73 +183,73 @@
 
     <string name="settings_option_none">None</string>
 
-    <string name="settings_cpu_model_preset">Model Preset</string>
-    <string name="settings_cpu_model_preset_help">Applies default CPU, chipset, and memory settings</string>
+    <string name="settings_cpu_model_preset">Amiga model</string>
+    <string name="settings_cpu_model_preset_help">Sets the CPU, chipset and memory to the model\'s defaults.</string>
     <string name="settings_cpu_section_title">CPU</string>
 
     <string name="settings_chipset_section_title">Chipset</string>
 
-    <string name="settings_memory_config_title">Memory Configuration</string>
+    <string name="settings_memory_config_title">Memory configuration</string>
     <string name="settings_memory_summary_title">Summary</string>
     <string name="settings_memory_summary_total">Total: %1$s</string>
     <string name="settings_memory_value_mb">%1$d MB</string>
     <string name="settings_memory_value_mb_decimal">%1$.1f MB</string>
     <string name="settings_memory_value_kb">%1$d KB</string>
 
-    <string name="settings_display_title">Display Settings</string>
+    <string name="settings_display_title">Display settings</string>
     <string name="settings_display_resolution_label">Resolution</string>
     <string name="settings_display_resolution_pal_low">640x256 (PAL Low-res)</string>
     <string name="settings_display_resolution_pal_high">640x512 (PAL Hi-res)</string>
     <string name="settings_display_resolution_default">720x568 (Default)</string>
     <string name="settings_display_resolution_800_600">800x600</string>
     <string name="settings_display_resolution_1024_768">1024x768</string>
-    <string name="settings_display_app_theme">App Theme</string>
+    <string name="settings_display_app_theme">App theme</string>
     <string name="settings_display_theme_label">Theme</string>
-    <string name="settings_display_theme_system">Follow System</string>
+    <string name="settings_display_theme_system">Follow system</string>
     <string name="settings_display_theme_light">Light</string>
     <string name="settings_display_theme_dark">Dark</string>
     <string name="settings_display_dynamic_color">Use Material You colors</string>
-    <string name="settings_display_in_game_menu">In-game Menu</string>
+    <string name="settings_display_in_game_menu">In-game menu</string>
     <string name="settings_display_classic_menu">Use the classic settings window</string>
-    <string name="settings_display_classic_menu_help">Back, Start and the two-finger swipe open the full ImGui settings window during emulation instead of the in-game menu.</string>
-    <string name="settings_display_integer_scaling">Integer Scaling</string>
-    <string name="settings_display_integer_scaling_desc">Pixel-perfect scaling. Sets the scaling method to Integer and turns Resolution Autoswitch to Always On.</string>
-    <string name="settings_display_shader_label">Native Shader</string>
-    <string name="settings_display_shader_help">Applies to native Amiga display modes. RTG screens are unaffected.</string>
+    <string name="settings_display_classic_menu_help">Back, Start and the two-finger swipe open the classic settings window during emulation instead of the in-game menu.</string>
+    <string name="settings_display_integer_scaling">Integer scaling</string>
+    <string name="settings_display_integer_scaling_desc">Sharp, evenly sized pixels. Sets the scaling method to Integer and resolution autoswitch to Always on.</string>
+    <string name="settings_display_shader_label">Native screen shader</string>
+    <string name="settings_display_shader_help">Changes the look of the Amiga picture, such as a CRT TV effect. RTG (graphics card) screens are not affected.</string>
     <string name="settings_display_shader_unavailable">Unavailable</string>
     <string name="settings_display_shader_unavailable_value">%1$s — %2$s</string>
     <string name="settings_display_shader_unavailable_help">The configured shader is unavailable. Choose another shader or restore its file.</string>
 
-    <string name="settings_sound_title">Sound Settings</string>
+    <string name="settings_sound_title">Sound settings</string>
     <string name="settings_sound_buffer_option">%1$s (%2$d ms)</string>
 
-    <string name="settings_input_port_assignments_title">Port Assignments</string>
-    <string name="settings_input_on_screen_controls_title">On-Screen Controls</string>
-    <string name="settings_input_on_screen_keyboard_toggle">On-Screen Keyboard Toggle Button</string>
+    <string name="settings_input_port_assignments_title">Port assignments</string>
+    <string name="settings_input_on_screen_controls_title">On-screen controls</string>
+    <string name="settings_input_on_screen_keyboard_toggle">On-screen keyboard toggle button</string>
     <string name="settings_input_on_screen_keyboard_toggle_hint">Gamepad button that shows or hides the on-screen keyboard. Back always hides it.</string>
     <string name="settings_input_device_mouse">Mouse</string>
     <string name="settings_input_device_joystick_0">Controller 1</string>
     <string name="settings_input_device_joystick_1">Controller 2</string>
-    <string name="settings_input_device_on_screen_joystick">On-Screen Joystick</string>
-    <string name="settings_input_device_keyboard_layout_1">Keyboard Layout A (Numpad, 0/5=Fire, Decimal/DEL=2nd Fire)</string>
-    <string name="settings_input_device_keyboard_layout_2">Keyboard Layout B (Cursor, RCtrl/RAlt=Fire, RShift=2nd Fire)</string>
-    <string name="settings_input_device_keyboard_layout_3">Keyboard Layout C (WSAD, LAlt=Fire, LShift=2nd Fire)</string>
-    <string name="settings_input_device_keyboard_layout_4">Keyboard Layout D (Cursor, LCtrl/LAlt=Fire, LShift=2nd Fire)</string>
+    <string name="settings_input_device_on_screen_joystick">On-screen joystick</string>
+    <string name="settings_input_device_keyboard_layout_1">Keyboard layout A (Numpad, 0/5=Fire, Decimal/DEL=2nd Fire)</string>
+    <string name="settings_input_device_keyboard_layout_2">Keyboard layout B (Cursor, RCtrl/RAlt=Fire, RShift=2nd Fire)</string>
+    <string name="settings_input_device_keyboard_layout_3">Keyboard layout C (WSAD, LAlt=Fire, LShift=2nd Fire)</string>
+    <string name="settings_input_device_keyboard_layout_4">Keyboard layout D (Cursor, LCtrl/LAlt=Fire, LShift=2nd Fire)</string>
 
     <string name="settings_storage_kickstart_rom_title">Kickstart ROM</string>
     <!-- Empty kickstart_rom_file: the launcher picks the model's Kickstart, or AROS when none is installed. -->
     <string name="settings_storage_rom_automatic">Automatic</string>
     <string name="settings_storage_no_roms_found">No ROMs found. Import via the Files tab.</string>
-    <string name="settings_storage_floppy_drives_title">Floppy Drives</string>
+    <string name="settings_storage_floppy_drives_title">Floppy drives</string>
     <string name="settings_storage_drive_df0">DF0</string>
     <string name="settings_storage_drive_df1">DF1</string>
     <string name="settings_storage_drive_df2">DF2</string>
     <string name="settings_storage_drive_df3">DF3</string>
-    <string name="settings_storage_cd_image_title">CD Image</string>
+    <string name="settings_storage_cd_image_title">CD image</string>
     <string name="settings_storage_no_cd_images_found">No CD images found. Import via the Files tab.</string>
     <string name="settings_storage_disk_label">Disk</string>
     <string name="settings_storage_import_disk_image">Import disk image...</string>
-    <string name="settings_storage_hard_drives_title">Hard Drives</string>
+    <string name="settings_storage_hard_drives_title">Hard drives</string>
     <string name="settings_storage_hard_drive_label">Hard drive %1$d</string>
     <string name="settings_storage_hardfile_label">HDF image</string>
     <string name="settings_storage_import_hardfile">Import HDF image...</string>
@@ -286,52 +264,47 @@
     <string name="about_title">About Amiberry</string>
     <string name="about_description">Amiberry is an optimized Amiga emulator, bringing the classic Amiga experience to modern devices. Based on UAE (Unix Amiga Emulator), it supports a wide range of Amiga models from the A500 to the A4000, CD32, and CDTV.</string>
     <string name="about_version_label">Version</string>
-    <string name="about_support_title">Support Info</string>
+    <string name="about_support_title">Support info</string>
     <string name="about_copy_support_info">Copy support info</string>
     <string name="about_license_title">License</string>
     <string name="about_license_body">GNU General Public License v3 (GPLv3)\n\nAmiberry is free and open-source software. You are free to use, modify, and distribute it under the terms of the GPLv3.</string>
     <string name="about_links_title">Links</string>
-    <string name="about_link_github">Source Code (GitHub)</string>
-    <string name="about_link_wiki">Wiki &amp; Documentation</string>
+    <string name="about_link_github">Source code (GitHub)</string>
+    <string name="about_link_wiki">Wiki &amp; documentation</string>
     <string name="about_link_discord">Community (Discord)</string>
-    <string name="about_link_privacy">Privacy Policy</string>
+    <string name="about_link_privacy">Privacy policy</string>
     <string name="about_credits_title">Credits</string>
     <string name="about_credits_body">Created by Dimitris Panokostas (MiDWaN)\n\nBased on WinUAE by Toni Wilen, and earlier work by Bernd Schmidt and the UAE team.\n\nUses SDL, Dear ImGui, and other open-source libraries.</string>
 
     <string name="welcome_title">Welcome to Amiberry</string>
-    <string name="welcome_message">Amiberry is an Amiga emulator. Models whose Kickstart ROM (the Amiga\'s operating system firmware) is not installed boot the free AROS ROM instead; for the best compatibility, import a Kickstart from the Files tab. Then choose an Amiga model and insert a floppy or CD image to start emulating.</string>
-    <string name="welcome_help_link">Learn more</string>
     <string name="welcome_dismiss">Got it</string>
 
     <string name="crash_dialog_title">Emulator stopped unexpectedly</string>
     <string name="crash_dialog_message">The emulator process exited unexpectedly. This may have been caused by an incompatible configuration or a missing ROM file. If this keeps happening, try a different Amiga model or check your ROM files.</string>
     <string name="crash_dialog_diagnostics_summary">Last launch: %1$s</string>
-    <string name="crash_dialog_copy_diagnostics">Copy Diagnostics</string>
+    <string name="crash_dialog_copy_diagnostics">Copy diagnostics</string>
     <string name="crash_dialog_dismiss">OK</string>
     <string name="msg_crash_diagnostics_copied">Crash diagnostics copied</string>
 
     <string name="asset_extraction_failed_title">Setup failed</string>
     <string name="asset_extraction_failed_message">Amiberry could not extract its data files. Please ensure the device has enough free storage and try again.</string>
     <string name="asset_extraction_failure_summary">Failed assets: %1$s</string>
-    <string name="asset_extraction_copy_details">Copy Details</string>
+    <string name="asset_extraction_copy_details">Copy details</string>
     <string name="action_retry">Retry</string>
     <string name="action_retrying">Retrying</string>
     <string name="msg_asset_extraction_details_copied">Setup failure details copied</string>
 
-    <string name="msg_unsupported_file_type">Unsupported file type for this category</string>
     <string name="search_placeholder">Search…</string>
 
-    <string name="storage_permission_banner_title">Limited file access</string>
-    <string name="storage_permission_banner_message">Amiberry can only access files in its own app folder. To use ROM and disk image files from other locations, grant All Files Access.</string>
-    <string name="storage_permission_banner_action">Grant Access</string>
+    <string name="storage_permission_banner_action">Grant access</string>
     <string name="msg_storage_permission_settings_failed">Could not open storage permission settings</string>
 
     <!-- Library: configuration rename/duplicate/delete, Recent launches, unsaved changes on Start -->
     <string name="action_rename">Rename…</string>
     <string name="action_rename_confirm">Rename</string>
     <string name="action_show_actions">Show actions</string>
-    <string name="dialog_rename_config_title">Rename Configuration</string>
-    <string name="dialog_duplicate_config_title">Duplicate Configuration</string>
+    <string name="dialog_rename_config_title">Rename configuration</string>
+    <string name="dialog_duplicate_config_title">Duplicate configuration</string>
     <string name="label_config_name">Name</string>
     <string name="config_name_problem_empty">Enter a name for the configuration.</string>
     <string name="config_name_problem_invalid">A name cannot contain /, \\ or :, or start with a dot.</string>
@@ -355,11 +328,10 @@
     <string name="dialog_clear_recent_title">Clear Recent?</string>
     <string name="dialog_clear_recent_message">Remove every item from Recent? The files themselves are kept.</string>
     <string name="dialog_unsaved_changes_start_message">Save your changes to “%1$s” before starting?</string>
-    <string name="action_dont_save">Don’t Save</string>
+    <string name="action_dont_save">Don’t save</string>
 
     <!-- Rules: Kickstart ROMs and the built-in AROS fallback -->
     <string name="rom_aros_builtin">AROS (built-in)</string>
-    <string name="rom_aros_ext_builtin">AROS extension (built-in)</string>
     <string name="quick_start_aros_notice">The Kickstart ROM this model needs is not installed: it boots the free AROS ROM instead.</string>
     <string name="quick_start_model_boots_aros">Kickstart not installed: boots AROS</string>
     <string name="quick_start_summary_rom">Kickstart</string>
@@ -403,19 +375,19 @@
     <string name="overlay_pause_help">Leave the menu with the emulation paused</string>
     <string name="overlay_drives">Drives</string>
     <string name="overlay_drives_help">Insert and eject disks and CDs</string>
-    <string name="overlay_states">Save States</string>
+    <string name="overlay_states">Save states</string>
     <string name="overlay_states_help">Save or load the machine in slots</string>
     <string name="overlay_controls">Controls</string>
-    <string name="overlay_controls_help">On-screen joystick and keyboard</string>
+    <string name="overlay_controls_help">Joystick ports and on-screen controls</string>
     <string name="overlay_settings">Settings</string>
-    <string name="overlay_settings_help">Volume, speed and display</string>
+    <string name="overlay_settings_help">Volume, speed and display for this session</string>
     <string name="overlay_reset">Reset</string>
     <string name="overlay_reset_help">Restart the Amiga</string>
-    <string name="overlay_hard_reset">Hard Reset</string>
+    <string name="overlay_hard_reset">Hard reset</string>
     <string name="overlay_hard_reset_help">Switch the Amiga off and on</string>
-    <string name="overlay_advanced">Advanced Settings</string>
-    <string name="overlay_advanced_help">Every setting, in the classic settings window</string>
-    <string name="overlay_quit">Quit to Launcher</string>
+    <string name="overlay_advanced">Classic settings window</string>
+    <string name="overlay_advanced_help">Every Amiberry setting, in one window</string>
+    <string name="overlay_quit">Quit to launcher</string>
     <string name="overlay_quit_help">Stop the emulation</string>
     <string name="overlay_confirm_hard_reset_title">Hard reset the Amiga?</string>
     <string name="overlay_confirm_hard_reset_text">The machine restarts as if switched off and on. Anything it has not saved is lost.</string>
@@ -427,7 +399,7 @@
     <string name="overlay_drive_empty">Empty</string>
     <string name="overlay_insert">Insert…</string>
     <string name="overlay_eject">Eject</string>
-    <string name="overlay_swapper">Disk Swapper</string>
+    <string name="overlay_swapper">Disk swapper</string>
     <string name="overlay_swapper_insert">Into DF%1$d:</string>
     <string name="overlay_picker_floppy_title">Insert into DF%1$d:</string>
     <string name="overlay_picker_cd_title">Insert a CD</string>
@@ -445,33 +417,137 @@
     <string name="overlay_state_save_failed">Could not save to slot %1$d</string>
     <string name="overlay_state_load_failed">Could not load slot %1$d</string>
     <string name="overlay_setting_failed">The setting could not be changed</string>
-    <string name="overlay_show_keyboard">Show Keyboard</string>
+    <string name="overlay_show_keyboard">Show keyboard</string>
     <string name="overlay_show_keyboard_help">Back to the emulation with the on-screen keyboard up</string>
     <string name="overlay_show_keyboard_off">Turn the on-screen keyboard on first</string>
     <string name="overlay_settings_unavailable">The settings list could not be read.</string>
-    <!-- The settings layer's groups, worded as the Apple app titles them (SettingsModel.swift groupTitle). -->
+    <!-- The settings layer's groups, worded as the Apple app titles them (SettingsModel.swift groupTitle), in sentence case. -->
     <string name="settings_group_cpu">CPU</string>
     <string name="settings_group_mmu">MMU</string>
     <string name="settings_group_fpu">FPU</string>
-    <string name="settings_group_cpu_speed">CPU Speed</string>
-    <string name="settings_group_jit">JIT Compiler</string>
+    <string name="settings_group_cpu_speed">CPU speed</string>
+    <string name="settings_group_jit">JIT compiler</string>
     <string name="settings_group_chipset">Chipset</string>
-    <string name="settings_group_adv_chipset">Advanced Chipset</string>
+    <string name="settings_group_adv_chipset">Advanced chipset</string>
     <string name="settings_group_genlock">Genlock</string>
     <string name="settings_group_memory">Memory</string>
     <string name="settings_group_rom">ROMs</string>
     <string name="settings_group_display">Display</string>
-    <string name="settings_group_filter">Filters &amp; Shaders</string>
+    <string name="settings_group_filter">Filters &amp; shaders</string>
     <string name="settings_group_sound">Sound</string>
     <string name="settings_group_input">Input</string>
-    <string name="settings_group_onscreen">On-screen Controls</string>
-    <string name="settings_group_floppy">Floppy Drives</string>
+    <string name="settings_group_onscreen">On-screen controls</string>
+    <string name="settings_group_floppy">Floppy drives</string>
     <string name="settings_group_cd">CD</string>
     <string name="settings_group_filesystem">Filesystem</string>
     <string name="settings_group_misc">Miscellaneous</string>
     <string name="settings_group_expansions">Expansions</string>
-    <string name="settings_group_io">IO Ports</string>
+    <string name="settings_group_io">IO ports</string>
     <string name="settings_section_show">Show %1$s</string>
     <string name="settings_section_hide">Hide %1$s</string>
-    <string name="settings_display_more_title">More Display Options</string>
+    <!-- Files tab, imports and the device storage browser -->
+    <string name="file_manager_storage_location">Storage location</string>
+    <string name="file_manager_storage_location_help">Amiberry keeps its ROMs, disks and games here. You can also copy files into its folders with a computer or a file manager, then tap Refresh.</string>
+    <string name="file_manager_storage_location_help_tv">Amiberry keeps its ROMs, disks and games here. Most TV file managers can\'t reach this folder: use Import instead.</string>
+    <string name="file_manager_empty_help_touch">Tap Import to add %1$s files. Files of other kinds go to their own category.</string>
+    <string name="file_manager_empty_help_tv">Press OK on Import to add %1$s files from a USB drive or this device\'s storage.</string>
+    <string name="file_manager_browse_device">Browse device storage</string>
+    <string name="file_manager_import_sorted_into">Added to: %1$s</string>
+    <plurals name="file_manager_import_not_whdload">
+        <item quantity="one">%1$d archive has no WHDLoad .slave file, so it won\'t start as a WHDLoad game.</item>
+        <item quantity="other">%1$d archives have no WHDLoad .slave file, so they won\'t start as WHDLoad games.</item>
+    </plurals>
+    <string name="msg_imported_not_whdload">Imported %1$s, but it has no WHDLoad .slave file: it isn\'t a WHDLoad game and would stop at an AmigaDOS prompt.</string>
+    <string name="file_manager_aros_row">AROS (free built-in replacement)</string>
+    <string name="file_manager_aros_row_detail">Boots any model whose Kickstart ROM isn\'t installed</string>
+    <string name="file_manager_action_insert_df0_start">Insert in DF0 and start</string>
+    <string name="file_manager_action_insert_df1">Insert in DF1</string>
+    <string name="file_manager_inserted_df1">%1$s is in DF1 for Quick Start</string>
+    <string name="storage_access_card_title">Optional: browse your own folders</string>
+    <string name="storage_access_card_message">Import works without this. Allow All files access only if you want to pick ROMs and disks from this device\'s folders or a USB drive in Amiberry\'s own browser.</string>
+    <string name="storage_access_card_message_no_picker">To import ROMs and games from a USB drive or this device\'s storage, Amiberry needs All files access.</string>
+    <string name="storage_access_card_not_now">Not now</string>
+    <string name="device_browser_title">Device storage</string>
+    <string name="device_browser_internal_storage">Internal storage</string>
+    <string name="device_browser_downloads">Downloads</string>
+    <string name="device_browser_no_storage">No storage found</string>
+    <string name="device_browser_unreadable">This folder can\'t be opened.</string>
+    <string name="device_browser_empty">No folders or supported files here.</string>
+    <string name="device_browser_import_folder">Import this folder</string>
+    <string name="device_browser_import_selected">Import (%1$d)</string>
+    <string name="device_browser_up">Up one folder</string>
+    <string name="device_browser_close">Close</string>
+    <string name="device_browser_access_title">Allow access to your files</string>
+    <string name="device_browser_access_message">To browse this device\'s storage and USB drives, Amiberry needs All files access. Turn it on for Amiberry on the next screen, then come back: the browser opens by itself.</string>
+    <string name="device_browser_access_open_settings">Open settings</string>
+
+    <!-- Home: Quick Start, shell, About (UX audit) -->
+    <string name="msg_quit_emulation_to_open_file">A game is running. Quit it from its menu (Back, then Quit), then open the file again.</string>
+    <string name="action_undo">Undo</string>
+    <string name="action_select">Select</string>
+    <string name="action_clear_selection">Clear selection</string>
+    <string name="action_reset_to_preset">Reset to preset</string>
+    <string name="quick_start_media_ejected_no_floppy">%1$s ejected: the %2$s has no floppy drive.</string>
+    <string name="quick_start_media_ejected_no_cd">CD ejected: the %1$s has no CD drive.</string>
+    <string name="quick_start_whdload_choose_game">Choose a game</string>
+    <string name="quick_start_whdload_picker_title">Choose a WHDLoad game</string>
+    <string name="quick_start_whdload_picker_hint">Games you played lately come first.</string>
+    <string name="quick_start_whdload_picker_hint_launch">Press OK on a game to start it. Games you played lately come first.</string>
+    <string name="quick_start_whdload_search">Search games</string>
+    <string name="quick_start_whdload_no_match">No game matches \"%1$s\".</string>
+    <string name="quick_start_whdload_game_detail">%1$s · %2$s</string>
+    <string name="quick_start_whdload_recently_played">Played lately</string>
+    <string name="quick_start_whdload_selected">Selected</string>
+    <string name="quick_start_recent_hint">Choose an entry to start it again, with the settings it was launched with.</string>
+    <string name="recent_launched_just_now">just now</string>
+    <string name="summary_rom_missing">Missing: %1$s</string>
+    <string name="summary_rom_missing_aros">Missing: %1$s (boots AROS)</string>
+    <string name="quick_start_rom_missing_notice">The Kickstart file %1$s is gone. Import it again to start this model.</string>
+    <string name="quick_start_rom_missing_notice_aros">The Kickstart file %1$s is gone: this launch boots the free AROS ROM instead.</string>
+    <string name="quick_start_model_needs_rom">Kickstart not installed: boots AROS. Needs %1$s</string>
+    <string name="quick_start_model_using_config">Using: %1$s</string>
+    <string name="quick_start_model_edited_title">Changed from the preset</string>
+    <string name="quick_start_model_edited">Edited: %1$s</string>
+    <string name="quick_start_model_edited_more">%1$s, +%2$d more</string>
+    <string name="welcome_step">%1$d. %2$s</string>
+    <string name="welcome_step_kickstart">Import a Kickstart ROM for the best compatibility. Without one, Amiberry boots the free AROS.</string>
+    <string name="welcome_step_kickstart_done">Your Kickstart ROM is installed.</string>
+    <string name="welcome_step_whdload">Choose a WHDLoad game (.lha) and press Start.</string>
+    <string name="welcome_step_disk">Insert a floppy disk image (.adf) in DF0 and press Start.</string>
+    <string name="welcome_step_cd">Insert a CD image and press Start. The CD32 and CDTV need their own ROMs.</string>
+    <string name="welcome_step_recent">Choose something you launched before to start it again.</string>
+    <string name="quick_start_cd_roms_title">The CD32 and CDTV need their own ROMs</string>
+    <string name="quick_start_cd_roms_message">AROS cannot run CD titles. Import these ROMs to play CD images:</string>
+    <string name="quick_start_cd_roms_model">%1$s: %2$s</string>
+    <string name="settings_display_more_title">More display options</string>
+
+    <!-- Settings and Configurations: quick setups, review changes, new configurations -->
+    <string name="settings_input_controller_options_title">Autofire, controllers and mouse</string>
+    <string name="action_quick_setups">Quick setups…</string>
+    <string name="settings_quick_setups_title">Quick setups</string>
+    <string name="msg_quick_setup_applied">Applied “%1$s”</string>
+    <string name="dialog_review_changes_new_title">Changes from the %1$s preset</string>
+    <string name="action_revert">Revert</string>
+    <string name="action_revert_named">Revert %1$s</string>
+    <string name="action_discard_all">Discard all</string>
+    <string name="action_close">Close</string>
+    <string name="dialog_unsaved_changes_switch_message">Save your changes to “%1$s” first? Otherwise opening another configuration replaces them.</string>
+    <string name="dialog_unsaved_new_config_message">Save the new configuration first? Otherwise opening another configuration replaces its settings.</string>
+    <string name="configurations_new">New</string>
+    <!-- In-emulation input and menu (TV remote, hints, confirmations) -->
+    <string name="hint_menu">Press Back for the Amiberry menu</string>
+    <string name="hint_menu_tv">Press Back on the remote for the Amiberry menu</string>
+    <string name="hint_remote_joystick">Remote: the D-pad moves the joystick and OK fires. Press Back for the Amiberry menu.</string>
+    <string name="overlay_remote_joystick">No controller is connected, so the remote is the Port 2 joystick: the D-pad moves it and OK fires. Connect a controller to use it instead.</string>
+    <string name="overlay_swap_ports">Swap ports</string>
+    <string name="overlay_swap_ports_help">Exchange the Port 1 and Port 2 devices</string>
+    <string name="overlay_controls_kept">Port changes apply to this session. The on-screen controls you turn on or off here are kept for next time.</string>
+    <string name="overlay_settings_session">These changes apply to this session only.</string>
+    <string name="overlay_change_disk">Change disk…</string>
+    <string name="overlay_change_cd">Change CD…</string>
+    <string name="overlay_confirm_reset_title">Reset the Amiga?</string>
+    <string name="overlay_confirm_reset_text">The Amiga restarts. Anything it has not saved is lost.</string>
+    <string name="overlay_confirm_overwrite_title">Overwrite slot %1$d?</string>
+    <string name="overlay_confirm_overwrite_text">The state saved %1$s is replaced.</string>
+    <string name="overlay_overwrite">Overwrite</string>
 </resources>

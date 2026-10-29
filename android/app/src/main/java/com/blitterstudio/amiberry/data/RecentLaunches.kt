@@ -40,11 +40,16 @@ object RecentLaunches {
 		ModelUnavailable
 	}
 
-	/** What a Recent row shows: a title, the kind of launch and a short detail (file name or model), never a full path. */
+	/**
+	 * What a Recent row shows: a title, the kind of launch, a short detail (file name or
+	 * model), never a full path, and when it was last launched (null for entries stored
+	 * before the launcher recorded it).
+	 */
 	data class Details(
 		val title: String,
 		val type: Type,
-		val detail: String
+		val detail: String,
+		val launchedAtMs: Long? = null
 	)
 
 	/** One row of the Recent list. */
@@ -69,9 +74,16 @@ object RecentLaunches {
 		return arr.toString()
 	}
 
-	fun add(entries: List<JSONObject>, entry: JSONObject, maxItems: Int = MAX_ITEMS): List<JSONObject> {
-		val identity = identity(entry)
-		return (listOf(entry) + entries.filterNot { identity(it) == identity }).take(maxItems)
+	/** [entry] first, launched at [nowMs], without its earlier launch. */
+	fun add(
+		entries: List<JSONObject>,
+		entry: JSONObject,
+		maxItems: Int = MAX_ITEMS,
+		nowMs: Long = System.currentTimeMillis()
+	): List<JSONObject> {
+		val stamped = JSONObject(entry.toString()).put(LAUNCHED_AT, nowMs)
+		val identity = identity(stamped)
+		return (listOf(stamped) + entries.filterNot { identity(it) == identity }).take(maxItems)
 	}
 
 	/** [entries] without [entry] (in any model ID spelling it was stored with). */
@@ -105,11 +117,13 @@ object RecentLaunches {
 		}
 
 	// The same launch whatever model ID spelling it was stored with ("A500"
-	// before the launcher used the emulator's presets, "a500" since).
+	// before the launcher used the emulator's presets, "a500" since) and
+	// whenever it was launched.
 	private fun identity(entry: JSONObject): String {
-		if (entry.optString("type") != "quickstart") return entry.toString()
-		val model = AmigaModel.find(entry.optString("model")) ?: return entry.toString()
-		return JSONObject(entry.toString()).put("model", model.cmdArg).toString()
+		val launch = JSONObject(entry.toString()).apply { remove(LAUNCHED_AT) }
+		if (launch.optString("type") != "quickstart") return launch.toString()
+		val model = AmigaModel.find(launch.optString("model")) ?: return launch.toString()
+		return launch.put("model", model.cmdArg).toString()
 	}
 
 	/**
@@ -177,15 +191,21 @@ object RecentLaunches {
 
 	fun details(entry: JSONObject): Details {
 		val type = Type.of(entry)
-		return when (type) {
+		val details = when (type) {
 			Type.QuickStart -> quickStartDetails(entry)
-			Type.Configuration, Type.WhdLoad, Type.Rp9 -> Details(
+			Type.Configuration, Type.Rp9 -> Details(
 				title = label(entry),
+				type = type,
+				detail = fileName(entry.optString("path"))
+			)
+			Type.WhdLoad -> Details(
+				title = WhdLoadTitles.clean(fileName(entry.optString("path"))).ifEmpty { "WHDLoad" },
 				type = type,
 				detail = fileName(entry.optString("path"))
 			)
 			Type.Unknown -> Details(title = "?", type = type, detail = "")
 		}
+		return details.copy(launchedAtMs = entry.optLong(LAUNCHED_AT, 0L).takeIf { it > 0L })
 	}
 
 	private fun quickStartDetails(entry: JSONObject): Details {
@@ -221,4 +241,7 @@ object RecentLaunches {
 
 	private val MEDIA_KEYS = listOf("df0", "df1", "cd")
 	private val ARCHIVE_SUFFIXES = listOf(".lha", ".lzx", ".lzh")
+
+	/** When the entry was last launched, epoch milliseconds. */
+	private const val LAUNCHED_AT = "time"
 }

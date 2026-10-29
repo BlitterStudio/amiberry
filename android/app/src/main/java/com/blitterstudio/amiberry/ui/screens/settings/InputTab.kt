@@ -107,7 +107,8 @@ fun InputTab(viewModel: SettingsViewModel) {
 			}
 		}
 
-		SchemaGroupSection("input", viewModel)
+		// Not "Input" on the Input tab: the section holds autofire, port modes and mouse options.
+		SchemaGroupSection("input", viewModel, title = stringResource(R.string.settings_input_controller_options_title))
 
 		// The keyboard can be driven by a game controller, so keep its settings
 		// available on non-touch devices as well. The KB touch button and the
