@@ -16,7 +16,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Close
@@ -86,12 +86,14 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.filled.DriveFileRenameOutline
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
 import com.blitterstudio.amiberry.data.ConfigFiles
 import com.blitterstudio.amiberry.ui.dpadVerticalMovesFocus
+import com.blitterstudio.amiberry.ui.rememberDpadTypingGate
 
 private fun NavController.switchToTab(route: String) {
 	navigate(route) {
@@ -208,15 +210,21 @@ fun ConfigurationsScreen(
 					}
 				}
 			} else {
+				// Renaming re-keys the card and deleting removes it, either of which drops
+				// D-pad focus to the navigation rail: the card named here (by file name) takes
+				// focus once it is composed.
+				var focusConfigFile by remember { mutableStateOf<String?>(null) }
 				LazyColumn(
 					contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
 					verticalArrangement = Arrangement.spacedBy(8.dp)
 				) {
-					items(filteredConfigs, key = { it.path }) { config ->
+					itemsIndexed(filteredConfigs, key = { _, config -> config.path }) { index, config ->
 					ConfigItem(
 						config = config,
 						launchInProgress = launchInProgress,
 						isOpenInSettings = settingsViewModel.isConfigOpen(config.path),
+						focusRequested = File(config.path).name == focusConfigFile,
+						onFocusRequestHandled = { focusConfigFile = null },
 						suggestedCopyName = { viewModel.suggestedCopyName(config) },
 						nameProblem = { name, renaming -> viewModel.nameProblem(name, config.takeIf { renaming }) },
 						onLoad = {
@@ -235,6 +243,10 @@ fun ConfigurationsScreen(
 							onDelete = {
 								scope.launch {
 									val deleted = viewModel.deleteConfig(config.path)
+									if (deleted) {
+										val neighbour = filteredConfigs.getOrNull(index + 1) ?: filteredConfigs.getOrNull(index - 1)
+										focusConfigFile = neighbour?.let { File(it.path).name }
+									}
 									val wasOpen = deleted && settingsViewModel.onConfigDeleted(config.path)
 									snackbarHostState.showSnackbar(
 										actionMessage(ConfigurationActions.deleteMessage(config.name, deleted, wasOpen))
@@ -252,6 +264,7 @@ fun ConfigurationsScreen(
 									val result = viewModel.renameConfig(config.path, newName)
 									if (result is ConfigFiles.EditResult.Done) {
 										settingsViewModel.onConfigRenamed(config.path, result.file)
+										focusConfigFile = result.file.name
 										// Keeping the same name leaves the file as it was: nothing to report.
 										if (result.file.name == File(config.path).name) return@launch
 									}
@@ -427,6 +440,8 @@ private fun ConfigItem(
 	config: ConfigInfo,
 	launchInProgress: Boolean,
 	isOpenInSettings: Boolean,
+	focusRequested: Boolean,
+	onFocusRequestHandled: () -> Unit,
 	suggestedCopyName: () -> String,
 	nameProblem: (name: String, renaming: Boolean) -> ConfigFiles.NameProblem?,
 	onLoad: () -> Unit,
@@ -441,11 +456,24 @@ private fun ConfigItem(
 	var showDeleteDialog by remember { mutableStateOf(false) }
 	var showRenameDialog by remember { mutableStateOf(false) }
 	var duplicateName by remember { mutableStateOf<String?>(null) }
+	// The buttons lie inside the focusable card, so the 2D focus search from the card
+	// never finds them (a candidate must lie past the card's edge): Right enters them,
+	// Left from Play returns to the card.
+	val cardFocus = remember { FocusRequester() }
+	val playFocus = remember { FocusRequester() }
+	LaunchedEffect(focusRequested) {
+		if (focusRequested) {
+			cardFocus.requestFocus()
+			onFocusRequestHandled()
+		}
+	}
 
 	Card(
 		modifier = Modifier
 			.fillMaxWidth()
 			.dpadFocusIndicator()
+			.focusRequester(cardFocus)
+			.focusProperties { right = playFocus }
 			.combinedClickable(
 				onClickLabel = stringResource(R.string.action_edit_config),
 				onClick = onLoad,
@@ -486,7 +514,10 @@ private fun ConfigItem(
 				IconButton(
 					onClick = onLaunch,
 					enabled = !launchInProgress,
-					modifier = Modifier.dpadFocusIndicator()
+					modifier = Modifier
+						.focusRequester(playFocus)
+						.focusProperties { left = cardFocus }
+						.dpadFocusIndicator()
 				) {
 					if (launchInProgress) {
 						CircularProgressIndicator(
@@ -671,11 +702,16 @@ private fun ConfigNameDialog(
 		onDismissRequest = onDismiss,
 		title = { Text(title) },
 		text = {
+			// Inside the dialog's window, so the gate drives the dialog's keyboard.
+			val typingGate = rememberDpadTypingGate()
 			OutlinedTextField(
 				value = field,
 				onValueChange = { field = it },
 				label = { Text(stringResource(R.string.label_config_name)) },
 				singleLine = true,
+				// On a TV the IME opens on OK, not on focus: returning to the field with Up
+				// re-opened it and the next Down typed into the keyboard instead of moving.
+				readOnly = typingGate.readOnly,
 				isError = problemText != null,
 				supportingText = if (problemText != null) {
 					{ Text(problemText) }
@@ -688,6 +724,7 @@ private fun ConfigNameDialog(
 					.fillMaxWidth()
 					// A single-line field has no lines to move between: D-pad up/down reach the buttons.
 					.dpadVerticalMovesFocus()
+					.then(typingGate.modifier)
 					.focusRequester(focusRequester)
 			)
 		},

@@ -81,7 +81,7 @@ import com.blitterstudio.amiberry.data.model.FileCategory
 import com.blitterstudio.amiberry.data.model.ModelRomAvailability
 import com.blitterstudio.amiberry.data.model.RomReadinessDiagnostics
 import com.blitterstudio.amiberry.data.model.RomIdentity
-import com.blitterstudio.amiberry.ui.dpadVerticalMovesFocus
+import com.blitterstudio.amiberry.ui.dpadArrowsMoveFocus
 import com.blitterstudio.amiberry.ui.dpadFocusIndicator
 import com.blitterstudio.amiberry.ui.findActivity
 import com.blitterstudio.amiberry.ui.launchImportGuarded
@@ -586,7 +586,7 @@ fun QuickStartScreen(
 			QuickStartModeSelector(
 				selectedMode = selectedLaunchMode,
 				onModeSelected = viewModel::selectLaunchMode,
-				modifier = Modifier.focusRequester(quickStartModeFocusRequester)
+				focusRequester = quickStartModeFocusRequester
 			)
 
 			when (selectedLaunchMode) {
@@ -785,7 +785,9 @@ fun QuickStartScreen(
 							}
 						},
 						onRemove = { entry -> appPreferences.removeRecentLaunch(entry) },
-						onClear = { appPreferences.clearRecentLaunches() }
+						onClear = { appPreferences.clearRecentLaunches() },
+						// Nothing in the emptied section can hold focus: return it to the Recent mode button.
+						onEmptied = { quickStartModeFocusRequester.requestFocus() }
 					)
 				}
 			}
@@ -866,7 +868,7 @@ private fun RomReadinessSummary(diagnostics: RomReadinessDiagnostics) {
 private fun QuickStartModeSelector(
 	selectedMode: QuickStartLaunchMode,
 	onModeSelected: (QuickStartLaunchMode) -> Unit,
-	modifier: Modifier = Modifier
+	focusRequester: FocusRequester
 ) {
 	OutlinedCard(modifier = Modifier.fillMaxWidth()) {
 		Column(
@@ -881,13 +883,15 @@ private fun QuickStartModeSelector(
 				QuickStartModeButton(
 					mode = QuickStartLaunchMode.WHDLOAD,
 					selectedMode = selectedMode,
-					modifier = modifier.weight(1f),
+					modifier = Modifier.weight(1f),
+					focusRequester = focusRequester,
 					onModeSelected = onModeSelected
 				)
 				QuickStartModeButton(
 					mode = QuickStartLaunchMode.DISK,
 					selectedMode = selectedMode,
 					modifier = Modifier.weight(1f),
+					focusRequester = focusRequester,
 					onModeSelected = onModeSelected
 				)
 			}
@@ -896,12 +900,14 @@ private fun QuickStartModeSelector(
 					mode = QuickStartLaunchMode.CD,
 					selectedMode = selectedMode,
 					modifier = Modifier.weight(1f),
+					focusRequester = focusRequester,
 					onModeSelected = onModeSelected
 				)
 				QuickStartModeButton(
 					mode = QuickStartLaunchMode.RECENT,
 					selectedMode = selectedMode,
 					modifier = Modifier.weight(1f),
+					focusRequester = focusRequester,
 					onModeSelected = onModeSelected
 				)
 			}
@@ -914,6 +920,7 @@ private fun QuickStartModeButton(
 	mode: QuickStartLaunchMode,
 	selectedMode: QuickStartLaunchMode,
 	modifier: Modifier,
+	focusRequester: FocusRequester,
 	onModeSelected: (QuickStartLaunchMode) -> Unit
 ) {
 	val selected = mode == selectedMode
@@ -921,7 +928,10 @@ private fun QuickStartModeButton(
 	// D-pad focus to the navigation rail when the mode changes.
 	Button(
 		onClick = { onModeSelected(mode) },
-		modifier = modifier.dpadFocusIndicator(),
+		// The selected mode's button is where focus returns (Welcome dismissed, Recent emptied).
+		modifier = modifier
+			.then(if (selected) Modifier.focusRequester(focusRequester) else Modifier)
+			.dpadFocusIndicator(),
 		colors = if (selected) ButtonDefaults.buttonColors() else ButtonDefaults.outlinedButtonColors(),
 		elevation = if (selected) ButtonDefaults.buttonElevation() else null,
 		border = if (selected) null else ButtonDefaults.outlinedButtonBorder(enabled = true)
@@ -982,7 +992,7 @@ private fun ModelSelectorCard(
 					enabled = availableModels.isNotEmpty(),
 					trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = modelExpanded) },
 					modifier = Modifier
-						.dpadVerticalMovesFocus()
+						.dpadArrowsMoveFocus()
 						.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
 						.fillMaxWidth(),
 					supportingText = {

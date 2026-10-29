@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -22,6 +23,7 @@ import androidx.compose.material.icons.filled.Eject
 import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.SaveAlt
 import androidx.compose.material.icons.filled.Storage
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import com.blitterstudio.amiberry.data.model.EmulatorSettings
 import com.blitterstudio.amiberry.data.model.HardDrive
@@ -39,12 +41,16 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -66,7 +72,9 @@ import com.blitterstudio.amiberry.ui.components.settings.schemaLabel
 import com.blitterstudio.amiberry.ui.components.settings.schemaOption
 import com.blitterstudio.amiberry.ui.ImportInFlightGuard
 import com.blitterstudio.amiberry.ui.dpadFocusIndicator
+import com.blitterstudio.amiberry.ui.dpadArrowsMoveFocus
 import com.blitterstudio.amiberry.ui.dpadVerticalMovesFocus
+import com.blitterstudio.amiberry.ui.rememberDpadTypingGate
 import com.blitterstudio.amiberry.ui.launchImportGuarded
 import com.blitterstudio.amiberry.ui.rememberImportInFlightGuard
 import com.blitterstudio.amiberry.ui.viewmodel.SettingsViewModel
@@ -253,6 +261,19 @@ fun StorageTab(
 				}
 				Spacer(modifier = Modifier.height(8.dp))
 
+				// Adding a drive moves D-pad focus to its HDF field; removing one takes its
+				// focused Delete button away, so focus goes to Add hard drive instead of the
+				// navigation rail. Requested once the list has changed size.
+				val newDriveFocus = remember { FocusRequester() }
+				val addDriveFocus = remember { FocusRequester() }
+				var pendingFocus by remember { mutableStateOf<Pair<FocusRequester, Int>?>(null) }
+				LaunchedEffect(settings.hardDrives.size, pendingFocus) {
+					val (target, sizeBefore) = pendingFocus ?: return@LaunchedEffect
+					if (settings.hardDrives.size == sizeBefore) return@LaunchedEffect
+					pendingFocus = null
+					target.requestFocus()
+				}
+
 				settings.hardDrives.forEachIndexed { index, drive ->
 					HardDriveRow(
 						index = index,
@@ -274,10 +295,12 @@ fun StorageTab(
 							}
 						},
 						onRemove = {
+							pendingFocus = addDriveFocus to settings.hardDrives.size
 							viewModel.updateSettings { s ->
 								s.copy(hardDrives = s.hardDrives.removedAt(index))
 							}
 						},
+						fieldFocus = if (index == settings.hardDrives.lastIndex) newDriveFocus else null,
 						context = context,
 						importGuard = importGuard,
 						importInProgress = importInProgress,
@@ -288,9 +311,10 @@ fun StorageTab(
 
 				TextButton(
 					onClick = {
+						pendingFocus = newDriveFocus to settings.hardDrives.size
 						viewModel.updateSettings { s -> s.copy(hardDrives = s.hardDrives + HardDrive(path = "")) }
 					},
-					modifier = Modifier.dpadFocusIndicator()
+					modifier = Modifier.focusRequester(addDriveFocus).dpadFocusIndicator()
 				) {
 					Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
 					Spacer(modifier = Modifier.width(4.dp))
@@ -354,7 +378,8 @@ private fun FileDropdown(
 	extraPaths: List<String> = emptyList(),
 	help: String? = null,
 	fileLabel: @Composable (AmigaFile) -> String = { it.name },
-	pathLabel: @Composable (String) -> String = { LauncherChoices.fileName(it) }
+	pathLabel: @Composable (String) -> String = { LauncherChoices.fileName(it) },
+	fieldModifier: Modifier = Modifier
 ) {
 	var expanded by remember { mutableStateOf(false) }
 	val selectedName = if (selectedPath.isEmpty()) emptyLabel else pathLabel(selectedPath)
@@ -376,7 +401,8 @@ private fun FileDropdown(
 					label = { Text(label) },
 					trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
 					modifier = Modifier
-						.dpadVerticalMovesFocus()
+						.then(fieldModifier)
+						.dpadArrowsMoveFocus()
 						.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
 						.fillMaxWidth()
 				)
@@ -483,7 +509,10 @@ private fun FloppyDriveRow(
 			TextButton(
 				onClick = { importLauncher.launch(FilePickerFilters.mimeTypesFor(FileCategory.FLOPPIES)) },
 				enabled = !importInProgress,
-				modifier = Modifier.dpadFocusIndicator()
+				// Full width so D-pad Up/Down reach it: the focus search weighs the distance
+				// between centres, and a short left-aligned button between two full-width
+				// fields lost to the next field. The trailing spacer keeps the text left-aligned.
+				modifier = Modifier.fillMaxWidth().dpadFocusIndicator()
 			) {
 				if (importInProgress) {
 					CircularProgressIndicator(
@@ -497,6 +526,7 @@ private fun FloppyDriveRow(
 						if (importInProgress) R.string.action_importing else R.string.settings_storage_import_disk_image
 					)
 				)
+				Spacer(modifier = Modifier.weight(1f))
 			}
 		}
 	}
@@ -518,12 +548,16 @@ private fun HardDriveRow(
 	onReadOnlyChange: (Boolean) -> Unit,
 	onBootPriorityChange: (Int) -> Unit,
 	onRemove: () -> Unit,
+	fieldFocus: FocusRequester?,
 	context: android.content.Context,
 	importGuard: ImportInFlightGuard,
 	importInProgress: Boolean,
 	onImportResult: (FileManager.ImportResult) -> Unit
 ) {
 	val scope = rememberCoroutineScope()
+	// The small Delete button above the right end of the HDF field lost the focus search to
+	// the full-width field above it, so Up from the HDF field goes to it explicitly.
+	val deleteFocus = remember { FocusRequester() }
 
 	Column(modifier = Modifier.fillMaxWidth()) {
 		Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -534,7 +568,7 @@ private fun HardDriveRow(
 			)
 			IconButton(
 				onClick = onRemove,
-				modifier = Modifier.dpadFocusIndicator()
+				modifier = Modifier.focusRequester(deleteFocus).dpadFocusIndicator()
 			) {
 				Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.settings_storage_remove_hard_drive))
 			}
@@ -545,7 +579,10 @@ private fun HardDriveRow(
 			files = files,
 			selectedPath = drive.path,
 			onSelect = onPathChange,
-			onClear = { onPathChange("") }
+			onClear = { onPathChange("") },
+			fieldModifier = Modifier
+				.focusProperties { up = deleteFocus }
+				.then(if (fieldFocus != null) Modifier.focusRequester(fieldFocus) else Modifier)
 		)
 
 		val importLauncher = rememberLauncherForActivityResult(
@@ -568,7 +605,8 @@ private fun HardDriveRow(
 		TextButton(
 			onClick = { importLauncher.launch(FilePickerFilters.mimeTypesFor(FileCategory.HARD_DRIVES)) },
 			enabled = !importInProgress,
-			modifier = Modifier.dpadFocusIndicator()
+			// Full width so D-pad Up/Down reach it (see the floppy import button).
+			modifier = Modifier.fillMaxWidth().dpadFocusIndicator()
 		) {
 			if (importInProgress) {
 				CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
@@ -579,6 +617,7 @@ private fun HardDriveRow(
 					if (importInProgress) R.string.action_importing else R.string.settings_storage_import_hardfile
 				)
 			)
+			Spacer(modifier = Modifier.weight(1f))
 		}
 
 		SettingSwitchRow(
@@ -588,6 +627,7 @@ private fun HardDriveRow(
 		)
 
 		var bootText by remember(drive.bootPriority) { mutableStateOf(drive.bootPriority.toString()) }
+		val bootTyping = rememberDpadTypingGate()
 		OutlinedTextField(
 			value = bootText,
 			onValueChange = { input ->
@@ -596,8 +636,13 @@ private fun HardDriveRow(
 			},
 			label = { Text(stringResource(R.string.settings_storage_boot_priority)) },
 			singleLine = true,
-			keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-			modifier = Modifier.fillMaxWidth()
+			readOnly = bootTyping.readOnly,
+			keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
+			keyboardActions = KeyboardActions(onDone = { bootTyping.stopTyping() }),
+			modifier = Modifier
+				.fillMaxWidth()
+				.dpadVerticalMovesFocus()
+				.then(bootTyping.modifier)
 		)
 	}
 }

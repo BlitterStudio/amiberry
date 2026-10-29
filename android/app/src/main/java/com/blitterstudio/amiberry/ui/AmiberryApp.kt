@@ -21,6 +21,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
@@ -257,9 +259,13 @@ fun AmiberryApp() {
 				)
 			},
 			confirmButton = {
+				// Save is the safe default for D-pad focus: an OK pressed at once must not
+				// throw the edits away.
+				val saveFocus = remember { FocusRequester() }
+				LaunchedEffect(Unit) { saveFocus.requestFocus() }
 				TextButton(
 					onClick = { answer(UnsavedChangesGuard.Choice.Save) },
-					modifier = Modifier.dpadFocusIndicator()
+					modifier = Modifier.focusRequester(saveFocus).dpadFocusIndicator()
 				) {
 					Text(stringResource(R.string.action_save))
 				}

@@ -27,6 +27,7 @@ import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -35,6 +36,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.blitterstudio.amiberry.R
@@ -57,9 +60,21 @@ internal fun QuickStartRecentSection(
 	launchInProgress: Boolean,
 	onLaunch: (JSONObject) -> Unit,
 	onRemove: (JSONObject) -> Unit,
-	onClear: () -> Unit
+	onClear: () -> Unit,
+	onEmptied: () -> Unit
 ) {
 	var confirmClear by remember { mutableStateOf(false) }
+	// Removing the focused row (or clearing the list) would drop D-pad focus to the
+	// navigation rail. Once the list has shrunk, focus goes to the row now in the removed
+	// one's place, or out of the section ([onEmptied]) when no row is left.
+	var refocus by remember { mutableStateOf<RecentRefocus?>(null) }
+	val rowFocus = remember(items.size) { List(items.size) { FocusRequester() } }
+	LaunchedEffect(items.size, refocus) {
+		val pending = refocus ?: return@LaunchedEffect
+		if (items.size >= pending.sizeBefore) return@LaunchedEffect
+		refocus = null
+		if (items.isEmpty()) onEmptied() else rowFocus[pending.index.coerceAtMost(items.lastIndex)].requestFocus()
+	}
 
 	OutlinedCard(modifier = Modifier.fillMaxWidth()) {
 		Column(modifier = Modifier.padding(16.dp)) {
@@ -90,12 +105,16 @@ internal fun QuickStartRecentSection(
 					color = MaterialTheme.colorScheme.onSurfaceVariant
 				)
 			} else {
-				items.forEach { item ->
+				items.forEachIndexed { index, item ->
 					RecentRow(
 						item = item,
 						launchInProgress = launchInProgress,
+						focusRequester = rowFocus[index],
 						onLaunch = { onLaunch(item.entry) },
-						onRemove = { onRemove(item.entry) }
+						onRemove = {
+							refocus = RecentRefocus(index, items.size)
+							onRemove(item.entry)
+						}
 					)
 				}
 			}
@@ -111,6 +130,7 @@ internal fun QuickStartRecentSection(
 				TextButton(
 					onClick = {
 						confirmClear = false
+						refocus = RecentRefocus(0, items.size)
 						onClear()
 					},
 					modifier = Modifier.dpadFocusIndicator()
@@ -130,11 +150,15 @@ internal fun QuickStartRecentSection(
 	}
 }
 
+/** Where D-pad focus goes once the list is shorter than [sizeBefore]: the row at [index]. */
+private data class RecentRefocus(val index: Int, val sizeBefore: Int)
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun RecentRow(
 	item: RecentLaunches.Item,
 	launchInProgress: Boolean,
+	focusRequester: FocusRequester,
 	onLaunch: () -> Unit,
 	onRemove: () -> Unit
 ) {
@@ -155,6 +179,7 @@ private fun RecentRow(
 			modifier = Modifier
 				.weight(1f)
 				.clip(RoundedCornerShape(12.dp))
+				.focusRequester(focusRequester)
 				.dpadFocusIndicator()
 				.combinedClickable(
 					// An entry that cannot be launched opens its actions instead, so Remove is one tap away.

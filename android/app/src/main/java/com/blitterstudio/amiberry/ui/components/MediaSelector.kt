@@ -37,7 +37,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.blitterstudio.amiberry.R
 import com.blitterstudio.amiberry.data.model.AmigaFile
-import com.blitterstudio.amiberry.ui.dpadVerticalMovesFocus
+import com.blitterstudio.amiberry.ui.dpadArrowsMoveFocus
 import com.blitterstudio.amiberry.ui.dpadFocusIndicator
 
 /**
@@ -148,7 +148,7 @@ fun MediaSelector(
 							readOnly = true,
 							trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
 							modifier = Modifier
-								.dpadVerticalMovesFocus()
+								.dpadArrowsMoveFocus()
 								.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
 								.fillMaxWidth()
 						)

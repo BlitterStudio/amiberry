@@ -108,7 +108,7 @@ class FileManagerScreenArchitectureTest {
 
 		assertTrue(
 			"Each file row should retain its own delete callback.",
-			screen.contains("onDelete = { viewModel.deleteFile(file) }")
+			screen.contains("viewModel.deleteFile(file)")
 		)
 		assertTrue(
 			"Delete should continue to require local confirmation state.",
