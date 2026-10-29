@@ -142,39 +142,44 @@ fun hasTouchScreen(context: Context): Boolean {
  * Use this on Cards, Rows, or other custom composables that aren't
  * standard Material interactive elements (which already have focus indication).
  */
-fun Modifier.dpadFocusable(): Modifier = composed {
-	var isFocused by remember { mutableStateOf(false) }
-	val borderColor by animateColorAsState(
-		targetValue = if (isFocused) MaterialTheme.colorScheme.primary else Color.Transparent,
-		label = "focusBorder"
-	)
-
-	this
-		.onFocusChanged { isFocused = it.isFocused }
-		.border(
-			width = 2.dp,
-			color = borderColor,
-			shape = RoundedCornerShape(12.dp)
-		)
-		.focusable()
-}
+fun Modifier.dpadFocusable(): Modifier = dpadFocusRing().focusable()
 
 /**
  * Lighter variant that only adds focus tracking + border styling
  * without making the element focusable (for elements that are already
  * focusable via clickable() or other means).
  */
-fun Modifier.dpadFocusIndicator(): Modifier = composed {
+fun Modifier.dpadFocusIndicator(): Modifier = dpadFocusRing()
+
+/**
+ * The focus ring of a read-only dropdown field, on a TV only: Material's own focused
+ * outline is a thin primary line that reads as unfocused from across the room. Elsewhere
+ * a tap focuses the field, and its outline already shows that.
+ */
+fun Modifier.dpadFieldFocusIndicator(): Modifier = composed {
+	if (isTvDevice()) dpadFocusRing() else Modifier
+}
+
+/**
+ * The ring around the control with D-pad focus. On a TV it is 3 dp in the content colour
+ * (white on the dark theme): a primary-coloured ring vanished against filled primary buttons.
+ */
+private fun Modifier.dpadFocusRing(): Modifier = composed {
 	var isFocused by remember { mutableStateOf(false) }
+	val tv = isTvDevice()
 	val borderColor by animateColorAsState(
-		targetValue = if (isFocused) MaterialTheme.colorScheme.primary else Color.Transparent,
+		targetValue = when {
+			!isFocused -> Color.Transparent
+			tv -> MaterialTheme.colorScheme.onSurface
+			else -> MaterialTheme.colorScheme.primary
+		},
 		label = "focusBorder"
 	)
 
 	this
 		.onFocusChanged { isFocused = it.isFocused }
 		.border(
-			width = 2.dp,
+			width = if (tv) 3.dp else 2.dp,
 			color = borderColor,
 			shape = RoundedCornerShape(12.dp)
 		)

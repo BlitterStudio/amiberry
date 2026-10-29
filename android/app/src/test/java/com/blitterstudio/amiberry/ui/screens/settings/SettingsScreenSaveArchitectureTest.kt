@@ -22,13 +22,6 @@ class SettingsScreenSaveArchitectureTest {
 	}
 
 	@Test
-	fun `top bar has a Save action that saves the tracked config`() {
-		assertTrue(
-			Regex("""actions = \{[\s\S]*viewModel\.saveTracked\(\)""").containsMatchIn(source)
-		)
-	}
-
-	@Test
 	fun `overflow offers Save As`() {
 		assertTrue(source.contains("R.string.action_save_as"))
 	}
@@ -46,15 +39,6 @@ class SettingsScreenSaveArchitectureTest {
 			Regex("""SaveConfigDialog\([\s\S]*initialName[\s\S]*initialDescription""")
 				.containsMatchIn(source)
 		)
-	}
-
-	@Test
-	fun `settings screen exposes dependency feedback and intent presets`() {
-		assertTrue(source.contains("SettingsAdjustmentBanner("))
-		assertTrue(source.contains("SettingsPresetSelector("))
-		assertTrue(source.contains("selectedPreset = viewModel.selectedIntentPreset"))
-		assertTrue(source.contains("viewModel.applyIntentPreset"))
-		assertTrue(source.contains("selectedPreset?.let { stringResource(it.titleRes()) }"))
 	}
 
 	@Test

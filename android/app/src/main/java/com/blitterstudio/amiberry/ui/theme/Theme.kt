@@ -16,6 +16,9 @@ import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 import com.blitterstudio.amiberry.data.AppPreferences
 import com.blitterstudio.amiberry.ui.findActivity
+import com.blitterstudio.amiberry.ui.isTvDevice
+import androidx.compose.material3.Typography
+import androidx.compose.ui.text.TextStyle
 
 private val AmiberryRed = Color(0xFFCC3333)
 private val AmiberryRedDark = Color(0xFF992222)
@@ -126,6 +129,27 @@ fun AmiberryTheme(
 
 	MaterialTheme(
 		colorScheme = colorScheme,
+		typography = if (isTvDevice()) TvTypography else DefaultTypography,
 		content = content
 	)
 }
+
+private val DefaultTypography = Typography()
+
+/**
+ * Text read from across the room: body, helper and small label text 1.2 times
+ * Material's size (bodySmall help 12 sp becomes about 14 sp). Titles and button
+ * labels (labelLarge) are large enough as they are.
+ */
+private val TvTypography: Typography = Typography().let { base ->
+	fun TextStyle.scaled() = copy(fontSize = fontSize * TV_TEXT_SCALE, lineHeight = lineHeight * TV_TEXT_SCALE)
+	base.copy(
+		bodyLarge = base.bodyLarge.scaled(),
+		bodyMedium = base.bodyMedium.scaled(),
+		bodySmall = base.bodySmall.scaled(),
+		labelMedium = base.labelMedium.scaled(),
+		labelSmall = base.labelSmall.scaled()
+	)
+}
+
+private const val TV_TEXT_SCALE = 1.2f

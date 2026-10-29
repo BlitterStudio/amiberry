@@ -40,6 +40,8 @@ import com.blitterstudio.amiberry.ui.components.settings.SettingSwitchRow
 import com.blitterstudio.amiberry.ui.components.settings.SupportingText
 import com.blitterstudio.amiberry.ui.components.settings.settingText
 import com.blitterstudio.amiberry.ui.dpadArrowsMoveFocus
+import com.blitterstudio.amiberry.ui.dpadFieldFocusIndicator
+import com.blitterstudio.amiberry.ui.components.settings.dpadMenuItemInitialFocus
 import com.blitterstudio.amiberry.ui.viewmodel.SettingsViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -99,6 +101,7 @@ fun DisplayTab(viewModel: SettingsViewModel) {
 						label = { Text(stringResource(R.string.settings_display_resolution_label)) },
 						trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = resExpanded) },
 						modifier = Modifier
+							.dpadFieldFocusIndicator()
 							.dpadArrowsMoveFocus()
 							.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
 							.fillMaxWidth()
@@ -110,6 +113,7 @@ fun DisplayTab(viewModel: SettingsViewModel) {
 						resolutionPresets.forEach { (w, h, label) ->
 							DropdownMenuItem(
 								text = { Text(label) },
+								modifier = Modifier.dpadMenuItemInitialFocus(w == settings.gfxWidth && h == settings.gfxHeight),
 								onClick = {
 									viewModel.updateSettings { s ->
 										s.copy(gfxWidth = w, gfxHeight = h)
@@ -189,6 +193,7 @@ fun DisplayTab(viewModel: SettingsViewModel) {
 							ExposedDropdownMenuDefaults.TrailingIcon(expanded = shaderExpanded)
 						},
 						modifier = Modifier
+							.dpadFieldFocusIndicator()
 							.dpadArrowsMoveFocus()
 							.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
 							.fillMaxWidth()
@@ -200,6 +205,7 @@ fun DisplayTab(viewModel: SettingsViewModel) {
 						viewModel.shaderCatalogEntries.forEach { shader ->
 							DropdownMenuItem(
 								text = { Text(settingText(LauncherChoices.shader(shader))) },
+								modifier = Modifier.dpadMenuItemInitialFocus(shader == settings.shader),
 								onClick = {
 									if (shader != settings.shader) {
 										viewModel.updateSettings { s -> s.copy(shader = shader) }
@@ -252,6 +258,7 @@ fun DisplayTab(viewModel: SettingsViewModel) {
 						label = { Text(stringResource(R.string.settings_display_theme_label)) },
 						trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = themeExpanded) },
 						modifier = Modifier
+							.dpadFieldFocusIndicator()
 							.dpadArrowsMoveFocus()
 							.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
 							.fillMaxWidth()
@@ -263,6 +270,7 @@ fun DisplayTab(viewModel: SettingsViewModel) {
 						themeModeOptions.forEach { (value, label) ->
 							DropdownMenuItem(
 								text = { Text(label) },
+								modifier = Modifier.dpadMenuItemInitialFocus(value == themeMode),
 								onClick = {
 									appPrefs.setThemeMode(value)
 									themeExpanded = false

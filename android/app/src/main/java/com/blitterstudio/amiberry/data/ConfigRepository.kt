@@ -3,6 +3,9 @@ package com.blitterstudio.amiberry.data
 import android.content.Context
 import com.blitterstudio.amiberry.data.model.StoragePaths
 import com.blitterstudio.amiberry.data.model.EmulatorSettings
+import com.blitterstudio.amiberry.data.model.LauncherChoices
+import com.blitterstudio.amiberry.data.model.SettingsSchema
+import com.blitterstudio.amiberry.data.model.installedMemory
 import java.io.File
 import java.io.IOException
 
@@ -10,8 +13,35 @@ data class ConfigInfo(
 	val path: String,
 	val name: String,
 	val lastModified: Long,
-	val description: String
+	val description: String,
+	/** The machine the configuration describes, for its card; null when the file could not be read. */
+	val machine: ConfigMachine? = null
 )
+
+/**
+ * What a configuration's card says about its machine: the model, the CPU, the RAM
+ * it fits in total and the first medium it inserts ("DF0: Lost Pixel.adf"), if any.
+ */
+data class ConfigMachine(val model: String, val cpu: Int, val memoryKb: Int, val firstMedium: String?) {
+	companion object {
+		fun of(settings: EmulatorSettings, schema: SettingsSchema? = SettingsSchema.current): ConfigMachine {
+			val media = listOf(
+				"DF0" to settings.floppy0,
+				"DF1" to settings.floppy1,
+				"CD" to settings.cdImage
+			) + settings.hardDrives.map { "HD" to it.path.trimEnd('/', '\\') }
+			val firstMedium = media.firstNotNullOfOrNull { (drive, path) ->
+				LauncherChoices.fileName(path).takeIf { it.isNotBlank() }?.let { "$drive: $it" }
+			}
+			return ConfigMachine(
+				model = settings.baseModel.displayName,
+				cpu = settings.cpuModel,
+				memoryKb = schema?.let { installedMemory(settings, it).sumOf { memory -> memory.kb } } ?: 0,
+				firstMedium = firstMedium
+			)
+		}
+	}
+}
 
 class ConfigRepository(private val context: Context) {
 
@@ -23,12 +53,13 @@ class ConfigRepository(private val context: Context) {
 	fun listConfigs(): List<ConfigInfo> {
 		return ConfigFiles.listUserConfigFiles(confDir)
 			.map { file ->
-				val parsed = ConfigParser.parse(file)
+				val parsed = runCatching { ConfigParser.parse(file) }.getOrNull()
 				ConfigInfo(
 					path = file.absolutePath,
 					name = file.nameWithoutExtension,
 					lastModified = file.lastModified(),
-					description = parsed.description
+					description = parsed?.description.orEmpty(),
+					machine = parsed?.let { ConfigMachine.of(it.settings) }
 				)
 			}
 			.sortedByDescending { it.lastModified }

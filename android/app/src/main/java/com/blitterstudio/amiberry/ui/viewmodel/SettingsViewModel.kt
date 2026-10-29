@@ -7,6 +7,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.blitterstudio.amiberry.data.AppPreferences
+import com.blitterstudio.amiberry.data.ConfigFiles
 import com.blitterstudio.amiberry.data.ConfigGenerator
 import com.blitterstudio.amiberry.data.ConfigSettingsResolver
 import com.blitterstudio.amiberry.data.FileRepository
@@ -21,6 +22,7 @@ import com.blitterstudio.amiberry.data.model.SettingsChangeSummary
 import com.blitterstudio.amiberry.data.model.SettingsAdjustmentNotice
 import com.blitterstudio.amiberry.data.model.SettingsAdjustmentNotices
 import com.blitterstudio.amiberry.data.model.SettingsIntentPreset
+import com.blitterstudio.amiberry.data.model.SettingsSchema
 import com.blitterstudio.amiberry.data.model.SettingsIntentPresets
 import com.blitterstudio.amiberry.data.ConfigParser
 import com.blitterstudio.amiberry.data.ConfigRepository
@@ -84,8 +86,31 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 		get() = currentConfigName != null &&
 			(settings != baselineSettings || currentUnknownLines != baselineUnknownLines)
 
+	/**
+	 * What Review changes compares with: the open configuration as last saved or
+	 * loaded, or for a new configuration its model's preset (EmulatorSettings.presetMachine).
+	 */
+	val reviewBaseline: EmulatorSettings
+		get() = if (currentConfigName != null) baselineSettings else settings.presetMachine()
+
 	val changeSummary: List<SettingsChange>
-		get() = SettingsChangeSummary.diff(baselineSettings, settings)
+		get() = SettingsChangeSummary.diff(reviewBaseline, settings)
+
+	/**
+	 * Whether Save would keep something the editor would otherwise lose: edits to the
+	 * open configuration, or a new configuration that differs from its model's preset.
+	 * Unlike [isDirty] (the shell's leave and Start questions, which save to the open
+	 * file) it covers new configurations too.
+	 */
+	val hasUnsavedChanges: Boolean
+		get() = if (currentConfigName != null) isDirty else changeSummary.isNotEmpty()
+
+	/**
+	 * Set before another screen switches to Settings with a button (Configurations'
+	 * Edit and New): Settings then puts D-pad focus on its first control, as the
+	 * button that had it is gone. Settings clears it.
+	 */
+	var focusOnEntry by mutableStateOf(false)
 
 	val availableRoms: StateFlow<List<AmigaFile>> = repository.roms
 	val availableFloppies: StateFlow<List<AmigaFile>> = repository.floppies
@@ -288,14 +313,61 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 		return result
 	}
 
-	/** Revert in-memory edits back to the last saved/loaded values of the open config. */
+	/**
+	 * Put the editor back to [reviewBaseline]: the open configuration's last saved or
+	 * loaded values, or a new configuration's model preset.
+	 */
 	fun discardChanges() {
 		selectedIntentPreset = null
-		settings = baselineSettings
-		currentUnknownLines = baselineUnknownLines
+		if (currentConfigName != null) {
+			settings = baselineSettings
+			currentUnknownLines = baselineUnknownLines
+		} else {
+			settings = applyConstraints(settings.presetMachine())
+		}
 		clearAdjustmentNotices()
 		appPreferences.saveAndroidControls(settings)
 		saveLastSession()
+	}
+
+	/**
+	 * Set [change]'s option back to its [reviewBaseline] value, with what the layer's
+	 * setter changes along with it (reverting the CPU can drop the JIT again). The
+	 * launcher's own rows (no option) cannot be reverted one by one.
+	 */
+	fun revertChange(change: SettingsChange) {
+		val id = change.optionId ?: return
+		val value = reviewBaseline.optionValue(id) ?: SettingsSchema.current?.option(id)?.defaultOnAndroid ?: return
+		updateSettings { it.withOption(id, value) }
+	}
+
+	/**
+	 * Start a new, unnamed configuration: the default model's preset with the
+	 * remembered Android controls, as on a first start.
+	 */
+	fun newConfiguration() {
+		val context = getApplication<Application>()
+		val globalSettingsFile = ShaderCatalog.findSettingsFile(context.filesDir, context.getExternalFilesDir(null))
+		selectedIntentPreset = null
+		currentConfigName = null
+		currentConfigPath = null
+		currentConfigDescription = ""
+		currentUnknownLines = emptyList()
+		settings = applyConstraints(
+			appPreferences.applyRememberedAndroidControls(ConfigSettingsResolver.defaults(globalSettingsFile), emptySet())
+		)
+		autoSelectDefaultRomIfNeeded(availableRoms.value)
+		baselineSettings = settings
+		baselineUnknownLines = currentUnknownLines
+		clearAdjustmentNotices()
+		appPreferences.saveAndroidControls(settings)
+		saveLastSession()
+	}
+
+	/** The name Save offers a new configuration: its model's, numbered past the saved ones. */
+	suspend fun suggestedConfigName(): String {
+		val names = withContext(Dispatchers.IO) { configRepository.listConfigs().map { it.name } }
+		return ConfigFiles.suggestedName(settings.baseModel.displayName, names)
 	}
 
 	private val tracked: OpenConfigTracking.Tracked
