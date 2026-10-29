@@ -307,6 +307,14 @@ fun QuickStartScreen(
 						}
 					}
 				}
+				if (result is FileManager.ImportResult.Imported) {
+					// Settings that boot AROS switch to the model's Kickstart once it is
+					// installed; otherwise Start would keep booting AROS.
+					val installedRoms = FileRepository.getInstance(context).roms.value
+					QuickStartUiState.withInstalledKickstart(settingsViewModel.settings, installedRoms)?.let { updated ->
+						settingsViewModel.updateSettings { updated }
+					}
+				}
 				snackbarHostState.showSnackbar(importResultMessage(result))
 			}
 		}
@@ -564,7 +572,7 @@ fun QuickStartScreen(
 				}
 			}
 
-			if (selectedModelRoms.aros && selectedLaunchMode != QuickStartLaunchMode.RECENT) {
+			if (QuickStartUiState.showsArosNotice(settingsViewModel.settings, selectedModelRoms, selectedLaunchMode)) {
 				ArosFallbackNotice(
 					importInProgress = importInProgress,
 					onImportRom = {
@@ -794,13 +802,6 @@ fun QuickStartScreen(
 						selectedModelAvailable
 					},
 					selectedWhdloadName = selectedWhdloadGame?.name,
-					// A Quick Start launch boots the selected model's ROMs; a WHDLoad
-					// launch the auto-configured settings' ROM.
-					romFile = if (selectedLaunchMode == QuickStartLaunchMode.WHDLOAD) {
-						settingsViewModel.settings.romFile
-					} else {
-						selectedModelRoms.romFile
-					},
 					roms = roms
 				)
 			)

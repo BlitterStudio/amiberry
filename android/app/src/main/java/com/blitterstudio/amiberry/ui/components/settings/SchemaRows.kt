@@ -277,12 +277,13 @@ fun SchemaLevelRow(
 
 /**
  * A number people look up as a field with its unit after it ("8192 KB").
- * The typed number is taken when it is one of the option's values (within
- * its range, on its step) that [accepts] allows, and the field is left or
- * Done is pressed; a number in range that [accepts] refuses shows the
- * layer's constraint instead of the range.
- * [suggestions] are stored values offered in the field's menu, which is
- * also how a D-pad user picks one without typing.
+ * The typed number is stored as soon as it is one of the option's values
+ * (within its range, on its step) that [accepts] allows, so Start or Save
+ * tapped while the field still has focus see it. Invalid text shows why
+ * (the range, or the layer's constraint for a number in range that [accepts]
+ * refuses) and goes back to the stored value when the field is left or Done
+ * is pressed. [suggestions] are stored values offered in the field's menu,
+ * which is also how a D-pad user picks one without typing.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -316,13 +317,20 @@ fun SchemaNumberRow(
 	}
 	fun storedFor(text: String): Int? = inRange(text)?.takeIf(accepts)
 
-	var text by remember(stored) { mutableStateOf(shownText(stored)) }
+	var text by remember { mutableStateOf(shownText(stored)) }
+	// Follow a change from elsewhere (a preset, a model switch) unless the
+	// text already says it, so typing "0128" is not rewritten under the cursor.
+	var syncedStored by remember { mutableStateOf(stored) }
+	if (stored != syncedStored) {
+		syncedStored = stored
+		if (storedFor(text) != stored) text = shownText(stored)
+	}
 	var expanded by remember { mutableStateOf(false) }
 	val typedInRange = inRange(text)
 	val invalid = typedInRange == null || !accepts(typedInRange)
-	fun commit() {
-		val next = storedFor(text)
-		if (next == null) text = shownText(stored) else if (next != stored) onStoredChange(next)
+	// Valid input is already stored; leaving invalid text puts the stored value back.
+	fun restoreIfInvalid() {
+		if (storedFor(text) == null) text = shownText(stored)
 	}
 	val range = option?.shownRange
 	val rangeText = if (option != null && range != null) {
@@ -343,7 +351,10 @@ fun SchemaNumberRow(
 		) {
 			OutlinedTextField(
 				value = text,
-				onValueChange = { text = it },
+				onValueChange = { typed ->
+					text = typed
+					storedFor(typed)?.let { next -> if (next != stored) onStoredChange(next) }
+				},
 				enabled = enabled,
 				singleLine = true,
 				isError = invalid,
@@ -363,11 +374,11 @@ fun SchemaNumberRow(
 					}
 				} else null,
 				keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
-				keyboardActions = KeyboardActions(onDone = { commit() }),
+				keyboardActions = KeyboardActions(onDone = { restoreIfInvalid() }),
 				modifier = Modifier
 					.dpadVerticalMovesFocus()
 					.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable, enabled)
-					.onFocusChanged { if (!it.isFocused) commit() }
+					.onFocusChanged { if (!it.isFocused) restoreIfInvalid() }
 					.fillMaxWidth()
 			)
 			if (suggestions.isNotEmpty()) {

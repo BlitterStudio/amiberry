@@ -45,12 +45,12 @@ object QuickStartUiState {
 		}
 	}
 
+	/** The summary of what Start launches; its ROM row is the settings' own ROM, which the launch boots. */
 	fun buildEffectiveSummary(
 		settings: EmulatorSettings,
 		launchMode: QuickStartLaunchMode,
 		selectedModelAvailable: Boolean,
 		selectedWhdloadName: String? = null,
-		romFile: String = settings.romFile,
 		roms: List<AmigaFile> = emptyList()
 	): QuickStartEffectiveSummary {
 		return QuickStartEffectiveSummary(
@@ -60,8 +60,37 @@ object QuickStartUiState {
 			memory = buildMemorySummary(settings),
 			media = buildMediaSummary(settings, launchMode, selectedWhdloadName),
 			controls = buildControlsSummary(settings),
-			rom = if (selectedModelAvailable) romIdentity(romFile, roms) else null,
-			romFileName = mediaName(romFile).orEmpty()
+			rom = if (selectedModelAvailable) romIdentity(settings.romFile, roms) else null,
+			romFileName = mediaName(settings.romFile).orEmpty()
+		)
+	}
+
+	/**
+	 * Whether Quick Start tells the user the launch boots AROS: the settings name the
+	 * built-in AROS ROM, or name no ROM while the model's Kickstart is not installed.
+	 */
+	fun showsArosNotice(
+		settings: EmulatorSettings,
+		selectedRoms: ModelRomAvailability.SelectedRoms,
+		launchMode: QuickStartLaunchMode
+	): Boolean = launchMode != QuickStartLaunchMode.RECENT && (
+		ModelRomAvailability.isBuiltInArosRom(settings.romFile) ||
+			(settings.romFile.isBlank() && selectedRoms.aros)
+		)
+
+	/**
+	 * After a ROM import: settings that boot AROS (or name no ROM) move to the model's
+	 * Kickstart once one is installed, as the emulator would otherwise keep booting
+	 * AROS. Null when nothing changes.
+	 */
+	fun withInstalledKickstart(settings: EmulatorSettings, roms: List<AmigaFile>): EmulatorSettings? {
+		if (settings.romFile.isNotBlank() && !ModelRomAvailability.isBuiltInArosRom(settings.romFile)) return null
+		val selected = ModelRomAvailability.selectRomsForModel(settings.baseModel, roms)
+		val kick = selected.kick ?: return null
+		return settings.copy(
+			baseConfig = selected.config,
+			romFile = kick.path,
+			romExtFile = selected.ext?.path.orEmpty()
 		)
 	}
 
