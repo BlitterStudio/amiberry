@@ -1,11 +1,13 @@
 package com.blitterstudio.amiberry.ui.screens
 
+import com.blitterstudio.amiberry.R
 import com.blitterstudio.amiberry.data.model.AmigaFile
 import com.blitterstudio.amiberry.data.model.AmigaModel
 import com.blitterstudio.amiberry.data.model.EmulatorSettings
 import com.blitterstudio.amiberry.data.model.FileCategory
 import com.blitterstudio.amiberry.data.model.ModelRomAvailability
 import com.blitterstudio.amiberry.data.model.RomIdentity
+import com.blitterstudio.amiberry.data.model.SettingText
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -39,16 +41,59 @@ class QuickStartUiStateTest {
 	}
 
 	@Test
-	fun `whdload summary shows the selected title and inherited auto-configured model`() {
-		val summary = QuickStartUiState.buildEffectiveSummary(
-			settings = EmulatorSettings.fromModel(AmigaModel.A1200),
-			launchMode = QuickStartLaunchMode.WHDLOAD,
-			selectedModelAvailable = true,
-			selectedWhdloadName = "Lotus.lha"
+	fun `whdload summary shows only what the launcher passes, and leaves the hardware to WHDBooter`() {
+		val summary = QuickStartUiState.buildWhdLoadSummary(
+			launchSettings = EmulatorSettings.fromModel(AmigaModel.A500).copy(
+				joyport0 = "mouse",
+				joyport1 = "joy0",
+				onScreenJoystick = false,
+				onScreenKeyboardButton = true,
+				shader = "presets/crt.glslp"
+			),
+			selectedWhdloadName = "Lotus.lha",
+			perGameConfigName = null
 		)
 
-		assertEquals("Amiga 1200", summary.model)
+		assertEquals(
+			QuickStartWhdLoadSummary(
+				media = "WHDLoad: Lotus",
+				perGameConfig = null,
+				controls = "On-screen keyboard",
+				port0 = SettingText.Resource(R.string.settings_input_device_mouse),
+				port1 = SettingText.Resource(R.string.settings_input_device_joystick_0),
+				shader = SettingText.Plain("crt.glslp")
+			),
+			summary
+		)
+	}
+
+	@Test
+	fun `whdload summary names the game's own configuration`() {
+		val summary = QuickStartUiState.buildWhdLoadSummary(
+			launchSettings = EmulatorSettings(),
+			selectedWhdloadName = "Lotus.lzx",
+			perGameConfigName = "Lotus.uae"
+		)
+
 		assertEquals("WHDLoad: Lotus", summary.media)
+		assertEquals("Lotus.uae", summary.perGameConfig)
+	}
+
+	@Test
+	fun `the WHDLoad AROS notice follows the A1200 Kickstart, whatever model the settings hold`() {
+		val aros = listOf(rom("aros-rom.bin", 0x11111111L), rom("aros-ext.bin", 0x22222222L))
+		val withA500Kick = aros + rom("kick13.rom", 0xc4f0f55fL)
+		val withA1200Kick = aros + rom("kick31.rom", 0x1483a091L)
+
+		assertTrue(QuickStartUiState.showsWhdLoadArosNotice(aros))
+		assertTrue(QuickStartUiState.showsWhdLoadArosNotice(withA500Kick))
+		assertFalse(QuickStartUiState.showsWhdLoadArosNotice(withA1200Kick))
+		// Without AROS the launch cannot start at all; the setup card covers that.
+		assertFalse(QuickStartUiState.showsWhdLoadArosNotice(emptyList()))
+		// The machine notice is for Disk and CD; WHDLoad has its own.
+		val onAros = EmulatorSettings.fromModel(AmigaModel.A500).copy(romFile = ModelRomAvailability.arosRomFile)
+		val arosRoms = ModelRomAvailability.selectRomsForModel(AmigaModel.A500, aros)
+		assertFalse(QuickStartUiState.showsArosNotice(onAros, arosRoms, QuickStartLaunchMode.WHDLOAD))
 	}
 
 	@Test

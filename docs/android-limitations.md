@@ -71,7 +71,7 @@ Saved configurations preserve Default, None and explicit button selections indep
 
 While the keyboard is open, the D-pad or left stick moves focus, South presses the focused key, and East closes the keyboard. Focus stays fixed while South is held. Opening the emulator GUI closes the keyboard so controller releases consumed by the GUI cannot leave stale keyboard holds when emulation resumes.
 
-A WHDLoad sidecar configuration's explicit keyboard settings take precedence. If the sidecar omits them, the launcher's KB button and toggle selections are retained.
+A WHDLoad launch follows the same rule. WHDBooter chooses the hardware when the game starts, from its game database, the installed Kickstarts, or the game's own `<game>.uae` configuration. The launcher then applies its ports, on-screen controls, mouse map, analog mouse speed and shader, so its ports replace the ones WHDBooter assigns; whatever the game's own configuration sets explicitly takes precedence. Quick Start therefore shows only these launcher settings for a WHDLoad game, and names the game's configuration when it has one. `.lha`, `.lzh` and `.lzx` archives all boot.
 
 ## Desktop-Style Use on ChromeOS
 

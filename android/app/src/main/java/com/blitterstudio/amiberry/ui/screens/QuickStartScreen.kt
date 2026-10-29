@@ -47,6 +47,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -74,6 +75,7 @@ import com.blitterstudio.amiberry.data.FilePickerFilters
 import com.blitterstudio.amiberry.data.FileRepository
 import com.blitterstudio.amiberry.data.ImportFeedback
 import com.blitterstudio.amiberry.data.RecentLaunches
+import com.blitterstudio.amiberry.data.WhdLoadPerGameConfig
 import com.blitterstudio.amiberry.data.model.AmigaFile
 import com.blitterstudio.amiberry.data.model.AmigaModel
 import com.blitterstudio.amiberry.data.model.EmulatorSettings
@@ -92,6 +94,8 @@ import com.blitterstudio.amiberry.ui.viewmodel.QuickStartViewModel
 import com.blitterstudio.amiberry.ui.viewmodel.SettingsViewModel
 import com.blitterstudio.amiberry.ui.components.MediaSelector
 import com.blitterstudio.amiberry.ui.components.settings.CompatibilityLevelRow
+import com.blitterstudio.amiberry.ui.components.settings.settingText
+import com.blitterstudio.amiberry.ui.components.settings.settingsSchema
 import com.blitterstudio.amiberry.ui.components.StoragePermissionBanner
 import com.blitterstudio.amiberry.ui.navigation.Screen
 import kotlinx.coroutines.Dispatchers
@@ -191,7 +195,6 @@ fun QuickStartScreen(
 	val configWriteFailedMessage = stringResource(R.string.quick_start_config_write_failed)
 	val scanningMediaDescription = stringResource(R.string.quick_start_scanning_media)
 	var floppyImportTarget by remember { mutableStateOf(0) }
-	var whdloadAutoConfigPath by remember { mutableStateOf<String?>(null) }
 	fun actionMessage(message: ConfigurationActions.Message): String =
 		message.argument?.let { context.getString(message.stringRes, it) }
 			?: context.getString(message.stringRes)
@@ -211,15 +214,23 @@ fun QuickStartScreen(
 		}
 	}
 
-	LaunchedEffect(selectedLaunchMode, selectedWhdloadGame?.path) {
+	// The WHDLoad summary reads the game's own configuration, if it has one, off the main thread.
+	val whdloadSummary by produceState<QuickStartWhdLoadSummary?>(
+		initialValue = null,
+		selectedLaunchMode,
+		selectedWhdloadGame,
+		settingsViewModel.settings
+	) {
+		if (selectedLaunchMode != QuickStartLaunchMode.WHDLOAD) return@produceState
 		val game = selectedWhdloadGame
-		if (selectedLaunchMode != QuickStartLaunchMode.WHDLOAD || game == null) {
-			whdloadAutoConfigPath = null
-			return@LaunchedEffect
-		}
-		if (whdloadAutoConfigPath != game.path) {
-			whdloadAutoConfigPath = game.path
-			settingsViewModel.applyWhdLoadAutoConfig(game)
+		val currentSettings = settingsViewModel.settings
+		value = withContext(Dispatchers.IO) {
+			val perGameConfig = game?.let { WhdLoadPerGameConfig.existingFile(context, it.path) }
+			QuickStartUiState.buildWhdLoadSummary(
+				launchSettings = WhdLoadPerGameConfig.launch(perGameConfig, currentSettings).settings,
+				selectedWhdloadName = game?.name,
+				perGameConfigName = perGameConfig?.name
+			)
 		}
 	}
 
@@ -386,7 +397,8 @@ fun QuickStartScreen(
 										context = context,
 										lhaPath = whdloadPath,
 										configPath = prepared.configFile.absolutePath,
-										shaderOverride = prepared.shaderOverride
+										shaderOverride = prepared.shaderOverride,
+										controlOverrides = prepared.controlOverrides
 									)
 								}
 							}
@@ -572,8 +584,21 @@ fun QuickStartScreen(
 				}
 			}
 
-			if (QuickStartUiState.showsArosNotice(settingsViewModel.settings, selectedModelRoms, selectedLaunchMode)) {
+			if (selectedLaunchMode == QuickStartLaunchMode.WHDLOAD) {
+				if (QuickStartUiState.showsWhdLoadArosNotice(roms)) {
+					ArosFallbackNotice(
+						message = stringResource(R.string.quick_start_whdload_aros_notice),
+						importInProgress = importInProgress,
+						onImportRom = {
+							if (!importInProgress) {
+								romPickerLauncher.launch(FilePickerFilters.mimeTypesFor(FileCategory.ROMS))
+							}
+						}
+					)
+				}
+			} else if (QuickStartUiState.showsArosNotice(settingsViewModel.settings, selectedModelRoms, selectedLaunchMode)) {
 				ArosFallbackNotice(
+					message = stringResource(R.string.quick_start_aros_notice),
 					importInProgress = importInProgress,
 					onImportRom = {
 						if (!importInProgress) {
@@ -733,7 +758,8 @@ fun QuickStartScreen(
 											context = context,
 											lhaPath = whdloadPath,
 											configPath = prepared.configFile.absolutePath,
-											shaderOverride = prepared.shaderOverride
+											shaderOverride = prepared.shaderOverride,
+											controlOverrides = prepared.controlOverrides
 										)
 									}
 								}
@@ -793,21 +819,24 @@ fun QuickStartScreen(
 				}
 			}
 
-			EffectiveSummaryCard(
-				summary = QuickStartUiState.buildEffectiveSummary(
-					settings = settingsViewModel.settings,
-					launchMode = selectedLaunchMode,
-					selectedModelAvailable = if (selectedLaunchMode == QuickStartLaunchMode.DISK ||
-						selectedLaunchMode == QuickStartLaunchMode.CD
-					) {
-						selectedModeModelAvailable
-					} else {
-						selectedModelAvailable
-					},
-					selectedWhdloadName = selectedWhdloadGame?.name,
-					roms = roms
+			if (selectedLaunchMode == QuickStartLaunchMode.WHDLOAD) {
+				whdloadSummary?.let { WhdLoadSummaryCard(it) }
+			} else {
+				EffectiveSummaryCard(
+					summary = QuickStartUiState.buildEffectiveSummary(
+						settings = settingsViewModel.settings,
+						launchMode = selectedLaunchMode,
+						selectedModelAvailable = if (selectedLaunchMode == QuickStartLaunchMode.DISK ||
+							selectedLaunchMode == QuickStartLaunchMode.CD
+						) {
+							selectedModeModelAvailable
+						} else {
+							selectedModelAvailable
+						},
+						roms = roms
+					)
 				)
-			)
+			}
 
 		}
 	}
@@ -1052,7 +1081,7 @@ private fun ModelSelectorCard(
 }
 
 @Composable
-private fun EffectiveSummaryCard(summary: QuickStartEffectiveSummary) {
+private fun SummaryCard(rows: @Composable () -> Unit) {
 	Card(
 		modifier = Modifier.fillMaxWidth(),
 		colors = CardDefaults.cardColors(
@@ -1069,32 +1098,57 @@ private fun EffectiveSummaryCard(summary: QuickStartEffectiveSummary) {
 				style = MaterialTheme.typography.bodyMedium,
 				color = MaterialTheme.colorScheme.onSurfaceVariant
 			)
-			SummaryRow(stringResource(R.string.quick_start_summary_model), summary.model)
-			SummaryRow(stringResource(R.string.quick_start_summary_cpu), summary.cpu)
-			summary.rom?.let { rom ->
-				SummaryRow(
-					stringResource(R.string.quick_start_summary_rom),
-					when (rom) {
-						is RomIdentity.Kickstart -> rom.name
-						RomIdentity.BuiltInAros -> stringResource(R.string.rom_aros_builtin)
-						RomIdentity.Unknown -> summary.romFileName
-					}
-				)
-			}
-			SummaryRow(stringResource(R.string.quick_start_summary_chipset), summary.chipset)
-			SummaryRow(stringResource(R.string.quick_start_summary_memory), summary.memory)
-			SummaryRow(stringResource(R.string.quick_start_summary_media), summary.media)
-			SummaryRow(stringResource(R.string.quick_start_summary_controls), summary.controls)
+			rows()
 		}
 	}
 }
 
+@Composable
+private fun EffectiveSummaryCard(summary: QuickStartEffectiveSummary) {
+	SummaryCard {
+		SummaryRow(stringResource(R.string.quick_start_summary_model), summary.model)
+		SummaryRow(stringResource(R.string.quick_start_summary_cpu), summary.cpu)
+		summary.rom?.let { rom ->
+			SummaryRow(
+				stringResource(R.string.quick_start_summary_rom),
+				when (rom) {
+					is RomIdentity.Kickstart -> rom.name
+					RomIdentity.BuiltInAros -> stringResource(R.string.rom_aros_builtin)
+					RomIdentity.Unknown -> summary.romFileName
+				}
+			)
+		}
+		SummaryRow(stringResource(R.string.quick_start_summary_chipset), summary.chipset)
+		SummaryRow(stringResource(R.string.quick_start_summary_memory), summary.memory)
+		SummaryRow(stringResource(R.string.quick_start_summary_media), summary.media)
+		SummaryRow(stringResource(R.string.quick_start_summary_controls), summary.controls)
+	}
+}
+
+/** A WHDLoad launch: WHDBooter's hardware choice is named, not previewed; the rest is the launcher's. */
+@Composable
+private fun WhdLoadSummaryCard(summary: QuickStartWhdLoadSummary) {
+	val schema = settingsSchema()
+	SummaryCard {
+		SummaryRow(stringResource(R.string.quick_start_summary_media), summary.media)
+		SummaryRow(
+			stringResource(R.string.quick_start_summary_hardware),
+			summary.perGameConfig?.let { stringResource(R.string.quick_start_whdload_hardware_per_game, it) }
+				?: stringResource(R.string.quick_start_whdload_hardware_whdbooter)
+		)
+		SummaryRow(stringResource(R.string.quick_start_summary_controls), summary.controls)
+		SummaryRow(schema?.label("joyport0") ?: "joyport0", settingText(summary.port0))
+		SummaryRow(schema?.label("joyport1") ?: "joyport1", settingText(summary.port1))
+		SummaryRow(schema?.label("amiberry.shader") ?: "amiberry.shader", settingText(summary.shader))
+	}
+}
+
 /**
- * The selected model's Kickstart is not installed, so it boots the free
- * AROS ROM; importing the Kickstart makes it boot its own.
+ * Quick Start would boot the free AROS ROM ([message] says when); importing
+ * the Kickstart makes it boot its own.
  */
 @Composable
-private fun ArosFallbackNotice(importInProgress: Boolean, onImportRom: () -> Unit) {
+private fun ArosFallbackNotice(message: String, importInProgress: Boolean, onImportRom: () -> Unit) {
 	Card(
 		modifier = Modifier.fillMaxWidth(),
 		colors = CardDefaults.cardColors(
@@ -1111,7 +1165,7 @@ private fun ArosFallbackNotice(importInProgress: Boolean, onImportRom: () -> Uni
 				)
 				Spacer(modifier = Modifier.width(8.dp))
 				Text(
-					stringResource(R.string.quick_start_aros_notice),
+					message,
 					style = MaterialTheme.typography.bodyMedium,
 					color = MaterialTheme.colorScheme.onSecondaryContainer
 				)

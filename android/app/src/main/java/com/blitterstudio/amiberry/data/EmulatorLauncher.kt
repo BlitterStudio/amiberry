@@ -83,19 +83,22 @@ object EmulatorLauncher {
 	}
 
 	/**
-	 * Launch a WHDLoad game via the --autoload mechanism.
-	 * The emulator auto-configures based on its XML database match.
+	 * Launch a WHDLoad game via the --autoload mechanism: WHDBooter chooses
+	 * the hardware from its game database, the installed Kickstarts or the
+	 * game's own configuration.
 	 */
 	fun launchWhdload(
 		context: Context,
 		lhaPath: String,
 		configPath: String? = null,
-		shaderOverride: String? = null
+		shaderOverride: String? = null,
+		controlOverrides: LaunchRequest.AndroidControlOverrides? = null
 	) {
 		val request = LaunchRequest.WhdLoad(
 			lhaPath = lhaPath,
 			configPath = configPath,
-			shaderOverride = shaderOverride
+			shaderOverride = shaderOverride,
+			controlOverrides = controlOverrides
 		)
 		launchRequest(context, request)
 		AppPreferences.getInstance(context).addRecentLaunch(JSONObject().apply {

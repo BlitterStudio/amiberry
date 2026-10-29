@@ -109,6 +109,22 @@ printf 'not-really-an-archive' > "$work/game.lha"
 dir_count="$(find "$work" -type d | wc -l | tr -d ' ')"
 [ "$dir_count" -eq 1 ] || { echo "dump-config created directories during WHDLoad autoload" >&2; exit 1; }
 
+# WHDBooter boots .lzh and .lzx archives the same way: the archive becomes
+# the game drive. --autoload must accept them rather than fail as unknown.
+for ext in lzh lzx; do
+	printf 'not-really-an-archive' > "$work/game.$ext"
+	"$bin" --dump-config --autoload "$work/game.$ext" > "$work/$ext.txt" 2>/dev/null \
+		|| { echo "$ext autoload dump failed" >&2; exit 1; }
+	check "$work/$ext.txt" "^filesystem2=rw,DH1:Games:.*game\\.$ext,0\$"
+done
+
+# WHDBooter assigns the joystick ports; -s options after --autoload replace
+# its choice (front ends pass the user's port choices this way).
+check "$work/lha.txt" '^joyport0=mouse$'
+"$bin" --dump-config --autoload "$work/game.lha" -s joyport0=kbd2 -s joyport1=kbd3 > "$work/lha-ports.txt" 2>/dev/null
+check "$work/lha-ports.txt" '^joyport0=kbd2$'
+check "$work/lha-ports.txt" '^joyport1=kbd3$'
+
 # A config file that fails to load must fail the dump: exit non-zero, no
 # stdout, and a stderr explanation -- never a defaults dump masquerading as
 # the requested configuration.

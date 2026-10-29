@@ -70,7 +70,8 @@ sealed interface LaunchRequest {
 	data class WhdLoad(
 		val lhaPath: String,
 		val configPath: String? = null,
-		val shaderOverride: String? = null
+		val shaderOverride: String? = null,
+		val controlOverrides: AndroidControlOverrides? = null
 	) : LaunchRequest {
 		override fun toArgs(): Array<String> {
 			val args = mutableListOf("--rescan-roms")
@@ -78,8 +79,11 @@ sealed interface LaunchRequest {
 				args.addAll(listOf("--config", it))
 			}
 			args.addAll(listOf("--autoload", lhaPath))
-			// WHDLoad per-game configs can reset preferences, so reapply the shader after autoload.
+			// WHDBooter rebuilds the machine (or loads the game's own configuration)
+			// and assigns the joystick ports itself, so the shader and the Android
+			// controls follow autoload, where they replace its choices.
 			shaderOverride?.let { args.addAll(listOf("-s", "amiberry.shader=$it")) }
+			controlOverrides?.let { args.addAll(it.toArgs()) }
 			args.add("-G")
 			return args.toTypedArray()
 		}

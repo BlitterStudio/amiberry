@@ -161,7 +161,8 @@ class MainActivity : ComponentActivity() {
 				context = this,
 				lhaPath = launch.lhaPath,
 				configPath = launch.configPath,
-				shaderOverride = launch.shaderOverride
+				shaderOverride = launch.shaderOverride,
+				controlOverrides = launch.controlOverrides
 			)
 			is IntentImportExecutor.Launch.Rp9 -> EmulatorLauncher.launchRp9(
 				this,

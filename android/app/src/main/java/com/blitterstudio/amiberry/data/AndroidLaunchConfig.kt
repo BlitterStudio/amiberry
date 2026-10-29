@@ -14,7 +14,8 @@ object AndroidLaunchConfig {
 
 	data class PreparedWhdLoad(
 		val configFile: File,
-		val shaderOverride: String
+		val shaderOverride: String,
+		val controlOverrides: LaunchRequest.AndroidControlOverrides?
 	)
 
 	fun loadLastSessionSettings(context: Context): EmulatorSettings {
@@ -63,21 +64,24 @@ object AndroidLaunchConfig {
 		filename: String = CONTROL_CONFIG
 	): File = ConfigGenerator.writeControlConfig(context, settings, filename)
 
+	/**
+	 * The control configuration and the overrides of a WHDLoad launch. WHDBooter
+	 * chooses the hardware when the game starts; the launcher passes only its
+	 * shader and controls, minus the ones the game's own configuration sets.
+	 */
 	fun prepareWhdLoad(
 		context: Context,
 		lhaPath: String,
 		currentSettings: EmulatorSettings
 	): PreparedWhdLoad {
-		val externalFilesDir = context.getExternalFilesDir(null)
-		val shader = WhdLoadAutoConfig.resolveLaunchShader(
-			globalSettingsFile = ShaderCatalog.findSettingsFile(context.filesDir, externalFilesDir),
-			externalFilesDir = externalFilesDir,
-			lhaFile = File(lhaPath),
-			currentShader = currentSettings.shader
+		val launch = WhdLoadPerGameConfig.launch(
+			WhdLoadPerGameConfig.existingFile(context, lhaPath),
+			currentSettings
 		)
 		return PreparedWhdLoad(
-			configFile = writeControlConfig(context, currentSettings.copy(shader = shader)),
-			shaderOverride = shader
+			configFile = writeControlConfig(context, launch.settings),
+			shaderOverride = launch.settings.shader,
+			controlOverrides = launch.controls
 		)
 	}
 
