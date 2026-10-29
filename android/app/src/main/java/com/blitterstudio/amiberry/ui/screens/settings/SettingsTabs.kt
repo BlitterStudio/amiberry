@@ -13,7 +13,8 @@ enum class SettingsTab(
 	Display(R.string.tab_display, "settings-tab-3"),
 	Sound(R.string.tab_sound, "settings-tab-4"),
 	Input(R.string.tab_input, "settings-tab-5"),
-	Storage(R.string.tab_storage, "settings-tab-6")
+	Storage(R.string.tab_storage, "settings-tab-6"),
+	Misc(R.string.tab_misc, "settings-tab-7")
 }
 
 object SettingsTabs {
@@ -24,7 +25,8 @@ object SettingsTabs {
 		SettingsTab.Display,
 		SettingsTab.Sound,
 		SettingsTab.Input,
-		SettingsTab.Storage
+		SettingsTab.Storage,
+		SettingsTab.Misc
 	)
 
 	fun validSelectedIndex(index: Int): Int =

@@ -137,7 +137,11 @@ bool read_option_list(const char* path, std::set<std::string>& ids)
 	return true;
 }
 
-void options(std::string& out, const std::set<std::string>* only)
+// The layer's options, or those named in only. One that only names but
+// listed (the option list) does not is marked preset_only: the export adds
+// it because a preset level sets it, so a front end writes it without
+// showing it.
+void options(std::string& out, const std::set<std::string>* only, const std::set<std::string>* listed)
 {
 	out += "\"options\":[";
 	bool first = true;
@@ -193,6 +197,8 @@ void options(std::string& out, const std::set<std::string>* only)
 			if (d->level)
 				out += ",\"level\":true";
 		}
+		if (listed && !listed->count(d->id))
+			out += ",\"preset_only\":true";
 		if (d->constraint) {
 			out += ",\"constraint\":";
 			json_string(out, d->constraint);
@@ -217,18 +223,87 @@ void options(std::string& out, const std::set<std::string>* only)
 	out += "\n]";
 }
 
-// The options a preset configuration is described by. Paths are left out:
-// the ROM files depend on the ROMs the machine making the schema has.
-const char* const preset_keys[] = {
-	"chipset", "ntsc", "cpu_model", "fpu_model", "cpu_24bit_addressing", "cpu_compatible",
-	"cachesize", "compfpu", "cycle_exact", "cpu_speed", "chipmem_size", "bogomem_size", "fastmem_size", "z3mem_size",
-	"cd32cd", "cdtvcd", "floppy0type", "floppy1type",
-};
-
 // A fresh pending configuration, as a configuration load starts from.
 void reset_pending()
 {
 	default_prefs(&changed_prefs, true, 0);
+}
+
+// Whether a preset's value of the option describes the machine: paths are
+// left out (the ROM files depend on the ROMs the machine making the schema
+// has, the launcher supplies its own), and so are the sub-options
+// ("cpuboard_settings:pckbd"), which are part of their parent's value and
+// no configuration key of their own.
+bool machine_option(const amiberry_setting_descriptor* d)
+{
+	return d->type != AMIBERRY_SETTING_PATH && !std::strchr(d->id, ':');
+}
+
+// Every option's value in a fresh configuration, by descriptor index.
+std::vector<std::string> default_values()
+{
+	std::vector<std::string> values(amiberry_settings_count());
+	reset_pending();
+	amiberry_settings_session* session = amiberry_settings_session_open();
+	if (!session)
+		return {};
+	for (size_t i = 0; i < values.size(); i++)
+		values[i] = value_of(session, amiberry_settings_at(i)->id);
+	amiberry_settings_session_close(session);
+	return values;
+}
+
+// The options preset levels set, which the export describes whatever the
+// option list names: a front end writes them, so it needs their order
+// and labels.
+std::set<std::string> preset_option_ids;
+
+// One compatibility level of a preset configuration: every machine option
+// whose value differs from a fresh configuration's, in layer order, so that
+// a configuration file of these lines loads as the machine the preset
+// builds (whatever the front end shows). Not limited to the option list.
+// Sets ppc when the configuration has a PowerPC board.
+bool preset_level(std::string& out, const char* id, int config, int level,
+	const std::vector<std::string>& defaults, bool& ppc)
+{
+	reset_pending();
+	amiberry_settings_session* session = amiberry_settings_session_open();
+	if (!session)
+		return false;
+	const amiberry_settings_status status = amiberry_settings_preset_apply(session, id, config, level);
+	if (status == AMIBERRY_SETTINGS_OK) {
+		bool committed = false;
+		amiberry_settings_commit(session, &committed);
+	}
+	amiberry_settings_session_close(session);
+	out += '{';
+	if (status != AMIBERRY_SETTINGS_OK) {
+		out += '}';
+		return true;
+	}
+	session = amiberry_settings_session_open();
+	if (!session)
+		return false;
+	bool first = true;
+	for (size_t i = 0; i < amiberry_settings_count(); i++) {
+		const amiberry_setting_descriptor* d = amiberry_settings_at(i);
+		if (!machine_option(d))
+			continue;
+		const std::string value = value_of(session, d->id);
+		if (value == defaults[i])
+			continue;
+		if (!first)
+			out += ',';
+		first = false;
+		json_string(out, d->id);
+		preset_option_ids.insert(d->id);
+		out += ':';
+		json_string(out, value.c_str());
+	}
+	out += '}';
+	ppc = ppc || cpuboard_is_ppc_accelerator(&changed_prefs);
+	amiberry_settings_session_close(session);
+	return true;
 }
 
 // The ROM IDs presets ask for, for the ROM table after the presets.
@@ -317,6 +392,9 @@ std::vector<std::vector<std::vector<int>>> preset_rom_sets(const char* id, int c
 
 bool presets(std::string& out)
 {
+	const std::vector<std::string> defaults = default_values();
+	if (defaults.size() != amiberry_settings_count())
+		return false;
 	out += ",\n\"compatibility_levels\":[";
 	for (int level = 0;; level++) {
 		const char* label = amiberry_settings_preset_compatibility_label(level);
@@ -342,12 +420,7 @@ bool presets(std::string& out)
 			out += ",\"arcade\":true";
 		out += ",\"configs\":[";
 		for (int config = 0; config < preset->config_count; config++) {
-			reset_pending();
-			amiberry_settings_session* session = amiberry_settings_session_open();
-			if (!session)
-				return false;
 			const auto rom_sets = preset_rom_sets(preset->id, config);
-			const amiberry_settings_status status = amiberry_settings_preset_apply(session, preset->id, config, 0);
 			if (config)
 				out += ',';
 			out += "\n {\"label\":";
@@ -376,36 +449,22 @@ bool presets(std::string& out)
 				out += ']';
 			}
 			out += ']';
-			out += ",\"values\":{";
+			// The machine at each compatibility level, best compatibility first.
+			out += ",\"levels\":[";
 			bool ppc = false;
-			if (status == AMIBERRY_SETTINGS_OK) {
-				bool committed = false;
-				amiberry_settings_commit(session, &committed);
-				amiberry_settings_session_close(session);
-				session = amiberry_settings_session_open();
-				if (!session)
+			for (int level = 0; level <= preset->compatibility_max; level++) {
+				if (level)
+					out += ',';
+				if (!preset_level(out, preset->id, config, level, defaults, ppc))
 					return false;
-				bool first = true;
-				for (const char* key : preset_keys) {
-					if (!amiberry_settings_find(key))
-						continue;
-					if (!first)
-						out += ',';
-					first = false;
-					json_string(out, key);
-					out += ':';
-					json_string(out, value_of(session, key).c_str());
-				}
-				ppc = cpuboard_is_ppc_accelerator(&changed_prefs);
 			}
-			out += '}';
+			out += ']';
 			// Features of the emulator the configuration needs that a build
 			// may leave out: the PowerPC boards need WITH_PPC, which the
 			// Android build does not have.
 			if (ppc)
 				out += ",\"requires\":[\"ppc\"]";
 			out += '}';
-			amiberry_settings_session_close(session);
 		}
 		out += "]}";
 	}
@@ -465,6 +524,30 @@ std::vector<const char*> choice_values(const char* id)
 	const amiberry_setting_descriptor* d = amiberry_settings_find(id);
 	for (size_t c = 0; d && c < d->choice_count; c++)
 		values.push_back(d->choices[c].value);
+	return values;
+}
+
+// The values of an integer option from its minimum to its maximum, by its
+// step, that the layer takes in a fresh configuration (the KB fast RAM
+// sizes: powers of two from 64 KB).
+std::vector<const char*> accepted_values(const char* id)
+{
+	// The texts outlive the call: tables keep pointers to them.
+	static std::set<std::string> texts;
+	std::vector<const char*> values;
+	const amiberry_setting_descriptor* d = amiberry_settings_find(id);
+	if (!d || d->step <= 0)
+		return values;
+	reset_pending();
+	amiberry_settings_session* session = amiberry_settings_session_open();
+	if (!session)
+		return values;
+	for (double v = d->min; v <= d->max; v += d->step) {
+		const std::string text = std::to_string(static_cast<long long>(v));
+		if (amiberry_settings_set(session, id, text.c_str()) == AMIBERRY_SETTINGS_OK)
+			values.push_back(texts.insert(text).first->c_str());
+	}
+	amiberry_settings_session_close(session);
 	return values;
 }
 
@@ -682,6 +765,28 @@ state_space cpu_states()
 		{}};
 }
 
+// The CPU states with the MMU, which rules out the JIT and with it the
+// options that read the effective JIT. It loads after cpu_model, which
+// does not reset it.
+state_space cpu_mmu_states()
+{
+	state_space space = cpu_states();
+	space.inputs.insert(space.inputs.begin() + 1, {"mmu_model", choice_values("mmu_model")});
+	return space;
+}
+
+// The IDs of a group's options, in layer order.
+std::vector<const char*> group_options(const char* group)
+{
+	std::vector<const char*> ids;
+	for (size_t i = 0; i < amiberry_settings_count(); i++) {
+		const amiberry_setting_descriptor* d = amiberry_settings_at(i);
+		if (std::strcmp(d->group, group) == 0)
+			ids.push_back(d->id);
+	}
+	return ids;
+}
+
 // The option values every state is also asked with; the first is the
 // state alone, whose answers the tables give. The transition fields that
 // are not inputs take both of their values, so a transition can tell a
@@ -733,20 +838,71 @@ std::string describe(const pairs& values)
 	return text.empty() ? "the defaults" : text;
 }
 
-// A fresh pending configuration with the context, the state and then the
-// probe loaded as a configuration file loads them. The probe comes last so
-// that loading an input cannot override it (cfgfile drops "max" CPU speed
-// in cycle-exact modes of old configurations); no probe sets an input.
-void load_state(const state_space& space, const pairs& state, const pairs& probe)
-{
-	reset_pending();
-	for (const pairs* values : {&space.context, &state, &probe}) {
-		for (const auto& [id, value] : *values) {
+// A state loaded into a fresh pending configuration as a configuration file
+// loads it (cfgfile, so no setter's dependent changes apply): the table's
+// context, then the state. Each probe starts from a copy of that
+// configuration and is loaded last, so that loading an input cannot
+// override it (cfgfile drops "max" CPU speed in cycle-exact modes of old
+// configurations); a probe sets no input (see without_inputs). Copying the
+// loaded configuration back is several times cheaper than a fresh
+// configuration and a parse per input for every probe, which was most of
+// the export's time. One state is loaded at a time, so one buffer (the
+// configuration is about 11 MB) serves every state.
+class loaded_state {
+public:
+	loaded_state(const state_space& space, const pairs& state)
+		: saved(buffer())
+	{
+		reset_pending();
+		parse(space.context);
+		parse(state);
+		if (saved)
+			std::memcpy(static_cast<void*>(saved), static_cast<const void*>(&changed_prefs), sizeof(uae_prefs));
+	}
+	loaded_state(const loaded_state&) = delete;
+	loaded_state& operator=(const loaded_state&) = delete;
+
+	bool ok() const { return saved != nullptr; }
+
+	// The pending configuration becomes the state with the probe loaded after it.
+	void with(const pairs& probe) const
+	{
+		std::memcpy(static_cast<void*>(&changed_prefs), static_cast<const void*>(saved), sizeof(uae_prefs));
+		parse(probe);
+	}
+
+private:
+	static uae_prefs* buffer()
+	{
+		static uae_prefs* const prefs = static_cast<uae_prefs*>(std::malloc(sizeof(uae_prefs)));
+		return prefs;
+	}
+
+	static void parse(const pairs& values)
+	{
+		for (const auto& [id, value] : values) {
 			TCHAR text[64];
 			std::snprintf(text, sizeof text, "%s", value);
 			cfgfile_parse_option(&changed_prefs, id, text, 0);
 		}
 	}
+
+	uae_prefs* saved;
+};
+
+// A probe without the values it has for inputs of the space: an
+// availability table may have an option the probes vary as an input (sound
+// channels for the stereo options), and its state gives that one.
+pairs without_inputs(const pairs& probe, const state_space& space)
+{
+	pairs values;
+	for (const auto& [id, value] : probe) {
+		const bool input = std::any_of(space.inputs.begin(), space.inputs.end(),
+			[&](const field& f) { return std::strcmp(f.id, id) == 0; });
+		if (!input)
+			values.emplace_back(id, value);
+	}
+	return values;
 }
 
 void json_fields(std::string& out, const std::vector<field>& fields)
@@ -812,16 +968,83 @@ std::vector<availability_table> availability_tables()
 	static const char* const empty_volumes[] = {"floppy0soundvolume_empty", "floppy1soundvolume_empty",
 		"floppy2soundvolume_empty", "floppy3soundvolume_empty"};
 	std::vector<availability_table> tables = {
-		{cpu_states(),
-			{"cpu_24bit_addressing", "cpu_compatible", "cachesize", "compfpu", "z3mem_size"},
-			{"fpu_model", "cycle_exact"}},
+		// The CPU, MMU, FPU and JIT options against the CPU, the MMU and
+		// the JIT. The data cache also needs the indirect UAE Boot ROM when
+		// a boot ROM is needed (hard drives); the core fixup turns it off
+		// otherwise, and the answers here are those without one.
+		{cpu_mmu_states(),
+			{"cpu_24bit_addressing", "cpu_compatible", "cachesize", "compfpu", "z3mem_size",
+				"cpu_no_unimplemented", "cpu_data_cache", "mmu_model", "fpu_strict", "fpu_softfloat",
+				"fpu_no_unimplemented", "cpu_threaded", "comp_constjump", "comp_flushmode", "comp_nf",
+				"comp_catchfault", "comp_trustbyte"},
+			{"fpu_model", "cycle_exact", "mmu_model"}},
+		// The speed options against the cycle-exact modes, CPU
+		// compatibility and the speed.
+		{{{{"cycle_exact", choice_values("cycle_exact")}, {"cpu_compatible", {"true", "false"}},
+			{"cpu_speed", choice_values("cpu_speed")}}, {}},
+			{"cpu_throttle", "amiberry.cpu_idle", "cpu_multiplier"}, {}},
+		// Waiting blits against immediate blits and the 68000/010 memory
+		// cycle-exact mode.
+		{{{{"cpu_model", choice_values("cpu_model")}, {"cycle_exact", choice_values("cycle_exact")},
+			{"immediate_blits", {"true", "false"}}}, {}},
+			{"waiting_blits"}, {}},
+		{{{{"keyboard_type", choice_values("keyboard_type")}}, {}}, {"keyboard_nkro"}, {}},
+		// The advanced chipset options while a chipset extra is active (it
+		// sets them), and the 1 MB chip jumper against chip RAM.
+		{{{{"chipset_compatible", choice_values("chipset_compatible")},
+			{"chipmem_size", choice_values("chipmem_size")}}, {}},
+			group_options("adv_chipset"), {}},
+		// The RTC chip a chipset extra keeps, which depends on the CPU.
+		{{{{"cpu_model", choice_values("cpu_model")}, {"cpu_compatible", {"true", "false"}},
+			{"chipset_compatible", choice_values("chipset_compatible")}}, {}},
+			{}, {"rtc"}},
+		{{{{"genlock", {"true", "false"}}}, {}},
+			{"genlockmode", "genlock_mix", "genlock_alpha", "genlock_aspect"}, {"genlockmode"}},
+		// The Zorro III boards and mappings need 32-bit addressing.
+		{{{{"cpu_24bit_addressing", {"true", "false"}}}, {}},
+			{"z3mem2_size", "z3mem3_size", "z3mem4_size", "megachipmem_size", "z3mapping"}, {}},
+		// The native resolution and line mode while autoswitching follows
+		// the Amiga's screen mode, and VGA autoswitching against them.
+		{{{{"gfx_autoresolution", choice_values("gfx_autoresolution")}}, {}},
+			{"gfx_resolution", "gfx_linemode"}, {}},
+		{{{{"gfx_resolution", choice_values("gfx_resolution")}, {"gfx_linemode", choice_values("gfx_linemode")}}, {}},
+			{"gfx_autoresolution_vga"}, {}},
+		// Centering against the overscan mode and auto crop, and manual crop
+		// against auto crop.
+		{{{{"gfx_overscanmode", choice_values("gfx_overscanmode")}, {"amiberry.gfx_auto_crop", {"true", "false"}}}, {}},
+			{"gfx_center_horizontal", "gfx_center_vertical"}, {}},
+		{{{{"amiberry.gfx_auto_crop", {"true", "false"}}, {"amiberry.gfx_manual_crop", {"true", "false"}}}, {}},
+			{"amiberry.gfx_manual_crop", "amiberry.gfx_manual_crop_width", "amiberry.gfx_manual_crop_height",
+				"amiberry.gfx_horizontal_offset", "amiberry.gfx_vertical_offset"}, {}},
 		// What needs sound emulation, and the sound modes the cycle-exact
 		// modes allow.
 		{{{{"sound_output", choice_values("sound_output")}, {"cycle_exact", choice_values("cycle_exact")}}, {}},
 			{"sound_channels", "sound_frequency", "sound_max_buff", "sound_volume_paula", "sound_volume_cd",
 				"sound_volume_ahi", "sound_volume_midi", "floppy0sound", "floppy1sound", "floppy2sound",
-				"floppy3sound"},
-			{"sound_output"}},
+				"floppy3sound", "sound_auto", "sound_interpol", "sound_stereo_swap_paula", "sound_stereo_swap_ahi",
+				"sound_filter", "sound_filter_type"},
+			{"sound_output", "sound_filter"}},
+		// The stereo options against the channel mode.
+		{{{{"sound_output", choice_values("sound_output")}, {"sound_channels", choice_values("sound_channels")}}, {}},
+			{"sound_stereo_separation", "sound_stereo_mixing_delay"}, {}},
+		// The virtual mouse driver's options, and the on-screen keyboard's.
+		{{{{"absolute_mouse", choice_values("absolute_mouse")}}, {}}, {"magic_mousecursor", "tablet_library"}, {}},
+		{{{{"amiberry.vkbd_enabled", {"true", "false"}}}, {}},
+			{"amiberry.vkbd_transparency", "amiberry.vkbd_language"}, {}},
+		// The chip and slow RAM sizes the machine allows: the 1.8 MB slow
+		// RAM conflicts with the Gayle, Gary and Ramsey boards the chipset
+		// extra brings, the 1.5 MB sizes with an effective JIT. The chipset
+		// extra comes after the CPU, as in a configuration file: its boards
+		// depend on the CPU model and, for Generic, on CPU compatibility. A
+		// Zorro II RTG board also limits chip RAM; a front end without one
+		// gets the answers without it.
+		{{{{"cpu_model", choice_values("cpu_model")},
+			{"cpu_compatible", {"true", "false"}},
+			{"cpu_24bit_addressing", {"true", "false"}},
+			{"cycle_exact", choice_values("cycle_exact")},
+			{"cachesize", {"0", "8192"}},
+			{"chipset_compatible", choice_values("chipset_compatible")}}, {}},
+			{}, {"chipmem_size", "bogomem_size"}},
 	};
 	// Each drive's click volumes against its drive sound.
 	for (int drive = 0; drive < 4; drive++) {
@@ -877,8 +1100,11 @@ bool availability_table_json(std::string& out, const availability_table& table)
 	for (size_t s = 0; s < states; s++) {
 		const pairs state = state_inputs(table.space, s);
 		std::vector<unsigned long long> answers;
+		const loaded_state loaded(table.space, state);
+		if (!loaded.ok())
+			return false;
 		for (size_t p = 0; p < probes().size(); p++) {
-			load_state(table.space, state, probes()[p]);
+			loaded.with(without_inputs(probes()[p], table.space));
 			amiberry_settings_session* session = amiberry_settings_session_open();
 			if (!session)
 				return false;
@@ -953,6 +1179,24 @@ transition_table cpu_transitions()
 			"cpu_speed", "immediate_blits", "compfpu"}};
 }
 
+// The Zorro II fast RAM boards, as cfgfile names them: a board's size is
+// one value written under one of two keys (the MB key, or the KB key for a
+// board below 1 MB), so setting either changes what both read. One table
+// per board.
+std::vector<transition_table> memory_transitions()
+{
+	static const char* const mb_keys[] = {"fastmem_size", "fastmem2_size", "fastmem3_size", "fastmem4_size"};
+	static const char* const kb_keys[] = {"fastmem_size_k", "fastmem2_size_k", "fastmem3_size_k", "fastmem4_size_k"};
+	std::vector<transition_table> tables;
+	for (int board = 0; board < 4; board++) {
+		const std::vector<const char*> kb = accepted_values(kb_keys[board]);
+		tables.push_back({{{{mb_keys[board], choice_values(mb_keys[board])}, {kb_keys[board], kb}}, {}},
+			{{mb_keys[board], choice_values(mb_keys[board])}, {kb_keys[board], kb}},
+			{mb_keys[board], kb_keys[board]}});
+	}
+	return tables;
+}
+
 std::vector<std::string> read_fields(const amiberry_settings_session* session, const std::vector<const char*>& fields)
 {
 	std::vector<std::string> values;
@@ -961,9 +1205,8 @@ std::vector<std::string> read_fields(const amiberry_settings_session* session, c
 	return values;
 }
 
-bool transitions(std::string& out)
+bool transition_table_json(std::string& out, const transition_table& table)
 {
-	const transition_table table = cpu_transitions();
 	const auto& fields = table.fields;
 	std::vector<bool> is_input(fields.size(), false);
 	for (size_t f = 0; f < fields.size(); f++) {
@@ -986,8 +1229,11 @@ bool transitions(std::string& out)
 		std::vector<std::vector<std::string>> before(probes().size());
 		std::vector<std::vector<std::vector<std::string>>> after(probes().size());
 		std::vector<std::vector<bool>> refused(probes().size());
+		const loaded_state loaded(table.space, state);
+		if (!loaded.ok())
+			return false;
 		for (size_t p = 0; p < probes().size(); p++) {
-			load_state(table.space, state, probes()[p]);
+			loaded.with(without_inputs(probes()[p], table.space));
 			for (const auto& [id, value] : actions) {
 				amiberry_settings_session* session = amiberry_settings_session_open();
 				if (!session)
@@ -1065,7 +1311,7 @@ bool transitions(std::string& out)
 		rows += ']';
 	}
 
-	out += ",\n\"transitions\":{";
+	out += '{';
 	json_state_space(out, table.space);
 	out += ",\"fields\":";
 	json_ids(out, fields);
@@ -1088,6 +1334,23 @@ bool transitions(std::string& out)
 	out += "],\"rows\":[";
 	out += rows;
 	out += "\n]}";
+	return true;
+}
+
+// The CPU table, then the memory boards' tables.
+bool transitions(std::string& out)
+{
+	out += ",\n\"transitions\":";
+	if (!transition_table_json(out, cpu_transitions()))
+		return false;
+	out += ",\n\"memory_transitions\":[";
+	const std::vector<transition_table> boards = memory_transitions();
+	for (size_t t = 0; t < boards.size(); t++) {
+		out += t ? ",\n" : "\n";
+		if (!transition_table_json(out, boards[t]))
+			return false;
+	}
+	out += "\n]";
 	return true;
 }
 
@@ -1115,8 +1378,17 @@ int settings_schema_and_exit(const char* option_list)
 	std::string out = "{\"schema_version\":1,\"api_version\":";
 	json_number(out, AMIBERRY_SETTINGS_API_VERSION);
 	out += ",\n";
-	options(out, option_list ? &only : nullptr);
-	if (!presets(out) || !resolutions(out)) {
+	// The presets first: the options their levels set are described too.
+	std::string preset_json;
+	if (!presets(preset_json)) {
+		std::fprintf(stderr, "--settings-schema: out of memory\n");
+		return 1;
+	}
+	const std::set<std::string> listed = only;
+	only.insert(preset_option_ids.begin(), preset_option_ids.end());
+	options(out, option_list ? &only : nullptr, option_list ? &listed : nullptr);
+	out += preset_json;
+	if (!resolutions(out)) {
 		std::fprintf(stderr, "--settings-schema: out of memory or an empty resolution input\n");
 		return 1;
 	}

@@ -7,6 +7,11 @@
 # The export itself fails when an availability or transition answer changes
 # with an option its table does not have as an input.
 #
+# Every preset configuration's compatibility levels are the machine: a
+# configuration file of a level's values loads as the configuration
+# --apply-preset builds at that level, which is how the Android launcher
+# starts a preset.
+#
 # Usage: AMIBERRY_BIN=<path-to-amiberry> tests/test_settings_schema.sh
 set -eu
 
@@ -46,7 +51,14 @@ for option in schema["options"]:
     if option["type"] == "choice":
         assert isinstance(option["choices"], list), option["id"]
 assert schema["presets"] and all(p["configs"] for p in schema["presets"]), "presets"
-assert all(c["values"].get("cpu_model") for p in schema["presets"] for c in p["configs"]), "preset values"
+for p in schema["presets"]:
+    for c in p["configs"]:
+        assert len(c["levels"]) == p["compatibility_max"] + 1, (p["id"], c["label"])
+        assert all(level for level in c["levels"]), (p["id"], c["label"], "an empty level")
+ids_set = set(ids)
+types = {o["id"]: o["type"] for o in schema["options"]}
+level_keys = {k for p in schema["presets"] for c in p["configs"] for level in c["levels"] for k in level}
+assert level_keys <= ids_set and not any(types[k] == "path" or ":" in k for k in level_keys), level_keys
 assert all(c["rom_sets"] for p in schema["presets"] for c in p["configs"]), "every configuration can be built"
 rom_ids = {r["id"] for r in schema["roms"]}
 assert all(any(i in rom_ids for i in req["ids"])
@@ -77,13 +89,26 @@ for table in schema["availability"]:
         assert all(0 <= m < 1 << len(c["values"]) for m, c in zip(row[1:], table["choices"])), table["options"]
 available = {o for t in schema["availability"] for o in t["options"]}
 assert {"cpu_compatible", "cachesize", "z3mem_size", "sound_channels", "floppy3soundvolume_empty"} <= available
+# The chip and slow RAM sizes against the chipset extra and the JIT.
+memory = [t for t in schema["availability"] if {c["id"] for c in t["choices"]} == {"chipmem_size", "bogomem_size"}]
+assert len(memory) == 1 and "chipset_compatible" in [f["id"] for f in memory[0]["inputs"]], "memory availability"
 
-trans = schema["transitions"]
-columns = sum(len(a["values"]) for a in trans["actions"])
-assert len(trans["rows"]) == state_count(trans["inputs"]), "transition rows"
-assert all(len(r) == columns and all(-1 <= o < len(trans["outcomes"]) for o in r) for r in trans["rows"]), "transitions"
-for outcome in trans["outcomes"]:
-    assert len(outcome) % 2 == 0 and all(0 <= i < len(trans["fields"]) for i in outcome[0::2]), outcome
+def check_transitions(trans):
+    columns = sum(len(a["values"]) for a in trans["actions"])
+    assert len(trans["rows"]) == state_count(trans["inputs"]), "transition rows"
+    assert all(len(r) == columns and all(-1 <= o < len(trans["outcomes"]) for o in r) for r in trans["rows"]), "transitions"
+    for outcome in trans["outcomes"]:
+        assert len(outcome) % 2 == 0 and all(0 <= i < len(trans["fields"]) for i in outcome[0::2]), outcome
+
+
+check_transitions(schema["transitions"])
+# One table per Zorro II fast RAM board: its MB and KB keys are one size,
+# so setting either writes both.
+boards = schema["memory_transitions"]
+assert [t["fields"][0] for t in boards] == ["fastmem_size"] + [f"fastmem{n}_size" for n in (2, 3, 4)]
+for board in boards:
+    check_transitions(board)
+    assert board["fields"][1] == board["fields"][0] + "_k"
 
 # A configuration that needs a feature some build leaves out comes after
 # every one that does not, so a front end that drops it keeps the others'
@@ -104,6 +129,66 @@ if "$AMIBERRY_BIN" --settings-schema="$work/bad.txt" > /dev/null 2>&1; then
 	echo "an option list with an unknown option was accepted" >&2
 	exit 1
 fi
+
+# Each level of each preset configuration, written as a configuration file,
+# loads as the machine --apply-preset builds. Both start from a loaded
+# configuration (the empty file), as a launch does. Paths are left out of
+# the levels, the launcher supplies its own (ROM files; the NVRAM file in
+# flash_file). What the layer has no option for is listed below.
+"$python" - "$AMIBERRY_BIN" "$work/full.json" "$work" <<'PY'
+import json, os, subprocess, sys
+binary, schema_path, work = sys.argv[1:4]
+schema = json.load(open(schema_path))
+types = {o["id"]: o["type"] for o in schema["options"]}
+# Machine state that is not a layer option, so not part of the levels:
+gaps = {
+    # The CDTV's 64 KB SRAM card is an expansion board (a ROM-board line),
+    # which the layer configures through its board API, not as an option.
+    "cdtvsram_rom_file": {("cdtv", 1)},
+    # The ALG boards' floppy data pull-up; the arcade boards are not offered
+    # where the levels are used (the Android launcher).
+    "floppydata_pullup": {("alg", 0)},
+    # The A1000 has no slow RAM fitted, so its slow RAM timing is inert.
+    "bogomem_options": {("a1000", c) for c in range(4)},
+}
+assert not set(gaps) & set(types), "a gap became a layer option: export it in the levels"
+empty = os.path.join(work, "empty.uae")
+open(empty, "w").close()
+
+def dump(args):
+    result = subprocess.run([binary, "--config"] + args + ["--dump-config"],
+                            capture_output=True, text=True, env=dict(os.environ, HOME=work))
+    assert result.returncode == 0, (args, result.stderr)
+    values = {}
+    for line in result.stdout.splitlines():
+        if line.startswith(";") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        values.setdefault(key, []).append(value)
+    return values
+
+failures = []
+count = 0
+for preset in schema["presets"]:
+    for config, c in enumerate(preset["configs"]):
+        for level, values in enumerate(c["levels"]):
+            path = os.path.join(work, "level.uae")
+            with open(path, "w") as f:
+                f.writelines(f"{key}={value}\n" for key, value in values.items())
+            spec = f'{preset["id"]}:{config}:{level}'
+            built = dump([empty, "--apply-preset", spec])
+            loaded = dump([path])
+            count += 1
+            # gdb_port is not the machine but the GDB server's port, which a
+            # preset's reset sets and a configuration load leaves out.
+            differ = [k for k in sorted(set(built) | set(loaded)) if built.get(k) != loaded.get(k)
+                      and k != "gdb_port" and types.get(k) != "path"
+                      and (preset["id"], config) not in gaps.get(k, ())]
+            if differ:
+                failures.append(f"{spec}: " + ", ".join(f"{k} {built.get(k)} != {loaded.get(k)}" for k in differ))
+assert not failures, "levels that do not load as their preset:\n" + "\n".join(failures)
+print(f"{count} preset levels load as their preset")
+PY
 
 # The directory is an asset source of the Android app: nothing else in it.
 if [ "$(ls -A "$settings")" != "settings_schema.json" ]; then

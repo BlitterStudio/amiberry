@@ -26,8 +26,9 @@ class ConfigParserTest {
 		val result = ConfigParser.parse(writeConfig("sound_stereo_separation=3\nsound_channels=mixed\n"))
 
 		assertEquals("stereo", result.settings.soundChannels)
-		// The earlier separation is what "mixed" replaced.
-		assertEquals(listOf("sound_stereo_separation=7", "sound_stereo_mixing_delay=5"), result.unknownLines)
+		// The earlier separation is what "mixed" replaced; both are schema options.
+		assertEquals(mapOf("sound_stereo_separation" to "7", "sound_stereo_mixing_delay" to "5"), result.settings.options)
+		assertTrue(result.unknownLines.isEmpty())
 	}
 
 	@Test
@@ -35,7 +36,8 @@ class ConfigParserTest {
 		val result = ConfigParser.parse(writeConfig("sound_channels=mixed\nsound_stereo_mixing_delay=2\n"))
 
 		assertEquals("stereo", result.settings.soundChannels)
-		assertEquals(listOf("sound_stereo_mixing_delay=2", "sound_stereo_separation=7"), result.unknownLines)
+		assertEquals(mapOf("sound_stereo_mixing_delay" to "2", "sound_stereo_separation" to "7"), result.settings.options)
+		assertTrue(result.unknownLines.isEmpty())
 	}
 
 	@Test

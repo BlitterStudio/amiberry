@@ -220,6 +220,8 @@ fun StorageTab(
 					importInProgress = importInProgress,
 					onImportResult = onImportResult
 				)
+				Spacer(modifier = Modifier.height(8.dp))
+				SchemaGroupInlineRows("floppy", viewModel)
 			}
 		}
 
@@ -248,6 +250,8 @@ fun StorageTab(
 						onClear = { viewModel.updateSettings { s -> s.copy(cdImage = "") } }
 					)
 				}
+				Spacer(modifier = Modifier.height(8.dp))
+				SchemaGroupInlineRows("cd", viewModel)
 			}
 		}
 
@@ -322,6 +326,8 @@ fun StorageTab(
 				}
 			}
 		}
+
+		SchemaGroupSection("filesystem", viewModel)
 	}
 }
 

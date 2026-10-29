@@ -39,7 +39,9 @@ class SchemaTablesTest {
 		fpuModel = state.getValue("fpu_model").toInt(),
 		cpuSpeed = "max",
 		immediateBlits = true,
-		jitFpu = false
+		jitFpu = false,
+		// The availability table's states have the MMU too; an option without a field.
+		options = state["mmu_model"]?.let { mapOf("mmu_model" to it) }.orEmpty()
 	)
 
 	private fun fieldsOf(s: EmulatorSettings) = mapOf(

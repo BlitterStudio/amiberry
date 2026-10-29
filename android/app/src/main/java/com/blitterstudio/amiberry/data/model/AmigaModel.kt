@@ -3,43 +3,58 @@ package com.blitterstudio.amiberry.data.model
 /**
  * An Amiga model the Quick Start screen offers: one of the shared settings
  * layer's machine presets (the ImGui Quickstart's), read from the bundled
- * settings schema. Its defaults are the first configuration's; the others
- * are used when only their ROMs are installed (see ModelRomAvailability).
- * New presets in the emulator show up here once the schema is regenerated.
+ * settings schema. Its defaults are the first configuration's at the
+ * default compatibility level; the other configurations are used when only
+ * their ROMs are installed (see ModelRomAvailability). New presets in the
+ * emulator show up here once the schema is regenerated.
  */
 data class AmigaModel(
 	/** The layer's stable preset ID ("a500"); what recent launches store. */
 	val cmdArg: String,
 	val displayName: String,
 	/** The preset's configurations, in the emulator's order; never empty. */
-	val configs: List<SettingsSchema.PresetConfig>
+	val configs: List<SettingsSchema.PresetConfig>,
+	/** The highest compatibility level (0 = the model has one level). */
+	val compatibilityMax: Int = 0
 ) {
 	/** The first configuration's label, for example "1.3 ROM, OCS, 512 KB Chip + 512 KB Slow RAM". */
 	val description: String
 		get() = configs.first().label
 
-	/** The first configuration's values, in .uae spelling. */
-	val values: Map<String, String>
-		get() = configs.first().values
+	/**
+	 * The level a model starts at: approximate (1) where the model has it,
+	 * as --apply-preset and the native front ends pick.
+	 */
+	val defaultLevel: Int
+		get() = minOf(1, compatibilityMax)
+
+	/** The configuration index clamped to the model's configurations. */
+	fun configIndex(config: Int): Int = config.coerceIn(0, configs.size - 1)
+
+	/** The level clamped to the model's levels. */
+	fun levelIndex(level: Int): Int = level.coerceIn(0, compatibilityMax)
+
+	/** The options configuration [config] sets at [level], .uae spelling (see SettingsSchema.PresetConfig). */
+	fun levelValues(config: Int, level: Int): Map<String, String> {
+		val levels = configs[configIndex(config)].levels
+		return levels.getOrNull(levelIndex(level)) ?: levels.lastOrNull().orEmpty()
+	}
+
+	/** The first configuration's value of [id] at the default level; the option's default where it sets none. */
+	private fun value(id: String): String? =
+		levelValues(0, defaultLevel)[id] ?: SettingsSchema.current?.option(id)?.defaultOnAndroid
 
 	val hasFloppy: Boolean
-		get() = values["floppy0type"]?.let { it != "-1" } ?: true
+		get() = value("floppy0type")?.let { it != "-1" } ?: true
 
 	val hasCd: Boolean
-		get() = values["cd32cd"] == "true" || values["cdtvcd"] == "true"
+		get() = value("cd32cd") == "true" || value("cdtvcd") == "true"
 
 	val chipset: String
-		get() = values["chipset"].orEmpty()
+		get() = value("chipset").orEmpty()
 
 	val defaultCpu: String
-		get() = values["cpu_model"].orEmpty()
-
-	/**
-	 * The emulator argument that builds one of this model's configurations
-	 * (at the best compatibility level, as the schema's values are).
-	 */
-	fun presetArg(config: Int): String =
-		"$cmdArg:${config.coerceIn(0, configs.size - 1)}:0"
+		get() = value("cpu_model").orEmpty()
 
 	override fun toString(): String = cmdArg
 

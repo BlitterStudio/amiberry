@@ -16,9 +16,17 @@ object SettingsControlAvailability {
 
 	/** Whether the option [id] can be changed in [settings]. */
 	fun isAvailable(settings: EmulatorSettings, id: String, schema: SettingsSchema? = SettingsSchema.current): Boolean =
-		schema?.availability?.isAvailable(id, settings.schemaState()) ?: true
+		isAvailable(settings.schemaState(schema), id, schema)
+
+	/** Whether the option [id] can be changed in [state] (from [EmulatorSettings.schemaState]; one state for many rows). */
+	fun isAvailable(state: Map<String, String>, id: String, schema: SettingsSchema? = SettingsSchema.current): Boolean =
+		schema?.availability?.isAvailable(id, state) ?: true
 
 	/** The choices of [id] offered in [settings], in the option's order; null (every choice) without an answer. */
 	fun choiceValues(settings: EmulatorSettings, id: String, schema: SettingsSchema? = SettingsSchema.current): List<String>? =
-		schema?.availability?.choices(id, settings.schemaState())
+		choiceValues(settings.schemaState(schema), id, schema)
+
+	/** The choices of [id] offered in [state], in the option's order; null (every choice) without an answer. */
+	fun choiceValues(state: Map<String, String>, id: String, schema: SettingsSchema? = SettingsSchema.current): List<String>? =
+		schema?.availability?.choices(id, state)
 }

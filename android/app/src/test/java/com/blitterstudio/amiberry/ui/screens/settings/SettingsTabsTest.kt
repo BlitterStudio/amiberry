@@ -16,7 +16,8 @@ class SettingsTabsTest {
 				R.string.tab_display to "settings-tab-3",
 				R.string.tab_sound to "settings-tab-4",
 				R.string.tab_input to "settings-tab-5",
-				R.string.tab_storage to "settings-tab-6"
+				R.string.tab_storage to "settings-tab-6",
+				R.string.tab_misc to "settings-tab-7"
 			),
 			SettingsTabs.all.map { it.titleRes to it.testTag }
 		)
@@ -27,13 +28,13 @@ class SettingsTabsTest {
 		assertEquals(0, SettingsTabs.validSelectedIndex(-1))
 		assertEquals(0, SettingsTabs.validSelectedIndex(0))
 		assertEquals(6, SettingsTabs.validSelectedIndex(6))
-		assertEquals(6, SettingsTabs.validSelectedIndex(99))
+		assertEquals(7, SettingsTabs.validSelectedIndex(99))
 	}
 
 	@Test
 	fun `tab for index uses the clamped selection`() {
 		assertEquals(SettingsTab.Cpu, SettingsTabs.tabFor(-10))
 		assertEquals(SettingsTab.Input, SettingsTabs.tabFor(5))
-		assertEquals(SettingsTab.Storage, SettingsTabs.tabFor(99))
+		assertEquals(SettingsTab.Misc, SettingsTabs.tabFor(99))
 	}
 }

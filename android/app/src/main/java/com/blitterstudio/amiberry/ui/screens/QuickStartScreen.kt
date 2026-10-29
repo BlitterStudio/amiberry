@@ -91,6 +91,7 @@ import com.blitterstudio.amiberry.ui.rememberLaunchInFlightGuard
 import com.blitterstudio.amiberry.ui.viewmodel.QuickStartViewModel
 import com.blitterstudio.amiberry.ui.viewmodel.SettingsViewModel
 import com.blitterstudio.amiberry.ui.components.MediaSelector
+import com.blitterstudio.amiberry.ui.components.settings.CompatibilityLevelRow
 import com.blitterstudio.amiberry.ui.components.StoragePermissionBanner
 import com.blitterstudio.amiberry.ui.navigation.Screen
 import kotlinx.coroutines.Dispatchers
@@ -409,11 +410,10 @@ fun QuickStartScreen(
 									EmulatorLauncher.launchQuickStart(
 										context = context,
 										model = launchSettings.baseModel,
-										presetConfig = launchSettings.baseConfig,
+										configPath = configFile.absolutePath,
 										floppyPath = launchSettings.floppy0.takeIf { it.isNotBlank() },
 										floppy1Path = launchSettings.floppy1.takeIf { it.isNotBlank() },
-										cdPath = launchSettings.cdImage.takeIf { it.isNotBlank() },
-										configPath = configFile.absolutePath
+										cdPath = launchSettings.cdImage.takeIf { it.isNotBlank() }
 									)
 								}
 							}
@@ -613,11 +613,12 @@ fun QuickStartScreen(
 				}
 				QuickStartLaunchMode.DISK -> {
 					ModelSelectorCard(
-						model = model,
+						settings = settingsViewModel.settings,
 						availableModels = modeAvailableModels,
 						selectedModelAvailable = selectedModeModelAvailable,
 						arosModels = arosModels,
-						onModelSelected = settingsViewModel::applyModel
+						onModelSelected = settingsViewModel::applyModel,
+						onLevelSelected = settingsViewModel::applyCompatibilityLevel
 					)
 					if (selectedModeModelAvailable && model.hasFloppy) {
 						MediaSelector(
@@ -668,11 +669,12 @@ fun QuickStartScreen(
 				}
 				QuickStartLaunchMode.CD -> {
 					ModelSelectorCard(
-						model = model,
+						settings = settingsViewModel.settings,
 						availableModels = modeAvailableModels,
 						selectedModelAvailable = selectedModeModelAvailable,
 						arosModels = arosModels,
-						onModelSelected = settingsViewModel::applyModel
+						onModelSelected = settingsViewModel::applyModel,
+						onLevelSelected = settingsViewModel::applyCompatibilityLevel
 					)
 					if (selectedModeModelAvailable && model.hasCd) {
 						MediaSelector(
@@ -705,12 +707,13 @@ fun QuickStartScreen(
 							when (entry.optString("type")) {
 								"config" -> {
 									val configPath = entry.optString("path")
-									val controlSettings = settingsViewModel.settings
+									// Not the editor state: that may belong to another configuration.
+									val rememberedControls = appPreferences.rememberedAndroidControls()
 									scope.launchGuarded(launchGuard) {
 										EmulatorLauncher.launchWithConfig(
 											context,
 											configPath,
-											controlSettings = controlSettings
+											rememberedControls = rememberedControls
 										)
 									}
 								}
@@ -749,7 +752,7 @@ fun QuickStartScreen(
 										val recentCd = entry.optString("cd")
 										val currentSettings = settingsViewModel.settings
 										scope.launchGuarded(launchGuard) {
-											val (configFile, presetConfig) = try {
+											val configFile = try {
 												withContext(Dispatchers.IO) {
 													val settingsSnapshot = buildRecentQuickStartSettingsSnapshot(
 														model = model,
@@ -759,8 +762,7 @@ fun QuickStartScreen(
 														floppy1 = recentFloppy1,
 														cdImage = recentCd
 													)
-													settingsViewModel.writeSettingsConfig(settingsSnapshot, AndroidLaunchConfig.QUICKSTART_CONFIG) to
-														settingsSnapshot.baseConfig
+													settingsViewModel.writeSettingsConfig(settingsSnapshot, AndroidLaunchConfig.QUICKSTART_CONFIG)
 												}
 											} catch (_: Exception) {
 												snackbarHostState.showSnackbar(configWriteFailedMessage)
@@ -769,11 +771,10 @@ fun QuickStartScreen(
 											EmulatorLauncher.launchQuickStart(
 												context,
 												model,
-												presetConfig = presetConfig,
+												configPath = configFile.absolutePath,
 												floppyPath = recentFloppy0.takeIf { it.isNotBlank() },
 												floppy1Path = recentFloppy1.takeIf { it.isNotBlank() },
-												cdPath = recentCd.takeIf { it.isNotBlank() },
-												configPath = configFile.absolutePath
+												cdPath = recentCd.takeIf { it.isNotBlank() }
 											)
 										}
 									} else {
@@ -961,16 +962,19 @@ private fun QuickStartLaunchMode.icon(): ImageVector = when (this) {
 	QuickStartLaunchMode.RECENT -> Icons.Default.History
 }
 
+/** The model to start, and the compatibility level of its preset. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ModelSelectorCard(
-	model: AmigaModel,
+	settings: EmulatorSettings,
 	availableModels: List<AmigaModel>,
 	selectedModelAvailable: Boolean,
 	/** Available models whose Kickstart is not installed, which boot AROS. */
 	arosModels: Set<AmigaModel>,
-	onModelSelected: (AmigaModel) -> Unit
+	onModelSelected: (AmigaModel) -> Unit,
+	onLevelSelected: (Int) -> Unit
 ) {
+	val model = settings.baseModel
 	OutlinedCard(modifier = Modifier.fillMaxWidth()) {
 		Column(modifier = Modifier.padding(16.dp)) {
 			Text(stringResource(R.string.quick_start_amiga_model), style = MaterialTheme.typography.titleMedium)
@@ -1035,6 +1039,13 @@ private fun ModelSelectorCard(
 						)
 					}
 				}
+			}
+			if (selectedModelAvailable) {
+				CompatibilityLevelRow(
+					settings = settings,
+					onSelect = onLevelSelected,
+					modifier = Modifier.padding(top = 8.dp)
+				)
 			}
 		}
 	}

@@ -20,6 +20,20 @@ MIDI is built with PortMidi's null backend, so no host MIDI devices are availabl
 ### Shaders
 The Android launcher's **Native Shader** list offers the built-in shaders (`none`, `tv`, `pc`, `lite`, `1084`) plus any `.glslp` presets and top-level `.glsl` files found in `Visuals/Shaders`. The built-in CRT effect switches to lighter shader and blur variants on mobile GPUs.
 
+### Model presets
+The launcher writes the whole machine a Quick Start model builds into its configuration (chipset extras such as the A3000's SCSI and Ramsey or the CD32's Akiko included), at the **Compatibility** level picked next to the model; new models start at the approximate level, as on the desktop. A few parts of a preset are not settings the launcher can write:
+- the CD32, CDTV, arcade and DraCo NVRAM file, so their NVRAM is not kept between launches;
+- the 64 KB SRAM card of the CDTV "Floppy drive and 64KB SRAM card" configuration;
+- the CD drive of a CD32 or CDTV started without a disc.
+
+### Settings coverage
+The launcher's Settings tabs show every option of the shared settings layer that means something on Android: each tab's own controls first, then one section per settings group (CPU, MMU, FPU, CPU speed, JIT; Chipset, Advanced Chipset and Genlock, which start collapsed; Memory and ROMs; Display and Filters; Sound; Input and On-screen Controls; Floppy, CD and Filesystem), and a **Misc** tab for the miscellaneous options, expansions and the protection dongle. An option that is unavailable in the current machine is dimmed, and its section says why once. The second to fourth memory boards of a kind appear once the board before is fitted. Configured in the desktop GUI only, for now:
+- RTG and accelerator boards (the board type is not yet in the launcher), and their memory and options;
+- the disk swapper list, joystick ports 3 and 4, custom bezel images and the RTG shader;
+- hotkeys.
+
+Options for host windows, devices, serial ports, MIDI and PowerPC do not apply on Android and are not shown.
+
 ### FPU Signaling NaN Detection
 Hardware-based signaling NaN (SNAN) detection is disabled. This is a platform-independent limitation but particularly affects Android due to the ARM64 FPU behavior.
 
@@ -54,7 +68,7 @@ The on-screen keyboard has two independent ways to open it:
 
 Turning the KB button off keeps the gamepad toggle working, so a TV or other gamepad-only device can hide all touch controls and still type. The keyboard is off entirely only when the KB button is off and the toggle is **None (disabled)**. A gamepad connected at startup hides the on-screen joystick but leaves the keyboard available.
 
-Saved configurations preserve Default, None and explicit button selections independently of remembered settings. Older configurations without a toggle setting still inherit the remembered selection. Configurations and remembered settings from older versions that had the keyboard switched off load with the KB button off and the toggle set to None.
+Saved configurations preserve Default, None and explicit button selections independently of remembered settings, both when opened in Settings and when launched from Configurations, Recent or a shared file. The same holds for their port, on-screen joystick, numeric keypad, mouse-map and analog mouse speed settings: remembered controls only fill the ones a configuration does not set, so older configurations without a toggle setting still inherit the remembered selection. Quick Start disk and CD launches and RP9 packages use the remembered controls. Configurations and remembered settings from older versions that had the keyboard switched off load with the KB button off and the toggle set to None.
 
 While the keyboard is open, the D-pad or left stick moves focus, South presses the focused key, and East closes the keyboard. Focus stays fixed while South is held. Opening the emulator GUI closes the keyboard so controller releases consumed by the GUI cannot leave stale keyboard holds when emulation resumes.
 

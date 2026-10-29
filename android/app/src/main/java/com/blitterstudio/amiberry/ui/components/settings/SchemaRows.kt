@@ -47,6 +47,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.blitterstudio.amiberry.R
+import com.blitterstudio.amiberry.data.model.EmulatorSettings
 import com.blitterstudio.amiberry.data.model.SettingsSchema
 import com.blitterstudio.amiberry.ui.dpadFocusIndicator
 import com.blitterstudio.amiberry.ui.dpadSliderKeys
@@ -178,6 +179,33 @@ fun SchemaChoiceRow(
 		reason = rowReason(option, enabled, reason, showReason),
 		testTag = testTag,
 		optionTestTag = optionTestTag
+	)
+}
+
+/**
+ * The model preset's compatibility level as a dropdown of the layer's level
+ * labels (levels 0 to the model's maximum). It reads as the level the
+ * settings are at, or as custom once an option a level sets was edited.
+ * Nothing shows for a model with one level.
+ */
+@Composable
+fun CompatibilityLevelRow(
+	settings: EmulatorSettings,
+	onSelect: (Int) -> Unit,
+	modifier: Modifier = Modifier
+) {
+	val model = settings.baseModel
+	if (model.compatibilityMax == 0) return
+	val labels = settingsSchema()?.compatibilityLevels.orEmpty()
+	fun label(level: Int) = labels.getOrNull(level) ?: level.toString()
+	val level = settings.compatibilityLevel
+	SettingChoiceRow(
+		label = stringResource(R.string.settings_compatibility_level),
+		valueText = level?.let(::label) ?: stringResource(R.string.settings_compatibility_level_custom),
+		choices = (0..model.compatibilityMax).map { ChoiceItem(it, label(it)) },
+		onSelect = onSelect,
+		modifier = modifier,
+		help = stringResource(R.string.settings_compatibility_level_help)
 	)
 }
 

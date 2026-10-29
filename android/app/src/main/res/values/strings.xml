@@ -15,6 +15,7 @@
     <string name="tab_sound">Sound</string>
     <string name="tab_input">Input</string>
     <string name="tab_storage">Storage</string>
+    <string name="tab_misc">Misc</string>
 
     <string name="settings_title">Settings</string>
     <string name="quick_start_title">Quick Start</string>
@@ -57,12 +58,9 @@
     <string name="settings_unsaved_changes">Unsaved changes</string>
     <string name="settings_presets_title">Presets</string>
     <string name="settings_preset_select">Choose a preset</string>
-    <string name="settings_preset_compatibility">Compatibility</string>
-    <string name="settings_preset_compatibility_desc">Conservative timing with JIT off.</string>
-    <string name="settings_preset_balanced">Balanced</string>
-    <string name="settings_preset_balanced_desc">General-purpose settings for most titles.</string>
-    <string name="settings_preset_performance">Performance</string>
-    <string name="settings_preset_performance_desc">Fastest CPU mode where this model allows it.</string>
+    <string name="settings_compatibility_level">Compatibility</string>
+    <string name="settings_compatibility_level_help">How exactly the model\'s preset emulates the machine: more exact is slower.</string>
+    <string name="settings_compatibility_level_custom">Custom (edited)</string>
     <string name="settings_preset_pixel_perfect">Pixel Perfect</string>
     <string name="settings_preset_pixel_perfect_desc">Integer scaling with resolution autoswitch.</string>
     <string name="settings_preset_touch_controls">Touch Controls</string>
@@ -442,4 +440,29 @@
     <string name="overlay_show_keyboard_help">Back to the emulation with the on-screen keyboard up</string>
     <string name="overlay_show_keyboard_off">Turn the on-screen keyboard on first</string>
     <string name="overlay_settings_unavailable">The settings list could not be read.</string>
+    <!-- The settings layer's groups, worded as the Apple app titles them (SettingsModel.swift groupTitle). -->
+    <string name="settings_group_cpu">CPU</string>
+    <string name="settings_group_mmu">MMU</string>
+    <string name="settings_group_fpu">FPU</string>
+    <string name="settings_group_cpu_speed">CPU Speed</string>
+    <string name="settings_group_jit">JIT Compiler</string>
+    <string name="settings_group_chipset">Chipset</string>
+    <string name="settings_group_adv_chipset">Advanced Chipset</string>
+    <string name="settings_group_genlock">Genlock</string>
+    <string name="settings_group_memory">Memory</string>
+    <string name="settings_group_rom">ROMs</string>
+    <string name="settings_group_display">Display</string>
+    <string name="settings_group_filter">Filters &amp; Shaders</string>
+    <string name="settings_group_sound">Sound</string>
+    <string name="settings_group_input">Input</string>
+    <string name="settings_group_onscreen">On-screen Controls</string>
+    <string name="settings_group_floppy">Floppy Drives</string>
+    <string name="settings_group_cd">CD</string>
+    <string name="settings_group_filesystem">Filesystem</string>
+    <string name="settings_group_misc">Miscellaneous</string>
+    <string name="settings_group_expansions">Expansions</string>
+    <string name="settings_group_io">IO Ports</string>
+    <string name="settings_section_show">Show %1$s</string>
+    <string name="settings_section_hide">Hide %1$s</string>
+    <string name="settings_display_more_title">More Display Options</string>
 </resources>

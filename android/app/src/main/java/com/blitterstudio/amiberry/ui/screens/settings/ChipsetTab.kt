@@ -13,7 +13,6 @@ import androidx.compose.ui.unit.dp
 import com.blitterstudio.amiberry.R
 import com.blitterstudio.amiberry.ui.components.settings.SchemaChoiceRow
 import com.blitterstudio.amiberry.ui.components.settings.SchemaSwitchRow
-import com.blitterstudio.amiberry.ui.components.settings.SettingsSection
 import com.blitterstudio.amiberry.ui.viewmodel.SettingsViewModel
 
 @Composable
@@ -27,7 +26,7 @@ fun ChipsetTab(viewModel: SettingsViewModel) {
 			.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 120.dp),
 		verticalArrangement = Arrangement.spacedBy(16.dp)
 	) {
-		SettingsSection(title = stringResource(R.string.settings_chipset_section_title)) {
+		SchemaGroupSection("chipset", viewModel, title = stringResource(R.string.settings_chipset_section_title)) {
 			SchemaChoiceRow(
 				id = "chipset",
 				value = settings.chipset,
@@ -55,5 +54,7 @@ fun ChipsetTab(viewModel: SettingsViewModel) {
 				onSelect = { value -> viewModel.updateSettings { s -> s.copy(collisionLevel = value) } }
 			)
 		}
+		SchemaGroupSection("adv_chipset", viewModel)
+		SchemaGroupSection("genlock", viewModel)
 	}
 }

@@ -14,10 +14,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.blitterstudio.amiberry.R
 import com.blitterstudio.amiberry.data.model.EmulatorSettings
+import com.blitterstudio.amiberry.data.model.SettingsSchema
 import com.blitterstudio.amiberry.ui.components.settings.SchemaChoiceRow
 import com.blitterstudio.amiberry.ui.components.settings.SettingsSection
 import com.blitterstudio.amiberry.ui.components.settings.schemaLabel
+import com.blitterstudio.amiberry.ui.components.settings.schemaOption
 import com.blitterstudio.amiberry.ui.components.settings.schemaValueText
+import com.blitterstudio.amiberry.ui.components.settings.settingsSchema
 import com.blitterstudio.amiberry.ui.viewmodel.SettingsViewModel
 import kotlin.math.roundToInt
 
@@ -51,21 +54,19 @@ fun MemoryTab(viewModel: SettingsViewModel) {
 			.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 120.dp),
 		verticalArrangement = Arrangement.spacedBy(16.dp)
 	) {
-		SettingsSection(title = stringResource(R.string.settings_memory_config_title)) {
-			SchemaChoiceRow(
-				id = "chipmem_size",
-				value = settings.chipRam.toString(),
-				onSelect = { value -> value.toIntOrNull()?.let { size -> viewModel.updateSettings { s -> s.copy(chipRam = size) } } }
-			)
-			SchemaChoiceRow(
-				id = "bogomem_size",
-				value = settings.slowRam.toString(),
-				onSelect = { value -> value.toIntOrNull()?.let { size -> viewModel.updateSettings { s -> s.copy(slowRam = size) } } }
-			)
+		SchemaGroupSection("memory", viewModel, title = stringResource(R.string.settings_memory_config_title)) {
+			MemorySizeRow(settings, "chipmem_size", settings.chipRam) { size ->
+				viewModel.updateSettings { s -> s.copy(chipRam = size) }
+			}
+			MemorySizeRow(settings, "bogomem_size", settings.slowRam) { size ->
+				viewModel.updateSettings { s -> s.copy(slowRam = size) }
+			}
 			SchemaChoiceRow(
 				id = "fastmem_size",
 				value = settings.fastRam.toString(),
-				onSelect = { value -> value.toIntOrNull()?.let { size -> viewModel.updateSettings { s -> s.copy(fastRam = size) } } }
+				// The board's MB and KB keys are one size; the memory
+				// transitions make setting either agree.
+				onSelect = { value -> value.toIntOrNull()?.let { size -> viewModel.updateSettings { s -> s.withOption("fastmem_size", size.toString()) } } }
 			)
 			SchemaChoiceRow(
 				id = "z3mem_size",
@@ -76,29 +77,71 @@ fun MemoryTab(viewModel: SettingsViewModel) {
 		}
 
 		// Summary: each installed memory by the layer's label and size, then the total.
-		SettingsSection(title = stringResource(R.string.settings_memory_summary_title)) {
-			val chipKb = EmulatorSettings.chipRamKb(settings.chipRam)
-			val slowKb = settings.slowRam * 256
-			val summary = buildList {
-				add("chipmem_size" to settings.chipRam)
-				if (settings.slowRam > 0) add("bogomem_size" to settings.slowRam)
-				if (settings.fastRam > 0) add("fastmem_size" to settings.fastRam)
-				if (settings.z3Ram > 0) add("z3mem_size" to settings.z3Ram)
-			}
-			summary.forEach { (id, value) ->
+		val schema = settingsSchema()
+		if (schema != null) SettingsSection(title = stringResource(R.string.settings_memory_summary_title)) {
+			val installed = installedMemory(settings, schema)
+			installed.forEach { memory ->
 				Text(
-					stringResource(R.string.settings_label_value, schemaLabel(id), schemaValueText(id, value.toString())),
+					stringResource(R.string.settings_label_value, schemaLabel(memory.id), schemaValueText(memory.id, memory.value)),
 					style = MaterialTheme.typography.bodyMedium
 				)
 			}
-			val totalKb = chipKb + slowKb + (settings.fastRam + settings.z3Ram) * 1024
 			Text(
-				stringResource(R.string.settings_memory_summary_total, formatMemory(totalKb)),
+				stringResource(R.string.settings_memory_summary_total, formatMemory(installed.sumOf { it.kb })),
 				style = MaterialTheme.typography.titleSmall,
 				color = MaterialTheme.colorScheme.primary
 			)
 		}
+
+		SchemaGroupSection("rom", viewModel)
 	}
+}
+
+/** One memory the machine has: the option, its stored value and its size. */
+internal data class InstalledMemory(val id: String, val value: String, val kb: Int)
+
+/**
+ * The memory a configuration of [settings] gives the machine, one entry
+ * per memory option in use, in the layer's order: chip RAM always, then
+ * every board with a size. Chip and slow RAM are stored in 512 KB and
+ * 256 KB units (chipRamKb), board sizes in MB, and boards below 1 MB in
+ * KB under the *_size_k key. The launcher writes a board's KB key after
+ * its MB key and the later key sets the board, so a set KB key is the
+ * board's size.
+ */
+internal fun installedMemory(settings: EmulatorSettings, schema: SettingsSchema): List<InstalledMemory> =
+	schema.options.values.filter { it.group == "memory" && !it.presetOnly }.mapNotNull { option ->
+		val id = option.id
+		val value = settings.optionValue(id) ?: return@mapNotNull null
+		val number = value.toIntOrNull() ?: return@mapNotNull null
+		val kb = when {
+			id == "chipmem_size" -> EmulatorSettings.chipRamKb(number)
+			id == "bogomem_size" -> number * 256
+			id.endsWith("_size_k") -> number
+			id.endsWith("_size") && settings.optionValue("${id}_k") != null -> 0
+			id.endsWith("_size") -> number * 1024
+			else -> 0
+		}
+		InstalledMemory(id, value, kb).takeIf { kb > 0 || id == "chipmem_size" }
+	}
+
+/**
+ * A memory size offering the sizes the machine allows (the layer's
+ * availability table: the chipset extra's boards and the JIT rule some
+ * out). While some are left out the option's constraint says why.
+ */
+@Composable
+private fun MemorySizeRow(settings: EmulatorSettings, id: String, stored: Int, onSelect: (Int) -> Unit) {
+	val values = SettingsControlAvailability.choiceValues(settings, id)
+	val option = schemaOption(id)
+	val narrowed = values != null && option != null && values.size < option.choices.size
+	SchemaChoiceRow(
+		id = id,
+		value = stored.toString(),
+		values = values,
+		help = if (narrowed) listOfNotNull(option?.help?.takeIf { it.isNotBlank() }, option?.constraint).joinToString("\n") else null,
+		onSelect = { value -> value.toIntOrNull()?.let(onSelect) }
+	)
 }
 
 @Composable

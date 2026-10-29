@@ -27,10 +27,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.blitterstudio.amiberry.R
 import com.blitterstudio.amiberry.data.model.AmigaModel
+import com.blitterstudio.amiberry.ui.components.settings.CompatibilityLevelRow
 import com.blitterstudio.amiberry.ui.components.settings.SchemaChoiceRow
 import com.blitterstudio.amiberry.ui.components.settings.SchemaNumberRow
 import com.blitterstudio.amiberry.ui.components.settings.SchemaSwitchRow
-import com.blitterstudio.amiberry.ui.components.settings.SettingsSection
 import com.blitterstudio.amiberry.ui.dpadArrowsMoveFocus
 import com.blitterstudio.amiberry.ui.viewmodel.SettingsViewModel
 
@@ -89,10 +89,15 @@ fun CpuTab(viewModel: SettingsViewModel) {
 						}
 					}
 				}
+				CompatibilityLevelRow(
+					settings = settings,
+					onSelect = viewModel::applyCompatibilityLevel,
+					modifier = Modifier.padding(top = 8.dp)
+				)
 			}
 		}
 
-		SettingsSection(title = stringResource(R.string.settings_cpu_section_title)) {
+		SchemaGroupSection("cpu", viewModel, title = stringResource(R.string.settings_cpu_section_title)) {
 			SchemaChoiceRow(
 				id = "cpu_model",
 				value = settings.cpuModel.toString(),
@@ -128,7 +133,11 @@ fun CpuTab(viewModel: SettingsViewModel) {
 			)
 		}
 
-		SettingsSection(title = stringResource(R.string.settings_cpu_jit_section_title)) {
+		SchemaGroupSection("mmu", viewModel)
+		SchemaGroupSection("fpu", viewModel)
+		SchemaGroupSection("cpu_speed", viewModel)
+
+		SchemaGroupSection("jit", viewModel, title = stringResource(R.string.settings_cpu_jit_section_title)) {
 			SchemaNumberRow(
 				id = "cachesize",
 				stored = settings.jitCacheSize,
