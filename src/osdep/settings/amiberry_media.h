@@ -87,6 +87,11 @@ typedef enum amiberry_media_list {
 	                                  effect: the folder of a configuration's
 	                                  statefile_path (a state file) overrides
 	                                  AMIBERRY_FOLDER_SAVESTATES */
+	AMIBERRY_MEDIA_KICKSTART_ROMS, /* the Kickstart ROMs the last ROM scan
+	                                  recognised (amiberry_media_rescan_roms),
+	                                  named as the ROM list names them
+	                                  ("KS ROM v3.1 (A1200)"), by name; the
+	                                  path is what kickstart_rom_file takes */
 	AMIBERRY_MEDIA_LIST_COUNT
 } amiberry_media_list;
 
@@ -119,6 +124,26 @@ AMIBERRY_SETTINGS_API amiberry_settings_status amiberry_media_add_recent(amiberr
 	const char *path);
 
 /*
+ * Takes path off a recent list (floppies, CD images, WHDLoad archives), as
+ * a front end's Remove from Recent does, and saves the emulator's
+ * settings. path is matched the way the list's entries read: made
+ * absolute, so the path amiberry_media_entry gave removes its entry; the
+ * other entries keep their order. A path the list does not hold changes
+ * nothing. INVALID_VALUE for another list or an empty path; UNAVAILABLE,
+ * with the list unchanged, when the settings file cannot be written.
+ */
+AMIBERRY_SETTINGS_API amiberry_settings_status amiberry_media_remove_recent(amiberry_media_list list,
+	const char *path);
+
+/*
+ * Empties a recent list (floppies, CD images, WHDLoad archives), leaving
+ * the other lists as they are, and saves the emulator's settings.
+ * INVALID_VALUE for another list; UNAVAILABLE, with the list unchanged,
+ * when the settings file cannot be written.
+ */
+AMIBERRY_SETTINGS_API amiberry_settings_status amiberry_media_clear_recent(amiberry_media_list list);
+
+/*
  * Keeps access to a file or folder the user picked: on a Mac App Store
  * build it stores a security-scoped bookmark (for a file, of its folder
  * when the app can reach that, else of the file) so the path stays usable
@@ -144,7 +169,8 @@ AMIBERRY_SETTINGS_API amiberry_settings_status amiberry_media_current_configurat
 
 /*
  * Forgets that file: the pending configuration becomes a new machine (one
- * started from a model), which is no saved file's until it is saved.
+ * started from a model), which is no saved file's until it is saved. The
+ * names taken from it go too (the window title, the name saving suggests).
  */
 AMIBERRY_SETTINGS_API void amiberry_media_forget_current_configuration(void);
 

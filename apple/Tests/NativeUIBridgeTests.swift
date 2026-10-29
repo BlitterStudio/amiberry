@@ -176,15 +176,21 @@ final class SettingsSessionTests: XCTestCase {
 	}
 
 	func testHostSettingsAreProcessWide() throws {
-		XCTAssertGreaterThan(HostSettings.all.count, 60)
+		XCTAssertGreaterThan(HostSettings.all.count, 50)
 		let deadzone = try XCTUnwrap(HostSettings.all.first { $0.id == "default_joystick_deadzone" })
 		XCTAssertEqual(deadzone.kind, .integer)
-		XCTAssertEqual(try HostSettings.value(of: "Quickstart"), "true")
-		try HostSettings.set("false", for: "Quickstart")
-		XCTAssertEqual(try HostSettings.value(of: "Quickstart"), "false")
-		try HostSettings.set("true", for: "Quickstart")
-		XCTAssertThrowsError(try HostSettings.set("yes", for: "Quickstart")) {
-			XCTAssertEqual($0 as? SettingsError, .invalidValue(id: "Quickstart", value: "yes"))
+		XCTAssertEqual(try HostSettings.value(of: "rctrl_as_ramiga"), "false")
+		try HostSettings.set("true", for: "rctrl_as_ramiga")
+		XCTAssertEqual(try HostSettings.value(of: "rctrl_as_ramiga"), "true")
+		try HostSettings.set("false", for: "rctrl_as_ramiga")
+		XCTAssertThrowsError(try HostSettings.set("yes", for: "rctrl_as_ramiga")) {
+			XCTAssertEqual($0 as? SettingsError, .invalidValue(id: "rctrl_as_ramiga", value: "yes"))
+		}
+		// The native apps have no ImGui GUI, and are no Android app: the
+		// settings of those are not offered.
+		for id in ["Quickstart", "read_config_descriptions", "gui_joystick_control", "disable_shutdown_button",
+			"default_quickstart_compatibility", "gui_theme", "gui_layout_scale", "use_adpf"] {
+			XCTAssertFalse(HostSettings.all.contains { $0.id == id }, id)
 		}
 		XCTAssertThrowsError(try HostSettings.value(of: "nope")) {
 			XCTAssertEqual($0 as? SettingsError, .unknownID("nope"))

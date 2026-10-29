@@ -234,5 +234,8 @@ final class AppFilesTests: XCTestCase {
 		XCTAssertEqual(FileRequest.forOption("kickstart_ext_rom_file"), .rom)
 		XCTAssertEqual(FileRequest.forOption("cart_file"), .rom)
 		XCTAssertEqual(FileRequest.forOption("flash_file"), .file)
+		// The print folder is the catalogue's one folder option.
+		let folders = SettingsCatalog.descriptors.filter { $0.kind == .path && FileRequest.namesFolder($0.id) }.map(\.id)
+		XCTAssertEqual(folders, ["amiberry.parallel_port:folder"])
 	}
 }

@@ -276,9 +276,9 @@ bool fullscreen_picasso_available(const uae_prefs& p, const context&)
 // ---------------------------------------------------------------- vsync
 
 const amiberry_setting_choice vsync_choices[] = {
-	{"false", "-"},
+	{"false", "Off"},
 	{"true", "Standard"},
-	{"autoswitch", "Standard 50/60Hz"},
+	{"autoswitch", "Standard 50/60 Hz"},
 };
 
 void get_gfx_vsync(const uae_prefs& p, char* out, size_t size)
@@ -477,7 +477,7 @@ void set_gfx_overscanmode(uae_prefs& p, const value& v)
 
 const amiberry_setting_choice autoresolution_choices[] = {
 	{"0", "Disabled"},
-	{"1", "Always On"},
+	{"1", "Always on"},
 	{"10", "10%"},
 	{"33", "33%"},
 	{"66", "66%"},
@@ -736,7 +736,7 @@ void set_gfx_ntscpixelspal(uae_prefs& p, const value& v)
 }
 
 const amiberry_setting_choice scaling_method_choices[] = {
-	{"-1", "Auto"},
+	{"-1", "Automatic"},
 	{"0", "Nearest"},
 	{"1", "Linear"},
 	{"2", "Integer"},
@@ -826,6 +826,15 @@ bool linemode_available(const uae_prefs& p, const context&)
 	{id, group, label, help, AMIBERRY_SETTING_CHOICE, apply, 0, 0, 0, def, nullptr, 0, constraint}
 #define NUMBER_OPTION(id, group, label, help, type, apply, min, max, step, def, constraint) \
 	{id, group, label, help, type, apply, min, max, step, def, nullptr, 0, constraint}
+// A number shown with its unit, divided by scale, and whether it is a level
+// set by feel, which a front end may show as a slider (amiberry_settings.h).
+#define MEASURED_OPTION(id, group, label, help, type, apply, min, max, step, def, constraint, unit, scale, \
+	level) \
+	{id, group, label, help, type, apply, min, max, step, def, nullptr, 0, constraint, false, unit, scale, level}
+// A picture attribute stored in tenths and shown as -200.0 to +200.0.
+#define ATTRIBUTE_OPTION(id, label, help) \
+	MEASURED_OPTION(id, "display", label, help, AMIBERRY_SETTING_INT, AMIBERRY_APPLY_LIVE, -2000, 2000, 1, \
+		"0", nullptr, nullptr, 10, true)
 #define STRING_OPTION(id, group, label, help, apply, def, constraint) \
 	{id, group, label, help, AMIBERRY_SETTING_STRING, apply, 0, 0, 0, def, nullptr, 0, constraint}
 
@@ -841,16 +850,17 @@ const definition definitions[] = {
 			AMIBERRY_APPLY_LIVE, "0", "Needs more than one connected monitor."),
 		get_gfx_display_rtg, set_gfx_display_rtg, gfx_display_available, nullptr, gfx_display_range,
 		nullptr, gfx_display_dynamic_choices},
-	{NUMBER_OPTION("gfx_width_windowed", "display", "Windowed width",
+	{MEASURED_OPTION("gfx_width_windowed", "display", "Windowed width",
 			"Width of the emulator window in windowed mode.",
 			AMIBERRY_SETTING_INT, AMIBERRY_APPLY_LIVE, 160, 8192, 4, "720",
-			"Multiples of 4 between 160 and 8192, the range the core's dimension fixup keeps."),
+			"Multiples of 4 between 160 and 8192, the range the core's dimension fixup keeps.",
+			"px", 0, false),
 		get_gfx_width_windowed, set_gfx_width_windowed, window_sizes_available, nullptr, nullptr,
 		nullptr},
-	{NUMBER_OPTION("gfx_height_windowed", "display", "Windowed height",
+	{MEASURED_OPTION("gfx_height_windowed", "display", "Windowed height",
 			"Height of the emulator window in windowed mode.",
 			AMIBERRY_SETTING_INT, AMIBERRY_APPLY_LIVE, 128, 8192, 1, "568",
-			"Between 128 and 8192, the range the core's dimension fixup keeps."),
+			"Between 128 and 8192, the range the core's dimension fixup keeps.", "px", 0, false),
 		get_gfx_height_windowed, set_gfx_height_windowed, window_sizes_available, nullptr, nullptr,
 		nullptr},
 	{BOOL_OPTION("gfx_resize_windowed", "display", "Window resize",
@@ -912,9 +922,9 @@ const definition definitions[] = {
 			"Needs HighRes and Double line mode, the only modes where it can trigger."),
 		get_gfx_autoresolution_vga, set_gfx_autoresolution_vga, vga_autoswitch_available, nullptr,
 		nullptr, nullptr},
-	{NUMBER_OPTION("gfx_monitorblankdelay", "display", "Display resync blanking",
-			"Blank the screen for this many milliseconds after a display mode change.",
-			AMIBERRY_SETTING_INT, AMIBERRY_APPLY_LIVE, 0, 60000, 1, "0", nullptr),
+	{MEASURED_OPTION("gfx_monitorblankdelay", "display", "Display resync blanking",
+			"Blank the screen for this long after a display mode change.",
+			AMIBERRY_SETTING_INT, AMIBERRY_APPLY_LIVE, 0, 60000, 1, "0", nullptr, "ms", 0, false),
 		get_gfx_monitorblankdelay, set_gfx_monitorblankdelay, nullptr, nullptr, nullptr, nullptr},
 	{CHOICE_OPTION("gfx_resolution", "display", "Amiga resolution",
 			"Internal render resolution relative to the Amiga's video output.",
@@ -942,29 +952,23 @@ const definition definitions[] = {
 			AMIBERRY_APPLY_LIVE, "0",
 			"The writer saves the entry only while it is locked, so a rate locks it."),
 		get_displaydata_ntsc, set_displaydata_ntsc, nullptr, nullptr, nullptr, displaydata_accepts},
-	{NUMBER_OPTION("gfx_luminance", "display", "Brightness",
-			"Brightness adjustment; the panel works in tenths, so 1000 is +100.0.",
-			AMIBERRY_SETTING_INT, AMIBERRY_APPLY_LIVE, -2000, 2000, 1, "0", nullptr),
+	{ATTRIBUTE_OPTION("gfx_luminance", "Brightness",
+			"Brightness adjustment from -200 to +200; 0 leaves the picture as it is."),
 		get_gfx_luminance, set_gfx_luminance, nullptr, nullptr, nullptr, nullptr},
-	{NUMBER_OPTION("gfx_contrast", "display", "Contrast",
-			"Contrast adjustment; the panel works in tenths, so 1000 is +100.0.",
-			AMIBERRY_SETTING_INT, AMIBERRY_APPLY_LIVE, -2000, 2000, 1, "0", nullptr),
+	{ATTRIBUTE_OPTION("gfx_contrast", "Contrast",
+			"Contrast adjustment from -200 to +200; 0 leaves the picture as it is."),
 		get_gfx_contrast, set_gfx_contrast, nullptr, nullptr, nullptr, nullptr},
-	{NUMBER_OPTION("gfx_gamma", "display", "Gamma",
-			"Gamma adjustment; the panel works in tenths, so 1000 is +100.0.",
-			AMIBERRY_SETTING_INT, AMIBERRY_APPLY_LIVE, -2000, 2000, 1, "0", nullptr),
+	{ATTRIBUTE_OPTION("gfx_gamma", "Gamma",
+			"Gamma adjustment from -200 to +200; 0 leaves the picture as it is."),
 		get_gfx_gamma, set_gfx_gamma, nullptr, nullptr, nullptr, nullptr},
-	{NUMBER_OPTION("gfx_gamma_r", "display", "Gamma red",
-			"Red channel gamma adjustment in tenths.",
-			AMIBERRY_SETTING_INT, AMIBERRY_APPLY_LIVE, -2000, 2000, 1, "0", nullptr),
+	{ATTRIBUTE_OPTION("gfx_gamma_r", "Gamma red",
+			"Red channel gamma adjustment from -200 to +200; 0 leaves it as it is."),
 		get_gfx_gamma_r, set_gfx_gamma_r, nullptr, nullptr, nullptr, nullptr},
-	{NUMBER_OPTION("gfx_gamma_g", "display", "Gamma green",
-			"Green channel gamma adjustment in tenths.",
-			AMIBERRY_SETTING_INT, AMIBERRY_APPLY_LIVE, -2000, 2000, 1, "0", nullptr),
+	{ATTRIBUTE_OPTION("gfx_gamma_g", "Gamma green",
+			"Green channel gamma adjustment from -200 to +200; 0 leaves it as it is."),
 		get_gfx_gamma_g, set_gfx_gamma_g, nullptr, nullptr, nullptr, nullptr},
-	{NUMBER_OPTION("gfx_gamma_b", "display", "Gamma blue",
-			"Blue channel gamma adjustment in tenths.",
-			AMIBERRY_SETTING_INT, AMIBERRY_APPLY_LIVE, -2000, 2000, 1, "0", nullptr),
+	{ATTRIBUTE_OPTION("gfx_gamma_b", "Gamma blue",
+			"Blue channel gamma adjustment from -200 to +200; 0 leaves it as it is."),
 		get_gfx_gamma_b, set_gfx_gamma_b, nullptr, nullptr, nullptr, nullptr},
 	{CHOICE_OPTION("gfx_atari_palette_fix", "display", "Dark palette fix",
 			"Convert 3-bit color palettes so dark shades stay distinguishable.",

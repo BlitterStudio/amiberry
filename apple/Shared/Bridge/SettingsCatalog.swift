@@ -66,12 +66,15 @@ public struct SettingDescriptor: Hashable, Sendable, Identifiable {
 		case path
 		/// Any other literal value, for example a hexadecimal address.
 		case string
+		/// A keyboard shortcut: "" (none), a key with modifiers, a modifier
+		/// key alone or a controller button (see `HotkeyCatalog`).
+		case hotkey
 	}
 
 	public let id: String
 	/// A stable group ID, for example "cpu" or "jit".
 	public let group: String
-	public let label: String
+	public private(set) var label: String
 	public let help: String
 	public let kind: Kind
 	public let applyClass: ApplyClass
@@ -85,6 +88,89 @@ public struct SettingDescriptor: Hashable, Sendable, Identifiable {
 	public let choices: [SettingChoice]
 	/// Why the emulator may change a value the user picked.
 	public let constraint: String?
+	/// An integer counting the other way from how it reads (a volume stored
+	/// as its attenuation): shown as `shown(_:)` of the stored value.
+	public let reversed: Bool
+	/// The unit of an integer or real option's shown number ("%", "KB",
+	/// "px"), written after it; nil for none. The label does not repeat it.
+	public let unit: String?
+	/// What a stored number is divided by to show it: 10 for a gamma stored
+	/// in tenths (125 shows as 12.5), 1 for a number shown as stored.
+	public let scale: Double
+	/// A level people set by feel (a volume, the brightness, a dead zone)
+	/// rather than a number they look up: shown as a slider.
+	public let level: Bool
+
+	/// The number a person sees for a stored one: a reversed option's
+	/// range turned around (100 - 0 = full volume), then divided by the
+	/// scale.
+	public func shown(_ number: Double) -> Double {
+		var number = number
+		if reversed, let range {
+			number = range.lowerBound + range.upperBound - number
+		}
+		return number / scale
+	}
+
+	/// A range of stored numbers as the numbers shown.
+	public func shown(_ range: ClosedRange<Double>) -> ClosedRange<Double> {
+		let ends = [shown(range.lowerBound), shown(range.upperBound)]
+		return ends.min()!...ends.max()!
+	}
+
+	/// The stored number for a shown one, `shown(_:)` undone and rounded to
+	/// the option's step (counted from the bottom of its range) and, for an
+	/// integer, to a whole number.
+	public func stored(fromShown number: Double) -> Double {
+		var number = number * scale
+		if reversed, let range {
+			number = range.lowerBound + range.upperBound - number
+		}
+		if let step, step > 0 {
+			let origin = range?.lowerBound ?? 0
+			number = origin + ((number - origin) / step).rounded() * step
+		}
+		return kind == .integer ? number.rounded() : number
+	}
+
+	/// Whether the option is an on/off switch stored as "1" and "0" (see
+	/// `isSwitch(kind:range:choices:)`).
+	public var isSwitch: Bool {
+		SettingDescriptor.isSwitch(kind: kind, range: range, choices: choices)
+	}
+
+	/// Whether a value shows as a switch: the option is one, and the value
+	/// is "0" or "1". A configuration can hold another (an auto-resolution
+	/// threshold the GUI copied in), which a switch would show as off and
+	/// lose when turned on; that one keeps the option's other control.
+	public func showsAsSwitch(_ value: String) -> Bool {
+		isSwitch && (value == "0" || value == "1")
+	}
+
+	/// The labels that make a first choice of "0" read as off.
+	private static let offLabels: Set<String> = ["disabled", "off", "no", "none"]
+
+	/// Whether an option reads as an on/off switch, off stored as "0" and
+	/// on as "1": an integer from 0 to 1, or exactly two choices, "0" then
+	/// "1", the first named as off ("Disabled", "Off", "No", "None").
+	public static func isSwitch(kind: Kind, range: ClosedRange<Double>?, choices: [SettingChoice]) -> Bool {
+		switch kind {
+		case .integer:
+			return range == 0...1
+		case .choice:
+			return choices.map(\.value) == ["0", "1"] && offLabels.contains(choices[0].label.lowercased())
+		default:
+			return false
+		}
+	}
+
+	/// The same option under another label: a designed page names it in
+	/// the words of its section ("Image" under "DF0:").
+	public func labelled(_ text: String) -> SettingDescriptor {
+		var copy = self
+		copy.label = text
+		return copy
+	}
 
 	init(_ d: amiberry_setting_descriptor) {
 		id = layerString(d.id)
@@ -97,6 +183,7 @@ public struct SettingDescriptor: Hashable, Sendable, Identifiable {
 		case AMIBERRY_SETTING_REAL: kind = .real
 		case AMIBERRY_SETTING_CHOICE: kind = .choice
 		case AMIBERRY_SETTING_PATH: kind = .path
+		case AMIBERRY_SETTING_HOTKEY: kind = .hotkey
 		default: kind = .string
 		}
 		applyClass = ApplyClass(d.apply)
@@ -116,6 +203,11 @@ public struct SettingDescriptor: Hashable, Sendable, Identifiable {
 		}
 		self.choices = choices
 		constraint = optionalLayerString(d.constraint)
+		reversed = kind == .integer && d.reversed
+		let number = kind == .integer || kind == .real
+		unit = number ? optionalLayerString(d.unit) : nil
+		scale = number && d.scale != 0 ? d.scale : 1
+		level = number && d.level
 	}
 }
 
@@ -370,6 +462,23 @@ public enum HostSettings {
 	public static func save() -> Bool {
 		amiberry_host_settings_save()
 	}
+
+	/// The choices of a choice setting: its own list, or the host's devices,
+	/// shaders or bezels as the layer lists them now. A value can lie outside
+	/// them (a device that is not connected).
+	@MainActor
+	public static func choices(for id: String) -> [SettingChoice] {
+		var list: UnsafePointer<amiberry_setting_choice>?
+		let count = amiberry_host_settings_choices(id, &list)
+		guard let list else { return [] }
+		return (0..<count).map { SettingChoice(value: layerString(list[$0].value), label: layerString(list[$0].label)) }
+	}
+
+	/// Re-reads the host's device lists, for example after a device was connected.
+	@MainActor
+	public static func refreshChoices() {
+		amiberry_host_settings_refresh_choices()
+	}
 }
 
 public enum CustomControlCatalog {
@@ -390,4 +499,56 @@ public enum CustomControlCatalog {
 			amiberry_settings_input_event_at(index).map { layerString($0.pointee.value) }
 		}
 	}()
+}
+
+/// The modifier keys held with a recorded key: amiberry_settings.h's
+/// AMIBERRY_HOTKEY_* bits. Option is Alt and Command is GUI.
+public struct HotkeyModifiers: OptionSet, Hashable, Sendable {
+	public let rawValue: UInt32
+	public init(rawValue: UInt32) { self.rawValue = rawValue }
+	public static let leftControl = HotkeyModifiers(rawValue: AMIBERRY_HOTKEY_LCTRL)
+	public static let rightControl = HotkeyModifiers(rawValue: AMIBERRY_HOTKEY_RCTRL)
+	public static let leftShift = HotkeyModifiers(rawValue: AMIBERRY_HOTKEY_LSHIFT)
+	public static let rightShift = HotkeyModifiers(rawValue: AMIBERRY_HOTKEY_RSHIFT)
+	public static let leftOption = HotkeyModifiers(rawValue: AMIBERRY_HOTKEY_LALT)
+	public static let rightOption = HotkeyModifiers(rawValue: AMIBERRY_HOTKEY_RALT)
+	public static let leftCommand = HotkeyModifiers(rawValue: AMIBERRY_HOTKEY_LGUI)
+	public static let rightCommand = HotkeyModifiers(rawValue: AMIBERRY_HOTKEY_RGUI)
+}
+
+/// Keyboard shortcut values (`SettingDescriptor.Kind.hotkey`): the layer
+/// spells a recorded key press the way the emulator reads it, and lists the
+/// controller buttons a shortcut can name.
+public enum HotkeyCatalog {
+	/// Value: SDL's button name ("guide"); label: the button's name.
+	public static let buttons: [SettingChoice] = {
+		var list: UnsafePointer<amiberry_setting_choice>?
+		let count = amiberry_settings_hotkey_buttons(&list)
+		guard let list else { return [] }
+		return (0..<count).map { SettingChoice(value: layerString(list[$0].value), label: layerString(list[$0].label)) }
+	}()
+
+	/// Whether the emulator answers a controller button bound to this option
+	/// or host setting (the Amiga key options only map a key).
+	public static func takesButtons(_ id: String) -> Bool {
+		amiberry_settings_hotkey_takes_buttons(id)
+	}
+
+	/// Whether a modifier held with the key is part of the binding (the
+	/// Amiga key options are matched by key alone).
+	public static func takesModifiers(_ id: String) -> Bool {
+		amiberry_settings_hotkey_takes_modifiers(id)
+	}
+
+	/// The value for a key press: `usage` is the key's USB HID keyboard
+	/// usage, or 0 for a modifier key pressed alone (then `modifiers` holds
+	/// exactly that key). Nil for a key a shortcut cannot name, such as a
+	/// modifier usage or Keypad +.
+	public static func format(usage: UInt32, modifiers: HotkeyModifiers) -> String? {
+		var buffer = [CChar](repeating: 0, count: Int(AMIBERRY_SETTINGS_VALUE_MAX))
+		let spelled = buffer.withUnsafeMutableBufferPointer {
+			amiberry_settings_hotkey_format(usage, modifiers.rawValue, $0.baseAddress, $0.count)
+		}
+		return spelled ? decodedString(buffer) : nil
+	}
 }

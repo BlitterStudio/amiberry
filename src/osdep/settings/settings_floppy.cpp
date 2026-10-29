@@ -370,9 +370,11 @@ const char* const driver_constraint = "Needs a DrawBridge driver that supports i
 		get_floppy_subtype<n>, set_floppy_subtype<n>, bridge_drive<n>, nullptr, nullptr, nullptr, \
 		nullptr}
 
-#define DISKIMAGE(n) \
-	{PATH_OPTION("diskimage" #n, "diskswapper", "Disk swapper entry " #n, \
-			"Disk image in entry " #n " of the disk swapper list, or empty.", \
+// Entries are diskimage0 to diskimage19 in the file, and people count them
+// from 1, as the disk swapper panel lists them.
+#define DISKIMAGE(n, shown) \
+	{PATH_OPTION("diskimage" #n, "diskswapper", "Disk " #shown, \
+			"Disk image in entry " #shown " of the disk swapper list, or empty.", \
 			AMIBERRY_APPLY_LIVE, "", nullptr), \
 		get_diskimage<n>, set_diskimage<n>, nullptr, nullptr, nullptr, nullptr, nullptr}
 
@@ -385,10 +387,10 @@ const definition definitions[] = {
 			"Drive speed in percent of a real drive; Turbo transfers without delays.",
 			AMIBERRY_APPLY_LIVE, "100", floppy_speed_choices, nullptr),
 		get_floppy_speed, set_floppy_speed, nullptr, nullptr, nullptr, nullptr, nullptr},
-	DISKIMAGE(0), DISKIMAGE(1), DISKIMAGE(2), DISKIMAGE(3), DISKIMAGE(4),
-	DISKIMAGE(5), DISKIMAGE(6), DISKIMAGE(7), DISKIMAGE(8), DISKIMAGE(9),
-	DISKIMAGE(10), DISKIMAGE(11), DISKIMAGE(12), DISKIMAGE(13), DISKIMAGE(14),
-	DISKIMAGE(15), DISKIMAGE(16), DISKIMAGE(17), DISKIMAGE(18), DISKIMAGE(19),
+	DISKIMAGE(0, 1), DISKIMAGE(1, 2), DISKIMAGE(2, 3), DISKIMAGE(3, 4), DISKIMAGE(4, 5),
+	DISKIMAGE(5, 6), DISKIMAGE(6, 7), DISKIMAGE(7, 8), DISKIMAGE(8, 9), DISKIMAGE(9, 10),
+	DISKIMAGE(10, 11), DISKIMAGE(11, 12), DISKIMAGE(12, 13), DISKIMAGE(13, 14), DISKIMAGE(14, 15),
+	DISKIMAGE(15, 16), DISKIMAGE(16, 17), DISKIMAGE(17, 18), DISKIMAGE(18, 19), DISKIMAGE(19, 20),
 	{DYNAMIC_CHOICE_OPTION("amiberry.drawbridge_driver", "drawbridge", "DrawBridge driver",
 			"The FloppyBridge driver for the hardware that connects real floppy drives.",
 			AMIBERRY_APPLY_LIVE, "0", "Needs a build with FloppyBridge support."),

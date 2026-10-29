@@ -34,9 +34,12 @@ public final class SettingsStore {
 	@ObservationIgnored private var baselineValues: [String: String] = [:]
 	@ObservationIgnored private var baselineMounts: [String] = []
 	@ObservationIgnored private var presetApplied = false
-	/// Expansion board units or custom controls were edited: they are not
-	/// options, so the values do not show it.
-	@ObservationIgnored private var otherEdits = false
+	/// Expansion board units were edited: they are not options, so the
+	/// values do not show it. Observed, so the editor's marks clear when a
+	/// commit or revert resets it.
+	public private(set) var boardsEdited = false
+	/// Custom controls were edited (not options either).
+	public private(set) var customControlsEdited = false
 	/// Counts the commits that changed the pending configuration, so an
 	/// apply only clears `pendingApply` when nothing was committed after it.
 	@ObservationIgnored private var commitGeneration = 0
@@ -50,6 +53,21 @@ public final class SettingsStore {
 
 	public func value(of id: String) -> String? {
 		values[id]
+	}
+
+	/// The options whose value differs from the one the session opened on
+	/// (or last committed): what the editor marks as edited.
+	public var changedOptions: Set<String> {
+		_ = hasChanges
+		_ = revision
+		return Set(values.keys.filter { values[$0] != baselineValues[$0] })
+	}
+
+	/// Whether the mounted drives differ from the session's start (or last
+	/// commit).
+	public var mountsChanged: Bool {
+		_ = revision
+		return mounts != baselineMounts
 	}
 
 	public func isAvailable(_ id: String) -> Bool {
@@ -116,7 +134,7 @@ public final class SettingsStore {
 	public func setBoardValue(_ value: String, field: String, type: String, unit: Int) -> Bool {
 		perform {
 			try session.setBoardValue(value, field: field, type: type, unit: unit)
-			otherEdits = true
+			if !boardsEdited { boardsEdited = true }
 		}
 	}
 
@@ -145,7 +163,7 @@ public final class SettingsStore {
 	public func setCustomControl(_ event: String, control: String, port: Int, hotkey: Bool) -> Bool {
 		perform {
 			try session.setCustomControl(event, control: control, port: port, hotkey: hotkey)
-			otherEdits = true
+			if !customControlsEdited { customControlsEdited = true }
 		}
 	}
 
@@ -221,7 +239,8 @@ public final class SettingsStore {
 		if currentAdjustments != adjustments {
 			adjustments = currentAdjustments
 		}
-		let changed = presetApplied || otherEdits || values != baselineValues || mounts != baselineMounts
+		let changed = presetApplied || boardsEdited || customControlsEdited || values != baselineValues
+			|| mounts != baselineMounts
 		if changed != hasChanges {
 			hasChanges = changed
 		}
@@ -232,7 +251,8 @@ public final class SettingsStore {
 		baselineValues = values
 		baselineMounts = mounts
 		presetApplied = false
-		otherEdits = false
+		boardsEdited = false
+		customControlsEdited = false
 		hasChanges = false
 	}
 

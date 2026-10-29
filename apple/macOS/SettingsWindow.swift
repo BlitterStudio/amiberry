@@ -71,14 +71,32 @@ final class SettingsPresenter: NSObject, NSWindowDelegate {
 			model.startNewMachine(preset: preset.id, configuration: preset.configuration)
 		}
 		let window = self.window ?? makeWindow(size: NSSize(width: 900, height: 620))
-		window.title = emulating ? "Amiberry Settings" : (machine?.name ?? "New Machine")
+		window.title = model.title
 		self.window = window
 		self.model = model
 		if fromLibrary {
 			library?.editing = true
+			// A machine from the Library is a document: closing it with
+			// unsaved edits asks, as closing an edited document does.
+			model.askAboutUnsavedChanges = { name in
+				let (button, _) = Alerts.show(
+					title: "Do you want to save the changes you made to \u{201C}\(name)\u{201D}?",
+					message: "Your changes will be lost if you don\u{2019}t save them.",
+					buttons: ["Save", "Cancel", "Don\u{2019}t Save"])
+				switch button {
+				case 0: return .save
+				case 2: return .discard
+				default: return .cancel
+				}
+			}
 		}
-		presentWindow(hostWindowContent(SettingsRootView(model: model).windowSize(.editor)), in: window,
+		window.isDocumentEdited = false
+		let content = EditedWindowMarker(model: model, window: window, content: SettingsRootView(model: model))
+			.windowSize(.editor)
+		presentWindow(hostWindowContent(content), in: window,
 			autosave: "AmiberrySettings", size: NSSize(width: 900, height: 620))
+		// Over a paused emulation the badge goes: the editor holds the pause.
+		PauseOverlay.shared.refresh()
 	}
 
 	/// Closes the editor alone; the Library shows the machines saved meanwhile.
@@ -98,6 +116,8 @@ final class SettingsPresenter: NSObject, NSWindowDelegate {
 		libraryWindow?.orderOut(nil)
 		releaseWindowContent(libraryWindow)
 		library = nil
+		// A paused emulation shows its badge again.
+		PauseOverlay.shared.refresh()
 	}
 
 	func windowShouldClose(_ sender: NSWindow) -> Bool {
@@ -135,6 +155,20 @@ final class SettingsPresenter: NSObject, NSWindowDelegate {
 	}
 }
 
+/// The close button's dot: a machine from the Library has edits not saved
+/// to its file. Read in a body, so the dot follows the store.
+private struct EditedWindowMarker<Content: View>: View {
+	let model: SettingsWindowModel
+	weak var window: NSWindow?
+	let content: Content
+
+	var body: some View {
+		content.onChange(of: model.hasUnsavedChanges, initial: true) { _, changed in
+			window?.isDocumentEdited = model.fromLibrary && changed
+		}
+	}
+}
+
 /// The app settings window (Cmd-,): the emulator's own settings, beside the
 /// Library, the editor or a running emulation.
 @MainActor
@@ -146,8 +180,15 @@ final class AppSettingsWindow: NSObject, NSWindowDelegate {
 	func show() {
 		let window = self.window ?? makeWindow()
 		self.window = window
-		presentWindow(hostWindowContent(AppSettingsView(model: AppSettingsModel()).windowSize(.appSettings)), in: window,
-			autosave: "AmiberryAppSettings", size: NSSize(width: 640, height: 600))
+		presentWindow(hostWindowContent(AppSettingsSplitView(model: AppSettingsModel()).windowSize(.appSettings)), in: window,
+			autosave: "AmiberryAppSettings", size: WindowSize.appSettings.ideal)
+		// A frame saved by the single-form window, narrower than the sidebar
+		// needs, grows to the minimum.
+		let frame = window.frame
+		if frame.width < window.minSize.width || frame.height < window.minSize.height {
+			window.setFrame(NSRect(origin: frame.origin, size: NSSize(width: max(frame.width, window.minSize.width),
+				height: max(frame.height, window.minSize.height))), display: true)
+		}
 	}
 
 	func windowWillClose(_ notification: Notification) {
@@ -157,13 +198,15 @@ final class AppSettingsWindow: NSObject, NSWindowDelegate {
 	}
 
 	private func makeWindow() -> NSWindow {
+		// Full-size content, as the Library's: without it the split view's
+		// detail slides under the toolbar once the window is resized.
 		let window = NSWindow(
-			contentRect: NSRect(origin: .zero, size: NSSize(width: 640, height: 600)),
-			styleMask: [.titled, .closable, .miniaturizable, .resizable],
+			contentRect: NSRect(origin: .zero, size: WindowSize.appSettings.ideal),
+			styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
 			backing: .buffered, defer: false)
 		window.title = "Settings"
 		window.isReleasedWhenClosed = false
-		window.minSize = NSSize(width: 520, height: 400)
+		window.minSize = WindowSize.appSettings.min
 		window.collectionBehavior = [.fullScreenAuxiliary, .moveToActiveSpace]
 		window.animationBehavior = .none
 		window.delegate = self
@@ -181,7 +224,7 @@ struct WindowSize {
 
 	static let library = WindowSize(min: NSSize(width: 720, height: 480), ideal: NSSize(width: 860, height: 560))
 	static let editor = WindowSize(min: NSSize(width: 720, height: 480), ideal: NSSize(width: 900, height: 620))
-	static let appSettings = WindowSize(min: NSSize(width: 520, height: 400), ideal: NSSize(width: 640, height: 600))
+	static let appSettings = WindowSize(min: NSSize(width: 680, height: 460), ideal: NSSize(width: 760, height: 560))
 	static let acknowledgements = WindowSize(min: NSSize(width: 860, height: 680), ideal: NSSize(width: 860, height: 680))
 }
 
@@ -221,6 +264,13 @@ func presentWindow<V: View>(_ hosting: NSHostingController<V>, in window: NSWind
 	DispatchQueue.main.async {
 		hosting.view.needsLayout = true
 		hosting.view.layoutSubtreeIfNeeded()
+		// AppKit gives a new key window's first text field the focus, which
+		// put the editor's description field in edit mode with its text
+		// selected, so the first key typed replaced it. Nothing is focused
+		// until the user picks something.
+		if window.firstResponder is NSText {
+			window.makeFirstResponder(nil)
+		}
 	}
 }
 

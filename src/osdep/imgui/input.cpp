@@ -115,16 +115,19 @@ int input_device_id(const char* token)
     return JPORT_NONE;
 }
 
-// The port device list, mirrored from the settings layer's dynamic
-// choices so this panel and the global settings rows share one list.
+// The port device list, mirrored from the settings layer's connected
+// devices so this panel and the global settings rows share one list. A
+// port's stored device that is not connected has no entry here; the panel
+// selects nothing and names it in the combo's preview instead ("Joystick 3
+// (not connected)"), so each port's option list (which starts with that
+// device) is not used.
 std::vector<InputDeviceOption> input_device_options;
 
 } // namespace
 
 const std::vector<InputDeviceOption>& get_input_device_options()
 {
-    const settings::definition& d = *options().joyport[0];
-    const settings::choice_list choices = settings::choices_of(d, changed_prefs);
+    const settings::choice_list choices = settings::connected_port_devices();
     input_device_options.clear();
     for (size_t i = 0; i < choices.count; i++) {
         input_device_options.push_back({choices.items[i].label, choices.items[i].value,
@@ -158,6 +161,8 @@ static void set_port_input_device(const int port_idx, const int selected_idx)
     }
 }
 
+// The list entry for a port device id, or -1 when the device is not listed
+// (it is not connected).
 static int get_device_index(const int id)
 {
     const auto& options = get_input_device_options();
@@ -165,7 +170,7 @@ static int get_device_index(const int id)
         if (options[i].id == id)
             return static_cast<int>(i);
     }
-    return 0; // Default to <none>
+    return -1;
 }
 
 bool InputDeviceCombo(const char* id, const int current_index, const char* fallback_preview,
@@ -236,7 +241,8 @@ void render_panel_input() {
             ImGui::SetNextItemWidth(-ImGui::GetStyle().ItemSpacing.x * 2);
 			int selected_idx = dev_idx;
 			const std::string combo_id = "##Dev" + std::to_string(port_idx);
-			if (InputDeviceCombo(combo_id.c_str(), dev_idx, current, &selected_idx))
+			if (InputDeviceCombo(combo_id.c_str(), dev_idx, settings::port_device_label(current).c_str(),
+				&selected_idx))
 				set_port_input_device(port_idx, selected_idx);
             ShowHelpMarker("Select the input device to use for this Amiga port. Port 0 is typically for mouse, Port 1 for joystick");
 
@@ -440,7 +446,8 @@ void render_panel_input() {
             ImGui::SetNextItemWidth(-ImGui::GetStyle().ItemSpacing.x * 2);
 			int selected_idx = dev_idx;
 			const std::string combo_id = "##ParDev" + std::to_string(port_idx);
-			if (InputDeviceCombo(combo_id.c_str(), dev_idx, current, &selected_idx))
+			if (InputDeviceCombo(combo_id.c_str(), dev_idx, settings::port_device_label(current).c_str(),
+				&selected_idx))
 				set_port_input_device(port_idx, selected_idx);
 
             // Row 2: Autofire | Remap

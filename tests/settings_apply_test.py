@@ -27,9 +27,9 @@ import ipc_actions_test as ipc  # noqa: E402  (Emulator, Connection)
 
 STEPS = ("live", "reset", "restart")
 # Options whose value is not a configuration of the running emulation the
-# test can drive headless: paths and free-form strings (ROM files and other
-# files that must exist).
-SKIP_TYPES = ("path", "string")
+# test can drive headless: paths, free-form strings (ROM files and other
+# files that must exist) and keyboard shortcuts.
+SKIP_TYPES = ("path", "string", "hotkey")
 # Options the core copies into the running configuration at once
 # (check_prefs_changed_*) while the hardware reads them only at a later
 # step: the running value changes early, the declared class is the step

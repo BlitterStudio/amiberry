@@ -38,7 +38,7 @@ assert schema["schema_version"] == 1
 ids = [o["id"] for o in schema["options"]]
 assert len(ids) == len(set(ids)) and "cpu_model" in ids, "options"
 for option in schema["options"]:
-    assert option["type"] in ("bool", "int", "real", "choice", "path", "string"), option
+    assert option["type"] in ("bool", "int", "real", "choice", "path", "string", "hotkey"), option
     assert option["apply"] in ("live", "reset", "restart"), option
     # Host device lists (displays, audio devices) are left empty.
     if option["type"] == "choice":

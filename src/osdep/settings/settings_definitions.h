@@ -10,6 +10,7 @@
 #include <cstddef>
 #include <cstring>
 #include <cstdio>
+#include <string>
 #include <string_view>
 #include <vector>
 
@@ -130,6 +131,20 @@ int rescan_roms();
 // copy, base and preset snapshots), for host device refreshes that must
 // find the devices those configurations select again. Main thread only.
 void for_each_session_config(void (*visit)(uae_prefs& p, void* context), void* context);
+// Whether text names a port device the joyport options read ("none",
+// "kbdN", "joyN", "mouse", "mouseN"), connected now or not
+// (settings_input.cpp). The host settings' default devices take the same.
+bool is_port_device_token(std::string_view text);
+// The port devices connected now, without a configuration's stored one
+// (the joyport options list that first while it is not connected). The
+// items live until the next call. Main thread only.
+choice_list connected_port_devices();
+// A readable name for a port device token the connected list does not
+// hold: a joystick or mouse that is not connected ("Joystick 2 (not
+// connected)"; joysticks and mice counted from 1, as people count them),
+// a custom input mapping, or a token the core reads that the list never
+// offers.
+std::string port_device_label(std::string_view token);
 
 const domain& cpu_domain();
 const domain& chipset_domain();

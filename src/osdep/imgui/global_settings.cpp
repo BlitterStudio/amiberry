@@ -604,8 +604,9 @@ void render_panel_global_settings()
 			"Show virtual joystick controls by default on touchscreen devices.");
 		render_bool_row("On-screen keyboard", &amiberry_options.default_vkbd_enabled,
 			"Enable the on-screen Amiga keyboard by default.");
-		render_int_row("On-screen keyboard transparency", &amiberry_options.default_vkbd_transparency,
-			"Default on-screen keyboard transparency percentage.", 1, 0, 100);
+		render_int_row("On-screen keyboard opacity", &amiberry_options.default_vkbd_transparency,
+			"Opacity of the on-screen keyboard in new configurations (100% is opaque); 0 uses the default of 85%.",
+			1, 0, 100);
 		render_string_combo_row("On-screen keyboard layout", amiberry_options.default_vkbd_language,
 			sizeof amiberry_options.default_vkbd_language, vkbd_language_options, IM_ARRAYSIZE(vkbd_language_options),
 			"Default on-screen keyboard layout.");

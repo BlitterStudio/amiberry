@@ -96,6 +96,9 @@ extern int amiberry_get_active_input_monitor();
 extern int amiberry_resolve_active_input_monitor();
 
 extern amiberry_hotkey get_hotkey_from_config(const std::string& config_option);
+// The gamepad button a shortcut value names, SDL_GAMEPAD_BUTTON_INVALID for
+// none; a letter key's value ("A") is not a button ("a").
+extern SDL_GamepadButton gamepad_button_from_config(const std::string& value);
 // Re-reads the keyboard shortcuts (open GUI, quit, screenshot ...) from p.
 extern void target_hotkeys_changed(const uae_prefs* p);
 extern amiberry_hotkey enter_gui_key;
@@ -253,6 +256,9 @@ extern void set_last_active_config(const char* filename);
 // saved to; empty for a default or an RP9 package.
 extern void set_current_config_path(const char* filename);
 extern std::string get_current_config_path();
+// Forgets the configuration file and the names taken from it: the pending
+// configuration becomes a new machine.
+extern void forget_loaded_config();
 extern void set_last_active_config_from_media(const char* filename);
 extern void ReadConfigFileList();
 extern bool remove_configuration_file(const std::string& config_file);

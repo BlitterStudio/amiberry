@@ -160,6 +160,7 @@ amiberry_settings_status check_value(const definition& d, const uae_prefs& p,
 		v.text = text;
 		return AMIBERRY_SETTINGS_OK;
 	case AMIBERRY_SETTING_STRING:
+	case AMIBERRY_SETTING_HOTKEY:
 		// Free-form token: the setter validates.
 		if (text.size() >= max_value_length)
 			return AMIBERRY_SETTINGS_INVALID_VALUE;

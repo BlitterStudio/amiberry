@@ -48,7 +48,7 @@
 extern "C" {
 #endif
 
-#define AMIBERRY_SETTINGS_API_VERSION 8
+#define AMIBERRY_SETTINGS_API_VERSION 9
 
 /* Large enough for every value a descriptor can produce, including the
    terminating NUL. */
@@ -68,7 +68,12 @@ typedef enum amiberry_setting_type {
 	   A PATH longer than the host's path limit (PATH_MAX, 1024 bytes on
 	   macOS) is refused with AMIBERRY_SETTINGS_INVALID_VALUE. */
 	AMIBERRY_SETTING_PATH,
-	AMIBERRY_SETTING_STRING
+	AMIBERRY_SETTING_STRING,
+	/* A keyboard shortcut, read and written like a STRING: "" (none), a key
+	   with optional modifiers, a modifier key alone, or a controller
+	   button. The amiberry_settings_hotkey_* calls below spell and
+	   explain these values. */
+	AMIBERRY_SETTING_HOTKEY
 } amiberry_setting_type;
 
 typedef enum amiberry_apply_class {
@@ -96,6 +101,26 @@ typedef struct amiberry_setting_descriptor {
 	/* Why the emulator may change a value the user picked. Reported as the
 	   reason of an adjustment found by amiberry_settings_validate(). */
 	const char *constraint;
+	/* INT only: the value counts the other way from how people read it, as
+	   a volume stored as its attenuation (0 is full volume). A front end
+	   shows and takes min + max - value, and labels and help describe that
+	   shown number; get, set and ranges keep the .uae value. */
+	bool reversed;
+	/* INT and REAL only: NULL, or the unit of the shown number, written
+	   after it: "%", "KB", "ms", "s", "px" or "scanlines". The label does
+	   not repeat it. */
+	const char *unit;
+	/* INT and REAL only: 0 or 1 when the value is shown as it is stored.
+	   Otherwise people read value / scale, as a gamma stored in tenths
+	   (scale 10: 125 shows as 12.5). It applies after reversed: a front end
+	   shows (reversed ? min + max - value : value) / scale and stores the
+	   inverse; labels, help and units describe the shown number. */
+	double scale;
+	/* INT and REAL only: a level people set by feel (a volume, the
+	   brightness, a dead zone) rather than a number they look up, so a
+	   front end may offer a slider over the current range instead of a
+	   number field. */
+	bool level;
 } amiberry_setting_descriptor;
 
 AMIBERRY_SETTINGS_API size_t amiberry_settings_count(void);
@@ -131,9 +156,12 @@ AMIBERRY_SETTINGS_API void amiberry_settings_session_close(amiberry_settings_ses
  * amiberry_settings_choices() returns the choices that can be selected
  * now; a configuration may still hold a value outside the list (a device
  * that is no longer connected), which amiberry_settings_get() reports
- * as-is. Both calls, like every session call, run on the emulator's main
- * thread; the returned pointer is valid until the next main-thread call
- * of the layer. amiberry_settings_refresh_choices() re-reads the host
+ * as-is. The joyport device lists (joyport0 to joyport3) start with such a
+ * value, labelled for what it is ("Joystick 2 (not connected)"), so a
+ * front end shows the port as it is. Both calls, like every session call,
+ * run on the emulator's main thread; the returned pointer is valid until
+ * the next main-thread call of the layer.
+ * amiberry_settings_refresh_choices() re-reads the host
  * device lists, for example when a device was connected.
  */
 AMIBERRY_SETTINGS_API size_t amiberry_settings_choices(
@@ -394,12 +422,61 @@ AMIBERRY_SETTINGS_API const char *amiberry_settings_custom_control_use(
 	const amiberry_settings_session *session, int port, bool hotkey, const char *control);
 
 /*
+ * Keyboard shortcuts: the values of AMIBERRY_SETTING_HOTKEY options and
+ * host settings. A value is "" (none), or
+ * [LCtrl+|RCtrl+][LShift+|RShift+][LAlt+|RAlt+][LGUI+|RGUI+]<key>, where
+ * <key> is SDL's name for the key's scancode ("F12", "Left", "Keypad 5",
+ * "Return"; values the ImGui GUI recorded may also use ImGui's names, such
+ * as "LeftArrow"), or one modifier token alone ("RCtrl", which binds that
+ * modifier key), or an SDL gamepad button name ("guide", "leftshoulder")
+ * for an option that takes controller buttons. A front end records a key
+ * press and lets the layer spell it, rather than spelling SDL's names
+ * itself. These calls use no session and may be made from any thread.
+ */
+#define AMIBERRY_HOTKEY_LCTRL  0x01u
+#define AMIBERRY_HOTKEY_RCTRL  0x02u
+#define AMIBERRY_HOTKEY_LSHIFT 0x04u
+#define AMIBERRY_HOTKEY_RSHIFT 0x08u
+#define AMIBERRY_HOTKEY_LALT   0x10u
+#define AMIBERRY_HOTKEY_RALT   0x20u
+#define AMIBERRY_HOTKEY_LGUI   0x40u /* Command on a Mac, Windows key on a PC */
+#define AMIBERRY_HOTKEY_RGUI   0x80u
+
+/*
+ * Spells a key press as a hotkey value. usage is the key's USB HID keyboard
+ * usage (page 7, which SDL's scancodes follow; iOS reports it as
+ * UIKey.keyCode) and modifiers the AMIBERRY_HOTKEY_* bits held with it;
+ * with both keys of one modifier held, the left one is written, as the
+ * GUI's capture does. A modifier key pressed alone is usage 0 with exactly
+ * that modifier's bit. False when the usage is itself a modifier, a key
+ * without a name, or a key the value cannot spell (Keypad +, whose name
+ * holds the separator), for unknown modifier bits, and when the value does
+ * not fit size (AMIBERRY_SETTINGS_VALUE_MAX always fits); buffer is then
+ * unchanged.
+ */
+AMIBERRY_SETTINGS_API bool amiberry_settings_hotkey_format(unsigned int usage, unsigned int modifiers,
+	char *buffer, size_t size);
+/* The controller buttons a hotkey can name: value the SDL gamepad button
+   name, label the button's display name. Static, like descriptors. */
+AMIBERRY_SETTINGS_API size_t amiberry_settings_hotkey_buttons(const amiberry_setting_choice **choices);
+/* Whether the emulator answers a controller button bound to this hotkey
+   option or host setting; false for the Amiga key options, which only map
+   a key, and for an ID that is not a hotkey. */
+AMIBERRY_SETTINGS_API bool amiberry_settings_hotkey_takes_buttons(const char *id);
+/* Whether a modifier held with the key is part of this hotkey's binding;
+   false for the Amiga key options, which the emulator matches by key
+   alone, so a front end records those without modifiers. */
+AMIBERRY_SETTINGS_API bool amiberry_settings_hotkey_takes_modifiers(const char *id);
+
+/*
  * Host settings: the Global Settings panel (amiberry.conf), not a
  * configuration. They are process-wide, so there is no session: set
  * changes the live value, and save writes amiberry.conf. An ID is the
  * amiberry.conf key. A bool is "true" or "false"; a choice's value is the
- * integer the file stores. A GUI scale outside 50-200 is clamped, as the
- * file parser clamps it; the legacy full-screen mode 1 is full-window.
+ * integer the file stores, or for the default devices, the on-screen
+ * keyboard layout, the shaders and the bezel the token it stores. A GUI
+ * scale outside 50-200 is clamped, as the file parser clamps it; the
+ * legacy full-screen mode 1 is full-window.
  */
 AMIBERRY_SETTINGS_API size_t amiberry_host_settings_count(void);
 /* NULL when index >= amiberry_host_settings_count(). */
@@ -412,6 +489,35 @@ AMIBERRY_SETTINGS_API amiberry_settings_status amiberry_host_settings_set(
 	const char *id, const char *value);
 /* Writes amiberry.conf. False when the file could not be written. */
 AMIBERRY_SETTINGS_API bool amiberry_host_settings_save(void);
+
+/*
+ * The choices of a host CHOICE setting: its descriptor's list, or for the
+ * settings that pick what the host has (the default controllers and mice,
+ * the audio device, the shaders and the custom bezel, whose descriptors
+ * list none) the entries the configuration options offer now, the same
+ * the editor lists. A default device's list starts with "", the fallback
+ * the emulator uses when none is set (no device for the parallel ports
+ * default_controller3 and 4, whose lists hold one entry for no device:
+ * "none" while that is the stored value, "" otherwise); the audio
+ * device's with "0", the system default; a shader's and the bezel's with
+ * "none". These settings keep a value the host does not offer now (a
+ * device that is not connected, a shader no longer in its folder): set
+ * takes it, and the list then starts with it, labelled for what it is
+ * ("Joystick 2 (not connected)", "crt.glslp (not found)"), so a front
+ * end shows the list as it is. Set refuses a value no device, index or
+ * file name can be. Setting custom_bezel turns use_custom_bezel on, and
+ * use_bezel off, for an image, and use_custom_bezel off for "none", as
+ * the Global Settings panel does.
+ * Returns the count and points *choices at the entries (NULL and 0 for an
+ * unknown ID or a setting that is no CHOICE). Main thread only; the
+ * pointer is valid until the next main-thread call of the layer.
+ */
+AMIBERRY_SETTINGS_API size_t amiberry_host_settings_choices(const char *id,
+	const amiberry_setting_choice **choices);
+/* Re-reads the host device lists the choices enumerate, for example when
+   a device was connected; the same as amiberry_settings_refresh_choices().
+   Main thread only. */
+AMIBERRY_SETTINGS_API void amiberry_host_settings_refresh_choices(void);
 
 #ifdef __cplusplus
 }

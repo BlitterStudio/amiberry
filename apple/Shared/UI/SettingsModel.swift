@@ -47,12 +47,12 @@ enum SettingsPage: String, Hashable, Identifiable, CaseIterable {
 
 	var symbol: String {
 		switch self {
-		case .overview: return "sparkles"
+		case .overview: return "desktopcomputer"
 		case .hardware: return "cpu"
 		case .displaySound: return "display"
 		case .input: return "gamecontroller"
 		case .storage: return "opticaldiscdrive"
-		case .portsMisc: return "cable.connector.horizontal"
+		case .portsMisc: return "cable.connector"
 		case .advanced: return "list.bullet.rectangle"
 		}
 	}
@@ -83,6 +83,27 @@ enum SettingsPage: String, Hashable, Identifiable, CaseIterable {
 	/// name: what defines a machine at a glance.
 	static let overviewOptions = ["kickstart_rom_file", "chipset", "chipmem_size", "bogomem_size", "fastmem_size",
 		"floppy0", "floppy1"]
+
+	/// Whether the page shows any of these options (the edited ones, for
+	/// the sidebar's mark).
+	func shows(anyOf ids: Set<String>) -> Bool {
+		ids.contains { id in
+			if self == .overview, SettingsPage.overviewOptions.contains(id) {
+				return true
+			}
+			return SettingsCatalog.descriptor(for: id).map { groups.contains($0.group) } ?? false
+		}
+	}
+
+	/// Whether the store holds edits the page shows: its options, and the
+	/// hard drives (Storage), expansion boards (Hardware) or custom controls
+	/// (Input) it lays out, which are not options.
+	@MainActor
+	func isEdited(in store: SettingsStore) -> Bool {
+		let laidOut = (self == .storage && store.mountsChanged) || (self == .hardware && store.boardsEdited)
+			|| (self == .input && store.customControlsEdited)
+		return laidOut || shows(anyOf: store.changedOptions)
+	}
 
 	static func groupTitle(_ id: String) -> String {
 		if let title = groupTitles[id] {
@@ -122,10 +143,25 @@ final class SettingsWindowModel {
 	/// The machine being edited, opened from the Library: nil for a new one
 	/// until it is saved.
 	private(set) var machine: Machine?
-	/// The model a new machine started from, which Quick Start shows.
+	/// The model a new machine started from (or was switched to since),
+	/// which the Overview shows.
 	private(set) var newMachineModel: (id: String, configuration: Int)?
+	/// The compatibility level picked for it; nil for the model's default.
+	private(set) var newMachineCompatibility: Int?
 	/// Whether the editor was opened from the Library (it closes back to it).
 	let fromLibrary: Bool
+	/// Asks what to do with edits not saved to the machine's file as the
+	/// editor closes back to the Library (the Mac asks as a document app
+	/// does); nil keeps them as the pending configuration without asking.
+	@ObservationIgnored var askAboutUnsavedChanges: ((_ name: String) -> UnsavedChoice)?
+	/// Whether the Save Machine sheet shows.
+	var showingSaveSheet = false
+	/// The sheet was opened by closing a new machine: once it saves, the
+	/// editor closes to the Library.
+	@ObservationIgnored private(set) var closeAfterSave = false
+	/// While a save asked for by closing or starting runs: closing or
+	/// starting again waits for it.
+	@ObservationIgnored private var savingBeforeLeaving = false
 
 	@ObservationIgnored private let dismiss: () -> Void
 	@ObservationIgnored private let post: (EmulatorAction) -> Bool
@@ -158,25 +194,95 @@ final class SettingsWindowModel {
 		// offer to save it over the machine edited before.
 		MediaLibrary.forgetCurrentConfiguration()
 		_ = store.applyPreset(id, configuration: configuration)
+		// Not the core's "UAE default configuration": that would become the
+		// machine's subtitle in the Library.
+		store.set("", for: "config_description")
 		newMachineModel = (id, configuration)
 		page = .overview
 	}
 
-	/// The name the machine is saved under: its file name, or empty for a
-	/// new one.
-	var machineName: String { machine?.name ?? "" }
+	/// Applies a model from the Overview. The machine keeps what describes
+	/// it: a saved one its description and category, a new one no
+	/// description. A new machine then is that model, so the Overview shows
+	/// it again however often it is redrawn.
+	func applyModel(_ id: String, configuration: Int, compatibility: Int) {
+		let description = isNewMachine ? "" : (store.value(of: "config_description") ?? "")
+		let category = store.value(of: "config_category") ?? ""
+		_ = store.applyPreset(id, configuration: configuration, compatibility: compatibility)
+		store.set(description, for: "config_description")
+		store.set(category, for: "config_category")
+		modelApplied(id, configuration: configuration, compatibility: compatibility)
+	}
+
+	/// Records the model a new machine was switched to.
+	func modelApplied(_ id: String, configuration: Int, compatibility: Int) {
+		guard isNewMachine else { return }
+		newMachineModel = (id, configuration)
+		newMachineCompatibility = compatibility
+	}
+
+	/// Whether this is a new machine, started from a model in the Library
+	/// and not saved yet.
+	var isNewMachine: Bool { newMachineModel != nil && machine == nil }
+
+	/// The window's title: the machine's name.
+	var title: String {
+		if let machine {
+			return machine.name
+		}
+		return isNewMachine || !emulating ? "New Machine" : "Machine Settings"
+	}
+
+	/// The name the Save sheet offers: the machine's own, or for a new one
+	/// its model's, numbered past the machines that have it ("Amiga 1200 2").
+	var suggestedName: String {
+		if let machine {
+			return machine.name
+		}
+		guard let id = newMachineModel?.id, let label = MachinePresets.preset(for: id)?.label,
+			let folder = try? MediaLibrary.path(of: .configurations)
+		else { return "" }
+		return SettingsWindowModel.name(for: label, in: folder)
+	}
+
+	/// A model's label as a machine name save() takes ("American Laser
+	/// Games / Picmatic" has a slash), numbered past the files in folder.
+	static func name(for label: String, in folder: String) -> String {
+		let base = label.replacingOccurrences(of: " / ", with: " - ")
+			.replacingOccurrences(of: "/", with: "-").replacingOccurrences(of: ":", with: "-")
+		let taken = { (name: String) in
+			FileManager.default.fileExists(atPath: (folder as NSString).appendingPathComponent(name + ".uae"))
+		}
+		var name = base
+		var number = 2
+		while taken(name) {
+			name = "\(base) \(number)"
+			number += 1
+		}
+		return name
+	}
+
+	/// Why a machine cannot be named `name` (spaces at the ends aside), nil
+	/// when it can: the rules Save and the Library's Rename share (the name
+	/// becomes a file name in the configurations folder).
+	nonisolated static func nameProblem(_ name: String) -> String? {
+		let trimmed = name.trimmingCharacters(in: .whitespaces)
+		if trimmed.isEmpty {
+			return "Enter a name for the machine."
+		}
+		if trimmed.contains("/") || trimmed.contains(":") || trimmed.hasPrefix(".") {
+			return "A name cannot contain / or :, or start with a dot."
+		}
+		return nil
+	}
 
 	/// Saves the machine as a configuration in the configurations folder,
 	/// with its description and category: the session's edits are committed
 	/// first, so the file is what the editor shows. Returns whether it saved.
 	func save(name: String, description: String, category: String) async -> Bool {
 		let trimmed = name.trimmingCharacters(in: .whitespaces)
-		guard !trimmed.isEmpty else {
-			notice = "Enter a name for the machine."
-			return false
-		}
-		guard !trimmed.contains("/"), !trimmed.contains(":"), !trimmed.hasPrefix(".") else {
-			notice = "A name cannot contain / or :, or start with a dot."
+		if let problem = SettingsWindowModel.nameProblem(trimmed) {
+			notice = problem
 			return false
 		}
 		let folder: String
@@ -207,6 +313,9 @@ final class SettingsWindowModel {
 			return false
 		}
 		guard commit() else { return false }
+		// The session is committed from here on, so its edits are no longer
+		// changes to it: until the file has them, they are still unsaved.
+		committedNotSaved = true
 		guard let ticket = EmulatorActions.post(.saveConfiguration(path: path)) else {
 			notice = "The emulator did not accept the request. Try again."
 			return false
@@ -220,12 +329,21 @@ final class SettingsWindowModel {
 				return false
 			case .done, .unknown:
 				notice = nil
+				committedNotSaved = false
 				// The editor now edits the machine just saved.
 				machine = Machine(path: path, name: trimmed, description: description, category: category)
 				return true
 			}
 		}
 	}
+
+	/// Edits a save committed but could not write to the machine's file
+	/// (a read-only folder, say): the session has them, the file not.
+	private(set) var committedNotSaved = false
+
+	/// Whether the machine's file lacks edits: the session's, or those a
+	/// failed save committed. Closing or starting asks about them.
+	var hasUnsavedChanges: Bool { store.hasChanges || committedNotSaved }
 
 	/// The expansion boards wait for a restart: the session's differ from
 	/// the running emulation's.
@@ -248,8 +366,23 @@ final class SettingsWindowModel {
 		return result
 	}
 
-	/// Start (or resume) with the session's changes.
+	/// Start (or resume) with the session's changes. A saved machine with
+	/// edits asks first whether to save them: playing it from the Library
+	/// later loads its file, where unsaved edits are gone.
 	func startOrResume() {
+		guard !savingBeforeLeaving else { return }
+		if !emulating, machine != nil, hasUnsavedChanges, let ask = askAboutUnsavedChanges {
+			switch ask(title) {
+			case .cancel:
+				return
+			case .save:
+				saveThenStart()
+				return
+			case .discard:
+				// Started as edited, the file left as it was.
+				break
+			}
+		}
 		guard fieldsValid(), commit() else { return }
 		// What applies live reaches the emulation between frames.
 		if emulating, !request(.applySettings(.live)) {
@@ -336,12 +469,87 @@ final class SettingsWindowModel {
 		if emulating {
 			startOrResume()
 		} else if let closeToLibrary {
+			guard !savingBeforeLeaving else { return }
+			if hasUnsavedChanges, let ask = askAboutUnsavedChanges {
+				switch ask(title) {
+				case .cancel:
+					return
+				case .discard:
+					// The session is dropped uncommitted: the Library loads
+					// each machine from its file.
+					closeToLibrary()
+					return
+				case .save:
+					saveThenClose()
+					return
+				}
+			}
 			// Back to the Library, with the edits kept as the pending
 			// configuration.
 			guard fieldsValid(), commit() else { return }
 			closeToLibrary()
 		} else {
 			quit()
+		}
+	}
+
+	/// Saves the machine under its name, then starts it.
+	private func saveThenStart() {
+		guard let machine else { return }
+		savingBeforeLeaving = true
+		Task { @MainActor in
+			let saved = await save(name: machine.name, description: store.value(of: "config_description") ?? "",
+				category: store.value(of: "config_category") ?? "")
+			savingBeforeLeaving = false
+			if saved {
+				startOrResume()
+			}
+		}
+	}
+
+	/// Saves the machine under its name and closes to the Library; a new
+	/// machine is named in the Save Machine sheet first.
+	private func saveThenClose() {
+		guard let machine else {
+			closeAfterSave = true
+			showingSaveSheet = true
+			return
+		}
+		savingBeforeLeaving = true
+		Task { @MainActor in
+			let saved = await save(name: machine.name, description: store.value(of: "config_description") ?? "",
+				category: store.value(of: "config_category") ?? "")
+			savingBeforeLeaving = false
+			if saved {
+				closeToLibrary?()
+			}
+		}
+	}
+
+	/// The Save Machine sheet closed: after a save asked for by closing the
+	/// editor, it closes to the Library.
+	func saveSheetFinished(saved: Bool) {
+		showingSaveSheet = false
+		let close = closeAfterSave && saved
+		closeAfterSave = false
+		if close {
+			closeToLibrary?()
+		}
+	}
+
+	/// Whether there are edits Revert would drop: not for a new machine,
+	/// whose model is the whole of it.
+	var canRevert: Bool { !isNewMachine && store.hasChanges }
+
+	/// Drops the edits: the settings go back to the machine's as it was
+	/// opened (or as the running emulation has them).
+	func revert() {
+		do {
+			try store.revert()
+			invalidDrafts = [:]
+			notice = nil
+		} catch {
+			notice = SettingsWindowModel.describe(error)
 		}
 	}
 
@@ -403,4 +611,9 @@ final class SettingsWindowModel {
 		case .outOfMemory: return "Out of memory."
 		}
 	}
+}
+
+/// The answer to "Do you want to save the changes?".
+enum UnsavedChoice {
+	case save, discard, cancel
 }

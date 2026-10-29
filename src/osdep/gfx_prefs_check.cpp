@@ -765,7 +765,7 @@ int check_prefs_changed_gfx()
 			imgui_osk_set_language(currprefs.vkbd_language);
 			imgui_osk_set_numpad(currprefs.vkbd_numpad);
 			vkbd_key = get_hotkey_from_config(string(currprefs.vkbd_toggle));
-			vkbd_button = SDL_GetGamepadButtonFromString(currprefs.vkbd_toggle);
+			vkbd_button = gamepad_button_from_config(currprefs.vkbd_toggle);
 			imgui_osk_init();
 		}
 		else
@@ -777,7 +777,7 @@ int check_prefs_changed_gfx()
 
 #ifdef __ANDROID__
 		// Start remains a menu fallback unless explicitly bound to the OSK.
-		enter_gui_button = SDL_GetGamepadButtonFromString(currprefs.open_gui);
+		enter_gui_button = gamepad_button_from_config(currprefs.open_gui);
 		if (enter_gui_button == SDL_GAMEPAD_BUTTON_INVALID
 			&& vkbd_button != SDL_GAMEPAD_BUTTON_START)
 			enter_gui_button = SDL_GAMEPAD_BUTTON_START;

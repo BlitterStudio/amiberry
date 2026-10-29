@@ -56,7 +56,9 @@ target_sources(amiberry_native_ui PRIVATE
         apple/Shared/UI/HostEntryPoints.swift
         apple/Shared/UI/SettingsModel.swift
         apple/Shared/UI/SettingsViews.swift
+        apple/Shared/UI/HotkeyField.swift
         apple/Shared/UI/Library.swift
+        apple/Shared/UI/MediaBrowser.swift
         apple/Shared/UI/BoardsAndControls.swift
         apple/Shared/UI/AppSettings.swift
         apple/Shared/UI/DesignedPages.swift
@@ -77,6 +79,8 @@ else()
             apple/macOS/MainMenu.swift
             apple/macOS/NativeHost.swift
             apple/macOS/SettingsWindow.swift
+            apple/macOS/PathField.swift
+            apple/macOS/PauseOverlay.swift
             apple/macOS/AcknowledgementsWindow.swift
     )
 endif()
@@ -126,7 +130,12 @@ if(AMIBERRY_NATIVE_UI_TESTS)
             apple/Tests/MacOSHostTests.swift
             apple/Tests/NativeUIBridgeTests.swift
             apple/Tests/SharedUITests.swift
+            apple/Tests/LibraryViewTests.swift
+            apple/Tests/MediaBrowserTests.swift
+            apple/Tests/AppSettingsWindowTests.swift
+            apple/Tests/MenuBarTests.swift
             apple/Tests/LicencesCatalogueTests.swift
+            apple/Tests/HotkeyFieldTests.swift
             apple/Tests/TestRunner.swift
     )
     # The macOS front end's types are internal; the tests use @testable import.

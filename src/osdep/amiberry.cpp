@@ -696,7 +696,7 @@ whdload_options whdload_prefs = {};
 struct amiberry_options amiberry_options = {};
 amiberry_gui_theme gui_theme = {};
 amiberry_hotkey enter_gui_key;
-SDL_GamepadButton enter_gui_button;
+SDL_GamepadButton enter_gui_button = SDL_GAMEPAD_BUTTON_INVALID;
 amiberry_hotkey quit_key;
 amiberry_hotkey action_replay_key;
 amiberry_hotkey fullscreen_key;
@@ -704,7 +704,7 @@ amiberry_hotkey minimize_key;
 amiberry_hotkey left_amiga_key;
 amiberry_hotkey right_amiga_key;
 amiberry_hotkey vkbd_key;
-SDL_GamepadButton vkbd_button;
+SDL_GamepadButton vkbd_button = SDL_GAMEPAD_BUTTON_INVALID;
 amiberry_hotkey screenshot_key;
 amiberry_hotkey debugger_key;
 
@@ -741,6 +741,19 @@ std::vector<int> parse_color_string(const std::string& input)
 		result.push_back(std::stoi(token));
 	}
 	return result;
+}
+
+// The gamepad button a shortcut value names. SDL reads button names without
+// regard to case, so a letter key ("A", "B", "X", "Y" as the key captures
+// record them) would also be the South, East, West or North button; a
+// one-letter value names a button only spelled as SDL spells it ("a").
+SDL_GamepadButton gamepad_button_from_config(const std::string& value)
+{
+	const SDL_GamepadButton button = SDL_GetGamepadButtonFromString(value.c_str());
+	if (button == SDL_GAMEPAD_BUTTON_INVALID || value.size() != 1)
+		return button;
+	const char* name = SDL_GetGamepadStringForButton(button);
+	return name && value == name ? button : SDL_GAMEPAD_BUTTON_INVALID;
 }
 
 amiberry_hotkey get_hotkey_from_config(const std::string& config_option)
@@ -829,9 +842,11 @@ amiberry_hotkey get_hotkey_from_config(const std::string& config_option)
 	const auto sdl_it = sdl_key_name_map.find(hotkey.key_name);
 	const char* sdl_key_name = (sdl_it != sdl_key_name_map.end()) ? sdl_it->second : hotkey.key_name.c_str();
 
-	hotkey.scancode = SDL_GetScancodeFromName(sdl_key_name);
-	hotkey.button = SDL_GetGamepadButtonFromString(hotkey.key_name.c_str());
-	
+	// A value naming a gamepad button ("a", the South button) is that
+	// button, not also the key SDL reads the name as regardless of case.
+	hotkey.button = gamepad_button_from_config(hotkey.key_name);
+	hotkey.scancode = hotkey.button >= 0 ? SDL_SCANCODE_UNKNOWN : SDL_GetScancodeFromName(sdl_key_name);
+
 	return hotkey;
 }
 
@@ -855,7 +870,7 @@ static void set_key_configs(const uae_prefs* p)
 	if (p->vkbd_enabled)
 	{
 		vkbd_key = get_hotkey_from_config(p->vkbd_toggle);
-		vkbd_button = SDL_GetGamepadButtonFromString(p->vkbd_toggle);
+		vkbd_button = gamepad_button_from_config(p->vkbd_toggle);
 	}
 	else
 	{
@@ -863,7 +878,7 @@ static void set_key_configs(const uae_prefs* p)
 		vkbd_button = SDL_GAMEPAD_BUTTON_INVALID;
 	}
 
-	enter_gui_button = SDL_GetGamepadButtonFromString(p->open_gui);
+	enter_gui_button = gamepad_button_from_config(p->open_gui);
 #ifdef __ANDROID__
 	// Android: default Start button as pause/GUI toggle for hardware controllers
 	// (no F12 key available, and software back button isn't accessible from gamepads).
@@ -1326,6 +1341,17 @@ void set_current_config_path(const char* filename)
 	std::error_code ec;
 	const auto absolute = std::filesystem::absolute(std::filesystem::path(filename), ec);
 	current_config_path = ec ? std::string(filename) : absolute.lexically_normal().string();
+}
+
+void forget_loaded_config()
+{
+	// A new machine (a model picked, or a file played on its own) is no
+	// file's: its title and save name must not stay the machine loaded
+	// before, and the media it is given may name it.
+	last_loaded_config[0] = 0;
+	last_loaded_config_is_automatic_default = false;
+	last_active_config[0] = 0;
+	set_current_config_path(nullptr);
 }
 
 std::string get_current_config_path()
@@ -3133,22 +3159,22 @@ static bool handle_gamepad_button(const SDL_JoystickID which, const int button, 
 	else if (button == enter_gui_button) {
 		inputdevice_add_inputcode(AKS_ENTERGUI, down, nullptr);
 	}
-	else if (quit_key.button && button == quit_key.button) {
+	else if (quit_key.button >= 0 && button == quit_key.button) {
 		uae_quit();
 	}
-	else if (action_replay_key.button && button == action_replay_key.button) {
+	else if (action_replay_key.button >= 0 && button == action_replay_key.button) {
 		inputdevice_add_inputcode(AKS_FREEZEBUTTON, down, nullptr);
 	}
-	else if (fullscreen_key.button && button == fullscreen_key.button) {
+	else if (fullscreen_key.button >= 0 && button == fullscreen_key.button) {
 		inputdevice_add_inputcode(AKS_TOGGLEWINDOWFULLWINDOW, down, nullptr);
 	}
-	else if (minimize_key.button && button == minimize_key.button) {
+	else if (minimize_key.button >= 0 && button == minimize_key.button) {
 		minimizewindow(0);
 	}
-	else if (screenshot_key.button && button == screenshot_key.button) {
+	else if (screenshot_key.button >= 0 && button == screenshot_key.button) {
 		inputdevice_add_inputcode(AKS_SCREENSHOT_FILE, down, nullptr);
 	}
-	else if (debugger_key.button && button == debugger_key.button) {
+	else if (debugger_key.button >= 0 && button == debugger_key.button) {
 		inputdevice_add_inputcode(AKS_ENTERDEBUGGER, down, nullptr);
 	}
 	else if (imgui_osk_should_render()) {

@@ -802,6 +802,11 @@ constexpr double no_range = 0;
 	{id, group, label, help, AMIBERRY_SETTING_CHOICE, apply, no_range, no_range, no_range, def, CHOICES(choices), constraint}
 #define NUMBER_OPTION(id, group, label, help, type, apply, min, max, step, def, constraint) \
 	{id, group, label, help, type, apply, min, max, step, def, nullptr, 0, constraint}
+// A number shown with its unit, divided by scale, and whether it is a level
+// set by feel, which a front end may show as a slider (amiberry_settings.h).
+#define MEASURED_OPTION(id, group, label, help, type, apply, min, max, step, def, constraint, unit, scale, \
+	level) \
+	{id, group, label, help, type, apply, min, max, step, def, nullptr, 0, constraint, false, unit, scale, level}
 
 const char* const jit_constraint = "Needs the JIT, which needs a 68020 or later with 32-bit addressing and no MMU.";
 
@@ -863,13 +868,14 @@ const definition definitions[] = {
 			"Fastest possible runs the CPU as fast as the host allows; the other mode matches original Amiga speed.",
 			AMIBERRY_APPLY_LIVE, "real", cpu_speed_choices, nullptr),
 		get_cpu_speed, set_cpu_speed, nullptr, nullptr, nullptr},
-	{NUMBER_OPTION("cpu_throttle", "cpu_speed", "CPU speed adjustment",
-			"Speed adjustment in tenths of a percent.",
-			AMIBERRY_SETTING_REAL, AMIBERRY_APPLY_LIVE, -900, 5000, 100, "0.0", nullptr),
+	// Stored in tenths of a percent, shown in percent.
+	{MEASURED_OPTION("cpu_throttle", "cpu_speed", "CPU speed adjustment",
+			"Makes the CPU slower or faster than the selected speed, from -90% to +500%; 0 keeps it as it is.",
+			AMIBERRY_SETTING_REAL, AMIBERRY_APPLY_LIVE, -900, 5000, 100, "0.0", nullptr, "%", 10, true),
 		get_cpu_throttle, set_cpu_throttle, cpu_throttle_available, nullptr, cpu_throttle_range},
-	{NUMBER_OPTION("amiberry.cpu_idle", "cpu_speed", "CPU idle",
+	{MEASURED_OPTION("amiberry.cpu_idle", "cpu_speed", "CPU idle",
 			"How much the host CPU sleeps while the emulated CPU waits; 0 disables it.",
-			AMIBERRY_SETTING_INT, AMIBERRY_APPLY_LIVE, 0, 165, 15, "0", nullptr),
+			AMIBERRY_SETTING_INT, AMIBERRY_APPLY_LIVE, 0, 165, 15, "0", nullptr, nullptr, 0, true),
 		get_cpu_idle, set_cpu_idle, cpu_idle_available, nullptr, nullptr},
 	{CHOICE_OPTION("cpu_multiplier", "cpu_speed", "CPU frequency",
 			"CPU clock as a multiple of the chipset clock in More compatible and cycle-exact modes.",
@@ -898,10 +904,11 @@ const definition definitions[] = {
 			"x86 CPU speed as a percentage of maximum. Only has an effect when not running at fastest possible speed.",
 			AMIBERRY_SETTING_REAL, AMIBERRY_APPLY_LIVE, 0, 100000, 100, "0.0", nullptr),
 		get_x86_throttle, set_x86_throttle, x86_throttle_available, nullptr, nullptr},
-	{NUMBER_OPTION("cachesize", "jit", "JIT cache size",
-			"Just-In-Time compilation cache in KB; 0 turns the JIT off. Greatly speeds up CPU emulation but reduces compatibility.",
+	{MEASURED_OPTION("cachesize", "jit", "JIT cache size",
+			"Just-In-Time compilation cache; 0 turns the JIT off. Greatly speeds up CPU emulation but reduces compatibility.",
 			AMIBERRY_SETTING_INT, AMIBERRY_APPLY_LIVE, 0, max_jit_cache, 1, "0",
-			"The JIT needs a 68020 or later, is not available in cycle-exact modes, and needs at least 128 KB."),
+			"The JIT needs a 68020 or later, is not available in cycle-exact modes, and needs at least 128 KB.",
+			"KB", 0, false),
 		get_cachesize, set_cachesize, cachesize_available, nullptr, nullptr, cachesize_accepts},
 	{BOOL_OPTION("compfpu", "jit", "JIT FPU support",
 			"Enable JIT compilation for FPU instructions.",

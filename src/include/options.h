@@ -1408,7 +1408,9 @@ struct hotkey_modifiers
 struct amiberry_hotkey
 {
 	int scancode;
-	uint8_t button;
+	// The gamepad button (SDL_GamepadButton) the value names, -1 for none:
+	// 0 is the South button.
+	int button = -1;
 	std::string key_name;
 	std::string modifiers_string;
 	hotkey_modifiers modifiers;

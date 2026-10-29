@@ -18,6 +18,7 @@
 #include <cstdio>
 #include <cstring>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace amiberry_settings {
@@ -102,6 +103,23 @@ void fit_manual_crop(uae_prefs& p)
 
 namespace {
 
+// The built-in CRT emulations (crtemu) and "none" read as words; shader
+// files from the shaders folder are listed by their file names.
+const char* shader_label(std::string_view name)
+{
+	if (name == "none")
+		return "None";
+	if (name == "tv")
+		return "TV (built-in)";
+	if (name == "pc")
+		return "PC monitor (built-in)";
+	if (name == "lite")
+		return "Lite (built-in)";
+	if (name == "1084")
+		return "Commodore 1084 (built-in)";
+	return nullptr;
+}
+
 void width_range(const uae_prefs& p, double& min, double& max)
 {
 	min = 0;
@@ -177,8 +195,10 @@ void shader_choices(const uae_prefs&, choice_list& out)
 {
 	shader_values = get_available_shader_names();
 	shader_items.clear();
-	for (const std::string& name : shader_values)
-		shader_items.push_back({name.c_str(), name.c_str()});
+	for (const std::string& name : shader_values) {
+		const char* label = shader_label(name);
+		shader_items.push_back({name.c_str(), label ? label : name.c_str()});
+	}
 	out.items = shader_items.data();
 	out.count = shader_items.size();
 }
@@ -259,7 +279,7 @@ void bezel_choices(const uae_prefs&, choice_list& out)
 	bezel_values = get_available_bezel_names();
 	bezel_items.clear();
 	for (const std::string& name : bezel_values)
-		bezel_items.push_back({name.c_str(), name.c_str()});
+		bezel_items.push_back({name.c_str(), name == "none" ? "None" : name.c_str()});
 	out.items = bezel_items.data();
 	out.count = bezel_items.size();
 }
@@ -291,8 +311,9 @@ bool custom_bezel_available(const uae_prefs& p, const context&)
 
 #define BOOL_OPTION(id, group, label, help, apply, def, constraint) \
 	{id, group, label, help, AMIBERRY_SETTING_BOOL, apply, 0, 0, 0, def, nullptr, 0, constraint}
-#define INT_OPTION(id, group, label, help, apply, min, max, def, constraint) \
-	{id, group, label, help, AMIBERRY_SETTING_INT, apply, min, max, 1, def, nullptr, 0, constraint}
+// A size or offset in pixels at the render resolution.
+#define PIXEL_OPTION(id, group, label, help, apply, min, max, def, constraint) \
+	{id, group, label, help, AMIBERRY_SETTING_INT, apply, min, max, 1, def, nullptr, 0, constraint, false, "px"}
 #define DYNAMIC_CHOICE_OPTION(id, group, label, help, apply, def, constraint) \
 	{id, group, label, help, AMIBERRY_SETTING_CHOICE, apply, 0, 0, 0, def, nullptr, 0, constraint}
 
@@ -310,19 +331,19 @@ const definition definitions[] = {
 			"Show a window of the picture you set (size and position).",
 			AMIBERRY_APPLY_LIVE, "false", "Not together with auto crop."),
 		get_manual_crop, set_manual_crop, manual_crop_available, nullptr, nullptr},
-	{INT_OPTION("amiberry.gfx_manual_crop_width", "filter", "Crop width",
+	{PIXEL_OPTION("amiberry.gfx_manual_crop_width", "filter", "Crop width",
 			"The width of the window, in pixels at the render resolution.",
 			AMIBERRY_APPLY_LIVE, 0, widest_width, "754", "Only with manual crop; at most the whole frame."),
 		get_crop_width, set_crop_width, window_available, nullptr, width_range},
-	{INT_OPTION("amiberry.gfx_manual_crop_height", "filter", "Crop height",
+	{PIXEL_OPTION("amiberry.gfx_manual_crop_height", "filter", "Crop height",
 			"The height of the window, in pixels at the render resolution.",
 			AMIBERRY_APPLY_LIVE, 0, widest_height, "576", "Only with manual crop; at most the whole frame."),
 		get_crop_height, set_crop_height, window_available, nullptr, height_range},
-	{INT_OPTION("amiberry.gfx_horizontal_offset", "filter", "Horizontal offset",
+	{PIXEL_OPTION("amiberry.gfx_horizontal_offset", "filter", "Horizontal offset",
 			"Moves the window left or right.",
 			AMIBERRY_APPLY_LIVE, -widest_width, widest_width, "0", "Only with manual crop."),
 		get_horizontal_offset, set_horizontal_offset, window_available, nullptr, horizontal_offset_range},
-	{INT_OPTION("amiberry.gfx_vertical_offset", "filter", "Vertical offset",
+	{PIXEL_OPTION("amiberry.gfx_vertical_offset", "filter", "Vertical offset",
 			"Moves the window up or down.",
 			AMIBERRY_APPLY_LIVE, -widest_height, widest_height, "0", "Only with manual crop."),
 		get_vertical_offset, set_vertical_offset, window_available, nullptr, vertical_offset_range},
@@ -373,6 +394,11 @@ void refresh_filter_choices()
 	invalidate_shader_catalog();
 	invalidate_bezel_catalog();
 }
+
+#undef BOOL_OPTION
+#undef PIXEL_OPTION
+#undef DYNAMIC_CHOICE_OPTION
+#undef CHOICES
 
 const domain filter = {
 	definitions, sizeof definitions / sizeof definitions[0], commit_filter, refresh_filter_choices,

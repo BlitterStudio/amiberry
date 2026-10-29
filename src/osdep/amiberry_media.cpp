@@ -20,6 +20,7 @@
 #include <filesystem>
 #include <string>
 #include <system_error>
+#include <utility>
 #include <vector>
 
 #ifdef _WIN32
@@ -283,10 +284,47 @@ std::vector<media_entry> build_list(amiberry_media_list list)
 		// the save states folder.
 		entries = folder_files(state_folder(), ".uss");
 		break;
+	case AMIBERRY_MEDIA_KICKSTART_ROMS: {
+		// The main ROMs of the scanned list, named as the GUI's ROM combo
+		// names them; a ROM found twice is listed once.
+		const romlist* roms = romlist_getit();
+		const int count = romlist_count();
+		for (int i = 0; roms && i < count; i++) {
+			const romdata* rd = roms[i].rd;
+			if (!rd || !(rd->type & (ROMTYPE_KICK | ROMTYPE_KICKCD32)) || !roms[i].path || !roms[i].path[0])
+				continue;
+			const std::string path = roms[i].path;
+			if (!usable_path(path)
+				|| std::any_of(entries.begin(), entries.end(), [&](const media_entry& e) { return e.path == path; }))
+				continue;
+			entries.push_back({path, rd->name ? rd->name : file_name(path)});
+		}
+		std::stable_sort(entries.begin(), entries.end(),
+			[](const media_entry& a, const media_entry& b) { return a.name < b.name; });
+		break;
+	}
 	default:
 		break;
 	}
 	return entries;
+}
+
+// Puts next in place of a recent list and saves the emulator's settings at
+// once, as a folder is saved; a list that cannot be saved is put back and
+// the failure reported.
+amiberry_settings_status store_recent(std::vector<std::string>& recent, std::vector<std::string> next)
+{
+	recent.swap(next); // cannot throw; next now holds the list as it was
+	bool saved = false;
+	try {
+		saved = save_amiberry_settings_with_result();
+	} catch (...) {
+	}
+	if (!saved) {
+		recent.swap(next);
+		return AMIBERRY_SETTINGS_UNAVAILABLE;
+	}
+	return AMIBERRY_SETTINGS_OK;
 }
 
 } // namespace
@@ -419,7 +457,7 @@ amiberry_settings_status amiberry_media_current_configuration(char* path, size_t
 void amiberry_media_forget_current_configuration(void)
 {
 	amiberry_settings::no_throw(0, [] {
-		set_current_config_path(nullptr);
+		forget_loaded_config();
 		return 0;
 	});
 }
@@ -466,20 +504,44 @@ amiberry_settings_status amiberry_media_add_recent(amiberry_media_list list, con
 		if (!file)
 			return AMIBERRY_SETTINGS_INVALID_VALUE;
 		fclose(file);
-		// Saved at once, like a folder; a list that cannot be saved is put
-		// back and the failure reported.
-		std::vector<std::string> previous = *recent;
-		bool saved = false;
-		try {
-			add_file_to_mru_list(*recent, absolute);
-			saved = save_amiberry_settings_with_result();
-		} catch (...) {
+		std::vector<std::string> next = *recent;
+		add_file_to_mru_list(next, absolute);
+		return store_recent(*recent, std::move(next));
+	});
+}
+
+amiberry_settings_status amiberry_media_remove_recent(amiberry_media_list list, const char* path)
+{
+	return amiberry_settings::no_throw(AMIBERRY_SETTINGS_INVALID_VALUE, [=] {
+		std::vector<std::string>* recent = recent_list(list);
+		if (!recent || !path || !path[0])
+			return AMIBERRY_SETTINGS_INVALID_VALUE;
+		// Matched as build_list shows the entries: a list can hold a path
+		// recorded relative or in another spelling of the same file, and
+		// every entry listed under path goes.
+		const std::string absolute = absolute_path(path);
+		std::vector<std::string> next;
+		for (const std::string& entry : *recent) {
+			const bool listed = !entry.empty()
+				&& (entry == path || (!absolute.empty() && absolute_path(entry) == absolute));
+			if (!listed)
+				next.push_back(entry);
 		}
-		if (!saved) {
-			recent->swap(previous); // cannot throw
-			return AMIBERRY_SETTINGS_UNAVAILABLE;
-		}
-		return AMIBERRY_SETTINGS_OK;
+		if (next.size() == recent->size())
+			return AMIBERRY_SETTINGS_OK;
+		return store_recent(*recent, std::move(next));
+	});
+}
+
+amiberry_settings_status amiberry_media_clear_recent(amiberry_media_list list)
+{
+	return amiberry_settings::no_throw(AMIBERRY_SETTINGS_INVALID_VALUE, [=] {
+		std::vector<std::string>* recent = recent_list(list);
+		if (!recent)
+			return AMIBERRY_SETTINGS_INVALID_VALUE;
+		if (recent->empty())
+			return AMIBERRY_SETTINGS_OK;
+		return store_recent(*recent, {});
 	});
 }
 

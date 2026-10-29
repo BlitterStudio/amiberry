@@ -3852,6 +3852,7 @@ static const char* setting_type_name(amiberry_setting_type type)
 	case AMIBERRY_SETTING_CHOICE: return "choice";
 	case AMIBERRY_SETTING_PATH: return "path";
 	case AMIBERRY_SETTING_STRING: return "string";
+	case AMIBERRY_SETTING_HOTKEY: return "hotkey";
 	}
 	return "string";
 }
@@ -4129,6 +4130,17 @@ static std::string HandleSettingsDescribe(const std::vector<std::string>& args)
 		fields.push_back("min=" + number_text(min));
 		fields.push_back("max=" + number_text(max));
 		fields.push_back("step=" + number_text(d->step));
+		// Shown as min + max - value (a volume stored as attenuation).
+		if (d->reversed)
+			fields.push_back("reversed=true");
+		if (d->unit)
+			fields.push_back(std::string("unit=") + d->unit);
+		// Shown as value / scale (a gamma stored in tenths).
+		if (d->scale != 0 && d->scale != 1)
+			fields.push_back("scale=" + number_text(d->scale));
+		// A level a front end may show as a slider.
+		if (d->level)
+			fields.push_back("level=true");
 	}
 	// The choices the option offers now, with whether each is available.
 	// Copied first: the list may be rebuilt by the next layer call (host

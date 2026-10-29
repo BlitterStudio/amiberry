@@ -34,6 +34,23 @@ enum FileRequest: Int32 {
 		}
 		return .file
 	}
+
+	/// Whether an option holding a path names a folder: its ID says so
+	/// (amiberry.parallel_port:folder).
+	static func namesFolder(_ id: String) -> Bool {
+		id.hasSuffix(":folder")
+	}
+
+	/// The file a new one is named when an option names a file the emulator
+	/// writes and creates when missing (the battery-backed clock, the CD32
+	/// flash memory), so it can be a new one; nil for the others.
+	static func newFileName(_ id: String) -> String? {
+		switch id {
+		case "rtc_file": return "Clock.rtc"
+		case "flash_file": return "Flash.nvr"
+		default: return nil
+		}
+	}
 }
 
 @MainActor
@@ -84,15 +101,16 @@ enum AppFiles {
 		return URL(fileURLWithPath: try MediaLibrary.path(of: folder), isDirectory: true)
 	}
 
-	/// The folder a file to play belongs in, by its type.
+	/// The folder a file to play belongs in, by its type: its Media shelf's
+	/// folder, the configurations for a machine.
 	static func folder(forMedia url: URL) throws -> URL {
 		let folder: MediaFolder
-		switch url.pathExtension.lowercased() {
-		case "adf", "adz", "dms", "ipf", "zip", "7z": folder = .floppies
-		case "cue", "iso", "chd": folder = .cds
-		case "lha": folder = .whdloadArchives
-		case "uae", "rp9": folder = .configurations
-		default: return try self.folder(for: .media)
+		if let shelf = MediaShelf.shelf(for: url)?.folder {
+			folder = shelf
+		} else if ["uae", "rp9"].contains(url.pathExtension.lowercased()) {
+			folder = .configurations
+		} else {
+			return try self.folder(for: .media)
 		}
 		return URL(fileURLWithPath: try MediaLibrary.path(of: folder), isDirectory: true)
 	}
