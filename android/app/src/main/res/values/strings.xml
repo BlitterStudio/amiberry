@@ -19,7 +19,7 @@
 
     <string name="settings_title">Settings</string>
     <string name="quick_start_title">Quick Start</string>
-    <string name="file_manager_title">File Manager</string>
+    <string name="file_manager_title">Files</string>
     <string name="configurations_title">Saved Configurations</string>
     <string name="configurations_refresh">Refresh configurations</string>
 
@@ -140,7 +140,7 @@
     <string name="quick_start_media_floppy">Floppy selected</string>
     <string name="quick_start_media_cd">CD selected</string>
     <string name="quick_start_media_none">No media selected</string>
-    <string name="quick_start_no_rom_warning">No Kickstart ROM found. Import one from File Manager before launch.</string>
+    <string name="quick_start_no_rom_warning">No Kickstart ROM found. Import one from Files before launch.</string>
     <string name="quick_start_no_compatible_models">No compatible models found</string>
     <string name="quick_start_no_compatible_models_help">Import a supported Kickstart ROM to enable model selection.</string>
     <string name="quick_start_no_compatible_models_message">No recognized Kickstart ROM matches the Quick Start models. Import a supported model ROM or use a saved configuration.</string>
@@ -181,8 +181,6 @@
     <string name="file_manager_copy_path">Copy path</string>
     <string name="file_manager_refresh">Refresh files</string>
     <string name="file_manager_no_files_found">No %1$s found</string>
-    <string name="file_manager_empty_help">Tap + to import files, or copy them to:\n%1$s/%2$s/</string>
-    <string name="file_manager_empty_help_with_extensions">Tap + to import %3$s files, or copy them to:\n%1$s/%2$s/</string>
     <string name="file_manager_no_search_results">No matching files</string>
     <string name="file_manager_search_help">Try a different search term or clear the search.</string>
     <string name="file_manager_scanning_files">Scanning files</string>
@@ -321,8 +319,6 @@
     <string name="msg_unsupported_file_type">Unsupported file type for this category</string>
     <string name="search_placeholder">Search…</string>
 
-    <string name="storage_permission_banner_title">Limited file access</string>
-    <string name="storage_permission_banner_message">Amiberry can only access files in its own app folder. To use ROM and disk image files from other locations, grant All Files Access.</string>
     <string name="storage_permission_banner_action">Grant Access</string>
     <string name="msg_storage_permission_settings_failed">Could not open storage permission settings</string>
 
@@ -359,7 +355,6 @@
 
     <!-- Rules: Kickstart ROMs and the built-in AROS fallback -->
     <string name="rom_aros_builtin">AROS (built-in)</string>
-    <string name="rom_aros_ext_builtin">AROS extension (built-in)</string>
     <string name="quick_start_aros_notice">The Kickstart ROM this model needs is not installed: it boots the free AROS ROM instead.</string>
     <string name="quick_start_model_boots_aros">Kickstart not installed: boots AROS</string>
     <string name="quick_start_summary_rom">Kickstart</string>
@@ -474,4 +469,39 @@
     <string name="settings_section_show">Show %1$s</string>
     <string name="settings_section_hide">Hide %1$s</string>
     <string name="settings_display_more_title">More Display Options</string>
+    <!-- Files tab, imports and the device storage browser -->
+    <string name="file_manager_storage_location">Storage location</string>
+    <string name="file_manager_storage_location_help">Amiberry keeps its ROMs, disks and games here. You can also copy files into its folders with a computer or a file manager, then tap Refresh.</string>
+    <string name="file_manager_storage_location_help_tv">Amiberry keeps its ROMs, disks and games here. Most TV file managers can\'t reach this folder: use Import instead.</string>
+    <string name="file_manager_empty_help_touch">Tap Import to add %1$s files. Files of other kinds go to their own category.</string>
+    <string name="file_manager_empty_help_tv">Press OK on Import to add %1$s files from a USB drive or this device\'s storage.</string>
+    <string name="file_manager_browse_device">Browse device storage</string>
+    <string name="file_manager_import_sorted_into">Added to: %1$s</string>
+    <plurals name="file_manager_import_not_whdload">
+        <item quantity="one">%1$d archive has no WHDLoad .slave file, so it won\'t start as a WHDLoad game.</item>
+        <item quantity="other">%1$d archives have no WHDLoad .slave file, so they won\'t start as WHDLoad games.</item>
+    </plurals>
+    <string name="msg_imported_not_whdload">Imported %1$s, but it has no WHDLoad .slave file: it isn\'t a WHDLoad game and would stop at an AmigaDOS prompt.</string>
+    <string name="file_manager_aros_row">AROS (free built-in replacement)</string>
+    <string name="file_manager_aros_row_detail">Boots any model whose Kickstart ROM isn\'t installed</string>
+    <string name="file_manager_action_insert_df0_start">Insert in DF0 and start</string>
+    <string name="file_manager_action_insert_df1">Insert in DF1</string>
+    <string name="file_manager_inserted_df1">%1$s is in DF1 for Quick Start</string>
+    <string name="storage_access_card_title">Optional: browse your own folders</string>
+    <string name="storage_access_card_message">Import works without this. Allow All files access only if you want to pick ROMs and disks from this device\'s folders or a USB drive in Amiberry\'s own browser.</string>
+    <string name="storage_access_card_message_no_picker">To import ROMs and games from a USB drive or this device\'s storage, Amiberry needs All files access.</string>
+    <string name="storage_access_card_not_now">Not now</string>
+    <string name="device_browser_title">Device storage</string>
+    <string name="device_browser_internal_storage">Internal storage</string>
+    <string name="device_browser_downloads">Downloads</string>
+    <string name="device_browser_no_storage">No storage found</string>
+    <string name="device_browser_unreadable">This folder can\'t be opened.</string>
+    <string name="device_browser_empty">No folders or supported files here.</string>
+    <string name="device_browser_import_folder">Import this folder</string>
+    <string name="device_browser_import_selected">Import (%1$d)</string>
+    <string name="device_browser_up">Up one folder</string>
+    <string name="device_browser_close">Close</string>
+    <string name="device_browser_access_title">Allow access to your files</string>
+    <string name="device_browser_access_message">To browse this device\'s storage and USB drives, Amiberry needs All files access. Turn it on for Amiberry on the next screen, then come back: the browser opens by itself.</string>
+    <string name="device_browser_access_open_settings">Open settings</string>
 </resources>

@@ -133,6 +133,17 @@ class FileManagerTest {
 	}
 
 	@Test
+	fun `sorted imports go to the category of the extension whichever tab is open`() {
+		assertEquals(FileCategory.FLOPPIES, FileManager.sortedImportCategory("/downloads/Lotus.ADF"))
+		assertEquals(FileCategory.WHDLOAD_GAMES, FileManager.sortedImportCategory("Turrican.lha"))
+		assertEquals(FileCategory.ROMS, FileManager.sortedImportCategory("kick40068.A1200"))
+		assertEquals(FileCategory.CD_IMAGES, FileManager.sortedImportCategory("game.cue"))
+		assertEquals(FileCategory.HARD_DRIVES, FileManager.sortedImportCategory("wb.hdf"))
+		assertNull(FileManager.sortedImportCategory("notes.txt"))
+		assertNull(FileManager.sortedImportCategory("noextension"))
+	}
+
+	@Test
 	fun `importCandidateForCategory accepts matching names with sanitized filename`() {
 		val candidate = FileManager.importCandidateForCategory("../downloads/Game:Disk.ADF", FileCategory.FLOPPIES)
 

@@ -21,9 +21,14 @@ object ImportFeedback {
 	fun importFailed(fileName: String): Message =
 		Message(R.string.msg_intent_import_failed, cleanFileName(fileName))
 
+	/** Imported, but the archive has no `.slave`: WHDBooter would stop at an AmigaDOS prompt. */
+	fun notWhdloadGame(fileName: String): Message =
+		Message(R.string.msg_imported_not_whdload, cleanFileName(fileName))
+
 	fun fromImportResult(result: FileManager.ImportResult): Message =
 		when (result) {
-			is FileManager.ImportResult.Imported -> fileImported(result.safeName)
+			is FileManager.ImportResult.Imported ->
+				if (result.notWhdloadGame) notWhdloadGame(result.safeName) else fileImported(result.safeName)
 			is FileManager.ImportResult.Unsupported -> unsupportedFileType(result.extension)
 			is FileManager.ImportResult.Failed -> importFailed(result.safeName)
 		}

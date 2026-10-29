@@ -57,6 +57,16 @@ class ImportFeedbackTest {
 	}
 
 	@Test
+	fun `import result feedback warns about an archive with no WHDLoad slave`() {
+		val message = ImportFeedback.fromImportResult(
+			FileManager.ImportResult.Imported("C:/storage/LHA/dynAMIte.lha", "dynAMIte.lha", notWhdloadGame = true)
+		)
+
+		assertEquals(R.string.msg_imported_not_whdload, message.stringRes)
+		assertEquals("dynAMIte.lha", message.argument)
+	}
+
+	@Test
 	fun `import result feedback reports unsupported picker files`() {
 		val message = ImportFeedback.fromImportResult(
 			FileManager.ImportResult.Unsupported("notes.txt", "txt")

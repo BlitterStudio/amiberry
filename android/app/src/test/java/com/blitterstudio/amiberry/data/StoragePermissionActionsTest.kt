@@ -10,9 +10,10 @@ import org.junit.Test
 class StoragePermissionActionsTest {
 
 	@Test
-	fun `banner is hidden only when full storage access is already granted`() {
-		assertEquals(false, StoragePermissionActions.shouldShowBanner(hasFullStorageAccess = true))
-		assertEquals(true, StoragePermissionActions.shouldShowBanner(hasFullStorageAccess = false))
+	fun `banner shows until access is granted or the card is dismissed`() {
+		assertEquals(false, StoragePermissionActions.shouldShowBanner(hasFullStorageAccess = true, dismissed = false))
+		assertEquals(true, StoragePermissionActions.shouldShowBanner(hasFullStorageAccess = false, dismissed = false))
+		assertEquals(false, StoragePermissionActions.shouldShowBanner(hasFullStorageAccess = false, dismissed = true))
 	}
 
 	@Test

@@ -32,7 +32,9 @@ object FileManager {
 
 		data class Imported(
 			val path: String,
-			override val safeName: String
+			override val safeName: String,
+			/** An .lha/.lzh imported as a WHDLoad game that holds no `.slave`, so it won't start as one. */
+			val notWhdloadGame: Boolean = false
 		) : ImportResult
 
 		data class Unsupported(
@@ -88,27 +90,41 @@ object FileManager {
 		return importFileWithResult(context, uri, category, getFileName(context, uri))
 	}
 
+	/** Imports into the category the file's extension belongs to (an .adf to Floppies). */
+	fun importFileSortedWithResult(context: Context, uri: Uri): ImportResult {
+		return importFileWithResult(context, uri, category = null, displayName = getFileName(context, uri))
+	}
+
+	/** [category] null sorts the file by its extension. */
 	private fun importFileWithResult(
 		context: Context,
 		uri: Uri,
-		category: FileCategory,
+		category: FileCategory?,
 		displayName: String?
 	): ImportResult {
-		val candidate = importCandidateForCategory(displayName, category)
-		return when (candidate) {
-			is ImportCandidate.Importable -> copyImportFile(context, uri, category, candidate.safeName)
+		val target = category ?: sortedImportCategory(displayName)
+		if (target == null) {
+			val safeName = safeImportFileName(displayName)
+			return ImportResult.Unsupported(safeName, safeName.substringAfterLast('.', missingDelimiterValue = "").lowercase())
+		}
+		return when (val candidate = importCandidateForCategory(displayName, target)) {
+			is ImportCandidate.Importable -> copyImportFile(context, uri, target, candidate.safeName)
 			is ImportCandidate.Unsupported -> ImportResult.Unsupported(candidate.safeName, candidate.extension)
 		}
 	}
 
+	/** The category a file of this name is imported into when sorting by extension. */
+	internal fun sortedImportCategory(rawName: String?): FileCategory? =
+		FileCategory.fromExtension(safeImportFileName(rawName).substringAfterLast('.', missingDelimiterValue = ""))
+
 	/**
-	 * Import every supported file below a Storage Access Framework directory tree.
-	 * Subdirectories are traversed so users can select a ROM collection root once.
+	 * Import every supported file below a Storage Access Framework directory tree, each
+	 * into the category of its extension. Subdirectories are traversed so users can select
+	 * a collection root once.
 	 */
 	fun importFolderWithResults(
 		context: Context,
-		treeUri: Uri,
-		category: FileCategory
+		treeUri: Uri
 	): List<ImportResult> {
 		val traversal = documentsInTree(context, treeUri)
 		val results = traversal.documents.mapTo(mutableListOf()) { document ->
@@ -123,11 +139,20 @@ object FileManager {
 			val displayName = document.displayName
 				?.takeIf { it.isNotBlank() }
 				?: document.documentId.substringAfterLast('/').substringAfterLast(':')
-			importFileWithResult(context, uri, category, displayName)
+			importFileWithResult(context, uri, category = null, displayName = displayName)
 		}
 		results += traversal.failures.map { ImportResult.Failed(FOLDER_IMPORT_FAILURE_NAME) }
 		return results
 	}
+
+	/**
+	 * Import the supported files below a folder of the device's storage (the in-app
+	 * browser, with All Files Access), each into the category of its extension.
+	 */
+	fun importDirectoryWithResults(context: Context, dir: File): List<ImportResult> =
+		DeviceStorage.supportedFilesUnder(dir, FileCategory.allExtensions).map { file ->
+			importFileWithResult(context, Uri.fromFile(file), category = null, displayName = file.name)
+		}
 
 	private fun copyImportFile(
 		context: Context,
@@ -152,7 +177,9 @@ object FileManager {
 				}
 			}
 			Log.d(TAG, "Imported ${finalFile.name} to ${finalFile.absolutePath}")
-			ImportResult.Imported(finalFile.absolutePath, finalFile.name)
+			val notWhdloadGame = category == FileCategory.WHDLOAD_GAMES &&
+				WhdloadArchive.hasSlave(finalFile) == false
+			ImportResult.Imported(finalFile.absolutePath, finalFile.name, notWhdloadGame)
 		} catch (e: Exception) {
 			Log.e(TAG, "Failed to import file from URI: $uri", e)
 			ImportResult.Failed(fileName)

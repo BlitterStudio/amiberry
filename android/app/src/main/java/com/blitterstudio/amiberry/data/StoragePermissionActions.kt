@@ -11,8 +11,9 @@ object StoragePermissionActions {
 		val dataUri: String? = null
 	)
 
-	fun shouldShowBanner(hasFullStorageAccess: Boolean): Boolean =
-		!hasFullStorageAccess
+	/** The optional access card shows until access is granted or the user dismisses it. */
+	fun shouldShowBanner(hasFullStorageAccess: Boolean, dismissed: Boolean): Boolean =
+		!hasFullStorageAccess && !dismissed
 
 	fun permissionRequests(packageName: String, sdkInt: Int): List<PermissionRequest> {
 		if (sdkInt < Build.VERSION_CODES.R) return emptyList()

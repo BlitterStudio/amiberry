@@ -174,12 +174,22 @@ class AppPreferences private constructor(context: Context) {
 		prefs.edit { putBoolean(KEY_HAS_SEEN_WELCOME, seen) }
 	}
 
+	/** The optional All Files Access card in Files was dismissed ("Not now"). */
+	var storageAccessCardDismissed = mutableStateOf(prefs.getBoolean(KEY_STORAGE_ACCESS_CARD_DISMISSED, false))
+		private set
+
+	fun dismissStorageAccessCard() {
+		storageAccessCardDismissed.value = true
+		prefs.edit { putBoolean(KEY_STORAGE_ACCESS_CARD_DISMISSED, true) }
+	}
+
 	companion object {
 		private const val PREFS_NAME = "amiberry_prefs"
 		private const val KEY_DYNAMIC_COLOR = "use_dynamic_color"
 		private const val KEY_THEME_MODE = "theme_mode"
 		private const val KEY_HAS_SEEN_WELCOME = "has_seen_welcome"
 		private const val KEY_STORAGE_PERMISSION_REQUESTED = "storage_permission_requested"
+		private const val KEY_STORAGE_ACCESS_CARD_DISMISSED = "storage_access_card_dismissed"
 		private const val KEY_LAST_WHDLOAD = "last_whdload_path"
 		private const val KEY_CLASSIC_IN_GAME_MENU = "classic_in_game_menu"
 		private const val KEY_LAST_JOYPORT0 = "last_joyport0"

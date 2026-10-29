@@ -46,11 +46,15 @@ The Android build supports:
 
 ## Storage
 
-Amiberry can use the `MANAGE_EXTERNAL_STORAGE` (All Files Access) permission to access ROM images, disk images, and game archives in user-chosen directories. It is not requested at startup. On Android 11 and newer, the launcher shows a **Limited file access** banner with a **Grant Access** button that opens the system permission screen. Without the permission, the app works within its scoped storage directory, and imports through the system file picker still copy files there:
+Imports copy files into the app's scoped storage directory, each into the folder of its kind (an `.adf` to `Floppies`, an `.lha` to `LHA`) whichever Files category is open:
 
 ```
 /storage/emulated/0/Android/data/com.blitterstudio.amiberry/files/
 ```
+
+Files ▸ ⋮ ▸ **Storage location** shows this path (with **Copy path**, except on TV). Importing a `.lha`/`.lzh` that holds no `.slave` file warns that it is not a WHDLoad game.
+
+Imports use the system document picker. Where none exists (Google TV resolves it to a stub that only says "You don't have an app that can do this"), and from Files ▸ Import ▸ **Browse device storage** on other devices, the launcher opens its own browser of internal storage, Downloads and USB drives. That browser needs the `MANAGE_EXTERNAL_STORAGE` (All Files Access) permission (READ_EXTERNAL_STORAGE on Android 10). It is not requested at startup: the Files tab shows an optional, dismissible card, and the browser explains the permission before opening the system grant screen, then opens by itself once the user returns with it granted.
 
 ## Performance Notes
 

@@ -25,6 +25,18 @@
     <!-- Haptic feedback for game controllers -->
     <uses-permission android:name="android.permission.VIBRATE" />
 
+    <!-- Imports check that a document picker exists: Google TV resolves these to a stub,
+         and the launcher then offers its own storage browser. -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.OPEN_DOCUMENT" />
+            <data android:mimeType="*/*" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.OPEN_DOCUMENT_TREE" />
+        </intent>
+    </queries>
+
     <application
         android:allowBackup="true"
         android:fullBackupContent="@xml/backup_rules"
