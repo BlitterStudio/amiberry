@@ -6,6 +6,7 @@ import com.blitterstudio.amiberry.data.model.AmigaModel
 import com.blitterstudio.amiberry.data.model.EmulatorSettings
 import com.blitterstudio.amiberry.data.model.FileCategory
 import com.blitterstudio.amiberry.data.model.ModelRomAvailability
+import com.blitterstudio.amiberry.data.model.HardDrive
 import com.blitterstudio.amiberry.data.model.RomIdentity
 import com.blitterstudio.amiberry.data.model.SettingText
 import org.junit.Assert.assertEquals
@@ -132,6 +133,30 @@ class QuickStartUiStateTest {
 		)
 
 		assertEquals(RomIdentity.Kickstart("KS ROM v1.3 (A500,A1000,A2000)"), summary.rom)
+	}
+
+	@Test
+	fun `a configuration summary lists every medium it inserts and its Kickstart`() {
+		val roms = listOf(rom("kick13.rom", 0xc4f0f55fL))
+		val settings = EmulatorSettings.fromModel(AmigaModel.A500).copy(
+			romFile = "/roms/kick13.rom",
+			floppy0 = "/media/Workbench.adf",
+			cdImage = "/media/Demo.iso",
+			hardDrives = listOf(HardDrive("/drives/System.hdf"), HardDrive("/drives/Work/"))
+		)
+
+		val summary = QuickStartUiState.buildConfigurationSummary(settings, roms)
+
+		assertEquals("Amiga 500", summary.model)
+		assertEquals("DF0: Workbench.adf, CD: Demo.iso, HD: System.hdf, HD: Work", summary.media)
+		assertEquals(RomIdentity.Kickstart("KS ROM v1.3 (A500,A1000,A2000)"), summary.rom)
+	}
+
+	@Test
+	fun `a configuration without media has a blank media summary`() {
+		val summary = QuickStartUiState.buildConfigurationSummary(EmulatorSettings.fromModel(AmigaModel.A500), emptyList())
+
+		assertEquals("", summary.media)
 	}
 
 	@Test

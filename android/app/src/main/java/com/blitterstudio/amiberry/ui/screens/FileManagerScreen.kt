@@ -9,6 +9,12 @@ import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.material3.VerticalDivider
+import com.blitterstudio.amiberry.ui.components.SidePaneEntry
+import com.blitterstudio.amiberry.ui.components.SidePaneList
+import com.blitterstudio.amiberry.ui.windowWidthClass
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -289,6 +295,39 @@ fun FileManagerScreen(viewModel: FileManagerViewModel = viewModel()) {
 			}
 		}
 	) { innerPadding ->
+		val selectCategory: (Int) -> Unit = { index ->
+			selectedTab = index
+			searchQuery = ""
+			refocusAfterDeleting = null
+		}
+		// The search, progress and file list of the selected category: below the tab row
+		// on a phone, beside the category list on a wide window.
+		val categoryPage: @Composable ColumnScope.() -> Unit = {
+			FileCategoryPage(
+				files = files,
+				allFiles = allFiles,
+				showSearch = showSearch,
+				searchQuery = searchQuery,
+				effectiveSearchQuery = effectiveSearchQuery,
+				onSearchQueryChange = { searchQuery = it; refocusAfterDeleting = null },
+				showProgress = showProgress,
+				isScanning = isScanning,
+				progressDescription = progressDescription,
+				categoryTitle = tabs[selectedTab].title,
+				emptyHelp = stringResource(
+					R.string.file_manager_empty_help_with_extensions,
+					viewModel.getStoragePath(),
+					currentCategory.dirName,
+					acceptedExtensions
+				),
+				onImport = openImportPicker,
+				fileListFocus = fileListFocus,
+				onDelete = { file ->
+					refocusAfterDeleting = file.path
+					viewModel.deleteFile(file)
+				}
+			)
+		}
 		Column(
 			modifier = Modifier
 				.fillMaxSize()
@@ -301,144 +340,170 @@ fun FileManagerScreen(viewModel: FileManagerViewModel = viewModel()) {
 				}
 			)
 
-			SecondaryScrollableTabRow(
-				selectedTabIndex = selectedTab,
-				modifier = Modifier
-					.fillMaxWidth()
-					.focusGroup()
-			) {
-				tabs.forEachIndexed { index, tab ->
-					Tab(
-						selected = selectedTab == index,
-						onClick = { selectedTab = index; searchQuery = ""; refocusAfterDeleting = null },
-						text = { Text(tab.title) },
-						icon = { Icon(tab.icon, contentDescription = tab.title, modifier = Modifier.size(18.dp)) }
+			if (windowWidthClass().showsSideList) {
+				// Wide windows list the categories down the left with their file counts.
+				val counts = listOf(
+					viewModel.roms.collectAsState().value.size,
+					viewModel.whdloadGames.collectAsState().value.size,
+					viewModel.floppies.collectAsState().value.size,
+					viewModel.hardDrives.collectAsState().value.size,
+					viewModel.cdImages.collectAsState().value.size
+				)
+				Row(modifier = Modifier.weight(1f).fillMaxWidth()) {
+					SidePaneList(
+						entries = tabs.mapIndexed { index, tab ->
+							SidePaneEntry(tab.title, icon = tab.icon, badge = counts[index].toString())
+						},
+						selectedIndex = selectedTab,
+						onSelect = selectCategory
 					)
-				}
-			}
-
-			if (showSearch) {
-				OutlinedTextField(
-					value = searchQuery,
-					onValueChange = { searchQuery = it; refocusAfterDeleting = null },
-					modifier = Modifier
-						.fillMaxWidth()
-						.padding(horizontal = 16.dp, vertical = 2.dp),
-					placeholder = { Text(stringResource(R.string.search_placeholder)) },
-					leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(18.dp)) },
-					trailingIcon = {
-						if (searchQuery.isNotEmpty()) {
-							IconButton(
-								onClick = { searchQuery = ""; refocusAfterDeleting = null },
-								modifier = Modifier.dpadFocusIndicator()
-							) {
-								Icon(
-									Icons.Default.Clear,
-									contentDescription = stringResource(R.string.action_clear_search),
-									modifier = Modifier.size(18.dp)
-								)
-							}
-						}
-					},
-					singleLine = true
-				)
-			}
-
-			if (showProgress) {
-				LinearProgressIndicator(
-					modifier = Modifier
-						.fillMaxWidth()
-						.semantics { contentDescription = progressDescription }
-				)
-			}
-
-			if (files.isEmpty() && !isScanning) {
-				val searchHasNoResults = effectiveSearchQuery.isNotBlank() && allFiles.isNotEmpty()
-				Box(
-					modifier = Modifier
-						.weight(1f)
-						.fillMaxWidth()
-						.padding(32.dp),
-					contentAlignment = Alignment.Center
-				) {
-					Column(horizontalAlignment = Alignment.CenterHorizontally) {
-						Text(
-							text = if (searchHasNoResults) {
-								stringResource(R.string.file_manager_no_search_results)
-							} else {
-								stringResource(
-									R.string.file_manager_no_files_found,
-									tabs[selectedTab].title.lowercase(Locale.getDefault())
-								)
-							},
-							style = MaterialTheme.typography.bodyLarge
-						)
-						Spacer(modifier = Modifier.height(8.dp))
-						Text(
-							text = if (searchHasNoResults) {
-								stringResource(R.string.file_manager_search_help)
-							} else {
-								stringResource(
-									R.string.file_manager_empty_help_with_extensions,
-									viewModel.getStoragePath(),
-									currentCategory.dirName,
-									acceptedExtensions
-								)
-							},
-							style = MaterialTheme.typography.bodySmall,
-							color = MaterialTheme.colorScheme.onSurfaceVariant
-						)
-						Spacer(modifier = Modifier.height(24.dp))
-						Button(
-							onClick = {
-								if (searchHasNoResults) {
-									searchQuery = ""
-									refocusAfterDeleting = null
-								} else {
-									openImportPicker()
-								}
-							},
-							enabled = searchHasNoResults || !showProgress,
-							modifier = Modifier.dpadFocusIndicator()
-						) {
-							Icon(
-								if (searchHasNoResults) Icons.Default.Clear else Icons.Default.Add,
-								contentDescription = null,
-								modifier = Modifier.size(18.dp)
-							)
-							Spacer(modifier = Modifier.width(8.dp))
-							Text(
-								if (searchHasNoResults) {
-									stringResource(R.string.action_clear_search)
-								} else {
-									stringResource(R.string.file_manager_import_category, tabs[selectedTab].title)
-								}
-							)
-						}
+					VerticalDivider()
+					Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
+						categoryPage()
 					}
 				}
 			} else {
-				LazyColumn(
-					modifier = Modifier.weight(1f).focusRequester(fileListFocus).focusRestorer(),
-					contentPadding = PaddingValues(
-						start = 16.dp,
-						top = 4.dp,
-						end = 16.dp,
-						bottom = 120.dp
-					),
-					verticalArrangement = Arrangement.spacedBy(4.dp)
+				SecondaryScrollableTabRow(
+					selectedTabIndex = selectedTab,
+					modifier = Modifier
+						.fillMaxWidth()
+						.focusGroup()
 				) {
-					items(files, key = { it.path }) { file ->
-						FileItem(
-							file = file,
-							deleteEnabled = !showProgress,
-							onDelete = {
-								refocusAfterDeleting = file.path
-								viewModel.deleteFile(file)
-							}
+					tabs.forEachIndexed { index, tab ->
+						Tab(
+							selected = selectedTab == index,
+							onClick = { selectCategory(index) },
+							text = { Text(tab.title) },
+							icon = { Icon(tab.icon, contentDescription = tab.title, modifier = Modifier.size(18.dp)) }
 						)
 					}
 				}
+				categoryPage()
+			}
+		}
+	}
+}
+
+@Composable
+private fun ColumnScope.FileCategoryPage(
+	files: List<AmigaFile>,
+	allFiles: List<AmigaFile>,
+	showSearch: Boolean,
+	searchQuery: String,
+	effectiveSearchQuery: String,
+	onSearchQueryChange: (String) -> Unit,
+	showProgress: Boolean,
+	isScanning: Boolean,
+	progressDescription: String,
+	categoryTitle: String,
+	emptyHelp: String,
+	onImport: () -> Unit,
+	fileListFocus: FocusRequester,
+	onDelete: (AmigaFile) -> Unit
+) {
+	if (showSearch) {
+		OutlinedTextField(
+			value = searchQuery,
+			onValueChange = onSearchQueryChange,
+			modifier = Modifier
+				.fillMaxWidth()
+				.padding(horizontal = 16.dp, vertical = 2.dp),
+			placeholder = { Text(stringResource(R.string.search_placeholder)) },
+			leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(18.dp)) },
+			trailingIcon = {
+				if (searchQuery.isNotEmpty()) {
+					IconButton(
+						onClick = { onSearchQueryChange("") },
+						modifier = Modifier.dpadFocusIndicator()
+					) {
+						Icon(
+							Icons.Default.Clear,
+							contentDescription = stringResource(R.string.action_clear_search),
+							modifier = Modifier.size(18.dp)
+						)
+					}
+				}
+			},
+			singleLine = true
+		)
+	}
+
+	if (showProgress) {
+		LinearProgressIndicator(
+			modifier = Modifier
+				.fillMaxWidth()
+				.semantics { contentDescription = progressDescription }
+		)
+	}
+
+	if (files.isEmpty() && !isScanning) {
+		val searchHasNoResults = effectiveSearchQuery.isNotBlank() && allFiles.isNotEmpty()
+		Box(
+			modifier = Modifier
+				.weight(1f)
+				.fillMaxWidth()
+				.padding(32.dp),
+			contentAlignment = Alignment.Center
+		) {
+			Column(horizontalAlignment = Alignment.CenterHorizontally) {
+				Text(
+					text = if (searchHasNoResults) {
+						stringResource(R.string.file_manager_no_search_results)
+					} else {
+						stringResource(
+							R.string.file_manager_no_files_found,
+							categoryTitle.lowercase(Locale.getDefault())
+						)
+					},
+					style = MaterialTheme.typography.bodyLarge
+				)
+				Spacer(modifier = Modifier.height(8.dp))
+				Text(
+					text = if (searchHasNoResults) stringResource(R.string.file_manager_search_help) else emptyHelp,
+					style = MaterialTheme.typography.bodySmall,
+					color = MaterialTheme.colorScheme.onSurfaceVariant
+				)
+				Spacer(modifier = Modifier.height(24.dp))
+				Button(
+					onClick = {
+						if (searchHasNoResults) onSearchQueryChange("") else onImport()
+					},
+					enabled = searchHasNoResults || !showProgress,
+					modifier = Modifier.dpadFocusIndicator()
+				) {
+					Icon(
+						if (searchHasNoResults) Icons.Default.Clear else Icons.Default.Add,
+						contentDescription = null,
+						modifier = Modifier.size(18.dp)
+					)
+					Spacer(modifier = Modifier.width(8.dp))
+					Text(
+						if (searchHasNoResults) {
+							stringResource(R.string.action_clear_search)
+						} else {
+							stringResource(R.string.file_manager_import_category, categoryTitle)
+						}
+					)
+				}
+			}
+		}
+	} else {
+		LazyColumn(
+			modifier = Modifier.weight(1f).focusRequester(fileListFocus).focusRestorer(),
+			contentPadding = PaddingValues(
+				start = 16.dp,
+				top = 4.dp,
+				end = 16.dp,
+				bottom = 120.dp
+			),
+			verticalArrangement = Arrangement.spacedBy(4.dp)
+		) {
+			items(files, key = { it.path }) { file ->
+				FileItem(
+					file = file,
+					deleteEnabled = !showProgress,
+					onDelete = { onDelete(file) }
+				)
 			}
 		}
 	}

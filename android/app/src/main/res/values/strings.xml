@@ -109,6 +109,11 @@
     <string name="configurations_filter_all">All</string>
     <string name="configurations_filter_described">Described</string>
     <string name="configurations_filter_recent">Recent</string>
+    <string name="configurations_detail_machine">Machine</string>
+    <string name="configurations_detail_loading">Reading configuration…</string>
+    <string name="configurations_detail_unreadable">This configuration could not be read.</string>
+    <string name="configurations_detail_open_in_settings">Open in Settings</string>
+    <string name="summary_no_media">No media inserted</string>
 
     <string name="quick_start_recent_title">Recent</string>
     <string name="quick_start_recent_empty">No recent launches yet.</string>

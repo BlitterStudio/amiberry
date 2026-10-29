@@ -1,6 +1,7 @@
 package com.blitterstudio.amiberry.ui.screens
 
 import com.blitterstudio.amiberry.data.ConfigInfo
+import java.io.File
 
 enum class ConfigurationListFilter {
 	All,
@@ -15,6 +16,13 @@ enum class ConfigurationListFilter {
 
 internal fun shouldShowConfigurationSearch(configCount: Int): Boolean =
 	configCount > 5
+
+/**
+ * The configuration the list-detail layout shows: the one chosen (by file name) while it
+ * is listed, otherwise the first listed, as when the choice was filtered out or deleted.
+ */
+internal fun selectedConfiguration(configs: List<ConfigInfo>, selectedFileName: String?): ConfigInfo? =
+	configs.firstOrNull { File(it.path).name == selectedFileName } ?: configs.firstOrNull()
 
 internal fun filterConfigurations(
 	configs: List<ConfigInfo>,
