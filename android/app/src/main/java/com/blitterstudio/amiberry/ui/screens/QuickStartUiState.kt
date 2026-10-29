@@ -115,6 +115,8 @@ object QuickStartUiState {
 		val media = listOfNotNull(
 			mediaName(settings.floppy0)?.let { "DF0: $it" },
 			mediaName(settings.floppy1)?.let { "DF1: $it" },
+			mediaName(settings.floppy2)?.let { "DF2: $it" },
+			mediaName(settings.floppy3)?.let { "DF3: $it" },
 			mediaName(settings.cdImage)?.let { "CD: $it" }
 		) + settings.hardDrives.mapNotNull { drive ->
 			// A folder mounted as a drive may end in a separator.

@@ -141,6 +141,8 @@ class QuickStartUiStateTest {
 		val settings = EmulatorSettings.fromModel(AmigaModel.A500).copy(
 			romFile = "/roms/kick13.rom",
 			floppy0 = "/media/Workbench.adf",
+			floppy2 = "/media/Extras.adf",
+			floppy3 = "/media/Fonts.adf",
 			cdImage = "/media/Demo.iso",
 			hardDrives = listOf(HardDrive("/drives/System.hdf"), HardDrive("/drives/Work/"))
 		)
@@ -148,7 +150,10 @@ class QuickStartUiStateTest {
 		val summary = QuickStartUiState.buildConfigurationSummary(settings, roms)
 
 		assertEquals("Amiga 500", summary.model)
-		assertEquals("DF0: Workbench.adf, CD: Demo.iso, HD: System.hdf, HD: Work", summary.media)
+		assertEquals(
+			"DF0: Workbench.adf, DF2: Extras.adf, DF3: Fonts.adf, CD: Demo.iso, HD: System.hdf, HD: Work",
+			summary.media
+		)
 		assertEquals(RomIdentity.Kickstart("KS ROM v1.3 (A500,A1000,A2000)"), summary.rom)
 	}
 

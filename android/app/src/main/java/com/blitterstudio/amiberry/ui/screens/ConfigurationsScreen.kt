@@ -83,6 +83,7 @@ import com.blitterstudio.amiberry.R
 import android.content.Intent
 import androidx.core.content.FileProvider
 import com.blitterstudio.amiberry.data.AdvancedLaunchActions
+import kotlinx.coroutines.CancellationException
 import com.blitterstudio.amiberry.data.AppPreferences
 import com.blitterstudio.amiberry.data.ConfigurationActions
 import com.blitterstudio.amiberry.data.ConfigInfo
@@ -746,7 +747,17 @@ private fun ConfigDetailPane(
 	var dialog by remember(config.path) { mutableStateOf<ConfigDialog?>(null) }
 	// Null while reading; a failure to read shows a message instead of the summary.
 	val summary by produceState<Result<QuickStartEffectiveSummary>?>(null, config.path, config.lastModified, roms) {
-		value = runCatching { QuickStartUiState.buildConfigurationSummary(loadSettings(config.path), roms) }
+		// Browsing the list restarts this for every configuration focused: show "reading"
+		// rather than the previous one's summary, and let a cancelled read stay cancelled
+		// instead of reporting it as unreadable.
+		value = null
+		value = try {
+			Result.success(QuickStartUiState.buildConfigurationSummary(loadSettings(config.path), roms))
+		} catch (e: CancellationException) {
+			throw e
+		} catch (e: Exception) {
+			Result.failure(e)
+		}
 	}
 
 	Column(
