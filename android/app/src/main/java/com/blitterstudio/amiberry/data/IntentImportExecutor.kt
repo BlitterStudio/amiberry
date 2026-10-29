@@ -34,7 +34,8 @@ object IntentImportExecutor {
 		data class WhdLoad(
 			val lhaPath: String,
 			val configPath: String,
-			val shaderOverride: String? = null
+			val shaderOverride: String? = null,
+			val controlOverrides: LaunchRequest.AndroidControlOverrides? = null
 		) : Launch
 
 		data class Rp9(
@@ -61,13 +62,15 @@ object IntentImportExecutor {
 		category: FileCategory,
 		importedPath: String,
 		configPath: String,
-		shaderOverride: String? = null
+		shaderOverride: String? = null,
+		controlOverrides: LaunchRequest.AndroidControlOverrides? = null
 	): Launch? =
 		when (category) {
 			FileCategory.WHDLOAD_GAMES -> Launch.WhdLoad(
 				lhaPath = importedPath,
 				configPath = configPath,
-				shaderOverride = shaderOverride
+				shaderOverride = shaderOverride,
+				controlOverrides = controlOverrides
 			)
 			FileCategory.FLOPPIES -> Launch.QuickStart(
 				model = AmigaModel.A500,
@@ -176,7 +179,8 @@ object IntentImportExecutor {
 						category = category,
 						importedPath = importedPath,
 						configPath = prepared.configFile.absolutePath,
-						shaderOverride = prepared.shaderOverride
+						shaderOverride = prepared.shaderOverride,
+						controlOverrides = prepared.controlOverrides
 					)
 				}
 				FileCategory.FLOPPIES -> writeIntentQuickStartConfig(

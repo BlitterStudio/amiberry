@@ -1,9 +1,12 @@
 package com.blitterstudio.amiberry.ui.screens
 
 import com.blitterstudio.amiberry.data.model.AmigaFile
+import com.blitterstudio.amiberry.data.model.AmigaModel
 import com.blitterstudio.amiberry.data.model.EmulatorSettings
+import com.blitterstudio.amiberry.data.model.LauncherChoices
 import com.blitterstudio.amiberry.data.model.ModelRomAvailability
 import com.blitterstudio.amiberry.data.model.RomIdentity
+import com.blitterstudio.amiberry.data.model.SettingText
 import com.blitterstudio.amiberry.data.model.SettingsSchema
 import com.blitterstudio.amiberry.data.model.installedMemory
 
@@ -32,6 +35,22 @@ data class QuickStartEffectiveSummary(
 	val romFileName: String = ""
 )
 
+/**
+ * What Quick Start shows for a WHDLoad launch. WHDBooter chooses the machine
+ * (model, CPU, chipset, memory, Kickstart) when the game starts, from its game
+ * database, the installed Kickstarts or the game's own configuration, so only
+ * the values the launcher passes are listed.
+ */
+data class QuickStartWhdLoadSummary(
+	val media: String,
+	/** The game's own configuration file, which WHDBooter loads instead of choosing; null without one. */
+	val perGameConfig: String?,
+	val controls: String,
+	val port0: SettingText,
+	val port1: SettingText,
+	val shader: SettingText
+)
+
 object QuickStartUiState {
 	fun canStart(
 		launchMode: QuickStartLaunchMode,
@@ -47,12 +66,14 @@ object QuickStartUiState {
 		}
 	}
 
-	/** The summary of what Start launches; its ROM row is the settings' own ROM, which the launch boots. */
+	/**
+	 * The summary of what a Disk, CD or Recent launch starts; its ROM row is the
+	 * settings' own ROM, which the launch boots. WHDLoad: [buildWhdLoadSummary].
+	 */
 	fun buildEffectiveSummary(
 		settings: EmulatorSettings,
 		launchMode: QuickStartLaunchMode,
 		selectedModelAvailable: Boolean,
-		selectedWhdloadName: String? = null,
 		roms: List<AmigaFile> = emptyList()
 	): QuickStartEffectiveSummary {
 		return QuickStartEffectiveSummary(
@@ -60,7 +81,7 @@ object QuickStartUiState {
 			cpu = buildCpuSummary(settings),
 			chipset = buildChipsetSummary(settings),
 			memory = buildMemorySummary(settings),
-			media = buildMediaSummary(settings, launchMode, selectedWhdloadName),
+			media = buildMediaSummary(settings, launchMode, selectedWhdloadName = null),
 			controls = buildControlsSummary(settings),
 			rom = if (selectedModelAvailable) romIdentity(settings.romFile, roms) else null,
 			romFileName = mediaName(settings.romFile).orEmpty()
@@ -68,17 +89,44 @@ object QuickStartUiState {
 	}
 
 	/**
-	 * Whether Quick Start tells the user the launch boots AROS: the settings name the
-	 * built-in AROS ROM, or name no ROM while the model's Kickstart is not installed.
+	 * The summary of a WHDLoad launch, from [launchSettings]: the shader and
+	 * controls the launch passes (the game's own configuration's where it sets
+	 * them), and [perGameConfigName], the configuration's file name, if any.
+	 */
+	fun buildWhdLoadSummary(
+		launchSettings: EmulatorSettings,
+		selectedWhdloadName: String?,
+		perGameConfigName: String?
+	): QuickStartWhdLoadSummary = QuickStartWhdLoadSummary(
+		media = buildMediaSummary(launchSettings, QuickStartLaunchMode.WHDLOAD, selectedWhdloadName),
+		perGameConfig = perGameConfigName,
+		controls = buildControlsSummary(launchSettings),
+		port0 = LauncherChoices.portDevice(launchSettings.joyport0),
+		port1 = LauncherChoices.portDevice(launchSettings.joyport1),
+		shader = LauncherChoices.shader(launchSettings.shader)
+	)
+
+	/**
+	 * Whether a Disk or CD launch boots AROS: the settings name the built-in
+	 * AROS ROM, or name no ROM while the model's Kickstart is not installed.
 	 */
 	fun showsArosNotice(
 		settings: EmulatorSettings,
 		selectedRoms: ModelRomAvailability.SelectedRoms,
 		launchMode: QuickStartLaunchMode
-	): Boolean = launchMode != QuickStartLaunchMode.RECENT && (
+	): Boolean = (launchMode == QuickStartLaunchMode.DISK || launchMode == QuickStartLaunchMode.CD) && (
 		ModelRomAvailability.isBuiltInArosRom(settings.romFile) ||
 			(settings.romFile.isBlank() && selectedRoms.aros)
 		)
+
+	/**
+	 * Whether WHDLoad games can boot AROS: the A1200 Kickstart is not installed
+	 * and AROS is. WHDBooter starts the games it runs on the A1200 with the
+	 * A1200 preset's Kickstart, and the emulator boots AROS without one.
+	 * Which games those are is WHDBooter's choice at start.
+	 */
+	fun showsWhdLoadArosNotice(roms: List<AmigaFile>): Boolean =
+		ModelRomAvailability.selectRomsForModel(AmigaModel.A1200, roms).aros
 
 	/**
 	 * After a ROM import: settings that boot AROS (or name no ROM) move to the model's

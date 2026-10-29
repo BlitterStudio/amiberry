@@ -126,6 +126,10 @@
     <string name="quick_start_summary_memory">Memory</string>
     <string name="quick_start_summary_media">Media</string>
     <string name="quick_start_summary_controls">Controls</string>
+    <string name="quick_start_summary_hardware">Hardware</string>
+    <string name="quick_start_whdload_hardware_whdbooter">Chosen by WHDBooter when the game starts</string>
+    <string name="quick_start_whdload_hardware_per_game">From the game\'s own configuration, %1$s</string>
+    <string name="quick_start_whdload_aros_notice">The A1200 Kickstart is not installed: WHDLoad games that WHDBooter runs on the A1200 boot the free AROS ROM instead.</string>
     <string name="quick_start_media_whdload">WHDLoad game selected</string>
     <string name="quick_start_media_floppy_cd">Floppy and CD selected</string>
     <string name="quick_start_media_floppy">Floppy selected</string>
@@ -152,8 +156,8 @@
     <string name="quick_start_cd_image">CD Image</string>
     <string name="quick_start_no_cd_images">No CD images found</string>
     <string name="quick_start_whdload_title">WHDLoad Game</string>
-    <string name="quick_start_whdload_help">Select an .lha game to auto-configure and launch</string>
-    <string name="quick_start_no_whdload_games">No WHDLoad games found. Import .lha files to get started.</string>
+    <string name="quick_start_whdload_help">Select a game to launch: WHDBooter sets up the machine for it when it starts</string>
+    <string name="quick_start_no_whdload_games">No WHDLoad games found. Import .lha, .lzh or .lzx files to get started.</string>
     <string name="quick_start_select_game_placeholder">(select a game)</string>
     <string name="quick_start_scanning_media">Scanning media</string>
     <string name="rom_readiness_scanned">ROMs scanned: %1$d</string>

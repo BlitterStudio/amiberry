@@ -26,7 +26,6 @@ import com.blitterstudio.amiberry.data.ConfigParser
 import com.blitterstudio.amiberry.data.ConfigRepository
 import com.blitterstudio.amiberry.data.ConfigurationSaveActions
 import com.blitterstudio.amiberry.data.OpenConfigTracking
-import com.blitterstudio.amiberry.data.WhdLoadAutoConfig
 import com.blitterstudio.amiberry.ui.hasTouchScreen
 import java.io.File
 import kotlinx.coroutines.Dispatchers
@@ -338,25 +337,6 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 
 	fun clearAdjustmentNotices() {
 		adjustmentNotices = emptyList()
-	}
-
-	fun applyWhdLoadAutoConfig(file: AmigaFile) {
-		val currentSettings = settings
-		viewModelScope.launch {
-			val detectedSettings = withContext(Dispatchers.IO) {
-				WhdLoadAutoConfig.settingsFor(
-					context = getApplication(),
-					whdLoadFile = file,
-					availableRoms = availableRoms.value,
-					currentSettings = currentSettings
-				)
-			} ?: return@launch
-
-			selectedIntentPreset = null
-			applyConstrainedSettings(detectedSettings, publishNotices = true)
-			appPreferences.saveAndroidControls(settings)
-			saveLastSession()
-		}
 	}
 
 	fun writeSettingsConfig(

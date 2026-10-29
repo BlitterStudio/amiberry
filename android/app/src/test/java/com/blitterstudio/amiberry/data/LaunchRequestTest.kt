@@ -191,6 +191,38 @@ class LaunchRequestTest {
 	}
 
 	@Test
+	fun `whdload request passes the launcher's ports after autoload so they replace WHDBooter's`() {
+		val lhaPath = "/tmp/game.lha"
+		val configPath = "/tmp/android-controls.uae"
+
+		val args = LaunchRequest.WhdLoad(
+			lhaPath = lhaPath,
+			configPath = configPath,
+			shaderOverride = "tv",
+			controlOverrides = LaunchRequest.AndroidControlOverrides(
+				joyport0 = "joy0",
+				joyport1 = "kbd1",
+				onScreenJoystick = false,
+				onScreenKeyboardButton = false,
+				groups = setOf(AndroidControlSettings.Group.JOYPORT0, AndroidControlSettings.Group.JOYPORT1)
+			)
+		).toArgs()
+
+		assertArrayEquals(
+			arrayOf(
+				"--rescan-roms",
+				"--config", configPath,
+				"--autoload", lhaPath,
+				"-s", "amiberry.shader=tv",
+				"-s", "joyport0=joy0",
+				"-s", "joyport1=kbd1",
+				"-G"
+			),
+			args
+		)
+	}
+
+	@Test
 	fun `saved config request with skip gui true adds skip gui flag`() {
 		val configPath = "/tmp/saved.uae"
 

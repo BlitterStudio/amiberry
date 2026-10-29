@@ -1121,7 +1121,7 @@ void usage()
 	std::cout << " --model <Amiga Model>      Amiga model to emulate, from the QuickStart options." << '\n';
 	std::cout << "                            Available options are: A1000, A500, A500P, A600, A2000, A3000, A1200, A4000, CD32 and CDTV.\n" <<
 		'\n';
-	std::cout << " --autoload <file>          Load an RP9 package, an .lha WHDLoad game, or a CD image." << '\n';
+	std::cout << " --autoload <file>          Load an RP9 package, a WHDLoad game (.lha, .lzh, .lzx), or a CD image." << '\n';
 	std::cout << " --cdimage <file>           Load the CD image provided when starting emulation." << '\n';
 	std::cout << " --statefile <file>         Load a save state file." << '\n';
 	std::cout << " -s <option>=<value>        Set one or more configuration options directly, without loading a file." <<
@@ -1130,7 +1130,7 @@ void usage()
 		'\n';
 	std::cout << "\nAdditional options:" << '\n';
 	std::cout << "amiberry <file>             Auto-detect the type of file and use the default action for it." << '\n';
-	std::cout << "                            Supported file types are: .uae configs, .rp9 packages, .lha WHDLoad, CD and disk images." << '\n';
+	std::cout << "                            Supported file types are: .uae configs, .rp9 packages, .lha WHDLoad games, CD and disk images." << '\n';
 	std::cout << " -0 <disk.adf>              Insert specified ADF image into emulated floppy drive 0-3." << '\n';
 	std::cout << " -1 <disk.adf>              " << '\n';
 	std::cout << " -2 <disk.adf>              " << '\n';
@@ -1295,6 +1295,17 @@ static TCHAR *parsetextpath (const TCHAR *s)
 	}
 #endif
 	return s3;
+}
+
+// The archive types --autoload sends to WHDBooter: it mounts the archive itself
+// as the game drive, and the archive filesystem reads LHA (.lha/.lzh) and LZX
+// alike. --autoload names WHDLoad content explicitly; a positional .lzh/.lzx
+// may be a packed disk image instead.
+static bool is_whdload_archive_extension(const std::string& extension)
+{
+	return _tcsicmp(extension.c_str(), ".lha") == 0
+		|| _tcsicmp(extension.c_str(), ".lzh") == 0
+		|| _tcsicmp(extension.c_str(), ".lzx") == 0;
 }
 
 #ifdef AMIBERRY
@@ -1650,7 +1661,7 @@ static void parse_cmdline (int argc, TCHAR **argv)
 					else
 						cmdline_config_source_failed = true;
 				}
-				else if (_tcsicmp(txt2.c_str(), ".lha") == 0)
+				else if (is_whdload_archive_extension(txt2))
 				{
 					write_log("WHDLoad... %s\n", txt);
 					add_file_to_mru_list(lstMRUWhdloadList, std::string(txt));
@@ -1748,6 +1759,7 @@ static void parse_cmdline (int argc, TCHAR **argv)
 				else
 					cmdline_config_source_failed = true;
 			}
+			// Only .lha: an LZX- or LZH-packed disk image goes to DF0: below.
 			else if (_tcsicmp(txt2.c_str(), ".lha") == 0)
 			{
 				write_log("WHDLoad... %s\n", txt);
