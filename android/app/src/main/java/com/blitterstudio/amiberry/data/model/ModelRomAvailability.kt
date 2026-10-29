@@ -13,16 +13,17 @@ sealed interface RomIdentity {
 
 object ModelRomAvailability {
 
-	/**
-	 * The kickstart_rom_file value that boots the built-in AROS ROM
-	 * (is_builtin_aros_rom in src/memory.cpp). No file at all would first
-	 * look for a kick.rom, so the launcher names AROS explicitly.
-	 */
-	const val AROS_ROM_FILE = ":AROS"
+	/** The built-in AROS replacement as the emulator knows it (the schema's); null without a schema. */
+	private val aros: SettingsSchema.Aros?
+		get() = SettingsSchema.current?.aros
 
-	/** The AROS ROM files the emulator loads from its ROMs directory (find_kickstart_replacement_directory). */
-	private const val AROS_EXT_FILE_NAME = "aros-ext.bin"
-	private val AROS_FILES = setOf("aros-rom.bin", AROS_EXT_FILE_NAME)
+	/**
+	 * The kickstart_rom_file value that boots the built-in AROS ROM (empty
+	 * without a schema). No file at all would first look for a kick.rom, so
+	 * the launcher names AROS explicitly.
+	 */
+	val arosRomFile: String
+		get() = aros?.romFile.orEmpty()
 
 	/**
 	 * The ROM files for a model, and the preset configuration they belong to.
@@ -41,7 +42,7 @@ object ModelRomAvailability {
 
 		/** The kickstart_rom_file to write; empty when the model cannot start. */
 		val romFile: String
-			get() = kick?.path ?: if (aros) AROS_ROM_FILE else ""
+			get() = kick?.path ?: if (aros) arosRomFile else ""
 
 		val romExtFile: String
 			get() = ext?.path.orEmpty()
@@ -61,23 +62,30 @@ object ModelRomAvailability {
 		selectRomsForModel(model, roms).kick != null
 
 	fun romIdentity(rom: AmigaFile): RomIdentity {
-		if (rom.name.lowercase() in AROS_FILES) return RomIdentity.BuiltInAros
+		if (isBuiltInArosFile(rom)) return RomIdentity.BuiltInAros
 		val id = detectRomId(rom) ?: return RomIdentity.Unknown
 		val name = SettingsSchema.current?.roms?.get(id)?.name ?: return RomIdentity.Unknown
 		return RomIdentity.Kickstart(name)
 	}
 
 	/** Whether a kickstart_rom_file value names the built-in AROS ROM (an RP9's "<file>:AROS" too). */
-	fun isBuiltInArosRom(romFile: String): Boolean =
-		romFile == AROS_ROM_FILE || (romFile.length > AROS_ROM_FILE.length && romFile.endsWith(AROS_ROM_FILE))
+	fun isBuiltInArosRom(romFile: String): Boolean {
+		val token = aros?.romFile?.takeIf { it.isNotEmpty() } ?: return false
+		return romFile.endsWith(token)
+	}
 
-	/** The installed file is the AROS extension ROM (aros-ext.bin), the second of the two AROS files. */
+	/** The installed file is the AROS extension ROM, the second of the two AROS files. */
 	fun isBuiltInArosExtension(rom: AmigaFile): Boolean =
-		rom.name.equals(AROS_EXT_FILE_NAME, ignoreCase = true)
+		aros?.let { rom.name.equals(it.extFile, ignoreCase = true) } ?: false
 
 	/** Both AROS ROM files are installed, so a model without its Kickstart can boot AROS. */
-	fun hasBuiltInAros(roms: List<AmigaFile>): Boolean =
-		AROS_FILES.all { file -> roms.any { it.name.equals(file, ignoreCase = true) } }
+	fun hasBuiltInAros(roms: List<AmigaFile>): Boolean {
+		val aros = aros ?: return false
+		return listOf(aros.mainFile, aros.extFile).all { file -> roms.any { it.name.equals(file, ignoreCase = true) } }
+	}
+
+	private fun isBuiltInArosFile(rom: AmigaFile): Boolean =
+		aros?.let { rom.name.equals(it.mainFile, ignoreCase = true) || rom.name.equals(it.extFile, ignoreCase = true) } ?: false
 
 	/**
 	 * Whether AROS can stand in for the model's ROMs: only for a computer

@@ -907,7 +907,7 @@ const definition definitions[] = {
 	{MEASURED_OPTION("cachesize", "jit", "JIT cache size",
 			"Just-In-Time compilation cache; 0 turns the JIT off. Greatly speeds up CPU emulation but reduces compatibility.",
 			AMIBERRY_SETTING_INT, AMIBERRY_APPLY_LIVE, 0, max_jit_cache, 1, "0",
-			"The JIT needs a 68020 or later with 32-bit addressing and no MMU, is not available in cycle-exact modes, and needs at least 128 KB.",
+			"The JIT needs a 68020 or later with 32-bit addressing and no MMU, and at least 128 KB. Turning it on leaves cycle-exact modes.",
 			"KB", 0, false),
 		get_cachesize, set_cachesize, cachesize_available, nullptr, nullptr, cachesize_accepts},
 	{BOOL_OPTION("compfpu", "jit", "JIT FPU support",

@@ -94,7 +94,7 @@ class ModelRomAvailabilityTest {
 
 		assertTrue(selected.aros)
 		assertTrue(selected.isBootable)
-		assertEquals(ModelRomAvailability.AROS_ROM_FILE, selected.romFile)
+		assertEquals(ModelRomAvailability.arosRomFile, selected.romFile)
 		assertEquals("", selected.romExtFile)
 		assertTrue(ModelRomAvailability.isModelAvailable(AmigaModel.A500, roms))
 		assertFalse(ModelRomAvailability.hasKickstart(AmigaModel.A500, roms))

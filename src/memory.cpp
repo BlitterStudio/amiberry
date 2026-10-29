@@ -1940,8 +1940,8 @@ static std::string find_kickstart_replacement_directory()
 
 		std::string candidate(directory);
 		fix_trailing(candidate);
-		if (zfile_exists((candidate + "aros-ext.bin").c_str())
-			&& zfile_exists((candidate + "aros-rom.bin").c_str()))
+		if (zfile_exists((candidate + aros_ext_rom_file).c_str())
+			&& zfile_exists((candidate + aros_main_rom_file).c_str()))
 			return candidate;
 		return std::string();
 	};
@@ -1965,7 +1965,7 @@ static bool load_kickstart_replacement(void)
 		gui_message("Could not find the 'aros-ext.bin' and 'aros-rom.bin' files in the configured ROM directories!");
 		return false;
 	}
-	auto path = aros_directory + "aros-ext.bin";
+	auto path = aros_directory + aros_ext_rom_file;
 	auto* arosrom = zfile_load_file(path.c_str(), &arosrom_len);
 	if (arosrom == nullptr)
 		return false;
@@ -1994,7 +1994,7 @@ static bool load_kickstart_replacement(void)
 #ifdef AMIBERRY
 	zfile_fclose(f);
 	xfree(arosrom);
-	path = aros_directory + "aros-rom.bin";
+	path = aros_directory + aros_main_rom_file;
 	arosrom = zfile_load_file(path.c_str(), &arosrom_len);
 	if (arosrom == nullptr)
 		return false;
@@ -2163,7 +2163,9 @@ static const uae_u8 romend[20] = {
 };
 static bool is_builtin_aros_rom(const TCHAR *romfile)
 {
-	return !_tcscmp(romfile, _T(":AROS")) || (_tcslen(romfile) > 5 && !_tcscmp(romfile + _tcslen(romfile) - 5, _T(":AROS")));
+	const size_t token = _tcslen(aros_rom_token);
+	const size_t length = _tcslen(romfile);
+	return length >= token && !_tcscmp(romfile + length - token, aros_rom_token);
 }
 
 static int load_kickstart (void)

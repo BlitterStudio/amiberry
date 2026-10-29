@@ -1104,8 +1104,8 @@ void usage()
 	std::cout << " --dump-config              Print the resolved configuration (defaults, config file and" << '\n';
 	std::cout << "                            command line options, after fixup_prefs) and exit." << '\n';
 	std::cout << " --settings-schema[=<file>] Print the shared settings layer's options (only the IDs" << '\n';
-	std::cout << "                            listed in <file>), presets and resolution tables as" << '\n';
-	std::cout << "                            JSON and exit." << '\n';
+	std::cout << "                            listed in <file>), presets, resolution, availability and" << '\n';
+	std::cout << "                            transition tables as JSON and exit." << '\n';
 #ifdef AMIBERRY_NATIVE_UI_TESTS
 	std::cout << " --native-ui-tests=<bundle> Run the native UI bridge tests (an XCTest bundle) where" << '\n';
 	std::cout << "                            the GUI would open, and exit with their result." << '\n';

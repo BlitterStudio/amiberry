@@ -541,6 +541,12 @@ extern void free_fastmemory (int);
 extern void set_roms_modified (void);
 extern void reload_roms(void);
 extern bool read_kickstart_version(struct uae_prefs *p);
+// The built-in AROS Kickstart replacement: the ROM file name that selects it
+// (also as the end of an RP9's "<file>:AROS"), and the two files it loads
+// from a ROM directory.
+inline constexpr const char aros_rom_token[] = ":AROS";
+inline constexpr const char aros_main_rom_file[] = "aros-rom.bin";
+inline constexpr const char aros_ext_rom_file[] = "aros-ext.bin";
 extern void chipmem_setindirect(void);
 extern void initramboard(addrbank *ab, struct ramboard *rb);
 extern void loadboardfile(addrbank *ab, struct boardloadfile *lf);

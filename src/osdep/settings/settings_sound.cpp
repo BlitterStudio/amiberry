@@ -536,9 +536,11 @@ void set_sound_max_buff(uae_prefs& p, const value& v)
 // The buffer size and frequency a new configuration gets:
 // target_default_options() applies the host defaults from amiberry_options
 // (src/include/options.h), which Android raises for AAudio.
+constexpr const char* android_sound_buffer = AMIBERRY_SETTINGS_TEXT_OF(ANDROID_DEFAULT_SOUND_BUFFER);
+constexpr const char* android_sound_frequency = AMIBERRY_SETTINGS_TEXT_OF(ANDROID_DEFAULT_SOUND_FREQUENCY);
 #ifdef __ANDROID__
-constexpr const char* default_sound_buffer = "8192";
-constexpr const char* default_sound_frequency = "48000";
+constexpr const char* default_sound_buffer = android_sound_buffer;
+constexpr const char* default_sound_frequency = android_sound_frequency;
 #else
 constexpr const char* default_sound_buffer = "3072";
 constexpr const char* default_sound_frequency = "44100";
@@ -630,7 +632,7 @@ const definition definitions[] = {
 			"Output sample rate; 44100 or 48000 is recommended for modern systems.",
 			AMIBERRY_APPLY_LIVE, default_sound_frequency, frequency_choices, "Needs sound emulation to be on."),
 		get_sound_frequency, set_sound_frequency, sound_option_available, nullptr, nullptr,
-		nullptr},
+		nullptr, nullptr, android_sound_frequency},
 	{BOOL_OPTION("sound_stereo_swap_paula", "sound", "Swap Paula channels",
 			"Swap the left and right Paula channels.",
 			AMIBERRY_APPLY_LIVE, "false", "Needs sound emulation to be on."),
@@ -714,7 +716,7 @@ const definition definitions[] = {
 			"Audio buffer size; smaller values reduce latency but may glitch on slow systems.",
 			AMIBERRY_APPLY_LIVE, default_sound_buffer, buffer_choices, "Needs sound emulation to be on."),
 		get_sound_max_buff, set_sound_max_buff, sound_option_available, nullptr, nullptr,
-		nullptr},
+		nullptr, nullptr, android_sound_buffer},
 };
 
 bool commit_sound(const uae_prefs& base, const uae_prefs& from, uae_prefs& to,

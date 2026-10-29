@@ -409,7 +409,7 @@ bool set_default_system(uae_prefs* prefs, const rp9::Manifest& manifest)
 			return false;
 		}
 		bip_a4000(prefs, -1);
-		copy_path(prefs->romfile, MAX_DPATH, ":AROS");
+		copy_path(prefs->romfile, MAX_DPATH, aros_rom_token);
 		return true;
 	}
 	const auto rom = system_rom_code(manifest.system_rom);

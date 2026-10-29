@@ -92,7 +92,7 @@ class QuickStartUiStateTest {
 	@Test
 	fun `importing the model's Kickstart moves AROS settings to it, and the notice and summary follow`() {
 		val aros = listOf(rom("aros-rom.bin", 0x11111111L), rom("aros-ext.bin", 0x22222222L))
-		val onAros = EmulatorSettings.fromModel(AmigaModel.A500).copy(romFile = ModelRomAvailability.AROS_ROM_FILE)
+		val onAros = EmulatorSettings.fromModel(AmigaModel.A500).copy(romFile = ModelRomAvailability.arosRomFile)
 		val arosRoms = ModelRomAvailability.selectRomsForModel(AmigaModel.A500, aros)
 		assertTrue(QuickStartUiState.showsArosNotice(onAros, arosRoms, QuickStartLaunchMode.DISK))
 
@@ -122,7 +122,7 @@ class QuickStartUiStateTest {
 		val chosen = EmulatorSettings.fromModel(AmigaModel.A500).copy(romFile = "/roms/other.rom")
 		assertEquals(null, QuickStartUiState.withInstalledKickstart(chosen, roms))
 
-		val a1200OnAros = EmulatorSettings.fromModel(AmigaModel.A1200).copy(romFile = ModelRomAvailability.AROS_ROM_FILE)
+		val a1200OnAros = EmulatorSettings.fromModel(AmigaModel.A1200).copy(romFile = ModelRomAvailability.arosRomFile)
 		assertEquals(null, QuickStartUiState.withInstalledKickstart(a1200OnAros, roms))
 	}
 

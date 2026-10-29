@@ -19,8 +19,9 @@ namespace {
 // Guide is intercepted as the menu trigger on Android and the libretro
 // joypad action space has no guide button, so both front ends default
 // the toggle to the left stick.
+constexpr const char* left_stick_vkbd_toggle = "leftstick";
 #if defined(__ANDROID__) || defined(LIBRETRO)
-constexpr const char* vkbd_toggle_default = "leftstick";
+constexpr const char* vkbd_toggle_default = left_stick_vkbd_toggle;
 #else
 constexpr const char* vkbd_toggle_default = "guide";
 #endif
@@ -170,7 +171,8 @@ const definition definitions[] = {
 			"unbinds it.",
 			AMIBERRY_APPLY_LIVE, vkbd_toggle_default,
 			"Needs the on-screen keyboard enabled and the RetroArch on-screen keyboard button off."),
-		get_vkbd_toggle, set_vkbd_toggle, vkbd_toggle_available, nullptr, nullptr, vkbd_toggle_fits},
+		get_vkbd_toggle, set_vkbd_toggle, vkbd_toggle_available, nullptr, nullptr, vkbd_toggle_fits,
+		nullptr, left_stick_vkbd_toggle},
 	{BOOL_OPTION("amiberry.use_retroarch_vkbd", "onscreen", "Use the RetroArch on-screen keyboard button",
 			"Use the front end's RetroArch keyboard button instead of a custom toggle.",
 			AMIBERRY_APPLY_LIVE, "false", nullptr),

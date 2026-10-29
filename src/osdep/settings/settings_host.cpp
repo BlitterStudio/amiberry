@@ -358,7 +358,7 @@ const std::vector<host_setting>& settings()
 		choices_of("default_sound_frequency", "global_sound", "Sound frequency",
 			"Default audio output sample rate in Hz.",
 #ifdef __ANDROID__
-			"48000",
+			AMIBERRY_SETTINGS_TEXT_OF(ANDROID_DEFAULT_SOUND_FREQUENCY),
 #else
 			"44100",
 #endif
@@ -367,7 +367,7 @@ const std::vector<host_setting>& settings()
 		choices_of("default_sound_buffer", "global_sound", "Sound buffer",
 			"Default audio buffer size. Smaller values reduce latency.",
 #ifdef __ANDROID__
-			"8192",
+			AMIBERRY_SETTINGS_TEXT_OF(ANDROID_DEFAULT_SOUND_BUFFER),
 #else
 			"3072",
 #endif

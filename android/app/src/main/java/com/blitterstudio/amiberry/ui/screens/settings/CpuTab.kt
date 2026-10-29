@@ -41,7 +41,7 @@ private val JIT_CACHE_SUGGESTIONS = listOf(0, 1024, 2048, 4096, 8192, 16384)
 @Composable
 fun CpuTab(viewModel: SettingsViewModel) {
 	val settings = viewModel.settings
-	val fpuValues = SettingsControlAvailability.fpuOptionValues(settings).map { it.toString() }
+	val fpuValues = SettingsControlAvailability.choiceValues(settings, "fpu_model")
 
 	Column(
 		modifier = Modifier
@@ -97,7 +97,7 @@ fun CpuTab(viewModel: SettingsViewModel) {
 				id = "cpu_model",
 				value = settings.cpuModel.toString(),
 				onSelect = { value ->
-					value.toIntOrNull()?.let { cpu -> viewModel.updateSettings { s -> s.withCpuModel(cpu) } }
+					viewModel.updateSettings { s -> s.withOption("cpu_model", value) }
 				}
 			)
 			SchemaChoiceRow(
@@ -108,20 +108,20 @@ fun CpuTab(viewModel: SettingsViewModel) {
 			SchemaSwitchRow(
 				id = "cpu_compatible",
 				checked = settings.cpuCompatible,
-				enabled = SettingsControlAvailability.isCpuCompatibleEditable(settings),
-				onCheckedChange = { viewModel.updateSettings { s -> s.copy(cpuCompatible = it) } }
+				enabled = SettingsControlAvailability.isAvailable(settings, "cpu_compatible"),
+				onCheckedChange = { viewModel.updateSettings { s -> s.withOption("cpu_compatible", it.toString()) } }
 			)
 			SchemaSwitchRow(
 				id = "cpu_24bit_addressing",
 				checked = settings.address24Bit,
-				enabled = SettingsControlAvailability.isAddress24BitEditable(settings),
+				enabled = SettingsControlAvailability.isAvailable(settings, "cpu_24bit_addressing"),
 				onCheckedChange = { viewModel.updateSettings { s -> s.copy(address24Bit = it) } }
 			)
 			SchemaChoiceRow(
 				id = "fpu_model",
 				value = settings.fpuModel.toString(),
 				values = fpuValues,
-				enabled = fpuValues.size > 1,
+				enabled = fpuValues == null || fpuValues.size > 1,
 				onSelect = { value ->
 					value.toIntOrNull()?.let { fpu -> viewModel.updateSettings { s -> s.copy(fpuModel = fpu) } }
 				}
@@ -135,13 +135,13 @@ fun CpuTab(viewModel: SettingsViewModel) {
 				suggestions = JIT_CACHE_SUGGESTIONS,
 				// The core takes 0 (off) or at least 128 KB (cachesize_accepts in settings_cpu.cpp).
 				accepts = { it == 0 || it >= 128 },
-				enabled = SettingsControlAvailability.isJitAllowed(settings),
-				onStoredChange = { size -> viewModel.updateSettings { s -> s.withJitCacheSize(size) } }
+				enabled = SettingsControlAvailability.isAvailable(settings, "cachesize"),
+				onStoredChange = { size -> viewModel.updateSettings { s -> s.withOption("cachesize", size.toString()) } }
 			)
 			SchemaSwitchRow(
 				id = "compfpu",
 				checked = settings.jitFpu,
-				enabled = SettingsControlAvailability.isJitFpuAvailable(settings),
+				enabled = SettingsControlAvailability.isAvailable(settings, "compfpu"),
 				onCheckedChange = { viewModel.updateSettings { s -> s.copy(jitFpu = it) } }
 			)
 		}

@@ -75,6 +75,14 @@ class SettingsSchemaTest {
 	}
 
 	@Test
+	fun `configurations needing PowerPC boards are not offered`() {
+		val a1200 = schema.presets.single { it.id == "a1200" }
+		assertTrue(a1200.configs.any { "ppc" in it.requires })
+		assertEquals(a1200.configs.filter { it.requires.isEmpty() }, AmigaModel.A1200.configs)
+		assertTrue(AmigaModel.entries.all { model -> model.configs.none { it.requires.isNotEmpty() } })
+	}
+
+	@Test
 	fun `the preset configuration survives a save and reload`() {
 		val file = java.io.File.createTempFile("preset", ".uae")
 		try {

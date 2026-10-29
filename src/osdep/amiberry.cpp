@@ -13376,9 +13376,9 @@ static void refresh_whdboot_database_if_outdated()
 
 static bool rom_seed_files_missing()
 {
-	if (!file_exists(join_path(rom_path, "aros-ext.bin")))
+	if (!file_exists(join_path(rom_path, aros_ext_rom_file)))
 		return true;
-	if (!file_exists(join_path(rom_path, "aros-rom.bin")))
+	if (!file_exists(join_path(rom_path, aros_main_rom_file)))
 		return true;
 	if (!file_exists(join_path(rom_path, "mt32-roms/dir.txt")))
 		return true;
