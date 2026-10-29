@@ -462,7 +462,6 @@
     <string name="settings_group_io">IO ports</string>
     <string name="settings_section_show">Show %1$s</string>
     <string name="settings_section_hide">Hide %1$s</string>
-    <string name="settings_display_more_title">More Display Options</string>
     <!-- Files tab, imports and the device storage browser -->
     <string name="file_manager_storage_location">Storage location</string>
     <string name="file_manager_storage_location_help">Amiberry keeps its ROMs, disks and games here. You can also copy files into its folders with a computer or a file manager, then tap Refresh.</string>
