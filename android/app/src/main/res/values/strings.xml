@@ -406,9 +406,9 @@
     <string name="overlay_states">Save States</string>
     <string name="overlay_states_help">Save or load the machine in slots</string>
     <string name="overlay_controls">Controls</string>
-    <string name="overlay_controls_help">On-screen joystick and keyboard</string>
+    <string name="overlay_controls_help">Joystick ports and on-screen controls</string>
     <string name="overlay_settings">Settings</string>
-    <string name="overlay_settings_help">Volume, speed and display</string>
+    <string name="overlay_settings_help">Volume, speed and display for this session</string>
     <string name="overlay_reset">Reset</string>
     <string name="overlay_reset_help">Restart the Amiga</string>
     <string name="overlay_hard_reset">Hard Reset</string>
@@ -474,4 +474,20 @@
     <string name="settings_section_show">Show %1$s</string>
     <string name="settings_section_hide">Hide %1$s</string>
     <string name="settings_display_more_title">More Display Options</string>
+    <!-- In-emulation input and menu (TV remote, hints, confirmations) -->
+    <string name="hint_menu">Press Back for the Amiberry menu</string>
+    <string name="hint_menu_tv">Press Back on the remote for the Amiberry menu</string>
+    <string name="hint_remote_joystick">Remote: the D-pad moves the joystick and OK fires. Press Back for the Amiberry menu.</string>
+    <string name="overlay_remote_joystick">No controller is connected, so the remote is the Port 2 joystick: the D-pad moves it and OK fires. Connect a controller to use it instead.</string>
+    <string name="overlay_swap_ports">Swap ports</string>
+    <string name="overlay_swap_ports_help">Exchange the Port 1 and Port 2 devices</string>
+    <string name="overlay_controls_kept">Port changes apply to this session. The on-screen controls you turn on or off here are kept for next time.</string>
+    <string name="overlay_settings_session">These changes apply to this session only.</string>
+    <string name="overlay_change_disk">Change disk…</string>
+    <string name="overlay_change_cd">Change CD…</string>
+    <string name="overlay_confirm_reset_title">Reset the Amiga?</string>
+    <string name="overlay_confirm_reset_text">The Amiga restarts. Anything it has not saved is lost.</string>
+    <string name="overlay_confirm_overwrite_title">Overwrite slot %1$d?</string>
+    <string name="overlay_confirm_overwrite_text">The state saved %1$s is replaced.</string>
+    <string name="overlay_overwrite">Overwrite</string>
 </resources>

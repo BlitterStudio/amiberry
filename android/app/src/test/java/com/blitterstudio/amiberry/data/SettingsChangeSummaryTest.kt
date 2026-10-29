@@ -97,7 +97,7 @@ class SettingsChangeSummaryTest {
 
 		val rows = rows(SettingsChangeSummary.diff(before, after)).associateBy { it.label }
 
-		assertEquals("Fastest possible", rows.getValue(schema.label("cpu_speed")!!).after)
+		assertEquals("As fast as possible", rows.getValue(schema.label("cpu_speed")!!).after)
 		assertEquals(
 			Row(schema.label("cycle_exact")!!, "Off", "Cycle Exact (DMA/Memory)"),
 			rows.getValue(schema.label("cycle_exact")!!)

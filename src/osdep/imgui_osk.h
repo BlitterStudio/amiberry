@@ -27,6 +27,12 @@ bool imgui_osk_is_active();
 // Returns true if the keyboard should be rendered this frame.
 bool imgui_osk_should_render();
 
+// Fraction (0..1) of a width x height window, measured up from the bottom,
+// that the presenter should keep the picture out of because the keyboard is
+// docked there. Non-zero only for the Android touch keyboard in a portrait
+// window, and it follows the slide animation; 0 everywhere else.
+float imgui_osk_bottom_inset_fraction(int width, int height);
+
 // Render the keyboard. Called between imgui_overlay_begin_frame/end_frame in
 // native builds. Libretro renders into a presentation-only surface copy so
 // emulation-owned pixels are never modified.
@@ -72,6 +78,7 @@ inline void imgui_osk_toggle() {}
 inline void imgui_osk_hide() {}
 inline bool imgui_osk_is_active() { return false; }
 inline bool imgui_osk_should_render() { return false; }
+inline float imgui_osk_bottom_inset_fraction(int, int) { return 0.0f; }
 inline void imgui_osk_render() {}
 inline void imgui_osk_update() {}
 inline bool imgui_osk_process(int, int*, int*) { return false; }

@@ -14,7 +14,9 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
+import com.blitterstudio.amiberry.ui.viewmodel.SettingsViewModel
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -382,6 +384,9 @@ class MainActivity : ComponentActivity() {
 			}
 		}
 		emulatorWasLaunched = decision.keepLaunchTracked
+		// The on-screen controls turned in the in-game menu (the emulator
+		// records them only while its menu, not this activity, is in front).
+		ViewModelProvider(this)[SettingsViewModel::class.java].adoptInGameControls()
 	}
 
 	/** Called by EmulatorLauncher before starting the SDL activity. */

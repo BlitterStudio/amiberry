@@ -1222,9 +1222,22 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 	const float bounded_fallback_aspect = use_integer_scaling
 		&& !mon->screen_is_picasso && currprefs.gfx_correct_aspect
 		? integer_target_aspect : desired_aspect;
-	const AmiberryGfxRect final_rect = amiberry_gfx_final_presentation_rect(
+	const AmiberryGfxRect drawable_area{0, 0, drawableWidth, drawableHeight};
+	AmiberryGfxRect final_rect = amiberry_gfx_final_presentation_rect(
 		available_area, destW, destH, bounded_fallback_aspect,
 		has_bounded_bezel_area && use_integer_scaling && !use_center);
+	// Android portrait: the on-screen keyboard docks over the bottom of the
+	// window, so move the picture up into the free space above it. Not with a
+	// custom bezel, whose screen hole is fixed. render_quad and the published
+	// GUI geometry below take this rect, so pointer mapping follows the move.
+	if (vkbd_allowed(monid)
+		&& !(filter_prefs.use_custom_bezel && m_overlay.bezel_texture != 0)) {
+		const float osk_inset = imgui_osk_bottom_inset_fraction(drawableWidth, drawableHeight);
+		if (osk_inset > 0.0f) {
+			final_rect = amiberry_gfx_lift_above_bottom_inset(final_rect, drawable_area,
+				static_cast<int>(static_cast<float>(drawableHeight) * osk_inset + 0.5f));
+		}
+	}
 
 	// Flip Y for GL viewport: OpenGL has y=0 at bottom, bezel hole Y is y=0 at top
 	const int glDestY = drawableHeight - final_rect.y - final_rect.h;
@@ -1232,7 +1245,6 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 	// Clear whenever the presentation leaves any part of the drawable uncovered.
 	glBindFramebuffer(GL_FRAMEBUFFER, window_framebuffer);
 
-	const AmiberryGfxRect drawable_area{0, 0, drawableWidth, drawableHeight};
 	if (!amiberry_gfx_rect_covers_area(final_rect, drawable_area)) {
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);

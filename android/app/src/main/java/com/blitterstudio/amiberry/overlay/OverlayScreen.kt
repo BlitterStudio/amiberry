@@ -26,11 +26,14 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.Album
+import androidx.compose.material.icons.filled.Crop
+import androidx.compose.material.icons.filled.Gamepad
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Keyboard
 import androidx.compose.material.icons.filled.Pause
@@ -40,6 +43,7 @@ import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SportsEsports
+import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -50,6 +54,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -68,13 +73,16 @@ import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.blitterstudio.amiberry.R
 import com.blitterstudio.amiberry.data.model.SettingsSchema
 import com.blitterstudio.amiberry.ui.components.settings.SchemaChoiceRow
 import com.blitterstudio.amiberry.ui.components.settings.SchemaLevelRow
-import com.blitterstudio.amiberry.ui.components.settings.SchemaSwitchRow
 import com.blitterstudio.amiberry.ui.components.settings.settingsSchema
 import com.blitterstudio.amiberry.ui.dpadFocusIndicator
 import java.text.DateFormat
@@ -105,21 +113,44 @@ fun OverlayScreen(viewModel: OverlayViewModel) {
 				.widthIn(max = 560.dp)
 				.fillMaxWidth()
 		) {
-			Column(modifier = Modifier.padding(vertical = 12.dp)) {
-				Header(viewModel)
-				val focus = remember(viewModel.menu) { FocusTargets() }
-				PageContent(viewModel, focus)
-				// Each page change and each opening (the view composes while hidden).
-				// Opening leaves touch mode (OverlayHost.show); a page a touch
-				// user tapped open keeps no focus, so it shows no focus ring.
-				val inputMode = LocalInputModeManager.current
-				LaunchedEffect(viewModel.menu, viewModel.openings) {
-					// Once the page has laid out, so its items' requesters are attached.
-					withFrameNanos { }
-					if (inputMode.inputMode != InputMode.Touch) focus.request(viewModel.menu.focus)
+			Box {
+				Column(modifier = Modifier.padding(vertical = 12.dp)) {
+					Header(viewModel)
+					val focus = remember(viewModel.menu) { FocusTargets() }
+					PageContent(viewModel, focus)
+					// Each page change and each opening (the view composes while hidden).
+					// Opening leaves touch mode (OverlayHost.show); a page a touch
+					// user tapped open keeps no focus, so it shows no focus ring.
+					val inputMode = LocalInputModeManager.current
+					LaunchedEffect(viewModel.menu, viewModel.openings) {
+						// Once the page has laid out, so its items' requesters are attached.
+						withFrameNanos { }
+						if (inputMode.inputMode != InputMode.Touch) focus.request(viewModel.menu.focus)
+					}
 				}
+				// Over the page's foot, so the page never moves under a finger or the focus.
+				viewModel.notice?.let { notice -> Notice(notice, Modifier.align(Alignment.BottomCenter)) }
 			}
 		}
+	}
+}
+
+@Composable
+private fun Notice(notice: OverlayNotice, modifier: Modifier) {
+	Surface(
+		shape = RoundedCornerShape(12.dp),
+		color = if (notice.error) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.inverseSurface,
+		contentColor = if (notice.error) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.inverseOnSurface,
+		shadowElevation = 4.dp,
+		modifier = modifier
+			.padding(16.dp)
+			.semantics { liveRegion = LiveRegionMode.Polite }
+	) {
+		Text(
+			text = if (notice.slot != null) stringResource(notice.text, notice.slot) else stringResource(notice.text),
+			style = MaterialTheme.typography.bodyMedium,
+			modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
+		)
 	}
 }
 
@@ -150,9 +181,11 @@ private fun Header(viewModel: OverlayViewModel) {
 		OverlayPage.States -> stringResource(R.string.overlay_states)
 		OverlayPage.Controls -> stringResource(R.string.overlay_controls)
 		OverlayPage.Settings -> stringResource(R.string.overlay_settings)
-		is OverlayPage.Confirm -> when (page.action) {
-			ConfirmAction.HARD_RESET -> stringResource(R.string.overlay_confirm_hard_reset_title)
-			ConfirmAction.QUIT -> stringResource(R.string.overlay_confirm_quit_title)
+		is OverlayPage.Confirm -> when (val action = page.action) {
+			ConfirmAction.Reset -> stringResource(R.string.overlay_confirm_reset_title)
+			ConfirmAction.HardReset -> stringResource(R.string.overlay_confirm_hard_reset_title)
+			ConfirmAction.Quit -> stringResource(R.string.overlay_confirm_quit_title)
+			is ConfirmAction.Overwrite -> stringResource(R.string.overlay_confirm_overwrite_title, action.slot.paths.slot)
 		}
 	}
 	Row(
@@ -176,14 +209,6 @@ private fun Header(viewModel: OverlayViewModel) {
 			maxLines = 1,
 			overflow = TextOverflow.Ellipsis,
 			modifier = Modifier.weight(1f)
-		)
-	}
-	viewModel.notice?.let { notice ->
-		Text(
-			text = if (notice.slot != null) stringResource(notice.text, notice.slot) else stringResource(notice.text),
-			style = MaterialTheme.typography.bodyMedium,
-			color = if (notice.error) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
-			modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp)
 		)
 	}
 	HorizontalDivider(modifier = Modifier.padding(top = 8.dp))
@@ -251,7 +276,7 @@ private fun MenuItem(
 					subtitle,
 					style = MaterialTheme.typography.bodySmall,
 					color = MaterialTheme.colorScheme.onSurfaceVariant,
-					maxLines = 1,
+					maxLines = 2,
 					overflow = TextOverflow.Ellipsis
 				)
 			}
@@ -275,13 +300,13 @@ private fun HomePage(viewModel: OverlayViewModel, focus: FocusTargets) {
 		OverlayKeys.SETTINGS, focus, { viewModel.open(OverlayPage.Settings, OverlayKeys.SETTINGS) })
 	HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 	MenuItem(Icons.Filled.RestartAlt, stringResource(R.string.overlay_reset), stringResource(R.string.overlay_reset_help),
-		OverlayKeys.RESET, focus, { viewModel.reset(hard = false) })
+		OverlayKeys.RESET, focus, { viewModel.open(OverlayPage.Confirm(ConfirmAction.Reset), OverlayKeys.RESET) })
 	MenuItem(Icons.Filled.PowerSettingsNew, stringResource(R.string.overlay_hard_reset), stringResource(R.string.overlay_hard_reset_help),
-		OverlayKeys.HARD_RESET, focus, { viewModel.open(OverlayPage.Confirm(ConfirmAction.HARD_RESET), OverlayKeys.HARD_RESET) })
+		OverlayKeys.HARD_RESET, focus, { viewModel.open(OverlayPage.Confirm(ConfirmAction.HardReset), OverlayKeys.HARD_RESET) })
 	MenuItem(Icons.Filled.Settings, stringResource(R.string.overlay_advanced), stringResource(R.string.overlay_advanced_help),
 		OverlayKeys.ADVANCED, focus, viewModel::advancedSettings)
 	MenuItem(Icons.AutoMirrored.Filled.ExitToApp, stringResource(R.string.overlay_quit), stringResource(R.string.overlay_quit_help),
-		OverlayKeys.QUIT, focus, { viewModel.open(OverlayPage.Confirm(ConfirmAction.QUIT), OverlayKeys.QUIT) })
+		OverlayKeys.QUIT, focus, { viewModel.open(OverlayPage.Confirm(ConfirmAction.Quit), OverlayKeys.QUIT) })
 }
 
 /** "DF0: Game.adf · DF1: Empty": what the drives hold, on the Home entry. */
@@ -368,7 +393,15 @@ private fun DriveRow(
 					.focusRequester(focus.requester(key))
 					.dpadFocusIndicator()
 			) {
-				Text(stringResource(R.string.overlay_insert))
+				Text(
+					stringResource(
+						when {
+							path.isEmpty() -> R.string.overlay_insert
+							target == MediaTarget.Cd -> R.string.overlay_change_cd
+							else -> R.string.overlay_change_disk
+						}
+					)
+				)
 			}
 			// Never disabled: ejecting would take the focus from under a D-pad
 			// user's feet; an empty drive's Eject does nothing.
@@ -481,12 +514,12 @@ private fun StatesPage(viewModel: OverlayViewModel, focus: FocusTargets) {
 				Spacer(modifier = Modifier.height(4.dp))
 				Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
 					Button(
-						onClick = { viewModel.saveSlot(slot) },
+						onClick = { viewModel.requestSave(slot) },
 						// Busy ignores presses rather than disabling: a disabled
 						// button drops the D-pad focus.
 						modifier = Modifier
 							.weight(1f)
-							.focusRequester(focus.requester("save_$number"))
+							.focusRequester(focus.requester(OverlayKeys.save(number)))
 							.dpadFocusIndicator()
 					) {
 						Text(stringResource(R.string.overlay_save))
@@ -509,18 +542,49 @@ private fun StatesPage(viewModel: OverlayViewModel, focus: FocusTargets) {
 @Composable
 private fun ControlsPage(viewModel: OverlayViewModel, focus: FocusTargets) {
 	val schema = settingsSchema()
+	if (RemoteJoystick.isActive) {
+		Note(stringResource(R.string.overlay_remote_joystick))
+	}
+	val ports = OverlaySettings.offered(schema, OverlaySettings.PORTS)
+	ports.forEach { option ->
+		val state = viewModel.settings[option.id] ?: return@forEach
+		SchemaChoiceRow(
+			id = option.id,
+			value = state.value,
+			onSelect = { viewModel.change(option.id, it) },
+			enabled = state.available,
+			// The layer lists the devices connected now; the schema cannot.
+			choices = viewModel.portChoices[option.id],
+			modifier = Modifier
+				.padding(horizontal = 12.dp)
+				.focusRequester(focus.requester(option.id))
+		)
+	}
+	if (OverlaySettings.swappedPorts(viewModel.settings) != null) {
+		MenuItem(
+			icon = Icons.Filled.SwapVert,
+			title = stringResource(R.string.overlay_swap_ports),
+			subtitle = stringResource(R.string.overlay_swap_ports_help),
+			focusKey = OverlayKeys.SWAP_PORTS,
+			focus = focus,
+			onClick = viewModel::swapPorts
+		)
+	}
+	if (ports.isNotEmpty()) HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 	OverlaySettings.offered(schema, OverlaySettings.CONTROLS).forEach { option ->
 		val state = viewModel.settings[option.id] ?: return@forEach
-		SchemaSwitchRow(
-			id = option.id,
+		SwitchItem(
+			icon = if (option.id == OverlaySettings.ON_SCREEN_KEYBOARD) Icons.Filled.Keyboard else Icons.Filled.Gamepad,
+			title = option.label,
+			subtitle = option.help,
 			checked = state.value == "true",
 			onCheckedChange = { viewModel.change(option.id, if (it) "true" else "false") },
 			enabled = state.available,
-			modifier = Modifier.focusRequester(focus.requester(option.id))
+			focusKey = option.id,
+			focus = focus
 		)
 	}
 	val keyboardOn = viewModel.settings[OverlaySettings.ON_SCREEN_KEYBOARD]?.value == "true"
-	Spacer(modifier = Modifier.height(4.dp))
 	MenuItem(
 		icon = Icons.Filled.Keyboard,
 		title = stringResource(R.string.overlay_show_keyboard),
@@ -530,26 +594,89 @@ private fun ControlsPage(viewModel: OverlayViewModel, focus: FocusTargets) {
 		onClick = viewModel::showKeyboard,
 		enabled = keyboardOn
 	)
+	Note(stringResource(R.string.overlay_controls_kept))
+}
+
+/** An on/off menu entry, laid out as [MenuItem]: the whole row toggles (one D-pad stop). */
+@Composable
+private fun SwitchItem(
+	icon: ImageVector,
+	title: String,
+	subtitle: String?,
+	checked: Boolean,
+	onCheckedChange: (Boolean) -> Unit,
+	enabled: Boolean,
+	focusKey: String,
+	focus: FocusTargets
+) {
+	val color = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+	Row(
+		verticalAlignment = Alignment.CenterVertically,
+		modifier = Modifier
+			.fillMaxWidth()
+			.heightIn(min = 56.dp)
+			.focusRequester(focus.requester(focusKey))
+			// Before toggleable: onFocusChanged reports the focus target after it in the chain.
+			.dpadFocusIndicator()
+			.toggleable(value = checked, enabled = enabled, role = Role.Switch, onValueChange = onCheckedChange)
+			.padding(horizontal = 12.dp, vertical = 8.dp)
+	) {
+		Icon(icon, contentDescription = null, tint = color)
+		Spacer(modifier = Modifier.width(16.dp))
+		Column(modifier = Modifier.weight(1f)) {
+			Text(title, style = MaterialTheme.typography.titleMedium, color = color)
+			if (!subtitle.isNullOrBlank()) {
+				Text(
+					subtitle,
+					style = MaterialTheme.typography.bodySmall,
+					color = MaterialTheme.colorScheme.onSurfaceVariant,
+					maxLines = 2,
+					overflow = TextOverflow.Ellipsis
+				)
+			}
+		}
+		Spacer(modifier = Modifier.width(12.dp))
+		Switch(checked = checked, onCheckedChange = null, enabled = enabled)
+	}
+}
+
+/** A line of explanation on a page, inset as the entries' text. */
+@Composable
+private fun Note(text: String) {
+	Text(
+		text,
+		style = MaterialTheme.typography.bodySmall,
+		color = MaterialTheme.colorScheme.onSurfaceVariant,
+		modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+	)
 }
 
 @Composable
 private fun SettingsPage(viewModel: OverlayViewModel, focus: FocusTargets) {
 	val options = OverlaySettings.offered(settingsSchema(), OverlaySettings.SETTINGS)
+		// A machine with no CD drive has no CD audio to set.
+		.filter { it.id != OverlaySettings.CD_VOLUME || viewModel.status.hasCd }
 	if (options.isEmpty() || viewModel.settings.isEmpty()) {
 		Text(stringResource(R.string.overlay_settings_unavailable), modifier = Modifier.padding(8.dp))
 		return
 	}
+	Note(stringResource(R.string.overlay_settings_session))
 	options.forEach { option ->
 		val state = viewModel.settings[option.id] ?: return@forEach
-		val modifier = Modifier.focusRequester(focus.requester(option.id))
+		val modifier = Modifier
+			.padding(horizontal = 12.dp)
+			.focusRequester(focus.requester(option.id))
 		val change: (String) -> Unit = { viewModel.change(option.id, it) }
 		when {
-			option.type == SettingsSchema.TYPE_BOOL -> SchemaSwitchRow(
-				id = option.id,
+			option.type == SettingsSchema.TYPE_BOOL -> SwitchItem(
+				icon = Icons.Filled.Crop,
+				title = option.label,
+				subtitle = option.help,
 				checked = state.value == "true",
 				onCheckedChange = { change(if (it) "true" else "false") },
 				enabled = state.available,
-				modifier = modifier
+				focusKey = option.id,
+				focus = focus
 			)
 			option.type == SettingsSchema.TYPE_INT && option.min != null && option.max != null -> SchemaLevelRow(
 				id = option.id,
@@ -573,13 +700,17 @@ private fun SettingsPage(viewModel: OverlayViewModel, focus: FocusTargets) {
 
 @Composable
 private fun ConfirmPage(viewModel: OverlayViewModel, action: ConfirmAction, focus: FocusTargets) {
+	val format = remember { DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT) }
 	Text(
-		stringResource(
-			when (action) {
-				ConfirmAction.HARD_RESET -> R.string.overlay_confirm_hard_reset_text
-				ConfirmAction.QUIT -> R.string.overlay_confirm_quit_text
-			}
-		),
+		when (action) {
+			ConfirmAction.Reset -> stringResource(R.string.overlay_confirm_reset_text)
+			ConfirmAction.HardReset -> stringResource(R.string.overlay_confirm_hard_reset_text)
+			ConfirmAction.Quit -> stringResource(R.string.overlay_confirm_quit_text)
+			is ConfirmAction.Overwrite -> stringResource(
+				R.string.overlay_confirm_overwrite_text,
+				action.slot.savedAt?.let { format.format(Date(it)) }.orEmpty()
+			)
+		},
 		style = MaterialTheme.typography.bodyLarge,
 		modifier = Modifier.padding(8.dp)
 	)
@@ -596,12 +727,7 @@ private fun ConfirmPage(viewModel: OverlayViewModel, action: ConfirmAction, focu
 			Text(stringResource(R.string.overlay_cancel))
 		}
 		Button(
-			onClick = {
-				when (action) {
-					ConfirmAction.HARD_RESET -> viewModel.reset(hard = true)
-					ConfirmAction.QUIT -> viewModel.quit()
-				}
-			},
+			onClick = { viewModel.confirm(action) },
 			colors = ButtonDefaults.buttonColors(
 				containerColor = MaterialTheme.colorScheme.error,
 				contentColor = MaterialTheme.colorScheme.onError
@@ -613,8 +739,10 @@ private fun ConfirmPage(viewModel: OverlayViewModel, action: ConfirmAction, focu
 			Text(
 				stringResource(
 					when (action) {
-						ConfirmAction.HARD_RESET -> R.string.overlay_hard_reset
-						ConfirmAction.QUIT -> R.string.overlay_quit
+						ConfirmAction.Reset -> R.string.overlay_reset
+						ConfirmAction.HardReset -> R.string.overlay_hard_reset
+						ConfirmAction.Quit -> R.string.overlay_quit
+						is ConfirmAction.Overwrite -> R.string.overlay_overwrite
 					}
 				)
 			)
