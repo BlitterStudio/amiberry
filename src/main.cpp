@@ -1130,7 +1130,7 @@ void usage()
 		'\n';
 	std::cout << "\nAdditional options:" << '\n';
 	std::cout << "amiberry <file>             Auto-detect the type of file and use the default action for it." << '\n';
-	std::cout << "                            Supported file types are: .uae configs, .rp9 packages, WHDLoad archives (.lha, .lzh, .lzx), CD and disk images." << '\n';
+	std::cout << "                            Supported file types are: .uae configs, .rp9 packages, .lha WHDLoad games, CD and disk images." << '\n';
 	std::cout << " -0 <disk.adf>              Insert specified ADF image into emulated floppy drive 0-3." << '\n';
 	std::cout << " -1 <disk.adf>              " << '\n';
 	std::cout << " -2 <disk.adf>              " << '\n';
@@ -1297,8 +1297,10 @@ static TCHAR *parsetextpath (const TCHAR *s)
 	return s3;
 }
 
-// The archive types WHDBooter boots: it mounts the archive itself as the game
-// drive, and the archive filesystem reads LHA (.lha/.lzh) and LZX alike.
+// The archive types --autoload sends to WHDBooter: it mounts the archive itself
+// as the game drive, and the archive filesystem reads LHA (.lha/.lzh) and LZX
+// alike. --autoload names WHDLoad content explicitly; a positional .lzh/.lzx
+// may be a packed disk image instead.
 static bool is_whdload_archive_extension(const std::string& extension)
 {
 	return _tcsicmp(extension.c_str(), ".lha") == 0
@@ -1757,7 +1759,8 @@ static void parse_cmdline (int argc, TCHAR **argv)
 				else
 					cmdline_config_source_failed = true;
 			}
-			else if (is_whdload_archive_extension(txt2))
+			// Only .lha: an LZX- or LZH-packed disk image goes to DF0: below.
+			else if (_tcsicmp(txt2.c_str(), ".lha") == 0)
 			{
 				write_log("WHDLoad... %s\n", txt);
 				add_file_to_mru_list(lstMRUWhdloadList, std::string(txt));

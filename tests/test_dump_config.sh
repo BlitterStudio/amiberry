@@ -125,6 +125,13 @@ check "$work/lha.txt" '^joyport0=mouse$'
 check "$work/lha-ports.txt" '^joyport0=kbd2$'
 check "$work/lha-ports.txt" '^joyport1=kbd3$'
 
+# A CD32 title gets CD32 pads from WHDBooter; a port device chosen after
+# --autoload replaces the device but keeps the pad mode.
+printf 'not-really-an-archive' > "$work/game_CD32.lha"
+"$bin" --dump-config --autoload "$work/game_CD32.lha" -s joyport1=kbd3 > "$work/cd32-ports.txt" 2>/dev/null
+check "$work/cd32-ports.txt" '^joyport1=kbd3$'
+check "$work/cd32-ports.txt" '^joyport1mode=cd32joy$'
+
 # A config file that fails to load must fail the dump: exit non-zero, no
 # stdout, and a stderr explanation -- never a defaults dump masquerading as
 # the requested configuration.
