@@ -31,7 +31,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.blitterstudio.amiberry.ui.dpadFocusIndicator
-import com.blitterstudio.amiberry.ui.dpadVerticalMovesFocus
+import com.blitterstudio.amiberry.ui.dpadArrowsMoveFocus
 
 /** The alpha Material uses for disabled content. */
 internal const val DISABLED_ALPHA = 0.38f
@@ -106,13 +106,14 @@ fun SettingSwitchRow(
 	Column(
 		modifier = modifier
 			.fillMaxWidth()
+			// Before toggleable: onFocusChanged reports the focus target after it in the chain.
+			.dpadFocusIndicator()
 			.toggleable(
 				value = checked,
 				enabled = enabled,
 				role = Role.Switch,
 				onValueChange = onCheckedChange
 			)
-			.dpadFocusIndicator()
 			.padding(vertical = 4.dp)
 	) {
 		Row(
@@ -143,8 +144,8 @@ data class ChoiceItem<T>(val value: T, val label: String, val enabled: Boolean =
 /**
  * A pick-one row as a read-only dropdown. The current value reads as
  * [valueText]; [help] and, while unavailable, [reason] show under it.
- * D-pad Up/Down move to the neighbouring control rather than being
- * swallowed by the text field ([dpadVerticalMovesFocus] before menuAnchor).
+ * D-pad arrows move to the neighbouring control rather than being
+ * swallowed by the text field ([dpadArrowsMoveFocus] before menuAnchor).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -175,7 +176,7 @@ fun <T> SettingChoiceRow(
 				trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded && enabled) },
 				modifier = Modifier
 					.then(if (testTag != null) Modifier.testTag(testTag) else Modifier)
-					.dpadVerticalMovesFocus()
+					.dpadArrowsMoveFocus()
 					.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable, enabled)
 					.fillMaxWidth()
 			)

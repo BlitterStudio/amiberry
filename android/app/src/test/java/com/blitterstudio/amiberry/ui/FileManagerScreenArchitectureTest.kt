@@ -107,10 +107,6 @@ class FileManagerScreenArchitectureTest {
 		val screen = source()
 
 		assertTrue(
-			"Each file row should retain its own delete callback.",
-			screen.contains("onDelete = { viewModel.deleteFile(file) }")
-		)
-		assertTrue(
 			"Delete should continue to require local confirmation state.",
 			screen.contains("var showDeleteDialog by remember { mutableStateOf(false) }") &&
 				screen.contains("if (showDeleteDialog)") &&

@@ -58,6 +58,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -134,6 +138,22 @@ fun FileManagerScreen(viewModel: FileManagerViewModel = viewModel()) {
 	}
 
 	val files = filterFileManagerFiles(allFiles, effectiveSearchQuery)
+	// Up from Import returns to the list (the 2D search jumped over the list to the tabs),
+	// when a row there can take focus: the built-in AROS ROMs have no Delete button.
+	val fileListFocus = remember { FocusRequester() }
+	val listHasFocusableRows = remember(files) {
+		files.any { it.category != FileCategory.ROMS || ModelRomAvailability.romIdentity(it) != RomIdentity.BuiltInAros }
+	}
+	// Deleting a file takes its focused row away, which dropped D-pad focus to the
+	// navigation rail: once the list is shorter, focus returns to the list, or to Import.
+	val importFocus = remember { FocusRequester() }
+	var refocusBelowSize by remember { mutableStateOf<Int?>(null) }
+	LaunchedEffect(files.size, refocusBelowSize) {
+		val sizeBefore = refocusBelowSize ?: return@LaunchedEffect
+		if (files.size >= sizeBefore) return@LaunchedEffect
+		refocusBelowSize = null
+		if (listHasFocusableRows) fileListFocus.requestFocus() else importFocus.requestFocus()
+	}
 
 	val importResult by viewModel.importResult.collectAsState()
 	val isScanning by viewModel.isScanning.collectAsState()
@@ -219,7 +239,11 @@ fun FileManagerScreen(viewModel: FileManagerViewModel = viewModel()) {
 						}
 						openImportPicker()
 					},
-					modifier = Modifier.dpadFocusIndicator().semantics { if (showProgress) disabled() },
+					modifier = Modifier
+						.then(if (listHasFocusableRows) Modifier.focusProperties { up = fileListFocus } else Modifier)
+						.focusRequester(importFocus)
+						.dpadFocusIndicator()
+						.semantics { if (showProgress) disabled() },
 					icon = {
 						if (isImporting) {
 							CircularProgressIndicator(
@@ -391,7 +415,7 @@ fun FileManagerScreen(viewModel: FileManagerViewModel = viewModel()) {
 				}
 			} else {
 				LazyColumn(
-					modifier = Modifier.weight(1f),
+					modifier = Modifier.weight(1f).focusRequester(fileListFocus).focusRestorer(),
 					contentPadding = PaddingValues(
 						start = 16.dp,
 						top = 4.dp,
@@ -404,7 +428,10 @@ fun FileManagerScreen(viewModel: FileManagerViewModel = viewModel()) {
 						FileItem(
 							file = file,
 							deleteEnabled = !showProgress,
-							onDelete = { viewModel.deleteFile(file) }
+							onDelete = {
+								refocusBelowSize = files.size
+								viewModel.deleteFile(file)
+							}
 						)
 					}
 				}

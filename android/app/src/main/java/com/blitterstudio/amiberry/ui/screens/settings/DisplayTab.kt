@@ -39,7 +39,7 @@ import com.blitterstudio.amiberry.ui.components.settings.SchemaSwitchRow
 import com.blitterstudio.amiberry.ui.components.settings.SettingSwitchRow
 import com.blitterstudio.amiberry.ui.components.settings.SupportingText
 import com.blitterstudio.amiberry.ui.components.settings.settingText
-import com.blitterstudio.amiberry.ui.dpadVerticalMovesFocus
+import com.blitterstudio.amiberry.ui.dpadArrowsMoveFocus
 import com.blitterstudio.amiberry.ui.viewmodel.SettingsViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -99,7 +99,7 @@ fun DisplayTab(viewModel: SettingsViewModel) {
 						label = { Text(stringResource(R.string.settings_display_resolution_label)) },
 						trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = resExpanded) },
 						modifier = Modifier
-							.dpadVerticalMovesFocus()
+							.dpadArrowsMoveFocus()
 							.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
 							.fillMaxWidth()
 					)
@@ -189,7 +189,7 @@ fun DisplayTab(viewModel: SettingsViewModel) {
 							ExposedDropdownMenuDefaults.TrailingIcon(expanded = shaderExpanded)
 						},
 						modifier = Modifier
-							.dpadVerticalMovesFocus()
+							.dpadArrowsMoveFocus()
 							.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
 							.fillMaxWidth()
 					)
@@ -249,7 +249,7 @@ fun DisplayTab(viewModel: SettingsViewModel) {
 						label = { Text(stringResource(R.string.settings_display_theme_label)) },
 						trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = themeExpanded) },
 						modifier = Modifier
-							.dpadVerticalMovesFocus()
+							.dpadArrowsMoveFocus()
 							.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
 							.fillMaxWidth()
 					)

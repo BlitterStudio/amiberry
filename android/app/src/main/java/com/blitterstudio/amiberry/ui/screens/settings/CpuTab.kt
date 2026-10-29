@@ -31,7 +31,7 @@ import com.blitterstudio.amiberry.ui.components.settings.SchemaChoiceRow
 import com.blitterstudio.amiberry.ui.components.settings.SchemaNumberRow
 import com.blitterstudio.amiberry.ui.components.settings.SchemaSwitchRow
 import com.blitterstudio.amiberry.ui.components.settings.SettingsSection
-import com.blitterstudio.amiberry.ui.dpadVerticalMovesFocus
+import com.blitterstudio.amiberry.ui.dpadArrowsMoveFocus
 import com.blitterstudio.amiberry.ui.viewmodel.SettingsViewModel
 
 /** The JIT cache sizes offered in the size field's menu (stored KB; 0 turns the JIT off). */
@@ -67,7 +67,7 @@ fun CpuTab(viewModel: SettingsViewModel) {
 						readOnly = true,
 						trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = modelExpanded) },
 						modifier = Modifier
-							.dpadVerticalMovesFocus()
+							.dpadArrowsMoveFocus()
 							.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
 							.fillMaxWidth(),
 						supportingText = {

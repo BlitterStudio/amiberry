@@ -8,6 +8,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MoreVert
@@ -44,6 +48,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -81,8 +89,12 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import com.blitterstudio.amiberry.ui.dpadFocusable
 import com.blitterstudio.amiberry.ui.dpadFocusIndicator
+import com.blitterstudio.amiberry.ui.dpadArrowsMoveFocus
 import com.blitterstudio.amiberry.ui.dpadVerticalMovesFocus
+import com.blitterstudio.amiberry.ui.rememberDpadTypingGate
+import androidx.compose.ui.text.input.ImeAction
 import com.blitterstudio.amiberry.ui.findActivity
 import com.blitterstudio.amiberry.ui.launchImportGuarded
 import com.blitterstudio.amiberry.ui.launchGuarded
@@ -110,6 +122,9 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel(LocalContext.current
 	val availableRoms by viewModel.availableRoms.collectAsState()
 	val canStart = viewModel.settings.romFile.isNotBlank() || availableRoms.isNotEmpty()
 	val startGuard = LocalStartGuard.current
+	// Up from Start returns to the control last focused in the tab; the 2D search
+	// would jump over the scrolled tab to the Presets field above it.
+	val tabContentFocus = remember { FocusRequester() }
 	fun importResultMessage(result: FileManager.ImportResult): String {
 		val message = ImportFeedback.fromImportResult(result)
 		return context.getString(message.stringRes, message.argument)
@@ -147,6 +162,18 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel(LocalContext.current
 			?: context.getString(message.stringRes)
 	}
 
+	// Saving disables the focused Save button, which drops D-pad focus to the navigation
+	// rail; move it to the overflow button beside it instead.
+	val saveEnabled = viewModel.currentConfigName == null || viewModel.isDirty
+	var saveHadFocus by remember { mutableStateOf(false) }
+	val moreOptionsFocus = remember { FocusRequester() }
+	LaunchedEffect(saveEnabled) {
+		if (!saveEnabled && saveHadFocus) {
+			saveHadFocus = false
+			moreOptionsFocus.requestFocus()
+		}
+	}
+
 	Scaffold(
 		snackbarHost = { SnackbarHost(snackbarHostState) },
 		topBar = {
@@ -175,14 +202,17 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel(LocalContext.current
 								}
 							}
 						},
-						enabled = viewModel.currentConfigName == null || viewModel.isDirty,
-						modifier = Modifier.dpadFocusIndicator()
+						enabled = saveEnabled,
+						modifier = Modifier
+							// Only while enabled: losing focus by being disabled must not clear it.
+							.onFocusChanged { if (saveEnabled) saveHadFocus = it.isFocused }
+							.dpadFocusIndicator()
 					) {
 						Text(stringResource(R.string.action_save))
 					}
 					IconButton(
 						onClick = { showTopBarMenu = true },
-						modifier = Modifier.dpadFocusIndicator()
+						modifier = Modifier.focusRequester(moreOptionsFocus).dpadFocusIndicator()
 					) {
 						Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.more_options))
 					}
@@ -281,7 +311,9 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel(LocalContext.current
 						}
 					}
 				},
-				modifier = Modifier.dpadFocusIndicator(),
+				modifier = Modifier
+					.focusProperties { up = tabContentFocus }
+					.dpadFocusIndicator(),
 				icon = {
 					if (launchInProgress) {
 						CircularProgressIndicator(
@@ -390,6 +422,8 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel(LocalContext.current
 				modifier = Modifier
 					.weight(1f)
 					.fillMaxWidth()
+					.focusRequester(tabContentFocus)
+					.focusRestorer()
 			) {
 				when (SettingsTabs.tabFor(selectedTab)) {
 					SettingsTab.Cpu -> CpuTab(viewModel)
@@ -496,7 +530,7 @@ private fun SettingsPresetSelector(
 					label = { Text(stringResource(R.string.settings_presets_title)) },
 					trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
 					modifier = Modifier
-						.dpadVerticalMovesFocus()
+						.dpadArrowsMoveFocus()
 						.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
 						.fillMaxWidth()
 				)
@@ -649,7 +683,8 @@ private fun SettingsChangesDialog(
 					Text(stringResource(R.string.dialog_review_changes_empty))
 				} else {
 					changes.forEach { change ->
-						Column {
+						// Focusable rows: D-pad Up/Down scroll a list longer than the dialog.
+						Column(modifier = Modifier.fillMaxWidth().dpadFocusable().padding(4.dp)) {
 							Text(settingText(change.label), style = MaterialTheme.typography.labelLarge)
 							Text(
 								stringResource(
@@ -687,6 +722,9 @@ fun SaveConfigDialog(
 ) {
 	var name by remember { mutableStateOf(initialName) }
 	var description by remember { mutableStateOf(initialDescription) }
+	// D-pad Up/Down move between the fields and the buttons; OK on a field opens the IME.
+	val nameTyping = rememberDpadTypingGate()
+	val descriptionTyping = rememberDpadTypingGate()
 
 	AlertDialog(
 		onDismissRequest = onDismiss,
@@ -699,14 +737,22 @@ fun SaveConfigDialog(
 					value = name,
 					onValueChange = { name = it },
 					label = { Text(stringResource(R.string.label_configuration_name)) },
-					singleLine = true
+					singleLine = true,
+					readOnly = nameTyping.readOnly,
+					keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+					keyboardActions = KeyboardActions(onDone = { nameTyping.stopTyping() }),
+					modifier = Modifier.dpadVerticalMovesFocus().then(nameTyping.modifier)
 				)
 				Spacer(modifier = Modifier.height(8.dp))
 				OutlinedTextField(
 					value = description,
 					onValueChange = { description = it },
 					label = { Text(stringResource(R.string.label_configuration_description)) },
-					singleLine = true
+					singleLine = true,
+					readOnly = descriptionTyping.readOnly,
+					keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+					keyboardActions = KeyboardActions(onDone = { descriptionTyping.stopTyping() }),
+					modifier = Modifier.dpadVerticalMovesFocus().then(descriptionTyping.modifier)
 				)
 			}
 		},
