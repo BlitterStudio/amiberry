@@ -117,7 +117,8 @@ object QuickStartUiState {
 	/**
 	 * Every memory the machine has (installedMemory, as the Memory tab
 	 * counts it): chip, slow, Zorro II and Zorro III fast RAM by their short
-	 * names, every other board by the layer's label.
+	 * names, every other board by the layer's label. A board below 1 MB
+	 * (its *_size_k option) is named as its board.
 	 */
 	private fun buildMemorySummary(settings: EmulatorSettings): String {
 		val schema = SettingsSchema.current
@@ -128,7 +129,8 @@ object QuickStartUiState {
 				"bogomem_size" -> slowRamLabel(settings.slowRam)
 				else -> sizeLabel(memory.kb)
 			}
-			val name = SHORT_MEMORY_NAMES[memory.id] ?: schema.label(memory.id) ?: memory.id
+			val board = memory.id.removeSuffix("_k")
+			val name = SHORT_MEMORY_NAMES[board] ?: schema.label(board) ?: board
 			"$size $name"
 		}
 	}

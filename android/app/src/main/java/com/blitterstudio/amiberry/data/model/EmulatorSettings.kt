@@ -186,12 +186,17 @@ data class EmulatorSettings(
 	/**
 	 * [model]'s preset configuration [config] at the model's default level,
 	 * keeping these settings' Android controls and shader, and their
-	 * [options] of the input and on-screen groups the preset does not set: a
-	 * model change replaces the machine, not how the user plays.
+	 * [options] of the input and on-screen groups the user set: a model
+	 * change replaces the machine, not how the user plays. An option the new
+	 * preset sets, or one still at the value the current preset gave it (a
+	 * CD32's pad mode), goes with the machine.
 	 */
 	fun withModel(model: AmigaModel, config: Int, schema: SettingsSchema? = SettingsSchema.current): EmulatorSettings {
 		val machine = fromModel(model, config)
-		val played = options.filterKeys { id -> id !in machine.options && schema?.option(id)?.group in PLAY_GROUPS }
+		val preset = baseModel.levelValues(baseConfig, baseLevel)
+		val played = options.filter { (id, value) ->
+			id !in machine.options && preset[id] != value && schema?.option(id)?.group in PLAY_GROUPS
+		}
 		return machine.copy(
 			shader = shader,
 			joyport0 = joyport0,

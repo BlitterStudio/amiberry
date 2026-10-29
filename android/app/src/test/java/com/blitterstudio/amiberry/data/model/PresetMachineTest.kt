@@ -128,6 +128,11 @@ class PresetMachineTest {
 		)
 		assertEquals("40", snapshot.options["amiberry.vkbd_transparency"])
 		assertEquals("cd32joy", snapshot.options["joyport1mode"])
+
+		// Back to an A500: the CD32's pad mode was the preset's, not the user's.
+		val a500 = cd32.withModel(AmigaModel.A500, 0)
+		assertNull(a500.options["joyport1mode"])
+		assertEquals("40", a500.options["amiberry.vkbd_transparency"])
 	}
 
 	@Test
