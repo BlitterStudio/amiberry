@@ -323,7 +323,10 @@ JNIEXPORT void JNICALL OVERLAY_JNI(setRemoteJoystick)(JNIEnv*, jclass, jboolean 
 
 // A remote key (one REMOTE_* bit) while remote_joystick is on: true when it
 // moves the joystick. A press is not taken while the built-in GUI is open,
-// where the D-pad moves its focus; a release always is, so none sticks.
+// where the D-pad moves its focus: over a running emulation (gui_active) and
+// at startup without -G, which runs the GUI before any emulation and never
+// raises gui_active (gui_running covers both). A release always is taken, so
+// none sticks, and nothing is recorded for presses the GUI gets.
 JNIEXPORT jboolean JNICALL OVERLAY_JNI(remoteKey)(JNIEnv*, jclass, jint button, jboolean down)
 {
 	const unsigned bit = static_cast<unsigned>(button) & remote_all;
@@ -333,7 +336,7 @@ JNIEXPORT jboolean JNICALL OVERLAY_JNI(remoteKey)(JNIEnv*, jclass, jint button, 
 		remote_held.fetch_and(~bit);
 		return JNI_TRUE;
 	}
-	if (!remote_joystick.load() || gui_active > 0)
+	if (!remote_joystick.load() || gui_active > 0 || gui_running)
 		return JNI_FALSE;
 	remote_held.fetch_or(bit);
 	remote_taps.fetch_or(bit);

@@ -3027,8 +3027,9 @@ void run_gui()
 				| ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings)) {
 				ImGui::TextUnformatted(question);
 				ImGui::Spacing();
+				// Escape, Back or a gamepad's B cancels, as Cancel does.
 				bool answered = AmigaButton(ICON_FA_XMARK " Cancel", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT))
-					|| ImGui::IsKeyPressed(ImGuiKey_Escape);
+					|| ImGui::IsKeyPressed(ImGuiKey_Escape) || ImGui::IsKeyPressed(ImGuiKey_GamepadFaceRight);
 				// Cancel takes the cursor, so a second stray OK changes nothing.
 				ImGui::SetItemDefaultFocus();
 				ImGui::SameLine();
