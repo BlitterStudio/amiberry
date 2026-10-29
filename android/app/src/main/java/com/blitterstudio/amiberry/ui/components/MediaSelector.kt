@@ -32,6 +32,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -62,6 +64,7 @@ import com.blitterstudio.amiberry.ui.dpadFocusIndicator
  * @param onImport Called when user taps the import button
  * @param importInProgress Disables the import button and shows busy feedback during a direct import
  * @param displayName Optional transform for item display names (default: AmigaFile.name)
+ * @param enabled False shows the selection disabled (nothing to insert into yet); Import stays available
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -79,8 +82,11 @@ fun MediaSelector(
 	onImport: () -> Unit,
 	importInProgress: Boolean = false,
 	displayName: (AmigaFile) -> String = { it.name },
-	modifier: Modifier = Modifier
+	modifier: Modifier = Modifier,
+	enabled: Boolean = true
 ) {
+	val fieldFocus = remember { FocusRequester() }
+	val importFocus = remember { FocusRequester() }
 	OutlinedCard(modifier = modifier.fillMaxWidth()) {
 		Column(modifier = Modifier.padding(16.dp)) {
 			Row(
@@ -96,7 +102,7 @@ fun MediaSelector(
 				TextButton(
 					onClick = onImport,
 					enabled = !importInProgress,
-					modifier = Modifier.dpadFocusIndicator()
+					modifier = Modifier.focusRequester(importFocus).dpadFocusIndicator()
 				) {
 					if (importInProgress) {
 						CircularProgressIndicator(
@@ -137,7 +143,7 @@ fun MediaSelector(
 				) {
 					ExposedDropdownMenuBox(
 						expanded = expanded,
-						onExpandedChange = { expanded = it },
+						onExpandedChange = { expanded = it && enabled },
 						modifier = Modifier.weight(1f)
 					) {
 						OutlinedTextField(
@@ -146,10 +152,12 @@ fun MediaSelector(
 								?: placeholder,
 							onValueChange = {},
 							readOnly = true,
+							enabled = enabled,
 							trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
 							modifier = Modifier
+								.focusRequester(fieldFocus)
 								.dpadArrowsMoveFocus()
-								.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
+								.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable, enabled)
 								.fillMaxWidth()
 						)
 						ExposedDropdownMenu(
@@ -177,9 +185,13 @@ fun MediaSelector(
 						}
 					}
 
-					if (selectedPath.isNotBlank()) {
+					if (enabled && selectedPath.isNotBlank()) {
 						IconButton(
-							onClick = onEject,
+							onClick = {
+								onEject()
+								// The button leaves with the medium: keep D-pad focus in the card.
+								if (items.isNotEmpty()) fieldFocus.requestFocus() else importFocus.requestFocus()
+							},
 							modifier = Modifier.dpadFocusIndicator()
 						) {
 							Icon(

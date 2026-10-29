@@ -1,5 +1,7 @@
 package com.blitterstudio.amiberry.ui.screens
 
+import com.blitterstudio.amiberry.R
+import com.blitterstudio.amiberry.data.WhdLoadTitles
 import com.blitterstudio.amiberry.data.model.AmigaFile
 import com.blitterstudio.amiberry.data.model.AmigaModel
 import com.blitterstudio.amiberry.data.model.EmulatorSettings
@@ -9,6 +11,10 @@ import com.blitterstudio.amiberry.data.model.RomIdentity
 import com.blitterstudio.amiberry.data.model.SettingText
 import com.blitterstudio.amiberry.data.model.SettingsSchema
 import com.blitterstudio.amiberry.data.model.installedMemory
+import java.io.File
+
+/** A machine option changed from the preset: the layer's label and the value it has now. */
+data class PresetEdit(val label: String, val value: SettingText)
 
 enum class QuickStartLaunchMode {
 	WHDLOAD,
@@ -32,7 +38,13 @@ data class QuickStartEffectiveSummary(
 	/** The ROM the launch boots: a Kickstart by name, the built-in AROS, or null without one. */
 	val rom: RomIdentity? = null,
 	/** The ROM's file name, for one the launcher cannot identify. */
-	val romFileName: String = ""
+	val romFileName: String = "",
+	/**
+	 * The settings name a Kickstart file that is gone (deleted in Files): the emulator
+	 * falls back to AROS where the model can boot it ([romFallsBackToAros]).
+	 */
+	val romMissing: Boolean = false,
+	val romFallsBackToAros: Boolean = false
 )
 
 /**
@@ -67,15 +79,39 @@ object QuickStartUiState {
 	}
 
 	/**
+	 * The launch mode Quick Start opens in until the user picks one: Recent once something
+	 * was launched, WHDLoad with games installed, else Disk (an ADF is the common first try).
+	 */
+	fun defaultLaunchMode(hasRecent: Boolean, hasWhdloadGames: Boolean): QuickStartLaunchMode = when {
+		hasRecent -> QuickStartLaunchMode.RECENT
+		hasWhdloadGames -> QuickStartLaunchMode.WHDLOAD
+		else -> QuickStartLaunchMode.DISK
+	}
+
+	/**
 	 * The summary of what a Disk, CD or Recent launch starts; its ROM row is the
-	 * settings' own ROM, which the launch boots. WHDLoad: [buildWhdLoadSummary].
+	 * settings' own ROM, which the launch boots (with none named, the one the model's
+	 * ROM selection picks). WHDLoad: [buildWhdLoadSummary].
 	 */
 	fun buildEffectiveSummary(
 		settings: EmulatorSettings,
 		launchMode: QuickStartLaunchMode,
 		selectedModelAvailable: Boolean,
-		roms: List<AmigaFile> = emptyList()
+		roms: List<AmigaFile> = emptyList(),
+		fileExists: (String) -> Boolean = { File(it).exists() }
 	): QuickStartEffectiveSummary {
+		val romFile = settings.romFile
+		val romMissing = selectedModelAvailable && romFile.isNotBlank() &&
+			!ModelRomAvailability.isBuiltInArosRom(romFile) &&
+			roms.none { it.path == romFile } && !fileExists(romFile)
+		val rom = when {
+			!selectedModelAvailable || romMissing -> null
+			romFile.isBlank() -> ModelRomAvailability.selectRomsForModel(settings.baseModel, roms).let { selected ->
+				selected.kick?.let(ModelRomAvailability::romIdentity)
+					?: RomIdentity.BuiltInAros.takeIf { selected.aros }
+			}
+			else -> romIdentity(romFile, roms)
+		}
 		return QuickStartEffectiveSummary(
 			model = if (selectedModelAvailable) settings.baseModel.displayName else "No compatible model",
 			cpu = buildCpuSummary(settings),
@@ -83,9 +119,77 @@ object QuickStartUiState {
 			memory = buildMemorySummary(settings),
 			media = buildMediaSummary(settings, launchMode, selectedWhdloadName = null),
 			controls = buildControlsSummary(settings),
-			rom = if (selectedModelAvailable) romIdentity(settings.romFile, roms) else null,
-			romFileName = mediaName(settings.romFile).orEmpty()
+			rom = rom,
+			romFileName = mediaName(romFile).orEmpty(),
+			romMissing = romMissing,
+			romFallsBackToAros = romMissing && ModelRomAvailability.canBootAros(settings.baseModel) &&
+				ModelRomAvailability.hasBuiltInAros(roms)
 		)
+	}
+
+	/**
+	 * The ROMs [model] is built with, by the emulator's names ("KS ROM v1.3
+	 * (A500,A1000,A2000)"): the first ROM set of its first configuration, the
+	 * emulator's first choice of each.
+	 */
+	fun romsNeeded(model: AmigaModel, schema: SettingsSchema? = SettingsSchema.current): List<String> {
+		val set = model.configs.first().romSets.firstOrNull() ?: return emptyList()
+		return set.mapNotNull { request -> request.ids.firstOrNull()?.let { schema?.roms?.get(it)?.name } }
+	}
+
+	/** One spec line per model, from its preset: "68000 · OCS + OCS Denise · 512 KB Chip, 512 KB Slow". */
+	fun modelSpec(model: AmigaModel): String {
+		val preset = EmulatorSettings.fromModel(model)
+		return listOf(preset.cpuModel.toString(), buildChipsetSummary(preset), buildMemorySummary(preset))
+			.filter { it.isNotBlank() }
+			.joinToString(" · ")
+	}
+
+	/**
+	 * The machine options that differ from the preset [settings] were made from (its
+	 * model, configuration and compatibility level), by the layer's labels and value
+	 * names, in the layer's order; empty when they are the preset's. Controls, display,
+	 * sound and media are left out.
+	 */
+	fun presetEdits(settings: EmulatorSettings, schema: SettingsSchema? = SettingsSchema.current): List<PresetEdit> {
+		if (schema == null) return emptyList()
+		val preset = EmulatorSettings.fromModel(settings.baseModel, settings.baseConfig, settings.baseLevel)
+		return schema.options.mapNotNull { (id, option) ->
+			if (option.group !in MACHINE_GROUPS) return@mapNotNull null
+			val value = settings.optionValue(id) ?: option.defaultOnAndroid
+			if (value == (preset.optionValue(id) ?: option.defaultOnAndroid)) return@mapNotNull null
+			val text = if (option.showsAsSwitch(value)) {
+				SettingText.Resource(
+					if (value == "true" || value == "1") R.string.settings_value_on else R.string.settings_value_off
+				)
+			} else {
+				SettingText.Plain(option.valueText(value, value, value))
+			}
+			PresetEdit(option.label, text)
+		}
+	}
+
+	/** The settings groups that describe the machine (see [presetEdits]). */
+	private val MACHINE_GROUPS = setOf(
+		"cpu", "mmu", "fpu", "cpu_speed", "ppc", "jit", "chipset", "adv_chipset",
+		"memory", "rtg", "accelerator", "expansions"
+	)
+
+	/**
+	 * The WHDLoad picker's list: the games played recently first (most recent first, as
+	 * [recentPaths] lists them), then the rest by title. [query] keeps the games whose
+	 * title or file name contains every word of it.
+	 */
+	fun whdloadGameList(games: List<AmigaFile>, recentPaths: List<String>, query: String): List<AmigaFile> {
+		val words = query.trim().lowercase().split(Regex("\\s+")).filter { it.isNotEmpty() }
+		val matching = games.filter { game ->
+			val haystack = "${WhdLoadTitles.clean(game.name)} ${game.name}".lowercase()
+			words.all { it in haystack }
+		}
+		val recency = recentPaths.withIndex().associate { (index, path) -> path to index }
+		val (recent, others) = matching.partition { it.path in recency }
+		return recent.sortedBy { recency.getValue(it.path) } +
+			others.sortedBy { WhdLoadTitles.clean(it.name).lowercase() }
 	}
 
 	/**
@@ -227,7 +331,7 @@ object QuickStartUiState {
 	): String {
 		return when (launchMode) {
 			QuickStartLaunchMode.WHDLOAD -> {
-				val gameName = selectedWhdloadName?.let(::stripKnownArchiveSuffix).orEmpty()
+				val gameName = selectedWhdloadName?.let(WhdLoadTitles::clean).orEmpty()
 				if (gameName.isBlank()) "No WHDLoad game selected" else "WHDLoad: $gameName"
 			}
 			QuickStartLaunchMode.DISK -> {
@@ -263,9 +367,4 @@ object QuickStartUiState {
 
 	private fun mediaName(path: String): String? =
 		path.substringAfterLast('/').substringAfterLast('\\').takeIf { it.isNotBlank() }
-
-	private fun stripKnownArchiveSuffix(name: String): String =
-		name.removeSuffix(".lha")
-			.removeSuffix(".lzx")
-			.removeSuffix(".lzh")
 }

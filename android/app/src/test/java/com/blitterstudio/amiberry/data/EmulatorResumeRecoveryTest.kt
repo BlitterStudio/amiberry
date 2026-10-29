@@ -112,4 +112,20 @@ class EmulatorResumeRecoveryTest {
 		assertFalse(decision.clearSessionMarker)
 		assertFalse(decision.keepLaunchTracked)
 	}
+
+	@Test
+	fun `a session marker is no crash while the emulator process still runs`() {
+		assertFalse(EmulatorResumeRecovery.shouldCheckForCrash(wasCleanExit = false, emulatorRunning = true))
+		assertTrue(EmulatorResumeRecovery.shouldCheckForCrash(wasCleanExit = false, emulatorRunning = false))
+		assertFalse(EmulatorResumeRecovery.shouldCheckForCrash(wasCleanExit = true, emulatorRunning = false))
+	}
+
+	@Test
+	fun `a second launcher over a running emulator steps aside, the first one and recreations do not`() {
+		assertTrue(EmulatorResumeRecovery.isDuplicateLauncher(isTaskRoot = false, restoring = false, emulatorRunning = true))
+		assertFalse(EmulatorResumeRecovery.isDuplicateLauncher(isTaskRoot = true, restoring = false, emulatorRunning = true))
+		assertFalse(EmulatorResumeRecovery.isDuplicateLauncher(isTaskRoot = false, restoring = true, emulatorRunning = true))
+		// "Open with" from a file manager's task, nothing emulating: a normal launch.
+		assertFalse(EmulatorResumeRecovery.isDuplicateLauncher(isTaskRoot = false, restoring = false, emulatorRunning = false))
+	}
 }
