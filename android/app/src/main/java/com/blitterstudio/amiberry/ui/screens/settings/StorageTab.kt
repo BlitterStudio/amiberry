@@ -121,7 +121,7 @@ fun StorageTab(
 						onClear = { viewModel.updateSettings { s -> s.copy(romFile = "") } },
 						emptyLabel = stringResource(R.string.settings_storage_rom_automatic),
 						extraPaths = if (ModelRomAvailability.hasBuiltInAros(roms)) {
-							listOf(ModelRomAvailability.AROS_ROM_FILE)
+							listOf(ModelRomAvailability.arosRomFile)
 						} else {
 							emptyList()
 						},
@@ -307,7 +307,7 @@ internal fun shouldShowStorageFileDropdown(files: List<AmigaFile>, selectedPath:
 /**
  * The installed ROMs the Kickstart list offers as files. The two AROS files
  * are left out: neither boots on its own as a Kickstart, so AROS is offered
- * once as [ModelRomAvailability.AROS_ROM_FILE] instead.
+ * once as [ModelRomAvailability.arosRomFile] instead.
  */
 internal fun kickstartRomFiles(roms: List<AmigaFile>): List<AmigaFile> =
 	roms.filter { ModelRomAvailability.romIdentity(it) !is RomIdentity.BuiltInAros }

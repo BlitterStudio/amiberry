@@ -574,49 +574,29 @@ class EmulatorSettingsTest {
 		}
 	}
 
-	// --- Changes that bring others with them, as in the emulator ---
+	// --- Changes that bring others with them, from the schema's transition table ---
 
 	@Test
-	fun `a 68030 starts 32-bit and keeps 24-bit addressing when chosen`() {
-		val on68030 = EmulatorSettings(cpuModel = 68020, address24Bit = true).withCpuModel(68030)
-		assertFalse(on68030.address24Bit)
-
-		val constrained = EmulatorSettingsConstraints.apply(on68030.copy(address24Bit = true), hasTouchScreen = true)
-		assertTrue(constrained.address24Bit)
-	}
-
-	@Test
-	fun `a 68000 is 24-bit without JIT and FPU in compatible mode`() {
-		val s = EmulatorSettings(cpuModel = 68030, address24Bit = false, jitCacheSize = 8192, fpuModel = 68882)
-			.withCpuModel(68000)
-
-		assertTrue(s.address24Bit)
-		assertEquals(0, s.jitCacheSize)
-		assertEquals(0, s.fpuModel)
-	}
-
-	@Test
-	fun `choosing cycle-exact turns off immediate blits and the JIT`() {
-		val s = EmulatorSettings(
-			cpuModel = 68020, address24Bit = false, cpuSpeed = "max", cpuCompatible = false,
-			immediateBlits = true, jitCacheSize = 8192
-		).withCycleExact("memory")
-
-		assertEquals("memory", s.cycleExact)
-		assertEquals("real", s.cpuSpeed)
-		assertTrue(s.cpuCompatible)
-		assertFalse(s.immediateBlits)
-		assertEquals(0, s.jitCacheSize)
-		// A 68000 has no DMA-only mode.
-		assertEquals("true", EmulatorSettings(cpuModel = 68000).withCycleExact("memory").cycleExact)
-	}
-
-	@Test
-	fun `turning the JIT on leaves cycle-exact mode`() {
+	fun `turning the JIT on leaves cycle-exact mode and keeps the cache size chosen`() {
 		val s = EmulatorSettings(cpuModel = 68020, address24Bit = false, cycleExact = "true", jitFpu = false)
-			.withJitCacheSize(8192)
+			.withOption("cachesize", "4096")
 
+		assertEquals(4096, s.jitCacheSize)
 		assertEquals("false", s.cycleExact)
 		assertTrue(s.jitFpu)
+	}
+
+	@Test
+	fun `a value the emulator refuses leaves the settings as they are`() {
+		// A 68000 has no DMA-only cycle-exact mode.
+		val s = EmulatorSettings(cpuModel = 68000, cycleExact = "false")
+		assertEquals(s, s.withOption("cycle_exact", "memory"))
+	}
+
+	@Test
+	fun `new settings get the Android emulator's sound defaults`() {
+		val s = EmulatorSettings()
+		assertEquals(48000, s.soundFreq)
+		assertEquals(8192, s.soundBuffer)
 	}
 }

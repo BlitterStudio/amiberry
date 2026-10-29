@@ -70,7 +70,7 @@ fun MemoryTab(viewModel: SettingsViewModel) {
 			SchemaChoiceRow(
 				id = "z3mem_size",
 				value = settings.z3Ram.toString(),
-				enabled = SettingsControlAvailability.isZ3MemoryAvailable(settings),
+				enabled = SettingsControlAvailability.isAvailable(settings, "z3mem_size"),
 				onSelect = { value -> value.toIntOrNull()?.let { size -> viewModel.updateSettings { s -> s.copy(z3Ram = size) } } }
 			)
 		}

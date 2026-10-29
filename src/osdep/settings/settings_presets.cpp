@@ -236,9 +236,14 @@ const std::vector<amiberry_settings_preset>& completed_presets()
 
 } // namespace
 
+bool is_arcade_model(int model)
+{
+	return model == 10 || model == 11;
+}
+
 int arcade_game_config(int model)
 {
-	if (model != 10 && model != 11)
+	if (!is_arcade_model(model))
 		return -1;
 	romlist** list = getarcadiaroms(model == 10 ? 1 : 0);
 	int found = -1;
@@ -265,7 +270,7 @@ void apply_preset(uae_prefs& p, int model, int config, int compatibility, bool p
 		compatibility = max_compa;
 	// The arcade boards' one configuration is their first installed game;
 	// with none, the builder loads no game (no index matches -1).
-	if (model == 10 || model == 11)
+	if (is_arcade_model(model))
 		config = arcade_game_config(model);
 
 	if (preview)
@@ -406,7 +411,7 @@ bool machine_preset_rom_installed(const char* id, int config)
 	if (!scratch)
 		return false;
 	std::memcpy(static_cast<void*>(scratch), static_cast<const void*>(&changed_prefs), sizeof(uae_prefs));
-	const bool arcade = preset->model == 10 || preset->model == 11;
+	const bool arcade = is_arcade_model(preset->model);
 	const int game = arcade ? arcade_game_config(preset->model) : config;
 	bool installed = (!arcade || game >= 0) && built_in_prefs_preview(scratch, preset->model, game, 1) != 0;
 	std::free(scratch);

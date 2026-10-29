@@ -2,8 +2,9 @@
 # Regenerates android/app/src/main/settings/settings_schema.json from a
 # desktop Amiberry build: the options the launcher writes (listed in
 # settings_schema_options.txt next to this script), the machine presets and
-# the resolution tables of the shared settings layer. Run it after changing the layer
-# or the list; tests/test_settings_schema.sh fails while the file is stale.
+# the resolution, availability and transition tables of the shared settings
+# layer. Run it after changing the layer or the list;
+# tests/test_settings_schema.sh fails while the file is stale.
 #
 # Usage: android/scripts/update_settings_schema.sh <path-to-amiberry>
 set -eu

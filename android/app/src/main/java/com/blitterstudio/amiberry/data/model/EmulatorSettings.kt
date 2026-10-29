@@ -116,76 +116,71 @@ data class EmulatorSettings(
 		get() = cycleExact != "false"
 
 	/**
-	 * Another CPU, with the changes the emulator's CPU setting makes with it
-	 * (set_cpu_model in src/osdep/settings/settings_cpu.cpp): a 68000/010 is
-	 * 24-bit and has no JIT, and keeps an external FPU only outside More
-	 * compatible and cycle-exact modes; a 68030 starts 32-bit; a 68040/060
-	 * is 32-bit and uses its internal FPU; below a 68040 an internal FPU
-	 * becomes a 68881.
+	 * The settings as the schema's state tables key them: .uae values by
+	 * option ID, the JIT as off or on (the tables' one cache size stands
+	 * for every enabled size).
 	 */
-	fun withCpuModel(cpu: Int): EmulatorSettings {
-		if (cpu == cpuModel) return this
-		val externalFpu = if (fpuModel != 0 && fpuModel != 68882) 68881 else fpuModel
-		return when {
-			cpu <= 68010 -> copy(
-				cpuModel = cpu,
-				address24Bit = true,
-				jitCacheSize = 0,
-				fpuModel = if (cpuCompatible || isCycleExact) 0 else externalFpu
-			)
-			cpu <= 68030 -> copy(
-				cpuModel = cpu,
-				address24Bit = if (cpu == 68030) false else address24Bit,
-				fpuModel = externalFpu
-			)
-			else -> copy(
-				cpuModel = cpu,
-				address24Bit = false,
-				fpuModel = if (fpuModel != 0) cpu else 0
-			)
-		}
-	}
+	fun schemaState(): Map<String, String> = mapOf(
+		"cpu_model" to cpuModel.toString(),
+		"cpu_24bit_addressing" to address24Bit.toString(),
+		"cycle_exact" to cycleExact,
+		"cachesize" to jitState(jitCacheSize),
+		"cpu_compatible" to cpuCompatible.toString(),
+		"fpu_model" to fpuModel.toString(),
+		"sound_output" to soundOutput,
+		"floppy0sound" to floppy0Sound.toString(),
+		"floppy1sound" to floppy1Sound.toString(),
+		"floppy2sound" to floppy2Sound.toString(),
+		"floppy3sound" to floppy3Sound.toString()
+	)
 
 	/**
-	 * Another cycle-exact mode, with the changes the emulator's setting makes
-	 * with it (set_cycle_exact in src/osdep/settings/settings_chipset.cpp): a
-	 * 68000/010 has no DMA-only mode, so it runs fully cycle-exact; up to a
-	 * 68030 the CPU runs at real speed in More compatible mode; immediate
-	 * blits and the JIT are turned off.
+	 * [id] set to [value] (.uae spelling) with the changes the emulator's
+	 * setting makes with it, as the schema's transition table recorded them
+	 * from the settings layer's setters (a 68000 drops the JIT, cycle-exact
+	 * turns immediate blits off). A value the layer refuses in this state
+	 * leaves the settings as they are; without an answer in the table only
+	 * [id] changes.
 	 */
-	fun withCycleExact(value: String): EmulatorSettings {
-		if (value == "false") return copy(cycleExact = value)
-		val slowCpu = cpuModel <= 68030
-		return copy(
-			cycleExact = if (cpuModel < 68020) "true" else value,
-			cpuSpeed = if (slowCpu) "real" else cpuSpeed,
-			cpuCompatible = cpuCompatible || slowCpu,
-			immediateBlits = false,
-			jitCacheSize = 0
-		)
+	fun withOption(id: String, value: String, schema: SettingsSchema? = SettingsSchema.current): EmulatorSettings {
+		val stateValue = if (id == "cachesize") jitState(value.toIntOrNull() ?: return this) else value
+		val transition = schema?.transitions?.of(schemaState(), id, stateValue)
+		if (transition?.refused == true) return this
+		var result = withField(id, value) ?: return this
+		transition?.writes?.forEach { (field, written) ->
+			// An enabled JIT keeps the cache size chosen.
+			if (field == "cachesize" && written != "0" && result.jitCacheSize > 0) return@forEach
+			result = result.withField(field, written) ?: result
+		}
+		return result
 	}
 
-	/**
-	 * Another JIT cache size; turning the JIT on leaves cycle-exact mode and
-	 * turns the JIT FPU on, as the emulator's setting does (set_cachesize in
-	 * src/osdep/settings/settings_cpu.cpp; the launcher has no softfloat FPU).
-	 */
-	fun withJitCacheSize(size: Int): EmulatorSettings {
-		val enabling = jitCacheSize == 0 && size > 0
-		return if (enabling) {
-			copy(jitCacheSize = size, cycleExact = "false", jitFpu = true)
-		} else {
-			copy(jitCacheSize = size)
-		}
+	/** [id] stored as [value], for the options [withOption] edits and the fields setting them writes. */
+	private fun withField(id: String, value: String): EmulatorSettings? = when (id) {
+		"cpu_model" -> value.toIntOrNull()?.let { copy(cpuModel = it) }
+		"cpu_24bit_addressing" -> copy(address24Bit = value == "true")
+		"cycle_exact" -> copy(cycleExact = value)
+		"cachesize" -> value.toIntOrNull()?.let { copy(jitCacheSize = it) }
+		"cpu_compatible" -> copy(cpuCompatible = value == "true")
+		"fpu_model" -> value.toIntOrNull()?.let { copy(fpuModel = it) }
+		"cpu_speed" -> copy(cpuSpeed = value)
+		"immediate_blits" -> copy(immediateBlits = value == "true")
+		"compfpu" -> copy(jitFpu = value == "true")
+		else -> null
 	}
 
 	companion object {
+		/** The JIT as the schema's tables enumerate it: "0" off, their one cache size on. */
+		internal fun jitState(cacheSize: Int): String = if (cacheSize > 0) JIT_ON else "0"
+
+		private const val JIT_ON = "8192"
+
 		fun onScreenKeyboardAvailable(button: Boolean, toggle: String?): Boolean =
 			button || toggle != ""
 
-		/** The schema's default for an integer option, or [fallback] without one. */
+		/** The Android emulator's default for an integer option (the schema's), or [fallback] without a schema. */
 		internal fun schemaInt(id: String, fallback: Int): Int =
-			SettingsSchema.current?.options?.get(id)?.default?.toIntOrNull() ?: fallback
+			SettingsSchema.current?.options?.get(id)?.defaultOnAndroid?.toIntOrNull() ?: fallback
 
 		/**
 		 * The settings one of a model's preset configurations sets (the
@@ -241,9 +236,7 @@ data class EmulatorSettings(
 		val z3RamOptions: List<Pair<Int, String>> get() = intChoices("z3mem_size")
 		val cpuModels: List<Int> get() = intChoices("cpu_model").map { it.first }
 		val chipsetOptions: List<Pair<String, String>> get() = choices("chipset")
-		val soundOutputOptions: List<Pair<String, String>> get() = choices("sound_output")
 		val soundChannelOptions: List<Pair<String, String>> get() = choices("sound_channels")
-		val cycleExactOptions: List<Pair<String, String>> get() = choices("cycle_exact")
 		val floppyTypeOptions: List<Pair<Int, String>> get() = intChoices("floppy0type")
 		/** The pointer speeds the emulator offers for the left stick as mouse. */
 		val analogMouseSpeeds: List<Int> get() = intChoices("input.joymouse_speed_analog").map { it.first }

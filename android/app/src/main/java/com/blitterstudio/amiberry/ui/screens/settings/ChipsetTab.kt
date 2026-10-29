@@ -36,8 +36,8 @@ fun ChipsetTab(viewModel: SettingsViewModel) {
 			SchemaChoiceRow(
 				id = "cycle_exact",
 				value = settings.cycleExact,
-				values = SettingsControlAvailability.cycleExactChoiceValues(settings),
-				onSelect = { value -> viewModel.updateSettings { s -> s.withCycleExact(value) } }
+				values = SettingsControlAvailability.choiceValues(settings, "cycle_exact"),
+				onSelect = { value -> viewModel.updateSettings { s -> s.withOption("cycle_exact", value) } }
 			)
 			SchemaSwitchRow(
 				id = "immediate_blits",

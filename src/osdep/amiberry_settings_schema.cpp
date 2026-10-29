@@ -2,8 +2,9 @@
 // cannot call it (the Android launcher runs in another process than the
 // emulator and bundles this file instead). Everything in it is generated
 // from the layer: option descriptors, the machine presets and what they
-// configure, and how the layer resolves the CPU and chipset combinations a
-// front end lets the user pick.
+// configure, how the layer resolves the CPU, chipset, memory and sound
+// combinations a front end lets the user pick, which options and choices
+// it offers in each state, and what setting an option changes with it.
 //
 // The output is deterministic (no host paths, devices or ROM scans), so a
 // committed copy can be checked for freshness against the binary.
@@ -11,6 +12,8 @@
 #include "sysconfig.h"
 #include "sysdeps.h"
 #include "options.h"
+#include "cpuboard.h"
+#include "memory.h"
 #include "rommgr.h"
 
 #include "settings/amiberry_settings.h"
@@ -19,6 +22,7 @@
 #include <algorithm>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <fstream>
 #include <set>
 #include <string>
@@ -158,6 +162,14 @@ void options(std::string& out, const std::set<std::string>* only)
 		json_string(out, apply_name(d->apply));
 		out += ",\"default\":";
 		json_string(out, d->default_value);
+		// The Android build's default where it differs (this file is made on
+		// a desktop build).
+		const amiberry_settings::definition* definition = amiberry_settings::find(d->id);
+		if (definition && definition->android_default
+			&& std::strcmp(definition->android_default, d->default_value ? d->default_value : "") != 0) {
+			out += ",\"android_default\":";
+			json_string(out, definition->android_default);
+		}
 		if (d->type == AMIBERRY_SETTING_INT || d->type == AMIBERRY_SETTING_REAL) {
 			out += ",\"min\":";
 			json_number(out, d->min);
@@ -255,7 +267,7 @@ std::vector<std::vector<std::vector<int>>> preset_rom_sets(const char* id, int c
 		return sets;
 	}
 	std::vector<int> games;
-	const bool arcade = model == 10 || model == 11;
+	const bool arcade = amiberry_settings::is_arcade_model(model);
 	if (arcade) {
 		romlist** list = getarcadiaroms(model == 10 ? 1 : 0);
 		for (int i = 0; list && list[i]; i++) {
@@ -325,6 +337,9 @@ bool presets(std::string& out)
 		json_string(out, preset->label);
 		out += ",\"compatibility_max\":";
 		json_number(out, preset->compatibility_max);
+		// The arcade boards: their configuration is the first installed game.
+		if (amiberry_settings::is_arcade_model(amiberry_settings::preset_model_index(preset->id)))
+			out += ",\"arcade\":true";
 		out += ",\"configs\":[";
 		for (int config = 0; config < preset->config_count; config++) {
 			reset_pending();
@@ -362,6 +377,7 @@ bool presets(std::string& out)
 			}
 			out += ']';
 			out += ",\"values\":{";
+			bool ppc = false;
 			if (status == AMIBERRY_SETTINGS_OK) {
 				bool committed = false;
 				amiberry_settings_commit(session, &committed);
@@ -380,8 +396,15 @@ bool presets(std::string& out)
 					out += ':';
 					json_string(out, value_of(session, key).c_str());
 				}
+				ppc = cpuboard_is_ppc_accelerator(&changed_prefs);
 			}
-			out += "}}";
+			out += '}';
+			// Features of the emulator the configuration needs that a build
+			// may leave out: the PowerPC boards need WITH_PPC, which the
+			// Android build does not have.
+			if (ppc)
+				out += ",\"requires\":[\"ppc\"]";
+			out += '}';
 			amiberry_settings_session_close(session);
 		}
 		out += "]}";
@@ -447,6 +470,10 @@ std::vector<const char*> choice_values(const char* id)
 
 std::vector<resolution_table> resolution_tables()
 {
+	// The sound modes with the older spellings cfgfile still reads.
+	std::vector<const char*> sound_outputs = choice_values("sound_output");
+	sound_outputs.push_back("good");
+	sound_outputs.push_back("best");
 	return {
 		// The CPU and chipset combination.
 		{"resolutions",
@@ -482,6 +509,15 @@ std::vector<resolution_table> resolution_tables()
 			},
 			{},
 			{{"chipset_compatible", "A500"}, {"cpu_model", "68020"}, {"cycle_exact", "false"}}},
+		// The sound mode against the cycle-exact modes, which need Paula
+		// emulation.
+		{"sound_resolutions",
+			{
+				{"cycle_exact", choice_values("cycle_exact")},
+				{"sound_output", sound_outputs},
+			},
+			{},
+			{}},
 	};
 }
 
@@ -612,6 +648,462 @@ bool resolutions(std::string& out)
 	return true;
 }
 
+// What the layer answers while a front end edits: which options and
+// choices are available, and what setting an option changes with it (the
+// setters' dependent changes). Each table's states are the combinations of
+// its inputs; a state is loaded into a fresh pending configuration the way
+// a configuration file loads it (cfgfile, so no setter's dependent changes
+// apply), after the table's context, and an edit session on it is asked.
+// Rows list the states in combination order, the last input changing
+// fastest.
+//
+// The inputs are declared here by hand. So that a rule that starts reading
+// another option cannot go unnoticed, every state is also asked with other
+// options a front end edits set differently (the probes): an answer that
+// changes with them fails the export.
+struct state_space {
+	std::vector<field> inputs;
+	pairs context;
+};
+
+// The CPU options a front end edits, cpu_model first (loading it resets
+// the FPU).
+state_space cpu_states()
+{
+	return {
+		{
+			{"cpu_model", choice_values("cpu_model")},
+			{"cpu_24bit_addressing", {"true", "false"}},
+			{"cycle_exact", choice_values("cycle_exact")},
+			{"cachesize", {"0", "8192"}},
+			{"cpu_compatible", {"true", "false"}},
+			{"fpu_model", choice_values("fpu_model")},
+		},
+		{}};
+}
+
+// The option values every state is also asked with; the first is the
+// state alone, whose answers the tables give. The transition fields that
+// are not inputs take both of their values, so a transition can tell a
+// value a setter forces from one it keeps.
+const std::vector<pairs>& probes()
+{
+	static const std::vector<pairs> list = {
+		{},
+		{{"cpu_speed", "real"}, {"immediate_blits", "false"}, {"compfpu", "false"}},
+		{{"cpu_speed", "max"}, {"immediate_blits", "true"}, {"compfpu", "true"}},
+		{{"chipset", "aga"}, {"chipmem_size", "4"}, {"fastmem_size", "4"}, {"ntsc", "true"},
+			{"sound_channels", "mono"}, {"collision_level", "none"}},
+		{{"chipset", "ecs"}, {"bogomem_size", "0"}, {"z3mem_size", "16"}, {"sound_frequency", "22050"},
+			{"sound_max_buff", "1024"}},
+	};
+	return list;
+}
+
+size_t state_count(const state_space& space)
+{
+	size_t count = 1;
+	for (const field& f : space.inputs)
+		count *= f.values.size();
+	return count;
+}
+
+// The input values of the index-th state.
+pairs state_inputs(const state_space& space, size_t index)
+{
+	pairs values(space.inputs.size());
+	for (size_t i = space.inputs.size(); i-- > 0;) {
+		const field& f = space.inputs[i];
+		values[i] = {f.id, f.values[index % f.values.size()]};
+		index /= f.values.size();
+	}
+	return values;
+}
+
+std::string describe(const pairs& values)
+{
+	std::string text;
+	for (const auto& [id, value] : values) {
+		if (!text.empty())
+			text += ' ';
+		text += id;
+		text += '=';
+		text += value;
+	}
+	return text.empty() ? "the defaults" : text;
+}
+
+// A fresh pending configuration with the context, the state and then the
+// probe loaded as a configuration file loads them. The probe comes last so
+// that loading an input cannot override it (cfgfile drops "max" CPU speed
+// in cycle-exact modes of old configurations); no probe sets an input.
+void load_state(const state_space& space, const pairs& state, const pairs& probe)
+{
+	reset_pending();
+	for (const pairs* values : {&space.context, &state, &probe}) {
+		for (const auto& [id, value] : *values) {
+			TCHAR text[64];
+			std::snprintf(text, sizeof text, "%s", value);
+			cfgfile_parse_option(&changed_prefs, id, text, 0);
+		}
+	}
+}
+
+void json_fields(std::string& out, const std::vector<field>& fields)
+{
+	out += '[';
+	for (size_t i = 0; i < fields.size(); i++) {
+		if (i)
+			out += ',';
+		out += "{\"id\":";
+		json_string(out, fields[i].id);
+		out += ",\"values\":[";
+		for (size_t v = 0; v < fields[i].values.size(); v++) {
+			if (v)
+				out += ',';
+			json_string(out, fields[i].values[v]);
+		}
+		out += "]}";
+	}
+	out += ']';
+}
+
+void json_ids(std::string& out, const std::vector<const char*>& ids)
+{
+	out += '[';
+	for (size_t i = 0; i < ids.size(); i++) {
+		if (i)
+			out += ',';
+		json_string(out, ids[i]);
+	}
+	out += ']';
+}
+
+// "inputs" and "context" of a state space.
+void json_state_space(std::string& out, const state_space& space)
+{
+	out += "\"inputs\":";
+	json_fields(out, space.inputs);
+	out += ",\"context\":{";
+	for (size_t i = 0; i < space.context.size(); i++) {
+		if (i)
+			out += ',';
+		json_string(out, space.context[i].first);
+		out += ':';
+		json_string(out, space.context[i].second);
+	}
+	out += '}';
+}
+
+// An availability table: per state, a bit mask of the options that are
+// available (bit i for options[i]), then one mask per choice option of the
+// descriptor's choices that are (bit j for its j-th choice).
+struct availability_table {
+	state_space space;
+	std::vector<const char*> options;
+	std::vector<const char*> choices;
+};
+
+std::vector<availability_table> availability_tables()
+{
+	static const char* const drive_sounds[] = {"floppy0sound", "floppy1sound", "floppy2sound", "floppy3sound"};
+	static const char* const disk_volumes[] = {"floppy0soundvolume_disk", "floppy1soundvolume_disk",
+		"floppy2soundvolume_disk", "floppy3soundvolume_disk"};
+	static const char* const empty_volumes[] = {"floppy0soundvolume_empty", "floppy1soundvolume_empty",
+		"floppy2soundvolume_empty", "floppy3soundvolume_empty"};
+	std::vector<availability_table> tables = {
+		{cpu_states(),
+			{"cpu_24bit_addressing", "cpu_compatible", "cachesize", "compfpu", "z3mem_size"},
+			{"fpu_model", "cycle_exact"}},
+		// What needs sound emulation, and the sound modes the cycle-exact
+		// modes allow.
+		{{{{"sound_output", choice_values("sound_output")}, {"cycle_exact", choice_values("cycle_exact")}}, {}},
+			{"sound_channels", "sound_frequency", "sound_max_buff", "sound_volume_paula", "sound_volume_cd",
+				"sound_volume_ahi", "sound_volume_midi", "floppy0sound", "floppy1sound", "floppy2sound",
+				"floppy3sound"},
+			{"sound_output"}},
+	};
+	// Each drive's click volumes against its drive sound.
+	for (int drive = 0; drive < 4; drive++) {
+		tables.push_back({{{{"sound_output", choice_values("sound_output")},
+			{drive_sounds[drive], choice_values(drive_sounds[drive])}}, {}},
+			{disk_volumes[drive], empty_volumes[drive]}, {}});
+	}
+	return tables;
+}
+
+std::vector<unsigned long long> availability_answers(const amiberry_settings_session* session,
+	const availability_table& table)
+{
+	std::vector<unsigned long long> masks(1 + table.choices.size(), 0);
+	for (size_t i = 0; i < table.options.size(); i++) {
+		if (amiberry_settings_is_available(session, table.options[i]))
+			masks[0] |= 1ull << i;
+	}
+	for (size_t c = 0; c < table.choices.size(); c++) {
+		const std::vector<const char*> values = choice_values(table.choices[c]);
+		for (size_t j = 0; j < values.size(); j++) {
+			if (amiberry_settings_choice_is_available(session, table.choices[c], values[j]))
+				masks[1 + c] |= 1ull << j;
+		}
+	}
+	return masks;
+}
+
+bool availability_table_json(std::string& out, const availability_table& table)
+{
+	if (table.options.size() > 64)
+		return false;
+	for (const char* id : table.choices) {
+		if (choice_values(id).empty() || choice_values(id).size() > 64)
+			return false;
+	}
+	out += "\n{";
+	json_state_space(out, table.space);
+	out += ",\"options\":";
+	json_ids(out, table.options);
+	out += ",\"choices\":[";
+	for (size_t c = 0; c < table.choices.size(); c++) {
+		if (c)
+			out += ',';
+		out += "{\"id\":";
+		json_string(out, table.choices[c]);
+		out += ",\"values\":";
+		json_ids(out, choice_values(table.choices[c]));
+		out += '}';
+	}
+	out += "],\"rows\":[";
+	const size_t states = state_count(table.space);
+	for (size_t s = 0; s < states; s++) {
+		const pairs state = state_inputs(table.space, s);
+		std::vector<unsigned long long> answers;
+		for (size_t p = 0; p < probes().size(); p++) {
+			load_state(table.space, state, probes()[p]);
+			amiberry_settings_session* session = amiberry_settings_session_open();
+			if (!session)
+				return false;
+			const std::vector<unsigned long long> probed = availability_answers(session, table);
+			amiberry_settings_session_close(session);
+			if (p == 0) {
+				answers = probed;
+				continue;
+			}
+			for (size_t m = 0; m < answers.size(); m++) {
+				if (probed[m] != answers[m]) {
+					std::fprintf(stderr,
+						"--settings-schema: the availability of %s in %s changes with %s; "
+						"a rule reads an option the table does not have as an input\n",
+						m ? table.choices[m - 1] : "the table's options", describe(state).c_str(),
+						describe(probes()[p]).c_str());
+					return false;
+				}
+			}
+		}
+		if (s)
+			out += ',';
+		out += '[';
+		for (size_t m = 0; m < answers.size(); m++) {
+			if (m)
+				out += ',';
+			json_number(out, static_cast<double>(answers[m]));
+		}
+		out += ']';
+	}
+	out += "]}";
+	return true;
+}
+
+bool availability(std::string& out)
+{
+	out += ",\n\"availability\":[";
+	const std::vector<availability_table> tables = availability_tables();
+	for (size_t t = 0; t < tables.size(); t++) {
+		if (t)
+			out += ',';
+		if (!availability_table_json(out, tables[t]))
+			return false;
+	}
+	out += "\n]";
+	return true;
+}
+
+// What setting an option does in each state: the session's set, as a
+// front end's edit makes it, and the fields read back. An outcome lists
+// the fields the setting writes as [field index, value, ...]: an input
+// whose value it changes, or another field it forces to one value whatever
+// that was (a field it keeps is not listed). Each row has one outcome
+// index per action value (the actions' values in order); -1 is a value the
+// layer refuses in that state.
+struct transition_table {
+	state_space space;
+	std::vector<field> actions;
+	std::vector<const char*> fields;
+};
+
+transition_table cpu_transitions()
+{
+	return {cpu_states(),
+		{
+			{"cpu_model", choice_values("cpu_model")},
+			{"cycle_exact", choice_values("cycle_exact")},
+			{"cachesize", {"0", "8192"}},
+			{"cpu_compatible", {"true", "false"}},
+		},
+		{"cpu_model", "cpu_24bit_addressing", "cycle_exact", "cachesize", "cpu_compatible", "fpu_model",
+			"cpu_speed", "immediate_blits", "compfpu"}};
+}
+
+std::vector<std::string> read_fields(const amiberry_settings_session* session, const std::vector<const char*>& fields)
+{
+	std::vector<std::string> values;
+	for (const char* id : fields)
+		values.push_back(value_of(session, id));
+	return values;
+}
+
+bool transitions(std::string& out)
+{
+	const transition_table table = cpu_transitions();
+	const auto& fields = table.fields;
+	std::vector<bool> is_input(fields.size(), false);
+	for (size_t f = 0; f < fields.size(); f++) {
+		for (const field& input : table.space.inputs)
+			is_input[f] = is_input[f] || std::strcmp(input.id, fields[f]) == 0;
+	}
+	pairs actions;
+	for (const field& action : table.actions) {
+		for (const char* value : action.values)
+			actions.emplace_back(action.id, value);
+	}
+
+	using outcome = std::vector<std::pair<size_t, std::string>>;
+	std::vector<outcome> outcomes;
+	std::string rows;
+	const size_t states = state_count(table.space);
+	for (size_t s = 0; s < states; s++) {
+		const pairs state = state_inputs(table.space, s);
+		// Per probe: the fields before, and after each action (none when refused).
+		std::vector<std::vector<std::string>> before(probes().size());
+		std::vector<std::vector<std::vector<std::string>>> after(probes().size());
+		std::vector<std::vector<bool>> refused(probes().size());
+		for (size_t p = 0; p < probes().size(); p++) {
+			load_state(table.space, state, probes()[p]);
+			for (const auto& [id, value] : actions) {
+				amiberry_settings_session* session = amiberry_settings_session_open();
+				if (!session)
+					return false;
+				if (before[p].empty())
+					before[p] = read_fields(session, fields);
+				const bool set = amiberry_settings_set(session, id, value) == AMIBERRY_SETTINGS_OK;
+				refused[p].push_back(!set);
+				after[p].push_back(set ? read_fields(session, fields) : std::vector<std::string>());
+				amiberry_settings_session_close(session);
+			}
+		}
+		for (size_t f = 0; f < fields.size(); f++) {
+			bool varied = false;
+			for (size_t p = 1; p < probes().size(); p++)
+				varied = varied || before[p][f] != before[0][f];
+			if (is_input[f] && varied) {
+				std::fprintf(stderr, "--settings-schema: a probe changes the input %s in %s\n",
+					fields[f], describe(state).c_str());
+				return false;
+			}
+			if (!is_input[f] && !varied) {
+				std::fprintf(stderr, "--settings-schema: no probe changes %s in %s, so a transition cannot "
+					"tell a value it forces from one it keeps\n", fields[f], describe(state).c_str());
+				return false;
+			}
+		}
+
+		if (s)
+			rows += ',';
+		rows += "\n[";
+		for (size_t a = 0; a < actions.size(); a++) {
+			const std::string action = std::string(actions[a].first) + '=' + actions[a].second;
+			for (size_t p = 1; p < probes().size(); p++) {
+				if (refused[p][a] != refused[0][a]) {
+					std::fprintf(stderr, "--settings-schema: whether %s is refused in %s changes with %s; "
+						"a rule reads an option the table does not have as an input\n",
+						action.c_str(), describe(state).c_str(), describe(probes()[p]).c_str());
+					return false;
+				}
+			}
+			if (a)
+				rows += ',';
+			if (refused[0][a]) {
+				rows += "-1";
+				continue;
+			}
+			outcome changes;
+			for (size_t f = 0; f < fields.size(); f++) {
+				bool kept = true;
+				bool same = true;
+				for (size_t p = 0; p < probes().size(); p++) {
+					kept = kept && after[p][a][f] == before[p][f];
+					same = same && after[p][a][f] == after[0][a][f];
+				}
+				// An input is part of the state, so its new value must not
+				// depend on the probes; another field is either kept or set
+				// to one value whatever it was.
+				if (!is_input[f] && kept)
+					continue;
+				if (!same) {
+					std::fprintf(stderr, "--settings-schema: %s after %s in %s changes with the probes; "
+						"a setter reads an option the table does not have as an input\n",
+						fields[f], action.c_str(), describe(state).c_str());
+					return false;
+				}
+				if (!is_input[f] || after[0][a][f] != before[0][f])
+					changes.emplace_back(f, after[0][a][f]);
+			}
+			size_t index = std::find(outcomes.begin(), outcomes.end(), changes) - outcomes.begin();
+			if (index == outcomes.size())
+				outcomes.push_back(changes);
+			rows += std::to_string(index);
+		}
+		rows += ']';
+	}
+
+	out += ",\n\"transitions\":{";
+	json_state_space(out, table.space);
+	out += ",\"fields\":";
+	json_ids(out, fields);
+	out += ",\"actions\":";
+	json_fields(out, table.actions);
+	out += ",\"outcomes\":[";
+	for (size_t o = 0; o < outcomes.size(); o++) {
+		if (o)
+			out += ',';
+		out += '[';
+		for (size_t c = 0; c < outcomes[o].size(); c++) {
+			if (c)
+				out += ',';
+			json_number(out, static_cast<double>(outcomes[o][c].first));
+			out += ',';
+			json_string(out, outcomes[o][c].second.c_str());
+		}
+		out += ']';
+	}
+	out += "],\"rows\":[";
+	out += rows;
+	out += "\n]}";
+	return true;
+}
+
+// The built-in AROS Kickstart replacement (memory.cpp): the ROM file name
+// that selects it and the files it needs in a ROM directory.
+void aros(std::string& out)
+{
+	out += ",\n\"aros\":{\"rom_file\":";
+	json_string(out, aros_rom_token);
+	out += ",\"main_file\":";
+	json_string(out, aros_main_rom_file);
+	out += ",\"ext_file\":";
+	json_string(out, aros_ext_rom_file);
+	out += '}';
+}
+
 } // namespace
 
 // Writes the schema to stdout; 0 on success.
@@ -628,6 +1120,11 @@ int settings_schema_and_exit(const char* option_list)
 		std::fprintf(stderr, "--settings-schema: out of memory or an empty resolution input\n");
 		return 1;
 	}
+	if (!availability(out) || !transitions(out)) {
+		std::fprintf(stderr, "--settings-schema: the availability or transition tables cannot be made\n");
+		return 1;
+	}
+	aros(out);
 	out += "\n}\n";
 	if (std::fwrite(out.data(), 1, out.size(), stdout) != out.size() || std::fflush(stdout) != 0) {
 		std::fprintf(stderr, "--settings-schema: writing to stdout failed\n");

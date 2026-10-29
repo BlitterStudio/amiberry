@@ -34,8 +34,8 @@ class StorageTabOptionsTest {
 	fun `picking AROS stores the built-in AROS value and drops the extended ROM`() {
 		val settings = EmulatorSettings(romFile = "/roms/kick31.rom", romExtFile = "/roms/ext.rom")
 
-		val aros = settings.withKickstartRom(ModelRomAvailability.AROS_ROM_FILE)
-		assertEquals(ModelRomAvailability.AROS_ROM_FILE, aros.romFile)
+		val aros = settings.withKickstartRom(ModelRomAvailability.arosRomFile)
+		assertEquals(ModelRomAvailability.arosRomFile, aros.romFile)
 		assertEquals("", aros.romExtFile)
 
 		val kick = settings.withKickstartRom("/roms/kick13.rom")

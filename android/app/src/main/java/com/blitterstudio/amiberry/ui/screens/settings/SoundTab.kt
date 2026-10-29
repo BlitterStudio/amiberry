@@ -51,7 +51,8 @@ private val OFFERED_DRIVE_SOUNDS = listOf("0", "1")
 @Composable
 fun SoundTab(viewModel: SettingsViewModel) {
 	val settings = viewModel.settings
-	val soundOn = SettingsControlAvailability.isSoundEmulationOn(settings)
+	fun available(id: String) = SettingsControlAvailability.isAvailable(settings, id)
+	val soundOn = available("sound_channels")
 	// The reason every option that needs sound emulation shares, said once per section.
 	val needsSound = if (soundOn) null else settingsSchema()?.constraint("sound_channels")
 
@@ -78,20 +79,20 @@ fun SoundTab(viewModel: SettingsViewModel) {
 			SchemaChoiceRow(
 				id = "sound_output",
 				value = settings.soundOutput,
-				values = SettingsControlAvailability.soundOutputChoiceValues(settings),
+				values = SettingsControlAvailability.choiceValues(settings, "sound_output"),
 				onSelect = { value -> viewModel.updateSettings { s -> s.copy(soundOutput = value) } }
 			)
 			SchemaChoiceRow(
 				id = "sound_channels",
 				value = settings.soundChannels,
-				enabled = soundOn,
+				enabled = available("sound_channels"),
 				showReason = false,
 				onSelect = { value -> viewModel.updateSettings { s -> s.copy(soundChannels = value) } }
 			)
 			SchemaChoiceRow(
 				id = "sound_frequency",
 				value = settings.soundFreq.toString(),
-				enabled = soundOn,
+				enabled = available("sound_frequency"),
 				showReason = false,
 				onSelect = { value -> value.toIntOrNull()?.let { freq -> viewModel.updateSettings { s -> s.copy(soundFreq = freq) } } }
 			)
@@ -99,7 +100,7 @@ fun SoundTab(viewModel: SettingsViewModel) {
 				id = "sound_max_buff",
 				value = settings.soundBuffer.toString(),
 				choices = bufferChoices.takeIf { it.isNotEmpty() },
-				enabled = soundOn,
+				enabled = available("sound_max_buff"),
 				showReason = false,
 				onSelect = { value -> value.toIntOrNull()?.let { size -> viewModel.updateSettings { s -> s.copy(soundBuffer = size) } } }
 			)
@@ -114,28 +115,28 @@ fun SoundTab(viewModel: SettingsViewModel) {
 			SchemaLevelRow(
 				id = "sound_volume_paula",
 				stored = settings.soundVolumePaula,
-				enabled = soundOn,
+				enabled = available("sound_volume_paula"),
 				showReason = false,
 				onStoredChange = { v -> viewModel.updateSettings { s -> s.copy(soundVolumePaula = v) } }
 			)
 			SchemaLevelRow(
 				id = "sound_volume_cd",
 				stored = settings.soundVolumeCd,
-				enabled = soundOn,
+				enabled = available("sound_volume_cd"),
 				showReason = false,
 				onStoredChange = { v -> viewModel.updateSettings { s -> s.copy(soundVolumeCd = v) } }
 			)
 			SchemaLevelRow(
 				id = "sound_volume_ahi",
 				stored = settings.soundVolumeAhi,
-				enabled = soundOn,
+				enabled = available("sound_volume_ahi"),
 				showReason = false,
 				onStoredChange = { v -> viewModel.updateSettings { s -> s.copy(soundVolumeAhi = v) } }
 			)
 			SchemaLevelRow(
 				id = "sound_volume_midi",
 				stored = settings.soundVolumeMidi,
-				enabled = soundOn,
+				enabled = available("sound_volume_midi"),
 				showReason = false,
 				onStoredChange = { v -> viewModel.updateSettings { s -> s.copy(soundVolumeMidi = v) } }
 			)
@@ -146,12 +147,12 @@ fun SoundTab(viewModel: SettingsViewModel) {
 		if (drives.isNotEmpty()) {
 			SettingsSection(title = stringResource(R.string.settings_sound_drive_sounds_title), footer = needsSound) {
 				drives.forEach { drive ->
-					val volumesAvailable = SettingsControlAvailability.isFloppySoundVolumeAvailable(settings, drive.index)
+					val volumesAvailable = available("floppy${drive.index}soundvolume_disk")
 					SchemaChoiceRow(
 						id = "floppy${drive.index}sound",
 						value = drive.sound(settings).toString(),
 						values = OFFERED_DRIVE_SOUNDS,
-						enabled = soundOn,
+						enabled = available("floppy${drive.index}sound"),
 						showReason = false,
 						onSelect = { value ->
 							value.toIntOrNull()?.let { sound -> viewModel.updateSettings { s -> drive.withSound(s, sound) } }
@@ -167,7 +168,7 @@ fun SoundTab(viewModel: SettingsViewModel) {
 					SchemaLevelRow(
 						id = "floppy${drive.index}soundvolume_empty",
 						stored = drive.volumeEmpty(settings),
-						enabled = volumesAvailable,
+						enabled = available("floppy${drive.index}soundvolume_empty"),
 						showReason = soundOn,
 						onStoredChange = { v -> viewModel.updateSettings { s -> drive.withVolumeEmpty(s, v) } }
 					)
