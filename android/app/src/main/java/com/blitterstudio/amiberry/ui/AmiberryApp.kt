@@ -1,6 +1,5 @@
 package com.blitterstudio.amiberry.ui
 
-import android.content.res.Configuration
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.focusGroup
@@ -25,7 +24,6 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -165,8 +163,7 @@ fun AmiberryApp() {
 		}
 	}
 
-	val configuration = LocalConfiguration.current
-	val useNavRail = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+	val useNavRail = usesNavigationRail()
 
 	val navBackStackEntry by navController.currentBackStackEntryAsState()
 	val currentDestination = navBackStackEntry?.destination

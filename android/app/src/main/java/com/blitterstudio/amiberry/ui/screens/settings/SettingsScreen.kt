@@ -77,6 +77,12 @@ import com.blitterstudio.amiberry.data.model.SettingsIntentPreset
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.material3.VerticalDivider
+import com.blitterstudio.amiberry.ui.components.SidePaneEntry
+import com.blitterstudio.amiberry.ui.components.SidePaneList
+import com.blitterstudio.amiberry.ui.windowWidthClass
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.filled.Warning
@@ -329,114 +335,71 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel(LocalContext.current
 			)
 		}
 	) { innerPadding ->
-		Column(
-			modifier = Modifier
-				.fillMaxSize()
-				.padding(innerPadding)
-		) {
-			PrimaryScrollableTabRow(
-				selectedTabIndex = validSelectedTab,
+		val onImportRom = {
+			if (!importInProgress) {
+				romPickerLauncher.launch(FilePickerFilters.mimeTypesFor(FileCategory.ROMS))
+			}
+		}
+		val onImportResult: (FileManager.ImportResult) -> Unit = { result ->
+			scope.launch {
+				snackbarHostState.showSnackbar(importResultMessage(result))
+			}
+		}
+		if (windowWidthClass().showsSideList) {
+			// Wide windows list the tabs down the left, the selected tab's page beside them.
+			Row(
 				modifier = Modifier
-					.fillMaxWidth()
-					.focusGroup()
+					.fillMaxSize()
+					.padding(innerPadding)
 			) {
-				tabs.forEachIndexed { index, tab ->
-					Tab(
-						selected = validSelectedTab == index,
-						onClick = { selectedTab = index },
-						modifier = Modifier.testTag(tab.testTag).dpadFocusIndicator(),
-						text = { Text(stringResource(tab.titleRes)) }
+				SidePaneList(
+					entries = tabs.map { tab -> SidePaneEntry(stringResource(tab.titleRes), testTag = tab.testTag) },
+					selectedIndex = validSelectedTab,
+					onSelect = { selectedTab = it }
+				)
+				VerticalDivider()
+				Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
+					SettingsTabPage(
+						viewModel = viewModel,
+						tab = SettingsTabs.tabFor(selectedTab),
+						canStart = canStart,
+						importInProgress = importInProgress,
+						onImportRom = onImportRom,
+						onImportResult = onImportResult,
+						tabContentFocus = tabContentFocus
 					)
 				}
 			}
-
-			SettingsPresetSelector(
-				selectedPreset = viewModel.selectedIntentPreset,
-				onPresetSelected = { preset -> viewModel.applyIntentPreset(preset) }
-			)
-
-			SettingsAdjustmentBanner(
-				notices = viewModel.adjustmentNotices,
-				onDismiss = viewModel::clearAdjustmentNotices
-			)
-
-			if (!canStart) {
-				Card(
-					modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-					colors = CardDefaults.cardColors(
-						containerColor = MaterialTheme.colorScheme.errorContainer
-					)
-				) {
-					Column(modifier = Modifier.padding(16.dp)) {
-						Row(verticalAlignment = Alignment.CenterVertically) {
-							Icon(
-								Icons.Default.Warning,
-								contentDescription = null,
-								modifier = Modifier.size(24.dp),
-								tint = MaterialTheme.colorScheme.onErrorContainer
-							)
-							Spacer(modifier = Modifier.width(8.dp))
-							Text(
-								stringResource(R.string.setup_required_title),
-								style = MaterialTheme.typography.titleMedium,
-								color = MaterialTheme.colorScheme.onErrorContainer
-							)
-						}
-						Spacer(modifier = Modifier.height(8.dp))
-						Text(
-							text = stringResource(R.string.setup_required_message),
-							style = MaterialTheme.typography.bodyMedium,
-							color = MaterialTheme.colorScheme.onErrorContainer
-						)
-						Spacer(modifier = Modifier.height(12.dp))
-						Button(
-							onClick = {
-								if (!importInProgress) {
-									romPickerLauncher.launch(FilePickerFilters.mimeTypesFor(FileCategory.ROMS))
-								}
-							},
-							enabled = !importInProgress,
-							colors = ButtonDefaults.buttonColors(
-								containerColor = MaterialTheme.colorScheme.onErrorContainer,
-								contentColor = MaterialTheme.colorScheme.errorContainer
-							),
-							modifier = Modifier.dpadFocusIndicator()
-						) {
-							Text(
-								stringResource(
-									if (importInProgress) R.string.action_importing else R.string.action_import_rom
-								)
-							)
-						}
-					}
-				}
-			}
-
-			// Tab content
+		} else {
 			Column(
 				modifier = Modifier
-					.weight(1f)
-					.fillMaxWidth()
-					.focusRequester(tabContentFocus)
-					.focusRestorer()
+					.fillMaxSize()
+					.padding(innerPadding)
 			) {
-				when (SettingsTabs.tabFor(selectedTab)) {
-					SettingsTab.Cpu -> CpuTab(viewModel)
-					SettingsTab.Chipset -> ChipsetTab(viewModel)
-					SettingsTab.Memory -> MemoryTab(viewModel)
-					SettingsTab.Display -> DisplayTab(viewModel)
-					SettingsTab.Sound -> SoundTab(viewModel)
-					SettingsTab.Input -> InputTab(viewModel)
-					SettingsTab.Storage -> StorageTab(
-						viewModel = viewModel,
-						onImportResult = { result ->
-							scope.launch {
-								snackbarHostState.showSnackbar(importResultMessage(result))
-							}
-						}
-					)
-					SettingsTab.Misc -> MiscTab(viewModel)
+				PrimaryScrollableTabRow(
+					selectedTabIndex = validSelectedTab,
+					modifier = Modifier
+						.fillMaxWidth()
+						.focusGroup()
+				) {
+					tabs.forEachIndexed { index, tab ->
+						Tab(
+							selected = validSelectedTab == index,
+							onClick = { selectedTab = index },
+							modifier = Modifier.testTag(tab.testTag).dpadFocusIndicator(),
+							text = { Text(stringResource(tab.titleRes)) }
+						)
+					}
 				}
+				SettingsTabPage(
+					viewModel = viewModel,
+					tab = SettingsTabs.tabFor(selectedTab),
+					canStart = canStart,
+					importInProgress = importInProgress,
+					onImportRom = onImportRom,
+					onImportResult = onImportResult,
+					tabContentFocus = tabContentFocus
+				)
 			}
 		}
 
@@ -497,6 +460,99 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel(LocalContext.current
 					}
 				)
 			}
+	}
+}
+
+/**
+ * Everything under the tab chooser: the preset, the adjustment notices, the missing-ROM
+ * card and the selected tab's page. Below the tab row on a phone, beside the tab list
+ * on a wide window.
+ */
+@Composable
+private fun ColumnScope.SettingsTabPage(
+	viewModel: SettingsViewModel,
+	tab: SettingsTab,
+	canStart: Boolean,
+	importInProgress: Boolean,
+	onImportRom: () -> Unit,
+	onImportResult: (FileManager.ImportResult) -> Unit,
+	tabContentFocus: FocusRequester
+) {
+	SettingsPresetSelector(
+		selectedPreset = viewModel.selectedIntentPreset,
+		onPresetSelected = { preset -> viewModel.applyIntentPreset(preset) }
+	)
+
+	SettingsAdjustmentBanner(
+		notices = viewModel.adjustmentNotices,
+		onDismiss = viewModel::clearAdjustmentNotices
+	)
+
+	if (!canStart) {
+		Card(
+			modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+			colors = CardDefaults.cardColors(
+				containerColor = MaterialTheme.colorScheme.errorContainer
+			)
+		) {
+			Column(modifier = Modifier.padding(16.dp)) {
+				Row(verticalAlignment = Alignment.CenterVertically) {
+					Icon(
+						Icons.Default.Warning,
+						contentDescription = null,
+						modifier = Modifier.size(24.dp),
+						tint = MaterialTheme.colorScheme.onErrorContainer
+					)
+					Spacer(modifier = Modifier.width(8.dp))
+					Text(
+						stringResource(R.string.setup_required_title),
+						style = MaterialTheme.typography.titleMedium,
+						color = MaterialTheme.colorScheme.onErrorContainer
+					)
+				}
+				Spacer(modifier = Modifier.height(8.dp))
+				Text(
+					text = stringResource(R.string.setup_required_message),
+					style = MaterialTheme.typography.bodyMedium,
+					color = MaterialTheme.colorScheme.onErrorContainer
+				)
+				Spacer(modifier = Modifier.height(12.dp))
+				Button(
+					onClick = onImportRom,
+					enabled = !importInProgress,
+					colors = ButtonDefaults.buttonColors(
+						containerColor = MaterialTheme.colorScheme.onErrorContainer,
+						contentColor = MaterialTheme.colorScheme.errorContainer
+					),
+					modifier = Modifier.dpadFocusIndicator()
+				) {
+					Text(
+						stringResource(
+							if (importInProgress) R.string.action_importing else R.string.action_import_rom
+						)
+					)
+				}
+			}
+		}
+	}
+
+	Column(
+		modifier = Modifier
+			.weight(1f)
+			.fillMaxWidth()
+			.focusRequester(tabContentFocus)
+			.focusRestorer()
+	) {
+		when (tab) {
+			SettingsTab.Cpu -> CpuTab(viewModel)
+			SettingsTab.Chipset -> ChipsetTab(viewModel)
+			SettingsTab.Memory -> MemoryTab(viewModel)
+			SettingsTab.Display -> DisplayTab(viewModel)
+			SettingsTab.Sound -> SoundTab(viewModel)
+			SettingsTab.Input -> InputTab(viewModel)
+			SettingsTab.Storage -> StorageTab(viewModel = viewModel, onImportResult = onImportResult)
+			SettingsTab.Misc -> MiscTab(viewModel)
+		}
 	}
 }
 

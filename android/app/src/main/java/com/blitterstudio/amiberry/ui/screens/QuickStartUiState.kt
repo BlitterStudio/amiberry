@@ -107,6 +107,34 @@ object QuickStartUiState {
 	)
 
 	/**
+	 * A saved configuration's summary (the Configurations detail pane): the same rows as
+	 * Quick Start's, with every medium the configuration inserts. [QuickStartEffectiveSummary.media]
+	 * is blank when it inserts none.
+	 */
+	fun buildConfigurationSummary(settings: EmulatorSettings, roms: List<AmigaFile>): QuickStartEffectiveSummary {
+		val media = listOfNotNull(
+			mediaName(settings.floppy0)?.let { "DF0: $it" },
+			mediaName(settings.floppy1)?.let { "DF1: $it" },
+			mediaName(settings.floppy2)?.let { "DF2: $it" },
+			mediaName(settings.floppy3)?.let { "DF3: $it" },
+			mediaName(settings.cdImage)?.let { "CD: $it" }
+		) + settings.hardDrives.mapNotNull { drive ->
+			// A folder mounted as a drive may end in a separator.
+			mediaName(drive.path.trimEnd('/', '\\'))?.let { "HD: $it" }
+		}
+		return QuickStartEffectiveSummary(
+			model = settings.baseModel.displayName,
+			cpu = buildCpuSummary(settings),
+			chipset = buildChipsetSummary(settings),
+			memory = buildMemorySummary(settings),
+			media = media.joinToString(", "),
+			controls = buildControlsSummary(settings),
+			rom = romIdentity(settings.romFile, roms),
+			romFileName = mediaName(settings.romFile).orEmpty()
+		)
+	}
+
+	/**
 	 * Whether a Disk or CD launch boots AROS: the settings name the built-in
 	 * AROS ROM, or name no ROM while the model's Kickstart is not installed.
 	 */

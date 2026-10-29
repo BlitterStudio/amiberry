@@ -59,6 +59,16 @@ class ConfigurationsSearchStateTest {
 		assertTrue(ConfigurationListFilter.entries.all { ConfigurationListFilter.fromName(it.name) == it })
 	}
 
+	@Test
+	fun `the detail pane shows the chosen configuration while listed, else the first`() {
+		val configs = listOf(config("Workbench"), config("Lotus"))
+
+		assertEquals(configs[1], selectedConfiguration(configs, "Lotus.uae"))
+		assertEquals(configs[0], selectedConfiguration(configs, null))
+		assertEquals(configs[0], selectedConfiguration(configs, "Deleted.uae"))
+		assertEquals(null, selectedConfiguration(emptyList(), "Lotus.uae"))
+	}
+
 	private fun config(
 		name: String,
 		description: String = "",

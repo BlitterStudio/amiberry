@@ -4,6 +4,9 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.fillMaxHeight
+import com.blitterstudio.amiberry.ui.windowWidthClass
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -58,6 +61,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.focusRestorer
+import com.blitterstudio.amiberry.ui.dpadTrailingPane
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -82,7 +87,9 @@ import com.blitterstudio.amiberry.data.model.EmulatorSettings
 import com.blitterstudio.amiberry.data.model.FileCategory
 import com.blitterstudio.amiberry.data.model.ModelRomAvailability
 import com.blitterstudio.amiberry.data.model.RomReadinessDiagnostics
-import com.blitterstudio.amiberry.data.model.RomIdentity
+import com.blitterstudio.amiberry.ui.components.SettingsSummaryCard
+import com.blitterstudio.amiberry.ui.components.SummaryCard
+import com.blitterstudio.amiberry.ui.components.SummaryRow
 import com.blitterstudio.amiberry.ui.dpadArrowsMoveFocus
 import com.blitterstudio.amiberry.ui.dpadFocusIndicator
 import com.blitterstudio.amiberry.ui.findActivity
@@ -454,14 +461,7 @@ fun QuickStartScreen(
 			}
 		}
 	) { innerPadding ->
-		Column(
-			modifier = Modifier
-				.fillMaxSize()
-				.padding(innerPadding)
-				.verticalScroll(rememberScrollState())
-				.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 120.dp),
-			verticalArrangement = Arrangement.spacedBy(16.dp)
-		) {
+		val scanningIndicator: @Composable () -> Unit = {
 			if (isScanning) {
 				LinearProgressIndicator(
 					modifier = Modifier
@@ -469,7 +469,10 @@ fun QuickStartScreen(
 						.semantics { contentDescription = scanningMediaDescription }
 				)
 			}
-
+		}
+		// Storage access, welcome and ROM notices: above the launch mode on a phone, above
+		// the summary in the right column on a wide window, so the launch mode stays at the top.
+		val noticesSection: @Composable ColumnScope.() -> Unit = {
 			StoragePermissionBanner(
 				onMessage = { message ->
 					scope.launch { snackbarHostState.showSnackbar(actionMessage(message)) }
@@ -607,7 +610,9 @@ fun QuickStartScreen(
 					}
 				)
 			}
-
+		}
+		// The launch mode and its media: the left column on a wide window.
+		val launchSection: @Composable ColumnScope.() -> Unit = {
 			QuickStartModeSelector(
 				selectedMode = selectedLaunchMode,
 				onModeSelected = viewModel::selectLaunchMode,
@@ -818,11 +823,14 @@ fun QuickStartScreen(
 					)
 				}
 			}
-
+		}
+		val summarySection: @Composable () -> Unit = {
 			if (selectedLaunchMode == QuickStartLaunchMode.WHDLOAD) {
 				whdloadSummary?.let { WhdLoadSummaryCard(it) }
 			} else {
-				EffectiveSummaryCard(
+				SettingsSummaryCard(
+					title = stringResource(R.string.quick_start_ready_title),
+					subtitle = stringResource(R.string.quick_start_ready_subtitle),
 					summary = QuickStartUiState.buildEffectiveSummary(
 						settings = settingsViewModel.settings,
 						launchMode = selectedLaunchMode,
@@ -837,7 +845,57 @@ fun QuickStartScreen(
 					)
 				)
 			}
-
+		}
+		if (windowWidthClass().showsTwoPanes) {
+			// Wide windows keep what Start launches in view beside the choices.
+			val launchColumnFocus = remember { FocusRequester() }
+			Row(
+				modifier = Modifier
+					.fillMaxSize()
+					.padding(innerPadding)
+					.padding(horizontal = 16.dp),
+				horizontalArrangement = Arrangement.spacedBy(16.dp)
+			) {
+				Column(
+					modifier = Modifier
+						.weight(1f)
+						.fillMaxHeight()
+						.focusRequester(launchColumnFocus)
+						.focusRestorer()
+						.verticalScroll(rememberScrollState())
+						.padding(top = 16.dp, bottom = 120.dp),
+					verticalArrangement = Arrangement.spacedBy(16.dp)
+				) {
+					scanningIndicator()
+					launchSection()
+				}
+				Column(
+					modifier = Modifier
+						.weight(1f)
+						.fillMaxHeight()
+						.dpadTrailingPane(launchColumnFocus)
+						.verticalScroll(rememberScrollState())
+						.padding(top = 16.dp, bottom = 120.dp),
+					verticalArrangement = Arrangement.spacedBy(16.dp)
+				) {
+					noticesSection()
+					summarySection()
+				}
+			}
+		} else {
+			Column(
+				modifier = Modifier
+					.fillMaxSize()
+					.padding(innerPadding)
+					.verticalScroll(rememberScrollState())
+					.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 120.dp),
+				verticalArrangement = Arrangement.spacedBy(16.dp)
+			) {
+				scanningIndicator()
+				noticesSection()
+				launchSection()
+				summarySection()
+			}
 		}
 	}
 }
@@ -1080,56 +1138,14 @@ private fun ModelSelectorCard(
 	}
 }
 
-@Composable
-private fun SummaryCard(rows: @Composable () -> Unit) {
-	Card(
-		modifier = Modifier.fillMaxWidth(),
-		colors = CardDefaults.cardColors(
-			containerColor = MaterialTheme.colorScheme.primaryContainer
-		)
-	) {
-		Column(
-			modifier = Modifier.padding(16.dp),
-			verticalArrangement = Arrangement.spacedBy(8.dp)
-		) {
-			Text(stringResource(R.string.quick_start_ready_title), style = MaterialTheme.typography.titleLarge)
-			Text(
-				text = stringResource(R.string.quick_start_ready_subtitle),
-				style = MaterialTheme.typography.bodyMedium,
-				color = MaterialTheme.colorScheme.onSurfaceVariant
-			)
-			rows()
-		}
-	}
-}
-
-@Composable
-private fun EffectiveSummaryCard(summary: QuickStartEffectiveSummary) {
-	SummaryCard {
-		SummaryRow(stringResource(R.string.quick_start_summary_model), summary.model)
-		SummaryRow(stringResource(R.string.quick_start_summary_cpu), summary.cpu)
-		summary.rom?.let { rom ->
-			SummaryRow(
-				stringResource(R.string.quick_start_summary_rom),
-				when (rom) {
-					is RomIdentity.Kickstart -> rom.name
-					RomIdentity.BuiltInAros -> stringResource(R.string.rom_aros_builtin)
-					RomIdentity.Unknown -> summary.romFileName
-				}
-			)
-		}
-		SummaryRow(stringResource(R.string.quick_start_summary_chipset), summary.chipset)
-		SummaryRow(stringResource(R.string.quick_start_summary_memory), summary.memory)
-		SummaryRow(stringResource(R.string.quick_start_summary_media), summary.media)
-		SummaryRow(stringResource(R.string.quick_start_summary_controls), summary.controls)
-	}
-}
-
 /** A WHDLoad launch: WHDBooter's hardware choice is named, not previewed; the rest is the launcher's. */
 @Composable
 private fun WhdLoadSummaryCard(summary: QuickStartWhdLoadSummary) {
 	val schema = settingsSchema()
-	SummaryCard {
+	SummaryCard(
+		title = stringResource(R.string.quick_start_ready_title),
+		subtitle = stringResource(R.string.quick_start_ready_subtitle)
+	) {
 		SummaryRow(stringResource(R.string.quick_start_summary_media), summary.media)
 		SummaryRow(
 			stringResource(R.string.quick_start_summary_hardware),
@@ -1179,26 +1195,5 @@ private fun ArosFallbackNotice(message: String, importInProgress: Boolean, onImp
 				Text(stringResource(if (importInProgress) R.string.action_importing else R.string.action_import_rom))
 			}
 		}
-	}
-}
-
-@Composable
-private fun SummaryRow(label: String, value: String) {
-	Row(
-		modifier = Modifier.fillMaxWidth(),
-		horizontalArrangement = Arrangement.spacedBy(12.dp)
-	) {
-		Text(
-			label,
-			modifier = Modifier.weight(0.35f),
-			style = MaterialTheme.typography.bodyMedium,
-			color = MaterialTheme.colorScheme.onPrimaryContainer
-		)
-		Text(
-			value,
-			modifier = Modifier.weight(0.65f),
-			style = MaterialTheme.typography.bodyMedium,
-			color = MaterialTheme.colorScheme.onPrimaryContainer
-		)
 	}
 }

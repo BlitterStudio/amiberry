@@ -25,6 +25,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
@@ -231,6 +232,24 @@ fun Modifier.dpadSliderKeys(): Modifier = composed {
 	}.onKeyEvent { event ->
 		// Reached only when the slider itself did not use the key (at its end).
 		event.key == Key.DirectionLeft || event.key == Key.DirectionRight
+	}
+}
+
+/**
+ * The right-hand column of a two-column layout whose controls sit one per row (Quick
+ * Start's notices). Their short left-aligned buttons overlap horizontally, so the 2D
+ * search took Left/Right to another button in the same column. Left always returns to
+ * [leadingPane] (give it focusRestorer() to land on the control last focused there) and
+ * Right, with nothing beyond this column, stays put.
+ */
+fun Modifier.dpadTrailingPane(leadingPane: FocusRequester): Modifier = onPreviewKeyEvent { event ->
+	when (event.key) {
+		Key.DirectionLeft -> {
+			if (event.type == KeyEventType.KeyDown) leadingPane.requestFocus()
+			true
+		}
+		Key.DirectionRight -> true
+		else -> false
 	}
 }
 
