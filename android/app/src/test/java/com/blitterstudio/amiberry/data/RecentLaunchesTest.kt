@@ -153,11 +153,37 @@ class RecentLaunchesTest {
 		val added = RecentLaunches.add(existing, duplicate, maxItems = 10)
 
 		assertEquals(10, added.size)
-		assertEquals(duplicate.toString(), added.first().toString())
-		assertEquals(1, added.count { it.toString() == duplicate.toString() })
+		assertEquals("/configs/5.uae", added.first().optString("path"))
+		assertEquals(1, added.count { it.optString("path") == "/configs/5.uae" })
 		assertTrue(added.any { it.optString("path") == "/configs/10.uae" })
 		assertTrue(added.none { it.optString("path") == "/configs/11.uae" })
 		assertTrue(added.none { it.optString("path") == "/configs/12.uae" })
+	}
+
+	@Test
+	fun `a launch is stamped with its time and replaces the earlier launch of the same thing`() {
+		val first = RecentLaunches.add(emptyList(), entry("whdload", path = "/whdload/Lotus.lha"), nowMs = 1_000L)
+		val again = RecentLaunches.add(first, entry("whdload", path = "/whdload/Lotus.lha"), nowMs = 5_000L)
+
+		assertEquals(1, again.size)
+		assertEquals(5_000L, RecentLaunches.details(again.single()).launchedAtMs)
+	}
+
+	@Test
+	fun `entries stored before launch times have none and still remove by identity`() {
+		val old = entry("config", path = "/configs/A1200.uae")
+		val stamped = RecentLaunches.add(emptyList(), entry("config", path = "/configs/A1200.uae"), nowMs = 42L).single()
+
+		assertEquals(null, RecentLaunches.details(old).launchedAtMs)
+		assertTrue(RecentLaunches.remove(listOf(stamped), old).isEmpty())
+	}
+
+	@Test
+	fun `a WHDLoad entry is titled by its readable game name`() {
+		val details = RecentLaunches.details(entry("whdload", path = "/whdload/TheLostPixelv1.3_WHD4.lha"))
+
+		assertEquals("The Lost Pixel v1.3", details.title)
+		assertEquals("TheLostPixelv1.3_WHD4.lha", details.detail)
 	}
 
 	@Test

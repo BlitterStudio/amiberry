@@ -25,6 +25,8 @@ The launcher writes the whole machine a Quick Start model builds into its config
 - the 64 KB SRAM card of the CDTV "Floppy drive and 64KB SRAM card" configuration;
 - the CD drive of a CD32 or CDTV started without a disc.
 
+Changing the model keeps the inserted disks and CD. A medium the new model has no drive for (floppies on a CD32, a CD on an A500) is ejected, and a message offers Undo. Quick Start opens in **Recent** once something was launched, in **WHDLoad** when games are installed, and in **Disk** otherwise.
+
 ### Settings coverage
 The launcher's Settings tabs show every option of the shared settings layer that means something on Android: each tab's own controls first, then one section per settings group (CPU, MMU, FPU, CPU speed, JIT; Chipset, Advanced Chipset and Genlock, which start collapsed; Memory and ROMs; Display and Filters; Sound; Input and On-screen Controls; Floppy, CD and Filesystem), and a **Misc** tab for the miscellaneous options, expansions and the protection dongle. An option that is unavailable in the current machine is dimmed, and its section says why once. The second to fourth memory boards of a kind appear once the board before is fitted. Configured in the desktop GUI only, for now:
 - RTG and accelerator boards (the board type is not yet in the launcher), and their memory and options;
@@ -81,7 +83,7 @@ On large-screen/desktop-class devices (Chromebooks, freeform windowing), Amiberr
 
 ## Launcher Layout on Wide Screens
 
-The launcher adapts to the window width (Material 3 window size classes). From 600 dp (a tablet held upright) the navigation rail replaces the bottom bar, and Settings and Files list their tabs and categories down the left beside the content. From 840 dp (a landscape tablet, a Chromebook window, Android TV) Configurations shows the list beside the selected configuration's summary and actions, and Quick Start shows the launch mode and media beside the notices and current settings. A phone keeps the single-column layout, also when held sideways. With a D-pad, Left and Right move between the panes.
+The launcher adapts to the window width (Material 3 window size classes). From 600 dp (a tablet held upright) the navigation rail replaces the bottom bar, and Settings and Files list their tabs and categories down the left beside the content. From 840 dp (a landscape tablet, a Chromebook window, Android TV) Configurations shows the list beside the selected configuration's summary and actions, and Quick Start shows the launch mode and media beside the notices and current settings. A phone keeps the single-column layout, also when held sideways. With a D-pad, Left and Right move between the panes, and Right from the navigation rail always enters the tab's content. On Android TV, focus starts in Quick Start's content, and OK on a game in the WHDLoad game list starts it.
 
 ## RTG Display Modes
 

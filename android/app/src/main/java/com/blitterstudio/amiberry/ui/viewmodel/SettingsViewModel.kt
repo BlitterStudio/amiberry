@@ -27,6 +27,8 @@ import com.blitterstudio.amiberry.data.ConfigRepository
 import com.blitterstudio.amiberry.data.ConfigurationSaveActions
 import com.blitterstudio.amiberry.data.OpenConfigTracking
 import com.blitterstudio.amiberry.ui.hasTouchScreen
+import com.blitterstudio.amiberry.ui.screens.MediaDrive
+import com.blitterstudio.amiberry.ui.screens.QuickStartMediaState
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.StateFlow
@@ -98,7 +100,8 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 		appPreferences.saveAndroidControls(settings)
 		viewModelScope.launch {
 			repository.rescan()
-			autoSelectDefaultRomIfNeeded(availableRoms.value)
+			// A Kickstart imported anywhere (the Files tab too) fills settings that name none.
+			availableRoms.collect { roms -> autoSelectDefaultRomIfNeeded(roms) }
 		}
 	}
 
@@ -164,20 +167,42 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 		}
 	}
 
+	/** What a model change did: the settings before it (for Undo) and the media it had to eject. */
+	data class ModelChange(
+		val previous: EmulatorSettings,
+		val previousUnknownLines: List<String>,
+		val droppedMedia: List<MediaDrive>
+	)
+
 	/**
 	 * Switch to [model]'s preset at its default compatibility level, keeping
-	 * the Android controls and shader. The previous configuration's machine
-	 * goes, its preserved lines with it: they described that machine.
+	 * the Android controls, shader and inserted media (a disk the new model
+	 * has no drive for goes: see the returned [ModelChange]). The previous
+	 * configuration's machine goes, its preserved lines with it: they
+	 * described that machine.
 	 */
-	fun applyModel(model: AmigaModel) {
+	fun applyModel(model: AmigaModel): ModelChange {
+		val previous = settings
+		val previousUnknownLines = currentUnknownLines
 		selectedIntentPreset = null
 		val selectedRoms = ModelRomAvailability.selectRomsForModel(model, availableRoms.value)
-		val newSettings = settings.withModel(model, selectedRoms.config).copy(
+		val machine = settings.withModel(model, selectedRoms.config).copy(
 			romFile = selectedRoms.romFile,
 			romExtFile = selectedRoms.romExtFile
 		)
+		val media = QuickStartMediaState.keepMedia(previous, machine)
 		currentUnknownLines = emptyList()
-		applyConstrainedSettings(newSettings, publishNotices = true)
+		applyConstrainedSettings(media.settings, publishNotices = true)
+		appPreferences.saveAndroidControls(settings)
+		saveLastSession()
+		return ModelChange(previous, previousUnknownLines, media.dropped)
+	}
+
+	/** Undo [change]: the settings as they were before the model change. */
+	fun undoModelChange(change: ModelChange) {
+		selectedIntentPreset = null
+		currentUnknownLines = change.previousUnknownLines
+		applyConstrainedSettings(change.previous, publishNotices = false)
 		appPreferences.saveAndroidControls(settings)
 		saveLastSession()
 	}

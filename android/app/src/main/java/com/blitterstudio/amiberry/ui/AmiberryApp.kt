@@ -3,6 +3,12 @@ package com.blitterstudio.amiberry.ui
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.focusGroup
+import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.withFrameNanos
+import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -273,8 +279,8 @@ fun AmiberryApp() {
 						onClick = { answer(UnsavedChangesGuard.Choice.DontSave) },
 						modifier = Modifier.dpadFocusIndicator()
 					) {
-						// Leaving reverts the edits; starting keeps them open, unsaved.
-						Text(stringResource(if (starting) R.string.action_dont_save else R.string.action_discard))
+						// One wording for both: leaving reverts the edits, starting keeps them open, unsaved.
+						Text(stringResource(R.string.action_dont_save))
 					}
 					TextButton(
 						onClick = { answer(UnsavedChangesGuard.Choice.Cancel) },
@@ -287,45 +293,102 @@ fun AmiberryApp() {
 		)
 	}
 
-	if (useNavRail) {
-		Row(modifier = Modifier.fillMaxSize()) {
-			NavigationRail(modifier = Modifier.focusGroup()) {
+	// D-pad focus enters a tab's content where it last was, else at the control the screen
+	// marks (contentEntryFocus), else at its first control.
+	val contentFocus = remember { FocusRequester() }
+	val contentEntry = remember { FocusRequester() }
+	val contentModifier = Modifier
+		.focusRequester(contentFocus)
+		.focusRestorer(contentEntry)
+		.focusGroup()
+	val currentRoute = currentDestination?.route
+	val tv = isTvDevice()
+	// On a TV, focus starts in the content, not on the rail; About opens and closes from the
+	// content (Quick Start's info button), so focus stays in the content on both ways.
+	var initialFocusDone by rememberSaveable { mutableStateOf(false) }
+	var previousRoute by remember { mutableStateOf<String?>(null) }
+	LaunchedEffect(currentRoute) {
+		val fromOrToAbout = currentRoute == Screen.About.route || previousRoute == Screen.About.route
+		previousRoute = currentRoute
+		if (!tv || currentRoute == null || (initialFocusDone && !fromOrToAbout)) return@LaunchedEffect
+		// The destination's controls compose over the next frames.
+		repeat(CONTENT_FOCUS_ATTEMPTS) {
+			withFrameNanos { }
+			if (contentFocus.requestFocus(FocusDirection.Enter)) {
+				initialFocusDone = true
+				return@LaunchedEffect
+			}
+		}
+	}
+
+	fun isSelected(screen: Screen): Boolean =
+		currentDestination?.hierarchy?.any { it.route == screen.route } == true ||
+			// About opens from Home, so Home stays the tab you are on.
+			(screen == Screen.QuickStart && currentRoute == Screen.About.route)
+
+	CompositionLocalProvider(LocalContentEntryFocus provides contentEntry) {
+		if (useNavRail) {
+			Row(modifier = Modifier.fillMaxSize()) {
+				NavigationRail(modifier = Modifier.focusGroup()) {
+					val lastItem = Screen.bottomNavItems.last()
 					Screen.bottomNavItems.forEach { screen ->
 						val title = stringResource(screen.titleRes)
 						NavigationRailItem(
 							icon = { Icon(screen.icon, contentDescription = title) },
 							label = { Text(title) },
-							selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
-						onClick = { guardedNavigate(screen.route) { navigateToRoute(screen.route) } },
-						modifier = Modifier.dpadFocusIndicator()
-					)
-				}
-			}
-			Scaffold(modifier = Modifier.weight(1f)) { innerPadding ->
-				AmiberryNavHost(navController, startGuard, Modifier.padding(innerPadding))
-			}
-		}
-	} else {
-		Scaffold(
-			bottomBar = {
-				NavigationBar(modifier = Modifier.focusGroup()) {
-					Screen.bottomNavItems.forEach { screen ->
-						val title = stringResource(screen.titleRes)
-						NavigationBarItem(
-							icon = { Icon(screen.icon, contentDescription = title) },
-							label = { Text(title) },
-							selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
+							selected = isSelected(screen),
 							onClick = { guardedNavigate(screen.route) { navigateToRoute(screen.route) } },
-							modifier = Modifier.dpadFocusIndicator()
+							modifier = Modifier
+								.focusProperties {
+									// Right always enters the content (the 2D search found a top bar icon).
+									right = contentFocus
+									// Down from the last tab would jump to Start.
+									if (screen == lastItem) down = FocusRequester.Cancel
+								}
+								.dpadFocusIndicator()
 						)
 					}
 				}
+				Scaffold(modifier = Modifier.weight(1f)) { innerPadding ->
+					AmiberryNavHost(
+						navController,
+						startGuard,
+						contentModifier.padding(innerPadding).consumeWindowInsets(innerPadding)
+					)
+				}
 			}
-		) { innerPadding ->
-			AmiberryNavHost(navController, startGuard, Modifier.padding(innerPadding))
+		} else {
+			Scaffold(
+				bottomBar = {
+					NavigationBar(modifier = Modifier.focusGroup()) {
+						Screen.bottomNavItems.forEach { screen ->
+							val title = stringResource(screen.titleRes)
+							NavigationBarItem(
+								icon = { Icon(screen.icon, contentDescription = title) },
+								label = { Text(title) },
+								selected = isSelected(screen),
+								onClick = { guardedNavigate(screen.route) { navigateToRoute(screen.route) } },
+								modifier = Modifier.dpadFocusIndicator()
+							)
+						}
+					}
+				}
+			) { innerPadding ->
+				// The screens' own top bars and Scaffolds apply the status and navigation bar
+				// insets; consuming the shell's padding keeps them from adding the same inset
+				// twice (an empty band above every title).
+				AmiberryNavHost(
+					navController,
+					startGuard,
+					contentModifier.padding(innerPadding).consumeWindowInsets(innerPadding)
+				)
+			}
 		}
 	}
 }
+
+/** Frames the shell waits for a destination's controls before it gives up moving focus there. */
+private const val CONTENT_FOCUS_ATTEMPTS = 30
 
 @Composable
 private fun AmiberryNavHost(navController: NavHostController, startGuard: StartGuard, modifier: Modifier = Modifier) {

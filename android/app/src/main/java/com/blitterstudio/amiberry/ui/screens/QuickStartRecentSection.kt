@@ -37,7 +37,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.FocusProperties
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import android.text.format.DateUtils
+import com.blitterstudio.amiberry.ui.contentEntryFocus
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.blitterstudio.amiberry.R
@@ -61,7 +65,9 @@ internal fun QuickStartRecentSection(
 	onLaunch: (JSONObject) -> Unit,
 	onRemove: (JSONObject) -> Unit,
 	onClear: () -> Unit,
-	onEmptied: () -> Unit
+	onEmptied: () -> Unit,
+	/** The first row is where D-pad focus enters the screen (Recent is the mode Quick Start opened in). */
+	firstRowIsEntry: Boolean = false
 ) {
 	var confirmClear by remember { mutableStateOf(false) }
 	// Removing the focused row (or clearing the list) would drop D-pad focus to the
@@ -89,13 +95,23 @@ internal fun QuickStartRecentSection(
 				if (items.isNotEmpty()) {
 					TextButton(
 						onClick = { confirmClear = true },
-						modifier = Modifier.dpadFocusIndicator()
+						modifier = Modifier
+							.focusProperties { if (rowFocus.isNotEmpty()) down = rowFocus[0] }
+							.dpadFocusIndicator()
 					) {
 						Icon(Icons.Default.ClearAll, contentDescription = null, modifier = Modifier.size(18.dp))
 						Spacer(modifier = Modifier.width(4.dp))
 						Text(stringResource(R.string.action_clear_recent))
 					}
 				}
+			}
+			// A row starts its launch with the settings it was made with, not the ones below.
+			if (items.isNotEmpty()) {
+				Text(
+					stringResource(R.string.quick_start_recent_hint),
+					style = MaterialTheme.typography.bodySmall,
+					color = MaterialTheme.colorScheme.onSurfaceVariant
+				)
 			}
 			Spacer(modifier = Modifier.height(8.dp))
 			if (items.isEmpty()) {
@@ -110,6 +126,10 @@ internal fun QuickStartRecentSection(
 						item = item,
 						launchInProgress = launchInProgress,
 						focusRequester = rowFocus[index],
+						// Up and Down move from row to row; the ⋮ beside one is reached with Right.
+						previousRow = rowFocus.getOrNull(index - 1),
+						nextRow = rowFocus.getOrNull(index + 1),
+						isEntry = firstRowIsEntry && index == 0,
 						onLaunch = { onLaunch(item.entry) },
 						onRemove = {
 							refocus = RecentRefocus(index, items.size)
@@ -159,6 +179,9 @@ private fun RecentRow(
 	item: RecentLaunches.Item,
 	launchInProgress: Boolean,
 	focusRequester: FocusRequester,
+	previousRow: FocusRequester?,
+	nextRow: FocusRequester?,
+	isEntry: Boolean,
 	onLaunch: () -> Unit,
 	onRemove: () -> Unit
 ) {
@@ -170,6 +193,19 @@ private fun RecentRow(
 		RecentLaunches.Status.MissingFiles -> stringResource(R.string.recent_status_missing)
 		RecentLaunches.Status.ModelUnavailable -> stringResource(R.string.recent_status_model_unavailable)
 	}
+	val justNow = stringResource(R.string.recent_launched_just_now)
+	val launchedAt = details.launchedAtMs?.let { time ->
+		val now = System.currentTimeMillis()
+		if (now - time < DateUtils.MINUTE_IN_MILLIS) {
+			justNow
+		} else {
+			DateUtils.getRelativeTimeSpanString(time, now, DateUtils.MINUTE_IN_MILLIS).toString()
+		}
+	}
+	fun FocusProperties.rowNeighbours() {
+		previousRow?.let { up = it }
+		nextRow?.let { down = it }
+	}
 
 	Row(
 		modifier = Modifier.fillMaxWidth(),
@@ -180,6 +216,8 @@ private fun RecentRow(
 				.weight(1f)
 				.clip(RoundedCornerShape(12.dp))
 				.focusRequester(focusRequester)
+				.then(if (isEntry) Modifier.contentEntryFocus() else Modifier)
+				.focusProperties { rowNeighbours() }
 				.dpadFocusIndicator()
 				.combinedClickable(
 					// An entry that cannot be launched opens its actions instead, so Remove is one tap away.
@@ -202,7 +240,10 @@ private fun RecentRow(
 				modifier = Modifier.alpha(contentAlpha)
 			)
 			Text(
-				stringResource(R.string.recent_entry_summary, stringResource(details.type.labelRes), details.detail),
+				listOfNotNull(
+					stringResource(R.string.recent_entry_summary, stringResource(details.type.labelRes), details.detail),
+					launchedAt
+				).joinToString(" · "),
 				style = MaterialTheme.typography.bodySmall,
 				color = MaterialTheme.colorScheme.onSurfaceVariant,
 				modifier = Modifier.alpha(contentAlpha)
@@ -218,7 +259,12 @@ private fun RecentRow(
 		Box {
 			IconButton(
 				onClick = { showMenu = true },
-				modifier = Modifier.dpadFocusIndicator()
+				modifier = Modifier
+					.focusProperties {
+						rowNeighbours()
+						left = focusRequester
+					}
+					.dpadFocusIndicator()
 			) {
 				Icon(
 					Icons.Default.MoreVert,

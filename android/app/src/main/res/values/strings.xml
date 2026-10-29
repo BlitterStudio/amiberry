@@ -163,7 +163,6 @@
     <string name="quick_start_whdload_title">WHDLoad Game</string>
     <string name="quick_start_whdload_help">Select a game to launch: WHDBooter sets up the machine for it when it starts</string>
     <string name="quick_start_no_whdload_games">No WHDLoad games found. Import .lha, .lzh or .lzx files to get started.</string>
-    <string name="quick_start_select_game_placeholder">(select a game)</string>
     <string name="quick_start_scanning_media">Scanning media</string>
     <string name="rom_readiness_scanned">ROMs scanned: %1$d</string>
     <string name="rom_readiness_recognized">Recognized Kickstart ROMs: %1$d</string>
@@ -299,8 +298,6 @@
     <string name="about_credits_body">Created by Dimitris Panokostas (MiDWaN)\n\nBased on WinUAE by Toni Wilen, and earlier work by Bernd Schmidt and the UAE team.\n\nUses SDL, Dear ImGui, and other open-source libraries.</string>
 
     <string name="welcome_title">Welcome to Amiberry</string>
-    <string name="welcome_message">Amiberry is an Amiga emulator. Models whose Kickstart ROM (the Amiga\'s operating system firmware) is not installed boot the free AROS ROM instead; for the best compatibility, import a Kickstart from the Files tab. Then choose an Amiga model and insert a floppy or CD image to start emulating.</string>
-    <string name="welcome_help_link">Learn more</string>
     <string name="welcome_dismiss">Got it</string>
 
     <string name="crash_dialog_title">Emulator stopped unexpectedly</string>
@@ -474,4 +471,43 @@
     <string name="settings_section_show">Show %1$s</string>
     <string name="settings_section_hide">Hide %1$s</string>
     <string name="settings_display_more_title">More Display Options</string>
+
+    <!-- Home: Quick Start, shell, About (UX audit) -->
+    <string name="msg_quit_emulation_to_open_file">A game is running. Quit it from its menu (Back, then Quit), then open the file again.</string>
+    <string name="action_undo">Undo</string>
+    <string name="action_select">Select</string>
+    <string name="action_clear_selection">Clear selection</string>
+    <string name="action_reset_to_preset">Reset to preset</string>
+    <string name="quick_start_media_ejected_no_floppy">%1$s ejected: the %2$s has no floppy drive.</string>
+    <string name="quick_start_media_ejected_no_cd">CD ejected: the %1$s has no CD drive.</string>
+    <string name="quick_start_whdload_choose_game">Choose a game</string>
+    <string name="quick_start_whdload_picker_title">Choose a WHDLoad game</string>
+    <string name="quick_start_whdload_picker_hint">Games you played lately come first.</string>
+    <string name="quick_start_whdload_picker_hint_launch">Press OK on a game to start it. Games you played lately come first.</string>
+    <string name="quick_start_whdload_search">Search games</string>
+    <string name="quick_start_whdload_no_match">No game matches \"%1$s\".</string>
+    <string name="quick_start_whdload_game_detail">%1$s · %2$s</string>
+    <string name="quick_start_whdload_recently_played">Played lately</string>
+    <string name="quick_start_whdload_selected">Selected</string>
+    <string name="quick_start_recent_hint">Choose an entry to start it again, with the settings it was launched with.</string>
+    <string name="recent_launched_just_now">just now</string>
+    <string name="summary_rom_missing">Missing: %1$s</string>
+    <string name="summary_rom_missing_aros">Missing: %1$s (boots AROS)</string>
+    <string name="quick_start_rom_missing_notice">The Kickstart file %1$s is gone. Import it again to start this model.</string>
+    <string name="quick_start_rom_missing_notice_aros">The Kickstart file %1$s is gone: this launch boots the free AROS ROM instead.</string>
+    <string name="quick_start_model_needs_rom">Kickstart not installed: boots AROS. Needs %1$s</string>
+    <string name="quick_start_model_using_config">Using: %1$s</string>
+    <string name="quick_start_model_edited_title">Changed from the preset</string>
+    <string name="quick_start_model_edited">Edited: %1$s</string>
+    <string name="quick_start_model_edited_more">%1$s, +%2$d more</string>
+    <string name="welcome_step">%1$d. %2$s</string>
+    <string name="welcome_step_kickstart">Import a Kickstart ROM for the best compatibility. Without one, Amiberry boots the free AROS.</string>
+    <string name="welcome_step_kickstart_done">Your Kickstart ROM is installed.</string>
+    <string name="welcome_step_whdload">Choose a WHDLoad game (.lha) and press Start.</string>
+    <string name="welcome_step_disk">Insert a floppy disk image (.adf) in DF0 and press Start.</string>
+    <string name="welcome_step_cd">Insert a CD image and press Start. The CD32 and CDTV need their own ROMs.</string>
+    <string name="welcome_step_recent">Choose something you launched before to start it again.</string>
+    <string name="quick_start_cd_roms_title">The CD32 and CDTV need their own ROMs</string>
+    <string name="quick_start_cd_roms_message">AROS cannot run CD titles. Import these ROMs to play CD images:</string>
+    <string name="quick_start_cd_roms_model">%1$s: %2$s</string>
 </resources>

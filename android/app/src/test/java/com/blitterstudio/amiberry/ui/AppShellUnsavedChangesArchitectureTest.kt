@@ -32,7 +32,6 @@ class AppShellUnsavedChangesArchitectureTest {
 		assertTrue(source.contains("R.string.dialog_unsaved_changes_title"))
 		assertTrue(source.contains("settingsViewModel.saveTracked()"))
 		assertTrue(source.contains("settingsViewModel.discardChanges()"))
-		assertTrue(source.contains("R.string.action_discard"))
 	}
 
 	@Test
