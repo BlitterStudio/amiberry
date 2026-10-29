@@ -27,28 +27,62 @@ class ConfigurationActionsTest {
 	}
 
 	@Test
-	fun `delete message reflects success or failure`() {
+	fun `delete message names the configuration and says when Settings keeps it unnamed`() {
 		assertEquals(
-			ConfigurationActions.Message(R.string.msg_config_deleted),
-			ConfigurationActions.deleteMessage(deleted = true)
+			ConfigurationActions.Message(R.string.msg_config_deleted_named, "Workbench"),
+			ConfigurationActions.deleteMessage("Workbench", deleted = true, wasOpen = false)
+		)
+		assertEquals(
+			ConfigurationActions.Message(R.string.msg_config_deleted_was_open, "Workbench"),
+			ConfigurationActions.deleteMessage("Workbench", deleted = true, wasOpen = true)
 		)
 		assertEquals(
 			ConfigurationActions.Message(R.string.msg_failed_delete_config),
-			ConfigurationActions.deleteMessage(deleted = false)
+			ConfigurationActions.deleteMessage("Workbench", deleted = false, wasOpen = false)
 		)
 	}
 
 	@Test
-	fun `duplicate message includes copied file name on success`() {
-		val copy = tempDir.newFile("Workbench_copy.uae")
+	fun `duplicate message names the copy on success and explains a refused name`() {
+		val copy = tempDir.newFile("Workbench copy.uae")
 
 		assertEquals(
-			ConfigurationActions.Message(R.string.msg_config_duplicated_as, "Workbench_copy.uae"),
-			ConfigurationActions.duplicateMessage(Result.success(copy))
+			ConfigurationActions.Message(R.string.msg_config_duplicated_as, "Workbench copy"),
+			ConfigurationActions.duplicateMessage(ConfigFiles.EditResult.Done(copy))
+		)
+		assertEquals(
+			ConfigurationActions.Message(R.string.config_name_problem_taken, "Games"),
+			ConfigurationActions.duplicateMessage(
+				ConfigFiles.EditResult.Refused(ConfigFiles.NameProblem.Taken("Games"))
+			)
 		)
 		assertEquals(
 			ConfigurationActions.Message(R.string.msg_failed_duplicate_config),
-			ConfigurationActions.duplicateMessage(Result.failure(IllegalStateException()))
+			ConfigurationActions.duplicateMessage(ConfigFiles.EditResult.Failed)
+		)
+	}
+
+	@Test
+	fun `rename message names the new name or the reason it was refused`() {
+		val renamed = tempDir.newFile("Lemmings.uae")
+
+		assertEquals(
+			ConfigurationActions.Message(R.string.msg_config_renamed_as, "Lemmings"),
+			ConfigurationActions.renameMessage(ConfigFiles.EditResult.Done(renamed))
+		)
+		assertEquals(
+			ConfigurationActions.Message(R.string.config_name_problem_empty),
+			ConfigurationActions.renameMessage(ConfigFiles.EditResult.Refused(ConfigFiles.NameProblem.Empty))
+		)
+		assertEquals(
+			ConfigurationActions.Message(R.string.config_name_problem_invalid),
+			ConfigurationActions.renameMessage(
+				ConfigFiles.EditResult.Refused(ConfigFiles.NameProblem.InvalidCharacters)
+			)
+		)
+		assertEquals(
+			ConfigurationActions.Message(R.string.msg_failed_rename_config),
+			ConfigurationActions.renameMessage(ConfigFiles.EditResult.Failed)
 		)
 	}
 

@@ -29,7 +29,8 @@ object ConfigurationSaveActions {
 
 	fun messageFor(result: SaveResult): ConfigurationActions.Message =
 		when (result) {
-			is SaveResult.Saved -> ConfigurationActions.Message(R.string.msg_saved_configuration, result.file.name)
+			// The configuration's name, as the library lists it, not its .uae file name.
+			is SaveResult.Saved -> ConfigurationActions.Message(R.string.msg_saved_configuration, result.file.nameWithoutExtension)
 			SaveResult.InvalidName -> ConfigurationActions.Message(R.string.msg_invalid_config_name)
 			SaveResult.AlreadyExists -> ConfigurationActions.Message(R.string.msg_config_already_exists)
 			SaveResult.Failed -> ConfigurationActions.Message(R.string.msg_failed_save_config)

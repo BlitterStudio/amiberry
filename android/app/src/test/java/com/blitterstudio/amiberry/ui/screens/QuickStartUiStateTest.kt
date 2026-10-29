@@ -1,7 +1,11 @@
 package com.blitterstudio.amiberry.ui.screens
 
+import com.blitterstudio.amiberry.data.model.AmigaFile
 import com.blitterstudio.amiberry.data.model.AmigaModel
 import com.blitterstudio.amiberry.data.model.EmulatorSettings
+import com.blitterstudio.amiberry.data.model.FileCategory
+import com.blitterstudio.amiberry.data.model.ModelRomAvailability
+import com.blitterstudio.amiberry.data.model.RomIdentity
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -29,7 +33,7 @@ class QuickStartUiStateTest {
 		assertEquals("Amiga 1200", summary.model)
 		assertEquals("68030, 32-bit addressing", summary.cpu)
 		assertEquals("AGA", summary.chipset)
-		assertEquals("2M Chip", summary.memory)
+		assertEquals("2 MB Chip", summary.memory)
 		assertEquals("DF0: Workbench.adf, DF1: Extras.adf", summary.media)
 		assertEquals("On-screen keyboard", summary.controls)
 	}
@@ -46,6 +50,101 @@ class QuickStartUiStateTest {
 		assertEquals("Amiga 1200", summary.model)
 		assertEquals("WHDLoad: Lotus", summary.media)
 	}
+
+	@Test
+	fun `a model without its Kickstart starts on AROS and the summary says so`() {
+		val roms = listOf(rom("aros-rom.bin", 0x11111111L), rom("aros-ext.bin", 0x22222222L))
+		val model = AmigaModel.A1200
+		val selected = ModelRomAvailability.selectRomsForModel(model, roms)
+		val available = model in ModelRomAvailability.availableModels(roms)
+
+		assertTrue(selected.aros)
+		assertTrue(
+			QuickStartUiState.canStart(
+				launchMode = QuickStartLaunchMode.DISK,
+				hasRoms = roms.isNotEmpty(),
+				selectedModelAvailable = available,
+				hasSelectedWhdloadGame = false
+			)
+		)
+		val summary = QuickStartUiState.buildEffectiveSummary(
+			settings = EmulatorSettings.fromModel(model).copy(romFile = selected.romFile),
+			launchMode = QuickStartLaunchMode.DISK,
+			selectedModelAvailable = available,
+			roms = roms
+		)
+		assertEquals(RomIdentity.BuiltInAros, summary.rom)
+	}
+
+	@Test
+	fun `the summary names an installed Kickstart from the emulator's ROM table`() {
+		val roms = listOf(rom("kick13.rom", 0xc4f0f55fL))
+		val summary = QuickStartUiState.buildEffectiveSummary(
+			settings = EmulatorSettings.fromModel(AmigaModel.A500).copy(romFile = "/roms/kick13.rom"),
+			launchMode = QuickStartLaunchMode.DISK,
+			selectedModelAvailable = true,
+			roms = roms
+		)
+
+		assertEquals(RomIdentity.Kickstart("KS ROM v1.3 (A500,A1000,A2000)"), summary.rom)
+	}
+
+	@Test
+	fun `importing the model's Kickstart moves AROS settings to it, and the notice and summary follow`() {
+		val aros = listOf(rom("aros-rom.bin", 0x11111111L), rom("aros-ext.bin", 0x22222222L))
+		val onAros = EmulatorSettings.fromModel(AmigaModel.A500).copy(romFile = ModelRomAvailability.AROS_ROM_FILE)
+		val arosRoms = ModelRomAvailability.selectRomsForModel(AmigaModel.A500, aros)
+		assertTrue(QuickStartUiState.showsArosNotice(onAros, arosRoms, QuickStartLaunchMode.DISK))
+
+		val withKick = aros + rom("kick13.rom", 0xc4f0f55fL)
+		val updated = QuickStartUiState.withInstalledKickstart(onAros, withKick)!!
+
+		assertEquals("/roms/kick13.rom", updated.romFile)
+		assertEquals("", updated.romExtFile)
+		val kickRoms = ModelRomAvailability.selectRomsForModel(AmigaModel.A500, withKick)
+		assertFalse(QuickStartUiState.showsArosNotice(updated, kickRoms, QuickStartLaunchMode.DISK))
+		val summary = QuickStartUiState.buildEffectiveSummary(
+			settings = updated,
+			launchMode = QuickStartLaunchMode.DISK,
+			selectedModelAvailable = true,
+			roms = withKick
+		)
+		assertEquals(RomIdentity.Kickstart("KS ROM v1.3 (A500,A1000,A2000)"), summary.rom)
+	}
+
+	@Test
+	fun `a ROM import leaves a chosen Kickstart, and AROS without the model's Kickstart, alone`() {
+		val roms = listOf(
+			rom("aros-rom.bin", 0x11111111L),
+			rom("aros-ext.bin", 0x22222222L),
+			rom("kick13.rom", 0xc4f0f55fL)
+		)
+		val chosen = EmulatorSettings.fromModel(AmigaModel.A500).copy(romFile = "/roms/other.rom")
+		assertEquals(null, QuickStartUiState.withInstalledKickstart(chosen, roms))
+
+		val a1200OnAros = EmulatorSettings.fromModel(AmigaModel.A1200).copy(romFile = ModelRomAvailability.AROS_ROM_FILE)
+		assertEquals(null, QuickStartUiState.withInstalledKickstart(a1200OnAros, roms))
+	}
+
+	@Test
+	fun `the AROS notice shows for settings without a ROM when the model boots AROS, not in Recent`() {
+		val aros = listOf(rom("aros-rom.bin", 0x11111111L), rom("aros-ext.bin", 0x22222222L))
+		val selected = ModelRomAvailability.selectRomsForModel(AmigaModel.A500, aros)
+		val noRom = EmulatorSettings.fromModel(AmigaModel.A500).copy(romFile = "")
+
+		assertTrue(QuickStartUiState.showsArosNotice(noRom, selected, QuickStartLaunchMode.CD))
+		assertFalse(QuickStartUiState.showsArosNotice(noRom, selected, QuickStartLaunchMode.RECENT))
+	}
+
+	private fun rom(name: String, crc32: Long) = AmigaFile(
+		path = "/roms/$name",
+		name = name,
+		extension = name.substringAfterLast('.'),
+		size = 524288,
+		lastModified = 0,
+		category = FileCategory.ROMS,
+		crc32 = crc32
+	)
 
 	@Test
 	fun `start availability follows the active launch mode`() {

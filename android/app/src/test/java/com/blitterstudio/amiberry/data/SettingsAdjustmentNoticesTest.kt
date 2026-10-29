@@ -10,13 +10,36 @@ import org.junit.Test
 class SettingsAdjustmentNoticesTest {
 
 	@Test
-	fun `notices include addressing changes for 68030 and newer CPUs`() {
+	fun `an addressing change is explained by the schema's 24-bit constraint`() {
 		val notices = SettingsAdjustmentNotices.fromAdjustment(
-			requested = EmulatorSettings(cpuModel = 68030, address24Bit = true),
-			applied = EmulatorSettings(cpuModel = 68030, address24Bit = false)
+			requested = EmulatorSettings(cpuModel = 68040, address24Bit = true),
+			applied = EmulatorSettings(cpuModel = 68040, address24Bit = false)
 		)
 
-		assertEquals(listOf(SettingsAdjustmentNotice.CpuRequires32BitAddressing), notices)
+		assertEquals(listOf(SettingsAdjustmentNotice.AddressingChanged), notices)
+		assertEquals("cpu_24bit_addressing", notices.single().optionId)
+	}
+
+	@Test
+	fun `a JIT the emulator turns off is explained by the cachesize constraint`() {
+		val notices = SettingsAdjustmentNotices.fromAdjustment(
+			requested = EmulatorSettings(cpuModel = 68000, jitCacheSize = 8192),
+			applied = EmulatorSettings(cpuModel = 68000, jitCacheSize = 0)
+		)
+
+		assertEquals(listOf(SettingsAdjustmentNotice.JitTurnedOff), notices)
+		assertEquals("cachesize", notices.single().optionId)
+	}
+
+	@Test
+	fun `disabled sound raised for cycle-exact mode is explained by the sound_output constraint`() {
+		val notices = SettingsAdjustmentNotices.fromAdjustment(
+			requested = EmulatorSettings(cycleExact = "memory", cpuModel = 68020, soundOutput = "none"),
+			applied = EmulatorSettings(cycleExact = "memory", cpuModel = 68020, soundOutput = "interrupts")
+		)
+
+		assertEquals(listOf(SettingsAdjustmentNotice.SoundOutputRaised), notices)
+		assertEquals("sound_output", notices.single().optionId)
 	}
 
 	@Test
@@ -27,6 +50,7 @@ class SettingsAdjustmentNoticesTest {
 		)
 
 		assertEquals(listOf(SettingsAdjustmentNotice.IntegerScalingSynced), notices)
+		assertEquals(null, notices.single().optionId)
 	}
 
 	@Test

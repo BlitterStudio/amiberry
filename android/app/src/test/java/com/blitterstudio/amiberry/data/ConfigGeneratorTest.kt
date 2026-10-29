@@ -126,7 +126,7 @@ class ConfigGeneratorTest {
 	@Test
 	fun `generate constrained cycle exact chipset settings`() {
 		val constrained = EmulatorSettingsConstraints.apply(
-			EmulatorSettings(cycleExact = true, jitCacheSize = 8192),
+			EmulatorSettings(cycleExact = "true", jitCacheSize = 8192),
 			hasTouchScreen = true
 		)
 		val output = ConfigGenerator.generate(constrained)
@@ -468,7 +468,7 @@ class ConfigGeneratorTest {
 			chipset = "aga",
 			immediateBlits = true,
 			collisionLevel = "full",
-			cycleExact = true,
+			cycleExact = "true",
 			ntsc = false,
 			chipRam = 4,
 			slowRam = 0,
@@ -553,6 +553,86 @@ class ConfigGeneratorTest {
 
 		assertEquals(original.shader, parsed.settings.shader)
 		assertTrue(parsed.unknownLines.none { it.trimStart().startsWith("amiberry.shader=") })
+	}
+
+	private fun roundTrip(settings: EmulatorSettings, name: String): EmulatorSettings {
+		val file = tempDir.newFile(name)
+		file.writeText(ConfigGenerator.generate(settings))
+		return ConfigParser.parse(file).settings
+	}
+
+	@Test
+	fun `round-trip keeps every cycle-exact mode`() {
+		for (mode in listOf("false", "memory", "true")) {
+			val output = ConfigGenerator.generate(EmulatorSettings(cycleExact = mode))
+			assertContainsLine(output.lines(), "cycle_exact=$mode")
+			assertEquals(mode, roundTrip(EmulatorSettings(cycleExact = mode), "ce_$mode.uae").cycleExact)
+		}
+	}
+
+	@Test
+	fun `round-trip keeps every floppy drive type`() {
+		for (type in listOf(-1, 0, 1, 2, 7, 3, 8)) {
+			val parsed = roundTrip(EmulatorSettings(floppy2 = "", floppy2Type = type), "floppy_$type.uae")
+			assertEquals("$type", type, parsed.floppy2Type)
+		}
+	}
+
+	@Test
+	fun `round-trip keeps every sound frequency`() {
+		for (frequency in listOf(11025, 22050, 32000, 44100, 48000)) {
+			assertEquals(frequency, roundTrip(EmulatorSettings(soundFreq = frequency), "freq_$frequency.uae").soundFreq)
+		}
+	}
+
+	@Test
+	fun `round-trip keeps the volumes and drive sounds as stored attenuation`() {
+		val original = EmulatorSettings(
+			soundVolume = 10,
+			soundVolumePaula = 20,
+			soundVolumeCd = 30,
+			soundVolumeAhi = 40,
+			soundVolumeMidi = 50,
+			floppy0Sound = 1,
+			floppy3Sound = -1,
+			floppy0SoundVolumeDisk = 5,
+			floppy3SoundVolumeEmpty = 90
+		)
+		val output = ConfigGenerator.generate(original).lines()
+		assertContainsLine(output, "sound_volume=10")
+		assertContainsLine(output, "sound_volume_paula=20")
+		assertContainsLine(output, "sound_volume_cd=30")
+		assertContainsLine(output, "sound_volume_ahi=40")
+		assertContainsLine(output, "sound_volume_midi=50")
+		assertContainsLine(output, "floppy0sound=1")
+		assertContainsLine(output, "floppy0soundvolume_disk=5")
+
+		val parsed = roundTrip(original, "volumes.uae")
+		assertEquals(original.soundVolume, parsed.soundVolume)
+		assertEquals(original.soundVolumePaula, parsed.soundVolumePaula)
+		assertEquals(original.soundVolumeCd, parsed.soundVolumeCd)
+		assertEquals(original.soundVolumeAhi, parsed.soundVolumeAhi)
+		assertEquals(original.soundVolumeMidi, parsed.soundVolumeMidi)
+		assertEquals(original.floppy0Sound, parsed.floppy0Sound)
+		assertEquals(original.floppy3Sound, parsed.floppy3Sound)
+		assertEquals(original.floppy0SoundVolumeDisk, parsed.floppy0SoundVolumeDisk)
+		assertEquals(original.floppy3SoundVolumeEmpty, parsed.floppy3SoundVolumeEmpty)
+	}
+
+	@Test
+	fun `default volumes are the emulator's`() {
+		val s = EmulatorSettings()
+		assertEquals(0, s.soundVolume)
+		assertEquals(0, s.soundVolumePaula)
+		assertEquals(20, s.soundVolumeCd)
+		assertEquals(33, s.floppy0SoundVolumeDisk)
+		assertEquals(0, s.floppy0Sound)
+	}
+
+	@Test
+	fun `round-trip keeps the built-in AROS ROM token`() {
+		val parsed = roundTrip(EmulatorSettings(romFile = ":AROS"), "aros.uae")
+		assertEquals(":AROS", parsed.romFile)
 	}
 
 	// --- Hard drive round-trip ---

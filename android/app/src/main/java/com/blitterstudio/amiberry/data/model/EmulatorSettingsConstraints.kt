@@ -22,7 +22,7 @@ object EmulatorSettingsConstraints {
 		}
 
 		result = result.copy(
-			soundOutput = normalizeSoundOutput(result.soundOutput),
+			soundOutput = normalizeSoundOutput(result.soundOutput, result.isCycleExact),
 			soundFreq = if (result.soundFreq > 0) result.soundFreq else DEFAULT_SOUND_FREQUENCY,
 			// 0 is the emulator's "Min"; off-list sizes are valid native values too
 			soundBuffer = if (result.soundBuffer >= 0) result.soundBuffer else DEFAULT_SOUND_BUFFER,
@@ -92,7 +92,9 @@ object EmulatorSettingsConstraints {
 	 * emulator runs with after loading it. The table's chipset input is the
 	 * family (ocs, ecs, aga); a chipset variant the family keeps stays as
 	 * chosen. JIT and Z3 sizes are looked up as on or off and keep the size
-	 * chosen while the emulator keeps them on.
+	 * chosen while the emulator keeps them on. The table knows cycle-exact as
+	 * on or off; the core's checks treat both modes alike (fixup_cpu in
+	 * src/main.cpp), so a DMA/memory mode it keeps stays as chosen.
 	 */
 	private fun chipsetFamily(chipset: String) = when (chipset) {
 		"aga" -> "aga"
@@ -109,7 +111,7 @@ object EmulatorSettingsConstraints {
 				"cpu_model" to s.cpuModel.toString(),
 				"fpu_model" to s.fpuModel.toString(),
 				"cpu_24bit_addressing" to s.address24Bit.toString(),
-				"cycle_exact" to s.cycleExact.toString(),
+				"cycle_exact" to s.isCycleExact.toString(),
 				"cachesize" to if (s.jitCacheSize > 0) "8192" else "0",
 				"z3mem_size" to if (s.z3Ram > 0) "16" else "0",
 				"cpu_speed" to s.cpuSpeed,
@@ -124,7 +126,7 @@ object EmulatorSettingsConstraints {
 			cpuModel = resolved["cpu_model"]?.toIntOrNull() ?: s.cpuModel,
 			fpuModel = resolved["fpu_model"]?.toIntOrNull() ?: s.fpuModel,
 			address24Bit = flag("cpu_24bit_addressing", s.address24Bit),
-			cycleExact = resolved["cycle_exact"]?.let { it != "false" } ?: s.cycleExact,
+			cycleExact = if (resolved["cycle_exact"] == "false") "false" else s.cycleExact,
 			cpuCompatible = flag("cpu_compatible", s.cpuCompatible),
 			cpuSpeed = resolved["cpu_speed"]?.takeIf { it == "real" || it == "max" } ?: s.cpuSpeed,
 			jitCacheSize = if (resolved["cachesize"] == "0") 0 else s.jitCacheSize,
@@ -159,23 +161,36 @@ object EmulatorSettingsConstraints {
 		)
 	}
 
-	private fun normalizeSoundOutput(soundOutput: String): String = when (soundOutput) {
-		"none", "interrupts", "normal", "exact" -> soundOutput
-		"good" -> "normal"
-		"best" -> "exact"
+	/**
+	 * A sound mode the emulator has (the schema's sound_output choices), with
+	 * the old "good" and "best" spellings read as it reads them. Cycle-exact
+	 * timing needs Paula emulation, so the core raises a disabled sound
+	 * setting to "interrupts" (fixup_cpu in src/main.cpp).
+	 */
+	private fun normalizeSoundOutput(soundOutput: String, cycleExact: Boolean): String = when {
+		soundOutput == "none" && cycleExact -> "interrupts"
+		soundOutput in EmulatorSettings.soundOutputOptions.map { it.first } -> soundOutput
+		soundOutput == "good" -> "normal"
+		soundOutput == "best" -> "exact"
 		else -> DEFAULT_SOUND_OUTPUT
 	}
 
 	private fun normalizeSoundChannels(soundChannels: String): String =
 		if (soundChannels in NATIVE_SOUND_CHANNELS) soundChannels else DEFAULT_SOUND_CHANNELS
 
-	private fun normalizeFloppyDrive(path: String, driveType: Int): NormalizedFloppyDrive = when (driveType) {
-		FLOPPY_TYPE_DISABLED -> NormalizedFloppyDrive(path = "", driveType = FLOPPY_TYPE_DISABLED)
-		FLOPPY_TYPE_DD, FLOPPY_TYPE_HD -> NormalizedFloppyDrive(path = path, driveType = driveType)
-		else -> if (path.isBlank()) {
-			NormalizedFloppyDrive(path = "", driveType = FLOPPY_TYPE_DISABLED)
-		} else {
-			NormalizedFloppyDrive(path = path, driveType = FLOPPY_TYPE_DD)
+	/**
+	 * A disabled drive holds no disk. Every drive type the emulator has (the
+	 * schema's floppyNtype choices) is kept; an unknown one becomes a 3.5" DD
+	 * drive, or a disabled one when it holds no disk. Without a schema the
+	 * type is kept.
+	 */
+	private fun normalizeFloppyDrive(path: String, driveType: Int): NormalizedFloppyDrive {
+		val validTypes = EmulatorSettings.floppyTypeOptions.map { it.first }
+		return when {
+			driveType == FLOPPY_TYPE_DISABLED -> NormalizedFloppyDrive(path = "", driveType = FLOPPY_TYPE_DISABLED)
+			validTypes.isEmpty() || driveType in validTypes -> NormalizedFloppyDrive(path = path, driveType = driveType)
+			path.isBlank() -> NormalizedFloppyDrive(path = "", driveType = FLOPPY_TYPE_DISABLED)
+			else -> NormalizedFloppyDrive(path = path, driveType = FLOPPY_TYPE_DD)
 		}
 	}
 
@@ -185,17 +200,15 @@ object EmulatorSettingsConstraints {
 	private fun normalizeJoyport1(joyport1: String): String =
 		if (joyport1 in ANDROID_PORT_INPUT_DEVICES || joyport1 == "onscreen_joy") joyport1 else DEFAULT_JOYPORT1
 
-	/** Slider position for a speed that may sit between the slider's steps. */
-	fun nearestAnalogMouseSpeedIndex(speed: Int): Int =
-		ANALOG_MOUSE_SPEEDS.indices.minBy { kotlin.math.abs(ANALOG_MOUSE_SPEEDS[it] - speed) }
-
 	private const val DEFAULT_GFX_WIDTH = 720
 	private const val DEFAULT_GFX_HEIGHT = 568
 	private const val DEFAULT_SOUND_OUTPUT = "exact"
-	// Android mixes at 48 kHz, so 44.1 kHz forces resampling and loses AAudio's low-latency path.
+	// The Android build's defaults (settings_sound.cpp and options.h under
+	// __ANDROID__): Android mixes at 48 kHz, so 44.1 kHz forces resampling and
+	// loses AAudio's low-latency path, and it needs more queued audio to ride
+	// out scheduling stalls. The bundled schema comes from a desktop build and
+	// carries the desktop defaults (44100 Hz, 3072), so they are not read from it.
 	const val DEFAULT_SOUND_FREQUENCY = 48000
-	/** Same choices as the in-emulator slider; 0 is its "Min". */
-	val SOUND_BUFFER_SIZES = listOf(0, 1024, 2048, 3072, 4096, 6144, 8192, 12288, 16384, 32768, 65536)
 	const val DEFAULT_SOUND_BUFFER = 8192
 	private const val DEFAULT_SOUND_CHANNELS = "stereo"
 	private const val SCALING_METHOD_INTEGER = 2
@@ -204,7 +217,6 @@ object EmulatorSettingsConstraints {
 	private const val DEFAULT_JOYPORT1 = "joy1"
 	private const val FLOPPY_TYPE_DISABLED = -1
 	private const val FLOPPY_TYPE_DD = 0
-	private const val FLOPPY_TYPE_HD = 1
 	private val JOYSTICK_DEVICES = setOf("joy0", "joy1")
 	private val ANDROID_PORT_INPUT_DEVICES = setOf(
 		"none",
@@ -218,8 +230,9 @@ object EmulatorSettingsConstraints {
 	)
 	private val NATIVE_SOUND_CHANNELS: Set<String>
 		get() = EmulatorSettings.soundChannelOptions.map { it.first }.toSet()
-	val ANALOG_MOUSE_SPEEDS = listOf(5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 75, 100, 125, 150)
-	const val DEFAULT_ANALOG_MOUSE_SPEED = 25
+	/** The emulator's default pointer speed for the left stick as mouse. */
+	val DEFAULT_ANALOG_MOUSE_SPEED: Int
+		get() = EmulatorSettings.schemaInt("input.joymouse_speed_analog", 25)
 
 	private data class NormalizedFloppyDrive(
 		val path: String,

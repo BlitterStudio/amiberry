@@ -2,13 +2,11 @@ package com.blitterstudio.amiberry.ui.screens.settings
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -18,33 +16,32 @@ import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Slider
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.blitterstudio.amiberry.R
 import com.blitterstudio.amiberry.data.model.AmigaModel
-import com.blitterstudio.amiberry.data.model.EmulatorSettings
-import com.blitterstudio.amiberry.ui.dpadFocusIndicator
+import com.blitterstudio.amiberry.ui.components.settings.SchemaChoiceRow
+import com.blitterstudio.amiberry.ui.components.settings.SchemaNumberRow
+import com.blitterstudio.amiberry.ui.components.settings.SchemaSwitchRow
+import com.blitterstudio.amiberry.ui.components.settings.SettingsSection
 import com.blitterstudio.amiberry.ui.dpadVerticalMovesFocus
 import com.blitterstudio.amiberry.ui.viewmodel.SettingsViewModel
+
+/** The JIT cache sizes offered in the size field's menu (stored KB; 0 turns the JIT off). */
+private val JIT_CACHE_SUGGESTIONS = listOf(0, 1024, 2048, 4096, 8192, 16384)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CpuTab(viewModel: SettingsViewModel) {
 	val settings = viewModel.settings
-	val fastestSpeedReason = SettingsControlAvailability.fastestSpeedReasonRes(settings)
-	val cpuCompatibleReason = SettingsControlAvailability.cpuCompatibleReasonRes(settings)
-	val address24BitReason = SettingsControlAvailability.address24BitReasonRes(settings.cpuModel)
+	val fpuValues = SettingsControlAvailability.fpuOptionValues(settings).map { it.toString() }
 
 	Column(
 		modifier = Modifier
@@ -95,196 +92,57 @@ fun CpuTab(viewModel: SettingsViewModel) {
 			}
 		}
 
-		// CPU
-		OutlinedCard(modifier = Modifier.fillMaxWidth()) {
-			Column(modifier = Modifier.padding(16.dp)) {
-				Text(stringResource(R.string.settings_cpu_section_title), style = MaterialTheme.typography.titleMedium)
-				Spacer(modifier = Modifier.height(8.dp))
-
-				// CPU model
-				var cpuExpanded by remember { mutableStateOf(false) }
-				ExposedDropdownMenuBox(
-					expanded = cpuExpanded,
-					onExpandedChange = { cpuExpanded = it }
-				) {
-					OutlinedTextField(
-						value = "${settings.cpuModel}",
-						onValueChange = {},
-						readOnly = true,
-						label = { Text(stringResource(R.string.settings_cpu_model_label)) },
-						trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = cpuExpanded) },
-						modifier = Modifier
-							.dpadVerticalMovesFocus()
-							.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
-							.fillMaxWidth()
-					)
-					ExposedDropdownMenu(
-						expanded = cpuExpanded,
-						onDismissRequest = { cpuExpanded = false }
-					) {
-						EmulatorSettings.cpuModels.forEach { cpu ->
-							DropdownMenuItem(
-								text = { Text("$cpu") },
-								onClick = {
-									viewModel.updateSettings { it.copy(cpuModel = cpu) }
-									cpuExpanded = false
-								}
-							)
-						}
-					}
+		SettingsSection(title = stringResource(R.string.settings_cpu_section_title)) {
+			SchemaChoiceRow(
+				id = "cpu_model",
+				value = settings.cpuModel.toString(),
+				onSelect = { value ->
+					value.toIntOrNull()?.let { cpu -> viewModel.updateSettings { s -> s.withCpuModel(cpu) } }
 				}
-
-				Spacer(modifier = Modifier.height(8.dp))
-
-				// CPU speed
-				SwitchRow(
-					label = stringResource(R.string.settings_cpu_fastest_possible),
-					checked = settings.cpuSpeed == "max",
-					enabled = SettingsControlAvailability.isFastestSpeedEditable(settings),
-					supportingText = fastestSpeedReason?.let { stringResource(it) },
-					onCheckedChange = {
-						viewModel.updateSettings { s ->
-							s.copy(cpuSpeed = if (it) "max" else "real")
-						}
-					}
-				)
-
-				SwitchRow(
-					label = stringResource(R.string.settings_cpu_more_compatible),
-					checked = settings.cpuCompatible,
-					enabled = SettingsControlAvailability.isCpuCompatibleEditable(settings),
-					supportingText = cpuCompatibleReason?.let { stringResource(it) },
-					onCheckedChange = { viewModel.updateSettings { s -> s.copy(cpuCompatible = it) } }
-				)
-
-				SwitchRow(
-					label = stringResource(R.string.settings_cpu_24bit_addressing),
-					checked = settings.address24Bit,
-					enabled = SettingsControlAvailability.isAddress24BitEditable(settings.cpuModel),
-					supportingText = address24BitReason?.let { stringResource(it) },
-					onCheckedChange = { viewModel.updateSettings { s -> s.copy(address24Bit = it) } }
-				)
-
-				// FPU
-				if (settings.cpuModel >= 68020) {
-					Spacer(modifier = Modifier.height(8.dp))
-					var fpuExpanded by remember { mutableStateOf(false) }
-					val fpuOptions = SettingsControlAvailability.fpuOptionValues(settings.cpuModel).map { value ->
-						value to when (value) {
-							0 -> stringResource(R.string.settings_option_none)
-							settings.cpuModel -> stringResource(R.string.settings_cpu_fpu_internal)
-							else -> "$value"
-						}
-					}
-					ExposedDropdownMenuBox(
-						expanded = fpuExpanded,
-						onExpandedChange = { fpuExpanded = it }
-					) {
-						OutlinedTextField(
-							value = fpuOptions.firstOrNull { it.first == settings.fpuModel }?.second
-								?: stringResource(R.string.settings_option_none),
-							onValueChange = {},
-							readOnly = true,
-							label = { Text(stringResource(R.string.settings_cpu_fpu_label)) },
-							trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = fpuExpanded) },
-							modifier = Modifier
-								.dpadVerticalMovesFocus()
-								.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
-								.fillMaxWidth()
-						)
-						ExposedDropdownMenu(
-							expanded = fpuExpanded,
-							onDismissRequest = { fpuExpanded = false }
-						) {
-							fpuOptions.forEach { (value, label) ->
-								DropdownMenuItem(
-									text = { Text(label) },
-									onClick = {
-										viewModel.updateSettings { s -> s.copy(fpuModel = value) }
-										fpuExpanded = false
-									}
-								)
-							}
-						}
-					}
-				}
-
-				// JIT
-				if (settings.cpuModel >= 68020) {
-					Spacer(modifier = Modifier.height(8.dp))
-					Text(stringResource(R.string.settings_cpu_jit_cache_label), style = MaterialTheme.typography.bodyMedium)
-					val jitValues = listOf(0, 1024, 2048, 4096, 8192, 16384)
-					val currentIndex = jitValues.indexOf(settings.jitCacheSize).coerceAtLeast(0)
-					val isJitAllowed = SettingsControlAvailability.isJitAllowed(settings)
-					Slider(
-						value = currentIndex.toFloat(),
-						onValueChange = { idx ->
-							val size = jitValues[idx.toInt().coerceIn(0, jitValues.lastIndex)]
-							viewModel.updateSettings { s -> s.copy(jitCacheSize = size) }
-						},
-						valueRange = 0f..(jitValues.lastIndex).toFloat(),
-						steps = jitValues.size - 2,
-						enabled = isJitAllowed
-					)
-					Text(
-						text = SettingsControlAvailability.jitDisabledReasonRes(settings)?.let { stringResource(it) }
-							?: if (settings.jitCacheSize == 0) {
-								stringResource(R.string.settings_common_disabled)
-							} else {
-								stringResource(R.string.settings_cpu_jit_cache_value, settings.jitCacheSize)
-							},
-						style = MaterialTheme.typography.bodySmall,
-						color = if (isJitAllowed) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-					)
-				}
-			}
-		}
-
-	}
-}
-
-@Composable
-fun SwitchRow(
-	label: String,
-	checked: Boolean,
-	onCheckedChange: (Boolean) -> Unit,
-	enabled: Boolean = true,
-	supportingText: String? = null
-) {
-	Column(
-		modifier = Modifier
-			.fillMaxWidth()
-			.toggleable(
-				value = checked,
-				enabled = enabled,
-				role = Role.Switch,
-				onValueChange = onCheckedChange
 			)
-			.dpadFocusIndicator()
-			.padding(vertical = 4.dp)
-	) {
-		Row(
-			verticalAlignment = Alignment.CenterVertically,
-			horizontalArrangement = Arrangement.SpaceBetween,
-			modifier = Modifier.fillMaxWidth()
-		) {
-			Text(
-				text = label,
-				style = MaterialTheme.typography.bodyMedium,
-				color = if (enabled) MaterialTheme.colorScheme.onSurface
-				else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+			SchemaChoiceRow(
+				id = "cpu_speed",
+				value = settings.cpuSpeed,
+				onSelect = { value -> viewModel.updateSettings { s -> s.copy(cpuSpeed = value) } }
 			)
-			Switch(
-				checked = checked,
-				onCheckedChange = null,
-				enabled = enabled
+			SchemaSwitchRow(
+				id = "cpu_compatible",
+				checked = settings.cpuCompatible,
+				enabled = SettingsControlAvailability.isCpuCompatibleEditable(settings),
+				onCheckedChange = { viewModel.updateSettings { s -> s.copy(cpuCompatible = it) } }
+			)
+			SchemaSwitchRow(
+				id = "cpu_24bit_addressing",
+				checked = settings.address24Bit,
+				enabled = SettingsControlAvailability.isAddress24BitEditable(settings),
+				onCheckedChange = { viewModel.updateSettings { s -> s.copy(address24Bit = it) } }
+			)
+			SchemaChoiceRow(
+				id = "fpu_model",
+				value = settings.fpuModel.toString(),
+				values = fpuValues,
+				enabled = fpuValues.size > 1,
+				onSelect = { value ->
+					value.toIntOrNull()?.let { fpu -> viewModel.updateSettings { s -> s.copy(fpuModel = fpu) } }
+				}
 			)
 		}
-		if (!supportingText.isNullOrBlank()) {
-			Text(
-				text = supportingText,
-				style = MaterialTheme.typography.bodySmall,
-				color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f)
+
+		SettingsSection(title = stringResource(R.string.settings_cpu_jit_section_title)) {
+			SchemaNumberRow(
+				id = "cachesize",
+				stored = settings.jitCacheSize,
+				suggestions = JIT_CACHE_SUGGESTIONS,
+				// The core takes 0 (off) or at least 128 KB (cachesize_accepts in settings_cpu.cpp).
+				accepts = { it == 0 || it >= 128 },
+				enabled = SettingsControlAvailability.isJitAllowed(settings),
+				onStoredChange = { size -> viewModel.updateSettings { s -> s.withJitCacheSize(size) } }
+			)
+			SchemaSwitchRow(
+				id = "compfpu",
+				checked = settings.jitFpu,
+				enabled = SettingsControlAvailability.isJitFpuAvailable(settings),
+				onCheckedChange = { viewModel.updateSettings { s -> s.copy(jitFpu = it) } }
 			)
 		}
 	}

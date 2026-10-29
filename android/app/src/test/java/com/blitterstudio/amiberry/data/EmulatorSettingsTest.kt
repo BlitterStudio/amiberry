@@ -17,7 +17,7 @@ class EmulatorSettingsTest {
 		val s = EmulatorSettings.fromModel(AmigaModel.A500)
 		assertEquals(68000, s.cpuModel)
 		assertEquals("ocs", s.chipset)
-		assertTrue(s.cycleExact)
+		assertEquals("true", s.cycleExact)
 	}
 
 	@Test
@@ -202,14 +202,6 @@ class EmulatorSettingsTest {
 	}
 
 	@Test
-	fun `slider position for an off-step speed is the nearest step`() {
-		val speeds = EmulatorSettingsConstraints.ANALOG_MOUSE_SPEEDS
-		assertEquals(speeds.indexOf(5), EmulatorSettingsConstraints.nearestAnalogMouseSpeedIndex(2))
-		assertEquals(speeds.indexOf(10), EmulatorSettingsConstraints.nearestAnalogMouseSpeedIndex(8))
-		assertEquals(speeds.lastIndex, EmulatorSettingsConstraints.nearestAnalogMouseSpeedIndex(999))
-	}
-
-	@Test
 	fun `constraints disable on-screen joystick without touchscreen`() {
 		val constrained = EmulatorSettingsConstraints.apply(
 			EmulatorSettings(
@@ -307,7 +299,7 @@ class EmulatorSettingsTest {
 				chipset = "aga",
 				cpuModel = 68020,
 				address24Bit = false,
-				cycleExact = true,
+				cycleExact = "true",
 				cpuCompatible = false,
 				jitCacheSize = 8192
 			),
@@ -383,7 +375,7 @@ class EmulatorSettingsTest {
 		val chipsets = listOf("ocs", "ecs", "aga")
 		for (chipset in chipsets) for (cpu in listOf(68000, 68010, 68020, 68030, 68040, 68060))
 			for (fpu in listOf(0, 68881, 68882, 68040, 68060)) for (a24 in listOf(true, false))
-				for (ce in listOf(false, true)) for (jit in listOf(0, 8192)) {
+				for (ce in listOf("false", "memory", "true")) for (jit in listOf(0, 8192)) {
 					val requested = EmulatorSettings(
 						chipset = chipset, cpuModel = cpu, fpuModel = fpu, address24Bit = a24,
 						cycleExact = ce, jitCacheSize = jit
@@ -391,7 +383,7 @@ class EmulatorSettingsTest {
 					val expected = resolutions.resolve(
 						mapOf(
 							"chipset" to chipset, "cpu_model" to "$cpu", "fpu_model" to "$fpu",
-							"cpu_24bit_addressing" to "$a24", "cycle_exact" to "$ce",
+							"cpu_24bit_addressing" to "$a24", "cycle_exact" to if (ce == "false") "false" else "true",
 							"cachesize" to if (jit > 0) "8192" else "0", "z3mem_size" to "0",
 							"cpu_speed" to requested.cpuSpeed, "cpu_compatible" to "${requested.cpuCompatible}",
 							"compfpu" to "${requested.jitFpu}", "immediate_blits" to "${requested.immediateBlits}"
@@ -404,6 +396,8 @@ class EmulatorSettingsTest {
 					assertEquals(label, expected.getValue("cpu_24bit_addressing") == "true", actual.address24Bit)
 					assertEquals(label, expected.getValue("cpu_compatible") == "true", actual.cpuCompatible)
 					assertEquals(label, expected.getValue("cachesize") != "0", actual.jitCacheSize > 0)
+					val expectedCycleExact = if (expected.getValue("cycle_exact") == "false") "false" else ce
+					assertEquals(label, expectedCycleExact, actual.cycleExact)
 				}
 	}
 
@@ -530,5 +524,99 @@ class EmulatorSettingsTest {
 		assertEquals(-1, constrained.floppy2Type)
 		assertEquals("/disks/hd.adf", constrained.floppy3)
 		assertEquals(1, constrained.floppy3Type)
+	}
+
+	@Test
+	fun `constraints keep every drive type the emulator has`() {
+		for (type in listOf(0, 1, 2, 7, 3, 8)) {
+			val constrained = EmulatorSettingsConstraints.apply(
+				EmulatorSettings(floppy1 = "/disks/game.adf", floppy1Type = type),
+				hasTouchScreen = true
+			)
+			assertEquals("$type", type, constrained.floppy1Type)
+			assertEquals("$type", "/disks/game.adf", constrained.floppy1)
+		}
+	}
+
+	@Test
+	fun `constraints keep the DMA-only cycle-exact mode`() {
+		val constrained = EmulatorSettingsConstraints.apply(
+			EmulatorSettings(chipset = "aga", cpuModel = 68020, cycleExact = "memory"),
+			hasTouchScreen = true
+		)
+
+		assertEquals("memory", constrained.cycleExact)
+		assertTrue(constrained.cpuCompatible)
+	}
+
+	@Test
+	fun `constraints raise disabled sound to emulated in cycle-exact modes`() {
+		val cycleExact = EmulatorSettingsConstraints.apply(
+			EmulatorSettings(cycleExact = "true", soundOutput = "none"),
+			hasTouchScreen = true
+		)
+		val notCycleExact = EmulatorSettingsConstraints.apply(
+			EmulatorSettings(cycleExact = "false", soundOutput = "none"),
+			hasTouchScreen = true
+		)
+
+		assertEquals("interrupts", cycleExact.soundOutput)
+		assertEquals("none", notCycleExact.soundOutput)
+	}
+
+	@Test
+	fun `constraints keep every sound frequency the emulator offers`() {
+		val frequencies = SettingsSchema.current!!.option("sound_frequency")!!.choices.map { it.value.toInt() }
+		assertEquals(listOf(11025, 22050, 32000, 44100, 48000), frequencies)
+		for (frequency in frequencies) {
+			val constrained = EmulatorSettingsConstraints.apply(EmulatorSettings(soundFreq = frequency), hasTouchScreen = true)
+			assertEquals(frequency, constrained.soundFreq)
+		}
+	}
+
+	// --- Changes that bring others with them, as in the emulator ---
+
+	@Test
+	fun `a 68030 starts 32-bit and keeps 24-bit addressing when chosen`() {
+		val on68030 = EmulatorSettings(cpuModel = 68020, address24Bit = true).withCpuModel(68030)
+		assertFalse(on68030.address24Bit)
+
+		val constrained = EmulatorSettingsConstraints.apply(on68030.copy(address24Bit = true), hasTouchScreen = true)
+		assertTrue(constrained.address24Bit)
+	}
+
+	@Test
+	fun `a 68000 is 24-bit without JIT and FPU in compatible mode`() {
+		val s = EmulatorSettings(cpuModel = 68030, address24Bit = false, jitCacheSize = 8192, fpuModel = 68882)
+			.withCpuModel(68000)
+
+		assertTrue(s.address24Bit)
+		assertEquals(0, s.jitCacheSize)
+		assertEquals(0, s.fpuModel)
+	}
+
+	@Test
+	fun `choosing cycle-exact turns off immediate blits and the JIT`() {
+		val s = EmulatorSettings(
+			cpuModel = 68020, address24Bit = false, cpuSpeed = "max", cpuCompatible = false,
+			immediateBlits = true, jitCacheSize = 8192
+		).withCycleExact("memory")
+
+		assertEquals("memory", s.cycleExact)
+		assertEquals("real", s.cpuSpeed)
+		assertTrue(s.cpuCompatible)
+		assertFalse(s.immediateBlits)
+		assertEquals(0, s.jitCacheSize)
+		// A 68000 has no DMA-only mode.
+		assertEquals("true", EmulatorSettings(cpuModel = 68000).withCycleExact("memory").cycleExact)
+	}
+
+	@Test
+	fun `turning the JIT on leaves cycle-exact mode`() {
+		val s = EmulatorSettings(cpuModel = 68020, address24Bit = false, cycleExact = "true", jitFpu = false)
+			.withJitCacheSize(8192)
+
+		assertEquals("false", s.cycleExact)
+		assertTrue(s.jitFpu)
 	}
 }

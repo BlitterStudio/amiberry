@@ -2,39 +2,29 @@ package com.blitterstudio.amiberry.ui.screens.settings
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuAnchorType
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedCard
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.blitterstudio.amiberry.R
-import com.blitterstudio.amiberry.data.model.EmulatorSettingsConstraints
-import com.blitterstudio.amiberry.ui.dpadVerticalMovesFocus
+import com.blitterstudio.amiberry.data.model.LauncherChoices
+import com.blitterstudio.amiberry.data.model.SettingsSchema
+import com.blitterstudio.amiberry.ui.components.settings.ChoiceItem
+import com.blitterstudio.amiberry.ui.components.settings.SchemaChoiceRow
+import com.blitterstudio.amiberry.ui.components.settings.SchemaLevelRow
+import com.blitterstudio.amiberry.ui.components.settings.SchemaSwitchRow
+import com.blitterstudio.amiberry.ui.components.settings.SettingChoiceRow
+import com.blitterstudio.amiberry.ui.components.settings.SettingsSection
+import com.blitterstudio.amiberry.ui.components.settings.schemaOption
+import com.blitterstudio.amiberry.ui.components.settings.settingText
 import com.blitterstudio.amiberry.ui.hasTouchScreen
 import com.blitterstudio.amiberry.ui.viewmodel.SettingsViewModel
-import kotlin.math.roundToInt
 
 internal fun inputDeviceOptionIds(hasTouchScreen: Boolean, portIndex: Int): List<String> = buildList {
 	add("none")
@@ -58,39 +48,21 @@ internal fun inputDeviceOptionIds(hasTouchScreen: Boolean, portIndex: Int): List
 internal fun portSupportsMouseMap(portIndex: Int, deviceId: String, port0Device: String): Boolean =
 	portIndex == 1 && (deviceId == "joy0" || deviceId == "joy1") && port0Device == "mouse"
 
-/** SDL gamepad button names accepted by vkbd_toggle. null = emulator default; "" = disabled. */
-internal val oskToggleButtonOptions = listOf<Pair<String?, String>>(
-	null to "Default (emulator setting)",
-	"leftstick" to "Left stick (L3)",
-	"rightstick" to "Right stick (R3)",
-	"back" to "Back / Select",
-	"start" to "Start",
-	"guide" to "Guide",
-	"leftshoulder" to "L1",
-	"rightshoulder" to "R1",
-	"misc1" to "Misc 1",
-	"" to "None (disabled)"
-)
-
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun InputTab(viewModel: SettingsViewModel) {
 	val settings = viewModel.settings
 	val hasTouchScreen = hasTouchScreen()
 
-	val optionLabels = mapOf(
-		"none" to stringResource(R.string.settings_option_none),
-		"mouse" to stringResource(R.string.settings_input_device_mouse),
-		"joy0" to stringResource(R.string.settings_input_device_joystick_0),
-		"joy1" to stringResource(R.string.settings_input_device_joystick_1),
-		"onscreen_joy" to stringResource(R.string.settings_input_device_on_screen_joystick),
-		"kbd1" to stringResource(R.string.settings_input_device_keyboard_layout_1),
-		"kbd2" to stringResource(R.string.settings_input_device_keyboard_layout_2),
-		"kbd3" to stringResource(R.string.settings_input_device_keyboard_layout_3),
-		"kbd9" to stringResource(R.string.settings_input_device_keyboard_layout_4)
-	)
-	val port0Options = inputDeviceOptionIds(hasTouchScreen, portIndex = 0).map { it to optionLabels.getValue(it) }
-	val port1Options = inputDeviceOptionIds(hasTouchScreen, portIndex = 1).map { it to optionLabels.getValue(it) }
+	// The schema has no device list (the layer enumerates the host's devices
+	// at run time), so the launcher offers its own, by readable labels.
+	val port0Choices = inputDeviceOptionIds(hasTouchScreen, portIndex = 0).map { token ->
+		SettingsSchema.Choice(token, settingText(LauncherChoices.portDevice(token)))
+	}
+	val port1Choices = inputDeviceOptionIds(hasTouchScreen, portIndex = 1).map { token ->
+		SettingsSchema.Choice(token, settingText(LauncherChoices.portDevice(token)))
+	}
+	val toggleOption = schemaOption("amiberry.vkbd_toggle")
+	val toggleChoices = LauncherChoices.oskToggleButtons.map { (value, label) -> ChoiceItem(value, stringResource(label)) }
 
 	Column(
 		modifier = Modifier
@@ -99,226 +71,92 @@ fun InputTab(viewModel: SettingsViewModel) {
 			.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 120.dp),
 		verticalArrangement = Arrangement.spacedBy(16.dp)
 	) {
-		// Port assignments
-		OutlinedCard(modifier = Modifier.fillMaxWidth()) {
-			Column(modifier = Modifier.padding(16.dp)) {
-				Text(stringResource(R.string.settings_input_port_assignments_title), style = MaterialTheme.typography.titleMedium)
-				Spacer(modifier = Modifier.height(8.dp))
+		SettingsSection(title = stringResource(R.string.settings_input_port_assignments_title)) {
+			SchemaChoiceRow(
+				id = "joyport0",
+				value = settings.joyport0,
+				choices = port0Choices,
+				testTag = "input-port0-dropdown",
+				optionTestTag = { "input-port0-option-$it" },
+				onSelect = { value -> viewModel.updateSettings { s -> s.copy(joyport0 = value) } }
+			)
+			SchemaChoiceRow(
+				id = "joyport1",
+				value = settings.joyport1,
+				choices = port1Choices,
+				testTag = "input-port1-dropdown",
+				optionTestTag = { "input-port1-option-$it" },
+				onSelect = { value -> viewModel.updateSettings { s -> InputSettingsActions.selectPort1Device(s, value) } }
+			)
 
-				// Port 0
-				var port0Expanded by remember { mutableStateOf(false) }
-				val port0Label = port0Options.firstOrNull { it.first == settings.joyport0 }?.second
-					?: settings.joyport0
-
-				ExposedDropdownMenuBox(
-					expanded = port0Expanded,
-					onExpandedChange = { port0Expanded = it }
-				) {
-					OutlinedTextField(
-						value = port0Label,
-						onValueChange = {},
-						readOnly = true,
-						label = { Text(stringResource(R.string.settings_input_port0_label)) },
-						trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = port0Expanded) },
-						modifier = Modifier
-							.testTag("input-port0-dropdown")
-							.dpadVerticalMovesFocus()
-							.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
-							.fillMaxWidth()
-					)
-					ExposedDropdownMenu(
-						expanded = port0Expanded,
-						onDismissRequest = { port0Expanded = false }
-					) {
-						port0Options.forEach { (value, label) ->
-							DropdownMenuItem(
-								text = { Text(label) },
-								modifier = Modifier.testTag("input-port0-option-$value"),
-								onClick = {
-									viewModel.updateSettings { s -> s.copy(joyport0 = value) }
-									port0Expanded = false
-								}
-							)
-						}
+			if (portSupportsMouseMap(1, settings.joyport1, settings.joyport0)) {
+				SchemaChoiceRow(
+					id = "joyport1mousemap",
+					value = if (settings.joyport1MouseMap) "1" else "0",
+					onSelect = { value ->
+						viewModel.updateSettings { s -> InputSettingsActions.setPortMouseMap(s, 1, value == "1") }
 					}
-				}
-
-				Spacer(modifier = Modifier.height(8.dp))
-
-				// Port 1
-				var port1Expanded by remember { mutableStateOf(false) }
-				val port1Label = port1Options.firstOrNull { it.first == settings.joyport1 }?.second
-					?: settings.joyport1
-
-				ExposedDropdownMenuBox(
-					expanded = port1Expanded,
-					onExpandedChange = { port1Expanded = it }
-				) {
-					OutlinedTextField(
-						value = port1Label,
-						onValueChange = {},
-						readOnly = true,
-						label = { Text(stringResource(R.string.settings_input_port1_label)) },
-						trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = port1Expanded) },
-						modifier = Modifier
-							.testTag("input-port1-dropdown")
-							.dpadVerticalMovesFocus()
-							.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
-							.fillMaxWidth()
-					)
-					ExposedDropdownMenu(
-						expanded = port1Expanded,
-						onDismissRequest = { port1Expanded = false }
-					) {
-						port1Options.forEach { (value, label) ->
-							DropdownMenuItem(
-								text = { Text(label) },
-								modifier = Modifier.testTag("input-port1-option-$value"),
-								onClick = {
-									viewModel.updateSettings { s -> InputSettingsActions.selectPort1Device(s, value) }
-									port1Expanded = false
-								}
-							)
-						}
-					}
-				}
-
-				if (portSupportsMouseMap(1, settings.joyport1, settings.joyport0)) {
-					SwitchRow(
-						label = stringResource(R.string.settings_input_analog_mouse_map),
-						checked = settings.joyport1MouseMap,
-						supportingText = stringResource(R.string.settings_input_analog_mouse_map_summary),
-						onCheckedChange = { isEnabled ->
-							viewModel.updateSettings { s ->
-								InputSettingsActions.setPortMouseMap(s, 1, isEnabled)
-							}
-						}
-					)
-					Spacer(modifier = Modifier.height(8.dp))
-					val speedValues = EmulatorSettingsConstraints.ANALOG_MOUSE_SPEEDS
-					val currentSpeedIndex = EmulatorSettingsConstraints.nearestAnalogMouseSpeedIndex(settings.analogMouseSpeed)
-					val isMouseMapEnabled = settings.joyport1MouseMap
-					Row(
-						verticalAlignment = Alignment.CenterVertically,
-						horizontalArrangement = Arrangement.SpaceBetween,
-						modifier = Modifier.fillMaxWidth()
-					) {
-						Text(
-							text = stringResource(R.string.settings_input_analog_mouse_speed),
-							style = MaterialTheme.typography.bodyMedium,
-							color = if (isMouseMapEnabled) MaterialTheme.colorScheme.onSurface
-							else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-						)
-						Text(
-							text = "${settings.analogMouseSpeed}",
-							style = MaterialTheme.typography.bodyMedium,
-							color = if (isMouseMapEnabled) MaterialTheme.colorScheme.onSurfaceVariant
-							else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
-						)
-					}
-					Slider(
-						value = currentSpeedIndex.toFloat(),
-						onValueChange = { idx ->
-							val speed = speedValues[idx.roundToInt().coerceIn(0, speedValues.lastIndex)]
-							viewModel.updateSettings { s -> s.copy(analogMouseSpeed = speed) }
-						},
-						valueRange = 0f..(speedValues.lastIndex).toFloat(),
-						steps = speedValues.size - 2,
-						enabled = isMouseMapEnabled,
-						modifier = Modifier.testTag("input-analog-mouse-speed-slider")
-					)
-					Text(
-						text = stringResource(R.string.settings_input_analog_mouse_speed_summary),
-						style = MaterialTheme.typography.bodySmall,
-						color = if (isMouseMapEnabled) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f)
-						else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
-					)
-				}
+				)
+				SchemaLevelRow(
+					id = "input.joymouse_speed_analog",
+					stored = settings.analogMouseSpeed,
+					enabled = settings.joyport1MouseMap,
+					testTag = "input-analog-mouse-speed-slider",
+					onStoredChange = { speed -> viewModel.updateSettings { s -> s.copy(analogMouseSpeed = speed) } }
+				)
 			}
 		}
 
 		// The keyboard can be driven by a game controller, so keep its settings
 		// available on non-touch devices as well. The KB touch button and the
 		// gamepad toggle are independent ways to open it.
-		OutlinedCard(modifier = Modifier.fillMaxWidth()) {
-			Column(modifier = Modifier.padding(16.dp)) {
-				Text(stringResource(R.string.settings_input_on_screen_controls_title), style = MaterialTheme.typography.titleMedium)
-				Spacer(modifier = Modifier.height(8.dp))
-
-				if (hasTouchScreen) {
-					SwitchRow(
-						label = stringResource(R.string.settings_input_on_screen_joystick),
-						checked = settings.onScreenJoystick,
-						onCheckedChange = { isEnabled ->
-							viewModel.updateSettings { s -> InputSettingsActions.setOnScreenJoystick(s, isEnabled) }
-						}
-					)
-
-					SwitchRow(
-						label = stringResource(R.string.settings_input_on_screen_keyboard_button),
-						checked = settings.onScreenKeyboardButton,
-						enabled = settings.onScreenJoystick,
-						supportingText = stringResource(R.string.settings_input_on_screen_keyboard_button_summary),
-						onCheckedChange = {
-							viewModel.updateSettings { s -> s.copy(onScreenKeyboardButton = it) }
-						}
-					)
-				}
-
-				SwitchRow(
-					label = stringResource(R.string.settings_input_on_screen_keyboard_numpad),
-					checked = settings.onScreenKeyboardNumpad,
-					enabled = settings.onScreenKeyboardAvailable,
-					supportingText = stringResource(R.string.settings_input_on_screen_keyboard_numpad_summary),
-					onCheckedChange = {
-						viewModel.updateSettings { s -> s.copy(onScreenKeyboardNumpad = it) }
+		SettingsSection(title = stringResource(R.string.settings_input_on_screen_controls_title)) {
+			if (hasTouchScreen) {
+				SchemaSwitchRow(
+					id = "amiberry.onscreen_joystick",
+					checked = settings.onScreenJoystick,
+					onCheckedChange = { isEnabled ->
+						viewModel.updateSettings { s -> InputSettingsActions.setOnScreenJoystick(s, isEnabled) }
 					}
 				)
-
-				if (!hasTouchScreen) {
-					Text(
-						stringResource(R.string.settings_input_on_screen_keyboard_toggle_hint),
-						style = MaterialTheme.typography.bodySmall
-					)
-					Spacer(modifier = Modifier.height(8.dp))
-				}
-
-				var toggleExpanded by remember { mutableStateOf(false) }
-				val toggleLabel = oskToggleButtonOptions.firstOrNull { it.first == settings.onScreenKeyboardToggle }?.second
-					?: settings.onScreenKeyboardToggle.orEmpty()
-				ExposedDropdownMenuBox(
-					expanded = toggleExpanded,
-					onExpandedChange = { toggleExpanded = it }
-				) {
-					OutlinedTextField(
-						value = toggleLabel,
-						onValueChange = {},
-						readOnly = true,
-						label = { Text(stringResource(R.string.settings_input_on_screen_keyboard_toggle)) },
-						trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = toggleExpanded) },
-						modifier = Modifier
-							.testTag("input-osk-toggle-dropdown")
-							.dpadVerticalMovesFocus()
-							.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
-							.fillMaxWidth()
-					)
-					ExposedDropdownMenu(
-						expanded = toggleExpanded,
-						onDismissRequest = { toggleExpanded = false }
-					) {
-						oskToggleButtonOptions.forEach { (value, label) ->
-							DropdownMenuItem(
-								text = { Text(label) },
-								modifier = Modifier.testTag("input-osk-toggle-option-$value"),
-								onClick = {
-									viewModel.updateSettings { s -> s.copy(onScreenKeyboardToggle = value) }
-									toggleExpanded = false
-								}
-							)
-						}
+				SchemaSwitchRow(
+					id = "amiberry.vkbd_touch_button",
+					checked = settings.onScreenKeyboardButton,
+					enabled = settings.onScreenJoystick,
+					reason = stringResource(R.string.settings_input_needs_on_screen_joystick),
+					onCheckedChange = {
+						viewModel.updateSettings { s -> s.copy(onScreenKeyboardButton = it) }
 					}
-				}
+				)
 			}
+
+			SchemaSwitchRow(
+				id = "amiberry.vkbd_numpad",
+				checked = settings.onScreenKeyboardNumpad,
+				enabled = settings.onScreenKeyboardAvailable,
+				onCheckedChange = {
+					viewModel.updateSettings { s -> s.copy(onScreenKeyboardNumpad = it) }
+				}
+			)
+
+			if (!hasTouchScreen) {
+				Text(
+					stringResource(R.string.settings_input_on_screen_keyboard_toggle_hint),
+					style = MaterialTheme.typography.bodySmall
+				)
+			}
+
+			// A hotkey option: the schema has no button list, so the launcher
+			// offers the gamepad buttons the toggle takes.
+			SettingChoiceRow(
+				label = toggleOption?.label ?: stringResource(R.string.settings_input_on_screen_keyboard_toggle),
+				valueText = settingText(LauncherChoices.oskToggle(settings.onScreenKeyboardToggle)),
+				choices = toggleChoices,
+				help = toggleOption?.help,
+				testTag = "input-osk-toggle-dropdown",
+				optionTestTag = { "input-osk-toggle-option-$it" },
+				onSelect = { value -> viewModel.updateSettings { s -> s.copy(onScreenKeyboardToggle = value) } }
+			)
 		}
 	}
 }

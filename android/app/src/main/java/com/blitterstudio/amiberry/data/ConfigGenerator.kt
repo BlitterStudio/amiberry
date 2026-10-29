@@ -42,7 +42,7 @@ object ConfigGenerator {
 		sb.appendLine("chipset=${settings.chipset}")
 		sb.appendLine("immediate_blits=${settings.immediateBlits.toCfg()}")
 		sb.appendLine("collision_level=${settings.collisionLevel}")
-		sb.appendLine("cycle_exact=${settings.cycleExact.toCfg()}")
+		sb.appendLine("cycle_exact=${settings.cycleExact}")
 		sb.appendLine("ntsc=${settings.ntsc.toCfg()}")
 
 		// Memory
@@ -68,6 +68,18 @@ object ConfigGenerator {
 		sb.appendLine("floppy2type=${settings.floppy2Type}")
 		sb.appendLine("floppy3=${settings.floppy3}")
 		sb.appendLine("floppy3type=${settings.floppy3Type}")
+		sb.appendLine("floppy0sound=${settings.floppy0Sound}")
+		sb.appendLine("floppy1sound=${settings.floppy1Sound}")
+		sb.appendLine("floppy2sound=${settings.floppy2Sound}")
+		sb.appendLine("floppy3sound=${settings.floppy3Sound}")
+		sb.appendLine("floppy0soundvolume_disk=${settings.floppy0SoundVolumeDisk}")
+		sb.appendLine("floppy1soundvolume_disk=${settings.floppy1SoundVolumeDisk}")
+		sb.appendLine("floppy2soundvolume_disk=${settings.floppy2SoundVolumeDisk}")
+		sb.appendLine("floppy3soundvolume_disk=${settings.floppy3SoundVolumeDisk}")
+		sb.appendLine("floppy0soundvolume_empty=${settings.floppy0SoundVolumeEmpty}")
+		sb.appendLine("floppy1soundvolume_empty=${settings.floppy1SoundVolumeEmpty}")
+		sb.appendLine("floppy2soundvolume_empty=${settings.floppy2SoundVolumeEmpty}")
+		sb.appendLine("floppy3soundvolume_empty=${settings.floppy3SoundVolumeEmpty}")
 
 		// CD
 		if (settings.cdImage.isNotEmpty()) {
@@ -87,6 +99,12 @@ object ConfigGenerator {
 		sb.appendLine("sound_frequency=${settings.soundFreq}")
 		sb.appendLine("sound_max_buff=${settings.soundBuffer}")
 		sb.appendLine("sound_channels=${settings.soundChannels}")
+		// Attenuation, as the emulator stores volumes: 0 is full volume.
+		sb.appendLine("sound_volume=${settings.soundVolume}")
+		sb.appendLine("sound_volume_paula=${settings.soundVolumePaula}")
+		sb.appendLine("sound_volume_cd=${settings.soundVolumeCd}")
+		sb.appendLine("sound_volume_ahi=${settings.soundVolumeAhi}")
+		sb.appendLine("sound_volume_midi=${settings.soundVolumeMidi}")
 
 		// Display
 		sb.appendLine("gfx_width=${settings.gfxWidth}")

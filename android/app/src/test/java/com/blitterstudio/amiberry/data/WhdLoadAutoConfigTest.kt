@@ -202,7 +202,7 @@ class WhdLoadAutoConfigTest {
 		assertEquals("ecs", detected.chipset)
 		assertEquals(8, detected.fastRam)
 		assertTrue(detected.autoCrop)
-		assertTrue(detected.cycleExact)
+		assertEquals("true", detected.cycleExact)
 		assertFalse(detected.onScreenKeyboardButton)
 	}
 
@@ -316,7 +316,7 @@ class WhdLoadAutoConfigTest {
 
 		assertEquals(AmigaModel.A600, detected.baseModel)
 		assertFalse(detected.cpuCompatible)
-		assertFalse(detected.cycleExact)
+		assertEquals("false", detected.cycleExact)
 	}
 
 	private fun rom(name: String, crc32: Long, path: String = "/roms/$name") = AmigaFile(

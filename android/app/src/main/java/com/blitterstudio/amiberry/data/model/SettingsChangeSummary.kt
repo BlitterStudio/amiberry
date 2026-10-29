@@ -1,84 +1,191 @@
 package com.blitterstudio.amiberry.data.model
 
+import com.blitterstudio.amiberry.R
+
+/** One changed setting: what it is called and how it reads before and after. */
 data class SettingsChange(
-	val label: String,
-	val before: String,
-	val after: String
+	val label: SettingText,
+	val before: SettingText,
+	val after: SettingText
 )
 
+/**
+ * The review-changes list: every setting that differs, named by the
+ * settings layer's label (the launcher's own for launcher-only settings)
+ * with values as the controls show them — choice labels, on/off, numbers in
+ * their unit, file names — never the stored tokens.
+ */
 object SettingsChangeSummary {
-	fun diff(before: EmulatorSettings, after: EmulatorSettings): List<SettingsChange> = buildList {
-		addIfChanged("Model", before.baseModel.displayName, after.baseModel.displayName)
-		addIfChanged("CPU", before.cpuModel.toString(), after.cpuModel.toString())
-		addIfChanged("Addressing", addressing(before.address24Bit), addressing(after.address24Bit))
-		addIfChanged("CPU speed", before.cpuSpeed, after.cpuSpeed)
-		addIfChanged("Compatible CPU", yesNo(before.cpuCompatible), yesNo(after.cpuCompatible))
-		addIfChanged("JIT cache", cache(before.jitCacheSize), cache(after.jitCacheSize))
-		addIfChanged("Chipset", chipset(before.chipset), chipset(after.chipset))
-		addIfChanged("Cycle exact", yesNo(before.cycleExact), yesNo(after.cycleExact))
-		addIfChanged("Chip RAM", chipRam(before.chipRam), chipRam(after.chipRam))
-		addIfChanged("Slow RAM", slowRam(before.slowRam), slowRam(after.slowRam))
-		addIfChanged("Fast RAM", mb(before.fastRam), mb(after.fastRam))
-		addIfChanged("Z3 RAM", mb(before.z3Ram), mb(after.z3Ram))
-		addIfChanged("ROM", fileName(before.romFile), fileName(after.romFile))
-		addIfChanged("DF0", fileName(before.floppy0), fileName(after.floppy0))
-		addIfChanged("DF1", fileName(before.floppy1), fileName(after.floppy1))
-		addIfChanged("CD", fileName(before.cdImage), fileName(after.cdImage))
-		addIfChanged("Scaling", scaling(before.scalingMethod), scaling(after.scalingMethod))
-		addIfChanged("Resolution autoswitch", autoresolution(before.gfxAutoresolution), autoresolution(after.gfxAutoresolution))
-		addIfChanged("Native shader", before.shader, after.shader)
-		addIfChanged("Port 1", before.joyport0, after.joyport0)
-		addIfChanged("Port 2", before.joyport1, after.joyport1)
-		addIfChanged("On-screen joystick", yesNo(before.onScreenJoystick), yesNo(after.onScreenJoystick))
-		addIfChanged("On-screen keyboard button", yesNo(before.onScreenKeyboardButton), yesNo(after.onScreenKeyboardButton))
-		addIfChanged("On-screen keyboard numpad", yesNo(before.onScreenKeyboardNumpad), yesNo(after.onScreenKeyboardNumpad))
-		addIfChanged("On-screen keyboard toggle", before.onScreenKeyboardToggle ?: "Default", after.onScreenKeyboardToggle ?: "Default")
-		addIfChanged("Port 1 analog mouse map", yesNo(before.joyport0MouseMap), yesNo(after.joyport0MouseMap))
-		addIfChanged("Port 2 analog mouse map", yesNo(before.joyport1MouseMap), yesNo(after.joyport1MouseMap))
-		addIfChanged("Analog mouse speed", before.analogMouseSpeed.toString(), after.analogMouseSpeed.toString())
-	}
 
-	private fun MutableList<SettingsChange>.addIfChanged(label: String, before: String, after: String) {
-		if (before != after) {
-			add(SettingsChange(label, before, after))
+	fun diff(
+		before: EmulatorSettings,
+		after: EmulatorSettings,
+		schema: SettingsSchema? = SettingsSchema.current
+	): List<SettingsChange> = Diff(schema, before, after).apply {
+		launcher(R.string.settings_cpu_model_preset) { SettingText.Plain(it.baseModel.displayName) }
+		launcher(R.string.settings_change_model_configuration, ::presetConfiguration)
+
+		option("cpu_model") { it.cpuModel.toString() }
+		option("cpu_speed") { it.cpuSpeed }
+		option("cpu_compatible") { it.cpuCompatible.toString() }
+		option("cpu_24bit_addressing") { it.address24Bit.toString() }
+		option("fpu_model") { it.fpuModel.toString() }
+		option("cachesize") { it.jitCacheSize.toString() }
+		option("compfpu") { it.jitFpu.toString() }
+
+		option("chipset") { it.chipset }
+		option("cycle_exact") { it.cycleExact }
+		option("immediate_blits") { it.immediateBlits.toString() }
+		option("ntsc") { it.ntsc.toString() }
+		option("collision_level") { it.collisionLevel }
+
+		option("chipmem_size") { it.chipRam.toString() }
+		option("bogomem_size") { it.slowRam.toString() }
+		option("fastmem_size") { it.fastRam.toString() }
+		option("z3mem_size") { it.z3Ram.toString() }
+
+		launcher(R.string.settings_display_resolution_label) {
+			SettingText.Resource(R.string.settings_change_resolution_value, listOf(it.gfxWidth, it.gfxHeight))
+		}
+		option("amiberry.gfx_correct_aspect") { if (it.correctAspect) "1" else "0" }
+		option("amiberry.gfx_auto_crop") { it.autoCrop.toString() }
+		option("amiberry.scaling_method") { it.scalingMethod.toString() }
+		option("gfx_autoresolution") { it.gfxAutoresolution.toString() }
+		optionText("amiberry.shader") { LauncherChoices.shader(it.shader) }
+
+		option("sound_output") { it.soundOutput }
+		option("sound_channels") { it.soundChannels }
+		option("sound_frequency") { it.soundFreq.toString() }
+		option("sound_max_buff") { it.soundBuffer.toString() }
+		option("sound_volume") { it.soundVolume.toString() }
+		option("sound_volume_paula") { it.soundVolumePaula.toString() }
+		option("sound_volume_cd") { it.soundVolumeCd.toString() }
+		option("sound_volume_ahi") { it.soundVolumeAhi.toString() }
+		option("sound_volume_midi") { it.soundVolumeMidi.toString() }
+		drives.forEach { drive ->
+			option("floppy${drive.index}sound") { drive.sound(it).toString() }
+			option("floppy${drive.index}soundvolume_disk") { drive.volumeDisk(it).toString() }
+			option("floppy${drive.index}soundvolume_empty") { drive.volumeEmpty(it).toString() }
+		}
+
+		optionText("joyport0") { LauncherChoices.portDevice(it.joyport0) }
+		optionText("joyport1") { LauncherChoices.portDevice(it.joyport1) }
+		option("joyport0mousemap") { if (it.joyport0MouseMap) "1" else "0" }
+		option("joyport1mousemap") { if (it.joyport1MouseMap) "1" else "0" }
+		option("input.joymouse_speed_analog") { it.analogMouseSpeed.toString() }
+		option("amiberry.onscreen_joystick") { it.onScreenJoystick.toString() }
+		option("amiberry.vkbd_touch_button") { it.onScreenKeyboardButton.toString() }
+		option("amiberry.vkbd_numpad") { it.onScreenKeyboardNumpad.toString() }
+		optionText("amiberry.vkbd_toggle") { LauncherChoices.oskToggle(it.onScreenKeyboardToggle) }
+
+		optionText("kickstart_rom_file") { romFile(it.romFile) }
+		optionText("kickstart_ext_rom_file") { romFile(it.romExtFile) }
+		drives.forEach { drive ->
+			option("floppy${drive.index}type") { drive.type(it).toString() }
+			optionText("floppy${drive.index}") { file(drive.path(it)) }
+		}
+		optionText("cdimage0") { file(it.cdImage) }
+		hardDrives()
+	}.changes
+
+	private class Diff(
+		private val schema: SettingsSchema?,
+		private val before: EmulatorSettings,
+		private val after: EmulatorSettings
+	) {
+		val changes = mutableListOf<SettingsChange>()
+
+		private fun add(label: SettingText, old: SettingText, new: SettingText) {
+			if (old != new) changes += SettingsChange(label, old, new)
+		}
+
+		/** A launcher-only setting, named by a launcher string. */
+		fun launcher(labelRes: Int, text: (EmulatorSettings) -> SettingText) {
+			add(SettingText.Resource(labelRes), text(before), text(after))
+		}
+
+		private fun label(id: String): SettingText = SettingText.Plain(schema?.label(id) ?: id)
+
+		/** A layer option whose values the launcher names ([text]): devices, files, shaders. */
+		fun optionText(id: String, text: (EmulatorSettings) -> SettingText) {
+			add(label(id), text(before), text(after))
+		}
+
+		/** A layer option compared by its stored value, shown as the controls show it. */
+		fun option(id: String, stored: (EmulatorSettings) -> String) {
+			val old = stored(before)
+			val new = stored(after)
+			if (old != new) changes += SettingsChange(label(id), value(id, old), value(id, new))
+		}
+
+		private fun value(id: String, stored: String): SettingText {
+			val option = schema?.option(id) ?: return SettingText.Plain(stored)
+			return when {
+				option.type == SettingsSchema.TYPE_BOOL && (stored == "true" || stored == "false") -> onOff(stored == "true")
+				option.showsAsSwitch(stored) -> onOff(stored == "1")
+				else -> SettingText.Plain(option.valueText(stored, stored, stored))
+			}
+		}
+
+		private fun onOff(on: Boolean) = SettingText.Resource(if (on) R.string.settings_value_on else R.string.settings_value_off)
+
+		/** Hard drives by position: added, removed, or a changed image, read-only flag or boot priority. */
+		fun hardDrives() {
+			val count = maxOf(before.hardDrives.size, after.hardDrives.size)
+			for (index in 0 until count) {
+				val old = before.hardDrives.getOrNull(index)
+				val new = after.hardDrives.getOrNull(index)
+				val label = SettingText.Resource(R.string.settings_storage_hard_drive_label, listOf(index))
+				if (old == null || new == null) {
+					add(label, old?.let { file(it.path) } ?: none, new?.let { file(it.path) } ?: none)
+					continue
+				}
+				add(label, file(old.path), file(new.path))
+				add(
+					SettingText.Resource(R.string.settings_change_hard_drive_read_only, listOf(index)),
+					onOff(old.readOnly),
+					onOff(new.readOnly)
+				)
+				add(
+					SettingText.Resource(R.string.settings_change_hard_drive_boot_priority, listOf(index)),
+					SettingText.Plain(old.bootPriority.toString()),
+					SettingText.Plain(new.bootPriority.toString())
+				)
+			}
 		}
 	}
+}
 
-	private fun addressing(address24Bit: Boolean): String =
-		if (address24Bit) "24-bit" else "32-bit"
+/** One floppy drive's fields. */
+private class Drive(
+	val index: Int,
+	val path: (EmulatorSettings) -> String,
+	val type: (EmulatorSettings) -> Int,
+	val sound: (EmulatorSettings) -> Int,
+	val volumeDisk: (EmulatorSettings) -> Int,
+	val volumeEmpty: (EmulatorSettings) -> Int
+)
 
-	private fun yesNo(value: Boolean): String =
-		if (value) "Yes" else "No"
+private val drives = listOf(
+	Drive(0, { it.floppy0 }, { it.floppy0Type }, { it.floppy0Sound }, { it.floppy0SoundVolumeDisk }, { it.floppy0SoundVolumeEmpty }),
+	Drive(1, { it.floppy1 }, { it.floppy1Type }, { it.floppy1Sound }, { it.floppy1SoundVolumeDisk }, { it.floppy1SoundVolumeEmpty }),
+	Drive(2, { it.floppy2 }, { it.floppy2Type }, { it.floppy2Sound }, { it.floppy2SoundVolumeDisk }, { it.floppy2SoundVolumeEmpty }),
+	Drive(3, { it.floppy3 }, { it.floppy3Type }, { it.floppy3Sound }, { it.floppy3SoundVolumeDisk }, { it.floppy3SoundVolumeEmpty })
+)
 
-	private fun cache(value: Int): String =
-		if (value <= 0) "Off" else "$value KB"
+private val none = SettingText.Resource(R.string.settings_option_none)
 
-	private fun chipset(value: String): String =
-		EmulatorSettings.chipsetOptions.firstOrNull { it.first == value }?.second ?: value.uppercase()
+/** A path by its file name, or None for no file. */
+private fun file(path: String): SettingText =
+	if (path.isBlank()) none else SettingText.Plain(LauncherChoices.fileName(path))
 
-	private fun chipRam(value: Int): String =
-		EmulatorSettings.chipRamOptions.firstOrNull { it.first == value }?.second ?: "${EmulatorSettings.chipRamKb(value)} KB"
+/** A ROM path by its file name; the bundled AROS ROM by name. */
+private fun romFile(path: String): SettingText =
+	if (ModelRomAvailability.isBuiltInArosRom(path)) SettingText.Resource(R.string.rom_aros_builtin) else file(path)
 
-	private fun slowRam(value: Int): String =
-		EmulatorSettings.slowRamOptions.firstOrNull { it.first == value }?.second ?: "${value * 256} KB"
-
-	private fun mb(value: Int): String =
-		if (value <= 0) "None" else "$value MB"
-
-	private fun fileName(path: String): String =
-		path.substringAfterLast('/').substringAfterLast('\\').ifBlank { "None" }
-
-	private fun scaling(value: Int): String = when (value) {
-		-1 -> "Auto"
-		0 -> "Nearest"
-		1 -> "Linear"
-		2 -> "Integer"
-		else -> value.toString()
-	}
-
-	private fun autoresolution(value: Int): String = when (value) {
-		0 -> "Disabled"
-		1 -> "Always on"
-		else -> "$value"
-	}
+/** The model's preset configuration by its label. */
+private fun presetConfiguration(settings: EmulatorSettings): SettingText {
+	val config = settings.baseModel.configs.getOrNull(settings.baseConfig)
+		?: return SettingText.Plain((settings.baseConfig + 1).toString())
+	return SettingText.Plain(config.label)
 }

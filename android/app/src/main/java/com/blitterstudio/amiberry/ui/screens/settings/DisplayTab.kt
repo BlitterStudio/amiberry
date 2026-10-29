@@ -34,6 +34,11 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.blitterstudio.amiberry.R
 import com.blitterstudio.amiberry.data.AppPreferences
+import com.blitterstudio.amiberry.data.model.LauncherChoices
+import com.blitterstudio.amiberry.ui.components.settings.SchemaSwitchRow
+import com.blitterstudio.amiberry.ui.components.settings.SettingSwitchRow
+import com.blitterstudio.amiberry.ui.components.settings.SupportingText
+import com.blitterstudio.amiberry.ui.components.settings.settingText
 import com.blitterstudio.amiberry.ui.dpadVerticalMovesFocus
 import com.blitterstudio.amiberry.ui.viewmodel.SettingsViewModel
 
@@ -118,22 +123,22 @@ fun DisplayTab(viewModel: SettingsViewModel) {
 
 				Spacer(modifier = Modifier.height(8.dp))
 
-				SwitchRow(
-					label = stringResource(R.string.settings_display_correct_aspect_ratio),
+				SchemaSwitchRow(
+					id = "amiberry.gfx_correct_aspect",
 					checked = settings.correctAspect,
 					onCheckedChange = {
 						viewModel.updateSettings { s -> s.copy(correctAspect = it) }
 					}
 				)
-
-				SwitchRow(
-					label = stringResource(R.string.settings_display_auto_crop),
+				SchemaSwitchRow(
+					id = "amiberry.gfx_auto_crop",
 					checked = settings.autoCrop,
 					onCheckedChange = {
 						viewModel.updateSettings { s -> s.copy(autoCrop = it) }
 					}
 				)
-				SwitchRow(
+				// Launcher-only: one switch for the scaling method and resolution autoswitch pair.
+				SettingSwitchRow(
 					label = stringResource(R.string.settings_display_integer_scaling),
 					checked = settings.scalingMethod == 2 && settings.gfxAutoresolution == 1,
 					onCheckedChange = { on ->
@@ -142,7 +147,7 @@ fun DisplayTab(viewModel: SettingsViewModel) {
 							else s.copy(scalingMethod = -1, gfxAutoresolution = 0)
 						}
 					},
-					supportingText = stringResource(R.string.settings_display_integer_scaling_desc)
+					help = stringResource(R.string.settings_display_integer_scaling_desc)
 				)
 
 				Spacer(modifier = Modifier.height(8.dp))
@@ -152,14 +157,15 @@ fun DisplayTab(viewModel: SettingsViewModel) {
 					viewModel.shaderCatalogStatus == SettingsViewModel.ShaderCatalogStatus.LOADED &&
 						settings.shader !in viewModel.shaderCatalogEntries
 				val unavailableLabel = stringResource(R.string.settings_display_shader_unavailable)
+				val shaderName = settingText(LauncherChoices.shader(settings.shader))
 				val shaderDisplayValue = if (shaderUnavailable) {
 					stringResource(
 						R.string.settings_display_shader_unavailable_value,
-						settings.shader,
+						shaderName,
 						unavailableLabel
 					)
 				} else {
-					settings.shader
+					shaderName
 				}
 				val shaderSupportingText = stringResource(
 					if (shaderUnavailable) {
@@ -178,7 +184,6 @@ fun DisplayTab(viewModel: SettingsViewModel) {
 						onValueChange = {},
 						readOnly = true,
 						label = { Text(stringResource(R.string.settings_display_shader_label)) },
-						supportingText = { Text(shaderSupportingText) },
 						isError = shaderUnavailable,
 						trailingIcon = {
 							ExposedDropdownMenuDefaults.TrailingIcon(expanded = shaderExpanded)
@@ -194,7 +199,7 @@ fun DisplayTab(viewModel: SettingsViewModel) {
 					) {
 						viewModel.shaderCatalogEntries.forEach { shader ->
 							DropdownMenuItem(
-								text = { Text(shader) },
+								text = { Text(settingText(LauncherChoices.shader(shader))) },
 								onClick = {
 									if (shader != settings.shader) {
 										viewModel.updateSettings { s -> s.copy(shader = shader) }
@@ -212,6 +217,8 @@ fun DisplayTab(viewModel: SettingsViewModel) {
 						}
 					}
 				}
+				// Under the field like every other row's help, not inside it (Material indents that).
+				SupportingText(shaderSupportingText)
 			}
 		}
 
@@ -265,7 +272,7 @@ fun DisplayTab(viewModel: SettingsViewModel) {
 				if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
 					Spacer(modifier = Modifier.height(8.dp))
 					val useDynamicColor by appPrefs.useDynamicColor
-					SwitchRow(
+					SettingSwitchRow(
 						label = stringResource(R.string.settings_display_dynamic_color),
 						checked = useDynamicColor,
 						onCheckedChange = { appPrefs.setDynamicColor(it) }
