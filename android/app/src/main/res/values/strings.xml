@@ -551,7 +551,6 @@
     <string name="dialog_unsaved_changes_switch_message">Save your changes to “%1$s” first? Otherwise opening another configuration replaces them.</string>
     <string name="dialog_unsaved_new_config_message">Save the new configuration first? Otherwise opening another configuration replaces its settings.</string>
     <string name="configurations_new">New</string>
-    <string name="settings_display_more_title">More Display Options</string>
     <!-- In-emulation input and menu (TV remote, hints, confirmations) -->
     <string name="hint_menu">Press Back for the Amiberry menu</string>
     <string name="hint_menu_tv">Press Back on the remote for the Amiberry menu</string>
