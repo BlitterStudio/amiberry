@@ -38,6 +38,7 @@
 #include "amiberry_actions_host.h"
 #include "native_ui_tests.h"
 #include "native_ui_host.h"
+#include "android_overlay.h"
 #ifdef AMIBERRY_NATIVE_HOST
 #include "settings/amiberry_media.h"
 #endif
@@ -813,6 +814,12 @@ static void native_disk_selection(const int shortcut, uae_prefs* prefs)
 }
 #endif
 
+#if !defined(AMIBERRY_NATIVE_HOST) && defined(USE_IMGUI)
+// gui_ask_disk's recovery dialog is part of the built-in GUI, which must
+// show for it even where a native menu replaces the GUI (Android).
+static bool floppy_recovery_open = false;
+#endif
+
 bool gui_ask_disk(const int drv, TCHAR* name, const int name_len)
 {
 	if (drv < 0 || drv >= 4 || !name || name_len <= 0)
@@ -838,7 +845,9 @@ bool gui_ask_disk(const int drv, TCHAR* name, const int name_len)
 
 	active = true;
 	FloppyRecoveryDialog_Open(drv, name);
+	floppy_recovery_open = true;
 	gui_display(-1);
+	floppy_recovery_open = false;
 
 	std::string selected_path;
 	const bool selected = FloppyRecoveryDialog_ConsumeResult(selected_path);
@@ -859,12 +868,20 @@ bool gui_ask_disk(const int drv, TCHAR* name, const int name_len)
 }
 
 // The settings UI: the native window on macOS native UI builds, the
-// built-in (ImGui) GUI everywhere else.
-static void run_settings_ui()
+// built-in (ImGui) GUI everywhere else. Over a running emulation the
+// Android app shows its own menu instead, unless a hotkey's requester is
+// what opens (it needs the built-in GUI) or the launcher turned the menu
+// off; the menu's Advanced settings opens the built-in GUI after it.
+static void run_settings_ui([[maybe_unused]] const bool requester = false)
 {
 #ifdef AMIBERRY_NATIVE_HOST
 	native_host_run_settings();
 #else
+#ifdef __ANDROID__
+	if (emulating && !requester && !floppy_recovery_open && android_overlay_enabled()
+		&& android_overlay_run() == android_overlay_result::resume)
+		return;
+#endif
 	run_gui();
 #endif
 }
@@ -995,6 +1012,10 @@ void gui_purge_events()
 void gui_update()
 {
 	if (current_state_num == 99) return;
+	// A state load scheduled while the GUI was open (a load_state action
+	// from the Android menu or IPC) names its own file in savestate_fname;
+	// renaming it to the slot's would restore the wrong file, or none.
+	if (savestate_state & (STATE_DORESTORE | STATE_RESTORE)) return;
 
 	std::string filename;
 	const std::string suffix = current_state_num >= 1 && current_state_num <= 14 ?
@@ -1061,7 +1082,7 @@ void gui_display(int shortcut)
 			load_gui_theme();
 		else
 			prefs_to_gui();
-		run_settings_ui();
+		run_settings_ui(requester);
 		gui_to_prefs();
 
 		gui_update();

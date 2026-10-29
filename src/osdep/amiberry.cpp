@@ -97,6 +97,7 @@
 #include "native_ui_host.h"
 #ifdef __ANDROID__
 #include "android_touch_mouse.h"
+#include "android_overlay.h"
 #endif
 #include "macos_bookmarks.h"
 #include "macos_window.h"
@@ -4648,6 +4649,9 @@ bool handle_events()
 	amiberry_actions_run_pending();
 #ifdef AMIBERRY_NATIVE_HOST
 	native_host_service_autosave();
+#endif
+#ifdef __ANDROID__
+	android_overlay_service();
 #endif
 
 	if (pause_emulation)
