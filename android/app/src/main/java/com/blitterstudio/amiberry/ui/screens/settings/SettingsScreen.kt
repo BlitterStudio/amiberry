@@ -722,14 +722,14 @@ fun SaveConfigDialog(
 ) {
 	var name by remember { mutableStateOf(initialName) }
 	var description by remember { mutableStateOf(initialDescription) }
-	// D-pad Up/Down move between the fields and the buttons; OK on a field opens the IME.
-	val nameTyping = rememberDpadTypingGate()
-	val descriptionTyping = rememberDpadTypingGate()
-
 	AlertDialog(
 		onDismissRequest = onDismiss,
 		title = { Text(stringResource(R.string.dialog_save_config_title)) },
 		text = {
+			// D-pad Up/Down move between the fields and the buttons; OK on a field opens the
+			// IME. Created here, inside the dialog's window, so the gates drive its keyboard.
+			val nameTyping = rememberDpadTypingGate()
+			val descriptionTyping = rememberDpadTypingGate()
 			Column {
 				Text(stringResource(R.string.dialog_save_config_message))
 				Spacer(modifier = Modifier.height(8.dp))

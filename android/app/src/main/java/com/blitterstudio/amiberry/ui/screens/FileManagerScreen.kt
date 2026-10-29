@@ -146,11 +146,11 @@ fun FileManagerScreen(viewModel: FileManagerViewModel = viewModel()) {
 	}
 	// Deleting a file takes its focused row away, which dropped D-pad focus to the
 	// navigation rail: once the deleted file has left this category, focus returns to the
-	// list, or to Import. A failed delete leaves the file listed, so nothing moves; changing
-	// the tab or the search forgets the request.
+	// list, or to Import. A failed delete leaves the file listed, so nothing moves. Choosing
+	// a tab or editing the search forgets the request (cleared where the user acts: the
+	// search also empties itself when a delete leaves too few files to search).
 	val importFocus = remember { FocusRequester() }
 	var refocusAfterDeleting by remember { mutableStateOf<String?>(null) }
-	LaunchedEffect(currentCategory, effectiveSearchQuery) { refocusAfterDeleting = null }
 	LaunchedEffect(allFiles, refocusAfterDeleting) {
 		val deletedPath = refocusAfterDeleting ?: return@LaunchedEffect
 		if (allFiles.any { it.path == deletedPath }) return@LaunchedEffect
@@ -310,7 +310,7 @@ fun FileManagerScreen(viewModel: FileManagerViewModel = viewModel()) {
 				tabs.forEachIndexed { index, tab ->
 					Tab(
 						selected = selectedTab == index,
-						onClick = { selectedTab = index; searchQuery = "" },
+						onClick = { selectedTab = index; searchQuery = ""; refocusAfterDeleting = null },
 						text = { Text(tab.title) },
 						icon = { Icon(tab.icon, contentDescription = tab.title, modifier = Modifier.size(18.dp)) }
 					)
@@ -320,7 +320,7 @@ fun FileManagerScreen(viewModel: FileManagerViewModel = viewModel()) {
 			if (showSearch) {
 				OutlinedTextField(
 					value = searchQuery,
-					onValueChange = { searchQuery = it },
+					onValueChange = { searchQuery = it; refocusAfterDeleting = null },
 					modifier = Modifier
 						.fillMaxWidth()
 						.padding(horizontal = 16.dp, vertical = 2.dp),
@@ -329,7 +329,7 @@ fun FileManagerScreen(viewModel: FileManagerViewModel = viewModel()) {
 					trailingIcon = {
 						if (searchQuery.isNotEmpty()) {
 							IconButton(
-								onClick = { searchQuery = "" },
+								onClick = { searchQuery = ""; refocusAfterDeleting = null },
 								modifier = Modifier.dpadFocusIndicator()
 							) {
 								Icon(
@@ -393,6 +393,7 @@ fun FileManagerScreen(viewModel: FileManagerViewModel = viewModel()) {
 							onClick = {
 								if (searchHasNoResults) {
 									searchQuery = ""
+									refocusAfterDeleting = null
 								} else {
 									openImportPicker()
 								}

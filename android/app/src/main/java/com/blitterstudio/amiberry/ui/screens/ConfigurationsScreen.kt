@@ -698,11 +698,12 @@ private fun ConfigNameDialog(
 		if (problem == null) onConfirm(field.text.trim())
 	}
 
-	val typingGate = rememberDpadTypingGate()
 	AlertDialog(
 		onDismissRequest = onDismiss,
 		title = { Text(title) },
 		text = {
+			// Inside the dialog's window, so the gate drives the dialog's keyboard.
+			val typingGate = rememberDpadTypingGate()
 			OutlinedTextField(
 				value = field,
 				onValueChange = { field = it },
