@@ -145,13 +145,16 @@ fun FileManagerScreen(viewModel: FileManagerViewModel = viewModel()) {
 		files.any { it.category != FileCategory.ROMS || ModelRomAvailability.romIdentity(it) != RomIdentity.BuiltInAros }
 	}
 	// Deleting a file takes its focused row away, which dropped D-pad focus to the
-	// navigation rail: once the list is shorter, focus returns to the list, or to Import.
+	// navigation rail: once the deleted file has left this category, focus returns to the
+	// list, or to Import. A failed delete leaves the file listed, so nothing moves; changing
+	// the tab or the search forgets the request.
 	val importFocus = remember { FocusRequester() }
-	var refocusBelowSize by remember { mutableStateOf<Int?>(null) }
-	LaunchedEffect(files.size, refocusBelowSize) {
-		val sizeBefore = refocusBelowSize ?: return@LaunchedEffect
-		if (files.size >= sizeBefore) return@LaunchedEffect
-		refocusBelowSize = null
+	var refocusAfterDeleting by remember { mutableStateOf<String?>(null) }
+	LaunchedEffect(currentCategory, effectiveSearchQuery) { refocusAfterDeleting = null }
+	LaunchedEffect(allFiles, refocusAfterDeleting) {
+		val deletedPath = refocusAfterDeleting ?: return@LaunchedEffect
+		if (allFiles.any { it.path == deletedPath }) return@LaunchedEffect
+		refocusAfterDeleting = null
 		if (listHasFocusableRows) fileListFocus.requestFocus() else importFocus.requestFocus()
 	}
 
@@ -429,7 +432,7 @@ fun FileManagerScreen(viewModel: FileManagerViewModel = viewModel()) {
 							file = file,
 							deleteEnabled = !showProgress,
 							onDelete = {
-								refocusBelowSize = files.size
+								refocusAfterDeleting = file.path
 								viewModel.deleteFile(file)
 							}
 						)

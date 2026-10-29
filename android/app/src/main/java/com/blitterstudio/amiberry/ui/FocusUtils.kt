@@ -251,8 +251,13 @@ class DpadTypingGate internal constructor(
 
 	val readOnly: Boolean get() = !typing
 
+	/**
+	 * For IME Done. A custom onDone replaces Compose's default Done handling, which
+	 * hides the keyboard: on a TV the field turns read-only again (ending the input
+	 * session closes the IME); elsewhere the keyboard is hidden here.
+	 */
 	fun stopTyping() {
-		if (gated) typing = false
+		if (gated) typing = false else keyboardController?.hide()
 	}
 
 	val modifier: Modifier = if (!gated) Modifier else Modifier
