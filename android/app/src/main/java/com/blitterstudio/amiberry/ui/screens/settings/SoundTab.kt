@@ -75,7 +75,7 @@ fun SoundTab(viewModel: SettingsViewModel) {
 			.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 120.dp),
 		verticalArrangement = Arrangement.spacedBy(16.dp)
 	) {
-		SettingsSection(title = stringResource(R.string.settings_sound_title), footer = needsSound) {
+		SchemaGroupSection("sound", viewModel, title = stringResource(R.string.settings_sound_title), footer = needsSound) {
 			SchemaChoiceRow(
 				id = "sound_output",
 				value = settings.soundOutput,

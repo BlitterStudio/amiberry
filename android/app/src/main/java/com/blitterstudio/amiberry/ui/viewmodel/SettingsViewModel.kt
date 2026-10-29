@@ -165,27 +165,27 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 		}
 	}
 
+	/**
+	 * Switch to [model]'s preset at its default compatibility level, keeping
+	 * the Android controls and shader. The previous configuration's machine
+	 * goes, its preserved lines with it: they described that machine.
+	 */
 	fun applyModel(model: AmigaModel) {
 		selectedIntentPreset = null
 		val selectedRoms = ModelRomAvailability.selectRomsForModel(model, availableRoms.value)
-		val previousSettings = settings
-		val newSettings = EmulatorSettings.fromModel(model, selectedRoms.config).copy(
+		val newSettings = settings.withModel(model, selectedRoms.config).copy(
 			romFile = selectedRoms.romFile,
-			romExtFile = selectedRoms.romExtFile,
-			shader = previousSettings.shader,
-			joyport0 = previousSettings.joyport0,
-			joyport1 = previousSettings.joyport1,
-			onScreenJoystick = previousSettings.onScreenJoystick,
-			onScreenKeyboardButton = previousSettings.onScreenKeyboardButton,
-			onScreenKeyboardNumpad = previousSettings.onScreenKeyboardNumpad,
-			onScreenKeyboardToggle = previousSettings.onScreenKeyboardToggle,
-			joyport0MouseMap = previousSettings.joyport0MouseMap,
-			joyport1MouseMap = previousSettings.joyport1MouseMap,
-			analogMouseSpeed = previousSettings.analogMouseSpeed
+			romExtFile = selectedRoms.romExtFile
 		)
+		currentUnknownLines = emptyList()
 		applyConstrainedSettings(newSettings, publishNotices = true)
 		appPreferences.saveAndroidControls(settings)
 		saveLastSession()
+	}
+
+	/** Put the model's preset at compatibility [level] (see EmulatorSettings.withCompatibilityLevel). */
+	fun applyCompatibilityLevel(level: Int) {
+		updateSettings { it.withCompatibilityLevel(level) }
 	}
 
 	fun loadConfig(parsed: ConfigParser.ParsedConfig, name: String, path: String) {

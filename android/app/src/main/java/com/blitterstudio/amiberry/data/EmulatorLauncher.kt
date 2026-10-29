@@ -7,27 +7,28 @@ import android.content.Intent
 import com.blitterstudio.amiberry.AmiberryActivity
 import com.blitterstudio.amiberry.data.model.AmigaModel
 import com.blitterstudio.amiberry.data.model.EmulatorSettings
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.File
 
 object EmulatorLauncher {
 
 	/**
-	 * Launch emulation with a Quick Start model and optional media.
-	 * Uses --apply-preset + -0/-s for floppy/CD, plus -G to skip ImGui GUI.
+	 * Launch emulation with a Quick Start model's configuration (which the
+	 * launcher wrote, the whole machine) and optional media: -0/-1/-s for
+	 * floppy/CD, plus -G to skip ImGui GUI.
 	 */
 	fun launchQuickStart(
 		context: Context,
 		model: AmigaModel,
-		presetConfig: Int,
+		configPath: String,
 		floppyPath: String? = null,
 		floppy1Path: String? = null,
-		cdPath: String? = null,
-		configPath: String? = null
+		cdPath: String? = null
 	) {
 		val request = LaunchRequest.QuickStart(
 			model = model,
-			presetConfig = presetConfig,
 			configPath = configPath,
 			floppy0 = floppyPath,
 			floppy1 = floppy1Path,
@@ -46,18 +47,23 @@ object EmulatorLauncher {
 	}
 
 	/**
-	 * Launch emulation from a saved .uae config file.
+	 * Launch emulation from a saved .uae config file. The file's own control keys
+	 * win; [rememberedControls] only fills the control groups the file lacks.
 	 */
-	fun launchWithConfig(
+	suspend fun launchWithConfig(
 		context: Context,
 		configPath: String,
 		skipGui: Boolean = true,
-		controlSettings: EmulatorSettings? = null
+		rememberedControls: EmulatorSettings? = null
 	) {
+		val controlOverrides = rememberedControls?.let { remembered ->
+			val parsed = withContext(Dispatchers.IO) { ConfigParser.parse(File(configPath)) }
+			LaunchRequest.AndroidControlOverrides.missingFrom(parsed, remembered)
+		}
 		val request = LaunchRequest.SavedConfig(
 			configPath = configPath,
 			skipGui = skipGui,
-			controlOverrides = controlSettings?.let { LaunchRequest.AndroidControlOverrides.fromSettings(it) }
+			controlOverrides = controlOverrides
 		)
 
 		launchRequest(context, request)
@@ -72,8 +78,8 @@ object EmulatorLauncher {
 	 * This is intentionally not added to Recents because the backing config is
 	 * the transient .current_settings.uae file, not a user-saved configuration.
 	 */
-	fun launchSettingsConfig(context: Context, model: AmigaModel, presetConfig: Int, configPath: String) {
-		launchRequest(context, LaunchRequest.SettingsConfig(model = model, configPath = configPath, presetConfig = presetConfig))
+	fun launchSettingsConfig(context: Context, configPath: String) {
+		launchRequest(context, LaunchRequest.SettingsConfig(configPath = configPath))
 	}
 
 	/**

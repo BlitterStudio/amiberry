@@ -181,4 +181,24 @@ class QuickStartUiStateTest {
 			)
 		)
 	}
+
+	@Test
+	fun `memory summary lists every memory the machine has`() {
+		val summary = QuickStartUiState.buildEffectiveSummary(
+			settings = EmulatorSettings.fromModel(AmigaModel.A3000, 0, 0),
+			launchMode = QuickStartLaunchMode.DISK,
+			selectedModelAvailable = true
+		)
+		assertEquals("2 MB Chip, 8 MB Motherboard Fast RAM", summary.memory)
+
+		// A board below 1 MB is named as its board, not as its KB option.
+		val small = QuickStartUiState.buildEffectiveSummary(
+			settings = EmulatorSettings.fromModel(AmigaModel.A500)
+				.withOption("fastmem_size_k", "512")
+				.withOption("fastmem2_size_k", "256"),
+			launchMode = QuickStartLaunchMode.DISK,
+			selectedModelAvailable = true
+		)
+		assertEquals("512 KB Chip, 512 KB Slow, 512 KB Fast, 256 KB Z2 Fast RAM board 2", small.memory)
+	}
 }

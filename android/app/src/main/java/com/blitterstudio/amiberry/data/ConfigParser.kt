@@ -5,12 +5,15 @@ import com.blitterstudio.amiberry.data.model.AmigaModel
 import com.blitterstudio.amiberry.data.model.EmulatorSettings
 import com.blitterstudio.amiberry.data.model.EmulatorSettingsConstraints
 import com.blitterstudio.amiberry.data.model.HardDrive
+import com.blitterstudio.amiberry.data.model.SettingsSchema
 import java.io.File
 import java.io.IOException
 
 /**
  * Parses .uae config files back into EmulatorSettings.
- * Preserves unknown keys so configs created by ImGui don't lose settings on round-trip.
+ * Schema options without a field go to EmulatorSettings.options; other unknown
+ * keys are preserved verbatim so configs created by ImGui don't lose settings
+ * on round-trip.
  */
 object ConfigParser {
 
@@ -21,32 +24,19 @@ object ConfigParser {
 		val explicitKeys: Set<String> = emptySet()
 	)
 
-	// Keys we know how to parse into EmulatorSettings
-	private val knownKeys = setOf(
-		"cpu_model", "cpu_compatible", "cpu_24bit_addressing", "cpu_speed",
-		"fpu_model", "cachesize", "compfpu",
-		"chipset", "immediate_blits", "collision_level", "cycle_exact", "ntsc",
-		"chipmem_size", "bogomem_size", "fastmem_size", "z3mem_size",
-		"kickstart_rom_file", "kickstart_ext_rom_file",
-		"floppy0", "floppy0type", "floppy1", "floppy1type",
-		"floppy2", "floppy2type", "floppy3", "floppy3type",
-		"floppy0sound", "floppy1sound", "floppy2sound", "floppy3sound",
-		"floppy0soundvolume_disk", "floppy1soundvolume_disk", "floppy2soundvolume_disk", "floppy3soundvolume_disk",
-		"floppy0soundvolume_empty", "floppy1soundvolume_empty", "floppy2soundvolume_empty", "floppy3soundvolume_empty",
+	// Keys we parse into EmulatorSettings fields: the options with a field,
+	// older spellings of some, and the launcher's own records.
+	private val knownKeys = EmulatorSettings.FIELD_IDS + setOf(
 		"floppy_volume",
-		"cdimage0",
-		"sound_output", "sound_frequency", "sound_max_buff", "sound_channels",
-		"sound_volume", "sound_volume_paula", "sound_volume_cd", "sound_volume_ahi", "sound_volume_midi",
-		"gfx_width", "gfx_height", "gfx_correct_aspect", "gfx_auto_crop",
-		"amiberry.gfx_correct_aspect", "amiberry.gfx_auto_crop",
-		"scaling_method", "amiberry.scaling_method", "gfx_autoresolution", "amiberry.shader",
-		"joyport0", "joyport1",
-		"joyport0mousemap", "joyport1mousemap",
-		"input.joymouse_speed_analog",
-		"amiberry.onscreen_joystick", "amiberry.vkbd_enabled", "amiberry.vkbd_touch_button", "amiberry.vkbd_numpad", "amiberry.vkbd_toggle", "input.default_osk",
+		"gfx_width", "gfx_height", "gfx_correct_aspect", "gfx_auto_crop", "scaling_method",
+		"input.default_osk",
 		"amiberry.android_joyport1", "amiberry.android_preset",
-		"use_gui", "config_description", "config_hardware_path"
+		"config_description", "config_hardware_path"
 	)
+
+	/** A schema option without a field: kept in EmulatorSettings.options. */
+	private fun isMapOption(key: String): Boolean =
+		key !in knownKeys && SettingsSchema.current?.option(key) != null
 
 	private const val TAG = "Amiberry-ConfigParser"
 
@@ -69,6 +59,7 @@ object ConfigParser {
 			return ParsedConfig(EmulatorSettings(), emptyList(), "")
 		}
 		val kvPairs = mutableMapOf<String, String>()
+		val options = LinkedHashMap<String, String>()
 		val unknownLines = mutableListOf<String>()
 		val hardDrives = mutableListOf<HardDrive>()
 		// UAE controller units of the simple hardfile2 lines we adopted into hardDrives.
@@ -102,6 +93,7 @@ object ConfigParser {
 				}
 				isUaehfHdf(key, value) -> uaehfHdfLines.add(line to uaehfController(value))
 				key in knownKeys -> kvPairs[key] = value
+				isMapOption(key) -> options[key] = value
 				else -> unknownLines.add(line)
 			}
 		}
@@ -123,26 +115,51 @@ object ConfigParser {
 			for ((key, value) in LEGACY_MIXED_STEREO) {
 				if (lines.drop(mixedLine + 1).any { configKey(it) == key }) continue
 				unknownLines.removeAll { configKey(it) == key }
-				unknownLines.add("$key=$value")
+				if (isMapOption(key)) options[key] = value else unknownLines.add("$key=$value")
 			}
 		}
 
+		// A file's own keys win over what its preset record fills in.
 		val settings = buildSettings(kvPairs, hardDrives)
+			.copy(options = legacyPresetOptions(kvPairs["amiberry.android_preset"]) + options)
 		val description = kvPairs["config_description"] ?: ""
 
-		return ParsedConfig(settings, unknownLines, description, kvPairs.keys.toSet())
+		return ParsedConfig(settings, unknownLines, description, kvPairs.keys + options.keys)
+	}
+
+	/**
+	 * The machine options of a preset record written before levels existed
+	 * ("<preset id>:<configuration>", no level): those launches started the
+	 * emulator from the preset (--apply-preset) and the file holds only the
+	 * fields, so the rest of the preset's machine is level 0's values without
+	 * a field. Empty for a record with a level, which wrote its whole machine.
+	 */
+	private fun legacyPresetOptions(record: String?): Map<String, String> {
+		val parts = record?.split(':') ?: return emptyMap()
+		if (parts.size != 2) return emptyMap()
+		val model = AmigaModel.find(parts[0]) ?: return emptyMap()
+		val config = parts[1].toIntOrNull()?.takeIf { it in model.configs.indices } ?: return emptyMap()
+		return model.levelValues(config, 0).filterKeys { it !in EmulatorSettings.FIELD_IDS }
 	}
 
 	private fun buildSettings(kv: Map<String, String>, hardDrives: List<HardDrive>): EmulatorSettings {
 		// vkbd_enabled is the native master switch; the KB touch button and the
 		// gamepad toggle are only reachable while it is on (see ConfigGenerator).
 		val keyboardAvailable = kv["amiberry.vkbd_enabled"]?.toBool(true) ?: kv["input.default_osk"].toBool(true)
-		// amiberry.android_preset is "<preset id>:<configuration>"; configurations
-		// written before it existed are recognised by their hardware.
-		val preset = kv["amiberry.android_preset"]
-		val presetModel = AmigaModel.find(preset?.substringBefore(':'))
-		val presetConfig = preset?.substringAfter(':', "")?.toIntOrNull()
+		// amiberry.android_preset is "<preset id>:<configuration>:<level>";
+		// configurations written before levels existed have no level and were
+		// written from level 0's values. Configurations written before the
+		// record existed are recognised by their hardware.
+		val preset = kv["amiberry.android_preset"]?.split(':')
+		val presetModel = AmigaModel.find(preset?.getOrNull(0))
+		val presetConfig = preset?.getOrNull(1)?.toIntOrNull()
 			?.takeIf { presetModel != null && it in presetModel.configs.indices } ?: 0
+		val model = presetModel ?: guessModel(kv)
+		val presetLevel = when {
+			presetModel == null -> model.defaultLevel
+			preset == null || preset.size < 3 -> 0
+			else -> preset[2].toIntOrNull()?.takeIf { it in 0..model.compatibilityMax } ?: model.defaultLevel
+		}
 		val defaults = EmulatorSettings()
 		// floppy_volume (older configurations) sets every drive's click
 		// volumes; the per-drive keys the emulator writes after it win.
@@ -150,8 +167,9 @@ object ConfigParser {
 		fun floppyVolume(key: String, fallback: Int) = kv[key]?.toIntOrNull() ?: allDrivesVolume ?: fallback
 		fun int(key: String, fallback: Int) = kv[key]?.toIntOrNull() ?: fallback
 		return EmulatorSettings(
-			baseModel = presetModel ?: guessModel(kv),
+			baseModel = model,
 			baseConfig = presetConfig,
+			baseLevel = presetLevel,
 			cpuModel = kv["cpu_model"]?.toIntOrNull() ?: 68000,
 			cpuCompatible = kv["cpu_compatible"].toBool(true),
 			address24Bit = kv["cpu_24bit_addressing"].toBool(true),

@@ -24,6 +24,9 @@ object SettingsChangeSummary {
 	): List<SettingsChange> = Diff(schema, before, after).apply {
 		launcher(R.string.settings_cpu_model_preset) { SettingText.Plain(it.baseModel.displayName) }
 		launcher(R.string.settings_change_model_configuration, ::presetConfiguration)
+		launcher(R.string.settings_compatibility_level) { settings ->
+			SettingText.Plain(schema?.compatibilityLevels?.getOrNull(settings.baseLevel) ?: settings.baseLevel.toString())
+		}
 
 		option("cpu_model") { it.cpuModel.toString() }
 		option("cpu_speed") { it.cpuSpeed }
@@ -86,6 +89,7 @@ object SettingsChangeSummary {
 		}
 		optionText("cdimage0") { file(it.cdImage) }
 		hardDrives()
+		options()
 	}.changes
 
 	private class Diff(
@@ -151,6 +155,20 @@ object SettingsChangeSummary {
 					SettingText.Plain(old.bootPriority.toString()),
 					SettingText.Plain(new.bootPriority.toString())
 				)
+			}
+		}
+
+		/**
+		 * The options without a field, in the layer's order (an option a
+		 * side leaves out has the emulator's default there).
+		 */
+		fun options() {
+			val ids = before.options.keys + after.options.keys
+			val order = schema?.options?.keys.orEmpty()
+			val ordered = order.filter { it in ids } + ids.filter { it !in order }.sorted()
+			for (id in ordered) {
+				val default = schema?.option(id)?.defaultOnAndroid.orEmpty()
+				option(id) { it.options[id] ?: default }
 			}
 		}
 	}

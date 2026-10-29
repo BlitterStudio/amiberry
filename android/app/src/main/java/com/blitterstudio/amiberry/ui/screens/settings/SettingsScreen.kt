@@ -299,12 +299,7 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel(LocalContext.current
 								return@launchGuarded
 							}
 							runCatching {
-								EmulatorLauncher.launchSettingsConfig(
-									context,
-									launchSettings.baseModel,
-									launchSettings.baseConfig,
-									configFile.absolutePath
-								)
+								EmulatorLauncher.launchSettingsConfig(context, configFile.absolutePath)
 							}.onFailure {
 								snackbarHostState.showSnackbar(launchFailedMessage)
 							}
@@ -440,6 +435,7 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel(LocalContext.current
 							}
 						}
 					)
+					SettingsTab.Misc -> MiscTab(viewModel)
 				}
 			}
 		}
@@ -620,17 +616,11 @@ private fun SettingsAdjustmentBanner(
 }
 
 private fun SettingsIntentPreset.titleRes(): Int = when (this) {
-	SettingsIntentPreset.Compatibility -> R.string.settings_preset_compatibility
-	SettingsIntentPreset.Balanced -> R.string.settings_preset_balanced
-	SettingsIntentPreset.Performance -> R.string.settings_preset_performance
 	SettingsIntentPreset.PixelPerfect -> R.string.settings_preset_pixel_perfect
 	SettingsIntentPreset.TouchControls -> R.string.settings_preset_touch_controls
 }
 
 private fun SettingsIntentPreset.descriptionRes(): Int = when (this) {
-	SettingsIntentPreset.Compatibility -> R.string.settings_preset_compatibility_desc
-	SettingsIntentPreset.Balanced -> R.string.settings_preset_balanced_desc
-	SettingsIntentPreset.Performance -> R.string.settings_preset_performance_desc
 	SettingsIntentPreset.PixelPerfect -> R.string.settings_preset_pixel_perfect_desc
 	SettingsIntentPreset.TouchControls -> R.string.settings_preset_touch_controls_desc
 }

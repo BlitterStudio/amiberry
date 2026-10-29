@@ -107,10 +107,12 @@ fun InputTab(viewModel: SettingsViewModel) {
 			}
 		}
 
+		SchemaGroupSection("input", viewModel)
+
 		// The keyboard can be driven by a game controller, so keep its settings
 		// available on non-touch devices as well. The KB touch button and the
 		// gamepad toggle are independent ways to open it.
-		SettingsSection(title = stringResource(R.string.settings_input_on_screen_controls_title)) {
+		SchemaGroupSection("onscreen", viewModel, title = stringResource(R.string.settings_input_on_screen_controls_title)) {
 			if (hasTouchScreen) {
 				SchemaSwitchRow(
 					id = "amiberry.onscreen_joystick",

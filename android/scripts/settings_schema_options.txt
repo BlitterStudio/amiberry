@@ -1,7 +1,13 @@
 # The options android/app/src/main/settings/settings_schema.json describes:
 # the configuration keys the launcher writes (ConfigGenerator.kt) or shows
-# that the shared settings layer defines. Regenerate the schema after
-# changing this list or the layer: android/scripts/update_settings_schema.sh.
+# that the shared settings layer defines. The export adds every option a
+# preset's compatibility level sets, which the launcher writes from
+# EmulatorSettings.options (marked preset_only unless listed here). The
+# Settings tabs show every listed option: in their own rows, or in the
+# section of its group (SettingsGroups.kt). Options meaningless on Android
+# (host windows, devices, serial, MIDI, PPC) are never listed. Regenerate
+# the schema after changing this list or the layer:
+# android/scripts/update_settings_schema.sh.
 cpu_model
 cpu_24bit_addressing
 cpu_compatible
@@ -66,3 +72,179 @@ floppy3
 floppy3type
 cdimage0
 use_gui
+
+# Shown in the group sections of the Settings tabs.
+# cpu
+cpu_no_unimplemented
+cpu_data_cache
+# mmu
+mmu_model
+# fpu
+fpu_strict
+fpu_softfloat
+fpu_no_unimplemented
+# cpu_speed
+cpu_throttle
+amiberry.cpu_idle
+cpu_multiplier
+cpu_threaded
+# jit
+comp_constjump
+comp_flushmode
+comp_nf
+comp_catchfault
+comp_trustbyte
+# chipset
+waiting_blits
+keyboard_type
+keyboard_nkro
+display_optimizations
+chipset_compatible
+hvcsync
+# genlock
+genlock
+genlockmode
+genlock_mix
+genlock_alpha
+genlock_aspect
+# adv_chipset
+rtc
+chipset_rtc_adjust
+ciaatod
+cia_overlay
+a1000ram
+df0idhw
+cd32cd
+cd32c2p
+cd32nvram
+cdtvcd
+cdtvram
+cdtv-cr
+ksmirror_e0
+ksmirror_a8
+color_burst
+resetwarning
+cia_todbug
+cs_bytecustomwritebug
+memory_pattern
+rom_is_slow
+toshiba_gary
+z3_autoconfig
+pcmcia
+1mchipjumper
+ciaa_type
+scsi_a3000
+scsi_a4000t
+unmapped_address_space
+eclocksync
+agnusrev
+deniserev
+agnusmodel
+agnussize
+denisemodel
+# memory
+fastmem_size_k
+fastmem2_size
+fastmem2_size_k
+fastmem3_size
+fastmem3_size_k
+fastmem4_size
+fastmem4_size_k
+z3mem2_size
+z3mem3_size
+z3mem4_size
+a3000mem_size
+mbresmem_size
+megachipmem_size
+z3mapping
+# rom
+boot_rom_uae
+uaeboard
+kickshifter
+# display
+gfx_vsync
+gfx_blacker_than_black
+gfx_flickerfixer
+gfx_monochrome
+gfx_lores_mode
+gfx_autoresolution_vga
+gfx_monitorblankdelay
+gfx_resolution
+gfx_overscanmode
+gfx_luminance
+gfx_contrast
+gfx_gamma
+gfx_gamma_r
+gfx_gamma_g
+gfx_gamma_b
+gfx_atari_palette_fix
+gfx_center_horizontal
+gfx_center_vertical
+gfx_ntscpixelspal
+gfx_linemode
+# sound
+sound_auto
+sound_stereo_separation
+sound_interpol
+sound_stereo_swap_paula
+sound_stereo_swap_ahi
+sound_stereo_mixing_delay
+sound_filter
+sound_filter_type
+# input
+joyport0autofire
+joyport1autofire
+joyport0mode
+joyport1mode
+input.autoswitch
+input.joystick_up_button
+input.joystick_deadzone
+input.autofire_speed
+input.joymouse_speed_digital
+input.mouse_speed
+magic_mouse
+magic_mousecursor
+tablet_library
+absolute_mouse
+# onscreen
+amiberry.vkbd_transparency
+amiberry.vkbd_language
+amiberry.use_retroarch_vkbd
+# floppy
+floppy_speed
+# cd
+cd_speed
+# filesystem
+filesys_custom_uaefsdb
+filesys_no_fsdb
+# misc
+synchronize_clock
+cpu_reset_pause
+clipboard_sharing
+show_leds
+show_leds_rtg
+log_illegal_mem
+floppy_write_protect
+harddrive_write_protect
+uae_hide_autoconfig
+amiberry.right_control_is_right_win
+power_led_dim
+debug_mem
+cpu_halt_auto_reset
+scsidevice_disable
+warpboot
+amiberry.use_retroarch_quit
+amiberry.use_retroarch_menu
+amiberry.use_retroarch_reset
+# expansions
+bsdsocket_emu
+scsi
+# filter
+amiberry.gfx_manual_crop
+amiberry.gfx_manual_crop_width
+amiberry.gfx_manual_crop_height
+amiberry.gfx_horizontal_offset
+amiberry.gfx_vertical_offset
+amiberry.use_bezel
+# io
+dongle

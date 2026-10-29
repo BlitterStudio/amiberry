@@ -13,11 +13,13 @@ class EmulatorSettingsTest {
 	// --- Model defaults ---
 
 	@Test
-	fun `A500 defaults have OCS chipset and 68000`() {
+	fun `A500 defaults have OCS chipset and 68000 at the approximate level`() {
 		val s = EmulatorSettings.fromModel(AmigaModel.A500)
 		assertEquals(68000, s.cpuModel)
 		assertEquals("ocs", s.chipset)
-		assertEquals("true", s.cycleExact)
+		assertEquals(1, s.baseLevel)
+		assertEquals("false", s.cycleExact)
+		assertEquals("true", EmulatorSettings.fromModel(AmigaModel.A500, level = 0).cycleExact)
 	}
 
 	@Test

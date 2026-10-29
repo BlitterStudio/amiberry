@@ -65,6 +65,7 @@ import com.blitterstudio.amiberry.R
 import android.content.Intent
 import androidx.core.content.FileProvider
 import com.blitterstudio.amiberry.data.AdvancedLaunchActions
+import com.blitterstudio.amiberry.data.AppPreferences
 import com.blitterstudio.amiberry.data.ConfigurationActions
 import com.blitterstudio.amiberry.data.ConfigInfo
 import com.blitterstudio.amiberry.data.EmulatorLauncher
@@ -317,7 +318,8 @@ fun ConfigurationsScreen(
 							},
 							onLaunch = {
 								val configPath = config.path
-								val controlSettings = settingsViewModel.settings
+								// Not the editor state: that may belong to another configuration.
+								val rememberedControls = AppPreferences.getInstance(context).rememberedAndroidControls()
 								when (val target = ConfigurationActions.launchTarget(configPath)) {
 									is ConfigurationActions.LaunchTarget.Ready -> {
 										scope.launchGuarded(launchGuard) {
@@ -326,7 +328,7 @@ fun ConfigurationsScreen(
 													context,
 													target.path,
 													skipGui = true,
-													controlSettings = controlSettings
+													rememberedControls = rememberedControls
 												)
 											}.onFailure {
 												snackbarHostState.showSnackbar(actionMessage(ConfigurationActions.Message(R.string.msg_failed_launch_config)))

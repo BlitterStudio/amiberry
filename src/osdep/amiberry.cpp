@@ -4948,7 +4948,9 @@ static const char* get_screenshots_directory_name()
 	return "Screenshots";
 }
 
-static const char* get_nvram_directory_name()
+// The NVRAM directory's name in the content base (the default nvram_dir),
+// also the base-relative spelling of NVRAM files the settings schema exports.
+const char* get_nvram_directory_name()
 {
 	return "NVRAM";
 }

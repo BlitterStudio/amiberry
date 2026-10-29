@@ -142,17 +142,16 @@ class MainActivity : ComponentActivity() {
 		}
 	}
 
-	private fun launchPreparedImport(launch: IntentImportExecutor.Launch?) {
+	private suspend fun launchPreparedImport(launch: IntentImportExecutor.Launch?) {
 		when (launch) {
 			is IntentImportExecutor.Launch.SavedConfig -> EmulatorLauncher.launchWithConfig(
 				this,
 				launch.configPath,
-				controlSettings = launch.controlSettings
+				rememberedControls = launch.rememberedControls
 			)
 			is IntentImportExecutor.Launch.QuickStart -> EmulatorLauncher.launchQuickStart(
 				context = this,
 				model = launch.model,
-				presetConfig = launch.presetConfig,
 				floppyPath = launch.floppyPath,
 				floppy1Path = launch.floppy1Path,
 				cdPath = launch.cdPath,

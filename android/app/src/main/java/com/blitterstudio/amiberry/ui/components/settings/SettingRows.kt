@@ -9,12 +9,17 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.selection.toggleable
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
@@ -28,7 +33,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import com.blitterstudio.amiberry.R
 import androidx.compose.ui.unit.dp
 import com.blitterstudio.amiberry.ui.dpadFocusIndicator
 import com.blitterstudio.amiberry.ui.dpadArrowsMoveFocus
@@ -57,6 +64,53 @@ fun SettingsSection(
 			if (!footer.isNullOrBlank()) {
 				Spacer(modifier = Modifier.height(8.dp))
 				ReasonText(footer)
+			}
+		}
+	}
+}
+
+/**
+ * A [SettingsSection] whose rows show only while [expanded]: the title row
+ * opens and closes it (one D-pad stop, which keeps the focus while the rows
+ * come and go). For groups of options few people change.
+ */
+@Composable
+fun CollapsibleSettingsSection(
+	title: String,
+	expanded: Boolean,
+	onExpandedChange: (Boolean) -> Unit,
+	modifier: Modifier = Modifier,
+	footer: String? = null,
+	content: @Composable ColumnScope.() -> Unit
+) {
+	val action = stringResource(if (expanded) R.string.settings_section_hide else R.string.settings_section_show, title)
+	OutlinedCard(modifier = modifier.fillMaxWidth()) {
+		Column(modifier = Modifier.padding(16.dp)) {
+			Row(
+				verticalAlignment = Alignment.CenterVertically,
+				modifier = Modifier
+					.fillMaxWidth()
+					// Before clickable: onFocusChanged reports the focus target after it in the chain.
+					.dpadFocusIndicator()
+					.clickable(role = Role.Button, onClickLabel = action) { onExpandedChange(!expanded) }
+					.padding(vertical = 4.dp)
+			) {
+				Text(title, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+				Icon(
+					if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+					contentDescription = null,
+					tint = MaterialTheme.colorScheme.onSurfaceVariant
+				)
+			}
+			if (expanded) {
+				Spacer(modifier = Modifier.height(8.dp))
+				Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+					content()
+				}
+				if (!footer.isNullOrBlank()) {
+					Spacer(modifier = Modifier.height(8.dp))
+					ReasonText(footer)
+				}
 			}
 		}
 	}

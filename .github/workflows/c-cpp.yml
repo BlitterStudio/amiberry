@@ -625,9 +625,10 @@ jobs:
   build-ubuntu:
     runs-on: ${{ matrix.runner }}
     container: ${{ matrix.container }}
-    # The 24.04-amd64 job also runs the test suite, whose settings apply
-    # test starts an emulator per option change.
-    timeout-minutes: 45
+    # The 24.04-amd64 job also runs the test suite: the settings apply test
+    # runs three emulators for 20-30 minutes and the schema test regenerates
+    # the availability and preset tables.
+    timeout-minutes: 75
     permissions:
       contents: read
       actions: write

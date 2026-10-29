@@ -17,9 +17,10 @@ object IntentImportExecutor {
 	)
 
 	sealed interface Launch {
+		/** [rememberedControls] only fills the control groups the file lacks. */
 		data class SavedConfig(
 			val configPath: String,
-			val controlSettings: EmulatorSettings
+			val rememberedControls: EmulatorSettings
 		) : Launch
 
 		data class QuickStart(
@@ -27,8 +28,7 @@ object IntentImportExecutor {
 			val floppyPath: String?,
 			val floppy1Path: String?,
 			val cdPath: String?,
-			val configPath: String,
-			val presetConfig: Int = 0
+			val configPath: String
 		) : Launch
 
 		data class WhdLoad(
@@ -61,8 +61,7 @@ object IntentImportExecutor {
 		category: FileCategory,
 		importedPath: String,
 		configPath: String,
-		shaderOverride: String? = null,
-		presetConfig: Int = 0
+		shaderOverride: String? = null
 	): Launch? =
 		when (category) {
 			FileCategory.WHDLOAD_GAMES -> Launch.WhdLoad(
@@ -75,16 +74,14 @@ object IntentImportExecutor {
 				floppyPath = importedPath,
 				floppy1Path = null,
 				cdPath = null,
-				configPath = configPath,
-				presetConfig = presetConfig
+				configPath = configPath
 			)
 			FileCategory.CD_IMAGES -> Launch.QuickStart(
 				model = AmigaModel.CD32,
 				floppyPath = null,
 				floppy1Path = null,
 				cdPath = importedPath,
-				configPath = configPath,
-				presetConfig = presetConfig
+				configPath = configPath
 			)
 			FileCategory.ROMS,
 			FileCategory.HARD_DRIVES -> null
@@ -113,7 +110,7 @@ object IntentImportExecutor {
 				feedback = ImportFeedback.configImported(targetFile.name),
 				launch = Launch.SavedConfig(
 					configPath = targetFile.absolutePath,
-					controlSettings = AndroidLaunchConfig.loadLastSessionSettings(context)
+					rememberedControls = AppPreferences.getInstance(context).rememberedAndroidControls()
 				)
 			)
 		} catch (e: Exception) {
@@ -189,9 +186,7 @@ object IntentImportExecutor {
 					floppy0 = importedPath,
 					floppy1 = "",
 					cdImage = ""
-				).let { (configPath, presetConfig) ->
-					mediaLaunchFor(category, importedPath, configPath, presetConfig = presetConfig)
-				}
+				).let { configPath -> mediaLaunchFor(category, importedPath, configPath) }
 				FileCategory.CD_IMAGES -> writeIntentQuickStartConfig(
 					context = context,
 					model = AmigaModel.CD32,
@@ -199,9 +194,7 @@ object IntentImportExecutor {
 					floppy0 = "",
 					floppy1 = "",
 					cdImage = importedPath
-				).let { (configPath, presetConfig) ->
-					mediaLaunchFor(category, importedPath, configPath, presetConfig = presetConfig)
-				}
+				).let { configPath -> mediaLaunchFor(category, importedPath, configPath) }
 				FileCategory.ROMS,
 				FileCategory.HARD_DRIVES -> null
 			}
@@ -222,7 +215,7 @@ object IntentImportExecutor {
 		floppy0: String,
 		floppy1: String,
 		cdImage: String
-	): Pair<String, Int> {
+	): String {
 		val roms = FileManager.scanForCategory(context, FileCategory.ROMS)
 		val launchSettings = AndroidLaunchConfig.buildQuickStartSettingsSnapshot(
 			model = model,
@@ -232,7 +225,7 @@ object IntentImportExecutor {
 			floppy1 = floppy1,
 			cdImage = cdImage
 		)
-		return AndroidLaunchConfig.writeQuickStartConfig(context, launchSettings).absolutePath to launchSettings.baseConfig
+		return AndroidLaunchConfig.writeQuickStartConfig(context, launchSettings).absolutePath
 	}
 
 	private const val TAG = "Amiberry-IntentImport"

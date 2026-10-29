@@ -222,6 +222,9 @@ fun DisplayTab(viewModel: SettingsViewModel) {
 			}
 		}
 
+		SchemaGroupSection("display", viewModel, title = stringResource(R.string.settings_display_more_title))
+		SchemaGroupSection("filter", viewModel)
+
 		OutlinedCard(modifier = Modifier.fillMaxWidth()) {
 			Column(modifier = Modifier.padding(16.dp)) {
 				Text(stringResource(R.string.settings_display_app_theme), style = MaterialTheme.typography.titleMedium)

@@ -183,6 +183,13 @@ void fit_manual_crop(uae_prefs& p);
 bool soundcard_reset_by_vsync(const uae_prefs& p, int card);
 void clear_soundcard_for_vsync(uae_prefs& p);
 
+// The emulator feature a choice of the option id needs that a build may
+// leave out ("videograb" for the genlock's video and LaserDisc sources),
+// whatever this build has; nullptr for a choice every build offers. The
+// settings schema exports it so a front end for another build can drop the
+// choice (the Android launcher: settings_schema.json is made on desktop).
+const char* choice_requires(std::string_view id, std::string_view value);
+
 // The Quickstart constraints that complete built_in_prefs(); applies model,
 // config and compatibility level exactly like the Quickstart panel (which
 // historically ran these steps in src/osdep/imgui/quickstart.cpp). The

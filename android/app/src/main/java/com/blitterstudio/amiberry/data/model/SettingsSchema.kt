@@ -33,7 +33,12 @@ class SettingsSchema(
 	/** What setting a CPU option changes with it; null in a schema without it. */
 	val transitions: Transitions? = null,
 	/** The built-in AROS Kickstart replacement; null in a schema without it. */
-	val aros: Aros? = null
+	val aros: Aros? = null,
+	/**
+	 * What setting a Zorro II fast RAM board's size does, one table per
+	 * board: its MB and KB keys are one size, so setting either changes both.
+	 */
+	val memoryTransitions: List<Transitions> = emptyList()
 ) {
 	/** One ROM a preset needs: the first installed of [ids] ([role] "kick", "ext" or "other"). */
 	data class RomRequest(val role: String, val ids: List<Int>)
@@ -61,7 +66,7 @@ class SettingsSchema(
 			.filter { !it.arcade }
 			.map { preset -> preset to preset.configs.filter { config -> config.requires.all { it in ANDROID_FEATURES } } }
 			.filter { (_, configs) -> configs.isNotEmpty() }
-			.map { (preset, configs) -> AmigaModel(preset.id, preset.label, configs) }
+			.map { (preset, configs) -> AmigaModel(preset.id, preset.label, configs, preset.compatibilityMax) }
 	}
 
 	data class Choice(val value: String, val label: String)
@@ -70,9 +75,13 @@ class SettingsSchema(
 	 * One option of the settings layer, as people should see it: the
 	 * layer's [label] and [help] (shown under the control), the [constraint]
 	 * saying why it may be unavailable, and for numbers how the stored value
-	 * reads ([reversed], [scale], [unit]). Stored values keep their .uae
-	 * spelling throughout. [androidDefault] is the Android build's default
-	 * where it differs from [default] (the schema comes from a desktop build).
+	 * reads ([reversed], [scale], [unit]; [level] for a number set by feel,
+	 * shown as a slider). Stored values keep their .uae spelling throughout.
+	 * [androidDefault] is the Android build's default where it differs from
+	 * [default] (the schema comes from a desktop build). [group] is the
+	 * layer's group the Settings tabs place it by; [presetOnly] marks an
+	 * option the schema describes only because a preset sets it, which the
+	 * launcher writes but does not show.
 	 */
 	data class Option(
 		val id: String,
@@ -89,7 +98,10 @@ class SettingsSchema(
 		val unit: String? = null,
 		val scale: Double = 1.0,
 		val reversed: Boolean = false,
-		val androidDefault: String? = null
+		val androidDefault: String? = null,
+		val group: String = "",
+		val level: Boolean = false,
+		val presetOnly: Boolean = false
 	) {
 		/** The default the Android emulator gives the option. */
 		val defaultOnAndroid: String
@@ -198,6 +210,9 @@ class SettingsSchema(
 	/** The layer's label of [id]; null when the schema does not list it. */
 	fun label(id: String): String? = options[id]?.label
 
+	/** The Android emulator's default of every option, by ID: the values a state has where nothing sets them. */
+	val defaults: Map<String, String> by lazy { options.mapValues { it.value.defaultOnAndroid } }
+
 	/** Why [id] may be unavailable, as the layer words it; null when it always is. */
 	fun constraint(id: String): String? = options[id]?.constraint?.takeIf { it.isNotBlank() }
 
@@ -205,14 +220,18 @@ class SettingsSchema(
 	fun choiceLabel(id: String, value: String): String? = options[id]?.choiceLabel(value)
 
 	/**
-	 * One configuration of a preset. [romSets] are the ways it can be built:
-	 * one ROM from each request of a set (the emulator prefers earlier sets).
-	 * [requires] names emulator features it needs that a build may leave
-	 * out ("ppc" for the PowerPC boards).
+	 * One configuration of a preset. [levels] is the machine at each
+	 * compatibility level (0 the best compatibility, up to the preset's
+	 * compatibilityMax): every option whose value differs from a fresh
+	 * configuration's, .uae spelling, so a configuration file of these values
+	 * loads as the machine (paths left out). [romSets] are the ways it can be
+	 * built: one ROM from each request of a set (the emulator prefers earlier
+	 * sets). [requires] names emulator features it needs that a build may
+	 * leave out ("ppc" for the PowerPC boards).
 	 */
 	data class PresetConfig(
 		val label: String,
-		val values: Map<String, String>,
+		val levels: List<Map<String, String>>,
 		val romSets: List<List<RomRequest>>,
 		val requires: List<String> = emptyList()
 	)
@@ -300,11 +319,12 @@ class SettingsSchema(
 			val optionArray = json.getJSONArray("options")
 			for (i in 0 until optionArray.length()) {
 				val o = optionArray.getJSONObject(i)
+				// A choice that needs a feature the Android build leaves out
+				// (the genlock's video sources need VIDEOGRAB) is not offered.
 				val choices = o.optJSONArray("choices")?.let { array ->
-					List(array.length()) { c ->
-						val choice = array.getJSONObject(c)
-						Choice(choice.getString("value"), choice.getString("label"))
-					}
+					List(array.length()) { array.getJSONObject(it) }
+						.filter { choice -> choice.optJSONArray("requires")?.toStringList().orEmpty().all { it in ANDROID_FEATURES } }
+						.map { choice -> Choice(choice.getString("value"), choice.getString("label")) }
 				} ?: emptyList()
 				fun text(key: String): String? = if (o.has(key) && !o.isNull(key)) o.getString(key) else null
 				fun number(key: String): Double? = if (o.has(key) && !o.isNull(key)) o.getDouble(key) else null
@@ -324,7 +344,10 @@ class SettingsSchema(
 					unit = text("unit")?.takeIf { it.isNotBlank() },
 					scale = number("scale")?.takeIf { it != 0.0 } ?: 1.0,
 					reversed = o.optBoolean("reversed", false),
-					androidDefault = text("android_default")
+					androidDefault = text("android_default"),
+					group = text("group").orEmpty(),
+					level = o.optBoolean("level", false),
+					presetOnly = o.optBoolean("preset_only", false)
 				)
 				options[option.id] = option
 			}
@@ -349,9 +372,10 @@ class SettingsSchema(
 								RomRequest(rom.getString("role"), List(ids.length()) { ids.getInt(it) })
 							}
 						}
+						val levelArray = config.getJSONArray("levels")
 						PresetConfig(
 							config.getString("label"),
-							config.getJSONObject("values").toStringMap(),
+							List(levelArray.length()) { levelArray.getJSONObject(it).toStringMap() },
 							romSets,
 							config.optJSONArray("requires")?.toStringList().orEmpty()
 						)
@@ -375,9 +399,12 @@ class SettingsSchema(
 			val aros = json.optJSONObject("aros")?.let {
 				Aros(it.getString("rom_file"), it.getString("main_file"), it.getString("ext_file"))
 			}
+			val memoryTransitions = json.optJSONArray("memory_transitions")?.let { array ->
+				List(array.length()) { Transitions.parse(array.getJSONObject(it)) }
+			}.orEmpty()
 			return SettingsSchema(
 				options, presets, levels, roms, resolutions, memoryResolutions,
-				soundResolutions, availability, transitions, aros
+				soundResolutions, availability, transitions, aros, memoryTransitions
 			)
 		}
 

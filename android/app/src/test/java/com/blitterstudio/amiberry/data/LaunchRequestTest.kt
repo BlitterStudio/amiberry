@@ -1,30 +1,36 @@
 package com.blitterstudio.amiberry.data
 
 import com.blitterstudio.amiberry.data.model.AmigaModel
+import com.blitterstudio.amiberry.data.model.EmulatorSettings
 import org.junit.Assert.assertArrayEquals
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
 
 class LaunchRequestTest {
 
+	@get:Rule
+	val tempDir = TemporaryFolder()
+
 	@Test
-	fun `settings config request includes model config and skip gui`() {
+	fun `settings config request loads the complete config and skips gui`() {
 		val path = "/tmp/a1200.uae"
 
-		val args = LaunchRequest.SettingsConfig(
-			model = AmigaModel.A1200,
-			configPath = path
-		).toArgs()
+		val args = LaunchRequest.SettingsConfig(configPath = path).toArgs()
 
+		// No --apply-preset: the config holds the whole machine, and a config
+		// load would discard a preset applied before it.
 		assertArrayEquals(
-			arrayOf("--rescan-roms", "--apply-preset", "a1200:0:0", "--config", path, "-G"),
+			arrayOf("--rescan-roms", "--config", path, "-G"),
 			args
 		)
 	}
 
 	@Test
-	fun `quick start request includes model config floppy and skip gui`() {
+	fun `quick start request includes config floppy and skip gui`() {
 		val configPath = "/tmp/quickstart.uae"
 
 		val args = LaunchRequest.QuickStart(
@@ -36,7 +42,7 @@ class LaunchRequestTest {
 		).toArgs()
 
 		assertArrayEquals(
-			arrayOf("--rescan-roms", "--apply-preset", "a500:0:0", "--config", configPath, "-0", "/tmp/game.adf", "-G"),
+			arrayOf("--rescan-roms", "--config", configPath, "-0", "/tmp/game.adf", "-G"),
 			args
 		)
 	}
@@ -49,21 +55,7 @@ class LaunchRequestTest {
 		).toArgs()
 
 		assertArrayEquals(
-			arrayOf("--rescan-roms", "--apply-preset", "a500:0:0", "--config", "/tmp/.quickstart_settings.uae", "-G"),
-			args
-		)
-	}
-
-	@Test
-	fun `quick start without generated config preserves direct media args`() {
-		val args = LaunchRequest.QuickStart(
-			model = AmigaModel.A500,
-			configPath = null,
-			floppy0 = "/tmp/game.adf"
-		).toArgs()
-
-		assertArrayEquals(
-			arrayOf("--rescan-roms", "--apply-preset", "a500:0:0", "-0", "/tmp/game.adf", "-G"),
+			arrayOf("--rescan-roms", "--config", "/tmp/.quickstart_settings.uae", "-G"),
 			args
 		)
 	}
@@ -332,11 +324,118 @@ class LaunchRequestTest {
 		)
 	}
 
+	private val remembered = EmulatorSettings(
+		joyport0 = "mouse",
+		joyport1 = "joy0",
+		onScreenJoystick = false,
+		onScreenKeyboardButton = false,
+		onScreenKeyboardNumpad = true,
+		onScreenKeyboardToggle = "select",
+		joyport0MouseMap = false,
+		joyport1MouseMap = true,
+		analogMouseSpeed = 40
+	)
+
+	private fun savedConfigArgs(content: String, rememberedControls: EmulatorSettings = remembered): List<String> {
+		val file = tempDir.newFile("saved.uae").apply { writeText(content) }
+		val overrides = LaunchRequest.AndroidControlOverrides.missingFrom(ConfigParser.parse(file), rememberedControls)
+		return LaunchRequest.SavedConfig(file.path, controlOverrides = overrides).toArgs()
+			.drop(3).dropLast(1)
+	}
+
+	@Test
+	fun `saved config keeps its own joyport and keyboard toggle over remembered controls`() {
+		val args = savedConfigArgs("joyport0=joy1\namiberry.vkbd_toggle=start\n")
+
+		assertEquals(
+			listOf(
+				"-s", "joyport1=joy0",
+				"-s", "amiberry.onscreen_joystick=false",
+				// Derived from the remembered button and the file's toggle.
+				"-s", "amiberry.vkbd_enabled=true",
+				"-s", "amiberry.vkbd_touch_button=false",
+				"-s", "amiberry.vkbd_numpad=true",
+				"-s", "input.default_osk=true",
+				"-s", "joyport0mousemap=0",
+				"-s", "joyport1mousemap=1",
+				"-s", "input.joymouse_speed_analog=40"
+			),
+			args
+		)
+	}
+
+	@Test
+	fun `saved config without control keys gets every remembered control explicitly`() {
+		val args = savedConfigArgs(
+			"cpu_model=68020\n",
+			remembered.copy(onScreenKeyboardToggle = null, joyport1MouseMap = false)
+		)
+
+		assertEquals(
+			listOf(
+				"-s", "joyport0=mouse",
+				"-s", "joyport1=joy0",
+				"-s", "amiberry.onscreen_joystick=false",
+				"-s", "amiberry.vkbd_enabled=true",
+				"-s", "amiberry.vkbd_touch_button=false",
+				"-s", "amiberry.vkbd_numpad=true",
+				"-s", "input.default_osk=true",
+				// Remembered Default and disabled mouse maps stay explicit.
+				"-s", "amiberry.vkbd_toggle=default",
+				"-s", "joyport0mousemap=0",
+				"-s", "joyport1mousemap=0",
+				"-s", "input.joymouse_speed_analog=40"
+			),
+			args
+		)
+	}
+
+	@Test
+	fun `saved config with an explicitly disabled keyboard keeps button and toggle off`() {
+		val args = savedConfigArgs(
+			"amiberry.vkbd_enabled=false\njoyport0=mouse\njoyport1=joy1\namiberry.onscreen_joystick=false\n" +
+				"joyport0mousemap=1\njoyport1mousemap=0\ninput.joymouse_speed_analog=10\n"
+		)
+
+		assertEquals(listOf("-s", "amiberry.vkbd_numpad=true"), args)
+	}
+
+	@Test
+	fun `saved config keyboard switch follows a remembered toggle it lacks`() {
+		val args = savedConfigArgs(
+			"amiberry.vkbd_enabled=true\namiberry.vkbd_touch_button=false\namiberry.vkbd_numpad=false\n" +
+				"joyport0=mouse\njoyport1=joy1\namiberry.onscreen_joystick=false\n" +
+				"joyport0mousemap=0\njoyport1mousemap=0\ninput.joymouse_speed_analog=25\n",
+			remembered.copy(onScreenKeyboardToggle = "")
+		)
+
+		assertEquals(
+			listOf(
+				"-s", "amiberry.vkbd_enabled=false",
+				"-s", "input.default_osk=false",
+				"-s", "amiberry.vkbd_toggle="
+			),
+			args
+		)
+	}
+
+	@Test
+	fun `saved config with every control key gets no overrides`() {
+		val args = savedConfigArgs(
+			"joyport0=mouse\njoyport1=joy1\namiberry.onscreen_joystick=false\n" +
+				"amiberry.vkbd_enabled=true\namiberry.vkbd_touch_button=true\namiberry.vkbd_numpad=false\n" +
+				"amiberry.vkbd_toggle=default\njoyport0mousemap=0\njoyport1mousemap=0\n" +
+				"input.joymouse_speed_analog=25\n"
+		)
+
+		assertEquals(emptyList<String>(), args)
+	}
+
 	@Test
 	fun `launch matrix tracks emulator sessions but not advanced gui`() {
 		assertTrue(LaunchRequest.QuickStart(AmigaModel.A500, configPath = "/tmp/quick.uae").trackSession)
 		assertTrue(LaunchRequest.SavedConfig("/tmp/saved.uae").trackSession)
-		assertTrue(LaunchRequest.SettingsConfig(AmigaModel.A1200, "/tmp/current.uae").trackSession)
+		assertTrue(LaunchRequest.SettingsConfig("/tmp/current.uae").trackSession)
 		assertTrue(LaunchRequest.WhdLoad("/tmp/game.lha", configPath = "/tmp/controls.uae").trackSession)
 		assertTrue(LaunchRequest.Rp9("/tmp/game.rp9").trackSession)
 
@@ -348,7 +447,7 @@ class LaunchRequestTest {
 		val requests = listOf(
 			LaunchRequest.QuickStart(AmigaModel.A500, configPath = "/tmp/quick.uae"),
 			LaunchRequest.SavedConfig("/tmp/saved.uae"),
-			LaunchRequest.SettingsConfig(AmigaModel.A1200, "/tmp/current.uae"),
+			LaunchRequest.SettingsConfig("/tmp/current.uae"),
 			LaunchRequest.WhdLoad("/tmp/game.lha", configPath = "/tmp/controls.uae"),
 			LaunchRequest.Rp9("/tmp/game.rp9"),
 			LaunchRequest.AdvancedGui(configPath = "/tmp/edit.uae")
