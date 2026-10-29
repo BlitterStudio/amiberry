@@ -280,5 +280,20 @@ fun DisplayTab(viewModel: SettingsViewModel) {
 				}
 			}
 		}
+
+		OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+			Column(modifier = Modifier.padding(16.dp)) {
+				Text(stringResource(R.string.settings_display_in_game_menu), style = MaterialTheme.typography.titleMedium)
+				Spacer(modifier = Modifier.height(8.dp))
+				val appPrefs = AppPreferences.getInstance(LocalContext.current)
+				val useClassicMenu by appPrefs.useClassicInGameMenu
+				SettingSwitchRow(
+					label = stringResource(R.string.settings_display_classic_menu),
+					checked = useClassicMenu,
+					onCheckedChange = { appPrefs.setClassicInGameMenu(it) },
+					help = stringResource(R.string.settings_display_classic_menu_help)
+				)
+			}
+		}
 	}
 }

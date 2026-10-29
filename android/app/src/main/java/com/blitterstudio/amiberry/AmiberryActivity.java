@@ -10,6 +10,7 @@ import android.window.OnBackInvokedDispatcher;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
+import com.blitterstudio.amiberry.overlay.OverlayHost;
 import org.libsdl.app.SDLActivity;
 
 /**
@@ -21,18 +22,70 @@ import org.libsdl.app.SDLActivity;
  * emulation display.
  *
  * Back-button handling: legacy Back and Android 13+ predictive Back both use
- * dispatchBackToSdl(), which synthesizes KEYCODE_BACK for SDL.  The native side
- * receives SDL_SCANCODE_AC_BACK, closes the on-screen keyboard first, then uses
- * Back as the ImGui GUI shortcut.
+ * dispatchBackToSdl().  While the in-game menu shows, Back is the menu's;
+ * otherwise it synthesizes KEYCODE_BACK for SDL.  The native side receives
+ * SDL_SCANCODE_AC_BACK, closes the on-screen keyboard first, then uses Back
+ * as the GUI shortcut, which opens the in-game menu (OverlayHost) over a
+ * running emulation.
  */
 public class AmiberryActivity extends SDLActivity {
+	// Messages from src/osdep/android_overlay.cpp (SDL_SendAndroidMessage).
+	private static final int COMMAND_SHOW_OVERLAY = COMMAND_USER + 1;
+	private static final int COMMAND_HIDE_OVERLAY = COMMAND_USER + 2;
+
 	private OnBackInvokedCallback backCallback;
+	private OverlayHost overlay;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
+		// Without its libraries SDLActivity shows an error and has no layout.
+		if (!mBrokenLibraries && mLayout != null) {
+			overlay = new OverlayHost(this, mLayout, mSurface);
+			overlay.onCreate(savedInstanceState);
+		}
 		registerBackCallback();
 		enterImmersiveMode();
+	}
+
+	@Override
+	protected void onStart() {
+		super.onStart();
+		if (overlay != null) {
+			overlay.onStart();
+		}
+	}
+
+	@Override
+	protected void onResume() {
+		super.onResume();
+		if (overlay != null) {
+			overlay.onResume();
+		}
+	}
+
+	@Override
+	protected void onPause() {
+		if (overlay != null) {
+			overlay.onPause();
+		}
+		super.onPause();
+	}
+
+	@Override
+	protected void onStop() {
+		if (overlay != null) {
+			overlay.onStop();
+		}
+		super.onStop();
+	}
+
+	@Override
+	protected void onSaveInstanceState(Bundle outState) {
+		super.onSaveInstanceState(outState);
+		if (overlay != null) {
+			overlay.onSaveInstanceState(outState);
+		}
 	}
 
 	@Override
@@ -41,6 +94,33 @@ public class AmiberryActivity extends SDLActivity {
 		if (hasFocus) {
 			enterImmersiveMode();
 		}
+		if (overlay != null) {
+			overlay.onWindowFocusChanged(hasFocus);
+		}
+	}
+
+	@Override
+	public boolean dispatchKeyEvent(KeyEvent event) {
+		if (overlay != null && overlay.isShowing() && overlay.onKeyEvent(event)) {
+			return true;
+		}
+		return super.dispatchKeyEvent(event);
+	}
+
+	@Override
+	protected boolean onUnhandledMessage(int command, Object param) {
+		if (overlay == null) {
+			return super.onUnhandledMessage(command, param);
+		}
+		if (command == COMMAND_SHOW_OVERLAY) {
+			overlay.show();
+			return true;
+		}
+		if (command == COMMAND_HIDE_OVERLAY) {
+			overlay.hide();
+			return true;
+		}
+		return super.onUnhandledMessage(command, param);
 	}
 
 	@Override
@@ -76,6 +156,9 @@ public class AmiberryActivity extends SDLActivity {
 	protected void onDestroy() {
 		final boolean finishing = isFinishing();
 		unregisterBackCallback();
+		if (overlay != null) {
+			overlay.onDestroy();
+		}
 		// Note: SDL3's SDLActivity calls System.exit(0) after native
 		// main() returns, which kills the process without reaching
 		// onDestroy().  Clean-exit markers are therefore written from
@@ -124,6 +207,10 @@ public class AmiberryActivity extends SDLActivity {
 	}
 
 	private void dispatchBackToSdl() {
+		// The in-game menu shows over a paused emulation: Back is its own.
+		if (overlay != null && overlay.handleBack()) {
+			return;
+		}
 		SDLActivity.onNativeKeyDown(KeyEvent.KEYCODE_BACK);
 		SDLActivity.onNativeKeyUp(KeyEvent.KEYCODE_BACK);
 	}

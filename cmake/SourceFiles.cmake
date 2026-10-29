@@ -520,6 +520,9 @@ if(WIN32)
 endif()
 
 if(ANDROID)
+    # The in-emulation menu: the loop and the JNI of the app's Compose
+    # overlay (android/app/.../overlay).
+    list(APPEND SOURCE_FILES src/osdep/android_overlay.cpp)
     add_library(${PROJECT_NAME} SHARED ${SOURCE_FILES})
 elseif(IOS)
     add_executable(${PROJECT_NAME} MACOSX_BUNDLE ${SOURCE_FILES})
