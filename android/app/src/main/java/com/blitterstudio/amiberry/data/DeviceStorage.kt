@@ -66,20 +66,19 @@ object DeviceStorage {
 
 	/**
 	 * Every file with one of [extensions] below [dir], at most [MAX_DEPTH] folders deep.
-	 * Each folder is read once, so links that loop back are harmless.
+	 * Each folder is read once, so links that loop back are harmless. Folders that are,
+	 * or lie inside, one of [excluded] (the app's own storage) are skipped.
 	 */
-	fun supportedFilesUnder(dir: File, extensions: Set<String>): List<File> {
+	fun supportedFilesUnder(dir: File, extensions: Set<String>, excluded: List<File> = emptyList()): List<File> {
 		val files = mutableListOf<File>()
 		val visited = mutableSetOf<String>()
+		val excludedPaths = excluded.mapNotNull { canonicalOrNull(it) }
 		val pending = ArrayDeque<Pair<File, Int>>()
 		pending.add(dir to 0)
 		while (pending.isNotEmpty()) {
 			val (current, depth) = pending.removeFirst()
-			val canonical = try {
-				current.canonicalPath
-			} catch (_: IOException) {
-				continue
-			}
+			val canonical = canonicalOrNull(current) ?: continue
+			if (excludedPaths.any { canonical == it || canonical.startsWith(it + File.separator) }) continue
 			if (!visited.add(canonical)) continue
 			val children = current.listFiles() ?: continue
 			children.sortedBy { it.name.lowercase() }.forEach { child ->
@@ -91,6 +90,12 @@ object DeviceStorage {
 			}
 		}
 		return files
+	}
+
+	private fun canonicalOrNull(file: File): String? = try {
+		file.canonicalPath
+	} catch (_: IOException) {
+		null
 	}
 
 	private fun File.isSupportedFile(extensions: Set<String>): Boolean =

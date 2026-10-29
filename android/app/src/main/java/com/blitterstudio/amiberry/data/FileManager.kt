@@ -90,32 +90,78 @@ object FileManager {
 		return importFileWithResult(context, uri, category, getFileName(context, uri))
 	}
 
-	/** Imports into the category the file's extension belongs to (an .adf to Floppies). */
-	fun importFileSortedWithResult(context: Context, uri: Uri): ImportResult {
-		return importFileWithResult(context, uri, category = null, displayName = getFileName(context, uri))
+	/**
+	 * Imports each file into the category its extension belongs to (an .adf to Floppies);
+	 * a .bin goes by its size and the other files picked with it (see [sortedImportCategory]).
+	 */
+	fun importFilesSortedWithResults(context: Context, uris: List<Uri>): List<ImportResult> {
+		val names = uris.map { getFileName(context, it) }
+		val withCue = importIncludesCue(names)
+		return uris.zip(names) { uri, name ->
+			importFileWithResult(context, uri, category = null, displayName = name, importIncludesCue = withCue)
+		}
 	}
 
-	/** [category] null sorts the file by its extension. */
+	/** [category] null sorts the file (see [sortedImportCategory]). */
 	private fun importFileWithResult(
 		context: Context,
 		uri: Uri,
 		category: FileCategory?,
-		displayName: String?
+		displayName: String?,
+		importIncludesCue: Boolean = false
 	): ImportResult {
-		val target = category ?: sortedImportCategory(displayName)
+		val target = category ?: sortedImportCategory(displayName, importIncludesCue) { fileSize(context, uri) }
 		if (target == null) {
 			val safeName = safeImportFileName(displayName)
 			return ImportResult.Unsupported(safeName, safeName.substringAfterLast('.', missingDelimiterValue = "").lowercase())
 		}
+		// A sorted file's category already accepts it (a CD track .bin among CD images too).
+		if (category == null) return copyImportFile(context, uri, target, safeImportFileName(displayName))
 		return when (val candidate = importCandidateForCategory(displayName, target)) {
 			is ImportCandidate.Importable -> copyImportFile(context, uri, target, candidate.safeName)
 			is ImportCandidate.Unsupported -> ImportResult.Unsupported(candidate.safeName, candidate.extension)
 		}
 	}
 
-	/** The category a file of this name is imported into when sorting by extension. */
-	internal fun sortedImportCategory(rawName: String?): FileCategory? =
-		FileCategory.fromExtension(safeImportFileName(rawName).substringAfterLast('.', missingDelimiterValue = ""))
+	/**
+	 * The category a file of this name is imported into when sorting by extension. A
+	 * .bin is a Kickstart when it is ROM-sized ([size], read only for a .bin; unknown
+	 * counts as ROM-sized); a larger one is a CD track when the import includes a .cue
+	 * sheet, and unsupported otherwise.
+	 */
+	internal fun sortedImportCategory(
+		rawName: String?,
+		importIncludesCue: Boolean = false,
+		size: () -> Long? = { null }
+	): FileCategory? {
+		val extension = safeImportFileName(rawName).substringAfterLast('.', missingDelimiterValue = "").lowercase()
+		if (extension == "bin") {
+			val bytes = size()
+			return when {
+				bytes == null || bytes <= MAX_ROM_BIN_SIZE -> FileCategory.ROMS
+				importIncludesCue -> FileCategory.CD_IMAGES
+				else -> null
+			}
+		}
+		return FileCategory.fromExtension(extension)
+	}
+
+	internal fun importIncludesCue(names: List<String?>): Boolean =
+		names.any { it?.substringAfterLast('.', missingDelimiterValue = "")?.lowercase() == "cue" }
+
+	/** The size of the file behind [uri], or null when the provider does not say. */
+	private fun fileSize(context: Context, uri: Uri): Long? {
+		if (uri.scheme == "file") return uri.path?.let { File(it).length() }
+		return try {
+			context.contentResolver.query(uri, arrayOf(OpenableColumns.SIZE), null, null, null)?.use { cursor ->
+				val index = cursor.getColumnIndex(OpenableColumns.SIZE)
+				if (index >= 0 && cursor.moveToFirst() && !cursor.isNull(index)) cursor.getLong(index) else null
+			}
+		} catch (e: Exception) {
+			Log.w(TAG, "Failed to read the size of $uri", e)
+			null
+		}
+	}
 
 	/**
 	 * Import every supported file below a Storage Access Framework directory tree, each
@@ -127,6 +173,7 @@ object FileManager {
 		treeUri: Uri
 	): List<ImportResult> {
 		val traversal = documentsInTree(context, treeUri)
+		val withCue = importIncludesCue(traversal.documents.map { it.displayName })
 		val results = traversal.documents.mapTo(mutableListOf()) { document ->
 			val uri = try {
 				DocumentsContract.buildDocumentUriUsingTree(treeUri, document.documentId)
@@ -139,7 +186,7 @@ object FileManager {
 			val displayName = document.displayName
 				?.takeIf { it.isNotBlank() }
 				?: document.documentId.substringAfterLast('/').substringAfterLast(':')
-			importFileWithResult(context, uri, category = null, displayName = displayName)
+			importFileWithResult(context, uri, category = null, displayName = displayName, importIncludesCue = withCue)
 		}
 		results += traversal.failures.map { ImportResult.Failed(FOLDER_IMPORT_FAILURE_NAME) }
 		return results
@@ -147,12 +194,21 @@ object FileManager {
 
 	/**
 	 * Import the supported files below a folder of the device's storage (the in-app
-	 * browser, with All Files Access), each into the category of its extension.
+	 * browser, with All Files Access), each into the category of its extension. The
+	 * app's own storage is left out: importing Internal storage would otherwise import
+	 * the whole library again into itself.
 	 */
-	fun importDirectoryWithResults(context: Context, dir: File): List<ImportResult> =
-		DeviceStorage.supportedFilesUnder(dir, FileCategory.allExtensions).map { file ->
-			importFileWithResult(context, Uri.fromFile(file), category = null, displayName = file.name)
+	fun importDirectoryWithResults(context: Context, dir: File): List<ImportResult> {
+		val files = DeviceStorage.supportedFilesUnder(
+			dir,
+			FileCategory.allExtensions,
+			excluded = listOfNotNull(context.getExternalFilesDir(null))
+		)
+		val withCue = importIncludesCue(files.map { it.name })
+		return files.map { file ->
+			importFileWithResult(context, Uri.fromFile(file), category = null, displayName = file.name, importIncludesCue = withCue)
 		}
+	}
 
 	private fun copyImportFile(
 		context: Context,
@@ -470,6 +526,8 @@ object FileManager {
 
 	private val SAFE_FILENAME_CHARS = setOf(' ', '.', '_', '-', '(', ')', '+')
 	private const val FOLDER_IMPORT_FAILURE_NAME = "folder"
+	/** The largest .bin taken for a Kickstart: the biggest ROMs (CD32 with its extension) are 1 MiB. */
+	private const val MAX_ROM_BIN_SIZE = 2L * 1024 * 1024
 
 	private fun importTargetName(baseName: String, extension: String, counter: Int): String =
 		if (extension.isBlank()) "${baseName}_$counter" else "${baseName}_$counter.$extension"

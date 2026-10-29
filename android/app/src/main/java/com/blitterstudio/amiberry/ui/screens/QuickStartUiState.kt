@@ -16,6 +16,12 @@ import java.io.File
 /** A machine option changed from the preset: the layer's label and the value it has now. */
 data class PresetEdit(val label: String, val value: SettingText)
 
+/** A WHDLoad game and its cleaned [title], with the keys the picker searches and sorts on. */
+data class WhdLoadGameEntry(val game: AmigaFile, val title: String) {
+	internal val searchText = "$title ${game.name}".lowercase()
+	internal val sortKey = title.lowercase()
+}
+
 enum class QuickStartLaunchMode {
 	WHDLOAD,
 	DISK,
@@ -177,21 +183,25 @@ object QuickStartUiState {
 		"memory", "rtg", "accelerator", "expansions"
 	)
 
+	/** [games] with their titles cleaned once, for [whdloadGameList] and the picker's rows. */
+	fun whdloadGameEntries(games: List<AmigaFile>): List<WhdLoadGameEntry> =
+		games.map { WhdLoadGameEntry(it, WhdLoadTitles.clean(it.name)) }
+
 	/**
 	 * The WHDLoad picker's list: the games played recently first (most recent first, as
 	 * [recentPaths] lists them), then the rest by title. [query] keeps the games whose
 	 * title or file name contains every word of it.
 	 */
-	fun whdloadGameList(games: List<AmigaFile>, recentPaths: List<String>, query: String): List<AmigaFile> {
+	fun whdloadGameList(
+		entries: List<WhdLoadGameEntry>,
+		recentPaths: List<String>,
+		query: String
+	): List<WhdLoadGameEntry> {
 		val words = query.trim().lowercase().split(Regex("\\s+")).filter { it.isNotEmpty() }
-		val matching = games.filter { game ->
-			val haystack = "${WhdLoadTitles.clean(game.name)} ${game.name}".lowercase()
-			words.all { it in haystack }
-		}
+		val matching = entries.filter { entry -> words.all { it in entry.searchText } }
 		val recency = recentPaths.withIndex().associate { (index, path) -> path to index }
-		val (recent, others) = matching.partition { it.path in recency }
-		return recent.sortedBy { recency.getValue(it.path) } +
-			others.sortedBy { WhdLoadTitles.clean(it.name).lowercase() }
+		val (recent, others) = matching.partition { it.game.path in recency }
+		return recent.sortedBy { recency.getValue(it.game.path) } + others.sortedBy { it.sortKey }
 	}
 
 	/**

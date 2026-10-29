@@ -144,6 +144,24 @@ class FileManagerTest {
 	}
 
 	@Test
+	fun `a ROM-sized bin is a Kickstart, a CD track bin goes with its cue sheet`() {
+		val kickstart = 512L * 1024
+		val track = 300L * 1024 * 1024
+		assertEquals(FileCategory.ROMS, FileManager.sortedImportCategory("kick31.bin") { kickstart })
+		assertEquals(FileCategory.ROMS, FileManager.sortedImportCategory("kick31.bin", importIncludesCue = true) { kickstart })
+		assertEquals(FileCategory.CD_IMAGES, FileManager.sortedImportCategory("Game (Track 1).bin", importIncludesCue = true) { track })
+		assertNull(FileManager.sortedImportCategory("Game (Track 1).bin") { track })
+		// A provider that does not give the size: taken for a ROM, as before.
+		assertEquals(FileCategory.ROMS, FileManager.sortedImportCategory("kick31.bin") { null })
+	}
+
+	@Test
+	fun `an import includes a cue sheet when any of its names ends in cue`() {
+		assertEquals(true, FileManager.importIncludesCue(listOf("Game (Track 1).bin", "Game.CUE")))
+		assertEquals(false, FileManager.importIncludesCue(listOf("kick.bin", null, "cue")))
+	}
+
+	@Test
 	fun `importCandidateForCategory accepts matching names with sanitized filename`() {
 		val candidate = FileManager.importCandidateForCategory("../downloads/Game:Disk.ADF", FileCategory.FLOPPIES)
 

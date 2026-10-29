@@ -67,7 +67,7 @@ class FileManagerViewModel(application: Application) : AndroidViewModel(applicat
 	fun importFiles(uris: List<Uri>, openCategory: FileCategory) {
 		if (uris.isEmpty()) return
 		startImport(openCategory) { app ->
-			uris.map { uri -> FileManager.importFileSortedWithResult(app, uri) }
+			FileManager.importFilesSortedWithResults(app, uris)
 		}
 	}
 

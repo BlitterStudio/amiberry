@@ -181,12 +181,14 @@ private fun WhdLoadGamePickerDialog(
 	onPick: (AmigaFile) -> Unit
 ) {
 	var query by rememberSaveable { mutableStateOf("") }
-	val shown = remember(games, recentPaths, query) { QuickStartUiState.whdloadGameList(games, recentPaths, query) }
+	// Titles are cleaned once per game list, not on every keystroke or row.
+	val entries = remember(games) { QuickStartUiState.whdloadGameEntries(games) }
+	val shown = remember(entries, recentPaths, query) { QuickStartUiState.whdloadGameList(entries, recentPaths, query) }
 	val recent = remember(recentPaths) { recentPaths.toSet() }
 	val typingGate = rememberDpadTypingGate()
 	val listState = rememberLazyListState()
 	val initialRowFocus = remember { FocusRequester() }
-	val initialIndex = shown.indexOfFirst { it.path == selectedGame?.path }.coerceAtLeast(0)
+	val initialIndex = shown.indexOfFirst { it.game.path == selectedGame?.path }.coerceAtLeast(0)
 	// On a TV, focus starts on the chosen game (else the first), not in the search field.
 	var initialFocusPending by remember { mutableStateOf(launchesOnPick) }
 
@@ -231,7 +233,8 @@ private fun WhdLoadGamePickerDialog(
 					)
 				} else {
 					LazyColumn(state = listState, modifier = Modifier.weight(1f)) {
-						itemsIndexed(shown, key = { _, game -> game.path }) { index, game ->
+						itemsIndexed(shown, key = { _, entry -> entry.game.path }) { index, entry ->
+							val game = entry.game
 							val focusHere = initialFocusPending && index == initialIndex
 							if (focusHere) {
 								// Here the row's requester is attached; the effect runs once.
@@ -242,6 +245,7 @@ private fun WhdLoadGamePickerDialog(
 							}
 							GameRow(
 								game = game,
+								title = entry.title,
 								recentlyPlayed = game.path in recent,
 								selected = game.path == selectedGame?.path,
 								launchesOnPick = launchesOnPick,
@@ -264,6 +268,7 @@ private fun WhdLoadGamePickerDialog(
 @Composable
 private fun GameRow(
 	game: AmigaFile,
+	title: String,
 	recentlyPlayed: Boolean,
 	selected: Boolean,
 	launchesOnPick: Boolean,
@@ -283,7 +288,7 @@ private fun GameRow(
 		verticalAlignment = Alignment.CenterVertically
 	) {
 		Column(modifier = Modifier.weight(1f)) {
-			Text(WhdLoadTitles.clean(game.name), style = MaterialTheme.typography.titleSmall)
+			Text(title, style = MaterialTheme.typography.titleSmall)
 			Text(
 				stringResource(R.string.quick_start_whdload_game_detail, game.name, game.sizeDisplay),
 				style = MaterialTheme.typography.bodySmall,

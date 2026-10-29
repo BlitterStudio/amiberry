@@ -48,4 +48,19 @@ class DeviceStorageTest {
 
 		assertEquals(listOf("kick.rom", "Turrican.lha"), files.map { it.name })
 	}
+
+	@Test
+	fun `the app's own storage below the folder is left out`() {
+		val root = tempDir.root
+		val appFiles = File(root, "Android/data/com.blitterstudio.amiberry/files")
+		File(appFiles, "Floppies").mkdirs()
+		File(appFiles, "Floppies/Lotus.adf").writeText("disk")
+		File(root, "Download").mkdirs()
+		File(root, "Download/Turrican.lha").writeText("game")
+
+		val files = DeviceStorage.supportedFilesUnder(root, setOf("adf", "lha"), excluded = listOf(appFiles))
+
+		assertEquals(listOf("Turrican.lha"), files.map { it.name })
+		assertEquals(emptyList<File>(), DeviceStorage.supportedFilesUnder(appFiles, setOf("adf"), excluded = listOf(appFiles)))
+	}
 }

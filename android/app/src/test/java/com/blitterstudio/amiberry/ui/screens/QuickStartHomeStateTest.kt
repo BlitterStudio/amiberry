@@ -147,20 +147,22 @@ class QuickStartHomeStateTest {
 		val lostPixel = game("TheLostPixelv1.3_WHD4.lha")
 		val castlevania = game("CastlevaniaAGA_WHDLoad.lha")
 		val alienBreed = game("AlienBreed_v2.1.lha")
-		val games = listOf(lostPixel, castlevania, alienBreed)
+		val entries = QuickStartUiState.whdloadGameEntries(listOf(lostPixel, castlevania, alienBreed))
+		fun list(recentPaths: List<String>, query: String) =
+			QuickStartUiState.whdloadGameList(entries, recentPaths, query).map { it.game }
 
-		assertEquals(
-			listOf(lostPixel, alienBreed, castlevania),
-			QuickStartUiState.whdloadGameList(games, recentPaths = listOf(lostPixel.path), query = "")
-		)
-		assertEquals(
-			listOf(lostPixel),
-			QuickStartUiState.whdloadGameList(games, recentPaths = emptyList(), query = "lost pixel")
-		)
-		assertEquals(
-			listOf(castlevania),
-			QuickStartUiState.whdloadGameList(games, recentPaths = emptyList(), query = "aga")
-		)
+		assertEquals(listOf(lostPixel, alienBreed, castlevania), list(recentPaths = listOf(lostPixel.path), query = ""))
+		assertEquals(listOf(lostPixel), list(recentPaths = emptyList(), query = "lost pixel"))
+		assertEquals(listOf(castlevania), list(recentPaths = emptyList(), query = "aga"))
+		// The file name is searched too.
+		assertEquals(listOf(alienBreed), list(recentPaths = emptyList(), query = "v2.1"))
+	}
+
+	@Test
+	fun `each WHDLoad entry carries its cleaned title for the picker's row`() {
+		val entry = QuickStartUiState.whdloadGameEntries(listOf(game("TheLostPixelv1.3_WHD4.lha"))).single()
+
+		assertEquals("The Lost Pixel v1.3", entry.title)
 	}
 
 	private fun game(name: String) = AmigaFile(
