@@ -81,6 +81,17 @@ import kotlinx.coroutines.launch
 import java.text.DateFormat
 import java.util.Date
 import java.util.Locale
+import java.io.File
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.filled.DriveFileRenameOutline
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.TextFieldValue
+import com.blitterstudio.amiberry.data.ConfigFiles
+import com.blitterstudio.amiberry.ui.dpadVerticalMovesFocus
 
 private fun NavController.switchToTab(route: String) {
 	navigate(route) {
@@ -205,6 +216,9 @@ fun ConfigurationsScreen(
 					ConfigItem(
 						config = config,
 						launchInProgress = launchInProgress,
+						isOpenInSettings = settingsViewModel.isConfigOpen(config.path),
+						suggestedCopyName = { viewModel.suggestedCopyName(config) },
+						nameProblem = { name, renaming -> viewModel.nameProblem(name, config.takeIf { renaming }) },
 						onLoad = {
 							scope.launch {
 								when (val result = ConfigurationActions.load(runCatching { viewModel.loadConfig(config.path) })) {
@@ -221,13 +235,27 @@ fun ConfigurationsScreen(
 							onDelete = {
 								scope.launch {
 									val deleted = viewModel.deleteConfig(config.path)
-									snackbarHostState.showSnackbar(actionMessage(ConfigurationActions.deleteMessage(deleted)))
+									val wasOpen = deleted && settingsViewModel.onConfigDeleted(config.path)
+									snackbarHostState.showSnackbar(
+										actionMessage(ConfigurationActions.deleteMessage(config.name, deleted, wasOpen))
+									)
 								}
 							},
-							onDuplicate = {
+							onDuplicate = { newName ->
 								scope.launch {
-									val result = viewModel.duplicateConfig(config.path)
+									val result = viewModel.duplicateConfig(config.path, newName)
 									snackbarHostState.showSnackbar(actionMessage(ConfigurationActions.duplicateMessage(result)))
+								}
+							},
+							onRename = { newName ->
+								scope.launch {
+									val result = viewModel.renameConfig(config.path, newName)
+									if (result is ConfigFiles.EditResult.Done) {
+										settingsViewModel.onConfigRenamed(config.path, result.file)
+										// Keeping the same name leaves the file as it was: nothing to report.
+										if (result.file.name == File(config.path).name) return@launch
+									}
+									snackbarHostState.showSnackbar(actionMessage(ConfigurationActions.renameMessage(result)))
 								}
 							},
 							onShare = {
@@ -398,22 +426,30 @@ private fun ConfigurationListFilter.labelRes(): Int = when (this) {
 private fun ConfigItem(
 	config: ConfigInfo,
 	launchInProgress: Boolean,
+	isOpenInSettings: Boolean,
+	suggestedCopyName: () -> String,
+	nameProblem: (name: String, renaming: Boolean) -> ConfigFiles.NameProblem?,
 	onLoad: () -> Unit,
 	onDelete: () -> Unit,
-	onDuplicate: () -> Unit,
+	onDuplicate: (String) -> Unit,
+	onRename: (String) -> Unit,
 	onShare: () -> Unit,
 	onAdvancedEdit: () -> Unit,
 	onLaunch: () -> Unit
 ) {
 	var showMenu by remember { mutableStateOf(false) }
 	var showDeleteDialog by remember { mutableStateOf(false) }
+	var showRenameDialog by remember { mutableStateOf(false) }
+	var duplicateName by remember { mutableStateOf<String?>(null) }
 
 	Card(
 		modifier = Modifier
 			.fillMaxWidth()
 			.dpadFocusIndicator()
 			.combinedClickable(
+				onClickLabel = stringResource(R.string.action_edit_config),
 				onClick = onLoad,
+				onLongClickLabel = stringResource(R.string.action_show_actions),
 				onLongClick = { showMenu = true }
 			)
 	) {
@@ -452,76 +488,84 @@ private fun ConfigItem(
 					enabled = !launchInProgress,
 					modifier = Modifier.dpadFocusIndicator()
 				) {
-						if (launchInProgress) {
-							CircularProgressIndicator(
-								modifier = Modifier.size(20.dp),
-								strokeWidth = 2.dp
-							)
-						} else {
-							Icon(
-								Icons.Default.PlayArrow,
-								contentDescription = stringResource(R.string.action_launch_named, config.name),
-								modifier = Modifier.size(24.dp)
-							)
-						}
-					}
-					IconButton(
-						onClick = onLoad,
-						modifier = Modifier.dpadFocusIndicator()
-					) {
+					if (launchInProgress) {
+						CircularProgressIndicator(
+							modifier = Modifier.size(20.dp),
+							strokeWidth = 2.dp
+						)
+					} else {
 						Icon(
-							Icons.Default.Edit,
-							contentDescription = stringResource(R.string.action_edit_named, config.name),
+							Icons.Default.PlayArrow,
+							contentDescription = stringResource(R.string.action_launch_named, config.name),
 							modifier = Modifier.size(24.dp)
 						)
 					}
+				}
+				IconButton(
+					onClick = onLoad,
+					modifier = Modifier.dpadFocusIndicator()
+				) {
+					Icon(
+						Icons.Default.Edit,
+						contentDescription = stringResource(R.string.action_edit_named, config.name),
+						modifier = Modifier.size(24.dp)
+					)
+				}
 
 				// More options button (D-pad accessible alternative to long-press)
 				Box {
-						IconButton(
-							onClick = { showMenu = true },
-							modifier = Modifier.dpadFocusIndicator()
-						) {
-							Icon(
-								Icons.Default.MoreVert,
-								contentDescription = stringResource(R.string.action_more_for_named, config.name),
-								modifier = Modifier.size(24.dp)
-							)
-						}
+					IconButton(
+						onClick = { showMenu = true },
+						modifier = Modifier.dpadFocusIndicator()
+					) {
+						Icon(
+							Icons.Default.MoreVert,
+							contentDescription = stringResource(R.string.action_more_for_named, config.name),
+							modifier = Modifier.size(24.dp)
+						)
+					}
 					DropdownMenu(
 						expanded = showMenu,
 						onDismissRequest = { showMenu = false }
-						) {
-							DropdownMenuItem(
-								text = { Text(stringResource(R.string.action_edit_advanced_imgui)) },
-								onClick = {
-									onAdvancedEdit()
-									showMenu = false
-								},
-								enabled = !launchInProgress,
-								leadingIcon = { Icon(Icons.Default.Settings, contentDescription = null) }
-							)
-							DropdownMenuItem(
-								text = { Text(stringResource(R.string.action_duplicate)) },
-								onClick = {
-									onDuplicate()
-									showMenu = false
+					) {
+						DropdownMenuItem(
+							text = { Text(stringResource(R.string.action_edit_advanced_imgui)) },
+							onClick = {
+								onAdvancedEdit()
+								showMenu = false
+							},
+							enabled = !launchInProgress,
+							leadingIcon = { Icon(Icons.Default.Settings, contentDescription = null) }
+						)
+						DropdownMenuItem(
+							text = { Text(stringResource(R.string.action_rename)) },
+							onClick = {
+								showRenameDialog = true
+								showMenu = false
+							},
+							leadingIcon = { Icon(Icons.Default.DriveFileRenameOutline, contentDescription = null) }
+						)
+						DropdownMenuItem(
+							text = { Text(stringResource(R.string.action_duplicate)) },
+							onClick = {
+								duplicateName = suggestedCopyName()
+								showMenu = false
 							},
 							leadingIcon = { Icon(Icons.Default.ContentCopy, contentDescription = null) }
 						)
-							DropdownMenuItem(
-								text = { Text(stringResource(R.string.action_share)) },
-								onClick = {
-									onShare()
-									showMenu = false
-								},
-								leadingIcon = { Icon(Icons.Default.Share, contentDescription = null) }
-							)
-							DropdownMenuItem(
-								text = { Text(stringResource(R.string.action_delete)) },
-								onClick = {
-									showDeleteDialog = true
-									showMenu = false
+						DropdownMenuItem(
+							text = { Text(stringResource(R.string.action_share)) },
+							onClick = {
+								onShare()
+								showMenu = false
+							},
+							leadingIcon = { Icon(Icons.Default.Share, contentDescription = null) }
+						)
+						DropdownMenuItem(
+							text = { Text(stringResource(R.string.action_delete)) },
+							onClick = {
+								showDeleteDialog = true
+								showMenu = false
 							},
 							leadingIcon = {
 								Icon(
@@ -537,30 +581,140 @@ private fun ConfigItem(
 		}
 	}
 
-	// Delete confirmation dialog
-		if (showDeleteDialog) {
-			AlertDialog(
-				onDismissRequest = { showDeleteDialog = false },
-				title = { Text(stringResource(R.string.dialog_delete_config_title)) },
-				text = { Text(stringResource(R.string.dialog_delete_config_message, config.name)) },
-				confirmButton = {
-					TextButton(onClick = {
-						onDelete()
-						showDeleteDialog = false
-					}, modifier = Modifier.dpadFocusIndicator()) {
-						Text(stringResource(R.string.action_delete), color = MaterialTheme.colorScheme.error)
-					}
-				},
-				dismissButton = {
-					TextButton(
-						onClick = { showDeleteDialog = false },
-						modifier = Modifier.dpadFocusIndicator()
-					) {
-						Text(stringResource(R.string.action_cancel))
+	if (showRenameDialog) {
+		ConfigNameDialog(
+			title = stringResource(R.string.dialog_rename_config_title),
+			confirmLabel = stringResource(R.string.action_rename_confirm),
+			initialName = config.name,
+			problemFor = { nameProblem(it, true) },
+			onConfirm = { name ->
+				showRenameDialog = false
+				onRename(name)
+			},
+			onDismiss = { showRenameDialog = false }
+		)
+	}
+
+	duplicateName?.let { initialName ->
+		ConfigNameDialog(
+			title = stringResource(R.string.dialog_duplicate_config_title),
+			confirmLabel = stringResource(R.string.action_duplicate),
+			initialName = initialName,
+			problemFor = { nameProblem(it, false) },
+			onConfirm = { name ->
+				duplicateName = null
+				onDuplicate(name)
+			},
+			onDismiss = { duplicateName = null }
+		)
+	}
+
+	if (showDeleteDialog) {
+		AlertDialog(
+			onDismissRequest = { showDeleteDialog = false },
+			title = { Text(stringResource(R.string.dialog_delete_config_title)) },
+			text = {
+				Column {
+					Text(stringResource(R.string.dialog_delete_config_message, config.name))
+					if (isOpenInSettings) {
+						Spacer(modifier = Modifier.height(8.dp))
+						Text(stringResource(R.string.dialog_delete_config_open_note))
 					}
 				}
+			},
+			confirmButton = {
+				TextButton(onClick = {
+					onDelete()
+					showDeleteDialog = false
+				}, modifier = Modifier.dpadFocusIndicator()) {
+					Text(stringResource(R.string.action_delete), color = MaterialTheme.colorScheme.error)
+				}
+			},
+			dismissButton = {
+				TextButton(
+					onClick = { showDeleteDialog = false },
+					modifier = Modifier.dpadFocusIndicator()
+				) {
+					Text(stringResource(R.string.action_cancel))
+				}
+			}
+		)
+	}
+}
+
+/**
+ * Asks for a configuration name, prefilled with [initialName] (selected, ready to type over).
+ * [problemFor] says why a name cannot be used; the reason shows under the field and the
+ * confirm button waits until there is none.
+ */
+@Composable
+private fun ConfigNameDialog(
+	title: String,
+	confirmLabel: String,
+	initialName: String,
+	problemFor: (String) -> ConfigFiles.NameProblem?,
+	onConfirm: (String) -> Unit,
+	onDismiss: () -> Unit
+) {
+	var field by remember(initialName) {
+		mutableStateOf(TextFieldValue(initialName, selection = TextRange(0, initialName.length)))
+	}
+	val problem = problemFor(field.text)
+	val problemText = problem?.let { configNameProblemText(it) }
+	val focusRequester = remember { FocusRequester() }
+	LaunchedEffect(Unit) { focusRequester.requestFocus() }
+	fun confirm() {
+		if (problem == null) onConfirm(field.text.trim())
+	}
+
+	AlertDialog(
+		onDismissRequest = onDismiss,
+		title = { Text(title) },
+		text = {
+			OutlinedTextField(
+				value = field,
+				onValueChange = { field = it },
+				label = { Text(stringResource(R.string.label_config_name)) },
+				singleLine = true,
+				isError = problemText != null,
+				supportingText = if (problemText != null) {
+					{ Text(problemText) }
+				} else {
+					null
+				},
+				keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+				keyboardActions = KeyboardActions(onDone = { confirm() }),
+				modifier = Modifier
+					.fillMaxWidth()
+					// A single-line field has no lines to move between: D-pad up/down reach the buttons.
+					.dpadVerticalMovesFocus()
+					.focusRequester(focusRequester)
 			)
+		},
+		confirmButton = {
+			TextButton(
+				onClick = { confirm() },
+				enabled = problem == null,
+				modifier = Modifier.dpadFocusIndicator()
+			) {
+				Text(confirmLabel)
+			}
+		},
+		dismissButton = {
+			TextButton(
+				onClick = onDismiss,
+				modifier = Modifier.dpadFocusIndicator()
+			) {
+				Text(stringResource(R.string.action_cancel))
+			}
 		}
+	)
+}
+
+@Composable
+private fun configNameProblemText(problem: ConfigFiles.NameProblem): String {
+	val message = ConfigurationActions.nameProblemMessage(problem)
+	return message.argument?.let { stringResource(message.stringRes, it) } ?: stringResource(message.stringRes)
 }
 
 private fun formatDate(timestamp: Long): String {

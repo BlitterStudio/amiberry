@@ -41,13 +41,13 @@ class SettingsIntentPresetsTest {
 	@Test
 	fun `performance preset enables fastest safe CPU settings for 32-bit capable CPUs`() {
 		val settings = SettingsIntentPresets.apply(
-			EmulatorSettings(cpuModel = 68040, address24Bit = false, cycleExact = true, cpuCompatible = true),
+			EmulatorSettings(cpuModel = 68040, address24Bit = false, cycleExact = "true", cpuCompatible = true),
 			SettingsIntentPreset.Performance
 		)
 
 		assertEquals("max", settings.cpuSpeed)
 		assertEquals(16384, settings.jitCacheSize)
-		assertFalse(settings.cycleExact)
+		assertEquals("false", settings.cycleExact)
 		assertFalse(settings.cpuCompatible)
 	}
 

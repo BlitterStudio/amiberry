@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.SaveAlt
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.ui.text.input.KeyboardType
+import com.blitterstudio.amiberry.data.model.EmulatorSettings
 import com.blitterstudio.amiberry.data.model.HardDrive
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -55,6 +56,14 @@ import com.blitterstudio.amiberry.data.FilePickerFilters
 import com.blitterstudio.amiberry.data.FileRepository
 import com.blitterstudio.amiberry.data.model.AmigaFile
 import com.blitterstudio.amiberry.data.model.FileCategory
+import com.blitterstudio.amiberry.data.model.LauncherChoices
+import com.blitterstudio.amiberry.data.model.ModelRomAvailability
+import com.blitterstudio.amiberry.data.model.RomIdentity
+import com.blitterstudio.amiberry.ui.components.settings.SchemaChoiceRow
+import com.blitterstudio.amiberry.ui.components.settings.SettingSwitchRow
+import com.blitterstudio.amiberry.ui.components.settings.SupportingText
+import com.blitterstudio.amiberry.ui.components.settings.schemaLabel
+import com.blitterstudio.amiberry.ui.components.settings.schemaOption
 import com.blitterstudio.amiberry.ui.ImportInFlightGuard
 import com.blitterstudio.amiberry.ui.dpadFocusIndicator
 import com.blitterstudio.amiberry.ui.dpadVerticalMovesFocus
@@ -105,11 +114,20 @@ fun StorageTab(
 					)
 				} else {
 					FileDropdown(
-						label = stringResource(R.string.settings_storage_rom_file_label),
-						files = roms,
+						label = schemaLabel("kickstart_rom_file"),
+						files = kickstartRomFiles(roms),
 						selectedPath = settings.romFile,
-						onSelect = { viewModel.updateSettings { s -> s.copy(romFile = it) } },
-						onClear = { viewModel.updateSettings { s -> s.copy(romFile = "") } }
+						onSelect = { path -> viewModel.updateSettings { s -> s.withKickstartRom(path) } },
+						onClear = { viewModel.updateSettings { s -> s.copy(romFile = "") } },
+						emptyLabel = stringResource(R.string.settings_storage_rom_automatic),
+						extraPaths = if (ModelRomAvailability.hasBuiltInAros(roms)) {
+							listOf(ModelRomAvailability.AROS_ROM_FILE)
+						} else {
+							emptyList()
+						},
+						help = schemaOption("kickstart_rom_file")?.help?.takeIf { it.isNotBlank() },
+						fileLabel = { romLabel(it) },
+						pathLabel = { path -> romPathLabel(path, roms) }
 					)
 				}
 			}
@@ -127,6 +145,7 @@ fun StorageTab(
 
 				// DF0
 				FloppyDriveRow(
+					index = 0,
 					label = stringResource(R.string.settings_storage_drive_df0),
 					files = floppies,
 					selectedPath = settings.floppy0,
@@ -144,6 +163,7 @@ fun StorageTab(
 
 				// DF1
 				FloppyDriveRow(
+					index = 1,
 					label = stringResource(R.string.settings_storage_drive_df1),
 					files = floppies,
 					selectedPath = settings.floppy1,
@@ -161,6 +181,7 @@ fun StorageTab(
 
 				// DF2
 				FloppyDriveRow(
+					index = 2,
 					label = stringResource(R.string.settings_storage_drive_df2),
 					files = floppies,
 					selectedPath = settings.floppy2,
@@ -178,6 +199,7 @@ fun StorageTab(
 
 				// DF3
 				FloppyDriveRow(
+					index = 3,
 					label = stringResource(R.string.settings_storage_drive_df3),
 					files = floppies,
 					selectedPath = settings.floppy3,
@@ -211,7 +233,7 @@ fun StorageTab(
 					)
 				} else {
 					FileDropdown(
-						label = stringResource(R.string.settings_storage_cd_image_label),
+						label = schemaLabel("cdimage0"),
 						files = cds,
 						selectedPath = settings.cdImage,
 						onSelect = { viewModel.updateSettings { s -> s.copy(cdImage = it) } },
@@ -282,6 +304,44 @@ fun StorageTab(
 internal fun shouldShowStorageFileDropdown(files: List<AmigaFile>, selectedPath: String): Boolean =
 	files.isNotEmpty() || selectedPath.isNotBlank()
 
+/**
+ * The installed ROMs the Kickstart list offers as files. The two AROS files
+ * are left out: neither boots on its own as a Kickstart, so AROS is offered
+ * once as [ModelRomAvailability.AROS_ROM_FILE] instead.
+ */
+internal fun kickstartRomFiles(roms: List<AmigaFile>): List<AmigaFile> =
+	roms.filter { ModelRomAvailability.romIdentity(it) !is RomIdentity.BuiltInAros }
+
+/**
+ * [path] as the Kickstart. AROS brings its own extension ROM, so picking it
+ * clears kickstart_ext_rom_file; another Kickstart keeps the extended ROM.
+ */
+internal fun EmulatorSettings.withKickstartRom(path: String): EmulatorSettings =
+	if (ModelRomAvailability.isBuiltInArosRom(path)) copy(romFile = path, romExtFile = "") else copy(romFile = path)
+
+/** A scanned ROM by what it is: its Kickstart name, or its file name. */
+@Composable
+private fun romLabel(rom: AmigaFile): String = when (val identity = ModelRomAvailability.romIdentity(rom)) {
+	is RomIdentity.Kickstart -> identity.name
+	RomIdentity.BuiltInAros, RomIdentity.Unknown -> rom.name
+}
+
+/**
+ * A kickstart_rom_file value by what it boots: the built-in AROS, a scanned
+ * ROM by [romLabel], or else its file name (an AROS file named directly,
+ * which does not boot AROS, reads as that file).
+ */
+@Composable
+private fun romPathLabel(path: String, roms: List<AmigaFile>): String = when {
+	ModelRomAvailability.isBuiltInArosRom(path) -> stringResource(R.string.rom_aros_builtin)
+	else -> roms.firstOrNull { it.path == path }?.let { romLabel(it) } ?: LauncherChoices.fileName(path)
+}
+
+/**
+ * A file picked from [files], or none ([emptyLabel]). [extraPaths] are
+ * values that are no scanned file (the built-in AROS), listed after the
+ * empty entry and read by [pathLabel]; [help] shows under the row.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun FileDropdown(
@@ -289,69 +349,84 @@ private fun FileDropdown(
 	files: List<AmigaFile>,
 	selectedPath: String,
 	onSelect: (String) -> Unit,
-	onClear: () -> Unit
+	onClear: () -> Unit,
+	emptyLabel: String = stringResource(R.string.placeholder_none),
+	extraPaths: List<String> = emptyList(),
+	help: String? = null,
+	fileLabel: @Composable (AmigaFile) -> String = { it.name },
+	pathLabel: @Composable (String) -> String = { LauncherChoices.fileName(it) }
 ) {
 	var expanded by remember { mutableStateOf(false) }
-	val noneLabel = stringResource(R.string.placeholder_none)
-	val selectedName = if (selectedPath.isEmpty()) noneLabel
-	else selectedPath.substringAfterLast('/')
+	val selectedName = if (selectedPath.isEmpty()) emptyLabel else pathLabel(selectedPath)
 
-	Row(
-		modifier = Modifier.fillMaxWidth(),
-		verticalAlignment = Alignment.CenterVertically
-	) {
-		ExposedDropdownMenuBox(
-			expanded = expanded,
-			onExpandedChange = { expanded = it },
-			modifier = Modifier.weight(1f)
+	Column(modifier = Modifier.fillMaxWidth()) {
+		Row(
+			modifier = Modifier.fillMaxWidth(),
+			verticalAlignment = Alignment.CenterVertically
 		) {
-			OutlinedTextField(
-				value = selectedName,
-				onValueChange = {},
-				readOnly = true,
-				label = { Text(label) },
-				trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-				modifier = Modifier
-					.dpadVerticalMovesFocus()
-					.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
-					.fillMaxWidth()
-			)
-			ExposedDropdownMenu(
+			ExposedDropdownMenuBox(
 				expanded = expanded,
-				onDismissRequest = { expanded = false }
+				onExpandedChange = { expanded = it },
+				modifier = Modifier.weight(1f)
 			) {
-				DropdownMenuItem(
-					text = { Text(noneLabel) },
-					onClick = {
-						onClear()
-						expanded = false
-					}
+				OutlinedTextField(
+					value = selectedName,
+					onValueChange = {},
+					readOnly = true,
+					label = { Text(label) },
+					trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+					modifier = Modifier
+						.dpadVerticalMovesFocus()
+						.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
+						.fillMaxWidth()
 				)
-				files.forEach { file ->
+				ExposedDropdownMenu(
+					expanded = expanded,
+					onDismissRequest = { expanded = false }
+				) {
 					DropdownMenuItem(
-						text = { Text(file.name) },
+						text = { Text(emptyLabel) },
 						onClick = {
-							onSelect(file.path)
+							onClear()
 							expanded = false
 						}
 					)
+					extraPaths.forEach { path ->
+						DropdownMenuItem(
+							text = { Text(pathLabel(path)) },
+							onClick = {
+								onSelect(path)
+								expanded = false
+							}
+						)
+					}
+					files.forEach { file ->
+						DropdownMenuItem(
+							text = { Text(fileLabel(file)) },
+							onClick = {
+								onSelect(file.path)
+								expanded = false
+							}
+						)
+					}
+				}
+			}
+			if (selectedPath.isNotEmpty()) {
+				IconButton(
+					onClick = onClear,
+					modifier = Modifier.dpadFocusIndicator()
+				) {
+					Icon(Icons.Default.Eject, contentDescription = stringResource(R.string.action_eject_named, selectedName))
 				}
 			}
 		}
-		if (selectedPath.isNotEmpty()) {
-			IconButton(
-				onClick = onClear,
-				modifier = Modifier.dpadFocusIndicator()
-			) {
-				Icon(Icons.Default.Eject, contentDescription = stringResource(R.string.action_eject_named, selectedName))
-			}
-		}
+		if (help != null) SupportingText(help)
 	}
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun FloppyDriveRow(
+	index: Int,
 	label: String,
 	files: List<AmigaFile>,
 	selectedPath: String,
@@ -365,52 +440,17 @@ private fun FloppyDriveRow(
 	onImportResult: (FileManager.ImportResult) -> Unit
 ) {
 	val scope = rememberCoroutineScope()
-	val driveTypeOptions = listOf(
-		0 to stringResource(R.string.settings_storage_drive_type_dd),
-		1 to stringResource(R.string.settings_storage_drive_type_hd),
-		-1 to stringResource(R.string.settings_common_disabled)
-	)
 
 	Column(modifier = Modifier.fillMaxWidth()) {
 		Text(label, style = MaterialTheme.typography.labelMedium)
 		Spacer(modifier = Modifier.height(4.dp))
 
-		// Drive type
-		var typeExpanded by remember { mutableStateOf(false) }
-		val typeLabel = driveTypeOptions.firstOrNull { it.first == driveType }?.second
-			?: stringResource(R.string.settings_storage_drive_type_unknown)
-
-		ExposedDropdownMenuBox(
-			expanded = typeExpanded,
-			onExpandedChange = { typeExpanded = it },
-			modifier = Modifier.fillMaxWidth()
-		) {
-			OutlinedTextField(
-				value = typeLabel,
-				onValueChange = {},
-				readOnly = true,
-				label = { Text(stringResource(R.string.settings_storage_type_label)) },
-				trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = typeExpanded) },
-				modifier = Modifier
-					.dpadVerticalMovesFocus()
-					.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
-					.fillMaxWidth()
-			)
-			ExposedDropdownMenu(
-				expanded = typeExpanded,
-				onDismissRequest = { typeExpanded = false }
-			) {
-				driveTypeOptions.forEach { (value, text) ->
-					DropdownMenuItem(
-						text = { Text(text) },
-						onClick = {
-							onTypeChange(value)
-							typeExpanded = false
-						}
-					)
-				}
-			}
-		}
+		// Every drive type the emulator has, by the layer's labels.
+		SchemaChoiceRow(
+			id = "floppy${index}type",
+			value = driveType.toString(),
+			onSelect = { value -> value.toIntOrNull()?.let(onTypeChange) }
+		)
 
 		if (driveType >= 0) {
 			Spacer(modifier = Modifier.height(8.dp))
@@ -541,7 +581,7 @@ private fun HardDriveRow(
 			)
 		}
 
-		SwitchRow(
+		SettingSwitchRow(
 			label = stringResource(R.string.settings_storage_hard_drive_read_only),
 			checked = drive.readOnly,
 			onCheckedChange = onReadOnlyChange

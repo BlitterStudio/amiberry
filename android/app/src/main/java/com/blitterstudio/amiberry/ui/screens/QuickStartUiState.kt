@@ -1,6 +1,9 @@
 package com.blitterstudio.amiberry.ui.screens
 
+import com.blitterstudio.amiberry.data.model.AmigaFile
 import com.blitterstudio.amiberry.data.model.EmulatorSettings
+import com.blitterstudio.amiberry.data.model.ModelRomAvailability
+import com.blitterstudio.amiberry.data.model.RomIdentity
 
 enum class QuickStartLaunchMode {
 	WHDLOAD,
@@ -20,7 +23,11 @@ data class QuickStartEffectiveSummary(
 	val chipset: String,
 	val memory: String,
 	val media: String,
-	val controls: String
+	val controls: String,
+	/** The ROM the launch boots: a Kickstart by name, the built-in AROS, or null without one. */
+	val rom: RomIdentity? = null,
+	/** The ROM's file name, for one the launcher cannot identify. */
+	val romFileName: String = ""
 )
 
 object QuickStartUiState {
@@ -42,7 +49,9 @@ object QuickStartUiState {
 		settings: EmulatorSettings,
 		launchMode: QuickStartLaunchMode,
 		selectedModelAvailable: Boolean,
-		selectedWhdloadName: String? = null
+		selectedWhdloadName: String? = null,
+		romFile: String = settings.romFile,
+		roms: List<AmigaFile> = emptyList()
 	): QuickStartEffectiveSummary {
 		return QuickStartEffectiveSummary(
 			model = if (selectedModelAvailable) settings.baseModel.displayName else "No compatible model",
@@ -50,8 +59,18 @@ object QuickStartUiState {
 			chipset = buildChipsetSummary(settings),
 			memory = buildMemorySummary(settings),
 			media = buildMediaSummary(settings, launchMode, selectedWhdloadName),
-			controls = buildControlsSummary(settings)
+			controls = buildControlsSummary(settings),
+			rom = if (selectedModelAvailable) romIdentity(romFile, roms) else null,
+			romFileName = mediaName(romFile).orEmpty()
 		)
+	}
+
+	/** What a kickstart_rom_file value boots, from the scanned ROMs; null for none. */
+	fun romIdentity(romFile: String, roms: List<AmigaFile>): RomIdentity? = when {
+		romFile.isBlank() -> null
+		ModelRomAvailability.isBuiltInArosRom(romFile) -> RomIdentity.BuiltInAros
+		else -> roms.firstOrNull { it.path == romFile }?.let(ModelRomAvailability::romIdentity)
+			?: RomIdentity.Unknown
 	}
 
 	private fun buildCpuSummary(settings: EmulatorSettings): String {

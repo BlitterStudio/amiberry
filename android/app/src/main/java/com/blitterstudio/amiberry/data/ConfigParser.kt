@@ -30,8 +30,13 @@ object ConfigParser {
 		"kickstart_rom_file", "kickstart_ext_rom_file",
 		"floppy0", "floppy0type", "floppy1", "floppy1type",
 		"floppy2", "floppy2type", "floppy3", "floppy3type",
+		"floppy0sound", "floppy1sound", "floppy2sound", "floppy3sound",
+		"floppy0soundvolume_disk", "floppy1soundvolume_disk", "floppy2soundvolume_disk", "floppy3soundvolume_disk",
+		"floppy0soundvolume_empty", "floppy1soundvolume_empty", "floppy2soundvolume_empty", "floppy3soundvolume_empty",
+		"floppy_volume",
 		"cdimage0",
 		"sound_output", "sound_frequency", "sound_max_buff", "sound_channels",
+		"sound_volume", "sound_volume_paula", "sound_volume_cd", "sound_volume_ahi", "sound_volume_midi",
 		"gfx_width", "gfx_height", "gfx_correct_aspect", "gfx_auto_crop",
 		"amiberry.gfx_correct_aspect", "amiberry.gfx_auto_crop",
 		"scaling_method", "amiberry.scaling_method", "gfx_autoresolution", "amiberry.shader",
@@ -138,6 +143,12 @@ object ConfigParser {
 		val presetModel = AmigaModel.find(preset?.substringBefore(':'))
 		val presetConfig = preset?.substringAfter(':', "")?.toIntOrNull()
 			?.takeIf { presetModel != null && it in presetModel.configs.indices } ?: 0
+		val defaults = EmulatorSettings()
+		// floppy_volume (older configurations) sets every drive's click
+		// volumes; the per-drive keys the emulator writes after it win.
+		val allDrivesVolume = kv["floppy_volume"]?.toIntOrNull()
+		fun floppyVolume(key: String, fallback: Int) = kv[key]?.toIntOrNull() ?: allDrivesVolume ?: fallback
+		fun int(key: String, fallback: Int) = kv[key]?.toIntOrNull() ?: fallback
 		return EmulatorSettings(
 			baseModel = presetModel ?: guessModel(kv),
 			baseConfig = presetConfig,
@@ -152,7 +163,7 @@ object ConfigParser {
 			chipset = kv["chipset"] ?: "ocs",
 			immediateBlits = kv["immediate_blits"].toBool(false),
 			collisionLevel = kv["collision_level"] ?: "full",
-			cycleExact = kv["cycle_exact"].toBool(false),
+			cycleExact = parseCycleExact(kv["cycle_exact"]),
 			ntsc = kv["ntsc"].toBool(false),
 
 			chipRam = kv["chipmem_size"]?.toIntOrNull() ?: 1,
@@ -181,6 +192,23 @@ object ConfigParser {
 			soundBuffer = kv["sound_max_buff"]?.toIntOrNull()
 				?: EmulatorSettingsConstraints.DEFAULT_SOUND_BUFFER,
 			soundChannels = kv["sound_channels"] ?: "stereo",
+			soundVolume = int("sound_volume", defaults.soundVolume),
+			soundVolumePaula = int("sound_volume_paula", defaults.soundVolumePaula),
+			soundVolumeCd = int("sound_volume_cd", defaults.soundVolumeCd),
+			soundVolumeAhi = int("sound_volume_ahi", defaults.soundVolumeAhi),
+			soundVolumeMidi = int("sound_volume_midi", defaults.soundVolumeMidi),
+			floppy0Sound = int("floppy0sound", defaults.floppy0Sound),
+			floppy1Sound = int("floppy1sound", defaults.floppy1Sound),
+			floppy2Sound = int("floppy2sound", defaults.floppy2Sound),
+			floppy3Sound = int("floppy3sound", defaults.floppy3Sound),
+			floppy0SoundVolumeDisk = floppyVolume("floppy0soundvolume_disk", defaults.floppy0SoundVolumeDisk),
+			floppy1SoundVolumeDisk = floppyVolume("floppy1soundvolume_disk", defaults.floppy1SoundVolumeDisk),
+			floppy2SoundVolumeDisk = floppyVolume("floppy2soundvolume_disk", defaults.floppy2SoundVolumeDisk),
+			floppy3SoundVolumeDisk = floppyVolume("floppy3soundvolume_disk", defaults.floppy3SoundVolumeDisk),
+			floppy0SoundVolumeEmpty = floppyVolume("floppy0soundvolume_empty", defaults.floppy0SoundVolumeEmpty),
+			floppy1SoundVolumeEmpty = floppyVolume("floppy1soundvolume_empty", defaults.floppy1SoundVolumeEmpty),
+			floppy2SoundVolumeEmpty = floppyVolume("floppy2soundvolume_empty", defaults.floppy2SoundVolumeEmpty),
+			floppy3SoundVolumeEmpty = floppyVolume("floppy3soundvolume_empty", defaults.floppy3SoundVolumeEmpty),
 
 			gfxWidth = kv["gfx_width"]?.toIntOrNull() ?: 720,
 			gfxHeight = kv["gfx_height"]?.toIntOrNull() ?: 568,
@@ -286,6 +314,17 @@ object ConfigParser {
 		val bootPriority = parts[6].trim().toIntOrNull() ?: return null
 		val readOnly = access.equals("ro", ignoreCase = true)
 		return HardDrive(path = path, readOnly = readOnly, bootPriority = bootPriority)
+	}
+
+	/**
+	 * cycle_exact as the emulator reads it (cfgfile_strval in cfgfile.cpp):
+	 * "false", "memory" (DMA/memory) or "true" (full), and "yes"/"no" as the
+	 * table's entries 1 and 0, so "yes" is the DMA/memory mode.
+	 */
+	private fun parseCycleExact(value: String?): String = when (value?.lowercase()) {
+		"true" -> "true"
+		"memory", "yes" -> "memory"
+		else -> "false"
 	}
 
 	private fun String?.toBool(default: Boolean): Boolean {

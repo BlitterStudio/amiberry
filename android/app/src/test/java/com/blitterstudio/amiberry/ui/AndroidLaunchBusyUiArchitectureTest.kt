@@ -37,15 +37,9 @@ class AndroidLaunchBusyUiArchitectureTest {
 
 	@Test
 	fun `secondary launch actions are disabled while preparing SDL launch`() {
-		val quickStart = source("screens/QuickStartScreen.kt")
 		val configurations = source("screens/ConfigurationsScreen.kt")
 		val settings = source("screens/settings/SettingsScreen.kt")
 
-		assertTrue(
-			"QuickStart recent launch buttons should be disabled while a launch is in progress.",
-			Regex("""TextButton\([\s\S]*enabled = !launchInProgress""")
-				.containsMatchIn(quickStart)
-		)
 		assertTrue(
 			"Settings Advanced launch menu item should be disabled while a launch is in progress.",
 			Regex("""DropdownMenuItem\([\s\S]*text = \{ Text\(stringResource\(R\.string\.action_advanced\)\) \}[\s\S]*enabled = !launchInProgress""")

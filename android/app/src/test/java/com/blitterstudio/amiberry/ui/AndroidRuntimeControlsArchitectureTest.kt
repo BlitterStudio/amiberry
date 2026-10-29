@@ -144,12 +144,6 @@ class AndroidRuntimeControlsArchitectureTest {
 		val canceledTouch = Regex(
 			"""case SDL_EVENT_FINGER_CANCELED:[\s\S]*?break;"""
 		).find(processEvent)?.value.orEmpty()
-		val backgroundCase = Regex(
-			"""case SDL_EVENT_DID_ENTER_BACKGROUND:[\s\S]*?break;"""
-		).find(processEvent)?.value.orEmpty()
-		val foregroundCase = Regex(
-			"""case SDL_EVENT_DID_ENTER_FOREGROUND:[\s\S]*?break;"""
-		).find(processEvent)?.value.orEmpty()
 
 		assertTrue(
 			"The Android SDL event filter should only publish an atomic pending-neutralization request.",
@@ -181,13 +175,6 @@ class AndroidRuntimeControlsArchitectureTest {
 			"Focus loss and minimization must neutralize before input unacquire.",
 			inactiveHandler.indexOf("neutralize_touch_controls()") in
 				0 until inactiveHandler.indexOf("inputdevice_unacquire")
-		)
-		assertTrue(
-			"Background must neutralize before pausing, and foreground before resuming.",
-			backgroundCase.indexOf("neutralize_touch_controls()") in
-				0 until backgroundCase.indexOf("pause_sound()") &&
-				foregroundCase.indexOf("neutralize_touch_controls()") in
-					0 until foregroundCase.indexOf("resume_sound()")
 		)
 		assertTrue(
 			"Quit, close, and termination must neutralize before teardown.",

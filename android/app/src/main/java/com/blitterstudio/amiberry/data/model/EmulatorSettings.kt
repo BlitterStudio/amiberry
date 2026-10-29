@@ -23,7 +23,8 @@ data class EmulatorSettings(
 	val chipset: String = "ocs",  // ocs, ecs_agnus, ecs_denise, ecs, aga
 	val immediateBlits: Boolean = false,
 	val collisionLevel: String = "full",  // none, sprites, playfields, full
-	val cycleExact: Boolean = false,
+	/** cycle_exact as stored: "false", "memory" (DMA/memory accesses only) or "true" (full). */
+	val cycleExact: String = "false",
 	val ntsc: Boolean = false,
 
 	// Memory (in config file units)
@@ -36,9 +37,11 @@ data class EmulatorSettings(
 	val romFile: String = "",
 	val romExtFile: String = "",
 
-	// Floppy drives
+	// Floppy drives. The types are the emulator's drive types (the schema's
+	// floppyNtype choices): -1 disabled, 0 3.5" DD, 1 3.5" HD, 2 5.25" (40),
+	// 7 5.25" (80), 3 3.5" ESCOM, 8 FloppyBridge.
 	val floppy0: String = "",
-	val floppy0Type: Int = 0,  // 0=3.5"DD, 1=3.5"HD, -1=disabled
+	val floppy0Type: Int = 0,
 	val floppy1: String = "",
 	val floppy1Type: Int = -1,
 	val floppy2: String = "",
@@ -57,6 +60,27 @@ data class EmulatorSettings(
 	val soundFreq: Int = EmulatorSettingsConstraints.DEFAULT_SOUND_FREQUENCY,
 	val soundBuffer: Int = EmulatorSettingsConstraints.DEFAULT_SOUND_BUFFER,
 	val soundChannels: String = "stereo",
+	// Volumes as the configuration stores them: attenuation, 0 is full volume
+	// and 100 silent (the schema marks them reversed; a front end shows 100 - value).
+	val soundVolume: Int = schemaInt("sound_volume", 0),
+	val soundVolumePaula: Int = schemaInt("sound_volume_paula", 0),
+	val soundVolumeCd: Int = schemaInt("sound_volume_cd", 20),
+	val soundVolumeAhi: Int = schemaInt("sound_volume_ahi", 0),
+	val soundVolumeMidi: Int = schemaInt("sound_volume_midi", 0),
+	// Drive sounds (floppyNsound: 0 off, 1 the built-in A500 drive, -1 external
+	// samples) and their click volumes, attenuation as above.
+	val floppy0Sound: Int = schemaInt("floppy0sound", 0),
+	val floppy1Sound: Int = schemaInt("floppy1sound", 0),
+	val floppy2Sound: Int = schemaInt("floppy2sound", 0),
+	val floppy3Sound: Int = schemaInt("floppy3sound", 0),
+	val floppy0SoundVolumeDisk: Int = schemaInt("floppy0soundvolume_disk", 33),
+	val floppy1SoundVolumeDisk: Int = schemaInt("floppy1soundvolume_disk", 33),
+	val floppy2SoundVolumeDisk: Int = schemaInt("floppy2soundvolume_disk", 33),
+	val floppy3SoundVolumeDisk: Int = schemaInt("floppy3soundvolume_disk", 33),
+	val floppy0SoundVolumeEmpty: Int = schemaInt("floppy0soundvolume_empty", 33),
+	val floppy1SoundVolumeEmpty: Int = schemaInt("floppy1soundvolume_empty", 33),
+	val floppy2SoundVolumeEmpty: Int = schemaInt("floppy2soundvolume_empty", 33),
+	val floppy3SoundVolumeEmpty: Int = schemaInt("floppy3soundvolume_empty", 33),
 
 	// Display
 	val gfxWidth: Int = 720,
@@ -87,9 +111,81 @@ data class EmulatorSettings(
 	val onScreenKeyboardAvailable: Boolean
 		get() = onScreenKeyboardAvailable(onScreenKeyboardButton, onScreenKeyboardToggle)
 
+	/** Cycle-exact in either mode (DMA/memory or full). */
+	val isCycleExact: Boolean
+		get() = cycleExact != "false"
+
+	/**
+	 * Another CPU, with the changes the emulator's CPU setting makes with it
+	 * (set_cpu_model in src/osdep/settings/settings_cpu.cpp): a 68000/010 is
+	 * 24-bit and has no JIT, and keeps an external FPU only outside More
+	 * compatible and cycle-exact modes; a 68030 starts 32-bit; a 68040/060
+	 * is 32-bit and uses its internal FPU; below a 68040 an internal FPU
+	 * becomes a 68881.
+	 */
+	fun withCpuModel(cpu: Int): EmulatorSettings {
+		if (cpu == cpuModel) return this
+		val externalFpu = if (fpuModel != 0 && fpuModel != 68882) 68881 else fpuModel
+		return when {
+			cpu <= 68010 -> copy(
+				cpuModel = cpu,
+				address24Bit = true,
+				jitCacheSize = 0,
+				fpuModel = if (cpuCompatible || isCycleExact) 0 else externalFpu
+			)
+			cpu <= 68030 -> copy(
+				cpuModel = cpu,
+				address24Bit = if (cpu == 68030) false else address24Bit,
+				fpuModel = externalFpu
+			)
+			else -> copy(
+				cpuModel = cpu,
+				address24Bit = false,
+				fpuModel = if (fpuModel != 0) cpu else 0
+			)
+		}
+	}
+
+	/**
+	 * Another cycle-exact mode, with the changes the emulator's setting makes
+	 * with it (set_cycle_exact in src/osdep/settings/settings_chipset.cpp): a
+	 * 68000/010 has no DMA-only mode, so it runs fully cycle-exact; up to a
+	 * 68030 the CPU runs at real speed in More compatible mode; immediate
+	 * blits and the JIT are turned off.
+	 */
+	fun withCycleExact(value: String): EmulatorSettings {
+		if (value == "false") return copy(cycleExact = value)
+		val slowCpu = cpuModel <= 68030
+		return copy(
+			cycleExact = if (cpuModel < 68020) "true" else value,
+			cpuSpeed = if (slowCpu) "real" else cpuSpeed,
+			cpuCompatible = cpuCompatible || slowCpu,
+			immediateBlits = false,
+			jitCacheSize = 0
+		)
+	}
+
+	/**
+	 * Another JIT cache size; turning the JIT on leaves cycle-exact mode and
+	 * turns the JIT FPU on, as the emulator's setting does (set_cachesize in
+	 * src/osdep/settings/settings_cpu.cpp; the launcher has no softfloat FPU).
+	 */
+	fun withJitCacheSize(size: Int): EmulatorSettings {
+		val enabling = jitCacheSize == 0 && size > 0
+		return if (enabling) {
+			copy(jitCacheSize = size, cycleExact = "false", jitFpu = true)
+		} else {
+			copy(jitCacheSize = size)
+		}
+	}
+
 	companion object {
 		fun onScreenKeyboardAvailable(button: Boolean, toggle: String?): Boolean =
 			button || toggle != ""
+
+		/** The schema's default for an integer option, or [fallback] without one. */
+		internal fun schemaInt(id: String, fallback: Int): Int =
+			SettingsSchema.current?.options?.get(id)?.default?.toIntOrNull() ?: fallback
 
 		/**
 		 * The settings one of a model's preset configurations sets (the
@@ -111,17 +207,18 @@ data class EmulatorSettings(
 				jitCacheSize = int("cachesize", defaults.jitCacheSize),
 				jitFpu = flag("compfpu", defaults.jitFpu),
 				chipset = v["chipset"] ?: defaults.chipset,
-				cycleExact = v["cycle_exact"]?.let { it != "false" } ?: defaults.cycleExact,
+				cycleExact = v["cycle_exact"] ?: defaults.cycleExact,
 				ntsc = flag("ntsc", defaults.ntsc),
 				chipRam = int("chipmem_size", defaults.chipRam),
 				slowRam = int("bogomem_size", defaults.slowRam),
 				fastRam = int("fastmem_size", defaults.fastRam),
 				z3Ram = int("z3mem_size", defaults.z3Ram),
 				floppy0Type = int("floppy0type", defaults.floppy0Type),
-				floppy1Type = int("floppy1type", defaults.floppy1Type)
+				floppy1Type = int("floppy1type", defaults.floppy1Type),
+				floppy2Type = int("floppy2type", defaults.floppy2Type),
+				floppy3Type = int("floppy3type", defaults.floppy3Type)
 			)
 		}
-
 
 		// The choices the emulator offers for these options (value, label),
 		// from the bundled settings schema.
@@ -146,5 +243,9 @@ data class EmulatorSettings(
 		val chipsetOptions: List<Pair<String, String>> get() = choices("chipset")
 		val soundOutputOptions: List<Pair<String, String>> get() = choices("sound_output")
 		val soundChannelOptions: List<Pair<String, String>> get() = choices("sound_channels")
+		val cycleExactOptions: List<Pair<String, String>> get() = choices("cycle_exact")
+		val floppyTypeOptions: List<Pair<Int, String>> get() = intChoices("floppy0type")
+		/** The pointer speeds the emulator offers for the left stick as mouse. */
+		val analogMouseSpeeds: List<Int> get() = intChoices("input.joymouse_speed_analog").map { it.first }
 	}
 }

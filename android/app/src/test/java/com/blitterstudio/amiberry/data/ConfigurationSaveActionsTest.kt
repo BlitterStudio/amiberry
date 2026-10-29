@@ -59,7 +59,7 @@ class ConfigurationSaveActionsTest {
 			ConfigurationSaveActions.messageFor(ConfigurationSaveActions.SaveResult.Failed)
 		)
 		assertEquals(
-			ConfigurationActions.Message(R.string.msg_saved_configuration, "Workbench.uae"),
+			ConfigurationActions.Message(R.string.msg_saved_configuration, "Workbench"),
 			ConfigurationSaveActions.messageFor(ConfigurationSaveActions.SaveResult.Saved(File("Workbench.uae")))
 		)
 	}

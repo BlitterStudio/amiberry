@@ -61,6 +61,10 @@ import com.blitterstudio.amiberry.data.ImportFeedback
 import com.blitterstudio.amiberry.data.model.FileCategory
 import com.blitterstudio.amiberry.data.model.SettingsChange
 import com.blitterstudio.amiberry.data.model.SettingsAdjustmentNotice
+import com.blitterstudio.amiberry.ui.components.settings.settingText
+import com.blitterstudio.amiberry.ui.components.settings.settingsSchema
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import com.blitterstudio.amiberry.data.model.SettingsIntentPreset
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -82,6 +86,7 @@ import com.blitterstudio.amiberry.ui.dpadVerticalMovesFocus
 import com.blitterstudio.amiberry.ui.findActivity
 import com.blitterstudio.amiberry.ui.launchImportGuarded
 import com.blitterstudio.amiberry.ui.launchGuarded
+import com.blitterstudio.amiberry.ui.LocalStartGuard
 import com.blitterstudio.amiberry.ui.rememberImportInFlightGuard
 import com.blitterstudio.amiberry.ui.rememberLaunchInFlightGuard
 import com.blitterstudio.amiberry.ui.viewmodel.SettingsViewModel
@@ -104,6 +109,7 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel(LocalContext.current
 	var showReviewChangesDialog by remember { mutableStateOf(false) }
 	val availableRoms by viewModel.availableRoms.collectAsState()
 	val canStart = viewModel.settings.romFile.isNotBlank() || availableRoms.isNotEmpty()
+	val startGuard = LocalStartGuard.current
 	fun importResultMessage(result: FileManager.ImportResult): String {
 		val message = ImportFeedback.fromImportResult(result)
 		return context.getString(message.stringRes, message.argument)
@@ -246,30 +252,32 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel(LocalContext.current
 						}
 						return@ExtendedFloatingActionButton
 					}
-					val launchSettings = viewModel.settings
-					val launchUnknownLines = viewModel.currentUnknownLines
-					scope.launchGuarded(launchGuard) {
-						val configFile = try {
-							withContext(Dispatchers.IO) {
-								viewModel.writeSettingsConfig(
-									launchSettings,
-									".current_settings.uae",
-									launchUnknownLines
-								)
+					startGuard.confirmStart {
+						val launchSettings = viewModel.settings
+						val launchUnknownLines = viewModel.currentUnknownLines
+						scope.launchGuarded(launchGuard) {
+							val configFile = try {
+								withContext(Dispatchers.IO) {
+									viewModel.writeSettingsConfig(
+										launchSettings,
+										".current_settings.uae",
+										launchUnknownLines
+									)
+								}
+							} catch (_: Exception) {
+								snackbarHostState.showSnackbar(configWriteFailedMessage)
+								return@launchGuarded
 							}
-						} catch (_: Exception) {
-							snackbarHostState.showSnackbar(configWriteFailedMessage)
-							return@launchGuarded
-						}
-						runCatching {
-							EmulatorLauncher.launchSettingsConfig(
-								context,
-								launchSettings.baseModel,
-								launchSettings.baseConfig,
-								configFile.absolutePath
-							)
-						}.onFailure {
-							snackbarHostState.showSnackbar(launchFailedMessage)
+							runCatching {
+								EmulatorLauncher.launchSettingsConfig(
+									context,
+									launchSettings.baseModel,
+									launchSettings.baseConfig,
+									configFile.absolutePath
+								)
+							}.onFailure {
+								snackbarHostState.showSnackbar(launchFailedMessage)
+							}
 						}
 					}
 				},
@@ -555,7 +563,7 @@ private fun SettingsAdjustmentBanner(
 			}
 			notices.take(4).forEach { notice ->
 				Text(
-					stringResource(notice.messageRes()),
+					notice.message(),
 					style = MaterialTheme.typography.bodyMedium,
 					color = MaterialTheme.colorScheme.onSecondaryContainer
 				)
@@ -593,18 +601,35 @@ private fun SettingsIntentPreset.descriptionRes(): Int = when (this) {
 	SettingsIntentPreset.TouchControls -> R.string.settings_preset_touch_controls_desc
 }
 
-private fun SettingsAdjustmentNotice.messageRes(): Int = when (this) {
-	SettingsAdjustmentNotice.AgaRequires68020 -> R.string.settings_adjustment_aga_cpu
-	SettingsAdjustmentNotice.CpuRequires32BitAddressing -> R.string.settings_adjustment_cpu_32bit
-	SettingsAdjustmentNotice.CycleExactDisabledJit -> R.string.settings_adjustment_cycle_exact_jit
-	SettingsAdjustmentNotice.CycleExactDisabledImmediateBlits -> R.string.settings_adjustment_cycle_exact_blits
-	SettingsAdjustmentNotice.Z3Requires32BitAddressing -> R.string.settings_adjustment_z3_32bit
-	SettingsAdjustmentNotice.IntegerScalingSynced -> R.string.settings_adjustment_integer_scaling
-	SettingsAdjustmentNotice.JitRequires68020 -> R.string.settings_adjustment_jit_cpu
-	SettingsAdjustmentNotice.JitRequires32BitAddressing -> R.string.settings_adjustment_jit_32bit
-	SettingsAdjustmentNotice.OnScreenControlsRequireTouch -> R.string.settings_adjustment_touch_required
-	SettingsAdjustmentNotice.OnScreenJoystickMovedToPort1 -> R.string.settings_adjustment_touch_port
-	SettingsAdjustmentNotice.InvalidInputDeviceReset -> R.string.settings_adjustment_input_reset
+/**
+ * What a notice says: for the emulator's own rules the option's schema
+ * label and constraint, for the launcher's rules its own message.
+ */
+@Composable
+private fun SettingsAdjustmentNotice.message(): String {
+	val option = optionId?.let { settingsSchema()?.option(it) }
+	if (option != null) {
+		val constraint = option.constraint
+		return if (constraint != null) {
+			stringResource(R.string.settings_adjustment_option_reason, option.label, constraint)
+		} else {
+			stringResource(R.string.settings_adjustment_option, option.label)
+		}
+	}
+	return stringResource(
+		when (this) {
+			SettingsAdjustmentNotice.AgaRequires68020 -> R.string.settings_adjustment_aga_cpu
+			SettingsAdjustmentNotice.IntegerScalingSynced -> R.string.settings_adjustment_integer_scaling
+			SettingsAdjustmentNotice.OnScreenControlsRequireTouch -> R.string.settings_adjustment_touch_required
+			SettingsAdjustmentNotice.OnScreenJoystickMovedToPort1 -> R.string.settings_adjustment_touch_port
+			SettingsAdjustmentNotice.InvalidInputDeviceReset -> R.string.settings_adjustment_input_reset
+			// The emulator's rules, should the schema not list their option.
+			SettingsAdjustmentNotice.AddressingChanged,
+			SettingsAdjustmentNotice.JitTurnedOff,
+			SettingsAdjustmentNotice.Z3MemoryRemoved,
+			SettingsAdjustmentNotice.SoundOutputRaised -> R.string.settings_adjustments_title
+		}
+	)
 }
 
 @Composable
@@ -616,26 +641,26 @@ private fun SettingsChangesDialog(
 		onDismissRequest = onDismiss,
 		title = { Text(stringResource(R.string.dialog_review_changes_title)) },
 		text = {
-			Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+			Column(
+				modifier = Modifier.verticalScroll(rememberScrollState()),
+				verticalArrangement = Arrangement.spacedBy(8.dp)
+			) {
 				if (changes.isEmpty()) {
 					Text(stringResource(R.string.dialog_review_changes_empty))
 				} else {
-					changes.take(12).forEach { change ->
+					changes.forEach { change ->
 						Column {
-							Text(change.label, style = MaterialTheme.typography.labelLarge)
+							Text(settingText(change.label), style = MaterialTheme.typography.labelLarge)
 							Text(
-								stringResource(R.string.dialog_review_changes_row, change.before, change.after),
+								stringResource(
+									R.string.dialog_review_changes_row,
+									settingText(change.before),
+									settingText(change.after)
+								),
 								style = MaterialTheme.typography.bodySmall,
 								color = MaterialTheme.colorScheme.onSurfaceVariant
 							)
 						}
-					}
-					if (changes.size > 12) {
-						Text(
-							stringResource(R.string.dialog_review_changes_more, changes.size - 12),
-							style = MaterialTheme.typography.bodySmall,
-							color = MaterialTheme.colorScheme.onSurfaceVariant
-						)
 					}
 				}
 			}

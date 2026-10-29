@@ -100,13 +100,35 @@ class AppPreferences private constructor(context: Context) {
 		return RecentLaunches.parse(raw)
 	}
 
-	fun getRecentLaunches(): List<JSONObject> = recentLaunches.value
-
 	fun addRecentLaunch(entry: JSONObject) {
 		replaceRecentLaunches(RecentLaunches.add(recentLaunches.value, entry))
 	}
 
-	fun replaceRecentLaunches(entries: List<JSONObject>) {
+	fun removeRecentLaunch(entry: JSONObject) {
+		replaceRecentLaunches(RecentLaunches.remove(recentLaunches.value, entry))
+	}
+
+	fun clearRecentLaunches() {
+		replaceRecentLaunches(emptyList())
+	}
+
+	/** Keep Recent pointing at a configuration after it is renamed. */
+	fun renameRecentConfig(oldPath: String, newPath: String) {
+		val updated = RecentLaunches.replaceConfigPath(recentLaunches.value, oldPath, newPath)
+		if (updated.map { it.toString() } != recentLaunches.value.map { it.toString() }) {
+			replaceRecentLaunches(updated)
+		}
+	}
+
+	/** Take a configuration the user deleted in the app out of Recent. */
+	fun forgetRecentConfig(path: String) {
+		val updated = RecentLaunches.removeConfigPath(recentLaunches.value, path)
+		if (updated.size != recentLaunches.value.size) {
+			replaceRecentLaunches(updated)
+		}
+	}
+
+	private fun replaceRecentLaunches(entries: List<JSONObject>) {
 		val trimmed = entries.take(RecentLaunches.MAX_ITEMS)
 		prefs.edit { putString(KEY_RECENT_LAUNCHES, RecentLaunches.serialize(trimmed)) }
 		recentLaunches.value = trimmed

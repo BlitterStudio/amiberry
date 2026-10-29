@@ -14,7 +14,7 @@ object SettingsIntentPresets {
 			SettingsIntentPreset.Compatibility -> settings.copy(
 				cpuSpeed = "real",
 				cpuCompatible = true,
-				cycleExact = true,
+				cycleExact = "true",
 				immediateBlits = false,
 				jitCacheSize = 0,
 				jitFpu = false
@@ -22,7 +22,7 @@ object SettingsIntentPresets {
 			SettingsIntentPreset.Balanced -> settings.copy(
 				cpuSpeed = "real",
 				cpuCompatible = true,
-				cycleExact = false,
+				cycleExact = "false",
 				immediateBlits = false,
 				jitCacheSize = 0,
 				jitFpu = false,
@@ -33,7 +33,7 @@ object SettingsIntentPresets {
 				settings.copy(
 					cpuSpeed = "max",
 					cpuCompatible = if (settings.cpuModel >= 68040) false else settings.cpuCompatible,
-					cycleExact = false,
+					cycleExact = "false",
 					immediateBlits = true,
 					jitCacheSize = if (jitAllowed) 16384 else 0,
 					jitFpu = jitAllowed

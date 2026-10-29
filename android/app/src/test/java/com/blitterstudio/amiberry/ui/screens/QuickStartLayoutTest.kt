@@ -25,7 +25,7 @@ class QuickStartLayoutTest {
 
 		assertTrue(quickStartScreen.contains("QuickStartModeSelector("))
 		assertTrue(quickStartScreen.contains("EffectiveSummaryCard("))
-		assertTrue(quickStartScreen.contains("RecentLaunches.details(entry)"))
+		assertTrue(quickStartScreen.contains("QuickStartRecentSection("))
 	}
 
 	@Test

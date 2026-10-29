@@ -25,6 +25,7 @@ import com.blitterstudio.amiberry.data.model.SettingsIntentPresets
 import com.blitterstudio.amiberry.data.ConfigParser
 import com.blitterstudio.amiberry.data.ConfigRepository
 import com.blitterstudio.amiberry.data.ConfigurationSaveActions
+import com.blitterstudio.amiberry.data.OpenConfigTracking
 import com.blitterstudio.amiberry.data.WhdLoadAutoConfig
 import com.blitterstudio.amiberry.ui.hasTouchScreen
 import java.io.File
@@ -169,8 +170,8 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 		val selectedRoms = ModelRomAvailability.selectRomsForModel(model, availableRoms.value)
 		val previousSettings = settings
 		val newSettings = EmulatorSettings.fromModel(model, selectedRoms.config).copy(
-			romFile = selectedRoms.kick?.path.orEmpty(),
-			romExtFile = selectedRoms.ext?.path.orEmpty(),
+			romFile = selectedRoms.romFile,
+			romExtFile = selectedRoms.romExtFile,
 			shader = previousSettings.shader,
 			joyport0 = previousSettings.joyport0,
 			joyport1 = previousSettings.joyport1,
@@ -271,6 +272,32 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 		clearAdjustmentNotices()
 		appPreferences.saveAndroidControls(settings)
 		saveLastSession()
+	}
+
+	private val tracked: OpenConfigTracking.Tracked
+		get() = OpenConfigTracking.Tracked(currentConfigName, currentConfigPath)
+
+	/** Whether the configuration file at [path] is the one open here. */
+	fun isConfigOpen(path: String): Boolean = OpenConfigTracking.isOpen(tracked, path)
+
+	/** The file at [oldPath] was renamed to [renamed]: when it is the open one, Save now writes the new file. */
+	fun onConfigRenamed(oldPath: String, renamed: File) {
+		val updated = OpenConfigTracking.afterRename(tracked, oldPath, renamed)
+		currentConfigName = updated.name
+		currentConfigPath = updated.path
+	}
+
+	/**
+	 * The file at [path] was deleted. When it is the open one, its values stay open as an
+	 * unnamed configuration (no file to save back to). Returns whether it was the open one.
+	 */
+	fun onConfigDeleted(path: String): Boolean {
+		val before = tracked
+		val updated = OpenConfigTracking.afterDelete(before, path)
+		if (updated == before) return false
+		currentConfigName = updated.name
+		currentConfigPath = updated.path
+		return true
 	}
 
 	private fun autoSelectDefaultRomIfNeeded(roms: List<AmigaFile>) {

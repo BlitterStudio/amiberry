@@ -70,44 +70,36 @@
     <string name="settings_adjustments_title">Settings adjusted</string>
     <string name="settings_adjustments_more">And %1$d more.</string>
     <string name="settings_adjustment_aga_cpu">AGA chipset requires a 68020 or newer CPU.</string>
-    <string name="settings_adjustment_cpu_32bit">68030 and newer CPUs require 32-bit addressing.</string>
-    <string name="settings_adjustment_cycle_exact_jit">Cycle-exact mode disabled JIT.</string>
-    <string name="settings_adjustment_cycle_exact_blits">Cycle-exact mode disabled immediate blits.</string>
-    <string name="settings_adjustment_z3_32bit">Z3 Fast RAM requires 32-bit addressing.</string>
     <string name="settings_adjustment_integer_scaling">Integer scaling synchronized the filter and resolution autoswitch options.</string>
-    <string name="settings_adjustment_jit_cpu">JIT requires a 68020 or newer CPU.</string>
-    <string name="settings_adjustment_jit_32bit">JIT requires 32-bit addressing.</string>
     <string name="settings_adjustment_touch_required">On-screen controls were disabled because this device has no touchscreen.</string>
 	<string name="settings_adjustment_touch_port">On-screen joystick was assigned to Port 2.</string>
     <string name="settings_adjustment_input_reset">Invalid input device selections were reset.</string>
     <string name="dialog_overwrite_config_title">Overwrite configuration?</string>
-    <string name="dialog_overwrite_config_message">A configuration named \"%1$s\" already exists. Overwrite it?</string>
+    <string name="dialog_overwrite_config_message">A configuration named “%1$s” already exists. Overwrite it?</string>
     <string name="action_overwrite">Overwrite</string>
     <string name="action_discard">Discard</string>
     <string name="dialog_unsaved_changes_title">Unsaved changes</string>
-    <string name="dialog_unsaved_changes_message">Save your changes to \"%1$s\" before leaving?</string>
+    <string name="dialog_unsaved_changes_message">Save your changes to “%1$s” before leaving?</string>
     <string name="dialog_review_changes_title">Review Changes</string>
     <string name="dialog_review_changes_empty">Only preserved advanced settings changed.</string>
     <string name="dialog_review_changes_row">%1$s -> %2$s</string>
-    <string name="dialog_review_changes_more">And %1$d more.</string>
     <string name="dialog_delete_config_title">Delete Configuration</string>
-    <string name="dialog_delete_config_message">Delete "%1$s"? This cannot be undone.</string>
+    <string name="dialog_delete_config_message">Delete “%1$s”? This cannot be undone.</string>
 
     <string name="msg_invalid_config_name">Invalid configuration name</string>
     <string name="msg_config_already_exists">A configuration with that name already exists</string>
     <string name="msg_failed_save_config">Failed to save configuration</string>
-    <string name="msg_saved_configuration">Saved %1$s</string>
+    <string name="msg_saved_configuration">Saved “%1$s”</string>
     <string name="msg_rom_required_before_start">Import/select a Kickstart ROM before starting.</string>
     <string name="msg_game_imported">Game imported</string>
     <string name="msg_path_copied">Path copied</string>
     <string name="msg_failed_load_config">Failed to load configuration</string>
-    <string name="msg_config_deleted">Configuration deleted</string>
     <string name="msg_failed_delete_config">Failed to delete configuration</string>
     <string name="msg_failed_duplicate_config">Failed to duplicate configuration</string>
     <string name="msg_failed_share_config">Failed to share configuration</string>
     <string name="msg_failed_launch_config">Failed to launch configuration</string>
     <string name="msg_failed_launch_advanced">Failed to open Advanced mode</string>
-    <string name="msg_config_duplicated_as">Duplicated as %1$s</string>
+    <string name="msg_config_duplicated_as">Duplicated as “%1$s”</string>
     <string name="msg_link_open_failed">No app can open this link</string>
     <string name="msg_support_info_copied">Support info copied</string>
 
@@ -205,59 +197,19 @@
     <string name="file_manager_delete_message">Delete "%1$s"? This cannot be undone.</string>
 
     <string name="settings_option_none">None</string>
-    <string name="settings_common_disabled">Disabled</string>
-    <string name="settings_placeholder_unknown">?</string>
 
     <string name="settings_cpu_model_preset">Model Preset</string>
     <string name="settings_cpu_model_preset_help">Applies default CPU, chipset, and memory settings</string>
     <string name="settings_cpu_section_title">CPU</string>
-    <string name="settings_cpu_model_label">CPU Model</string>
-    <string name="settings_cpu_fastest_possible">Fastest Possible</string>
-    <string name="settings_cpu_fastest_disabled_cycle_exact">Cycle-exact mode uses real CPU speed.</string>
-    <string name="settings_cpu_more_compatible">More Compatible</string>
-    <string name="settings_cpu_compatible_disabled_jit">68040 and 68060 JIT disable compatible mode.</string>
-    <string name="settings_cpu_24bit_addressing">24-bit Addressing</string>
-    <string name="settings_cpu_24bit_forced_68000">68000 and 68010 CPUs always use 24-bit addressing.</string>
-    <string name="settings_cpu_24bit_unavailable_32bit">68030 and newer CPUs use 32-bit addressing.</string>
-    <string name="settings_cpu_fpu_label">FPU</string>
-    <string name="settings_cpu_fpu_internal">CPU Internal</string>
-    <string name="settings_cpu_jit_cache_label">JIT Cache (KB)</string>
-    <string name="settings_cpu_jit_cache_value">%1$d KB</string>
-    <string name="settings_cpu_jit_disabled_cpu">JIT requires a 68020 or newer CPU.</string>
-    <string name="settings_cpu_jit_disabled_cycle_exact">JIT is disabled while cycle-exact mode is enabled.</string>
-    <string name="settings_cpu_jit_disabled_24bit">JIT is disabled while 24-bit addressing is enabled.</string>
 
-    <string name="settings_chipset_ocs">OCS</string>
-    <string name="settings_chipset_ecs_agnus">ECS Agnus</string>
-    <string name="settings_chipset_ecs_denise">ECS Denise</string>
-    <string name="settings_chipset_full_ecs">Full ECS</string>
-    <string name="settings_chipset_aga">AGA</string>
     <string name="settings_chipset_section_title">Chipset</string>
-    <string name="settings_chipset_label">Chipset</string>
-    <string name="settings_chipset_immediate_blitter">Immediate Blitter</string>
-    <string name="settings_chipset_immediate_blitter_disabled_cycle_exact">Cycle-exact mode disables immediate blitter shortcuts.</string>
-    <string name="settings_chipset_cycle_exact">Cycle-Exact</string>
-    <string name="settings_chipset_ntsc">NTSC</string>
-    <string name="settings_chipset_collision_level_label">Collision Level</string>
-    <string name="settings_chipset_collision_sprites_only">Sprites Only</string>
-    <string name="settings_chipset_collision_sprites_playfields">Sprites + Playfields</string>
-    <string name="settings_chipset_collision_full">Full</string>
 
     <string name="settings_memory_config_title">Memory Configuration</string>
-    <string name="settings_memory_chip_ram">Chip RAM</string>
-    <string name="settings_memory_slow_ram">Slow RAM (Trapdoor)</string>
-    <string name="settings_memory_fast_ram">Fast RAM (Zorro II)</string>
-    <string name="settings_memory_z3_fast_ram">Z3 Fast RAM (Zorro III)</string>
     <string name="settings_memory_summary_title">Summary</string>
-    <string name="settings_memory_summary_chip">Chip: %1$s</string>
-    <string name="settings_memory_summary_slow">Slow: %1$s</string>
-    <string name="settings_memory_summary_z2_fast">Z2 Fast: %1$d MB</string>
-    <string name="settings_memory_summary_z3_fast">Z3 Fast: %1$d MB</string>
-    <string name="settings_memory_summary_total">Total: %1$.1f MB</string>
+    <string name="settings_memory_summary_total">Total: %1$s</string>
     <string name="settings_memory_value_mb">%1$d MB</string>
     <string name="settings_memory_value_mb_decimal">%1$.1f MB</string>
     <string name="settings_memory_value_kb">%1$d KB</string>
-    <string name="settings_memory_z3_disabled_24bit">Z3 Fast RAM requires 32-bit addressing.</string>
 
     <string name="settings_display_title">Display Settings</string>
     <string name="settings_display_resolution_label">Resolution</string>
@@ -266,8 +218,6 @@
     <string name="settings_display_resolution_default">720x568 (Default)</string>
     <string name="settings_display_resolution_800_600">800x600</string>
     <string name="settings_display_resolution_1024_768">1024x768</string>
-    <string name="settings_display_correct_aspect_ratio">Correct Aspect Ratio</string>
-    <string name="settings_display_auto_crop">Auto-Crop</string>
     <string name="settings_display_app_theme">App Theme</string>
     <string name="settings_display_theme_label">Theme</string>
     <string name="settings_display_theme_system">Follow System</string>
@@ -283,54 +233,25 @@
     <string name="settings_display_shader_unavailable_help">The configured shader is unavailable. Choose another shader or restore its file.</string>
 
     <string name="settings_sound_title">Sound Settings</string>
-    <string name="settings_sound_output_label">Sound Output</string>
-    <string name="settings_sound_sample_rate_label">Sample Rate</string>
-    <string name="settings_sound_stereo_mode_label">Stereo Mode</string>
-    <string name="settings_sound_output_disabled">Disabled</string>
-    <string name="settings_sound_output_emulated_no_output">Emulated (no output)</string>
-    <string name="settings_sound_output_normal">Normal</string>
-    <string name="settings_sound_output_exact">Exact</string>
-    <string name="settings_sound_frequency_hz">%1$d Hz</string>
-    <string name="settings_sound_buffer_label">Sound Buffer</string>
-    <string name="settings_sound_buffer_option">%1$d (%2$d ms)</string>
-    <string name="settings_sound_buffer_min">Min</string>
-    <string name="settings_sound_channels_mono">Mono</string>
-    <string name="settings_sound_channels_stereo">Stereo</string>
-    <string name="settings_sound_channels_cloned_stereo">Cloned stereo</string>
-    <string name="settings_sound_channels_4ch">4 channel</string>
-    <string name="settings_sound_channels_cloned_stereo_6ch">Cloned stereo 6 channel</string>
-    <string name="settings_sound_channels_6ch">6 channel</string>
-    <string name="settings_sound_channels_cloned_stereo_8ch">Cloned stereo 8 channel</string>
-    <string name="settings_sound_channels_8ch">8 channel</string>
-    <string name="settings_sound_channels_mixed" formatted="false">Mixed (75% stereo)</string>
+    <string name="settings_sound_buffer_option">%1$s (%2$d ms)</string>
 
     <string name="settings_input_port_assignments_title">Port Assignments</string>
-    <string name="settings_input_port0_label">Port 1 (Mouse Port)</string>
-    <string name="settings_input_port1_label">Port 2 (Joystick Port)</string>
     <string name="settings_input_on_screen_controls_title">On-Screen Controls</string>
-    <string name="settings_input_on_screen_joystick">On-Screen Joystick</string>
-    <string name="settings_input_on_screen_keyboard_button">On-Screen Keyboard Button</string>
-    <string name="settings_input_on_screen_keyboard_button_summary">KB button on the on-screen joystick. The toggle button below opens the keyboard either way.</string>
-    <string name="settings_input_on_screen_keyboard_numpad">Include Numeric Keypad</string>
-    <string name="settings_input_on_screen_keyboard_numpad_summary">Fits the full Amiga keyboard on screen using smaller keys.</string>
     <string name="settings_input_on_screen_keyboard_toggle">On-Screen Keyboard Toggle Button</string>
     <string name="settings_input_on_screen_keyboard_toggle_hint">Gamepad button that shows or hides the on-screen keyboard. Back always hides it.</string>
-    <string name="settings_input_analog_mouse_map">Left Analog Stick as Mouse</string>
-    <string name="settings_input_analog_mouse_map_summary">Left stick moves the mouse pointer; L/R shoulder buttons act as the left/right mouse buttons. Other controls stay as the port joystick.</string>
-    <string name="settings_input_analog_mouse_speed">Analog mouse speed</string>
-    <string name="settings_input_analog_mouse_speed_summary">Pointer speed when the left stick moves the mouse. Lower is slower.</string>
     <string name="settings_input_device_mouse">Mouse</string>
-    <string name="settings_input_device_joystick_0">Joystick 0</string>
-    <string name="settings_input_device_joystick_1">Joystick 1</string>
+    <string name="settings_input_device_joystick_0">Controller 1</string>
+    <string name="settings_input_device_joystick_1">Controller 2</string>
     <string name="settings_input_device_on_screen_joystick">On-Screen Joystick</string>
-    <string name="settings_input_device_keyboard_layout_1">Keyboard Layout A</string>
-    <string name="settings_input_device_keyboard_layout_2">Keyboard Layout B</string>
-    <string name="settings_input_device_keyboard_layout_3">Keyboard Layout C</string>
-    <string name="settings_input_device_keyboard_layout_4">Keyboard Layout D</string>
+    <string name="settings_input_device_keyboard_layout_1">Keyboard Layout A (Numpad, 0/5=Fire, Decimal/DEL=2nd Fire)</string>
+    <string name="settings_input_device_keyboard_layout_2">Keyboard Layout B (Cursor, RCtrl/RAlt=Fire, RShift=2nd Fire)</string>
+    <string name="settings_input_device_keyboard_layout_3">Keyboard Layout C (WSAD, LAlt=Fire, LShift=2nd Fire)</string>
+    <string name="settings_input_device_keyboard_layout_4">Keyboard Layout D (Cursor, LCtrl/LAlt=Fire, LShift=2nd Fire)</string>
 
     <string name="settings_storage_kickstart_rom_title">Kickstart ROM</string>
+    <!-- Empty kickstart_rom_file: the launcher picks the model's Kickstart, or AROS when none is installed. -->
+    <string name="settings_storage_rom_automatic">Automatic</string>
     <string name="settings_storage_no_roms_found">No ROMs found. Import via the Files tab.</string>
-    <string name="settings_storage_rom_file_label">ROM File</string>
     <string name="settings_storage_floppy_drives_title">Floppy Drives</string>
     <string name="settings_storage_drive_df0">DF0</string>
     <string name="settings_storage_drive_df1">DF1</string>
@@ -338,11 +259,6 @@
     <string name="settings_storage_drive_df3">DF3</string>
     <string name="settings_storage_cd_image_title">CD Image</string>
     <string name="settings_storage_no_cd_images_found">No CD images found. Import via the Files tab.</string>
-    <string name="settings_storage_cd_image_label">CD Image</string>
-    <string name="settings_storage_drive_type_dd">3.5" DD</string>
-    <string name="settings_storage_drive_type_hd">3.5" HD</string>
-    <string name="settings_storage_drive_type_unknown">Unknown</string>
-    <string name="settings_storage_type_label">Type</string>
     <string name="settings_storage_disk_label">Disk</string>
     <string name="settings_storage_import_disk_image">Import disk image...</string>
     <string name="settings_storage_hard_drives_title">Hard Drives</string>
@@ -373,7 +289,7 @@
     <string name="about_credits_body">Created by Dimitris Panokostas (MiDWaN)\n\nBased on WinUAE by Toni Wilen, and earlier work by Bernd Schmidt and the UAE team.\n\nUses SDL, Dear ImGui, and other open-source libraries.</string>
 
     <string name="welcome_title">Welcome to Amiberry</string>
-    <string name="welcome_message">Amiberry is an Amiga emulator. To get started, you\'ll need a Kickstart ROM file — this is the Amiga\'s operating system firmware. Import one from the Files tab, then choose an Amiga model and insert a floppy or CD image to start emulating.</string>
+    <string name="welcome_message">Amiberry is an Amiga emulator. Models whose Kickstart ROM (the Amiga\'s operating system firmware) is not installed boot the free AROS ROM instead; for the best compatibility, import a Kickstart from the Files tab. Then choose an Amiga model and insert a floppy or CD image to start emulating.</string>
     <string name="welcome_help_link">Learn more</string>
     <string name="welcome_dismiss">Got it</string>
 
@@ -399,4 +315,74 @@
     <string name="storage_permission_banner_message">Amiberry can only access files in its own app folder. To use ROM and disk image files from other locations, grant All Files Access.</string>
     <string name="storage_permission_banner_action">Grant Access</string>
     <string name="msg_storage_permission_settings_failed">Could not open storage permission settings</string>
+
+    <!-- Library: configuration rename/duplicate/delete, Recent launches, unsaved changes on Start -->
+    <string name="action_rename">Rename…</string>
+    <string name="action_rename_confirm">Rename</string>
+    <string name="action_show_actions">Show actions</string>
+    <string name="dialog_rename_config_title">Rename Configuration</string>
+    <string name="dialog_duplicate_config_title">Duplicate Configuration</string>
+    <string name="label_config_name">Name</string>
+    <string name="config_name_problem_empty">Enter a name for the configuration.</string>
+    <string name="config_name_problem_invalid">A name cannot contain /, \\ or :, or start with a dot.</string>
+    <string name="config_name_problem_taken">A configuration named “%1$s” already exists. Choose another name.</string>
+    <string name="msg_config_renamed_as">Renamed to “%1$s”</string>
+    <string name="msg_failed_rename_config">Failed to rename configuration</string>
+    <string name="msg_config_deleted_named">Deleted “%1$s”</string>
+    <string name="msg_config_deleted_was_open">Deleted “%1$s”. Settings keeps its values as an unnamed configuration.</string>
+    <string name="dialog_delete_config_open_note">It is open in Settings, which will keep its values as an unnamed configuration.</string>
+    <string name="recent_type_quick_start">Quick Start</string>
+    <string name="recent_type_configuration">Configuration</string>
+    <string name="recent_type_whdload">WHDLoad</string>
+    <string name="recent_type_rp9">RP9 package</string>
+    <string name="recent_type_unknown">Unknown</string>
+    <string name="recent_entry_summary">%1$s · %2$s</string>
+    <string name="recent_status_missing">No longer available: a file it uses is gone.</string>
+    <string name="recent_status_model_unavailable">Needs a Kickstart ROM that is not installed.</string>
+    <string name="action_remove_from_recent">Remove from Recent</string>
+    <string name="action_clear_recent">Clear Recent</string>
+    <string name="action_clear">Clear</string>
+    <string name="dialog_clear_recent_title">Clear Recent?</string>
+    <string name="dialog_clear_recent_message">Remove every item from Recent? The files themselves are kept.</string>
+    <string name="dialog_unsaved_changes_start_message">Save your changes to “%1$s” before starting?</string>
+    <string name="action_dont_save">Don’t Save</string>
+
+    <!-- Rules: Kickstart ROMs and the built-in AROS fallback -->
+    <string name="rom_aros_builtin">AROS (built-in)</string>
+    <string name="rom_aros_ext_builtin">AROS extension (built-in)</string>
+    <string name="quick_start_aros_notice">The Kickstart ROM this model needs is not installed: it boots the free AROS ROM instead.</string>
+    <string name="quick_start_model_boots_aros">Kickstart not installed: boots AROS</string>
+    <string name="quick_start_summary_rom">Kickstart</string>
+    <string name="file_manager_rom_file_detail">%1$s · %2$s</string>
+
+    <!-- SchemaUI: settings rows, launcher-defined choice labels and the review-changes dialog -->
+    <string name="settings_value_on">On</string>
+    <string name="settings_value_off">Off</string>
+    <string name="settings_value_range">Enter a value from %1$s to %2$s.</string>
+    <string name="settings_label_value">%1$s: %2$s</string>
+    <string name="settings_cpu_jit_section_title">JIT compiler</string>
+    <string name="settings_sound_volume_title">Volume</string>
+    <string name="settings_sound_drive_sounds_title">Drive sounds</string>
+    <string name="settings_input_needs_on_screen_joystick">Needs the on-screen joystick.</string>
+    <string name="settings_osk_toggle_default">Emulator default</string>
+    <string name="settings_osk_toggle_leftstick">Left stick (L3)</string>
+    <string name="settings_osk_toggle_rightstick">Right stick (R3)</string>
+    <string name="settings_osk_toggle_back">Back / Select</string>
+    <string name="settings_osk_toggle_start">Start</string>
+    <string name="settings_osk_toggle_guide">Guide</string>
+    <string name="settings_osk_toggle_leftshoulder">L1</string>
+    <string name="settings_osk_toggle_rightshoulder">R1</string>
+    <string name="settings_osk_toggle_misc1">Misc 1</string>
+    <string name="settings_osk_toggle_none">None (disabled)</string>
+    <string name="settings_shader_none">None</string>
+    <string name="settings_shader_tv">TV (built-in)</string>
+    <string name="settings_shader_pc">PC monitor (built-in)</string>
+    <string name="settings_shader_lite">Lite (built-in)</string>
+    <string name="settings_shader_1084">Commodore 1084 (built-in)</string>
+    <string name="settings_change_model_configuration">Model configuration</string>
+    <string name="settings_change_resolution_value">%1$d × %2$d px</string>
+    <string name="settings_change_hard_drive_read_only">Hard drive %1$d read-only</string>
+    <string name="settings_change_hard_drive_boot_priority">Hard drive %1$d boot priority</string>
+    <string name="settings_adjustment_option">%1$s changed.</string>
+    <string name="settings_adjustment_option_reason">%1$s changed: %2$s</string>
 </resources>

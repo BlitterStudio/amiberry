@@ -80,6 +80,7 @@ import com.blitterstudio.amiberry.data.model.EmulatorSettings
 import com.blitterstudio.amiberry.data.model.FileCategory
 import com.blitterstudio.amiberry.data.model.ModelRomAvailability
 import com.blitterstudio.amiberry.data.model.RomReadinessDiagnostics
+import com.blitterstudio.amiberry.data.model.RomIdentity
 import com.blitterstudio.amiberry.ui.dpadVerticalMovesFocus
 import com.blitterstudio.amiberry.ui.dpadFocusIndicator
 import com.blitterstudio.amiberry.ui.findActivity
@@ -139,6 +140,11 @@ fun QuickStartScreen(
 	val hasRoms = roms.isNotEmpty()
 	val availableModels = remember(roms) { ModelRomAvailability.availableModels(roms) }
 	val romDiagnostics = remember(roms) { RomReadinessDiagnostics.from(roms) }
+	// Models whose Kickstart is not installed: they boot the built-in AROS ROM.
+	val arosModels = remember(roms, availableModels) {
+		availableModels.filterTo(mutableSetOf()) { !ModelRomAvailability.hasKickstart(it, roms) }
+	}
+	val selectedModelRoms = remember(roms, model) { ModelRomAvailability.selectRomsForModel(model, roms) }
 	val selectedModelAvailable = model in availableModels
 	val modeAvailableModels = remember(availableModels, selectedLaunchMode) {
 		when (selectedLaunchMode) {
@@ -159,11 +165,8 @@ fun QuickStartScreen(
 	val recentFileExists: (String) -> Boolean = remember {
 		{ path -> File(path).exists() }
 	}
-	val recentLaunches = remember(allRecent, availableModels) {
-		RecentLaunches.available(allRecent, availableModels, recentFileExists)
-	}
-	val storedRecentLaunches = remember(allRecent) {
-		RecentLaunches.pruneMissingFiles(allRecent, recentFileExists)
+	val recentItems = remember(allRecent, availableModels) {
+		RecentLaunches.items(allRecent, availableModels, recentFileExists)
 	}
 	val hasSeenWelcome by appPreferences.hasSeenWelcome
 	val quickStartModeFocusRequester = remember { FocusRequester() }
@@ -200,7 +203,8 @@ fun QuickStartScreen(
 		} else {
 			availableModels
 		}
-		val firstAvailableModel = selectableModels.firstOrNull()
+		// A model with its own Kickstart comes before one that would boot AROS.
+		val firstAvailableModel = selectableModels.firstOrNull { it !in arosModels } ?: selectableModels.firstOrNull()
 		if (firstAvailableModel != null && model !in selectableModels) {
 			settingsViewModel.applyModel(firstAvailableModel)
 		}
@@ -560,10 +564,15 @@ fun QuickStartScreen(
 				}
 			}
 
-			LaunchedEffect(allRecent, storedRecentLaunches) {
-				if (!RecentLaunches.sameEntries(allRecent, storedRecentLaunches)) {
-					appPreferences.replaceRecentLaunches(storedRecentLaunches)
-				}
+			if (selectedModelRoms.aros && selectedLaunchMode != QuickStartLaunchMode.RECENT) {
+				ArosFallbackNotice(
+					importInProgress = importInProgress,
+					onImportRom = {
+						if (!importInProgress) {
+							romPickerLauncher.launch(FilePickerFilters.mimeTypesFor(FileCategory.ROMS))
+						}
+					}
+				)
 			}
 
 			QuickStartModeSelector(
@@ -599,6 +608,7 @@ fun QuickStartScreen(
 						model = model,
 						availableModels = modeAvailableModels,
 						selectedModelAvailable = selectedModeModelAvailable,
+						arosModels = arosModels,
 						onModelSelected = settingsViewModel::applyModel
 					)
 					if (selectedModeModelAvailable && model.hasFloppy) {
@@ -653,6 +663,7 @@ fun QuickStartScreen(
 						model = model,
 						availableModels = modeAvailableModels,
 						selectedModelAvailable = selectedModeModelAvailable,
+						arosModels = arosModels,
 						onModelSelected = settingsViewModel::applyModel
 					)
 					if (selectedModeModelAvailable && model.hasCd) {
@@ -679,126 +690,95 @@ fun QuickStartScreen(
 					}
 				}
 				QuickStartLaunchMode.RECENT -> {
-					OutlinedCard(modifier = Modifier.fillMaxWidth()) {
-						Column(modifier = Modifier.padding(16.dp)) {
-							Row(verticalAlignment = Alignment.CenterVertically) {
-								Icon(Icons.Default.History, contentDescription = null, modifier = Modifier.size(20.dp))
-								Spacer(modifier = Modifier.width(8.dp))
-								Text(stringResource(R.string.quick_start_recent_title), style = MaterialTheme.typography.titleMedium)
-							}
-							Spacer(modifier = Modifier.height(8.dp))
-							if (recentLaunches.isEmpty()) {
-								Text(
-									stringResource(R.string.quick_start_recent_empty),
-									style = MaterialTheme.typography.bodyMedium,
-									color = MaterialTheme.colorScheme.onSurfaceVariant
-								)
-							} else {
-								recentLaunches.take(5).forEach { entry ->
-									val details = RecentLaunches.details(entry)
-									TextButton(
-										onClick = {
-											when (entry.optString("type")) {
-												"config" -> {
-													val configPath = entry.optString("path")
-													val controlSettings = settingsViewModel.settings
-													scope.launchGuarded(launchGuard) {
-														EmulatorLauncher.launchWithConfig(
-															context,
-															configPath,
-															controlSettings = controlSettings
-														)
-													}
-												}
-												"whdload" -> {
-													val whdloadPath = entry.optString("path")
-													val controlSettings = settingsViewModel.settings
-													scope.launchGuarded(launchGuard) {
-														val prepared = try {
-															withContext(Dispatchers.IO) {
-																AndroidLaunchConfig.prepareWhdLoad(context, whdloadPath, controlSettings)
-															}
-														} catch (_: Exception) {
-															snackbarHostState.showSnackbar(configWriteFailedMessage)
-															return@launchGuarded
-														}
-														EmulatorLauncher.launchWhdload(
-															context = context,
-															lhaPath = whdloadPath,
-															configPath = prepared.configFile.absolutePath,
-															shaderOverride = prepared.shaderOverride
-														)
-													}
-												}
-												"rp9" -> {
-													val rp9Path = entry.optString("path")
-													val controlSettings = settingsViewModel.settings
-													scope.launchGuarded(launchGuard) {
-														EmulatorLauncher.launchRp9(context, rp9Path, controlSettings)
-													}
-												}
-												"quickstart" -> {
-													val model = AmigaModel.find(entry.optString("model")) ?: AmigaModel.A500
-													if (model in availableModels) {
-														val recentFloppy0 = entry.optString("df0")
-														val recentFloppy1 = entry.optString("df1")
-														val recentCd = entry.optString("cd")
-														val currentSettings = settingsViewModel.settings
-														scope.launchGuarded(launchGuard) {
-															val (configFile, presetConfig) = try {
-																withContext(Dispatchers.IO) {
-																	val settingsSnapshot = buildRecentQuickStartSettingsSnapshot(
-																		model = model,
-																		roms = roms,
-																		currentSettings = currentSettings,
-																		floppy0 = recentFloppy0,
-																		floppy1 = recentFloppy1,
-																		cdImage = recentCd
-																	)
-																	settingsViewModel.writeSettingsConfig(settingsSnapshot, AndroidLaunchConfig.QUICKSTART_CONFIG) to
-																		settingsSnapshot.baseConfig
-																}
-															} catch (_: Exception) {
-																snackbarHostState.showSnackbar(configWriteFailedMessage)
-																return@launchGuarded
-															}
-															EmulatorLauncher.launchQuickStart(
-																context,
-																model,
-																presetConfig = presetConfig,
-																floppyPath = recentFloppy0.takeIf { it.isNotBlank() },
-																floppy1Path = recentFloppy1.takeIf { it.isNotBlank() },
-																cdPath = recentCd.takeIf { it.isNotBlank() },
-																configPath = configFile.absolutePath
-															)
-														}
-													} else {
-														scope.launch {
-															snackbarHostState.showSnackbar(noCompatibleModelMessage)
-														}
-													}
-												}
+					QuickStartRecentSection(
+						items = recentItems,
+						launchInProgress = launchInProgress,
+						onLaunch = { entry ->
+							when (entry.optString("type")) {
+								"config" -> {
+									val configPath = entry.optString("path")
+									val controlSettings = settingsViewModel.settings
+									scope.launchGuarded(launchGuard) {
+										EmulatorLauncher.launchWithConfig(
+											context,
+											configPath,
+											controlSettings = controlSettings
+										)
+									}
+								}
+								"whdload" -> {
+									val whdloadPath = entry.optString("path")
+									val controlSettings = settingsViewModel.settings
+									scope.launchGuarded(launchGuard) {
+										val prepared = try {
+											withContext(Dispatchers.IO) {
+												AndroidLaunchConfig.prepareWhdLoad(context, whdloadPath, controlSettings)
 											}
-										},
-										enabled = !launchInProgress,
-										modifier = Modifier.fillMaxWidth().dpadFocusIndicator()
-									) {
-										Column(
-											modifier = Modifier.fillMaxWidth(),
-											horizontalAlignment = Alignment.Start
-										) {
-											Text(details.title, style = MaterialTheme.typography.titleSmall)
-											Text(
-												"${details.typeLabel} - ${details.detail}",
-												style = MaterialTheme.typography.bodySmall,
-												color = MaterialTheme.colorScheme.onSurfaceVariant
+										} catch (_: Exception) {
+											snackbarHostState.showSnackbar(configWriteFailedMessage)
+											return@launchGuarded
+										}
+										EmulatorLauncher.launchWhdload(
+											context = context,
+											lhaPath = whdloadPath,
+											configPath = prepared.configFile.absolutePath,
+											shaderOverride = prepared.shaderOverride
+										)
+									}
+								}
+								"rp9" -> {
+									val rp9Path = entry.optString("path")
+									val controlSettings = settingsViewModel.settings
+									scope.launchGuarded(launchGuard) {
+										EmulatorLauncher.launchRp9(context, rp9Path, controlSettings)
+									}
+								}
+								"quickstart" -> {
+									val model = AmigaModel.find(entry.optString("model")) ?: AmigaModel.A500
+									if (model in availableModels) {
+										val recentFloppy0 = entry.optString("df0")
+										val recentFloppy1 = entry.optString("df1")
+										val recentCd = entry.optString("cd")
+										val currentSettings = settingsViewModel.settings
+										scope.launchGuarded(launchGuard) {
+											val (configFile, presetConfig) = try {
+												withContext(Dispatchers.IO) {
+													val settingsSnapshot = buildRecentQuickStartSettingsSnapshot(
+														model = model,
+														roms = roms,
+														currentSettings = currentSettings,
+														floppy0 = recentFloppy0,
+														floppy1 = recentFloppy1,
+														cdImage = recentCd
+													)
+													settingsViewModel.writeSettingsConfig(settingsSnapshot, AndroidLaunchConfig.QUICKSTART_CONFIG) to
+														settingsSnapshot.baseConfig
+												}
+											} catch (_: Exception) {
+												snackbarHostState.showSnackbar(configWriteFailedMessage)
+												return@launchGuarded
+											}
+											EmulatorLauncher.launchQuickStart(
+												context,
+												model,
+												presetConfig = presetConfig,
+												floppyPath = recentFloppy0.takeIf { it.isNotBlank() },
+												floppy1Path = recentFloppy1.takeIf { it.isNotBlank() },
+												cdPath = recentCd.takeIf { it.isNotBlank() },
+												configPath = configFile.absolutePath
 											)
+										}
+									} else {
+										scope.launch {
+											snackbarHostState.showSnackbar(noCompatibleModelMessage)
 										}
 									}
 								}
 							}
-						}
-					}
+						},
+						onRemove = { entry -> appPreferences.removeRecentLaunch(entry) },
+						onClear = { appPreferences.clearRecentLaunches() }
+					)
 				}
 			}
 
@@ -813,7 +793,15 @@ fun QuickStartScreen(
 					} else {
 						selectedModelAvailable
 					},
-					selectedWhdloadName = selectedWhdloadGame?.name
+					selectedWhdloadName = selectedWhdloadGame?.name,
+					// A Quick Start launch boots the selected model's ROMs; a WHDLoad
+					// launch the auto-configured settings' ROM.
+					romFile = if (selectedLaunchMode == QuickStartLaunchMode.WHDLOAD) {
+						settingsViewModel.settings.romFile
+					} else {
+						selectedModelRoms.romFile
+					},
+					roms = roms
 				)
 			)
 
@@ -968,6 +956,8 @@ private fun ModelSelectorCard(
 	model: AmigaModel,
 	availableModels: List<AmigaModel>,
 	selectedModelAvailable: Boolean,
+	/** Available models whose Kickstart is not installed, which boot AROS. */
+	arosModels: Set<AmigaModel>,
 	onModelSelected: (AmigaModel) -> Unit
 ) {
 	OutlinedCard(modifier = Modifier.fillMaxWidth()) {
@@ -1018,6 +1008,13 @@ private fun ModelSelectorCard(
 										style = MaterialTheme.typography.bodySmall,
 										color = MaterialTheme.colorScheme.onSurfaceVariant
 									)
+									if (availableModel in arosModels) {
+										Text(
+											stringResource(R.string.quick_start_model_boots_aros),
+											style = MaterialTheme.typography.bodySmall,
+											color = MaterialTheme.colorScheme.onSurfaceVariant
+										)
+									}
 								}
 							},
 							onClick = {
@@ -1052,10 +1049,59 @@ private fun EffectiveSummaryCard(summary: QuickStartEffectiveSummary) {
 			)
 			SummaryRow(stringResource(R.string.quick_start_summary_model), summary.model)
 			SummaryRow(stringResource(R.string.quick_start_summary_cpu), summary.cpu)
+			summary.rom?.let { rom ->
+				SummaryRow(
+					stringResource(R.string.quick_start_summary_rom),
+					when (rom) {
+						is RomIdentity.Kickstart -> rom.name
+						RomIdentity.BuiltInAros -> stringResource(R.string.rom_aros_builtin)
+						RomIdentity.Unknown -> summary.romFileName
+					}
+				)
+			}
 			SummaryRow(stringResource(R.string.quick_start_summary_chipset), summary.chipset)
 			SummaryRow(stringResource(R.string.quick_start_summary_memory), summary.memory)
 			SummaryRow(stringResource(R.string.quick_start_summary_media), summary.media)
 			SummaryRow(stringResource(R.string.quick_start_summary_controls), summary.controls)
+		}
+	}
+}
+
+/**
+ * The selected model's Kickstart is not installed, so it boots the free
+ * AROS ROM; importing the Kickstart makes it boot its own.
+ */
+@Composable
+private fun ArosFallbackNotice(importInProgress: Boolean, onImportRom: () -> Unit) {
+	Card(
+		modifier = Modifier.fillMaxWidth(),
+		colors = CardDefaults.cardColors(
+			containerColor = MaterialTheme.colorScheme.secondaryContainer
+		)
+	) {
+		Column(modifier = Modifier.padding(16.dp)) {
+			Row(verticalAlignment = Alignment.CenterVertically) {
+				Icon(
+					Icons.Default.Info,
+					contentDescription = null,
+					modifier = Modifier.size(24.dp),
+					tint = MaterialTheme.colorScheme.onSecondaryContainer
+				)
+				Spacer(modifier = Modifier.width(8.dp))
+				Text(
+					stringResource(R.string.quick_start_aros_notice),
+					style = MaterialTheme.typography.bodyMedium,
+					color = MaterialTheme.colorScheme.onSecondaryContainer
+				)
+			}
+			Spacer(modifier = Modifier.height(12.dp))
+			Button(
+				onClick = onImportRom,
+				enabled = !importInProgress,
+				modifier = Modifier.dpadFocusIndicator()
+			) {
+				Text(stringResource(if (importInProgress) R.string.action_importing else R.string.action_import_rom))
+			}
 		}
 	}
 }

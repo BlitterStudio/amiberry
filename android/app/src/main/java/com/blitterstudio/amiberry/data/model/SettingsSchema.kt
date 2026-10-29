@@ -44,6 +44,13 @@ class SettingsSchema(
 
 	data class Choice(val value: String, val label: String)
 
+	/**
+	 * One option of the settings layer, as people should see it: the
+	 * layer's [label] and [help] (shown under the control), the [constraint]
+	 * saying why it may be unavailable, and for numbers how the stored value
+	 * reads ([reversed], [scale], [unit]). Stored values keep their .uae
+	 * spelling throughout.
+	 */
 	data class Option(
 		val id: String,
 		val type: String,
@@ -51,8 +58,123 @@ class SettingsSchema(
 		val default: String,
 		val min: Double?,
 		val max: Double?,
-		val choices: List<Choice>
-	)
+		val choices: List<Choice>,
+		val label: String = id,
+		val help: String = "",
+		val constraint: String? = null,
+		val step: Double? = null,
+		val unit: String? = null,
+		val scale: Double = 1.0,
+		val reversed: Boolean = false
+	) {
+		/** The layer's label of a choice value; null when [value] is not one of [choices]. */
+		fun choiceLabel(value: String): String? = choices.firstOrNull { it.value == value }?.label
+
+		/**
+		 * The number a person sees for a stored one: a reversed option's
+		 * range turned around (attenuation 0 reads as 100% volume), then
+		 * divided by the scale.
+		 */
+		fun shown(stored: Double): Double {
+			var number = stored
+			if (reversed && min != null && max != null) number = min + max - number
+			return number / scale
+		}
+
+		/**
+		 * The stored number for a shown one: [shown] undone, rounded to the
+		 * step counted from the bottom of the range and, for an integer, to
+		 * a whole number.
+		 */
+		fun stored(shown: Double): Double {
+			var number = shown * scale
+			if (reversed && min != null && max != null) number = min + max - number
+			val step = step
+			if (step != null && step > 0) {
+				val origin = min ?: 0.0
+				number = origin + Math.round((number - origin) / step) * step
+			}
+			return if (type == TYPE_INT) Math.round(number).toDouble() else number
+		}
+
+		/** The range of stored numbers as the numbers shown (low to high). */
+		val shownRange: ClosedFloatingPointRange<Double>?
+			get() {
+				val low = min ?: return null
+				val high = max ?: return null
+				val a = shown(low)
+				val b = shown(high)
+				return minOf(a, b)..maxOf(a, b)
+			}
+
+		/** The step of the shown number: the option's step (1 for none) over the scale. */
+		val shownStep: Double
+			get() = maxOf((step?.takeIf { it > 0 } ?: 1.0) / scale, 0.0001)
+
+		/** A shown number as text, to the decimals of the shown step ("12.5" for a step of 0.1). */
+		fun shownText(shown: Double): String {
+			val free = type == TYPE_REAL && (step ?: 0.0) <= 0
+			return plainNumber(shown, if (free) null else decimalsOf(shownStep))
+		}
+
+		/** A number with the unit after it: "80%", "720 px", "4096 KB". */
+		fun withUnit(text: String): String {
+			val unit = unit?.takeIf { it.isNotEmpty() } ?: return text
+			return if (unit == "%") text + unit else "$text $unit"
+		}
+
+		/** A stored number as it reads with its unit ("80%" for attenuation 20); other text as it is. */
+		fun numberText(stored: String): String =
+			stored.toDoubleOrNull()?.let { withUnit(shownText(shown(it))) } ?: stored
+
+		/**
+		 * Whether the option is an on/off switch stored as "1" and "0": an
+		 * integer from 0 to 1, or exactly two choices "0" then "1" whose
+		 * first is named as off ("Disabled", "Off", "No", "None").
+		 */
+		val isSwitch: Boolean
+			get() = when (type) {
+				TYPE_INT -> min == 0.0 && max == 1.0
+				TYPE_CHOICE -> choices.map { it.value } == listOf("0", "1") &&
+					choices[0].label.lowercase() in OFF_LABELS
+				else -> false
+			}
+
+		/**
+		 * Whether [value] shows as a switch: the option is one ([isSwitch], or
+		 * a bool) and the value is one of its two states. Any other stored
+		 * value (a hand-edited threshold) keeps the option's own control.
+		 */
+		fun showsAsSwitch(value: String): Boolean = when {
+			type == TYPE_BOOL -> value == "true" || value == "false"
+			isSwitch -> value == "0" || value == "1"
+			else -> false
+		}
+
+		/**
+		 * A stored value as the controls show it: [on] or [off] for a switch
+		 * or bool, a choice's label, a number in its unit; other text as it is.
+		 */
+		fun valueText(value: String, on: String, off: String): String = when {
+			type == TYPE_BOOL && (value == "true" || value == "false") -> if (value == "true") on else off
+			showsAsSwitch(value) -> if (value == "1") on else off
+			type == TYPE_CHOICE -> choiceLabel(value) ?: value
+			type == TYPE_INT || type == TYPE_REAL -> numberText(value)
+			else -> value
+		}
+	}
+
+	/** The option [id] describes; null when the schema does not list it. */
+	fun option(id: String): Option? = options[id]
+
+	/** The layer's label of [id]; null when the schema does not list it. */
+	fun label(id: String): String? = options[id]?.label
+
+	/** Why [id] may be unavailable, as the layer words it; null when it always is. */
+	fun constraint(id: String): String? = options[id]?.constraint?.takeIf { it.isNotBlank() }
+
+	/** The layer's label of the choice [value] of [id]; null when it is not one. */
+	fun choiceLabel(id: String, value: String): String? = options[id]?.choiceLabel(value)
 
 	/**
 	 * One configuration of a preset. [romSets] are the ways it can be built:
@@ -70,6 +192,34 @@ class SettingsSchema(
 	companion object {
 		const val ASSET = "settings_schema.json"
 		private val ARCADE_PRESETS = setOf("alg", "arcadia")
+
+		const val TYPE_BOOL = "bool"
+		const val TYPE_INT = "int"
+		const val TYPE_REAL = "real"
+		const val TYPE_CHOICE = "choice"
+
+		/** The labels that make a first choice of "0" read as off (see [Option.isSwitch]). */
+		private val OFF_LABELS = setOf("disabled", "off", "no", "none")
+
+		/** The decimals a step needs: 0 for 1, 1 for 0.5, 2 for 0.01. */
+		internal fun decimalsOf(step: Double): Int {
+			var digits = 0
+			var value = kotlin.math.abs(step)
+			while (digits < 6 && kotlin.math.abs(value - Math.rint(value)) > 1e-9) {
+				value *= 10
+				digits++
+			}
+			return digits
+		}
+
+		/** [number] without trailing zeros, rounded to [decimals] when given. */
+		internal fun plainNumber(number: Double, decimals: Int?): String {
+			var value = java.math.BigDecimal.valueOf(number)
+			if (decimals != null) value = value.setScale(decimals, java.math.RoundingMode.HALF_UP)
+			value = value.stripTrailingZeros()
+			if (value.signum() == 0) return "0"
+			return value.toPlainString()
+		}
 
 		@Volatile
 		private var loaded: SettingsSchema? = null
@@ -113,14 +263,24 @@ class SettingsSchema(
 						Choice(choice.getString("value"), choice.getString("label"))
 					}
 				} ?: emptyList()
+				fun text(key: String): String? = if (o.has(key) && !o.isNull(key)) o.getString(key) else null
+				fun number(key: String): Double? = if (o.has(key) && !o.isNull(key)) o.getDouble(key) else null
+				val id = o.getString("id")
 				val option = Option(
-					id = o.getString("id"),
+					id = id,
 					type = o.getString("type"),
 					apply = o.getString("apply"),
 					default = o.getString("default"),
-					min = if (o.has("min")) o.getDouble("min") else null,
-					max = if (o.has("max")) o.getDouble("max") else null,
-					choices = choices
+					min = number("min"),
+					max = number("max"),
+					choices = choices,
+					label = text("label")?.takeIf { it.isNotBlank() } ?: id,
+					help = text("help").orEmpty(),
+					constraint = text("constraint")?.takeIf { it.isNotBlank() },
+					step = number("step"),
+					unit = text("unit")?.takeIf { it.isNotBlank() },
+					scale = number("scale")?.takeIf { it != 0.0 } ?: 1.0,
+					reversed = o.optBoolean("reversed", false)
 				)
 				options[option.id] = option
 			}

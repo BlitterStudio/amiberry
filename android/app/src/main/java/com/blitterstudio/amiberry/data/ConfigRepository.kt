@@ -138,11 +138,11 @@ class ConfigRepository(private val context: Context) {
 		return ConfigFiles.deleteConfig(confDir, path)
 	}
 
-	fun renameConfig(path: String, newName: String): File? {
+	fun renameConfig(path: String, newName: String): ConfigFiles.EditResult {
 		return ConfigFiles.renameConfig(confDir, path, newName)
 	}
 
-	fun duplicateConfig(path: String, newName: String): File? {
+	fun duplicateConfig(path: String, newName: String): ConfigFiles.EditResult {
 		return ConfigFiles.duplicateConfig(confDir, path, newName)
 	}
 

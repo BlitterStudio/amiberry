@@ -11,7 +11,9 @@ data class RomReadinessDiagnostics(
 	val scannedRomCount: Int,
 	val recognizedRomCount: Int,
 	val unknownRomCount: Int,
+	/** The models that can start, with their Kickstart or on AROS. */
 	val availableModels: List<AmigaModel>,
+	/** Common models whose Kickstart is not installed (they may still boot AROS). */
 	val missingCommonModels: List<AmigaModel>
 ) {
 	companion object {
@@ -24,7 +26,9 @@ data class RomReadinessDiagnostics(
 
 		fun from(roms: List<AmigaFile>): RomReadinessDiagnostics {
 			val availableModels = ModelRomAvailability.availableModels(roms)
-			val recognizedRomCount = roms.count { ModelRomAvailability.isRecognizedRom(it) }
+			val identities = roms.map { ModelRomAvailability.romIdentity(it) }
+			val recognizedRomCount = identities.count { it is RomIdentity.Kickstart }
+			val unknownRomCount = identities.count { it is RomIdentity.Unknown }
 			val status = when {
 				roms.isEmpty() -> RomReadinessStatus.NoRoms
 				availableModels.isEmpty() -> RomReadinessStatus.NoCompatibleModels
@@ -35,9 +39,9 @@ data class RomReadinessDiagnostics(
 				status = status,
 				scannedRomCount = roms.size,
 				recognizedRomCount = recognizedRomCount,
-				unknownRomCount = roms.size - recognizedRomCount,
+				unknownRomCount = unknownRomCount,
 				availableModels = availableModels,
-				missingCommonModels = COMMON_MODELS.filter { it !in availableModels }
+				missingCommonModels = COMMON_MODELS.filter { !ModelRomAvailability.hasKickstart(it, roms) }
 			)
 		}
 	}

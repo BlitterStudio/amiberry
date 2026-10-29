@@ -2,32 +2,22 @@ package com.blitterstudio.amiberry.ui.screens.settings
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuAnchorType
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedCard
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.blitterstudio.amiberry.data.model.EmulatorSettings
 import com.blitterstudio.amiberry.R
-import com.blitterstudio.amiberry.ui.dpadVerticalMovesFocus
+import com.blitterstudio.amiberry.data.model.EmulatorSettings
+import com.blitterstudio.amiberry.ui.components.settings.SchemaChoiceRow
+import com.blitterstudio.amiberry.ui.components.settings.SettingsSection
+import com.blitterstudio.amiberry.ui.components.settings.schemaLabel
+import com.blitterstudio.amiberry.ui.components.settings.schemaValueText
 import com.blitterstudio.amiberry.ui.viewmodel.SettingsViewModel
 import kotlin.math.roundToInt
 
@@ -50,24 +40,9 @@ internal fun memoryAmountDisplayValue(kb: Int): MemoryAmountDisplay {
 	}
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MemoryTab(viewModel: SettingsViewModel) {
 	val settings = viewModel.settings
-	val noneLabel = stringResource(R.string.settings_option_none)
-	// The sizes the emulator offers (settings schema), with localized labels.
-	val chipOptions = EmulatorSettings.chipRamOptions.map { it.first }.map { value ->
-		value to formatMemory(EmulatorSettings.chipRamKb(value), noneLabel)
-	}
-	val slowOptions = EmulatorSettings.slowRamOptions.map { it.first }.map { value ->
-		value to if (value == 0) noneLabel else formatMemory(value * 256, noneLabel)
-	}
-	val z2FastOptions = EmulatorSettings.fastRamOptions.map { it.first }.map { value ->
-		value to if (value == 0) noneLabel else stringResource(R.string.settings_memory_value_mb, value)
-	}
-	val z3FastOptions = EmulatorSettings.z3RamOptions.map { it.first }.map { value ->
-		value to if (value == 0) noneLabel else stringResource(R.string.settings_memory_value_mb, value)
-	}
 
 	Column(
 		modifier = Modifier
@@ -76,156 +51,60 @@ fun MemoryTab(viewModel: SettingsViewModel) {
 			.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 120.dp),
 		verticalArrangement = Arrangement.spacedBy(16.dp)
 	) {
-		OutlinedCard(modifier = Modifier.fillMaxWidth()) {
-			Column(modifier = Modifier.padding(16.dp)) {
-				Text(stringResource(R.string.settings_memory_config_title), style = MaterialTheme.typography.titleMedium)
-				Spacer(modifier = Modifier.height(12.dp))
-
-				// Chip RAM
-				MemoryDropdown(
-					label = stringResource(R.string.settings_memory_chip_ram),
-					options = chipOptions,
-					selectedValue = settings.chipRam,
-					onValueChange = { viewModel.updateSettings { s -> s.copy(chipRam = it) } }
-				)
-
-				Spacer(modifier = Modifier.height(8.dp))
-
-				// Slow RAM
-				MemoryDropdown(
-					label = stringResource(R.string.settings_memory_slow_ram),
-					options = slowOptions,
-					selectedValue = settings.slowRam,
-					onValueChange = { viewModel.updateSettings { s -> s.copy(slowRam = it) } }
-				)
-
-				Spacer(modifier = Modifier.height(8.dp))
-
-				// Fast RAM (Z2)
-				MemoryDropdown(
-					label = stringResource(R.string.settings_memory_fast_ram),
-					options = z2FastOptions,
-					selectedValue = settings.fastRam,
-					onValueChange = { viewModel.updateSettings { s -> s.copy(fastRam = it) } }
-				)
-
-				// Z3 RAM (only for 32-bit addressing)
-				if (SettingsControlAvailability.isZ3MemoryVisible(settings)) {
-					Spacer(modifier = Modifier.height(8.dp))
-
-					MemoryDropdown(
-						label = stringResource(R.string.settings_memory_z3_fast_ram),
-						options = z3FastOptions,
-						selectedValue = settings.z3Ram,
-						onValueChange = { viewModel.updateSettings { s -> s.copy(z3Ram = it) } }
-					)
-				} else {
-					Spacer(modifier = Modifier.height(8.dp))
-					SettingsControlAvailability.z3HiddenReasonRes(settings)?.let { reason ->
-						Text(
-							text = stringResource(reason),
-							style = MaterialTheme.typography.bodySmall,
-							color = MaterialTheme.colorScheme.onSurfaceVariant
-						)
-					}
-				}
-			}
+		SettingsSection(title = stringResource(R.string.settings_memory_config_title)) {
+			SchemaChoiceRow(
+				id = "chipmem_size",
+				value = settings.chipRam.toString(),
+				onSelect = { value -> value.toIntOrNull()?.let { size -> viewModel.updateSettings { s -> s.copy(chipRam = size) } } }
+			)
+			SchemaChoiceRow(
+				id = "bogomem_size",
+				value = settings.slowRam.toString(),
+				onSelect = { value -> value.toIntOrNull()?.let { size -> viewModel.updateSettings { s -> s.copy(slowRam = size) } } }
+			)
+			SchemaChoiceRow(
+				id = "fastmem_size",
+				value = settings.fastRam.toString(),
+				onSelect = { value -> value.toIntOrNull()?.let { size -> viewModel.updateSettings { s -> s.copy(fastRam = size) } } }
+			)
+			SchemaChoiceRow(
+				id = "z3mem_size",
+				value = settings.z3Ram.toString(),
+				enabled = SettingsControlAvailability.isZ3MemoryAvailable(settings),
+				onSelect = { value -> value.toIntOrNull()?.let { size -> viewModel.updateSettings { s -> s.copy(z3Ram = size) } } }
+			)
 		}
 
-		// Summary card
-		OutlinedCard(modifier = Modifier.fillMaxWidth()) {
-			Column(modifier = Modifier.padding(16.dp)) {
-				Text(stringResource(R.string.settings_memory_summary_title), style = MaterialTheme.typography.titleMedium)
-				Spacer(modifier = Modifier.height(8.dp))
-
-				val chipKB = EmulatorSettings.chipRamKb(settings.chipRam)
-				val slowKB = settings.slowRam * 256
-				val fastMB = settings.fastRam
-				val z3MB = settings.z3Ram
-
+		// Summary: each installed memory by the layer's label and size, then the total.
+		SettingsSection(title = stringResource(R.string.settings_memory_summary_title)) {
+			val chipKb = EmulatorSettings.chipRamKb(settings.chipRam)
+			val slowKb = settings.slowRam * 256
+			val summary = buildList {
+				add("chipmem_size" to settings.chipRam)
+				if (settings.slowRam > 0) add("bogomem_size" to settings.slowRam)
+				if (settings.fastRam > 0) add("fastmem_size" to settings.fastRam)
+				if (settings.z3Ram > 0) add("z3mem_size" to settings.z3Ram)
+			}
+			summary.forEach { (id, value) ->
 				Text(
-					stringResource(R.string.settings_memory_summary_chip, formatMemory(chipKB, noneLabel)),
+					stringResource(R.string.settings_label_value, schemaLabel(id), schemaValueText(id, value.toString())),
 					style = MaterialTheme.typography.bodyMedium
 				)
-				if (slowKB > 0) {
-					Text(
-						stringResource(R.string.settings_memory_summary_slow, formatMemory(slowKB, noneLabel)),
-						style = MaterialTheme.typography.bodyMedium
-					)
-				}
-				if (fastMB > 0) {
-					Text(
-						stringResource(R.string.settings_memory_summary_z2_fast, fastMB),
-						style = MaterialTheme.typography.bodyMedium
-					)
-				}
-				if (z3MB > 0) {
-					Text(
-						stringResource(R.string.settings_memory_summary_z3_fast, z3MB),
-						style = MaterialTheme.typography.bodyMedium
-					)
-				}
-
-				val totalMB = (chipKB + slowKB) / 1024.0 + fastMB + z3MB
-				Spacer(modifier = Modifier.height(4.dp))
-				Text(
-					stringResource(R.string.settings_memory_summary_total, totalMB),
-					style = MaterialTheme.typography.titleSmall,
-					color = MaterialTheme.colorScheme.primary
-				)
 			}
-		}
-	}
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun MemoryDropdown(
-	label: String,
-	options: List<Pair<Int, String>>,
-	selectedValue: Int,
-	onValueChange: (Int) -> Unit
-) {
-	var expanded by remember { mutableStateOf(false) }
-	val displayText = options.firstOrNull { it.first == selectedValue }?.second
-		?: options.firstOrNull()?.second ?: stringResource(R.string.settings_placeholder_unknown)
-
-	ExposedDropdownMenuBox(
-		expanded = expanded,
-		onExpandedChange = { expanded = it }
-	) {
-		OutlinedTextField(
-			value = displayText,
-			onValueChange = {},
-			readOnly = true,
-			label = { Text(label) },
-			trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-			modifier = Modifier
-				.dpadVerticalMovesFocus()
-				.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
-				.fillMaxWidth()
-		)
-		ExposedDropdownMenu(
-			expanded = expanded,
-			onDismissRequest = { expanded = false }
-		) {
-			options.forEach { (value, text) ->
-				DropdownMenuItem(
-					text = { Text(text) },
-					onClick = {
-						onValueChange(value)
-						expanded = false
-					}
-				)
-			}
+			val totalKb = chipKb + slowKb + (settings.fastRam + settings.z3Ram) * 1024
+			Text(
+				stringResource(R.string.settings_memory_summary_total, formatMemory(totalKb)),
+				style = MaterialTheme.typography.titleSmall,
+				color = MaterialTheme.colorScheme.primary
+			)
 		}
 	}
 }
 
 @Composable
-private fun formatMemory(kb: Int, noneLabel: String): String {
+private fun formatMemory(kb: Int): String {
 	return when (val amount = memoryAmountDisplayValue(kb)) {
-		MemoryAmountDisplay.None -> noneLabel
+		MemoryAmountDisplay.None -> stringResource(R.string.settings_option_none)
 		is MemoryAmountDisplay.Kilobytes -> stringResource(R.string.settings_memory_value_kb, amount.kb)
 		is MemoryAmountDisplay.WholeMegabytes -> stringResource(R.string.settings_memory_value_mb, amount.mb)
 		is MemoryAmountDisplay.FractionalMegabytes -> {

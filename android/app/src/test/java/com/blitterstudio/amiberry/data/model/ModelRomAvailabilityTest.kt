@@ -87,8 +87,68 @@ class ModelRomAvailabilityTest {
 	}
 
 	@Test
-	fun `an empty file is not a ROM`() {
-		assertFalse(ModelRomAvailability.isRecognizedRom(rom("empty.rom", 0L)))
+	fun `without its Kickstart a model boots the built-in AROS ROM`() {
+		val roms = listOf(rom("aros-rom.bin", 0x11111111L), rom("aros-ext.bin", 0x22222222L))
+
+		val selected = ModelRomAvailability.selectRomsForModel(AmigaModel.A1200, roms)
+
+		assertTrue(selected.aros)
+		assertTrue(selected.isBootable)
+		assertEquals(ModelRomAvailability.AROS_ROM_FILE, selected.romFile)
+		assertEquals("", selected.romExtFile)
+		assertTrue(ModelRomAvailability.isModelAvailable(AmigaModel.A500, roms))
+		assertFalse(ModelRomAvailability.hasKickstart(AmigaModel.A500, roms))
+		// The CD32 and CDTV need their own extended ROMs to play discs.
+		assertFalse(ModelRomAvailability.isModelAvailable(AmigaModel.CD32, roms))
+		assertFalse(ModelRomAvailability.isModelAvailable(AmigaModel.CDTV, roms))
+		// A board with its own boot ROM (the DraCo) needs it too.
+		assertFalse(ModelRomAvailability.isModelAvailable(AmigaModel.find("macrosystem")!!, roms))
+	}
+
+	@Test
+	fun `an installed Kickstart wins over AROS`() {
+		val roms = listOf(
+			rom("aros-rom.bin", 0x11111111L),
+			rom("aros-ext.bin", 0x22222222L),
+			rom("kick13.rom", 0xc4f0f55fL)
+		)
+
+		val selected = ModelRomAvailability.selectRomsForModel(AmigaModel.A500, roms)
+
+		assertFalse(selected.aros)
+		assertEquals("/roms/kick13.rom", selected.romFile)
+	}
+
+	@Test
+	fun `AROS needs both of its files`() {
+		val roms = listOf(rom("aros-rom.bin", 0x11111111L))
+
+		assertFalse(ModelRomAvailability.selectRomsForModel(AmigaModel.A500, roms).isBootable)
+		assertEquals("", ModelRomAvailability.selectRomsForModel(AmigaModel.A500, roms).romFile)
+	}
+
+	@Test
+	fun `ROMs are identified by the emulator's ROM table and AROS by its files`() {
+		assertEquals(
+			RomIdentity.Kickstart("KS ROM v1.3 (A500,A1000,A2000)"),
+			ModelRomAvailability.romIdentity(rom("kick13.rom", 0xc4f0f55fL))
+		)
+		assertEquals(RomIdentity.BuiltInAros, ModelRomAvailability.romIdentity(rom("aros-ext.bin", 0x22222222L)))
+		assertEquals(RomIdentity.Unknown, ModelRomAvailability.romIdentity(rom("mystery.rom", 0x12345678L)))
+	}
+
+	@Test
+	fun `the AROS extension file is told apart from the AROS ROM`() {
+		assertTrue(ModelRomAvailability.isBuiltInArosExtension(rom("AROS-EXT.BIN", 0x22222222L)))
+		assertFalse(ModelRomAvailability.isBuiltInArosExtension(rom("aros-rom.bin", 0x11111111L)))
+	}
+
+	@Test
+	fun `the AROS token is recognised in a kickstart_rom_file value`() {
+		assertTrue(ModelRomAvailability.isBuiltInArosRom(":AROS"))
+		assertTrue(ModelRomAvailability.isBuiltInArosRom("/games/a.rp9:AROS"))
+		assertFalse(ModelRomAvailability.isBuiltInArosRom("/roms/kick13.rom"))
+		assertFalse(ModelRomAvailability.isBuiltInArosRom(""))
 	}
 
 	private fun rom(name: String, crc32: Long, path: String = "/roms/$name") = AmigaFile(

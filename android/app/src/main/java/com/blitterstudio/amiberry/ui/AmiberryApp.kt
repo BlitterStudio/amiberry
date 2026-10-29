@@ -54,6 +54,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.blitterstudio.amiberry.data.ConfigurationSaveActions
 import com.blitterstudio.amiberry.ui.viewmodel.SettingsViewModel
 import kotlinx.coroutines.launch
+import androidx.compose.runtime.CompositionLocalProvider
 
 @Composable
 fun AmiberryApp() {
@@ -171,7 +172,7 @@ fun AmiberryApp() {
 	val settingsViewModel: SettingsViewModel =
 		viewModel(LocalContext.current.findActivity() as ComponentActivity)
 	val navScope = rememberCoroutineScope()
-	var pendingNavigation by remember { mutableStateOf<(() -> Unit)?>(null) }
+	var pendingGuard by remember { mutableStateOf<UnsavedChangesGuard.Pending?>(null) }
 
 	fun navigateToRoute(route: String) {
 		navController.navigate(route) {
@@ -184,10 +185,23 @@ fun AmiberryApp() {
 	val onSettingsRoute = currentDestination?.hierarchy?.any { it.route == Screen.Settings.route } == true
 
 	fun guardedNavigate(targetRoute: String, action: () -> Unit) {
-		if (targetRoute != Screen.Settings.route && onSettingsRoute && settingsViewModel.isDirty) {
-			pendingNavigation = action
+		val pending = if (targetRoute != Screen.Settings.route && onSettingsRoute) {
+			UnsavedChangesGuard.request(UnsavedChangesGuard.Trigger.Leave, settingsViewModel.isDirty, action)
 		} else {
-			action()
+			null
+		}
+		if (pending != null) pendingGuard = pending else action()
+	}
+
+	// Settings' Start asks the same question while a named configuration has unsaved edits.
+	val startGuard = remember(settingsViewModel) {
+		StartGuard { proceed ->
+			val pending = UnsavedChangesGuard.request(
+				UnsavedChangesGuard.Trigger.Start,
+				settingsViewModel.isDirty,
+				proceed
+			)
+			if (pending != null) pendingGuard = pending else proceed()
 		}
 	}
 
@@ -202,33 +216,49 @@ fun AmiberryApp() {
 	}
 
 	BackHandler(enabled = onSettingsRoute && settingsViewModel.isDirty) {
-		pendingNavigation = { activity?.moveTaskToBack(true) }
+		pendingGuard = UnsavedChangesGuard.Pending(UnsavedChangesGuard.Trigger.Leave) {
+			activity?.moveTaskToBack(true)
+		}
 	}
 
-	pendingNavigation?.let { proceed ->
+	pendingGuard?.let { pending ->
 		val configName = settingsViewModel.currentConfigName.orEmpty()
+		val starting = pending.trigger == UnsavedChangesGuard.Trigger.Start
+		fun answer(choice: UnsavedChangesGuard.Choice) {
+			val resolution = UnsavedChangesGuard.resolve(pending.trigger, choice)
+			pendingGuard = null
+			if (resolution.saveFirst) {
+				navScope.launch {
+					val result = settingsViewModel.saveTracked()
+					if (result is ConfigurationSaveActions.SaveResult.Saved) {
+						pending.proceed()
+					} else {
+						Toast.makeText(
+							context,
+							context.getString(R.string.msg_failed_save_config),
+							Toast.LENGTH_SHORT
+						).show()
+					}
+				}
+				return
+			}
+			if (resolution.discardEdits) settingsViewModel.discardChanges()
+			if (resolution.proceed) pending.proceed()
+		}
 		AlertDialog(
-			onDismissRequest = { pendingNavigation = null },
+			onDismissRequest = { answer(UnsavedChangesGuard.Choice.Cancel) },
 			title = { Text(stringResource(R.string.dialog_unsaved_changes_title)) },
-			text = { Text(stringResource(R.string.dialog_unsaved_changes_message, configName)) },
+			text = {
+				Text(
+					stringResource(
+						if (starting) R.string.dialog_unsaved_changes_start_message else R.string.dialog_unsaved_changes_message,
+						configName
+					)
+				)
+			},
 			confirmButton = {
 				TextButton(
-					onClick = {
-						navScope.launch {
-							val result = settingsViewModel.saveTracked()
-							if (result is ConfigurationSaveActions.SaveResult.Saved) {
-								pendingNavigation = null
-								proceed()
-							} else {
-								pendingNavigation = null
-								Toast.makeText(
-									context,
-									context.getString(R.string.msg_failed_save_config),
-									Toast.LENGTH_SHORT
-								).show()
-							}
-						}
-					},
+					onClick = { answer(UnsavedChangesGuard.Choice.Save) },
 					modifier = Modifier.dpadFocusIndicator()
 				) {
 					Text(stringResource(R.string.action_save))
@@ -237,17 +267,14 @@ fun AmiberryApp() {
 			dismissButton = {
 				Row {
 					TextButton(
-						onClick = {
-							settingsViewModel.discardChanges()
-							pendingNavigation = null
-							proceed()
-						},
+						onClick = { answer(UnsavedChangesGuard.Choice.DontSave) },
 						modifier = Modifier.dpadFocusIndicator()
 					) {
-						Text(stringResource(R.string.action_discard))
+						// Leaving reverts the edits; starting keeps them open, unsaved.
+						Text(stringResource(if (starting) R.string.action_dont_save else R.string.action_discard))
 					}
 					TextButton(
-						onClick = { pendingNavigation = null },
+						onClick = { answer(UnsavedChangesGuard.Choice.Cancel) },
 						modifier = Modifier.dpadFocusIndicator()
 					) {
 						Text(stringResource(R.string.action_cancel))
@@ -272,7 +299,7 @@ fun AmiberryApp() {
 				}
 			}
 			Scaffold(modifier = Modifier.weight(1f)) { innerPadding ->
-				AmiberryNavHost(navController, Modifier.padding(innerPadding))
+				AmiberryNavHost(navController, startGuard, Modifier.padding(innerPadding))
 			}
 		}
 	} else {
@@ -292,13 +319,13 @@ fun AmiberryApp() {
 				}
 			}
 		) { innerPadding ->
-			AmiberryNavHost(navController, Modifier.padding(innerPadding))
+			AmiberryNavHost(navController, startGuard, Modifier.padding(innerPadding))
 		}
 	}
 }
 
 @Composable
-private fun AmiberryNavHost(navController: NavHostController, modifier: Modifier = Modifier) {
+private fun AmiberryNavHost(navController: NavHostController, startGuard: StartGuard, modifier: Modifier = Modifier) {
 	NavHost(
 		navController = navController,
 		startDestination = Screen.QuickStart.route,
@@ -311,7 +338,9 @@ private fun AmiberryNavHost(navController: NavHostController, modifier: Modifier
 			AboutScreen(onBack = { navController.popBackStack() })
 		}
 		composable(Screen.Settings.route) {
-			SettingsScreen()
+			CompositionLocalProvider(LocalStartGuard provides startGuard) {
+				SettingsScreen()
+			}
 		}
 		composable(Screen.FileManager.route) {
 			FileManagerScreen()

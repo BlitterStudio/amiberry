@@ -80,6 +80,8 @@ import com.blitterstudio.amiberry.data.ConfigurationActions
 import com.blitterstudio.amiberry.data.FilePickerFilters
 import com.blitterstudio.amiberry.data.model.AmigaFile
 import com.blitterstudio.amiberry.data.model.FileCategory
+import com.blitterstudio.amiberry.data.model.ModelRomAvailability
+import com.blitterstudio.amiberry.data.model.RomIdentity
 import com.blitterstudio.amiberry.ui.components.StoragePermissionBanner
 import com.blitterstudio.amiberry.ui.dpadFocusIndicator
 import com.blitterstudio.amiberry.ui.viewmodel.FileManagerViewModel
@@ -436,25 +438,49 @@ private fun FileItem(file: AmigaFile, deleteEnabled: Boolean, onDelete: () -> Un
 				tint = MaterialTheme.colorScheme.primary
 			)
 			Spacer(modifier = Modifier.width(12.dp))
+			// A ROM shows what it is (the emulator's name for a Kickstart, or
+			// the built-in AROS), with its file name underneath.
+			val romIdentity = remember(file) {
+				if (file.category == FileCategory.ROMS) ModelRomAvailability.romIdentity(file) else RomIdentity.Unknown
+			}
+			val title = when (romIdentity) {
+				is RomIdentity.Kickstart -> romIdentity.name
+				RomIdentity.BuiltInAros -> stringResource(
+					if (ModelRomAvailability.isBuiltInArosExtension(file)) {
+						R.string.rom_aros_ext_builtin
+					} else {
+						R.string.rom_aros_builtin
+					}
+				)
+				RomIdentity.Unknown -> file.name
+			}
 			Column(modifier = Modifier.weight(1f)) {
-				Text(text = file.name, style = MaterialTheme.typography.bodyMedium)
+				Text(text = title, style = MaterialTheme.typography.bodyMedium)
 				Text(
-					text = file.sizeDisplay,
+					text = if (romIdentity == RomIdentity.Unknown) {
+						file.sizeDisplay
+					} else {
+						stringResource(R.string.file_manager_rom_file_detail, file.name, file.sizeDisplay)
+					},
 					style = MaterialTheme.typography.bodySmall,
 					color = MaterialTheme.colorScheme.onSurfaceVariant
 				)
 			}
-			IconButton(
-				onClick = { showDeleteDialog = true },
-				enabled = deleteEnabled,
-				modifier = Modifier.dpadFocusIndicator()
-			) {
-				Icon(
-					Icons.Default.Delete,
-					contentDescription = stringResource(R.string.action_delete_named, file.name),
-					modifier = Modifier.size(20.dp),
-					tint = MaterialTheme.colorScheme.onSurfaceVariant
-				)
+			// The built-in AROS files are the fallback a model without its
+			// Kickstart boots, so they cannot be deleted here.
+			if (romIdentity != RomIdentity.BuiltInAros) {
+				IconButton(
+					onClick = { showDeleteDialog = true },
+					enabled = deleteEnabled,
+					modifier = Modifier.dpadFocusIndicator()
+				) {
+					Icon(
+						Icons.Default.Delete,
+						contentDescription = stringResource(R.string.action_delete_named, file.name),
+						modifier = Modifier.size(20.dp),
+						tint = MaterialTheme.colorScheme.onSurfaceVariant
+					)
+				}
 			}
 		}
 	}

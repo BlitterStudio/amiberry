@@ -102,14 +102,16 @@ object WhdLoadAutoConfig {
 		val chipset = hardware.stringOrNull("chipset")
 		val isAga = gameName.contains("AGA", ignoreCase = true) || chipset.equalsIgnoringCase("aga")
 		val isCd32 = gameName.contains("CD32", ignoreCase = true) || chipset.equalsIgnoringCase("cd32")
-		val a600Available = ModelRomAvailability.isModelAvailable(AmigaModel.A600, availableRoms)
+		// The A600 profile is used only with an A600 Kickstart installed; otherwise
+		// the A1200 profile runs (on AROS when no Kickstart is installed at all).
+		val a600Available = ModelRomAvailability.hasKickstart(AmigaModel.A600, availableRoms)
 		val baseModel = if (isAga || isCd32 || !a600Available) AmigaModel.A1200 else AmigaModel.A600
 		val selectedRoms = ModelRomAvailability.selectRomsForModel(baseModel, availableRoms)
 
 		var settings = EmulatorSettings.fromModel(baseModel, selectedRoms.config).copy(
 			fastRam = 8,
-			romFile = selectedRoms.kick?.path.orEmpty(),
-			romExtFile = selectedRoms.ext?.path.orEmpty(),
+			romFile = selectedRoms.romFile,
+			romExtFile = selectedRoms.romExtFile,
 			floppy0 = "",
 			floppy0Type = -1,
 			floppy1 = "",
@@ -182,8 +184,8 @@ object WhdLoadAutoConfig {
 		val cpuExact = hardware.boolOrNull("cpu_exact")
 		cpuCompatible?.let { settings = settings.copy(cpuCompatible = it) }
 		when {
-			cpuExact != null -> settings = settings.copy(cycleExact = cpuExact)
-			cpuCompatible == false -> settings = settings.copy(cycleExact = false)
+			cpuExact != null -> settings = settings.copy(cycleExact = if (cpuExact) "true" else "false")
+			cpuCompatible == false -> settings = settings.copy(cycleExact = "false")
 		}
 
 		val z3Ram = hardware.intOrNull("z3_ram")
@@ -203,7 +205,7 @@ object WhdLoadAutoConfig {
 					jitCacheSize = 16384,
 					jitFpu = true,
 					cpuCompatible = false,
-					cycleExact = false,
+					cycleExact = "false",
 					address24Bit = false,
 					cpuSpeed = "max"
 				)

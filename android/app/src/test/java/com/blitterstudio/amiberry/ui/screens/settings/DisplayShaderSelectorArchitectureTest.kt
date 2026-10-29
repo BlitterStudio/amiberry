@@ -73,7 +73,7 @@ class DisplayShaderSelectorArchitectureTest {
 	fun `shader field remains responsive and exposes label and supporting text`() {
 		assertTrue(source.contains("R.string.settings_display_shader_label"))
 		assertTrue(source.contains("R.string.settings_display_shader_help"))
-		assertTrue(source.contains("supportingText ="))
+		assertTrue(source.contains("SupportingText(shaderSupportingText)"))
 		assertTrue(
 			Regex(
 				"""settings_display_shader_label[\s\S]*menuAnchor\([\s\S]*fillMaxWidth\(\)"""

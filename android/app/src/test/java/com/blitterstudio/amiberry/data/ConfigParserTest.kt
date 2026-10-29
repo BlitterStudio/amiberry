@@ -148,8 +148,32 @@ class ConfigParserTest {
 		assertEquals("aga", s.chipset)
 		assertTrue(s.immediateBlits)
 		assertEquals("full", s.collisionLevel)
-		assertTrue(s.cycleExact)
+		assertEquals("true", s.cycleExact)
 		assertTrue(s.ntsc)
+	}
+
+	@Test
+	fun `parse cycle_exact as the emulator reads it`() {
+		for ((stored, expected) in listOf(
+			"memory" to "memory", "true" to "true", "false" to "false",
+			"yes" to "memory", "no" to "false"
+		)) {
+			val file = tempDir.newFile("cycle_exact_$stored.uae").apply { writeText("cycle_exact=$stored") }
+			assertEquals(stored, expected, ConfigParser.parse(file).settings.cycleExact)
+		}
+	}
+
+	@Test
+	fun `floppy_volume sets the drive volumes the per-drive keys leave`() {
+		val file = writeConfig("""
+			floppy_volume=50
+			floppy1soundvolume_disk=10
+		""".trimIndent())
+		val s = ConfigParser.parse(file).settings
+
+		assertEquals(50, s.floppy0SoundVolumeDisk)
+		assertEquals(50, s.floppy3SoundVolumeEmpty)
+		assertEquals(10, s.floppy1SoundVolumeDisk)
 	}
 
 	// --- Memory settings ---
