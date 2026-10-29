@@ -457,6 +457,42 @@ static void test_rtg_pointer_mapping_removes_letterbox()
 		"RTG pointer mapping must subtract the letterbox offset before scaling");
 }
 
+// Phone portrait 1080x2400 with the keyboard docked over the bottom 55%
+// (1320 rows): the 1080x810 picture, centred at y=795 and mostly covered,
+// is centred in the 1080 free rows above the keyboard instead.
+static void test_osk_dock_centres_picture_above_keyboard()
+{
+	const AmiberryGfxRect drawable{0, 0, 1080, 2400};
+	const AmiberryGfxRect centred = amiberry_gfx_final_presentation_rect(
+		drawable, 1080, 810, 4.0f / 3.0f, false);
+	expect_rect_eq(centred, 0, 795, 1080, 810, "portrait picture starts centred");
+	const AmiberryGfxRect lifted = amiberry_gfx_lift_above_bottom_inset(centred, drawable, 1320);
+	expect_rect_eq(lifted, 0, 135, 1080, 810,
+		"docked keyboard must centre the picture in the free space above it");
+	// Pointer mapping follows the moved quad: the top-left source pixel sits
+	// at the lifted origin.
+	const AmiberryGfxInputOffset offset = amiberry_gfx_input_offset(
+		lifted, 0.0f, 0.0f, 720.0f, 540.0f, false);
+	expect_float_near(135.0f / offset.my - offset.dy, 0.0f, 0.001f,
+		"pointer mapping must use the lifted picture origin");
+}
+
+// A picture taller than the free space is top-aligned, so the keyboard covers
+// as little of it as possible; a zero inset (keyboard hidden or landscape)
+// leaves it untouched; the rect never moves down.
+static void test_osk_dock_top_aligns_tall_picture_and_never_moves_down()
+{
+	const AmiberryGfxRect drawable{0, 0, 1600, 2560};
+	const AmiberryGfxRect centred{0, 680, 1600, 1200};
+	expect_rect_eq(amiberry_gfx_lift_above_bottom_inset(centred, drawable, 1408),
+		0, 0, 1600, 1200, "picture taller than the free space must be top-aligned");
+	expect_rect_eq(amiberry_gfx_lift_above_bottom_inset(centred, drawable, 0),
+		0, 680, 1600, 1200, "no inset must keep the centred picture");
+	const AmiberryGfxRect high{0, 10, 1600, 400};
+	expect_rect_eq(amiberry_gfx_lift_above_bottom_inset(high, drawable, 100),
+		0, 10, 1600, 400, "a picture already above the keyboard must not move down");
+}
+
 int main()
 {
 	test_ntsc_integer_scaling_without_aspect_uses_crop_geometry();
@@ -481,5 +517,7 @@ int main()
 	test_manual_crop_pointer_maps_to_presented_source();
 	test_presented_source_rect_matches_renderer_clamping();
 	test_rtg_pointer_mapping_removes_letterbox();
+	test_osk_dock_centres_picture_above_keyboard();
+	test_osk_dock_top_aligns_tall_picture_and_never_moves_down();
 	return failures == 0 ? 0 : 1;
 }

@@ -21,6 +21,10 @@
 //  - imgui_osk_hide() preserves intentionally engaged sticky modifiers and
 //    drops accumulated input state via osk_control(..., OskInputSource::Gamepad)
 //  - rendering draws geometry without advancing navigation state
+//  - Android touch chrome (built with AMIBERRY_OSK_TOUCH_CHROME=1): the Hide
+//    key hides the keyboard by touch and by D-pad without touching the guest,
+//    and the portrait dock inset follows the slide animation; without the
+//    chrome the inset is always 0
 
 #include "sysconfig.h" // scratch platform shim: SIZEOF_* for uae/types.h
 
@@ -283,6 +287,91 @@ static void test_hide_preserves_sticky_and_clears_accumulators()
 	expect(g_guest_down.empty(), "shutdown after reopen must release the sticky Shift");
 }
 
+// Finish the slide animation (300 ms) so touch input is accepted and the
+// animation progress is final.
+static void settle_animation()
+{
+	advance(400);
+	imgui_osk_render();
+}
+
+#if defined(AMIBERRY_OSK_TOUCH_CHROME) && AMIBERRY_OSK_TOUCH_CHROME
+// Key-height fraction of the window the plate covers on this (non-Android)
+// test build; mirrors KB_HEIGHT_FRAC.
+static constexpr float TEST_KB_HEIGHT_FRAC = 0.42f;
+
+// Right from Help reaches Hide; South press reports and sends nothing, the
+// release hides the keyboard like Back, and reopening focuses Esc again.
+static void test_hide_key_by_dpad()
+{
+	reset_engine();
+	for (int i = 0; i < 13; i++) { // Esc -> F1..F10, Del, Help, Hide
+		p(OSK_RIGHT);
+		p(0);
+	}
+	expect(p(OSK_BUTTON) && g_keycode == 0 && g_pressed == 1,
+		"South on Hide must report no guest key");
+	expect(g_guest_down.empty(), "pressing Hide must not touch the guest keyboard");
+	expect(imgui_osk_is_active(), "Hide acts on release, not on press");
+	expect(p(0) && g_keycode == 0 && g_pressed == 0, "South release on Hide");
+	expect(!imgui_osk_is_active(), "releasing South on Hide must hide the keyboard");
+	expect(g_guest_down.empty(), "hiding via Hide must leave the guest clean");
+
+	imgui_osk_toggle();
+	expect(p(OSK_BUTTON) && g_keycode == AK_ESC && g_pressed == 1,
+		"after Hide the reopened keyboard must focus Esc, not hide again");
+	expect(p(0) && g_keycode == AK_ESC && g_pressed == 0, "release Esc");
+}
+
+// A tap on Hide hides the keyboard on finger-up and sends nothing.
+static void test_hide_key_by_touch()
+{
+	reset_engine();
+	settle_animation();
+	// Hide key centre for the 1280x720 test display: compact layout (17
+	// units), 2% padding, key at x=15..16, function row of height 0.7.
+	const float pad = 1280.0f * 0.02f;
+	const float unit_w = (1280.0f - 2.0f * pad) / 17.0f;
+	const float kb_h = 720.0f * TEST_KB_HEIGHT_FRAC;
+	const float unit_h = (kb_h - 2.0f * pad) / 6.1f;
+	const float x = pad + 15.5f * unit_w;
+	const float y = 720.0f - kb_h + pad + 0.35f * unit_h;
+
+	expect(imgui_osk_handle_finger_down(x, y, 7), "finger down on Hide must be consumed");
+	expect(g_guest_down.empty(), "touching Hide must not press a guest key");
+	expect(imgui_osk_is_active(), "Hide acts on finger-up");
+	expect(imgui_osk_handle_finger_up(x, y, 7), "finger up on Hide must be consumed");
+	expect(!imgui_osk_is_active(), "finger-up on Hide must hide the keyboard");
+	expect(g_guest_down.empty(), "guest must be clean after hiding by touch");
+}
+
+// The portrait dock inset is the plate height while shown, 0 in landscape and
+// back to 0 once the keyboard has slid out.
+static void test_portrait_dock_inset()
+{
+	reset_engine();
+	settle_animation();
+	const float shown = imgui_osk_bottom_inset_fraction(1080, 2400);
+	expect(shown > TEST_KB_HEIGHT_FRAC - 0.001f && shown < TEST_KB_HEIGHT_FRAC + 0.001f,
+		"portrait inset must equal the docked plate height");
+	expect(imgui_osk_bottom_inset_fraction(2400, 1080) == 0.0f,
+		"landscape must keep the picture where it is");
+	imgui_osk_hide();
+	settle_animation();
+	expect(imgui_osk_bottom_inset_fraction(1080, 2400) == 0.0f,
+		"inset must return to 0 once the keyboard has slid out");
+}
+#else
+// Without the Android chrome the picture never moves for the keyboard.
+static void test_desktop_keeps_picture_placement()
+{
+	reset_engine();
+	settle_animation();
+	expect(imgui_osk_bottom_inset_fraction(1080, 2400) == 0.0f,
+		"desktop keyboard must not move the picture, even in portrait");
+}
+#endif
+
 int main()
 {
 	imgui_osk_update(); // before init: harmless no-op
@@ -300,6 +389,13 @@ int main()
 	test_suppressed_direction_replays_on_release();
 	test_shutdown_releases_owned_guest_keys();
 	test_hide_preserves_sticky_and_clears_accumulators();
+#if defined(AMIBERRY_OSK_TOUCH_CHROME) && AMIBERRY_OSK_TOUCH_CHROME
+	test_hide_key_by_dpad();
+	test_hide_key_by_touch();
+	test_portrait_dock_inset();
+#else
+	test_desktop_keeps_picture_placement();
+#endif
 
 	if (failures > 0) {
 		std::cerr << failures << " imgui_osk_engine_test failure(s)\n";

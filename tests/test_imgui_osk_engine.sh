@@ -56,14 +56,26 @@ Uint64 SDL_GetTicks(void);
 EOF
 
 inc="-I$scratch -I$root/src/osdep -I$root/src/include -I$root/external/imgui"
-out="$scratch/imgui_osk_engine_test"
 
-# The production unit is compiled without -Werror so unrelated latent
-# warnings cannot mask the regression; the harness follows the repo's
-# strict convention.
-"$cxx" -std=c++17 -Wall -Wextra $inc -c "$scratch/imgui_osk_engine.cpp" -o "$scratch/imgui_osk_engine.o"
-"$cxx" -std=c++17 -Wall -Wextra -Werror $inc -c "$root/tests/imgui_osk_engine_test.cpp" -o "$scratch/imgui_osk_engine_test.o"
-"$cxx" -std=c++17 "$scratch/imgui_osk_engine.o" "$scratch/imgui_osk_engine_test.o" \
-	"$root/external/imgui/imgui.cpp" "$root/external/imgui/imgui_draw.cpp" \
-	"$root/external/imgui/imgui_tables.cpp" "$root/external/imgui/imgui_widgets.cpp" -o "$out"
-"$out"
+# ImGui itself is variant-independent: compile it once.
+for src in imgui imgui_draw imgui_tables imgui_widgets; do
+	"$cxx" -std=c++17 $inc -c "$root/external/imgui/$src.cpp" -o "$scratch/$src.o"
+done
+
+# Run the engine twice: the desktop keyboard (AMIBERRY_OSK_TOUCH_CHROME=0) and
+# the Android touch chrome (=1: Hide key, portrait dock), which the engine
+# otherwise enables only for __ANDROID__.
+for chrome in 0 1; do
+	out="$scratch/imgui_osk_engine_test_$chrome"
+	def="-DAMIBERRY_OSK_TOUCH_CHROME=$chrome"
+	# The production unit is compiled without -Werror so unrelated latent
+	# warnings cannot mask the regression; the harness follows the repo's
+	# strict convention.
+	"$cxx" -std=c++17 -Wall -Wextra $def $inc -c "$scratch/imgui_osk_engine.cpp" -o "$scratch/imgui_osk_engine_$chrome.o"
+	"$cxx" -std=c++17 -Wall -Wextra -Werror $def $inc -c "$root/tests/imgui_osk_engine_test.cpp" -o "$scratch/imgui_osk_engine_test_$chrome.o"
+	"$cxx" -std=c++17 "$scratch/imgui_osk_engine_$chrome.o" "$scratch/imgui_osk_engine_test_$chrome.o" \
+		"$scratch/imgui.o" "$scratch/imgui_draw.o" \
+		"$scratch/imgui_tables.o" "$scratch/imgui_widgets.o" -o "$out"
+	echo "AMIBERRY_OSK_TOUCH_CHROME=$chrome:"
+	"$out"
+done

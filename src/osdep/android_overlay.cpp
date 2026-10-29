@@ -23,6 +23,7 @@
 #include "amiberry_actions_host.h"
 #include "settings/amiberry_actions.h"
 #include "settings/amiberry_settings.h"
+#include "custom.h"
 
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_system.h>
@@ -36,6 +37,8 @@
 #include <mutex>
 #include <string>
 #include <vector>
+
+extern int gui_active;
 
 namespace {
 
@@ -54,6 +57,22 @@ std::atomic<bool> enabled{true};
 std::atomic<int> close_request{close_none};
 // Show keyboard was chosen; android_overlay_service() shows it.
 std::atomic<bool> keyboard_requested{false};
+
+// The TV remote as the port 2 joystick: OverlayNative.REMOTE_* bits.
+constexpr unsigned remote_up = 1;
+constexpr unsigned remote_down = 2;
+constexpr unsigned remote_left = 4;
+constexpr unsigned remote_right = 8;
+constexpr unsigned remote_fire = 16;
+constexpr unsigned remote_all = remote_up | remote_down | remote_left | remote_right | remote_fire;
+std::atomic<bool> remote_joystick{false};
+// Held now, and pressed since the last pump (a tap may end before it).
+std::atomic<unsigned> remote_held{0};
+std::atomic<unsigned> remote_taps{0};
+// Emulator thread: what the joystick shows, and taps kept until the next frame.
+unsigned remote_applied = 0;
+unsigned remote_latched = 0;
+uae_u32 remote_latched_frame = 0;
 
 bool is_window_size_event(const SDL_Event& event)
 {
@@ -249,6 +268,33 @@ void android_overlay_service()
 		inputdevice_add_inputcode(AKS_OSK, 1, nullptr);
 }
 
+void android_remote_joystick_pump()
+{
+	const unsigned taps = remote_taps.exchange(0);
+	if (taps) {
+		remote_latched |= taps;
+		remote_latched_frame = vsync_counter;
+	} else if (remote_latched && vsync_counter != remote_latched_frame) {
+		remote_latched = 0;
+	}
+	const unsigned wanted = remote_joystick.load() ? (remote_held.load() | remote_latched) : 0;
+	const unsigned changed = wanted ^ remote_applied;
+	if (!changed)
+		return;
+	static constexpr struct { unsigned bit; int event; } events[] = {
+		{ remote_up, INPUTEVENT_JOY2_UP },
+		{ remote_down, INPUTEVENT_JOY2_DOWN },
+		{ remote_left, INPUTEVENT_JOY2_LEFT },
+		{ remote_right, INPUTEVENT_JOY2_RIGHT },
+		{ remote_fire, INPUTEVENT_JOY2_FIRE_BUTTON },
+	};
+	for (const auto& e : events) {
+		if (changed & e.bit)
+			send_input_event(e.event, (wanted & e.bit) ? 1 : 0, 1, 0);
+	}
+	remote_applied = wanted;
+}
+
 #define OVERLAY_JNI(name) Java_com_blitterstudio_amiberry_overlay_OverlayNative_##name
 
 extern "C" {
@@ -262,6 +308,36 @@ JNIEXPORT void JNICALL OVERLAY_JNI(close)(JNIEnv*, jclass, jint how)
 {
 	if (how == close_resume || how == close_advanced || how == close_keyboard)
 		close_request.store(how);
+}
+
+// A TV with no gamepad: the remote's D-pad and OK drive port 2. Any thread.
+JNIEXPORT void JNICALL OVERLAY_JNI(setRemoteJoystick)(JNIEnv*, jclass, jboolean on)
+{
+	remote_joystick.store(on == JNI_TRUE);
+	if (on != JNI_TRUE) {
+		// The pump releases what the joystick still shows.
+		remote_held.store(0);
+		remote_taps.store(0);
+	}
+}
+
+// A remote key (one REMOTE_* bit) while remote_joystick is on: true when it
+// moves the joystick. A press is not taken while the built-in GUI is open,
+// where the D-pad moves its focus; a release always is, so none sticks.
+JNIEXPORT jboolean JNICALL OVERLAY_JNI(remoteKey)(JNIEnv*, jclass, jint button, jboolean down)
+{
+	const unsigned bit = static_cast<unsigned>(button) & remote_all;
+	if (!bit)
+		return JNI_FALSE;
+	if (down != JNI_TRUE) {
+		remote_held.fetch_and(~bit);
+		return JNI_TRUE;
+	}
+	if (!remote_joystick.load() || gui_active > 0)
+		return JNI_FALSE;
+	remote_held.fetch_or(bit);
+	remote_taps.fetch_or(bit);
+	return JNI_TRUE;
 }
 
 // Runtime actions: any thread. The id is 0 when the action was rejected.
@@ -404,19 +480,25 @@ JNIEXPORT jobjectArray JNICALL OVERLAY_JNI(settingChoices)(JNIEnv* env, jclass, 
 	return ran ? to_java(env, fields) : nullptr;
 }
 
-// Sets one option as the settings editors do (a session, committed) and
-// has the running emulation pick it up. The apply class committed, or -1
-// when the value was refused or the emulator thread could not be reached.
-JNIEXPORT jint JNICALL OVERLAY_JNI(changeSetting)(JNIEnv* env, jclass, jstring id, jstring value)
+// Sets options as the settings editors do (one session, committed together)
+// and has the running emulation pick them up; together, so swapping the
+// port devices is not refused halfway. The apply class committed, or -1
+// when a value was refused or the emulator thread could not be reached.
+JNIEXPORT jint JNICALL OVERLAY_JNI(changeSettings)(JNIEnv* env, jclass, jobjectArray ids, jobjectArray values)
 {
-	const std::string option = from_java(env, id);
-	const std::string text = from_java(env, value);
+	const std::vector<std::string> options = from_java(env, ids);
+	const std::vector<std::string> texts = from_java(env, values);
+	if (options.empty() || options.size() != texts.size())
+		return -1;
 	int result = -1;
 	on_emulator_thread([&] {
 		amiberry_settings_session* session = amiberry_settings_session_open();
 		if (!session)
 			return;
-		if (amiberry_settings_set(session, option.c_str(), text.c_str()) == AMIBERRY_SETTINGS_OK) {
+		bool accepted = true;
+		for (size_t i = 0; i < options.size() && accepted; i++)
+			accepted = amiberry_settings_set(session, options[i].c_str(), texts[i].c_str()) == AMIBERRY_SETTINGS_OK;
+		if (accepted) {
 			bool changed = false;
 			const amiberry_apply_class apply = amiberry_settings_commit(session, &changed);
 			if (changed)

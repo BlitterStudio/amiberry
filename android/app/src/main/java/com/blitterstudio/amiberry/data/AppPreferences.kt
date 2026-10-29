@@ -6,12 +6,15 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.core.content.edit
 import com.blitterstudio.amiberry.data.model.EmulatorSettings
 import com.blitterstudio.amiberry.data.model.EmulatorSettingsConstraints
+import com.blitterstudio.amiberry.ui.isTvDevice
 import org.json.JSONObject
 
 class AppPreferences private constructor(context: Context) {
 
 	private val prefs: SharedPreferences =
 		context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+
+	private val controlDefaults = AndroidControlSettings.defaults(isTv = isTvDevice(context))
 
 	init {
 		migrateLegacyKeyboardSwitch()
@@ -51,10 +54,10 @@ class AppPreferences private constructor(context: Context) {
 
 	fun rememberedAndroidControls(): EmulatorSettings =
 		EmulatorSettings(
-			joyport0 = prefs.getString(KEY_LAST_JOYPORT0, DEFAULT_JOYPORT0) ?: DEFAULT_JOYPORT0,
-			joyport1 = prefs.getString(KEY_LAST_JOYPORT1, DEFAULT_JOYPORT1) ?: DEFAULT_JOYPORT1,
-			onScreenJoystick = prefs.getBoolean(KEY_LAST_ON_SCREEN_JOYSTICK, DEFAULT_ON_SCREEN_JOYSTICK),
-			onScreenKeyboardButton = prefs.getBoolean(KEY_LAST_ON_SCREEN_KEYBOARD_BUTTON, DEFAULT_ON_SCREEN_KEYBOARD),
+			joyport0 = prefs.getString(KEY_LAST_JOYPORT0, controlDefaults.joyport0) ?: controlDefaults.joyport0,
+			joyport1 = prefs.getString(KEY_LAST_JOYPORT1, controlDefaults.joyport1) ?: controlDefaults.joyport1,
+			onScreenJoystick = prefs.getBoolean(KEY_LAST_ON_SCREEN_JOYSTICK, controlDefaults.onScreenJoystick),
+			onScreenKeyboardButton = prefs.getBoolean(KEY_LAST_ON_SCREEN_KEYBOARD_BUTTON, controlDefaults.onScreenKeyboardButton),
 			onScreenKeyboardNumpad = prefs.getBoolean(KEY_LAST_ON_SCREEN_KEYBOARD_NUMPAD, false),
 			onScreenKeyboardToggle = prefs.getString(KEY_LAST_ON_SCREEN_KEYBOARD_TOGGLE, null),
 			joyport0MouseMap = prefs.getBoolean(KEY_LAST_JOYPORT0_MOUSEMAP, false),
@@ -207,9 +210,6 @@ class AppPreferences private constructor(context: Context) {
 		private const val KEY_LAUNCH_COUNT = "emulator_launch_count"
 		private const val FIRST_REVIEW_LAUNCH = 5
 		private const val REVIEW_INTERVAL = 20
-		private const val DEFAULT_JOYPORT0 = "mouse"
-		private const val DEFAULT_JOYPORT1 = "onscreen_joy"
-		private const val DEFAULT_ON_SCREEN_JOYSTICK = true
 		private const val DEFAULT_ON_SCREEN_KEYBOARD = true
 
 		@Volatile

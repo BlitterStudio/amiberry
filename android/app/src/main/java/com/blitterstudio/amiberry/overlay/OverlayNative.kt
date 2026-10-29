@@ -4,10 +4,11 @@ package com.blitterstudio.amiberry.overlay
  * The JNI of the in-emulation menu (src/osdep/android_overlay.cpp), in
  * libamiberry, which SDLActivity loads before AmiberryActivity uses this.
  *
- * Threads: the action posts, [poll], [status], [swapperEntries], [close]
- * and [setEnabled] may be called from any thread and never wait. The
- * settings and state-name calls run on the emulator thread and wait for it,
- * so they must never be called from the Android UI thread; they return null
+ * Threads: the action posts, [poll], [status], [swapperEntries], [close],
+ * [setEnabled], [setRemoteJoystick] and [remoteKey] may be called from any
+ * thread and never wait. The settings and state-name calls run on the
+ * emulator thread and wait for it, so they must never be called from the
+ * Android UI thread; they return null
  * (or -1) when the emulator thread could not run them.
  */
 object OverlayNative {
@@ -24,8 +25,24 @@ object OverlayNative {
 	const val RESULT_FAILED = 2
 	const val RESULT_UNKNOWN = 3
 
+	/** [remoteKey] buttons: the port 2 joystick's directions and fire. */
+	const val REMOTE_UP = 1
+	const val REMOTE_DOWN = 2
+	const val REMOTE_LEFT = 4
+	const val REMOTE_RIGHT = 8
+	const val REMOTE_FIRE = 16
+
 	@JvmStatic external fun setEnabled(enabled: Boolean)
 	@JvmStatic external fun close(how: Int)
+
+	/** Whether the remote drives port 2 (a TV with no gamepad); see [RemoteJoystick]. */
+	@JvmStatic external fun setRemoteJoystick(enabled: Boolean)
+	/**
+	 * A remote button pressed or released; true when it moved the joystick
+	 * (false while the classic settings window has the D-pad, or while the
+	 * remote does not drive port 2). A release is always taken.
+	 */
+	@JvmStatic external fun remoteKey(button: Int, down: Boolean): Boolean
 
 	// Runtime actions; each returns the action's id, 0 when it was rejected.
 	@JvmStatic external fun insertFloppy(drive: Int, path: String): Long
@@ -51,8 +68,8 @@ object OverlayNative {
 	@JvmStatic external fun readSettings(ids: Array<String>): Array<String>?
 	/** The choices offered now as value, label pairs. */
 	@JvmStatic external fun settingChoices(id: String): Array<String>?
-	/** Sets and commits one option; the apply class, -1 when it was refused. */
-	@JvmStatic external fun changeSetting(id: String, value: String): Int
+	/** Sets and commits options together; the apply class, -1 when one was refused. */
+	@JvmStatic external fun changeSettings(ids: Array<String>, values: Array<String>): Int
 	/** What state slots are named after, as [StateNameSources.parse] reads it. */
 	@JvmStatic external fun stateNameSources(): Array<String>?
 }

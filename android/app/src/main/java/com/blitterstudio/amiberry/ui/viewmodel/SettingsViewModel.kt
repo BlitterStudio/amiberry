@@ -28,9 +28,11 @@ import com.blitterstudio.amiberry.data.ConfigParser
 import com.blitterstudio.amiberry.data.ConfigRepository
 import com.blitterstudio.amiberry.data.ConfigurationSaveActions
 import com.blitterstudio.amiberry.data.OpenConfigTracking
+import com.blitterstudio.amiberry.data.InGameControls
 import com.blitterstudio.amiberry.ui.hasTouchScreen
 import com.blitterstudio.amiberry.ui.screens.MediaDrive
 import com.blitterstudio.amiberry.ui.screens.QuickStartMediaState
+import com.blitterstudio.amiberry.ui.isTvDevice
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.StateFlow
@@ -121,13 +123,32 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 		if (!restoreLastSession()) {
 			settings = appPreferences.applyRememberedAndroidControls(settings, emptySet())
 		}
-		settings = applyConstraints(settings)
+		settings = applyConstraints(withInGameControls(settings))
 		appPreferences.saveAndroidControls(settings)
 		viewModelScope.launch {
 			repository.rescan()
 			// A Kickstart imported anywhere (the Files tab too) fills settings that name none.
 			availableRoms.collect { roms -> autoSelectDefaultRomIfNeeded(roms) }
 		}
+	}
+
+	/**
+	 * Keeps the on-screen control switches turned in the in-game menu
+	 * (InGameControls) for the next launch; MainActivity calls this as the
+	 * emulation returns.
+	 */
+	fun adoptInGameControls() {
+		val adopted = withInGameControls(settings)
+		if (adopted == settings) return
+		applyConstrainedSettings(adopted, publishNotices = false)
+		appPreferences.saveAndroidControls(settings)
+		saveLastSession()
+	}
+
+	private fun withInGameControls(s: EmulatorSettings): EmulatorSettings {
+		val changes = InGameControls.take(getApplication())
+		if (changes.isEmpty()) return s
+		return InGameControls.applyTo(s, changes, touchControls = !isTvDevice(getApplication()))
 	}
 
 	fun refreshShaderCatalog() {

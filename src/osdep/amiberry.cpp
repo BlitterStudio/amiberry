@@ -4601,6 +4601,9 @@ int handle_msgpump(bool vblank)
 			osj_latch_vsync = vsync_counter;
 			on_screen_joystick_advance_frame();
 		}
+#ifdef __ANDROID__
+		android_remote_joystick_pump();
+#endif
 	}
 #if defined(AMIBERRY_MACOS) && !defined(LIBRETRO)
 	flush_macos_synthetic_mouse_releases();

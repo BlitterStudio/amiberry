@@ -13,6 +13,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.blitterstudio.amiberry.R
 import com.blitterstudio.amiberry.data.FileRepository
+import com.blitterstudio.amiberry.data.InGameControls
 import com.blitterstudio.amiberry.data.model.AmigaFile
 import com.blitterstudio.amiberry.data.model.FileCategory
 import com.blitterstudio.amiberry.data.model.SettingsSchema
@@ -60,6 +61,9 @@ class OverlayViewModel(application: Application) : AndroidViewModel(application)
 	/** The layer's shader choices (built-ins and the shaders folder); null until read. */
 	var shaderChoices by mutableStateOf<List<SettingsSchema.Choice>?>(null)
 		private set
+	/** The devices each port may take now, by port option; read as the Controls page opens. */
+	var portChoices by mutableStateOf<Map<String, List<SettingsSchema.Choice>>>(emptyMap())
+		private set
 	var slots by mutableStateOf<List<SlotState>>(emptyList())
 		private set
 	/** A save or load is running; the States page waits for it. */
@@ -77,6 +81,7 @@ class OverlayViewModel(application: Application) : AndroidViewModel(application)
 	internal var hideView: () -> Unit = {}
 
 	private var polling: Job? = null
+	private var noticeTimeout: Job? = null
 	private var sources: StateNameSources? = null
 	/** Setting changes commit through this, in order (kotlinx's Mutex is fair). */
 	private val settingWrites = Mutex()
@@ -116,6 +121,8 @@ class OverlayViewModel(application: Application) : AndroidViewModel(application)
 				files.rescanCategory(if (page.target == MediaTarget.Cd) FileCategory.CD_IMAGES else FileCategory.FLOPPIES)
 			}
 			OverlayPage.Settings -> if (shaderChoices == null) viewModelScope.launch { readShaderChoices() }
+			// Controllers may have come or gone since the last opening.
+			OverlayPage.Controls -> viewModelScope.launch { readPortChoices() }
 			else -> Unit
 		}
 	}
@@ -173,27 +180,70 @@ class OverlayViewModel(application: Application) : AndroidViewModel(application)
 		viewModelScope.launch { refreshSoon() }
 	}
 
+	/** Changes one live option (see [changeAll]). */
+	fun change(id: String, value: String) = changeAll(mapOf(id to value))
+
+	/** Port 1's device into port 2 and port 2's into port 1, in one commit. */
+	fun swapPorts() {
+		OverlaySettings.swappedPorts(settings)?.let(::changeAll)
+	}
+
 	/**
-	 * Changes one live option; the running machine picks it up between
-	 * frames. Changes commit one at a time in the order made (a held D-pad
-	 * key on a slider makes many), and the menu reads the values back only
-	 * after the last, so the slider never snaps back to an older one.
+	 * Changes live options, committed together; the running machine picks
+	 * them up between frames. Changes commit one at a time in the order made
+	 * (a held D-pad key on a slider makes many), and the menu reads the
+	 * values back only after the last, so the slider never snaps back to an
+	 * older one. The on-screen control switches are also kept for the next
+	 * launch (InGameControls); the rest apply to this session.
 	 */
-	fun change(id: String, value: String) {
-		settings[id]?.let { settings = settings + (id to it.copy(value = value)) }
+	private fun changeAll(values: Map<String, String>) {
+		values.forEach { (id, value) -> settings[id]?.let { settings = settings + (id to it.copy(value = value)) } }
 		pendingWrites++
 		viewModelScope.launch {
+			val ids = values.keys.toTypedArray()
+			val texts = values.values.toTypedArray()
 			// Main.immediate: each launch queues on the fair mutex in call order.
 			val applied = settingWrites.withLock {
-				withContext(Dispatchers.IO) { OverlayNative.changeSetting(id, value) }
+				withContext(Dispatchers.IO) { OverlayNative.changeSettings(ids, texts) }
 			}
 			pendingWrites--
-			if (applied < 0) notice = OverlayNotice(R.string.overlay_setting_failed, error = true)
-			if (pendingWrites == 0) readSettings()
+			if (applied < 0) {
+				showNotice(OverlayNotice(R.string.overlay_setting_failed, error = true))
+			} else {
+				withContext(Dispatchers.IO) {
+					values.filterKeys { it in OverlaySettings.CONTROLS }.forEach { (id, value) ->
+						InGameControls.record(getApplication(), id, value == "true")
+					}
+				}
+			}
+			if (pendingWrites == 0) {
+				readSettings()
+				if (values.keys.any { it in OverlaySettings.PORTS || it == OverlaySettings.ON_SCREEN_JOYSTICK }) readPortChoices()
+			}
 		}
 	}
 
-	fun saveSlot(slot: SlotState) {
+	/** Save on a slot: straight away when it is empty, after a confirmation when it holds a state. */
+	fun requestSave(slot: SlotState) {
+		if (busy) return
+		if (slot.savedAt == null) saveSlot(slot)
+		else open(OverlayPage.Confirm(ConfirmAction.Overwrite(slot)), OverlayKeys.save(slot.paths.slot))
+	}
+
+	/** The confirmation page's action, back on the page that asked for it. */
+	fun confirm(action: ConfirmAction) {
+		when (action) {
+			ConfirmAction.Reset -> reset(hard = false)
+			ConfirmAction.HardReset -> reset(hard = true)
+			ConfirmAction.Quit -> quit()
+			is ConfirmAction.Overwrite -> {
+				menu = menu.back() ?: OverlayMenu.HOME
+				saveSlot(action.slot)
+			}
+		}
+	}
+
+	private fun saveSlot(slot: SlotState) {
 		if (busy) return
 		busy = true
 		notice = null
@@ -201,11 +251,13 @@ class OverlayViewModel(application: Application) : AndroidViewModel(application)
 			val saved = finished(OverlayNative.saveState(slot.paths.state))
 			// The thumbnail is the frame the state was saved at, as the built-in GUI takes it.
 			if (saved) finished(OverlayNative.screenshot(slot.paths.thumbnail))
-			notice = if (saved) {
-				OverlayNotice(R.string.overlay_state_saved, slot.paths.slot)
-			} else {
-				OverlayNotice(R.string.overlay_state_save_failed, slot.paths.slot, error = true)
-			}
+			showNotice(
+				if (saved) {
+					OverlayNotice(R.string.overlay_state_saved, slot.paths.slot)
+				} else {
+					OverlayNotice(R.string.overlay_state_save_failed, slot.paths.slot, error = true)
+				}
+			)
 			loadSlots()
 			busy = false
 		}
@@ -221,7 +273,7 @@ class OverlayViewModel(application: Application) : AndroidViewModel(application)
 			if (finished(OverlayNative.loadState(slot.paths.state))) {
 				close(OverlayNative.CLOSE_RESUME)
 			} else {
-				notice = OverlayNotice(R.string.overlay_state_load_failed, slot.paths.slot, error = true)
+				showNotice(OverlayNotice(R.string.overlay_state_load_failed, slot.paths.slot, error = true))
 			}
 			busy = false
 		}
@@ -230,6 +282,16 @@ class OverlayViewModel(application: Application) : AndroidViewModel(application)
 	private fun close(how: Int) {
 		hideView()
 		OverlayNative.close(how)
+	}
+
+	/** Shows [shown] over the page for a while; it covers nothing the page needs and moves nothing. */
+	private fun showNotice(shown: OverlayNotice) {
+		notice = shown
+		noticeTimeout?.cancel()
+		noticeTimeout = viewModelScope.launch {
+			delay(NOTICE_MS)
+			if (notice == shown) notice = null
+		}
 	}
 
 	private fun refreshStatus() {
@@ -254,6 +316,16 @@ class OverlayViewModel(application: Application) : AndroidViewModel(application)
 	private suspend fun readShaderChoices() {
 		val pairs = withContext(Dispatchers.IO) { OverlayNative.settingChoices(OverlaySettings.SHADER) } ?: return
 		shaderChoices = pairs.toList().chunked(2).filter { it.size == 2 }.map { SettingsSchema.Choice(it[0], it[1]) }
+	}
+
+	private suspend fun readPortChoices() {
+		val read = withContext(Dispatchers.IO) {
+			OverlaySettings.PORTS.associateWith { id ->
+				OverlayNative.settingChoices(id)?.toList()?.chunked(2)?.filter { it.size == 2 }
+					?.map { SettingsSchema.Choice(it[0], it[1]) }
+			}
+		}
+		portChoices = read.filterValues { it != null }.mapValues { it.value.orEmpty() }
 	}
 
 	private suspend fun loadSlots() {
@@ -289,6 +361,7 @@ class OverlayViewModel(application: Application) : AndroidViewModel(application)
 
 	private companion object {
 		const val STATUS_INTERVAL_MS = 250L
+		const val NOTICE_MS = 4_000L
 		const val ACTION_SETTLE_MS = 100L
 		const val ACTION_POLL_MS = 30L
 		const val ACTION_TIMEOUT_MS = 15_000L

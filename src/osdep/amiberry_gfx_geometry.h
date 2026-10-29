@@ -61,6 +61,23 @@ static inline bool amiberry_gfx_rect_covers_area(
 		&& rect.y + rect.h >= area.y + area.h;
 }
 
+// Move a presentation rect up out of a band of `bottom_inset` rows reserved at
+// the bottom of `area` (the docked on-screen keyboard). The rect is centred in
+// the space above the band when it fits there, else top-aligned so the band
+// covers as little of it as possible. Size is kept and it never moves down.
+static inline AmiberryGfxRect amiberry_gfx_lift_above_bottom_inset(
+	const AmiberryGfxRect& rect, const AmiberryGfxRect& area, const int bottom_inset)
+{
+	if (bottom_inset <= 0) {
+		return rect;
+	}
+	const int free_height = area.h - bottom_inset;
+	const int y = free_height >= rect.h
+		? area.y + (free_height - rect.h) / 2
+		: area.y;
+	return { rect.x, y < rect.y ? y : rect.y, rect.w, rect.h };
+}
+
 // Region of a native surface that the renderers actually sample: the crop
 // rect when it selects a valid area (clamped to the surface exactly as the
 // OpenGL/Vulkan presenters clamp it), else the whole surface. Pointer mapping
