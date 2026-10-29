@@ -4,6 +4,8 @@ import com.blitterstudio.amiberry.data.model.AmigaFile
 import com.blitterstudio.amiberry.data.model.EmulatorSettings
 import com.blitterstudio.amiberry.data.model.ModelRomAvailability
 import com.blitterstudio.amiberry.data.model.RomIdentity
+import com.blitterstudio.amiberry.data.model.SettingsSchema
+import com.blitterstudio.amiberry.data.model.installedMemory
 
 enum class QuickStartLaunchMode {
 	WHDLOAD,
@@ -112,19 +114,33 @@ object QuickStartUiState {
 		EmulatorSettings.chipsetOptions.firstOrNull { it.first == settings.chipset }?.second
 			?: settings.chipset.uppercase()
 
+	/**
+	 * Every memory the machine has (installedMemory, as the Memory tab
+	 * counts it): chip, slow, Zorro II and Zorro III fast RAM by their short
+	 * names, every other board by the layer's label.
+	 */
 	private fun buildMemorySummary(settings: EmulatorSettings): String {
-		val parts = mutableListOf("${chipRamLabel(settings.chipRam)} Chip")
-		if (settings.slowRam > 0) {
-			parts += "${slowRamLabel(settings.slowRam)} Slow"
+		val schema = SettingsSchema.current
+			?: return "${chipRamLabel(settings.chipRam)} Chip"
+		return installedMemory(settings, schema).joinToString(", ") { memory ->
+			val size = when (memory.id) {
+				"chipmem_size" -> chipRamLabel(settings.chipRam)
+				"bogomem_size" -> slowRamLabel(settings.slowRam)
+				else -> sizeLabel(memory.kb)
+			}
+			val name = SHORT_MEMORY_NAMES[memory.id] ?: schema.label(memory.id) ?: memory.id
+			"$size $name"
 		}
-		if (settings.fastRam > 0) {
-			parts += "${settings.fastRam} MB Fast"
-		}
-		if (settings.z3Ram > 0) {
-			parts += "${settings.z3Ram} MB Z3"
-		}
-		return parts.joinToString(", ")
 	}
+
+	private val SHORT_MEMORY_NAMES = mapOf(
+		"chipmem_size" to "Chip",
+		"bogomem_size" to "Slow",
+		"fastmem_size" to "Fast",
+		"z3mem_size" to "Z3"
+	)
+
+	private fun sizeLabel(kb: Int): String = if (kb % 1024 == 0) "${kb / 1024} MB" else "$kb KB"
 
 	private fun buildMediaSummary(
 		settings: EmulatorSettings,

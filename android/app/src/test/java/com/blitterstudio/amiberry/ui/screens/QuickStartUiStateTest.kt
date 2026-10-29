@@ -181,4 +181,14 @@ class QuickStartUiStateTest {
 			)
 		)
 	}
+
+	@Test
+	fun `memory summary lists every memory the machine has`() {
+		val summary = QuickStartUiState.buildEffectiveSummary(
+			settings = EmulatorSettings.fromModel(AmigaModel.A3000, 0, 0),
+			launchMode = QuickStartLaunchMode.DISK,
+			selectedModelAvailable = true
+		)
+		assertEquals("2 MB Chip, 8 MB Motherboard Fast RAM", summary.memory)
+	}
 }

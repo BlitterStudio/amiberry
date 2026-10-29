@@ -17,6 +17,7 @@
 #include "rommgr.h"
 
 #include "settings/amiberry_settings.h"
+#include "target.h"
 #include "settings/settings_definitions.h"
 
 #include <algorithm>
@@ -204,7 +205,8 @@ void options(std::string& out, const std::set<std::string>* only, const std::set
 			json_string(out, d->constraint);
 		}
 		// The descriptor's own list; host device lists are left out (they
-		// depend on the machine the schema is made on).
+		// depend on the machine the schema is made on). A choice that needs
+		// a feature some build leaves out says so, as preset configurations do.
 		if (d->type == AMIBERRY_SETTING_CHOICE) {
 			out += ",\"choices\":[";
 			for (size_t c = 0; c < d->choice_count; c++) {
@@ -214,6 +216,11 @@ void options(std::string& out, const std::set<std::string>* only, const std::set
 				json_string(out, d->choices[c].value);
 				out += ",\"label\":";
 				json_string(out, d->choices[c].label);
+				if (const char* feature = amiberry_settings::choice_requires(d->id, d->choices[c].value)) {
+					out += ",\"requires\":[";
+					json_string(out, feature);
+					out += ']';
+				}
 				out += '}';
 			}
 			out += ']';
@@ -229,14 +236,32 @@ void reset_pending()
 	default_prefs(&changed_prefs, true, 0);
 }
 
-// Whether a preset's value of the option describes the machine: paths are
-// left out (the ROM files depend on the ROMs the machine making the schema
-// has, the launcher supplies its own), and so are the sub-options
-// ("cpuboard_settings:pckbd"), which are part of their parent's value and
-// no configuration key of their own.
+// Whether a preset's option is part of the machine it describes: the
+// sub-options ("cpuboard_settings:pckbd") are part of their parent's value
+// and no configuration key of their own.
 bool machine_option(const amiberry_setting_descriptor* d)
 {
-	return d->type != AMIBERRY_SETTING_PATH && !std::strchr(d->id, ':');
+	return !std::strchr(d->id, ':');
+}
+
+// A file a preset builds in the emulator's NVRAM directory (the CD32's
+// cd32.nvr), spelled relative to the content base ("./NVRAM/cd32.nvr"),
+// which cfgfile resolves in the installation that loads it
+// (target_resolve_relative_path) to its default NVRAM directory: the
+// Android launcher writes it and the emulator keeps the NVRAM there.
+// Empty for any other path: the ROM files depend on the ROMs the machine
+// making the schema has, and the launcher supplies its own. (The export
+// runs before the content paths are set, where the preset's path is the
+// bare file name.)
+std::string nvram_file(const std::string& path)
+{
+	const std::string nvram = get_nvram_path();
+	if (path.empty() || path.compare(0, nvram.size(), nvram) != 0)
+		return {};
+	const std::string name = path.substr(nvram.size());
+	if (name.empty() || name.find_first_of("/\\") != std::string::npos)
+		return {};
+	return std::string("./") + get_nvram_directory_name() + "/" + name;
 }
 
 // Every option's value in a fresh configuration, by descriptor index.
@@ -289,9 +314,14 @@ bool preset_level(std::string& out, const char* id, int config, int level,
 		const amiberry_setting_descriptor* d = amiberry_settings_at(i);
 		if (!machine_option(d))
 			continue;
-		const std::string value = value_of(session, d->id);
-		if (value == defaults[i])
+		std::string value = value_of(session, d->id);
+		if (d->type == AMIBERRY_SETTING_PATH) {
+			value = nvram_file(value);
+			if (value.empty())
+				continue;
+		} else if (value == defaults[i]) {
 			continue;
+		}
 		if (!first)
 			out += ',';
 		first = false;
@@ -747,6 +777,10 @@ bool resolutions(std::string& out)
 struct state_space {
 	std::vector<field> inputs;
 	pairs context;
+	// An input at "0" is not loaded: the fast RAM boards, whose KB key at
+	// 0 would clear the size the MB key set (a front end writes neither
+	// key at 0, as cfgfile saves one key per board).
+	bool skip_zero = false;
 };
 
 // The CPU options a front end edits, cpu_model first (loading it resets
@@ -787,20 +821,36 @@ std::vector<const char*> group_options(const char* group)
 	return ids;
 }
 
+// The chipset extras, without Custom ("-").
+std::vector<const char*> chipset_extras()
+{
+	std::vector<const char*> values = choice_values("chipset_compatible");
+	values.erase(std::remove_if(values.begin(), values.end(), [](const char* v) { return std::strcmp(v, "-") == 0; }),
+		values.end());
+	return values;
+}
+
 // The option values every state is also asked with; the first is the
 // state alone, whose answers the tables give. The transition fields that
 // are not inputs take both of their values, so a transition can tell a
-// value a setter forces from one it keeps.
+// value a setter forces from one it keeps (the MMU, data cache, CPU
+// multiplier and Wait for Blitter that a CPU or cycle-exact change resets).
+// The custom chipset's IDE, Ramsey and Gary and a machine without
+// expansion memory catch tables that would read those.
 const std::vector<pairs>& probes()
 {
 	static const std::vector<pairs> list = {
 		{},
-		{{"cpu_speed", "real"}, {"immediate_blits", "false"}, {"compfpu", "false"}},
-		{{"cpu_speed", "max"}, {"immediate_blits", "true"}, {"compfpu", "true"}},
+		{{"cpu_speed", "real"}, {"immediate_blits", "false"}, {"compfpu", "false"}, {"mmu_model", "0"},
+			{"cpu_data_cache", "false"}, {"cpu_multiplier", "1"}, {"waiting_blits", "disabled"}},
+		{{"cpu_speed", "max"}, {"immediate_blits", "true"}, {"compfpu", "true"}, {"mmu_model", "68030"},
+			{"cpu_data_cache", "true"}, {"cpu_multiplier", "16"}, {"waiting_blits", "automatic"}},
 		{{"chipset", "aga"}, {"chipmem_size", "4"}, {"fastmem_size", "4"}, {"ntsc", "true"},
-			{"sound_channels", "mono"}, {"collision_level", "none"}},
+			{"sound_channels", "mono"}, {"collision_level", "none"}, {"ide", "a600/a1200"}, {"ramsey", "15"},
+			{"fatgary", "0"}},
 		{{"chipset", "ecs"}, {"bogomem_size", "0"}, {"z3mem_size", "16"}, {"sound_frequency", "22050"},
 			{"sound_max_buff", "1024"}},
+		{{"bogomem_size", "0"}},
 	};
 	return list;
 }
@@ -854,8 +904,8 @@ public:
 		: saved(buffer())
 	{
 		reset_pending();
-		parse(space.context);
-		parse(state);
+		parse(space.context, false);
+		parse(state, space.skip_zero);
 		if (saved)
 			std::memcpy(static_cast<void*>(saved), static_cast<const void*>(&changed_prefs), sizeof(uae_prefs));
 	}
@@ -868,7 +918,7 @@ public:
 	void with(const pairs& probe) const
 	{
 		std::memcpy(static_cast<void*>(&changed_prefs), static_cast<const void*>(saved), sizeof(uae_prefs));
-		parse(probe);
+		parse(probe, false);
 	}
 
 private:
@@ -878,9 +928,11 @@ private:
 		return prefs;
 	}
 
-	static void parse(const pairs& values)
+	static void parse(const pairs& values, bool skip_zero)
 	{
 		for (const auto& [id, value] : values) {
+			if (skip_zero && std::strcmp(value, "0") == 0)
+				continue;
 			TCHAR text[64];
 			std::snprintf(text, sizeof text, "%s", value);
 			cfgfile_parse_option(&changed_prefs, id, text, 0);
@@ -994,10 +1046,6 @@ std::vector<availability_table> availability_tables()
 		{{{{"chipset_compatible", choice_values("chipset_compatible")},
 			{"chipmem_size", choice_values("chipmem_size")}}, {}},
 			group_options("adv_chipset"), {}},
-		// The RTC chip a chipset extra keeps, which depends on the CPU.
-		{{{{"cpu_model", choice_values("cpu_model")}, {"cpu_compatible", {"true", "false"}},
-			{"chipset_compatible", choice_values("chipset_compatible")}}, {}},
-			{}, {"rtc"}},
 		{{{{"genlock", {"true", "false"}}}, {}},
 			{"genlockmode", "genlock_mix", "genlock_alpha", "genlock_aspect"}, {"genlockmode"}},
 		// The Zorro III boards and mappings need 32-bit addressing.
@@ -1037,13 +1085,17 @@ std::vector<availability_table> availability_tables()
 		// extra comes after the CPU, as in a configuration file: its boards
 		// depend on the CPU model and, for Generic, on CPU compatibility. A
 		// Zorro II RTG board also limits chip RAM; a front end without one
-		// gets the answers without it.
+		// gets the answers without it. The IDE controller (Gayle) caps slow
+		// RAM whatever the extra. Custom ("-") is not a state: its Gary and
+		// Ramsey are numbers the table cannot list, so a custom machine gets
+		// no answer and keeps every size offered.
 		{{{{"cpu_model", choice_values("cpu_model")},
 			{"cpu_compatible", {"true", "false"}},
 			{"cpu_24bit_addressing", {"true", "false"}},
 			{"cycle_exact", choice_values("cycle_exact")},
 			{"cachesize", {"0", "8192"}},
-			{"chipset_compatible", choice_values("chipset_compatible")}}, {}},
+			{"chipset_compatible", chipset_extras()},
+			{"ide", choice_values("ide")}}, {}},
 			{}, {"chipmem_size", "bogomem_size"}},
 	};
 	// Each drive's click volumes against its drive sound.
@@ -1166,9 +1218,13 @@ struct transition_table {
 	std::vector<const char*> fields;
 };
 
+// The CPU setters' changes. The MMU is an input (it decides whether the
+// JIT can be set); the data cache, CPU multiplier and Wait for Blitter are
+// fields the setters reset to one value without reading them, which the
+// probes (both values of each) confirm.
 transition_table cpu_transitions()
 {
-	return {cpu_states(),
+	return {cpu_mmu_states(),
 		{
 			{"cpu_model", choice_values("cpu_model")},
 			{"cycle_exact", choice_values("cycle_exact")},
@@ -1176,7 +1232,8 @@ transition_table cpu_transitions()
 			{"cpu_compatible", {"true", "false"}},
 		},
 		{"cpu_model", "cpu_24bit_addressing", "cycle_exact", "cachesize", "cpu_compatible", "fpu_model",
-			"cpu_speed", "immediate_blits", "compfpu"}};
+			"cpu_speed", "immediate_blits", "compfpu", "mmu_model", "cpu_data_cache", "cpu_multiplier",
+			"waiting_blits"}};
 }
 
 // The Zorro II fast RAM boards, as cfgfile names them: a board's size is
@@ -1190,7 +1247,7 @@ std::vector<transition_table> memory_transitions()
 	std::vector<transition_table> tables;
 	for (int board = 0; board < 4; board++) {
 		const std::vector<const char*> kb = accepted_values(kb_keys[board]);
-		tables.push_back({{{{mb_keys[board], choice_values(mb_keys[board])}, {kb_keys[board], kb}}, {}},
+		tables.push_back({{{{mb_keys[board], choice_values(mb_keys[board])}, {kb_keys[board], kb}}, {}, true},
 			{{mb_keys[board], choice_values(mb_keys[board])}, {kb_keys[board], kb}},
 			{mb_keys[board], kb_keys[board]}});
 	}

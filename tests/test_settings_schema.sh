@@ -1,11 +1,13 @@
 #!/bin/sh
-# Behavioral test of --settings-schema: the full export is valid JSON with
-# every option, preset, resolution, availability and transition table; an
-# option list naming an unknown option is refused; and the copy the Android
-# launcher bundles (android/app/src/main/settings/settings_schema.json)
-# matches what this build generates, so a layer change cannot leave it stale.
-# The export itself fails when an availability or transition answer changes
-# with an option its table does not have as an input.
+# Behavioral test of --settings-schema: the export of the Android
+# launcher's option list is valid JSON with its options, every preset,
+# resolution, availability and transition table; an option list naming an
+# unknown option is refused; and the copy the Android launcher bundles
+# (android/app/src/main/settings/settings_schema.json) matches what this
+# build generates, so a layer change cannot leave it stale. The export runs
+# once (it takes minutes) and every check reads it. The export itself fails
+# when an availability or transition answer changes with an option its
+# table does not have as an input.
 #
 # Every preset configuration's compatibility levels are the machine: a
 # configuration file of a level's values loads as the configuration
@@ -37,8 +39,8 @@ work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 export HOME="$work"
 
-"$AMIBERRY_BIN" --settings-schema > "$work/full.json"
-"$python" - "$work/full.json" <<'PY'
+"$AMIBERRY_BIN" --settings-schema="$root/android/scripts/settings_schema_options.txt" > "$work/android.json"
+"$python" - "$work/android.json" <<'PY'
 import json, sys
 schema = json.load(open(sys.argv[1]))
 assert schema["schema_version"] == 1
@@ -58,7 +60,13 @@ for p in schema["presets"]:
 ids_set = set(ids)
 types = {o["id"]: o["type"] for o in schema["options"]}
 level_keys = {k for p in schema["presets"] for c in p["configs"] for level in c["levels"] for k in level}
-assert level_keys <= ids_set and not any(types[k] == "path" or ":" in k for k in level_keys), level_keys
+assert level_keys <= ids_set and not any(":" in k for k in level_keys), level_keys
+# The only paths in the levels are NVRAM files, spelled relative to the
+# content base so each installation keeps them in its own NVRAM directory.
+level_paths = {(k, level[k]) for p in schema["presets"] for c in p["configs"] for level in c["levels"]
+               for k in level if types[k] == "path"}
+assert all(k == "flash_file" and v.startswith("./NVRAM/") for k, v in level_paths), level_paths
+assert ("flash_file", "./NVRAM/cd32.nvr") in level_paths, level_paths
 assert all(c["rom_sets"] for p in schema["presets"] for c in p["configs"]), "every configuration can be built"
 rom_ids = {r["id"] for r in schema["roms"]}
 assert all(any(i in rom_ids for i in req["ids"])
@@ -121,6 +129,11 @@ assert ppc == {("a1200", "Blizzard PPC"), ("a4000", "CyberStorm PPC")}, ppc
 assert {p["id"] for p in schema["presets"] if p.get("arcade")} == {"alg", "arcadia"}, "arcade presets"
 android = {o["id"]: o["android_default"] for o in schema["options"] if "android_default" in o}
 assert android.get("sound_frequency") == "48000" and android.get("sound_max_buff") == "8192", android
+# The genlock sources a build without VIDEOGRAB leaves out are marked, so
+# the Android launcher (no VIDEOGRAB) drops them from the desktop export.
+genlock = {c["value"]: c.get("requires", []) for c in next(o for o in schema["options"] if o["id"] == "genlockmode")["choices"]}
+assert [v for v, r in genlock.items() if not r] == ["none", "noise", "testcard", "image"], genlock
+assert all(r == ["videograb"] for r in genlock.values() if r), genlock
 assert schema["aros"] == {"rom_file": ":AROS", "main_file": "aros-rom.bin", "ext_file": "aros-ext.bin"}, schema["aros"]
 PY
 
@@ -132,10 +145,10 @@ fi
 
 # Each level of each preset configuration, written as a configuration file,
 # loads as the machine --apply-preset builds. Both start from a loaded
-# configuration (the empty file), as a launch does. Paths are left out of
-# the levels, the launcher supplies its own (ROM files; the NVRAM file in
-# flash_file). What the layer has no option for is listed below.
-"$python" - "$AMIBERRY_BIN" "$work/full.json" "$work" <<'PY'
+# configuration (the empty file), as a launch does. Paths other than the
+# NVRAM file are left out of the levels: the launcher supplies its own ROM
+# files. What the layer has no option for is listed below.
+"$python" - "$AMIBERRY_BIN" "$work/android.json" "$work" <<'PY'
 import json, os, subprocess, sys
 binary, schema_path, work = sys.argv[1:4]
 schema = json.load(open(schema_path))
@@ -182,7 +195,7 @@ for preset in schema["presets"]:
             # gdb_port is not the machine but the GDB server's port, which a
             # preset's reset sets and a configuration load leaves out.
             differ = [k for k in sorted(set(built) | set(loaded)) if built.get(k) != loaded.get(k)
-                      and k != "gdb_port" and types.get(k) != "path"
+                      and k != "gdb_port" and (types.get(k) != "path" or k in values)
                       and (preset["id"], config) not in gaps.get(k, ())]
             if differ:
                 failures.append(f"{spec}: " + ", ".join(f"{k} {built.get(k)} != {loaded.get(k)}" for k in differ))
@@ -195,7 +208,6 @@ if [ "$(ls -A "$settings")" != "settings_schema.json" ]; then
 	echo "android/app/src/main/settings must hold only settings_schema.json" >&2
 	exit 1
 fi
-"$AMIBERRY_BIN" --settings-schema="$root/android/scripts/settings_schema_options.txt" > "$work/android.json"
 if ! cmp -s "$work/android.json" "$settings/settings_schema.json"; then
 	echo "android/app/src/main/settings/settings_schema.json is stale;" >&2
 	echo "regenerate it with android/scripts/update_settings_schema.sh" >&2

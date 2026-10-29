@@ -185,21 +185,27 @@ data class EmulatorSettings(
 
 	/**
 	 * [model]'s preset configuration [config] at the model's default level,
-	 * keeping these settings' Android controls and shader: a model change
-	 * replaces the machine, [options] included, not how the user plays.
+	 * keeping these settings' Android controls and shader, and their
+	 * [options] of the input and on-screen groups the preset does not set: a
+	 * model change replaces the machine, not how the user plays.
 	 */
-	fun withModel(model: AmigaModel, config: Int): EmulatorSettings = fromModel(model, config).copy(
-		shader = shader,
-		joyport0 = joyport0,
-		joyport1 = joyport1,
-		onScreenJoystick = onScreenJoystick,
-		onScreenKeyboardButton = onScreenKeyboardButton,
-		onScreenKeyboardNumpad = onScreenKeyboardNumpad,
-		onScreenKeyboardToggle = onScreenKeyboardToggle,
-		joyport0MouseMap = joyport0MouseMap,
-		joyport1MouseMap = joyport1MouseMap,
-		analogMouseSpeed = analogMouseSpeed
-	)
+	fun withModel(model: AmigaModel, config: Int, schema: SettingsSchema? = SettingsSchema.current): EmulatorSettings {
+		val machine = fromModel(model, config)
+		val played = options.filterKeys { id -> id !in machine.options && schema?.option(id)?.group in PLAY_GROUPS }
+		return machine.copy(
+			shader = shader,
+			joyport0 = joyport0,
+			joyport1 = joyport1,
+			onScreenJoystick = onScreenJoystick,
+			onScreenKeyboardButton = onScreenKeyboardButton,
+			onScreenKeyboardNumpad = onScreenKeyboardNumpad,
+			onScreenKeyboardToggle = onScreenKeyboardToggle,
+			joyport0MouseMap = joyport0MouseMap,
+			joyport1MouseMap = joyport1MouseMap,
+			analogMouseSpeed = analogMouseSpeed,
+			options = machine.options + played
+		)
+	}
 
 	/**
 	 * The compatibility level of [baseModel]'s configuration [baseConfig]
@@ -242,6 +248,9 @@ data class EmulatorSettings(
 		internal fun jitState(cacheSize: Int): String = if (cacheSize > 0) JIT_ON else "0"
 
 		private const val JIT_ON = "8192"
+
+		/** The settings groups that describe how the user plays rather than the machine (kept by [withModel]). */
+		private val PLAY_GROUPS = setOf("input", "onscreen")
 
 		fun onScreenKeyboardAvailable(button: Boolean, toggle: String?): Boolean =
 			button || toggle != ""

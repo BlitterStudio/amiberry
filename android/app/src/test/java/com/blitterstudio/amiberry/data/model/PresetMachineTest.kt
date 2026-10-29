@@ -1,5 +1,6 @@
 package com.blitterstudio.amiberry.data.model
 
+import com.blitterstudio.amiberry.data.AndroidLaunchConfig
 import com.blitterstudio.amiberry.data.ConfigGenerator
 import com.blitterstudio.amiberry.data.ConfigParser
 import com.blitterstudio.amiberry.data.ConfigSettingsResolver
@@ -85,6 +86,81 @@ class PresetMachineTest {
 		val defaults = ConfigSettingsResolver.defaults(null)
 		assertEquals(AmigaModel.A500, defaults.baseModel)
 		assertEquals(AmigaModel.A500.defaultLevel, defaults.compatibilityLevel)
+	}
+
+	@Test
+	fun `a preset record without a level brings level 0's machine and the file's keys win`() {
+		// Written before levels: the launch applied the preset, the file has only the fields.
+		val file = tempDir.newFile("old.uae")
+		file.writeText("amiberry.android_preset=cd32:0\ncpu_model=68020\nchipset=aga\ncd32nvram=false\n")
+		val parsed = ConfigParser.parse(file)
+		val generated = written(parsed.settings)
+		assertEquals("true", generated["cd32cd"])
+		assertEquals("true", generated["cd32c2p"])
+		assertEquals("CD32", generated["chipset_compatible"])
+		assertEquals("false", generated["cd32nvram"])
+		// What the record filled in is not what the file set.
+		assertFalse("cd32cd" in parsed.explicitKeys)
+		assertTrue("cd32nvram" in parsed.explicitKeys)
+
+		// A record with a level wrote its whole machine: nothing is added.
+		file.writeText("amiberry.android_preset=cd32:0:0\ncpu_model=68020\n")
+		assertNull(ConfigParser.parse(file).settings.options["cd32cd"])
+	}
+
+	@Test
+	fun `a model change keeps the input and on-screen options the new preset does not set`() {
+		val played = EmulatorSettings.fromModel(AmigaModel.A500)
+			.withOption("amiberry.vkbd_transparency", "40")
+			.withOption("input.joystick_deadzone", "20")
+			.withOption("joyport1mode", "djoy")
+		val cd32 = played.withModel(AmigaModel.CD32, 0)
+		assertEquals("40", cd32.options["amiberry.vkbd_transparency"])
+		assertEquals("20", cd32.options["input.joystick_deadzone"])
+		// The CD32 preset sets its pad mode; the machine's own values replace the A500's.
+		assertEquals("cd32joy", cd32.options["joyport1mode"])
+		assertEquals("CD32", cd32.options["chipset_compatible"])
+		assertEquals(AmigaModel.CD32.defaultLevel, cd32.compatibilityLevel)
+
+		// Quick Start builds its launch the same way.
+		val snapshot = AndroidLaunchConfig.buildQuickStartSettingsSnapshot(
+			AmigaModel.CD32, emptyList(), played, "", "", ""
+		)
+		assertEquals("40", snapshot.options["amiberry.vkbd_transparency"])
+		assertEquals("cd32joy", snapshot.options["joyport1mode"])
+	}
+
+	@Test
+	fun `a CPU change resets the MMU and sets the multiplier as the emulator does`() {
+		val a3000 = EmulatorSettings.fromModel(AmigaModel.A3000, 0, 0)
+		assertEquals("68030", a3000.optionValue("mmu_model"))
+		assertNull(a3000.withOption("cpu_model", "68040").options["mmu_model"])
+
+		// More compatible: a 68020 runs at 4x the chipset clock.
+		val a500 = EmulatorSettings.fromModel(AmigaModel.A500)
+		assertTrue(a500.cpuCompatible)
+		assertEquals("4", a500.withOption("cpu_model", "68020").optionValue("cpu_multiplier"))
+	}
+
+	@Test
+	fun `picking a sub-1 MB fast RAM size clears the MB size`() {
+		val small = EmulatorSettings(fastRam = 2).withOption("fastmem_size_k", "256")
+		assertEquals(0, small.fastRam)
+		assertEquals("256", small.options["fastmem_size_k"])
+	}
+
+	@Test
+	fun `genlock sources that need video capture are not offered`() {
+		assertEquals(listOf("none", "noise", "testcard", "image"), schema.option("genlockmode")!!.choices.map { it.value })
+	}
+
+	@Test
+	fun `a CD32 keeps its NVRAM in the emulator's NVRAM directory`() {
+		// Spelled relative to the content base, which the core resolves to its NVRAM directory.
+		val cd32 = EmulatorSettings.fromModel(AmigaModel.CD32)
+		assertEquals("./NVRAM/cd32.nvr", written(cd32)["flash_file"])
+		assertEquals("./NVRAM/cd32.nvr", roundTrip(cd32).settings.options["flash_file"])
+		assertEquals("./NVRAM/cdtv.nvr", written(EmulatorSettings.fromModel(AmigaModel.CDTV))["flash_file"])
 	}
 
 	@Test

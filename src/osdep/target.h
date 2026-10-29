@@ -236,6 +236,7 @@ extern bool set_portable_mode(bool enable);
 #endif
 extern int relativepaths;
 extern std::string get_relative_path_base();
+extern const char* get_nvram_directory_name();
 extern bool should_show_legacy_cleanup_prompt();
 extern std::vector<std::string> get_legacy_cleanup_prompt_items();
 extern bool legacy_cleanup_uses_trash();

@@ -46,23 +46,14 @@ object AndroidLaunchConfig {
 	): EmulatorSettings {
 		val selectedRoms = ModelRomAvailability.selectRomsForModel(model, roms)
 
-		return EmulatorSettings.fromModel(model, selectedRoms.config).copy(
+		// The model's machine with the current controls, shader and input options.
+		return currentSettings.withModel(model, selectedRoms.config).copy(
 			romFile = selectedRoms.romFile,
 			romExtFile = selectedRoms.romExtFile,
 			floppy0 = floppy0,
 			floppy1 = floppy1,
 			floppy1Type = if (floppy1.isBlank()) -1 else 0,
-			cdImage = cdImage,
-			shader = currentSettings.shader,
-			joyport0 = currentSettings.joyport0,
-			joyport1 = currentSettings.joyport1,
-			onScreenJoystick = currentSettings.onScreenJoystick,
-			onScreenKeyboardButton = currentSettings.onScreenKeyboardButton,
-			onScreenKeyboardNumpad = currentSettings.onScreenKeyboardNumpad,
-			onScreenKeyboardToggle = currentSettings.onScreenKeyboardToggle,
-			joyport0MouseMap = currentSettings.joyport0MouseMap,
-			joyport1MouseMap = currentSettings.joyport1MouseMap,
-			analogMouseSpeed = currentSettings.analogMouseSpeed
+			cdImage = cdImage
 		)
 	}
 

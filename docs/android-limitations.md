@@ -21,8 +21,7 @@ MIDI is built with PortMidi's null backend, so no host MIDI devices are availabl
 The Android launcher's **Native Shader** list offers the built-in shaders (`none`, `tv`, `pc`, `lite`, `1084`) plus any `.glslp` presets and top-level `.glsl` files found in `Visuals/Shaders`. The built-in CRT effect switches to lighter shader and blur variants on mobile GPUs.
 
 ### Model presets
-The launcher writes the whole machine a Quick Start model builds into its configuration (chipset extras such as the A3000's SCSI and Ramsey or the CD32's Akiko included), at the **Compatibility** level picked next to the model; new models start at the approximate level, as on the desktop. A few parts of a preset are not settings the launcher can write:
-- the CD32, CDTV, arcade and DraCo NVRAM file, so their NVRAM is not kept between launches;
+The launcher writes the whole machine a Quick Start model builds into its configuration (chipset extras such as the A3000's SCSI and Ramsey or the CD32's Akiko included), at the **Compatibility** level picked next to the model; new models start at the approximate level, as on the desktop. The CD32, CDTV and DraCo NVRAM files are kept in the emulator's `NVRAM` folder between launches. A few parts of a preset are not settings the launcher can write:
 - the 64 KB SRAM card of the CDTV "Floppy drive and 64KB SRAM card" configuration;
 - the CD drive of a CD32 or CDTV started without a disc.
 

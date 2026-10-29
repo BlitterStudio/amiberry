@@ -133,13 +133,10 @@ z3_autoconfig
 pcmcia
 1mchipjumper
 ciaa_type
-ide
 scsi_a3000
 scsi_a4000t
 unmapped_address_space
 eclocksync
-ramsey
-fatgary
 agnusrev
 deniserev
 agnusmodel
@@ -197,8 +194,6 @@ sound_filter_type
 # input
 joyport0autofire
 joyport1autofire
-joyport2autofire
-joyport3autofire
 joyport0mode
 joyport1mode
 input.autoswitch

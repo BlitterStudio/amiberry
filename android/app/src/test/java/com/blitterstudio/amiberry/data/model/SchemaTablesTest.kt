@@ -53,8 +53,16 @@ class SchemaTablesTest {
 		"fpu_model" to s.fpuModel.toString(),
 		"cpu_speed" to s.cpuSpeed,
 		"immediate_blits" to s.immediateBlits.toString(),
-		"compfpu" to s.jitFpu.toString()
+		"compfpu" to s.jitFpu.toString(),
+		// Options without a field: their value, or the default where unset.
+		"mmu_model" to optionOf(s, "mmu_model"),
+		"cpu_data_cache" to optionOf(s, "cpu_data_cache"),
+		"cpu_multiplier" to optionOf(s, "cpu_multiplier"),
+		"waiting_blits" to optionOf(s, "waiting_blits")
 	)
+
+	private fun optionOf(s: EmulatorSettings, id: String): String =
+		s.optionValue(id) ?: SettingsSchema.current!!.option(id)!!.defaultOnAndroid
 
 	@Test
 	fun `every CPU state reads the availability the export wrote for it`() {

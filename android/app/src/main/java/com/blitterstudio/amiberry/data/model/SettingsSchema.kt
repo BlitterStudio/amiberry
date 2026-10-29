@@ -319,11 +319,12 @@ class SettingsSchema(
 			val optionArray = json.getJSONArray("options")
 			for (i in 0 until optionArray.length()) {
 				val o = optionArray.getJSONObject(i)
+				// A choice that needs a feature the Android build leaves out
+				// (the genlock's video sources need VIDEOGRAB) is not offered.
 				val choices = o.optJSONArray("choices")?.let { array ->
-					List(array.length()) { c ->
-						val choice = array.getJSONObject(c)
-						Choice(choice.getString("value"), choice.getString("label"))
-					}
+					List(array.length()) { array.getJSONObject(it) }
+						.filter { choice -> choice.optJSONArray("requires")?.toStringList().orEmpty().all { it in ANDROID_FEATURES } }
+						.map { choice -> Choice(choice.getString("value"), choice.getString("label")) }
 				} ?: emptyList()
 				fun text(key: String): String? = if (o.has(key) && !o.isNull(key)) o.getString(key) else null
 				fun number(key: String): Double? = if (o.has(key) && !o.isNull(key)) o.getDouble(key) else null

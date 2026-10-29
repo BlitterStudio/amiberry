@@ -85,13 +85,13 @@ class SettingsControlAvailabilityTest {
 	fun `a chipset extra sets the advanced chipset`() {
 		val generic = EmulatorSettings(cpuModel = 68020, chipRam = 1)
 		assertFalse(available(generic, "ciaatod"))
-		assertEquals(listOf("RP5C01A"), SettingsControlAvailability.choiceValues(generic, "rtc"))
+		// The RTC chips an extra keeps depend on the machine's memory too, which no table has: every chip is offered.
+		assertNull(SettingsControlAvailability.choiceValues(generic, "rtc"))
 
 		val custom = generic.withOption("chipset_compatible", "-")
 		assertTrue(available(custom, "ciaatod"))
 		assertTrue(available(custom, "1mchipjumper"))
 		assertFalse(available(custom.copy(chipRam = 4), "1mchipjumper"))
-		assertEquals(4, SettingsControlAvailability.choiceValues(custom, "rtc")?.size)
 	}
 
 	@Test

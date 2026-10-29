@@ -851,8 +851,8 @@ const definition definitions[] = {
 			fpu_strict_apply, "false", "Needs an FPU."),
 		get_fpu_strict, set_fpu_strict, has_fpu, nullptr, nullptr},
 	{BOOL_OPTION("fpu_softfloat", "fpu", "Softfloat FPU (80-bit)",
-			"FPU precision mode. Softfloat is most accurate but slowest.",
-			AMIBERRY_APPLY_LIVE, "false", "Needs an FPU, and is not available when the JIT emulates the FPU."),
+			"FPU precision mode. Softfloat is most accurate but slowest; the JIT FPU replaces it.",
+			AMIBERRY_APPLY_LIVE, "false", "Needs an FPU."),
 		get_fpu_softfloat, set_fpu_softfloat, has_fpu, nullptr, nullptr, fpu_softfloat_accepts},
 #ifdef MSVC_LONG_DOUBLE
 	{BOOL_OPTION("fpu_msvc_long_double", "fpu", "Host FPU (80-bit)",
@@ -862,7 +862,7 @@ const definition definitions[] = {
 #endif
 	{BOOL_OPTION("fpu_no_unimplemented", "fpu", "No unimplemented FPU emulation",
 			"Do not emulate the FPU instructions the CPU traps as unimplemented.",
-			AMIBERRY_APPLY_LIVE, "false", "Needs an FPU; unimplemented instruction emulation is always on with the JIT."),
+			AMIBERRY_APPLY_LIVE, "false", "Not available without an FPU, nor with the JIT, which always emulates them."),
 		get_fpu_no_unimplemented, set_fpu_no_unimplemented, fpu_no_unimplemented_available, nullptr, nullptr},
 	{CHOICE_OPTION("cpu_speed", "cpu_speed", "CPU speed",
 			"Fastest possible runs the CPU as fast as the host allows; the other mode matches original Amiga speed.",

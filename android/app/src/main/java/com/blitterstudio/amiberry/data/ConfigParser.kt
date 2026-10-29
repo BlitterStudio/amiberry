@@ -119,10 +119,27 @@ object ConfigParser {
 			}
 		}
 
-		val settings = buildSettings(kvPairs, hardDrives).copy(options = options)
+		// A file's own keys win over what its preset record fills in.
+		val settings = buildSettings(kvPairs, hardDrives)
+			.copy(options = legacyPresetOptions(kvPairs["amiberry.android_preset"]) + options)
 		val description = kvPairs["config_description"] ?: ""
 
 		return ParsedConfig(settings, unknownLines, description, kvPairs.keys + options.keys)
+	}
+
+	/**
+	 * The machine options of a preset record written before levels existed
+	 * ("<preset id>:<configuration>", no level): those launches started the
+	 * emulator from the preset (--apply-preset) and the file holds only the
+	 * fields, so the rest of the preset's machine is level 0's values without
+	 * a field. Empty for a record with a level, which wrote its whole machine.
+	 */
+	private fun legacyPresetOptions(record: String?): Map<String, String> {
+		val parts = record?.split(':') ?: return emptyMap()
+		if (parts.size != 2) return emptyMap()
+		val model = AmigaModel.find(parts[0]) ?: return emptyMap()
+		val config = parts[1].toIntOrNull()?.takeIf { it in model.configs.indices } ?: return emptyMap()
+		return model.levelValues(config, 0).filterKeys { it !in EmulatorSettings.FIELD_IDS }
 	}
 
 	private fun buildSettings(kv: Map<String, String>, hardDrives: List<HardDrive>): EmulatorSettings {

@@ -2,6 +2,7 @@ package com.blitterstudio.amiberry.ui.screens.settings
 
 import com.blitterstudio.amiberry.data.model.EmulatorSettings
 import com.blitterstudio.amiberry.data.model.SettingsSchema
+import com.blitterstudio.amiberry.data.model.installedMemory
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

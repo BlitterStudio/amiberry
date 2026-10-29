@@ -46,7 +46,7 @@ void write_choice(char* out, size_t size, const amiberry_setting_choice* choices
 #define CHOICES(array) array, sizeof(array) / sizeof((array)[0])
 
 // The Advanced Chipset panel keeps every control except the RTC radios
-// disabled while a chipset extra (Compatible Settings) is active.
+// disabled while a chipset extra is active.
 bool custom_chipset(const uae_prefs& p, const context&)
 {
 	return p.cs_compatible == 0;
@@ -407,6 +407,12 @@ void set_genlockmode(uae_prefs& p, const value& v)
 	p.genlock_image = choice_index(CHOICES(genlockmode_choices), v.text);
 }
 
+// The sources after the image file need the VIDEOGRAB build.
+bool genlockmode_needs_videograb(std::string_view choice)
+{
+	return choice_index(CHOICES(genlockmode_choices), choice) > 3;
+}
+
 // The old panel clamped an unavailable genlock source to none with a write
 // on every frame; the layer makes the sources that need the VIDEOGRAB build
 // unavailable instead.
@@ -416,8 +422,7 @@ bool genlockmode_choice_available(const uae_prefs&, std::string_view choice)
 	(void)choice;
 	return true;
 #else
-	const int index = choice_index(CHOICES(genlockmode_choices), choice);
-	return index >= 0 && index <= 3;
+	return choice_index(CHOICES(genlockmode_choices), choice) >= 0 && !genlockmode_needs_videograb(choice);
 #endif
 }
 
@@ -850,7 +855,7 @@ constexpr double no_range = 0;
 	{id, group, label, help, AMIBERRY_SETTING_PATH, apply, no_range, no_range, no_range, def, nullptr, 0, constraint}
 
 const char* const custom_constraint =
-	"Greyed out while a chipset extra (Compatible Settings) is active; the extra sets it.";
+	"Not available while a chipset extra is set; the extra sets it.";
 
 const definition definitions[] = {
 	{CHOICE_OPTION("chipset", "chipset", "Chipset",
@@ -872,7 +877,7 @@ const definition definitions[] = {
 	{CHOICE_OPTION("waiting_blits", "chipset", "Wait for Blitter",
 			"CPU waits for the Blitter to finish. More compatible than Immediate Blitter.",
 			AMIBERRY_APPLY_LIVE, "disabled", waiting_blits_choices,
-			"Not available with immediate blits, nor in memory cycle-exact mode on a 68000 or 68010."),
+			"Not available with immediate blits, nor in the cycle-exact modes on a 68000 or 68010."),
 		get_waiting_blits, set_waiting_blits, waiting_blits_available, nullptr, nullptr},
 	{CHOICE_OPTION("keyboard_type", "chipset", "Keyboard layout",
 			"Keyboard controller emulation mode.",
@@ -904,9 +909,9 @@ const definition definitions[] = {
 			AMIBERRY_APPLY_LIVE, "false", nullptr),
 		get_genlock, set_genlock, nullptr, nullptr, nullptr, genlock_accepts},
 	{CHOICE_OPTION("genlockmode", "genlock", "Genlock source",
-			"What the genlock overlays on the Amiga video signal.",
+			"What the genlock overlays on the Amiga video signal. The video and LaserDisc sources need a VIDEOGRAB build.",
 			AMIBERRY_APPLY_LIVE, "none", genlockmode_choices,
-			"Needs genlock on. The video and LaserDisc sources need a VIDEOGRAB build."),
+			"Needs genlock on."),
 		get_genlockmode, set_genlockmode, genlock_group, genlockmode_choice_available, nullptr},
 	{PATH_OPTION("genlock_image", "genlock", "Genlock image file",
 			"PNG/JPEG/BMP image the genlock overlays (genlockmode=image).",
@@ -995,17 +1000,17 @@ const definition definitions[] = {
 	{CHOICE_OPTION("ide", "adv_chipset", "IDE controller",
 			"Built-in IDE controller type. The A600/A1200 and A4000 controllers exclude each other, as on real hardware.",
 			AMIBERRY_APPLY_RESET, "none", ide_choices,
-			"Only written when the machine's IDE controller is enabled (a chipset extra)."),
+			custom_constraint),
 		get_ide, set_ide, custom_chipset, nullptr, nullptr},
 	{BOOL_OPTION("scsi_a3000", "adv_chipset", "A3000 WD33C93 SCSI",
 			"Enable the A3000 built-in WD33C93 SCSI controller.",
 			AMIBERRY_APPLY_LIVE, "false",
-			"Only written when the machine's SCSI controller is enabled (a chipset extra)."),
+			custom_constraint),
 		get_scsi_a3000, set_scsi_a3000, custom_chipset, nullptr, nullptr},
 	{BOOL_OPTION("scsi_a4000t", "adv_chipset", "A4000T NCR53C710 SCSI",
 			"Enable the A4000T built-in NCR53C710 SCSI controller.",
 			AMIBERRY_APPLY_LIVE, "false",
-			"Only written when the machine's SCSI controller is enabled (a chipset extra)."),
+			custom_constraint),
 		get_scsi_a4000t, set_scsi_a4000t, custom_chipset, nullptr, nullptr},
 	{CHOICE_OPTION("unmapped_address_space", "adv_chipset", "Unmapped address space",
 			"What unmapped memory reads return.",
@@ -1155,6 +1160,11 @@ const domain chipset = {
 const domain& chipset_domain()
 {
 	return chipset;
+}
+
+const char* choice_requires(std::string_view id, std::string_view value)
+{
+	return id == "genlockmode" && genlockmode_needs_videograb(value) ? "videograb" : nullptr;
 }
 
 } // namespace amiberry_settings
