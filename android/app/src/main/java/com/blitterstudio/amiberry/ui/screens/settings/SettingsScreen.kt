@@ -266,6 +266,7 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel(LocalContext.current
 					) {
 						DropdownMenuItem(
 							text = { Text(stringResource(R.string.action_review_changes)) },
+							modifier = Modifier.dpadFocusIndicator(),
 							leadingIcon = { Icon(Icons.Default.Info, contentDescription = null) },
 							enabled = viewModel.hasUnsavedChanges,
 							onClick = {
@@ -275,6 +276,7 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel(LocalContext.current
 						)
 						DropdownMenuItem(
 							text = { Text(stringResource(R.string.action_save_as)) },
+							modifier = Modifier.dpadFocusIndicator(),
 							leadingIcon = { Icon(Icons.Default.Save, contentDescription = null) },
 							onClick = {
 								showTopBarMenu = false
@@ -283,6 +285,7 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel(LocalContext.current
 						)
 						DropdownMenuItem(
 							text = { Text(stringResource(R.string.action_quick_setups)) },
+							modifier = Modifier.dpadFocusIndicator(),
 							leadingIcon = { Icon(Icons.Default.AutoFixHigh, contentDescription = null) },
 							onClick = {
 								showTopBarMenu = false
@@ -291,6 +294,7 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel(LocalContext.current
 						)
 						DropdownMenuItem(
 							text = { Text(stringResource(R.string.action_advanced)) },
+							modifier = Modifier.dpadFocusIndicator(),
 							leadingIcon = { Icon(Icons.Default.Settings, contentDescription = null) },
 							enabled = !launchInProgress,
 							onClick = {

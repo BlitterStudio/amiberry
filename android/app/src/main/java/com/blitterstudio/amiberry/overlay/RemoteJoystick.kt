@@ -6,9 +6,13 @@ import android.os.Handler
 import android.os.Looper
 import android.view.InputDevice
 import android.view.KeyEvent
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
 import com.blitterstudio.amiberry.ui.isTvDevice
 
 /**
@@ -32,6 +36,11 @@ object RemoteJoystick {
 		sources and InputDevice.SOURCE_GAMEPAD == InputDevice.SOURCE_GAMEPAD ||
 			sources and InputDevice.SOURCE_JOYSTICK == InputDevice.SOURCE_JOYSTICK
 
+	/** Whether the remote drives port 2 on this device now: a TV with no gamepad connected. */
+	fun drivesPort2(isTv: Boolean): Boolean = isTv && InputDevice.getDeviceIds().none { id ->
+		InputDevice.getDevice(id)?.let { !it.isVirtual && isGamepad(it.sources) } == true
+	}
+
 	/** The joystick button a remote key stands for; 0 for any other key. */
 	fun button(keyCode: Int): Int = when (keyCode) {
 		KeyEvent.KEYCODE_DPAD_UP -> OverlayNative.REMOTE_UP
@@ -41,6 +50,31 @@ object RemoteJoystick {
 		KeyEvent.KEYCODE_DPAD_CENTER -> OverlayNative.REMOTE_FIRE
 		else -> 0
 	}
+}
+
+/**
+ * [RemoteJoystick.drivesPort2] for the launcher, which runs apart from the emulator:
+ * whether a launch now would have the remote drive port 2, kept up to date as
+ * gamepads connect and disconnect.
+ */
+@Composable
+fun rememberRemoteDrivesPort2(): Boolean {
+	val context = LocalContext.current
+	val isTv = isTvDevice()
+	var drives by remember { mutableStateOf(RemoteJoystick.drivesPort2(isTv)) }
+	if (isTv) {
+		DisposableEffect(context) {
+			val inputManager = context.getSystemService(InputManager::class.java)
+			val listener = object : InputManager.InputDeviceListener {
+				override fun onInputDeviceAdded(deviceId: Int) { drives = RemoteJoystick.drivesPort2(true) }
+				override fun onInputDeviceRemoved(deviceId: Int) { drives = RemoteJoystick.drivesPort2(true) }
+				override fun onInputDeviceChanged(deviceId: Int) { drives = RemoteJoystick.drivesPort2(true) }
+			}
+			inputManager?.registerInputDeviceListener(listener, Handler(Looper.getMainLooper()))
+			onDispose { inputManager?.unregisterInputDeviceListener(listener) }
+		}
+	}
+	return drives
 }
 
 /**
@@ -96,10 +130,7 @@ class RemoteJoystickHost(
 	override fun onInputDeviceChanged(deviceId: Int) = update()
 
 	private fun update() {
-		val gamepad = InputDevice.getDeviceIds().any { id ->
-			InputDevice.getDevice(id)?.let { !it.isVirtual && RemoteJoystick.isGamepad(it.sources) } == true
-		}
-		val active = isTv && !gamepad
+		val active = RemoteJoystick.drivesPort2(isTv)
 		if (active == RemoteJoystick.isActive) return
 		RemoteJoystick.isActive = active
 		OverlayNative.setRemoteJoystick(active)

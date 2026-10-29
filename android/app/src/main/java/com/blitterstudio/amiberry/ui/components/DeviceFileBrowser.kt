@@ -40,19 +40,24 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.DialogWindowProvider
+import androidx.core.view.WindowCompat
 import com.blitterstudio.amiberry.R
 import com.blitterstudio.amiberry.data.DeviceStorage
 import com.blitterstudio.amiberry.ui.dpadFocusIndicator
@@ -117,6 +122,18 @@ internal fun DeviceFileBrowserDialog(
 		onDismissRequest = ::goUp,
 		properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
 	) {
+		// The full-screen dialog has its own window: its status and navigation bar icons
+		// follow the theme as the app's do, or they stay white on a light surface.
+		val dialogView = LocalView.current
+		val lightBars = MaterialTheme.colorScheme.surface.luminance() > 0.5f
+		SideEffect {
+			(dialogView.parent as? DialogWindowProvider)?.window?.let { window ->
+				WindowCompat.getInsetsController(window, dialogView).apply {
+					isAppearanceLightStatusBars = lightBars
+					isAppearanceLightNavigationBars = lightBars
+				}
+			}
+		}
 		Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {
 			Column(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {
 				BrowserHeader(

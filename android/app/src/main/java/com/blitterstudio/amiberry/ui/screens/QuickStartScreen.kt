@@ -96,6 +96,7 @@ import com.blitterstudio.amiberry.data.model.FileCategory
 import com.blitterstudio.amiberry.data.model.ModelRomAvailability
 import com.blitterstudio.amiberry.data.model.RomReadinessDiagnostics
 import com.blitterstudio.amiberry.ui.components.rememberImportPicker
+import com.blitterstudio.amiberry.overlay.rememberRemoteDrivesPort2
 import com.blitterstudio.amiberry.ui.components.SettingsSummaryCard
 import com.blitterstudio.amiberry.ui.components.SummaryCard
 import com.blitterstudio.amiberry.ui.components.SummaryRow
@@ -191,6 +192,8 @@ fun QuickStartScreen(
 	}
 	val hasSeenWelcome by appPreferences.hasSeenWelcome
 	val tv = isTvDevice()
+	// The Controls summary names the remote when it would be the port 2 joystick.
+	val remoteDrivesPort2 = rememberRemoteDrivesPort2()
 	val quickStartModeFocusRequester = remember { FocusRequester() }
 	var requestQuickStartModeFocus by remember { mutableStateOf(false) }
 	LaunchedEffect(hasSeenWelcome, requestQuickStartModeFocus) {
@@ -293,7 +296,8 @@ fun QuickStartScreen(
 		initialValue = null,
 		selectedLaunchMode,
 		selectedWhdloadGame,
-		settingsViewModel.settings
+		settingsViewModel.settings,
+		remoteDrivesPort2
 	) {
 		if (selectedLaunchMode != QuickStartLaunchMode.WHDLOAD) return@produceState
 		val game = selectedWhdloadGame
@@ -303,7 +307,8 @@ fun QuickStartScreen(
 			QuickStartUiState.buildWhdLoadSummary(
 				launchSettings = WhdLoadPerGameConfig.launch(perGameConfig, currentSettings).settings,
 				selectedWhdloadName = game?.name,
-				perGameConfigName = perGameConfig?.name
+				perGameConfigName = perGameConfig?.name,
+				remoteDrivesPort2 = remoteDrivesPort2
 			)
 		}
 	}
@@ -546,7 +551,8 @@ fun QuickStartScreen(
 				selectedModelAvailable
 			},
 			roms = roms,
-			fileExists = mediaFileExists
+			fileExists = mediaFileExists,
+			remoteDrivesPort2 = remoteDrivesPort2
 		)
 		// The first-run card, ROM notices: above the launch mode on a phone, above the
 		// summary in the right column on a wide window, so the launch mode stays at the top.

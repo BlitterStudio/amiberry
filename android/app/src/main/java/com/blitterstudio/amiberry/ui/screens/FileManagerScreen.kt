@@ -306,6 +306,7 @@ fun FileManagerScreen(viewModel: FileManagerViewModel = viewModel()) {
 			) {
 				DropdownMenuItem(
 					text = { Text(stringResource(R.string.action_import_files)) },
+					modifier = Modifier.dpadFocusIndicator(),
 					leadingIcon = { Icon(Icons.Default.Add, contentDescription = null) },
 					onClick = {
 						showImportMenu = false
@@ -314,6 +315,7 @@ fun FileManagerScreen(viewModel: FileManagerViewModel = viewModel()) {
 				)
 				DropdownMenuItem(
 					text = { Text(stringResource(R.string.action_import_folder)) },
+					modifier = Modifier.dpadFocusIndicator(),
 					leadingIcon = { Icon(Icons.Default.FolderOpen, contentDescription = null) },
 					onClick = {
 						showImportMenu = false
@@ -323,6 +325,7 @@ fun FileManagerScreen(viewModel: FileManagerViewModel = viewModel()) {
 				if (hasDocumentPicker) {
 					DropdownMenuItem(
 						text = { Text(stringResource(R.string.file_manager_browse_device)) },
+						modifier = Modifier.dpadFocusIndicator(),
 						leadingIcon = { Icon(Icons.Default.PhoneAndroid, contentDescription = null) },
 						onClick = {
 							showImportMenu = false
@@ -366,6 +369,7 @@ fun FileManagerScreen(viewModel: FileManagerViewModel = viewModel()) {
 						DropdownMenu(expanded = showOverflowMenu, onDismissRequest = { showOverflowMenu = false }) {
 							DropdownMenuItem(
 								text = { Text(stringResource(R.string.file_manager_storage_location)) },
+								modifier = Modifier.dpadFocusIndicator(),
 								leadingIcon = { Icon(Icons.Default.Storage, contentDescription = null) },
 								onClick = {
 									showOverflowMenu = false

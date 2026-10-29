@@ -786,6 +786,7 @@ private fun ConfigItem(
 						) {
 							DropdownMenuItem(
 								text = { Text(stringResource(R.string.action_edit_advanced_imgui)) },
+								modifier = Modifier.dpadFocusIndicator(),
 								onClick = {
 									actions.onAdvancedEdit()
 									showMenu = false
@@ -795,6 +796,7 @@ private fun ConfigItem(
 							)
 							DropdownMenuItem(
 								text = { Text(stringResource(R.string.action_rename)) },
+								modifier = Modifier.dpadFocusIndicator(),
 								onClick = {
 									dialog = ConfigDialog.Rename
 									showMenu = false
@@ -803,6 +805,7 @@ private fun ConfigItem(
 							)
 							DropdownMenuItem(
 								text = { Text(stringResource(R.string.action_duplicate)) },
+								modifier = Modifier.dpadFocusIndicator(),
 								onClick = {
 									dialog = ConfigDialog.Duplicate(actions.suggestedCopyName())
 									showMenu = false
@@ -812,6 +815,7 @@ private fun ConfigItem(
 							actions.onShare?.let { share ->
 								DropdownMenuItem(
 									text = { Text(stringResource(R.string.action_share)) },
+									modifier = Modifier.dpadFocusIndicator(),
 									onClick = {
 										share()
 										showMenu = false
@@ -821,6 +825,7 @@ private fun ConfigItem(
 							}
 							DropdownMenuItem(
 								text = { Text(stringResource(R.string.action_delete)) },
+								modifier = Modifier.dpadFocusIndicator(),
 								onClick = {
 									dialog = ConfigDialog.Delete
 									showMenu = false

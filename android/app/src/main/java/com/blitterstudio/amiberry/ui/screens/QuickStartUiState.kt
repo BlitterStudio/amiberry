@@ -91,14 +91,16 @@ object QuickStartUiState {
 	/**
 	 * The summary of what a Disk, CD or Recent launch starts; its ROM row is the
 	 * settings' own ROM, which the launch boots (with none named, the one the model's
-	 * ROM selection picks). WHDLoad: [buildWhdLoadSummary].
+	 * ROM selection picks). WHDLoad: [buildWhdLoadSummary]. [remoteDrivesPort2]: the TV
+	 * remote is the port 2 joystick (no gamepad connected).
 	 */
 	fun buildEffectiveSummary(
 		settings: EmulatorSettings,
 		launchMode: QuickStartLaunchMode,
 		selectedModelAvailable: Boolean,
 		roms: List<AmigaFile> = emptyList(),
-		fileExists: (String) -> Boolean = { File(it).exists() }
+		fileExists: (String) -> Boolean = { File(it).exists() },
+		remoteDrivesPort2: Boolean = false
 	): QuickStartEffectiveSummary {
 		val romFile = settings.romFile
 		val romMissing = selectedModelAvailable && romFile.isNotBlank() &&
@@ -118,7 +120,7 @@ object QuickStartUiState {
 			chipset = buildChipsetSummary(settings),
 			memory = buildMemorySummary(settings),
 			media = buildMediaSummary(settings, launchMode, selectedWhdloadName = null),
-			controls = buildControlsSummary(settings),
+			controls = buildControlsSummary(settings, remoteDrivesPort2),
 			rom = rom,
 			romFileName = mediaName(romFile).orEmpty(),
 			romMissing = romMissing,
@@ -196,15 +198,17 @@ object QuickStartUiState {
 	 * The summary of a WHDLoad launch, from [launchSettings]: the shader and
 	 * controls the launch passes (the game's own configuration's where it sets
 	 * them), and [perGameConfigName], the configuration's file name, if any.
+	 * [remoteDrivesPort2]: the TV remote is the port 2 joystick (no gamepad connected).
 	 */
 	fun buildWhdLoadSummary(
 		launchSettings: EmulatorSettings,
 		selectedWhdloadName: String?,
-		perGameConfigName: String?
+		perGameConfigName: String?,
+		remoteDrivesPort2: Boolean = false
 	): QuickStartWhdLoadSummary = QuickStartWhdLoadSummary(
 		media = buildMediaSummary(launchSettings, QuickStartLaunchMode.WHDLOAD, selectedWhdloadName),
 		perGameConfig = perGameConfigName,
-		controls = buildControlsSummary(launchSettings),
+		controls = buildControlsSummary(launchSettings, remoteDrivesPort2),
 		port0 = LauncherChoices.portDevice(launchSettings.joyport0),
 		port1 = LauncherChoices.portDevice(launchSettings.joyport1),
 		shader = LauncherChoices.shader(launchSettings.shader)
@@ -348,8 +352,14 @@ object QuickStartUiState {
 		}
 	}
 
-	private fun buildControlsSummary(settings: EmulatorSettings): String {
+	/**
+	 * [remoteDrivesPort2]: a TV with no gamepad, where the remote is the port 2 joystick
+	 * and the touch joystick has nothing to drive it.
+	 */
+	private fun buildControlsSummary(settings: EmulatorSettings, remoteDrivesPort2: Boolean = false): String {
 		return when {
+			remoteDrivesPort2 && settings.onScreenKeyboardAvailable -> "Remote as the Port 2 joystick, on-screen keyboard"
+			remoteDrivesPort2 -> "Remote as the Port 2 joystick"
 			settings.onScreenJoystick && settings.onScreenKeyboardAvailable -> "On-screen joystick and keyboard"
 			settings.onScreenJoystick -> "On-screen joystick"
 			settings.onScreenKeyboardAvailable -> "On-screen keyboard"
