@@ -109,6 +109,7 @@ import com.blitterstudio.amiberry.ui.components.SidePaneEntry
 import com.blitterstudio.amiberry.ui.components.SidePaneList
 import com.blitterstudio.amiberry.ui.components.StoragePermissionBanner
 import com.blitterstudio.amiberry.ui.components.rememberImportPicker
+import com.blitterstudio.amiberry.ui.contentEntryFocus
 import com.blitterstudio.amiberry.ui.dpadFocusIndicator
 import com.blitterstudio.amiberry.ui.findActivity
 import com.blitterstudio.amiberry.ui.hasFullStorageAccess
@@ -436,7 +437,9 @@ fun FileManagerScreen(viewModel: FileManagerViewModel = viewModel()) {
 						SidePaneEntry(tab.title, icon = tab.icon, badge = counts[index].toString())
 					},
 					selectedIndex = selectedTab,
-					onSelect = selectCategory
+					onSelect = selectCategory,
+					// Right from the rail enters the categories, not the top bar's Import.
+					modifier = Modifier.contentEntryFocus()
 				)
 				VerticalDivider()
 				categoryList(Modifier.weight(1f).fillMaxHeight(), accessCard)
@@ -552,7 +555,10 @@ private fun CategoryChips(tabs: List<TabInfo>, selectedIndex: Int, onSelect: (In
 				onClick = { onSelect(index) },
 				label = { Text(tab.title) },
 				leadingIcon = { Icon(tab.icon, contentDescription = null, modifier = Modifier.size(18.dp)) },
-				modifier = Modifier.dpadFocusIndicator()
+				// Right from the rail enters at the selected category, not the top bar.
+				modifier = Modifier
+					.then(if (index == selectedIndex) Modifier.contentEntryFocus() else Modifier)
+					.dpadFocusIndicator()
 			)
 		}
 	}

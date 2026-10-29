@@ -1,7 +1,5 @@
 package com.blitterstudio.amiberry.ui.screens.settings
 
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.BringIntoViewSpec
 import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
@@ -100,6 +98,7 @@ import com.blitterstudio.amiberry.data.model.SettingsAdjustmentNotice
 import com.blitterstudio.amiberry.data.model.SettingsChange
 import com.blitterstudio.amiberry.data.model.SettingsIntentPreset
 import com.blitterstudio.amiberry.ui.LocalStartGuard
+import com.blitterstudio.amiberry.ui.components.rememberImportPicker
 import com.blitterstudio.amiberry.ui.components.SidePaneEntry
 import com.blitterstudio.amiberry.ui.components.SidePaneList
 import com.blitterstudio.amiberry.ui.components.settings.settingText
@@ -153,10 +152,11 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel(LocalContext.current
 		return context.getString(message.stringRes, message.argument)
 	}
 
-	val romPickerLauncher = rememberLauncherForActivityResult(
-		contract = ActivityResultContracts.OpenDocument()
-	) { uri ->
-		uri?.let {
+	val romPicker = rememberImportPicker(
+		mimeTypes = FilePickerFilters.mimeTypesFor(FileCategory.ROMS),
+		extensions = FileCategory.ROMS.extensions
+	) { uris ->
+		uris.first().let {
 			scope.launchImportGuarded(importGuard) {
 				val result = withContext(Dispatchers.IO) {
 					FileManager.importFileWithResult(context, it, FileCategory.ROMS).also { importResult ->
@@ -383,7 +383,7 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel(LocalContext.current
 	) { innerPadding ->
 		val onImportRom = {
 			if (!importInProgress) {
-				romPickerLauncher.launch(FilePickerFilters.mimeTypesFor(FileCategory.ROMS))
+				romPicker.pickFiles()
 			}
 		}
 		val onImportResult: (FileManager.ImportResult) -> Unit = { result ->
@@ -627,7 +627,7 @@ private fun ColumnScope.SettingsTabPage(
 	val platformSpec = LocalBringIntoViewSpec.current
 	val tv = isTvDevice()
 	val bringIntoViewSpec = remember(clearOfStart, tv, platformSpec) {
-		if (tv) platformSpec else ClearOfBottomBringIntoViewSpec(clearOfStart)
+		if (tv) platformSpec else ClearOfBottomBringIntoViewSpec(clearOfStart, platformSpec)
 	}
 	Column(
 		modifier = Modifier
@@ -658,15 +658,22 @@ private val START_BUTTON_CLEARANCE = 88.dp
  * Scrolls a focused control into the part of the page [bottomPx] above its bottom edge
  * (where the Start button floats), as little as possible: a control already there stays
  * put, one above it comes down to the top, one below it comes up, never past its own top.
+ * What cannot fit above the button gets the [platform] rule. That includes everything in
+ * the scrollers nested in the page, such as a text field's own, which are barely taller
+ * than the button: scrolling one never cleared the button, so the request repeated every
+ * frame and ran the page to its end (opening the Amiga model menu did).
  */
 @OptIn(ExperimentalFoundationApi::class)
-private class ClearOfBottomBringIntoViewSpec(private val bottomPx: Float) : BringIntoViewSpec {
+internal class ClearOfBottomBringIntoViewSpec(
+	private val bottomPx: Float,
+	private val platform: BringIntoViewSpec
+) : BringIntoViewSpec {
 	override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float {
-		val clear = (containerSize - bottomPx).takeIf { it > 0f } ?: containerSize
+		val clear = containerSize - bottomPx
+		if (size > clear) return platform.calculateScrollDistance(offset, size, containerSize)
 		val trailingEdge = offset + size
 		return when {
 			offset >= 0f && trailingEdge <= clear -> 0f
-			offset < 0f && trailingEdge > clear -> 0f
 			offset < 0f -> offset
 			else -> min(offset, trailingEdge - clear)
 		}

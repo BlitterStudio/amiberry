@@ -39,6 +39,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.blitterstudio.amiberry.R
 import com.blitterstudio.amiberry.data.model.AmigaFile
+import com.blitterstudio.amiberry.ui.components.settings.dpadMenuItemInitialFocus
 import com.blitterstudio.amiberry.ui.dpadArrowsMoveFocus
 import com.blitterstudio.amiberry.ui.dpadFocusIndicator
 
@@ -51,7 +52,7 @@ import com.blitterstudio.amiberry.ui.dpadFocusIndicator
  * - Eject button when a file is selected
  * - Empty state text when no files are available
  *
- * @param title The title label (e.g., "Floppy DF0:", "CD Image")
+ * @param title The title label (e.g., "Floppy DF0:", "CD image")
  * @param icon The leading icon for the title
  * @param items List of available files to choose from
  * @param selectedItem Currently selected file (null if none)
@@ -176,6 +177,7 @@ fun MediaSelector(
 											)
 										}
 									},
+									modifier = Modifier.dpadMenuItemInitialFocus(file.path == selectedPath),
 									onClick = {
 										onItemSelected(file)
 										expanded = false

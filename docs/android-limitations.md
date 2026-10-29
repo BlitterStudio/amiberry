@@ -87,7 +87,7 @@ The red **Hide** key in the top-right corner of the keyboard, above the arrow ke
 
 On Android TV (a leanback device) a new installation starts without the touch overlays: no on-screen joystick and no KB button, with Port 2 set to a controller. While no gamepad is connected, the remote's D-pad moves the Port 2 joystick and OK fires; Back still opens the menu. This is decided while the emulation runs, so configurations saved on a TV are the same as anywhere else, and connecting a gamepad hands Port 2 back to the configuration's device. A one-time hint says what the remote does; on other devices a one-time hint says that Back opens the menu.
 
-The in-game menu's **Controls** page shows the Port 1 and Port 2 devices, with **Swap ports**. Port changes there apply to the session; the on-screen joystick and keyboard switches are kept for the next launch. The **Settings** page's changes apply to the session only. Reset, Hard Reset, Quit and saving over a used state slot ask first, with Cancel focused.
+The in-game menu's **Controls** page shows the Port 1 and Port 2 devices, with **Swap ports**. Port changes there apply to the session; the on-screen joystick and keyboard switches are kept for the next launch. The **Settings** page's changes apply to the session only. Reset, Hard reset, Quit and saving over a used state slot ask first, with Cancel focused. The menu's **Classic settings window** opens the built-in settings window, with every option.
 
 ## Desktop-Style Use on ChromeOS
 

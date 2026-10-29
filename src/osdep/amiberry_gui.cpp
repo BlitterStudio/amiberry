@@ -871,7 +871,7 @@ bool gui_ask_disk(const int drv, TCHAR* name, const int name_len)
 // built-in (ImGui) GUI everywhere else. Over a running emulation the
 // Android app shows its own menu instead, unless a hotkey's requester is
 // what opens (it needs the built-in GUI) or the launcher turned the menu
-// off; the menu's Advanced settings opens the built-in GUI after it.
+// off; the menu's Classic settings window opens the built-in GUI after it.
 static void run_settings_ui([[maybe_unused]] const bool requester = false)
 {
 #ifdef AMIBERRY_NATIVE_HOST

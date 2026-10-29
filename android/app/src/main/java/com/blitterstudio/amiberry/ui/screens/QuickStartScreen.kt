@@ -1,7 +1,5 @@
 package com.blitterstudio.amiberry.ui.screens
 
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -72,6 +70,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
+import androidx.compose.ui.focus.onFocusChanged
 import com.blitterstudio.amiberry.ui.dpadTrailingPane
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -96,6 +95,7 @@ import com.blitterstudio.amiberry.data.model.EmulatorSettings
 import com.blitterstudio.amiberry.data.model.FileCategory
 import com.blitterstudio.amiberry.data.model.ModelRomAvailability
 import com.blitterstudio.amiberry.data.model.RomReadinessDiagnostics
+import com.blitterstudio.amiberry.ui.components.rememberImportPicker
 import com.blitterstudio.amiberry.ui.components.SettingsSummaryCard
 import com.blitterstudio.amiberry.ui.components.SummaryCard
 import com.blitterstudio.amiberry.ui.components.SummaryRow
@@ -111,6 +111,7 @@ import com.blitterstudio.amiberry.ui.viewmodel.SettingsViewModel
 import com.blitterstudio.amiberry.ui.components.MediaSelector
 import com.blitterstudio.amiberry.ui.components.settings.CompatibilityLevelRow
 import com.blitterstudio.amiberry.ui.components.settings.settingText
+import com.blitterstudio.amiberry.ui.components.settings.dpadMenuItemInitialFocus
 import com.blitterstudio.amiberry.ui.components.settings.settingsSchema
 import com.blitterstudio.amiberry.ui.navigation.Screen
 import kotlinx.coroutines.Dispatchers
@@ -334,10 +335,11 @@ fun QuickStartScreen(
 		return context.getString(message.stringRes, message.argument)
 	}
 
-	val floppyPickerLauncher = rememberLauncherForActivityResult(
-		contract = ActivityResultContracts.OpenDocument()
-	) { uri ->
-		uri?.let {
+	val floppyPicker = rememberImportPicker(
+		mimeTypes = FilePickerFilters.mimeTypesFor(FileCategory.FLOPPIES),
+		extensions = FileCategory.FLOPPIES.extensions
+	) { uris ->
+		uris.first().let {
 			scope.launchImportGuarded(importGuard) {
 				val result = withContext(Dispatchers.IO) {
 					FileManager.importFileWithResult(context, it, FileCategory.FLOPPIES).also { importResult ->
@@ -360,10 +362,11 @@ fun QuickStartScreen(
 		}
 	}
 
-	val cdPickerLauncher = rememberLauncherForActivityResult(
-		contract = ActivityResultContracts.OpenDocument()
-	) { uri ->
-		uri?.let {
+	val cdPicker = rememberImportPicker(
+		mimeTypes = FilePickerFilters.mimeTypesFor(FileCategory.CD_IMAGES),
+		extensions = FileCategory.CD_IMAGES.extensions
+	) { uris ->
+		uris.first().let {
 			scope.launchImportGuarded(importGuard) {
 				val result = withContext(Dispatchers.IO) {
 					FileManager.importFileWithResult(context, it, FileCategory.CD_IMAGES).also { importResult ->
@@ -380,10 +383,11 @@ fun QuickStartScreen(
 		}
 	}
 
-	val romPickerLauncher = rememberLauncherForActivityResult(
-		contract = ActivityResultContracts.OpenDocument()
-	) { uri ->
-		uri?.let {
+	val romPicker = rememberImportPicker(
+		mimeTypes = FilePickerFilters.mimeTypesFor(FileCategory.ROMS),
+		extensions = FileCategory.ROMS.extensions
+	) { uris ->
+		uris.first().let {
 			scope.launchImportGuarded(importGuard) {
 				val result = withContext(Dispatchers.IO) {
 					FileManager.importFileWithResult(context, it, FileCategory.ROMS).also { importResult ->
@@ -405,10 +409,11 @@ fun QuickStartScreen(
 		}
 	}
 
-	val whdloadPickerLauncher = rememberLauncherForActivityResult(
-		contract = ActivityResultContracts.OpenDocument()
-	) { uri ->
-		uri?.let {
+	val whdloadPicker = rememberImportPicker(
+		mimeTypes = FilePickerFilters.mimeTypesFor(FileCategory.WHDLOAD_GAMES),
+		extensions = FileCategory.WHDLOAD_GAMES.extensions
+	) { uris ->
+		uris.first().let {
 			scope.launchImportGuarded(importGuard) {
 				val result = withContext(Dispatchers.IO) {
 					FileManager.importFileWithResult(context, it, FileCategory.WHDLOAD_GAMES).also { importResult ->
@@ -528,7 +533,7 @@ fun QuickStartScreen(
 			}
 		}
 		val importRom: () -> Unit = {
-			if (!importInProgress) romPickerLauncher.launch(FilePickerFilters.mimeTypesFor(FileCategory.ROMS))
+			if (!importInProgress) romPicker.pickFiles()
 		}
 		val effectiveSummary = QuickStartUiState.buildEffectiveSummary(
 			settings = settingsViewModel.settings,
@@ -552,6 +557,7 @@ fun QuickStartScreen(
 					kickstartInstalled = availableModels.any { it !in arosModels },
 					importInProgress = importInProgress,
 					onImportRom = importRom,
+					afterImportFocus = quickStartModeFocusRequester,
 					onDismiss = {
 						requestQuickStartModeFocus = true
 						appPreferences.setHasSeenWelcome(true)
@@ -670,7 +676,7 @@ fun QuickStartScreen(
 						importInProgress = importInProgress,
 						onImport = {
 							if (!importInProgress) {
-								whdloadPickerLauncher.launch(FilePickerFilters.mimeTypesFor(FileCategory.WHDLOAD_GAMES))
+								whdloadPicker.pickFiles()
 							}
 						},
 						onSelect = { game -> viewModel.selectWhdload(game) },
@@ -706,7 +712,7 @@ fun QuickStartScreen(
 							onImport = {
 								if (!importInProgress) {
 									floppyImportTarget = 0
-									floppyPickerLauncher.launch(FilePickerFilters.mimeTypesFor(FileCategory.FLOPPIES))
+									floppyPicker.pickFiles()
 								}
 							},
 							importInProgress = importInProgress
@@ -729,7 +735,7 @@ fun QuickStartScreen(
 							onImport = {
 								if (!importInProgress) {
 									floppyImportTarget = 1
-									floppyPickerLauncher.launch(FilePickerFilters.mimeTypesFor(FileCategory.FLOPPIES))
+									floppyPicker.pickFiles()
 								}
 							},
 							importInProgress = importInProgress
@@ -768,7 +774,7 @@ fun QuickStartScreen(
 						},
 						onImport = {
 							if (!importInProgress) {
-								cdPickerLauncher.launch(FilePickerFilters.mimeTypesFor(FileCategory.CD_IMAGES))
+								cdPicker.pickFiles()
 							}
 						},
 						importInProgress = importInProgress,
@@ -1161,6 +1167,7 @@ private fun ModelSelectorCard(
 									}
 								}
 							},
+							modifier = Modifier.dpadMenuItemInitialFocus(availableModel == model),
 							onClick = {
 								onModelSelected(availableModel)
 								modelExpanded = false
@@ -1217,7 +1224,8 @@ private const val MAX_EDITS_SHOWN = 3
 
 /**
  * The first-run card: two short steps, the second for the launch mode chosen, then Got it.
- * The Kickstart step offers the import until one is installed.
+ * The Kickstart step offers the import until one is installed; [afterImportFocus] takes
+ * D-pad focus when the import button leaves.
  */
 @Composable
 private fun WelcomeCard(
@@ -1225,6 +1233,7 @@ private fun WelcomeCard(
 	kickstartInstalled: Boolean,
 	importInProgress: Boolean,
 	onImportRom: () -> Unit,
+	afterImportFocus: FocusRequester,
 	onDismiss: () -> Unit
 ) {
 	Card(
@@ -1259,9 +1268,24 @@ private fun WelcomeCard(
 				style = MaterialTheme.typography.bodyMedium,
 				color = textColor
 			)
+			// The import button leaves once a Kickstart is installed. If the import ran from
+			// it, D-pad focus goes back to the launch mode rather than dropping to the rail.
+			var importHadFocus by remember { mutableStateOf(false) }
+			LaunchedEffect(kickstartInstalled) {
+				if (kickstartInstalled && importHadFocus) {
+					importHadFocus = false
+					afterImportFocus.requestFocus()
+				}
+			}
 			Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
 				if (!kickstartInstalled) {
-					Button(onClick = onImportRom, enabled = !importInProgress, modifier = Modifier.dpadFocusIndicator()) {
+					Button(
+						onClick = onImportRom,
+						enabled = !importInProgress,
+						modifier = Modifier
+							.onFocusChanged { if (it.isFocused) importHadFocus = true }
+							.dpadFocusIndicator()
+					) {
 						Text(stringResource(if (importInProgress) R.string.action_importing else R.string.action_import_rom))
 					}
 				}
