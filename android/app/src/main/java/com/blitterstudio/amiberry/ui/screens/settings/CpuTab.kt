@@ -32,6 +32,8 @@ import com.blitterstudio.amiberry.ui.components.settings.SchemaChoiceRow
 import com.blitterstudio.amiberry.ui.components.settings.SchemaNumberRow
 import com.blitterstudio.amiberry.ui.components.settings.SchemaSwitchRow
 import com.blitterstudio.amiberry.ui.dpadArrowsMoveFocus
+import com.blitterstudio.amiberry.ui.components.settings.dpadMenuItemInitialFocus
+import com.blitterstudio.amiberry.ui.dpadFieldFocusIndicator
 import com.blitterstudio.amiberry.ui.viewmodel.SettingsViewModel
 
 /** The JIT cache sizes offered in the size field's menu (stored KB; 0 turns the JIT off). */
@@ -50,7 +52,7 @@ fun CpuTab(viewModel: SettingsViewModel) {
 			.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 120.dp),
 		verticalArrangement = Arrangement.spacedBy(16.dp)
 	) {
-		// Model preset
+		// The Amiga model: the one machine picker (its preset sets CPU, chipset and memory).
 		OutlinedCard(modifier = Modifier.fillMaxWidth()) {
 			Column(modifier = Modifier.padding(16.dp)) {
 				Text(stringResource(R.string.settings_cpu_model_preset), style = MaterialTheme.typography.titleMedium)
@@ -67,6 +69,7 @@ fun CpuTab(viewModel: SettingsViewModel) {
 						readOnly = true,
 						trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = modelExpanded) },
 						modifier = Modifier
+							.dpadFieldFocusIndicator()
 							.dpadArrowsMoveFocus()
 							.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
 							.fillMaxWidth(),
@@ -81,6 +84,7 @@ fun CpuTab(viewModel: SettingsViewModel) {
 						AmigaModel.entries.forEach { m ->
 							DropdownMenuItem(
 								text = { Text("${m.displayName} - ${m.description}") },
+								modifier = Modifier.dpadMenuItemInitialFocus(m == settings.baseModel),
 								onClick = {
 									viewModel.applyModel(m)
 									modelExpanded = false

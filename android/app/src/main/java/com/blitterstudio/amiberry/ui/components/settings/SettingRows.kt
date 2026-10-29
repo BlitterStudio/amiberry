@@ -39,6 +39,14 @@ import com.blitterstudio.amiberry.R
 import androidx.compose.ui.unit.dp
 import com.blitterstudio.amiberry.ui.dpadFocusIndicator
 import com.blitterstudio.amiberry.ui.dpadArrowsMoveFocus
+import com.blitterstudio.amiberry.ui.dpadFieldFocusIndicator
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.withFrameNanos
+import androidx.compose.ui.composed
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.InputMode
+import androidx.compose.ui.platform.LocalInputModeManager
 
 /** The alpha Material uses for disabled content. */
 internal const val DISABLED_ALPHA = 0.38f
@@ -199,7 +207,8 @@ data class ChoiceItem<T>(val value: T, val label: String, val enabled: Boolean =
  * A pick-one row as a read-only dropdown. The current value reads as
  * [valueText]; [help] and, while unavailable, [reason] show under it.
  * D-pad arrows move to the neighbouring control rather than being
- * swallowed by the text field ([dpadArrowsMoveFocus] before menuAnchor).
+ * swallowed by the text field ([dpadArrowsMoveFocus] before menuAnchor),
+ * and the open menu starts on the choice [valueText] names.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -230,6 +239,7 @@ fun <T> SettingChoiceRow(
 				trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded && enabled) },
 				modifier = Modifier
 					.then(if (testTag != null) Modifier.testTag(testTag) else Modifier)
+					.dpadFieldFocusIndicator()
 					.dpadArrowsMoveFocus()
 					.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable, enabled)
 					.fillMaxWidth()
@@ -238,11 +248,14 @@ fun <T> SettingChoiceRow(
 				expanded = expanded && enabled,
 				onDismissRequest = { expanded = false }
 			) {
-				choices.forEach { choice ->
+				val current = choices.indexOfFirst { it.label == valueText }
+				choices.forEachIndexed { index, choice ->
 					DropdownMenuItem(
 						text = { Text(choice.label) },
 						enabled = choice.enabled,
-						modifier = optionTestTag?.let { Modifier.testTag(it(choice.value)) } ?: Modifier,
+						modifier = Modifier
+							.dpadMenuItemInitialFocus(index == current)
+							.then(optionTestTag?.let { Modifier.testTag(it(choice.value)) } ?: Modifier),
 						onClick = {
 							onSelect(choice.value)
 							expanded = false
@@ -253,4 +266,23 @@ fun <T> SettingChoiceRow(
 		}
 		RowFooter(help, enabled, reason)
 	}
+}
+
+/**
+ * For the item of an open dropdown menu that holds the current value: a D-pad or
+ * keyboard user starts on it, scrolled into view, instead of on the first item (a
+ * long list cut the current value off at the bottom). Touch users see the menu as
+ * before. Put it on every item, [selected] true on one.
+ */
+fun Modifier.dpadMenuItemInitialFocus(selected: Boolean): Modifier = composed {
+	if (!selected) return@composed Modifier
+	val keyboardMode = LocalInputModeManager.current.inputMode == InputMode.Keyboard
+	val requester = remember { FocusRequester() }
+	LaunchedEffect(Unit) {
+		if (!keyboardMode) return@LaunchedEffect
+		// The menu's popup takes focus once it is shown: ask after its first frame.
+		withFrameNanos { }
+		requester.requestFocus()
+	}
+	Modifier.focusRequester(requester)
 }

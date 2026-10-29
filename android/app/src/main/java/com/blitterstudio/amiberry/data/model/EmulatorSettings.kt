@@ -248,6 +248,22 @@ data class EmulatorSettings(
 		return result
 	}
 
+	/**
+	 * The machine [baseModel]'s preset configuration [baseConfig] builds at the
+	 * model's default compatibility level, with these settings' launcher fields
+	 * (controls, shader, ROM files and media, hard drives included, which no
+	 * preset describes): what a new configuration's edits are reviewed against.
+	 */
+	fun presetMachine(): EmulatorSettings {
+		var preset = fromModel(baseModel, baseConfig)
+		for ((id, field) in FIELDS) {
+			if (field.machine) continue
+			val set = field.set ?: continue
+			preset = set(preset, field.get(this)) ?: preset
+		}
+		return preset.copy(hardDrives = hardDrives)
+	}
+
 	companion object {
 		/** The JIT as the schema's tables enumerate it: "0" off, their one cache size on. */
 		internal fun jitState(cacheSize: Int): String = if (cacheSize > 0) JIT_ON else "0"

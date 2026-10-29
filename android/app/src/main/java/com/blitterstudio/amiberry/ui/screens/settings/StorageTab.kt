@@ -73,6 +73,8 @@ import com.blitterstudio.amiberry.ui.components.settings.schemaOption
 import com.blitterstudio.amiberry.ui.ImportInFlightGuard
 import com.blitterstudio.amiberry.ui.dpadFocusIndicator
 import com.blitterstudio.amiberry.ui.dpadArrowsMoveFocus
+import com.blitterstudio.amiberry.ui.dpadFieldFocusIndicator
+import com.blitterstudio.amiberry.ui.components.settings.dpadMenuItemInitialFocus
 import com.blitterstudio.amiberry.ui.dpadVerticalMovesFocus
 import com.blitterstudio.amiberry.ui.rememberDpadTypingGate
 import com.blitterstudio.amiberry.ui.launchImportGuarded
@@ -408,6 +410,7 @@ private fun FileDropdown(
 					trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
 					modifier = Modifier
 						.then(fieldModifier)
+						.dpadFieldFocusIndicator()
 						.dpadArrowsMoveFocus()
 						.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
 						.fillMaxWidth()
@@ -418,6 +421,7 @@ private fun FileDropdown(
 				) {
 					DropdownMenuItem(
 						text = { Text(emptyLabel) },
+						modifier = Modifier.dpadMenuItemInitialFocus(selectedPath.isEmpty()),
 						onClick = {
 							onClear()
 							expanded = false
@@ -426,6 +430,7 @@ private fun FileDropdown(
 					extraPaths.forEach { path ->
 						DropdownMenuItem(
 							text = { Text(pathLabel(path)) },
+							modifier = Modifier.dpadMenuItemInitialFocus(path == selectedPath),
 							onClick = {
 								onSelect(path)
 								expanded = false
@@ -435,6 +440,7 @@ private fun FileDropdown(
 					files.forEach { file ->
 						DropdownMenuItem(
 							text = { Text(fileLabel(file)) },
+							modifier = Modifier.dpadMenuItemInitialFocus(file.path == selectedPath),
 							onClick = {
 								onSelect(file.path)
 								expanded = false

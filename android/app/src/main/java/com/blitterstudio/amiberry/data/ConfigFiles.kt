@@ -79,6 +79,21 @@ object ConfigFiles {
 		return if (match.range.first > 0) name.substring(0, match.range.first) else name
 	}
 
+	/**
+	 * The name Save offers a new configuration made from [base] (the model's name): [base]
+	 * with the characters a name cannot hold replaced, then "base 2", "base 3" and so on past
+	 * [existingNames], so saving it at once creates a file next to the others.
+	 */
+	fun suggestedName(base: String, existingNames: Collection<String>): String {
+		val cleaned = base.replace(Regex("""[/\\:]"""), "-").trim().trimStart('.').trim()
+		var number = 1
+		while (true) {
+			val candidate = if (number == 1) cleaned else "$cleaned $number"
+			if (existingNames.none { it.equals(candidate, ignoreCase = true) }) return candidate
+			number++
+		}
+	}
+
 	fun deleteConfig(confDir: File, path: String): Boolean {
 		val file = userConfigFileFromPath(confDir, path) ?: return false
 		return file.delete()

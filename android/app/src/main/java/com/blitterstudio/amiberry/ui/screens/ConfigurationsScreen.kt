@@ -42,8 +42,8 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
@@ -67,6 +67,16 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.material3.Surface
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.blitterstudio.amiberry.data.ConfigMachine
+import com.blitterstudio.amiberry.data.ConfigurationSaveActions
+import com.blitterstudio.amiberry.ui.contentEntryFocus
+import com.blitterstudio.amiberry.ui.isTvDevice
+import com.blitterstudio.amiberry.ui.screens.settings.SaveConfigDialog
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -131,6 +141,10 @@ fun ConfigurationsScreen(
 	navController: androidx.navigation.NavController
 ) {
 	val context = LocalContext.current
+	// Google TV has no app to share a file with.
+	val isTv = isTvDevice()
+	// The card list: where D-pad focus enters the screen, and Left from Launch returns to.
+	val listFocus = remember { FocusRequester() }
 	val scope = rememberCoroutineScope()
 	val snackbarHostState = remember { SnackbarHostState() }
 	val launchGuard = rememberLaunchInFlightGuard()
@@ -152,8 +166,35 @@ fun ConfigurationsScreen(
 		message.argument?.let { context.getString(message.stringRes, it) }
 			?: context.getString(message.stringRes)
 
-	LaunchedEffect(Unit) {
-		viewModel.refresh()
+	// Files copied in while the app was away show up when the tab is shown again.
+	val lifecycleOwner = LocalLifecycleOwner.current
+	DisposableEffect(lifecycleOwner, viewModel) {
+		val observer = LifecycleEventObserver { _, event ->
+			if (event == Lifecycle.Event.ON_RESUME) viewModel.refresh()
+		}
+		lifecycleOwner.lifecycle.addObserver(observer)
+		onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+	}
+
+	/** Switch to Settings, D-pad focus with it (the button that had it is gone). */
+	fun openSettings() {
+		settingsViewModel.focusOnEntry = true
+		navController.switchToTab(Screen.Settings.route)
+	}
+
+	// An action that replaces what Settings holds (Edit, New) waits here while the
+	// editor has unsaved changes, a new configuration's included.
+	var pendingReplace by remember { mutableStateOf<(() -> Unit)?>(null) }
+	fun replaceSettings(action: () -> Unit) {
+		if (settingsViewModel.hasUnsavedChanges) pendingReplace = action else action()
+	}
+	// Save chosen for a new configuration: the name dialog, and the action waiting for it.
+	var saveNewName by remember { mutableStateOf<String?>(null) }
+	var saveNewThen by remember { mutableStateOf<(() -> Unit)?>(null) }
+	fun saveMessage(result: ConfigurationSaveActions.SaveResult): String {
+		val message = ConfigurationSaveActions.messageFor(result)
+		return message.argument?.let { context.getString(message.stringRes, it) }
+			?: context.getString(message.stringRes)
 	}
 
 	Scaffold(
@@ -162,14 +203,18 @@ fun ConfigurationsScreen(
 			TopAppBar(
 				title = { Text(stringResource(R.string.configurations_title)) },
 				actions = {
-					IconButton(
-						onClick = { viewModel.refresh() },
+					TextButton(
+						onClick = {
+							replaceSettings {
+								settingsViewModel.newConfiguration()
+								openSettings()
+							}
+						},
 						modifier = Modifier.dpadFocusIndicator()
 					) {
-						Icon(
-							Icons.Default.Refresh,
-							contentDescription = stringResource(R.string.configurations_refresh)
-						)
+						Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+						Spacer(modifier = Modifier.width(8.dp))
+						Text(stringResource(R.string.configurations_new))
 					}
 				}
 			)
@@ -189,14 +234,21 @@ fun ConfigurationsScreen(
 			suggestedCopyName = { viewModel.suggestedCopyName(config) },
 			nameProblem = { name, renaming -> viewModel.nameProblem(name, config.takeIf { renaming }) },
 			onLoad = {
-				scope.launch {
-					when (val result = ConfigurationActions.load(runCatching { viewModel.loadConfig(config.path) })) {
-						is ConfigurationActions.LoadResult.Loaded -> {
-							settingsViewModel.loadConfig(result.value, config.name, config.path)
-							navController.switchToTab(Screen.Settings.route)
-						}
-						is ConfigurationActions.LoadResult.Failed -> {
-							snackbarHostState.showSnackbar(actionMessage(result.message))
+				if (settingsViewModel.isConfigOpen(config.path)) {
+					// Already open: its edits stay.
+					openSettings()
+				} else {
+					replaceSettings {
+						scope.launch {
+							when (val result = ConfigurationActions.load(runCatching { viewModel.loadConfig(config.path) })) {
+								is ConfigurationActions.LoadResult.Loaded -> {
+									settingsViewModel.loadConfig(result.value, config.name, config.path)
+									openSettings()
+								}
+								is ConfigurationActions.LoadResult.Failed -> {
+									snackbarHostState.showSnackbar(actionMessage(result.message))
+								}
+							}
 						}
 					}
 				}
@@ -234,7 +286,7 @@ fun ConfigurationsScreen(
 					snackbarHostState.showSnackbar(actionMessage(ConfigurationActions.renameMessage(result)))
 				}
 			},
-			onShare = {
+			onShare = if (isTv) null else ({
 				when (val target = ConfigurationActions.shareTarget(config.path)) {
 					is ConfigurationActions.ShareTarget.Ready -> {
 						try {
@@ -257,7 +309,7 @@ fun ConfigurationsScreen(
 						}
 					}
 				}
-			},
+			}),
 			onAdvancedEdit = {
 				when (val target = AdvancedLaunchActions.savedConfigTarget(config.path)) {
 					is AdvancedLaunchActions.ConfigTarget.Ready -> {
@@ -338,8 +390,9 @@ fun ConfigurationsScreen(
 				}
 			} else {
 				LazyColumn(
-					// Left from the detail pane returns to the card last focused.
-					modifier = if (listDetail) Modifier.focusRestorer() else Modifier,
+					// Entering the list (from the rail, or Left from the detail pane) lands
+					// on the card last focused, else the first.
+					modifier = Modifier.focusRequester(listFocus).contentEntryFocus().focusRestorer(),
 					contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
 					verticalArrangement = Arrangement.spacedBy(8.dp)
 				) {
@@ -385,8 +438,8 @@ fun ConfigurationsScreen(
 					)
 					Spacer(modifier = Modifier.height(24.dp))
 					Button(
-						onClick = { navController.switchToTab(Screen.Settings.route) },
-						modifier = Modifier.dpadFocusIndicator()
+						onClick = ::openSettings,
+						modifier = Modifier.contentEntryFocus().dpadFocusIndicator()
 					) {
 						Text(stringResource(R.string.configurations_empty_cta))
 					}
@@ -403,6 +456,7 @@ fun ConfigurationsScreen(
 						isOpenInSettings = settingsViewModel.isConfigOpen(selectedConfig.path),
 						launchInProgress = launchInProgress,
 						launchFocus = detailFocus,
+						listFocus = listFocus,
 						actions = actionsFor(filteredConfigs.indexOf(selectedConfig), selectedConfig),
 						modifier = Modifier.weight(0.55f).fillMaxHeight()
 					)
@@ -412,6 +466,61 @@ fun ConfigurationsScreen(
 			}
 		} else {
 			Column(modifier = Modifier.fillMaxSize().padding(innerPadding), content = listPane)
+		}
+
+		pendingReplace?.let { proceed ->
+			val openName = settingsViewModel.currentConfigName
+			UnsavedSettingsDialog(
+				message = if (openName != null) {
+					stringResource(R.string.dialog_unsaved_changes_switch_message, openName)
+				} else {
+					stringResource(R.string.dialog_unsaved_new_config_message)
+				},
+				onSave = {
+					pendingReplace = null
+					scope.launch {
+						if (openName != null) {
+							val result = settingsViewModel.saveTracked()
+							if (result is ConfigurationSaveActions.SaveResult.Saved) {
+								proceed()
+							} else {
+								snackbarHostState.showSnackbar(saveMessage(result))
+							}
+						} else {
+							saveNewThen = proceed
+							saveNewName = settingsViewModel.suggestedConfigName()
+						}
+					}
+				},
+				onDontSave = {
+					pendingReplace = null
+					proceed()
+				},
+				onCancel = { pendingReplace = null }
+			)
+		}
+
+		saveNewName?.let { initialName ->
+			SaveConfigDialog(
+				initialName = initialName,
+				initialDescription = "",
+				onDismiss = {
+					saveNewName = null
+					saveNewThen = null
+				},
+				onSave = { name, description ->
+					scope.launch {
+						val result = settingsViewModel.saveAs(name, description, allowOverwrite = false)
+						if (result is ConfigurationSaveActions.SaveResult.Saved) {
+							saveNewName = null
+							viewModel.refresh()
+							saveNewThen?.invoke()
+							saveNewThen = null
+						}
+						snackbarHostState.showSnackbar(saveMessage(result))
+					}
+				}
+			)
 		}
 	}
 }
@@ -509,7 +618,8 @@ private class ConfigItemActions(
 	val onDelete: () -> Unit,
 	val onDuplicate: (String) -> Unit,
 	val onRename: (String) -> Unit,
-	val onShare: () -> Unit,
+	/** Null where no app can take a shared file (Google TV). */
+	val onShare: (() -> Unit)?,
 	val onAdvancedEdit: () -> Unit,
 	val onLaunch: () -> Unit
 )
@@ -597,6 +707,12 @@ private fun ConfigItem(
 					text = config.name,
 					style = MaterialTheme.typography.titleMedium
 				)
+				config.machine?.let { machine ->
+					Text(
+						text = configMachineText(machine),
+						style = MaterialTheme.typography.bodyMedium
+					)
+				}
 				if (config.description.isNotEmpty()) {
 					Text(
 						text = config.description,
@@ -609,6 +725,9 @@ private fun ConfigItem(
 					style = MaterialTheme.typography.bodySmall,
 					color = MaterialTheme.colorScheme.onSurfaceVariant
 				)
+				if (isOpenInSettings) {
+					LoadedInSettingsChip(modifier = Modifier.padding(top = 4.dp))
+				}
 			}
 
 			if (selection == null) {
@@ -690,14 +809,16 @@ private fun ConfigItem(
 								},
 								leadingIcon = { Icon(Icons.Default.ContentCopy, contentDescription = null) }
 							)
-							DropdownMenuItem(
-								text = { Text(stringResource(R.string.action_share)) },
-								onClick = {
-									actions.onShare()
-									showMenu = false
-								},
-								leadingIcon = { Icon(Icons.Default.Share, contentDescription = null) }
-							)
+							actions.onShare?.let { share ->
+								DropdownMenuItem(
+									text = { Text(stringResource(R.string.action_share)) },
+									onClick = {
+										share()
+										showMenu = false
+									},
+									leadingIcon = { Icon(Icons.Default.Share, contentDescription = null) }
+								)
+							}
 							DropdownMenuItem(
 								text = { Text(stringResource(R.string.action_delete)) },
 								onClick = {
@@ -739,6 +860,7 @@ private fun ConfigDetailPane(
 	isOpenInSettings: Boolean,
 	launchInProgress: Boolean,
 	launchFocus: FocusRequester,
+	listFocus: FocusRequester,
 	actions: ConfigItemActions,
 	modifier: Modifier = Modifier
 ) {
@@ -771,14 +893,11 @@ private fun ConfigDetailPane(
 			Text(config.description, style = MaterialTheme.typography.bodyMedium)
 		}
 		Text(
-			text = if (isOpenInSettings) {
-				"${formatDate(config.lastModified)} · ${stringResource(R.string.configurations_detail_open_in_settings)}"
-			} else {
-				formatDate(config.lastModified)
-			},
+			text = formatDate(config.lastModified),
 			style = MaterialTheme.typography.bodySmall,
 			color = MaterialTheme.colorScheme.onSurfaceVariant
 		)
+		if (isOpenInSettings) LoadedInSettingsChip()
 
 		FlowRow(
 			horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -787,7 +906,11 @@ private fun ConfigDetailPane(
 			Button(
 				onClick = actions.onLaunch,
 				enabled = !launchInProgress,
-				modifier = Modifier.focusRequester(launchFocus).dpadFocusIndicator()
+				modifier = Modifier
+					.focusRequester(launchFocus)
+					// Left returns to the card list (the 2D search went to the rail past it).
+					.focusProperties { left = listFocus }
+					.dpadFocusIndicator()
 			) {
 				if (launchInProgress) {
 					CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
@@ -814,7 +937,9 @@ private fun ConfigDetailPane(
 				stringResource(R.string.action_duplicate),
 				onClick = { dialog = ConfigDialog.Duplicate(actions.suggestedCopyName()) }
 			)
-			ConfigDetailAction(Icons.Default.Share, stringResource(R.string.action_share), actions.onShare)
+			actions.onShare?.let { share ->
+				ConfigDetailAction(Icons.Default.Share, stringResource(R.string.action_share), share)
+			}
 			ConfigDetailAction(
 				Icons.Default.Delete,
 				stringResource(R.string.action_delete),
@@ -1020,4 +1145,71 @@ private fun formatDate(timestamp: Long): String {
 	if (timestamp == 0L) return ""
 	return DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT, Locale.getDefault())
 		.format(Date(timestamp))
+}
+
+/**
+ * The machine line of a configuration's card: "Amiga 1200 · 68030 · 66 MB · DF0: Lost Pixel.adf"
+ * (the RAM fitted in total; the first medium it inserts, if any).
+ */
+@Composable
+private fun configMachineText(machine: ConfigMachine): String {
+	val memory = when {
+		machine.memoryKb <= 0 -> null
+		machine.memoryKb % 1024 == 0 -> stringResource(R.string.settings_memory_value_mb, machine.memoryKb / 1024)
+		machine.memoryKb > 1024 -> stringResource(R.string.settings_memory_value_mb_decimal, machine.memoryKb / 1024f)
+		else -> stringResource(R.string.settings_memory_value_kb, machine.memoryKb)
+	}
+	return listOfNotNull(machine.model, machine.cpu.toString(), memory, machine.firstMedium).joinToString(" · ")
+}
+
+/** Marks the configuration Settings holds: a label, not a link. */
+@Composable
+private fun LoadedInSettingsChip(modifier: Modifier = Modifier) {
+	Surface(
+		shape = MaterialTheme.shapes.small,
+		color = MaterialTheme.colorScheme.secondaryContainer,
+		contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+		modifier = modifier
+	) {
+		Text(
+			stringResource(R.string.configurations_detail_open_in_settings),
+			style = MaterialTheme.typography.labelMedium,
+			modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+		)
+	}
+}
+
+/**
+ * Asks before Edit or New replaces what Settings holds: Save (the default for D-pad
+ * focus, so an OK pressed at once keeps the edits), Don't Save or Cancel.
+ */
+@Composable
+private fun UnsavedSettingsDialog(
+	message: String,
+	onSave: () -> Unit,
+	onDontSave: () -> Unit,
+	onCancel: () -> Unit
+) {
+	val saveFocus = remember { FocusRequester() }
+	LaunchedEffect(Unit) { saveFocus.requestFocus() }
+	AlertDialog(
+		onDismissRequest = onCancel,
+		title = { Text(stringResource(R.string.dialog_unsaved_changes_title)) },
+		text = { Text(message) },
+		confirmButton = {
+			TextButton(onClick = onSave, modifier = Modifier.focusRequester(saveFocus).dpadFocusIndicator()) {
+				Text(stringResource(R.string.action_save))
+			}
+		},
+		dismissButton = {
+			Row {
+				TextButton(onClick = onDontSave, modifier = Modifier.dpadFocusIndicator()) {
+					Text(stringResource(R.string.action_dont_save))
+				}
+				TextButton(onClick = onCancel, modifier = Modifier.dpadFocusIndicator()) {
+					Text(stringResource(R.string.action_cancel))
+				}
+			}
+		}
+	)
 }
