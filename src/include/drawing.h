@@ -88,6 +88,9 @@ STATIC_INLINE int color_reg_get(struct color_entry *ce, int c)
 /* Functions in drawing.c.  */
 extern int coord_native_to_amiga_y(int);
 extern int coord_native_to_amiga_x(int);
+#ifdef AMIBERRY
+extern int coord_native_line_shift(void);
+#endif
 
 /* Determine how to draw a scan line.  */
 enum nln_how {

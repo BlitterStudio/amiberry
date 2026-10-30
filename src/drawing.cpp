@@ -650,6 +650,15 @@ int coord_native_to_amiga_y(int y)
 	return y;
 }
 
+#ifdef AMIBERRY
+// Native buffer rows per display line, as a shift; the scale applied by
+// coord_native_to_amiga_y().
+int coord_native_line_shift(void)
+{
+	return linedbl;
+}
+#endif
+
 void notice_screen_contents_lost(int monid)
 {
 	struct amigadisplay *ad = &adisplays[monid];

@@ -2344,6 +2344,59 @@ static void putmousepixel(const SDL_Surface* cursor_surface, const int x, const 
 		*target_pixel = amiberry_cursor_rgba32_from_rgb24(ct[c]);
 	}
 }
+
+static SDL_Surface* create_host_cursor_surface(const uae_u8* image, const int pitch,
+	const int src_w, const int src_h, const uae_u32* ct, const int dst_w, const int dst_h)
+{
+	SDL_Surface* surface = SDL_CreateSurface(dst_w, dst_h, SDL_PIXELFORMAT_RGBA32);
+	if (!surface) {
+		return nullptr;
+	}
+	for (int y = 0; y < dst_h; y++) {
+		const uae_u8* row = image + amiberry_cursor_scaled_source_index(y, dst_h, src_h) * pitch;
+		for (int x = 0; x < dst_w; x++) {
+			putmousepixel(surface, x, y, row[amiberry_cursor_scaled_source_index(x, dst_w, src_w)], ct);
+		}
+	}
+	return surface;
+}
+
+// Host cursor units per decoded cursor pixel, so the host cursor is as large
+// as the pointer the Amiga display would show.
+static void host_cursor_display_scale(const int monid, const bool native,
+	float* scale_x, float* scale_y, float* pixel_density)
+{
+	if (getgfxwindowscale(monid, scale_x, scale_y) && native) {
+		// Decoded native cursors use mousehack units, hires pixels and
+		// interlaced lines, while the scale is per native buffer pixel.
+		*scale_x *= static_cast<float>(1 << currprefs.gfx_resolution) / 2.0f;
+		*scale_y *= static_cast<float>(1 << coord_native_line_shift()) / 2.0f;
+	}
+	SDL_Window* window = AMonitors[monid].amiga_window;
+	*pixel_density = window ? SDL_GetWindowPixelDensity(window) : 1.0f;
+}
+
+static SDL_Cursor* create_host_cursor(const uae_u8* image, const int pitch,
+	const int src_w, const int src_h, const uae_u32* ct, const AmiberryCursorHostImage& layout)
+{
+	SDL_Surface* surface = create_host_cursor_surface(image, pitch, src_w, src_h, ct,
+		layout.width, layout.height);
+	if (!surface) {
+		return nullptr;
+	}
+	if (layout.pixel_width != layout.width || layout.pixel_height != layout.height) {
+		// HiDPI windows pick this copy instead of upscaling the cursor units.
+		SDL_Surface* hidpi = create_host_cursor_surface(image, pitch, src_w, src_h, ct,
+			layout.pixel_width, layout.pixel_height);
+		if (hidpi) {
+			SDL_AddSurfaceAlternateImage(surface, hidpi);
+			SDL_DestroySurface(hidpi);
+		}
+	}
+	SDL_Cursor* cursor = SDL_CreateColorCursor(surface, layout.hot_x, layout.hot_y);
+	SDL_DestroySurface(surface);
+	return cursor;
+}
 #else
 static void putwinmousepixel(HDC andDC, HDC xorDC, int x, int y, int c, uae_u32 *ct)
 {
@@ -2367,6 +2420,7 @@ static int tmp_sprite_hotspot_x, tmp_sprite_hotspot_y;
 static int tmp_sprite_residual_x, tmp_sprite_residual_y;
 static int tmp_sprite_chipset = -1;
 static int tmp_sprite_monid = -1;
+static AmiberryCursorHostImage tmp_sprite_layout;
 #endif
 
 extern uaecptr sprite_0;
@@ -2380,7 +2434,8 @@ extern uae_u32 sprite_0_colors[4];
 static int createwindowscursor(int monid, int set, int chipset)
 {
 #ifdef AMIBERRY
-	SDL_Surface* cursor_surface = nullptr;
+	float scale_x = 1.0f, scale_y = 1.0f, pixel_density = 1.0f;
+	AmiberryCursorHostImage layout{};
 	int ret = 0;
 	bool isdata = false;
 	SDL_Cursor* old_cursor = p96_cursor;
@@ -2409,6 +2464,7 @@ static int createwindowscursor(int monid, int set, int chipset)
 		isfullscreen() == 0)) {
 		goto exit;
 	}
+	host_cursor_display_scale(monid, chipset != 0, &scale_x, &scale_y, &pixel_density);
 
 	if (chipset) {
 		reset_p96_cursor_hotspot_tracker();
@@ -2536,8 +2592,11 @@ static int createwindowscursor(int monid, int set, int chipset)
 				residual_y = 0;
 			}
 
+			layout = amiberry_cursor_host_image(w, h, hotspot_x, hotspot_y,
+				scale_x, scale_y, pixel_density);
 			const bool cursor_update_needed = !cursor_cache_matches
-				|| hotspot_x != tmp_sprite_hotspot_x || hotspot_y != tmp_sprite_hotspot_y;
+				|| hotspot_x != tmp_sprite_hotspot_x || hotspot_y != tmp_sprite_hotspot_y
+				|| !amiberry_cursor_host_image_equal(layout, tmp_sprite_layout);
 			if (amiberry_input_cursor_hotspot_should_defer_swap(cursor_update_needed,
 				old_cursor && tmp_sprite_chipset == 0, hotspot_tracker)) {
 				SDL_SetCursor(old_cursor);
@@ -2550,7 +2609,9 @@ static int createwindowscursor(int monid, int set, int chipset)
 		}
 	}
 
-	if (cursor_cache_matches && hotspot_x == tmp_sprite_hotspot_x && hotspot_y == tmp_sprite_hotspot_y) {
+	layout = amiberry_cursor_host_image(w, h, hotspot_x, hotspot_y, scale_x, scale_y, pixel_density);
+	if (cursor_cache_matches && hotspot_x == tmp_sprite_hotspot_x && hotspot_y == tmp_sprite_hotspot_y
+		&& amiberry_cursor_host_image_equal(layout, tmp_sprite_layout)) {
 		if (SDL_GetCursor() == p96_cursor) {
 			SDL_ShowCursor();
 			tmp_sprite_residual_x = residual_x;
@@ -2563,34 +2624,22 @@ static int createwindowscursor(int monid, int set, int chipset)
 
 	p96_cursor = nullptr;
 
-	write_log(_T("p96_cursor: %dx%d\n"), w, h);
+	write_log(_T("p96_cursor: %dx%d -> %dx%d\n"), w, h, layout.width, layout.height);
 
 	tmp_sprite_w = tmp_sprite_h = 0;
 	tmp_sprite_hotspot_x = tmp_sprite_hotspot_y = 0;
 	tmp_sprite_residual_x = tmp_sprite_residual_y = 0;
 	tmp_sprite_chipset = -1;
 	tmp_sprite_monid = -1;
+	tmp_sprite_layout = {};
 
-	cursor_surface = SDL_CreateSurface(w, h, SDL_PIXELFORMAT_RGBA32);
-	if (!cursor_surface)
-		goto end;
-
-	isdata = false;
-	for (int y = 0; y < h; y++) {
-		uae_u8* s = image + y * w;
-		for (int x = 0; x < w; x++) {
-			int c = *s++;
-			putmousepixel(cursor_surface, x, y, c, ct);
-			if (c > 0) {
-				isdata = true;
-			}
-		}
-	}
+	isdata = std::any_of(image, image + datasize, [](const uae_u8 c) { return c != 0; });
 	ret = 1;
-
-end:
 	if (isdata) {
-		p96_cursor = SDL_CreateColorCursor(cursor_surface, hotspot_x, hotspot_y);
+		p96_cursor = create_host_cursor(image, w, w, h, ct, layout);
+		ret = p96_cursor != nullptr;
+	}
+	if (p96_cursor) {
 		tmp_sprite_w = w;
 		tmp_sprite_h = h;
 		tmp_sprite_hotspot_x = hotspot_x;
@@ -2599,14 +2648,9 @@ end:
 		tmp_sprite_residual_y = residual_y;
 		tmp_sprite_chipset = chipset;
 		tmp_sprite_monid = monid;
+		tmp_sprite_layout = layout;
 		memcpy(tmp_sprite_data, image, datasize);
 		memcpy(tmp_sprite_colors, ct, sizeof(uae_u32) * 4);
-	}
-
-	if (cursor_surface != nullptr)
-	{
-		SDL_DestroySurface(cursor_surface);
-		cursor_surface = nullptr;
 	}
 
 	if (p96_cursor) {
@@ -2824,10 +2868,15 @@ void picasso_update_external_host_cursor(const int monid, const uae_u8* image, c
 
 	hotspot_x = std::clamp(hotspot_x, 0, width - 1);
 	hotspot_y = std::clamp(hotspot_y, 0, height - 1);
+	float scale_x = 1.0f, scale_y = 1.0f, pixel_density = 1.0f;
+	host_cursor_display_scale(monid, false, &scale_x, &scale_y, &pixel_density);
+	const AmiberryCursorHostImage layout = amiberry_cursor_host_image(width, height,
+		hotspot_x, hotspot_y, scale_x, scale_y, pixel_density);
 	bool same_image = p96_cursor && tmp_sprite_chipset == 2
 		&& tmp_sprite_monid == monid
 		&& tmp_sprite_w == width && tmp_sprite_h == height
 		&& tmp_sprite_hotspot_x == hotspot_x && tmp_sprite_hotspot_y == hotspot_y
+		&& amiberry_cursor_host_image_equal(layout, tmp_sprite_layout)
 		&& !memcmp(tmp_sprite_colors, colors, sizeof(uae_u32) * 4);
 	for (int y = 0; same_image && y < height; ++y) {
 		same_image = !memcmp(tmp_sprite_data + y * width, image + y * image_pitch, width);
@@ -2842,24 +2891,15 @@ void picasso_update_external_host_cursor(const int monid, const uae_u8* image, c
 		return;
 	}
 
-	SDL_Surface* cursor_surface = SDL_CreateSurface(width, height, SDL_PIXELFORMAT_RGBA32);
-	if (!cursor_surface) {
-		return;
-	}
-
 	bool has_visible_pixel = false;
-	for (int y = 0; y < height; ++y) {
-		for (int x = 0; x < width; ++x) {
-			const int color = image[y * image_pitch + x];
-			putmousepixel(cursor_surface, x, y, color, colors);
-			has_visible_pixel |= color != 0;
-		}
+	for (int y = 0; y < height && !has_visible_pixel; ++y) {
+		const uae_u8* row = image + y * image_pitch;
+		has_visible_pixel = std::any_of(row, row + width, [](const uae_u8 c) { return c != 0; });
 	}
 
 	SDL_Cursor* new_cursor = has_visible_pixel
-		? SDL_CreateColorCursor(cursor_surface, hotspot_x, hotspot_y)
+		? create_host_cursor(image, image_pitch, width, height, colors, layout)
 		: nullptr;
-	SDL_DestroySurface(cursor_surface);
 	if (!new_cursor) {
 		picasso_clear_external_host_cursor(monid);
 		return;
@@ -2875,6 +2915,7 @@ void picasso_update_external_host_cursor(const int monid, const uae_u8* image, c
 	tmp_sprite_residual_y = 0;
 	tmp_sprite_chipset = 2;
 	tmp_sprite_monid = monid;
+	tmp_sprite_layout = layout;
 	for (int y = 0; y < height; ++y) {
 		memcpy(tmp_sprite_data + y * width, image + y * image_pitch, width);
 	}
@@ -2901,6 +2942,7 @@ void picasso_clear_external_host_cursor(const int monid)
 		tmp_sprite_residual_y = 0;
 		tmp_sprite_chipset = -1;
 		tmp_sprite_monid = -1;
+		tmp_sprite_layout = {};
 	}
 }
 #endif

@@ -88,6 +88,11 @@ extern int target_get_display_scanline(int displayindex);
 extern void target_spin(int);
 
 void getgfxoffset(int monid, float *dxp, float *dyp, float *mxp, float *myp);
+#ifdef AMIBERRY
+// Window coordinate units per presented source pixel. Pointer events and SDL
+// cursor images share this space on every video driver.
+bool getgfxwindowscale(int monid, float *sxp, float *syp);
+#endif
 bool getgfxsourceorigin(int monid, int *xp, int *yp);
 float target_getcurrentvblankrate(int monid);
 
