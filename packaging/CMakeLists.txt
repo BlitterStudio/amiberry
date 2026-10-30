@@ -168,9 +168,9 @@ endif()
 if(USE_LIBMPEG2)
     string(APPEND _rpm_deps ", libmpeg2")
 endif()
-if(AMIBERRY_WITH_FFMPEG)
-    string(APPEND _rpm_deps ", libavcodec-free, libavformat-free, libavutil-free, libswresample-free, libswscale-free")
-endif()
+# FFmpeg needs no package-name Requires: rpmbuild's automatic soname dependencies
+# (libavcodec.so.NN()(64bit), ...) are met by Fedora's *-free libraries and by
+# RPM Fusion's ffmpeg-libs, which conflicts with them (issue #2568).
 if(AMIBERRY_WITH_WEBP)
     string(APPEND _rpm_deps ", libwebp")
 endif()

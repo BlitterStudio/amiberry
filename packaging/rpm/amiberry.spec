@@ -34,11 +34,6 @@ Requires:       libstdc++
 Requires:       SDL3
 Requires:       SDL3_image
 Requires:       flac
-Requires:       libavcodec-free
-Requires:       libavformat-free
-Requires:       libavutil-free
-Requires:       libswresample-free
-Requires:       libswscale-free
 Requires:       libwebp
 Requires:       mpg123
 Requires:       zlib
