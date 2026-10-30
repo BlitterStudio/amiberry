@@ -960,6 +960,37 @@ void getgfxoffset(const int monid, float* dxp, float* dyp, float* mxp, float* my
 	*myp = 1.0f / my;
 }
 
+bool getgfxwindowscale(const int monid, float* sxp, float* syp)
+{
+	*sxp = 1.0f;
+	*syp = 1.0f;
+	float dx, dy, mx, my;
+	getgfxoffset(monid, &dx, &dy, &mx, &my);
+	if (!(mx > 0.0f) || !(my > 0.0f))
+		return false;
+	// getgfxoffset() yields source pixels per presentation unit; pointer input
+	// reaches presentation units the same way as below.
+	float sx = 1.0f / mx;
+	float sy = 1.0f / my;
+	const AmigaMonitor* mon = &AMonitors[monid];
+	if (mon->amiga_renderer) {
+		float x0, y0, x1, y1;
+		if (!SDL_RenderCoordinatesToWindow(mon->amiga_renderer, 0.0f, 0.0f, &x0, &y0)
+			|| !SDL_RenderCoordinatesToWindow(mon->amiga_renderer, 1.0f, 1.0f, &x1, &y1))
+			return false;
+		sx *= x1 - x0;
+		sy *= y1 - y0;
+	} else {
+		sx /= mon->hidpi_scale_x;
+		sy /= mon->hidpi_scale_y;
+	}
+	if (!(sx > 0.0f) || !(sy > 0.0f))
+		return false;
+	*sxp = sx;
+	*syp = sy;
+	return true;
+}
+
 bool getgfxsourceorigin(const int monid, int* xp, int* yp)
 {
 	*xp = 0;
