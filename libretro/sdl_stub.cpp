@@ -986,6 +986,11 @@ bool SDL_GetWindowSize(SDL_Window* window, int* w, int* h)
 	if (h) *h = window ? window->h : 0;
 	return true;
 }
+float SDL_GetWindowPixelDensity(SDL_Window* window)
+{
+	(void)window;
+	return 1.0f;
+}
 void SDL_SetWindowGrab(SDL_Window* window, SDL_bool grabbed)
 {
 	(void)window;
@@ -1089,6 +1094,12 @@ SDL_Cursor* SDL_CreateColorCursor(SDL_Surface* surface, int hot_x, int hot_y)
 	(void)hot_x;
 	(void)hot_y;
 	return nullptr;
+}
+bool SDL_AddSurfaceAlternateImage(SDL_Surface* surface, SDL_Surface* image)
+{
+	(void)surface;
+	(void)image;
+	return false;
 }
 SDL_Cursor* SDL_CreateSystemCursor(SDL_SystemCursor id)
 {
