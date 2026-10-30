@@ -568,6 +568,51 @@ static void test_native_crosshair_hotspot_snaps_to_bitmap_intersection()
 	expect_int_eq(hotspot_y, 0, "unrelated arrow hotspot y must remain unchanged");
 }
 
+static void test_host_cursor_scaled_hotspot_samples_source_hotspot()
+{
+	for (int src = 1; src <= 64; ++src) {
+		for (int dst = src; dst <= src * 8; ++dst) {
+			for (int hot = 0; hot < src; ++hot) {
+				const int scaled = amiberry_cursor_scaled_hotspot(hot, src, dst);
+				if (amiberry_cursor_scaled_source_index(scaled, dst, src) != hot) {
+					expect_int_eq(amiberry_cursor_scaled_source_index(scaled, dst, src), hot,
+						"scaled hotspot must sample the source hotspot pixel");
+					return;
+				}
+			}
+		}
+	}
+}
+
+static void test_host_cursor_image_scales_to_display()
+{
+	AmiberryCursorHostImage image = amiberry_cursor_host_image(16, 16, 3, 5, 1.0f, 1.0f, 1.0f);
+	expect_int_eq(image.width, 16, "1:1 display must keep the cursor width");
+	expect_int_eq(image.hot_x, 3, "1:1 display must keep the hotspot x");
+	expect_int_eq(image.hot_y, 5, "1:1 display must keep the hotspot y");
+	expect_int_eq(image.pixel_width, 16, "pixel density 1 must not add a backing image");
+
+	image = amiberry_cursor_host_image(16, 16, 0, 15, 3.0f, 2.0f, 1.0f);
+	expect_int_eq(image.width, 48, "cursor width must follow the horizontal display scale");
+	expect_int_eq(image.height, 32, "cursor height must follow the vertical display scale");
+	expect_int_eq(image.hot_x, 1, "scaled hotspot x must sit in the centre of its pixel run");
+	expect_int_eq(image.hot_y, 30, "scaled hotspot y must sit in the centre of its pixel run");
+
+	image = amiberry_cursor_host_image(16, 16, 0, 0, 2.0f, 2.0f, 2.0f);
+	expect_int_eq(image.width, 32, "pixel density must not change the cursor size");
+	expect_int_eq(image.pixel_width, 64, "HiDPI backing image must cover the pixel density");
+
+	image = amiberry_cursor_host_image(16, 16, 0, 0, 0.5f, NAN, 0.0f);
+	expect_int_eq(image.width, 16, "smaller displays must not shrink the cursor");
+	expect_int_eq(image.height, 16, "invalid scales must fall back to 1:1");
+	expect_int_eq(image.pixel_width, 16, "invalid pixel density must fall back to 1");
+
+	image = amiberry_cursor_host_image(64, 64, 63, 63, 100.0f, 100.0f, 4.0f);
+	expect_int_eq(image.width, 512, "cursor scale must be capped");
+	expect_int_eq(image.pixel_width, 512, "backing image must be capped");
+	expect_int_eq(image.hot_x, 507, "capped hotspot must stay on the source pixel");
+}
+
 int main()
 {
 	test_rgb12_expands_to_rgb24();
@@ -596,5 +641,7 @@ int main()
 	test_native_cursor_hotspot_learning_recovers_from_initial_edge();
 	test_p96_cursor_swap_waits_for_stable_hotspot();
 	test_native_crosshair_hotspot_snaps_to_bitmap_intersection();
+	test_host_cursor_scaled_hotspot_samples_source_hotspot();
+	test_host_cursor_image_scales_to_display();
 	return failures == 0 ? 0 : 1;
 }
