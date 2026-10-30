@@ -19,6 +19,31 @@
 # -swift-version wins: the iOS sources then compiled in Swift 4 mode, where
 # UIKit's API notes give the pre-4.2 spellings.
 set(CMAKE_Swift_LANGUAGE_VERSION 6)
+# The Ninja generator gives swiftc no deployment target: CMake passes
+# CMAKE_OSX_DEPLOYMENT_TARGET to the C and C++ compilers only, so the Swift
+# code compiled for the build machine's macOS. Its #available checks then
+# folded away and the SDK symbols newer than the deployment target were
+# linked strongly: the app failed to launch on older systems (macOS 15:
+# "Symbol not found: _$s7SwiftUI24_TagTraitWritingModifierVMa", from
+# SwiftUI's tag(_:), which uses that type on macOS 26 and later only). Set
+# before enable_language(Swift), which reads it for the target info. The
+# Xcode generator (iOS) applies the deployment target itself.
+if(NOT CMAKE_GENERATOR STREQUAL "Xcode" AND NOT CMAKE_SYSTEM_NAME STREQUAL "iOS"
+        AND NOT CMAKE_Swift_COMPILER_TARGET)
+    if(CMAKE_OSX_ARCHITECTURES)
+        set(_amiberry_swift_arch "${CMAKE_OSX_ARCHITECTURES}")
+    else()
+        set(_amiberry_swift_arch "${CMAKE_HOST_SYSTEM_PROCESSOR}")
+    endif()
+    list(LENGTH _amiberry_swift_arch _amiberry_swift_arch_count)
+    if(NOT _amiberry_swift_arch_count EQUAL 1)
+        message(FATAL_ERROR "The native Apple UI builds for one architecture at a time; "
+            "CMAKE_OSX_ARCHITECTURES is \"${CMAKE_OSX_ARCHITECTURES}\".")
+    endif()
+    set(CMAKE_Swift_COMPILER_TARGET "${_amiberry_swift_arch}-apple-macosx${CMAKE_OSX_DEPLOYMENT_TARGET}")
+    unset(_amiberry_swift_arch)
+    unset(_amiberry_swift_arch_count)
+endif()
 enable_language(Swift)
 
 # Xcode 26 (Swift 6.2) or newer. Swift 6.1 (Xcode 16) rejects valid
