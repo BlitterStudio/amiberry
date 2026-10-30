@@ -3539,6 +3539,23 @@ static void handle_key_event(const SDL_Event& event)
 static int pen_in_proximity;
 #endif
 
+#ifndef LIBRETRO
+// With a tablet mode active the pen is driven by handle_pen_event(), so SDL's
+// pen-synthesized mouse events are duplicates, and touch-synthesized ones are
+// palm contacts while the pen hovers. Real mice are never gated on pen
+// proximity: a pen resting on the tablet stays in range, and SDL's X11 backend
+// reports pens whose proximity it cannot query as permanently in range, which
+// left the mouse buttons dead whenever the virtual mouse driver was on (#2512).
+static bool pen_suppresses_mouse_event(const SDL_MouseID which)
+{
+	if (currprefs.input_tablet <= 0)
+		return false;
+	if (which == SDL_PEN_MOUSEID)
+		return true;
+	return which == SDL_TOUCH_MOUSEID && pen_in_proximity;
+}
+#endif
+
 #ifndef __ANDROID__
 static void handle_finger_event(const SDL_Event& event)
 {
@@ -3687,7 +3704,7 @@ static void set_host_mouse_button_state(const int mouse, const int button,
 static void handle_mouse_button_event(const SDL_Event& event, const AmigaMonitor* mon)
 {
 #ifndef LIBRETRO
-	if (pen_in_proximity && currprefs.input_tablet > 0)
+	if (pen_suppresses_mouse_event(event.button.which))
 		return;
 #endif
 
@@ -3823,7 +3840,7 @@ static bool handle_mouse_motion_event(const SDL_Event& event, const AmigaMonitor
 	monitor_off = 0;
 
 #ifndef LIBRETRO
-	if (pen_in_proximity && currprefs.input_tablet > 0)
+	if (pen_suppresses_mouse_event(event.motion.which))
 		return false;
 #endif
 
