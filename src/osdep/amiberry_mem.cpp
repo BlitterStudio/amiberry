@@ -654,6 +654,11 @@ static int doinit_shm ()
 			if (!start_rtg)
 				start_rtg = aci->start;
 			end_rtg = aci->start + aci->size;
+		} else if (aci->direct_vram && aci->zorro == 2) {
+			// Zorro II space (8 MB) is full: the board stays unconfigured.
+			write_log(_T("MMAN: %s (%u MB) does not fit in Zorro II space, disabled.\n"), aci->name, aci->size >> 20);
+			gui_message(_T("%s (%u MB) does not fit in the 8 MB Zorro II address space beside the other Zorro II boards, so it is disabled.\nLower the Z2 Fast RAM or the RTG board memory."),
+				aci->name, aci->size >> 20);
 		}
 	}
 
@@ -1116,11 +1121,13 @@ bool uae_mman_info(addrbank* ab, struct uae_mman_data* md)
 		md->maprom = maprom;
 		md->hasbarrier = barrier;
 
+		// 64-bit sums: an unassigned board (start 0xffffffff) wraps a 32-bit
+		// start + size below the limit and would be mapped past natmem.
+		const uae_u64 end = static_cast<uae_u64>(start) + size;
 		if (start_rtg && end_rtg) {
-			if (start < start_rtg || start + size > end_rtg)
+			if (start < start_rtg || end > end_rtg)
 				directsupport = false;
-		} else if (start >= natmem_reserved_size || start + size > natmem_reserved_size) {
-			// start + size may cause 32-bit overflow
+		} else if (start >= natmem_reserved_size || end > natmem_reserved_size) {
 			directsupport = false;
 		}
 		md->directsupport = directsupport;
