@@ -7916,6 +7916,8 @@ static bool write_amiberry_settings()
 	// Open each config file and read the Description field? 
 	// This will slow down scanning the config list if it's very large
 	write_bool_option("read_config_descriptions", amiberry_options.read_config_descriptions);
+	for (const auto& group : amiberry_options.expanded_config_groups)
+		write_string_option("config_group_expanded", group);
 
 	// Write to logfile? 
 	// If enabled, a file named "amiberry_log.txt" will be generated in the startup folder
@@ -8471,6 +8473,13 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		ret |= cfgfile_intval(option, value, "MRUCDList", &numCDs, 1);
 		ret |= cfgfile_yesno(option, value, "Quickstart", &amiberry_options.quickstart_start);
 		ret |= cfgfile_yesno(option, value, "read_config_descriptions", &amiberry_options.read_config_descriptions);
+		if (_tcscmp(option, _T("config_group_expanded")) == 0 && value[0])
+		{
+			auto& groups = amiberry_options.expanded_config_groups;
+			if (std::find(groups.begin(), groups.end(), value) == groups.end())
+				groups.emplace_back(value);
+			ret = 1;
+		}
 		ret |= cfgfile_yesno(option, value, "write_logfile", &amiberry_options.write_logfile);
 		ret |= cfgfile_intval(option, value, "default_line_mode", &amiberry_options.default_line_mode, 1);
 		// Sanitize at the parse boundary: cfgfile_floatval stores the raw

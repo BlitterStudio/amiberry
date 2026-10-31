@@ -1474,6 +1474,8 @@ struct amiberry_options
 {
 	bool quickstart_start = true;
 	bool read_config_descriptions = true;
+	// Configurations panel category groups left expanded, restored on startup.
+	std::vector<std::string> expanded_config_groups;
 	bool write_logfile = false;
 	bool rctrl_as_ramiga = false;
 	// macOS native UI: what Left Command-Q does while an emulation window

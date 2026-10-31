@@ -61,6 +61,22 @@ static void trim_category(char* value)
 	value[length] = '\0';
 }
 
+static bool is_config_group_expanded(const std::string& name)
+{
+	const auto& expanded = amiberry_options.expanded_config_groups;
+	return std::find(expanded.begin(), expanded.end(), name) != expanded.end();
+}
+
+static void set_config_group_expanded(const std::string& name, const bool expanded)
+{
+	auto& groups = amiberry_options.expanded_config_groups;
+	const auto it = std::find(groups.begin(), groups.end(), name);
+	if (expanded && it == groups.end())
+		groups.push_back(name);
+	else if (!expanded && it != groups.end())
+		groups.erase(it);
+}
+
 static bool rebuild_config_groups(std::vector<ConfigGroup>& groups)
 {
 	groups.clear();
@@ -91,6 +107,12 @@ static bool rebuild_config_groups(std::vector<ConfigGroup>& groups)
 			groups.push_back({group_name, {}});
 		groups[group_index->second].entries.push_back(i);
 	}
+
+	// Forget expansion state for categories no longer used by any config.
+	auto& expanded = amiberry_options.expanded_config_groups;
+	expanded.erase(std::remove_if(expanded.begin(), expanded.end(),
+		[&](const std::string& name) { return group_indices.find(name) == group_indices.end(); }),
+		expanded.end());
 	return true;
 }
 
@@ -299,12 +321,24 @@ void render_panel_configurations()
 			if (!has_visible_entry)
 				continue;
 
-			if ((search_text[0] != '\0' && has_visible_entry) ||
-				(reveal_selected_group && contains_selection))
-				ImGui::SetNextItemOpen(true, ImGuiCond_Always);
+			// Expansion state persists across restarts; an active search only
+			// forces matching groups open without changing the remembered state.
+			bool expanded = is_config_group_expanded(group.name);
+			if (reveal_selected_group && contains_selection && !expanded)
+			{
+				expanded = true;
+				set_config_group_expanded(group.name, true);
+			}
+			const bool searching = search_text[0] != '\0';
+			ImGui::SetNextItemOpen(searching || expanded, ImGuiCond_Always);
 
 			ImGui::PushID(group.name.c_str());
-			if (ImGui::CollapsingHeader(group.name.c_str(), ImGuiTreeNodeFlags_DefaultOpen))
+			const bool open = ImGui::CollapsingHeader(group.name.c_str());
+			// Only persist real user toggles: a clipped/hidden list skips the
+			// header and returns false without the user collapsing anything.
+			if (!searching && ImGui::IsItemToggledOpen())
+				set_config_group_expanded(group.name, open);
+			if (open)
 			{
 				ImGui::Indent();
 				for (const int index : group.entries)
@@ -336,10 +370,11 @@ void render_panel_configurations()
 	ImGui::SameLine(label_width);
 	AmigaInputText("##Search", search_text, sizeof(search_text));
 	ImGui::SameLine();
-	if (search_text[0] == '\0') ImGui::BeginDisabled();
+	const bool search_empty = search_text[0] == '\0';
+	if (search_empty) ImGui::BeginDisabled();
 	if (AmigaButton("X"))
 		search_text[0] = '\0';
-	if (search_text[0] == '\0') ImGui::EndDisabled();
+	if (search_empty) ImGui::EndDisabled();
 
 	ImGui::AlignTextToFramePadding();
 	ImGui::Text("Name:");
