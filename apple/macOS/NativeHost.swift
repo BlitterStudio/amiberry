@@ -74,7 +74,9 @@ enum Alerts {
 	}
 
 	/// Runs a modal alert; returns the index of the button chosen and whether
-	/// the suppression checkbox was ticked.
+	/// the suppression checkbox was ticked. The window that was key is key
+	/// again afterwards: AppKit leaves SDL's emulation window without key
+	/// status (so without keyboard input) once the alert is gone.
 	@discardableResult
 	static func show(title: String, message: String, buttons: [String], suppression: String? = nil) -> (Int, Bool) {
 		let alert = NSAlert()
@@ -87,8 +89,12 @@ enum Alerts {
 			alert.showsSuppressionButton = true
 			alert.suppressionButton?.title = suppression
 		}
+		let keyWindow = NSApplication.shared.keyWindow
 		NSApplication.shared.activate(ignoringOtherApps: true)
 		let response = alert.runModal()
+		if let keyWindow, keyWindow.isVisible, NSApplication.shared.keyWindow == nil {
+			keyWindow.makeKey()
+		}
 		let index = response.rawValue - NSApplication.ModalResponse.alertFirstButtonReturn.rawValue
 		return (max(0, min(index, buttons.count - 1)), alert.suppressionButton?.state == .on)
 	}

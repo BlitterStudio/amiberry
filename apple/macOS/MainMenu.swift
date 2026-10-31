@@ -7,7 +7,8 @@
  * Shortcuts use Control-Command: Command alone is the Amiga key, and the
  * emulated programs need Amiga-letter combinations. The plain-⌘ ones (the
  * Edit menu's, Settings and SDL's own) are taken off while an emulation
- * window is key (commandShortcuts).
+ * window is key (commandShortcuts); Left ⌘Q then asks to quit, quits or
+ * goes to the Amiga, as set (leftCommandQ).
  */
 
 import AppKit
@@ -33,6 +34,32 @@ final class MenuCommands: NSObject, NSMenuItemValidation {
 	}
 	/// Opens a web page; replaced by the tests.
 	var openURL: (URL) -> Void = { _ = NSWorkspace.shared.open($0) }
+	/// What Left ⌘Q does while an emulation window is key (the host
+	/// setting; a value it cannot hold asks, as the default does); replaced
+	/// by the tests.
+	var leftCommandQMode: () -> LeftCommandQ = {
+		LeftCommandQ(rawValue: (try? HostSettings.value(of: LeftCommandQ.settingID)) ?? "") ?? .ask
+	}
+	/// Whether an emulation window is key; replaced by the tests.
+	var emulationKey: () -> Bool = { EmulationChrome.isEmulation(NSApplication.shared.keyWindow) }
+	/// Asks whether to quit, and whether to stop asking (the checkbox);
+	/// replaced by the tests.
+	var confirmQuit: () -> (quit: Bool, stopAsking: Bool) = {
+		let (button, stopAsking) = Alerts.show(title: "Quit Amiberry?",
+			message: "The machine stops. Anything it has not saved is lost.",
+			buttons: ["Quit", "Cancel"], suppression: "Don\u{2019}t ask again")
+		return (button == 0, stopAsking)
+	}
+	/// Stores a new Left ⌘Q mode and saves amiberry.conf, as the app
+	/// settings' picker does; replaced by the tests. A failure is told
+	/// before the app quits.
+	var storeLeftCommandQMode: (LeftCommandQ) -> Void = { mode in
+		try? HostSettings.set(mode.rawValue, for: LeftCommandQ.settingID)
+		if !HostSettings.save() {
+			Alerts.show(title: "The settings could not be saved.",
+				message: "Left \u{2318}Q asks again the next time Amiberry runs.", buttons: ["OK"])
+		}
+	}
 
 	static let fileTitle = "File"
 	static let editTitle = "Edit"
@@ -204,15 +231,29 @@ final class MenuCommands: NSObject, NSMenuItemValidation {
 			NSApplication.shared.helpMenu = help
 			followKeyWindow(NSApplication.shared.keyWindow)
 			let center = NotificationCenter.default
-			// The window that became key is the key window by then.
-			center.addObserver(forName: NSWindow.didBecomeKeyNotification, object: nil, queue: .main) { _ in
-				MainActor.assumeIsolated { MenuCommands.shared.followKeyWindow(NSApplication.shared.keyWindow) }
+			// The notification's window: as the app is activated, the window
+			// becomes key before NSApp.keyWindow names it. Its address crosses
+			// into the main actor, which posts the notification.
+			center.addObserver(forName: NSWindow.didBecomeKeyNotification, object: nil, queue: .main) { note in
+				let address = (note.object as? NSWindow).map { UInt(bitPattern: Unmanaged.passUnretained($0).toOpaque()) }
+				MainActor.assumeIsolated {
+					let window = address.flatMap { UnsafeMutableRawPointer(bitPattern: $0) }
+						.map { Unmanaged<NSWindow>.fromOpaque($0).takeUnretainedValue() }
+					MenuCommands.shared.followKeyWindow(window)
+				}
 			}
 			// With no window key (the emulation's minimised, say) the
 			// shortcuts are the app's again. The next key window is known
 			// once the change is over.
 			center.addObserver(forName: NSWindow.didResignKeyNotification, object: nil, queue: .main) { _ in
 				Task { @MainActor in MenuCommands.shared.followKeyWindow(NSApplication.shared.keyWindow) }
+			}
+			// Left ⌘Q does what the setting says (leftCommandQ).
+			// SDL's event pump takes its events through NSApp, so the
+			// emulation window's keys come by here first.
+			_ = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+				let taken = MainActor.assumeIsolated { MenuCommands.shared.leftCommandQ(event) }
+				return taken ? nil : event
 			}
 		}
 	}
@@ -261,6 +302,54 @@ final class MenuCommands: NSObject, NSMenuItemValidation {
 			item.keyEquivalent = ""
 			item.keyEquivalentModifierMask = []
 		}
+	}
+
+	/// NX_DEVICELCMDKEYMASK and NX_DEVICERCMDKEYMASK (IOKit's IOLLEvent.h):
+	/// the device-dependent bits of an event's modifier flags that tell the
+	/// left Command key from the right one. A menu shortcut cannot.
+	static let leftCommandBit: UInt = 0x08
+	static let rightCommandBit: UInt = 0x10
+
+	/// Whether a key press is Q with the left Command key alone: no other
+	/// modifier and the right Command key up. Q is what the layout types
+	/// with Command held (as a menu matches it), or without.
+	static func isLeftCommandQ(_ event: NSEvent) -> Bool {
+		guard event.type == .keyDown,
+			event.modifierFlags.intersection([.shift, .control, .option, .command]) == .command,
+			[event.characters, event.charactersIgnoringModifiers].contains(where: { $0?.lowercased() == "q" })
+		else { return false }
+		let flags = event.modifierFlags.rawValue
+		return flags & leftCommandBit != 0 && flags & rightCommandBit == 0
+	}
+
+	/// Left ⌘Q while an emulation window is key: what the setting says.
+	/// Asking, the requester's "Don't ask again" makes Left ⌘Q quit at once
+	/// from then on, when Quit is chosen (the app settings bring the
+	/// question back). Either way the Q never reaches the Amiga. Right ⌘Q,
+	/// and Left ⌘Q set to go to the Amiga, are the Amiga's (Right or Left
+	/// Amiga-Q). Returns whether the key press was taken.
+	func leftCommandQ(_ event: NSEvent) -> Bool {
+		guard MenuCommands.isLeftCommandQ(event), emulationKey(), runState() != .stopped, !settingsOpen()
+		else { return false }
+		// Held down, the key repeats: the repeats go where the press went,
+		// so the Amiga never gets a Q it did not get first.
+		if event.isARepeat {
+			return leftCommandQMode() != .amiga
+		}
+		switch leftCommandQMode() {
+		case .amiga:
+			return false
+		case .quit:
+			post(.quit)
+		case .ask:
+			let answer = confirmQuit()
+			guard answer.quit else { break }
+			if answer.stopAsking {
+				storeLeftCommandQMode(.quit)
+			}
+			post(.quit)
+		}
+		return true
 	}
 
 	private func holder(_ menu: NSMenu) -> NSMenuItem {
@@ -478,4 +567,14 @@ final class MenuCommands: NSObject, NSMenuItemValidation {
 		guard let model = library() else { return false }
 		return !model.editing && !model.busy
 	}
+}
+
+/// What Left ⌘Q does while an emulation window is key: the host setting
+/// macos_left_command_q's values.
+enum LeftCommandQ: String {
+	case amiga = "0"
+	case ask = "1"
+	case quit = "2"
+
+	static let settingID = "macos_left_command_q"
 }
