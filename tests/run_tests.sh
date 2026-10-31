@@ -2,12 +2,14 @@
 # Run the Amiberry test suite. Invoke from anywhere; it changes to the
 # repository root itself.
 #
-# Usage: tests/run_tests.sh [--behavioral-only] [path-to-amiberry-binary]
+# Usage: tests/run_tests.sh [--behavioral-only] [--skip-slow] [path-to-amiberry-binary]
 #
 # Without a binary path (or AMIBERRY_BIN), only the static source checks and
 # self-contained harnesses run. With one, the behavioral tests run too. The
 # --behavioral-only mode requires a binary and skips static checks that need
-# development dependencies outside the configured build.
+# development dependencies outside the configured build. --skip-slow leaves
+# out the behavioral tests listed in SLOW_TESTS: CI runs the schema test in
+# a job of its own and the apply test nightly.
 #
 # Requirements: bash, a C++17 compiler, grep, pkg-config, libcurl and OpenSSL;
 # ripgrep and python3 for the tests that use them.
@@ -37,11 +39,25 @@ BEHAVIORAL_TESTS=(
 	"test_native_ui_bridge.sh"
 )
 
+# Behavioral tests that take tens of minutes each on a CI runner.
+SLOW_TESTS=(
+	"test_settings_apply.sh"
+	"test_settings_schema.sh"
+)
+
 behavioral_only=0
-if [[ "${1:-}" == "--behavioral-only" ]]; then
-	behavioral_only=1
+skip_slow=0
+while [[ "${1:-}" == --* ]]; do
+	case "$1" in
+	--behavioral-only) behavioral_only=1 ;;
+	--skip-slow) skip_slow=1 ;;
+	*)
+		echo "unknown option: $1" >&2
+		exit 2
+		;;
+	esac
 	shift
-fi
+done
 binary="${1:-${AMIBERRY_BIN:-}}"
 if [[ "$behavioral_only" == 1 && -z "$binary" ]]; then
 	echo "--behavioral-only requires an amiberry binary" >&2
@@ -65,6 +81,15 @@ skip_reason_for()
 			return
 		fi
 	done
+}
+
+is_slow()
+{
+	local wanted="$1" slow
+	for slow in "${SLOW_TESTS[@]}"; do
+		[[ "$slow" == "$wanted" ]] && return 0
+	done
+	return 1
 }
 if [[ "$behavioral_only" == 0 ]]; then
 for test_path in tests/*.sh; do
@@ -97,6 +122,10 @@ if [[ -z "$binary" ]]; then
 	echo "NOTE: no amiberry binary given; behavioral tests skipped"
 else
 	for test_name in ${BEHAVIORAL_TESTS[@]+"${BEHAVIORAL_TESTS[@]}"}; do
+		if [[ "$skip_slow" == 1 ]] && is_slow "$test_name"; then
+			echo "SKIP $test_name (slow; --skip-slow)"
+			continue
+		fi
 		if AMIBERRY_BIN="$binary" bash "tests/$test_name"; then
 			echo "PASS $test_name"
 			pass=$((pass + 1))

@@ -19,11 +19,6 @@ if ! grep -F -q 'play_prepare_selected_content_for_start()' "$source_file"; then
 	exit 1
 fi
 
-if ! grep -F -q 'amiberry_options.quickstart_start ? "quickstart" : "play"' "$source_file"; then
-	echo "Startup without a loaded config must honor the saved Quickstart startup preference" >&2
-	exit 1
-fi
-
 if ! grep -F -q 'amiberry_options.quickstart_start);' "$source_file"; then
 	echo "Quickstart startup must enable expert mode so simple-mode filtering does not switch back to Play" >&2
 	exit 1

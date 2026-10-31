@@ -188,7 +188,9 @@ cmake_configure+=("${cmake_args[@]}")
 cmake --build "$build_dir" --parallel "$jobs"
 (
     cd "$repo_root"
-    tests/run_tests.sh --behavioral-only "$build_dir/amiberry"
+    # The slow settings-layer tests do not depend on the packaging; CI runs
+    # them against its Ubuntu builds (see tests/run_tests.sh).
+    tests/run_tests.sh --behavioral-only --skip-slow "$build_dir/amiberry"
 )
 
 appdir="$build_dir/AppDir"

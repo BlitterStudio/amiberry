@@ -625,10 +625,10 @@ jobs:
   build-ubuntu:
     runs-on: ${{ matrix.runner }}
     container: ${{ matrix.container }}
-    # The 24.04-amd64 job also runs the test suite: the settings apply test
-    # runs three emulators for 20-30 minutes and the schema test regenerates
-    # the availability and preset tables.
-    timeout-minutes: 75
+    # The 24.04-amd64 job also runs the test suite, except the slow settings
+    # tests: test-settings-schema runs the schema test against its package,
+    # and settings-apply.yml runs the apply test nightly.
+    timeout-minutes: 45
     permissions:
       contents: read
       actions: write
@@ -790,7 +790,7 @@ jobs:
           sudo apt-get install -y ripgrep python3 ffmpeg
           # Retain the compiled /usr installation while relocation tests run its copied binary.
           sudo cmake --install build
-          tests/run_tests.sh /usr/bin/amiberry
+          tests/run_tests.sh --skip-slow /usr/bin/amiberry
 
       - name: Verify QEMU-UAE plugin in DEB
         run: |
@@ -818,6 +818,50 @@ jobs:
         with:
           name: ${{ matrix.artifact_name }}
           path: amiberry-*.zip
+
+  # The test suite's settings schema test (one of tests/run_tests.sh's
+  # SLOW_TESTS) against the Ubuntu 24.04 package, beside the other jobs: it
+  # regenerates the availability, transition and preset tables and loads
+  # every preset level (about 12 minutes). The other slow test, the settings
+  # apply test, runs nightly (settings-apply.yml).
+  test-settings-schema:
+    needs: [build-ubuntu]
+    # Another Ubuntu leg's failure does not stop it; a failed 24.04 leg
+    # leaves no package, and the download fails.
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-24.04
+    container: ubuntu:24.04
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v6
+
+      - name: Download Ubuntu 24.04 package
+        uses: actions/download-artifact@v8
+        with:
+          name: amiberry-ubuntu-24.04-amd64
+          path: package
+
+      - name: Install the package
+        run: |
+          apt-get update
+          apt-get install -y python3 unzip
+          cd package
+          # Tag builds upload the package zipped for the release.
+          for archive in *.zip; do
+            if [ -e "$archive" ]; then unzip -o "$archive"; fi
+          done
+          apt-get install -y ./amiberry_*.deb
+
+      - name: Run test_settings_schema.sh
+        env:
+          SDL_VIDEODRIVER: dummy
+          SDL_AUDIODRIVER: dummy
+          AMIBERRY_BIN: /usr/bin/amiberry
+        run: sh tests/test_settings_schema.sh
 
   build-appimage:
     runs-on: ${{ matrix.runner }}
@@ -2333,7 +2377,7 @@ jobs:
           path: amiberry/libretro/amiberry_libretro.info
 
   create-release:
-    needs: [merge-macOS-universal, build-appimage, smoke-appimage-mount, smoke-appimage-extract, build-fedora, build-ubuntu, build-debian-amd64, build-debian-arm64, build-windows, build-windows-arm64, build-libretro]
+    needs: [merge-macOS-universal, build-appimage, smoke-appimage-mount, smoke-appimage-extract, build-fedora, build-ubuntu, test-settings-schema, build-debian-amd64, build-debian-arm64, build-windows, build-windows-arm64, build-libretro]
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     if: github.ref_type == 'tag' && (startsWith(github.ref_name, 'v') || startsWith(github.ref_name, 'preview-v'))

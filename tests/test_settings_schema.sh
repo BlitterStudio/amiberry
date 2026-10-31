@@ -148,6 +148,11 @@ fi
 # configuration (the empty file), as a launch does. Paths other than the
 # NVRAM file are left out of the levels: the launcher supplies its own ROM
 # files. What the layer has no option for is listed below.
+#
+# A level's NVRAM file is spelled relative to the content base, where the
+# Android launcher (like the macOS, Windows and portable layouts) keeps the
+# NVRAM directory. A Linux desktop install keeps it in its XDG data
+# directory instead, so the check sets it in the content base first.
 "$python" - "$AMIBERRY_BIN" "$work/android.json" "$work" <<'PY'
 import json, os, subprocess, sys
 binary, schema_path, work = sys.argv[1:4]
@@ -165,12 +170,19 @@ gaps = {
     "bogomem_options": {("a1000", c) for c in range(4)},
 }
 assert not set(gaps) & set(types), "a gap became a layer option: export it in the levels"
+env = dict(os.environ, HOME=work)
+paths = dict(line.split("=", 1) for line in subprocess.run(
+    [binary, "--dump-paths"], capture_output=True, text=True, env=env, check=True).stdout.splitlines()
+    if "=" in line)
+os.makedirs(os.path.dirname(paths["amiberry_conf_file"]), exist_ok=True)
+with open(paths["amiberry_conf_file"], "w") as f:
+    f.write(f'nvram_dir={os.path.join(paths["relative_path_base"], "NVRAM")}\n')
 empty = os.path.join(work, "empty.uae")
 open(empty, "w").close()
 
 def dump(args):
     result = subprocess.run([binary, "--config"] + args + ["--dump-config"],
-                            capture_output=True, text=True, env=dict(os.environ, HOME=work))
+                            capture_output=True, text=True, env=env)
     assert result.returncode == 0, (args, result.stderr)
     values = {}
     for line in result.stdout.splitlines():
