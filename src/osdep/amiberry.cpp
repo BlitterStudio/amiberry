@@ -7913,6 +7913,10 @@ static bool write_amiberry_settings()
 	// This helps with keyboards that may not have 2 Win keys and no Menu key either
 	write_bool_option("rctrl_as_ramiga", amiberry_options.rctrl_as_ramiga);
 
+	// macOS native UI: Left Command-Q goes to the Amiga (0), asks to quit
+	// (1) or quits (2). Right Command-Q always goes to the Amiga.
+	write_int_option("macos_left_command_q", amiberry_options.macos_left_command_q);
+
 	// Disable controller in the GUI?
 	// If you want to disable the default behavior for some reason
 	write_bool_option("gui_joystick_control", amiberry_options.gui_joystick_control);
@@ -8461,6 +8465,7 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		ret |= cfgfile_floatval(option, value, "gui_layout_scale", &parsed_gui_layout_scale);
 		amiberry_options.gui_layout_scale_percent = clamp_gui_layout_scale_percent(parsed_gui_layout_scale);
 		ret |= cfgfile_yesno(option, value, "rctrl_as_ramiga", &amiberry_options.rctrl_as_ramiga);
+		ret |= cfgfile_intval(option, value, "macos_left_command_q", &amiberry_options.macos_left_command_q, 1);
 		ret |= cfgfile_yesno(option, value, "gui_joystick_control", &amiberry_options.gui_joystick_control);
 		ret |= cfgfile_intval(option, value, "input_default_mouse_speed", &amiberry_options.input_default_mouse_speed, 1);
 		ret |= cfgfile_yesno(option, value, "input_keyboard_as_joystick_stop_keypresses", &amiberry_options.input_keyboard_as_joystick_stop_keypresses);

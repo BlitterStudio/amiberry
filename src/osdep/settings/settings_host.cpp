@@ -57,6 +57,9 @@ const choice buffer_choices[] = {
 };
 const choice language_choices[] = {{"US", "US"}, {"UK", "UK"}, {"DE", "German"}, {"FR", "French"}};
 const choice channel_choices[] = {{"0", "Stable"}, {"1", "Preview"}};
+#if defined(AMIBERRY_NATIVE_APPLE_UI) && defined(AMIBERRY_MACOS)
+const choice left_command_q_choices[] = {{"1", "Asks to quit"}, {"2", "Quits"}, {"0", "Goes to the Amiga"}};
+#endif
 
 enum class kind { boolean, integer, choice_list, text, hotkey, real, path };
 
@@ -270,6 +273,14 @@ const std::vector<host_setting>& settings()
 		boolean("rctrl_as_ramiga", "global_input", "Right Ctrl as Right Amiga",
 			"Map Right Control to the Right Amiga key by default.",
 			"false", &amiberry_options::rctrl_as_ramiga),
+#if defined(AMIBERRY_NATIVE_APPLE_UI) && defined(AMIBERRY_MACOS)
+		// Read by the macOS menu bar (apple/macOS/MainMenu.swift).
+		choices_of("macos_left_command_q", "global_input", "Left Command-Q",
+			"What Left Command-Q does while an emulation window is active: ask whether to quit, quit at once, "
+			"or reach the Amiga as Left Amiga-Q. Right Command-Q always goes to the Amiga.",
+			"1", left_command_q_choices, sizeof left_command_q_choices / sizeof left_command_q_choices[0],
+			&amiberry_options::macos_left_command_q),
+#endif
 		measured("input_default_mouse_speed", "global_input", "Default mouse speed",
 			"Mouse speed applied to new configurations (100% is normal).",
 			"100", 1, 1000, &amiberry_options::input_default_mouse_speed, "%", false),
