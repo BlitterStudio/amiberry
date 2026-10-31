@@ -626,7 +626,8 @@ jobs:
     runs-on: ${{ matrix.runner }}
     container: ${{ matrix.container }}
     # The 24.04-amd64 job also runs the test suite, except the slow settings
-    # tests, which test-ubuntu-slow runs against its package.
+    # tests: test-settings-schema runs the schema test against its package,
+    # and settings-apply.yml runs the apply test nightly.
     timeout-minutes: 45
     permissions:
       contents: read
@@ -818,26 +819,22 @@ jobs:
           name: ${{ matrix.artifact_name }}
           path: amiberry-*.zip
 
-  # The test suite's slow settings tests (tests/run_tests.sh SLOW_TESTS), one
-  # job each so they run side by side, against the Ubuntu 24.04 package.
-  # The settings apply test runs three emulators for 20-60 minutes; the
-  # schema test regenerates the availability, transition and preset tables
-  # and loads every preset level (about 12 minutes).
-  test-ubuntu-slow:
+  # The test suite's settings schema test (one of tests/run_tests.sh's
+  # SLOW_TESTS) against the Ubuntu 24.04 package, beside the other jobs: it
+  # regenerates the availability, transition and preset tables and loads
+  # every preset level (about 12 minutes). The other slow test, the settings
+  # apply test, runs nightly (settings-apply.yml).
+  test-settings-schema:
     needs: [build-ubuntu]
-    # Another Ubuntu leg's failure does not stop these; a failed 24.04 leg
+    # Another Ubuntu leg's failure does not stop it; a failed 24.04 leg
     # leaves no package, and the download fails.
     if: ${{ !cancelled() }}
     runs-on: ubuntu-24.04
     container: ubuntu:24.04
-    timeout-minutes: 120
+    timeout-minutes: 45
     permissions:
       contents: read
       actions: read
-    strategy:
-      fail-fast: false
-      matrix:
-        test: [test_settings_apply.sh, test_settings_schema.sh]
     steps:
       - name: Check out repository code
         uses: actions/checkout@v6
@@ -859,12 +856,12 @@ jobs:
           done
           apt-get install -y ./amiberry_*.deb
 
-      - name: Run ${{ matrix.test }}
+      - name: Run test_settings_schema.sh
         env:
           SDL_VIDEODRIVER: dummy
           SDL_AUDIODRIVER: dummy
           AMIBERRY_BIN: /usr/bin/amiberry
-        run: sh tests/${{ matrix.test }}
+        run: sh tests/test_settings_schema.sh
 
   build-appimage:
     runs-on: ${{ matrix.runner }}
@@ -2380,7 +2377,7 @@ jobs:
           path: amiberry/libretro/amiberry_libretro.info
 
   create-release:
-    needs: [merge-macOS-universal, build-appimage, smoke-appimage-mount, smoke-appimage-extract, build-fedora, build-ubuntu, test-ubuntu-slow, build-debian-amd64, build-debian-arm64, build-windows, build-windows-arm64, build-libretro]
+    needs: [merge-macOS-universal, build-appimage, smoke-appimage-mount, smoke-appimage-extract, build-fedora, build-ubuntu, test-settings-schema, build-debian-amd64, build-debian-arm64, build-windows, build-windows-arm64, build-libretro]
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     if: github.ref_type == 'tag' && (startsWith(github.ref_name, 'v') || startsWith(github.ref_name, 'preview-v'))

@@ -1,0 +1,48 @@
+# The settings apply test (tests/test_settings_apply.sh): every option the
+# running emulation lets the settings layer change must reach it at the step
+# its descriptor declares (live, reset or restart). It runs three emulators
+# for 20-60 minutes, too long for every pull request, so it runs nightly on
+# master and on demand (Actions > Settings apply test > Run workflow, which
+# also takes a branch).
+name: Settings apply test
+
+on:
+  schedule:
+    - cron: '30 2 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  settings-apply:
+    runs-on: ubuntu-24.04
+    container: ubuntu:26.04
+    timeout-minutes: 120
+    steps:
+      - name: Install dependencies
+        run: |
+          apt-get update
+          apt-get install -y git build-essential cmake ninja-build file python3 libflac-dev libmpeg2-4-dev libpng-dev libwebp-dev libasound2-dev libmpg123-dev libportmidi-dev libserialport-dev libenet-dev libpcap-dev libzstd-dev libcurl4-openssl-dev nlohmann-json3-dev libdbus-1-dev libavformat-dev libavcodec-dev libavutil-dev libswscale-dev libswresample-dev libsdl3-dev libsdl3-image-dev
+
+      - name: Check out repository code
+        uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - name: Build and install
+        run: |
+          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
+          cmake --build build -j$(nproc)
+          cmake --install build
+
+      - name: Run test_settings_apply.sh
+        env:
+          SDL_VIDEODRIVER: dummy
+          SDL_AUDIODRIVER: dummy
+          AMIBERRY_BIN: /usr/bin/amiberry
+        run: sh tests/test_settings_apply.sh

@@ -189,7 +189,7 @@ cmake --build "$build_dir" --parallel "$jobs"
 (
     cd "$repo_root"
     # The slow settings-layer tests do not depend on the packaging; CI runs
-    # them against the Ubuntu 24.04 package in jobs of their own.
+    # them against its Ubuntu builds (see tests/run_tests.sh).
     tests/run_tests.sh --behavioral-only --skip-slow "$build_dir/amiberry"
 )
 

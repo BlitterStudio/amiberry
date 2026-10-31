@@ -8,8 +8,8 @@
 # self-contained harnesses run. With one, the behavioral tests run too. The
 # --behavioral-only mode requires a binary and skips static checks that need
 # development dependencies outside the configured build. --skip-slow leaves
-# out the behavioral tests listed in SLOW_TESTS, which CI runs in jobs of
-# their own.
+# out the behavioral tests listed in SLOW_TESTS: CI runs the schema test in
+# a job of its own and the apply test nightly.
 #
 # Requirements: bash, a C++17 compiler, grep, pkg-config, libcurl and OpenSSL;
 # ripgrep and python3 for the tests that use them.
