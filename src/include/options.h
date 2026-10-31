@@ -1476,6 +1476,10 @@ struct amiberry_options
 	bool read_config_descriptions = true;
 	bool write_logfile = false;
 	bool rctrl_as_ramiga = false;
+	// macOS native UI: what Left Command-Q does while an emulation window
+	// is key. 0 = Left Amiga-Q to the Amiga, 1 = asks to quit, 2 = quits.
+	// Asks by default: earlier Mac builds quit on Command-Q.
+	int macos_left_command_q = 1;
 	bool gui_joystick_control = true;
 	int default_line_mode = 1;
 	int input_default_mouse_speed = 100;

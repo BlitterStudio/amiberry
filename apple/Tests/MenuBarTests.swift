@@ -1,8 +1,8 @@
 /*
  * Copyright (C) 2026 BlitterStudio
  * Tests of the menu bar's File and Help menus, the View menu's full
- * screen command and the shortcuts that step aside for the Amiga key
- * (apple/macOS/MainMenu.swift).
+ * screen command, the shortcuts that step aside for the Amiga key and
+ * Left ⌘Q (apple/macOS/MainMenu.swift).
  */
 
 import AmiberrySettings
@@ -163,5 +163,86 @@ final class MenuBarTests: XCTestCase {
 			XCTAssertEqual(entry.keyEquivalentModifierMask, modifiers, entry.title)
 		}
 		XCTAssertEqual(try item(main, "Amiberry", "Hide Others").keyEquivalentModifierMask, [.option, .command])
+	}
+
+	private func keyDown(_ key: String, _ flags: NSEvent.ModifierFlags, device: UInt,
+		unmodified: String? = nil, repeats: Bool = false) throws -> NSEvent {
+		try XCTUnwrap(NSEvent.keyEvent(with: .keyDown, location: .zero,
+			modifierFlags: NSEvent.ModifierFlags(rawValue: flags.rawValue | device), timestamp: 0, windowNumber: 0,
+			context: nil, characters: key, charactersIgnoringModifiers: unmodified ?? key, isARepeat: repeats,
+			keyCode: 12))
+	}
+
+	func testLeftCommandQFollowsItsSettingAndRightCommandQIsTheAmigas() throws {
+		var posted: [EmulatorAction] = []
+		var asked = 0
+		var answer = (quit: false, stopAsking: false)
+		var mode = LeftCommandQ.amiga
+		var stored: [LeftCommandQ] = []
+		var emulationKey = true
+		commands.post = { posted.append($0) }
+		commands.leftCommandQMode = { mode }
+		commands.storeLeftCommandQMode = {
+			stored.append($0)
+			mode = $0
+		}
+		commands.emulationKey = { emulationKey }
+		commands.confirmQuit = {
+			asked += 1
+			return answer
+		}
+		let left = try keyDown("q", .command, device: MenuCommands.leftCommandBit)
+
+		XCTAssertFalse(commands.leftCommandQ(left), "set to the Amiga, Left Amiga-Q is the Amiga's")
+		mode = .ask
+		XCTAssertFalse(commands.leftCommandQ(try keyDown("q", .command, device: MenuCommands.rightCommandBit)),
+			"Right Amiga-Q, the Amiga's menu shortcut, always reaches it")
+		XCTAssertFalse(commands.leftCommandQ(try keyDown("q", .command,
+			device: MenuCommands.leftCommandBit | MenuCommands.rightCommandBit)), "both Command keys")
+		XCTAssertFalse(commands.leftCommandQ(try keyDown("q", [.command, .option], device: MenuCommands.leftCommandBit)))
+		XCTAssertFalse(commands.leftCommandQ(try keyDown("w", .command, device: MenuCommands.leftCommandBit)))
+		emulationKey = false
+		XCTAssertFalse(commands.leftCommandQ(left), "another window has the menu's ⌘Q")
+		emulationKey = true
+		var settingsOpen = true
+		commands.settingsOpen = { settingsOpen }
+		XCTAssertFalse(commands.leftCommandQ(left), "the settings window holds the emulation")
+		settingsOpen = false
+		state = .stopped
+		XCTAssertFalse(commands.leftCommandQ(left))
+		XCTAssertEqual(asked, 0)
+
+		state = .running
+		let repeated = try keyDown("q", .command, device: MenuCommands.leftCommandBit, repeats: true)
+		XCTAssertTrue(commands.leftCommandQ(repeated), "held down: the repeats do not reach the Amiga either")
+		XCTAssertEqual(asked, 0, "nor ask again")
+		mode = .amiga
+		XCTAssertFalse(commands.leftCommandQ(repeated), "the Amiga's repeats stay the Amiga's")
+		mode = .ask
+		// A non-Latin layout types its own letter, and Q with Command held.
+		answer = (quit: false, stopAsking: false)
+		XCTAssertTrue(commands.leftCommandQ(try keyDown("q", .command, device: MenuCommands.leftCommandBit,
+			unmodified: "\u{439}")))
+		XCTAssertEqual(asked, 1)
+
+		answer = (quit: false, stopAsking: true)
+		XCTAssertTrue(commands.leftCommandQ(left), "cancelled, the Q still does not reach the Amiga")
+		XCTAssertEqual(asked, 2)
+		XCTAssertEqual(posted, [])
+		XCTAssertEqual(stored, [], "Cancel keeps asking, checkbox or not")
+
+		answer = (quit: true, stopAsking: false)
+		XCTAssertTrue(commands.leftCommandQ(try keyDown("Q", [.command, .capsLock], device: MenuCommands.leftCommandBit)),
+			"Caps Lock on")
+		XCTAssertEqual(posted, [.quit])
+		XCTAssertEqual(stored, [])
+
+		answer = (quit: true, stopAsking: true)
+		XCTAssertTrue(commands.leftCommandQ(left))
+		XCTAssertEqual(stored, [.quit], "Don't ask again")
+		XCTAssertEqual(posted, [.quit, .quit])
+		XCTAssertTrue(commands.leftCommandQ(left))
+		XCTAssertEqual(asked, 4, "quits without asking from then on")
+		XCTAssertEqual(posted, [.quit, .quit, .quit])
 	}
 }
