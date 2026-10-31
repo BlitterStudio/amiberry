@@ -29,6 +29,10 @@
 #include <string>
 #include <vector>
 
+#if defined(__GLIBC__)
+#include <malloc.h>
+#endif
+
 namespace {
 
 void json_string(std::string& out, const char* text)
@@ -1429,6 +1433,16 @@ void aros(std::string& out)
 // Writes the schema to stdout; 0 on success.
 int settings_schema_and_exit(const char* option_list)
 {
+#if defined(__GLIBC__)
+	// Every settings session copies the configuration (about 11 MB) into
+	// two allocations, hundreds of thousands of times. glibc serves blocks
+	// that size with mmap, or trims them back to the system when freed, so
+	// each copy faults its pages in afresh: a fifth of the export's time on
+	// Linux. Kept in the heap, they are reused. The process exits after the
+	// export, so nothing else runs with these settings.
+	mallopt(M_MMAP_THRESHOLD, 32 * 1024 * 1024);
+	mallopt(M_TRIM_THRESHOLD, 1024 * 1024 * 1024);
+#endif
 	std::set<std::string> only;
 	if (option_list && !read_option_list(option_list, only))
 		return 1;
