@@ -30,7 +30,6 @@
 #include "zfile.h"
 #include "uae.h"
 #include "gui.h"
-#include "debug.h"
 #ifdef WITH_SNDBOARD
 #include "sndboard.h"
 #endif

@@ -23,7 +23,6 @@
 #include "sysdeps.h"
 
 #include "options.h"
-#include "threaddep/thread.h"
 #include "uae.h"
 #include "gensound.h"
 #include "audio.h"
@@ -77,8 +76,6 @@
 #endif
 
 #include "fsdb.h"
-#include "fsdb_host.h"
-#include "keyboard.h"
 #ifndef LIBRETRO
 #include "amiberry_update.h"
 #endif

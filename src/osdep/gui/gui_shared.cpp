@@ -6,8 +6,6 @@
 #include "sysconfig.h"
 #include "sysdeps.h"
 
-#include "options.h"
-#include "gui.h"
 #include "target.h"
 #include "gui/gui_handling.h"
 #include "tinyxml2.h"

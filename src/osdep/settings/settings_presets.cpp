@@ -10,7 +10,6 @@
 #include "options.h"
 #include "blkdev.h"
 #include "disk.h"
-#include "memory.h"
 #include "rommgr.h"
 
 #include "settings_definitions.h"

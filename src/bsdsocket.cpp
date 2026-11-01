@@ -19,9 +19,7 @@
 #include "autoconf.h"
 #include "traps.h"
 #include "bsdsocket.h"
-#include "threaddep/thread.h"
 #include "native2amiga.h"
-#include "debug.h"
 
 #ifndef _WIN32
 #include <arpa/inet.h>

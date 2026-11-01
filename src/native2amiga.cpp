@@ -13,8 +13,6 @@
 #include "sysdeps.h"
 
 #include "threaddep/thread.h"
-#include "options.h"
-#include "memory.h"
 #include "autoconf.h"
 #include "traps.h"
 #include "native2amiga.h"

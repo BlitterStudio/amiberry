@@ -15,7 +15,6 @@
 #include "dongle.h"
 #include "events.h"
 #include "uae.h"
-#include "debug.h"
 #include "inputdevice.h"
 
 #define ROBOCOP3 1

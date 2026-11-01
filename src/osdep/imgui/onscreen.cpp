@@ -2,11 +2,8 @@
 #include "sysdeps.h"
 #include "options.h"
 #include "inputdevice.h"
-#include "amiberry_input.h"
 #include "target.h"
 #include "settings/settings_definitions.h"
-#include <string>
-#include <vector>
 #include <SDL3/SDL.h>
 
 #include "imgui_panels.h"

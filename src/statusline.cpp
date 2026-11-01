@@ -1,7 +1,6 @@
 #include "sysconfig.h"
 #include "sysdeps.h"
 
-#include <cctype>
 #include <cassert>
 
 #include "options.h"

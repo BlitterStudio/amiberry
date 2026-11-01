@@ -16,7 +16,6 @@
 #include "custom.h"
 #include "newcpu.h"
 #include "cd32_fmv.h"
-#include "debug.h"
 #include "audio.h"
 #include "devices.h"
 #include "threaddep/thread.h"

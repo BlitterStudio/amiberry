@@ -4,11 +4,9 @@
 #include "amiberry_gfx.h"
 #include "imgui_panels.h"
 #include "gui/gui_handling.h"
-#include "fsdb_host.h"
 #include "amiberry_update.h"
 #include "amiberry_update_asset_policy.h"
 #include "target.h"
-#include "irenderer.h"
 #ifdef USE_OPENGL
 #include "opengl_renderer.h"
 #include "gl_platform.h"

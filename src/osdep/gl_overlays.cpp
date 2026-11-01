@@ -12,17 +12,14 @@
 #include "options.h"
 #include "custom.h"
 #include "xwin.h"
-#include "drawing.h"
 #include "gui.h"
 #include "inputdevice.h"
-#include "picasso96.h"
 #include "statusline.h"
 
 #include "amiberry_gfx.h"
 #include "irenderer.h"
 #include "gl_overlays.h"
 #include "target.h"
-#include "fsdb_host.h"
 #include "gfx_platform_internal.h"
 
 #ifdef AMIBERRY

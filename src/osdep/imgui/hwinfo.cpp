@@ -3,8 +3,6 @@
 #include "options.h"
 #include "gui/gui_handling.h"
 #include "autoconf.h"
-#include <string>
-#include <vector>
 
 #include "imgui_panels.h"
 

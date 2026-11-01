@@ -9,7 +9,6 @@
 #include "sysconfig.h"
 #include "sysdeps.h"
 
-#include <ctype.h>
 #include <assert.h>
 
 #include "options.h"

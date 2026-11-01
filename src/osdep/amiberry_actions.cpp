@@ -16,7 +16,6 @@
 #include "memory.h"
 #include "disk.h"
 #include "savestate.h"
-#include "custom.h"
 #include "gui.h"
 #include "uae.h"
 #include "target.h"
@@ -31,7 +30,6 @@
 
 
 #include <cstdio>
-#include <algorithm>
 #include <vector>
 #include <cstring>
 #include <mutex>

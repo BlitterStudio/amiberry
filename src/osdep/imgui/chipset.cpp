@@ -1,6 +1,5 @@
 #include "imgui.h"
 #include "sysdeps.h"
-#include "custom.h"
 #include "options.h"
 #include "imgui_panels.h"
 #include "rommgr.h"

@@ -11,8 +11,6 @@
 #include "events.h"
 #include "sampler.h"
 
-#include <sounddep/sound.h>
-
 #include <math.h>
 
 //#include "win32.h"

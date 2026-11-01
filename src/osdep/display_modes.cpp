@@ -10,19 +10,13 @@
 #include <cstdlib>
 #include <utility>
 #include <cstring>
-#include <cstdio>
 
 #include "sysdeps.h"
 #include "options.h"
 #include "custom.h"
 #include "xwin.h"
-#include "drawing.h"
-#include "gui.h"
 #include "amiberry_gfx.h"
 #include "display_modes.h"
-#include "threaddep/thread.h"
-#include "registry.h"
-#include "fsdb_host.h"
 
 #include "gfx_platform_internal.h"
 

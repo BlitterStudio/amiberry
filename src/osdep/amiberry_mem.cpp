@@ -12,7 +12,6 @@
 #include "autoconf.h"
 #include "gfxboard.h"
 #include "cpuboard.h"
-#include "rommgr.h"
 #include "newcpu.h"
 
 #ifdef _WIN32
@@ -22,7 +21,6 @@
 #endif
 
 #include "gui.h"
-#include "sys/types.h"
 #if defined(__linux__) && !defined(__ANDROID__)
 #include "sys/sysinfo.h"
 #endif

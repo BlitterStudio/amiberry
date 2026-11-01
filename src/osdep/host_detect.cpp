@@ -1,7 +1,5 @@
 #include "sysconfig.h"
 #include "sysdeps.h"
-#include "options.h"
-#include "uae.h"
 
 #if defined(__linux__) && !defined(__ANDROID__)
 
