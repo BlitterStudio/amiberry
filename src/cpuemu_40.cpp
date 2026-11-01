@@ -2,8 +2,6 @@
 #include "sysdeps.h"
 #include "options.h"
 #include "memory.h"
-#include "custom.h"
-#include "events.h"
 #include "newcpu.h"
 #include "cpu_prefetch.h"
 #include "cputbl.h"

@@ -22,7 +22,6 @@
 #include "autoconf.h"
 #include "traps.h"
 #include "uae.h"
-#include "debug.h"
 
 /*
 * Traps are the mechanism via which 68k code can call emulator code

@@ -1,7 +1,6 @@
 #include "imgui.h"
 #include "sysdeps.h"
 #include <string>
-#include <vector>
 #include "imgui_panels.h"
 #include "options.h"
 #include "file_dialog.h"

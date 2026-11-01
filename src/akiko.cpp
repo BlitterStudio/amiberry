@@ -162,7 +162,6 @@
 #include "custom.h"
 #include "newcpu.h"
 #include "flashrom.h"
-#include "debug.h"
 #include "rommgr.h"
 #include "devices.h"
 

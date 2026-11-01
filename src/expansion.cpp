@@ -23,7 +23,6 @@
 #endif
 #include "cdtv.h"
 #include "cdtvcr.h"
-#include "threaddep/thread.h"
 #ifdef A2091
 #include "a2091.h"
 #endif

@@ -12,7 +12,6 @@
 
 #include <cstddef>
 
-#include "options.h"
 #include "blkdev.h"
 #include "isofs_api.h"
 #include "uae/string.h"

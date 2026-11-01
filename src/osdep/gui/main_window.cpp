@@ -7,7 +7,6 @@
 #include <algorithm>
 #include <string>
 #include <filesystem>
-#include <array>
 #include <nlohmann/json.hpp>
 #include <cfloat>
 #include <SDL3_image/SDL_image.h>
@@ -18,7 +17,6 @@
 
 #include "sysdeps.h"
 #include "options.h"
-#include "memory.h"
 #include "uae.h"
 #include "gui_handling.h"
 #include "amiberry_gfx.h"
@@ -27,21 +25,14 @@
 #include "opengl_renderer.h"
 #endif
 #include "fsdb_host.h"
-#include "autoconf.h"
-#include "blkdev.h"
-#include "inputdevice.h"
-#include "xwin.h"
 #ifdef USE_IPC_SOCKET
 #include "amiberry_ipc.h"
 #endif
-#include "custom.h"
 #include "disk.h"
 #include "zfile.h"
 #include "imgui_internal.h"
-#include "savestate.h"
 #include "target.h"
 #include "perf_monitor.h"
-#include "tinyxml2.h"
 #include "file_dialog.h"
 #include "macos_window.h"
 #include "amiberry_rp9.h"

@@ -27,7 +27,6 @@
 #include "ethernet.h"
 #endif
 #include "execio.h"
-#include "debug.h"
 #include "devices.h"
 
 #ifdef SANA2

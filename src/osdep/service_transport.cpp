@@ -2,7 +2,6 @@
  * Commands and rendering remain in the plugin; this file owns byte copies
  * and transfer bounds only. */
 #include "sysdeps.h"
-#include "uae.h"
 #include "uae/dlopen.h"
 #include "service_transport.h"
 #include "minigl_display.h"
@@ -10,7 +9,6 @@
 #include "traps.h"
 #include "memory.h"
 #include "picasso96.h"
-#include "gfxboard.h"
 #include <mutex>
 #include <vector>
 #include <new>

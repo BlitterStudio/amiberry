@@ -26,7 +26,6 @@
 #include "newcpu.h"
 #include "ncr_scsi.h"
 #include "ncr9x_scsi.h"
-#include "debug.h"
 #include "flashrom.h"
 #include "uae.h"
 #ifdef WITH_PPC

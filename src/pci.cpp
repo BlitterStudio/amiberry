@@ -19,7 +19,6 @@
 
 #include "options.h"
 #include "memory.h"
-#include "debug.h"
 #include "pci_hw.h"
 #include "pci.h"
 #include "ncr_scsi.h"
@@ -30,8 +29,6 @@
 #include "devices.h"
 
 #include "qemuvga/qemuuaeglue.h"
-#include "qemuvga/queue.h"
-#include "qemuvga/scsi/scsi.h"
 
 #define PCI_BRIDGE_WILDFIRE 0
 #define PCI_BRIDGE_GREX (PCI_BRIDGE_WILDFIRE + 1)

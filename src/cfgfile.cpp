@@ -10,15 +10,11 @@
 #include "sysconfig.h"
 #include "sysdeps.h"
 
-#include <cctype>
-
 #include "options.h"
 #include "uae.h"
 #include "audio.h"
-#include "events.h"
 #include "custom.h"
 #include "inputdevice.h"
-#include "gfxfilter.h"
 #include "savestate.h"
 #include "memory.h"
 #include "autoconf.h"

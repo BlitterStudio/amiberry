@@ -1,6 +1,5 @@
 #include "sysconfig.h"
 #include "sysdeps.h"
-#include "uae.h"
 #include "thread.h"
 
 int uae_start_thread_fast(uae_thread_function fn, void* arg, uae_thread_id* thread)

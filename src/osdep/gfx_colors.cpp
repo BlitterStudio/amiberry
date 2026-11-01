@@ -10,11 +10,9 @@
 #include "options.h"
 #include "custom.h"
 #include "xwin.h"
-#include "drawing.h"
 #include "picasso96.h"
 #include "gfxboard.h"
 #include "amiberry_gfx.h"
-#include "fsdb_host.h"
 #include "gfx_colors.h"
 
 #include "gfx_platform_internal.h"

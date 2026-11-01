@@ -14,7 +14,6 @@
 #include "sysdeps.h"
 
 #include <algorithm>
-#include <cctype>
 #include <cassert>
 #include <cmath>
 
@@ -49,7 +48,6 @@
 #if defined(ENFORCER)
 #include "enforcer.h"
 #endif
-#include "threaddep/thread.h"
 #ifdef WITH_THREADED_CPU
 #include "cpu_thread.h"
 #endif

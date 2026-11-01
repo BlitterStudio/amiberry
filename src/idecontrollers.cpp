@@ -14,7 +14,6 @@
 #include "memory.h"
 #include "newcpu.h"
 #include "filesys.h"
-#include "debug.h"
 #include "ide.h"
 #include "idecontrollers.h"
 #include "zfile.h"

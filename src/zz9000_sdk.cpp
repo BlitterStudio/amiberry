@@ -13,7 +13,6 @@
 
 #include <algorithm>
 #include <chrono>
-#include <cfenv>
 #include <cmath>
 #include <cstring>
 #include <limits>

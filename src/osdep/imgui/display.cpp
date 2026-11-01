@@ -6,7 +6,6 @@
 #include "display_modes.h"
 #include "imgui_panels.h"
 #include "gui/gui_handling.h"
-#include "gfxboard.h"
 #include "play_setup.h"
 #include "settings/settings_definitions.h"
 
@@ -14,7 +13,6 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <string>
 
 namespace settings = amiberry_settings;
 

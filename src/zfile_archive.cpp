@@ -20,7 +20,6 @@
 #include "zfile.h"
 #include "archivers/zip/unzip.h"
 #include "archivers/dms/pfile.h"
-#include "crc32.h"
 #include "zarchive.h"
 #include "disk.h"
 

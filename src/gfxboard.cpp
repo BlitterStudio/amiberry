@@ -47,7 +47,6 @@ static bool memlogw = true;
 #endif
 
 #include "memory.h"
-#include "debug.h"
 #include "custom.h"
 #include "newcpu.h"
 #include "picasso96.h"
@@ -57,7 +56,6 @@ static bool memlogw = true;
 #include "gfxboard.h"
 #include "xwin.h"
 #include "devices.h"
-#include "gfxfilter.h"
 #include "flashrom.h"
 #include "pci.h"
 #include "pci_hw.h"
@@ -65,7 +63,6 @@ static bool memlogw = true;
 #include "pcem/pcemglue.h"
 #endif
 #include "qemuvga/qemuuaeglue.h"
-#include "qemuvga/vga.h"
 #ifdef WITH_DRACO
 #include "draco.h"
 #endif
