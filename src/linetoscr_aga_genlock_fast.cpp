@@ -32,8 +32,7 @@ static void lts_aga_n_ilores_dlores_b1_genlock(int cnt, int draw_end, int hbstrt
 			col = acolors[c];
 			cp += cpadds[0];
 			*buf1++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -81,8 +80,7 @@ static void lts_aga_dpf_ilores_dlores_b1_genlock(int cnt, int draw_end, int hbst
 			}
 			cp += cpadds[0];
 			*buf1++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -129,8 +127,7 @@ static void lts_aga_ehb_ilores_dlores_b1_genlock(int cnt, int draw_end, int hbst
 			}
 			cp += cpadds[0];
 			*buf1++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -171,8 +168,7 @@ static void lts_aga_ham_ilores_dlores_b1_genlock(int cnt, int draw_end, int hbst
 			col = decode_ham_pixel_aga_fast(c, planes, bxor, colors_aga);
 			cp += cpadds[0];
 			*buf1++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -214,8 +210,7 @@ static void lts_aga_kehb_ilores_dlores_b1_genlock(int cnt, int draw_end, int hbs
 			col = acolors[c & 31];
 			cp += cpadds[0];
 			*buf1++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -259,8 +254,7 @@ static void lts_aga_n_ihires_dlores_b1_genlock(int cnt, int draw_end, int hbstrt
 			clxdat |= bplcoltable[c];
 			cp += cpadds[0];
 			*buf1++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -304,8 +298,7 @@ static void lts_aga_n_ihires_dlores_b1_filtered_genlock(int cnt, int draw_end, i
 			col = filter_pixel(col, colf);
 			cp += cpadds[0];
 			*buf1++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -351,8 +344,7 @@ static void lts_aga_dpf_ihires_dlores_b1_genlock(int cnt, int draw_end, int hbst
 			clxdat |= bplcoltable[c];
 			cp += cpadds[0];
 			*buf1++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -408,8 +400,7 @@ static void lts_aga_dpf_ihires_dlores_b1_filtered_genlock(int cnt, int draw_end,
 			col = filter_pixel(col, colf);
 			cp += cpadds[0];
 			*buf1++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -454,8 +445,7 @@ static void lts_aga_ehb_ihires_dlores_b1_genlock(int cnt, int draw_end, int hbst
 			clxdat |= bplcoltable[c];
 			cp += cpadds[0];
 			*buf1++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -509,8 +499,7 @@ static void lts_aga_ehb_ihires_dlores_b1_filtered_genlock(int cnt, int draw_end,
 			col = filter_pixel(col, colf);
 			cp += cpadds[0];
 			*buf1++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -550,8 +539,7 @@ static void lts_aga_ham_ihires_dlores_b1_genlock(int cnt, int draw_end, int hbst
 			decode_ham_pixel_aga_fast(c, planes, bxor, colors_aga);
 			cp += cpadds[0];
 			*buf1++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -593,8 +581,7 @@ static void lts_aga_ham_ihires_dlores_b1_filtered_genlock(int cnt, int draw_end,
 			col = filter_pixel(col, colf);
 			cp += cpadds[0];
 			*buf1++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -634,8 +621,7 @@ static void lts_aga_kehb_ihires_dlores_b1_genlock(int cnt, int draw_end, int hbs
 			clxdat |= bplcoltable[c];
 			cp += cpadds[0];
 			*buf1++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -679,8 +665,7 @@ static void lts_aga_kehb_ihires_dlores_b1_filtered_genlock(int cnt, int draw_end
 			col = filter_pixel(col, colf);
 			cp += cpadds[0];
 			*buf1++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -760,16 +745,14 @@ static void lts_aga_n_ilores_dhires_b1_genlock(int cnt, int draw_end, int hbstrt
 			col = acolors[c];
 			cp += cpadds[0];
 			*buf1++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 			c = *cp;
 			clxdat |= bplcoltable[c];
 			c ^= bxor;
 			col = acolors[c];
 			cp += cpadds[1];
 			*buf1++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -819,8 +802,7 @@ static void lts_aga_dpf_ilores_dhires_b1_genlock(int cnt, int draw_end, int hbst
 			}
 			cp += cpadds[0];
 			*buf1++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 			c = *cp;
 			clxdat |= bplcoltable[c];
 			{
@@ -833,8 +815,7 @@ static void lts_aga_dpf_ilores_dhires_b1_genlock(int cnt, int draw_end, int hbst
 			}
 			cp += cpadds[1];
 			*buf1++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -883,8 +864,7 @@ static void lts_aga_ehb_ilores_dhires_b1_genlock(int cnt, int draw_end, int hbst
 			}
 			cp += cpadds[0];
 			*buf1++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 			c = *cp;
 			clxdat |= bplcoltable[c];
 			c ^= bxor;
@@ -896,8 +876,7 @@ static void lts_aga_ehb_ilores_dhires_b1_genlock(int cnt, int draw_end, int hbst
 			}
 			cp += cpadds[1];
 			*buf1++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -940,15 +919,13 @@ static void lts_aga_ham_ilores_dhires_b1_genlock(int cnt, int draw_end, int hbst
 			col = decode_ham_pixel_aga_fast(c, planes, bxor, colors_aga);
 			cp += cpadds[0];
 			*buf1++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 			c = *cp;
 			clxdat |= bplcoltable[c];
 			col = decode_ham_pixel_aga_fast(c, planes, bxor, colors_aga);
 			cp += cpadds[1];
 			*buf1++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -992,16 +969,14 @@ static void lts_aga_kehb_ilores_dhires_b1_genlock(int cnt, int draw_end, int hbs
 			col = acolors[c & 31];
 			cp += cpadds[0];
 			*buf1++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 			c = *cp;
 			clxdat |= bplcoltable[c];
 			c ^= bxor;
 			col = acolors[c & 31];
 			cp += cpadds[1];
 			*buf1++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -1043,8 +1018,7 @@ static void lts_aga_n_ihires_dhires_b1_genlock(int cnt, int draw_end, int hbstrt
 			col = acolors[c];
 			cp += cpadds[0];
 			*buf1++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -1092,8 +1066,7 @@ static void lts_aga_dpf_ihires_dhires_b1_genlock(int cnt, int draw_end, int hbst
 			}
 			cp += cpadds[0];
 			*buf1++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -1140,8 +1113,7 @@ static void lts_aga_ehb_ihires_dhires_b1_genlock(int cnt, int draw_end, int hbst
 			}
 			cp += cpadds[0];
 			*buf1++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -1182,8 +1154,7 @@ static void lts_aga_ham_ihires_dhires_b1_genlock(int cnt, int draw_end, int hbst
 			col = decode_ham_pixel_aga_fast(c, planes, bxor, colors_aga);
 			cp += cpadds[0];
 			*buf1++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -1225,8 +1196,7 @@ static void lts_aga_kehb_ihires_dhires_b1_genlock(int cnt, int draw_end, int hbs
 			col = acolors[c & 31];
 			cp += cpadds[0];
 			*buf1++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -1270,8 +1240,7 @@ static void lts_aga_n_ishres_dhires_b1_genlock(int cnt, int draw_end, int hbstrt
 			clxdat |= bplcoltable[c];
 			cp += cpadds[0];
 			*buf1++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -1315,8 +1284,7 @@ static void lts_aga_n_ishres_dhires_b1_filtered_genlock(int cnt, int draw_end, i
 			col = filter_pixel(col, colf);
 			cp += cpadds[0];
 			*buf1++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -1362,8 +1330,7 @@ static void lts_aga_dpf_ishres_dhires_b1_genlock(int cnt, int draw_end, int hbst
 			clxdat |= bplcoltable[c];
 			cp += cpadds[0];
 			*buf1++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -1419,8 +1386,7 @@ static void lts_aga_dpf_ishres_dhires_b1_filtered_genlock(int cnt, int draw_end,
 			col = filter_pixel(col, colf);
 			cp += cpadds[0];
 			*buf1++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -1465,8 +1431,7 @@ static void lts_aga_ehb_ishres_dhires_b1_genlock(int cnt, int draw_end, int hbst
 			clxdat |= bplcoltable[c];
 			cp += cpadds[0];
 			*buf1++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -1520,8 +1485,7 @@ static void lts_aga_ehb_ishres_dhires_b1_filtered_genlock(int cnt, int draw_end,
 			col = filter_pixel(col, colf);
 			cp += cpadds[0];
 			*buf1++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -1561,8 +1525,7 @@ static void lts_aga_ham_ishres_dhires_b1_genlock(int cnt, int draw_end, int hbst
 			decode_ham_pixel_aga_fast(c, planes, bxor, colors_aga);
 			cp += cpadds[0];
 			*buf1++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -1604,8 +1567,7 @@ static void lts_aga_ham_ishres_dhires_b1_filtered_genlock(int cnt, int draw_end,
 			col = filter_pixel(col, colf);
 			cp += cpadds[0];
 			*buf1++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -1645,8 +1607,7 @@ static void lts_aga_kehb_ishres_dhires_b1_genlock(int cnt, int draw_end, int hbs
 			clxdat |= bplcoltable[c];
 			cp += cpadds[0];
 			*buf1++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -1690,8 +1651,7 @@ static void lts_aga_kehb_ishres_dhires_b1_filtered_genlock(int cnt, int draw_end
 			col = filter_pixel(col, colf);
 			cp += cpadds[0];
 			*buf1++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -1735,32 +1695,28 @@ static void lts_aga_n_ilores_dshres_b1_genlock(int cnt, int draw_end, int hbstrt
 			col = acolors[c];
 			cp += cpadds[0];
 			*buf1++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 			c = *cp;
 			clxdat |= bplcoltable[c];
 			c ^= bxor;
 			col = acolors[c];
 			cp += cpadds[1];
 			*buf1++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 			c = *cp;
 			clxdat |= bplcoltable[c];
 			c ^= bxor;
 			col = acolors[c];
 			cp += cpadds[2];
 			*buf1++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 			c = *cp;
 			clxdat |= bplcoltable[c];
 			c ^= bxor;
 			col = acolors[c];
 			cp += cpadds[3];
 			*buf1++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -1814,8 +1770,7 @@ static void lts_aga_dpf_ilores_dshres_b1_genlock(int cnt, int draw_end, int hbst
 			}
 			cp += cpadds[0];
 			*buf1++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 			c = *cp;
 			clxdat |= bplcoltable[c];
 			{
@@ -1828,8 +1783,7 @@ static void lts_aga_dpf_ilores_dshres_b1_genlock(int cnt, int draw_end, int hbst
 			}
 			cp += cpadds[1];
 			*buf1++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 			c = *cp;
 			clxdat |= bplcoltable[c];
 			{
@@ -1842,8 +1796,7 @@ static void lts_aga_dpf_ilores_dshres_b1_genlock(int cnt, int draw_end, int hbst
 			}
 			cp += cpadds[2];
 			*buf1++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 			c = *cp;
 			clxdat |= bplcoltable[c];
 			{
@@ -1856,8 +1809,7 @@ static void lts_aga_dpf_ilores_dshres_b1_genlock(int cnt, int draw_end, int hbst
 			}
 			cp += cpadds[3];
 			*buf1++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -1910,8 +1862,7 @@ static void lts_aga_ehb_ilores_dshres_b1_genlock(int cnt, int draw_end, int hbst
 			}
 			cp += cpadds[0];
 			*buf1++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 			c = *cp;
 			clxdat |= bplcoltable[c];
 			c ^= bxor;
@@ -1923,8 +1874,7 @@ static void lts_aga_ehb_ilores_dshres_b1_genlock(int cnt, int draw_end, int hbst
 			}
 			cp += cpadds[1];
 			*buf1++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 			c = *cp;
 			clxdat |= bplcoltable[c];
 			c ^= bxor;
@@ -1936,8 +1886,7 @@ static void lts_aga_ehb_ilores_dshres_b1_genlock(int cnt, int draw_end, int hbst
 			}
 			cp += cpadds[2];
 			*buf1++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 			c = *cp;
 			clxdat |= bplcoltable[c];
 			c ^= bxor;
@@ -1949,8 +1898,7 @@ static void lts_aga_ehb_ilores_dshres_b1_genlock(int cnt, int draw_end, int hbst
 			}
 			cp += cpadds[3];
 			*buf1++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -1997,29 +1945,25 @@ static void lts_aga_ham_ilores_dshres_b1_genlock(int cnt, int draw_end, int hbst
 			col = decode_ham_pixel_aga_fast(c, planes, bxor, colors_aga);
 			cp += cpadds[0];
 			*buf1++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 			c = *cp;
 			clxdat |= bplcoltable[c];
 			col = decode_ham_pixel_aga_fast(c, planes, bxor, colors_aga);
 			cp += cpadds[1];
 			*buf1++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 			c = *cp;
 			clxdat |= bplcoltable[c];
 			col = decode_ham_pixel_aga_fast(c, planes, bxor, colors_aga);
 			cp += cpadds[2];
 			*buf1++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 			c = *cp;
 			clxdat |= bplcoltable[c];
 			col = decode_ham_pixel_aga_fast(c, planes, bxor, colors_aga);
 			cp += cpadds[3];
 			*buf1++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -2067,32 +2011,28 @@ static void lts_aga_kehb_ilores_dshres_b1_genlock(int cnt, int draw_end, int hbs
 			col = acolors[c & 31];
 			cp += cpadds[0];
 			*buf1++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 			c = *cp;
 			clxdat |= bplcoltable[c];
 			c ^= bxor;
 			col = acolors[c & 31];
 			cp += cpadds[1];
 			*buf1++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 			c = *cp;
 			clxdat |= bplcoltable[c];
 			c ^= bxor;
 			col = acolors[c & 31];
 			cp += cpadds[2];
 			*buf1++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 			c = *cp;
 			clxdat |= bplcoltable[c];
 			c ^= bxor;
 			col = acolors[c & 31];
 			cp += cpadds[3];
 			*buf1++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -2136,16 +2076,14 @@ static void lts_aga_n_ihires_dshres_b1_genlock(int cnt, int draw_end, int hbstrt
 			col = acolors[c];
 			cp += cpadds[0];
 			*buf1++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 			c = *cp;
 			clxdat |= bplcoltable[c];
 			c ^= bxor;
 			col = acolors[c];
 			cp += cpadds[1];
 			*buf1++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -2195,8 +2133,7 @@ static void lts_aga_dpf_ihires_dshres_b1_genlock(int cnt, int draw_end, int hbst
 			}
 			cp += cpadds[0];
 			*buf1++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 			c = *cp;
 			clxdat |= bplcoltable[c];
 			{
@@ -2209,8 +2146,7 @@ static void lts_aga_dpf_ihires_dshres_b1_genlock(int cnt, int draw_end, int hbst
 			}
 			cp += cpadds[1];
 			*buf1++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -2259,8 +2195,7 @@ static void lts_aga_ehb_ihires_dshres_b1_genlock(int cnt, int draw_end, int hbst
 			}
 			cp += cpadds[0];
 			*buf1++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 			c = *cp;
 			clxdat |= bplcoltable[c];
 			c ^= bxor;
@@ -2272,8 +2207,7 @@ static void lts_aga_ehb_ihires_dshres_b1_genlock(int cnt, int draw_end, int hbst
 			}
 			cp += cpadds[1];
 			*buf1++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -2316,15 +2250,13 @@ static void lts_aga_ham_ihires_dshres_b1_genlock(int cnt, int draw_end, int hbst
 			col = decode_ham_pixel_aga_fast(c, planes, bxor, colors_aga);
 			cp += cpadds[0];
 			*buf1++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 			c = *cp;
 			clxdat |= bplcoltable[c];
 			col = decode_ham_pixel_aga_fast(c, planes, bxor, colors_aga);
 			cp += cpadds[1];
 			*buf1++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -2368,16 +2300,14 @@ static void lts_aga_kehb_ihires_dshres_b1_genlock(int cnt, int draw_end, int hbs
 			col = acolors[c & 31];
 			cp += cpadds[0];
 			*buf1++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 			c = *cp;
 			clxdat |= bplcoltable[c];
 			c ^= bxor;
 			col = acolors[c & 31];
 			cp += cpadds[1];
 			*buf1++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -2419,8 +2349,7 @@ static void lts_aga_n_ishres_dshres_b1_genlock(int cnt, int draw_end, int hbstrt
 			col = acolors[c];
 			cp += cpadds[0];
 			*buf1++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -2468,8 +2397,7 @@ static void lts_aga_dpf_ishres_dshres_b1_genlock(int cnt, int draw_end, int hbst
 			}
 			cp += cpadds[0];
 			*buf1++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -2516,8 +2444,7 @@ static void lts_aga_ehb_ishres_dshres_b1_genlock(int cnt, int draw_end, int hbst
 			}
 			cp += cpadds[0];
 			*buf1++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -2558,8 +2485,7 @@ static void lts_aga_ham_ishres_dshres_b1_genlock(int cnt, int draw_end, int hbst
 			col = decode_ham_pixel_aga_fast(c, planes, bxor, colors_aga);
 			cp += cpadds[0];
 			*buf1++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -2601,8 +2527,7 @@ static void lts_aga_kehb_ishres_dshres_b1_genlock(int cnt, int draw_end, int hbs
 			col = acolors[c & 31];
 			cp += cpadds[0];
 			*buf1++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -2647,8 +2572,7 @@ static void lts_aga_n_ilores_dlores_b2_genlock(int cnt, int draw_end, int hbstrt
 			cp += cpadds[0];
 			*buf1++ = col;
 			*buf2++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -2699,8 +2623,7 @@ static void lts_aga_dpf_ilores_dlores_b2_genlock(int cnt, int draw_end, int hbst
 			cp += cpadds[0];
 			*buf1++ = col;
 			*buf2++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -2750,8 +2673,7 @@ static void lts_aga_ehb_ilores_dlores_b2_genlock(int cnt, int draw_end, int hbst
 			cp += cpadds[0];
 			*buf1++ = col;
 			*buf2++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -2795,8 +2717,7 @@ static void lts_aga_ham_ilores_dlores_b2_genlock(int cnt, int draw_end, int hbst
 			cp += cpadds[0];
 			*buf1++ = col;
 			*buf2++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -2841,8 +2762,7 @@ static void lts_aga_kehb_ilores_dlores_b2_genlock(int cnt, int draw_end, int hbs
 			cp += cpadds[0];
 			*buf1++ = col;
 			*buf2++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -2889,8 +2809,7 @@ static void lts_aga_n_ihires_dlores_b2_genlock(int cnt, int draw_end, int hbstrt
 			cp += cpadds[0];
 			*buf1++ = col;
 			*buf2++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -2937,8 +2856,7 @@ static void lts_aga_n_ihires_dlores_b2_filtered_genlock(int cnt, int draw_end, i
 			cp += cpadds[0];
 			*buf1++ = col;
 			*buf2++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -2987,8 +2905,7 @@ static void lts_aga_dpf_ihires_dlores_b2_genlock(int cnt, int draw_end, int hbst
 			cp += cpadds[0];
 			*buf1++ = col;
 			*buf2++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -3047,8 +2964,7 @@ static void lts_aga_dpf_ihires_dlores_b2_filtered_genlock(int cnt, int draw_end,
 			cp += cpadds[0];
 			*buf1++ = col;
 			*buf2++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -3096,8 +3012,7 @@ static void lts_aga_ehb_ihires_dlores_b2_genlock(int cnt, int draw_end, int hbst
 			cp += cpadds[0];
 			*buf1++ = col;
 			*buf2++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -3154,8 +3069,7 @@ static void lts_aga_ehb_ihires_dlores_b2_filtered_genlock(int cnt, int draw_end,
 			cp += cpadds[0];
 			*buf1++ = col;
 			*buf2++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -3198,8 +3112,7 @@ static void lts_aga_ham_ihires_dlores_b2_genlock(int cnt, int draw_end, int hbst
 			cp += cpadds[0];
 			*buf1++ = col;
 			*buf2++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -3244,8 +3157,7 @@ static void lts_aga_ham_ihires_dlores_b2_filtered_genlock(int cnt, int draw_end,
 			cp += cpadds[0];
 			*buf1++ = col;
 			*buf2++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -3288,8 +3200,7 @@ static void lts_aga_kehb_ihires_dlores_b2_genlock(int cnt, int draw_end, int hbs
 			cp += cpadds[0];
 			*buf1++ = col;
 			*buf2++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -3336,8 +3247,7 @@ static void lts_aga_kehb_ihires_dlores_b2_filtered_genlock(int cnt, int draw_end
 			cp += cpadds[0];
 			*buf1++ = col;
 			*buf2++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -3421,8 +3331,7 @@ static void lts_aga_n_ilores_dhires_b2_genlock(int cnt, int draw_end, int hbstrt
 			cp += cpadds[0];
 			*buf1++ = col;
 			*buf2++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 			c = *cp;
 			clxdat |= bplcoltable[c];
 			c ^= bxor;
@@ -3430,8 +3339,7 @@ static void lts_aga_n_ilores_dhires_b2_genlock(int cnt, int draw_end, int hbstrt
 			cp += cpadds[1];
 			*buf1++ = col;
 			*buf2++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -3485,8 +3393,7 @@ static void lts_aga_dpf_ilores_dhires_b2_genlock(int cnt, int draw_end, int hbst
 			cp += cpadds[0];
 			*buf1++ = col;
 			*buf2++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 			c = *cp;
 			clxdat |= bplcoltable[c];
 			{
@@ -3500,8 +3407,7 @@ static void lts_aga_dpf_ilores_dhires_b2_genlock(int cnt, int draw_end, int hbst
 			cp += cpadds[1];
 			*buf1++ = col;
 			*buf2++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -3554,8 +3460,7 @@ static void lts_aga_ehb_ilores_dhires_b2_genlock(int cnt, int draw_end, int hbst
 			cp += cpadds[0];
 			*buf1++ = col;
 			*buf2++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 			c = *cp;
 			clxdat |= bplcoltable[c];
 			c ^= bxor;
@@ -3568,8 +3473,7 @@ static void lts_aga_ehb_ilores_dhires_b2_genlock(int cnt, int draw_end, int hbst
 			cp += cpadds[1];
 			*buf1++ = col;
 			*buf2++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -3616,16 +3520,14 @@ static void lts_aga_ham_ilores_dhires_b2_genlock(int cnt, int draw_end, int hbst
 			cp += cpadds[0];
 			*buf1++ = col;
 			*buf2++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 			c = *cp;
 			clxdat |= bplcoltable[c];
 			col = decode_ham_pixel_aga_fast(c, planes, bxor, colors_aga);
 			cp += cpadds[1];
 			*buf1++ = col;
 			*buf2++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -3673,8 +3575,7 @@ static void lts_aga_kehb_ilores_dhires_b2_genlock(int cnt, int draw_end, int hbs
 			cp += cpadds[0];
 			*buf1++ = col;
 			*buf2++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 			c = *cp;
 			clxdat |= bplcoltable[c];
 			c ^= bxor;
@@ -3682,8 +3583,7 @@ static void lts_aga_kehb_ilores_dhires_b2_genlock(int cnt, int draw_end, int hbs
 			cp += cpadds[1];
 			*buf1++ = col;
 			*buf2++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -3728,8 +3628,7 @@ static void lts_aga_n_ihires_dhires_b2_genlock(int cnt, int draw_end, int hbstrt
 			cp += cpadds[0];
 			*buf1++ = col;
 			*buf2++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -3780,8 +3679,7 @@ static void lts_aga_dpf_ihires_dhires_b2_genlock(int cnt, int draw_end, int hbst
 			cp += cpadds[0];
 			*buf1++ = col;
 			*buf2++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -3831,8 +3729,7 @@ static void lts_aga_ehb_ihires_dhires_b2_genlock(int cnt, int draw_end, int hbst
 			cp += cpadds[0];
 			*buf1++ = col;
 			*buf2++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -3876,8 +3773,7 @@ static void lts_aga_ham_ihires_dhires_b2_genlock(int cnt, int draw_end, int hbst
 			cp += cpadds[0];
 			*buf1++ = col;
 			*buf2++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -3922,8 +3818,7 @@ static void lts_aga_kehb_ihires_dhires_b2_genlock(int cnt, int draw_end, int hbs
 			cp += cpadds[0];
 			*buf1++ = col;
 			*buf2++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -3970,8 +3865,7 @@ static void lts_aga_n_ishres_dhires_b2_genlock(int cnt, int draw_end, int hbstrt
 			cp += cpadds[0];
 			*buf1++ = col;
 			*buf2++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -4018,8 +3912,7 @@ static void lts_aga_n_ishres_dhires_b2_filtered_genlock(int cnt, int draw_end, i
 			cp += cpadds[0];
 			*buf1++ = col;
 			*buf2++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -4068,8 +3961,7 @@ static void lts_aga_dpf_ishres_dhires_b2_genlock(int cnt, int draw_end, int hbst
 			cp += cpadds[0];
 			*buf1++ = col;
 			*buf2++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -4128,8 +4020,7 @@ static void lts_aga_dpf_ishres_dhires_b2_filtered_genlock(int cnt, int draw_end,
 			cp += cpadds[0];
 			*buf1++ = col;
 			*buf2++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -4177,8 +4068,7 @@ static void lts_aga_ehb_ishres_dhires_b2_genlock(int cnt, int draw_end, int hbst
 			cp += cpadds[0];
 			*buf1++ = col;
 			*buf2++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -4235,8 +4125,7 @@ static void lts_aga_ehb_ishres_dhires_b2_filtered_genlock(int cnt, int draw_end,
 			cp += cpadds[0];
 			*buf1++ = col;
 			*buf2++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -4279,8 +4168,7 @@ static void lts_aga_ham_ishres_dhires_b2_genlock(int cnt, int draw_end, int hbst
 			cp += cpadds[0];
 			*buf1++ = col;
 			*buf2++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -4325,8 +4213,7 @@ static void lts_aga_ham_ishres_dhires_b2_filtered_genlock(int cnt, int draw_end,
 			cp += cpadds[0];
 			*buf1++ = col;
 			*buf2++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -4369,8 +4256,7 @@ static void lts_aga_kehb_ishres_dhires_b2_genlock(int cnt, int draw_end, int hbs
 			cp += cpadds[0];
 			*buf1++ = col;
 			*buf2++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -4417,8 +4303,7 @@ static void lts_aga_kehb_ishres_dhires_b2_filtered_genlock(int cnt, int draw_end
 			cp += cpadds[0];
 			*buf1++ = col;
 			*buf2++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -4468,8 +4353,7 @@ static void lts_aga_n_ilores_dshres_b2_genlock(int cnt, int draw_end, int hbstrt
 			cp += cpadds[0];
 			*buf1++ = col;
 			*buf2++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 			c = *cp;
 			clxdat |= bplcoltable[c];
 			c ^= bxor;
@@ -4477,8 +4361,7 @@ static void lts_aga_n_ilores_dshres_b2_genlock(int cnt, int draw_end, int hbstrt
 			cp += cpadds[1];
 			*buf1++ = col;
 			*buf2++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 			c = *cp;
 			clxdat |= bplcoltable[c];
 			c ^= bxor;
@@ -4486,8 +4369,7 @@ static void lts_aga_n_ilores_dshres_b2_genlock(int cnt, int draw_end, int hbstrt
 			cp += cpadds[2];
 			*buf1++ = col;
 			*buf2++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 			c = *cp;
 			clxdat |= bplcoltable[c];
 			c ^= bxor;
@@ -4495,8 +4377,7 @@ static void lts_aga_n_ilores_dshres_b2_genlock(int cnt, int draw_end, int hbstrt
 			cp += cpadds[3];
 			*buf1++ = col;
 			*buf2++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -4556,8 +4437,7 @@ static void lts_aga_dpf_ilores_dshres_b2_genlock(int cnt, int draw_end, int hbst
 			cp += cpadds[0];
 			*buf1++ = col;
 			*buf2++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 			c = *cp;
 			clxdat |= bplcoltable[c];
 			{
@@ -4571,8 +4451,7 @@ static void lts_aga_dpf_ilores_dshres_b2_genlock(int cnt, int draw_end, int hbst
 			cp += cpadds[1];
 			*buf1++ = col;
 			*buf2++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 			c = *cp;
 			clxdat |= bplcoltable[c];
 			{
@@ -4586,8 +4465,7 @@ static void lts_aga_dpf_ilores_dshres_b2_genlock(int cnt, int draw_end, int hbst
 			cp += cpadds[2];
 			*buf1++ = col;
 			*buf2++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 			c = *cp;
 			clxdat |= bplcoltable[c];
 			{
@@ -4601,8 +4479,7 @@ static void lts_aga_dpf_ilores_dshres_b2_genlock(int cnt, int draw_end, int hbst
 			cp += cpadds[3];
 			*buf1++ = col;
 			*buf2++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -4661,8 +4538,7 @@ static void lts_aga_ehb_ilores_dshres_b2_genlock(int cnt, int draw_end, int hbst
 			cp += cpadds[0];
 			*buf1++ = col;
 			*buf2++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 			c = *cp;
 			clxdat |= bplcoltable[c];
 			c ^= bxor;
@@ -4675,8 +4551,7 @@ static void lts_aga_ehb_ilores_dshres_b2_genlock(int cnt, int draw_end, int hbst
 			cp += cpadds[1];
 			*buf1++ = col;
 			*buf2++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 			c = *cp;
 			clxdat |= bplcoltable[c];
 			c ^= bxor;
@@ -4689,8 +4564,7 @@ static void lts_aga_ehb_ilores_dshres_b2_genlock(int cnt, int draw_end, int hbst
 			cp += cpadds[2];
 			*buf1++ = col;
 			*buf2++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 			c = *cp;
 			clxdat |= bplcoltable[c];
 			c ^= bxor;
@@ -4703,8 +4577,7 @@ static void lts_aga_ehb_ilores_dshres_b2_genlock(int cnt, int draw_end, int hbst
 			cp += cpadds[3];
 			*buf1++ = col;
 			*buf2++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -4757,32 +4630,28 @@ static void lts_aga_ham_ilores_dshres_b2_genlock(int cnt, int draw_end, int hbst
 			cp += cpadds[0];
 			*buf1++ = col;
 			*buf2++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 			c = *cp;
 			clxdat |= bplcoltable[c];
 			col = decode_ham_pixel_aga_fast(c, planes, bxor, colors_aga);
 			cp += cpadds[1];
 			*buf1++ = col;
 			*buf2++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 			c = *cp;
 			clxdat |= bplcoltable[c];
 			col = decode_ham_pixel_aga_fast(c, planes, bxor, colors_aga);
 			cp += cpadds[2];
 			*buf1++ = col;
 			*buf2++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 			c = *cp;
 			clxdat |= bplcoltable[c];
 			col = decode_ham_pixel_aga_fast(c, planes, bxor, colors_aga);
 			cp += cpadds[3];
 			*buf1++ = col;
 			*buf2++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -4836,8 +4705,7 @@ static void lts_aga_kehb_ilores_dshres_b2_genlock(int cnt, int draw_end, int hbs
 			cp += cpadds[0];
 			*buf1++ = col;
 			*buf2++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 			c = *cp;
 			clxdat |= bplcoltable[c];
 			c ^= bxor;
@@ -4845,8 +4713,7 @@ static void lts_aga_kehb_ilores_dshres_b2_genlock(int cnt, int draw_end, int hbs
 			cp += cpadds[1];
 			*buf1++ = col;
 			*buf2++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 			c = *cp;
 			clxdat |= bplcoltable[c];
 			c ^= bxor;
@@ -4854,8 +4721,7 @@ static void lts_aga_kehb_ilores_dshres_b2_genlock(int cnt, int draw_end, int hbs
 			cp += cpadds[2];
 			*buf1++ = col;
 			*buf2++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 			c = *cp;
 			clxdat |= bplcoltable[c];
 			c ^= bxor;
@@ -4863,8 +4729,7 @@ static void lts_aga_kehb_ilores_dshres_b2_genlock(int cnt, int draw_end, int hbs
 			cp += cpadds[3];
 			*buf1++ = col;
 			*buf2++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -4912,8 +4777,7 @@ static void lts_aga_n_ihires_dshres_b2_genlock(int cnt, int draw_end, int hbstrt
 			cp += cpadds[0];
 			*buf1++ = col;
 			*buf2++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 			c = *cp;
 			clxdat |= bplcoltable[c];
 			c ^= bxor;
@@ -4921,8 +4785,7 @@ static void lts_aga_n_ihires_dshres_b2_genlock(int cnt, int draw_end, int hbstrt
 			cp += cpadds[1];
 			*buf1++ = col;
 			*buf2++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -4976,8 +4839,7 @@ static void lts_aga_dpf_ihires_dshres_b2_genlock(int cnt, int draw_end, int hbst
 			cp += cpadds[0];
 			*buf1++ = col;
 			*buf2++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 			c = *cp;
 			clxdat |= bplcoltable[c];
 			{
@@ -4991,8 +4853,7 @@ static void lts_aga_dpf_ihires_dshres_b2_genlock(int cnt, int draw_end, int hbst
 			cp += cpadds[1];
 			*buf1++ = col;
 			*buf2++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -5045,8 +4906,7 @@ static void lts_aga_ehb_ihires_dshres_b2_genlock(int cnt, int draw_end, int hbst
 			cp += cpadds[0];
 			*buf1++ = col;
 			*buf2++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 			c = *cp;
 			clxdat |= bplcoltable[c];
 			c ^= bxor;
@@ -5059,8 +4919,7 @@ static void lts_aga_ehb_ihires_dshres_b2_genlock(int cnt, int draw_end, int hbst
 			cp += cpadds[1];
 			*buf1++ = col;
 			*buf2++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -5107,16 +4966,14 @@ static void lts_aga_ham_ihires_dshres_b2_genlock(int cnt, int draw_end, int hbst
 			cp += cpadds[0];
 			*buf1++ = col;
 			*buf2++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 			c = *cp;
 			clxdat |= bplcoltable[c];
 			col = decode_ham_pixel_aga_fast(c, planes, bxor, colors_aga);
 			cp += cpadds[1];
 			*buf1++ = col;
 			*buf2++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -5164,8 +5021,7 @@ static void lts_aga_kehb_ihires_dshres_b2_genlock(int cnt, int draw_end, int hbs
 			cp += cpadds[0];
 			*buf1++ = col;
 			*buf2++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 			c = *cp;
 			clxdat |= bplcoltable[c];
 			c ^= bxor;
@@ -5173,8 +5029,7 @@ static void lts_aga_kehb_ihires_dshres_b2_genlock(int cnt, int draw_end, int hbs
 			cp += cpadds[1];
 			*buf1++ = col;
 			*buf2++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -5219,8 +5074,7 @@ static void lts_aga_n_ishres_dshres_b2_genlock(int cnt, int draw_end, int hbstrt
 			cp += cpadds[0];
 			*buf1++ = col;
 			*buf2++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -5271,8 +5125,7 @@ static void lts_aga_dpf_ishres_dshres_b2_genlock(int cnt, int draw_end, int hbst
 			cp += cpadds[0];
 			*buf1++ = col;
 			*buf2++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -5322,8 +5175,7 @@ static void lts_aga_ehb_ishres_dshres_b2_genlock(int cnt, int draw_end, int hbst
 			cp += cpadds[0];
 			*buf1++ = col;
 			*buf2++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -5367,8 +5219,7 @@ static void lts_aga_ham_ishres_dshres_b2_genlock(int cnt, int draw_end, int hbst
 			cp += cpadds[0];
 			*buf1++ = col;
 			*buf2++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;
@@ -5413,8 +5264,7 @@ static void lts_aga_kehb_ishres_dshres_b2_genlock(int cnt, int draw_end, int hbs
 			cp += cpadds[0];
 			*buf1++ = col;
 			*buf2++ = col;
-			gpix = get_genlock_transparency_fast(c);
-			*gbuf++ = gpix;
+			*gbuf++ = get_genlock_transparency_fast(c);
 		}
 		if (cnt >= bpl1dat_trigger_offset && !bpl) {
 			cp += cpaddv;

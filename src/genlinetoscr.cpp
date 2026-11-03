@@ -684,7 +684,7 @@ static void gen_pix_aga(void)
 		outf("internal_pixel_cnt += %d;", 4 / (1 << outres));
 	}
 
-	outf("if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {");
+	outf("if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_%dx) {", 1 << outres);
 
 	// bitplane/sprite merging
 	off = 0;
@@ -835,7 +835,7 @@ static void gen_pix(void)
 		}
 	}
 
-	outf("if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {");
+	outf("if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_%dx) {", 1 << outres);
 
 	// bitplane/sprite merging
 	for (int i = 0; i < (1 << outres); i++) {
@@ -1189,8 +1189,7 @@ static void gen_fastdraw_mode(int off, int total)
 		outf("*buf2++ = col;");
 	}
 	if (genlock) {
-		outf("gpix = get_genlock_transparency_fast(c);");
-		outf("*gbuf++ = gpix;");
+		outf("*gbuf++ = get_genlock_transparency_fast(c);");
 	}
 }
 
@@ -1849,7 +1848,7 @@ int main (int argc, char *argv[])
 					gen_sprpix(1);
 					gen_matchspr(2);
 					gen_ecsshresspr();
-					outf("if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {");
+					outf("if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_2x) {");
 					if (filtered) {
 						outf("dpix_val0 = filter_pixel(dpix_val0, dpix_val1);");
 						outf("dpix_val2 = filter_pixel(dpix_val2, dpix_val3);");
@@ -1867,7 +1866,7 @@ int main (int argc, char *argv[])
 					gen_sprpix(1);
 					gen_matchspr(2);
 					gen_ecsshresspr();
-					outf("if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {");
+					outf("if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_4x) {");
 					gen_storepix(0, 0);
 					gen_storepix(1, 1);
 					gen_storepix(2, 2);
