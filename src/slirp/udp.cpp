@@ -103,6 +103,10 @@ void udp_input(struct mbuf *m, int iphlen)
 	/*
 	 * Get IP and UDP header together in first mbuf.
 	 */
+	if (m->m_len < iphlen + sizeof(struct udphdr)) {
+		udpstat.udps_hdrops++;
+		goto bad;
+	}
 	ip = mtod(m, struct ip *);
 	uh = (struct udphdr *)((caddr_t)ip + iphlen);
 
@@ -111,7 +115,10 @@ void udp_input(struct mbuf *m, int iphlen)
 	 * If not enough data to reflect UDP length, drop.
 	 */
 	len = ntohs((u_int16_t)uh->uh_ulen);
-
+	if (len < (int)sizeof(struct udphdr)) {
+		udpstat.udps_badlen++;
+		goto bad;
+	}
 	if (ip->ip_len != len) {
 		if (len > ip->ip_len) {
 			udpstat.udps_badlen++;
@@ -165,7 +172,7 @@ void udp_input(struct mbuf *m, int iphlen)
 	 * Locate pcb for datagram.
 	 */
 	so = udp_last_so;
-	if (so->so_lport != uh->uh_sport ||
+	if (so == &udb || so->so_lport != uh->uh_sport ||
 	    so->so_laddr.s_addr != ip->ip_src.s_addr) {
 		struct socket *tmp;
 		
@@ -376,7 +383,9 @@ u_int8_t udp_tos(struct socket *so)
 	while(udptos[i].tos) {
 		if ((udptos[i].fport && ntohs(so->so_fport) == udptos[i].fport) ||
 		    (udptos[i].lport && ntohs(so->so_lport) == udptos[i].lport)) {
-		    	so->so_emu = udptos[i].emu;
+			if (slirp_enable_emu) {
+				so->so_emu = udptos[i].emu;
+			}
 			return udptos[i].tos;
 		}
 		i++;

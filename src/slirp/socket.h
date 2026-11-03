@@ -86,7 +86,7 @@ struct socket * solookup(struct socket *, struct in_addr, u_int, struct in_addr,
 struct socket * socreate(void);
 void sofree(struct socket *);
 int soread(struct socket *);
-void sorecvoob(struct socket *);
+int sorecvoob(struct socket *);
 int sosendoob(struct socket *);
 int sowrite(struct socket *);
 void sorecvfrom(struct socket *);

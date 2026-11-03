@@ -205,7 +205,7 @@ static int tftp_send_data(struct tftp_session *spt,
 
     /* send "file not found" error back */
 
-    tftp_send_error(spt, 1, "File not found", tp);
+    tftp_send_error(spt, 1, "File not found", recv_tp);
 
     return -1;
   }
@@ -239,6 +239,12 @@ static void tftp_handle_rrq(struct tftp_t *tp, int pktlen)
 
   spt = &tftp_sessions[s];
 
+  /* unspecified prefix means service disabled */
+  if (!tftp_prefix) {
+    tftp_send_error(spt, 2, "Access violation", tp);
+    return;
+  }
+
   src = tp->x.tp_buf;
   dst = (u_int8_t *)spt->filename;
   n = (int)(pktlen - ((uint8_t *)&tp->x.tp_buf[0] - (uint8_t *)tp));
@@ -250,6 +256,7 @@ static void tftp_handle_rrq(struct tftp_t *tp, int pktlen)
       dst[k] = src[k];
     }
     else {
+      tftp_session_terminate(spt);
       return;
     }
     
@@ -259,6 +266,7 @@ static void tftp_handle_rrq(struct tftp_t *tp, int pktlen)
   }
       
   if (k >= n) {
+    tftp_session_terminate(spt);
     return;
   }
   
@@ -266,6 +274,7 @@ static void tftp_handle_rrq(struct tftp_t *tp, int pktlen)
   
   /* check mode */
   if ((n - k) < 6) {
+    tftp_session_terminate(spt);
     return;
   }
   
@@ -321,6 +330,10 @@ static void tftp_handle_ack(struct tftp_t *tp, int pktlen)
 void tftp_input(struct mbuf *m)
 {
   struct tftp_t *tp = (struct tftp_t *)m->m_data;
+
+  if (m->m_len < offsetof(struct tftp_t, x.tp_buf)) {
+    return;
+  }
 
   switch(ntohs(tp->tp_op)) {
   case TFTP_RRQ:

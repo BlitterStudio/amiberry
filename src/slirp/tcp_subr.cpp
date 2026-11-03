@@ -563,7 +563,14 @@ static struct tos_t tcptos[] = {
 };
 
 struct emu_t *tcpemu = 0;
-		
+
+/*
+ * Protocol emulation (FTP, IRC DCC, ident, RealAudio, kshell, talk,
+ * CU-SeeMe) rewrites addresses inside the payload of guest connections.
+ * It has a long history of memory safety bugs, so like libslirp keep it
+ * disabled unless explicitly enabled.
+ */
+int slirp_enable_emu = 0;
 /*
  * Return TOS according to the above table
  */
@@ -575,7 +582,9 @@ u_int8_t tcp_tos(struct socket *so)
 	while(tcptos[i].tos) {
 		if ((tcptos[i].fport && (ntohs(so->so_fport) == tcptos[i].fport)) ||
 		    (tcptos[i].lport && (ntohs(so->so_lport) == tcptos[i].lport))) {
-			so->so_emu = tcptos[i].emu;
+			if (slirp_enable_emu) {
+				so->so_emu = tcptos[i].emu;
+			}
 			return tcptos[i].tos;
 		}
 		i++;
@@ -585,7 +594,9 @@ u_int8_t tcp_tos(struct socket *so)
 	for (emup = tcpemu; emup; emup = emup->next) {
 		if ((emup->fport && (ntohs(so->so_fport) == emup->fport)) ||
 		    (emup->lport && (ntohs(so->so_lport) == emup->lport))) {
-			so->so_emu = emup->emu;
+			if (slirp_enable_emu) {
+				so->so_emu = emup->emu;
+			}
 			return emup->tos;
 		}
 	}
@@ -594,6 +605,43 @@ u_int8_t tcp_tos(struct socket *so)
 }
 
 int do_echo = -1;
+
+/*
+ * Make sure there are at least len bytes of room from m_data on.
+ * m_inc() takes the size of the whole buffer.
+ */
+static void tcp_emu_room(struct mbuf *m, size_t len)
+{
+	if ((size_t)M_ROOM(m) < len) {
+		char *base = (m->m_flags & M_EXT) ? m->m_ext : m->m_dat;
+		m_inc(m, (int)((m->m_data - base) + len));
+	}
+}
+
+/*
+ * snprintf() that returns the number of characters actually stored
+ * (without the terminating NUL), so the result can be added to m_len.
+ */
+static int tcp_emu_fmt(char *str, size_t size, const char *format, ...)
+{
+	va_list args;
+	int rv;
+
+	if (size == 0) {
+		return 0;
+	}
+	va_start(args, format);
+	rv = vsnprintf(str, size, format, args);
+	va_end(args);
+	if (rv < 0) {
+		str[0] = 0;
+		return 0;
+	}
+	if ((size_t)rv >= size) {
+		return (int)(size - 1);
+	}
+	return rv;
+}
 
 /*
  * Emulate programs that try and connect to us
@@ -622,7 +670,7 @@ int do_echo = -1;
 int tcp_emu(struct socket *so, struct mbuf *m)
 {
 	u_int n1, n2, n3, n4, n5, n6;
-	char buff[256];
+	char buff[257];
 	u_int32_t laddr;
 	u_int lport;
 	char *bptr;
@@ -643,44 +691,44 @@ int tcp_emu(struct socket *so, struct mbuf *m)
 			struct socket *tmpso;
 			struct sockaddr_in addr;
 			socklen_t addrlen = sizeof(struct sockaddr_in);
-			struct sbuf *so_rcv = &so->so_rcv;
-			
-			memcpy(so_rcv->sb_wptr, m->m_data, m->m_len);
-			so_rcv->sb_wptr += m->m_len;
-			so_rcv->sb_rptr += m->m_len;
-			m->m_data[m->m_len] = 0; /* NULL terminate */
-			if (strchr(m->m_data, '\r') || strchr(m->m_data, '\n')) {
-				if (sscanf(so_rcv->sb_data, "%d%*[ ,]%d", &n1, &n2) == 2) {
-					HTONS(n1);
-					HTONS(n2);
-					/* n2 is the one on our host */
-					for (tmpso = tcb.so_next; tmpso != &tcb; tmpso = tmpso->so_next) {
-						if (tmpso->so_laddr.s_addr == so->so_laddr.s_addr &&
-						    tmpso->so_lport == n2 &&
-						    tmpso->so_faddr.s_addr == so->so_faddr.s_addr &&
-						    tmpso->so_fport == n1) {
-							if (getsockname(tmpso->s,
-								(struct sockaddr *)&addr, &addrlen) == 0)
-							   n2 = ntohs(addr.sin_port);
-							break;
-						}
+			char *eol = NULL;
+			size_t k;
+
+			/* XXX Assumes the whole request came in one packet */
+			for (k = 0; k + 1 < m->m_len; k++) {
+				if (m->m_data[k] == '\r' && m->m_data[k + 1] == '\n') {
+					eol = m->m_data + k;
+					break;
+				}
+			}
+			if (!eol) {
+				return 1;
+			}
+
+			*eol = 0;
+			if (sscanf(m->m_data, "%u%*[ ,]%u", &n1, &n2) == 2) {
+				HTONS(n1);
+				HTONS(n2);
+				/* n2 is the one on our host */
+				for (tmpso = tcb.so_next; tmpso != &tcb; tmpso = tmpso->so_next) {
+					if (tmpso->so_laddr.s_addr == so->so_laddr.s_addr &&
+					    tmpso->so_lport == n2 &&
+					    tmpso->so_faddr.s_addr == so->so_faddr.s_addr &&
+					    tmpso->so_fport == n1) {
+						if (getsockname(tmpso->s,
+							(struct sockaddr *)&addr, &addrlen) == 0)
+						   n2 = addr.sin_port;
+						break;
 					}
 				}
-				size_t sb_avail = so_rcv->sb_datalen;
-				if (sb_avail > 0) {
-					int wrote = snprintf(so_rcv->sb_data, sb_avail, "%d,%d\r\n", n1, n2);
-					size_t used = wrote > 0 ? (size_t)wrote : 0;
-					if (used >= sb_avail)
-						used = sb_avail - 1;
-					so_rcv->sb_cc = (u_int)used;
-				} else {
-					so_rcv->sb_cc = 0;
-				}
-				so_rcv->sb_rptr = so_rcv->sb_data;
-				so_rcv->sb_wptr = so_rcv->sb_data + so_rcv->sb_cc;
+				NTOHS(n1);
+				NTOHS(n2);
+				tcp_emu_room(m, snprintf(NULL, 0, "%u,%u\r\n", n1, n2) + 1);
+				m->m_len = tcp_emu_fmt(m->m_data, M_ROOM(m), "%u,%u\r\n", n1, n2);
+			} else {
+				*eol = '\r';
 			}
-			m_free(m);
-			return 0;
+			return 1;
 		}
 		
 #if 0
@@ -945,7 +993,7 @@ int tcp_emu(struct socket *so, struct mbuf *m)
 					*(so_rcv->sb_rptr + num) = 0;
 					if (ctl_password && !ctl_password_ok) {
 						/* Need a password */
-						if (sscanf(so_rcv->sb_rptr, "pass %255s", buff) == 1) {
+						if (sscanf(so_rcv->sb_rptr, "pass %256s", buff) == 1) {
 							if (strcmp(buff, ctl_password) == 0) {
 								ctl_password_ok = 1;
 								n = sprintf(so_snd->sb_wptr,
@@ -980,12 +1028,13 @@ do_prompt:
 		}
 #endif		
         case EMU_FTP: /* ftp */
+		tcp_emu_room(m, m->m_len + 1);
 		*(m->m_data+m->m_len) = 0; /* NULL terminate for strstr */
 		if ((bptr = (char *)strstr(m->m_data, "ORT")) != NULL) {
 			/*
 			 * Need to emulate the PORT command
 			 */			
-			x = sscanf(bptr, "ORT %d,%d,%d,%d,%d,%d\r\n%255[^\177]", 
+			x = sscanf(bptr, "ORT %d,%d,%d,%d,%d,%d\r\n%256[^\177]", 
 				   &n1, &n2, &n3, &n4, &n5, &n6, buff);
 			if (x < 6)
 			   return 1;
@@ -1009,16 +1058,14 @@ do_prompt:
 			n4 =  (laddr & 0xff);
 			
 			m->m_len = bptr - m->m_data; /* Adjust length */
-			size_t remaining = M_FREEROOM(m);
-			int written = snprintf(bptr, remaining, "ORT %d,%d,%d,%d,%d,%d\r\n%s",
+			m->m_len += tcp_emu_fmt(bptr, M_FREEROOM(m), "ORT %d,%d,%d,%d,%d,%d\r\n%s",
 					    n1, n2, n3, n4, n5, n6, x==7?buff:"");
-			m->m_len += written >= (int)remaining ? remaining - 1 : written;
 			return 1;
 		} else if ((bptr = (char *)strstr(m->m_data, "27 Entering")) != NULL) {
 			/*
 			 * Need to emulate the PASV response
 			 */
-			x = sscanf(bptr, "27 Entering Passive Mode (%d,%d,%d,%d,%d,%d)\r\n%255[^\177]",
+			x = sscanf(bptr, "27 Entering Passive Mode (%d,%d,%d,%d,%d,%d)\r\n%256[^\177]", 
 				   &n1, &n2, &n3, &n4, &n5, &n6, buff);
 			if (x < 6)
 			   return 1;
@@ -1042,17 +1089,15 @@ do_prompt:
 			n4 =  (laddr & 0xff);
 			
 			m->m_len = bptr - m->m_data; /* Adjust length */
-			size_t remaining = M_FREEROOM(m);
-			int written = snprintf(bptr, remaining, "27 Entering Passive Mode (%d,%d,%d,%d,%d,%d)\r\n%s",
+			m->m_len += tcp_emu_fmt(bptr, M_FREEROOM(m), "27 Entering Passive Mode (%d,%d,%d,%d,%d,%d)\r\n%s",
 					    n1, n2, n3, n4, n5, n6, x==7?buff:"");
-			m->m_len += written >= (int)remaining ? remaining - 1 : written;
 
 			return 1;
 		}
 		
 		return 1;
 				   
-	 case EMU_KSH: {
+	 case EMU_KSH:
 		/*
 		 * The kshell (Kerberos rsh) and shell services both pass
 		 * a local port port number to carry signals to the server
@@ -1067,61 +1112,46 @@ do_prompt:
 			lport += m->m_data[i] - '0';
 		}
 		if (m->m_data[m->m_len-1] == '\0' && lport != 0 &&
-		    (so = solisten(0, so->so_laddr.s_addr, htons(lport), SS_FACCEPTONCE)) != NULL) {
-			size_t avail = M_ROOM(m);
-			if (avail == 0)
-				return 1;
-			int wrote = snprintf(m->m_data, avail, "%d", ntohs(so->so_fport));
-			size_t used = wrote > 0 ? (size_t)wrote : 0;
-			if (used >= avail)
-				used = avail - 1;
-			m->m_len = used + 1;
-		}
+		    (so = solisten(0, so->so_laddr.s_addr, htons(lport), SS_FACCEPTONCE)) != NULL)
+			m->m_len = tcp_emu_fmt(m->m_data, M_ROOM(m), "%d", ntohs(so->so_fport))+1;
 		return 1;
-	}
 		
-	 case EMU_IRC: {
+	 case EMU_IRC:
 		/*
 		 * Need to emulate DCC CHAT, DCC SEND and DCC MOVE
 		 */
+		tcp_emu_room(m, m->m_len + 1);
 		*(m->m_data+m->m_len) = 0; /* NULL terminate the string for strstr */
 		if ((bptr = (char *)strstr(m->m_data, "DCC")) == NULL)
 			 return 1;
 		
-		/* The %255s is for the broken mIRC */
-		if (sscanf(bptr, "DCC CHAT %255s %u %u", buff, &laddr, &lport) == 3) {
+		/* The %256s is for the broken mIRC */
+		if (sscanf(bptr, "DCC CHAT %256s %u %u", buff, &laddr, &lport) == 3) {
 			if ((so = solisten(0, htonl(laddr), htons(lport), SS_FACCEPTONCE)) == NULL)
 				return 1;
 			
 			m->m_len = bptr - m->m_data; /* Adjust length */
-			size_t remaining = M_FREEROOM(m);
-			int written = snprintf(bptr, remaining, "DCC CHAT chat %lu %u%c\n",
+			m->m_len += tcp_emu_fmt(bptr, M_FREEROOM(m), "DCC CHAT chat %lu %u%c\n",
 			     (unsigned long)ntohl(so->so_faddr.s_addr),
 			     ntohs(so->so_fport), 1);
-			m->m_len += written >= (int)remaining ? remaining - 1 : written;
-		} else if (sscanf(bptr, "DCC SEND %255s %u %u %u", buff, &laddr, &lport, &n1) == 4) {
+		} else if (sscanf(bptr, "DCC SEND %256s %u %u %u", buff, &laddr, &lport, &n1) == 4) {
 			if ((so = solisten(0, htonl(laddr), htons(lport), SS_FACCEPTONCE)) == NULL)
 				return 1;
 
 			m->m_len = bptr - m->m_data; /* Adjust length */
-			size_t remaining = M_FREEROOM(m);
-			int written = snprintf(bptr, remaining, "DCC SEND %s %lu %u %u%c\n",
+			m->m_len += tcp_emu_fmt(bptr, M_FREEROOM(m), "DCC SEND %s %lu %u %u%c\n",
 			      buff, (unsigned long)ntohl(so->so_faddr.s_addr),
 			      ntohs(so->so_fport), n1, 1);
-			m->m_len += written >= (int)remaining ? remaining - 1 : written;
-		} else if (sscanf(bptr, "DCC MOVE %255s %u %u %u", buff, &laddr, &lport, &n1) == 4) {
+		} else if (sscanf(bptr, "DCC MOVE %256s %u %u %u", buff, &laddr, &lport, &n1) == 4) {
 			if ((so = solisten(0, htonl(laddr), htons(lport), SS_FACCEPTONCE)) == NULL)
 				return 1;
 
 			m->m_len = bptr - m->m_data; /* Adjust length */
-			size_t remaining = M_FREEROOM(m);
-			int written = snprintf(bptr, remaining, "DCC MOVE %s %lu %u %u%c\n",
+			m->m_len += tcp_emu_fmt(bptr, M_FREEROOM(m), "DCC MOVE %s %lu %u %u%c\n",
 			      buff, (unsigned long)ntohl(so->so_faddr.s_addr),
 			      ntohs(so->so_fport), n1, 1);
-			m->m_len += written >= (int)remaining ? remaining - 1 : written;
 		}
 		return 1;
-	}
 
 	 case EMU_REALAUDIO:
                 /* 
@@ -1203,6 +1233,9 @@ do_prompt:
 				break;
 				
 			 case 5: 
+				if (bptr == m->m_data + m->m_len - 1) {
+					return 1; /* We need two bytes */
+				}
 				/*
 				 * The difference between versions 1.0 and
 				 * 2.0 is here. For future versions of
@@ -1218,6 +1251,9 @@ do_prompt:
 				/* This is the field containing the port
 				 * number that RA-player is listening to.
 				 */
+				if (bptr == m->m_data + m->m_len - 1) {
+					return 1; /* We need two bytes */
+				}
 				lport = (((u_char*)bptr)[0] << 8) 
 				+ ((u_char *)bptr)[1];
 				if (lport < 6970)      

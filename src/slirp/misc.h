@@ -64,6 +64,7 @@ struct emu_t {
 };
 
 extern struct emu_t *tcpemu;
+extern int slirp_enable_emu;
 
 extern int x_port, x_server, x_display;
 
