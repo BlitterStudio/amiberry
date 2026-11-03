@@ -670,6 +670,7 @@ static void hardware_trap_ack(TrapContext *ctx)
 #if NEW_TRAP_DEBUG
 	write_log(_T("TRAP SLOT %d: ACK. TASK = %08x\n"), ctx->trap_slot, task);
 #endif
+	trap_fence();	// registers and return value before the completion byte
 
 	put_byte_host(status + 2, 0xff);
 	if (task && trap_mode == 1) {
@@ -848,6 +849,7 @@ static uae_u32 call_hardware_trap_back(TrapContext *ctx, uae_u16 cmd, uae_u32 p1
 	put_long_host(data + 12, p3);
 	put_long_host(data + 16, p4);
 	put_word_host(status, cmd);
+	trap_fence();	// command, parameters and MULTI/copy data before the status byte
 
 	volatile uae_u8 *d = status + 3;
 
@@ -874,6 +876,7 @@ static uae_u32 call_hardware_trap_back(TrapContext *ctx, uae_u16 cmd, uae_u32 p1
 		}
 		uae_u8 v = *d;
 		if (v == 0x01 || v == 0x02 || v == 0x03) {
+			trap_fence();	// the result and copied data only after the status byte
 			break;
 		}
 		uae_sem_trywait_delay(&hardware_trap_event[trap_slot], 100);
