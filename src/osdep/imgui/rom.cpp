@@ -6,7 +6,6 @@
 #include "memory.h"
 #include "uae.h"
 #include "gui/gui_handling.h"
-#include "pcem/paths.h"
 #include "settings/settings_definitions.h"
 
 #include <cstdio>

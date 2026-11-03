@@ -153,14 +153,14 @@
 #define WITH_TOCCATA
 #define WITH_PCI
 
-// CPU-board SCSI support is needed by PCem boards and PPC accelerators.
-#if defined(USE_PCEM) || defined(WITH_PPC)
+// CPU-board SCSI support is needed by 86Box boards and PPC accelerators.
+#if defined(USE_86BOX) || defined(WITH_PPC)
 #define NCR /* A4000T/A4091, 53C710/53C770 SCSI */
 #define NCR9X /* 53C9X SCSI */
 #endif
 
-// PCem support and dependent x86 bridgeboard features.
-#ifdef USE_PCEM
+// 86Box support and dependent x86 bridgeboard features.
+#ifdef USE_86BOX
 #define WITH_X86
 #define WITH_DRACO
 #endif

@@ -19,6 +19,7 @@
 
 #include "options.h"
 #include "memory.h"
+#include "debug.h"
 #include "pci_hw.h"
 #include "pci.h"
 #include "ncr_scsi.h"
@@ -29,6 +30,8 @@
 #include "devices.h"
 
 #include "qemuvga/qemuuaeglue.h"
+#include "qemuvga/queue.h"
+#include "qemuvga/scsi/scsi.h"
 
 #define PCI_BRIDGE_WILDFIRE 0
 #define PCI_BRIDGE_GREX (PCI_BRIDGE_WILDFIRE + 1)
@@ -42,7 +45,9 @@ static struct pci_bridge *bridges[PCI_BRIDGE_MAX + 1];
 static int last_bridge_index;
 static struct pci_board_state *hsyncs[MAX_PCI_BOARDS + 1];
 
+namespace {
 extern addrbank pci_config_bank, pci_io_bank, pci_mem_bank, pci_bridge_bank;
+}
 
 static void pci_board_free(struct pci_board_state *pcibs)
 {
@@ -139,15 +144,15 @@ struct pci_board_state *pci_board_add(struct pci_bridge *pcib, const struct pci_
 	memset(pcibs->config_data, 0, sizeof pcibs->config_data);
 	if (pci->pci_get_config) {
 		struct pci_config *config = &pcibs->dynamic_config;
-		config->vendor = (pci->pci_get_config(1) << 8) | pci->pci_get_config(0);
-		config->device = (pci->pci_get_config(3) << 8) | pci->pci_get_config(2);
-		config->deviceclass = (pci->pci_get_config(10) << 16) | (pci->pci_get_config(9) << 8) | pci->pci_get_config(8);
-		config->revision = pci->pci_get_config(11);
-		config->subsystem = (pci->pci_get_config(0x2d) << 8) | pci->pci_get_config(0x2c);
-		config->subsystenvendor = (pci->pci_get_config(0x2f) << 8) | pci->pci_get_config(0x2e);
-		config->max_latency = pci->pci_get_config(0x3f);
-		config->min_grant = pci->pci_get_config(0x3e);
-		config->interruptpin = pci->pci_get_config(0x3d);
+		config->vendor = (pci->pci_get_config(pcibs, 1) << 8) | pci->pci_get_config(pcibs, 0);
+		config->device = (pci->pci_get_config(pcibs, 3) << 8) | pci->pci_get_config(pcibs, 2);
+		config->deviceclass = (pci->pci_get_config(pcibs, 10) << 16) | (pci->pci_get_config(pcibs, 9) << 8) | pci->pci_get_config(pcibs, 8);
+		config->revision = pci->pci_get_config(pcibs, 11);
+		config->subsystem = (pci->pci_get_config(pcibs, 0x2d) << 8) | pci->pci_get_config(pcibs, 0x2c);
+		config->subsystenvendor = (pci->pci_get_config(pcibs, 0x2f) << 8) | pci->pci_get_config(pcibs, 0x2e);
+		config->max_latency = pci->pci_get_config(pcibs, 0x3f);
+		config->min_grant = pci->pci_get_config(pcibs, 0x3e);
+		config->interruptpin = pci->pci_get_config(pcibs, 0x3d);
 	} else {
 		memcpy(&pcibs->dynamic_config, pci->config, sizeof(struct pci_config));
 	}
@@ -389,10 +394,20 @@ static struct pci_board_state *get_pci_board_state(struct pci_bridge *pcib, uaec
 	if (io && addr2 < 0x400) {
 		for (int i = 0; i < MAX_PCI_BOARDS; i++) {
 			struct pci_board_state *pcibs = &pcib->boards[i];
-			if (pcibs->board && pcibs->board->bars[MAX_PCI_BARS].bget) {
+			if (pcibs->board && pcibs->board->bars[PCI_LEGACY_IO].bget) {
 				stored_board = i;
-				stored_bar = MAX_PCI_BARS;
+				stored_bar = PCI_LEGACY_IO;
 				*bar = stored_bar;
+				return pcibs;
+			}
+		}
+	}
+	// VGA cards also decode the legacy VGA memory window without a BAR
+	if (!io && addr2 >= 0xa0000 && addr2 < 0xc0000) {
+		for (int i = 0; i < MAX_PCI_BOARDS; i++) {
+			struct pci_board_state *pcibs = &pcib->boards[i];
+			if (pcibs->board && pcibs->board->bars[PCI_LEGACY_VGA].bget && pcibs->memory_map_active) {
+				*bar = PCI_LEGACY_VGA;
 				return pcibs;
 			}
 		}
@@ -488,27 +503,27 @@ static uae_u8 *get_pci_config(uaecptr addr, int size, uae_u32 v, int *endianswap
 		int off = addr & 0xff;
 		uae_u8 *c = pcibs->config_data;
 		if (size == 4 || size == -4) {
-			c[off + 3] = pcibs->board->pci_get_config(off + 0);
-			c[off + 2] = pcibs->board->pci_get_config(off + 1);
-			c[off + 1] = pcibs->board->pci_get_config(off + 2);
-			c[off + 0] = pcibs->board->pci_get_config(off + 3);
+			c[off + 3] = pcibs->board->pci_get_config(pcibs, off + 0);
+			c[off + 2] = pcibs->board->pci_get_config(pcibs, off + 1);
+			c[off + 1] = pcibs->board->pci_get_config(pcibs, off + 2);
+			c[off + 0] = pcibs->board->pci_get_config(pcibs, off + 3);
 		} else if (size == 2 || size == -2) {
 			if (pcib->endian_swap_config < 0) {
-				c[(off ^ 2) + 0] = pcibs->board->pci_get_config(off + 0);
-				c[(off ^ 2) + 1] = pcibs->board->pci_get_config(off + 1);
+				c[(off ^ 2) + 0] = pcibs->board->pci_get_config(pcibs, off + 0);
+				c[(off ^ 2) + 1] = pcibs->board->pci_get_config(pcibs, off + 1);
 			} else if (pcib->endian_swap_config > 0) {
-				c[off + 0] = pcibs->board->pci_get_config(off + 0);
-				c[off + 1] = pcibs->board->pci_get_config(off + 1);
+				c[off + 0] = pcibs->board->pci_get_config(pcibs, off + 0);
+				c[off + 1] = pcibs->board->pci_get_config(pcibs, off + 1);
 			} else {
-				c[off + 1] = pcibs->board->pci_get_config((off ^ 2) + 0);
-				c[off + 0] = pcibs->board->pci_get_config((off ^ 2) + 1);
+				c[off + 1] = pcibs->board->pci_get_config(pcibs, (off ^ 2) + 0);
+				c[off + 0] = pcibs->board->pci_get_config(pcibs, (off ^ 2) + 1);
 			}
 			*endianswap = 0;
 		} else {
 			if (pcib->endian_swap_config > 0) {
-				c[off] = pcibs->board->pci_get_config(off ^ 0);
+				c[off] = pcibs->board->pci_get_config(pcibs, off ^ 0);
 			} else {
-				c[off] = pcibs->board->pci_get_config(off ^ 3);
+				c[off] = pcibs->board->pci_get_config(pcibs, off ^ 3);
 			}
 			*endianswap = 0;
 		}
@@ -577,49 +592,49 @@ static void update_pci_config(uaecptr addr, int size)
 			pcibs->bar[i] = 0;
 			// pre-set bar size when indirect PCI config
 			if (pcibs->board->pci_put_config) {
-				uae_u32 tbar = pcibs->board->pci_get_config(off + 3) << 24;
-				tbar |= pcibs->board->pci_get_config(off + 2) << 16;
-				tbar |= pcibs->board->pci_get_config(off + 1) << 8;
-				tbar |= pcibs->board->pci_get_config(off + 0) << 0;
-				pcibs->board->pci_put_config(off + 3, 0xff);
-				pcibs->board->pci_put_config(off + 2, 0xff);
-				pcibs->board->pci_put_config(off + 1, 0xff);
-				pcibs->board->pci_put_config(off + 0, 0xff);
-				uae_u32 bar = pcibs->board->pci_get_config(off + 3) << 24;
-				bar |= pcibs->board->pci_get_config(off + 2) << 16;
-				bar |= pcibs->board->pci_get_config(off + 1) << 8;
-				bar |= pcibs->board->pci_get_config(off + 0) << 0;
+				uae_u32 tbar = pcibs->board->pci_get_config(pcibs, off + 3) << 24;
+				tbar |= pcibs->board->pci_get_config(pcibs, off + 2) << 16;
+				tbar |= pcibs->board->pci_get_config(pcibs, off + 1) << 8;
+				tbar |= pcibs->board->pci_get_config(pcibs, off + 0) << 0;
+				pcibs->board->pci_put_config(pcibs, off + 3, 0xff);
+				pcibs->board->pci_put_config(pcibs, off + 2, 0xff);
+				pcibs->board->pci_put_config(pcibs, off + 1, 0xff);
+				pcibs->board->pci_put_config(pcibs, off + 0, 0xff);
+				uae_u32 bar = pcibs->board->pci_get_config(pcibs, off + 3) << 24;
+				bar |= pcibs->board->pci_get_config(pcibs, off + 2) << 16;
+				bar |= pcibs->board->pci_get_config(pcibs, off + 1) << 8;
+				bar |= pcibs->board->pci_get_config(pcibs, off + 0) << 0;
 				pcibs->bar_size[i] = ~((bar & ~1) - 1);
-				pcibs->board->pci_put_config(off + 3, tbar >> 24);
-				pcibs->board->pci_put_config(off + 2, tbar >> 16);
-				pcibs->board->pci_put_config(off + 1, tbar >> 8);
-				pcibs->board->pci_put_config(off + 0, tbar >> 0);
+				pcibs->board->pci_put_config(pcibs, off + 3, tbar >> 24);
+				pcibs->board->pci_put_config(pcibs, off + 2, tbar >> 16);
+				pcibs->board->pci_put_config(pcibs, off + 1, tbar >> 8);
+				pcibs->board->pci_put_config(pcibs, off + 0, tbar >> 0);
 			}
 		}
 	}
 	if (pcibs->board->pci_put_config) {
 		int off = addr & 0xff;
 		if (size == 4) {
-			pcibs->board->pci_put_config(off + 3, d[off + 0]);
-			pcibs->board->pci_put_config(off + 2, d[off + 1]);
-			pcibs->board->pci_put_config(off + 1, d[off + 2]);
-			pcibs->board->pci_put_config(off + 0, d[off + 3]);
+			pcibs->board->pci_put_config(pcibs, off + 3, d[off + 0]);
+			pcibs->board->pci_put_config(pcibs, off + 2, d[off + 1]);
+			pcibs->board->pci_put_config(pcibs, off + 1, d[off + 2]);
+			pcibs->board->pci_put_config(pcibs, off + 0, d[off + 3]);
 		} else if (size == 2) {
 			if (pcib->endian_swap_config < 0) {
-				pcibs->board->pci_put_config((off ^ 2) + 0, d[off + 0]);
-				pcibs->board->pci_put_config((off ^ 2) + 1, d[off + 1]);
+				pcibs->board->pci_put_config(pcibs, (off ^ 2) + 0, d[off + 0]);
+				pcibs->board->pci_put_config(pcibs, (off ^ 2) + 1, d[off + 1]);
 			} else if (pcib->endian_swap_config > 0) {
-				pcibs->board->pci_put_config(off + 0, d[off + 0]);
-				pcibs->board->pci_put_config(off + 1, d[off + 1]);
+				pcibs->board->pci_put_config(pcibs, off + 0, d[off + 0]);
+				pcibs->board->pci_put_config(pcibs, off + 1, d[off + 1]);
 			} else {
-				pcibs->board->pci_put_config(off + 0, d[off + 0]);
-				pcibs->board->pci_put_config(off + 1, d[off + 1]);
+				pcibs->board->pci_put_config(pcibs, off + 0, d[off + 0]);
+				pcibs->board->pci_put_config(pcibs, off + 1, d[off + 1]);
 			}
 		} else {
 			if (pcib->endian_swap_config > 0) {
-				pcibs->board->pci_put_config(off ^ 0, d[off + 0]);
+				pcibs->board->pci_put_config(pcibs, off ^ 0, d[off + 0]);
 			} else {
-				pcibs->board->pci_put_config(off ^ 3, d[off + 0]);
+				pcibs->board->pci_put_config(pcibs, off ^ 3, d[off + 0]);
 			}
 		}
 		if ((off >= 0x10 && off < 0x10 + (MAX_PCI_BARS - 1) * 4) || (off >= 0x30 && off < 0x34)) {
@@ -630,10 +645,10 @@ static void update_pci_config(uaecptr addr, int size)
 				index = (off - 0x10) / 4;
 			}
 			uae_u32 obar = pcibs->bar[index];
-			pcibs->bar[index] = pcibs->board->pci_get_config(off + 3) << 24;
-			pcibs->bar[index] |= pcibs->board->pci_get_config(off + 2) << 16;
-			pcibs->bar[index] |= pcibs->board->pci_get_config(off + 1) << 8;
-			pcibs->bar[index] |= pcibs->board->pci_get_config(off + 0) << 0;
+			pcibs->bar[index] = pcibs->board->pci_get_config(pcibs, off + 3) << 24;
+			pcibs->bar[index] |= pcibs->board->pci_get_config(pcibs, off + 2) << 16;
+			pcibs->bar[index] |= pcibs->board->pci_get_config(pcibs, off + 1) << 8;
+			pcibs->bar[index] |= pcibs->board->pci_get_config(pcibs, off + 0) << 0;
 			if (d[off + 0] == 0xff && d[off + 1] == 0xff && d[off + 2] == 0xff && (d[off + 3] & 0xfe) == 0xfe) {
 				pcibs->bar_size[index] = ~((pcibs->bar[index] & ~1) - 1);
 				if (pcibs->board->config->bars[index] & 1) {
@@ -655,7 +670,7 @@ static void update_pci_config(uaecptr addr, int size)
 	bool o_mm = pcibs->memory_map_active;
 	uae_u8 map;
 	if (pcibs->board->pci_get_config) {
-		map = pcibs->board->pci_get_config(7 ^ 3);
+		map = pcibs->board->pci_get_config(pcibs, 7 ^ 3);
 	} else {
 		map = d[7];
 	}
@@ -1242,13 +1257,13 @@ static void mediator_set_window_offset_window(struct pci_bridge *pcib, int windo
 
 static void mediator_set_window_offset(struct pci_bridge *pcib, uae_u16 v)
 {
-	v = do_byteswap_16(v);
 	if (pcib->bank_2_zorro == 3) {
-		// 4000
+		// 4000: the byte register selects PCI address bits 31..28.
 		pcib->window[0] = v & 0xf0;
-		pcib->memory_start_offset[0] = pcib->window[0] << 18;
+		pcib->memory_start_offset[0] = pcib->baseaddress - ((uae_u32)pcib->window[0] << 24);
 	} else {
-		// 1200
+		// 1200: window selection is a little-endian word register.
+		v = do_byteswap_16(v);
 		if (pcib->multiwindow) {
 			// TX has 2x4M banks
 			if (v & 0x0010) {
@@ -1458,6 +1473,7 @@ static void REGPARAM2 pci_bridge_lput_2(uaecptr addr, uae_u32 b)
 	pci_bridge_wput_2(addr + 2, b >>  0);
 }
 
+namespace {
 addrbank pci_config_bank = {
 	pci_config_lget, pci_config_wget, pci_config_bget,
 	pci_config_lput, pci_config_wput, pci_config_bput,
@@ -1486,7 +1502,8 @@ addrbank pci_bridge_bank = {
 	pci_bridge_lget, pci_bridge_wget,
 	ABFLAG_IO | ABFLAG_SAFE, S_READ, S_WRITE
 };
-addrbank pci_bridge_bank_2 = {
+}
+static addrbank pci_bridge_bank_2 = {
 	pci_bridge_lget_2, pci_bridge_wget_2, pci_bridge_bget_2,
 	pci_bridge_lput_2, pci_bridge_wput_2, pci_bridge_bput_2,
 	default_xlate, default_check, NULL, NULL, _T("PCI BRIDGE #2"),

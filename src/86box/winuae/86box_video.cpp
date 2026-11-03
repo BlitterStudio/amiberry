@@ -1304,11 +1304,13 @@ struct rtg_thread
 	struct gfxchip *chip;
 };
 
-static void rtg_thread_start(void *p)
+// Amiberry: uae_thread_function is SDL's int-returning form.
+static int rtg_thread_start(void *p)
 {
 	struct rtg_thread *t = (struct rtg_thread *)p;
 	chip_thread = t->chip;
 	t->func(t->param);
+	return 0;
 }
 
 /* The thread works for the board that creates it */
@@ -1318,7 +1320,7 @@ thread_t *thread_create_named(void (*thread_func)(void *param), void *param, con
 	t->func = thread_func;
 	t->param = param;
 	t->chip = current_chip();
-	if (!uae_start_thread(_T("86Box video"), rtg_thread_start, t, &t->tid)) {
+	if (!uae_start_thread("86Box video", rtg_thread_start, t, &t->tid)) {
 		xfree(t);
 		return NULL;
 	}
@@ -1331,7 +1333,7 @@ int thread_wait(thread_t *arg)
 	if (!t) {
 		return 0;
 	}
-	uae_wait_thread(t->tid);
+	uae_wait_thread(&t->tid);
 	xfree(t);
 	return 1;
 }

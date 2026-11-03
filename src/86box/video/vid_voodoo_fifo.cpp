@@ -364,7 +364,9 @@ voodoo_wake_fifo_threads(voodoo_set_t *set, voodoo_t *voodoo)
 void
 voodoo_wait_for_swap_complete(voodoo_t *voodoo)
 {
-    while (voodoo->swap_pending) {
+    /* Card teardown stops the vsync that clears swap_pending: stop waiting
+       then, or voodoo_card_close() waits forever for this thread. */
+    while (voodoo->fifo_thread_run && voodoo->swap_pending) {
         /* Avoid waiting on wake_fifo_thread here; main thread may be draining the FIFO. */
         thread_wait_mutex(voodoo->swap_mutex);
         if ((voodoo->swap_pending && voodoo->flush) || FIFO_FULL) {

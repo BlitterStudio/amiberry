@@ -604,15 +604,17 @@ uint8_t fm_driver_get_cs(int chip_id, fm_drv_t *drv)
 
 /* MIDI out of the MPU-401 goes to WinUAE's MIDI port */
 
-static int midi_open;
+// Amiberry: osdep/midi.h declares a midi_open() function; name the flag
+// differently.
+static int midi_port_open;
 
 void midi_raw_out_byte(uint8_t val)
 {
 #ifdef WITH_MIDI
-	if (!midi_open) {
-		midi_open = Midi_Open();
+	if (!midi_port_open) {
+		midi_port_open = Midi_Open();
 	}
-	BYTE b = (BYTE)val;
+	uint8_t b = val;
 	Midi_Parse(midi_output, &b);
 #endif
 }
@@ -629,11 +631,11 @@ void midi_clear_buffer(void)
 void midi_reset(void)
 {
 #ifdef WITH_MIDI
-	if (midi_open) {
+	if (midi_port_open) {
 		Midi_Close();
 	}
 #endif
-	midi_open = 0;
+	midi_port_open = 0;
 }
 
 void midi_in_handler(int set, void (*msg)(void *priv, uint8_t *msg, uint32_t len), int (*sysex)(void *priv, uint8_t *buffer, uint32_t len, int abort), int (*poll)(void *priv), void *priv)

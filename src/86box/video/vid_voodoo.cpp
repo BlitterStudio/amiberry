@@ -1672,8 +1672,12 @@ voodoo_card_close(voodoo_t *voodoo)
     thread_destroy_event(voodoo->wake_fifo_thread);
     thread_destroy_event(voodoo->wake_render_thread[0]);
     thread_destroy_event(voodoo->wake_render_thread[1]);
+    thread_destroy_event(voodoo->wake_render_thread[2]);
+    thread_destroy_event(voodoo->wake_render_thread[3]);
     thread_destroy_event(voodoo->render_not_full_event[0]);
     thread_destroy_event(voodoo->render_not_full_event[1]);
+    thread_destroy_event(voodoo->render_not_full_event[2]);
+    thread_destroy_event(voodoo->render_not_full_event[3]);
 
     if (voodoo->wait_stats_enabled && voodoo->wait_stats_explicit) {
         pclog("Voodoo wait stats (type=%d): fifo_full waits=%" PRIu64 " ticks=%" PRIu64 " spins=%" PRIu64

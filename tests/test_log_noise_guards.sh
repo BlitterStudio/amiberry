@@ -2,14 +2,14 @@
 set -eu
 
 missing=0
-voodoo_src=src/pcem/vid_voodoo_banshee.cpp
-
-for reg in cmdBump0 cmdRdPtrH0 cmdHoleCnt0; do
-	if ! grep -F -q "case ${reg}:" "$voodoo_src"; then
-		echo "Banshee command register ${reg} must be handled explicitly" >&2
-		missing=1
-	fi
-done
+voodoo_src=src/86box/video/vid_voodoo_banshee.cpp
+# 86Box compiles banshee_log() out unless ENABLE_BANSHEE_LOG is defined, so
+# the noisy unhandled-CMDFIFO-register logging PCem needed case labels for
+# cannot come back without that define.
+if ! grep -F -q '#ifdef ENABLE_BANSHEE_LOG' "$voodoo_src"; then
+	echo "banshee_log must stay behind ENABLE_BANSHEE_LOG" >&2
+	missing=1
+fi
 
 if grep -F -q 'write_log("hdf_close_target\n");' src/osdep/amiberry_hardfile.cpp; then
 	echo "hdf_close_target must not emit an unconditional bare trace line" >&2

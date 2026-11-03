@@ -12,6 +12,13 @@
 struct _device_;
 typedef struct _device_ device_t;
 
+/* Amiberry: with 86Box compiled out, gfxboard.cpp includes this header for
+   the types only (GFXCHIP_MAX_BOARDS, struct gfxchip_linear) and provides
+   its own inline stubs for the functions; WINUAE_86BOX_VIDEO_STUBS hides
+   the declarations they would collide with, and the card device_t
+   externs, which no board table entry references then. */
+#ifndef WINUAE_86BOX_VIDEO_STUBS
+
 /* Boards gfxboard.cpp offers, in the 86Box card sources */
 extern const device_t gd5426_device;
 extern const device_t gd5426_swapped_device;
@@ -39,12 +46,14 @@ extern const device_t millennium_device;
 extern const device_t millennium_ii_device;
 extern const device_t mystique_device;
 extern const device_t mystique_220_device;
+#endif /* WINUAE_86BOX_VIDEO_STUBS */
 
 /* Each RTG board with an 86Box chip has its own glue state. Up to
    GFXCHIP_MAX_BOARDS boards can run at the same time. */
 #define GFXCHIP_MAX_BOARDS 4
 struct gfxchip;
 
+#ifndef WINUAE_86BOX_VIDEO_STUBS
 /* Set up the video glue for board 'gfxboard' (rtggfxboard) and start the
    card. index: the board's number, 0 to GFXCHIP_MAX_BOARDS - 1. swapped:
    the board shows 15/16 bit pixels with red and blue swapped. *priv gets
@@ -79,7 +88,7 @@ uint8_t get_pci_gfxchip(struct gfxchip *chip, uint32_t addr);
 uint8_t *gfxchip_getbuffer32(struct gfxchip *chip, int x, int y, int yy);
 /* Mark VRAM the Amiga wrote directly as changed */
 void gfxchip_linear_mark(struct gfxchip *chip, int offset);
-
+#endif /* WINUAE_86BOX_VIDEO_STUBS */
 /* The card's linear frame buffer handlers (its first mapping of 1MB or
    more), which gfxboard.cpp calls directly for VRAM accesses. The cards'
    linear handlers don't call back into the glue, so these calls don't
@@ -95,7 +104,9 @@ struct gfxchip_linear
 	void (*write_w)(uint32_t addr, uint16_t val, void *priv);
 	void (*write_l)(uint32_t addr, uint32_t val, void *priv);
 };
+#ifndef WINUAE_86BOX_VIDEO_STUBS
 struct gfxchip_linear *gfxchip_get_linear(struct gfxchip *chip);
+#endif /* WINUAE_86BOX_VIDEO_STUBS */
 
 /* In gfxboard.cpp, p is the board's rtggfxboard */
 void gfxboard_resize(int width, int height, int hmult, int vmult, void *p);

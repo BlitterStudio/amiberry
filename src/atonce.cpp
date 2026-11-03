@@ -21,8 +21,8 @@
 *   PORT_B = base+0x80 (word): write = resume(+INT), read = stop + trap info
 *   default base 0xBFF000 -> 0xBFF041/0xBFF080 (aliases all over CIA space)
 *
-* Uses the PCem v16 core already present for the A1060/A2088/A2286/A2386
-* bridgeboards. Mutually exclusive with those boards (PCem is single
+* Uses the 86Box x86 core already present for the A1060/A2088/A2286/A2386
+* bridgeboards. Mutually exclusive with those boards (the core is single
 * instance).
 */
 
@@ -45,22 +45,18 @@
 #include "autoconf.h"
 #include "filesys.h"
 
-#include "pcem/ibm.h"
-#include "pcem/device.h"
-#include "pcem/cpu.h"
-#include "pcem/pic.h"
-#include "pcem/timer.h"
-#include "pcem/pcemglue.h"
-#include "pcem/model.h"
-#include "pcem/mem.h"
-#include "pcem/codegen.h"
-#include "pcem/x86.h"
-#include "pcem/io.h"
+#include "86box_glue.h"
+#include <86box/86box.h>
+#include <86box/device.h>
+#include <86box/timer.h>
+#include <86box/mem.h>
+#include <86box/pic.h>
+#include "86box/cpu/cpu.h"
 
 /*
 * INTEGRATION STATUS (2026-06-13): structurally complete, compiles into the
 * expansion list as "ATonce Plus" (Vortex). Points to validate once running:
-*   1. PCem core bring-up: minimal init (no pit/dma/kbc). Confirm exec386 runs
+*   1. 86Box core bring-up: minimal init (no pit/dma/kbc). Confirm exec386 runs
 *      and the 286 starts from F000:FFF0 (= chip RAM 0x3FFF0 via the F000 map).
 *   2. Trap/resume timing: atonce_trap ends the slice (cycles=0) AFTER the I/O
 *      instruction; data flows through the pusha frame in shared RAM, so this is
@@ -115,12 +111,14 @@ struct atonce_s {
 	int refresh_due;         // a video refresh is owed (set per frame, serviced
 	                         // at the next safe point: idle hsync or 286 resume)
 	int fake_active;         // a synthetic CRTC refresh trap is in flight
+	int video_set;           // the 286 has programmed the video hardware since
+	                         // its last reset (see atonce_video_port)
 	int err287;
 	// MEMMODE shift register, stages AH/BH/CH/DH (AH = last shifted bit)
 	int mm_a, mm_b, mm_c, mm_d;
 	// translation table: x86 64K bank -> Amiga bank base, -1 = onboard DRAM
 	int bank_amiga[256];
-	uae_u8 *dram;            // 512KB onboard DRAM (= PCem "ram")
+	uae_u8 *dram;            // 512KB onboard DRAM (= 86Box "ram")
 	uae_u8 *vmem;            // DIAGNOSTIC: private backing for the 286's sub-1MB
 	                         // chip windows (banks 0-6), so video/conventional
 	                         // writes can't corrupt Amiga chip RAM. F000 mailbox
@@ -144,7 +142,7 @@ struct atonce_s {
 
 // DIAGNOSTIC toggle: when 1, the 286's extended memory (>1MB) is backed by a
 // private, flat buffer instead of the dynamic MEMMODE translation onto Amiga
-// fast RAM. This buffer is mapped with a REAL exec pointer, so PCem's code fetch
+// fast RAM. This buffer is mapped with a REAL exec pointer, so 86Box's code fetch
 // (getpccache) works when himem.sys relocates/executes in the HMA (>1MB). It
 // also fully isolates the 286's extended memory from the Amiga (no sharing of
 // fast RAM with the 286, as on the video-isolation test). Use to bring up XMS /
@@ -154,13 +152,7 @@ struct atonce_s {
 
 static struct atonce_s *atonce;
 
-int atonce_intr_vector = -1;  // consumed by picinterrupt() (pcem/pic.cpp patch)
-
-// Allocates pcemmap (the PCem memory-map block table) + the PCem video infra.
-// The bridgeboards reach it via their video card; the ATonce has no PCem video,
-// so we call it directly (priv=NULL is safe: it is only stored as gfxboard_priv,
-// never dereferenced unless PCem video is rendered, which we never do).
-extern void initpcemvideo(void *p, bool swapped);
+int atonce_intr_vector = -1;  // consumed by picinterrupt() (86box/pic.cpp UAE hook)
 
 /*-------------------------------------------------------------------------*/
 /* Address translation 286 -> Amiga, ported from atplus2_core.v             */
@@ -169,12 +161,12 @@ extern void initpcemvideo(void *p, bool swapped);
 /* precomputed per 64K bank and rebuilt when MEMMODE/A20 change.            */
 /*-------------------------------------------------------------------------*/
 
-// Drive PCem's physical A20 mask from the LCA gate (PORT_A D2). On the ATonce
-// there is no keyboard controller: the LCA A20 gate IS the A20 line. PCem masks
+// Drive 86Box's physical A20 mask from the LCA gate (PORT_A D2). On the ATonce
+// there is no keyboard controller: the LCA A20 gate IS the A20 line. 86Box masks
 // bit 20 of the physical address via rammask (mem_a20_recalc), so this makes the
 // 286 wrap 0x100000->0x000000 when A20 is gated off - exactly what himem.sys's
 // A20-control test checks (else: "Unable to control A20 line!"). We own A20
-// entirely: keep mem_a20_key cleared (PCem defaults it to 2 = A20 always on).
+// entirely: keep mem_a20_key cleared (86Box defaults it to 2 = A20 always on).
 static void atonce_apply_a20(struct atonce_s *xb)
 {
 	mem_a20_key = 0;
@@ -235,7 +227,7 @@ static void atonce_rebuild_map(struct atonce_s *xb)
 }
 
 /*-------------------------------------------------------------------------*/
-/* x86-side memory access (PCem handlers). Byte order: the data bus is      */
+/* x86-side memory access (86Box handlers). Byte order: the data bus is      */
 /* byte-swapped by wiring (U24/U25), which makes byte addresses map 1:1;    */
 /* reading consecutive Amiga bytes as a little-endian word is exactly what  */
 /* the hardware produces.                                                   */
@@ -291,7 +283,7 @@ static mem_mapping_t atonce_mapping;   // extended memory (1MB+), dynamic
 /*-------------------------------------------------------------------------*/
 /* Sub-1MB chip-RAM windows (static map). The 286 executes code from here    */
 /* (BIOS at F000 = chip 0x30000, conventional 512-640K = chip 0x40000), and  */
-/* PCem's code fetch (getpccache) needs a real pointer, not the function     */
+/* 86Box's code fetch (getpccache) needs a real pointer, not the function     */
 /* handlers. So each window exposes WinUAE chip RAM directly via an "exec"   */
 /* pointer; data goes through funcs that index the same buffer. The U24/U25  */
 /* byte-swap is 1:1 at byte level, so a direct pointer matches the handlers. */
@@ -355,6 +347,29 @@ static const struct { uae_u32 xbase, size, chipoff; } atonce_win_map[] = {
 #define ATONCE_NWIN (sizeof(atonce_win_map) / sizeof(atonce_win_map[0]))
 static mem_mapping_t atonce_win[ATONCE_NWIN];
 
+// The LCA's EXT term (~P67) only covers 1MB-8MB. Every 1MB block from 0x800000
+// up is decoded like the low megabyte, whatever A20 and MEMMODE say, so its
+// bank xF is the BIOS window (chip 0x30000) too. The 286 comes out of reset at
+// FFFFF0 (EFFFF0 while A20 is gated off), so those banks must reach the BIOS.
+// They are added after the extended memory mapping, which they override.
+#define ATONCE_NBIOSALIAS 8
+static mem_mapping_t atonce_bios_alias[ATONCE_NBIOSALIAS];
+
+static void atonce_map_bios_alias(void)
+{
+	uae_u8 *chip = chipmem_bank.baseaddr;
+	if (!chip || chipmem_bank.allocated_size < 0x40000) {
+		return;
+	}
+	for (int i = 0; i < ATONCE_NBIOSALIAS; i++) {
+		uae_u32 xbase = 0x8f0000 + i * 0x100000;
+		mem_mapping_add(&atonce_bios_alias[i], xbase, 0x10000,
+			atonce_chip_readb, atonce_chip_readw, atonce_chip_readl,
+			atonce_chip_writeb, atonce_chip_writew, atonce_chip_writel,
+			chip + 0x30000, MEM_MAPPING_EXTERNAL, chip + 0x30000 - xbase);
+	}
+}
+
 static void atonce_map_windows(void)
 {
 	uae_u8 *chip = chipmem_bank.baseaddr;
@@ -373,10 +388,8 @@ static void atonce_map_windows(void)
 			base = atonce->vmem;
 #endif
 		uae_u8 *lin = base + atonce_win_map[i].chipoff - atonce_win_map[i].xbase;
-		// NOTE: mem_mapping_add (stock PCem), NOT mem_mapping_addx (WinUAE glue).
 		// The 286 core's getpccache/readmembl consult read_mapping[]/_mem_exec[]
-		// filled by the stock mem_mapping_add; the glue's addx fills a separate
-		// pcemmap[] table and self-disables on re-add. The bridgeboards use add.
+		// filled by mem_mapping_add.
 		mem_mapping_add(&atonce_win[i], atonce_win_map[i].xbase, atonce_win_map[i].size,
 			atonce_chip_readb, atonce_chip_readw, atonce_chip_readl,
 			atonce_chip_writeb, atonce_chip_writew, atonce_chip_writel,
@@ -394,7 +407,7 @@ static void atonce_map_windows(void)
 		mem_readb_phys(0), mem_readb_phys(0x10000), mem_readb_phys(0x80000),
 		mem_readb_phys(0xF0000), mem_readb_phys(0xFFFF0),
 		(unsigned)w->base, (unsigned)w->size, w->flags, w->enable,
-		w->read_b(0xFFFF0, w->p));
+		w->read_b(0xFFFF0, w->priv));
 }
 
 /*-------------------------------------------------------------------------*/
@@ -413,17 +426,17 @@ static void atonce_trap(struct atonce_s *xb, uae_u16 port, int dir)
 	xb->trap_port = port & 0x3ff;
 	xb->trap_dir = dir;
 	xb->frozen = 1;
-	// End the current PCem slice right after this instruction. exec386's inner
+	// End the current 86Box slice right after this instruction. exec386's inner
 	// loop exits on cycdiff (= oldcyc - cycles) >= cycle_period, not on cycles
 	// alone, so a huge-negative value forces cycdiff past any cycle_period and
 	// bails out of both the inner and the outer (cycles>0) loop immediately.
 	cycles = -0x40000000;
 }
 
-// Drive the 286 for up to `budget` cycles. PCem's exec386 paces itself against
+// Drive the 286 for up to `budget` cycles. 86Box's exec386 paces itself against
 // the timer subsystem: its inner loop runs until cycdiff >= cycle_period, where
 // cycle_period = (timer_target - tsc) + 1, and timer_process() only advances
-// timer_target while a timer is registered. We register no PCem timers (the PIT
+// timer_target while a timer is registered. We register no 86Box timers (the PIT
 // lives behind the I/O trap and is emulated by the 68k), so timer_target stays
 // behind the ever-growing tsc, cycle_period goes <= 0, and exec386 spins
 // forever in its outer loop without ever issuing an instruction. Keeping
@@ -432,26 +445,11 @@ static void atonce_trap(struct atonce_s *xb, uae_u16 port, int dir)
 static void atonce_run(struct atonce_s *xb, int budget)
 {
 	(void)xb;
-	timer_target = (uint32_t)tsc + (uint32_t)budget + 16;
+	timer_target = tsc + (uint64_t)budget + 16;
 	cycles = 0;
-	exec386(budget);
+	cpu_exec(budget);
 }
 
-static uint8_t atonce_io_inb(uint16_t addr, void *priv)
-{
-	atonce_trap((struct atonce_s*)priv, addr, 1);
-	return 0xff;
-}
-static uint16_t atonce_io_inw(uint16_t addr, void *priv)
-{
-	atonce_trap((struct atonce_s*)priv, addr, 1);
-	return 0xffff;
-}
-static uint32_t atonce_io_inl(uint16_t addr, void *priv)
-{
-	atonce_trap((struct atonce_s*)priv, addr, 1);
-	return 0xffffffff;
-}
 // On a trapped 286 OUT the board latches the written data into the shared F000
 // I/O shadow at F000:[port] (= chip 0x30000 + port). The 68k driver reads this
 // shadow byte to recover the OUT value: e.g. the CRTC handler reads the register
@@ -492,22 +490,6 @@ static uae_u32 atonce_io_shadow_read(uae_u16 port, int size)
 	for (int i = 0; i < size; i++)
 		v |= (uae_u32)sh[(port + i) & 0x3ff] << (8 * i);
 	return v;
-}
-
-static void atonce_io_outb(uint16_t addr, uint8_t val, void *priv)
-{
-	atonce_io_shadow(addr & 0x3ff, val, 1);
-	atonce_trap((struct atonce_s*)priv, addr, 0);
-}
-static void atonce_io_outw(uint16_t addr, uint16_t val, void *priv)
-{
-	atonce_io_shadow(addr & 0x3ff, val, 2);
-	atonce_trap((struct atonce_s*)priv, addr, 0);
-}
-static void atonce_io_outl(uint16_t addr, uint32_t val, void *priv)
-{
-	atonce_io_shadow(addr & 0x3ff, val, 4);
-	atonce_trap((struct atonce_s*)priv, addr, 0);
 }
 
 /*-------------------------------------------------------------------------*/
@@ -557,7 +539,6 @@ static int atonce_hdd_resolve(void)
 			continue;
 
 		uae_u8 blk[512];
-		uae_u32 err = 0;
 		// Find the RDSK block within the first 16 sectors.
 		int found_rdb = 0;
 		for (int b = 0; b < 16; b++) {
@@ -682,7 +663,6 @@ static int atonce_disk_bypass(uint16_t port)
 		uae_u64 pos = atonce_part_off + (uae_u64)lba * 512u;
 		int ok = 1, done = 0;
 		uint8_t sb[512];
-		uae_u32 err = 0;
 		for (int s = 0; s < count; s++) {
 			uae_u64 sp = pos + (uae_u64)s * 512;
 			if (func == 0x02) {
@@ -729,7 +709,17 @@ static int atonce_disk_bypass(uint16_t port)
 	}
 }
 
-// Entry point from pcem/x86.cpp's portin/portout. The 286's IN/OUT opcodes go
+// The 286 programs the video hardware through the CRTC and mode registers, or
+// through the Vortex "set video mode" service (0xBE) - the driver sets up its
+// screen from these. The synthetic refresh is a CRTC write, so it must not
+// reach the driver before the 286's own video setup has.
+static int atonce_video_port(uae_u16 p)
+{
+	return p == 0x3b4 || p == 0x3b5 || p == 0x3b8 ||
+		p == 0x3d4 || p == 0x3d5 || p == 0x3d8 || p == 0x0be;
+}
+
+// Entry point from x86.cpp's portin/portout. The 286's IN/OUT opcodes go
 // through outb()/inb() -> portout()/portin() in x86.cpp, which are the *bridge-
 // board* dispatchers and dereference bridges[0] (NULL for the ATonce). Those
 // functions now fall through to here when no PC bridgeboard owns the x86 side.
@@ -752,6 +742,9 @@ uint32_t atonce_x86_io(uint16_t port, int dir, uint32_t val, int size)
 		// HDD bypass: serve drive >= 0x80 from the host VHD and skip the 68k trap.
 		if ((port == 0xb0 || port == 0xb9) && atonce_disk_bypass(port))
 			return 0;
+		if (atonce_video_port(port & 0x3ff)) {
+			xb->video_set = 1;
+		}
 		atonce_io_shadow(port & 0x3ff, val, size);
 		atonce_trap(xb, port, dir);
 		return 0;
@@ -810,6 +803,8 @@ static void atonce_porta_write(struct atonce_s *xb, uae_u8 v)
 	// triggered so the per-poll mode-byte write does not reset every time.
 	if (xb->configured && (v & PORTA_DIN) && !(old & PORTA_DIN)) {
 		xb->in_reset = 1;
+		xb->video_set = 0;
+		xb->refresh_due = 0;
 		resetx86();     // 286 restarts at FFFF0
 	}
 }
@@ -915,9 +910,11 @@ static void atonce_portb_write(struct atonce_s *xb, uae_u16 v)
 	// the board becomes live and the 286 starts at its reset vector (FFFF0).
 	if (!xb->configured) {
 		xb->configured = 1;
+		xb->video_set = 0;
+		xb->refresh_due = 0;
 		atonce_rebuild_map(xb);
 		resetx86();
-		// resetx86() resets PCem's _mem_state (back to INTERNAL), which drops our
+		// resetx86() resets 86Box's _mem_state (back to INTERNAL), which drops our
 		// EXTERNAL chip-RAM windows from _mem_exec -> the 286 can't fetch the BIOS
 		// (Bad getpccache at FFFF0). Re-assert the state so recalc reinstalls the
 		// still-listed mappings. (Don't re-add the mappings: that corrupts the list.)
@@ -927,7 +924,7 @@ static void atonce_portb_write(struct atonce_s *xb, uae_u16 v)
 	}
 	if (v & 1) {
 		atonce_intr_vector = (v >> 8) & 0xff;
-		pic_intpending = 1;
+		pic.int_pending = 1;
 	}
 	// If a video refresh is owed (set once per frame by atonce_hsync), inject it
 	// here instead of running the 286: a resume is a safe point (the trap just
@@ -1109,7 +1106,12 @@ static void atonce_hsync(void)
 	// 286's key traps / show the new text). Fix: only refresh when the 286's text
 	// page ACTUALLY changed (cheap FNV hash once per frame), plus a slow ~2Hz
 	// heartbeat so the blinking cursor still shows. Idle = no render -> 68k free.
-	if (++xb->refresh_div >= maxvpos) {
+	//
+	// Nothing is owed until the 286 has programmed the video hardware. The v3.00
+	// driver has no screen before that, and a CRTC trap sends its main loop down
+	// the no-screen path with a stale PORT_A pointer (address error on the next
+	// resume).
+	if (xb->video_set && ++xb->refresh_div >= maxvpos) {
 		xb->refresh_div = 0;
 		uae_u32 h = atonce_text_hash();
 		xb->refresh_heartbeat++;
@@ -1132,7 +1134,7 @@ static void atonce_hsync(void)
 	if (xb->frozen)
 		return;
 
-	float cycles_to_run = (float)cpu_get_speed() / (vblank_hz * maxvpos);
+	float cycles_to_run = (float)x86pc_get_cpu_speed() / (vblank_hz * maxvpos);
 	totalcycles += cycles_to_run;
 	int cycs = (int)totalcycles;
 	if (cycs > 0)
@@ -1161,7 +1163,8 @@ static void atonce_reset(int hardreset)
 static void atonce_free(void)
 {
 	if (atonce) {
-		pcem_close();
+		x86pc_close_devices();
+		x86pc_mem_free();
 		xfree(atonce->vmem);
 		xfree(atonce->emem);
 		xfree(atonce);
@@ -1190,49 +1193,31 @@ bool atonce_init(struct autoconfig_info *aci)
 
 	atonce_hdd_tried = (xb->rc->device_settings & 1) ? 0 : -1;
 
-	// PCem setup: bare 286, no PC support devices (the LCA has none; the
+	// 86Box setup: bare 286, no PC support devices (the LCA has none; the
 	// PIT/PIC/DMA/KBC/RTC are all emulated by the 68k driver through traps)
-	romset = ROM_AMI286;     // model index only; no ROM is loaded
-	model = 1;               // [286] entry of models[] (model_init is empty)
-	cpu_manufacturer = 0;
-	cpu = 4;                 // cpus_286[4] = "286/16" (16 MHz); the board is 286-16
+	x86pc_close_devices();
+	x86pc_set_machine(X86PC_AT286, 4); // 286/16, the board is 286-16
 	fpu_type = FPU_NONE;     // TODO: optional 287 (FPU_287) + err287 path
-	AT = 1;
 	cpu_set();
-
-	// allocate the PCem memory-map table (pcemmap) before any mem_mapping_add
-	initpcemvideo(NULL, false);
+	// No timers are ever enabled: atonce_run() paces the CPU through
+	// timer_target itself.
+	timer_init();
 
 	mem_size = ONBOARD_SIZE / 1024;
 	mem_init();
-	mem_alloc();
-	xb->dram = ram;          // PCem-owned 512KB = the board's local DRAM
+	mem_reset();
+	xb->dram = ram;          // 86Box-owned 512KB = the board's local DRAM
 #if ATONCE_ISOLATE_CHIP
 	if (!xb->vmem)
 		xb->vmem = xcalloc(uae_u8, ATONCE_VMEM_SIZE);
 #endif
 
-	// Minimal PCem core bring-up. We deliberately do NOT init the PC support
+	// Minimal core bring-up. We deliberately do NOT init the PC support
 	// chips (pit/dma/keyboard/nvr): the LCA has none, the 68k driver emulates
-	// them via the I/O traps. pic is still init'd because the CPU core calls
-	// picinterrupt() (patched in pcem/pic.cpp to deliver atonce_intr_vector).
-	timer_reset();
+	// them via the I/O traps, which x86.cpp's portin/portout route to
+	// atonce_x86_io(). pic is still init'd because the CPU core calls
+	// picinterrupt() (hooked in 86box/pic.cpp to deliver atonce_intr_vector).
 	pic_init();
-	pic_reset();
-	codegen_init();          // CPU recompiler tables
-	// Turbo ON: cpu_get_speed() (which paces atonce_run via atonce_hsync) returns
-	// cpu_turbo_speed = cpu_s->rspeed = the full 16 MHz. With turbo OFF, PCem caps
-	// cpu_nonturbo_speed at 8 MHz (cpu.cpp ~229) for any 286 -> the emulated 286
-	// ran at half clock (the DOS prompt felt 2-3x slower than real hardware).
-	cpu_set_turbo(1);
-
-	// catch-all I/O traps, except 287 range 0xF8-0xFF
-	io_sethandlerx(0x0000, 0x00f8,
-		atonce_io_inb, atonce_io_inw, atonce_io_inl,
-		atonce_io_outb, atonce_io_outw, atonce_io_outl, xb);
-	io_sethandlerx(0x0100, 0xff00,
-		atonce_io_inb, atonce_io_inw, atonce_io_inl,
-		atonce_io_outb, atonce_io_outw, atonce_io_outl, xb);
 
 	// Sub-1MB chip-RAM windows (static, with exec pointers so the 286 can run
 	// the BIOS from F000). Must come after mem_init (chip RAM is already
@@ -1242,7 +1227,7 @@ bool atonce_init(struct autoconfig_info *aci)
 	// Extended memory above 1MB.
 #if ATONCE_ISOLATE_EXT
 	// DIAGNOSTIC: back the whole >1MB window with a private, flat buffer mapped
-	// with a REAL exec pointer, so PCem's code fetch (getpccache) works when
+	// with a REAL exec pointer, so 86Box's code fetch (getpccache) works when
 	// himem.sys relocates/runs in the HMA (>1MB). Fully isolates the 286's
 	// extended memory from Amiga RAM (no shared fast RAM, no MEMMODE translation).
 	// The atonce_chip_* handlers are generic linear-buffer handlers:
@@ -1268,6 +1253,7 @@ bool atonce_init(struct autoconfig_info *aci)
 	mem_set_mem_state(0x100000, 0x1000000 - 0x100000,
 		MEM_READ_EXTERNAL | MEM_WRITE_EXTERNAL);
 #endif
+	atonce_map_bios_alias();
 
 	atonce_reset(1);
 
