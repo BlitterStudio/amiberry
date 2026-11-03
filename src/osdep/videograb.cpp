@@ -31,7 +31,9 @@ extern "C" {
 #include <SDL3/SDL_surface.h>
 #endif
 
+#ifndef BI_RGB
 #define BI_RGB 0
+#endif
 
 struct AviFrame {
     char id[4];

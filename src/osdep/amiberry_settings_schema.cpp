@@ -954,7 +954,7 @@ pairs without_inputs(const pairs& probe, const state_space& space)
 	pairs values;
 	for (const auto& [id, value] : probe) {
 		const bool input = std::any_of(space.inputs.begin(), space.inputs.end(),
-			[&](const field& f) { return std::strcmp(f.id, id) == 0; });
+			[key = id](const field& f) { return std::strcmp(f.id, key) == 0; });
 		if (!input)
 			values.emplace_back(id, value);
 	}
