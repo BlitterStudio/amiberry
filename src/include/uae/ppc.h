@@ -43,8 +43,6 @@
 #define PPC_STATE_INACTIVE 0
 #define PPC_STATE_STOP 1
 #define PPC_STATE_ACTIVE 2
-#define PPC_STATE_SLEEP 3
-#define PPC_STATE_CRASH 4
 
 /* PPC view of the Amiga memory map. Natural alignment, no packing.
  * memory == NULL routes accesses through the I/O callbacks below.
@@ -104,7 +102,6 @@ void uae_ppc_cpu_lock(void);
 bool uae_ppc_cpu_unlock(void);
 void uae_ppc_reset(bool hardreset);
 void uae_ppc_free(void);
-void uae_ppc_wakeup(void);
 void ppc_map_banks(uae_u32 start, uae_u32 size, const TCHAR *name, void *addr, bool remove);
 void ppc_remap_bank(uae_u32 start, uae_u32 size, const TCHAR *name, void *addr);
 bool uae_self_is_ppc(void);

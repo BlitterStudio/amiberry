@@ -163,6 +163,23 @@ static bool ppc_paused;
 /* Dummy PPC implementation */
 
 static void PPCCALL dummy_ppc_cpu_run_continuous(void) { }
+/* The common code calls these QEMU entry points without checking which
+ * implementation is loaded. No thread is the PPC CPU thread, locking
+ * always succeeds and interrupts go nowhere. */
+
+static bool UAECALL dummy_qemu_uae_ppc_in_cpu_thread(void)
+{
+	return false;
+}
+
+static void UAECALL dummy_qemu_uae_ppc_external_interrupt(bool active)
+{
+}
+
+static int UAECALL dummy_qemu_uae_lock(int type)
+{
+	return 0;
+}
 
 /* Functions typedefs for PPC implementation */
 
@@ -194,6 +211,9 @@ static void load_dummy_implementation(void)
 	write_log(_T("PPC: Loading dummy implementation\n"));
 	memset(&impl, 0, sizeof(impl));
 	impl.run_continuous = dummy_ppc_cpu_run_continuous;
+	impl.in_cpu_thread = dummy_qemu_uae_ppc_in_cpu_thread;
+	impl.external_interrupt = dummy_qemu_uae_ppc_external_interrupt;
+	impl.lock = dummy_qemu_uae_lock;
 }
 
 template<typename T>
@@ -611,7 +631,7 @@ static int ppc_thread(void *v)
 		uae_ppc_cpu_reset();
 		impl.run_continuous();
 
-		if (ppc_state == PPC_STATE_ACTIVE || ppc_state == PPC_STATE_SLEEP)
+		if (ppc_state == PPC_STATE_ACTIVE)
 			ppc_state = PPC_STATE_STOP;
 		write_log(_T("ppc_cpu_run() exited.\n"));
 		ppc_thread_running = false;
@@ -866,11 +886,6 @@ bool uae_ppc_cpu_unlock(void)
 	return false;
 }
 
-void uae_ppc_wakeup(void)
-{
-	if (ppc_state == PPC_STATE_SLEEP)
-		ppc_state = PPC_STATE_ACTIVE;
-}
 
 void uae_ppc_interrupt(bool active)
 {
