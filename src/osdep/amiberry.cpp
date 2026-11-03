@@ -7097,7 +7097,7 @@ int target_parse_option(uae_prefs *p, const TCHAR *option, const TCHAR *value, c
 // names or indexes (sound cards, MIDI, serial and parallel ports) are
 // left out because a Windows value would select the wrong device here.
 static const TCHAR *compat_options[] = {
-	_T("active_input"), _T("active_not_captured_nosound"), _T("active_not_captured_pause"), _T("active_priority"),
+	_T("active_not_captured_nosound"), _T("active_not_captured_pause"), _T("active_priority"),
 	_T("inactive_input"), _T("inactive_nosound"), _T("inactive_pause"), _T("inactive_priority"),
 	_T("iconified_input"), _T("iconified_nosound"), _T("iconified_pause"), _T("iconified_priority"),
 	_T("middle_mouse"),
