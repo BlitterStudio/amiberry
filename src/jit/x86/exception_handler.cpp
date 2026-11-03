@@ -27,8 +27,6 @@
 #define SIG_READ 1
 #define SIG_WRITE 2
 
-static int in_handler = 0;
-static uae_u8 *veccode;
 
 #if defined(JIT_DEBUG)
 #define DEBUG_ACCESS
@@ -552,8 +550,6 @@ static int handle_access(uintptr_t fault_addr, CONTEXT_T context)
 	if (!canbang || !currprefs.cachesize)
 		return 0;
 
-	if (in_handler)
-		write_log(_T("JIT: Argh --- Am already in a handler. Shouldn't happen!\n"));
 
 	if (fault_pc < compiled_code || fault_pc > current_compile_p) {
 		return 0;
@@ -867,29 +863,6 @@ static void install_exception_handler(void)
 	test_exception_handler();
 #endif
 
-#ifdef JIT_EXCEPTION_HANDLER
-	if (veccode == NULL) {
-		/* veccode generates RIP-relative references to globals, so it
-		 * must be within ±2GB of the .data segment. Use the anchor-based
-		 * JIT allocator to place it near .data/JIT cache, then set RWX. */
-		veccode = (uae_u8 *) jit_vm_acquire(256, 0);
-		if (veccode) {
-			if (!uae_vm_protect(veccode, 256, UAE_VM_READ_WRITE_EXECUTE)) {
-				disable_jit_on_runtime_alloc_failure(
-					"Could not make the x86 exception trampoline executable.");
-				uae_vm_free(veccode, 256);
-				veccode = NULL;
-				return;
-			}
-		} else {
-			write_log("JIT: FATAL: veccode allocation failed -- "
-				"cannot install exception handler, disabling JIT\n");
-			changed_prefs.cachesize = 0;
-			currprefs.cachesize = 0;
-			return;
-		}
-	}
-#endif
 #ifdef USE_STRUCTURED_EXCEPTION_HANDLING
 	/* Structured exception handler is installed in main.cpp */
 #elif defined(_WIN32)
