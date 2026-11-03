@@ -1980,7 +1980,8 @@ static bool graffiti(struct vidbuffer *src, struct vidbuffer *dst)
 		uae_u8 *dstp = dstbuf;
 		bool erase = false;
 
-		uae_u16 dat = get_sm_data(ystart + (y >> 1));
+		int srcrow = (int)((srcbuf - src->bufmem) / src->rowbytes);
+		uae_u16 dat = get_sm_data(((srcrow * avidinfo->ychange) + src->yoffset) >> VRES_MAX);
 		bool active = (dat & 0x0100) != 0;
 
 		while (srcp < srclineend) {
