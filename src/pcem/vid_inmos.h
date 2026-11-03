@@ -1,3 +1,0 @@
-extern device_t inmos_rainbow3_z3_device;
-extern device_t inmos_visiona_z2_device;
-extern device_t inmos_egs_110_24_device;
