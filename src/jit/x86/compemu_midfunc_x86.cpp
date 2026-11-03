@@ -258,29 +258,6 @@ MIDFUNC(1,fflags_into_flags,(W2 tmp))
 	fflags_into_flags_internal(tmp);
 }
 
-MIDFUNC(4,fcmp_fixup_rrr,(W2 tmp, FRW d, FR a, FR b))
-{
-	clobber_flags();
-	if (FFLAG_NREG_CLOBBER_CONDITION) {
-		int tmp2=tmp;
-		d=f_rmw(d);
-		a=f_readreg(a);
-		b=f_readreg(b);
-		tmp=writereg_specific(tmp,4,FFLAG_NREG);
-		raw_fcmp_fixup_rrr(d,a,b);
-		unlock2(tmp);
-		forget_about(tmp2);
-	}
-	else {
-		d=f_rmw(d);
-		a=f_readreg(a);
-		b=f_readreg(b);
-		raw_fcmp_fixup_rrr(d,a,b);
-	}
-	f_unlock(b);
-	f_unlock(a);
-	f_unlock(d);
-}
 
 MIDFUNC(2,bt_l_ri,(RR4 r, IMM i)) /* This is defined as only affecting C */
 {
@@ -2974,6 +2951,18 @@ MIDFUNC(2,fsub_rr,(FRW d, FR s))
 	s=f_readreg(s);
 	d=f_rmw(d);
 	raw_fsub_rr(d,s);
+	f_unlock(s);
+	f_unlock(d);
+}
+
+MIDFUNC(3,fcmp_result_rrr,(FW r, FR d, FR s))
+{
+	clobber_flags();
+	d=f_readreg(d);
+	s=f_readreg(s);
+	r=f_writereg(r);
+	raw_fcmp_result_rrr(r,d,s);
+	f_unlock(r);
 	f_unlock(s);
 	f_unlock(d);
 }

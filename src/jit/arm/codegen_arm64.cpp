@@ -878,6 +878,22 @@ LOWFUNC(NONE,NONE,2,raw_fsub_rr,(FRW d, FR s))
 	FSUB_ddd(d, d, s);
 }
 LENDFUNC(NONE,NONE,2,raw_fsub_rr,(FRW d, FR s))
+// FCMP: r = d - s, but equal infinities compare equal although their
+// difference is NaN. They give a zero with the sign of d instead.
+LOWFUNC(NONE,NONE,3,raw_fcmp_result_rrr,(FW r, FR d, FR s))
+{
+	FSUB_ddd(r, d, s);
+	FCMP_dd(r, r);
+	BVC_i(7);		// result is a number
+	FCMP_dd(d, s);
+	BNE_i(5);		// not equal or unordered
+	FMOV_xd(REG_WORK1, d);
+	LSR_xxi(REG_WORK1, REG_WORK1, 63);
+	LSL_xxi(REG_WORK1, REG_WORK1, 63);
+	FMOV_dx(r, REG_WORK1);
+}
+LENDFUNC(NONE,NONE,3,raw_fcmp_result_rrr,(FW r, FR d, FR s))
+
 
 LOWFUNC(NONE,NONE,2,raw_frndint_rr,(FW d, FR s))
 {
@@ -1007,10 +1023,15 @@ LOWFUNC(NONE,WRITE,2,raw_fp_from_exten_mr,(RR4 adr, FR s))
 	uae_u32* branchadd_end = (uae_u32*)get_target();
 	B_i(0);            // end_of_op
 
-	// isnan
+	// isnan or infinity: keep the sign, mantissa all ones for NaN, zero for infinity
 	write_jmp_target(branchadd_isnan, (uintptr)get_target());
-	MOV_xish(REG_WORK1, 0x7fff, 16);
-	MOVN_xi(REG_WORK2, 0);
+	LSL_xxi(REG_WORK2, REG_WORK1, 12);          // fraction
+	CMP_xi(REG_WORK2, 0);
+	CSETM_wc(REG_WORK2, NATIVE_CC_NE);
+	UBFX_xxii(REG_WORK1, REG_WORK1, 63, 1);     // extract sign
+	LSL_xxi(REG_WORK1, REG_WORK1, 31);
+	MOV_xish(REG_WORK3, 0x7fff, 16);
+	ORR_xxx(REG_WORK1, REG_WORK1, REG_WORK3);
 	B_i(4);
 
 	// iszero
@@ -1048,6 +1069,7 @@ LOWFUNC(NONE,READ,2,raw_fp_to_exten_rm,(FW d, RR4 adr))
 	CBNZ_xi(REG_WORK1, 0);          // not zero
 
 	// zero
+	uae_u32* branch_zero = (uae_u32*)get_target();
 	MOVI_di(d, 0);
 	uae_u32* branchadd_end = (uae_u32*)get_target();
 	TBZ_xii(REG_WORK4, 15, 0); // end_of_op
@@ -1060,17 +1082,43 @@ LOWFUNC(NONE,READ,2,raw_fp_to_exten_rm,(FW d, RR4 adr))
 	write_jmp_target(branchadd_notzero, (uintptr)get_target());
 	write_jmp_target(branchadd_notzero2, (uintptr)get_target());
 	MOV_xi(REG_WORK3, 15360);                 // diff of bias between double and long double
-	SUB_xxx(REG_WORK2, REG_WORK2, REG_WORK3);	// exponent done, ToDo: check for carry -> result gets Inf in double
+	SUB_xxx(REG_WORK2, REG_WORK2, REG_WORK3);	// exponent done
+	CMP_xi(REG_WORK2, 0);
+	uae_u32* branchadd_tiny = (uae_u32*)get_target();
+	BLE_i(0);				// too small for a double: zero
+	CMP_xi(REG_WORK2, 2047);
+	uae_u32* branchadd_big = (uae_u32*)get_target();
+	BGE_i(0);				// too big for a double, infinity or NaN
 	UBFX_xxii(REG_WORK4, REG_WORK4, 15, 1);		// extract sign
 	BFI_xxii(REG_WORK2, REG_WORK4, 11, 1);		// insert sign
 	LSR_xxi(REG_WORK1, REG_WORK1, 11);				// shift mantissa to correct position
 	LSL_xxi(REG_WORK2, REG_WORK2, 52);
 	ORR_xxx(REG_WORK1, REG_WORK1, REG_WORK2);
 	FMOV_dx(d, REG_WORK1);
+	uae_u32* branchadd_end3 = (uae_u32*)get_target();
+	B_i(0);					// end_of_op
+
+	// big: infinity, or NaN if the exponent is 0x7fff and the fraction is not zero
+	write_jmp_target(branchadd_big, (uintptr)get_target());
+	MOV_xi(REG_WORK3, 0x7fff - 15360);
+	CMP_xx(REG_WORK2, REG_WORK3);
+	MOV_xish(REG_WORK3, 0x7ff0, 48);			// infinity
+	uae_u32* branchadd_inf = (uae_u32*)get_target();
+	BNE_i(0);
+	uae_u32* branchadd_inf2 = (uae_u32*)get_target();
+	CBZ_xi(REG_WORK1, 0);
+	MOV_xish(REG_WORK3, 0x7ff8, 48);			// NaN
+	write_jmp_target(branchadd_inf, (uintptr)get_target());
+	write_jmp_target(branchadd_inf2, (uintptr)get_target());
+	UBFX_xxii(REG_WORK4, REG_WORK4, 15, 1);		// extract sign
+	ORR_xxxLSLi(REG_WORK3, REG_WORK3, REG_WORK4, 63);
+	FMOV_dx(d, REG_WORK3);
 
 	// end_of_op
 	write_jmp_target(branchadd_end, (uintptr)get_target());
 	write_jmp_target(branchadd_end2, (uintptr)get_target());
+	write_jmp_target(branchadd_end3, (uintptr)get_target());
+	write_jmp_target(branchadd_tiny, (uintptr)branch_zero);
 }
 LENDFUNC(NONE,READ,2,raw_fp_to_exten_rm,(FW d, RR4 adr))
 
@@ -1093,27 +1141,6 @@ STATIC_INLINE void raw_fflags_into_flags(int r)
 	FCMP_d0(r);
 }
 
-/* FCMP fixup: d holds a-b. When both operands are infinities with the
-   same sign the subtraction produced NaN on the host, but a 6888x FCMP
-   compares them as ordered and equal: replace the NaN with a zero that
-   carries the destination's sign. A NaN operand keeps the NaN result so
-   it still compares unordered. */
-STATIC_INLINE void raw_fcmp_fixup_rrr(int d, int a, int b)
-{
-	FCMP_dd(a, b); // V set if either operand is NaN
-	uae_u32* branchadd_unordered = (uae_u32*)get_target();
-	BVS_i(0); // keep the NaN so it compares unordered
-
-	FCMP_d0(d); // V clear if d is not NaN
-	uae_u32* branchadd_ordered = (uae_u32*)get_target();
-	BVC_i(0); // ordered result, nothing to fix up
-
-	FMOV_di(SCRATCH_F64_1, 0x70); // 1.0
-	FDIV_ddd(d, SCRATCH_F64_1, a); // 1/dest is a zero with the destination's sign
-
-	write_jmp_target(branchadd_unordered, (uintptr)get_target());
-	write_jmp_target(branchadd_ordered, (uintptr)get_target());
-}
 
 LOWFUNC(NONE,NONE,2,raw_fp_fscc_ri,(RW4 d, int cc))
 {

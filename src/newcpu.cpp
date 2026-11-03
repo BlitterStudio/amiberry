@@ -2197,7 +2197,7 @@ static void update_68k_cycles ()
 			cpucycleunit /= 2;
 		}
 	} else if (currprefs.cpu_frequency) {
-		cpucycleunit = CYCLE_UNIT * baseclock / currprefs.cpu_frequency;
+		cpucycleunit = (uae_u64)CYCLE_UNIT * baseclock / ((uae_u64)8 * currprefs.cpu_frequency);
 	} else if (currprefs.cpu_memory_cycle_exact && currprefs.cpu_clock_multiplier == 0) {
 		if (currprefs.cpu_model >= 68040) {
 			cpucycleunit = CYCLE_UNIT / 16;
@@ -5174,7 +5174,7 @@ static void m68k_run_1_ce (void)
 static void m68k_run_1_ce ()
 {
 	struct regstruct *r = &regs;
-	bool first = true;
+	TRY_VOLATILE bool first = true;
 	bool exit = false;
 
 	while (!exit) {
@@ -6218,7 +6218,7 @@ void cpu_halt(int id)
 /* MMU 68060  */
 static void m68k_run_mmu060 ()
 {
-	struct flag_struct f;
+	TRY_VOLATILE struct flag_struct f;
 	int halt = 0;
 
 	check_halt();
@@ -6272,7 +6272,7 @@ static void m68k_run_mmu060 ()
 /* Aranym MMU 68040  */
 static void m68k_run_mmu040 ()
 {
-	struct flag_struct f{};
+	TRY_VOLATILE struct flag_struct f{};
 	int halt = 0;
 
 	check_halt();
@@ -6327,7 +6327,7 @@ static void m68k_run_mmu040 ()
 // Previous MMU 68030
 static void m68k_run_mmu030 (void)
 {
-	struct flag_struct f;
+	TRY_VOLATILE struct flag_struct f;
 	int halt = 0;
 
 	mmu030_opcode_stageb = -1;
@@ -6478,7 +6478,7 @@ static void m68k_run_3ce ()
 {
 	struct regstruct *r = &regs;
 	bool exit = false;
-	int extracycles = 0;
+	TRY_VOLATILE int extracycles = 0;
 
 	while (!exit) {
 		check_debugger();
@@ -6575,7 +6575,7 @@ static void m68k_run_2ce ()
 {
 	struct regstruct *r = &regs;
 	bool exit = false;
-	bool first = true;
+	TRY_VOLATILE bool first = true;
 
 	while (!exit) {
 		check_debugger();
@@ -6719,7 +6719,7 @@ static void m68k_run_2p ()
 {
 	struct regstruct *r = &regs;
 	bool exit = false;
-	bool first = true;
+	TRY_VOLATILE bool first = true;
 
 	while (!exit) {
 		check_debugger();

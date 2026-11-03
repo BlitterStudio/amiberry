@@ -732,14 +732,17 @@ void fpp_set_fpsr (uae_u32 val)
 #ifdef JIT
 	// check comment in fpp_cond
 	if (currprefs.cachesize && currprefs.compfpu) {
-		if (val & 0x01000000)
-			fpnan(&regs.fp_result);
-		else if (val & 0x04000000)
-			fpset(&regs.fp_result, 0);
-		else if (val & 0x08000000)
-			fpset(&regs.fp_result, -1);
-		else
-			fpset(&regs.fp_result, 1);
+		// fp_result must give back every condition code combination
+		uae_u32 sign = (val & FPSR_CC_N) ? 0x80000000 : 0;
+		if (val & FPSR_CC_NAN) {
+			fpp_to_exten(&regs.fp_result, sign | xhex_nan[0], xhex_nan[1], xhex_nan[2]);
+		} else if (val & FPSR_CC_Z) {
+			fpp_to_exten(&regs.fp_result, sign, 0, 0);
+		} else if (val & FPSR_CC_I) {
+			fpp_to_exten(&regs.fp_result, sign | 0x7fff0000, 0, 0);
+		} else {
+			fpset(&regs.fp_result, sign ? -1 : 1);
+		}
 	}
 #endif
 }
@@ -1437,7 +1440,7 @@ static void fpu_null (void)
 	regs.fpu_state = 0;
 	regs.fpu_exp_state = 0;
 	regs.fpcr = 0;
-	regs.fpsr = 0;
+	fpp_set_fpsr(0);
 	regs.fpiar = 0;
 	for (int i = 0; i < 8; i++)
 		fpnan (&regs.fp[i]);

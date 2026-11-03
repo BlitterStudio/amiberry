@@ -843,6 +843,23 @@ LOWFUNC(NONE,NONE,2,raw_fsub_rr,(FRW d, FR s))
 	VSUB64_ddd(d, d, s);
 }
 LENDFUNC(NONE,NONE,2,raw_fsub_rr,(FRW d, FR s))
+// FCMP: r = d - s, but equal infinities compare equal although their
+// difference is NaN. They give a zero with the sign of d instead.
+LOWFUNC(NONE,NONE,3,raw_fcmp_result_rrr,(FW r, FR d, FR s))
+{
+	VSUB64_ddd(r, d, s);
+	VCMP64_dd(r, r);
+	VMRS_CPSR();
+	BVC_i(5);		// result is a number
+	VCMP64_dd(d, s);
+	VMRS_CPSR();
+	CC_VMOV64_rrd(NATIVE_CC_EQ, REG_WORK1, REG_WORK2, d);
+	CC_AND_rri(NATIVE_CC_EQ, REG_WORK2, REG_WORK2, 0x80000000);
+	CC_MOV_ri(NATIVE_CC_EQ, REG_WORK1, 0);
+	CC_VMOV64_drr(NATIVE_CC_EQ, r, REG_WORK1, REG_WORK2);
+}
+LENDFUNC(NONE,NONE,3,raw_fcmp_result_rrr,(FW r, FR d, FR s))
+
 
 LOWFUNC(NONE,NONE,2,raw_frndint_rr,(FW d, FR s))
 {
@@ -993,17 +1010,25 @@ LOWFUNC(NONE,WRITE,2,raw_fp_from_exten_mr,(RR4 adr, FR s))
   uae_u32* branchadd_end = (uae_u32*)get_target();
   B_i(0);            // end_of_op
 
-// isnan
+// isnan or infinity: keep the sign, mantissa all ones for NaN, zero for infinity
   write_jmp_target(branchadd_isnan, (uintptr)get_target());
-  MOVW_ri16(REG_WORK1, 0x7fff);
-  LSL_rri(REG_WORK1, REG_WORK1, 16);
-  MVN_ri(REG_WORK2, 0);
+  LSL_rri(REG_WORK2, REG_WORK1, 12);          // high part of fraction
+  VMOVi_to_ARM_rd(REG_WORK3, s, 0);           // low part of fraction
+  ORRS_rrr(REG_WORK2, REG_WORK2, REG_WORK3);
+  CC_MVN_ri(NATIVE_CC_NE, REG_WORK2, 0);
+  AND_rri(REG_WORK1, REG_WORK1, 0x80000000);  // extract sign
+  MOVW_ri16(REG_WORK3, 0x7fff);
+  ORR_rrrLSLi(REG_WORK1, REG_WORK1, REG_WORK3, 16);
+  uae_u32* branchadd_store = (uae_u32*)get_target();
+  B_i(0);            // store
 
 // iszero
   write_jmp_target(branchadd_iszero, (uintptr)get_target());
   CC_AND_rri(NATIVE_CC_EQ, REG_WORK1, REG_WORK1, 0x80000000); // extract sign
   CC_MOV_ri(NATIVE_CC_EQ, REG_WORK2, 0);
 
+// store
+  write_jmp_target(branchadd_store, (uintptr)get_target());
 	ADD_rrr(REG_WORK3, adr, R_MEMSTART);
 
   REV_rr(REG_WORK1, REG_WORK1);
@@ -1047,6 +1072,7 @@ LOWFUNC(NONE,READ,2,raw_fp_to_exten_rm,(FW d, RR4 adr))
 	BNE_i(0);				// not zero
 
 // zero
+	uae_u32* branch_zero = (uae_u32*)get_target();
 	VMOV_I64_dimmI(d, 0x00);
 	TST_ri(REG_WORK1, 0x8000);								// check sign
 	uae_u32* branchadd_end = (uae_u32*)get_target();
@@ -1061,7 +1087,14 @@ LOWFUNC(NONE,READ,2,raw_fp_to_exten_rm,(FW d, RR4 adr))
   write_jmp_target(branchadd_notzero, (uintptr)get_target());
   write_jmp_target(branchadd_notzero2, (uintptr)get_target());
 	MOVW_ri16(REG_WORK3, 15360);              // diff of bias between double and long double
-	SUB_rrr(REG_WORK2, REG_WORK2, REG_WORK3);	// exponent done, ToDo: check for carry -> result gets Inf in double
+	SUB_rrr(REG_WORK2, REG_WORK2, REG_WORK3);	// exponent done
+	CMP_ri(REG_WORK2, 0);
+	uae_u32* branchadd_tiny = (uae_u32*)get_target();
+	BLE_i(0);				// too small for a double: zero
+	MOVW_ri16(REG_WORK3, 2047);
+	CMP_rr(REG_WORK2, REG_WORK3);
+	uae_u32* branchadd_big = (uae_u32*)get_target();
+	BGE_i(0);				// too big for a double, infinity or NaN
 	UBFX_rrii(REG_WORK1, REG_WORK1, 15, 1);		// extract sign
 	BFI_rrii(REG_WORK2, REG_WORK1, 11, 11);		// insert sign
 	VSHR64_ddi(d, d, 11);											// shift mantissa to correct position
@@ -1069,9 +1102,31 @@ LOWFUNC(NONE,READ,2,raw_fp_to_exten_rm,(FW d, RR4 adr))
 	VMOV_I64_dimmI(SCRATCH_F64_1, 0x00);
 	VMOVi_from_ARM_dr(SCRATCH_F64_1, REG_WORK2, 1);
 	VORR_ddd(d, d, SCRATCH_F64_1);
+	uae_u32* branchadd_end3 = (uae_u32*)get_target();
+	B_i(0);					// end_of_op
+
+// big: infinity, or NaN if the exponent is 0x7fff and the fraction is not zero
+	write_jmp_target(branchadd_big, (uintptr)get_target());
+	MOVW_ri16(REG_WORK3, 0x7fff - 15360);
+	CMP_rr(REG_WORK2, REG_WORK3);
+	MOVW_ri16(REG_WORK2, 0x7ff0);							// infinity
+	uae_u32* branchadd_inf = (uae_u32*)get_target();
+	BNE_i(0);
+	VMOV64_rrd(REG_WORK2, REG_WORK3, d);			// fraction
+	ORRS_rrr(REG_WORK2, REG_WORK2, REG_WORK3);
+	MOVW_ri16(REG_WORK2, 0x7ff0);							// infinity
+	CC_MOVW_ri16(NATIVE_CC_NE, REG_WORK2, 0x7ff8);	// NaN
+	write_jmp_target(branchadd_inf, (uintptr)get_target());
+	LSL_rri(REG_WORK2, REG_WORK2, 16);
+	AND_rri(REG_WORK1, REG_WORK1, 0x8000);		// extract sign
+	ORR_rrrLSLi(REG_WORK2, REG_WORK2, REG_WORK1, 16);
+	MOV_ri(REG_WORK3, 0);
+	VMOV64_drr(d, REG_WORK3, REG_WORK2);
 // end_of_op
   write_jmp_target(branchadd_end, (uintptr)get_target());
   write_jmp_target(branchadd_end2, (uintptr)get_target());
+  write_jmp_target(branchadd_end3, (uintptr)get_target());
+  write_jmp_target(branchadd_tiny, (uintptr)branch_zero);
 }
 LENDFUNC(NONE,READ,2,raw_fp_to_exten_rm,(FW d, RR4 adr))
 
@@ -1109,29 +1164,6 @@ STATIC_INLINE void raw_fflags_into_flags(int r)
 	VMRS_CPSR();
 }
 
-/* FCMP fixup: d holds a-b. When both operands are infinities with the
-   same sign the subtraction produced NaN on the host, but a 6888x FCMP
-   compares them as ordered and equal: replace the NaN with a zero that
-   carries the destination's sign. A NaN operand keeps the NaN result so
-   it still compares unordered. */
-STATIC_INLINE void raw_fcmp_fixup_rrr(int d, int a, int b)
-{
-	VCMP64_dd(a, b); // V set if either operand is NaN
-	VMRS_CPSR();
-	uae_u32* branchadd_unordered = (uae_u32*)get_target();
-	BVS_i(0); // keep the NaN so it compares unordered
-
-	VCMP64_d0(d); // V clear if d is not NaN
-	VMRS_CPSR();
-	uae_u32* branchadd_ordered = (uae_u32*)get_target();
-	BVC_i(0); // ordered result, nothing to fix up
-
-	VMOV_F64_dimmF(SCRATCH_F64_1, 0x70); // 1.0
-	VDIV64_ddd(d, SCRATCH_F64_1, a); // 1/dest is a zero with the destination's sign
-
-	write_jmp_target(branchadd_unordered, (uintptr)get_target());
-	write_jmp_target(branchadd_ordered, (uintptr)get_target());
-}
 
 LOWFUNC(NONE,NONE,2,raw_fp_fscc_ri,(RW4 d, int cc))
 {

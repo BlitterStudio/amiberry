@@ -1803,17 +1803,17 @@ void REGPARAM2 mmu060_put_rmw_bitfield (uae_u32 dst, uae_u32 bdata[2], uae_u32 v
 
 
 #ifndef __cplusplus
-jmp_buf __exbuf;
+uae_jmp_buf __exbuf;
 int     __exvalue;
 #define MAX_TRY_STACK 256
 static int s_try_stack_size=0;
-static jmp_buf s_try_stack[MAX_TRY_STACK];
-jmp_buf* __poptry(void) {
+static uae_jmp_buf s_try_stack[MAX_TRY_STACK];
+uae_jmp_buf* __poptry(void) {
 	if (s_try_stack_size>0) {
 		s_try_stack_size--;
 		if (s_try_stack_size == 0)
 			return NULL;
-		memcpy(&__exbuf,&s_try_stack[s_try_stack_size-1],sizeof(jmp_buf));
+		memcpy(&__exbuf,&s_try_stack[s_try_stack_size-1],sizeof(uae_jmp_buf));
 		// fprintf(stderr,"pop jmpbuf=%08x\n",s_try_stack[s_try_stack_size][0]);
 		return &s_try_stack[s_try_stack_size-1];
 	}
@@ -1823,10 +1823,10 @@ jmp_buf* __poptry(void) {
 		abort();
 	}
 }
-void __pushtry(jmp_buf* j) {
+void __pushtry(uae_jmp_buf* j) {
 	if (s_try_stack_size<MAX_TRY_STACK) {
 		// fprintf(stderr,"push jmpbuf=%08x\n",(*j)[0]);
-		memcpy(&s_try_stack[s_try_stack_size],j,sizeof(jmp_buf));
+		memcpy(&s_try_stack[s_try_stack_size],j,sizeof(uae_jmp_buf));
 		s_try_stack_size++;
 	} else {
 		fprintf(stderr,"try stack overflow...\n");

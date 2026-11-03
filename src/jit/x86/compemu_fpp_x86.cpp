@@ -115,6 +115,20 @@ static void fpuop_illg(uae_u32 opcode, uae_u32 /* extra */)
 #endif
 
 uae_s32 temp_fp[4];  /* To convert between FP/integer */
+/* The x87 needs the explicit integer bit in normal numbers, infinities and
+   NaNs, but a zero or denormal with it set is a different, nonzero value.
+   The 68k accepts either, so set it in temp_fp if the exponent is not zero. */
+STATIC_INLINE void temp_fp_integer_bit(void)
+{
+	mov_l_rm(S2, JITPTR (temp_fp) + 8);
+	and_l_ri(S2, 0x7fff);
+	add_l_ri(S2, 0x7fff);	/* bit 15 is set if the exponent is not zero */
+	and_l_ri(S2, 0x8000);
+	shll_l_ri(S2, 16);
+	mov_l_rm(S3, JITPTR (temp_fp) + 4);
+	or_l(S3, S2);
+	mov_l_mr(JITPTR (temp_fp) + 4, S3);
+}
 
 /* return register number, or -1 for failure */
 STATIC_INLINE int get_fp_value(uae_u32 opcode, uae_u16 extra)
@@ -288,12 +302,11 @@ STATIC_INLINE int get_fp_value(uae_u32 opcode, uae_u16 extra)
 		mov_w_mr((JITPTR temp_fp) + 8, S2);
 		add_l_ri(ad, 4);
 		readlong(ad, S2, S3);
-		// always set the explicit integer bit.
-		or_l_ri(S2, 0x80000000);
 		mov_l_mr(JITPTR (temp_fp) + 4, S2);
 		add_l_ri(ad, 4);
 		readlong(ad, S2, S3);
 		mov_l_mr(JITPTR (temp_fp), S2);
+		temp_fp_integer_bit();
 		delay2;
 		fmov_ext_rm(FS1, JITPTR (temp_fp));
 		break;
@@ -1302,6 +1315,7 @@ void comp_fpp_opp(uae_u32 opcode, uae_u16 extra)
 							sub_l_ri(ad, 4);
 							readword(ad, S2, S3);
 							mov_w_mr((JITPTR temp_fp) + 8, S2);
+							temp_fp_integer_bit();
 							delay2;
 							fmov_ext_rm(reg, JITPTR (temp_fp));
 						}
@@ -1322,6 +1336,7 @@ void comp_fpp_opp(uae_u32 opcode, uae_u16 extra)
 							readlong(ad, S2, S3);
 							mov_l_mr(JITPTR(temp_fp), S2);
 							add_l_ri(ad, 4);
+							temp_fp_integer_bit();
 							delay2;
 							fmov_ext_rm(reg, JITPTR (temp_fp));
 						}
@@ -2108,11 +2123,7 @@ void comp_fpp_opp(uae_u32 opcode, uae_u16 extra)
 				FAIL(1);				/* Illegal instruction */
 				return;
 			}
-			fmov_rr(FP_RESULT, reg);
-			fsub_rr(FP_RESULT, src);	/* Right way? */
-			/* Equal-signed infinities subtract to NaN on the host; a
-			   6888x compares them as equal. Fix up the result. */
-			fcmp_fixup_rrr(S2, FP_RESULT, reg, src);
+			fcmp_result_rrr(FP_RESULT, reg, src);
 			break;
 		case 0x3a:						/* FTST */
 			if (jit_disable.ftst)
