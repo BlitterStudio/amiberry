@@ -2999,6 +2999,9 @@ static struct opals *opal;
 
 static void opal_pixel(struct opals *opal, uae_u8 *d, uae_u8 *d2, uae_u8 *s, uae_u8 *s2, uae_u8 *s_genlock, struct vidbuffer *src, struct vidbuffer *dst, uae_u8 r, uae_u8 g, uae_u8 b, uae_u8 pr, bool doublelines, bool hires, bool nextpix)
 {
+	if (!d) {
+		return;
+	}
 	bool oa;
 	switch (opal->priority_stencil_mode | pr)
 	{
@@ -3209,12 +3212,18 @@ static bool opalvision(struct vidbuffer *src, struct vidbuffer *dst, bool double
 			uae_u8 newval = FIRGB(src, sa);
 			uae_u8 val = prev | newval;
 
-			uae_u8 *d = dstline + ((ax << 1) >> hdbl_shift) * dst->pixbytes;
+			int xpos = (ax << 1) >> hdbl_shift;
+			uae_u8 *d = dstline + xpos * dst->pixbytes;
 			uae_u8 *d2 = d + dst->rowbytes;
 
-			uae_u8 *s = line + ((ax << 1) >> hdbl_shift) * src->pixbytes;
+			uae_u8 *s = line + xpos * src->pixbytes;
 			uae_u8 *s2 = s + src->rowbytes;
-			uae_u8 *s_genlock = line_genlock ? line_genlock + ((ax << 1) >> hdbl_shift) : NULL;
+			uae_u8 *s_genlock = line_genlock ? line_genlock + xpos : NULL;
+			if (xpos >= src->inwidth || xpos >= dst->inwidth) {
+				// past the last visible pixel: decode only, do not draw
+				d = d2 = s = s2 = NULL;
+				s_genlock = NULL;
+			}
 
 			if (!oddeven) {
 
