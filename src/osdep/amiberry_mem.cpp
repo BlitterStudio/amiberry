@@ -498,7 +498,7 @@ bool preinit_shm ()
 				write_log (_T("MMAN: Can't allocate 257M of virtual address space!?\n"));
 				natmem_size = 17 * 1024 * 1024;
 				natmem_reserved = static_cast<uae_u8*>(VirtualAlloc(nullptr, natmem_size, vaflags, PAGE_READWRITE));
-				if (!natmem_size) {
+				if (!natmem_reserved) {
 					write_log (_T("MMAN: Can't allocate 17M of virtual address space!? Something is seriously wrong\n"));
 					notify_user(NUMSG_NOMEMORY);
 					return false;
@@ -671,7 +671,7 @@ static int doinit_shm ()
 			notify_user(NUMSG_NOMEMORY);
 			return -1;
 		}
-#ifdef _WIN64
+#ifdef CPU_64_BIT
 		// 64-bit can't do natmem_offset..
 		notify_user(NUMSG_NOMEMORY);
 		return -1;
@@ -1239,7 +1239,7 @@ void *uae_shmat (addrbank *ab, int shmid, void *shmaddr, int shmflg, struct uae_
 			virtualfreewithlock (shmaddr, size, MEM_DECOMMIT);
 		result = virtualallocwithlock (shmaddr, size, MEM_COMMIT, PAGE_READWRITE);
 		if (result == nullptr)
-			virtualfreewithlock (shmaddr, 0, MEM_DECOMMIT);
+			virtualfreewithlock (shmaddr, size, MEM_DECOMMIT);
 		result = virtualallocwithlock (shmaddr, size, MEM_COMMIT, PAGE_READWRITE);
 		if (result == nullptr) {
 			result = reinterpret_cast<void*>(-1);
@@ -1519,7 +1519,8 @@ int uae_shmctl (int shmid, int cmd, struct uae_shmid_ds *buf)
 			break;
 		case UAE_IPC_RMID:
 			if (!release_nondirect_shmid(shmid)) {
-				VirtualFree (shmids[shmid].attached, shmids[shmid].size, MEM_DECOMMIT);
+				if (shmids[shmid].attached && !shmids[shmid].fake)
+					VirtualFree (shmids[shmid].attached, shmids[shmid].size, MEM_DECOMMIT);
 				clear_shmid(shmid);
 			}
 			result = 0;
