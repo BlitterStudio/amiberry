@@ -1187,6 +1187,7 @@ int lockscr(struct vidbuffer* vb, bool fullupdate, bool skip)
 		vb->width_allocated = surface->w;
 		vb->height_allocated = surface->h;
 		if (vb->bufmem) {
+			vb->bufmemend = vb->bufmem + static_cast<size_t>(vb->rowbytes) * vb->height_allocated;
 			ret = 1;
 		}
 	} else {
@@ -1231,6 +1232,7 @@ void unlockscr(struct vidbuffer* vb, int y_start, int y_end)
 	vb->locked = false;
 	if (vb->vram_buffer) {
 		vb->bufmem = nullptr;
+		vb->bufmemend = nullptr;
 		// Not using SDL_UnlockTexture due to performance reasons, see lockscr for details
 		//SDL_UnlockTexture(amiga_texture);
 
