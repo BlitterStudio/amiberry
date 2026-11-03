@@ -8515,8 +8515,8 @@ void draw_denise_bitplane_line_fast(int gfx_ypos, enum nln_how how, struct lines
 			hbstop_offset += ww1;
 			int w = hbstop_offset - draw_startoffset - (1 << hresolution);
 			if (w > 0) {
-				if (buf1 + w > (uae_u32*)xlinebuffer_end) {
-					w = addrdiff((uae_u32*)xlinebuffer_end, buf1);
+				if (buf1p + w > (uae_u32*)xlinebuffer_end) {
+					w = addrdiff((uae_u32*)xlinebuffer_end, buf1p);
 				}
 				if (w > 0) {
 					memset(buf1p, DEBUG_TVOVERSCAN_H_GRAYSCALE_LEFT, w * sizeof(uae_u32));
