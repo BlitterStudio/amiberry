@@ -34,7 +34,7 @@ static void lts_ecs_fm0_n0_p6_ilores_dlores_ntsc_genlock(void)
 			}
 			shiftbpl6();
 			internal_pixel_cnt += 4;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_1x) {
 				dtbuf[h][0] = dpix_val0;
 				dtgbuf[h][0] = gpix0;
 				uae_u32 t0 = 0;
@@ -109,7 +109,7 @@ static void lts_ecs_fm0_n1_p6_ilores_dlores_ntsc_genlock(void)
 			}
 			shiftbpl6();
 			internal_pixel_cnt += 4;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_1x) {
 				dtbuf[h][0] = dpix_val0;
 				dtgbuf[h][0] = gpix0;
 				uae_u32 t0 = 0;
@@ -188,7 +188,7 @@ static void lts_ecs_fm0_dpf0_p6_ilores_dlores_ntsc_genlock(void)
 			}
 			shiftbpl6();
 			internal_pixel_cnt += 4;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_1x) {
 				dtbuf[h][0] = dpix_val0;
 				dtgbuf[h][0] = gpix0;
 				uae_u32 t0 = 0;
@@ -264,7 +264,7 @@ static void lts_ecs_fm0_dpf1_p6_ilores_dlores_ntsc_genlock(void)
 			}
 			shiftbpl6();
 			internal_pixel_cnt += 4;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_1x) {
 				dtbuf[h][0] = dpix_val0;
 				dtgbuf[h][0] = gpix0;
 				uae_u32 t0 = 0;
@@ -347,7 +347,7 @@ static void lts_ecs_fm0_ehb0_p6_ilores_dlores_ntsc_genlock(void)
 			}
 			shiftbpl6();
 			internal_pixel_cnt += 4;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_1x) {
 				dtbuf[h][0] = dpix_val0;
 				dtgbuf[h][0] = gpix0;
 				uae_u32 t0 = 0;
@@ -427,7 +427,7 @@ static void lts_ecs_fm0_ehb1_p6_ilores_dlores_ntsc_genlock(void)
 			}
 			shiftbpl6();
 			internal_pixel_cnt += 4;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_1x) {
 				dtbuf[h][0] = dpix_val0;
 				dtgbuf[h][0] = gpix0;
 				uae_u32 t0 = 0;
@@ -505,7 +505,7 @@ static void lts_ecs_fm0_ham0_p6_ilores_dlores_ntsc_genlock(void)
 			}
 			shiftbpl6();
 			internal_pixel_cnt += 4;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_1x) {
 				dtbuf[h][0] = dpix_val0;
 				dtgbuf[h][0] = gpix0;
 				uae_u32 t0 = 0;
@@ -580,7 +580,7 @@ static void lts_ecs_fm0_ham1_p6_ilores_dlores_ntsc_genlock(void)
 			}
 			shiftbpl6();
 			internal_pixel_cnt += 4;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_1x) {
 				dtbuf[h][0] = dpix_val0;
 				dtgbuf[h][0] = gpix0;
 				uae_u32 t0 = 0;
@@ -671,7 +671,7 @@ static void lts_ecs_fm0_n0_p6_ilores_dlores_spr_ntsc_genlock(void)
 				}
 			}
 			internal_pixel_cnt += 4;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_1x) {
 				if (sv0) {
 					uae_u32 spix0 = denise_render_sprites2(pix0, sv0);
 					if (spix0) {
@@ -767,7 +767,7 @@ static void lts_ecs_fm0_n1_p6_ilores_dlores_spr_ntsc_genlock(void)
 				}
 			}
 			internal_pixel_cnt += 4;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_1x) {
 				if (sv0) {
 					uae_u32 spix0 = denise_render_sprites2(pix0, sv0);
 					if (spix0) {
@@ -867,7 +867,7 @@ static void lts_ecs_fm0_dpf0_p6_ilores_dlores_spr_ntsc_genlock(void)
 				}
 			}
 			internal_pixel_cnt += 4;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_1x) {
 				if (sv0) {
 					uae_u32 spix0 = denise_render_sprites2(pix0, sv0);
 					if (spix0) {
@@ -964,7 +964,7 @@ static void lts_ecs_fm0_dpf1_p6_ilores_dlores_spr_ntsc_genlock(void)
 				}
 			}
 			internal_pixel_cnt += 4;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_1x) {
 				if (sv0) {
 					uae_u32 spix0 = denise_render_sprites2(pix0, sv0);
 					if (spix0) {
@@ -1068,7 +1068,7 @@ static void lts_ecs_fm0_ehb0_p6_ilores_dlores_spr_ntsc_genlock(void)
 				}
 			}
 			internal_pixel_cnt += 4;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_1x) {
 				if (sv0) {
 					uae_u32 spix0 = denise_render_sprites2(pix0, sv0);
 					if (spix0) {
@@ -1169,7 +1169,7 @@ static void lts_ecs_fm0_ehb1_p6_ilores_dlores_spr_ntsc_genlock(void)
 				}
 			}
 			internal_pixel_cnt += 4;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_1x) {
 				if (sv0) {
 					uae_u32 spix0 = denise_render_sprites2(pix0, sv0);
 					if (spix0) {
@@ -1268,7 +1268,7 @@ static void lts_ecs_fm0_ham0_p6_ilores_dlores_spr_ntsc_genlock(void)
 				}
 			}
 			internal_pixel_cnt += 4;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_1x) {
 				if (sv0) {
 					uae_u32 spix0 = denise_render_sprites2(pix0, sv0);
 					if (spix0) {
@@ -1364,7 +1364,7 @@ static void lts_ecs_fm0_ham1_p6_ilores_dlores_spr_ntsc_genlock(void)
 				}
 			}
 			internal_pixel_cnt += 4;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_1x) {
 				if (sv0) {
 					uae_u32 spix0 = denise_render_sprites2(pix0, sv0);
 					if (spix0) {
@@ -1463,7 +1463,7 @@ static void lts_ecs_fm0_n0_p4_ihires_dlores_ntsc_genlock(void)
 			}
 			shiftbpl4();
 			internal_pixel_cnt += 2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_1x) {
 				dtbuf[h][0] = dpix_val0;
 				dtgbuf[h][0] = gpix0;
 				uae_u32 t0 = 0;
@@ -1547,7 +1547,7 @@ static void lts_ecs_fm0_n0_p4_ihires_dlores_ntsc_filtered_genlock(void)
 			}
 			shiftbpl4();
 			internal_pixel_cnt += 2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_1x) {
 				dpix_val0 = filter_pixel(dpix_val0, dpix_val1);
 				gpix0 = filter_pixel_genlock(gpix0, gpix1);
 				dtbuf[h][0] = dpix_val0;
@@ -1633,7 +1633,7 @@ static void lts_ecs_fm0_n1_p4_ihires_dlores_ntsc_genlock(void)
 			}
 			shiftbpl4();
 			internal_pixel_cnt += 2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_1x) {
 				dtbuf[h][0] = dpix_val0;
 				dtgbuf[h][0] = gpix0;
 				uae_u32 t0 = 0;
@@ -1720,7 +1720,7 @@ static void lts_ecs_fm0_n1_p4_ihires_dlores_ntsc_filtered_genlock(void)
 			}
 			shiftbpl4();
 			internal_pixel_cnt += 2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_1x) {
 				dpix_val0 = filter_pixel(dpix_val0, dpix_val1);
 				gpix0 = filter_pixel_genlock(gpix0, gpix1);
 				dtbuf[h][0] = dpix_val0;
@@ -1811,7 +1811,7 @@ static void lts_ecs_fm0_dpf0_p4_ihires_dlores_ntsc_genlock(void)
 			}
 			shiftbpl4();
 			internal_pixel_cnt += 2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_1x) {
 				dtbuf[h][0] = dpix_val0;
 				dtgbuf[h][0] = gpix0;
 				uae_u32 t0 = 0;
@@ -1897,7 +1897,7 @@ static void lts_ecs_fm0_dpf0_p4_ihires_dlores_ntsc_filtered_genlock(void)
 			}
 			shiftbpl4();
 			internal_pixel_cnt += 2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_1x) {
 				dpix_val0 = filter_pixel(dpix_val0, dpix_val1);
 				gpix0 = filter_pixel_genlock(gpix0, gpix1);
 				dtbuf[h][0] = dpix_val0;
@@ -1985,7 +1985,7 @@ static void lts_ecs_fm0_dpf1_p4_ihires_dlores_ntsc_genlock(void)
 			}
 			shiftbpl4();
 			internal_pixel_cnt += 2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_1x) {
 				dtbuf[h][0] = dpix_val0;
 				dtgbuf[h][0] = gpix0;
 				uae_u32 t0 = 0;
@@ -2074,7 +2074,7 @@ static void lts_ecs_fm0_dpf1_p4_ihires_dlores_ntsc_filtered_genlock(void)
 			}
 			shiftbpl4();
 			internal_pixel_cnt += 2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_1x) {
 				dpix_val0 = filter_pixel(dpix_val0, dpix_val1);
 				gpix0 = filter_pixel_genlock(gpix0, gpix1);
 				dtbuf[h][0] = dpix_val0;
@@ -2147,7 +2147,7 @@ static void lts_ecs_fm0_ehb0_p4_ihires_dlores_ntsc_genlock(void)
 				dpix_val1 = bordercolor;
 			}
 			internal_pixel_cnt += 2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_1x) {
 				dtbuf[h][0] = dpix_val0;
 				dtgbuf[h][0] = gpix0;
 				uae_u32 t0 = 0;
@@ -2212,7 +2212,7 @@ static void lts_ecs_fm0_ehb0_p4_ihires_dlores_ntsc_filtered_genlock(void)
 				dpix_val1 = bordercolor;
 			}
 			internal_pixel_cnt += 2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_1x) {
 				dpix_val0 = filter_pixel(dpix_val0, dpix_val1);
 				gpix0 = filter_pixel_genlock(gpix0, gpix1);
 				dtbuf[h][0] = dpix_val0;
@@ -2279,7 +2279,7 @@ static void lts_ecs_fm0_ehb1_p4_ihires_dlores_ntsc_genlock(void)
 				dpix_val1 = bordercolor;
 			}
 			internal_pixel_cnt += 2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_1x) {
 				dtbuf[h][0] = dpix_val0;
 				dtgbuf[h][0] = gpix0;
 				uae_u32 t0 = 0;
@@ -2344,7 +2344,7 @@ static void lts_ecs_fm0_ehb1_p4_ihires_dlores_ntsc_filtered_genlock(void)
 				dpix_val1 = bordercolor;
 			}
 			internal_pixel_cnt += 2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_1x) {
 				dpix_val0 = filter_pixel(dpix_val0, dpix_val1);
 				gpix0 = filter_pixel_genlock(gpix0, gpix1);
 				dtbuf[h][0] = dpix_val0;
@@ -2411,7 +2411,7 @@ static void lts_ecs_fm0_ham0_p4_ihires_dlores_ntsc_genlock(void)
 				dpix_val1 = bordercolor;
 			}
 			internal_pixel_cnt += 2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_1x) {
 				dtbuf[h][0] = dpix_val0;
 				dtgbuf[h][0] = gpix0;
 				uae_u32 t0 = 0;
@@ -2476,7 +2476,7 @@ static void lts_ecs_fm0_ham0_p4_ihires_dlores_ntsc_filtered_genlock(void)
 				dpix_val1 = bordercolor;
 			}
 			internal_pixel_cnt += 2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_1x) {
 				dpix_val0 = filter_pixel(dpix_val0, dpix_val1);
 				gpix0 = filter_pixel_genlock(gpix0, gpix1);
 				dtbuf[h][0] = dpix_val0;
@@ -2543,7 +2543,7 @@ static void lts_ecs_fm0_ham1_p4_ihires_dlores_ntsc_genlock(void)
 				dpix_val1 = bordercolor;
 			}
 			internal_pixel_cnt += 2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_1x) {
 				dtbuf[h][0] = dpix_val0;
 				dtgbuf[h][0] = gpix0;
 				uae_u32 t0 = 0;
@@ -2608,7 +2608,7 @@ static void lts_ecs_fm0_ham1_p4_ihires_dlores_ntsc_filtered_genlock(void)
 				dpix_val1 = bordercolor;
 			}
 			internal_pixel_cnt += 2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_1x) {
 				dpix_val0 = filter_pixel(dpix_val0, dpix_val1);
 				gpix0 = filter_pixel_genlock(gpix0, gpix1);
 				dtbuf[h][0] = dpix_val0;
@@ -2704,7 +2704,7 @@ static void lts_ecs_fm0_n0_p4_ihires_dlores_spr_ntsc_genlock(void)
 			}
 			shiftbpl4();
 			internal_pixel_cnt += 2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_1x) {
 				if (sv0) {
 					uae_u32 spix0 = denise_render_sprites2(pix0, sv0);
 					if (spix0) {
@@ -2809,7 +2809,7 @@ static void lts_ecs_fm0_n0_p4_ihires_dlores_spr_ntsc_filtered_genlock(void)
 			}
 			shiftbpl4();
 			internal_pixel_cnt += 2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_1x) {
 				dpix_val0 = filter_pixel(dpix_val0, dpix_val1);
 				gpix0 = filter_pixel_genlock(gpix0, gpix1);
 				if (sv0) {
@@ -2917,7 +2917,7 @@ static void lts_ecs_fm0_n1_p4_ihires_dlores_spr_ntsc_genlock(void)
 			}
 			shiftbpl4();
 			internal_pixel_cnt += 2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_1x) {
 				if (sv0) {
 					uae_u32 spix0 = denise_render_sprites2(pix0, sv0);
 					if (spix0) {
@@ -3025,7 +3025,7 @@ static void lts_ecs_fm0_n1_p4_ihires_dlores_spr_ntsc_filtered_genlock(void)
 			}
 			shiftbpl4();
 			internal_pixel_cnt += 2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_1x) {
 				dpix_val0 = filter_pixel(dpix_val0, dpix_val1);
 				gpix0 = filter_pixel_genlock(gpix0, gpix1);
 				if (sv0) {
@@ -3138,7 +3138,7 @@ static void lts_ecs_fm0_dpf0_p4_ihires_dlores_spr_ntsc_genlock(void)
 			}
 			shiftbpl4();
 			internal_pixel_cnt += 2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_1x) {
 				if (sv0) {
 					uae_u32 spix0 = denise_render_sprites2(pix0, sv0);
 					if (spix0) {
@@ -3245,7 +3245,7 @@ static void lts_ecs_fm0_dpf0_p4_ihires_dlores_spr_ntsc_filtered_genlock(void)
 			}
 			shiftbpl4();
 			internal_pixel_cnt += 2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_1x) {
 				dpix_val0 = filter_pixel(dpix_val0, dpix_val1);
 				gpix0 = filter_pixel_genlock(gpix0, gpix1);
 				if (sv0) {
@@ -3355,7 +3355,7 @@ static void lts_ecs_fm0_dpf1_p4_ihires_dlores_spr_ntsc_genlock(void)
 			}
 			shiftbpl4();
 			internal_pixel_cnt += 2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_1x) {
 				if (sv0) {
 					uae_u32 spix0 = denise_render_sprites2(pix0, sv0);
 					if (spix0) {
@@ -3465,7 +3465,7 @@ static void lts_ecs_fm0_dpf1_p4_ihires_dlores_spr_ntsc_filtered_genlock(void)
 			}
 			shiftbpl4();
 			internal_pixel_cnt += 2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_1x) {
 				dpix_val0 = filter_pixel(dpix_val0, dpix_val1);
 				gpix0 = filter_pixel_genlock(gpix0, gpix1);
 				if (sv0) {
@@ -3547,7 +3547,7 @@ static void lts_ecs_fm0_ehb0_p4_ihires_dlores_spr_ntsc_genlock(void)
 				dpix_val1 = bordercolor;
 			}
 			internal_pixel_cnt += 2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_1x) {
 				dtbuf[h][0] = dpix_val0;
 				dtgbuf[h][0] = gpix0;
 				uae_u32 t0 = 0;
@@ -3612,7 +3612,7 @@ static void lts_ecs_fm0_ehb0_p4_ihires_dlores_spr_ntsc_filtered_genlock(void)
 				dpix_val1 = bordercolor;
 			}
 			internal_pixel_cnt += 2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_1x) {
 				dpix_val0 = filter_pixel(dpix_val0, dpix_val1);
 				gpix0 = filter_pixel_genlock(gpix0, gpix1);
 				dtbuf[h][0] = dpix_val0;
@@ -3679,7 +3679,7 @@ static void lts_ecs_fm0_ehb1_p4_ihires_dlores_spr_ntsc_genlock(void)
 				dpix_val1 = bordercolor;
 			}
 			internal_pixel_cnt += 2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_1x) {
 				dtbuf[h][0] = dpix_val0;
 				dtgbuf[h][0] = gpix0;
 				uae_u32 t0 = 0;
@@ -3744,7 +3744,7 @@ static void lts_ecs_fm0_ehb1_p4_ihires_dlores_spr_ntsc_filtered_genlock(void)
 				dpix_val1 = bordercolor;
 			}
 			internal_pixel_cnt += 2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_1x) {
 				dpix_val0 = filter_pixel(dpix_val0, dpix_val1);
 				gpix0 = filter_pixel_genlock(gpix0, gpix1);
 				dtbuf[h][0] = dpix_val0;
@@ -3811,7 +3811,7 @@ static void lts_ecs_fm0_ham0_p4_ihires_dlores_spr_ntsc_genlock(void)
 				dpix_val1 = bordercolor;
 			}
 			internal_pixel_cnt += 2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_1x) {
 				dtbuf[h][0] = dpix_val0;
 				dtgbuf[h][0] = gpix0;
 				uae_u32 t0 = 0;
@@ -3876,7 +3876,7 @@ static void lts_ecs_fm0_ham0_p4_ihires_dlores_spr_ntsc_filtered_genlock(void)
 				dpix_val1 = bordercolor;
 			}
 			internal_pixel_cnt += 2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_1x) {
 				dpix_val0 = filter_pixel(dpix_val0, dpix_val1);
 				gpix0 = filter_pixel_genlock(gpix0, gpix1);
 				dtbuf[h][0] = dpix_val0;
@@ -3943,7 +3943,7 @@ static void lts_ecs_fm0_ham1_p4_ihires_dlores_spr_ntsc_genlock(void)
 				dpix_val1 = bordercolor;
 			}
 			internal_pixel_cnt += 2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_1x) {
 				dtbuf[h][0] = dpix_val0;
 				dtgbuf[h][0] = gpix0;
 				uae_u32 t0 = 0;
@@ -4008,7 +4008,7 @@ static void lts_ecs_fm0_ham1_p4_ihires_dlores_spr_ntsc_filtered_genlock(void)
 				dpix_val1 = bordercolor;
 			}
 			internal_pixel_cnt += 2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_1x) {
 				dpix_val0 = filter_pixel(dpix_val0, dpix_val1);
 				gpix0 = filter_pixel_genlock(gpix0, gpix1);
 				dtbuf[h][0] = dpix_val0;
@@ -4082,7 +4082,7 @@ static void lts_ecs_fm0_n0_p6_ilores_dhires_ntsc_genlock(void)
 			uae_u32 dpix_val1 = dpix_val0;
 			uae_u8 pix1 = pix0;
 			uae_u8 gpix1 = gpix0;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_2x) {
 				dtbuf[h][0] = dpix_val0;
 				dtgbuf[h][0] = gpix0;
 				dtbuf[h][1] = dpix_val1;
@@ -4175,7 +4175,7 @@ static void lts_ecs_fm0_n1_p6_ilores_dhires_ntsc_genlock(void)
 			uae_u32 dpix_val1 = dpix_val0;
 			uae_u8 pix1 = pix0;
 			uae_u8 gpix1 = gpix0;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_2x) {
 				dtbuf[h][0] = dpix_val0;
 				dtgbuf[h][0] = gpix0;
 				dtbuf[h][1] = dpix_val1;
@@ -4272,7 +4272,7 @@ static void lts_ecs_fm0_dpf0_p6_ilores_dhires_ntsc_genlock(void)
 			uae_u32 dpix_val1 = dpix_val0;
 			uae_u8 pix1 = pix0;
 			uae_u8 gpix1 = gpix0;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_2x) {
 				dtbuf[h][0] = dpix_val0;
 				dtgbuf[h][0] = gpix0;
 				dtbuf[h][1] = dpix_val1;
@@ -4366,7 +4366,7 @@ static void lts_ecs_fm0_dpf1_p6_ilores_dhires_ntsc_genlock(void)
 			uae_u32 dpix_val1 = dpix_val0;
 			uae_u8 pix1 = pix0;
 			uae_u8 gpix1 = gpix0;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_2x) {
 				dtbuf[h][0] = dpix_val0;
 				dtgbuf[h][0] = gpix0;
 				dtbuf[h][1] = dpix_val1;
@@ -4467,7 +4467,7 @@ static void lts_ecs_fm0_ehb0_p6_ilores_dhires_ntsc_genlock(void)
 			uae_u32 dpix_val1 = dpix_val0;
 			uae_u8 pix1 = pix0;
 			uae_u8 gpix1 = gpix0;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_2x) {
 				dtbuf[h][0] = dpix_val0;
 				dtgbuf[h][0] = gpix0;
 				dtbuf[h][1] = dpix_val1;
@@ -4565,7 +4565,7 @@ static void lts_ecs_fm0_ehb1_p6_ilores_dhires_ntsc_genlock(void)
 			uae_u32 dpix_val1 = dpix_val0;
 			uae_u8 pix1 = pix0;
 			uae_u8 gpix1 = gpix0;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_2x) {
 				dtbuf[h][0] = dpix_val0;
 				dtgbuf[h][0] = gpix0;
 				dtbuf[h][1] = dpix_val1;
@@ -4661,7 +4661,7 @@ static void lts_ecs_fm0_ham0_p6_ilores_dhires_ntsc_genlock(void)
 			uae_u32 dpix_val1 = dpix_val0;
 			uae_u8 pix1 = pix0;
 			uae_u8 gpix1 = gpix0;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_2x) {
 				dtbuf[h][0] = dpix_val0;
 				dtgbuf[h][0] = gpix0;
 				dtbuf[h][1] = dpix_val1;
@@ -4754,7 +4754,7 @@ static void lts_ecs_fm0_ham1_p6_ilores_dhires_ntsc_genlock(void)
 			uae_u32 dpix_val1 = dpix_val0;
 			uae_u8 pix1 = pix0;
 			uae_u8 gpix1 = gpix0;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_2x) {
 				dtbuf[h][0] = dpix_val0;
 				dtgbuf[h][0] = gpix0;
 				dtbuf[h][1] = dpix_val1;
@@ -4863,7 +4863,7 @@ static void lts_ecs_fm0_n0_p6_ilores_dhires_spr_ntsc_genlock(void)
 			uae_u32 dpix_val1 = dpix_val0;
 			uae_u8 pix1 = pix0;
 			uae_u8 gpix1 = gpix0;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_2x) {
 				if (sv0) {
 					uae_u32 spix0 = denise_render_sprites2(pix0, sv0);
 					if (spix0) {
@@ -4978,7 +4978,7 @@ static void lts_ecs_fm0_n1_p6_ilores_dhires_spr_ntsc_genlock(void)
 			uae_u32 dpix_val1 = dpix_val0;
 			uae_u8 pix1 = pix0;
 			uae_u8 gpix1 = gpix0;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_2x) {
 				if (sv0) {
 					uae_u32 spix0 = denise_render_sprites2(pix0, sv0);
 					if (spix0) {
@@ -5097,7 +5097,7 @@ static void lts_ecs_fm0_dpf0_p6_ilores_dhires_spr_ntsc_genlock(void)
 			uae_u32 dpix_val1 = dpix_val0;
 			uae_u8 pix1 = pix0;
 			uae_u8 gpix1 = gpix0;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_2x) {
 				if (sv0) {
 					uae_u32 spix0 = denise_render_sprites2(pix0, sv0);
 					if (spix0) {
@@ -5213,7 +5213,7 @@ static void lts_ecs_fm0_dpf1_p6_ilores_dhires_spr_ntsc_genlock(void)
 			uae_u32 dpix_val1 = dpix_val0;
 			uae_u8 pix1 = pix0;
 			uae_u8 gpix1 = gpix0;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_2x) {
 				if (sv0) {
 					uae_u32 spix0 = denise_render_sprites2(pix0, sv0);
 					if (spix0) {
@@ -5336,7 +5336,7 @@ static void lts_ecs_fm0_ehb0_p6_ilores_dhires_spr_ntsc_genlock(void)
 			uae_u32 dpix_val1 = dpix_val0;
 			uae_u8 pix1 = pix0;
 			uae_u8 gpix1 = gpix0;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_2x) {
 				if (sv0) {
 					uae_u32 spix0 = denise_render_sprites2(pix0, sv0);
 					if (spix0) {
@@ -5456,7 +5456,7 @@ static void lts_ecs_fm0_ehb1_p6_ilores_dhires_spr_ntsc_genlock(void)
 			uae_u32 dpix_val1 = dpix_val0;
 			uae_u8 pix1 = pix0;
 			uae_u8 gpix1 = gpix0;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_2x) {
 				if (sv0) {
 					uae_u32 spix0 = denise_render_sprites2(pix0, sv0);
 					if (spix0) {
@@ -5574,7 +5574,7 @@ static void lts_ecs_fm0_ham0_p6_ilores_dhires_spr_ntsc_genlock(void)
 			uae_u32 dpix_val1 = dpix_val0;
 			uae_u8 pix1 = pix0;
 			uae_u8 gpix1 = gpix0;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_2x) {
 				if (sv0) {
 					uae_u32 spix0 = denise_render_sprites2(pix0, sv0);
 					if (spix0) {
@@ -5689,7 +5689,7 @@ static void lts_ecs_fm0_ham1_p6_ilores_dhires_spr_ntsc_genlock(void)
 			uae_u32 dpix_val1 = dpix_val0;
 			uae_u8 pix1 = pix0;
 			uae_u8 gpix1 = gpix0;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_2x) {
 				if (sv0) {
 					uae_u32 spix0 = denise_render_sprites2(pix0, sv0);
 					if (spix0) {
@@ -5803,7 +5803,7 @@ static void lts_ecs_fm0_n0_p4_ihires_dhires_ntsc_genlock(void)
 			}
 			shiftbpl4();
 			internal_pixel_cnt += 2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_2x) {
 				dtbuf[h][0] = dpix_val0;
 				dtgbuf[h][0] = gpix0;
 				dtbuf[h][1] = dpix_val1;
@@ -5905,7 +5905,7 @@ static void lts_ecs_fm0_n1_p4_ihires_dhires_ntsc_genlock(void)
 			}
 			shiftbpl4();
 			internal_pixel_cnt += 2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_2x) {
 				dtbuf[h][0] = dpix_val0;
 				dtgbuf[h][0] = gpix0;
 				dtbuf[h][1] = dpix_val1;
@@ -6012,7 +6012,7 @@ static void lts_ecs_fm0_dpf0_p4_ihires_dhires_ntsc_genlock(void)
 			}
 			shiftbpl4();
 			internal_pixel_cnt += 2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_2x) {
 				dtbuf[h][0] = dpix_val0;
 				dtgbuf[h][0] = gpix0;
 				dtbuf[h][1] = dpix_val1;
@@ -6116,7 +6116,7 @@ static void lts_ecs_fm0_dpf1_p4_ihires_dhires_ntsc_genlock(void)
 			}
 			shiftbpl4();
 			internal_pixel_cnt += 2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_2x) {
 				dtbuf[h][0] = dpix_val0;
 				dtgbuf[h][0] = gpix0;
 				dtbuf[h][1] = dpix_val1;
@@ -6205,7 +6205,7 @@ static void lts_ecs_fm0_ehb0_p4_ihires_dhires_ntsc_genlock(void)
 				dpix_val1 = bordercolor;
 			}
 			internal_pixel_cnt += 2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_2x) {
 				dtbuf[h][0] = dpix_val0;
 				dtgbuf[h][0] = gpix0;
 				dtbuf[h][1] = dpix_val1;
@@ -6288,7 +6288,7 @@ static void lts_ecs_fm0_ehb1_p4_ihires_dhires_ntsc_genlock(void)
 				dpix_val1 = bordercolor;
 			}
 			internal_pixel_cnt += 2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_2x) {
 				dtbuf[h][0] = dpix_val0;
 				dtgbuf[h][0] = gpix0;
 				dtbuf[h][1] = dpix_val1;
@@ -6371,7 +6371,7 @@ static void lts_ecs_fm0_ham0_p4_ihires_dhires_ntsc_genlock(void)
 				dpix_val1 = bordercolor;
 			}
 			internal_pixel_cnt += 2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_2x) {
 				dtbuf[h][0] = dpix_val0;
 				dtgbuf[h][0] = gpix0;
 				dtbuf[h][1] = dpix_val1;
@@ -6454,7 +6454,7 @@ static void lts_ecs_fm0_ham1_p4_ihires_dhires_ntsc_genlock(void)
 				dpix_val1 = bordercolor;
 			}
 			internal_pixel_cnt += 2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_2x) {
 				dtbuf[h][0] = dpix_val0;
 				dtgbuf[h][0] = gpix0;
 				dtbuf[h][1] = dpix_val1;
@@ -6566,7 +6566,7 @@ static void lts_ecs_fm0_n0_p4_ihires_dhires_spr_ntsc_genlock(void)
 			}
 			shiftbpl4();
 			internal_pixel_cnt += 2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_2x) {
 				if (sv0) {
 					uae_u32 spix0 = denise_render_sprites2(pix0, sv0);
 					if (spix0) {
@@ -6698,7 +6698,7 @@ static void lts_ecs_fm0_n1_p4_ihires_dhires_spr_ntsc_genlock(void)
 			}
 			shiftbpl4();
 			internal_pixel_cnt += 2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_2x) {
 				if (sv0) {
 					uae_u32 spix0 = denise_render_sprites2(pix0, sv0);
 					if (spix0) {
@@ -6835,7 +6835,7 @@ static void lts_ecs_fm0_dpf0_p4_ihires_dhires_spr_ntsc_genlock(void)
 			}
 			shiftbpl4();
 			internal_pixel_cnt += 2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_2x) {
 				if (sv0) {
 					uae_u32 spix0 = denise_render_sprites2(pix0, sv0);
 					if (spix0) {
@@ -6969,7 +6969,7 @@ static void lts_ecs_fm0_dpf1_p4_ihires_dhires_spr_ntsc_genlock(void)
 			}
 			shiftbpl4();
 			internal_pixel_cnt += 2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_2x) {
 				if (sv0) {
 					uae_u32 spix0 = denise_render_sprites2(pix0, sv0);
 					if (spix0) {
@@ -7075,7 +7075,7 @@ static void lts_ecs_fm0_ehb0_p4_ihires_dhires_spr_ntsc_genlock(void)
 				dpix_val1 = bordercolor;
 			}
 			internal_pixel_cnt += 2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_2x) {
 				dtbuf[h][0] = dpix_val0;
 				dtgbuf[h][0] = gpix0;
 				dtbuf[h][1] = dpix_val1;
@@ -7158,7 +7158,7 @@ static void lts_ecs_fm0_ehb1_p4_ihires_dhires_spr_ntsc_genlock(void)
 				dpix_val1 = bordercolor;
 			}
 			internal_pixel_cnt += 2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_2x) {
 				dtbuf[h][0] = dpix_val0;
 				dtgbuf[h][0] = gpix0;
 				dtbuf[h][1] = dpix_val1;
@@ -7241,7 +7241,7 @@ static void lts_ecs_fm0_ham0_p4_ihires_dhires_spr_ntsc_genlock(void)
 				dpix_val1 = bordercolor;
 			}
 			internal_pixel_cnt += 2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_2x) {
 				dtbuf[h][0] = dpix_val0;
 				dtgbuf[h][0] = gpix0;
 				dtbuf[h][1] = dpix_val1;
@@ -7324,7 +7324,7 @@ static void lts_ecs_fm0_ham1_p4_ihires_dhires_spr_ntsc_genlock(void)
 				dpix_val1 = bordercolor;
 			}
 			internal_pixel_cnt += 2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_2x) {
 				dtbuf[h][0] = dpix_val0;
 				dtgbuf[h][0] = gpix0;
 				dtbuf[h][1] = dpix_val1;
@@ -7422,7 +7422,7 @@ static void lts_ecs_fm0_n0_p6_ilores_dshres_ntsc_genlock(void)
 			uae_u32 dpix_val3 = dpix_val2;
 			uae_u8 pix3 = pix2;
 			uae_u8 gpix3 = gpix2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_4x) {
 				dtbuf[h][0] = dpix_val0;
 				dtgbuf[h][0] = gpix0;
 				dtbuf[h][1] = dpix_val1;
@@ -7551,7 +7551,7 @@ static void lts_ecs_fm0_n1_p6_ilores_dshres_ntsc_genlock(void)
 			uae_u32 dpix_val3 = dpix_val2;
 			uae_u8 pix3 = pix2;
 			uae_u8 gpix3 = gpix2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_4x) {
 				dtbuf[h][0] = dpix_val0;
 				dtgbuf[h][0] = gpix0;
 				dtbuf[h][1] = dpix_val1;
@@ -7684,7 +7684,7 @@ static void lts_ecs_fm0_dpf0_p6_ilores_dshres_ntsc_genlock(void)
 			uae_u32 dpix_val3 = dpix_val2;
 			uae_u8 pix3 = pix2;
 			uae_u8 gpix3 = gpix2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_4x) {
 				dtbuf[h][0] = dpix_val0;
 				dtgbuf[h][0] = gpix0;
 				dtbuf[h][1] = dpix_val1;
@@ -7814,7 +7814,7 @@ static void lts_ecs_fm0_dpf1_p6_ilores_dshres_ntsc_genlock(void)
 			uae_u32 dpix_val3 = dpix_val2;
 			uae_u8 pix3 = pix2;
 			uae_u8 gpix3 = gpix2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_4x) {
 				dtbuf[h][0] = dpix_val0;
 				dtgbuf[h][0] = gpix0;
 				dtbuf[h][1] = dpix_val1;
@@ -7951,7 +7951,7 @@ static void lts_ecs_fm0_ehb0_p6_ilores_dshres_ntsc_genlock(void)
 			uae_u32 dpix_val3 = dpix_val2;
 			uae_u8 pix3 = pix2;
 			uae_u8 gpix3 = gpix2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_4x) {
 				dtbuf[h][0] = dpix_val0;
 				dtgbuf[h][0] = gpix0;
 				dtbuf[h][1] = dpix_val1;
@@ -8085,7 +8085,7 @@ static void lts_ecs_fm0_ehb1_p6_ilores_dshres_ntsc_genlock(void)
 			uae_u32 dpix_val3 = dpix_val2;
 			uae_u8 pix3 = pix2;
 			uae_u8 gpix3 = gpix2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_4x) {
 				dtbuf[h][0] = dpix_val0;
 				dtgbuf[h][0] = gpix0;
 				dtbuf[h][1] = dpix_val1;
@@ -8217,7 +8217,7 @@ static void lts_ecs_fm0_ham0_p6_ilores_dshres_ntsc_genlock(void)
 			uae_u32 dpix_val3 = dpix_val2;
 			uae_u8 pix3 = pix2;
 			uae_u8 gpix3 = gpix2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_4x) {
 				dtbuf[h][0] = dpix_val0;
 				dtgbuf[h][0] = gpix0;
 				dtbuf[h][1] = dpix_val1;
@@ -8346,7 +8346,7 @@ static void lts_ecs_fm0_ham1_p6_ilores_dshres_ntsc_genlock(void)
 			uae_u32 dpix_val3 = dpix_val2;
 			uae_u8 pix3 = pix2;
 			uae_u8 gpix3 = gpix2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_4x) {
 				dtbuf[h][0] = dpix_val0;
 				dtgbuf[h][0] = gpix0;
 				dtbuf[h][1] = dpix_val1;
@@ -8491,7 +8491,7 @@ static void lts_ecs_fm0_n0_p6_ilores_dshres_spr_ntsc_genlock(void)
 			uae_u32 dpix_val3 = dpix_val2;
 			uae_u8 pix3 = pix2;
 			uae_u8 gpix3 = gpix2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_4x) {
 				if (sv0) {
 					uae_u32 spix0 = denise_render_sprites2(pix0, sv0);
 					if (spix0) {
@@ -8644,7 +8644,7 @@ static void lts_ecs_fm0_n1_p6_ilores_dshres_spr_ntsc_genlock(void)
 			uae_u32 dpix_val3 = dpix_val2;
 			uae_u8 pix3 = pix2;
 			uae_u8 gpix3 = gpix2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_4x) {
 				if (sv0) {
 					uae_u32 spix0 = denise_render_sprites2(pix0, sv0);
 					if (spix0) {
@@ -8801,7 +8801,7 @@ static void lts_ecs_fm0_dpf0_p6_ilores_dshres_spr_ntsc_genlock(void)
 			uae_u32 dpix_val3 = dpix_val2;
 			uae_u8 pix3 = pix2;
 			uae_u8 gpix3 = gpix2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_4x) {
 				if (sv0) {
 					uae_u32 spix0 = denise_render_sprites2(pix0, sv0);
 					if (spix0) {
@@ -8955,7 +8955,7 @@ static void lts_ecs_fm0_dpf1_p6_ilores_dshres_spr_ntsc_genlock(void)
 			uae_u32 dpix_val3 = dpix_val2;
 			uae_u8 pix3 = pix2;
 			uae_u8 gpix3 = gpix2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_4x) {
 				if (sv0) {
 					uae_u32 spix0 = denise_render_sprites2(pix0, sv0);
 					if (spix0) {
@@ -9116,7 +9116,7 @@ static void lts_ecs_fm0_ehb0_p6_ilores_dshres_spr_ntsc_genlock(void)
 			uae_u32 dpix_val3 = dpix_val2;
 			uae_u8 pix3 = pix2;
 			uae_u8 gpix3 = gpix2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_4x) {
 				if (sv0) {
 					uae_u32 spix0 = denise_render_sprites2(pix0, sv0);
 					if (spix0) {
@@ -9274,7 +9274,7 @@ static void lts_ecs_fm0_ehb1_p6_ilores_dshres_spr_ntsc_genlock(void)
 			uae_u32 dpix_val3 = dpix_val2;
 			uae_u8 pix3 = pix2;
 			uae_u8 gpix3 = gpix2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_4x) {
 				if (sv0) {
 					uae_u32 spix0 = denise_render_sprites2(pix0, sv0);
 					if (spix0) {
@@ -9430,7 +9430,7 @@ static void lts_ecs_fm0_ham0_p6_ilores_dshres_spr_ntsc_genlock(void)
 			uae_u32 dpix_val3 = dpix_val2;
 			uae_u8 pix3 = pix2;
 			uae_u8 gpix3 = gpix2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_4x) {
 				if (sv0) {
 					uae_u32 spix0 = denise_render_sprites2(pix0, sv0);
 					if (spix0) {
@@ -9583,7 +9583,7 @@ static void lts_ecs_fm0_ham1_p6_ilores_dshres_spr_ntsc_genlock(void)
 			uae_u32 dpix_val3 = dpix_val2;
 			uae_u8 pix3 = pix2;
 			uae_u8 gpix3 = gpix2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_4x) {
 				if (sv0) {
 					uae_u32 spix0 = denise_render_sprites2(pix0, sv0);
 					if (spix0) {
@@ -9735,7 +9735,7 @@ static void lts_ecs_fm0_n0_p4_ihires_dshres_ntsc_genlock(void)
 			uae_u32 dpix_val3 = dpix_val2;
 			uae_u8 pix3 = pix2;
 			uae_u8 gpix3 = gpix2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_4x) {
 				dtbuf[h][0] = dpix_val0;
 				dtgbuf[h][0] = gpix0;
 				dtbuf[h][1] = dpix_val1;
@@ -9873,7 +9873,7 @@ static void lts_ecs_fm0_n1_p4_ihires_dshres_ntsc_genlock(void)
 			uae_u32 dpix_val3 = dpix_val2;
 			uae_u8 pix3 = pix2;
 			uae_u8 gpix3 = gpix2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_4x) {
 				dtbuf[h][0] = dpix_val0;
 				dtgbuf[h][0] = gpix0;
 				dtbuf[h][1] = dpix_val1;
@@ -10016,7 +10016,7 @@ static void lts_ecs_fm0_dpf0_p4_ihires_dshres_ntsc_genlock(void)
 			uae_u32 dpix_val3 = dpix_val2;
 			uae_u8 pix3 = pix2;
 			uae_u8 gpix3 = gpix2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_4x) {
 				dtbuf[h][0] = dpix_val0;
 				dtgbuf[h][0] = gpix0;
 				dtbuf[h][1] = dpix_val1;
@@ -10156,7 +10156,7 @@ static void lts_ecs_fm0_dpf1_p4_ihires_dshres_ntsc_genlock(void)
 			uae_u32 dpix_val3 = dpix_val2;
 			uae_u8 pix3 = pix2;
 			uae_u8 gpix3 = gpix2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_4x) {
 				dtbuf[h][0] = dpix_val0;
 				dtgbuf[h][0] = gpix0;
 				dtbuf[h][1] = dpix_val1;
@@ -10281,7 +10281,7 @@ static void lts_ecs_fm0_ehb0_p4_ihires_dshres_ntsc_genlock(void)
 			uae_u32 dpix_val3 = dpix_val2;
 			uae_u8 pix3 = pix2;
 			uae_u8 gpix3 = gpix2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_4x) {
 				dtbuf[h][0] = dpix_val0;
 				dtgbuf[h][0] = gpix0;
 				dtbuf[h][1] = dpix_val1;
@@ -10400,7 +10400,7 @@ static void lts_ecs_fm0_ehb1_p4_ihires_dshres_ntsc_genlock(void)
 			uae_u32 dpix_val3 = dpix_val2;
 			uae_u8 pix3 = pix2;
 			uae_u8 gpix3 = gpix2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_4x) {
 				dtbuf[h][0] = dpix_val0;
 				dtgbuf[h][0] = gpix0;
 				dtbuf[h][1] = dpix_val1;
@@ -10519,7 +10519,7 @@ static void lts_ecs_fm0_ham0_p4_ihires_dshres_ntsc_genlock(void)
 			uae_u32 dpix_val3 = dpix_val2;
 			uae_u8 pix3 = pix2;
 			uae_u8 gpix3 = gpix2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_4x) {
 				dtbuf[h][0] = dpix_val0;
 				dtgbuf[h][0] = gpix0;
 				dtbuf[h][1] = dpix_val1;
@@ -10638,7 +10638,7 @@ static void lts_ecs_fm0_ham1_p4_ihires_dshres_ntsc_genlock(void)
 			uae_u32 dpix_val3 = dpix_val2;
 			uae_u8 pix3 = pix2;
 			uae_u8 gpix3 = gpix2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_4x) {
 				dtbuf[h][0] = dpix_val0;
 				dtgbuf[h][0] = gpix0;
 				dtbuf[h][1] = dpix_val1;
@@ -10786,7 +10786,7 @@ static void lts_ecs_fm0_n0_p4_ihires_dshres_spr_ntsc_genlock(void)
 			uae_u32 dpix_val3 = dpix_val2;
 			uae_u8 pix3 = pix2;
 			uae_u8 gpix3 = gpix2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_4x) {
 				if (sv0) {
 					uae_u32 spix0 = denise_render_sprites2(pix0, sv0);
 					if (spix0) {
@@ -10972,7 +10972,7 @@ static void lts_ecs_fm0_n1_p4_ihires_dshres_spr_ntsc_genlock(void)
 			uae_u32 dpix_val3 = dpix_val2;
 			uae_u8 pix3 = pix2;
 			uae_u8 gpix3 = gpix2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_4x) {
 				if (sv0) {
 					uae_u32 spix0 = denise_render_sprites2(pix0, sv0);
 					if (spix0) {
@@ -11163,7 +11163,7 @@ static void lts_ecs_fm0_dpf0_p4_ihires_dshres_spr_ntsc_genlock(void)
 			uae_u32 dpix_val3 = dpix_val2;
 			uae_u8 pix3 = pix2;
 			uae_u8 gpix3 = gpix2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_4x) {
 				if (sv0) {
 					uae_u32 spix0 = denise_render_sprites2(pix0, sv0);
 					if (spix0) {
@@ -11351,7 +11351,7 @@ static void lts_ecs_fm0_dpf1_p4_ihires_dshres_spr_ntsc_genlock(void)
 			uae_u32 dpix_val3 = dpix_val2;
 			uae_u8 pix3 = pix2;
 			uae_u8 gpix3 = gpix2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_4x) {
 				if (sv0) {
 					uae_u32 spix0 = denise_render_sprites2(pix0, sv0);
 					if (spix0) {
@@ -11511,7 +11511,7 @@ static void lts_ecs_fm0_ehb0_p4_ihires_dshres_spr_ntsc_genlock(void)
 			uae_u32 dpix_val3 = dpix_val2;
 			uae_u8 pix3 = pix2;
 			uae_u8 gpix3 = gpix2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_4x) {
 				dtbuf[h][0] = dpix_val0;
 				dtgbuf[h][0] = gpix0;
 				dtbuf[h][1] = dpix_val1;
@@ -11630,7 +11630,7 @@ static void lts_ecs_fm0_ehb1_p4_ihires_dshres_spr_ntsc_genlock(void)
 			uae_u32 dpix_val3 = dpix_val2;
 			uae_u8 pix3 = pix2;
 			uae_u8 gpix3 = gpix2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_4x) {
 				dtbuf[h][0] = dpix_val0;
 				dtgbuf[h][0] = gpix0;
 				dtbuf[h][1] = dpix_val1;
@@ -11749,7 +11749,7 @@ static void lts_ecs_fm0_ham0_p4_ihires_dshres_spr_ntsc_genlock(void)
 			uae_u32 dpix_val3 = dpix_val2;
 			uae_u8 pix3 = pix2;
 			uae_u8 gpix3 = gpix2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_4x) {
 				dtbuf[h][0] = dpix_val0;
 				dtgbuf[h][0] = gpix0;
 				dtbuf[h][1] = dpix_val1;
@@ -11868,7 +11868,7 @@ static void lts_ecs_fm0_ham1_p4_ihires_dshres_spr_ntsc_genlock(void)
 			uae_u32 dpix_val3 = dpix_val2;
 			uae_u8 pix3 = pix2;
 			uae_u8 gpix3 = gpix2;
-			if (denise_pixtotal >= 0 && denise_pixtotal < denise_pixtotal_max) {
+			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_4x) {
 				dtbuf[h][0] = dpix_val0;
 				dtgbuf[h][0] = gpix0;
 				dtbuf[h][1] = dpix_val1;

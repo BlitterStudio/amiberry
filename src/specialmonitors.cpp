@@ -80,10 +80,18 @@ static const int opal_video_debug = 0;
 static bool automatic;
 static int monitor;
 
-extern uae_u16 bplcon0;
-
 static uae_u8 graffiti_palette[256 * 4];
 static bool graffiti_gaudio;
+
+#define MAX_SM_DATA_LINES 313
+static uae_u16 sm_data[MAX_SM_DATA_LINES];
+static uae_u16 get_sm_data(int y)
+{
+	if (y < 0 || y >= MAX_SM_DATA_LINES) {
+		return 0;
+	}
+	return sm_data[y];
+}
 
 static bool specialmonitor_setresolution(struct vidbuffer *src, struct vidbuffer *dst, int width, int height, bool nativeposition)
 {
@@ -583,7 +591,7 @@ static bool dctv(struct vidbuffer *src, struct vidbuffer *dst, bool doublelines,
 			write_log(_T("\n"));
 #endif
 
-		for (x = 0; x < src->inwidth; x++) {
+		for (x = 2; x < src->inwidth - 4; x++) {
 			uae_u8 *s = line + ((x << 1) / hdbl) * src->pixbytes;
 			uae_u8 *d = dstline + ((x << 1) / hdbl) * dst->pixbytes + zigzagoffset;
 			uae_u8 *s2 = s + src->rowbytes;
@@ -853,7 +861,7 @@ static bool firecracker24(struct vidbuffer *src, struct vidbuffer *dst, bool dou
 		uae_u8 *dstline = dst->bufmem + (((y * 2 + oddlines) - dst->yoffset) / vdbl) * dst->rowbytes;
 		uae_u8 *vramline = sm_frame_buffer + (fc24_y + oddlines) * SM_VRAM_WIDTH * SM_VRAM_BYTES + bufferoffset;
 		fc24_x = 0;
-		for (x = 0; x < src->inwidth; x++) {
+		for (x = 2; x < src->inwidth - 4; x++) {
 			uae_u8 r = 0, g = 0, b = 0;
 			uae_u8 *s = line + ((x << 1) / hdbl) * src->pixbytes;
 			uae_u8 *s_genlock = line_genlock + ((x << 1) / hdbl);
@@ -1307,7 +1315,7 @@ static bool avideo(struct vidbuffer *src, struct vidbuffer *dst, bool doubleline
 		int yoff = (((y * 2 + oddlines) - src->yoffset) / vdbl);
 		if (yoff < 0)
 			continue;
-		if (yoff >= src->inheight)
+		if (yoff >= src->inheight - 1)
 			continue;
 		uae_u8 *line = src->bufmem + yoff * src->rowbytes;
 		uae_u8 *dstline = dst->bufmem + (((y * 2 + oddlines) - dst->yoffset) / vdbl) * dst->rowbytes;
@@ -1320,7 +1328,7 @@ static bool avideo(struct vidbuffer *src, struct vidbuffer *dst, bool doubleline
 				vramline += SM_VRAM_WIDTH * SM_VRAM_BYTES;
 		}
 
-		for (x = 0; x < src->inwidth; x++) {
+		for (x = 2; x < src->inwidth - 4; x++) {
 			uae_u8 *s = line + ((x << 1) / hdbl) * src->pixbytes;
 			uae_u8 *d = dstline + ((x << 1) / hdbl) * dst->pixbytes;
 			uae_u8 *vramptr = vramline + ((x << 1) / hdbl) * SM_VRAM_BYTES;
@@ -1577,18 +1585,10 @@ static bool videodac18(struct vidbuffer *src, struct vidbuffer *dst, bool double
 	int ystart, yend, isntsc;
 	int xadd, xaddpix;
 	uae_u16 hsstrt, hsstop, vsstrt, vsstop;
-	int xstart, xstop;
 
 	if ((beamcon0 & (0x80 | 0x100 | 0x200 | 0x10)) != 0x300)
 		return false;
 	getsyncregisters(&hsstrt, &hsstop, &vsstrt, &vsstop);
-
-	if (hsstop < hsstrt) {
-		hsstop += maxhpos + 1;
-	}
-	xstart = (hsstrt << RES_MAX) - src->xoffset;
-	xstop = (hsstop << RES_MAX) - src->xoffset;
-
 	isntsc = (beamcon0 & 0x20) ? 0 : 1;
 	if (!(currprefs.chipset_mask & CSMASK_ECS_AGNUS))
 		isntsc = currprefs.ntscmode ? 1 : 0;
@@ -1609,12 +1609,12 @@ static bool videodac18(struct vidbuffer *src, struct vidbuffer *dst, bool double
 		int yoff = (((y * 2 + oddlines) - src->yoffset) / vdbl);
 		if (yoff < 0)
 			continue;
-		if (yoff >= src->inheight)
+		if (yoff >= src->inheight - 1)
 			continue;
 		uae_u8 *line = src->bufmem + yoff * src->rowbytes;
 		uae_u8 *dstline = dst->bufmem + (((y * 2 + oddlines) - dst->yoffset) / vdbl) * dst->rowbytes;
 		r = g = b = 0;
-		for (x = 0; x < src->inwidth; x++) {
+		for (x = 8; x < src->inwidth - 16; x++) {
 			uae_u8 *s = line + ((x << 1) / hdbl) * src->pixbytes;
 			uae_u8 *d = dstline + ((x << 1) / hdbl) * dst->pixbytes;
 			uae_u8 *s2 = s + src->rowbytes;
@@ -1635,7 +1635,7 @@ static bool videodac18(struct vidbuffer *src, struct vidbuffer *dst, bool double
 				} else {
 					g = data;
 				}
-				if (y >= vsstrt && y < vsstop && x >= xstart && x < xstop) {
+				if (y >= vsstrt && y < vsstop) {
 					PUT_PRGB(d, d2, dst, r, g, b, xaddpix, doublelines, true);
 				} else {
 					PUT_AMIGARGB(d, s, d2, s2, dst, xaddpix, doublelines, true);
@@ -1700,8 +1700,8 @@ static bool ham_e(struct vidbuffer *src, struct vidbuffer *dst, bool doublelines
 	xaddpix = (1 << 1) / hdbl;
 	xadd = ((1 << 1) / hdbl) * src->pixbytes;
 
-	ystart = isntsc ? VBLANK_ENDLINE_NTSC : VBLANK_ENDLINE_PAL;
-	yend = isntsc ? MAXVPOS_NTSC : MAXVPOS_PAL;
+	ystart = (isntsc ? VBLANK_ENDLINE_NTSC : VBLANK_ENDLINE_PAL) - LINES_AFTER_VSYNC;
+	yend = (isntsc ? MAXVPOS_NTSC : MAXVPOS_PAL) - LINES_AFTER_VSYNC + 1;
 
 	uae_u8 r, g, b;
 	/* or is an alternative operator and cannot be used as an identifier */
@@ -1714,7 +1714,7 @@ static bool ham_e(struct vidbuffer *src, struct vidbuffer *dst, bool doublelines
 	bool cookie_line = false;
 	int cookiestartx = 10000;
 	for (y = ystart; y < yend; y++) {
-		int yoff = (((y * 2 + oddlines) - src->yoffset) / vdbl);
+		int yoff = ((y * 2 + oddlines) - src->yoffset) / vdbl;
 		if (yoff < 0)
 			continue;
 		if (yoff >= src->inheight)
@@ -1736,8 +1736,10 @@ static bool ham_e(struct vidbuffer *src, struct vidbuffer *dst, bool doublelines
 			uae_u8 newval = FIRGB(src, s);
 			uae_u8 val = prev | newval;
 
-			if (s_genlock[0])
+			uae_u16 dat = get_sm_data(y);
+			if (dat & 0x8000) {
 				zeroline = false;
+			}
 
 			if (val == ham_e_magic_cookie[0] && x + sizeof ham_e_magic_cookie + 1 < src->inwidth) {
 				int i;
@@ -1756,12 +1758,14 @@ static bool ham_e(struct vidbuffer *src, struct vidbuffer *dst, bool doublelines
 						cookie_line = true;
 					}
 				}
-				if (i == sizeof ham_e_magic_cookie + 1)
+				if (i == sizeof ham_e_magic_cookie + 1) {
 					continue;
+				}
 			}
 
-			if (!cookie_line && x == cookiestartx)
+			if (!cookie_line && x == cookiestartx) {
 				oddeven = 0;
+			}
 
 			if (oddeven) {
 				if (getpalette) {
@@ -1854,8 +1858,9 @@ static bool ham_e(struct vidbuffer *src, struct vidbuffer *dst, bool doublelines
 		}
 
 		cookie_line = false;
-		if (mode_active)
+		if (mode_active) {
 			was_active = mode_active;
+		}
 		if (zeroline) {
 			if (prevzeroline) {
 				mode_active = 0;
@@ -1903,17 +1908,21 @@ static bool do_hame(struct vidbuffer *src, struct vidbuffer *dst)
 	return v;
 }
 
-void specialmonitor_gaudio(bool gaudio, int vpos)
+void specialmonitor_data(uae_u16 bplcon0, int vpos)
 {
-	graffiti_gaudio |= gaudio;
+	if (vpos < 0 || vpos >= MAX_SM_DATA_LINES) {
+		return;	
+	}
+	sm_data[vpos] = bplcon0;
+	graffiti_gaudio |= (bplcon0 & 0x0100) != 0;
 }
 
 static bool graffiti(struct vidbuffer *src, struct vidbuffer *dst)
 {
 	struct vidbuf_description *avidinfo = &adisplays[dst->monitor_id].gfxvidinfo;
-	int y, x;
+	int y;
 	int ystart, yend, isntsc;
-	int xstart, xend;
+	int xstart;
 	uae_u8 *srcbuf, *srcend;
 	uae_u8 *dstbuf, *dstbufend;
 	bool command, hires, found;
@@ -1943,44 +1952,41 @@ static bool graffiti(struct vidbuffer *src, struct vidbuffer *dst)
 	xadd = avidinfo->xchange == 1 ? src->pixbytes * 2 : src->pixbytes;
 	xpixadd = avidinfo->xchange == 1 ? 4 : 2;
 
-	xstart = 0x1c * 2 + 1;
-	xend = 0xf0 * 2 + 1;
+	xstart = 0x1c * 2 + 2;
 	if (!(currprefs.chipset_mask & CSMASK_AGA)) {
 		xstart++;
-		xend++;
 	}
 	if ((xstart << RES_MAX) < src->xoffset)
 		return false;
 
-	srcbuf = src->bufmem + (((ystart << VRES_MAX) - src->yoffset) / avidinfo->ychange) * src->rowbytes + (((xstart << RES_MAX) - src->xoffset) / avidinfo->xchange) * src->pixbytes;
-
-	srcbuf = src->bufmem;
-
+	int sy = (((ystart << VRES_MAX) - src->yoffset) / avidinfo->ychange);
+	int ssx = (xstart << RES_MAX) - src->xoffset;
+	if (ssx < 0) {
+		ssx = 0;
+	}
+	int sx = (ssx / avidinfo->xchange) * src->pixbytes;
+	srcbuf = src->bufmem + sy * src->rowbytes + sx;
 	srcend = src->bufmem + (((yend << VRES_MAX) - src->yoffset) / avidinfo->ychange) * src->rowbytes;
 	extrapix = 0;
 
-	dstbuf = dst->bufmem + (((ystart << VRES_MAX) - src->yoffset) / avidinfo->ychange) * dst->rowbytes + (((xstart << RES_MAX) - src->xoffset) / avidinfo->xchange) * dst->pixbytes;
+	int dxoff = (((xstart << RES_MAX) - src->xoffset) / avidinfo->xchange) * dst->pixbytes;
+	dstbuf = dst->bufmem + (((ystart << VRES_MAX) - src->yoffset) / avidinfo->ychange) * dst->rowbytes + dxoff;
 	dstbufend = dst->bufmemend - 8 * dst->width_allocated * dst->pixbytes;
 
 	y = 0;
 	while (srcend > srcbuf && dstbufend > dstbuf) {
 		uae_u8 *srcp = srcbuf + extrapix;
+		uae_u8 *srclineend = srcp + (src->inwidth - (sx / src->pixbytes)) * src->pixbytes;
 		uae_u8 *dstp = dstbuf;
+		uae_u8 *dstlineend = dstbuf - dxoff + dst->inwidth * dst->pixbytes;
+		bool erase = false;
 
-		x = xstart;
-		bool first = true;
-		while (x < xend) {
-			
-			if (command && first) {
-				if (FR(src, srcp) || FG(src, srcp) || FB(src, srcp) || FI(src, srcp)) {
-					first = false;
-				} else {
-					x += xpixadd;
-					srcp += xadd;
-					dstp += dst->pixbytes * xpixadd;
-					continue;
-				}
-			}
+		int srcrow = (int)((srcbuf - src->bufmem) / src->rowbytes);
+		uae_u16 dat = get_sm_data(((srcrow * avidinfo->ychange) + src->yoffset) >> VRES_MAX);
+		bool active = (dat & 0x0100) != 0;
+
+		while (srcp + xadd * 8 <= srclineend &&
+			dstp + dst->pixbytes * (8 << (avidinfo->xchange == 1 && !hires ? 1 : 0)) <= dstlineend) {
 
 			uae_u8 mask = 0x80;
 			uae_u8 chunky[4] = { 0, 0, 0, 0 };
@@ -2041,15 +2047,13 @@ static bool graffiti(struct vidbuffer *src, struct vidbuffer *dst)
 					}
 				}
 
-				memset(dstp, 0, dst->pixbytes * 4 * 2);
-				dstp += dst->pixbytes * 4 * 2;
+				erase = true;
 
 			} else if (waitline) {
 			
-				memset(dstp, 0, dst->pixbytes * 4 * 2);
-				dstp += dst->pixbytes * 4 * 2;
+				erase = true;
 			
-			} else {
+			} else if (active) {
 
 				for (int pix = 0; pix < 4; pix++) {
 					uae_u8 r, g, b, c;
@@ -2073,7 +2077,14 @@ static bool graffiti(struct vidbuffer *src, struct vidbuffer *dst)
 
 			}
 
-			x += xpixadd;
+			if (erase) {
+				int edbl = avidinfo->xchange == 1 && !hires ? 1 : 0;
+				memset(dstp, 0, dst->pixbytes * (8 << edbl));
+				if (dbl) {
+					memset(dstp + dst->rowbytes, 0, dst->pixbytes * (8 << edbl));
+				}
+				dstp += dst->pixbytes * (8 << edbl);
+			}
 		}
 
 		y++;
@@ -2990,6 +3001,9 @@ static struct opals *opal;
 
 static void opal_pixel(struct opals *opal, uae_u8 *d, uae_u8 *d2, uae_u8 *s, uae_u8 *s2, uae_u8 *s_genlock, struct vidbuffer *src, struct vidbuffer *dst, uae_u8 r, uae_u8 g, uae_u8 b, uae_u8 pr, bool doublelines, bool hires, bool nextpix)
 {
+	if (!d) {
+		return;
+	}
 	bool oa;
 	switch (opal->priority_stencil_mode | pr)
 	{
@@ -3084,10 +3098,10 @@ static bool opalvision(struct vidbuffer *src, struct vidbuffer *dst, bool double
 	else if (hdbl == 4)
 		hdbl_shift = 2;
 
-	int ystart = isntsc ? VBLANK_ENDLINE_NTSC : VBLANK_ENDLINE_PAL;
+	int ystart = (isntsc ? VBLANK_ENDLINE_NTSC : VBLANK_ENDLINE_PAL) - LINES_AFTER_VSYNC;
 	int ystartcopro = ystart + 4;
 	int yimgstart = ystart + 6;
-	int yend = (isntsc ? MAXVPOS_NTSC : MAXVPOS_PAL) + 1;
+	int yend = (isntsc ? MAXVPOS_NTSC : MAXVPOS_PAL) - LINES_AFTER_VSYNC + 1;
 	int wrappos = -1;
 
 	if (yline < 0 || yline == ystart) {
@@ -3117,11 +3131,11 @@ static bool opalvision(struct vidbuffer *src, struct vidbuffer *dst, bool double
 		uae_u8 *dstline = NULL;
 		int ydisp = -1;
 
-		int yoff = (((y * 2 - oddlines) - src->yoffset) / vdbl);
+		int yoff = (((y * 2 + oddlines) - src->yoffset) / vdbl);
 		if (yoff >= 0 && yoff < src->inheight) {
 			line = src->bufmem + yoff * src->rowbytes;
 			line_genlock = get_row_genlock(0, yoff);
-			dstline = dst->bufmem + (((y * 2 - oddlines) - dst->yoffset) / vdbl) * dst->rowbytes;
+			dstline = dst->bufmem + (((y * 2 + oddlines) - dst->yoffset) / vdbl) * dst->rowbytes;
 			if (y >= yimgstart) {
 				ydisp = y - yimgstart;
 			}
@@ -3195,17 +3209,23 @@ static bool opalvision(struct vidbuffer *src, struct vidbuffer *dst, bool double
 		int xoffset = 8;
 		int ax = xoffset;
 
-		for (x = 0; x < src->inwidth - xoffset; x++, ax++) {
+		for (x = 0; x < src->inwidth; x++, ax++) {
 			uae_u8 *sa = line + ((x << 1) >> hdbl_shift) * src->pixbytes;
 			uae_u8 newval = FIRGB(src, sa);
 			uae_u8 val = prev | newval;
 
-			uae_u8 *d = dstline + ((ax << 1) >> hdbl_shift) * dst->pixbytes;
+			int xpos = (ax << 1) >> hdbl_shift;
+			uae_u8 *d = dstline + xpos * dst->pixbytes;
 			uae_u8 *d2 = d + dst->rowbytes;
 
-			uae_u8 *s = line + ((ax << 1) >> hdbl_shift) * src->pixbytes;
+			uae_u8 *s = line + xpos * src->pixbytes;
 			uae_u8 *s2 = s + src->rowbytes;
-			uae_u8 *s_genlock = line_genlock ? line_genlock + ((ax << 1) >> hdbl_shift) : NULL;
+			uae_u8 *s_genlock = line_genlock ? line_genlock + xpos : NULL;
+			if (xpos >= src->inwidth || xpos >= dst->inwidth) {
+				// past the last visible pixel: decode only, do not draw
+				d = d2 = s = s2 = NULL;
+				s_genlock = NULL;
+			}
 
 			if (!oddeven) {
 
