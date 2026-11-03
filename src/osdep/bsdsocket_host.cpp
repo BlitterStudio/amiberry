@@ -5838,8 +5838,12 @@ void host_gethostbynameaddr (TrapContext *ctx, SB, uae_u32 name, uae_u32 namelen
 	WAITSIGNAL;
 
 	unix_hostent_copy hostent;
-	if (take_hostent(sb, &hostent) && !sb->eintr)
+	if (sb->eintr) {
+		take_hostent(sb, &hostent);
+		bsdsocklib_setherrno(ctx, sb, 2); /* TRY_AGAIN */
+	} else if (take_hostent(sb, &hostent)) {
 		copyHostent(ctx, &hostent, sb);
+	}
 }
 
 #endif /* _WIN32 */
