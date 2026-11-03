@@ -427,12 +427,20 @@ namespace {
 			uint32_t complen_bytes = (destlen < 65536) ? 2 : 3;
 			uint32_t ecc_bytes = (frames + 7) / 8;
 			uint32_t header_bytes = ecc_bytes + complen_bytes;
+			// the ECC flags and base length must be present
+			if (complen < header_bytes)
+			{
+				throw std::error_condition(chd_file::error::DECOMPRESSION_ERROR);
+			}
 
 			// extract compressed length of base
 			uint32_t complen_base = (src[ecc_bytes + 0] << 8) | src[ecc_bytes + 1];
 			if (complen_bytes > 2)
 				complen_base = (complen_base << 8) | src[ecc_bytes + 2];
-
+			if (complen_base > complen - header_bytes)
+			{
+				throw std::error_condition(chd_file::error::DECOMPRESSION_ERROR);
+			}
 			// reset and decode
 			m_base_decompressor.decompress(&src[header_bytes], complen_base, &m_buffer[0], frames * CD_MAX_SECTOR_DATA);
 			m_subcode_decompressor.decompress(&src[header_bytes + complen_base], complen - complen_base - header_bytes, &m_buffer[frames * CD_MAX_SECTOR_DATA], frames * CD_MAX_SUBCODE_DATA);
@@ -1565,6 +1573,12 @@ chd_flac_decompressor::chd_flac_decompressor(chd_file& chd, uint32_t hunkbytes, 
 
 void chd_flac_decompressor::decompress(const uint8_t* src, uint32_t complen, uint8_t* dest, uint32_t destlen)
 {
+	// need at least the endianness byte; complen - 1 below
+	if (complen == 0)
+	{
+		throw std::error_condition(chd_file::error::DECOMPRESSION_ERROR);
+	}
+
 	// determine the endianness
 	bool swap_endian;
 	if (src[0] == 'L')
@@ -1790,6 +1804,10 @@ void chd_cd_flac_decompressor::decompress(const uint8_t* src, uint32_t complen, 
 
 	// inflate the subcode data
 	uint32_t offset = m_decoder.finish();
+	if (offset > complen)
+	{
+		throw std::error_condition(chd_file::error::DECOMPRESSION_ERROR);
+	}
 	m_inflater.next_in = const_cast<Bytef*>(src + offset);
 	m_inflater.avail_in = complen - offset;
 	m_inflater.total_in = 0;
