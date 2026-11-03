@@ -559,9 +559,24 @@ jobs:
             "$RW_DMG"
 
           DEVICE=""
+
+          # Spotlight/QuickLook or diskimages-helper can still hold the
+          # freshly-scripted volume open ("Resource busy", hdiutil exit 16),
+          # so retry with backoff and force-detach only as a last resort.
+          detach_dmg() {
+            local dev="$1" i
+            for i in 1 2 3 4 5; do
+              if hdiutil detach "$dev"; then
+                return 0
+              fi
+              sleep $((i * 5))
+            done
+            hdiutil detach -force "$dev"
+          }
+
           cleanup() {
             if [ -n "$DEVICE" ]; then
-              hdiutil detach "$DEVICE" || true
+              detach_dmg "$DEVICE" || true
             fi
           }
           trap cleanup EXIT
@@ -573,7 +588,7 @@ jobs:
           fi
 
           osascript packaging/dmg/AppDMGSetup.scpt "Amiberry"
-          hdiutil detach "$DEVICE"
+          detach_dmg "$DEVICE"
           DEVICE=""
           trap - EXIT
 
