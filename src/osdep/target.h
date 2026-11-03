@@ -25,6 +25,10 @@
 #include "sana2.h"
 
 #define TARGET_NAME _T("amiberry")
+// Also read the settings that WinUAE for Windows saves as win32.*.
+#define TARGET_NAME_COMPAT _T("win32")
+// True when a win32.* option means the same in Amiberry (without the prefix).
+bool amiberry_config_is_compat_option(const TCHAR *option);
 
 #define NO_MAIN_IN_MAIN_C
 

@@ -4112,6 +4112,12 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 				return 1;
 			return target_parse_option(p, option, value, CONFIG_TYPE_HOST);
 		}
+#ifdef TARGET_NAME_COMPAT
+		/* Settings saved by another host under its own section name. */
+		if (_tcscmp(section, TARGET_NAME_COMPAT) == 0) {
+			return target_parse_compat_option(p, option, value);
+		}
+#endif
 		return 0;
 	}
 
@@ -7708,6 +7714,14 @@ static int isobsolete (TCHAR *s)
 	return 0;
 }
 
+#ifdef TARGET_NAME_COMPAT
+static bool cfgfile_is_compat_option(const TCHAR *option)
+{
+	size_t len = _tcslen(TARGET_NAME_COMPAT);
+	return !_tcsnicmp(option, TARGET_NAME_COMPAT, len) && option[len] == '.';
+}
+#endif
+
 static void cfgfile_parse_separated_line (struct uae_prefs *p, const TCHAR *line1b, TCHAR *line2b, int type)
 {
 	TCHAR line3b[CONFIG_BLEN], line4b[CONFIG_BLEN];
@@ -7731,6 +7745,12 @@ static void cfgfile_parse_separated_line (struct uae_prefs *p, const TCHAR *line
 				u->unknown = 1;
 				cfgfile_warning(_T("unknown config entry: '%s=%s'\n"), u->option, u->value);
 			}
+			#ifdef TARGET_NAME_COMPAT
+			/* Save the other host's line unchanged even when it was used here. */
+			if (cfgfile_is_compat_option(line3b)) {
+				u->unknown = 1;
+			}
+			#endif
 		}
 	}
 }
