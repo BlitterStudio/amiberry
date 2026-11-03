@@ -4799,8 +4799,16 @@ uae_u8* save_log(int bootlog, size_t* len)
 
 void strip_slashes(TCHAR* p)
 {
-	while (_tcslen(p) > 0 && (p[_tcslen(p) - 1] == '\\' || p[_tcslen(p) - 1] == '/'))
-		p[_tcslen(p) - 1] = 0;
+	// Remove trailing path separators, but keep a bare root "/".
+	size_t len = _tcslen(p);
+	while (len > 1 && (p[len - 1] == '/' || p[len - 1] == '\\')) {
+		p[--len] = 0;
+	}
+}
+
+void stripslashes(TCHAR* p)
+{
+	strip_slashes(p);
 }
 
 void fix_trailing(TCHAR* p)
