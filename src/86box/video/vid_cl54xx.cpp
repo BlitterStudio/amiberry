@@ -4863,6 +4863,213 @@ gd54xx_mem_sys_dest(uint32_t count, gd54xx_t *gd54xx, svga_t *svga)
     }
 }
 
+#ifdef AMIBERRY
+/* Amiberry delta (dd8fd139b with the fixes from 210aad4f2 and d945a2a8b,
+   re-implemented for 86Box's blitter): bulk paths for the three blits
+   Picasso96 issues for RectFill, patterned RectFill and ScrollRaster —
+   solid colour fill, 8x8 monochrome pattern fill and screen-to-screen
+   copy. Every path here produces the same VRAM bytes as the generic
+   loops below for the cases it accepts, and refuses everything else:
+   other ROPs, transparency comparison, XY addressing, clipping, command
+   lists, background-only writes, system-source or system-destination
+   blits, nonzero pattern alignment, partially restarted blits, lines
+   crossing the end of VRAM, and 8-bit screens (garbled there, 210aad4f2
+   and d945a2a8b).
+
+   This block is Amiberry-only: upstream 86Box and WinUAE have nothing
+   like it, and it is kept in one piece so an upstream import conflicts
+   with it instead of overwriting it. */
+static int
+amiberry_gd54xx_fast_blit(gd54xx_t *gd54xx, svga_t *svga)
+{
+    const int rop_ok = (gd54xx->blt.rop == 0x0d) || (gd54xx->blt.rop == 0xf0);
+    int       bpp;
+    int       w;
+    int       h;
+
+    if (!rop_ok || (svga->bpp == 8))
+        return 0;
+
+    /* A blit restarted mid-way has counters already decremented; leave
+       those to the generic engine. */
+    if ((gd54xx->blt.width != gd54xx->blt.width_backup) ||
+        (gd54xx->blt.height != gd54xx->blt.height_backup))
+        return 0;
+
+    if (gd54xx->blt.modeext & (CIRRUS_BLTMODEEXT_XY_POSITION_SPEC |
+                               CIRRUS_BLTMODEEXT_CLIP_RECTANGLE |
+                               CIRRUS_BLTMODEEXT_BACKGROUNDONLY |
+                               CIRRUS_BLTMODEEXT_COMMAND_LIST))
+        return 0;
+
+    bpp = gd54xx->blt.pixel_width;
+    w   = (int) gd54xx->blt.width_backup + 1;
+    h   = (int) gd54xx->blt.height + 1;
+
+    if (w <= 0 || h <= 0 || bpp <= 0)
+        return 0;
+
+    const int is_24bit = (svga->bpp == 24) || (bpp == 3);
+
+    if (!(gd54xx->blt.mode & (CIRRUS_BLTMODE_PATTERNCOPY | CIRRUS_BLTMODE_COLOREXPAND |
+                              CIRRUS_BLTMODE_MEMSYSSRC | CIRRUS_BLTMODE_MEMSYSDEST |
+                              CIRRUS_BLTMODE_TRANSPARENTCOMP))) {
+        /* Screen-to-screen copy: one memmove per line. */
+        const int allow_fast_copy_24 = is_24bit && ((gd54xx->blt.mask & 7) == 0) && ((w % 3) == 0);
+        if (is_24bit && !allow_fast_copy_24)
+            return 0;
+
+        const int  dir       = gd54xx->blt.dir;
+        const int  dst_pitch = (int) gd54xx->blt.dst_pitch * dir;
+        const int  src_pitch = (int) gd54xx->blt.src_pitch * dir;
+        uint32_t   dst_addr  = gd54xx->blt.dst_addr;
+        uint32_t   src_addr  = gd54xx->blt.src_addr;
+
+        for (int y = 0; y < h; y++) {
+            /* Backward blits start at the last byte of the line. */
+            uint32_t dst = dir > 0 ? dst_addr : dst_addr - (uint32_t) (w - 1);
+            uint32_t src = dir > 0 ? src_addr : src_addr - (uint32_t) (w - 1);
+
+            if (((uint64_t) dst + (uint32_t) w) > gd54xx->vram_size ||
+                ((uint64_t) src + (uint32_t) w) > gd54xx->vram_size)
+                return 0;
+
+            memmove(&svga->vram[dst], &svga->vram[src], (size_t) w);
+            for (uint32_t p = dst >> 12; p <= (dst + (uint32_t) (w - 1)) >> 12; p++)
+                svga->changedvram[p] = changeframecount;
+
+            dst_addr += (uint32_t) dst_pitch;
+            src_addr += (uint32_t) src_pitch;
+        }
+
+        /* The address registers advance with the blit, as in
+           gd54xx_normal_blit(). */
+        gd54xx->blt.dst_addr = dst_addr & gd54xx->vram_mask;
+        gd54xx->blt.src_addr = src_addr & gd54xx->vram_mask;
+        gd54xx->blt.width    = 0xffff;
+        gd54xx->blt.height_internal = 0xffff;
+        return 1;
+    }
+
+    if ((gd54xx->blt.mode & (CIRRUS_BLTMODE_PATTERNCOPY | CIRRUS_BLTMODE_COLOREXPAND)) ==
+        (CIRRUS_BLTMODE_PATTERNCOPY | CIRRUS_BLTMODE_COLOREXPAND)) {
+        /* Keep 24-bit pattern fills on conservative path (f944129b3). */
+        if (is_24bit)
+            return 0;
+
+        if (gd54xx->blt.mode & (CIRRUS_BLTMODE_MEMSYSSRC | CIRRUS_BLTMODE_MEMSYSDEST))
+            return 0;
+
+        /* Only 16-bit and 32-bit supported for fast pattern fills. */
+        if (bpp != 2 && bpp != 4)
+            return 0;
+
+        if ((w % bpp) != 0)
+            return 0;
+
+        /* The generic engine skips the first blt.pattern_x bytes of every
+           line; only take blits with no such skip. */
+        if (gd54xx->blt.pattern_x != 0)
+            return 0;
+
+        const uint32_t fg        = gd54xx->blt.fg_col;
+        const uint32_t bg        = gd54xx->blt.bg_col;
+        const int      transp    = (gd54xx->blt.mode & CIRRUS_BLTMODE_TRANSPARENTCOMP) != 0;
+        const int      inv       = (gd54xx->blt.modeext & CIRRUS_BLTMODEEXT_COLOREXPINV) != 0;
+        const uint32_t pattern   = (gd54xx->blt.src_addr & ~UINT32_C(7)) & gd54xx->vram_mask;
+        const int      pattern_y = (int) (gd54xx->blt.src_addr & 7);
+        uint32_t       dst_addr  = gd54xx->blt.dst_addr & gd54xx->vram_mask;
+        const int      pixels    = w / bpp;
+
+        for (int y = 0; y < h; y++) {
+            uint8_t  bits = svga->vram[(pattern | (uint32_t) ((pattern_y + y) & 7)) & gd54xx->vram_mask];
+            uint32_t dst  = dst_addr;
+
+            if (((uint64_t) dst + (uint32_t) w) > gd54xx->vram_size)
+                return 0;
+
+            if (gd54xx->blt.modeext & CIRRUS_BLTMODEEXT_SOLIDFILL) {
+                if (bpp == 2) {
+                    uint16_t  c = (uint16_t) fg;
+                    uint16_t *d = (uint16_t *) &svga->vram[dst];
+                    for (int k = 0; k < pixels; k++)
+                        d[k] = c;
+                } else {
+                    uint32_t  c = fg;
+                    uint32_t *d = (uint32_t *) &svga->vram[dst];
+                    for (int k = 0; k < pixels; k++)
+                        d[k] = c;
+                }
+            } else {
+                if (transp) {
+                    if (inv)
+                        bits ^= 0xff;
+                    if (bits == 0)
+                        continue;
+                }
+
+                if (bits == 0xff) {
+                    if (bpp == 2) {
+                        uint16_t  c = (uint16_t) fg;
+                        uint16_t *d = (uint16_t *) &svga->vram[dst];
+                        for (int k = 0; k < pixels; k++)
+                            d[k] = c;
+                    } else {
+                        uint32_t  c = fg;
+                        uint32_t *d = (uint32_t *) &svga->vram[dst];
+                        for (int k = 0; k < pixels; k++)
+                            d[k] = c;
+                    }
+                } else if (!transp && bits == 0x00) {
+                    if (bpp == 2) {
+                        uint16_t  c = (uint16_t) bg;
+                        uint16_t *d = (uint16_t *) &svga->vram[dst];
+                        for (int k = 0; k < pixels; k++)
+                            d[k] = c;
+                    } else {
+                        uint32_t  c = bg;
+                        uint32_t *d = (uint32_t *) &svga->vram[dst];
+                        for (int k = 0; k < pixels; k++)
+                            d[k] = c;
+                    }
+                } else {
+                    if (bpp == 2) {
+                        uint16_t  c_fg = (uint16_t) fg, c_bg = (uint16_t) bg;
+                        uint16_t *d    = (uint16_t *) &svga->vram[dst];
+                        for (int k = 0; k < pixels; k++) {
+                            int bit = (bits >> (7 - (k & 7))) & 1;
+                            if (transp && !bit)
+                                continue;
+                            d[k] = bit ? c_fg : c_bg;
+                        }
+                    } else {
+                        uint32_t  c_fg = fg, c_bg = bg;
+                        uint32_t *d    = (uint32_t *) &svga->vram[dst];
+                        for (int k = 0; k < pixels; k++) {
+                            int bit = (bits >> (7 - (k & 7))) & 1;
+                            if (transp && !bit)
+                                continue;
+                            d[k] = bit ? c_fg : c_bg;
+                        }
+                    }
+                }
+            }
+
+            for (uint32_t p = dst >> 12; p <= (dst + (uint32_t) (w - 1)) >> 12; p++)
+                svga->changedvram[p] = changeframecount;
+
+            dst_addr = (dst_addr + (uint32_t) gd54xx->blt.dst_pitch) & gd54xx->vram_mask;
+        }
+
+        gd54xx->blt.width           = 0xffff;
+        gd54xx->blt.height_internal = 0xffff;
+        return 1;
+    }
+
+    return 0;
+}
+#endif
+
 static void
 gd54xx_start_blit(uint32_t cpu_dat, uint32_t count, gd54xx_t *gd54xx, svga_t *svga)
 {
@@ -4884,6 +5091,12 @@ gd54xx_start_blit(uint32_t cpu_dat, uint32_t count, gd54xx_t *gd54xx, svga_t *sv
     } else
         gd54xx->blt.pattern_x = 0; /* No skip in normal blit mode. */
 
+#ifdef AMIBERRY
+    if (amiberry_gd54xx_fast_blit(gd54xx, svga)) {
+        gd54xx_reset_blit(gd54xx);
+        return;
+    }
+#endif
     if ((svga->crtc[0x27] == CIRRUS_ID_CLGD5480) && (gd54xx->blt.modeext & CIRRUS_BLTMODEEXT_COMMAND_LIST))
         gd54xx_normal_blit(count, gd54xx, svga);
     else {
