@@ -797,13 +797,21 @@ void comp_fbcc_opp(uae_u32 opcode)
 	v1 = get_const(PC_P);
 	v2 = get_const(S1);
 	fflags_into_flags(S2);
+	/* Conditions 1, 4 and 5 jump back to the fall-through address when the
+	 * comparison was unordered. Load that address into S2 as a constant,
+	 * built like S1 above: a runtime copy of PC_P in a temporary would be
+	 * spilled and reloaded with 32 bits and lose the upper half of the
+	 * host pointer (#2591). */
+	if (cc == 1 || cc == 4 || cc == 5) {
+		mov_l_ri(S2, 0);
+		add_l_ri(S2, (uintptr)v1);
+	}
 
 	switch (cc)
 	{
 	case 0:
 		break;							/* jump never */
 	case 1:
-		mov_l_rr(S2, PC_P);
 		cmov_l_rr(PC_P, S1, 4);
 		cmov_l_rr(PC_P, S2, 10);
 		break;
@@ -814,12 +822,10 @@ void comp_fbcc_opp(uae_u32 opcode)
 		register_branch(v1, v2, 3);
 		break;
 	case 4:
-		mov_l_rr(S2, PC_P);
 		cmov_l_rr(PC_P, S1, 2);
 		cmov_l_rr(PC_P, S2, 10);
 		break;
 	case 5:
-		mov_l_rr(S2, PC_P);
 		cmov_l_rr(PC_P, S1, 6);
 		cmov_l_rr(PC_P, S2, 10);
 		break;
