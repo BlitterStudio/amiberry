@@ -268,6 +268,24 @@ static void test_native_mousehack_compensates_cropped_screen_origin()
 		"uncropped higher-resolution input must not receive the LowRes correction");
 }
 
+static void test_rtg_host_cursor_ignores_pointer_prefs_offset()
+{
+	// Pointer.prefs default arrow offset -3: the host hotspot comes from it on
+	// native screens, from the active pointer's own offset on RTG screens.
+	expect_int_eq(amiberry_input_mousehack_pointer_prefs_adjust(true, true, -3,
+		amiberry_mousehack_pointer_bias_x), -2,
+		"native host cursor must keep the Pointer.prefs offset and sprite bias");
+	expect_int_eq(amiberry_input_mousehack_pointer_prefs_adjust(true, false, -3,
+		amiberry_mousehack_pointer_bias_x), 0,
+		"RTG host cursor hotspot must be delivered as the Amiga pointer position");
+	expect_int_eq(amiberry_input_mousehack_pointer_prefs_adjust(true, false, 0,
+		amiberry_mousehack_pointer_bias_x), 0,
+		"RTG host cursor must not apply the sprite bias for a zero Pointer.prefs offset");
+	expect_int_eq(amiberry_input_mousehack_pointer_prefs_adjust(false, false, -3,
+		amiberry_mousehack_pointer_bias_x), -2,
+		"RTG without a host cursor hotspot must keep the Pointer.prefs offset and sprite bias");
+}
+
 static void test_native_mousehack_normalizes_interlace_field_origin()
 {
 	expect_int_eq(amiberry_input_native_interlace_origin(38, true, false, 2), 38,
@@ -628,6 +646,7 @@ int main()
 	test_native_sprite_position_decoding();
 	test_native_cursor_height_requires_sscan2();
 	test_native_mousehack_compensates_cropped_screen_origin();
+	test_rtg_host_cursor_ignores_pointer_prefs_offset();
 	test_native_mousehack_normalizes_interlace_field_origin();
 	test_native_cursor_hotspot_learning_waits_for_rest();
 	test_native_cursor_hotspot_ignores_lagging_sprite_during_slow_movement();

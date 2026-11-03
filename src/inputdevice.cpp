@@ -3260,12 +3260,13 @@ static void inputdevice_mh_abs (int x, int y, uae_u32 buttonbits)
 #endif
 {
 #ifdef AMIBERRY
+	x -= amiberry_input_mousehack_pointer_prefs_adjust(mousehack_host_cursor_uses_hotspot,
+		mousehack_position_is_native, mouseoffset_x, amiberry_mousehack_pointer_bias_x);
+	y -= amiberry_input_mousehack_pointer_prefs_adjust(mousehack_host_cursor_uses_hotspot,
+		mousehack_position_is_native, mouseoffset_y, amiberry_mousehack_pointer_bias_y);
 	if (mousehack_host_cursor_uses_hotspot) {
-		x -= mousehack_host_cursor_residual_x + mouseoffset_x + 1;
-		y -= mousehack_host_cursor_residual_y + mouseoffset_y;
-	} else {
-		x -= mouseoffset_x + 1;
-		y -= mouseoffset_y;
+		x -= mousehack_host_cursor_residual_x;
+		y -= mousehack_host_cursor_residual_y;
 	}
 	int screen_offset_x = 0;
 	int screen_offset_y = 0;
