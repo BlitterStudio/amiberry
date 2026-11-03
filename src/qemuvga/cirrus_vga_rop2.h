@@ -66,7 +66,12 @@ glue(glue(glue(cirrus_patternfill_, ROP_NAME), _),DEPTH)
 #endif
     pattern_y = s->cirrus_blt_srcaddr & 7;
     for(y = 0; y < bltheight; y++) {
+#if DEPTH == 24
+        // skipleft counts bytes, pattern_x is a pixel index into the pattern
+        pattern_x = (skipleft / 3) & 7;
+#else
         pattern_x = skipleft;
+#endif
         d = dst + skipleft;
         src1 = src + pattern_y * pattern_pitch;
         for (x = skipleft; x < bltwidth; x += (DEPTH / 8)) {
@@ -110,14 +115,19 @@ glue(glue(glue(cirrus_colorexpand_transp_, ROP_NAME), _),DEPTH)
     unsigned bitmask;
     unsigned index;
 #if DEPTH == 24
+    // GR2F[4:0] counts destination bytes to skip in packed 24-bit modes,
+    // that can be more than 8 source bits (QEMU 27d14251b9)
     int dstskipleft = s->vga.gr[0x2f] & 0x1f;
-    int srcskipleft = dstskipleft / 3;
+    int srcskipleftbits = (dstskipleft / 3) & 7;
+    int srcskipleftbytes = (dstskipleft / 3) >> 3;
 #else
-    int srcskipleft = s->vga.gr[0x2f] & 0x07;
-    int dstskipleft = srcskipleft * (DEPTH / 8);
+    int srcskipleftbits = s->vga.gr[0x2f] & 0x07;
+    int srcskipleftbytes = 0;
+    int dstskipleft = srcskipleftbits * (DEPTH / 8);
 #endif
 
 	BLTCHECK_DST(dstskipleft)
+	BLTCHECK_SRC_EXPAND(srcskipleftbits, srcskipleftbytes, dstskipleft)
 	INITBLIT
 
 	if (s->cirrus_blt_modeext & CIRRUS_BLTMODEEXT_COLOREXPINV) {
@@ -130,7 +140,8 @@ glue(glue(glue(cirrus_colorexpand_transp_, ROP_NAME), _),DEPTH)
     }
 
     for(y = 0; y < bltheight; y++) {
-        bitmask = 0x80 >> srcskipleft;
+        bitmask = 0x80 >> srcskipleftbits;
+        src += srcskipleftbytes;
         bits = *src++ ^ bits_xor;
         d = dst + dstskipleft;
         for (x = dstskipleft; x < bltwidth; x += (DEPTH / 8)) {
@@ -167,6 +178,7 @@ glue(glue(glue(cirrus_colorexpand_, ROP_NAME), _),DEPTH)
     int dstskipleft = srcskipleft * (DEPTH / 8);
 
 	BLTCHECK_DST(dstskipleft)
+	BLTCHECK_SRC_EXPAND(srcskipleft, 0, dstskipleft)
 	INITBLIT
 		
 	colors[0] = s->cirrus_blt_bgcol;
@@ -202,8 +214,10 @@ glue(glue(glue(cirrus_colorexpand_pattern_transp_, ROP_NAME), _),DEPTH)
     unsigned int bits, bits_xor;
     unsigned int col;
 #if DEPTH == 24
+    // GR2F[4:0] counts destination bytes to skip in packed 24-bit modes,
+    // the 8 pixel wide pattern repeats (QEMU aefeecb413)
     int dstskipleft = s->vga.gr[0x2f] & 0x1f;
-    int srcskipleft = dstskipleft / 3;
+    int srcskipleft = (dstskipleft / 3) & 7;
 #else
     int srcskipleft = s->vga.gr[0x2f] & 0x07;
     int dstskipleft = srcskipleft * (DEPTH / 8);

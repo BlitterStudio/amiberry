@@ -59,14 +59,18 @@ public:
 	void AssertIrq();
 	void NegateIrq();
 
+	void AssertHighToLowT1();
 	uint32 GetTStatesPending() const { return mTStatesLeft; }
 	uint32 GetCyclesLeft() const { return mCyclesLeft; }
 	void AddCycles(sint32 cycles) { mCyclesBase += cycles;  mCyclesLeft += cycles; }
 	void Run();
 
-	void DispatchIrq();
+	void DispatchExternalIrq();
+	void DispatchTimerIrq();
 	void UpdateTimer();
 	void UpdateTimerDeadline();
+	void StartCount();
+	void StopCount();
 
 	int		mTStatesLeft = 0;
 
@@ -84,6 +88,7 @@ public:
 	bool	mbIF = false;
 	bool	mbTIF = false;
 	bool	mbTF = false;
+	bool	mbCountEnabled = false;
 	bool	mbF1 = false;
 	bool	mbIrqEnabled = false;
 	bool	mbIrqPending = false;
@@ -114,5 +119,7 @@ void mpFnWriteBus(uint8);
 uint8 mpFnReadPort(int, uint8);
 uint8 mpFnReadT0(void);
 uint8 mpFnReadT1(void);
+uint8 mpFnReadXRAM(uint8);
+void mpFnWriteXRAM(uint8, uint8);
 
 #endif	// f_ATCOPROC_CO8048_H

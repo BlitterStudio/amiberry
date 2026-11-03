@@ -41,6 +41,11 @@ const char* AV_METADATA_FORMAT = "FPS:%d.%06d WIDTH:%d HEIGHT:%d INTERLACED:%d C
 
 static const uint32_t METADATA_HEADER_SIZE = 16;          // metadata header size
 
+// sanity limits for values read from a (possibly malformed) file
+static const uint32_t CHD_MAX_HUNK_SIZE = 128 * 1024 * 1024;  // largest hunk we accept
+static const uint64_t CHD_MAX_MAP_SIZE = 256 * 1024 * 1024;   // largest in-memory hunk map we allocate
+static const uint32_t CHD_MAX_METADATA_ENTRIES = 65536;       // longest metadata chain we walk
+
 static const uint8_t V34_MAP_ENTRY_FLAG_TYPE_MASK = 0x0f;     // what type of hunk
 static const uint8_t V34_MAP_ENTRY_FLAG_NO_CRC = 0x10;        // no CRC is present
 
@@ -923,6 +928,15 @@ std::error_condition chd_file::read_hunk(uint32_t hunknum, void* buffer)
 			{
 			case V34_MAP_ENTRY_TYPE_COMPRESSED:
 				blocklen = be_read(&rawmap[12], 2) + (rawmap[14] << 16);
+				// the 24-bit length must fit the hunk-sized compressed buffer
+				if (blocklen > uint32_t(m_compressed.size()))
+				{
+					throw std::error_condition(error::DECOMPRESSION_ERROR);
+				}
+				if (m_decompressor[0] == nullptr)
+				{
+					throw std::error_condition(error::DECOMPRESSION_ERROR);
+				}
 				file_read(blockoffs, &m_compressed[0], blocklen);
 				m_decompressor[0]->decompress(&m_compressed[0], blocklen, dest, m_hunkbytes);
 				if (!(rawmap[15] & V34_MAP_ENTRY_FLAG_NO_CRC) && dest != nullptr && util::crc32_creator::simple(dest, m_hunkbytes) != blockcrc)
@@ -936,6 +950,11 @@ std::error_condition chd_file::read_hunk(uint32_t hunknum, void* buffer)
 				return std::error_condition();
 
 			case V34_MAP_ENTRY_TYPE_MINI:
+				// the 8-byte pattern must fit in the hunk
+				if (m_hunkbytes < 8)
+				{
+					throw std::error_condition(error::DECOMPRESSION_ERROR);
+				}
 				be_write(dest, blockoffs, 8);
 				for (uint32_t bytes = 8; bytes < m_hunkbytes; bytes++)
 					dest[bytes] = dest[bytes - 8];
@@ -944,8 +963,23 @@ std::error_condition chd_file::read_hunk(uint32_t hunknum, void* buffer)
 				return std::error_condition();
 
 			case V34_MAP_ENTRY_TYPE_SELF_HUNK:
-				return read_hunk(blockoffs, dest);
-
+				// follow the chain here rather than by recursion; each link must
+				// name an earlier hunk, so a self-reference or cycle is rejected
+				// and a long chain cannot exhaust the stack
+				for (;;)
+				{
+					if (blockoffs >= hunknum)
+					{
+						throw std::error_condition(error::DECOMPRESSION_ERROR);
+					}
+					hunknum = blockoffs;
+					rawmap = &m_rawmap[16 * hunknum];
+					if ((rawmap[15] & V34_MAP_ENTRY_FLAG_TYPE_MASK) != V34_MAP_ENTRY_TYPE_SELF_HUNK)
+					{
+						return read_hunk(hunknum, dest);
+					}
+					blockoffs = be_read(&rawmap[0], 8);
+				}
 			case V34_MAP_ENTRY_TYPE_PARENT_HUNK:
 				if (m_parent_missing)
 					throw std::error_condition(error::REQUIRES_PARENT);
@@ -982,6 +1016,15 @@ std::error_condition chd_file::read_hunk(uint32_t hunknum, void* buffer)
 			case COMPRESSION_TYPE_1:
 			case COMPRESSION_TYPE_2:
 			case COMPRESSION_TYPE_3:
+				// the 24-bit length must fit the hunk-sized compressed buffer
+				if (blocklen > uint32_t(m_compressed.size()))
+				{
+					throw std::error_condition(error::DECOMPRESSION_ERROR);
+				}
+				if (m_decompressor[rawmap[0]] == nullptr)
+				{
+					throw std::error_condition(error::DECOMPRESSION_ERROR);
+				}
 				file_read(blockoffs, &m_compressed[0], blocklen);
 				m_decompressor[rawmap[0]]->decompress(&m_compressed[0], blocklen, dest, m_hunkbytes);
 				if (!m_decompressor[rawmap[0]]->lossy() && dest != nullptr && util::crc16_creator::simple(dest, m_hunkbytes) != blockcrc)
@@ -997,8 +1040,23 @@ std::error_condition chd_file::read_hunk(uint32_t hunknum, void* buffer)
 				return std::error_condition();
 
 			case COMPRESSION_SELF:
-				return read_hunk(blockoffs, dest);
-
+				// follow the chain here rather than by recursion; each link must
+				// name an earlier hunk, so a self-reference or cycle is rejected
+				// and a long chain cannot exhaust the stack
+				for (;;)
+				{
+					if (blockoffs >= hunknum)
+					{
+						throw std::error_condition(error::DECOMPRESSION_ERROR);
+					}
+					hunknum = blockoffs;
+					rawmap = &m_rawmap[m_mapentrybytes * hunknum];
+					if (rawmap[0] != COMPRESSION_SELF)
+					{
+						return read_hunk(hunknum, dest);
+					}
+					blockoffs = be_read(&rawmap[4], 6);
+				}
 			case COMPRESSION_PARENT:
 				if (m_parent_missing)
 					throw std::error_condition(error::REQUIRES_PARENT);
@@ -1158,6 +1216,12 @@ std::error_condition chd_file::write_units(uint64_t unitnum, const void* buffer,
 
 std::error_condition chd_file::read_bytes(uint64_t offset, void* buffer, uint32_t bytes)
 {
+	// nothing to do; also keeps offset + bytes - 1 below from underflowing
+	if (bytes == 0)
+	{
+		return std::error_condition();
+	}
+
 	// iterate over hunks
 	uint32_t first_hunk = offset / m_hunkbytes;
 	uint32_t last_hunk = (offset + bytes - 1) / m_hunkbytes;
@@ -1211,6 +1275,12 @@ std::error_condition chd_file::read_bytes(uint64_t offset, void* buffer, uint32_
 
 std::error_condition chd_file::write_bytes(uint64_t offset, const void* buffer, uint32_t bytes)
 {
+	// nothing to do; also keeps offset + bytes - 1 below from underflowing
+	if (bytes == 0)
+	{
+		return std::error_condition();
+	}
+
 	// iterate over hunks
 	uint32_t first_hunk = offset / m_hunkbytes;
 	uint32_t last_hunk = (offset + bytes - 1) / m_hunkbytes;
@@ -1777,6 +1847,10 @@ void chd_file::parse_v3_header(uint8_t* rawheader, util::sha1_t& parentsha1)
 	m_metaoffset = be_read(&rawheader[36], 8);
 	m_hunkbytes = be_read(&rawheader[76], 4);
 	m_hunkcount = be_read(&rawheader[24], 4);
+	if (m_hunkbytes == 0 || m_hunkbytes > CHD_MAX_HUNK_SIZE)
+	{
+		throw std::error_condition(error::INVALID_FILE);
+	}
 
 	// extract parent SHA-1
 	uint32_t flags = be_read(&rawheader[16], 4);
@@ -1809,6 +1883,10 @@ void chd_file::parse_v3_header(uint8_t* rawheader, util::sha1_t& parentsha1)
 
 	// guess at the units based on snooping the metadata
 	m_unitbytes = guess_unitbytes();
+	if (m_unitbytes == 0)
+	{
+		throw std::error_condition(error::INVALID_FILE);
+	}
 	m_unitcount = (m_logicalbytes + m_unitbytes - 1) / m_unitbytes;
 }
 
@@ -1840,6 +1918,10 @@ void chd_file::parse_v4_header(uint8_t* rawheader, util::sha1_t& parentsha1)
 	m_metaoffset = be_read(&rawheader[36], 8);
 	m_hunkbytes = be_read(&rawheader[44], 4);
 	m_hunkcount = be_read(&rawheader[24], 4);
+	if (m_hunkbytes == 0 || m_hunkbytes > CHD_MAX_HUNK_SIZE)
+	{
+		throw std::error_condition(error::INVALID_FILE);
+	}
 
 	// extract parent SHA-1
 	uint32_t flags = be_read(&rawheader[16], 4);
@@ -1872,6 +1954,10 @@ void chd_file::parse_v4_header(uint8_t* rawheader, util::sha1_t& parentsha1)
 
 	// guess at the units based on snooping the metadata
 	m_unitbytes = guess_unitbytes();
+	if (m_unitbytes == 0)
+	{
+		throw std::error_condition(error::INVALID_FILE);
+	}
 	m_unitcount = (m_logicalbytes + m_unitbytes - 1) / m_unitbytes;
 }
 
@@ -1899,9 +1985,22 @@ void chd_file::parse_v5_header(uint8_t* rawheader, util::sha1_t& parentsha1)
 	m_mapoffset = be_read(&rawheader[40], 8);
 	m_metaoffset = be_read(&rawheader[48], 8);
 	m_hunkbytes = be_read(&rawheader[56], 4);
-	m_hunkcount = (m_logicalbytes + m_hunkbytes - 1) / m_hunkbytes;
 	m_unitbytes = be_read(&rawheader[60], 4);
-	m_unitcount = (m_logicalbytes + m_unitbytes - 1) / m_unitbytes;
+
+	// hunk and unit sizes must be sane before calculating counts
+	if (m_hunkbytes == 0 || m_unitbytes == 0 || m_hunkbytes > CHD_MAX_HUNK_SIZE)
+	{
+		throw std::error_condition(error::INVALID_FILE);
+	}
+
+	// the hunk count must fit in 32 bits (computed without overflowing)
+	uint64_t hunkcount = m_logicalbytes / m_hunkbytes + ((m_logicalbytes % m_hunkbytes) != 0 ? 1 : 0);
+	if (hunkcount > 0xffffffff)
+	{
+		throw std::error_condition(error::INVALID_FILE);
+	}
+	m_hunkcount = uint32_t(hunkcount);
+	m_unitcount = m_logicalbytes / m_unitbytes + ((m_logicalbytes % m_unitbytes) != 0 ? 1 : 0);
 
 	// determine compression
 	m_compression[0] = be_read(&rawheader[16], 4);
@@ -2169,6 +2268,20 @@ void chd_file::decompress_v5_map()
 	uint8_t const selfbits = rawbuf[13];
 	uint8_t const parentbits = rawbuf[14];
 
+	// these are bit widths for the bitstream reader; chdman never makes them
+	// wider than 32, and anything wider is undefined behaviour in the reader
+	if (lengthbits > 32 || selfbits > 32 || parentbits > 32)
+	{
+		throw std::error_condition(error::INVALID_FILE);
+	}
+
+	// the compressed map must fit in the file
+	uint64_t filesize = 0;
+	std::error_condition serr = m_file->length(filesize);
+	if (serr || m_mapoffset > filesize || filesize - m_mapoffset < sizeof(rawbuf) || mapbytes > filesize - m_mapoffset - sizeof(rawbuf) || mapbytes > CHD_MAX_MAP_SIZE)
+	{
+		throw std::error_condition(error::INVALID_FILE);
+	}
 	// now read the map
 	std::vector<uint8_t> compressed(mapbytes);
 	file_read(m_mapoffset + 16, &compressed[0], mapbytes);
@@ -2443,6 +2556,23 @@ std::error_condition chd_file::open_common(bool writeable)
 		else if (m_parent)
 			throw std::error_condition(std::errc::invalid_argument);
 
+		// bound the hunk map before it is allocated; a raw (v3/v4 or
+		// uncompressed v5) map is stored as-is and must fit in the file
+		uint64_t mapbytes = uint64_t(m_hunkcount) * uint64_t(m_mapentrybytes);
+		if (mapbytes > CHD_MAX_MAP_SIZE)
+		{
+			throw std::error_condition(error::INVALID_FILE);
+		}
+		if (m_version < 5 || !compressed())
+		{
+			uint64_t filesize = 0;
+			std::error_condition serr = m_file->length(filesize);
+			if (serr || m_mapoffset > filesize || mapbytes > filesize - m_mapoffset)
+			{
+				throw std::error_condition(error::INVALID_FILE);
+			}
+		}
+
 		// finish opening the file
 		create_open_common();
 		return std::error_condition();
@@ -2651,9 +2781,16 @@ bool chd_file::metadata_find(chd_metadata_tag metatag, int32_t metaindex, metada
 		metaentry.offset = metaentry.next;
 	}
 
-	// loop until we run out of options
+	// loop until we run out of options; bound the walk so that a cyclic
+	// chain in a malformed file cannot loop forever
+	uint32_t entries = 0;
 	while (metaentry.offset != 0)
 	{
+		if (++entries > CHD_MAX_METADATA_ENTRIES)
+		{
+			throw std::error_condition(error::INVALID_FILE);
+		}
+
 		// read the raw header
 		uint8_t raw_meta_header[METADATA_HEADER_SIZE];
 		file_read(metaentry.offset, raw_meta_header, sizeof(raw_meta_header));

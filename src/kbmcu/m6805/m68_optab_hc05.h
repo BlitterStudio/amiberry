@@ -87,7 +87,7 @@ M68_OPTABLE_ENT m68hc05_optable[256] = {
 	{ "ILLEGAL", AMODE_ILLEGAL, 0, 0, NULL },
 	{ "RORX", AMODE_INHERENT_X, 3, false, &m68op_ROR },
 	{ "ASRX", AMODE_INHERENT_X, 3, false, &m68op_ASR },
-	{ "ASLX", AMODE_INHERENT_A, 3, false, &m68op_ASL },
+	{ "ASLX", AMODE_INHERENT_X, 3, false, &m68op_ASL },
 	{ "ROLX", AMODE_INHERENT_X, 3, false, &m68op_ROL },
 	{ "DECX", AMODE_INHERENT_X, 3, false, &m68op_DEC },
 	{ "ILLEGAL", AMODE_ILLEGAL, 0, 0, NULL },

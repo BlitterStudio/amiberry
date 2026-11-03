@@ -205,6 +205,7 @@ void ip_input(struct mbuf *m)
 				return;
 			ipstat.ips_reassembled++;
 			m = dtom(ip);
+			hlen = ip->ip_hl << 2;
 		} else
 			if (fp)
 		   	   ip_freef(fp);
@@ -248,9 +249,9 @@ bad:
 struct ip *ip_reass(struct ip *ip, struct ipq *fp)
 {
 	struct mbuf *m = dtom(ip);
-	struct ipasfrag *q;
+	struct ipasfrag *q, *prev;
 	int hlen = ip->ip_hl << 2;
-	int i, next;
+	int i, next, delta;
 	
 	DEBUG_CALL("ip_reass");
 	DEBUG_ARG("ip = %p", ip);
@@ -321,11 +322,11 @@ struct ip *ip_reass(struct ip *ip, struct ipq *fp)
 			m_adj(dtom(q), i);
 			break;
 		}
+		prev = q;
 		q = (struct ipasfrag*)(q->ipf_next);
-		m_freem(dtom(q->ipf_prev));
-		ip_deq((struct ipasfrag*)(q->ipf_prev));
+		ip_deq(prev);
+		m_freem(dtom(prev));
 	}
-
 insert:
 	/*
 	 * Stick new segment in its place;
@@ -346,6 +347,12 @@ insert:
 	 */
 	q = (struct ipasfrag*)(fp->frag_link.next);
 	m = dtom(q);
+	/*
+	 * Remember where the first fragment lives relative to the start
+	 * of its buffer: m_cat() below may move it to a new m_ext buffer
+	 * (and the first fragment may already be in an m_ext buffer).
+	 */
+	delta = (int)((char *)q - ((m->m_flags & M_EXT) ? m->m_ext : m->m_dat));
 
 	q = (struct ipasfrag *) q->ipf_next;
 	while (q != (struct ipasfrag*)&fp->frag_link) {
@@ -365,14 +372,12 @@ insert:
 	/*
 	 * If the fragments concatenated to an mbuf that's
 	 * bigger than the total size of the fragment, then and
-	 * m_ext buffer was alloced. But fp->ipq_next points to
-	 * the old buffer (in the mbuf), so we must point ip
-	 * into the new buffer.
+	 * m_ext buffer was alloced (or the existing one was
+	 * realloc()ed). But fp->ipq_next points to the old
+	 * buffer, so we must point ip into the new buffer.
 	 */
 	if (m->m_flags & M_EXT) {
-	  int delta;
-	  delta = (int)((char *)q - m->m_dat);
-	  q = (struct ipasfrag *)(m->m_ext + delta);
+		q = (struct ipasfrag *)(m->m_ext + delta);
 	}
 
 	/* DEBUG_ARG("ip = %lx", (long)ip); 

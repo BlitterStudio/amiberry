@@ -143,10 +143,13 @@ void m_free(struct mbuf *m)
 void m_cat(struct mbuf *m, struct mbuf *n)
 {
 	/*
-	 * If there's no room, realloc
+	 * If there's no room, realloc.  m_inc() takes the new size
+	 * of the whole buffer, so include the space in front of m_data.
 	 */
-	if (M_FREEROOM(m) < n->m_len)
-		m_inc(m,(int)(m->m_size+MINCSIZE));
+	if (M_FREEROOM(m) < n->m_len) {
+		char *base = (m->m_flags & M_EXT) ? m->m_ext : m->m_dat;
+		m_inc(m, (int)((m->m_data - base) + m->m_len + n->m_len));
+	}
 	
 	memcpy(m->m_data+m->m_len, n->m_data, n->m_len);
 	m->m_len += n->m_len;

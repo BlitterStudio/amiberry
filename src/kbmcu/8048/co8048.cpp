@@ -53,6 +53,8 @@ void ATCoProc8048::WarmReset() {
 	mPC = 0;
 	mbF1 = false;
 	mbTF = false;
+	mbTIF = false;
+	mbTimerIrqPending = false;
 	mbIF = false;
 	mbPBK = false;
 	mbDBF = false;
@@ -61,6 +63,9 @@ void ATCoProc8048::WarmReset() {
 	mpProgramBank = mpProgramBanks[0];
 
 	mbTimerActive = false;
+
+	if (mbCountEnabled)
+		StopCount();
 
 	mP1 = 0xFF;
 	mP2 = 0xFF;
@@ -79,6 +84,20 @@ void ATCoProc8048::AssertIrq() {
 
 void ATCoProc8048::NegateIrq() {
 	mbIrqPending = false;
+}
+
+void ATCoProc8048::AssertHighToLowT1() {
+	if (mbCountEnabled) {
+		++mT;
+
+		if (mT == 0) {
+			if (!mbTF)
+				mbTF = true;
+
+			if (!mbTimerIrqPending && mbTIF)
+				mbTimerIrqPending = true;
+		}
+	}
 }
 
 void ATCoProc8048::Run() {
@@ -131,14 +150,15 @@ void ATCoProc8048::Run() {
 
 			if (mbIrqEnabled) {
 				if (mbIrqPending && mbIF)
-					DispatchIrq();
+					DispatchExternalIrq();
 			}
 		}
 
-		if (mbTIF && !mbTF && mbTimerActive) {
+		if (mbTIF && !mbTimerIrqPending && mbTimerActive) {
 			UpdateTimer();
+
 			if (mbTimerIrqPending && mbIrqEnabled)
-				DispatchIrq();
+				DispatchTimerIrq();
 		}
 
 		const uint8 opcode = mpProgramBank[mPC];
@@ -422,10 +442,13 @@ void ATCoProc8048::Run() {
 				break;
 
 			case 0x25:		// EN TCNTI
-				mbTIF = true;
-				mbIrqAttention |= mbTF;
+				if (!mbTIF) {
+					mbTIF = true;
 
-				DispatchIrq();
+					// We don't need to update the timer interrupt here as the timer
+					// overflow FF is held in reset while the timer interrupt is disabled
+					// (TIF=0), so any overflows would have been discarded.
+				}
 				break;
 
 			case 0x08:		// IN A,BUS
@@ -538,10 +561,13 @@ void ATCoProc8048::Run() {
 
 				if (mbTF) {
 					mbTF = false;
-					UpdateTimer();
-					UpdateTimerDeadline();
 					mPC = ((mPC - 1) & 0x700) + operand;
 				}
+
+				// must do this after we've taken the branch, so the return address
+				// is correct
+				if (mbTimerIrqPending)
+					DispatchTimerIrq();
 				break;
 
 			case 0x36:		// JT0 address
@@ -584,9 +610,10 @@ void ATCoProc8048::Run() {
 				break;
 
 			case 0x42:		// MOV A,T
-				if (mbTimerActive)
+				if (mbTimerActive) {
 					UpdateTimer();
-
+					DispatchTimerIrq();
+				}
 				mA = mT;
 				break;
 
@@ -646,15 +673,16 @@ void ATCoProc8048::Run() {
 
 			case 0x80:		// MOVX A,@Rr
 			case 0x81:
-				mA = mpRegBank[opcode - 0x80];
+				mA = mpFnReadXRAM(mpRegBank[opcode - 0x80]);
 				break;
 
 			case 0x90:		// MOVX @Rr,A
 			case 0x91:
-				mpRegBank[opcode - 0x90] = mA;
+				mpFnWriteXRAM(mpRegBank[opcode - 0x90], mA);
 				break;
 
 			case 0x00:		// NOP
+			case 0x01:		// undocumented - treated as NOP for now (seen in 1029 Polish firmware)
 				break;
 
 			case 0x48:		// ORL A,Rr
@@ -746,7 +774,8 @@ void ATCoProc8048::Run() {
 
 					mbIrqEnabled = true;
 
-					DispatchIrq();
+					DispatchExternalIrq();
+					DispatchTimerIrq();
 				}
 				break;
 
@@ -796,17 +825,31 @@ void ATCoProc8048::Run() {
 
 			case 0x65:		// STOP TCNT
 				if (mbTimerActive) {
+					// Latch T while still in timer mode; in event counter
+					// mode T is already current.
+					if (mbCountEnabled)
+						StopCount();
+					else
+						UpdateTimer();
+
 					mbTimerActive = false;
 
-					UpdateTimer();
+					DispatchTimerIrq();
 				}
 				break;
 
-	//		case 0x45:		// STRT TCNT
+			case 0x45:		// STRT CNT
+				StartCount();
+				mbTimerActive = true;
+				break;
 
 			case 0x55:		// STRT T
-				mbTimerActive = true;
-				UpdateTimerDeadline();
+				if (!mbTimerActive || mbCountEnabled) {
+					StopCount();
+
+					mbTimerActive = true;
+					UpdateTimerDeadline();
+				}
 				break;
 
 			case 0x47:		// SWAP A
@@ -839,6 +882,15 @@ void ATCoProc8048::Run() {
 				}
 				break;
 
+			case 0x30:		// XCHD A,@Rr
+			case 0x31:
+				{
+					uint8 *r = &mRAM[mpRegBank[opcode - 0x30]];
+					uint8 d = (*r ^ mA) & 15;
+					*r ^= d;
+					mA ^= d;
+				}
+				break;
 			case 0xD8:		// XRL A,Rr
 			case 0xD9:
 			case 0xDA:
@@ -870,11 +922,8 @@ force_exit:
 	;
 }
 
-void ATCoProc8048::DispatchIrq() {
-	if (!mbIrqEnabled)
-		return;
-
-	if (mbIF && mbIrqPending) {
+void ATCoProc8048::DispatchExternalIrq() {
+	if (mbIrqEnabled && mbIF && mbIrqPending) {
 		mbIrqEnabled = false;
 
 		uint8 *stackEntry = &mRAM[0x08 + (mPSW & 7) * 2];
@@ -887,8 +936,14 @@ void ATCoProc8048::DispatchIrq() {
 		mbPBK = false;
 		mpProgramBank = mpProgramBanks[false];
 		mPC = 3;
-	} else if (mbTIF && mbTimerIrqPending) {
+	}
+}
+
+void ATCoProc8048::DispatchTimerIrq() {
+	if (mbIrqEnabled && mbTIF && mbTimerIrqPending) {
 		mbIrqEnabled = false;
+
+		// clear timer overflow FF
 		mbTimerIrqPending = false;
 
 		uint8 *stackEntry = &mRAM[0x08 + (mPSW & 7) * 2];
@@ -905,13 +960,17 @@ void ATCoProc8048::DispatchIrq() {
 }
 
 void ATCoProc8048::UpdateTimer() {
+	if (mbCountEnabled)
+		return;
+
 	const uint32 delta = (mCyclesBase - mCyclesLeft) - mTimerDeadline;
 	mT = (uint8)(delta >> 5);
 
-	if (!mbTF && !(delta & (UINT32_C(1) << 31))) {
-		mbTF = true;
+	if (!(delta & (UINT32_C(1) << 31))) {
+		if (!mbTF)
+			mbTF = true;
 
-		if (mbTIF)
+		if (!mbTimerIrqPending && mbTIF)
 			mbTimerIrqPending = true;
 
 		mTimerDeadline += 32 * 256;
@@ -920,4 +979,21 @@ void ATCoProc8048::UpdateTimer() {
 
 void ATCoProc8048::UpdateTimerDeadline() {
 	mTimerDeadline = ((mCyclesBase - mCyclesLeft) & ~UINT32_C(31)) + ((0x100 - (uint32)mT) << 5);
+}
+
+// T1 event counter. WinUAE has no count-enable callback: the host only
+// needs to call AssertHighToLowT1() for T1 edges while mbCountEnabled.
+void ATCoProc8048::StartCount() {
+	if (mbCountEnabled)
+		return;
+
+	// Latch T if the timer was running in timer mode.
+	if (mbTimerActive)
+		UpdateTimer();
+
+	mbCountEnabled = true;
+}
+
+void ATCoProc8048::StopCount() {
+	mbCountEnabled = false;
 }

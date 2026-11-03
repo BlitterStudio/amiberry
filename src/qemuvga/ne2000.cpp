@@ -271,6 +271,10 @@ static int ne2000_buffer_full(NE2000State *s)
 {
     int avail, index, boundary;
 
+    if (s->stop <= s->start) {
+        return 1;
+    }
+
     index = s->curpag << 8;
     boundary = s->boundary << 8;
     if (index < boundary)
@@ -342,13 +346,13 @@ static bool ne2000_canreceive(NetClientState *nc, const uint8_t *buf)
 static ssize_t ne2000_receive(NetClientState *nc, const uint8_t *buf, size_t size_)
 {
     NE2000State *s = qemu_get_nic_opaque(nc);
-    int size = (int)size_;
+    size_t size = size_;
     uint8_t *p;
     unsigned int total_len, next, avail, len, index;
     uint8_t buf1[60];
 
 #if defined(DEBUG_NE2000)
-    write_log("NE2000: received len=%d\n", size);
+    write_log("NE2000: received len=%zu\n", size);
 #endif
 
     if (s->cmd & E8390_STOP)
@@ -366,7 +370,7 @@ static ssize_t ne2000_receive(NetClientState *nc, const uint8_t *buf, size_t siz
 		write_log(_T("NE2000<!DST:%02X.%02X.%02X.%02X.%02X.%02X SRC:%02X.%02X.%02X.%02X.%02X.%02X E=%04X S=%d\n"),
 			dstmac[0], dstmac[1], dstmac[2], dstmac[3], dstmac[4], dstmac[5],
 			srcmac[0], srcmac[1], srcmac[2], srcmac[3], srcmac[4], srcmac[5],
-			(buf[12] << 8) | buf[13], size);
+			(buf[12] << 8) | buf[13], (int)size);
 	}
 
     /* if too small buffer, then expand it */
@@ -378,6 +382,9 @@ static ssize_t ne2000_receive(NetClientState *nc, const uint8_t *buf, size_t siz
     }
 
     index = s->curpag << 8;
+    if (index >= NE2000_PMEM_END) {
+        index = s->start;
+    }
     /* 4 bytes for header */
     total_len = size + 4;
     /* address for next packet (4 bytes for CRC) */
@@ -409,7 +416,7 @@ static ssize_t ne2000_receive(NetClientState *nc, const uint8_t *buf, size_t siz
         if (index <= s->stop)
             avail = s->stop - index;
         else
-            avail = 0;
+            break;
         len = size;
         if (len > avail)
             len = avail;
@@ -550,13 +557,19 @@ static void ne2000_ioport_write(void *opaque, uint32_t addr, uint32_t val)
         offset = addr | (page << 4);
         switch(offset) {
         case EN0_STARTPG:
-            s->start = val << 8;
+            if (val << 8 <= NE2000_PMEM_END) {
+                s->start = val << 8;
+            }
             break;
         case EN0_STOPPG:
-            s->stop = val << 8;
+            if (val << 8 <= NE2000_PMEM_END) {
+                s->stop = val << 8;
+            }
             break;
         case EN0_BOUNDARY:
-            s->boundary = val;
+            if (val << 8 < NE2000_PMEM_END) {
+                s->boundary = val;
+            }
             break;
         case EN0_IMR:
             s->imr = val;
@@ -605,7 +618,9 @@ static void ne2000_ioport_write(void *opaque, uint32_t addr, uint32_t val)
             s->phys[offset - EN1_PHYS] = val;
             break;
         case EN1_CURPAG:
-            s->curpag = val;
+            if (val << 8 < NE2000_PMEM_END) {
+                s->curpag = val;
+            }
             break;
 		case EN1_MULT:
 		case EN1_MULT + 1:
@@ -770,11 +785,24 @@ static uint32_t ne2000_ioport_read(void *opaque, uint32_t addr)
 #endif
     return ret;
 }
+// Plain NE2000: 32-byte PROM window at 0 and the packet RAM at
+// NE2000_PMEM_START..NE2000_MEM_SIZE. dp8390 mode (Hydra, LAN Rover): the
+// board maps its 16KB buffer RAM straight into Amiga space, backed by
+// mem[0..0x3fff], and the 8390 local DMA uses the same offsets, so there
+// is no PROM hole. In both modes the access must stay inside mem[]: the
+// remote DMA address register is 16 bits and keeps counting past it.
+static inline bool ne2000_mem_valid(NE2000State *s, uint32_t addr, uint32_t len)
+{
+    if (s->dp8390) {
+        return addr < NE2000_MEM_SIZE && len <= NE2000_MEM_SIZE - addr;
+    }
+    return addr < 32 ||
+        (addr >= NE2000_PMEM_START && addr < NE2000_MEM_SIZE && len <= NE2000_MEM_SIZE - addr);
+}
 
 static inline void ne2000_mem_writeb(NE2000State *s, uint32_t addr, uint32_t val)
 {
-    if (s->dp8390 || addr < 32 ||
-        (addr >= NE2000_PMEM_START && addr < NE2000_MEM_SIZE)) {
+    if (ne2000_mem_valid(s, addr, 1)) {
         s->mem[addr] = val;
     }
 }
@@ -782,8 +810,7 @@ static inline void ne2000_mem_writeb(NE2000State *s, uint32_t addr, uint32_t val
 static inline void ne2000_mem_writew(NE2000State *s, uint32_t addr, uint32_t val)
 {
     addr &= ~1; /* XXX: check exact behaviour if not even */
-    if (s->dp8390 || addr < 32 ||
-        (addr >= NE2000_PMEM_START && addr < NE2000_MEM_SIZE)) {
+    if (ne2000_mem_valid(s, addr, 2)) {
 		s->mem[addr + 1] = val >> 8;
 		s->mem[addr + 0] = val & 0xff;
 	}
@@ -792,8 +819,7 @@ static inline void ne2000_mem_writew(NE2000State *s, uint32_t addr, uint32_t val
 static inline void ne2000_mem_writel(NE2000State *s, uint32_t addr, uint32_t val)
 {
     addr &= ~1; /* XXX: check exact behaviour if not even */
-    if (s->dp8390 || addr < 32 ||
-        (addr >= NE2000_PMEM_START && addr < NE2000_MEM_SIZE)) {
+    if (ne2000_mem_valid(s, addr, 4)) {
 		s->mem[addr + 3] = val >> 24;
 		s->mem[addr + 2] = (val >> 16) & 0xff;
 		s->mem[addr + 1] = (val >> 8) & 0xff;
@@ -803,8 +829,7 @@ static inline void ne2000_mem_writel(NE2000State *s, uint32_t addr, uint32_t val
 
 static inline uint32_t ne2000_mem_readb(NE2000State *s, uint32_t addr)
 {
-    if (s->dp8390 || addr < 32 ||
-        (addr >= NE2000_PMEM_START && addr < NE2000_MEM_SIZE)) {
+    if (ne2000_mem_valid(s, addr, 1)) {
         return s->mem[addr];
     } else {
         return 0xff;
@@ -814,8 +839,7 @@ static inline uint32_t ne2000_mem_readb(NE2000State *s, uint32_t addr)
 static inline uint32_t ne2000_mem_readw(NE2000State *s, uint32_t addr)
 {
     addr &= ~1; /* XXX: check exact behaviour if not even */
-    if (s->dp8390 || addr < 32 ||
-        (addr >= NE2000_PMEM_START && addr < NE2000_MEM_SIZE)) {
+    if (ne2000_mem_valid(s, addr, 2)) {
 		uint16_t val = (s->mem[addr + 1] << 8) | (s->mem[addr + 0]);
 		return val;
     } else {
@@ -826,8 +850,7 @@ static inline uint32_t ne2000_mem_readw(NE2000State *s, uint32_t addr)
 static inline uint32_t ne2000_mem_readl(NE2000State *s, uint32_t addr)
 {
     addr &= ~1; /* XXX: check exact behaviour if not even */
-    if (s->dp8390 || addr < 32 ||
-        (addr >= NE2000_PMEM_START && addr < NE2000_MEM_SIZE)) {
+    if (ne2000_mem_valid(s, addr, 4)) {
         uint32_t val = (s->mem[addr + 3] << 24) | (s->mem[addr + 2] << 16) | (s->mem[addr + 1] << 8) | (s->mem[addr + 0]);
         return val;
     } else {

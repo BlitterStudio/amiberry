@@ -105,6 +105,9 @@ static void dhcp_decode(const uint8_t *buf, int size,
             if (p >= p_end)
                 break;
             len = *p++;
+            if (p + len > p_end) {
+                break;
+            }
 
             switch(tag) {
             case RFC2132_MSG_TYPE:
@@ -119,7 +122,7 @@ static void dhcp_decode(const uint8_t *buf, int size,
     }
 }
 
-static void bootp_reply(struct bootp_t *bp)
+static void bootp_reply(struct bootp_t *bp, int vend_len)
 {
     BOOTPClient *bc;
     struct mbuf *m;
@@ -129,7 +132,7 @@ static void bootp_reply(struct bootp_t *bp)
     uint8_t *q;
 
     /* extract exact DHCP msg type */
-    dhcp_decode(bp->bp_vend, DHCP_OPT_LEN, &dhcp_msg_type);
+    dhcp_decode(bp->bp_vend, vend_len, &dhcp_msg_type);
     
     if (dhcp_msg_type == 0)
         dhcp_msg_type = DHCPREQUEST; /* Force reply for old BOOTP clients */
@@ -248,8 +251,11 @@ have_addr:
 void bootp_input(struct mbuf *m)
 {
     struct bootp_t *bp = mtod(m, struct bootp_t *);
-
+    /* the vendor area is optional, the fixed part must be there */
+    if (m->m_len < offsetof(struct bootp_t, bp_vend)) {
+        return;
+    }
     if (bp->bp_op == BOOTP_REQUEST) {
-        bootp_reply(bp);
+        bootp_reply(bp, (int)(m->m_len - offsetof(struct bootp_t, bp_vend)));
     }
 }
