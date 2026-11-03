@@ -1212,10 +1212,10 @@ static uae_u32 mmu030_table_search(uaecptr addr, uae_u32 fc, bool write, int lev
      * tables A, B, C and D and one indirect descriptor */
     uae_u32 descr[2];
     uae_u32 descr_type;
-	uaecptr descr_addr[7];
-	uaecptr descr_types[7];
+	TRY_VOLATILE uaecptr descr_addr[7];
+	TRY_VOLATILE uaecptr descr_types[7];
 	uaecptr table_addr = 0;
-    uaecptr page_addr = 0;
+    TRY_VOLATILE uaecptr page_addr = 0;
     uaecptr indirect_addr = 0;
     uae_u32 table_index = 0;
     uae_u32 limit = 0;
@@ -1223,7 +1223,7 @@ static uae_u32 mmu030_table_search(uaecptr addr, uae_u32 fc, bool write, int lev
     bool super = (fc&4) ? true : false;
     bool super_violation = false;
     bool write_protected = false;
-    uae_u8 cache_inhibit = CACHE_ENABLE_ALL;
+    TRY_VOLATILE uae_u8 cache_inhibit = CACHE_ENABLE_ALL;
     bool descr_modified = false;
         
     mmu030.status = 0; /* Reset status */
@@ -1234,7 +1234,7 @@ static uae_u32 mmu030_table_search(uaecptr addr, uae_u32 fc, bool write, int lev
     int addr_position = 1;
     int next_size = 0;
     int descr_size = 8;
-    int descr_num = 0;
+    TRY_VOLATILE int descr_num = 0;
     bool early_termination = false;
     int old_s;
     int i;
