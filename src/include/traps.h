@@ -15,6 +15,17 @@
 
 #include "uae/types.h"
 
+#include <atomic>
+
+/* uaeboard indirect traps: host threads and the emulation thread hand trap parameters, results and
+ * registers over through plain rtarea memory and signal with a status byte. On a weakly ordered host
+ * (arm64) the status byte can become visible before the data written ahead of it, and the reader can
+ * load the data ahead of the status byte, so both sides fence around the hand-over. */
+static inline void trap_fence(void)
+{
+	std::atomic_thread_fence(std::memory_order_seq_cst);
+}
+
 
 #define TRAPCMD_MULTI 0
 #define TRAPCMD_PUT_LONG 1

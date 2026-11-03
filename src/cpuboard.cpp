@@ -559,6 +559,27 @@ static void REGPARAM2 blizzardram_nojit_bput(uaecptr addr, uae_u32 b)
 	blizzardram_nojit_bank.baseaddr[addr] = b;
 }
 #endif
+#else
+
+void cyberstorm_scsi_ram_put(uaecptr addr, uae_u32 v)
+{
+}
+
+uae_u32 cyberstorm_scsi_ram_get(uaecptr addr)
+{
+	return 0;
+}
+
+uae_u8 *REGPARAM2 cyberstorm_scsi_ram_xlate(uaecptr addr)
+{
+	return NULL;
+}
+
+int REGPARAM2 cyberstorm_scsi_ram_check(uaecptr a, uae_u32 b)
+{
+	return 0;
+}
+
 #endif // WITH_CPUBOARD
 
 static void no_rom_protect(void)
@@ -1631,6 +1652,20 @@ static void REGPARAM2 blizzardio_lput(uaecptr addr, uae_u32 v)
 			maprom_state = 1;
 		}
 	}
+}
+
+#else
+
+void cyberstorm_mk3_ppc_irq_setonly(int id, int level)
+{
+}
+
+void cyberstorm_mk3_ppc_irq(int id, int level)
+{
+}
+
+void blizzardppc_irq(int id, int level)
+{
 }
 
 #endif //WITH_CPUBOARD

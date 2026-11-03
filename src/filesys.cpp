@@ -2636,6 +2636,29 @@ static void move_aino_children (Unit *unit, a_inode *from, a_inode *to)
 	from->child = 0;
 	update_child_names (unit, to->child, to);
 }
+/* Dispose of the cached a_inodes below a directory, except those that are
+   still in use, and those above them.  Returns true if none is left.  */
+static bool dispose_children (Unit *unit, a_inode *dir)
+{
+	a_inode **aip = &dir->child;
+	bool all = true;
+
+	if (dir->exnext_count > 0)
+		return dir->child == 0;
+	while (*aip) {
+		a_inode *aino = *aip;
+		aino_test (aino);
+		if (aino->shlock > 0 || aino->elock || !dispose_children (unit, aino)) {
+			all = false;
+			aip = &aino->sibling;
+			continue;
+		}
+		de_recycle_aino (unit, aino);
+		dispose_aino (unit, aip, aino);
+	}
+	return all;
+}
+
 
 static void delete_aino (Unit *unit, a_inode *aino)
 {
@@ -2647,6 +2670,14 @@ static void delete_aino (Unit *unit, a_inode *aino)
 	aino->dirty = 1;
 	aino->deleted = 1;
 	de_recycle_aino (unit, aino);
+	/* A directory that disappeared on the host can still have cached
+	   children, which point back to it as their parent.  Dispose of them
+	   with it, or, if any of them is still in use, keep it.  */
+	if (aino->child && !dispose_children (unit, aino)) {
+		write_log (_T("FILESYS: keeping deleted directory '%s', its contents are in use\n"), aino->nname);
+		return;
+	}
+
 
 	/* If any ExKeys are currently pointing at us, advance them.  */
 	if (aino->parent->exnext_count > 0) {

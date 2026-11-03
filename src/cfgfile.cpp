@@ -4112,6 +4112,12 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 				return 1;
 			return target_parse_option(p, option, value, CONFIG_TYPE_HOST);
 		}
+#ifdef TARGET_NAME_COMPAT
+		/* Settings saved by another host under its own section name. */
+		if (_tcscmp(section, TARGET_NAME_COMPAT) == 0) {
+			return target_parse_compat_option(p, option, value, CONFIG_TYPE_HOST);
+		}
+#endif
 		return 0;
 	}
 
@@ -6468,6 +6474,13 @@ static int cfgfile_parse_hardware (struct uae_prefs *p, const TCHAR *option, TCH
 			option = tmpp + 1;
 			return target_parse_option(p, option, value, CONFIG_TYPE_HARDWARE);
 		}
+		#ifdef TARGET_NAME_COMPAT
+		/* Settings saved by another host under its own section name. */
+		if (_tcscmp(tmpbuf, TARGET_NAME_COMPAT) == 0) {
+			option = tmpp + 1;
+			return target_parse_compat_option(p, option, value, CONFIG_TYPE_HARDWARE);
+		}
+		#endif
 	}
 
 	if (cfgfile_yesno(option, value, _T("cpu_compatible"), &p->cpu_compatible)) {
@@ -7565,11 +7578,14 @@ int cfgfile_parse_option (struct uae_prefs *p, const TCHAR *option, TCHAR *value
 		return 1;
 	if (!_tcscmp (option, _T("config_host")))
 		return 1;
-	if (cfgfile_path (option, value, _T("config_all_path"), p->config_all_path, sizeof p->config_all_path / sizeof(TCHAR)))
+	/* Linked-config paths stay exactly as written: cfgfile_adjust_path() would
+	 * absolutize a bare name against the current directory, and cfgfile_load()
+	 * joins it with the configuration directory again. */
+	if (cfgfile_string (option, value, _T("config_all_path"), p->config_all_path, sizeof p->config_all_path / sizeof(TCHAR)))
 		return 1;
-	if (cfgfile_path (option, value, _T("config_hardware_path"), p->config_hardware_path, sizeof p->config_hardware_path / sizeof (TCHAR)))
+	if (cfgfile_string (option, value, _T("config_hardware_path"), p->config_hardware_path, sizeof p->config_hardware_path / sizeof (TCHAR)))
 		return 1;
-	if (cfgfile_path (option, value, _T("config_host_path"), p->config_host_path, sizeof p->config_host_path / sizeof(TCHAR)))
+	if (cfgfile_string (option, value, _T("config_host_path"), p->config_host_path, sizeof p->config_host_path / sizeof(TCHAR)))
 		return 1;
 	if (type == 0 || (type & CONFIG_TYPE_HARDWARE)) {
 		if (cfgfile_parse_hardware (p, option, value))
@@ -7707,6 +7723,7 @@ static int isobsolete (TCHAR *s)
 	}
 	return 0;
 }
+
 
 static void cfgfile_parse_separated_line (struct uae_prefs *p, const TCHAR *line1b, TCHAR *line2b, int type)
 {
@@ -7922,9 +7939,9 @@ static int cfgfile_load_2 (struct uae_prefs *p, const TCHAR *filename, bool real
 				cfgfile_string(line1b, line2b, _T("config_description"), p->description, sizeof p->description / sizeof(TCHAR));
 				cfgfile_string(line1b, line2b, _T("config_category"), p->category, sizeof p->category / sizeof(TCHAR));
 				cfgfile_string(line1b, line2b, _T("config_tags"), p->tags, sizeof p->tags / sizeof(TCHAR));
-				cfgfile_path (line1b, line2b, _T("config_hardware_path"), p->config_hardware_path, sizeof p->config_hardware_path / sizeof (TCHAR));
-				cfgfile_path (line1b, line2b, _T("config_host_path"), p->config_host_path, sizeof p->config_host_path / sizeof(TCHAR));
-				cfgfile_path (line1b, line2b, _T("config_all_path"), p->config_all_path, sizeof p->config_all_path / sizeof(TCHAR));
+				cfgfile_string (line1b, line2b, _T("config_hardware_path"), p->config_hardware_path, sizeof p->config_hardware_path / sizeof (TCHAR));
+				cfgfile_string (line1b, line2b, _T("config_host_path"), p->config_host_path, sizeof p->config_host_path / sizeof(TCHAR));
+				cfgfile_string (line1b, line2b, _T("config_all_path"), p->config_all_path, sizeof p->config_all_path / sizeof(TCHAR));
 				cfgfile_string (line1b, line2b, _T("config_window_title"), p->config_window_title, sizeof p->config_window_title / sizeof (TCHAR));
 				// boxart checks
 				if (cfgfile_string(line1b, line2b, _T("floppy0"), p->floppyslots[0].df, sizeof p->floppyslots[0].df / sizeof(TCHAR)))
@@ -8006,6 +8023,20 @@ static int cfgfile_load_2 (struct uae_prefs *p, const TCHAR *filename, bool real
 	return 1;
 }
 
+// An absolute linked path is used as-is; a bare name is taken relative
+// to the configuration directory.
+static TCHAR *cfgfile_linked_config_path(TCHAR *tmp, const TCHAR *link)
+{
+	if (link[0] && ((link[1] == ':') || (link[0] == '\\' && link[1] == '\\'))) {
+		_tcsncpy(tmp, link, MAX_DPATH - 1);
+		tmp[MAX_DPATH - 1] = 0;
+	} else {
+		get_configuration_path(tmp, MAX_DPATH);
+		_tcsncat(tmp, link, MAX_DPATH - _tcslen(tmp) - 1);
+	}
+	return tmp;
+}
+
 int cfgfile_load (struct uae_prefs *p, const TCHAR *filename, int *type, int ignorelink, int userconfig)
 {
 	int v;
@@ -8039,21 +8070,18 @@ int cfgfile_load (struct uae_prefs *p, const TCHAR *filename, int *type, int ign
 #endif
 	if (!ignorelink) {
 		if (p->config_all_path[0]) {
-			get_configuration_path(tmp, sizeof(tmp) / sizeof(TCHAR));
-			_tcsncat(tmp, p->config_all_path, sizeof(tmp) / sizeof(TCHAR) - _tcslen(tmp) - 1);
+			cfgfile_linked_config_path(tmp, p->config_all_path);
 			type2 = CONFIG_TYPE_HOST | CONFIG_TYPE_HARDWARE;
 			target_setdefaultstatefilename(filename);
 			cfgfile_load(p, tmp, &type2, 1, 0);
 		}
 		if (p->config_hardware_path[0]) {
-			get_configuration_path (tmp, sizeof (tmp) / sizeof (TCHAR));
-			_tcsncat (tmp, p->config_hardware_path, sizeof (tmp) / sizeof (TCHAR) - _tcslen(tmp) - 1);
+			cfgfile_linked_config_path(tmp, p->config_hardware_path);
 			type2 = CONFIG_TYPE_HARDWARE;
 			cfgfile_load (p, tmp, &type2, 1, 0);
 		}
 		if (p->config_host_path[0]) {
-			get_configuration_path (tmp, sizeof (tmp) / sizeof (TCHAR));
-			_tcsncat (tmp, p->config_host_path, sizeof (tmp) / sizeof (TCHAR) - _tcslen(tmp) - 1);
+			cfgfile_linked_config_path(tmp, p->config_host_path);
 			type2 = CONFIG_TYPE_HOST;
 			target_setdefaultstatefilename(filename);
 			cfgfile_load (p, tmp, &type2, 1, 0);

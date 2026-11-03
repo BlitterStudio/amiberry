@@ -30,6 +30,8 @@ extern int linear_hpos;
 void custom_trigger_start_fast(void);
 
 evt_t event_cycles, nextevent, currcycle;
+int pissoff_value = 15000 * CYCLE_UNIT;
+int pissoff_nojit_value = 160 * CYCLE_UNIT;
 evt_t currcycle_cck;
 int is_syncline;
 static int syncline_cnt;
