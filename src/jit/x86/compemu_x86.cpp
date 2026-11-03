@@ -31033,13 +31033,17 @@ uae_u32 REGPARAM2 op_52c8_0_comp_ff(uae_u32 opcode) /* DBcc */
 				{
 					int nsrc=scratchie++;
 					make_flags_live();
+					int zero=scratchie++;
+					int tmp=scratchie++;
+					mov_l_ri(zero,0);
 					mov_l_rr(nsrc,src);
+					mov_l_rr(tmp,src);
+					cmov_l_rr(tmp,zero,7);
 					lea_l_brr(scratchie,src,(uae_s32)-1);
 					mov_w_rr(src,scratchie);
-					cmov_l_rr(offs,PC_P,7);
 					cmov_l_rr(src,nsrc,7);
 					start_needflags();
-					test_w_rr(nsrc,nsrc);
+					test_w_rr(tmp,tmp);
 					end_needflags();
 					cmov_l_rr(PC_P,offs,5);
 					if(srcreg != src) {
@@ -31321,13 +31325,17 @@ uae_u32 REGPARAM2 op_53c8_0_comp_ff(uae_u32 opcode) /* DBcc */
 				{
 					int nsrc=scratchie++;
 					make_flags_live();
+					int zero=scratchie++;
+					int tmp=scratchie++;
+					mov_l_ri(zero,0);
 					mov_l_rr(nsrc,src);
+					mov_l_rr(tmp,src);
+					cmov_l_rr(tmp,zero,6);
 					lea_l_brr(scratchie,src,(uae_s32)-1);
 					mov_w_rr(src,scratchie);
-					cmov_l_rr(offs,PC_P,6);
 					cmov_l_rr(src,nsrc,6);
 					start_needflags();
-					test_w_rr(nsrc,nsrc);
+					test_w_rr(tmp,tmp);
 					end_needflags();
 					cmov_l_rr(PC_P,offs,5);
 					if(srcreg != src) {
@@ -31609,13 +31617,17 @@ uae_u32 REGPARAM2 op_54c8_0_comp_ff(uae_u32 opcode) /* DBcc */
 				{
 					int nsrc=scratchie++;
 					make_flags_live();
+					int zero=scratchie++;
+					int tmp=scratchie++;
+					mov_l_ri(zero,0);
 					mov_l_rr(nsrc,src);
+					mov_l_rr(tmp,src);
+					cmov_l_rr(tmp,zero,3);
 					lea_l_brr(scratchie,src,(uae_s32)-1);
 					mov_w_rr(src,scratchie);
-					cmov_l_rr(offs,PC_P,3);
 					cmov_l_rr(src,nsrc,3);
 					start_needflags();
-					test_w_rr(nsrc,nsrc);
+					test_w_rr(tmp,tmp);
 					end_needflags();
 					cmov_l_rr(PC_P,offs,5);
 					if(srcreg != src) {
@@ -31897,13 +31909,17 @@ uae_u32 REGPARAM2 op_55c8_0_comp_ff(uae_u32 opcode) /* DBcc */
 				{
 					int nsrc=scratchie++;
 					make_flags_live();
+					int zero=scratchie++;
+					int tmp=scratchie++;
+					mov_l_ri(zero,0);
 					mov_l_rr(nsrc,src);
+					mov_l_rr(tmp,src);
+					cmov_l_rr(tmp,zero,2);
 					lea_l_brr(scratchie,src,(uae_s32)-1);
 					mov_w_rr(src,scratchie);
-					cmov_l_rr(offs,PC_P,2);
 					cmov_l_rr(src,nsrc,2);
 					start_needflags();
-					test_w_rr(nsrc,nsrc);
+					test_w_rr(tmp,tmp);
 					end_needflags();
 					cmov_l_rr(PC_P,offs,5);
 					if(srcreg != src) {
@@ -32185,13 +32201,17 @@ uae_u32 REGPARAM2 op_56c8_0_comp_ff(uae_u32 opcode) /* DBcc */
 				{
 					int nsrc=scratchie++;
 					make_flags_live();
+					int zero=scratchie++;
+					int tmp=scratchie++;
+					mov_l_ri(zero,0);
 					mov_l_rr(nsrc,src);
+					mov_l_rr(tmp,src);
+					cmov_l_rr(tmp,zero,5);
 					lea_l_brr(scratchie,src,(uae_s32)-1);
 					mov_w_rr(src,scratchie);
-					cmov_l_rr(offs,PC_P,5);
 					cmov_l_rr(src,nsrc,5);
 					start_needflags();
-					test_w_rr(nsrc,nsrc);
+					test_w_rr(tmp,tmp);
 					end_needflags();
 					cmov_l_rr(PC_P,offs,5);
 					if(srcreg != src) {
@@ -32473,13 +32493,17 @@ uae_u32 REGPARAM2 op_57c8_0_comp_ff(uae_u32 opcode) /* DBcc */
 				{
 					int nsrc=scratchie++;
 					make_flags_live();
+					int zero=scratchie++;
+					int tmp=scratchie++;
+					mov_l_ri(zero,0);
 					mov_l_rr(nsrc,src);
+					mov_l_rr(tmp,src);
+					cmov_l_rr(tmp,zero,4);
 					lea_l_brr(scratchie,src,(uae_s32)-1);
 					mov_w_rr(src,scratchie);
-					cmov_l_rr(offs,PC_P,4);
 					cmov_l_rr(src,nsrc,4);
 					start_needflags();
-					test_w_rr(nsrc,nsrc);
+					test_w_rr(tmp,tmp);
 					end_needflags();
 					cmov_l_rr(PC_P,offs,5);
 					if(srcreg != src) {
@@ -32761,13 +32785,17 @@ uae_u32 REGPARAM2 op_5ac8_0_comp_ff(uae_u32 opcode) /* DBcc */
 				{
 					int nsrc=scratchie++;
 					make_flags_live();
+					int zero=scratchie++;
+					int tmp=scratchie++;
+					mov_l_ri(zero,0);
 					mov_l_rr(nsrc,src);
+					mov_l_rr(tmp,src);
+					cmov_l_rr(tmp,zero,9);
 					lea_l_brr(scratchie,src,(uae_s32)-1);
 					mov_w_rr(src,scratchie);
-					cmov_l_rr(offs,PC_P,9);
 					cmov_l_rr(src,nsrc,9);
 					start_needflags();
-					test_w_rr(nsrc,nsrc);
+					test_w_rr(tmp,tmp);
 					end_needflags();
 					cmov_l_rr(PC_P,offs,5);
 					if(srcreg != src) {
@@ -33049,13 +33077,17 @@ uae_u32 REGPARAM2 op_5bc8_0_comp_ff(uae_u32 opcode) /* DBcc */
 				{
 					int nsrc=scratchie++;
 					make_flags_live();
+					int zero=scratchie++;
+					int tmp=scratchie++;
+					mov_l_ri(zero,0);
 					mov_l_rr(nsrc,src);
+					mov_l_rr(tmp,src);
+					cmov_l_rr(tmp,zero,8);
 					lea_l_brr(scratchie,src,(uae_s32)-1);
 					mov_w_rr(src,scratchie);
-					cmov_l_rr(offs,PC_P,8);
 					cmov_l_rr(src,nsrc,8);
 					start_needflags();
-					test_w_rr(nsrc,nsrc);
+					test_w_rr(tmp,tmp);
 					end_needflags();
 					cmov_l_rr(PC_P,offs,5);
 					if(srcreg != src) {
@@ -33337,13 +33369,17 @@ uae_u32 REGPARAM2 op_5cc8_0_comp_ff(uae_u32 opcode) /* DBcc */
 				{
 					int nsrc=scratchie++;
 					make_flags_live();
+					int zero=scratchie++;
+					int tmp=scratchie++;
+					mov_l_ri(zero,0);
 					mov_l_rr(nsrc,src);
+					mov_l_rr(tmp,src);
+					cmov_l_rr(tmp,zero,13);
 					lea_l_brr(scratchie,src,(uae_s32)-1);
 					mov_w_rr(src,scratchie);
-					cmov_l_rr(offs,PC_P,13);
 					cmov_l_rr(src,nsrc,13);
 					start_needflags();
-					test_w_rr(nsrc,nsrc);
+					test_w_rr(tmp,tmp);
 					end_needflags();
 					cmov_l_rr(PC_P,offs,5);
 					if(srcreg != src) {
@@ -33625,13 +33661,17 @@ uae_u32 REGPARAM2 op_5dc8_0_comp_ff(uae_u32 opcode) /* DBcc */
 				{
 					int nsrc=scratchie++;
 					make_flags_live();
+					int zero=scratchie++;
+					int tmp=scratchie++;
+					mov_l_ri(zero,0);
 					mov_l_rr(nsrc,src);
+					mov_l_rr(tmp,src);
+					cmov_l_rr(tmp,zero,12);
 					lea_l_brr(scratchie,src,(uae_s32)-1);
 					mov_w_rr(src,scratchie);
-					cmov_l_rr(offs,PC_P,12);
 					cmov_l_rr(src,nsrc,12);
 					start_needflags();
-					test_w_rr(nsrc,nsrc);
+					test_w_rr(tmp,tmp);
 					end_needflags();
 					cmov_l_rr(PC_P,offs,5);
 					if(srcreg != src) {
@@ -33913,13 +33953,17 @@ uae_u32 REGPARAM2 op_5ec8_0_comp_ff(uae_u32 opcode) /* DBcc */
 				{
 					int nsrc=scratchie++;
 					make_flags_live();
+					int zero=scratchie++;
+					int tmp=scratchie++;
+					mov_l_ri(zero,0);
 					mov_l_rr(nsrc,src);
+					mov_l_rr(tmp,src);
+					cmov_l_rr(tmp,zero,15);
 					lea_l_brr(scratchie,src,(uae_s32)-1);
 					mov_w_rr(src,scratchie);
-					cmov_l_rr(offs,PC_P,15);
 					cmov_l_rr(src,nsrc,15);
 					start_needflags();
-					test_w_rr(nsrc,nsrc);
+					test_w_rr(tmp,tmp);
 					end_needflags();
 					cmov_l_rr(PC_P,offs,5);
 					if(srcreg != src) {
@@ -34201,13 +34245,17 @@ uae_u32 REGPARAM2 op_5fc8_0_comp_ff(uae_u32 opcode) /* DBcc */
 				{
 					int nsrc=scratchie++;
 					make_flags_live();
+					int zero=scratchie++;
+					int tmp=scratchie++;
+					mov_l_ri(zero,0);
 					mov_l_rr(nsrc,src);
+					mov_l_rr(tmp,src);
+					cmov_l_rr(tmp,zero,14);
 					lea_l_brr(scratchie,src,(uae_s32)-1);
 					mov_w_rr(src,scratchie);
-					cmov_l_rr(offs,PC_P,14);
 					cmov_l_rr(src,nsrc,14);
 					start_needflags();
-					test_w_rr(nsrc,nsrc);
+					test_w_rr(tmp,tmp);
 					end_needflags();
 					cmov_l_rr(PC_P,offs,5);
 					if(srcreg != src) {
@@ -81960,13 +82008,17 @@ uae_u32 REGPARAM2 op_52c8_0_comp_nf(uae_u32 opcode) /* DBcc */
 				{
 					int nsrc=scratchie++;
 					make_flags_live();
+					int zero=scratchie++;
+					int tmp=scratchie++;
+					mov_l_ri(zero,0);
 					mov_l_rr(nsrc,src);
+					mov_l_rr(tmp,src);
+					cmov_l_rr(tmp,zero,7);
 					lea_l_brr(scratchie,src,(uae_s32)-1);
 					mov_w_rr(src,scratchie);
-					cmov_l_rr(offs,PC_P,7);
 					cmov_l_rr(src,nsrc,7);
 					start_needflags();
-					test_w_rr(nsrc,nsrc);
+					test_w_rr(tmp,tmp);
 					end_needflags();
 					cmov_l_rr(PC_P,offs,5);
 					if(srcreg != src) {
@@ -82248,13 +82300,17 @@ uae_u32 REGPARAM2 op_53c8_0_comp_nf(uae_u32 opcode) /* DBcc */
 				{
 					int nsrc=scratchie++;
 					make_flags_live();
+					int zero=scratchie++;
+					int tmp=scratchie++;
+					mov_l_ri(zero,0);
 					mov_l_rr(nsrc,src);
+					mov_l_rr(tmp,src);
+					cmov_l_rr(tmp,zero,6);
 					lea_l_brr(scratchie,src,(uae_s32)-1);
 					mov_w_rr(src,scratchie);
-					cmov_l_rr(offs,PC_P,6);
 					cmov_l_rr(src,nsrc,6);
 					start_needflags();
-					test_w_rr(nsrc,nsrc);
+					test_w_rr(tmp,tmp);
 					end_needflags();
 					cmov_l_rr(PC_P,offs,5);
 					if(srcreg != src) {
@@ -82536,13 +82592,17 @@ uae_u32 REGPARAM2 op_54c8_0_comp_nf(uae_u32 opcode) /* DBcc */
 				{
 					int nsrc=scratchie++;
 					make_flags_live();
+					int zero=scratchie++;
+					int tmp=scratchie++;
+					mov_l_ri(zero,0);
 					mov_l_rr(nsrc,src);
+					mov_l_rr(tmp,src);
+					cmov_l_rr(tmp,zero,3);
 					lea_l_brr(scratchie,src,(uae_s32)-1);
 					mov_w_rr(src,scratchie);
-					cmov_l_rr(offs,PC_P,3);
 					cmov_l_rr(src,nsrc,3);
 					start_needflags();
-					test_w_rr(nsrc,nsrc);
+					test_w_rr(tmp,tmp);
 					end_needflags();
 					cmov_l_rr(PC_P,offs,5);
 					if(srcreg != src) {
@@ -82824,13 +82884,17 @@ uae_u32 REGPARAM2 op_55c8_0_comp_nf(uae_u32 opcode) /* DBcc */
 				{
 					int nsrc=scratchie++;
 					make_flags_live();
+					int zero=scratchie++;
+					int tmp=scratchie++;
+					mov_l_ri(zero,0);
 					mov_l_rr(nsrc,src);
+					mov_l_rr(tmp,src);
+					cmov_l_rr(tmp,zero,2);
 					lea_l_brr(scratchie,src,(uae_s32)-1);
 					mov_w_rr(src,scratchie);
-					cmov_l_rr(offs,PC_P,2);
 					cmov_l_rr(src,nsrc,2);
 					start_needflags();
-					test_w_rr(nsrc,nsrc);
+					test_w_rr(tmp,tmp);
 					end_needflags();
 					cmov_l_rr(PC_P,offs,5);
 					if(srcreg != src) {
@@ -83112,13 +83176,17 @@ uae_u32 REGPARAM2 op_56c8_0_comp_nf(uae_u32 opcode) /* DBcc */
 				{
 					int nsrc=scratchie++;
 					make_flags_live();
+					int zero=scratchie++;
+					int tmp=scratchie++;
+					mov_l_ri(zero,0);
 					mov_l_rr(nsrc,src);
+					mov_l_rr(tmp,src);
+					cmov_l_rr(tmp,zero,5);
 					lea_l_brr(scratchie,src,(uae_s32)-1);
 					mov_w_rr(src,scratchie);
-					cmov_l_rr(offs,PC_P,5);
 					cmov_l_rr(src,nsrc,5);
 					start_needflags();
-					test_w_rr(nsrc,nsrc);
+					test_w_rr(tmp,tmp);
 					end_needflags();
 					cmov_l_rr(PC_P,offs,5);
 					if(srcreg != src) {
@@ -83400,13 +83468,17 @@ uae_u32 REGPARAM2 op_57c8_0_comp_nf(uae_u32 opcode) /* DBcc */
 				{
 					int nsrc=scratchie++;
 					make_flags_live();
+					int zero=scratchie++;
+					int tmp=scratchie++;
+					mov_l_ri(zero,0);
 					mov_l_rr(nsrc,src);
+					mov_l_rr(tmp,src);
+					cmov_l_rr(tmp,zero,4);
 					lea_l_brr(scratchie,src,(uae_s32)-1);
 					mov_w_rr(src,scratchie);
-					cmov_l_rr(offs,PC_P,4);
 					cmov_l_rr(src,nsrc,4);
 					start_needflags();
-					test_w_rr(nsrc,nsrc);
+					test_w_rr(tmp,tmp);
 					end_needflags();
 					cmov_l_rr(PC_P,offs,5);
 					if(srcreg != src) {
@@ -83688,13 +83760,17 @@ uae_u32 REGPARAM2 op_5ac8_0_comp_nf(uae_u32 opcode) /* DBcc */
 				{
 					int nsrc=scratchie++;
 					make_flags_live();
+					int zero=scratchie++;
+					int tmp=scratchie++;
+					mov_l_ri(zero,0);
 					mov_l_rr(nsrc,src);
+					mov_l_rr(tmp,src);
+					cmov_l_rr(tmp,zero,9);
 					lea_l_brr(scratchie,src,(uae_s32)-1);
 					mov_w_rr(src,scratchie);
-					cmov_l_rr(offs,PC_P,9);
 					cmov_l_rr(src,nsrc,9);
 					start_needflags();
-					test_w_rr(nsrc,nsrc);
+					test_w_rr(tmp,tmp);
 					end_needflags();
 					cmov_l_rr(PC_P,offs,5);
 					if(srcreg != src) {
@@ -83976,13 +84052,17 @@ uae_u32 REGPARAM2 op_5bc8_0_comp_nf(uae_u32 opcode) /* DBcc */
 				{
 					int nsrc=scratchie++;
 					make_flags_live();
+					int zero=scratchie++;
+					int tmp=scratchie++;
+					mov_l_ri(zero,0);
 					mov_l_rr(nsrc,src);
+					mov_l_rr(tmp,src);
+					cmov_l_rr(tmp,zero,8);
 					lea_l_brr(scratchie,src,(uae_s32)-1);
 					mov_w_rr(src,scratchie);
-					cmov_l_rr(offs,PC_P,8);
 					cmov_l_rr(src,nsrc,8);
 					start_needflags();
-					test_w_rr(nsrc,nsrc);
+					test_w_rr(tmp,tmp);
 					end_needflags();
 					cmov_l_rr(PC_P,offs,5);
 					if(srcreg != src) {
@@ -84264,13 +84344,17 @@ uae_u32 REGPARAM2 op_5cc8_0_comp_nf(uae_u32 opcode) /* DBcc */
 				{
 					int nsrc=scratchie++;
 					make_flags_live();
+					int zero=scratchie++;
+					int tmp=scratchie++;
+					mov_l_ri(zero,0);
 					mov_l_rr(nsrc,src);
+					mov_l_rr(tmp,src);
+					cmov_l_rr(tmp,zero,13);
 					lea_l_brr(scratchie,src,(uae_s32)-1);
 					mov_w_rr(src,scratchie);
-					cmov_l_rr(offs,PC_P,13);
 					cmov_l_rr(src,nsrc,13);
 					start_needflags();
-					test_w_rr(nsrc,nsrc);
+					test_w_rr(tmp,tmp);
 					end_needflags();
 					cmov_l_rr(PC_P,offs,5);
 					if(srcreg != src) {
@@ -84552,13 +84636,17 @@ uae_u32 REGPARAM2 op_5dc8_0_comp_nf(uae_u32 opcode) /* DBcc */
 				{
 					int nsrc=scratchie++;
 					make_flags_live();
+					int zero=scratchie++;
+					int tmp=scratchie++;
+					mov_l_ri(zero,0);
 					mov_l_rr(nsrc,src);
+					mov_l_rr(tmp,src);
+					cmov_l_rr(tmp,zero,12);
 					lea_l_brr(scratchie,src,(uae_s32)-1);
 					mov_w_rr(src,scratchie);
-					cmov_l_rr(offs,PC_P,12);
 					cmov_l_rr(src,nsrc,12);
 					start_needflags();
-					test_w_rr(nsrc,nsrc);
+					test_w_rr(tmp,tmp);
 					end_needflags();
 					cmov_l_rr(PC_P,offs,5);
 					if(srcreg != src) {
@@ -84840,13 +84928,17 @@ uae_u32 REGPARAM2 op_5ec8_0_comp_nf(uae_u32 opcode) /* DBcc */
 				{
 					int nsrc=scratchie++;
 					make_flags_live();
+					int zero=scratchie++;
+					int tmp=scratchie++;
+					mov_l_ri(zero,0);
 					mov_l_rr(nsrc,src);
+					mov_l_rr(tmp,src);
+					cmov_l_rr(tmp,zero,15);
 					lea_l_brr(scratchie,src,(uae_s32)-1);
 					mov_w_rr(src,scratchie);
-					cmov_l_rr(offs,PC_P,15);
 					cmov_l_rr(src,nsrc,15);
 					start_needflags();
-					test_w_rr(nsrc,nsrc);
+					test_w_rr(tmp,tmp);
 					end_needflags();
 					cmov_l_rr(PC_P,offs,5);
 					if(srcreg != src) {
@@ -85128,13 +85220,17 @@ uae_u32 REGPARAM2 op_5fc8_0_comp_nf(uae_u32 opcode) /* DBcc */
 				{
 					int nsrc=scratchie++;
 					make_flags_live();
+					int zero=scratchie++;
+					int tmp=scratchie++;
+					mov_l_ri(zero,0);
 					mov_l_rr(nsrc,src);
+					mov_l_rr(tmp,src);
+					cmov_l_rr(tmp,zero,14);
 					lea_l_brr(scratchie,src,(uae_s32)-1);
 					mov_w_rr(src,scratchie);
-					cmov_l_rr(offs,PC_P,14);
 					cmov_l_rr(src,nsrc,14);
 					start_needflags();
-					test_w_rr(nsrc,nsrc);
+					test_w_rr(tmp,tmp);
 					end_needflags();
 					cmov_l_rr(PC_P,offs,5);
 					if(srcreg != src) {

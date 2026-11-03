@@ -2344,19 +2344,20 @@ gen_opcode(unsigned int opcode)
 		case 13:
 		case 14:
 		case 15:
+			comprintf("\tint zero=scratchie++;\n");
+			comprintf("\tint tmp=scratchie++;\n");
+			comprintf("\tmov_l_ri(zero,0);\n");
 			comprintf("\tmov_l_rr(nsrc,src);\n");
+			comprintf("\tmov_l_rr(tmp,src);\n");
+			comprintf("\tcmov_l_rr(tmp,zero,%d);\n",
+				cond_codes[curi->cc]);
 			comprintf("\tlea_l_brr(scratchie,src,(uae_s32)-1);\n"
 				"\tmov_w_rr(src,scratchie);\n");
-			comprintf("\tcmov_l_rr(offs,PC_P,%d);\n",
-				cond_codes[curi->cc]);
 			comprintf("\tcmov_l_rr(src,nsrc,%d);\n",
 				cond_codes[curi->cc]);
-			/* OK, now for cc=true, we have src==nsrc and offs==PC_P,
-			   so whether we move them around doesn't matter. However,
-			   if cc=false, we have offs==jump_pc, and src==nsrc-1 */
 
 			comprintf("\tstart_needflags();\n");
-			comprintf("\ttest_w_rr(nsrc,nsrc);\n");
+			comprintf("\ttest_w_rr(tmp,tmp);\n");
 			comprintf("\tend_needflags();\n");
 			comprintf("\tcmov_l_rr(PC_P,offs,%d);\n", NATIVE_CC_NE);
 			break;
