@@ -16,7 +16,6 @@
 #include "amiberry_gfx.h"
 #include "macos_bookmarks.h"
 #include "options.h"
-#include "xwin.h"
 
 #ifdef HAS_NFD
 #include <nfd.h>

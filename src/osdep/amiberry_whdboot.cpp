@@ -7,8 +7,6 @@
 
 #include "sysconfig.h"
 #include "sysdeps.h"
-#include "options.h"
-#include "uae.h"
 #include "target.h"
 #include "gui/gui_handling.h"
 #include "settings/amiberry_whdboot.h"

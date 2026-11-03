@@ -8,7 +8,6 @@
 #include <algorithm>
 #include <chrono>
 #include <cstring>
-#include <limits>
 
 #ifdef AMIBERRY_WITH_FFMPEG
 extern "C" {

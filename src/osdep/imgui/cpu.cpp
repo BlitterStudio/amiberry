@@ -2,7 +2,6 @@
 #include "gui/gui_handling.h"
 #include "imgui.h"
 #include "imgui_panels.h"
-#include "newcpu.h"
 #include "options.h"
 #include "settings/settings_definitions.h"
 

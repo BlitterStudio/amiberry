@@ -19,7 +19,6 @@
 #include "rommgr.h"
 #include "custom.h"
 #include "newcpu.h"
-#include "debug.h"
 #include "arcadia.h"
 #include "zfile.h"
 #ifdef VIDEOGRAB

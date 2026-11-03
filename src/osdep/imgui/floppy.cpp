@@ -1,5 +1,4 @@
 #include "imgui.h"
-#include "imgui_internal.h"
 #include "sysdeps.h"
 #include "options.h"
 #include "gui/gui_handling.h"

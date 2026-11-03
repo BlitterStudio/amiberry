@@ -1,4 +1,3 @@
-#include <cstdio>
 #include <cstring>
 #include <cstdlib>
 #include <algorithm>
@@ -14,8 +13,6 @@
 #include "input_platform.h"
 #include "amiberry_gfx.h"
 #include "fsdb.h"
-#include "uae.h"
-#include "xwin.h"
 #include "target.h"
 #include "tabletlibrary.h"
 

@@ -16,8 +16,6 @@
 #include "amiberry_update.h"
 #include "amiberry_update_asset_policy.h"
 #include "amiberry_curl.h"
-#include "options.h"
-#include "threaddep/thread.h"
 
 #ifdef AMIBERRY_HAS_CURL
 #include <curl/curl.h>

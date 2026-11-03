@@ -29,7 +29,6 @@
 #ifdef WITH_PCI
 #include "pci_hw.h"
 #endif
-#include "debug.h"
 #include "autoconf.h"
 #include "expansion_display_name.h"
 #include "rommgr.h"

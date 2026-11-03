@@ -25,44 +25,32 @@
 #include "options.h"
 #include "uae.h"
 #include "custom.h"
-#include "events.h"
 #include "xwin.h"
-#include "keyboard.h"
 #include "drawing.h"
 #include "picasso96.h"
-#include "gui.h"
 #include "amiberry_gfx.h"
 #include "perf_monitor.h"
-#include "sounddep/sound.h"
 #include "inputdevice.h"
 #ifdef WITH_MIDI
 #include "midi.h"
 #endif
-#include "serial.h"
-#include "parallel.h"
-#include "sampler.h"
 #include "gfxboard.h"
 #include "statusline.h"
 #include "devices.h"
 
 #include "threaddep/thread.h"
 // imgui_osk.h included for vkbd_allowed() - no old vkbd dependency
-#include "on_screen_joystick.h"
-#include "fsdb_host.h"
-#include "savestate.h"
 #include "uae/types.h"
 
 #ifdef WITH_MIDIEMU
 #include "midiemu.h"
 #endif
 
-#include "dpi_handler.hpp"
 #include "registry.h"
 #include "target.h"
 #include "gfx_window.h"
 #include "gl_overlays.h"
 #include "gfx_colors.h"
-#include "gfx_prefs_check.h"
 #include "display_modes.h"
 #include "renderer_factory.h"
 #include "amiberry_input_helpers.h"

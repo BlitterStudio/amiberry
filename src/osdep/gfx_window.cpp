@@ -13,10 +13,8 @@
 #include <unistd.h>
 #endif
 #include <cstdio>
-#include <cmath>
 #include "sysdeps.h"
 #include "options.h"
-#include "uae.h"
 #include "custom.h"
 #include "xwin.h"
 #include "drawing.h"
@@ -31,14 +29,12 @@
 #include "amiberry_input.h"
 #include "target.h"
 
-#include "threaddep/thread.h"
 #include "imgui_overlay.h"
 #ifdef USE_VULKAN
 #include "imgui_impl_vulkan.h"
 #endif
 #include "imgui_osk.h"
 #include "on_screen_joystick.h"
-#include "fsdb_host.h"
 #include "uae/types.h"
 #include "gl_context_ladder.h"
 #include "native_ui_host.h"

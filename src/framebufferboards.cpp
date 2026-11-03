@@ -11,7 +11,6 @@
 #include "sysdeps.h"
 
 #include "options.h"
-#include "debug.h"
 #include "memory.h"
 #include "custom.h"
 #include "picasso96.h"

@@ -14,8 +14,6 @@
 #include <cstring>
 #include <sstream>
 #include <system_error>
-#include <sys/types.h>
-#include <sys/stat.h>
 #include "sysdeps.h"
 #include "uae.h"
 #include "options.h"
@@ -27,7 +25,6 @@
 #include "xwin.h"
 #include "drawing.h"
 #include "midiemu.h"
-#include "registry.h"
 #include "zfile.h"
 #include "zarchive.h"
 

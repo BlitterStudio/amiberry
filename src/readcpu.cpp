@@ -8,7 +8,6 @@
 
 #include "sysconfig.h"
 #include "sysdeps.h"
-#include <ctype.h>
 
 #include "readcpu.h"
 

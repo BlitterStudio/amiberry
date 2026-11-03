@@ -11,7 +11,6 @@
 
 #include "sysdeps.h"
 #include "options.h"
-#include "inputdevice.h"
 #include "amiberry_input.h"
 
 // Retroarch mapping reference: https://docs.libretro.com/guides/controller-autoconfiguration/

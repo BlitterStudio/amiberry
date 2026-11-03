@@ -9,12 +9,10 @@
 #include "sysconfig.h"
 #include "sysdeps.h"
 #include "options.h"
-#include "uae.h"
 #include "cpu_thread.h"
 #include "memory.h"
 #include "events.h"
 #include "newcpu.h"
-#include "custom.h"
 
 #ifdef WITH_THREADED_CPU
 /* Global diagnostics structure */

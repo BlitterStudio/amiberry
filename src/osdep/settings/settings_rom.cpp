@@ -8,7 +8,6 @@
 #include "sysconfig.h"
 #include "sysdeps.h"
 #include "options.h"
-#include "memory.h"
 #include "rommgr.h"
 
 #include "settings_definitions.h"

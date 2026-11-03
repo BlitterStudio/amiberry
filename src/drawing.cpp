@@ -16,7 +16,6 @@
 
 #include <algorithm>
 #include <atomic>
-#include <cctype>
 #include <cassert>
 #include <cmath>
 #include <cstdint>

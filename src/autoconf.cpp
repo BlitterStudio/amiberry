@@ -17,7 +17,6 @@
 #include "newcpu.h"
 #include "autoconf.h"
 #include "traps.h"
-#include "debug.h"
 #include "threaddep/thread.h"
 #include "inputdevice.h"
 #ifdef WITH_PPC

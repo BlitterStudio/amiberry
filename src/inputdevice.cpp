@@ -32,7 +32,6 @@
 #include "amiberry_input_helpers.h"
 #endif
 
-#include <algorithm>
 #include "inputrecord.h"
 #include "keybuf.h"
 #include "custom.h"

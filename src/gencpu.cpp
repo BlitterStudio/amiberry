@@ -9535,16 +9535,21 @@ static void generate_macros(FILE *f)
 		"#define SET_ALWAYS_NFLG(x) SET_NFLG(x)\n");
 }
 
+/* id is the cpuemu_<id>.cpp variant, or -1 for cpustbl.cpp. Each header
+ * is only emitted for the files that actually use it. */
 static void generate_includes (FILE *f, int id)
 {
+	const bool mmu = id >= 31 && id <= 35;
 	fprintf(f, "#include \"sysconfig.h\"\n");
 	fprintf(f, "#include \"sysdeps.h\"\n");
-	fprintf(f, "#include \"options.h\"\n");
+	if (id == 0 || id == 24 || id == 33 || id == 40 || id == 50)
+		fprintf(f, "#include \"options.h\"\n");
 	fprintf(f, "#include \"memory.h\"\n");
-	fprintf(f, "#include \"custom.h\"\n");
-	fprintf(f, "#include \"events.h\"\n");
+	if (id == 11 || id == 13 || id == 35)
+		fprintf(f, "#include \"events.h\"\n");
 	fprintf(f, "#include \"newcpu.h\"\n");
-	fprintf(f, "#include \"cpu_prefetch.h\"\n");
+	if (id >= 0 && !mmu)
+		fprintf(f, "#include \"cpu_prefetch.h\"\n");
 	fprintf(f, "#include \"cputbl.h\"\n");
 	if (id == 31 || id == 33)
 		fprintf(f, "#include \"cpummu.h\"\n");
@@ -10317,7 +10322,7 @@ int main(int argc, char *argv[])
 	fprintf(headerfile, "#define HARDWARE_BUS_ERROR_EMULATION %d\n", using_bus_error);
 
 	stblfile = fopen("cpustbl.cpp", "wb");
-	generate_includes(stblfile, 0);
+	generate_includes(stblfile, -1);
 
 	for (int i = 0; i <= 55; i++) {
 		if ((i >= 6 && i < 11) || (i > 14 && i < 20) || (i > 25 && i < 31) || (i > 35 && i < 40))

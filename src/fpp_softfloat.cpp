@@ -13,12 +13,10 @@
 
 #include <math.h>
 #include <float.h>
-#include <fenv.h>
 
 #include "sysconfig.h"
 #include "sysdeps.h"
 
-#include "options.h"
 #include "memory.h"
 #include "newcpu.h"
 #include "fpp.h"

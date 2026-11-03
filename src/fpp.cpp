@@ -14,7 +14,6 @@
 #define FPU_LOG 0
 
 #include <cmath>
-#include <cfloat>
 
 #include "sysconfig.h"
 #include "sysdeps.h"
@@ -25,7 +24,6 @@
 #include "fpp.h"
 #include "savestate.h"
 #include "cpummu030.h"
-#include "debug.h"
 #include "uae.h"
 
 #ifndef CPU_TESTER

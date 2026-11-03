@@ -11,7 +11,6 @@
 #define __USE_ISOC9X  /* We might be able to pick up a NaN */
 
 #include <cmath>
-#include <cfloat>
 #include <cfenv>
 
 #include "sysconfig.h"

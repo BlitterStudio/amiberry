@@ -1,4 +1,3 @@
-#include <cstring>
 #include <SDL3/SDL.h>
 
 #include "sysdeps.h"

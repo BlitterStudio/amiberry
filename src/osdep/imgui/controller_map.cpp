@@ -3,8 +3,6 @@
 
 #include "sysdeps.h"
 #include "gui/gui_handling.h"
-#include "amiberry_gfx.h"
-#include "fsdb_host.h"
 #include "dpi_handler.hpp"
 
 #include <SDL3_image/SDL_image.h>

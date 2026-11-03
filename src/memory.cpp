@@ -29,7 +29,6 @@
 #include "ar.h"
 #include "crc32.h"
 #include "gui.h"
-#include "cdtv.h"
 #include "akiko.h"
 #ifdef ARCADIA
 #include "arcadia.h"

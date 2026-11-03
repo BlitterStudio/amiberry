@@ -19,7 +19,6 @@
 #include "options.h"
 #include "memory.h"
 #include "newcpu.h"
-#include "debug.h"
 #include "zfile.h"
 #include "gui.h"
 #include "cdtvcr.h"

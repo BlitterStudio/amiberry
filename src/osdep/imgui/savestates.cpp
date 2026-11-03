@@ -1,12 +1,10 @@
 #include "imgui.h"
 #include "sysdeps.h"
-#include "options.h"
 #include "gui.h"
 #include "gui/gui_handling.h"
 #include "savestate.h"
 #include <sys/stat.h>
 #include <string>
-#include <vector>
 
 #include <SDL3/SDL.h>
 #include <SDL3_image/SDL_image.h>

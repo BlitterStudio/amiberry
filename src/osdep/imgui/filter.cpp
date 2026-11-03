@@ -1,6 +1,5 @@
 #include "imgui.h"
 #include "sysdeps.h"
-#include "amiga_constants.h"
 #include "imgui_panels.h"
 #include "options.h"
 #include "gui/gui_handling.h"
@@ -9,7 +8,6 @@
 #include "display_catalog.h"
 #include "settings/settings_definitions.h"
 #include <algorithm>
-#include <filesystem>
 #include <vector>
 #include <string>
 

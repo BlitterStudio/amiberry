@@ -19,7 +19,6 @@
 #include "memory.h"
 #include "newcpu.h"
 #include "threaddep/thread.h"
-#include "debug.h"
 #include "savestate.h"
 #include "scsi.h"
 #include "ide.h"

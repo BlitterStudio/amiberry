@@ -17,13 +17,11 @@
 #include "gfxboard.h"
 #include "custom.h"
 #include "ethernet.h"
-#include "sana2.h"
 #include "zz9000_net_protocol.h"
 #include "zz9000_sdk.h"
 #ifdef AMIBERRY
 #include "amiberry_cursor.h"
 #endif
-#include "xwin.h"
 
 #include <algorithm>
 #include <array>

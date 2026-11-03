@@ -19,7 +19,6 @@
 
 #include <cerrno>
 #include <climits>
-#include <cmath>
 #include <cstdio>
 #include <cstring>
 #include <string>

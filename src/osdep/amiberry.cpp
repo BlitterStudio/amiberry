@@ -22,7 +22,6 @@
 #include <cstdio>
 #include <cstring>
 #include <cctype>
-#include <sys/types.h>
 #include <dirent.h>
 #include <cstdlib>
 #include <ctime>
@@ -37,14 +36,12 @@
 
 #include "sysdeps.h"
 #include "options.h"
-#include "audio.h"
 #include "sounddep/sound.h"
 #include "uae.h"
 #include "memory.h"
 #include "rommgr.h"
 #include "custom.h"
 #include "newcpu.h"
-#include "traps.h"
 #include "xwin.h"
 #include "gdb_server.h"
 #include "keyboard.h"
@@ -76,7 +73,6 @@
 #include "amiberry_update_asset_policy.h"
 #include "settings/amiberry_actions.h"
 #include "clipboard.h"
-#include "dpi_handler.hpp"
 #include "gui_layout_scale.h"
 #include "fsdb.h"
 #include "scsidev.h"

@@ -1,6 +1,5 @@
 #include "sysconfig.h"
 #include "sysdeps.h"
-#include "options.h"
 #include "memory.h"
 #include "blitter.h"
 #include "blitfunc.h"

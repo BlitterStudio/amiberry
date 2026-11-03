@@ -14,7 +14,6 @@
 #include "gfxboard.h"
 #include "rtgmodes.h"
 #include "ethernet.h"
-#include "xwin.h"
 
 #include "settings_definitions.h"
 

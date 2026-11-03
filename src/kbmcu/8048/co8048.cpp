@@ -20,7 +20,6 @@
 //	archive for details.
 
 #include <cstring>
-#include <string>
 #include "co8048.h"
 
 ATCoProc8048::ATCoProc8048() {

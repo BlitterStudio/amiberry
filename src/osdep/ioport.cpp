@@ -1,9 +1,7 @@
 #include "sysconfig.h"
 #include "sysdeps.h"
 
-#include "ioport.h"
 #include "cia.h"
-#include "options.h"
 #include "vpar.h"
 
 #define para_log write_log
