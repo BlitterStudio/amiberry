@@ -163,3 +163,7 @@ android/local.properties
 
 # Local planning / scratch notes (not for the repo)
 notes/
+
+# Python bytecode caches
+__pycache__/
+*.py[cod]
