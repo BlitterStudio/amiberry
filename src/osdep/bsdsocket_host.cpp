@@ -2666,6 +2666,9 @@ void host_getservbynameport(TrapContext *ctx, SB, uae_u32 nameport, uae_u32 prot
 #include <csignal>
 #include <arpa/inet.h>
 #include <unistd.h>
+#include <string>
+#include <unordered_map>
+#include <mutex>
 #endif /* _WIN32 */
 
 #if defined(__HAIKU__)
@@ -3979,46 +3982,114 @@ static int copysockaddr_n2a (uae_u32 a_addr, const struct sockaddr_in *addr, uns
 /*
  * Copy a hostent object from native space to amiga space
  */
-static void copyHostent(TrapContext* ctx, const struct hostent* hostent, SB)
+/*
+ * Host-side copy of a gethostby*() result. The socket thread does the
+ * lookup and saves the result here; host_gethostbynameaddr() then builds
+ * the Amiga hostent in the trap context, because allocating Amiga memory
+ * needs a trap context.
+ */
+struct unix_hostent_copy {
+	int addrtype;
+	int length;
+	std::string name;
+	std::vector<std::string> aliases;
+	std::vector<std::string> addrs;
+};
+
+static std::mutex hostent_copy_mutex;
+static std::unordered_map<struct socketbase*, unix_hostent_copy> hostent_copies;
+
+static void save_hostent(SB, const struct hostent* hostent)
+{
+	unix_hostent_copy h;
+	int i;
+
+	h.addrtype = hostent->h_addrtype;
+	h.length = hostent->h_length;
+	if (hostent->h_name != nullptr)
+		h.name = hostent->h_name;
+	if (hostent->h_aliases != nullptr) {
+		for (i = 0; hostent->h_aliases[i]; i++)
+			h.aliases.emplace_back(hostent->h_aliases[i]);
+	}
+	if (hostent->h_addr_list != nullptr) {
+		for (i = 0; hostent->h_addr_list[i]; i++)
+			h.addrs.emplace_back(hostent->h_addr_list[i], hostent->h_length);
+	}
+
+	std::lock_guard<std::mutex> lock(hostent_copy_mutex);
+	hostent_copies[sb] = std::move(h);
+}
+
+static bool take_hostent(SB, unix_hostent_copy* h)
+{
+	std::lock_guard<std::mutex> lock(hostent_copy_mutex);
+	auto it = hostent_copies.find(sb);
+	if (it == hostent_copies.end())
+		return false;
+	*h = std::move(it->second);
+	hostent_copies.erase(it);
+	return true;
+}
+
+static void drop_hostent(SB)
+{
+	std::lock_guard<std::mutex> lock(hostent_copy_mutex);
+	hostent_copies.erase(sb);
+}
+
+/*
+ * Copy a hostent object from native space to amiga space
+ */
+static void copyHostent(TrapContext* ctx, const unix_hostent_copy* hostent, SB)
 {
 	int size = 28;
 	int i;
-	int numaddr = 0;
-	int numaliases = 0;
+	int numaddr = static_cast<int>(hostent->addrs.size());
+	int numaliases = static_cast<int>(hostent->aliases.size());
 	uae_u32 aptr;
 
-	if (hostent->h_name != NULL)
-		size += strlen(hostent->h_name) + 1;
+	size += static_cast<int>(hostent->name.size()) + 1;
+	for (i = 0; i < numaliases; i++)
+		size += static_cast<int>(hostent->aliases[i].size()) + 5;
+	size += numaddr * (hostent->length + 4);
 
-	if (hostent->h_aliases != NULL)
-		while (hostent->h_aliases[numaliases])
-			size += strlen(hostent->h_aliases[numaliases++]) + 5;
+	// The buffer starts at 1024 bytes; grow it for larger results
+	if (sb->hostent && sb->hostentsize < size) {
+		uae_FreeMem(ctx, sb->hostent, sb->hostentsize, sb->sysbase);
+		sb->hostent = 0;
+		sb->hostentsize = 0;
+	}
 
-	if (hostent->h_addr_list != NULL) {
-		while (hostent->h_addr_list[numaddr])
-			numaddr++;
-		size += numaddr * (hostent->h_length + 4);
+	if (!sb->hostent) {
+		sb->hostent = uae_AllocMem(ctx, size, 0, sb->sysbase);
+		if (!sb->hostent) {
+			write_log("BSDSOCK: WARNING - copyHostent() ran out of Amiga memory (couldn't allocate %d bytes)\n", size);
+			bsdsocklib_seterrno(ctx, sb, 12); // ENOMEM
+			return;
+		}
+		sb->hostentsize = size;
 	}
 
 	aptr = sb->hostent + 28 + numaliases * 4 + numaddr * 4;
 
 	// transfer hostent to Amiga memory
 	trap_put_long(ctx, sb->hostent + 4, sb->hostent + 20);
-	trap_put_long(ctx, sb->hostent + 8, hostent->h_addrtype);
-	trap_put_long(ctx, sb->hostent + 12, hostent->h_length);
+	trap_put_long(ctx, sb->hostent + 8, hostent->addrtype);
+	trap_put_long(ctx, sb->hostent + 12, hostent->length);
 	trap_put_long(ctx, sb->hostent + 16, sb->hostent + 24 + numaliases * 4);
 
 	for (i = 0; i < numaliases; i++)
-		trap_put_long(ctx, sb->hostent + 20 + i * 4, addstr(ctx, &aptr, hostent->h_aliases[i]));
+		trap_put_long(ctx, sb->hostent + 20 + i * 4, addstr(ctx, &aptr, hostent->aliases[i].c_str()));
 	trap_put_long(ctx, sb->hostent + 20 + numaliases * 4, 0);
 
 	for (i = 0; i < numaddr; i++) {
-		trap_put_long(ctx, sb->hostent + 24 + (numaliases + i) * 4, addmem(ctx, &aptr, hostent->h_addr_list[i], hostent->h_length));
+		trap_put_long(ctx, sb->hostent + 24 + (numaliases + i) * 4, addmem(ctx, &aptr, hostent->addrs[i].data(), hostent->length));
 	}
 	trap_put_long(ctx, sb->hostent + 24 + numaliases * 4 + numaddr * 4, 0);
 	trap_put_long(ctx, sb->hostent, aptr);
-	addstr(ctx, &aptr, hostent->h_name);
-	
+	addstr(ctx, &aptr, hostent->name.c_str());
+
 	bsdsocklib_seterrno(ctx, sb, 0);
 }
 
@@ -4400,7 +4471,7 @@ static int bsdlib_threadfunc(void* arg)
 			int herr, ret;
 			ret = gethostbyname_r((char*)get_real_address(sb->name), &hent, buf, sizeof(buf), &tmphostent, &herr);
 			if (ret == 0 && tmphostent) {
-				copyHostent(ctx, tmphostent, sb);
+				save_hostent(sb, tmphostent);
 				bsdsocklib_setherrno(ctx, sb, 0);
 			} else {
 				bsdsocklib_setherrno(ctx, sb, herr);
@@ -4410,7 +4481,7 @@ static int bsdlib_threadfunc(void* arg)
 			std::lock_guard<std::mutex> lock(bsdsock_mutex);
 			struct hostent* tmphostent = gethostbyname((char*)get_real_address(sb->name));
 			if (tmphostent) {
-				copyHostent(ctx, tmphostent, sb);
+				save_hostent(sb, tmphostent);
 				bsdsocklib_setherrno(ctx, sb, 0);
 			} else {
 				SETHERRNO;
@@ -4441,7 +4512,7 @@ static int bsdlib_threadfunc(void* arg)
 			int herr, ret;
 			ret = gethostbyaddr_r((char*)get_real_address(sb->name), sb->a_addrlen, sb->flags, &hent, buf, sizeof(buf), &tmphostent, &herr);
 			if (ret == 0 && tmphostent) {
-				copyHostent(ctx, tmphostent, sb);
+				save_hostent(sb, tmphostent);
 				bsdsocklib_setherrno(ctx, sb, 0);
 			} else {
 				bsdsocklib_setherrno(ctx, sb, herr);
@@ -4451,7 +4522,7 @@ static int bsdlib_threadfunc(void* arg)
 			std::lock_guard<std::mutex> lock(bsdsock_mutex);
 			struct hostent* tmphostent = gethostbyaddr((const char*)get_real_address(sb->name), sb->a_addrlen, sb->flags);
 			if (tmphostent) {
-				copyHostent(ctx, tmphostent, sb);
+				save_hostent(sb, tmphostent);
 				bsdsocklib_setherrno(ctx, sb, 0);
 			} else {
 				SETHERRNO;
@@ -4586,6 +4657,7 @@ void host_sbcleanup (SB)
 		 * about that. */
 		uae_wait_thread (&thread);
 		sb->thread = nullptr;
+		drop_hostent(sb);
 	}
 
 	if (sb->sem) {
@@ -5760,9 +5832,18 @@ void host_gethostbynameaddr (TrapContext *ctx, SB, uae_u32 name, uae_u32 namelen
 	else
 		sb->action = 7;
 
+	drop_hostent(sb);
 	uae_sem_post (&sb->sem);
 
 	WAITSIGNAL;
+
+	unix_hostent_copy hostent;
+	if (sb->eintr) {
+		take_hostent(sb, &hostent);
+		bsdsocklib_setherrno(ctx, sb, 2); /* TRY_AGAIN */
+	} else if (take_hostent(sb, &hostent)) {
+		copyHostent(ctx, &hostent, sb);
+	}
 }
 
 #endif /* _WIN32 */

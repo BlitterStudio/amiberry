@@ -668,15 +668,6 @@ std::string prefix_with_data_path(const std::string& filename)
 	}
 }
 
-[[nodiscard]] static time_t get_local_time_offset(time_t t)
-{
-	struct tm lt{};
-	localtime_r(&t, &lt);
-	struct tm gt{};
-	gmtime_r(&t, &gt);
-	gt.tm_isdst = lt.tm_isdst;
-	return t - mktime(&gt);
-}
 
 [[nodiscard]] static long get_mtime_usec(const STAT& st) noexcept
 {

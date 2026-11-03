@@ -63,6 +63,7 @@ extern int target_sleep_nanos(int);
 void target_setdefaultstatefilename(const TCHAR*);
 extern bool get_plugin_path (TCHAR *out, int size, const TCHAR *path);
 extern void strip_slashes (TCHAR *p);
+extern void stripslashes (TCHAR *p);
 extern void fix_trailing (TCHAR *p);
 extern std::string fix_trailing(std::string& input);
 extern void fullpath(TCHAR *path, int size);
