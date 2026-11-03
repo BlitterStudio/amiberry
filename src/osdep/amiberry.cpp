@@ -1690,6 +1690,12 @@ void unsetminimized(const int monid)
 
 void setpriority(const int prio)
 {
+// SDL_SetCurrentThreadPriority() maps to pthread_setschedparam() on macOS,
+// which can block indefinitely in thread_policy while the app transitions to
+// the background (e.g. AppNap), stalling the emulation thread. Raising to
+// HIGH requires SCHED_RR there, which macOS rejects for non-root processes,
+// so the boost never worked anyway. See GitHub issue #2590.
+#ifndef __APPLE__
 	if (prio >= 0 && prio <= 2)
 	{
 		switch (prio)
@@ -1707,6 +1713,9 @@ void setpriority(const int prio)
 			break;
 		}
 	}
+#else
+	(void)prio;
+#endif
 }
 
 static void setcursorshape(const int monid)
