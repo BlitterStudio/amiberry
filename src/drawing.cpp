@@ -8198,11 +8198,13 @@ void draw_denise_border_line_fast(int gfx_ypos, bool blank, enum nln_how how, st
 
 		if (need_genlock_data && gbuf && total > 0) {
 			int max = addrdiff(xlinebuffer_genlock_end, gbuf);
-			total += GENLOCK_EXTRA_CLEAR;
-			if (max > 0 && total > max) {
-				total = max;
+			if (max > 0) {
+				total += GENLOCK_EXTRA_CLEAR;
+				if (total > max) {
+					total = max;
+				}
+				memset(gbuf, 0xff, total);
 			}
-			memset(gbuf, 0xff, total);
 		}
 	}
 }
