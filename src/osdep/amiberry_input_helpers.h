@@ -118,6 +118,21 @@ static inline int amiberry_input_native_mousehack_uncropped_lowres_x_compensatio
 	return !source_origin_valid && low_resolution ? -2 : 0;
 }
 
+// Amount removed from the host position for the Pointer.prefs default pointer
+// offset and the classic sprite bias before it is delivered to the guest.
+// An RTG host cursor takes its hotspot from the active pointer's own offset
+// (P96 BoardInfo, ZZ9000 firmware), so its hotspot already is the Amiga pointer
+// position. The default pointer's offset does not describe that pointer, e.g.
+// an application crosshair set with SetPointer.
+static inline int amiberry_input_mousehack_pointer_prefs_adjust(bool host_cursor_uses_hotspot,
+	bool native_position, int pointer_prefs_offset, int bias)
+{
+	if (host_cursor_uses_hotspot && !native_position) {
+		return 0;
+	}
+	return pointer_prefs_offset + bias;
+}
+
 static inline int amiberry_input_native_interlace_origin(
 	int source_origin, bool interlaced, bool long_field, int field_line_height)
 {
