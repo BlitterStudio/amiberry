@@ -34,3 +34,5 @@ extern bool utf8_to_latin1_string(std::string_view input, std::string& output);
 extern std::string prefix_with_application_directory_path(std::string_view currentpath);
 extern std::string prefix_with_data_path(const std::string& filename);
 extern std::string prefix_with_whdboot_path(const std::string& filename);
+extern time_t get_local_time_offset(time_t t);
+extern time_t local_to_utc(time_t local);

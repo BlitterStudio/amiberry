@@ -23,6 +23,51 @@
 #else
 #include <sys/time.h>
 #endif
+#include <ctime>
+
+#ifdef _WIN32
+static inline struct tm* localtime_r(const time_t* timep, struct tm* result) {
+	return localtime_s(result, timep) == 0 ? result : nullptr;
+}
+static inline struct tm* gmtime_r(const time_t* timep, struct tm* result) {
+	return gmtime_s(result, timep) == 0 ? result : nullptr;
+}
+#endif
+
+time_t get_local_time_offset(time_t t)
+{
+	struct tm lt{};
+	if (!localtime_r(&t, &lt)) {
+		return 0;
+	}
+#if defined(_WIN32)
+	struct tm gt{};
+	if (!gmtime_r(&t, &gt)) {
+		return 0;
+	}
+	gt.tm_isdst = lt.tm_isdst;
+	time_t m = mktime(&gt);
+	if (m == static_cast<time_t>(-1)) {
+		int dst = lt.tm_isdst > 0 ? 3600 : 0;
+		return static_cast<time_t>(-_timezone + dst);
+	}
+	return t - m;
+#else
+	return static_cast<time_t>(lt.tm_gmtoff);
+#endif
+}
+
+time_t local_to_utc(time_t local)
+{
+	struct tm tm{};
+	if (!gmtime_r(&local, &tm)) {
+		return local;
+	}
+	tm.tm_isdst = -1;
+	time_t t = mktime(&tm);
+	return t == static_cast<time_t>(-1) ? local - get_local_time_offset(local) : t;
+}
+
 
 
 #include "sysconfig.h"
@@ -611,47 +656,33 @@ bool my_utime(const char* name, const struct mytimeval* tv)
 	bool ok = false;
 	try {
 		if (tv == nullptr) {
-			time_t rawtime;
-			time(&rawtime);
-
-			struct tm* local_tm = localtime(&rawtime);
-			if (!local_tm) {
-				return false;
-			}
-
-			time_t local_time = mktime(local_tm);
-			if (local_time == -1) {
-				return false;
-			}
-
-			mtv.tv_sec = local_time;
-			mtv.tv_usec = 0;
-#ifndef _WIN32
-			struct timeval current_time {};
-			if (gettimeofday(&current_time, nullptr) != -1)
-				mtv.tv_usec = current_time.tv_usec;
+#ifdef _WIN32
+			ok = _utime(path_utf8.c_str(), nullptr) == 0;
+#else
+			ok = utimes(path_utf8.c_str(), nullptr) == 0;
 #endif
 		}
 		else {
-			mtv = *tv;
-		}
+			struct mytimeval mtv = *tv;
+			mtv.tv_sec = static_cast<uae_s64>(local_to_utc(static_cast<time_t>(tv->tv_sec)));
 
 #ifdef _WIN32
-		struct _utimbuf utb;
-		utb.actime = mtv.tv_sec;
-		utb.modtime = mtv.tv_sec;
-		ok = _utime(path_utf8.c_str(), &utb) == 0;
+			struct _utimbuf utb;
+			utb.actime = static_cast<time_t>(mtv.tv_sec);
+			utb.modtime = static_cast<time_t>(mtv.tv_sec);
+			ok = _utime(path_utf8.c_str(), &utb) == 0;
 #else
-		struct timeval times[2];
+			struct timeval times[2];
 #if defined(__FreeBSD__) && defined(__i386__)
-		times[0].tv_sec = static_cast<time_t>(mtv.tv_sec);
-		times[0].tv_usec = static_cast<suseconds_t>(mtv.tv_usec);
-		times[1] = times[0];
+			times[0].tv_sec = static_cast<time_t>(mtv.tv_sec);
+			times[0].tv_usec = static_cast<suseconds_t>(mtv.tv_usec);
+			times[1] = times[0];
 #else
-		times[0] = times[1] = { mtv.tv_sec, mtv.tv_usec };
+			times[0] = times[1] = { static_cast<time_t>(mtv.tv_sec), static_cast<suseconds_t>(mtv.tv_usec) };
 #endif
-		ok = utimes(path_utf8.c_str(), times) == 0;
+			ok = utimes(path_utf8.c_str(), times) == 0;
 #endif
+		}
 	}
 	catch (...) {
 		return false;
@@ -679,7 +710,20 @@ bool my_utime(const char* name, const struct mytimeval* tv)
 
 	int uaem_err = 0;
 	if (had_uaem || fsdb_needs_uaem_sidecar(nullptr, &info)) {
-		timeval_to_amiga(&mtv, &info.days, &info.mins, &info.ticks, 50);
+		struct mytimeval local_tv;
+		if (tv == nullptr) {
+			struct mystat st{};
+			if (my_stat(name, &st)) {
+				local_tv = st.mtime;
+			} else {
+				const time_t now = time(nullptr);
+				local_tv.tv_sec = static_cast<uae_s64>(now + get_local_time_offset(now));
+				local_tv.tv_usec = 0;
+			}
+		} else {
+			local_tv = *tv;
+		}
+		timeval_to_amiga(&local_tv, &info.days, &info.mins, &info.ticks, 50);
 		uaem_err = fsdb_write_uaem_internal(nullptr, name, &info);
 	}
 	if (info.comment) {
@@ -1183,11 +1227,5 @@ TCHAR* fsdb_create_unique_nname(const a_inode* base, const TCHAR* suggestion)
 uae_u32 getlocaltime()
 {
 	time_t utc = time(nullptr);
-	struct tm *lt = localtime(&utc);
-#if defined(_WIN32)
-	int dst = lt->tm_isdst > 0 ? 3600 : 0;
-	return static_cast<uae_u32>(utc - _timezone + dst);
-#else
-	return static_cast<uae_u32>(utc + lt->tm_gmtoff);
-#endif
+	return static_cast<uae_u32>(utc + get_local_time_offset(utc));
 }
