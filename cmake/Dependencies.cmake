@@ -694,15 +694,15 @@ if (USE_LIBENET)
     endif()
 endif ()
 
-if (USE_PCEM)
-    target_compile_definitions(${PROJECT_NAME} PRIVATE USE_PCEM)
+if (USE_86BOX)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE USE_86BOX)
 endif ()
 
 if (USE_PPC)
     target_compile_definitions(${PROJECT_NAME} PRIVATE WITH_PPC)
 endif()
 
-if (USE_PCEM OR USE_PPC)
+if (USE_86BOX OR USE_PPC)
     target_compile_definitions(${PROJECT_NAME} PRIVATE WITH_QEMU_CPU)
 endif()
 

@@ -24,7 +24,7 @@ export HOME="$work"
 # Build the harness with the options the binary has: PPC emulation and the
 # JIT are build options (USE_PPC, USE_JIT), and cfgfile or the fixups drop
 # their settings when they are compiled out.
-SETTINGS_LAYER_DEFINES="-DUSE_PCEM"
+SETTINGS_LAYER_DEFINES="-DUSE_86BOX"
 "$AMIBERRY_BIN" --dump-config -s cpu_model=68060 -s ppc_model=automatic > "$work/ppc.txt" 2>/dev/null || true
 if grep -q '^ppc_model=' "$work/ppc.txt"; then
 	SETTINGS_LAYER_DEFINES="$SETTINGS_LAYER_DEFINES -DWITH_PPC"

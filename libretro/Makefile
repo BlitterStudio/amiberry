@@ -279,6 +279,7 @@ SOURCES_CORE := $(AMIBERRY_DIR)/src/a2065.cpp \
                $(AMIBERRY_DIR)/src/amax.cpp \
                $(AMIBERRY_DIR)/src/ar.cpp \
                $(AMIBERRY_DIR)/src/arcadia.cpp \
+               $(AMIBERRY_DIR)/src/atonce.cpp \
                $(AMIBERRY_DIR)/src/audio.cpp \
                $(AMIBERRY_DIR)/src/autoconf.cpp \
                $(AMIBERRY_DIR)/src/blitfunc.cpp \
@@ -616,65 +617,6 @@ SOURCES_SLIRP := $(AMIBERRY_DIR)/src/slirp/bootp.cpp \
                 $(AMIBERRY_DIR)/src/slirp/tftp.cpp \
                 $(AMIBERRY_DIR)/src/slirp/udp.cpp
 
-# PCem
-SOURCES_PCEM := $(AMIBERRY_DIR)/src/pcem/386.cpp \
-               $(AMIBERRY_DIR)/src/pcem/386_common.cpp \
-               $(AMIBERRY_DIR)/src/pcem/386_dynarec.cpp \
-               $(AMIBERRY_DIR)/src/pcem/808x.cpp \
-               $(AMIBERRY_DIR)/src/pcem/cpu.cpp \
-               $(AMIBERRY_DIR)/src/pcem/dosbox/dbopl.cpp \
-               $(AMIBERRY_DIR)/src/pcem/dma.cpp \
-               $(AMIBERRY_DIR)/src/pcem/keyboard.cpp \
-               $(AMIBERRY_DIR)/src/pcem/keyboard_at.cpp \
-               $(AMIBERRY_DIR)/src/pcem/keyboard_at_draco.cpp \
-               $(AMIBERRY_DIR)/src/pcem/mem.cpp \
-               $(AMIBERRY_DIR)/src/pcem/mouse_ps2.cpp \
-               $(AMIBERRY_DIR)/src/pcem/mouse_serial.cpp \
-               $(AMIBERRY_DIR)/src/pcem/dosbox/nukedopl.cpp \
-               $(AMIBERRY_DIR)/src/pcem/nvr.cpp \
-               $(AMIBERRY_DIR)/src/pcem/pcemglue.cpp \
-               $(AMIBERRY_DIR)/src/pcem/pcemrtc.cpp \
-               $(AMIBERRY_DIR)/src/pcem/pic.cpp \
-               $(AMIBERRY_DIR)/src/pcem/pit.cpp \
-               $(AMIBERRY_DIR)/src/pcem/serial.cpp \
-               $(AMIBERRY_DIR)/src/pcem/sound_cms.cpp \
-               $(AMIBERRY_DIR)/src/pcem/sound_dbopl.cpp \
-               $(AMIBERRY_DIR)/src/pcem/sound_mpu401_uart.cpp \
-               $(AMIBERRY_DIR)/src/pcem/sound_opl.cpp \
-               $(AMIBERRY_DIR)/src/pcem/sound_sb.cpp \
-               $(AMIBERRY_DIR)/src/pcem/sound_sb_dsp.cpp \
-               $(AMIBERRY_DIR)/src/pcem/sound_speaker.cpp \
-               $(AMIBERRY_DIR)/src/pcem/timer.cpp \
-               $(AMIBERRY_DIR)/src/pcem/vid_bt482_ramdac.cpp \
-               $(AMIBERRY_DIR)/src/pcem/vid_cl5429.cpp \
-               $(AMIBERRY_DIR)/src/pcem/vid_et4000.cpp \
-               $(AMIBERRY_DIR)/src/pcem/vid_et4000w32.cpp \
-               $(AMIBERRY_DIR)/src/pcem/vid_inmos.cpp \
-               $(AMIBERRY_DIR)/src/pcem/vid_mga.cpp \
-               $(AMIBERRY_DIR)/src/pcem/vid_ncr.cpp \
-               $(AMIBERRY_DIR)/src/pcem/vid_permedia2.cpp \
-               $(AMIBERRY_DIR)/src/pcem/vid_s3.cpp \
-               $(AMIBERRY_DIR)/src/pcem/vid_s3_virge.cpp \
-               $(AMIBERRY_DIR)/src/pcem/vid_sc1502x_ramdac.cpp \
-               $(AMIBERRY_DIR)/src/pcem/vid_sdac_ramdac.cpp \
-               $(AMIBERRY_DIR)/src/pcem/vid_svga.cpp \
-               $(AMIBERRY_DIR)/src/pcem/vid_svga_render.cpp \
-               $(AMIBERRY_DIR)/src/pcem/vid_tvp3026_ramdac.cpp \
-               $(AMIBERRY_DIR)/src/pcem/vid_voodoo.cpp \
-               $(AMIBERRY_DIR)/src/pcem/vid_voodoo_banshee.cpp \
-               $(AMIBERRY_DIR)/src/pcem/vid_voodoo_banshee_blitter.cpp \
-               $(AMIBERRY_DIR)/src/pcem/vid_voodoo_blitter.cpp \
-               $(AMIBERRY_DIR)/src/pcem/vid_voodoo_display.cpp \
-               $(AMIBERRY_DIR)/src/pcem/vid_voodoo_fb.cpp \
-               $(AMIBERRY_DIR)/src/pcem/vid_voodoo_fifo.cpp \
-               $(AMIBERRY_DIR)/src/pcem/vid_voodoo_reg.cpp \
-               $(AMIBERRY_DIR)/src/pcem/vid_voodoo_render.cpp \
-               $(AMIBERRY_DIR)/src/pcem/vid_voodoo_setup.cpp \
-               $(AMIBERRY_DIR)/src/pcem/vid_voodoo_texture.cpp \
-               $(AMIBERRY_DIR)/src/pcem/x86seg.cpp \
-               $(AMIBERRY_DIR)/src/pcem/x87.cpp \
-               $(AMIBERRY_DIR)/src/pcem/x87_timings.cpp
-
 # Miscellaneous hardware / support
 SOURCES_MISC := $(AMIBERRY_DIR)/src/caps/caps_amiberry.cpp \
                $(AMIBERRY_DIR)/src/dsp3210/dsp_glue.cpp \
@@ -692,10 +634,9 @@ SOURCES_MISC := $(AMIBERRY_DIR)/src/caps/caps_amiberry.cpp \
 
 SOURCES_CXX := $(SOURCES_CORE) $(SOURCES_OSDEP) $(SOURCES_CPU) $(SOURCES_JIT) $(SOURCES_PPC) $(SOURCES_QEMUVGA) $(SOURCES_ARCHIVE) $(SOURCES_SLIRP) $(SOURCES_MISC)
 
-ifeq ($(USE_PCEM),1)
-FLAGS += -DUSE_PCEM
-SOURCES_CXX += $(SOURCES_PCEM)
-endif
+# 86Box (x86 bridgeboards, DraCo, RTG boards): source lists, the opt-in
+# USE_86BOX wiring and the per-object flags live in 86box.mk.
+include 86box.mk
 
 # Optional MT-32/CM-32L emulation via MUNT
 # Note: WITH_MIDIEMU is already defined in sysconfig.h;
@@ -766,8 +707,11 @@ $(LIBRETRO_INFO): $(LIBRETRO_DIR)/amiberry_libretro.info.in $(LIBRETRO_DIR)/libr
 	sed -e 's/@SUPPORTED_EXTENSIONS@/$(LIBRETRO_SUPPORTED_EXTENSIONS)/' \
 		-e 's/@VERSION@/$(AMIBERRY_VERSION)/' $< > $@
 
+# STD_CXX is a variable so 86box.mk can build the imported 86Box sources as
+# C++20 (see 86box.mk); everything else stays on C++17.
+STD_CXX := -std=gnu++17
 %.o: %.cpp | $(NLOHMANN_JSON_HEADER)
-	$(CXX) $(INCFLAGS) $(FLAGS) -std=gnu++17 -c -o $@ $<
+	$(CXX) $(INCFLAGS) $(FLAGS) $(STD_CXX) -c -o $@ $<
 
 %.o: %.c
 	$(CC) $(INCFLAGS) $(FLAGS) -std=gnu99 -c -o $@ $<

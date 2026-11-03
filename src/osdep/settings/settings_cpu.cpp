@@ -652,7 +652,7 @@ void set_x86_throttle(uae_prefs& p, const value& v)
 
 bool x86_throttle_available(const uae_prefs& p, const context&)
 {
-#ifdef USE_PCEM
+#ifdef USE_86BOX
 	return is_x86_cpu(const_cast<uae_prefs*>(&p)) != 0;
 #else
 	(void)p;

@@ -98,7 +98,7 @@ settings_layer_compile() {
 	# and those reference emulator globals the harness does not link.
 	# shellcheck disable=SC2046,SC2086
 	${CXX:-c++} -std=c++17 -O1 -Isrc -Isrc/include -Isrc/osdep -Isrc/threaddep \
-		${SETTINGS_LAYER_DEFINES--DWITH_PPC -DUSE_PCEM} $(pkg-config --cflags sdl3) \
+		${SETTINGS_LAYER_DEFINES--DWITH_PPC -DUSE_86BOX} $(pkg-config --cflags sdl3) \
 		-o "$out" tests/settings_layer_test.cpp "$fixup" "$chipfix" "$refresh" "$events" src/osdep/settings/settings_*.cpp \
 		$(pkg-config --libs sdl3)
 	local status=$?

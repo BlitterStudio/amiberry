@@ -5,6 +5,9 @@
 
 #define MAX_PCI_BOARDS 6
 #define MAX_PCI_BARS 7
+// pci_board bars[] slots after the BARs: legacy I/O and legacy VGA memory
+#define PCI_LEGACY_IO MAX_PCI_BARS
+#define PCI_LEGACY_VGA (MAX_PCI_BARS + 1)
 
 typedef uae_u32(REGPARAM3 *pci_get_func)(struct pci_board_state*,uaecptr) REGPARAM;
 typedef void (REGPARAM3 *pci_put_func)(struct pci_board_state*,uaecptr,uae_u32) REGPARAM;
@@ -14,8 +17,8 @@ typedef void(*pci_dev_reset)(struct pci_board_state*);
 typedef void(*pci_dev_hsync)(struct pci_board_state*);
 typedef void(*pci_dev_chkcfg)(struct pci_board_state*, uae_u8*);
 typedef void(*pci_dev_free)(struct pci_board_state*);
-typedef uae_u8(*pci_get_config_func)(uaecptr);
-typedef void(*pci_put_config_func)(uaecptr, uae_u8);
+typedef uae_u8(*pci_get_config_func)(struct pci_board_state*, uaecptr);
+typedef void(*pci_put_config_func)(struct pci_board_state*, uaecptr, uae_u8);
 typedef void(*pci_change_config_func)(struct pci_board_state*);
 
 typedef struct
@@ -52,7 +55,7 @@ struct pci_board
 	pci_dev_reset reset;
 	pci_dev_hsync hsync;
 	pci_dev_chkcfg chkcfg;
-	pci_addrbank bars[MAX_PCI_BARS + 1];
+	pci_addrbank bars[MAX_PCI_BARS + 2];
 	bool dont_mask_io;
 	pci_get_config_func pci_get_config;
 	pci_put_config_func pci_put_config;

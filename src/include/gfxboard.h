@@ -15,6 +15,7 @@ extern int gfxboard_get_configtype (struct rtgboardconfig*);
 extern int gfxboard_is_registers (struct rtgboardconfig*);
 extern int gfxboard_get_vram_min (struct rtgboardconfig*);
 extern int gfxboard_get_vram_max (struct rtgboardconfig*);
+// Amiberry: by-type form used by the settings layer (see gfxboard.cpp).
 extern bool gfxboard_get_vram_range(int type, int *vmin, int *vmax);
 extern int gfxboard_get_configtype_of(int type);
 extern bool gfxboard_need_byteswap (struct rtgboardconfig*);
@@ -55,7 +56,6 @@ extern struct gfxboard_func zz9000_func;
 extern bool zz9000_net_board_present(void);
 extern bool zz9000_net_host_active(void);
 #endif
-
 extern void vga_io_put(int board, int portnum, uae_u8 v);
 extern uae_u8 vga_io_get(int board, int portnum);
 extern void vga_ram_put(int board, int offset, uae_u8 v);
@@ -67,8 +67,6 @@ void gfxboard_get_a8_vram(int index);
 void gfxboard_free_vram(int index);
 
 int gfxboard_get_devnum(struct uae_prefs *p, int index);
-
-int pcem_getvramsize(void);
 
 void gfxboard_intreq(void *p, int act, bool safe);
 

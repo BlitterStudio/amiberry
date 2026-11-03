@@ -17,6 +17,7 @@
 #include "x86.h"
 #include "ncr_scsi.h"
 #include "draco.h"
+#include "86box/winuae/86box_glue.h"
 #include "zfile.h"
 #include "rommgr.h"
 #include "disk.h"
@@ -148,15 +149,7 @@ static int maxcnt = 100;
 	INTREQ: 11 (RBF)
 */
 
-void serial_reset();
-void serial_write(uint16_t addr, uint8_t val, void *p);
-uint8_t serial_read(uint16_t addr, void *p);
-void draco_serial_init(void **s1, void **s2);
-void mouse_serial_poll(int x, int y, int z, int b, void *p);
-void *mouse_serial_init_draco();
-
-void keyboard_at_write(uint8_t val, void *priv);
-uint8_t keyboard_at_read(uint16_t port, void *priv);
+void draco_keyboard_write(uint8_t val, void *priv);
 void *draco_keyboard_init(void);
 void draco_key_process(uint16_t scan, int down);
 int draco_kbc_translate(uint8_t val);
@@ -175,7 +168,7 @@ static uae_u8 draco_superio_cfg[16];
 static uae_s8 draco_superio_idx;
 static uae_u8 draco_reg[0x20];
 static int draco_watchdog;
-static int draco_scsi_intpen, draco_serial_intpen;
+static int draco_scsi_intpen, draco_serial_intpen, draco_serial_irqs;
 
 static bool draco_have_vmotion = false;
 
@@ -341,7 +334,7 @@ static void draco_keyboard_read(void)
 					write_log("draco->keyboard code %02x\n", draco_kbd_code);
 #endif
 					draco_reg[3] = v;
-					keyboard_at_write((uae_u8)draco_kbd_code, draco_keyboard);
+					draco_keyboard_write((uae_u8)draco_kbd_code, draco_keyboard);
 					v = draco_reg[3];
 				}
 			}
@@ -950,7 +943,7 @@ static uae_u32 REGPARAM2 draco_bget(uaecptr addr)
 			case 0x3fd:
 			case 0x3fe:
 			case 0x3ff:
-				v = serial_read(reg, draco_serial[0]);
+				v = x86pc_serial_read(draco_serial[0], reg);
 				break;
 
 			case 0x2f8:
@@ -961,7 +954,7 @@ static uae_u32 REGPARAM2 draco_bget(uaecptr addr)
 			case 0x2fd:
 			case 0x2fe:
 			case 0x2ff:
-				v = serial_read(reg, draco_serial[1]);
+				v = x86pc_serial_read(draco_serial[1], reg);
 				break;
 
 			case 0x278:
@@ -1234,7 +1227,7 @@ static void REGPARAM2 draco_bput(uaecptr addr, uae_u32 b)
 			case 0x3fd:
 			case 0x3fe:
 			case 0x3ff:
-				serial_write(reg, b, draco_serial[0]);
+				x86pc_serial_write(draco_serial[0], reg, b);
 				break;
 
 			case 0x2f8:
@@ -1245,7 +1238,7 @@ static void REGPARAM2 draco_bput(uaecptr addr, uae_u32 b)
 			case 0x2fd:
 			case 0x2fe:
 			case 0x2ff:
-				serial_write(reg, b, draco_serial[1]);
+				x86pc_serial_write(draco_serial[1], reg, b);
 				break;
 
 			case 0x278:
@@ -1374,6 +1367,12 @@ static void draco_hsync(void)
 	}
 #endif
 
+	// serial ports and mouse run on 86Box timers
+	static float timercycles;
+	timercycles += (float)x86pc_get_cpu_speed() / (vblank_hz * maxvpos);
+	x86pc_timers_run((int)timercycles);
+	timercycles -= (int)timercycles;
+
 	if (currprefs.cs_compatible == CP_DRACO) {
 		ot = draco_timer;
 		draco_timer -= tm;
@@ -1422,6 +1421,17 @@ void draco_set_scsi_irq(int id, int level)
 }
 
 
+static void draco_serial_irq(int irq, int state)
+{
+	if (state) {
+		draco_serial_irqs |= 1 << irq;
+	} else {
+		draco_serial_irqs &= ~(1 << irq);
+	}
+	draco_serial_intpen = draco_serial_irqs != 0;
+	dc_irq();
+}
+
 static void x86_irq(int irq, bool state)
 {
 	if (irq == 4) {
@@ -1446,7 +1456,8 @@ void draco_free(void)
 			zfile_fclose(draco_flashfile);
 		}
 	}
-	xfree(draco_mouse_base);
+	x86pc_close_devices();
+	x86pc_set_serial_irq_hook(NULL);
 	draco_mouse_base = NULL;
 	xfree(dracorom);
 	dracorom = NULL;
@@ -1456,8 +1467,12 @@ void draco_reset(int hardreset)
 {
 
 	x86_initfloppy(x86_irq);
-	draco_serial_init(&draco_serial[0], &draco_serial[1]);
-	draco_mouse_base = mouse_serial_init_draco();
+	x86pc_timers_init();
+	x86pc_set_serial_irq_hook(draco_serial_irq);
+	draco_serial[0] = x86pc_add_serial(0);
+	draco_serial[1] = x86pc_add_serial(1);
+	draco_mouse_base = x86pc_add_serial_mouse(1);
+	draco_serial_irqs = 0;
 	draco_keyboard = draco_keyboard_init();
 
 	draco_intena = 0;
@@ -1550,7 +1565,7 @@ bool draco_mouse(int port, int x, int y, int z, int b)
 	if (currprefs.cs_compatible == CP_DRACO || currprefs.cs_compatible == CP_CASABLANCA) {
 		if (b < 0)
 			return true;
-		mouse_serial_poll(x, y, z, b, draco_mouse_base);
+		x86pc_mouse_input(x, y, z, b);
 		return true;
 	}
 	return false;

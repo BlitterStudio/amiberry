@@ -53,7 +53,7 @@ cmake -B build-no-ppc -DUSE_PPC=OFF
 cmake -B build-ppc-no-qemu -DUSE_PPC=ON -DUSE_QEMU_PPC=OFF
 ```
 
-`USE_PPC=ON` enables PPC accelerator board support in Amiberry. `USE_QEMU_PPC=ON` enables runtime loading of the QEMU-UAE PPC implementation. PCem/QEMU device glue remains controlled by `USE_PCEM`.
+`USE_PPC=ON` enables PPC accelerator board support in Amiberry. `USE_QEMU_PPC=ON` enables runtime loading of the QEMU-UAE PPC implementation. The 86Box/QEMU device glue is controlled by `USE_86BOX`.
 
 `QEMU_UAE_PLUGIN` is optional. When set, CMake validates that the artifact exists and that QEMU PPC support is enabled, then installs it beside the other Amiberry plugins.
 

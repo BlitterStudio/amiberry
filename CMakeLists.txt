@@ -64,7 +64,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
 endif()
 
 # Feature options
-option(USE_PCEM          "Use PCem for hardware emulation (no support for RISC-V)" ON)
+option(USE_86BOX        "Use 86Box for x86 bridgeboard and RTG hardware emulation" ON)
 option(USE_PPC "Enable PowerPC accelerator board support" ON)
 option(USE_QEMU_PPC "Enable QEMU-UAE PowerPC plugin support" ON)
 option(USE_LIBSERIALPORT "Use LibSerialPort for serial port emulation" ON)
@@ -112,13 +112,32 @@ if(USE_VULKAN AND USE_OPENGL)
     set(USE_OPENGL OFF CACHE BOOL "Use OpenGL for rendering" FORCE)
 endif()
 
-# Automatically disable PCem on architectures without a PCem backend
-string(TOLOWER "${CMAKE_SYSTEM_PROCESSOR}" ARCH_LOWER)
-if(ARCH_LOWER MATCHES "riscv|loongarch")
-    if(USE_PCEM)
-        message(STATUS "Detected ${CMAKE_SYSTEM_PROCESSOR} architecture. Disabling USE_PCEM (no backend available).")
+# PCem was replaced by 86Box: warn about the removed option instead of
+# silently aliasing it to the new one.
+if(DEFINED USE_PCEM)
+    message(WARNING "USE_PCEM was removed: Amiberry uses 86Box for the x86 bridgeboards and RTG boards now. Set USE_86BOX instead; this USE_PCEM value is ignored.")
+endif()
+
+# 86Box's x86 recompiler for the bridgeboard PCs. It has one backend per
+# binary, so multi-architecture builds (macOS universal) and other
+# architectures (armhf, RISC-V, LoongArch) keep the interpreter.
+set(AMIBERRY_86BOX_TARGET_ARCHES "${CMAKE_SYSTEM_PROCESSOR}")
+if(APPLE AND CMAKE_OSX_ARCHITECTURES)
+    set(AMIBERRY_86BOX_TARGET_ARCHES "${CMAKE_OSX_ARCHITECTURES}")
+endif()
+set(AMIBERRY_86BOX_DYNAREC_BACKEND "")
+list(LENGTH AMIBERRY_86BOX_TARGET_ARCHES AMIBERRY_86BOX_TARGET_ARCH_COUNT)
+if(AMIBERRY_86BOX_TARGET_ARCH_COUNT EQUAL 1)
+    if(AMIBERRY_86BOX_TARGET_ARCHES MATCHES "^(aarch64|arm64)$")
+        set(AMIBERRY_86BOX_DYNAREC_BACKEND arm64)
+    elseif(AMIBERRY_86BOX_TARGET_ARCHES MATCHES "^(x86_64|amd64|AMD64)$")
+        set(AMIBERRY_86BOX_DYNAREC_BACKEND x86-64)
     endif()
-    set(USE_PCEM OFF CACHE BOOL "Use PCem for hardware emulation (no backend for this architecture)" FORCE)
+endif()
+cmake_dependent_option(USE_86BOX_DYNAREC "Build the 86Box x86 recompiler for the bridgeboard PCs (single-arch x86-64/arm64 binaries)" ON "USE_86BOX" OFF)
+if(USE_86BOX_DYNAREC AND NOT AMIBERRY_86BOX_DYNAREC_BACKEND)
+    message(STATUS "The 86Box x86 recompiler has no backend for ${AMIBERRY_86BOX_TARGET_ARCHES}; the bridgeboards use the interpreter")
+    set(USE_86BOX_DYNAREC OFF CACHE BOOL "Build the 86Box x86 recompiler for the bridgeboard PCs" FORCE)
 endif()
 
 # Platform-specific feature gating
@@ -156,7 +175,7 @@ elseif(IOS)
     endif()
     set(USE_GPIOD OFF CACHE BOOL "GPIO not available on iOS" FORCE)
     set(USE_LIBSERIALPORT OFF CACHE BOOL "Serial port not available on iOS" FORCE)
-    set(USE_PCEM OFF CACHE BOOL "PCem x86 emulation not available on iOS" FORCE)
+    set(USE_86BOX OFF CACHE BOOL "86Box x86 emulation not available on iOS" FORCE)
     set(USE_PPC OFF CACHE BOOL "PPC accelerator support is not available on iOS yet" FORCE)
     set(USE_QEMU_PPC OFF CACHE BOOL "Dynamic QEMU-UAE PPC plugins are not available on iOS" FORCE)
     set(USE_LIBMPEG2 OFF CACHE BOOL "LibMPEG2 not available on iOS" FORCE)

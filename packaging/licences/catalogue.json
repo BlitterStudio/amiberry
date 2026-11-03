@@ -46,13 +46,13 @@
       ]
     },
     {
-      "id": "pcem",
-      "name": "PCem / 86Box PC emulation",
+      "id": "86box",
+      "name": "86Box PC system emulator (x86 bridgeboards and RTG boards, incl. Nuked OPL2/3)",
       "version": "",
-      "copyright": "Sarah Walker; Fred N. van Kempen; Miran Grca; and other PCem and 86Box authors",
+      "copyright": "Sarah Walker; Fred N. van Kempen; Miran Grca; Alexey Khokholov (Nuke.YKT); and other 86Box, PCem and Nuked OPL authors",
       "licence": "GPL-2.0-or-later",
       "licence_name": "GNU General Public License, version 2 or later",
-      "url": "https://pcem-emulator.co.uk/",
+      "url": "https://86box.net/",
       "text": "GPL-2.0.txt",
       "platforms": [
         "macos",
@@ -60,14 +60,14 @@
       ]
     },
     {
-      "id": "dosbox-opl",
-      "name": "DOSBox OPL emulator",
-      "version": "",
-      "copyright": "2002-2010 The DOSBox Team",
-      "licence": "GPL-2.0-or-later",
-      "licence_name": "GNU General Public License, version 2 or later",
-      "url": "https://www.dosbox.com/",
-      "text": "GPL-2.0.txt",
+      "id": "softfloat3e",
+      "name": "Berkeley SoftFloat 3e (86Box x87 FPU core)",
+      "version": "3e",
+      "copyright": "2011, 2012, 2013, 2014 The Regents of the University of California (John R. Hauser)",
+      "licence": "BSD-3-Clause",
+      "licence_name": "BSD 3-Clause License",
+      "url": "http://www.jhauser.us/arithmetic/SoftFloat.html",
+      "text": "BSD-3-Clause.txt",
       "platforms": [
         "macos",
         "macos-store"

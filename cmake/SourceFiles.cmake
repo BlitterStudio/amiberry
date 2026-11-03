@@ -414,66 +414,6 @@ set(IMGUI_GUI_FILES
 		src/osdep/imgui/whdload.cpp
 )
 
-set(PCEM_SOURCE_FILES
-        src/pcem/386.cpp
-        src/pcem/386_common.cpp
-        src/pcem/386_dynarec.cpp
-        src/pcem/808x.cpp
-        src/pcem/cpu.cpp
-        src/pcem/dosbox/dbopl.cpp
-        src/pcem/dma.cpp
-        src/pcem/keyboard.cpp
-        src/pcem/keyboard_at.cpp
-        src/pcem/keyboard_at_draco.cpp
-        src/pcem/mem.cpp
-        src/pcem/mouse_ps2.cpp
-        src/pcem/mouse_serial.cpp
-        src/pcem/dosbox/nukedopl.cpp
-        src/pcem/nvr.cpp
-        src/pcem/pcemglue.cpp
-        src/pcem/pcemrtc.cpp
-        src/pcem/pic.cpp
-        src/pcem/pit.cpp
-        src/pcem/serial.cpp
-        src/pcem/sound_cms.cpp
-        src/pcem/sound_dbopl.cpp
-        src/pcem/sound_mpu401_uart.cpp
-        src/pcem/sound_opl.cpp
-        src/pcem/sound_sb.cpp
-        src/pcem/sound_sb_dsp.cpp
-        src/pcem/sound_speaker.cpp
-        src/pcem/timer.cpp
-        src/pcem/vid_bt482_ramdac.cpp
-        src/pcem/vid_cl5429.cpp
-        src/pcem/vid_et4000.cpp
-        src/pcem/vid_et4000w32.cpp
-        src/pcem/vid_inmos.cpp
-        src/pcem/vid_mga.cpp
-        src/pcem/vid_ncr.cpp
-        src/pcem/vid_permedia2.cpp
-        src/pcem/vid_s3.cpp
-        src/pcem/vid_s3_virge.cpp
-        src/pcem/vid_sc1502x_ramdac.cpp
-        src/pcem/vid_sdac_ramdac.cpp
-        src/pcem/vid_svga.cpp
-        src/pcem/vid_svga_render.cpp
-        src/pcem/vid_tvp3026_ramdac.cpp
-        src/pcem/vid_voodoo.cpp
-        src/pcem/vid_voodoo_banshee.cpp
-        src/pcem/vid_voodoo_banshee_blitter.cpp
-        src/pcem/vid_voodoo_blitter.cpp
-        src/pcem/vid_voodoo_display.cpp
-        src/pcem/vid_voodoo_fb.cpp
-        src/pcem/vid_voodoo_fifo.cpp
-        src/pcem/vid_voodoo_reg.cpp
-        src/pcem/vid_voodoo_render.cpp
-        src/pcem/vid_voodoo_setup.cpp
-        src/pcem/vid_voodoo_texture.cpp
-        src/pcem/x86seg.cpp
-        src/pcem/x87.cpp
-        src/pcem/x87_timings.cpp
-)
-
 # The ImGui GUI and overlays: everywhere but the native Apple apps.
 if(AMIBERRY_IMGUI)
     message(STATUS "Using ImGui for GUI")
@@ -488,12 +428,11 @@ else()
     message(STATUS "Built without ImGui: the native Apple UI")
 endif()
 
-if (USE_PCEM)
-    message(STATUS "PCem support enabled")
-    list(APPEND SOURCE_FILES ${PCEM_SOURCE_FILES})
-else ()
-    message(STATUS "PCem support disabled")
-endif()
+# 86Box: the x86 bridgeboards, ATonce, DraCo and the RTG video cards. The
+# source lists, object libraries and glue wiring live in cmake/86Box.cmake,
+# which is included here so its glue sources land in SOURCE_FILES before
+# the target below is created.
+include(cmake/86Box.cmake)
 
 # FloppyBridge: the loader (floppybridge_lib.cpp, which talks to the plugin
 # dylib via dlopen) is always compiled in — disk.cpp and the floppy panel
@@ -686,9 +625,9 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
 )
 
 # Haiku: <arch/x86_64/signal.h> declares `struct fpu_state` with members
-# named cs and ss. PCem's x86.h #defines cs/ds/es/ss as register macros,
+# named cs and ss. 86Box's cpu.h #defines cs/ds/es/ss as register macros,
 # which mangles that struct when a system header pulls signal.h in after
-# the PCem headers. Force the struct in first; its include guard keeps it
+# the 86Box headers. Force the struct in first; its include guard keeps it
 # from being re-parsed under the macros.
 if(CMAKE_SYSTEM_NAME STREQUAL "Haiku" AND CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64|amd64")
     target_compile_options(${PROJECT_NAME} PRIVATE -include arch/x86_64/signal.h)

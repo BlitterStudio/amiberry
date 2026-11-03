@@ -816,7 +816,7 @@ void fixup_prefs (struct uae_prefs *p, bool userconfig)
 		p->cs_ciaatod = p->ntscmode ? 2 : 1;
 	}
 
-	// PCem does not support max speed.
+	// The 86Box PC side does not support max speed.
 	p->x86_speed_throttle = std::max<float>(p->x86_speed_throttle, 0);
 
 	if (p->cs_hsyncadjust < 2 * 4 * 2) {
