@@ -201,6 +201,20 @@ bool checksd(TrapContext *ctx, SB, int sd)
 			if (sockdata[iCounter].sockpoolids != UNIQUE_ID && s == sockdata[iCounter].sockpoolsocks)
 				return true;
 		}
+		/* ReleaseCopyOfSocket() shares the native socket with other tasks and
+		 * ObtainSocket() drops the pool entry, so another task may still hold
+		 * this socket: release the local descriptor and keep the native one
+		 * open for the remaining owner. */
+		for (struct socketbase *sb2 = socketbases; sb2; sb2 = sb2->next) {
+			if (sb2 == sb || !sb2->dtable)
+				continue;
+			for (iCounter = 1; iCounter <= sb2->dtablesize; iCounter++) {
+				if (sb2->dtable[iCounter - 1] == s) {
+					releasesock(ctx, sb, sd);
+					return true;
+				}
+			}
+		}
 	}
 	BSDTRACE((_T("checksd FALSE s 0x%x sd %d\n"),s,sd));
 	return false;
