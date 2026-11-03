@@ -51,7 +51,7 @@ glue(cirrus_bitblt_rop_fwd_, ROP_NAME)(CirrusVGAState *s,
 {
     int x,y;
 
-	BLTCHECK_FWD
+	BLTCHECK_FWD(1)
 
     dstpitch -= bltwidth;
     srcpitch -= bltwidth;
@@ -79,7 +79,7 @@ glue(cirrus_bitblt_rop_bkwd_, ROP_NAME)(CirrusVGAState *s,
 										int dstpitch,int srcpitch,
                                         int bltwidth,int bltheight)
 {
-	BLTCHECK_BKWD
+	BLTCHECK_BKWD(1)
 	
 	int x,y;
 
@@ -111,7 +111,7 @@ glue(glue(cirrus_bitblt_rop_fwd_transp_, ROP_NAME),_8)(CirrusVGAState *s,
 								int dstpitch,int srcpitch,
 								int bltwidth,int bltheight)
 {
-	BLTCHECK_FWD
+	BLTCHECK_FWD(1)
 
 	int x,y;
     uint8_t p;
@@ -139,7 +139,7 @@ glue(glue(cirrus_bitblt_rop_bkwd_transp_, ROP_NAME),_8)(CirrusVGAState *s,
 							int dstpitch,int srcpitch,
 							int bltwidth,int bltheight)
 {
-	BLTCHECK_BKWD
+	BLTCHECK_BKWD(1)
 	
 	int x,y;
     uint8_t p;
@@ -167,7 +167,7 @@ glue(glue(cirrus_bitblt_rop_fwd_transp_, ROP_NAME),_16)(CirrusVGAState *s,
 							int dstpitch,int srcpitch,
 							int bltwidth,int bltheight)
 {
-	BLTCHECK_FWD
+	BLTCHECK_FWD(2)
 		
 	int x,y;
     uint8_t p1, p2;
@@ -200,7 +200,7 @@ glue(glue(cirrus_bitblt_rop_bkwd_transp_, ROP_NAME),_16)(CirrusVGAState *s,
 							int dstpitch,int srcpitch,
 							int bltwidth,int bltheight)
 {
-	BLTCHECK_BKWD
+	BLTCHECK_BKWD(2)
 
 	int x,y;
     uint8_t p1, p2;

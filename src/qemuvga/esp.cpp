@@ -172,7 +172,7 @@ void esp_request_cancelled(SCSIRequest *req)
     }
 }
 
-static uint32_t get_cmd(ESPState *s, uint8_t *buf)
+static uint32_t get_cmd(ESPState *s, uint8_t *buf, uint32_t buflen)
 {
     uint32_t dmalen;
     int target;
@@ -182,9 +182,26 @@ static uint32_t get_cmd(ESPState *s, uint8_t *buf)
         dmalen = s->rregs[ESP_TCLO];
         dmalen |= s->rregs[ESP_TCMID] << 8;
         dmalen |= s->rregs[ESP_TCHI] << 16;
+        // Transfer count is guest controlled (up to 16M), the command
+        // buffer is not (CVE-2016-4441).
+        if (dmalen > buflen) {
+            dmalen = buflen;
+        }
         s->dma_memory_read(s->dma_opaque, buf, dmalen);
     } else {
-        dmalen = s->ti_size;
+        // ti_size is not necessarily FIFO fill level here, it can be a
+        // stale (even negative) data phase length.
+        if (s->ti_size < 0) {
+            dmalen = 0;
+        } else {
+            dmalen = s->ti_size;
+        }
+        if (dmalen > TI_BUFSZ) {
+            dmalen = TI_BUFSZ;
+        }
+        if (dmalen > buflen) {
+            dmalen = buflen;
+        }
         memcpy(buf, s->ti_buf, dmalen);
         //buf[0] = buf[2] >> 5; // This makes no sense!
     }
@@ -224,7 +241,12 @@ static void do_busid_cmd(ESPState *s, uint8_t *buf, uint8_t busid)
     SCSIDevice *current_lun;
 
     lun = busid & 7;
-    current_lun = scsiesp_device_find(&s->bus, 0, s->current_dev->id, lun);
+    current_lun = NULL;
+    // TI with a pending command after the selected target went away
+    // (cf. QEMU 99545751734035b76bd372c4e7215bb337428d89)
+    if (s->current_dev) {
+        current_lun = scsiesp_device_find(&s->bus, 0, s->current_dev->id, lun);
+    }
 	if (!current_lun) {
         s->rregs[ESP_RSTAT] = 0;
         s->rregs[ESP_RINTR] = INTR_DC;
@@ -265,14 +287,14 @@ static void do_cmd(ESPState *s, uint8_t *buf)
 
 static int handle_satn(ESPState *s)
 {
-    uint8_t buf[32];
+    uint8_t *buf = s->selbuf;
     int len;
 
     if (s->dma && !s->dma_enabled) {
         s->dma_cb = handle_satn;
         return 1;
     }
-    len = get_cmd(s, buf);
+    len = get_cmd(s, buf, sizeof(s->selbuf));
     if (len)
         do_cmd(s, buf);
 	return 1;
@@ -280,14 +302,14 @@ static int handle_satn(ESPState *s)
 
 static int handle_s_without_atn(ESPState *s)
 {
-    uint8_t buf[32];
+    uint8_t *buf = s->selbuf;
     int len;
 
     if (s->dma && !s->dma_enabled) {
         s->dma_cb = handle_s_without_atn;
         return 1;
     }
-    len = get_cmd(s, buf);
+    len = get_cmd(s, buf, sizeof(s->selbuf));
     if (len) {
         do_busid_cmd(s, buf, 0);
     }
@@ -300,7 +322,7 @@ static int handle_satn_stop(ESPState *s)
         s->dma_cb = handle_satn_stop;
         return 1;
     }
-    s->cmdlen = get_cmd(s, s->cmdbuf);
+    s->cmdlen = get_cmd(s, s->cmdbuf, sizeof(s->cmdbuf));
     if (s->cmdlen) {
         s->do_cmd = 1;
         s->rregs[ESP_RSTAT] = STAT_TC | STAT_CD;
@@ -377,6 +399,13 @@ static int esp_do_dma(ESPState *s)
     to_device = (s->ti_size < 0);
     len = s->dma_left;
     if (s->do_cmd) {
+        // message byte(s) from select with ATN and stop are already in cmdbuf
+        if (s->cmdlen > ESP_CMDBUF_SZ) {
+            s->cmdlen = ESP_CMDBUF_SZ;
+        }
+        if (len > (int)(ESP_CMDBUF_SZ - s->cmdlen)) {
+            len = ESP_CMDBUF_SZ - s->cmdlen;
+        }
         s->dma_memory_read(s->dma_opaque, &s->cmdbuf[s->cmdlen], len);
         s->ti_size = 0;
         s->cmdlen = 0;
@@ -564,7 +593,7 @@ static int handle_ti(ESPState *s)
     s->dma_counter = dmalen;
 
     if (s->do_cmd)
-        minlen = (dmalen < 32) ? dmalen : 32;
+        minlen = (dmalen < ESP_CMDBUF_SZ) ? dmalen : ESP_CMDBUF_SZ;
     else if (s->ti_size < 0)
         minlen = (dmalen < -s->ti_size) ? dmalen : -s->ti_size;
     else
@@ -631,11 +660,12 @@ uint64_t fas408_read_fifo(void *opaque)
 	s->rregs[ESP_FIFO] = 0;
 	if ((s->fas4xxextra & 1) && (s->wregs[ESP_REGS + NCR_PSTAT] & NCRPSTAT_PIOM) && (s->fas408_buffer_size > 0 || s->fas408_buffer_offset > 0 || (s->rregs[ESP_RSTAT] & STAT_PIO_MASK) == STAT_DO)) {
 		bool refill = true;
-		if (s->ti_size > 128) {
+		if (s->ti_size > 128 && s->async_buf) {
 			s->rregs[ESP_FIFO] = s->async_buf[s->ti_rptr++];
 			s->ti_size--;
 		} else if (!s->fas408_buffer_size) {
-			if (s->ti_size) {
+			// ti_size is negative in data out phase
+			if (s->ti_size > 0 && s->async_buf) {
 				memcpy(s->fas408_buffer, &s->async_buf[s->ti_rptr], s->ti_size);
 				s->fas408_buffer_offset = 0;
 				s->fas408_buffer_size = s->ti_size;
@@ -787,7 +817,8 @@ void fas408_write_fifo(void *opaque, uint64_t val)
 		s->fas408_buffer[s->fas408_buffer_size++] = (uint8_t)val;
 	}
 	fas408_check(s);
-	while ((s->wregs[ESP_REGS + NCR_PSTAT] & NCRPSTAT_PIOM) && s->ti_size < 0 && s->fas408_buffer_size > 0) {
+	while ((s->wregs[ESP_REGS + NCR_PSTAT] & NCRPSTAT_PIOM) && s->ti_size < 0 && s->fas408_buffer_size > 0 &&
+		s->async_buf && s->dma_pending < (uint32_t)s->async_len) {
 		s->async_buf[s->dma_pending++] = s->fas408_buffer[0];
 		s->fas408_buffer_size--;
 		if (s->fas408_buffer_size > 0) {
@@ -830,7 +861,7 @@ void esp_reg_write(void *opaque, uint32_t saddr, uint64_t val64)
 		write_log("->FIFO %02x %d %d %d\n", val & 0xff, s->do_cmd, s->cmdlen, s->ti_wptr);
 #endif
 		if (s->do_cmd) {
-			if (s->cmdlen >= TI_BUFSZ)
+			if (s->cmdlen >= ESP_CMDBUF_SZ)
 				return;
             s->cmdbuf[s->cmdlen++] = val & 0xff;
         } else {

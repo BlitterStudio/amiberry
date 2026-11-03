@@ -174,35 +174,59 @@
 #define CIRRUS_PNPMMIO_SIZE         0x1000
 
 // If blit is out of bounds, reduce height.
-static void check_blit(int32_t addr, uint32_t mask, int pitch, int width, int *height, int depth, int dir)
+// addr: VRAM offset (already masked) of the first byte (dir > 0) or the last
+// byte (dir < 0, backwards blit) of the first row.
+// width: number of bytes touched per row, pitch: signed row to row distance.
+// mask == 0: source is not VRAM (CPU blit buffer), nothing to check.
+static void check_blit(int64_t addr, uint32_t mask, int pitch, int width, int *height, int dir)
 {
-	int h = *height;
-    int maskp1 = mask + 1;
-	int32_t off;
-	if (!h || !width || (!addr && !mask))
+	int64_t size = (int64_t)mask + 1;
+	int64_t lo, hi, h, hmax;
+
+	h = *height;
+	if (h <= 0 || width <= 0 || !mask) {
 		return;
-	addr &= mask;
-	off = addr + pitch * (h - 1);
+	}
 	if (dir > 0) {
-		off += width * (depth / 8);
+		lo = addr;
+		hi = addr + width - 1;
 	} else {
-		off -= width * (depth / 8);
+		lo = addr - width + 1;
+		hi = addr;
 	}
-	if (off > maskp1) {
-		if (pitch)
-			h -= (off - maskp1 + pitch - 1) / pitch;
-		else
-			h = 0;
-	} else if (off < 0) {
-		if (pitch)
-			h -= ((-off) + pitch - 1) / pitch;
-		else
-			h = 0;
+	if (lo < 0 || hi >= size) {
+		*height = 0;
+		return;
 	}
-	if (h < 0)
-		h = 0;
-	*height = h;
+	if (pitch > 0) {
+		// rows move up, last row must end below VRAM end
+		hmax = (size - 1 - hi) / pitch + 1;
+	} else if (pitch < 0) {
+		// rows move down, last row must start at or above VRAM start
+		hmax = lo / -(int64_t)pitch + 1;
+	} else {
+		hmax = h;
+	}
+	if (h > hmax) {
+		h = hmax;
+	}
+	*height = (int)h;
 }
+
+// Number of source bytes a colour expansion blit consumes per row.
+static int colorexpand_srcbytes(int bltwidth, int dstskipleft, int srcskipleftbits, int srcskipleftbytes, int pixelbytes)
+{
+	int npix;
+
+	if (bltwidth <= dstskipleft) {
+		return srcskipleftbytes + 1;
+	}
+	npix = (bltwidth - dstskipleft + pixelbytes - 1) / pixelbytes;
+	return srcskipleftbytes + (srcskipleftbits + npix - 1) / 8 + 1;
+}
+
+// width in bytes rounded up to whole pixels/accesses
+#define BLTCHECK_ROUNDUP(w, n) (((w) + (n) - 1) / (n) * (n))
 
 #define INITBLIT \
 	dst += (dstaddr & dstmask); \
@@ -212,16 +236,26 @@ static void check_blit(int32_t addr, uint32_t mask, int pitch, int width, int *h
 	dst += (dstaddr & dstmask);
 
 #define BLTCHECK_DST(skip) \
-	check_blit(dstaddr + skip, dstmask, dstpitch, bltwidth - skip, &bltheight, DEPTH, 1);
+	check_blit((int64_t)(dstaddr & dstmask) + (skip), dstmask, dstpitch, \
+		BLTCHECK_ROUNDUP(bltwidth - (skip), DEPTH / 8), &bltheight, 1);
 
-#define BLTCHECK_FWD \
-	check_blit(dstaddr, dstmask, dstpitch, bltwidth, &bltheight, 8, 1); \
-	check_blit(srcaddr, srcmask, srcpitch, bltwidth, &bltheight, 8, 1); \
+// colour expansion source is read sequentially, srcpitch is ignored
+#define BLTCHECK_SRC_EXPAND(srcskipbits, srcskipbytes, dstskip) \
+	{ \
+		int srcbytes = colorexpand_srcbytes(bltwidth, dstskip, srcskipbits, srcskipbytes, DEPTH / 8); \
+		check_blit(srcaddr & srcmask, srcmask, srcbytes, srcbytes, &bltheight, 1); \
+	}
+
+// unit: access size of the inner loop (transparent 16-bit blits
+// always touch both bytes of a pixel)
+#define BLTCHECK_FWD(unit) \
+	check_blit(dstaddr & dstmask, dstmask, dstpitch, BLTCHECK_ROUNDUP(bltwidth, unit), &bltheight, 1); \
+	check_blit(srcaddr & srcmask, srcmask, srcpitch, BLTCHECK_ROUNDUP(bltwidth, unit), &bltheight, 1); \
 	INITBLIT;
 
-#define BLTCHECK_BKWD \
-	check_blit(dstaddr, dstmask, dstpitch, bltwidth, &bltheight, 8, -1); \
-	check_blit(srcaddr, srcmask, srcpitch, bltwidth, &bltheight, 8, -1); \
+#define BLTCHECK_BKWD(unit) \
+	check_blit(dstaddr & dstmask, dstmask, dstpitch, BLTCHECK_ROUNDUP(bltwidth, unit), &bltheight, -1); \
+	check_blit(srcaddr & srcmask, srcmask, srcpitch, BLTCHECK_ROUNDUP(bltwidth, unit), &bltheight, -1); \
 	INITBLIT;
 
 #if 0
@@ -652,9 +686,24 @@ static int cirrus_bitblt_solidfill(CirrusVGAState *s, int blt_rop)
 
 static int cirrus_bitblt_videotovideo_patterncopy(CirrusVGAState * s)
 {
-    return cirrus_bitblt_common_patterncopy(s,
-					    s->vga.vram_ptr + ((s->cirrus_blt_srcaddr & ~7) &
-                                            s->cirrus_addr_mask));
+	uint32_t srcaddr = (s->cirrus_blt_srcaddr & ~7) & s->cirrus_addr_mask;
+	uint32_t patternsize;
+
+	// The pattern is a fixed size block that the blit size checks don't
+	// cover, make sure all of it is inside VRAM (cf. QEMU 95280c31cd).
+	if (s->cirrus_blt_mode & CIRRUS_BLTMODE_COLOREXPAND) {
+		patternsize = 8;
+	} else if (s->cirrus_blt_pixelwidth == 1) {
+		patternsize = 64;
+	} else if (s->cirrus_blt_pixelwidth == 2) {
+		patternsize = 128;
+	} else {
+		patternsize = 256;
+	}
+	if (srcaddr + patternsize > s->cirrus_addr_mask + 1) {
+		return 0;
+	}
+	return cirrus_bitblt_common_patterncopy(s, s->vga.vram_ptr + srcaddr);
 }
 
 static void cirrus_do_copy(CirrusVGAState *s, int dst, int src, int w, int h)
@@ -773,6 +822,11 @@ static void cirrus_bitblt_cputovideo_next(CirrusVGAState * s)
                 /* XXX: keep alignment to speed up transfer */
                 end_ptr = s->cirrus_bltbuf + s->cirrus_blt_srcpitch;
                 copy_count = (int)(s->cirrus_srcptr_end - end_ptr);
+                if (copy_count > CIRRUS_BLTBUFSIZE) {
+                    copy_count = CIRRUS_BLTBUFSIZE;
+                } else if (copy_count < 0) {
+                    copy_count = 0;
+                }
                 memmove(s->cirrus_bltbuf, end_ptr, copy_count);
                 s->cirrus_srcptr = s->cirrus_bltbuf + copy_count;
                 s->cirrus_srcptr_end = s->cirrus_bltbuf + s->cirrus_blt_srcpitch;
@@ -2020,15 +2074,16 @@ static void cirrus_mem_writeb_mode4and5_8bpp(CirrusVGAState * s,
     unsigned val = mem_value;
     uint8_t *dst;
 
-    dst = s->vga.vram_ptr + (offset &= s->cirrus_addr_mask);
+    offset &= s->cirrus_addr_mask;
     for (x = 0; x < 8; x++) {
+	// mask every byte, offset can be up to 7 bytes from VRAM end
+	dst = s->vga.vram_ptr + ((offset + x) & s->cirrus_addr_mask);
 	if (val & 0x80) {
 	    *dst = s->cirrus_shadow_gr1;
 	} else if (mode == 5) {
 	    *dst = s->cirrus_shadow_gr0;
 	}
 	val <<= 1;
-	dst++;
     }
     linear_memory_region_set_dirty(&s->vga.vram, offset, 8);
 }
@@ -2042,8 +2097,10 @@ static void cirrus_mem_writeb_mode4and5_16bpp(CirrusVGAState * s,
     unsigned val = mem_value;
     uint8_t *dst;
 
-    dst = s->vga.vram_ptr + (offset &= s->cirrus_addr_mask);
+    offset &= s->cirrus_addr_mask;
     for (x = 0; x < 8; x++) {
+	// mask every pixel, offset can be up to 15 bytes from VRAM end
+	dst = s->vga.vram_ptr + ((offset + 2 * x) & s->cirrus_addr_mask & ~1);
 	if (val & 0x80) {
 	    *dst = s->cirrus_shadow_gr1;
 	    *(dst + 1) = s->vga.gr[0x11];
@@ -2052,7 +2109,6 @@ static void cirrus_mem_writeb_mode4and5_16bpp(CirrusVGAState * s,
 	    *(dst + 1) = s->vga.gr[0x10];
 	}
 	val <<= 1;
-	dst += 2;
     }
     linear_memory_region_set_dirty(&s->vga.vram, offset, 16);
 }

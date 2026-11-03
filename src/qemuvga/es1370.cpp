@@ -585,7 +585,8 @@ IO_WRITE_PROTO (es1370_writew)
     case ES1370_REG_DAC2_SCOUNT:
         d++;
     case ES1370_REG_DAC1_SCOUNT:
-        d->scount = (d->scount & ~0xffff) | (val & 0xffff);
+        // writing the sample count also reloads the current sample count
+        d->scount = ((val & 0xffff) << 16) | (val & 0xffff);
         break;
 
     default:
@@ -622,7 +623,10 @@ IO_WRITE_PROTO (es1370_writel)
     case ES1370_REG_DAC2_SCOUNT:
         d++;
     case ES1370_REG_DAC1_SCOUNT:
-        d->scount = (val & 0xffff) | (d->scount & ~0xffff);
+        // Writing the sample count also reloads the current sample count,
+        // which counts down from it. Linux ens1370 and AROS sb128 drivers
+        // rely on this (QEMU 00e3b29d06).
+        d->scount = ((val & 0xffff) << 16) | (val & 0xffff);
         ldebug ("chan %td CURR_SAMP_CT %d, SAMP_CT %d\n",
                 d - &s->chan[0], val >> 16, (val & 0xffff));
         break;
@@ -833,6 +837,12 @@ static void es1370_transfer_audio (ES1370State *s, struct chan *d, int loop_sel,
     int csc_bytes = (csc + 1) << d->shift;
     int cnt = d->frame_cnt >> 16;
     int size = d->frame_cnt & 0xffff;
+    // guest can set the current frame count past the buffer size
+    // (QEMU 369ff955a8, CVE-2020-13361)
+    if (size < cnt) {
+        *irq = 0;
+        return;
+    }
     int left = ((size - cnt + 1) << 2) + d->leftover;
     int transferred = 0;
     int temp = audio_MIN (max, audio_MIN (left, csc_bytes));
@@ -841,7 +851,7 @@ static void es1370_transfer_audio (ES1370State *s, struct chan *d, int loop_sel,
     addr += (cnt << 2) + d->leftover;
 
     if (index == ADC_CHANNEL) {
-        while (temp) {
+        while (temp > 0) {
             int acquired, to_copy;
 
             to_copy = audio_MIN ((size_t) temp, sizeof (tmpbuf));
@@ -858,7 +868,7 @@ static void es1370_transfer_audio (ES1370State *s, struct chan *d, int loop_sel,
     } else {
         SWVoiceOut *voice = s->dac_voice[index];
 
-        while (temp) {
+        while (temp > 0) {
             int copied, to_copy;
 
             to_copy = audio_MIN ((size_t) temp, sizeof (tmpbuf));

@@ -179,6 +179,9 @@ do { write_log("lsi_scsi: error: " fmt , ## __VA_ARGS__); } while (0)
 /* Flag set if this is a tagged command.  */
 #define LSI_TAG_VALID     (1 << 16)
 
+/* Maximum instructions to process. */
+#define LSI_MAX_INSN    10000
+
 typedef struct lsi_request {
     SCSIRequest *req;
     uint32_t tag;
@@ -850,13 +853,17 @@ static void lsi_do_msgin(LSIState *s)
     len = s->msg_len;
     if (len > s->dbc)
         len = s->dbc;
-    pci_dma_write(PCI_DEVICE(s), s->dnad, s->msg, len);
-    /* Linux drivers rely on the last byte being in the SIDL.  */
-    s->sidl = s->msg[len - 1];
-    s->msg_len -= len;
-    if (s->msg_len) {
-        memmove(s->msg, s->msg + len, s->msg_len);
-    } else {
+    // dbc can be zero (QEMU e497e6a557)
+    if (len) {
+        pci_dma_write(PCI_DEVICE(s), s->dnad, s->msg, len);
+        /* Linux drivers rely on the last byte being in the SIDL.  */
+        s->sidl = s->msg[len - 1];
+        s->msg_len -= len;
+        if (s->msg_len) {
+            memmove(s->msg, s->msg + len, s->msg_len);
+        }
+    }
+    if (!s->msg_len) {
         /* ??? Check if ATN (not yet implemented) is asserted and maybe
            switch to PHASE_MO.  */
         switch (s->msg_action) {
@@ -1064,7 +1071,23 @@ static void lsi_execute_script(LSIState *s)
 
     s->istat1 |= LSI_ISTAT1_SRUN;
 again:
-    insn_processed++;
+    // Checked here, not at the end of the loop, so that runs of empty
+    // opcodes (which skip the rest of the loop) are limited too
+    // (QEMU de594e4765, CVE-2019-12068).
+    if (++insn_processed > LSI_MAX_INSN) {
+        /* Some windows drivers make the device spin waiting for a memory
+           location to change.  If we have been executed a lot of code then
+           assume this is the case and force an unexpected device disconnect.
+           This is apparently sufficient to beat the drivers into submission.
+         */
+        if (!(s->sien0 & LSI_SIST0_UDC)) {
+            fprintf(stderr, "inf. loop with UDC masked\n");
+        }
+        lsi_script_scsi_interrupt(s, LSI_SIST0_UDC, 0);
+        lsi_disconnect(s);
+        DPRINTF("SCRIPTS execution stopped\n");
+        return;
+    }
     insn = read_dword(s, s->dsp);
     if (!insn) {
         /* If we receive an empty opcode increment the DSP by 4 bytes
@@ -1491,17 +1514,7 @@ again:
             }
         }
     }
-    if (insn_processed > 10000 && !s->waiting) {
-        /* Some windows drivers make the device spin waiting for a memory
-           location to change.  If we have been executed a lot of code then
-           assume this is the case and force an unexpected device disconnect.
-           This is apparently sufficient to beat the drivers into submission.
-         */
-        if (!(s->sien0 & LSI_SIST0_UDC))
-            fprintf(stderr, "inf. loop with UDC masked\n");
-        lsi_script_scsi_interrupt(s, LSI_SIST0_UDC, 0);
-        lsi_disconnect(s);
-    } else if (s->istat1 & LSI_ISTAT1_SRUN && !s->waiting) {
+    if (s->istat1 & LSI_ISTAT1_SRUN && !s->waiting) {
         if (s->dcntl & LSI_DCNTL_SSM) {
             lsi_script_dma_interrupt(s, LSI_DSTAT_SSI);
         } else {
