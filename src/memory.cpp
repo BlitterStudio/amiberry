@@ -78,7 +78,7 @@ static bool needmman (void)
 {
 	if (!jit_direct_compatible_memory)
 		return false;
-#ifdef _WIN32
+#ifdef NATMEM_OFFSET
 	return true;
 #endif
 	if (canjit ())

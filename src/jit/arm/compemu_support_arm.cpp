@@ -2808,6 +2808,37 @@ static uint8 *alloc_code_near_popall(uint32 size)
 }
 #endif /* __APPLE__ */
 #endif /* CPU_AARCH64 */
+#if defined(CPU_AARCH64)
+STATIC_INLINE void create_popalls(void);
+
+/* popallspace was allocated without room for a cache of this size, because
+ * JIT was off at startup or the cache has grown since. A separately
+ * allocated cache can land out of B/BL range of popallspace, so allocate
+ * both again as one block and regenerate the stubs. Generated code leaves
+ * popallspace through tail jumps only, so nothing runs from it here. */
+static void realloc_popallspace_with_cache(void)
+{
+	if (popallspace) {
+		vm_release(popallspace, popall_combined_alloc_size ? popall_combined_alloc_size : POPALLSPACE_SIZE);
+		popallspace = NULL;
+	}
+	popall_combined_alloc_size = 0;
+	popall_combined_cache_start = NULL;
+	popall_combined_cache_kb = 0;
+	pushall_call_handler = NULL;
+	popall_execute_normal = NULL;
+	popall_check_checksum = NULL;
+	create_popalls();
+	if (!pushall_call_handler || !popall_execute_normal) {
+		return;
+	}
+	for (int i = 0; i < TAGSIZE; i += 2) {
+		cache_tags[i].handler = (cpuop_func*)popall_execute_normal;
+		cache_tags[i + 1].bi = NULL;
+	}
+}
+#endif
+
 
 void alloc_cache(void)
 {
@@ -2829,6 +2860,9 @@ void alloc_cache(void)
         return;
 
 #if defined(CPU_AARCH64)
+	if (!popall_combined_cache_start || (uint32)cache_size > popall_combined_cache_kb) {
+		realloc_popallspace_with_cache();
+	}
 	/* Use pre-allocated cache from the combined popallspace block if available */
 	if (popall_combined_cache_start && (uint32)cache_size <= popall_combined_cache_kb) {
 		compiled_code = popall_combined_cache_start;
