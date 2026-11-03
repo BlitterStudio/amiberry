@@ -4666,7 +4666,7 @@ bool handle_events()
 #ifdef AMIBERRY_NATIVE_HOST
 	native_host_service_autosave();
 #endif
-#ifdef __ANDROID__
+#if defined(__ANDROID__) && !defined(LIBRETRO)
 	android_overlay_service();
 #endif
 
