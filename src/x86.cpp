@@ -1652,14 +1652,7 @@ static void x86_code_written(uint32_t addr, int size)
 {
 #ifdef USE_DYNAREC
 	if (cpu_use_dynarec) {
-		uint32_t start_page = addr >> 12;
-		uint32_t end_page = (addr + size - 1) >> 12;
-		for (uint32_t p = start_page; p <= end_page && p < pages_sz; p++) {
-			if (pages[p].code_present_mask) {
-				mem_invalidate_range(addr, addr + size - 1);
-				break;
-			}
-		}
+		mem_invalidate_range(addr, addr + size - 1);
 	}
 #endif
 }
@@ -3724,7 +3717,7 @@ void x86_xt_ide_bios(struct zfile *z, struct romconfig *rc)
 	mem_mapping_add(&x86_bios_mapping[5], addr, 0x4000, mem_read_romext2, mem_read_romextw2, mem_read_romextl2, mem_write_null, mem_write_nullw, mem_write_nulll, xtiderom, MEM_MAPPING_EXTERNAL | MEM_MAPPING_ROM, 0);
 }
 
-static int x86_global_settings;
+static int x86_global_settings = -1;
 
 static int x86_device_config_int(const char *s)
 {
@@ -3757,6 +3750,10 @@ bool x86_device_config(const device_t *dev, const char *s, int *value)
 {
 	struct x86_bridge *xb = bridges[0];
 
+	if (dev == &mouse_ps2_device && !strcmp(s, "buttons") && xb) {
+		*value = xb->mouse_type == 2 ? 4 : 2;
+		return true;
+	}
 	if (x86_global_settings >= 0) {
 		// Sound Blaster
 		if (!strcmp(s, "base") || !strcmp(s, "irq") || !strcmp(s, "dma")) {
@@ -3773,10 +3770,6 @@ bool x86_device_config(const device_t *dev, const char *s, int *value)
 			return true;
 		}
 		return false;
-	}
-	if (dev == &mouse_ps2_device && !strcmp(s, "buttons") && xb) {
-		*value = xb->mouse_type == 2 ? 4 : 2;
-		return true;
 	}
 	return false;
 }

@@ -1320,9 +1320,15 @@ static void REGPARAM2 gtb_bput(uaecptr addr, uae_u32 b)
 	struct rtggfxboard *gb = &rtggfxboards[gfx_temp_bank_idx];
 	b &= 0xff;
 	addr &= 0xffff;
-	if (addr == 0x48) {
+	const uaecptr configure_address = gb->board->configtype == 3 ? 0x44 : 0x48;
+	if (addr == configure_address) {
 		gfx_temp_bank_idx++;
-		map_banks_z2(gb->gfxmem_bank, expamem_board_pointer >> 16, expamem_board_size >> 16);
+		if (gb->board->configtype == 3)
+			map_banks_z3(gb->gfxmem_bank, expamem_board_pointer >> 16,
+				expamem_board_size >> 16);
+		else
+			map_banks_z2(gb->gfxmem_bank, expamem_board_pointer >> 16,
+				expamem_board_size >> 16);
 		gb->func->configured(gb->userdata, expamem_board_pointer);
 		expamem_next(gb->gfxmem_bank, NULL);
 		return;
