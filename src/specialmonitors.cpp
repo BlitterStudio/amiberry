@@ -1970,21 +1970,24 @@ static bool graffiti(struct vidbuffer *src, struct vidbuffer *dst)
 	srcend = src->bufmem + (((yend << VRES_MAX) - src->yoffset) / avidinfo->ychange) * src->rowbytes;
 	extrapix = 0;
 
-	dstbuf = dst->bufmem + (((ystart << VRES_MAX) - src->yoffset) / avidinfo->ychange) * dst->rowbytes + (((xstart << RES_MAX) - src->xoffset) / avidinfo->xchange) * dst->pixbytes;
+	int dxoff = (((xstart << RES_MAX) - src->xoffset) / avidinfo->xchange) * dst->pixbytes;
+	dstbuf = dst->bufmem + (((ystart << VRES_MAX) - src->yoffset) / avidinfo->ychange) * dst->rowbytes + dxoff;
 	dstbufend = dst->bufmemend - 8 * dst->width_allocated * dst->pixbytes;
 
 	y = 0;
 	while (srcend > srcbuf && dstbufend > dstbuf) {
 		uae_u8 *srcp = srcbuf + extrapix;
-		uae_u8 *srclineend = srcp + (src->inwidth - (xstart >> RES_MAX)) * src->pixbytes;
+		uae_u8 *srclineend = srcp + (src->inwidth - (sx / src->pixbytes)) * src->pixbytes;
 		uae_u8 *dstp = dstbuf;
+		uae_u8 *dstlineend = dstbuf - dxoff + dst->inwidth * dst->pixbytes;
 		bool erase = false;
 
 		int srcrow = (int)((srcbuf - src->bufmem) / src->rowbytes);
 		uae_u16 dat = get_sm_data(((srcrow * avidinfo->ychange) + src->yoffset) >> VRES_MAX);
 		bool active = (dat & 0x0100) != 0;
 
-		while (srcp < srclineend) {
+		while (srcp + xadd * 8 <= srclineend &&
+			dstp + dst->pixbytes * (8 << (avidinfo->xchange == 1 && !hires ? 1 : 0)) <= dstlineend) {
 
 			uae_u8 mask = 0x80;
 			uae_u8 chunky[4] = { 0, 0, 0, 0 };
