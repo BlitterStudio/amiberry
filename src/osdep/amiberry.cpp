@@ -7116,21 +7116,22 @@ bool amiberry_config_is_compat_option(const TCHAR *option)
 	return false;
 }
 
-int target_parse_compat_option(struct uae_prefs *p, const TCHAR *option, const TCHAR *value)
+int target_parse_compat_option(struct uae_prefs *p, const TCHAR *option, const TCHAR *value, int type)
 {
 	if (!amiberry_config_is_compat_option(option)) {
 		return 0;
 	}
-	if (cfgfile_yesno(option, value, _T("iconified_pause"), &p->minimized_pause)
-		|| cfgfile_yesno(option, value, _T("iconified_nosound"), &p->minimized_nosound)
-		|| cfgfile_intval(option, value, _T("iconified_input"), &p->minimized_input, 1)
-		|| cfgfile_intval(option, value, _T("iconified_priority"), &p->minimized_priority, 1))
+	/* win32.iconified_* maps to Amiberry's minimized_* host settings. */
+	if ((type & CONFIG_TYPE_HOST)
+		&& (cfgfile_yesno(option, value, _T("iconified_pause"), &p->minimized_pause)
+			|| cfgfile_yesno(option, value, _T("iconified_nosound"), &p->minimized_nosound)
+			|| cfgfile_intval(option, value, _T("iconified_input"), &p->minimized_input, 1)
+			|| cfgfile_intval(option, value, _T("iconified_priority"), &p->minimized_priority, 1)))
 		return 1;
-	int v = target_parse_option(p, option, value, CONFIG_TYPE_HOST);
-	if (!v) {
-		v = target_parse_option(p, option, value, CONFIG_TYPE_HARDWARE);
-	}
-	return v;
+	/* Keep the caller's type: a hardware-only linked load applies only the
+	 * hardware settings, a host-only one only the host settings, exactly
+	 * like the native amiberry.* options. */
+	return target_parse_option(p, option, value, type);
 }
 
 

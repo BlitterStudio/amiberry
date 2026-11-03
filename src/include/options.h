@@ -1263,7 +1263,7 @@ extern TCHAR* cfgfile_subst_path(const TCHAR* path, const TCHAR* subst, const TC
 
 extern TCHAR* target_expand_environment(const TCHAR* path, TCHAR* out, int maxlen);
 extern int target_parse_option (struct uae_prefs *, const TCHAR *option, const TCHAR *value, int type);
-extern int target_parse_compat_option(struct uae_prefs *, const TCHAR *option, const TCHAR *value);
+extern int target_parse_compat_option(struct uae_prefs *, const TCHAR *option, const TCHAR *value, int type);
 extern void target_save_options(struct zfile*, struct uae_prefs*);
 extern void target_default_options(struct uae_prefs*, int type);
 extern void target_fixup_options(struct uae_prefs*);
