@@ -1651,8 +1651,15 @@ static uae_u8 get0x3da(struct x86_bridge *xb)
 static void x86_code_written(uint32_t addr, int size)
 {
 #ifdef USE_DYNAREC
-	if (cpu_use_dynarec && (addr >> 12) < pages_sz && pages[addr >> 12].code_present_mask) {
-		mem_invalidate_range(addr, addr + size - 1);
+	if (cpu_use_dynarec) {
+		uint32_t start_page = addr >> 12;
+		uint32_t end_page = (addr + size - 1) >> 12;
+		for (uint32_t p = start_page; p <= end_page && p < pages_sz; p++) {
+			if (pages[p].code_present_mask) {
+				mem_invalidate_range(addr, addr + size - 1);
+				break;
+			}
+		}
 	}
 #endif
 }
@@ -1793,6 +1800,7 @@ static void vlsi_set_ems(struct x86_bridge *xb, bool all)
 				write_log(_T("EMS %06x = -\n"), baseaddr);
 #endif
 			mem_mapping_disable(m);
+			x86_code_written(baseaddr, EMS_BANK);
 		}
 	}
 }
@@ -4092,6 +4100,7 @@ bool x86_bridge_init(struct autoconfig_info *aci, uae_u32 romtype, int type)
 
 	set_sb_emu(xb);
 	sound_pos_global = xb->sound_emu ? 0 : -1;
+	music_pos_global = sound_pos_global;
 
 	if (xb->type >= TYPE_2286) {
 		refresh_at_enable = 1;
@@ -4111,8 +4120,19 @@ bool x86_bridge_init(struct autoconfig_info *aci, uae_u32 romtype, int type)
 			xb->cmosfile = zfile_fopen(path, _T("wb"));
 		}
 		if (xb->cmosfile && xb->nvr) {
-			memset(xb->nvr->regs, 0, xb->cmossize);
-			zfile_fread(xb->nvr->regs, 1, xb->cmossize, xb->cmosfile);
+			uint8_t temp[256];
+			if (zfile_fread(temp, 1, xb->cmossize, xb->cmosfile) == xb->cmossize) {
+				memcpy(xb->nvr->regs, temp, xb->cmossize);
+				xb->nvr->is_new = 0;
+			}
+			if (xb->nvr->start)
+				xb->nvr->start(xb->nvr);
+			if ((xb->nvr->regs[10] & 0x70) == 0x00)
+				xb->nvr->regs[10] = (xb->nvr->regs[10] & 0x8f) | 0x20;
+			if (nvr_at_device.reset)
+				nvr_at_device.reset(xb->nvr);
+			if (nvr_at_device.speed_changed)
+				nvr_at_device.speed_changed(xb->nvr);
 		}
 	} else {
 		pit_devs[0].set_out_func(pit_devs[0].data, 1, pit_refresh_timer_xt);
@@ -4423,6 +4443,7 @@ void sound_reset()
 {
 	sound_handlers_num = 0;
 	sound_pos_global = 0;
+	music_pos_global = 0;
 	x86_sndbuffer[0] = outbuffer1;
 	x86_sndbuffer[1] = outbuffer2;
 	x86_sndbuffer_filled[0] = x86_sndbuffer_filled[1] = false;

@@ -283,6 +283,8 @@ void x86pc_timer_init(void)
 	timer_set_delay_u64(&keepalive_timer, TIMER_USEC * 1000000);
 }
 
+static void x86pc_mouse_close(void);
+
 void x86pc_close_devices(void)
 {
 	/* Unlink all timers first, as 86Box does on reset: the devices'
@@ -293,6 +295,7 @@ void x86pc_close_devices(void)
 			device_remove(&devices[i]);
 		}
 	}
+	x86pc_mouse_close();
 }
 
 void device_reset_all(uint32_t match_flags)
@@ -439,6 +442,14 @@ static void *mouse_priv;
 static pc_timer_t mouse_timer;
 static double mouse_sample_rate = 100.0;
 int mouse_timed;
+static void x86pc_mouse_close(void)
+{
+	mouse_timed = 0;
+	mouse_dev_poll = NULL;
+	mouse_priv = NULL;
+	memset(&mouse_timer, 0, sizeof(mouse_timer));
+}
+
 
 void mouse_process(void)
 {

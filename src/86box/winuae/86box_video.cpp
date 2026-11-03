@@ -302,7 +302,7 @@ static void video_init_tables(void)
 		video_8to32 = xcalloc(uint32_t, 256);
 		for (int c = 0; c < 256; c++) {
 			video_6to8[c] = calc_6to8(c);
-			video_8togs[c] = c | (c << 16) | (c << 24);
+			video_8togs[c] = makecol32(c, c, c);
 			video_8to32[c] = calc_8to32(c);
 		}
 	}
