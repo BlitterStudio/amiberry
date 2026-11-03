@@ -29,6 +29,8 @@
 #include "execio.h"
 #include "devices.h"
 
+int log_net;
+
 #ifdef SANA2
 
 static void uaenet_gotdata (void *dev, const uae_u8 *data, int len);

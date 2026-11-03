@@ -1236,7 +1236,7 @@ static uae_u32 REGPARAM2 uaelib_demux2 (TrapContext *ctx)
 	return uaelib_demux_common(ctx, ARG0, ARG1, ARG2, ARG3, ARG4, ARG5);
 }
 
-extern int uaelib_debug;
+int uaelib_debug;
 static uae_u32 REGPARAM2 uaelib_demux (TrapContext *ctx)
 {
 	uae_u32 v;

@@ -58,7 +58,7 @@ void dmabuf_surface_reclaim();
 
 #define ENABLE_MULTITHREADED_DENISE 1
 
-extern int multithread_enabled;
+int multithread_enabled = 1;
 #define MULTITHREADED_DENISE (ENABLE_MULTITHREADED_DENISE && multithread_enabled != 0)
 
 #define BLANK_COLOR 0x000000

@@ -4667,9 +4667,7 @@ static frame_time_t mavg(struct mavg_data *md, frame_time_t newval, int size)
 }
 
 #define MAVG_VSYNC_SIZE 128
-#ifdef DEBUGGER
-extern int log_vsync, debug_vsync_min_delay, debug_vsync_forced_delay;
-#endif
+int log_vsync, debug_vsync_min_delay, debug_vsync_forced_delay;
 static bool framewait(void)
 {
 	struct amigadisplay *ad = &adisplays[0];

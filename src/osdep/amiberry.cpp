@@ -635,13 +635,6 @@ static void drain_pending_touch_neutralization()
 
 static SDL_ThreadID mainthreadid;
 static int logging_started;
-int log_scsi;
-int log_net;
-int log_vsync, debug_vsync_min_delay, debug_vsync_forced_delay;
-int uaelib_debug;
-int pissoff_value = 15000 * CYCLE_UNIT;
-int pissoff_nojit_value = 160 * CYCLE_UNIT;
-int multithread_enabled = 1;
 
 bool amiberry_dump_config_mode = false;
 static TCHAR* inipath = nullptr;
@@ -7100,6 +7093,46 @@ int target_parse_option(uae_prefs *p, const TCHAR *option, const TCHAR *value, c
 	}
 	return 0;
 }
+// win32.* settings that mean the same in Amiberry. Paths and host device
+// names or indexes (sound cards, MIDI, serial and parallel ports) are
+// left out because a Windows value would select the wrong device here.
+static const TCHAR *compat_options[] = {
+	_T("active_input"), _T("active_not_captured_nosound"), _T("active_not_captured_pause"), _T("active_priority"),
+	_T("inactive_input"), _T("inactive_nosound"), _T("inactive_pause"), _T("inactive_priority"),
+	_T("iconified_input"), _T("iconified_nosound"), _T("iconified_pause"), _T("iconified_priority"),
+	_T("middle_mouse"),
+	_T("rtg_vblank"),
+	_T("uaescsimode"),
+	nullptr
+};
+
+bool amiberry_config_is_compat_option(const TCHAR *option)
+{
+	for (int i = 0; compat_options[i]; i++) {
+		if (!_tcsicmp(option, compat_options[i])) {
+			return true;
+		}
+	}
+	return false;
+}
+
+int target_parse_compat_option(struct uae_prefs *p, const TCHAR *option, const TCHAR *value)
+{
+	if (!amiberry_config_is_compat_option(option)) {
+		return 0;
+	}
+	if (cfgfile_yesno(option, value, _T("iconified_pause"), &p->minimized_pause)
+		|| cfgfile_yesno(option, value, _T("iconified_nosound"), &p->minimized_nosound)
+		|| cfgfile_intval(option, value, _T("iconified_input"), &p->minimized_input, 1)
+		|| cfgfile_intval(option, value, _T("iconified_priority"), &p->minimized_priority, 1))
+		return 1;
+	int v = target_parse_option(p, option, value, CONFIG_TYPE_HOST);
+	if (!v) {
+		v = target_parse_option(p, option, value, CONFIG_TYPE_HARDWARE);
+	}
+	return v;
+}
+
 
 std::string get_data_path()
 {

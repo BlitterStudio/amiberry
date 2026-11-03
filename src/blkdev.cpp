@@ -33,6 +33,7 @@
 #endif
 
 int log_scsiemu = 0;
+int log_scsi;
 
 #define PRE_INSERT_DELAY (3 * (currprefs.ntscmode ? 60 : 50))
 
