@@ -2723,6 +2723,42 @@ LOWFUNC(NONE,NONE,2,raw_fcmp_rr,(FR d, FR s))
 	emit_byte(0xdd);
 	emit_byte(0xe0+ds); /* cmp dest with source*/
 }
+/* FCMP: r = d - s, but equal infinities compare equal although their
+   difference is NaN. They give a zero with the sign of d instead.
+   The fixup uses fucomi, which every SSE2 host has. */
+LOWFUNC(NONE,NONE,3,raw_fcmp_result_rrr,(FW r, FR d, FR s))
+{
+	int ds, ss;
+
+	raw_fmov_rr(r, d);
+	raw_fsub_rr(r, s);
+	if (!have_cmov) {
+		return;
+	}
+	make_tos(r);
+	ds = stackpos(d);
+	ss = stackpos(s);
+
+	emit_byte(0xdb);
+	emit_byte(0xe8); /* fucomi st(0),st(0) */
+	emit_byte(0x7b);
+	emit_byte(14); /* jnp: the result is a number */
+	emit_byte(0xd9);
+	emit_byte(0xc0+ds); /* fld d */
+	emit_byte(0xdf);
+	emit_byte(0xe9+ss); /* fucomip d with s, pop */
+	emit_byte(0x75);
+	emit_byte(8); /* jne: not equal */
+	emit_byte(0x7a);
+	emit_byte(6); /* jp: unordered */
+	emit_byte(0xd9);
+	emit_byte(0xe8); /* fld1 */
+	emit_byte(0xd8);
+	emit_byte(0xf1+ds); /* fdiv d: 1/inf is a zero with its sign */
+	emit_byte(0xdd);
+	emit_byte(0xd9); /* fstp st(1): replace r, pop */
+}
+
 
 LOWFUNC(NONE,NONE,2,raw_fmul_rr,(FRW d, FR s))
 {
@@ -3525,66 +3561,3 @@ static inline void raw_fflags_into_flags(int r)
 	emit_byte(0xd9+p);  /* store value back, and get rid of 0 */
 }
 
-/* Compare the x87 stack slot pa with the slot pb (both already adjusted
-   for the transient push) and leave the relation in EFLAGS, with PF set
-   for unordered, like fucomi does. */
-static inline void raw_fcomi_st(int pa, int pb)
-{
-	emit_byte(0xd9);
-	emit_byte(0xc0+pa); /* fld st(pa), a copy on top of the stack */
-	if (have_cmov) {
-		emit_byte(0xdb);
-		emit_byte(0xe8+pb); /* fucomi st(0), st(pb) */
-	}
-	else {
-		emit_byte(0xdd);
-		emit_byte(0xe0+pb); /* fucom st(0), st(pb) */
-		emit_byte(0x9b);
-		emit_byte(0xdf);
-		emit_byte(0xe0); /* fstsw ax */
-		raw_sahf(0); /* sahf, C2 (unordered) goes to PF */
-	}
-	emit_byte(0xdd);
-	emit_byte(0xd8); /* fstp st(0), drop the copy */
-}
-
-/* FCMP fixup: d holds a-b. When both operands are infinities with the
-   same sign the subtraction produced NaN on the host, but a 6888x FCMP
-   compares them as ordered and equal: replace the NaN with a zero that
-   carries the destination's sign. A NaN operand keeps the NaN result so
-   it still compares unordered. */
-static inline void raw_fcmp_fixup_rrr(int d, int a, int b)
-{
-	int pd, pa, pb;
-	uae_s8 *skip_ordered, *skip_unordered;
-
-	usereg(d);
-	usereg(a);
-	usereg(b);
-	/* usereg may push, so read the slots only after all three */
-	pd=stackpos(d);
-	pa=stackpos(a);
-	pb=stackpos(b);
-
-	raw_fcomi_st(pd, pd+1); /* NaN result, i.e. inf minus inf? */
-	skip_ordered=(uae_s8 *)x86_get_target()+1;
-	JCCSii(11, 0); /* jnp, ordered result, nothing to fix up */
-
-	raw_fcomi_st(pa, pb+1); /* NaN operand? */
-	skip_unordered=(uae_s8 *)x86_get_target()+1;
-	JCCSii(10, 0); /* jp, keep the NaN so it compares unordered */
-
-	emit_byte(0xd9);
-	emit_byte(0xc0+pa); /* fld st(pa), the destination operand */
-	emit_byte(0xd9);
-	emit_byte(0xe8); /* fld1 */
-	emit_byte(0xde);
-	emit_byte(0xf1); /* fdivrp, 1/dest is a zero with the destination's sign */
-	emit_byte(0xd9);
-	emit_byte(0xc8+pd+1); /* fxch st(pd+1), swap with the NaN */
-	emit_byte(0xdd);
-	emit_byte(0xd8); /* fstp st(0), drop the NaN */
-
-	*skip_ordered=(uae_s8)(JITPTR x86_get_target()-(JITPTR skip_ordered+1));
-	*skip_unordered=(uae_s8)(JITPTR x86_get_target()-(JITPTR skip_unordered+1));
-}

@@ -883,6 +883,19 @@ MIDFUNC(2,fsub_rr,(FRW d, FR s))
 	f_unlock(d);
 }
 MENDFUNC(2,fsub_rr,(FRW d, FR s))
+MIDFUNC(3,fcmp_result_rrr,(FW r, FR d, FR s))
+{
+	clobber_flags();
+	d = f_readreg(d);
+	s = f_readreg(s);
+	r = f_writereg(r);
+	raw_fcmp_result_rrr(r, d, s);
+	f_unlock(r);
+	f_unlock(s);
+	f_unlock(d);
+}
+MENDFUNC(3,fcmp_result_rrr,(FW r, FR d, FR s))
+
 
 MIDFUNC(2,frndint_rr,(FW d, FR s))
 {
@@ -1016,19 +1029,6 @@ MIDFUNC(1,fflags_into_flags,())
 	fflags_into_flags_internal();
 }
 MENDFUNC(1,fflags_into_flags,())
-
-MIDFUNC(3,fcmp_fixup_rrr,(FRW d, FR a, FR b))
-{
-	clobber_flags();
-	a = f_readreg(a);
-	b = f_readreg(b);
-	d = f_rmw(d);
-	raw_fcmp_fixup_rrr(d, a, b);
-	f_unlock(b);
-	f_unlock(a);
-	f_unlock(d);
-}
-MENDFUNC(3,fcmp_fixup_rrr,(FRW d, FR a, FR b))
 
 
 MIDFUNC(2,fp_from_exten_mr,(RR4 adr, FR s))

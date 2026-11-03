@@ -421,6 +421,15 @@ static void fp_to_exten(fpdata *fpd, uae_u32 wrd1, uae_u32 wrd2, uae_u32 wrd3)
 			fpd->fp = (wrd1 & 0x80000000) ? -0.0 : +0.0;
 			return;
 		}
+		if ((wrd1 & 0x7fff0000) == 0x7fff0000) {
+			// infinity if the fraction (without the explicit integer bit) is zero, else NaN
+			if ((wrd2 & 0x7fffffff) == 0 && wrd3 == 0) {
+				fpd->fp = copysign(INFINITY, (wrd1 & 0x80000000) ? -1.0 : 1.0);
+			} else {
+				fpd->fp = copysign(NAN, (wrd1 & 0x80000000) ? -1.0 : 1.0);
+			}
+			return;
+		}
 		frac = ((double)wrd2 + ((double)wrd3 / twoto32)) / 2147483648.0;
 		if (wrd1 & 0x80000000) {
 			frac = -frac;
@@ -431,6 +440,15 @@ static void fp_to_exten(fpdata *fpd, uae_u32 wrd1, uae_u32 wrd2, uae_u32 wrd3)
 		double frac;
 		if ((wrd1 & 0x7fff0000) == 0 && wrd2 == 0 && wrd3 == 0) {
 			fpd->fp = (wrd1 & 0x80000000) ? -0.0 : +0.0;
+			return;
+		}
+		if ((wrd1 & 0x7fff0000) == 0x7fff0000) {
+			// infinity if the fraction (without the explicit integer bit) is zero, else NaN
+			if ((wrd2 & 0x7fffffff) == 0 && wrd3 == 0) {
+				fpd->fp = copysign(INFINITY, (wrd1 & 0x80000000) ? -1.0 : 1.0);
+			} else {
+				fpd->fp = copysign(NAN, (wrd1 & 0x80000000) ? -1.0 : 1.0);
+			}
 			return;
 		}
 		frac = ((double)wrd2 + ((double)wrd3 / twoto32)) / 2147483648.0;
@@ -461,9 +479,14 @@ static void fp_from_exten(fpdata *fpd, uae_u32 *wrd1, uae_u32 *wrd2, uae_u32 *wr
 			*wrd3 = 0;
 			return;
 		} else if (fp_is_nan(fpd)) {
-			*wrd1 = 0x7fff0000;
+			*wrd1 = (signbit(fpd->fp) ? 0x80000000 : 0) | 0x7fff0000;
 			*wrd2 = 0xffffffff;
 			*wrd3 = 0xffffffff;
+			return;
+		} else if (fp_is_infinity(fpd)) {
+			*wrd1 = (signbit(fpd->fp) ? 0x80000000 : 0) | 0x7fff0000;
+			*wrd2 = 0;
+			*wrd3 = 0;
 			return;
 		}
 		v = fpd->fp;
@@ -495,9 +518,14 @@ static void fp_from_exten(fpdata *fpd, uae_u32 *wrd1, uae_u32 *wrd2, uae_u32 *wr
 		return;
 	}
 	else if (fp_is_nan(fpd)) {
-		*wrd1 = 0x7fff0000;
+		*wrd1 = (signbit(fpd->fp) ? 0x80000000 : 0) | 0x7fff0000;
 		*wrd2 = 0xffffffff;
 		*wrd3 = 0xffffffff;
+		return;
+	} else if (fp_is_infinity(fpd)) {
+		*wrd1 = (signbit(fpd->fp) ? 0x80000000 : 0) | 0x7fff0000;
+		*wrd2 = 0;
+		*wrd3 = 0;
 		return;
 	}
 	v = fpd->fp;
@@ -1096,12 +1124,10 @@ static void fp_cmp(fpdata *a, fpdata *b)
 		}
 	} else {
 		v = a->fp - b->fp;
-		// The host subtraction yields NaN for equal-signed infinities,
-		// but a real 6888x FCMP compares them as ordered and equal
-		// (Z set, N per the destination's sign). NaN operands must
-		// still compare unordered.
-		if (!(v == v) && !fp_is_nan(a) && !fp_is_nan(b)) {
-			v = fp_is_neg(a) ? -0.0 : 0.0;
+		// Equal infinities: the difference is NaN but they compare equal,
+		// negative infinities also set N.
+		if (isnan(v) && a->fp == b->fp) {
+			v = signbit(a->fp) ? -0.0 : 0.0;
 		}
 		fp_clear_status();
 	}
