@@ -642,9 +642,9 @@ static void CIA_update_check(void)
 							t->inputpipe &= ~CIA_PIPE_CLR2;
 						}
 					} else {
-						if (acc_mode()) {
-							t->inputpipe &= ~CIA_PIPE_CLR1;
-						}
+						// Continuous mode: the reload takes one clock, so the
+						// period is latch + 1 (also in the non-accurate mode).
+						t->inputpipe &= ~CIA_PIPE_CLR1;
 					}
 				}
 				t->preovfl = false;
