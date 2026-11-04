@@ -2302,9 +2302,13 @@ static void toccata_put(struct snddev_data *data, uaecptr addr, uae_u8 v)
 	} else 	if ((addr & data->codec_reg2_mask) == data->codec_reg2_addr) {
 		// AD1848 register 1
 		uae_u8 old = data->ad1848_regs[idx];
-		
+
 		switch(idx)
 		{
+			case 25:
+			// CS4231A version / chip ID: read-only
+			v = old;
+			break;
 			case 12:
 			// revision (AD1848) or revision + mode (CS4231A)
 			if (data->type == SNDDEV_TOCCATA) {
