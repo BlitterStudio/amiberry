@@ -31,7 +31,12 @@ uae_u8 get_clock_msm(struct rtc_msm_data *data, int addr, struct tm *ct)
 		case 0x1: v = ct->tm_sec / 10; break;
 		case 0x2: v = ct->tm_min % 10; break;
 		case 0x3: v = ct->tm_min / 10; break;
-		case 0x4: v = ct->tm_hour % 10; break;
+		case 0x4:
+			if (data->clock_control_f & 4)
+				v = ct->tm_hour % 10; // 24h
+			else
+				v = (ct->tm_hour % 12) % 10; // 12h
+			break;
 		case 0x5:
 			if (data->clock_control_f & 4) {
 				v = ct->tm_hour / 10; // 24h
@@ -107,7 +112,12 @@ uae_u8 get_clock_ricoh(struct rtc_ricoh_data *data, int addr, struct tm *ct)
 		case 0x1: v = ct->tm_sec / 10; break;
 		case 0x2: v = ct->tm_min % 10; break;
 		case 0x3: v = ct->tm_min / 10; break;
-		case 0x4: v = ct->tm_hour % 10; break;
+		case 0x4:
+			if (data->rtc_alarm[10] & 1)
+				v = ct->tm_hour % 10; // 24h
+			else
+				v = (ct->tm_hour % 12) % 10; // 12h
+			break;
 		case 0x5:
 			if (data->rtc_alarm[10] & 1)
 				v = ct->tm_hour / 10; // 24h
