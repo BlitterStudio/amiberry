@@ -1139,10 +1139,12 @@ static bool audio_state_sndboard_uae(int streamid, void *params)
 			}
 		}
 	}
-		if (s->ch == 1 && s->chmode) {
+		if (s->ch == 1) {
+			// 35.B: output channel mask of a mono stream, 0 = left and right
+			uae_u8 chmask = s->chmode ? s->chmode : 3;
 			int smp = s->sample[0];
 			for (int i = 1; i < MAX_UAE_CHANNELS; i++) {
-				if ((1 << i) & s->chmode) {
+				if ((1 << i) & chmask) {
 					s->sample[i] = smp;
 					if (i + 1 > highestch)
 						highestch = i + 1;
