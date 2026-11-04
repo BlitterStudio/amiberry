@@ -1396,7 +1396,6 @@ void compute_vsynctime(void)
 	vblank_hz_mult = 0;
 	vblank_hz_state = 1;
 	if (fabs (currprefs.chipset_refreshrate) > 0.1) {
-		syncadjust = currprefs.chipset_refreshrate / vblank_hz_nom;
 		vblank_hz = currprefs.chipset_refreshrate;
 		if (isvsync_chipset() && !currprefs.gfx_variable_sync) {
 			int mult = 0;
@@ -1437,6 +1436,13 @@ void compute_vsynctime(void)
 	cputimebase = 0;
 	if (svpos > 0 && shpos > 0) {
 		cputimebase = syncbase / ((uae_u32)(svpos * shpos));
+		// The frame rate of this frame shape (long/short/interlaced), not
+		// vblank_hz_nom (always the short frame), so that sound boards, CD
+		// audio etc. get exactly the chipset clock at the default rate.
+		if (fabs(currprefs.chipset_refreshrate) > 0.1) {
+			float chipclk = (float)(currprefs.ntscmode ? CHIPSET_CLOCK_NTSC : CHIPSET_CLOCK_PAL);
+			syncadjust = currprefs.chipset_refreshrate / (chipclk / (svpos * shpos));
+		}
 	}
 	if (cputimebase == 0) {
 		cputimebase = 1;
