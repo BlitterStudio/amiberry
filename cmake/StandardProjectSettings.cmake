@@ -107,7 +107,10 @@ if(NOT MSVC)
             list(APPEND AMIBERRY_LINK_OPTIONS "-Wl,-z,combreloc")
         endif()
 
-        set(release_link_options "-Wl,--gc-sections" "-Wl,--strip-all" "-Wl,-O1")
+        set(release_link_options "-Wl,--gc-sections" "-Wl,-O1")
+        if(WITH_STRIP)
+            list(APPEND release_link_options "-Wl,--strip-all")
+        endif()
 
         # ELF-specific hardening flags (not available on Windows PE)
         if(NOT WIN32)

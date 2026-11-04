@@ -88,6 +88,7 @@ option(WITH_LTO          "Enable Link Time Optimization" OFF)
 option(WITH_PGO_GENERATE "Generate profile data for Profile-Guided Optimization" OFF)
 option(WITH_PGO_USE      "Use profile data for Profile-Guided Optimization" OFF)
 option(WITH_OPTIMIZE     "Enable native CPU optimizations" OFF)
+option(WITH_STRIP        "Strip symbols from the Release binary" ON)
 option(BUNDLE_SDL        "Bundle SDL3 shared libraries into the package (for distros without SDL3)" OFF)
 # Native Apple UI is Apple-only; validated after project() sets APPLE/IOS.
 if(AMIBERRY_NATIVE_APPLE_UI AND USE_VULKAN)
