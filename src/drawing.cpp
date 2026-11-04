@@ -4898,13 +4898,10 @@ static void denise_collide_sprites(uae_u8 apixel, uae_u32 vs)
 	}
 }
 
-static uae_u8 denise_render_sprites2(uae_u8 apixel, uae_u32 vs)
+// The sprite colour of one pixel (0 = none), playfield priority applied
+static uae_u8 denise_sprite_colour(uae_u8 apixel, uae_u32 vs)
 {
-	uae_u8 c = vs >> 16;
 	uae_u16 v = (uae_u16)vs;
-	if (currprefs.collision_level) {
-		denise_collide_sprites(apixel, vs);
-	}
 #ifdef AMIBERRY
 	// Host Only keeps chipset sprite 0 available for collision and cursor
 	// extraction, but removes it from the rendered Denise output.
@@ -4969,6 +4966,14 @@ static uae_u8 denise_render_sprites2(uae_u8 apixel, uae_u32 vs)
 	return 0;
 }
 
+static uae_u8 denise_render_sprites2(uae_u8 apixel, uae_u32 vs)
+{
+	if (currprefs.collision_level) {
+		denise_collide_sprites(apixel, vs);
+	}
+	return denise_sprite_colour(apixel, vs);
+}
+
 static void autoscale_sprites(void)
 {
 #if AUTOSCALE_SPRITES
@@ -5010,11 +5015,23 @@ static void track_autoscale_sprite_zero(void)
 }
 #endif
 
-static void get_shres_spr_pix(uae_u32 sv0, uae_u32 sv1, uae_u32 *dpix0, uae_u32 *dpix1)
+// sv0 covers the superhires pixels pf0 and pf1, sv1 covers pf2 and pf3
+static void get_shres_spr_pix(uae_u8 pf0, uae_u8 pf1, uae_u8 pf2, uae_u8 pf3, uae_u32 sv0, uae_u32 sv1, uae_u32 *dpix0, uae_u32 *dpix1)
 {
 	uae_u16 v;
-	uae_u8 p0 = denise_render_sprites2(0, sv0);
-	uae_u8 p1 = denise_render_sprites2(0, sv1);
+	// Sprite-playfield collisions see every playfield pixel under the sprite.
+	if (currprefs.collision_level) {
+		if (sv0) {
+			denise_collide_sprites(pf0, sv0);
+			denise_collide_sprites(pf1, sv0);
+		}
+		if (sv1) {
+			denise_collide_sprites(pf2, sv1);
+			denise_collide_sprites(pf3, sv1);
+		}
+	}
+	uae_u8 p0 = denise_sprite_colour(0, sv0);
+	uae_u8 p1 = denise_sprite_colour(0, sv1);
 	uae_u8 off = ((p1 & 3) * 4) + (p0 & 3) + ((p0 | p1) & 16);
 	if (p0) {
 		v = (denise_colors.color_regs_ecs[off] & 0xccc) << 0;

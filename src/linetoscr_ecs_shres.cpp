@@ -70,7 +70,7 @@ static void lts_ecs_shres_dhires(void)
 			}
 			matchsprites_ecs_shres(cnt + 2);
 			if (sv0 || sv1) {
-				get_shres_spr_pix(sv0, sv1, &dpix_val0, &dpix_val2);
+				get_shres_spr_pix(pix0, pix1, pix2, pix3, sv0, sv1, &dpix_val0, &dpix_val2);
 				if (sv0) {
 					dpix_val1 = dpix_val0;
 				}
@@ -192,7 +192,7 @@ static void lts_ecs_shres_dhires_filtered(void)
 			}
 			matchsprites_ecs_shres(cnt + 2);
 			if (sv0 || sv1) {
-				get_shres_spr_pix(sv0, sv1, &dpix_val0, &dpix_val2);
+				get_shres_spr_pix(pix0, pix1, pix2, pix3, sv0, sv1, &dpix_val0, &dpix_val2);
 				if (sv0) {
 					dpix_val1 = dpix_val0;
 				}
@@ -316,7 +316,7 @@ static void lts_ecs_shres_dshres(void)
 			}
 			matchsprites_ecs_shres(cnt + 2);
 			if (sv0 || sv1) {
-				get_shres_spr_pix(sv0, sv1, &dpix_val0, &dpix_val2);
+				get_shres_spr_pix(pix0, pix1, pix2, pix3, sv0, sv1, &dpix_val0, &dpix_val2);
 				if (sv0) {
 					dpix_val1 = dpix_val0;
 				}
@@ -465,7 +465,7 @@ static void lts_ecs_shres_dhires_genlock(void)
 			}
 			matchsprites_ecs_shres(cnt + 2);
 			if (sv0 || sv1) {
-				get_shres_spr_pix(sv0, sv1, &dpix_val0, &dpix_val2);
+				get_shres_spr_pix(pix0, pix1, pix2, pix3, sv0, sv1, &dpix_val0, &dpix_val2);
 				if (sv0) {
 					dpix_val1 = dpix_val0;
 				}
@@ -593,7 +593,7 @@ static void lts_ecs_shres_dhires_genlock_filtered(void)
 			}
 			matchsprites_ecs_shres(cnt + 2);
 			if (sv0 || sv1) {
-				get_shres_spr_pix(sv0, sv1, &dpix_val0, &dpix_val2);
+				get_shres_spr_pix(pix0, pix1, pix2, pix3, sv0, sv1, &dpix_val0, &dpix_val2);
 				if (sv0) {
 					dpix_val1 = dpix_val0;
 				}
@@ -725,7 +725,7 @@ static void lts_ecs_shres_dshres_genlock(void)
 			}
 			matchsprites_ecs_shres(cnt + 2);
 			if (sv0 || sv1) {
-				get_shres_spr_pix(sv0, sv1, &dpix_val0, &dpix_val2);
+				get_shres_spr_pix(pix0, pix1, pix2, pix3, sv0, sv1, &dpix_val0, &dpix_val2);
 				if (sv0) {
 					dpix_val1 = dpix_val0;
 				}
