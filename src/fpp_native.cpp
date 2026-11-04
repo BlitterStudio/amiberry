@@ -12,6 +12,7 @@
 
 #include <cmath>
 #include <cfenv>
+#include <cfloat>
 
 #include "sysconfig.h"
 #include "sysdeps.h"
@@ -28,6 +29,17 @@
 #include "uae/attributes.h"
 #include "uae/vm.h"
 #include "newcpu.h"
+
+/* libm calls on fptype. Use the long double functions only where long
+ * double is the x87 80-bit format (done in hardware): elsewhere it is either
+ * the same as double, or IEEE binary128 done in software (aarch64, riscv64
+ * Linux), which only promotes a double operand and rounds the result back,
+ * at many times the cost: too slow for real time on FPU-heavy code. */
+#if defined(USE_LONG_DOUBLE) || LDBL_MANT_DIG == 64
+#define FP_FN(f) f##l
+#else
+#define FP_FN(f) f
+#endif
 
 #ifdef JIT
 uae_u32 xhex_exp_1[] ={0xa2bb4a9a, 0xadf85458, 0x4000};
@@ -551,10 +563,10 @@ static void fp_from_exten(fpdata *fpd, uae_u32 *wrd1, uae_u32 *wrd2, uae_u32 *wr
 
 #if USE_HOST_ROUNDING == 0
 #ifdef USE_LONG_DOUBLE
-#define fp_round_to_minus_infinity(x) floorl(x)
-#define fp_round_to_plus_infinity(x) ceill(x)
-#define fp_round_to_zero(x)	((x) >= 0.0 ? floorl(x) : ceill(x))
-#define fp_round_to_nearest(x) roundl(x)
+#define fp_round_to_minus_infinity(x) FP_FN(floor)(x)
+#define fp_round_to_plus_infinity(x) FP_FN(ceil)(x)
+#define fp_round_to_zero(x)	((x) >= 0.0 ? FP_FN(floor)(x) : FP_FN(ceil)(x))
+#define fp_round_to_nearest(x) FP_FN(round)(x)
 #else // if !USE_LONG_DOUBLE
 #define fp_round_to_minus_infinity(x) floor(x)
 #define fp_round_to_plus_infinity(x) ceil(x)
@@ -600,7 +612,7 @@ static uae_s64 fp_to_int(fpdata *src, int size)
 		fp = fxsizes[size * 2 + 1];
 	}
 #if USE_HOST_ROUNDING
-	return lrintl(fp);
+	return FP_FN(lrint)(fp);
 #else
 	uae_s64 result = (int)fp;
 	switch (regs.fpcr & 0x30)
@@ -634,8 +646,8 @@ static void fp_round32(fpdata *fpd)
 {
     int expon;
     float mant;
-    mant = (float)(frexpl(fpd->fp, &expon) * 2.0);
-    fpd->fp = ldexpl((fptype)mant, expon - 1);
+    mant = (float)(FP_FN(frexp)(fpd->fp, &expon) * 2.0);
+    fpd->fp = FP_FN(ldexp)((fptype)mant, expon - 1);
 }
 
 // round to double with extended precision exponent
@@ -643,8 +655,8 @@ static void fp_round64(fpdata *fpd)
 {
     int expon;
     double mant;
-    mant = (double)(frexpl(fpd->fp, &expon) * 2.0);
-    fpd->fp = ldexpl((fptype)mant, expon - 1);
+    mant = (double)(FP_FN(frexp)(fpd->fp, &expon) * 2.0);
+    fpd->fp = FP_FN(ldexp)((fptype)mant, expon - 1);
 }
 
 // round to float
@@ -778,7 +790,7 @@ static void fp_int(fpdata *a, fpdata *b)
 {
 	fptype bb = b->fp;
 #if USE_HOST_ROUNDING
-	a->fp = rintl(bb);
+	a->fp = FP_FN(rint)(bb);
 #else
     switch (regs.fpcr & FPCR_ROUNDING_MODE)
     {
@@ -804,7 +816,7 @@ static void fp_getexp(fpdata *a, fpdata *b)
 {
     int expon;
 	fp_normal_prec();
-	frexpl(b->fp, &expon);
+	FP_FN(frexp)(b->fp, &expon);
 	a->fp = (fptype)expon - 1;
 	fp_reset_normal_prec();
 }
@@ -812,7 +824,7 @@ static void fp_getman(fpdata *a, fpdata *b)
 {
     int expon;
 	fp_normal_prec();
-	a->fp = frexpl(b->fp, &expon) * 2.0;
+	a->fp = FP_FN(frexp)(b->fp, &expon) * 2.0;
 	fp_reset_normal_prec();
 }
 static void fp_div(fpdata *a, fpdata *b, int prec)
@@ -825,7 +837,7 @@ static void fp_mod(fpdata *a, fpdata *b, uae_u64 *q, uae_u8 *s)
 {
     fptype quot;
 #if USE_HOST_ROUNDING
-    quot = truncl(a->fp / b->fp);
+    quot = FP_FN(trunc)(a->fp / b->fp);
 #else
     quot = fp_round_to_zero(a->fp / b->fp);
 #endif
@@ -836,7 +848,12 @@ static void fp_mod(fpdata *a, fpdata *b, uae_u64 *q, uae_u8 *s)
         *s = 0;
     }
     *q = (uae_u64)quot;
-    a->fp = fmodl(a->fp, b->fp);
+    bool nan_in = isnan(a->fp) || isnan(b->fp);
+    a->fp = FP_FN(fmod)(a->fp, b->fp);
+    // invalid operation (x/0, inf/x): the 68881 default NaN, which is
+    // positive; libm's NaN takes the dividend's sign
+    if (!nan_in && isnan(a->fp))
+        a->fp = *fp_nan;
 	fp_round(a);
 }
 
@@ -844,7 +861,7 @@ static void fp_rem(fpdata *a, fpdata *b, uae_u64 *q, uae_u8 *s)
 {
     fptype quot;
 #if USE_HOST_ROUNDING
-    quot = roundl(a->fp / b->fp);
+    quot = FP_FN(round)(a->fp / b->fp);
 #else
     quot = fp_round_to_nearest(a->fp / b->fp);
 #endif
@@ -855,14 +872,19 @@ static void fp_rem(fpdata *a, fpdata *b, uae_u64 *q, uae_u8 *s)
         *s = 0;
     }
     *q = (uae_u64)quot;
-    a->fp = remainderl(a->fp, b->fp);
+    bool nan_in = isnan(a->fp) || isnan(b->fp);
+    a->fp = FP_FN(remainder)(a->fp, b->fp);
+    // invalid operation (x/0, inf/x): the 68881 default NaN, which is
+    // positive; libm's NaN takes the dividend's sign
+    if (!nan_in && isnan(a->fp))
+        a->fp = *fp_nan;
 	fp_round(a);
 }
 
 static void fp_scale(fpdata *a, fpdata *b)
 {
 	fp_normal_prec();
-	a->fp = ldexpl(a->fp, (int)b->fp);
+	a->fp = FP_FN(ldexp)(a->fp, (int)b->fp);
 	fp_reset_normal_prec();
 	fp_round(a);
 }
@@ -870,14 +892,14 @@ static void fp_scale(fpdata *a, fpdata *b)
 static void fp_sinh(fpdata *a, fpdata *b)
 {
 	fp_normal_prec();
-	a->fp = sinhl(b->fp);
+	a->fp = FP_FN(sinh)(b->fp);
 	fp_reset_normal_prec();
 	fp_round(a);
 }
 static void fp_intrz(fpdata *a, fpdata *b)
 {
 #if USE_HOST_ROUNDING
-    a->fp = truncl(b->fp);
+    a->fp = FP_FN(trunc)(b->fp);
 #else
     a->fp = fp_round_to_zero (b->fp);
 #endif
@@ -886,117 +908,117 @@ static void fp_intrz(fpdata *a, fpdata *b)
 static void fp_sqrt(fpdata *a, fpdata *b, int prec)
 {
 	fp_set_prec(prec);
-	a->fp = sqrtl(b->fp);
+	a->fp = FP_FN(sqrt)(b->fp);
 	fp_reset_prec(a);
 }
 static void fp_lognp1(fpdata *a, fpdata *b)
 {
 	fp_normal_prec();
-	a->fp = log1pl(b->fp);
+	a->fp = FP_FN(log1p)(b->fp);
 	fp_reset_normal_prec();
 	fp_round(a);
 }
 static void fp_etoxm1(fpdata *a, fpdata *b)
 {
 	fp_normal_prec();
-	a->fp = expm1l(b->fp);
+	a->fp = FP_FN(expm1)(b->fp);
 	fp_reset_normal_prec();
 	fp_round(a);
 }
 static void fp_tanh(fpdata *a, fpdata *b)
 {
 	fp_normal_prec();
-	a->fp = tanhl(b->fp);
+	a->fp = FP_FN(tanh)(b->fp);
 	fp_reset_normal_prec();
 	fp_round(a);
 }
 static void fp_atan(fpdata *a, fpdata *b)
 {
 	fp_normal_prec();
-	a->fp = atanl(b->fp);
+	a->fp = FP_FN(atan)(b->fp);
 	fp_reset_normal_prec();
 	fp_round(a);
 }
 static void fp_atanh(fpdata *a, fpdata *b)
 {
 	fp_normal_prec();
-	a->fp = atanhl(b->fp);
+	a->fp = FP_FN(atanh)(b->fp);
 	fp_reset_normal_prec();
 	fp_round(a);
 }
 static void fp_sin(fpdata *a, fpdata *b)
 {
 	fp_normal_prec();
-	a->fp = sinl(b->fp);
+	a->fp = FP_FN(sin)(b->fp);
 	fp_reset_normal_prec();
 	fp_round(a);
 }
 static void fp_asin(fpdata *a, fpdata *b)
 {
 	fp_normal_prec();
-	a->fp = asinl(b->fp);
+	a->fp = FP_FN(asin)(b->fp);
 	fp_reset_normal_prec();
 	fp_round(a);
 }
 static void fp_tan(fpdata *a, fpdata *b)
 {
 	fp_normal_prec();
-	a->fp = tanl(b->fp);
+	a->fp = FP_FN(tan)(b->fp);
 	fp_reset_normal_prec();
 	fp_round(a);
 }
 static void fp_etox(fpdata *a, fpdata *b)
 {
 	fp_normal_prec();
-	a->fp = expl(b->fp);
+	a->fp = FP_FN(exp)(b->fp);
 	fp_reset_normal_prec();
 	fp_round(a);
 }
 static void fp_twotox(fpdata *a, fpdata *b)
 {
 	fp_normal_prec();
-	a->fp = powl(2.0, b->fp);
+	a->fp = FP_FN(pow)(2.0, b->fp);
 	fp_reset_normal_prec();
 	fp_round(a);
 }
 static void fp_tentox(fpdata *a, fpdata *b)
 {
 	fp_normal_prec();
-	a->fp = powl(10.0, b->fp);
+	a->fp = FP_FN(pow)(10.0, b->fp);
 	fp_reset_normal_prec();
 	fp_round(a);
 }
 static void fp_logn(fpdata *a, fpdata *b)
 {
 	fp_normal_prec();
-	a->fp = logl(b->fp);
+	a->fp = FP_FN(log)(b->fp);
 	fp_reset_normal_prec();
 	fp_round(a);
 }
 static void fp_log10(fpdata *a, fpdata *b)
 {
 	fp_normal_prec();
-	a->fp = log10l(b->fp);
+	a->fp = FP_FN(log10)(b->fp);
 	fp_reset_normal_prec();
 	fp_round(a);
 }
 static void fp_log2(fpdata *a, fpdata *b)
 {
 	fp_normal_prec();
-	a->fp = log2l(b->fp);
+	a->fp = FP_FN(log2)(b->fp);
 	fp_reset_normal_prec();
 	fp_round(a);
 }
 static void fp_abs(fpdata *a, fpdata *b, int prec)
 {
 	fp_set_prec(prec);
-	a->fp = fabsl(b->fp);
+	a->fp = FP_FN(fabs)(b->fp);
 	fp_reset_prec(a);
 }
 static void fp_cosh(fpdata *a, fpdata *b)
 {
 	fp_normal_prec();
-	a->fp = coshl(b->fp);
+	a->fp = FP_FN(cosh)(b->fp);
 	fp_reset_normal_prec();
 	fp_round(a);
 }
@@ -1009,22 +1031,22 @@ static void fp_neg(fpdata *a, fpdata *b, int prec)
 static void fp_acos(fpdata *a, fpdata *b)
 {
 	fp_normal_prec();
-	a->fp = acosl(b->fp);
+	a->fp = FP_FN(acos)(b->fp);
 	fp_reset_normal_prec();
 	fp_round(a);
 }
 static void fp_cos(fpdata *a, fpdata *b)
 {
 	fp_normal_prec();
-	a->fp = cosl(b->fp);
+	a->fp = FP_FN(cos)(b->fp);
 	fp_reset_normal_prec();
 	fp_round(a);
 }
 static void fp_sincos(fpdata *a, fpdata *b, fpdata *c)
 {
 	fp_normal_prec();
-	c->fp = cosl(b->fp);
-	a->fp = sinl(b->fp);
+	c->fp = FP_FN(cos)(b->fp);
+	a->fp = FP_FN(sin)(b->fp);
 	fp_reset_normal_prec();
 	fp_round(a);
 	fp_round(c);
@@ -1056,8 +1078,8 @@ static void fp_sglmul(fpdata *a, fpdata *b)
     /* FIXME: truncate mantissa of a and b to single precision */
     z = a->fp * b->fp;
 
-    mant = (float)(frexpl(z, &expon) * 2.0);
-    a->fp = ldexpl((fptype)mant, expon - 1);
+    mant = (float)(FP_FN(frexp)(z, &expon) * 2.0);
+    a->fp = FP_FN(ldexp)((fptype)mant, expon - 1);
 }
 static void fp_sgldiv(fpdata *a, fpdata *b)
 {
@@ -1066,8 +1088,8 @@ static void fp_sgldiv(fpdata *a, fpdata *b)
     int expon;
     z = a->fp / b->fp;
     
-    mant = (float)(frexpl(z, &expon) * 2.0);
-    a->fp = ldexpl((fptype)mant, expon - 1);
+    mant = (float)(FP_FN(frexp)(z, &expon) * 2.0);
+    a->fp = FP_FN(ldexp)((fptype)mant, expon - 1);
 }
 
 static void fp_normalize(fpdata *a)
@@ -1493,6 +1515,6 @@ double softfloat_tan(double v)
 	fp_to_double(&fpd, f64 >> 32, (uae_u32)f64);
 	return fpd.fp;
 #else
-	return tanl(v);
+	return FP_FN(tan)(v);
 #endif
 }
