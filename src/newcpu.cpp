@@ -5352,7 +5352,7 @@ static struct alignas(64) {
 	char pad[64 - sizeof(uae_s64)];
 } cpu_thread_tokens_line;   // a cache line of its own
 #define cpu_thread_tokens (cpu_thread_tokens_line.v)
-static volatile int cpu_thread_paced;
+static int cpu_thread_paced;   // written by the CPU thread, read by the main thread: __atomic_*
 #define CPU_THREAD_CREDIT_MAX (227 * CYCLE_UNIT)   /* one raster line */
 #define CPU_THREAD_INSN_CREDIT (2 * CYCLE_UNIT)    /* the shortest 68000 instruction */
 
@@ -5369,7 +5369,7 @@ static inline void cpu_thread_spin_pause()
 
 static uae_s64 cpu_thread_progress(uae_s64 *seen)
 {
-	if (cpu_thread_paced == 2) {
+	if (__atomic_load_n(&cpu_thread_paced, __ATOMIC_ACQUIRE) == 2) {
 		int cd = __atomic_load_n(&countdown, __ATOMIC_RELAXED);
 		int last = (int)*seen;
 		*seen = cd;
@@ -5629,7 +5629,7 @@ static void run_cpu_thread(int (*f)(void *))
 	uae_s64 tokens_seen = 0, credit = CPU_THREAD_CREDIT_MAX;
 
 	cpu_thread_active = 0;
-	cpu_thread_paced = 0;
+	__atomic_store_n(&cpu_thread_paced, 0, __ATOMIC_RELEASE);
 	__atomic_store_n(&cpu_thread_tokens, 0, __ATOMIC_RELAXED);
 	cpu_thread_tid = 0;
 	cpu_thread_indirect_mode = 0xff;
@@ -5698,7 +5698,8 @@ static void run_cpu_thread(int (*f)(void *))
 				service_cpu_indirect_request();
 			}
 
-			if (cpu_thread_paced && credit < CYCLE_UNIT) {
+			const int paced = __atomic_load_n(&cpu_thread_paced, __ATOMIC_ACQUIRE);
+			if (paced && credit < CYCLE_UNIT) {
 				credit += cpu_thread_progress(&tokens_seen);
 				if (credit > CPU_THREAD_CREDIT_MAX)
 					credit = CPU_THREAD_CREDIT_MAX;
@@ -5742,7 +5743,7 @@ static void run_cpu_thread(int (*f)(void *))
 			// charge the chipset time that passed (none while it waits for vsync)
 			const evt_t c0 = get_cycles();
 			do_cycles(CYCLE_UNIT);
-			if (cpu_thread_paced)
+			if (paced)
 				credit -= (uae_s64)(get_cycles() - c0);
 
 			if (++cck_cnt >= 227) {
@@ -6034,7 +6035,7 @@ static int cpu_thread_run_jit(void *v)
 	__atomic_store_n(&cpu_thread_indirect_mode, 0xff, __ATOMIC_RELEASE);
 	__atomic_store_n(&cpu_thread_reset, 0, __ATOMIC_RELEASE);
 	countdown = pissoff_value;
-	cpu_thread_paced = 2;
+	__atomic_store_n(&cpu_thread_paced, 2, __ATOMIC_RELEASE);
 	cpu_thread_active = 1;
 #ifdef USE_STRUCTURED_EXCEPTION_HANDLING
 	__try
@@ -6992,7 +6993,7 @@ static int cpu_thread_run_2(void *v)
 	__atomic_store_n(&cpu_thread_reset, 0, __ATOMIC_RELEASE);
 
 	uae_s64 insns = 0;
-	cpu_thread_paced = 1;
+	__atomic_store_n(&cpu_thread_paced, 1, __ATOMIC_RELEASE);
 	cpu_thread_active = 1;
 	while (!exit) {
 		check_debugger();
