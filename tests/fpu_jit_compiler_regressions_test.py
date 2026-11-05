@@ -11,6 +11,178 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class FpuJitCompilerRegressions(unittest.TestCase):
+    def test_explicit_fpsr_conditions_in_compiled_set_and_branch(self):
+        source = (ROOT / "src/jit/x86/compemu_fpp_x86.cpp").read_text()
+
+        def function(text, signature):
+            start = text.index(signature)
+            return text[start:text.index("\n}", start) + 2]
+
+        predicates = "\n".join(function(source, signature) for signature in (
+            "static void get_fp_condition(", "void comp_fscc_opp(", "void comp_fbcc_opp("))
+        source = (ROOT / "src/fpp.cpp").read_text()
+        tables = source[source.index("static const bool condition_table_040_060"):
+                        source.index("int fpp_cond(")]
+        source = (ROOT / "src/jit/x86/compemu_midfunc_x86.cpp").read_text()
+        override = function(source, "MIDFUNC(3,fpu_cond_from_fpsr,")
+        driver = r"""
+#include <cassert>
+#include <cstdint>
+#include <vector>
+using uae_u8 = uint8_t;
+using uae_u16 = uint16_t;
+using uae_u32 = uint32_t;
+using uae_s16 = int16_t;
+using uae_s32 = int32_t;
+using uintptr = uintptr_t;
+using IMM = uintptr;
+using RW4 = int;
+using W4 = int;
+enum {S1 = 20, S2, S3, S4, PC_P, TRASH = 0, VALID = 1};
+struct { int flags_in_flags, flags_on_stack; } live;
+struct { uae_u32 fpsr; } regs;
+struct { bool compfpu = true; } currprefs;
+struct { bool fscc, fbcc; } jit_disable;
+static bool fpu_fpsr_cc_written, failure;
+static uintptr constants[32], vreg[32], not_taken, taken;
+static uae_u32 m68k_pc_offset;
+static uae_u8 *comp_pc_p = reinterpret_cast<uae_u8 *>(uintptr(0x123450000000));
+static int displacement, branch_cc, represented_control, flags;
+struct Op { int kind, d, s; uintptr value; };
+enum {MOVI, MOVR, ADDI, CMOV, FPFLAGS, MOVB, CMP, JZ, LOAD, SHR, AND, BT, SBB, TEST};
+static Op ops[128];
+static uae_u8 code[128];
+static int length;
+static void emit(int kind, int d = 0, int s = 0, uintptr value = 0) {
+    ops[length++] = {kind, d, s, value};
+}
+static bool cc(int condition) {
+    bool c = flags & 1, p = flags & 4, z = flags & 64;
+    switch (condition) {
+    case 2: return c; case 3: return !c; case 4: return z; case 5: return !z;
+    case 6: return c || z; case 7: return !c && !z;
+    case 10: return p; case 11: return !p; default: assert(false); return false;
+    }
+}
+static void execute() {
+    for (int pc = 0; pc < length; ++pc) {
+        const Op &o = ops[pc];
+        switch (o.kind) {
+        case MOVI: vreg[o.d] = o.value; break;
+        case MOVR: vreg[o.d] = vreg[o.s]; break;
+        case ADDI: vreg[o.d] += o.value; break;
+        case CMOV: if (cc(o.value)) vreg[o.d] = vreg[o.s]; break;
+        case FPFLAGS:
+            flags = (represented_control & 1) ? 0x45 :
+                (represented_control & 4) ? 0x40 : (represented_control & 8) ? 1 : 0;
+            break;
+        case MOVB: vreg[o.d] = (vreg[o.d] & ~uintptr(255)) | (vreg[o.s] & 255); break;
+        case CMP: flags = !fpu_fpsr_cc_written ? 64 : 0; break;
+        case JZ: if (flags & 64) pc += 1 + code[pc + 1]; else ++pc; break;
+        case LOAD: vreg[o.d] = regs.fpsr; break;
+        case SHR: vreg[o.d] >>= o.value; break;
+        case AND: vreg[o.d] &= o.value; break;
+        case BT: flags = (vreg[o.d] >> (vreg[o.s] & 31)) & 1; break;
+        case SBB: vreg[o.d] = (flags & 1) ? uae_u32(-1) : 0; break;
+        case TEST: flags = vreg[o.d] ? 0 : 64; break;
+        default: assert(false);
+        }
+    }
+}
+static void mov_l_ri(int d, uintptr value) { constants[d] = value; emit(MOVI, d, 0, value); }
+static void mov_l_rr(int d, int s) { emit(MOVR, d, s); }
+static void add_l_ri(int d, uintptr value) { constants[d] += value; emit(ADDI, d, 0, value); }
+static void mov_b_rr(int d, int s) { emit(MOVB, d, s); }
+static void cmov_l_rr(int d, int s, int condition) { emit(CMOV, d, s, condition); }
+static void fflags_into_flags(int) {
+    live.flags_in_flags = VALID; live.flags_on_stack = TRASH;
+    emit(FPFLAGS);
+}
+static uintptr get_const(int r) { return constants[r]; }
+static int comp_get_iword(int) { return displacement & 0xffff; }
+static int comp_get_ilong(int) { return displacement; }
+static void test_l_rr(int d, int) { emit(TEST, d); }
+static void register_branch(uintptr a, uintptr b, uae_u8 condition) {
+    not_taken = a; taken = b; branch_cc = condition;
+}
+static int rmw(int r, int, int) {
+    assert(live.flags_in_flags == TRASH && live.flags_on_stack == VALID);
+    return r;
+}
+static int writereg(int r, int) { return r; }
+static void unlock2(int) {}
+static void raw_cmp_b_mi(uintptr, int) { emit(CMP); }
+static void raw_jz_b_oponly() { emit(JZ); }
+static uae_u8 *get_target() { return code + length; }
+static void skip_byte() { ++length; }
+static void raw_mov_l_rm(int d, uintptr) { emit(LOAD, d); }
+static void raw_shrl_l_ri(int d, int i) { emit(SHR, d, 0, i); }
+static void raw_and_l_ri(int d, int i) { emit(AND, d, 0, i); }
+static void raw_mov_l_ri(int d, uintptr i) { emit(MOVI, d, 0, i); }
+static void raw_bt_l_rr(int d, int s) { emit(BT, d, s); }
+static void raw_sbb_l(int d, int s) { assert(d == s); emit(SBB, d); }
+#define MIDFUNC(n, name, args) static void name args
+#define FAIL(x) (failure = true)
+#define JITPTR (uintptr)
+""" + tables + override + predicates + r"""
+int main() {
+    for (const bool *table : {condition_table_6888x, condition_table_040_060}) {
+        condition_table = table;
+        for (bool branch : {false, true}) for (bool long_branch : {false, true})
+        for (int condition = 0; condition < 16; ++condition)
+        for (int offset : {-100, 100}) {
+            length = 0; failure = false; m68k_pc_offset = 2; displacement = offset;
+            if (branch)
+                comp_fbcc_opp(0xf280 | condition | (long_branch ? 0x40 : 0));
+            else
+                comp_fscc_opp(0xf243, condition);
+            assert(!failure);
+            assert(live.flags_in_flags == TRASH && live.flags_on_stack == VALID);
+            if (branch) {
+                assert(not_taken == uintptr(comp_pc_p) + (long_branch ? 6 : 4));
+                assert(taken == uintptr(comp_pc_p) + 2 + offset);
+                assert(branch_cc == 5);
+            }
+            // Reuse the emitted block after explicit FPSR writes and arithmetic.
+            for (bool written : {false, true}) for (int control = 0; control < 16; ++control) {
+                if (!written && (control == 3 || control == 5 || control == 6 ||
+                    control == 7 || control == 11 || control >= 13))
+                    continue;
+                fpu_fpsr_cc_written = written;
+                regs.fpsr = uae_u32(control) << 24;
+                represented_control = (control & 1) ? 1 :
+                    (control & 4) ? (control & 12) : control;
+                vreg[3] = 0x12345678;
+                execute();
+                bool expected = table[control * 32 + condition];
+                if (branch)
+                    assert(cc(branch_cc) == expected);
+                else
+                    assert(vreg[3] == (expected ? 0x123456ffU : 0x12345600U));
+                assert(regs.fpsr == uae_u32(control) << 24);
+            }
+        }
+    }
+    for (int condition = 16; condition < 32; ++condition) {
+        length = 0; failure = false;
+        comp_fscc_opp(0xf240, condition);
+        assert(failure && !length);
+        failure = false;
+        comp_fbcc_opp(0xf280 | condition);
+        assert(failure && !length);
+    }
+}
+"""
+        with tempfile.TemporaryDirectory(prefix=".fpu-predicates-", dir=ROOT / "tests") as directory:
+            directory = Path(directory)
+            cpp = directory / "driver.cpp"
+            binary = directory / "predicates"
+            cpp.write_text(driver)
+            subprocess.run(
+                ["c++", "-std=c++17", "-Wall", "-Wextra", "-Werror",
+                 str(cpp), "-o", str(binary)], check=True, timeout=30)
+            subprocess.run([str(binary)], check=True, timeout=10)
+
     def test_decoded_ea_and_helper_call_state(self):
         source = (ROOT / "src/jit/x86/compemu_fpp_x86.cpp").read_text()
         start = source.index("static int get_fp_native_ea(")

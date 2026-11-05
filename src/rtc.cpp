@@ -16,7 +16,7 @@
 #include <chrono>
 
 struct rtc_timebase {
-	uae_s64 host_us, sample_us;
+	uae_s64 host_us, sample_us, anchor_us;
 	uae_u64 cycles, remainder;
 	int clock_hz;
 	bool initialized;
@@ -25,11 +25,13 @@ struct rtc_timebase {
 static uae_s64 rtc_project_microseconds(struct rtc_timebase *base, uae_s64 host_us,
 	uae_u64 cycles, int clock_hz, bool warp)
 {
+	const uae_s64 interpolation_us = 20000;
 	uae_u64 frequency = (uae_u64)clock_hz * CYCLE_UNIT;
 	if (!base->initialized || warp || base->clock_hz != clock_hz ||
 		host_us < base->host_us || host_us - base->host_us >= 1000000 ||
 		cycles < base->cycles || cycles - base->cycles >= frequency) {
 		base->sample_us = host_us;
+		base->anchor_us = host_us;
 		base->remainder = 0;
 	} else {
 		// During a continuous access burst, carry and BUSY share the CPU's
@@ -37,6 +39,16 @@ static uae_s64 rtc_project_microseconds(struct rtc_timebase *base, uae_s64 host_
 		uae_u64 elapsed = (cycles - base->cycles) * 1000000 + base->remainder;
 		base->sample_us += elapsed / frequency;
 		base->remainder = elapsed % frequency;
+		// Interpolate within a host frame, not indefinitely at emulated speed.
+		if (host_us - base->anchor_us >= interpolation_us) {
+			if (base->sample_us <= host_us) {
+				base->sample_us = host_us;
+				base->remainder = 0;
+			}
+			base->anchor_us = host_us;
+		}
+		if (base->sample_us > host_us + interpolation_us)
+			base->sample_us = host_us + interpolation_us;
 	}
 	base->host_us = host_us;
 	base->cycles = cycles;
@@ -95,10 +107,10 @@ static void clock_advance(struct rtc_clock_data *clock, uae_s64 seconds, uae_u8 
 	}
 }
 
-static struct tm *clock_sample(struct rtc_clock_data *clock, bool running, uae_u8 *leap)
+static struct tm *clock_sample(struct rtc_clock_data *clock, bool running, uae_u8 *leap, bool hold = false)
 {
 	uae_s64 now = rtc_microseconds();
-	if (!clock->initialized || (!clock->written && running)) {
+	if (!clock->initialized || (!clock->written && running && !hold)) {
 		time_t t = now / 1000000 + currprefs.cs_rtc_adjust;
 		clock->value = *localtime(&t);
 		clock->hour12_written = false;
@@ -110,8 +122,12 @@ static struct tm *clock_sample(struct rtc_clock_data *clock, bool running, uae_u
 		clock->initialized = true;
 	} else if (running && now > clock->last_us) {
 		uae_s64 elapsed = now - clock->last_us + clock->phase_us;
-		if (elapsed >= 1000000)
-			clock_advance(clock, elapsed / 1000000, leap);
+		if (elapsed >= 1000000) {
+			if (hold)
+				clock->carry_pending = true;
+			else
+				clock_advance(clock, elapsed / 1000000, leap);
+		}
 		clock->phase_us = elapsed % 1000000;
 	}
 	clock->last_us = now;
@@ -167,7 +183,8 @@ uae_u8 get_clock_msm(struct rtc_msm_data *data, int addr, struct tm *ct)
 	int year;
 
 	if (!ct) {
-		ct = clock_sample(&data->clock, !(data->clock_control_f & 3), NULL);
+		ct = clock_sample(&data->clock, !(data->clock_control_f & 3), NULL,
+			(data->clock_control_d & 1) != 0);
 		if (data->clock_control_d & 1)
 			ct = &data->clock.held_value;
 	}
@@ -214,7 +231,8 @@ uae_u8 get_clock_msm(struct rtc_msm_data *data, int addr, struct tm *ct)
 bool put_clock_msm(struct rtc_msm_data *data, int addr, uae_u8 v)
 {
 	v &= 15;
-	clock_sample(&data->clock, !(data->clock_control_f & 3), NULL);
+	clock_sample(&data->clock, !(data->clock_control_f & 3), NULL,
+		(data->clock_control_d & 1) != 0);
 	if (addr < 13) {
 		clock_write_digit(&data->clock, addr, v, (data->clock_control_f & 4) != 0, 4);
 		if (data->clock_control_d & 1)
@@ -225,8 +243,11 @@ bool put_clock_msm(struct rtc_msm_data *data, int addr, uae_u8 v)
 	switch (addr)
 	{
 		case 0xD:
-			if ((v & 1) && !(data->clock_control_d & 1))
-				data->clock.held_value = data->clock.value;
+			if (!(v & 1) && (data->clock_control_d & 1)) {
+				if (data->clock.carry_pending)
+					clock_advance(&data->clock, 1, NULL);
+				data->clock.carry_pending = false;
+			}
 			if (v & 8) {
 				int seconds = data->clock.value.tm_sec;
 				data->clock.value.tm_sec = 0;
@@ -235,6 +256,8 @@ bool put_clock_msm(struct rtc_msm_data *data, int addr, uae_u8 v)
 				data->clock.phase_us = 0;
 				data->clock.written = true;
 			}
+			if (v & 1)
+				data->clock.held_value = data->clock.value;
 			if (data->clock_control_d != (v & 1)) {
 				data->clock_control_d = v & 1;
 				data->delayed_write = -1;
@@ -251,8 +274,10 @@ bool put_clock_msm(struct rtc_msm_data *data, int addr, uae_u8 v)
 				data->clock.hour12_written = false;
 			if (v & 3)
 				data->clock.written = true;
-			if (v & 1)
+			if (v & 1) {
 				data->clock.phase_us = 0;
+				data->clock.carry_pending = false;
+			}
 			if (data->clock_control_f != v) {
 				data->clock_control_f = v;
 				data->delayed_write = -1;
@@ -267,6 +292,9 @@ uae_u8 get_clock_ricoh(struct rtc_ricoh_data *data, int addr, struct tm *ct)
 	uae_u8 v = 0;
 	int bank = data->clock_control_d & 3;
 
+	if (!ct)
+		ct = clock_sample(&data->clock, (data->clock_control_d & 8) != 0, &data->rtc_alarm[11]);
+
 	/* memory access */
 	if (bank >= 2 && addr < 0x0d)
 		return (data->rtc_memory[addr] >> ((bank == 2) ? 0 : 4)) & 0x0f;
@@ -277,9 +305,6 @@ uae_u8 get_clock_ricoh(struct rtc_ricoh_data *data, int addr, struct tm *ct)
 		write_log (_T("CLOCK ALARM R %X: %X\n"), addr, v);
 #endif
 		return v;
-	}
-	if (!ct) {
-		ct = clock_sample(&data->clock, (data->clock_control_d & 8) != 0, &data->rtc_alarm[11]);
 	}
 	switch (addr)
 	{

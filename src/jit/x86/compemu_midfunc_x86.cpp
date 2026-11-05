@@ -258,6 +258,28 @@ MIDFUNC(1,fflags_into_flags,(W2 tmp))
 	fflags_into_flags_internal(tmp);
 }
 
+MIDFUNC(3,fpu_cond_from_fpsr,(RW4 d, W4 tmp, IMM mask))
+{
+	// Discard the temporary x87 comparison flags, not the saved integer CCR.
+	live.flags_in_flags = TRASH;
+	live.flags_on_stack = VALID;
+	d = rmw(d, 4, 4);
+	tmp = writereg(tmp, 4);
+	raw_cmp_b_mi((uintptr)&fpu_fpsr_cc_written, 0);
+	raw_jz_b_oponly();
+	uae_u8 *resume = get_target();
+	skip_byte();
+	raw_mov_l_rm(tmp, (uintptr)&regs.fpsr);
+	raw_shrl_l_ri(tmp, 24);
+	raw_and_l_ri(tmp, 15);
+	raw_mov_l_ri(d, mask);
+	raw_bt_l_rr(d, tmp);
+	raw_sbb_l(d, d);
+	*resume = get_target() - (resume + 1);
+	unlock2(tmp);
+	unlock2(d);
+}
+
 
 MIDFUNC(2,bt_l_ri,(RR4 r, IMM i)) /* This is defined as only affecting C */
 {

@@ -172,13 +172,23 @@ adaptive scheduler-overshoot margins and PAL/NTSC deadline boundaries.
 
 RTC access bursts interpolate from host time using chipset cycles, so host
 frame waits cannot hide the MSM6242B's 244-microsecond BUSY pulse from a polling
-guest. Idle gaps of one second, reset, state restore, pause/resume and warp
-transitions re-anchor to host time. Warp retains a wall-clock RTC.
+guest. Interpolation is bounded to one PAL frame (20 milliseconds) and
+periodically rejoins host time, including during continuous reads at different
+emulation speeds. Idle gaps of one second, reset, state restore, pause/resume
+and warp transitions re-anchor to host time. Warp retains a wall-clock RTC.
+MSM6242B HOLD freezes the calendar during writes and defers one carry until
+release; Ricoh calendar and leap counters advance regardless of the selected
+register bank.
 
 FPU exception, stack-frame and compiler checks run with
 `python3 tests/fpu_exception_regressions_test.py`,
 `python3 tests/fpu_frame_regressions_test.py` and
 `python3 tests/fpu_jit_compiler_regressions_test.py`.
+These include independent FPSR condition-bit combinations in interpreted and
+compiled x86 predicates, with signaling conditions retaining BSUN handling.
+Run `python3 tests/fpu_predicates_live_test.py build/amiberry` to execute an
+original synthetic ROM's predicate matrix and integer-CCR preservation checks
+through both the interpreter and JIT, without external ROMs or disks.
 
 Interpreter handlers and x86 JIT translators are checked in. After changing
 `src/gencpu.cpp` or `src/jit/x86/gencomp.cpp`, regenerate their outputs;

@@ -825,6 +825,8 @@ extern void fpuop_restore(uae_u32);
 extern uae_u32 fpp_get_fpsr (void);
 extern bool fpu_get_constant(fpdata *fp, int cr);
 extern int fpp_cond(int condition);
+extern uae_u32 fpp_get_cond_mask(int condition);
+extern bool fpu_fpsr_cc_written;
 
 extern void exception3_read(uae_u32 opcode, uaecptr addr, int size, int fc);
 extern void exception3_write(uae_u32 opcode, uaecptr addr, int size, uae_u32 val, int fc);

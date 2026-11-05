@@ -938,7 +938,7 @@ int main() {
         cycles = 0;
         uae_s64 start = rtc_microseconds();
         for (int i = 1; i < 10000; ++i) {
-            cycles += 326535;
+            cycles += 3265;
             assert(rtc_microseconds() == start + cycles * 1000000 / ((uae_u64)hz * CYCLE_UNIT));
         }
         rtc_base = base;
@@ -946,6 +946,97 @@ int main() {
         assert(!rtc_base.initialized);
         host_us += 500000; // even a subsecond pause rejoins wall time
         assert(rtc_project_microseconds(&rtc_base, host_us, cycles, hz, false) == host_us);
+    }
+}
+""")
+    def test_rtc_continuous_accesses_bound_wall_clock_drift(self):
+        text = source("src/rtc.cpp")
+        projection = text[text.index("struct rtc_timebase {"):text.index("static uae_s64 rtc_microseconds(")]
+        run_cpp(r"""
+constexpr int CYCLE_UNIT = 512;
+""" + projection + r"""
+int main() {
+    const uae_s64 epoch = 1700000000000000;
+    for (int hz : {3546895, 3579545}) for (int speed : {0, 1, 4, 16}) {
+        rtc_timebase base{};
+        uae_u64 cycles = 0;
+        uae_s64 previous = rtc_project_microseconds(&base, epoch, cycles, hz, false);
+        for (int i = 1; i <= 2000; ++i) {
+            uae_s64 host = epoch + i * 5000;
+            // Quarter speed, normal speed, four times speed, or stalled.
+            cycles = (uae_u64)i * 5000 * hz * CYCLE_UNIT * speed / 4000000;
+            uae_s64 sample = rtc_project_microseconds(&base, host, cycles, hz, false);
+            assert(sample >= previous);
+            assert(sample >= host - 20000 && sample <= host + 20000);
+            previous = sample;
+        }
+        assert(previous >= epoch + 10000000 && previous <= epoch + 10020000);
+    }
+}
+""")
+
+    def test_rtc_hold_writes_and_banked_leap_reads(self):
+        text = source("src/rtc.cpp")
+        run_cpp(r"""
+struct { int cs_rtc_adjust; } currprefs;
+uae_s64 now_us = 1700000000700000;
+uae_s64 rtc_microseconds() { return now_us; }
+""" + source("src/include/rtc.h") + "\n" +
+                text[text.index("static void clock_advance("):] + r"""
+int main() {
+    rtc_msm_data msm{};
+    msm.clock_control_f = 4;
+    clock_sample(&msm.clock, true, nullptr);
+    msm.clock.value.tm_sec = 10;
+    msm.clock.written = true;
+    put_clock_msm(&msm, 13, 1);
+    now_us += 400000;
+    assert(get_clock_msm(&msm, 0, nullptr) == 0);
+    put_clock_msm(&msm, 12, 4);
+    assert(get_clock_msm(&msm, 0, nullptr) == 0);
+    assert(get_clock_msm(&msm, 12, nullptr) == 4);
+    assert(get_clock_msm(&msm, 13, nullptr) == 1);
+    put_clock_msm(&msm, 13, 0);
+    assert(get_clock_msm(&msm, 0, nullptr) == 1);
+    assert(get_clock_msm(&msm, 12, nullptr) == 4);
+    put_clock_msm(&msm, 13, 1);
+    now_us += 100000;
+    put_clock_msm(&msm, 0, 7);
+    assert(get_clock_msm(&msm, 0, nullptr) == 7);
+    put_clock_msm(&msm, 13, 0);
+    assert(get_clock_msm(&msm, 0, nullptr) == 7);
+
+    // A held 12-hour write retains its staging across a carry.
+    put_clock_msm(&msm, 15, 0);
+    put_clock_msm(&msm, 13, 1);
+    put_clock_msm(&msm, 4, 1);
+    now_us += 1000000;
+    put_clock_msm(&msm, 5, 1);
+    assert(get_clock_msm(&msm, 4, nullptr) == 1);
+    assert(get_clock_msm(&msm, 5, nullptr) == 1);
+    put_clock_msm(&msm, 13, 0);
+    assert(get_clock_msm(&msm, 4, nullptr) == 1);
+    assert(get_clock_msm(&msm, 5, nullptr) == 1);
+
+    for (int bank : {1, 2, 3}) {
+        rtc_ricoh_data ricoh{};
+        ricoh.clock_control_d = 8 | bank;
+        ricoh.clock.initialized = ricoh.clock.written = true;
+        ricoh.clock.last_us = now_us;
+        ricoh.clock.value.tm_year = 123;
+        ricoh.clock.value.tm_mon = 11;
+        ricoh.clock.value.tm_mday = 31;
+        ricoh.clock.value.tm_hour = 23;
+        ricoh.clock.value.tm_min = 59;
+        ricoh.clock.value.tm_sec = 59;
+        ricoh.rtc_alarm[11] = 3;
+        ricoh.rtc_memory[11] = 0xab;
+        now_us += 2000000;
+        int value = get_clock_ricoh(&ricoh, 11, nullptr);
+        assert(value == (bank == 1 ? 0 : bank == 2 ? 11 : 10));
+        assert(ricoh.rtc_alarm[11] == 0);
+        assert(ricoh.clock.value.tm_year == 124);
+        assert(ricoh.clock.value.tm_sec == 1);
     }
 }
 """)

@@ -5,7 +5,7 @@ struct rtc_clock_data
 	struct tm value, held_value;
 	uae_s64 last_us;
 	int phase_us, hour12;
-	bool initialized, written, hour12_written;
+	bool initialized, written, hour12_written, carry_pending;
 };
 
 struct rtc_msm_data

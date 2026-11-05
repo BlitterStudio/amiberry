@@ -149,6 +149,7 @@ DECLARE_MIDFUNC(add_w_mi(MEMRW d, IMM s));
 DECLARE_MIDFUNC(add_b_mi(MEMRW d, IMM s));
 DECLARE_MIDFUNC(test_l_ri(RR4 d, IMM i));
 DECLARE_MIDFUNC(test_l_rr(RR4 d, RR4 s));
+DECLARE_MIDFUNC(fpu_cond_from_fpsr(RW4 d, W4 tmp, IMM mask));
 DECLARE_MIDFUNC(test_w_rr(RR2 d, RR2 s));
 DECLARE_MIDFUNC(test_b_rr(RR1 d, RR1 s));
 DECLARE_MIDFUNC(test_b_mi(MEMR d, IMM s));

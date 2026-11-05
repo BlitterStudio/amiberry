@@ -2098,11 +2098,19 @@ static const bool condition_table_6888x[] =
 };
 static const bool *condition_table = condition_table_6888x;
 
+uae_u32 fpp_get_cond_mask(int condition)
+{
+	uae_u32 mask = 0;
+	for (int control = 0; control < 16; ++control)
+		mask |= uae_u32(condition_table[control * 32 + (condition & 31)]) << control;
+	return mask;
+}
+
 int fpp_cond(int condition)
 {
 	condition &= 0x1f;
 #ifdef JIT
-	if (currprefs.cachesize && currprefs.compfpu) {
+	if (currprefs.cachesize && currprefs.compfpu && !fpu_fpsr_cc_written) {
 		// JIT reads and writes regs.fpu_result
 		fpp_is_init(&regs.fp_result);
 		int NotANumber = fpp_is_nan(&regs.fp_result);

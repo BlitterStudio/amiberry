@@ -41,6 +41,43 @@ static void mode(uae_u32 value)
 	fpp_clear_status();
 }
 
+static void check_explicit_fpsr_conditions()
+{
+	for (const bool *table : {condition_table_6888x, condition_table_040_060}) {
+		condition_table = table;
+		for (bool jit : {false, true}) {
+			currprefs.cachesize = jit ? 1024 : 0;
+			currprefs.compfpu = jit;
+			for (uae_u32 control = 0; control < 16; ++control) {
+				for (int condition = 0; condition < 32; ++condition) {
+					const int expected = table[control * 32 + condition];
+					assert(((fpp_get_cond_mask(condition) >> control) & 1) == expected);
+					for (uae_u32 enable : {0U, uae_u32(FPSR_BSUN)}) {
+						mode(enable);
+						trapped_vector = 0;
+						fpp_set_fpsr(control << 24);
+						const bool trap = enable && (condition & 16) && (control & 1);
+						assert(fpp_cond(condition) == (trap ? -2 : expected));
+						assert(trapped_vector == (trap ? 48 : 0));
+						assert((fpp_get_fpsr() >> 24) == control);
+						if ((condition & 16) && (control & 1))
+							assert((regs.fpsr & (FPSR_BSUN | FPSR_AE_IOP)) ==
+								(FPSR_BSUN | FPSR_AE_IOP));
+					}
+				}
+			}
+			mode(0);
+			fpp_set_fpsr(FPSR_CC_NAN | FPSR_CC_Z);
+			assert(fpp_cond(1) == 1);
+			fpdata result;
+			fpp_from_int(&result, 1);
+			fpsr_set_result_always(&result);
+			assert(!fpu_fpsr_cc_written && fpp_cond(1) == 0);
+		}
+	}
+	condition_table = condition_table_6888x;
+}
+
 static void benchmark_exponentials()
 {
 	if (!getenv("AMIBERRY_FPU_BENCHMARK"))
@@ -384,6 +421,7 @@ int main()
 	fpp_from_pack(&a, packed, 3);
 	assert(packed[0] == 1 && packed[1] == 0x23000000 && packed[2] == 0);
 	check_status(FPSR_INEX2);
+	check_explicit_fpsr_conditions();
 	for (bool jit : {false, true}) {
 		currprefs.cachesize = jit ? 1024 : 0;
 		currprefs.compfpu = jit;

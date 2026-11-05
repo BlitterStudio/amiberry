@@ -90,7 +90,6 @@ struct jit_disable_opcodes jit_disable;
 #endif
 
 //#define STATIC_INLINE static inline
-extern bool fpu_fpsr_cc_written;
 #define MAKE_FPSR(r) do { \
 	fmov_rr(FP_RESULT, r); \
 	mov_b_mi(JITPTR &fpu_fpsr_cc_written, 0); \
@@ -629,46 +628,13 @@ void comp_fdbcc_opp (uae_u32 /* opcode */, uae_u16 /* extra */)
 }
 
 
-void comp_fscc_opp(uae_u32 opcode, uae_u16 extra)
+static void get_fp_condition(int condition)
 {
-	int reg;
-
-	if (extra & 0x10) {
-		// Signaling predicates must update BSUN and honor its FPCR enable.
-		FAIL(1);
-		return;
-	}
-
-	if (!currprefs.compfpu)
-	{
-		FAIL(1);
-		return;
-	}
-	if (jit_disable.fscc)
-	{
-		FAIL(1);
-		return;
-	}
-
-	if (extra & 0x20)
-	{									/* only cc from 00 to 1f are defined */
-		FAIL(1);
-		return;
-	}
-	if ((opcode & 0x38) != 0)
-	{									/* We can only do to integer register */
-		FAIL(1);
-		return;
-	}
-
 	fflags_into_flags(S2);
-	reg = (opcode & 7);
-
 	mov_l_ri(S1, 255);
 	mov_l_ri(S4, 0);
-	switch (extra & 0x0f)
-	{									/* according to fpp.c, the 0x10 bit is ignored
-										 */
+	switch (condition & 0x0f)
+	{
 	case 0:
 		break;							/* set never */
 	case 1:
@@ -727,24 +693,18 @@ void comp_fscc_opp(uae_u32 opcode, uae_u16 extra)
 		break;
 	}
 
-	if ((opcode & 0x38) == 0)
-	{
-		mov_b_rr(reg, S4);
-	} else
-	{
-		abort();
-#if 0
-		int cc;
+	fpu_cond_from_fpsr(S4, S3, fpp_get_cond_mask(condition));
+}
 
-		if (get_fp_ad(opcode) < 0)
-		{
-			FAIL(1);
-		} else
-		{
-			put_byte(ad, cc ? 0xff : 0x00);
-		}
-#endif
+void comp_fscc_opp(uae_u32 opcode, uae_u16 extra)
+{
+	// Signaling predicates must update BSUN and honor its FPCR enable.
+	if (!currprefs.compfpu || jit_disable.fscc || (extra & 0x30) || (opcode & 0x38)) {
+		FAIL(1);
+		return;
 	}
+	get_fp_condition(extra);
+	mov_b_rr(opcode & 7, S4);
 }
 
 
@@ -761,7 +721,6 @@ void comp_fbcc_opp(uae_u32 opcode)
 	uae_s32 off;
 	uintptr v1;
 	uintptr v2;
-	int cc;
 
 	if (!currprefs.compfpu)
 	{
@@ -778,6 +737,7 @@ void comp_fbcc_opp(uae_u32 opcode)
 		FAIL(1);
 		return;
 	}
+	get_fp_condition(opcode);
 	if ((opcode & 0x40) == 0)
 	{
 		off = (uae_s32) (uae_s16) comp_get_iword((m68k_pc_offset += 2) - 2);
@@ -800,77 +760,10 @@ void comp_fbcc_opp(uae_u32 opcode)
 	add_l_ri(PC_P, m68k_pc_offset);
 	m68k_pc_offset = 0;
 
-	/* Signaling predicates were rejected above. */
-	cc = opcode & 0x0f;
 	v1 = get_const(PC_P);
 	v2 = get_const(S1);
-	fflags_into_flags(S2);
-	/* Conditions 1, 4 and 5 jump back to the fall-through address when the
-	 * comparison was unordered. Load that address into S2 as a constant,
-	 * built like S1 above: a runtime copy of PC_P in a temporary would be
-	 * spilled and reloaded with 32 bits and lose the upper half of the
-	 * host pointer (#2591). */
-	if (cc == 1 || cc == 4 || cc == 5) {
-		mov_l_ri(S2, 0);
-		add_l_ri(S2, (uintptr)v1);
-	}
-
-	switch (cc)
-	{
-	case 0:
-		break;							/* jump never */
-	case 1:
-		cmov_l_rr(PC_P, S1, 4);
-		cmov_l_rr(PC_P, S2, 10);
-		break;
-	case 2:
-		register_branch(v1, v2, 7);
-		break;
-	case 3:
-		register_branch(v1, v2, 3);
-		break;
-	case 4:
-		cmov_l_rr(PC_P, S1, 2);
-		cmov_l_rr(PC_P, S2, 10);
-		break;
-	case 5:
-		cmov_l_rr(PC_P, S1, 6);
-		cmov_l_rr(PC_P, S2, 10);
-		break;
-	case 6:
-		register_branch(v1, v2, 5);
-		break;
-	case 7:
-		register_branch(v1, v2, 11);
-		break;
-	case 8:
-		register_branch(v1, v2, 10);
-		break;
-	case 9:
-		register_branch(v1, v2, 4);
-		break;
-	case 10:
-		cmov_l_rr(PC_P, S1, 10);
-		cmov_l_rr(PC_P, S1, 7);
-		break;
-	case 11:
-		cmov_l_rr(PC_P, S1, 4);
-		cmov_l_rr(PC_P, S1, 3);
-		break;
-	case 12:
-		register_branch(v1, v2, 2);
-		break;
-	case 13:
-		register_branch(v1, v2, 6);
-		break;
-	case 14:
-		cmov_l_rr(PC_P, S1, 5);
-		cmov_l_rr(PC_P, S1, 10);
-		break;
-	case 15:
-		mov_l_rr(PC_P, S1);
-		break;
-	}
+	test_l_rr(S4, S4);
+	register_branch(v1, v2, 5);
 }
 
 
