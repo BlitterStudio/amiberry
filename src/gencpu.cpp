@@ -7121,8 +7121,11 @@ static void gen_opcode (unsigned int opcode)
 			addcycles_ce020 (6);
 		    out("if (frame == 0x0) {\nm68k_areg(regs, 7) += offset; break; }\n");
 			if (cpu_level >= 2) {
-				// 68020+
-				out("else if (frame == 0x1) {\nm68k_areg(regs, 7) += offset; }\n");
+				// 68020+; the 68060 has no throwaway frame (format $1):
+				// 060 UM 8.2.7, RTE accepts only formats 0, 2, 3 and 4
+				if (cpu_level <= 4) {
+					out("else if (frame == 0x1) {\nm68k_areg(regs, 7) += offset; }\n");
+				}
 				out("else if (frame == 0x2) {\nm68k_areg(regs, 7) += offset + 4; break; }\n");
 			}
 			if (cpu_level >= 4) {
