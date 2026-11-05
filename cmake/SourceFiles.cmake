@@ -215,6 +215,9 @@ set(SOURCE_FILES
         src/osdep/dpi_handler.cpp
         src/osdep/fsdb_host.cpp
         src/osdep/clipboard.cpp
+        src/osdep/clipboard_common.cpp
+        src/osdep/clipboard_image.cpp
+        src/osdep/clipboard_host.cpp
         src/osdep/amiberry_hardfile.cpp
         src/osdep/keyboard.cpp
         src/osdep/host_detect.cpp
