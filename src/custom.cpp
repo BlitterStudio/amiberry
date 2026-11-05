@@ -10200,7 +10200,9 @@ static void ciab_tod_maybe_inc(int delay)
 
 static void ciaa_tod_maybe_inc(int delay)
 {
-	if (ciavsyncs) {
+	// CD32: CIA-A TOD is counted from Akiko's frame timing in
+	// cia_hsync_do() (cs_cd32cd); counting VSYNC as well doubled it
+	if (ciavsyncs && !currprefs.cs_cd32cd) {
 		if (delay > 0) {
 			// current hpos=START (1)
 			delay--;
