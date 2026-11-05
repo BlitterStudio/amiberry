@@ -360,7 +360,7 @@ static void gen_shiftspr(int shift)
 static void gen_ecsshresspr(void)
 {
 	outf("if (sv0 || sv1) {");
-	outf("get_shres_spr_pix(sv0, sv1, &dpix_val0, &dpix_val2);");
+	outf("get_shres_spr_pix(pix0, pix1, pix2, pix3, sv0, sv1, &dpix_val0, &dpix_val2);");
 	outf("if (sv0) {");
 	outf("dpix_val1 = dpix_val0;");
 	outf("}");

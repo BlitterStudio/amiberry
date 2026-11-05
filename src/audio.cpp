@@ -709,14 +709,21 @@ static void do_extra_channels(int idx, int ch, int *data1, int *data2, int *data
 	} else if (ch == 1) {
 		int datas[1];
 		samplexx_anti_handler(datas, idx, 1);
+		// A mono stream goes to both sides, mixed with each side's own sample
 		int d1 = *data1 + datas[0];
 		if (d1 < -32768)
 			d1 = -32768;
 		if (d1 > 32767)
 			d1 = 32767;
 		*data1 = d1;
-		if (data2)
-			*data2 = d1;
+		if (data2) {
+			int d2 = *data2 + datas[0];
+			if (d2 < -32768)
+				d2 = -32768;
+			if (d2 > 32767)
+				d2 = 32767;
+			*data2 = d2;
+		}
 	} else if (ch > 2) {
 		int datas[AUDIO_CHANNEL_MAX_STREAM_CH];
 		samplexx_anti_handler(datas, idx, 6);

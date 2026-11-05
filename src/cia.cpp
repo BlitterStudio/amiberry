@@ -642,9 +642,9 @@ static void CIA_update_check(void)
 							t->inputpipe &= ~CIA_PIPE_CLR2;
 						}
 					} else {
-						if (acc_mode()) {
-							t->inputpipe &= ~CIA_PIPE_CLR1;
-						}
+						// Continuous mode: the reload takes one clock, so the
+						// period is latch + 1 (also in the non-accurate mode).
+						t->inputpipe &= ~CIA_PIPE_CLR1;
 					}
 				}
 				t->preovfl = false;
@@ -1151,7 +1151,9 @@ static void CIA_tod_event_check(int num)
 	if (c->tod_event_state == 1) {
 		int hpos = current_hpos();
 		if (hpos >= c->tod_offset) {
-			CIA_tod_inc(false, num);
+			// irq: the alarm or TOD may have been written after
+			// CIA_tod_handler() predicted no alarm on this tick.
+			CIA_tod_inc(true, num);
 			c->tod_event_state = 0;
 		}
 	}
@@ -1315,7 +1317,10 @@ static void cia_delayed_tod(int num)
 		return;
 	}
 	if (c->tod_event_state == 1) {
-		CIA_tod_inc(false, num);
+		// No alarm event was scheduled, either because none was
+		// predicted (the alarm or TOD can be written after that) or
+		// because the increment crossed into this line: still raise it.
+		CIA_tod_inc(true, num);
 	}
 	c->tod_event_state = 0;
 	c->tod_offset = -1;

@@ -1139,10 +1139,12 @@ static bool audio_state_sndboard_uae(int streamid, void *params)
 			}
 		}
 	}
-		if (s->ch == 1 && s->chmode) {
+		if (s->ch == 1) {
+			// 35.B: output channel mask of a mono stream, 0 = left and right
+			uae_u8 chmask = s->chmode ? s->chmode : 3;
 			int smp = s->sample[0];
 			for (int i = 1; i < MAX_UAE_CHANNELS; i++) {
-				if ((1 << i) & s->chmode) {
+				if ((1 << i) & chmask) {
 					s->sample[i] = smp;
 					if (i + 1 > highestch)
 						highestch = i + 1;
@@ -2302,9 +2304,25 @@ static void toccata_put(struct snddev_data *data, uaecptr addr, uae_u8 v)
 	} else 	if ((addr & data->codec_reg2_mask) == data->codec_reg2_addr) {
 		// AD1848 register 1
 		uae_u8 old = data->ad1848_regs[idx];
-		
+		uae_u8 written = v;
+		// R0 MCE: I8 (data format), I9 (except PEN/CEN) and, on the
+		// CS4231A, I28 (capture format) can only change while it is set.
+		bool mce = (data->ad1848_index & 0x40) != 0;
+
 		switch(idx)
 		{
+			case 9:
+			if (!mce)
+				v = (old & ~3) | (v & 3);
+			break;
+			case 25:
+			// CS4231A version / chip ID: read-only
+			v = old;
+			break;
+			case 28:
+			if (!mce)
+				v = old;
+			break;
 			case 12:
 			// revision (AD1848) or revision + mode (CS4231A)
 			if (data->type == SNDDEV_TOCCATA) {
@@ -2315,6 +2333,10 @@ static void toccata_put(struct snddev_data *data, uaecptr addr, uae_u8 v)
 			}
 			break;
 			case 8:
+			if (!mce) {
+				v = old;
+				break;
+			}
 			if (data->ad1848_regs[12] & 0x40) {
 				// CS4231A only big endian 16-bit data format?
 				data->fifo_play_byteswap = (v >> 5) == 6;
@@ -2333,7 +2355,7 @@ static void toccata_put(struct snddev_data *data, uaecptr addr, uae_u8 v)
 		switch(idx)
 		{
 			case 9:
-			if (v & 8) // ACI enabled
+			if (written & 8) // ACI enabled
 				data->autocalibration = 50;
 			if (!(old & 3) && (v & 3))
 				codec_start(data);
