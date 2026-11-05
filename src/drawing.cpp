@@ -435,7 +435,11 @@ static int doublescan2xx;
 
 uae_sem_t gui_sem;
 
-static volatile int rga_denise_fast_read, rga_denise_fast_write;
+// Single-producer/single-consumer ring (emulation thread -> Denise thread).
+// The indexes publish the slots, so they need release/acquire ordering:
+// on weakly ordered hosts (ARM64) plain volatile let the consumer see a
+// new write index before the slot's data and process a stale entry.
+static std::atomic<int> rga_denise_fast_read, rga_denise_fast_write;
 #define DENISE_RGA_SLOT_FAST_TOTAL 1024
 static struct denise_rga rga_denise_fast[DENISE_RGA_SLOT_FAST_TOTAL];
 
@@ -4577,8 +4581,11 @@ static void expand_drga(struct denise_rga *rd)
 static void flush_fast_rga(uae_u32 linecnt)
 {
 	// extract fast CPU RGA pipeline
-	while (rga_denise_fast_write != rga_denise_fast_read) {
-		int rp = rga_denise_fast_read;
+	for (;;) {
+		int rp = rga_denise_fast_read.load(std::memory_order_relaxed);
+		if (rga_denise_fast_write.load(std::memory_order_acquire) == rp) {
+			break;
+		}
 		struct denise_rga *rd = &rga_denise_fast[rp];
 		// Any RGA queued accesses must be processed first
 		if (linecnt <= rd->line) {
@@ -4589,7 +4596,7 @@ static void flush_fast_rga(uae_u32 linecnt)
 		expand_drga(rd);
 		rp++;
 		rp &= DENISE_RGA_SLOT_FAST_TOTAL - 1;
-		rga_denise_fast_read = rp;
+		rga_denise_fast_read.store(rp, std::memory_order_release);
 	}
 }
 
@@ -5488,8 +5495,8 @@ static void denise_handle_quick_strobe(uae_u16 strobe, int offset, int vpos)
 
 bool denise_update_reg_queued(uae_u16 reg, uae_u16 v, uae_u32 linecnt)
 {
-	int wp = rga_denise_fast_write;
-	if (((wp + 1) & (DENISE_RGA_SLOT_FAST_TOTAL - 1)) == rga_denise_fast_read) {
+	int wp = rga_denise_fast_write.load(std::memory_order_relaxed);
+	if (((wp + 1) & (DENISE_RGA_SLOT_FAST_TOTAL - 1)) == rga_denise_fast_read.load(std::memory_order_acquire)) {
 		return false;
 	}
 	struct denise_rga *r = &rga_denise_fast[wp];
@@ -5498,7 +5505,7 @@ bool denise_update_reg_queued(uae_u16 reg, uae_u16 v, uae_u32 linecnt)
 	r->line = linecnt;
 	wp++;
 	wp &= DENISE_RGA_SLOT_FAST_TOTAL - 1;
-	rga_denise_fast_write = wp;
+	rga_denise_fast_write.store(wp, std::memory_order_release);
 	return true;
 }
 
