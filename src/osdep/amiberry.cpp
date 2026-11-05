@@ -81,7 +81,6 @@
 #endif
 #include "registry.h"
 #include "threaddep/thread.h"
-#include "uae/uae.h"
 #include "sana2.h"
 #include "gui_handling_platform.h"
 #include "gui/gui_handling.h"
@@ -2170,7 +2169,6 @@ static void amiberry_active(const AmigaMonitor* mon, const int is_minimized)
 		// click-to-capture, especially after a Full-window focus transition.
 		setmouseactive(mon->monitor_id, -1);
 	}
-	clipboard_active(1, 1);
 }
 
 static void amiberry_inactive(const AmigaMonitor* mon, const int is_minimized)
@@ -2180,7 +2178,6 @@ static void amiberry_inactive(const AmigaMonitor* mon, const int is_minimized)
 	recapture = 0;
 	wait_keyrelease();
 	setmouseactive(mon->monitor_id, 0);
-	clipboard_active(1, 0);
 	auto pri = currprefs.inactive_priority;
 	if (!quit_program) {
 		if (is_minimized) {
@@ -2995,14 +2992,12 @@ static void handle_quit_event()
 	uae_quit();
 }
 
-static void handle_clipboard_update_event()
+#ifndef LIBRETRO
+static void handle_clipboard_update_event(const SDL_ClipboardEvent& event)
 {
-	if (currprefs.clipboard_sharing && SDL_HasClipboardText() == true)
-	{
-		const auto* clipboard_host = SDL_GetClipboardText();
-		uae_clipboard_put_text(clipboard_host);
-	}
+	osdep_platform_clipboard_update(event);
 }
+#endif
 
 struct OskControllerState {
 	enum AxisOwner { Neutral, Gameplay, Osk };
@@ -4367,7 +4362,9 @@ static void process_event(const SDL_Event& event)
 		// queue in SDL3: see app_lifecycle_watch(), and Android's event filter.
 
 		case SDL_EVENT_CLIPBOARD_UPDATE:
-			handle_clipboard_update_event();
+#ifndef LIBRETRO
+			handle_clipboard_update_event(event.clipboard);
+#endif
 			break;
 
 #ifndef LIBRETRO
@@ -4655,7 +4652,7 @@ int handle_msgpump(bool vblank)
 #ifdef __ANDROID__
 	amiberry_android_touch_mouse_tick();
 #endif
-	if (got_event && currprefs.clipboard_sharing)
+	if (currprefs.clipboard_sharing)
 		update_clipboard();
 	return got_event;
 }

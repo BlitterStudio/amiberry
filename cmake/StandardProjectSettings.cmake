@@ -189,7 +189,7 @@ elseif(CMAKE_SYSTEM_NAME MATCHES "Darwin")
         )
     endif()
 
-    list(APPEND AMIBERRY_PLATFORM_LIBS "-framework IOKit" "-framework AppKit" "-framework Foundation" "-framework CoreFoundation" "-framework DiskArbitration" "iconv")
+    list(APPEND AMIBERRY_PLATFORM_LIBS "-framework IOKit" "-framework AppKit" "-framework Foundation" "-framework CoreFoundation" "-framework DiskArbitration" "-framework ImageIO" "-framework CoreGraphics" "iconv")
 endif()
 
 if(WIN32)

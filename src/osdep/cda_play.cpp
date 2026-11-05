@@ -50,6 +50,7 @@ void cda_audio::setvolume(int left, int right)
 }
 
 static uae_sem_t play_sem;
+static bool play_sem_initialized;
 
 static void sub_deinterleave(const uae_u8* s, uae_u8* d)
 {
@@ -337,6 +338,7 @@ end:
 	ciw->subcodevalid = false;
 	cd_audio_mode_changed = false;
 	delete ciw->cda;
+	ciw->cda = NULL;
 
 	write_log(_T("CDDA: thread killed\n"));
 	return restart;
@@ -346,6 +348,10 @@ int ciw_cdda_play(void* v)
 {
 	struct cda_play* ciw = (struct cda_play*)v;
 	int outpos = -1;
+	if (!play_sem_initialized) {
+		uae_sem_init(&play_sem, 0, 1);
+		play_sem_initialized = true;
+	}
 	cd_audio_mode_changed = false;
 	for (;;) {
 		if (!cdda_play2(ciw, &outpos)) {

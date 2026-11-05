@@ -426,6 +426,7 @@ SOURCES_OSDEP := $(LIBRETRO_DIR)/libretro.cpp \
                 $(AMIBERRY_DIR)/src/osdep/cda_play.cpp \
                 $(AMIBERRY_DIR)/src/osdep/charset.cpp \
                 $(AMIBERRY_DIR)/src/osdep/clipboard.cpp \
+                $(AMIBERRY_DIR)/src/osdep/clipboard_common.cpp \
                 $(AMIBERRY_DIR)/src/osdep/dpi_handler.cpp \
                 $(AMIBERRY_DIR)/src/osdep/libretro/input_platform.cpp \
                 $(AMIBERRY_DIR)/src/osdep/libretro/posixemu_vfs.cpp \
