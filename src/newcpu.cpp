@@ -49,6 +49,7 @@
 #endif
 #include "cpuboard.h"
 #include "threaddep/thread.h"
+#include <thread>
 #ifdef WITH_X86
 #include "x86.h"
 #endif
@@ -5338,6 +5339,54 @@ static uae_u16 get_word_020_prefetchf (uae_u32 pc)
 
 #ifdef WITH_THREADED_CPU
 static volatile int cpu_thread_active;
+// Threaded CPU pacing: the main thread spends CPU progress as chipset time
+// and waits (bounded) when there is none, so the chipset cannot run far
+// ahead of a CPU thread that the host delays. Without it a late CPU thread
+// merged interrupts (two CIA timer underflows seen by one handler).
+// Progress: the interpreter counts its instructions in cpu_thread_tokens,
+// each worth CPU_THREAD_INSN_CREDIT (paced 1; an add and a store per
+// instruction); the JIT counts its cycles down in countdown (paced 2), and
+// an indirect request served counts as progress of either. The main thread
+// reads the counters only when its credit has run out: a shared cache line
+// written per instruction and read per colour clock slowed both threads
+// down several times.
+static struct alignas(64) {
+	volatile uae_s64 v;
+	char pad[64 - sizeof(uae_s64)];
+} cpu_thread_tokens_line;   // a cache line of its own
+#define cpu_thread_tokens (cpu_thread_tokens_line.v)
+static volatile int cpu_thread_paced;
+#define CPU_THREAD_CREDIT_MAX (227 * CYCLE_UNIT)   /* one raster line */
+#define CPU_THREAD_INSN_CREDIT (2 * CYCLE_UNIT)    /* the shortest 68000 instruction */
+
+static inline void cpu_thread_spin_pause()
+{
+#if defined(CPU_arm) || defined(CPU_AARCH64)
+	__asm__ __volatile__ ("yield");
+#elif defined(CPU_x86_64) || defined(CPU_i386)
+	__asm__ __volatile__ ("pause");
+#elif defined(__riscv)
+	__asm__ __volatile__ (".insn i 0x0f, 0, x0, x0, 0x010");
+#endif
+}
+
+static uae_s64 cpu_thread_progress(uae_s64 *seen)
+{
+	if (cpu_thread_paced == 2) {
+		int cd = __atomic_load_n(&countdown, __ATOMIC_RELAXED);
+		int last = (int)*seen;
+		*seen = cd;
+		if (cd <= last)
+			return last - cd;
+		// Refilled (do_nothing(), or the main thread's own write while the
+		// chipset waits for vsync): count only what ran since the refill.
+		return cd < pissoff_value ? pissoff_value - cd : 0;
+	}
+	uae_s64 t = __atomic_load_n(&cpu_thread_tokens, __ATOMIC_RELAXED);
+	uae_s64 d = t - *seen;
+	*seen = t;
+	return d * CPU_THREAD_INSN_CREDIT;
+}
 static uae_sem_t cpu_in_sema, cpu_wakeup_sema;
 
 static volatile uae_atomic cpu_thread_indirect_mode;
@@ -5565,13 +5614,26 @@ static inline bool service_cpu_indirect_request(void)
 	return true;
 }
 
+// The CPU thread makes no progress the chipset should wait for: stopped,
+// halted, held in reset or waiting for the main thread outside the indirect
+// requests.
+static bool cpu_thread_unpaced()
+{
+	return regs.stopped || regs.halted
+		|| (regs.spcflags & (SPCFLAG_CPUINRESET | SPCFLAG_MODE_CHANGE | SPCFLAG_CALLBACK))
+		|| __atomic_load_n(&cpu_thread_reset, __ATOMIC_RELAXED);
+}
+
 static void run_cpu_thread(int (*f)(void *))
 {
 	int vp = 0;
 	int intlev_prev = 0;
 	int cck_cnt = 0;
+	uae_s64 tokens_seen = 0, credit = CPU_THREAD_CREDIT_MAX;
 
 	cpu_thread_active = 0;
+	cpu_thread_paced = 0;
+	__atomic_store_n(&cpu_thread_tokens, 0, __ATOMIC_RELAXED);
 	cpu_thread_tid = 0;
 	cpu_thread_indirect_mode = 0xff;
 	atomic_set(&cpu_thread_reset, 0);
@@ -5639,7 +5701,52 @@ static void run_cpu_thread(int (*f)(void *))
 				service_cpu_indirect_request();
 			}
 
+			if (cpu_thread_paced && credit < CYCLE_UNIT) {
+				credit += cpu_thread_progress(&tokens_seen);
+				if (credit > CPU_THREAD_CREDIT_MAX)
+					credit = CPU_THREAD_CREDIT_MAX;
+				if (credit < CYCLE_UNIT && !cpu_thread_unpaced()) {
+					// The CPU thread is behind: wait for it. Bounded (2 ms at
+					// 50 Hz); after a timeout end this batch, so that the
+					// requests handled outside it (reset, callbacks) are seen.
+					// A wait longer than a short spin means the host has
+					// descheduled the CPU thread: give it this core.
+					const frame_time_t t0 = read_processor_time();
+					const frame_time_t spin = syncbase / 50000;   // 20 us
+					while (credit < CYCLE_UNIT) {
+						// a request served is progress too (the JIT counts
+						// down only at the end of a block)
+						if (service_cpu_indirect_request()) {
+							credit += CPU_THREAD_INSN_CREDIT;
+							continue;
+						}
+						// back off: every read takes the line from the writer
+						for (int k = 0; k < 32; k++)
+							cpu_thread_spin_pause();
+						credit += cpu_thread_progress(&tokens_seen);
+						if (cpu_thread_unpaced())
+							break;
+						const frame_time_t waited = read_processor_time() - t0;
+						if (waited > spin)
+							std::this_thread::yield();
+						if (waited > vsynctimebase / 10) {
+							credit = CPU_THREAD_CREDIT_MAX;
+							cycles_to_do = i + 1;
+							break;
+						}
+					}
+					if (credit > CPU_THREAD_CREDIT_MAX)
+						credit = CPU_THREAD_CREDIT_MAX;
+				}
+				if (credit < CYCLE_UNIT)
+					credit = CYCLE_UNIT;   // unpaced: run on
+			}
+
+			// charge the chipset time that passed (none while it waits for vsync)
+			const evt_t c0 = get_cycles();
 			do_cycles(CYCLE_UNIT);
+			if (cpu_thread_paced)
+				credit -= (uae_s64)(get_cycles() - c0);
 
 			if (++cck_cnt >= 227) {
 				cck_cnt = 0;
@@ -5749,6 +5856,15 @@ void execute_exception(uae_u32 cycles)
 }
 #endif
 
+// Threaded CPU, interpreted instructions of the JIT: count them down like
+// compiled blocks do, so the main thread sees the progress (paced 2).
+static void cpu_thread_jit_count(int cycles)
+{
+	countdown -= cycles;
+	if (countdown < 0)
+		countdown = pissoff_value;
+}
+
 void do_nothing (void)
 {
 #ifdef JIT_DEBUG_MEM_CORRUPTION
@@ -5820,6 +5936,8 @@ void exec_nostats (void)
 			if (ppc_state)
 				ppc_interrupt(intlev());
 #endif
+		} else {
+			cpu_thread_jit_count(cpu_cycles);
 		}
 
 		if (end_block(r->opcode) || r->spcflags || uae_int_requested)
@@ -5875,6 +5993,8 @@ void execute_normal(void)
 //		cpu_cycles = adjust_cycles(cpu_cycles);
 		if (!currprefs.cpu_thread) {
 			do_cycles (cpu_cycles);
+		} else {
+			cpu_thread_jit_count(cpu_cycles);
 		}
 		total_cycles += cpu_cycles;
 
@@ -5917,6 +6037,7 @@ static int cpu_thread_run_jit(void *v)
 	__atomic_store_n(&cpu_thread_indirect_mode, 0xff, __ATOMIC_RELEASE);
 	__atomic_store_n(&cpu_thread_reset, 0, __ATOMIC_RELEASE);
 	countdown = pissoff_value;
+	cpu_thread_paced = 2;
 	cpu_thread_active = 1;
 #ifdef USE_STRUCTURED_EXCEPTION_HANDLING
 	__try
@@ -6873,6 +6994,8 @@ static int cpu_thread_run_2(void *v)
 	__atomic_store_n(&cpu_thread_indirect_mode, 0xff, __ATOMIC_RELEASE);
 	__atomic_store_n(&cpu_thread_reset, 0, __ATOMIC_RELEASE);
 
+	uae_s64 insns = 0;
+	cpu_thread_paced = 1;
 	cpu_thread_active = 1;
 	while (!exit) {
 		check_debugger();
@@ -6889,6 +7012,7 @@ static int cpu_thread_run_2(void *v)
 				}
 #endif
 				(*cpufunctbl[r->opcode])(r->opcode);
+				__atomic_store_n(&cpu_thread_tokens, ++insns, __ATOMIC_RELAXED);
 
 				if (regs.spcflags) {
 					if (do_specialties_thread())
