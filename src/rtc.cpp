@@ -13,10 +13,20 @@
 
 #include "rtc.h"
 
+#include <algorithm>
 #include <chrono>
 
+// The RTC counts emulated time: on the real machine its 32.768 kHz crystal
+// and the colour clock both keep real time, so a guest timing one against
+// the other (seconds digit against CIA or beam) must see them agree also
+// when the emulation runs slower or faster than real time. It starts at the
+// host clock and re-anchors to it (rtc_rebase) on reset, state restore,
+// unpause and warp changes; warp itself keeps the host clock. While running
+// it slews towards the host clock by at most 1 % once they are more than
+// 1 s apart, so the Amiga clock follows the host's over a long session; a
+// host clock jump of over an hour (suspend, NTP) re-anchors at once.
 struct rtc_timebase {
-	uae_s64 host_us, sample_us, anchor_us;
+	uae_s64 sample_us;
 	uae_u64 cycles, remainder;
 	int clock_hz;
 	bool initialized;
@@ -25,32 +35,27 @@ struct rtc_timebase {
 static uae_s64 rtc_project_microseconds(struct rtc_timebase *base, uae_s64 host_us,
 	uae_u64 cycles, int clock_hz, bool warp)
 {
-	const uae_s64 interpolation_us = 20000;
-	uae_u64 frequency = (uae_u64)clock_hz * CYCLE_UNIT;
-	if (!base->initialized || warp || base->clock_hz != clock_hz ||
-		host_us < base->host_us || host_us - base->host_us >= 1000000 ||
-		cycles < base->cycles || cycles - base->cycles >= frequency) {
+	const uae_s64 slew_threshold_us = 1000000, reanchor_us = 3600LL * 1000000;
+	const uae_u64 frequency = (uae_u64)clock_hz * CYCLE_UNIT;
+	if (!base->initialized || warp || base->clock_hz != clock_hz || cycles < base->cycles) {
 		base->sample_us = host_us;
-		base->anchor_us = host_us;
 		base->remainder = 0;
 	} else {
-		// During a continuous access burst, carry and BUSY share the CPU's
-		// clock domain. Host frame waits must not swallow a 244us pulse.
-		uae_u64 elapsed = (cycles - base->cycles) * 1000000 + base->remainder;
-		base->sample_us += elapsed / frequency;
-		base->remainder = elapsed % frequency;
-		// Interpolate within a host frame, not indefinitely at emulated speed.
-		if (host_us - base->anchor_us >= interpolation_us) {
-			if (base->sample_us <= host_us) {
-				base->sample_us = host_us;
-				base->remainder = 0;
-			}
-			base->anchor_us = host_us;
+		const uae_u64 delta = cycles - base->cycles;
+		// whole seconds first: delta * 1000000 overflows after ~3 h
+		const uae_u64 frac = (delta % frequency) * 1000000 + base->remainder;
+		const uae_s64 elapsed_us = (uae_s64)(delta / frequency * 1000000 + frac / frequency);
+		base->remainder = frac % frequency;
+		base->sample_us += elapsed_us;
+		const uae_s64 drift = host_us - base->sample_us;
+		if (drift > reanchor_us || drift < -reanchor_us) {
+			base->sample_us = host_us;
+			base->remainder = 0;
+		} else if (drift > slew_threshold_us || drift < -slew_threshold_us) {
+			const uae_s64 slew = std::min(elapsed_us / 100, (drift > 0 ? drift : -drift) - slew_threshold_us);
+			base->sample_us += drift > 0 ? slew : -slew;
 		}
-		if (base->sample_us > host_us + interpolation_us)
-			base->sample_us = host_us + interpolation_us;
 	}
-	base->host_us = host_us;
 	base->cycles = cycles;
 	base->clock_hz = clock_hz;
 	base->initialized = true;

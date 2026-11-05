@@ -919,9 +919,11 @@ int main() {
                    msm.clock.phase_us == (305000 + elapsed) % 1000000);
         }
         assert(pulses == 3);
-        // Idle/pause and cycle resets rejoin the host calendar.
+        // No emulated time, no RTC time (a real pause calls rtc_rebase).
+        uae_s64 before = rtc_microseconds();
         host_us += 7000000;
-        assert(rtc_microseconds() == host_us);
+        assert(rtc_microseconds() == before);
+        // A cycle counter reset rejoins the host calendar.
         cycles = 0;
         host_us += 1;
         assert(rtc_microseconds() == host_us);
@@ -949,28 +951,61 @@ int main() {
     }
 }
 """)
-    def test_rtc_continuous_accesses_bound_wall_clock_drift(self):
+    def test_rtc_follows_emulated_time_and_slews_to_the_host(self):
         text = source("src/rtc.cpp")
         projection = text[text.index("struct rtc_timebase {"):text.index("static uae_s64 rtc_microseconds(")]
         run_cpp(r"""
+#include <algorithm>
 constexpr int CYCLE_UNIT = 512;
 """ + projection + r"""
 int main() {
     const uae_s64 epoch = 1700000000000000;
-    for (int hz : {3546895, 3579545}) for (int speed : {0, 1, 4, 16}) {
-        rtc_timebase base{};
-        uae_u64 cycles = 0;
-        uae_s64 previous = rtc_project_microseconds(&base, epoch, cycles, hz, false);
-        for (int i = 1; i <= 2000; ++i) {
-            uae_s64 host = epoch + i * 5000;
-            // Quarter speed, normal speed, four times speed, or stalled.
-            cycles = (uae_u64)i * 5000 * hz * CYCLE_UNIT * speed / 4000000;
-            uae_s64 sample = rtc_project_microseconds(&base, host, cycles, hz, false);
-            assert(sample >= previous);
-            assert(sample >= host - 20000 && sample <= host + 20000);
-            previous = sample;
+    for (int hz : {3546895, 3579545}) {
+        const uae_u64 per_s = (uae_u64)hz * CYCLE_UNIT;
+        // Quarter, normal, four and sixteen times speed, and stalled: for
+        // 10 s of host time the RTC advances by the emulated time, plus at
+        // most 1 % slew towards the host.
+        for (int speed : {0, 1, 4, 16, 64}) {
+            rtc_timebase base{};
+            uae_u64 cycles = 0;
+            uae_s64 previous = rtc_project_microseconds(&base, epoch, cycles, hz, false);
+            assert(previous == epoch);
+            for (int i = 1; i <= 2000; ++i) {
+                uae_s64 host = epoch + i * 5000;
+                cycles = (uae_u64)i * 5000 * per_s * speed / 4000000;
+                uae_s64 sample = rtc_project_microseconds(&base, host, cycles, hz, false);
+                assert(sample >= previous);
+                previous = sample;
+            }
+            const uae_s64 emulated = 10000000LL * speed / 4;
+            const uae_s64 got = previous - epoch;
+            assert(got >= emulated - emulated / 100 - 1 && got <= emulated + emulated / 100 + 1);
+            if (speed == 0)
+                assert(got == 0);
         }
-        assert(previous >= epoch + 10000000 && previous <= epoch + 10020000);
+        // 0.5 % slower than real time for 10 minutes: the slew keeps the
+        // RTC within about a second of the host clock.
+        {
+            rtc_timebase base{};
+            rtc_project_microseconds(&base, epoch, 0, hz, false);
+            uae_s64 sample = 0;
+            for (int i = 1; i <= 60000; ++i) {
+                uae_s64 host = epoch + (uae_s64)i * 10000;
+                uae_u64 cycles = (uae_u64)i * 10000 * per_s * 995 / 1000 / 1000000;
+                sample = rtc_project_microseconds(&base, host, cycles, hz, false);
+            }
+            uae_s64 drift = epoch + 600000000LL - sample;
+            assert(drift >= 0 && drift <= 1100000);
+        }
+        // A host clock jump of over an hour re-anchors; warp keeps the host clock.
+        {
+            rtc_timebase base{};
+            rtc_project_microseconds(&base, epoch, 0, hz, false);
+            uae_s64 host = epoch + 2LL * 3600 * 1000000;
+            assert(rtc_project_microseconds(&base, host, per_s / 1000000 * 20000, hz, false) == host);
+            host += 5000;
+            assert(rtc_project_microseconds(&base, host, per_s / 1000000 * 20000 * 50, hz, true) == host);
+        }
     }
 }
 """)

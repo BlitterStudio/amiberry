@@ -170,12 +170,14 @@ The x86 flag-emitter check runs only on x86-64 hosts.
 Run `bash tests/test_frame_pacing.sh` for software frame-pacing checks, including
 adaptive scheduler-overshoot margins and PAL/NTSC deadline boundaries.
 
-RTC access bursts interpolate from host time using chipset cycles, so host
-frame waits cannot hide the MSM6242B's 244-microsecond BUSY pulse from a polling
-guest. Interpolation is bounded to one PAL frame (20 milliseconds) and
-periodically rejoins host time, including during continuous reads at different
-emulation speeds. Idle gaps of one second, reset, state restore, pause/resume
-and warp transitions re-anchor to host time. Warp retains a wall-clock RTC.
+The RTC counts emulated time (chipset cycles), like the real chip's own
+crystal next to the colour clock: its seconds agree with the CIAs and the beam
+also when the emulation runs slower or faster than real time, and host frame
+waits cannot hide the MSM6242B's 244-microsecond BUSY pulse from a polling
+guest. It starts at the host clock and re-anchors to it on reset, state
+restore, pause/resume and warp transitions; warp retains a wall-clock RTC.
+While running it slews towards the host clock by at most 1 % once they are more
+than a second apart, and re-anchors after a host clock jump of over an hour.
 MSM6242B HOLD freezes the calendar during writes and defers one carry until
 release; Ricoh calendar and leap counters advance regardless of the selected
 register bank.
