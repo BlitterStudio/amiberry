@@ -3022,10 +3022,11 @@ void rtc_hardreset(void)
 {
 	if (currprefs.cs_rtc == 1 || currprefs.cs_rtc == 3) { /* MSM6242B */
 		clock_bank.name = currprefs.cs_rtc == 1 ? _T("Battery backed up clock (MSM6242B)") : _T("Battery backed up clock A2000 (MSM6242B)");
-		rtc_msm.clock_control_d = 0x1;
+		rtc_msm.clock_control_d = 0; /* running: HOLD clear (it keeps time) */
 		rtc_msm.clock_control_e = 0;
 		rtc_msm.clock_control_f = 0x4; /* 24/12 */
 		rtc_msm.delayed_write = 0;
+		rtc_msm.cnt.control_written = false; /* the time keeps running across resets */
 	} else if (currprefs.cs_rtc == 2) { /* RF5C01A */
 		clock_bank.name = _T("Battery backed up clock (RF5C01A)");
 		rtc_ricoh.clock_control_d = 0x8; /* Timer EN */
