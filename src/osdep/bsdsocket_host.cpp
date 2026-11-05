@@ -1327,6 +1327,16 @@ uae_u32 host_shutdown(SB, uae_u32 sd, uae_u32 how)
 	return -1;
 }
 
+/*
+ * struct in_addr (IP_MULTICAST_IF) and struct ip_mreq (IP_ADD_MEMBERSHIP,
+ * IP_DROP_MEMBERSHIP) hold addresses in network byte order, so they are
+ * copied byte for byte, not as 32-bit integers.
+ */
+static bool is_ip_multicast_address_option(uae_u32 level, uae_u32 optname)
+{
+	return level == IPPROTO_IP && (optname == IP_MULTICAST_IF || optname == IP_ADD_MEMBERSHIP || optname == IP_DROP_MEMBERSHIP);
+}
+
 void host_setsockopt(SB, uae_u32 sd, uae_u32 level, uae_u32 optname, uae_u32 optval, uae_u32 len)
 {
 	TrapContext *ctx = NULL;
@@ -1347,13 +1357,18 @@ void host_setsockopt(SB, uae_u32 sd, uae_u32 level, uae_u32 optname, uae_u32 opt
 			sb->resultval = 0;
 			return;
 		}
-		for (i = 0; (uae_u32)i < len / 4; i++) {
-			((long*)buf)[i] = get_long(optval + i * 4);
+		if (is_ip_multicast_address_option(level, optname)) {
+			for (i = 0; (uae_u32)i < len; i++)
+				buf[i] = get_byte(optval + i);
+		} else {
+			for (i = 0; (uae_u32)i < len / 4; i++) {
+				((long*)buf)[i] = get_long(optval + i * 4);
+			}
+			if (len - i == 2)
+				((long*)buf)[i] = get_word(optval + i * 4);
+			else if (len - i == 1)
+				((long*)buf)[i] = get_byte(optval + i * 4);
 		}
-		if (len - i == 2)
-			((long*)buf)[i] = get_word(optval + i * 4);
-		else if (len - i == 1)
-			((long*)buf)[i] = get_byte(optval + i * 4);
 
 		if (level == SOL_SOCKET && (optname == SO_SNDTIMEO || optname == SO_RCVTIMEO)) {
 			uae_u32 millis = ((long*)buf)[0] * 1000 + ((long*)buf)[1] / 1000;
@@ -1420,26 +1435,31 @@ uae_u32 host_getsockopt(TrapContext *ctx, SB, uae_u32 sd, uae_u32 level, uae_u32
 					((long*)buf)[1] = (millis % 1000) * 1000;
 					len = 8;
 				}
-				for (int i = 0; i < len; i += 4) {
-					uae_u32 v;
-					if (len - i >= 4)
-						v = *((long*)(buf + i));
-					else if (len - i >= 2)
-						v = *((short*)(buf + i));
-					else
-						v = buf[i];
-					if (outlen >= 4) {
-						put_long(optval + outcnt, v);
-						outlen -= 4;
-						outcnt += 4;
-					} else if (outlen >= 2) {
-						put_word(optval + outcnt, v);
-						outlen -= 2;
-						outcnt += 2;
-					} else if (outlen > 0) {
-						put_byte(optval + outcnt, v);
-						outlen -= 1;
-						outcnt += 1;
+				if (is_ip_multicast_address_option(level, optname)) {
+					for (int i = 0; i < len && outlen > 0; i++, outlen--)
+						put_byte(optval + outcnt++, buf[i]);
+				} else {
+					for (int i = 0; i < len; i += 4) {
+						uae_u32 v;
+						if (len - i >= 4)
+							v = *((long*)(buf + i));
+						else if (len - i >= 2)
+							v = *((short*)(buf + i));
+						else
+							v = buf[i];
+						if (outlen >= 4) {
+							put_long(optval + outcnt, v);
+							outlen -= 4;
+							outcnt += 4;
+						} else if (outlen >= 2) {
+							put_word(optval + outcnt, v);
+							outlen -= 2;
+							outcnt += 2;
+						} else if (outlen > 0) {
+							put_byte(optval + outcnt, v);
+							outlen -= 1;
+							outcnt += 1;
+						}
 					}
 				}
 				put_long(optlen, outcnt);
@@ -3087,6 +3107,8 @@ static int mapsockoptname (int level, int optname)
 			return IP_MULTICAST_LOOP;
 		case 12:
 			return IP_ADD_MEMBERSHIP;
+		case 13:
+			return IP_DROP_MEMBERSHIP;
 
 		default:
 			write_log("Invalid setsockopt option 0x%x for level %d\n",
@@ -3116,9 +3138,33 @@ static int mapsockoptname (int level, int optname)
 }
 
 /*
+ * IPv4 multicast options don't take a 32-bit integer: struct in_addr and
+ * struct ip_mreq hold addresses in network byte order, and the TTL and loop
+ * flags are a u_char (an int is accepted too). Returns the smallest valid
+ * argument size, or 0 for any other option.
+ */
+static int ip_multicast_option_size(int level, int optname)
+{
+	if (level != IPPROTO_IP)
+		return 0;
+	switch (optname) {
+	case IP_MULTICAST_TTL:
+	case IP_MULTICAST_LOOP:
+		return 1;
+	case IP_MULTICAST_IF:
+		return 4;
+	case IP_ADD_MEMBERSHIP:
+	case IP_DROP_MEMBERSHIP:
+		return 8;
+	default:
+		return 0;
+	}
+}
+
+/*
  * Map amiga (s|g)etsockopt return value into the correct form
  */
-static void mapsockoptreturn(int level, int optname, uae_u32 optval, void *buf)
+static void mapsockoptreturn(int level, int optname, uae_u32 optval, void *buf, socklen_t len)
 {
 	switch (level) {
 
@@ -3166,11 +3212,22 @@ static void mapsockoptreturn(int level, int optname, uae_u32 optval, void *buf)
 		case IP_RECVOPTS:
 		//case IP_RECVRETOPTS:
 		//case IP_RETOPTS:
+			put_long (optval, *(int *)buf);
+			break;
+
 		case IP_MULTICAST_IF:
+			// struct in_addr, already in network byte order
+			for (int i = 0; i < 4; i++)
+				put_byte (optval + i, ((uae_u8 *)buf)[i]);
+			break;
+
 		case IP_MULTICAST_TTL:
 		case IP_MULTICAST_LOOP:
-		case IP_ADD_MEMBERSHIP:
-			put_long (optval, *(int *)buf);
+			// the host returns a u_char or an int, matching the length asked for
+			if (len < sizeof(int))
+				put_byte (optval, *(uae_u8 *)buf);
+			else
+				put_long (optval, *(int *)buf);
 			break;
 
 		default:
@@ -3198,7 +3255,7 @@ static void mapsockoptreturn(int level, int optname, uae_u32 optval, void *buf)
 /*
  * Map amiga (s|g)etsockopt value from amiga to the appropriate value
  */
-static void mapsockoptvalue(int level, int optname, uae_u32 optval, void *buf)
+static void mapsockoptvalue(int level, int optname, uae_u32 optval, void *buf, uae_u32 len)
 {
 	switch (level) {
 
@@ -3242,11 +3299,24 @@ static void mapsockoptvalue(int level, int optname, uae_u32 optval, void *buf)
 		case IP_RECVOPTS:
 		//case IP_RECVRETOPTS:
 		//case IP_RETOPTS:
+			*((int *)buf) = get_long (optval);
+			break;
+
 		case IP_MULTICAST_IF:
+		case IP_ADD_MEMBERSHIP:
+		case IP_DROP_MEMBERSHIP:
+			// struct in_addr / struct ip_mreq, already in network byte order
+			for (int i = 0; i < ip_multicast_option_size(level, optname); i++)
+				((uae_u8 *)buf)[i] = get_byte (optval + i);
+			break;
+
 		case IP_MULTICAST_TTL:
 		case IP_MULTICAST_LOOP:
-		case IP_ADD_MEMBERSHIP:
-			*((int *)buf) = get_long (optval);
+			// a u_char, or an int
+			if (len < sizeof(uae_u32))
+				*(uae_u8 *)buf = get_byte (optval);
+			else
+				*((int *)buf) = get_long (optval);
 			break;
 
 		default:
@@ -3307,10 +3377,6 @@ static int sockopt_amiga_scalar_size(int level, int optname)
 		case IP_TOS:
 		case IP_TTL:
 		case IP_RECVOPTS:
-		case IP_MULTICAST_IF:
-		case IP_MULTICAST_TTL:
-		case IP_MULTICAST_LOOP:
-		case IP_ADD_MEMBERSHIP:
 			return sizeof(uae_u32);
 		default:
 			return -1;
@@ -3332,6 +3398,9 @@ static int sockopt_amiga_scalar_size(int level, int optname)
 
 static int setsockopt_argument_size(int level, int optname)
 {
+	int size = ip_multicast_option_size(level, optname);
+	if (size)
+		return size;
 	if (level == SOL_SOCKET && optname == SO_LINGER)
 		return 8;
 	if (level == SOL_SOCKET && (optname == SO_RCVTIMEO || optname == SO_SNDTIMEO))
@@ -3341,6 +3410,12 @@ static int setsockopt_argument_size(int level, int optname)
 
 static int getsockopt_result_size(int level, int optname)
 {
+	// memberships can only be set
+	if (level == IPPROTO_IP && (optname == IP_ADD_MEMBERSHIP || optname == IP_DROP_MEMBERSHIP))
+		return -1;
+	int size = ip_multicast_option_size(level, optname);
+	if (size)
+		return size;
 	if (level == SOL_SOCKET && optname == SO_LINGER)
 		return 8;
 	if (level == SOL_SOCKET && (optname == SO_RCVTIMEO || optname == SO_SNDTIMEO))
@@ -5113,7 +5188,7 @@ void host_setsockopt(SB, uae_u32 sd, uae_u32 level, uae_u32 optname, uae_u32 opt
 			bsdsocklib_seterrno(ctx, sb, 12); // ENOMEM
 			return;
 		}
-		mapsockoptvalue(nativelevel, nativeoptname, optval, buf);
+		mapsockoptvalue(nativelevel, nativeoptname, optval, buf, len);
 	}
 
 	if (nativeoptname == SO_RCVTIMEO || nativeoptname == SO_SNDTIMEO) {
@@ -5268,7 +5343,7 @@ uae_u32 host_getsockopt(TrapContext* ctx, SB, uae_u32 sd, uae_u32 level, uae_u32
 				put_long(optval + 4, sl.l_linger);
 			}
 			else {
-				mapsockoptreturn(nativelevel, nativeoptname, optval, buf);
+				mapsockoptreturn(nativelevel, nativeoptname, optval, buf, len);
 			}
 		}
 	}
