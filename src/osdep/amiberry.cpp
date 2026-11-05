@@ -1787,7 +1787,20 @@ static bool apply_mouse_capture_grabs(AmigaMonitor* mon)
 	// from the previous one.
 	amiberry_android_reset_mouse_deltas();
 #endif
-	const bool mouse_grab_ok = SDL_SetWindowMouseGrab(mon->amiga_window, true);
+	// SDL3's Haiku backend cannot confine the pointer: HAIKU_SetWindowMouseGrab()
+	// returns SDL_Unsupported(), so SDL_SetWindowMouseGrab(true) always fails
+	// there. Treating that as a capture failure cleared focus on every capture
+	// attempt and left the keyboard and mouse buttons dead (#2609). Relative
+	// mode, which the Haiku backend implements by re-centring the pointer,
+	// still keeps it inside the window.
+	constexpr bool capture_requires_mouse_grab =
+#ifdef __HAIKU__
+		false;
+#else
+		true;
+#endif
+	const bool mouse_grab_ok = SDL_SetWindowMouseGrab(mon->amiga_window, true)
+		|| !capture_requires_mouse_grab;
 	if (!mouse_grab_ok) {
 		write_log("SDL_SetWindowMouseGrab(true) failed on monitor %d: %s\n", mon->monitor_id, SDL_GetError());
 	}
