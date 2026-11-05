@@ -182,6 +182,62 @@ static void clock_write_digit(struct rtc_clock_data *clock, int addr, uae_u8 v, 
 	clock->written = true;
 }
 
+// The calendar digits of an rtcfile (registers 0-12, as write_battclock()
+// stored them age_us ago), restored into a clock that keeps running while
+// the emulator is off, like the real battery-backed chip. A calendar that
+// was the host's (the guest never set it, or a file from before the RTC
+// kept its own time) leaves the clock following the host clock.
+bool rtc_restore_calendar(struct rtc_clock_data *clock, const uae_u8 *digits, bool ricoh, bool mode24, uae_s64 age_us)
+{
+	// register index of each field: MSM6242B, RF5C01A (weekday at 6)
+	static const int msm[13] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 };
+	static const int rf[13] = { 0, 1, 2, 3, 4, 5, 7, 8, 9, 10, 11, 12, 6 };
+	const int *r = ricoh ? rf : msm;
+	int d[13];
+	for (int i = 0; i < 13; i++)
+		d[i] = digits[r[i]] & 15;
+	struct tm t = {};
+	t.tm_sec = d[1] * 10 + d[0];
+	t.tm_min = d[3] * 10 + d[2];
+	if (mode24) {
+		t.tm_hour = (d[5] & 3) * 10 + d[4];
+	} else {
+		const int pm = ricoh ? 2 : 4;
+		const int h12 = (d[5] & 1) * 10 + d[4];
+		if (h12 < 1 || h12 > 12)
+			return false;
+		t.tm_hour = h12 % 12 + ((d[5] & pm) ? 12 : 0);
+	}
+	t.tm_mday = d[7] * 10 + d[6];
+	t.tm_mon = d[9] * 10 + d[8] - 1;
+	const int year = d[11] * 10 + d[10];
+	t.tm_year = year < 78 ? year + 100 : year;  // battclock: 78-99 19xx, 00-77 20xx
+	t.tm_wday = d[12] % 7;
+	if (t.tm_sec > 59 || t.tm_min > 59 || t.tm_hour > 23 || t.tm_mday < 1 || t.tm_mday > 31
+		|| t.tm_mon < 0 || t.tm_mon > 11 || year > 99)
+		return false;
+	struct tm local = t;
+	local.tm_isdst = -1;
+	const time_t guest = mktime(&local);
+	if (guest == (time_t)-1)
+		return false;
+	const uae_s64 now = rtc_microseconds();
+	const uae_s64 written = (now - age_us) / 1000000 + currprefs.cs_rtc_adjust;  // host calendar then
+	const uae_s64 offset = (uae_s64)guest - written;
+	if (offset >= -2 && offset <= 2)
+		return false;  // the host's calendar: keep following it
+	const time_t value = (time_t)(now / 1000000 + currprefs.cs_rtc_adjust + offset);
+	clock->value = *localtime(&value);
+	clock->held_value = clock->value;
+	clock->phase_us = now % 1000000;
+	clock->last_us = now;
+	clock->hour12_written = false;
+	clock->carry_pending = false;
+	clock->initialized = true;
+	clock->written = true;
+	return true;
+}
+
 uae_u8 get_clock_msm(struct rtc_msm_data *data, int addr, struct tm *ct)
 {
 	uae_u8 v = 0;

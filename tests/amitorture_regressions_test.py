@@ -1010,6 +1010,75 @@ int main() {
 }
 """)
 
+    def test_rtc_file_calendar_restores_guest_time(self):
+        text = source("src/rtc.cpp")
+        run_cpp(r"""
+#include <cstdlib>
+struct { int cs_rtc_adjust; } currprefs;
+uae_s64 now_us = 1700000000700000;  // 2023-11-14 22:13:20.7 UTC
+uae_s64 rtc_microseconds() { return now_us; }
+""" + source("src/include/rtc.h") + "\n" +
+                text[text.index("static void clock_advance("):] + r"""
+// MSM6242B digits 0-12: S1 S10 MI1 MI10 H1 H10 D1 D10 MO1 MO10 Y1 Y10 W
+static void msm_digits(uae_u8 *d, const struct tm &t, bool mode24) {
+    int h = t.tm_hour, h10;
+    if (mode24) { h10 = h / 10; }
+    else { int h12 = h % 12 ? h % 12 : 12; h10 = h12 / 10 | (h >= 12 ? 4 : 0); h = h12; }
+    int y = t.tm_year % 100;
+    uae_u8 v[13] = { uae_u8(t.tm_sec % 10), uae_u8(t.tm_sec / 10), uae_u8(t.tm_min % 10), uae_u8(t.tm_min / 10),
+        uae_u8(h % 10), uae_u8(h10), uae_u8(t.tm_mday % 10), uae_u8(t.tm_mday / 10),
+        uae_u8((t.tm_mon + 1) % 10), uae_u8((t.tm_mon + 1) / 10), uae_u8(y % 10), uae_u8(y / 10), uae_u8(t.tm_wday) };
+    memcpy(d, v, 13);
+}
+int main() {
+    setenv("TZ", "UTC", 1);
+    tzset();
+    const uae_s64 age = 3600LL * 1000000;
+    uae_u8 d[16] = {};
+    // The host's calendar when the file was written: keep following the host.
+    {
+        time_t then = (time_t)((now_us - age) / 1000000);
+        struct tm t = *gmtime(&then);
+        msm_digits(d, t, true);
+        rtc_clock_data c{};
+        assert(!rtc_restore_calendar(&c, d, false, true, age));
+        assert(!c.initialized && !c.written);
+    }
+    // A guest-set time comes back moved on by the time the file is old.
+    for (bool mode24 : {true, false}) for (int hour : {0, 4, 12, 23}) {
+        struct tm t = {};
+        t.tm_year = 101; t.tm_mon = 1; t.tm_mday = 3; t.tm_hour = hour; t.tm_min = 5; t.tm_sec = 6; t.tm_wday = 6;
+        msm_digits(d, t, mode24);
+        rtc_clock_data c{};
+        assert(rtc_restore_calendar(&c, d, false, mode24, age));
+        assert(c.initialized && c.written);
+        assert(c.value.tm_year == 101 && c.value.tm_mon == 1);
+        assert(c.value.tm_hour == (hour + 1) % 24);
+        assert(c.value.tm_mday == (hour == 23 ? 4 : 3));
+        assert(c.value.tm_min == 5 && c.value.tm_sec == 6);
+        assert(c.phase_us == now_us % 1000000);
+    }
+    // RF5C01A layout: the weekday is register 6, then day, month, year.
+    {
+        struct tm t = {};
+        t.tm_year = 99; t.tm_mon = 11; t.tm_mday = 31; t.tm_hour = 23; t.tm_min = 59; t.tm_sec = 30; t.tm_wday = 5;
+        uae_u8 m[13];
+        msm_digits(m, t, true);
+        uae_u8 rf[13] = { m[0], m[1], m[2], m[3], m[4], m[5], m[12], m[6], m[7], m[8], m[9], m[10], m[11] };
+        rtc_clock_data c{};
+        assert(rtc_restore_calendar(&c, rf, true, true, age));
+        assert(c.value.tm_year == 100 && c.value.tm_mon == 0 && c.value.tm_mday == 1);
+        assert(c.value.tm_hour == 0 && c.value.tm_min == 59 && c.value.tm_sec == 30);
+    }
+    // Digits that are no time are ignored.
+    {
+        uae_u8 bad[13] = { 9, 9, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0 };  // 99 seconds
+        rtc_clock_data c{};
+        assert(!rtc_restore_calendar(&c, bad, false, true, age) && !c.initialized);
+    }
+}
+""")
+
     def test_rtc_hold_writes_and_banked_leap_reads(self):
         text = source("src/rtc.cpp")
         run_cpp(r"""

@@ -56,6 +56,10 @@
 #include "scsi.h"
 #include "rtc.h"
 #include "devices.h"
+#ifdef AMIBERRY
+#include "fsdb_host.h"
+#endif
+#include <filesystem>
 #include "keyboard_mcu.h"
 
 #define CIAA_DEBUG_R 0
@@ -2997,6 +3001,24 @@ static void write_battclock(void)
 	}
 }
 
+// How long ago the rtcfile was written (write_battclock() rewrites all of
+// it), or -1. Taken from the file clock directly: no time zone involved.
+static uae_s64 rtcfile_age_us(const TCHAR *path)
+{
+	std::error_code ec;
+#ifdef AMIBERRY
+	const std::filesystem::path p(iso_8859_1_to_utf8(path));
+#else
+	const std::filesystem::path p(path);
+#endif
+	const auto written = std::filesystem::last_write_time(p, ec);
+	if (ec)
+		return -1;
+	const auto age = std::filesystem::file_time_type::clock::now() - written;
+	const uae_s64 us = std::chrono::duration_cast<std::chrono::microseconds>(age).count();
+	return us < 0 ? 0 : us;
+}
+
 void rtc_hardreset(void)
 {
 	if (currprefs.cs_rtc == 1 || currprefs.cs_rtc == 3) { /* MSM6242B */
@@ -3025,16 +3047,25 @@ void rtc_hardreset(void)
 			int size = zfile_size32(f);
 			uae_u8 empty[16];
 			zfile_fread(empty, sizeof(empty), 1, f);
+			// The calendar digits (0-12) hold the time the guest set, as
+			// write_battclock() stored it: restore it, moved on by the time
+			// since then, like a battery-backed clock. Older files hold the
+			// host's time, which keeps the clock following the host.
+			const uae_s64 age = rtcfile_age_us(path);
 			if (size > 16) {
 				rtc_ricoh.clock_control_d = empty[13];
 				rtc_ricoh.clock_control_e = empty[14];
 				rtc_ricoh.clock_control_f = empty[15];
 				zfile_fread(rtc_ricoh.rtc_alarm, RF5C01A_RAM_SIZE, 1, f);
 				zfile_fread(rtc_ricoh.rtc_memory, RF5C01A_RAM_SIZE, 1, f);
+				if (currprefs.cs_rtc == 2 && age >= 0)
+					rtc_restore_calendar(&rtc_ricoh.clock, empty, true, (rtc_ricoh.rtc_alarm[10] & 1) != 0, age);
 			} else if (size == 16) {
 				rtc_msm.clock_control_d = empty[13];
 				rtc_msm.clock_control_e = empty[14];
 				rtc_msm.clock_control_f = empty[15];
+				if ((currprefs.cs_rtc == 1 || currprefs.cs_rtc == 3) && age >= 0)
+					rtc_restore_calendar(&rtc_msm.clock, empty, false, (rtc_msm.clock_control_f & 4) != 0, age);
 			}
 			zfile_fclose(f);
 		}
