@@ -4356,7 +4356,7 @@ static uae_u32 REGPARAM2 voodoo3_mb1_bget(struct pci_board_state *pcibs, uaecptr
 
 static uae_u32 REGPARAM2 voodoo3_bios_bget(struct pci_board_state *pcibs, uaecptr addr)
 {
-	struct rtggfxboard* gb = getgfxboard(addr);
+	struct rtggfxboard *gb = (struct rtggfxboard*)pcibs->userdata;
 	if (!gb->bios)
 		return 0;
 	addr &= gb->bios_mask;
