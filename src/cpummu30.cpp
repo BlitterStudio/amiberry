@@ -1675,6 +1675,8 @@ static void mmu030_ptest_atc_search(uaecptr logical_addr, uae_u32 fc, bool write
         return;
     }
     
+    /* the ATC holds page-aligned addresses */
+    logical_addr &= mmu030.translation.page.imask;
     for (i = 0; i < ATC030_NUM_ENTRIES; i++) {
         if ((mmu030.atc[i].logical.fc == fc) &&
             (mmu030.atc[i].logical.addr == logical_addr) &&
