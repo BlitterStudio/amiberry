@@ -271,22 +271,6 @@ static void mmu030_flush_atc_page_fc(uaecptr logical_addr, uae_u32 fc_base, uae_
 	mmu030_flush_cache(logical_addr);
 }
 
-/* This function flushes ATC entries depending on their logical address */
-static void mmu030_flush_atc_page(uaecptr logical_addr) {
-    int i;
-	logical_addr &= mmu030.translation.page.imask;
-    for (i=0; i<ATC030_NUM_ENTRIES; i++) {
-        if ((mmu030.atc[i].logical.addr == logical_addr) &&
-            mmu030.atc[i].logical.valid) {
-            mmu030.atc[i].logical.valid = false;
-#if MMU030_OP_DBG_MSG
-            write_log(_T("ATC: Flushing %08X\n"), mmu030.atc[i].physical.addr);
-#endif
-		}
-    }
-	mmu030_flush_cache(logical_addr);
-}
-
 /* This function flushes all ATC entries */
 void mmu030_flush_atc_all(void) {
 #if MMU030_OP_DBG_MSG
@@ -526,7 +510,8 @@ static bool mmu_op30_pload (uaecptr pc, uae_u32 opcode, uae_u16 next, uaecptr ex
     write_log (_T("PLOAD%c: Create ATC entry for %08X, FC = %i\n"), write?'W':'R', extra, fc);
 #endif
 
-    mmu030_flush_atc_page(extra);
+    /* replaces only this page's entry for this function code */
+    mmu030_flush_atc_page_fc(extra, fc, 7);
     mmu030_table_search(extra, fc, write, 0);
 	return false;
 }
