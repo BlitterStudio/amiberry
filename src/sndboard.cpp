@@ -1583,7 +1583,8 @@ addrbank uaesndboard_bank_z3 = {
 addrbank uaesndboard_bank_z2 = {
 	sub_bank_lget, sub_bank_wget, sub_bank_bget,
 	sub_bank_lput, sub_bank_wput, sub_bank_bput,
-	default_xlate, default_check, NULL, NULL, _T("uaesnd z2"),
+	// sub-bank aware: sample sets in the board's own RAM ($8000) are valid
+	sub_bank_xlate, sub_bank_check, NULL, NULL, _T("uaesnd z2"),
 	dummy_lgeti, dummy_wgeti,
 	ABFLAG_IO, S_READ, S_WRITE, uaesndz2_sub_banks
 };
