@@ -242,7 +242,8 @@ foreach(HEADER ${libmt32emu_HEADERS})
   configure_file("src/${HEADER}" "include/mt32emu/${HEADER}" COPYONLY)
 endforeach(HEADER)
 
-file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/include/mt32emu.h" "#include <mt32emu/mt32emu.h>")
+file(GENERATE OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/include/mt32emu.h"
+  CONTENT "#include <mt32emu/mt32emu.h>")
 
 configure_file("src/config.h.in" "include/mt32emu/config.h")
 
