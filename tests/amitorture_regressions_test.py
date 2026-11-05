@@ -1040,17 +1040,33 @@ int main() {
         time_t then = (time_t)((now_us - age) / 1000000);
         struct tm t = *gmtime(&then);
         msm_digits(d, t, true);
-        rtc_clock_data c{};
-        assert(!rtc_restore_calendar(&c, d, false, true, age));
+        rtc_msm_data data{};
+        data.clock_control_f = 4;
+        auto &c = data.clock;
+        assert(!rtc_restore_calendar(&data, d, age));
         assert(!c.initialized && !c.written);
+        d[12] = (t.tm_wday + 1) % 7;
+        assert(rtc_restore_calendar(&data, d, age));
+        assert(c.written && c.value.tm_wday == d[12]);
+        rtc_ricoh_data rf{};
+        rf.clock_control_d = 8;
+        rf.rtc_alarm[10] = 1;
+        rf.rtc_alarm[11] = (t.tm_year + 1) & 3;
+        uae_u8 digits[13];
+        for (int i = 0; i < 13; ++i)
+            digits[i] = get_clock_ricoh(&rf, i, &t);
+        assert(rtc_restore_calendar(&rf, digits, age));
+        assert(rf.clock.written && rf.rtc_alarm[11] == ((t.tm_year + 1) & 3));
     }
     // A guest-set time comes back moved on by the time the file is old.
     for (bool mode24 : {true, false}) for (int hour : {0, 4, 12, 23}) {
         struct tm t = {};
         t.tm_year = 101; t.tm_mon = 1; t.tm_mday = 3; t.tm_hour = hour; t.tm_min = 5; t.tm_sec = 6; t.tm_wday = 6;
         msm_digits(d, t, mode24);
-        rtc_clock_data c{};
-        assert(rtc_restore_calendar(&c, d, false, mode24, age));
+        rtc_msm_data data{};
+        data.clock_control_f = mode24 ? 4 : 0;
+        auto &c = data.clock;
+        assert(rtc_restore_calendar(&data, d, age));
         assert(c.initialized && c.written);
         assert(c.value.tm_year == 101 && c.value.tm_mon == 1);
         assert(c.value.tm_hour == (hour + 1) % 24);
@@ -1065,17 +1081,223 @@ int main() {
         uae_u8 m[13];
         msm_digits(m, t, true);
         uae_u8 rf[13] = { m[0], m[1], m[2], m[3], m[4], m[5], m[12], m[6], m[7], m[8], m[9], m[10], m[11] };
-        rtc_clock_data c{};
-        assert(rtc_restore_calendar(&c, rf, true, true, age));
+        rtc_ricoh_data data{};
+        data.clock_control_d = 8;
+        data.rtc_alarm[10] = 1;
+        data.rtc_alarm[11] = 3;
+        auto &c = data.clock;
+        assert(rtc_restore_calendar(&data, rf, age));
         assert(c.value.tm_year == 100 && c.value.tm_mon == 0 && c.value.tm_mday == 1);
         assert(c.value.tm_hour == 0 && c.value.tm_min == 59 && c.value.tm_sec == 30);
+        assert(data.rtc_alarm[11] == 0);
     }
     // Digits that are no time are ignored.
     {
         uae_u8 bad[13] = { 9, 9, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0 };  // 99 seconds
-        rtc_clock_data c{};
-        assert(!rtc_restore_calendar(&c, bad, false, true, age) && !c.initialized);
+        rtc_msm_data data{};
+        data.clock_control_f = 4;
+        assert(!rtc_restore_calendar(&data, bad, age) && !data.clock.initialized);
     }
+    // Both hour modes retain an independent weekday, stopped calendars,
+    // and the Ricoh's independently programmed leap counter.
+    for (bool mode24 : {false, true}) {
+        struct tm t = {};
+        t.tm_year = 101; t.tm_mon = 1; t.tm_mday = 28;
+        t.tm_hour = 23; t.tm_min = 59; t.tm_sec = 59; t.tm_wday = 2;
+        msm_digits(d, t, mode24);
+        for (uae_s64 offline : {0LL, 1000000LL, 3600000000LL}) {
+            for (int stop : {1, 2, 3}) {
+                rtc_msm_data data{};
+                data.clock_control_f = (mode24 ? 4 : 0) | stop;
+                assert(rtc_restore_calendar(&data, d, offline));
+                assert(data.clock.value.tm_hour == 23 && data.clock.value.tm_sec == 59);
+                assert(data.clock.value.tm_mday == 28 && data.clock.value.tm_wday == 2);
+                now_us += 2000000;
+                get_clock_msm(&data, 13, nullptr);
+                assert(data.clock.value.tm_sec == 59);
+                put_clock_msm(&data, 15, mode24 ? 4 : 0);
+                now_us += 1000000;
+                get_clock_msm(&data, 13, nullptr);
+                assert(data.clock.value.tm_sec == 0 && data.clock.value.tm_mon == 2);
+                assert(data.clock.value.tm_mday == 1 && data.clock.value.tm_wday == 3);
+            }
+        }
+        {
+            rtc_msm_data data{};
+            data.clock_control_f = mode24 ? 4 : 0;
+            assert(rtc_restore_calendar(&data, d, 0));
+            assert(data.clock.value.tm_wday == 2);
+        }
+        for (bool stopped : {false, true}) {
+            rtc_msm_data data{};
+            data.clock_control_d = 1;
+            data.clock_control_f = (mode24 ? 4 : 0) | (stopped ? 2 : 0);
+            assert(rtc_restore_calendar(&data, d, age));
+            assert(data.clock.value.tm_sec == 59 && data.clock.held_value.tm_sec == 59);
+            assert(data.clock.carry_pending == !stopped);
+            put_clock_msm(&data, 13, 0);
+            assert(data.clock.value.tm_sec == (stopped ? 59 : 0));
+            assert(data.clock.value.tm_mon == (stopped ? 1 : 2));
+            assert(data.clock.value.tm_wday == (stopped ? 2 : 3));
+        }
+        uae_u8 rf[13] = { d[0], d[1], d[2], d[3], d[4],
+            uae_u8(mode24 ? d[5] : (d[5] & 1) | ((d[5] & 4) ? 2 : 0)), d[12],
+            d[6], d[7], d[8], d[9], d[10], d[11] };
+        for (int bank = 0; bank < 4; ++bank) for (bool running : {false, true}) {
+            rtc_ricoh_data data{};
+            data.clock_control_d = bank | (running ? 8 : 0);
+            data.rtc_alarm[10] = mode24 ? 1 : 0;
+            data.rtc_alarm[11] = 0;  // 2001 is a leap year on this programmed chip.
+            assert(rtc_restore_calendar(&data, rf, 1000000));
+            assert(data.clock.value.tm_mday == (running ? 29 : 28));
+            assert(data.clock.value.tm_wday == (running ? 3 : 2));
+            assert(data.clock.value.tm_sec == (running ? 0 : 59));
+            assert(data.rtc_alarm[11] == 0);
+            if (!running) {
+                now_us += 2000000;
+                put_clock_ricoh(&data, 13, 8 | bank);
+                now_us += 1000000;
+                get_clock_ricoh(&data, 13, nullptr);
+                assert(data.clock.value.tm_mday == 29 && data.clock.value.tm_wday == 3);
+                assert(data.clock.value.tm_sec == 0);
+            }
+        }
+    }
+    // Even a calendar matching the host must remain frozen when stopped.
+    {
+        time_t then = (time_t)((now_us - age) / 1000000);
+        struct tm t = *localtime(&then);
+        msm_digits(d, t, true);
+        rtc_msm_data data{};
+        data.clock_control_f = 6;
+        assert(rtc_restore_calendar(&data, d, age));
+        assert(data.clock.value.tm_hour == t.tm_hour && data.clock.value.tm_min == t.tm_min);
+    }
+    // The chip counts calendar days, not the host's daylight-saving jumps.
+    {
+        setenv("TZ", "EST5EDT,M3.2.0/2,M11.1.0/2", 1);
+        tzset();
+        struct tm t = {};
+        t.tm_year = 124; t.tm_mon = 2; t.tm_mday = 9; t.tm_hour = 12; t.tm_wday = 2;
+        msm_digits(d, t, true);
+        rtc_msm_data data{};
+        data.clock_control_f = 4;
+        assert(rtc_restore_calendar(&data, d, 86400000000LL));
+        assert(data.clock.value.tm_mday == 10 && data.clock.value.tm_hour == 12);
+        assert(data.clock.value.tm_wday == 3);
+    }
+}
+""")
+
+    def test_rtc_savestate_samples_and_restores_the_save_instant(self):
+        rtc = source("src/rtc.cpp")
+        cia = source("src/cia.cpp")
+        serializers = "\n".join(function(cia, signature) for signature in (
+            "static uae_u8 getclockreg(", "static void save_rtc_tm(",
+            "static uae_u8 *restore_rtc_tm(", "void restore_rtc_start(",
+            "uae_u8 *save_rtc(", "uae_u8 *restore_rtc(",
+        ))
+        run_cpp(r"""
+#include <cstdlib>
+struct { int cs_rtc, cs_rtc_adjust; } currprefs;
+uae_s64 now_us = 1700000000700000;
+uae_s64 rtc_microseconds() { return now_us; }
+""" + source("src/include/rtc.h") + "\n" +
+                rtc[rtc.index("static void clock_advance("):] + r"""
+rtc_msm_data rtc_msm{};
+rtc_ricoh_data rtc_ricoh{};
+bool rtc_state_restored;
+#define xmalloc(type, count) ((type *)malloc(sizeof(type) * (count)))
+void push32(uae_u8 *&p, uae_u32 v) {
+    for (int i = 3; i >= 0; --i) *p++ = v >> (i * 8);
+}
+uae_u32 pull32(uae_u8 *&p) {
+    uae_u32 v = 0;
+    for (int i = 0; i < 4; ++i) v = (v << 8) | *p++;
+    return v;
+}
+void push16(uae_u8 *&p, uae_u16 v) { *p++ = v >> 8; *p++ = v; }
+uae_u16 pull16(uae_u8 *&p) { uae_u16 v = *p++; return (v << 8) | *p++; }
+#define save_u32(v) push32(dst, (v))
+#define restore_u32() pull32(src)
+#define save_u16(v) push16(dst, (v))
+#define restore_u16() pull16(src)
+#define save_u8(v) (*dst++ = (v))
+#define restore_u8() (*src++)
+""" + serializers + r"""
+void same_tm(const struct tm &a, const struct tm &b) {
+    assert(a.tm_sec == b.tm_sec && a.tm_min == b.tm_min && a.tm_hour == b.tm_hour);
+    assert(a.tm_mday == b.tm_mday && a.tm_mon == b.tm_mon && a.tm_year == b.tm_year);
+    assert(a.tm_wday == b.tm_wday);
+}
+int main() {
+    for (int chip : {1, 2, 3}) for (int state = 0; state < 5; ++state) {
+        currprefs.cs_rtc = chip;
+        now_us = 1700000000700000;
+        rtc_msm = {};
+        rtc_ricoh = {};
+        const bool ricoh = chip == 2;
+        const bool stopped = ricoh ? state == 4 : state == 1 || state == 2 || state == 4;
+        const bool held = !ricoh && state >= 3;
+        rtc_msm.clock_control_d = held ? 1 : 0;
+        rtc_msm.clock_control_f = 4 | (state == 2 ? 1 : stopped ? 2 : 0);
+        rtc_ricoh.clock_control_d = state < 4 ? 8 | state : 3;
+        rtc_ricoh.rtc_alarm[10] = 1;
+        rtc_ricoh.rtc_alarm[11] = 1;
+        rtc_ricoh.rtc_memory[3] = 0xab;
+        auto &c = ricoh ? rtc_ricoh.clock : rtc_msm.clock;
+        c.initialized = c.written = c.hour12_written = true;
+        c.hour12 = 11;
+        c.last_us = now_us;
+        c.phase_us = 700000;
+        c.value.tm_year = 123; c.value.tm_mon = 11; c.value.tm_mday = 31;
+        c.value.tm_hour = 23; c.value.tm_min = 59; c.value.tm_sec = 58; c.value.tm_wday = 2;
+        c.held_value = c.value;
+        now_us += 5500000;
+        uae_u8 buffer[200];
+        size_t length = 0;
+        assert(save_rtc(&length, buffer) == buffer && length <= sizeof buffer);
+        assert(c.last_us == now_us);
+        if (stopped || held) {
+            assert(c.value.tm_year == 123 && c.value.tm_sec == 58 && c.phase_us == (stopped ? 700000 : 200000));
+            assert(c.hour12_written && c.carry_pending == (held && !stopped));
+        } else {
+            assert(c.value.tm_year == 124 && c.value.tm_mon == 0 && c.value.tm_mday == 1);
+            assert(c.value.tm_hour == 0 && c.value.tm_min == 0 && c.value.tm_sec == 4);
+            assert(c.value.tm_wday == 3 && c.phase_us == 200000 && !c.hour12_written);
+        }
+        const auto expected = c;
+        const auto msm = rtc_msm;
+        const auto rf = rtc_ricoh;
+        now_us += 3600000000LL;
+        rtc_msm = {};
+        rtc_ricoh = {};
+        restore_rtc_start();
+        assert(!rtc_msm.clock.initialized && !rtc_ricoh.clock.initialized && !rtc_state_restored);
+        assert(restore_rtc(buffer) == buffer + length && rtc_state_restored);
+        assert(c.initialized && c.written && c.last_us == now_us);
+        same_tm(c.value, expected.value);
+        same_tm(c.held_value, expected.held_value);
+        assert(c.phase_us == expected.phase_us && c.hour12 == expected.hour12);
+        assert(c.hour12_written == expected.hour12_written && c.carry_pending == expected.carry_pending);
+        if (ricoh) {
+            assert(rtc_ricoh.clock_control_d == rf.clock_control_d);
+            assert(rtc_ricoh.rtc_alarm[11] == (stopped ? 1 : 2));
+            assert(!memcmp(rtc_ricoh.rtc_alarm, rf.rtc_alarm, sizeof rf.rtc_alarm));
+            assert(!memcmp(rtc_ricoh.rtc_memory, rf.rtc_memory, sizeof rf.rtc_memory));
+        } else {
+            assert(rtc_msm.clock_control_d == msm.clock_control_d);
+            assert(rtc_msm.clock_control_f == msm.clock_control_f);
+        }
+    }
+    restore_rtc_start();
+    currprefs.cs_rtc = 1;
+    rtc_msm.clock_control_d = 0;
+    rtc_msm.clock_control_f = 4;
+    getclockreg(13, nullptr);
+    const time_t host = now_us / 1000000;
+    assert(rtc_msm.clock.initialized && !rtc_msm.clock.written);
+    same_tm(rtc_msm.clock.value, *localtime(&host));
 }
 """)
 

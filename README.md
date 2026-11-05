@@ -181,6 +181,9 @@ than a second apart, and re-anchors after a host clock jump of over an hour.
 MSM6242B HOLD freezes the calendar during writes and defers one carry until
 release; Ricoh calendar and leap counters advance regardless of the selected
 register bank.
+Savestates capture the RTC at the save instant. An RTC file preserves
+guest-written calendars and independent weekday/leap counters across restarts;
+only running clocks advance while the emulator is off, and HOLD defers one carry.
 
 FPU exception, stack-frame and compiler checks run with
 `python3 tests/fpu_exception_regressions_test.py`,

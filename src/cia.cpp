@@ -3071,13 +3071,13 @@ void rtc_hardreset(void)
 				zfile_fread(rtc_ricoh.rtc_alarm, RF5C01A_RAM_SIZE, 1, f);
 				zfile_fread(rtc_ricoh.rtc_memory, RF5C01A_RAM_SIZE, 1, f);
 				if (currprefs.cs_rtc == 2 && age >= 0)
-					rtc_restore_calendar(&rtc_ricoh.clock, empty, true, (rtc_ricoh.rtc_alarm[10] & 1) != 0, age);
+					rtc_restore_calendar(&rtc_ricoh, empty, age);
 			} else if (size == 16) {
 				rtc_msm.clock_control_d = empty[13];
 				rtc_msm.clock_control_e = empty[14];
 				rtc_msm.clock_control_f = empty[15];
 				if ((currprefs.cs_rtc == 1 || currprefs.cs_rtc == 3) && age >= 0)
-					rtc_restore_calendar(&rtc_msm.clock, empty, false, (rtc_msm.clock_control_f & 4) != 0, age);
+					rtc_restore_calendar(&rtc_msm, empty, age);
 			}
 			zfile_fclose(f);
 		}
@@ -3392,6 +3392,8 @@ uae_u8 *save_rtc(size_t *len, uae_u8 *dstptr)
 		dstbak = dst = dstptr;
 	else
 		dstbak = dst = xmalloc(uae_u8, 200);
+	// The calendar advances lazily on register access, not on every frame.
+	getclockreg(0xd, NULL);
 	const bool ricoh = currprefs.cs_rtc == 2;
 	const struct rtc_clock_data *c = ricoh ? &rtc_ricoh.clock : &rtc_msm.clock;
 	save_u32(1);							/* version */

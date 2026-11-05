@@ -33,9 +33,11 @@ uae_u8 get_clock_msm(struct rtc_msm_data *data, int addr, struct tm *ct);
 bool put_clock_msm(struct rtc_msm_data *data, int addr, uae_u8 v);
 // A clock restored from a savestate continues from now.
 void rtc_clock_resume(struct rtc_clock_data *clock);
-// Restores the calendar digits of an rtcfile written age_us ago; false if
-// they were the host's calendar (the clock keeps following the host).
-bool rtc_restore_calendar(struct rtc_clock_data *clock, const uae_u8 *digits, bool ricoh, bool mode24, uae_s64 age_us);
+// Restore an rtcfile's calendar using the loaded chip controls. Running
+// clocks advance by age_us; stopped/held calendars and independent counters survive.
+// Returns false for invalid digits or an unmodified running host calendar.
+bool rtc_restore_calendar(struct rtc_msm_data *data, const uae_u8 *digits, uae_s64 age_us);
+bool rtc_restore_calendar(struct rtc_ricoh_data *data, const uae_u8 *digits, uae_s64 age_us);
 
 uae_u8 get_clock_ricoh(struct rtc_ricoh_data *data, int addr, struct tm *ct);
 void put_clock_ricoh(struct rtc_ricoh_data *data, int addr, uae_u8 v);

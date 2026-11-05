@@ -194,7 +194,8 @@ void rtc_clock_resume(struct rtc_clock_data *clock)
 // the emulator is off, like the real battery-backed chip. A calendar that
 // was the host's (the guest never set it, or a file from before the RTC
 // kept its own time) leaves the clock following the host clock.
-bool rtc_restore_calendar(struct rtc_clock_data *clock, const uae_u8 *digits, bool ricoh, bool mode24, uae_s64 age_us)
+static bool clock_restore_calendar(struct rtc_clock_data *clock, const uae_u8 *digits,
+	bool ricoh, bool mode24, uae_s64 age_us, bool running, bool hold, uae_u8 *leap)
 {
 	// register index of each field: MSM6242B, RF5C01A (weekday at 6)
 	static const int msm[13] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 };
@@ -231,18 +232,37 @@ bool rtc_restore_calendar(struct rtc_clock_data *clock, const uae_u8 *digits, bo
 	const uae_s64 now = rtc_microseconds();
 	const uae_s64 written = (now - age_us) / 1000000 + currprefs.cs_rtc_adjust;  // host calendar then
 	const uae_s64 offset = (uae_s64)guest - written;
-	if (offset >= -2 && offset <= 2)
+	if (running && !hold && offset >= -2 && offset <= 2
+		&& t.tm_wday == local.tm_wday && (!leap || (*leap & 3) == (t.tm_year & 3)))
 		return false;  // the host's calendar: keep following it
-	const time_t value = (time_t)(now / 1000000 + currprefs.cs_rtc_adjust + offset);
-	clock->value = *localtime(&value);
-	clock->held_value = clock->value;
-	clock->phase_us = now % 1000000;
+	clock->value = t;
+	clock->phase_us = running ? now % 1000000 : 0;
 	clock->last_us = now;
 	clock->hour12_written = false;
 	clock->carry_pending = false;
+	if (running) {
+		const uae_s64 seconds = now / 1000000 - (now - age_us) / 1000000;
+		if (hold)
+			clock->carry_pending = seconds > 0;
+		else
+			clock_advance(clock, seconds, leap);
+	}
+	clock->held_value = clock->value;
 	clock->initialized = true;
 	clock->written = true;
 	return true;
+}
+
+bool rtc_restore_calendar(struct rtc_msm_data *data, const uae_u8 *digits, uae_s64 age_us)
+{
+	return clock_restore_calendar(&data->clock, digits, false, (data->clock_control_f & 4) != 0,
+		age_us, !(data->clock_control_f & 3), (data->clock_control_d & 1) != 0, NULL);
+}
+
+bool rtc_restore_calendar(struct rtc_ricoh_data *data, const uae_u8 *digits, uae_s64 age_us)
+{
+	return clock_restore_calendar(&data->clock, digits, true, (data->rtc_alarm[10] & 1) != 0,
+		age_us, (data->clock_control_d & 8) != 0, false, &data->rtc_alarm[11]);
 }
 
 uae_u8 get_clock_msm(struct rtc_msm_data *data, int addr, struct tm *ct)
