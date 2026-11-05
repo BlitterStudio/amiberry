@@ -1170,6 +1170,13 @@ static bool audio_state_sndboard_uae(int streamid, void *params)
 		s->sample[6] = c;
 		s->sample[7] = lfe;
 	}
+	// The set may have ended in this call: uaesndboard_stop() has then
+	// released the mixer stream (s->streamid = 0). Updating it now would
+	// bring the freed stream back as a one-channel stream that nobody
+	// owns, mixing its last sample forever and keeping its slot taken.
+	// Returning false lets the mixer idle the stream itself.
+	if (s->streamid != streamid)
+		return false;
 	uaesnd_apply_mono_pan(s, &highestch);
 	audio_state_stream_state(streamid, s->sample, highestch, s->event_time);
 	return true;
