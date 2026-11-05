@@ -29,6 +29,7 @@ BEHAVIORAL_TESTS=(
 	"test_ipc_transport.sh"
 	"test_ipc_actions.sh"
 	"test_board_reset.sh"
+	"test_fpu_predicates_live.sh"
 	"test_plugin_search_paths.sh"
 	"test_relocatable_install_paths.sh"
 	"test_relative_paths.sh"
