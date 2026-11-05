@@ -142,6 +142,9 @@ extern uae_u8 *restore_cia(int, uae_u8 *);
 extern uae_u8 *save_cia(int, size_t *, uae_u8 *);
 extern void restore_cia_finish(void);
 extern void restore_cia_start(void);
+extern uae_u8 *restore_rtc(uae_u8 *);
+extern uae_u8 *save_rtc(size_t *, uae_u8 *);
+extern void restore_rtc_start(void);
 
 extern uae_u8 *restore_expansion(uae_u8 *);
 extern uae_u8 *save_expansion(size_t *, uae_u8 *);

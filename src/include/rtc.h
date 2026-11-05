@@ -31,6 +31,8 @@ struct rtc_ricoh_data
 
 uae_u8 get_clock_msm(struct rtc_msm_data *data, int addr, struct tm *ct);
 bool put_clock_msm(struct rtc_msm_data *data, int addr, uae_u8 v);
+// A clock restored from a savestate continues from now.
+void rtc_clock_resume(struct rtc_clock_data *clock);
 // Restores the calendar digits of an rtcfile written age_us ago; false if
 // they were the host's calendar (the clock keeps following the host).
 bool rtc_restore_calendar(struct rtc_clock_data *clock, const uae_u8 *digits, bool ricoh, bool mode24, uae_s64 age_us);

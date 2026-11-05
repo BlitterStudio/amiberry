@@ -550,6 +550,7 @@ void devices_restore_start(void)
 	rtc_rebase();
 	restore_audio_start();
 	restore_cia_start();
+	restore_rtc_start();
 	restore_blkdev_start();
 	restore_custom_start();
 	changed_prefs.bogomem.size = 0;

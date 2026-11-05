@@ -182,6 +182,13 @@ static void clock_write_digit(struct rtc_clock_data *clock, int addr, uae_u8 v, 
 	clock->written = true;
 }
 
+// A clock restored from a savestate runs on from now: the time it was
+// saved is its last sample (no jump for the time the snapshot was stored).
+void rtc_clock_resume(struct rtc_clock_data *clock)
+{
+	clock->last_us = rtc_microseconds();
+}
+
 // The calendar digits of an rtcfile (registers 0-12, as write_battclock()
 // stored them age_us ago), restored into a clock that keeps running while
 // the emulator is off, like the real battery-backed chip. A calendar that

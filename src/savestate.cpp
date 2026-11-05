@@ -795,6 +795,8 @@ void restore_state (const TCHAR *filename)
 			end = restore_cia (0, chunk);
 		else if (!_tcscmp (name, _T("CIAB")))
 			end = restore_cia (1, chunk);
+		else if (!_tcscmp (name, _T("RTC ")))
+			end = restore_rtc (chunk);
 		else if (!_tcscmp (name, _T("CHIP")))
 			end = restore_custom (chunk);
 		else if (!_tcscmp (name, _T("CINP")))
@@ -1181,6 +1183,12 @@ int save_state_internal (struct zfile *f, const TCHAR *description, int comp, bo
 	dst = save_cia (1, &len, 0);
 	save_chunk (f, dst, len, _T("CIAB"), 0);
 	xfree (dst);
+
+	dst = save_rtc (&len, NULL);
+	if (dst) {
+		save_chunk (f, dst, len, _T("RTC "), 0);
+		xfree (dst);
+	}
 
 	dst = save_keyboard (&len, NULL);
 	save_chunk (f, dst, len, _T("KEYB"), 0);
