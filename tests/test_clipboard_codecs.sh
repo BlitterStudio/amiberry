@@ -8,12 +8,18 @@ cd "$(dirname "$0")/.."
 out="${TMPDIR:-/tmp}/clipboard_codecs_test.$$"
 trap 'rm -f "$out" "$out.c"' EXIT
 
+# On macOS the ImageIO (TIFF) code is built too.
+frameworks=""
+if [[ "$(uname -s)" == Darwin ]]; then
+	frameworks="-framework ImageIO -framework CoreGraphics -framework CoreFoundation"
+fi
+
 clipboard_compile() {
-	# shellcheck disable=SC2046
+	# shellcheck disable=SC2046,SC2086
 	${CXX:-c++} -std=c++17 -O1 -pthread -Isrc -Isrc/include -Isrc/osdep -Isrc/threaddep \
 		$(pkg-config --cflags sdl3 libpng) -o "$out" tests/clipboard_codecs_test.cpp \
 		src/osdep/clipboard.cpp src/osdep/clipboard_common.cpp src/osdep/clipboard_image.cpp \
-		$(pkg-config --libs sdl3 libpng)
+		$(pkg-config --libs sdl3 libpng) $frameworks
 }
 
 clipboard_compile

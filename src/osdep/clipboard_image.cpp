@@ -8,6 +8,9 @@
  * files with a BITMAPV5HEADER.
  */
 
+// sysconfig.h defines AMIBERRY_MACOS, which selects the ImageIO code below
+// and the matching declarations in clipboard_image.h.
+#include "sysconfig.h"
 #include "clipboard_image.h"
 
 #include <climits>

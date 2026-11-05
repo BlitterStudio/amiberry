@@ -293,6 +293,13 @@ static void bmp_tests()
 	check(clipboard_png_encode(src, &v) && clipboard_png_decode(v.data(), v.size(), &dst) &&
 		dst.width == 5 && dst.height == 3 && dst.pixels == src.pixels, "PNG roundtrip");
 	check(!clipboard_png_decode(v.data(), v.size() / 2, &dst), "truncated PNG");
+#ifdef AMIBERRY_MACOS
+	// ImageIO decoding keeps the top row on top (src's rows all differ).
+	check(clipboard_tiff_encode(src, &v) && clipboard_imageio_decode(v.data(), v.size(), &dst) &&
+		dst.width == 5 && dst.height == 3 && dst.pixels == src.pixels, "TIFF roundtrip through ImageIO");
+	check(clipboard_png_encode(src, &v) && clipboard_imageio_decode(v.data(), v.size(), &dst) &&
+		dst.pixels == src.pixels, "PNG through ImageIO");
+#endif
 }
 
 static void transfer_tests()
