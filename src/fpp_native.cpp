@@ -1852,8 +1852,10 @@ void fp_init_native(void)
 #ifdef SOFTFLOAT_CONVERSIONS
 	set_floatx80_rounding_precision(80, &fs);
 	set_float_rounding_mode(float_round_to_zero, &fs);
+	// the same special-value rules as fp_init_softfloat(): the specials go
+	// to the same softfloat routines
 	set_special_flags(currprefs.fpu_model == 68040 ? cmp_signed_nan :
-		currprefs.fpu_model == 68060 ? infinity_clear_intbit : 0, &fs);
+		currprefs.fpu_model == 68060 ? infinity_clear_intbit : addsub_swap_inf, &fs);
 #endif
 	fpp_print = fp_print;
 	fpp_unset_snan = fp_unset_snan;
