@@ -628,6 +628,9 @@ static void uaesndboard_stop(struct uaesndboard_data *data, struct uaesndboard_s
 	data->stream_stop_count++;
 	s->play = 0;
 	s->next = 0;
+	// the set pointer ($0180) "also clears automatically when stream ends"
+	s->setaddr = 0;
+	put_long_host(s->io + 0x80, 0);
 	data->streammask &= ~(1 << (s - data->stream));
 	audio_enable_stream(false, s->streamid, 0, NULL, NULL);
 	s->streamid = 0;
