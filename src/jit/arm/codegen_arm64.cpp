@@ -1149,6 +1149,10 @@ LOWFUNC(NONE,NONE,2,raw_fp_fscc_ri,(RW4 d, int cc))
 			CLEAR_LOW8_xx(d, d);
 			break;
 
+		case NATIVE_CC_AL: // FST/ST: always set (emitted nothing before)
+			SET_LOW8_xx(d, d);
+			break;
+
 		case NATIVE_CC_NE: // Set if not equal
 			CSETM_wc(REG_WORK1, NATIVE_CC_NE);
 			BFXIL_xxii(d, REG_WORK1, 0, 8);
