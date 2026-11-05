@@ -445,6 +445,32 @@ static void sharing_tests()
 	got = guest_receive();
 	check(clipboard_decode_bitmap(got.data(), (uae_u32)got.size(), &received) &&
 		received.pixels == std::vector<uae_u32>({ 0x654321, 0x0a0b0c }), "rebooted guest gets the unchanged host image");
+
+	// The startup size limit applies only to the snapshot taken when the
+	// guest starts: after an empty one, a later 100x100 image (over the
+	// startup limit, under the normal one) still reaches the guest.
+	clipboard_reset();
+	amiga_clipboard_task_start(NULL, CLIP_DATA);
+	amiga_clipboard_init(NULL);
+	check(clipboard_host_snapshot_wanted(), "guest asks for the host clipboard");
+	clipboard_set_host_content(clipboard_content());
+	check(guest_receive().empty(), "empty host clipboard sends nothing");
+	clipboard_content large;
+	large.type = clipboard_content::kind::bitmap;
+	large.bitmap.width = 100; large.bitmap.height = 100; large.bitmap.pixels.assign(10000, 0x204060);
+	clipboard_set_host_content(std::move(large));
+	got = guest_receive();
+	check(clipboard_decode_bitmap(got.data(), (uae_u32)got.size(), &received) && received.width == 100,
+		"image copied after an empty startup snapshot uses the normal limit");
+	clipboard_reset();
+	amiga_clipboard_task_start(NULL, CLIP_DATA);
+	amiga_clipboard_init(NULL);
+	check(clipboard_host_snapshot_wanted(), "guest asks for the host clipboard again");
+	clipboard_content large_at_start;
+	large_at_start.type = clipboard_content::kind::bitmap;
+	large_at_start.bitmap.width = 100; large_at_start.bitmap.height = 100; large_at_start.bitmap.pixels.assign(10000, 0x204060);
+	clipboard_set_host_content(std::move(large_at_start));
+	check(guest_receive().empty(), "startup snapshot keeps the startup limit");
 	clipboard_reset();
 }
 

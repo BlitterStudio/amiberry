@@ -24,15 +24,16 @@ extern bool filesys_heartbeat(void);
 
 static clipboard_transfer transfer;
 static bool clip_disabled;
-// The next offer to the guest is the first one after its clipboard task
-// started, which uses the smaller initial size limit.
-static bool initial_offer;
-
 static std::mutex content_mutex;
 // What the host clipboard holds, kept for paste-to-keyboard.
 static clipboard_content host_content;
 // host_content still has to be offered to the guest.
 static bool host_content_pending;
+// host_content answers the snapshot taken when the guest's clipboard task
+// started, which is offered with the smaller startup size limits. Content
+// the host reports later always gets the normal limits.
+static bool host_content_initial;
+static bool snapshot_answer_due;
 // What the guest's clipboard holds as far as this side knows: the last
 // content offered to it or copied there. Host content equal to it is not
 // offered, so the guest's own copies are not sent back to it.
@@ -60,6 +61,8 @@ void clipboard_set_host_content(clipboard_content &&content)
 	host_content = std::move(content);
 	host_content_pending = host_content.type != clipboard_content::kind::none
 		&& !same_content(host_content, guest_clipboard);
+	host_content_initial = snapshot_answer_due;
+	snapshot_answer_due = false;
 }
 
 bool clipboard_take_guest_content(clipboard_content *content)
@@ -82,6 +85,9 @@ bool clipboard_host_snapshot_wanted()
 	std::lock_guard<std::mutex> lock(content_mutex);
 	const bool wanted = host_snapshot_wanted;
 	host_snapshot_wanted = false;
+	// The main thread reads the host clipboard next; that is the answer.
+	if (wanted)
+		snapshot_answer_due = true;
 	return wanted;
 }
 
@@ -136,8 +142,7 @@ static void offer_host_content()
 			return;
 		host_content_pending = false;
 		content = host_content;
-		initial = initial_offer;
-		initial_offer = false;
+		initial = host_content_initial;
 	}
 	const size_t limit = initial ? CLIP_SIZE_LIMIT_INIT : CLIP_SIZE_LIMIT;
 	if (content.type == clipboard_content::kind::text) {
@@ -188,7 +193,8 @@ void clipboard_reset()
 	guest_clipboard = clipboard_content();
 	host_content_pending = false;
 	host_snapshot_wanted = false;
-	initial_offer = false;
+	snapshot_answer_due = false;
+	host_content_initial = false;
 }
 
 uaecptr amiga_clipboard_proc_start(TrapContext *ctx)
@@ -223,7 +229,7 @@ void amiga_clipboard_init(TrapContext *ctx)
 	guest_clipboard = clipboard_content();
 	host_content_pending = false;
 	host_snapshot_wanted = true;
-	initial_offer = true;
+	snapshot_answer_due = false;
 }
 
 void amiga_clipboard_got_data(TrapContext *ctx, uaecptr data, uae_u32 size, uae_u32 actual)
