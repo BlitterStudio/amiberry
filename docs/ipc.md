@@ -58,6 +58,96 @@ in the same emulated frame. A controller that needs the Amiga to observe a
 state, such as a key or mouse button being held down, must wait between the
 press and the release instead of relying on one request per frame.
 
+## Joystick and CD32 input
+
+```text
+SEND_JOYSTICK <port> <directions> <buttons>
+```
+
+Send exactly three tab-separated **unsigned decimal integers** (no signs,
+hexadecimal notation, whitespace, or trailing fields). Success is `OK`;
+invalid arguments return `ERROR` with a diagnostic and leave input unchanged.
+
+`port` is an **Amiga port**, not an SDL/host device index:
+
+| Port | Destination |
+| --- | --- |
+| 0 | First Amiga connector, normally the mouse; JOY0DAT, CIA-A fire bit 6 |
+| 1 | Second Amiga connector, normally the joystick; JOY1DAT, CIA-A fire bit 7 |
+| 2 | Parallel joystick adapter, first joystick |
+| 3 | Parallel joystick adapter, second joystick |
+
+`directions` is a complete bitmask: **1=left, 2=right, 4=up, 8=down**.
+Zero is centered; diagonals are sums, for example 5=up-left. Values outside
+0–15 and opposite pairs (left+right or up+down) are errors.
+
+`buttons` is a complete pressed-button bitmask:
+
+| Value | Standard joystick | CD32 pad |
+| --- | --- | --- |
+| 1 | Primary fire | Red |
+| 2 | Secondary fire | Blue |
+| 4 | Not supported | Green |
+| 8 | Not supported | Yellow |
+| 16 | Not supported | Reverse / rewind |
+| 32 | Not supported | Forward |
+| 64 | Not supported | Play / pause |
+
+Zero releases all buttons. Values outside 0–127 are errors. Values above 3
+require an active CD32 pad on port 0 or 1; parallel ports do not support CD32.
+The adapter's secondary fire uses its existing shared spare input line.
+
+The command drives the core's normal joystick direction counters and button
+state. CD32 buttons pass through the existing CIA clock/POT serial shifter;
+they are not substituted into guest register reads. Red and blue also work
+as fire buttons in CD32 two-button mode. Configure the destination with
+`SET_JOYPORT_MODE <port> 3` (joystick), `4` (gamepad), or `7` (CD32); wait for
+`GET_JOYPORT_MODE` to report the new mode before injecting. An explicit mode
+works even with `joyportN=none`; no host controller or keyboard layout is
+required. The command itself does not change modes, device assignments,
+custom mappings, or autofire settings.
+
+Each connection owns an independent state for each port. A request replaces
+that connection's entire state on that port only. Keep the connection open
+while holding input: closing it (including a send-side shutdown once replies
+are drained) releases its injected state. Send
+`SEND_JOYSTICK <port> 0 0` for an explicit release. Emulator resets and input
+configuration reinitialization discard injected holds, including their
+ownership, so later disconnections cannot restore stale presses.
+Rewind/input-recorder snapshots retain legacy physical input state but exclude
+connection-owned holds; restoring one cannot convert injected buttons into
+permanently held physical buttons.
+
+Physical/keyboard-mapped input and other connections are combined with
+injected input, not replaced: releasing one source cannot clear another
+source's hold. Across sources, opposing directions follow the core's normal
+right/down priority. A controller needing an otherwise released port should
+disable physical/keyboard mappings for that port. Commands can run in the
+same emulated frame, so wait between press and release for guest observation.
+
+Example on one persistent connection (fields below are shown with spaces;
+send tabs on the wire):
+
+```text
+SET_JOYPORT_MODE 1 7
+GET_JOYPORT_MODE 1
+# Wait for OK 7 cd32_pad before proceeding.
+SEND_JOYSTICK 1 4 1
+# Wait for the guest to observe up + red.
+SEND_JOYSTICK 1 0 0
+```
+
+Regression checks: `sh tests/test_ipc_joystick.sh` exercises the production
+parser, all masks/ports, CD32 bit mapping, physical-source merging, reset,
+release ownership, and extracted production recorder save/restore paths
+(including negative mutations) without an emulator build. Set `AMIBERRY_BIN` to a
+newly built executable to additionally exercise real JOYDAT, CIA, POT and
+CD32 serial reads over IPC:
+
+```sh
+AMIBERRY_BIN="$PWD/build/amiberry" sh tests/test_ipc_joystick.sh
+```
+
 ## Screenshot-driven GUI automation
 
 The safe controller sequence is:

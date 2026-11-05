@@ -2772,6 +2772,7 @@ gen_opcode(unsigned int opcode)
 			if (curi->smode != immi) {
 				comprintf("\tsetcc_for_cntzero(tmpcnt, cdata, odata, %d, %d, 1);\n", curi->size == sz_byte ? 7 : curi->size == sz_word ? 15 : 31, curi->size);
 			} else {
+				comprintf("\tclear_overflow();\n");
 				comprintf("\tduplicate_carry();\n");
 			}
 			comprintf("if (!(needed_flags & FLAG_CZNV)) dont_care_flags();\n");

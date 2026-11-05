@@ -2502,6 +2502,51 @@ MIDFUNC(5,call_r_11,(W4 out1, RR4 r, RR4 in1, IMM osize, IMM isize))
 #endif
 
 #if defined(UAE)
+MIDFUNC(4,fpu_native_call,(IMM instruction, RR4 ea, IMM pc, IMM nextpc))
+{
+	clobber_flags();
+	remove_all_offsets();
+	// The helper can read/write any architectural register (including EA
+	// updates and conversion destinations), not just caller-saved registers.
+	for (int i = 0; i < 16; ++i)
+		flush_reg(i);
+	ea = readreg_specific(ea, 4, REG_PAR2);
+	prepare_for_call_1();
+#if USE_NORMAL_CALLING_CONVENTION
+	raw_push_l_r(ea);
+	raw_push_l_i(instruction);
+#endif
+	unlock2(ea);
+	prepare_for_call_2();
+	for (int i = 0; i < 16; ++i) {
+		if (isinreg(i))
+			disassociate(i);
+		live.state[i].val = 0;
+		set_status(i, INMEM);
+	}
+	if (isinreg(PC_P))
+		disassociate(PC_P);
+	live.state[PC_P].val = 0;
+	set_status(PC_P, INMEM);
+	raw_mov_l_ri(REG_PAR1, instruction);
+	raw_mov_l_mi((uintptr)&regs.instruction_pc, pc);
+	raw_mov_l_mi((uintptr)&regs.pc, nextpc);
+	raw_mov_w_mi((uintptr)&regs.opcode, instruction >> 16);
+	raw_mov_w_mi((uintptr)&regs.ir, instruction >> 16);
+	raw_dec_sp(STACK_SHADOW_SPACE);
+	compemu_raw_call((uintptr)fpuop_arithmetic_jit);
+	raw_inc_sp(STACK_SHADOW_SPACE);
+#if USE_NORMAL_CALLING_CONVENTION
+	raw_inc_sp(8);
+#endif
+	raw_cmp_b_mi((uintptr)&regs.fp_exception, 0);
+	raw_jz_b_oponly();
+	uae_u8 *resume = get_target();
+	skip_byte();
+	compemu_raw_jmp((uintptr)popall_do_nothing);
+	*resume = get_target() - (resume + 1);
+}
+
 MIDFUNC(5,call_r_02,(RR4 r, RR4 in1, RR4 in2, IMM isize1, IMM isize2))
 {
 	clobber_flags();

@@ -198,6 +198,7 @@ DECLARE_MIDFUNC(end_needflags(void));
 DECLARE_MIDFUNC(make_flags_live(void));
 DECLARE_MIDFUNC(call_r_11(RR4 r, W4 out1, RR4 in1, IMM osize, IMM isize));
 DECLARE_MIDFUNC(call_r_02(RR4 r, RR4 in1, RR4 in2, IMM isize1, IMM isize2));
+DECLARE_MIDFUNC(fpu_native_call(IMM instruction, RR4 ea, IMM pc, IMM nextpc));
 DECLARE_MIDFUNC(forget_about(W4 r));
 DECLARE_MIDFUNC(nop(void));
 

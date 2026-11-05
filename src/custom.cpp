@@ -31,6 +31,7 @@
 #include "inputdevice.h"
 #ifdef AMIBERRY
 #include "amiberry_cursor.h"
+#include "amiberry_frame_pacing.h"
 #include "amiberry_input_helpers.h"
 #endif
 #ifdef SERIAL_PORT
@@ -4849,6 +4850,26 @@ static bool framewait(void)
 			t = read_processor_time() - start;
 		}
 		if (!currprefs.cpu_thread) {
+#ifdef AMIBERRY
+			static amiberry_frame_pacer pacer;
+			while (!currprefs.turbo_emulation) {
+				if (!pacer.sleep_us(-rpt_vsync(clockadjust) * 1000000 / syncbase))
+					break;
+				const frame_time_t sleep_start = read_processor_time();
+				rtg_vsynccheck();
+				maybe_process_pull_audio();
+				const frame_time_t remaining = -rpt_vsync(clockadjust);
+				const int delay_us = pacer.sleep_us(remaining * 1000000 / syncbase);
+				if (!delay_us)
+					break;
+				const int result = delay_us == 1000
+					? cpu_sleep_millis(1) : target_sleep_nanos(delay_us);
+				pacer.observe_sleep(delay_us,
+					(read_processor_time() - sleep_start) * 1000000 / syncbase);
+				if (result < 0)
+					break;
+			}
+#else
 			while (!currprefs.turbo_emulation) {
 				float v = rpt_vsync(clockadjust) / (syncbase / 1000.0f);
 				if (v >= -FRAMEWAIT_MIN_MS)
@@ -4858,6 +4879,7 @@ static bool framewait(void)
 				if (cpu_sleep_millis(1) < 0)
 					break;
 			}
+#endif
 
 			while (rpt_vsync(clockadjust) < 0) {
 				rtg_vsynccheck();
@@ -7791,12 +7813,15 @@ static int REGPARAM2 custom_wput_1(uaecptr addr, uae_u32 value, int noget)
 		ret = custom_wput_agnus(addr, value, noget);
 	}
 	if (!(noget & 0x8000) && (c & 2)) {
-		uae_u32 v = value;
+		uae_u64 v = value;
 		if (!currprefs.cpu_memory_cycle_exact || custom_fastmode > 0) {
+			if (aga_mode && (c & 0x30)) {
+				v = wordto64convert((c & 0x10) ? fetchmode_fmode_bpl : fetchmode_fmode_spr, value);
+			}
 			// fast CPU RGA pipeline, allow multiple register writes per CCK
 			if (!denise_update_reg_queued(addr, v, rga_denise_cycle_line)) {
 				// if full: direct write
-				denise_update_reg_queue(addr, value, rga_denise_cycle_line);
+				denise_update_reg_queue(addr, v, rga_denise_cycle_line);
 			}
 		} else {
 			int reg = addr & 0x1fe;

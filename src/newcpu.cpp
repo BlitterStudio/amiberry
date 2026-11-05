@@ -2492,11 +2492,7 @@ static void MakeFromSR_x(int t0trace)
 			}
 		} else {
 			if (regs.ipl_pin <= regs.intmask && regs.ipl_pin > newimask) {
-				if (!currprefs.cachesize) {
-					set_special(SPCFLAG_INT);
-				} else {
-					set_special(SPCFLAG_DOINT);
-				}
+				set_special(SPCFLAG_INT);
 			}
 		}
 		regs.intmask = newimask;
@@ -2980,9 +2976,10 @@ kludge_me_do:
 #endif
 
 // 68030 MMU
-static void Exception_mmu030 (int nr, uaecptr oldpc)
+static void Exception_mmu030 (int nr)
 {
 	uae_u32 currpc = m68k_getpc (), newpc;
+	uaecptr oldpc = regs.instruction_pc;
 	int interrupt, vector_nr = nr;
 
 	interrupt = nr >= 24 && nr < 24 + 8;
@@ -3517,7 +3514,7 @@ static void ExceptionX (int nr, uaecptr address, uaecptr oldpc)
 		}
 		if (currprefs.mmu_model) {
 			if (currprefs.cpu_model == 68030)
-				Exception_mmu030(nr, m68k_getpc());
+				Exception_mmu030(nr);
 			else
 				Exception_mmu(nr, m68k_getpc());
 		} else {

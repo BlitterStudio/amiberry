@@ -110,6 +110,11 @@ typedef uae_u8 flagtype;
 
 #ifdef FPUEMU
 
+#if !defined(USE_LONG_DOUBLE) && (defined(CPU_i386) || defined(CPU_x86_64)) && defined(__LDBL_MANT_DIG__) && __LDBL_MANT_DIG__ == 64
+// The native core and x87 JIT can retain the complete MC6888x register format.
+#define USE_LONG_DOUBLE
+#endif
+
 #ifdef USE_LONG_DOUBLE
 typedef long double fptype;
 #else
@@ -805,6 +810,7 @@ extern void mmu_op (uae_u32, uae_u32);
 extern bool mmu_op30 (uaecptr, uae_u32, uae_u16, uaecptr);
 
 extern void fpuop_arithmetic(uae_u32, uae_u16);
+extern void REGPARAM3 fpuop_arithmetic_jit(uae_u32 instruction, uaecptr ea);
 extern void fpuop_dbcc(uae_u32, uae_u16);
 extern void fpuop_scc(uae_u32, uae_u16);
 extern void fpuop_trapcc(uae_u32, uaecptr, uae_u16);

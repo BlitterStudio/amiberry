@@ -6,6 +6,7 @@
 #ifdef USE_IPC_SOCKET
 
 #include "amiberry_ipc.h"
+#include "amiberry_ipc_joystick.h"
 #include "settings/amiberry_actions.h"
 #include "settings/amiberry_media.h"
 #include "settings/amiberry_settings.h"
@@ -78,6 +79,8 @@ static bool ipc_active = false;
 static bool ipc_quit_requested = false;
 static std::mutex ipc_handle_mutex;
 static AmiberryGuiInputConfigState gui_input_config_state;
+static uae_u64 joystick_client_id;
+static uae_u64 next_input_client_id;
 
 // Command handler type
 typedef std::function<std::string(const std::vector<std::string>&)> CommandHandler;
@@ -1336,6 +1339,19 @@ static std::string HandleSetMouseSpeed(const std::vector<std::string>& args)
 	changed_prefs.input_mouse_speed = speed;
 	set_config_changed();
 
+	return make_response(true);
+}
+
+static std::string HandleSendJoystick(const std::vector<std::string>& args)
+{
+	if (!currprefs.ipc_disable_logging)
+		std::cout << "IPC: Received SEND_JOYSTICK" << std::endl;
+	JoystickRequest request;
+	if (const char* error = parse_joystick_request(args, request))
+		return make_response(false, {error});
+	if (request.buttons > 3 && !inputdevice_joystick_is_cd32(request.port))
+		return make_response(false, {"CD32 buttons require a CD32 pad on port 0 or 1"});
+	inputdevice_set_joystick_state(joystick_client_id, request.port, request.directions, request.buttons);
 	return make_response(true);
 }
 
@@ -3494,6 +3510,7 @@ static std::string HandleHelp(const std::vector<std::string>& args)
 	commands.emplace_back("FRAME_ADVANCE [n], SET_MOUSE_SPEED <10-200>, GET_MOUSE_SPEED");
 	commands.emplace_back("TOGGLE_MOUSE_GRAB");
 	commands.emplace_back("SEND_KEY <code> <state>, SEND_MOUSE <dx> <dy> <buttons>");
+	commands.emplace_back("SEND_JOYSTICK <port 0-3> <directions 0-15> <buttons 0-127>");
 	commands.emplace_back("SEND_MOUSE_ABS <x> <y> <buttons> (requires tablet_mode mousehack or real)");
 	commands.emplace_back("--- GUI automation controller commands (prefer MCP/HTTP) ---");
 	commands.emplace_back("SCREENSHOT <path> ACTIONABLE (SDL/OpenGL; unavailable on Vulkan)");
@@ -4259,6 +4276,7 @@ static void InitHandlers()
 	command_handlers[CMD_FRAME_ADVANCE] = HandleFrameAdvance;
 	command_handlers[CMD_SET_MOUSE_SPEED] = HandleSetMouseSpeed;
 	command_handlers[CMD_SEND_MOUSE] = HandleSendMouse;
+	command_handlers[CMD_SEND_JOYSTICK] = HandleSendJoystick;
 	command_handlers[CMD_SEND_MOUSE_ABS] = HandleSendMouseAbs;
 	command_handlers[CMD_GET_GUI_AUTOMATION_STATE] = HandleGetGuiAutomationState;
 	command_handlers[CMD_SET_GUI_AUTOMATION_CONFIG] = HandleSetGuiAutomationConfig;
@@ -4370,7 +4388,7 @@ static void InitHandlers()
 }
 
 // Process a single command line
-static std::string ProcessCommand(const std::string& line)
+static std::string ProcessCommand(const std::string& line, uae_u64 client_id)
 {
 	// Parse: COMMAND\tARG1\tARG2...
 	std::vector<std::string> parts = split(line, '\t');
@@ -4387,15 +4405,16 @@ static std::string ProcessCommand(const std::string& line)
 	// would lose its value. An empty string is a real settings value (for
 	// example ppc_model= turns PPC emulation off, an empty board rom_file a
 	// board without its ROM, an empty custom control its default), so keep
-	// it for those commands only; every other command parses exactly as
-	// before.
+	// it for those commands and the strict-arity joystick command only;
+	// every other command parses exactly as before.
 	if ((cmd == "SETTINGS_SET" || cmd == "SETTINGS_BOARD_SET" || cmd == "SETTINGS_CUSTOM_CONTROL_SET"
-		|| cmd == "HOST_SETTINGS_SET")
+		|| cmd == "HOST_SETTINGS_SET" || cmd == CMD_SEND_JOYSTICK)
 		&& !line.empty() && line.back() == '\t')
 		args.emplace_back();
 
 	const auto it = command_handlers.find(cmd);
 	if (it != command_handlers.end()) {
+		joystick_client_id = client_id;
 		return it->second(args);
 	}
 
@@ -4476,6 +4495,7 @@ struct IPCClient {
 	std::string pending; // received bytes not handled yet
 	std::string output;  // reply bytes the connection has not accepted yet
 	bool eof;            // the client has stopped sending
+	uae_u64 input_id = ++next_input_client_id;
 };
 
 static std::vector<IPCClient> ipc_clients;
@@ -4542,6 +4562,7 @@ static bool ConnIsOpen(const IPCClient& client)
 
 static void CloseClient(IPCClient& client)
 {
+	inputdevice_release_joystick(client.input_id);
 	client.conn.reset();
 }
 
@@ -4771,6 +4792,7 @@ static bool ConnIsOpen(const IPCClient& client)
 
 static void CloseClient(IPCClient& client)
 {
+	inputdevice_release_joystick(client.input_id);
 	if (client.conn >= 0) {
 		close(client.conn);
 		client.conn = -1;
@@ -4991,7 +5013,7 @@ static bool ServiceClient(IPCClient& client, std::chrono::steady_clock::time_poi
 			continue;
 		}
 
-		client.output += ProcessCommand(line);
+		client.output += ProcessCommand(line, client.input_id);
 		++processed;
 		if (ipc_quit_requested) {
 			FlushBeforeQuit(client);

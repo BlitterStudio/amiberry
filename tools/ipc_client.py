@@ -227,6 +227,7 @@ def print_help():
   LIST_CONFIGS              - List available config files
 
 === Input ===
+  SEND_JOYSTICK <port> <dirs> <buttons> - Full joystick state; see docs/ipc.md
   SEND_KEY <keycode> <state>- Send key (state: 0=release, 1=press); Amiga keys
                               (0x00-0x7F) need a running emulation to press
   SEND_MOUSE <dx> <dy> <btn>- Send mouse input (btn: bit0=L, bit1=R, bit2=M)

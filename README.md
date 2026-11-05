@@ -159,6 +159,31 @@ See the [build guide](https://github.com/BlitterStudio/amiberry/wiki/Compile-fro
 
 Desktop builds enable SDL3-backed genlock video and camera input by default (`USE_VIDEOGRAB`). `USE_FFMPEG` independently enables ZZ9000 and genlock media decoding when FFmpeg 5.1 or newer development files are available; it requires libavformat 59.27+, libavcodec 59.37+, libavutil 57.28+, libswresample 4.7+, and libswscale 6.7+. `USE_WEBP` enables still and animated WebP decoding when libwebp and libwebpdemux development files are available.
 
+### Emulator regression checks
+
+ROM-free regression fixtures compile production functions to check CPU flags
+and exception frames, coherent CIA timer reads, event dispatch, 68030 ATC and
+locked accesses, queued sprite writes, AGA subpixel collisions, and writable
+RTC counters, calendar, hour modes and sub-frame carry/BUSY timing.
+The x86 flag-emitter check runs only on x86-64 hosts.
+
+Run `bash tests/test_frame_pacing.sh` for software frame-pacing checks, including
+adaptive scheduler-overshoot margins and PAL/NTSC deadline boundaries.
+
+RTC access bursts interpolate from host time using chipset cycles, so host
+frame waits cannot hide the MSM6242B's 244-microsecond BUSY pulse from a polling
+guest. Idle gaps of one second, reset, state restore, pause/resume and warp
+transitions re-anchor to host time. Warp retains a wall-clock RTC.
+
+FPU exception, stack-frame and compiler checks run with
+`python3 tests/fpu_exception_regressions_test.py`,
+`python3 tests/fpu_frame_regressions_test.py` and
+`python3 tests/fpu_jit_compiler_regressions_test.py`.
+
+Interpreter handlers and x86 JIT translators are checked in. After changing
+`src/gencpu.cpp` or `src/jit/x86/gencomp.cpp`, regenerate their outputs;
+CMake does not run these generators automatically.
+
 ## Contributing
 
 Contributions are welcome — bug reports, feature suggestions, and pull requests all help make Amiberry better.

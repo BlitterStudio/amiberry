@@ -423,7 +423,7 @@ void MISC_handler(void)
 	mintime = EVT_MAX;
 	for (int i = 0; i < event2max; i++) {
 		ev2 *e = &eventtab2[i];
-		if (e->evtime == ct) {
+		if (e->active && e->evtime == ct) {
 			e->active = false;
 			event2cnt++;
 			e->handler(e->data);

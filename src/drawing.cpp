@@ -15,7 +15,6 @@
 #include "sysdeps.h"
 
 #include <algorithm>
-#include <atomic>
 #include <cassert>
 #include <cmath>
 #include <cstdint>
@@ -27,6 +26,7 @@
 #include "custom.h"
 #include "xwin.h"
 #include "gui.h"
+#include <atomic>
 #include "picasso96.h"
 #include "drawing.h"
 #include "savestate.h"
@@ -123,7 +123,8 @@ struct denise_rga_queue
 	int erase;
 	bool finalseg;
 	struct linestate *ls;
-	uae_u16 reg, val;
+	uae_u16 reg;
+	uae_u64 val;
 };
 
 static volatile uae_atomic rga_queue_read, rga_queue_write;
@@ -136,7 +137,7 @@ static bool full_line_draw;
 
 static void denise_handle_quick_strobe(uae_u16 strobe, int offset, int vpos);
 static void draw_denise_vsync(int);
-static void denise_update_reg(uae_u16 reg, uae_u16 v, uae_u32 linecnt);
+static void denise_update_reg(uae_u16 reg, uae_u64 v, uae_u32 linecnt);
 static void draw_denise_line(int gfx_ypos, nln_how how, uae_u32 linecnt, int startpos, int startcycle, int endcycle, int skip_start, int skip_end, int dtotal,
 	int calib_start, int calib_len, bool lol, int hdelay, bool blanked, uae_s8 borderline, bool finalseg, struct linestate *ls);
 
@@ -150,6 +151,22 @@ static uae_u16 spr_unalign_val[2];
 static uae_u64 spr_unalign_val64[2];
 static void set_strlong(void);
 
+static void flush_sprite_writes(void)
+{
+	if (spr_unalign_reg[0]) {
+		sprwrite(spr_unalign_reg[0] - 0x140, spr_unalign_val[0]);
+		spr_unalign_reg[0] = 0;
+	}
+	if (spr_unalign_reg[1]) {
+		if (aga_mode) {
+			sprwrite_64(spr_unalign_reg[1] - 0x140, spr_unalign_val64[1]);
+		} else {
+			sprwrite(spr_unalign_reg[1] - 0x140, spr_unalign_val[1]);
+		}
+		spr_unalign_reg[1] = 0;
+	}
+}
+
 static void quick_denise_rga(uae_u32 linecnt, int startpos, int endpos)
 {
 	int pos = startpos;
@@ -159,21 +176,8 @@ static void quick_denise_rga(uae_u32 linecnt, int startpos, int endpos)
 		struct denise_rga *rd = &rga_denise[pos];
 		if (rd->line == linecnt) {
 			if (rd->rga != 0x1fe && (rd->rga < 0x38 || rd->rga >= 0x40)) {
-				denise_update_reg(rd->rga, rd->v, linecnt);
-				if (spr_unalign_reg[0]) {
-					int sreg = spr_unalign_reg[0] - 0x140;
-					sprwrite(sreg, spr_unalign_val[0]);
-					spr_unalign_reg[0] = 0;
-				}
-				if (spr_unalign_reg[1]) {
-					int sreg = spr_unalign_reg[1] - 0x140;
-					if (aga_mode) {
-						sprwrite_64(sreg, spr_unalign_val64[1]);
-					} else {
-						sprwrite(sreg, spr_unalign_val[1]);
-					}
-					spr_unalign_reg[1] = 0;
-				}
+				denise_update_reg(rd->rga, rd->v64, linecnt);
+				flush_sprite_writes();
 			}
 			if (rd->rga == 0x03e) {
 				set_strlong();
@@ -435,7 +439,7 @@ static int doublescan2xx;
 
 uae_sem_t gui_sem;
 
-static volatile int rga_denise_fast_read, rga_denise_fast_write;
+static std::atomic<int> rga_denise_fast_read{0}, rga_denise_fast_write{0};
 #define DENISE_RGA_SLOT_FAST_TOTAL 1024
 static struct denise_rga rga_denise_fast[DENISE_RGA_SLOT_FAST_TOTAL];
 
@@ -2932,6 +2936,13 @@ static void calchdiw(void)
 	setup_brdblank();
 }
 
+static bool aga_subpixel_collisions(void)
+{
+	return aga_mode && currprefs.collision_level > 0 && hresolution < RES_SUPERHIRES
+		&& (denise_spr_nr_armed || denise_spr_nr_armeds || denise_res > hresolution
+			|| ((bplcon1_denise >> 8) & 0x33));
+}
+
 static void spr_nearest(void)
 {
 	int min = 0x7fffffff;
@@ -2969,7 +2980,7 @@ static void spr_nearest(void)
 	}
 	denise_spr_nearestcnt = min - 2;
 	if (aga_mode && denise_spr_nearestcnt > 0 && denise_spr_nearestcnt < 0x7fffffff) {
-		denise_spr_nearestcnt <<= hresolution;
+		denise_spr_nearestcnt <<= aga_subpixel_collisions() ? RES_SUPERHIRES : hresolution;
 	}
 }
 
@@ -3317,11 +3328,13 @@ static void update_bplcon1(void)
 
 	int bplcon1_hr_mask = 0;//3 >> denise_res;
 
-	bplcon1_shift_full[0] &= ~mask;
-	bplcon1_shift_full[1] &= ~mask;
+	if (!aga_mode) {
+		bplcon1_shift_full[0] &= ~mask;
+		bplcon1_shift_full[1] &= ~mask;
+	}
 
-	bplcon1_shift_full_masked[0] = bplcon1_shift_full[0] & ~bplcon1_hr_mask;
-	bplcon1_shift_full_masked[1] = bplcon1_shift_full[1] & ~bplcon1_hr_mask;
+	bplcon1_shift_full_masked[0] = bplcon1_shift_full[0] & ~(bplcon1_hr_mask | mask);
+	bplcon1_shift_full_masked[1] = bplcon1_shift_full[1] & ~(bplcon1_hr_mask | mask);
 
 	if (wasoddeven != (bplcon1_shift_full[0] != bplcon1_shift_full[1])) {
 		lts_request = true;
@@ -3867,7 +3880,8 @@ void denise_reset(bool hard)
 	denise_cycle_half = 0;
 	denise_strlong = false;
 	denise_strlong_fast = false;
-	rga_denise_fast_read = rga_denise_fast_write = 0;
+	rga_denise_fast_read.store(0, std::memory_order_relaxed);
+	rga_denise_fast_write.store(0, std::memory_order_relaxed);
 	rga_queue_write = rga_queue_read = 0;
 	denise_lol_shift_enable = false;
 	denise_lol_shift_prev = 0;
@@ -4577,8 +4591,8 @@ static void expand_drga(struct denise_rga *rd)
 static void flush_fast_rga(uae_u32 linecnt)
 {
 	// extract fast CPU RGA pipeline
-	while (rga_denise_fast_write != rga_denise_fast_read) {
-		int rp = rga_denise_fast_read;
+	int rp = rga_denise_fast_read.load(std::memory_order_relaxed);
+	while (rga_denise_fast_write.load(std::memory_order_acquire) != rp) {
 		struct denise_rga *rd = &rga_denise_fast[rp];
 		// Any RGA queued accesses must be processed first
 		if (linecnt <= rd->line) {
@@ -4586,10 +4600,11 @@ static void flush_fast_rga(uae_u32 linecnt)
 		}
 		expand_drga_early2x(rd);
 		expand_drga_early(rd);
+		flush_sprite_writes();
 		expand_drga(rd);
 		rp++;
 		rp &= DENISE_RGA_SLOT_FAST_TOTAL - 1;
-		rga_denise_fast_read = rp;
+		rga_denise_fast_read.store(rp, std::memory_order_release);
 	}
 }
 
@@ -4658,18 +4673,17 @@ static void do_ecs_unaligned1(void)
 	}
 }
 
-static void denise_update_reg(uae_u16 reg, uae_u16 v, uae_u32 linecnt)
+static void denise_update_reg(uae_u16 reg, uae_u64 v, uae_u32 linecnt)
 {
 	// makes sure fast queue is flushed first
-	if (rga_denise_fast_write != rga_denise_fast_read) {
-		flush_fast_rga(linecnt);
-	}
+	flush_fast_rga(linecnt);
 
 	struct denise_rga dr = { 0 };
 	dr.rga = reg;
-	dr.v = v;
+	dr.v64 = v;
 	expand_drga_early2x(&dr);
 	expand_drga_early(&dr);
+	flush_sprite_writes();
 	expand_drga(&dr);
 	// handle all queued writes immediately
 	update_bplcon1();
@@ -5486,19 +5500,19 @@ static void denise_handle_quick_strobe(uae_u16 strobe, int offset, int vpos)
 	}
 }
 
-bool denise_update_reg_queued(uae_u16 reg, uae_u16 v, uae_u32 linecnt)
+bool denise_update_reg_queued(uae_u16 reg, uae_u64 v, uae_u32 linecnt)
 {
-	int wp = rga_denise_fast_write;
-	if (((wp + 1) & (DENISE_RGA_SLOT_FAST_TOTAL - 1)) == rga_denise_fast_read) {
+	int wp = rga_denise_fast_write.load(std::memory_order_relaxed);
+	if (((wp + 1) & (DENISE_RGA_SLOT_FAST_TOTAL - 1)) == rga_denise_fast_read.load(std::memory_order_acquire)) {
 		return false;
 	}
 	struct denise_rga *r = &rga_denise_fast[wp];
 	r->rga = reg;
-	r->v = v;
+	r->v64 = v;
 	r->line = linecnt;
 	wp++;
 	wp &= DENISE_RGA_SLOT_FAST_TOTAL - 1;
-	rga_denise_fast_write = wp;
+	rga_denise_fast_write.store(wp, std::memory_order_release);
 	return true;
 }
 
@@ -5513,9 +5527,7 @@ static void do_denise_cck(int linecnt, int startpos, int i)
 	denise_hcounter_new = denise_hcounter + 2;
 	denise_hcounter_new &= 511;
 
-	if (rga_denise_fast_write != rga_denise_fast_read) {
-		flush_fast_rga(linecnt);
-	}
+	flush_fast_rga(linecnt);
 
 	struct denise_rga *rd;
 
@@ -5704,6 +5716,11 @@ static inline __attribute__((always_inline)) bool checkhorizontal1_aga(int cnt, 
 STATIC_INLINE bool checkhorizontal1_aga(int cnt, int cnt_next, int h)
 #endif
 {
+	if (aga_subpixel_collisions()) {
+		denise_cycle_half = h;
+		lts_unaligned_aga(cnt, cnt_next, h);
+		return true;
+	}
 #if !DEBUG_ALWAYS_UNALIGNED_DRAWING
 	if (denise_hevent_valid && aga_unalign0 <= 0 && aga_unalign1 <= 0
 		&& static_cast<unsigned int>(cnt) < DENISE_HEVENT_POSITIONS
@@ -5723,6 +5740,10 @@ static bool checkhorizontal1_aga(int cnt, int cnt_next, int h)
 #endif
 {
 	denise_cycle_half = h;
+	if (aga_subpixel_collisions()) {
+		lts_unaligned_aga(cnt, cnt_next, h);
+		return true;
+	}
 #if DEBUG_ALWAYS_UNALIGNED_DRAWING
 	lts_unaligned_aga(cnt, cnt_next, h);
 	return true;
@@ -5869,10 +5890,11 @@ static void matchsprites(int cnt)
 static void matchsprites2_aga(int cnt)
 {
 	int sidx = 0;
+	int xposmask = denise_xposmask | (aga_subpixel_collisions() ? 3 : 0);
 	while (dprspt[sidx]) {
 		struct denise_spr *sp = dprspt[sidx];
 		if (sp->armed) {
-			if ((cnt & denise_xposmask) == (sp->xpos & denise_xposmask)) {
+			if ((cnt & xposmask) == (sp->xpos & xposmask)) {
 				if (sp->shiftercopydone) {
 					sp->shiftercopydone = false;
 				} else {
@@ -7153,6 +7175,12 @@ static void lts_unaligned_aga(int cnt, int cnt_next, int h)
 	if (denise_res > hresolution) {
 		xshift = RES_SUPERHIRES - denise_res;
 		xadd = 1 << xshift;
+		denise_res_size2 = denise_res_size;
+	}
+	if (aga_subpixel_collisions()) {
+		// Collisions sample the hardware pixels before host output decimation.
+		xshift = 0;
+		xadd = 1;
 		denise_res_size2 = denise_res_size;
 	}
 	int ipix = 0;
@@ -8968,7 +8996,7 @@ void draw_denise_vsync_queue(int erase)
 	}
 }
 
-void denise_update_reg_queue(uae_u16 reg, uae_u16 v, uae_u32 linecnt)
+void denise_update_reg_queue(uae_u16 reg, uae_u64 v, uae_u32 linecnt)
 {
 	if (multithread_denise_active()) {
 

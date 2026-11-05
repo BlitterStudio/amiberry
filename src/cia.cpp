@@ -1548,21 +1548,9 @@ static uae_u8 ReadCIAReg(int num, int reg)
 		bool timer_prev = true;
 		// fast CPU timer hack
 		if ((t->cr & CR_START) && !(t->cr & CR_INMODE1) && !(t->cr & CR_INMODE)) {
-			if (t->latch == t->timer) {
-				if (currprefs.cachesize || currprefs.m68k_speed < 0) {
-					uae_u16 adj = cia_timer_hack_adjust;
-					if (adj >= tval && (tval > 1 || !(t->cr & CR_RUNMODE))) {
-						adj = tval - 1;
-					}
-					tval -= adj;
-				}
-			}
 			if ((slow_cpu_access & 1) && (reg == 4 || reg == 6) && tval == t->timerval_prev) {
 				if (currprefs.cachesize || currprefs.m68k_speed < 0) {
-					uae_u16 adj = cia_timer_hack_adjust;
-					if (adj > 0 && ((tval > 1) || !(t->cr & CR_RUNMODE))) {
-						tval -= adj;
-					}
+					// Advance emulated time, not just this timer's returned value.
 					set_special(SPCFLAG_CPU_SLOW);
 					timer_prev = false;
 					t->timerval_prev = 0xffffffff;
@@ -2979,10 +2967,6 @@ static void write_battclock(void)
 	cfgfile_resolve_path_out_load(currprefs.rtcfile, path, MAX_DPATH, PATH_ROM);
 	struct zfile *f = zfile_fopen(path, _T("wb"));
 	if (f) {
-		struct tm *ct;
-		time_t t = time(0);
-		t += currprefs.cs_rtc_adjust;
-		ct = localtime(&t);
 		uae_u8 od;
 		if (currprefs.cs_rtc == 2) {
 			od = rtc_ricoh.clock_control_d;
@@ -2991,7 +2975,7 @@ static void write_battclock(void)
 			od = rtc_msm.clock_control_d;
 		}
 		for (int i = 0; i < 13; i++) {
-			uae_u8 v = getclockreg(i, ct);
+			uae_u8 v = getclockreg(i, NULL);
 			zfile_fwrite(&v, 1, 1, f);
 		}
 		if (currprefs.cs_rtc == 2) {
@@ -3021,6 +3005,7 @@ void rtc_hardreset(void)
 		rtc_msm.clock_control_e = 0;
 		rtc_msm.clock_control_f = 0x4; /* 24/12 */
 		rtc_msm.delayed_write = 0;
+		rtc_msm.clock = {};
 	} else if (currprefs.cs_rtc == 2) { /* RF5C01A */
 		clock_bank.name = _T("Battery backed up clock (RF5C01A)");
 		rtc_ricoh.clock_control_d = 0x8; /* Timer EN */
@@ -3030,6 +3015,7 @@ void rtc_hardreset(void)
 		memset(rtc_ricoh.rtc_alarm, 0, RF5C01A_RAM_SIZE);
 		rtc_ricoh.rtc_alarm[10] = 1; /* 24H mode */
 		rtc_ricoh.delayed_write = 0;
+		rtc_ricoh.clock = {};
 	}
 	if (currprefs.rtcfile[0]) {
 		TCHAR path[MAX_DPATH];
@@ -3073,7 +3059,6 @@ static uae_u32 REGPARAM2 clock_wget(uaecptr addr)
 
 static uae_u32 REGPARAM2 clock_bget(uaecptr addr)
 {
-	struct tm *ct;
 	uae_u8 v = 0;
 
 	if ((addr & 0xffff) >= 0x8000 && currprefs.cs_fatgaryrev >= 0)
@@ -3088,11 +3073,8 @@ static uae_u32 REGPARAM2 clock_bget(uaecptr addr)
 	if ((addr & 3) == 2 || (addr & 3) == 0 || currprefs.cs_rtc == 0) {
 		return dummy_get_safe(addr, 1, false, v);
 	}
-	time_t t = time(0);
-	t += currprefs.cs_rtc_adjust;
-	ct = localtime(&t);
 	addr >>= 2;
-	return getclockreg(addr, ct);
+	return getclockreg(addr, NULL);
 }
 
 static void cputester_event(uae_u32 v)
