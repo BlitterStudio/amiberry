@@ -555,7 +555,9 @@ MENDFUNC(2,arm_ADD_l,(RW4 d, RR4 s))
 MIDFUNC(2,arm_ADD_ldiv8,(RW4 d, RR4 s))
 {
 	if (isconst(s)) {
-		COMPCALL(arm_ADD_l_ri)(d,(live.state[s].val & ~0x1f) >> 3);
+		// signed, like the register path (ASR 5, LSL 2): a negative bit
+		// offset gives a negative byte offset
+		COMPCALL(arm_ADD_l_ri)(d,(uae_u32)(((uae_s32)live.state[s].val >> 5) * 4));
 		return;
 	}
 
