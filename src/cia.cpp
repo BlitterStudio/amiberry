@@ -1546,9 +1546,14 @@ static uae_u8 ReadCIAReg(int num, int reg)
 	{
 		uae_u16 tval = t->timer - t->passed;
 		bool timer_prev = true;
-		// fast CPU timer hack
+		// fast CPU timer hack: right after a (re)load a fast CPU would read
+		// the latch value unchanged, so report one less. Only while no
+		// clock has passed since the load: once one has, the real value
+		// is already latch - 1, and adjusting further would make the
+		// counter jump up again at the next CIA update (any register
+		// access), i.e. a down-counter seen counting up.
 		if ((t->cr & CR_START) && !(t->cr & CR_INMODE1) && !(t->cr & CR_INMODE)) {
-			if (t->latch == t->timer) {
+			if (t->latch == t->timer && t->passed == 0) {
 				if (currprefs.cachesize || currprefs.m68k_speed < 0) {
 					uae_u16 adj = cia_timer_hack_adjust;
 					if (adj >= tval && (tval > 1 || !(t->cr & CR_RUNMODE))) {
