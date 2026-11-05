@@ -39,14 +39,16 @@ SDL_ThreadID uae_thread_get_id(SDL_Thread* thread);
 #define UAE_THREAD_EXIT do {} while (0)
 
 #ifdef AMIBERRY
+// Return the value before the operation, as WinUAE's _InterlockedAnd/Or:
+// check_uae_int_request() tests atomic_and(&flag, 0) for "was set".
 static uae_atomic atomic_and(volatile uae_atomic * p, uae_u32 v)
 {
-    return __atomic_and_fetch(p, v, __ATOMIC_SEQ_CST);
+    return __atomic_fetch_and(p, v, __ATOMIC_SEQ_CST);
 }
 
 static uae_atomic atomic_or(volatile uae_atomic * p, uae_u32 v)
 {
-    return __atomic_or_fetch(p, v, __ATOMIC_SEQ_CST);
+    return __atomic_fetch_or(p, v, __ATOMIC_SEQ_CST);
 }
 
 static uae_atomic atomic_inc(volatile uae_atomic * p)

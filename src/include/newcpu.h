@@ -209,8 +209,13 @@ struct regstruct
 	uae_u32 trace_pc;
 
 	uae_u16 irc, ir, ird;
-	volatile uae_atomic spcflags;
-	uae_u32 last_prefetch;
+	// A cache line of its own: with the threaded CPU the main thread reads
+	// and sets it all the time, and sharing a line with fields the CPU writes
+	// per instruction (opcode, instruction_pc) cost the threaded
+	// interpreter ~8 % host time; which fields shared it depended on where
+	// the linker happened to place regs.
+	alignas(64) volatile uae_atomic spcflags;
+	alignas(64) uae_u32 last_prefetch;
 	uae_u32 chipset_latch_rw;
 	uae_u32 chipset_latch_read;
 	uae_u32 chipset_latch_write;

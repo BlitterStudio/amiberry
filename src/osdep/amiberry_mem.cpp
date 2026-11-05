@@ -1281,8 +1281,12 @@ void unprotect_maprom()
 void protect_roms(bool protect)
 {
 	if (protect) {
-		// protect only if JIT enabled, always allow unprotect
-		if (!currprefs.cachesize || currprefs.comptrustbyte || currprefs.comptrustword || currprefs.comptrustlong) {
+		// protect only if JIT enabled, always allow unprotect.
+		// Only comp_trustbyte=indirect makes every access indirect
+		// (special_mem_default, jit/compemu_prefs.cpp); with
+		// comp_trustword/trustlong=indirect the other sizes are still
+		// native stores, so the ROM must stay write-protected.
+		if (!currprefs.cachesize || currprefs.comptrustbyte) {
 			return;
 		}
 		if (currprefs.rom_readwrite || rom_write_enabled) {

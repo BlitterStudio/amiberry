@@ -628,6 +628,9 @@ static void uaesndboard_stop(struct uaesndboard_data *data, struct uaesndboard_s
 	data->stream_stop_count++;
 	s->play = 0;
 	s->next = 0;
+	// the set pointer ($0180) "also clears automatically when stream ends"
+	s->setaddr = 0;
+	put_long_host(s->io + 0x80, 0);
 	data->streammask &= ~(1 << (s - data->stream));
 	audio_enable_stream(false, s->streamid, 0, NULL, NULL);
 	s->streamid = 0;
@@ -1170,6 +1173,13 @@ static bool audio_state_sndboard_uae(int streamid, void *params)
 		s->sample[6] = c;
 		s->sample[7] = lfe;
 	}
+	// The set may have ended in this call: uaesndboard_stop() has then
+	// released the mixer stream (s->streamid = 0). Updating it now would
+	// bring the freed stream back as a one-channel stream that nobody
+	// owns, mixing its last sample forever and keeping its slot taken.
+	// Returning false lets the mixer idle the stream itself.
+	if (s->streamid != streamid)
+		return false;
 	uaesnd_apply_mono_pan(s, &highestch);
 	audio_state_stream_state(streamid, s->sample, highestch, s->event_time);
 	return true;
@@ -1576,7 +1586,8 @@ addrbank uaesndboard_bank_z3 = {
 addrbank uaesndboard_bank_z2 = {
 	sub_bank_lget, sub_bank_wget, sub_bank_bget,
 	sub_bank_lput, sub_bank_wput, sub_bank_bput,
-	default_xlate, default_check, NULL, NULL, _T("uaesnd z2"),
+	// sub-bank aware: sample sets in the board's own RAM ($8000) are valid
+	sub_bank_xlate, sub_bank_check, NULL, NULL, _T("uaesnd z2"),
 	dummy_lgeti, dummy_wgeti,
 	ABFLAG_IO, S_READ, S_WRITE, uaesndz2_sub_banks
 };

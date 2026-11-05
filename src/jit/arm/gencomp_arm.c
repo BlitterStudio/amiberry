@@ -1998,7 +1998,8 @@ static void gen_bchg(uae_u32 opcode, struct instr *curi, const char* ssize) {
 		comprintf("\t end_needflags();\n");
 	} else {
 		comprintf("\t jnf_BCHG_%s(dst,src);\n", ssize);
-		comprintf("\t dont_care_flags();\n");
+		// no dont_care_flags(): only Z is not needed; N/V/C of the
+		// previous instruction are still live
 	}
 	genastore("dst", curi->dmode, "dstreg", curi->size, "dst");
 #else
@@ -2043,7 +2044,8 @@ static void gen_bclr(uae_u32 opcode, struct instr *curi, const char* ssize) {
 		comprintf("\t end_needflags();\n");
 	} else {
 		comprintf("\t jnf_BCLR_%s(dst,src);\n", ssize);
-		comprintf("\t dont_care_flags();\n");
+		// no dont_care_flags(): only Z is not needed; N/V/C of the
+		// previous instruction are still live
 	}
 	genastore("dst", curi->dmode, "dstreg", curi->size, "dst");
 #else
@@ -2088,7 +2090,8 @@ static void gen_bset(uae_u32 opcode, struct instr *curi, const char* ssize) {
 		comprintf("\t end_needflags();\n");
 	} else {
 		comprintf("\t jnf_BSET_%s(dst,src);\n", ssize);
-		comprintf("\t dont_care_flags();\n");
+		// no dont_care_flags(): only Z is not needed; N/V/C of the
+		// previous instruction are still live
 	}
 	genastore("dst", curi->dmode, "dstreg", curi->size, "dst");
 #else
@@ -2134,7 +2137,8 @@ static void gen_btst(uae_u32 opcode, struct instr *curi, const char* ssize) {
 		comprintf("\t live_flags();\n");
 		comprintf("\t end_needflags();\n");
 	} else {
-		comprintf("\t dont_care_flags();\n");
+		// nothing: BTST writes only Z; N/V/C of the previous
+		// instruction are still live (no dont_care_flags())
 	}
 #else
 	(void) ssize;

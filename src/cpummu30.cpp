@@ -510,6 +510,7 @@ static bool mmu_op30_pload (uaecptr pc, uae_u32 opcode, uae_u16 next, uaecptr ex
     write_log (_T("PLOAD%c: Create ATC entry for %08X, FC = %i\n"), write?'W':'R', extra, fc);
 #endif
 
+    /* replaces only this page's entry for this function code */
     mmu030_flush_atc_page_fc(extra, fc, 7);
     mmu030_table_search(extra, fc, write, 0);
 	return false;
@@ -1659,9 +1660,11 @@ static void mmu030_ptest_atc_search(uaecptr logical_addr, uae_u32 fc, bool write
         return;
     }
     
+    /* the ATC holds page-aligned addresses */
+    logical_addr &= mmu030.translation.page.imask;
     for (i = 0; i < ATC030_NUM_ENTRIES; i++) {
         if ((mmu030.atc[i].logical.fc == fc) &&
-            (mmu030.atc[i].logical.addr == (logical_addr & mmu030.translation.page.imask)) &&
+            (mmu030.atc[i].logical.addr == logical_addr) &&
             mmu030.atc[i].logical.valid) {
             break;
         }

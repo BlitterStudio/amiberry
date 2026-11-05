@@ -936,10 +936,11 @@ void setdivuflags(uae_u32 dividend, uae_u16 divisor)
 		SET_VFLG(1);
 		SET_CFLG(0);
 	} else if (currprefs.cpu_model >= 68020) {
+		// 68020/030: V=1, C=0, Z=0, N = dividend negative (table above)
 		SET_VFLG(1);
 		SET_CFLG(0);
-		if ((uae_s32)dividend < 0)
-			SET_NFLG(1);
+		SET_ZFLG(0);
+		SET_NFLG((uae_s32)dividend < 0);
 	} else if (currprefs.cpu_model == 68010) {
 		SET_VFLG(1);
 		if ((uae_s32)dividend < 0 && (uae_s16)divisor < 0) {

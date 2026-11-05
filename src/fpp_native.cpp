@@ -1031,6 +1031,16 @@ static void fp_getexp(fpdata *a, fpdata *b)
 	native_raw_set(a, floatx80_getexp(native_raw(b), &fs));
 #else
     int expon;
+	// 68881: FGETEXP of a zero is that zero, of an infinity a NaN
+	// (OPERR), of a NaN the NaN; frexp() gives exponent 0 for zero
+	if (fp_is_zero(b) || fp_is_nan(b)) {
+		a->fp = b->fp;
+		return;
+	}
+	if (fp_is_infinity(b)) {
+		a->fp = *fp_nan;
+		return;
+	}
 	fp_normal_prec();
 	FP_FN(frexp)(b->fp, &expon);
 	a->fp = (fptype)expon - 1;

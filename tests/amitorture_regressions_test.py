@@ -515,7 +515,7 @@ int main() {
 }
 """)
 
-    def test_divu_overflow_clears_carry(self):
+    def test_divu_overflow_flags_for_all_initial_conditions(self):
         run_cpp(r"""
 struct { int cpu_model; } currprefs;
 int n, z, v, c, x;
@@ -527,11 +527,265 @@ int n, z, v, c, x;
 int main() {
     for (int cpu : {68000, 68010, 68020, 68030, 68040, 68060}) {
         currprefs.cpu_model = cpu;
-        for (uae_u32 dividend : {0x10000u, 0x80000000u, 0xffffffffu}) {
-            n = z = v = c = x = 1;
-            setdivuflags(dividend, 1);
-            assert(v == 1 && c == 0 && x == 1);
+        for (uae_u32 dividend : {0x10000u, 0x7fffffffu, 0x80000000u, 0xffffffffu}) {
+            for (uae_u16 divisor : {uae_u16(1), uae_u16(0x8000), uae_u16(0xffff)}) {
+                for (int flags = 0; flags < 32; ++flags) {
+                    n = flags & 1; z = (flags >> 1) & 1;
+                    v = (flags >> 2) & 1; c = (flags >> 3) & 1; x = (flags >> 4) & 1;
+                    int old_n = n, old_z = z, old_x = x;
+                    setdivuflags(dividend, divisor);
+                    assert(v == 1 && c == 0 && x == old_x);
+                    if (cpu >= 68040) {
+                        assert(n == old_n && z == old_z);
+                    } else {
+                        bool negative = (uae_s32)dividend < 0;
+                        int expected_n = cpu == 68000 ? 1 :
+                            cpu == 68010 ? !(negative && (uae_s16)divisor < 0) : negative;
+                        assert(n == expected_n && z == 0);
+                    }
+                }
+            }
         }
+    }
+}
+""")
+
+    def test_host_interrupt_atomics_return_previous_flags(self):
+        text = source("src/threaddep/thread.h")
+        run_cpp(r"""
+using uae_atomic = uae_u32;
+""" + function(text, "static uae_atomic atomic_and(") +
+                function(text, "static uae_atomic atomic_or(") + r"""
+int main() {
+    volatile uae_atomic flags = 0;
+    assert(atomic_or(&flags, 5) == 0 && flags == 5);
+    assert(atomic_or(&flags, 2) == 5 && flags == 7);
+    assert(atomic_and(&flags, 6) == 7 && flags == 6);
+    assert(atomic_and(&flags, 0) == 6 && flags == 0);
+    assert(atomic_and(&flags, 0) == 0 && flags == 0);
+}
+""")
+
+    def test_arm_movem_word_special_memory_extends_each_register(self):
+        text = source("src/jit/arm/compemu_arm.cpp")
+        handlers = "\n".join(function(text, f"uae_u32 REGPARAM2 op_4c90_0_comp_{mode}(")
+                             for mode in ("ff", "nf"))
+        run_cpp(r"""
+#define REGPARAM2
+constexpr int SYNC_PC_OFFSET = 100;
+bool special_mem = true;
+uae_u32 values[32], m68k_pc_offset;
+uae_u16 mask, word;
+int reads;
+uae_u16 comp_get_iword(int) { return mask; }
+int alloc_scratch() { return 16; }
+void get_n_addr(int, int) { assert(false); }
+void jnf_MVMEL_w(int, int, int) { assert(false); }
+void mov_l_rr(int d, int s) { values[d] = values[s]; }
+void readword(int address, int dest) {
+    assert(values[address] == 0x1000u + reads * 2);
+    ++reads;
+    values[dest] = word;
+}
+void sign_extend_16_rr(int d, int s) { values[d] = (uae_s32)(uae_s16)values[s]; }
+void arm_ADD_l_ri8(int d, int value) { values[d] += value; }
+void sync_m68k_pc() { assert(false); }
+""" + handlers + r"""
+int main() {
+    for (auto handler : {op_4c90_0_comp_ff, op_4c90_0_comp_nf}) {
+        for (uae_u16 bits : {0, 1, 0x8000, 0xffff}) {
+            for (uae_u16 input : {0, 0x7fff, 0x8000, 0xffff}) {
+                for (auto &value : values) value = 0xbadf00d;
+                values[8] = 0x1000;
+                mask = bits; word = input; reads = 0; m68k_pc_offset = 0;
+                handler(0x4c90);
+                int expected_reads = 0;
+                for (int i = 0; i < 16; ++i) {
+                    if (bits & (1 << i)) {
+                        assert(values[i] == (uae_u32)(uae_s32)(uae_s16)input);
+                        ++expected_reads;
+                    } else {
+                        assert(values[i] == (i == 8 ? 0x1000u : 0xbadf00du));
+                    }
+                }
+                assert(reads == expected_reads);
+            }
+        }
+    }
+}
+""")
+
+    def test_arm_constant_bitfield_offsets_match_register_offsets(self):
+        for path in ("src/jit/arm/compemu_midfunc_arm.cpp",
+                     "src/jit/arm/compemu_midfunc_arm64.cpp"):
+            with self.subTest(path=path):
+                run_cpp(r"""
+#define MIDFUNC(n, name, args) void generated args
+#define RW4 int
+#define RR4 int
+#define COMPCALL(name) name
+constexpr int REG_WORK1 = 31;
+struct { struct { uae_u32 val; } state[32]; } live;
+uae_u32 values[32];
+bool constant;
+bool isconst(int) { return constant; }
+int readreg(int r) { return r; }
+int rmw(int r) { return r; }
+void unlock2(int) {}
+void arm_ADD_l_ri(int d, uae_u32 value) { values[d] += value; }
+void ASR_rri(int d, int s, int shift) { values[d] = (uae_s32)values[s] >> shift; }
+void ASR_wwi(int d, int s, int shift) { ASR_rri(d, s, shift); }
+void ADD_rrrLSLi(int d, int s, int t, int shift) { values[d] = values[s] + (values[t] << shift); }
+void ADD_wwwLSLi(int d, int s, int t, int shift) { ADD_rrrLSLi(d, s, t, shift); }
+""" + function(source(path), "MIDFUNC(2,arm_ADD_ldiv8,") + r"""
+int main() {
+    for (uae_s32 offset : {INT32_MIN, -129, -33, -32, -31, -1, 0, 1, 31, 32, INT32_MAX}) {
+        uae_s64 rounded = (uae_s64(offset) - (offset < 0 ? 31 : 0)) / 32 * 4;
+        for (bool mode : {false, true}) {
+            constant = mode;
+            values[0] = 0x1000;
+            values[1] = live.state[1].val = offset;
+            generated(0, 1);
+            assert(values[0] == 0x1000u + (uae_u32)rounded);
+        }
+    }
+}
+""")
+
+    def test_arm_bit_operations_keep_other_live_flags(self):
+        text = source("src/jit/arm/compemu_arm.cpp")
+        for opcode in ("100", "110", "140", "150", "180", "190", "1c0", "1d0"):
+            self.assertNotIn("dont_care_flags();",
+                             function(text, f"uae_u32 REGPARAM2 op_{opcode}_0_comp_nf("))
+        generator = source("src/jit/arm/gencomp_arm.c")
+        for operation in ("bchg", "bclr", "bset", "btst"):
+            self.assertNotRegex(function(generator, f"static void gen_{operation}("),
+                                r'comprintf\("[^"]*dont_care_flags')
+
+    def test_threaded_cpu_progress_and_bounded_chipset_waits(self):
+        text = source("src/newcpu.cpp")
+        declarations = text[text.index("static struct alignas(64) {"):
+                            text.index("static inline void cpu_thread_spin_pause()")]
+        thread = function(text, "static void run_cpu_thread(")
+        start = thread.index("\t\tfor (int i = 0; i < cycles_to_do; i++)")
+        batch = thread[start:thread.index("\n\t\tcheck_debugger();", start)]
+        run_cpp(r"""
+constexpr int CYCLE_UNIT = 512;
+constexpr int SPCFLAG_CPUINRESET = 1, SPCFLAG_MODE_CHANGE = 2, SPCFLAG_CALLBACK = 4;
+constexpr int SPCFLAG_INT = 8;
+using frame_time_t = uae_s64;
+using evt_t = uae_u64;
+struct { bool stopped, halted; int spcflags; } regs;
+int countdown, pissoff_value = 100000, cpu_thread_reset;
+int cpu_thread_ilvl, cpu_wakeup_sema;
+""" + declarations +
+                function(text, "static uae_s64 cpu_thread_progress(") +
+                function(text, "static bool cpu_thread_unpaced(") +
+                function(text, "static void cpu_thread_jit_count(") + r"""
+evt_t chipset_cycles;
+frame_time_t syncbase = 1000000, vsynctimebase = 20000;
+int clock_reads, spins, requests;
+bool indirect;
+frame_time_t read_processor_time() { return ++clock_reads * 50; }
+void cpu_thread_spin_pause() { ++spins; }
+bool service_cpu_indirect_request() { ++requests; return indirect; }
+evt_t get_cycles() { return chipset_cycles; }
+void do_cycles(int n) { chipset_cycles += n; }
+void check_uae_int_request() {}
+int intlev() { return 0; }
+void atomic_set(int *p, int value) { *p = value; }
+void set_special(int flag) { regs.spcflags |= flag; }
+void uae_sem_post(int *) {}
+void run_batch(int cycles_to_do) {
+    uae_s64 tokens_seen = 0, credit = 0;
+    int cck_cnt = 0, intlev_prev = 0;
+""" + batch + r"""
+}
+int main() {
+    cpu_thread_paced = 1;
+    uae_s64 seen = 0;
+    cpu_thread_tokens = 3;
+    assert(cpu_thread_progress(&seen) == 3 * CPU_THREAD_INSN_CREDIT);
+    assert(seen == 3 && cpu_thread_progress(&seen) == 0);
+    cpu_thread_tokens = 5;
+    assert(cpu_thread_progress(&seen) == 2 * CPU_THREAD_INSN_CREDIT);
+
+    cpu_thread_paced = 2;
+    seen = countdown = pissoff_value;
+    cpu_thread_jit_count(42);
+    assert(cpu_thread_progress(&seen) == 42);
+    assert(cpu_thread_progress(&seen) == 0);
+    countdown = 10;
+    seen = 10;
+    countdown = pissoff_value - 17;
+    assert(cpu_thread_progress(&seen) == 17);
+    countdown = pissoff_value;
+    assert(cpu_thread_progress(&seen) == 0);
+    countdown = 1;
+    cpu_thread_jit_count(2);
+    assert(countdown == pissoff_value);
+
+    cpu_thread_paced = 1;
+    cpu_thread_tokens = 0;
+    assert(!cpu_thread_unpaced());
+    // A descheduled CPU must end the batch rather than run the chipset ahead.
+    run_batch(128);
+    assert(chipset_cycles == CYCLE_UNIT && spins > 0);
+    assert(clock_reads > 1 && clock_reads < 100);
+    for (int state = 0; state < 6; ++state) {
+        regs = {};
+        cpu_thread_reset = 0;
+        if (state == 0) regs.stopped = true;
+        if (state == 1) regs.halted = true;
+        if (state == 2) regs.spcflags = SPCFLAG_CPUINRESET;
+        if (state == 3) regs.spcflags = SPCFLAG_MODE_CHANGE;
+        if (state == 4) regs.spcflags = SPCFLAG_CALLBACK;
+        if (state == 5) cpu_thread_reset = 1;
+        chipset_cycles = 0;
+        clock_reads = spins = 0;
+        assert(cpu_thread_unpaced());
+        run_batch(128);
+        assert(chipset_cycles == 128 * CYCLE_UNIT);
+        assert(clock_reads == 0 && spins == 0);
+    }
+    regs = {};
+    cpu_thread_reset = 0;
+    chipset_cycles = 0;
+    clock_reads = spins = requests = 0;
+    indirect = true;
+    run_batch(128);
+    assert(chipset_cycles == 128 * CYCLE_UNIT && requests > 0);
+    assert(spins == 0);
+}
+""")
+
+    def test_native_fgetexp_fallback_preserves_special_values(self):
+        run_cpp(r"""
+#include <cmath>
+#include <limits>
+using fptype = double;
+struct fpdata { fptype fp; };
+const fptype nan_value = std::numeric_limits<fptype>::quiet_NaN();
+const fptype *fp_nan = &nan_value;
+#define FP_FN(fn) std::fn
+bool fp_is_zero(const fpdata *p) { return p->fp == 0; }
+bool fp_is_nan(const fpdata *p) { return std::isnan(p->fp); }
+bool fp_is_infinity(const fpdata *p) { return std::isinf(p->fp); }
+void fp_normal_prec() {}
+void fp_reset_normal_prec() {}
+""" + function(source("src/fpp_native.cpp"), "static void fp_getexp(") + r"""
+int main() {
+    const double infinity = std::numeric_limits<double>::infinity();
+    for (double value : {0.0, -0.0, 1.0, -1.0, 0.125, -8.0,
+                        nan_value, infinity, -infinity}) {
+        fpdata operand{value}, result{};
+        fp_getexp(&result, &operand);
+        if (!std::isfinite(value))
+            assert(std::isnan(result.fp));
+        else if (value == 0)
+            assert(result.fp == 0 && std::signbit(result.fp) == std::signbit(value));
+        else
+            assert(result.fp == std::floor(std::log2(std::abs(value))));
     }
 }
 """)
