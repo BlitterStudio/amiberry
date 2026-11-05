@@ -363,14 +363,14 @@ static void sharing_tests()
 	trap_put_long(NULL, CLIP_DATA + 4, CLIP_BUFFER);
 	trap_put_long(NULL, CLIP_DATA + 8, 0x1234);
 	amiga_clipboard_task_start(NULL, CLIP_DATA);
-
+	check(!clipboard_host_snapshot_wanted(), "no host snapshot before the guest asks");
+	amiga_clipboard_init(NULL);
+	check(clipboard_host_snapshot_wanted() && !clipboard_host_snapshot_wanted(), "guest init asks for one host snapshot");
+	// The main thread answers with what the host clipboard holds.
 	clipboard_content host;
 	host.type = clipboard_content::kind::text;
 	host.text = "before boot";
 	clipboard_set_host_content(std::move(host));
-	check(!clipboard_host_snapshot_wanted(), "no host snapshot before the guest asks");
-	amiga_clipboard_init(NULL);
-	check(clipboard_host_snapshot_wanted() && !clipboard_host_snapshot_wanted(), "guest init asks for one host snapshot");
 
 	std::vector<uae_u8> got = guest_receive();
 	std::string text;
@@ -414,6 +414,30 @@ static void sharing_tests()
 	clipboard_set_host_content(std::move(host_text));
 	target_paste_to_keyboard();
 	check(injected == "a\nb\nc", "paste-to-keyboard normalizes line ends");
+
+	// The host clipboard is emptied or holds something that cannot be
+	// shared: the earlier text is not typed any more.
+	clipboard_set_host_content(clipboard_content());
+	injected.clear();
+	target_paste_to_keyboard();
+	check(injected.empty(), "emptied host clipboard is not typed");
+
+	// The guest reboots while the host clipboard still holds the image the
+	// guest received before; the new clipboard task gets it again.
+	clipboard_content before_reboot;
+	before_reboot.type = clipboard_content::kind::bitmap;
+	before_reboot.bitmap.width = 2; before_reboot.bitmap.height = 1; before_reboot.bitmap.pixels = { 0x654321, 0x0a0b0c };
+	clipboard_content after_reboot = before_reboot;
+	clipboard_set_host_content(std::move(before_reboot));
+	check(!guest_receive().empty(), "host image before the reboot");
+	clipboard_reset();
+	amiga_clipboard_task_start(NULL, CLIP_DATA);
+	amiga_clipboard_init(NULL);
+	check(clipboard_host_snapshot_wanted(), "rebooted guest asks for the host clipboard");
+	clipboard_set_host_content(std::move(after_reboot));
+	got = guest_receive();
+	check(clipboard_decode_bitmap(got.data(), (uae_u32)got.size(), &received) &&
+		received.pixels == std::vector<uae_u32>({ 0x654321, 0x0a0b0c }), "rebooted guest gets the unchanged host image");
 	clipboard_reset();
 }
 

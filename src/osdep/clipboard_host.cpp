@@ -75,22 +75,24 @@ bool read_host_image(clipboard_bitmap *bitmap)
 	return false;
 }
 
+// Anything that cannot be shared (empty, unsupported format, too large) is
+// reported as empty, so that neither the guest nor paste-to-keyboard gets
+// what the host clipboard held before.
 void read_host_clipboard()
 {
 	clipboard_content content;
 	if (SDL_HasClipboardText()) {
-		char *text = SDL_GetClipboardText();
-		if (!text)
-			return;
-		content.text = text;
-		SDL_free(text);
-		if (content.text.size() > CLIP_SIZE_LIMIT)
-			return;
-		content.type = clipboard_content::kind::text;
+		if (char *text = SDL_GetClipboardText()) {
+			if (strlen(text) <= CLIP_SIZE_LIMIT) {
+				content.type = clipboard_content::kind::text;
+				content.text = text;
+			}
+			SDL_free(text);
+		}
 	} else if (read_host_image(&content.bitmap)) {
 		content.type = clipboard_content::kind::bitmap;
 	} else {
-		return;
+		content.bitmap = clipboard_bitmap();
 	}
 	clipboard_set_host_content(std::move(content));
 }

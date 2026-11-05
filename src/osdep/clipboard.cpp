@@ -31,8 +31,12 @@ static bool initial_offer;
 static std::mutex content_mutex;
 // What the host clipboard holds, kept for paste-to-keyboard.
 static clipboard_content host_content;
-// host_content has not been offered to the guest yet.
+// host_content still has to be offered to the guest.
 static bool host_content_pending;
+// What the guest's clipboard holds as far as this side knows: the last
+// content offered to it or copied there. Host content equal to it is not
+// offered, so the guest's own copies are not sent back to it.
+static clipboard_content guest_clipboard;
 // What the guest copied, waiting for the main thread.
 static clipboard_content guest_content;
 static bool guest_content_pending;
@@ -53,12 +57,9 @@ static bool same_content(const clipboard_content &a, const clipboard_content &b)
 void clipboard_set_host_content(clipboard_content &&content)
 {
 	std::lock_guard<std::mutex> lock(content_mutex);
-	// The host reports the guest's own copies back too; offering them to the
-	// guest again would make it write its clipboard a second time.
-	if (same_content(content, host_content))
-		return;
 	host_content = std::move(content);
-	host_content_pending = host_content.type != clipboard_content::kind::none;
+	host_content_pending = host_content.type != clipboard_content::kind::none
+		&& !same_content(host_content, guest_clipboard);
 }
 
 bool clipboard_take_guest_content(clipboard_content *content)
@@ -87,6 +88,9 @@ bool clipboard_host_snapshot_wanted()
 static void queue_for_host(clipboard_content &&content)
 {
 	std::lock_guard<std::mutex> lock(content_mutex);
+	// The guest's copy is newer than any host content still waiting.
+	guest_clipboard = content;
+	host_content_pending = false;
 	guest_content = std::move(content);
 	guest_content_pending = true;
 }
@@ -145,6 +149,10 @@ static void offer_host_content()
 			content.bitmap.width, content.bitmap.height);
 		return;
 	}
+	{
+		std::lock_guard<std::mutex> lock(content_mutex);
+		guest_clipboard = std::move(content);
+	}
 	transfer.start();
 }
 
@@ -177,6 +185,8 @@ void clipboard_reset()
 	std::lock_guard<std::mutex> lock(content_mutex);
 	guest_content = clipboard_content();
 	guest_content_pending = false;
+	guest_clipboard = clipboard_content();
+	host_content_pending = false;
 	host_snapshot_wanted = false;
 	initial_offer = false;
 }
@@ -206,9 +216,12 @@ void amiga_clipboard_init(TrapContext *ctx)
 	transfer.signaling = false;
 	transfer.initialized = true;
 	write_log(_T("clipboard initialized\n"));
-	// The main thread reads the host clipboard on its next pass and the
-	// next vsync offers it to the guest.
+	// A new clipboard task starts with an empty clipboard. The main thread
+	// reads the host clipboard on its next pass and the next vsync offers
+	// it, even when it equals what an earlier task received.
 	std::lock_guard<std::mutex> lock(content_mutex);
+	guest_clipboard = clipboard_content();
+	host_content_pending = false;
 	host_snapshot_wanted = true;
 	initial_offer = true;
 }
