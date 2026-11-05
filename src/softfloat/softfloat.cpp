@@ -2363,7 +2363,10 @@ static floatx80 addFloatx80Sigs(floatx80 a, floatx80 b, flag zSign,
                 return propagateFloatx80NaN(a, b, status);
             }
 			if (inf_clear_intbit(status)) return packFloatx80(extractFloatx80Sign(a), aExp, 0);
-			return faddsub_swap_inf(status) ? b : a;
+			// 6888x: the result takes b's significand, but the sign of the
+			// operation (zSign): for a - b with opposite signs b carries
+			// the other sign, so +inf - -inf returned -inf
+			return faddsub_swap_inf(status) ? packFloatx80(zSign, bExp, bSig) : a;
         }
         zSig1 = 0;
         zSig0 = aSig + bSig;
