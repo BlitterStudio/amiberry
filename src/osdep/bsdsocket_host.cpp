@@ -1327,6 +1327,16 @@ uae_u32 host_shutdown(SB, uae_u32 sd, uae_u32 how)
 	return -1;
 }
 
+/*
+ * struct in_addr (IP_MULTICAST_IF) and struct ip_mreq (IP_ADD_MEMBERSHIP,
+ * IP_DROP_MEMBERSHIP) hold addresses in network byte order, so they are
+ * copied byte for byte, not as 32-bit integers.
+ */
+static bool is_ip_multicast_address_option(uae_u32 level, uae_u32 optname)
+{
+	return level == IPPROTO_IP && (optname == IP_MULTICAST_IF || optname == IP_ADD_MEMBERSHIP || optname == IP_DROP_MEMBERSHIP);
+}
+
 void host_setsockopt(SB, uae_u32 sd, uae_u32 level, uae_u32 optname, uae_u32 optval, uae_u32 len)
 {
 	TrapContext *ctx = NULL;
@@ -1347,13 +1357,18 @@ void host_setsockopt(SB, uae_u32 sd, uae_u32 level, uae_u32 optname, uae_u32 opt
 			sb->resultval = 0;
 			return;
 		}
-		for (i = 0; (uae_u32)i < len / 4; i++) {
-			((long*)buf)[i] = get_long(optval + i * 4);
+		if (is_ip_multicast_address_option(level, optname)) {
+			for (i = 0; (uae_u32)i < len; i++)
+				buf[i] = get_byte(optval + i);
+		} else {
+			for (i = 0; (uae_u32)i < len / 4; i++) {
+				((long*)buf)[i] = get_long(optval + i * 4);
+			}
+			if (len - i == 2)
+				((long*)buf)[i] = get_word(optval + i * 4);
+			else if (len - i == 1)
+				((long*)buf)[i] = get_byte(optval + i * 4);
 		}
-		if (len - i == 2)
-			((long*)buf)[i] = get_word(optval + i * 4);
-		else if (len - i == 1)
-			((long*)buf)[i] = get_byte(optval + i * 4);
 
 		if (level == SOL_SOCKET && (optname == SO_SNDTIMEO || optname == SO_RCVTIMEO)) {
 			uae_u32 millis = ((long*)buf)[0] * 1000 + ((long*)buf)[1] / 1000;
@@ -1420,26 +1435,31 @@ uae_u32 host_getsockopt(TrapContext *ctx, SB, uae_u32 sd, uae_u32 level, uae_u32
 					((long*)buf)[1] = (millis % 1000) * 1000;
 					len = 8;
 				}
-				for (int i = 0; i < len; i += 4) {
-					uae_u32 v;
-					if (len - i >= 4)
-						v = *((long*)(buf + i));
-					else if (len - i >= 2)
-						v = *((short*)(buf + i));
-					else
-						v = buf[i];
-					if (outlen >= 4) {
-						put_long(optval + outcnt, v);
-						outlen -= 4;
-						outcnt += 4;
-					} else if (outlen >= 2) {
-						put_word(optval + outcnt, v);
-						outlen -= 2;
-						outcnt += 2;
-					} else if (outlen > 0) {
-						put_byte(optval + outcnt, v);
-						outlen -= 1;
-						outcnt += 1;
+				if (is_ip_multicast_address_option(level, optname)) {
+					for (int i = 0; i < len && outlen > 0; i++, outlen--)
+						put_byte(optval + outcnt++, buf[i]);
+				} else {
+					for (int i = 0; i < len; i += 4) {
+						uae_u32 v;
+						if (len - i >= 4)
+							v = *((long*)(buf + i));
+						else if (len - i >= 2)
+							v = *((short*)(buf + i));
+						else
+							v = buf[i];
+						if (outlen >= 4) {
+							put_long(optval + outcnt, v);
+							outlen -= 4;
+							outcnt += 4;
+						} else if (outlen >= 2) {
+							put_word(optval + outcnt, v);
+							outlen -= 2;
+							outcnt += 2;
+						} else if (outlen > 0) {
+							put_byte(optval + outcnt, v);
+							outlen -= 1;
+							outcnt += 1;
+						}
 					}
 				}
 				put_long(optlen, outcnt);
