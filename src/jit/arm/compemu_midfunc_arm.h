@@ -105,6 +105,7 @@ DECLARE_MIDFUNC(ffunc_rr(double (*func)(double), FW d, FR s));
 DECLARE_MIDFUNC(fsincos_rr(FW d, FW c, FR s));
 DECLARE_MIDFUNC(fpowx_rr(uae_u32 x, FW d, FR s));
 DECLARE_MIDFUNC(fflags_into_flags());
+DECLARE_MIDFUNC(fflags_into_flags_keep_ccr(void));
 DECLARE_MIDFUNC(fp_from_exten_mr(RR4 adr, FR s));
 DECLARE_MIDFUNC(fp_to_exten_rm(FW d, RR4 adr));
 DECLARE_MIDFUNC(fp_from_double_mr(RR4 adr, FR s));

@@ -354,7 +354,7 @@ void comp_fscc_opp (uae_u32 opcode, uae_u16 extra)
 		return;
 	}
 
-	fflags_into_flags ();
+	fflags_into_flags_keep_ccr ();
 	reg = (opcode & 7);
 
 	if (!(opcode & 0x38)) {
@@ -430,7 +430,7 @@ void comp_fbcc_opp (uae_u32 opcode)
 
 	v1 = get_const (PC_P);
 	v2 = get_const (S1);
-	fflags_into_flags ();
+	fflags_into_flags_keep_ccr ();
 
 	switch (cc) {
 		case 1: register_branch (v1, v2, NATIVE_CC_EQ); break;
