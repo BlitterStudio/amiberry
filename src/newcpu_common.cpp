@@ -1547,9 +1547,11 @@ void Exception_build_stack_frame(uae_u32 oldpc, uae_u32 currpc, uae_u32 ssw, int
 		// version & internal information (We store index here)
 		m68k_areg(regs, 7) -= 2;
 		x_put_word(m68k_areg(regs, 7), (mmu030_idx & 0xf) | ((mmu030_idx_done & 0xf) << 4) | (regs.wb2_status << 8));
+		regs.wb2_status = 0;
 		// 3* internal registers
 		m68k_areg(regs, 7) -= 2;
 		x_put_word(m68k_areg(regs, 7), mmu030_state[2] | (regs.wb3_status << 8));
+		regs.wb3_status = 0;
 		m68k_areg(regs, 7) -= 2;
 		x_put_word(m68k_areg(regs, 7), regs.wb2_address); // = mmu030_state[1]
 		m68k_areg(regs, 7) -= 2;
