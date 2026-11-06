@@ -2295,7 +2295,7 @@ jobs:
           - os: ubuntu-24.04
             platform: unix
             artifact_platform: linux
-            arch: arm64
+            arch: aarch64
             artifact: amiberry_libretro.so
           - os: windows-2025
             platform: win
@@ -2305,7 +2305,7 @@ jobs:
           - os: macos-15
             platform: osx
             artifact_platform: macOS
-            arch: aarch64
+            arch: arm64
             artifact: amiberry_libretro.dylib
     steps:
       - name: Check out amiberry
