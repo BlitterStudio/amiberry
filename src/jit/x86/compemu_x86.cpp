@@ -51998,6 +51998,7 @@ uae_u32 REGPARAM2 op_e008_0_comp_ff(uae_u32 opcode) /* LSR */
 					shrl_b_ri(data,srcreg);
 					live_flags();
 					end_needflags();
+					clear_overflow();
 					duplicate_carry();
 					if (!(needed_flags & FLAG_CZNV)) dont_care_flags();
 					if(dstreg != data) {
@@ -52321,6 +52322,7 @@ uae_u32 REGPARAM2 op_e048_0_comp_ff(uae_u32 opcode) /* LSR */
 					shrl_w_ri(data,srcreg);
 					live_flags();
 					end_needflags();
+					clear_overflow();
 					duplicate_carry();
 					if (!(needed_flags & FLAG_CZNV)) dont_care_flags();
 					if(dstreg != data) {
@@ -52641,6 +52643,7 @@ uae_u32 REGPARAM2 op_e088_0_comp_ff(uae_u32 opcode) /* LSR */
 					shrl_l_ri(data,srcreg);
 					live_flags();
 					end_needflags();
+					clear_overflow();
 					duplicate_carry();
 					if (!(needed_flags & FLAG_CZNV)) dont_care_flags();
 					if(dstreg != data) {

@@ -110,6 +110,11 @@ typedef uae_u8 flagtype;
 
 #ifdef FPUEMU
 
+#if !defined(USE_LONG_DOUBLE) && (defined(CPU_i386) || defined(CPU_x86_64)) && defined(__LDBL_MANT_DIG__) && __LDBL_MANT_DIG__ == 64
+// The native core and x87 JIT can retain the complete MC6888x register format.
+#define USE_LONG_DOUBLE
+#endif
+
 #ifdef USE_LONG_DOUBLE
 typedef long double fptype;
 #else
@@ -204,8 +209,13 @@ struct regstruct
 	uae_u32 trace_pc;
 
 	uae_u16 irc, ir, ird;
-	volatile uae_atomic spcflags;
-	uae_u32 last_prefetch;
+	// A cache line of its own: with the threaded CPU the main thread reads
+	// and sets it all the time, and sharing a line with fields the CPU writes
+	// per instruction (opcode, instruction_pc) cost the threaded
+	// interpreter ~8 % host time; which fields shared it depended on where
+	// the linker happened to place regs.
+	alignas(64) volatile uae_atomic spcflags;
+	alignas(64) uae_u32 last_prefetch;
 	uae_u32 chipset_latch_rw;
 	uae_u32 chipset_latch_read;
 	uae_u32 chipset_latch_write;
@@ -805,6 +815,7 @@ extern void mmu_op (uae_u32, uae_u32);
 extern bool mmu_op30 (uaecptr, uae_u32, uae_u16, uaecptr);
 
 extern void fpuop_arithmetic(uae_u32, uae_u16);
+extern void REGPARAM3 fpuop_arithmetic_jit(uae_u32 instruction, uaecptr ea);
 extern void fpuop_dbcc(uae_u32, uae_u16);
 extern void fpuop_scc(uae_u32, uae_u16);
 extern void fpuop_trapcc(uae_u32, uaecptr, uae_u16);
@@ -814,6 +825,8 @@ extern void fpuop_restore(uae_u32);
 extern uae_u32 fpp_get_fpsr (void);
 extern bool fpu_get_constant(fpdata *fp, int cr);
 extern int fpp_cond(int condition);
+extern uae_u32 fpp_get_cond_mask(int condition);
+extern bool fpu_fpsr_cc_written;
 
 extern void exception3_read(uae_u32 opcode, uaecptr addr, int size, int fc);
 extern void exception3_write(uae_u32 opcode, uaecptr addr, int size, uae_u32 val, int fc);

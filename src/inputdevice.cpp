@@ -33,8 +33,10 @@
 #endif
 
 #include "inputrecord.h"
+#include "joyport_input.h"
 #include "keybuf.h"
 #include "custom.h"
+#include "rtc.h"
 #include "xwin.h"
 #include "drawing.h"
 #include "memory.h"
@@ -515,6 +517,12 @@ static uae_s16 lightpen_deltanoreset[2][2];
 static int lightpen_trigger2;
 static int joybutton[MAX_JPORTS];
 static int joydir[MAX_JPORTS];
+static Amiberry::Input::JoyportInput joyport_input;
+static_assert(MAX_JPORTS == 4 && DIR_LEFT == 1 && DIR_RIGHT == 2 && DIR_UP == 4 && DIR_DOWN == 8);
+static_assert(JOYBUTTON_1 == 0 && JOYBUTTON_2 == 1
+	&& JOYBUTTON_CD32_RED == 8 && JOYBUTTON_CD32_BLUE == 9
+	&& JOYBUTTON_CD32_GREEN == 6 && JOYBUTTON_CD32_YELLOW == 7
+	&& JOYBUTTON_CD32_RWD == 4 && JOYBUTTON_CD32_FFW == 5 && JOYBUTTON_CD32_PLAY == 3);
 static int joydirpot[MAX_JPORTS][2];
 static uae_s16 mouse_frame_x[MAX_JPORTS], mouse_frame_y[MAX_JPORTS];
 
@@ -3991,6 +3999,36 @@ static void joymousecounter (int joy)
 	}
 }
 
+static void update_joyport_input(int port)
+{
+	const int old_directions = joydir[port];
+	joybutton[port] = joyport_input.buttons(port);
+	joydir[port] = joyport_input.directions(port, false);
+	if (port < NORMAL_JPORTS && old_directions != joydir[port])
+		joymousecounter(port);
+}
+
+bool inputdevice_joystick_is_cd32(int port)
+{
+	return port >= 0 && port < NORMAL_JPORTS && cd32_pad_enabled[port];
+}
+
+void inputdevice_set_joystick_state(uae_u64 client, int port, int directions, int buttons)
+{
+	if (port < 0 || port >= MAX_JPORTS)
+		return;
+	joyport_input.set(client, port, directions,
+		Amiberry::Input::joystick_button_mask(buttons, inputdevice_joystick_is_cd32(port)));
+	update_joyport_input(port);
+}
+
+void inputdevice_release_joystick(uae_u64 client)
+{
+	joyport_input.release(client);
+	for (int port = 0; port < MAX_JPORTS; ++port)
+		update_joyport_input(port);
+}
+
 static int inputread;
 
 void inputdevice_read_msg(bool vblank)
@@ -5943,14 +5981,8 @@ static int handle_input_event2(int nr, int state, int max, int flags, int extra)
 			}
 			else {
 				int old = joybutton[joy] & (1 << ie->data);
-				if (state) {
-					joybutton[joy] |= 1 << ie->data;
-					//gui_gameport_button_change(joy, ie->data, 1);
-				}
-				else {
-					joybutton[joy] &= ~(1 << ie->data);
-					//gui_gameport_button_change(joy, ie->data, 0);
-				}
+				joyport_input.set_host_button(joy, ie->data, state != 0);
+				joybutton[joy] = joyport_input.buttons(joy);
 
 				if (ie->data == 0 && old != (joybutton[joy] & (1 << ie->data)) && currprefs.cpu_cycle_exact) {
 					if (!input_record && !input_play && currprefs.input_contact_bounce) {
@@ -6229,6 +6261,8 @@ static int handle_input_event2(int nr, int state, int max, int flags, int extra)
 					}
 					joydir[joy] |= DIR_DOWN;
 				}
+				joyport_input.set_host_directions(joy, joydir[joy]);
+				joydir[joy] = joyport_input.directions(joy, false);
 				if (joy == 0 || joy == 1)
 					joymousecounter(joy);
 
@@ -6405,6 +6439,9 @@ void inputdevice_vsync (void)
 
 void inputdevice_reset (void)
 {
+	joyport_input.clear_injected();
+	for (int port = 0; port < MAX_JPORTS; ++port)
+		update_joyport_input(port);
 	magicmouse_ibase = 0;
 	magicmouse_gfxbase = 0;
 	mousehack_reset();
@@ -7235,6 +7272,20 @@ static void scanevents (struct uae_prefs *p)
 			analog_port[i][j] = 0;
 			joydirpot[i][j] = 128 / (312 * 100 / currprefs.input_analog_joystick_mult) + (128 * currprefs.input_analog_joystick_mult / 100) + currprefs.input_analog_joystick_offset;
 		}
+		// A configured virtual pad works even without a mapped host device.
+		if (p->jports[i].mode == JSEM_MODE_JOYSTICK_CD32)
+			cd32_pad_enabled[i] = 1;
+		if (p->jports[i].mode == JSEM_MODE_JOYSTICK
+			|| p->jports[i].mode == JSEM_MODE_GAMEPAD
+			|| p->jports[i].mode == JSEM_MODE_JOYSTICK_CD32) {
+			digital_port[i][1] = 1;
+			if (p->jports[i].id < 0)
+				joymodes[i] = p->jports[i].mode;
+		}
+	}
+	for (i = NORMAL_JPORTS; i < MAX_JPORTS; ++i) {
+		if (p->jports[i].mode == JSEM_MODE_JOYSTICK || p->jports[i].mode == JSEM_MODE_GAMEPAD)
+			parport_joystick_enabled = 1;
 	}
 	lightpen_enabled = false;
 	lightpen_enabled2 = false;
@@ -8608,6 +8659,7 @@ static void resetinput (void)
 {
 	if ((input_play || input_record) && hsync_counter > 0)
 		return;
+	joyport_input.reset();
 	cd32_shifter[0] = cd32_shifter[1] = 8;
 	for (int i = 0; i < MAX_JPORTS; i++) {
 		oleft[i] = 0;
@@ -10728,6 +10780,7 @@ void bootwarpmode(void)
 
 void warpmode(int mode)
 {
+	rtc_rebase();
 	if (mode < 0) {
 		if (currprefs.turbo_emulation) {
 			changed_prefs.gfx_framerate = currprefs.gfx_framerate = 1;
@@ -10840,6 +10893,10 @@ static bool fixjport(struct jport *port, int add, bool always)
 		} else if (vv >= JSEM_MICE && vv < JSEM_END) {
 			_tcsncpy(port->idc.name, inputdevice_get_device_name (IDTYPE_MOUSE, vv - JSEM_MICE), MAX_JPORT_NAME - 1);
 			_tcsncpy(port->idc.configname, inputdevice_get_device_unique_name (IDTYPE_MOUSE, vv - JSEM_MICE), MAX_JPORT_CONFIG - 1);
+		} else if (vv == JPORT_NONE && (port->mode == JSEM_MODE_JOYSTICK
+			|| port->mode == JSEM_MODE_GAMEPAD || port->mode == JSEM_MODE_JOYSTICK_CD32)) {
+			// Keep an explicitly configured virtual pad matchable on later fixup passes.
+			_tcscpy(port->idc.shortid, _T("none"));
 		} else if (vv >= JSEM_KBDLAYOUT && vv < JSEM_CUSTOM) {
 			_sntprintf(port->idc.shortid, sizeof port->idc.shortid, _T("kbd%d"), vv - JSEM_KBDLAYOUT + 1);
 		} else if (vv >= JSEM_CUSTOM && vv < JSEM_JOYS) {
@@ -11334,8 +11391,9 @@ uae_u8 *save_inputstate (size_t *len, uae_u8 *dstptr)
 	else
 		dstbak = dst = xmalloc (uae_u8, 1000);
 	for (int i = 0; i < MAX_JPORTS; i++) {
-		save_u16 (joydir[i]);
-		save_u16 (joybutton[i]);
+		const auto physical = joyport_input.save_host(i);
+		save_u16 (physical.directions);
+		save_u16 (physical.buttons);
 		save_u16 (otop[i]);
 		save_u16 (obot[i]);
 		save_u16 (oleft[i]);
@@ -11362,9 +11420,16 @@ uae_u8 *save_inputstate (size_t *len, uae_u8 *dstptr)
 
 uae_u8 *restore_inputstate (uae_u8 *src)
 {
+	joyport_input.clear_injected();
+	bool refresh_counters[NORMAL_JPORTS]{};
 	for (int i = 0; i < MAX_JPORTS; i++) {
-		joydir[i] = restore_u16 ();
-		joybutton[i] = restore_u16 ();
+		const int saved_directions = restore_u16 ();
+		const int saved_buttons = restore_u16 ();
+		const bool refresh = joyport_input.restore_saved_host(i, saved_directions, saved_buttons);
+		joydir[i] = joyport_input.directions(i, false);
+		joybutton[i] = joyport_input.buttons(i);
+		if (i < NORMAL_JPORTS)
+			refresh_counters[i] = refresh;
 		otop[i] = restore_u16 ();
 		obot[i] = restore_u16 ();
 		oleft[i] = restore_u16 ();
@@ -11384,6 +11449,8 @@ uae_u8 *restore_inputstate (uae_u8 *src)
 		}
 		mouse_frame_x[i] = restore_u16 ();
 		mouse_frame_y[i] = restore_u16 ();
+		if (refresh_counters[i])
+			joymousecounter(i);
 	}
 	return src;
 }

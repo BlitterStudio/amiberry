@@ -159,6 +159,46 @@ See the [build guide](https://github.com/BlitterStudio/amiberry/wiki/Compile-fro
 
 Desktop builds enable SDL3-backed genlock video and camera input by default (`USE_VIDEOGRAB`). `USE_FFMPEG` independently enables ZZ9000 and genlock media decoding when FFmpeg 5.1 or newer development files are available; it requires libavformat 59.27+, libavcodec 59.37+, libavutil 57.28+, libswresample 4.7+, and libswscale 6.7+. `USE_WEBP` enables still and animated WebP decoding when libwebp and libwebpdemux development files are available.
 
+### Emulator regression checks
+
+ROM-free regression fixtures compile production functions to check CPU flags
+and exception frames, coherent CIA timer reads, event dispatch, 68030 ATC and
+locked accesses, queued sprite writes, AGA subpixel collisions, and writable
+RTC counters, calendar, hour modes and sub-frame carry/BUSY timing.
+The x86 flag-emitter check runs only on x86-64 hosts.
+
+Run `bash tests/test_frame_pacing.sh` for software frame-pacing checks, including
+adaptive scheduler-overshoot margins and PAL/NTSC deadline boundaries.
+
+The RTC counts emulated time (chipset cycles), like the real chip's own
+crystal next to the colour clock: its seconds agree with the CIAs and the beam
+also when the emulation runs slower or faster than real time, and host frame
+waits cannot hide the MSM6242B's 244-microsecond BUSY pulse from a polling
+guest. It starts at the host clock and re-anchors to it on reset, state
+restore, pause/resume and warp transitions; warp retains a wall-clock RTC.
+While running it slews towards the host clock by at most 1 % once they are more
+than a second apart, and re-anchors after a host clock jump of over an hour.
+MSM6242B HOLD freezes the calendar during writes and defers one carry until
+release; Ricoh calendar and leap counters advance regardless of the selected
+register bank.
+Savestates capture the RTC at the save instant. An RTC file preserves
+guest-written calendars and independent weekday/leap counters across restarts;
+only running clocks advance while the emulator is off, and HOLD defers one carry.
+
+FPU exception, stack-frame and compiler checks run with
+`python3 tests/fpu_exception_regressions_test.py`,
+`python3 tests/fpu_frame_regressions_test.py` and
+`python3 tests/fpu_jit_compiler_regressions_test.py`.
+These include independent FPSR condition-bit combinations in interpreted and
+compiled x86 predicates, with signaling conditions retaining BSUN handling.
+Run `python3 tests/fpu_predicates_live_test.py build/amiberry` to execute an
+original synthetic ROM's predicate matrix and integer-CCR preservation checks
+through both the interpreter and JIT, without external ROMs or disks.
+
+Interpreter handlers and x86 JIT translators are checked in. After changing
+`src/gencpu.cpp` or `src/jit/x86/gencomp.cpp`, regenerate their outputs;
+CMake does not run these generators automatically.
+
 ## Contributing
 
 Contributions are welcome — bug reports, feature suggestions, and pull requests all help make Amiberry better.

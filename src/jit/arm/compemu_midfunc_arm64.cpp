@@ -555,7 +555,9 @@ MENDFUNC(2,arm_ADD_l,(RW4 d, RR4 s))
 MIDFUNC(2,arm_ADD_ldiv8,(RW4 d, RR4 s))
 {
 	if (isconst(s)) {
-		COMPCALL(arm_ADD_l_ri)(d,(live.state[s].val & ~0x1f) >> 3);
+		// signed, like the register path (ASR 5, LSL 2): a negative bit
+		// offset gives a negative byte offset
+		COMPCALL(arm_ADD_l_ri)(d,(uae_u32)(((uae_s32)live.state[s].val >> 5) * 4));
 		return;
 	}
 
@@ -1199,6 +1201,23 @@ MIDFUNC(1,fflags_into_flags,())
 }
 MENDFUNC(1,fflags_into_flags,())
 
+/* FScc/FBcc: the FPU condition codes in the host flags for one test, the
+ * integer CCR kept. fflags_into_flags() + live_flags() made them the 68k
+ * CCR, so FScc and FBcc changed the guest's CCR. Save the CCR
+ * (clobber_flags), load the FPU flags, and leave the host flags TRASH:
+ * the CCR is reloaded from its saved copy when next needed, and the
+ * block end of an FBcc (flush, then the conditional jump on these flags)
+ * no longer stores the FPU flags as the CCR. */
+MIDFUNC(0,fflags_into_flags_keep_ccr,(void))
+{
+	clobber_flags();
+	int r = f_readreg(FP_RESULT);
+	raw_fflags_into_flags(r);
+	f_unlock(r);
+	live.flags_in_flags = TRASH;
+}
+MENDFUNC(0,fflags_into_flags_keep_ccr,(void))
+
 
 MIDFUNC(2,fp_from_exten_mr,(RR4 adr, FR s))
 {
@@ -1243,6 +1262,57 @@ MIDFUNC(2,fp_to_double_rm,(FW d, RR4 adr))
 	f_unlock(d);
 }
 MENDFUNC(2,fp_to_double_rm,(FW d, RR4 adr))
+
+/* FPSR condition codes written directly (FMOVE to FPSR, FRESTORE:
+ * fpp_set_fpsr() sets fpu_fpsr_cc_written) can combine N, Z, I and NAN in
+ * ways no FP_RESULT value holds, e.g. Z with NAN. While the flag is set the
+ * predicate comes from the FPSR CC nibble instead: bit n of mask is the
+ * predicate for nibble n (fpp_get_cond_mask()). Low byte of d = $FF/$00.
+ * No host flags are changed. */
+static void emit_cc_from_fpsr(int d, uae_u32 mask)
+{
+	LOAD_U64(REG_WORK1, (uintptr)&fpu_fpsr_cc_written);
+	LDRB_wXi(REG_WORK1, REG_WORK1, 0);
+	uae_u32 *branchadd = (uae_u32 *)get_target();
+	CBZ_wi(REG_WORK1, 0);                       // FP_RESULT is valid: keep d
+	LOAD_U64(REG_WORK1, (uintptr)&regs.fpsr);
+	LDR_wXi(REG_WORK1, REG_WORK1, 0);
+	UBFX_wwii(REG_WORK1, REG_WORK1, 24, 4);     // CC nibble N Z I NAN
+	LOAD_U32(REG_WORK2, mask);
+	LSR_www(REG_WORK2, REG_WORK2, REG_WORK1);
+	SBFX_wwii(REG_WORK2, REG_WORK2, 0, 1);      // 0 or -1
+	BFI_wwii(d, REG_WORK2, 0, 8);
+	write_jmp_target(branchadd, (uintptr)get_target());
+}
+
+MIDFUNC(2,fp_cc_from_fpsr,(RW4 d, IM32 mask))
+{
+	d = rmw(d);
+	emit_cc_from_fpsr(d, mask);
+	unlock2(d);
+}
+MENDFUNC(2,fp_cc_from_fpsr,(RW4 d, IM32 mask))
+
+/* FBcc: the host flags for the branch from the predicate byte in d (NE =
+ * taken). Not live_flags(): the 68k CCR stays in its saved copy, and the
+ * block end (flush, then the conditional jump) keeps these flags. */
+MIDFUNC(1,fp_fbcc_test,(RR4 d))
+{
+	d = readreg(d);
+	TST_ww(d, d);
+	unlock2(d);
+	live.flags_in_flags = TRASH;
+}
+MENDFUNC(1,fp_fbcc_test,(RR4 d))
+
+/* A compiled FPU operation set FP_RESULT: the FPSR CC come from it again. */
+MIDFUNC(0,fpu_cc_written_clear,(void))
+{
+	LOAD_U64(REG_WORK1, (uintptr)&fpu_fpsr_cc_written);
+	MOV_wi(REG_WORK2, 0);
+	STRB_wXi(REG_WORK2, REG_WORK1, 0);
+}
+MENDFUNC(0,fpu_cc_written_clear,(void))
 
 MIDFUNC(2,fp_fscc_ri,(RW4 d, int cc))
 {

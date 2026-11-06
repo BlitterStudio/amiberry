@@ -1171,6 +1171,10 @@ LOWFUNC(NONE,NONE,2,raw_fp_fscc_ri,(RW4 d, int cc))
 		case NATIVE_CC_F_NEVER:
 			BIC_rri(d, d, 0xff);
 			break;
+
+		case NATIVE_CC_AL: // FST/ST: always set (emitted nothing before)
+			ORR_rri(d, d, 0xff);
+			break;
 			
 		case NATIVE_CC_NE: // Set if not equal
 			CC_BIC_rri(NATIVE_CC_EQ, d, d, 0xff); // do not set if equal

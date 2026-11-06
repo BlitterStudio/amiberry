@@ -201,7 +201,7 @@ void draw_denise_border_line_fast_queue(int gfx_ypos, bool blank, enum nln_how h
 bool start_draw_denise(void);
 void end_draw_denise(void);
 void denise_reset(bool);
-bool denise_update_reg_queued(uae_u16 reg, uae_u16 v, uae_u32 linecnt);
+bool denise_update_reg_queued(uae_u16 reg, uae_u64 v, uae_u32 linecnt);
 void denise_store_registers(void);
 void denise_restore_registers(void);
 bool denise_is_vb(void);
@@ -213,7 +213,7 @@ bool drawing_can_lineoptimizations(void);
 void set_drawbuffer(void);
 int gethresolution(void);
 int getvresolution(void);
-void denise_update_reg_queue(uae_u16 reg, uae_u16 v, uae_u32 linecnt);
+void denise_update_reg_queue(uae_u16 reg, uae_u64 v, uae_u32 linecnt);
 void denise_store_restore_registers_queue(bool store, uae_u32 linecnt);
 void denise_clearbuffers(void);
 uae_u8 *get_row_genlock(int monid, int line);

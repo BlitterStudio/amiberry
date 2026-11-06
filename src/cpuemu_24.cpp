@@ -19079,8 +19079,6 @@ void REGPARAM2 op_4e73_24_ff(uae_u32 opcode)
 		newsr = sr; newpc = pc;
 		if (frame == 0x0) {
 		m68k_areg(regs, 7) += offset; break; }
-		else if (frame == 0x1) {
-		m68k_areg(regs, 7) += offset; }
 		else if (frame == 0x2) {
 		m68k_areg(regs, 7) += offset + 4; break; }
 		else if (frame == 0x3) {

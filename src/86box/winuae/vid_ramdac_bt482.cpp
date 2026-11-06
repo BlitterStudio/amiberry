@@ -68,6 +68,7 @@ void bt482_ramdac_out(uint16_t addr, int rs2, uint8_t val, void *priv, svga_t *s
 	rs |= (!!rs2) << 2;
 	switch (rs) {
 		case 0x00: /* Palette write index */
+		case 0x03: /* Palette read index (as vid_ramdac_bt48x.cpp) */
 			svga->dac_pos = 0;
 			svga->dac_status = addr & 0x03;
 			svga->dac_addr = val;
@@ -148,6 +149,7 @@ uint8_t bt482_ramdac_in(uint16_t addr, int rs2, void *priv, svga_t *svga)
 	rs |= (!!rs2) << 2;
 	switch (rs) {
 		case 0x00: /* Palette write index */
+		case 0x01: /* Palette data (readback of the palette RAM) */
 			temp = svga_in(addr, svga);
 			break;
 		case 0x02:

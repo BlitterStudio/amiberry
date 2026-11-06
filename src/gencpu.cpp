@@ -7122,7 +7122,9 @@ static void gen_opcode (unsigned int opcode)
 		    out("if (frame == 0x0) {\nm68k_areg(regs, 7) += offset; break; }\n");
 			if (cpu_level >= 2) {
 				// 68020+
-				out("else if (frame == 0x1) {\nm68k_areg(regs, 7) += offset; }\n");
+				if (cpu_level < 5) {
+					out("else if (frame == 0x1) {\nm68k_areg(regs, 7) += offset; }\n");
+				}
 				out("else if (frame == 0x2) {\nm68k_areg(regs, 7) += offset + 4; break; }\n");
 			}
 			if (cpu_level >= 4) {

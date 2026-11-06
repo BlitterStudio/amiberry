@@ -494,7 +494,9 @@ MENDFUNC(2,arm_ADD_l,(RW4 d, RR4 s))
 MIDFUNC(2,arm_ADD_ldiv8,(RW4 d, RR4 s))
 {
 	if (isconst(s)) {
-		COMPCALL(arm_ADD_l_ri)(d,(live.state[s].val & ~0x1f) >> 3);
+		// signed, like the register path (ASR 5, LSL 2): a negative bit
+		// offset gives a negative byte offset
+		COMPCALL(arm_ADD_l_ri)(d,(uae_u32)(((uae_s32)live.state[s].val >> 5) * 4));
 		return;
 	}
 
@@ -1029,6 +1031,23 @@ MIDFUNC(1,fflags_into_flags,())
 	fflags_into_flags_internal();
 }
 MENDFUNC(1,fflags_into_flags,())
+
+/* FScc/FBcc: the FPU condition codes in the host flags for one test, the
+ * integer CCR kept. fflags_into_flags() + live_flags() made them the 68k
+ * CCR, so FScc and FBcc changed the guest's CCR. Save the CCR
+ * (clobber_flags), load the FPU flags, and leave the host flags TRASH:
+ * the CCR is reloaded from its saved copy when next needed, and the
+ * block end of an FBcc (flush, then the conditional jump on these flags)
+ * no longer stores the FPU flags as the CCR. */
+MIDFUNC(0,fflags_into_flags_keep_ccr,(void))
+{
+	clobber_flags();
+	int r = f_readreg(FP_RESULT);
+	raw_fflags_into_flags(r);
+	f_unlock(r);
+	live.flags_in_flags = TRASH;
+}
+MENDFUNC(0,fflags_into_flags_keep_ccr,(void))
 
 
 MIDFUNC(2,fp_from_exten_mr,(RR4 adr, FR s))

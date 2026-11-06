@@ -5,6 +5,7 @@
 #include "devices.h"
 
 #include "options.h"
+#include "rtc.h"
 #include "uae.h"
 #include "threaddep/thread.h"
 #include "memory.h"
@@ -241,6 +242,7 @@ void devices_reset_ext(int hardreset)
 
 void devices_reset(int hardreset)
 {
+	rtc_rebase();
 	gdb_server_reset();
 	memset(device_reset_done, 0, sizeof(device_reset_done));
 #ifdef AMIBERRY
@@ -545,8 +547,10 @@ void virtualdevice_init (void)
 
 void devices_restore_start(void)
 {
+	rtc_rebase();
 	restore_audio_start();
 	restore_cia_start();
+	restore_rtc_start();
 	restore_blkdev_start();
 	restore_custom_start();
 	changed_prefs.bogomem.size = 0;
@@ -587,6 +591,7 @@ void devices_pause(void)
 
 void devices_unpause(void)
 {
+	rtc_rebase();
 	blkdev_exitgui();
 #ifdef RETROPLATFORM
 	rp_pause(0);

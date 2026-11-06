@@ -149,6 +149,7 @@ DECLARE_MIDFUNC(add_w_mi(MEMRW d, IMM s));
 DECLARE_MIDFUNC(add_b_mi(MEMRW d, IMM s));
 DECLARE_MIDFUNC(test_l_ri(RR4 d, IMM i));
 DECLARE_MIDFUNC(test_l_rr(RR4 d, RR4 s));
+DECLARE_MIDFUNC(fpu_cond_from_fpsr(RW4 d, W4 tmp, IMM mask));
 DECLARE_MIDFUNC(test_w_rr(RR2 d, RR2 s));
 DECLARE_MIDFUNC(test_b_rr(RR1 d, RR1 s));
 DECLARE_MIDFUNC(test_b_mi(MEMR d, IMM s));
@@ -198,6 +199,7 @@ DECLARE_MIDFUNC(end_needflags(void));
 DECLARE_MIDFUNC(make_flags_live(void));
 DECLARE_MIDFUNC(call_r_11(RR4 r, W4 out1, RR4 in1, IMM osize, IMM isize));
 DECLARE_MIDFUNC(call_r_02(RR4 r, RR4 in1, RR4 in2, IMM isize1, IMM isize2));
+DECLARE_MIDFUNC(fpu_native_call(IMM instruction, RR4 ea, IMM pc, IMM nextpc));
 DECLARE_MIDFUNC(forget_about(W4 r));
 DECLARE_MIDFUNC(nop(void));
 

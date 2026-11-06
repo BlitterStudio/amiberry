@@ -936,9 +936,11 @@ void setdivuflags(uae_u32 dividend, uae_u16 divisor)
 		SET_VFLG(1);
 		SET_CFLG(0);
 	} else if (currprefs.cpu_model >= 68020) {
+		// 68020/030: V=1, C=0, Z=0, N = dividend negative (table above)
 		SET_VFLG(1);
-		if ((uae_s32)dividend < 0)
-			SET_NFLG(1);
+		SET_CFLG(0);
+		SET_ZFLG(0);
+		SET_NFLG((uae_s32)dividend < 0);
 	} else if (currprefs.cpu_model == 68010) {
 		SET_VFLG(1);
 		if ((uae_s32)dividend < 0 && (uae_s16)divisor < 0) {
@@ -1643,7 +1645,9 @@ void Exception_build_stack_frame_common(uae_u32 oldpc, uae_u32 currpc, uae_u32 s
 				Exception_build_stack_frame(oldpc, regs.instruction_pc, 0, vector_nr, 0x0);
 			}
 		} else { /* post-instruction */
-			if (currprefs.cpu_model == 68060 && nr == 55 && regs.fp_unimp_pend == 2) { // packed decimal real
+			if (currprefs.cpu_model == 68020 || currprefs.cpu_model == 68030) {
+				Exception_build_stack_frame(regs.instruction_pc, currpc, 0, vector_nr, 0x9);
+			} else if (currprefs.cpu_model == 68060 && nr == 55 && regs.fp_unimp_pend == 2) { // packed decimal real
 				Exception_build_stack_frame(regs.fp_ea, currpc, 0, vector_nr, 0x2);
 			} else {
 				Exception_build_stack_frame(oldpc, currpc, 0, vector_nr, 0x3);

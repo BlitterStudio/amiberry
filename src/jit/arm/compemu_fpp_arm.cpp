@@ -333,6 +333,23 @@ STATIC_INLINE int comp_fp_adr (uae_u32 opcode)
 	}
 }
 
+/* FPU operations that set FP_RESULT make it the source of the FPSR
+ * condition codes again (see emit_cc_from_fpsr()). ARM64 only: 32-bit ARM
+ * has no FPSR-based predicate yet and never sets fpu_fpsr_cc_written. */
+#if defined(CPU_AARCH64)
+#define FP_RESULT_WRITTEN() fpu_cc_written_clear()
+#else
+#define FP_RESULT_WRITTEN()
+#endif
+
+/* host condition for FScc/FBcc predicate 0-15 (the $10 bit only adds BSUN) */
+static const int fp_native_cc[16] = {
+	NATIVE_CC_F_NEVER, NATIVE_CC_EQ, NATIVE_CC_F_OGT, NATIVE_CC_F_OGE,
+	NATIVE_CC_F_OLT, NATIVE_CC_F_OLE, NATIVE_CC_F_OGL, NATIVE_CC_F_OR,
+	NATIVE_CC_F_UN, NATIVE_CC_F_UEQ, NATIVE_CC_F_UGT, NATIVE_CC_F_UGE,
+	NATIVE_CC_F_ULT, NATIVE_CC_F_ULE, NATIVE_CC_NE, NATIVE_CC_AL
+};
+
 void comp_fscc_opp (uae_u32 opcode, uae_u16 extra)
 {
 	int reg;
@@ -354,9 +371,15 @@ void comp_fscc_opp (uae_u32 opcode, uae_u16 extra)
 		return;
 	}
 
-	fflags_into_flags ();
+	fflags_into_flags_keep_ccr ();
 	reg = (opcode & 7);
 
+#if defined(CPU_AARCH64)
+	fp_fscc_ri(reg, fp_native_cc[extra & 0x0f]);
+	if ((extra & 0x0f) != 0 && (extra & 0x0f) != 15)
+		fp_cc_from_fpsr(reg, fpp_get_cond_mask(extra & 0x1f));
+	return;
+#endif
 	if (!(opcode & 0x38)) {
 	  switch (extra & 0x0f) { /* according to fpp.c, the 0x10 bit is ignored */
 		  case 0: fp_fscc_ri(reg, NATIVE_CC_F_NEVER); break;
@@ -430,7 +453,22 @@ void comp_fbcc_opp (uae_u32 opcode)
 
 	v1 = get_const (PC_P);
 	v2 = get_const (S1);
-	fflags_into_flags ();
+#if defined(CPU_AARCH64)
+	if (cc == 15) {
+		register_branch (v2, v2, NATIVE_CC_AL);
+		return;
+	}
+	// The predicate as a byte (as FScc computes it, with the FPSR-based
+	// one for directly written CC), then branch on it.
+	mov_l_ri (S2, 0);
+	fflags_into_flags_keep_ccr ();
+	fp_fscc_ri (S2, fp_native_cc[cc]);
+	fp_cc_from_fpsr (S2, fpp_get_cond_mask(opcode & 0x1f));
+	fp_fbcc_test (S2);
+	register_branch (v1, v2, NATIVE_CC_NE);
+	return;
+#endif
+	fflags_into_flags_keep_ccr ();
 
 	switch (cc) {
 		case 1: register_branch (v1, v2, NATIVE_CC_EQ); break;
@@ -750,6 +788,7 @@ void comp_fpp_opp (uae_u32 opcode, uae_u16 extra)
 				    return;
 			  }
 			  fmov_rr (FP_RESULT, dreg);
+			  FP_RESULT_WRITTEN();
 			  return;
       }
 		  if (opmode & 0x20) /* two operands, so we need a scratch reg */
@@ -767,6 +806,7 @@ void comp_fpp_opp (uae_u32 opcode, uae_u16 extra)
 		  }
 		  if (!opmode) { /* FMOVE  <EA>,FPx */
 			  fmov_rr (FP_RESULT, dreg);
+			  FP_RESULT_WRITTEN();
 			  return;
 		  }
 		  /* no break here for <EA> to dreg */
@@ -896,9 +936,11 @@ void comp_fpp_opp (uae_u32 opcode, uae_u16 extra)
 				  return;
 			  case 0x38: /* FCMP */
 			    fcmp_result_rrr (FP_RESULT, dreg, sreg);
+			    FP_RESULT_WRITTEN();
 			    return;
 			  case 0x3a: /* FTST */
 			    fmov_rr (FP_RESULT, sreg);
+			    FP_RESULT_WRITTEN();
 			    return;
 		    case 0x40: /* FSMOVE */
 			    if (prec == 1 || !currprefs.fpu_strict) {
@@ -967,6 +1009,7 @@ void comp_fpp_opp (uae_u32 opcode, uae_u16 extra)
 			    return;
       }
 		  fmov_rr (FP_RESULT, dreg);
+			  FP_RESULT_WRITTEN();
 		  return;
 		default:
 		  write_log (_T ("Unsupported JIT-FPU instruction: 0x%04x %04x\n"), opcode, extra);
