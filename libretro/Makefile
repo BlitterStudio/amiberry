@@ -121,10 +121,6 @@ ifneq (,$(filter arm64 ARM64,$(ARCH)))
    override ARCH := aarch64
 endif
 
-TARGET_POINTER_SIZE := $(shell printf '' | $(CXX) $(CPPFLAGS) $(CXXFLAGS) $(FLAGS) -dM -E -x c++ - 2>/dev/null | sed -n 's/^#define __SIZEOF_POINTER__ //p')
-ifneq ($(TARGET_POINTER_SIZE),8)
-   $(error Amiberry requires a 64-bit target ABI; check the target compiler and flags)
-endif
 
 LDFLAGS += $(fpic) $(SHARED)
 FLAGS += $(fpic)
@@ -268,6 +264,17 @@ FLAGS += -D_WIN32_WINNT=0x0601
 # Link winpthread explicitly. The link is also harmless under MinGW-w64
 # GCC, where it's normally pulled in implicitly.
 LDFLAGS += -liconv -lws2_32 -lz -liphlpapi -lgdi32 -lwinmm -lpthread
+endif
+
+# The target must have 8-byte pointers. Probed here, after the platform
+# sections above have chosen the compiler (e.g. CLANG64 on Windows) and its
+# flags. No "#" in the command: GNU make 3.81 (macOS) would read it as the
+# start of a comment. tr strips the CR of Windows toolchains.
+TARGET_POINTER_SIZE := $(strip $(shell printf '' | $(CXX) $(CPPFLAGS) $(CXXFLAGS) $(FLAGS) -dM -E -x c++ - 2>/dev/null | grep __SIZEOF_POINTER__ | awk '{ print $$3 }' | tr -d '\r'))
+ifeq ($(TARGET_POINTER_SIZE),)
+   $(error Could not determine the target pointer size with $(CXX) (Amiberry requires a 64-bit target ABI); check the target compiler and flags)
+else ifneq ($(TARGET_POINTER_SIZE),8)
+   $(error Amiberry requires a 64-bit target ABI, $(CXX) targets $(TARGET_POINTER_SIZE)-byte pointers; check the target compiler and flags)
 endif
 
 # Source files - Core Amiga Emulation
