@@ -360,16 +360,10 @@ bool preinit_shm ()
 	GetSystemInfo (&si);
 	size_t max_allowed_mman = 512 + 256;
 	if (os_64bit) {
-#ifdef CPU_64_BIT
 		// 64-bit JITs are pointer-clean via a dedicated natmem base register.
 		// Reserve 4GB to cover the full 68040 32-bit address space,
 		// preventing SIGSEGV from JIT direct access to high M68K addresses.
 		max_allowed_mman = 4096 - 1;
-#else
-		// 32-bit builds (e.g. WoW64): all addresses are naturally below 4GB.
-		// Higher than 2G to support G-REX PCI VRAM.
-		max_allowed_mman = 2560;
-#endif
 	}
 	if (maxmem > 0)
 		max_allowed_mman = std::max<size_t>(static_cast<size_t>(maxmem), max_allowed_mman);
@@ -443,14 +437,10 @@ bool preinit_shm ()
 	natmem_size = WIN32_NATMEM_TEST * 1024 * 1024;
 #endif
 
-	#if defined(CPU_64_BIT)
 	// 64-bit JIT: ensure at least 4GB for full 68040 32-bit address space coverage.
 	// MAXZ3MEM64 may cap size64 below 4GB, but we need the natmem reservation
 	// to span all 4GB so JIT direct access to any M68K address won't fault outside it.
 	natmem_size = std::max<size_t>(natmem_size, 0x100000000ULL);
-#else
-	natmem_size = std::min<size_t>(natmem_size, 0xc0000000);
-#endif
 
 	write_log (_T("MMAN: Total physical RAM %llu MB, all RAM %llu MB\n"),
 	           totalphys64 >> 20, total64 >> 20);
@@ -459,13 +449,11 @@ bool preinit_shm ()
 #if 1
 	{
 		int vm_flags = UAE_VM_32BIT | UAE_VM_WRITE_WATCH;
-#if defined(CPU_64_BIT)
 		/* 64-bit JITs are pointer-clean (including add/sub on PC_P):
 		   natmem can live above 4GB.  Dropping UAE_VM_32BIT avoids futile
 		   mmap/munmap cycles on platforms where the kernel ignores low-address
-		   hints (e.g. macOS x86-64/ARM64). */
+		   hints (e.g. macOS x86-64/aarch64). */
 		vm_flags &= ~UAE_VM_32BIT;
-#endif
 		natmem_reserved = static_cast<uae_u8*>(uae_vm_reserve(natmem_size, vm_flags));
 	}
 #else
@@ -522,11 +510,9 @@ bool preinit_shm ()
 	clear_shm (nullptr);
 
 	canbang = true;
-#ifdef CPU_64_BIT
 	if ((uintptr_t)natmem_reserved + natmem_reserved_size > (uintptr_t)0x100000000ULL) {
 		write_log (_T("MMAN: INFO: natmem at %p exceeds 32-bit range - JIT direct mode allowed (64-bit clean)\n"), natmem_reserved);
 	}
-#endif
 	return true;
 }
 
@@ -671,22 +657,9 @@ static int doinit_shm ()
 			notify_user(NUMSG_NOMEMORY);
 			return -1;
 		}
-#ifdef CPU_64_BIT
 		// 64-bit can't do natmem_offset..
 		notify_user(NUMSG_NOMEMORY);
 		return -1;
-#else
-
-		p96base_offset = start_rtg;
-		p96mem_size = end_rtg - start_rtg;
-		write_log("MMAN: rtgbase_offset = %08x, size %08x\n", p96base_offset, p96mem_size);
-		// adjust p96mem_offset to beginning of natmem
-		// by subtracting start of original p96mem_offset from natmem_offset
-		if (p96base_offset >= 0x10000000) {
-			natmem_offset = natmem_reserved - p96base_offset;
-			p96mem_offset = natmem_offset + p96base_offset;
-		}
-#endif
 	} else {
 		start_rtg = 0;
 		end_rtg = 0;

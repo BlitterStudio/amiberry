@@ -1,6 +1,6 @@
 /*
  * Asserts which trap-capable opcodes force whole-block interpreter demotion
- * in the ARM64 JIT.
+ * in the aarch64 JIT.
  *
  * Why this test exists: a widening of this policy is invisible in correctness
  * terms - the emulator still produces right answers, just far more slowly,

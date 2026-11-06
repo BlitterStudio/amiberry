@@ -81,19 +81,12 @@ else ifneq (,$(findstring android,$(platform)))
    # API 28, so the core targets API 28 — Android 9 and newer.
    ANDROID_API ?= 28
    ANDROID_NDK_LLVM ?= $(ANDROID_NDK_ROOT)/toolchains/llvm/prebuilt/linux-x86_64
-   ifeq ($(platform), android-arm64)
+   ifneq (,$(filter $(platform),android-aarch64 android-arm64))
       ANDROID_TRIPLE := aarch64-linux-android
       ARCH := aarch64
-   else ifeq ($(platform), android-arm)
-      ANDROID_TRIPLE := armv7a-linux-androideabi
-      ARCH := arm
-      FLAGS += -mfpu=neon -mfloat-abi=softfp
    else ifneq (,$(filter $(platform),android-x86_64 android-x64))
       ANDROID_TRIPLE := x86_64-linux-android
       ARCH := x86_64
-   else ifeq ($(platform), android-x86)
-      ANDROID_TRIPLE := i686-linux-android
-      ARCH := x86
    else
       $(error unknown Android platform '$(platform)')
    endif
@@ -122,6 +115,15 @@ else
    CHD_PTTY := $(AMIBERRY_DIR)/src/archivers/chd/winptty.cpp
    CHD_SOCKET := $(AMIBERRY_DIR)/src/archivers/chd/winsocket.cpp
    SHARED := -shared -static -Wl,--no-undefined
+endif
+
+ifneq (,$(filter arm64 ARM64,$(ARCH)))
+   override ARCH := aarch64
+endif
+
+TARGET_POINTER_SIZE := $(shell printf '' | $(CXX) $(CPPFLAGS) $(CXXFLAGS) $(FLAGS) -dM -E -x c++ - 2>/dev/null | sed -n 's/^#define __SIZEOF_POINTER__ //p')
+ifneq ($(TARGET_POINTER_SIZE),8)
+   $(error Amiberry requires a 64-bit target ABI; check the target compiler and flags)
 endif
 
 LDFLAGS += $(fpic) $(SHARED)
@@ -174,13 +176,9 @@ FLAGS += -DCHD_FLAC_PLATFORM_HEADER=\"flac_platform_internal_libretro.h\"
 FLAGS += -DSOUND_PLATFORM_HEADER=\"sound_platform_internal_libretro.h\"
 FLAGS += -DWITH_MIDI
 
-ifneq (,$(findstring aarch64,$(ARCH)))
+ifeq ($(ARCH),aarch64)
    FLAGS += -DCPU_AARCH64
-else ifneq (,$(findstring arm64,$(ARCH)))
-   FLAGS += -DCPU_AARCH64
-else ifneq (,$(findstring arm,$(ARCH)))
-   FLAGS += -DCPU_ARM
-else
+else ifneq (,$(filter x86_64 amd64 AMD64,$(ARCH)))
    FLAGS += -DCPU_X86_64
 endif
 

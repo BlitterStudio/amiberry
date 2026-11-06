@@ -1,10 +1,10 @@
-# Toolchain file for Windows ARM64 (aarch64) builds using llvm-mingw.
+# Toolchain file for Windows aarch64 (aarch64) builds using llvm-mingw.
 #
 # llvm-mingw ships clang wrappers named <triple>-clang / <triple>-clang++
 # which invoke `clang --target=<triple>` with the right sysroot already
 # configured. Download from: https://github.com/mstorsjo/llvm-mingw
 #
-# Usage via the windows-arm64-* CMake presets; this file is loaded as
+# Usage via the windows-aarch64-* CMake presets; this file is loaded as
 # VCPKG_CHAINLOAD_TOOLCHAIN_FILE so vcpkg still runs on top.
 #
 # The llvm-mingw install root can be provided via the LLVM_MINGW_ROOT

@@ -989,7 +989,7 @@ static bool has_cmdline_option(int argc, TCHAR** argv, const TCHAR* option)
 }
 
 #if defined(JIT)
-static inline uae_u32 arm64_mov_w0_imm16(uae_u16 imm)
+static inline uae_u32 aarch64_mov_w0_imm16(uae_u16 imm)
 {
 	return 0x52800000u | (static_cast<uae_u32>(imm) << 5);
 }
@@ -997,16 +997,16 @@ static inline uae_u32 arm64_mov_w0_imm16(uae_u16 imm)
 #if defined(CPU_AARCH64) || defined(CPU_x86_64)
 // Emit a "return imm32" stub for the host architecture. Returns the number
 // of bytes written. The stub is the smallest function we can call from C++:
-//   ARM64:   MOV w0, #imm16 ; RET            (8 bytes, low 16 bits used)
+//   aarch64:   MOV w0, #imm16 ; RET            (8 bytes, low 16 bits used)
 //   x86_64:  MOV EAX, imm32 ; RET            (6 bytes, full 32 bits used)
 // EAX/W0 is the integer return register on both ABIs.
 static size_t jit_selftest_emit_return_imm(uae_u8* dst, uae_u32 imm)
 {
 #if defined(CPU_AARCH64)
-	constexpr uae_u32 arm64_ret = 0xD65F03C0u;
+	constexpr uae_u32 aarch64_ret = 0xD65F03C0u;
 	auto* code = reinterpret_cast<uae_u32*>(dst);
-	code[0] = arm64_mov_w0_imm16(static_cast<uae_u16>(imm));
-	code[1] = arm64_ret;
+	code[0] = aarch64_mov_w0_imm16(static_cast<uae_u16>(imm));
+	code[1] = aarch64_ret;
 	return 8;
 #else // CPU_x86_64
 	dst[0] = 0xB8; // MOV EAX, imm32
@@ -1023,7 +1023,7 @@ static size_t jit_selftest_emit_return_imm(uae_u8* dst, uae_u32 imm)
 int run_jit_selftest_cli(void)
 {
 #if defined(CPU_AARCH64) || defined(CPU_x86_64)
-	// Use 16-bit-friendly values so the same constants work for the ARM64
+	// Use 16-bit-friendly values so the same constants work for the aarch64
 	// MOV w0, #imm16 path and the x86_64 MOV EAX, imm32 path.
 	constexpr uae_u32 first_result = 0x1234u;
 	constexpr uae_u32 patched_result = 0x4B1Du;
@@ -1096,7 +1096,7 @@ void usage()
 	std::cout << " -h                         Show this help." << '\n';
 	std::cout << " --help                     \n" << '\n';
 	std::cout << " --log                      Show log output to console." << '\n';
-	std::cout << " --jit-selftest             Run JIT VM/write/execute selftest (ARM64 or x86_64) and exit." << '\n';
+	std::cout << " --jit-selftest             Run JIT VM/write/execute selftest (aarch64 or x86_64) and exit." << '\n';
 	std::cout << " --dump-paths               Resolve startup paths, print them, and exit." << '\n';
 	std::cout << " --dump-config              Print the resolved configuration (defaults, config file and" << '\n';
 	std::cout << "                            command line options, after fixup_prefs) and exit." << '\n';

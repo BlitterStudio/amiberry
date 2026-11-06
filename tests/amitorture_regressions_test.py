@@ -567,7 +567,7 @@ int main() {
 """)
 
     def test_arm_movem_word_special_memory_extends_each_register(self):
-        text = source("src/jit/arm/compemu_arm.cpp")
+        text = source("src/jit/aarch64/compemu_aarch64.cpp")
         handlers = "\n".join(function(text, f"uae_u32 REGPARAM2 op_4c90_0_comp_{mode}(")
                              for mode in ("ff", "nf"))
         run_cpp(r"""
@@ -616,8 +616,7 @@ int main() {
 """)
 
     def test_arm_constant_bitfield_offsets_match_register_offsets(self):
-        for path in ("src/jit/arm/compemu_midfunc_arm.cpp",
-                     "src/jit/arm/compemu_midfunc_arm64.cpp"):
+        for path in ("src/jit/aarch64/compemu_midfunc_aarch64.cpp",):
             with self.subTest(path=path):
                 run_cpp(r"""
 #define MIDFUNC(n, name, args) void generated args
@@ -653,11 +652,11 @@ int main() {
 """)
 
     def test_arm_bit_operations_keep_other_live_flags(self):
-        text = source("src/jit/arm/compemu_arm.cpp")
+        text = source("src/jit/aarch64/compemu_aarch64.cpp")
         for opcode in ("100", "110", "140", "150", "180", "190", "1c0", "1d0"):
             self.assertNotIn("dont_care_flags();",
                              function(text, f"uae_u32 REGPARAM2 op_{opcode}_0_comp_nf("))
-        generator = source("src/jit/arm/gencomp_arm.c")
+        generator = source("src/jit/aarch64/gencomp_aarch64.c")
         for operation in ("bchg", "bclr", "bset", "btst"):
             self.assertNotRegex(function(generator, f"static void gen_{operation}("),
                                 r'comprintf\("[^"]*dont_care_flags')
@@ -793,10 +792,10 @@ int main() {
     @unittest.skipUnless(platform.machine().lower() in ("x86_64", "amd64"),
                          "executes x86 SHR and the x86 JIT flag emitter")
     def test_x86_lsr_immediate_flags(self):
-        generated = source("src/jit/x86/compemu_x86.cpp")
+        generated = source("src/jit/x86_64/compemu_x86_64.cpp")
         handlers = "\n".join(function(generated, f"uae_u32 REGPARAM2 op_{op}_0_comp_ff(")
                              for op in ("e008", "e048", "e088"))
-        emitter = function(source("src/jit/x86/compemu_midfunc_x86.cpp"),
+        emitter = function(source("src/jit/x86_64/compemu_midfunc_x86_64.cpp"),
                            "MIDFUNC(0,clear_overflow,")
         run_cpp(r"""
 #include <sys/mman.h>

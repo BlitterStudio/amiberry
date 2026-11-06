@@ -542,10 +542,6 @@ uae_u32 REGPARAM2 ahi_demux (TrapContext *context)
 			return 1;
 		}
 
-#ifndef CPU_64_BIT
-	case 105: //returns memory offset
-		return (uae_u32)get_real_address(0);
-#endif
 
 	case 110:
 	{

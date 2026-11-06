@@ -3,8 +3,8 @@ name: Apple native CI
 # Builds the Apple targets that C/C++ CI does not cover:
 #   - macOS with the native UI layer (Swift) enabled, and its bridge
 #     tests run inside the app                         (Ninja generator)
-#   - iOS simulator, arm64                            (Xcode generator)
-#   - iOS device, arm64, unsigned                      (Xcode generator)
+#   - iOS simulator, aarch64                            (Xcode generator)
+#   - iOS device, aarch64, unsigned                      (Xcode generator)
 #
 # iOS builds fetch SDL3/SDL3_image from source (cmake/Dependencies.cmake),
 # so a clean checkout needs only Xcode — no prebuilt dependency SDKs.
@@ -112,7 +112,7 @@ jobs:
           brew install cmake ninja || true
           brew bundle || { sleep 10; brew bundle; }
 
-      - name: Build the native-UI app (Release, arm64)
+      - name: Build the native-UI app (Release, aarch64)
         run: |
           cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DAMIBERRY_NATIVE_APPLE_UI=ON
           cmake --build build -j"$(sysctl -n hw.ncpu)"
@@ -207,7 +207,7 @@ jobs:
 
       - name: Package the app
         run: |
-          name="Amiberry-native-ui-$(git rev-parse --short=9 HEAD)-macOS-arm64"
+          name="Amiberry-native-ui-$(git rev-parse --short=9 HEAD)-macOS-aarch64"
           ditto -c -k --keepParent build/Amiberry.app "$name.zip"
           echo "NATIVE_UI_ZIP=$name" >> "$GITHUB_ENV"
 
@@ -227,7 +227,7 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Build for the iOS simulator (arm64)
+      - name: Build for the iOS simulator (aarch64)
         run: |
           cmake -B build-ios-sim -G Xcode \
             -DCMAKE_SYSTEM_NAME=iOS \
@@ -255,7 +255,7 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Build for the iOS device (arm64, unsigned)
+      - name: Build for the iOS device (aarch64, unsigned)
         run: |
           cmake -B build-ios-dev -G Xcode \
             -DCMAKE_SYSTEM_NAME=iOS \

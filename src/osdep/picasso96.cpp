@@ -4441,7 +4441,6 @@ static uae_u32 REGPARAM2 picasso_SetSplitPosition(TrapContext *ctx)
 	return 1;
 }
 
-#ifdef CPU_64_BIT
 static void do_xor8(uae_u8 *p, int w, uae_u32 v)
 {
 	while (ALIGN_POINTER_TO32(p) != 7 && w) {
@@ -4463,28 +4462,6 @@ static void do_xor8(uae_u8 *p, int w, uae_u32 v)
 		w--;
 	}
 }
-#else
-static void do_xor8(uae_u8 *p, int w, uae_u32 v)
-{
-	while (ALIGN_POINTER_TO32(p) != 3 && w) {
-		*p ^= v;
-		p++;
-		w--;
-	}
-	while (w >= 2 * 4) {
-		*((uae_u32*)p) ^= v;
-		p += 4;
-		*((uae_u32*)p) ^= v;
-		p += 4;
-		w -= 2 * 4;
-	}
-	while (w) {
-		*p ^= v;
-		p++;
-		w--;
-	}
-}
-#endif
 /*
 * InvertRect:
 *

@@ -360,8 +360,6 @@ static linux_release_arch get_linux_release_arch()
 {
 #if defined(__aarch64__) || defined(CPU_AARCH64)
 	return linux_release_arch::aarch64;
-#elif defined(__arm__) || defined(CPU_arm)
-	return linux_release_arch::armhf;
 #else
 	return linux_release_arch::x86_64;
 #endif

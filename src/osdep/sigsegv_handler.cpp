@@ -38,8 +38,8 @@
 
 #ifdef _WIN32
 /* On Windows x86_64, JIT exception handling is done via
- * AddVectoredExceptionHandler in jit/x86/exception_handler.cpp.
- * Windows ARM64 uses the ARM64 JIT and installs its vectored handler here. */
+ * AddVectoredExceptionHandler in jit/x86_64/exception_handler.cpp.
+ * Windows aarch64 uses the aarch64 JIT and installs its vectored handler here. */
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #endif
@@ -56,7 +56,7 @@ extern void raise_in_cl_list(blockinfo* bi);
 #endif
 
 static int max_signals = 200;
-static void* installed_arm64_vector_handler;
+static void* installed_aarch64_vector_handler;
 
 #if defined(JIT) && defined(CPU_AARCH64)
 typedef uae_u64 uintptr;
@@ -74,7 +74,7 @@ enum type_size_t {
 	SIZE_INT
 };
 
-static bool windows_arm64_jit_pc(uintptr pc)
+static bool windows_aarch64_jit_pc(uintptr pc)
 {
 	return (compiled_code && pc >= reinterpret_cast<uintptr>(compiled_code) && pc < reinterpret_cast<uintptr>(current_compile_p)) ||
 		(popallspace && pc >= reinterpret_cast<uintptr>(popallspace) && pc < reinterpret_cast<uintptr>(popallspace + POPALLSPACE_SIZE));
@@ -96,7 +96,7 @@ static int delete_trigger(blockinfo* bi, void* pc)
 	return 0;
 }
 
-static int windows_arm64_exception_size(const int transfer_size)
+static int windows_aarch64_exception_size(const int transfer_size)
 {
 	switch (transfer_size) {
 	case SIZE_BYTE:
@@ -109,16 +109,16 @@ static int windows_arm64_exception_size(const int transfer_size)
 	}
 }
 
-static void windows_arm64_jit_bus_error(const uaecptr amiga_addr, const bool read, const int transfer_size)
+static void windows_aarch64_jit_bus_error(const uaecptr amiga_addr, const bool read, const int transfer_size)
 {
-	exception2_setup(regs.opcode, amiga_addr, read, windows_arm64_exception_size(transfer_size), regs.s ? 4 : 0);
+	exception2_setup(regs.opcode, amiga_addr, read, windows_aarch64_exception_size(transfer_size), regs.s ? 4 : 0);
 	flush_icache(3);
 	countdown = 0;
 	set_special(SPCFLAG_END_COMPILE);
 	longjmp(jit_bus_error_jmpbuf, 2);
 }
 
-static LONG CALLBACK windows_arm64_jit_exception_handler(PEXCEPTION_POINTERS info)
+static LONG CALLBACK windows_aarch64_jit_exception_handler(PEXCEPTION_POINTERS info)
 {
 	if (info->ExceptionRecord->ExceptionCode != EXCEPTION_ACCESS_VIOLATION)
 		return EXCEPTION_CONTINUE_SEARCH;
@@ -126,7 +126,7 @@ static LONG CALLBACK windows_arm64_jit_exception_handler(PEXCEPTION_POINTERS inf
 		return EXCEPTION_CONTINUE_SEARCH;
 
 	const uintptr fault_pc = static_cast<uintptr>(info->ContextRecord->Pc);
-	if (!windows_arm64_jit_pc(fault_pc))
+	if (!windows_aarch64_jit_pc(fault_pc))
 		return EXCEPTION_CONTINUE_SEARCH;
 	if (!natmem_offset)
 		return EXCEPTION_CONTINUE_SEARCH;
@@ -139,7 +139,7 @@ static LONG CALLBACK windows_arm64_jit_exception_handler(PEXCEPTION_POINTERS inf
 	const uintptr fault_addr = static_cast<uintptr>(info->ExceptionRecord->ExceptionInformation[1]);
 	const uintptr amiga_addr_wide = fault_addr - reinterpret_cast<uintptr>(natmem_offset);
 	if (amiga_addr_wide > 0xffffffffULL) {
-		write_log(_T("JIT: Windows ARM64 AV outside natmem PC=%p fault=%p\n"),
+		write_log(_T("JIT: Windows aarch64 AV outside natmem PC=%p fault=%p\n"),
 			reinterpret_cast<void*>(fault_pc), reinterpret_cast<void*>(fault_addr));
 		return EXCEPTION_CONTINUE_SEARCH;
 	}
@@ -148,20 +148,20 @@ static LONG CALLBACK windows_arm64_jit_exception_handler(PEXCEPTION_POINTERS inf
 	if (a3000lmem_bank.allocated_size > 0 &&
 		amiga_addr >= a3000lmem_bank.start - 0x00100000 &&
 		amiga_addr < a3000lmem_bank.start - 0x00100000 + 8) {
-		write_log(_T("JIT: Windows ARM64 ramsey_low probe at 0x%08x, skipping faulting instruction.\n"), amiga_addr);
+		write_log(_T("JIT: Windows aarch64 ramsey_low probe at 0x%08x, skipping faulting instruction.\n"), amiga_addr);
 		info->ContextRecord->Pc += 4;
 		return EXCEPTION_CONTINUE_EXECUTION;
 	}
 	if (a3000hmem_bank.allocated_size > 0 &&
 		amiga_addr >= a3000hmem_bank.start + a3000hmem_bank.allocated_size &&
 		amiga_addr < a3000hmem_bank.start + a3000hmem_bank.allocated_size + 8) {
-		write_log(_T("JIT: Windows ARM64 ramsey_high probe at 0x%08x, skipping faulting instruction.\n"), amiga_addr);
+		write_log(_T("JIT: Windows aarch64 ramsey_high probe at 0x%08x, skipping faulting instruction.\n"), amiga_addr);
 		info->ContextRecord->Pc += 4;
 		return EXCEPTION_CONTINUE_EXECUTION;
 	}
 
 	addrbank* ab = &get_mem_bank(amiga_addr);
-	const bool arm64_quarantine_candidate = (ab == &dummy_bank);
+	const bool aarch64_quarantine_candidate = (ab == &dummy_bank);
 	const unsigned int opcode = *reinterpret_cast<uae_u32*>(fault_pc);
 	transfer_type_t transfer_type = TYPE_UNKNOWN;
 	int transfer_size = SIZE_UNKNOWN;
@@ -345,10 +345,10 @@ static LONG CALLBACK windows_arm64_jit_exception_handler(PEXCEPTION_POINTERS inf
 
 		const uae_u64 eff_addr = rn_val + offset;
 		if (eff_addr != static_cast<uae_u64>(fault_addr)) {
-			write_log(_T("JIT: Windows ARM64 EA mismatch fault=%016llx ea=%016llx opcode=%08x\n"),
+			write_log(_T("JIT: Windows aarch64 EA mismatch fault=%016llx ea=%016llx opcode=%08x\n"),
 				static_cast<unsigned long long>(fault_addr), static_cast<unsigned long long>(eff_addr), opcode);
-			if (arm64_quarantine_candidate && jit_in_compiled_code) {
-				windows_arm64_jit_bus_error(amiga_addr, transfer_type == TYPE_LOAD, transfer_size);
+			if (aarch64_quarantine_candidate && jit_in_compiled_code) {
+				windows_aarch64_jit_bus_error(amiga_addr, transfer_type == TYPE_LOAD, transfer_size);
 			}
 			return EXCEPTION_CONTINUE_SEARCH;
 		}
@@ -356,9 +356,9 @@ static LONG CALLBACK windows_arm64_jit_exception_handler(PEXCEPTION_POINTERS inf
 		if (ab == &dummy_bank) {
 			if (transfer_type == TYPE_LOAD) {
 				set_reg_w(rd, 0);
-				write_log(_T("JIT: Windows ARM64 dummy_bank load at %08x, returning 0 to x%d\n"), amiga_addr, rd);
+				write_log(_T("JIT: Windows aarch64 dummy_bank load at %08x, returning 0 to x%d\n"), amiga_addr, rd);
 			} else {
-				write_log(_T("JIT: Windows ARM64 dummy_bank store at %08x ignored\n"), amiga_addr);
+				write_log(_T("JIT: Windows aarch64 dummy_bank store at %08x ignored\n"), amiga_addr);
 			}
 		} else if (transfer_type == TYPE_LOAD) {
 			uae_u32 newval = get_reg_w(rd);
@@ -396,7 +396,7 @@ static LONG CALLBACK windows_arm64_jit_exception_handler(PEXCEPTION_POINTERS inf
 		info->ContextRecord->Pc += 4;
 		countdown = 0;
 		set_special(SPCFLAG_END_COMPILE);
-		if (arm64_quarantine_candidate) {
+		if (aarch64_quarantine_candidate) {
 			flush_icache(3);
 		}
 
@@ -410,20 +410,20 @@ static LONG CALLBACK windows_arm64_jit_exception_handler(PEXCEPTION_POINTERS inf
 		return EXCEPTION_CONTINUE_EXECUTION;
 	}
 
-	if (arm64_quarantine_candidate && jit_in_compiled_code) {
-		write_log(_T("JIT: Windows ARM64 unhandled insn 0x%08x at unmapped %08x, returning to interpreter.\n"),
+	if (aarch64_quarantine_candidate && jit_in_compiled_code) {
+		write_log(_T("JIT: Windows aarch64 unhandled insn 0x%08x at unmapped %08x, returning to interpreter.\n"),
 			opcode, amiga_addr);
 		const bool read = access_type == 0;
-		windows_arm64_jit_bus_error(amiga_addr, read, transfer_size);
+		windows_aarch64_jit_bus_error(amiga_addr, read, transfer_size);
 	}
 
-	write_log(_T("JIT: Windows ARM64 unhandled access violation at PC=%p fault=%p amiga=%08x opcode=%08x bank=%s\n"),
+	write_log(_T("JIT: Windows aarch64 unhandled access violation at PC=%p fault=%p amiga=%08x opcode=%08x bank=%s\n"),
 		reinterpret_cast<void*>(fault_pc), reinterpret_cast<void*>(fault_addr), amiga_addr, opcode,
 		ab && ab->name ? ab->name : _T("NONE"));
 	return EXCEPTION_CONTINUE_SEARCH;
 }
 
-static const TCHAR* windows_arm64_av_type(const ULONG_PTR access_type)
+static const TCHAR* windows_aarch64_av_type(const ULONG_PTR access_type)
 {
 	switch (access_type) {
 	case 0:
@@ -437,53 +437,53 @@ static const TCHAR* windows_arm64_av_type(const ULONG_PTR access_type)
 	}
 }
 
-static LONG WINAPI windows_arm64_jit_unhandled_exception_filter(PEXCEPTION_POINTERS info)
+static LONG WINAPI windows_aarch64_jit_unhandled_exception_filter(PEXCEPTION_POINTERS info)
 {
 	const auto* er = info->ExceptionRecord;
 	const auto* ctx = info->ContextRecord;
 	const uintptr fault_pc = static_cast<uintptr>(ctx->Pc);
-	write_log(_T("JIT: Windows ARM64 unhandled exception code=%08lx PC=%p in_jit=%d\n"),
-		er->ExceptionCode, reinterpret_cast<void*>(fault_pc), windows_arm64_jit_pc(fault_pc) ? 1 : 0);
+	write_log(_T("JIT: Windows aarch64 unhandled exception code=%08lx PC=%p in_jit=%d\n"),
+		er->ExceptionCode, reinterpret_cast<void*>(fault_pc), windows_aarch64_jit_pc(fault_pc) ? 1 : 0);
 	if (er->ExceptionCode == EXCEPTION_ACCESS_VIOLATION && er->NumberParameters >= 2) {
 		const uintptr fault_addr = static_cast<uintptr>(er->ExceptionInformation[1]);
-		write_log(_T("JIT: Windows ARM64 unhandled AV type=%s target=%p natmem=%p amiga=%08x\n"),
-			windows_arm64_av_type(er->ExceptionInformation[0]), reinterpret_cast<void*>(fault_addr),
+		write_log(_T("JIT: Windows aarch64 unhandled AV type=%s target=%p natmem=%p amiga=%08x\n"),
+			windows_aarch64_av_type(er->ExceptionInformation[0]), reinterpret_cast<void*>(fault_addr),
 			natmem_offset, natmem_offset ? static_cast<uaecptr>(fault_addr - reinterpret_cast<uintptr>(natmem_offset)) : 0);
 		/* Flag the classic "32-bit value with bit 31 set sign-extended
 		 * to 64-bit" pattern so we can correlate future reports with
 		 * natmem-placement regressions. */
 		if ((fault_addr >> 32) == 0xFFFFFFFFu) {
-			write_log(_T("JIT: Windows ARM64 fault target looks sign-extended (upper32=FFFFFFFF)\n"));
+			write_log(_T("JIT: Windows aarch64 fault target looks sign-extended (upper32=FFFFFFFF)\n"));
 		}
 	}
-	write_log(_T("JIT: Windows ARM64 ranges compiled=%p current=%p popall=%p-%p M68K PC=%08x pc_p=%p spcflags=%08x\n"),
+	write_log(_T("JIT: Windows aarch64 ranges compiled=%p current=%p popall=%p-%p M68K PC=%08x pc_p=%p spcflags=%08x\n"),
 		compiled_code, current_compile_p, popallspace, popallspace ? popallspace + POPALLSPACE_SIZE : nullptr,
 		static_cast<uae_u32>(M68K_GETPC), regs.pc_p, regs.spcflags);
 	/* Dump X0..X30, SP, LR so we can inspect which register held the bad
 	 * effective-address base when the fault hit.  Grouped four per line to
 	 * keep the log readable. */
-	write_log(_T("JIT: Windows ARM64 X0=%016llx  X1=%016llx  X2=%016llx  X3=%016llx\n"),
+	write_log(_T("JIT: Windows aarch64 X0=%016llx  X1=%016llx  X2=%016llx  X3=%016llx\n"),
 		(unsigned long long)ctx->X[0], (unsigned long long)ctx->X[1],
 		(unsigned long long)ctx->X[2], (unsigned long long)ctx->X[3]);
-	write_log(_T("JIT: Windows ARM64 X4=%016llx  X5=%016llx  X6=%016llx  X7=%016llx\n"),
+	write_log(_T("JIT: Windows aarch64 X4=%016llx  X5=%016llx  X6=%016llx  X7=%016llx\n"),
 		(unsigned long long)ctx->X[4], (unsigned long long)ctx->X[5],
 		(unsigned long long)ctx->X[6], (unsigned long long)ctx->X[7]);
-	write_log(_T("JIT: Windows ARM64 X8=%016llx  X9=%016llx X10=%016llx X11=%016llx\n"),
+	write_log(_T("JIT: Windows aarch64 X8=%016llx  X9=%016llx X10=%016llx X11=%016llx\n"),
 		(unsigned long long)ctx->X[8], (unsigned long long)ctx->X[9],
 		(unsigned long long)ctx->X[10], (unsigned long long)ctx->X[11]);
-	write_log(_T("JIT: Windows ARM64 X12=%016llx X13=%016llx X14=%016llx X15=%016llx\n"),
+	write_log(_T("JIT: Windows aarch64 X12=%016llx X13=%016llx X14=%016llx X15=%016llx\n"),
 		(unsigned long long)ctx->X[12], (unsigned long long)ctx->X[13],
 		(unsigned long long)ctx->X[14], (unsigned long long)ctx->X[15]);
-	write_log(_T("JIT: Windows ARM64 X16=%016llx X17=%016llx X18=%016llx X19=%016llx\n"),
+	write_log(_T("JIT: Windows aarch64 X16=%016llx X17=%016llx X18=%016llx X19=%016llx\n"),
 		(unsigned long long)ctx->X[16], (unsigned long long)ctx->X[17],
 		(unsigned long long)ctx->X[18], (unsigned long long)ctx->X[19]);
-	write_log(_T("JIT: Windows ARM64 X20=%016llx X21=%016llx X22=%016llx X23=%016llx\n"),
+	write_log(_T("JIT: Windows aarch64 X20=%016llx X21=%016llx X22=%016llx X23=%016llx\n"),
 		(unsigned long long)ctx->X[20], (unsigned long long)ctx->X[21],
 		(unsigned long long)ctx->X[22], (unsigned long long)ctx->X[23]);
-	write_log(_T("JIT: Windows ARM64 X24=%016llx X25=%016llx X26=%016llx X27=%016llx\n"),
+	write_log(_T("JIT: Windows aarch64 X24=%016llx X25=%016llx X26=%016llx X27=%016llx\n"),
 		(unsigned long long)ctx->X[24], (unsigned long long)ctx->X[25],
 		(unsigned long long)ctx->X[26], (unsigned long long)ctx->X[27]);
-	write_log(_T("JIT: Windows ARM64 X28=%016llx X29=%016llx LR=%016llx  SP=%016llx\n"),
+	write_log(_T("JIT: Windows aarch64 X28=%016llx X29=%016llx LR=%016llx  SP=%016llx\n"),
 		(unsigned long long)ctx->X[28], (unsigned long long)ctx->X[29],
 		(unsigned long long)ctx->Lr, (unsigned long long)ctx->Sp);
 	/* Print the faulting instruction regardless of whether the PC is in
@@ -500,20 +500,20 @@ static LONG WINAPI windows_arm64_jit_unhandled_exception_filter(PEXCEPTION_POINT
 	}
 	if (pc_readable) {
 		const uae_u32 insn = *reinterpret_cast<const uae_u32*>(fault_pc);
-		write_log(_T("JIT: Windows ARM64 instruction at PC insn=%08x jit=%d\n"),
-			insn, windows_arm64_jit_pc(fault_pc) ? 1 : 0);
+		write_log(_T("JIT: Windows aarch64 instruction at PC insn=%08x jit=%d\n"),
+			insn, windows_aarch64_jit_pc(fault_pc) ? 1 : 0);
 	} else {
-		write_log(_T("JIT: Windows ARM64 could not read instruction at fault PC\n"));
+		write_log(_T("JIT: Windows aarch64 could not read instruction at fault PC\n"));
 	}
 	return EXCEPTION_CONTINUE_SEARCH;
 }
 
-static void install_windows_arm64_jit_exception_handler()
+static void install_windows_aarch64_jit_exception_handler()
 {
-	if (!installed_arm64_vector_handler) {
-		write_log(_T("JIT: Installing Windows ARM64 vectored exception handler\n"));
-		installed_arm64_vector_handler = AddVectoredExceptionHandler(0, windows_arm64_jit_exception_handler);
-		SetUnhandledExceptionFilter(windows_arm64_jit_unhandled_exception_filter);
+	if (!installed_aarch64_vector_handler) {
+		write_log(_T("JIT: Installing Windows aarch64 vectored exception handler\n"));
+		installed_aarch64_vector_handler = AddVectoredExceptionHandler(0, windows_aarch64_jit_exception_handler);
+		SetUnhandledExceptionFilter(windows_aarch64_jit_unhandled_exception_filter);
 	}
 }
 #endif
@@ -526,7 +526,7 @@ void init_max_signals()
 	max_signals = 200;
 #endif
 #if defined(JIT) && defined(CPU_AARCH64)
-	install_windows_arm64_jit_exception_handler();
+	install_windows_aarch64_jit_exception_handler();
 #endif
 }
 
@@ -715,11 +715,11 @@ static int handle_exception(mcontext_t sigcont, long fault_addr)
 			/* Quarantine any JIT fault that hits the dummy bank (unmapped
 			 * address space). This prevents repeated SIGSEGV from JIT direct
 			 * access to addresses outside natmem reservation. */
-			const bool arm64_quarantine_candidate = (ab == &dummy_bank);
+			const bool aarch64_quarantine_candidate = (ab == &dummy_bank);
 
-		// Analyze AARCH64 instruction
+		// Analyze aarch64 instruction
 		const unsigned int opcode = ((uae_u32*)fault_pc)[0];
-		output_log(_T("JIT: AARCH64 opcode = 0x%08x\n"), opcode);
+		output_log(_T("JIT: aarch64 opcode = 0x%08x\n"), opcode);
 #ifdef JIT_DEBUG
 		extern void disam_range(void* start, void* stop);
 		disam_range((void*)(fault_pc - 128), (void*)(fault_pc + 32));
@@ -904,7 +904,7 @@ static int handle_exception(mcontext_t sigcont, long fault_addr)
 					unsigned_imm = true;
 					break;
 				default:
-					output_log(_T("AARCH64: Handling of instruction 0x%08x not supported.\n"), opcode);
+					output_log(_T("aarch64: Handling of instruction 0x%08x not supported.\n"), opcode);
 					break;
 				}
 			}
@@ -1040,8 +1040,7 @@ static int handle_exception(mcontext_t sigcont, long fault_addr)
 #else
 				sigcont->__ss.__pc += 4;
 #endif
-				/* Keep ARM64 behavior aligned with 32-bit ARM path:
-				 * after fault-emulated memory access, force a quick return
+				/* After fault-emulated memory access, force a quick return
 				 * to interpreter so we don't keep running the same JIT block. */
 				countdown = 0;
 				handled = HANDLE_EXCEPTION_OK;
@@ -1049,7 +1048,7 @@ static int handle_exception(mcontext_t sigcont, long fault_addr)
 				 * fault-emulated memory operation to avoid cascading faults in
 				 * the same translated block. */
 				set_special(SPCFLAG_END_COMPILE);
-				if (arm64_quarantine_candidate) {
+				if (aarch64_quarantine_candidate) {
 					/* Flush translated cache so control returns via interpreter. */
 					flush_icache(3);
 				}
@@ -1066,11 +1065,11 @@ static int handle_exception(mcontext_t sigcont, long fault_addr)
 				}
 
 			}
-			/* Fallback for unrecognized ARM64 instructions in JIT code:
+			/* Fallback for unrecognized aarch64 instructions in JIT code:
 			 * If the fault is on unmapped memory (dummy_bank) and we couldn't
 			 * decode the instruction, quarantine the block and bail out via
 			 * longjmp to m68k_run_jit's setjmp recovery point. */
-			if (transfer_size == SIZE_UNKNOWN && arm64_quarantine_candidate) {
+			if (transfer_size == SIZE_UNKNOWN && aarch64_quarantine_candidate) {
 				output_log(_T("JIT: unhandled insn 0x%08x at unmapped %08x, quarantine PC=%08x\n"),
 					opcode, amiga_addr, regs.pc);
 				flush_icache(3);
@@ -1320,529 +1319,6 @@ void signal_buserror(int signum, siginfo_t* info, void* ptr)
 		output_log(_T("%s\n"), strings[i]);
 	output_log(_T("End of stack trace.\n"));
 #endif /* HAVE_EXECINFO */
-	output_log(_T("--- end exception ---\n"));
-
-	SDL_Quit();
-	exit(1);
-}
-
-#elif defined(__arm__)
-
-enum {
-	ARM_REG_PC = 15,
-	ARM_REG_CPSR = 16
-};
-
-static const char* reg_names[] = {
-	"r0", "r1", "r2", "r3", "r4", "r5", "r6", "r7",
-	"r8", "r9", "r10/sl", "r11/fp", "r12/ip", "r13/sp", "r14/lr", "r15/pc"
-};
-
-#ifdef JIT
-static int delete_trigger(blockinfo *bi, void *pc)
-{
-	while (bi) {
-		if (bi->handler && (uae_u8*)bi->direct_handler <= pc &&	(uae_u8*)bi->nexthandler > pc) {
-			output_log(_T("JIT: Deleted trigger (%p < %p < %p) %p\n"),
-				bi->handler, pc, bi->nexthandler, bi->pc_p);
-			invalidate_block(bi);
-			raise_in_cl_list(bi);
-			set_special(0);
-			return 1;
-		}
-		bi = bi->next;
-	}
-	return 0;
-}
-#endif
-
-typedef uae_u32 uintptr;
-
-static int handle_exception(unsigned long* pregs, long fault_addr)
-{
-	auto handled = HANDLE_EXCEPTION_NONE;
-	auto* fault_pc = (unsigned int*)pregs[ARM_REG_PC];
-
-	if (fault_pc == 0) {
-		output_log(_T("PC is NULL.\n"));
-		return HANDLE_EXCEPTION_NONE;
-	}
-
-	// Check for exception in handler
-	if (in_handler > 0) {
-		output_log(_T("Segmentation fault in handler.\n"));
-		return HANDLE_EXCEPTION_NONE;
-	}
-	++in_handler;
-
-#ifdef JIT
-	for (;;) {
-		// We analyze only exceptions from JIT
-		if (!canbang || currprefs.cachesize == 0) {
-			output_log(_T("JIT not in use.\n"));
-			break;
-		}
-
-		// Did the error happen in compiled code?
-		if ((uae_u8*)fault_pc >= compiled_code && (uae_u8*)fault_pc < current_compile_p)
-			output_log(_T("Error in compiled code.\n"));
-		else if ((uae_u8*)fault_pc >= popallspace && (uae_u8*)fault_pc < popallspace + POPALLSPACE_SIZE)
-			output_log(_T("Error in popallspace code.\n"));
-		else {
-			output_log(_T("Error not in JIT code.\n"));
-			break;
-		}
-
-		// Get Amiga address of illegal memory address using 32-bit wrap semantics.
-		const uae_u32 fault_addr32 = static_cast<uae_u32>(static_cast<uintptr>(fault_addr));
-		const uae_u32 natmem32 = static_cast<uae_u32>(reinterpret_cast<uintptr>(natmem_offset));
-		uaecptr amiga_addr = fault_addr32 - natmem32;
-
-		// Check for stupid RAM detection of kickstart
-		if (a3000lmem_bank.allocated_size > 0 && amiga_addr >= a3000lmem_bank.start - 0x00100000 && amiga_addr < a3000lmem_bank.start - 0x00100000 + 8) {
-			output_log(_T("  Stupid kickstart detection for size of ramsey_low at 0x%08x.\n"), amiga_addr);
-			pregs[ARM_REG_PC] += 4;
-			handled = HANDLE_EXCEPTION_A4000RAM;
-			break;
-		}
-
-		// Check for stupid RAM detection of kickstart
-		if (a3000hmem_bank.allocated_size > 0 && amiga_addr >= a3000hmem_bank.start + a3000hmem_bank.allocated_size && amiga_addr < a3000hmem_bank.start + a3000hmem_bank.allocated_size + 8) {
-			output_log(_T("  Stupid kickstart detection for size of ramsey_high at 0x%08x.\n"), amiga_addr);
-			pregs[ARM_REG_PC] += 4;
-			handled = HANDLE_EXCEPTION_A4000RAM;
-			break;
-		}
-
-		// Get memory bank of address
-		auto* ab = &get_mem_bank(amiga_addr);
-		if (ab)
-			output_log(_T("JIT: Address bank: %s, address %08x\n"), ab->name ? ab->name : _T("NONE"), amiga_addr);
-
-		// Analyse ARM instruction
-		const auto opcode = fault_pc[0];
-		auto transfer_type = TYPE_UNKNOWN;
-		int transfer_size = SIZE_UNKNOWN;
-		int style = STYLE_UNSIGNED;
-		output_log(_T("JIT: ARM opcode = 0x%08x\n"), opcode);
-
-		// Handle load/store instructions only
-		switch ((opcode >> 25) & 7) {
-		case 0: // Halfword and Signed Data Transfer (LDRH, STRH, LDRSB, LDRSH)
-			// Determine transfer size (S/H bits)
-			switch ((opcode >> 5) & 3) {
-			case 0: // SWP instruction
-				output_log(_T("ARM: SWP Instruction, not supported (0x%08x)\n"), opcode);
-				break;
-			case 1: // Unsigned halfwords
-				transfer_size = SIZE_WORD;
-				break;
-			case 3: // Signed halfwords
-				style = STYLE_SIGNED;
-				transfer_size = SIZE_WORD;
-				break;
-			case 2: // Signed byte
-				style = STYLE_SIGNED;
-				transfer_size = SIZE_BYTE;
-				break;
-			}
-			break;
-
-		case 2:
-		case 3: // Single Data Transfer (LDR, STR)
-			style = STYLE_UNSIGNED;
-			// Determine transfer size (B bit)
-			if (((opcode >> 22) & 1) == 1)
-				transfer_size = SIZE_BYTE;
-			else
-				transfer_size = SIZE_INT;
-			break;
-
-		default:
-			output_log(_T("ARM: Handling of instruction 0x%08x not supported.\n"), opcode);
-		}
-
-		// Determine transfer type (L bit)
-		if (((opcode >> 20) & 1) == 1)
-			transfer_type = TYPE_LOAD;
-		else
-			transfer_type = TYPE_STORE;
-
-		// Get ARM register
-		int rd = (opcode >> 12) & 0xf;
-
-		output_log(_T("%s %s register %s\n"),
-			transfer_size == SIZE_BYTE ? _T("byte") : transfer_size == SIZE_WORD ? _T("word") : transfer_size == SIZE_INT ? _T("long") : _T("unknown"),
-			transfer_type == TYPE_LOAD ? _T("load to") : _T("store from"),
-			reg_names[rd]);
-
-		if (transfer_size != SIZE_UNKNOWN) {
-			/* dummy_bank handler is NOT signal-safe: it calls gary_nonrange()
-			 * which can trigger hardware_exception2() -> THROW(2) (longjmp from
-			 * signal handler = undefined behavior). For dummy_bank, return 0
-			 * for loads and silently ignore stores. */
-			if (ab == &dummy_bank) {
-				if (transfer_type == TYPE_LOAD) {
-					pregs[rd] = 0;
-					output_log(_T("JIT: dummy_bank load at %08x, returning 0 to %s\n"), amiga_addr, reg_names[rd]);
-				} else {
-					output_log(_T("JIT: dummy_bank store at %08x, ignored\n"), amiga_addr);
-				}
-			} else if (transfer_type == TYPE_LOAD) {
-				// Perform load via indirect memory call
-				uae_u32 oldval = pregs[rd];
-				switch (transfer_size) {
-				case SIZE_BYTE:
-					pregs[rd] = style == STYLE_SIGNED ? (uae_s8)get_byte_jit(amiga_addr) : (uae_u8)get_byte_jit(amiga_addr);
-					break;
-
-				case SIZE_WORD:
-					pregs[rd] = style == STYLE_SIGNED
-						? static_cast<uae_s16>(uae_bswap_16(static_cast<uae_u16>(get_word_jit(amiga_addr))))
-						: static_cast<uae_u16>(uae_bswap_16(static_cast<uae_u16>(get_word_jit(amiga_addr))));
-					break;
-
-				case SIZE_INT:
-					pregs[rd] = uae_bswap_32(get_long_jit(amiga_addr));
-					break;
-				}
-				output_log(_T("New value in %s: 0x%08x (old: 0x%08x)\n"), reg_names[rd], pregs[rd], oldval);
-			}
-			else {
-				// Perform store via indirect memory call
-				switch (transfer_size) {
-				case SIZE_BYTE: {
-					put_byte_jit(amiga_addr, pregs[rd]);
-					break;
-				}
-				case SIZE_WORD: {
-					put_word_jit(amiga_addr, uae_bswap_16(static_cast<uae_u16>(pregs[rd])));
-					break;
-				}
-				case SIZE_INT: {
-					put_long_jit(amiga_addr, uae_bswap_32(pregs[rd]));
-					break;
-				}
-				}
-				output_log(_T("Stored value from %s to 0x%08x\n"), reg_names[rd], amiga_addr);
-			}
-
-			// Go to next instruction
-			pregs[ARM_REG_PC] += 4;
-			/* Force a quick return to interpreter after fault-emulated accesses. */
-			countdown = 0;
-			handled = HANDLE_EXCEPTION_OK;
-
-			bool deleted = delete_trigger(active, fault_pc);
-			if (!deleted) {
-				/* Not found in the active list. Might be a rom routine that
-				 * is in the dormant list */
-				deleted = delete_trigger(dormant, fault_pc);
-			}
-			if (!deleted) {
-				// Can happen if one emulated instruction causes multiple faults.
-				set_special(0);
-			}
-		}
-
-		break;
-  }
-#endif
-
-  in_handler--;
-  return handled;
-}
-
-void signal_segv(int signum, siginfo_t* info, void* ptr)
-{
-	int handled = HANDLE_EXCEPTION_NONE;
-	ucontext_t* ucontext = (ucontext_t*)ptr;
-	Dl_info dlinfo;
-
-	output_log(_T("--- New exception ---\n"));
-
-#ifdef TRACER
-	trace_end();
-#endif
-
-#if !defined (CPU_AMD64) && !defined (__x86_64__)
-	mcontext_t* context = &(ucontext->uc_mcontext);
-
-	#if defined(__FreeBSD__) && defined(CPU_arm) && !defined(CPU_AARCH64)
-		unsigned long* regs = (unsigned long*)&context->__gregs[_REG_R0];
-	#else
-		unsigned long* regs = &context->arm_r0;
-	#endif
-	uintptr addr = (uintptr)info->si_addr;
-
-	handled = handle_exception(regs, addr);
-	if (handled == HANDLE_EXCEPTION_OK || handled == HANDLE_EXCEPTION_A4000RAM)
-		return;
-
-#if SHOW_DETAILS
-	if (handled != HANDLE_EXCEPTION_A4000RAM) {
-		if (signum == 4)
-			output_log(_T("Illegal Instruction\n"));
-		else
-			output_log(_T("Segmentation Fault\n"));
-
-		output_log(_T("info.si_signo = %d\n"), signum);
-		output_log(_T("info.si_errno = %d\n"), info->si_errno);
-		output_log(_T("info.si_code = %d\n"), info->si_code);
-		output_log(_T("info.si_addr = %p\n"), info->si_addr);
-		if (signum == 4)
-			output_log(_T("       value = 0x%08x\n"), *((uae_u32*)(info->si_addr)));
-		#if defined(__FreeBSD__) && defined(CPU_arm) && !defined(CPU_AARCH64)
-			output_log(_T("r0  = 0x%08x\n"), ucontext->uc_mcontext.__gregs[_REG_R0]);
-			output_log(_T("r1  = 0x%08x\n"), ucontext->uc_mcontext.__gregs[_REG_R1]);
-			output_log(_T("r2  = 0x%08x\n"), ucontext->uc_mcontext.__gregs[_REG_R2]);
-			output_log(_T("r3  = 0x%08x\n"), ucontext->uc_mcontext.__gregs[_REG_R3]);
-			output_log(_T("r4  = 0x%08x\n"), ucontext->uc_mcontext.__gregs[_REG_R4]);
-			output_log(_T("r5  = 0x%08x\n"), ucontext->uc_mcontext.__gregs[_REG_R5]);
-			output_log(_T("r6  = 0x%08x\n"), ucontext->uc_mcontext.__gregs[_REG_R6]);
-			output_log(_T("r7  = 0x%08x\n"), ucontext->uc_mcontext.__gregs[_REG_R7]);
-			output_log(_T("r8  = 0x%08x\n"), ucontext->uc_mcontext.__gregs[_REG_R8]);
-			output_log(_T("r9  = 0x%08x\n"), ucontext->uc_mcontext.__gregs[_REG_R9]);
-			output_log(_T("r10 = 0x%08x\n"), ucontext->uc_mcontext.__gregs[_REG_R10]);
-			output_log(_T("FP  = 0x%08x\n"), ucontext->uc_mcontext.__gregs[_REG_FP]);
-			output_log(_T("IP  = 0x%08x\n"), ucontext->uc_mcontext.__gregs[_REG_R12]);
-			output_log(_T("SP  = 0x%08x\n"), ucontext->uc_mcontext.__gregs[_REG_SP]);
-			output_log(_T("LR  = 0x%08x\n"), ucontext->uc_mcontext.__gregs[_REG_LR]);
-			output_log(_T("PC  = 0x%08x\n"), ucontext->uc_mcontext.__gregs[_REG_PC]);
-			output_log(_T("CPSR = 0x%08x\n"), ucontext->uc_mcontext.__gregs[_REG_CPSR]);
-			output_log(_T("Fault Address = 0x%08x\n"), (unsigned int)info->si_addr);
-			output_log(_T("Trap no = 0x%08x\n"), info->si_errno);
-			output_log(_T("Err Code = 0x%08x\n"), info->si_code);
-			output_log(_T("Old Mask = 0x%08x\n"), ucontext->uc_sigmask.__bits[0]);
-		#else
-			output_log(_T("r0  = 0x%08x\n"), ucontext->uc_mcontext.arm_r0);
-			output_log(_T("r1  = 0x%08x\n"), ucontext->uc_mcontext.arm_r1);
-			output_log(_T("r2  = 0x%08x\n"), ucontext->uc_mcontext.arm_r2);
-			output_log(_T("r3  = 0x%08x\n"), ucontext->uc_mcontext.arm_r3);
-			output_log(_T("r4  = 0x%08x\n"), ucontext->uc_mcontext.arm_r4);
-			output_log(_T("r5  = 0x%08x\n"), ucontext->uc_mcontext.arm_r5);
-			output_log(_T("r6  = 0x%08x\n"), ucontext->uc_mcontext.arm_r6);
-			output_log(_T("r7  = 0x%08x\n"), ucontext->uc_mcontext.arm_r7);
-			output_log(_T("r8  = 0x%08x\n"), ucontext->uc_mcontext.arm_r8);
-			output_log(_T("r9  = 0x%08x\n"), ucontext->uc_mcontext.arm_r9);
-			output_log(_T("r10 = 0x%08x\n"), ucontext->uc_mcontext.arm_r10);
-			output_log(_T("FP  = 0x%08x\n"), ucontext->uc_mcontext.arm_fp);
-			output_log(_T("IP  = 0x%08x\n"), ucontext->uc_mcontext.arm_ip);
-			output_log(_T("SP  = 0x%08x\n"), ucontext->uc_mcontext.arm_sp);
-			output_log(_T("LR  = 0x%08x\n"), ucontext->uc_mcontext.arm_lr);
-			output_log(_T("PC  = 0x%08x\n"), ucontext->uc_mcontext.arm_pc);
-			output_log(_T("CPSR = 0x%08x\n"), ucontext->uc_mcontext.arm_cpsr);
-			output_log(_T("Fault Address = 0x%08x\n"), ucontext->uc_mcontext.fault_address);
-			output_log(_T("Trap no = 0x%08x\n"), ucontext->uc_mcontext.trap_no);
-			output_log(_T("Err Code = 0x%08x\n"), ucontext->uc_mcontext.error_code);
-			output_log(_T("Old Mask = 0x%08x\n"), ucontext->uc_mcontext.oldmask);
-		#endif
-
-		#if defined(__FreeBSD__) && defined(CPU_arm) && !defined(CPU_AARCH64)
-			void* getaddr = (void*)ucontext->uc_mcontext.__gregs[_REG_LR];
-		#else
-			void* getaddr = (void*)ucontext->uc_mcontext.arm_lr;
-		#endif
-
-		if (dladdr(getaddr, &dlinfo))
-			output_log(_T("LR - 0x%08X: <%s> (%s)\n"), getaddr, dlinfo.dli_sname, dlinfo.dli_fname);
-		else
-			output_log(_T("LR - 0x%08X: symbol not found\n"), getaddr);
-	}
-#endif
-
-#if SHOW_DETAILS > 1 && defined(HAVE_EXECINFO)
-	if (handled != HANDLE_EXCEPTION_A4000RAM) {
-		output_log(_T("Stack trace:\n"));
-
-#define MAX_BACKTRACE 20
-
-		void* array[MAX_BACKTRACE];
-		int size = backtrace(array, MAX_BACKTRACE);
-		for (int i = 0; i < size; ++i)
-		{
-			if (dladdr(array[i], &dlinfo)) {
-				const char* symname = dlinfo.dli_sname;
-				output_log(_T("0x%08x <%s + 0x%08x> (%s)\n"), array[i], symname,
-					(unsigned long)array[i] - (unsigned long)dlinfo.dli_saddr, dlinfo.dli_fname);
-			}
-		}
-
-		void* ip = (void*)ucontext->uc_mcontext.arm_r10;
-		void** bp = (void**)ucontext->uc_mcontext.arm_r10;
-		int f = 0;
-		while (bp && ip) {
-			if (!dladdr(ip, &dlinfo)) {
-				output_log(_T("IP out of range\n"));
-				break;
-			}
-			const char* symname = dlinfo.dli_sname;
-			output_log(_T("%02d: 0x%08x <%s + 0x%08x> (%s)\n"), ++f, ip, symname,
-				(unsigned long)ip - (unsigned long)dlinfo.dli_saddr, dlinfo.dli_fname);
-			if (dlinfo.dli_sname && !strcmp(dlinfo.dli_sname, "main"))
-				break;
-			ip = bp[1];
-			bp = (void**)bp[0];
-		}
-
-		output_log(_T("Stack trace (non-dedicated):\n"));
-		char** strings;
-		void* bt[100];
-		int sz = backtrace(bt, 100);
-		strings = backtrace_symbols(bt, sz);
-		for (int i = 0; i < sz; ++i)
-			output_log(_T("%s\n"), strings[i]);
-		output_log(_T("End of stack trace.\n"));
-	}
-#endif
-
-	output_log(_T("--- end exception ---\n"));
-
-	if (handled != HANDLE_EXCEPTION_A4000RAM) {
-		--max_signals;
-		if (max_signals <= 0) {
-			target_startup_msg(_T("Exception"), _T("Too many access violations. Please turn off JIT."));
-			uae_restart(&currprefs, 1, NULL);
-			return;
-		}
-	}
-
-	if (handled != HANDLE_EXCEPTION_NONE)
-		return;
-#endif
-
-	SDL_Quit();
-	exit(1);
-}
-
-
-void signal_buserror(int signum, siginfo_t* info, void* ptr)
-{
-	ucontext_t* ucontext = (ucontext_t*)ptr;
-	Dl_info dlinfo;
-
-	output_log(_T("--- New exception ---\n"));
-
-#ifdef TRACER
-	trace_end();
-#endif
-
-	mcontext_t* context = &(ucontext->uc_mcontext);
-
-#if !defined (CPU_AMD64) && !defined (__x86_64__)
-	#if defined(__FreeBSD__) && defined(CPU_arm) && !defined(CPU_AARCH64)
-		unsigned long* regs = (unsigned long*)&context->__gregs[_REG_R0];
-	#else
-		unsigned long* regs = &context->arm_r0;
-	#endif
-	uintptr_t addr = (uintptr_t)info->si_addr;
-
-	output_log(_T("info.si_signo = %d\n"), signum);
-	output_log(_T("info.si_errno = %d\n"), info->si_errno);
-	output_log(_T("info.si_code = %d\n"), info->si_code);
-	output_log(_T("info.si_addr = %p\n"), info->si_addr);
-	if (signum == 4)
-		output_log(_T("       value = 0x%08x\n"), *((uae_u32*)(info->si_addr)));
-	#if defined(__FreeBSD__) && defined(CPU_arm) && !defined(CPU_AARCH64)
-		output_log(_T("r0  = 0x%08x\n"), ucontext->uc_mcontext.__gregs[_REG_R0]);
-		output_log(_T("r1  = 0x%08x\n"), ucontext->uc_mcontext.__gregs[_REG_R1]);
-		output_log(_T("r2  = 0x%08x\n"), ucontext->uc_mcontext.__gregs[_REG_R2]);
-		output_log(_T("r3  = 0x%08x\n"), ucontext->uc_mcontext.__gregs[_REG_R3]);
-		output_log(_T("r4  = 0x%08x\n"), ucontext->uc_mcontext.__gregs[_REG_R4]);
-		output_log(_T("r5  = 0x%08x\n"), ucontext->uc_mcontext.__gregs[_REG_R5]);
-		output_log(_T("r6  = 0x%08x\n"), ucontext->uc_mcontext.__gregs[_REG_R6]);
-		output_log(_T("r7  = 0x%08x\n"), ucontext->uc_mcontext.__gregs[_REG_R7]);
-		output_log(_T("r8  = 0x%08x\n"), ucontext->uc_mcontext.__gregs[_REG_R8]);
-		output_log(_T("r9  = 0x%08x\n"), ucontext->uc_mcontext.__gregs[_REG_R9]);
-		output_log(_T("r10 = 0x%08x\n"), ucontext->uc_mcontext.__gregs[_REG_R10]);
-		output_log(_T("FP  = 0x%08x\n"), ucontext->uc_mcontext.__gregs[_REG_FP]);
-		output_log(_T("IP  = 0x%08x\n"), ucontext->uc_mcontext.__gregs[_REG_R12]);
-		output_log(_T("SP  = 0x%08x\n"), ucontext->uc_mcontext.__gregs[_REG_SP]);
-		output_log(_T("LR  = 0x%08x\n"), ucontext->uc_mcontext.__gregs[_REG_LR]);
-		output_log(_T("PC  = 0x%08x\n"), ucontext->uc_mcontext.__gregs[_REG_PC]);
-		output_log(_T("CPSR = 0x%08x\n"), ucontext->uc_mcontext.__gregs[_REG_CPSR]);
-		output_log(_T("Trap no = 0x%08x\n"), info->si_errno);
-		output_log(_T("Err Code = 0x%08x\n"), info->si_code);
-		output_log(_T("Old Mask = 0x%08x\n"), ucontext->uc_sigmask.__bits[0]);
-		output_log(_T("Fault Address = 0x%08x\n"), (unsigned int)info->si_addr);
-	#else
-		output_log(_T("r0  = 0x%08x\n"), ucontext->uc_mcontext.arm_r0);
-		output_log(_T("r1  = 0x%08x\n"), ucontext->uc_mcontext.arm_r1);
-		output_log(_T("r2  = 0x%08x\n"), ucontext->uc_mcontext.arm_r2);
-		output_log(_T("r3  = 0x%08x\n"), ucontext->uc_mcontext.arm_r3);
-		output_log(_T("r4  = 0x%08x\n"), ucontext->uc_mcontext.arm_r4);
-		output_log(_T("r5  = 0x%08x\n"), ucontext->uc_mcontext.arm_r5);
-		output_log(_T("r6  = 0x%08x\n"), ucontext->uc_mcontext.arm_r6);
-		output_log(_T("r7  = 0x%08x\n"), ucontext->uc_mcontext.arm_r7);
-		output_log(_T("r8  = 0x%08x\n"), ucontext->uc_mcontext.arm_r8);
-		output_log(_T("r9  = 0x%08x\n"), ucontext->uc_mcontext.arm_r9);
-		output_log(_T("r10 = 0x%08x\n"), ucontext->uc_mcontext.arm_r10);
-		output_log(_T("FP  = 0x%08x\n"), ucontext->uc_mcontext.arm_fp);
-		output_log(_T("IP  = 0x%08x\n"), ucontext->uc_mcontext.arm_ip);
-		output_log(_T("SP  = 0x%08x\n"), ucontext->uc_mcontext.arm_sp);
-		output_log(_T("LR  = 0x%08x\n"), ucontext->uc_mcontext.arm_lr);
-		output_log(_T("PC  = 0x%08x\n"), ucontext->uc_mcontext.arm_pc);
-		output_log(_T("CPSR = 0x%08x\n"), ucontext->uc_mcontext.arm_cpsr);
-		output_log(_T("Trap no = 0x%08x\n"), ucontext->uc_mcontext.trap_no);
-		output_log(_T("Err Code = 0x%08x\n"), ucontext->uc_mcontext.error_code);
-		output_log(_T("Old Mask = 0x%08x\n"), ucontext->uc_mcontext.oldmask);
-		output_log(_T("Fault Address = 0x%08x\n"), ucontext->uc_mcontext.fault_address);
-	#endif
-
-	#if defined(__FreeBSD__) && defined(CPU_arm) && !defined(CPU_AARCH64)
-		void* getaddr = (void*)ucontext->uc_mcontext.__gregs[_REG_LR];
-	#else
-		void* getaddr = (void*)ucontext->uc_mcontext.arm_lr;
-	#endif
-	if (dladdr(getaddr, &dlinfo))
-		output_log(_T("LR - 0x%08X: <%s> (%s)\n"), getaddr, dlinfo.dli_sname, dlinfo.dli_fname);
-	else
-		output_log(_T("LR - 0x%08X: symbol not found\n"), getaddr);
-
-	output_log(_T("Stack trace:\n"));
-
-#if defined(HAVE_EXECINFO)
-#define MAX_BACKTRACE 20
-
-	void* array[MAX_BACKTRACE];
-	int size = backtrace(array, MAX_BACKTRACE);
-	for (int i = 0; i < size; ++i)
-	{
-		if (dladdr(array[i], &dlinfo)) {
-			const char* symname = dlinfo.dli_sname;
-			output_log(_T("0x%08x <%s + 0x%08x> (%s)\n"), array[i], symname,
-				(unsigned long)array[i] - (unsigned long)dlinfo.dli_saddr, dlinfo.dli_fname);
-		}
-	}
-
-	void* ip = (void*)ucontext->uc_mcontext.arm_r10;
-	void** bp = (void**)ucontext->uc_mcontext.arm_r10;
-	int f = 0;
-	while (bp && ip) {
-		if (!dladdr(ip, &dlinfo)) {
-			output_log(_T("IP out of range\n"));
-			break;
-		}
-		const char* symname = dlinfo.dli_sname;
-		output_log(_T("%02d: 0x%08x <%s + 0x%08x> (%s)\n"), ++f, ip, symname,
-			(unsigned long)ip - (unsigned long)dlinfo.dli_saddr, dlinfo.dli_fname);
-		if (dlinfo.dli_sname && !strcmp(dlinfo.dli_sname, "main"))
-			break;
-		ip = bp[1];
-		bp = (void**)bp[0];
-	}
-
-	output_log(_T("Stack trace (non-dedicated):\n"));
-	char** strings;
-	void* bt[100];
-	int sz = backtrace(bt, 100);
-	strings = backtrace_symbols(bt, sz);
-	for (int i = 0; i < sz; ++i)
-		output_log(_T("%s\n"), strings[i]);
-	output_log(_T("End of stack trace.\n"));
-#endif /* HAVE_EXECINFO */
-
-#endif
 	output_log(_T("--- end exception ---\n"));
 
 	SDL_Quit();

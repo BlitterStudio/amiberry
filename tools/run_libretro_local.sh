@@ -176,7 +176,7 @@ if [[ "$os_name" == "Darwin" ]]; then
 			run_prefix=(arch -x86_64)
 		fi
 	elif [[ "$retroarch_file_info" == *"arm64"* ]]; then
-		target_arch="arm64"
+		target_arch="aarch64"
 	fi
 fi
 

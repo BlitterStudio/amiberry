@@ -110,7 +110,7 @@ typedef uae_u8 flagtype;
 
 #ifdef FPUEMU
 
-#if !defined(USE_LONG_DOUBLE) && (defined(CPU_i386) || defined(CPU_x86_64)) && defined(__LDBL_MANT_DIG__) && __LDBL_MANT_DIG__ == 64
+#if !defined(USE_LONG_DOUBLE) && (defined(CPU_x86_64)) && defined(__LDBL_MANT_DIG__) && __LDBL_MANT_DIG__ == 64
 // The native core and x87 JIT can retain the complete MC6888x register format.
 #define USE_LONG_DOUBLE
 #endif

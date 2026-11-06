@@ -9,7 +9,7 @@ trap 'rm -f "$out"' EXIT
 
 # The set assertions below cover src/jit/jit_trap_policy.h; this guard
 # checks that the emulator still takes its policy from that header. If
-# jit_trap_demote_opcode in src/jit/arm/compemu_support_arm.cpp stops
+# jit_trap_demote_opcode in src/jit/aarch64/compemu_support_aarch64.cpp stops
 # delegating (partial revert, conflict resolution), the set test stays
 # green while the emulator re-widens demotion -- the #2315 regression
 # class. Policy changes belong in jit_trap_policy.h, not in the .cpp.
@@ -19,7 +19,7 @@ trap 'rm -f "$out"' EXIT
 # since #if 0 can compile the delegation out while it still greps. The
 # delegation must be the function's sole policy authority: no mnemonic
 # references may remain.
-cpp=src/jit/arm/compemu_support_arm.cpp
+cpp=src/jit/aarch64/compemu_support_aarch64.cpp
 body=$(sed -n '/^static bool jit_trap_demote_opcode/,/^}/p' "$cpp")
 if [ -z "$body" ]; then
 	echo "FAIL: jit_trap_demote_opcode not found in $cpp" >&2

@@ -40,7 +40,7 @@
   <div class="highlight-card">
     <div class="highlight-icon">⚡</div>
     <h3>Blazing Fast</h3>
-    <p>Custom JIT compiler for ARM64 and x86-64 delivers maximum emulation speed</p>
+    <p>Custom JIT compiler for aarch64 and x86-64 delivers maximum emulation speed</p>
   </div>
   <div class="highlight-card">
     <div class="highlight-icon">🎯</div>
@@ -65,7 +65,7 @@ Everything you need for the ultimate Amiga experience.
     <div class="feature-icon">⚡</div>
     <div class="feature-content">
       <h4>JIT Compiler</h4>
-      <p>Custom just-in-time compilation for ARM64 and x86-64 — maximum speed on modern hardware</p>
+      <p>Custom just-in-time compilation for aarch64 and x86-64 — maximum speed on modern hardware</p>
     </div>
   </div>
   <div class="feature-card">
@@ -156,19 +156,19 @@ sudo apt install amiberry</code></pre>
 
   <div class="platform-card windows">
     <h3>🪟 Windows</h3>
-    <p>Download from <a href="https://github.com/BlitterStudio/amiberry/releases/latest">Releases</a>. Both <strong>x64</strong> and <strong>ARM64</strong> (Windows-on-ARM / Snapdragon&nbsp;X, Copilot+) builds are published:</p>
+    <p>Download from <a href="https://github.com/BlitterStudio/amiberry/releases/latest">Releases</a>. Both <strong>x64</strong> and <strong>aarch64</strong> (Windows-on-ARM / Snapdragon&nbsp;X, Copilot+) builds are published:</p>
     <ul>
       <li><strong>Installer</strong> — run the <code>.exe</code> installer for a guided setup (pick the one matching your CPU)</li>
       <li><strong>Portable ZIP</strong> — extract the <code>*-portable.zip</code> archive and run <code>Amiberry.exe</code>; it already includes the <code>amiberry.portable</code> marker</li>
     </ul>
     <p class="platform-alt">
-      Running ARM64 in a VM (VMware Fusion / Parallels / Hyper-V)?  Drop <code>opengl32.dll</code> from <a href="https://github.com/mmozeiko/build-mesa/releases"><code>mesa-llvmpipe-arm64</code></a> next to <code>Amiberry.exe</code> so the GUI can start — guest VMs typically lack an OpenGL ICD.
+      Running aarch64 in a VM (VMware Fusion / Parallels / Hyper-V)?  Drop <code>opengl32.dll</code> from <a href="https://github.com/mmozeiko/build-mesa/releases"><code>mesa-llvmpipe-arm64</code></a> next to <code>Amiberry.exe</code> so the GUI can start — guest VMs typically lack an OpenGL ICD.
     </p>
   </div>
 
   <div class="platform-card android">
     <h3>🤖 Android</h3>
-    <p>AArch64 &amp; x86_64 with full ARM64 JIT support for maximum performance.</p>
+    <p>AArch64 &amp; x86_64 with full aarch64 JIT support for maximum performance.</p>
     <p>Currently in Closed Testing on Google Play for <a href="https://ko-fi.com/midwan">Ko-fi</a> members. Open Testing is planned after the next release, followed by a public paid release.</p>
     <p class="platform-alt">
       See the <a href="https://github.com/BlitterStudio/amiberry/wiki/Android">Android guide</a> for details, or the <a href="https://github.com/BlitterStudio/amiberry/wiki/Compile-from-source#android">build instructions</a> to build it yourself.

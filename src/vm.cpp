@@ -68,8 +68,8 @@ static int vm_prot_posix(int protect)
 	}
 }
 
-/* Extra mmap flags implied by the allocation flags. Only Apple arm64 has
- * MAP_JIT; everywhere else (including macOS x86-64 and Windows ARM64)
+/* Extra mmap flags implied by the allocation flags. Only Apple aarch64 has
+ * MAP_JIT; everywhere else (including macOS x86-64 and Windows aarch64)
  * UAE_VM_JIT is ignored. */
 static int vm_map_flags(int flags)
 {
@@ -230,15 +230,8 @@ static void *vm_alloc_32bit_windows(size_t size, int flags, int protect)
 
 void *uae_vm_alloc(size_t size, int flags, int protect)
 {
-	/* The 32-bit placement request is meaningless (and impossible to
-	 * honour) on 32-bit hosts. */
-#ifndef CPU_64_BIT
-	flags &= ~UAE_VM_32BIT;
-#endif
-
 #ifdef _WIN32
 
-#ifdef CPU_64_BIT
 	if (flags & UAE_VM_32BIT) {
 		void *address = vm_alloc_32bit_windows(size, flags, protect);
 		if (address != nullptr) {
@@ -248,7 +241,6 @@ void *uae_vm_alloc(size_t size, int flags, int protect)
 			size, flags, protect, GetLastError());
 		return nullptr;
 	}
-#endif
 
 	int allocation_type = MEM_COMMIT | MEM_RESERVE;
 	if (flags & UAE_VM_WRITE_WATCH) {
@@ -271,7 +263,6 @@ void *uae_vm_alloc(size_t size, int flags, int protect)
 
 	int map_flags = vm_map_flags(flags);
 
-#if defined(CPU_64_BIT)
 	if (flags & UAE_VM_32BIT) {
 		void *address = vm_alloc_32bit_posix(size, flags, protect);
 		if (address != nullptr) {
@@ -281,7 +272,6 @@ void *uae_vm_alloc(size_t size, int flags, int protect)
 			size, flags, protect, errno);
 		return nullptr;
 	}
-#endif
 
 	void *address = mmap(nullptr, size, vm_prot_posix(protect), map_flags, -1, 0);
 	if (address == MAP_FAILED) {
@@ -389,14 +379,12 @@ static void *vm_reserve_at(void *candidate, size_t size, int flags)
 	if (address == MAP_FAILED) {
 		return nullptr;
 	}
-#ifdef CPU_64_BIT
 	if ((flags & UAE_VM_32BIT)
 		&& reinterpret_cast<uintptr_t>(address) + size > 0x100000000ULL) {
 		write_log("VM: reserve at %p (size %zu) ends above 4 GiB, rejected\n", address, size);
 		munmap(address, size);
 		return nullptr;
 	}
-#endif
 	return address;
 
 #endif
@@ -417,10 +405,6 @@ static void *vm_reserve_probe_downward(size_t size, int flags)
 
 void *uae_vm_reserve(size_t size, int flags)
 {
-#ifndef CPU_64_BIT
-	/* Below 4 GiB is the only option on a 32-bit host. */
-	flags &= ~UAE_VM_32BIT;
-#endif
 
 	void *address = nullptr;
 
@@ -430,7 +414,7 @@ void *uae_vm_reserve(size_t size, int flags)
 #if defined(CPU_AARCH64)
 	if (!want_32bit) {
 		/* Above 4 GiB, so bit 31 of the low 32 bits of natmem pointers is
-		 * clear — the layout the arm64 JIT expects, matching macOS arm64. */
+		 * clear — the layout the aarch64 JIT expects, matching macOS aarch64. */
 		address = vm_reserve_at(reinterpret_cast<void *>(0x100000000ULL), size, flags);
 		if (address != nullptr) {
 			return address;
@@ -447,21 +431,11 @@ void *uae_vm_reserve(size_t size, int flags)
 
 #else /* POSIX */
 
-#ifdef CPU_64_BIT
 	if (flags & UAE_VM_32BIT) {
 		address = vm_reserve_probe_downward(size, flags);
 	} else {
 		address = vm_reserve_at(nullptr, size, flags);
 	}
-#else
-	/* 32-bit host: the downward probe normally lands on the first hint;
-	 * fall back to an OS-chosen placement when 32-bit placement was not
-	 * explicitly requested. */
-	address = vm_reserve_probe_downward(size, flags);
-	if (address == nullptr && !(flags & UAE_VM_32BIT)) {
-		address = vm_reserve_at(nullptr, size, flags);
-	}
-#endif
 
 #endif
 
@@ -542,7 +516,7 @@ bool uae_vm_decommit(void *address, size_t size)
 }
 
 /* ------------------------------------------------------------------ */
-/* JIT write protection (Apple arm64 W^X)                             */
+/* JIT write protection (Apple aarch64 W^X)                             */
 /* ------------------------------------------------------------------ */
 
 void uae_vm_jit_write_protect(bool enable_execute_mode)

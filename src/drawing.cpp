@@ -7713,7 +7713,7 @@ STATIC_INLINE void pfield_doline32_8(uae_u32 *pixels, int wordcount, int planes,
 	}
 }
 
-/* ---- SIMD bitplane merge: ARM64 NEON ---- */
+/* ---- SIMD bitplane merge: aarch64 NEON ---- */
 
 #ifdef HAVE_NEON
 

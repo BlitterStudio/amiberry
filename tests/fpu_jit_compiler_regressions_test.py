@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class FpuJitCompilerRegressions(unittest.TestCase):
     def test_explicit_fpsr_conditions_in_compiled_set_and_branch(self):
-        source = (ROOT / "src/jit/x86/compemu_fpp_x86.cpp").read_text()
+        source = (ROOT / "src/jit/x86_64/compemu_fpp_x86_64.cpp").read_text()
 
         def function(text, signature):
             start = text.index(signature)
@@ -23,7 +23,7 @@ class FpuJitCompilerRegressions(unittest.TestCase):
         source = (ROOT / "src/fpp.cpp").read_text()
         tables = source[source.index("static const bool condition_table_040_060"):
                         source.index("int fpp_cond(")]
-        source = (ROOT / "src/jit/x86/compemu_midfunc_x86.cpp").read_text()
+        source = (ROOT / "src/jit/x86_64/compemu_midfunc_x86_64.cpp").read_text()
         override = function(source, "MIDFUNC(3,fpu_cond_from_fpsr,")
         driver = r"""
 #include <cassert>
@@ -184,15 +184,15 @@ int main() {
             subprocess.run([str(binary)], check=True, timeout=10)
 
     def test_decoded_ea_and_helper_call_state(self):
-        source = (ROOT / "src/jit/x86/compemu_fpp_x86.cpp").read_text()
+        source = (ROOT / "src/jit/x86_64/compemu_fpp_x86_64.cpp").read_text()
         start = source.index("static int get_fp_native_ea(")
         ea = source[start:source.index("\n}", start) + 2]
         start = source.index("static bool fp_native_disabled(")
         disabled = source[start:source.index("\n}", start) + 2]
-        header = (ROOT / "src/jit/x86/compemu_x86.h").read_text()
+        header = (ROOT / "src/jit/x86_64/compemu_x86_64.h").read_text()
         start = header.index("struct jit_disable_opcodes {")
         flags = header[start:header.index("\n};", start) + 3]
-        source = (ROOT / "src/jit/x86/compemu_midfunc_x86.cpp").read_text()
+        source = (ROOT / "src/jit/x86_64/compemu_midfunc_x86_64.cpp").read_text()
         start = source.index("MIDFUNC(4,fpu_native_call,")
         call = source[start:source.index("\n}", start) + 2]
         driver = r"""

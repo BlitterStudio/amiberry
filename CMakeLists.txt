@@ -40,6 +40,8 @@ project(amiberry
     HOMEPAGE_URL "https://amiberry.com"
 )
 
+include(cmake/HostArchitecture.cmake)
+
 # Enforce C++17 explicitly across all toolchains
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -121,7 +123,7 @@ endif()
 
 # 86Box's x86 recompiler for the bridgeboard PCs. It has one backend per
 # binary, so multi-architecture builds (macOS universal) and other
-# architectures (armhf, RISC-V, LoongArch) keep the interpreter.
+# architectures (RISC-V, LoongArch) keep the interpreter.
 set(AMIBERRY_86BOX_TARGET_ARCHES "${CMAKE_SYSTEM_PROCESSOR}")
 if(APPLE AND CMAKE_OSX_ARCHITECTURES)
     set(AMIBERRY_86BOX_TARGET_ARCHES "${CMAKE_OSX_ARCHITECTURES}")
@@ -130,12 +132,12 @@ set(AMIBERRY_86BOX_DYNAREC_BACKEND "")
 list(LENGTH AMIBERRY_86BOX_TARGET_ARCHES AMIBERRY_86BOX_TARGET_ARCH_COUNT)
 if(AMIBERRY_86BOX_TARGET_ARCH_COUNT EQUAL 1)
     if(AMIBERRY_86BOX_TARGET_ARCHES MATCHES "^(aarch64|arm64)$")
-        set(AMIBERRY_86BOX_DYNAREC_BACKEND arm64)
+        set(AMIBERRY_86BOX_DYNAREC_BACKEND aarch64)
     elseif(AMIBERRY_86BOX_TARGET_ARCHES MATCHES "^(x86_64|amd64|AMD64)$")
         set(AMIBERRY_86BOX_DYNAREC_BACKEND x86-64)
     endif()
 endif()
-cmake_dependent_option(USE_86BOX_DYNAREC "Build the 86Box x86 recompiler for the bridgeboard PCs (single-arch x86-64/arm64 binaries)" ON "USE_86BOX" OFF)
+cmake_dependent_option(USE_86BOX_DYNAREC "Build the 86Box x86 recompiler for the bridgeboard PCs (single-arch x86-64/aarch64 binaries)" ON "USE_86BOX" OFF)
 if(USE_86BOX_DYNAREC AND NOT AMIBERRY_86BOX_DYNAREC_BACKEND)
     message(STATUS "The 86Box x86 recompiler has no backend for ${AMIBERRY_86BOX_TARGET_ARCHES}; the bridgeboards use the interpreter")
     set(USE_86BOX_DYNAREC OFF CACHE BOOL "Build the 86Box x86 recompiler for the bridgeboard PCs" FORCE)
@@ -195,8 +197,8 @@ elseif(WIN32)
     set(USE_PORTMIDI OFF CACHE BOOL "PortMidi not available in vcpkg for MinGW" FORCE)
 
     if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|arm64|ARM64")
-        set(USE_MPG123 OFF CACHE BOOL "mpg123 vcpkg port broken on Windows ARM64 mingw" FORCE)
-        message(STATUS "Windows ARM64 detected: mpg123 disabled")
+        set(USE_MPG123 OFF CACHE BOOL "mpg123 vcpkg port broken on Windows aarch64 mingw" FORCE)
+        message(STATUS "Windows aarch64 detected: mpg123 disabled")
     endif()
 elseif(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
     set(USE_UAENET_TAP OFF CACHE BOOL "TAP backend only available on Linux" FORCE)

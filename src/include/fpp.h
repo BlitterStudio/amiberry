@@ -33,7 +33,7 @@ extern uae_u32 fpp_get_fpsr(void);
 extern uae_u32 fpp_get_fpcr(void);
 extern uae_u32 fpp_get_fpiar(void);
 
-#if defined(CPU_i386) || defined(CPU_x86_64)
+#if defined(CPU_x86_64)
 extern void init_fpucw_x87(void);
 #ifdef MSVC_LONG_DOUBLE
 extern void init_fpucw_x87_80(void);

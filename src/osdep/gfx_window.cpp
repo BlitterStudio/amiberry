@@ -1189,7 +1189,7 @@ bool doInit(AmigaMonitor* mon)
 						 * matching GL pixel format available" when the GL
 						 * driver doesn't expose a pixel format compatible
 						 * with the attributes we just set (seen with Mesa
-						 * d3d12 on Windows ARM64 VMs).  Treat it as a
+						 * d3d12 on Windows aarch64 VMs).  Treat it as a
 						 * context-mode failure and retry with the next
 						 * mode rather than aborting the whole init. */
 						write_log("Window creation failed for renderer mode %d on monitor %d. Retrying with next mode...\n",
@@ -1478,7 +1478,7 @@ bool doInit(AmigaMonitor* mon)
 	 *            Core/Legacy tiers so drivers without ES 3.0 (RPi3 vc4)
 	 *            keep hardware GL 2.1 instead of demoting to software.
 	 * Modes 2/3 exist for drivers with a narrow pixel-format set (e.g.
-	 * Mesa3D d3d12 on Windows ARM64 VMs). Unsupported modes return false
+	 * Mesa3D d3d12 on Windows aarch64 VMs). Unsupported modes return false
 	 * and the caller advances to the next attempt. */
 #ifdef AMIBERRY_GLES_FALLBACK
 	constexpr bool es_fallback_tier = true;

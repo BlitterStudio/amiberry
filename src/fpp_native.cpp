@@ -138,7 +138,7 @@ static void native_precision(int prec)
 #define NATIVE_UNARY_SPECIAL(operation)
 #endif
 
-#if defined(CPU_i386) || defined(CPU_x86_64)
+#if defined(CPU_x86_64)
 
 /* The fallback thunk is for compilers without inline x87 fldcw support.
  * MSVC x64 is the usual case: _control87/_controlfp only updates SSE2
@@ -221,21 +221,19 @@ static void set_fpucw_x87(uae_u32 m68k_cw)
 		0x127f, 0x1e7f, 0x167f, 0x1a7f,	/* undefined (Double) */
 	};
 	x87_cw = x87_cw_tab[(m68k_cw >> 4) & 0xf];
-#if defined(X86_MSVC_ASSEMBLY) && 0
-	__asm { fldcw word ptr x87_cw }
-#elif defined(__GNUC__)
+#if   defined(__GNUC__)
 	__asm__("fldcw %0" : : "m" (*&x87_cw));
 #else
 	((x87_fldcw_function) x87_fldcw_code)();
 #endif
 }
 
-#endif /* defined(CPU_i386) || defined(CPU_x86_64) */
+#endif /* defined(CPU_x86_64) */
 
 static void native_set_fpucw(uae_u32 m68k_cw)
 {
 #ifndef __MACH__
-#if defined(CPU_i386) || defined(CPU_x86_64)
+#if defined(CPU_x86_64)
 #ifndef __ANDROID__
 	set_fpucw_x87(m68k_cw);
 #endif
@@ -337,7 +335,7 @@ static uae_u32 fp_get_support_flags(void)
 
 static void fp_clear_status(void)
 {
-#if defined(__GNUC__) && (defined(CPU_i386) || defined(CPU_x86_64)) && defined(__SSE__) && FE_ALL_EXCEPT == 0x3d
+#if defined(__GNUC__) && (defined(CPU_x86_64)) && defined(__SSE__) && FE_ALL_EXCEPT == 0x3d
 	uae_u16 sw;
 	__asm__ volatile ("fnstsw %0" : "=a" (sw));
 	/* fnclex avoids the expensive environment save/restore, but also clears

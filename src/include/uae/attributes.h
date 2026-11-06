@@ -14,9 +14,6 @@
 #if defined(_WIN32)
 /* Win32 __cdecl keyword (llvm-mingw / MSYS2 clang) */
 #define uae_cdecl __cdecl
-#elif defined(__GNUC__) && defined(__i386__)
-/* 32-bit x86 GCC/Clang (libretro android-x86): GNU cdecl attribute */
-#define uae_cdecl __attribute__((cdecl))
 #else
 #define uae_cdecl
 #endif

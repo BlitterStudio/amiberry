@@ -907,7 +907,7 @@ extern void signal_buserror(int signum, siginfo_t* info, void* ptr);
 extern void signal_term(int signum, siginfo_t* info, void* ptr);
 #endif
 
-#if defined(CPU_arm) && !defined(_WIN32)
+#if defined(CPU_AARCH64) && !defined(_WIN32)
 #if defined(JIT) && defined(JIT_DEBUG_MEM_CORRUPTION)
 extern bool jit_dbg_is_sigsegv_handler(void (*handler)(int, siginfo_t*, void*));
 #endif
@@ -949,7 +949,7 @@ static bool install_fault_signal_handler(const int signum, const char* name,
 // Unhandled faults still restore the console: signal_segv() calls SDL_Quit().
 bool install_fault_signal_handlers()
 {
-#if defined(CPU_arm) && !defined(_WIN32)
+#if defined(CPU_AARCH64) && !defined(_WIN32)
 	return install_fault_signal_handler(SIGSEGV, "SIGSEGV", signal_segv)
 		&& install_fault_signal_handler(SIGILL, "SIGILL", signal_segv)
 		&& install_fault_signal_handler(SIGBUS, "SIGBUS", signal_buserror);
@@ -14503,7 +14503,7 @@ int amiberry_main(int argc, char* argv[])
 
 	logging_init();
 	rp9_init();
-#if defined (CPU_arm) && !defined (_WIN32)
+#if defined (CPU_AARCH64) && !defined (_WIN32)
 	if (!install_fault_signal_handlers())
 	{
 #ifndef __ANDROID__

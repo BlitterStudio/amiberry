@@ -3419,7 +3419,7 @@ kludge_me_do:
 	// (Illegal Instruction) also gets corrupted, causing infinite exception
 	// loops and stack overflow crashes.
 	// v41 also fixes v40 byte-order bug: shadows now stored in M68k BE format
-	// matching x_get_long() output, so comparisons work correctly on LE ARM64.
+	// matching x_get_long() output, so comparisons work correctly on LE aarch64.
 	if (vector_nr >= 1 && vector_nr <= 6) {
 		extern uae_u32 jit_vec_shadow[];
 		uae_u32 shadow_val = jit_vec_shadow[vector_nr];
@@ -5358,9 +5358,9 @@ static int cpu_thread_paced;   // written by the CPU thread, read by the main th
 
 static inline void cpu_thread_spin_pause()
 {
-#if defined(CPU_arm) || defined(CPU_AARCH64)
+#if defined(CPU_AARCH64)
 	__asm__ __volatile__ ("yield");
-#elif defined(CPU_x86_64) || defined(CPU_i386)
+#elif defined(CPU_x86_64)
 	__asm__ __volatile__ ("pause");
 #elif defined(__riscv)
 	__asm__ __volatile__ (".insn i 0x0f, 0, x0, x0, 0x010");
@@ -5520,9 +5520,9 @@ uae_u32 process_cpu_indirect_memory_read(uae_u32 addr, int size)
 		if (regs.spcflags & SPCFLAG_MODE_CHANGE) {
 			return 0;
 		}
-#if defined(CPU_arm) || defined(CPU_AARCH64)
+#if defined(CPU_AARCH64)
 		__asm__ __volatile__ ("yield");
-#elif defined(CPU_x86_64) || defined(CPU_i386)
+#elif defined(CPU_x86_64)
 		__asm__ __volatile__ ("pause");
 #elif defined(__riscv)
 		__asm__ __volatile__ (".insn i 0x0f, 0, x0, x0, 0x010");
@@ -5566,9 +5566,9 @@ void process_cpu_indirect_memory_write(uae_u32 addr, uae_u32 data, int size)
 		if (regs.spcflags & SPCFLAG_MODE_CHANGE) {
 			return;
 		}
-#if defined(CPU_arm) || defined(CPU_AARCH64)
+#if defined(CPU_AARCH64)
 		__asm__ __volatile__ ("yield");
-#elif defined(CPU_x86_64) || defined(CPU_i386)
+#elif defined(CPU_x86_64)
 		__asm__ __volatile__ ("pause");
 #elif defined(__riscv)
 		__asm__ __volatile__ (".insn i 0x0f, 0, x0, x0, 0x010");
@@ -5842,7 +5842,7 @@ void cpu_keyboard_reset(bool hardreset, bool hold)
 
 #ifdef JIT  /* Completely different run_2 replacement */
 
-#ifdef CPU_AARCH64 // Used by the AARCH64 JIT implementation
+#ifdef CPU_AARCH64 // Used by the aarch64 JIT implementation
 void execute_exception(uae_u32 cycles)
 {
 	countdown -= cycles;

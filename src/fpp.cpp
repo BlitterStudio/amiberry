@@ -727,9 +727,9 @@ static void fpset (fpdata *fpd, uae_s32 val)
 void fpp_set_fpsr (uae_u32 val)
 {
 	regs.fpsr = val & fpsr_mask;
-#if defined(CPU_i386) || defined(CPU_x86_64) || defined(CPU_AARCH64)
+#if defined(CPU_x86_64) || defined(CPU_AARCH64)
 	// FP_RESULT cannot represent independent N, Z, I and NAN bits: the JIT
-	// predicates (x86, ARM64) take them from the FPSR until the next result.
+	// predicates (x86, aarch64) take them from the FPSR until the next result.
 	fpu_fpsr_cc_written = true;
 #endif
 
@@ -3754,7 +3754,7 @@ void fpu_reset (void)
 		fp_init_native();
 	}
 
-#if defined(CPU_i386) || defined(CPU_x86_64)
+#if defined(CPU_x86_64)
 #ifndef __MACH__
 #ifndef __ANDROID__
 	init_fpucw_x87();

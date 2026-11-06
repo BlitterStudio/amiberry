@@ -84,7 +84,7 @@
         </release>
         <release version="8.4.0" date="2026-10-11">
             <description>
-                <p>Feature release: expanded ZZ9000 emulation (AHI audio, SANA-II networking, SDK mailbox and MHI audio, MPEGA streams, image and ZZPlay services, firmware 2.8 register ABI), support for an external MiniGL renderer plugin (available separately) with dma-buf frame compositing, user plugin locations, custom cartridge ROM and .A1000 ROM support, relative media paths, and a --dump-config command-line option. RTG dirty-tracking and warm-reset fixes, ARM64 JIT trap and FPU fixes, RPi4 zero-copy native frames and faster AGA drawing, runtime GL capability detection, bsdsocket/SANA-II/uaenet networking fixes, a libretro on-screen keyboard and disk control improvements, Android launcher/touch/TV fixes, and the latest WinUAE and ImGui updates.</p>
+                <p>Feature release: expanded ZZ9000 emulation (AHI audio, SANA-II networking, SDK mailbox and MHI audio, MPEGA streams, image and ZZPlay services, firmware 2.8 register ABI), support for an external MiniGL renderer plugin (available separately) with dma-buf frame compositing, user plugin locations, custom cartridge ROM and .A1000 ROM support, relative media paths, and a --dump-config command-line option. RTG dirty-tracking and warm-reset fixes, aarch64 JIT trap and FPU fixes, RPi4 zero-copy native frames and faster AGA drawing, runtime GL capability detection, bsdsocket/SANA-II/uaenet networking fixes, a libretro on-screen keyboard and disk control improvements, Android launcher/touch/TV fixes, and the latest WinUAE and ImGui updates.</p>
             </description>
         </release>
             <release version="8.3.0" date="2026-08-05">
@@ -104,12 +104,12 @@
         </release>
         <release version="8.2.0" date="2026-06-12">
             <description>
-                <p>Stable release: major Raspberry Pi 4 and slow ARM host performance improvements, a new performance monitor, PPC/QEMU-UAE plugin hardening, extensive ARM64 and x86-64 JIT fixes, libretro startup/WHDLoad/audio/path fixes, Android input and launch improvements, network/serial/bsdsocket fixes, keyboard layout D support, GUI responsiveness work, refreshed SDL3/ImGui/WinUAE updates, and packaging/signing improvements across Linux, macOS, Windows, Android, and Flatpak.</p>
+                <p>Stable release: major Raspberry Pi 4 and slow ARM host performance improvements, a new performance monitor, PPC/QEMU-UAE plugin hardening, extensive aarch64 and x86-64 JIT fixes, libretro startup/WHDLoad/audio/path fixes, Android input and launch improvements, network/serial/bsdsocket fixes, keyboard layout D support, GUI responsiveness work, refreshed SDL3/ImGui/WinUAE updates, and packaging/signing improvements across Linux, macOS, Windows, Android, and Flatpak.</p>
             </description>
         </release>
         <release version="8.1.6" date="2026-05-09">
             <description>
-                <p>Stable release: Windows ARM64 and llvm-mingw build improvements, extensive x86-64 and ARM64 JIT fixes, RTG zero-copy enabled by default, OpenGL and VSync robustness improvements, Android input/back-button fixes, libretro path isolation, FreeBSD build/install updates, GUI polish, refreshed ImGui and WinUAE sync, and configuration healing for duplicate path entries.</p>
+                <p>Stable release: Windows aarch64 and llvm-mingw build improvements, extensive x86-64 and aarch64 JIT fixes, RTG zero-copy enabled by default, OpenGL and VSync robustness improvements, Android input/back-button fixes, libretro path isolation, FreeBSD build/install updates, GUI polish, refreshed ImGui and WinUAE sync, and configuration healing for duplicate path entries.</p>
             </description>
         </release>
         <release version="8.1.5" date="2026-04-14">

@@ -669,10 +669,6 @@ STATIC_INLINE uae_u32 get_wordi_jit(uaecptr addr)
 /*
 * Read a host pointer from addr
 */
-#if SIZEOF_VOID_P == 4
-# define get_pointer(addr) ((void *)get_long (addr))
-#else
-# if SIZEOF_VOID_P == 8
 STATIC_INLINE void *get_pointer (uaecptr addr)
 {
 	const unsigned int n = SIZEOF_VOID_P / 4;
@@ -691,10 +687,6 @@ STATIC_INLINE void *get_pointer (uaecptr addr)
 	}
 	return p.ptr;
 }
-# else
-#  error "Unknown or unsupported pointer size."
-# endif
-#endif
 
 void dma_put_long(uaecptr addr, uae_u32 v);
 uae_u32 dma_get_long(uaecptr addr);
@@ -777,10 +769,6 @@ STATIC_INLINE void put_byte_jit(uaecptr addr, uae_u32 l)
 /*
 * Store host pointer v at addr
 */
-#if SIZEOF_VOID_P == 4
-# define put_pointer(addr, p) (put_long ((addr), (uae_u32)(p)))
-#else
-# if SIZEOF_VOID_P == 8
 STATIC_INLINE void put_pointer (uaecptr addr, void *v)
 {
 	const unsigned int n = SIZEOF_VOID_P / 4;
@@ -800,8 +788,6 @@ STATIC_INLINE void put_pointer (uaecptr addr, void *v)
 #endif
 	}
 }
-# endif
-#endif
 
 bool real_address_allowed(void);
 uae_u8 *memory_get_real_address(uaecptr);

@@ -646,10 +646,6 @@ endif()
 
 if (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64" OR CMAKE_SYSTEM_PROCESSOR MATCHES "arm64")
     target_compile_definitions(${PROJECT_NAME} PRIVATE CPU_AARCH64)
-elseif (CMAKE_SYSTEM_PROCESSOR MATCHES "arm")
-    target_compile_definitions(${PROJECT_NAME} PRIVATE
-            CPU_arm ARMV6_ASSEMBLY ARMV6T2 USE_ARMNEON ARM_HAS_DIV
-    )
 endif ()
 
 if(WIN32)
@@ -712,7 +708,7 @@ elseif(NOT IOS
     # globals; fixed __TEXT at 4GB plus a small pagezero leaves usable low
     # address space for those buffers without letting PIE slide globals too low.
     # Keep these scoped to the x86_64 slice so universal builds do not change
-    # arm64 image layout.
+    # aarch64 image layout.
     set(AMIBERRY_MACOS_X86_LINK_OPTIONS
             "-Wl,-no_pie"
             "-Wl,-segaddr,__TEXT,0x100000000"

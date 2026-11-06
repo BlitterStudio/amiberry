@@ -84,12 +84,12 @@ libretro-build-linux-aarch64:
     - .linux-defs
 
 # macOS ARM 64-bit
-libretro-build-osx-arm64:
+libretro-build-osx-aarch64:
   extends:
     - .libretro-osx-arm64-make-default
     - .core-defs
   variables:
-    ARCH: arm64
+    ARCH: aarch64
 
 # macOS 64-bit (Intel)
 libretro-build-osx-x64:
@@ -104,10 +104,8 @@ libretro-build-osx-x64:
 ################################## CELLPHONES ################################
 # Android ARMv8a
 #
-# No armeabi-v7a job: the 32-bit ARM JIT does not compile in this
-# configuration (compemu_arm.h wants N_REGS, which nothing defines here), and
-# fsdb_host.cpp narrows a 64-bit timestamp into a 32-bit time_t.
-libretro-build-android-arm64-v8a:
+# Only 64-bit host ABIs are supported.
+libretro-build-android-aarch64:
   extends:
     - .libretro-android-make-arm64-v8a
     - .core-defs

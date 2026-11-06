@@ -358,7 +358,7 @@ bool ide_isdrive (struct ide_hdf *ide)
  * secbuf, the registers and intdrq and then arms irq_delay. The CPU thread
  * polls irq_delay in ide_interrupt_hsync() and only then builds the status
  * from that state. Arm with release and poll with acquire so the thread's
- * writes are visible first: on weakly ordered hosts (ARM64) the CPU thread
+ * writes are visible first: on weakly ordered hosts (aarch64) the CPU thread
  * could otherwise see the armed delay but a stale intdrq, raise the
  * interrupt without DRQ, and leave scsi.device polling for DRQ forever. */
 static void ide_arm_interrupt (struct ide_hdf *ide, int delay)
