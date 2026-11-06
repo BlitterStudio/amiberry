@@ -97,8 +97,8 @@ static inline void* vm_acquire_code(uae_u32 size, int options = VM_MAP_DEFAULT)
 	int flags = UAE_VM_32BIT;
 	int protect = UAE_VM_READ_WRITE;
 #if defined(__APPLE__)
-	/* On macOS aarch64, MAP_JIT mappings may not be placeable below 4GB.
-	 * Allow normal placement and rely on aarch64 codegen's 64-bit pointers. */
+	/* On macOS ARM64, MAP_JIT mappings may not be placeable below 4GB.
+	 * Allow normal placement and rely on ARM64 codegen's 64-bit pointers. */
 	flags = UAE_VM_JIT;
 #else
 	/* aarch64 JIT is 64-bit pointer clean — no need for 32-bit constraint.
@@ -2826,7 +2826,7 @@ void alloc_cache(void)
 		static bool aarch64_jit_mode_logged = false;
 		if (!aarch64_jit_mode_logged) {
 #if defined(__APPLE__)
-			jit_log("aarch64 macOS JIT mode: MAP_JIT + write/execute switching");
+			jit_log("ARM64 macOS JIT mode: MAP_JIT + write/execute switching");
 #elif defined(__ANDROID__)
 			jit_log("aarch64 Android JIT mode: RWX anonymous mapping");
 #else
@@ -3057,12 +3057,12 @@ STATIC_INLINE void create_popalls(void)
             if (currprefs.cachesize > 0)
             {
 #if defined(_WIN32) && defined(CPU_AARCH64)
-                /* Windows aarch64: RWX allocations can be denied by VBS/HVCI or
+                /* Windows ARM64: RWX allocations can be denied by VBS/HVCI or
                  * similar security policies (commonly seen in VMware WoA VMs).
                  * Rather than jit_abort() (which kills the process), log
                  * clearly and fall back to the interpreter — the caller will
                  * call disable_jit_runtime() on our NULL pushall_call_handler. */
-                jit_log("aarch64: Windows RWX allocation denied — disabling JIT. "
+                jit_log("ARM64: Windows RWX allocation denied — disabling JIT. "
                     "Check VBS/HVCI/Arbitrary Code Guard policy in the VM.");
 #else
                 jit_abort("Could not allocate popallspace!");

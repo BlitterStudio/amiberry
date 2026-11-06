@@ -32,10 +32,10 @@ transparency; no source offer is owed for them.
 
 Usage:
   collect-third-party-sources.py scan \
-      --app build/Amiberry.app --variant macos --arch aarch64 \
-      --out third-party-scan-aarch64.json
+      --app build/Amiberry.app --variant macos --arch arm64 \
+      --out third-party-scan-arm64.json
   collect-third-party-sources.py assemble \
-      --scan third-party-scan-x86_64.json --scan third-party-scan-aarch64.json \
+      --scan third-party-scan-x86_64.json --scan third-party-scan-arm64.json \
       --tag v8.5.0 --out amiberry-v8.5.0-third-party-sources.tar.xz
 
 The Mac App Store (MACOS_APP_STORE=ON) and iOS builds are built outside this
@@ -932,7 +932,7 @@ def main() -> None:
     ps = sub.add_parser("scan", help="map a built .app bundle to Homebrew formula versions")
     ps.add_argument("--app", required=True, help="path to the built Amiberry.app")
     ps.add_argument("--variant", required=True, choices=("macos", "macos-store", "ios"))
-    ps.add_argument("--arch", default="", help="x86_64 / aarch64 (informational)")
+    ps.add_argument("--arch", default="", help="x86_64 / arm64 (informational)")
     ps.add_argument("--out", required=True, help="output scan JSON")
     ps.add_argument("--brew", default="brew")
     ps.add_argument("--allow-unknown", action="store_true",

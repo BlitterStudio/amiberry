@@ -39,7 +39,7 @@
 #ifdef _WIN32
 /* On Windows x86_64, JIT exception handling is done via
  * AddVectoredExceptionHandler in jit/x86_64/exception_handler.cpp.
- * Windows aarch64 uses the aarch64 JIT and installs its vectored handler here. */
+ * Windows ARM64 uses the ARM64 JIT and installs its vectored handler here. */
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #endif
@@ -56,7 +56,7 @@ extern void raise_in_cl_list(blockinfo* bi);
 #endif
 
 static int max_signals = 200;
-static void* installed_aarch64_vector_handler;
+static void* installed_arm64_vector_handler;
 
 #if defined(JIT) && defined(CPU_AARCH64)
 typedef uae_u64 uintptr;
@@ -74,7 +74,7 @@ enum type_size_t {
 	SIZE_INT
 };
 
-static bool windows_aarch64_jit_pc(uintptr pc)
+static bool windows_arm64_jit_pc(uintptr pc)
 {
 	return (compiled_code && pc >= reinterpret_cast<uintptr>(compiled_code) && pc < reinterpret_cast<uintptr>(current_compile_p)) ||
 		(popallspace && pc >= reinterpret_cast<uintptr>(popallspace) && pc < reinterpret_cast<uintptr>(popallspace + POPALLSPACE_SIZE));
@@ -96,7 +96,7 @@ static int delete_trigger(blockinfo* bi, void* pc)
 	return 0;
 }
 
-static int windows_aarch64_exception_size(const int transfer_size)
+static int windows_arm64_exception_size(const int transfer_size)
 {
 	switch (transfer_size) {
 	case SIZE_BYTE:
@@ -109,16 +109,16 @@ static int windows_aarch64_exception_size(const int transfer_size)
 	}
 }
 
-static void windows_aarch64_jit_bus_error(const uaecptr amiga_addr, const bool read, const int transfer_size)
+static void windows_arm64_jit_bus_error(const uaecptr amiga_addr, const bool read, const int transfer_size)
 {
-	exception2_setup(regs.opcode, amiga_addr, read, windows_aarch64_exception_size(transfer_size), regs.s ? 4 : 0);
+	exception2_setup(regs.opcode, amiga_addr, read, windows_arm64_exception_size(transfer_size), regs.s ? 4 : 0);
 	flush_icache(3);
 	countdown = 0;
 	set_special(SPCFLAG_END_COMPILE);
 	longjmp(jit_bus_error_jmpbuf, 2);
 }
 
-static LONG CALLBACK windows_aarch64_jit_exception_handler(PEXCEPTION_POINTERS info)
+static LONG CALLBACK windows_arm64_jit_exception_handler(PEXCEPTION_POINTERS info)
 {
 	if (info->ExceptionRecord->ExceptionCode != EXCEPTION_ACCESS_VIOLATION)
 		return EXCEPTION_CONTINUE_SEARCH;
@@ -126,7 +126,7 @@ static LONG CALLBACK windows_aarch64_jit_exception_handler(PEXCEPTION_POINTERS i
 		return EXCEPTION_CONTINUE_SEARCH;
 
 	const uintptr fault_pc = static_cast<uintptr>(info->ContextRecord->Pc);
-	if (!windows_aarch64_jit_pc(fault_pc))
+	if (!windows_arm64_jit_pc(fault_pc))
 		return EXCEPTION_CONTINUE_SEARCH;
 	if (!natmem_offset)
 		return EXCEPTION_CONTINUE_SEARCH;
@@ -139,7 +139,7 @@ static LONG CALLBACK windows_aarch64_jit_exception_handler(PEXCEPTION_POINTERS i
 	const uintptr fault_addr = static_cast<uintptr>(info->ExceptionRecord->ExceptionInformation[1]);
 	const uintptr amiga_addr_wide = fault_addr - reinterpret_cast<uintptr>(natmem_offset);
 	if (amiga_addr_wide > 0xffffffffULL) {
-		write_log(_T("JIT: Windows aarch64 AV outside natmem PC=%p fault=%p\n"),
+		write_log(_T("JIT: Windows ARM64 AV outside natmem PC=%p fault=%p\n"),
 			reinterpret_cast<void*>(fault_pc), reinterpret_cast<void*>(fault_addr));
 		return EXCEPTION_CONTINUE_SEARCH;
 	}
@@ -148,20 +148,20 @@ static LONG CALLBACK windows_aarch64_jit_exception_handler(PEXCEPTION_POINTERS i
 	if (a3000lmem_bank.allocated_size > 0 &&
 		amiga_addr >= a3000lmem_bank.start - 0x00100000 &&
 		amiga_addr < a3000lmem_bank.start - 0x00100000 + 8) {
-		write_log(_T("JIT: Windows aarch64 ramsey_low probe at 0x%08x, skipping faulting instruction.\n"), amiga_addr);
+		write_log(_T("JIT: Windows ARM64 ramsey_low probe at 0x%08x, skipping faulting instruction.\n"), amiga_addr);
 		info->ContextRecord->Pc += 4;
 		return EXCEPTION_CONTINUE_EXECUTION;
 	}
 	if (a3000hmem_bank.allocated_size > 0 &&
 		amiga_addr >= a3000hmem_bank.start + a3000hmem_bank.allocated_size &&
 		amiga_addr < a3000hmem_bank.start + a3000hmem_bank.allocated_size + 8) {
-		write_log(_T("JIT: Windows aarch64 ramsey_high probe at 0x%08x, skipping faulting instruction.\n"), amiga_addr);
+		write_log(_T("JIT: Windows ARM64 ramsey_high probe at 0x%08x, skipping faulting instruction.\n"), amiga_addr);
 		info->ContextRecord->Pc += 4;
 		return EXCEPTION_CONTINUE_EXECUTION;
 	}
 
 	addrbank* ab = &get_mem_bank(amiga_addr);
-	const bool aarch64_quarantine_candidate = (ab == &dummy_bank);
+	const bool arm64_quarantine_candidate = (ab == &dummy_bank);
 	const unsigned int opcode = *reinterpret_cast<uae_u32*>(fault_pc);
 	transfer_type_t transfer_type = TYPE_UNKNOWN;
 	int transfer_size = SIZE_UNKNOWN;
@@ -345,10 +345,10 @@ static LONG CALLBACK windows_aarch64_jit_exception_handler(PEXCEPTION_POINTERS i
 
 		const uae_u64 eff_addr = rn_val + offset;
 		if (eff_addr != static_cast<uae_u64>(fault_addr)) {
-			write_log(_T("JIT: Windows aarch64 EA mismatch fault=%016llx ea=%016llx opcode=%08x\n"),
+			write_log(_T("JIT: Windows ARM64 EA mismatch fault=%016llx ea=%016llx opcode=%08x\n"),
 				static_cast<unsigned long long>(fault_addr), static_cast<unsigned long long>(eff_addr), opcode);
-			if (aarch64_quarantine_candidate && jit_in_compiled_code) {
-				windows_aarch64_jit_bus_error(amiga_addr, transfer_type == TYPE_LOAD, transfer_size);
+			if (arm64_quarantine_candidate && jit_in_compiled_code) {
+				windows_arm64_jit_bus_error(amiga_addr, transfer_type == TYPE_LOAD, transfer_size);
 			}
 			return EXCEPTION_CONTINUE_SEARCH;
 		}
@@ -356,9 +356,9 @@ static LONG CALLBACK windows_aarch64_jit_exception_handler(PEXCEPTION_POINTERS i
 		if (ab == &dummy_bank) {
 			if (transfer_type == TYPE_LOAD) {
 				set_reg_w(rd, 0);
-				write_log(_T("JIT: Windows aarch64 dummy_bank load at %08x, returning 0 to x%d\n"), amiga_addr, rd);
+				write_log(_T("JIT: Windows ARM64 dummy_bank load at %08x, returning 0 to x%d\n"), amiga_addr, rd);
 			} else {
-				write_log(_T("JIT: Windows aarch64 dummy_bank store at %08x ignored\n"), amiga_addr);
+				write_log(_T("JIT: Windows ARM64 dummy_bank store at %08x ignored\n"), amiga_addr);
 			}
 		} else if (transfer_type == TYPE_LOAD) {
 			uae_u32 newval = get_reg_w(rd);
@@ -396,7 +396,7 @@ static LONG CALLBACK windows_aarch64_jit_exception_handler(PEXCEPTION_POINTERS i
 		info->ContextRecord->Pc += 4;
 		countdown = 0;
 		set_special(SPCFLAG_END_COMPILE);
-		if (aarch64_quarantine_candidate) {
+		if (arm64_quarantine_candidate) {
 			flush_icache(3);
 		}
 
@@ -410,20 +410,20 @@ static LONG CALLBACK windows_aarch64_jit_exception_handler(PEXCEPTION_POINTERS i
 		return EXCEPTION_CONTINUE_EXECUTION;
 	}
 
-	if (aarch64_quarantine_candidate && jit_in_compiled_code) {
-		write_log(_T("JIT: Windows aarch64 unhandled insn 0x%08x at unmapped %08x, returning to interpreter.\n"),
+	if (arm64_quarantine_candidate && jit_in_compiled_code) {
+		write_log(_T("JIT: Windows ARM64 unhandled insn 0x%08x at unmapped %08x, returning to interpreter.\n"),
 			opcode, amiga_addr);
 		const bool read = access_type == 0;
-		windows_aarch64_jit_bus_error(amiga_addr, read, transfer_size);
+		windows_arm64_jit_bus_error(amiga_addr, read, transfer_size);
 	}
 
-	write_log(_T("JIT: Windows aarch64 unhandled access violation at PC=%p fault=%p amiga=%08x opcode=%08x bank=%s\n"),
+	write_log(_T("JIT: Windows ARM64 unhandled access violation at PC=%p fault=%p amiga=%08x opcode=%08x bank=%s\n"),
 		reinterpret_cast<void*>(fault_pc), reinterpret_cast<void*>(fault_addr), amiga_addr, opcode,
 		ab && ab->name ? ab->name : _T("NONE"));
 	return EXCEPTION_CONTINUE_SEARCH;
 }
 
-static const TCHAR* windows_aarch64_av_type(const ULONG_PTR access_type)
+static const TCHAR* windows_arm64_av_type(const ULONG_PTR access_type)
 {
 	switch (access_type) {
 	case 0:
@@ -437,53 +437,53 @@ static const TCHAR* windows_aarch64_av_type(const ULONG_PTR access_type)
 	}
 }
 
-static LONG WINAPI windows_aarch64_jit_unhandled_exception_filter(PEXCEPTION_POINTERS info)
+static LONG WINAPI windows_arm64_jit_unhandled_exception_filter(PEXCEPTION_POINTERS info)
 {
 	const auto* er = info->ExceptionRecord;
 	const auto* ctx = info->ContextRecord;
 	const uintptr fault_pc = static_cast<uintptr>(ctx->Pc);
-	write_log(_T("JIT: Windows aarch64 unhandled exception code=%08lx PC=%p in_jit=%d\n"),
-		er->ExceptionCode, reinterpret_cast<void*>(fault_pc), windows_aarch64_jit_pc(fault_pc) ? 1 : 0);
+	write_log(_T("JIT: Windows ARM64 unhandled exception code=%08lx PC=%p in_jit=%d\n"),
+		er->ExceptionCode, reinterpret_cast<void*>(fault_pc), windows_arm64_jit_pc(fault_pc) ? 1 : 0);
 	if (er->ExceptionCode == EXCEPTION_ACCESS_VIOLATION && er->NumberParameters >= 2) {
 		const uintptr fault_addr = static_cast<uintptr>(er->ExceptionInformation[1]);
-		write_log(_T("JIT: Windows aarch64 unhandled AV type=%s target=%p natmem=%p amiga=%08x\n"),
-			windows_aarch64_av_type(er->ExceptionInformation[0]), reinterpret_cast<void*>(fault_addr),
+		write_log(_T("JIT: Windows ARM64 unhandled AV type=%s target=%p natmem=%p amiga=%08x\n"),
+			windows_arm64_av_type(er->ExceptionInformation[0]), reinterpret_cast<void*>(fault_addr),
 			natmem_offset, natmem_offset ? static_cast<uaecptr>(fault_addr - reinterpret_cast<uintptr>(natmem_offset)) : 0);
 		/* Flag the classic "32-bit value with bit 31 set sign-extended
 		 * to 64-bit" pattern so we can correlate future reports with
 		 * natmem-placement regressions. */
 		if ((fault_addr >> 32) == 0xFFFFFFFFu) {
-			write_log(_T("JIT: Windows aarch64 fault target looks sign-extended (upper32=FFFFFFFF)\n"));
+			write_log(_T("JIT: Windows ARM64 fault target looks sign-extended (upper32=FFFFFFFF)\n"));
 		}
 	}
-	write_log(_T("JIT: Windows aarch64 ranges compiled=%p current=%p popall=%p-%p M68K PC=%08x pc_p=%p spcflags=%08x\n"),
+	write_log(_T("JIT: Windows ARM64 ranges compiled=%p current=%p popall=%p-%p M68K PC=%08x pc_p=%p spcflags=%08x\n"),
 		compiled_code, current_compile_p, popallspace, popallspace ? popallspace + POPALLSPACE_SIZE : nullptr,
 		static_cast<uae_u32>(M68K_GETPC), regs.pc_p, regs.spcflags);
 	/* Dump X0..X30, SP, LR so we can inspect which register held the bad
 	 * effective-address base when the fault hit.  Grouped four per line to
 	 * keep the log readable. */
-	write_log(_T("JIT: Windows aarch64 X0=%016llx  X1=%016llx  X2=%016llx  X3=%016llx\n"),
+	write_log(_T("JIT: Windows ARM64 X0=%016llx  X1=%016llx  X2=%016llx  X3=%016llx\n"),
 		(unsigned long long)ctx->X[0], (unsigned long long)ctx->X[1],
 		(unsigned long long)ctx->X[2], (unsigned long long)ctx->X[3]);
-	write_log(_T("JIT: Windows aarch64 X4=%016llx  X5=%016llx  X6=%016llx  X7=%016llx\n"),
+	write_log(_T("JIT: Windows ARM64 X4=%016llx  X5=%016llx  X6=%016llx  X7=%016llx\n"),
 		(unsigned long long)ctx->X[4], (unsigned long long)ctx->X[5],
 		(unsigned long long)ctx->X[6], (unsigned long long)ctx->X[7]);
-	write_log(_T("JIT: Windows aarch64 X8=%016llx  X9=%016llx X10=%016llx X11=%016llx\n"),
+	write_log(_T("JIT: Windows ARM64 X8=%016llx  X9=%016llx X10=%016llx X11=%016llx\n"),
 		(unsigned long long)ctx->X[8], (unsigned long long)ctx->X[9],
 		(unsigned long long)ctx->X[10], (unsigned long long)ctx->X[11]);
-	write_log(_T("JIT: Windows aarch64 X12=%016llx X13=%016llx X14=%016llx X15=%016llx\n"),
+	write_log(_T("JIT: Windows ARM64 X12=%016llx X13=%016llx X14=%016llx X15=%016llx\n"),
 		(unsigned long long)ctx->X[12], (unsigned long long)ctx->X[13],
 		(unsigned long long)ctx->X[14], (unsigned long long)ctx->X[15]);
-	write_log(_T("JIT: Windows aarch64 X16=%016llx X17=%016llx X18=%016llx X19=%016llx\n"),
+	write_log(_T("JIT: Windows ARM64 X16=%016llx X17=%016llx X18=%016llx X19=%016llx\n"),
 		(unsigned long long)ctx->X[16], (unsigned long long)ctx->X[17],
 		(unsigned long long)ctx->X[18], (unsigned long long)ctx->X[19]);
-	write_log(_T("JIT: Windows aarch64 X20=%016llx X21=%016llx X22=%016llx X23=%016llx\n"),
+	write_log(_T("JIT: Windows ARM64 X20=%016llx X21=%016llx X22=%016llx X23=%016llx\n"),
 		(unsigned long long)ctx->X[20], (unsigned long long)ctx->X[21],
 		(unsigned long long)ctx->X[22], (unsigned long long)ctx->X[23]);
-	write_log(_T("JIT: Windows aarch64 X24=%016llx X25=%016llx X26=%016llx X27=%016llx\n"),
+	write_log(_T("JIT: Windows ARM64 X24=%016llx X25=%016llx X26=%016llx X27=%016llx\n"),
 		(unsigned long long)ctx->X[24], (unsigned long long)ctx->X[25],
 		(unsigned long long)ctx->X[26], (unsigned long long)ctx->X[27]);
-	write_log(_T("JIT: Windows aarch64 X28=%016llx X29=%016llx LR=%016llx  SP=%016llx\n"),
+	write_log(_T("JIT: Windows ARM64 X28=%016llx X29=%016llx LR=%016llx  SP=%016llx\n"),
 		(unsigned long long)ctx->X[28], (unsigned long long)ctx->X[29],
 		(unsigned long long)ctx->Lr, (unsigned long long)ctx->Sp);
 	/* Print the faulting instruction regardless of whether the PC is in
@@ -500,20 +500,20 @@ static LONG WINAPI windows_aarch64_jit_unhandled_exception_filter(PEXCEPTION_POI
 	}
 	if (pc_readable) {
 		const uae_u32 insn = *reinterpret_cast<const uae_u32*>(fault_pc);
-		write_log(_T("JIT: Windows aarch64 instruction at PC insn=%08x jit=%d\n"),
-			insn, windows_aarch64_jit_pc(fault_pc) ? 1 : 0);
+		write_log(_T("JIT: Windows ARM64 instruction at PC insn=%08x jit=%d\n"),
+			insn, windows_arm64_jit_pc(fault_pc) ? 1 : 0);
 	} else {
-		write_log(_T("JIT: Windows aarch64 could not read instruction at fault PC\n"));
+		write_log(_T("JIT: Windows ARM64 could not read instruction at fault PC\n"));
 	}
 	return EXCEPTION_CONTINUE_SEARCH;
 }
 
-static void install_windows_aarch64_jit_exception_handler()
+static void install_windows_arm64_jit_exception_handler()
 {
-	if (!installed_aarch64_vector_handler) {
-		write_log(_T("JIT: Installing Windows aarch64 vectored exception handler\n"));
-		installed_aarch64_vector_handler = AddVectoredExceptionHandler(0, windows_aarch64_jit_exception_handler);
-		SetUnhandledExceptionFilter(windows_aarch64_jit_unhandled_exception_filter);
+	if (!installed_arm64_vector_handler) {
+		write_log(_T("JIT: Installing Windows ARM64 vectored exception handler\n"));
+		installed_arm64_vector_handler = AddVectoredExceptionHandler(0, windows_arm64_jit_exception_handler);
+		SetUnhandledExceptionFilter(windows_arm64_jit_unhandled_exception_filter);
 	}
 }
 #endif
@@ -526,7 +526,7 @@ void init_max_signals()
 	max_signals = 200;
 #endif
 #if defined(JIT) && defined(CPU_AARCH64)
-	install_windows_aarch64_jit_exception_handler();
+	install_windows_arm64_jit_exception_handler();
 #endif
 }
 

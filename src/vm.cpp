@@ -68,8 +68,8 @@ static int vm_prot_posix(int protect)
 	}
 }
 
-/* Extra mmap flags implied by the allocation flags. Only Apple aarch64 has
- * MAP_JIT; everywhere else (including macOS x86-64 and Windows aarch64)
+/* Extra mmap flags implied by the allocation flags. Only Apple arm64 has
+ * MAP_JIT; everywhere else (including macOS x86-64 and Windows ARM64)
  * UAE_VM_JIT is ignored. */
 static int vm_map_flags(int flags)
 {
@@ -414,7 +414,7 @@ void *uae_vm_reserve(size_t size, int flags)
 #if defined(CPU_AARCH64)
 	if (!want_32bit) {
 		/* Above 4 GiB, so bit 31 of the low 32 bits of natmem pointers is
-		 * clear — the layout the aarch64 JIT expects, matching macOS aarch64. */
+		 * clear — the layout the arm64 JIT expects, matching macOS arm64. */
 		address = vm_reserve_at(reinterpret_cast<void *>(0x100000000ULL), size, flags);
 		if (address != nullptr) {
 			return address;
@@ -516,7 +516,7 @@ bool uae_vm_decommit(void *address, size_t size)
 }
 
 /* ------------------------------------------------------------------ */
-/* JIT write protection (Apple aarch64 W^X)                             */
+/* JIT write protection (Apple arm64 W^X)                             */
 /* ------------------------------------------------------------------ */
 
 void uae_vm_jit_write_protect(bool enable_execute_mode)

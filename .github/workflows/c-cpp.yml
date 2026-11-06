@@ -52,7 +52,7 @@ jobs:
           - name: Apple-Silicon
             runner: macos-15
             arch: apple-silicon
-            artifact_name: amiberry-macOS-aarch64-intermediate
+            artifact_name: amiberry-macOS-arm64-intermediate
     steps:
       - name: Check out repository code
         uses: actions/checkout@v6
@@ -117,7 +117,7 @@ jobs:
         run: |
           case "${{ matrix.arch }}" in
             intel) scan_arch=x86_64 ;;
-            *) scan_arch=aarch64 ;;
+            *) scan_arch=arm64 ;;
           esac
           python3 packaging/sources/collect-third-party-sources.py scan \
             --app build/Amiberry.app \
@@ -161,16 +161,16 @@ jobs:
           name: amiberry-macOS-x86_64-intermediate
           path: x86_64-app
 
-      - name: Download aarch64 app bundle
+      - name: Download arm64 app bundle
         uses: actions/download-artifact@v8
         with:
-          name: amiberry-macOS-aarch64-intermediate
-          path: aarch64-app
+          name: amiberry-macOS-arm64-intermediate
+          path: arm64-app
 
       - name: Extract downloaded app bundles
         run: |
           tar -xzf x86_64-app/Amiberry.app.tar.gz -C x86_64-app
-          tar -xzf aarch64-app/Amiberry.app.tar.gz -C aarch64-app
+          tar -xzf arm64-app/Amiberry.app.tar.gz -C arm64-app
 
       - name: Create Universal binary with lipo
         run: |
@@ -183,13 +183,13 @@ jobs:
 
           mkdir -p universal-app/Amiberry.app
 
-          # Start with the aarch64 app as the base (preserves bundle structure)
-          cp -R aarch64-app/Amiberry.app/ universal-app/Amiberry.app/
+          # Start with the arm64 app as the base (preserves bundle structure)
+          cp -R arm64-app/Amiberry.app/ universal-app/Amiberry.app/
 
           # Merge the main executable
           lipo -create \
             x86_64-app/Amiberry.app/Contents/MacOS/Amiberry \
-            aarch64-app/Amiberry.app/Contents/MacOS/Amiberry \
+            arm64-app/Amiberry.app/Contents/MacOS/Amiberry \
             -output universal-app/Amiberry.app/Contents/MacOS/Amiberry
           chmod +x universal-app/Amiberry.app/Contents/MacOS/Amiberry
 
@@ -232,7 +232,7 @@ jobs:
           }
 
           X86_FW="x86_64-app/Amiberry.app/Contents/Frameworks"
-          ARM_FW="aarch64-app/Amiberry.app/Contents/Frameworks"
+          ARM_FW="arm64-app/Amiberry.app/Contents/Frameworks"
           UNI_FW="universal-app/Amiberry.app/Contents/Frameworks"
 
           # Build stem → filename maps for both architectures
@@ -255,22 +255,22 @@ jobs:
           fi
 
           # Parity check: warn about mismatches between architectures
-          echo "=== Checking dylib parity between x86_64 and aarch64 builds ==="
+          echo "=== Checking dylib parity between x86_64 and arm64 builds ==="
           had_mismatch=0
           for stem in "${!arm_stems[@]}"; do
             arm_name="${arm_stems[$stem]}"
             x86_name="${x86_stems[$stem]:-}"
             if [ -z "$x86_name" ]; then
-              echo "  WARNING: $arm_name exists only in aarch64 build (no x86_64 equivalent)"
+              echo "  WARNING: $arm_name exists only in arm64 build (no x86_64 equivalent)"
               had_mismatch=1
             elif [ "$arm_name" != "$x86_name" ]; then
-              echo "  WARNING: version mismatch for $stem: x86_64=$x86_name vs aarch64=$arm_name"
+              echo "  WARNING: version mismatch for $stem: x86_64=$x86_name vs arm64=$arm_name"
               had_mismatch=1
             fi
           done
           for stem in "${!x86_stems[@]}"; do
             if [ -z "${arm_stems[$stem]:-}" ]; then
-              echo "  WARNING: ${x86_stems[$stem]} exists only in x86_64 build (no aarch64 equivalent)"
+              echo "  WARNING: ${x86_stems[$stem]} exists only in x86_64 build (no arm64 equivalent)"
               had_mismatch=1
             fi
           done
@@ -304,23 +304,23 @@ jobs:
                 merge_binary "$X86_FW/$x86_name" "$ARM_FW/$arm_name" "$UNI_FW/$arm_name"
               else
                 # Version mismatch — merge by stem, provide both names
-                echo "  Merging with version mismatch: x86_64=$x86_name + aarch64=$arm_name"
+                echo "  Merging with version mismatch: x86_64=$x86_name + arm64=$arm_name"
                 merge_binary "$X86_FW/$x86_name" "$ARM_FW/$arm_name" "$UNI_FW/$arm_name"
                 ln -sf "$arm_name" "$UNI_FW/$x86_name"
                 echo "    → Universal dylib: $arm_name, symlink: $x86_name → $arm_name"
               fi
             elif [ -n "$arm_name" ]; then
-              echo "  Keeping aarch64-only: $arm_name (no x86_64 equivalent)"
+              echo "  Keeping arm64-only: $arm_name (no x86_64 equivalent)"
             elif [ -n "$x86_name" ]; then
-              echo "  Copying x86_64-only: $x86_name (not in aarch64 base)"
+              echo "  Copying x86_64-only: $x86_name (not in arm64 base)"
               cp "$X86_FW/$x86_name" "$UNI_FW/$x86_name"
             fi
           done
 
-          # Merge all dylibs in plugins (aarch64 base + any x86-only plugins)
+          # Merge all dylibs in plugins (arm64 base + any x86-only plugins)
           UNI_PLUGINS="universal-app/Amiberry.app/Contents/Resources/plugins"
           X86_PLUGINS="x86_64-app/Amiberry.app/Contents/Resources/plugins"
-          ARM_PLUGINS="aarch64-app/Amiberry.app/Contents/Resources/plugins"
+          ARM_PLUGINS="arm64-app/Amiberry.app/Contents/Resources/plugins"
           if [ -d "$UNI_PLUGINS" ]; then
             for dylib in "$UNI_PLUGINS"/*.dylib; do
               [ -f "$dylib" ] || continue
@@ -625,7 +625,7 @@ jobs:
         run: |
           python3 packaging/sources/collect-third-party-sources.py assemble \
             --scan third-party-scans/third-party-scan-x86_64.json \
-            --scan third-party-scans/third-party-scan-aarch64.json \
+            --scan third-party-scans/third-party-scan-arm64.json \
             --tag "${{ github.ref_name }}" \
             --out "amiberry-${{ github.ref_name }}-third-party-sources.tar.xz"
 
@@ -1299,13 +1299,13 @@ jobs:
         path: "amiberry-*.zip"
 
   # Windows x64: native build on windows-2025 using llvm-mingw (clang).
-  # Shares the toolchain with build-windows-aarch64 so Windows on Arm and x64
+  # Shares the toolchain with build-windows-arm64 so Windows on Arm and x64
   # use a single compiler stack. Replaced the previous MSYS2/MinGW-w64 GCC
   # build once the llvm-mingw shakeout was stable.
   build-windows:
     runs-on: windows-2025
     # Cold-cache runs (vcpkg + llvm-mingw downloads) finish in ~24 min,
-    # warm-cache runs in ~10-15 min — see build-windows-aarch64 for comparison.
+    # warm-cache runs in ~10-15 min — see build-windows-arm64 for comparison.
     # Release signing can require manual SignPath approval, so keep enough
     # headroom for the build, signing round-trip, and approval window.
     timeout-minutes: 120
@@ -1617,7 +1617,7 @@ jobs:
 
 
           # x86_64 builds include the JIT, so exercise --jit-selftest from the
-          # portable layout. Mirrors the build-windows-aarch64 smoke test.
+          # portable layout. Mirrors the build-windows-arm64 smoke test.
           $jitStdoutFile = Join-Path $verifyRoot "jit-selftest.stdout"
           $jitStderrFile = Join-Path $verifyRoot "jit-selftest.stderr"
           $jitProc = Start-Process -FilePath $exePath -ArgumentList "--jit-selftest" `
@@ -1821,14 +1821,14 @@ jobs:
             amiberry-*.exe
           retention-days: 7
 
-  # Windows aarch64: native build on the GitHub-hosted windows-11-arm
+  # Windows ARM64: native build on the GitHub-hosted windows-11-arm
   # runner using the same llvm-mingw toolchain as build-windows.  Kept
   # as a separate job because it cross-runs on a different runner image
   # (windows-11-arm) and needs to install InnoSetup at runtime, but the
   # toolchain, presets, and packaging are otherwise the same.  This job
   # is mandatory and a failure blocks the workflow (and downstream
   # create-release).
-  build-windows-aarch64:
+  build-windows-arm64:
     runs-on: windows-11-arm
     # Cold-cache runs finish in ~24 min, warm-cache runs in ~8 min. The
     # extra time vs. x64 mostly comes from the InnoSetup-via-Chocolatey
@@ -1842,9 +1842,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: aarch64
-            artifact_name: amiberry-windows-aarch64
-            release_suffix: windows-aarch64
+          - name: arm64
+            artifact_name: amiberry-windows-arm64
+            release_suffix: windows-arm64
     env:
       LLVM_MINGW_TAG: "20260421"
       LLVM_MINGW_FLAVOR: "ucrt-aarch64"
@@ -1896,13 +1896,13 @@ jobs:
       - name: Cache vcpkg installed packages
         uses: actions/cache@v5
         with:
-          path: out/build/windows-aarch64-release/vcpkg_installed
+          path: out/build/windows-arm64-release/vcpkg_installed
           # Include LLVM_MINGW_TAG so a toolchain bump invalidates the
           # cache (avoids ABI mismatches between deps built with one
           # toolchain and binaries linked with another).
-          key: ${{ runner.os }}-aarch64-vcpkg-${{ env.LLVM_MINGW_TAG }}-${{ hashFiles('vcpkg.json', 'cmake/Toolchain-aarch64-w64-mingw32.cmake') }}
+          key: ${{ runner.os }}-arm64-vcpkg-${{ env.LLVM_MINGW_TAG }}-${{ hashFiles('vcpkg.json', 'cmake/Toolchain-aarch64-w64-mingw32.cmake') }}
           restore-keys: |
-            ${{ runner.os }}-aarch64-vcpkg-${{ env.LLVM_MINGW_TAG }}-
+            ${{ runner.os }}-arm64-vcpkg-${{ env.LLVM_MINGW_TAG }}-
 
       - name: Download QEMU-UAE plugin
         shell: pwsh
@@ -1911,8 +1911,8 @@ jobs:
       - name: Configure
         shell: bash
         run: |
-          cmake --preset windows-aarch64-release -DQEMU_UAE_PLUGIN="$QEMU_UAE_PLUGIN" -DQEMU_UAE_PLUGIN_DIR="$QEMU_UAE_PLUGIN_DIR"
-          PRODUCT_VERSION="$(cat out/build/windows-aarch64-release/amiberry-product-version.txt)"
+          cmake --preset windows-arm64-release -DQEMU_UAE_PLUGIN="$QEMU_UAE_PLUGIN" -DQEMU_UAE_PLUGIN_DIR="$QEMU_UAE_PLUGIN_DIR"
+          PRODUCT_VERSION="$(cat out/build/windows-arm64-release/amiberry-product-version.txt)"
           if [ -z "$PRODUCT_VERSION" ]; then
             echo "Could not determine the Amiberry product version from the build tree." >&2
             exit 1
@@ -1922,47 +1922,47 @@ jobs:
       - name: Build
         shell: bash
         run: |
-          cmake --build out/build/windows-aarch64-release -j$NUMBER_OF_PROCESSORS
+          cmake --build out/build/windows-arm64-release -j$NUMBER_OF_PROCESSORS
           # vcpkg's FFmpeg port does not configure for arm64-mingw, so this
           # build has WebP but not the FFmpeg codecs (see vcpkg.json).
           for library in webp webpdemux; do
-            find out/build/windows-aarch64-release -maxdepth 1 -iname "*${library}*.dll" -print -quit | grep -q .
+            find out/build/windows-arm64-release -maxdepth 1 -iname "*${library}*.dll" -print -quit | grep -q .
           done
 
       - name: Install (portable layout)
         shell: bash
         run: |
-          rm -rf out/install/windows-aarch64-release
-          rm -rf out/package/windows-aarch64-release
-          cmake --install out/build/windows-aarch64-release --prefix out/install/windows-aarch64-release
+          rm -rf out/install/windows-arm64-release
+          rm -rf out/package/windows-arm64-release
+          cmake --install out/build/windows-arm64-release --prefix out/install/windows-arm64-release
           for library in webp webpdemux; do
-            find out/install/windows-aarch64-release -maxdepth 1 -iname "*${library}*.dll" -print -quit | grep -q .
+            find out/install/windows-arm64-release -maxdepth 1 -iname "*${library}*.dll" -print -quit | grep -q .
           done
 
       - name: Package (Portable ZIP)
         shell: bash
         run: |
-          PORTABLE_ROOT="out/install/windows-aarch64-release"
+          PORTABLE_ROOT="out/install/windows-arm64-release"
           test -f "$PORTABLE_ROOT/Amiberry.exe"
           : > "$PORTABLE_ROOT/amiberry.portable"
 
           if [ "${{ github.ref_type }}" = "tag" ]; then
-            ZIP_NAME="amiberry-${{ github.ref_name }}-windows-aarch64-portable.zip"
+            ZIP_NAME="amiberry-${{ github.ref_name }}-windows-arm64-portable.zip"
           else
-            ZIP_NAME="amiberry-${{ github.sha }}-windows-aarch64-portable.zip"
+            ZIP_NAME="amiberry-${{ github.sha }}-windows-arm64-portable.zip"
           fi
 
-          PACKAGE_ROOT="out/package/windows-aarch64-release/${ZIP_NAME%.zip}"
+          PACKAGE_ROOT="out/package/windows-arm64-release/${ZIP_NAME%.zip}"
           mkdir -p "$(dirname "$PACKAGE_ROOT")"
           cmake -E copy_directory "$PORTABLE_ROOT" "$PACKAGE_ROOT"
 
           ZIP_PATH="$PWD/$ZIP_NAME"
-          (cd out/package/windows-aarch64-release && cmake -E tar cf "$ZIP_PATH" --format=zip "${ZIP_NAME%.zip}")
+          (cd out/package/windows-arm64-release && cmake -E tar cf "$ZIP_PATH" --format=zip "${ZIP_NAME%.zip}")
 
       - name: Smoke test (--dump-paths, --jit-selftest)
         shell: pwsh
         run: |
-          $zip = Get-ChildItem "$PWD/amiberry-*-windows-aarch64-portable.zip" | Select-Object -First 1
+          $zip = Get-ChildItem "$PWD/amiberry-*-windows-arm64-portable.zip" | Select-Object -First 1
           if (-not $zip) { throw "Portable ZIP not found." }
 
           $verifyRoot = Join-Path $PWD "portable-smoke"
@@ -2038,10 +2038,10 @@ jobs:
             Write-Host "STDERR:"; if (Test-Path $stderrFile) { Get-Content $stderrFile }
             throw "--dump-paths failed with exit code $($proc.ExitCode)."
           }
-          Write-Host "aarch64 Amiberry.exe ran --dump-paths successfully."
+          Write-Host "ARM64 Amiberry.exe ran --dump-paths successfully."
 
           # Shared dump-mode behavioral tests also run on the x64 and Linux
-          # legs; aarch64 has no JIT, but every path assertion applies.
+          # legs; ARM64 has no JIT, but every path assertion applies.
           $env:SDL_VIDEODRIVER = "dummy"
           $env:SDL_AUDIODRIVER = "dummy"
           $env:AMIBERRY_BIN = $exePath
@@ -2053,7 +2053,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) {
             throw "plugin search path behavioral test failed with exit code $LASTEXITCODE."
           }
-          Write-Host "aarch64 Amiberry.exe ran the dump-mode behavioral tests successfully."
+          Write-Host "ARM64 Amiberry.exe ran the dump-mode behavioral tests successfully."
 
 
           $jitStdoutFile = Join-Path $verifyRoot "jit-selftest.stdout"
@@ -2066,7 +2066,7 @@ jobs:
             Write-Host "JIT SELFTEST STDERR:"; if (Test-Path $jitStderrFile) { Get-Content $jitStderrFile }
             throw "--jit-selftest failed with exit code $($jitProc.ExitCode)."
           }
-          Write-Host "aarch64 Amiberry.exe ran --jit-selftest successfully."
+          Write-Host "ARM64 Amiberry.exe ran --jit-selftest successfully."
 
       - name: Ensure InnoSetup is available
         shell: pwsh
@@ -2100,7 +2100,7 @@ jobs:
       - name: Package (InnoSetup)
         shell: pwsh
         run: |
-          cpack -G INNOSETUP --config out/build/windows-aarch64-release/CPackConfig.cmake
+          cpack -G INNOSETUP --config out/build/windows-arm64-release/CPackConfig.cmake
 
       - name: Detect SignPath configuration
         id: signpath-config
@@ -2234,7 +2234,7 @@ jobs:
           }
           Write-Host "Installer EXE signature status: $($installerSignature.Status)"
 
-          $portableZip = Get-ChildItem "$PWD/amiberry-*-windows-aarch64-portable.zip" | Select-Object -First 1
+          $portableZip = Get-ChildItem "$PWD/amiberry-*-windows-arm64-portable.zip" | Select-Object -First 1
           if (-not $portableZip) {
             throw "Signed portable ZIP not found in workspace."
           }
@@ -2295,7 +2295,7 @@ jobs:
           - os: ubuntu-24.04
             platform: unix
             artifact_platform: linux
-            arch: aarch64
+            arch: arm64
             artifact: amiberry_libretro.so
           - os: windows-2025
             platform: win
@@ -2403,7 +2403,7 @@ jobs:
           path: amiberry/libretro/amiberry_libretro.info
 
   create-release:
-    needs: [merge-macOS-universal, build-appimage, smoke-appimage-mount, smoke-appimage-extract, build-fedora, build-ubuntu, test-settings-schema, build-debian-amd64, build-debian-aarch64, build-windows, build-windows-aarch64, build-libretro]
+    needs: [merge-macOS-universal, build-appimage, smoke-appimage-mount, smoke-appimage-extract, build-fedora, build-ubuntu, test-settings-schema, build-debian-amd64, build-debian-aarch64, build-windows, build-windows-arm64, build-libretro]
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     if: github.ref_type == 'tag' && (startsWith(github.ref_name, 'v') || startsWith(github.ref_name, 'preview-v'))

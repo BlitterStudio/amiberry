@@ -84,12 +84,12 @@ libretro-build-linux-aarch64:
     - .linux-defs
 
 # macOS ARM 64-bit
-libretro-build-osx-aarch64:
+libretro-build-osx-arm64:
   extends:
     - .libretro-osx-arm64-make-default
     - .core-defs
   variables:
-    ARCH: aarch64
+    ARCH: arm64
 
 # macOS 64-bit (Intel)
 libretro-build-osx-x64:
