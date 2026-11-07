@@ -222,6 +222,7 @@ set(SOURCE_FILES
         src/osdep/keyboard.cpp
         src/osdep/host_detect.cpp
         src/osdep/midi.cpp
+        src/osdep/midi_parser.cpp
         src/osdep/perf_monitor.cpp
         src/osdep/amiberry_adpf.cpp
         src/osdep/mhi_host.cpp
