@@ -5587,10 +5587,18 @@ MIDFUNC(1,jff_NEGX_b,(RW1 d))
 
 	SIGNED8_REG_2_REG(REG_WORK1, d);
 	NGCS_ww(REG_WORK1, REG_WORK1);
+	// The 32-bit NGCS of the sign-extended operand gives the right C, X
+	// and Z, but its N and V are those of a 32-bit result: 0 - $80 is
+	// +$80 there, N and V clear. 68k: N = Rm, V = Dm & Rm (bit 7).
+	AND_www(REG_WORK3, d, REG_WORK1);
 	BFI_wwii(d, REG_WORK1, 0, 8);
 
 	MRS_NZCV_x(REG_WORK4);
 	EOR_xxCflag(REG_WORK4, REG_WORK4);
+	LSR_wwi(REG_WORK1, REG_WORK1, 7);
+	BFI_wwii(REG_WORK4, REG_WORK1, 31, 1);     // N
+	LSR_wwi(REG_WORK3, REG_WORK3, 7);
+	BFI_wwii(REG_WORK4, REG_WORK3, 28, 1);     // V
 	AND_www(REG_WORK4, REG_WORK4, REG_WORK2);
 	MSR_NZCV_x(REG_WORK4);
 	flags_carry_inverted = false;
@@ -5616,10 +5624,18 @@ MIDFUNC(1,jff_NEGX_w,(RW2 d))
 
 	SIGNED16_REG_2_REG(REG_WORK1, d);
 	NGCS_ww(REG_WORK1, REG_WORK1);
+	// The 32-bit NGCS of the sign-extended operand gives the right C, X
+	// and Z, but its N and V are those of a 32-bit result: 0 - $80 is
+	// +$80 there, N and V clear. 68k: N = Rm, V = Dm & Rm (bit 15).
+	AND_www(REG_WORK3, d, REG_WORK1);
 	BFI_wwii(d, REG_WORK1, 0, 16);
 
 	MRS_NZCV_x(REG_WORK4);
 	EOR_xxCflag(REG_WORK4, REG_WORK4);
+	LSR_wwi(REG_WORK1, REG_WORK1, 15);
+	BFI_wwii(REG_WORK4, REG_WORK1, 31, 1);     // N
+	LSR_wwi(REG_WORK3, REG_WORK3, 15);
+	BFI_wwii(REG_WORK4, REG_WORK3, 28, 1);     // V
 	AND_www(REG_WORK4, REG_WORK4, REG_WORK2);
 	MSR_NZCV_x(REG_WORK4);
 	flags_carry_inverted = false;
