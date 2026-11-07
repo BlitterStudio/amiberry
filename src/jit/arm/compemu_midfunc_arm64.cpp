@@ -915,6 +915,39 @@ static void emit_fpsr_int_conv(int s, int size)
 	STR_wXi(REG_WORK2, REG_WORK4, 0);
 }
 
+/* FScc/FBcc with an IEEE-nonaware predicate ($10-$1F): with NAN set, BSUN
+ * and the accrued IOP are set (fpp_cond()). NAN is the FPSR CC bit when the
+ * CC were written directly (fpu_fpsr_cc_written), else FP_RESULT is a NaN.
+ * An enabled BSUN trap is not taken in compiled code. */
+MIDFUNC(0,fp_bsun_iop,(void))
+{
+	clobber_flags();
+	int r = f_readreg(FP_RESULT);               // before any branch: may load it
+	LOAD_U64(REG_WORK4, (uintptr)&regs.fpsr);
+	LOAD_U64(REG_WORK1, (uintptr)&fpu_fpsr_cc_written);
+	LDRB_wXi(REG_WORK1, REG_WORK1, 0);
+	uae_u32 *branch_result = (uae_u32 *)get_target();
+	CBZ_wi(REG_WORK1, 0);
+	LDR_wXi(REG_WORK2, REG_WORK4, 0);
+	uae_u32 *branch_nonan1 = (uae_u32 *)get_target();
+	TBZ_wii(REG_WORK2, 24, 0);                  // CC NAN clear
+	uae_u32 *branch_set = (uae_u32 *)get_target();
+	B_i(0);
+	write_jmp_target(branch_result, (uintptr)get_target());
+	FCMP_dd(r, r);
+	uae_u32 *branch_nonan2 = (uae_u32 *)get_target();
+	CC_B_i(NATIVE_CC_VC, 0);                    // ordered: not a NaN
+	write_jmp_target(branch_set, (uintptr)get_target());
+	LDR_wXi(REG_WORK2, REG_WORK4, 0);
+	MOV_wi(REG_WORK3, 0x8080);                  // BSUN, accrued IOP
+	ORR_www(REG_WORK2, REG_WORK2, REG_WORK3);
+	STR_wXi(REG_WORK2, REG_WORK4, 0);
+	write_jmp_target(branch_nonan1, (uintptr)get_target());
+	write_jmp_target(branch_nonan2, (uintptr)get_target());
+	f_unlock(r);
+}
+MENDFUNC(0,fp_bsun_iop,(void))
+
 MIDFUNC(2,fmov_to_l_rr,(W4 d, FR s))
 {
 	s = f_readreg(s);
