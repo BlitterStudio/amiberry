@@ -3492,29 +3492,57 @@ MIDFUNC(2,jff_DIVS,(RW4 d, RR4 s))
 }
 MENDFUNC(2,jff_DIVS,(RW4 d, RR4 s))
 
+/* DIVL division by zero: the flags of divsl_divbyzero()/divul_divbyzero().
+ * 68040/060: C clear, N/Z/V unchanged. 68020/030: DIVS.L N clear, Z set;
+ * DIVU.L N/Z from the dividend, V set; C clear. */
+static void emit_divl_div0_flags(int d, bool issigned)
+{
+	if (currprefs.cpu_model >= 68040) {
+		MRS_NZCV_x(REG_WORK1);
+		CLEAR_xxCflag(REG_WORK1, REG_WORK1);
+	} else if (issigned) {
+		MOV_wish(REG_WORK1, 0x4000, 16);    // Z
+	} else {
+		MOV_wish(REG_WORK1, 0x1000, 16);    // V
+		TBZ_wii(d, 31, 2);
+		MOV_wish(REG_WORK1, 0x9000, 16);    // N V
+		CBNZ_wi(d, 2);
+		MOV_wish(REG_WORK1, 0x5000, 16);    // Z V
+	}
+	MSR_NZCV_x(REG_WORK1);
+}
+
+/* DIVU.L <ea>,Dq / DIVUL.L <ea>,Dr:Dq (32-bit dividend): no overflow is
+ * possible; division by zero signals exception 5 with Dq/Dr unchanged. */
+static void emit_divlu32(int d, int s1, int rem, bool flags)
+{
+	uae_u32 *branch_div0 = (uae_u32 *)get_target();
+	CBZ_wi(s1, 0);                          // -> division by zero
+
+	UDIV_www(REG_WORK1, d, s1);
+	MSUB_wwww(rem, s1, REG_WORK1, d);       // remainder
+	MOV_ww(d, REG_WORK1);
+	if (flags)
+		TST_ww(d, d);
+	uae_u32 *branch_end = (uae_u32 *)get_target();
+	B_i(0);
+
+	write_jmp_target(branch_div0, (uintptr)get_target());
+	if (flags)
+		emit_divl_div0_flags(d, false);
+	MOV_wi(REG_WORK1, 5);                   // signal exception 5
+	uintptr idx = (uintptr)(&regs.jit_exception) - (uintptr)(&regs);
+	STR_wXi(REG_WORK1, R_REGSTRUCT, idx);
+
+	write_jmp_target(branch_end, (uintptr)get_target());
+}
+
 MIDFUNC(3,jnf_DIVLU32,(RW4 d, RR4 s1, W4 rem))
 {
 	s1 = readreg(s1);
 	d = rmw(d);
 	rem = rmw(rem);     // unchanged on division by zero: load it
-
-	CBNZ_wi(s1, 4);     // src is not 0
-
-	// Signal exception 5
-	MOV_wi(REG_WORK1, 5);
-	uintptr idx = (uintptr)(&regs.jit_exception) - (uintptr)(&regs);
-	STR_wXi(REG_WORK1, R_REGSTRUCT, idx);
-	B_i(4);        // end_of_op
-
-	// src is not 0
-	UDIV_www(REG_WORK1, d, s1);
-
-	// Here we have to calc remainder
-	MSUB_wwww(rem, s1, REG_WORK1, d);
-	MOV_ww(d, REG_WORK1);
-
-// end_of_op
-
+	emit_divlu32(d, s1, rem, false);
 	unlock2(rem);
 	unlock2(d);
 	unlock2(s1);
@@ -3526,27 +3554,7 @@ MIDFUNC(3,jff_DIVLU32,(RW4 d, RR4 s1, W4 rem))
 	s1 = readreg(s1);
 	d = rmw(d);
 	rem = rmw(rem);     // unchanged on division by zero: load it
-
-	CBNZ_wi(s1, 4);     // src is not 0
-
-	// Signal exception 5
-	MOV_wi(REG_WORK1, 5);
-	uintptr idx = (uintptr)(&regs.jit_exception) - (uintptr)(&regs);
-	STR_wXi(REG_WORK1, R_REGSTRUCT, idx);
-
-	B_i(5);        // end_of_op
-
-	// src is not 0
-	UDIV_www(REG_WORK1, d, s1);
-
-	// Here we have to calc flags and remainder
-	TST_ww(REG_WORK1, REG_WORK1);
-
-	MSUB_wwww(rem, s1, REG_WORK1, d);
-	MOV_ww(d, REG_WORK1);
-
-	// end_of_op
-
+	emit_divlu32(d, s1, rem, true);
 	flags_carry_inverted = false;
 	unlock2(rem);
 	unlock2(d);
@@ -3599,6 +3607,8 @@ static void emit_divls32(int d, int s1, int rem, bool flags)
 	B_i(0);
 
 	write_jmp_target(branch_div0, (uintptr)get_target());
+	if (flags)
+		emit_divl_div0_flags(d, true);
 	MOV_wi(REG_WORK1, 5);                   // signal exception 5
 	uintptr idx = (uintptr)(&regs.jit_exception) - (uintptr)(&regs);
 	STR_wXi(REG_WORK1, R_REGSTRUCT, idx);
