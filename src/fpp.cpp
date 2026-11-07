@@ -2358,6 +2358,11 @@ static void fpu_timing_end(int cpu, int head, int tail)
 		return;
 	}
 	evt_t clock = fpu_timing_clock();
+	// The overlap is part of the instruction's own time: a longer head
+	// would release it before the previous instruction's result exists.
+	if (head > cpu) {
+		head = cpu;
+	}
 	evt_t release = fpu_timing_start + cpu * clock;
 	evt_t after = fpu_busy_until + (cpu - head) * clock;
 	if (after > release) {
@@ -2388,6 +2393,38 @@ static void fpu_timing_cond(int c6888x, int c040)
 	}
 }
 
+// An instruction that writes FPU state to the bus (FMOVE, FMOVE(M) and
+// FMOVEM to <ea>, FScc, FSAVE) waits for the previous instruction before
+// it executes, so the write cannot be seen before the result exists. Only
+// the first head clocks of a 6888x instruction overlap it. fpu_timing_end()
+// then charges the rest of the instruction from the new start.
+static void fpu_timing_wait(int head6888x)
+{
+	if (!currprefs.cpu_cycle_exact || currprefs.cpu_model < 68020) {
+		return;
+	}
+	evt_t ready = fpu_busy_until - (fpu_6888x() ? head6888x : 0) * fpu_timing_clock();
+	evt_t now = get_cycles();
+	if (ready > now) {
+		x_do_cycles((int)(ready - now));
+		fpu_timing_start = get_cycles();
+	}
+}
+
+static void fpu_timing_store_wait(uae_u16 extra)
+{
+	switch ((extra >> 13) & 7)
+	{
+		case 3: // FMOVE FPn,<ea>
+			fpu_timing_wait(0);
+			break;
+		case 5: // FMOVE(M) control registers to <ea>
+		case 7: // FMOVEM FPn to <ea>
+			fpu_timing_wait(6);
+			break;
+	}
+}
+
 static int fpu_timing_opmode(int opmode)
 {
 	// 68040/68060 single and double precision rounding variants
@@ -2401,6 +2438,18 @@ static int fpu_timing_opmode(int opmode)
 		case 0x62: case 0x66: return 0x22;
 		case 0x63: case 0x67: return 0x23;
 		case 0x68: case 0x6c: return 0x28;
+		// 6888x undocumented opmodes that execute as their neighbours
+		// (see fault_if_nonexisting_opmode() and fp_arithmetic())
+		case 0x05: return 0x04;
+		case 0x07: return 0x06;
+		case 0x0b: return 0x0a;
+		case 0x13: return 0x12;
+		case 0x17: return 0x16;
+		case 0x1b: return 0x1a;
+		case 0x29: case 0x2a: case 0x2b: case 0x2c:
+		case 0x2d: case 0x2e: case 0x2f: return 0x28;
+		case 0x39: case 0x3c: case 0x3d: return 0x38;
+		case 0x3b: case 0x3e: case 0x3f: return 0x3a;
 	}
 	return opmode & 0x3f;
 }
@@ -2572,6 +2621,12 @@ static void fpu_timing_cond(int c6888x, int c040)
 static void fpu_timing_save_restore(bool restore, bool idle)
 {
 }
+static void fpu_timing_wait(int head6888x)
+{
+}
+static void fpu_timing_store_wait(uae_u16 extra)
+{
+}
 
 #endif
 
@@ -2636,6 +2691,7 @@ void fpuop_scc (uae_u32 opcode, uae_u16 extra)
 	int reg = opcode & 7;
 
 	fpu_timing_begin();
+	fpu_timing_wait(6);
 	if (fp_exception_pending(true))
 		return;
 	regs.fp_exception = false;
@@ -2776,6 +2832,7 @@ void fpuop_save (uae_u32 opcode)
 
 	regs.fp_exception = false;
 	fpu_timing_begin();
+	fpu_timing_wait(0);
 
 	if (fault_if_no_6888x (opcode, 0, pc))
 		return;
@@ -4006,6 +4063,7 @@ void fpuop_arithmetic (uae_u32 opcode, uae_u16 extra)
 	regs.fp_exception = false;
 	fpu_mmu_fixup = false;
 	fpu_timing_begin();
+	fpu_timing_store_wait(extra);
 #if FPU_LOG
 	write_log(_T("FPUOP %04x %04x PC=%08x\n"), opcode, extra, M68K_GETPC);
 #endif
