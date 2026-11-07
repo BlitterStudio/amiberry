@@ -40,6 +40,8 @@ project(amiberry
     HOMEPAGE_URL "https://amiberry.com"
 )
 
+include(cmake/HostArchitecture.cmake)
+
 # Enforce C++17 explicitly across all toolchains
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -121,7 +123,7 @@ endif()
 
 # 86Box's x86 recompiler for the bridgeboard PCs. It has one backend per
 # binary, so multi-architecture builds (macOS universal) and other
-# architectures (armhf, RISC-V, LoongArch) keep the interpreter.
+# architectures (RISC-V, LoongArch) keep the interpreter.
 set(AMIBERRY_86BOX_TARGET_ARCHES "${CMAKE_SYSTEM_PROCESSOR}")
 if(APPLE AND CMAKE_OSX_ARCHITECTURES)
     set(AMIBERRY_86BOX_TARGET_ARCHES "${CMAKE_OSX_ARCHITECTURES}")

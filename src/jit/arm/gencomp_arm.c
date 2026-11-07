@@ -1,5 +1,5 @@
 /*
- *  compiler/gencomp_arm2.c - MC680x0 compilation generator (ARM Adaption JIT v1 & JIT v2)
+ *  compiler/gencomp_arm2.c - MC680x0 compilation generator (ARM Adaption JIT v2)
  *
  *  Based on work Copyright 1995, 1996 Bernd Schmidt
  *  Changes for UAE-JIT Copyright 2000 Bernd Meyer
@@ -32,7 +32,7 @@
  *  	- Easier to understand / read
  *  	- Easier to optimize
  *  	- More precise flag handling
- *  	- Better optimization for different CPU version ARM, ARMv6 etc..
+ *  	- ARM64-specific optimization
  *
  *  Disadvantages of JIT v2
  *  	- Less generated
@@ -620,7 +620,6 @@ static void genastore(const char *from, amodes mode, const char *reg, wordsizes 
 }
 
 static void gen_move16(uae_u32 opcode, struct instr *curi) {
-#if defined(USE_JIT2)
 	comprintf("\tint src=scratchie++;\n");
 	comprintf("\tint dst=scratchie++;\n");
 
@@ -647,55 +646,6 @@ static void gen_move16(uae_u32 opcode, struct instr *curi) {
 		}
 	}
 	comprintf("\t jnf_MOVE16(dst, src);");
-#else
-	comprintf("\tint src=scratchie++;\n");
-	comprintf("\tint dst=scratchie++;\n");
-
-	if ((opcode & 0xfff8) == 0xf620) {
-		/* MOVE16 (Ax)+,(Ay)+ */
-		comprintf("\tuae_u16 dstreg=((%s)>>12)&0x07;\n", gen_nextiword());
-		comprintf("\tmov_l_rr(src,8+srcreg);\n");
-		comprintf("\tmov_l_rr(dst,8+dstreg);\n");
-	} else {
-		/* Other variants */
-		genamode(curi->smode, "srcreg", curi->size, "src", 0, 2);
-		genamode(curi->dmode, "dstreg", curi->size, "dst", 0, 2);
-		comprintf("\tmov_l_rr(src,srca);\n");
-		comprintf("\tmov_l_rr(dst,dsta);\n");
-	}
-
-	/* Align on 16-byte boundaries */
-	comprintf("\tand_l_ri(src,~15);\n");
-	comprintf("\tand_l_ri(dst,~15);\n");
-
-	if ((opcode & 0xfff8) == 0xf620) {
-		comprintf("\tif (srcreg != dstreg)\n");
-		comprintf("\tarm_ADD_l_ri8(srcreg+8,16);\n");
-		comprintf("\tarm_ADD_l_ri8(dstreg+8,16);\n");
-	} else if ((opcode & 0xfff8) == 0xf600)
-		comprintf("\tarm_ADD_l_ri8(srcreg+8,16);\n");
-	else if ((opcode & 0xfff8) == 0xf608)
-		comprintf("\tarm_ADD_l_ri8(dstreg+8,16);\n");
-
-	start_brace();
-	comprintf("\tint tmp=scratchie;\n");
-	comprintf("\tscratchie+=4;\n");
-
-	comprintf("\tget_n_addr(src,src);\n"
-			"\tget_n_addr(dst,dst);\n"
-			"\tmov_l_rR(tmp+0,src,0);\n"
-			"\tmov_l_rR(tmp+1,src,4);\n"
-			"\tmov_l_rR(tmp+2,src,8);\n"
-			"\tmov_l_rR(tmp+3,src,12);\n"
-			"\tmov_l_Rr(dst,tmp+0,0);\n"
-			"\tforget_about(tmp+0);\n"
-			"\tmov_l_Rr(dst,tmp+1,4);\n"
-			"\tforget_about(tmp+1);\n"
-			"\tmov_l_Rr(dst,tmp+2,8);\n"
-			"\tforget_about(tmp+2);\n"
-			"\tmov_l_Rr(dst,tmp+3,12);\n");
-	close_brace();
-#endif
 }
 
 static void genmovemel(uae_u16 opcode) {
@@ -855,391 +805,6 @@ typedef enum {
 	flag_mov
 } flagtypes;
 
-#if !defined(USE_JIT2)
-static void genflags(flagtypes type, wordsizes size, const char *value, const char *src, const char *dst)
-{
-	if (noflags) {
-		switch (type) {
-		case flag_cmp:
-			comprintf("\tdont_care_flags();\n");
-			comprintf("/* Weird --- CMP with noflags ;-) */\n");
-			return;
-		case flag_add:
-		case flag_sub:
-			comprintf("\tdont_care_flags();\n");
-			{
-				const char* op;
-				switch (type) {
-				case flag_add:
-					op = "add";
-					break; // nf
-				case flag_sub:
-					op = "sub";
-					break; // nf
-				default:
-					assert(0);
-					break;
-				}
-				switch (size) {
-				case sz_byte:
-					comprintf("\t%s_b(%s,%s);\n", op, dst, src);
-					break;
-				case sz_word:
-					comprintf("\t%s_w(%s,%s);\n", op, dst, src);
-					break;
-				case sz_long:
-					comprintf("\t%s_l(%s,%s);\n", op, dst, src);
-					break;
-				}
-				return;
-			}
-			break;
-
-		case flag_and:
-			comprintf("\tdont_care_flags();\n");
-			switch (size) {
-			case sz_byte:
-				comprintf("if (kill_rodent(dst)) {\n");
-				comprintf("\tzero_extend_8_rr(scratchie,%s);\n", src);
-				comprintf("\tor_l_ri(scratchie,0xffffff00);\n"); // nf
-				comprintf("\tarm_AND_l(%s,scratchie);\n", dst);
-				comprintf("\tforget_about(scratchie);\n");
-				comprintf("\t} else \n"
-						"\tarm_AND_b(%s,%s);\n", dst, src);
-				break;
-			case sz_word:
-				comprintf("if (kill_rodent(dst)) {\n");
-				comprintf("\tzero_extend_16_rr(scratchie,%s);\n", src);
-				comprintf("\tor_l_ri(scratchie,0xffff0000);\n"); // nf
-				comprintf("\tarm_AND_l(%s,scratchie);\n", dst);
-				comprintf("\tforget_about(scratchie);\n");
-				comprintf("\t} else \n"
-						"\tarm_AND_w(%s,%s);\n", dst, src);
-				break;
-			case sz_long:
-				comprintf("\tarm_AND_l(%s,%s);\n", dst, src);
-				break;
-			}
-			return;
-
-		case flag_mov:
-			comprintf("\tdont_care_flags();\n");
-			switch (size) {
-			case sz_byte:
-				comprintf("if (kill_rodent(dst)) {\n");
-				comprintf("\tzero_extend_8_rr(scratchie,%s);\n", src);
-				comprintf("\tand_l_ri(%s,0xffffff00);\n", dst); // nf
-				comprintf("\tarm_ORR_l(%s,scratchie);\n", dst);
-				comprintf("\tforget_about(scratchie);\n");
-				comprintf("\t} else \n"
-						"\tmov_b_rr(%s,%s);\n", dst, src);
-				break;
-			case sz_word:
-				comprintf("if (kill_rodent(dst)) {\n");
-				comprintf("\tzero_extend_16_rr(scratchie,%s);\n", src);
-				comprintf("\tand_l_ri(%s,0xffff0000);\n", dst); // nf
-				comprintf("\tarm_ORR_l(%s,scratchie);\n", dst);
-				comprintf("\tforget_about(scratchie);\n");
-				comprintf("\t} else \n"
-						"\tmov_w_rr(%s,%s);\n", dst, src);
-				break;
-			case sz_long:
-				comprintf("\tmov_l_rr(%s,%s);\n", dst, src);
-				break;
-			}
-			return;
-
-		case flag_or:
-		case flag_eor:
-			comprintf("\tdont_care_flags();\n");
-			start_brace();
-			{
-				const char* op;
-				switch (type) {
-				case flag_or:
-					op = "ORR";
-					break; // nf
-				case flag_eor:
-					op = "EOR";
-					break; // nf
-				default:
-					assert(0);
-					break;
-				}
-				switch (size) {
-				case sz_byte:
-					comprintf("if (kill_rodent(dst)) {\n");
-					comprintf("\tzero_extend_8_rr(scratchie,%s);\n", src);
-					comprintf("\tarm_%s_l(%s,scratchie);\n", op, dst);
-					comprintf("\tforget_about(scratchie);\n");
-					comprintf("\t} else \n"
-							"\tarm_%s_b(%s,%s);\n", op, dst, src);
-					break;
-				case sz_word:
-					comprintf("if (kill_rodent(dst)) {\n");
-					comprintf("\tzero_extend_16_rr(scratchie,%s);\n", src);
-					comprintf("\tarm_%s_l(%s,scratchie);\n", op, dst);
-					comprintf("\tforget_about(scratchie);\n");
-					comprintf("\t} else \n"
-							"\tarm_%s_w(%s,%s);\n", op, dst, src);
-					break;
-				case sz_long:
-					comprintf("\tarm_%s_l(%s,%s);\n", op, dst, src);
-					break;
-				}
-				close_brace();
-				return;
-			}
-
-		case flag_addx:
-		case flag_subx:
-			comprintf("\tdont_care_flags();\n");
-			{
-				const char* op;
-				switch (type) {
-				case flag_addx:
-					op = "adc";
-					break;
-				case flag_subx:
-					op = "sbb";
-					break;
-				default:
-					assert(0);
-					break;
-				}
-				comprintf("\trestore_carry();\n"); /* Reload the X flag into C */
-				switch (size) {
-				case sz_byte:
-					comprintf("\t%s_b(%s,%s);\n", op, dst, src);
-					break;
-				case sz_word:
-					comprintf("\t%s_w(%s,%s);\n", op, dst, src);
-					break;
-				case sz_long:
-					comprintf("\t%s_l(%s,%s);\n", op, dst, src);
-					break;
-				}
-				return;
-			}
-			break;
-		default:
-			return;
-		}
-	}
-
-	/* Need the flags, but possibly not all of them */
-	switch (type) {
-	case flag_logical_noclobber:
-		failure;
-		/* fall through */
-
-	case flag_and:
-	case flag_or:
-	case flag_eor:
-		comprintf("\tdont_care_flags();\n");
-		start_brace();
-		{
-			const char* op;
-			switch (type) {
-			case flag_and:
-				op = "and";
-				break;
-			case flag_or:
-				op = "or";
-				break;
-			case flag_eor:
-				op = "xor";
-				break;
-			default:
-				assert(0);
-				break;
-			}
-			switch (size) {
-			case sz_byte:
-				comprintf("\tstart_needflags();\n"
-						"\t%s_b(%s,%s);\n", op, dst, src);
-				break;
-			case sz_word:
-				comprintf("\tstart_needflags();\n"
-						"\t%s_w(%s,%s);\n", op, dst, src);
-				break;
-			case sz_long:
-				comprintf("\tstart_needflags();\n"
-						"\t%s_l(%s,%s);\n", op, dst, src);
-				break;
-			}
-			comprintf("\tlive_flags();\n");
-			comprintf("\tend_needflags();\n");
-			close_brace();
-			return;
-		}
-
-	case flag_mov:
-		comprintf("\tdont_care_flags();\n");
-		start_brace();
-		{
-			switch (size) {
-			case sz_byte:
-				comprintf("\tif (%s!=%s) {\n", src, dst);
-				comprintf("\tmov_b_ri(%s,0);\n"
-						"\tstart_needflags();\n", dst);
-				comprintf("\tor_b(%s,%s);\n", dst, src);
-				comprintf("\t} else {\n");
-				comprintf("\tmov_b_rr(%s,%s);\n", dst, src);
-				comprintf("\ttest_b_rr(%s,%s);\n", dst, dst);
-				comprintf("\t}\n");
-				break;
-			case sz_word:
-				comprintf("\tif (%s!=%s) {\n", src, dst);
-				comprintf("\tmov_w_ri(%s,0);\n"
-						"\tstart_needflags();\n", dst);
-				comprintf("\tor_w(%s,%s);\n", dst, src);
-				comprintf("\t} else {\n");
-				comprintf("\tmov_w_rr(%s,%s);\n", dst, src);
-				comprintf("\ttest_w_rr(%s,%s);\n", dst, dst);
-				comprintf("\t}\n");
-				break;
-			case sz_long:
-				comprintf("\tif (%s!=%s) {\n", src, dst);
-				comprintf("\tmov_l_ri(%s,0);\n"
-						"\tstart_needflags();\n", dst);
-				comprintf("\tor_l(%s,%s);\n", dst, src);
-				comprintf("\t} else {\n");
-				comprintf("\tmov_l_rr(%s,%s);\n", dst, src);
-				comprintf("\ttest_l_rr(%s,%s);\n", dst, dst);
-				comprintf("\t}\n");
-				break;
-			}
-			comprintf("\tlive_flags();\n");
-			comprintf("\tend_needflags();\n");
-			close_brace();
-			return;
-		}
-
-	case flag_logical:
-		comprintf("\tdont_care_flags();\n");
-		start_brace();
-		switch (size) {
-		case sz_byte:
-			comprintf("\tstart_needflags();\n"
-					"\ttest_b_rr(%s,%s);\n", value, value);
-			break;
-		case sz_word:
-			comprintf("\tstart_needflags();\n"
-					"\ttest_w_rr(%s,%s);\n", value, value);
-			break;
-		case sz_long:
-			comprintf("\tstart_needflags();\n"
-					"\ttest_l_rr(%s,%s);\n", value, value);
-			break;
-		}
-		comprintf("\tlive_flags();\n");
-		comprintf("\tend_needflags();\n");
-		close_brace();
-		return;
-
-	case flag_add:
-	case flag_sub:
-	case flag_cmp:
-		comprintf("\tdont_care_flags();\n");
-		{
-			const char* op;
-			switch (type) {
-			case flag_add:
-				op = "add";
-				break;
-			case flag_sub:
-				op = "sub";
-				break;
-			case flag_cmp:
-				op = "cmp";
-				break;
-			default:
-				assert(0);
-				break;
-			}
-			switch (size) {
-			case sz_byte:
-				comprintf("\tstart_needflags();\n"
-						"\t%s_b(%s,%s);\n", op, dst, src);
-				break;
-			case sz_word:
-				comprintf("\tstart_needflags();\n"
-						"\t%s_w(%s,%s);\n", op, dst, src);
-				break;
-			case sz_long:
-				comprintf("\tstart_needflags();\n"
-						"\t%s_l(%s,%s);\n", op, dst, src);
-				break;
-			}
-			comprintf("\tlive_flags();\n");
-			comprintf("\tend_needflags();\n");
-			if (type != flag_cmp) {
-				duplicate_carry();
-			}
-			comprintf("if (!(needed_flags & FLAG_CZNV)) dont_care_flags();\n");
-
-			return;
-		}
-
-	case flag_addx:
-	case flag_subx:
-		uses_cmov;
-		comprintf("\tdont_care_flags();\n");
-		{
-			const char* op;
-			switch (type) {
-			case flag_addx:
-				op = "adc";
-				break;
-			case flag_subx:
-				op = "sbb";
-				break;
-			default:
-				assert(0);
-				break;
-			}
-			start_brace();
-			comprintf("\tint zero=scratchie++;\n"
-					"\tint one=scratchie++;\n"
-					"\tif (needed_flags&FLAG_Z) {\n"
-					"\tmov_l_ri(zero,0);\n"
-					"\tmov_l_ri(one,-1);\n"
-					"\tmake_flags_live();\n"
-					"\tcmov_l_rr(zero,one,%d);\n"
-					"\t}\n", NATIVE_CC_NE);
-			comprintf("\trestore_carry();\n"); /* Reload the X flag into C */
-			switch (size) {
-			case sz_byte:
-				comprintf("\tstart_needflags();\n"
-						"\t%s_b(%s,%s);\n", op, dst, src);
-				break;
-			case sz_word:
-				comprintf("\tstart_needflags();\n"
-						"\t%s_w(%s,%s);\n", op, dst, src);
-				break;
-			case sz_long:
-				comprintf("\tstart_needflags();\n"
-						"\t%s_l(%s,%s);\n", op, dst, src);
-				break;
-			}
-			comprintf("\tlive_flags();\n");
-			comprintf("\tif (needed_flags&FLAG_Z) {\n"
-					"\tcmov_l_rr(zero,one,%d);\n"
-					"\tset_zero(zero, one);\n" /* No longer need one */
-					"\tlive_flags();\n"
-					"\t}\n", NATIVE_CC_NE);
-			comprintf("\tend_needflags();\n");
-			duplicate_carry();
-			comprintf("if (!(needed_flags & FLAG_CZNV)) dont_care_flags();\n");
-			return;
-		}
-	default:
-		failure;
-		break;
-	}
-}
-#endif
 
 static void gen_abcd(uae_u32 opcode, struct instr *curi, const char* ssize) {
 #if 0
@@ -1254,7 +819,6 @@ static void gen_abcd(uae_u32 opcode, struct instr *curi, const char* ssize) {
 
 static void gen_add(uae_u32 opcode, struct instr *curi, const char* ssize) {
 	(void) opcode;
-#if defined(USE_JIT2)
 	genamode(curi->smode, "srcreg", curi->size, "src", 1, 0);
 	genamode(curi->dmode, "dstreg", curi->size, "dst", 1, 0);
 
@@ -1274,51 +838,19 @@ static void gen_add(uae_u32 opcode, struct instr *curi, const char* ssize) {
 		comprintf("\t jnf_ADD_%s(tmp,dst,src);\n", ssize);
 	}
 	genastore("tmp", curi->dmode, "dstreg", curi->size, "dst");
-#else
-	(void) ssize;
-	genamode(curi->smode, "srcreg", curi->size, "src", 1, 0);
-	genamode(curi->dmode, "dstreg", curi->size, "dst", 1, 0);
-	genflags(flag_add, curi->size, "", "src", "dst");
-	genastore("dst", curi->dmode, "dstreg", curi->size, "dst");
-#endif
 }
 
 static void gen_adda(uae_u32 opcode, struct instr *curi, const char* ssize) {
 	(void) opcode;
-#if defined(USE_JIT2)
 	genamode(curi->smode, "srcreg", curi->size, "src", 1, 0);
 	genamode(curi->dmode, "dstreg", sz_long, "dst", 1, 0);
 	start_brace();
 	comprintf("\t jnf_ADDA_%s(dst, src);\n", ssize);
 	genastore("dst", curi->dmode, "dstreg", sz_long, "dst");
-#else
-	(void) ssize;
-	genamode(curi->smode, "srcreg", curi->size, "src", 1, 0);
-	genamode(curi->dmode, "dstreg", sz_long, "dst", 1, 0);
-	start_brace();
-	comprintf("\tint tmp=scratchie++;\n");
-	switch (curi->size) {
-	case sz_byte:
-		comprintf("\tsign_extend_8_rr(tmp,src);\n");
-		break;
-	case sz_word:
-		comprintf("\tsign_extend_16_rr(tmp,src);\n");
-		break;
-	case sz_long:
-		comprintf("\ttmp=src;\n");
-		break;
-	default:
-		assert(0);
-		break;
-	}
-	comprintf("\tarm_ADD_l(dst,tmp);\n");
-	genastore("dst", curi->dmode, "dstreg", sz_long, "dst");
-#endif
 }
 
 static void gen_addx(uae_u32 opcode, struct instr *curi, const char* ssize) {
 	(void) opcode;
-#if defined(USE_JIT2)
 	isaddx;
 	genamode(curi->smode, "srcreg", curi->size, "src", 1, 0);
 	genamode(curi->dmode, "dstreg", curi->size, "dst", 1, 0);
@@ -1341,20 +873,10 @@ static void gen_addx(uae_u32 opcode, struct instr *curi, const char* ssize) {
 		comprintf("\t jnf_ADDX_%s(tmp,dst,src);\n", ssize);
 	}
 	genastore("tmp", curi->dmode, "dstreg", curi->size, "dst");
-#else
-	(void) ssize;
-	isaddx;
-	genamode(curi->smode, "srcreg", curi->size, "src", 1, 0);
-	genamode(curi->dmode, "dstreg", curi->size, "dst", 1, 0);
-	start_brace();
-	genflags(flag_addx, curi->size, "", "src", "dst");
-	genastore("dst", curi->dmode, "dstreg", curi->size, "dst");
-#endif
 }
 
 static void gen_and(uae_u32 opcode, struct instr *curi, const char* ssize) {
 	(void) opcode;
-#if defined(USE_JIT2)
 	genamode(curi->smode, "srcreg", curi->size, "src", 1, 0);
 	genamode(curi->dmode, "dstreg", curi->size, "dst", 1, 0);
 
@@ -1369,19 +891,11 @@ static void gen_and(uae_u32 opcode, struct instr *curi, const char* ssize) {
 		comprintf("\t jnf_AND_%s(tmp,dst,src);\n", ssize);
 	}
 	genastore("tmp", curi->dmode, "dstreg", curi->size, "dst");
-#else
-	(void) ssize;
-	genamode(curi->smode, "srcreg", curi->size, "src", 1, 0);
-	genamode(curi->dmode, "dstreg", curi->size, "dst", 1, 0);
-	genflags(flag_and, curi->size, "", "src", "dst");
-	genastore("dst", curi->dmode, "dstreg", curi->size, "dst");
-#endif
 }
 
 static void gen_andsr(uae_u32 opcode, struct instr *curi, const char* ssize) {
 	(void) opcode;
 	(void) ssize;
-#if defined(USE_JIT2)
 	genamode(curi->smode, "srcreg", curi->size, "src", 1, 0);
 	if (!noflags) {
 		comprintf("\t make_flags_live();\n");
@@ -1390,16 +904,10 @@ static void gen_andsr(uae_u32 opcode, struct instr *curi, const char* ssize) {
 		comprintf("\t live_flags();\n");
 		comprintf("\t end_needflags();\n");
 	}
-#else
-	(void) curi;
-	failure;
-	isjump;
-#endif
 }
 
 static void gen_asl(uae_u32 opcode, struct instr *curi, const char* ssize) {
 	(void) opcode;
-#if defined(USE_JIT2)
 	mayfail;
 	if (curi->smode == Dreg) {
 		comprintf("if ((uae_u32)srcreg==(uae_u32)dstreg) {\n"
@@ -1445,211 +953,11 @@ static void gen_asl(uae_u32 opcode, struct instr *curi, const char* ssize) {
 		}
 	}
 	genastore("tmp", curi->dmode, "dstreg", curi->size, "data");
-#else
-	(void) ssize;
-
-	mayfail;
-	if (curi->smode == Dreg) {
-		comprintf("if ((uae_u32)srcreg==(uae_u32)dstreg) {\n"
-				"  FAIL(1);\n"
-				"  return 0;\n"
-				"} \n");
-		start_brace();
-	}
-	comprintf("\tdont_care_flags();\n");
-	/* Except for the handling of the V flag, this is identical to
-	 LSL. The handling of V is, uhm, unpleasant, so if it's needed,
-	 let the normal emulation handle it. Shoulders of giants kinda
-	 thing ;-) */
-	comprintf("if (needed_flags & FLAG_V) {\n"
-			"  FAIL(1);\n"
-			"  return 0;\n"
-			"} \n");
-
-	genamode(curi->smode, "srcreg", curi->size, "cnt", 1, 0);
-	genamode(curi->dmode, "dstreg", curi->size, "data", 1, 0);
-	if (curi->smode != immi) {
-		if (!noflags) {
-			uses_cmov;
-			start_brace();
-			comprintf("\tint highmask;\n"
-					"\tint cdata=scratchie++;\n"
-					"\tint tmpcnt=scratchie++;\n");
-			comprintf("\tmov_l_rr(tmpcnt,cnt);\n"
-					"\tand_l_ri(tmpcnt,63);\n"
-					"\tmov_l_ri(cdata,0);\n"
-					"\tcmov_l_rr(cdata,data,%d);\n", NATIVE_CC_NE);
-			/* cdata is now either data (for shift count!=0) or
-			 0 (for shift count==0) */
-			switch (curi->size) {
-			case sz_byte:
-				comprintf("\tshll_b_rr(data,cnt);\n"
-						"\thighmask=0x38;\n");
-				break;
-			case sz_word:
-				comprintf("\tshll_w_rr(data,cnt);\n"
-						"\thighmask=0x30;\n");
-				break;
-			case sz_long:
-				comprintf("\tshll_l_rr(data,cnt);\n"
-						"\thighmask=0x20;\n");
-				break;
-			default:
-				assert(0);
-				break;
-			}
-			comprintf("test_l_ri(cnt,highmask);\n"
-					"mov_l_ri(scratchie,0);\n"
-					"cmov_l_rr(scratchie,data,%d);\n", NATIVE_CC_EQ);
-			switch (curi->size) {
-			case sz_byte:
-				comprintf("\tmov_b_rr(data,scratchie);\n");
-				break;
-			case sz_word:
-				comprintf("\tmov_w_rr(data,scratchie);\n");
-				break;
-			case sz_long:
-				comprintf("\tmov_l_rr(data,scratchie);\n");
-				break;
-			default:
-				assert(0);
-				break;
-			}
-			/* Result of shift is now in data. Now we need to determine
-			 the carry by shifting cdata one less */
-			comprintf("\tsub_l_ri(tmpcnt,1);\n");
-			switch (curi->size) {
-			case sz_byte:
-				comprintf("\tshll_b_rr(cdata,tmpcnt);\n");
-				break;
-			case sz_word:
-				comprintf("\tshll_w_rr(cdata,tmpcnt);\n");
-				break;
-			case sz_long:
-				comprintf("\tshll_l_rr(cdata,tmpcnt);\n");
-				break;
-			default:
-				assert(0);
-				break;
-			}
-			comprintf("test_l_ri(tmpcnt,highmask);\n"
-					"mov_l_ri(scratchie,0);\n"
-					"cmov_l_rr(cdata,scratchie,%d);\n", NATIVE_CC_NE);
-			/* And create the flags */
-			comprintf("\tstart_needflags();\n");
-
-			comprintf("\tif (needed_flags & FLAG_ZNV)\n");
-			switch (curi->size) {
-			case sz_byte:
-				comprintf("\t  test_b_rr(data,data);\n");
-				comprintf("\t bt_l_ri(cdata,7);\n");
-				break;
-			case sz_word:
-				comprintf("\t  test_w_rr(data,data);\n");
-				comprintf("\t bt_l_ri(cdata,15);\n");
-				break;
-			case sz_long:
-				comprintf("\t  test_l_rr(data,data);\n");
-				comprintf("\t bt_l_ri(cdata,31);\n");
-				break;
-			}
-			comprintf("\t live_flags();\n");
-			comprintf("\t end_needflags();\n");
-			comprintf("\t duplicate_carry();\n");
-			comprintf("if (!(needed_flags & FLAG_CZNV)) dont_care_flags();\n");
-			genastore("data", curi->dmode, "dstreg", curi->size, "data");
-		} else {
-			uses_cmov;
-			start_brace();
-			comprintf("\tint highmask;\n");
-			switch (curi->size) {
-			case sz_byte:
-				comprintf("\tshll_b_rr(data,cnt);\n"
-						"\thighmask=0x38;\n");
-				break;
-			case sz_word:
-				comprintf("\tshll_w_rr(data,cnt);\n"
-						"\thighmask=0x30;\n");
-				break;
-			case sz_long:
-				comprintf("\tshll_l_rr(data,cnt);\n"
-						"\thighmask=0x20;\n");
-				break;
-			default:
-				assert(0);
-				break;
-			}
-			comprintf("test_l_ri(cnt,highmask);\n"
-					"mov_l_ri(scratchie,0);\n"
-					"cmov_l_rr(scratchie,data,%d);\n", NATIVE_CC_EQ);
-			switch (curi->size) {
-			case sz_byte:
-				comprintf("\tmov_b_rr(data,scratchie);\n");
-				break;
-			case sz_word:
-				comprintf("\tmov_w_rr(data,scratchie);\n");
-				break;
-			case sz_long:
-				comprintf("\tmov_l_rr(data,scratchie);\n");
-				break;
-			default:
-				assert(0);
-				break;
-			}
-			genastore("data", curi->dmode, "dstreg", curi->size, "data");
-		}
-	} else {
-		start_brace();
-		comprintf("\tint tmp=scratchie++;\n"
-				"\tint bp;\n"
-				"\tmov_l_rr(tmp,data);\n");
-		switch (curi->size) {
-		case sz_byte:
-			comprintf("\tshll_b_ri(data,srcreg);\n"
-					"\tbp=8-srcreg;\n");
-			break;
-		case sz_word:
-			comprintf("\tshll_w_ri(data,srcreg);\n"
-					"\tbp=16-srcreg;\n");
-			break;
-		case sz_long:
-			comprintf("\tshll_l_ri(data,srcreg);\n"
-					"\tbp=32-srcreg;\n");
-			break;
-		default:
-			assert(0);
-			break;
-		}
-
-		if (!noflags) {
-			comprintf("\tstart_needflags();\n");
-			comprintf("\tif (needed_flags & FLAG_ZNV)\n");
-			switch (curi->size) {
-			case sz_byte:
-				comprintf("\t  test_b_rr(data,data);\n");
-				break;
-			case sz_word:
-				comprintf("\t  test_w_rr(data,data);\n");
-				break;
-			case sz_long:
-				comprintf("\t  test_l_rr(data,data);\n");
-				break;
-			}
-			comprintf("\t bt_l_ri(tmp,bp);\n"); /* Set C */
-			comprintf("\t live_flags();\n");
-			comprintf("\t end_needflags();\n");
-			comprintf("\t duplicate_carry();\n");
-			comprintf("if (!(needed_flags & FLAG_CZNV)) dont_care_flags();\n");
-		}
-		genastore("data", curi->dmode, "dstreg", curi->size, "data");
-	}
-#endif
 }
 
 static void gen_aslw(uae_u32 opcode, struct instr *curi, const char* ssize) {
 	(void) opcode;
 	(void) ssize;
-#if defined(USE_JIT2)
 	comprintf("\t dont_care_flags();\n");
 	genamode(curi->smode, "srcreg", curi->size, "src", 1, 0);
 	start_brace();
@@ -1663,14 +971,9 @@ static void gen_aslw(uae_u32 opcode, struct instr *curi, const char* ssize) {
 		comprintf("\t jnf_ASLW(tmp,src);\n");
 	}
 	genastore("tmp", curi->smode, "srcreg", curi->size, "src");
-#else
-	(void) curi;
-	failure;
-#endif
 }
 
 static void gen_asr(uae_u32 opcode, struct instr *curi, const char* ssize) {
-#if defined(USE_JIT2)
 	(void)opcode;
 
 	mayfail;
@@ -1720,249 +1023,11 @@ static void gen_asr(uae_u32 opcode, struct instr *curi, const char* ssize) {
 		}
 	}
 	genastore("tmp", curi->dmode, "dstreg", curi->size, "data");
-#else
-	(void) opcode;
-	(void) ssize;
-
-	mayfail;
-	if (curi->smode == Dreg) {
-		comprintf("if ((uae_u32)srcreg==(uae_u32)dstreg) {\n"
-				"  FAIL(1);\n"
-				"  return 0;\n"
-				"} \n");
-		start_brace();
-	}
-	comprintf("\tdont_care_flags();\n");
-
-	genamode(curi->smode, "srcreg", curi->size, "cnt", 1, 0);
-	genamode(curi->dmode, "dstreg", curi->size, "data", 1, 0);
-	if (curi->smode != immi) {
-		if (!noflags) {
-			uses_cmov;
-			start_brace();
-			comprintf("\tint highmask;\n"
-					"\tint width;\n"
-					"\tint cdata=scratchie++;\n"
-					"\tint tmpcnt=scratchie++;\n"
-					"\tint highshift=scratchie++;\n");
-			comprintf("\tmov_l_rr(tmpcnt,cnt);\n"
-					"\tand_l_ri(tmpcnt,63);\n"
-					"\tmov_l_ri(cdata,0);\n"
-					"\tcmov_l_rr(cdata,data,%d);\n", NATIVE_CC_NE);
-			/* cdata is now either data (for shift count!=0) or
-			 0 (for shift count==0) */
-			switch (curi->size) {
-			case sz_byte:
-				comprintf("\tshra_b_rr(data,cnt);\n"
-						"\thighmask=0x38;\n"
-						"\twidth=8;\n");
-				break;
-			case sz_word:
-				comprintf("\tshra_w_rr(data,cnt);\n"
-						"\thighmask=0x30;\n"
-						"\twidth=16;\n");
-				break;
-			case sz_long:
-				comprintf("\tshra_l_rr(data,cnt);\n"
-						"\thighmask=0x20;\n"
-						"\twidth=32;\n");
-				break;
-			default:
-				assert(0);
-				break;
-			}
-			comprintf("test_l_ri(cnt,highmask);\n"
-					"mov_l_ri(highshift,0);\n"
-					"mov_l_ri(scratchie,width/2);\n"
-					"cmov_l_rr(highshift,scratchie,%d);\n", NATIVE_CC_NE);
-			/* The x86 masks out bits, so we now make sure that things
-			 really get shifted as much as planned */
-			switch (curi->size) {
-			case sz_byte:
-				comprintf("\tshra_b_rr(data,highshift);\n");
-				break;
-			case sz_word:
-				comprintf("\tshra_w_rr(data,highshift);\n");
-				break;
-			case sz_long:
-				comprintf("\tshra_l_rr(data,highshift);\n");
-				break;
-			default:
-				assert(0);
-				break;
-			}
-			/* And again */
-			switch (curi->size) {
-			case sz_byte:
-				comprintf("\tshra_b_rr(data,highshift);\n");
-				break;
-			case sz_word:
-				comprintf("\tshra_w_rr(data,highshift);\n");
-				break;
-			case sz_long:
-				comprintf("\tshra_l_rr(data,highshift);\n");
-				break;
-			default:
-				assert(0);
-				break;
-			}
-
-			/* Result of shift is now in data. Now we need to determine
-			 the carry by shifting cdata one less */
-			comprintf("\tsub_l_ri(tmpcnt,1);\n");
-			switch (curi->size) {
-			case sz_byte:
-				comprintf("\tshra_b_rr(cdata,tmpcnt);\n");
-				break;
-			case sz_word:
-				comprintf("\tshra_w_rr(cdata,tmpcnt);\n");
-				break;
-			case sz_long:
-				comprintf("\tshra_l_rr(cdata,tmpcnt);\n");
-				break;
-			default:
-				assert(0);
-				break;
-			}
-			/* If the shift count was higher than the width, we need
-			 to pick up the sign from data */
-			comprintf("test_l_ri(tmpcnt,highmask);\n"
-					"cmov_l_rr(cdata,data,%d);\n", NATIVE_CC_NE);
-			/* And create the flags */
-			comprintf("\tstart_needflags();\n");
-			comprintf("\tif (needed_flags & FLAG_ZNV)\n");
-			switch (curi->size) {
-			case sz_byte:
-				comprintf("\t  test_b_rr(data,data);\n");
-				break;
-			case sz_word:
-				comprintf("\t  test_w_rr(data,data);\n");
-				break;
-			case sz_long:
-				comprintf("\t  test_l_rr(data,data);\n");
-				break;
-			}
-			comprintf("\t bt_l_ri(cdata,0);\n"); /* Set C */
-			comprintf("\t live_flags();\n");
-			comprintf("\t end_needflags();\n");
-			comprintf("\t duplicate_carry();\n");
-			comprintf("if (!(needed_flags & FLAG_CZNV)) dont_care_flags();\n");
-			genastore("data", curi->dmode, "dstreg", curi->size, "data");
-		} else {
-			uses_cmov;
-			start_brace();
-			comprintf("\tint highmask;\n"
-					"\tint width;\n"
-					"\tint highshift=scratchie++;\n");
-			switch (curi->size) {
-			case sz_byte:
-				comprintf("\tshra_b_rr(data,cnt);\n"
-						"\thighmask=0x38;\n"
-						"\twidth=8;\n");
-				break;
-			case sz_word:
-				comprintf("\tshra_w_rr(data,cnt);\n"
-						"\thighmask=0x30;\n"
-						"\twidth=16;\n");
-				break;
-			case sz_long:
-				comprintf("\tshra_l_rr(data,cnt);\n"
-						"\thighmask=0x20;\n"
-						"\twidth=32;\n");
-				break;
-			default:
-				assert(0);
-				break;
-			}
-			comprintf("test_l_ri(cnt,highmask);\n"
-					"mov_l_ri(highshift,0);\n"
-					"mov_l_ri(scratchie,width/2);\n"
-					"cmov_l_rr(highshift,scratchie,%d);\n", NATIVE_CC_NE);
-			/* The x86 masks out bits, so we now make sure that things
-			 really get shifted as much as planned */
-			switch (curi->size) {
-			case sz_byte:
-				comprintf("\tshra_b_rr(data,highshift);\n");
-				break;
-			case sz_word:
-				comprintf("\tshra_w_rr(data,highshift);\n");
-				break;
-			case sz_long:
-				comprintf("\tshra_l_rr(data,highshift);\n");
-				break;
-			default:
-				assert(0);
-				break;
-			}
-			/* And again */
-			switch (curi->size) {
-			case sz_byte:
-				comprintf("\tshra_b_rr(data,highshift);\n");
-				break;
-			case sz_word:
-				comprintf("\tshra_w_rr(data,highshift);\n");
-				break;
-			case sz_long:
-				comprintf("\tshra_l_rr(data,highshift);\n");
-				break;
-			default:
-				assert(0);
-				break;
-			}
-			genastore("data", curi->dmode, "dstreg", curi->size, "data");
-		}
-	} else {
-		start_brace();
-		comprintf("\tint tmp=scratchie++;\n"
-				"\tint bp;\n"
-				"\tmov_l_rr(tmp,data);\n");
-		switch (curi->size) {
-		case sz_byte:
-			comprintf("\tshra_b_ri(data,srcreg);\n"
-					"\tbp=srcreg-1;\n");
-			break;
-		case sz_word:
-			comprintf("\tshra_w_ri(data,srcreg);\n"
-					"\tbp=srcreg-1;\n");
-			break;
-		case sz_long:
-			comprintf("\tshra_l_ri(data,srcreg);\n"
-					"\tbp=srcreg-1;\n");
-			break;
-		default:
-			assert(0);
-			break;
-		}
-
-		if (!noflags) {
-			comprintf("\tstart_needflags();\n");
-			comprintf("\tif (needed_flags & FLAG_ZNV)\n");
-			switch (curi->size) {
-			case sz_byte:
-				comprintf("\t  test_b_rr(data,data);\n");
-				break;
-			case sz_word:
-				comprintf("\t  test_w_rr(data,data);\n");
-				break;
-			case sz_long:
-				comprintf("\t  test_l_rr(data,data);\n");
-				break;
-			}
-			comprintf("\t bt_l_ri(tmp,bp);\n"); /* Set C */
-			comprintf("\t live_flags();\n");
-			comprintf("\t end_needflags();\n");
-			comprintf("\t duplicate_carry();\n");
-			comprintf("if (!(needed_flags & FLAG_CZNV)) dont_care_flags();\n");
-		}
-		genastore("data", curi->dmode, "dstreg", curi->size, "data");
-	}
-#endif
 }
 
 static void gen_asrw(uae_u32 opcode, struct instr *curi, const char* ssize) {
 	(void) opcode;
 	(void) ssize;
-#if defined(USE_JIT2)
 	comprintf("\t dont_care_flags();\n");
 	genamode(curi->smode, "srcreg", curi->size, "src", 1, 0);
 	start_brace();
@@ -1977,15 +1042,10 @@ static void gen_asrw(uae_u32 opcode, struct instr *curi, const char* ssize) {
 		comprintf("\t jnf_ASRW(tmp,src);\n");
 	}
 	genastore("tmp", curi->smode, "srcreg", curi->size, "src");
-#else
-	(void) curi;
-	failure;
-#endif
 }
 
 static void gen_bchg(uae_u32 opcode, struct instr *curi, const char* ssize) {
 	(void) opcode;
-#if defined(USE_JIT2)
 	genamode(curi->smode, "srcreg", curi->size, "src", 1, 0);
 	genamode(curi->dmode, "dstreg", curi->size, "dst", 1, 0);
 	start_brace();
@@ -2002,36 +1062,10 @@ static void gen_bchg(uae_u32 opcode, struct instr *curi, const char* ssize) {
 		// previous instruction are still live
 	}
 	genastore("dst", curi->dmode, "dstreg", curi->size, "dst");
-#else
-	(void) ssize;
-	genamode(curi->smode, "srcreg", curi->size, "src", 1, 0);
-	genamode(curi->dmode, "dstreg", curi->size, "dst", 1, 0);
-	start_brace();
-	comprintf("\tint s=scratchie++;\n"
-			"\tint tmp=scratchie++;\n"
-			"\tmov_l_rr(s,src);\n");
-	if (curi->size == sz_byte)
-		comprintf("\tand_l_ri(s,7);\n");
-	else
-		comprintf("\tand_l_ri(s,31);\n");
-
-	comprintf("\tbtc_l_rr(dst,s);\n" /* Answer now in C */
-			"\tsbb_l(s,s);\n" /* s is 0 if bit was 0, -1 otherwise */
-			"\tmake_flags_live();\n" /* Get the flags back */
-			"\tdont_care_flags();\n");
-	if (!noflags) {
-		comprintf("\tstart_needflags();\n"
-				"\tset_zero(s,tmp);\n"
-				"\tlive_flags();\n"
-				"\tend_needflags();\n");
-	}
-	genastore("dst", curi->dmode, "dstreg", curi->size, "dst");
-#endif
 }
 
 static void gen_bclr(uae_u32 opcode, struct instr *curi, const char* ssize) {
 	(void) opcode;
-#if defined(USE_JIT2)
 	genamode(curi->smode, "srcreg", curi->size, "src", 1, 0);
 	genamode(curi->dmode, "dstreg", curi->size, "dst", 1, 0);
 	start_brace();
@@ -2048,36 +1082,10 @@ static void gen_bclr(uae_u32 opcode, struct instr *curi, const char* ssize) {
 		// previous instruction are still live
 	}
 	genastore("dst", curi->dmode, "dstreg", curi->size, "dst");
-#else
-	(void) ssize;
-	genamode(curi->smode, "srcreg", curi->size, "src", 1, 0);
-	genamode(curi->dmode, "dstreg", curi->size, "dst", 1, 0);
-	start_brace();
-	comprintf("\tint s=scratchie++;\n"
-			"\tint tmp=scratchie++;\n"
-			"\tmov_l_rr(s,src);\n");
-	if (curi->size == sz_byte)
-		comprintf("\tand_l_ri(s,7);\n");
-	else
-		comprintf("\tand_l_ri(s,31);\n");
-
-	comprintf("\tbtr_l_rr(dst,s);\n" /* Answer now in C */
-			"\tsbb_l(s,s);\n" /* s is 0 if bit was 0, -1 otherwise */
-			"\tmake_flags_live();\n" /* Get the flags back */
-			"\tdont_care_flags();\n");
-	if (!noflags) {
-		comprintf("\tstart_needflags();\n"
-				"\tset_zero(s,tmp);\n"
-				"\tlive_flags();\n"
-				"\tend_needflags();\n");
-	}
-	genastore("dst", curi->dmode, "dstreg", curi->size, "dst");
-#endif
 }
 
 static void gen_bset(uae_u32 opcode, struct instr *curi, const char* ssize) {
 	(void) opcode;
-#if defined(USE_JIT2)
 	genamode(curi->smode, "srcreg", curi->size, "src", 1, 0);
 	genamode(curi->dmode, "dstreg", curi->size, "dst", 1, 0);
 	start_brace();
@@ -2094,36 +1102,10 @@ static void gen_bset(uae_u32 opcode, struct instr *curi, const char* ssize) {
 		// previous instruction are still live
 	}
 	genastore("dst", curi->dmode, "dstreg", curi->size, "dst");
-#else
-	(void) ssize;
-	genamode(curi->smode, "srcreg", curi->size, "src", 1, 0);
-	genamode(curi->dmode, "dstreg", curi->size, "dst", 1, 0);
-	start_brace();
-	comprintf("\tint s=scratchie++;\n"
-			"\tint tmp=scratchie++;\n"
-			"\tmov_l_rr(s,src);\n");
-	if (curi->size == sz_byte)
-		comprintf("\tand_l_ri(s,7);\n");
-	else
-		comprintf("\tand_l_ri(s,31);\n");
-
-	comprintf("\tbts_l_rr(dst,s);\n" /* Answer now in C */
-			"\tsbb_l(s,s);\n" /* s is 0 if bit was 0, -1 otherwise */
-			"\tmake_flags_live();\n" /* Get the flags back */
-			"\tdont_care_flags();\n");
-	if (!noflags) {
-		comprintf("\tstart_needflags();\n"
-				"\tset_zero(s,tmp);\n"
-				"\tlive_flags();\n"
-				"\tend_needflags();\n");
-	}
-	genastore("dst", curi->dmode, "dstreg", curi->size, "dst");
-#endif
 }
 
 static void gen_btst(uae_u32 opcode, struct instr *curi, const char* ssize) {
 	(void) opcode;
-#if defined(USE_JIT2)
 	genamode(curi->smode, "srcreg", curi->size, "src", 1, 0);
 	genamode(curi->dmode, "dstreg", curi->size, "dst", 1, 0);
 	start_brace();
@@ -2140,36 +1122,11 @@ static void gen_btst(uae_u32 opcode, struct instr *curi, const char* ssize) {
 		// nothing: BTST writes only Z; N/V/C of the previous
 		// instruction are still live (no dont_care_flags())
 	}
-#else
-	(void) ssize;
-	genamode(curi->smode, "srcreg", curi->size, "src", 1, 0);
-	genamode(curi->dmode, "dstreg", curi->size, "dst", 1, 0);
-	start_brace();
-	comprintf("\tint s=scratchie++;\n"
-			"\tint tmp=scratchie++;\n"
-			"\tmov_l_rr(s,src);\n");
-	if (curi->size == sz_byte)
-		comprintf("\tand_l_ri(s,7);\n");
-	else
-		comprintf("\tand_l_ri(s,31);\n");
-
-	comprintf("\tbt_l_rr(dst,s);\n" /* Answer now in C */
-			"\tsbb_l(s,s);\n" /* s is 0 if bit was 0, -1 otherwise */
-			"\tmake_flags_live();\n" /* Get the flags back */
-			"\tdont_care_flags();\n");
-	if (!noflags) {
-		comprintf("\tstart_needflags();\n"
-				"\tset_zero(s,tmp);\n"
-				"\tlive_flags();\n"
-				"\tend_needflags();\n");
-	}
-#endif
 }
 
 static void gen_clr(uae_u32 opcode, struct instr *curi, const char* ssize) {
 	(void) opcode;
 	(void) ssize;
-#if defined(USE_JIT2)
 	genamode(curi->smode, "srcreg", curi->size, "src", 2, 0);
 	comprintf("\t dont_care_flags();\n");
 	start_brace();
@@ -2183,19 +1140,10 @@ static void gen_clr(uae_u32 opcode, struct instr *curi, const char* ssize) {
 		comprintf("\t jnf_CLR_%s(tmp);\n", ssize);
 	}
 	genastore("tmp", curi->smode, "srcreg", curi->size, "src");
-#else
-	genamode(curi->smode, "srcreg", curi->size, "src", 2, 0);
-	start_brace();
-	comprintf("\tint dst=scratchie++;\n");
-	comprintf("\tmov_l_ri(dst,0);\n");
-	genflags(flag_logical, curi->size, "dst", "", "");
-	genastore("dst", curi->smode, "srcreg", curi->size, "src");
-#endif
 }
 
 static void gen_cmp(uae_u32 opcode, struct instr *curi, const char* ssize) {
 	(void) opcode;
-#if defined(USE_JIT2)
 	genamode(curi->smode, "srcreg", curi->size, "src", 1, 0);
 	genamode(curi->dmode, "dstreg", curi->size, "dst", 1, 0);
 	start_brace();
@@ -2209,18 +1157,10 @@ static void gen_cmp(uae_u32 opcode, struct instr *curi, const char* ssize) {
 	} else {
 		comprintf("/* Weird --- CMP with noflags ;-) */\n");
 	}
-#else
-	(void) ssize;
-	genamode(curi->smode, "srcreg", curi->size, "src", 1, 0);
-	genamode(curi->dmode, "dstreg", curi->size, "dst", 1, 0);
-	start_brace();
-	genflags(flag_cmp, curi->size, "", "src", "dst");
-#endif
 }
 
 static void gen_cmpa(uae_u32 opcode, struct instr *curi, const char* ssize) {
 	(void) opcode;
-#if  defined(USE_JIT2)
 	genamode(curi->smode, "srcreg", curi->size, "src", 1, 0);
 	genamode(curi->dmode, "dstreg", sz_long, "dst", 1, 0);
 	start_brace();
@@ -2235,28 +1175,6 @@ static void gen_cmpa(uae_u32 opcode, struct instr *curi, const char* ssize) {
 		comprintf("\tdont_care_flags();\n");
 		comprintf("/* Weird --- CMP with noflags ;-) */\n");
 	}
-#else
-	(void) ssize;
-	genamode(curi->smode, "srcreg", curi->size, "src", 1, 0);
-	genamode(curi->dmode, "dstreg", sz_long, "dst", 1, 0);
-	start_brace();
-	comprintf("\tint tmps=scratchie++;\n");
-	switch (curi->size) {
-	case sz_byte:
-		comprintf("\tsign_extend_8_rr(tmps,src);\n");
-		break;
-	case sz_word:
-		comprintf("\tsign_extend_16_rr(tmps,src);\n");
-		break;
-	case sz_long:
-		comprintf("tmps=src;\n");
-		break;
-	default:
-		assert(0);
-		break;
-	}
-	genflags(flag_cmp, sz_long, "", "tmps", "dst");
-#endif
 }
 
 static void gen_dbcc(uae_u32 opcode, struct instr *curi, const char* ssize) {
@@ -2394,7 +1312,6 @@ static void gen_dbcc(uae_u32 opcode, struct instr *curi, const char* ssize) {
 
 static void gen_eor(uae_u32 opcode, struct instr *curi, const char* ssize) {
 	(void) opcode;
-#if defined(USE_JIT2)
 	genamode(curi->smode, "srcreg", curi->size, "src", 1, 0);
 	genamode(curi->dmode, "dstreg", curi->size, "dst", 1, 0);
 
@@ -2409,19 +1326,11 @@ static void gen_eor(uae_u32 opcode, struct instr *curi, const char* ssize) {
 		comprintf("\t jnf_EOR_%s(tmp,dst,src);\n", ssize);
 	}
 	genastore("tmp", curi->dmode, "dstreg", curi->size, "dst");
-#else
-	(void) ssize;
-	genamode(curi->smode, "srcreg", curi->size, "src", 1, 0);
-	genamode(curi->dmode, "dstreg", curi->size, "dst", 1, 0);
-	genflags(flag_eor, curi->size, "", "src", "dst");
-	genastore("dst", curi->dmode, "dstreg", curi->size, "dst");
-#endif
 }
 
 static void gen_eorsr(uae_u32 opcode, struct instr *curi, const char* ssize) {
 	(void) opcode;
 	(void) ssize;
-#if defined(USE_JIT2)
 	genamode(curi->smode, "srcreg", curi->size, "src", 1, 0);
 	if (!noflags) {
 		comprintf("\t make_flags_live();\n");
@@ -2430,11 +1339,6 @@ static void gen_eorsr(uae_u32 opcode, struct instr *curi, const char* ssize) {
 		comprintf("\t live_flags();\n");
 		comprintf("\t end_needflags();\n");
 	}
-#else
-	(void) curi;
-	failure;
-	isjump;
-#endif
 }
 
 static void gen_exg(uae_u32 opcode, struct instr *curi, const char* ssize) {
@@ -2454,7 +1358,6 @@ static void gen_exg(uae_u32 opcode, struct instr *curi, const char* ssize) {
 
 static void gen_ext(uae_u32 opcode, struct instr *curi, const char* ssize) {
 	(void) opcode;
-#if defined(USE_JIT2)
 	genamode(curi->smode, "srcreg", sz_long, "src", 1, 0);
 	comprintf("\t dont_care_flags();\n");
 	start_brace();
@@ -2469,39 +1372,11 @@ static void gen_ext(uae_u32 opcode, struct instr *curi, const char* ssize) {
 	}
 	genastore("tmp", curi->smode, "srcreg",
 			curi->size == sz_word ? sz_word : sz_long, "src");
-#else
-	(void) ssize;
-	genamode(curi->smode, "srcreg", sz_long, "src", 1, 0);
-	comprintf("\tdont_care_flags();\n");
-	start_brace();
-	switch (curi->size) {
-	case sz_byte:
-		comprintf("\tint dst = src;\n"
-				"\tsign_extend_8_rr(src,src);\n");
-		break;
-	case sz_word:
-		comprintf("\tint dst = scratchie++;\n"
-				"\tsign_extend_8_rr(dst,src);\n");
-		break;
-	case sz_long:
-		comprintf("\tint dst = src;\n"
-				"\tsign_extend_16_rr(src,src);\n");
-		break;
-	default:
-		assert(0);
-		break;
-	}
-	genflags(flag_logical, curi->size == sz_word ? sz_word : sz_long, "dst", "",
-			"");
-	genastore("dst", curi->smode, "srcreg",
-			curi->size == sz_word ? sz_word : sz_long, "src");
-#endif
 }
 
 static void gen_lsl(uae_u32 opcode, struct instr *curi, const char* ssize) {
 	(void) opcode;
 	(void) ssize;
-#if defined(USE_JIT2)
 	mayfail;
 	if (curi->smode == Dreg) {
 		comprintf("if ((uae_u32)srcreg==(uae_u32)dstreg) {\n"
@@ -2546,200 +1421,11 @@ static void gen_lsl(uae_u32 opcode, struct instr *curi, const char* ssize) {
 		}
 	}
 	genastore("tmp", curi->dmode, "dstreg", curi->size, "data");
-#else
-	mayfail;
-	if (curi->smode == Dreg) {
-		comprintf("if ((uae_u32)srcreg==(uae_u32)dstreg) {\n"
-				"  FAIL(1);\n"
-				"  return 0;\n"
-				"} \n");
-		start_brace();
-	}
-	comprintf("\tdont_care_flags();\n");
-
-	genamode(curi->smode, "srcreg", curi->size, "cnt", 1, 0);
-	genamode(curi->dmode, "dstreg", curi->size, "data", 1, 0);
-	if (curi->smode != immi) {
-		if (!noflags) {
-			uses_cmov;
-			start_brace();
-			comprintf("\tint highmask;\n"
-					"\tint cdata=scratchie++;\n"
-					"\tint tmpcnt=scratchie++;\n");
-			comprintf("\tmov_l_rr(tmpcnt,cnt);\n"
-					"\tand_l_ri(tmpcnt,63);\n"
-					"\tmov_l_ri(cdata,0);\n"
-					"\tcmov_l_rr(cdata,data,%d);\n", NATIVE_CC_NE);
-			/* cdata is now either data (for shift count!=0) or
-			 0 (for shift count==0) */
-			switch (curi->size) {
-			case sz_byte:
-				comprintf("\tshll_b_rr(data,cnt);\n"
-						"\thighmask=0x38;\n");
-				break;
-			case sz_word:
-				comprintf("\tshll_w_rr(data,cnt);\n"
-						"\thighmask=0x30;\n");
-				break;
-			case sz_long:
-				comprintf("\tshll_l_rr(data,cnt);\n"
-						"\thighmask=0x20;\n");
-				break;
-			default:
-				assert(0);
-				break;
-			}
-			comprintf("test_l_ri(cnt,highmask);\n"
-					"mov_l_ri(scratchie,0);\n"
-					"cmov_l_rr(scratchie,data,%d);\n", NATIVE_CC_EQ);
-			switch (curi->size) {
-			case sz_byte:
-				comprintf("\tmov_b_rr(data,scratchie);\n");
-				break;
-			case sz_word:
-				comprintf("\tmov_w_rr(data,scratchie);\n");
-				break;
-			case sz_long:
-				comprintf("\tmov_l_rr(data,scratchie);\n");
-				break;
-			default:
-				assert(0);
-				break;
-			}
-			/* Result of shift is now in data. Now we need to determine
-			 the carry by shifting cdata one less */
-			comprintf("\tsub_l_ri(tmpcnt,1);\n");
-			switch (curi->size) {
-			case sz_byte:
-				comprintf("\tshll_b_rr(cdata,tmpcnt);\n");
-				break;
-			case sz_word:
-				comprintf("\tshll_w_rr(cdata,tmpcnt);\n");
-				break;
-			case sz_long:
-				comprintf("\tshll_l_rr(cdata,tmpcnt);\n");
-				break;
-			default:
-				assert(0);
-				break;
-			}
-			comprintf("test_l_ri(tmpcnt,highmask);\n"
-					"mov_l_ri(scratchie,0);\n"
-					"cmov_l_rr(cdata,scratchie,%d);\n", NATIVE_CC_NE);
-			/* And create the flags */
-			comprintf("\tstart_needflags();\n");
-			comprintf("\tif (needed_flags & FLAG_ZNV)\n");
-			switch (curi->size) {
-			case sz_byte:
-				comprintf("\t  test_b_rr(data,data);\n");
-				comprintf("\t bt_l_ri(cdata,7);\n");
-				break;
-			case sz_word:
-				comprintf("\t  test_w_rr(data,data);\n");
-				comprintf("\t bt_l_ri(cdata,15);\n");
-				break;
-			case sz_long:
-				comprintf("\t  test_l_rr(data,data);\n");
-				comprintf("\t bt_l_ri(cdata,31);\n");
-				break;
-			}
-			comprintf("\t live_flags();\n");
-			comprintf("\t end_needflags();\n");
-			comprintf("\t duplicate_carry();\n");
-			comprintf("if (!(needed_flags & FLAG_CZNV)) dont_care_flags();\n");
-			genastore("data", curi->dmode, "dstreg", curi->size, "data");
-		} else {
-			uses_cmov;
-			start_brace();
-			comprintf("\tint highmask;\n");
-			switch (curi->size) {
-			case sz_byte:
-				comprintf("\tshll_b_rr(data,cnt);\n"
-						"\thighmask=0x38;\n");
-				break;
-			case sz_word:
-				comprintf("\tshll_w_rr(data,cnt);\n"
-						"\thighmask=0x30;\n");
-				break;
-			case sz_long:
-				comprintf("\tshll_l_rr(data,cnt);\n"
-						"\thighmask=0x20;\n");
-				break;
-			default:
-				assert(0);
-				break;
-			}
-			comprintf("test_l_ri(cnt,highmask);\n"
-					"mov_l_ri(scratchie,0);\n"
-					"cmov_l_rr(scratchie,data,%d);\n", NATIVE_CC_EQ);
-			switch (curi->size) {
-			case sz_byte:
-				comprintf("\tmov_b_rr(data,scratchie);\n");
-				break;
-			case sz_word:
-				comprintf("\tmov_w_rr(data,scratchie);\n");
-				break;
-			case sz_long:
-				comprintf("\tmov_l_rr(data,scratchie);\n");
-				break;
-			default:
-				assert(0);
-				break;
-			}
-			genastore("data", curi->dmode, "dstreg", curi->size, "data");
-		}
-	} else {
-		start_brace();
-		comprintf("\tint tmp=scratchie++;\n"
-				"\tint bp;\n"
-				"\tmov_l_rr(tmp,data);\n");
-		switch (curi->size) {
-		case sz_byte:
-			comprintf("\tshll_b_ri(data,srcreg);\n"
-					"\tbp=8-srcreg;\n");
-			break;
-		case sz_word:
-			comprintf("\tshll_w_ri(data,srcreg);\n"
-					"\tbp=16-srcreg;\n");
-			break;
-		case sz_long:
-			comprintf("\tshll_l_ri(data,srcreg);\n"
-					"\tbp=32-srcreg;\n");
-			break;
-		default:
-			assert(0);
-			break;
-		}
-
-		if (!noflags) {
-			comprintf("\tstart_needflags();\n");
-			comprintf("\tif (needed_flags & FLAG_ZNV)\n");
-			switch (curi->size) {
-			case sz_byte:
-				comprintf("\t  test_b_rr(data,data);\n");
-				break;
-			case sz_word:
-				comprintf("\t  test_w_rr(data,data);\n");
-				break;
-			case sz_long:
-				comprintf("\t  test_l_rr(data,data);\n");
-				break;
-			}
-			comprintf("\t bt_l_ri(tmp,bp);\n"); /* Set C */
-			comprintf("\t live_flags();\n");
-			comprintf("\t end_needflags();\n");
-			comprintf("\t duplicate_carry();\n");
-			comprintf("if (!(needed_flags & FLAG_CZNV)) dont_care_flags();\n");
-		}
-		genastore("data", curi->dmode, "dstreg", curi->size, "data");
-	}
-#endif
 }
 
 static void gen_lslw(uae_u32 opcode, struct instr *curi, const char* ssize) {
 	(void) opcode;
 	(void) ssize;
-#if defined(USE_JIT2)
 	comprintf("\t dont_care_flags();\n");
 	genamode(curi->smode, "srcreg", curi->size, "src", 1, 0);
 	start_brace();
@@ -2753,15 +1439,10 @@ static void gen_lslw(uae_u32 opcode, struct instr *curi, const char* ssize) {
 		comprintf("\t jnf_LSLW(tmp,src);\n");
 	}
 	genastore("tmp", curi->smode, "srcreg", curi->size, "src");
-#else
-	(void) curi;
-	failure;
-#endif
 }
 
 static void gen_lsr(uae_u32 opcode, struct instr *curi, const char* ssize) {
 	(void) opcode;
-#if defined(USE_JIT2)
 	mayfail;
 	if (curi->smode == Dreg) {
 		comprintf("if ((uae_u32)srcreg==(uae_u32)dstreg) {\n"
@@ -2810,199 +1491,11 @@ static void gen_lsr(uae_u32 opcode, struct instr *curi, const char* ssize) {
 		}
 	}
 	genastore("tmp", curi->dmode, "dstreg", curi->size, "data");
-#else
-	(void) ssize;
-	mayfail;
-	if (curi->smode == Dreg) {
-		comprintf("if ((uae_u32)srcreg==(uae_u32)dstreg) {\n"
-				"  FAIL(1);\n"
-				"  return 0;\n"
-				"} \n");
-		start_brace();
-	}
-	comprintf("\tdont_care_flags();\n");
-
-	genamode(curi->smode, "srcreg", curi->size, "cnt", 1, 0);
-	genamode(curi->dmode, "dstreg", curi->size, "data", 1, 0);
-	if (curi->smode != immi) {
-		if (!noflags) {
-			uses_cmov;
-			start_brace();
-			comprintf("\tint highmask;\n"
-					"\tint cdata=scratchie++;\n"
-					"\tint tmpcnt=scratchie++;\n");
-			comprintf("\tmov_l_rr(tmpcnt,cnt);\n"
-					"\tand_l_ri(tmpcnt,63);\n"
-					"\tmov_l_ri(cdata,0);\n"
-					"\tcmov_l_rr(cdata,data,%d);\n", NATIVE_CC_NE);
-			/* cdata is now either data (for shift count!=0) or
-			 0 (for shift count==0) */
-			switch (curi->size) {
-			case sz_byte:
-				comprintf("\tshrl_b_rr(data,cnt);\n"
-						"\thighmask=0x38;\n");
-				break;
-			case sz_word:
-				comprintf("\tshrl_w_rr(data,cnt);\n"
-						"\thighmask=0x30;\n");
-				break;
-			case sz_long:
-				comprintf("\tshrl_l_rr(data,cnt);\n"
-						"\thighmask=0x20;\n");
-				break;
-			default:
-				assert(0);
-				break;
-			}
-			comprintf("test_l_ri(cnt,highmask);\n"
-					"mov_l_ri(scratchie,0);\n"
-					"cmov_l_rr(scratchie,data,%d);\n", NATIVE_CC_EQ);
-			switch (curi->size) {
-			case sz_byte:
-				comprintf("\tmov_b_rr(data,scratchie);\n");
-				break;
-			case sz_word:
-				comprintf("\tmov_w_rr(data,scratchie);\n");
-				break;
-			case sz_long:
-				comprintf("\tmov_l_rr(data,scratchie);\n");
-				break;
-			default:
-				assert(0);
-				break;
-			}
-			/* Result of shift is now in data. Now we need to determine
-			 the carry by shifting cdata one less */
-			comprintf("\tsub_l_ri(tmpcnt,1);\n");
-			switch (curi->size) {
-			case sz_byte:
-				comprintf("\tshrl_b_rr(cdata,tmpcnt);\n");
-				break;
-			case sz_word:
-				comprintf("\tshrl_w_rr(cdata,tmpcnt);\n");
-				break;
-			case sz_long:
-				comprintf("\tshrl_l_rr(cdata,tmpcnt);\n");
-				break;
-			default:
-				assert(0);
-				break;
-			}
-			comprintf("test_l_ri(tmpcnt,highmask);\n"
-					"mov_l_ri(scratchie,0);\n"
-					"cmov_l_rr(cdata,scratchie,%d);\n", NATIVE_CC_NE);
-			/* And create the flags */
-			comprintf("\tstart_needflags();\n");
-			comprintf("\tif (needed_flags & FLAG_ZNV)\n");
-			switch (curi->size) {
-			case sz_byte:
-				comprintf("\t  test_b_rr(data,data);\n");
-				break;
-			case sz_word:
-				comprintf("\t  test_w_rr(data,data);\n");
-				break;
-			case sz_long:
-				comprintf("\t  test_l_rr(data,data);\n");
-				break;
-			}
-			comprintf("\t bt_l_ri(cdata,0);\n"); /* Set C */
-			comprintf("\t live_flags();\n");
-			comprintf("\t end_needflags();\n");
-			comprintf("\t duplicate_carry();\n");
-			comprintf("if (!(needed_flags & FLAG_CZNV)) dont_care_flags();\n");
-			genastore("data", curi->dmode, "dstreg", curi->size, "data");
-		} else {
-			uses_cmov;
-			start_brace();
-			comprintf("\tint highmask;\n");
-			switch (curi->size) {
-			case sz_byte:
-				comprintf("\tshrl_b_rr(data,cnt);\n"
-						"\thighmask=0x38;\n");
-				break;
-			case sz_word:
-				comprintf("\tshrl_w_rr(data,cnt);\n"
-						"\thighmask=0x30;\n");
-				break;
-			case sz_long:
-				comprintf("\tshrl_l_rr(data,cnt);\n"
-						"\thighmask=0x20;\n");
-				break;
-			default:
-				assert(0);
-				break;
-			}
-			comprintf("test_l_ri(cnt,highmask);\n"
-					"mov_l_ri(scratchie,0);\n"
-					"cmov_l_rr(scratchie,data,%d);\n", NATIVE_CC_EQ);
-			switch (curi->size) {
-			case sz_byte:
-				comprintf("\tmov_b_rr(data,scratchie);\n");
-				break;
-			case sz_word:
-				comprintf("\tmov_w_rr(data,scratchie);\n");
-				break;
-			case sz_long:
-				comprintf("\tmov_l_rr(data,scratchie);\n");
-				break;
-			default:
-				assert(0);
-				break;
-			}
-			genastore("data", curi->dmode, "dstreg", curi->size, "data");
-		}
-	} else {
-		start_brace();
-		comprintf("\tint tmp=scratchie++;\n"
-				"\tint bp;\n"
-				"\tmov_l_rr(tmp,data);\n");
-		switch (curi->size) {
-		case sz_byte:
-			comprintf("\tshrl_b_ri(data,srcreg);\n"
-					"\tbp=srcreg-1;\n");
-			break;
-		case sz_word:
-			comprintf("\tshrl_w_ri(data,srcreg);\n"
-					"\tbp=srcreg-1;\n");
-			break;
-		case sz_long:
-			comprintf("\tshrl_l_ri(data,srcreg);\n"
-					"\tbp=srcreg-1;\n");
-			break;
-		default:
-			assert(0);
-			break;
-		}
-
-		if (!noflags) {
-			comprintf("\tstart_needflags();\n");
-			comprintf("\tif (needed_flags & FLAG_ZNV)\n");
-			switch (curi->size) {
-			case sz_byte:
-				comprintf("\t  test_b_rr(data,data);\n");
-				break;
-			case sz_word:
-				comprintf("\t  test_w_rr(data,data);\n");
-				break;
-			case sz_long:
-				comprintf("\t  test_l_rr(data,data);\n");
-				break;
-			}
-			comprintf("\t bt_l_ri(tmp,bp);\n"); /* Set C */
-			comprintf("\t live_flags();\n");
-			comprintf("\t end_needflags();\n");
-			comprintf("\t duplicate_carry();\n");
-			comprintf("if (!(needed_flags & FLAG_CZNV)) dont_care_flags();\n");
-		}
-		genastore("data", curi->dmode, "dstreg", curi->size, "data");
-	}
-#endif
 }
 
 static void gen_lsrw(uae_u32 opcode, struct instr *curi, const char* ssize) {
 	(void) opcode;
 	(void) ssize;
-#if defined(USE_JIT2)
 	comprintf("\t dont_care_flags();\n");
 	genamode(curi->smode, "srcreg", curi->size, "src", 1, 0);
 	start_brace();
@@ -3017,15 +1510,10 @@ static void gen_lsrw(uae_u32 opcode, struct instr *curi, const char* ssize) {
 		comprintf("\t jnf_LSRW(tmp,src);\n");
 	}
 	genastore("tmp", curi->smode, "srcreg", curi->size, "src");
-#else
-	(void) curi;
-	failure;
-#endif
 }
 
 static void gen_move(uae_u32 opcode, struct instr *curi, const char* ssize) {
 	(void) opcode;
-#if defined(USE_JIT2)
 	switch (curi->dmode) {
 		case Dreg:
 		case Areg:
@@ -3059,63 +1547,21 @@ static void gen_move(uae_u32 opcode, struct instr *curi, const char* ssize) {
 		genastore("src", curi->dmode, "dstreg", curi->size, "dst");
 		break;
 	}
-#else
-	(void) ssize;
-
-	switch (curi->dmode) {
-	case Dreg:
-	case Areg:
-		genamode(curi->smode, "srcreg", curi->size, "src", 1, 0);
-		genamode(curi->dmode, "dstreg", curi->size, "dst", 2, 0);
-		genflags(flag_mov, curi->size, "", "src", "dst");
-		genastore("dst", curi->dmode, "dstreg", curi->size, "dst");
-		break;
-	default: /* It goes to memory, not a register */
-		genamode(curi->smode, "srcreg", curi->size, "src", 1, 0);
-		genamode(curi->dmode, "dstreg", curi->size, "dst", 2, 0);
-		genflags(flag_logical, curi->size, "src", "", "");
-		genastore("src", curi->dmode, "dstreg", curi->size, "dst");
-		break;
-	}
-#endif
 }
 
 static void gen_movea(uae_u32 opcode, struct instr *curi, const char* ssize) {
 	(void) opcode;
-#if defined(USE_JIT2)
 	genamode(curi->smode, "srcreg", curi->size, "src", 1, 0);
 	genamode(curi->dmode, "dstreg", curi->size, "dst", 2, 0);
 
 	start_brace();
 	comprintf("\t jnf_MOVEA_%s(dst, src);\n", ssize);
 	genastore("dst", curi->dmode, "dstreg", sz_long, "dst");
-#else
-	(void) ssize;
-
-	genamode(curi->smode, "srcreg", curi->size, "src", 1, 0);
-	genamode(curi->dmode, "dstreg", curi->size, "dst", 2, 0);
-
-	start_brace();
-	comprintf("\tint tmps=scratchie++;\n");
-	switch (curi->size) {
-	case sz_word:
-		comprintf("\tsign_extend_16_rr(dst,src);\n");
-		break;
-	case sz_long:
-		comprintf("\tmov_l_rr(dst,src);\n");
-		break;
-	default:
-		assert(0);
-		break;
-	}
-	genastore("dst", curi->dmode, "dstreg", sz_long, "dst");
-#endif
 }
 
 static void gen_mull(uae_u32 opcode, struct instr *curi, const char* ssize) {
 	(void) opcode;
 	(void) ssize;
-#if defined(USE_JIT2)
 	comprintf("\t uae_u16 extra=%s;\n", gen_nextiword());
 	comprintf("\t int r2=(extra>>12)&7;\n"
 			"\t int tmp=scratchie++;\n");
@@ -3182,38 +1628,11 @@ static void gen_mull(uae_u32 opcode, struct instr *curi, const char* ssize) {
 		comprintf("\t	} \n"); /* The result is in r2, with r2 holding the lower 32 bits */
 		comprintf("\t }\n");
 	}
-#else
-	if (!noflags) {
-		failure;
-		return;
-	}
-	comprintf("\tuae_u16 extra=%s;\n", gen_nextiword());
-	comprintf("\tint r2=(extra>>12)&7;\n"
-			"\tint tmp=scratchie++;\n");
-
-	genamode(curi->dmode, "dstreg", curi->size, "dst", 1, 0);
-	/* The two operands are in dst and r2 */
-	comprintf("\tif (extra&0x0400) {\n" /* Need full 64 bit result */
-			"\tint r3=(extra&7);\n"
-			"\tmov_l_rr(r3,dst);\n"); /* operands now in r3 and r2 */
-	comprintf("\tif (extra&0x0800) { \n" /* signed */
-			"\t\timul_64_32(r2,r3);\n"
-			"\t} else { \n"
-			"\t\tmul_64_32(r2,r3);\n"
-			"\t} \n");
-	/* The result is in r2/tmp, with r2 holding the lower 32 bits */
-	comprintf("\t} else {\n"); /* Only want 32 bit result */
-	/* operands in dst and r2, result foes into r2 */
-	/* shouldn't matter whether it's signed or unsigned?!? */
-	comprintf("\timul_32_32(r2,dst);\n"
-			"\t}\n");
-#endif
 }
 
 static void gen_muls(uae_u32 opcode, struct instr *curi, const char* ssize) {
 	(void) opcode;
 	(void) ssize;
-#if defined(USE_JIT2)
 	comprintf("\t dont_care_flags();\n");
 	genamode(curi->smode, "srcreg", sz_word, "src", 1, 0);
 	genamode(curi->dmode, "dstreg", sz_word, "dst", 1, 0);
@@ -3227,22 +1646,11 @@ static void gen_muls(uae_u32 opcode, struct instr *curi, const char* ssize) {
 		comprintf("\t jnf_MULS(dst,src);\n");
 	}
 	genastore("dst", curi->dmode, "dstreg", sz_long, "dst");
-#else
-	comprintf("\tdont_care_flags();\n");
-	genamode(curi->smode, "srcreg", sz_word, "src", 1, 0);
-	genamode(curi->dmode, "dstreg", sz_word, "dst", 1, 0);
-	comprintf("\tsign_extend_16_rr(scratchie,src);\n"
-			"\tsign_extend_16_rr(dst,dst);\n"
-			"\timul_32_32(dst,scratchie);\n");
-	genflags(flag_logical, sz_long, "dst", "", "");
-	genastore("dst", curi->dmode, "dstreg", sz_long, "dst");
-#endif
 }
 
 static void gen_mulu(uae_u32 opcode, struct instr *curi, const char* ssize) {
 	(void) opcode;
 	(void) ssize;
-#if defined(USE_JIT2)
 	comprintf("\t dont_care_flags();\n");
 	genamode(curi->smode, "srcreg", sz_word, "src", 1, 0);
 	genamode(curi->dmode, "dstreg", sz_word, "dst", 1, 0);
@@ -3256,21 +1664,6 @@ static void gen_mulu(uae_u32 opcode, struct instr *curi, const char* ssize) {
 		comprintf("\t jnf_MULU(dst,src);\n");
 	}
 	genastore("dst", curi->dmode, "dstreg", sz_long, "dst");
-#else
-	comprintf("\tdont_care_flags();\n");
-	genamode(curi->smode, "srcreg", sz_word, "src", 1, 0);
-	genamode(curi->dmode, "dstreg", sz_word, "dst", 1, 0);
-	/* To do 16x16 unsigned multiplication, we actually use
-	 32x32 signed, and zero-extend the registers first.
-	 That solves the problem of MUL needing dedicated registers
-	 on the x86 */
-	comprintf("\tzero_extend_16_rr(scratchie,src);\n"
-			"\tzero_extend_16_rr(dst,dst);\n"
-			"\timul_32_32(dst,scratchie);\n");
-	genflags(flag_logical, sz_long, "dst", "", "");
-	genastore("dst", curi->dmode, "dstreg", sz_long, "dst");
-
-#endif
 }
 
 static void gen_nbcd(uae_u32 opcode, struct instr *curi, const char* ssize) {
@@ -3286,7 +1679,6 @@ static void gen_nbcd(uae_u32 opcode, struct instr *curi, const char* ssize) {
 
 static void gen_neg(uae_u32 opcode, struct instr *curi, const char* ssize) {
 	(void) opcode;
-#if defined(USE_JIT2)
 	genamode(curi->smode, "srcreg", curi->size, "src", 1, 0);
 	start_brace();
 	comprintf("\t int tmp=scratchie++;\n");
@@ -3302,20 +1694,10 @@ static void gen_neg(uae_u32 opcode, struct instr *curi, const char* ssize) {
 	}
 
 	genastore("tmp", curi->smode, "srcreg", curi->size, "src");
-#else
-	(void) ssize;
-	genamode(curi->smode, "srcreg", curi->size, "src", 1, 0);
-	start_brace();
-	comprintf("\tint dst=scratchie++;\n");
-	comprintf("\tmov_l_ri(dst,0);\n");
-	genflags(flag_sub, curi->size, "", "src", "dst");
-	genastore("dst", curi->smode, "srcreg", curi->size, "src");
-#endif
 }
 
 static void gen_negx(uae_u32 opcode, struct instr *curi, const char* ssize) {
 	(void) opcode;
-#if defined(USE_JIT2)
 	isaddx;
 	genamode(curi->smode, "srcreg", curi->size, "src", 1, 0);
 	start_brace();
@@ -3336,21 +1718,10 @@ static void gen_negx(uae_u32 opcode, struct instr *curi, const char* ssize) {
 	}
 
 	genastore("dst", curi->smode, "srcreg", curi->size, "src");
-#else
-	(void) ssize;
-	isaddx;
-	genamode(curi->smode, "srcreg", curi->size, "src", 1, 0);
-	start_brace();
-	comprintf("\tint dst=scratchie++;\n");
-	comprintf("\tmov_l_ri(dst,0);\n");
-	genflags(flag_subx, curi->size, "", "src", "dst");
-	genastore("dst", curi->smode, "srcreg", curi->size, "src");
-#endif
 }
 
 static void gen_not(uae_u32 opcode, struct instr *curi, const char* ssize) {
 	(void) opcode;
-#if defined(USE_JIT2)
 	genamode(curi->smode, "srcreg", curi->size, "src", 1, 0);
 	comprintf("\t dont_care_flags();\n");
 	start_brace();
@@ -3364,20 +1735,10 @@ static void gen_not(uae_u32 opcode, struct instr *curi, const char* ssize) {
 		comprintf("\t jnf_NOT_%s(tmp,src);\n", ssize);
 	}
 	genastore("tmp", curi->smode, "srcreg", curi->size, "src");
-#else
-	(void) ssize;
-	genamode(curi->smode, "srcreg", curi->size, "src", 1, 0);
-	start_brace();
-	comprintf("\tint dst=scratchie++;\n");
-	comprintf("\tmov_l_ri(dst,0xffffffff);\n");
-	genflags(flag_eor, curi->size, "", "src", "dst");
-	genastore("dst", curi->smode, "srcreg", curi->size, "src");
-#endif
 }
 
 static void gen_or(uae_u32 opcode, struct instr *curi, const char* ssize) {
 	(void) opcode;
-#if defined(USE_JIT2)
 	genamode(curi->smode, "srcreg", curi->size, "src", 1, 0);
 	genamode(curi->dmode, "dstreg", curi->size, "dst", 1, 0);
 
@@ -3392,19 +1753,11 @@ static void gen_or(uae_u32 opcode, struct instr *curi, const char* ssize) {
 		comprintf("\t jnf_OR_%s(tmp, dst,src);\n", ssize);
 	}
 	genastore("tmp", curi->dmode, "dstreg", curi->size, "dst");
-#else
-	(void) ssize;
-	genamode(curi->smode, "srcreg", curi->size, "src", 1, 0);
-	genamode(curi->dmode, "dstreg", curi->size, "dst", 1, 0);
-	genflags(flag_or, curi->size, "", "src", "dst");
-	genastore("dst", curi->dmode, "dstreg", curi->size, "dst");
-#endif
 }
 
 static void gen_orsr(uae_u32 opcode, struct instr *curi, const char* ssize) {
 	(void) opcode;
 	(void) ssize;
-#if defined(USE_JIT2)
 	genamode(curi->smode, "srcreg", curi->size, "src", 1, 0);
 	if (!noflags) {
 		comprintf("\t make_flags_live();\n");
@@ -3413,16 +1766,10 @@ static void gen_orsr(uae_u32 opcode, struct instr *curi, const char* ssize) {
 		comprintf("\t live_flags();\n");
 		comprintf("\t end_needflags();\n");
 	}
-#else
-	(void) curi;
-	failure;
-	isjump;
-#endif
 }
 
 static void gen_rol(uae_u32 opcode, struct instr *curi, const char* ssize) {
 	(void) opcode;
-#if defined(USE_JIT2)
 	mayfail;
 	if (curi->smode == Dreg) {
 		comprintf("if ((uae_u32)srcreg==(uae_u32)dstreg) {\n"
@@ -3446,60 +1793,11 @@ static void gen_rol(uae_u32 opcode, struct instr *curi, const char* ssize) {
 		comprintf("\t jnf_ROL_%s(tmp,data,cnt);\n", ssize);
 	}
 	genastore("tmp", curi->dmode, "dstreg", curi->size, "data");
-#else
-	(void) ssize;
-
-	mayfail;
-	if (curi->smode == Dreg) {
-		comprintf("if ((uae_u32)srcreg==(uae_u32)dstreg) {\n"
-				"  FAIL(1);\n"
-				"  return 0;\n"
-				"} \n");
-		start_brace();
-	}
-	comprintf("\tdont_care_flags();\n");
-	genamode(curi->smode, "srcreg", curi->size, "cnt", 1, 0);
-	genamode(curi->dmode, "dstreg", curi->size, "data", 1, 0);
-	start_brace();
-
-	switch (curi->size) {
-	case sz_long:
-		comprintf("\t rol_l_rr(data,cnt);\n");
-		break;
-	case sz_word:
-		comprintf("\t rol_w_rr(data,cnt);\n");
-		break;
-	case sz_byte:
-		comprintf("\t rol_b_rr(data,cnt);\n");
-		break;
-	}
-
-	if (!noflags) {
-		comprintf("\tstart_needflags();\n");
-		comprintf("\tif (needed_flags & FLAG_ZNV)\n");
-		switch (curi->size) {
-		case sz_byte:
-			comprintf("\t  test_b_rr(data,data);\n");
-			break;
-		case sz_word:
-			comprintf("\t  test_w_rr(data,data);\n");
-			break;
-		case sz_long:
-			comprintf("\t  test_l_rr(data,data);\n");
-			break;
-		}
-		comprintf("\t bt_l_ri(data,0x00);\n"); /* Set C */
-		comprintf("\t live_flags();\n");
-		comprintf("\t end_needflags();\n");
-	}
-	genastore("data", curi->dmode, "dstreg", curi->size, "data");
-#endif
 }
 
 static void gen_rolw(uae_u32 opcode, struct instr *curi, const char* ssize) {
 	(void) opcode;
 	(void) ssize;
-#if defined(USE_JIT2)
 	comprintf("\t dont_care_flags();\n");
 	genamode(curi->smode, "srcreg", curi->size, "src", 1, 0);
 	start_brace();
@@ -3514,15 +1812,10 @@ static void gen_rolw(uae_u32 opcode, struct instr *curi, const char* ssize) {
 		comprintf("\t jnf_ROLW(tmp,src);\n");
 	}
 	genastore("tmp", curi->smode, "srcreg", curi->size, "src");
-#else
-	(void) curi;
-	failure;
-#endif
 }
 
 static void gen_ror(uae_u32 opcode, struct instr *curi, const char* ssize) {
 	(void) opcode;
-#if defined(USE_JIT2)
 	mayfail;
 	if (curi->smode == Dreg) {
 		comprintf("if ((uae_u32)srcreg==(uae_u32)dstreg) {\n"
@@ -3546,69 +1839,11 @@ static void gen_ror(uae_u32 opcode, struct instr *curi, const char* ssize) {
 		comprintf("\t jnf_ROR_%s(tmp,data,cnt);\n", ssize);
 	}
 	genastore("tmp", curi->dmode, "dstreg", curi->size, "data");
-#else
-	(void) ssize;
-	mayfail;
-	if (curi->smode == Dreg) {
-		comprintf("if ((uae_u32)srcreg==(uae_u32)dstreg) {\n"
-				"  FAIL(1);\n"
-				"  return 0;\n"
-				"} \n");
-		start_brace();
-	}
-	comprintf("\tdont_care_flags();\n");
-	genamode(curi->smode, "srcreg", curi->size, "cnt", 1, 0);
-	genamode(curi->dmode, "dstreg", curi->size, "data", 1, 0);
-	start_brace();
-
-	switch (curi->size) {
-	case sz_long:
-		comprintf("\t ror_l_rr(data,cnt);\n");
-		break;
-	case sz_word:
-		comprintf("\t ror_w_rr(data,cnt);\n");
-		break;
-	case sz_byte:
-		comprintf("\t ror_b_rr(data,cnt);\n");
-		break;
-	}
-
-	if (!noflags) {
-		comprintf("\tstart_needflags();\n");
-		comprintf("\tif (needed_flags & FLAG_ZNV)\n");
-		switch (curi->size) {
-		case sz_byte:
-			comprintf("\t  test_b_rr(data,data);\n");
-			break;
-		case sz_word:
-			comprintf("\t  test_w_rr(data,data);\n");
-			break;
-		case sz_long:
-			comprintf("\t  test_l_rr(data,data);\n");
-			break;
-		}
-		switch (curi->size) {
-		case sz_byte:
-			comprintf("\t bt_l_ri(data,0x07);\n");
-			break;
-		case sz_word:
-			comprintf("\t bt_l_ri(data,0x0f);\n");
-			break;
-		case sz_long:
-			comprintf("\t bt_l_ri(data,0x1f);\n");
-			break;
-		}
-		comprintf("\t live_flags();\n");
-		comprintf("\t end_needflags();\n");
-	}
-	genastore("data", curi->dmode, "dstreg", curi->size, "data");
-#endif
 }
 
 static void gen_rorw(uae_u32 opcode, struct instr *curi, const char* ssize) {
 	(void) opcode;
 	(void) ssize;
-#if defined(USE_JIT2)
 	comprintf("\t dont_care_flags();\n");
 	genamode(curi->smode, "srcreg", curi->size, "src", 1, 0);
 	start_brace();
@@ -3623,15 +1858,10 @@ static void gen_rorw(uae_u32 opcode, struct instr *curi, const char* ssize) {
 		comprintf("\t jnf_RORW(tmp,src);\n");
 	}
 	genastore("tmp", curi->smode, "srcreg", curi->size, "src");
-#else
-	(void) curi;
-	failure;
-#endif
 }
 
 static void gen_roxl(uae_u32 opcode, struct instr *curi, const char* ssize) {
 	(void) opcode;
-#if defined(USE_JIT2)
 	mayfail;
 	if (curi->smode == Dreg) {
 		comprintf("if ((uae_u32)srcreg==(uae_u32)dstreg) {\n"
@@ -3660,17 +1890,11 @@ static void gen_roxl(uae_u32 opcode, struct instr *curi, const char* ssize) {
 		comprintf("\t jnf_ROXL_%s(tmp,data,cnt);\n", ssize);
 	}
 	genastore("tmp", curi->dmode, "dstreg", curi->size, "data");
-#else
-	(void) curi;
-	(void) ssize;
-	failure;
-#endif
 }
 
 static void gen_roxlw(uae_u32 opcode, struct instr *curi, const char* ssize) {
 	(void) opcode;
 	(void) ssize;
-#if defined(USE_JIT2)
 	isaddx;
 	comprintf("\t dont_care_flags();\n");
 	genamode(curi->smode, "srcreg", curi->size, "src", 1, 0);
@@ -3690,16 +1914,11 @@ static void gen_roxlw(uae_u32 opcode, struct instr *curi, const char* ssize) {
 		comprintf("\t jnf_ROXLW(tmp,src);\n");
 	}
 	genastore("tmp", curi->smode, "srcreg", curi->size, "src");
-#else
-	(void) curi;
-	failure;
-#endif
 }
 
 static void gen_roxr(uae_u32 opcode, struct instr *curi, const char* ssize) {
 	(void) opcode;
 	(void) ssize;
-#if defined(USE_JIT2)
 	mayfail;
 	if (curi->smode == Dreg) {
 		comprintf("if ((uae_u32)srcreg==(uae_u32)dstreg) {\n"
@@ -3728,16 +1947,11 @@ static void gen_roxr(uae_u32 opcode, struct instr *curi, const char* ssize) {
 		comprintf("\t jnf_ROXR_%s(tmp,data,cnt);\n", ssize);
 	}
 	genastore("tmp", curi->dmode, "dstreg", curi->size, "data");
-#else
-	(void) curi;
-	failure;
-#endif
 }
 
 static void gen_roxrw(uae_u32 opcode, struct instr *curi, const char* ssize) {
 	(void) opcode;
 	(void) ssize;
-#if defined(USE_JIT2)
 	isaddx;
 	comprintf("\t dont_care_flags();\n");
 	genamode(curi->smode, "srcreg", curi->size, "src", 1, 0);
@@ -3757,10 +1971,6 @@ static void gen_roxrw(uae_u32 opcode, struct instr *curi, const char* ssize) {
 		comprintf("\t jnf_ROXRW(tmp,src);\n");
 	}
 	genastore("tmp", curi->smode, "srcreg", curi->size, "src");
-#else
-	(void) curi;
-	failure;
-#endif
 }
 
 static void gen_sbcd(uae_u32 opcode, struct instr *curi, const char* ssize) {
@@ -3847,7 +2057,6 @@ static void gen_scc(uae_u32 opcode, struct instr *curi, const char* ssize) {
 
 static void gen_sub(uae_u32 opcode, struct instr *curi, const char* ssize) {
 	(void) opcode;
-#if defined(USE_JIT2)
 	genamode(curi->smode, "srcreg", curi->size, "src", 1, 0);
 	genamode(curi->dmode, "dstreg", curi->size, "dst", 1, 0);
 
@@ -3867,51 +2076,19 @@ static void gen_sub(uae_u32 opcode, struct instr *curi, const char* ssize) {
 		comprintf("\t jnf_SUB_%s(tmp,dst,src);\n", ssize);
 	}
 	genastore("tmp", curi->dmode, "dstreg", curi->size, "dst");
-#else
-	(void) ssize;
-	genamode(curi->smode, "srcreg", curi->size, "src", 1, 0);
-	genamode(curi->dmode, "dstreg", curi->size, "dst", 1, 0);
-	genflags(flag_sub, curi->size, "", "src", "dst");
-	genastore("dst", curi->dmode, "dstreg", curi->size, "dst");
-#endif
 }
 
 static void gen_suba(uae_u32 opcode, struct instr *curi, const char* ssize) {
 	(void) opcode;
-#if defined(USE_JIT2)
 	genamode(curi->smode, "srcreg", curi->size, "src", 1, 0);
 	genamode(curi->dmode, "dstreg", sz_long, "dst", 1, 0);
 	start_brace();
 	comprintf("\t jnf_SUBA_%s(dst, src);\n", ssize);
 	genastore("dst", curi->dmode, "dstreg", sz_long, "dst");
-#else
-	(void) ssize;
-	genamode(curi->smode, "srcreg", curi->size, "src", 1, 0);
-	genamode(curi->dmode, "dstreg", sz_long, "dst", 1, 0);
-	start_brace();
-	comprintf("\tint tmp=scratchie++;\n");
-	switch (curi->size) {
-	case sz_byte:
-		comprintf("\tsign_extend_8_rr(tmp,src);\n");
-		break;
-	case sz_word:
-		comprintf("\tsign_extend_16_rr(tmp,src);\n");
-		break;
-	case sz_long:
-		comprintf("\ttmp=src;\n");
-		break;
-	default:
-		assert(0);
-		break;
-	}
-	comprintf("\tsub_l(dst,tmp);\n");
-	genastore("dst", curi->dmode, "dstreg", sz_long, "dst");
-#endif
 }
 
 static void gen_subx(uae_u32 opcode, struct instr *curi, const char* ssize) {
 	(void) opcode;
-#if defined(USE_JIT2)
 	isaddx;
 	genamode(curi->smode, "srcreg", curi->size, "src", 1, 0);
 	genamode(curi->dmode, "dstreg", curi->size, "dst", 1, 0);
@@ -3932,20 +2109,11 @@ static void gen_subx(uae_u32 opcode, struct instr *curi, const char* ssize) {
 		comprintf("\t jnf_SUBX_%s(tmp,dst,src);\n", ssize);
 	}
 	genastore("tmp", curi->dmode, "dstreg", curi->size, "dst");
-#else
-	(void) ssize;
-	isaddx;
-	genamode(curi->smode, "srcreg", curi->size, "src", 1, 0);
-	genamode(curi->dmode, "dstreg", curi->size, "dst", 1, 0);
-	genflags(flag_subx, curi->size, "", "src", "dst");
-	genastore("dst", curi->dmode, "dstreg", curi->size, "dst");
-#endif
 }
 
 static void gen_swap(uae_u32 opcode, struct instr *curi, const char* ssize) {
 	(void) opcode;
 	(void) ssize;
-#if defined(USE_JIT2)
 	genamode(curi->smode, "srcreg", sz_long, "src", 1, 0);
 	comprintf("\t dont_care_flags();\n");
 	start_brace();
@@ -3960,19 +2128,11 @@ static void gen_swap(uae_u32 opcode, struct instr *curi, const char* ssize) {
 		comprintf("\t jnf_SWAP(src);\n");
 	}
 	genastore("src", curi->smode, "srcreg", sz_long, "src");
-#else
-	genamode(curi->smode, "srcreg", sz_long, "src", 1, 0);
-	comprintf("\tdont_care_flags();\n");
-	comprintf("\tarm_ROR_l_ri8(src,16);\n");
-	genflags(flag_logical, sz_long, "src", "", "");
-	genastore("src", curi->smode, "srcreg", sz_long, "src");
-#endif
 }
 
 static void gen_tst(uae_u32 opcode, struct instr *curi, const char* ssize) {
 	(void) opcode;
 	(void) ssize;
-#if defined(USE_JIT2)
 	genamode(curi->smode, "srcreg", curi->size, "src", 1, 0);
 	comprintf("\t dont_care_flags();\n");
 	if (!noflags) {
@@ -3982,10 +2142,6 @@ static void gen_tst(uae_u32 opcode, struct instr *curi, const char* ssize) {
 		comprintf("\t live_flags();\n");
 		comprintf("\t end_needflags();\n");
 	}
-#else
-	genamode(curi->smode, "srcreg", curi->size, "src", 1, 0);
-	genflags(flag_logical, curi->size, "src", "", "");
-#endif
 }
 
 static int /* returns zero for success, non-zero for failure */

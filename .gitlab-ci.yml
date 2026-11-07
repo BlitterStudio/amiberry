@@ -104,9 +104,7 @@ libretro-build-osx-x64:
 ################################## CELLPHONES ################################
 # Android ARMv8a
 #
-# No armeabi-v7a job: the 32-bit ARM JIT does not compile in this
-# configuration (compemu_arm.h wants N_REGS, which nothing defines here), and
-# fsdb_host.cpp narrows a 64-bit timestamp into a 32-bit time_t.
+# Only 64-bit host ABIs are supported.
 libretro-build-android-arm64-v8a:
   extends:
     - .libretro-android-make-arm64-v8a

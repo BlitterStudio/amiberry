@@ -84,16 +84,9 @@ else ifneq (,$(findstring android,$(platform)))
    ifeq ($(platform), android-arm64)
       ANDROID_TRIPLE := aarch64-linux-android
       ARCH := aarch64
-   else ifeq ($(platform), android-arm)
-      ANDROID_TRIPLE := armv7a-linux-androideabi
-      ARCH := arm
-      FLAGS += -mfpu=neon -mfloat-abi=softfp
    else ifneq (,$(filter $(platform),android-x86_64 android-x64))
       ANDROID_TRIPLE := x86_64-linux-android
       ARCH := x86_64
-   else ifeq ($(platform), android-x86)
-      ANDROID_TRIPLE := i686-linux-android
-      ARCH := x86
    else
       $(error unknown Android platform '$(platform)')
    endif
@@ -123,6 +116,11 @@ else
    CHD_SOCKET := $(AMIBERRY_DIR)/src/archivers/chd/winsocket.cpp
    SHARED := -shared -static -Wl,--no-undefined
 endif
+
+ifneq (,$(filter arm64 ARM64,$(ARCH)))
+   override ARCH := aarch64
+endif
+
 
 LDFLAGS += $(fpic) $(SHARED)
 FLAGS += $(fpic)
@@ -174,13 +172,9 @@ FLAGS += -DCHD_FLAC_PLATFORM_HEADER=\"flac_platform_internal_libretro.h\"
 FLAGS += -DSOUND_PLATFORM_HEADER=\"sound_platform_internal_libretro.h\"
 FLAGS += -DWITH_MIDI
 
-ifneq (,$(findstring aarch64,$(ARCH)))
+ifeq ($(ARCH),aarch64)
    FLAGS += -DCPU_AARCH64
-else ifneq (,$(findstring arm64,$(ARCH)))
-   FLAGS += -DCPU_AARCH64
-else ifneq (,$(findstring arm,$(ARCH)))
-   FLAGS += -DCPU_ARM
-else
+else ifneq (,$(filter x86_64 amd64 AMD64,$(ARCH)))
    FLAGS += -DCPU_X86_64
 endif
 
@@ -270,6 +264,21 @@ FLAGS += -D_WIN32_WINNT=0x0601
 # Link winpthread explicitly. The link is also harmless under MinGW-w64
 # GCC, where it's normally pulled in implicitly.
 LDFLAGS += -liconv -lws2_32 -lz -liphlpapi -lgdi32 -lwinmm -lpthread
+endif
+
+# The target must have 8-byte pointers. Probed here, after the platform
+# sections above have chosen the compiler (e.g. CLANG64 on Windows) and its
+# flags. No "#" in the command: GNU make 3.81 (macOS) would read it as the
+# start of a comment. tr strips the CR of Windows toolchains.
+# Not when only clean/distclean are made: they must work without a target
+# compiler. "make clean all" still probes.
+ifneq (,$(if $(MAKECMDGOALS),$(filter-out clean distclean,$(MAKECMDGOALS)),all))
+TARGET_POINTER_SIZE := $(strip $(shell printf '' | $(CXX) $(CPPFLAGS) $(CXXFLAGS) $(FLAGS) -dM -E -x c++ - 2>/dev/null | grep __SIZEOF_POINTER__ | awk '{ print $$3 }' | tr -d '\r'))
+ifeq ($(TARGET_POINTER_SIZE),)
+   $(error Could not determine the target pointer size with $(CXX) (Amiberry requires a 64-bit target ABI); check the target compiler and flags)
+else ifneq ($(TARGET_POINTER_SIZE),8)
+   $(error Amiberry requires a 64-bit target ABI, $(CXX) targets $(TARGET_POINTER_SIZE)-byte pointers; check the target compiler and flags)
+endif
 endif
 
 # Source files - Core Amiga Emulation

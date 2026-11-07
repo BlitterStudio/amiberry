@@ -1,5 +1,5 @@
 /*
- *  compiler/flags_x86.h - Native flags definitions for IA-32
+ *  compiler/flags_x86_64.h - Native flags definitions for IA-32
  *
  *  Original 68040 JIT compiler for UAE, copyright 2000-2002 Bernd Meyer
  *
@@ -44,7 +44,7 @@ enum {
 	NATIVE_CC_LE = 14
 };
 
-/* FIXME: include/flags_x86.h in UAE had the following values:
+/* FIXME: include/flags_x86_64.h in UAE had the following values:
 	NATIVE_CC_VC = 11,
 	NATIVE_CC_VS = 10,
 */

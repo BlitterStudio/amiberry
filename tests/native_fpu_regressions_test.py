@@ -50,7 +50,7 @@ def production_frontend():
 
 
 def production_x87_predicate():
-    source = (ROOT / "src/jit/x86/codegen_x86.cpp").read_text()
+    source = (ROOT / "src/jit/x86_64/codegen_x86_64.cpp").read_text()
     start = source.index("static inline void raw_fflags_into_flags(int r)")
     emitter = source[start:source.index("\n}", start) + 2]
     return r"""

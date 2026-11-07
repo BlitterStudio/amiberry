@@ -5,10 +5,10 @@
 #include "uae/memory.h"
 #include "readcpu.h"
 #include "newcpu.h"
-#include "comptbl_x86.h"
+#include "comptbl_x86_64.h"
 #include "debug.h"
-#include "compemu_x86.h"
-#include "flags_x86.h"
+#include "compemu_x86_64.h"
+#include "flags_x86_64.h"
 
 #if !defined(PART_1) && !defined(PART_2) && !defined(PART_3) && !defined(PART_4) && !defined(PART_5) && !defined(PART_6) && !defined(PART_7) && !defined(PART_8)
 #define PART_1 1

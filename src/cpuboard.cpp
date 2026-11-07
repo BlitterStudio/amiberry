@@ -1915,11 +1915,7 @@ void cpuboard_cleanup(void)
 #if 0
 } else {
 		if (blizzardram_nojit_bank.baseaddr) {
-#ifdef CPU_64_BIT
 			uae_vm_free(blizzardram_nojit_bank.baseaddr, blizzardram_nojit_bank.allocated);
-#else
-			xfree(blizzardram_nojit_bank.baseaddr);
-#endif
 		}
 	}
 #endif

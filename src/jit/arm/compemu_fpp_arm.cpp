@@ -334,13 +334,8 @@ STATIC_INLINE int comp_fp_adr (uae_u32 opcode)
 }
 
 /* FPU operations that set FP_RESULT make it the source of the FPSR
- * condition codes again (see emit_cc_from_fpsr()). ARM64 only: 32-bit ARM
- * has no FPSR-based predicate yet and never sets fpu_fpsr_cc_written. */
-#if defined(CPU_AARCH64)
+ * condition codes again (see emit_cc_from_fpsr()). */
 #define FP_RESULT_WRITTEN() fpu_cc_written_clear()
-#else
-#define FP_RESULT_WRITTEN()
-#endif
 
 /* host condition for FScc/FBcc predicate 0-15 (the $10 bit only adds BSUN) */
 static const int fp_native_cc[16] = {
@@ -374,32 +369,9 @@ void comp_fscc_opp (uae_u32 opcode, uae_u16 extra)
 	fflags_into_flags_keep_ccr ();
 	reg = (opcode & 7);
 
-#if defined(CPU_AARCH64)
 	fp_fscc_ri(reg, fp_native_cc[extra & 0x0f]);
 	if ((extra & 0x0f) != 0 && (extra & 0x0f) != 15)
 		fp_cc_from_fpsr(reg, fpp_get_cond_mask(extra & 0x1f));
-	return;
-#endif
-	if (!(opcode & 0x38)) {
-	  switch (extra & 0x0f) { /* according to fpp.c, the 0x10 bit is ignored */
-		  case 0: fp_fscc_ri(reg, NATIVE_CC_F_NEVER); break;
-		  case 1: fp_fscc_ri(reg, NATIVE_CC_EQ); break;
-		  case 2: fp_fscc_ri(reg, NATIVE_CC_F_OGT); break;
-		  case 3: fp_fscc_ri(reg, NATIVE_CC_F_OGE); break;
-		  case 4: fp_fscc_ri(reg, NATIVE_CC_F_OLT); break;
-		  case 5: fp_fscc_ri(reg, NATIVE_CC_F_OLE); break;
-		  case 6: fp_fscc_ri(reg, NATIVE_CC_F_OGL); break;
-		  case 7: fp_fscc_ri(reg, NATIVE_CC_F_OR); break;
-		  case 8: fp_fscc_ri(reg, NATIVE_CC_F_UN); break;
-		  case 9: fp_fscc_ri(reg, NATIVE_CC_F_UEQ); break;
-		  case 10: fp_fscc_ri(reg, NATIVE_CC_F_UGT); break;
-		  case 11: fp_fscc_ri(reg, NATIVE_CC_F_UGE); break;
-		  case 12: fp_fscc_ri(reg, NATIVE_CC_F_ULT); break;
-		  case 13: fp_fscc_ri(reg, NATIVE_CC_F_ULE); break;
-		  case 14: fp_fscc_ri(reg, NATIVE_CC_NE); break;
-		  case 15: fp_fscc_ri(reg, NATIVE_CC_AL); break;
-	  }
-  }
 }
 
 void comp_fbcc_opp (uae_u32 opcode)
@@ -432,10 +404,8 @@ void comp_fbcc_opp (uae_u32 opcode)
   if(cc == 0)
     return; /* jump never */
 
-	/* ARM64 fix: split the branch target computation so that the
-	 * displacement and the host pointer addition are separate.
-	 * On 32-bit, mov_l_ri folds everything into a single value,
-	 * but on 64-bit, set_const masks non-PC_P registers to 32 bits,
+	/* Split the displacement and host pointer addition:
+	 * set_const masks non-PC_P registers to 32 bits,
 	 * truncating the host pointer.  Match the pattern used by the
 	 * integer Bcc handlers: load signed displacement first, then
 	 * add the 64-bit comp_pc_p via arm_ADD_l_ri. */
@@ -453,7 +423,6 @@ void comp_fbcc_opp (uae_u32 opcode)
 
 	v1 = get_const (PC_P);
 	v2 = get_const (S1);
-#if defined(CPU_AARCH64)
 	if (cc == 15) {
 		register_branch (v2, v2, NATIVE_CC_AL);
 		return;
@@ -466,27 +435,6 @@ void comp_fbcc_opp (uae_u32 opcode)
 	fp_cc_from_fpsr (S2, fpp_get_cond_mask(opcode & 0x1f));
 	fp_fbcc_test (S2);
 	register_branch (v1, v2, NATIVE_CC_NE);
-	return;
-#endif
-	fflags_into_flags_keep_ccr ();
-
-	switch (cc) {
-		case 1: register_branch (v1, v2, NATIVE_CC_EQ); break;
-		case 2: register_branch (v1, v2, NATIVE_CC_F_OGT); break;
-		case 3: register_branch (v1, v2, NATIVE_CC_F_OGE); break;
-		case 4: register_branch (v1, v2, NATIVE_CC_F_OLT); break;
-		case 5: register_branch (v1, v2, NATIVE_CC_F_OLE); break;
-		case 6: register_branch (v1, v2, NATIVE_CC_F_OGL); break;
-		case 7: register_branch (v1, v2, NATIVE_CC_F_OR); break;
-		case 8: register_branch (v1, v2, NATIVE_CC_F_UN); break;
-		case 9: register_branch (v1, v2, NATIVE_CC_F_UEQ); break;
-		case 10: register_branch (v1, v2, NATIVE_CC_F_UGT); break;
-		case 11: register_branch (v1, v2, NATIVE_CC_F_UGE); break;
-		case 12: register_branch (v1, v2, NATIVE_CC_F_ULT); break;
-		case 13: register_branch (v1, v2, NATIVE_CC_F_ULE); break;
-		case 14: register_branch (v1, v2, NATIVE_CC_NE); break;
-		case 15: register_branch (v2, v2, NATIVE_CC_AL); break;
-	}
 }
 
 static uae_u32 dhex_pi[]    ={0x54442D18, 0x400921FB};

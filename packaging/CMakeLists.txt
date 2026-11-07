@@ -57,9 +57,6 @@ set(CPACK_DMG_DS_STORE_SETUP_SCRIPT "${CMAKE_SOURCE_DIR}/packaging/dmg/AppDMGSet
 if (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64" OR CMAKE_SYSTEM_PROCESSOR MATCHES "arm64")
     set(_deb_arch "arm64")
     set(_rpm_arch "aarch64")
-elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "arm")
-    set(_deb_arch "armhf")
-    set(_rpm_arch "armhf")
 elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "riscv64")
     set(_deb_arch "riscv64")
     set(_rpm_arch "riscv64")
@@ -211,16 +208,13 @@ elseif (WIN32)
 	if (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|arm64|ARM64")
 		set(CPACK_INNOSETUP_ARCHITECTURE arm64)
 		set(_innosetup_arch_suffix "arm64")
-	elseif (CMAKE_SIZEOF_VOID_P EQUAL 8)
+	else()
 		set(CPACK_INNOSETUP_ARCHITECTURE x64)
 		# Allow the x64 installer to run on Windows 11 ARM64 under x64
 		# emulation. Plain "x64" excludes ARM64 machines.
 		set(CPACK_INNOSETUP_SETUP_ArchitecturesAllowed "x64compatible")
 		set(CPACK_INNOSETUP_SETUP_ArchitecturesInstallIn64BitMode "x64compatible")
 		set(_innosetup_arch_suffix "win64")
-	else()
-		set(CPACK_INNOSETUP_ARCHITECTURE x86)
-		set(_innosetup_arch_suffix "win32")
 	endif()
 	# Override CPack's default "<name>-<version>-win64.exe" so the ARM64
 	# installer doesn't get the misleading win64 suffix when produced on

@@ -834,6 +834,17 @@ jobs:
           name: ${{ matrix.artifact_name }}
           path: amiberry-*.zip
 
+  test-host-architecture:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v6
+
+      - name: Verify the 64-bit host ABI policy
+        run: bash tests/test_host_architecture.sh
+
   # The test suite's settings schema test (one of tests/run_tests.sh's
   # SLOW_TESTS) against the Ubuntu 24.04 package, beside the other jobs: it
   # regenerates the availability, transition and preset tables and loads

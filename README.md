@@ -7,7 +7,7 @@
 
 **Optimized Amiga emulator for Linux, macOS, Windows, Android, FreeBSD, and Haiku.**
 
-Built on the WinUAE emulation core, Amiberry delivers full Amiga compatibility across ARM, x86, RISC-V, and LoongArch64 hardware — from a Raspberry Pi to a desktop workstation. Custom JIT compilation for ARM64 and x86-64 provides maximum emulation speed.
+Built on the WinUAE emulation core, Amiberry delivers full Amiga compatibility on 64-bit hosts, including ARM64, x86-64, RISC-V and LoongArch64 hardware — from a Raspberry Pi to a desktop workstation. Custom JIT compilation for ARM64 and x86-64 provides maximum emulation speed. 32-bit host builds are not supported; emulated Amiga CPU and address widths are unchanged.
 
 ## Sponsors
 
@@ -196,7 +196,7 @@ original synthetic ROM's predicate matrix and integer-CCR preservation checks
 through both the interpreter and JIT, without external ROMs or disks.
 
 Interpreter handlers and x86 JIT translators are checked in. After changing
-`src/gencpu.cpp` or `src/jit/x86/gencomp.cpp`, regenerate their outputs;
+`src/gencpu.cpp` or `src/jit/x86_64/gencomp.cpp`, regenerate their outputs;
 CMake does not run these generators automatically.
 
 ## Contributing

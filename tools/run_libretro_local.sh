@@ -176,6 +176,8 @@ if [[ "$os_name" == "Darwin" ]]; then
 			run_prefix=(arch -x86_64)
 		fi
 	elif [[ "$retroarch_file_info" == *"arm64"* ]]; then
+		# macOS spells it arm64 (also in file(1) output, checked below);
+		# libretro/Makefile maps ARCH=arm64 to aarch64.
 		target_arch="arm64"
 	fi
 fi

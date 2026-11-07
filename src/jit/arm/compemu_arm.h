@@ -8,7 +8,7 @@
  * This file is part of the ARAnyM project which builds a new and powerful
  * TOS/FreeMiNT compatible virtual machine running on almost any hardware.
  *
- * JIT compiler m68k -> IA-32 and AMD64
+ * JIT compiler m68k -> ARM64
  *
  * Original 68040 JIT compiler for UAE, copyright 2000-2002 Bernd Meyer
  * Adaptation for Basilisk II and improvements, copyright 2000-2004 Gwenole Beauchesne
@@ -36,12 +36,8 @@
 #include "newcpu.h"
 
 #ifdef UAE
-#ifdef CPU_64_BIT
 typedef uae_u64 uintptr;
 typedef uae_s64 intptr;
-#else
-typedef uae_u32 uintptr;
-#endif
 /* FIXME: cpummu.cpp also checks for USE_JIT, possibly others */
 #define USE_JIT
 #endif
@@ -85,13 +81,8 @@ typedef union {
 #define MAXCYCLES (1000 * CYCLE_UNIT)
 
 #define BYTES_PER_INST 10240  /* paranoid ;-) */
-#if defined(CPU_arm)
 #define LONGEST_68K_INST 256 /* The number of bytes the longest possible
 			       68k instruction takes */
-#else
-#define LONGEST_68K_INST 16 /* The number of bytes the longest possible
-			       68k instruction takes */
-#endif
 #define MAX_CHECKSUM_LEN 2048 /* The maximum size we calculate checksums
 				 for. Anything larger will be flushed
 				 unconditionally even with SOFT_FLUSH */
@@ -116,13 +107,7 @@ typedef union {
 #define FLAG_ALL  (FLAG_C | FLAG_Z | FLAG_N | FLAG_V | FLAG_X)
 #define FLAG_ZNV  (FLAG_Z | FLAG_N | FLAG_V)
 
-#if defined(CPU_arm) && !defined(ARMV6T2) && !defined(CPU_AARCH64)
-#define USE_DATA_BUFFER
-#elif defined(CPU_AARCH64)
 #define N_REGS 18   /* really 32, but 29 to 31 are FP, LR, SP; 18 has special meaning; 27 holds memstart and 28 holds regs-struct */
-#else
-#define N_REGS 11  /* really 16, but 13 to 15 are SP, LR, PC; 11 holds memstart and 12 is scratch register */
-#endif
 
 #define N_FREGS 16  // We use 10 regs: 6 - FP_RESULT, 7 - SCRATCH, 8-15 - Amiga regs FP0-FP7
 
@@ -283,10 +268,8 @@ typedef struct {
 /* What we expose to the outside */
 #define DECLARE_MIDFUNC(func) extern void func
 
-#if defined(CPU_arm)
 #include "compemu_midfunc_arm.h"
 #include "compemu_midfunc_arm2.h"
-#endif
 
 #undef DECLARE_MIDFUNC
 
@@ -391,7 +374,6 @@ typedef fptype fpu_register;
 
 void jit_abort(const TCHAR *format,...);
 
-#ifdef CPU_64_BIT
 static inline uae_u32 check_uae_p32(uintptr address, const char* file, int line)
 {
 	if (address > (uintptr_t)0xffffffff) {
@@ -413,8 +395,5 @@ static inline uae_u32 check_uae_p32(uintptr address, const char* file, int line)
 	return (uae_u32)address;
 }
 #define uae_p32(x) (check_uae_p32((uintptr)(x), __FILE__, __LINE__))
-#else
-#define uae_p32(x) ((uae_u32)(x))
-#endif
 
 #endif /* COMPEMU_H */

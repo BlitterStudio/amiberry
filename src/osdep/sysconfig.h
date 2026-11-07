@@ -1,5 +1,7 @@
 #pragma once
 
+#include "host_arch.h"
+
 #ifdef _WIN32
 /* Include Winsock2 early, before any C++ std headers that bring in
  * std::byte (via 'using namespace std' in sysdeps.h).  This avoids
@@ -219,11 +221,7 @@
 
 #include <cstdint>
 
-#if defined(__x86_64__) || defined(CPU_AARCH64) || defined(CPU_AMD64) || defined(CPU_loongarch64) || defined(__LP64__) || defined(_WIN64)
 #define SIZEOF_VOID_P 8
-#else
-#define SIZEOF_VOID_P 4
-#endif
 
 #if !defined(AHI)
 #undef ENFORCER
@@ -370,10 +368,8 @@ typedef int32_t uae_atomic;
 /* The number of bytes in a long.  */
 #if defined(_WIN32)
 #define SIZEOF_LONG 4  /* Windows LLP64: long is always 4 bytes */
-#elif defined(__x86_64__) || defined(CPU_AARCH64) || defined(CPU_AMD64) || defined(CPU_loongarch64) || defined(__LP64__)
-#define SIZEOF_LONG 8
 #else
-#define SIZEOF_LONG 4
+#define SIZEOF_LONG 8
 #endif
 
 /* The number of bytes in a long long.  */

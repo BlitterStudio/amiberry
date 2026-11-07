@@ -62,9 +62,9 @@ static SDL_Mutex* ppc_mutex, *ppc_mutex2;
  * (SDL_CPUPauseInstruction). */
 static inline void ppc_spinlock_cpu_relax(void)
 {
-#if defined(__x86_64__) || defined(__i386__)
+#if defined(__x86_64__)
 	__asm__ __volatile__("pause");
-#elif defined(__aarch64__) || defined(__arm__)
+#elif defined(__aarch64__)
 	__asm__ __volatile__("yield");
 #endif
 }

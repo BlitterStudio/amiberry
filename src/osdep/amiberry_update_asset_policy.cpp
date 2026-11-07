@@ -30,8 +30,6 @@ bool matches_architecture(const std::string& lower_name, const linux_release_arc
 	case linux_release_arch::aarch64:
 		return lower_name.find("aarch64") != std::string::npos
 			|| lower_name.find("arm64") != std::string::npos;
-	case linux_release_arch::armhf:
-		return lower_name.find("armhf") != std::string::npos;
 	case linux_release_arch::x86_64:
 	default:
 		return lower_name.find("x86_64") != std::string::npos

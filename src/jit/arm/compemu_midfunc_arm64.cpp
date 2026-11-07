@@ -516,7 +516,6 @@ MIDFUNC(2,arm_ADD_l,(RW4 d, RR4 s))
 {
 	if (isconst(s)) {
 		uintptr val = live.state[s].val;
-		#ifdef CPU_AARCH64
 		// When adding a 32-bit M68K displacement to PC_P (a 64-bit host
 		// pointer), sign-extend the displacement first.  M68K branch
 		// offsets are signed, but stored as unsigned uintptr in
@@ -525,17 +524,13 @@ MIDFUNC(2,arm_ADD_l,(RW4 d, RR4 s))
 		// instead of the correct 0x3...
 		if (d == PC_P && val <= (uintptr)0xFFFFFFFFULL)
 			val = (uintptr)(uae_s64)(uae_s32)val;
-#endif
 		COMPCALL(arm_ADD_l_ri)(d, val);
 		return;
 	}
 
-#ifdef CPU_AARCH64
 	bool is_pcp = (d == PC_P);
-#endif
 	s = readreg(s);
 	d = rmw(d);
-#ifdef CPU_AARCH64
 	if (is_pcp) {
 		/* PC_P holds a 64-bit host pointer. src is a signed 32-bit
 		   displacement in a W register.  Use ADD Xd, Xd, Ws, SXTW
@@ -543,7 +538,6 @@ MIDFUNC(2,arm_ADD_l,(RW4 d, RR4 s))
 		   adding, preserving the upper bits of the host pointer. */
 		ADD_xxwEX(d, d, s, 6); // extend option 6 = SXTW
 	} else
-#endif
 	{
 		ADD_www(d, d, s);
 	}

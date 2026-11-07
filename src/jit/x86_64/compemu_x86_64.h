@@ -36,12 +36,8 @@
 #include "newcpu.h"
 
 #ifdef UAE
-#ifdef CPU_64_BIT
 typedef uae_u64 uintptr;
 typedef uae_s64 intptr;
-#else
-typedef uae_u32 uintptr;
-#endif
 /* FIXME: cpummu.cpp also checks for USE_JIT, possibly others */
 #define USE_JIT
 #endif
@@ -123,13 +119,8 @@ union cacheline {
 #define SCALE 2
 
 #define BYTES_PER_INST 10240  /* paranoid ;-) */
-#if defined(CPU_arm)
-#define LONGEST_68K_INST 256 /* The number of bytes the longest possible
-			       68k instruction takes */
-#else
 #define LONGEST_68K_INST 16 /* The number of bytes the longest possible
 			       68k instruction takes */
-#endif
 #define MAX_CHECKSUM_LEN 2048 /* The maximum size we calculate checksums
 				 for. Anything larger will be flushed
 				 unconditionally even with SOFT_FLUSH */
@@ -148,16 +139,7 @@ union cacheline {
 
 #define KILLTHERAT 1  /* Set to 1 to avoid some partial_rat_stalls */
 
-#if defined(CPU_arm)
-#define USE_DATA_BUFFER
-#define N_REGS 13  /* really 16, but 13 to 15 are SP, LR, PC */
-#else
-#if defined(CPU_x86_64)
 #define N_REGS 16 /* really only 15, but they are numbered 0-3,5-15 */
-#else
-#define N_REGS 8  /* really only 7, but they are numbered 0,1,2,3,5,6,7 */
-#endif
-#endif
 #define N_FREGS 6 /* That leaves us two positions on the stack to play with */
 
 /* Functions exposed to newcpu, or to what was moved from newcpu.c to
@@ -391,9 +373,7 @@ extern int touchcnt;
 /* What we expose to the outside */
 #define DECLARE_MIDFUNC(func) extern void func
 
-#if defined(CPU_i386) || defined(CPU_x86_64)
-#include "compemu_midfunc_x86.h"
-#endif
+#include "compemu_midfunc_x86_64.h"
 
 #undef DECLARE_MIDFUNC
 

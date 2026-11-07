@@ -48,7 +48,7 @@
 #include "memory-uae.h"
 #include "readcpu.h"
 #include "newcpu.h"
-#include "compemu_x86.h"
+#include "compemu_x86_64.h"
 //#include "fpu/fpu.h"
 //#include "fpu/flags.h"
 //#include "fpu/exceptions.h"

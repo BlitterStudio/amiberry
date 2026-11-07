@@ -6,8 +6,7 @@
 enum class linux_release_arch
 {
 	x86_64,
-	aarch64,
-	armhf
+	aarch64
 };
 
 enum class linux_installation_kind

@@ -40,18 +40,12 @@
 #error "Only Fixed Addressing is supported with the JIT Compiler"
 #endif
 
-#if defined(X86_ASSEMBLY) && !SAHF_SETO_PROFITABLE
-#error "Only [LS]AHF scheme to [gs]et flags is supported with the JIT Compiler"
-#endif
 
 /* NOTE: support for AMD64 assumes translation cache and other code
  * buffers are allocated into a 32-bit address space because (i) B2/JIT
  * code is not 64-bit clean and (ii) it's faster to resolve branches
  * that way.
  */
-#if !defined(CPU_i386) && !defined(CPU_x86_64) && !defined(CPU_arm) && !defined(CPU_AARCH64)
-#error "Only IA-32, X86-64, ARM and ARM64 targets are supported with the JIT Compiler"
-#endif
 #endif
 
 #define USE_MATCH 0
@@ -80,9 +74,9 @@
 #include "readcpu.h"
 #endif
 #include "newcpu.h"
-#include "comptbl_x86.h"
+#include "comptbl_x86_64.h"
 #ifdef UAE
-#include "compemu_x86.h"
+#include "compemu_x86_64.h"
 #ifdef FSUAE
 #include "codegen_udis86.h"
 #endif
@@ -125,7 +119,6 @@ static void build_comp(void);
 #define vm_protect(address, size, protect) uae_vm_protect(address, size, protect)
 #define vm_release(address, size) uae_vm_free(address, size)
 
-#if defined(CPU_x86_64)
 /*
  * JIT cache allocation strategy (PIE-compatible):
  *
@@ -149,7 +142,6 @@ static void build_comp(void);
  * All x86-64 platforms need this since RIP-relative addressing
  * requires JIT allocations within +/-2GB of both code and globals. */
 static uae_u8* vm_acquire_anchor = NULL;
-#endif
 
 static inline bool jit_vm_alloc_failed(const void *ptr)
 {
@@ -358,10 +350,9 @@ static void *mach_vm_acquire_near(uintptr base, uae_u32 size, uintptr range)
 
 void *jit_vm_acquire(uae_u32 size, int options)
 {
-#if defined(CPU_x86_64)
 	if (!(options & VM_MAP_32BIT)) {
 #ifdef _WIN32
-		/* RIP-relative addressing (the _r_X macro in codegen_x86.h)
+		/* RIP-relative addressing (the _r_X macro in codegen_x86_64.h)
 		 * requires all targets within +/-2GB of the JIT code that
 		 * references them.  Anchor at compiled_code (JIT cache base)
 		 * when available; fall back to a .data anchor for the first
@@ -542,7 +533,6 @@ void *jit_vm_acquire(uae_u32 size, int options)
 #endif /* !__FreeBSD__ */
 #endif /* !_WIN32 */
 	}
-#endif
 	return uae_vm_alloc(size, UAE_VM_32BIT, UAE_VM_READ_WRITE);
 }
 
@@ -648,9 +638,6 @@ void jit_abort(const char *format, ...)
 # include <cerrno>
 # include <cassert>
 
-#if defined(CPU_x86_64) && 0
-#define RECORD_REGISTER_USAGE		1
-#endif
 
 #ifdef JIT_DEBUG
 #undef abort
@@ -950,18 +937,10 @@ static inline blockinfo* get_blockinfo_addr(void* addr)
 #define TARGET_X86		2
 #define TARGET_X86_64	3
 #define TARGET_ARM		4
-#if defined(CPU_i386)
-#define TARGET_NATIVE	TARGET_X86
-#endif
 #if defined(CPU_powerpc)
 #define TARGET_NATIVE	TARGET_POWERPC
 #endif
-#if defined(CPU_x86_64)
 #define TARGET_NATIVE	TARGET_X86_64
-#endif
-#if defined(CPU_arm)
-#define TARGET_NATIVE	TARGET_ARM
-#endif
 #include "disasm-glue.h"
 
 bool disasm_this_inst;
@@ -1337,10 +1316,8 @@ T * LazyBlockAllocator<T>::acquire()
 		// chunks into the free list
 #if defined(CPU_x86_64) && defined(__FreeBSD__)
 		Pool * newPool = (Pool *)jit_vm_acquire(sizeof(Pool), VM_MAP_DEFAULT | VM_MAP_32BIT);
-#elif defined(CPU_x86_64)
-		Pool * newPool = (Pool *)jit_vm_acquire(sizeof(Pool), VM_MAP_DEFAULT);
 #else
-		Pool * newPool = (Pool *)jit_vm_acquire(sizeof(Pool), VM_MAP_DEFAULT | VM_MAP_32BIT);
+		Pool * newPool = (Pool *)jit_vm_acquire(sizeof(Pool), VM_MAP_DEFAULT);
 #endif
 		if (jit_vm_alloc_failed(newPool)) {
 #ifdef UAE
@@ -1615,12 +1592,7 @@ static inline void reset_data_buffer(void)
  * Getting the information about the target CPU                     *
  ********************************************************************/
 
-#if defined(CPU_arm)
-#include "codegen_arm.cpp"
-#endif
-#if defined(CPU_i386) || defined(CPU_x86_64)
-#include "codegen_x86.cpp"
-#endif
+#include "codegen_x86_64.cpp"
 
 
 /********************************************************************
@@ -2005,12 +1977,10 @@ static inline void do_load_reg(int n, int r)
 		raw_load_flagreg(n);
 	else if (r == FLAGX)
 		raw_load_flagx(n);
-#if X86_TARGET_64BIT
 	else if (r == PC_P) {
 		/* PC_P holds a 64-bit host pointer - must use 64-bit load */
 		raw_mov_q_rm(n, (uintptr)live.state[r].mem);
 	}
-#endif
 	else
 		compemu_raw_mov_l_rm(n, JITPTR  live.state[r].mem);
 }
@@ -2111,7 +2081,6 @@ static inline void adjust_nreg(int r, uintptr val)
 	compemu_raw_lea_l_brr(r,r,val);
 }
 
-#if X86_TARGET_64BIT
 static inline void free_nreg(int r);
 
 static inline bool x86_imm_fits_s32(uintptr i)
@@ -2180,17 +2149,6 @@ static inline void adjust_vreg_nreg(int vreg, int nreg, uintptr val)
 		adjust_nreg(nreg, val);
 	}
 }
-#else
-static inline void copy_vreg_nreg(int /* vreg */, int dst, int src)
-{
-	compemu_raw_mov_l_rr(dst, src);
-}
-
-static inline void adjust_vreg_nreg(int /* vreg */, int nreg, uintptr val)
-{
-	adjust_nreg(nreg, val);
-}
-#endif
 
 static void tomem(int r)
 {
@@ -2212,12 +2170,10 @@ static void tomem(int r)
 		case 1: compemu_raw_mov_b_mr(JITPTR live.state[r].mem,rr); break;
 		case 2: compemu_raw_mov_w_mr(JITPTR live.state[r].mem,rr); break;
 		case 4:
-#if X86_TARGET_64BIT
 			if (r == PC_P) {
 				/* PC_P holds a 64-bit host pointer - must use 64-bit store */
 				raw_mov_q_mr((uintptr)live.state[r].mem, rr);
 			} else
-#endif
 			{
 				compemu_raw_mov_l_mr(JITPTR live.state[r].mem, rr);
 			}
@@ -2235,7 +2191,6 @@ static inline int isconst(int r)
 	return live.state[r].status==ISCONST;
 }
 
-#if X86_TARGET_64BIT
 static inline void store_const_q_mi(uintptr d, uintptr s)
 {
 	int scratch = get_unlocked_scratch_nreg();
@@ -2243,7 +2198,6 @@ static inline void store_const_q_mi(uintptr d, uintptr s)
 	raw_mov_q_ri(scratch, s);
 	raw_mov_q_mr(d, scratch);
 }
-#endif
 
 int is_const(int r)
 {
@@ -2258,12 +2212,10 @@ static inline void writeback_const(int r)
 		jit_abort("Trying to write back constant NF_HANDLER!");
 	}
 
-#if X86_TARGET_64BIT
 	if (r == PC_P) {
 		/* PC_P holds a 64-bit host pointer and needs allocator-aware scratch use. */
 		store_const_q_mi((uintptr)live.state[r].mem, live.state[r].val);
 	} else
-#endif
 	{
 		compemu_raw_mov_l_mi(JITPTR live.state[r].mem, live.state[r].val);
 	}
@@ -2343,12 +2295,10 @@ static inline void disassociate(int r)
 static inline void set_const(int r, uintptr val)
 {
 	disassociate(r);
-#if X86_TARGET_64BIT
 	/* Guest Dn/An/flag virtual registers are 32-bit M68K values.
 	   PC_P is the only virtual register that may hold a 64-bit host pointer. */
 	if (r != PC_P)
 		val = (uae_u32)val;
-#endif
 	live.state[r].val=val;
 	set_status(r,ISCONST);
 }
@@ -2423,12 +2373,10 @@ static int alloc_reg_hinted(int r, int size, int willclobber, int hint)
 	if (!willclobber) {
 		if (live.state[r].status!=UNDEF) {
 			if (isconst(r)) {
-#if X86_TARGET_64BIT
 				if (r == PC_P || live.state[r].val > (uintptr)0xffffffff) {
 					/* PC_P and temporary host pointers need the full 64-bit value. */
 					raw_mov_q_ri(bestreg, live.state[r].val);
 				} else
-#endif
 				{
 					compemu_raw_mov_l_ri(bestreg, live.state[r].val);
 				}
@@ -2469,11 +2417,9 @@ static int alloc_reg_hinted(int r, int size, int willclobber, int hint)
 		}
 		else {
 			if (live.state[r].status!=UNDEF) {
-#if X86_TARGET_64BIT
 				if (r == PC_P || live.state[r].val > (uintptr)0xffffffff) {
 					raw_mov_q_ri(bestreg, live.state[r].val);
 				} else
-#endif
 				{
 					compemu_raw_mov_l_ri(bestreg, live.state[r].val);
 				}
@@ -3271,17 +3217,8 @@ static void prepare_for_call_2(void)
 }
 #endif
 
-#if defined(CPU_arm)
-#include "compemu_midfunc_arm.cpp"
 
-#if defined(USE_JIT2)
-#include "compemu_midfunc_arm2.cpp"
-#endif
-#endif
-
-#if defined(CPU_i386) || defined(CPU_x86_64)
-#include "compemu_midfunc_x86.cpp"
-#endif
+#include "compemu_midfunc_x86_64.cpp"
 
 
 /********************************************************************
@@ -3410,7 +3347,6 @@ void compemu_make_sr(int sr, int tmp)
 	and_l(sr, tmp);
 	mov_l_rr(tmp, sr);
 
-#if (defined(CPU_i386) && defined(X86_ASSEMBLY)) || (defined(CPU_x86_64) && defined(X86_64_ASSEMBLY))
 #ifndef SAHF_SETO_PROFITABLE
 	ror_b_ri(sr, FLAGBIT_N - 3);                             /* move NZ into position; C->4 */
 	shrl_w_ri(tmp, FLAGBIT_V - 1);                           /* move V into position in tmp */
@@ -3433,22 +3369,6 @@ void compemu_make_sr(int sr, int tmp)
 	shll_l_ri(tmp, 4);
 	or_l(sr, tmp);
 
-#elif defined(CPU_arm) && defined(ARM_ASSEMBLY)
-	shrl_l_ri(sr, FLAGBIT_N - 3);                            /* move NZ into position */
-	ror_l_ri(tmp, FLAGBIT_C - 1);                            /* move C into position in tmp; V->31 */
-	and_l_ri(sr, 0xc);
-	or_l(sr, tmp);                                           /* or C flag to SR */
-	shrl_l_ri(tmp, 31);                                      /* move V into position in tmp */
-	or_l(sr, tmp);                                           /* or V flag to SR */
-
-	mov_b_rm(tmp, uae_p32(&regflags.x));
-	and_l_ri(tmp, FLAGVAL_X);
-	shrl_l_ri(tmp, FLAGBIT_X - 4);
-	or_l(sr, tmp);
-
-#else
-#error "unknown CPU"
-#endif
 
 #else
 
@@ -3500,23 +3420,13 @@ void compemu_enter_super(int sr)
 	 * }
 	 */
 	test_l_ri(sr, 0x2000);
-#if defined(CPU_i386) || defined(CPU_x86_64)
 	compemu_raw_jnz_b_oponly();
 	uae_u8 *branchadd = get_target();
 	skip_byte();
-#elif defined(CPU_arm)
-	compemu_raw_jnz_b_oponly();
-	uae_u8 *branchadd = get_target();
-	skip_byte();
-#endif
 	mov_l_mr(JITPTR &regs.usp, SP_REG);
 	mov_l_rm(SP_REG, uae_p32(&regs.isp));
 	mov_b_mi(uae_p32(&regs.s), 1);
-#if defined(CPU_i386) || defined(CPU_x86_64)
 	*branchadd = JITPTR get_target() - (JITPTR branchadd + 1);
-#elif defined(CPU_arm)
-	*((uae_u32 *)branchadd - 3) = get_target() - (branchadd + 1);
-#endif
 }
 
 /********************************************************************
@@ -3562,10 +3472,8 @@ void compiler_init(void)
 	jit_log("<JIT compiler> : target processor has CMOV instructions : %s", have_cmov ? "yes" : "no");
 	jit_log("<JIT compiler> : target processor can suffer from partial register stalls : %s", have_rat_stall ? "yes" : "no");
 	jit_log("<JIT compiler> : alignment for loops, jumps are %d, %d", align_loops, align_jumps);
-#if defined(CPU_i386) || defined(CPU_x86_64)
 	jit_log("<JIT compiler> : target processor has SSE2 instructions : %s", cpuinfo.x86_has_xmm2 ? "yes" : "no");
 	jit_log("<JIT compiler> : cache linesize is %lu", (unsigned long)cpuinfo.x86_clflush_size);
-#endif
 
 	// Translation cache flush mechanism
 	lazy_flush = (bx_options.jit.jitlazyflush == 0) ? false : true;
@@ -3720,11 +3628,7 @@ static void init_comp(void)
 	live.state[FLAGX].needflush=NF_TOMEM;
 	set_status(FLAGX,INMEM);
 
-#if defined(CPU_arm)
-	live.state[FLAGTMP].mem=(uae_u32*)&(regflags.nzcv);
-#else
 	live.state[FLAGTMP].mem=(uae_u32*)&(regflags.cznv);
-#endif
 	live.state[FLAGTMP].needflush=NF_TOMEM;
 	set_status(FLAGTMP,INMEM);
 
@@ -3794,7 +3698,6 @@ void flush_reg(int reg)
 		case INMEM:
 			if (live.state[reg].val)
 			{
-#if X86_TARGET_64BIT
 				if (reg == PC_P) {
 					/* PC_P is a 64-bit pointer - must use 64-bit load/add/store.
 					   compemu_raw_add_l_mi is only 32-bit and would leave
@@ -3804,7 +3707,6 @@ void flush_reg(int reg)
 					x86_add_q_ri_ptr(r_tmp, live.state[reg].val);
 					raw_mov_q_mr((uintptr)live.state[reg].mem, r_tmp);
 				} else
-#endif
 				compemu_raw_add_l_mi(JITPTR live.state[reg].mem, live.state[reg].val);
 				log_vwrite(reg);
 				live.state[reg].val = 0;
@@ -3905,16 +3807,12 @@ static void freescratch(void)
 {
 	int i;
 	for (i=0;i<N_REGS;i++)
-#if defined(CPU_arm)
-		if (live.nat[i].locked && i != REG_WORK1 && i != REG_WORK2)
-#else
 		if (live.nat[i].locked && i != ESP_INDEX
 #if defined(UAE) && defined(CPU_x86_64)
 			&& i != R12_INDEX
 			&& i != R_MEMSTART
 #endif
 			)
-#endif
 		{
 			jit_log("Warning! %d is locked",i);
 		}
@@ -4005,7 +3903,6 @@ static inline void writemem(int address, int source, int offset, int size, int t
 {
 	int f=tmp;
 
-#if X86_TARGET_64BIT
 	/* x86-64: The register allocator only spills/reloads 32-bit values,
 	   so 64-bit pointers (addrbank ptr, function ptr) must NOT be stored
 	   in virtual registers.  Instead, compute the 32-bit bank index via
@@ -4050,14 +3947,6 @@ static inline void writemem(int address, int source, int offset, int size, int t
 	raw_inc_sp(STACK_SHADOW_SPACE);
 
 	forget_about(tmp);
-#else
-	mov_l_rr(f,address);
-	shrl_l_ri(f,16);
-	mov_l_rm_indexed(f,uae_p32(mem_banks),f,SIZEOF_VOID_P);
-	mov_l_rR(f,f,offset);
-	call_r_02(f,address,source,4,size);
-	forget_about(tmp);
-#endif
 }
 #endif
 
@@ -4164,7 +4053,6 @@ static inline void readmem(int address, int dest, int offset, int size, int tmp)
 {
 	int f=tmp;
 
-#if X86_TARGET_64BIT
 	/* x86-64: Same approach as writemem - keep 64-bit pointers out of
 	   virtual registers.  Compute 32-bit bank index via allocator, then
 	   do 64-bit pointer chase with raw instructions after call setup. */
@@ -4220,14 +4108,6 @@ static inline void readmem(int address, int dest, int offset, int size, int tmp)
 	set_status(dest, DIRTY);
 
 	forget_about(tmp);
-#else
-	mov_l_rr(f,address);
-	shrl_l_ri(f,16);
-	mov_l_rm_indexed(f,uae_p32(mem_banks),f,SIZEOF_VOID_P);
-	mov_l_rR(f,f,offset);
-	call_r_11(dest,f,address,size,4);
-	forget_about(tmp);
-#endif
 }
 #endif
 
@@ -4275,7 +4155,6 @@ void get_n_addr(int address, int dest, int tmp)
 	}
 #endif
 
-#if X86_TARGET_64BIT
 #ifdef NATMEM_OFFSET
 	if (canbang) {
 		int hw_address = readreg(address, 4);
@@ -4287,7 +4166,6 @@ void get_n_addr(int address, int dest, int tmp)
 		forget_about(tmp);
 		return;
 	}
-#endif
 #endif
 
 	// a is the register containing the virtual address
@@ -4340,7 +4218,6 @@ void get_n_addr_jmp(int address, int dest, int tmp)
 		return;
 	}
 #endif
-#if X86_TARGET_64BIT
 	if (canbang && dest == PC_P) {
 		clobber_flags();
 		int hw_address = readreg(address, 4);
@@ -4353,7 +4230,6 @@ void get_n_addr_jmp(int address, int dest, int tmp)
 		forget_about(tmp);
 		return;
 	}
-#endif
 	int f=tmp;
 	if (address!=dest)
 		f=dest;
@@ -4361,13 +4237,11 @@ void get_n_addr_jmp(int address, int dest, int tmp)
 	shrl_l_ri(f,16);   /* The index into the baseaddr bank table */
 	mov_l_rm_indexed(dest,uae_p32(baseaddr),f,SIZEOF_VOID_P); /* FIXME: is SIZEOF_VOID_P correct? */
 	add_l(dest,address);
-#if X86_TARGET_64BIT
 	if (dest == PC_P) {
 		int hw_dest = rmw(dest, 4, 4);
 		ANDQir((IMM)~1, hw_dest);
 		unlock2(hw_dest);
 	} else
-#endif
 	and_l_ri (dest, ~1);
 	forget_about(tmp);
 #endif
@@ -4468,7 +4342,6 @@ uae_u32 get_jitted_size(void)
 static uint8 *do_alloc_code(uint32 size, int depth)
 {
 	UNUSED(depth);
-#if X86_TARGET_64BIT
 #if defined(__FreeBSD__)
 	/* FreeBSD ASLR places mmap at high addresses; force JIT cache below
 	 * 2GB so ADDR32 (0x67-prefix) absolute addressing works correctly. */
@@ -4477,19 +4350,12 @@ static uint8 *do_alloc_code(uint32 size, int depth)
 	/* Linux/macOS/Windows: RIP-relative anchor placement handles this */
 	uint8 *code = (uint8 *)jit_vm_acquire(size, VM_MAP_DEFAULT);
 #endif
-#else
-	uint8 *code = (uint8 *)jit_vm_acquire(size, VM_MAP_DEFAULT | VM_MAP_32BIT);
-#endif
 	return code == VM_MAP_FAILED ? NULL : code;
 }
 
 static inline uint8 *alloc_code(uint32 size)
 {
 	uint8 *ptr = do_alloc_code(size, 0);
-#if !X86_TARGET_64BIT
-	/* allocated code must fit in 32-bit boundaries */
-	assert((uintptr)ptr <= 0xffffffff);
-#endif
 	return ptr;
 }
 
@@ -4499,9 +4365,7 @@ void alloc_cache(void)
 		flush_icache_hard(3);
 		vm_release(compiled_code, cache_size * 1024);
 		compiled_code = 0;
-#if defined(CPU_x86_64)
 		vm_acquire_anchor = NULL;
-#endif
 	}
 
 #ifdef UAE
@@ -4531,16 +4395,13 @@ void alloc_cache(void)
 #endif
 		vm_release(compiled_code, cache_size * 1024);
 		compiled_code = 0;
-#if defined(CPU_x86_64)
 		vm_acquire_anchor = NULL;
-#endif
 		cache_size = 0;
 		return;
 	}
 	
 	if (compiled_code) {
 		jit_log("<JIT compiler> : actual translation cache size : %d KB at %p-%p", cache_size, compiled_code, compiled_code + cache_size*1024);
-#if defined(CPU_x86_64)
 		/* Anchor subsequent jit_vm_acquire() calls at the JIT cache so
 		 * blockinfo pools stay within RIP-relative range of code. */
 		vm_acquire_anchor = compiled_code;
@@ -4563,7 +4424,6 @@ void alloc_cache(void)
 				return;
 			}
 		}
-#endif
 #ifdef USE_DATA_BUFFER
 		max_compile_start = compiled_code + cache_size*1024 - BYTES_PER_INST - DATA_BUFFER_SIZE;
 #else
@@ -4862,13 +4722,11 @@ static inline void create_popalls(void)
 	pushall_call_handler=get_target();
 	raw_push_regs_to_preserve();
 	raw_dec_sp(stack_space);
-#if X86_TARGET_64BIT
 	/* Load R_MEMSTART (R15) with natmem_offset - used as base register
 	   for all JIT memory accesses: [R_MEMSTART + m68k_addr].
 	   Loaded from the global variable (not immediate) so it stays correct
 	   if natmem_offset changes across resets. */
 	raw_mov_q_rm(R_MEMSTART, (uintptr)&natmem_offset);
-#endif
 	r=REG_PC_TMP;
 	compemu_raw_mov_l_rm(r, uae_p32(&regs.pc_p));
 	compemu_raw_and_l_ri(r,TAGMASK);
@@ -4946,24 +4804,14 @@ static void prepare_block(blockinfo* bi)
 	set_target(current_compile_p);
 	align_target(align_jumps);
 	bi->direct_pen=(cpuop_func*)get_target();
-#if X86_TARGET_64BIT
 	raw_mov_q_rm(0, (uintptr)&(bi->pc_p));
 	raw_mov_q_mr((uintptr)&regs.pc_p, 0);
-#else
-	compemu_raw_mov_l_rm(0, JITPTR &(bi->pc_p));
-	compemu_raw_mov_l_mr(JITPTR &regs.pc_p,0);
-#endif
 	compemu_raw_jmp(JITPTR popall_execute_normal);
 
 	align_target(align_jumps);
 	bi->direct_pcc=(cpuop_func*)get_target();
-#if X86_TARGET_64BIT
 	raw_mov_q_rm(0, (uintptr)&(bi->pc_p));
 	raw_mov_q_mr((uintptr)&regs.pc_p, 0);
-#else
-	compemu_raw_mov_l_rm(0, JITPTR &(bi->pc_p));
-	compemu_raw_mov_l_mr(JITPTR &regs.pc_p,0);
-#endif
 	compemu_raw_jmp(JITPTR popall_check_checksum);
 	flush_cpu_icache((void *)current_compile_p, (void *)target);
 	current_compile_p=get_target();
@@ -5799,21 +5647,13 @@ static void compile_block(cpu_history* pc_hist, int blocklen)
 		log_startblock();
 
 		if (bi->count>=0) { /* Need to generate countdown code */
-#if X86_TARGET_64BIT
 			raw_mov_q_mi((uintptr)&regs.pc_p, (uintptr)pc_hist[0].location);
-#else
-			compemu_raw_mov_l_mi(JITPTR &regs.pc_p, JITPTR pc_hist[0].location);
-#endif
 			compemu_raw_sub_l_mi(JITPTR &(bi->count),1);
 			compemu_raw_jl(JITPTR popall_recompile_block);
 		}
 		if (optlev==0 || unsafe_special_mem_block) { /* No need to actually translate */
 			/* Execute normally without keeping stats */
-#if X86_TARGET_64BIT
 			raw_mov_q_mi((uintptr)&regs.pc_p, (uintptr)pc_hist[0].location);
-#else
-			compemu_raw_mov_l_mi(JITPTR &regs.pc_p, JITPTR pc_hist[0].location);
-#endif
 			compemu_raw_jmp(JITPTR popall_exec_nostats);
 		}
 		else {
@@ -5839,13 +5679,8 @@ static void compile_block(cpu_history* pc_hist, int blocklen)
 
 #ifdef JIT_DEBUG
 			if (JITDebug) {
-#if X86_TARGET_64BIT
 				raw_mov_q_mi((uintptr)&last_regs_pc_p,(uintptr)pc_hist[0].location);
 				raw_mov_q_mi((uintptr)&last_compiled_block_addr,current_block_start_target);
-#else
-				compemu_raw_mov_l_mi((uintptr)&last_regs_pc_p,(uintptr)pc_hist[0].location);
-				compemu_raw_mov_l_mi((uintptr)&last_compiled_block_addr,current_block_start_target);
-#endif
 			}
 #endif
 
@@ -5998,13 +5833,8 @@ static void compile_block(cpu_history* pc_hist, int blocklen)
 					{
 						uintptr native_pc = (uintptr)pc_hist[i].location;
 						uae_u32 m68k_pc = get_virtual_compile_pc(native_pc);
-#if X86_TARGET_64BIT
 						raw_mov_q_mi((uintptr)&regs.pc_p, native_pc);
 						raw_mov_q_mi((uintptr)&regs.pc_oldp, native_pc);
-#else
-						compemu_raw_mov_l_mi(JITPTR &regs.pc_p, JITPTR native_pc);
-						compemu_raw_mov_l_mi(JITPTR &regs.pc_oldp, JITPTR native_pc);
-#endif
 						compemu_raw_mov_l_mi(JITPTR &regs.pc, m68k_pc);
 						compemu_raw_mov_l_mi(JITPTR &regs.instruction_pc, m68k_pc);
 					}
@@ -6115,11 +5945,7 @@ static void compile_block(cpu_history* pc_hist, int blocklen)
 #endif
 				tba=(uae_u32*)get_target();
 				emit_jmp_target(JITPTR get_handler(t1));
-	#if X86_TARGET_64BIT
 				raw_mov_q_mi((uintptr)&regs.pc_p, t1);
-#else
-				compemu_raw_mov_l_mi(JITPTR &regs.pc_p, JITPTR t1);
-#endif
 				flush_reg_count();
 				compemu_raw_jmp(JITPTR popall_do_nothing);
 				create_jmpdep(bi,0,tba, JITPTR t1);
@@ -6141,11 +5967,7 @@ static void compile_block(cpu_history* pc_hist, int blocklen)
 #endif
 				tba=(uae_u32*)get_target();
 				emit_jmp_target(JITPTR get_handler(t2));
-	#if X86_TARGET_64BIT
 				raw_mov_q_mi((uintptr)&regs.pc_p, t2);
-#else
-				compemu_raw_mov_l_mi(JITPTR &regs.pc_p, JITPTR t2);
-#endif
 				flush_reg_count();
 				compemu_raw_jmp(JITPTR popall_do_nothing);
 				create_jmpdep(bi,1,tba, JITPTR t2);
@@ -6160,22 +5982,13 @@ static void compile_block(cpu_history* pc_hist, int blocklen)
 				/* Let's find out where next_handler is... */
 				if (was_comp && isinreg(PC_P)) {
 					r=live.state[PC_P].realreg;
-#if X86_TARGET_64BIT
 					int rtag = (r != R10_INDEX) ? R10_INDEX : R11_INDEX;
 					int r2 = (r != R11_INDEX && rtag != R11_INDEX) ? R11_INDEX : EAX_INDEX;
-#else
-					int rtag = (r != EAX_INDEX) ? EAX_INDEX : ECX_INDEX;
-					int r2 = (r != ECX_INDEX && rtag != ECX_INDEX) ? ECX_INDEX : EDX_INDEX;
-#endif
 					free_nreg(rtag);
 					free_nreg(r2);
 					compemu_raw_mov_l_rr(rtag,r);
 					compemu_raw_and_l_ri(rtag,TAGMASK);
-#if X86_TARGET_64BIT
 					raw_mov_q_ri(r2, JITPTR popall_do_nothing);
-#else
-					compemu_raw_mov_l_ri(r2, JITPTR popall_do_nothing);
-#endif
 #ifdef UAE
 					raw_sub_l_mi(uae_p32(&countdown),scaled_cycles(totcycles));
 					raw_cmov_l_rm_indexed(r2, JITPTR cache_tags,rtag,sizeof(void *),NATIVE_CC_PL);
@@ -6202,11 +6015,7 @@ static void compile_block(cpu_history* pc_hist, int blocklen)
 #endif
 					tba=(uae_u32*)get_target();
 					emit_jmp_target(JITPTR get_handler(v));
-	#if X86_TARGET_64BIT
 					raw_mov_q_mi((uintptr)&regs.pc_p, v);
-#else
-					compemu_raw_mov_l_mi(JITPTR &regs.pc_p, JITPTR v);
-#endif
 					compemu_raw_jmp(JITPTR popall_do_nothing);
 					create_jmpdep(bi,0,tba, JITPTR v);
 				}
@@ -6215,11 +6024,7 @@ static void compile_block(cpu_history* pc_hist, int blocklen)
 					compemu_raw_mov_l_rm(r,JITPTR &regs.pc_p);
 					compemu_raw_and_l_ri(r,TAGMASK);
 					int r2 = (r==0) ? 1 : 0;
-#if X86_TARGET_64BIT
 					raw_mov_q_ri(r2, JITPTR popall_do_nothing);
-#else
-					compemu_raw_mov_l_ri(r2, JITPTR popall_do_nothing);
-#endif
 #ifdef UAE
 					raw_sub_l_mi(uae_p32(&countdown),scaled_cycles(totcycles));
 					raw_cmov_l_rm_indexed(r2, JITPTR cache_tags,r,sizeof(void *),NATIVE_CC_PL);
@@ -6306,7 +6111,6 @@ static void compile_block(cpu_history* pc_hist, int blocklen)
 		/* This is the non-direct handler */
 		bi->handler=
 			bi->handler_to_use=(cpuop_func *)get_target();
-#if X86_TARGET_64BIT
 		/* regs.pc_p is a 64-bit pointer - must compare all 8 bytes.
 		   x86-64 has no CMP [mem], imm64, so load into scratch and CMP. */
 		{
@@ -6314,9 +6118,6 @@ static void compile_block(cpu_history* pc_hist, int blocklen)
 			raw_mov_q_ri(r_tmp, (uintptr)pc_hist[0].location);
 			raw_cmp_q_mr((uintptr)&regs.pc_p, r_tmp);
 		}
-#else
-		compemu_raw_cmp_l_mi(JITPTR &regs.pc_p, JITPTR pc_hist[0].location);
-#endif
 		compemu_raw_jnz(JITPTR popall_cache_miss);
 		comp_pc_p=(uae_u8*)pc_hist[0].location;
 
@@ -6393,13 +6194,8 @@ void execute_normal(void)
 	if (!check_for_cache_miss()) {
 		cpu_history pc_hist[MAXRUN];
 		int blocklen = 0;
-#if 0 && FIXED_ADDRESSING
-		start_pc_p = regs.pc_p;
-		start_pc = get_virtual_address(regs.pc_p);
-#else
 		start_pc_p = regs.pc_oldp;
 		start_pc = regs.pc; 
-#endif
 		for (;;)  { /* Take note: This is the do-it-normal loop */
 			pc_hist[blocklen++].location = (uae_u16 *)regs.pc_p;
 			uae_u32 opcode = GET_OPCODE;

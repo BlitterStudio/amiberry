@@ -5,7 +5,7 @@
 #include "uae/memory.h"
 #include "readcpu.h"
 #include "newcpu.h"
-#include "comptbl_x86.h"
+#include "comptbl_x86_64.h"
 #include "debug.h"
 const struct comptbl op_smalltbl_0_comp_ff[] = {
 { op_0_0_comp_ff, 0, COMP_OPCODE_LONG_OPCODE }, /* OR */

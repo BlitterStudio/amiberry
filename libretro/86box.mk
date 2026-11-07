@@ -378,13 +378,10 @@ FLAGS += -DUSE_86BOX
 INCFLAGS += -I$(AMIBERRY_DIR)/src/86box/include -I$(AMIBERRY_DIR)/src/86box/winuae
 
 # 86Box's x86 recompiler has one backend per binary (arm64 or x86-64), so
-# universal binaries and other architectures (armhf, RISC-V, LoongArch) keep
+# universal binaries and other architectures (RISC-V, LoongArch) keep
 # the interpreter.
 86BOX_DYNAREC := 0
 ifeq ($(ARCH),aarch64)
-	86BOX_DYNAREC := 1
-	86BOX_DYNAREC_BACKEND := ARM64
-else ifeq ($(ARCH),arm64)
 	86BOX_DYNAREC := 1
 	86BOX_DYNAREC_BACKEND := ARM64
 else ifeq ($(ARCH),x86_64)

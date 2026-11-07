@@ -54,20 +54,6 @@ typedef LPEXCEPTION_POINTERS CONTEXT_T;
 #define CONTEXT_R14(context) (context->ContextRecord->R14)
 #define CONTEXT_R15(context) (context->ContextRecord->R15)
 
-#elif defined(_WIN32) && defined(CPU_i386)
-
-typedef LPEXCEPTION_POINTERS CONTEXT_T;
-#define HAVE_CONTEXT_T 1
-#define CONTEXT_RIP(context) (context->ContextRecord->Eip)
-#define CONTEXT_RAX(context) (context->ContextRecord->Eax)
-#define CONTEXT_RCX(context) (context->ContextRecord->Ecx)
-#define CONTEXT_RDX(context) (context->ContextRecord->Edx)
-#define CONTEXT_RBX(context) (context->ContextRecord->Ebx)
-#define CONTEXT_RSP(context) (context->ContextRecord->Esp)
-#define CONTEXT_RBP(context) (context->ContextRecord->Ebp)
-#define CONTEXT_RSI(context) (context->ContextRecord->Esi)
-#define CONTEXT_RDI(context) (context->ContextRecord->Edi)
-
 #elif defined(HAVE_STRUCT_UCONTEXT_T_UC_MCONTEXT_GREGS) && defined(CPU_x86_64)
 
 typedef void *CONTEXT_T;
@@ -112,20 +98,6 @@ typedef void *CONTEXT_T;
 #define CONTEXT_R14(context) (((ucontext_t *) context)->uc_mcontext.r14)
 #define CONTEXT_R15(context) (((ucontext_t *) context)->uc_mcontext.r15)
 
-#elif defined(HAVE_STRUCT_UCONTEXT_T_UC_MCONTEXT_GREGS) && defined(CPU_i386)
-
-typedef void *CONTEXT_T;
-#define HAVE_CONTEXT_T 1
-#define CONTEXT_RIP(context) (((ucontext_t *) context)->uc_mcontext.gregs[REG_EIP])
-#define CONTEXT_RAX(context) (((ucontext_t *) context)->uc_mcontext.gregs[REG_EAX])
-#define CONTEXT_RCX(context) (((ucontext_t *) context)->uc_mcontext.gregs[REG_ECX])
-#define CONTEXT_RDX(context) (((ucontext_t *) context)->uc_mcontext.gregs[REG_EDX])
-#define CONTEXT_RBX(context) (((ucontext_t *) context)->uc_mcontext.gregs[REG_EBX])
-#define CONTEXT_RSP(context) (((ucontext_t *) context)->uc_mcontext.gregs[REG_ESP])
-#define CONTEXT_RBP(context) (((ucontext_t *) context)->uc_mcontext.gregs[REG_EBP])
-#define CONTEXT_RSI(context) (((ucontext_t *) context)->uc_mcontext.gregs[REG_ESI])
-#define CONTEXT_RDI(context) (((ucontext_t *) context)->uc_mcontext.gregs[REG_EDI])
-
 #elif defined(HAVE_STRUCT_UCONTEXT_UC_MCONTEXT_GREGS) && defined(CPU_x86_64)
 
 typedef void *CONTEXT_T;
@@ -148,20 +120,6 @@ typedef void *CONTEXT_T;
 #define CONTEXT_R14(context) (((struct ucontext *) context)->uc_mcontext.gregs[REG_R14])
 #define CONTEXT_R15(context) (((struct ucontext *) context)->uc_mcontext.gregs[REG_R15])
 
-#elif defined(HAVE_STRUCT_UCONTEXT_UC_MCONTEXT_GREGS) && defined(CPU_i386)
-
-typedef void *CONTEXT_T;
-#define HAVE_CONTEXT_T 1
-#define CONTEXT_RIP(context) (((struct ucontext *) context)->uc_mcontext.gregs[REG_EIP])
-#define CONTEXT_RAX(context) (((struct ucontext *) context)->uc_mcontext.gregs[REG_EAX])
-#define CONTEXT_RCX(context) (((struct ucontext *) context)->uc_mcontext.gregs[REG_ECX])
-#define CONTEXT_RDX(context) (((struct ucontext *) context)->uc_mcontext.gregs[REG_EDX])
-#define CONTEXT_RBX(context) (((struct ucontext *) context)->uc_mcontext.gregs[REG_EBX])
-#define CONTEXT_RSP(context) (((struct ucontext *) context)->uc_mcontext.gregs[REG_ESP])
-#define CONTEXT_RBP(context) (((struct ucontext *) context)->uc_mcontext.gregs[REG_EBP])
-#define CONTEXT_RSI(context) (((struct ucontext *) context)->uc_mcontext.gregs[REG_ESI])
-#define CONTEXT_RDI(context) (((struct ucontext *) context)->uc_mcontext.gregs[REG_EDI])
-
 #elif defined(__DARWIN_UNIX03) && defined(CPU_x86_64)
 
 typedef void *CONTEXT_T;
@@ -183,20 +141,6 @@ typedef void *CONTEXT_T;
 #define CONTEXT_R13(context) (((ucontext_t *) context)->uc_mcontext->__ss.__r13)
 #define CONTEXT_R14(context) (((ucontext_t *) context)->uc_mcontext->__ss.__r14)
 #define CONTEXT_R15(context) (((ucontext_t *) context)->uc_mcontext->__ss.__r15)
-
-#elif defined(__DARWIN_UNIX03) && defined(CPU_i386)
-
-typedef void *CONTEXT_T;
-#define HAVE_CONTEXT_T 1
-#define CONTEXT_RIP(context) (*((unsigned long *) &((ucontext_t *) context)->uc_mcontext->__ss.__eip))
-#define CONTEXT_RAX(context) (((ucontext_t *) context)->uc_mcontext->__ss.__eax)
-#define CONTEXT_RCX(context) (((ucontext_t *) context)->uc_mcontext->__ss.__ecx)
-#define CONTEXT_RDX(context) (((ucontext_t *) context)->uc_mcontext->__ss.__edx)
-#define CONTEXT_RBX(context) (((ucontext_t *) context)->uc_mcontext->__ss.__ebx)
-#define CONTEXT_RSP(context) (*((unsigned long *) &((ucontext_t *) context)->uc_mcontext->__ss.__esp))
-#define CONTEXT_RBP(context) (((ucontext_t *) context)->uc_mcontext->__ss.__ebp)
-#define CONTEXT_RSI(context) (((ucontext_t *) context)->uc_mcontext->__ss.__esi)
-#define CONTEXT_RDI(context) (((ucontext_t *) context)->uc_mcontext->__ss.__edi)
 
 #elif defined (AMIBERRY) && defined(CPU_x86_64) && defined(__FreeBSD__)
 
@@ -296,20 +240,17 @@ static bool decode_instruction(
 	*len = 0;
 	*rex = 0;
 
-#ifdef CPU_x86_64
 	/* Skip address-size override prefix. */
 	if (*pc == 0x67) {
 		pc += 1;
 		*len += 1;
 	}
-#endif
 	/* Operand size override prefix. */
 	if (*pc == 0x66) {
 		pc += 1;
 		*size = 2;
 		*len += 1;
 	}
-#ifdef CPU_x86_64
 	/* Handle x86-64 REX prefix. */
 	if ((pc[0] & 0xf0) == 0x40) {
 		*rex = pc[0];
@@ -321,7 +262,6 @@ static bool decode_instruction(
 			return 0;
 		}
 	}
-#endif
 
 	switch (pc[0]) {
 	case 0x8a: /* MOV r8, m8 */
@@ -411,7 +351,6 @@ static bool decode_instruction(
 		}
 		break;
 	}
-#ifdef CPU_x86_64
 	/* SIB byte present when ModR/M rm field = 100 (binary).
 	 * This occurs in JIT-generated memory accesses like
 	 * MOV r32, [R15 + reg*1 + disp32] where R15 = natmem_offset.
@@ -424,7 +363,6 @@ static bool decode_instruction(
 		/* Use x86-64 extended registers R8..R15. */
 		*r += 8;
 	}
-#endif
 	return *r != -1;
 }
 
@@ -465,7 +403,6 @@ static void *get_pr_from_context(CONTEXT_T context, int r, int size, int rex)
 		} else {
 			return (((uae_u8 *) &(CONTEXT_RBX(context))) + 1); /* BH */
 		}
-#ifdef CPU_x86_64
 	case 8:
 		return &(CONTEXT_R8(context));
 	case 9:
@@ -482,7 +419,6 @@ static void *get_pr_from_context(CONTEXT_T context, int r, int size, int rex)
 		return &(CONTEXT_R14(context));
 	case 15:
 		return &(CONTEXT_R15(context));
-#endif
 	default:
 		abort ();
 	}
@@ -530,7 +466,6 @@ static int handle_ramsey_size_probe(uae_u32 addr, CONTEXT_T context, int len)
 static int handle_access(uintptr_t fault_addr, CONTEXT_T context)
 {
 	uae_u8 *fault_pc = (uae_u8 *) CONTEXT_PC(context);
-#ifdef CPU_64_BIT
 	/* Compute Amiga address first, then range-check. The host fault address
 	 * can exceed 32-bit when natmem_offset + amiga_addr > 4GB, but the
 	 * Amiga address itself is always 32-bit. */
@@ -542,7 +477,6 @@ static int handle_access(uintptr_t fault_addr, CONTEXT_T context)
 			return 0;
 		}
 	}
-#endif
 
 #ifdef DEBUG_ACCESS
 	write_log(_T("JIT: Fault address is 0x%lx at PC=%p\n"), fault_addr, fault_pc);
@@ -657,7 +591,6 @@ static int handle_access(uintptr_t fault_addr, CONTEXT_T context)
 
 #ifdef _WIN32
 
-#if defined(CPU_x86_64)
 static LONG WINAPI JITUnhandledExceptionFilter(PEXCEPTION_POINTERS pExInfo)
 {
 	PEXCEPTION_RECORD er = pExInfo->ExceptionRecord;
@@ -715,7 +648,6 @@ static LONG WINAPI JITUnhandledExceptionFilter(PEXCEPTION_POINTERS pExInfo)
 
 	return EXCEPTION_CONTINUE_SEARCH;  /* Let Windows default handler take over */
 }
-#endif /* CPU_x86_64 */
 
 LONG WINAPI EvalException(LPEXCEPTION_POINTERS info)
 {
@@ -870,10 +802,8 @@ static void install_exception_handler(void)
 	write_log(_T("JIT: Installing vectored exception handler\n"));
 	installed_vector_handler = AddVectoredExceptionHandler(
 		0, JITVectoredHandler);
-#if defined(CPU_x86_64)
 	write_log(_T("JIT: Installing unhandled exception filter (crash diagnostics)\n"));
 	SetUnhandledExceptionFilter(JITUnhandledExceptionFilter);
-#endif
 #else
 	write_log(_T("JIT: Installing unhandled exception filter\n"));
 	SetUnhandledExceptionFilter(EvalException);

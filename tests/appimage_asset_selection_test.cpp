@@ -40,6 +40,15 @@ int main()
 			linux_installation_kind::appimage),
 		"Amiberry-8.4.2-aarch64.AppImage",
 		"aarch64 AppImage selection");
+	const std::vector<std::string> legacy_aarch64_assets = {
+		"Amiberry-8.4.2-arm64.AppImage",
+		"Amiberry-8.4.2-x86_64.AppImage",
+	};
+	expect_equal(
+		select_linux_release_asset(legacy_aarch64_assets, linux_release_arch::aarch64,
+			linux_installation_kind::appimage),
+		"Amiberry-8.4.2-arm64.AppImage",
+		"legacy external arm64 release naming");
 	expect_equal(
 		select_linux_release_asset(mixed_x86_assets, linux_release_arch::x86_64,
 			linux_installation_kind::native_package),

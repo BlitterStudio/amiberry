@@ -5,11 +5,11 @@
 #ifndef AMIBERRY_COMPEMU_H
 #define AMIBERRY_COMPEMU_H
 
-#if defined(CPU_arm) || defined(CPU_AARCH64) || defined(__arm__) || defined(_M_ARM) || \
+#if defined(CPU_AARCH64) || \
 	defined(__aarch64__) || defined(_M_ARM64) || defined(_M_ARM64EC)
 #include "arm/compemu_arm.h"
 #elif defined(__x86_64__) || defined(_M_AMD64)
-#include "x86/compemu_x86.h"
+#include "x86_64/compemu_x86_64.h"
 #endif
 
 extern volatile int jit_exception_pending;

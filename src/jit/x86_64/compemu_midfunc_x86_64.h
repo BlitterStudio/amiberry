@@ -1,5 +1,5 @@
 /*
- *  compiler/compemu_midfunc_x86.h - Native MIDFUNCS for IA-32 and AMD64
+ *  compiler/compemu_midfunc_x86_64.h - Native MIDFUNCS for IA-32 and AMD64
  *
  * Copyright (c) 2014 Jens Heitmann of ARAnyM dev team (see AUTHORS)
  *
@@ -113,9 +113,7 @@ DECLARE_MIDFUNC(mov_w_brrm_indexed(W2 d, IMM base, RR4 baser, RR4 index, IMM fac
 DECLARE_MIDFUNC(mov_b_brrm_indexed(W1 d, IMM base, RR4 baser, RR4 index, IMM factor));
 DECLARE_MIDFUNC(mov_l_rm_indexed(W4 d, MEMR base, RR4 index, IMM factor));
 DECLARE_MIDFUNC(mov_l_rR(W4 d, RR4 s, IMM offset));
-#if X86_TARGET_64BIT
 DECLARE_MIDFUNC(mov_q_rR(W4 d, RR4 s, IMM offset));
-#endif
 DECLARE_MIDFUNC(mov_w_rR(W2 d, RR4 s, IMM offset));
 DECLARE_MIDFUNC(mov_b_rR(W1 d, RR4 s, IMM offset));
 DECLARE_MIDFUNC(mov_l_brR(W4 d, RR4 s, IMPTR offset));

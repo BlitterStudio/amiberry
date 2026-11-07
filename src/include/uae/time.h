@@ -16,7 +16,7 @@ uae_s64 read_processor_time_rdtsc(void);
 #else
 static inline uae_s64 read_processor_time_rdtsc(void)
 {
-#if defined(__x86_64__) || defined(__i386__)
+#if defined(__x86_64__)
 	unsigned int lo, hi;
 	__asm__ volatile ("rdtsc" : "=a" (lo), "=d" (hi));
 	return ((uae_u64)hi << 32) | lo;
@@ -24,10 +24,6 @@ static inline uae_s64 read_processor_time_rdtsc(void)
 	int64_t v;
 	__asm__ volatile("mrs %0, cntvct_el0" : "=r" (v));
 	return v;
-#elif defined(__arm__)
-	unsigned int lo, hi;
-	__asm__ volatile("mrrc p15, 1, %0, %1, c14" : "=r"(lo), "=r"(hi));
-	return ((uae_u64)hi << 32) | lo;
 #else
 	return uae_time();
 #endif

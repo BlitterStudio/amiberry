@@ -1,5 +1,5 @@
 /*
- * compiler/codegen_x86.cpp - IA-32 and AMD64 code generator
+ * compiler/codegen_x86_64.cpp - IA-32 and AMD64 code generator
  *
  * Copyright (c) 2001-2004 Milan Jurik of ARAnyM dev team (see AUTHORS)
  * 
@@ -32,7 +32,7 @@
 /* This should eventually end up in machdep/, but for now, x86 is the
    only target, and it's easier this way... */
 
-#include "flags_x86.h"
+#include "flags_x86_64.h"
 
 /*************************************************************************
  * Some basic information about the the target CPU                       *
@@ -50,7 +50,6 @@
 #define EBP_INDEX 5
 #define ESI_INDEX 6
 #define EDI_INDEX 7
-#if defined(CPU_x86_64)
 #define R8_INDEX  8
 #define R9_INDEX  9
 #define R10_INDEX 10
@@ -62,7 +61,6 @@
 /* Dedicated register holding natmem_offset, analogous to ARM64's R27 (R_MEMSTART).
    Used in [R_MEMSTART + m68k_addr] addressing to avoid disp32 sign-extension. */
 #define R_MEMSTART R15_INDEX
-#endif
 /* XXX this has to match X86_Reg8H_Base + 4 */
 #define AH_INDEX (0x10+4+EAX_INDEX)
 #define CH_INDEX (0x10+4+ECX_INDEX)
@@ -77,12 +75,9 @@
 /* Handle the _fastcall parameters of ECX and EDX */
 #define REG_PAR1 ECX_INDEX
 #define REG_PAR2 EDX_INDEX
-#elif defined(CPU_x86_64)
+#else
 #define REG_PAR1 EDI_INDEX
 #define REG_PAR2 ESI_INDEX
-#else
-#define REG_PAR1 EAX_INDEX
-#define REG_PAR2 EDX_INDEX
 #endif
 
 #define REG_PC_PRE EAX_INDEX /* The register we use for preloading regs.pc_p */
@@ -108,7 +103,6 @@
 #define STACK_SHADOW_SPACE 0
 #endif
 
-#if defined(CPU_x86_64)
 #ifdef UAE
 /* Register R12 (and ESP) cannot be used with simple [r/m + disp32] addressing,
  * since r/m bits 100 implies SIB byte. Simplest fix is to not use these
@@ -120,11 +114,6 @@ uae_s8 always_used[] = { ESP_INDEX, -1 };
 #endif
 uae_s8 can_byte[]={0,1,2,3,5,6,7,8,9,10,11,12,13,14,-1};
 uae_s8 can_word[]={0,1,2,3,5,6,7,8,9,10,11,12,13,14,-1};
-#else
-uae_s8 always_used[] = { ESP_INDEX, -1 };
-uae_s8 can_byte[]={0,1,2,3,-1};
-uae_s8 can_word[]={0,1,2,3,5,6,7,-1};
-#endif
 static bool		have_lahf_lm		= true;		// target has LAHF supported in long mode ?
 
 #if USE_OPTIMIZED_CALLS
@@ -144,7 +133,6 @@ uae_u8 call_saved[]={0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0};
    - Special registers (such like the stack pointer) should not be "preserved"
      by pushing, even though they are "saved" across function calls
 */
-#if defined(CPU_x86_64)
 #ifdef _WIN64
 /* https://msdn.microsoft.com/en-us/library/6t169e9c.aspx:
  * "The registers RBX, RBP, RDI, RSI, RSP, R12, R13, R14, and R15 are
@@ -157,10 +145,6 @@ static const uae_u8 need_to_preserve[]={0,0,0,1,0,1,1,1,0,0,0,1,1,1,1,1};
 /* FIXME: not really sure what the point of saving r11 is (??). If functions
  * cannot assume calle preserves it, it will not be used across calls anyway? */
 static const uae_u8 need_to_preserve[]={0,0,0,1,0,1,0,0,0,0,0,1,1,1,1,1};
-#endif
-#else
-/* callee-saved registers as defined by System V IA-32 ABI: edi, esi, ebx, ebp */
-static const uae_u8 need_to_preserve[]={0,0,0,1,0,1,1,1};
 #endif
 
 /* Whether classes of instructions do or don't clobber the native flags */
@@ -199,8 +183,6 @@ static const uae_u8 need_to_preserve[]={0,0,0,1,0,1,1,1};
 #define CLOBBER_BT   clobber_flags()
 #define CLOBBER_BSF  clobber_flags()
 
-#if defined(CPU_x86_64)
-#define X86_TARGET_64BIT		1
 /* ADDR32 removed: the address override prefix (0x67) caused a 5-cycle penalty
    on Intel Core processors and forced 32-bit addressing. With the JIT now
    64-bit pointer-clean, we use the default 64-bit addressing mode which
@@ -214,13 +196,10 @@ static const uae_u8 need_to_preserve[]={0,0,0,1,0,1,1,1};
 #else
 #define ADDR32
 #endif
-#else
-#define ADDR32
-#endif
 #define X86_FLAT_REGISTERS		0
 #define X86_OPTIMIZE_ALU		1
 #define X86_OPTIMIZE_ROTSHI		1
-#include "codegen_x86.h"
+#include "codegen_x86_64.h"
 
 #define x86_emit_byte(B)		emit_byte(B)
 #define x86_emit_word(W)		emit_word(W)
@@ -231,14 +210,11 @@ static const uae_u8 need_to_preserve[]={0,0,0,1,0,1,1,1};
 
 static inline void x86_64_addr32(void)
 {
-#ifdef CPU_x86_64
 	emit_byte(0x67);
-#endif
 }
 
 static inline void x86_64_rex(bool w, uae_u32 *r, uae_u32 *x, uae_u32 *b)
 {
-#ifdef CPU_x86_64
 	int rex_byte = 0x40;
 	/* Each of r/x/b is optional: a NULL pointer means that REX field is not
 	   used by this instruction. The previous version dereferenced 'b'
@@ -263,12 +239,6 @@ static inline void x86_64_rex(bool w, uae_u32 *r, uae_u32 *x, uae_u32 *b)
 	if (rex_byte != 0x40) {
 		emit_byte(rex_byte);
 	}
-#else
-	UNUSED(w);
-	UNUSED(r);
-	UNUSED(x);
-	UNUSED(b);
-#endif
 }
 
 static inline void x86_64_prefix(
@@ -321,29 +291,17 @@ static void jit_fail(const char *msg, const char *file, int line, const char *fu
 
 LOWFUNC(NONE,WRITE,1,raw_push_l_r,(R4 r))
 {
-#if defined(CPU_x86_64)
 	PUSHQr(r);
-#else
-	PUSHLr(r);
-#endif
 }
 
 LOWFUNC(NONE,READ,1,raw_pop_l_r,(R4 r))
 {
-#if defined(CPU_x86_64)
 	POPQr(r);
-#else
-	POPLr(r);
-#endif
 }
 
 LOWFUNC(NONE,READ,1,raw_pop_l_m,(MEMW d))
 {
-#if defined(CPU_x86_64)
 	POPQm(d, X86_NOREG, X86_NOREG, 1);
-#else
-	POPLm(d, X86_NOREG, X86_NOREG, 1);
-#endif
 }
 
 LOWFUNC(WRITE,NONE,2,raw_bt_l_ri,(R4 r, IMM i))
@@ -736,7 +694,6 @@ LOWFUNC(NONE,READ,5,raw_mov_b_brrm_indexed,(W1 d, IMM base, R4 baser, R4 index, 
 
 LOWFUNC(NONE,READ,4,raw_mov_l_rm_indexed,(W4 d, MEMR base, R4 index, IMM factor))
 {
-#if X86_TARGET_64BIT
 	/* x86-64: [disp32 + index*scale] can't reach addresses above ±2GB.
 	   Load 64-bit base into a scratch, then read from [scratch + index*factor].
 	   All callers read pointer arrays (baseaddr[], mem_banks[], cache_tags[]),
@@ -755,14 +712,10 @@ LOWFUNC(NONE,READ,4,raw_mov_l_rm_indexed,(W4 d, MEMR base, R4 index, IMM factor)
 		MOVQir(base, d);
 		MOVQmr(0, d, index, factor, d);
 	}
-#else
-	MOVLmr(base, X86_NOREG, index, factor, d);
-#endif
 }
 
 LOWFUNC(NONE,READ,5,raw_cmov_l_rm_indexed,(W4 d, MEMR base, R4 index, IMM factor, IMM cond))
 {
-#if X86_TARGET_64BIT
 	/* x86-64: [disp32 + index*scale] can't reach 64-bit addresses.
 	   Emulate CMOV as: JCC_not skip; MOV d,[base+index*factor]; skip:
 	   If d == index, use a scratch register to hold the base (preserved
@@ -782,16 +735,6 @@ LOWFUNC(NONE,READ,5,raw_cmov_l_rm_indexed,(W4 d, MEMR base, R4 index, IMM factor
 		}
 		*target_p = (uae_s8)(JITPTR x86_get_target() - (JITPTR target_p + 1));
 	}
-#else
-	if (have_cmov)
-		CMOVLmr(cond, base, X86_NOREG, index, factor, d);
-	else { /* replacement using branch and mov */
-		uae_s8 *target_p = (uae_s8 *)x86_get_target() + 1;
-		JCCSii(cond^1, 0);
-		MOVLmr(base, X86_NOREG, index, factor, d);
-		*target_p = JITPTR x86_get_target() - (JITPTR target_p + 1);
-	}
-#endif
 }
 
 LOWFUNC(NONE,READ,3,raw_cmov_l_rm,(W4 d, MEMR mem, IMM cond))
@@ -811,14 +754,12 @@ LOWFUNC(NONE,READ,3,raw_mov_l_rR,(W4 d, R4 s, IMM offset))
 	ADDR32 MOVLmr(offset, s, X86_NOREG, 1, d);
 }
 
-#if X86_TARGET_64BIT
 /* 64-bit register-relative load: d = *(uint64_t*)(s + offset).
    Used for reading pointer-sized values (e.g., function pointers from addrbank). */
 static inline void raw_mov_q_rR(int d, int s, int offset)
 {
 	MOVQmr(offset, s, X86_NOREG, 1, d);
 }
-#endif
 
 LOWFUNC(NONE,READ,3,raw_mov_w_rR,(W2 d, R4 s, IMM offset))
 {
@@ -832,7 +773,6 @@ LOWFUNC(NONE,READ,3,raw_mov_b_rR,(W1 d, R4 s, IMM offset))
 
 LOWFUNC(NONE,READ,3,raw_mov_l_brR,(W4 d, R4 s, IMM offset))
 {
-#if X86_TARGET_64BIT
 	/* Use LEA+MOV to ensure M68K 32-bit address wrapping.
 	   x86-64 [base + index + disp32] computes in 64-bit, so when the
 	   M68K register + displacement wraps past 32 bits, the host address
@@ -846,14 +786,10 @@ LOWFUNC(NONE,READ,3,raw_mov_l_brR,(W4 d, R4 s, IMM offset))
 	} else {
 		MOVLmr(0, R_MEMSTART, s, 1, d);
 	}
-#else
-	ADDR32 MOVLmr(offset, s, X86_NOREG, 1, d);
-#endif
 }
 
 LOWFUNC(NONE,READ,3,raw_mov_w_brR,(W2 d, R4 s, IMM offset))
 {
-#if X86_TARGET_64BIT
 	/* See raw_mov_l_brR for the LEA+MOV rationale. */
 	if (offset != 0) {
 		LEALmr(offset, s, X86_NOREG, 1, d);
@@ -861,23 +797,16 @@ LOWFUNC(NONE,READ,3,raw_mov_w_brR,(W2 d, R4 s, IMM offset))
 	} else {
 		MOVWmr(0, R_MEMSTART, s, 1, d);
 	}
-#else
-	ADDR32 MOVWmr(offset, s, X86_NOREG, 1, d);
-#endif
 }
 
 LOWFUNC(NONE,READ,3,raw_mov_b_brR,(W1 d, R4 s, IMM offset))
 {
-#if X86_TARGET_64BIT
 	if (offset != 0) {
 		LEALmr(offset, s, X86_NOREG, 1, d);
 		MOVBmr(0, R_MEMSTART, d, 1, d);
 	} else {
 		MOVBmr(0, R_MEMSTART, s, 1, d);
 	}
-#else
-	ADDR32 MOVBmr(offset, s, X86_NOREG, 1, d);
-#endif
 }
 
 LOWFUNC(NONE,WRITE,3,raw_mov_l_Ri,(R4 d, IMM i, IMM offset))
@@ -938,30 +867,18 @@ LOWFUNC(NONE,NONE,4,raw_lea_l_r_scaled,(W4 d, R4 index, IMM factor))
 
 LOWFUNC(NONE,WRITE,3,raw_mov_l_bRr,(R4 d, R4 s, IMM offset))
 {
-#if X86_TARGET_64BIT
 	/* Use [R_MEMSTART + d + offset] — see raw_mov_l_brR comment. */
 	MOVLrm(s, offset, R_MEMSTART, d, 1);
-#else
-	ADDR32 MOVLrm(s, offset, d, X86_NOREG, 1);
-#endif
 }
 
 LOWFUNC(NONE,WRITE,3,raw_mov_w_bRr,(R4 d, R2 s, IMM offset))
 {
-#if X86_TARGET_64BIT
 	MOVWrm(s, offset, R_MEMSTART, d, 1);
-#else
-	ADDR32 MOVWrm(s, offset, d, X86_NOREG, 1);
-#endif
 }
 
 LOWFUNC(NONE,WRITE,3,raw_mov_b_bRr,(R4 d, R1 s, IMM offset))
 {
-#if X86_TARGET_64BIT
 	MOVBrm(s, offset, R_MEMSTART, d, 1);
-#else
-	ADDR32 MOVBrm(s, offset, d, X86_NOREG, 1);
-#endif
 }
 
 LOWFUNC(NONE,NONE,1,raw_bswap_32,(RW4 r))
@@ -1009,7 +926,6 @@ LOWFUNC(NONE,NONE,2,raw_mov_l_ri,(W4 d, IMM s))
 	MOVLir(s, d);
 }
 
-#if X86_TARGET_64BIT
 /* 64-bit immediate → register (movabs r64, imm64).
    Used for PC_P which holds a 64-bit host pointer. */
 LOWFUNC(NONE,NONE,2,raw_mov_q_ri,(W4 d, uintptr s))
@@ -1041,7 +957,6 @@ static inline void raw_mov_q_mr(uintptr d, int s)
 {
 	MOVQrm(s, d, X86_NOREG, X86_NOREG, 1);  /* mov [d], s via RIP-relative */
 }
-#endif
 
 LOWFUNC(NONE,NONE,2,raw_mov_w_ri,(W2 d, IMM s))
 {
@@ -1293,14 +1208,12 @@ LOWFUNC(WRITE,READ,2,raw_cmp_l_mi,(MEMR d, IMM s))
 	ADDR32 CMPLim(s, d, X86_NOREG, X86_NOREG, 1);
 }
 
-#if X86_TARGET_64BIT
 /* CMP [mem64], r64  — compare 8-byte memory value against 64-bit register.
    Sets flags from [mem] - reg. */
 static inline void raw_cmp_q_mr(uintptr mem, R4 r)
 {
 	CMPQrm(r, mem, X86_NOREG, X86_NOREG, 1);
 }
-#endif
 
 LOWFUNC(NONE,NONE,2,raw_xchg_l_rr,(RW4 r1, RW4 r2))
 {
@@ -1350,32 +1263,21 @@ static inline void raw_jmp_r(R4 r)
 
 static inline void raw_jmp_m_indexed(uintptr base, uae_u32 r, uae_u32 m)
 {
-#if X86_TARGET_64BIT
 	/* x86-64: load 64-bit base into RAX, then JMP [RAX + r*m].
 	   Caller must ensure r != EAX_INDEX (currently always true:
 	   r = REG_PC_TMP = ECX_INDEX). */
 	MOVQir(base, X86_RAX);
 	JMPsm(0, X86_RAX, r, m);
-#else
-	JMPsm(base, X86_NOREG, r, m);
-#endif
 }
 
 static inline void raw_jmp_m(uintptr base)
 {
-#if X86_TARGET_64BIT
 	/* x86-64: load 64-bit address into RAX, then JMP [RAX] */
 	MOVQir(base, X86_RAX);
 	JMPsm(0, X86_RAX, X86_NOREG, 1);
-#else
-	emit_byte(0xff);
-	emit_byte(0x25);
-	emit_long(base);
-#endif
 }
 
 
-#if X86_TARGET_64BIT
 static inline void raw_call(uintptr t)
 {
 	/* 64-bit: load target into scratch register, call via register */
@@ -1389,17 +1291,6 @@ static inline void raw_jmp(uintptr t)
 	MOVQir(t, X86_RAX);
 	JMPsr(X86_RAX);
 }
-#else
-static inline void raw_call(uae_u32 t)
-{
-	CALLm(t);
-}
-
-static inline void raw_jmp(uae_u32 t)
-{
-	JMPm(t);
-}
-#endif
 
 static inline void raw_jcc_l_oponly(int cc)
 {
@@ -1473,7 +1364,6 @@ static inline void raw_emit_nop(void)
 static inline void raw_emit_nop_filler(int nbytes)
 {
 
-#if defined(CPU_x86_64)
   /* The recommended way to pad 64bit code is to use NOPs preceded by
      maximally four 0x66 prefixes.  Balance the size of nops.  */
   static const uae_u8 prefixes[4] = { 0x66, 0x66, 0x66, 0x66 };
@@ -1493,66 +1383,6 @@ static inline void raw_emit_nop_filler(int nbytes)
 	  emit_block(prefixes, len - 1);
 	  raw_emit_nop();
   }
-#else
-  /* Source: GNU Binutils 2.12.90.0.15 */
-  /* Various efficient no-op patterns for aligning code labels.
-     Note: Don't try to assemble the instructions in the comments.
-     0L and 0w are not legal.  */
-  static const uae_u8 f32_1[] =
-	{0x90}; 								/* nop					*/
-  static const uae_u8 f32_2[] =
-	{0x89,0xf6};							/* movl %esi,%esi		*/
-  static const uae_u8 f32_3[] =
-	{0x8d,0x76,0x00};						/* leal 0(%esi),%esi	*/
-  static const uae_u8 f32_4[] =
-	{0x8d,0x74,0x26,0x00};					/* leal 0(%esi,1),%esi	*/
-  static const uae_u8 f32_5[] =
-	{0x90,									/* nop					*/
-	 0x8d,0x74,0x26,0x00};					/* leal 0(%esi,1),%esi	*/
-  static const uae_u8 f32_6[] =
-	{0x8d,0xb6,0x00,0x00,0x00,0x00};		/* leal 0L(%esi),%esi	*/
-  static const uae_u8 f32_7[] =
-	{0x8d,0xb4,0x26,0x00,0x00,0x00,0x00};	/* leal 0L(%esi,1),%esi */
-  static const uae_u8 f32_8[] =
-	{0x90,									/* nop					*/
-	 0x8d,0xb4,0x26,0x00,0x00,0x00,0x00};	/* leal 0L(%esi,1),%esi */
-  static const uae_u8 f32_9[] =
-	{0x89,0xf6, 							/* movl %esi,%esi		*/
-	 0x8d,0xbc,0x27,0x00,0x00,0x00,0x00};	/* leal 0L(%edi,1),%edi */
-  static const uae_u8 f32_10[] =
-	{0x8d,0x76,0x00,						/* leal 0(%esi),%esi	*/
-	 0x8d,0xbc,0x27,0x00,0x00,0x00,0x00};	/* leal 0L(%edi,1),%edi */
-  static const uae_u8 f32_11[] =
-	{0x8d,0x74,0x26,0x00,					/* leal 0(%esi,1),%esi	*/
-	 0x8d,0xbc,0x27,0x00,0x00,0x00,0x00};	/* leal 0L(%edi,1),%edi */
-  static const uae_u8 f32_12[] =
-	{0x8d,0xb6,0x00,0x00,0x00,0x00, 		/* leal 0L(%esi),%esi	*/
-	 0x8d,0xbf,0x00,0x00,0x00,0x00};		/* leal 0L(%edi),%edi	*/
-  static const uae_u8 f32_13[] =
-	{0x8d,0xb6,0x00,0x00,0x00,0x00, 		/* leal 0L(%esi),%esi	*/
-	 0x8d,0xbc,0x27,0x00,0x00,0x00,0x00};	/* leal 0L(%edi,1),%edi */
-  static const uae_u8 f32_14[] =
-	{0x8d,0xb4,0x26,0x00,0x00,0x00,0x00,	/* leal 0L(%esi,1),%esi */
-	 0x8d,0xbc,0x27,0x00,0x00,0x00,0x00};	/* leal 0L(%edi,1),%edi */
-  static const uae_u8 f32_15[] =
-	{0xeb,0x0d,0x90,0x90,0x90,0x90,0x90,	/* jmp .+15; lotsa nops */
-	 0x90,0x90,0x90,0x90,0x90,0x90,0x90,0x90};
-  static const uae_u8 f32_16[] =
-	{0xeb,0x0d,0x90,0x90,0x90,0x90,0x90,	/* jmp .+15; lotsa nops */
-	 0x90,0x90,0x90,0x90,0x90,0x90,0x90,0x90,0x90};
-  static const uae_u8 *const f32_patt[] = {
-	f32_1, f32_2, f32_3, f32_4, f32_5, f32_6, f32_7, f32_8,
-	f32_9, f32_10, f32_11, f32_12, f32_13, f32_14, f32_15
-  };
-
-  int nloops = nbytes / 16;
-  while (nloops-- > 0)
-	emit_block(f32_16, sizeof(f32_16));
-
-  nbytes %= 16;
-  if (nbytes)
-	emit_block(f32_patt[nbytes - 1], nbytes);
-#endif
 }
 
 
@@ -1642,7 +1472,6 @@ static inline void raw_flags_set_zero_FLAGSTK(int s, int tmp)
 
 static inline void raw_flags_init_FLAGSTK(void) { }
 
-#if defined(CPU_x86_64)
 
 #ifndef SAHF_SETO_PROFITABLE
 #error x64 JIT requires SAHF_SETO_PROFITABLE
@@ -1704,14 +1533,11 @@ static inline void raw_flags_init_FLAGGEN(void)
 		FLAG_NREG3_FLAGGEN = FLAG_NREG3_FLAGSTK;
 	}
 }
-#endif
 
 #ifdef SAHF_SETO_PROFITABLE
 #define FLAG_SUFFIX FLAGREG
-#elif defined CPU_x86_64
-#define FLAG_SUFFIX FLAGGEN
 #else
-#define FLAG_SUFFIX FLAGSTK
+#define FLAG_SUFFIX FLAGGEN
 #endif
 
 #define FLAG_GLUE_2(x, y)		x ## _ ## y
@@ -1750,9 +1576,7 @@ static inline void raw_load_flagx(uae_u32 target)
 static inline void raw_dec_sp(int off)
 {
 	if (off) {
-#ifdef CPU_x86_64
 		emit_byte(0x48); /* REX prefix */
-#endif
 		raw_sub_l_ri(ESP_INDEX,off);
 	}
 }
@@ -1760,9 +1584,7 @@ static inline void raw_dec_sp(int off)
 static inline void raw_inc_sp(int off)
 {
 	if (off) {
-#ifdef CPU_x86_64
 		emit_byte(0x48); /* REX prefix */
-#endif
 		raw_add_l_ri(ESP_INDEX,off);
 	}
 }
@@ -1965,11 +1787,7 @@ static void raw_init_cpu(void)
 	c->x86_model = c->x86_mask = 0;	/* So far unknown... */
 	c->x86_vendor_id[0] = '\0';		/* Unset */
 	c->x86_hwcap = 0;
-#ifdef CPU_x86_64
 	c->x86_clflush_size = 64;
-#else
-	c->x86_clflush_size = 32;
-#endif
 
 	/* Get vendor name */
 	c->x86_vendor_id[12] = '\0';
@@ -2067,11 +1885,9 @@ static void raw_init_cpu(void)
 
 	/* Have CMOV support? */
 	have_cmov = (c->x86_hwcap & (1 << 15)) != 0;
-#if defined(CPU_x86_64)
 	if (!have_cmov) {
 		jit_abort("x86-64 implementations are bound to have CMOV!");
 	}
-#endif
 
 	c->x86_has_xmm2 = (c->x86_hwcap & (1 << 26)) != 0;
 
@@ -2444,7 +2260,6 @@ LOWFUNC(NONE,NONE,2,raw_fmov_rr,(FW d, FR s))
 
 LOWFUNC(NONE,READ,2,raw_fldcw_m_indexed,(R4 index, MEMR base))
 {
-#if X86_TARGET_64BIT
 	/* x86-64: [index + disp32] can't reach a 64-bit base address, so the base
 	   must be materialized in a register, then used as FLDCW [scratch + index*1]
 	   via SIB encoding. RAX/RCX are allocatable (not in always_used[]) and may
@@ -2461,12 +2276,6 @@ LOWFUNC(NONE,READ,2,raw_fldcw_m_indexed,(R4 index, MEMR base))
 	/* SIB: scale=00 (x1), index=index_reg, base=scratch */
 	emit_byte((_r(index) << 3) | _r(scratch));
 	POPQr(scratch);
-#else
-	x86_64_prefix(true, false, NULL, NULL, &index);
-	emit_byte(0xd9);
-	emit_byte(0xa8 + index);
-	emit_long(base);
-#endif
 }
 
 LOWFUNC(NONE,NONE,2,raw_fsqrt_rr,(FW d, FR s))
@@ -3000,11 +2809,7 @@ LOWFUNC(NONE,NONE,2,raw_ftan_rr,(FW d, FR s))
 	}
 }
 
-#ifdef CPU_x86_64
 #define REX64() emit_byte(0x48)
-#else
-#define REX64()
-#endif
 
 LOWFUNC(NONE,NONE,1,raw_fcuts_r,(FRW r))
 {
@@ -3560,4 +3365,3 @@ static inline void raw_fflags_into_flags(int r)
 	emit_byte(0xdd);
 	emit_byte(0xd9+p);  /* store value back, and get rid of 0 */
 }
-

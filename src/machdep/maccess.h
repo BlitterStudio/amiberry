@@ -12,11 +12,7 @@
 #include "uae/byteswap.h"
 #include "sysdeps.h"
 
-#ifdef CPU_64_BIT
 #define ALIGN_POINTER_TO32(p) ((~(uae_u64)(p)) & 7)
-#else
-#define ALIGN_POINTER_TO32(p) ((~(uae_u32)(p)) & 3)
-#endif
 
 static inline uae_u64 do_get_mem_quad(uae_u64 *a)
 {

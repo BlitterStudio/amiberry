@@ -18,7 +18,7 @@ import sys
 
 sysconfig = Path("src/osdep/sysconfig.h").read_text()
 sysdeps = Path("src/include/sysdeps.h").read_text()
-jit_support = Path("src/jit/x86/compemu_support_x86.cpp").read_text()
+jit_support = Path("src/jit/x86_64/compemu_support_x86_64.cpp").read_text()
 
 
 def fail(message: str) -> None:

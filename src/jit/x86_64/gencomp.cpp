@@ -114,16 +114,16 @@
 #endif
 
 #ifdef AMIBERRY
-#define COMP_HEADER_INCLUDE "comptbl_x86.h"
-#define COMPEMU_INCLUDE "compemu_x86.h"
-#define FLAGS_X86_INCLUDE "flags_x86.h"
-#define GEN_COMP_HEADER "comptbl_x86.h"
-#define GEN_COMP_STBL "compstbl_x86.cpp"
-#define GEN_COMPEMU "compemu_x86.cpp"
+#define COMP_HEADER_INCLUDE "comptbl_x86_64.h"
+#define COMPEMU_INCLUDE "compemu_x86_64.h"
+#define FLAGS_X86_INCLUDE "flags_x86_64.h"
+#define GEN_COMP_HEADER "comptbl_x86_64.h"
+#define GEN_COMP_STBL "compstbl_x86_64.cpp"
+#define GEN_COMPEMU "compemu_x86_64.cpp"
 #else
 #define COMP_HEADER_INCLUDE "comptbl.h"
 #define COMPEMU_INCLUDE JIT_PATH "compemu.h"
-#define FLAGS_X86_INCLUDE JIT_PATH "flags_x86.h"
+#define FLAGS_X86_INCLUDE JIT_PATH "flags_x86_64.h"
 #define GEN_COMP_HEADER GEN_PATH "comptbl.h"
 #define GEN_COMP_STBL GEN_PATH "compstbl.cpp"
 #define GEN_COMPEMU GEN_PATH "compemu.cpp"
@@ -152,7 +152,7 @@ static int global_fpu;
 
 static char endstr[1000];
 
-#include "flags_x86.h"
+#include "flags_x86_64.h"
 
 #ifdef AMIBERRY
 static const char *amiberry_gen_path;
@@ -172,11 +172,11 @@ static void init_amiberry_output_paths(void)
 	if (file_exists("gencomp.cpp")) {
 		amiberry_gen_path = "";
 		amiberry_dispatch_path = "../";
-	} else if (file_exists("jit/x86/gencomp.cpp")) {
-		amiberry_gen_path = "jit/x86/";
+	} else if (file_exists("jit/x86_64/gencomp.cpp")) {
+		amiberry_gen_path = "jit/x86_64/";
 		amiberry_dispatch_path = "jit/";
-	} else if (file_exists("src/jit/x86/gencomp.cpp")) {
-		amiberry_gen_path = "src/jit/x86/";
+	} else if (file_exists("src/jit/x86_64/gencomp.cpp")) {
+		amiberry_gen_path = "src/jit/x86_64/";
 		amiberry_dispatch_path = "src/jit/";
 	} else {
 		amiberry_gen_path = "";
@@ -208,7 +208,7 @@ static void write_amiberry_file_header(FILE *f)
 
 static void write_amiberry_cpu_dispatch(FILE *f, const char *arm_include, const char *x86_include)
 {
-	fprintf(f, "#if defined(CPU_arm) || defined(CPU_AARCH64) || defined(__arm__) || defined(_M_ARM) || \\\n");
+	fprintf(f, "#if defined(CPU_AARCH64) || \\\n");
 	fprintf(f, "\tdefined(__aarch64__) || defined(_M_ARM64) || defined(_M_ARM64EC)\n");
 	fprintf(f, "#include \"%s\"\n", arm_include);
 	fprintf(f, "#elif defined(__x86_64__) || defined(_M_AMD64)\n");
@@ -226,20 +226,20 @@ static void write_amiberry_dispatchers(void)
 	write_amiberry_file_header(f);
 	fprintf(f, "#ifndef AMIBERRY_COMPTBL_H\n");
 	fprintf(f, "#define AMIBERRY_COMPTBL_H\n\n");
-	write_amiberry_cpu_dispatch(f, "arm/comptbl_arm.h", "x86/comptbl_x86.h");
+	write_amiberry_cpu_dispatch(f, "arm/comptbl_arm.h", "x86_64/comptbl_x86_64.h");
 	fprintf(f, "\n#endif //AMIBERRY_COMPTBL_H\n");
 	fclose(f);
 
 	make_path(path, sizeof path, amiberry_dispatch_path, "compstbl.cpp");
 	f = open_output_or_abort(path);
 	write_amiberry_file_header(f);
-	write_amiberry_cpu_dispatch(f, "arm/compstbl_arm.cpp", "x86/compstbl_x86.cpp");
+	write_amiberry_cpu_dispatch(f, "arm/compstbl_arm.cpp", "x86_64/compstbl_x86_64.cpp");
 	fclose(f);
 
 	make_path(path, sizeof path, amiberry_dispatch_path, "compemu.cpp");
 	f = open_output_or_abort(path);
 	write_amiberry_file_header(f);
-	write_amiberry_cpu_dispatch(f, "arm/compemu_arm.cpp", "x86/compemu_x86.cpp");
+	write_amiberry_cpu_dispatch(f, "arm/compemu_arm.cpp", "x86_64/compemu_x86_64.cpp");
 	fclose(f);
 }
 
