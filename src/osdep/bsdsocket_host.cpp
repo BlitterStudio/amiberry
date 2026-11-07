@@ -2720,6 +2720,7 @@ void host_getservbynameport(TrapContext *ctx, SB, uae_u32 nameport, uae_u32 prot
 #include <cstring>
 #include <vector>
 #include "bsdsocket_blocking.h"
+#include "bsdsocket_ifinfo.h"
 #include <SDL3/SDL_mutex.h>
 #if defined(_WIN32)
 #include <mutex>
@@ -5409,6 +5410,50 @@ uae_u32 host_getpeername(TrapContext *ctx, SB, uae_u32 sd, uae_u32 name, uae_u32
 	return -1;
 }
 
+/* SIOCGIFFLAGS, SIOCGIF{ADDR,DSTADDR,BRDADDR,NETMASK} and SIOCGIFCONF. */
+static int host_interface_ioctl(TrapContext *ctx, SB, bsdsock_ifinfo::request req, uae_u32 arg)
+{
+	using namespace bsdsock_ifinfo;
+
+	struct ifaddrs *list;
+	if (getifaddrs(&list) != 0) {
+		SETERRNO;
+		return -1;
+	}
+
+	int err = 0;
+	if (req == request::conf) {
+		const uae_s32 len = trap_get_long(ctx, arg);
+		const uae_u32 bufptr = trap_get_long(ctx, arg + 4);
+		if (len > 0 && !bufptr) {
+			err = 14; /* EFAULT */
+		} else {
+			const size_t needed = conf_size(list);
+			const size_t capacity = len > 0 ? static_cast<size_t>(len) : 0;
+			std::vector<uint8_t> buf(capacity < needed ? capacity : needed);
+			const size_t used = conf(list, buf.data(), buf.size());
+			if (used)
+				trap_put_bytes(ctx, buf.data(), bufptr, static_cast<int>(used));
+			trap_put_long(ctx, arg, static_cast<uae_u32>(used));
+		}
+	} else {
+		char name[name_size + 1];
+		trap_get_bytes(ctx, name, arg, name_size);
+		name[name_size] = 0;
+		uint8_t value[value_size];
+		err = query(list, name, req, value);
+		if (!err)
+			trap_put_bytes(ctx, value, arg + name_size, value_size);
+	}
+	freeifaddrs(list);
+
+	if (err) {
+		bsdsocklib_seterrno(ctx, sb, err);
+		return -1;
+	}
+	return 0;
+}
+
 uae_u32 host_IoctlSocket(TrapContext *ctx, SB, uae_u32 sd, uae_u32 request, uae_u32 arg)
 {
 	sd++;
@@ -5492,63 +5537,11 @@ uae_u32 host_IoctlSocket(TrapContext *ctx, SB, uae_u32 sd, uae_u32 request, uae_
 		break;
 	}
 
-#ifndef _WIN32
-	// Interface discovery IOCTLs - not available on Windows (no ifreq/ifconf)
-	case 0x80106921: /* SIOCGIFADDR */
-	case 0x80106923: /* SIOCGIFDSTADDR */
-	case 0x80106925: /* SIOCGIFBRDADDR */
-	case 0x80106927: /* SIOCGIFNETMASK */
-	case 0xc0206911: /* SIOCGIFFLAGS */
-	{
-		struct ifreq ifr;
-		memset(&ifr, 0, sizeof(ifr));
-		// Read interface name from Amiga memory
-		for (int i = 0; i < IFNAMSIZ - 1; i++) {
-			ifr.ifr_name[i] = trap_get_byte(ctx, arg + i);
-			if (ifr.ifr_name[i] == 0) break;
-		}
-		ifr.ifr_name[IFNAMSIZ - 1] = 0;
-		r = ioctl(sock, request, &ifr);
-		if (r >= 0) {
-			// Write result back
-			if (request == 0xc0206911) { // SIOCGIFFLAGS
-				trap_put_word(ctx, arg + IFNAMSIZ, ifr.ifr_flags);
-			} else { // Address IOCTLs
-				copysockaddr_n2a(arg + IFNAMSIZ, (struct sockaddr_in*)&ifr.ifr_addr, 16);
-			}
-		}
-		return r;
-	}
-
-	case 0xc0086924: /* SIOCGIFCONF */
-	{
-		struct ifconf ifc;
-		char buf[1024];
-		ifc.ifc_len = sizeof(buf);
-		ifc.ifc_buf = buf;
-		r = ioctl(sock, SIOCGIFCONF, &ifc);
-		if (r >= 0) {
-			// Write back the interface list
-			trap_put_long(ctx, arg, ifc.ifc_len);
-			uae_u32 bufptr = trap_get_long(ctx, arg + 4);
-			if (bufptr) {
-				for (int i = 0; i < ifc.ifc_len && i < (int)sizeof(buf);) {
-					struct ifreq *ifr = (struct ifreq*)(buf + i);
-					// Write interface name
-					for (int j = 0; j < IFNAMSIZ; j++) {
-						trap_put_byte(ctx, bufptr + i + j, ifr->ifr_name[j]);
-					}
-					// Write address
-					copysockaddr_n2a(bufptr + i + IFNAMSIZ, (struct sockaddr_in*)&ifr->ifr_addr, 16);
-					i += sizeof(struct ifreq);
-				}
-			}
-		}
-		return r;
-	}
-#endif /* !_WIN32 */
-
 	} /* end switch */
+
+	const auto iface_req = bsdsock_ifinfo::decode(request);
+	if (iface_req != bsdsock_ifinfo::request::none)
+		return host_interface_ioctl(ctx, sb, iface_req, arg);
 
 	bsdsocklib_seterrno (ctx, sb, EINVAL);
 	return -1;
