@@ -1,5 +1,5 @@
 /*
- * compiler/codegen_armA64.h - aarch64 code generator
+ * compiler/codegen_armA64.h - AARCH64 code generator
  *
  * Copyright (c) 2019 TomB
  *
@@ -122,7 +122,7 @@
  * Use UXTW to zero-extend 32-bit M68k addresses to 64-bit host offsets.
  * SXTW was used historically when natmem lived at 0x80000000, but sign-extending
  * addresses with bit 31 set wraps BELOW natmem on platforms where natmem > 2GB
- * (e.g., macOS aarch64 at 0x300000000), causing SIGBUS. */
+ * (e.g., macOS ARM64 at 0x300000000), causing SIGBUS. */
 #define LDR_wXx(Wt,Xn,Xm)         _W((0b10111000011 << 21) | ((Xn) << 16) | (EX_UXTW << 13) | (0 << 12) | (0b10 << 10) | ((Xm) << 5) | (Wt))
 #define LDR_xXx(Xt,Xn,Xm)         _W((0b11111000011 << 21) | ((Xm) << 16) | (0b011 << 13) | (0 << 12) | (0b10 << 10) | ((Xn) << 5) | (Xt))
 // i=0 no shift, i=1 LSL 2 (W) or LSL 3 (X)

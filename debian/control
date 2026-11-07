@@ -64,7 +64,7 @@ Package: amiberry
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: Optimized Amiga emulator for various platforms
- Amiberry is an optimized Amiga emulator for aarch64, AMD64 and RISC-V
+ Amiberry is an optimized Amiga emulator for ARM64, AMD64 and RISC-V
  platforms. It is based on the latest WinUAE and supports various Amiga
  models, including the A4000T, A4000D, A1200, A3000 and A600.
  .

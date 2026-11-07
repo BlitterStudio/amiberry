@@ -452,7 +452,7 @@ bool preinit_shm ()
 		/* 64-bit JITs are pointer-clean (including add/sub on PC_P):
 		   natmem can live above 4GB.  Dropping UAE_VM_32BIT avoids futile
 		   mmap/munmap cycles on platforms where the kernel ignores low-address
-		   hints (e.g. macOS x86-64/aarch64). */
+		   hints (e.g. macOS x86-64/ARM64). */
 		vm_flags &= ~UAE_VM_32BIT;
 		natmem_reserved = static_cast<uae_u8*>(uae_vm_reserve(natmem_size, vm_flags));
 	}

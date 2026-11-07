@@ -453,7 +453,7 @@ static inline int cctrue(int cc)
  * Machine dependent structure for holding the 68k CCR flags.
  * The flags are stored in host NZCV bit positions; cznv aliases nzcv so
  * generic CPU core code (gencpu output, newcpu.cpp) can use the same field
- * name on every host, matching WinUAE's aarch64 definition.
+ * name on every host, matching WinUAE's ARM64 definition.
  */
 struct flag_struct {
 	union {

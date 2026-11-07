@@ -95,7 +95,7 @@ Missing-plugin check:
 
 The QEMU-UAE PPC plugin repository should publish artifacts for the desktop platforms that can load Amiberry dynamic plugins:
 
-- Linux x86-64 and aarch64: `qemu-uae.so`
+- Linux x86-64 and ARM64: `qemu-uae.so`
 - macOS universal: `qemu-uae.dylib`
 - Windows x64 and ARM64: `qemu-uae.dll`
 

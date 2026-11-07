@@ -81,7 +81,7 @@ else ifneq (,$(findstring android,$(platform)))
    # API 28, so the core targets API 28 — Android 9 and newer.
    ANDROID_API ?= 28
    ANDROID_NDK_LLVM ?= $(ANDROID_NDK_ROOT)/toolchains/llvm/prebuilt/linux-x86_64
-   ifneq (,$(filter $(platform),android-aarch64 android-arm64))
+   ifeq ($(platform), android-arm64)
       ANDROID_TRIPLE := aarch64-linux-android
       ARCH := aarch64
    else ifneq (,$(filter $(platform),android-x86_64 android-x64))

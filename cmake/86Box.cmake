@@ -316,7 +316,7 @@ set(AMIBERRY_86BOX_DYNAREC_SOURCES
     src/86box/cpu/codegen_timing_winchip2.cpp
 )
 
-set(AMIBERRY_86BOX_DYNAREC_AARCH64_SOURCES
+set(AMIBERRY_86BOX_DYNAREC_ARM64_SOURCES
     src/86box/codegen/codegen_backend_arm64.cpp
     src/86box/codegen/codegen_backend_arm64_imm.cpp
     src/86box/codegen/codegen_backend_arm64_ops.cpp
@@ -404,8 +404,8 @@ if(USE_86BOX)
         # USE_DYNAREC changes 86Box's CPU state, so it applies to every file
         # that includes 86Box's cpu.h.
         list(APPEND AMIBERRY_86BOX_OBJECT_SOURCES ${AMIBERRY_86BOX_DYNAREC_SOURCES})
-        if(AMIBERRY_86BOX_DYNAREC_BACKEND STREQUAL "aarch64")
-            list(APPEND AMIBERRY_86BOX_OBJECT_SOURCES ${AMIBERRY_86BOX_DYNAREC_AARCH64_SOURCES})
+        if(AMIBERRY_86BOX_DYNAREC_BACKEND STREQUAL "arm64")
+            list(APPEND AMIBERRY_86BOX_OBJECT_SOURCES ${AMIBERRY_86BOX_DYNAREC_ARM64_SOURCES})
         else()
             list(APPEND AMIBERRY_86BOX_OBJECT_SOURCES ${AMIBERRY_86BOX_DYNAREC_X86_64_SOURCES})
         endif()

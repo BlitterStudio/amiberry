@@ -7,7 +7,7 @@
 
 **Optimized Amiga emulator for Linux, macOS, Windows, Android, FreeBSD, and Haiku.**
 
-Built on the WinUAE emulation core, Amiberry delivers full Amiga compatibility on 64-bit hosts, including aarch64, x86_64, RISC-V and LoongArch64 hardware — from a Raspberry Pi to a desktop workstation. Custom JIT compilation for aarch64 and x86_64 provides maximum emulation speed. 32-bit host builds are not supported; emulated Amiga CPU and address widths are unchanged.
+Built on the WinUAE emulation core, Amiberry delivers full Amiga compatibility on 64-bit hosts, including ARM64, x86-64, RISC-V and LoongArch64 hardware — from a Raspberry Pi to a desktop workstation. Custom JIT compilation for ARM64 and x86-64 provides maximum emulation speed. 32-bit host builds are not supported; emulated Amiga CPU and address widths are unchanged.
 
 ## Sponsors
 
@@ -60,7 +60,7 @@ platforms your product depends on exist because of community and corporate suppo
 
 ## Features
 
-- **JIT Compiler** — Custom just-in-time compilation for aarch64 and x86-64
+- **JIT Compiler** — Custom just-in-time compilation for ARM64 and x86-64
 - **WHDLoad Support** — Launch WHDLoad titles directly with automatic configuration
 - **Custom Bezels & Shaders** — CRT monitor frames, overlay effects, and GLSL shader support
 - **Modern GUI** — Clean Dear ImGui interface navigable by mouse or gamepad
@@ -102,7 +102,7 @@ Download the [installer or portable ZIP](https://github.com/BlitterStudio/amiber
 
 ### Android
 
-Currently in Closed Testing on [Google Play](https://play.google.com/store/apps/details?id=com.blitterstudio.amiberry) for [Ko-fi](https://ko-fi.com/midwan) members, who receive a 100% discount code that also covers the final release. Open Testing is planned after the next release, followed by a public paid release on Google Play. AArch64 & x86_64, with full aarch64 JIT support. See the [Android wiki page](https://github.com/BlitterStudio/amiberry/wiki/Android) for details.
+Currently in Closed Testing on [Google Play](https://play.google.com/store/apps/details?id=com.blitterstudio.amiberry) for [Ko-fi](https://ko-fi.com/midwan) members, who receive a 100% discount code that also covers the final release. Open Testing is planned after the next release, followed by a public paid release on Google Play. AArch64 & x86_64, with full ARM64 JIT support. See the [Android wiki page](https://github.com/BlitterStudio/amiberry/wiki/Android) for details.
 
 ### FreeBSD
 Install from the FreeBSD package repository:

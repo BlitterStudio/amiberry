@@ -745,7 +745,7 @@ void comp_fbcc_opp(uae_u32 opcode)
 	{
 		off = (uae_s32) comp_get_ilong((m68k_pc_offset += 4) - 4);
 	}
-	/* Match the aarch64 FBcc fix: keep the signed displacement separate
+	/* Match the ARM64 FBcc fix: keep the signed displacement separate
 	 * from the 64-bit host pointer so non-PC_P set_const paths do not
 	 * lose pointer width or zero-extend backward branches. */
 	{

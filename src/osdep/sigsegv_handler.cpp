@@ -715,11 +715,11 @@ static int handle_exception(mcontext_t sigcont, long fault_addr)
 			/* Quarantine any JIT fault that hits the dummy bank (unmapped
 			 * address space). This prevents repeated SIGSEGV from JIT direct
 			 * access to addresses outside natmem reservation. */
-			const bool aarch64_quarantine_candidate = (ab == &dummy_bank);
+			const bool arm64_quarantine_candidate = (ab == &dummy_bank);
 
-		// Analyze aarch64 instruction
+		// Analyze AARCH64 instruction
 		const unsigned int opcode = ((uae_u32*)fault_pc)[0];
-		output_log(_T("JIT: aarch64 opcode = 0x%08x\n"), opcode);
+		output_log(_T("JIT: AARCH64 opcode = 0x%08x\n"), opcode);
 #ifdef JIT_DEBUG
 		extern void disam_range(void* start, void* stop);
 		disam_range((void*)(fault_pc - 128), (void*)(fault_pc + 32));
@@ -904,7 +904,7 @@ static int handle_exception(mcontext_t sigcont, long fault_addr)
 					unsigned_imm = true;
 					break;
 				default:
-					output_log(_T("aarch64: Handling of instruction 0x%08x not supported.\n"), opcode);
+					output_log(_T("AARCH64: Handling of instruction 0x%08x not supported.\n"), opcode);
 					break;
 				}
 			}
@@ -1048,7 +1048,7 @@ static int handle_exception(mcontext_t sigcont, long fault_addr)
 				 * fault-emulated memory operation to avoid cascading faults in
 				 * the same translated block. */
 				set_special(SPCFLAG_END_COMPILE);
-				if (aarch64_quarantine_candidate) {
+				if (arm64_quarantine_candidate) {
 					/* Flush translated cache so control returns via interpreter. */
 					flush_icache(3);
 				}
@@ -1065,11 +1065,11 @@ static int handle_exception(mcontext_t sigcont, long fault_addr)
 				}
 
 			}
-			/* Fallback for unrecognized aarch64 instructions in JIT code:
+			/* Fallback for unrecognized ARM64 instructions in JIT code:
 			 * If the fault is on unmapped memory (dummy_bank) and we couldn't
 			 * decode the instruction, quarantine the block and bail out via
 			 * longjmp to m68k_run_jit's setjmp recovery point. */
-			if (transfer_size == SIZE_UNKNOWN && aarch64_quarantine_candidate) {
+			if (transfer_size == SIZE_UNKNOWN && arm64_quarantine_candidate) {
 				output_log(_T("JIT: unhandled insn 0x%08x at unmapped %08x, quarantine PC=%08x\n"),
 					opcode, amiga_addr, regs.pc);
 				flush_icache(3);

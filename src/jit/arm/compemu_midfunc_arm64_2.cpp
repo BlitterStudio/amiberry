@@ -1,5 +1,5 @@
 /*
- * compiler/compemu_midfunc_arm.cpp - Native MIDFUNCS for aarch64 (JIT v2)
+ * compiler/compemu_midfunc_arm.cpp - Native MIDFUNCS for AARCH64 (JIT v2)
  *
  * Copyright (c) 2019 TomB
  *

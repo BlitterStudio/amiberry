@@ -36,7 +36,7 @@ The launcher's Settings tabs show every option of the shared settings layer that
 Options for host windows, devices, serial ports, MIDI and PowerPC do not apply on Android and are not shown.
 
 ### FPU Signaling NaN Detection
-Hardware-based signaling NaN (SNAN) detection is disabled. This is a platform-independent limitation but particularly affects Android due to the aarch64 FPU behavior.
+Hardware-based signaling NaN (SNAN) detection is disabled. This is a platform-independent limitation but particularly affects Android due to the ARM64 FPU behavior.
 
 ## Architecture Support
 
@@ -60,7 +60,7 @@ Imports use the system document picker. Where none exists (Google TV resolves it
 
 ## Performance Notes
 
-- The JIT compiler is available on aarch64 devices and provides much faster than native M68K speeds
+- The JIT compiler is available on ARM64 devices and provides much faster than native M68K speeds
 - GPU-intensive configurations (RTG high resolution, multiple bitplanes) may be slower than on desktop
 - Floppy drive sounds are supported but may add slight audio latency on some devices
 

@@ -16,7 +16,7 @@ $PYTHON - <<'PY'
 from pathlib import Path
 import sys
 
-codegen = Path("src/jit/aarch64/codegen_aarch64.cpp").read_text()
+codegen = Path("src/jit/arm/codegen_arm64.cpp").read_text()
 
 
 def fail(message: str) -> None:
@@ -28,7 +28,7 @@ try:
 	start = codegen.index("STATIC_INLINE void compemu_raw_store_pc_state_from_work1(")
 	end = codegen.index("LOWFUNC(NONE,WRITE,1,compemu_raw_set_pc_i", start)
 except ValueError as exc:
-	fail(f"Could not find AARCH64 PC synchronization code: {exc}")
+	fail(f"Could not find ARM64 PC synchronization code: {exc}")
 
 pc_sync = codegen[start:end]
 required = (
@@ -37,7 +37,7 @@ required = (
 	"CBZ_wi(REG_WORK2, 0);",
 )
 if any(statement not in pc_sync for statement in required):
-	fail("AARCH64 PC synchronization must branch on the runtime direct-map state")
+	fail("ARM64 PC synchronization must branch on the runtime direct-map state")
 if "CBZ_xi(R_MEMSTART, 0);" in pc_sync:
-	fail("AARCH64 PC synchronization must not infer direct-map state from natmem_offset")
+	fail("ARM64 PC synchronization must not infer direct-map state from natmem_offset")
 PY

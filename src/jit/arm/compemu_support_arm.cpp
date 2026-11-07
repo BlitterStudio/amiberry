@@ -8,7 +8,7 @@
  * This file is part of the ARAnyM project which builds a new and powerful
  * TOS/FreeMiNT compatible virtual machine running on almost any hardware.
  *
- * JIT compiler m68k -> aarch64
+ * JIT compiler m68k -> ARM
  *
  * Original 68040 JIT compiler for UAE, copyright 2000-2002 Bernd Meyer
  * Adaptation for Basilisk II and improvements, copyright 2000-2004 Gwenole Beauchesne
@@ -58,12 +58,12 @@
 #include "events.h"
 #include "include/memory.h"
 #include "newcpu.h"
-#include "comptbl_aarch64.h"
-#include "compemu_aarch64.h"
+#include "comptbl_arm.h"
+#include "compemu_arm.h"
 #include "jit/jit_trap_policy.h"
 #include <SDL3/SDL.h>
 
-/* aarch64 JIT is PIE-compatible: it uses register-indirect addressing
+/* ARM64 JIT is PIE-compatible: it uses register-indirect addressing
  * (R_MEMSTART/R15) rather than PC-relative globals, so code placement
  * relative to .data does not matter. */
 
@@ -86,7 +86,7 @@ static inline void *vm_acquire(uae_u32 size, int options = VM_MAP_DEFAULT)
 {
 	assert(options == (VM_MAP_DEFAULT | VM_MAP_32BIT));
 	int flags = UAE_VM_32BIT;
-	/* aarch64 JIT is 64-bit clean: metadata pools don't need low 4GB. */
+	/* ARM64 JIT is 64-bit clean: metadata pools don't need low 4GB. */
 	flags = 0;
 	return uae_vm_alloc(size, flags, UAE_VM_READ_WRITE);
 }
@@ -101,12 +101,12 @@ static inline void* vm_acquire_code(uae_u32 size, int options = VM_MAP_DEFAULT)
 	 * Allow normal placement and rely on ARM64 codegen's 64-bit pointers. */
 	flags = UAE_VM_JIT;
 #else
-	/* aarch64 JIT is 64-bit pointer clean — no need for 32-bit constraint.
+	/* ARM64 JIT is 64-bit pointer clean — no need for 32-bit constraint.
 	 * On Android, the 32-bit scan loop would iterate ~460K times because
 	 * natmem is placed well above 4GB by the kernel. */
 	flags = 0;
 #endif
-	/* All aarch64: code memory must be executable from allocation time.
+	/* All ARM64: code memory must be executable from allocation time.
 	 * On Android, SELinux may deny mprotect(PROT_EXEC) on non-exec pages. */
 	protect = UAE_VM_READ_WRITE_EXECUTE;
 	return uae_vm_alloc(size, flags, protect);
@@ -119,7 +119,7 @@ static inline void* vm_acquire_code(uae_u32 size, int options = VM_MAP_DEFAULT)
   write_log("JIT: " format "\n", ##__VA_ARGS__);
 #define jit_log2(format, ...)
 
-/* Not used on aarch64; R_MEMSTART (x27) holds full 64-bit natmem_offset */
+/* Not used on ARM64; R_MEMSTART (x27) holds full 64-bit natmem_offset */
 #define MEMBaseDiff ((uae_u32)0)
 
 #ifdef NATMEM_OFFSET
@@ -332,8 +332,8 @@ static uae_s32 reg_alloc_run;
 const int POPALLSPACE_SIZE = 2048; /* That should be enough space */
 uae_u8* popallspace = NULL;
 
-/* On aarch64, popallspace and JIT cache are allocated as one contiguous
- * block to guarantee the cache is within aarch64 B/BL branch range
+/* On ARM64, popallspace and JIT cache are allocated as one contiguous
+ * block to guarantee the cache is within ARM64 B/BL branch range
  * (+-128 MB) of popallspace. Separate allocations may be scattered
  * too far apart by the kernel's mmap placement. */
 static size_t popall_combined_alloc_size = 0;
@@ -423,7 +423,7 @@ static volatile int jit_dbg_brk_step_count = 0;
 
 // SIGSEGV→SIGTRAP communication
 static volatile uae_u32 jit_dbg_last_write_m68k_addr = 0xFFFFFFFF;
-static volatile uae_u64 jit_dbg_last_write_aarch64_pc = 0;
+static volatile uae_u64 jit_dbg_last_write_arm64_pc = 0;
 static volatile int jit_dbg_vec2_sigsegv_count = 0;
 
 // Full-page shadow (4KB) — initialized when protection is armed
@@ -471,13 +471,13 @@ static void jit_dbg_vec2_sigtrap_handler(int sig, siginfo_t *si, void *ctx_raw)
         // v42 only protected vectors 1-6 (0x004-0x01B). v43 protects the
         // entire 4KB page, catching DMA writes to FPU vectors (0x0c0-0x0d8),
         // OS data (0x5d0+), and any other low-memory locations.
-        //   - DMA writes (aarch64 PC outside JIT cache): restore from shadow
-        //   - CPU writes (aarch64 PC inside JIT cache): update shadow
+        //   - DMA writes (ARM64 PC outside JIT cache): restore from shadow
+        //   - CPU writes (ARM64 PC inside JIT cache): update shadow
         // The page is still unprotected here, so we can read/write natmem freely.
         {
             uae_u32 wr_addr = jit_dbg_last_write_m68k_addr;
             if (wr_addr < 4096 && jit_page0_shadow_valid) {
-                uae_u64 wr_pc = jit_dbg_last_write_aarch64_pc;
+                uae_u64 wr_pc = jit_dbg_last_write_arm64_pc;
                 // JIT code cache: compiled_code .. current_compile_p
                 // If the write came from outside this range, it's DMA → restore
                 int from_jit = (compiled_code != NULL &&
@@ -503,7 +503,7 @@ static void jit_dbg_vec2_sigtrap_handler(int sig, siginfo_t *si, void *ctx_raw)
                         (jit_dbg_page0_restore_count <= 300 && jit_dbg_page0_restore_count % 10 == 0) ||
                         (jit_dbg_page0_restore_count % 500 == 0)) {
                         write_log("JIT_VEC v43: page0 M68k 0x%03x restored from shadow "
-                            "after DMA write #%d (aarch64 PC=0x%016llx)\n",
+                            "after DMA write #%d (ARM64 PC=0x%016llx)\n",
                             aligned_addr, jit_dbg_page0_restore_count,
                             (unsigned long long)wr_pc);
                     }
@@ -559,7 +559,7 @@ static void jit_dbg_vec2_sigtrap_handler(int sig, siginfo_t *si, void *ctx_raw)
 
 // v36: SIGSEGV handler for mprotect-based vec2 write trap.
 // When the first page of natmem is read-only, any write triggers this handler.
-// If the write targets the vec2 area (M68k 0x008-0x00b), we dump the aarch64 PC
+// If the write targets the vec2 area (M68k 0x008-0x00b), we dump the ARM64 PC
 // and all registers — this identifies the EXACT JIT-compiled instruction responsible.
 // For non-vec2 writes: uses BRK single-step to keep the page protected.
 static void jit_dbg_vec2_sigsegv_handler(int sig, siginfo_t *si, void *ctx_raw)
@@ -584,14 +584,14 @@ static void jit_dbg_vec2_sigsegv_handler(int sig, siginfo_t *si, void *ctx_raw)
     }
 
     ucontext_t *uc = (ucontext_t*)ctx_raw;
-    unsigned long long aarch64_pc = uc->uc_mcontext.pc;
+    unsigned long long arm64_pc = uc->uc_mcontext.pc;
     uae_u32 m68k_addr = (uae_u32)(fault_addr - natmem_offset);
 
     jit_dbg_vec2_sigsegv_count++;
 
     // v42: Save write info for SIGTRAP handler (immediate vector restore)
     jit_dbg_last_write_m68k_addr = m68k_addr;
-    jit_dbg_last_write_aarch64_pc = aarch64_pc;
+    jit_dbg_last_write_arm64_pc = arm64_pc;
 
     // Unprotect the page so the write can complete and we can log
     mprotect((void*)page_base, 4096, PROT_READ | PROT_WRITE);
@@ -607,8 +607,8 @@ static void jit_dbg_vec2_sigsegv_handler(int sig, siginfo_t *si, void *ctx_raw)
             (jit_dbg_vec2_write_count % 100 == 0)) {
             int vec_nr = m68k_addr / 4;
             write_log("JIT_VEC v41: vector DMA write #%d: vec%d M68k 0x%03x, "
-                "aarch64 PC=0x%016llx, val=0x%04llx (BRK step)\n",
-                jit_dbg_vec2_write_count, vec_nr, m68k_addr, aarch64_pc,
+                "ARM64 PC=0x%016llx, val=0x%04llx (BRK step)\n",
+                jit_dbg_vec2_write_count, vec_nr, m68k_addr, arm64_pc,
                 (unsigned long long)uc->uc_mcontext.regs[1]);
         }
         // Fall through to BRK single-step below (same path as non-vector writes)
@@ -622,8 +622,8 @@ static void jit_dbg_vec2_sigsegv_handler(int sig, siginfo_t *si, void *ctx_raw)
     if (jit_dbg_vec2_sigsegv_count <= 30 ||
         (jit_dbg_vec2_sigsegv_count <= 300 && jit_dbg_vec2_sigsegv_count % 10 == 0) ||
         (jit_dbg_vec2_sigsegv_count % 500 == 0)) {
-        write_log("JIT_VEC v36:page write #%d: M68k 0x%03x AARCH64_PC=0x%016llx (BRK step)\n",
-            jit_dbg_vec2_sigsegv_count, m68k_addr, aarch64_pc);
+        write_log("JIT_VEC v36:page write #%d: M68k 0x%03x ARM64_PC=0x%016llx (BRK step)\n",
+            jit_dbg_vec2_sigsegv_count, m68k_addr, arm64_pc);
     }
 
     // Safety check: if a previous BRK is still pending, something went wrong.
@@ -640,7 +640,7 @@ static void jit_dbg_vec2_sigsegv_handler(int sig, siginfo_t *si, void *ctx_raw)
     // Insert BRK #0x7777 at the instruction AFTER the faulting store (PC+4).
     // When the store re-executes (page is unprotected), control flows to PC+4
     // which now has BRK. This fires SIGTRAP, and our handler re-protects the page.
-    uint32_t *next_insn_addr = (uint32_t*)((uintptr_t)aarch64_pc + 4);
+    uint32_t *next_insn_addr = (uint32_t*)((uintptr_t)arm64_pc + 4);
 
     // Ensure the code page containing PC+4 is writable (JIT cache may be RX)
     uintptr_t code_page = (uintptr_t)next_insn_addr & ~0xFFFUL;
@@ -1354,7 +1354,7 @@ STATIC_INLINE void reset_data_buffer(void)
 STATIC_INLINE void clobber_flags(void);
 #endif
 
-#include "codegen_aarch64.cpp"
+#include "codegen_arm64.cpp"
 
 /********************************************************************
  * Flags status handling. EMIT TIME!                                *
@@ -1639,7 +1639,7 @@ static inline void disassociate(int r)
 static inline void set_const(int r, uintptr val)
 {
     disassociate(r);
-    // On aarch64, guest registers (Dn, An, flags) are 32-bit values.
+    // On ARM64, guest registers (Dn, An, flags) are 32-bit values.
     // Only PC_P holds a 64-bit host pointer.  Mask val to 32-bit for
     // all other registers to prevent 64-bit arithmetic leaking into
     // constant-propagation paths (sub_l_ri underflow, etc.).
@@ -2030,7 +2030,7 @@ static inline int isinrom(uintptr addr)
         addr < (uintptr)kickmem_bank.baseaddr + 8 * 65536) {
         return 1;
     }
-    /* Treat UAE Boot ROM (rtarea) as ROM too for aarch64 JIT safety guards. */
+    /* Treat UAE Boot ROM (rtarea) as ROM too for ARM64 JIT safety guards. */
     if (rtarea_bank.baseaddr &&
         addr >= (uintptr)rtarea_bank.baseaddr &&
         addr < (uintptr)rtarea_bank.baseaddr + 65536) {
@@ -2101,8 +2101,8 @@ static void prepare_for_call_2(void)
 }
 #endif
 
-#include "compemu_midfunc_aarch64.cpp"
-#include "compemu_midfunc_aarch64_2.cpp"
+#include "compemu_midfunc_arm64.cpp"
+#include "compemu_midfunc_arm64_2.cpp"
 
 /********************************************************************
  * Support functions exposed to gencomp. CREATE time                *
@@ -2679,18 +2679,18 @@ static inline uint8 *alloc_code(uint32 size)
 {
     uint8 *ptr = do_alloc_code(size, 0);
 	/* allocated code must fit in 32-bit boundaries */
-	/* aarch64 JIT is 64-bit pointer clean — tolerate high addresses. */
+	/* ARM64 JIT is 64-bit pointer clean — tolerate high addresses. */
 	if (ptr && (uintptr)ptr + size > (uintptr)0xffffffff) {
-		static bool aarch64_high_jit_logged = false;
-		if (!aarch64_high_jit_logged) {
-			jit_log("aarch64: JIT code allocated above 32-bit boundary at %p (size %u)", ptr, size);
-			aarch64_high_jit_logged = true;
+		static bool arm64_high_jit_logged = false;
+		if (!arm64_high_jit_logged) {
+			jit_log("ARM64: JIT code allocated above 32-bit boundary at %p (size %u)", ptr, size);
+			arm64_high_jit_logged = true;
 		}
 	}
 	return ptr;
 }
 
-static inline bool aarch64_uncond_branch_reachable(uintptr from, uintptr to)
+static inline bool arm64_uncond_branch_reachable(uintptr from, uintptr to)
 {
 	/* AArch64 B immediate range: signed 26-bit immediate, shifted left by 2. */
 	const intptr_t diff = (intptr_t)to - (intptr_t)from;
@@ -2699,7 +2699,7 @@ static inline bool aarch64_uncond_branch_reachable(uintptr from, uintptr to)
 	return diff >= min && diff <= max;
 }
 
-static inline bool aarch64_cache_reaches_popall(uint8 *cache_start, uint32 cache_size_bytes)
+static inline bool arm64_cache_reaches_popall(uint8 *cache_start, uint32 cache_size_bytes)
 {
 	if (!cache_start || !cache_size_bytes || !popallspace) {
 		return false;
@@ -2707,8 +2707,8 @@ static inline bool aarch64_cache_reaches_popall(uint8 *cache_start, uint32 cache
 	const uintptr popall = (uintptr)popallspace;
 	const uintptr start = (uintptr)cache_start;
 	const uintptr end = start + cache_size_bytes - 4;
-	return aarch64_uncond_branch_reachable(start, popall) &&
-		aarch64_uncond_branch_reachable(end, popall);
+	return arm64_uncond_branch_reachable(start, popall) &&
+		arm64_uncond_branch_reachable(end, popall);
 }
 
 #if defined(__APPLE__)
@@ -2738,7 +2738,7 @@ static uint8 *alloc_code_near_popall(uint32 size)
 				continue;
 			}
 			uint8 *code = (uint8 *)p;
-			if (aarch64_cache_reaches_popall(code, size)) {
+			if (arm64_cache_reaches_popall(code, size)) {
 				return code;
 			}
 			munmap(code, size);
@@ -2809,8 +2809,8 @@ void alloc_cache(void)
 #else
 			compiled_code = alloc_code(cache_bytes);
 #endif
-			if (compiled_code && !aarch64_cache_reaches_popall(compiled_code, cache_bytes)) {
-				jit_log("aarch64: JIT cache %p (size %u) is out of branch range from popallspace %p",
+			if (compiled_code && !arm64_cache_reaches_popall(compiled_code, cache_bytes)) {
+				jit_log("ARM64: JIT cache %p (size %u) is out of branch range from popallspace %p",
 					compiled_code, cache_bytes, popallspace);
 				vm_release(compiled_code, cache_bytes);
 				compiled_code = NULL;
@@ -2823,16 +2823,16 @@ void alloc_cache(void)
 	}
 
     if (compiled_code) {
-		static bool aarch64_jit_mode_logged = false;
-		if (!aarch64_jit_mode_logged) {
+		static bool arm64_jit_mode_logged = false;
+		if (!arm64_jit_mode_logged) {
 #if defined(__APPLE__)
 			jit_log("ARM64 macOS JIT mode: MAP_JIT + write/execute switching");
 #elif defined(__ANDROID__)
-			jit_log("aarch64 Android JIT mode: RWX anonymous mapping");
+			jit_log("ARM64 Android JIT mode: RWX anonymous mapping");
 #else
-			jit_log("aarch64 JIT mode: RWX anonymous mapping");
+			jit_log("ARM64 JIT mode: RWX anonymous mapping");
 #endif
-			aarch64_jit_mode_logged = true;
+			arm64_jit_mode_logged = true;
 		}
         jit_log("<JIT compiler> : actual translation cache size : %d KB at %p-%p\n", cache_size, compiled_code, compiled_code + cache_size * 1024);
 #ifdef USE_DATA_BUFFER
@@ -3022,27 +3022,27 @@ STATIC_INLINE void create_popalls(void)
     int i, r;
 
     if (popallspace == NULL) {
-        /* On aarch64, allocate popallspace + JIT cache as one contiguous block
+        /* On ARM64, allocate popallspace + JIT cache as one contiguous block
          * to guarantee the cache is within B/BL branch range (+-128 MB). */
         if (currprefs.cachesize > 0) {
             const uint32 cache_kb = currprefs.cachesize;
             const size_t cache_bytes = (size_t)cache_kb * 1024;
             const size_t combined_size = POPALLSPACE_SIZE + cache_bytes;
-            jit_log("aarch64: allocating popallspace+cache (cache=%u KB, total=%zu bytes)",
+            jit_log("ARM64: allocating popallspace+cache (cache=%u KB, total=%zu bytes)",
                 cache_kb, combined_size);
             popallspace = alloc_code(combined_size);
             if (popallspace) {
                 popall_combined_alloc_size = combined_size;
                 popall_combined_cache_start = popallspace + POPALLSPACE_SIZE;
                 popall_combined_cache_kb = cache_kb;
-                jit_log("aarch64: combined popallspace+cache allocation at %p (%u KB cache)",
+                jit_log("ARM64: combined popallspace+cache allocation at %p (%u KB cache)",
                     popallspace, cache_kb);
             } else {
                 /* Fall back to popallspace-only allocation */
                 popall_combined_alloc_size = 0;
                 popall_combined_cache_start = NULL;
                 popall_combined_cache_kb = 0;
-                jit_log("aarch64: combined popallspace+cache allocation failed; retrying popallspace-only (%u bytes)",
+                jit_log("ARM64: combined popallspace+cache allocation failed; retrying popallspace-only (%u bytes)",
                     (unsigned)POPALLSPACE_SIZE);
                 popallspace = alloc_code(POPALLSPACE_SIZE);
             }
@@ -3138,7 +3138,7 @@ STATIC_INLINE void create_popalls(void)
 #endif
 
     // no need to further write into popallspace
-    // aarch64 has separate I-cache and D-cache: we MUST flush the I-cache
+    // ARM64 has separate I-cache and D-cache: we MUST flush the I-cache
     // after writing code before making it executable, or we'll execute
     // stale/random data from the I-cache.
     flush_cpu_icache((void *)popallspace, (void *)get_target());
@@ -3340,7 +3340,7 @@ void build_comp(void)
 	if (currprefs.cachesize == 0)
 		return;
 	if (!compiled_code) {
-		disable_jit_runtime("failed to allocate aarch64 JIT code cache");
+		disable_jit_runtime("failed to allocate ARM64 JIT code cache");
 		return;
 	}
 	reset_lists();

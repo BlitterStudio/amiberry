@@ -5,7 +5,7 @@
 #include "uae/memory.h"
 #include "readcpu.h"
 #include "newcpu.h"
-#include "comptbl_aarch64.h"
+#include "comptbl_arm.h"
 #include "debug.h"
 extern const struct comptbl op_smalltbl_0_comp_ff[] = { { op_0_0_comp_ff, 0, 0x00000002 }, /* OR */
 { op_10_0_comp_ff, 16, 0x00000002 }, /* OR */

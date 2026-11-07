@@ -95,7 +95,7 @@ class HostArchitectureTests(unittest.TestCase):
                 if arch in ("aarch64", "arm64", "ARM64"):
                     self.assertEqual(canonical, "aarch64")
                     self.assertIn("-DCPU_AARCH64", flags)
-                    self.assertEqual(backend, "AARCH64")
+                    self.assertEqual(backend, "ARM64")
                 elif arch == "x86_64":
                     self.assertIn("-DCPU_X86_64", flags)
                     self.assertEqual(backend, "X86_64")

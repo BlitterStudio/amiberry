@@ -5879,7 +5879,7 @@ static void compile_block(cpu_history* pc_hist, int blocklen)
 #if 0 /* Disabled: inter-block flag optimization uses single-instruction
 		 lookahead which is insufficient. Can discard flags that later
 		 instructions in the next block depend on, causing visual corruption.
-		 Same issue as aarch64 fix (compemu_support_aarch64.cpp:3528). */
+		 Same issue as ARM64 fix (compemu_support_arm.cpp:3528). */
 			if (next_pc_p && taken_pc_p &&
 				was_comp && taken_pc_p==current_block_pc_p)
 			{

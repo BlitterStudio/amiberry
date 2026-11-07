@@ -306,7 +306,7 @@ SOURCES_86BOX_DYNAREC := \
 	$(AMIBERRY_DIR)/src/86box/cpu/codegen_timing_winchip.cpp \
 	$(AMIBERRY_DIR)/src/86box/cpu/codegen_timing_winchip2.cpp
 
-SOURCES_86BOX_DYNAREC_AARCH64 := \
+SOURCES_86BOX_DYNAREC_ARM64 := \
 	$(AMIBERRY_DIR)/src/86box/codegen/codegen_backend_arm64.cpp \
 	$(AMIBERRY_DIR)/src/86box/codegen/codegen_backend_arm64_imm.cpp \
 	$(AMIBERRY_DIR)/src/86box/codegen/codegen_backend_arm64_ops.cpp \
@@ -377,13 +377,13 @@ ifeq ($(USE_86BOX),1)
 FLAGS += -DUSE_86BOX
 INCFLAGS += -I$(AMIBERRY_DIR)/src/86box/include -I$(AMIBERRY_DIR)/src/86box/winuae
 
-# 86Box's x86 recompiler has one backend per binary (aarch64 or x86-64), so
+# 86Box's x86 recompiler has one backend per binary (arm64 or x86-64), so
 # universal binaries and other architectures (RISC-V, LoongArch) keep
 # the interpreter.
 86BOX_DYNAREC := 0
 ifeq ($(ARCH),aarch64)
 	86BOX_DYNAREC := 1
-	86BOX_DYNAREC_BACKEND := AARCH64
+	86BOX_DYNAREC_BACKEND := ARM64
 else ifeq ($(ARCH),x86_64)
 	86BOX_DYNAREC := 1
 	86BOX_DYNAREC_BACKEND := X86_64

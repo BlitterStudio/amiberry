@@ -19,7 +19,7 @@
 
 /* uaeboard indirect traps: host threads and the emulation thread hand trap parameters, results and
  * registers over through plain rtarea memory and signal with a status byte. On a weakly ordered host
- * (aarch64) the status byte can become visible before the data written ahead of it, and the reader can
+ * (arm64) the status byte can become visible before the data written ahead of it, and the reader can
  * load the data ahead of the status byte, so both sides fence around the hand-over. */
 static inline void trap_fence(void)
 {

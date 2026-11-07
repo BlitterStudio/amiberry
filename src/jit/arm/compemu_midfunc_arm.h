@@ -1,5 +1,5 @@
 /*
- *  compiler/compemu_midfunc_aarch64.h - Native MIDFUNCS for ARM
+ *  compiler/compemu_midfunc_arm.h - Native MIDFUNCS for ARM
  *
  * Copyright (c) 2014 Jens Heitmann of ARAnyM dev team (see AUTHORS)
  *

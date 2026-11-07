@@ -1,5 +1,5 @@
 /*
- *  compiler/flags_aarch64.h - Native flags definitions for aarch64
+ *  compiler/flags_arm.h - Native flags definitions for ARM
  *
  * Copyright (c) 2013 Jens Heitmann of ARAnyM dev team (see AUTHORS)
  * 
@@ -27,8 +27,8 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef NATIVE_FLAGS_AARCH64_H
-#define NATIVE_FLAGS_AARCH64_H
+#ifndef NATIVE_FLAGS_ARM_H
+#define NATIVE_FLAGS_ARM_H
 
 /* Native integer code conditions */
 enum
@@ -65,4 +65,4 @@ enum
 	NATIVE_CC_F_NEVER = 32
 };
 
-#endif /* NATIVE_FLAGS_AARCH64_H */
+#endif /* NATIVE_FLAGS_ARM_H */

@@ -148,8 +148,8 @@ case "$arch" in
         appimagetool_sha256="$APPIMAGETOOL_AARCH64_SHA256"
         runtime_url="$TYPE2_RUNTIME_AARCH64_URL"
         runtime_sha256="$TYPE2_RUNTIME_AARCH64_SHA256"
-        zsync_url="$ZSYNC_AARCH64_URL"
-        zsync_sha256="$ZSYNC_AARCH64_SHA256"
+        zsync_url="$ZSYNC_ARM64_URL"
+        zsync_sha256="$ZSYNC_ARM64_SHA256"
         qemu_url="$QEMU_UAE_AARCH64_URL"
         qemu_sha256="$QEMU_UAE_AARCH64_SHA256"
         ;;

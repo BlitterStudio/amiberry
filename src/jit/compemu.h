@@ -7,7 +7,7 @@
 
 #if defined(CPU_AARCH64) || \
 	defined(__aarch64__) || defined(_M_ARM64) || defined(_M_ARM64EC)
-#include "aarch64/compemu_aarch64.h"
+#include "arm/compemu_arm.h"
 #elif defined(__x86_64__) || defined(_M_AMD64)
 #include "x86_64/compemu_x86_64.h"
 #endif
@@ -18,7 +18,7 @@ extern volatile int jit_exception_pending;
 #define JIT_HAS_BUS_ERROR_RECOVERY 1
 #if defined(_WIN32) && (defined(CPU_AARCH64) || defined(__aarch64__) || defined(_M_ARM64) || \
 	defined(_M_ARM64EC)) && defined(D)
-/* mingw-w64 aarch64 setjmp.h declares a member named D in _JUMP_BUFFER.
+/* mingw-w64 ARM64 setjmp.h declares a member named D in _JUMP_BUFFER.
  * UAE debug headers define D as an empty marker macro, which corrupts that
  * system declaration unless the macro is hidden around the include. */
 #define AMIBERRY_RESTORE_D_AFTER_SETJMP

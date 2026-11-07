@@ -6,7 +6,7 @@
  * combined UAE_VM_READ/WRITE/EXECUTE values (0, 1, 3, 5, 7); anything else
  * is treated as no access. Allocation flags are UAE_VM_32BIT (result must
  * lie below 4 GiB on 64-bit hosts), UAE_VM_WRITE_WATCH (Windows write
- * watching) and UAE_VM_JIT (Apple aarch64 MAP_JIT).
+ * watching) and UAE_VM_JIT (Apple arm64 MAP_JIT).
  *
  * Copyright (C) 2026 Dimitris Panokostas
  * SPDX-License-Identifier: GPL-2.0-or-later
@@ -67,7 +67,7 @@ bool uae_vm_decommit(void *address, size_t size);
 /* OS page size in bytes (> 0). */
 int uae_vm_page_size(void);
 
-/* Apple aarch64 only: toggle the current thread between MAP_JIT write mode
+/* Apple arm64 only: toggle the current thread between MAP_JIT write mode
  * (false) and execute mode (true). No-op elsewhere. */
 void uae_vm_jit_write_protect(bool enable_execute_mode);
 

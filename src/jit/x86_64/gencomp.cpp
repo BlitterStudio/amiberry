@@ -226,20 +226,20 @@ static void write_amiberry_dispatchers(void)
 	write_amiberry_file_header(f);
 	fprintf(f, "#ifndef AMIBERRY_COMPTBL_H\n");
 	fprintf(f, "#define AMIBERRY_COMPTBL_H\n\n");
-	write_amiberry_cpu_dispatch(f, "aarch64/comptbl_aarch64.h", "x86_64/comptbl_x86_64.h");
+	write_amiberry_cpu_dispatch(f, "arm/comptbl_arm.h", "x86_64/comptbl_x86_64.h");
 	fprintf(f, "\n#endif //AMIBERRY_COMPTBL_H\n");
 	fclose(f);
 
 	make_path(path, sizeof path, amiberry_dispatch_path, "compstbl.cpp");
 	f = open_output_or_abort(path);
 	write_amiberry_file_header(f);
-	write_amiberry_cpu_dispatch(f, "aarch64/compstbl_aarch64.cpp", "x86_64/compstbl_x86_64.cpp");
+	write_amiberry_cpu_dispatch(f, "arm/compstbl_arm.cpp", "x86_64/compstbl_x86_64.cpp");
 	fclose(f);
 
 	make_path(path, sizeof path, amiberry_dispatch_path, "compemu.cpp");
 	f = open_output_or_abort(path);
 	write_amiberry_file_header(f);
-	write_amiberry_cpu_dispatch(f, "aarch64/compemu_aarch64.cpp", "x86_64/compemu_x86_64.cpp");
+	write_amiberry_cpu_dispatch(f, "arm/compemu_arm.cpp", "x86_64/compemu_x86_64.cpp");
 	fclose(f);
 }
 
@@ -253,7 +253,7 @@ static void make_amiberry_gen_path(char *dst, size_t dst_size, const char *name)
 static void write_winuae_header_prefix(FILE *f)
 {
 	fprintf(f, "#if defined(CPU_AARCH64)\n");
-	fprintf(f, "#include \"%s\"\n", "aarch64/comptbl_aarch64.h");
+	fprintf(f, "#include \"%s\"\n", "arm/comptbl_arm.h");
 	fprintf(f, "#else\n");
 }
 
@@ -271,7 +271,7 @@ static void write_winuae_source_prefix(FILE *f, const char *arm_source)
 
 static void write_winuae_compemu_prefix(FILE *f)
 {
-	write_winuae_source_prefix(f, "aarch64/compemu_aarch64.cpp");
+	write_winuae_source_prefix(f, "arm/compemu_arm.cpp");
 }
 
 static void write_winuae_compemu_suffix(FILE *f)
@@ -3759,7 +3759,7 @@ int main(void)
 	}
 
 #if defined(UAE) && !defined(AMIBERRY)
-	write_winuae_source_prefix(stblfile, "aarch64/compstbl_aarch64.cpp");
+	write_winuae_source_prefix(stblfile, "arm/compstbl_arm.cpp");
 	write_winuae_compemu_prefix(stdout);
 #endif
 	generate_includes(stdout);

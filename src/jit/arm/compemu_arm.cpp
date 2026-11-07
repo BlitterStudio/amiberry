@@ -5,8 +5,8 @@
 #include "memory.h"
 #include "newcpu.h"
 #include "custom.h"
-#include "comptbl_aarch64.h"
-#include "compemu_aarch64.h"
+#include "comptbl_arm.h"
+#include "compemu_arm.h"
 
 #if !defined(PART_1) && !defined(PART_2) && !defined(PART_3) && !defined(PART_4) && !defined(PART_5) && !defined(PART_6) && !defined(PART_7) && !defined(PART_8)
 #define PART_1 1

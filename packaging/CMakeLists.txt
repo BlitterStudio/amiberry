@@ -39,7 +39,7 @@ endif()
 set(CPACK_PACKAGE_VENDOR "BlitterStudio")
 set(CPACK_PACKAGE_CONTACT "Dimitris Panokostas <midwan@gmail.com>")
 set(CPACK_PACKAGE_DESCRIPTION
-        "Optimized Amiga emulator for various aarch64, AMD64 and RISC-V platforms.
+        "Optimized Amiga emulator for various ARM64, AMD64 and RISC-V platforms.
 Amiberry is an optimized Amiga emulator for various platforms. It is based on
 the latest WinUAE and supports various Amiga models, including the A4000T,
 A4000D, A1200, A3000 and A600. Additionally, it includes several unique

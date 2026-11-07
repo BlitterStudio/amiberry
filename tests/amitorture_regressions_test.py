@@ -567,7 +567,7 @@ int main() {
 """)
 
     def test_arm_movem_word_special_memory_extends_each_register(self):
-        text = source("src/jit/aarch64/compemu_aarch64.cpp")
+        text = source("src/jit/arm/compemu_arm.cpp")
         handlers = "\n".join(function(text, f"uae_u32 REGPARAM2 op_4c90_0_comp_{mode}(")
                              for mode in ("ff", "nf"))
         run_cpp(r"""
@@ -616,7 +616,7 @@ int main() {
 """)
 
     def test_arm_constant_bitfield_offsets_match_register_offsets(self):
-        for path in ("src/jit/aarch64/compemu_midfunc_aarch64.cpp",):
+        for path in ("src/jit/arm/compemu_midfunc_arm64.cpp",):
             with self.subTest(path=path):
                 run_cpp(r"""
 #define MIDFUNC(n, name, args) void generated args
@@ -652,11 +652,11 @@ int main() {
 """)
 
     def test_arm_bit_operations_keep_other_live_flags(self):
-        text = source("src/jit/aarch64/compemu_aarch64.cpp")
+        text = source("src/jit/arm/compemu_arm.cpp")
         for opcode in ("100", "110", "140", "150", "180", "190", "1c0", "1d0"):
             self.assertNotIn("dont_care_flags();",
                              function(text, f"uae_u32 REGPARAM2 op_{opcode}_0_comp_nf("))
-        generator = source("src/jit/aarch64/gencomp_aarch64.c")
+        generator = source("src/jit/arm/gencomp_arm.c")
         for operation in ("bchg", "bclr", "bset", "btst"):
             self.assertNotRegex(function(generator, f"static void gen_{operation}("),
                                 r'comprintf\("[^"]*dont_care_flags')

@@ -15,8 +15,8 @@
 #include "options.h"
 #include "memory.h"
 #include "newcpu.h"
-#include "compemu_aarch64.h"
-#include "flags_aarch64.h"
+#include "compemu_arm.h"
+#include "flags_arm.h"
 
 #if defined(USE_JIT_FPU)
 
@@ -349,7 +349,7 @@ void comp_fscc_opp (uae_u32 opcode, uae_u16 extra)
 {
 	int reg;
 
-	/* compstbl_aarch64.cpp does not flag FScc/FBcc COMP_OPCODE_USES_FPU, so
+	/* compstbl_arm.cpp does not flag FScc/FBcc COMP_OPCODE_USES_FPU, so
 	 * avoid_fpu in build_comp() does not filter them: check here that the
 	 * JIT FPU is on and the CPU has an FPU at all. */
 	if (!currprefs.compfpu || !currprefs.fpu_model) {

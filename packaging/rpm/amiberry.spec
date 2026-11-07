@@ -4,7 +4,7 @@
 Name:           amiberry
 Version:        8.5.0
 Release:        1%{?dist}
-Summary:        Optimized Amiga emulator for aarch64, AMD64 and RISC-V platforms
+Summary:        Optimized Amiga emulator for ARM64, AMD64 and RISC-V platforms
 
 License:        GPL-3.0-or-later
 URL:            https://amiberry.com
@@ -44,7 +44,7 @@ Requires:       portmidi
 Requires:       enet
 
 %description
-Amiberry is an optimized Amiga emulator for aarch64, AMD64 and RISC-V platforms.
+Amiberry is an optimized Amiga emulator for ARM64, AMD64 and RISC-V platforms.
 It is based on the latest WinUAE and supports various Amiga models, including
 the A4000T, A4000D, A1200, A3000 and A600. Features include support for WHDLoad
 titles, RetroArch integration, custom controller mappings, and more.

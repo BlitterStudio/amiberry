@@ -1,5 +1,5 @@
 /*
- * compiler/codegen_arm.cpp - aarch64 code generator
+ * compiler/codegen_arm.cpp - AARCH64 code generator
  *
  * Copyright (c) 2019 TomB
  *
@@ -29,7 +29,7 @@
  *       32 bit address space. See alloc_AmigaMem() in generic_mem.cpp.
  */
 
-#include "flags_aarch64.h"
+#include "flags_arm.h"
 #include <cmath>
 
 /*************************************************************************
@@ -93,7 +93,7 @@ uae_u8 call_saved[] = {0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,1, 1,1,1,1, 1,1
 */
 static const uae_u8 need_to_preserve[] = {0,0,0,0, 0,0,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,0, 0,0,0,0, 0,0,0,1, 1,0,0,0};
 
-#include "codegen_aarch64.h"
+#include "codegen_arm64.h"
 
 #define FIX_INVERTED_CARRY              \
   if(flags_carry_inverted) {            \

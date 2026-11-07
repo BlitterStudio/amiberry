@@ -708,7 +708,7 @@ elseif(NOT IOS
     # globals; fixed __TEXT at 4GB plus a small pagezero leaves usable low
     # address space for those buffers without letting PIE slide globals too low.
     # Keep these scoped to the x86_64 slice so universal builds do not change
-    # aarch64 image layout.
+    # arm64 image layout.
     set(AMIBERRY_MACOS_X86_LINK_OPTIONS
             "-Wl,-no_pie"
             "-Wl,-segaddr,__TEXT,0x100000000"

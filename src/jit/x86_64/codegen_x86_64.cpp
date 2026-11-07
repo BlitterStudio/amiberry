@@ -58,7 +58,7 @@
 #define R13_INDEX 13
 #define R14_INDEX 14
 #define R15_INDEX 15
-/* Dedicated register holding natmem_offset, analogous to aarch64's R27 (R_MEMSTART).
+/* Dedicated register holding natmem_offset, analogous to ARM64's R27 (R_MEMSTART).
    Used in [R_MEMSTART + m68k_addr] addressing to avoid disp32 sign-extension. */
 #define R_MEMSTART R15_INDEX
 /* XXX this has to match X86_Reg8H_Base + 4 */

@@ -8,7 +8,7 @@
  * This file is part of the ARAnyM project which builds a new and powerful
  * TOS/FreeMiNT compatible virtual machine running on almost any hardware.
  *
- * JIT compiler m68k -> aarch64
+ * JIT compiler m68k -> ARM64
  *
  * Original 68040 JIT compiler for UAE, copyright 2000-2002 Bernd Meyer
  * Adaptation for Basilisk II and improvements, copyright 2000-2004 Gwenole Beauchesne
@@ -146,7 +146,7 @@ extern void* pushall_call_handler;
 
 typedef struct {
   uae_u32* mem;
-  uintptr val;  /* Must be pointer-width: PC_P holds a host pointer (64-bit on aarch64) */
+  uintptr val;  /* Must be pointer-width: PC_P holds a host pointer (64-bit on ARM64) */
   uae_u8 status;
   uae_s8 realreg; /* gb-- realreg can hold -1 */
   uae_u8 realind; /* The index in the holds[] array */
@@ -268,8 +268,8 @@ typedef struct {
 /* What we expose to the outside */
 #define DECLARE_MIDFUNC(func) extern void func
 
-#include "compemu_midfunc_aarch64.h"
-#include "compemu_midfunc_aarch64_2.h"
+#include "compemu_midfunc_arm.h"
+#include "compemu_midfunc_arm2.h"
 
 #undef DECLARE_MIDFUNC
 

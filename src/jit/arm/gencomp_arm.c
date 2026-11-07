@@ -1,5 +1,5 @@
 /*
- *  compiler/gencomp_aarch64.c - MC680x0 compilation generator (aarch64 JIT)
+ *  compiler/gencomp_arm2.c - MC680x0 compilation generator (ARM Adaption JIT v2)
  *
  *  Based on work Copyright 1995, 1996 Bernd Schmidt
  *  Changes for UAE-JIT Copyright 2000 Bernd Meyer
@@ -32,7 +32,7 @@
  *  	- Easier to understand / read
  *  	- Easier to optimize
  *  	- More precise flag handling
- *  	- aarch64-specific optimization
+ *  	- ARM64-specific optimization
  *
  *  Disadvantages of JIT v2
  *  	- Less generated
@@ -88,7 +88,7 @@ static char endstr[1000];
 static char lines[100000];
 static int comp_index = 0;
 
-#include "flags_aarch64.h"
+#include "flags_arm.h"
 
 #ifndef __attribute__
 #  ifndef __GNUC__
@@ -2879,8 +2879,8 @@ static void generate_compemu_includes(FILE * f) {
 	fprintf(f, "#include \"memory.h\"\n");
 	fprintf(f, "#include \"newcpu.h\"\n");
 	fprintf(f, "#include \"custom.h\"\n");
-	fprintf(f, "#include \"comptbl_aarch64.h\"\n");
-	fprintf(f, "#include \"compemu_aarch64.h\"\n");
+	fprintf(f, "#include \"comptbl_arm.h\"\n");
+	fprintf(f, "#include \"compemu_arm.h\"\n");
 	fprintf(f, "\n");
 	fprintf(f, "static inline void start_needflags(void) {}\n");
 	fprintf(f, "static inline void end_needflags(void) {}\n");
@@ -3066,7 +3066,7 @@ static void generate_compstbl_includes(FILE * f) {
 	fprintf(f, "#include \"uae/memory.h\"\n");
 	fprintf(f, "#include \"readcpu.h\"\n");
 	fprintf(f, "#include \"newcpu.h\"\n");
-	fprintf(f, "#include \"comptbl_aarch64.h\"\n");
+	fprintf(f, "#include \"comptbl_arm.h\"\n");
 	fprintf(f, "#include \"debug.h\"\n");
 }
 
@@ -3442,14 +3442,14 @@ int main(void)
 	 * cputbl.h that way), but cpuopti can't cope.  That could be fixed, but
 	 * I don't dare to touch the 68k version.  */
 
-	headerfile = fopen("comptbl_aarch64.h", "wb");
+	headerfile = fopen("comptbl_arm.h", "wb");
 	fprintf (headerfile, ""
 		"extern const struct comptbl op_smalltbl_0_comp_nf[];\n"
 		"extern const struct comptbl op_smalltbl_0_comp_ff[];\n"
 		"");
 
-	stblfile = fopen("compstbl_aarch64.cpp", "wb");
-	if (freopen("compemu_aarch64.cpp", "wb", stdout) == NULL)
+	stblfile = fopen("compstbl_arm.cpp", "wb");
+	if (freopen("compemu_arm.cpp", "wb", stdout) == NULL)
 	{
 		assert(0);
 	}
