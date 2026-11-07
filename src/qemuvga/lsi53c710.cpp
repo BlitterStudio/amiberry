@@ -1780,7 +1780,8 @@ static uint8_t lsi_reg_readb2(LSIState710 *s, int offset)
 		return s->ctest7;
     CASE_GET_REG32(temp, 0x1c)
     case 0x20: /* DFIFO */
-        return 0;
+		/* DMA is synchronous, so no bytes remain buffered in the FIFO. */
+		return s->dbc & 0x7f;
 	case 0x21: /* ISTAT */
 		return s->istat;
 	case 0x22: /* CTEST8 */
