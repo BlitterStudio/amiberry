@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
 # MIDI output stream parser shared with WinUAE: running status, real-time
-# bytes inside messages and SysEx, and the bounded SysEx buffer. Runs again
-# under AddressSanitizer for the buffer limit.
+# bytes inside messages and SysEx, and long SysEx messages sent in pieces.
+# Runs again under AddressSanitizer for the buffer handling.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 out="${TMPDIR:-/tmp}/midi_parser_test.$$"
 trap 'rm -f "$out" "$out.c"' EXIT
 
 midi_compile() {
-	# shellcheck disable=SC2086
+	# shellcheck disable=SC2046,SC2086
 	${CXX:-c++} -std=c++17 -O1 -Isrc -Isrc/include -Isrc/osdep -Isrc/threaddep \
-		-o "$out" tests/midi_parser_test.cpp src/osdep/midi_parser.cpp
+		$(pkg-config --cflags sdl3) -o "$out" tests/midi_parser_test.cpp src/osdep/midi_parser.cpp
 }
 
 midi_compile
