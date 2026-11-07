@@ -2398,7 +2398,10 @@ void write_cdimage_entry(const struct cdslot *cd, const TCHAR *path, TCHAR *out,
 	out[size - 1] = 0;
 	if (cd->type != SCSI_UNIT_DEFAULT || _tcschr(cd->name, ',') || cd->delayed) {
 		const bool params = cd->delayed || cd->type != SCSI_UNIT_DEFAULT;
-		if (params && _tcschr(cd->name, ',')) {
+		// The reader keeps backslashes literal inside quotes, so a name
+		// with a quote of its own stays unquoted: the parameters still
+		// follow its last comma.
+		if (params && _tcschr(cd->name, ',') && !_tcschr(path, '\"')) {
 			// This should always escape if name has a comma
 			// but currently only escape if extra parameters are present,
 			// for backwards compatibility with old config files.
@@ -5496,8 +5499,9 @@ static void get_filesys_controller (const TCHAR *hdc, int *type, int *typenum, i
 			hdunit = 0;
 	}
 	if (hdcv == HD_CONTROLLER_TYPE_UAE) {
-		hdunit = _tstol(hdc + 3);
-		if (hdunit >= MAX_FILESYSTEM_UNITS)
+		// An empty or short field (no controller given) is unit 0.
+		hdunit = _tcslen(hdc) > 3 ? _tstol(hdc + 3) : 0;
+		if (hdunit < 0 || hdunit >= MAX_FILESYSTEM_UNITS)
 			hdunit = 0;
 	} else if (hdcv > HD_CONTROLLER_TYPE_UAE) {
 		TCHAR control[MAX_DPATH];

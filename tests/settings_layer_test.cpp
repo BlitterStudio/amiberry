@@ -4179,6 +4179,11 @@ void check_storage_domain()
 	CHECK(set(p, "cdimage0", value_of(p, "cdimage0").c_str()) == AMIBERRY_SETTINGS_OK);
 	CHECK(std::strcmp(p.cdslots[0].name, "/cd/a,b") == 0 && p.cdslots[0].delayed
 		&& p.cdslots[0].type == SCSI_UNIT_IMAGE);
+	// Quoting cannot carry a quote in the name: such a name stays as it
+	// was, and the fields still follow its last comma.
+	CHECK(set(p, "cdimage0", "/cd/a\"b,c.iso,delay:image") == AMIBERRY_SETTINGS_OK);
+	CHECK(std::strcmp(p.cdslots[0].name, "/cd/a\"b,c.iso") == 0 && p.cdslots[0].delayed);
+	CHECK(value_of(p, "cdimage0") == "/cd/a\"b,c.iso,delay:image");
 	// The delay flag alone has no field separator after it.
 	CHECK(set(p, "cdimage0", "/cd/game.iso,delay") == AMIBERRY_SETTINGS_OK);
 	CHECK(p.cdslots[0].delayed && p.cdslots[0].type == SCSI_UNIT_DEFAULT);
