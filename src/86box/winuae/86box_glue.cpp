@@ -625,8 +625,7 @@ void midi_raw_out_byte(uint8_t val)
 	if (!midi_port_open) {
 		midi_port_open = Midi_Open();
 	}
-	uint8_t b = val;
-	Midi_Parse(midi_output, &b);
+	Midi_Parse(midi_output, &val);
 #endif
 }
 

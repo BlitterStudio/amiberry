@@ -15,6 +15,10 @@
 
 #include "midi.h"
 #include "options.h"
+#include "midi_parser.h"
+
+// Decodes the guest's output stream into complete messages for the backend.
+static midi_parser output_parser;
 
 //#define MIDI_TRACING_ENABLED
 
@@ -56,10 +60,6 @@ static volatile int in_ring_wr = 0;
 static volatile int in_ring_rd = 0;
 static uae_sem_t in_ring_sem;
 
-// Sysex output buffer
-#define SYSEX_BUFLEN 65536
-static uae_u8 sysex_buf[SYSEX_BUFLEN];
-static int sysex_len = 0;
 static MIDIHDR sysex_hdr;
 
 static void in_ring_add(uae_u8 byte)
@@ -148,6 +148,7 @@ int midi_open()
 	in_ring_rd = 0;
 
 	parse_config(&currprefs);
+	midi_parser_reset(&output_parser);
 
 	bool opened_any = false;
 
@@ -189,6 +190,7 @@ int midi_open()
 void midi_close()
 {
 	write_log(_T("midi_close() [Windows native]\n"));
+	midi_parser_reset(&output_parser);
 
 	if (in_handle) {
 		midiInStop(in_handle);
@@ -209,12 +211,6 @@ void midi_close()
 
 // ----- MIDI OUT -----
 
-static DWORD out_msg;
-static int out_msg_bits;
-static int out_msg_bytes;
-static uae_u8 out_msg_last_command;
-static int out_sysex_mode;
-
 static void write_short_msg(DWORD msg)
 {
 	if (!out_handle)
@@ -230,88 +226,51 @@ static void write_short_msg(DWORD msg)
 	TRACE((_T("-> midi_out: %08x\n"), msg));
 }
 
-static void flush_sysex()
+static void write_sysex(const uae_u8 *data, int length)
 {
-	if (!out_handle || sysex_len == 0)
+	if (!out_handle)
 		return;
 
 	memset(&sysex_hdr, 0, sizeof(sysex_hdr));
-	sysex_hdr.lpData = (LPSTR)sysex_buf;
-	sysex_hdr.dwBufferLength = sysex_len;
-	sysex_hdr.dwBytesRecorded = sysex_len;
+	// The driver only reads the buffer, and the header is unprepared
+	// before this returns.
+	sysex_hdr.lpData = (LPSTR)const_cast<uae_u8*>(data);
+	sysex_hdr.dwBufferLength = length;
+	sysex_hdr.dwBytesRecorded = length;
 
 	MMRESULT res = midiOutPrepareHeader(out_handle, &sysex_hdr, sizeof(sysex_hdr));
 	if (res == MMSYSERR_NOERROR) {
 		res = midiOutLongMsg(out_handle, &sysex_hdr, sizeof(sysex_hdr));
 		if (res != MMSYSERR_NOERROR) {
 			write_log(_T("MIDI OUT: midiOutLongMsg error %d\n"), res);
+		} else {
+			// Wait for completion then unprepare
+			while ((sysex_hdr.dwFlags & MHDR_DONE) == 0)
+				Sleep(1);
 		}
-		// Wait for completion then unprepare
-		while ((sysex_hdr.dwFlags & MHDR_DONE) == 0)
-			Sleep(1);
 		midiOutUnprepareHeader(out_handle, &sysex_hdr, sizeof(sysex_hdr));
 	} else {
 		write_log(_T("MIDI OUT: midiOutPrepareHeader error %d\n"), res);
 	}
-	sysex_len = 0;
+}
+
+static void midi_output_message(const uae_u8 *data, int length)
+{
+	// SysEx, or a later piece of one: the driver streams the bytes.
+	if (data[0] == 0xf0 || data[0] < 0x80) {
+		write_sysex(data, length);
+		return;
+	}
+	DWORD msg = data[0];
+	for (int i = 1; i < length; i++)
+		msg |= (DWORD)data[i] << (8 * i);
+	write_short_msg(msg);
 }
 
 void midi_send_byte(uint8_t ch)
 {
 	TRACE((_T("midi_send_byte(%02x)\n"), ch));
-
-	if ((ch & 0x80) == 0x80) {
-		// Status byte
-		if (ch == 0xf0) {
-			// SYSEX begin
-			out_sysex_mode = 1;
-			sysex_len = 0;
-			sysex_buf[sysex_len++] = ch;
-		} else if (ch == 0xf7) {
-			// SYSEX end
-			if (out_sysex_mode) {
-				sysex_buf[sysex_len++] = ch;
-				flush_sysex();
-				out_sysex_mode = 0;
-			}
-		} else {
-			if ((ch < 0xf8) && out_sysex_mode) {
-				// Abort sysex
-				sysex_buf[sysex_len++] = 0xf7;
-				flush_sysex();
-				out_sysex_mode = 0;
-			}
-			out_msg_bytes = param_len[ch & 0x7f];
-			out_msg = ch;
-			out_msg_last_command = ch;
-			out_msg_bits = 8;
-			if (out_msg_bytes == 0) {
-				write_short_msg(out_msg);
-			}
-		}
-	} else {
-		// Data byte
-		if (out_sysex_mode) {
-			if (sysex_len < SYSEX_BUFLEN)
-				sysex_buf[sysex_len++] = ch;
-		} else if (out_msg_bytes > 0) {
-			out_msg |= ch << out_msg_bits;
-			out_msg_bits += 8;
-			out_msg_bytes--;
-			if (out_msg_bytes == 0) {
-				write_short_msg(out_msg);
-			}
-		} else {
-			// Running status
-			out_msg = out_msg_last_command & 0xff;
-			out_msg |= ch << 8;
-			out_msg_bits = 16;
-			out_msg_bytes = param_len[out_msg_last_command & 0x7f] - 1;
-			if (out_msg_bytes == 0) {
-				write_short_msg(out_msg);
-			}
-		}
-	}
+	midi_parser_byte(&output_parser, ch, midi_output_message);
 }
 
 // ----- MIDI IN -----
@@ -354,6 +313,9 @@ static PmDeviceID in_dev_id = pmNoDevice;
 static PmDeviceID out_dev_id = pmNoDevice;
 static PortMidiStream *out;
 static PortMidiStream *in;
+// The SysEx word being filled (midi_output_message())
+static PmMessage out_sysex_msg;
+static int out_sysex_bits;
 
 #define MY_IN_QUEUE_SIZE 64
 static int timer_active = 0;
@@ -539,6 +501,9 @@ static int midi_open_with_config(const uae_prefs *cfg)
 	Pm_Initialize();
 
 	parse_config(cfg);
+	midi_parser_reset(&output_parser);
+	out_sysex_msg = 0;
+	out_sysex_bits = 0;
 
 	// open streams
 	out = open_out_stream();
@@ -564,6 +529,9 @@ int midi_open()
 void midi_close()
 {
 	write_log(_T("midi_close()\n"));
+	midi_parser_reset(&output_parser);
+	out_sysex_msg = 0;
+	out_sysex_bits = 0;
 
 	// stop timer
 	timer_active = 0;
@@ -591,16 +559,6 @@ void midi_close()
 
 // ----- MIDI OUT -----
 
-static PmMessage out_msg;
-static int out_msg_bits;
-static int out_msg_bytes;
-
-static char out_msg_last_command;
-
-static PmMessage out_sysex_msg;
-static int out_sysex_mode;
-static int out_sysex_bits;
-
 static void write_msg(PmMessage msg)
 {
 	static int last_result;
@@ -617,100 +575,33 @@ static void write_msg(PmMessage msg)
 	TRACE((_T("-> midi_out: %04x\n"), msg));
 }
 
-static void out_add_sysex_byte(uint8_t data)
+static void midi_output_message(const uae_u8 *data, int length)
 {
-	out_sysex_msg |= data << out_sysex_bits;
-	out_sysex_bits += 8;
-	TRACE((_T("sysex: %02x -> %08x\n"), data, out_sysex_msg));
-	if(out_sysex_bits == 32) {
-		write_msg(out_sysex_msg);
-		out_sysex_bits = 0;
-		out_sysex_msg = 0;
+	if (data[0] == 0xf0 || data[0] < 0x80) {
+		// SysEx, possibly in pieces: four bytes per PmMessage, the word
+		// with the EOX zero-padded. A partial word carries over to the
+		// next piece.
+		for (int i = 0; i < length; i++) {
+			out_sysex_msg |= (PmMessage)data[i] << out_sysex_bits;
+			out_sysex_bits += 8;
+			if (out_sysex_bits == 32 || data[i] == 0xf7) {
+				write_msg(out_sysex_msg);
+				out_sysex_msg = 0;
+				out_sysex_bits = 0;
+			}
+		}
+		return;
 	}
-}
-
-static void out_flush_sysex()
-{
-	if(out_sysex_bits != 0) {
-		write_msg(out_sysex_msg);
-	}
+	PmMessage msg = 0;
+	for (int i = 0; i < length; i++)
+		msg |= (PmMessage)data[i] << (8 * i);
+	write_msg(msg);
 }
 
 void midi_send_byte(uint8_t ch)
 {
 	TRACE((_T("midi_send_byte(%02x)\n"), ch));
-
-	// is a status byte (begin of command?)
-	if((ch & 0x80) == 0x80) {
-		// SYSEX begin
-		if(ch == 0xf0) {
-			TRACE((_T("midi out sysex: begin\n")));
-			out_sysex_mode = 1;
-			out_sysex_msg = ch;
-			out_sysex_bits = 8;
-		}
-		// SYSEX end / EOX
-		else if(ch == 0xf7) {
-			TRACE((_T("midi out sysex: end\n")));
-			out_add_sysex_byte(0xf7);
-			out_flush_sysex();
-			out_sysex_mode = 0;
-		}
-		// other command
-		else {
-			// auto-terminate sysex if no sys realtime message
-			if((ch < 0xf8) && out_sysex_mode) {
-				TRACE((_T("midi out sysex: abort!\n")));
-				out_add_sysex_byte(0xf7);
-				out_flush_sysex();
-				out_sysex_mode = 0;
-			}
-			// get number of parameter bytes for this message
-			out_msg_bytes = param_len[ch & 0x7f];
-			// prepare msg
-			out_msg = ch;
-			out_msg_last_command = ch;
-			// setup bit shift for next byte
-			out_msg_bits = 8;
-			// send single byte msg
-			if(out_msg_bytes == 0) {
-				write_msg(out_msg);
-			}
-		}
-	}
-	// data byte
-	else {
-		// fill in command parameters (1 or 2)
-		if(out_msg_bytes > 0) {
-			// store next byte in msg
-			out_msg |= ch << out_msg_bits;
-			out_msg_bits += 8;
-			out_msg_bytes--;
-			// msg ready to be sent
-			if(out_msg_bytes == 0) {
-				write_msg(out_msg);
-			}
-		}
-		// store bytes in sysex transfer
-		else if(out_sysex_mode) {
-			out_add_sysex_byte(ch);
-		}
-
-		// unexpected data bytes after complete message, so repeat last command
-		else {
-			// initialize message with last command
-			out_msg = out_msg_last_command &0xff;
-
-			// add current byte to message
-			out_msg |= ch << 8;
-
-			// set current number of bits
-			out_msg_bits = 16;
-
-			// set remaining number of bytes according to last command
-			out_msg_bytes = param_len[out_msg_last_command & 0x7f] - 1;
-		}
-	}
+	midi_parser_byte(&output_parser, ch, midi_output_message);
 }
 
 // ----- MIDI IN -----
