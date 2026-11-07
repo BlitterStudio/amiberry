@@ -2367,6 +2367,46 @@ static void flush(int save_regs)
     }
 }
 
+/* After a compiled instruction that may raise an exception (DIV by zero,
+ * CHK, TRAPcc, ...): if regs.jit_exception is set, leave for
+ * execute_exception(). Exception_cpu() reads the 68k state from regs: the
+ * PC (regs.pc_p), the address of the instruction (regs.instruction_pc, the
+ * format $2 frame's instruction address) and the registers. Compiled code
+ * holds those in host registers and in m68k_pc_offset, so write them back
+ * on the exception path first: without that the frame carried the PC of an
+ * earlier instruction and a stale instruction address, and register values
+ * the block had changed were lost. The normal path continues with the
+ * allocator state from before the write-back. */
+static void compemu_handle_except_sync(uae_u32 cycles, uae_u32 insn_pc)
+{
+    clobber_flags();
+    uintptr idx = (uintptr)(&regs.jit_exception) - (uintptr)(&regs);
+    LDR_wXi(REG_WORK1, R_REGSTRUCT, idx);
+    uae_u32* branch_none = (uae_u32*)get_target();
+    CBZ_wi(REG_WORK1, 0);                   // no exception: next instruction
+
+    bigstate saved = live;
+    const uae_u32 saved_pc_offset = m68k_pc_offset;
+    uae_u8* const saved_comp_pc_p = comp_pc_p;
+    const bool saved_carry_inverted = flags_carry_inverted;
+
+    flush(1);                               // registers, flags, PC_P = next instruction
+    if (isconst(PC_P))
+        compemu_raw_mov_l_mi((uintptr)&regs.pc_p, live.state[PC_P].val);
+    compemu_raw_mov_l_mi((uintptr)&regs.instruction_pc, insn_pc);
+    LOAD_U32(REG_PAR1, cycles);
+    uae_u32* branch_exc = (uae_u32*)get_target();
+    B_i(0);
+    write_jmp_target(branch_exc, (uintptr)popall_execute_exception);
+
+    live = saved;
+    m68k_pc_offset = saved_pc_offset;
+    comp_pc_p = saved_comp_pc_p;
+    flags_carry_inverted = saved_carry_inverted;
+
+    write_jmp_target(branch_none, (uintptr)get_target());
+}
+
 int alloc_scratch(void)
 {
     for (int i = 0; i < SCRATCH_REGS; ++i) {
@@ -3703,9 +3743,10 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
                     }
                 } else if (may_raise_exception) {
 #if defined(USE_DATA_BUFFER)
-                    data_check_end(8, 64);
+                    data_check_end(8, 256);
 #endif
-                    compemu_raw_handle_except(scaled_cycles(totcycles));
+                    compemu_handle_except_sync(scaled_cycles(totcycles),
+                        start_pc + (uae_u32)((uae_u8*)pc_hist[i].location - start_pc_p));
                     may_raise_exception = false;
                 }
             }
