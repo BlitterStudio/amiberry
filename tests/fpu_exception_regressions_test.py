@@ -73,6 +73,10 @@ static bool fp_arithmetic(fpdata *, fpdata *, int) { return false; }
 static bool fpsr_check_arithmetic_exception(
     uae_u32, fpdata *, uae_u32, uae_u16, uae_u32, bool, uaecptr) { return false; }
 static int fpsr_get_vector(uae_u32) { return 0; }
+// Cycle-exact FPU timing does not take part in these checks.
+static void fpu_timing_begin() {}
+static void fpu_timing_cond(int, int) {}
+static void fpu_timing_save_restore(bool, bool) {}
 """
         assertions = r"""
 int main()
