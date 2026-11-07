@@ -15,6 +15,9 @@
 #ifndef _WIN32
 #include <unistd.h>
 #endif
+#if defined(__unix__) && !defined(__ANDROID__)
+#include <dlfcn.h>
+#endif
 #include <cstdio>
 #include <cmath>
 #include <iostream>
@@ -598,6 +601,70 @@ bool gl_renderer_demoted = false;
 bool kmsdrm_detected = false;
 bool no_wm_detected = false;
 
+#if defined(__unix__) && !defined(__ANDROID__)
+namespace {
+// Leading fields of Xlib's XErrorEvent; declared here so the probe below
+// needs no X11 headers at build time.
+struct XErrorEventHead {
+	int type;
+	void* display;
+	unsigned long resourceid;
+	unsigned long serial;
+	unsigned char error_code;
+	unsigned char request_code;
+	unsigned char minor_code;
+};
+
+int x11_wm_probe_error = 0;
+
+int x11_wm_probe_error_handler(void*, XErrorEventHead* event)
+{
+	x11_wm_probe_error = event->error_code;
+	return 0;
+}
+
+// Returns 1 when a window manager runs on $DISPLAY, 0 when none does, and
+// -1 when the probe can't tell (libX11 or the display unavailable).
+// A window manager is the client holding SubstructureRedirect on the root
+// window, and the X server grants that selection to one client only, so
+// asking for it fails with BadAccess whenever any WM is active (EWMH or
+// not, including XWayland's). The probe uses its own connection; closing
+// it drops the selection again when no WM was running. libX11 is resolved
+// at runtime because SDL's x11 driver has already loaded it.
+int probe_x11_window_manager()
+{
+	void* lib = dlopen("libX11.so.6", RTLD_LAZY | RTLD_NOLOAD);
+	if (!lib) lib = dlopen("libX11.so.6", RTLD_LAZY);
+	if (!lib) return -1;
+
+	using ErrorHandler = int (*)(void*, XErrorEventHead*);
+	const auto open_display = reinterpret_cast<void* (*)(const char*)>(dlsym(lib, "XOpenDisplay"));
+	const auto close_display = reinterpret_cast<int (*)(void*)>(dlsym(lib, "XCloseDisplay"));
+	const auto default_root_window = reinterpret_cast<unsigned long (*)(void*)>(dlsym(lib, "XDefaultRootWindow"));
+	const auto select_input = reinterpret_cast<int (*)(void*, unsigned long, long)>(dlsym(lib, "XSelectInput"));
+	const auto sync = reinterpret_cast<int (*)(void*, int)>(dlsym(lib, "XSync"));
+	const auto set_error_handler = reinterpret_cast<ErrorHandler (*)(ErrorHandler)>(dlsym(lib, "XSetErrorHandler"));
+	if (!open_display || !close_display || !default_root_window || !select_input || !sync || !set_error_handler)
+		return -1;
+
+	void* display = open_display(nullptr);
+	if (!display) return -1;
+
+	constexpr long substructure_redirect_mask = 1L << 20;
+	constexpr int bad_access = 10;
+	x11_wm_probe_error = 0;
+	const ErrorHandler previous_handler = set_error_handler(x11_wm_probe_error_handler);
+	select_input(display, default_root_window(display), substructure_redirect_mask);
+	sync(display, 0);
+	set_error_handler(previous_handler);
+	close_display(display);
+
+	if (x11_wm_probe_error == 0) return 0;
+	return x11_wm_probe_error == bad_access ? 1 : -1;
+}
+}
+#endif
+
 // Detect when we're running without a window manager. This covers two cases:
 //   1. KMSDRM — inherently WM-less (console framebuffer / direct-to-display)
 //   2. x11 without a WM — e.g. kiosk-style setups like Batocera
@@ -654,16 +721,27 @@ void detect_no_wm()
 		}
 	}
 
-	// Auto-detection: x11 driver without any desktop-session env vars set.
-	// Naturally skips on macOS/Windows/Wayland — only bare x11 reaches the
-	// heuristic. Note: this is a heuristic, not a definitive WM probe; users
-	// on minimalist x11 setups (xinit + twm/fvwm/xmonad without any session
-	// vars exported) can be misclassified — they should set AMIBERRY_NO_WM=0
-	// to opt out. A more rigorous _NET_SUPPORTING_WM_CHECK probe via X11
-	// interop could replace this if the heuristic proves troublesome.
+	// Auto-detection only applies to the x11 driver; macOS, Windows and
+	// Wayland always have a window manager.
 	if (strcmpi(driver, "x11") != 0)
 		return;
 
+#if defined(__unix__) && !defined(__ANDROID__)
+	// Ask the X server whether a window manager is running. Session env
+	// vars are not reliable for this: startx/xinit sessions with a plain WM
+	// (Openbox, twm, ...) often export none of them (#2621).
+	const int wm_probe = probe_x11_window_manager();
+	if (wm_probe >= 0) {
+		no_wm_detected = wm_probe == 0;
+		if (no_wm_detected)
+			write_log("x11 without window manager detected (driver=%s) — using shared-window mode for GUI (set AMIBERRY_NO_WM=0 to disable)\n", driver);
+		return;
+	}
+	write_log("x11 window manager probe unavailable — falling back to desktop session env vars\n");
+#endif
+
+	// Fallback heuristic when the X server can't be queried: assume no WM
+	// unless a desktop-session env var is set.
 	auto env_set = [](const char* name) {
 		const char* v = getenv(name);
 		return v && *v;
