@@ -270,11 +270,15 @@ endif
 # sections above have chosen the compiler (e.g. CLANG64 on Windows) and its
 # flags. No "#" in the command: GNU make 3.81 (macOS) would read it as the
 # start of a comment. tr strips the CR of Windows toolchains.
+# Not when only clean/distclean are made: they must work without a target
+# compiler. "make clean all" still probes.
+ifneq (,$(if $(MAKECMDGOALS),$(filter-out clean distclean,$(MAKECMDGOALS)),all))
 TARGET_POINTER_SIZE := $(strip $(shell printf '' | $(CXX) $(CPPFLAGS) $(CXXFLAGS) $(FLAGS) -dM -E -x c++ - 2>/dev/null | grep __SIZEOF_POINTER__ | awk '{ print $$3 }' | tr -d '\r'))
 ifeq ($(TARGET_POINTER_SIZE),)
    $(error Could not determine the target pointer size with $(CXX) (Amiberry requires a 64-bit target ABI); check the target compiler and flags)
 else ifneq ($(TARGET_POINTER_SIZE),8)
    $(error Amiberry requires a 64-bit target ABI, $(CXX) targets $(TARGET_POINTER_SIZE)-byte pointers; check the target compiler and flags)
+endif
 endif
 
 # Source files - Core Amiga Emulation
