@@ -90,7 +90,7 @@ static int g_max_handle = -1;
 
 #if defined(__x86_64__) || defined(_M_AMD64) || defined(_M_X64)
     #define ARCH_NAME _T("x86-64")
-#elif defined(__powerpc64__)
+#elif defined(__ppc__)
     #define ARCH_NAME _T("ppc")
 #else
     #define ARCH_NAME _T("unknown")
