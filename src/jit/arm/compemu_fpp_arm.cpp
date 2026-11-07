@@ -366,6 +366,8 @@ void comp_fscc_opp (uae_u32 opcode, uae_u16 extra)
 		return;
 	}
 
+	if (extra & 0x10)
+		fp_bsun_iop ();     // IEEE-nonaware predicate: BSUN, IOP on NAN
 	fflags_into_flags_keep_ccr ();
 	reg = (opcode & 7);
 
@@ -397,9 +399,10 @@ void comp_fbcc_opp (uae_u32 opcode)
 		off = comp_get_ilong ((m68k_pc_offset += 4) - 4);
 	}
 
-	/* according to fpp.c, the 0x10 bit is ignored
-	   (it handles exception handling, which we don't
-	   do, anyway ;-) */
+	/* The $10 bit selects the IEEE-nonaware predicates: same outcome,
+	   but BSUN and the accrued IOP are set when NAN is (no BSUN trap). */
+	if (opcode & 0x10)
+		fp_bsun_iop ();
 	cc = opcode & 0x0f;
   if(cc == 0)
     return; /* jump never */
