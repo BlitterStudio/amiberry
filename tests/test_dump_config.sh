@@ -121,10 +121,11 @@ done
 # A hardfile's filesystem name that needs quotes (here for its comma) is
 # written with minimal escaping and must be read back the same way: a
 # backslash in it stays, as it does in a Windows path, and a quote in it
-# is written as \".
+# is written as \". Only the name's own part is compared: a Windows build
+# writes the temporary directory in its native form.
 printf 'hardfile2=rw,DH1:%s/disk.hdf,32,1,2,512,0,"%s/fs,dir\\l\\Fast\\"FS",uae0\n' "$work" "$work" > "$work/hdf-filesys.uae"
 "$bin" --dump-config -f "$work/hdf-filesys.uae" > "$work/hdf-filesys.txt" 2>/dev/null
-grep -qF ",0,\"$work/fs,dir\\l\\Fast\\\"FS\",uae0" "$work/hdf-filesys.txt" || {
+grep '^hardfile2=' "$work/hdf-filesys.txt" | grep -qF 'fs,dir\l\Fast\"FS",uae0' || {
 	echo "hardfile2 filesystem name did not survive loading:" >&2
 	grep '^hardfile2=' "$work/hdf-filesys.txt" >&2
 	exit 1
