@@ -428,12 +428,12 @@ ifeq ($(SANITIZE), 1)
 	86BOX_OPTFLAGS += -fsanitize=address -fno-omit-frame-pointer -g
 endif
 
-86BOX_OBJECTS := $(SOURCES_86BOX_IMPORTED:.cpp=.o)
+86BOX_OBJECTS := $(call obj_of,$(SOURCES_86BOX_IMPORTED))
 $(86BOX_OBJECTS): STD_CXX := -std=gnu++20
 $(86BOX_OBJECTS): FLAGS := $(fpic) -w $(86BOX_DEFINES) $(86BOX_GNU_STATIC_ASSERT) \
 	$(86BOX_OPTFLAGS) -fvisibility=hidden -ffunction-sections -fdata-sections
 $(86BOX_OBJECTS): INCFLAGS := $(86BOX_INCFLAGS)
-$(SOURCES_86BOX_VIDEO:.cpp=.o): INCFLAGS := $(86BOX_INCFLAGS) \
+$(call obj_of,$(SOURCES_86BOX_VIDEO)): INCFLAGS := $(86BOX_INCFLAGS) \
 	-include $(AMIBERRY_DIR)/src/86box/winuae/86box_video_redirect.h
 else ifeq ($(USE_PCEM),1)
 $(warning USE_PCEM was removed: Amiberry uses 86Box for the x86 bridgeboards. Build with USE_86BOX=1.)

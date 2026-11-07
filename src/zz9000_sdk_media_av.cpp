@@ -159,10 +159,16 @@ MediaAv::~MediaAv()
 
 void MediaAv::start_locked()
 {
-	if (!started_) {
-		started_ = true;
-		worker_ = std::thread(&MediaAv::worker_loop, this);
-	}
+	if (started_)
+		return;
+	started_ = true;
+#ifdef AMIBERRY_WITH_FFMPEG
+	worker_ = std::thread(&MediaAv::worker_loop, this);
+#else
+	// Without FFmpeg every stream fails; no thread is needed to say so.
+	failed_ = true;
+	output_ready_.notify_all();
+#endif
 }
 
 uint32_t MediaAv::append(const uint8_t *data, uint32_t length)
@@ -291,14 +297,9 @@ int MediaAv::decode(MediaAvFrame &frame, uint32_t flags)
 	return done_ ? 2 : 0;
 }
 
+#ifdef AMIBERRY_WITH_FFMPEG
 void MediaAv::worker_loop()
 {
-#ifndef AMIBERRY_WITH_FFMPEG
-	std::lock_guard<std::mutex> lock(mutex_);
-	failed_ = true;
-	output_ready_.notify_all();
-	return;
-#else
 	HostNearestRounding host_rounding;
 	auto fail = [this] {
 		std::lock_guard<std::mutex> lock(mutex_);
@@ -630,7 +631,7 @@ void MediaAv::worker_loop()
 		if (!abort_) done_ = true;
 		output_ready_.notify_all();
 	}
-#endif
 }
+#endif
 
 } // namespace zz9000_sdk

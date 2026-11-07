@@ -36,7 +36,14 @@
 #endif
 #include "uae.h"
 
-#ifdef _WIN32
+#if defined(AMIBERRY_NO_HOST_SIGNALS)
+/* Hosts without signals (AMIBERRY_NO_HOST_SIGNALS, e.g. bare metal): a
+ * fault is the host's to report, and amiberry.cpp installs no handlers. */
+void init_max_signals()
+{
+}
+
+#elif defined(_WIN32)
 /* On Windows x86_64, JIT exception handling is done via
  * AddVectoredExceptionHandler in jit/x86_64/exception_handler.cpp.
  * Windows ARM64 uses the ARM64 JIT and installs its vectored handler here. */

@@ -1,3 +1,23 @@
+# Building the core into another program rather than loading it as a shared
+# library:
+#   STATIC_LINKING=1        build amiberry_libretro.a, not a shared core
+#                           (TARGET=<path> names the file)
+#   OBJDIR=<dir>            put the objects in <dir>, not next to their
+#                           sources, so one tree can build several setups
+#   EXTRA_SOURCES=<files>   the program's own .cpp and .c files, built with
+#                           the core's flags so they can use its headers
+#   NLOHMANN_JSON_INCLUDE=<dir>  the folder holding nlohmann/json.hpp,
+#                           instead of downloading it into deps/
+#   CPPFLAGS, CFLAGS, CXXFLAGS   added to every compile
+# For hosts without some of what the core expects (bare metal):
+#   NO_JIT=1                leave the JIT out
+#   NO_STD_THREAD=1         no std::thread: CHD's work queues run their
+#                           work on the thread that queues it
+#   NO_HOST_SIGNALS=1       no fault or SIGTERM handlers
+#   NO_CHD_SPECIAL_FILES=1  CHD's file layer opens every name as a file
+#                           (no "socket.", "domain." or pty names)
+# Such a program can also make the calls in libretro/amiberry_embed.h.
+
 STATIC_LINKING := 0
 ARGT := 
 
@@ -121,6 +141,10 @@ ifneq (,$(filter arm64 ARM64,$(ARCH)))
    override ARCH := aarch64
 endif
 
+ifeq ($(STATIC_LINKING), 1)
+   TARGET := $(basename $(TARGET)).a
+endif
+
 
 LDFLAGS += $(fpic) $(SHARED)
 FLAGS += $(fpic)
@@ -231,11 +255,12 @@ ZLIB_LIBS ?= $(shell $(PKG_CONFIG) --libs zlib 2>/dev/null)
 INCFLAGS += $(ZLIB_CFLAGS)
 LDFLAGS += $(ZLIB_LIBS)
 
-# nlohmann/json (header-only) — fetched once into deps/
+# nlohmann/json (header-only): NLOHMANN_JSON_INCLUDE holds nlohmann/json.hpp.
+# The default folder, deps/, gets the header downloaded once.
 NLOHMANN_JSON_VERSION ?= v3.11.3
-NLOHMANN_JSON_DIR := $(LIBRETRO_DIR)/deps/nlohmann
-NLOHMANN_JSON_HEADER := $(NLOHMANN_JSON_DIR)/json.hpp
-INCFLAGS += -I$(LIBRETRO_DIR)/deps
+NLOHMANN_JSON_INCLUDE ?= $(LIBRETRO_DIR)/deps
+NLOHMANN_JSON_HEADER := $(NLOHMANN_JSON_INCLUDE)/nlohmann/json.hpp
+INCFLAGS += -I$(NLOHMANN_JSON_INCLUDE)
 
 ifeq ($(platform), unix)
 # forkpty() (uaelib's host shell) lives in libutil on glibc/BSD systems.
@@ -501,14 +526,29 @@ SOURCES_JIT := $(AMIBERRY_DIR)/src/jit/compemu.cpp \
                $(AMIBERRY_DIR)/src/jit/compemu_support.cpp \
                $(AMIBERRY_DIR)/src/jit/compstbl.cpp
 
-# Disable JIT for 64-bit x86 libretro builds (addressing 32-bit pointer checks).
-ifneq (,$(findstring x86_64,$(ARCH)))
+# The JIT is always left out of 64-bit x86 libretro builds (addressing
+# 32-bit pointer checks).
+ifneq (,$(findstring x86_64,$(ARCH))$(findstring amd64,$(ARCH)))
+   override NO_JIT := 1
+endif
+ifeq ($(NO_JIT), 1)
    FLAGS += -DLIBRETRO_NO_JIT
    SOURCES_JIT :=
 endif
-ifneq (,$(findstring amd64,$(ARCH)))
-   FLAGS += -DLIBRETRO_NO_JIT
-   SOURCES_JIT :=
+
+ifeq ($(NO_STD_THREAD), 1)
+   FLAGS += -DAMIBERRY_NO_STD_THREAD
+endif
+ifeq ($(NO_HOST_SIGNALS), 1)
+   FLAGS += -DAMIBERRY_NO_HOST_SIGNALS
+endif
+ifeq ($(NO_CHD_SPECIAL_FILES), 1)
+   ifeq ($(platform), win)
+      $(error NO_CHD_SPECIAL_FILES is for the POSIX file layer, not platform=win)
+   endif
+   FLAGS += -DAMIBERRY_NO_CHD_SPECIAL_FILES
+   CHD_PTTY :=
+   CHD_SOCKET :=
 endif
 
 SOURCES_PPC := $(AMIBERRY_DIR)/src/ppc/ppc.cpp \
@@ -642,6 +682,18 @@ SOURCES_MISC := $(AMIBERRY_DIR)/src/caps/caps_amiberry.cpp \
                $(AMIBERRY_DIR)/src/mame/tm34010/tms34010.cpp \
                $(AMIBERRY_DIR)/external/floppybridge/src/floppybridge_lib.cpp
 
+# Object paths. Without OBJDIR an object sits next to its source. With it,
+# ../src/x.cpp becomes $(OBJDIR)/src/x.o and ./x.cpp $(OBJDIR)/libretro/x.o
+# (../libretro/x.cpp is the same file, so one pattern rule builds both);
+# a source elsewhere, such as an EXTRA_SOURCES file, goes under
+# $(OBJDIR)/extra/ by its whole path.
+ifeq ($(OBJDIR),)
+obj_of = $(addsuffix .o,$(basename $(1)))
+else
+obj_rel = $(if $(filter $(AMIBERRY_DIR)/%,$(1)),$(patsubst $(AMIBERRY_DIR)/%,%,$(1)),$(if $(filter $(LIBRETRO_DIR)/%,$(1)),libretro/$(patsubst $(LIBRETRO_DIR)/%,%,$(1)),extra/$(subst ..,__,$(subst :,,$(1)))))
+obj_of = $(foreach s,$(1),$(OBJDIR)/$(basename $(call obj_rel,$(s))).o)
+endif
+
 SOURCES_CXX := $(SOURCES_CORE) $(SOURCES_OSDEP) $(SOURCES_CPU) $(SOURCES_JIT) $(SOURCES_PPC) $(SOURCES_QEMUVGA) $(SOURCES_ARCHIVE) $(SOURCES_SLIRP) $(SOURCES_MISC)
 
 # 86Box (x86 bridgeboards, DraCo, RTG boards): source lists, the opt-in
@@ -699,16 +751,28 @@ endif
 
 SOURCES_C := $(SOURCES_7Z) $(SOURCES_LHASA) $(LIBCO_DIR)/libco.c $(SOURCES_LIBRETRO_COMMON)
 
-OBJECTS := $(SOURCES_CXX:.cpp=.o) $(SOURCES_C:.c=.o)
+SOURCES_CXX += $(filter %.cpp,$(EXTRA_SOURCES))
+SOURCES_C += $(filter %.c,$(EXTRA_SOURCES))
+ifneq ($(filter-out %.cpp %.c,$(EXTRA_SOURCES)),)
+   $(error EXTRA_SOURCES takes .cpp and .c files: $(filter-out %.cpp %.c,$(EXTRA_SOURCES)))
+endif
+
+OBJECTS := $(call obj_of,$(SOURCES_CXX) $(SOURCES_C))
 
 all: $(TARGET) $(LIBRETRO_INFO)
 
 $(NLOHMANN_JSON_HEADER):
-	@mkdir -p $(NLOHMANN_JSON_DIR)
+	@mkdir -p $(dir $@)
 	curl -sfL -o $@ https://github.com/nlohmann/json/releases/download/$(NLOHMANN_JSON_VERSION)/json.hpp
 
+ifeq ($(STATIC_LINKING), 1)
+$(TARGET): $(OBJECTS)
+	@rm -f $@
+	$(AR) rcs $@ $^
+else
 $(TARGET): $(OBJECTS)
 	$(CXX) $(INCFLAGS) $(FLAGS) -o $@ $^ $(LDFLAGS)
+endif
 
 # Canonical core info entry: whenever it changes, submit the generated file to
 # libretro/libretro-super as dist/info/amiberry_libretro.info.
@@ -720,11 +784,31 @@ $(LIBRETRO_INFO): $(LIBRETRO_DIR)/amiberry_libretro.info.in $(LIBRETRO_DIR)/libr
 # STD_CXX is a variable so 86box.mk can build the imported 86Box sources as
 # C++20 (see 86box.mk); everything else stays on C++17.
 STD_CXX := -std=gnu++17
+COMPILE_CXX = $(CXX) $(INCFLAGS) $(FLAGS) $(STD_CXX) $(CPPFLAGS) $(CXXFLAGS) -c -o $@ $<
+COMPILE_C = $(CC) $(INCFLAGS) $(FLAGS) -std=gnu99 $(CPPFLAGS) $(CFLAGS) -c -o $@ $<
+
 %.o: %.cpp | $(NLOHMANN_JSON_HEADER)
-	$(CXX) $(INCFLAGS) $(FLAGS) $(STD_CXX) -c -o $@ $<
+	$(COMPILE_CXX)
 
 %.o: %.c
-	$(CC) $(INCFLAGS) $(FLAGS) -std=gnu99 -c -o $@ $<
+	$(COMPILE_C)
+
+ifneq ($(OBJDIR),)
+$(OBJDIR)/%.o: $(AMIBERRY_DIR)/%.cpp | $(NLOHMANN_JSON_HEADER)
+	@mkdir -p $(@D)
+	$(COMPILE_CXX)
+
+$(OBJDIR)/%.o: $(AMIBERRY_DIR)/%.c
+	@mkdir -p $(@D)
+	$(COMPILE_C)
+
+define outside_source_rule
+$(call obj_of,$(1)): $(1) | $(NLOHMANN_JSON_HEADER)
+	@mkdir -p $$(@D)
+	$$(COMPILE_$(if $(filter %.cpp,$(1)),CXX,C))
+endef
+$(foreach s,$(filter-out $(AMIBERRY_DIR)/% $(LIBRETRO_DIR)/%,$(SOURCES_CXX) $(SOURCES_C)),$(eval $(call outside_source_rule,$(s))))
+endif
 
 ifeq ($(platform), win)
 # On Windows, GCC/Clang select libco's amd64.c raw stack-switching backend for
@@ -734,8 +818,7 @@ ifeq ($(platform), win)
 # emulation cothread stack and kills the process. Undefine __amd64__ for this
 # TU so libco falls through to fiber.c, which uses the Win32 Fiber API
 # (CreateFiber switches TEB stack bounds; exceptions unwind correctly).
-$(LIBCO_DIR)/libco.o: $(LIBCO_DIR)/libco.c
-	$(CC) $(INCFLAGS) $(FLAGS) -U__amd64__ -std=gnu99 -c -o $@ $<
+$(call obj_of,$(LIBCO_DIR)/libco.c): FLAGS += -U__amd64__
 endif
 
 clean:
