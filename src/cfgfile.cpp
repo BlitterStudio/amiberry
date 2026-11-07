@@ -2397,14 +2397,26 @@ void write_cdimage_entry(const struct cdslot *cd, const TCHAR *path, TCHAR *out,
 	_sntprintf(out, size, _T("%s"), path);
 	out[size - 1] = 0;
 	if (cd->type != SCSI_UNIT_DEFAULT || _tcschr(cd->name, ',') || cd->delayed) {
-		//for escaping some day..
-		//TCHAR *n = cfgfile_escape(tmp2, _T(","), true, true);
+		const bool params = cd->delayed || cd->type != SCSI_UNIT_DEFAULT;
+		if (params && _tcschr(cd->name, ',')) {
+			// This should always escape if name has a comma
+			// but currently only escape if extra parameters are present,
+			// for backwards compatibility with old config files.
+			TCHAR *n = cfgfile_escape(path, _T(","), true, true);
+			_sntprintf(out, size, _T("%s"), n);
+			out[size - 1] = 0;
+			xfree(n);
+		}
+		// Without parameters, a trailing comma keeps a comma in the name
+		// from being read as the start of the parameters.
 		cfgfile_append_optionf(out, size, _T(","));
 		if (cd->delayed) {
 			cfgfile_append_optionf(out, size, _T("delay"));
-			cfgfile_append_optionf(out, size, _T(":"));
 		}
 		if (cd->type != SCSI_UNIT_DEFAULT) {
+			if (cd->delayed) {
+				cfgfile_append_optionf(out, size, _T(":"));
+			}
 			cfgfile_append_optionf(out, size, _T("%s"), cdmodes[cd->type + 1]);
 		}
 	}
@@ -5863,11 +5875,20 @@ static bool parse_newfilesys_entry (struct uae_prefs *p, int type, TCHAR *value,
 			TCHAR *n = cfgfile_unescape (tmpp2, &end, 0, true);
 			if (!n)
 				goto invalid_fs;
+			// An unterminated quote leaves end at the terminator.
+			if (end <= tmpp2 + 1 || end[-1] != '\"') {
+				xfree(n);
+				goto invalid_fs;
+			}
 			const bool fits = copy_mount_field (uci.rootdir, n);
 			xfree(n);
 			if (!fits)
 				goto invalid_fs;
 			tmpp = const_cast<TCHAR*>(end);
+			// As for an unquoted path: the boot priority follows a comma.
+			// Stepping over the terminator would read past the value.
+			if (*tmpp != ',')
+				{ incomplete = true; goto empty_fs; }
 			*tmpp++ = 0;
 		} else {
 			tmpp = _tcschr (tmpp, ',');
@@ -5897,6 +5918,10 @@ static bool parse_newfilesys_entry (struct uae_prefs *p, int type, TCHAR *value,
 			TCHAR *n = cfgfile_unescape (tmpp2, &end, 0, true);
 			if (!n)
 				goto invalid_fs;
+			if (end <= tmpp2 + 1 || end[-1] != '\"') {
+				xfree(n);
+				goto invalid_fs;
+			}
 			const bool fits = copy_mount_field (uci.rootdir, n);
 			xfree(n);
 			if (!fits)
@@ -5904,6 +5929,8 @@ static bool parse_newfilesys_entry (struct uae_prefs *p, int type, TCHAR *value,
 			tmpp = const_cast<TCHAR*>(end);
 			midmarker = *tmpp == ':'; // <real hd path>:<optional extra path/drive letter>?
 			if (!midmarker) {
+				if (*tmpp != ',')
+					goto invalid_fs;
 				*tmpp++ = 0;
 			}
 		} else {
@@ -5949,19 +5976,30 @@ static bool parse_newfilesys_entry (struct uae_prefs *p, int type, TCHAR *value,
 				TCHAR *n = cfgfile_unescape (tmpp2, &end, 0, false);
 				if (!n)
 					goto invalid_fs;
+				if (end <= tmpp2 + 1 || end[-1] != '\"') {
+					xfree(n);
+					goto invalid_fs;
+				}
 				const bool fits = copy_mount_field (uci.filesys, n);
 				xfree(n);
 				if (!fits)
 					goto invalid_fs;
 				tmpp = const_cast<TCHAR*>(end);
-				*tmpp++ = 0;
+				// The controller and the rest are optional; stepping over
+				// the terminator would read past the value.
+				if (*tmpp == ',')
+					*tmpp++ = 0;
+				else if (*tmpp)
+					goto invalid_fs;
 			} else {
 				tmpp = _tcschr (tmpp, ',');
-				if (tmpp == nullptr)
-					{ incomplete = true; goto empty_fs; }
-				*tmpp++ = 0;
+				if (tmpp)
+					*tmpp++ = 0;
 				if (!copy_mount_field (uci.filesys, tmpp2))
 					goto invalid_fs;
+				// A value that ends with the filesystem has no controller.
+				if (!tmpp)
+					tmpp = tmpp2 + _tcslen (tmpp2);
 			}
 			get_filesys_controller (tmpp, &uci.controller_type, &uci.controller_type_unit, &uci.controller_unit);
 			tmpp2 = _tcschr (tmpp, ',');
@@ -6000,7 +6038,8 @@ static bool parse_newfilesys_entry (struct uae_prefs *p, int type, TCHAR *value,
 
 			TCHAR *pflags;
 			if ((pflags = cfgfile_option_get(tmpp2, _T("flags")))) {
-				getintval(&pflags, &uci.unit_special_flags, 0);
+				TCHAR *flags_value = pflags;
+				getintval(&flags_value, &uci.unit_special_flags, 0);
 				xfree(pflags);
 			}
 

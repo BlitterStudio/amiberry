@@ -4170,6 +4170,19 @@ void check_storage_domain()
 	CHECK(set(p, "cdimage0", "/cd/a,b.iso,") == AMIBERRY_SETTINGS_OK);
 	CHECK(std::strcmp(p.cdslots[0].name, "/cd/a,b.iso") == 0);
 	CHECK(value_of(p, "cdimage0") == "/cd/a,b.iso,");
+	// With the delay flag or a drive type, such a name is quoted, as
+	// WinUAE writes it, and read back whole.
+	CHECK(set(p, "cdimage0", "/cd/a,b,delay:image") == AMIBERRY_SETTINGS_OK);
+	CHECK(std::strcmp(p.cdslots[0].name, "/cd/a,b") == 0 && p.cdslots[0].delayed
+		&& p.cdslots[0].type == SCSI_UNIT_IMAGE);
+	CHECK(value_of(p, "cdimage0") == "\"/cd/a,b\",delay:image");
+	CHECK(set(p, "cdimage0", value_of(p, "cdimage0").c_str()) == AMIBERRY_SETTINGS_OK);
+	CHECK(std::strcmp(p.cdslots[0].name, "/cd/a,b") == 0 && p.cdslots[0].delayed
+		&& p.cdslots[0].type == SCSI_UNIT_IMAGE);
+	// The delay flag alone has no field separator after it.
+	CHECK(set(p, "cdimage0", "/cd/game.iso,delay") == AMIBERRY_SETTINGS_OK);
+	CHECK(p.cdslots[0].delayed && p.cdslots[0].type == SCSI_UNIT_DEFAULT);
+	CHECK(value_of(p, "cdimage0") == "/cd/game.iso,delay");
 	CHECK(set(p, "cdimage0", "") == AMIBERRY_SETTINGS_OK);
 	CHECK(!p.cdslots[0].inuse && value_of(p, "cdimage0") == "");
 	CHECK(set(p, "cdimage0", std::string(MAX_DPATH, 'a').c_str()) == AMIBERRY_SETTINGS_INVALID_VALUE);
