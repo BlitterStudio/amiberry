@@ -61,6 +61,10 @@ static bool if_no_fpu() { return false; }
 template<class... A> static void fp_unimp_datatype(A...) { assert(false); }
 template<class... A> static void fpu_noinst(A...) { assert(false); }
 static void trace_t0_68040() {}
+// Cycle-exact FPU timing does not take part in these checks.
+static void fpu_timing_begin() {}
+static void fpu_timing_store_wait(uae_u16) {}
+static void fpu_timing_arithmetic(uae_u32, uae_u16) {}
 static bool fp_arithmetic(fpdata *, fpdata *, int);
 static bool fpsr_check_arithmetic_exception(
     uae_u32, fpdata *, uae_u32, uae_u16, uae_u32, bool, uaecptr pc) {
