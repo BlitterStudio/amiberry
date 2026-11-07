@@ -3252,13 +3252,10 @@ MIDFUNC(2,jff_DIVU,(RW4 d, RR4 s))
 		SET_xxVflag(REG_WORK1, REG_WORK1);
 		CLEAR_xxCflag(REG_WORK1, REG_WORK1);
 	} else if (currprefs.cpu_model >= 68020) {
-		// 68020/030 preserve incoming Z/C and N, except a negative dividend sets N.
-		int saved_flags = readreg(FLAGTMP);
-		MOV_ww(REG_WORK1, saved_flags);
-		unlock2(saved_flags);
-		SET_xxVflag(REG_WORK1, REG_WORK1);
+		// 68020/030, as setdivuflags(): V set, C and Z clear, N = dividend < 0.
+		MOV_wish(REG_WORK1, 0x1000, 16);  // V
 		TBZ_wii(d, 31, 2);
-		SET_xxNflag(REG_WORK1, REG_WORK1);
+		MOV_wish(REG_WORK1, 0x9000, 16);  // N V
 	} else if (currprefs.cpu_model == 68010) {
 		// 68010: V set, Z/C cleared, N cleared only if both operands are negative.
 		MOV_wish(REG_WORK1, 0x9000, 16);
