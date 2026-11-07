@@ -483,6 +483,33 @@ static TCHAR *cfgfile_unescape_min(const TCHAR *s)
 	return cfgfile_unescape(s, nullptr, 0, true);
 }
 
+// Reads a quoted field that cfgfile_escape_min() wrote for a file name:
+// backslashes are literal (Windows paths), except that \" is a quote of
+// the name. A file name cannot end with a backslash, so a backslash before
+// the closing quote is never the name's own. Returns null when the closing
+// quote is missing; endpos is set after it.
+static TCHAR *cfgfile_unescape_quoted_filename(const TCHAR *s, const TCHAR **endpos)
+{
+	if (s[0] != '\"')
+		return nullptr;
+	TCHAR *s2 = xmalloc(TCHAR, _tcslen(s) + 1);
+	TCHAR *p = s2;
+	for (int i = 1; s[i]; i++) {
+		if (s[i] == '\\' && s[i + 1] == '\"') {
+			*p++ = '\"';
+			i++;
+		} else if (s[i] == '\"') {
+			*p = 0;
+			*endpos = &s[i + 1];
+			return s2;
+		} else {
+			*p++ = s[i];
+		}
+	}
+	xfree(s2);
+	return nullptr;
+}
+
 static void clearmountitems(struct uae_prefs *p)
 {
 	p->mountitems = 0;
@@ -5977,13 +6004,12 @@ static bool parse_newfilesys_entry (struct uae_prefs *p, int type, TCHAR *value,
 			// quoted special case
 			if (tmpp2[0] == '\"') {
 				const TCHAR *end;
-				TCHAR *n = cfgfile_unescape (tmpp2, &end, 0, false);
+				// Written with cfgfile_escape_min(), as the image path is:
+				// backslashes are literal (Windows paths keep them), \" is
+				// a quote in the name.
+				TCHAR *n = cfgfile_unescape_quoted_filename (tmpp2, &end);
 				if (!n)
 					goto invalid_fs;
-				if (end <= tmpp2 + 1 || end[-1] != '\"') {
-					xfree(n);
-					goto invalid_fs;
-				}
 				const bool fits = copy_mount_field (uci.filesys, n);
 				xfree(n);
 				if (!fits)
