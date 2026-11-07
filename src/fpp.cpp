@@ -2221,6 +2221,360 @@ static void trace_t0_68040(void)
 		check_t0_trace();
 }
 
+/* Cycle-exact FPU timing, in clocks, assuming the FPU runs from the CPU clock.
+ *
+ * 68881/68882: MC68881/MC68882 User's Manual, tables 8-2, 8-3 and 8-6 to 8-8
+ * (cache case). 68040: MC68040 User's Manual, section 10.7. 68060: MC68060
+ * User's Manual, table 10-25.
+ *
+ * An instruction holds the CPU for "cpu" clocks from its start, and the first
+ * "head" of those can overlap the previous FPU instruction. After that the FPU
+ * keeps working for "tail" clocks while the CPU continues with integer
+ * instructions. Bus cycles the instruction has already made count towards
+ * "cpu". The 68881 has no head (8.2). Its tail is only listed relative to an
+ * unspecified table (8-25), so the 68882 tail is used for it.
+ */
+
+#ifndef CPU_TESTER
+
+#define FPU_TIMING_MAX_BUSY 4096
+
+static evt_t fpu_timing_start, fpu_busy_until;
+
+struct fpu_op_timing {
+	// FPn,FPn: 68881 total, 68882 tail, 68040 FPU latency, 68060 total.
+	// -1: not implemented in this FPU.
+	uae_s16 total881, tail882, lat040, total060;
+	bool dyadic;
+};
+
+static const struct fpu_op_timing fpu_op_timings[0x40] = {
+	{ 33, 0, 2, 1, false },		// 00 FMOVE
+	{ 55, 37, -1, 3, false },	// 01 FINT
+	{ 687, 669, -1, -1, false },	// 02 FSINH
+	{ 55, 37, -1, 3, false },	// 03 FINTRZ
+	{ 107, 89, 107, 68, false },	// 04 FSQRT
+	{ 0, 0, 0, 0, false },
+	{ 571, 553, -1, -1, false },	// 06 FLOGNP1
+	{ 0, 0, 0, 0, false },
+	{ 545, 527, -1, -1, false },	// 08 FETOXM1
+	{ 661, 643, -1, -1, false },	// 09 FTANH
+	{ 403, 385, -1, -1, false },	// 0a FATAN
+	{ 0, 0, 0, 0, false },
+	{ 581, 563, -1, -1, false },	// 0c FASIN
+	{ 693, 675, -1, -1, false },	// 0d FATANH
+	{ 391, 373, -1, -1, false },	// 0e FSIN
+	{ 473, 455, -1, -1, false },	// 0f FTAN
+	{ 497, 479, -1, -1, false },	// 10 FETOX
+	{ 567, 549, -1, -1, false },	// 11 FTWOTOX
+	{ 567, 549, -1, -1, false },	// 12 FTENTOX
+	{ 0, 0, 0, 0, false },
+	{ 525, 507, -1, -1, false },	// 14 FLOGN
+	{ 581, 563, -1, -1, false },	// 15 FLOG10
+	{ 581, 563, -1, -1, false },	// 16 FLOG2
+	{ 0, 0, 0, 0, false },
+	{ 35, 17, 2, 1, false },	// 18 FABS
+	{ 607, 589, -1, -1, false },	// 19 FCOSH
+	{ 35, 17, 2, 1, false },	// 1a FNEG
+	{ 0, 0, 0, 0, false },
+	{ 625, 607, -1, -1, false },	// 1c FACOS
+	{ 391, 373, -1, -1, false },	// 1d FCOS
+	{ 45, 27, -1, -1, false },	// 1e FGETEXP
+	{ 31, 13, -1, -1, false },	// 1f FGETMAN
+	{ 103, 87, 42, 37, true },	// 20 FDIV
+	{ 70, 54, -1, -1, true },	// 21 FMOD
+	{ 51, 35, 7, 3, true },		// 22 FADD
+	{ 71, 55, 9, 3, true },		// 23 FMUL
+	{ 69, 53, 42, 37, true },	// 24 FSGLDIV
+	{ 100, 84, -1, -1, true },	// 25 FREM
+	{ 41, 25, -1, -1, true },	// 26 FSCALE
+	{ 59, 43, 9, 3, true },		// 27 FSGLMUL
+	{ 51, 35, 7, 3, true },		// 28 FSUB
+	{ 0, 0, 0, 0, false },
+	{ 0, 0, 0, 0, false },
+	{ 0, 0, 0, 0, false },
+	{ 0, 0, 0, 0, false },
+	{ 0, 0, 0, 0, false },
+	{ 0, 0, 0, 0, false },
+	{ 0, 0, 0, 0, false },
+	{ 451, 433, -1, -1, false },	// 30 FSINCOS
+	{ 451, 433, -1, -1, false },
+	{ 451, 433, -1, -1, false },
+	{ 451, 433, -1, -1, false },
+	{ 451, 433, -1, -1, false },
+	{ 451, 433, -1, -1, false },
+	{ 451, 433, -1, -1, false },
+	{ 451, 433, -1, -1, false },
+	{ 33, 17, 6, 1, true },		// 38 FCMP
+	{ 0, 0, 0, 0, false },
+	{ 33, 15, 2, 1, false },	// 3a FTST
+	{ 0, 0, 0, 0, false },
+	{ 0, 0, 0, 0, false },
+	{ 0, 0, 0, 0, false },
+	{ 0, 0, 0, 0, false },
+	{ 0, 0, 0, 0, false },
+};
+
+// Source or destination format index: 0 FPn, 1 integer, 2 single, 3 double,
+// 4 extended, 5 packed.
+static const uae_u8 fpu_timing_format[8] = { 1, 2, 4, 5, 1, 3, 1, 5 };
+// Per format: 68882 CPU time and head, added tail (monadic, dyadic), 68881 added total.
+static const uae_s16 fpu_cpu882[6] = { 21, 40, 31, 37, 43, 82 };
+static const uae_s16 fpu_head882[6] = { 17, 21, 30, 36, 42, 13 };
+static const uae_s16 fpu_tail882_monadic[6] = { 0, 11, 3, 3, 3, 794 };
+static const uae_s16 fpu_tail882_dyadic[6] = { 0, 19, 3, 3, 3, 792 };
+static const uae_s16 fpu_total881[6] = { 0, 27, 19, 25, 23, 837 };
+// FMOVE <ea>,FPn
+static const uae_s16 fpu_fmove_cpu882[6] = { 21, 40, 34, 40, 46, 82 };
+static const uae_s16 fpu_fmove_head882[6] = { 21, 21, 34, 40, 46, 13 };
+static const uae_s16 fpu_fmove_tail882[6] = { 0, 8, 0, 0, 0, 809 };
+static const uae_s16 fpu_fmove_total881[6] = { 33, 60, 52, 58, 56, 870 };
+// FMOVE FPn,<ea>
+static const uae_s16 fpu_fmove_out881[6] = { 0, 100, 80, 86, 72, 2002 };
+static const uae_s16 fpu_fmove_out882[6] = { 0, 110, 38, 44, 50, 2006 };
+
+static bool fpu_6888x(void)
+{
+	return currprefs.fpu_model == 68881 || currprefs.fpu_model == 68882;
+}
+
+// One CPU clock. 68040 and 68060 cycle-exact code counts in half clocks.
+static evt_t fpu_timing_clock(void)
+{
+	return currprefs.cpu_model >= 68040 ? cpucycleunit * 2 : cpucycleunit;
+}
+
+static void fpu_timing_begin(void)
+{
+	fpu_timing_start = get_cycles();
+	if (fpu_busy_until > fpu_timing_start + FPU_TIMING_MAX_BUSY * fpu_timing_clock()) {
+		fpu_busy_until = 0;
+	}
+}
+
+static void fpu_timing_end(int cpu, int head, int tail)
+{
+	if (!currprefs.cpu_cycle_exact || currprefs.cpu_model < 68020) {
+		return;
+	}
+	evt_t clock = fpu_timing_clock();
+	evt_t release = fpu_timing_start + cpu * clock;
+	evt_t after = fpu_busy_until + (cpu - head) * clock;
+	if (after > release) {
+		release = after;
+	}
+	evt_t now = get_cycles();
+	if (release > now) {
+		x_do_cycles((int)(release - now));
+	}
+	fpu_busy_until = get_cycles() + tail * clock;
+}
+
+// Wait for the FPU, then hold the CPU for cpu clocks: instructions that use
+// the result of the previous one, or that the 68040/68060 FPU does not overlap.
+static void fpu_timing_sync(int cpu)
+{
+	fpu_timing_end(cpu, 0, 0);
+}
+
+// 6888x conditional instructions, Table 8-7: 6 clocks overlap the previous
+// instruction, the condition then needs its result.
+static void fpu_timing_cond(int c6888x, int c040)
+{
+	if (fpu_6888x()) {
+		fpu_timing_end(c6888x, 6, 0);
+	} else {
+		fpu_timing_sync(currprefs.fpu_model == 68040 ? c040 : 0);
+	}
+}
+
+static int fpu_timing_opmode(int opmode)
+{
+	// 68040/68060 single and double precision rounding variants
+	switch (opmode)
+	{
+		case 0x40: case 0x44: return 0x00;
+		case 0x41: case 0x45: return 0x04;
+		case 0x58: case 0x5c: return 0x18;
+		case 0x5a: case 0x5e: return 0x1a;
+		case 0x60: case 0x64: return 0x20;
+		case 0x62: case 0x66: return 0x22;
+		case 0x63: case 0x67: return 0x23;
+		case 0x68: case 0x6c: return 0x28;
+	}
+	return opmode & 0x3f;
+}
+
+static void fpu_timing_arithmetic(uae_u32 opcode, uae_u16 extra)
+{
+	int opclass = (extra >> 13) & 7;
+	int fmt = opclass ? fpu_timing_format[(extra >> 10) & 7] : 0;
+	bool dn = opclass && (opcode & 0x38) == 0;
+	int fpu_model = currprefs.fpu_model;
+
+	switch (opclass)
+	{
+		case 0:
+		case 2:
+		{
+			if (opclass == 2 && (extra & 0xfc00) == 0x5c00) {
+				// FMOVECR
+				if (fpu_model == 68882) {
+					fpu_timing_end(32, 10, 0);
+				} else if (fpu_model == 68881) {
+					fpu_timing_end(29, 0, 0);
+				} else {
+					fpu_timing_sync(2);
+				}
+				return;
+			}
+			const struct fpu_op_timing *t = &fpu_op_timings[fpu_timing_opmode(extra & 0x7f)];
+			int cpu, head, tail;
+			if (t->total881 == 0) {
+				return;
+			}
+			if ((extra & 0x7f) == 0x00) {
+				tail = fpu_fmove_tail882[fmt];
+				cpu = fpu_fmove_cpu882[fmt];
+				head = fpu_fmove_head882[fmt];
+				if (fpu_model == 68881) {
+					cpu = fpu_fmove_total881[fmt] - tail;
+				}
+			} else {
+				tail = t->tail882 + (t->dyadic ? fpu_tail882_dyadic[fmt] : fpu_tail882_monadic[fmt]);
+				cpu = fpu_cpu882[fmt];
+				head = fpu_head882[fmt];
+				if (fpu_model == 68881) {
+					int total = t->total881 + fpu_total881[fmt] + (t->dyadic && fmt >= 1 && fmt <= 4 ? 2 : 0);
+					cpu = total - tail;
+				}
+			}
+			if (fpu_model == 68881) {
+				head = 0;
+			} else if (fpu_model == 68040) {
+				// Integer unit support time, then the FPU pipeline. Instructions
+				// emulated instead of trapping to the FPSP use the 68882 tail.
+				cpu = 2;
+				head = cpu;
+				tail = t->lat040 >= 0 ? t->lat040 : t->tail882;
+			} else if (fpu_model == 68060) {
+				// The 68060 FPU runs alongside the integer unit but does not
+				// overlap two floating point instructions.
+				cpu = 1;
+				head = 0;
+				tail = t->total060 >= 0 ? t->total060 - 1 : t->tail882;
+			}
+			if (dn && fpu_6888x()) {
+				cpu -= 5;
+			}
+			fpu_timing_end(cpu, head, tail);
+			return;
+		}
+		case 3:
+		{
+			// FMOVE FPn,<ea>: needs the result of the previous instruction.
+			int cpu;
+			if (fpu_model == 68881) {
+				cpu = fpu_fmove_out881[fmt];
+			} else if (fpu_model == 68882) {
+				cpu = fpu_fmove_out882[fmt];
+			} else {
+				cpu = fpu_model == 68040 ? 3 : (dn ? 3 : 1);
+			}
+			if (fpu_6888x()) {
+				if (fmt == 5 && (extra & 0x1c00) == 0x1c00) {
+					cpu += 14;
+				}
+				if (dn) {
+					cpu -= 2;
+				}
+			}
+			fpu_timing_sync(cpu);
+			return;
+		}
+		case 4:
+		case 5:
+		{
+			// FMOVE(M) control registers, Table 8-6
+			if (!fpu_6888x()) {
+				fpu_timing_sync(0);
+				return;
+			}
+			int n = ((extra >> 12) & 1) + ((extra >> 11) & 1) + ((extra >> 10) & 1);
+			int cpu;
+			if ((opcode & 0x30) == 0) {
+				// Dn or An
+				cpu = (extra & 0x2000) ? 31 : 28;
+			} else if ((opcode & 0x3f) == 0x3c) {
+				cpu = n > 1 ? 25 + 6 * n : 30;
+			} else {
+				cpu = n > 1 ? 27 + 6 * n : 33;
+			}
+			if (fpu_model == 68882) {
+				cpu += 2;
+			}
+			fpu_timing_end(cpu, 6, 0);
+			return;
+		}
+		case 6:
+		case 7:
+		{
+			// FMOVEM data registers, Table 8-6
+			int n = 0;
+			int list = (extra & 0x0800) ? (m68k_dreg(regs, (extra >> 4) & 7) & 0xff) : (extra & 0xff);
+			for (int i = 0; i < 8; i++) {
+				n += (list >> i) & 1;
+			}
+			if (fpu_model == 68040) {
+				fpu_timing_sync(2 + 2 * n);
+			} else if (fpu_model == 68060) {
+				fpu_timing_sync(1 + 3 * n);
+			} else {
+				int cpu = (extra & 0x2000) ? 37 + 25 * n : 35 + 31 * n;
+				if (extra & 0x0800) {
+					cpu += 14;
+				}
+				if (fpu_model == 68882) {
+					cpu += 2;
+				}
+				fpu_timing_end(cpu, 6, 0);
+			}
+			return;
+		}
+	}
+}
+
+// FSAVE and FRESTORE of null or idle frames, Table 8-8
+static void fpu_timing_save_restore(bool restore, bool idle)
+{
+	if (!fpu_6888x()) {
+		fpu_timing_sync(0);
+		return;
+	}
+	int cpu = restore ? 21 : 16;
+	if (idle) {
+		cpu += currprefs.fpu_model == 68882 ? 84 : 36;
+	}
+	fpu_timing_sync(cpu);
+}
+
+#else
+
+static void fpu_timing_begin(void)
+{
+}
+static void fpu_timing_arithmetic(uae_u32 opcode, uae_u16 extra)
+{
+}
+static void fpu_timing_cond(int c6888x, int c040)
+{
+}
+static void fpu_timing_save_restore(bool restore, bool idle)
+{
+}
+
+#endif
+
 
 void fpuop_dbcc (uae_u32 opcode, uae_u16 extra)
 {
@@ -2228,6 +2582,7 @@ void fpuop_dbcc (uae_u32 opcode, uae_u16 extra)
 	uae_s32 disp;
 	int cc;
 
+	fpu_timing_begin();
 	if (fp_exception_pending(true))
 		return;
 	regs.fp_exception = false;
@@ -2260,6 +2615,13 @@ void fpuop_dbcc (uae_u32 opcode, uae_u16 extra)
 			regs.fp_branch = true;
 		}
 	}
+	if (cc >= 0) {
+		if (cc) {
+			fpu_timing_cond(20, 7);
+		} else {
+			fpu_timing_cond(regs.fp_branch ? 20 : 24, 9);
+		}
+	}
 	// 68040 FDBCC: T0 always
 	trace_t0_68040();
 }
@@ -2273,6 +2635,7 @@ void fpuop_scc (uae_u32 opcode, uae_u16 extra)
 	int mode = (opcode >> 3) & 7;
 	int reg = opcode & 7;
 
+	fpu_timing_begin();
 	if (fp_exception_pending(true))
 		return;
 	regs.fp_exception = false;
@@ -2323,12 +2686,16 @@ void fpuop_scc (uae_u32 opcode, uae_u16 extra)
 		}
 		fpu_mmu_fixup = false;
 	}
+	if (cc >= 0) {
+		fpu_timing_cond(mode ? 22 : 18, 6);
+	}
 }
 
 void fpuop_trapcc (uae_u32 opcode, uaecptr oldpc, uae_u16 extra)
 {
 	int cc;
 
+	fpu_timing_begin();
 	if (fp_exception_pending(true))
 		return;
 	regs.fp_exception = false;
@@ -2352,6 +2719,8 @@ void fpuop_trapcc (uae_u32 opcode, uaecptr oldpc, uae_u16 extra)
 	} else if (cc) {
 		regs.fp_exception = true;
 		Exception_cpu_oldpc(7, oldpc);
+	} else {
+		fpu_timing_cond((opcode & 7) == 2 ? 20 : ((opcode & 7) == 3 ? 22 : 18), 6);
 	}
 }
 
@@ -2359,6 +2728,7 @@ void fpuop_bcc(uae_u32 opcode, uaecptr oldpc, uae_u32 extra)
 {
 	int cc;
 
+	fpu_timing_begin();
 	if (fp_exception_pending(true))
 		return;
 	regs.fp_exception = false;
@@ -2385,6 +2755,9 @@ void fpuop_bcc(uae_u32 opcode, uaecptr oldpc, uae_u32 extra)
 		m68k_setpc(oldpc + extra);
 		regs.fp_branch = true;
 	}
+	if (cc >= 0) {
+		fpu_timing_cond(cc ? 20 : 18, cc ? 7 : 6);
+	}
 }
 
 void fpuop_save (uae_u32 opcode)
@@ -2402,6 +2775,7 @@ void fpuop_save (uae_u32 opcode)
 #endif
 
 	regs.fp_exception = false;
+	fpu_timing_begin();
 
 	if (fault_if_no_6888x (opcode, 0, pc))
 		return;
@@ -2602,6 +2976,7 @@ void fpuop_save (uae_u32 opcode)
 		m68k_areg (regs, opcode & 7) = adp;
 	regs.fpu_exp_state = 0;
 	regs.fp_exp_pend = 0;
+	fpu_timing_save_restore(false, regs.fpu_state != 0);
 }
 
 static bool fp_arithmetic(fpdata *src, fpdata *dst, int extra);
@@ -2617,6 +2992,7 @@ void fpuop_restore (uae_u32 opcode)
 	uae_u32 d;
 
 	regs.fp_exception = false;
+	fpu_timing_begin();
 
 #if FPU_LOG
 	if (!isinrom())
@@ -2830,6 +3206,7 @@ retry:
 
 	if ((opcode & 0x38) == 0x18) /// postincrement
 		m68k_areg (regs, opcode & 7) = ad;
+	fpu_timing_save_restore(true, regs.fpu_state != 0);
 }
 
 static uaecptr fmovem2mem (uaecptr ad, uae_u32 list, int incr, int regdir)
@@ -3628,12 +4005,16 @@ void fpuop_arithmetic (uae_u32 opcode, uae_u16 extra)
 	regs.fpu_state = 1;
 	regs.fp_exception = false;
 	fpu_mmu_fixup = false;
+	fpu_timing_begin();
 #if FPU_LOG
 	write_log(_T("FPUOP %04x %04x PC=%08x\n"), opcode, extra, M68K_GETPC);
 #endif
 	fpuop_arithmetic2 (opcode, extra);
 	if (fpu_mmu_fixup) {
 		mmufixup[0].reg = -1;
+	}
+	if (!regs.fp_exception) {
+		fpu_timing_arithmetic(opcode, extra);
 	}
 }
 
@@ -3773,6 +4154,9 @@ void fpu_reset (void)
 	regs.fpu_exp_state = 0;
 	regs.fp_unimp_pend = 0;
 	regs.fp_ea_set = false;
+#ifndef CPU_TESTER
+	fpu_busy_until = 0;
+#endif
 	get_features();
 	fpp_set_fpcr (0);
 	fpp_set_fpsr (0);
