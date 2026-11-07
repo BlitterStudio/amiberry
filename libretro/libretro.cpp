@@ -942,7 +942,7 @@ static struct retro_core_option_v2_definition option_defs[] = {
 		"amiberry_internal_vsync",
 		"Internal VSync",
 		"Internal VSync",
-		"Select internal vsync mode.",
+		"Let the frontend pace frames instead of the core's own timer. Use it when the frontend syncs to a display running at the Amiga's refresh rate (50 Hz PAL, 60 Hz NTSC).",
 		NULL,
 		"video",
 		{

@@ -2777,7 +2777,14 @@ int isvsync_chipset(void)
 	if (currprefs.gfx_apmode[0].gfx_vsync <= 0)
 		return 0;
 #ifdef AMIBERRY
-#ifndef LIBRETRO
+#ifdef LIBRETRO
+	// The core yields to the frontend when it shows a frame, and the frontend
+	// calls retro_run() again at its own pace (its vsync, or a display locked
+	// to the Amiga's rate). With Internal VSync on, that is the frame wait:
+	// the core must not also sleep until its own deadline, or the two clocks
+	// drift apart until frames miss their refresh.
+	return currprefs.gfx_apmode[0].gfx_vsyncmode == 0 ? 1 : 0;
+#else
 	// Standard VSync (gfx_vsyncmode == 0, not Adaptive/VRR) with matched monitor
 	// refresh can use hardware pacing via swap blocking. Any other combination
 	// falls through to software timing — renderers still set SwapInterval
@@ -2787,8 +2794,8 @@ int isvsync_chipset(void)
 	if (currprefs.gfx_apmode[0].gfx_vsyncmode == 0 && !currprefs.gfx_variable_sync
 		&& amiberry_hw_vsync_pacing_ok())
 		return 1;
-#endif
 	return 0;
+#endif
 #else
 	if (currprefs.gfx_apmode[0].gfx_vsyncmode == 0)
 		return 1;

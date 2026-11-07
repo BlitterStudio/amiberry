@@ -9,6 +9,9 @@
 #   NLOHMANN_JSON_INCLUDE=<dir>  the folder holding nlohmann/json.hpp,
 #                           instead of downloading it into deps/
 #   CPPFLAGS, CFLAGS, CXXFLAGS   added to every compile
+#   NET_CFLAGS              added to the network sources only (SLiRP,
+#                           slirp_uae.cpp, bsdsocket_host.cpp), e.g. to
+#                           send their socket calls to the host's own stack
 # For hosts without some of what the core expects (bare metal):
 #   NO_JIT=1                leave the JIT out
 #   NO_STD_THREAD=1         no std::thread: CHD's work queues run their
@@ -695,6 +698,11 @@ obj_of = $(foreach s,$(1),$(OBJDIR)/$(basename $(call obj_rel,$(s))).o)
 endif
 
 SOURCES_CXX := $(SOURCES_CORE) $(SOURCES_OSDEP) $(SOURCES_CPU) $(SOURCES_JIT) $(SOURCES_PPC) $(SOURCES_QEMUVGA) $(SOURCES_ARCHIVE) $(SOURCES_SLIRP) $(SOURCES_MISC)
+
+NET_SOURCES := $(SOURCES_SLIRP) $(AMIBERRY_DIR)/src/slirp_uae.cpp $(AMIBERRY_DIR)/src/osdep/bsdsocket_host.cpp
+ifneq ($(NET_CFLAGS),)
+$(call obj_of,$(NET_SOURCES)): FLAGS += $(NET_CFLAGS)
+endif
 
 # 86Box (x86 bridgeboards, DraCo, RTG boards): source lists, the opt-in
 # USE_86BOX wiring and the per-object flags live in 86box.mk.
