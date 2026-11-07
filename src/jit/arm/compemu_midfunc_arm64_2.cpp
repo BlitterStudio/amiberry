@@ -3499,7 +3499,7 @@ MIDFUNC(3,jnf_DIVLU32,(RW4 d, RR4 s1, W4 rem))
 {
 	s1 = readreg(s1);
 	d = rmw(d);
-	rem = writereg(rem);
+	rem = rmw(rem);     // unchanged on division by zero: load it
 
 	CBNZ_wi(s1, 4);     // src is not 0
 
@@ -3528,7 +3528,7 @@ MIDFUNC(3,jff_DIVLU32,(RW4 d, RR4 s1, W4 rem))
 {
 	s1 = readreg(s1);
 	d = rmw(d);
-	rem = writereg(rem);
+	rem = rmw(rem);     // unchanged on division by zero: load it
 
 	CBNZ_wi(s1, 4);     // src is not 0
 
@@ -3557,34 +3557,65 @@ MIDFUNC(3,jff_DIVLU32,(RW4 d, RR4 s1, W4 rem))
 }
 MENDFUNC(3,jff_DIVLU32,(RW4 d, RR4 s1, W4 rem))
 
+/* DIVS.L <ea>,Dq / DIVSL.L <ea>,Dr:Dq (32-bit dividend). Division by zero
+ * signals exception 5 and $80000000 / -1 overflows; in both cases Dq and Dr
+ * are unchanged, so rem is taken read-modify-write: a writereg() left its
+ * old value unloaded, and the skipped paths stored garbage in Dr.
+ * Overflow flags as divsl_overflow() for this case: V set, C clear, and
+ * N = 1, Z = 0 on the 68020/030 (dividend negative); on the 68040/060 N and
+ * Z are undefined (cleared here). */
+static void emit_divls32(int d, int s1, int rem, bool flags)
+{
+	uae_u32 *branch_div0 = (uae_u32 *)get_target();
+	CBZ_wi(s1, 0);                          // -> division by zero
+
+	ADD_wwi(REG_WORK1, s1, 1);
+	uae_u32 *branch_ok1 = (uae_u32 *)get_target();
+	CBNZ_wi(REG_WORK1, 0);                  // divisor != -1 -> divide
+	MOV_wish(REG_WORK2, 0x8000, 16);
+	CMP_ww(d, REG_WORK2);
+	uae_u32 *branch_ok2 = (uae_u32 *)get_target();
+	BNE_i(0);                               // dividend != $80000000 -> divide
+	if (flags) {
+		// overflow: V set, C clear
+		if (currprefs.cpu_model >= 68040)
+			MOV_wish(REG_WORK1, 0x1000, 16);    // V
+		else
+			MOV_wish(REG_WORK1, 0x9000, 16);    // N V
+		MSR_NZCV_x(REG_WORK1);
+	}
+	uae_u32 *branch_end1 = (uae_u32 *)get_target();
+	B_i(0);
+
+	write_jmp_target(branch_ok1, (uintptr)get_target());
+	write_jmp_target(branch_ok2, (uintptr)get_target());
+	SDIV_www(REG_WORK1, d, s1);
+	// remainder, with the sign of the dividend
+	MSUB_wwww(rem, s1, REG_WORK1, d);
+	EOR_www(REG_WORK3, rem, d);
+	TBZ_wii(REG_WORK3, 31, 2);
+	NEG_ww(rem, rem);
+	MOV_ww(d, REG_WORK1);
+	if (flags)
+		TST_ww(d, d);
+	uae_u32 *branch_end2 = (uae_u32 *)get_target();
+	B_i(0);
+
+	write_jmp_target(branch_div0, (uintptr)get_target());
+	MOV_wi(REG_WORK1, 5);                   // signal exception 5
+	uintptr idx = (uintptr)(&regs.jit_exception) - (uintptr)(&regs);
+	STR_wXi(REG_WORK1, R_REGSTRUCT, idx);
+
+	write_jmp_target(branch_end1, (uintptr)get_target());
+	write_jmp_target(branch_end2, (uintptr)get_target());
+}
+
 MIDFUNC(3,jnf_DIVLS32,(RW4 d, RR4 s1, W4 rem))
 {
 	s1 = readreg(s1);
 	d = rmw(d);
-	rem = writereg(rem);
-
-	CBNZ_wi(s1, 4);     // src is not 0
-
-	// Signal exception 5
-	MOV_wi(REG_WORK1, 5);
-	uintptr idx = (uintptr)(&regs.jit_exception) - (uintptr)(&regs);
-	STR_wXi(REG_WORK1, R_REGSTRUCT, idx);
-	B_i(7);        // end_of_op
-
-	// src is not 0
-	SDIV_www(REG_WORK1, d, s1);
-
-	// Here we have to calc remainder
-	MSUB_wwww(rem, s1, REG_WORK1, d);
-
-	EOR_www(REG_WORK3, rem, d);	// If sign of remainder and first operand differs, change sign of remainder
-	TBZ_wii(REG_WORK3, 31, 2);
-	NEG_ww(rem, rem);
-
-	MOV_ww(d, REG_WORK1);
-
-	// end_of_op
-
+	rem = rmw(rem);
+	emit_divls32(d, s1, rem, false);
 	unlock2(rem);
 	unlock2(d);
 	unlock2(s1);
@@ -3595,31 +3626,8 @@ MIDFUNC(3,jff_DIVLS32,(RW4 d, RR4 s1, W4 rem))
 {
 	s1 = readreg(s1);
 	d = rmw(d);
-	rem = writereg(rem);
-
-	CBNZ_wi(s1, 4);     // src is not 0
-
-	// Signal exception 5
-	MOV_wi(REG_WORK1, 5);
-	uintptr idx = (uintptr)(&regs.jit_exception) - (uintptr)(&regs);
-	STR_wXi(REG_WORK1, R_REGSTRUCT, idx);
-	B_i(8);        // end_of_op
-
-	// src is not 0
-	SDIV_www(REG_WORK1, d, s1);
-
-	// Here we have to calc remainder
-	MSUB_wwww(rem, s1, REG_WORK1, d);
-
-	EOR_www(REG_WORK3, rem, d);	// If sign of remainder and first operand differs, change sign of remainder
-	TBZ_wii(REG_WORK3, 31, 2);
-	NEG_ww(rem, rem);
-
-	MOV_ww(d, REG_WORK1);
-	TST_ww(d, d);
-
-	// end_of_op
-
+	rem = rmw(rem);
+	emit_divls32(d, s1, rem, true);
 	flags_carry_inverted = false;
 	unlock2(rem);
 	unlock2(d);
