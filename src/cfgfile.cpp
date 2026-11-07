@@ -5977,7 +5977,9 @@ static bool parse_newfilesys_entry (struct uae_prefs *p, int type, TCHAR *value,
 			// quoted special case
 			if (tmpp2[0] == '\"') {
 				const TCHAR *end;
-				TCHAR *n = cfgfile_unescape (tmpp2, &end, 0, false);
+				// Written with cfgfile_escape_min(), as the image path is:
+				// backslashes are literal (Windows paths keep them).
+				TCHAR *n = cfgfile_unescape (tmpp2, &end, 0, true);
 				if (!n)
 					goto invalid_fs;
 				if (end <= tmpp2 + 1 || end[-1] != '\"') {

@@ -118,6 +118,17 @@ for ext in lzh lzx; do
 	check "$work/$ext.txt" "^filesystem2=rw,DH1:Games:.*game\\.$ext,0\$"
 done
 
+# A hardfile's filesystem name that needs quotes (here for its comma) is
+# written with minimal escaping and must be read back the same way: a
+# backslash in it stays, as it does in a Windows path.
+printf 'hardfile2=rw,DH1:%s/disk.hdf,32,1,2,512,0,"%s/fs,dir\\l\\FastFileSystem",uae0\n' "$work" "$work" > "$work/hdf-filesys.uae"
+"$bin" --dump-config -f "$work/hdf-filesys.uae" > "$work/hdf-filesys.txt" 2>/dev/null
+grep -qF ",0,\"$work/fs,dir\\l\\FastFileSystem\",uae0" "$work/hdf-filesys.txt" || {
+	echo "hardfile2 filesystem name lost its backslashes:" >&2
+	grep '^hardfile2=' "$work/hdf-filesys.txt" >&2
+	exit 1
+}
+
 # WHDBooter assigns the joystick ports; -s options after --autoload replace
 # its choice (front ends pass the user's port choices this way).
 check "$work/lha.txt" '^joyport0=mouse$'
