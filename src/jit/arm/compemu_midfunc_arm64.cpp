@@ -869,11 +869,58 @@ MIDFUNC(2,fmov_s_ri,(FW d, IM32 i))
 }
 MENDFUNC(2,fmov_s_ri,(FW d, IM32 i))
 
+/* FPSR exception byte of an FMOVE FPn to integer (L/W/B), as the
+ * interpreter sets it: OPERR (and accrued IOP) when the rounded value does
+ * not fit the integer size or is a NaN/infinity, else INEX2 (and accrued
+ * INEX) when rounding changed it; the rest of the exception byte is
+ * cleared. The rounded value is in SCRATCH_F64_1 (raw_fmov_to_*: FRINTI).
+ * Enabled OPERR/INEX traps are not taken in compiled code. Uses the host
+ * flags: the 68k CCR is saved first (FMOVE does not change it). */
+static void emit_fpsr_int_conv(int s, int size)
+{
+	clobber_flags();
+	FCVTAS_wd(REG_WORK1, SCRATCH_F64_1);        // saturated 32-bit value
+	SCVTF_dw(SCRATCH_F64_2, REG_WORK1);
+	FCMP_dd(SCRATCH_F64_2, SCRATCH_F64_1);      // != or unordered: out of range
+	uae_u32 *branch_operr1 = (uae_u32 *)get_target();
+	BNE_i(0);
+	uae_u32 *branch_operr2 = NULL;
+	if (size < 4) {
+		if (size == 2)
+			SXTH_ww(REG_WORK2, REG_WORK1);
+		else
+			SXTB_ww(REG_WORK2, REG_WORK1);
+		CMP_ww(REG_WORK1, REG_WORK2);
+		branch_operr2 = (uae_u32 *)get_target();
+		BNE_i(0);
+	}
+	MOV_wi(REG_WORK3, 0);
+	FCMP_dd(SCRATCH_F64_1, s);                  // rounding changed it: inexact
+	uae_u32 *branch_exact = (uae_u32 *)get_target();
+	BEQ_i(0);
+	MOV_wi(REG_WORK3, 0x0208);                  // INEX2, accrued INEX
+	uae_u32 *branch_store = (uae_u32 *)get_target();
+	B_i(0);
+	write_jmp_target(branch_operr1, (uintptr)get_target());
+	if (branch_operr2)
+		write_jmp_target(branch_operr2, (uintptr)get_target());
+	MOV_wi(REG_WORK3, 0x2080);                  // OPERR, accrued IOP
+	write_jmp_target(branch_exact, (uintptr)get_target());
+	write_jmp_target(branch_store, (uintptr)get_target());
+	LOAD_U64(REG_WORK4, (uintptr)&regs.fpsr);
+	LDR_wXi(REG_WORK2, REG_WORK4, 0);
+	MOV_wi(REG_WORK1, 0xff00);
+	BIC_www(REG_WORK2, REG_WORK2, REG_WORK1);   // exception byte
+	ORR_www(REG_WORK2, REG_WORK2, REG_WORK3);
+	STR_wXi(REG_WORK2, REG_WORK4, 0);
+}
+
 MIDFUNC(2,fmov_to_l_rr,(W4 d, FR s))
 {
 	s = f_readreg(s);
 	d = writereg(d);
 	raw_fmov_to_l_rr(d, s);
+	emit_fpsr_int_conv(s, 4);
 	unlock2(d);
 	f_unlock(s);
 }
@@ -895,6 +942,7 @@ MIDFUNC(2,fmov_to_w_rr,(W4 d, FR s))
 	INIT_WREG_w(d);
 
 	raw_fmov_to_w_rr(d, s, targetIsReg);
+	emit_fpsr_int_conv(s, 2);
 	unlock2(d);
 	f_unlock(s);
 }
@@ -906,6 +954,7 @@ MIDFUNC(2,fmov_to_b_rr,(W4 d, FR s))
 	INIT_WREG_b(d);
 
 	raw_fmov_to_b_rr(d, s, targetIsReg);
+	emit_fpsr_int_conv(s, 1);
 	unlock2(d);
 	f_unlock(s);
 }
