@@ -1,6 +1,7 @@
 #include "libretro.h"
 #include "libretro_shared.h"
 #include "libretro_crop_helpers.h"
+#include "amiberry_embed.h"
 #ifdef LIBRETRO
 #include "sdl_compat.h"
 #endif
@@ -1221,6 +1222,17 @@ static bool core_options_update_display_callback(void)
 }
 
 extern int amiberry_main(int argc, char** argv);
+
+// Arguments a program that links the core in adds to the end of
+// amiberry_main()'s command line (amiberry_embed.h).
+static std::vector<std::string> embed_extra_args;
+
+void amiberry_libretro_set_extra_args(int argc, const char* const* argv)
+{
+	embed_extra_args.clear();
+	for (int i = 0; i < argc; i++)
+		embed_extra_args.emplace_back(argv[i] ? argv[i] : "");
+}
 
 static bool path_is_absolute(const std::string& path)
 {
@@ -4673,6 +4685,8 @@ static void core_entry(void)
 		}
 		safe_strdup("-G");
 	}
+	for (const auto& arg : embed_extra_args)
+		safe_strdup(arg.c_str());
 	argv.push_back(nullptr);
 
 	if (libretro_debug_file) {

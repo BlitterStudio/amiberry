@@ -225,12 +225,14 @@ namespace {
 std::error_condition osd_file::open(std::string const& path, std::uint32_t openflags, ptr& file, std::uint64_t& filesize) noexcept
 {
 	std::string dst;
+#if !defined(AMIBERRY_NO_CHD_SPECIAL_FILES)
 	if (posix_check_socket_path(path))
 		return posix_open_socket(path, openflags, file, filesize);
 	else if (posix_check_ptty_path(path))
 		return posix_open_ptty(openflags, file, filesize, dst);
 	else if (posix_check_domain_path(path))
 		return posix_open_domain(path, openflags, file, filesize);
+#endif
 
 	// select the file open modes
 	int access;
@@ -337,8 +339,12 @@ std::error_condition osd_file::open(std::string const& path, std::uint32_t openf
 
 std::error_condition osd_file::openpty(ptr& file, std::string& name) noexcept
 {
+#if defined(AMIBERRY_NO_CHD_SPECIAL_FILES)
+	return std::errc::not_supported;
+#else
 	std::uint64_t filesize;
 	return posix_open_ptty(OPEN_FLAG_READ | OPEN_FLAG_WRITE, file, filesize, name);
+#endif
 }
 
 

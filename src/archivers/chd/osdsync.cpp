@@ -87,8 +87,8 @@ static void spin_while_not(const volatile _AtomType* volatile atom, const _MainT
 
 int osd_get_num_processors(bool heavy_mt)
 {
-#if defined(SDLMAME_EMSCRIPTEN)
-	// multithreading is not supported at this time
+#if defined(SDLMAME_EMSCRIPTEN) || defined(AMIBERRY_NO_STD_THREAD)
+	// multithreading is not supported at this time (Amiberry: or not at all)
 	return 1;
 #else
 	unsigned int threads = std::thread::hardware_concurrency();
@@ -274,7 +274,7 @@ osd_work_queue* osd_work_queue_alloc(int flags)
 	if (osdworkqueuemaxthreads != nullptr && sscanf(osdworkqueuemaxthreads, "%d", &osdthreadnum) == 1 && threadnum > osdthreadnum)
 		threadnum = osdthreadnum;
 
-#if defined(SDLMAME_EMSCRIPTEN)
+#if defined(SDLMAME_EMSCRIPTEN) || defined(AMIBERRY_NO_STD_THREAD)
 	// threads are not supported at all
 	threadnum = 0;
 #endif
@@ -283,7 +283,9 @@ osd_work_queue* osd_work_queue_alloc(int flags)
 	queue->threads = std::min(threadnum, WORK_MAX_THREADS);
 
 	// allocate memory for thread array (+1 to count the calling thread if WORK_QUEUE_FLAG_MULTI)
-	if (flags & WORK_QUEUE_FLAG_MULTI)
+	// Amiberry: also +1 when there are no threads, as osd_work_item_queue_multiple()
+	// then runs the work on the calling thread as thread[0]
+	if ((flags & WORK_QUEUE_FLAG_MULTI) || queue->threads == 0)
 		allocthreadnum = queue->threads + 1;
 	else
 		allocthreadnum = queue->threads;
@@ -295,6 +297,7 @@ osd_work_queue* osd_work_queue_alloc(int flags)
 	for (threadnum = 0; threadnum < allocthreadnum; threadnum++)
 		queue->thread.push_back(new work_thread_info(threadnum, *queue));
 
+#if !defined(AMIBERRY_NO_STD_THREAD)
 	// iterate over threads
 	for (threadnum = 0; threadnum < queue->threads; threadnum++)
 	{
@@ -312,6 +315,7 @@ osd_work_queue* osd_work_queue_alloc(int flags)
 		else
 			thread_adjust_priority(thread->handle, 0);
 	}
+#endif
 
 	// start a timer going for "waittime" on the main thread
 	if (flags & WORK_QUEUE_FLAG_MULTI)
