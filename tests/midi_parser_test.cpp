@@ -65,15 +65,58 @@ int main(void)
 	midi_parser_reset(&parser);
 	feed(&parser, { 0x7f });
 	check(packets.empty());
-	/* Saturate SysEx storage and verify that the final EOX still fits. */
+	/* A SysEx message that fills the buffer exactly, EOX included, is one
+	   packet. */
 	feed(&parser, { 0xf0 });
-	for (int i = 0; i < MIDI_PARSER_BUFFER_SIZE * 2; i++) {
+	for (int i = 0; i < MIDI_PARSER_BUFFER_SIZE - 2; i++) {
 		midi_parser_byte(&parser, 0x12, output);
 	}
 	feed(&parser, { 0xf7 });
 	check(packets.size() == 1);
 	check(packets[0].size() == MIDI_PARSER_BUFFER_SIZE);
 	check(packets[0].front() == 0xf0 && packets[0].back() == 0xf7);
+	/* A longer one goes out in pieces with nothing lost: the first starts
+	   with 0xF0, the others with a data byte, the last ends with EOX. A
+	   clock byte in the middle still goes out on its own. */
+	packets.clear();
+	feed(&parser, { 0xf0 });
+	for (int i = 0; i < MIDI_PARSER_BUFFER_SIZE * 2; i++) {
+		midi_parser_byte(&parser, (uae_u8)(i & 0x7f), output);
+		if (i == MIDI_PARSER_BUFFER_SIZE) {
+			midi_parser_byte(&parser, 0xf8, output);
+		}
+	}
+	feed(&parser, { 0xf7 });
+	{
+		std::vector<uae_u8> sysex;
+		int pieces = 0, clocks = 0;
+		for (const auto &packet : packets) {
+			if (packet == std::vector<uae_u8>{ 0xf8 }) {
+				clocks++;
+				continue;
+			}
+			check(packet.size() <= MIDI_PARSER_BUFFER_SIZE);
+			check(pieces ? packet.front() < 0x80 : packet.front() == 0xf0);
+			sysex.insert(sysex.end(), packet.begin(), packet.end());
+			pieces++;
+		}
+		check(clocks == 1 && pieces == 3);
+		check(sysex.size() == (size_t)MIDI_PARSER_BUFFER_SIZE * 2 + 2);
+		check(sysex.front() == 0xf0 && sysex.back() == 0xf7);
+		for (int i = 0; i < MIDI_PARSER_BUFFER_SIZE * 2; i++) {
+			check(sysex[i + 1] == (uae_u8)(i & 0x7f));
+		}
+	}
+	/* A new status ends a long message the same way. */
+	packets.clear();
+	feed(&parser, { 0xf0 });
+	for (int i = 0; i < MIDI_PARSER_BUFFER_SIZE; i++) {
+		midi_parser_byte(&parser, 0x12, output);
+	}
+	feed(&parser, { 0x90, 0x3c, 0x7f });
+	check(packets.size() == 3);
+	check(packets[1].back() == 0xf7);
+	check(packets[2] == std::vector<uae_u8>({ 0x90, 0x3c, 0x7f }));
 	/* All channel statuses: one- and two-data-byte packets, running status. */
 	for (int status = 0x80; status < 0xf0; status++) {
 		packets.clear();

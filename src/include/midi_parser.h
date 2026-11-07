@@ -11,9 +11,14 @@ struct midi_parser {
 	int position;
 	uae_u8 sysex[MIDI_PARSER_BUFFER_SIZE];
 	int sysex_length;
+	bool in_sysex;
 };
 
-/* The receiver must copy data if its host API retains the buffer. */
+/* The receiver must copy data if its host API retains the buffer.
+ * A SysEx message longer than the buffer arrives in pieces: the first
+ * starts with 0xF0, the others with a data byte, and the last ends with
+ * 0xF7. Every other message starts with its status byte, never 0xF0 or a
+ * data byte. */
 typedef void (*midi_parser_output)(const uae_u8 *data, int length);
 void midi_parser_reset(struct midi_parser *parser);
 void midi_parser_byte(struct midi_parser *parser, uae_u8 data,

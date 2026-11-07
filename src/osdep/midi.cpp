@@ -256,7 +256,8 @@ static void write_sysex(const uae_u8 *data, int length)
 
 static void midi_output_message(const uae_u8 *data, int length)
 {
-	if (data[0] == 0xf0) {
+	// SysEx, or a later piece of one: the driver streams the bytes.
+	if (data[0] == 0xf0 || data[0] < 0x80) {
 		write_sysex(data, length);
 		return;
 	}
@@ -312,6 +313,9 @@ static PmDeviceID in_dev_id = pmNoDevice;
 static PmDeviceID out_dev_id = pmNoDevice;
 static PortMidiStream *out;
 static PortMidiStream *in;
+// The SysEx word being filled (midi_output_message())
+static PmMessage out_sysex_msg;
+static int out_sysex_bits;
 
 #define MY_IN_QUEUE_SIZE 64
 static int timer_active = 0;
@@ -498,6 +502,8 @@ static int midi_open_with_config(const uae_prefs *cfg)
 
 	parse_config(cfg);
 	midi_parser_reset(&output_parser);
+	out_sysex_msg = 0;
+	out_sysex_bits = 0;
 
 	// open streams
 	out = open_out_stream();
@@ -524,6 +530,8 @@ void midi_close()
 {
 	write_log(_T("midi_close()\n"));
 	midi_parser_reset(&output_parser);
+	out_sysex_msg = 0;
+	out_sysex_bits = 0;
 
 	// stop timer
 	timer_active = 0;
@@ -569,14 +577,25 @@ static void write_msg(PmMessage msg)
 
 static void midi_output_message(const uae_u8 *data, int length)
 {
-	// Up to four bytes per PmMessage: a short message fits in one, a SysEx
-	// message is split, its last word zero-padded.
-	for (int i = 0; i < length; i += 4) {
-		PmMessage msg = 0;
-		for (int j = 0; j < 4 && i + j < length; j++)
-			msg |= (PmMessage)data[i + j] << (8 * j);
-		write_msg(msg);
+	if (data[0] == 0xf0 || data[0] < 0x80) {
+		// SysEx, possibly in pieces: four bytes per PmMessage, the word
+		// with the EOX zero-padded. A partial word carries over to the
+		// next piece.
+		for (int i = 0; i < length; i++) {
+			out_sysex_msg |= (PmMessage)data[i] << out_sysex_bits;
+			out_sysex_bits += 8;
+			if (out_sysex_bits == 32 || data[i] == 0xf7) {
+				write_msg(out_sysex_msg);
+				out_sysex_msg = 0;
+				out_sysex_bits = 0;
+			}
+		}
+		return;
 	}
+	PmMessage msg = 0;
+	for (int i = 0; i < length; i++)
+		msg |= (PmMessage)data[i] << (8 * i);
+	write_msg(msg);
 }
 
 void midi_send_byte(uint8_t ch)
