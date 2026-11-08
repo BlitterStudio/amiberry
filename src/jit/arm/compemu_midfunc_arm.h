@@ -114,7 +114,7 @@ DECLARE_MIDFUNC(fp_fscc_ri(RW4, int cc));
 DECLARE_MIDFUNC(fp_cc_from_fpsr(RW4 d, IM32 mask));
 DECLARE_MIDFUNC(fp_bsun_iop(void));
 DECLARE_MIDFUNC(jitx_fpp_arith(IMPTR fn, RR4 v1, RR4 v2, IM8 nvals, IM32 opext, IMPTR pcp, IM32 pc, IM8 anreg, IM32 delta));
-DECLARE_MIDFUNC(jitx_fpp_generic(RR4 a, IM8 hasea, IM32 opext, IMPTR nextp, IMPTR lenpc));
+DECLARE_MIDFUNC(jitx_fpp_generic(IMPTR fn, RR4 a, IM8 hasea, IM32 opext, IMPTR nextp, IMPTR lenpc));
 DECLARE_MIDFUNC(fpx_cc_from_fpsr(RW4 d, IM32 mask, IM8 bsun));
 DECLARE_MIDFUNC(fp_fbcc_test(RR4 d));
 DECLARE_MIDFUNC(fpu_cc_written_clear(void));

@@ -999,9 +999,10 @@ MIDFUNC(9,jitx_fpp_arith,(IMPTR fn, RR4 v1, RR4 v2, IM8 nvals, IM32 opext, IMPTR
 }
 MENDFUNC(9,jitx_fpp_arith,(IMPTR fn, RR4 v1, RR4 v2, IM8 nvals, IM32 opext, IMPTR pcp, IM32 pc, IM8 anreg, IM32 delta))
 
-/* Compiled FPU instruction via fpp_jit_generic(opext, ea, next_p, lenpc):
+/* Compiled FPU instruction via fn, fpp_jit_generic(opext, ea, next_p, lenpc)
+ * or a helper with its arguments and results (fp_jit_out_helper()):
  * ea from the 68k temp a (if hasea). Continue on 1, leave the block on 2. */
-MIDFUNC(5,jitx_fpp_generic,(RR4 a, IM8 hasea, IM32 opext, IMPTR nextp, IMPTR lenpc))
+MIDFUNC(6,jitx_fpp_generic,(IMPTR fn, RR4 a, IM8 hasea, IM32 opext, IMPTR nextp, IMPTR lenpc))
 {
 	clobber_flags();
 	int r = -1;
@@ -1014,7 +1015,7 @@ MIDFUNC(5,jitx_fpp_generic,(RR4 a, IM8 hasea, IM32 opext, IMPTR nextp, IMPTR len
 	LOAD_U32(REG_PAR1, (uae_u32)opext);
 	LOAD_U64(R2_INDEX, nextp);
 	LOAD_U64(R3_INDEX, lenpc);
-	compemu_raw_call((uintptr)fpp_jit_generic);
+	compemu_raw_call(fn);
 	uae_u32 *branch_cont = (uae_u32 *)get_target();
 	TBZ_wii(REG_RESULT, 1, 0);                  // 1: continue
 	uae_u32 *branch_leave = (uae_u32 *)get_target();
@@ -1022,7 +1023,7 @@ MIDFUNC(5,jitx_fpp_generic,(RR4 a, IM8 hasea, IM32 opext, IMPTR nextp, IMPTR len
 	write_jmp_target(branch_leave, (uintptr)popall_do_nothing);
 	write_jmp_target(branch_cont, (uintptr)get_target());
 }
-MENDFUNC(5,jitx_fpp_generic,(RR4 a, IM8 hasea, IM32 opext, IMPTR nextp, IMPTR lenpc))
+MENDFUNC(6,jitx_fpp_generic,(IMPTR fn, RR4 a, IM8 hasea, IM32 opext, IMPTR nextp, IMPTR lenpc))
 
 /* The exact core: the FPSR CC are always valid. d low byte = $FF/$00 from the
  * predicate's truth mask over the CC nibble (fpp_get_cond_mask()); with bsun
