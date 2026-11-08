@@ -1,5 +1,7 @@
 #pragma once
 
+#include "amiberry_filesys_charset.h"
+
 typedef struct fsdb_file_info {
     int type;
     uint32_t mode;
@@ -29,7 +31,6 @@ struct fs_stat {
 };
 
 extern bool fs_path_exists(const std::string& s);
-extern std::string iso_8859_1_to_utf8(std::string_view str) noexcept;
 extern bool utf8_to_latin1_string(std::string_view input, std::string& output);
 extern std::string prefix_with_application_directory_path(std::string_view currentpath);
 extern std::string prefix_with_data_path(const std::string& filename);

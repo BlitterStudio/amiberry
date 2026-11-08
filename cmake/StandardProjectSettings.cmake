@@ -167,7 +167,7 @@ set(AMIBERRY_PLATFORM_LIBS "")
 
 if(IOS)
     # iOS: no Homebrew paths, different framework set (no IOKit/DiskArbitration)
-    list(APPEND AMIBERRY_PLATFORM_LIBS "-framework Foundation" "-framework CoreFoundation" "-framework UIKit" "-framework OpenGLES" "iconv")
+    list(APPEND AMIBERRY_PLATFORM_LIBS "-framework Foundation" "-framework CoreFoundation" "-framework UIKit" "-framework OpenGLES")
 elseif(CMAKE_SYSTEM_NAME MATCHES "Darwin")
     if(CMAKE_SYSTEM_PROCESSOR MATCHES "arm64")
         list(APPEND AMIBERRY_PLATFORM_INCLUDE_DIRS
@@ -189,7 +189,7 @@ elseif(CMAKE_SYSTEM_NAME MATCHES "Darwin")
         )
     endif()
 
-    list(APPEND AMIBERRY_PLATFORM_LIBS "-framework IOKit" "-framework AppKit" "-framework Foundation" "-framework CoreFoundation" "-framework DiskArbitration" "-framework ImageIO" "-framework CoreGraphics" "iconv")
+    list(APPEND AMIBERRY_PLATFORM_LIBS "-framework IOKit" "-framework AppKit" "-framework Foundation" "-framework CoreFoundation" "-framework DiskArbitration" "-framework ImageIO" "-framework CoreGraphics")
 endif()
 
 if(WIN32)

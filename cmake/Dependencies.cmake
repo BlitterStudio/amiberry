@@ -959,10 +959,9 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
 elseif(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
     find_library(UTIL_LIBRARY util REQUIRED)
     # REQUIRED will make sure the build fails earlier if libutil isn't found
-    find_library(ICONV_LIB iconv PATHS /usr/local/lib REQUIRED)
-    target_link_libraries(${PROJECT_NAME} PRIVATE ${UTIL_LIBRARY} ${ICONV_LIB})
+    target_link_libraries(${PROJECT_NAME} PRIVATE ${UTIL_LIBRARY})
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Haiku")
-    target_link_libraries(${PROJECT_NAME} PRIVATE network iconv bsd)
+    target_link_libraries(${PROJECT_NAME} PRIVATE network bsd)
 endif()
 
 # Platform system libraries must come AFTER all other dependencies so that

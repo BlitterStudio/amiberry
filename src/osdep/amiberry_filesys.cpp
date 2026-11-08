@@ -22,15 +22,6 @@
 #include <list>
 #include <memory>
 #include <dirent.h>
-#if !defined(_WIN32) || defined(LIBRETRO)
-#include <iconv.h>
-#else
-#include <SDL3/SDL.h>
-#define iconv_t SDL_iconv_t
-#define iconv_open SDL_iconv_open
-#define iconv_close SDL_iconv_close
-#define iconv SDL_iconv
-#endif
 #include <iostream>
 #include <mutex>
 
@@ -124,25 +115,19 @@ static inline int utimes(const char* path, const struct timeval tv[2])
 
 #include "crc32.h"
 #include "fsdb_host.h"
+#include "host_fs.h"
 #include "uae.h"
 
 #ifdef __MACH__
 #include <CoreFoundation/CoreFoundation.h>
 #endif
 
-/* bionic only grew iconv() in API 28, so the SDL build borrows SDL's. The
-   libretro core targets API 28 and uses the C library one (included above),
-   and its SDL shim has no iconv to offer. */
 #if defined(__ANDROID__) && !defined(LIBRETRO)
-#include <SDL3/SDL.h>
-#define iconv_t SDL_iconv_t
-#define iconv_open SDL_iconv_open
-#define iconv_close SDL_iconv_close
-#define iconv SDL_iconv
+#include <SDL3/SDL.h> // SDL_GetAndroidExternalStoragePath
 #endif
 
 struct my_opendir_s {
-	DIR* dir{};
+	host_dir dir;
 	std::unordered_set<std::string> uaem_basenames;
 };
 
@@ -246,19 +231,8 @@ static std::string normalize_nfd_for_latin1(const std::string_view input)
 	return result;
 }
 
-static bool has_logged_iconv_fail = false;
 [[nodiscard]] bool utf8_to_latin1_string(const std::string_view input, std::string& output)
 {
-    // Fast path for empty input
-    if (input.empty()) {
-        output.clear();
-        return true;
-    }
-
-    // Pre-allocate output buffer - maximum size needed is the input length
-    output.clear();
-    output.reserve(input.length());
-
     // Fast path for ASCII-only content (bytes < 128)
     bool ascii_only = true;
     for (unsigned char c : input) {
@@ -279,117 +253,7 @@ static bool has_logged_iconv_fail = false;
     const std::string_view normalized = input;
 #endif
 
-    // Thread-local RAII wrapper for iconv to ensure thread safety
-    static thread_local class IconvWrapper {
-        iconv_t handle_;
-        std::once_flag init_flag_;
-        bool valid_ = false;
-
-    public:
-        IconvWrapper() : handle_(iconv_t(-1)) {}
-
-        ~IconvWrapper() {
-            if (handle_ != iconv_t(-1))
-                iconv_close(handle_);
-        }
-
-        iconv_t get() {
-            std::call_once(init_flag_, [this]() {
-#ifdef __APPLE__
-				handle_ = iconv_open("ISO-8859-1", "UTF-8-MAC");
-#else
-				handle_ = iconv_open("ISO-8859-1", "UTF-8");
-#endif
-                valid_ = (handle_ != iconv_t(-1));
-            });
-            return handle_;
-        }
-
-        bool is_valid() const { return valid_; }
-
-        void reset() {
-            if (valid_)
-                iconv(handle_, nullptr, nullptr, nullptr, nullptr);
-        }
-    } iconv_wrapper;
-
-    const iconv_t iconv_handle = iconv_wrapper.get();
-    if (iconv_handle == iconv_t(-1)) {
-        if (!has_logged_iconv_fail) {
-            write_log(_T("utf8_to_latin1_string: iconv_open failed: %s\n"), strerror(errno));
-            has_logged_iconv_fail = true;
-        }
-        output = input;
-        return false;
-    }
-
-    std::vector<char> in_buf(normalized.begin(), normalized.end());
-
-    std::array<char, 2048> buf{};
-    char* src_ptr = in_buf.data();
-    size_t src_size = normalized.size();
-    size_t invalid_chars = 0;
-
-    // Reset conversion state before starting
-    iconv_wrapper.reset();
-
-    // Perform conversion in chunks
-    while (src_size > 0) {
-        char* dst_ptr = buf.data();
-        size_t dst_size = buf.size();
-
-/* SDL's iconv() (used on Android and Windows outside the libretro core)
-   takes a const source pointer; the C library one does not. */
-#if !defined(LIBRETRO) && (defined(__ANDROID__) || defined(_WIN32))
-        size_t res = iconv(iconv_handle, (const char**)&src_ptr, &src_size, &dst_ptr, &dst_size);
-#else
-        size_t res = iconv(iconv_handle, &src_ptr, &src_size, &dst_ptr, &dst_size);
-#endif
-
-        if (res == size_t(-1)) {
-            switch (errno) {
-                case E2BIG:
-                    // Buffer full - append what we have and continue
-                    output.append(buf.data(), buf.size() - dst_size);
-                    continue;
-
-			case EILSEQ: {
-				    // Flush any successfully converted data in buf before the bad char
-				    if (buf.size() > dst_size) {
-				        output.append(buf.data(), buf.size() - dst_size);
-				    }
-				    const auto lead = static_cast<unsigned char>(*src_ptr);
-				    size_t char_len = 1;
-				    if ((lead & 0xE0) == 0xC0) char_len = 2;
-				    else if ((lead & 0xF0) == 0xE0) char_len = 3;
-				    else if ((lead & 0xF8) == 0xF0) char_len = 4;
-				    if (char_len > src_size) char_len = src_size;
-				    src_ptr += char_len;
-				    src_size -= char_len;
-				    ++invalid_chars;
-				    output += '?';
-				    continue;
-				}
-
-                case EINVAL:
-                    // Incomplete sequence at end - skip remaining bytes
-                    src_size = 0;
-                    ++invalid_chars;
-                    break;
-
-                default:
-                    // Unexpected error
-                    write_log(_T("utf8_to_latin1_string: conversion error: %s\n"), strerror(errno));
-                    src_size = 0;
-                    ++invalid_chars;
-            }
-        }
-
-        // Append successfully converted data
-        if (buf.size() > dst_size) {
-            output.append(buf.data(), buf.size() - dst_size);
-        }
-    }
+    const size_t invalid_chars = amiberry_utf8_to_latin1(normalized, output);
 
     // Log if significant number of characters were invalid (rate-limited)
     if (invalid_chars > 0 && invalid_chars > normalized.size() / 10) {
@@ -404,37 +268,6 @@ static bool has_logged_iconv_fail = false;
     }
 
     return invalid_chars == 0;
-}
-
-[[nodiscard]] std::string iso_8859_1_to_utf8(std::string_view str) noexcept
-{
-	if (str.empty()) {
-		return {};
-	}
-
-	// Calculate exact size needed to avoid reallocations
-	const auto utf8_size = std::count_if(str.begin(), str.end(),
-		[](unsigned char c) { return c >= 0x80; }) + str.size();
-
-	std::string str_out;
-	str_out.reserve(utf8_size);
-
-	// Convert each character
-	for (const auto ch : str)
-	{
-		const auto byte = static_cast<uint8_t>(ch);
-		if (byte < 0x80) {
-			// ASCII characters (0-127) are copied as-is
-			str_out += byte;
-		}
-		else {
-			// Convert ISO-8859-1 to UTF-8 (two bytes)
-			str_out += static_cast<char>(0xC0 | (byte >> 6));     // First byte: 110xxxxx
-			str_out += static_cast<char>(0x80 | (byte & 0x3F));   // Second byte: 10xxxxxx
-		}
-	}
-
-	return str_out;
 }
 
 #endif
@@ -629,7 +462,7 @@ std::string prefix_with_data_path(const std::string& filename)
 	try {
 		// Use std::filesystem for path handling
 		const auto output = iso_8859_1_to_utf8(std::string_view(name));
-		fs::path filepath(output);
+		const fs::path filepath = host_path(output);
 
 		// Get current file status
 		std::error_code ec;
@@ -691,7 +524,7 @@ std::string prefix_with_data_path(const std::string& filename)
 
 		// Use filesystem for better path handling
 		const auto output = iso_8859_1_to_utf8(std::string_view(name));
-		fs::path filepath(output);
+		const fs::path filepath = host_path(output);
 
 		// Get file status using std::filesystem
 		std::error_code ec;
@@ -704,7 +537,7 @@ std::string prefix_with_data_path(const std::string& filename)
 
 		// Get detailed file information
 		STAT st {};
-		if (stat(output.c_str(), &st) == -1) {
+		if (host_stat(output.c_str(), &st) == -1) {
 			write_log("my_stat: stat failed for %s: %s\n",
 				output.c_str(), strerror(errno));
 			return false;
@@ -737,6 +570,197 @@ bool compare_nocase(const std::string& first, const std::string& second)
 	);
 }
 
+std::filesystem::path host_path(const std::string& utf8)
+{
+#ifdef __cpp_char8_t
+	return std::filesystem::path(std::u8string(utf8.begin(), utf8.end()));
+#else
+	return std::filesystem::u8path(utf8);
+#endif
+}
+
+std::string host_path_utf8(const std::filesystem::path& path)
+{
+	const auto text = path.u8string();
+	return std::string(text.begin(), text.end());
+}
+
+#if defined(_WIN32) && !defined(LIBRETRO)
+static std::wstring to_wide(const char* utf8)
+{
+	const int length = MultiByteToWideChar(CP_UTF8, 0, utf8, -1, nullptr, 0);
+	if (length <= 0)
+		return {};
+	std::wstring wide(static_cast<size_t>(length), L'\0');
+	MultiByteToWideChar(CP_UTF8, 0, utf8, -1, wide.data(), length);
+	wide.resize(static_cast<size_t>(length) - 1);
+	return wide;
+}
+
+int host_stat(const char* path, STAT* st)
+{
+	struct _stat64 wide_st {};
+	if (_wstat64(to_wide(path).c_str(), &wide_st) != 0)
+		return -1;
+	*st = STAT{};
+	st->st_dev = wide_st.st_dev;
+	st->st_ino = wide_st.st_ino;
+	st->st_mode = wide_st.st_mode;
+	st->st_nlink = wide_st.st_nlink;
+	st->st_uid = wide_st.st_uid;
+	st->st_gid = wide_st.st_gid;
+	st->st_rdev = wide_st.st_rdev;
+	st->st_size = static_cast<decltype(st->st_size)>(wide_st.st_size);
+	st->st_atime = static_cast<decltype(st->st_atime)>(wide_st.st_atime);
+	st->st_mtime = static_cast<decltype(st->st_mtime)>(wide_st.st_mtime);
+	st->st_ctime = static_cast<decltype(st->st_ctime)>(wide_st.st_ctime);
+	return 0;
+}
+
+int host_open(const char* path, int flags, int mode)
+{
+	return _wopen(to_wide(path).c_str(), flags, mode);
+}
+
+FILE* host_fopen(const char* path, const char* mode)
+{
+	return _wfopen(to_wide(path).c_str(), to_wide(mode).c_str());
+}
+
+int host_rename(const char* from, const char* to)
+{
+	return _wrename(to_wide(from).c_str(), to_wide(to).c_str());
+}
+
+int host_remove(const char* path)
+{
+	return _wremove(to_wide(path).c_str());
+}
+
+int host_mkdir(const char* path)
+{
+	return _wmkdir(to_wide(path).c_str());
+}
+
+int host_rmdir(const char* path)
+{
+	return _wrmdir(to_wide(path).c_str());
+}
+
+int host_chmod(const char* path, int mode)
+{
+	return _wchmod(to_wide(path).c_str(), mode);
+}
+
+int host_utime(const char* path, struct _utimbuf* times)
+{
+	return _wutime(to_wide(path).c_str(), times);
+}
+
+bool host_dir::open(const char* path)
+{
+	close();
+	dir_ = _wopendir(to_wide(path).c_str());
+	return dir_ != nullptr;
+}
+
+int host_dir::close()
+{
+	if (!dir_)
+		return 0;
+	const int result = _wclosedir(dir_);
+	dir_ = nullptr;
+	return result;
+}
+
+const char* host_dir::next()
+{
+	if (!dir_)
+		return nullptr;
+	while (const _wdirent* entry = _wreaddir(dir_)) {
+		const int length = WideCharToMultiByte(CP_UTF8, 0, entry->d_name, -1, nullptr, 0, nullptr, nullptr);
+		if (length <= 0)
+			continue;
+		name_.resize(static_cast<size_t>(length));
+		WideCharToMultiByte(CP_UTF8, 0, entry->d_name, -1, name_.data(), length, nullptr, nullptr);
+		name_.resize(static_cast<size_t>(length) - 1);
+		return name_.c_str();
+	}
+	return nullptr;
+}
+#else
+int host_stat(const char* path, STAT* st)
+{
+	return stat(path, st);
+}
+
+int host_open(const char* path, int flags, int mode)
+{
+	return open(path, flags, mode);
+}
+
+FILE* host_fopen(const char* path, const char* mode)
+{
+	return fopen(path, mode);
+}
+
+int host_rename(const char* from, const char* to)
+{
+	return rename(from, to);
+}
+
+int host_remove(const char* path)
+{
+	return remove(path);
+}
+
+int host_mkdir(const char* path)
+{
+	return mkdir(path, 0755);
+}
+
+int host_rmdir(const char* path)
+{
+	return rmdir(path);
+}
+
+int host_chmod(const char* path, int mode)
+{
+	return chmod(path, mode);
+}
+
+#ifdef _WIN32
+int host_utime(const char* path, struct _utimbuf* times)
+{
+	return _utime(path, times);
+}
+#endif
+
+bool host_dir::open(const char* path)
+{
+	close();
+	dir_ = opendir(path);
+	return dir_ != nullptr;
+}
+
+int host_dir::close()
+{
+	if (!dir_)
+		return 0;
+	const int result = closedir(dir_);
+	dir_ = nullptr;
+	return result;
+}
+
+const char* host_dir::next()
+{
+	if (!dir_)
+		return nullptr;
+	const dirent* entry = readdir(dir_);
+	return entry ? entry->d_name : nullptr;
+}
+#endif
+
 struct my_opendir_s* my_opendir(const TCHAR* name, const TCHAR* mask)
 {
 	if (!name) {
@@ -751,9 +775,7 @@ struct my_opendir_s* my_opendir(const TCHAR* name, const TCHAR* mask)
 	}
 
 	const auto output = iso_8859_1_to_utf8(std::string(name));
-	mod->dir = opendir(output.c_str());
-
-	if (!mod->dir) {
+	if (!mod->dir.open(output.c_str())) {
 		write_log("my_opendir: opendir on directory %s failed\n", name);
 		return nullptr;
 	}
@@ -771,7 +793,7 @@ void my_closedir(struct my_opendir_s* mod)
 		return;
 	}
 
-	if (mod->dir && closedir(mod->dir) != 0) {
+	if (mod->dir.close() != 0) {
 		write_log("my_closedir: closedir on directory failed: %s\n", strerror(errno));
 	}
 
@@ -788,12 +810,12 @@ int my_readdir(struct my_opendir_s* mod, TCHAR* name)
 	static const std::set<std::string> ignoreList = { ".", "..", "_UAEFSDB.___", "Thumbs.db", ".DS_Store", "UAEFS.ini" };
 
 	while (true) {
-		auto* entry = readdir(mod->dir);
+		const char* entry = mod->dir.next();
 		if (!entry) {
 			return 0;
 		}
 
-		const std::string result(entry->d_name);
+		const std::string result(entry);
 		const int len = result.length();
 
 		if (ignoreList.find(result) != ignoreList.end()) {
@@ -847,7 +869,7 @@ bool my_existsfiledir(const char *name)
 	if (!name) return false;
 	const auto output = iso_8859_1_to_utf8(std::string(name));
 	STAT st;
-	if (stat(output.c_str(), &st) == 0)
+	if (host_stat(output.c_str(), &st) == 0)
 		return true;
 
 	if (errno == ENOENT || errno == ENOTDIR)
@@ -860,14 +882,16 @@ bool my_existsfile(const char* name)
 {
 	if (!name) return false;
 	const auto output = iso_8859_1_to_utf8(string(name));
-	return fs::exists(output) && fs::is_regular_file(output);
+	const fs::path path = host_path(output);
+	return fs::exists(path) && fs::is_regular_file(path);
 }
 
 bool my_existsdir(const char* name)
 {
 	if (!name) return false;
 	const auto output = iso_8859_1_to_utf8(string(name));
-	return fs::exists(output) && fs::is_directory(output);
+	const fs::path path = host_path(output);
+	return fs::exists(path) && fs::is_directory(path);
 }
 
 uae_s64 my_fsize(struct my_openfile_s* mos)
@@ -916,7 +940,7 @@ bool fs_path_exists(const std::string& s)
 
 	const auto output = iso_8859_1_to_utf8(s);
 	STAT buffer{};
-	return stat(output.c_str(), &buffer) == 0;
+	return host_stat(output.c_str(), &buffer) == 0;
 }
 
 struct my_openfile_s* my_open(const TCHAR* name, int flags)
@@ -933,7 +957,7 @@ struct my_openfile_s* my_open(const TCHAR* name, int flags)
 	}
 
 	const auto output = iso_8859_1_to_utf8(std::string(name));
-	mos->fd = (flags & O_CREAT) ? open(output.c_str(), flags, 0660) : open(output.c_str(), flags);
+	mos->fd = host_open(output.c_str(), flags, 0660);
 
 	if (mos->fd == -1) {
 		write_log("my_open: open on file %s failed: %s\n", name, strerror(errno));
@@ -1076,8 +1100,9 @@ void my_set_time_explicit(struct my_openfile_s* mos) noexcept
 
 		// Check if directory already exists to provide better error reporting
 		std::error_code ec;
-		if (fs::exists(utf8_path, ec)) {
-			if (fs::is_directory(utf8_path, ec)) {
+		const fs::path dirpath = host_path(utf8_path);
+		if (fs::exists(dirpath, ec)) {
+			if (fs::is_directory(dirpath, ec)) {
 				write_log("my_mkdir: directory %s already exists\n", path);
 				errno = EEXIST;
 				return -1;
@@ -1088,7 +1113,7 @@ void my_set_time_explicit(struct my_openfile_s* mos) noexcept
 		}
 
 		// Create all parent directories if they don't exist
-		fs::path parent = fs::path(utf8_path).parent_path();
+		fs::path parent = dirpath.parent_path();
 		if (!parent.empty() && !fs::exists(parent, ec)) {
 			if (!fs::create_directories(parent, ec)) {
 				write_log("my_mkdir: failed to create parent directories for %s: %s\n",
@@ -1099,7 +1124,7 @@ void my_set_time_explicit(struct my_openfile_s* mos) noexcept
 		}
 
 		// Create the actual directory with proper permissions
-		if (mkdir(utf8_path.c_str(), 0755) != 0) {
+		if (host_mkdir(utf8_path.c_str()) != 0) {
 			write_log("my_mkdir: mkdir on path %s failed: %s\n",
 				path, strerror(errno));
 			return -1;
@@ -1128,12 +1153,13 @@ void my_set_time_explicit(struct my_openfile_s* mos) noexcept
 
 		// Check if file exists and is writable
 		std::error_code ec;
-		if (!fs::exists(utf8_path, ec)) {
+		const fs::path filepath = host_path(utf8_path);
+		if (!fs::exists(filepath, ec)) {
 			write_log("my_truncate: file %s does not exist\n", name);
 			return -1;
 		}
 
-		if (!fs::is_regular_file(utf8_path, ec)) {
+		if (!fs::is_regular_file(filepath, ec)) {
 			write_log("my_truncate: %s is not a regular file\n", name);
 			return -1;
 		}
@@ -1186,7 +1212,7 @@ void my_set_time_explicit(struct my_openfile_s* mos) noexcept
 
 	try {
 		// Create filesystem path and handle path concatenation properly
-		fs::path filepath = fs::path(path);
+		fs::path filepath = host_path(iso_8859_1_to_utf8(std::string_view(path)));
 		if (filepath.empty()) {
 			write_log("remove_extra_file: empty path provided\n");
 			return false;
@@ -1274,7 +1300,7 @@ void my_set_time_explicit(struct my_openfile_s* mos) noexcept
 	try {
 		// Convert to filesystem path and validate
 		const auto utf8_path = iso_8859_1_to_utf8(std::string_view(path));
-		fs::path filepath(utf8_path);
+		const fs::path filepath = host_path(utf8_path);
 
 		if (filepath.empty()) {
 			write_log("my_setfilehidden: empty path provided\n");
@@ -1289,7 +1315,7 @@ void my_set_time_explicit(struct my_openfile_s* mos) noexcept
 
 #ifdef _WIN32
 		// Windows implementation using file attributes
-		const DWORD attrs = GetFileAttributes(path);
+		const DWORD attrs = GetFileAttributesW(filepath.c_str());
 		if (attrs == INVALID_FILE_ATTRIBUTES) {
 			write_log("my_setfilehidden: GetFileAttributes failed for %s\n", path);
 			return false;
@@ -1299,7 +1325,7 @@ void my_set_time_explicit(struct my_openfile_s* mos) noexcept
 			(attrs | FILE_ATTRIBUTE_HIDDEN) :
 			(attrs & ~FILE_ATTRIBUTE_HIDDEN);
 
-		if (!SetFileAttributes(path, new_attrs)) {
+		if (!SetFileAttributesW(filepath.c_str(), new_attrs)) {
 			write_log("my_setfilehidden: SetFileAttributes failed for %s\n", path);
 			return false;
 		}
@@ -1354,7 +1380,7 @@ void my_set_time_explicit(struct my_openfile_s* mos) noexcept
 	try {
 		// Convert path to UTF-8 and create filesystem path
 		const auto utf8_path = iso_8859_1_to_utf8(std::string_view(path));
-		fs::path dirpath(utf8_path);
+		const fs::path dirpath = host_path(utf8_path);
 
 		// Validate path
 		std::error_code ec;
@@ -1379,7 +1405,7 @@ void my_set_time_explicit(struct my_openfile_s* mos) noexcept
 		// Check if directory has any real files (skip .uaem sidecars and _UAEFSDB.___)
 		bool has_real_files = false;
 		for (const auto& entry : fs::directory_iterator(dirpath, ec)) {
-			const auto name = entry.path().filename().string();
+			const auto name = host_path_utf8(entry.path().filename());
 			if (name == "_UAEFSDB.___") continue;
 			if (name.size() > 5 && name.compare(name.size() - 5, 5, ".uaem") == 0) continue;
 			has_real_files = true;
@@ -1399,7 +1425,7 @@ void my_set_time_explicit(struct my_openfile_s* mos) noexcept
 
 		// Remove the directory
 		errno = 0;
-		int result = rmdir(utf8_path.c_str());
+		int result = host_rmdir(utf8_path.c_str());
 
 		if (result != 0) {
 			write_log("my_rmdir: rmdir on directory %s failed: %s\n",
@@ -1428,7 +1454,7 @@ void my_set_time_explicit(struct my_openfile_s* mos) noexcept
 	try {
 		// Convert to filesystem path and validate
 		const auto utf8_path = iso_8859_1_to_utf8(std::string_view(path));
-		fs::path filepath(utf8_path);
+		const fs::path filepath = host_path(utf8_path);
 
 		if (filepath.empty()) {
 			write_log("my_unlink: empty path provided\n");
@@ -1466,7 +1492,7 @@ void my_set_time_explicit(struct my_openfile_s* mos) noexcept
 			return -1;
 		}
 
-		fs::path uaem_path(utf8_path + ".uaem");
+		const fs::path uaem_path = host_path(utf8_path + ".uaem");
 		if (fs::exists(uaem_path, ec)) {
 			fs::remove(uaem_path, ec);
 		}
@@ -1513,7 +1539,7 @@ void my_set_time_explicit(struct my_openfile_s* mos) noexcept
 		errno = 0;
 
 		// Perform rename operation
-		const int result = rename(old_output.c_str(), new_output.c_str());
+		const int result = host_rename(old_output.c_str(), new_output.c_str());
 
 		// Enhanced error reporting with specific error codes
 		if (result != 0) {
@@ -1539,8 +1565,8 @@ void my_set_time_explicit(struct my_openfile_s* mos) noexcept
 		} else {
 			const std::string old_uaem = old_output + ".uaem";
 			const std::string new_uaem = new_output + ".uaem";
-			if (fs::exists(fs::path(old_uaem))) {
-				rename(old_uaem.c_str(), new_uaem.c_str());
+			if (fs::exists(host_path(old_uaem))) {
+				host_rename(old_uaem.c_str(), new_uaem.c_str());
 			}
 		}
 
@@ -1895,12 +1921,13 @@ void my_set_time_explicit(struct my_openfile_s* mos) noexcept
 
 		// Check if file exists and is readable before attempting to open
 		std::error_code ec;
-		if (!fs::exists(utf8_path, ec)) {
+		const fs::path filepath = host_path(utf8_path);
+		if (!fs::exists(filepath, ec)) {
 			write_log("my_opentext: file '%s' does not exist\n", name);
 			return nullptr;
 		}
 
-		if (!fs::is_regular_file(utf8_path, ec)) {
+		if (!fs::is_regular_file(filepath, ec)) {
 			write_log("my_opentext: '%s' is not a regular file\n", name);
 			return nullptr;
 		}
@@ -1909,7 +1936,7 @@ void my_set_time_explicit(struct my_openfile_s* mos) noexcept
 		errno = 0;
 
 		// Open file with binary mode and read-only access
-		FILE* file = fopen(utf8_path.c_str(), "rb");
+		FILE* file = host_fopen(utf8_path.c_str(), "rb");
 
 		// Enhanced error reporting
 		if (file == nullptr) {
@@ -1963,7 +1990,7 @@ bool my_createshortcut(const char* source, const char* target, const char* descr
 		}
 
 		// Create filesystem path
-		fs::path link_path(utf8_path);
+		const fs::path link_path = host_path(utf8_path);
 
 		// Check if path exists and is a symlink
 		std::error_code ec;
@@ -2001,7 +2028,7 @@ bool my_createshortcut(const char* source, const char* target, const char* descr
 
 		// Convert target path back to Latin1
 		std::string target_latin1;
-		if (!utf8_to_latin1_string(target_path.string(), target_latin1)) {
+		if (!utf8_to_latin1_string(host_path_utf8(target_path), target_latin1)) {
 			write_log("my_resolvesoftlink: character conversion failed for target path\n");
 			return false;
 		}
@@ -2208,8 +2235,8 @@ bool copyfile(const char* target, const char* source, const bool replace)
         const auto source_path = iso_8859_1_to_utf8(std::string_view(source));
         const auto target_path = iso_8859_1_to_utf8(std::string_view(target));
 
-        fs::path src_fs(source_path);
-        fs::path dst_fs(target_path);
+        const fs::path src_fs = host_path(source_path);
+        const fs::path dst_fs = host_path(target_path);
 
         // Check if source file exists
         std::error_code ec;
@@ -2295,7 +2322,7 @@ std::string my_get_sha1_of_file(const char* filepath)
 
         // Check file existence before attempting operations
         std::error_code ec;
-        fs::path file_path(utf8_path);
+        const fs::path file_path = host_path(utf8_path);
         if (!fs::exists(file_path, ec) || !fs::is_regular_file(file_path, ec)) {
             write_log("my_get_sha1_of_file: '%s' does not exist or is not a regular file\n", filepath);
             return "";
@@ -2304,7 +2331,7 @@ std::string my_get_sha1_of_file(const char* filepath)
         // Use RAII for file descriptor
         struct FileDescriptor {
             int fd = -1;
-            FileDescriptor(const char* path) : fd(open(path, O_RDONLY)) {}
+            FileDescriptor(const char* path) : fd(host_open(path, O_RDONLY, 0)) {}
             ~FileDescriptor() { if (fd >= 0) close(fd); }
             bool valid() const { return fd >= 0; }
         } file(utf8_path.c_str());

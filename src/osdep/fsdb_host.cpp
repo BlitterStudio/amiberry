@@ -75,6 +75,7 @@ time_t local_to_utc(time_t local)
 #include "fsdb.h"
 #include "zfile.h"
 #include "fsdb_host.h"
+#include "host_fs.h"
 #include "amiberry_filesys_permissions.h"
 #include "uae.h"
 
@@ -264,7 +265,7 @@ int fsdb_read_uaem(const char* nname, fsdb_file_info* info)
 
 	const std::string uaem_path = std::string(nname) + ".uaem";
 	const auto uaem_path_utf8 = iso_8859_1_to_utf8(std::string_view(uaem_path));
-	FILE* file = fopen(uaem_path_utf8.c_str(), "rb");
+	FILE* file = host_fopen(uaem_path_utf8.c_str(), "rb");
 	if (!file) {
 		return ERROR_OBJECT_NOT_AROUND;
 	}
@@ -387,7 +388,7 @@ int fsdb_read_uaem(const char* nname, fsdb_file_info* info)
 
 static int fsdb_write_uaem_file(const char* path_utf8, const fsdb_file_info* info, bool has_comment)
 {
-	FILE* file = fopen(path_utf8, "wb");
+	FILE* file = host_fopen(path_utf8, "wb");
 	if (!file) {
 		return ERROR_OBJECT_NOT_AROUND;
 	}
@@ -493,7 +494,7 @@ static int fsdb_write_uaem_internal(const a_inode* aino, const char* nname, cons
 	const auto uaem_path_utf8 = iso_8859_1_to_utf8(std::string_view(uaem_path));
 
 	if (!need_uaem) {
-		remove(uaem_path_utf8.c_str());
+		host_remove(uaem_path_utf8.c_str());
 		return 0;
 	}
 
@@ -503,11 +504,11 @@ static int fsdb_write_uaem_internal(const a_inode* aino, const char* nname, cons
 		return write_err;
 	}
 
-	if (rename(tmp_path_utf8.c_str(), uaem_path_utf8.c_str()) == 0) {
+	if (host_rename(tmp_path_utf8.c_str(), uaem_path_utf8.c_str()) == 0) {
 		return 0;
 	}
 
-	remove(tmp_path_utf8.c_str());
+	host_remove(tmp_path_utf8.c_str());
 	return fsdb_write_uaem_file(uaem_path_utf8.c_str(), info, has_comment);
 }
 
@@ -656,7 +657,7 @@ bool my_utime(const char* name, const struct mytimeval* tv)
 	try {
 		if (tv == nullptr) {
 #ifdef _WIN32
-			ok = _utime(path_utf8.c_str(), nullptr) == 0;
+			ok = host_utime(path_utf8.c_str(), nullptr) == 0;
 #else
 			ok = utimes(path_utf8.c_str(), nullptr) == 0;
 #endif
@@ -669,7 +670,7 @@ bool my_utime(const char* name, const struct mytimeval* tv)
 			struct _utimbuf utb;
 			utb.actime = static_cast<time_t>(mtv.tv_sec);
 			utb.modtime = static_cast<time_t>(mtv.tv_sec);
-			ok = _utime(path_utf8.c_str(), &utb) == 0;
+			ok = host_utime(path_utf8.c_str(), &utb) == 0;
 #else
 			struct timeval times[2];
 			times[0] = times[1] = { static_cast<time_t>(mtv.tv_sec), static_cast<suseconds_t>(mtv.tv_usec) };
@@ -776,7 +777,7 @@ int fsdb_fill_file_attrs(a_inode* base, a_inode* aino)
 
 		// Get file information
 		STAT statbuf {};
-		if (stat(path_utf8.c_str(), &statbuf) == -1) {
+		if (host_stat(path_utf8.c_str(), &statbuf) == -1) {
 			const int error = errno;
 			write_log(_T("fsdb_fill_file_attrs: stat failed for '%s': %s\n"),
 					  aino->nname, strerror(error));
@@ -838,7 +839,7 @@ int fsdb_set_file_attrs(a_inode* aino)
 
         // Get file attributes
         STAT statbuf {};
-        if (stat(path_utf8.c_str(), &statbuf) == -1) {
+        if (host_stat(path_utf8.c_str(), &statbuf) == -1) {
             const int err = errno;
             write_log(_T("fsdb_set_file_attrs: stat failed for '%s': %s\n"),
                      aino->nname, strerror(err));
@@ -854,7 +855,7 @@ int fsdb_set_file_attrs(a_inode* aino)
 			(mask & A_FIBF_EXECUTE) != 0);
 
 		// Apply new permissions
-		if (chmod(path_utf8.c_str(), mode) != 0) {
+		if (host_chmod(path_utf8.c_str(), mode) != 0) {
 			const int err = errno;
 			write_log(_T("fsdb_set_file_attrs: chmod failed for '%s': %s\n"),
 					 aino->nname, strerror(err));
@@ -961,8 +962,8 @@ static void find_nname_case(const char* dir_path, char** name)
 	}
 
 	const auto dir_path_utf8 = iso_8859_1_to_utf8(std::string_view(dir_path));
-	DIR* dir = opendir(dir_path_utf8.c_str());
-	if (!dir) {
+	host_dir dir;
+	if (!dir.open(dir_path_utf8.c_str())) {
 		return;
 	}
 
@@ -972,21 +973,18 @@ static void find_nname_case(const char* dir_path, char** name)
 		search_name = search_latin1.c_str();
 	}
 
-	struct dirent* entry;
-	while ((entry = readdir(dir)) != nullptr) {
+	while (const char* entry = dir.next()) {
 		std::string entry_latin1;
-		const char* entry_name = entry->d_name;
-		if (utf8_to_latin1_string(std::string_view(entry->d_name), entry_latin1)) {
+		const char* entry_name = entry;
+		if (utf8_to_latin1_string(std::string_view(entry), entry_latin1)) {
 			entry_name = entry_latin1.c_str();
 		}
 		if (strcasecmp(entry_name, search_name) == 0) {
 			free(*name);
-			*name = strdup(entry->d_name);
+			*name = strdup(entry);
 			break;
 		}
 	}
-
-	closedir(dir);
 }
 
 a_inode* custom_fsdb_lookup_aino_aname(a_inode* base, const TCHAR* aname)
@@ -1004,7 +1002,7 @@ a_inode* custom_fsdb_lookup_aino_aname(a_inode* base, const TCHAR* aname)
 	TCHAR* full_nname = build_nname(base->nname, encoded);
 	const auto full_nname_utf8 = iso_8859_1_to_utf8(std::string_view(full_nname));
 	STAT statbuf {};
-	if (stat(full_nname_utf8.c_str(), &statbuf) != 0) {
+	if (host_stat(full_nname_utf8.c_str(), &statbuf) != 0) {
 		free(encoded);
 		xfree(full_nname);
 		return nullptr;
@@ -1058,7 +1056,7 @@ a_inode* custom_fsdb_lookup_aino_nname(a_inode* base, const TCHAR* nname)
 	TCHAR* full_nname = build_nname(base->nname, nname);
 	const auto full_nname_utf8 = iso_8859_1_to_utf8(std::string_view(full_nname));
 	STAT statbuf {};
-	if (stat(full_nname_utf8.c_str(), &statbuf) != 0) {
+	if (host_stat(full_nname_utf8.c_str(), &statbuf) != 0) {
 		xfree(full_nname);
 		return nullptr;
 	}
