@@ -264,7 +264,7 @@ int fsdb_read_uaem(const char* nname, fsdb_file_info* info)
 	}
 
 	const std::string uaem_path = std::string(nname) + ".uaem";
-	const auto uaem_path_utf8 = iso_8859_1_to_utf8(std::string_view(uaem_path));
+	const auto uaem_path_utf8 = nname_to_host(uaem_path);
 	FILE* file = host_fopen(uaem_path_utf8.c_str(), "rb");
 	if (!file) {
 		return ERROR_OBJECT_NOT_AROUND;
@@ -491,7 +491,7 @@ static int fsdb_write_uaem_internal(const a_inode* aino, const char* nname, cons
 	const bool need_uaem = fsdb_needs_uaem_sidecar(aino, info);
 
 	const std::string uaem_path = std::string(nname) + ".uaem";
-	const auto uaem_path_utf8 = iso_8859_1_to_utf8(std::string_view(uaem_path));
+	const auto uaem_path_utf8 = nname_to_host(uaem_path);
 
 	if (!need_uaem) {
 		host_remove(uaem_path_utf8.c_str());
@@ -651,7 +651,7 @@ bool my_utime(const char* name, const struct mytimeval* tv)
 	}
 
 	struct mytimeval mtv;
-	const auto path_utf8 = iso_8859_1_to_utf8(std::string_view(name));
+	const auto path_utf8 = nname_to_host(name);
 
 	bool ok = false;
 	try {
@@ -773,7 +773,7 @@ int fsdb_fill_file_attrs(a_inode* base, a_inode* aino)
 
 	try {
 		// Convert filename to UTF-8 for filesystem operations
-		const auto path_utf8 = iso_8859_1_to_utf8(std::string_view(aino->nname));
+		const auto path_utf8 = nname_to_host(aino->nname);
 
 		// Get file information
 		STAT statbuf {};
@@ -835,7 +835,7 @@ int fsdb_set_file_attrs(a_inode* aino)
 
     try {
         // Convert path to UTF-8
-        const auto path_utf8 = iso_8859_1_to_utf8(std::string_view(aino->nname));
+        const auto path_utf8 = nname_to_host(aino->nname);
 
         // Get file attributes
         STAT statbuf {};
@@ -961,7 +961,7 @@ static void find_nname_case(const char* dir_path, char** name)
 		return;
 	}
 
-	const auto dir_path_utf8 = iso_8859_1_to_utf8(std::string_view(dir_path));
+	const auto dir_path_utf8 = nname_to_host(dir_path);
 	host_dir dir;
 	if (!dir.open(dir_path_utf8.c_str())) {
 		return;
@@ -1000,7 +1000,7 @@ a_inode* custom_fsdb_lookup_aino_aname(a_inode* base, const TCHAR* aname)
 
 	find_nname_case(base->nname, &encoded);
 	TCHAR* full_nname = build_nname(base->nname, encoded);
-	const auto full_nname_utf8 = iso_8859_1_to_utf8(std::string_view(full_nname));
+	const auto full_nname_utf8 = nname_to_host(full_nname);
 	STAT statbuf {};
 	if (host_stat(full_nname_utf8.c_str(), &statbuf) != 0) {
 		free(encoded);
@@ -1054,7 +1054,7 @@ a_inode* custom_fsdb_lookup_aino_nname(a_inode* base, const TCHAR* nname)
 	}
 
 	TCHAR* full_nname = build_nname(base->nname, nname);
-	const auto full_nname_utf8 = iso_8859_1_to_utf8(std::string_view(full_nname));
+	const auto full_nname_utf8 = nname_to_host(full_nname);
 	STAT statbuf {};
 	if (host_stat(full_nname_utf8.c_str(), &statbuf) != 0) {
 		xfree(full_nname);

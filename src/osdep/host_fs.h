@@ -14,9 +14,16 @@
 #include <dirent.h>
 #include <filesystem>
 #include <string>
+#include <string_view>
 #ifdef _WIN32
 #include <sys/utime.h>
 #endif
+
+// The UTF-8 host path for a directory filesystem name: a registered mount
+// root stays as it is, the rest is converted from ISO-8859-1.
+std::string nname_to_host(std::string_view nname);
+// The other way round; false when a name below the root is not Latin-1.
+bool host_to_nname(std::string_view host, std::string& nname);
 
 std::filesystem::path host_path(const std::string& utf8);
 std::string host_path_utf8(const std::filesystem::path& path);

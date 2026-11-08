@@ -866,6 +866,9 @@ TCHAR *filesys_createvolname (const TCHAR *volname, const TCHAR *rootdir, struct
 static int set_filesys_volume (const TCHAR *rootdir, int *flags, bool *readonly, bool *emptydrive, struct zvolume **zvp)
 {
 	*emptydrive = 0;
+#ifdef AMIBERRY
+	my_register_mount_root (rootdir);
+#endif
 	if (my_existsfile (rootdir)) {
 		struct zvolume *zv;
 		zv = zfile_fopen_archive (rootdir);

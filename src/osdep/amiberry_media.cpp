@@ -13,6 +13,7 @@
 #include "settings/settings_definitions.h"
 #include "macos_bookmarks.h"
 #include "rommgr.h"
+#include "amiberry_filesys_charset.h"
 
 #include <algorithm>
 #include <cctype>
@@ -66,45 +67,15 @@ std::string to_utf8(const std::filesystem::path& path)
 	return std::string(text.begin(), text.end());
 }
 
-// Whether text is well-formed UTF-8 (no overlong forms, surrogates or code
-// points past U+10FFFF). POSIX file names are arbitrary bytes; the API
-// promises UTF-8, so names that are not are left out of the lists.
-bool valid_utf8(const std::string& text)
-{
-	const auto* p = reinterpret_cast<const unsigned char*>(text.data());
-	const auto* end = p + text.size();
-	while (p < end) {
-		const unsigned char c = *p++;
-		if (c < 0x80)
-			continue;
-		int extra;
-		unsigned int cp;
-		if (c >= 0xc2 && c <= 0xdf) { extra = 1; cp = c & 0x1f; }
-		else if (c >= 0xe0 && c <= 0xef) { extra = 2; cp = c & 0x0f; }
-		else if (c >= 0xf0 && c <= 0xf4) { extra = 3; cp = c & 0x07; }
-		else return false;
-		if (end - p < extra)
-			return false;
-		for (int i = 0; i < extra; i++) {
-			if ((p[i] & 0xc0) != 0x80)
-				return false;
-			cp = (cp << 6) | (p[i] & 0x3f);
-		}
-		p += extra;
-		if ((extra == 2 && (cp < 0x800 || (cp >= 0xd800 && cp <= 0xdfff)))
-			|| (extra == 3 && (cp < 0x10000 || cp > 0x10ffff)))
-			return false;
-	}
-	return true;
-}
-
 // Whether the core can use path: UTF-8, as the API promises, and on Windows
 // one the core's narrow file calls can open. Those take the bytes in the
 // active code page, so a path beyond ASCII only works where that code page
 // is UTF-8.
 bool usable_path(const std::string& path)
 {
-	if (!valid_utf8(path))
+	// POSIX file names are arbitrary bytes; the API promises UTF-8, so names
+	// that are not are left out of the lists.
+	if (!amiberry_valid_utf8(path))
 		return false;
 #ifdef _WIN32
 	if (GetACP() != CP_UTF8) {

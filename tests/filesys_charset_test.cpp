@@ -3,10 +3,25 @@
 
 #include <cstdio>
 #include <string>
+#include <vector>
 
 #include "amiberry_filesys_charset.h"
 
 static int failures;
+
+static void expect_true(bool ok, const char* what)
+{
+	if (!ok) {
+		std::fprintf(stderr, "FAIL: %s\n", what);
+		++failures;
+	}
+}
+
+static void expect_host(const std::string& nname, const std::vector<amiberry_mount_root>& roots,
+	const std::string& want, const char* what)
+{
+	expect_true(amiberry_nname_to_host(nname, roots) == want, what);
+}
 
 static void expect_decode(const std::string& input, const std::string& want, size_t want_invalid, const char* what)
 {
@@ -51,6 +66,37 @@ int main()
 			++failures;
 		}
 	}
+
+	expect_true(amiberry_valid_utf8("caf\xC3\xA9"), "UTF-8 e-acute is valid");
+	expect_true(!amiberry_valid_utf8("caf\xE9"), "CP1252 e-acute is not UTF-8");
+	expect_true(!amiberry_valid_utf8("\xED\xA0\x80"), "UTF-16 surrogate is rejected");
+	expect_true(!amiberry_valid_utf8("\xC0\xAF"), "overlong slash is rejected");
+
+	// A mount root is a host path from the configuration; only what follows
+	// it is Latin-1. Converting the whole nname encoded the root twice.
+	const std::vector<amiberry_mount_root> roots = {
+		{ "/home/jos\xC3\xA9/amiga", "/home/jos\xC3\xA9/amiga" },
+		{ "D:\\M\xFAsica", "D:\\M\xC3\xBAsica" },
+		{ "/m", "/m" },
+		{ "/m/\xE9", "/m/\xE9" },
+	};
+	expect_host("/home/jos\xC3\xA9/amiga/caf\xE9.txt", roots, "/home/jos\xC3\xA9/amiga/caf\xC3\xA9.txt",
+		"UTF-8 root stays, Latin-1 name below it is converted");
+	expect_host("/home/jos\xC3\xA9/amiga", roots, "/home/jos\xC3\xA9/amiga", "the root itself");
+	expect_host("/home/jos\xC3\xA9/amigaX/f", roots, "/home/jos\xC3\x83\xC2\xA9/amigaX/f",
+		"a root only matches up to a path separator");
+	expect_host("D:\\M\xFAsica\\\xE9t\xE9", roots, "D:\\M\xC3\xBAsica\\\xC3\xA9t\xC3\xA9",
+		"ANSI code page root on Windows");
+	expect_host("/m/\xE9/a", roots, "/m/\xE9/a", "longest root wins, its bytes are kept");
+	expect_host("rel\xE9", roots, "rel\xC3\xA9", "no root: the whole name is Latin-1");
+
+	std::string nname;
+	expect_true(amiberry_host_to_nname("/home/jos\xC3\xA9/amiga/d\xC3\xA9j\xC3\xA0", roots, nname)
+		&& nname == "/home/jos\xC3\xA9/amiga/d\xE9j\xE0", "host path below a root maps back to an nname");
+	expect_true(amiberry_nname_to_host(nname, roots) == "/home/jos\xC3\xA9/amiga/d\xC3\xA9j\xC3\xA0",
+		"nname round trip");
+	expect_true(!amiberry_host_to_nname("/home/jos\xC3\xA9/amiga/\xE6\x97\xA5", roots, nname),
+		"name below the root outside Latin-1");
 
 	if (failures)
 		return 1;

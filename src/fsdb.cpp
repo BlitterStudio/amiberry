@@ -75,7 +75,11 @@ static FILE *get_fsdb (a_inode *dir, const TCHAR *mode)
 	if (!dir->nname)
 		return NULL;
 	n = build_nname (dir->nname, FSDB_FILE);
+#ifdef AMIBERRY
+	f = my_fopen (n, mode);
+#else
 	f = uae_tfopen (n, mode);
+#endif
 	xfree (n);
 	return f;
 }
@@ -85,7 +89,11 @@ static void kill_fsdb (a_inode *dir)
 	if (!dir->nname)
 		return;
 	TCHAR *n = build_nname (dir->nname, FSDB_FILE);
+#ifdef AMIBERRY
+	my_remove (n);
+#else
 	_wunlink (n);
+#endif
 	xfree (n);
 }
 
@@ -121,7 +129,11 @@ void fsdb_clean_dir (a_inode *dir)
 	if (!dir->nname)
 		return;
 	n = build_nname (dir->nname, FSDB_FILE);
+#ifdef AMIBERRY
+	f = my_fopen (n, _T("r+b"));
+#else
 	f = uae_tfopen (n, _T("r+b"));
+#endif
 	if (f == 0) {
 		xfree (n);
 		return;
