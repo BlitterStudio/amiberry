@@ -821,6 +821,13 @@ extern bool jit_fpu_enabled(void);
 // The FPU registers are softfloat extended values (fpx), not host doubles
 extern bool fpu_softfloat_core(void);
 extern void REGPARAM3 fpuop_arithmetic_jit(uae_u32 instruction, uaecptr ea);
+// compiled FPU arithmetic for a JIT without native FPU code (fpp.cpp)
+extern bool jit_fpu_arith_ok(uae_u16 opcode, uae_u16 extra);
+extern uae_u32 REGPARAM3 fpp_jit_arith(uae_u32 opext, uae_u64 value, uae_u8 *pc_p, uae_u32 pc);
+// its specialised versions for the common instructions, or nullptr (fpp_softfloat.cpp)
+extern void *fp_jit_fast_helper(uae_u16 opcode, uae_u16 extra);
+extern bool jit_fpu_generic_ok(uae_u16 opcode, uae_u16 extra);
+extern uae_u32 REGPARAM3 fpp_jit_generic(uae_u32 opext, uae_u64 ea, uae_u8 *next_p, uae_u64 lenpc);
 extern void fpuop_dbcc(uae_u32, uae_u16);
 extern void fpuop_scc(uae_u32, uae_u16);
 extern void fpuop_trapcc(uae_u32, uaecptr, uae_u16);

@@ -948,6 +948,109 @@ MIDFUNC(0,fp_bsun_iop,(void))
 }
 MENDFUNC(0,fp_bsun_iop,(void))
 
+/* Compiled FPU arithmetic without native FPU code (the exact core): a call of
+ * fpp_jit_arith(opext, value, pc_p, pc). nvals: 0 no operand, 1 v1 (32 bits),
+ * 2 v1:v2 (a double). On return 0 the (An)+/-(An) update anreg += delta is
+ * applied; on 1 nothing; on 2 the block is left (the interpreter handler took
+ * an exception or left special flags). All registers are flushed. */
+MIDFUNC(9,jitx_fpp_arith,(IMPTR fn, RR4 v1, RR4 v2, IM8 nvals, IM32 opext, IMPTR pcp, IM32 pc, IM8 anreg, IM32 delta))
+{
+	clobber_flags();
+	int r1 = -1, r2 = -1;
+	if (nvals >= 1)
+		r1 = readreg_specific(v1, REG_PAR2);
+	if (nvals >= 2)
+		r2 = readreg(v2);
+	prepare_for_call_1();
+	if (nvals >= 2) {
+		ORR_xxxLSLi(REG_PAR2, r2, REG_PAR2, 32);    // v1 << 32 | v2 (W registers are zero-extended)
+	}
+	if (r1 >= 0)
+		unlock2(r1);
+	if (r2 >= 0)
+		unlock2(r2);
+	prepare_for_call_2();
+	LOAD_U32(REG_PAR1, (uae_u32)opext);
+	LOAD_U64(R2_INDEX, pcp);
+	LOAD_U32(R3_INDEX, (uae_u32)pc);
+	compemu_raw_call(fn);
+
+	uae_u32 *branch_notfast = (uae_u32 *)get_target();
+	CBNZ_wi(REG_RESULT, 0);
+	if (anreg >= 0 && delta) {
+		uintptr idx = (uintptr)&regs.regs[8 + anreg] - (uintptr)&regs;
+		LDR_wXi(REG_WORK2, R_REGSTRUCT, idx);
+		if (delta > 0)
+			ADD_wwi(REG_WORK2, REG_WORK2, delta);
+		else
+			SUB_wwi(REG_WORK2, REG_WORK2, -delta);
+		STR_wXi(REG_WORK2, R_REGSTRUCT, idx);
+	}
+	uae_u32 *branch_join = (uae_u32 *)get_target();
+	B_i(0);
+	write_jmp_target(branch_notfast, (uintptr)get_target());
+	uae_u32 *branch_slow_join = (uae_u32 *)get_target();
+	TBZ_wii(REG_RESULT, 1, 0);                  // 1: the interpreter did it, continue
+	uae_u32 *branch_leave = (uae_u32 *)get_target();
+	B_i(0);                                     // 2: leave the block
+	write_jmp_target(branch_leave, (uintptr)popall_do_nothing);
+	write_jmp_target(branch_join, (uintptr)get_target());
+	write_jmp_target(branch_slow_join, (uintptr)get_target());
+}
+MENDFUNC(9,jitx_fpp_arith,(IMPTR fn, RR4 v1, RR4 v2, IM8 nvals, IM32 opext, IMPTR pcp, IM32 pc, IM8 anreg, IM32 delta))
+
+/* Compiled FPU instruction via fpp_jit_generic(opext, ea, next_p, lenpc):
+ * ea from the 68k temp a (if hasea). Continue on 1, leave the block on 2. */
+MIDFUNC(5,jitx_fpp_generic,(RR4 a, IM8 hasea, IM32 opext, IMPTR nextp, IMPTR lenpc))
+{
+	clobber_flags();
+	int r = -1;
+	if (hasea)
+		r = readreg_specific(a, REG_PAR2);
+	prepare_for_call_1();
+	if (r >= 0)
+		unlock2(r);
+	prepare_for_call_2();
+	LOAD_U32(REG_PAR1, (uae_u32)opext);
+	LOAD_U64(R2_INDEX, nextp);
+	LOAD_U64(R3_INDEX, lenpc);
+	compemu_raw_call((uintptr)fpp_jit_generic);
+	uae_u32 *branch_cont = (uae_u32 *)get_target();
+	TBZ_wii(REG_RESULT, 1, 0);                  // 1: continue
+	uae_u32 *branch_leave = (uae_u32 *)get_target();
+	B_i(0);                                     // 2: leave the block
+	write_jmp_target(branch_leave, (uintptr)popall_do_nothing);
+	write_jmp_target(branch_cont, (uintptr)get_target());
+}
+MENDFUNC(5,jitx_fpp_generic,(RR4 a, IM8 hasea, IM32 opext, IMPTR nextp, IMPTR lenpc))
+
+/* The exact core: the FPSR CC are always valid. d low byte = $FF/$00 from the
+ * predicate's truth mask over the CC nibble (fpp_get_cond_mask()); with bsun
+ * (IEEE-nonaware predicate) and NAN set, BSUN and the accrued IOP are set
+ * (no BSUN trap in compiled code). */
+MIDFUNC(3,fpx_cc_from_fpsr,(RW4 d, IM32 mask, IM8 bsun))
+{
+	clobber_flags();                            // save the 68k CCR: FBcc's TST follows
+	d = rmw(d);
+	LOAD_U64(REG_WORK4, (uintptr)&regs.fpsr);
+	LDR_wXi(REG_WORK1, REG_WORK4, 0);
+	if (bsun) {
+		uae_u32 *branch_nonan = (uae_u32 *)get_target();
+		TBZ_wii(REG_WORK1, 24, 0);              // CC NAN clear
+		MOV_wi(REG_WORK3, 0x8080);              // BSUN, accrued IOP
+		ORR_www(REG_WORK1, REG_WORK1, REG_WORK3);
+		STR_wXi(REG_WORK1, REG_WORK4, 0);
+		write_jmp_target(branch_nonan, (uintptr)get_target());
+	}
+	UBFX_wwii(REG_WORK1, REG_WORK1, 24, 4);     // CC nibble N Z I NAN
+	LOAD_U32(REG_WORK2, mask);
+	LSR_www(REG_WORK2, REG_WORK2, REG_WORK1);
+	SBFX_wwii(REG_WORK2, REG_WORK2, 0, 1);      // 0 or -1
+	BFI_wwii(d, REG_WORK2, 0, 8);
+	unlock2(d);
+}
+MENDFUNC(3,fpx_cc_from_fpsr,(RW4 d, IM32 mask, IM8 bsun))
+
 MIDFUNC(2,fmov_to_l_rr,(W4 d, FR s))
 {
 	s = f_readreg(s);

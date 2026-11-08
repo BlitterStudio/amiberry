@@ -4222,6 +4222,201 @@ void fpuop_arithmetic (uae_u32 opcode, uae_u16 extra)
 	}
 }
 
+#ifdef JIT
+/* ---- compiled FPU arithmetic for the JIT when it does not compile FPU
+ * instructions natively (the exact core): opclass 0 (FPm to FPn) and 2
+ * (<ea> to FPn) become a call of fpp_jit_arith(), without the interpreter's
+ * decoding. jit_fpu_arith_ok() at compile time says which. */
+
+static bool jit_fpu_arith_opmode(uae_u16 extra)
+{
+	const uae_u16 v = extra & 0x7f;
+	if (v < 0x40) {
+		switch (v) {
+		case 0x05: case 0x07: case 0x0b: case 0x13: case 0x17: case 0x1b:
+		case 0x29: case 0x2a: case 0x2b: case 0x2c: case 0x2d: case 0x2e: case 0x2f:
+		case 0x39: case 0x3b: case 0x3c: case 0x3d: case 0x3e: case 0x3f:
+			return false; // undocumented opmodes: the interpreter
+		default:
+			return true;
+		}
+	}
+	if (currprefs.fpu_model != 68040 && currprefs.fpu_model != 68060)
+		return false;
+	switch (v) { // FSxxx/FDxxx
+	case 0x40: case 0x41: case 0x44: case 0x45: case 0x58: case 0x5a: case 0x5c: case 0x5e:
+	case 0x60: case 0x62: case 0x63: case 0x64: case 0x66: case 0x67: case 0x68: case 0x6c:
+		return true;
+	default:
+		return false;
+	}
+}
+
+bool jit_fpu_arith_ok(uae_u16 opcode, uae_u16 extra)
+{
+	if (jit_fpu_enabled() || !currprefs.fpu_model || currprefs.mmu_model)
+		return false;
+	// 68040/68060 without the emulated FPSP: unimplemented instructions and data types trap
+	if (currprefs.cpu_model >= 68040 && currprefs.fpu_no_unimplemented)
+		return false;
+	if (((extra >> 13) & 5) != 0) // opclass 0 or 2 only
+		return false;
+	if ((extra & 0xfc00) == 0x5c00) // FMOVECR
+		return false;
+	if (!jit_fpu_arith_opmode(extra))
+		return false;
+	if (!(extra & 0x4000))
+		return true;
+	const int mode = (opcode >> 3) & 7, reg = opcode & 7, size = (extra >> 10) & 7;
+	if (size == 3 || size == 7) // packed, undefined
+		return false;
+	if (mode == 0) // Dn: .L .S .W .B
+		return size == 0 || size == 1 || size == 4 || size == 6;
+	if (mode == 1)
+		return false;
+	if (mode == 7) {
+		if (reg == 3 || reg > 4) // (d8,PC,Xn) and invalid modes
+			return false;
+		if (reg == 4 && size == 2) // #immediate .X
+			return false;
+	}
+	return true;
+}
+
+// the interpreter handler for the instruction, with the PC state it expects
+static NOINLINE uae_u32 fpp_jit_arith_slow(uae_u16 opcode, uae_u8 *pc_p, uae_u32 pc)
+{
+	uae_u8 *const save_pc_p = regs.pc_p, *const save_pc_oldp = regs.pc_oldp;
+	const uae_u32 save_pc = regs.pc, save_ipc = regs.instruction_pc;
+	regs.pc_p = regs.pc_oldp = pc_p;
+	regs.pc = regs.instruction_pc = pc;
+	(*cpufunctbl[opcode])(opcode);
+	if (regs.spcflags || regs.fp_exception)
+		return 2; // the compiled code leaves the block: the PC is the interpreter's
+	regs.pc_p = save_pc_p;
+	regs.pc_oldp = save_pc_oldp;
+	regs.pc = save_pc;
+	regs.instruction_pc = save_ipc;
+	return 1;
+}
+
+/* Any FPU general instruction (opclass 3: FMOVE to <ea>) with the effective
+ * address computed by the compiled code: the interpreter's handling via
+ * jit_ea, no decoding of the instruction stream. lenpc: instruction length
+ * << 32 | its address; next_p: the host pointer after it. An (An)+/-(An)
+ * update is done here. Returns 1, or 2: leave the block (exception or
+ * special flags). All 68k registers are in memory. */
+uae_u32 REGPARAM3 fpp_jit_generic(uae_u32 opext, uae_u64 ea, uae_u8 *next_p, uae_u64 lenpc)
+{
+	const uae_u16 opcode = opext >> 16;
+	const uae_u16 extra = opext;
+	const uae_u32 pc = (uae_u32)lenpc;
+	uae_u8 *const save_pc_p = regs.pc_p, *const save_pc_oldp = regs.pc_oldp;
+	const uae_u32 save_pc = regs.pc, save_ipc = regs.instruction_pc;
+	regs.pc_p = regs.pc_oldp = next_p;
+	regs.pc = pc + (uae_u32)(lenpc >> 32);
+	regs.instruction_pc = pc;
+	const uaecptr jit_ea = (uaecptr)ea;
+	regs.fpu_state = 1;
+	regs.fp_exception = false;
+	fpu_mmu_fixup = false;
+	if (!fpuop_arith_regmem_direct(opcode, extra, &jit_ea))
+		fpuop_arithmetic2(opcode, extra, &jit_ea);
+	if (fpu_mmu_fixup)
+		mmufixup[0].reg = -1;
+	if (regs.spcflags || regs.fp_exception)
+		return 2;
+	regs.pc_p = save_pc_p;
+	regs.pc_oldp = save_pc_oldp;
+	regs.pc = save_pc;
+	regs.instruction_pc = save_ipc;
+	return 1;
+}
+
+bool jit_fpu_generic_ok(uae_u16 opcode, uae_u16 extra)
+{
+	if (jit_fpu_enabled() || !currprefs.fpu_model || currprefs.mmu_model)
+		return false;
+	if (currprefs.cpu_model >= 68040 && currprefs.fpu_no_unimplemented)
+		return false;
+	if (((extra >> 13) & 7) != 3) // FMOVE to <ea>
+		return false;
+	const int mode = (opcode >> 3) & 7, reg = opcode & 7, size = (extra >> 10) & 7;
+	if (size == 3 || size == 7) // packed with a static/dynamic k factor
+		return false;
+	if (mode == 1)
+		return false;
+	if (mode == 0)
+		return size == 0 || size == 1 || size == 4 || size == 6;
+	if (mode == 7 && reg > 1) // (d16,PC) etc. are not alterable
+		return false;
+	return true;
+}
+
+/* opext: opcode << 16 | extension word. value: the source operand the
+ * compiled code loaded (.L .W .B .S: low 32 bits; .D: both longs; .X: its
+ * address); not used for an FPm or Dn source. pc_p, pc: the instruction.
+ * Returns 0: done, the compiled code applies a (An)+/-(An) update; 1: the
+ * interpreter handler did it all; 2: as 1, and the compiled code must leave
+ * the block (an exception, or special flags). All 68k registers are in
+ * memory. */
+uae_u32 REGPARAM3 fpp_jit_arith(uae_u32 opext, uae_u64 value, uae_u8 *pc_p, uae_u32 pc)
+{
+	const uae_u16 opcode = opext >> 16;
+	const uae_u16 extra = opext;
+	if ((regs.fpcr & 0xff00) || regs.fp_exp_pend || regs.fp_unimp_pend || if_no_fpu())
+		return fpp_jit_arith_slow(opcode, pc_p, pc); // exceptions possible: as the interpreter does
+	fpdata src, dst;
+	const int reg = (extra >> 7) & 7;
+	regs.fpu_state = 1;
+	regs.fp_exception = false;
+	fpsr_clear_status();
+	if (currprefs.fpu_model == 68040 || currprefs.fpu_model == 68060)
+		regs.fpiar = pc;
+	const fpdata *srcp = &src;
+	if (!(extra & 0x4000)) {
+		srcp = &regs.fp[(extra >> 10) & 7];
+	} else {
+		const uae_u32 v = ((opcode >> 3) & 7) == 0 ? m68k_dreg(regs, opcode & 7) : (uae_u32)value;
+		switch ((extra >> 10) & 7) {
+		case 0:
+			fpset(&src, (uae_s32)v);
+			break;
+		case 1:
+			fpp_to_single(&src, v);
+			break;
+		case 4:
+			fpset(&src, (uae_s16)v);
+			break;
+		case 6:
+			fpset(&src, (uae_s8)v);
+			break;
+		case 5:
+			fpp_to_double(&src, (uae_u32)(value >> 32), (uae_u32)value);
+			break;
+		default: { // 2: .X from memory
+			const uaecptr ad = (uaecptr)value;
+			fpp_to_exten(&src, x_cp_get_long(ad), x_cp_get_long(ad + 4), x_cp_get_long(ad + 8));
+			break;
+		}
+		}
+	}
+	// the softfloat cores (the exact core): the common instructions in place
+	if (fpu_softfloat_core() && fp_exact_fast_arith(&regs.fp[reg], srcp, extra))
+		return 0;
+	if (srcp != &src)
+		src = *srcp;
+	normalize_or_fault_if_no_denormal_support(opcode, extra, 0, false, pc, &src);
+	dst = regs.fp[reg];
+	if (fp_is_dyadic(extra))
+		normalize_or_fault_if_no_denormal_support_dst(opcode, extra, 0, false, pc, &dst, &src);
+	maybe_set_fpiar(pc);
+	if (fp_arithmetic(&src, &dst, extra))
+		regs.fp[reg] = dst;
+	return 0;
+}
+#endif
+
 void REGPARAM3 fpuop_arithmetic_jit(uae_u32 instruction, uaecptr ea)
 {
 	const uae_u16 opcode = instruction >> 16;
