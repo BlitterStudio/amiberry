@@ -75,10 +75,12 @@ int main()
 	// A mount root is a host path from the configuration; only what follows
 	// it is Latin-1. Converting the whole nname encoded the root twice.
 	const std::vector<amiberry_mount_root> roots = {
-		{ "/home/jos\xC3\xA9/amiga", "/home/jos\xC3\xA9/amiga" },
-		{ "D:\\M\xFAsica", "D:\\M\xC3\xBAsica" },
-		{ "/m", "/m" },
-		{ "/m/\xE9", "/m/\xE9" },
+		{ "/home/jos\xC3\xA9/amiga", "/home/jos\xC3\xA9/amiga", "/home/jos\xC3\xA9/amiga" },
+		{ "D:\\M\xFAsica", "D:\\M\xC3\xBAsica", "D:\\M\xC3\xBAsica" },
+		{ "/m", "/m", "/m" },
+		{ "/m/\xE9", "/m/\xE9", "/m/\xE9" },
+		// macOS: decomposed e + U+0301 in the configuration, composed key
+		{ "/Users/cafe\xCC\x81", "/Users/cafe\xCC\x81", "/Users/caf\xC3\xA9" },
 	};
 	expect_host("/home/jos\xC3\xA9/amiga/caf\xE9.txt", roots, "/home/jos\xC3\xA9/amiga/caf\xC3\xA9.txt",
 		"UTF-8 root stays, Latin-1 name below it is converted");
@@ -97,6 +99,8 @@ int main()
 		"nname round trip");
 	expect_true(!amiberry_host_to_nname("/home/jos\xC3\xA9/amiga/\xE6\x97\xA5", roots, nname),
 		"name below the root outside Latin-1");
+	expect_true(amiberry_host_to_nname("/Users/caf\xC3\xA9/l\xC3\xA0", roots, nname)
+		&& nname == "/Users/cafe\xCC\x81/l\xE0", "composed host path keeps the decomposed root bytes");
 
 	if (failures)
 		return 1;

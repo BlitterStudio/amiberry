@@ -595,7 +595,7 @@ void my_register_mount_root(const TCHAR* root)
 {
 	if (!root || !root[0])
 		return;
-	amiberry_mount_root entry{ root, root };
+	amiberry_mount_root entry{ root, root, {} };
 #ifdef _WIN32
 	// Paths from the GUI's file dialogs are UTF-8, paths typed into older
 	// builds' configurations may be in the ANSI code page.
@@ -608,6 +608,11 @@ void my_register_mount_root(const TCHAR* root)
 		WideCharToMultiByte(CP_UTF8, 0, wide.c_str(), -1, entry.utf8.data(), length, nullptr, nullptr);
 		entry.utf8.resize(entry.utf8.size() - 1);
 	}
+#endif
+#ifdef __APPLE__
+	entry.key = normalize_nfd_for_latin1(entry.utf8);
+#else
+	entry.key = entry.utf8;
 #endif
 	const std::lock_guard<std::mutex> lock(mount_roots_mutex);
 	for (const auto& known : mount_roots) {
