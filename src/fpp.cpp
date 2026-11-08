@@ -4480,6 +4480,14 @@ void fpu_modechange(void)
 	if (fpu_core_wanted() == fpu_core_active)
 		return;
 
+#ifdef JIT
+	// Compiled code is for the old core: host FPU instructions on host
+	// values in regs.fp, or calls into the exact core on 80-bit ones. Throw
+	// it away (a cache state change flushes hard; set_cpu_caches() restores
+	// the state from the CACR).
+	if (currprefs.cachesize)
+		set_cache_state(0);
+#endif
 	set_cpu_caches(true);
 	for (int i = 0; i < 8; i++) {
 		fpp_from_exten_fmovem(&regs.fp[i], &temp_ext[i][0], &temp_ext[i][1], &temp_ext[i][2]);
