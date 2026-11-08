@@ -23,6 +23,8 @@
 
 #include "softfloat/softfloat-macros.h"
 #include "softfloat/softfloat-specialize.h"
+#include "softfloat/softfloat_dd.h"
+#include <fenv.h>
 
 #define	FPCR_ROUNDING_MODE	0x00000030
 #define	FPCR_ROUND_NEAR		0x00000000
@@ -71,22 +73,34 @@ static void fp_set_mode(uae_u32 mode_control)
 	}
 }
 
+// FPSR exception status bits for each value of fs.float_exception_flags
+static uae_u32 fp_status_bits[256];
+
+static void fp_init_status_bits(void)
+{
+	for (int f = 0; f < 256; f++) {
+		uae_u32 s = 0;
+		if (f & float_flag_signaling)
+			s |= FPSR_SNAN;
+		if (f & float_flag_invalid)
+			s |= FPSR_OPERR;
+		if (f & float_flag_divbyzero)
+			s |= FPSR_DZ;
+		if (f & float_flag_overflow)
+			s |= FPSR_OVFL;
+		if (f & float_flag_underflow)
+			s |= FPSR_UNFL;
+		if (f & float_flag_inexact)
+			s |= FPSR_INEX2;
+		if (f & float_flag_decimal)
+			s |= FPSR_INEX1;
+		fp_status_bits[f] = s;
+	}
+}
+
 static void fp_get_status(uae_u32 *status)
 {
-	if (fs.float_exception_flags & float_flag_signaling)
-		*status |= FPSR_SNAN;
-	if (fs.float_exception_flags & float_flag_invalid)
-		*status |= FPSR_OPERR;
-	if (fs.float_exception_flags & float_flag_divbyzero)
-		*status |= FPSR_DZ;
-	if (fs.float_exception_flags & float_flag_overflow)
-		*status |= FPSR_OVFL;
-	if (fs.float_exception_flags & float_flag_underflow)
-		*status |= FPSR_UNFL;
-	if (fs.float_exception_flags & float_flag_inexact)
-		*status |= FPSR_INEX2;
-	if (fs.float_exception_flags & float_flag_decimal)
-		*status |= FPSR_INEX1;
+	*status |= fp_status_bits[fs.float_exception_flags];
 }
 
 STATIC_INLINE void fp_clear_status(void)
@@ -183,6 +197,22 @@ static bool fp_is_denormal(fpdata *fpd)
 static bool fp_is_unnormal(fpdata *fpd)
 {
 	return floatx80_is_unnormal(fpd->fpx) != 0;
+}
+static bool fp_is_denormal_or_unnormal(fpdata *fpd)
+{
+	return floatx80_is_denormal(fpd->fpx) || floatx80_is_unnormal(fpd->fpx);
+}
+static uae_u32 fp_get_cc(fpdata *fpd)
+{
+	const floatx80 v = fpd->fpx;
+	uae_u32 cc = floatx80_is_negative(v) ? 8 : 0;
+	if (floatx80_is_any_nan(v))
+		cc |= 1;
+	else if (floatx80_is_zero(v))
+		cc |= 4;
+	else if (floatx80_is_infinity(v))
+		cc |= 2;
+	return cc;
 }
 
 
@@ -517,6 +547,85 @@ static void fp_sincos(fpdata *a, fpdata *b, fpdata *c)
 	a->fpx = floatx80_sincos(b->fpx, &c->fpx, &fs);
 }
 
+// the exact FPU core: double-double versions (softfloat/softfloat_dd.cpp)
+static void fp_dd_etox(fpdata *a, fpdata *b)
+{
+	a->fpx = floatx80_dd_etox(b->fpx, &fs);
+}
+static void fp_dd_etoxm1(fpdata *a, fpdata *b)
+{
+	a->fpx = floatx80_dd_etoxm1(b->fpx, &fs);
+}
+static void fp_dd_twotox(fpdata *a, fpdata *b)
+{
+	a->fpx = floatx80_dd_twotox(b->fpx, &fs);
+}
+static void fp_dd_tentox(fpdata *a, fpdata *b)
+{
+	a->fpx = floatx80_dd_tentox(b->fpx, &fs);
+}
+static void fp_dd_sinh(fpdata *a, fpdata *b)
+{
+	a->fpx = floatx80_dd_sinh(b->fpx, &fs);
+}
+static void fp_dd_cosh(fpdata *a, fpdata *b)
+{
+	a->fpx = floatx80_dd_cosh(b->fpx, &fs);
+}
+static void fp_dd_tanh(fpdata *a, fpdata *b)
+{
+	a->fpx = floatx80_dd_tanh(b->fpx, &fs);
+}
+static void fp_dd_logn(fpdata *a, fpdata *b)
+{
+	a->fpx = floatx80_dd_logn(b->fpx, &fs);
+}
+static void fp_dd_lognp1(fpdata *a, fpdata *b)
+{
+	a->fpx = floatx80_dd_lognp1(b->fpx, &fs);
+}
+static void fp_dd_log10(fpdata *a, fpdata *b)
+{
+	a->fpx = floatx80_dd_log10(b->fpx, &fs);
+}
+static void fp_dd_log2(fpdata *a, fpdata *b)
+{
+	a->fpx = floatx80_dd_log2(b->fpx, &fs);
+}
+static void fp_dd_atanh(fpdata *a, fpdata *b)
+{
+	a->fpx = floatx80_dd_atanh(b->fpx, &fs);
+}
+static void fp_dd_sin(fpdata *a, fpdata *b)
+{
+	a->fpx = floatx80_dd_sin(b->fpx, &fs);
+}
+static void fp_dd_cos(fpdata *a, fpdata *b)
+{
+	a->fpx = floatx80_dd_cos(b->fpx, &fs);
+}
+static void fp_dd_tan(fpdata *a, fpdata *b)
+{
+	a->fpx = floatx80_dd_tan(b->fpx, &fs);
+}
+static void fp_dd_atan(fpdata *a, fpdata *b)
+{
+	a->fpx = floatx80_dd_atan(b->fpx, &fs);
+}
+static void fp_dd_asin(fpdata *a, fpdata *b)
+{
+	a->fpx = floatx80_dd_asin(b->fpx, &fs);
+}
+static void fp_dd_acos(fpdata *a, fpdata *b)
+{
+	a->fpx = floatx80_dd_acos(b->fpx, &fs);
+}
+static void fp_dd_sincos(fpdata *a, fpdata *b, fpdata *c)
+{
+	a->fpx = floatx80_dd_sincos(b->fpx, &c->fpx, &fs);
+}
+
+
 /* Functions for converting between float formats */
 static const fptype twoto32 = 4294967296.0;
 
@@ -759,8 +868,11 @@ void fp_init_softfloat(int fpu_model)
 	fpp_is_neg = fp_is_neg;
 	fpp_is_denormal = fp_is_denormal;
 	fpp_is_unnormal = fp_is_unnormal;
+	fpp_is_denormal_or_unnormal = fp_is_denormal_or_unnormal;
+	fpp_get_cc = fp_get_cc;
 	fpp_fix_infinity = fp_fix_infinity;
 
+	fp_init_status_bits();
 	fpp_get_status = fp_get_status;
 	fpp_clear_status = fp_clear_status;
 	fpp_set_mode = fp_set_mode;
@@ -834,4 +946,33 @@ void fp_init_softfloat(int fpu_model)
 	fpp_cmp = fp_cmp;
 	fpp_tst = fp_tst;
 	fpp_move = fp_move;
+}
+
+/* The exact FPU core: softfloat, with transcendental functions that are faster
+ * and more accurate than the FPSP algorithms (results within 1 ulp, mostly
+ * correctly rounded; softfloat/softfloat_dd.cpp). They need round-to-nearest
+ * host arithmetic and else use the FPSP functions. */
+void fp_init_softfloat_exact(int fpu_model)
+{
+	fp_init_softfloat(fpu_model);
+	fesetround(FE_TONEAREST);
+	fpp_etox = fp_dd_etox;
+	fpp_etoxm1 = fp_dd_etoxm1;
+	fpp_twotox = fp_dd_twotox;
+	fpp_tentox = fp_dd_tentox;
+	fpp_sinh = fp_dd_sinh;
+	fpp_cosh = fp_dd_cosh;
+	fpp_tanh = fp_dd_tanh;
+	fpp_logn = fp_dd_logn;
+	fpp_lognp1 = fp_dd_lognp1;
+	fpp_log10 = fp_dd_log10;
+	fpp_log2 = fp_dd_log2;
+	fpp_atanh = fp_dd_atanh;
+	fpp_sin = fp_dd_sin;
+	fpp_cos = fp_dd_cos;
+	fpp_tan = fp_dd_tan;
+	fpp_atan = fp_dd_atan;
+	fpp_asin = fp_dd_asin;
+	fpp_acos = fp_dd_acos;
+	fpp_sincos = fp_dd_sincos;
 }

@@ -60,6 +60,8 @@ FPP_IS fpp_is_zero;
 FPP_IS fpp_is_neg;
 FPP_IS fpp_is_denormal;
 FPP_IS fpp_is_unnormal;
+FPP_IS fpp_is_denormal_or_unnormal;
+FPP_GET_CC fpp_get_cc;
 FPP_A fpp_fix_infinity;
 
 FPP_GET_STATUS fpp_get_status;
@@ -146,9 +148,76 @@ STATIC_INLINE int isinrom (void)
 	return (munge24 (m68k_getpc ()) & 0xFFF80000) == 0xF80000 && !currprefs.mmu_model;
 }
 
+/* The FPU core (fpu_mode, FPU_MODE_*): exact (80-bit softfloat, with the
+ * double-double transcendentals) or host floating point. Automatic picks the
+ * exact core on AArch64, which has no extended-precision hardware, unless the
+ * JIT compiles FPU instructions to host doubles (JIT with JIT FPU); x86-64's
+ * host core is x87 80-bit already. Chosen at FPU reset and when the settings
+ * change (fpu_modechange()); with the exact core the JIT compiles FPU
+ * instructions as calls into it (jit_fpu_enabled() false). */
+static bool fpu_exact_active;
+static int fpu_core_active = -2;
+
+bool fpu_softfloat_core(void)
+{
+	return fpu_exact_active;
+}
+
+bool jit_fpu_enabled(void)
+{
+	return currprefs.compfpu && !fpu_exact_active;
+}
+
 static bool jit_fpu(void)
 {
-	return currprefs.cachesize && currprefs.compfpu;
+	return currprefs.cachesize && jit_fpu_enabled();
+}
+
+// 1: the exact core, 0: host floating point, -1: host 80-bit (MSVC long double)
+static int fpu_core_wanted(void)
+{
+	switch (currprefs.fpu_mode) {
+	case FPU_MODE_EXACT:
+		return 1;
+	case FPU_MODE_HOST:
+		return 0;
+	case FPU_MODE_HOST80:
+		return -1;
+	default:
+#if defined(CPU_AARCH64) && defined(WITH_SOFTFLOAT)
+		return currprefs.cachesize && currprefs.compfpu ? 0 : 1;
+#else
+		return 0;
+#endif
+	}
+}
+
+static void fpu_select_core(void)
+{
+	int core = fpu_core_wanted();
+#ifndef WITH_SOFTFLOAT
+	if (core > 0)
+		core = 0;
+#endif
+	fpu_core_active = core;
+#ifdef MSVC_LONG_DOUBLE
+	use_long_double = false;
+	if (core < 0) {
+		use_long_double = true;
+		if (!fp_init_native_80()) {
+			use_long_double = false;
+			core = 1;
+		}
+	}
+#endif
+	fpu_exact_active = core > 0;
+	if (core > 0) {
+#ifdef WITH_SOFTFLOAT
+		fp_init_softfloat_exact(currprefs.fpu_model);
+#endif
+	} else if (core == 0) {
+		fp_init_native();
+	}
 }
 
 static int warned = 100;
@@ -350,7 +419,7 @@ static uae_u32 get_ftag(fpdata *src, int size)
 	fpp_is_init(src);
 	if (fpp_is_zero(src)) {
 		return 1; // ZERO
-	} else if (fpp_is_unnormal(src) || fpp_is_denormal(src)) {
+	} else if (fpp_is_denormal_or_unnormal(src)) {
 		if (size == 1 || size == 5)
 			return 5; // Single/double DENORMAL
 		return 4; // Extended DENORMAL or UNNORMAL
@@ -367,7 +436,7 @@ STATIC_INLINE bool fp_is_dyadic(uae_u16 extra)
 	return ((extra & 0x30) == 0x20 || (extra & 0x7f) == 0x38);
 }
 
-static bool fp_exception_pending(bool pre)
+static bool fp_exception_pending_slow(bool pre)
 {
 	// first check for pending arithmetic exceptions
 	if (support_exceptions) {
@@ -400,6 +469,14 @@ static bool fp_exception_pending(bool pre)
 		return true;
 	}
 	return false;
+}
+
+// the common case, nothing pending, without a call
+static inline bool fp_exception_pending(bool pre)
+{
+	if (!((support_exceptions && regs.fp_exp_pend) || regs.fp_unimp_pend))
+		return false;
+	return fp_exception_pending_slow(pre);
 }
 
 static void fp_unimp_instruction_exception_pending(void)
@@ -438,7 +515,7 @@ static uae_u32 fpsr_get_vector(uae_u32 exception)
 	return 0;
 }
 
-static bool fpsr_check_arithmetic_exception(uae_u32 mask, fpdata *src, uae_u32 opcode, uae_u16 extra, uae_u32 ea, bool easet, uaecptr oldpc)
+static bool fpsr_check_arithmetic_exception_slow(uae_u32 mask, fpdata *src, uae_u32 opcode, uae_u16 extra, uae_u32 ea, bool easet, uaecptr oldpc)
 {
 	if (!support_exceptions)
 		return false;
@@ -579,6 +656,19 @@ static bool fpsr_check_arithmetic_exception(uae_u32 mask, fpdata *src, uae_u32 o
 	return false;
 }
 
+// the common case, no enabled exception, without a call
+static inline bool fpsr_check_arithmetic_exception(uae_u32 mask, fpdata *src, uae_u32 opcode, uae_u16 extra, uae_u32 ea, bool easet, uaecptr oldpc)
+{
+	if (!support_exceptions)
+		return false;
+	uae_u32 exception = regs.fpsr & regs.fpcr & 0xff00;
+	if (currprefs.cpu_model >= 68040 && currprefs.fpu_model && currprefs.fpu_no_unimplemented)
+		exception |= regs.fpsr & (FPSR_OVFL | FPSR_UNFL | mask);
+	if (!exception)
+		return false;
+	return fpsr_check_arithmetic_exception_slow(mask, src, opcode, extra, ea, easet, oldpc);
+}
+
 // Flag that is always set immediately.
 static void fpsr_set_result_always(fpdata *result)
 {
@@ -591,6 +681,16 @@ static void fpsr_set_result_always(fpdata *result)
 	if (fpp_is_neg(result)) {
 		regs.fpsr |= FPSR_CC_N;
 	}
+}
+
+// fpsr_set_result_always() and fpsr_set_result() together, with one call into the FPU core
+static void fpsr_set_result_all(fpdata *result)
+{
+	fpu_fpsr_cc_written = false;
+#ifdef JIT
+	regs.fp_result = *result;
+#endif
+	regs.fpsr = (regs.fpsr & 0x00fffff8) | (fpp_get_cc(result) << 24);
 }
 
 // Flags that are set if instruction didn't generate exception.
@@ -682,7 +782,7 @@ static void fpsr_get_quotient(uae_u64 *quot, uae_u8 *sign)
 uae_u32 fpp_get_fpsr (void)
 {
 #ifdef JIT
-	if (currprefs.cachesize && currprefs.compfpu && !fpu_fpsr_cc_written) {
+	if (jit_fpu() && !fpu_fpsr_cc_written) {
 		regs.fpsr &= 0x00fffff8; // clear cc
 		fpp_is_init(&regs.fp_result);
 		if (fpp_is_nan(&regs.fp_result)) {
@@ -735,7 +835,7 @@ void fpp_set_fpsr (uae_u32 val)
 
 #ifdef JIT
 	// check comment in fpp_cond
-	if (currprefs.cachesize && currprefs.compfpu) {
+	if (jit_fpu()) {
 		// fp_result must give back every condition code combination
 		uae_u32 sign = (val & FPSR_CC_N) ? 0x80000000 : 0;
 		if (val & FPSR_CC_NAN) {
@@ -901,8 +1001,7 @@ bool fpu_get_constant(fpdata *fpd, int cr)
 				fpp_to_exten_fmovem(fpd, f[0], f[1], f[2]);
 			}
 
-			fpsr_set_result_always(fpd);
-			fpsr_set_result(fpd);
+			fpsr_set_result_all(fpd);
 			regs.fpsr |= sr;
 			return false;
 		}
@@ -925,8 +1024,7 @@ bool fpu_get_constant(fpdata *fpd, int cr)
 	if (prec >= 2)
 		fpp_round64(fpd);
 	
-	fpsr_set_result_always(fpd);
-	fpsr_set_result(fpd);
+	fpsr_set_result_all(fpd);
 
 	return true;
 }
@@ -1099,14 +1197,19 @@ static void fpu_noinst(uae_u16 opcode, uaecptr pc)
 	op_illg(opcode);
 }
 
-static bool if_no_fpu(void)
+static inline bool if_no_fpu(void)
 {
 	return (regs.pcr & 2) || currprefs.fpu_model <= 0;
 }
 
-static bool fault_if_no_fpu(uae_u16 opcode, uae_u16 extra, uaecptr ea, bool easet, uaecptr oldpc)
+static bool fault_no_fpu(uae_u16 opcode, uae_u16 extra, uaecptr ea, bool easet, uaecptr oldpc);
+static inline bool fault_if_no_fpu(uae_u16 opcode, uae_u16 extra, uaecptr ea, bool easet, uaecptr oldpc)
 {
-	if (if_no_fpu()) {
+	return if_no_fpu() && fault_no_fpu(opcode, extra, ea, easet, oldpc);
+}
+static bool fault_no_fpu(uae_u16 opcode, uae_u16 extra, uaecptr ea, bool easet, uaecptr oldpc)
+{
+	{
 #if EXCEPTION_FPP
 		write_log(_T("no FPU: %04X-%04X PC=%08X\n"), opcode, extra, oldpc);
 #endif
@@ -1240,7 +1343,7 @@ static bool fault_if_nonexisting_opmode(uae_u16 opcode, uae_u16 extra, uaecptr o
 	return false;
 }
 
-static bool fault_if_unimplemented_680x0 (uae_u16 opcode, uae_u16 extra, uaecptr ea, bool easet, uaecptr oldpc, fpdata *src, int reg)
+static bool fault_if_unimplemented_680x0_slow (uae_u16 opcode, uae_u16 extra, uaecptr ea, bool easet, uaecptr oldpc, fpdata *src, int reg)
 {
 	if (fault_if_no_fpu (opcode, extra, ea, easet, oldpc))
 		return true;
@@ -1297,6 +1400,14 @@ static bool fault_if_unimplemented_680x0 (uae_u16 opcode, uae_u16 extra, uaecptr
 		}
 	}
 	return false;
+}
+
+// 6888x, or 68040/68060 with the unimplemented instructions emulated: only the no-FPU check
+static inline bool fault_if_unimplemented_680x0 (uae_u16 opcode, uae_u16 extra, uaecptr ea, bool easet, uaecptr oldpc, fpdata *src, int reg)
+{
+	if (!(currprefs.cpu_model >= 68040 && currprefs.fpu_model && currprefs.fpu_no_unimplemented))
+		return fault_if_no_fpu (opcode, extra, ea, easet, oldpc);
+	return fault_if_unimplemented_680x0_slow (opcode, extra, ea, easet, oldpc, src, reg);
 }
 
 static bool fault_if_unimplemented_6888x (uae_u16 opcode, uae_u16 extra, uaecptr oldpc)
@@ -1457,7 +1568,7 @@ static bool normalize_or_fault_if_no_denormal_support(uae_u16 opcode, uae_u16 ex
 	if (!support_denormals)
 		return false;
 	fpp_is_init(src);
-	if (fpp_is_unnormal(src) || fpp_is_denormal(src)) {
+	if (fpp_is_denormal_or_unnormal(src)) {
 		if (currprefs.cpu_model >= 68040 && currprefs.fpu_model && currprefs.fpu_no_unimplemented) {
 			if (fpp_is_zero(src)) {
 				fpp_normalize(src); // 68040/060 can only fix unnormal zeros
@@ -1476,7 +1587,7 @@ static bool normalize_or_fault_if_no_denormal_support_dst(uae_u16 opcode, uae_u1
 	if (!support_denormals)
 		return false;
 	fpp_is_init(dst);
-	if (fpp_is_unnormal(dst) || fpp_is_denormal(dst)) {
+	if (fpp_is_denormal_or_unnormal(dst)) {
 		if (currprefs.cpu_model >= 68040 && currprefs.fpu_model && currprefs.fpu_no_unimplemented) {
 			if (fpp_is_zero(dst)) {
 				fpp_normalize(dst); // 68040/060 can only fix unnormal zeros
@@ -1504,7 +1615,7 @@ static bool fault_if_no_packed_support(uae_u16 opcode, uae_u16 extra, uaecptr ea
 // 68040 does not support move to integer format
 static bool fault_if_68040_integer_nonmaskable(uae_u16 opcode, uae_u16 extra, uaecptr ea, bool easet, uaecptr oldpc, fpdata *src)
 {
-	if (currprefs.cpu_model == 68040 && currprefs.fpu_model && currprefs.fpu_mode > 0) {
+	if (currprefs.cpu_model == 68040 && currprefs.fpu_model && fpu_softfloat_core()) {
 		fpsr_make_status();
 		if (regs.fpsr & (FPSR_SNAN | FPSR_OPERR)) {
 			fpsr_check_arithmetic_exception(FPSR_SNAN | FPSR_OPERR, src, opcode, extra, ea, easet, oldpc);
@@ -2111,7 +2222,7 @@ int fpp_cond(int condition)
 {
 	condition &= 0x1f;
 #ifdef JIT
-	if (currprefs.cachesize && currprefs.compfpu && !fpu_fpsr_cc_written) {
+	if (jit_fpu() && !fpu_fpsr_cc_written) {
 		// JIT reads and writes regs.fpu_result
 		fpp_is_init(&regs.fp_result);
 		int NotANumber = fpp_is_nan(&regs.fp_result);
@@ -3590,8 +3701,7 @@ static bool fp_arithmetic(fpdata *src, fpdata *dst, int extra)
 		{
 			fpp_cmp(dst, src);
 			fpsr_make_status();
-			fpsr_set_result_always(dst);
-			fpsr_set_result(dst);
+			fpsr_set_result_all(dst);
 			return false;
 		}
 		case 0x3a: /* FTST */
@@ -3601,8 +3711,7 @@ static bool fp_arithmetic(fpdata *src, fpdata *dst, int extra)
 		{
 			fpp_tst(dst, src);
 			fpsr_make_status();
-			fpsr_set_result_always(dst);
-			fpsr_set_result(dst);
+			fpsr_set_result_all(dst);
 			return false;
 		}
 		default:
@@ -3610,8 +3719,7 @@ static bool fp_arithmetic(fpdata *src, fpdata *dst, int extra)
 			return false;
 	}
 
-	fpsr_set_result_always(dst);
-	fpsr_set_result(dst);
+	fpsr_set_result_all(dst);
 
 	if (fpsr_make_status()) {
 		return false;
@@ -3620,7 +3728,116 @@ static bool fp_arithmetic(fpdata *src, fpdata *dst, int extra)
 	return true;
 }
 
-static void fpuop_arithmetic2 (uae_u32 opcode, uae_u16 extra, const uaecptr *jit_ea = nullptr)
+/* The arithmetic instructions: opclass 0 (FPm to FPn) and 2 (<ea> to FPn),
+ * FMOVECR included. Called directly by the FPU entry points, so the most
+ * common FPU instructions skip the large fpuop_arithmetic2() frame. */
+static void fpuop_arith_regmem(uae_u32 opcode, uae_u16 extra, uaecptr pc, const uaecptr *jit_ea)
+{
+	int reg;
+	int v;
+	fpdata src, dst;
+	uaecptr ad = 0;
+	bool adset = false;
+	bool nonmaskable = false;
+
+
+	reg = (extra >> 7) & 7;
+	if ((extra & 0xfc00) == 0x5c00) {
+		// FMOVECR
+		if (fault_if_unimplemented_680x0 (opcode, extra, ad, adset, pc, &src, reg))
+			return;
+		if (extra & 0x40) {
+			// 6888x and ROM constant 0x40 - 0x7f: f-line
+			fpu_noinst (opcode, pc);
+			return;
+		}
+		fpsr_clear_status();
+		maybe_set_fpiar(pc);
+		fpu_get_constant(&regs.fp[reg], extra & 0x7f);
+		fpsr_make_status();
+		fpsr_check_arithmetic_exception(0, &src, opcode, extra, ad, adset, pc);
+		return;
+	}
+
+	// 6888x does not have special exceptions, check immediately
+	// 68040+ also generate immediate exception 11 if invalid opmode.
+	if (fault_if_nonexisting_opmode(opcode, extra, pc))
+		return;
+
+	fpsr_clear_status();
+
+	// 68040 and 68060 always set FPIAR
+	if (currprefs.fpu_model == 68040 || currprefs.fpu_model == 68060) {
+		regs.fpiar = pc;
+	}
+
+	if (!(extra & 0x4000)) {
+		// FPm to FPn (as get_fp_value(), without its call)
+		if (fault_if_no_fpu (opcode, extra, 0, false, pc))
+			return;
+		src = regs.fp[(extra >> 10) & 7];
+		normalize_or_fault_if_no_denormal_support(opcode, extra, 0, false, pc, &src);
+	} else {
+		v = get_fp_value(opcode, extra, &src, pc, &ad, &adset, jit_ea);
+		if (v <= 0) {
+			if (v == 0) {
+				fpu_noinst(opcode, pc);
+			}
+			return;
+		}
+	}
+
+	if (fault_if_no_fpu (opcode, extra, ad, adset, pc))
+		return;
+
+	dst = regs.fp[reg];
+
+	if (fp_is_dyadic(extra))
+		normalize_or_fault_if_no_denormal_support_dst(opcode, extra, ad, adset, pc, &dst, &src);
+
+	// check for 680x0 unimplemented instruction
+	if (fault_if_unimplemented_680x0 (opcode, extra, ad, adset, pc, &src, reg))
+		return;
+
+	// unimplemented datatype was checked in get_fp_value
+	if (regs.fp_unimp_pend) {
+		// simplification: always mid/post-instruction exception
+		fp_exception_pending(false);
+		return;
+	}
+
+	maybe_set_fpiar(pc);
+
+	v = fp_arithmetic(&src, &dst, extra);
+
+	nonmaskable = fpsr_check_arithmetic_exception(0, &src, opcode, extra, ad, adset, pc);
+
+	// 68040 does not update destination register if nonmasked exception was generated
+	if (v && (currprefs.fpu_model != 68040 || !nonmaskable)) {
+		regs.fp[reg] = dst;
+	}
+
+	if (nonmaskable) {
+		fp_exception_pending(false);
+	}
+}
+
+// the common prologue of fpuop_arithmetic2(), for the direct calls of fpuop_arith_regmem()
+static inline bool fpuop_arith_regmem_direct(uae_u32 opcode, uae_u16 extra, const uaecptr *jit_ea)
+{
+	if (((extra >> 13) & 5) != 0) // not opclass 0 or 2
+		return false;
+	const uaecptr pc = jit_ea ? regs.instruction_pc : m68k_getpc () - 4;
+	if (fault_if_no_6888x(opcode, extra, pc))
+		return true;
+	if (fp_exception_pending(true))
+		return true;
+	fpuop_arith_regmem(opcode, extra, pc, jit_ea);
+	return true;
+}
+
+// not inlined into the entry points: its frame is what fpuop_arith_regmem() avoids
+static NOINLINE void fpuop_arithmetic2 (uae_u32 opcode, uae_u16 extra, const uaecptr *jit_ea = nullptr)
 {
 	int reg = -1;
 	int v;
@@ -3977,79 +4194,7 @@ static void fpuop_arithmetic2 (uae_u32 opcode, uae_u16 extra, const uaecptr *jit
 
 		case 0:
 		case 2: /* Extremely common */
-
-			reg = (extra >> 7) & 7;
-			if ((extra & 0xfc00) == 0x5c00) {
-				// FMOVECR
-				if (fault_if_unimplemented_680x0 (opcode, extra, ad, adset, pc, &src, reg))
-					return;
-				if (extra & 0x40) {
-					// 6888x and ROM constant 0x40 - 0x7f: f-line
-					fpu_noinst (opcode, pc);
-					return;
-				}
-				fpsr_clear_status();
-				maybe_set_fpiar(pc);
-				fpu_get_constant(&regs.fp[reg], extra & 0x7f);
-				fpsr_make_status();
-				fpsr_check_arithmetic_exception(0, &src, opcode, extra, ad, adset, pc);
-				return;
-			}
-
-			// 6888x does not have special exceptions, check immediately
-			// 68040+ also generate immediate exception 11 if invalid opmode.
-			if (fault_if_nonexisting_opmode(opcode, extra, pc))
-				return;
-
-			fpsr_clear_status();
-
-			// 68040 and 68060 always set FPIAR
-			if (currprefs.fpu_model == 68040 || currprefs.fpu_model == 68060) {
-				regs.fpiar = pc;
-			}
-
-			v = get_fp_value(opcode, extra, &src, pc, &ad, &adset, jit_ea);
-			if (v <= 0) {
-				if (v == 0) {
-					fpu_noinst(opcode, pc);
-				}
-				return;
-			}
-
-			if (fault_if_no_fpu (opcode, extra, ad, adset, pc))
-				return;
-
-			dst = regs.fp[reg];
-
-			if (fp_is_dyadic(extra))
-				normalize_or_fault_if_no_denormal_support_dst(opcode, extra, ad, adset, pc, &dst, &src);
-
-			// check for 680x0 unimplemented instruction
-			if (fault_if_unimplemented_680x0 (opcode, extra, ad, adset, pc, &src, reg))
-				return;
-
-			// unimplemented datatype was checked in get_fp_value
-			if (regs.fp_unimp_pend) {
-				// simplification: always mid/post-instruction exception
-				fp_exception_pending(false);
-				return;
-			}
-
-			maybe_set_fpiar(pc);
-
-			v = fp_arithmetic(&src, &dst, extra);
-
-			nonmaskable = fpsr_check_arithmetic_exception(0, &src, opcode, extra, ad, adset, pc);
-
-			// 68040 does not update destination register if nonmasked exception was generated
-			if (v && (currprefs.fpu_model != 68040 || !nonmaskable)) {
-				regs.fp[reg] = dst;
-			}
-
-			if (nonmaskable) {
-				fp_exception_pending(false);
-			}
-
+			fpuop_arith_regmem(opcode, extra, pc, jit_ea);
 			return;
 		default:
 		break;
@@ -4067,7 +4212,8 @@ void fpuop_arithmetic (uae_u32 opcode, uae_u16 extra)
 #if FPU_LOG
 	write_log(_T("FPUOP %04x %04x PC=%08x\n"), opcode, extra, M68K_GETPC);
 #endif
-	fpuop_arithmetic2 (opcode, extra);
+	if (!fpuop_arith_regmem_direct(opcode, extra, nullptr))
+		fpuop_arithmetic2 (opcode, extra);
 	if (fpu_mmu_fixup) {
 		mmufixup[0].reg = -1;
 	}
@@ -4084,7 +4230,8 @@ void REGPARAM3 fpuop_arithmetic_jit(uae_u32 instruction, uaecptr ea)
 	regs.fpu_state = 1;
 	regs.fp_exception = false;
 	fpu_mmu_fixup = false;
-	fpuop_arithmetic2(opcode, extra, &ea);
+	if (!fpuop_arith_regmem_direct(opcode, extra, &ea))
+		fpuop_arithmetic2(opcode, extra, &ea);
 	if (fpu_mmu_fixup)
 		mmufixup[0].reg = -1;
 	// The emitted predicates need an x87-representable CC surrogate, not
@@ -4121,30 +4268,16 @@ void fpu_modechange(void)
 {
 	uae_u32 temp_ext[8][3];
 
-	if (currprefs.fpu_mode == changed_prefs.fpu_mode)
-		return;
 	currprefs.fpu_mode = changed_prefs.fpu_mode;
+	// also a JIT setting can change what Automatic picks
+	if (fpu_core_wanted() == fpu_core_active)
+		return;
 
 	set_cpu_caches(true);
 	for (int i = 0; i < 8; i++) {
 		fpp_from_exten_fmovem(&regs.fp[i], &temp_ext[i][0], &temp_ext[i][1], &temp_ext[i][2]);
 	}
-	if (currprefs.fpu_mode > 0) {
-#ifdef WITH_SOFTFLOAT
-		fp_init_softfloat(currprefs.fpu_model);
-#endif
-#ifdef MSVC_LONG_DOUBLE
-		use_long_double = false;
-	} else if (currprefs.fpu_mode < 0) {
-		use_long_double = true;
-		fp_init_native_80();
-#endif
-	} else {
-#ifdef MSVC_LONG_DOUBLE
-		use_long_double = false;
-#endif
-		fp_init_native();
-	}
+	fpu_select_core();
 	get_features();
 	for (int i = 0; i < 8; i++) {
 		fpp_to_exten_fmovem(&regs.fp[i], temp_ext[i][0], temp_ext[i][1], temp_ext[i][2]);
@@ -4173,25 +4306,7 @@ void fpu_reset (void)
 {
 #ifndef CPU_TESTER
 	currprefs.fpu_mode = changed_prefs.fpu_mode;
-	if (currprefs.fpu_mode > 0) {
-#ifdef WITH_SOFTFLOAT
-		fp_init_softfloat(currprefs.fpu_model);
-#endif
-#ifdef MSVC_LONG_DOUBLE
-		use_long_double = false;
-	} else if (currprefs.fpu_mode < 0) {
-		use_long_double = true;
-		if (!fp_init_native_80()) {
-			use_long_double = false;
-			fp_init_softfloat(currprefs.fpu_model);
-		}
-#endif
-	} else {
-#ifdef MSVC_LONG_DOUBLE
-		use_long_double = false;
-#endif
-		fp_init_native();
-	}
+	fpu_select_core();
 
 #if defined(CPU_x86_64)
 #ifndef __MACH__

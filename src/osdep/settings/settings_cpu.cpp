@@ -123,6 +123,31 @@ bool has_fpu(const uae_prefs& p, const context&)
 	return p.fpu_model > 0;
 }
 
+// The FPU core fpp.cpp's fpu_core_wanted() picks: the exact one, or host
+// floating point (Automatic: exact on AArch64 unless the JIT FPU is on).
+bool fpu_exact_core(const uae_prefs& p)
+{
+	if (p.fpu_mode == FPU_MODE_EXACT)
+		return true;
+	if (p.fpu_mode != FPU_MODE_AUTO)
+		return false;
+#if defined(CPU_AARCH64)
+	return !(effective_jit_cache(p) && p.compfpu);
+#else
+	return false;
+#endif
+}
+
+// More compatible changes the host core only (rounding to the FPCR
+// precision, compares of special values); the exact core always does that.
+// Not with the Exact core chosen. Automatic is left to the front end: which
+// core it picks depends on the host (fpu_exact_core()), and the exported
+// tables must not (Android's are made on any desktop).
+bool fpu_strict_available(const uae_prefs& p, const context& ctx)
+{
+	return has_fpu(p, ctx) && p.fpu_mode != FPU_MODE_EXACT;
+}
+
 // The JIT's preference check is the only code that copies fpu_strict into a
 // running configuration.
 #ifdef JIT
@@ -360,19 +385,44 @@ void set_fpu_strict(uae_prefs& p, const value& v)
 	p.fpu_strict = v.number != 0;
 }
 
-void get_fpu_softfloat(const uae_prefs& p, char* out, size_t size)
+// The FPU core (fpu_mode, options.h FPU_MODE_*): Automatic is the exact core
+// where it costs no speed (AArch64 without the JIT FPU), else the host core.
+const amiberry_setting_choice fpu_core_choices[] = {
+	{"auto", "Automatic"},
+	{"host", "Host"},
+	{"exact", "Exact (80-bit)"},
+};
+
+void get_fpu_core(const uae_prefs& p, char* out, size_t size)
 {
-	write_bool(out, size, p.fpu_mode > 0);
+	write_choice(out, size, CHOICES(fpu_core_choices),
+		p.fpu_mode == FPU_MODE_EXACT ? 2 : p.fpu_mode == FPU_MODE_HOST || p.fpu_mode == FPU_MODE_HOST80 ? 1 : 0);
 }
 
-// Turning softfloat off restores host floating point; it leaves the host
-// 80-bit mode of MSVC long double builds alone.
+// Host keeps the host 80-bit mode of MSVC long double builds.
+void set_fpu_core(uae_prefs& p, const value& v)
+{
+	if (v.text == "exact")
+		p.fpu_mode = FPU_MODE_EXACT;
+	else if (v.text == "host")
+		p.fpu_mode = p.fpu_mode == FPU_MODE_HOST80 ? FPU_MODE_HOST80 : FPU_MODE_HOST;
+	else
+		p.fpu_mode = FPU_MODE_AUTO;
+}
+
+// fpu_softfloat (cfgfile and older configurations): true is the exact core.
+void get_fpu_softfloat(const uae_prefs& p, char* out, size_t size)
+{
+	write_bool(out, size, p.fpu_mode == FPU_MODE_EXACT);
+}
+
+// Turning softfloat off restores Automatic; it leaves the host modes alone.
 void set_fpu_softfloat(uae_prefs& p, const value& v)
 {
 	if (v.number != 0)
-		p.fpu_mode = 1;
-	else if (p.fpu_mode > 0)
-		p.fpu_mode = 0;
+		p.fpu_mode = FPU_MODE_EXACT;
+	else if (p.fpu_mode == FPU_MODE_EXACT)
+		p.fpu_mode = FPU_MODE_AUTO;
 }
 
 #ifdef MSVC_LONG_DOUBLE
@@ -386,18 +436,17 @@ void get_fpu_msvc_long_double(const uae_prefs& p, char* out, size_t size)
 void set_fpu_msvc_long_double(uae_prefs& p, const value& v)
 {
 	if (v.number != 0)
-		p.fpu_mode = -1;
-	else if (p.fpu_mode < 0)
-		p.fpu_mode = 0;
+		p.fpu_mode = FPU_MODE_HOST80;
+	else if (p.fpu_mode == FPU_MODE_HOST80)
+		p.fpu_mode = FPU_MODE_HOST;
 }
 #endif
 
-// The JIT FPU emulates the FPU with host floating point, so softfloat cannot
-// be switched on while a JIT that fixup_cpu() keeps has its FPU on.
-// Switching it off (to a host mode) is always possible.
-bool fpu_softfloat_accepts(const uae_prefs& p, const value& v)
+// The exact core works with the JIT (it compiles FPU instructions as calls
+// into it), so every core can be selected with any JIT setting.
+bool fpu_softfloat_accepts(const uae_prefs&, const value&)
 {
-	return v.number == 0 || !(effective_jit_cache(p) && p.compfpu);
+	return true;
 }
 
 void get_fpu_no_unimplemented(const uae_prefs& p, char* out, size_t size)
@@ -680,7 +729,7 @@ void set_cachesize(uae_prefs& p, const value& v)
 		p.cpu_cycle_exact = false;
 		p.blitter_cycle_exact = false;
 		p.cpu_memory_cycle_exact = false;
-		p.compfpu = p.fpu_mode <= 0;
+		p.compfpu = p.fpu_mode != FPU_MODE_EXACT;
 	}
 	clamp_ram_for_fixups(p);
 }
@@ -701,12 +750,9 @@ void get_compfpu(const uae_prefs& p, char* out, size_t size)
 	write_bool(out, size, p.compfpu);
 }
 
-// Turning the JIT FPU on replaces softfloat, as the core fixup would.
 void set_compfpu(uae_prefs& p, const value& v)
 {
 	p.compfpu = v.number != 0;
-	if (p.compfpu && effective_jit_cache(p))
-		p.fpu_mode = 0;
 }
 
 // cfgfile only reads and writes compfpu in JIT FPU builds; the JIT is
@@ -714,7 +760,8 @@ void set_compfpu(uae_prefs& p, const value& v)
 bool compfpu_available(const uae_prefs& p, const context&)
 {
 #ifdef USE_JIT_FPU
-	return jit_enabled(p) && p.fpu_model > 0;
+	// the exact core compiles its own calls: the JIT FPU only selects the host core's
+	return jit_enabled(p) && p.fpu_model > 0 && p.fpu_mode != FPU_MODE_EXACT;
 #else
 	(void)p;
 	return false;
@@ -847,11 +894,17 @@ const definition definitions[] = {
 			"A 68000 or 68010 in More compatible or cycle-exact mode has no FPU, and a 68040 or 68060 uses its internal FPU."),
 		get_fpu_model, set_fpu_model, nullptr, fpu_model_choice_available, nullptr},
 	{BOOL_OPTION("fpu_strict", "fpu", "More compatible FPU",
-			"More accurate but slower FPU emulation.",
-			fpu_strict_apply, "false", "Needs an FPU."),
-		get_fpu_strict, set_fpu_strict, has_fpu, nullptr, nullptr},
-	{BOOL_OPTION("fpu_softfloat", "fpu", "Softfloat FPU (80-bit)",
-			"FPU precision mode. Softfloat is most accurate but slowest; the JIT FPU replaces it.",
+			"Host FPU core: round results to the FPCR precision and compare special values like the 68k (slower). "
+			"The Exact core always does; Automatic picks it on AArch64 unless the JIT FPU is on.",
+			fpu_strict_apply, "false", "Needs an FPU and not the Exact FPU core (which always rounds and compares exactly)."),
+		get_fpu_strict, set_fpu_strict, fpu_strict_available, nullptr, nullptr},
+	{CHOICE_OPTION("fpu_core", "fpu", "FPU core",
+			"Exact computes in 80-bit extended precision like a real 68881/68882/68040/68060; Host uses the host's floating point "
+			"(64-bit on AArch64, faster with the JIT FPU). Automatic is Exact on AArch64 unless the JIT FPU is on, else Host.",
+			AMIBERRY_APPLY_LIVE, "auto", fpu_core_choices, "Needs an FPU."),
+		get_fpu_core, set_fpu_core, has_fpu, nullptr, nullptr},
+	{BOOL_OPTION("fpu_softfloat", "fpu", "Exact FPU core (80-bit softfloat)",
+			"The exact FPU core (fpu_core=exact); kept for older configurations.",
 			AMIBERRY_APPLY_LIVE, "false", "Needs an FPU."),
 		get_fpu_softfloat, set_fpu_softfloat, has_fpu, nullptr, nullptr, fpu_softfloat_accepts},
 #ifdef MSVC_LONG_DOUBLE
@@ -1007,6 +1060,11 @@ const domain& cpu_domain()
 int jit_cache_after_fixup_cpu(const uae_prefs& p)
 {
 	return effective_jit_cache(p);
+}
+
+bool fpu_exact_core_after_fixup(const uae_prefs& p)
+{
+	return fpu_exact_core(p);
 }
 
 } // namespace amiberry_settings

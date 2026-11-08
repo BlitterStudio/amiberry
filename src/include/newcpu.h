@@ -815,6 +815,11 @@ extern void mmu_op (uae_u32, uae_u32);
 extern bool mmu_op30 (uaecptr, uae_u32, uae_u16, uaecptr);
 
 extern void fpuop_arithmetic(uae_u32, uae_u16);
+// The JIT compiles FPU instructions (compfpu) and the FPU core keeps host
+// doubles for it; false while the exact FPU core is active.
+extern bool jit_fpu_enabled(void);
+// The FPU registers are softfloat extended values (fpx), not host doubles
+extern bool fpu_softfloat_core(void);
 extern void REGPARAM3 fpuop_arithmetic_jit(uae_u32 instruction, uaecptr ea);
 extern void fpuop_dbcc(uae_u32, uae_u16);
 extern void fpuop_scc(uae_u32, uae_u16);
