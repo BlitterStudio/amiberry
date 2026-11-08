@@ -174,7 +174,7 @@ static inline floatx80 fp_fast_normalize(floatx80 v)
 	return floatx80_normalize(v);          // unnormal or denormal
 }
 
-enum { FK_MOVE, FK_ADD, FK_SUB, FK_MUL, FK_DIV, FK_SQRT, FK_ABS, FK_NEG, FK_CMP, FK_TST, FK_INT, FK_INTRZ };
+enum { FK_MOVE, FK_ADD, FK_SUB, FK_MUL, FK_DIV, FK_SQRT, FK_ABS, FK_NEG, FK_CMP, FK_TST, FK_INT, FK_INTRZ, FK_GETEXP, FK_GETMAN };
 
 bool fp_exact_fast_arith(fpdata *dst, const fpdata *src, uae_u16 extra)
 {
@@ -827,6 +827,8 @@ static uae_u32 REGPARAM3 fpj_arith(uae_u32 opext, uae_u64 value, uae_u8 *pc_p, u
 	}
 	floatx80 r;
 	switch (OP) {
+	case FK_GETEXP: r = floatx80_getexp(s, &fs); break;
+	case FK_GETMAN: r = floatx80_getman(s, &fs); break;
 	case FK_MOVE: r = floatx80_move(s, &fs); break;
 	case FK_ADD: r = d; if (!fp_fast_dyadic(FD_ADD, &r, s)) r = floatx80_add(d, s, &fs); break;
 	case FK_SUB: r = d; if (!fp_fast_dyadic(FD_SUB, &r, s)) r = floatx80_sub(d, s, &fs); break;
@@ -885,8 +887,9 @@ template <int OP, int SRC>
 static uae_u32 REGPARAM3 fpj_leaf(uae_u32 opext, uae_u64 value, uae_u8 *pc_p, uae_u32 pc)
 {
 	// FPCR: no exception enabled, extended precision, round to nearest
-	// (FINT, FINTRZ: any rounding mode and precision)
-	if ((regs.fpcr & (OP == FK_INT || OP == FK_INTRZ ? 0xff00 : 0xfff0)) | regs.fp_exp_pend | regs.fp_unimp_pend
+	// (FINT, FINTRZ, FGETEXP, FGETMAN: any rounding mode and precision)
+	if ((regs.fpcr & (OP == FK_INT || OP == FK_INTRZ || OP == FK_GETEXP || OP == FK_GETMAN ? 0xff00 : 0xfff0))
+		| regs.fp_exp_pend | regs.fp_unimp_pend
 		| (regs.pcr & 2) | (fpp_add != fp_add))
 		return fpj_arith<OP, 0, SRC>(opext, value, pc_p, pc);
 	floatx80 s;
@@ -919,6 +922,14 @@ static uae_u32 REGPARAM3 fpj_leaf(uae_u32 opext, uae_u64 value, uae_u8 *pc_p, ua
 		if (!fx80_int(s, OP == FK_INT ? fs.float_rounding_mode : float_round_to_zero, &r, &inexact))
 			return fpj_arith<OP, 0, SRC>(opext, value, pc_p, pc);
 		break;
+	case FK_GETEXP:
+		// floatx80_getexp() of a normal value: the unbiased exponent (+0 for 0)
+		if (!fx80_from_i32((s.high & 0x7fff) - 0x3fff, &r)) {
+			r.high = 0;
+			r.low = 0;
+		}
+		break;
+	case FK_GETMAN: r.high = (s.high & 0x8000) | 0x3fff; break;
 	case FK_ABS: r.high &= 0x7fff; break;
 	case FK_NEG: r.high ^= 0x8000; break;
 	default: break;                                // FK_MOVE, FK_TST, FK_CMP
@@ -928,8 +939,8 @@ static uae_u32 REGPARAM3 fpj_leaf(uae_u32 opext, uae_u64 value, uae_u8 *pc_p, ua
 			return fpj_arith<OP, 0, SRC>(opext, value, pc_p, pc);
 	} else {
 		cc = (r.high & 0x8000) ? 8 : 0;
-		if ((OP == FK_INT || OP == FK_INTRZ) && !(r.high & 0x7fff))
-			cc |= 4;                               // rounded to zero
+		if ((OP == FK_INT || OP == FK_INTRZ || OP == FK_GETEXP) && !(r.high & 0x7fff))
+			cc |= 4;                               // zero
 	}
 	regs.fpsr = (regs.fpsr & 0x00ff00f8) | (cc << 24) | (inexact ? fp_status_fpsr[float_flag_inexact] : 0);
 	fpu_fpsr_cc_written = false;
@@ -1146,7 +1157,7 @@ static fpj_fn fpj_pick(int src)
 #ifdef __SIZEOF_INT128__
 	if (PREC == 0 && (OP == FK_MOVE || OP == FK_ADD || OP == FK_SUB || OP == FK_MUL || OP == FK_DIV
 		|| OP == FK_SQRT || OP == FK_ABS || OP == FK_NEG || OP == FK_CMP || OP == FK_TST || OP == FK_INT
-		|| OP == FK_INTRZ)) {
+		|| OP == FK_INTRZ || OP == FK_GETEXP || OP == FK_GETMAN)) {
 		switch (src) {
 		case FJS_FPM: return fpj_leaf<OP, FJS_FPM>;
 		case FJS_L: return fpj_leaf<OP, FJS_L>;
@@ -1215,6 +1226,8 @@ void *fp_jit_fast_helper(uae_u16 opcode, uae_u16 extra)
 	case 0x3a: return (void *)fpj_pick<FK_TST, 0>(src);
 	case 0x01: return (void *)fpj_pick<FK_INT, 0>(src);
 	case 0x03: return (void *)fpj_pick<FK_INTRZ, 0>(src);
+	case 0x1e: return (void *)fpj_pick<FK_GETEXP, 0>(src);
+	case 0x1f: return (void *)fpj_pick<FK_GETMAN, 0>(src);
 	default: break;
 	}
 #ifdef __SIZEOF_INT128__
