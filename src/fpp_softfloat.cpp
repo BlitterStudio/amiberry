@@ -1033,9 +1033,11 @@ static void *fpj_out_pick(int mode)
 	}
 }
 
-// the helper for an FMOVE to <ea> jit_fpu_generic_ok() accepted: fpj_out, or fpp_jit_generic()
+// the helper for an instruction jit_fpu_generic_ok() accepted: fpj_out for an FMOVE to <ea>, or fpp_jit_generic()
 void *fp_jit_out_helper(uae_u16 opcode, uae_u16 extra)
 {
+	if (((extra >> 13) & 7) != 3)
+		return (void *)fpp_jit_generic;  // control registers, FMOVEM
 	const int mode = (opcode >> 3) & 7;
 	switch ((extra >> 10) & 7) {
 	case 0: return fpj_out_pick<0>(mode);
