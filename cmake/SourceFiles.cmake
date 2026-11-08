@@ -54,6 +54,7 @@ set(SOURCE_FILES
         src/softfloat/softfloat.cpp
         src/softfloat/softfloat_decimal.cpp
         src/softfloat/softfloat_fpsp.cpp
+        src/softfloat/softfloat_dd.cpp
         src/framebufferboards.cpp
         src/zz9000.cpp
         src/zz9000_sdk.cpp
