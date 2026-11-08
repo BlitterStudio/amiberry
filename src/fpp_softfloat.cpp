@@ -105,12 +105,12 @@ static void fp_get_status(uae_u32 *status)
 }
 
 
-/* a = a + b, a - b or a * b inline (softfloat_fastx80.h) when that gives
+/* a = a + b, a - b, a * b, a / b or sqrt(b) inline (softfloat_fastx80.h) when that gives
  * softfloat's result: rounding to nearest at extended precision and no FPU
  * exception enabled
  * (an enabled one reads the unrounded result softfloat saves). The inexact
  * flag goes to fs as softfloat would raise it. False: use softfloat. */
-enum { FD_ADD, FD_SUB, FD_MUL };
+enum { FD_ADD, FD_SUB, FD_MUL, FD_DIV, FD_SQRT };
 #ifdef __SIZEOF_INT128__
 static inline __attribute__((always_inline)) bool fp_fast_dyadic(int op, floatx80 *a, floatx80 b)
 {
@@ -119,7 +119,14 @@ static inline __attribute__((always_inline)) bool fp_fast_dyadic(int op, floatx8
 		return false;
 	floatx80 r;
 	bool inexact;
-	if (op == FD_MUL ? !fx80_mul(*a, b, &r, &inexact) : !fx80_addsub(*a, b, op == FD_SUB, &r, &inexact))
+	bool ok;
+	switch (op) {
+	case FD_MUL: ok = fx80_mul(*a, b, &r, &inexact); break;
+	case FD_DIV: ok = fx80_div(*a, b, &r, &inexact); break;
+	case FD_SQRT: ok = fx80_sqrt(b, &r, &inexact); break;
+	default: ok = fx80_addsub(*a, b, op == FD_SUB, &r, &inexact); break;
+	}
+	if (!ok)
 		return false;
 	*a = r;
 	if (inexact)
@@ -218,8 +225,8 @@ bool fp_exact_fast_arith(fpdata *dst, const fpdata *src, uae_u16 extra)
 	case FK_ADD: r = d; if (!fp_fast_dyadic(FD_ADD, &r, s)) r = floatx80_add(d, s, &fs); break;
 	case FK_SUB: r = d; if (!fp_fast_dyadic(FD_SUB, &r, s)) r = floatx80_sub(d, s, &fs); break;
 	case FK_MUL: r = d; if (!fp_fast_dyadic(FD_MUL, &r, s)) r = floatx80_mul(d, s, &fs); break;
-	case FK_DIV: r = floatx80_div(d, s, &fs); break;
-	case FK_SQRT: r = floatx80_sqrt(s, &fs); break;
+	case FK_DIV: r = d; if (!fp_fast_dyadic(FD_DIV, &r, s)) r = floatx80_div(d, s, &fs); break;
+	case FK_SQRT: if (!fp_fast_dyadic(FD_SQRT, &r, s)) r = floatx80_sqrt(s, &fs); break;
 	case FK_ABS: r = floatx80_abs(s, &fs); break;
 	case FK_NEG: r = floatx80_neg(s, &fs); break;
 	case FK_CMP: r = floatx80_cmp(d, s, &fs); break;
@@ -602,13 +609,15 @@ static void fp_mul(fpdata *a, fpdata *b, int prec)
 static void fp_div(fpdata *a, fpdata *b, int prec)
 {
 	SETPREC
-	a->fpx = floatx80_div(a->fpx, b->fpx, &fs);
+	if (!fp_fast_dyadic(FD_DIV, &a->fpx, b->fpx))
+		a->fpx = floatx80_div(a->fpx, b->fpx, &fs);
 	RESETPREC
 }
 static void fp_sqrt(fpdata *a, fpdata *b, int prec)
 {
 	SETPREC
-	a->fpx = floatx80_sqrt(b->fpx, &fs);
+	if (!fp_fast_dyadic(FD_SQRT, &a->fpx, b->fpx))
+		a->fpx = floatx80_sqrt(b->fpx, &fs);
 	RESETPREC
 }
 
@@ -822,8 +831,8 @@ static uae_u32 REGPARAM3 fpj_arith(uae_u32 opext, uae_u64 value, uae_u8 *pc_p, u
 	case FK_ADD: r = d; if (!fp_fast_dyadic(FD_ADD, &r, s)) r = floatx80_add(d, s, &fs); break;
 	case FK_SUB: r = d; if (!fp_fast_dyadic(FD_SUB, &r, s)) r = floatx80_sub(d, s, &fs); break;
 	case FK_MUL: r = d; if (!fp_fast_dyadic(FD_MUL, &r, s)) r = floatx80_mul(d, s, &fs); break;
-	case FK_DIV: r = floatx80_div(d, s, &fs); break;
-	case FK_SQRT: r = floatx80_sqrt(s, &fs); break;
+	case FK_DIV: r = d; if (!fp_fast_dyadic(FD_DIV, &r, s)) r = floatx80_div(d, s, &fs); break;
+	case FK_SQRT: if (!fp_fast_dyadic(FD_SQRT, &r, s)) r = floatx80_sqrt(s, &fs); break;
 	case FK_ABS: r = floatx80_abs(s, &fs); break;
 	case FK_NEG: r = floatx80_neg(s, &fs); break;
 	case FK_CMP: r = floatx80_cmp(d, s, &fs); break;
@@ -892,6 +901,14 @@ static uae_u32 REGPARAM3 fpj_leaf(uae_u32 opext, uae_u64 value, uae_u8 *pc_p, ua
 		break;
 	case FK_MUL:
 		if (!fx80_mul(dstp->fpx, s, &r, &inexact))
+			return fpj_arith<OP, 0, SRC>(opext, value, pc_p, pc);
+		break;
+	case FK_DIV:
+		if (!fx80_div(dstp->fpx, s, &r, &inexact))
+			return fpj_arith<OP, 0, SRC>(opext, value, pc_p, pc);
+		break;
+	case FK_SQRT:
+		if (!fx80_sqrt(s, &r, &inexact))
 			return fpj_arith<OP, 0, SRC>(opext, value, pc_p, pc);
 		break;
 	case FK_ABS: r.high &= 0x7fff; break;
@@ -1043,8 +1060,8 @@ template <int OP, int PREC>
 static fpj_fn fpj_pick(int src)
 {
 #ifdef __SIZEOF_INT128__
-	if (PREC == 0 && (OP == FK_MOVE || OP == FK_ADD || OP == FK_SUB || OP == FK_MUL || OP == FK_ABS
-		|| OP == FK_NEG || OP == FK_CMP || OP == FK_TST)) {
+	if (PREC == 0 && (OP == FK_MOVE || OP == FK_ADD || OP == FK_SUB || OP == FK_MUL || OP == FK_DIV
+		|| OP == FK_SQRT || OP == FK_ABS || OP == FK_NEG || OP == FK_CMP || OP == FK_TST)) {
 		switch (src) {
 		case FJS_FPM: return fpj_leaf<OP, FJS_FPM>;
 		case FJS_L: return fpj_leaf<OP, FJS_L>;

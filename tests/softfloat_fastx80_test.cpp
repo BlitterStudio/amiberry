@@ -1,5 +1,5 @@
 // softfloat_fastx80.h against softfloat: for random and edge-case operands,
-// every result the fast FADD/FSUB/FMUL give must be the one softfloat gives
+// every result the fast FADD/FSUB/FMUL/FDIV/FSQRT give must be the one softfloat gives
 // at extended precision, rounding to nearest even, with the same flags
 // (inexact only); the FCMP condition codes those of floatx80_cmp(); the
 // single, double and integer conversions those of softfloat, without flags;
@@ -97,12 +97,20 @@ static void check(const char *op, floatx80 a, floatx80 b)
 		want = floatx80_add(a, b, &fs);
 	else if (op[0] == 's')
 		want = floatx80_sub(a, b, &fs);
+	else if (op[0] == 'd')
+		want = floatx80_div(a, b, &fs);
+	else if (op[0] == 'q')
+		want = floatx80_sqrt(a, &fs);
 	else
 		want = floatx80_mul(a, b, &fs);
 	floatx80 got;
 	bool inexact = false, ok;
 	if (op[0] == 'm')
 		ok = fx80_mul(a, b, &got, &inexact);
+	else if (op[0] == 'd')
+		ok = fx80_div(a, b, &got, &inexact);
+	else if (op[0] == 'q')
+		ok = fx80_sqrt(a, &got, &inexact);
 	else
 		ok = fx80_addsub(a, b, op[0] == 's', &got, &inexact);
 	total++;
@@ -265,6 +273,18 @@ static floatx80 out_operand()
 	return make(rnd() & 1, e, sig());
 }
 
+// exact squares and their neighbours: sqrt's exact and nearly exact cases
+static void check_squares()
+{
+	const uint64_t t = 0xb504f334ull + rnd() % 0x4afb0ccc;   // t^2 has its top bit set
+	const uint64_t sq = t * t;
+	for (int d = -1; d <= 1; d++)
+		for (int odd = 0; odd < 2; odd++) {
+			const floatx80 a = make(0, 0x3fff + 2 * (int32_t)(rnd() % 64) - 64 + odd, sq + d);
+			check("qsqrt", a, a);
+		}
+}
+
 int main(int argc, char **argv)
 {
 #ifndef __SIZEOF_INT128__
@@ -272,7 +292,7 @@ int main(int argc, char **argv)
 	return 77;                                     // the fast paths need a 128-bit integer type
 #else
 	const long n = argc > 1 ? atol(argv[1]) : 3000000;
-	static const char *const ops[] = {"add", "sub", "mul"};
+	static const char *const ops[] = {"add", "sub", "mul", "div", "qsqrt"};
 	for (long i = 0; i < n; i++) {
 		const floatx80 a = operand();
 		const floatx80 b = rnd() % 2 ? partner(a) : operand();
@@ -281,6 +301,7 @@ int main(int argc, char **argv)
 		check_cmp(a, b);
 		check_conversions();
 		check_out(out_operand());
+		check_squares();
 	}
 	printf("%ld checks, %ld handled by the fast path, %ld mismatches\n", total, handled, failures);
 	// the fast path must cover the common case (normal operands), not just be correct
