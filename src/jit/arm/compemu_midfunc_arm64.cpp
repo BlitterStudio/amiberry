@@ -1017,7 +1017,7 @@ static void fpx_emit_inline(fpx_fails &f, uae_u32 kind, uae_u32 opext, uae_u32 p
 	const uae_u16 opcode = opext >> 16, extra = (uae_u16)opext;
 	const int sreg = (extra >> 10) & 7, dreg = (extra >> 7) & 7;
 	enum { K_MOVE, K_ADD, K_SUB, K_MUL, K_DIV, K_SQRT, K_ABS, K_NEG, K_CMP, K_TST };   // FK_* (fpp_softfloat.cpp)
-	enum { S_FPM, S_L, S_S, S_W, S_B, S_D };                                         // FJS_*
+	enum { S_FPM, S_L, S_S, S_W, S_B, S_D, S_X };                                    // FJS_*
 
 	// FPCR: no exception enabled, extended precision, round to nearest; nothing pending
 	LDR_wXi(16, R_REGSTRUCT, FPX_OFF(fpcr));
@@ -1039,9 +1039,22 @@ static void fpx_emit_inline(fpx_fails &f, uae_u32 kind, uae_u32 opext, uae_u32 p
 	const bool zeros = op == K_MOVE || op == K_ABS || op == K_NEG || op == K_TST || op == K_CMP;
 	uae_u32 *src_zero_done = nullptr;
 	// the source in (w6, x7)
-	if (src == S_FPM) {
-		LDRH_wXi(6, R_REGSTRUCT, FPX_OFF(fp[sreg].fpx.high));
-		LDR_xXi(7, R_REGSTRUCT, FPX_OFF(fp[sreg].fpx.low));
+	if (src == S_FPM || src == S_X) {
+		if (src == S_FPM) {
+			LDRH_wXi(6, R_REGSTRUCT, FPX_OFF(fp[sreg].fpx.high));
+			LDR_xXi(7, R_REGSTRUCT, FPX_OFF(fp[sreg].fpx.low));
+		} else {                                           // .X at the address in w1, read directly (fpx_in_direct())
+			LDR_wXx(12, 1, R_MEMSTART);
+			REV_ww(12, 12);
+			LSR_wwi(6, 12, 16);
+			ADD_wwi(13, 1, 4);
+			LDR_wXx(14, 13, R_MEMSTART);
+			REV_ww(14, 14);
+			ADD_wwi(13, 1, 8);
+			LDR_wXx(15, 13, R_MEMSTART);
+			REV_ww(15, 15);
+			ORR_xxxLSLi(7, 15, 14, 32);
+		}
 		if (zeros)
 			fpx_normal_or_zero(f, 6, 7);
 		else
@@ -1325,6 +1338,12 @@ static void fpx_emit_inline(fpx_fails &f, uae_u32 kind, uae_u32 opext, uae_u32 p
  * directly (as writelong() decides at compile time), at the address in w1;
  * (An)+ and -(An) are stepped here. Every case it does not handle branches
  * to the helper call. */
+// the JIT may read a long of this instruction's memory directly (readlong())
+static bool fpx_in_direct(void)
+{
+	return !(special_mem & S_READ) && !distrust_long() && !jit_n_addr_unsafe && !currprefs.address_space_24;
+}
+
 static bool fpx_out_direct(int size)
 {
 	const int ok = size == 6 ? !distrust_byte() : size == 4 ? !distrust_word() : !distrust_long();
@@ -1555,7 +1574,7 @@ MIDFUNC(10,jitx_fpp_arith,(IMPTR fn, RR4 v1, RR4 v2, IM8 nvals, IM32 opext, IMPT
 	// inl: the instruction inline, the call only when that does not apply
 	fpx_fails fails;
 	fails.n = 0;
-	if (inl) {
+	if (inl && (((inl >> 8) & 0xf) != 6 || fpx_in_direct())) {   // .X from memory: read directly
 		const bool verify = fp_jit_inline_verify();
 		if (verify) {                                      // the state before it, for the check
 			MOV_xx(REG_PAR1, REG_PAR2);
