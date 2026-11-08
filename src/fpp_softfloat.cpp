@@ -1079,7 +1079,8 @@ uae_u32 fp_jit_inline_kind(uae_u16 opcode, uae_u16 extra)
 		case 4: src = FJS_W; break;
 		case 6: src = FJS_B; break;
 		case 5: src = FJS_D; break;
-		default: return 0;                             // .X from memory: the helper
+		case 2: src = FJS_X; break;                    // the JIT reads it if it may (fpx_in_direct())
+		default: return 0;
 		}
 	}
 	return (uae_u32)(op + 1) | (src << 8) | (fpj_fpiar_always ? 1 << 12 : 0)
