@@ -588,8 +588,9 @@ std::string host_path_utf8(const std::filesystem::path& path)
 static std::mutex mount_roots_mutex;
 static std::vector<amiberry_mount_root> mount_roots;
 
-// Entries are never removed: a stale root is still a real host path, and
-// keeping it as it is stays correct for any nname that starts with it.
+// Entries are never removed: a stale root is still a real host path, so
+// keeping it as it is stays correct for the nnames that start with it (see
+// amiberry_find_mount_root() for nested mounts).
 void my_register_mount_root(const TCHAR* root)
 {
 	if (!root || !root[0])
@@ -770,7 +771,8 @@ int host_rename(const char* from, const char* to)
 
 int host_remove(const char* path)
 {
-	return remove(path);
+	// unlink(), not remove(): the libretro core maps unlink() to its VFS.
+	return unlink(path);
 }
 
 int host_mkdir(const char* path)

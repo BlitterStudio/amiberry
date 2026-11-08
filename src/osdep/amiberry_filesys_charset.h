@@ -111,6 +111,10 @@ struct amiberry_mount_root {
 };
 
 // The longest root that starts path and ends at a path separator of it.
+// Nested mounts are ambiguous in one case: when the inner root's path below
+// the outer one is not ASCII, a folder of the outer volume whose name is the
+// Latin-1 reading of those bytes (for example "Ã©" for "é") maps to the
+// inner root. Telling them apart would need the unit with every nname.
 [[nodiscard]] inline const amiberry_mount_root* amiberry_find_mount_root(
 	const std::string_view path, const std::vector<amiberry_mount_root>& roots, const bool by_utf8) noexcept
 {
