@@ -364,6 +364,7 @@ SOURCES_CORE := $(AMIBERRY_DIR)/src/a2065.cpp \
                $(AMIBERRY_DIR)/src/softfloat/softfloat.cpp \
                $(AMIBERRY_DIR)/src/softfloat/softfloat_decimal.cpp \
                $(AMIBERRY_DIR)/src/softfloat/softfloat_fpsp.cpp \
+               $(AMIBERRY_DIR)/src/softfloat/softfloat_dd.cpp \
                $(AMIBERRY_DIR)/src/framebufferboards.cpp \
                $(AMIBERRY_DIR)/src/zz9000.cpp \
                $(AMIBERRY_DIR)/src/zz9000_sdk.cpp \
