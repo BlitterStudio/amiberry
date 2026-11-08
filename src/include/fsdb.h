@@ -219,6 +219,12 @@ int fsdb_set_file_time(a_inode* node, int days, int mins, int ticks);
 void fsdb_sync_file_time_from_host(const TCHAR* nname);
 int host_errno_to_dos_errno(int err);
 bool copyfile(const char* target, const char* source, bool replace);
+/* Directory filesystem names (nnames) are a mount root, a host path as given
+   in the configuration, followed by ISO-8859-1 Amiga names. Registering the
+   root keeps it as it is when nnames are turned into host paths. */
+void my_register_mount_root(const TCHAR* root);
+FILE* my_fopen(const TCHAR* nname, const TCHAR* mode);
+int my_remove(const TCHAR* nname);
 #endif
 
 #endif /* UAE_FSDB_H */

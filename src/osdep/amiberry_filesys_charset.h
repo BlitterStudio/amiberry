@@ -6,6 +6,38 @@
 #include <cstddef>
 #include <string>
 #include <string_view>
+#include <vector>
+
+// Whether text is well-formed UTF-8 (no overlong forms, surrogates or code
+// points past U+10FFFF).
+[[nodiscard]] inline bool amiberry_valid_utf8(const std::string_view text) noexcept
+{
+	const auto* p = reinterpret_cast<const unsigned char*>(text.data());
+	const auto* end = p + text.size();
+	while (p < end) {
+		const unsigned char c = *p++;
+		if (c < 0x80)
+			continue;
+		int extra;
+		unsigned int cp;
+		if (c >= 0xc2 && c <= 0xdf) { extra = 1; cp = c & 0x1f; }
+		else if (c >= 0xe0 && c <= 0xef) { extra = 2; cp = c & 0x0f; }
+		else if (c >= 0xf0 && c <= 0xf4) { extra = 3; cp = c & 0x07; }
+		else return false;
+		if (end - p < extra)
+			return false;
+		for (int i = 0; i < extra; i++) {
+			if ((p[i] & 0xc0) != 0x80)
+				return false;
+			cp = (cp << 6) | (p[i] & 0x3f);
+		}
+		p += extra;
+		if ((extra == 2 && (cp < 0x800 || (cp >= 0xd800 && cp <= 0xdfff)))
+			|| (extra == 3 && (cp < 0x10000 || cp > 0x10ffff)))
+			return false;
+	}
+	return true;
+}
 
 [[nodiscard]] inline std::string iso_8859_1_to_utf8(const std::string_view input) noexcept
 {
@@ -68,4 +100,61 @@ inline size_t amiberry_utf8_to_latin1(const std::string_view input, std::string&
 		i += taken;
 	}
 	return invalid;
+}
+
+// A directory filesystem name (nname) is the mount root, a host path taken
+// from the configuration, followed by Amiga names in ISO-8859-1. Only the
+// part after the root is Latin-1, so the root has to be kept as it is.
+struct amiberry_mount_root {
+	std::string native; // as it appears at the start of nnames
+	std::string utf8;   // the same path as UTF-8
+	// utf8 in the form host paths are compared in on the way back (macOS:
+	// Latin-1 letters composed, as the paths are before that comparison)
+	std::string key;
+};
+
+// The longest root that starts path and ends at a path separator of it.
+// Nested mounts are ambiguous in one case: when the inner root's path below
+// the outer one is not ASCII, a folder of the outer volume whose name is the
+// Latin-1 reading of those bytes (for example "Ã©" for "é") maps to the
+// inner root. Telling them apart would need the unit with every nname.
+[[nodiscard]] inline const amiberry_mount_root* amiberry_find_mount_root(
+	const std::string_view path, const std::vector<amiberry_mount_root>& roots, const bool by_key) noexcept
+{
+	const amiberry_mount_root* best = nullptr;
+	for (const auto& root : roots) {
+		const std::string& prefix = by_key ? root.key : root.native;
+		if (prefix.empty() || path.size() < prefix.size() || path.compare(0, prefix.size(), prefix) != 0)
+			continue;
+		const bool boundary = path.size() == prefix.size()
+			|| prefix.back() == '/' || prefix.back() == '\\'
+			|| path[prefix.size()] == '/' || path[prefix.size()] == '\\';
+		if (boundary && (!best || prefix.size() > (by_key ? best->key : best->native).size()))
+			best = &root;
+	}
+	return best;
+}
+
+// The UTF-8 host path for an nname.
+[[nodiscard]] inline std::string amiberry_nname_to_host(
+	const std::string_view nname, const std::vector<amiberry_mount_root>& roots)
+{
+	const amiberry_mount_root* root = amiberry_find_mount_root(nname, roots, false);
+	if (!root)
+		return iso_8859_1_to_utf8(nname);
+	return root->utf8 + iso_8859_1_to_utf8(nname.substr(root->native.size()));
+}
+
+// The nname for a UTF-8 host path, given in the same form as the roots' keys.
+// Returns false when a name below the root has characters outside Latin-1
+// ('?' stands in for each of them).
+[[nodiscard]] inline bool amiberry_host_to_nname(
+	const std::string_view host, const std::vector<amiberry_mount_root>& roots, std::string& nname)
+{
+	const amiberry_mount_root* root = amiberry_find_mount_root(host, roots, true);
+	const std::string_view tail = root ? host.substr(root->key.size()) : host;
+	std::string latin1;
+	const size_t invalid = amiberry_utf8_to_latin1(tail, latin1);
+	nname = root ? root->native + latin1 : latin1;
+	return invalid == 0;
 }

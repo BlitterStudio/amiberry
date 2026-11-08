@@ -461,7 +461,7 @@ std::string prefix_with_data_path(const std::string& filename)
 
 	try {
 		// Use std::filesystem for path handling
-		const auto output = iso_8859_1_to_utf8(std::string_view(name));
+		const auto output = nname_to_host(name);
 		const fs::path filepath = host_path(output);
 
 		// Get current file status
@@ -523,7 +523,7 @@ std::string prefix_with_data_path(const std::string& filename)
 		}
 
 		// Use filesystem for better path handling
-		const auto output = iso_8859_1_to_utf8(std::string_view(name));
+		const auto output = nname_to_host(name);
 		const fs::path filepath = host_path(output);
 
 		// Get file status using std::filesystem
@@ -583,6 +583,71 @@ std::string host_path_utf8(const std::filesystem::path& path)
 {
 	const auto text = path.u8string();
 	return std::string(text.begin(), text.end());
+}
+
+static std::mutex mount_roots_mutex;
+static std::vector<amiberry_mount_root> mount_roots;
+
+// Entries are never removed: a stale root is still a real host path, so
+// keeping it as it is stays correct for the nnames that start with it (see
+// amiberry_find_mount_root() for nested mounts).
+void my_register_mount_root(const TCHAR* root)
+{
+	if (!root || !root[0])
+		return;
+	amiberry_mount_root entry{ root, root, {} };
+#ifdef _WIN32
+	// Paths from the GUI's file dialogs are UTF-8, paths typed into older
+	// builds' configurations may be in the ANSI code page.
+	if (!amiberry_valid_utf8(entry.native)) {
+		const int wide_length = MultiByteToWideChar(CP_ACP, 0, root, -1, nullptr, 0);
+		std::wstring wide(wide_length > 0 ? static_cast<size_t>(wide_length) : 1, L'\0');
+		MultiByteToWideChar(CP_ACP, 0, root, -1, wide.data(), wide_length);
+		const int length = WideCharToMultiByte(CP_UTF8, 0, wide.c_str(), -1, nullptr, 0, nullptr, nullptr);
+		entry.utf8.assign(length > 0 ? static_cast<size_t>(length) : 1, '\0');
+		WideCharToMultiByte(CP_UTF8, 0, wide.c_str(), -1, entry.utf8.data(), length, nullptr, nullptr);
+		entry.utf8.resize(entry.utf8.size() - 1);
+	}
+#endif
+#ifdef __APPLE__
+	entry.key = normalize_nfd_for_latin1(entry.utf8);
+#else
+	entry.key = entry.utf8;
+#endif
+	const std::lock_guard<std::mutex> lock(mount_roots_mutex);
+	for (const auto& known : mount_roots) {
+		if (known.native == entry.native)
+			return;
+	}
+	mount_roots.push_back(std::move(entry));
+}
+
+std::string nname_to_host(const std::string_view nname)
+{
+	const std::lock_guard<std::mutex> lock(mount_roots_mutex);
+	return amiberry_nname_to_host(nname, mount_roots);
+}
+
+bool host_to_nname(const std::string_view host, std::string& nname)
+{
+#ifdef __APPLE__
+	const std::string composed = normalize_nfd_for_latin1(host);
+	const std::string_view text = composed;
+#else
+	const std::string_view text = host;
+#endif
+	const std::lock_guard<std::mutex> lock(mount_roots_mutex);
+	return amiberry_host_to_nname(text, mount_roots, nname);
+}
+
+FILE* my_fopen(const TCHAR* nname, const TCHAR* mode)
+{
+	return host_fopen(nname_to_host(nname).c_str(), mode);
+}
+
+int my_remove(const TCHAR* nname)
+{
+	return host_remove(nname_to_host(nname).c_str());
 }
 
 #if defined(_WIN32) && !defined(LIBRETRO)
@@ -711,7 +776,8 @@ int host_rename(const char* from, const char* to)
 
 int host_remove(const char* path)
 {
-	return remove(path);
+	// unlink(), not remove(): the libretro core maps unlink() to its VFS.
+	return unlink(path);
 }
 
 int host_mkdir(const char* path)
@@ -774,7 +840,7 @@ struct my_opendir_s* my_opendir(const TCHAR* name, const TCHAR* mask)
 		return nullptr;
 	}
 
-	const auto output = iso_8859_1_to_utf8(std::string(name));
+	const auto output = nname_to_host(name);
 	if (!mod->dir.open(output.c_str())) {
 		write_log("my_opendir: opendir on directory %s failed\n", name);
 		return nullptr;
@@ -867,7 +933,7 @@ bool my_existsfile2(const char* name)
 bool my_existsfiledir(const char *name)
 {
 	if (!name) return false;
-	const auto output = iso_8859_1_to_utf8(std::string(name));
+	const auto output = nname_to_host(name);
 	STAT st;
 	if (host_stat(output.c_str(), &st) == 0)
 		return true;
@@ -881,7 +947,7 @@ bool my_existsfiledir(const char *name)
 bool my_existsfile(const char* name)
 {
 	if (!name) return false;
-	const auto output = iso_8859_1_to_utf8(string(name));
+	const auto output = nname_to_host(name);
 	const fs::path path = host_path(output);
 	return fs::exists(path) && fs::is_regular_file(path);
 }
@@ -889,7 +955,7 @@ bool my_existsfile(const char* name)
 bool my_existsdir(const char* name)
 {
 	if (!name) return false;
-	const auto output = iso_8859_1_to_utf8(string(name));
+	const auto output = nname_to_host(name);
 	const fs::path path = host_path(output);
 	return fs::exists(path) && fs::is_directory(path);
 }
@@ -918,7 +984,13 @@ int my_getvolumeinfo(const char* root)
 	}
 
 	STAT st{};
+	// lstat() on POSIX so a symlinked root is not followed, as before; the
+	// Windows narrow call would read a UTF-8 root in the ANSI code page.
+#if defined(_WIN32)
+	if (host_stat(nname_to_host(root).c_str(), &st) != 0) {
+#else
 	if (lstat(root, &st) != 0) {
+#endif
 		write_log("my_getvolumeinfo: lstat on file %s failed: %s\n", root, strerror(errno));
 		return -1;
 	}
@@ -938,7 +1010,7 @@ bool fs_path_exists(const std::string& s)
 		return false;
 	}
 
-	const auto output = iso_8859_1_to_utf8(s);
+	const auto output = nname_to_host(s);
 	STAT buffer{};
 	return host_stat(output.c_str(), &buffer) == 0;
 }
@@ -956,7 +1028,7 @@ struct my_openfile_s* my_open(const TCHAR* name, int flags)
 		return nullptr;
 	}
 
-	const auto output = iso_8859_1_to_utf8(std::string(name));
+	const auto output = nname_to_host(name);
 	mos->fd = host_open(output.c_str(), flags, 0660);
 
 	if (mos->fd == -1) {
@@ -1096,7 +1168,7 @@ void my_set_time_explicit(struct my_openfile_s* mos) noexcept
 
 	try {
 		// Convert input path to UTF-8 for filesystem operations
-		const auto utf8_path = iso_8859_1_to_utf8(std::string_view(path));
+		const auto utf8_path = nname_to_host(path);
 
 		// Check if directory already exists to provide better error reporting
 		std::error_code ec;
@@ -1149,7 +1221,7 @@ void my_set_time_explicit(struct my_openfile_s* mos) noexcept
 
 	try {
 		// Convert path to UTF-8 for filesystem operations
-		const auto utf8_path = iso_8859_1_to_utf8(std::string_view(name));
+		const auto utf8_path = nname_to_host(name);
 
 		// Check if file exists and is writable
 		std::error_code ec;
@@ -1212,7 +1284,7 @@ void my_set_time_explicit(struct my_openfile_s* mos) noexcept
 
 	try {
 		// Create filesystem path and handle path concatenation properly
-		fs::path filepath = host_path(iso_8859_1_to_utf8(std::string_view(path)));
+		fs::path filepath = host_path(nname_to_host(path));
 		if (filepath.empty()) {
 			write_log("remove_extra_file: empty path provided\n");
 			return false;
@@ -1299,7 +1371,7 @@ void my_set_time_explicit(struct my_openfile_s* mos) noexcept
 
 	try {
 		// Convert to filesystem path and validate
-		const auto utf8_path = iso_8859_1_to_utf8(std::string_view(path));
+		const auto utf8_path = nname_to_host(path);
 		const fs::path filepath = host_path(utf8_path);
 
 		if (filepath.empty()) {
@@ -1379,7 +1451,7 @@ void my_set_time_explicit(struct my_openfile_s* mos) noexcept
 
 	try {
 		// Convert path to UTF-8 and create filesystem path
-		const auto utf8_path = iso_8859_1_to_utf8(std::string_view(path));
+		const auto utf8_path = nname_to_host(path);
 		const fs::path dirpath = host_path(utf8_path);
 
 		// Validate path
@@ -1453,7 +1525,7 @@ void my_set_time_explicit(struct my_openfile_s* mos) noexcept
 
 	try {
 		// Convert to filesystem path and validate
-		const auto utf8_path = iso_8859_1_to_utf8(std::string_view(path));
+		const auto utf8_path = nname_to_host(path);
 		const fs::path filepath = host_path(utf8_path);
 
 		if (filepath.empty()) {
@@ -1525,8 +1597,8 @@ void my_set_time_explicit(struct my_openfile_s* mos) noexcept
 
 	try {
 		// Convert paths to UTF-8 format
-		const auto old_output = iso_8859_1_to_utf8(std::string_view(oldname));
-		const auto new_output = iso_8859_1_to_utf8(std::string_view(newname));
+		const auto old_output = nname_to_host(oldname);
+		const auto new_output = nname_to_host(newname);
 
 		// Check if paths are valid after conversion
 		if (old_output.empty() || new_output.empty()) {
@@ -1913,7 +1985,7 @@ void my_set_time_explicit(struct my_openfile_s* mos) noexcept
 
 	try {
 		// Convert path to UTF-8 using string_view for efficiency
-		const auto utf8_path = iso_8859_1_to_utf8(std::string_view(name));
+		const auto utf8_path = nname_to_host(name);
 		if (utf8_path.empty()) {
 			write_log("my_opentext: path conversion failed for '%s'\n", name);
 			return nullptr;
@@ -1983,7 +2055,7 @@ bool my_createshortcut(const char* source, const char* target, const char* descr
 
 	try {
 		// Convert path to UTF-8 using string_view for efficiency
-		const auto utf8_path = iso_8859_1_to_utf8(std::string_view(linkfile));
+		const auto utf8_path = nname_to_host(linkfile);
 		if (utf8_path.empty()) {
 			write_log("my_resolvesoftlink: path conversion failed for '%s'\n", linkfile);
 			return false;
@@ -2028,7 +2100,7 @@ bool my_createshortcut(const char* source, const char* target, const char* descr
 
 		// Convert target path back to Latin1
 		std::string target_latin1;
-		if (!utf8_to_latin1_string(host_path_utf8(target_path), target_latin1)) {
+		if (!host_to_nname(host_path_utf8(target_path), target_latin1)) {
 			write_log("my_resolvesoftlink: character conversion failed for target path\n");
 			return false;
 		}
@@ -2232,8 +2304,8 @@ bool copyfile(const char* target, const char* source, const bool replace)
 
     try {
         // Convert paths to UTF-8 for filesystem operations
-        const auto source_path = iso_8859_1_to_utf8(std::string_view(source));
-        const auto target_path = iso_8859_1_to_utf8(std::string_view(target));
+        const auto source_path = nname_to_host(source);
+        const auto target_path = nname_to_host(target);
 
         const fs::path src_fs = host_path(source_path);
         const fs::path dst_fs = host_path(target_path);
@@ -2318,7 +2390,7 @@ std::string my_get_sha1_of_file(const char* filepath)
 
     try {
         // Convert path to UTF-8 for filesystem operations
-        const auto utf8_path = iso_8859_1_to_utf8(std::string_view(filepath));
+        const auto utf8_path = nname_to_host(filepath);
 
         // Check file existence before attempting operations
         std::error_code ec;
