@@ -953,6 +953,7 @@ extern void (*flush_icache)(int);
 extern void compemu_reset(void);
 // End the running compiled code at its next block end (after a handled fault).
 extern void jit_end_dispatch(void);
+extern void set_cache_state(int enabled);
 #else
 #define flush_icache(int) do {} while (0)
 #define flush_icache_hard(int) do {} while (0)
