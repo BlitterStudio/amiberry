@@ -43,10 +43,6 @@ namespace zz9000_sdk {
 namespace {
 
 constexpr uint32_t abi_magic = 0x5a5a394b;
-constexpr uint32_t request_offset = 128;
-constexpr uint32_t completion_offset = request_offset + 64 * 64;
-constexpr uint32_t ring_entries = 64;
-constexpr uint32_t entry_size = 64;
 constexpr uint32_t base_capabilities = (1u << 0) | (1u << 2) | (1u << 3) |
 	(1u << 4) | (1u << 5) | (1u << 6) | (1u << 10) | (1u << 13) |
 	(1u << 14) | (1u << 15);
@@ -242,7 +238,9 @@ Engine::Engine(uint8_t *board_memory, uint32_t board_size)
 }
 
 Engine::Engine(uint8_t *io_memory, uint8_t *vram_memory, uint32_t board_size)
-	: io_memory_(io_memory), vram_memory_(vram_memory), board_size_(board_size)
+	: io_memory_(io_memory), vram_memory_(vram_memory), board_size_(board_size),
+	  mailbox_offset_(board_size == 0x08000000 ? z3_mailbox_offset : z2_mailbox_offset),
+	  ring_entries_(board_size == 0x08000000 ? z3_mailbox_entries : z2_mailbox_entries)
 {
 	reset();
 }
@@ -287,16 +285,16 @@ void Engine::reset()
 	overlay_ = {};
 	aperture_acked_ = false;
 	last_status_ = ok;
-	auto *mb = memory_at(mailbox_offset);
-	std::memset(mb, 0, mailbox_size);
+	auto *mb = memory_at(mailbox_offset_);
+	std::memset(mb, 0, mailbox_descriptor_size + 2 * ring_entries_ * mailbox_entry_size);
 	put32(mb + 0, abi_magic);
 	put16(mb + 4, 2);
 	put16(mb + 6, 0);
-	put32(mb + 8, 128);
-	put32(mb + 12, request_offset);
-	put32(mb + 16, ring_entries);
-	put32(mb + 28, completion_offset);
-	put32(mb + 32, ring_entries);
+	put32(mb + 8, mailbox_descriptor_size);
+	put32(mb + 12, mailbox_descriptor_size);
+	put32(mb + 16, ring_entries_);
+	put32(mb + 28, mailbox_descriptor_size + ring_entries_ * mailbox_entry_size);
+	put32(mb + 32, ring_entries_);
 	put32(mb + 44, supported_capabilities());
 }
 
@@ -305,8 +303,8 @@ uint16_t Engine::read_register(uint32_t offset) const
 	switch (offset) {
 		case 0x100: return 0x5a39;
 		case 0x102: return 0x0200;
-		case 0x104: return mailbox_arm_address >> 16;
-		case 0x106: return mailbox_arm_address & 0xffff;
+		case 0x104: return (mailbox_offset_ - memory_base + arm_memory_start) >> 16;
+		case 0x106: return (mailbox_offset_ - memory_base + arm_memory_start) & 0xffff;
 		case 0x10a: return last_status_;
 		case 0x11c: return board_size_ == 0x00400000 ? 0x5a02 : 0;
 		case 0x11e: return board_size_ == 0x00400000 ? 0x0704 : 0;
@@ -320,7 +318,7 @@ bool Engine::write_register(uint32_t offset, uint16_t value)
 		return poll();
 	if (offset == 0x11e && board_size_ == 0x00400000 && value == 0xa502) {
 		aperture_acked_ = true;
-		put32(memory_at(mailbox_offset) + 44, supported_capabilities());
+		put32(memory_at(mailbox_offset_) + 44, supported_capabilities());
 		return false;
 	}
 	// Completion IRQ is deliberately unadvertised: SDK clients poll the ring.
@@ -1450,8 +1448,8 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 		put32(reply + 16, buffers_.size());
 		put32(reply + 20, 0);
 		put32(reply + 24, 0);
-		put32(reply + 28, ring_entries);
-		put32(reply + 32, ring_entries);
+		put32(reply + 28, ring_entries_);
+		put32(reply + 32, ring_entries_);
 		put32(reply + 36, board_size_ == 0x00400000 ?
 			(aperture_acked_ ? 0x4000 : host_window_end - host_window_begin) : 0);
 		*reply_length = 48;
@@ -2525,24 +2523,25 @@ bool Engine::poll()
 {
 	bool dirty = false;
 	pump_audio();
-	auto *mb = memory_at(mailbox_offset);
+	auto *mb = memory_at(mailbox_offset_);
 	uint32_t head = be32(mb + 20);
 	const uint32_t tail = be32(mb + 24);
 	uint32_t completion_tail = be32(mb + 40);
 	const uint32_t completion_head = be32(mb + 36);
-	if (head >= ring_entries || tail >= ring_entries ||
-		completion_tail >= ring_entries || completion_head >= ring_entries) {
+	if (head >= ring_entries_ || tail >= ring_entries_ ||
+		completion_tail >= ring_entries_ || completion_head >= ring_entries_) {
 		last_status_ = bad_request;
 		return false;
 	}
 	while (head != tail) {
-		const uint32_t next_completion = (completion_tail + 1) % ring_entries;
+		const uint32_t next_completion = (completion_tail + 1) % ring_entries_;
 		if (next_completion == completion_head) {
 			last_status_ = busy;
 			break;
 		}
-		const uint8_t *request = mb + request_offset + head * entry_size;
-		uint8_t *reply = mb + completion_offset + completion_tail * entry_size;
+		const uint8_t *request = mb + mailbox_descriptor_size + head * mailbox_entry_size;
+		uint8_t *reply = mb + mailbox_descriptor_size +
+			(ring_entries_ + completion_tail) * mailbox_entry_size;
 		uint8_t payload[48] = {};
 		uint16_t payload_length = 0;
 		const uint16_t opcode = be16(request + 4);
@@ -2570,7 +2569,7 @@ bool Engine::poll()
 		if (last_status_ == ok && (surface_framebuffer_write ||
 		    image_framebuffer_write || image_overlay_write || opcode == 0x0b08))
 			dirty = true;
-		std::memset(reply, 0, entry_size);
+		std::memset(reply, 0, mailbox_entry_size);
 		std::memcpy(reply, request, 4); // request id
 		put16(reply + 4, opcode);
 		put16(reply + 6, last_status_);
@@ -2578,7 +2577,7 @@ bool Engine::poll()
 		put16(reply + 10, payload_length);
 		std::memcpy(reply + 12, request + 12, 4); // cookie
 		std::memcpy(reply + 16, payload, payload_length);
-		head = (head + 1) % ring_entries;
+		head = (head + 1) % ring_entries_;
 		completion_tail = next_completion;
 		put32(mb + 20, head);
 		put32(mb + 40, completion_tail);

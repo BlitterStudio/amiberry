@@ -1,4 +1,5 @@
 #include "zz9000_sdk.h"
+#include "zz9000_sdk_test_mailbox.h"
 
 #include <cassert>
 #include <cstdio>
@@ -47,16 +48,19 @@ void reseal_ogg_page(std::vector<uint8_t> &bytes, size_t offset)
 struct Mailbox {
 	std::vector<uint8_t> board;
 	zz9000_sdk::Engine sdk;
+	uint8_t *mb;
+	uint32_t entries;
 	uint32_t request_id = 0;
 	uint32_t completion_head = 0;
 
-	explicit Mailbox(uint32_t size) : board(size), sdk(board.data(), size) {}
+	explicit Mailbox(uint32_t size)
+		: board(size), sdk(board.data(), size),
+		  mb(zz9000_test_mailbox(sdk, board.data())), entries(get32(mb + 16)) {}
 
 	const uint8_t *call(uint16_t opcode, const uint8_t *payload, uint16_t length,
 	                    uint16_t expected_status = 0) {
-		auto *mb = board.data() + zz9000_sdk::mailbox_offset;
 		const uint32_t tail = get32(mb + 24);
-		uint8_t *request = mb + 128 + tail * 64;
+		uint8_t *request = mb + get32(mb + 12) + tail * 64;
 		for (int i = 0; i < 64; ++i)
 			request[i] = 0;
 		put32(request, ++request_id);
@@ -64,16 +68,16 @@ struct Mailbox {
 		put16(request + 10, length);
 		for (uint16_t i = 0; i < length && i < 48; ++i)
 			request[16 + i] = payload[i];
-		put32(mb + 24, (tail + 1) % 64);
+		put32(mb + 24, (tail + 1) % entries);
 		sdk.poll();
-		const auto *reply = mb + 128 + 64 * 64 + completion_head * 64;
+		const auto *reply = mb + get32(mb + 28) + completion_head * 64;
 		assert(get32(reply) == request_id);
 		assert(get16(reply + 4) == opcode);
 		if (get16(reply + 6) != expected_status)
 			fprintf(stderr, "status mismatch: opcode=0x%04x expected=%u got=%u\n",
 				opcode, expected_status, get16(reply + 6));
 		assert(get16(reply + 6) == expected_status);
-		completion_head = (completion_head + 1) % 64;
+		completion_head = (completion_head + 1) % entries;
 		put32(mb + 36, completion_head);
 		return reply;
 	}
@@ -111,14 +115,16 @@ const uint8_t *begin_audio_ex(Mailbox &mailbox, uint32_t codec, uint32_t input,
 int main(int argc, char **argv)
 {
 	Mailbox z2(4 * 1024 * 1024);
-	auto *mb = z2.board.data() + zz9000_sdk::mailbox_offset;
+	auto *mb = z2.mb;
 	assert(z2.sdk.read_register(0x100) == 0x5a39);
-	const uint32_t advertised_mailbox =
-		(static_cast<uint32_t>(z2.sdk.read_register(0x104)) << 16) |
-		z2.sdk.read_register(0x106);
-	assert(advertised_mailbox == 0x3fe40000u +
-	       (zz9000_sdk::mailbox_offset - 0xa000u));
+	// The firmware's Zorro II placement: 22-entry rings ending at the audio
+	// scratch base, ARM 0x005df480. The 64 KiB host window stops below it.
+	assert(zz9000_test_mailbox_arm(z2.sdk) == 0x005df480);
 	assert(get32(mb) == 0x5a5a394b);
+	assert(get32(mb + 12) == 128 && get32(mb + 16) == 22);
+	assert(get32(mb + 28) == 128 + 22 * 64 && get32(mb + 32) == 22);
+	assert(zz9000_test_arm_to_board(zz9000_test_mailbox_arm(z2.sdk)) +
+	       128 + 2 * 22 * 64 == 0x3f0000);
 	uint32_t expected_caps = (1u << 0) | (1u << 2) | (1u << 3) |
 		(1u << 4) | (1u << 5) | (1u << 6) | (1u << 10) |
 		(1u << 13) | (1u << 14) | (1u << 15);
@@ -132,7 +138,7 @@ int main(int argc, char **argv)
 	{
 		Mailbox doorbell(4 * 1024 * 1024);
 		doorbell.sdk.set_framebuffer(0x110000, 2, 2, 8, 7);
-		auto *ring = doorbell.board.data() + zz9000_sdk::mailbox_offset;
+		auto *ring = doorbell.mb;
 		auto *request = ring + 128;
 		put32(request, 1);
 		put16(request + 4, 0x0203); // Fill the visible framebuffer.
@@ -146,7 +152,7 @@ int main(int argc, char **argv)
 		assert(get32(ring + 20) == 0);
 		assert(doorbell.sdk.write_register(0x108, 1));
 		assert(get32(ring + 20) == 1);
-		assert(get16(ring + 128 + 64 * 64 + 6) == 0);
+		assert(get16(ring + get32(ring + 28) + 6) == 0);
 		assert(doorbell.board[0x110002] == 0xff);
 		assert(!doorbell.sdk.poll()); // The doorbell consumed the request.
 		request += 64;
@@ -160,7 +166,9 @@ int main(int argc, char **argv)
 		std::vector<uint8_t> io(0x10000);
 		std::vector<uint8_t> vram(4 * 1024 * 1024 - 0x10000);
 		zz9000_sdk::Engine split_memory(io.data(), vram.data(), 4 * 1024 * 1024);
-		auto *ring = io.data() + zz9000_sdk::mailbox_offset;
+		// The mailbox lives in card memory, not in the register aperture.
+		auto *ring = vram.data() + zz9000_test_arm_to_board(
+			zz9000_test_mailbox_arm(split_memory)) - 0x10000;
 		assert(get32(ring) == 0x5a5a394b);
 		split_memory.set_framebuffer(0x110000, 2, 2, 8, 7);
 		auto *request = ring + 128;
@@ -178,16 +186,19 @@ int main(int argc, char **argv)
 	uint8_t payload[48] = {};
 	const auto *reply = z2.call(0x0001, nullptr, 0);
 	assert(get32(reply + 16) == 0x5a5a394b);
-	assert(get32(reply + 52) == 0x10000);
-	put32(payload, 65536);
+	assert(get32(reply + 44) == 22 && get32(reply + 48) == 22);
+	assert(get32(reply + 52) == 0xf480);
+	put32(payload, 0xf480);
 	put32(payload + 4, 16);
 	put32(payload + 8, 1);
 	reply = z2.call(0x0100, payload, 12);
 	const uint32_t staging = get32(reply + 16);
 	assert(staging != 0);
 	assert(get32(reply + 20) == 0x005d0000);
-	assert(z2.sdk.buffer_length(staging) == 65536);
+	assert(z2.sdk.buffer_length(staging) == 0xf480);
 	assert(z2.sdk.buffer_data(staging) == z2.board.data() + 0x3e0000);
+	put32(payload, 0xf490);
+	z2.call(0x0100, payload, 12, 4); // past the window: it would overlap the mailbox
 	put32(payload, staging);
 	z2.call(0x0101, payload, 4);
 	assert(z2.sdk.buffer_data(staging) == nullptr);
@@ -210,6 +221,8 @@ int main(int argc, char **argv)
 	assert(get32(mb + 20) == 0 && get32(mb + 40) == 0);
 	assert(z2.sdk.buffer_data(staging) == nullptr);
 	Mailbox z3(128 * 1024 * 1024);
+	// SDK_MAILBOX_Z3_ADDRESS with 64-entry rings, above the SDK heap.
+	assert(zz9000_test_mailbox_arm(z3.sdk) == 0x08100000 && z3.entries == 64);
 	put32(payload, 256 * 1024);
 	put32(payload + 4, 16);
 	put32(payload + 8, 0);

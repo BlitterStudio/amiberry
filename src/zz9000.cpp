@@ -233,6 +233,7 @@ struct zz9000_state {
 	int height;
 	uae_u32 pan_offset;
 	uae_u32 pan_width;
+	uae_u32 pan_hi; // PAN_HI half staged for the PAN_LO write that applies it
 	uae_u32 split_offset;
 	int split_position;
 
@@ -1948,10 +1949,14 @@ static void zz_write_register(zz9000_state *data, uae_u32 offset, uae_u16 value)
 				(static_cast<uae_u32>(zz_bswap16(value)) << 16);
 			break;
 		case ZZ_REG_PAN_HI:
-			data->pan_offset = (data->pan_offset & 0xffff) | (static_cast<uae_u32>(value) << 16);
+			data->pan_hi = static_cast<uae_u32>(value) << 16;
 			break;
 		case ZZ_REG_PAN_LO: {
-			const uae_u32 base = (data->pan_offset & 0xffff0000) | value;
+			const uae_u32 base = data->pan_hi | value;
+			// SetSwitch(native) still writes the old fixed capture area. As in
+			// firmware 2.9, ignore it so the RTG pan survives the switch.
+			if (base == 0x00e00000 || base == 0x00dff2f8)
+				break;
 			zz_set_pan(data, base, static_cast<int16_t>(data->x[0]),
 				static_cast<int16_t>(data->y[0]), data->x[1], data->blit_color_mode);
 			data->sprite_x_offset = static_cast<int16_t>(data->x[0]);
@@ -2180,13 +2185,15 @@ static uae_u16 zz_read_register(zz9000_state *data, uae_u32 offset)
 		return data->sdk->read_register(offset >= 0x1000 ? offset - 0x1000 : offset);
 	switch (offset) {
 		case ZZ_REG_FW_VERSION:
-			return 0x0208;
+			/* ZZ9000.card 2.14 (2.9.1 kit) refuses firmware below 2.9.
+			 * The 2.9 drivers gate nothing else on the version. */
+			return 0x0209;
 		case ZZ_REG_FW_CAPABILITIES:
-			/* No 2.8-only capability bits: custom P96 modelines, Z2
-			 * aperture negotiation and the VCAP centered-1080p /
-			 * live-calibration stack are not emulated, so a 2.8
-			 * card driver stays on the legacy paths this
-			 * emulation backs. */
+			/* No capability bits: custom P96 modelines, Z2 aperture
+			 * negotiation, the VCAP centered-1080p / live-calibration
+			 * stack and firmware modules are not emulated, so the card
+			 * driver and ZZTop stay on the legacy paths this emulation
+			 * backs. */
 			return 0;
 		case ZZ_REG_ETH_TX:
 			return data->net ? data->net->tx_status : 1;
@@ -2261,9 +2268,6 @@ static uae_u32 REGPARAM2 zz9000_wget(uaecptr addr)
 	if (!data || !data->memory)
 		return 0;
 	const uae_u32 offset = addr - data->configured;
-	if (data->sdk && offset >= zz9000_sdk::mailbox_offset &&
-	    offset + 1 < zz9000_sdk::mailbox_offset + zz9000_sdk::mailbox_size)
-		return (data->io_memory[offset] << 8) | data->io_memory[offset + 1];
 	if (data->net && offset >= ZZ_NET_RX_WINDOW && offset + 1 < 0x6000)
 		return (data->net->rx.read(offset - ZZ_NET_RX_WINDOW) << 8) |
 			data->net->rx.read(offset + 1 - ZZ_NET_RX_WINDOW);
@@ -2285,9 +2289,6 @@ static uae_u32 REGPARAM2 zz9000_bget(uaecptr addr)
 	if (!data || !data->memory)
 		return 0;
 	const uae_u32 offset = addr - data->configured;
-	if (data->sdk && offset >= zz9000_sdk::mailbox_offset &&
-	    offset < zz9000_sdk::mailbox_offset + zz9000_sdk::mailbox_size)
-		return data->io_memory[offset];
 	if (data->net && offset >= ZZ_NET_RX_WINDOW && offset < 0x6000)
 		return data->net->rx.read(offset - ZZ_NET_RX_WINDOW);
 	if (data->net && offset >= ZZ_NET_TX_WINDOW && offset < ZZ_NET_TX_WINDOW + ZZ_NET_WINDOW_BYTES)
@@ -2309,12 +2310,6 @@ static void REGPARAM2 zz9000_wput(uaecptr addr, uae_u32 value)
 	if (!data || !data->memory)
 		return;
 	const uae_u32 offset = addr - data->configured;
-	if (data->sdk && offset >= zz9000_sdk::mailbox_offset &&
-	    offset + 1 < zz9000_sdk::mailbox_offset + zz9000_sdk::mailbox_size) {
-		data->io_memory[offset] = static_cast<uae_u8>(value >> 8);
-		data->io_memory[offset + 1] = static_cast<uae_u8>(value);
-		return;
-	}
 	if (offset >= ZZ_NET_RX_WINDOW && offset < 0x6000)
 		return;
 	if (data->net && offset >= ZZ_NET_TX_WINDOW && offset + 1 < ZZ_NET_TX_WINDOW + ZZ_NET_WINDOW_BYTES) {
@@ -2339,11 +2334,6 @@ static void REGPARAM2 zz9000_bput(uaecptr addr, uae_u32 value)
 	if (!data || !data->memory)
 		return;
 	const uae_u32 offset = addr - data->configured;
-	if (data->sdk && offset >= zz9000_sdk::mailbox_offset &&
-	    offset < zz9000_sdk::mailbox_offset + zz9000_sdk::mailbox_size) {
-		data->io_memory[offset] = static_cast<uae_u8>(value);
-		return;
-	}
 	if (offset >= ZZ_NET_RX_WINDOW && offset < 0x6000)
 		return;
 	if (data->net && offset >= ZZ_NET_TX_WINDOW && offset < ZZ_NET_TX_WINDOW + ZZ_NET_WINDOW_BYTES) {

@@ -12,10 +12,6 @@
 
 namespace zz9000_sdk {
 
-constexpr uint32_t mailbox_offset = 0xd000;
-constexpr uint32_t mailbox_size = 128 + 2 * 64 * 64;
-constexpr uint32_t mailbox_arm_address = 0x3fe43000;
-
 class ConsoleEncoder;
 
 class Engine {
@@ -72,6 +68,10 @@ private:
 	uint8_t *io_memory_;
 	uint8_t *vram_memory_;
 	uint32_t board_size_;
+	// Board offset and ring length of the mailbox; see the placement
+	// constants in zz9000_sdk_internal.h.
+	uint32_t mailbox_offset_;
+	uint32_t ring_entries_;
 	bool aperture_acked_ = false;
 	std::array<Buffer, 16> buffers_{};
 	uint32_t next_handle_ = 1;
