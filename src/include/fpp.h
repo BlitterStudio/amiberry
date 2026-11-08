@@ -25,6 +25,7 @@ extern void fp_init_softfloat(int);
 // softfloat with the fast double-double exponential functions (the exact FPU core)
 extern void fp_init_softfloat_exact(int);
 // the softfloat cores' fast path for the common arithmetic instructions (fpp_softfloat.cpp)
+extern bool fp_exact_fast_arith(fpdata *dst, const fpdata *src, uae_u16 extra);
 extern void fpsr_set_exception(uae_u32 exception);
 extern void fpu_modechange(void);
 extern void fpu_clearstatus(void);

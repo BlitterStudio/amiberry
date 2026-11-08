@@ -103,6 +103,117 @@ static void fp_get_status(uae_u32 *status)
 	*status |= fp_status_bits[fs.float_exception_flags];
 }
 
+
+/* ---- the exact core's fast path for the common arithmetic instructions,
+ * when no FPU exception is enabled: dst = op(dst, src) in place, and the
+ * FPSR CC, exception and accrued bytes set as fpp.cpp's generic path does
+ * (fpsr_set_result_all() and fpsr_make_status()). The caller cleared the
+ * exception flags before converting src. False: not one of these (nothing
+ * done). */
+static uae_u32 fp_status_fpsr[256]; // exception byte and its accrued bits per flags value
+
+static void fp_init_status_fpsr(void)
+{
+	for (int f = 0; f < 256; f++) {
+		uae_u32 s = fp_status_bits[f];
+		if (s & FPSR_OVFL)
+			s |= 0x40;                     // AE OVFL
+		if (s & (FPSR_OVFL | FPSR_INEX2 | FPSR_INEX1))
+			s |= 0x08;                     // AE INEX
+		if (s & (FPSR_SNAN | FPSR_OPERR))
+			s |= 0x80;                     // AE IOP
+		if ((s & FPSR_UNFL) && (s & FPSR_INEX2))
+			s |= 0x20;                     // AE UNFL
+		if (s & FPSR_DZ)
+			s |= 0x10;                     // AE DZ
+		fp_status_fpsr[f] = s;
+	}
+}
+
+static inline floatx80 fp_fast_normalize(floatx80 v)
+{
+	const int e = v.high & 0x7fff;
+	if (e == 0x7fff || (e != 0 && (v.low >> 63)) || (e == 0 && v.low == 0))
+		return v;
+	return floatx80_normalize(v);          // unnormal or denormal
+}
+
+enum { FK_MOVE, FK_ADD, FK_SUB, FK_MUL, FK_DIV, FK_SQRT, FK_ABS, FK_NEG, FK_CMP, FK_TST, FK_INT, FK_INTRZ };
+
+bool fp_exact_fast_arith(fpdata *dst, const fpdata *src, uae_u16 extra)
+{
+	int kind, prec = 0;
+	bool dyadic = true;
+	switch (extra & 0x7f) {
+	case 0x00: kind = FK_MOVE; dyadic = false; break;
+	case 0x40: kind = FK_MOVE; dyadic = false; prec = 32; break;
+	case 0x44: kind = FK_MOVE; dyadic = false; prec = 64; break;
+	case 0x22: kind = FK_ADD; break;
+	case 0x62: kind = FK_ADD; prec = 32; break;
+	case 0x66: kind = FK_ADD; prec = 64; break;
+	case 0x28: kind = FK_SUB; break;
+	case 0x68: kind = FK_SUB; prec = 32; break;
+	case 0x6c: kind = FK_SUB; prec = 64; break;
+	case 0x23: kind = FK_MUL; break;
+	case 0x63: kind = FK_MUL; prec = 32; break;
+	case 0x67: kind = FK_MUL; prec = 64; break;
+	case 0x20: kind = FK_DIV; break;
+	case 0x60: kind = FK_DIV; prec = 32; break;
+	case 0x64: kind = FK_DIV; prec = 64; break;
+	case 0x04: kind = FK_SQRT; dyadic = false; break;
+	case 0x41: kind = FK_SQRT; dyadic = false; prec = 32; break;
+	case 0x45: kind = FK_SQRT; dyadic = false; prec = 64; break;
+	case 0x18: kind = FK_ABS; dyadic = false; break;
+	case 0x58: kind = FK_ABS; dyadic = false; prec = 32; break;
+	case 0x5c: kind = FK_ABS; dyadic = false; prec = 64; break;
+	case 0x1a: kind = FK_NEG; dyadic = false; break;
+	case 0x5a: kind = FK_NEG; dyadic = false; prec = 32; break;
+	case 0x5e: kind = FK_NEG; dyadic = false; prec = 64; break;
+	case 0x38: kind = FK_CMP; break;
+	case 0x3a: kind = FK_TST; dyadic = false; break;
+	case 0x01: kind = FK_INT; dyadic = false; break;
+	case 0x03: kind = FK_INTRZ; dyadic = false; break;
+	default:
+		return false;
+	}
+	const floatx80 s = fp_fast_normalize(src->fpx);
+	floatx80 d = dst->fpx;
+	if (dyadic)
+		d = fp_fast_normalize(d);
+	const int8_t oldprec = fs.floatx80_rounding_precision;
+	if (prec)
+		set_floatx80_rounding_precision(prec, &fs);
+	floatx80 r;
+	switch (kind) {
+	case FK_MOVE: r = floatx80_move(s, &fs); break;
+	case FK_ADD: r = floatx80_add(d, s, &fs); break;
+	case FK_SUB: r = floatx80_sub(d, s, &fs); break;
+	case FK_MUL: r = floatx80_mul(d, s, &fs); break;
+	case FK_DIV: r = floatx80_div(d, s, &fs); break;
+	case FK_SQRT: r = floatx80_sqrt(s, &fs); break;
+	case FK_ABS: r = floatx80_abs(s, &fs); break;
+	case FK_NEG: r = floatx80_neg(s, &fs); break;
+	case FK_CMP: r = floatx80_cmp(d, s, &fs); break;
+	case FK_TST: r = floatx80_tst(s, &fs); break;
+	case FK_INT: r = floatx80_round_to_int(s, &fs); break;
+	default: r = floatx80_round_to_int_toward_zero(s, &fs); break;
+	}
+	if (prec)
+		set_floatx80_rounding_precision(oldprec, &fs);
+	uae_u32 cc = floatx80_is_negative(r) ? 8 : 0;
+	if (floatx80_is_any_nan(r))
+		cc |= 1;
+	else if (floatx80_is_zero(r))
+		cc |= 4;
+	else if (floatx80_is_infinity(r))
+		cc |= 2;
+	regs.fpsr = (regs.fpsr & 0x00ff00f8) | (cc << 24) | fp_status_fpsr[fs.float_exception_flags];
+	fpu_fpsr_cc_written = false;
+	if (kind != FK_CMP && kind != FK_TST)
+		dst->fpx = r;
+	return true;
+}
+
 STATIC_INLINE void fp_clear_status(void)
 {
 	fs.float_exception_flags = 0;
@@ -626,6 +737,155 @@ static void fp_dd_sincos(fpdata *a, fpdata *b, fpdata *c)
 }
 
 
+#ifdef JIT
+/* ---- compiled FPU arithmetic, specialised per operation, precision and
+ * source kind at JIT compile time (fp_jit_fast_helper()): the common
+ * instructions without any decoding. Same arguments and results as
+ * fpp_jit_arith() (fpp.cpp), which they hand over to when the fast path does
+ * not apply: an FPU exception enabled or pending, the FPU disabled (68060
+ * PCR), or a core other than softfloat active. */
+enum { FJS_FPM, FJS_L, FJS_S, FJS_W, FJS_B, FJS_D, FJS_X };
+static bool fpj_fpiar_always; // 68040/68060: FPIAR on every instruction
+
+template <int OP, int PREC, int SRC>
+static uae_u32 REGPARAM3 fpj_arith(uae_u32 opext, uae_u64 value, uae_u8 *pc_p, uae_u32 pc)
+{
+	if ((regs.fpcr & 0xff00) | regs.fp_exp_pend | regs.fp_unimp_pend | (regs.pcr & 2) | (fpp_add != fp_add))
+		return fpp_jit_arith(opext, value, pc_p, pc);
+	const uae_u16 extra = (uae_u16)opext;
+	fpdata *const dstp = &regs.fp[(extra >> 7) & 7];
+	fs.float_exception_flags = 0;
+	floatx80 s;
+	if (SRC == FJS_FPM) {
+		s = regs.fp[(extra >> 10) & 7].fpx;
+	} else {
+		const uae_u32 v = (opext & 0x00380000) == 0 ? m68k_dreg(regs, (opext >> 16) & 7) : (uae_u32)value;
+		switch (SRC) {
+		case FJS_L: s = int32_to_floatx80((uae_s32)v); break;
+		case FJS_W: s = int32_to_floatx80((uae_s16)v); break;
+		case FJS_B: s = int32_to_floatx80((uae_s8)v); break;
+		case FJS_S: s = float32_to_floatx80_allowunnormal(v, &fs); break;
+		case FJS_D: s = float64_to_floatx80_allowunnormal(value, &fs); break;
+		default: {
+			const uaecptr ad = (uaecptr)value;
+			s.high = (uae_u16)(x_cp_get_long(ad) >> 16);
+			s.low = ((uae_u64)x_cp_get_long(ad + 4) << 32) | x_cp_get_long(ad + 8);
+			break;
+		}
+		}
+	}
+	s = fp_fast_normalize(s);
+	const bool dyadic = OP == FK_ADD || OP == FK_SUB || OP == FK_MUL || OP == FK_DIV || OP == FK_CMP;
+	floatx80 d;
+	if (dyadic)
+		d = fp_fast_normalize(dstp->fpx);
+	int8_t oldprec = 0;
+	if (PREC) {
+		oldprec = fs.floatx80_rounding_precision;
+		set_floatx80_rounding_precision(PREC, &fs);
+	}
+	floatx80 r;
+	switch (OP) {
+	case FK_MOVE: r = floatx80_move(s, &fs); break;
+	case FK_ADD: r = floatx80_add(d, s, &fs); break;
+	case FK_SUB: r = floatx80_sub(d, s, &fs); break;
+	case FK_MUL: r = floatx80_mul(d, s, &fs); break;
+	case FK_DIV: r = floatx80_div(d, s, &fs); break;
+	case FK_SQRT: r = floatx80_sqrt(s, &fs); break;
+	case FK_ABS: r = floatx80_abs(s, &fs); break;
+	case FK_NEG: r = floatx80_neg(s, &fs); break;
+	case FK_CMP: r = floatx80_cmp(d, s, &fs); break;
+	case FK_TST: r = floatx80_tst(s, &fs); break;
+	case FK_INT: r = floatx80_round_to_int(s, &fs); break;
+	default: r = floatx80_round_to_int_toward_zero(s, &fs); break;
+	}
+	if (PREC)
+		set_floatx80_rounding_precision(oldprec, &fs);
+	uae_u32 cc = floatx80_is_negative(r) ? 8 : 0;
+	if (floatx80_is_any_nan(r))
+		cc |= 1;
+	else if (floatx80_is_zero(r))
+		cc |= 4;
+	else if (floatx80_is_infinity(r))
+		cc |= 2;
+	regs.fpsr = (regs.fpsr & 0x00ff00f8) | (cc << 24) | fp_status_fpsr[fs.float_exception_flags];
+	fpu_fpsr_cc_written = false;
+	if (OP != FK_CMP && OP != FK_TST)
+		dstp->fpx = r;
+	regs.fpu_state = 1;
+	regs.fp_exception = false;
+	if (fpj_fpiar_always)
+		regs.fpiar = pc;
+	return 0;
+}
+
+typedef uae_u32 (REGPARAM3 *fpj_fn)(uae_u32, uae_u64, uae_u8 *, uae_u32);
+
+template <int OP, int PREC>
+static fpj_fn fpj_pick(int src)
+{
+	switch (src) {
+	case FJS_FPM: return fpj_arith<OP, PREC, FJS_FPM>;
+	case FJS_L: return fpj_arith<OP, PREC, FJS_L>;
+	case FJS_S: return fpj_arith<OP, PREC, FJS_S>;
+	case FJS_W: return fpj_arith<OP, PREC, FJS_W>;
+	case FJS_B: return fpj_arith<OP, PREC, FJS_B>;
+	case FJS_D: return fpj_arith<OP, PREC, FJS_D>;
+	default: return fpj_arith<OP, PREC, FJS_X>;
+	}
+}
+
+// the specialised helper for an instruction jit_fpu_arith_ok() accepted, or nullptr (fpp_jit_arith())
+void *fp_jit_fast_helper(uae_u16 opcode, uae_u16 extra)
+{
+	int src;
+	if (!(extra & 0x4000)) {
+		src = FJS_FPM;
+	} else {
+		switch ((extra >> 10) & 7) {
+		case 0: src = FJS_L; break;
+		case 1: src = FJS_S; break;
+		case 4: src = FJS_W; break;
+		case 6: src = FJS_B; break;
+		case 5: src = FJS_D; break;
+		case 2: src = FJS_X; break;
+		default: return nullptr;
+		}
+	}
+	switch (extra & 0x7f) {
+	case 0x00: return (void *)fpj_pick<FK_MOVE, 0>(src);
+	case 0x40: return (void *)fpj_pick<FK_MOVE, 32>(src);
+	case 0x44: return (void *)fpj_pick<FK_MOVE, 64>(src);
+	case 0x22: return (void *)fpj_pick<FK_ADD, 0>(src);
+	case 0x62: return (void *)fpj_pick<FK_ADD, 32>(src);
+	case 0x66: return (void *)fpj_pick<FK_ADD, 64>(src);
+	case 0x28: return (void *)fpj_pick<FK_SUB, 0>(src);
+	case 0x68: return (void *)fpj_pick<FK_SUB, 32>(src);
+	case 0x6c: return (void *)fpj_pick<FK_SUB, 64>(src);
+	case 0x23: return (void *)fpj_pick<FK_MUL, 0>(src);
+	case 0x63: return (void *)fpj_pick<FK_MUL, 32>(src);
+	case 0x67: return (void *)fpj_pick<FK_MUL, 64>(src);
+	case 0x20: return (void *)fpj_pick<FK_DIV, 0>(src);
+	case 0x60: return (void *)fpj_pick<FK_DIV, 32>(src);
+	case 0x64: return (void *)fpj_pick<FK_DIV, 64>(src);
+	case 0x04: return (void *)fpj_pick<FK_SQRT, 0>(src);
+	case 0x41: return (void *)fpj_pick<FK_SQRT, 32>(src);
+	case 0x45: return (void *)fpj_pick<FK_SQRT, 64>(src);
+	case 0x18: return (void *)fpj_pick<FK_ABS, 0>(src);
+	case 0x58: return (void *)fpj_pick<FK_ABS, 32>(src);
+	case 0x5c: return (void *)fpj_pick<FK_ABS, 64>(src);
+	case 0x1a: return (void *)fpj_pick<FK_NEG, 0>(src);
+	case 0x5a: return (void *)fpj_pick<FK_NEG, 32>(src);
+	case 0x5e: return (void *)fpj_pick<FK_NEG, 64>(src);
+	case 0x38: return (void *)fpj_pick<FK_CMP, 0>(src);
+	case 0x3a: return (void *)fpj_pick<FK_TST, 0>(src);
+	case 0x01: return (void *)fpj_pick<FK_INT, 0>(src);
+	case 0x03: return (void *)fpj_pick<FK_INTRZ, 0>(src);
+	default: return nullptr;
+	}
+}
+#endif
+
 /* Functions for converting between float formats */
 static const fptype twoto32 = 4294967296.0;
 
@@ -873,6 +1133,7 @@ void fp_init_softfloat(int fpu_model)
 	fpp_fix_infinity = fp_fix_infinity;
 
 	fp_init_status_bits();
+	fp_init_status_fpsr();
 	fpp_get_status = fp_get_status;
 	fpp_clear_status = fp_clear_status;
 	fpp_set_mode = fp_set_mode;
@@ -955,6 +1216,9 @@ void fp_init_softfloat(int fpu_model)
 void fp_init_softfloat_exact(int fpu_model)
 {
 	fp_init_softfloat(fpu_model);
+#ifdef JIT
+	fpj_fpiar_always = fpu_model == 68040 || fpu_model == 68060;
+#endif
 	fesetround(FE_TONEAREST);
 	fpp_etox = fp_dd_etox;
 	fpp_etoxm1 = fp_dd_etoxm1;
