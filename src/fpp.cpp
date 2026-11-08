@@ -4489,6 +4489,9 @@ void fpu_modechange(void)
 		set_cache_state(0);
 #endif
 	set_cpu_caches(true);
+	// the condition codes as the old core keeps them (the host core with the
+	// JIT FPU computes them from regs.fp_result when read)
+	regs.fpsr = fpp_get_fpsr();
 	for (int i = 0; i < 8; i++) {
 		fpp_from_exten_fmovem(&regs.fp[i], &temp_ext[i][0], &temp_ext[i][1], &temp_ext[i][2]);
 	}
@@ -4497,6 +4500,8 @@ void fpu_modechange(void)
 	for (int i = 0; i < 8; i++) {
 		fpp_to_exten_fmovem(&regs.fp[i], temp_ext[i][0], temp_ext[i][1], temp_ext[i][2]);
 	}
+	// regs.fp_result is the old core's: the FPSR holds the condition codes
+	fpu_fpsr_cc_written = true;
 }
 
 #endif
