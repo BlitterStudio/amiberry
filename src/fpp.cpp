@@ -4339,9 +4339,21 @@ bool jit_fpu_generic_ok(uae_u16 opcode, uae_u16 extra)
 		return false;
 	if (currprefs.cpu_model >= 68040 && currprefs.fpu_no_unimplemented)
 		return false;
-	if (((extra >> 13) & 7) != 3) // FMOVE to <ea>
+	const int opclass = (extra >> 13) & 7, mode = (opcode >> 3) & 7, reg = opcode & 7;
+	if (opclass >= 4) {
+		// FMOVE(M) of control registers (4, 5) and FMOVEM (6, 7). The
+		// compiled code passes An itself for (An)+ and -(An): the handler
+		// steps it. PC-relative and immediate sources read the instruction
+		// stream, which the call does not give it.
+		if (mode == 7 && reg > 1)
+			return false;
+		if (mode <= 1)
+			return opclass <= 5;
+		return true;
+	}
+	if (opclass != 3) // FMOVE to <ea>
 		return false;
-	const int mode = (opcode >> 3) & 7, reg = opcode & 7, size = (extra >> 10) & 7;
+	const int size = (extra >> 10) & 7;
 	if (size == 3 || size == 7) // packed with a static/dynamic k factor
 		return false;
 	if (mode == 1)

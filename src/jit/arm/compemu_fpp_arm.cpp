@@ -471,9 +471,10 @@ static uae_u32 dhex_1e128[] ={0xF9301D32, 0x5A827748};
 static uae_u32 dhex_1e256[] ={0x7F73BF3C, 0x75154FDD};
 static double fp_1e8;
 
-/* FMOVE FPn,<ea> (opclass 3) without native FPU code: the effective address
- * here (An not changed: the interpreter's jit_ea path does the (An)+/-(An)
- * update), the rest via fpp_jit_generic(). */
+/* FMOVE FPn,<ea> (opclass 3), FMOVE(M) of control registers and FMOVEM
+ * (opclass 4-7) without native FPU code: the effective address here (An not
+ * changed: the interpreter's jit_ea path does the (An)+/-(An) update), the
+ * rest via a helper (fp_jit_out_helper(): fpj_out or fpp_jit_generic()). */
 static bool comp_fpp_generic_call(uae_u32 opcode, uae_u16 extra)
 {
 	if (!jit_fpu_generic_ok(opcode, extra))
@@ -493,7 +494,8 @@ static bool comp_fpp_generic_call(uae_u32 opcode, uae_u16 extra)
 		break;
 	case 4:
 		mov_l_rr(S1, reg + 8);
-		arm_SUB_l_ri8(S1, bytes);
+		if (((extra >> 13) & 7) == 3) // FMOVE: the address; FMOVE(M) of control registers and FMOVEM step An themselves
+			arm_SUB_l_ri8(S1, bytes);
 		break;
 	case 5: {
 		uae_u32 off = (uae_s32)(uae_s16)comp_get_iword((m68k_pc_offset += 2) - 2);
