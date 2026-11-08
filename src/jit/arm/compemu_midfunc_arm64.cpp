@@ -992,6 +992,22 @@ static void fpx_normal(fpx_fails &f, int wh, int xl)
 	f.add(); BHI_i(0);
 }
 
+// a normal value or a zero (wh, xl); else fail. w17 holds 0x7ffd.
+static void fpx_normal_or_zero(fpx_fails &f, int wh, int xl)
+{
+	uae_u32 *normal = (uae_u32 *)get_target(); TBNZ_xii(xl, 63, 0);
+	f.add(); CBNZ_xi(xl, 0);                           // denormal or unnormal
+	UBFX_wwii(16, wh, 0, 15);
+	f.add(); CBNZ_wi(16, 0);                           // infinity, or an unnormal zero
+	uae_u32 *done = (uae_u32 *)get_target(); B_i(0);
+	write_jmp_target(normal, (uintptr)get_target());
+	UBFX_wwii(16, wh, 0, 15);
+	SUB_wwi(16, 16, 1);
+	CMP_ww(16, 17);
+	f.add(); BHI_i(0);
+	write_jmp_target(done, (uintptr)get_target());
+}
+
 // kind: fp_jit_inline_kind(); the result is left in x0 (0: the fast path did
 // it) when it falls through, else a failure branch was taken
 static void fpx_emit_inline(fpx_fails &f, uae_u32 kind, uae_u32 opext, uae_u32 pc)
@@ -1019,18 +1035,34 @@ static void fpx_emit_inline(fpx_fails &f, uae_u32 kind, uae_u32 opext, uae_u32 p
 	f.add(); CBNZ_wi(16, 0);
 	MOV_wi(17, 0x7ffd);                                    // w17: the normal exponent limit, throughout
 
+	// zeros too (not for FADD/FSUB/FMUL): FMOVE, FABS, FNEG, FTST, FCMP of +-0
+	const bool zeros = op == K_MOVE || op == K_ABS || op == K_NEG || op == K_TST || op == K_CMP;
+	uae_u32 *src_zero_done = nullptr;
 	// the source in (w6, x7)
 	if (src == S_FPM) {
 		LDRH_wXi(6, R_REGSTRUCT, FPX_OFF(fp[sreg].fpx.high));
 		LDR_xXi(7, R_REGSTRUCT, FPX_OFF(fp[sreg].fpx.low));
-		fpx_normal(f, 6, 7);
+		if (zeros)
+			fpx_normal_or_zero(f, 6, 7);
+		else
+			fpx_normal(f, 6, 7);
 	} else if (src == S_D) {
 		MOV_xx(12, 1);
+		if (zeros) {                                       // +-0: sign only
+			LSL_xxi(13, 12, 1);
+			uae_u32 *nonzero = (uae_u32 *)get_target(); CBNZ_xi(13, 0);
+			LSR_xxi(6, 12, 48);
+			MOV_wi(13, 0x8000);
+			AND_www(6, 6, 13);
+			MOV_xi(7, 0);
+			src_zero_done = (uae_u32 *)get_target(); B_i(0);
+			write_jmp_target(nonzero, (uintptr)get_target());
+		}
 		UBFX_xxii(13, 12, 52, 11);
 		SUB_wwi(14, 13, 1);
 		MOV_wi(15, 0x7fd);
 		CMP_ww(14, 15);
-		f.add(); BHI_i(0);                                 // zero, denormal, infinity, NaN
+		f.add(); BHI_i(0);                                 // denormal, infinity, NaN
 		MOV_wi(14, 0x3c00);
 		ADD_www(6, 13, 14);
 		LSR_xxi(14, 12, 48);
@@ -1046,6 +1078,16 @@ static void fpx_emit_inline(fpx_fails &f, uae_u32 kind, uae_u32 opext, uae_u32 p
 		else
 			MOV_ww(12, 1);
 		if (src == S_S) {
+			if (zeros) {
+				LSL_wwi(13, 12, 1);
+				uae_u32 *nonzero = (uae_u32 *)get_target(); CBNZ_wi(13, 0);
+				LSR_wwi(6, 12, 16);
+				MOV_wi(13, 0x8000);
+				AND_www(6, 6, 13);
+				MOV_xi(7, 0);
+				src_zero_done = (uae_u32 *)get_target(); B_i(0);
+				write_jmp_target(nonzero, (uintptr)get_target());
+			}
 			UBFX_wwii(13, 12, 23, 8);
 			SUB_wwi(14, 13, 1);
 			CMP_wi(14, 0xfd);
@@ -1064,7 +1106,15 @@ static void fpx_emit_inline(fpx_fails &f, uae_u32 kind, uae_u32 opext, uae_u32 p
 				SXTH_ww(12, 12);
 			else if (src == S_B)
 				SXTB_ww(12, 12);
-			f.add(); CBZ_wi(12, 0);                        // zero
+			if (zeros) {                                   // 0: +0
+				uae_u32 *nonzero = (uae_u32 *)get_target(); CBNZ_wi(12, 0);
+				MOV_wi(6, 0);
+				MOV_xi(7, 0);
+				src_zero_done = (uae_u32 *)get_target(); B_i(0);
+				write_jmp_target(nonzero, (uintptr)get_target());
+			} else {
+				f.add(); CBZ_wi(12, 0);                    // zero
+			}
 			ASR_wwi(13, 12, 31);
 			EOR_www(14, 12, 13);
 			SUB_www(14, 14, 13);                           // |i|
@@ -1079,11 +1129,16 @@ static void fpx_emit_inline(fpx_fails &f, uae_u32 kind, uae_u32 opext, uae_u32 p
 		}
 	}
 
+	if (src_zero_done)
+		write_jmp_target(src_zero_done, (uintptr)get_target());
 	const bool dyadic = op == K_ADD || op == K_SUB || op == K_MUL || op == K_CMP;
 	if (dyadic) {                                          // the destination in (w8, x9)
 		LDRH_wXi(8, R_REGSTRUCT, FPX_OFF(fp[dreg].fpx.high));
 		LDR_xXi(9, R_REGSTRUCT, FPX_OFF(fp[dreg].fpx.low));
-		fpx_normal(f, 8, 9);
+		if (zeros)
+			fpx_normal_or_zero(f, 8, 9);
+		else
+			fpx_normal(f, 8, 9);
 	}
 	bool inexact = false;                                  // w5: inexact (ADD/SUB/MUL)
 	if (op == K_ADD || op == K_SUB || op == K_MUL) {
@@ -1208,6 +1263,14 @@ static void fpx_emit_inline(fpx_fails &f, uae_u32 kind, uae_u32 opext, uae_u32 p
 		MOV_wi(4, 4);
 		CMP_wi(2, 0);
 		CSEL_wwwc(0, 4, 0, NATIVE_CC_NE);              // w0: the condition code nibble
+		// floatx80_cmp() of two zeros: Z, and N with a negative destination
+		ORR_xxx(2, 9, 7);
+		uae_u32 *not_zeros = (uae_u32 *)get_target(); CBNZ_xi(2, 0);
+		LSR_wwi(3, 8, 15);
+		LSL_wwi(3, 3, 3);
+		MOV_wi(0, 4);
+		ORR_www(0, 0, 3);
+		write_jmp_target(not_zeros, (uintptr)get_target());
 	} else {
 		MOV_ww(10, 6);
 		MOV_xx(11, 7);
@@ -1218,9 +1281,14 @@ static void fpx_emit_inline(fpx_fails &f, uae_u32 kind, uae_u32 opext, uae_u32 p
 			EOR_www(10, 10, 0);
 		}
 	}
-	if (op != K_CMP) {                                     // N from the result's sign
+	if (op != K_CMP) {                                     // N from the result's sign, Z for a zero
 		UBFX_wwii(0, op == K_TST ? 6 : 10, 15, 1);
 		LSL_wwi(0, 0, 3);
+		if (zeros) {
+			CMP_xi(op == K_TST ? 7 : 11, 0);
+			CSET_wc(4, NATIVE_CC_EQ);
+			ORR_wwwLSLi(0, 0, 4, 2);
+		}
 	}
 	// the condition codes, the exception byte cleared (bits 0-2 and 28-31 are 0)
 	LDR_wXi(2, R_REGSTRUCT, FPX_OFF(fpsr));
