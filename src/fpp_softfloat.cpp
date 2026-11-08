@@ -914,6 +914,127 @@ static uae_u32 REGPARAM3 fpj_leaf(uae_u32 opext, uae_u64 value, uae_u8 *pc_p, ua
 		regs.fpiar = pc;
 	return 0;
 }
+
+/* FMOVE FPn,<ea> (opclass 3) as fpp_jit_generic() does it, for the common
+ * case: no FPU exception enabled, rounding to nearest, a normal value the
+ * format holds (softfloat_fastx80.h). Anything else goes to
+ * fpp_jit_generic(). SIZE: the format (extension word bits 12-10); AM: the
+ * destination: a data register, memory, (An)+ or -(An) (ea: the address
+ * the compiled code computed, after the decrement). */
+enum { FJA_DREG, FJA_MEM, FJA_POSTINC, FJA_PREDEC };
+
+template <int SIZE, int AM>
+static uae_u32 REGPARAM3 fpj_out(uae_u32 opext, uae_u64 ea, uae_u8 *next_p, uae_u64 lenpc)
+{
+	// FPCR: no exception enabled, round to nearest (the format sets the precision)
+	if ((regs.fpcr & 0xff30) | regs.fp_exp_pend | regs.fp_unimp_pend | (regs.pcr & 2) | (fpp_add != fp_add))
+		return fpp_jit_generic(opext, ea, next_p, lenpc);
+	const floatx80 v = regs.fp[(opext >> 7) & 7].fpx;
+	uae_u32 w = 0;
+	uint64_t w64 = 0;
+	bool inexact = false;
+	switch (SIZE) {
+	case 0:
+	case 4:
+	case 6: {
+		int32_t i;
+		if (!fx80_to_int(v, SIZE == 0 ? 32 : SIZE == 4 ? 16 : 8, &i, &inexact))
+			return fpp_jit_generic(opext, ea, next_p, lenpc);
+		w = (uae_u32)i;
+		break;
+	}
+	case 1:
+		if (!fx80_to_f32(v, &w, &inexact))
+			return fpp_jit_generic(opext, ea, next_p, lenpc);
+		break;
+	case 5:
+		if (!fx80_to_f64(v, &w64, &inexact))
+			return fpp_jit_generic(opext, ea, next_p, lenpc);
+		break;
+	default: // 2: X
+		if (!fx80_normal(v))
+			return fpp_jit_generic(opext, ea, next_p, lenpc);
+		break;
+	}
+	// the interpreter's PC while it runs the instruction (a store can fault)
+	const uae_u32 pc = (uae_u32)lenpc;
+	uae_u8 *const save_pc_p = regs.pc_p, *const save_pc_oldp = regs.pc_oldp;
+	const uae_u32 save_pc = regs.pc, save_ipc = regs.instruction_pc;
+	regs.pc_p = regs.pc_oldp = next_p;
+	regs.pc = pc + (uae_u32)(lenpc >> 32);
+	regs.instruction_pc = pc;
+	regs.fpu_state = 1;
+	regs.fp_exception = false;
+	const int reg = (opext >> 16) & 7;
+	if (AM == FJA_DREG) {
+		uae_u32 &d = m68k_dreg(regs, reg);
+		d = SIZE == 6 ? (d & ~0xffu) | (w & 0xff) : SIZE == 4 ? (d & ~0xffffu) | (w & 0xffff) : w;
+	} else {
+		const uaecptr ad = (uaecptr)ea;
+		const int bytes = SIZE == 6 ? (reg == 7 ? 2 : 1) : SIZE == 4 ? 2 : SIZE == 5 ? 8 : SIZE == 2 ? 12 : 4;
+		if (AM == FJA_POSTINC)
+			m68k_areg(regs, reg) += bytes;
+		else if (AM == FJA_PREDEC)
+			m68k_areg(regs, reg) -= bytes;
+		switch (SIZE) {
+		case 0:
+		case 1: x_cp_put_long(ad, w); break;
+		case 4: x_cp_put_word(ad, w); break;
+		case 6: x_cp_put_byte(ad, w); break;
+		case 5:
+			x_cp_put_long(ad, (uae_u32)(w64 >> 32));
+			x_cp_put_long(ad + 4, (uae_u32)w64);
+			break;
+		default:
+			x_cp_put_long(ad, (uae_u32)v.high << 16);
+			x_cp_put_long(ad + 4, (uae_u32)(v.low >> 32));
+			x_cp_put_long(ad + 8, (uae_u32)v.low);
+			break;
+		}
+	}
+	// the exception byte cleared (CC kept), INEX2 and the accrued INEX
+	regs.fpsr = (regs.fpsr & 0x0fff00f8) | (inexact ? fp_status_fpsr[float_flag_inexact] : 0);
+	if (fpj_fpiar_always)
+		regs.fpiar = pc;
+	if (regs.spcflags)
+		return 2;                                  // leave the block: the PC is the interpreter's
+	regs.pc_p = save_pc_p;
+	regs.pc_oldp = save_pc_oldp;
+	regs.pc = save_pc;
+	regs.instruction_pc = save_ipc;
+	return 1;
+}
+
+template <int SIZE>
+static void *fpj_out_pick(int mode)
+{
+	switch (mode) {
+	case 0: return (void *)fpj_out<SIZE, FJA_DREG>;
+	case 3: return (void *)fpj_out<SIZE, FJA_POSTINC>;
+	case 4: return (void *)fpj_out<SIZE, FJA_PREDEC>;
+	default: return (void *)fpj_out<SIZE, FJA_MEM>;
+	}
+}
+
+// the helper for an FMOVE to <ea> jit_fpu_generic_ok() accepted: fpj_out, or fpp_jit_generic()
+void *fp_jit_out_helper(uae_u16 opcode, uae_u16 extra)
+{
+	const int mode = (opcode >> 3) & 7;
+	switch ((extra >> 10) & 7) {
+	case 0: return fpj_out_pick<0>(mode);
+	case 1: return fpj_out_pick<1>(mode);
+	case 2: return fpj_out_pick<2>(mode);
+	case 4: return fpj_out_pick<4>(mode);
+	case 5: return fpj_out_pick<5>(mode);
+	case 6: return fpj_out_pick<6>(mode);
+	default: return (void *)fpp_jit_generic;  // packed
+	}
+}
+#else
+void *fp_jit_out_helper(uae_u16, uae_u16)
+{
+	return (void *)fpp_jit_generic;
+}
 #endif
 
 typedef uae_u32 (REGPARAM3 *fpj_fn)(uae_u32, uae_u64, uae_u8 *, uae_u32);

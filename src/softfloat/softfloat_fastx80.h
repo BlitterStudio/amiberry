@@ -3,8 +3,8 @@
  * rounding to nearest even at extended precision, a normal result. The
  * result and the inexact flag are those of softfloat's floatx80_add/
  * floatx80_sub/floatx80_mul (SOFTFLOAT_68K). Also FCMP's condition codes of
- * two normal values, and normal single, double and integer sources in
- * extended format. tests/softfloat_fastx80_test.py compares them all with
+ * two normal values, normal single, double and integer sources in extended
+ * format, and FMOVE of a normal value to an integer, single or double. tests/softfloat_fastx80_test.py compares them all with
  * softfloat. False: not that case, nothing done (softfloat handles it:
  * zeros, denormals, unnormals, infinities, NaNs, an exact zero difference,
  * operands 64 or more binades apart, overflow and underflow). Unlike
@@ -155,6 +155,79 @@ FX80_INLINE bool fx80_from_i32(int32_t i, floatx80 *r)
 	const int lz = __builtin_clz(m);
 	r->high = (uint16_t)((i < 0 ? 0x8000 : 0) | (0x3fff + 31 - lz));
 	r->low = (uint64_t)m << (32 + lz);
+	return true;
+}
+
+/* FMOVE to an integer (bits 32, 16 or 8), single or double, rounding to
+ * nearest even, as floatx80_to_int32/16/8(), floatx80_to_float32() and
+ * floatx80_to_float64() give it, with their inexact flag. False: not a
+ * normal value, or one out of the format's range (or 2^31 and up: -2^31 is
+ * left to softfloat as well), or an underflow. */
+FX80_INLINE bool fx80_to_int(floatx80 a, int bits, int32_t *r, bool *inexact)
+{
+	if (!fx80_normal(a))
+		return false;
+	const int e = (a.high & 0x7fff) - 0x3fff;
+	if (e >= bits - 1)
+		return false;
+	const uint64_t half = 0x8000000000000000ull;
+	uint64_t q, rem;
+	if (e >= 0) {
+		q = a.low >> (63 - e);
+		rem = a.low << (e + 1);
+	} else {
+		q = 0;
+		rem = e == -1 ? a.low : 1;                     // 1: below one half, a sticky bit
+	}
+	if (rem > half || (rem == half && (q & 1)))
+		q++;
+	const bool neg = a.high >> 15;
+	if (q > (neg ? 1ull << (bits - 1) : (1ull << (bits - 1)) - 1))
+		return false;
+	*r = neg ? (int32_t)(0u - (uint32_t)q) : (int32_t)q;
+	*inexact = rem != 0;
+	return true;
+}
+
+FX80_INLINE bool fx80_to_f32(floatx80 a, uint32_t *r, bool *inexact)
+{
+	if (!fx80_normal(a))
+		return false;
+	uint32_t e = (a.high & 0x7fff) - 0x3f80;           // single biased exponent
+	if (e - 1 >= 0xfe)
+		return false;
+	uint64_t q = a.low >> 40;
+	const uint64_t rem = a.low << 24, half = 0x8000000000000000ull;
+	if (rem > half || (rem == half && (q & 1))) {
+		if (++q >> 24) {
+			q >>= 1;
+			if (++e > 0xfe)
+				return false;                          // overflow
+		}
+	}
+	*r = ((uint32_t)(a.high & 0x8000) << 16) | (e << 23) | ((uint32_t)q & 0x7fffff);
+	*inexact = rem != 0;
+	return true;
+}
+
+FX80_INLINE bool fx80_to_f64(floatx80 a, uint64_t *r, bool *inexact)
+{
+	if (!fx80_normal(a))
+		return false;
+	uint64_t e = (uint64_t)(a.high & 0x7fff) - 0x3c00;  // double biased exponent
+	if (e - 1 >= 0x7fe)
+		return false;
+	uint64_t q = a.low >> 11;
+	const uint64_t rem = a.low << 53, half = 0x8000000000000000ull;
+	if (rem > half || (rem == half && (q & 1))) {
+		if (++q >> 53) {
+			q >>= 1;
+			if (++e > 0x7fe)
+				return false;
+		}
+	}
+	*r = ((uint64_t)(a.high & 0x8000) << 48) | (e << 52) | (q & 0xfffffffffffffull);
+	*inexact = rem != 0;
 	return true;
 }
 
