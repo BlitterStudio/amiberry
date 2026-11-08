@@ -3,8 +3,9 @@
 // at extended precision, rounding to nearest even, with the same flags
 // (inexact only); the FCMP condition codes those of floatx80_cmp(); the
 // single, double and integer conversions those of softfloat, without flags;
-// and FMOVE to an integer, single or double, rounding to nearest, with the
-// result and inexact flag of softfloat (an extended copy unchanged).
+// FINT/FINTRZ and FMOVE to an integer in every rounding mode, single or
+// double rounding to nearest, with the result and inexact flag of softfloat
+// (an extended copy unchanged).
 // Built and run by tests/softfloat_fastx80_test.py.
 #include <cstdio>
 #include <cstdint>
@@ -210,19 +211,40 @@ static void check_out(floatx80 a)
 	float_status fs;
 	bool inexact;
 	static const int bits[] = {32, 16, 8};
-	for (int b : bits) {
-		memset(&fs, 0, sizeof fs);
-		set_float_rounding_mode(float_round_nearest_even, &fs);
-		const int32_t want = b == 32 ? floatx80_to_int32(a, &fs) : b == 16 ? floatx80_to_int16(a, &fs) : floatx80_to_int8(a, &fs);
-		int32_t got;
-		total++;
-		if (!fx80_to_int(a, b, &got, &inexact))
-			continue;
-		handled++;
-		if (got != want || fs.float_exception_flags != (inexact ? float_flag_inexact : 0)) {
-			if (failures++ < 20)
-				printf("to int%d %04x.%016llx: fast %d inex %d, softfloat %d flags %02x\n", b, a.high,
-					(unsigned long long)a.low, got, inexact, want, fs.float_exception_flags);
+	static const int modes[] = {float_round_nearest_even, float_round_down, float_round_up, float_round_to_zero};
+	for (int mode : modes) {
+		for (int b : bits) {
+			memset(&fs, 0, sizeof fs);
+			set_float_rounding_mode(mode, &fs);
+			const int32_t want = b == 32 ? floatx80_to_int32(a, &fs) : b == 16 ? floatx80_to_int16(a, &fs) : floatx80_to_int8(a, &fs);
+			int32_t got;
+			total++;
+			if (!fx80_to_int(a, b, mode, &got, &inexact))
+				continue;
+			handled++;
+			if (got != want || fs.float_exception_flags != (inexact ? float_flag_inexact : 0)) {
+				if (failures++ < 20)
+					printf("to int%d mode %d %04x.%016llx: fast %d inex %d, softfloat %d flags %02x\n", b, mode,
+						a.high, (unsigned long long)a.low, got, inexact, want, fs.float_exception_flags);
+			}
+		}
+		// FINT in this mode, FINTRZ
+		for (int rz = 0; rz < 2; rz++) {
+			memset(&fs, 0, sizeof fs);
+			set_float_rounding_mode(mode, &fs);
+			const floatx80 want = rz ? floatx80_round_to_int_toward_zero(a, &fs) : floatx80_round_to_int(a, &fs);
+			floatx80 got;
+			total++;
+			if (!fx80_int(a, rz ? float_round_to_zero : mode, &got, &inexact))
+				continue;
+			handled++;
+			if (got.high != want.high || got.low != want.low || fs.float_exception_flags != (inexact ? float_flag_inexact : 0)) {
+				if (failures++ < 20)
+					printf("%s mode %d %04x.%016llx: fast %04x.%016llx inex %d, softfloat %04x.%016llx flags %02x\n",
+						rz ? "fintrz" : "fint", mode, a.high, (unsigned long long)a.low, got.high,
+						(unsigned long long)got.low, inexact, want.high, (unsigned long long)want.low,
+						fs.float_exception_flags);
+			}
 		}
 	}
 	memset(&fs, 0, sizeof fs);
@@ -266,10 +288,10 @@ static void check_out(floatx80 a)
 static floatx80 out_operand()
 {
 	static const int32_t ends[] = {0x3fff + 7, 0x3fff + 15, 0x3fff + 31, 0x3fff + 30, 0x3fff + 14, 0x3fff + 6,
-		0x3ffe, 0x3ffd, 0x3f81, 0x407e, 0x3c01, 0x43fe, 0x3f80, 0x407f, 0x3c00, 0x43ff};
+		0x3ffe, 0x3ffd, 0x3f81, 0x407e, 0x3c01, 0x43fe, 0x3f80, 0x407f, 0x3c00, 0x43ff, 0x403e, 0x403d};
 	if (rnd() % 2)
 		return operand();
-	const int32_t e = ends[rnd() % 16] + (int32_t)(rnd() % 3) - 1;
+	const int32_t e = ends[rnd() % 18] + (int32_t)(rnd() % 3) - 1;
 	return make(rnd() & 1, e, sig());
 }
 

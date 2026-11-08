@@ -863,8 +863,9 @@ static uae_u32 REGPARAM3 fpj_arith(uae_u32 opext, uae_u64 value, uae_u8 *pc_p, u
 #ifdef __SIZEOF_INT128__
 /* The common case of fpj_arith<OP, 0, SRC> as a leaf function, without a
  * stack frame (fpj_arith saves registers for its calls): rounding to nearest
- * at extended precision, no FPU exception enabled, normal operands, and a
- * result softfloat_fastx80.h computes. Anything else goes to fpj_arith. */
+ * at extended precision (FINT, FINTRZ: any mode), no FPU exception enabled,
+ * normal operands, and a result softfloat_fastx80.h computes. Anything else
+ * goes to fpj_arith. */
 template <int SRC>
 static inline __attribute__((always_inline)) bool fpj_leaf_source(uae_u32 opext, uae_u64 value, floatx80 *s)
 {
@@ -884,7 +885,9 @@ template <int OP, int SRC>
 static uae_u32 REGPARAM3 fpj_leaf(uae_u32 opext, uae_u64 value, uae_u8 *pc_p, uae_u32 pc)
 {
 	// FPCR: no exception enabled, extended precision, round to nearest
-	if ((regs.fpcr & 0xfff0) | regs.fp_exp_pend | regs.fp_unimp_pend | (regs.pcr & 2) | (fpp_add != fp_add))
+	// (FINT, FINTRZ: any rounding mode and precision)
+	if ((regs.fpcr & (OP == FK_INT || OP == FK_INTRZ ? 0xff00 : 0xfff0)) | regs.fp_exp_pend | regs.fp_unimp_pend
+		| (regs.pcr & 2) | (fpp_add != fp_add))
 		return fpj_arith<OP, 0, SRC>(opext, value, pc_p, pc);
 	floatx80 s;
 	if (!fpj_leaf_source<SRC>(opext, value, &s))
@@ -911,6 +914,11 @@ static uae_u32 REGPARAM3 fpj_leaf(uae_u32 opext, uae_u64 value, uae_u8 *pc_p, ua
 		if (!fx80_sqrt(s, &r, &inexact))
 			return fpj_arith<OP, 0, SRC>(opext, value, pc_p, pc);
 		break;
+	case FK_INT:
+	case FK_INTRZ:
+		if (!fx80_int(s, OP == FK_INT ? fs.float_rounding_mode : float_round_to_zero, &r, &inexact))
+			return fpj_arith<OP, 0, SRC>(opext, value, pc_p, pc);
+		break;
 	case FK_ABS: r.high &= 0x7fff; break;
 	case FK_NEG: r.high ^= 0x8000; break;
 	default: break;                                // FK_MOVE, FK_TST, FK_CMP
@@ -920,6 +928,8 @@ static uae_u32 REGPARAM3 fpj_leaf(uae_u32 opext, uae_u64 value, uae_u8 *pc_p, ua
 			return fpj_arith<OP, 0, SRC>(opext, value, pc_p, pc);
 	} else {
 		cc = (r.high & 0x8000) ? 8 : 0;
+		if ((OP == FK_INT || OP == FK_INTRZ) && !(r.high & 0x7fff))
+			cc |= 4;                               // rounded to zero
 	}
 	regs.fpsr = (regs.fpsr & 0x00ff00f8) | (cc << 24) | (inexact ? fp_status_fpsr[float_flag_inexact] : 0);
 	fpu_fpsr_cc_written = false;
@@ -933,8 +943,8 @@ static uae_u32 REGPARAM3 fpj_leaf(uae_u32 opext, uae_u64 value, uae_u8 *pc_p, ua
 }
 
 /* FMOVE FPn,<ea> (opclass 3) as fpp_jit_generic() does it, for the common
- * case: no FPU exception enabled, rounding to nearest, a normal value the
- * format holds (softfloat_fastx80.h). Anything else goes to
+ * case: no FPU exception enabled, a normal value the format holds, rounding
+ * to nearest for single and double (softfloat_fastx80.h). Anything else goes to
  * fpp_jit_generic(). SIZE: the format (extension word bits 12-10); AM: the
  * destination: a data register, memory, (An)+ or -(An) (ea: the address
  * the compiled code computed, after the decrement). */
@@ -943,8 +953,10 @@ enum { FJA_DREG, FJA_MEM, FJA_POSTINC, FJA_PREDEC };
 template <int SIZE, int AM>
 static uae_u32 REGPARAM3 fpj_out(uae_u32 opext, uae_u64 ea, uae_u8 *next_p, uae_u64 lenpc)
 {
-	// FPCR: no exception enabled, round to nearest (the format sets the precision)
-	if ((regs.fpcr & 0xff30) | regs.fp_exp_pend | regs.fp_unimp_pend | (regs.pcr & 2) | (fpp_add != fp_add))
+	// FPCR: no exception enabled; round to nearest for single and double
+	// (integers: any mode; the format sets the precision)
+	if ((regs.fpcr & ((SIZE == 1 || SIZE == 5) ? 0xff30 : 0xff00)) | regs.fp_exp_pend | regs.fp_unimp_pend
+		| (regs.pcr & 2) | (fpp_add != fp_add))
 		return fpp_jit_generic(opext, ea, next_p, lenpc);
 	const floatx80 v = regs.fp[(opext >> 7) & 7].fpx;
 	uae_u32 w = 0;
@@ -955,7 +967,7 @@ static uae_u32 REGPARAM3 fpj_out(uae_u32 opext, uae_u64 ea, uae_u8 *next_p, uae_
 	case 4:
 	case 6: {
 		int32_t i;
-		if (!fx80_to_int(v, SIZE == 0 ? 32 : SIZE == 4 ? 16 : 8, &i, &inexact))
+		if (!fx80_to_int(v, SIZE == 0 ? 32 : SIZE == 4 ? 16 : 8, fs.float_rounding_mode, &i, &inexact))
 			return fpp_jit_generic(opext, ea, next_p, lenpc);
 		w = (uae_u32)i;
 		break;
@@ -1133,7 +1145,8 @@ static fpj_fn fpj_pick(int src)
 {
 #ifdef __SIZEOF_INT128__
 	if (PREC == 0 && (OP == FK_MOVE || OP == FK_ADD || OP == FK_SUB || OP == FK_MUL || OP == FK_DIV
-		|| OP == FK_SQRT || OP == FK_ABS || OP == FK_NEG || OP == FK_CMP || OP == FK_TST)) {
+		|| OP == FK_SQRT || OP == FK_ABS || OP == FK_NEG || OP == FK_CMP || OP == FK_TST || OP == FK_INT
+		|| OP == FK_INTRZ)) {
 		switch (src) {
 		case FJS_FPM: return fpj_leaf<OP, FJS_FPM>;
 		case FJS_L: return fpj_leaf<OP, FJS_L>;

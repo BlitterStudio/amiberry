@@ -4,7 +4,8 @@
  * result and the inexact flag are those of softfloat's floatx80_add/
  * floatx80_sub/floatx80_mul/floatx80_div/floatx80_sqrt (SOFTFLOAT_68K). Also FCMP's condition codes of
  * two normal values, normal single, double and integer sources in extended
- * format, and FMOVE of a normal value to an integer, single or double. tests/softfloat_fastx80_test.py compares them all with
+ * format, FINT/FINTRZ, and FMOVE of a normal value to an integer (every
+ * rounding mode), single or double. tests/softfloat_fastx80_test.py compares them all with
  * softfloat. False: not that case, nothing done (softfloat handles it:
  * zeros, denormals, unnormals, infinities, NaNs, an exact zero difference,
  * operands 64 or more binades apart, overflow and underflow). Unlike
@@ -264,29 +265,74 @@ FX80_INLINE bool fx80_from_i32(int32_t i, floatx80 *r)
 	return true;
 }
 
-/* FMOVE to an integer (bits 32, 16 or 8), single or double, rounding to
- * nearest even, as floatx80_to_int32/16/8(), floatx80_to_float32() and
- * floatx80_to_float64() give it, with their inexact flag. False: not a
- * normal value, or one out of the format's range (or 2^31 and up: -2^31 is
- * left to softfloat as well), or an underflow. */
-FX80_INLINE bool fx80_to_int(floatx80 a, int bits, int32_t *r, bool *inexact)
+/* The integer part q of a normal a (e: its unbiased exponent, below 63)
+ * and the fraction rem (bit 63 = one half; a sticky 1 below one half),
+ * rounded in softfloat's rounding mode (float_round_nearest_even, _down,
+ * _up, _to_zero). */
+FX80_INLINE uint64_t fx80_int_part(floatx80 a, int e, int mode, uint64_t *remp)
+{
+	const uint64_t half = 0x8000000000000000ull;
+	uint64_t q, rem;
+	if (e >= 0) {
+		q = a.low >> (63 - e);
+		rem = e == 63 ? 0 : a.low << (e + 1);
+	} else {
+		q = 0;
+		rem = e == -1 ? a.low : 1;
+	}
+	const bool neg = a.high >> 15;
+	bool up;
+	switch (mode) {
+	case float_round_nearest_even: up = rem > half || (rem == half && (q & 1)); break;
+	case float_round_down: up = neg && rem; break;
+	case float_round_up: up = !neg && rem; break;
+	default: up = false; break;
+	}
+	*remp = rem;
+	return q + up;
+}
+
+/* FINT (mode: the FPCR's) and FINTRZ (float_round_to_zero) of a normal
+ * value, as floatx80_round_to_int() and floatx80_round_to_int_toward_zero()
+ * give them, with their inexact flag. */
+FX80_INLINE bool fx80_int(floatx80 a, int mode, floatx80 *r, bool *inexact)
+{
+	if (!fx80_normal(a))
+		return false;
+	const int e = (a.high & 0x7fff) - 0x3fff;
+	if (e >= 63) {
+		*r = a;                                        // an integer already
+		*inexact = false;
+		return true;
+	}
+	uint64_t rem;
+	const uint64_t q = fx80_int_part(a, e, mode, &rem);
+	if (q == 0) {
+		r->high = a.high & 0x8000;                     // zero of a's sign
+		r->low = 0;
+	} else {
+		const int lz = __builtin_clzll(q);
+		r->high = (uint16_t)((a.high & 0x8000) | (0x3fff + 63 - lz));
+		r->low = q << lz;
+	}
+	*inexact = rem != 0;
+	return true;
+}
+
+/* FMOVE to an integer (bits 32, 16 or 8) in softfloat's rounding mode,
+ * single or double rounding to nearest even, as floatx80_to_int32/16/8(),
+ * floatx80_to_float32() and floatx80_to_float64() give it, with their
+ * inexact flag. False: not a normal value, or one out of the format's range
+ * (or 2^31 and up: -2^31 is left to softfloat as well), or an underflow. */
+FX80_INLINE bool fx80_to_int(floatx80 a, int bits, int mode, int32_t *r, bool *inexact)
 {
 	if (!fx80_normal(a))
 		return false;
 	const int e = (a.high & 0x7fff) - 0x3fff;
 	if (e >= bits - 1)
 		return false;
-	const uint64_t half = 0x8000000000000000ull;
-	uint64_t q, rem;
-	if (e >= 0) {
-		q = a.low >> (63 - e);
-		rem = a.low << (e + 1);
-	} else {
-		q = 0;
-		rem = e == -1 ? a.low : 1;                     // 1: below one half, a sticky bit
-	}
-	if (rem > half || (rem == half && (q & 1)))
-		q++;
+	uint64_t rem;
+	const uint64_t q = fx80_int_part(a, e, mode, &rem);
 	const bool neg = a.high >> 15;
 	if (q > (neg ? 1ull << (bits - 1) : (1ull << (bits - 1)) - 1))
 		return false;
