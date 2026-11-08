@@ -24,6 +24,7 @@
 #include "softfloat/softfloat-macros.h"
 #include "softfloat/softfloat-specialize.h"
 #include "softfloat/softfloat_dd.h"
+#include "softfloat/softfloat_fastx80.h"
 #include <fenv.h>
 
 #define	FPCR_ROUNDING_MODE	0x00000030
@@ -103,6 +104,34 @@ static void fp_get_status(uae_u32 *status)
 	*status |= fp_status_bits[fs.float_exception_flags];
 }
 
+
+/* a = a + b, a - b or a * b inline (softfloat_fastx80.h) when that gives
+ * softfloat's result: rounding to nearest at extended precision and no FPU
+ * exception enabled
+ * (an enabled one reads the unrounded result softfloat saves). The inexact
+ * flag goes to fs as softfloat would raise it. False: use softfloat. */
+enum { FD_ADD, FD_SUB, FD_MUL };
+#ifdef __SIZEOF_INT128__
+static inline __attribute__((always_inline)) bool fp_fast_dyadic(int op, floatx80 *a, floatx80 b)
+{
+	if (fs.float_rounding_mode != float_round_nearest_even || fs.floatx80_rounding_precision != 80
+		|| (regs.fpcr & 0xff00))
+		return false;
+	floatx80 r;
+	bool inexact;
+	if (op == FD_MUL ? !fx80_mul(*a, b, &r, &inexact) : !fx80_addsub(*a, b, op == FD_SUB, &r, &inexact))
+		return false;
+	*a = r;
+	if (inexact)
+		fs.float_exception_flags |= float_flag_inexact;
+	return true;
+}
+#else
+static inline bool fp_fast_dyadic(int, floatx80 *, floatx80)
+{
+	return false;
+}
+#endif
 
 /* ---- the exact core's fast path for the common arithmetic instructions,
  * when no FPU exception is enabled: dst = op(dst, src) in place, and the
@@ -186,9 +215,9 @@ bool fp_exact_fast_arith(fpdata *dst, const fpdata *src, uae_u16 extra)
 	floatx80 r;
 	switch (kind) {
 	case FK_MOVE: r = floatx80_move(s, &fs); break;
-	case FK_ADD: r = floatx80_add(d, s, &fs); break;
-	case FK_SUB: r = floatx80_sub(d, s, &fs); break;
-	case FK_MUL: r = floatx80_mul(d, s, &fs); break;
+	case FK_ADD: r = d; if (!fp_fast_dyadic(FD_ADD, &r, s)) r = floatx80_add(d, s, &fs); break;
+	case FK_SUB: r = d; if (!fp_fast_dyadic(FD_SUB, &r, s)) r = floatx80_sub(d, s, &fs); break;
+	case FK_MUL: r = d; if (!fp_fast_dyadic(FD_MUL, &r, s)) r = floatx80_mul(d, s, &fs); break;
 	case FK_DIV: r = floatx80_div(d, s, &fs); break;
 	case FK_SQRT: r = floatx80_sqrt(s, &fs); break;
 	case FK_ABS: r = floatx80_abs(s, &fs); break;
@@ -552,19 +581,22 @@ static void fp_neg(fpdata *a, fpdata *b, int prec)
 static void fp_add(fpdata *a, fpdata *b, int prec)
 {
 	SETPREC
-	a->fpx = floatx80_add(a->fpx, b->fpx, &fs);
+	if (!fp_fast_dyadic(FD_ADD, &a->fpx, b->fpx))
+		a->fpx = floatx80_add(a->fpx, b->fpx, &fs);
 	RESETPREC
 }
 static void fp_sub(fpdata *a, fpdata *b, int prec)
 {
 	SETPREC
-	a->fpx = floatx80_sub(a->fpx, b->fpx, &fs);
+	if (!fp_fast_dyadic(FD_SUB, &a->fpx, b->fpx))
+		a->fpx = floatx80_sub(a->fpx, b->fpx, &fs);
 	RESETPREC
 }
 static void fp_mul(fpdata *a, fpdata *b, int prec)
 {
 	SETPREC
-	a->fpx = floatx80_mul(a->fpx, b->fpx, &fs);
+	if (!fp_fast_dyadic(FD_MUL, &a->fpx, b->fpx))
+		a->fpx = floatx80_mul(a->fpx, b->fpx, &fs);
 	RESETPREC
 }
 static void fp_div(fpdata *a, fpdata *b, int prec)
@@ -787,9 +819,9 @@ static uae_u32 REGPARAM3 fpj_arith(uae_u32 opext, uae_u64 value, uae_u8 *pc_p, u
 	floatx80 r;
 	switch (OP) {
 	case FK_MOVE: r = floatx80_move(s, &fs); break;
-	case FK_ADD: r = floatx80_add(d, s, &fs); break;
-	case FK_SUB: r = floatx80_sub(d, s, &fs); break;
-	case FK_MUL: r = floatx80_mul(d, s, &fs); break;
+	case FK_ADD: r = d; if (!fp_fast_dyadic(FD_ADD, &r, s)) r = floatx80_add(d, s, &fs); break;
+	case FK_SUB: r = d; if (!fp_fast_dyadic(FD_SUB, &r, s)) r = floatx80_sub(d, s, &fs); break;
+	case FK_MUL: r = d; if (!fp_fast_dyadic(FD_MUL, &r, s)) r = floatx80_mul(d, s, &fs); break;
 	case FK_DIV: r = floatx80_div(d, s, &fs); break;
 	case FK_SQRT: r = floatx80_sqrt(s, &fs); break;
 	case FK_ABS: r = floatx80_abs(s, &fs); break;
@@ -819,11 +851,90 @@ static uae_u32 REGPARAM3 fpj_arith(uae_u32 opext, uae_u64 value, uae_u8 *pc_p, u
 	return 0;
 }
 
+#ifdef __SIZEOF_INT128__
+/* The common case of fpj_arith<OP, 0, SRC> as a leaf function, without a
+ * stack frame (fpj_arith saves registers for its calls): rounding to nearest
+ * at extended precision, no FPU exception enabled, normal operands, and a
+ * result softfloat_fastx80.h computes. Anything else goes to fpj_arith. */
+template <int SRC>
+static inline __attribute__((always_inline)) bool fpj_leaf_source(uae_u32 opext, uae_u64 value, floatx80 *s)
+{
+	if (SRC == FJS_FPM) {
+		*s = regs.fp[(opext >> 10) & 7].fpx;
+		return fx80_normal(*s);
+	}
+	if (SRC == FJS_D)
+		return fx80_from_f64(value, s);
+	const uae_u32 v = (opext & 0x00380000) == 0 ? m68k_dreg(regs, (opext >> 16) & 7) : (uae_u32)value;
+	if (SRC == FJS_S)
+		return fx80_from_f32(v, s);
+	return fx80_from_i32(SRC == FJS_L ? (uae_s32)v : SRC == FJS_W ? (uae_s16)v : (uae_s8)v, s);
+}
+
+template <int OP, int SRC>
+static uae_u32 REGPARAM3 fpj_leaf(uae_u32 opext, uae_u64 value, uae_u8 *pc_p, uae_u32 pc)
+{
+	// FPCR: no exception enabled, extended precision, round to nearest
+	if ((regs.fpcr & 0xfff0) | regs.fp_exp_pend | regs.fp_unimp_pend | (regs.pcr & 2) | (fpp_add != fp_add))
+		return fpj_arith<OP, 0, SRC>(opext, value, pc_p, pc);
+	floatx80 s;
+	if (!fpj_leaf_source<SRC>(opext, value, &s))
+		return fpj_arith<OP, 0, SRC>(opext, value, pc_p, pc);
+	fpdata *const dstp = &regs.fp[(opext >> 7) & 7];
+	floatx80 r = s;
+	bool inexact = false;
+	uae_u32 cc;
+	switch (OP) {
+	case FK_ADD:
+	case FK_SUB:
+		if (!fx80_addsub(dstp->fpx, s, OP == FK_SUB, &r, &inexact))
+			return fpj_arith<OP, 0, SRC>(opext, value, pc_p, pc);
+		break;
+	case FK_MUL:
+		if (!fx80_mul(dstp->fpx, s, &r, &inexact))
+			return fpj_arith<OP, 0, SRC>(opext, value, pc_p, pc);
+		break;
+	case FK_ABS: r.high &= 0x7fff; break;
+	case FK_NEG: r.high ^= 0x8000; break;
+	default: break;                                // FK_MOVE, FK_TST, FK_CMP
+	}
+	if (OP == FK_CMP) {
+		if (!fx80_cmp_cc(dstp->fpx, s, &cc))
+			return fpj_arith<OP, 0, SRC>(opext, value, pc_p, pc);
+	} else {
+		cc = (r.high & 0x8000) ? 8 : 0;
+	}
+	regs.fpsr = (regs.fpsr & 0x00ff00f8) | (cc << 24) | (inexact ? fp_status_fpsr[float_flag_inexact] : 0);
+	fpu_fpsr_cc_written = false;
+	if (OP != FK_CMP && OP != FK_TST)
+		dstp->fpx = r;
+	regs.fpu_state = 1;
+	regs.fp_exception = false;
+	if (fpj_fpiar_always)
+		regs.fpiar = pc;
+	return 0;
+}
+#endif
+
 typedef uae_u32 (REGPARAM3 *fpj_fn)(uae_u32, uae_u64, uae_u8 *, uae_u32);
 
 template <int OP, int PREC>
 static fpj_fn fpj_pick(int src)
 {
+#ifdef __SIZEOF_INT128__
+	if (PREC == 0 && (OP == FK_MOVE || OP == FK_ADD || OP == FK_SUB || OP == FK_MUL || OP == FK_ABS
+		|| OP == FK_NEG || OP == FK_CMP || OP == FK_TST)) {
+		switch (src) {
+		case FJS_FPM: return fpj_leaf<OP, FJS_FPM>;
+		case FJS_L: return fpj_leaf<OP, FJS_L>;
+		case FJS_S: return fpj_leaf<OP, FJS_S>;
+		case FJS_W: return fpj_leaf<OP, FJS_W>;
+		case FJS_B: return fpj_leaf<OP, FJS_B>;
+		case FJS_D: return fpj_leaf<OP, FJS_D>;
+		default: break;                            // FJS_X: memory reads, fpj_arith
+		}
+	}
+#endif
 	switch (src) {
 	case FJS_FPM: return fpj_arith<OP, PREC, FJS_FPM>;
 	case FJS_L: return fpj_arith<OP, PREC, FJS_L>;
