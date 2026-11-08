@@ -1058,6 +1058,76 @@ void *fp_jit_out_helper(uae_u16, uae_u16)
 
 typedef uae_u32 (REGPARAM3 *fpj_fn)(uae_u32, uae_u64, uae_u8 *, uae_u32);
 
+#ifdef __SIZEOF_INT128__
+/* The exact core's transcendentals (FSIN ... FSINCOS: the double-double
+ * functions fp_init_softfloat_exact() installs) for a normal source from FPm,
+ * an integer, single or double, without fpp_jit_arith()'s decoding and
+ * status calls: the result, the condition codes from it and the status
+ * bits from softfloat's flags, as fp_arithmetic() sets them. Not with an
+ * FPU exception enabled or pending, or another core: fpp_jit_arith(). */
+template <int OPM, int SRC>
+static uae_u32 REGPARAM3 fpj_trans(uae_u32 opext, uae_u64 value, uae_u8 *pc_p, uae_u32 pc)
+{
+	if ((regs.fpcr & 0xff00) | regs.fp_exp_pend | regs.fp_unimp_pend | (regs.pcr & 2) | (fpp_sin != fp_dd_sin))
+		return fpp_jit_arith(opext, value, pc_p, pc);
+	floatx80 s;
+	if (!fpj_leaf_source<SRC>(opext, value, &s))
+		return fpp_jit_arith(opext, value, pc_p, pc);
+	fs.float_exception_flags = 0;
+	floatx80 r;
+	switch (OPM) {
+	case 0x02: r = floatx80_dd_sinh(s, &fs); break;
+	case 0x06: r = floatx80_dd_lognp1(s, &fs); break;
+	case 0x08: r = floatx80_dd_etoxm1(s, &fs); break;
+	case 0x09: r = floatx80_dd_tanh(s, &fs); break;
+	case 0x0a: r = floatx80_dd_atan(s, &fs); break;
+	case 0x0c: r = floatx80_dd_asin(s, &fs); break;
+	case 0x0d: r = floatx80_dd_atanh(s, &fs); break;
+	case 0x0e: r = floatx80_dd_sin(s, &fs); break;
+	case 0x0f: r = floatx80_dd_tan(s, &fs); break;
+	case 0x10: r = floatx80_dd_etox(s, &fs); break;
+	case 0x11: r = floatx80_dd_twotox(s, &fs); break;
+	case 0x12: r = floatx80_dd_tentox(s, &fs); break;
+	case 0x14: r = floatx80_dd_logn(s, &fs); break;
+	case 0x15: r = floatx80_dd_log10(s, &fs); break;
+	case 0x16: r = floatx80_dd_log2(s, &fs); break;
+	case 0x19: r = floatx80_dd_cosh(s, &fs); break;
+	case 0x1c: r = floatx80_dd_acos(s, &fs); break;
+	case 0x1d: r = floatx80_dd_cos(s, &fs); break;
+	default: r = floatx80_dd_sincos(s, &regs.fp[opext & 7].fpx, &fs); break;   // FSINCOS: cosine to FPc
+	}
+	uae_u32 cc = floatx80_is_negative(r) ? 8 : 0;
+	if (floatx80_is_any_nan(r))
+		cc |= 1;
+	else if (floatx80_is_zero(r))
+		cc |= 4;
+	else if (floatx80_is_infinity(r))
+		cc |= 2;
+	regs.fpsr = (regs.fpsr & 0x00ff00f8) | (cc << 24) | fp_status_fpsr[fs.float_exception_flags];
+	fpu_fpsr_cc_written = false;
+	regs.fp[(opext >> 7) & 7].fpx = r;                  // after FPc: FPs wins when they are the same
+	regs.fpu_state = 1;
+	regs.fp_exception = false;
+	if (fpj_fpiar_always)
+		regs.fpiar = pc;
+	return 0;
+}
+
+template <int OPM>
+static fpj_fn fpj_trans_pick(int src)
+{
+	switch (src) {
+	case FJS_FPM: return fpj_trans<OPM, FJS_FPM>;
+	case FJS_L: return fpj_trans<OPM, FJS_L>;
+	case FJS_S: return fpj_trans<OPM, FJS_S>;
+	case FJS_W: return fpj_trans<OPM, FJS_W>;
+	case FJS_B: return fpj_trans<OPM, FJS_B>;
+	case FJS_D: return fpj_trans<OPM, FJS_D>;
+	default: return nullptr;                          // .X from memory: fpp_jit_arith()
+	}
+}
+#endif
+
 template <int OP, int PREC>
 static fpj_fn fpj_pick(int src)
 {
@@ -1132,8 +1202,34 @@ void *fp_jit_fast_helper(uae_u16 opcode, uae_u16 extra)
 	case 0x3a: return (void *)fpj_pick<FK_TST, 0>(src);
 	case 0x01: return (void *)fpj_pick<FK_INT, 0>(src);
 	case 0x03: return (void *)fpj_pick<FK_INTRZ, 0>(src);
-	default: return nullptr;
+	default: break;
 	}
+#ifdef __SIZEOF_INT128__
+	switch (extra & 0x7f) {
+	case 0x02: return (void *)fpj_trans_pick<0x02>(src);
+	case 0x06: return (void *)fpj_trans_pick<0x06>(src);
+	case 0x08: return (void *)fpj_trans_pick<0x08>(src);
+	case 0x09: return (void *)fpj_trans_pick<0x09>(src);
+	case 0x0a: return (void *)fpj_trans_pick<0x0a>(src);
+	case 0x0c: return (void *)fpj_trans_pick<0x0c>(src);
+	case 0x0d: return (void *)fpj_trans_pick<0x0d>(src);
+	case 0x0e: return (void *)fpj_trans_pick<0x0e>(src);
+	case 0x0f: return (void *)fpj_trans_pick<0x0f>(src);
+	case 0x10: return (void *)fpj_trans_pick<0x10>(src);
+	case 0x11: return (void *)fpj_trans_pick<0x11>(src);
+	case 0x12: return (void *)fpj_trans_pick<0x12>(src);
+	case 0x14: return (void *)fpj_trans_pick<0x14>(src);
+	case 0x15: return (void *)fpj_trans_pick<0x15>(src);
+	case 0x16: return (void *)fpj_trans_pick<0x16>(src);
+	case 0x19: return (void *)fpj_trans_pick<0x19>(src);
+	case 0x1c: return (void *)fpj_trans_pick<0x1c>(src);
+	case 0x1d: return (void *)fpj_trans_pick<0x1d>(src);
+	case 0x30: case 0x31: case 0x32: case 0x33: case 0x34: case 0x35: case 0x36: case 0x37:
+		return (void *)fpj_trans_pick<0x30>(src);
+	default: break;
+	}
+#endif
+	return nullptr;
 }
 #endif
 
