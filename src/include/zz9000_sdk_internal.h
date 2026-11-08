@@ -23,10 +23,29 @@ constexpr uint32_t pcm_s16le = 1;
 constexpr uint32_t pcm_s16be = 2;
 constexpr uint32_t pcm_s32le = 3;
 constexpr uint32_t pcm_s32be = 4;
+// SDK v2 mailbox placement, as in the firmware's memorymap.h. Both boards
+// keep it in the main aperture (ARM = board offset - 0x10000 + 0x200000),
+// which every SDK release maps the same way. The mapped-I/O window behind
+// board 0xa000 moved from ARM 0x3fe40000 to 0x3ff70000 in the SDK, so a
+// mailbox there only works for one generation of clients.
+constexpr uint32_t mailbox_descriptor_size = 128;
+constexpr uint32_t mailbox_entry_size = 64;
+constexpr uint32_t arm_memory_start = 0x00200000;
+// Zorro III: SDK_MAILBOX_Z3_ADDRESS (ARM 0x08100000), 64-entry rings.
+constexpr uint32_t z3_mailbox_offset = 0x07f10000;
+constexpr uint32_t z3_mailbox_entries = 64;
+// Zorro II: SDK_MAILBOX_Z2_RING_ENTRIES-entry rings ending at the audio
+// scratch base 0x3f0000, the tail of the generation-2 direct-ring
+// reservation. Without the generation-2 acknowledgement the 64 KiB host
+// window below it ends where the mailbox starts.
+constexpr uint32_t z2_mailbox_entries = 22;
+constexpr uint32_t z2_mailbox_offset = 0x3f0000 -
+	(mailbox_descriptor_size + 2 * z2_mailbox_entries * mailbox_entry_size);
 constexpr uint32_t host_window_begin = 0x3e0000;
-constexpr uint32_t host_window_end = 0x3f0000;
+constexpr uint32_t host_window_end = z2_mailbox_offset;
 constexpr uint32_t z3_heap_begin = 0x06000000;
 constexpr uint32_t z3_heap_end = 0x07e00000;
+static_assert(z3_heap_end <= z3_mailbox_offset, "Z3 mailbox overlaps the SDK heap");
 constexpr uint32_t max_image_input = 16 * 1024 * 1024;
 constexpr uint32_t max_image_pixels = 24 * 1024 * 1024;
 constexpr uint32_t framebuffer_handle = 0x80000000;

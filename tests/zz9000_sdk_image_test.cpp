@@ -1,4 +1,5 @@
 #include "zz9000_sdk.h"
+#include "zz9000_sdk_test_mailbox.h"
 
 #include <algorithm>
 #include <cassert>
@@ -18,30 +19,33 @@ void put32(uint8_t *p, uint32_t n) { put16(p, n >> 16); put16(p + 2, n); }
 struct Mailbox {
 	std::vector<uint8_t> board;
 	zz9000_sdk::Engine sdk;
+	uint8_t *mb;
+	uint32_t entries;
 	uint32_t request_id = 0;
 	uint32_t completion_head = 0;
 	bool last_dirty = false;
 
-	explicit Mailbox(uint32_t size) : board(size), sdk(board.data(), size) {}
+	explicit Mailbox(uint32_t size)
+		: board(size), sdk(board.data(), size),
+		  mb(zz9000_test_mailbox(sdk, board.data())), entries(get32(mb + 16)) {}
 
 	const uint8_t *call(uint16_t opcode, const uint8_t *payload,
 	                    uint16_t length, uint16_t status = 0,
 	                    bool doorbell = false) {
-		auto *mb = board.data() + zz9000_sdk::mailbox_offset;
 		const uint32_t tail = get32(mb + 24);
-		auto *request = mb + 128 + tail * 64;
+		auto *request = mb + get32(mb + 12) + tail * 64;
 		std::fill(request, request + 64, 0);
 		put32(request, ++request_id);
 		put16(request + 4, opcode);
 		put16(request + 10, length);
 		if (payload)
 			std::copy(payload, payload + length, request + 16);
-		put32(mb + 24, (tail + 1) % 64);
+		put32(mb + 24, (tail + 1) % entries);
 		last_dirty = doorbell ? sdk.write_register(0x108, 1) : sdk.poll();
-		const auto *reply = mb + 128 + 64 * 64 + completion_head * 64;
+		const auto *reply = mb + get32(mb + 28) + completion_head * 64;
 		assert(get32(reply) == request_id);
 		assert(get16(reply + 6) == status);
-		completion_head = (completion_head + 1) % 64;
+		completion_head = (completion_head + 1) % entries;
 		put32(mb + 36, completion_head);
 		return reply + 16;
 	}
@@ -627,8 +631,7 @@ int main(int argc, char **argv)
 {
 	assert(argc == 7);
 	Mailbox mailbox(4 * 1024 * 1024);
-	assert((get32(mailbox.board.data() + zz9000_sdk::mailbox_offset + 44) &
-	        (1u << 5)) != 0);
+	assert((get32(mailbox.mb + 44) & (1u << 5)) != 0);
 	uint8_t request[48] = {};
 	put32(request, 0x400);
 	const auto *reply = mailbox.call(0x0004, request, 4);

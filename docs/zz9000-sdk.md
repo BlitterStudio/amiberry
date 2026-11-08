@@ -1,11 +1,11 @@
 # ZZ9000 SDK mailbox, images, audio, and video
 
 The emulated ZZ9000 exposes the SDK v2 mailbox discovery registers and a
-polling completion ring at board offset `0xD000`. The protocol follows the
-ZZ9000 firmware's SDK (`zz9000-firmware` master, which now advertises WebP,
-FLAC, Vorbis, WebM and MPEG-2). Amiberry advertises a capability bit or
-service flag only when the host code behind it is compiled in, so the guest
-clients fall back exactly as they would on older firmware.
+polling completion ring. The protocol follows the ZZ9000 firmware's SDK
+(`zz9000-firmware` master, which now advertises WebP, FLAC, Vorbis, WebM and
+MPEG-2). Amiberry advertises a capability bit or service flag only when the
+host code behind it is compiled in, so the guest clients fall back exactly as
+they would on older firmware.
 
 ## Build options
 
@@ -28,16 +28,27 @@ for `arm64-mingw-dynamic`.
 Discovery, service queries, and bounded shared-buffer allocation work on both
 board models. Zorro II additionally answers the aperture-info handshake
 (`0x111C`/`0x111E`) and the aperture layout query that current
-`zz9k.library` builds use. The codec, crypto and diagnostics services are not
-advertised; current clients treat them as optional.
+`zz9k.library` builds use. The codec, crypto, diagnostics, firmware-module
+and ARM app (ZZRun) services are not advertised, and the audio output clock
+op (`0x0517`) answers `UNSUPPORTED`; current clients treat all of them as
+optional.
+
+The mailbox sits where the firmware places it, in the main board aperture:
+ARM `0x08100000` with 64-entry rings on Zorro III, and ARM `0x005DF480` with
+22-entry rings (ending at board offset `0x3F0000`) on Zorro II. Every SDK
+client maps that range the same way. The older board-`0xD000` placement went
+through the mapped-I/O window, whose ARM address the SDK moved from
+`0x3FE40000` to `0x3FF70000` in October 2026, so it only worked with one
+generation of clients.
 
 The Zorro III model reserves a shared-buffer heap near the top of its 128 MB
 board memory and also accepts card-only media allocations of up to 64 MiB
 (`ZZ9K_ALLOC_MEDIA`), which ZZPlay's `--preload` option copies the file into
-with `MEM_COPY` before playback. The Zorro II model provides a 64 KiB
-host-visible staging window plus card-only buffers for the compressed and PCM
-rings. Both models reset the mailbox and release every session, worker thread
-and buffer on board reset or removal.
+with `MEM_COPY` before playback. The Zorro II model provides a 61 KiB
+(`0xF480`) host-visible staging window below the mailbox, or 16 KiB once the
+generation-2 aperture layout is acknowledged, plus card-only buffers for the
+compressed and PCM rings. Both models reset the mailbox and release every
+session, worker thread and buffer on board reset or removal.
 
 ## Audio streams
 

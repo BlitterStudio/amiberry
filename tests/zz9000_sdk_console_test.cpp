@@ -1,4 +1,5 @@
 #include "zz9000_sdk.h"
+#include "zz9000_sdk_test_mailbox.h"
 
 #include <cassert>
 #include <cstdint>
@@ -14,30 +15,33 @@ void put32(uint8_t *p, uint32_t value) { put16(p, value >> 16); put16(p + 2, val
 struct Mailbox {
 	std::vector<uint8_t> board;
 	zz9000_sdk::Engine sdk;
+	uint8_t *mailbox;
+	uint32_t entries;
 	uint32_t request_id = 0;
 	uint32_t completion_head = 0;
 
-	explicit Mailbox(uint32_t size) : board(size), sdk(board.data(), size) {}
+	explicit Mailbox(uint32_t size)
+		: board(size), sdk(board.data(), size),
+		  mailbox(zz9000_test_mailbox(sdk, board.data())), entries(get32(mailbox + 16)) {}
 
 	const uint8_t *call(uint16_t opcode, const uint8_t *payload, uint16_t length,
 		uint16_t expected = 0)
 	{
-		auto *mailbox = board.data() + zz9000_sdk::mailbox_offset;
 		const uint32_t tail = get32(mailbox + 24);
-		auto *request = mailbox + 128 + tail * 64;
+		auto *request = mailbox + get32(mailbox + 12) + tail * 64;
 		std::memset(request, 0, 64);
 		put32(request, ++request_id);
 		put16(request + 4, opcode);
 		put16(request + 10, length);
 		if (payload)
 			std::memcpy(request + 16, payload, length);
-		put32(mailbox + 24, (tail + 1) % 64);
+		put32(mailbox + 24, (tail + 1) % entries);
 		sdk.poll();
-		const auto *reply = mailbox + 128 + 64 * 64 + completion_head * 64;
+		const auto *reply = mailbox + get32(mailbox + 28) + completion_head * 64;
 		assert(get32(reply) == request_id);
 		assert(get16(reply + 4) == opcode);
 		assert(get16(reply + 6) == expected);
-		completion_head = (completion_head + 1) % 64;
+		completion_head = (completion_head + 1) % entries;
 		put32(mailbox + 36, completion_head);
 		return reply;
 	}
@@ -77,7 +81,7 @@ int main()
 {
 	uint8_t request[48] = {};
 	Mailbox z2(4 * 1024 * 1024);
-	auto *z2_mailbox = z2.board.data() + zz9000_sdk::mailbox_offset;
+	auto *z2_mailbox = z2.mailbox;
 	assert(z2.sdk.read_register(0x11c) == 0x5a02);
 	assert(z2.sdk.read_register(0x11e) == 0x0704);
 	assert((get32(z2_mailbox + 44) & ((1u << 20) | (1u << 24))) == 0);
@@ -95,7 +99,7 @@ int main()
 	assert(z2.alloc(64, 1));
 
 	Mailbox z3(128 * 1024 * 1024);
-	auto *z3_mailbox = z3.board.data() + zz9000_sdk::mailbox_offset;
+	auto *z3_mailbox = z3.mailbox;
 	assert((get32(z3_mailbox + 44) & ((1u << 10) | (1u << 30))) ==
 		((1u << 10) | (1u << 30)));
 	put32(request, 0x100);
