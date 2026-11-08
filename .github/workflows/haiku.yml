@@ -52,7 +52,7 @@ jobs:
               flac_devel mpg123_devel libpng16_devel zlib_devel zstd_devel \
               enet_devel portmidi_devel libmpeg2_devel \
               nlohmann_json \
-              ffmpeg8_devel libwebp_devel libiconv_devel curl_devel mesa_devel
+              ffmpeg8_devel libwebp_devel curl_devel mesa_devel
           run: |
             set -eu
             uname -a

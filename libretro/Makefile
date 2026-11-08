@@ -100,8 +100,8 @@ else ifneq (,$(findstring android,$(platform)))
    CHD_PTTY := $(AMIBERRY_DIR)/src/archivers/chd/posixptty.cpp
    CHD_SOCKET := $(AMIBERRY_DIR)/src/archivers/chd/posixsocket.cpp
    SHARED := -shared $(NO_UNDEFINED) -Wl,--version-script=$(LIBRETRO_DIR)/link.T -Wl,-Bsymbolic-functions
-   # bionic grew forkpty() (uaelib's host shell) in API 23 and iconv() in
-   # API 28, so the core targets API 28 — Android 9 and newer.
+   # bionic grew forkpty() (uaelib's host shell) in API 23; the core
+   # targets API 28 — Android 9 and newer.
    ANDROID_API ?= 28
    ANDROID_NDK_LLVM ?= $(ANDROID_NDK_ROOT)/toolchains/llvm/prebuilt/linux-x86_64
    ifeq ($(platform), android-arm64)
@@ -127,7 +127,7 @@ else ifeq ($(platform), osx)
    CHD_PTTY := $(AMIBERRY_DIR)/src/archivers/chd/posixptty.cpp
    CHD_SOCKET := $(AMIBERRY_DIR)/src/archivers/chd/posixsocket.cpp
    SHARED := -dynamiclib
-   LDFLAGS += -framework CoreFoundation -framework DiskArbitration -lz -liconv
+   LDFLAGS += -framework CoreFoundation -framework DiskArbitration -lz
 else
    TARGET := $(TARGET_NAME)_libretro.dll
    CC ?= gcc
@@ -291,7 +291,7 @@ FLAGS += -D_WIN32_WINNT=0x0601
 # SDL stubs in libretro/sdl_stub.o etc.) come up undefined at link time.
 # Link winpthread explicitly. The link is also harmless under MinGW-w64
 # GCC, where it's normally pulled in implicitly.
-LDFLAGS += -liconv -lws2_32 -lz -liphlpapi -lgdi32 -lwinmm -lpthread
+LDFLAGS += -lws2_32 -lz -liphlpapi -lgdi32 -lwinmm -lpthread
 endif
 
 # The target must have 8-byte pointers. Probed here, after the platform
