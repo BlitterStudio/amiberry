@@ -520,7 +520,8 @@ static bool comp_fpp_generic_call(uae_u32 opcode, uae_u16 extra)
 	}
 	const uae_u8 *next = (uae_u8 *)comp_pc_p + m68k_pc_offset;
 	const uae_u64 lenpc = ((uae_u64)(next - insn) << 32) | pc;
-	jitx_fpp_generic((uintptr)fp_jit_out_helper(opcode, extra), S1, hasea, (opcode << 16) | extra, (uintptr)next, (uintptr)lenpc);
+	jitx_fpp_generic((uintptr)fp_jit_out_helper(opcode, extra), S1, hasea, (opcode << 16) | extra, (uintptr)next, (uintptr)lenpc,
+		fp_jit_out_inline_kind(opcode, extra));
 	return true;
 }
 
