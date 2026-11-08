@@ -948,6 +948,15 @@ MIDFUNC(0,fp_bsun_iop,(void))
 }
 MENDFUNC(0,fp_bsun_iop,(void))
 
+/* A call of a helper with up to four arguments in x0-x3: through x16, as
+ * compemu_raw_call() loads its target into x2 (REG_WORK1), the third
+ * argument. All registers are flushed before. */
+static void fpx_call4(uintptr fn)
+{
+	LOAD_U64(16, fn);
+	compemu_raw_call_r(16);
+}
+
 /* Compiled FPU arithmetic without native FPU code (the exact core): a call of
  * fpp_jit_arith(opext, value, pc_p, pc). nvals: 0 no operand, 1 v1 (32 bits),
  * 2 v1:v2 (a double). On return 0 the (An)+/-(An) update anreg += delta is
@@ -973,7 +982,7 @@ MIDFUNC(9,jitx_fpp_arith,(IMPTR fn, RR4 v1, RR4 v2, IM8 nvals, IM32 opext, IMPTR
 	LOAD_U32(REG_PAR1, (uae_u32)opext);
 	LOAD_U64(R2_INDEX, pcp);
 	LOAD_U32(R3_INDEX, (uae_u32)pc);
-	compemu_raw_call(fn);
+	fpx_call4(fn);
 
 	uae_u32 *branch_notfast = (uae_u32 *)get_target();
 	CBNZ_wi(REG_RESULT, 0);
@@ -1015,7 +1024,7 @@ MIDFUNC(6,jitx_fpp_generic,(IMPTR fn, RR4 a, IM8 hasea, IM32 opext, IMPTR nextp,
 	LOAD_U32(REG_PAR1, (uae_u32)opext);
 	LOAD_U64(R2_INDEX, nextp);
 	LOAD_U64(R3_INDEX, lenpc);
-	compemu_raw_call(fn);
+	fpx_call4(fn);
 	uae_u32 *branch_cont = (uae_u32 *)get_target();
 	TBZ_wii(REG_RESULT, 1, 0);                  // 1: continue
 	uae_u32 *branch_leave = (uae_u32 *)get_target();
