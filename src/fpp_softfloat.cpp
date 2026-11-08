@@ -1045,6 +1045,117 @@ static uae_u32 REGPARAM3 fpj_out(uae_u32 opext, uae_u64 ea, uae_u8 *next_p, uae_
 	return 1;
 }
 
+/* The instructions the JIT emits inline (compemu_midfunc_arm64.cpp
+ * fpx_emit_inline(), the fpj_leaf cases as code): 0 for none, else
+ * FK_* + 1 | FJS_* << 8 | FPIAR on every instruction << 12 | 68060 << 13.
+ * Only with the exact core active (a core change flushes compiled code).
+ * AMIBERRY_JIT_FPU_INLINE=0 turns it off. */
+uae_u32 fp_jit_inline_kind(uae_u16 opcode, uae_u16 extra)
+{
+	static int enabled = -1;
+	if (enabled < 0) {
+		const char *e = getenv("AMIBERRY_JIT_FPU_INLINE");
+		enabled = !(e && e[0] == '0');
+	}
+	if (!enabled || !fpu_softfloat_core() || fpp_add != fp_add)
+		return 0;
+	int op;
+	switch (extra & 0x7f) {
+	case 0x00: op = FK_MOVE; break;
+	case 0x22: op = FK_ADD; break;
+	case 0x28: op = FK_SUB; break;
+	case 0x23: op = FK_MUL; break;
+	case 0x18: op = FK_ABS; break;
+	case 0x1a: op = FK_NEG; break;
+	case 0x38: op = FK_CMP; break;
+	case 0x3a: op = FK_TST; break;
+	default: return 0;
+	}
+	int src = FJS_FPM;
+	if (extra & 0x4000) {
+		switch ((extra >> 10) & 7) {
+		case 0: src = FJS_L; break;
+		case 1: src = FJS_S; break;
+		case 4: src = FJS_W; break;
+		case 6: src = FJS_B; break;
+		case 5: src = FJS_D; break;
+		default: return 0;                             // .X from memory: the helper
+		}
+	}
+	return (uae_u32)(op + 1) | (src << 8) | (fpj_fpiar_always ? 1 << 12 : 0)
+		| (currprefs.cpu_model == 68060 ? 1 << 13 : 0);
+}
+
+// the FPSR bits of an inexact result (INEX2 and the accrued INEX)
+uae_u32 fp_jit_inexact_status(void)
+{
+	return fp_status_fpsr[float_flag_inexact];
+}
+
+/* AMIBERRY_JIT_FPU_VERIFY=1: every inline instruction that completes is
+ * checked against its helper: the FPU state before it is saved, and after
+ * it the helper runs from that state; the FP registers and the FPSR must be
+ * the same. Mismatches are logged. For testing; slow. */
+static struct {
+	floatx80 fp[8];
+	uae_u32 fpsr, fpiar, fpu_state;
+	bool fp_exception;
+} fpj_verify_state;
+static uae_u64 fpj_verify_checks, fpj_verify_mismatches;
+
+bool fp_jit_inline_verify(void)
+{
+	static int verify = -1;
+	if (verify < 0) {
+		const char *e = getenv("AMIBERRY_JIT_FPU_VERIFY");
+		verify = e && e[0] == '1';
+		if (verify)
+			write_log(_T("JIT FPU: inline instructions are verified against their helpers\n"));
+	}
+	return verify;
+}
+
+uae_u64 REGPARAM3 fp_jit_verify_save(uae_u64 value)
+{
+	for (int i = 0; i < 8; i++)
+		fpj_verify_state.fp[i] = regs.fp[i].fpx;
+	fpj_verify_state.fpsr = regs.fpsr;
+	fpj_verify_state.fpiar = regs.fpiar;
+	fpj_verify_state.fpu_state = regs.fpu_state;
+	fpj_verify_state.fp_exception = regs.fp_exception;
+	return value;
+}
+
+void REGPARAM3 fp_jit_verify_check(uae_u32 opext, uae_u64 value, uae_u8 *pc_p, uae_u32 pc, void *fn)
+{
+	floatx80 got[8];
+	for (int i = 0; i < 8; i++)
+		got[i] = regs.fp[i].fpx;
+	const uae_u32 got_fpsr = regs.fpsr, got_fpiar = regs.fpiar;
+	for (int i = 0; i < 8; i++)
+		regs.fp[i].fpx = fpj_verify_state.fp[i];
+	regs.fpsr = fpj_verify_state.fpsr;
+	regs.fpiar = fpj_verify_state.fpiar;
+	regs.fpu_state = fpj_verify_state.fpu_state;
+	regs.fp_exception = fpj_verify_state.fp_exception;
+	const uae_u32 r = ((uae_u32 (REGPARAM3 *)(uae_u32, uae_u64, uae_u8 *, uae_u32))fn)(opext, value, pc_p, pc);
+	bool same = r == 0 && regs.fpsr == got_fpsr && regs.fpiar == got_fpiar;
+	for (int i = 0; i < 8; i++)
+		same &= regs.fp[i].fpx.high == got[i].high && regs.fp[i].fpx.low == got[i].low;
+	fpj_verify_checks++;
+	if (!same && fpj_verify_mismatches++ < 50) {
+		const int d = (opext >> 7) & 7, sr = (opext >> 10) & 7;
+		write_log(_T("JIT FPU verify: %08x value %016llx PC %08x: helper %u, dst FP%d %04x.%016llx (inline %04x.%016llx), FPSR %08x (inline %08x), src FP%d before %04x.%016llx, dst before %04x.%016llx\n"),
+			opext, (unsigned long long)value, pc, r, d, regs.fp[d].fpx.high, (unsigned long long)regs.fp[d].fpx.low,
+			got[d].high, (unsigned long long)got[d].low, regs.fpsr, got_fpsr, sr, fpj_verify_state.fp[sr].high,
+			(unsigned long long)fpj_verify_state.fp[sr].low, fpj_verify_state.fp[d].high,
+			(unsigned long long)fpj_verify_state.fp[d].low);
+	}
+	if (fpj_verify_checks == 1 || !(fpj_verify_checks & 0xfffff))
+		write_log(_T("JIT FPU verify: %llu inline instructions checked, %llu mismatches\n"),
+			(unsigned long long)fpj_verify_checks, (unsigned long long)fpj_verify_mismatches);
+}
+
 template <int SIZE>
 static void *fpj_out_pick(int mode)
 {
@@ -1076,6 +1187,11 @@ void *fp_jit_out_helper(uae_u16 opcode, uae_u16 extra)
 void *fp_jit_out_helper(uae_u16, uae_u16)
 {
 	return (void *)fpp_jit_generic;
+}
+
+uae_u32 fp_jit_inline_kind(uae_u16, uae_u16)
+{
+	return 0;                                          // the inline code needs the 128-bit fast paths
 }
 #endif
 

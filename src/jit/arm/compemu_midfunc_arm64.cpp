@@ -957,12 +957,308 @@ static void fpx_call4(uintptr fn)
 	compemu_raw_call_r(16);
 }
 
+/* ---- the exact core's common FPU instructions inline (fp_jit_inline_kind()):
+ * the leaf helper fpj_leaf (fpp_softfloat.cpp) as emitted code, decoded at
+ * compile time. Runs after the registers are flushed, in x0 and x2-x17
+ * (x1 holds the source value for the helper call); every case it does not
+ * handle branches to the helper call, which does it. Only the fast path's
+ * exit is taken without the call. Same results as fpj_leaf, which
+ * softfloat_fastx80.h computes (FADD/FSUB/FMUL: fx80_addsub, fx80_mul). */
+#if defined(JIT) && defined(__SIZEOF_INT128__)
+#define FPX_OFF(field) ((uae_u32)((uintptr)&(regs.field) - (uintptr)&regs))
+#define FPX_TOP(r) MOV_xish(r, 0x8000, 48)
+
+struct fpx_fails {
+	uae_u32 *at[32];
+	int n;
+	void add() { at[n++] = (uae_u32 *)get_target(); }
+};
+
+static void fpx_mov32(int r, uae_u32 v)
+{
+	MOV_wi(r, v & 0xffff);
+	if (v >> 16)
+		MOVK_wish(r, v >> 16, 16);
+}
+
+// a normal value (wh, xl): exponent 1..0x7ffe, the integer bit set; else
+// fail. w17 holds 0x7ffd.
+static void fpx_normal(fpx_fails &f, int wh, int xl)
+{
+	f.add(); TBZ_xii(xl, 63, 0);
+	UBFX_wwii(16, wh, 0, 15);
+	SUB_wwi(16, 16, 1);
+	CMP_ww(16, 17);
+	f.add(); BHI_i(0);
+}
+
+// kind: fp_jit_inline_kind(); the result is left in x0 (0: the fast path did
+// it) when it falls through, else a failure branch was taken
+static void fpx_emit_inline(fpx_fails &f, uae_u32 kind, uae_u32 opext, uae_u32 pc)
+{
+	const int op = (kind & 0xff) - 1, src = (kind >> 8) & 0xf;
+	const bool fpiar = (kind >> 12) & 1, pcr060 = (kind >> 13) & 1;
+	const uae_u16 opcode = opext >> 16, extra = (uae_u16)opext;
+	const int sreg = (extra >> 10) & 7, dreg = (extra >> 7) & 7;
+	enum { K_MOVE, K_ADD, K_SUB, K_MUL, K_DIV, K_SQRT, K_ABS, K_NEG, K_CMP, K_TST };   // FK_* (fpp_softfloat.cpp)
+	enum { S_FPM, S_L, S_S, S_W, S_B, S_D };                                         // FJS_*
+
+	// FPCR: no exception enabled, extended precision, round to nearest; nothing pending
+	LDR_wXi(16, R_REGSTRUCT, FPX_OFF(fpcr));
+	MOV_wi(12, 0xfff0);
+	AND_www(16, 16, 12);
+	LDR_wXi(12, R_REGSTRUCT, FPX_OFF(fp_exp_pend));
+	ORR_www(16, 16, 12);
+	LDR_wXi(12, R_REGSTRUCT, FPX_OFF(fp_unimp_pend));
+	ORR_www(16, 16, 12);
+	if (pcr060) {
+		LDR_wXi(12, R_REGSTRUCT, FPX_OFF(pcr));
+		UBFX_wwii(12, 12, 1, 1);                           // DFP: the FPU disabled
+		ORR_www(16, 16, 12);
+	}
+	f.add(); CBNZ_wi(16, 0);
+	MOV_wi(17, 0x7ffd);                                    // w17: the normal exponent limit, throughout
+
+	// the source in (w6, x7)
+	if (src == S_FPM) {
+		LDRH_wXi(6, R_REGSTRUCT, FPX_OFF(fp[sreg].fpx.high));
+		LDR_xXi(7, R_REGSTRUCT, FPX_OFF(fp[sreg].fpx.low));
+		fpx_normal(f, 6, 7);
+	} else if (src == S_D) {
+		MOV_xx(12, 1);
+		UBFX_xxii(13, 12, 52, 11);
+		SUB_wwi(14, 13, 1);
+		MOV_wi(15, 0x7fd);
+		CMP_ww(14, 15);
+		f.add(); BHI_i(0);                                 // zero, denormal, infinity, NaN
+		MOV_wi(14, 0x3c00);
+		ADD_www(6, 13, 14);
+		LSR_xxi(14, 12, 48);
+		MOV_wi(15, 0x8000);
+		AND_www(14, 14, 15);
+		ORR_www(6, 6, 14);
+		LSL_xxi(7, 12, 11);
+		FPX_TOP(15);
+		ORR_xxx(7, 7, 15);
+	} else {
+		if (((opcode >> 3) & 7) == 0)
+			LDR_wXi(12, R_REGSTRUCT, FPX_OFF(regs[opcode & 7]));
+		else
+			MOV_ww(12, 1);
+		if (src == S_S) {
+			UBFX_wwii(13, 12, 23, 8);
+			SUB_wwi(14, 13, 1);
+			CMP_wi(14, 0xfd);
+			f.add(); BHI_i(0);
+			MOV_wi(14, 0x3f80);
+			ADD_www(6, 13, 14);
+			LSR_wwi(14, 12, 16);
+			MOV_wi(15, 0x8000);
+			AND_www(14, 14, 15);
+			ORR_www(6, 6, 14);
+			LSL_xxi(7, 12, 40);
+			FPX_TOP(15);
+			ORR_xxx(7, 7, 15);
+		} else {                                           // integer: int32_to_floatx80()
+			if (src == S_W)
+				SXTH_ww(12, 12);
+			else if (src == S_B)
+				SXTB_ww(12, 12);
+			f.add(); CBZ_wi(12, 0);                        // zero
+			ASR_wwi(13, 12, 31);
+			EOR_www(14, 12, 13);
+			SUB_www(14, 14, 13);                           // |i|
+			CLZ_ww(15, 14);
+			MOV_wi(6, 0x401e);
+			SUB_www(6, 6, 15);
+			MOV_wi(16, 0x8000);
+			AND_www(13, 13, 16);
+			ORR_www(6, 6, 13);
+			ADD_wwi(15, 15, 32);
+			LSL_xxx(7, 14, 15);
+		}
+	}
+
+	const bool dyadic = op == K_ADD || op == K_SUB || op == K_MUL || op == K_CMP;
+	if (dyadic) {                                          // the destination in (w8, x9)
+		LDRH_wXi(8, R_REGSTRUCT, FPX_OFF(fp[dreg].fpx.high));
+		LDR_xXi(9, R_REGSTRUCT, FPX_OFF(fp[dreg].fpx.low));
+		fpx_normal(f, 8, 9);
+	}
+	bool inexact = false;                                  // w5: inexact (ADD/SUB/MUL)
+	if (op == K_ADD || op == K_SUB || op == K_MUL) {
+		inexact = true;
+		// to the packing below: w16 sign, w2 exponent, x14 significand, x15 lost bits
+		uae_u32 *to_pack[4];
+		int npack = 0;
+		if (op == K_MUL) {
+			EOR_www(16, 8, 6);
+			LSR_wwi(16, 16, 15);
+			UBFX_wwii(2, 8, 0, 15);
+			UBFX_wwii(3, 6, 0, 15);
+			ADD_www(2, 2, 3);
+			MOV_wi(0, 0x3ffe);
+			SUB_www(2, 2, 0);
+			MUL_xxx(15, 9, 7);
+			UMULH_xxx(14, 9, 7);
+			to_pack[npack++] = (uae_u32 *)get_target(); TBNZ_xii(14, 63, 0);
+			EXTR_xxxi(14, 14, 15, 63);                     // (hi:lo) << 1
+			LSL_xxi(15, 15, 1);
+			SUB_wwi(2, 2, 1);
+		} else {
+			LSR_wwi(12, 8, 15);                            // a: the destination
+			LSR_wwi(13, 6, 15);                            // b: the source
+			if (op == K_SUB) {
+				MOV_wi(0, 1);
+				EOR_www(13, 13, 0);
+			}
+			UBFX_wwii(14, 8, 0, 15);
+			UBFX_wwii(15, 6, 0, 15);
+			SUBS_xxx(31, 9, 7);                            // C clear: |a| < |b|, swap
+			SBCS_www(31, 14, 15);
+			CSEL_wwwc(16, 13, 12, NATIVE_CC_CC);           // w16 sign, w10 the other's
+			CSEL_wwwc(10, 12, 13, NATIVE_CC_CC);
+			CSEL_wwwc(2, 15, 14, NATIVE_CC_CC);            // w2 exponent of the larger, w3 the smaller's
+			CSEL_wwwc(3, 14, 15, NATIVE_CC_CC);
+			CSEL_xxxc(4, 7, 9, NATIVE_CC_CC);              // x4 larger significand, x5 smaller
+			CSEL_xxxc(5, 9, 7, NATIVE_CC_CC);
+			SUB_www(0, 2, 3);                              // d
+			CMP_wi(0, 64);
+			f.add(); BCS_i(0);                             // 64 or more binades apart
+			LSR_xxx(14, 5, 0);                             // b aligned
+			NEG_xx(15, 0);
+			LSL_xxx(15, 5, 15);                            // its bits shifted out
+			CMP_wi(0, 0);
+			CSEL_xxxc(15, 31, 15, NATIVE_CC_EQ);
+			CMP_ww(16, 10);
+			uae_u32 *to_sub = (uae_u32 *)get_target(); BNE_i(0);
+			ADDS_xxx(14, 4, 14);
+			to_pack[npack++] = (uae_u32 *)get_target(); BCC_i(0);
+			// carry: one more binade, the sum's lowest bit joins the lost ones
+			UBFX_xxii(3, 15, 0, 1);
+			LSR_xxi(15, 15, 1);
+			ORR_xxx(15, 15, 3);
+			ORR_xxxLSLi(15, 15, 14, 63);
+			LSR_xxi(14, 14, 1);
+			FPX_TOP(3);
+			ORR_xxx(14, 14, 3);
+			ADD_wwi(2, 2, 1);
+			to_pack[npack++] = (uae_u32 *)get_target(); B_i(0);
+			write_jmp_target(to_sub, (uintptr)get_target());
+			// (x4:0) - (x14:x15), exact
+			NEGS_xx(15, 15);
+			SBC_xxx(14, 4, 14);
+			ORR_xxx(3, 14, 15);
+			f.add(); CBZ_xi(3, 0);                         // exact zero: its sign depends on the mode
+			to_pack[npack++] = (uae_u32 *)get_target(); TBNZ_xii(14, 63, 0);
+			uae_u32 *hi_zero = (uae_u32 *)get_target(); CBZ_xi(14, 0);
+			CLZ_xx(3, 14);
+			LSL_xxx(14, 14, 3);
+			NEG_xx(0, 3);
+			LSR_xxx(0, 15, 0);
+			ORR_xxx(14, 14, 0);
+			LSL_xxx(15, 15, 3);
+			SUB_www(2, 2, 3);
+			uae_u32 *to_pack2 = (uae_u32 *)get_target(); B_i(0);
+			write_jmp_target(hi_zero, (uintptr)get_target());
+			CLZ_xx(3, 15);
+			LSL_xxx(14, 15, 3);
+			MOV_xi(15, 0);
+			SUB_www(2, 2, 3);
+			SUB_wwi(2, 2, 64);
+			write_jmp_target(to_pack2, (uintptr)get_target());
+		}
+		for (int i = 0; i < npack; i++)
+			write_jmp_target(to_pack[i], (uintptr)get_target());
+		// round to nearest even (fx80_pack)
+		FPX_TOP(3);
+		CMP_xx(15, 3);
+		CSET_wc(0, NATIVE_CC_HI);
+		CSET_wc(4, NATIVE_CC_EQ);
+		AND_www(4, 4, 14);
+		ORR_www(0, 0, 4);
+		ADDS_xxx(14, 14, 0);
+		CSEL_xxxc(14, 3, 14, NATIVE_CC_CS);
+		CSET_wc(4, NATIVE_CC_CS);
+		ADD_www(2, 2, 4);
+		SUB_wwi(4, 2, 1);
+		CMP_ww(4, 17);
+		f.add(); BHI_i(0);                                 // underflow or overflow
+		ORR_wwwLSLi(10, 2, 16, 15);
+		MOV_xx(11, 14);
+		CMP_xi(15, 0);
+		CSET_wc(5, NATIVE_CC_NE);
+	} else if (op == K_CMP) {
+		// floatx80_cmp() of normal values: Z when equal, N when dst < src
+		CMP_ww(8, 6);
+		CCMP_xxfc(9, 7, 0, NATIVE_CC_EQ);
+		CSET_wc(2, NATIVE_CC_EQ);
+		UBFX_wwii(3, 8, 0, 15);
+		UBFX_wwii(4, 6, 0, 15);
+		SUBS_xxx(31, 9, 7);
+		SBCS_www(31, 3, 4);
+		CSET_wc(0, NATIVE_CC_CC);                          // |dst| < |src|
+		LSR_wwi(3, 8, 15);
+		LSR_wwi(4, 6, 15);
+		EOR_www(4, 3, 4);
+		EOR_www(0, 3, 0);
+		CMP_wi(4, 0);
+		CSEL_wwwc(0, 3, 0, NATIVE_CC_NE);                  // less
+		LSL_wwi(0, 0, 3);
+		MOV_wi(4, 4);
+		CMP_wi(2, 0);
+		CSEL_wwwc(0, 4, 0, NATIVE_CC_NE);              // w0: the condition code nibble
+	} else {
+		MOV_ww(10, 6);
+		MOV_xx(11, 7);
+		if (op == K_ABS) {
+			BFI_wwii(10, 31, 15, 1);
+		} else if (op == K_NEG) {
+			MOV_wi(0, 0x8000);
+			EOR_www(10, 10, 0);
+		}
+	}
+	if (op != K_CMP) {                                     // N from the result's sign
+		UBFX_wwii(0, op == K_TST ? 6 : 10, 15, 1);
+		LSL_wwi(0, 0, 3);
+	}
+	// the condition codes, the exception byte cleared (bits 0-2 and 28-31 are 0)
+	LDR_wXi(2, R_REGSTRUCT, FPX_OFF(fpsr));
+	BFI_wwii(2, 0, 24, 4);
+	BFI_wwii(2, 31, 8, 8);
+	if (inexact) {
+		const uae_u32 inex = fp_jit_inexact_status();
+		if (inex == 0x208) {                               // INEX2 and the accrued INEX
+			LSL_wwi(3, 5, 3);
+			ORR_wwwLSLi(3, 3, 5, 9);
+		} else {
+			fpx_mov32(3, inex);
+			CMP_wi(5, 0);
+			CSEL_wwwc(3, 3, 31, NATIVE_CC_NE);
+		}
+		ORR_www(2, 2, 3);
+	}
+	STR_wXi(2, R_REGSTRUCT, FPX_OFF(fpsr));
+	if (op != K_CMP && op != K_TST) {
+		STRH_wXi(10, R_REGSTRUCT, FPX_OFF(fp[dreg].fpx.high));
+		STR_xXi(11, R_REGSTRUCT, FPX_OFF(fp[dreg].fpx.low));
+	}
+	MOV_wi(3, 1);
+	STR_wXi(3, R_REGSTRUCT, FPX_OFF(fpu_state));
+	STRB_wXi(31, R_REGSTRUCT, FPX_OFF(fp_exception));
+	if (fpiar) {
+		fpx_mov32(3, pc);
+		STR_wXi(3, R_REGSTRUCT, FPX_OFF(fpiar));
+	}
+}
+#endif
+
 /* Compiled FPU arithmetic without native FPU code (the exact core): a call of
  * fpp_jit_arith(opext, value, pc_p, pc). nvals: 0 no operand, 1 v1 (32 bits),
  * 2 v1:v2 (a double). On return 0 the (An)+/-(An) update anreg += delta is
  * applied; on 1 nothing; on 2 the block is left (the interpreter handler took
  * an exception or left special flags). All registers are flushed. */
-MIDFUNC(9,jitx_fpp_arith,(IMPTR fn, RR4 v1, RR4 v2, IM8 nvals, IM32 opext, IMPTR pcp, IM32 pc, IM8 anreg, IM32 delta))
+MIDFUNC(10,jitx_fpp_arith,(IMPTR fn, RR4 v1, RR4 v2, IM8 nvals, IM32 opext, IMPTR pcp, IM32 pc, IM8 anreg, IM32 delta, IM32 inl))
 {
 	clobber_flags();
 	int r1 = -1, r2 = -1;
@@ -979,6 +1275,41 @@ MIDFUNC(9,jitx_fpp_arith,(IMPTR fn, RR4 v1, RR4 v2, IM8 nvals, IM32 opext, IMPTR
 	if (r2 >= 0)
 		unlock2(r2);
 	prepare_for_call_2();
+	uae_u32 *inline_done = nullptr;
+#if defined(JIT) && defined(__SIZEOF_INT128__)
+	// inl: the instruction inline, the call only when that does not apply
+	fpx_fails fails;
+	fails.n = 0;
+	if (inl) {
+		const bool verify = fp_jit_inline_verify();
+		if (verify) {                                      // the state before it, for the check
+			MOV_xx(REG_PAR1, REG_PAR2);
+			compemu_raw_call((uintptr)fp_jit_verify_save);
+			MOV_xx(REG_PAR2, REG_RESULT);
+		}
+		fpx_emit_inline(fails, inl, opext, pc);
+		if (verify) {                                      // the helper's result from that state must be the same
+			LOAD_U32(REG_PAR1, (uae_u32)opext);
+			LOAD_U64(R2_INDEX, pcp);
+			LOAD_U32(R3_INDEX, (uae_u32)pc);
+			LOAD_U64(R4_INDEX, fn);
+			fpx_call4((uintptr)fp_jit_verify_check);
+		}
+		if (anreg >= 0 && delta) {                         // the (An)+/-(An) update, as on a return of 0
+			uintptr idx = (uintptr)&regs.regs[8 + anreg] - (uintptr)&regs;
+			LDR_wXi(REG_WORK2, R_REGSTRUCT, idx);
+			if (delta > 0)
+				ADD_wwi(REG_WORK2, REG_WORK2, delta);
+			else
+				SUB_wwi(REG_WORK2, REG_WORK2, -delta);
+			STR_wXi(REG_WORK2, R_REGSTRUCT, idx);
+		}
+		inline_done = (uae_u32 *)get_target();
+		B_i(0);                                            // to the end
+		for (int i = 0; i < fails.n; i++)
+			write_jmp_target(fails.at[i], (uintptr)get_target());
+	}
+#endif
 	LOAD_U32(REG_PAR1, (uae_u32)opext);
 	LOAD_U64(R2_INDEX, pcp);
 	LOAD_U32(R3_INDEX, (uae_u32)pc);
@@ -1005,8 +1336,10 @@ MIDFUNC(9,jitx_fpp_arith,(IMPTR fn, RR4 v1, RR4 v2, IM8 nvals, IM32 opext, IMPTR
 	write_jmp_target(branch_leave, (uintptr)popall_do_nothing);
 	write_jmp_target(branch_join, (uintptr)get_target());
 	write_jmp_target(branch_slow_join, (uintptr)get_target());
+	if (inline_done)
+		write_jmp_target(inline_done, (uintptr)get_target());
 }
-MENDFUNC(9,jitx_fpp_arith,(IMPTR fn, RR4 v1, RR4 v2, IM8 nvals, IM32 opext, IMPTR pcp, IM32 pc, IM8 anreg, IM32 delta))
+MENDFUNC(10,jitx_fpp_arith,(IMPTR fn, RR4 v1, RR4 v2, IM8 nvals, IM32 opext, IMPTR pcp, IM32 pc, IM8 anreg, IM32 delta, IM32 inl))
 
 /* Compiled FPU instruction via fn, fpp_jit_generic(opext, ea, next_p, lenpc)
  * or a helper with its arguments and results (fp_jit_out_helper()):

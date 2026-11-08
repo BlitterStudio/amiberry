@@ -639,7 +639,8 @@ static bool comp_fpp_arith_call(uae_u32 opcode, uae_u16 extra)
 		}
 	}
 	void *fn = fp_jit_fast_helper(opcode, extra);
-	jitx_fpp_arith(fn ? (uintptr)fn : (uintptr)fpp_jit_arith, S2, S3, nvals, opext, (uintptr)insn, pc, anreg, delta);
+	jitx_fpp_arith(fn ? (uintptr)fn : (uintptr)fpp_jit_arith, S2, S3, nvals, opext, (uintptr)insn, pc, anreg, delta,
+		fn ? fp_jit_inline_kind(opcode, extra) : 0);
 	return true;
 }
 
