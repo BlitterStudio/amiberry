@@ -1251,6 +1251,213 @@ static void fpx_emit_inline(fpx_fails &f, uae_u32 kind, uae_u32 opext, uae_u32 p
 		STR_wXi(3, R_REGSTRUCT, FPX_OFF(fpiar));
 	}
 }
+
+/* FMOVE FPn,<ea> inline (fp_jit_out_inline_kind()): fpj_out (fpp_softfloat.cpp)
+ * as code. The destination is a data register, or memory the JIT may write
+ * directly (as writelong() decides at compile time), at the address in w1;
+ * (An)+ and -(An) are stepped here. Every case it does not handle branches
+ * to the helper call. */
+static bool fpx_out_direct(int size)
+{
+	const int ok = size == 6 ? !distrust_byte() : size == 4 ? !distrust_word() : !distrust_long();
+	return !(special_mem & S_WRITE) && ok && !jit_n_addr_unsafe && !currprefs.address_space_24;
+}
+
+// rounding of q (x14) by rem (x15) at the top: x0 = 1 to round up (nearest even)
+static void fpx_round_up_rn(void)
+{
+	FPX_TOP(4);
+	CMP_xx(15, 4);
+	CSET_wc(0, NATIVE_CC_HI);
+	CSET_wc(2, NATIVE_CC_EQ);
+	AND_www(2, 2, 14);
+	ORR_www(0, 0, 2);
+}
+
+static void fpx_emit_out(fpx_fails &f, uae_u32 kind, uae_u32 opext, uae_u32 pc)
+{
+	const uae_u16 opcode = opext >> 16, extra = (uae_u16)opext;
+	const int size = (extra >> 10) & 7, sreg = (extra >> 7) & 7, mode = (opcode >> 3) & 7, reg = opcode & 7;
+	const bool fpiar = (kind >> 12) & 1, pcr060 = (kind >> 13) & 1;
+	const bool fltfmt = size == 1 || size == 5;
+
+	// FPCR: no exception enabled; round to nearest for single and double
+	LDR_wXi(16, R_REGSTRUCT, FPX_OFF(fpcr));
+	MOV_wi(12, fltfmt ? 0xff30 : 0xff00);
+	AND_www(16, 16, 12);
+	LDR_wXi(12, R_REGSTRUCT, FPX_OFF(fp_exp_pend));
+	ORR_www(16, 16, 12);
+	LDR_wXi(12, R_REGSTRUCT, FPX_OFF(fp_unimp_pend));
+	ORR_www(16, 16, 12);
+	if (pcr060) {
+		LDR_wXi(12, R_REGSTRUCT, FPX_OFF(pcr));
+		UBFX_wwii(12, 12, 1, 1);
+		ORR_www(16, 16, 12);
+	}
+	f.add(); CBNZ_wi(16, 0);
+	MOV_wi(17, 0x7ffd);
+	LDRH_wXi(6, R_REGSTRUCT, FPX_OFF(fp[sreg].fpx.high));
+	LDR_xXi(7, R_REGSTRUCT, FPX_OFF(fp[sreg].fpx.low));
+	fpx_normal(f, 6, 7);
+
+	bool inexact = true;                                   // w5
+	if (size == 0 || size == 4 || size == 6) {             // fx80_to_int(), the FPCR's rounding mode
+		const int bits = size == 0 ? 32 : size == 4 ? 16 : 8;
+		UBFX_wwii(12, 6, 0, 15);
+		MOV_wi(13, 0x3fff);
+		SUB_www(12, 12, 13);                               // e
+		CMP_wi(12, bits - 1);
+		f.add(); BGE_i(0);                                 // out of range (or -2^31: softfloat)
+		uae_u32 *neg_e = (uae_u32 *)get_target(); TBNZ_wii(12, 31, 0);
+		MOV_wi(13, 63);
+		SUB_www(13, 13, 12);
+		LSR_xxx(14, 7, 13);                                // q
+		ADD_wwi(13, 12, 1);
+		LSL_xxx(15, 7, 13);                                // rem
+		uae_u32 *have = (uae_u32 *)get_target(); B_i(0);
+		write_jmp_target(neg_e, (uintptr)get_target());
+		MOV_xi(14, 0);
+		MOV_xi(15, 1);
+		ADDS_wwi(31, 12, 1);                               // e == -1: rem is the significand
+		CSEL_xxxc(15, 7, 15, NATIVE_CC_EQ);
+		write_jmp_target(have, (uintptr)get_target());
+		LDR_wXi(16, R_REGSTRUCT, FPX_OFF(fpcr));
+		UBFX_wwii(16, 16, 4, 2);                           // 0 RN, 1 RZ, 2 RM, 3 RP
+		LSR_wwi(3, 6, 15);                                 // negative
+		fpx_round_up_rn();
+		CMP_xi(15, 0);
+		CSET_wc(2, NATIVE_CC_NE);
+		UBFX_wwii(4, 16, 0, 1);
+		EOR_www(4, 4, 3);
+		AND_www(2, 2, 4);                                  // RM: negative, RP: positive, inexact
+		CMP_wi(16, 1);
+		CSEL_wwwc(2, 31, 2, NATIVE_CC_EQ);                 // RZ: never
+		CMP_wi(16, 0);
+		CSEL_wwwc(0, 0, 2, NATIVE_CC_EQ);
+		ADD_xxx(14, 14, 0);
+		fpx_mov32(4, (1u << (bits - 1)) - 1);
+		ADD_xxx(4, 4, 3);                                  // 2^(bits-1) when negative
+		CMP_xx(14, 4);
+		f.add(); BHI_i(0);                                 // overflow
+		NEG_ww(4, 14);
+		CMP_wi(3, 0);
+		CSEL_wwwc(10, 4, 14, NATIVE_CC_NE);
+	} else if (size == 1 || size == 5) {                   // fx80_to_f32()/fx80_to_f64()
+		const bool d = size == 5;
+		UBFX_wwii(12, 6, 0, 15);
+		MOV_wi(13, d ? 0x3c00 : 0x3f80);
+		SUB_www(12, 12, 13);                               // the format's biased exponent
+		SUB_wwi(13, 12, 1);
+		MOV_wi(0, d ? 0x7fd : 0xfd);
+		CMP_ww(13, 0);
+		f.add(); BHI_i(0);                                 // overflow or underflow
+		LSR_xxi(14, 7, d ? 11 : 40);
+		LSL_xxi(15, 7, d ? 53 : 24);
+		fpx_round_up_rn();
+		ADD_xxx(14, 14, 0);
+		uae_u32 *nocarry = (uae_u32 *)get_target(); TBZ_xii(14, d ? 53 : 24, 0);
+		LSR_xxi(14, 14, 1);
+		ADD_wwi(12, 12, 1);
+		MOV_wi(0, d ? 0x7fe : 0xfe);
+		CMP_ww(12, 0);
+		f.add(); BHI_i(0);
+		write_jmp_target(nocarry, (uintptr)get_target());
+		LSR_wwi(3, 6, 15);
+		if (d) {
+			UBFX_xxii(14, 14, 0, 52);
+			ORR_xxxLSLi(10, 14, 12, 52);
+			ORR_xxxLSLi(10, 10, 3, 63);
+		} else {
+			UBFX_wwii(14, 14, 0, 23);
+			ORR_wwwLSLi(10, 14, 12, 23);
+			ORR_wwwLSLi(10, 10, 3, 31);
+		}
+	} else {
+		inexact = false;                                   // X: the register unchanged
+	}
+	if (inexact) {
+		CMP_xi(15, 0);
+		CSET_wc(5, NATIVE_CC_NE);
+	}
+
+	if (mode == 0) {
+		const uae_u32 off = FPX_OFF(regs[reg]);
+		if (size == 4 || size == 6) {
+			LDR_wXi(2, R_REGSTRUCT, off);
+			BFI_wwii(2, 10, 0, size == 4 ? 16 : 8);
+			STR_wXi(2, R_REGSTRUCT, off);
+		} else {
+			STR_wXi(10, R_REGSTRUCT, off);
+		}
+	} else {
+		if (mode == 3 || mode == 4) {
+			const int bytes = size == 6 ? (reg == 7 ? 2 : 1) : size == 4 ? 2 : size == 5 ? 8 : size == 2 ? 12 : 4;
+			const uae_u32 off = FPX_OFF(regs[8 + reg]);
+			LDR_wXi(2, R_REGSTRUCT, off);
+			if (mode == 3)
+				ADD_wwi(2, 2, bytes);
+			else
+				SUB_wwi(2, 2, bytes);
+			STR_wXi(2, R_REGSTRUCT, off);
+		}
+		switch (size) {
+		case 6:
+			STRB_wXx(10, 1, R_MEMSTART);
+			break;
+		case 4:
+			REV16_ww(2, 10);
+			STRH_wXx(2, 1, R_MEMSTART);
+			break;
+		case 5:
+			LSR_xxi(3, 10, 32);
+			REV_ww(2, 3);
+			STR_wXx(2, 1, R_MEMSTART);
+			ADD_wwi(3, 1, 4);
+			REV_ww(2, 10);
+			STR_wXx(2, 3, R_MEMSTART);
+			break;
+		case 2:
+			LSL_wwi(2, 6, 16);
+			REV_ww(2, 2);
+			STR_wXx(2, 1, R_MEMSTART);
+			ADD_wwi(3, 1, 4);
+			LSR_xxi(4, 7, 32);
+			REV_ww(2, 4);
+			STR_wXx(2, 3, R_MEMSTART);
+			ADD_wwi(3, 1, 8);
+			REV_ww(2, 7);
+			STR_wXx(2, 3, R_MEMSTART);
+			break;
+		default:
+			REV_ww(2, 10);
+			STR_wXx(2, 1, R_MEMSTART);
+			break;
+		}
+	}
+	// the exception byte cleared (CC kept), INEX2 and the accrued INEX
+	LDR_wXi(2, R_REGSTRUCT, FPX_OFF(fpsr));
+	BFI_wwii(2, 31, 8, 8);
+	if (inexact) {
+		const uae_u32 inex = fp_jit_inexact_status();
+		if (inex == 0x208) {
+			LSL_wwi(3, 5, 3);
+			ORR_wwwLSLi(3, 3, 5, 9);
+		} else {
+			fpx_mov32(3, inex);
+			CMP_wi(5, 0);
+			CSEL_wwwc(3, 3, 31, NATIVE_CC_NE);
+		}
+		ORR_www(2, 2, 3);
+	}
+	STR_wXi(2, R_REGSTRUCT, FPX_OFF(fpsr));
+	MOV_wi(3, 1);
+	STR_wXi(3, R_REGSTRUCT, FPX_OFF(fpu_state));
+	STRB_wXi(31, R_REGSTRUCT, FPX_OFF(fp_exception));
+	if (fpiar) {
+		fpx_mov32(3, pc);
+		STR_wXi(3, R_REGSTRUCT, FPX_OFF(fpiar));
+	}
+}
 #endif
 
 /* Compiled FPU arithmetic without native FPU code (the exact core): a call of
@@ -1344,7 +1551,7 @@ MENDFUNC(10,jitx_fpp_arith,(IMPTR fn, RR4 v1, RR4 v2, IM8 nvals, IM32 opext, IMP
 /* Compiled FPU instruction via fn, fpp_jit_generic(opext, ea, next_p, lenpc)
  * or a helper with its arguments and results (fp_jit_out_helper()):
  * ea from the 68k temp a (if hasea). Continue on 1, leave the block on 2. */
-MIDFUNC(6,jitx_fpp_generic,(IMPTR fn, RR4 a, IM8 hasea, IM32 opext, IMPTR nextp, IMPTR lenpc))
+MIDFUNC(7,jitx_fpp_generic,(IMPTR fn, RR4 a, IM8 hasea, IM32 opext, IMPTR nextp, IMPTR lenpc, IM32 inl))
 {
 	clobber_flags();
 	int r = -1;
@@ -1354,6 +1561,33 @@ MIDFUNC(6,jitx_fpp_generic,(IMPTR fn, RR4 a, IM8 hasea, IM32 opext, IMPTR nextp,
 	if (r >= 0)
 		unlock2(r);
 	prepare_for_call_2();
+	uae_u32 *inline_done = nullptr;
+#if defined(JIT) && defined(__SIZEOF_INT128__)
+	// inl: an FMOVE to <ea> inline, the call only when that does not apply
+	fpx_fails fails;
+	fails.n = 0;
+	if (inl && ((((uae_u16)opext >> 13) & 7) != 3 || ((opext >> 19) & 7) == 0 || fpx_out_direct(((uae_u16)opext >> 10) & 7))) {
+		const bool verify = fp_jit_inline_verify();
+		if (verify) {
+			MOV_xx(REG_PAR1, REG_PAR2);
+			LOAD_U32(REG_PAR2, (uae_u32)opext);
+			fpx_call4((uintptr)fp_jit_verify_out_save);
+			MOV_xx(REG_PAR2, REG_RESULT);
+		}
+		fpx_emit_out(fails, inl, opext, (uae_u32)lenpc);
+		if (verify) {
+			LOAD_U32(REG_PAR1, (uae_u32)opext);
+			LOAD_U64(R2_INDEX, nextp);
+			LOAD_U64(R3_INDEX, lenpc);
+			LOAD_U64(R4_INDEX, fn);
+			fpx_call4((uintptr)fp_jit_verify_out_check);
+		}
+		inline_done = (uae_u32 *)get_target();
+		B_i(0);
+		for (int i = 0; i < fails.n; i++)
+			write_jmp_target(fails.at[i], (uintptr)get_target());
+	}
+#endif
 	LOAD_U32(REG_PAR1, (uae_u32)opext);
 	LOAD_U64(R2_INDEX, nextp);
 	LOAD_U64(R3_INDEX, lenpc);
@@ -1364,8 +1598,10 @@ MIDFUNC(6,jitx_fpp_generic,(IMPTR fn, RR4 a, IM8 hasea, IM32 opext, IMPTR nextp,
 	B_i(0);                                     // 2: leave the block
 	write_jmp_target(branch_leave, (uintptr)popall_do_nothing);
 	write_jmp_target(branch_cont, (uintptr)get_target());
+	if (inline_done)
+		write_jmp_target(inline_done, (uintptr)get_target());
 }
-MENDFUNC(6,jitx_fpp_generic,(IMPTR fn, RR4 a, IM8 hasea, IM32 opext, IMPTR nextp, IMPTR lenpc))
+MENDFUNC(7,jitx_fpp_generic,(IMPTR fn, RR4 a, IM8 hasea, IM32 opext, IMPTR nextp, IMPTR lenpc, IM32 inl))
 
 /* The exact core: the FPSR CC are always valid. d low byte = $FF/$00 from the
  * predicate's truth mask over the CC nibble (fpp_get_cond_mask()); with bsun

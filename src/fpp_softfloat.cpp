@@ -1086,6 +1086,25 @@ uae_u32 fp_jit_inline_kind(uae_u16 opcode, uae_u16 extra)
 		| (currprefs.cpu_model == 68060 ? 1 << 13 : 0);
 }
 
+/* FMOVE FPn,<ea> inline (fpx_emit_out(), fpj_out as code): 0 for none, else
+ * 1 | FPIAR on every instruction << 12 | 68060 << 13. The JIT also needs a
+ * data register or memory it writes directly. */
+uae_u32 fp_jit_out_inline_kind(uae_u16 opcode, uae_u16 extra)
+{
+	if (!fp_jit_inline_kind(0xf200, 0x0000))            // inline code off, or not the exact core
+		return 0;
+	if (((extra >> 13) & 7) != 3)
+		return 0;
+	switch ((extra >> 10) & 7) {
+	case 0: case 1: case 2: case 4: case 5: case 6:
+		break;
+	default:
+		return 0;                                      // packed
+	}
+	(void)opcode;
+	return 1 | (fpj_fpiar_always ? 1 << 12 : 0) | (currprefs.cpu_model == 68060 ? 1 << 13 : 0);
+}
+
 // the FPSR bits of an inexact result (INEX2 and the accrued INEX)
 uae_u32 fp_jit_inexact_status(void)
 {
@@ -1113,6 +1132,84 @@ bool fp_jit_inline_verify(void)
 			write_log(_T("JIT FPU: inline instructions are verified against their helpers\n"));
 	}
 	return verify;
+}
+
+/* The same for an inline FMOVE to <ea>: the integer registers and the
+ * destination's memory too (the helper rerun must find them as before). */
+static struct {
+	uae_u32 regs[16];
+	uae_u8 mem[12];
+} fpj_verify_out;
+
+static int fpj_out_bytes(uae_u32 opext)
+{
+	const int size = (opext >> 10) & 7, mode = (opext >> 19) & 7;
+	if (mode == 0)
+		return 0;
+	return size == 6 ? 1 : size == 4 ? 2 : size == 5 ? 8 : size == 2 ? 12 : 4;
+}
+
+uae_u64 REGPARAM3 fp_jit_verify_out_save(uae_u64 ea, uae_u32 opext)
+{
+	fp_jit_verify_save(0);
+	for (int i = 0; i < 16; i++)
+		fpj_verify_out.regs[i] = regs.regs[i];
+	for (int i = 0; i < fpj_out_bytes(opext); i++)
+		fpj_verify_out.mem[i] = get_byte((uaecptr)ea + i);
+	return ea;
+}
+
+void REGPARAM3 fp_jit_verify_out_check(uae_u32 opext, uae_u64 ea, uae_u8 *next_p, uae_u64 lenpc, void *fn)
+{
+	const int n = fpj_out_bytes(opext);
+	uae_u32 got_regs[16];
+	uae_u8 got_mem[12];
+	floatx80 got[8];
+	for (int i = 0; i < 8; i++)
+		got[i] = regs.fp[i].fpx;
+	for (int i = 0; i < 16; i++)
+		got_regs[i] = regs.regs[i];
+	for (int i = 0; i < n; i++)
+		got_mem[i] = get_byte((uaecptr)ea + i);
+	const uae_u32 got_fpsr = regs.fpsr, got_fpiar = regs.fpiar;
+	// the state before, then the helper from it (keeping the compiled code's PC state)
+	for (int i = 0; i < 8; i++)
+		regs.fp[i].fpx = fpj_verify_state.fp[i];
+	for (int i = 0; i < 16; i++)
+		regs.regs[i] = fpj_verify_out.regs[i];
+	for (int i = 0; i < n; i++)
+		put_byte((uaecptr)ea + i, fpj_verify_out.mem[i]);
+	regs.fpsr = fpj_verify_state.fpsr;
+	regs.fpiar = fpj_verify_state.fpiar;
+	regs.fpu_state = fpj_verify_state.fpu_state;
+	regs.fp_exception = fpj_verify_state.fp_exception;
+	uae_u8 *const pc_p = regs.pc_p, *const pc_oldp = regs.pc_oldp;
+	const uae_u32 pc = regs.pc, ipc = regs.instruction_pc;
+	const uae_u32 r = ((uae_u32 (REGPARAM3 *)(uae_u32, uae_u64, uae_u8 *, uae_u64))fn)(opext, ea, next_p, lenpc);
+	regs.pc_p = pc_p;
+	regs.pc_oldp = pc_oldp;
+	regs.pc = pc;
+	regs.instruction_pc = ipc;
+	bool same = (r == 1 || r == 2) && regs.fpsr == got_fpsr && regs.fpiar == got_fpiar;
+	for (int i = 0; i < 8; i++)
+		same &= regs.fp[i].fpx.high == got[i].high && regs.fp[i].fpx.low == got[i].low;
+	for (int i = 0; i < 16; i++)
+		same &= regs.regs[i] == got_regs[i];
+	for (int i = 0; i < n; i++)
+		same &= get_byte((uaecptr)ea + i) == got_mem[i];
+	fpj_verify_checks++;
+	if (!same && fpj_verify_mismatches++ < 50) {
+		const int sr = (opext >> 7) & 7;
+		write_log(_T("JIT FPU verify (FMOVE out): %08x ea %08x: helper %u, FPSR %08x (inline %08x), FP%d %04x.%016llx, mem %02x%02x%02x%02x (inline %02x%02x%02x%02x), D%d %08x (inline %08x)\n"),
+			opext, (uae_u32)ea, r, regs.fpsr, got_fpsr, sr, fpj_verify_state.fp[sr].high,
+			(unsigned long long)fpj_verify_state.fp[sr].low,
+			n > 0 ? get_byte((uaecptr)ea) : 0, n > 1 ? get_byte((uaecptr)ea + 1) : 0, n > 2 ? get_byte((uaecptr)ea + 2) : 0,
+			n > 3 ? get_byte((uaecptr)ea + 3) : 0, n > 0 ? got_mem[0] : 0, n > 1 ? got_mem[1] : 0, n > 2 ? got_mem[2] : 0,
+			n > 3 ? got_mem[3] : 0, (opext >> 16) & 7, regs.regs[(opext >> 16) & 7], got_regs[(opext >> 16) & 7]);
+	}
+	if (fpj_verify_checks == 1 || !(fpj_verify_checks & 0xfffff))
+		write_log(_T("JIT FPU verify: %llu inline instructions checked, %llu mismatches\n"),
+			(unsigned long long)fpj_verify_checks, (unsigned long long)fpj_verify_mismatches);
 }
 
 uae_u64 REGPARAM3 fp_jit_verify_save(uae_u64 value)
@@ -1192,6 +1289,11 @@ void *fp_jit_out_helper(uae_u16, uae_u16)
 uae_u32 fp_jit_inline_kind(uae_u16, uae_u16)
 {
 	return 0;                                          // the inline code needs the 128-bit fast paths
+}
+
+uae_u32 fp_jit_out_inline_kind(uae_u16, uae_u16)
+{
+	return 0;
 }
 #endif
 
