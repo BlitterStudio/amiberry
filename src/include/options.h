@@ -632,6 +632,15 @@ struct whdload_options
 };
 #endif
 
+/* fpu_mode, the FPU core. Automatic: the exact core where it costs no speed
+ * (AArch64 without the JIT FPU), else the host core. Exact: 80-bit softfloat
+ * on any host (cfgfile fpu_softfloat). Host: host floating point, 64-bit or
+ * x87 80-bit; FPU_MODE_HOST80 the MSVC long double host core. */
+#define FPU_MODE_AUTO 0
+#define FPU_MODE_EXACT 1
+#define FPU_MODE_HOST 2
+#define FPU_MODE_HOST80 (-1)
+
 struct uae_prefs {
 
 	struct strlist *all_lines;
@@ -714,7 +723,7 @@ struct uae_prefs {
 	bool cachesize_inhibit;
 	TCHAR jitblacklist[MAX_DPATH];
 	bool fpu_strict;
-	int fpu_mode;
+	int fpu_mode; // FPU_MODE_*: the FPU core (fpp.cpp fpu_core_wanted())
 
 	struct monconfig gfx_monitor[MAX_AMIGADISPLAYS];
 	int gfx_framerate, gfx_autoframerate;

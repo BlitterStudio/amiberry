@@ -3541,7 +3541,9 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 	cfgfile_dwrite_bool (f, _T("fpu_no_unimplemented"), p->fpu_no_unimplemented);
 	cfgfile_dwrite_bool (f, _T("cpu_no_unimplemented"), p->int_no_unimplemented);
 	cfgfile_write_bool (f, _T("fpu_strict"), p->fpu_strict);
-	cfgfile_dwrite_bool (f, _T("fpu_softfloat"), p->fpu_mode > 0);
+	cfgfile_dwrite_bool (f, _T("fpu_softfloat"), p->fpu_mode == FPU_MODE_EXACT);
+	cfgfile_dwrite_str (f, _T("fpu_core"), p->fpu_mode == FPU_MODE_EXACT ? _T("exact")
+		: p->fpu_mode == FPU_MODE_HOST || p->fpu_mode == FPU_MODE_HOST80 ? _T("host") : _T("auto"));
 #ifdef MSVC_LONG_DOUBLE
 	cfgfile_dwrite_bool(f, _T("fpu_msvc_long_double"), p->fpu_mode < 0);
 #endif
@@ -6869,9 +6871,23 @@ static int cfgfile_parse_hardware (struct uae_prefs *p, const TCHAR *option, TCH
 		|| cfgfile_string (option, value, _T("ghostscript_parameters"), p->ghostscript_parameters, sizeof p->ghostscript_parameters / sizeof (TCHAR)))
 		return 1;
 
+	// fpu_softfloat (WinUAE, older Amiberry): true is the exact core; false
+	// is written without a choice, so it leaves Automatic and Host alone.
 	if (cfgfile_yesno(option, value, _T("fpu_softfloat"), &dummybool)) {
 		if (dummybool)
-			p->fpu_mode = 1;
+			p->fpu_mode = FPU_MODE_EXACT;
+		else if (p->fpu_mode == FPU_MODE_EXACT)
+			p->fpu_mode = FPU_MODE_AUTO;
+		return 1;
+	}
+	TCHAR fpu_core[16];
+	if (cfgfile_string(option, value, _T("fpu_core"), fpu_core, sizeof fpu_core / sizeof(TCHAR))) {
+		if (!_tcsicmp(fpu_core, _T("exact")))
+			p->fpu_mode = FPU_MODE_EXACT;
+		else if (!_tcsicmp(fpu_core, _T("host")))
+			p->fpu_mode = p->fpu_mode == FPU_MODE_HOST80 ? FPU_MODE_HOST80 : FPU_MODE_HOST;
+		else
+			p->fpu_mode = FPU_MODE_AUTO;
 		return 1;
 	}
 #ifdef MSVC_LONG_DOUBLE
@@ -9082,7 +9098,7 @@ static int execcmdline(struct uae_prefs *prefs, int argv, TCHAR **argc, TCHAR *o
 		// command sets compfpu. Configurations saved by older builds with
 		// JIT off can carry compfpu=false that the user never chose.
 		if (!old_cachesize && prefs->cachesize && !compfpu_given)
-			prefs->compfpu = prefs->fpu_mode <= 0;
+			prefs->compfpu = prefs->fpu_mode != FPU_MODE_EXACT;
 #endif
 		inputdevice_fix_prefs(prefs, false);
 		set_config_changed();
@@ -9890,7 +9906,7 @@ static void buildin_default_prefs (struct uae_prefs *p)
 	// Presets that switch JIT on (quickstart, WHDLoad) get the JIT FPU by
 	// default unless softfloat is selected; it has no effect without JIT
 	// or an FPU.
-	p->compfpu = p->fpu_mode <= 0;
+	p->compfpu = p->fpu_mode != FPU_MODE_EXACT;
 #endif
 	p->socket_emu = false;
 	p->clipboard_sharing = false;
