@@ -73,8 +73,7 @@ internal object LibraryLaunch {
 			hasFloppy = { it.hasFloppy },
 			hasKickstart = { ModelRomAvailability.hasKickstart(it, roms) }
 		) ?: return PlayResult.Refused(R.string.quick_start_no_compatible_models_message)
-		launchQuickPlay(context, model, roms, floppy0 = disk.path)
-		return PlayResult.Started
+		return launchQuickPlay(context, model, roms, floppy0 = disk.path)
 	}
 
 	/** A CD in a CD32 (a CDTV when only its Kickstart is installed). */
@@ -82,8 +81,7 @@ internal object LibraryLaunch {
 		val model = listOf(AmigaModel.CD32, AmigaModel.CDTV)
 			.firstOrNull { ModelRomAvailability.isModelAvailable(it, roms) }
 			?: return PlayResult.Refused(R.string.library_cd_needs_rom)
-		launchQuickPlay(context, model, roms, cdImage = cd.path)
-		return PlayResult.Started
+		return launchQuickPlay(context, model, roms, cdImage = cd.path)
 	}
 
 	/** A WHDLoad archive through the WHDBooter path: it decides the hardware at start. */
@@ -172,8 +170,7 @@ internal object LibraryLaunch {
 		val floppy0 = entry.optString("df0")
 		val floppy1 = entry.optString("df1")
 		val cdImage = entry.optString("cd")
-		launchQuickPlay(context, model, roms, floppy0, floppy1, cdImage)
-		return PlayResult.Started
+		return launchQuickPlay(context, model, roms, floppy0, floppy1, cdImage)
 	}
 
 	/**

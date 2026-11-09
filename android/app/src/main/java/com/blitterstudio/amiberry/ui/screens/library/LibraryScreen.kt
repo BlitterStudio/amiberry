@@ -147,9 +147,13 @@ fun LibraryScreen(
 	// honest while it works (and stops a second batch from being silently dropped).
 	val filesImporting by fileViewModel.isImporting.collectAsState()
 
-	// What was played last, most recent first.
+	// What was played last, most recent first. An entry's files are checked against the
+	// shelf inventories: deleting a played disk or re-importing a missing one shows on
+	// its row as soon as the scan that follows lands.
 	val recentEntries by preferences.recentLaunches
-	val recentItems = remember(recentEntries, availableModels) {
+	val recentItems = remember(
+		recentEntries, availableModels, floppies, cds, whdloadGames, hardDrives
+	) {
 		RecentLaunches.items(recentEntries, availableModels)
 	}
 
