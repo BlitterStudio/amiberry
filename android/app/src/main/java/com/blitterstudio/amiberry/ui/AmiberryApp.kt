@@ -1,66 +1,56 @@
 package com.blitterstudio.amiberry.ui
 
 import android.widget.Toast
+import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.focusGroup
-import androidx.compose.foundation.layout.consumeWindowInsets
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.withFrameNanos
-import androidx.compose.ui.focus.FocusDirection
-import androidx.compose.ui.focus.focusProperties
-import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Icon
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationRail
-import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.runtime.getValue
-import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.blitterstudio.amiberry.R
-import com.blitterstudio.amiberry.ui.findActivity
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavDestination.Companion.hierarchy
-import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.blitterstudio.amiberry.R
+import com.blitterstudio.amiberry.data.ConfigurationSaveActions
 import com.blitterstudio.amiberry.data.GlobalDialogState
 import com.blitterstudio.amiberry.data.PendingImportState
+import com.blitterstudio.amiberry.ui.findActivity
 import com.blitterstudio.amiberry.ui.navigation.Screen
 import com.blitterstudio.amiberry.ui.navigation.shouldMoveTaskToBack
 import com.blitterstudio.amiberry.ui.screens.AboutScreen
-import com.blitterstudio.amiberry.ui.screens.ConfigurationsScreen
-import com.blitterstudio.amiberry.ui.screens.FileManagerScreen
-import com.blitterstudio.amiberry.ui.screens.QuickStartScreen
+import com.blitterstudio.amiberry.ui.screens.library.LibraryScreen
 import com.blitterstudio.amiberry.ui.screens.settings.SettingsScreen
-import androidx.activity.ComponentActivity
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.blitterstudio.amiberry.data.ConfigurationSaveActions
 import com.blitterstudio.amiberry.ui.viewmodel.SettingsViewModel
 import kotlinx.coroutines.launch
-import androidx.compose.runtime.CompositionLocalProvider
 
 @Composable
 fun AmiberryApp() {
@@ -169,8 +159,6 @@ fun AmiberryApp() {
 		}
 	}
 
-	val useNavRail = usesNavigationRail()
-
 	val navBackStackEntry by navController.currentBackStackEntryAsState()
 	val currentDestination = navBackStackEntry?.destination
 
@@ -179,24 +167,7 @@ fun AmiberryApp() {
 	val navScope = rememberCoroutineScope()
 	var pendingGuard by remember { mutableStateOf<UnsavedChangesGuard.Pending?>(null) }
 
-	fun navigateToRoute(route: String) {
-		navController.navigate(route) {
-			popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-			launchSingleTop = true
-			restoreState = true
-		}
-	}
-
 	val onSettingsRoute = currentDestination?.hierarchy?.any { it.route == Screen.Settings.route } == true
-
-	fun guardedNavigate(targetRoute: String, action: () -> Unit) {
-		val pending = if (targetRoute != Screen.Settings.route && onSettingsRoute) {
-			UnsavedChangesGuard.request(UnsavedChangesGuard.Trigger.Leave, settingsViewModel.isDirty, action)
-		} else {
-			null
-		}
-		if (pending != null) pendingGuard = pending else action()
-	}
 
 	// Settings' Start asks the same question while a named configuration has unsaved edits.
 	val startGuard = remember(settingsViewModel) {
@@ -220,9 +191,11 @@ fun AmiberryApp() {
 		activity?.moveTaskToBack(true)
 	}
 
+	// Back from the editor to the Library asks about unsaved edits first; without any,
+	// Back simply pops to the Library.
 	BackHandler(enabled = onSettingsRoute && settingsViewModel.isDirty) {
 		pendingGuard = UnsavedChangesGuard.Pending(UnsavedChangesGuard.Trigger.Leave) {
-			activity?.moveTaskToBack(true)
+			navController.popBackStack()
 		}
 	}
 
@@ -293,7 +266,7 @@ fun AmiberryApp() {
 		)
 	}
 
-	// D-pad focus enters a tab's content where it last was, else at the control the screen
+	// D-pad focus enters the destination's content where it last was, else at the control the screen
 	// marks (contentEntryFocus), else at its first control.
 	val contentFocus = remember { FocusRequester() }
 	val contentEntry = remember { FocusRequester() }
@@ -303,8 +276,8 @@ fun AmiberryApp() {
 		.focusGroup()
 	val currentRoute = currentDestination?.route
 	val tv = isTvDevice()
-	// On a TV, focus starts in the content, not on the rail; About opens and closes from the
-	// content (Quick Start's info button), so focus stays in the content on both ways.
+	// On a TV, focus starts in the content, not on a top bar; About opens and closes from
+	// the content (the Library's overflow menu), so focus stays in the content both ways.
 	var initialFocusDone by rememberSaveable { mutableStateOf(false) }
 	var previousRoute by remember { mutableStateOf<String?>(null) }
 	LaunchedEffect(currentRoute) {
@@ -321,68 +294,16 @@ fun AmiberryApp() {
 		}
 	}
 
-	fun isSelected(screen: Screen): Boolean =
-		currentDestination?.hierarchy?.any { it.route == screen.route } == true ||
-			// About opens from Home, so Home stays the tab you are on.
-			(screen == Screen.QuickStart && currentRoute == Screen.About.route)
-
 	CompositionLocalProvider(LocalContentEntryFocus provides contentEntry) {
-		if (useNavRail) {
-			Row(modifier = Modifier.fillMaxSize()) {
-				NavigationRail(modifier = Modifier.focusGroup()) {
-					val lastItem = Screen.bottomNavItems.last()
-					Screen.bottomNavItems.forEach { screen ->
-						val title = stringResource(screen.titleRes)
-						NavigationRailItem(
-							icon = { Icon(screen.icon, contentDescription = title) },
-							label = { Text(title) },
-							selected = isSelected(screen),
-							onClick = { guardedNavigate(screen.route) { navigateToRoute(screen.route) } },
-							modifier = Modifier
-								.focusProperties {
-									// Right always enters the content (the 2D search found a top bar icon).
-									right = contentFocus
-									// Down from the last tab would jump to Start.
-									if (screen == lastItem) down = FocusRequester.Cancel
-								}
-								.dpadFocusIndicator()
-						)
-					}
-				}
-				Scaffold(modifier = Modifier.weight(1f)) { innerPadding ->
-					AmiberryNavHost(
-						navController,
-						startGuard,
-						contentModifier.padding(innerPadding).consumeWindowInsets(innerPadding)
-					)
-				}
-			}
-		} else {
-			Scaffold(
-				bottomBar = {
-					NavigationBar(modifier = Modifier.focusGroup()) {
-						Screen.bottomNavItems.forEach { screen ->
-							val title = stringResource(screen.titleRes)
-							NavigationBarItem(
-								icon = { Icon(screen.icon, contentDescription = title) },
-								label = { Text(title) },
-								selected = isSelected(screen),
-								onClick = { guardedNavigate(screen.route) { navigateToRoute(screen.route) } },
-								modifier = Modifier.dpadFocusIndicator()
-							)
-						}
-					}
-				}
-			) { innerPadding ->
-				// The screens' own top bars and Scaffolds apply the status and navigation bar
-				// insets; consuming the shell's padding keeps them from adding the same inset
-				// twice (an empty band above every title).
-				AmiberryNavHost(
-					navController,
-					startGuard,
-					contentModifier.padding(innerPadding).consumeWindowInsets(innerPadding)
-				)
-			}
+		Scaffold { innerPadding ->
+			// The screens' own Scaffolds apply the status and navigation bar insets;
+			// consuming the shell's padding keeps them from adding the same inset twice
+			// (an empty band above every title).
+			AmiberryNavHost(
+				navController,
+				startGuard,
+				contentModifier.padding(innerPadding).consumeWindowInsets(innerPadding)
+			)
 		}
 	}
 }
@@ -394,11 +315,11 @@ private const val CONTENT_FOCUS_ATTEMPTS = 30
 private fun AmiberryNavHost(navController: NavHostController, startGuard: StartGuard, modifier: Modifier = Modifier) {
 	NavHost(
 		navController = navController,
-		startDestination = Screen.QuickStart.route,
+		startDestination = Screen.Library.route,
 		modifier = modifier
 	) {
-		composable(Screen.QuickStart.route) {
-			QuickStartScreen(navController = navController)
+		composable(Screen.Library.route) {
+			LibraryScreen(navController = navController)
 		}
 		composable(Screen.About.route) {
 			AboutScreen(onBack = { navController.popBackStack() })
@@ -407,12 +328,6 @@ private fun AmiberryNavHost(navController: NavHostController, startGuard: StartG
 			CompositionLocalProvider(LocalStartGuard provides startGuard) {
 				SettingsScreen()
 			}
-		}
-		composable(Screen.FileManager.route) {
-			FileManagerScreen()
-		}
-		composable(Screen.Configurations.route) {
-			ConfigurationsScreen(navController = navController)
 		}
 	}
 }

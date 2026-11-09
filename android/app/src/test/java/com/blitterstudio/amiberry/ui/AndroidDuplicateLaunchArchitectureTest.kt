@@ -8,24 +8,24 @@ class AndroidDuplicateLaunchArchitectureTest {
 
 	@Test
 	fun `launch screens share an in-flight guard`() {
-		val quickStart = source("screens/QuickStartScreen.kt")
+		val library = source("screens/library/LibraryScreen.kt")
+		val machines = source("screens/library/LibraryMachinesPane.kt")
 		val settings = source("screens/settings/SettingsScreen.kt")
-		val configurations = source("screens/ConfigurationsScreen.kt")
 
 		listOf(
-			"QuickStartScreen" to quickStart,
-			"SettingsScreen" to settings,
-			"ConfigurationsScreen" to configurations
+			"LibraryScreen" to library,
+			"LibraryMachinesPane" to machines,
+			"SettingsScreen" to settings
 		).forEach { (name, text) ->
-			assertTrue(
-				"$name should remember a launch guard so repeated taps cannot start concurrent SDL launches.",
-				text.contains("rememberLaunchInFlightGuard()")
-			)
 			assertTrue(
 				"$name should start emulator launches through launchGuarded().",
 				text.contains("launchGuarded(launchGuard)")
 			)
 		}
+		assertTrue(
+			"LibraryScreen should remember the launch guard every launch goes through.",
+			library.contains("rememberLaunchInFlightGuard()")
+		)
 	}
 
 	@Test

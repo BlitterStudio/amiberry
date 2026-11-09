@@ -30,8 +30,8 @@ import com.blitterstudio.amiberry.data.ConfigurationSaveActions
 import com.blitterstudio.amiberry.data.OpenConfigTracking
 import com.blitterstudio.amiberry.data.InGameControls
 import com.blitterstudio.amiberry.ui.hasTouchScreen
-import com.blitterstudio.amiberry.ui.screens.MediaDrive
-import com.blitterstudio.amiberry.ui.screens.QuickStartMediaState
+import com.blitterstudio.amiberry.data.model.MediaCarryOverRules
+import com.blitterstudio.amiberry.data.model.MediaDrive
 import com.blitterstudio.amiberry.ui.isTvDevice
 import java.io.File
 import kotlinx.coroutines.Dispatchers
@@ -74,6 +74,10 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 		private set
 
 	var currentConfigDescription by mutableStateOf("")
+		private set
+
+	/** The group the open configuration declares (config_category), kept through a Save. */
+	var currentConfigCategory by mutableStateOf("")
 		private set
 
 	var currentConfigPath by mutableStateOf<String?>(null)
@@ -236,7 +240,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 			romFile = selectedRoms.romFile,
 			romExtFile = selectedRoms.romExtFile
 		)
-		val media = QuickStartMediaState.keepMedia(previous, machine)
+		val media = MediaCarryOverRules.keepMedia(previous, machine)
 		currentUnknownLines = emptyList()
 		applyConstrainedSettings(media.settings, publishNotices = true)
 		appPreferences.saveAndroidControls(settings)
@@ -267,6 +271,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 		currentUnknownLines = parsed.unknownLines
 		currentConfigName = name
 		currentConfigDescription = parsed.description
+		currentConfigCategory = parsed.category
 		currentConfigPath = path
 		autoSelectDefaultRomIfNeeded(availableRoms.value)
 		baselineSettings = settings
@@ -290,7 +295,8 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 				path = path,
 				settings = savedSettings,
 				unknownLines = savedUnknownLines,
-				description = currentConfigDescription
+				description = currentConfigDescription,
+				category = currentConfigCategory
 			)
 		}
 		if (result is ConfigurationSaveActions.SaveResult.Saved) {
@@ -321,6 +327,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 				currentConfigName = currentConfigName,
 				unknownLines = savedUnknownLines,
 				description = description,
+				category = currentConfigCategory,
 				allowOverwrite = allowOverwrite
 			)
 		}
@@ -373,6 +380,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 		currentConfigName = null
 		currentConfigPath = null
 		currentConfigDescription = ""
+		currentConfigCategory = ""
 		currentUnknownLines = emptyList()
 		settings = applyConstraints(
 			appPreferences.applyRememberedAndroidControls(ConfigSettingsResolver.defaults(globalSettingsFile), emptySet())

@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
+import android.util.Log
 import com.blitterstudio.amiberry.AmiberryActivity
 import com.blitterstudio.amiberry.data.model.AmigaModel
 import com.blitterstudio.amiberry.data.model.EmulatorSettings
@@ -11,8 +12,14 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.File
+import java.util.concurrent.atomic.AtomicBoolean
 
 object EmulatorLauncher {
+
+	/** Whether an SDL start is in flight; see [launchSdlActivity]. */
+	private val startingLaunch = AtomicBoolean(false)
+
+	private const val TAG = "Amiberry-Launcher"
 
 	/**
 	 * Launch emulation with a Quick Start model's configuration (which the
@@ -156,31 +163,42 @@ object EmulatorLauncher {
 		args: Array<String>,
 		trackSession: Boolean = true
 	) {
-		if (trackSession) {
-			writeSessionMarker(context)
-		} else {
-			clearUntrackedLaunchMarkers(context)
-		}
-
-		val finalArgs = prepareLaunchArgs(args)
-		writeLaunchDiagnostics(context, request, finalArgs, trackSession)
-
-		val intent = Intent(context, AmiberryActivity::class.java)
-		intent.putExtra("SDL_ARGS", finalArgs)
-		if (!context.isActivityBacked()) {
-			intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+		// One SDL start at a time, process-wide: two launch paths racing (the Library and
+		// the editor, or a second tap the UI had not disabled yet) must not start two
+		// emulator activities. A refused launch returns quietly; no marker is written.
+		if (!startingLaunch.compareAndSet(false, true)) {
+			Log.w(TAG, "Ignoring launch request while another launch is starting")
+			return
 		}
 		try {
-			context.startActivity(intent)
-		} catch (e: RuntimeException) {
 			if (trackSession) {
-				clearSessionMarker(context)
+				writeSessionMarker(context)
+			} else {
+				clearUntrackedLaunchMarkers(context)
 			}
-			throw e
-		}
 
-		if (trackSession) {
-			(context as? com.blitterstudio.amiberry.ui.MainActivity)?.markEmulatorLaunched()
+			val finalArgs = prepareLaunchArgs(args)
+			writeLaunchDiagnostics(context, request, finalArgs, trackSession)
+
+			val intent = Intent(context, AmiberryActivity::class.java)
+			intent.putExtra("SDL_ARGS", finalArgs)
+			if (!context.isActivityBacked()) {
+				intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+			}
+			try {
+				context.startActivity(intent)
+			} catch (e: RuntimeException) {
+				if (trackSession) {
+					clearSessionMarker(context)
+				}
+				throw e
+			}
+
+			if (trackSession) {
+				(context as? com.blitterstudio.amiberry.ui.MainActivity)?.markEmulatorLaunched()
+			}
+		} finally {
+			startingLaunch.set(false)
 		}
 	}
 

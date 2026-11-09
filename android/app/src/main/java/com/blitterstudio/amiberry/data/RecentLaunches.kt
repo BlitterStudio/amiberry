@@ -16,6 +16,8 @@ object RecentLaunches {
 		Configuration(R.string.recent_type_configuration),
 		WhdLoad(R.string.recent_type_whdload),
 		Rp9(R.string.recent_type_rp9),
+		/** A media file played in a saved machine; the entry's path names the machine. */
+		PlayIn(R.string.recent_type_playin),
 		Unknown(R.string.recent_type_unknown);
 
 		companion object {
@@ -24,6 +26,7 @@ object RecentLaunches {
 				"config" -> Configuration
 				"whdload" -> WhdLoad
 				"rp9" -> Rp9
+				"playin" -> PlayIn
 				else -> Unknown
 			}
 		}
@@ -93,13 +96,14 @@ object RecentLaunches {
 	}
 
 	/**
-	 * [entries] with configuration launches of [oldPath] pointing at [newPath], so a renamed
-	 * configuration stays in Recent instead of showing as gone.
+	 * [entries] with launches of the configuration at [oldPath] pointing at [newPath] — a
+	 * Configuration played, or the machine a Play In played — so a renamed configuration
+	 * stays in Recent (and keeps replaying) instead of showing as gone.
 	 */
 	fun replaceConfigPath(entries: List<JSONObject>, oldPath: String, newPath: String): List<JSONObject> =
 		entries
 			.map { entry ->
-				if (Type.of(entry) == Type.Configuration && ConfigFiles.sameConfigPath(entry.optString("path"), oldPath)) {
+				if (entry.namesConfiguration(oldPath)) {
 					JSONObject(entry.toString()).put("path", newPath)
 				} else {
 					entry
@@ -108,13 +112,17 @@ object RecentLaunches {
 			.distinctBy { identity(it) }
 
 	/**
-	 * [entries] without launches of the configuration at [path]: one the user deleted in the app
-	 * leaves Recent, while files that vanish outside the app stay listed as missing.
+	 * [entries] without launches of the configuration at [path] (a Configuration's own
+	 * launch, or a Play In's machine): one the user deleted in the app leaves Recent,
+	 * while files that vanish outside the app stay listed as missing.
 	 */
 	fun removeConfigPath(entries: List<JSONObject>, path: String): List<JSONObject> =
-		entries.filterNot { entry ->
-			Type.of(entry) == Type.Configuration && ConfigFiles.sameConfigPath(entry.optString("path"), path)
-		}
+		entries.filterNot { entry -> entry.namesConfiguration(path) }
+
+	/** Whether the entry's path names the configuration/machine at [path] (Configurations and Play Ins). */
+	private fun JSONObject.namesConfiguration(path: String): Boolean =
+		(Type.of(this) == Type.Configuration || Type.of(this) == Type.PlayIn) &&
+			ConfigFiles.sameConfigPath(optString("path"), path)
 
 	// The same launch whatever model ID spelling it was stored with ("A500"
 	// before the launcher used the emulator's presets, "a500" since) and
@@ -152,6 +160,14 @@ object RecentLaunches {
 				val path = entry.optString("path")
 				if (path.isNotBlank() && fileExists(path)) Status.Available else Status.MissingFiles
 			}
+			// The machine and every medium the launch inserted must still be there.
+			Type.PlayIn -> {
+				val machineThere = entry.optString("path").isNotBlank() && fileExists(entry.optString("path"))
+				val mediaThere = MEDIA_KEYS.all { key ->
+					entry.optString(key).isBlank() || fileExists(entry.optString(key))
+				}
+				if (machineThere && mediaThere) Status.Available else Status.MissingFiles
+			}
 			Type.QuickStart -> {
 				val mediaPresent = MEDIA_KEYS.all { key ->
 					val path = entry.optString(key)
@@ -185,6 +201,11 @@ object RecentLaunches {
 				.ifEmpty { "WHDLoad" }
 			Type.Rp9 -> stripSuffixCaseInsensitive(fileName(entry.optString("path")), ".rp9")
 				.ifEmpty { "RP9" }
+			// The media names the launch; the machine is the detail beside it.
+			Type.PlayIn -> MEDIA_KEYS
+				.mapNotNull { key -> fileName(entry.optString(key)).takeIf { it.isNotBlank() } }
+				.joinToString(", ")
+				.ifEmpty { "Machine" }
 			Type.Unknown -> "?"
 		}
 	}
@@ -202,6 +223,12 @@ object RecentLaunches {
 				title = WhdLoadTitles.clean(fileName(entry.optString("path"))).ifEmpty { "WHDLoad" },
 				type = type,
 				detail = fileName(entry.optString("path"))
+			)
+			Type.PlayIn -> Details(
+				title = label(entry),
+				type = type,
+				detail = stripSuffixCaseInsensitive(fileName(entry.optString("path")), ".uae")
+					.ifEmpty { "Machine" }
 			)
 			Type.Unknown -> Details(title = "?", type = type, detail = "")
 		}

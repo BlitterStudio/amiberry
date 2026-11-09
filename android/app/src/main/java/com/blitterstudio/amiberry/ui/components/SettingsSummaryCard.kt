@@ -17,16 +17,15 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.blitterstudio.amiberry.R
 import com.blitterstudio.amiberry.data.model.RomIdentity
-import com.blitterstudio.amiberry.ui.screens.QuickStartEffectiveSummary
+import com.blitterstudio.amiberry.ui.screens.library.MachineSummary
 
 /**
- * The machine a launch runs as label/value rows: Quick Start's current settings and a
- * saved configuration in the Configurations detail pane. A Kickstart file that is gone
- * shows as missing, in the error colour.
+ * The machine a launch runs as label/value rows, as the Library's machine detail pane
+ * shows it. A Kickstart file that is gone shows as missing, in the error colour.
  */
 @Composable
 fun SettingsSummaryCard(
-	summary: QuickStartEffectiveSummary,
+	summary: MachineSummary,
 	title: String,
 	subtitle: String? = null,
 	modifier: Modifier = Modifier
@@ -34,26 +33,15 @@ fun SettingsSummaryCard(
 	SummaryCard(title = title, subtitle = subtitle, modifier = modifier) {
 		SummaryRow(stringResource(R.string.quick_start_summary_model), summary.model)
 		SummaryRow(stringResource(R.string.quick_start_summary_cpu), summary.cpu)
-		if (summary.romMissing) {
+		summary.rom?.let { rom ->
 			SummaryRow(
 				stringResource(R.string.quick_start_summary_rom),
-				stringResource(
-					if (summary.romFallsBackToAros) R.string.summary_rom_missing_aros else R.string.summary_rom_missing,
-					summary.romFileName
-				),
-				valueColor = MaterialTheme.colorScheme.error
+				when (rom) {
+					is RomIdentity.Kickstart -> rom.name
+					RomIdentity.BuiltInAros -> stringResource(R.string.rom_aros_builtin)
+					RomIdentity.Unknown -> summary.romFileName
+				}
 			)
-		} else {
-			summary.rom?.let { rom ->
-				SummaryRow(
-					stringResource(R.string.quick_start_summary_rom),
-					when (rom) {
-						is RomIdentity.Kickstart -> rom.name
-						RomIdentity.BuiltInAros -> stringResource(R.string.rom_aros_builtin)
-						RomIdentity.Unknown -> summary.romFileName
-					}
-				)
-			}
 		}
 		SummaryRow(stringResource(R.string.quick_start_summary_chipset), summary.chipset)
 		SummaryRow(stringResource(R.string.quick_start_summary_memory), summary.memory)

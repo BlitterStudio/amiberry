@@ -14,6 +14,8 @@ data class ConfigInfo(
 	val name: String,
 	val lastModified: Long,
 	val description: String,
+	/** The group the file declares itself part of (config_category); the Library filters by it. */
+	val category: String = "",
 	/** The machine the configuration describes, for its card; null when the file could not be read. */
 	val machine: ConfigMachine? = null
 )
@@ -59,6 +61,7 @@ class ConfigRepository(private val context: Context) {
 					name = file.nameWithoutExtension,
 					lastModified = file.lastModified(),
 					description = parsed?.description.orEmpty(),
+					category = parsed?.category.orEmpty(),
 					machine = parsed?.let { ConfigMachine.of(it.settings) }
 				)
 			}
@@ -73,8 +76,8 @@ class ConfigRepository(private val context: Context) {
 		return ConfigSettingsResolver.parse(File(path), globalSettingsFile)
 	}
 
-	fun saveConfig(settings: EmulatorSettings, name: String, unknownLines: List<String> = emptyList(), description: String = ""): File? {
-		return when (val result = saveConfigResult(settings, name, unknownLines, description)) {
+	fun saveConfig(settings: EmulatorSettings, name: String, unknownLines: List<String> = emptyList(), description: String = "", category: String = ""): File? {
+		return when (val result = saveConfigResult(settings, name, unknownLines, description, category)) {
 			is ConfigurationSaveActions.SaveResult.Saved -> result.file
 			ConfigurationSaveActions.SaveResult.AlreadyExists,
 			ConfigurationSaveActions.SaveResult.Failed,
@@ -86,14 +89,15 @@ class ConfigRepository(private val context: Context) {
 		settings: EmulatorSettings,
 		name: String,
 		unknownLines: List<String> = emptyList(),
-		description: String = ""
+		description: String = "",
+		category: String = ""
 	): ConfigurationSaveActions.SaveResult {
 		val target = when (val saveTarget = ConfigurationSaveActions.targetForName(confDir, name)) {
 			is ConfigurationSaveActions.SaveTarget.Ready -> saveTarget.file
 			ConfigurationSaveActions.SaveTarget.InvalidName -> return ConfigurationSaveActions.SaveResult.InvalidName
 			ConfigurationSaveActions.SaveTarget.AlreadyExists -> return ConfigurationSaveActions.SaveResult.AlreadyExists
 		}
-		return writeConfigFile(target, settings, unknownLines, description)
+		return writeConfigFile(target, settings, unknownLines, description, category)
 	}
 
 	/**
@@ -107,6 +111,7 @@ class ConfigRepository(private val context: Context) {
 		currentConfigName: String?,
 		unknownLines: List<String> = emptyList(),
 		description: String = "",
+		category: String = "",
 		allowOverwrite: Boolean = false
 	): ConfigurationSaveActions.SaveResult {
 		val target = when (val resolution = ConfigSaveResolver.resolve(confDir, requestedName, currentConfigName)) {
@@ -117,7 +122,7 @@ class ConfigRepository(private val context: Context) {
 				if (allowOverwrite) resolution.file
 				else return ConfigurationSaveActions.SaveResult.AlreadyExists
 		}
-		return writeConfigFile(target, settings, unknownLines, description)
+		return writeConfigFile(target, settings, unknownLines, description, category)
 	}
 
 	/**
@@ -129,23 +134,28 @@ class ConfigRepository(private val context: Context) {
 		path: String,
 		settings: EmulatorSettings,
 		unknownLines: List<String> = emptyList(),
-		description: String = ""
+		description: String = "",
+		category: String = ""
 	): ConfigurationSaveActions.SaveResult {
 		val target = ConfigFiles.userConfigFile(confDir, path)
 			?: return ConfigurationSaveActions.SaveResult.InvalidName
-		return writeConfigFile(target, settings, unknownLines, description)
+		return writeConfigFile(target, settings, unknownLines, description, category)
 	}
 
 	private fun writeConfigFile(
 		target: File,
 		settings: EmulatorSettings,
 		unknownLines: List<String>,
-		description: String
+		description: String,
+		category: String
 	): ConfigurationSaveActions.SaveResult {
 		return try {
 			target.writeText(ConfigGenerator.generate(settings))
 			if (description.isNotBlank()) {
 				target.appendText("config_description=$description\n")
+			}
+			if (category.isNotBlank()) {
+				target.appendText("config_category=$category\n")
 			}
 			if (unknownLines.isNotEmpty()) {
 				target.appendText("\n; Preserved settings from original config\n")

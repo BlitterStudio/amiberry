@@ -7,52 +7,46 @@ import java.io.File
 class AndroidLaunchBusyUiArchitectureTest {
 
 	@Test
-	fun `main launch actions expose busy state while preparing SDL launch`() {
-		val quickStart = source("screens/QuickStartScreen.kt")
-		val settings = source("screens/settings/SettingsScreen.kt")
+	fun `library launch actions are disabled while preparing SDL launch`() {
+		val library = source("screens/library/LibraryScreen.kt")
+		val machines = source("screens/library/LibraryMachinesPane.kt")
 
-		listOf(
-			"QuickStartScreen" to quickStart,
-			"SettingsScreen" to settings
-		).forEach { (name, text) ->
-			assertTrue(
-				"$name should read the guard's observable launch state.",
-				text.contains("val launchInProgress = launchGuard.isLaunching")
-			)
-			assertTrue(
-				"$name should ignore repeated Start presses while a launch is already being prepared.",
-				Regex("""ExtendedFloatingActionButton[\s\S]*if \(launchInProgress\) \{[\s\S]*return@ExtendedFloatingActionButton""")
-					.containsMatchIn(text)
-			)
-			assertTrue(
-				"$name should show progress feedback while launch preparation is running.",
-				text.contains("CircularProgressIndicator")
-			)
-			assertTrue(
-				"$name should swap the Start label to a Launching label while busy.",
-				text.contains("R.string.action_launching")
-			)
-		}
+		assertTrue(
+			"LibraryScreen should read the guard's observable launch state.",
+			library.contains("val launchInProgress = launchGuard.isLaunching")
+		)
+		assertTrue(
+			"One launch admission for the whole Library: a Play a File copy runs in the activity's own guard.",
+			library.contains("activity?.importLaunchInProgress == true")
+		)
+		assertTrue(
+			"LibraryScreen quick play should not start while a launch is already being prepared.",
+			library.split("if (launchBusy) return").size - 1 >= 3
+		)
+		assertTrue(
+			"The Play a File toolbar action should be disabled while a launch is in progress.",
+			Regex("""IconButton\([\s\S]*onClick = \{ if \(!launchBusy\) playFilePicker\.pickFiles\(\) \}[\s\S]*enabled = !launchBusy""")
+				.containsMatchIn(library)
+		)
+		assertTrue(
+			"LibraryMachinesPane should pass launch busy state into saved machine rows.",
+			machines.contains("launchInProgress = launchInProgress")
+		)
+		assertTrue(
+			"Saved machine Advanced launch menu item should be disabled while a launch is in progress.",
+			Regex("""DropdownMenuItem\([\s\S]*text = \{ Text\(stringResource\(R\.string\.action_edit_advanced_imgui\)\) \}[\s\S]*enabled = !launchInProgress""")
+				.containsMatchIn(machines)
+		)
 	}
 
 	@Test
 	fun `secondary launch actions are disabled while preparing SDL launch`() {
-		val configurations = source("screens/ConfigurationsScreen.kt")
 		val settings = source("screens/settings/SettingsScreen.kt")
 
 		assertTrue(
 			"Settings Advanced launch menu item should be disabled while a launch is in progress.",
 			Regex("""DropdownMenuItem\([\s\S]*text = \{ Text\(stringResource\(R\.string\.action_advanced\)\) \}[\s\S]*enabled = !launchInProgress""")
 				.containsMatchIn(settings)
-		)
-		assertTrue(
-			"ConfigurationsScreen should pass launch busy state into saved configuration rows.",
-			configurations.contains("launchInProgress = launchInProgress")
-		)
-		assertTrue(
-			"Saved configuration Advanced launch menu item should be disabled while a launch is in progress.",
-			Regex("""DropdownMenuItem\([\s\S]*text = \{ Text\(stringResource\(R\.string\.action_edit_advanced_imgui\)\) \}[\s\S]*enabled = !launchInProgress""")
-				.containsMatchIn(configurations)
 		)
 	}
 

@@ -61,6 +61,22 @@ object ModelRomAvailability {
 	fun hasKickstart(model: AmigaModel, roms: List<AmigaFile>): Boolean =
 		selectRomsForModel(model, roms).kick != null
 
+	/**
+	 * After a ROM import: settings that boot AROS (or name no ROM) move to the model's
+	 * Kickstart once one is installed, as the emulator would otherwise keep booting
+	 * AROS. Null when nothing changes.
+	 */
+	fun withInstalledKickstart(settings: EmulatorSettings, roms: List<AmigaFile>): EmulatorSettings? {
+		if (settings.romFile.isNotBlank() && !isBuiltInArosRom(settings.romFile)) return null
+		val selected = selectRomsForModel(settings.baseModel, roms)
+		val kick = selected.kick ?: return null
+		return settings.copy(
+			baseConfig = selected.config,
+			romFile = kick.path,
+			romExtFile = selected.ext?.path.orEmpty()
+		)
+	}
+
 	fun romIdentity(rom: AmigaFile): RomIdentity {
 		if (isBuiltInArosFile(rom)) return RomIdentity.BuiltInAros
 		val id = detectRomId(rom) ?: return RomIdentity.Unknown
