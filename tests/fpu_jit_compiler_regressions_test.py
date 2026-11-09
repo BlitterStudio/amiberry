@@ -42,6 +42,7 @@ enum {S1 = 20, S2, S3, S4, PC_P, TRASH = 0, VALID = 1};
 struct { int flags_in_flags, flags_on_stack; } live;
 struct { uae_u32 fpsr; } regs;
 struct { bool compfpu = true; } currprefs;
+static bool jit_fpu_enabled() { return currprefs.compfpu; }  // the host core: no exact core here
 struct { bool fscc, fbcc; } jit_disable;
 static bool fpu_fpsr_cc_written, failure;
 static uintptr constants[32], vreg[32], not_taken, taken;
