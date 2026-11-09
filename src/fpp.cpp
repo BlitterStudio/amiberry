@@ -223,7 +223,11 @@ static void fpu_select_core(void)
 		use_long_double = true;
 		if (!fp_init_native_80()) {
 			use_long_double = false;
-			core = 1;
+#ifdef WITH_SOFTFLOAT
+			core = 1;                              // as before: the softfloat core
+#else
+			core = 0;
+#endif
 		}
 	}
 #endif

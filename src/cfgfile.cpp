@@ -6893,9 +6893,9 @@ static int cfgfile_parse_hardware (struct uae_prefs *p, const TCHAR *option, TCH
 #ifdef MSVC_LONG_DOUBLE
 	if (cfgfile_yesno(option, value, _T("fpu_msvc_long_double"), &dummybool)) {
 		if (dummybool)
-			p->fpu_mode = -1;
-		else if (p->fpu_mode < 0)
-			p->fpu_mode = 0;
+			p->fpu_mode = FPU_MODE_HOST80;
+		else if (p->fpu_mode == FPU_MODE_HOST80)
+			p->fpu_mode = FPU_MODE_HOST;               // as the settings layer: still the host core
 		return 1;
 	}
 #endif
