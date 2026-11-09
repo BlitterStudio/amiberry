@@ -37,6 +37,9 @@
         ${AMIBERRY_MACOS_STORE_PLIST_KEYS}
         <key>LSApplicationCategoryType</key>
         <string>public.app-category.entertainment</string>
+        <!-- Game Mode came with the games category; Entertainment keeps it this way. -->
+        <key>LSSupportsGameMode</key>
+        <true/>
 		<key>CFBundleDocumentTypes</key>
 		<array>
 			<dict>

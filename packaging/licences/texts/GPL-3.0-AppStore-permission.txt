@@ -5,13 +5,13 @@ later (the "GPL"). As provided by section 7 of the GPL version 3, the
 copyright holders listed below grant the following additional permission
 for their code in Amiberry.
 
-You may convey Amiberry, or a work based on it, in object code form
-through Apple's App Store (including TestFlight), under the terms of
-service, usage rules, code signing and digital rights management that
-Apple applies to the apps it distributes there, even where those terms
-place restrictions on the recipients beyond those of the GPL. For copies
-installed from Apple's App Store, you need not provide the Installation
-Information described in section 6 of the GPL.
+You may convey their code, as part of Amiberry or of a work based on it,
+in object code form through Apple's App Store (including TestFlight),
+under the terms of service, usage rules, code signing and digital rights
+management that Apple applies to the apps it distributes there, even
+where those terms place restrictions on the recipients beyond those of
+the GPL. For copies conveyed this way, you need not provide the
+Installation Information described in section 6 of the GPL.
 
 This permission does not apply to any other distribution channel, and it
 does not relieve you of any other obligation under the GPL. In

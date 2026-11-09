@@ -46,14 +46,16 @@ On iPhone, iPad and Mac, the App asks for the camera or the microphone only when
 
 The App connects to the internet only in these cases:
 
-1. **Downloads you ask for.** WHDLoad and its helper files are not included with the App, because their licences do not allow it. When you ask for them (for example when you first start a WHDLoad game), the App downloads:
+1. **Downloads you ask for.** WHDLoad, its helper files and some Amiga libraries are not included with the App, because their licences do not allow it. When you ask for them (for example when you first start a WHDLoad game), the App downloads:
    - WHDLoad from its author's site, `whdload.de`;
-   - the kickstart relocation files and the JST booter from `aminet.net`;
-   - the boot files and the WHDLoad game database from the Amiberry project on GitHub (`github.com`, `raw.githubusercontent.com`).
+   - the kickstart relocation files, the JST booter and Amiga libraries (XPK, MMULib, explode, medplayer) from `aminet.net`;
+   - the boot files and the WHDLoad game database from GitHub (`github.com`, `raw.githubusercontent.com`): the Amiberry project's files, or, if its game database can't be reached, the older one from the Amiberry XML Builder project.
+
+   In the versions with the classic settings window (all except the iPhone, iPad and Mac App Store apps), the "Update Controllers DB" button also downloads the SDL game controller database from GitHub.
 
    Like any download, these servers see your IP address. The App sends them nothing else.
 2. **Emulated networking.** Amiga software running inside the emulator can use the network (bsdsocket.library and the emulated network cards), just as on a real Amiga. That traffic goes where the Amiga software sends it.
-3. **Update check (GitHub and amiberry.com builds only).** These builds can check `api.github.com` for new Amiberry releases. The App Store and Google Play versions don't: those stores deliver the updates.
+3. **Update check (direct downloads and Linux packages, except Flatpak).** These versions can check `api.github.com` for new Amiberry releases. On Windows and macOS you can then download the new release from GitHub. The App Store, Google Play and Flatpak versions don't check: their stores deliver the updates.
 4. **Crash reports (Android only).** See below.
 
 Links on the App's About and Licences screens open in your browser.
