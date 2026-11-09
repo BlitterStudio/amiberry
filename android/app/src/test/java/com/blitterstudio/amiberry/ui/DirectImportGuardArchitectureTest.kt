@@ -62,7 +62,7 @@ class DirectImportGuardArchitectureTest {
 	@Test
 	fun `settings direct imports are guarded and controls show busy state`() {
 		val settings = source("screens/settings/SettingsScreen.kt")
-		val storage = source("screens/settings/StorageTab.kt")
+		val storage = source("screens/settings/StoragePage.kt")
 
 		assertTrue(
 			"SettingsScreen should remember a direct import guard for ROM imports.",
@@ -78,15 +78,15 @@ class DirectImportGuardArchitectureTest {
 				.containsMatchIn(settings)
 		)
 		assertTrue(
-			"StorageTab should remember a direct import guard for floppy imports.",
+			"StoragePage should remember a direct import guard for floppy imports.",
 			storage.contains("val importGuard = rememberImportInFlightGuard()")
 		)
 		assertTrue(
-			"StorageTab should guard direct floppy import callbacks.",
+			"StoragePage should guard direct floppy import callbacks.",
 			storage.contains("launchImportGuarded(importGuard)")
 		)
 		assertTrue(
-			"StorageTab should show an importing label while direct floppy import is active.",
+			"StoragePage should show an importing label while direct floppy import is active.",
 			storage.contains("R.string.action_importing")
 		)
 	}

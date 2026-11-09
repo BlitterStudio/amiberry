@@ -8,9 +8,8 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
 
-class StorageTabOptionsTest {
+class StoragePageOptionsTest {
 
 	private val rom = AmigaFile(
 		path = "/roms/kick31.rom",
@@ -51,34 +50,22 @@ class StorageTabOptionsTest {
 	}
 
 	@Test
-	fun `storage tab exposes all four floppy drives`() {
-		val storageTab = File("src/main/java/com/blitterstudio/amiberry/ui/screens/settings/StorageTab.kt").readText()
+	fun `the storage page reads and writes each of the four drives by number`() {
+		val settings = EmulatorSettings(
+			floppy0 = "df0.adf", floppy1 = "df1.adf", floppy2 = "df2.adf", floppy3 = "df3.adf",
+			floppy0Type = 0, floppy1Type = 1, floppy2Type = -1, floppy3Type = 0
+		)
 
 		(0..3).forEach { index ->
-			assertTrue(
-				"StorageTab should render DF$index.",
-				storageTab.contains("R.string.settings_storage_drive_df$index")
-			)
-			assertTrue(
-				"DF$index should read its selected disk from settings.floppy$index.",
-				storageTab.contains("selectedPath = settings.floppy$index")
-			)
-			assertTrue(
-				"DF$index should read its drive type from settings.floppy${index}Type.",
-				storageTab.contains("driveType = settings.floppy${index}Type")
-			)
-			assertTrue(
-				"DF$index selection should update settings.floppy$index.",
-				storageTab.contains("s.copy(floppy$index = it)")
-			)
-			assertTrue(
-				"DF$index eject should clear settings.floppy$index.",
-				storageTab.contains("s.copy(floppy$index = \"\")")
-			)
-			assertTrue(
-				"DF$index drive type should update settings.floppy${index}Type.",
-				storageTab.contains("s.copy(floppy${index}Type = it)")
-			)
+			assertEquals("df$index.adf", settings.drivePath(index))
+			assertEquals("other.adf", settings.withDrivePath(index, "other.adf").drivePath(index))
+			assertEquals("", settings.withDrivePath(index, "").drivePath(index))
 		}
+		assertEquals(1, settings.driveType(1))
+		assertEquals(-1, settings.driveType(2))
+		assertEquals(0, settings.withDriveType(2, 0).driveType(2))
+
+		// Writing one drive leaves the others alone.
+		assertEquals("df0.adf", settings.withDrivePath(3, "x.adf").drivePath(0))
 	}
 }

@@ -7,7 +7,7 @@ import java.io.File
 class DisplayShaderSelectorArchitectureTest {
 
 	private val source =
-		File("src/main/java/com/blitterstudio/amiberry/ui/screens/settings/DisplayTab.kt").readText()
+		File("src/main/java/com/blitterstudio/amiberry/ui/screens/settings/DisplaySoundPage.kt").readText()
 
 	@Test
 	fun `refreshes the shader catalog on display entry and lifecycle resume`() {

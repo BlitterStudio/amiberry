@@ -21,6 +21,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -34,19 +35,59 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.blitterstudio.amiberry.R
 import com.blitterstudio.amiberry.data.AppPreferences
+import com.blitterstudio.amiberry.data.model.EmulatorSettings
+import com.blitterstudio.amiberry.data.model.EmulatorSettingsConstraints
 import com.blitterstudio.amiberry.data.model.LauncherChoices
+import com.blitterstudio.amiberry.data.model.SettingsSchema
+import com.blitterstudio.amiberry.ui.components.settings.SchemaChoiceRow
+import com.blitterstudio.amiberry.ui.components.settings.SchemaLevelRow
 import com.blitterstudio.amiberry.ui.components.settings.SchemaSwitchRow
+import com.blitterstudio.amiberry.ui.components.settings.SettingsSection
 import com.blitterstudio.amiberry.ui.components.settings.SettingSwitchRow
 import com.blitterstudio.amiberry.ui.components.settings.SupportingText
+import com.blitterstudio.amiberry.ui.components.settings.dpadMenuItemInitialFocus
+import com.blitterstudio.amiberry.ui.components.settings.schemaOption
 import com.blitterstudio.amiberry.ui.components.settings.settingText
+import com.blitterstudio.amiberry.ui.components.settings.settingsSchema
 import com.blitterstudio.amiberry.ui.dpadArrowsMoveFocus
 import com.blitterstudio.amiberry.ui.dpadFieldFocusIndicator
-import com.blitterstudio.amiberry.ui.components.settings.dpadMenuItemInitialFocus
 import com.blitterstudio.amiberry.ui.viewmodel.SettingsViewModel
+import kotlin.math.roundToInt
 
+/** One floppy drive's sound fields, read and written by drive number. */
+private class DriveSound(
+	val index: Int,
+	val type: (EmulatorSettings) -> Int,
+	val sound: (EmulatorSettings) -> Int,
+	val volumeDisk: (EmulatorSettings) -> Int,
+	val volumeEmpty: (EmulatorSettings) -> Int,
+	val withSound: EmulatorSettings.(Int) -> EmulatorSettings,
+	val withVolumeDisk: EmulatorSettings.(Int) -> EmulatorSettings,
+	val withVolumeEmpty: EmulatorSettings.(Int) -> EmulatorSettings
+)
+
+private val driveSounds = listOf(
+	DriveSound(0, { it.floppy0Type }, { it.floppy0Sound }, { it.floppy0SoundVolumeDisk }, { it.floppy0SoundVolumeEmpty },
+		{ copy(floppy0Sound = it) }, { copy(floppy0SoundVolumeDisk = it) }, { copy(floppy0SoundVolumeEmpty = it) }),
+	DriveSound(1, { it.floppy1Type }, { it.floppy1Sound }, { it.floppy1SoundVolumeDisk }, { it.floppy1SoundVolumeEmpty },
+		{ copy(floppy1Sound = it) }, { copy(floppy1SoundVolumeDisk = it) }, { copy(floppy1SoundVolumeEmpty = it) }),
+	DriveSound(2, { it.floppy2Type }, { it.floppy2Sound }, { it.floppy2SoundVolumeDisk }, { it.floppy2SoundVolumeEmpty },
+		{ copy(floppy2Sound = it) }, { copy(floppy2SoundVolumeDisk = it) }, { copy(floppy2SoundVolumeEmpty = it) }),
+	DriveSound(3, { it.floppy3Type }, { it.floppy3Sound }, { it.floppy3SoundVolumeDisk }, { it.floppy3SoundVolumeEmpty },
+		{ copy(floppy3Sound = it) }, { copy(floppy3SoundVolumeDisk = it) }, { copy(floppy3SoundVolumeEmpty = it) })
+)
+
+/** The drive sounds offered: off and the built-in A500 drive (external samples are kept when stored, not offered). */
+private val OFFERED_DRIVE_SOUNDS = listOf("0", "1")
+
+/**
+ * The Display & Sound page: the display settings people reach for (the
+ * launcher's own card), then the layer's remaining display and filter rows
+ * and the sound sections.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DisplayTab(viewModel: SettingsViewModel) {
+fun DisplaySoundPage(viewModel: SettingsViewModel) {
 	val settings = viewModel.settings
 	val lifecycleOwner = LocalLifecycleOwner.current
 
@@ -231,6 +272,8 @@ fun DisplayTab(viewModel: SettingsViewModel) {
 		SchemaGroupSection("display", viewModel, title = stringResource(R.string.settings_display_more_title))
 		SchemaGroupSection("filter", viewModel)
 
+		SoundSections(viewModel)
+
 		OutlinedCard(modifier = Modifier.fillMaxWidth()) {
 			Column(modifier = Modifier.padding(16.dp)) {
 				Text(stringResource(R.string.settings_display_app_theme), style = MaterialTheme.typography.titleMedium)
@@ -291,19 +334,129 @@ fun DisplayTab(viewModel: SettingsViewModel) {
 				}
 			}
 		}
+	}
+}
 
-		OutlinedCard(modifier = Modifier.fillMaxWidth()) {
-			Column(modifier = Modifier.padding(16.dp)) {
-				Text(stringResource(R.string.settings_display_in_game_menu), style = MaterialTheme.typography.titleMedium)
-				Spacer(modifier = Modifier.height(8.dp))
-				val appPrefs = AppPreferences.getInstance(LocalContext.current)
-				val useClassicMenu by appPrefs.useClassicInGameMenu
-				SettingSwitchRow(
-					label = stringResource(R.string.settings_display_classic_menu),
-					checked = useClassicMenu,
-					onCheckedChange = { appPrefs.setClassicInGameMenu(it) },
-					help = stringResource(R.string.settings_display_classic_menu_help)
-				)
+/** The sound sections: output, volumes and the drives' sounds (the drive types are on the Storage page). */
+@Composable
+private fun SoundSections(viewModel: SettingsViewModel) {
+	val settings = viewModel.settings
+	fun available(id: String) = SettingsControlAvailability.isAvailable(settings, id)
+	val soundOn = available("sound_channels")
+	// The reason every option that needs sound emulation shares, said once per section.
+	val needsSound = if (soundOn) null else settingsSchema()?.constraint("sound_channels")
+
+	// The layer's buffer sizes, each with the latency it gives at the current
+	// frequency (one emulator chunk is sound_max_buff / 4 frames).
+	val bufferFreq = if (settings.soundFreq > 0) settings.soundFreq else EmulatorSettingsConstraints.DEFAULT_SOUND_FREQUENCY
+	val bufferChoices = schemaOption("sound_max_buff")?.choices.orEmpty().map { choice ->
+		val size = choice.value.toIntOrNull() ?: 0
+		if (size <= 0) choice
+		else SettingsSchema.Choice(
+			choice.value,
+			stringResource(R.string.settings_sound_buffer_option, choice.label, (size / 4.0 * 1000.0 / bufferFreq).roundToInt())
+		)
+	}
+
+	Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+		SchemaGroupSection("sound", viewModel, title = stringResource(R.string.settings_sound_title), footer = needsSound) {
+			SchemaChoiceRow(
+				id = "sound_output",
+				value = settings.soundOutput,
+				values = SettingsControlAvailability.choiceValues(settings, "sound_output"),
+				onSelect = { value -> viewModel.updateSettings { s -> s.copy(soundOutput = value) } }
+			)
+			SchemaChoiceRow(
+				id = "sound_channels",
+				value = settings.soundChannels,
+				enabled = available("sound_channels"),
+				showReason = false,
+				onSelect = { value -> viewModel.updateSettings { s -> s.copy(soundChannels = value) } }
+			)
+			SchemaChoiceRow(
+				id = "sound_frequency",
+				value = settings.soundFreq.toString(),
+				enabled = available("sound_frequency"),
+				showReason = false,
+				onSelect = { value -> value.toIntOrNull()?.let { freq -> viewModel.updateSettings { s -> s.copy(soundFreq = freq) } } }
+			)
+			SchemaChoiceRow(
+				id = "sound_max_buff",
+				value = settings.soundBuffer.toString(),
+				choices = bufferChoices.takeIf { it.isNotEmpty() },
+				enabled = available("sound_max_buff"),
+				showReason = false,
+				onSelect = { value -> value.toIntOrNull()?.let { size -> viewModel.updateSettings { s -> s.copy(soundBuffer = size) } } }
+			)
+		}
+
+		SettingsSection(title = stringResource(R.string.settings_sound_volume_title), footer = needsSound) {
+			SchemaLevelRow(
+				id = "sound_volume",
+				stored = settings.soundVolume,
+				onStoredChange = { v -> viewModel.updateSettings { s -> s.copy(soundVolume = v) } }
+			)
+			SchemaLevelRow(
+				id = "sound_volume_paula",
+				stored = settings.soundVolumePaula,
+				enabled = available("sound_volume_paula"),
+				showReason = false,
+				onStoredChange = { v -> viewModel.updateSettings { s -> s.copy(soundVolumePaula = v) } }
+			)
+			SchemaLevelRow(
+				id = "sound_volume_cd",
+				stored = settings.soundVolumeCd,
+				enabled = available("sound_volume_cd"),
+				showReason = false,
+				onStoredChange = { v -> viewModel.updateSettings { s -> s.copy(soundVolumeCd = v) } }
+			)
+			SchemaLevelRow(
+				id = "sound_volume_ahi",
+				stored = settings.soundVolumeAhi,
+				enabled = available("sound_volume_ahi"),
+				showReason = false,
+				onStoredChange = { v -> viewModel.updateSettings { s -> s.copy(soundVolumeAhi = v) } }
+			)
+			SchemaLevelRow(
+				id = "sound_volume_midi",
+				stored = settings.soundVolumeMidi,
+				enabled = available("sound_volume_midi"),
+				showReason = false,
+				onStoredChange = { v -> viewModel.updateSettings { s -> s.copy(soundVolumeMidi = v) } }
+			)
+		}
+
+		// Drive sounds for the drives that are enabled (drive types are set on the Storage page).
+		val drives = driveSounds.filter { it.type(settings) != -1 }
+		if (drives.isNotEmpty()) {
+			SettingsSection(title = stringResource(R.string.settings_sound_drive_sounds_title), footer = needsSound) {
+				drives.forEach { drive ->
+					val volumesAvailable = available("floppy${drive.index}soundvolume_disk")
+					SchemaChoiceRow(
+						id = "floppy${drive.index}sound",
+						value = drive.sound(settings).toString(),
+						values = OFFERED_DRIVE_SOUNDS,
+						enabled = available("floppy${drive.index}sound"),
+						showReason = false,
+						onSelect = { value ->
+							value.toIntOrNull()?.let { sound -> viewModel.updateSettings { s -> drive.withSound(s, sound) } }
+						}
+					)
+					SchemaLevelRow(
+						id = "floppy${drive.index}soundvolume_disk",
+						stored = drive.volumeDisk(settings),
+						enabled = volumesAvailable,
+						showReason = false,
+						onStoredChange = { v -> viewModel.updateSettings { s -> drive.withVolumeDisk(s, v) } }
+					)
+					SchemaLevelRow(
+						id = "floppy${drive.index}soundvolume_empty",
+						stored = drive.volumeEmpty(settings),
+						enabled = available("floppy${drive.index}soundvolume_empty"),
+						showReason = soundOn,
+						onStoredChange = { v -> viewModel.updateSettings { s -> drive.withVolumeEmpty(s, v) } }
+					)
+				}
 			}
 		}
 	}

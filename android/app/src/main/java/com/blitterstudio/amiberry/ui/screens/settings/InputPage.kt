@@ -2,17 +2,23 @@ package com.blitterstudio.amiberry.ui.screens.settings
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.getValue
 import com.blitterstudio.amiberry.R
+import com.blitterstudio.amiberry.data.AppPreferences
 import com.blitterstudio.amiberry.data.model.LauncherChoices
 import com.blitterstudio.amiberry.data.model.SettingsSchema
 import com.blitterstudio.amiberry.ui.components.settings.ChoiceItem
@@ -20,6 +26,7 @@ import com.blitterstudio.amiberry.ui.components.settings.SchemaChoiceRow
 import com.blitterstudio.amiberry.ui.components.settings.SchemaLevelRow
 import com.blitterstudio.amiberry.ui.components.settings.SchemaSwitchRow
 import com.blitterstudio.amiberry.ui.components.settings.SettingChoiceRow
+import com.blitterstudio.amiberry.ui.components.settings.SettingSwitchRow
 import com.blitterstudio.amiberry.ui.components.settings.SettingsSection
 import com.blitterstudio.amiberry.ui.components.settings.schemaOption
 import com.blitterstudio.amiberry.ui.components.settings.settingText
@@ -48,8 +55,12 @@ internal fun inputDeviceOptionIds(hasTouchScreen: Boolean, portIndex: Int): List
 internal fun portSupportsMouseMap(portIndex: Int, deviceId: String, port0Device: String): Boolean =
 	portIndex == 1 && (deviceId == "joy0" || deviceId == "joy1") && port0Device == "mouse"
 
+/**
+ * The Input page: the joyports, the layer's input and on-screen rows, and
+ * the launcher's own control settings (the in-game menu's).
+ */
 @Composable
-fun InputTab(viewModel: SettingsViewModel) {
+fun InputPage(viewModel: SettingsViewModel) {
 	val settings = viewModel.settings
 	val hasTouchScreen = hasTouchScreen()
 
@@ -107,7 +118,7 @@ fun InputTab(viewModel: SettingsViewModel) {
 			}
 		}
 
-		// Not "Input" on the Input tab: the section holds autofire, port modes and mouse options.
+		// Not "Input" on the Input page: the section holds autofire, port modes and mouse options.
 		SchemaGroupSection("input", viewModel, title = stringResource(R.string.settings_input_controller_options_title))
 
 		// The keyboard can be driven by a game controller, so keep its settings
@@ -160,6 +171,22 @@ fun InputTab(viewModel: SettingsViewModel) {
 				optionTestTag = { "input-osk-toggle-option-$it" },
 				onSelect = { value -> viewModel.updateSettings { s -> s.copy(onScreenKeyboardToggle = value) } }
 			)
+		}
+
+		// The launcher's own control setting: which menu the in-emulation Back button opens.
+		OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+			Column(modifier = Modifier.padding(16.dp)) {
+				Text(stringResource(R.string.settings_display_in_game_menu), style = MaterialTheme.typography.titleMedium)
+				Spacer(modifier = Modifier.height(8.dp))
+				val appPrefs = AppPreferences.getInstance(LocalContext.current)
+				val useClassicMenu by appPrefs.useClassicInGameMenu
+				SettingSwitchRow(
+					label = stringResource(R.string.settings_display_classic_menu),
+					checked = useClassicMenu,
+					onCheckedChange = { appPrefs.setClassicInGameMenu(it) },
+					help = stringResource(R.string.settings_display_classic_menu_help)
+				)
+			}
 		}
 	}
 }

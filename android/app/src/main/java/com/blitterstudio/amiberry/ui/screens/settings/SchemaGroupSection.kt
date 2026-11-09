@@ -21,12 +21,14 @@ import com.blitterstudio.amiberry.ui.viewmodel.SettingsViewModel
 import kotlin.math.roundToInt
 
 /**
- * The section of a settings layer group: the tab's own rows for the group
- * ([leading], when the tab has some) and then every option of the group
+ * The section of a settings layer group: the page's own rows for the group
+ * ([leading], when the page has some) and then every option of the group
  * that [placed] leaves out (SettingsGroups.options), each as its type's
- * row. Unavailable rows are dimmed; the footer gives each reason once
- * ([footer], the tab's own, first). A collapsed section (SettingsGroups.byTab) starts closed.
- * Nothing shows for a group without rows.
+ * row. Options are named in the section's words (SettingsGroups.labelIn);
+ * unavailable rows are dimmed, and why is said once in the footer
+ * (SettingsGroups.constraintNotes), [footer]'s own text first. A collapsed
+ * section (SettingsGroups.byPage) starts closed. Nothing shows for a group
+ * without rows.
  */
 @Composable
 fun SchemaGroupSection(
@@ -43,14 +45,12 @@ fun SchemaGroupSection(
 	val state = remember(settings, schema) { settings.schemaState(schema) }
 	val rows = shownOptions(schema, settings, group, placed)
 	if (rows.isEmpty() && leading == null) return
-	val reasons = rows
-		.filter { !SettingsControlAvailability.isAvailable(state, it.id, schema) }
-		.mapNotNull { it.constraint }
-	val sectionFooter = (listOfNotNull(footer) + reasons).distinct().joinToString("\n").ifBlank { null }
 	val sectionTitle = title ?: stringResource(SettingsGroups.titleRes(group))
+	val notes = SettingsGroups.constraintNotes(rows) { SettingsControlAvailability.isAvailable(state, it, schema) }
+	val sectionFooter = (listOfNotNull(footer) + notes).joinToString("\n").ifBlank { null }
 	val content: @Composable ColumnScope.() -> Unit = {
 		leading?.invoke(this)
-		SchemaGroupRows(rows, settings, state, schema, showReasons = false) { id, value ->
+		SchemaGroupRows(rows, settings, state, schema, showReasons = false, sectionTitle = sectionTitle) { id, value ->
 			viewModel.updateSettings { s -> s.withOption(id, value) }
 		}
 	}
@@ -97,7 +97,8 @@ private fun shownOptions(
  * [settings], or the emulator's default where nothing sets it; dimmed
  * where the layer's tables say unavailable in [state], with the reason
  * under the row when [showReasons] (else the section's footer gives it).
- * [onChange] gets the option and its new .uae value.
+ * Named in [sectionTitle]'s words (SettingsGroups.labelIn), TalkBack keeps
+ * the whole label. [onChange] gets the option and its new .uae value.
  */
 @Composable
 internal fun SchemaGroupRows(
@@ -106,18 +107,24 @@ internal fun SchemaGroupRows(
 	state: Map<String, String>,
 	schema: SettingsSchema,
 	showReasons: Boolean,
+	sectionTitle: String? = null,
 	onChange: (id: String, value: String) -> Unit
 ) {
 	for (option in options) {
 		val id = option.id
 		val value = settings.optionValue(id) ?: option.defaultOnAndroid
 		val enabled = SettingsControlAvailability.isAvailable(state, id, schema)
+		val wholeLabel = option.label
+		val shownLabel = sectionTitle?.let { SettingsGroups.labelIn(wholeLabel, it) }
+		val semanticsLabel = if (shownLabel != null && shownLabel != wholeLabel) wholeLabel else null
 		when (SettingsGroups.rowKind(option)) {
 			SettingsGroups.RowKind.Switch -> SchemaSwitchRow(
 				id = id,
 				checked = value.lowercase() in TRUE_VALUES,
 				enabled = enabled,
 				showReason = showReasons,
+				label = shownLabel,
+				semanticsLabel = semanticsLabel,
 				onCheckedChange = { onChange(id, it.toString()) }
 			)
 			SettingsGroups.RowKind.Choice -> SchemaChoiceRow(
@@ -126,6 +133,8 @@ internal fun SchemaGroupRows(
 				values = SettingsControlAvailability.choiceValues(state, id, schema),
 				enabled = enabled,
 				showReason = showReasons,
+				label = shownLabel,
+				semanticsLabel = semanticsLabel,
 				onSelect = { onChange(id, it) }
 			)
 			SettingsGroups.RowKind.Level -> SchemaLevelRow(
@@ -133,6 +142,8 @@ internal fun SchemaGroupRows(
 				stored = storedNumber(option, value),
 				enabled = enabled,
 				showReason = showReasons,
+				label = shownLabel,
+				semanticsLabel = semanticsLabel,
 				onStoredChange = { onChange(id, numberValue(option, it)) }
 			)
 			SettingsGroups.RowKind.Number -> SchemaNumberRow(
@@ -140,6 +151,8 @@ internal fun SchemaGroupRows(
 				stored = storedNumber(option, value),
 				enabled = enabled,
 				showReason = showReasons,
+				label = shownLabel,
+				semanticsLabel = semanticsLabel,
 				onStoredChange = { onChange(id, numberValue(option, it)) }
 			)
 			null -> Unit

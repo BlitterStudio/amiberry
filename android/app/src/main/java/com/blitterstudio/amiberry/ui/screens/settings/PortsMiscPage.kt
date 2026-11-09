@@ -11,9 +11,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.blitterstudio.amiberry.ui.viewmodel.SettingsViewModel
 
-/** The options the Apple app keeps on its Ports & Misc page that mean something on Android, one section per group. */
+/** The Ports & Misc page (Apple's generated one): a section per layer group it covers. */
 @Composable
-fun MiscTab(viewModel: SettingsViewModel) {
+fun PortsMiscPage(viewModel: SettingsViewModel) {
 	Column(
 		modifier = Modifier
 			.fillMaxWidth()
@@ -21,7 +21,7 @@ fun MiscTab(viewModel: SettingsViewModel) {
 			.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 120.dp),
 		verticalArrangement = Arrangement.spacedBy(16.dp)
 	) {
-		SettingsGroups.byTab.getValue(SettingsTab.Misc).forEach { placement ->
+		SettingsGroups.byPage.getValue(SettingsPage.PortsMisc).forEach { placement ->
 			SchemaGroupSection(placement.group, viewModel)
 		}
 	}

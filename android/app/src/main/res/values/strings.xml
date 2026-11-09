@@ -8,15 +8,6 @@
     <string name="nav_configs">Configs</string>
     <string name="nav_about">About</string>
 
-    <string name="tab_cpu">CPU</string>
-    <string name="tab_chipset">Chipset</string>
-    <string name="tab_memory">Memory</string>
-    <string name="tab_display">Display</string>
-    <string name="tab_sound">Sound</string>
-    <string name="tab_input">Input</string>
-    <string name="tab_storage">Storage</string>
-    <string name="tab_misc">Misc</string>
-
     <string name="quick_start_title">Quick Start</string>
     <string name="file_manager_title">Files</string>
     <string name="configurations_title">Saved configurations</string>
@@ -443,6 +434,26 @@
     <string name="settings_group_misc">Miscellaneous</string>
     <string name="settings_group_expansions">Expansions</string>
     <string name="settings_group_io">IO ports</string>
+    <string name="settings_group_ppc">PowerPC</string>
+    <string name="settings_group_rtg">RTG board</string>
+    <string name="settings_group_accelerator">Accelerator board</string>
+    <!-- The machine editor's pages (the Apple app's SettingsPage) and its marks. -->
+    <string name="settings_page_overview">Overview</string>
+    <string name="settings_page_hardware">Hardware</string>
+    <string name="settings_page_display_sound">Display &amp; Sound</string>
+    <string name="settings_page_input">Input</string>
+    <string name="settings_page_storage">Storage</string>
+    <string name="settings_page_ports_misc">Ports &amp; Misc</string>
+    <string name="settings_page_all_settings">All Settings</string>
+    <string name="settings_page_edited_dot">Edited</string>
+    <string name="settings_overview_at_a_glance_title">At a glance</string>
+    <string name="action_edit_machine_details">Name and description…</string>
+    <string name="settings_search_all_label">Search all settings</string>
+    <string name="settings_only_changed">Only changed</string>
+    <string name="settings_search_no_matches">No settings match your search.</string>
+    <string name="dialog_revert_title">Discard changes?</string>
+    <string name="dialog_revert_message_saved">The edits made to “%1$s” since it was last saved are discarded.</string>
+    <string name="dialog_revert_message_preset">The machine goes back to the %1$s preset.</string>
     <string name="settings_section_show">Show %1$s</string>
     <string name="settings_section_hide">Hide %1$s</string>
     <!-- Files tab, imports and the device storage browser -->
