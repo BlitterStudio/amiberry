@@ -1,13 +1,18 @@
 # Multi-threaded CPU
 
 Amiberry runs the 68k interpreter or JIT on a worker thread of its own while
-the main emulation thread runs the chipset, whenever the host has at least two
-logical CPUs. There is no GUI option: the choice is made automatically, and
-re-checked every frame, so a configuration change takes effect on the next
-frame without a restart.
+the main emulation thread runs the chipset, when the CPU speed is "fastest
+possible", the CPU is a 68020 or later and the host has at least two logical
+CPUs. The choice is made automatically and re-checked every frame, so a
+configuration change takes effect on the next frame without a restart.
+
+Threaded: 68020 to 68060 at the fastest speed, with the JIT or the
+interpreter, More compatible, MMU and any FPU.
 
 Emulation stays on the main thread (single-threaded, as before) when:
 
+- the CPU is a 68000 or 68010;
+- the CPU speed is not "fastest possible" (real or another approximate speed);
 - cycle-exact or memory cycle-exact CPU emulation is selected;
 - beam racing ("low latency vsync") is active;
 - PPC emulation is enabled;
@@ -15,13 +20,13 @@ Emulation stays on the main thread (single-threaded, as before) when:
 - the GDB server is enabled;
 - the host has a single logical CPU, or the worker thread cannot be started.
 
-All CPU models and other modes are threaded: 68000 to 68060, More compatible,
-MMU, JIT, any FPU, and both "fastest possible" and approximate CPU speeds. The
-switch is silent; the log reports `CPU emulation runs on the CPU thread.` or
-`... main thread.` when it changes.
+At an approximate speed a CPU thread would only add host CPU use, and 68000
+software tends to depend on the CPU's timing. The log reports `CPU emulation
+runs on the CPU thread.` or `... main thread.` when it changes.
 
-For testing, the config option `cpu_threaded=false` keeps emulation on the
-main thread. It is not in the GUI and defaults to `true`.
+The "Multi-threaded CPU" checkbox on the CPU panel (config option
+`cpu_threaded`, default `true`) turns the CPU thread off. It is available only
+in the configurations above that can use it.
 
 ## Pacing
 
@@ -30,16 +35,8 @@ autoconfig boards) is served on the main thread, at the time it is made. The
 two threads are paced so that the chipset never runs far ahead of the CPU, and
 the CPU never runs far ahead of the chipset:
 
-- **Approximate CPU speed** (any speed but "fastest possible"): the worker
-  counts the cycles of its instructions, as single-threaded emulation does,
-  and the chipset follows that count. The worker waits when it is 64 colour
-  clocks ahead of the chipset and continues at 32. An interrupt is therefore
-  taken at most 64 colour clocks late. After a wait of its own (STOP, a
-  hardware access, a pause) the worker moves its count up to the chipset time,
-  so no cycles are owed for time spent waiting, including CIA E-clock waits.
-- **Fastest possible**: the worker publishes progress (instructions executed,
-  JIT block cycles, hardware accesses served) and the chipset spends it as
-  time. When the worker shows no progress (a JIT compile, a host deschedule),
+- The worker publishes progress (instructions executed, JIT block cycles,
+  hardware accesses served) and the chipset spends it as time. When the worker shows no progress (a JIT compile, a host deschedule),
   the chipset may run on at most 64 colour clocks of credit before it waits,
   which bounds how far a CPU timing measurement can be off.
 - **STOP**: the chipset runs freely while the CPU is stopped. When an
@@ -50,23 +47,24 @@ the CPU never runs far ahead of the chipset:
   worker polls for 0.5 ms before it sleeps, because interrupts tend to follow
   one another closely.
 
-At an approximate speed the frame limiter runs as in single-threaded
-emulation; in fastest mode the CPU loop paces the frame. While the chipset
-waits for the worker, it answers each hardware access at once, rather than
-after a polling back-off.
+The CPU loop paces the frame. While the chipset waits for the worker, it
+answers each hardware access at once, rather than after a polling back-off.
 
 The main thread can serve several worker accesses at the same colour clock.
-Chipset changes that single-threaded emulation applies one cycle late as a
-delta (the 68000/68010 INTENA/INTREQ interrupt delay) or as a last-write
-value (AGA FMODE) would then be applied out of order. Threaded, the interrupt
-delay is therefore not modelled (pending delayed changes are flushed when the
-worker starts), and delayed FMODE writes replace one another.
+A change that single-threaded emulation applies one cycle later as a
+last-write value (AGA FMODE) would then be applied out of order, so threaded,
+delayed FMODE writes replace one another.
 
-Host CPU use: at an approximate speed the worker keeps in step with the
-chipset by polling, so it uses about as much host CPU as the main thread's
-chipset emulation; expect roughly twice the host CPU of single-threaded
-emulation when the guest is busy. Sleeping instead of polling at this
-granularity would cost a thread wake-up every 64 colour clocks.
+A nasty blit (DMACON BLTPRI set) keeps the CPU off the bus until the blit
+ends. Single-threaded, the CPU loop waits for it. Threaded, the main thread
+holds the worker's next hardware access, or the reply to the write that
+started the blit, until the blitter is done. Track loaders that start a blit
+and use its result without waiting for the blitter depend on this.
+
+Host CPU use: the worker runs the CPU as fast as it can, as single-threaded
+"fastest possible" emulation does, and the chipset runs on a second core.
+The main thread polls while the worker uses the hardware and sleeps in the
+frame limiter otherwise.
 
 Pausing parks the worker at an instruction or JIT-dispatch boundary, including
 when the guest is in STOP. Bounded JIT recording/recompilation already in progress
@@ -123,7 +121,7 @@ event) share one park.
 A hardware access served on the main thread costs a cross-core round trip,
 which is slower than an unthreaded register read. Guests that
 poll the beam position, interrupt or DMA state, or the mouse/joystick fire
-buttons would run slower threaded than unthreaded. In fastest mode the worker
+buttons would run slower threaded than unthreaded. The worker
 therefore reads a few side-effect-free registers from a snapshot that the main
 thread publishes:
 
@@ -146,10 +144,9 @@ registers until the main thread has published them again, so the interrupt
 handler does not see INTREQR as it was before the interrupt. Word and
 longword reads at odd addresses, mirrored CIA addresses, custom register
 mirrors below `$DF8000` on Fat Gary chipsets, debugger memory watchpoints,
-dongles and input recording/playback all use the main thread. At an approximate CPU
-speed every access is served at the CPU's time, so the snapshot is not used.
+dongles and input recording/playback all use the main thread.
 
-In fastest mode the main thread waits for real time to catch up at intervals
+The main thread waits for real time to catch up at intervals
 of 32 lines, and the chipset time stands still meanwhile while the CPU thread
 runs on. While the snapshot is in use, it waits after every line instead, as
 unthreaded emulation runs the CPU for at most a line of host time at one

@@ -58,8 +58,8 @@ in the same emulated frame. A controller that needs the Amiga to observe a
 state, such as a key or mouse button being held down, must wait between the
 press and the release instead of relying on one request per frame.
 
-When the CPU runs on a thread of its own (the default on hosts with more than
-one CPU core), `READ_MEM`, `WRITE_MEM`, `GET_CPU_REGS` and `DISASSEMBLE`
+When the CPU runs on a thread of its own (the default for a 68020 or later at
+the fastest CPU speed, on hosts with more than one CPU core), `READ_MEM`, `WRITE_MEM`, `GET_CPU_REGS` and `DISASSEMBLE`
 temporarily park the CPU worker for each request. Use `PAUSE` when several
 requests must observe the same stopped state. Savestate creation also parks
 the worker while capturing CPU state and RAM. See
