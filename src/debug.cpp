@@ -8633,6 +8633,7 @@ static bool check_breakpoint_count(struct breakpoint_node *bpn, uaecptr pc)
 
 void debug (void)
 {
+	cpu_thread_guard cpu_guard;
 	int wasactive;
 	char remote_reason[128] = "S05";
 #ifdef AMIBERRY

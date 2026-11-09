@@ -469,7 +469,7 @@ void do_leave_program (void)
 {
 #ifdef WITH_THREADED_CPU
 	// Print CPU thread diagnostics before cleanup
-	if (currprefs.cpu_thread && cpu_thread_diag.enable_diagnostics) {
+	if (cpu_thread_diag_enabled()) {
 		cpu_thread_diag_print_stats();
 	}
 #endif

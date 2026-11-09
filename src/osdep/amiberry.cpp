@@ -589,14 +589,11 @@ static bool SDLCALL app_lifecycle_watch(void*, SDL_Event* event)
 		if (!background_pause.active) {
 			background_pause.active = true;
 			background_pause.owned = pause_emulation == 0;
-			if (background_pause.owned) {
-				// setpaused() releases held host keys only when the flag is
-				// clear, which this sets ahead of it (no focus loss need
-				// come first, as with the Control Center).
-				wait_keyrelease();
-				pause_sound();
-				pause_emulation = 1;
-			}
+			// setpaused() releases held host keys and pauses the sound and
+			// the CPU thread (no focus loss need come first, as with the
+			// Control Center).
+			if (background_pause.owned)
+				setpaused(1);
 		}
 		break;
 	case SDL_EVENT_DID_ENTER_BACKGROUND:
@@ -612,10 +609,8 @@ static bool SDLCALL app_lifecycle_watch(void*, SDL_Event* event)
 		if (background_pause.active) {
 			background_pause.active = false;
 			// Only the pause this set ends (not the settings UI's, say).
-			if (background_pause.owned && pause_emulation == 1) {
-				pause_emulation = 0;
-				resume_sound();
-			}
+			if (background_pause.owned && pause_emulation == 1)
+				resumepaused(1);
 		}
 		break;
 	default:
@@ -1627,6 +1622,8 @@ void setsoundpaused()
 #endif
 }
 
+static bool cpu_pause_held;
+
 static bool resumepaused_internal(const int priority, const bool restorecapture)
 {
 	const AmigaMonitor* mon = &AMonitors[0];
@@ -1647,6 +1644,10 @@ static bool resumepaused_internal(const int priority, const bool restorecapture)
 	pause_emulation = 0;
 	setsystime();
 	wait_keyrelease();
+	if (cpu_pause_held) {
+		cpu_pause_held = false;
+		cpu_thread_resume();
+	}
 	return true;
 }
 
@@ -1668,6 +1669,8 @@ bool setpaused(const int priority)
 	if (!pause_emulation) {
 		wait_keyrelease();
 	}
+	if (!cpu_pause_held)
+		cpu_pause_held = cpu_thread_pause();
 	pause_emulation = priority;
 	devices_pause();
 	setsoundpaused();
@@ -6113,7 +6116,7 @@ static void boost_emulation_thread_frequency()
 
 // Tune the CALLING thread for sustained emulation performance.  Called on the
 // main thread from target_run(); also called on the dedicated CPU thread (when
-// cpu_threaded is enabled) so the thread actually executing the m68k core is
+// the CPU emulation runs on it) so the thread actually executing the m68k core is
 // covered - target_run() runs before that thread exists, so it cannot tune it.
 // On API 31+ the OS adaptively manages CPU frequency and core placement through
 // the ADPF hint session.  When ADPF is unavailable for this thread (older API,

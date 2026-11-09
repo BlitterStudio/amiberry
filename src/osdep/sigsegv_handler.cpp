@@ -120,7 +120,7 @@ static void windows_arm64_jit_bus_error(const uaecptr amiga_addr, const bool rea
 {
 	exception2_setup(regs.opcode, amiga_addr, read, windows_arm64_exception_size(transfer_size), regs.s ? 4 : 0);
 	flush_icache(3);
-	countdown = 0;
+	jit_end_dispatch();
 	set_special(SPCFLAG_END_COMPILE);
 	longjmp(jit_bus_error_jmpbuf, 2);
 }
@@ -401,7 +401,7 @@ static LONG CALLBACK windows_arm64_jit_exception_handler(PEXCEPTION_POINTERS inf
 		}
 
 		info->ContextRecord->Pc += 4;
-		countdown = 0;
+		jit_end_dispatch();
 		set_special(SPCFLAG_END_COMPILE);
 		if (arm64_quarantine_candidate) {
 			flush_icache(3);
@@ -1049,7 +1049,7 @@ static int handle_exception(mcontext_t sigcont, long fault_addr)
 #endif
 				/* After fault-emulated memory access, force a quick return
 				 * to interpreter so we don't keep running the same JIT block. */
-				countdown = 0;
+				jit_end_dispatch();
 				handled = HANDLE_EXCEPTION_OK;
 				/* End current compiled fragment immediately after any handled
 				 * fault-emulated memory operation to avoid cascading faults in
@@ -1080,7 +1080,7 @@ static int handle_exception(mcontext_t sigcont, long fault_addr)
 				output_log(_T("JIT: unhandled insn 0x%08x at unmapped %08x, quarantine PC=%08x\n"),
 					opcode, amiga_addr, regs.pc);
 				flush_icache(3);
-				countdown = 0;
+				jit_end_dispatch();
 				set_special(SPCFLAG_END_COMPILE);
 				in_handler--;
 				longjmp(jit_bus_error_jmpbuf, 2);

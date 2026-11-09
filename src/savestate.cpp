@@ -1053,6 +1053,7 @@ static void save_rams (struct zfile *f, int comp)
 
 int save_state_internal (struct zfile *f, const TCHAR *description, int comp, bool savepath)
 {
+	cpu_thread_guard cpu_guard;
 	uae_u8 endhunk[] = { 'E', 'N', 'D', ' ', 0, 0, 0, 8 };
 	uae_u8 header[1000];
 	TCHAR tmp[100];
@@ -1367,6 +1368,7 @@ int save_state_internal (struct zfile *f, const TCHAR *description, int comp, bo
 
 int save_state (const TCHAR *filename, const TCHAR *description)
 {
+	cpu_thread_guard cpu_guard;
 	struct zfile *f;
 	int comp = (savestate_flags & SAVESTATE_DOCOMPRESS) != 0;
 
@@ -1733,6 +1735,7 @@ void savestate_capture (int force)
 		if (hsync_counter % currprefs.statecapturerate)
 			return;
 	}
+	cpu_thread_guard cpu_guard;
 	savestate_first_capture = false;
 
 	retrycnt = 0;

@@ -2481,9 +2481,20 @@ static int cia_cycles(int delay, int phase, int val, int post)
 	return phase;
 }
 
+// The threaded CPU waits for the E-clock only when the chipset follows its
+// cycle count (timed pacing): the CPU thread takes up the time on the reply.
+static bool cia_no_eclock_wait()
+{
+#ifdef WITH_THREADED_CPU
+	return cpu_threaded_run && !cpu_thread_eclock_wait();
+#else
+	return cpu_threaded_run;
+#endif
+}
+
 static void cia_wait_pre(int cianummask)
 {
-	if (currprefs.cachesize || currprefs.cpu_thread)
+	if (currprefs.cachesize || cia_no_eclock_wait())
 		return;
 #ifdef WITH_PPC
 	if (ppc_state)
@@ -2527,7 +2538,7 @@ static void cia_wait_post(int cianummask, uaecptr addr, uae_u32 value, bool rw)
 	if (ppc_state)
 		return;
 #endif
-	if (currprefs.cpu_thread)
+	if (cia_no_eclock_wait())
 		return;
 	if (currprefs.cachesize) {
 		do_cycles(12 * E_CYCLE_UNIT);
@@ -2710,6 +2721,18 @@ static uae_u32 REGPARAM2 cia_bget(uaecptr addr)
 #endif
 	return v;
 }
+
+#ifdef WITH_THREADED_CPU
+// CIA-A PRA as a CPU read of 0xbfe001 would return it now (cia_bget()), for
+// the CPU thread's register snapshot. Not with inputs that need each read.
+bool cia_cpu_thread_pra(uae_u8 *v)
+{
+	if (currprefs.dongle || input_record > 0 || input_play > 0)
+		return false;
+	*v = ReadCIAA(0, nullptr);
+	return true;
+}
+#endif
 
 static uae_u32 REGPARAM2 cia_wget(uaecptr addr)
 {

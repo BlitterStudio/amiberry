@@ -29,7 +29,6 @@ struct cpu_options {
     const settings::definition& cpu_throttle = settings::require("cpu_throttle");
     const settings::definition& cpu_idle = settings::require("amiberry.cpu_idle");
     const settings::definition& cpu_multiplier = settings::require("cpu_multiplier");
-    const settings::definition& cpu_threaded = settings::require("cpu_threaded");
 #ifdef WITH_PPC
     const settings::definition& ppc_model = settings::require("ppc_model");
     const settings::definition& ppc_implementation = settings::require("ppc_implementation");
@@ -384,11 +383,6 @@ void render_panel_cpu() {
         snprintf(freq_label, sizeof(freq_label), "%.6f", freq_mhz / 1000000.0f);
         ImGui::SetNextItemWidth(BUTTON_WIDTH);
         ImGui::InputText("##FreqReadout", freq_label, sizeof(freq_label), ImGuiInputTextFlags_ReadOnly);
-
-        ImGui::BeginDisabled(!available(o.cpu_threaded, ctx));
-        option_checkbox("Multi-threaded CPU", o.cpu_threaded, ctx);
-        ShowHelpMarker(o.cpu_threaded.descriptor.help);
-        ImGui::EndDisabled();
 
         ImGui::Dummy(ImVec2(right_group_min_width, 0.0f));
         }

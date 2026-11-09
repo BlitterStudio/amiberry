@@ -675,6 +675,7 @@ void reset_prefs(uae_prefs& p)
 	p.compnf = true;
 	p.comp_constjump = true;
 	p.comp_catchfault = true;
+	p.cpu_thread = true;
 #ifdef USE_JIT_FPU
 	p.compfpu = true;
 #endif
@@ -920,7 +921,8 @@ void check_availability()
 	CHECK(!available(p, "mmu_model"));
 	CHECK(!available(p, "cpu_compatible")); // memory cycle-exact forces it on
 	CHECK(!available(p, "cpu_data_cache"));
-	CHECK(!available(p, "cpu_threaded"));
+	CHECK(available(p, "cpu_threaded")); // chosen at run time, always settable
+	CHECK(value_of(p, "cpu_threaded") == "true");
 	CHECK(!available(p, "fpu_strict"));
 	CHECK(choice_available(p, "fpu_model", "0"));
 	CHECK(!choice_available(p, "fpu_model", "68881")); // 68000 in More compatible mode
@@ -939,8 +941,7 @@ void check_availability()
 	CHECK(choice_available(p, "mmu_model", "68030"));
 	CHECK(choice_available(p, "mmu_model", "68ec030"));
 	CHECK(!choice_available(p, "mmu_model", "68040"));
-	CHECK(available(p, "cpu_threaded"));
-	CHECK(!available(p, "cpu_threaded", settings::context{true}));
+	CHECK(available(p, "cpu_threaded", settings::context{true}));
 
 	CHECK(set(p, "cpu_model", "68040") == AMIBERRY_SETTINGS_OK);
 	CHECK(!available(p, "cpu_24bit_addressing"));
@@ -951,7 +952,7 @@ void check_availability()
 
 	CHECK(set(p, "mmu_model", "68040") == AMIBERRY_SETTINGS_OK);
 	CHECK(!available(p, "cachesize")); // no JIT with MMU emulation
-	CHECK(!available(p, "cpu_threaded")); // MMU emulation without the JIT
+	CHECK(available(p, "cpu_threaded"));
 
 	// The speed adjustment can only slow the CPU down at fastest speed.
 	double min, max;
@@ -1295,16 +1296,21 @@ void check_session()
 	session = amiberry_settings_session_open();
 	CHECK(amiberry_settings_set(session, "cpu_compatible", "false") == AMIBERRY_SETTINGS_OK);
 	emulating = 1;
-	CHECK(!amiberry_settings_is_available(session, "cpu_threaded"));
-	CHECK(amiberry_settings_set(session, "cpu_threaded", "true") == AMIBERRY_SETTINGS_UNAVAILABLE);
+	CHECK(!amiberry_settings_is_available(session, "uaeboard"));
+	CHECK(amiberry_settings_set(session, "uaeboard", "full") == AMIBERRY_SETTINGS_UNAVAILABLE);
+	// the CPU thread is chosen at run time: a live option
+	CHECK(amiberry_settings_is_available(session, "cpu_threaded"));
+	CHECK(amiberry_settings_set(session, "cpu_threaded", "false") == AMIBERRY_SETTINGS_OK);
+	CHECK(amiberry_settings_commit(session, &changed) == AMIBERRY_APPLY_LIVE);
+	CHECK(changed && !changed_prefs.cpu_thread);
 	emulating = 0;
-	CHECK(amiberry_settings_set(session, "cpu_threaded", "true") == AMIBERRY_SETTINGS_OK);
+	CHECK(amiberry_settings_set(session, "uaeboard", "full") == AMIBERRY_SETTINGS_OK);
 	CHECK(amiberry_settings_commit(session, &changed) == AMIBERRY_APPLY_RESTART);
-	CHECK(changed && changed_prefs.cpu_thread);
+	CHECK(changed && changed_prefs.uaeboard == 2);
 
 	// Re-submitting an unchanged restart-only option with a live change
 	// does not ask for a restart.
-	CHECK(amiberry_settings_set(session, "cpu_threaded", "true") == AMIBERRY_SETTINGS_OK);
+	CHECK(amiberry_settings_set(session, "uaeboard", "full") == AMIBERRY_SETTINGS_OK);
 	CHECK(amiberry_settings_set(session, "amiberry.cpu_idle", "0") == AMIBERRY_SETTINGS_UNAVAILABLE); // real speed
 	CHECK(amiberry_settings_set(session, "cpu_speed", "max") == AMIBERRY_SETTINGS_OK);
 	CHECK(amiberry_settings_commit(session, &changed) == AMIBERRY_APPLY_LIVE);
@@ -1312,7 +1318,7 @@ void check_session()
 
 	// Commit stores what the fixups adjust outside the session's options:
 	// 24-bit addressing removes Z3 RAM.
-	CHECK(amiberry_settings_set(session, "cpu_threaded", "false") == AMIBERRY_SETTINGS_OK);
+	CHECK(amiberry_settings_set(session, "uaeboard", "disabled") == AMIBERRY_SETTINGS_OK);
 	CHECK(amiberry_settings_commit(session, &changed) == AMIBERRY_APPLY_RESTART);
 	changed_prefs.z3fastmem[0].size = 16 * 1024 * 1024;
 	CHECK(amiberry_settings_set(session, "cpu_24bit_addressing", "true") == AMIBERRY_SETTINGS_OK);

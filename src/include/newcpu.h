@@ -15,6 +15,22 @@
 #include "events.h"
 #include "thread.h"
 
+bool cpu_thread_pause();
+void cpu_thread_resume();
+bool cpu_thread_is_waiting_on_main();
+#ifdef WITH_THREADED_CPU
+void cpu_thread_check_selection();
+#endif
+
+class cpu_thread_guard {
+	bool held;
+public:
+	explicit cpu_thread_guard(bool acquire = true) : held(acquire && cpu_thread_pause()) {}
+	~cpu_thread_guard() { if (held) cpu_thread_resume(); }
+	cpu_thread_guard(const cpu_thread_guard&) = delete;
+	cpu_thread_guard& operator=(const cpu_thread_guard&) = delete;
+};
+
 #ifdef WITH_SOFTFLOAT
 #include <softfloat/softfloat.h>
 #endif
@@ -382,6 +398,7 @@ extern void safe_interrupt_set(int, int, bool);
 #define SPCFLAG_CHECK		0x008000
 #define SPCFLAG_MMURESTART	0x010000
 #define SPCFLAG_CALLBACK	0x020000
+#define SPCFLAG_CPU_THREAD_SYNC	0x040000 /* threaded CPU: park or debugger request pending */
 
 STATIC_INLINE void set_special_exter(uae_u32 x)
 {
@@ -396,6 +413,16 @@ STATIC_INLINE void set_special (uae_u32 x)
 STATIC_INLINE void unset_special (uae_u32 x)
 {
 	atomic_and(&regs.spcflags, ~x);
+}
+
+// Only for flags that just the CPU itself sets (SPCFLAG_TRACE/DOTRACE): skip
+// the locked RMW when no bit is set. With the threaded CPU the main thread
+// keeps the spcflags line shared, so an unneeded locked RMW on every
+// exception costs a cross-core line transfer.
+STATIC_INLINE void unset_special_cpu (uae_u32 x)
+{
+	if (regs.spcflags & x)
+		atomic_and(&regs.spcflags, ~x);
 }
 
 #define m68k_dreg(r,num) ((r).regs[(num)])
@@ -907,6 +934,8 @@ extern cpuop_func *cpufunctbl[65536] ASM_SYM_FOR_FUNC("cpufunctbl");
 #ifdef JIT
 extern void (*flush_icache)(int);
 extern void compemu_reset(void);
+// End the running compiled code at its next block end (after a handled fault).
+extern void jit_end_dispatch(void);
 #else
 #define flush_icache(int) do {} while (0)
 #define flush_icache_hard(int) do {} while (0)

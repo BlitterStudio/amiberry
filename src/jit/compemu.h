@@ -12,7 +12,7 @@
 #include "x86_64/compemu_x86_64.h"
 #endif
 
-extern volatile int jit_exception_pending;
+extern thread_local volatile int jit_exception_pending;
 #if defined(CPU_AARCH64) || defined(__aarch64__) || defined(_M_ARM64) || defined(_M_ARM64EC) || \
 	defined(CPU_x86_64) || defined(__x86_64__) || defined(_M_AMD64)
 #define JIT_HAS_BUS_ERROR_RECOVERY 1
@@ -30,8 +30,8 @@ extern volatile int jit_exception_pending;
 #pragma pop_macro("D")
 #undef AMIBERRY_RESTORE_D_AFTER_SETJMP
 #endif
-extern jmp_buf jit_bus_error_jmpbuf;
-extern volatile bool jit_in_compiled_code;
+extern thread_local jmp_buf jit_bus_error_jmpbuf;
+extern thread_local volatile bool jit_in_compiled_code;
 #endif
 
 #endif //AMIBERRY_COMPEMU_H

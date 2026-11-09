@@ -76,6 +76,12 @@ void events_schedule(void)
 
 extern int vsync_activeheight;
 
+static void refill_event_budget()
+{
+	if (!cpu_threaded_run)
+		pissoff = currprefs.cachesize ? pissoff_value : pissoff_nojit_value;
+}
+
 static bool event_check_vsync(void)
 {
 	/* Keep only CPU emulation running while waiting for sync point. */
@@ -102,10 +108,7 @@ static bool event_check_vsync(void)
 				uae_ppc_execute_quick();
 			}
 #endif
-			if (currprefs.cachesize)
-				pissoff = pissoff_value;
-			else
-				pissoff = pissoff_nojit_value;
+			refill_event_budget();
 			return true;
 		}
 		vsync_clear();
@@ -131,10 +134,7 @@ static bool event_check_vsync(void)
 				uae_ppc_execute_quick();
 			}
 #endif
-			if (currprefs.cachesize)
-				pissoff = pissoff_value;
-			else
-				pissoff = pissoff_nojit_value;
+			refill_event_budget();
 			return true;
 		}
 		vsync_clear();
@@ -154,10 +154,7 @@ static bool event_check_vsync(void)
 				uae_ppc_execute_quick();
 			}
 #endif
-			if (currprefs.cachesize)
-				pissoff = pissoff_value;
-			else
-				pissoff = pissoff_nojit_value;
+			refill_event_budget();
 			return true;
 		}
 		vsync_clear();
@@ -178,10 +175,7 @@ static bool event_check_vsync(void)
 				uae_ppc_execute_check();
 			}
 #endif
-			if (currprefs.cachesize)
-				pissoff = pissoff_value;
-			else
-				pissoff = pissoff_nojit_value;
+			refill_event_budget();
 			return true;
 		}
 		vsync_event_done();
@@ -202,10 +196,7 @@ static bool event_check_vsync(void)
 				uae_ppc_execute_check();
 			}
 #endif
-			if (currprefs.cachesize)
-				pissoff = pissoff_value;
-			else
-				pissoff = pissoff_nojit_value;
+			refill_event_budget();
 			return true;
 		}
 		vsync_event_done();
@@ -222,10 +213,7 @@ static bool event_check_vsync(void)
 					uae_ppc_execute_check();
 				}
 #endif
-				if (currprefs.cachesize)
-					pissoff = pissoff_value;
-				else
-					pissoff = pissoff_nojit_value;
+				refill_event_budget();
 				return true;
 			}
 		}
@@ -251,10 +239,7 @@ static bool event_check_vsync(void)
 					}
 				}
 #endif
-				if (currprefs.cachesize)
-					pissoff = pissoff_value;
-				else
-					pissoff = pissoff_nojit_value;
+				refill_event_budget();
 
 				return true;
 			}
@@ -292,12 +277,13 @@ static int cycles_to_add_remain;
 void do_cycles_slow(int cycles_to_add)
 {
 #ifdef WITH_THREADED_CPU
-	if (currprefs.cpu_thread && !is_mainthread()) {
-		/* Track stalls when CPU thread can't access chipset */
-		if (cpu_thread_diag.enable_diagnostics) {
-			cpu_thread_diag_log_stall(cycles_to_add);
+	if (cpu_threaded_run) {
+		if (cpu_thread_is_worker()) {
+			cpu_thread_worker_cycles(cycles_to_add);
+			return;
 		}
-		return;
+		if (!is_mainthread())
+			return;
 	}
 #endif
 
@@ -325,7 +311,7 @@ void do_cycles_slow(int cycles_to_add)
 	cycles_to_add += cycles_to_add_remain;
 	cycles_to_add_remain = 0;
 
-	if (!currprefs.cpu_thread) {
+	if (!cpu_threaded_run) {
 		if ((pissoff -= cycles_to_add) >= 0) {
 			return;
 		}

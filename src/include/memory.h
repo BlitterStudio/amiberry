@@ -525,6 +525,7 @@ extern addrbank *get_mem_bank_real(uaecptr);
 extern void memory_init (void);
 extern void memory_cleanup(void);
 extern void restore_banks(void);
+extern void memory_set_cpu_thread_banks(bool threaded);
 extern void map_banks (addrbank *bank, int first, int count, int realsize);
 extern bool map_banks_z2(addrbank *bank, int first, int count);
 extern uae_u32 map_banks_z2_autosize(addrbank *bank, int first);

@@ -516,15 +516,6 @@ void set_cpu_threaded(uae_prefs& p, const value& v)
 	p.cpu_thread = v.number != 0;
 }
 
-// Only the JIT and the plain 68020+ interpreter can run on the CPU thread,
-// and the thread is chosen when emulation starts.
-bool cpu_threaded_available(const uae_prefs& p, const context& ctx)
-{
-	const bool no_thread = p.cpu_compatible || p.ppc_mode || p.cpu_memory_cycle_exact
-		|| p.cpu_cycle_exact || (p.mmu_model && !p.cachesize) || p.cpu_model < 68020;
-	return !no_thread && !ctx.emulating;
-}
-
 // ---------------------------------------------------------------- PPC
 
 #ifdef WITH_PPC
@@ -884,11 +875,12 @@ const definition definitions[] = {
 			AMIBERRY_APPLY_LIVE, "0", cpu_multiplier_choices,
 			"Needs More compatible or cycle-exact mode, and not the fastest speed."),
 		get_cpu_multiplier, set_cpu_multiplier, cpu_multiplier_available, nullptr, nullptr},
+	// Not in the GUI: the CPU thread is chosen automatically. Kept for
+	// configuration files and troubleshooting (false: never use it).
 	{BOOL_OPTION("cpu_threaded", "cpu_speed", "Multi-threaded CPU",
-			"Run CPU emulation on a separate thread. Experimental. May help CPU-heavy software, but hardware-register accesses require synchronization and can make it slower.",
-			AMIBERRY_APPLY_RESTART, "false",
-			"The CPU thread needs a 68020 or later and is not available with PPC emulation, More compatible, cycle-exact or MMU modes."),
-		get_cpu_threaded, set_cpu_threaded, cpu_threaded_available, nullptr, nullptr},
+			"Run the CPU emulation on a thread of its own when the host has two or more cores. Cycle-exact emulation, PPC emulation, beam racing, the GDB server and freezer cartridges run it on the main thread automatically.",
+			AMIBERRY_APPLY_LIVE, "true", nullptr),
+		get_cpu_threaded, set_cpu_threaded, nullptr, nullptr, nullptr},
 #ifdef WITH_PPC
 	{CHOICE_OPTION("ppc_model", "ppc", "PPC CPU emulation",
 			"Enable PowerPC CPU emulation for CyberStorm PPC or Blizzard PPC boards.",

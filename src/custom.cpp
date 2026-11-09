@@ -1146,8 +1146,13 @@ static void setup_fmodes(uae_u16 con0)
 		fetchmode_size = 16 << fetchmode;
 		fetchmode_mask = fetchmode_size - 1;
 		if (!savestate_state) {
-			// Fetch mode/modulo change is delayed by 2 CCK
-			event2_newevent_xx(-1, 2 * CYCLE_UNIT, fmode, setup_fmodes_delayed);
+			// Fetch mode/modulo change is delayed by 2 CCK. Threaded, writes
+			// can be served at one chipset cycle, and events due at the same
+			// cycle do not run in queue order: keep only the latest value.
+			if (cpu_threaded_run)
+				event2_newevent_x_replace(2, fmode, setup_fmodes_delayed);
+			else
+				event2_newevent_xx(-1, 2 * CYCLE_UNIT, fmode, setup_fmodes_delayed);
 		} else {
 			setup_fmodes_delayed(fmode);
 		}
@@ -3198,7 +3203,7 @@ static void DMACON(int hpos, uae_u16 v)
 #endif
 
 	// See do_blitter(): the threaded CPU never waits for a nasty blit.
-	if ((dmacon & DMA_BLITPRI) > (oldcon & DMA_BLITPRI) && (blt_info.blit_main || blt_info.blit_queued) && !currprefs.cpu_thread) {
+	if ((dmacon & DMA_BLITPRI) > (oldcon & DMA_BLITPRI) && (blt_info.blit_main || blt_info.blit_queued) && !cpu_threaded_run) {
 		set_special(SPCFLAG_BLTNASTY);
 	}
 
@@ -3410,6 +3415,16 @@ static void doint_delay_intena(uae_u16 v)
 	else {
 		event_doint_delay_do_intena(v);
 	}
+}
+
+// m68k_interrupt_delay was turned off: apply the queued INTENA/INTREQ changes.
+void custom_interrupt_delay_flush(void)
+{
+	event2_newevent_x_remove(event_doint_delay_do_intena);
+	event2_newevent_x_remove(event_doint_delay_do_intreq);
+	intena2 = intena;
+	intreq2 = intreq;
+	doint();
 }
 
 static void INTENA(uae_u16 v)
@@ -4849,7 +4864,9 @@ static bool framewait(void)
 			frame_rendered = crender_screen(0, 1, false);
 			t = read_processor_time() - start;
 		}
-		if (!currprefs.cpu_thread) {
+		// A CPU thread at an approximate speed follows the chipset: it waits
+		// here with it. In fastest mode the CPU loop paces the frame.
+		if (!cpu_threaded_run || currprefs.m68k_speed >= 0) {
 #ifdef AMIBERRY
 			static amiberry_frame_pacer pacer;
 			while (!currprefs.turbo_emulation) {
@@ -5459,6 +5476,9 @@ static void vsync_handler_post(void)
 	prevtime = read_processor_time();
 
 	check_nocustom();
+#ifdef WITH_THREADED_CPU
+	cpu_thread_check_selection();
+#endif
 
 #if CUSTOM_DEBUG > 1
 	if ((intreq & 0x0020) && (intena & 0x0020))
@@ -6478,7 +6498,7 @@ static void hsync_handler_post(bool onvsync)
 
 	bool input_read_done = false;
 
-	if (currprefs.cpu_thread) {
+	if (cpu_threaded_run) {
 
 		maybe_process_pull_audio();
 
@@ -6498,7 +6518,7 @@ static void hsync_handler_post(bool onvsync)
 				input_read_done = linesync_beam_multi_single();
 		}
 #endif
-	} else if (!currprefs.cpu_thread && !cpu_sleepmode && currprefs.m68k_speed < 0 && !currprefs.cpu_memory_cycle_exact) {
+	} else if (!cpu_threaded_run && !cpu_sleepmode && currprefs.m68k_speed < 0 && !currprefs.cpu_memory_cycle_exact) {
 
 		static int sleeps_remaining;
 		if (is_last_line()) {
@@ -6566,7 +6586,7 @@ static void hsync_handler_post(bool onvsync)
 			maybe_process_pull_audio();
 		}
 
-	} else if (!currprefs.cpu_thread) {
+	} else if (!cpu_threaded_run) {
 
 		// the rest
 		static int linecounter;
@@ -7252,6 +7272,27 @@ int custom_init(void)
 
 	return 1;
 }
+
+#ifdef WITH_THREADED_CPU
+// What a CPU read of these registers would return now (custom_wget_1()).
+// VHPOSR has a side effect only for slow_cpu_access.
+bool custom_cpu_thread_pos(uae_u16 *vposr, uae_u16 *vhposr)
+{
+	if (slow_cpu_access & 2)
+		return false;
+	*vposr = VPOSR();
+	*vhposr = VHPOSR();
+	return true;
+}
+
+void custom_cpu_thread_regs(uae_u16 *v)
+{
+	v[0] = DMACONR();
+	v[1] = INTENAR();
+	v[2] = INTREQR();
+	v[3] = ADKCONR();
+}
+#endif
 
 /* Custom chip memory bank */
 
@@ -12687,7 +12728,7 @@ static void sync_imm_evhandler(void)
 int do_cycles_cck(int cycles)
 {
 #ifdef WITH_THREADED_CPU
-	if (currprefs.cpu_thread && !is_mainthread()) {
+	if (cpu_threaded_run && !is_mainthread()) {
 		/* CPU thread is skipping cycle accounting */
 		if (cpu_thread_diag.enable_diagnostics) {
 			cpu_thread_diag_log_stall(cycles);
@@ -13006,7 +13047,7 @@ void wait_cpu_cycle_write_ce020(uaecptr addr, int mode, uae_u32 v)
 void do_cycles_ce(int cycles)
 {
 #ifdef WITH_THREADED_CPU
-	if (currprefs.cpu_thread && !is_mainthread()) {
+	if (cpu_threaded_run && !is_mainthread()) {
 		if (cpu_thread_diag.enable_diagnostics) {
 			cpu_thread_diag_log_stall(cycles);
 		}
@@ -13024,7 +13065,7 @@ void do_cycles_ce(int cycles)
 void do_cycles_ce020(int cycles)
 {
 #ifdef WITH_THREADED_CPU
-	if (currprefs.cpu_thread && !is_mainthread()) {
+	if (cpu_threaded_run && !is_mainthread()) {
 		if (cpu_thread_diag.enable_diagnostics) {
 			cpu_thread_diag_log_stall(cycles);
 		}

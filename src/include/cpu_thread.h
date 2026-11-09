@@ -12,32 +12,37 @@
 #include "uae/types.h"
 
 #ifdef WITH_THREADED_CPU
+#include <atomic>
+
 /* Thread diagnostics and profiling */
 typedef struct {
-	// Counters
-	volatile uae_atomic stall_count;          // Number of times CPU thread stalled on IO
-	volatile uae_atomic stall_cycles_lost;     // Cycles wasted on synchronization
-	volatile uae_atomic longest_stall;         // Longest single stall in cycles
-
-	// State tracking
-	volatile uae_atomic is_stalled;            // Currently stalled?
-	evt_t stall_start_cycle;                   // When current stall started
-
-	// Configuration
-	int enable_diagnostics;
+	// Access counters only with __atomic builtins, including during reset.
+	uae_u64 wait_count;
+	uae_u64 total_wait_ns;
+	uae_u64 longest_wait_ns;
+	uae_u64 skipped_cycle_count;
+	uae_u64 total_skipped_cycles;
+	uae_u64 longest_skipped_cycles;
+	std::atomic<bool> enable_diagnostics;
 } cpu_thread_diagnostics;
 
 extern cpu_thread_diagnostics cpu_thread_diag;
 
-/* Function prototypes */
+inline bool cpu_thread_diag_enabled(void)
+{
+	return cpu_thread_diag.enable_diagnostics.load(std::memory_order_relaxed);
+}
+
+// Reads AMIBERRY_CPU_THREAD_DIAGNOSTICS (0/1, false/true, no/yes, off/on).
 void cpu_thread_diag_init(void);
+// For a coherent new reporting interval, reset while the CPU worker is idle.
 void cpu_thread_diag_reset(void);
+// Measure an actual mailbox wait with SDL_GetTicksNS(), only when enabled.
+void cpu_thread_diag_log_wait(uae_u64 nanoseconds);
+// Legacy events/custom hook: skipped guest cycles, NOT elapsed host waits.
 void cpu_thread_diag_log_stall(evt_t duration);
 void cpu_thread_diag_print_stats(void);
 
-void cpu_thread_stall_start(void);
-void cpu_thread_stall_end(evt_t duration);
+#endif /* WITH_THREADED_CPU */
 
 #endif /* UAE_CPU_THREAD_H */
-
-#endif

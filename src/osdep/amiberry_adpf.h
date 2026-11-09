@@ -11,7 +11,7 @@
 // hint session.  The first registered thread creates the session; later threads
 // are added to it (the session is rebuilt covering the union of tids).  This
 // lets every thread doing per-frame work - the main thread and, when
-// cpu_threaded is enabled, the dedicated CPU thread - be boosted together.
+// the CPU emulation runs on it, the dedicated CPU thread - be boosted together.
 // Returns true iff the calling thread is now covered by an active session, so
 // the caller can fall back to static tuning when it is not.  Thread-safe.
 bool adpf_register_thread(int32_t tid);

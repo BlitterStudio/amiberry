@@ -2084,7 +2084,7 @@ void action_replay_memory_reset (void)
 #ifdef WITH_THREADED_CPU
 	// m68k_run() keeps a freezer on the main-thread CPU loops. A cartridge that
 	// appears while the CPU thread runs needs a restart of the CPU loop.
-	if (currprefs.cpu_thread && action_replay_freezer_active())
+	if (cpu_threaded_run && action_replay_freezer_active())
 		set_special(SPCFLAG_MODE_CHANGE);
 #endif
 }

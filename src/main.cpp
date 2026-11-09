@@ -373,13 +373,6 @@ void fixup_cpu (struct uae_prefs *p)
 		p->fpu_mode = 0;
 	}
 
-	// Checked after the CPU options above are final: only the JIT and the plain
-	// 68020+ interpreter have a CPU thread (m68k_run()).
-	if (p->cpu_thread && (p->cpu_compatible || p->ppc_mode || p->cpu_memory_cycle_exact || p->mmu_model || p->cpu_model < 68020)) {
-		p->cpu_thread = false;
-		error_log(_T("Threaded CPU mode is not compatible with PPC emulation, More compatible, Cycle Exact or MMU modes. CPU type must be 68020 or higher."));
-	}
-
 #ifdef JIT
 	if (p->comptrustbyte < 0 || p->comptrustbyte > 3) {
 		error_log(_T("Bad value for comptrustbyte parameter: value must be within 0..2."));
