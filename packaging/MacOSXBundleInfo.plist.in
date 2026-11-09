@@ -36,7 +36,7 @@
         <string>${MACOSX_BUNDLE_COPYRIGHT}</string>
         ${AMIBERRY_MACOS_STORE_PLIST_KEYS}
         <key>LSApplicationCategoryType</key>
-        <string>public.app-category.games</string>
+        <string>public.app-category.entertainment</string>
 		<key>CFBundleDocumentTypes</key>
 		<array>
 			<dict>

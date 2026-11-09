@@ -5,107 +5,112 @@ title: Privacy Policy - Amiberry
 
 # Privacy Policy
 
-**Effective Date: March 28, 2026**
+**Effective Date: November 9, 2026**
 
-This privacy policy describes how **Amiberry** ("the App"), developed by **BlitterStudio**, handles user data on the Android platform.
+This privacy policy describes how **Amiberry** ("the App"), developed by Dimitris Panokostas (BlitterStudio), handles your data in:
+
+- Amiberry for iPhone, iPad and Mac, from Apple's App Store;
+- Amiberry for Android, from Google Play;
+- the builds you download from GitHub or amiberry.com, and the packages built from them.
 
 ---
 
 ## Summary
 
-Amiberry does not collect, store, or transmit any personal data, with the sole exception of **anonymous crash reports** sent via Firebase Crashlytics to help us fix bugs. No personal information, usage patterns, or file contents are ever collected.
+- **iPhone, iPad and Mac (App Store):** the App collects no data at all. App Store "Data Not Collected".
+- **Android:** the only data that leaves your device is an **anonymous crash report** sent through Firebase Crashlytics when the App crashes.
+- On every platform there are no accounts, no analytics, no advertising and no tracking. Your files never leave your device.
 
 ---
 
-## What Data Does the App Access?
+## Files the App Uses
 
-Amiberry accesses files stored locally on your device, including:
+Amiberry reads and writes files on your device so it can emulate an Amiga:
 
-- Amiga ROM files (Kickstart ROMs)
-- Disk image files (ADF, IPF, HDF, WHDLoad archives)
-- Configuration files created by the App
-- WHDLoad game data
+- Kickstart ROM files
+- Floppy, hard disk and CD images (ADF, IPF, HDF, ISO, CHD and others), and WHDLoad archives
+- Configuration files, save states and screenshots it creates
+- WHDLoad boot files and the game database
 
-All file access is local to your device. No files are uploaded, transmitted, or shared with any third party.
+All of this stays on your device. Nothing is uploaded, transmitted or shared.
 
-## Why Does the App Need Storage Permission?
+- **iPhone and iPad:** the App works with its own folder (visible in the Files app) and with files you choose in the Files app or share to Amiberry.
+- **Mac (App Store):** the App runs in Apple's sandbox. It can only open files and folders you choose, and it remembers that choice through a sandbox bookmark.
+- **Android:** the App asks for "All files access" (`MANAGE_EXTERNAL_STORAGE`) on Android 11 and later, because ROMs and disk images are usually kept in folders you choose, outside the App's private storage.
 
-Amiberry requests the `MANAGE_EXTERNAL_STORAGE` (All Files Access) permission on Android 11 and above. This permission is required because:
+## Camera and Microphone
 
-- Users store their Amiga ROM files and disk images in various locations on their device
-- The App must be able to read these files from any user-chosen directory to function as an emulator
-- Without this permission, the App cannot access files outside its own private storage area
+On iPhone, iPad and Mac, the App asks for the camera or the microphone only when you select them as an input of the emulated Amiga: the camera as a genlock video source, the microphone as the recording input of the sampler or an emulated sound card. The picture and sound are used live by the emulation. They are not stored or sent anywhere.
 
-## Network Usage
+## Network Use
 
-Amiberry uses the `INTERNET` permission for:
+The App connects to the internet only in these cases:
 
-1. **Emulated Amiga networking** (bsdsocket.library emulation) — allows Amiga software running inside the emulator to access network resources, just as a real Amiga would.
-2. **Crash reporting** — anonymous crash diagnostics are sent to Firebase Crashlytics (see below).
+1. **Downloads you ask for.** WHDLoad and its helper files are not included with the App, because their licences do not allow it. When you ask for them (for example when you first start a WHDLoad game), the App downloads:
+   - WHDLoad from its author's site, `whdload.de`;
+   - the kickstart relocation files and the JST booter from `aminet.net`;
+   - the boot files and the WHDLoad game database from the Amiberry project on GitHub (`github.com`, `raw.githubusercontent.com`).
 
-The App does not:
+   Like any download, these servers see your IP address. The App sends them nothing else.
+2. **Emulated networking.** Amiga software running inside the emulator can use the network (bsdsocket.library and the emulated network cards), just as on a real Amiga. That traffic goes where the Amiga software sends it.
+3. **Update check (GitHub and amiberry.com builds only).** These builds can check `api.github.com` for new Amiberry releases. The App Store and Google Play versions don't: those stores deliver the updates.
+4. **Crash reports (Android only).** See below.
 
-- Send analytics or telemetry data
-- Display advertisements
-- Track user behavior or usage patterns
-- Make any other network requests on its own behalf
+Links on the App's About and Licences screens open in your browser.
 
-## Crash Reporting (Firebase Crashlytics)
+## Crash Reporting on Android (Firebase Crashlytics)
 
-Amiberry uses **Firebase Crashlytics** to collect anonymous crash reports. This helps us identify and fix bugs, which is especially important for a complex emulator with native code.
+The Android App uses **Firebase Crashlytics** to send an anonymous report when it crashes. Native emulator code is hard to debug without them.
 
-**What Crashlytics collects when a crash occurs:**
+**What a crash report contains:**
 
-- Crash stack trace (technical details about what went wrong)
-- Device model and manufacturer
-- Android OS version
-- App version and build number
-- A random Crashlytics installation ID (not linked to your identity)
-- General device state (e.g. available memory, orientation)
+- the crash stack trace;
+- device model and manufacturer;
+- Android OS version;
+- App version and build number;
+- a random Crashlytics installation ID, not linked to your identity;
+- general device state (for example available memory and orientation).
 
-**What Crashlytics does NOT collect:**
+**What it does not contain:** your name, email or other personal identifiers, file names or file contents, ROMs, disk images or any emulation data, your location, or what you were emulating.
 
-- Your name, email, or any personal identifiers
-- File names or contents on your device
-- ROM files, disk images, or any emulation data
-- Your location
-- Any information about what you were emulating
+Google processes Crashlytics data under the [Firebase Terms of Service](https://firebase.google.com/terms) and the [Google Privacy Policy](https://policies.google.com/privacy). Crash data is kept for 90 days.
 
-Crashlytics data is processed by Google in accordance with the [Firebase Terms of Service](https://firebase.google.com/terms) and the [Google Privacy Policy](https://policies.google.com/privacy). Crash data is retained for 90 days.
+The iPhone, iPad and Mac versions contain no crash reporting.
 
 ## Other Data Collection
 
-Beyond crash reports, **Amiberry does not collect any data.** Specifically:
+Beyond the Android crash reports above, **Amiberry collects no data**:
 
-- No personal information is collected
-- No usage statistics or analytics are gathered
-- No advertising identifiers are recorded
-- No cookies or tracking technologies are used
+- no personal information;
+- no usage statistics or analytics;
+- no advertising identifiers;
+- no cookies or tracking technologies.
 
 ## Third-Party Services
 
-Amiberry integrates **Firebase Crashlytics** for crash reporting as described above. There are no ads, analytics, social media integrations, or other third-party services that collect user data.
+The only third-party service built into Amiberry is Firebase Crashlytics, in the Android version. There are no ads, analytics, social media integrations or other services that collect user data.
 
 ## Children's Privacy
 
-Amiberry does not knowingly collect personal information from children. The only data collected (crash reports) is anonymous and not linked to any individual. The App complies with applicable children's privacy regulations.
+Amiberry does not knowingly collect personal information from anyone, children included. The only data it sends (Android crash reports) is anonymous and is not linked to any person.
 
 ## Data Security
 
-No personal data is collected or transmitted. Crash reports contain only anonymous technical information and are transmitted securely (HTTPS) to Firebase servers. All emulator data (configurations, save states) is stored locally on your device and is under your control.
+Downloads and crash reports use HTTPS. Your configurations, save states and other emulator data stay on your device, under your control.
 
 ## Open Source
 
-Amiberry is open-source software released under the **GNU General Public License v3 (GPLv3)**. The complete source code is publicly available at [github.com/BlitterStudio/amiberry](https://github.com/BlitterStudio/amiberry), allowing full transparency into how the App operates. The macOS and iOS apps include an Acknowledgements / About & Licences screen with the GPL text, a link to the exact source of that build, and the licence notices for the third-party components that build ships.
+Amiberry is open-source software under the **GNU General Public License v3 (GPLv3)**. The complete source code is at [github.com/BlitterStudio/amiberry](https://github.com/BlitterStudio/amiberry), so anyone can check what the App does. The iPhone, iPad and Mac apps have an About & Licences (Acknowledgements) screen with the GPL text, a link to the exact source of that build, and the licence notices of the third-party components it ships.
 
 ## Changes to This Policy
 
-If this privacy policy is updated, the revised version will be posted at this URL with an updated effective date.
+If this policy changes, the new version will be posted at this URL with a new effective date.
 
 ## Contact
 
-If you have questions about this privacy policy, you can reach us at:
+Questions about this policy:
 
+- **Email:** [midwan@gmail.com](mailto:midwan@gmail.com)
 - **GitHub:** [github.com/BlitterStudio/amiberry](https://github.com/BlitterStudio/amiberry)
 - **Discord:** [discord.gg/wWndKTGpGV](https://discord.gg/wWndKTGpGV)
 

@@ -218,6 +218,9 @@ Contributions are welcome — bug reports, feature suggestions, and pull request
 ## License
 
 Amiberry is licensed under the [GNU General Public License v3.0](LICENSE).
+Distribution through Apple's App Store is covered by an
+[additional permission under GPLv3 section 7](packaging/licences/texts/GPL-3.0-AppStore-permission.txt)
+from the copyright holders it names.
 
 ---
 
