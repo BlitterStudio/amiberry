@@ -5793,13 +5793,12 @@ static inline bool cpu_thread_reply_ready(uae_u32 mode, uae_u32 completion)
 	return mode == completion || mode == 0xfd;
 }
 
-// Handoff between the threads: a waker publishes with a plain release store
-// and then checks the peer's sleeping flag. There is no store-load fence: on
-// x86 that is a locked instruction stalling on the cache line the peer polls,
-// on every hardware access. So a waker can miss a peer that announces its
-// sleep at that very moment; the announcing side therefore keeps polling for
-// CPU_THREAD_SETTLE_NS, far longer than a store takes to become visible, and
-// every sleep has a timeout: a miss can cost time, never progress.
+// Handoff between the threads (Dekker): a waker stores the mailbox mode and
+// then loads the peer's sleeping flag; a sleeper stores its flag and then
+// loads the mode. All four are SEQ_CST, so at least one side sees the other's
+// store and no wakeup is lost. The sleeper still polls for
+// CPU_THREAD_SETTLE_NS before it sleeps, as a reply usually follows within
+// that time, and every sleep has a timeout.
 #define CPU_THREAD_SETTLE_NS 5000
 template <typename Ready>
 static bool cpu_thread_settle(Ready ready)
@@ -5869,7 +5868,7 @@ static NOINLINE void cpu_thread_wait_reply_slow(uae_u32 completion)
 		__atomic_store_n(&cpu_thread_worker_sleeping, 1, __ATOMIC_SEQ_CST);
 		if (!cpu_thread_settle([completion] {
 				return cpu_thread_reply_ready(
-					__atomic_load_n(&cpu_thread_indirect_mode, __ATOMIC_ACQUIRE), completion);
+					__atomic_load_n(&cpu_thread_indirect_mode, __ATOMIC_SEQ_CST), completion);
 			}))
 			uae_sem_trywait_delay(&cpu_reply_sema, 1);
 		__atomic_store_n(&cpu_thread_worker_sleeping, 0, __ATOMIC_RELAXED);
@@ -5900,15 +5899,15 @@ static inline void cpu_thread_wait_reply(uae_u32 completion)
 // Request after addr/size/value: wake the main thread only if it sleeps.
 static inline void cpu_thread_post_request(uae_u32 mode)
 {
-	__atomic_store_n(&cpu_thread_indirect_mode, mode, __ATOMIC_RELEASE);
-	if (CPU_THREAD_RARE(__atomic_load_n(&cpu_thread_main_sleeping, __ATOMIC_RELAXED)))
+	__atomic_store_n(&cpu_thread_indirect_mode, mode, __ATOMIC_SEQ_CST);
+	if (CPU_THREAD_RARE(__atomic_load_n(&cpu_thread_main_sleeping, __ATOMIC_SEQ_CST)))
 		uae_sem_post(&cpu_request_sema);
 }
 
 static inline void cpu_thread_post_reply(uae_u32 mode)
 {
-	__atomic_store_n(&cpu_thread_indirect_mode, mode, __ATOMIC_RELEASE);
-	if (CPU_THREAD_RARE(__atomic_load_n(&cpu_thread_worker_sleeping, __ATOMIC_RELAXED)))
+	__atomic_store_n(&cpu_thread_indirect_mode, mode, __ATOMIC_SEQ_CST);
+	if (CPU_THREAD_RARE(__atomic_load_n(&cpu_thread_worker_sleeping, __ATOMIC_SEQ_CST)))
 		uae_sem_post(&cpu_reply_sema);
 }
 
@@ -6343,7 +6342,7 @@ static bool cpu_thread_main_has_work()
 }
 
 // Main thread: sleep up to ms. A request posts the semaphore only while
-// cpu_thread_main_sleeping is set (see cpu_thread_settle()).
+// cpu_thread_main_sleeping is set (see cpu_thread_post_request()).
 // Resets, parking and debugger waits post it unconditionally.
 static void cpu_thread_main_sleep(int ms)
 {

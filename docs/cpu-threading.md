@@ -87,9 +87,11 @@ While the worker is accessing hardware, both threads poll for each other so
 that an access does not wait for a thread wake-up. After about a millisecond
 without hardware accesses, the main thread sleeps in the frame limiter instead
 of spinning. A worker that has waited 0.1 ms for a reply also sleeps until
-woken. A request or reply is a plain release store. The other thread is
-signalled only when it has announced that it sleeps, and a sleeping thread
-polls briefly before it blocks, so a lost race costs time, not progress.
+woken. The handshake is sequentially consistent: a request or reply is
+stored before the other thread's sleeping flag is read, and a thread that
+goes to sleep sets its flag before it reads the mailbox, so a wake-up cannot
+be lost. The other thread is signalled only when it has announced that it
+sleeps.
 Pause requests raise a special flag, as debugger breaks already do.
 The interpreter's per-instruction check therefore stays a single test.
 

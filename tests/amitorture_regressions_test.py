@@ -1565,7 +1565,7 @@ int main() {
     idle.join();
     assert(reads == 303 && writes == 300);
     assert(worker_sleeps > 0);
-    assert(lost_wakeups <= 2);
+    assert(lost_wakeups == 0);   // SEQ_CST handshake: no wakeup is lost
     assert(!cpu_thread_main_sleeping && !cpu_thread_worker_sleeping);
 }
 """)
