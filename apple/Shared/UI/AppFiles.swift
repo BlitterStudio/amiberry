@@ -126,25 +126,66 @@ enum AppFiles {
 				url.stopAccessingSecurityScopedResource()
 			}
 		}
-		let manager = FileManager.default
-		try manager.createDirectory(at: folder, withIntermediateDirectories: true)
-		if url.pathExtension.lowercased() == "cue" {
-			return try importCueSheet(url, into: folder)
+		try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+		// A file provider's file (OneDrive, iCloud Drive) need not be on the
+		// device yet: a coordinated read has the provider deliver it first.
+		return try coordinatedRead(url) { source in try copyIn(source, into: folder) }
+	}
+
+	/// The copy itself, run inside the coordinated read.
+	nonisolated private static func copyIn(_ source: URL, into folder: URL) throws -> String {
+		if source.pathExtension.lowercased() == "cue" {
+			return try importCueSheet(source, into: folder)
 		}
-		let name = url.deletingPathExtension().lastPathComponent
-		let suffix = url.pathExtension.isEmpty ? "" : "." + url.pathExtension
+		let manager = FileManager.default
+		let name = source.deletingPathExtension().lastPathComponent
+		let suffix = source.pathExtension.isEmpty ? "" : "." + source.pathExtension
 		var number = 1
 		while true {
 			let candidate = folder.appendingPathComponent(number == 1 ? name + suffix : "\(name) \(number)\(suffix)")
 			if !manager.fileExists(atPath: candidate.path) {
-				try manager.copyItem(at: url, to: candidate)
+				try manager.copyItem(at: source, to: candidate)
 				return candidate.path
 			}
-			if manager.contentsEqual(atPath: candidate.path, andPath: url.path) {
+			if manager.contentsEqual(atPath: candidate.path, andPath: source.path) {
 				return candidate.path
 			}
 			number += 1
 		}
+	}
+
+	/// Runs `body` on the URL a coordinated read of `url` hands over.
+	private static func coordinatedRead(_ url: URL, _ body: @escaping @Sendable (URL) throws -> String) throws -> String {
+		#if os(iOS)
+		// The read waits while the provider downloads the file, which can
+		// take long for a CD image: it runs off the main thread, which keeps
+		// turning (and writes a requested autosave) meanwhile.
+		let outcome = CoordinatedOutcome()
+		let coordinator = NSFileCoordinator()
+		nonisolated(unsafe) let intent = NSFileAccessIntent.readingIntent(with: url)
+		coordinator.coordinate(with: [intent], queue: OperationQueue()) { error in
+			if let error {
+				outcome.finish(.failure(error))
+			} else {
+				outcome.finish(Result { try body(intent.url) })
+			}
+		}
+		ModalWait.wait(until: { outcome.result != nil })
+		return try outcome.result!.get()
+		#else
+		var coordinationError: NSError?
+		var outcome: Result<String, Error>?
+		NSFileCoordinator().coordinate(readingItemAt: url, options: [], error: &coordinationError) { source in
+			outcome = Result { try body(source) }
+		}
+		if let coordinationError {
+			throw coordinationError
+		}
+		guard let outcome else {
+			throw CocoaError(.fileReadUnknown, userInfo: [NSURLErrorKey: url])
+		}
+		return try outcome.get()
+		#endif
 	}
 
 	/// A cue sheet is nothing without its tracks: it goes into a folder of
@@ -154,7 +195,7 @@ enum AppFiles {
 	/// alone) is not imported. A folder of the same name holding the same
 	/// sheet and the same tracks is used as it is; two CDs whose sheets read
 	/// alike (disc.cue naming Track 01.bin) are told apart by their tracks.
-	private static func importCueSheet(_ url: URL, into folder: URL) throws -> String {
+	nonisolated private static func importCueSheet(_ url: URL, into folder: URL) throws -> String {
 		let manager = FileManager.default
 		let data = try Data(contentsOf: url)
 		let tracks = cueTracks(String(data: data, encoding: .utf8) ?? String(decoding: data, as: UTF8.self))
@@ -206,7 +247,7 @@ enum AppFiles {
 	/// sheet), each once. Read as the emulator's parsecue() reads them: the
 	/// words split at any white space, a quoted name runs to its closing
 	/// quote (or the end of the line).
-	static func cueTracks(_ sheet: String) -> [String] {
+	nonisolated static func cueTracks(_ sheet: String) -> [String] {
 		var tracks: [String] = []
 		for line in sheet.split(whereSeparator: \.isNewline) {
 			var rest = line.drop(while: \.isWhitespace)
@@ -254,3 +295,19 @@ struct CueTracksUnreadable: LocalizedError {
 		"\u{201C}\(sheet)\u{201D} needs \(tracks.joined(separator: ", ")), which Amiberry cannot read from there. Copy the CD\u{2019}s whole folder into Amiberry\u{2019}s CDs folder with the Files app, or use the CD as one .chd or .iso file."
 	}
 }
+
+#if os(iOS)
+/// What a coordinated read on another thread came to, for the main thread.
+private final class CoordinatedOutcome: @unchecked Sendable {
+	private let lock = NSLock()
+	private var stored: Result<String, Error>?
+
+	var result: Result<String, Error>? {
+		lock.withLock { stored }
+	}
+
+	func finish(_ result: Result<String, Error>) {
+		lock.withLock { stored = result }
+	}
+}
+#endif
