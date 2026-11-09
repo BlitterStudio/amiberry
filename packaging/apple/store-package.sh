@@ -1,8 +1,8 @@
 #!/bin/bash
 # Packages a built Amiberry.app for App Store Connect.
 #
-#   store-package.sh macos <Amiberry.app> <profile.provisionprofile> <build number> <out.pkg>
-#   store-package.sh ios   <Amiberry.app> <profile.mobileprovision>  <build number> <out.ipa>
+#   store-package.sh macos <Amiberry.app> <profile.provisionprofile> <out.pkg> [build number]
+#   store-package.sh ios   <Amiberry.app> <profile.mobileprovision>  <out.ipa> [build number]
 #
 # The app is copied, never changed in place. The copy gets the build number
 # as CFBundleVersion, the provisioning profile, and a signature by the Apple
@@ -12,6 +12,11 @@
 # package signed by the Mac Installer Distribution identity; the iOS copy
 # becomes an .ipa.
 #
+# The version (CFBundleShortVersionString) stays the project version. The
+# build number defaults to the Android versionCode formula, so every upload
+# of the same version gets a higher one: major * 100000000 + minor * 1000000
+# + patch * 10000 + minutes since 2024-01-01 (UTC).
+#
 # Identities are looked up in the keychain by name; override them with
 # AMIBERRY_DIST_IDENTITY and AMIBERRY_INSTALLER_IDENTITY.
 #
@@ -20,16 +25,16 @@
 
 set -euo pipefail
 
-if [ $# -ne 5 ]; then
-	sed -n '2,7p' "$0" >&2
+if [ $# -lt 4 ] || [ $# -gt 5 ]; then
+	sed -n '2,5p' "$0" >&2
 	exit 2
 fi
 
 platform=$1
 app=${2%/}
 profile=$3
-build_number=$4
-out=$5
+out=$4
+build_number=${5:-}
 repo=$(cd "$(dirname "$0")/../.." && pwd)
 
 case "$platform" in
@@ -49,7 +54,7 @@ esac
 
 [ -d "$app" ] || { echo "no app bundle at $app" >&2; exit 1; }
 [ -f "$profile" ] || { echo "no provisioning profile at $profile" >&2; exit 1; }
-if ! [[ "$build_number" =~ ^[0-9]+(\.[0-9]+){0,2}$ ]]; then
+if [ -n "$build_number" ] && ! [[ "$build_number" =~ ^[0-9]+(\.[0-9]+){0,2}$ ]]; then
 	echo "build number must be one to three dot-separated integers: $build_number" >&2
 	exit 2
 fi
@@ -80,6 +85,12 @@ bundle_id=$(pb "Print :CFBundleIdentifier" "$contents/Info.plist")
 if [ "$profile_app_id" != "$team_id.$bundle_id" ]; then
 	echo "the profile is for $profile_app_id, the app is $team_id.$bundle_id" >&2
 	exit 1
+fi
+version=$(pb "Print :CFBundleShortVersionString" "$contents/Info.plist")
+if [ -z "$build_number" ]; then
+	IFS=. read -r v_major v_minor v_patch <<< "$version"
+	minutes=$(( ($(date -u +%s) - $(date -u -j -f '%Y-%m-%d %H:%M:%S' '2024-01-01 00:00:00' +%s)) / 60 ))
+	build_number=$(( v_major * 100000000 + v_minor * 1000000 + ${v_patch:-0} * 10000 + minutes ))
 fi
 pb "Set :CFBundleVersion $build_number" "$contents/Info.plist"
 
@@ -158,4 +169,4 @@ else
 	mv "$staged" "$work/Payload/"
 	(cd "$work" && zip -qry "$out" Payload)
 fi
-echo "$out: $bundle_id $build_number ($platform)"
+echo "$out: $bundle_id $version ($build_number), $platform"
