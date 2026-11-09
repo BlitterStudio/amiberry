@@ -110,8 +110,6 @@ int hardware_bus_error;
 static int baseclock;
 int m68k_pc_indirect;
 bool m68k_interrupt_delay;
-// what build_cpufunctbl() chose; cpu_thread_select() turns it off when threaded
-static bool m68k_interrupt_delay_wanted;
 int slow_cpu_access;
 static bool m68k_accurate_ipl;
 static bool m68k_reset_delay;
@@ -132,7 +130,6 @@ static bool is_cpu_thread();
 static bool cpu_thread_start_failed;
 static void cpu_thread_select(bool on);
 static int cpu_thread_slow_path();
-static void cpu_thread_timed_resync();
 static void cpu_thread_safepoint();
 static bool cpu_thread_debugger_wait();
 static void cpu_thread_debugger_resume();
@@ -2123,7 +2120,6 @@ static void build_cpufunctbl ()
 			m68k_interrupt_delay = true;
 		}
 	}
-	m68k_interrupt_delay_wanted = m68k_interrupt_delay;
 
 	if (currprefs.cpu_cycle_exact) {
 		if (currprefs.cpu_model == 68000)
@@ -5435,11 +5431,9 @@ static struct alignas(64) {
 static int cpu_thread_paced;   // written by the CPU thread, read by the main thread: __atomic_*
 // Set only around a sleep, so that the other thread posts a semaphore only
 // when needed. Each has a line of its own: they are read on hot paths.
-static struct alignas(64) { int v; uae_s64 until; } cpu_thread_main_sleeping_line, cpu_thread_worker_sleeping_line;
+static struct alignas(64) { int v; } cpu_thread_main_sleeping_line, cpu_thread_worker_sleeping_line;
 #define cpu_thread_main_sleeping (cpu_thread_main_sleeping_line.v)
-// 1: waiting for a reply; 2: waiting for the chipset to reach cpu_thread_worker_until
-#define cpu_thread_worker_sleeping (cpu_thread_worker_sleeping_line.v)
-#define cpu_thread_worker_until (cpu_thread_worker_sleeping_line.until)
+#define cpu_thread_worker_sleeping (cpu_thread_worker_sleeping_line.v)   // waiting for a reply
 // How far the chipset may run on credit while the CPU thread shows no
 // progress (a JIT compile, an exception, a host deschedule): what a timing
 // measurement by the CPU can be off by, in fastest mode.
@@ -5447,28 +5441,7 @@ static struct alignas(64) { int v; uae_s64 until; } cpu_thread_main_sleeping_lin
 #define CPU_THREAD_INSN_CREDIT (2 * CYCLE_UNIT)    /* the shortest 68000 instruction */
 #define CPU_THREAD_REPLY_SPIN_NS 100000            /* covers a sleeping main thread's wake-up */
 
-// Timed pacing, for every CPU speed but "fastest possible": the CPU thread
-// counts the cycles of its instructions and the chipset follows that count,
-// as without the thread. Each side waits for the other: the chipset when it
-// has reached the CPU's count (a hardware access is served there, at the
-// time it is made), the CPU when it is CPU_THREAD_LEAD ahead of the chipset.
-// The lead bounds how late an interrupt can be taken.
-// The main thread publishes the chipset time (get_cycles() since the CPU
-// thread started) every few colour clocks and whenever it waits for the CPU.
-// After a wait of its own (STOP, a hardware access, a pause) the CPU thread
-// moves its count up to the chipset time: no cycles are owed for time spent
-// waiting, including the E-clock waits of CIA accesses.
-#define CPU_THREAD_LEAD (64 * CYCLE_UNIT)
-#define CPU_THREAD_CHIP_PUBLISH 16                 /* colour clocks */
-#define CPU_THREAD_TIMED_BREAK (SPCFLAG_CPU_THREAD_SYNC | SPCFLAG_MODE_CHANGE | SPCFLAG_BRK | SPCFLAG_CPUINRESET)
-static bool cpu_threaded_timed;          // set before the CPU thread starts
-static struct alignas(64) {
-	volatile uae_s64 time;               // chipset time; written by the main thread
-} cpu_thread_chip_line;
-#define cpu_thread_chip_time (cpu_thread_chip_line.time)
-static evt_t cpu_thread_chip_base;       // main thread
-static uae_s64 cpu_thread_my_tokens;     // CPU thread: the cycles it has counted
-static uae_s64 cpu_thread_chip_seen;     // CPU thread: the last chipset time read
+static uae_s64 cpu_thread_my_tokens;     // CPU thread: its progress credit
 static bool cpu_thread_counts_cycles;    // CPU thread: an interpreter loop that calls do_cycles()
 
 static inline void cpu_thread_spin_pause()
@@ -5570,13 +5543,6 @@ bool cpu_thread_is_worker()
 	return cpu_worker;
 }
 
-// Main thread, serving a CPU thread's CIA access: wait for the E-clock as the
-// CPU would. Not while pausing: a pause can be made inside do_cycles().
-bool cpu_thread_eclock_wait()
-{
-	return cpu_threaded_timed && !cpu_thread_pause_depth;
-}
-
 bool cpu_thread_is_waiting_on_main()
 {
 	return is_mainthread() && (cpu_thread_servicing
@@ -5645,10 +5611,8 @@ static void cpu_thread_idle_wait(bool spin)
 	for (;;) {
 		int idle = CPU_THREAD_IDLE;
 		if (__atomic_compare_exchange_n(&cpu_thread_parked, &idle, CPU_THREAD_RUNNING,
-				false, __ATOMIC_ACQ_REL, __ATOMIC_ACQUIRE)) {
-			cpu_thread_timed_resync();
+				false, __ATOMIC_ACQ_REL, __ATOMIC_ACQUIRE))
 			return;
-		}
 		// held by a pause: wait for the resume to hand it back
 		if (!cpu_thread_poll_while([] { return __atomic_load_n(&cpu_thread_parked, __ATOMIC_ACQUIRE) == CPU_THREAD_IDLE_HELD; }))
 			uae_sem_trywait_delay(&cpu_resume_sema, 1);
@@ -5789,7 +5753,6 @@ static int do_specialties_thread()
 	}
 	// SPCFLAG_BRK alone must not end this thread: run_cpu_thread() keeps running
 	// until SPCFLAG_MODE_CHANGE, so the emulation would stop with no CPU.
-	cpu_thread_timed_resync();
 	return (regs.spcflags & SPCFLAG_MODE_CHANGE) ? 1 : 0;
 }
 
@@ -5851,105 +5814,13 @@ static bool cpu_thread_settle(Ready ready)
 	}
 }
 
-// Main thread: publish the chipset time, and wake a CPU thread waiting for it.
-static inline void cpu_thread_publish_chip()
-{
-	const uae_s64 chip = (uae_s64)(get_cycles() - cpu_thread_chip_base);
-	__atomic_store_n(&cpu_thread_chip_time, chip, __ATOMIC_RELEASE);
-	if (CPU_THREAD_RARE(__atomic_load_n(&cpu_thread_worker_sleeping, __ATOMIC_RELAXED) == 2)
-		&& chip >= __atomic_load_n(&cpu_thread_worker_until, __ATOMIC_RELAXED))
-		uae_sem_post(&cpu_wakeup_sema);
-}
-
-static inline bool cpu_thread_chip_reached(uae_s64 until)
-{
-	return __atomic_load_n(&cpu_thread_chip_time, __ATOMIC_ACQUIRE) >= until
-		|| (regs.spcflags & CPU_THREAD_TIMED_BREAK);
-}
-
-#define CPU_THREAD_TIMED_SPIN_NS 20000
-// CPU thread, timed: t cycles counted, more than CPU_THREAD_LEAD ahead of the
-// chipset. Wait until the chipset is within half of it, or for a request.
-static NOINLINE void cpu_thread_timed_wait(uae_s64 t)
-{
-	const uae_s64 until = t - CPU_THREAD_LEAD / 2;
-	uae_u64 spin_until = 0;
-	for (unsigned int spins = 1;; ++spins) {
-		cpu_thread_chip_seen = __atomic_load_n(&cpu_thread_chip_time, __ATOMIC_ACQUIRE);
-		if (cpu_thread_chip_seen >= until || (regs.spcflags & CPU_THREAD_TIMED_BREAK))
-			return;
-		cpu_thread_spin_pause();
-		if (spins & 63)
-			continue;
-		const uae_u64 now = SDL_GetTicksNS();
-		if (!spin_until)
-			spin_until = now + CPU_THREAD_TIMED_SPIN_NS;
-		if (now < spin_until)
-			continue;
-		__atomic_store_n(&cpu_thread_worker_until, until, __ATOMIC_RELAXED);
-		__atomic_store_n(&cpu_thread_worker_sleeping, 2, __ATOMIC_SEQ_CST);
-		if (!cpu_thread_settle([until] { return cpu_thread_chip_reached(until); }))
-			uae_sem_trywait_delay(&cpu_wakeup_sema, 1);
-		__atomic_store_n(&cpu_thread_worker_sleeping, 0, __ATOMIC_RELAXED);
-	}
-}
-
-static inline void cpu_thread_timed_check(uae_s64 t)
-{
-	if (CPU_THREAD_RARE(t - cpu_thread_chip_seen > CPU_THREAD_LEAD)) {
-		cpu_thread_chip_seen = __atomic_load_n(&cpu_thread_chip_time, __ATOMIC_ACQUIRE);
-		if (t - cpu_thread_chip_seen > CPU_THREAD_LEAD)
-			cpu_thread_timed_wait(t);
-	}
-}
-
-// The JIT's cumulative count, as the CPU thread sees it.
-static inline uae_s64 cpu_thread_jit_own_total()
-{
-	return cpu_thread_jit_base - cpu_thread_unkicked(__atomic_load_n(&countdown, __ATOMIC_RELAXED));
-}
-
-static void cpu_thread_jit_add(uae_s64 d)
-{
-	const uae_u32 seq = cpu_thread_jit_seq;
-	__atomic_store_n(&cpu_thread_jit_seq, seq + 1, __ATOMIC_RELAXED);
-	__atomic_thread_fence(__ATOMIC_RELEASE);
-	__atomic_store_n(&cpu_thread_jit_base, cpu_thread_jit_base + d, __ATOMIC_RELAXED);
-	__atomic_store_n(&cpu_thread_jit_seq, seq + 2, __ATOMIC_RELEASE);
-}
-
-// CPU thread, timed: after a wait, take up the chipset time that has passed.
-static void cpu_thread_timed_resync()
-{
-	if (!cpu_threaded_timed || !cpu_worker)
-		return;
-	const uae_s64 chip = __atomic_load_n(&cpu_thread_chip_time, __ATOMIC_ACQUIRE);
-	cpu_thread_chip_seen = chip;
-	if (cpu_thread_counts_cycles) {
-		if (cpu_thread_my_tokens < chip) {
-			cpu_thread_my_tokens = chip;
-			__atomic_store_n(&cpu_thread_tokens, chip, __ATOMIC_RELAXED);
-		}
-	} else if (__atomic_load_n(&cpu_thread_paced, __ATOMIC_RELAXED) == 2) {
-		const uae_s64 total = cpu_thread_jit_own_total();
-		if (total < chip)
-			cpu_thread_jit_add(chip - total);
-	}
-}
-
 // do_cycles() on the CPU thread: an interpreter loop counting its cycles.
 void cpu_thread_worker_cycles(int cycles)
 {
 	if (!cpu_thread_counts_cycles)
 		return;   // the JIT and cpu_thread_run_2() count on their own
-	if (cpu_threaded_timed) {
-		cpu_thread_my_tokens += cycles;
-		__atomic_store_n(&cpu_thread_tokens, cpu_thread_my_tokens, __ATOMIC_RELAXED);
-		cpu_thread_timed_check(cpu_thread_my_tokens);
-	} else {
-		cpu_thread_my_tokens += CPU_THREAD_INSN_CREDIT;
-		__atomic_store_n(&cpu_thread_tokens, cpu_thread_my_tokens, __ATOMIC_RELAXED);
-	}
+	cpu_thread_my_tokens += CPU_THREAD_INSN_CREDIT;
+	__atomic_store_n(&cpu_thread_tokens, cpu_thread_my_tokens, __ATOMIC_RELAXED);
 	// STOP is executed again and again; interrupts raise a flag and post the
 	// wakeup semaphore.
 	if (CPU_THREAD_RARE(regs.stopped) && !regs.spcflags)
@@ -5968,7 +5839,6 @@ static NOINLINE void cpu_thread_wait_reply_slow(uae_u32 completion)
 		if (cpu_thread_reply_ready(mode, completion)) {
 			if (diagnose)
 				cpu_thread_diag_log_wait(SDL_GetTicksNS() - start);
-			cpu_thread_timed_resync();
 #ifdef JIT
 			if (currprefs.cachesize && cpu_thread_leave_jit())
 				cpu_thread_jit_break();
@@ -6014,8 +5884,6 @@ static inline void cpu_thread_wait_reply(uae_u32 completion)
 	for (int spins = 0; spins < 256; spins++) {
 		const uae_u32 mode = __atomic_load_n(&cpu_thread_indirect_mode, __ATOMIC_ACQUIRE);
 		if (mode == completion) {
-			if (cpu_threaded_timed)
-				cpu_thread_timed_resync();
 #ifdef JIT
 			if (currprefs.cachesize && CPU_THREAD_RARE(cpu_thread_leave_jit()))
 				cpu_thread_jit_break();
@@ -6044,7 +5912,7 @@ static inline void cpu_thread_post_reply(uae_u32 mode)
 		uae_sem_post(&cpu_reply_sema);
 }
 
-// Register snapshot. With untimed pacing the CPU thread reads some registers
+// Register snapshot. The CPU thread reads some registers
 // without a round trip: the beam position, DMACONR, INTENAR, INTREQR, ADKCONR
 // and CIA-A PRA. Reading them has no side effect, and through the mailbox the
 // main thread would answer at its current chipset time too. The main thread
@@ -6281,8 +6149,6 @@ static NOINLINE bool cpu_thread_snap_clock_moves()
 // CPU thread: read from the snapshot if it has a current copy.
 static inline bool cpu_thread_snap_read(const addrbank *ab, uaecptr addr, int size, uae_u32 *out)
 {
-	if (cpu_threaded_timed)
-		return false;
 	int r0 = 0, r1 = 0;
 	const int group = cpu_thread_snap_group(ab, addr, size, &r0, &r1);
 	if (!group)
@@ -6401,10 +6267,8 @@ static inline bool service_cpu_indirect_request(bool chipset = false)
 		cpu_thread_blit_held = 0;
 		if (held == 0xff) {
 			// the chipset ran on meanwhile
-			if (!cpu_threaded_timed && cpu_thread_snap_main.armed)
+			if (cpu_thread_snap_main.armed)
 				cpu_thread_snap_publish(false);
-			if (cpu_threaded_timed)
-				cpu_thread_publish_chip();
 			cpu_thread_post_reply(0xff);
 			return true;
 		}
@@ -6447,20 +6311,15 @@ static inline bool service_cpu_indirect_request(bool chipset = false)
 	} ENDTRY
 	cpu_thread_servicing = false;
 	cpu_thread_requests_served++;
-	if (!cpu_threaded_timed) {
-		if (mode == 0xfe)
-			cpu_thread_snap_arm(ab, addr, size);
-		// the CPU thread must see what this access changed
-		if (CPU_THREAD_RARE(cpu_thread_snap_main.armed))
-			cpu_thread_snap_publish(false);
-	}
+	if (mode == 0xfe)
+		cpu_thread_snap_arm(ab, addr, size);
+	// the CPU thread must see what this access changed
+	if (CPU_THREAD_RARE(cpu_thread_snap_main.armed))
+		cpu_thread_snap_publish(false);
 	if (CPU_THREAD_RARE(mode == 0xff && chipset && cpu_thread_blit_nasty())) {
 		cpu_thread_blit_held = 0xff;
 		return true;
 	}
-	// the reply resynchronises the CPU thread to this time (CIA E-clock waits)
-	if (cpu_threaded_timed)
-		cpu_thread_publish_chip();
 	cpu_thread_post_reply(mode);
 	return true;
 }
@@ -6531,8 +6390,6 @@ static inline void cpu_thread_flush_resume();
 static void cpu_thread_main_wait_wake()
 {
 	cpu_thread_flush_resume();
-	if (cpu_threaded_timed)
-		cpu_thread_publish_chip();
 	const uae_u64 start = SDL_GetTicksNS();
 	for (unsigned int spins = 1; regs.stopped; ++spins) {
 		if (service_cpu_indirect_request())
@@ -6668,17 +6525,11 @@ static void run_cpu_thread(int (*f)(void *))
 	int vp = 0;
 	int intlev_prev = 0;
 	int cck_cnt = 0;
-	unsigned int publish_cnt = 0;
-	const bool timed = currprefs.m68k_speed >= 0;
-	uae_s64 tokens_seen = 0, credit = timed ? 0 : CPU_THREAD_CREDIT_MAX;
+	uae_s64 tokens_seen = 0, credit = CPU_THREAD_CREDIT_MAX;
 	uae_u32 requests_seen = cpu_thread_requests_served;
 	frame_time_t poll_until = read_processor_time();
 
-	cpu_threaded_timed = timed;
-	cpu_thread_chip_base = get_cycles();
-	__atomic_store_n(&cpu_thread_chip_time, 0, __ATOMIC_RELAXED);
 	cpu_thread_my_tokens = 0;
-	cpu_thread_chip_seen = 0;
 	cpu_thread_counts_cycles = false;
 	__atomic_store_n(&cpu_thread_active, 0, __ATOMIC_RELEASE);
 	__atomic_store_n(&cpu_thread_paced, 0, __ATOMIC_RELEASE);
@@ -6735,11 +6586,7 @@ static void run_cpu_thread(int (*f)(void *))
 		cpu_thread_flush_resume();
 
 		// Service any pending indirect memory request (lockless fast path).
-		// Timed pacing serves requests only once the chipset has reached the
-		// CPU: in the wait for the CPU below.
-		const bool serve_any = !timed || !__atomic_load_n(&cpu_thread_paced, __ATOMIC_ACQUIRE);
-		if (serve_any)
-			service_cpu_indirect_request(true);
+		service_cpu_indirect_request(true);
 
 		// Check for CPU reset request
 		service_cpu_thread_reset();
@@ -6748,48 +6595,36 @@ static void run_cpu_thread(int (*f)(void *))
 		// When idle (no pending request), run more cycles per iteration.
 		// When a request just completed, re-check immediately after 1 cycle.
 		int cycles_to_do;
-		if (!serve_any || __atomic_load_n(&cpu_thread_indirect_mode, __ATOMIC_RELAXED) > 2) {
-			cycles_to_do = currprefs.m68k_speed < 0 ? 256 : 128;
+		if (__atomic_load_n(&cpu_thread_indirect_mode, __ATOMIC_RELAXED) > 2) {
+			cycles_to_do = 256;
 		} else {
 			cycles_to_do = 1;
 		}
 
 		for (int i = 0; i < cycles_to_do; i++) {
 			// Check for incoming IO request EVERY cycle for minimal latency
-			if (i > 0 && serve_any) {
+			if (i > 0) {
 				service_cpu_indirect_request(true);
 			}
 
 			const int paced = __atomic_load_n(&cpu_thread_paced, __ATOMIC_ACQUIRE);
 			if (paced && credit < CYCLE_UNIT) {
-				if (timed) {
-					cpu_thread_progress(&tokens_seen);
-					credit = tokens_seen - (uae_s64)(get_cycles() - cpu_thread_chip_base);
-				} else {
-					credit += cpu_thread_progress(&tokens_seen);
-					if (credit > CPU_THREAD_CREDIT_MAX)
-						credit = CPU_THREAD_CREDIT_MAX;
-				}
+				credit += cpu_thread_progress(&tokens_seen);
+				if (credit > CPU_THREAD_CREDIT_MAX)
+					credit = CPU_THREAD_CREDIT_MAX;
 				if (credit < CYCLE_UNIT && !cpu_thread_unpaced()) {
 					// The CPU thread is behind: wait for it. Bounded (2 ms at
 					// 50 Hz); after a timeout end this batch, so that the
 					// requests handled outside it (reset, callbacks) are seen.
 					// A wait longer than a short spin means the host has
 					// descheduled the CPU thread: give it this core.
-					if (timed)
-						cpu_thread_publish_chip();
 					const frame_time_t t0 = read_processor_time();
 					const frame_time_t spin = syncbase / 50000;   // 20 us
 					while (credit < CYCLE_UNIT) {
 						// a request served is progress too (the JIT counts
 						// down only at the end of a block)
 						if (service_cpu_indirect_request(true)) {
-							if (timed) {
-								cpu_thread_progress(&tokens_seen);
-								credit = tokens_seen - (uae_s64)(get_cycles() - cpu_thread_chip_base);
-							} else {
-								credit += CPU_THREAD_INSN_CREDIT;
-							}
+							credit += CPU_THREAD_INSN_CREDIT;
 							continue;
 						}
 						// back off: every read of the progress counters takes
@@ -6801,20 +6636,14 @@ static void run_cpu_thread(int (*f)(void *))
 								break;
 							cpu_thread_spin_pause();
 						}
-						if (timed) {
-							cpu_thread_progress(&tokens_seen);
-							credit = tokens_seen - (uae_s64)(get_cycles() - cpu_thread_chip_base);
-						} else {
-							credit += cpu_thread_progress(&tokens_seen);
-						}
+						credit += cpu_thread_progress(&tokens_seen);
 						if (cpu_thread_unpaced())
 							break;
 						const frame_time_t waited = read_processor_time() - t0;
 						if (waited > spin)
 							std::this_thread::yield();
 						if (waited > vsynctimebase / 10) {
-							// timed: the chipset must not run ahead of the CPU
-							credit = timed ? CYCLE_UNIT : CPU_THREAD_CREDIT_MAX;
+							credit = CPU_THREAD_CREDIT_MAX;
 							cycles_to_do = i + 1;
 							break;
 						}
@@ -6824,8 +6653,6 @@ static void run_cpu_thread(int (*f)(void *))
 				}
 				if (credit < CYCLE_UNIT) {
 					// unpaced: run on
-					if (!serve_any)
-						service_cpu_indirect_request(true);
 					credit = CYCLE_UNIT;
 				}
 			}
@@ -6840,8 +6667,6 @@ static void run_cpu_thread(int (*f)(void *))
 			// cpu_thread_snap_interrupt())
 			if (CPU_THREAD_RARE(cpu_thread_snap_main.armed))
 				cpu_thread_snap_publish(true);
-			if (timed && !(++publish_cnt % CPU_THREAD_CHIP_PUBLISH))
-				cpu_thread_publish_chip();
 
 			if (++cck_cnt >= 227) {
 				cck_cnt = 0;
@@ -6878,16 +6703,14 @@ static void run_cpu_thread(int (*f)(void *))
 			unset_special(SPCFLAG_UAEINT);
 		}
 
-		// Horizontal position sync and frame rate limiter. Timed pacing
-		// waits for the frame in framewait(), as without the thread: the
-		// CPU thread is held by the chipset meanwhile.
+		// Horizontal position sync and frame rate limiter.
 		// The chipset time stands still while it waits here, and the CPU
 		// thread runs on. While it reads registers from the snapshot, which
 		// costs it no round trip, a guest loop that polls the hardware with
 		// an iteration bound would run out at one chipset time: wait for
 		// every line then, as the unthreaded CPU loop runs at most a line of
 		// host time at one chipset time.
-		if (vp != vpos && !timed) {
+		if (vp != vpos) {
 			vp = vpos;
 			if (((vpos & 31) == 0 || vpos >= maxvpos - 32 || cpu_thread_snap_main.armed) && !currprefs.turbo_emulation) {
 				frame_time_t next = vsyncmintimepre + (vsynctimebase * vpos / (maxvpos + 1));
@@ -6942,7 +6765,6 @@ static void run_cpu_thread(int (*f)(void *))
 	}
 	uae_wait_thread(&cpu_thread);
 	cpu_thread = nullptr;
-	cpu_threaded_timed = false;
 	cpu_thread_counts_cycles = false;
 #ifdef JIT
 	cpu_thread_jit_unkick();
@@ -7023,13 +6845,6 @@ static void cpu_thread_jit_set_countdown(int value)
 static void cpu_thread_jit_refill()
 {
 #ifdef WITH_THREADED_CPU
-	if (cpu_threaded_timed && cpu_worker) {
-		// Timed: short dispatches, so that the CPU thread can wait for the
-		// chipset (cpu_thread_timed_check()) often enough.
-		cpu_thread_timed_check(cpu_thread_jit_own_total());
-		cpu_thread_jit_set_countdown(CPU_THREAD_LEAD / 2);
-		return;
-	}
 	cpu_thread_jit_set_countdown(pissoff_value);
 #else
 	countdown = pissoff_value;
@@ -7353,7 +7168,7 @@ static int cpu_thread_run_jit(void *v)
 #endif
 	__atomic_store_n(&cpu_thread_indirect_mode, 0xff, __ATOMIC_RELEASE);
 	__atomic_store_n(&cpu_thread_reset, 0, __ATOMIC_RELEASE);
-	countdown = cpu_threaded_timed ? CPU_THREAD_LEAD / 2 : pissoff_value;
+	countdown = pissoff_value;
 	cpu_thread_jit_base = countdown;   // no progress yet
 	__atomic_store_n(&cpu_thread_paced, 2, __ATOMIC_RELEASE);
 #ifdef USE_STRUCTURED_EXCEPTION_HANDLING
@@ -8475,6 +8290,11 @@ static bool cpu_thread_wanted(void (*run_func)(void))
 	static const unsigned int host_cpus = std::thread::hardware_concurrency();
 	if (!currprefs.cpu_thread || cpu_thread_start_failed || host_cpus < 2)
 		return false;
+	// "Fastest possible" 68020+ only: the CPU thread runs as fast as it can,
+	// so at an approximate speed it would only add host CPU use, and 68000
+	// software tends to depend on the CPU's timing.
+	if (currprefs.m68k_speed >= 0 || currprefs.cpu_model < 68020)
+		return false;
 	if (currprefs.cpu_cycle_exact || currprefs.cpu_memory_cycle_exact)
 		return false;
 	if (run_func == m68k_run_1_ce || run_func == m68k_run_2ce || run_func == m68k_run_3ce)
@@ -8500,18 +8320,6 @@ static bool cpu_thread_wanted(void (*run_func)(void))
 
 static void cpu_thread_select(bool on)
 {
-	// The delayed IPL model applies INTENA/INTREQ changes through 1-cycle
-	// events, as set/clear deltas. Threaded, the main thread can serve
-	// several CPU writes at one chipset cycle (Disable() then Enable()), and
-	// events due at the same cycle do not run in the order they were queued:
-	// INTENA could be left without its master bit. The CPU thread does not
-	// model the IPL delay anyway, so apply the changes at once.
-	const bool delay = m68k_interrupt_delay_wanted && !on;
-	if (m68k_interrupt_delay != delay) {
-		m68k_interrupt_delay = delay;
-		if (!delay)
-			custom_interrupt_delay_flush();
-	}
 	if (on == cpu_threaded_run)
 		return;
 	cpu_threaded_run = on;

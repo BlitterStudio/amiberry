@@ -2481,20 +2481,9 @@ static int cia_cycles(int delay, int phase, int val, int post)
 	return phase;
 }
 
-// The threaded CPU waits for the E-clock only when the chipset follows its
-// cycle count (timed pacing): the CPU thread takes up the time on the reply.
-static bool cia_no_eclock_wait()
-{
-#ifdef WITH_THREADED_CPU
-	return cpu_threaded_run && !cpu_thread_eclock_wait();
-#else
-	return cpu_threaded_run;
-#endif
-}
-
 static void cia_wait_pre(int cianummask)
 {
-	if (currprefs.cachesize || cia_no_eclock_wait())
+	if (currprefs.cachesize || cpu_threaded_run)
 		return;
 #ifdef WITH_PPC
 	if (ppc_state)
@@ -2538,7 +2527,7 @@ static void cia_wait_post(int cianummask, uaecptr addr, uae_u32 value, bool rw)
 	if (ppc_state)
 		return;
 #endif
-	if (cia_no_eclock_wait())
+	if (cpu_threaded_run)
 		return;
 	if (currprefs.cachesize) {
 		do_cycles(12 * E_CYCLE_UNIT);

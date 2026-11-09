@@ -1107,6 +1107,10 @@ std::vector<availability_table> availability_tables()
 		{{{{"cycle_exact", choice_values("cycle_exact")}, {"cpu_compatible", {"true", "false"}},
 			{"cpu_speed", choice_values("cpu_speed")}}, {}},
 			{"cpu_throttle", "amiberry.cpu_idle", "cpu_multiplier"}, {}},
+		// The CPU thread against the CPU, the cycle-exact modes and the speed.
+		{{{{"cpu_model", choice_values("cpu_model")}, {"cycle_exact", choice_values("cycle_exact")},
+			{"cpu_speed", choice_values("cpu_speed")}}, {}},
+			{"cpu_threaded"}, {}},
 		// Waiting blits against immediate blits and the 68000/010 memory
 		// cycle-exact mode.
 		{{{{"cpu_model", choice_values("cpu_model")}, {"cycle_exact", choice_values("cycle_exact")},

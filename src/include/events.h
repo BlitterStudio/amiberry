@@ -92,7 +92,6 @@ extern bool cpu_threaded_run;
 bool cpu_thread_is_worker();
 void cpu_thread_kick();
 void cpu_thread_worker_cycles(int cycles);
-bool cpu_thread_eclock_wait();
 // Register values for the CPU thread's snapshot (newcpu.cpp), main thread only.
 bool custom_cpu_thread_pos(uae_u16 *vposr, uae_u16 *vhposr);
 void custom_cpu_thread_regs(uae_u16 *dmaconr_intenar_intreqr_adkconr);

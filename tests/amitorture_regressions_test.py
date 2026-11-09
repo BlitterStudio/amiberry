@@ -798,8 +798,7 @@ uae_u32 cpu_thread_indirect_mode;
 int clock_reads, spins, requests;
 void cpu_thread_spin_pause() { ++spins; }
 bool cpu_worker;
-uae_s64 cpu_thread_jit_own_total() { return 0; }
-void cpu_thread_timed_check(uae_s64) { assert(false); }   // timed pacing only
+uae_u32 cpu_thread_blit_held;
 """ + declarations + kick_state +
                 function(text, "static bool cpu_thread_jit_total(") +
                 function(text, "static uae_s64 cpu_thread_progress(") +
@@ -812,7 +811,7 @@ evt_t chipset_cycles;
 frame_time_t syncbase = 1000000, vsynctimebase = 20000;
 bool indirect;
 frame_time_t read_processor_time() { return ++clock_reads * 50; }
-bool service_cpu_indirect_request() { ++requests; return indirect; }
+bool service_cpu_indirect_request(bool = false) { ++requests; return indirect; }
 evt_t get_cycles() { return chipset_cycles; }
 void do_cycles(int n) { chipset_cycles += n; }
 void check_uae_int_request() {}
@@ -820,7 +819,6 @@ int intlev() { return 0; }
 void atomic_set(int *p, int value) { *p = value; }
 void set_special(int flag) { regs.spcflags |= flag; }
 void uae_sem_post(int *) {}
-void cpu_thread_publish_chip() {}
 bool cpu_thread_interrupt_wakes(int) { return false; }
 void cpu_thread_main_wait_wake() {}
 void cpu_thread_flush_resume() {}
@@ -829,8 +827,6 @@ void cpu_thread_snap_publish(bool) { assert(false); }
 void run_batch(int cycles_to_do) {
     uae_s64 tokens_seen = 0, credit = 0;
     int cck_cnt = 0, intlev_prev = 0;
-    const bool timed = false, serve_any = true;
-    unsigned int publish_cnt = 0;
 """ + batch + r"""
 }
 int main() {
@@ -1268,7 +1264,6 @@ uint64_t SDL_GetTicksNS() { return host_ns; }
 struct addrbank { int id; };
 addrbank custom_bank{1}, cia_bank{2}, chip_bank{3};
 struct { int cs_fatgaryrev = -1; } currprefs;
-bool cpu_threaded_timed;
 std::atomic<uae_u32> beam{0x2c00};
 uae_u16 chip_regs[4] = {0x0200, 0x4020, 0x0020, 0x1100};
 uae_u8 pra = 0xfc;
@@ -1381,12 +1376,6 @@ int main() {
     assert(!rd(cia_bank, 0xbfe001, 0, &v));
     assert(must(custom_bank, 0xdff01e, 1) == 0x0024);
     pra_ok = true;
-    // Timed pacing answers at the CPU's time: always through the mailbox.
-    cpu_thread_snap_arm(&cia_bank, 0xbfe001, 0);
-    cpu_thread_snap_publish(false);
-    cpu_threaded_timed = true;
-    assert(!rd(custom_bank, 0xdff006, 1, &v) && !rd(cia_bank, 0xbfe001, 0, &v));
-    cpu_threaded_timed = false;
     // Unused copies expire.
     for (int i = 0; i < CPU_THREAD_SNAP_TTL; i++)
         cpu_thread_snap_publish(true);
@@ -1507,15 +1496,14 @@ bool cpu_thread_snap_read(const addrbank *, uaecptr, int, uae_u32 *) { return fa
 struct { unsigned armed; } cpu_thread_snap_main;
 void cpu_thread_snap_arm(const addrbank *, uaecptr, int) {}
 void cpu_thread_snap_publish(bool) { assert(false); }
+uae_u32 cpu_thread_blit_held;   // no nasty blit here
+bool cpu_thread_blit_nasty() { return false; }
 // A pending mode change cannot cancel an instruction's hardware transaction.
 constexpr unsigned SPCFLAG_MODE_CHANGE = 1, SPCFLAG_CALLBACK = 2;
 struct { unsigned spcflags = SPCFLAG_MODE_CHANGE; } regs;
 #define CPU_THREAD_RARE(x) (x)
 #define NOINLINE __attribute__((noinline))
 constexpr uae_u64 CPU_THREAD_SETTLE_NS = 5000;
-bool cpu_threaded_timed;   // fastest-mode pacing: nothing to publish or resync
-void cpu_thread_timed_resync() {}
-void cpu_thread_publish_chip() { assert(false); }
 """ + function(text, "static inline bool cpu_thread_reply_ready(") +
                 "template <typename Ready>\n" +
                 function(text, "static bool cpu_thread_settle(") +

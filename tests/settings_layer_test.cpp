@@ -921,7 +921,7 @@ void check_availability()
 	CHECK(!available(p, "mmu_model"));
 	CHECK(!available(p, "cpu_compatible")); // memory cycle-exact forces it on
 	CHECK(!available(p, "cpu_data_cache"));
-	CHECK(available(p, "cpu_threaded")); // chosen at run time, always settable
+	CHECK(!available(p, "cpu_threaded")); // a 68000: never threaded
 	CHECK(value_of(p, "cpu_threaded") == "true");
 	CHECK(!available(p, "fpu_strict"));
 	CHECK(choice_available(p, "fpu_model", "0"));
@@ -941,7 +941,10 @@ void check_availability()
 	CHECK(choice_available(p, "mmu_model", "68030"));
 	CHECK(choice_available(p, "mmu_model", "68ec030"));
 	CHECK(!choice_available(p, "mmu_model", "68040"));
-	CHECK(available(p, "cpu_threaded", settings::context{true}));
+	CHECK(!available(p, "cpu_threaded")); // real speed: never threaded
+	p.m68k_speed = -1;
+	CHECK(available(p, "cpu_threaded", settings::context{true})); // chosen at run time
+	p.m68k_speed = 0;
 
 	CHECK(set(p, "cpu_model", "68040") == AMIBERRY_SETTINGS_OK);
 	CHECK(!available(p, "cpu_24bit_addressing"));
@@ -952,7 +955,9 @@ void check_availability()
 
 	CHECK(set(p, "mmu_model", "68040") == AMIBERRY_SETTINGS_OK);
 	CHECK(!available(p, "cachesize")); // no JIT with MMU emulation
+	p.m68k_speed = -1;
 	CHECK(available(p, "cpu_threaded"));
+	p.m68k_speed = 0;
 
 	// The speed adjustment can only slow the CPU down at fastest speed.
 	double min, max;
@@ -1298,11 +1303,7 @@ void check_session()
 	emulating = 1;
 	CHECK(!amiberry_settings_is_available(session, "uaeboard"));
 	CHECK(amiberry_settings_set(session, "uaeboard", "full") == AMIBERRY_SETTINGS_UNAVAILABLE);
-	// the CPU thread is chosen at run time: a live option
-	CHECK(amiberry_settings_is_available(session, "cpu_threaded"));
-	CHECK(amiberry_settings_set(session, "cpu_threaded", "false") == AMIBERRY_SETTINGS_OK);
-	CHECK(amiberry_settings_commit(session, &changed) == AMIBERRY_APPLY_LIVE);
-	CHECK(changed && !changed_prefs.cpu_thread);
+	CHECK(!amiberry_settings_is_available(session, "cpu_threaded")); // real speed
 	emulating = 0;
 	CHECK(amiberry_settings_set(session, "uaeboard", "full") == AMIBERRY_SETTINGS_OK);
 	CHECK(amiberry_settings_commit(session, &changed) == AMIBERRY_APPLY_RESTART);
@@ -1315,6 +1316,13 @@ void check_session()
 	CHECK(amiberry_settings_set(session, "cpu_speed", "max") == AMIBERRY_SETTINGS_OK);
 	CHECK(amiberry_settings_commit(session, &changed) == AMIBERRY_APPLY_LIVE);
 	CHECK(changed && changed_prefs.m68k_speed < 0);
+	// the CPU thread is chosen at run time: a live option
+	emulating = 1;
+	CHECK(amiberry_settings_is_available(session, "cpu_threaded"));
+	CHECK(amiberry_settings_set(session, "cpu_threaded", "false") == AMIBERRY_SETTINGS_OK);
+	CHECK(amiberry_settings_commit(session, &changed) == AMIBERRY_APPLY_LIVE);
+	CHECK(changed && !changed_prefs.cpu_thread);
+	emulating = 0;
 
 	// Commit stores what the fixups adjust outside the session's options:
 	// 24-bit addressing removes Z3 RAM.
@@ -1435,8 +1443,8 @@ void emit_roundtrip()
 	apply("cpu_model", "68020");
 	apply("cpu_24bit_addressing", "false");
 	apply("cpu_compatible", "false");
-	apply("cpu_threaded", "true");
 	apply("cpu_speed", "max");
+	apply("cpu_threaded", "false");
 	apply("amiberry.cpu_idle", "60");
 	emit("threaded_020", p);
 

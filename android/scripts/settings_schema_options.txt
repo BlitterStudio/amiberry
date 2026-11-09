@@ -87,6 +87,7 @@ fpu_no_unimplemented
 cpu_throttle
 amiberry.cpu_idle
 cpu_multiplier
+cpu_threaded
 # jit
 comp_constjump
 comp_flushmode

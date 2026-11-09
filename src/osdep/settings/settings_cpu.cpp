@@ -516,6 +516,14 @@ void set_cpu_threaded(uae_prefs& p, const value& v)
 	p.cpu_thread = v.number != 0;
 }
 
+// The CPU thread is used only at the fastest speed with a 68020 or later,
+// and not with cycle-exact or PPC emulation (cpu_thread_wanted()).
+bool cpu_threaded_available(const uae_prefs& p, const context&)
+{
+	return p.cpu_model >= 68020 && p.m68k_speed < 0 && !p.cpu_cycle_exact
+		&& !p.cpu_memory_cycle_exact && !p.ppc_mode;
+}
+
 // ---------------------------------------------------------------- PPC
 
 #ifdef WITH_PPC
@@ -875,12 +883,11 @@ const definition definitions[] = {
 			AMIBERRY_APPLY_LIVE, "0", cpu_multiplier_choices,
 			"Needs More compatible or cycle-exact mode, and not the fastest speed."),
 		get_cpu_multiplier, set_cpu_multiplier, cpu_multiplier_available, nullptr, nullptr},
-	// Not in the GUI: the CPU thread is chosen automatically. Kept for
-	// configuration files and troubleshooting (false: never use it).
 	{BOOL_OPTION("cpu_threaded", "cpu_speed", "Multi-threaded CPU",
-			"Run the CPU emulation on a thread of its own when the host has two or more cores. Cycle-exact emulation, PPC emulation, beam racing, the GDB server and freezer cartridges run it on the main thread automatically.",
-			AMIBERRY_APPLY_LIVE, "true", nullptr),
-		get_cpu_threaded, set_cpu_threaded, nullptr, nullptr, nullptr},
+			"Run the CPU emulation on a thread of its own, at the fastest speed with a 68020 or later, when the host has two or more cores. Beam racing, the GDB server and freezer cartridges run it on the main thread automatically.",
+			AMIBERRY_APPLY_LIVE, "true",
+			"The CPU thread needs a 68020 or later at the fastest speed, and is not used with cycle-exact or PPC emulation."),
+		get_cpu_threaded, set_cpu_threaded, cpu_threaded_available, nullptr, nullptr},
 #ifdef WITH_PPC
 	{CHOICE_OPTION("ppc_model", "ppc", "PPC CPU emulation",
 			"Enable PowerPC CPU emulation for CyberStorm PPC or Blizzard PPC boards.",

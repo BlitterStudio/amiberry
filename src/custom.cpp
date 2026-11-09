@@ -3202,7 +3202,7 @@ static void DMACON(int hpos, uae_u16 v)
 	}
 #endif
 
-	// See do_blitter(): the threaded CPU never waits for a nasty blit.
+	// See do_blitter(): the CPU thread is held by the main thread instead.
 	if ((dmacon & DMA_BLITPRI) > (oldcon & DMA_BLITPRI) && (blt_info.blit_main || blt_info.blit_queued) && !cpu_threaded_run) {
 		set_special(SPCFLAG_BLTNASTY);
 	}
@@ -3415,16 +3415,6 @@ static void doint_delay_intena(uae_u16 v)
 	else {
 		event_doint_delay_do_intena(v);
 	}
-}
-
-// m68k_interrupt_delay was turned off: apply the queued INTENA/INTREQ changes.
-void custom_interrupt_delay_flush(void)
-{
-	event2_newevent_x_remove(event_doint_delay_do_intena);
-	event2_newevent_x_remove(event_doint_delay_do_intreq);
-	intena2 = intena;
-	intreq2 = intreq;
-	doint();
 }
 
 static void INTENA(uae_u16 v)
@@ -4864,9 +4854,8 @@ static bool framewait(void)
 			frame_rendered = crender_screen(0, 1, false);
 			t = read_processor_time() - start;
 		}
-		// A CPU thread at an approximate speed follows the chipset: it waits
-		// here with it. In fastest mode the CPU loop paces the frame.
-		if (!cpu_threaded_run || currprefs.m68k_speed >= 0) {
+		// Threaded, the CPU loop paces the frame.
+		if (!cpu_threaded_run) {
 #ifdef AMIBERRY
 			static amiberry_frame_pacer pacer;
 			while (!currprefs.turbo_emulation) {
