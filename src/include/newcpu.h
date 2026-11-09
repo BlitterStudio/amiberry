@@ -845,6 +845,7 @@ struct fpj_fmovem {
 	bool to_mem, reversed;
 };
 extern bool fp_jit_fmovem_plan(uae_u16 opcode, uae_u16 extra, struct fpj_fmovem *p);
+extern bool fp_jit_fmovecr(uae_u16 extra, uae_u16 *hi, uae_u64 *lo, uae_u32 *ccexc, uae_u32 *accr);
 extern uae_u64 REGPARAM3 fp_jit_verify_out_save(uae_u64 ea, uae_u32 opext);
 extern void REGPARAM3 fp_jit_verify_out_check(uae_u32 opext, uae_u64 ea, uae_u8 *next_p, uae_u64 lenpc, void *fn);
 extern void fpuop_dbcc(uae_u32, uae_u16);

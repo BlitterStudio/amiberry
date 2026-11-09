@@ -4397,12 +4397,43 @@ bool fp_jit_fmovem_plan(uae_u16 opcode, uae_u16 extra, struct fpj_fmovem *p)
 	return true;
 }
 
+/* FMOVECR #ofs,FPn as fpuop_arithmetic2() does it with the FPCR at round to
+ * nearest, extended precision (what the JIT's inline FMOVECR requires): the
+ * value, the FPSR condition codes and exception byte (ccexc), the accrued
+ * bits it sets. Run at compile time on a scratch FPSR. False: an offset
+ * the 6888x refuses ($40-$7f). */
+bool fp_jit_fmovecr(uae_u16 extra, uae_u16 *hi, uae_u64 *lo, uae_u32 *ccexc, uae_u32 *accr)
+{
+	if (extra & 0x40)
+		return false;
+	const uae_u32 fpsr = regs.fpsr, fpcr = regs.fpcr;
+	const fpdata result = regs.fp_result;
+	const bool cc_written = fpu_fpsr_cc_written;
+	regs.fpcr = 0;
+	regs.fpsr = 0;
+	fpsr_clear_status();
+	fpdata d;
+	fpu_get_constant(&d, extra & 0x7f);
+	fpsr_make_status();
+	*hi = d.fpx.high;
+	*lo = d.fpx.low;
+	*ccexc = regs.fpsr & 0x0f00ff00;
+	*accr = regs.fpsr & 0xf8;
+	regs.fpsr = fpsr;
+	regs.fpcr = fpcr;
+	regs.fp_result = result;
+	fpu_fpsr_cc_written = cc_written;
+	return true;
+}
+
 bool jit_fpu_generic_ok(uae_u16 opcode, uae_u16 extra)
 {
 	if (jit_fpu_enabled() || !currprefs.fpu_model || currprefs.mmu_model)
 		return false;
 	if (currprefs.cpu_model >= 68040 && currprefs.fpu_no_unimplemented)
 		return false;
+	if ((extra & 0xfc00) == 0x5c00) // FMOVECR: only inline (the helper call alone is slower than the interpreter)
+		return !(extra & 0x40) && ((opcode >> 3) & 7) == 0 && fp_jit_out_inline_kind(opcode, extra);
 	const int opclass = (extra >> 13) & 7, mode = (opcode >> 3) & 7, reg = opcode & 7;
 	if (opclass >= 4) {
 		// FMOVE(M) of control registers (4, 5) and FMOVEM (6, 7). The
