@@ -26,6 +26,8 @@
 #include "softfloat/softfloat_dd.h"
 #include "softfloat/softfloat_fastx80.h"
 #include <fenv.h>
+#include <vector>
+#include <algorithm>
 
 #define	FPCR_ROUNDING_MODE	0x00000030
 #define	FPCR_ROUND_NEAR		0x00000000
@@ -1109,6 +1111,68 @@ uae_u32 fp_jit_out_inline_kind(uae_u16 opcode, uae_u16 extra)
 	return 1 | (fpj_fpiar_always ? 1 << 12 : 0) | (currprefs.cpu_model == 68060 ? 1 << 13 : 0);
 }
 
+/* AMIBERRY_JIT_FPU_STATS=<file>: how often each compiled FPU instruction
+ * runs, by its kind (fp_jit_stats_key(): EA mode, source format, opmode or
+ * opclass) and path (FPJ_ST_*), written to the file at exit as a table,
+ * the most frequent first. The compiled code increments the counters. */
+static uae_u64 *fpj_stats;
+static const char *fpj_stats_file;
+
+static void fpj_stats_dump(void)
+{
+	FILE *f = fpj_stats_file ? fopen(fpj_stats_file, "w") : nullptr;
+	if (!f || !fpj_stats)
+		return;
+	struct row { uae_u64 n[4], total; uae_u32 key; };
+	std::vector<row> rows;
+	for (uae_u32 k = 0; k < FPJ_STATS_KEYS; k++) {
+		row r = { { fpj_stats[k * 4], fpj_stats[k * 4 + 1], fpj_stats[k * 4 + 2], fpj_stats[k * 4 + 3] }, 0, k };
+		r.total = r.n[0] + r.n[1] + r.n[2] + r.n[3];
+		if (r.total)
+			rows.push_back(r);
+	}
+	std::sort(rows.begin(), rows.end(), [](const row &a, const row &b) { return a.total > b.total; });
+	static const char *const fmt[8] = { "L", "S", "X", "P", "W", "D", "B", "P" };
+	fprintf(f, "# total   inline   inl->helper   helper   interp   ea-mode  class  fmt  opmode  (extension word bits)\n");
+	for (const row &r : rows) {
+		const int ea = r.key >> 13, cls = (r.key >> 10) & 7, sz = (r.key >> 7) & 7, opm = r.key & 0x7f;
+		fprintf(f, "%10llu %10llu %10llu %10llu %10llu   %d  %d  %s  %02x\n", (unsigned long long)r.total,
+			(unsigned long long)r.n[0], (unsigned long long)r.n[1], (unsigned long long)r.n[2],
+			(unsigned long long)r.n[3], ea, cls, (cls == 0 || cls == 6 || cls == 7) ? "-" : fmt[sz], opm);
+	}
+	fclose(f);
+}
+
+uae_u64 *fp_jit_stats(void)
+{
+	static int init;
+	if (!init) {
+		init = 1;
+		fpj_stats_file = getenv("AMIBERRY_JIT_FPU_STATS");
+		if (fpj_stats_file && fpj_stats_file[0]) {
+			fpj_stats = (uae_u64 *)calloc(FPJ_STATS_KEYS * 4, sizeof(uae_u64));
+			atexit(fpj_stats_dump);
+			write_log(_T("JIT FPU: instruction counts to %s at exit\n"), fpj_stats_file);
+		}
+	}
+	return fpj_stats;
+}
+
+// the counter key of an FPU instruction: EA mode, opclass, source format, opmode
+uae_u32 fp_jit_stats_key(uae_u16 opcode, uae_u16 extra)
+{
+	const int cls = (extra >> 13) & 7;
+	// opclass 0: bits 12-10 are the source register, not a format
+	return (((opcode >> 3) & 7) << 13) | (cls << 10) | (cls ? ((extra >> 10) & 7) << 7 : 0) | (extra & 0x7f);
+}
+
+void fp_jit_stats_count(uae_u16 opcode, uae_u16 extra, int path)
+{
+	uae_u64 *s = fp_jit_stats();
+	if (s)
+		s[fp_jit_stats_key(opcode, extra) * 4 + path]++;
+}
+
 // the FPSR bits of an inexact result (INEX2 and the accrued INEX)
 uae_u32 fp_jit_inexact_status(void)
 {
@@ -1316,6 +1380,20 @@ uae_u32 fp_jit_inline_kind(uae_u16, uae_u16)
 uae_u32 fp_jit_out_inline_kind(uae_u16, uae_u16)
 {
 	return 0;
+}
+
+uae_u64 *fp_jit_stats(void)
+{
+	return nullptr;
+}
+
+uae_u32 fp_jit_stats_key(uae_u16, uae_u16)
+{
+	return 0;
+}
+
+void fp_jit_stats_count(uae_u16, uae_u16, int)
+{
 }
 #endif
 

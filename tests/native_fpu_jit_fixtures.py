@@ -57,6 +57,8 @@ template<class... A> static bool fault_if_unimplemented_680x0(A...) { return fal
 template<class... A> static bool fault_if_nonexisting_opmode(A...) { return false; }
 template<class... A> static bool fault_if_no_packed_support(A...) { return false; }
 static bool fault_if_60() { return false; }
+uae_u64 *fp_jit_stats(void) { return nullptr; }
+void fp_jit_stats_count(uae_u16, uae_u16, int) {}
 static bool if_no_fpu() { return false; }
 template<class... A> static void fp_unimp_datatype(A...) { assert(false); }
 template<class... A> static void fpu_noinst(A...) { assert(false); }
