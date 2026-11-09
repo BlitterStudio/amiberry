@@ -192,6 +192,15 @@ static int fpu_core_wanted(void)
 	}
 }
 
+bool fpu_exact_wanted(void)
+{
+#ifdef WITH_SOFTFLOAT
+	return fpu_core_wanted() > 0;
+#else
+	return false;
+#endif
+}
+
 // the core the settings select, for the log
 const TCHAR *fpu_core_name(void)
 {
