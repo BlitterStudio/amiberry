@@ -68,6 +68,9 @@ trap 'rm -rf "$work"' EXIT
 security cms -D -i "$profile" > "$work/profile.plist"
 pb() { /usr/libexec/PlistBuddy -c "$1" "$2"; }
 profile_app_id=$(pb "Print :Entitlements:$app_id_key" "$work/profile.plist")
+# The App ID prefix is the team ID for every App ID made since 2011; older
+# ones can have their own (TN2311), which the profile names.
+app_id_prefix=$(pb "Print :ApplicationIdentifierPrefix:0" "$work/profile.plist")
 team_id=$(pb "Print :Entitlements:com.apple.developer.team-identifier" "$work/profile.plist")
 
 staged="$work/$(basename "$app")"
@@ -82,8 +85,16 @@ else
 fi
 
 bundle_id=$(pb "Print :CFBundleIdentifier" "$contents/Info.plist")
-if [ "$profile_app_id" != "$team_id.$bundle_id" ]; then
-	echo "the profile is for $profile_app_id, the app is $team_id.$bundle_id" >&2
+app_id="$app_id_prefix.$bundle_id"
+# An explicit App ID must be the app's; a wildcard one ("PREFIX.*",
+# "PREFIX.com.example.*") must cover it, and the app is signed with its own
+# identifier rather than the wildcard.
+case "$profile_app_id" in
+	*\*) [[ "$app_id" == "${profile_app_id%\*}"* ]] || app_id= ;;
+	*) [ "$profile_app_id" = "$app_id" ] || app_id= ;;
+esac
+if [ -z "$app_id" ]; then
+	echo "the profile is for $profile_app_id, the app is $app_id_prefix.$bundle_id" >&2
 	exit 1
 fi
 version=$(pb "Print :CFBundleShortVersionString" "$contents/Info.plist")
@@ -132,7 +143,7 @@ if [ "$platform" = macos ]; then
 fi
 
 cp "$entitlements_src" "$work/entitlements.plist"
-pb "Add :$app_id_key string $profile_app_id" "$work/entitlements.plist"
+pb "Add :$app_id_key string $app_id" "$work/entitlements.plist"
 pb "Add :com.apple.developer.team-identifier string $team_id" "$work/entitlements.plist"
 if [ "$platform" = ios ]; then
 	pb "Add :get-task-allow bool false" "$work/entitlements.plist"
