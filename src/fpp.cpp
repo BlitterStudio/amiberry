@@ -192,6 +192,23 @@ static int fpu_core_wanted(void)
 	}
 }
 
+// the core the settings select, for the log
+const TCHAR *fpu_core_name(void)
+{
+	switch (fpu_core_wanted()) {
+	case 1:
+		return _T("exact");
+	case -1:
+		return _T("host 80b");
+	default:
+#ifdef USE_LONG_DOUBLE
+		return _T("host 80b");
+#else
+		return _T("host 64b");
+#endif
+	}
+}
+
 static void fpu_select_core(void)
 {
 	int core = fpu_core_wanted();
