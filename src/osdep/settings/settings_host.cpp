@@ -96,6 +96,13 @@ struct host_setting {
 	// The descriptor's unit and level (amiberry_settings.h).
 	const char* unit = nullptr;
 	bool level = false;
+	// The Android build's default where it differs from default_value; the
+	// schema export (--settings-schema, made on a desktop build) carries it
+	// to the Android launcher, as it does for options.
+	const char* android_default = nullptr;
+	// The Android build has no use for the setting (the update checker:
+	// Android has no self-update), so the schema export leaves it out.
+	bool android_unused = false;
 };
 
 // The text fields, by address, so a pointer-to-member of differing array
@@ -245,6 +252,22 @@ host_setting path(const char* id, const char* label, const char* help,
 	return s;
 }
 
+// A setting whose default the Android build spells differently, so the
+// schema export carries that default too (as it does for options).
+host_setting android(host_setting s, const char* def)
+{
+	s.android_default = def;
+	return s;
+}
+
+// A setting the Android build has no use for, so the schema export leaves
+// it out.
+host_setting not_on_android(host_setting s)
+{
+	s.android_unused = true;
+	return s;
+}
+
 const std::vector<host_setting>& settings()
 {
 	static const std::vector<host_setting> list = {
@@ -365,7 +388,7 @@ const std::vector<host_setting>& settings()
 			"Default stereo separation between the left and right channels.",
 			"7", stereo_choices, sizeof stereo_choices / sizeof stereo_choices[0],
 			&amiberry_options::default_stereo_separation),
-		choices_of("default_sound_frequency", "global_sound", "Sound frequency",
+		android(choices_of("default_sound_frequency", "global_sound", "Sound frequency",
 			"Default audio output sample rate in Hz.",
 #ifdef __ANDROID__
 			AMIBERRY_SETTINGS_TEXT_OF(ANDROID_DEFAULT_SOUND_FREQUENCY),
@@ -374,7 +397,8 @@ const std::vector<host_setting>& settings()
 #endif
 			frequency_choices, sizeof frequency_choices / sizeof frequency_choices[0],
 			&amiberry_options::default_sound_frequency),
-		choices_of("default_sound_buffer", "global_sound", "Sound buffer",
+			AMIBERRY_SETTINGS_TEXT_OF(ANDROID_DEFAULT_SOUND_FREQUENCY)),
+		android(choices_of("default_sound_buffer", "global_sound", "Sound buffer",
 			"Default audio buffer size. Smaller values reduce latency.",
 #ifdef __ANDROID__
 			AMIBERRY_SETTINGS_TEXT_OF(ANDROID_DEFAULT_SOUND_BUFFER),
@@ -383,6 +407,7 @@ const std::vector<host_setting>& settings()
 #endif
 			buffer_choices, sizeof buffer_choices / sizeof buffer_choices[0],
 			&amiberry_options::default_sound_buffer),
+			AMIBERRY_SETTINGS_TEXT_OF(ANDROID_DEFAULT_SOUND_BUFFER)),
 		sound_device("default_soundcard", "Audio device",
 			"Default sound output device. System default follows the operating system's choice."),
 
@@ -408,35 +433,36 @@ const std::vector<host_setting>& settings()
 			"Allow the WHDLoad JSON booter database to override display defaults.",
 			"true", &amiberry_options::allow_display_settings_from_json),
 
-		boolean("default_onscreen_joystick", "global_touch", "On-screen joystick",
+		android(boolean("default_onscreen_joystick", "global_touch", "On-screen joystick",
 			"Show virtual joystick controls by default on touchscreen devices.",
 #ifdef __ANDROID__
 			"true",
 #else
 			"false",
 #endif
-			&amiberry_options::default_onscreen_joystick),
-		boolean("default_vkbd_enabled", "global_touch", "On-screen keyboard",
+			&amiberry_options::default_onscreen_joystick), "true"),
+		android(boolean("default_vkbd_enabled", "global_touch", "On-screen keyboard",
 			"Enable the on-screen Amiga keyboard by default.",
 #ifdef __ANDROID__
 			"true",
 #else
 			"false",
 #endif
-			&amiberry_options::default_vkbd_enabled),
+			&amiberry_options::default_vkbd_enabled), "true"),
 		measured("default_vkbd_transparency", "global_touch", "On-screen keyboard opacity",
 			"Opacity of the on-screen keyboard in new configurations (100% is opaque); 0 uses the "
 			"default of 85%.",
 			"0", 0, 100, &amiberry_options::default_vkbd_transparency, "%", false),
 		language("default_vkbd_language", "global_touch", "On-screen keyboard layout",
 			"Default on-screen keyboard layout.", "US"),
-		hotkey("default_vkbd_toggle", "global_touch", "On-screen keyboard toggle",
+		android(hotkey("default_vkbd_toggle", "global_touch", "On-screen keyboard toggle",
 			"Default key or controller button that shows and hides the on-screen keyboard.",
 #if defined(__ANDROID__) || defined(LIBRETRO)
 			"leftstick"),
 #else
 			"guide"),
 #endif
+			"leftstick"),
 		boolean("default_retroarch_vkbd", "global_touch", "RetroArch on-screen keyboard button",
 			"Use the RetroArch on-screen keyboard button by default when a mapping exists.",
 			"false", &amiberry_options::default_retroarch_vkbd),
@@ -515,16 +541,18 @@ const std::vector<host_setting>& settings()
 
 		// Store builds are updated by the App Store: no update settings.
 #if !defined(AMIBERRY_IOS) && !defined(MACOS_APP_STORE)
-		choices_of("update_check", "global_updates", "Startup update check",
+		// Android has no self-update either (get_update_method is DISABLED
+		// there), so the schema export leaves these out.
+		not_on_android(choices_of("update_check", "global_updates", "Startup update check",
 			"Check for Amiberry updates on startup when the installation type supports it.",
 			"1", enabled_choices, sizeof enabled_choices / sizeof enabled_choices[0],
-			&amiberry_options::update_check),
-		choices_of("update_channel", "global_updates", "Update channel",
+			&amiberry_options::update_check)),
+		not_on_android(choices_of("update_channel", "global_updates", "Update channel",
 			"Stable checks only releases. Preview can include pre-release versions.",
 			"0", channel_choices, sizeof channel_choices / sizeof channel_choices[0],
-			&amiberry_options::update_channel),
-		text("skipped_version", "global_updates", "Skipped version",
-			"Version string to skip during update checks. Empty stops skipping a version.", ""),
+			&amiberry_options::update_channel)),
+		not_on_android(text("skipped_version", "global_updates", "Skipped version",
+			"Version string to skip during update checks. Empty stops skipping a version.", "")),
 #endif
 
 		boolean("perf_log", "global_advanced", "Performance log",
@@ -561,6 +589,7 @@ host_setting scale_setting()
 #endif
 	s.min = gui_layout_scale_min_percent;
 	s.max = gui_layout_scale_max_percent;
+	s.android_default = "70";
 	s.real = &amiberry_options::gui_layout_scale_percent;
 	s.clamp_scale = true;
 	s.unit = "%";
@@ -602,32 +631,35 @@ amiberry_setting_type setting_type(kind k)
 	return AMIBERRY_SETTING_STRING;
 }
 
+// A host_setting as the layer's front ends see it (amiberry_settings.h).
+amiberry_setting_descriptor descriptor_of(const host_setting& s)
+{
+	amiberry_setting_descriptor d{};
+	d.id = s.id;
+	d.group = s.group;
+	d.label = s.label;
+	d.help = s.help;
+	d.type = setting_type(s.k);
+	d.apply = AMIBERRY_APPLY_LIVE;
+	// A choice's range is its list (the audio device keeps its index range
+	// for the setter only).
+	d.min = s.k == kind::choice_list ? 0 : s.min;
+	d.max = s.k == kind::choice_list ? 0 : s.max;
+	d.step = s.k == kind::integer || s.k == kind::real ? 1 : 0;
+	d.default_value = s.default_value;
+	d.choices = reinterpret_cast<const amiberry_setting_choice*>(s.choices);
+	d.choice_count = s.choice_count;
+	d.unit = s.unit;
+	d.level = s.level;
+	return d;
+}
+
 std::vector<amiberry_setting_descriptor>& descriptors()
 {
 	static std::vector<amiberry_setting_descriptor> list = [] {
 		std::vector<amiberry_setting_descriptor> out;
-		auto add = [&out](const host_setting& s) {
-			amiberry_setting_descriptor d{};
-			d.id = s.id;
-			d.group = s.group;
-			d.label = s.label;
-			d.help = s.help;
-			d.type = setting_type(s.k);
-			d.apply = AMIBERRY_APPLY_LIVE;
-			// A choice's range is its list (the audio device keeps its
-			// index range for the setter only).
-			d.min = s.k == kind::choice_list ? 0 : s.min;
-			d.max = s.k == kind::choice_list ? 0 : s.max;
-			d.step = s.k == kind::integer || s.k == kind::real ? 1 : 0;
-			d.default_value = s.default_value;
-			d.choices = reinterpret_cast<const amiberry_setting_choice*>(s.choices);
-			d.choice_count = s.choice_count;
-			d.unit = s.unit;
-			d.level = s.level;
-			out.push_back(d);
-		};
 		for (const host_setting& s : settings())
-			add(s);
+			out.push_back(descriptor_of(s));
 #ifndef AMIBERRY_NO_IMGUI
 		// The GUI scale (ImGui's) sits after the other display defaults.
 		const host_setting scale = scale_setting();
@@ -636,12 +668,7 @@ std::vector<amiberry_setting_descriptor>& descriptors()
 			if (std::strcmp(it->group, "global_display") == 0)
 				at = it + 1;
 		}
-		amiberry_setting_descriptor d{};
-		d.id = scale.id; d.group = scale.group; d.label = scale.label; d.help = scale.help;
-		d.type = AMIBERRY_SETTING_REAL; d.apply = AMIBERRY_APPLY_LIVE;
-		d.min = scale.min; d.max = scale.max; d.step = 1; d.default_value = scale.default_value;
-		d.unit = scale.unit;
-		out.insert(at, d);
+		out.insert(at, descriptor_of(scale));
 #endif
 		return out;
 	}();
@@ -785,6 +812,39 @@ bool text_choice_accepted(const host_setting& s, std::string_view value)
 }
 
 } // namespace
+
+android_host_setting host_setting_on_android(std::string_view id)
+{
+	const host_setting* s = find_setting(id);
+	if (!s)
+		return {};
+	android_host_setting info;
+	info.default_value = s->android_default;
+	info.present = !s->android_unused;
+	return info;
+}
+
+#ifdef __ANDROID__
+// The Android build lists these with the others (settings()).
+const std::vector<amiberry_setting_descriptor>& android_only_host_settings()
+{
+	static const std::vector<amiberry_setting_descriptor> list;
+	return list;
+}
+#else
+// Host settings only the Android build compiles (Android ADPF): the schema
+// export, made on a desktop build, carries them to the Android launcher,
+// which cannot enumerate them from its own list.
+const std::vector<amiberry_setting_descriptor>& android_only_host_settings()
+{
+	static const std::vector<amiberry_setting_descriptor> list = {
+		descriptor_of(boolean("use_adpf", "global_advanced", "Android ADPF",
+			"Use Android Dynamic Performance Framework hints when available.",
+			"true", &amiberry_options::use_adpf)),
+	};
+	return list;
+}
+#endif
 
 size_t host_settings_count()
 {

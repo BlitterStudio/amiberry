@@ -135,6 +135,38 @@ genlock = {c["value"]: c.get("requires", []) for c in next(o for o in schema["op
 assert [v for v, r in genlock.items() if not r] == ["none", "noise", "testcard", "image"], genlock
 assert all(r == ["videograb"] for r in genlock.values() if r), genlock
 assert schema["aros"] == {"rom_file": ":AROS", "main_file": "aros-rom.bin", "ext_file": "aros-ext.bin"}, schema["aros"]
+
+# Host settings (amiberry.conf): the Android build's own, as a desktop
+# export describes them. The update checker is left out (no self-update on
+# Android) and the Android-only ones (ADPF) are carried.
+host = schema["host_settings"]
+host_ids = [h["id"] for h in host]
+assert len(host_ids) == len(set(host_ids)), "host settings"
+assert {"Quickstart", "shader", "rom_path", "input_default_mouse_speed", "gui_layout_scale",
+        "default_controller1", "default_soundcard", "default_vkbd_toggle", "use_adpf"} <= set(host_ids), host_ids
+assert not {"update_check", "update_channel", "skipped_version", "macos_left_command_q"} & set(host_ids), host_ids
+for setting in host:
+    assert setting["type"] in ("bool", "int", "real", "choice", "path", "string", "hotkey"), setting
+    assert setting["apply"] == "live", setting["id"]
+    if setting["type"] == "choice":
+        assert isinstance(setting["choices"], list), setting["id"]
+host_by_id = {h["id"]: h for h in host}
+# The lists that name the host's devices, shaders and bezels travel empty.
+for dynamic in ("default_controller1", "default_mouse1", "default_soundcard", "shader", "shader_rtg", "custom_bezel"):
+    assert host_by_id[dynamic]["type"] == "choice" and host_by_id[dynamic]["choices"] == [], dynamic
+# Defaults that differ on the Android build.
+android_host = {h["id"]: h["android_default"] for h in host if "android_default" in h}
+assert android_host.get("default_sound_frequency") == "48000", android_host
+assert android_host.get("default_sound_buffer") == "8192", android_host
+assert android_host.get("default_onscreen_joystick") == "true", android_host
+assert android_host.get("default_vkbd_enabled") == "true", android_host
+assert android_host.get("default_vkbd_toggle") == "leftstick", android_host
+assert android_host.get("gui_layout_scale") == "70", android_host
+assert host_by_id["gui_layout_scale"]["default"] == "100", host_by_id["gui_layout_scale"]
+# A level a front end may show as a slider, with its unit.
+assert host_by_id["default_joystick_deadzone"]["level"] is True, host_by_id["default_joystick_deadzone"]
+assert host_by_id["default_joystick_deadzone"]["unit"] == "%", host_by_id["default_joystick_deadzone"]
+assert host_by_id["use_adpf"]["type"] == "bool" and host_by_id["use_adpf"]["group"] == "global_advanced"
 PY
 
 printf 'cpu_model\nnot_an_option\n' > "$work/bad.txt"
