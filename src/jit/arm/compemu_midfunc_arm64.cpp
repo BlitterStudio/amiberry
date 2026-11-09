@@ -1059,7 +1059,8 @@ static void fpx_emit_inline(fpx_fails &f, uae_u32 kind, uae_u32 opext, uae_u32 p
 
 	// FPCR: no exception enabled, extended precision, round to nearest; nothing pending
 	fpx_gate(f, 0xfff0, pcr060);
-	MOV_wi(17, 0x7ffd);                                    // w17: the normal exponent limit, throughout
+	if (op == K_ADD || op == K_SUB || op == K_MUL)
+		MOV_wi(17, 0x7ffd);                                // w17: the normal exponent limit (the packing)
 
 	// zeros too: +-0 operands (FADD/FSUB/FMUL: softfloat's zero rules below)
 	const bool zeros = true;
@@ -1357,21 +1358,18 @@ static void fpx_emit_inline(fpx_fails &f, uae_u32 kind, uae_u32 opext, uae_u32 p
 		MOV_wi(0, 4);
 		ORR_www(0, 0, 3);
 		write_jmp_target(not_zeros, (uintptr)get_target());
-	} else {
-		MOV_ww(10, 6);
-		MOV_xx(11, 7);
-		if (op == K_ABS) {
-			BFI_wwii(10, 31, 15, 1);
-		} else if (op == K_NEG) {
-			MOV_wi(0, 0x8000);
-			EOR_www(10, 10, 0);
-		}
+	} else if (op == K_ABS) {                              // FMOVE, FABS, FNEG, FTST: the result in (w6, x7)
+		BFI_wwii(6, 31, 15, 1);
+	} else if (op == K_NEG) {
+		MOV_wi(0, 0x8000);
+		EOR_www(6, 6, 0);
 	}
+	const int rh = op == K_ADD || op == K_SUB || op == K_MUL ? 10 : 6, rl = rh == 10 ? 11 : 7;
 	if (op != K_CMP) {                                     // N from the result's sign, Z for a zero
-		UBFX_wwii(0, op == K_TST ? 6 : 10, 15, 1);
+		UBFX_wwii(0, rh, 15, 1);
 		LSL_wwi(0, 0, 3);
 		if (zeros) {
-			CMP_xi(op == K_TST ? 7 : 11, 0);
+			CMP_xi(rl, 0);
 			CSET_wc(4, NATIVE_CC_EQ);
 			ORR_wwwLSLi(0, 0, 4, 2);
 		}
@@ -1394,12 +1392,11 @@ static void fpx_emit_inline(fpx_fails &f, uae_u32 kind, uae_u32 opext, uae_u32 p
 	}
 	STR_wXi(2, R_REGSTRUCT, FPX_OFF(fpsr));
 	if (op != K_CMP && op != K_TST) {
-		STRH_wXi(10, R_REGSTRUCT, FPX_OFF(fp[dreg].fpx.high));
-		STR_xXi(11, R_REGSTRUCT, FPX_OFF(fp[dreg].fpx.low));
+		STRH_wXi(rh, R_REGSTRUCT, FPX_OFF(fp[dreg].fpx.high));
+		STR_xXi(rl, R_REGSTRUCT, FPX_OFF(fp[dreg].fpx.low));
 	}
 	MOV_wi(3, 1);
 	STR_wXi(3, R_REGSTRUCT, FPX_OFF(fpu_state));
-	STRB_wXi(31, R_REGSTRUCT, FPX_OFF(fp_exception));
 	if (fpiar) {
 		fpx_mov32(3, pc);
 		STR_wXi(3, R_REGSTRUCT, FPX_OFF(fpiar));
@@ -1461,7 +1458,6 @@ static void fpx_emit_fmovem(fpx_fails &f, uae_u32 kind, uae_u32 opext, const str
 	}
 	MOV_wi(3, 1);
 	STR_wXi(3, R_REGSTRUCT, FPX_OFF(fpu_state));
-	STRB_wXi(31, R_REGSTRUCT, FPX_OFF(fp_exception));
 }
 
 /* FMOVECR #ofs,FPn inline: the constant and its FPSR bits from
@@ -1492,7 +1488,6 @@ static void fpx_emit_fmovecr(fpx_fails &f, uae_u32 kind, uae_u32 opext, uae_u32 
 	STR_wXi(2, R_REGSTRUCT, FPX_OFF(fpsr));
 	MOV_wi(3, 1);
 	STR_wXi(3, R_REGSTRUCT, FPX_OFF(fpu_state));
-	STRB_wXi(31, R_REGSTRUCT, FPX_OFF(fp_exception));
 	if ((kind >> 12) & 1) {
 		fpx_mov32(3, pc);
 		STR_wXi(3, R_REGSTRUCT, FPX_OFF(fpiar));
@@ -1705,7 +1700,6 @@ static void fpx_emit_out(fpx_fails &f, uae_u32 kind, uae_u32 opext, uae_u32 pc)
 	STR_wXi(2, R_REGSTRUCT, FPX_OFF(fpsr));
 	MOV_wi(3, 1);
 	STR_wXi(3, R_REGSTRUCT, FPX_OFF(fpu_state));
-	STRB_wXi(31, R_REGSTRUCT, FPX_OFF(fp_exception));
 	if (fpiar) {
 		fpx_mov32(3, pc);
 		STR_wXi(3, R_REGSTRUCT, FPX_OFF(fpiar));
@@ -1724,16 +1718,20 @@ MIDFUNC(10,jitx_fpp_arith,(IMPTR fn, RR4 v1, RR4 v2, IM8 nvals, IM32 opext, IMPT
 	int r1 = -1, r2 = -1;
 	if (nvals >= 1)
 		r1 = readreg_specific(v1, REG_PAR2);
-	if (nvals >= 2)
-		r2 = readreg(v2);
-	prepare_for_call_1();
 	if (nvals >= 2) {
+		r2 = readreg(v2);
 		ORR_xxxLSLi(REG_PAR2, r2, REG_PAR2, 32);    // v1 << 32 | v2 (W registers are zero-extended)
 	}
 	if (r1 >= 0)
 		unlock2(r1);
 	if (r2 >= 0)
 		unlock2(r2);
+	// the operand's temporaries are dead now (x1 has it): not written back
+	if (nvals >= 1)
+		forget_about(v1);
+	if (nvals >= 2)
+		forget_about(v2);
+	prepare_for_call_1();
 	prepare_for_call_2();
 	uae_u32 *inline_done = nullptr;
 #if defined(JIT) && defined(__SIZEOF_INT128__)
@@ -1812,9 +1810,11 @@ MIDFUNC(7,jitx_fpp_generic,(IMPTR fn, RR4 a, IM8 hasea, IM32 opext, IMPTR nextp,
 	int r = -1;
 	if (hasea)
 		r = readreg_specific(a, REG_PAR2);
-	prepare_for_call_1();
-	if (r >= 0)
+	if (r >= 0) {
 		unlock2(r);
+		forget_about(a);                           // the address temporary (x1 has it): not written back
+	}
+	prepare_for_call_1();
 	prepare_for_call_2();
 	uae_u32 *inline_done = nullptr;
 #if defined(JIT) && defined(__SIZEOF_INT128__)
