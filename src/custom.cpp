@@ -599,7 +599,7 @@ int firstword_bplcon1;
 
 static int copper_access;
 
-uae_u16 clxdat;
+clxdat_reg clxdat;
 static uae_u16 clxcon, clxcon2;
 
 #define COP_INS_MOVE 0

@@ -329,7 +329,16 @@ bool check_rga(int slot);
 bool check_rga_free_slot_in(void);
 struct rgabuf *read_rga(int slot);
 struct rgabuf *write_rga(int slot, int type, uae_u16 v, uae_u32 *p);
-extern uae_u16 clxdat;
+// The Denise thread ORs collision bits into CLXDAT for every pixel. A main
+// thread variable sharing its cache line pays for those writes on every
+// chipset cycle, so CLXDAT owns a whole cache line.
+struct alignas(64) clxdat_reg {
+	uae_u16 v;
+	operator uae_u16() const { return v; }
+	clxdat_reg &operator=(uae_u32 n) { v = (uae_u16)n; return *this; }
+	clxdat_reg &operator|=(uae_u32 n) { v |= (uae_u16)n; return *this; }
+};
+extern clxdat_reg clxdat;
 #ifdef AMIBERRY
 extern uae_u32 magic_sprite_mask;
 #endif
