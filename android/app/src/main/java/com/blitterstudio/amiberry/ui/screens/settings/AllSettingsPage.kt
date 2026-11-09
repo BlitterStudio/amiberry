@@ -34,13 +34,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.blitterstudio.amiberry.R
-import com.blitterstudio.amiberry.data.model.EmulatorSettings
-import com.blitterstudio.amiberry.data.model.LauncherChoices
 import com.blitterstudio.amiberry.data.model.SettingsSchema
 import com.blitterstudio.amiberry.ui.components.settings.ReasonText
-import com.blitterstudio.amiberry.ui.components.settings.SchemaChoiceRow
 import com.blitterstudio.amiberry.ui.components.settings.SettingSwitchRow
-import com.blitterstudio.amiberry.ui.components.settings.settingText
 import com.blitterstudio.amiberry.ui.components.settings.settingsSchema
 import com.blitterstudio.amiberry.ui.dpadFocusIndicator
 import com.blitterstudio.amiberry.ui.dpadVerticalMovesFocus
@@ -96,10 +92,13 @@ fun AllSettingsPage(
 	// The rows of every group that has a match, in the layer's order
 	// (SettingsGroups.allSettingsRows: coupled pairs as one row, the managed
 	// options left out), and the memory boards a page shows only while in
-	// use listed too.
-	val sections = remember(settings, schema, terms, onlyChanged, frozenChanged) {
+	// use listed too. Rows the pages hide on this device (the registry's
+	// shows rules) are left out here as well.
+	val touch = hasTouchScreen()
+	val sections = remember(settings, schema, terms, onlyChanged, frozenChanged, touch) {
 		val changed = frozenChanged
 		fun matches(id: String): Boolean {
+			if (!SettingsOptionRows.shows(id, settings, touch)) return false
 			if (onlyChanged && id !in changed.orEmpty()) return false
 			if (terms.isEmpty()) return true
 			val option = schema.option(id) ?: return false
@@ -194,12 +193,9 @@ fun AllSettingsPage(
 						)
 					}
 					items(section.rows, key = { it.id }, contentType = { "row" }) { option ->
-						AllSettingsOptionRow(
-							option = option,
+						SettingsOptionRow(
+							id = option.id,
 							viewModel = viewModel,
-							settings = settings,
-							state = state,
-							schema = schema,
 							sectionTitle = stringResource(section.titleRes)
 						)
 					}
@@ -210,57 +206,6 @@ fun AllSettingsPage(
 					}
 				}
 			}
-		}
-	}
-}
-
-/**
- * One option's row on the All Settings page: the same row the page that owns
- * the option shows where the launcher has its own for it (the joyport
- * devices, the shader), else the generated row of its type.
- */
-@Composable
-private fun AllSettingsOptionRow(
-	option: SettingsSchema.Option,
-	viewModel: SettingsViewModel,
-	settings: EmulatorSettings,
-	state: Map<String, String>,
-	schema: SettingsSchema,
-	sectionTitle: String
-) {
-	when (option.id) {
-		// The integer scaling pair: one switch for the scaling method and the
-		// resolution autoswitch the constraints keep together.
-		"amiberry.scaling_method" -> IntegerScalingRow(viewModel)
-		// The schema has no device list (the layer enumerates the host's
-		// devices at run time), so the launcher offers its own.
-		"joyport0" -> SchemaChoiceRow(
-			id = "joyport0",
-			value = settings.joyport0,
-			choices = inputDeviceOptionIds(hasTouchScreen(), portIndex = 0).map { token ->
-				SettingsSchema.Choice(token, settingText(LauncherChoices.portDevice(token)))
-			},
-			onSelect = { value -> viewModel.updateSettings { s -> s.copy(joyport0 = value) } }
-		)
-		"joyport1" -> SchemaChoiceRow(
-			id = "joyport1",
-			value = settings.joyport1,
-			choices = inputDeviceOptionIds(hasTouchScreen(), portIndex = 1).map { token ->
-				SettingsSchema.Choice(token, settingText(LauncherChoices.portDevice(token)))
-			},
-			onSelect = { value -> viewModel.updateSettings { s -> InputSettingsActions.selectPort1Device(s, value) } }
-		)
-		// The shader list is the catalog's, not the schema's.
-		"amiberry.shader" -> ShaderDropdownRow(viewModel)
-		else -> SchemaGroupRows(
-			options = listOf(option),
-			settings = settings,
-			state = state,
-			schema = schema,
-			showReasons = false,
-			sectionTitle = sectionTitle
-		) { id, value ->
-			viewModel.updateSettings { s -> s.withOption(id, value) }
 		}
 	}
 }
