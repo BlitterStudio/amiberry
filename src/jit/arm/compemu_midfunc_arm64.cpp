@@ -1731,6 +1731,7 @@ MIDFUNC(10,jitx_fpp_arith,(IMPTR fn, RR4 v1, RR4 v2, IM8 nvals, IM32 opext, IMPT
 		forget_about(v1);
 	if (nvals >= 2)
 		forget_about(v2);
+	writeback_consts();                        // the helper and (An)+/-(An) use the 68k registers in memory
 	prepare_for_call_1();
 	prepare_for_call_2();
 	uae_u32 *inline_done = nullptr;
@@ -1814,6 +1815,7 @@ MIDFUNC(7,jitx_fpp_generic,(IMPTR fn, RR4 a, IM8 hasea, IM32 opext, IMPTR nextp,
 		unlock2(r);
 		forget_about(a);                           // the address temporary (x1 has it): not written back
 	}
+	writeback_consts();                        // the helper uses the 68k registers in memory
 	prepare_for_call_1();
 	prepare_for_call_2();
 	uae_u32 *inline_done = nullptr;
@@ -1877,6 +1879,7 @@ MENDFUNC(7,jitx_fpp_generic,(IMPTR fn, RR4 a, IM8 hasea, IM32 opext, IMPTR nextp
 MIDFUNC(5,fpx_cc_gate,(IM32 opcode, IMPTR pcp, IM32 pc, IM8 bsun, IM8 fpiar))
 {
 	clobber_flags();
+	writeback_consts();                        // the interpreter handler may run instead
 	prepare_for_call_1();
 	prepare_for_call_2();
 	const uae_u32 pend = (uae_u32)((uintptr)&regs.fp_exp_pend - (uintptr)&regs);

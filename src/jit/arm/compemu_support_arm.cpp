@@ -2072,6 +2072,17 @@ static void flush_all(void)
         f_evict(FS1);
 }
 
+/* Constant 68k registers (moveq, lea) live only in the compiler's state:
+ * store them, as flush() does, before a helper that reads or writes the 68k
+ * registers in memory. Uses REG_WORK1/2 only. */
+static void writeback_consts(void)
+{
+    for (int i = 0; i <= FLAGTMP; i++) {
+        if (i != PC_P && isconst(i))
+            writeback_const(i);
+    }
+}
+
 
 /* Make sure all registers that will get clobbered by a call are
    save and sound in memory */
