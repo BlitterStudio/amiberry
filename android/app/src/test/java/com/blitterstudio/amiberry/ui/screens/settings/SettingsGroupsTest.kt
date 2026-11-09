@@ -48,15 +48,28 @@ class SettingsGroupsTest {
 	}
 
 	@Test
-	fun `all settings lists every option a row can edit, grouped in the layer's order`() {
+	fun `all settings lists every option a row can edit, except the managed ones`() {
 		val all = SettingsGroups.groupsOf(SettingsPage.AllSettings, schema)
-			.flatMap { SettingsGroups.options(schema, it, placed = emptySet()).map { o -> o.id } }
+			.flatMap { SettingsGroups.options(schema, it, placed = SettingsGroups.managed).map { o -> o.id } }
 		val listed = schema.options.values
 			.filter { !it.presetOnly && SettingsGroups.rowKind(it) != null }
 			.map { it.id }
+			// The launcher writes these itself (or resets them): no control works.
+			.filter { it !in SettingsGroups.managed }
 		assertEquals(listed.toSet(), all.toSet())
-		// Every group the layer has, in the layer's order, nothing placed left out.
+		// Every group the layer has, in the layer's order.
 		assertEquals(schema.options.values.map { it.group }.distinct(), SettingsGroups.groupsOf(SettingsPage.AllSettings, schema))
+		// The options whose working control is a page's own row are listed too.
+		assertTrue("joyport0" in all)
+		assertTrue("joyport1" in all)
+		assertTrue("amiberry.shader" in all)
+		assertTrue("cachesize" in all)
+		// The JIT cache takes 0 (off) or at least 128 KB, on every page that edits it.
+		val accepts = SettingsGroups.numberAccepts("cachesize")
+		assertTrue(accepts(0))
+		assertTrue(accepts(128))
+		assertFalse(accepts(64))
+		assertTrue(SettingsGroups.numberAccepts("ramsey")(3))
 	}
 
 	@Test

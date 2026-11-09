@@ -172,6 +172,27 @@ object SettingsGroups {
 		}
 	}
 
+	/** The JIT cache sizes offered in the cachesize field's menu (stored KB; 0 turns the JIT off). */
+	val jitCacheSuggestions = listOf(0, 1024, 2048, 4096, 8192, 16384)
+
+	/** The numbers a number field's menu offers (the JIT cache's sizes). */
+	fun numberSuggestions(option: SettingsSchema.Option): List<Int> =
+		if (option.id == "cachesize") jitCacheSuggestions else emptyList()
+
+	/**
+	 * The numbers a field accepts, shared by every row that edits [id]: the
+	 * JIT cache takes 0 (off) or at least 128 KB (cachesize_accepts in
+	 * settings_cpu.cpp) — the core silently drops the JIT for anything
+	 * between, so no field may store it.
+	 */
+	fun numberAccepts(id: String): (Int) -> Boolean = when (id) {
+		"cachesize" -> { size -> size == 0 || size >= 128 }
+		else -> { _ -> true }
+	}
+
+	/** [numberAccepts] for an option. */
+	fun numberAccepts(option: SettingsSchema.Option): (Int) -> Boolean = numberAccepts(option.id)
+
 	/**
 	 * Whether [id] shows, given each option's value ([value]): a board of
 	 * [after] shows while it or one of the options before it is in use.

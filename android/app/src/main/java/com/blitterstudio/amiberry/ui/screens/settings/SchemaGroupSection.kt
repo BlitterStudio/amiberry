@@ -153,6 +153,8 @@ internal fun SchemaGroupRows(
 				showReason = showReasons,
 				label = shownLabel,
 				semanticsLabel = semanticsLabel,
+				suggestions = SettingsGroups.numberSuggestions(option),
+				accepts = SettingsGroups.numberAccepts(option),
 				onStoredChange = { onChange(id, numberValue(option, it)) }
 			)
 			null -> Unit

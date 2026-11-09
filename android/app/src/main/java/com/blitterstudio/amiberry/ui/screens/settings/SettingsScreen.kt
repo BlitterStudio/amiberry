@@ -401,7 +401,9 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel(LocalContext.current
 					}
 				},
 				modifier = Modifier
-					.focusProperties { up = pageContentFocus }
+					// With the phone's page list showing, Up lands on the list, not
+					// on a page that is not composed.
+					.focusProperties { up = if (wide || pageOpen) pageContentFocus else categoryFocus }
 					.dpadFocusIndicator(),
 				icon = {
 					if (launchInProgress) {

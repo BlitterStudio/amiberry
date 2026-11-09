@@ -29,12 +29,12 @@ class DisplayShaderSelectorArchitectureTest {
 	@Test
 	fun `places native shader selector after integer scaling in the first display card`() {
 		val integerScaling = source.indexOf("R.string.settings_display_integer_scaling")
-		val shaderLabel = source.indexOf("R.string.settings_display_shader_label")
+		val shaderSelector = source.indexOf("ShaderDropdownRow(viewModel)")
 		val appTheme = source.indexOf("R.string.settings_display_app_theme")
 
 		assertTrue(integerScaling >= 0)
-		assertTrue(shaderLabel > integerScaling)
-		assertTrue(appTheme > shaderLabel)
+		assertTrue(shaderSelector > integerScaling)
+		assertTrue(appTheme > shaderSelector)
 	}
 
 	@Test

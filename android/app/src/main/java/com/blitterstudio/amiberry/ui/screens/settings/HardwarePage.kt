@@ -19,9 +19,6 @@ import com.blitterstudio.amiberry.ui.components.settings.SchemaSwitchRow
 import com.blitterstudio.amiberry.ui.components.settings.schemaOption
 import com.blitterstudio.amiberry.ui.viewmodel.SettingsViewModel
 
-/** The JIT cache sizes offered in the size field's menu (stored KB; 0 turns the JIT off). */
-private val JIT_CACHE_SUGGESTIONS = listOf(0, 1024, 2048, 4096, 8192, 16384)
-
 /**
  * The Hardware page: a section per layer group, from the CPU to the genlock
  * (Apple's generated Hardware page), the launcher's own rows first in the
@@ -84,9 +81,9 @@ fun HardwarePage(viewModel: SettingsViewModel) {
 			SchemaNumberRow(
 				id = "cachesize",
 				stored = settings.jitCacheSize,
-				suggestions = JIT_CACHE_SUGGESTIONS,
-				// The core takes 0 (off) or at least 128 KB (cachesize_accepts in settings_cpu.cpp).
-				accepts = { it == 0 || it >= 128 },
+				suggestions = SettingsGroups.jitCacheSuggestions,
+				// The core takes 0 (off) or at least 128 KB (SettingsGroups.numberAccepts).
+				accepts = SettingsGroups.numberAccepts("cachesize"),
 				enabled = SettingsControlAvailability.isAvailable(settings, "cachesize"),
 				onStoredChange = { size -> viewModel.updateSettings { s -> s.withOption("cachesize", size.toString()) } }
 			)

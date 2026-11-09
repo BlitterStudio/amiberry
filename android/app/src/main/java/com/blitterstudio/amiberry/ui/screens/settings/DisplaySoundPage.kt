@@ -197,75 +197,7 @@ fun DisplaySoundPage(viewModel: SettingsViewModel) {
 
 				Spacer(modifier = Modifier.height(8.dp))
 
-				var shaderExpanded by remember { mutableStateOf(false) }
-				val shaderUnavailable =
-					viewModel.shaderCatalogStatus == SettingsViewModel.ShaderCatalogStatus.LOADED &&
-						settings.shader !in viewModel.shaderCatalogEntries
-				val unavailableLabel = stringResource(R.string.settings_display_shader_unavailable)
-				val shaderName = settingText(LauncherChoices.shader(settings.shader))
-				val shaderDisplayValue = if (shaderUnavailable) {
-					stringResource(
-						R.string.settings_display_shader_unavailable_value,
-						shaderName,
-						unavailableLabel
-					)
-				} else {
-					shaderName
-				}
-				val shaderSupportingText = stringResource(
-					if (shaderUnavailable) {
-						R.string.settings_display_shader_unavailable_help
-					} else {
-						R.string.settings_display_shader_help
-					}
-				)
-
-				ExposedDropdownMenuBox(
-					expanded = shaderExpanded,
-					onExpandedChange = { shaderExpanded = it }
-				) {
-					OutlinedTextField(
-						value = shaderDisplayValue,
-						onValueChange = {},
-						readOnly = true,
-						label = { Text(stringResource(R.string.settings_display_shader_label)) },
-						isError = shaderUnavailable,
-						trailingIcon = {
-							ExposedDropdownMenuDefaults.TrailingIcon(expanded = shaderExpanded)
-						},
-						modifier = Modifier
-							.dpadFieldFocusIndicator()
-							.dpadArrowsMoveFocus()
-							.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
-							.fillMaxWidth()
-					)
-					ExposedDropdownMenu(
-						expanded = shaderExpanded,
-						onDismissRequest = { shaderExpanded = false }
-					) {
-						viewModel.shaderCatalogEntries.forEach { shader ->
-							DropdownMenuItem(
-								text = { Text(settingText(LauncherChoices.shader(shader))) },
-								modifier = Modifier.dpadMenuItemInitialFocus(shader == settings.shader),
-								onClick = {
-									if (shader != settings.shader) {
-										viewModel.updateSettings { s -> s.copy(shader = shader) }
-									}
-									shaderExpanded = false
-								}
-							)
-						}
-						if (shaderUnavailable) {
-							DropdownMenuItem(
-								text = { Text(shaderDisplayValue) },
-								onClick = {},
-								enabled = false
-							)
-						}
-					}
-				}
-				// Under the field like every other row's help, not inside it (Material indents that).
-				SupportingText(shaderSupportingText)
+				ShaderDropdownRow(viewModel)
 			}
 		}
 
@@ -460,4 +392,85 @@ private fun SoundSections(viewModel: SettingsViewModel) {
 			}
 		}
 	}
+}
+
+/**
+ * The native screen shader as a dropdown of the catalog's entries (the
+ * built-ins and the shaders folder scan), the configured shader named and
+ * marked when the catalog has lost it. Shared by the Display & Sound page
+ * and All Settings, so both offer the shader the same way.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun ShaderDropdownRow(viewModel: SettingsViewModel) {
+	val settings = viewModel.settings
+	var shaderExpanded by remember { mutableStateOf(false) }
+	val shaderUnavailable =
+		viewModel.shaderCatalogStatus == SettingsViewModel.ShaderCatalogStatus.LOADED &&
+			settings.shader !in viewModel.shaderCatalogEntries
+	val unavailableLabel = stringResource(R.string.settings_display_shader_unavailable)
+	val shaderName = settingText(LauncherChoices.shader(settings.shader))
+	val shaderDisplayValue = if (shaderUnavailable) {
+		stringResource(
+			R.string.settings_display_shader_unavailable_value,
+			shaderName,
+			unavailableLabel
+		)
+	} else {
+		shaderName
+	}
+	val shaderSupportingText = stringResource(
+		if (shaderUnavailable) {
+			R.string.settings_display_shader_unavailable_help
+		} else {
+			R.string.settings_display_shader_help
+		}
+	)
+
+	ExposedDropdownMenuBox(
+		expanded = shaderExpanded,
+		onExpandedChange = { shaderExpanded = it }
+	) {
+		OutlinedTextField(
+			value = shaderDisplayValue,
+			onValueChange = {},
+			readOnly = true,
+			label = { Text(stringResource(R.string.settings_display_shader_label)) },
+			isError = shaderUnavailable,
+			trailingIcon = {
+				ExposedDropdownMenuDefaults.TrailingIcon(expanded = shaderExpanded)
+			},
+			modifier = Modifier
+				.dpadFieldFocusIndicator()
+				.dpadArrowsMoveFocus()
+				.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
+				.fillMaxWidth()
+		)
+		ExposedDropdownMenu(
+			expanded = shaderExpanded,
+			onDismissRequest = { shaderExpanded = false }
+		) {
+			viewModel.shaderCatalogEntries.forEach { shader ->
+				DropdownMenuItem(
+					text = { Text(settingText(LauncherChoices.shader(shader))) },
+					modifier = Modifier.dpadMenuItemInitialFocus(shader == settings.shader),
+					onClick = {
+						if (shader != settings.shader) {
+							viewModel.updateSettings { s -> s.copy(shader = shader) }
+						}
+						shaderExpanded = false
+					}
+				)
+			}
+			if (shaderUnavailable) {
+				DropdownMenuItem(
+					text = { Text(shaderDisplayValue) },
+					onClick = {},
+					enabled = false
+				)
+			}
+		}
+	}
+	// Under the field like every other row's help, not inside it (Material indents that).
+	SupportingText(shaderSupportingText)
 }
