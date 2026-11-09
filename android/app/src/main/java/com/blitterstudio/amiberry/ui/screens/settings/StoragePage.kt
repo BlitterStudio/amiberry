@@ -18,7 +18,6 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Album
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Eject
-import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.SaveAlt
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.ui.text.input.ImeAction
@@ -85,13 +84,12 @@ import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun StorageTab(
+fun StoragePage(
 	viewModel: SettingsViewModel,
 	onImportResult: (FileManager.ImportResult) -> Unit = {}
 ) {
 	val context = LocalContext.current
 	val settings = viewModel.settings
-	val roms by viewModel.availableRoms.collectAsState()
 	val floppies by viewModel.availableFloppies.collectAsState()
 	val cds by viewModel.availableCds.collectAsState()
 	val hardDrives by viewModel.availableHardDrives.collectAsState()
@@ -105,43 +103,6 @@ fun StorageTab(
 			.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 120.dp),
 		verticalArrangement = Arrangement.spacedBy(16.dp)
 	) {
-		// ROM selection
-		OutlinedCard(modifier = Modifier.fillMaxWidth()) {
-			Column(modifier = Modifier.padding(16.dp)) {
-				Row(verticalAlignment = Alignment.CenterVertically) {
-					Icon(Icons.Default.Memory, contentDescription = null, modifier = Modifier.size(20.dp))
-					Spacer(modifier = Modifier.width(8.dp))
-					Text(stringResource(R.string.settings_storage_kickstart_rom_title), style = MaterialTheme.typography.titleMedium)
-				}
-				Spacer(modifier = Modifier.height(8.dp))
-
-				if (!shouldShowStorageFileDropdown(roms, settings.romFile)) {
-					Text(
-						stringResource(R.string.settings_storage_no_roms_found),
-						style = MaterialTheme.typography.bodySmall,
-						color = MaterialTheme.colorScheme.error
-					)
-				} else {
-					FileDropdown(
-						label = schemaLabel("kickstart_rom_file"),
-						files = kickstartRomFiles(roms),
-						selectedPath = settings.romFile,
-						onSelect = { path -> viewModel.updateSettings { s -> s.withKickstartRom(path) } },
-						onClear = { viewModel.updateSettings { s -> s.copy(romFile = "") } },
-						emptyLabel = stringResource(R.string.settings_storage_rom_automatic),
-						extraPaths = if (ModelRomAvailability.hasBuiltInAros(roms)) {
-							listOf(ModelRomAvailability.arosRomFile)
-						} else {
-							emptyList()
-						},
-						help = schemaOption("kickstart_rom_file")?.help?.takeIf { it.isNotBlank() },
-						fileLabel = { romLabel(it) },
-						pathLabel = { path -> romPathLabel(path, roms) }
-					)
-				}
-			}
-		}
-
 		// Floppy drives
 		OutlinedCard(modifier = Modifier.fillMaxWidth()) {
 			Column(modifier = Modifier.padding(16.dp)) {
@@ -152,76 +113,23 @@ fun StorageTab(
 				}
 				Spacer(modifier = Modifier.height(8.dp))
 
-				// DF0
-				FloppyDriveRow(
-					index = 0,
-					label = stringResource(R.string.settings_storage_drive_df0),
-					files = floppies,
-					selectedPath = settings.floppy0,
-					driveType = settings.floppy0Type,
-					onSelect = { viewModel.updateSettings { s -> s.copy(floppy0 = it) } },
-					onClear = { viewModel.updateSettings { s -> s.copy(floppy0 = "") } },
-					onTypeChange = { viewModel.updateSettings { s -> s.copy(floppy0Type = it) } },
-					context = context,
-					importGuard = importGuard,
-					importInProgress = importInProgress,
-					onImportResult = onImportResult
-				)
-
-				Spacer(modifier = Modifier.height(8.dp))
-
-				// DF1
-				FloppyDriveRow(
-					index = 1,
-					label = stringResource(R.string.settings_storage_drive_df1),
-					files = floppies,
-					selectedPath = settings.floppy1,
-					driveType = settings.floppy1Type,
-					onSelect = { viewModel.updateSettings { s -> s.copy(floppy1 = it) } },
-					onClear = { viewModel.updateSettings { s -> s.copy(floppy1 = "") } },
-					onTypeChange = { viewModel.updateSettings { s -> s.copy(floppy1Type = it) } },
-					context = context,
-					importGuard = importGuard,
-					importInProgress = importInProgress,
-					onImportResult = onImportResult
-				)
-
-				Spacer(modifier = Modifier.height(8.dp))
-
-				// DF2
-				FloppyDriveRow(
-					index = 2,
-					label = stringResource(R.string.settings_storage_drive_df2),
-					files = floppies,
-					selectedPath = settings.floppy2,
-					driveType = settings.floppy2Type,
-					onSelect = { viewModel.updateSettings { s -> s.copy(floppy2 = it) } },
-					onClear = { viewModel.updateSettings { s -> s.copy(floppy2 = "") } },
-					onTypeChange = { viewModel.updateSettings { s -> s.copy(floppy2Type = it) } },
-					context = context,
-					importGuard = importGuard,
-					importInProgress = importInProgress,
-					onImportResult = onImportResult
-				)
-
-				Spacer(modifier = Modifier.height(8.dp))
-
-				// DF3
-				FloppyDriveRow(
-					index = 3,
-					label = stringResource(R.string.settings_storage_drive_df3),
-					files = floppies,
-					selectedPath = settings.floppy3,
-					driveType = settings.floppy3Type,
-					onSelect = { viewModel.updateSettings { s -> s.copy(floppy3 = it) } },
-					onClear = { viewModel.updateSettings { s -> s.copy(floppy3 = "") } },
-					onTypeChange = { viewModel.updateSettings { s -> s.copy(floppy3Type = it) } },
-					context = context,
-					importGuard = importGuard,
-					importInProgress = importInProgress,
-					onImportResult = onImportResult
-				)
-				Spacer(modifier = Modifier.height(8.dp))
+				for (index in 0..3) {
+					FloppyDriveRow(
+						index = index,
+						label = stringResource(driveLabelRes(index)),
+						files = floppies,
+						selectedPath = settings.drivePath(index),
+						driveType = settings.driveType(index),
+						onSelect = { path -> viewModel.updateSettings { s -> s.withDrivePath(index, path) } },
+						onClear = { viewModel.updateSettings { s -> s.withDrivePath(index, "") } },
+						onTypeChange = { type -> viewModel.updateSettings { s -> s.withDriveType(index, type) } },
+						context = context,
+						importGuard = importGuard,
+						importInProgress = importInProgress,
+						onImportResult = onImportResult
+					)
+					Spacer(modifier = Modifier.height(8.dp))
+				}
 				SchemaGroupInlineRows("floppy", viewModel)
 			}
 		}
@@ -352,7 +260,7 @@ internal fun EmulatorSettings.withKickstartRom(path: String): EmulatorSettings =
 
 /** A scanned ROM by what it is: its Kickstart name, or its file name. */
 @Composable
-private fun romLabel(rom: AmigaFile): String = when (val identity = ModelRomAvailability.romIdentity(rom)) {
+internal fun romLabel(rom: AmigaFile): String = when (val identity = ModelRomAvailability.romIdentity(rom)) {
 	is RomIdentity.Kickstart -> identity.name
 	RomIdentity.BuiltInAros, RomIdentity.Unknown -> rom.name
 }
@@ -363,7 +271,7 @@ private fun romLabel(rom: AmigaFile): String = when (val identity = ModelRomAvai
  * which does not boot AROS, reads as that file).
  */
 @Composable
-private fun romPathLabel(path: String, roms: List<AmigaFile>): String = when {
+internal fun romPathLabel(path: String, roms: List<AmigaFile>): String = when {
 	ModelRomAvailability.isBuiltInArosRom(path) -> stringResource(R.string.rom_aros_builtin)
 	else -> roms.firstOrNull { it.path == path }?.let { romLabel(it) } ?: LauncherChoices.fileName(path)
 }
@@ -375,7 +283,7 @@ private fun romPathLabel(path: String, roms: List<AmigaFile>): String = when {
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun FileDropdown(
+internal fun FileDropdown(
 	label: String,
 	files: List<AmigaFile>,
 	selectedPath: String,
@@ -462,7 +370,7 @@ private fun FileDropdown(
 }
 
 @Composable
-private fun FloppyDriveRow(
+internal fun FloppyDriveRow(
 	index: Int,
 	label: String,
 	files: List<AmigaFile>,

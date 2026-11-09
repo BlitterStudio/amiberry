@@ -3,6 +3,7 @@ package com.blitterstudio.amiberry.ui.screens.settings
 import com.blitterstudio.amiberry.data.ConfigGenerator
 import com.blitterstudio.amiberry.data.ConfigParser
 import com.blitterstudio.amiberry.data.model.EmulatorSettings
+import com.blitterstudio.amiberry.data.model.EmulatorSettingsConstraints
 import com.blitterstudio.amiberry.data.model.SettingsSchema
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -19,38 +20,137 @@ class SettingsGroupsTest {
 
 	private val schema = SettingsSchema.current!!
 
-	/** Every option each tab shows: its own rows, then its groups' sections. */
-	private fun shownByTab(): Map<SettingsTab, List<String>> = SettingsTabs.all.associateWith { tab ->
-		SettingsGroups.laidOut[tab].orEmpty().toList() +
-			SettingsGroups.byTab.getValue(tab).flatMap { SettingsGroups.options(schema, it.group).map { o -> o.id } }
-	}
+	/** Every option each content page shows: its own rows, then its groups' sections. */
+	private fun shownByPage(): Map<SettingsPage, List<String>> =
+		SettingsPages.all.associateWith { page ->
+			SettingsGroups.laidOut[page].orEmpty().toList() +
+				SettingsGroups.byPage[page].orEmpty().flatMap { SettingsGroups.options(schema, it.group).map { o -> o.id } }
+		}
 
 	@Test
-	fun `every listed option shows exactly once across the tabs`() {
+	fun `every listed option shows exactly once across the pages`() {
 		val listed = schema.options.values.filter { !it.presetOnly }.map { it.id }
-		val shown = shownByTab().values.flatten() + SettingsGroups.managed
+		val shown = shownByPage().values.flatten() + SettingsGroups.managed
 		assertEquals(shown.size, shown.toSet().size)
 		assertEquals(listed.toSet(), shown.toSet())
 	}
+	@Test
+	fun `each option lands on exactly one page, the page that owns it`() {
+		for (option in schema.options.values) {
+			if (option.presetOnly || option.id in SettingsGroups.managed) continue
+			assertEquals(option.id, SettingsGroups.pageFor(option.id), pageOwning(option.id))
+		}
+	}
+
+	/** The page the option's group section or own row shows it on, computed independently of pageFor. */
+	private fun pageOwning(optionId: String): SettingsPage {
+		val own = shownByPage().entries.singleOrNull { (_, ids) -> optionId in ids }
+		return own?.key ?: error("$optionId shows on no page")
+	}
 
 	@Test
-	fun `every tab has a place and each group one tab`() {
-		assertEquals(SettingsTabs.all.toSet(), SettingsGroups.byTab.keys)
-		val groups = SettingsGroups.byTab.values.flatten().map { it.group }
+	fun `all settings lists every option a row can edit, except the managed and coupled ones`() {
+		val all = SettingsGroups.groupsOf(SettingsPage.AllSettings, schema)
+			.flatMap { SettingsGroups.allSettingsRows(schema, it) { _ -> true }.map { o -> o.id } }
+		val listed = schema.options.values
+			.filter { !it.presetOnly && SettingsGroups.rowKind(it) != null }
+			.map { it.id }
+			// The launcher writes these itself (or resets them): no control works.
+			.filter { it !in SettingsGroups.managed }
+			// A coupled pair shows as its first member's row alone.
+			.filter { id -> SettingsGroups.coupledPairOf(id)?.let { it.first() == id } ?: true }
+		assertEquals(listed.toSet(), all.toSet())
+		// Every group the layer has, in the layer's order.
+		assertEquals(schema.options.values.map { it.group }.distinct(), SettingsGroups.groupsOf(SettingsPage.AllSettings, schema))
+		// The options whose working control is a page's own row are listed too.
+		assertTrue("joyport0" in all)
+		assertTrue("joyport1" in all)
+		assertTrue("amiberry.shader" in all)
+		assertTrue("cachesize" in all)
+		// The JIT cache takes 0 (off) or at least 128 KB, on every page that edits it.
+		val accepts = SettingsGroups.numberAccepts("cachesize")
+		assertTrue(accepts(0))
+		assertTrue(accepts(128))
+		assertFalse(accepts(64))
+		assertTrue(SettingsGroups.numberAccepts("ramsey")(3))
+	}
+
+	@Test
+	fun `a coupled pair shows as one row that matches when either half does`() {
+		assertEquals(
+			listOf("amiberry.scaling_method", "gfx_autoresolution"),
+			SettingsGroups.coupledPairOf("gfx_autoresolution")
+		)
+
+		// Both halves' rows collapse into the first's, shown once.
+		assertEquals(
+			listOf("amiberry.scaling_method"),
+			SettingsGroups.allSettingsRows(schema, "display") { _ -> true }
+				.map { it.id }.filter { SettingsGroups.coupledPairOf(it) != null }
+		)
+		// A search that matches only the second half still finds the pair's row.
+		assertEquals(
+			listOf("amiberry.scaling_method"),
+			SettingsGroups.allSettingsRows(schema, "display") { it == "gfx_autoresolution" }.map { it.id }
+		)
+		// A search that matches neither half shows neither.
+		assertTrue(SettingsGroups.allSettingsRows(schema, "display") { false }.isEmpty())
+	}
+
+	@Test
+	fun `the constraints restore a coupled half edited alone, so pages pair the update`() {
+		val integer = EmulatorSettings().copy(scalingMethod = 2, gfxAutoresolution = 1)
+
+		// Turning one half off alone is restored from the other.
+		val halfOff = EmulatorSettingsConstraints.apply(
+			integer.withOption("amiberry.scaling_method", "0"),
+			hasTouchScreen = true
+		)
+		assertEquals(2, halfOff.scalingMethod)
+		assertEquals(1, halfOff.gfxAutoresolution)
+
+		// Both together turn it off (the paired row's update).
+		val bothOff = EmulatorSettingsConstraints.apply(
+			integer.copy(scalingMethod = -1, gfxAutoresolution = 0),
+			hasTouchScreen = true
+		)
+		assertEquals(-1, bothOff.scalingMethod)
+		assertEquals(0, bothOff.gfxAutoresolution)
+	}
+
+	@Test
+	fun `each group has exactly one page and every page has a place`() {
+		assertEquals(SettingsPages.all.filter { it != SettingsPage.AllSettings }.toSet(), SettingsGroups.byPage.keys)
+		val groups = SettingsGroups.byPage.values.flatten().map { it.group }
 		assertEquals(groups.size, groups.toSet().size)
+		// Every group the layer has is placed (Apple's pages, without the ones the
+		// launcher's layer does not have: no x86, diskswapper, drawbridge or priority).
+		assertEquals(schema.options.values.map { it.group }.distinct().toSet(), groups.toSet())
 		groups.forEach { SettingsGroups.titleRes(it) }
+	}
+
+	@Test
+	fun `the pages cover the Apple app's groups`() {
+		assertEquals(
+			listOf("cpu", "mmu", "fpu", "cpu_speed", "jit", "chipset", "adv_chipset", "memory", "rom", "accelerator", "rtg", "expansions", "ppc", "genlock"),
+			SettingsGroups.byPage.getValue(SettingsPage.Hardware).map { it.group }
+		)
+		assertEquals(listOf("display", "filter", "sound"), SettingsGroups.byPage.getValue(SettingsPage.DisplaySound).map { it.group })
+		assertEquals(listOf("input", "onscreen"), SettingsGroups.byPage.getValue(SettingsPage.Input).map { it.group })
+		assertEquals(listOf("floppy", "cd", "filesystem"), SettingsGroups.byPage.getValue(SettingsPage.Storage).map { it.group })
+		assertEquals(listOf("misc", "io"), SettingsGroups.byPage.getValue(SettingsPage.PortsMisc).map { it.group })
 	}
 
 	@Test
 	fun `options a preset alone sets do not show`() {
 		val presetOnly = schema.options.values.filter { it.presetOnly }.map { it.id }
 		assertTrue("ppc_model" in presetOnly)
-		val shown = shownByTab().values.flatten()
+		val shown = shownByPage().values.flatten()
 		assertTrue(presetOnly.none { it in shown })
 	}
 
 	@Test
-	fun `a group section follows the layer order and leaves out the tab's own rows`() {
+	fun `a group section follows the layer order and leaves out the page's own rows`() {
 		val cpu = SettingsGroups.options(schema, "cpu").map { it.id }
 		assertEquals(listOf("cpu_no_unimplemented", "cpu_data_cache"), cpu)
 		val order = schema.options.keys.toList()
@@ -97,6 +197,56 @@ class SettingsGroupsTest {
 		assertTrue(shows("z3mem2_size", bare.copy(z3Ram = 64)))
 		// A board in use shows even when the one before it is not.
 		assertTrue(shows("z3mem3_size", bare.withOption("z3mem3_size", "16")))
+	}
+
+	@Test
+	fun `an option is named in its section's words, not the section's`() {
+		// The Apple app's OptionSection.label(_:in:).
+		assertEquals("Extra", SettingsGroups.labelIn("Chipset extra", "Chipset"))
+		assertEquals("Adjustment", SettingsGroups.labelIn("CPU speed adjustment", "CPU speed"))
+		assertEquals("Image", SettingsGroups.labelIn("DF0: image", "DF0:"))
+		// A label that is the section's name stays.
+		assertEquals("Chipset", SettingsGroups.labelIn("Chipset", "Chipset"))
+		// A label that only starts with the same letters stays.
+		assertEquals("Floppy drive emulation speed", SettingsGroups.labelIn("Floppy drive emulation speed", "Floppy drives"))
+		// A label the section does not start stays whole.
+		assertEquals("NTSC", SettingsGroups.labelIn("NTSC", "Chipset"))
+		// A prefix that is not followed by a space or colon stays whole.
+		assertEquals("Chipsetry", SettingsGroups.labelIn("Chipsetry", "Chipset"))
+		// A label that is the section plus a separator alone stays.
+		assertEquals("Chipset:", SettingsGroups.labelIn("Chipset:", "Chipset"))
+	}
+
+	@Test
+	fun `a section's footer says each unavailability reason once, naming a lone option`() {
+		// The Apple app's OptionSection.constraintNotes.
+		val a = schema.option("cpu_data_cache")!!.copy(constraint = "Needs a CPU with a data cache")
+		val b = schema.option("cpu_no_unimplemented")!!.copy(constraint = "Needs a CPU with a data cache")
+		val lone = schema.option("mmu_model")!!.copy(constraint = "Needs a 68030 or better")
+
+		// Two options share a reason: it is said once, no names.
+		assertEquals(
+			listOf("Needs a CPU with a data cache"),
+			SettingsGroups.constraintNotes(listOf(a, b)) { false }
+		)
+		// A reason one option has names it, unless it starts with the option's name.
+		assertEquals(
+			listOf(
+				"Data cache emulation: Needs a CPU with a data cache",
+				"MMU: Needs a 68030 or better"
+			),
+			SettingsGroups.constraintNotes(listOf(a, lone)) { false }
+		)
+		val named = lone.copy(constraint = "MMU needs a 68030 or better")
+		assertEquals(
+			listOf("MMU needs a 68030 or better"),
+			SettingsGroups.constraintNotes(listOf(named)) { false }
+		)
+		// Available options say nothing.
+		assertTrue(SettingsGroups.constraintNotes(listOf(a, lone)) { true }.isEmpty())
+		// Options without a constraint say nothing.
+		val quiet = schema.option("ntsc")!!.copy(constraint = null)
+		assertTrue(SettingsGroups.constraintNotes(listOf(quiet)) { false }.isEmpty())
 	}
 
 	@Test

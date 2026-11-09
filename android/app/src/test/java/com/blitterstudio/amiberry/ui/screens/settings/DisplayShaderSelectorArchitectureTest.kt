@@ -7,7 +7,7 @@ import java.io.File
 class DisplayShaderSelectorArchitectureTest {
 
 	private val source =
-		File("src/main/java/com/blitterstudio/amiberry/ui/screens/settings/DisplayTab.kt").readText()
+		File("src/main/java/com/blitterstudio/amiberry/ui/screens/settings/DisplaySoundPage.kt").readText()
 
 	@Test
 	fun `refreshes the shader catalog on display entry and lifecycle resume`() {
@@ -28,13 +28,13 @@ class DisplayShaderSelectorArchitectureTest {
 
 	@Test
 	fun `places native shader selector after integer scaling in the first display card`() {
-		val integerScaling = source.indexOf("R.string.settings_display_integer_scaling")
-		val shaderLabel = source.indexOf("R.string.settings_display_shader_label")
+		val integerScaling = source.indexOf("SettingsOptionRow(\"amiberry.scaling_method\"")
+		val shaderSelector = source.indexOf("SettingsOptionRow(\"amiberry.shader\"")
 		val appTheme = source.indexOf("R.string.settings_display_app_theme")
 
 		assertTrue(integerScaling >= 0)
-		assertTrue(shaderLabel > integerScaling)
-		assertTrue(appTheme > shaderLabel)
+		assertTrue(shaderSelector > integerScaling)
+		assertTrue(appTheme > shaderSelector)
 	}
 
 	@Test

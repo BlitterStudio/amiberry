@@ -1,9 +1,12 @@
 package com.blitterstudio.amiberry.ui.screens.settings
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.BringIntoViewSpec
 import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -16,19 +19,21 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -43,11 +48,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.PrimaryScrollableTabRow
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -131,22 +134,35 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel(LocalContext.current
 	val launchInProgress = launchGuard.isLaunching
 	val importGuard = rememberImportInFlightGuard()
 	val importInProgress = importGuard.isImporting
-	var selectedTab by rememberSaveable { mutableIntStateOf(0) }
+	var selectedPage by rememberSaveable { mutableIntStateOf(0) }
+	// On a phone, whether a page is open over the list of pages; Back returns to the list.
+	var pageOpen by rememberSaveable { mutableStateOf(false) }
 	// The name the Save dialog opens with; null while it is closed.
 	var saveAsName by remember { mutableStateOf<String?>(null) }
 	var overwriteRequest by remember { mutableStateOf<OverwriteRequest?>(null) }
 	var showTopBarMenu by remember { mutableStateOf(false) }
 	var showReviewChangesDialog by remember { mutableStateOf(false) }
+	var showRevertDialog by remember { mutableStateOf(false) }
 	var showQuickSetups by remember { mutableStateOf(false) }
 	val availableRoms by viewModel.availableRoms.collectAsState()
 	val canStart = viewModel.settings.romFile.isNotBlank() || availableRoms.isNotEmpty()
 	val startGuard = LocalStartGuard.current
-	// Up from Start returns to the control last focused in the tab; the 2D search
-	// would jump over the scrolled tab to the controls above it.
-	val tabContentFocus = remember { FocusRequester() }
-	// The tab row or the category list, where D-pad focus enters the screen.
+	// Up from Start returns to the control last focused in the page; the 2D search
+	// would jump over the scrolled page to the controls above it.
+	val pageContentFocus = remember { FocusRequester() }
+	// The page list or the side list, where D-pad focus enters the screen.
 	val categoryFocus = remember { FocusRequester() }
 	val keyboardMode = LocalInputModeManager.current.inputMode == InputMode.Keyboard
+	val wide = windowWidthClass().showsSideList
+	val pages = SettingsPages.all
+	val page = SettingsPages.pageFor(selectedPage)
+	// The sidebar's marks (the Apple app's): an existing machine's edits,
+	// page by page. All Settings lists them all, so it is not marked.
+	val editedPages = if (viewModel.currentConfigName != null) {
+		SettingsPages.editedPages(viewModel.changeSummary)
+	} else {
+		emptySet()
+	}
 	fun importResultMessage(result: FileManager.ImportResult): String {
 		val message = ImportFeedback.fromImportResult(result)
 		return context.getString(message.stringRes, message.argument)
@@ -173,8 +189,7 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel(LocalContext.current
 		}
 	}
 
-	val tabs = SettingsTabs.all
-	val validSelectedTab = SettingsTabs.validSelectedIndex(selectedTab)
+	val validSelectedPage = SettingsPages.validSelectedIndex(selectedPage)
 	val romRequiredMessage = stringResource(R.string.msg_rom_required_before_start)
 	val configWriteFailedMessage = stringResource(R.string.msg_failed_save_config)
 	val launchFailedMessage = stringResource(R.string.msg_failed_launch_config)
@@ -202,13 +217,19 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel(LocalContext.current
 		}
 	}
 
-	// Another screen switched here with a button (Configurations' Edit or New), whose
-	// focus is gone with it: D-pad focus starts on the tab row or the category list
-	// instead of falling back to the navigation rail.
+	// Another screen switched here with a button (the Library's Edit or New), whose
+	// focus is gone with it: D-pad focus starts on the page list or the side list
+	// instead of falling back to the navigation rail. Entering starts at the list —
+	// the category focus is attached to the phone's page list or the side list, and
+	// a page left open would leave it attached nowhere (a page's content focus is
+	// only requested once composed; every other requestFocus target in this screen
+	// — the overflow button, the dialogs' buttons, the hard-drive rows' — is
+	// composed before its effect can run).
 	LaunchedEffect(viewModel.focusOnEntry) {
 		if (!viewModel.focusOnEntry) return@LaunchedEffect
 		viewModel.focusOnEntry = false
 		if (keyboardMode) {
+			pageOpen = false
 			withFrameNanos { }
 			categoryFocus.requestFocus()
 		}
@@ -226,13 +247,26 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel(LocalContext.current
 		}
 	}
 
+	// A page open on a phone: Back returns to the list of pages (the shell's
+	// unsaved-changes question takes Back from the list).
+	BackHandler(enabled = !wide && pageOpen) { pageOpen = false }
+
 	Scaffold(
 		snackbarHost = { SnackbarHost(snackbarHostState) },
 		topBar = {
 			TopAppBar(
 				title = {
 					Column {
+						// The machine being edited, the page under it (the Apple
+						// editor's window title).
 						Text(viewModel.currentConfigName ?: stringResource(R.string.settings_new_configuration))
+						if (wide || pageOpen) {
+							Text(
+								text = stringResource(page.titleRes),
+								style = MaterialTheme.typography.labelSmall,
+								color = MaterialTheme.colorScheme.onSurfaceVariant
+							)
+						}
 						// New configurations too: their changes from the model's preset are kept only by Save.
 						if (viewModel.hasUnsavedChanges) {
 							Text(
@@ -281,6 +315,16 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel(LocalContext.current
 							onClick = {
 								showTopBarMenu = false
 								openSaveAs()
+							}
+						)
+						DropdownMenuItem(
+							text = { Text(stringResource(R.string.action_revert)) },
+							modifier = Modifier.dpadFocusIndicator(),
+							leadingIcon = { Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = null) },
+							enabled = viewModel.hasUnsavedChanges,
+							onClick = {
+								showTopBarMenu = false
+								showRevertDialog = true
 							}
 						)
 						DropdownMenuItem(
@@ -363,7 +407,9 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel(LocalContext.current
 					}
 				},
 				modifier = Modifier
-					.focusProperties { up = tabContentFocus }
+					// With the phone's page list showing, Up lands on the list, not
+					// on a page that is not composed.
+					.focusProperties { up = if (wide || pageOpen) pageContentFocus else categoryFocus }
 					.dpadFocusIndicator(),
 				icon = {
 					if (launchInProgress) {
@@ -395,67 +441,71 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel(LocalContext.current
 				snackbarHostState.showSnackbar(importResultMessage(result))
 			}
 		}
-		if (windowWidthClass().showsSideList) {
-			// Wide windows list the tabs down the left, the selected tab's page beside them.
+		if (wide) {
+			// Wide windows and the TV list the pages down the left, the selected page beside them.
 			Row(
 				modifier = Modifier
 					.fillMaxSize()
 					.padding(innerPadding)
 			) {
 				SidePaneList(
-					entries = tabs.map { tab -> SidePaneEntry(stringResource(tab.titleRes), testTag = tab.testTag) },
-					selectedIndex = validSelectedTab,
-					onSelect = { selectedTab = it },
+					entries = pages.map { entry ->
+						SidePaneEntry(
+							label = stringResource(entry.titleRes),
+							badge = if (entry in editedPages && entry != SettingsPage.AllSettings) EDITED_DOT else null,
+							testTag = entry.testTag
+						)
+					},
+					selectedIndex = validSelectedPage,
+					onSelect = { selectedPage = it },
 					modifier = Modifier.focusRequester(categoryFocus).contentEntryFocus(),
-					contentFocus = tabContentFocus,
+					contentFocus = pageContentFocus,
 					selectOnFocus = true
 				)
 				VerticalDivider()
 				Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
-					SettingsTabPage(
+					SettingsEditorPage(
 						viewModel = viewModel,
-						tab = SettingsTabs.tabFor(selectedTab),
+						page = page,
 						canStart = canStart,
 						importInProgress = importInProgress,
 						onImportRom = onImportRom,
 						onImportResult = onImportResult,
-						tabContentFocus = tabContentFocus
+						onEditMachine = ::openSaveAs,
+						pageContentFocus = pageContentFocus
 					)
 				}
 			}
+		} else if (!pageOpen) {
+			// A phone lists the pages; tapping one opens it, and Back returns here.
+			PageList(
+				pages = pages,
+				editedPages = editedPages,
+				onOpen = { index ->
+					selectedPage = index
+					pageOpen = true
+				},
+				modifier = Modifier
+					.fillMaxSize()
+					.padding(innerPadding)
+					.focusRequester(categoryFocus)
+					.contentEntryFocus()
+			)
 		} else {
 			Column(
 				modifier = Modifier
 					.fillMaxSize()
 					.padding(innerPadding)
 			) {
-				val tabFocus = remember(tabs.size) { List(tabs.size) { FocusRequester() } }
-				PrimaryScrollableTabRow(
-					selectedTabIndex = validSelectedTab,
-					modifier = Modifier
-						.fillMaxWidth()
-						.focusRequester(categoryFocus)
-						.contentEntryFocus()
-						// Entering the row lands on the selected tab.
-						.focusRestorer(tabFocus[validSelectedTab])
-				) {
-					tabs.forEachIndexed { index, tab ->
-						Tab(
-							selected = validSelectedTab == index,
-							onClick = { selectedTab = index },
-							modifier = Modifier.focusRequester(tabFocus[index]).testTag(tab.testTag).dpadFocusIndicator(),
-							text = { Text(stringResource(tab.titleRes)) }
-						)
-					}
-				}
-				SettingsTabPage(
+				SettingsEditorPage(
 					viewModel = viewModel,
-					tab = SettingsTabs.tabFor(selectedTab),
+					page = page,
 					canStart = canStart,
 					importInProgress = importInProgress,
 					onImportRom = onImportRom,
 					onImportResult = onImportResult,
-					tabContentFocus = tabContentFocus
+					onEditMachine = ::openSaveAs,
+					pageContentFocus = pageContentFocus
 				)
 			}
 		}
@@ -499,6 +549,42 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel(LocalContext.current
 					save()
 				},
 				onDismiss = { showReviewChangesDialog = false }
+			)
+		}
+
+		if (showRevertDialog) {
+			AlertDialog(
+				onDismissRequest = { showRevertDialog = false },
+				title = { Text(stringResource(R.string.dialog_revert_title)) },
+				text = {
+					val configName = viewModel.currentConfigName
+					Text(
+						if (configName != null) {
+							stringResource(R.string.dialog_revert_message_saved, configName)
+						} else {
+							stringResource(R.string.dialog_revert_message_preset, viewModel.settings.baseModel.displayName)
+						}
+					)
+				},
+				confirmButton = {
+					TextButton(
+						onClick = {
+							showRevertDialog = false
+							viewModel.discardChanges()
+						},
+						modifier = Modifier.dpadFocusIndicator()
+					) {
+						Text(stringResource(R.string.action_revert))
+					}
+				},
+				dismissButton = {
+					TextButton(
+						onClick = { showRevertDialog = false },
+						modifier = Modifier.dpadFocusIndicator()
+					) {
+						Text(stringResource(R.string.action_cancel))
+					}
+				}
 			)
 		}
 
@@ -555,21 +641,81 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel(LocalContext.current
 	}
 }
 
+
+/** The dot that marks a page with edits in the side list (the Apple app's sidebar mark). */
+private const val EDITED_DOT = "•"
+
 /**
- * Everything under the tab chooser: the adjustment notices, the missing-ROM card and
- * the selected tab's page. Below the tab row on a phone, beside the tab list on a
- * wide window.
+ * The phone's list of the editor's pages, one row per page, a dot marking the
+ * pages with edits. Tapping (or OK on) a row opens it; Back from the page
+ * returns here.
+ */
+@Composable
+private fun PageList(
+	pages: List<SettingsPage>,
+	editedPages: Set<SettingsPage>,
+	onOpen: (Int) -> Unit,
+	modifier: Modifier = Modifier
+) {
+	val firstRowFocus = remember { FocusRequester() }
+	val editedLabel = stringResource(R.string.settings_page_edited_dot)
+	Column(
+		modifier = modifier
+			.verticalScroll(rememberScrollState())
+			// Entering the list lands on the first page.
+			.focusRestorer(firstRowFocus)
+			.padding(horizontal = 16.dp, vertical = 8.dp),
+		verticalArrangement = Arrangement.spacedBy(4.dp)
+	) {
+		pages.forEachIndexed { index, page ->
+			// All Settings lists every changed option, so it is not marked.
+			val edited = page in editedPages && page != SettingsPage.AllSettings
+			Row(
+				verticalAlignment = Alignment.CenterVertically,
+				modifier = Modifier
+					.fillMaxWidth()
+					// Entering the list lands on the first page.
+					.then(if (index == 0) Modifier.focusRequester(firstRowFocus) else Modifier)
+					.dpadFocusIndicator()
+					.clickable(role = Role.Button) { onOpen(index) }
+					.padding(vertical = 12.dp)
+					.testTag(page.testTag)
+			) {
+				Text(
+					stringResource(page.titleRes),
+					style = MaterialTheme.typography.titleMedium,
+					modifier = Modifier.weight(1f)
+				)
+				if (edited) {
+					Box(
+						modifier = Modifier
+							.padding(start = 8.dp)
+							.size(8.dp)
+							.background(MaterialTheme.colorScheme.primary, MaterialTheme.shapes.small)
+							.semantics { contentDescription = editedLabel }
+					)
+				}
+			}
+		}
+	}
+}
+
+/**
+ * Everything under the page chooser: the adjustment notices, the missing-ROM card and
+ * the page. Beside the side list on a wide window, below the top bar on a phone with
+ * a page open.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun ColumnScope.SettingsTabPage(
+private fun ColumnScope.SettingsEditorPage(
 	viewModel: SettingsViewModel,
-	tab: SettingsTab,
+	page: SettingsPage,
 	canStart: Boolean,
 	importInProgress: Boolean,
 	onImportRom: () -> Unit,
 	onImportResult: (FileManager.ImportResult) -> Unit,
-	tabContentFocus: FocusRequester
+	onEditMachine: () -> Unit,
+	pageContentFocus: FocusRequester
 ) {
 	SettingsAdjustmentBanner(
 		notices = viewModel.adjustmentNotices,
@@ -633,23 +779,34 @@ private fun ColumnScope.SettingsTabPage(
 	val bringIntoViewSpec = remember(clearOfStart, tv, platformSpec) {
 		if (tv) platformSpec else ClearOfBottomBringIntoViewSpec(clearOfStart, platformSpec)
 	}
-	Column(
-		modifier = Modifier
-			.weight(1f)
-			.fillMaxWidth()
-			.focusRequester(tabContentFocus)
-			.focusRestorer()
-	) {
+	if (page == SettingsPage.AllSettings) {
+		// The page's list carries the focus itself (a LazyColumn is its own focus group).
 		CompositionLocalProvider(LocalBringIntoViewSpec provides bringIntoViewSpec) {
-			when (tab) {
-				SettingsTab.Cpu -> CpuTab(viewModel)
-				SettingsTab.Chipset -> ChipsetTab(viewModel)
-				SettingsTab.Memory -> MemoryTab(viewModel)
-				SettingsTab.Display -> DisplayTab(viewModel)
-				SettingsTab.Sound -> SoundTab(viewModel)
-				SettingsTab.Input -> InputTab(viewModel)
-				SettingsTab.Storage -> StorageTab(viewModel = viewModel, onImportResult = onImportResult)
-				SettingsTab.Misc -> MiscTab(viewModel)
+			AllSettingsPage(viewModel = viewModel, pageFocus = pageContentFocus)
+		}
+	} else {
+		Column(
+			modifier = Modifier
+				.weight(1f)
+				.fillMaxWidth()
+				.focusRequester(pageContentFocus)
+				.focusRestorer()
+		) {
+			CompositionLocalProvider(LocalBringIntoViewSpec provides bringIntoViewSpec) {
+				when (page) {
+					SettingsPage.Overview -> OverviewPage(
+						viewModel = viewModel,
+						onEditMachine = onEditMachine,
+						importInProgress = importInProgress,
+						onImportResult = onImportResult
+					)
+					SettingsPage.Hardware -> HardwarePage(viewModel)
+					SettingsPage.DisplaySound -> DisplaySoundPage(viewModel)
+					SettingsPage.Input -> InputPage(viewModel)
+					SettingsPage.Storage -> StoragePage(viewModel = viewModel, onImportResult = onImportResult)
+					SettingsPage.PortsMisc -> PortsMiscPage(viewModel)
+					SettingsPage.AllSettings -> Unit
+				}
 			}
 		}
 	}
@@ -662,7 +819,7 @@ private val START_BUTTON_CLEARANCE = 88.dp
  * Scrolls a focused control into the part of the page [bottomPx] above its bottom edge
  * (where the Start button floats), as little as possible: a control already there stays
  * put, one above it comes down to the top, one below it comes up, never past its own top.
- * What cannot fit above the button gets the [platform] rule. That includes everything in
+ * What cannot fit above the button gets the [platform] rule. This includes everything in
  * the scrollers nested in the page, such as a text field's own, which are barely taller
  * than the button: scrolling one never cleared the button, so the request repeated every
  * frame and ran the page to its end (opening the Amiga model menu did).
@@ -686,7 +843,7 @@ internal class ClearOfBottomBringIntoViewSpec(
 
 /**
  * The quick setups: named bundles of display and control settings applied in one go
- * (not machines: the Amiga model picker on the CPU tab chooses those).
+ * (not machines: the Amiga model picker on the Overview page chooses those).
  */
 @Composable
 private fun QuickSetupsDialog(

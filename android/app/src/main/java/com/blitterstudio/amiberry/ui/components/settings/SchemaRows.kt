@@ -110,7 +110,8 @@ fun SchemaSwitchRow(
 	reason: String? = null,
 	showReason: Boolean = true,
 	label: String? = null,
-	help: String? = null
+	help: String? = null,
+	semanticsLabel: String? = null
 ) {
 	val option = schemaOption(id)
 	SettingSwitchRow(
@@ -120,7 +121,8 @@ fun SchemaSwitchRow(
 		modifier = modifier,
 		enabled = enabled,
 		help = help ?: option?.help,
-		reason = rowReason(option, enabled, reason, showReason)
+		reason = rowReason(option, enabled, reason, showReason),
+		semanticsLabel = semanticsLabel
 	)
 }
 
@@ -146,7 +148,8 @@ fun SchemaChoiceRow(
 	label: String? = null,
 	help: String? = null,
 	testTag: String? = null,
-	optionTestTag: ((String) -> String)? = null
+	optionTestTag: ((String) -> String)? = null,
+	semanticsLabel: String? = null
 ) {
 	val option = schemaOption(id)
 	if (choices == null && option != null && option.type == SettingsSchema.TYPE_CHOICE && option.showsAsSwitch(value)) {
@@ -159,7 +162,8 @@ fun SchemaChoiceRow(
 			reason = reason,
 			showReason = showReason,
 			label = label,
-			help = help
+			help = help,
+			semanticsLabel = semanticsLabel
 		)
 		return
 	}
@@ -177,6 +181,7 @@ fun SchemaChoiceRow(
 		enabled = enabled,
 		help = help ?: option?.help,
 		reason = rowReason(option, enabled, reason, showReason),
+		semanticsLabel = semanticsLabel,
 		testTag = testTag,
 		optionTestTag = optionTestTag
 	)
@@ -231,7 +236,8 @@ fun SchemaLevelRow(
 	help: String? = null,
 	stops: List<Int>? = null,
 	valueText: ((Int) -> String)? = null,
-	testTag: String? = null
+	testTag: String? = null,
+	semanticsLabel: String? = null
 ) {
 	val option = schemaOption(id)
 	val title = label ?: option?.label ?: id
@@ -332,7 +338,7 @@ fun SchemaLevelRow(
 						}
 					)
 					.semantics {
-						contentDescription = title
+						contentDescription = semanticsLabel ?: title
 						stateDescription = text
 					}
 			)
@@ -373,7 +379,8 @@ fun SchemaNumberRow(
 	label: String? = null,
 	help: String? = null,
 	suggestions: List<Int> = emptyList(),
-	accepts: (Int) -> Boolean = { true }
+	accepts: (Int) -> Boolean = { true },
+	semanticsLabel: String? = null
 ) {
 	val option = schemaOption(id)
 	val title = label ?: option?.label ?: id
@@ -470,6 +477,7 @@ fun SchemaNumberRow(
 					// makes it focusable on them, so the D-pad can reach the suggestions.
 					.then(if (menuShown) Modifier else Modifier.dpadVerticalMovesFocus())
 					.then(typingGate.modifier)
+					.semantics { if (semanticsLabel != null) contentDescription = semanticsLabel }
 					.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable, enabled)
 					.onFocusChanged { if (it.isFocused) editStart = stored else endEdit() }
 					.fillMaxWidth()

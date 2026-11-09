@@ -33,7 +33,8 @@ class AndroidAppSmokeTest {
 		waitForText("Quick Start")
 
 		composeRule.onNodeWithText("Settings").performClick()
-		composeRule.onNodeWithTag("settings-tab-5").performScrollTo().performClick()
+		// The phone's editor lists its pages; Input is the fourth.
+		composeRule.onNodeWithTag("settings-page-3").performScrollTo().performClick()
 
 		composeRule.onNodeWithTag("input-port0-dropdown").performClick()
 		assertTagIsNotDisplayed("input-port0-option-onscreen_joy")

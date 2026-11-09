@@ -35,6 +35,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import com.blitterstudio.amiberry.R
 import androidx.compose.ui.unit.dp
 import com.blitterstudio.amiberry.ui.dpadFocusIndicator
@@ -153,7 +155,9 @@ internal fun RowFooter(help: String?, enabled: Boolean, reason: String?) {
 
 /**
  * An on/off row: the whole row toggles (one D-pad stop), the [help] and,
- * while it is unavailable, the [reason] under it.
+ * while it is unavailable, the [reason] under it. [semanticsLabel] keeps
+ * TalkBack's name whole when the visual [label] is shortened to its
+ * section's words (SettingsGroups.labelIn).
  */
 @Composable
 fun SettingSwitchRow(
@@ -163,11 +167,13 @@ fun SettingSwitchRow(
 	modifier: Modifier = Modifier,
 	enabled: Boolean = true,
 	help: String? = null,
-	reason: String? = null
+	reason: String? = null,
+	semanticsLabel: String? = null
 ) {
 	Column(
 		modifier = modifier
 			.fillMaxWidth()
+			.semantics { if (semanticsLabel != null) contentDescription = semanticsLabel }
 			// Before toggleable: onFocusChanged reports the focus target after it in the chain.
 			.dpadFocusIndicator()
 			.toggleable(
@@ -209,6 +215,8 @@ data class ChoiceItem<T>(val value: T, val label: String, val enabled: Boolean =
  * D-pad arrows move to the neighbouring control rather than being
  * swallowed by the text field ([dpadArrowsMoveFocus] before menuAnchor),
  * and the open menu starts on the choice [valueText] names.
+ * [semanticsLabel] keeps TalkBack's name whole when the visual [label] is
+ * shortened to its section's words (SettingsGroups.labelIn).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -221,6 +229,7 @@ fun <T> SettingChoiceRow(
 	enabled: Boolean = true,
 	help: String? = null,
 	reason: String? = null,
+	semanticsLabel: String? = null,
 	testTag: String? = null,
 	optionTestTag: ((T) -> String)? = null
 ) {
@@ -239,6 +248,7 @@ fun <T> SettingChoiceRow(
 				trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded && enabled) },
 				modifier = Modifier
 					.then(if (testTag != null) Modifier.testTag(testTag) else Modifier)
+					.semantics { if (semanticsLabel != null) contentDescription = semanticsLabel }
 					.dpadFieldFocusIndicator()
 					.dpadArrowsMoveFocus()
 					.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable, enabled)
