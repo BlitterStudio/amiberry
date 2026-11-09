@@ -4304,6 +4304,18 @@ static NOINLINE uae_u32 fpp_jit_arith_slow(uae_u16 opcode, uae_u8 *pc_p, uae_u32
 	return 1;
 }
 
+/* The interpreter handler for an FBcc/FScc the compiled code could not take
+ * (an exception pending, an enabled BSUN trap, a disabled 68060 FPU): with
+ * the PC state it expects; the compiled code then leaves the block, and the
+ * PC is what the handler made it (the branch target, the next instruction,
+ * or an exception vector). */
+void REGPARAM3 fpp_jit_interp_leave(uae_u32 opcode, uae_u8 *pc_p, uae_u32 pc)
+{
+	regs.pc_p = regs.pc_oldp = pc_p;
+	regs.pc = regs.instruction_pc = pc;
+	(*cpufunctbl[opcode])(opcode);
+}
+
 /* Any FPU general instruction (opclass 3: FMOVE to <ea>) with the effective
  * address computed by the compiled code: the interpreter's handling via
  * jit_ea, no decoding of the instruction stream. lenpc: instruction length

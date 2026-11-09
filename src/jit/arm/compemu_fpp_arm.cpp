@@ -370,6 +370,9 @@ void comp_fscc_opp (uae_u32 opcode, uae_u16 extra)
 
 	reg = (opcode & 7);
 	if (fpsr_cc) {
+		const uae_u8 *insn = (uae_u8 *)comp_pc_p + m68k_pc_offset - 4;
+		fpx_cc_gate(opcode, (uintptr)insn, start_pc + (uae_u32)((uae_char *)insn - (uae_char *)start_pc_p),
+			(extra & 0x10) != 0, 0);
 		fpx_cc_from_fpsr (reg, fpp_get_cond_mask(extra & 0x1f), (extra & 0x10) != 0);
 		return;
 	}
@@ -400,6 +403,13 @@ void comp_fbcc_opp (uae_u32 opcode)
 	if (opcode & 0x20) {  /* only cc from 00 to 1f are defined */
 		FAIL (1);
 		return;
+	}
+	if (fpsr_cc) {
+		// what the interpreter checks first; the 68060 sets FPIAR (not for FNOP)
+		const uae_u8 *insn = (uae_u8 *)comp_pc_p + start_68k_offset - 2;
+		const bool fnop = opcode == 0xf280 && comp_get_iword(m68k_pc_offset) == 0;
+		fpx_cc_gate(opcode, (uintptr)insn, start_pc + (uae_u32)((uae_char *)insn - (uae_char *)start_pc_p),
+			(opcode & 0x10) != 0, currprefs.fpu_model == 68060 && !fnop);
 	}
 	if (!(opcode & 0x40)) {
 		off = (uae_s32) (uae_s16) comp_get_iword ((m68k_pc_offset += 2) - 2);
