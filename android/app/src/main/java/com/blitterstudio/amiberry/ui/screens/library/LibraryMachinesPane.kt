@@ -1,13 +1,17 @@
-package com.blitterstudio.amiberry.ui.screens
+package com.blitterstudio.amiberry.ui.screens.library
 
+import android.content.Intent
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -15,363 +19,247 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
-import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.LocalContentColor
-import androidx.compose.material3.VerticalDivider
-import androidx.compose.runtime.produceState
-import androidx.compose.ui.focus.focusRestorer
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
-import com.blitterstudio.amiberry.data.FileRepository
-import com.blitterstudio.amiberry.data.model.EmulatorSettings
-import com.blitterstudio.amiberry.ui.components.SettingsSummaryCard
-import com.blitterstudio.amiberry.ui.windowWidthClass
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DriveFileRenameOutline
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.Button
-import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.material3.Surface
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.compose.LocalLifecycleOwner
-import com.blitterstudio.amiberry.data.ConfigMachine
-import com.blitterstudio.amiberry.data.ConfigurationSaveActions
-import com.blitterstudio.amiberry.ui.contentEntryFocus
-import com.blitterstudio.amiberry.ui.isTvDevice
-import com.blitterstudio.amiberry.ui.screens.settings.SaveConfigDialog
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.blitterstudio.amiberry.R
-import android.content.Intent
-import androidx.core.content.FileProvider
-import com.blitterstudio.amiberry.data.AdvancedLaunchActions
-import kotlinx.coroutines.CancellationException
-import com.blitterstudio.amiberry.data.AppPreferences
-import com.blitterstudio.amiberry.data.ConfigurationActions
-import com.blitterstudio.amiberry.data.ConfigInfo
-import com.blitterstudio.amiberry.data.EmulatorLauncher
-import com.blitterstudio.amiberry.ui.dpadFocusIndicator
-import com.blitterstudio.amiberry.ui.findActivity
-import com.blitterstudio.amiberry.ui.launchGuarded
-import androidx.navigation.NavController
-import androidx.navigation.NavGraph.Companion.findStartDestination
-import com.blitterstudio.amiberry.ui.navigation.Screen
-import com.blitterstudio.amiberry.ui.rememberLaunchInFlightGuard
-import com.blitterstudio.amiberry.ui.viewmodel.ConfigurationsViewModel
-import com.blitterstudio.amiberry.ui.viewmodel.SettingsViewModel
-import kotlinx.coroutines.launch
-import java.text.DateFormat
-import java.util.Date
-import java.util.Locale
-import java.io.File
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.filled.DriveFileRenameOutline
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.focusRestorer
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.unit.dp
+import androidx.core.content.FileProvider
+import com.blitterstudio.amiberry.R
+import com.blitterstudio.amiberry.data.AdvancedLaunchActions
+import com.blitterstudio.amiberry.data.AppPreferences
 import com.blitterstudio.amiberry.data.ConfigFiles
+import com.blitterstudio.amiberry.data.ConfigInfo
+import com.blitterstudio.amiberry.data.ConfigMachine
+import com.blitterstudio.amiberry.data.ConfigurationActions
+import com.blitterstudio.amiberry.data.EmulatorLauncher
+import com.blitterstudio.amiberry.data.model.AmigaModel
+import com.blitterstudio.amiberry.data.model.EmulatorSettings
+import com.blitterstudio.amiberry.ui.components.SettingsSummaryCard
+import com.blitterstudio.amiberry.ui.contentEntryFocus
+import com.blitterstudio.amiberry.ui.dpadFocusIndicator
 import com.blitterstudio.amiberry.ui.dpadVerticalMovesFocus
+import com.blitterstudio.amiberry.ui.LaunchInFlightGuard
+import com.blitterstudio.amiberry.ui.isTvDevice
+import com.blitterstudio.amiberry.ui.launchGuarded
 import com.blitterstudio.amiberry.ui.rememberDpadTypingGate
+import com.blitterstudio.amiberry.ui.rememberLaunchInFlightGuard
+import com.blitterstudio.amiberry.ui.viewmodel.ConfigurationsViewModel
+import com.blitterstudio.amiberry.ui.viewmodel.SettingsViewModel
+import com.blitterstudio.amiberry.ui.windowWidthClass
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
+import java.io.File
+import java.text.DateFormat
+import java.util.Date
+import java.util.Locale
 
-private fun NavController.switchToTab(route: String) {
-	navigate(route) {
-		popUpTo(graph.findStartDestination().id) { saveState = true }
-		launchSingleTop = true
-		restoreState = true
-	}
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
+/**
+ * The Library's machines: the saved configurations as cards (a wide window shows the
+ * chosen one beside the list), each to play, edit, duplicate, rename, delete, share or
+ * edit in the classic settings window. With none saved, the models start a new machine.
+ */
 @Composable
-fun ConfigurationsScreen(
-	viewModel: ConfigurationsViewModel = viewModel(),
-	settingsViewModel: SettingsViewModel = viewModel(LocalContext.current.findActivity() as androidx.activity.ComponentActivity),
-	navController: androidx.navigation.NavController
+internal fun LibraryMachinesPane(
+	modifier: Modifier,
+	configs: List<ConfigInfo>,
+	category: String?,
+	query: String,
+	settingsViewModel: SettingsViewModel,
+	viewModel: ConfigurationsViewModel,
+	scope: CoroutineScope,
+	snackbarHostState: SnackbarHostState,
+	launchGuard: LaunchInFlightGuard,
+	launchInProgress: Boolean,
+	onEdit: (ConfigInfo) -> Unit,
+	onNewMachine: (AmigaModel) -> Unit,
+	onPlayFile: () -> Unit
 ) {
 	val context = LocalContext.current
-	// Google TV has no app to share a file with.
 	val isTv = isTvDevice()
-	// The card list: where D-pad focus enters the screen, and Left from Launch returns to.
-	val listFocus = remember { FocusRequester() }
-	val scope = rememberCoroutineScope()
-	val snackbarHostState = remember { SnackbarHostState() }
-	val launchGuard = rememberLaunchInFlightGuard()
-	val launchInProgress = launchGuard.isLaunching
-	val configs by viewModel.configs.collectAsState()
-	var searchQuery by rememberSaveable { mutableStateOf("") }
-	var selectedFilterName by rememberSaveable { mutableStateOf(ConfigurationListFilter.All.name) }
-	val selectedFilter = ConfigurationListFilter.fromName(selectedFilterName)
-	val showConfigurationSearch = shouldShowConfigurationSearch(configs.size)
-	val effectiveFilter = if (showConfigurationSearch) selectedFilter else ConfigurationListFilter.All
-	val filteredConfigs = remember(configs, searchQuery, effectiveFilter) {
-		filterConfigurations(
-			configs = configs,
-			query = if (showConfigurationSearch) searchQuery else "",
-			filter = effectiveFilter
-		)
-	}
+
+	// Renaming re-keys the card and deleting removes it, either of which drops D-pad
+	// focus: the card named here (by file name) takes focus once it is composed.
+	var focusConfigFile by remember { mutableStateOf<String?>(null) }
+	// The machine the detail pane shows on a wide window, by file name.
+	var selectedConfigFile by rememberSaveable { mutableStateOf<String?>(null) }
+
 	fun actionMessage(message: ConfigurationActions.Message): String =
 		message.argument?.let { context.getString(message.stringRes, it) }
 			?: context.getString(message.stringRes)
 
-	// Files copied in while the app was away show up when the tab is shown again.
-	val lifecycleOwner = LocalLifecycleOwner.current
-	DisposableEffect(lifecycleOwner, viewModel) {
-		val observer = LifecycleEventObserver { _, event ->
-			if (event == Lifecycle.Event.ON_RESUME) viewModel.refresh()
-		}
-		lifecycleOwner.lifecycle.addObserver(observer)
-		onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
-	}
-
-	/** Switch to Settings, D-pad focus with it (the button that had it is gone). */
-	fun openSettings() {
-		settingsViewModel.focusOnEntry = true
-		navController.switchToTab(Screen.Settings.route)
-	}
-
-	// An action that replaces what Settings holds (Edit, New) waits here while the
-	// editor has unsaved changes, a new configuration's included.
-	var pendingReplace by remember { mutableStateOf<(() -> Unit)?>(null) }
-	fun replaceSettings(action: () -> Unit) {
-		if (settingsViewModel.hasUnsavedChanges) pendingReplace = action else action()
-	}
-	// Save chosen for a new configuration: the name dialog, and the action waiting for it.
-	var saveNewName by remember { mutableStateOf<String?>(null) }
-	var saveNewThen by remember { mutableStateOf<(() -> Unit)?>(null) }
-	fun saveMessage(result: ConfigurationSaveActions.SaveResult): String {
-		val message = ConfigurationSaveActions.messageFor(result)
-		return message.argument?.let { context.getString(message.stringRes, it) }
-			?: context.getString(message.stringRes)
-	}
-
-	Scaffold(
-		snackbarHost = { SnackbarHost(snackbarHostState) },
-		topBar = {
-			TopAppBar(
-				title = { Text(stringResource(R.string.configurations_title)) },
-				actions = {
-					TextButton(
-						onClick = {
-							replaceSettings {
-								settingsViewModel.newConfiguration()
-								openSettings()
-							}
-						},
-						modifier = Modifier.dpadFocusIndicator()
-					) {
-						Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-						Spacer(modifier = Modifier.width(8.dp))
-						Text(stringResource(R.string.configurations_new))
-					}
+	fun actionsFor(index: Int, config: ConfigInfo) = ConfigItemActions(
+		suggestedCopyName = { viewModel.suggestedCopyName(config) },
+		nameProblem = { name, renaming -> viewModel.nameProblem(name, config.takeIf { renaming }) },
+		onLoad = { onEdit(config) },
+		onDelete = {
+			scope.launch {
+				val deleted = viewModel.deleteConfig(config.path)
+				if (deleted) {
+					val neighbour = filteredConfigs(configs, category, query).getOrNull(index + 1)
+						?: filteredConfigs(configs, category, query).getOrNull(index - 1)
+					focusConfigFile = neighbour?.let { File(it.path).name }
+					selectedConfigFile = focusConfigFile
 				}
-			)
-		}
-	) { innerPadding ->
-		// Renaming re-keys the card and deleting removes it, either of which drops
-		// D-pad focus to the navigation rail: the card named here (by file name) takes
-		// focus once it is composed.
-		var focusConfigFile by remember { mutableStateOf<String?>(null) }
-		// The configuration the detail pane shows on a wide window, by file name.
-		var selectedConfigFile by rememberSaveable { mutableStateOf<String?>(null) }
-		val listDetail = windowWidthClass().showsTwoPanes
-		val selectedConfig = if (listDetail) selectedConfiguration(filteredConfigs, selectedConfigFile) else null
-		val detailFocus = remember { FocusRequester() }
-
-		fun actionsFor(index: Int, config: ConfigInfo) = ConfigItemActions(
-			suggestedCopyName = { viewModel.suggestedCopyName(config) },
-			nameProblem = { name, renaming -> viewModel.nameProblem(name, config.takeIf { renaming }) },
-			onLoad = {
-				if (settingsViewModel.isConfigOpen(config.path)) {
-					// Already open: its edits stay.
-					openSettings()
-				} else {
-					replaceSettings {
-						scope.launch {
-							when (val result = ConfigurationActions.load(runCatching { viewModel.loadConfig(config.path) })) {
-								is ConfigurationActions.LoadResult.Loaded -> {
-									settingsViewModel.loadConfig(result.value, config.name, config.path)
-									openSettings()
-								}
-								is ConfigurationActions.LoadResult.Failed -> {
-									snackbarHostState.showSnackbar(actionMessage(result.message))
-								}
-							}
-						}
-					}
-				}
-			},
-			onDelete = {
-				scope.launch {
-					val deleted = viewModel.deleteConfig(config.path)
-					if (deleted) {
-						val neighbour = filteredConfigs.getOrNull(index + 1) ?: filteredConfigs.getOrNull(index - 1)
-						focusConfigFile = neighbour?.let { File(it.path).name }
-						selectedConfigFile = focusConfigFile
-					}
-					val wasOpen = deleted && settingsViewModel.onConfigDeleted(config.path)
-					snackbarHostState.showSnackbar(
-						actionMessage(ConfigurationActions.deleteMessage(config.name, deleted, wasOpen))
-					)
-				}
-			},
-			onDuplicate = { newName ->
-				scope.launch {
-					val result = viewModel.duplicateConfig(config.path, newName)
-					snackbarHostState.showSnackbar(actionMessage(ConfigurationActions.duplicateMessage(result)))
-				}
-			},
-			onRename = { newName ->
-				scope.launch {
-					val result = viewModel.renameConfig(config.path, newName)
-					if (result is ConfigFiles.EditResult.Done) {
-						settingsViewModel.onConfigRenamed(config.path, result.file)
-						focusConfigFile = result.file.name
-						if (selectedConfigFile == File(config.path).name) selectedConfigFile = result.file.name
-						// Keeping the same name leaves the file as it was: nothing to report.
-						if (result.file.name == File(config.path).name) return@launch
-					}
-					snackbarHostState.showSnackbar(actionMessage(ConfigurationActions.renameMessage(result)))
-				}
-			},
-			onShare = if (isTv) null else ({
-				when (val target = ConfigurationActions.shareTarget(config.path)) {
-					is ConfigurationActions.ShareTarget.Ready -> {
-						try {
-							val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", target.file)
-							val shareIntent = Intent(Intent.ACTION_SEND).apply {
-								type = "application/octet-stream"
-								putExtra(Intent.EXTRA_STREAM, uri)
-								addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-							}
-							context.startActivity(Intent.createChooser(shareIntent, config.name))
-						} catch (e: Exception) {
-							scope.launch {
-								snackbarHostState.showSnackbar(actionMessage(ConfigurationActions.shareFailedMessage()))
-							}
-						}
-					}
-					is ConfigurationActions.ShareTarget.Failed -> {
-						scope.launch {
-							snackbarHostState.showSnackbar(actionMessage(target.message))
-						}
-					}
-				}
-			}),
-			onAdvancedEdit = {
-				when (val target = AdvancedLaunchActions.savedConfigTarget(config.path)) {
-					is AdvancedLaunchActions.ConfigTarget.Ready -> {
-						scope.launchGuarded(launchGuard) {
-							runCatching {
-								EmulatorLauncher.launchAdvancedGui(context, target.path)
-							}.onFailure {
-								snackbarHostState.showSnackbar(
-									actionMessage(AdvancedLaunchActions.launchFailedMessage())
-								)
-							}
-						}
-					}
-					is AdvancedLaunchActions.ConfigTarget.Failed -> {
-						scope.launch {
-							snackbarHostState.showSnackbar(actionMessage(target.message))
-						}
-					}
-				}
-			},
-			onLaunch = {
-				val configPath = config.path
-				// Not the editor state: that may belong to another configuration.
-				val rememberedControls = AppPreferences.getInstance(context).rememberedAndroidControls()
-				when (val target = ConfigurationActions.launchTarget(configPath)) {
-					is ConfigurationActions.LaunchTarget.Ready -> {
-						scope.launchGuarded(launchGuard) {
-							runCatching {
-								EmulatorLauncher.launchWithConfig(
-									context,
-									target.path,
-									skipGui = true,
-									rememberedControls = rememberedControls
-								)
-							}.onFailure {
-								snackbarHostState.showSnackbar(actionMessage(ConfigurationActions.Message(R.string.msg_failed_launch_config)))
-							}
-						}
-					}
-					is ConfigurationActions.LaunchTarget.Failed -> {
-						scope.launch {
-							snackbarHostState.showSnackbar(actionMessage(target.message))
-						}
-					}
-				}
-			}
-		)
-
-		// The search and the configuration cards: the whole screen on a phone, the left
-		// pane on a wide window, where a card selects what the detail pane shows.
-		val listPane: @Composable ColumnScope.() -> Unit = {
-			if (showConfigurationSearch) {
-				ConfigurationSearchControls(
-					query = searchQuery,
-					selectedFilter = selectedFilter,
-					onQueryChange = { searchQuery = it },
-					onClearSearch = { searchQuery = "" },
-					onFilterSelected = { selectedFilterName = it.name }
+				val wasOpen = deleted && settingsViewModel.onConfigDeleted(config.path)
+				snackbarHostState.showSnackbar(
+					actionMessage(ConfigurationActions.deleteMessage(config.name, deleted, wasOpen))
 				)
 			}
+		},
+		onDuplicate = { newName ->
+			scope.launch {
+				val result = viewModel.duplicateConfig(config.path, newName)
+				snackbarHostState.showSnackbar(actionMessage(ConfigurationActions.duplicateMessage(result)))
+			}
+		},
+		onRename = { newName ->
+			scope.launch {
+				val result = viewModel.renameConfig(config.path, newName)
+				if (result is ConfigFiles.EditResult.Done) {
+					settingsViewModel.onConfigRenamed(config.path, result.file)
+					focusConfigFile = result.file.name
+					if (selectedConfigFile == File(config.path).name) selectedConfigFile = result.file.name
+					// Keeping the same name leaves the file as it was: nothing to report.
+					if (result.file.name == File(config.path).name) return@launch
+				}
+				snackbarHostState.showSnackbar(actionMessage(ConfigurationActions.renameMessage(result)))
+			}
+		},
+		onShare = if (isTv) null else ({
+			when (val target = ConfigurationActions.shareTarget(config.path)) {
+				is ConfigurationActions.ShareTarget.Ready -> {
+					try {
+						val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", target.file)
+						val shareIntent = Intent(Intent.ACTION_SEND).apply {
+							type = "application/octet-stream"
+							putExtra(Intent.EXTRA_STREAM, uri)
+							addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+						}
+						context.startActivity(Intent.createChooser(shareIntent, config.name))
+					} catch (_: Exception) {
+						scope.launch {
+							snackbarHostState.showSnackbar(actionMessage(ConfigurationActions.shareFailedMessage()))
+						}
+					}
+				}
+				is ConfigurationActions.ShareTarget.Failed ->
+					scope.launch { snackbarHostState.showSnackbar(actionMessage(target.message)) }
+			}
+		}),
+		onAdvancedEdit = {
+			when (val target = AdvancedLaunchActions.savedConfigTarget(config.path)) {
+				is AdvancedLaunchActions.ConfigTarget.Ready -> {
+					scope.launchGuarded(launchGuard) {
+						runCatching {
+							EmulatorLauncher.launchAdvancedGui(context, target.path)
+						}.onFailure {
+							snackbarHostState.showSnackbar(actionMessage(AdvancedLaunchActions.launchFailedMessage()))
+						}
+					}
+				}
+				is AdvancedLaunchActions.ConfigTarget.Failed ->
+					scope.launch { snackbarHostState.showSnackbar(actionMessage(target.message)) }
+			}
+		},
+		onLaunch = {
+			val configPath = config.path
+			// Not the editor state: that may belong to another configuration.
+			val rememberedControls = AppPreferences.getInstance(context).rememberedAndroidControls()
+			when (val target = ConfigurationActions.launchTarget(configPath)) {
+				is ConfigurationActions.LaunchTarget.Ready -> {
+					scope.launchGuarded(launchGuard) {
+						runCatching {
+							EmulatorLauncher.launchWithConfig(
+								context,
+								target.path,
+								skipGui = true,
+								rememberedControls = rememberedControls
+							)
+						}.onFailure {
+							snackbarHostState.showSnackbar(actionMessage(ConfigurationActions.Message(R.string.msg_failed_launch_config)))
+						}
+					}
+				}
+				is ConfigurationActions.LaunchTarget.Failed ->
+					scope.launch { snackbarHostState.showSnackbar(actionMessage(target.message)) }
+			}
+		}
+	)
 
-			if (filteredConfigs.isEmpty()) {
+	val shown = remember(configs, category, query) { filteredConfigs(configs, category, query) }
+	val listDetail = windowWidthClass().showsTwoPanes
+	val selectedConfig = if (listDetail) selectedConfiguration(shown, selectedConfigFile) else null
+	val detailFocus = remember { FocusRequester() }
+	// The card list: where D-pad focus enters the pane, and Left from the detail pane returns to.
+	val listFocus = remember { FocusRequester() }
+
+	if (configs.isEmpty()) {
+		EmptyLibrary(
+			modifier = modifier,
+			onNewMachine = onNewMachine,
+			onPlayFile = onPlayFile
+		)
+	} else {
+		val listPane: @Composable ColumnScope.() -> Unit = {
+			if (shown.isEmpty()) {
 				Box(
 					modifier = Modifier
 						.fillMaxSize()
@@ -390,13 +278,17 @@ fun ConfigurationsScreen(
 				}
 			} else {
 				LazyColumn(
-					// Entering the list (from the rail, or Left from the detail pane) lands
-					// on the card last focused, else the first.
-					modifier = Modifier.focusRequester(listFocus).contentEntryFocus().focusRestorer(),
+					// Entering the list (D-pad Right from the filter list, or Left from the
+					// detail pane) lands on the card last focused, else the first.
+					modifier = Modifier
+						.fillMaxSize()
+						.focusRequester(listFocus)
+						.contentEntryFocus()
+						.focusRestorer(),
 					contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
 					verticalArrangement = Arrangement.spacedBy(8.dp)
 				) {
-					itemsIndexed(filteredConfigs, key = { _, config -> config.path }) { index, config ->
+					itemsIndexed(shown, key = { _, config -> config.path }) { index, config ->
 						val fileName = File(config.path).name
 						ConfigItem(
 							config = config,
@@ -420,33 +312,8 @@ fun ConfigurationsScreen(
 			}
 		}
 
-		if (configs.isEmpty()) {
-			Box(
-				modifier = Modifier
-					.fillMaxSize()
-					.padding(innerPadding)
-					.padding(32.dp),
-				contentAlignment = Alignment.Center
-			) {
-				Column(horizontalAlignment = Alignment.CenterHorizontally) {
-					Text(stringResource(R.string.configurations_empty_title), style = MaterialTheme.typography.bodyLarge)
-					Spacer(modifier = Modifier.height(8.dp))
-					Text(
-						stringResource(R.string.configurations_empty_message),
-						style = MaterialTheme.typography.bodySmall,
-						color = MaterialTheme.colorScheme.onSurfaceVariant
-					)
-					Spacer(modifier = Modifier.height(24.dp))
-					Button(
-						onClick = ::openSettings,
-						modifier = Modifier.contentEntryFocus().dpadFocusIndicator()
-					) {
-						Text(stringResource(R.string.configurations_empty_cta))
-					}
-				}
-			}
-		} else if (listDetail) {
-			Row(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+		if (listDetail) {
+			Row(modifier = modifier.fillMaxSize()) {
 				Column(modifier = Modifier.weight(0.45f).fillMaxHeight(), content = listPane)
 				VerticalDivider()
 				if (selectedConfig != null) {
@@ -457,7 +324,7 @@ fun ConfigurationsScreen(
 						launchInProgress = launchInProgress,
 						launchFocus = detailFocus,
 						listFocus = listFocus,
-						actions = actionsFor(filteredConfigs.indexOf(selectedConfig), selectedConfig),
+						actions = actionsFor(shown.indexOf(selectedConfig), selectedConfig),
 						modifier = Modifier.weight(0.55f).fillMaxHeight()
 					)
 				} else {
@@ -465,152 +332,77 @@ fun ConfigurationsScreen(
 				}
 			}
 		} else {
-			Column(modifier = Modifier.fillMaxSize().padding(innerPadding), content = listPane)
-		}
-
-		pendingReplace?.let { proceed ->
-			val openName = settingsViewModel.currentConfigName
-			UnsavedSettingsDialog(
-				message = if (openName != null) {
-					stringResource(R.string.dialog_unsaved_changes_switch_message, openName)
-				} else {
-					stringResource(R.string.dialog_unsaved_new_config_message)
-				},
-				onSave = {
-					pendingReplace = null
-					scope.launch {
-						if (openName != null) {
-							val result = settingsViewModel.saveTracked()
-							if (result is ConfigurationSaveActions.SaveResult.Saved) {
-								proceed()
-							} else {
-								snackbarHostState.showSnackbar(saveMessage(result))
-							}
-						} else {
-							saveNewThen = proceed
-							saveNewName = settingsViewModel.suggestedConfigName()
-						}
-					}
-				},
-				onDontSave = {
-					pendingReplace = null
-					proceed()
-				},
-				onCancel = { pendingReplace = null }
-			)
-		}
-
-		saveNewName?.let { initialName ->
-			SaveConfigDialog(
-				initialName = initialName,
-				initialDescription = "",
-				onDismiss = {
-					saveNewName = null
-					saveNewThen = null
-				},
-				onSave = { name, description ->
-					scope.launch {
-						val result = settingsViewModel.saveAs(name, description, allowOverwrite = false)
-						if (result is ConfigurationSaveActions.SaveResult.Saved) {
-							saveNewName = null
-							viewModel.refresh()
-							saveNewThen?.invoke()
-							saveNewThen = null
-						}
-						snackbarHostState.showSnackbar(saveMessage(result))
-					}
-				}
-			)
+			Column(modifier = modifier.fillMaxSize(), content = listPane)
 		}
 	}
 }
 
+/** No saved machines: start from a model, or play a file. */
 @Composable
-private fun ConfigurationSearchControls(
-	query: String,
-	selectedFilter: ConfigurationListFilter,
-	onQueryChange: (String) -> Unit,
-	onClearSearch: () -> Unit,
-	onFilterSelected: (ConfigurationListFilter) -> Unit
-) {
-	Column(
-		modifier = Modifier
-			.fillMaxWidth()
-			.padding(horizontal = 16.dp, vertical = 8.dp),
-		verticalArrangement = Arrangement.spacedBy(8.dp)
-	) {
-		OutlinedTextField(
-			value = query,
-			onValueChange = onQueryChange,
-			label = { Text(stringResource(R.string.configurations_search_label)) },
-			leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-			trailingIcon = {
-				if (query.isNotBlank()) {
-					IconButton(
-						onClick = onClearSearch,
-						modifier = Modifier.dpadFocusIndicator()
-					) {
-						Icon(Icons.Default.Close, contentDescription = stringResource(R.string.action_clear_search))
-					}
-				}
-			},
-			singleLine = true,
-			modifier = Modifier.fillMaxWidth()
-		)
-		Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-			ConfigurationFilterButton(
-				filter = ConfigurationListFilter.All,
-				selectedFilter = selectedFilter,
-				modifier = Modifier.weight(1f),
-				onFilterSelected = onFilterSelected
-			)
-			ConfigurationFilterButton(
-				filter = ConfigurationListFilter.WithDescription,
-				selectedFilter = selectedFilter,
-				modifier = Modifier.weight(1f),
-				onFilterSelected = onFilterSelected
-			)
-			ConfigurationFilterButton(
-				filter = ConfigurationListFilter.Recent,
-				selectedFilter = selectedFilter,
-				modifier = Modifier.weight(1f),
-				onFilterSelected = onFilterSelected
-			)
-		}
-	}
-}
-
-@Composable
-private fun ConfigurationFilterButton(
-	filter: ConfigurationListFilter,
-	selectedFilter: ConfigurationListFilter,
+private fun EmptyLibrary(
 	modifier: Modifier,
-	onFilterSelected: (ConfigurationListFilter) -> Unit
+	onNewMachine: (AmigaModel) -> Unit,
+	onPlayFile: () -> Unit
 ) {
-	if (filter == selectedFilter) {
-		Button(
-			onClick = { onFilterSelected(filter) },
-			modifier = modifier.dpadFocusIndicator()
-		) {
-			Text(stringResource(filter.labelRes()))
-		}
-	} else {
-		OutlinedButton(
-			onClick = { onFilterSelected(filter) },
-			modifier = modifier.dpadFocusIndicator()
-		) {
-			Text(stringResource(filter.labelRes()))
+	Box(
+		modifier = modifier
+			.fillMaxSize()
+			.padding(32.dp),
+		contentAlignment = Alignment.Center
+	) {
+		Column(horizontalAlignment = Alignment.CenterHorizontally) {
+			Text(stringResource(R.string.library_no_saved_machines), style = MaterialTheme.typography.titleMedium)
+			Spacer(modifier = Modifier.height(8.dp))
+			Text(
+				stringResource(R.string.library_no_saved_machines_message),
+				style = MaterialTheme.typography.bodyMedium,
+				color = MaterialTheme.colorScheme.onSurfaceVariant
+			)
+			Spacer(modifier = Modifier.height(24.dp))
+			// The four main models, as the Apple apps' empty Library offers them.
+			FlowRow(
+				horizontalArrangement = Arrangement.spacedBy(8.dp),
+				verticalArrangement = Arrangement.spacedBy(8.dp)
+			) {
+				listOf(AmigaModel.A500, AmigaModel.A1200, AmigaModel.CD32, AmigaModel.A4000).forEach { model ->
+					AssistChip(
+						onClick = { onNewMachine(model) },
+						label = { Text(model.displayName) },
+						leadingIcon = { Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp)) },
+						modifier = Modifier.contentEntryFocus().dpadFocusIndicator()
+					)
+				}
+			}
+			Spacer(modifier = Modifier.height(16.dp))
+			OutlinedButton(onClick = onPlayFile, modifier = Modifier.dpadFocusIndicator()) {
+				Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(18.dp))
+				Spacer(modifier = Modifier.width(8.dp))
+				Text(stringResource(R.string.library_play_file))
+			}
 		}
 	}
 }
 
-private fun ConfigurationListFilter.labelRes(): Int = when (this) {
-	ConfigurationListFilter.All -> R.string.configurations_filter_all
-	ConfigurationListFilter.WithDescription -> R.string.configurations_filter_described
-	ConfigurationListFilter.Recent -> R.string.configurations_filter_recent
+/** The machines of [category] (all for null) whose name, description or path matches [query]. */
+internal fun filteredConfigs(configs: List<ConfigInfo>, category: String?, query: String): List<ConfigInfo> {
+	val inCategory = if (category == null) configs else configs.filter { it.category == category }
+	val normalizedQuery = query.trim().lowercase()
+	if (normalizedQuery.isBlank()) return inCategory
+	return inCategory.filter { config ->
+		config.name.contains(normalizedQuery, ignoreCase = true) ||
+			config.description.contains(normalizedQuery, ignoreCase = true) ||
+			config.path.contains(normalizedQuery, ignoreCase = true)
+	}
 }
 
-/** What can be done with one configuration, from its card or the detail pane. */
+/**
+ * The configuration the list-detail layout shows: the one chosen (by file name) while it
+ * is listed, otherwise the first listed, as when the choice was filtered out or deleted.
+ */
+internal fun selectedConfiguration(configs: List<ConfigInfo>, selectedFileName: String?): ConfigInfo? =
+	configs.firstOrNull { File(it.path).name == selectedFileName } ?: configs.firstOrNull()
+
+/** What can be done with one machine, from its card or the detail pane. */
 private class ConfigItemActions(
 	val suggestedCopyName: () -> String,
 	val nameProblem: (name: String, renaming: Boolean) -> ConfigFiles.NameProblem?,
@@ -630,7 +422,7 @@ private class ConfigItemActions(
  */
 private class ConfigItemSelection(val selected: Boolean, val detailFocus: FocusRequester, val onSelect: () -> Unit)
 
-/** The confirmation or name dialog a configuration action opens. */
+/** The confirmation or name dialog a machine action opens. */
 private sealed interface ConfigDialog {
 	data object Rename : ConfigDialog
 	data class Duplicate(val initialName: String) : ConfigDialog
@@ -638,9 +430,9 @@ private sealed interface ConfigDialog {
 }
 
 /**
- * A configuration's card. On a phone it carries Play, Edit and More, and tapping it
- * edits the configuration; with a [selection] (list-detail layout) it only names the
- * configuration and tapping selects it, the actions being in the detail pane.
+ * A machine's card. On a phone it carries Play, Edit and More, and tapping it opens the
+ * machine in the editor; with a [selection] (list-detail layout) it only names the
+ * machine and tapping selects it, the actions being in the detail pane.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -680,7 +472,7 @@ private fun ConfigItem(
 			.then(
 				if (selection != null) {
 					Modifier
-						// Browsing the list with the D-pad shows each configuration in turn.
+						// Browsing the list with the D-pad shows each machine in turn.
 						.onFocusChanged { if (it.isFocused && !selection.selected) selection.onSelect() }
 						.focusProperties { if (!launchInProgress) right = selection.detailFocus }
 						.selectable(selected = selection.selected, onClick = selection.onSelect)
@@ -703,15 +495,16 @@ private fun ConfigItem(
 			verticalAlignment = Alignment.CenterVertically
 		) {
 			Column(modifier = Modifier.weight(1f)) {
-				Text(
-					text = config.name,
-					style = MaterialTheme.typography.titleMedium
-				)
-				config.machine?.let { machine ->
+				Text(text = config.name, style = MaterialTheme.typography.titleMedium)
+				if (config.category.isNotBlank()) {
 					Text(
-						text = configMachineText(machine),
-						style = MaterialTheme.typography.bodyMedium
+						text = config.category,
+						style = MaterialTheme.typography.labelMedium,
+						color = MaterialTheme.colorScheme.onSurfaceVariant
 					)
+				}
+				config.machine?.let { machine ->
+					Text(text = configMachineText(machine), style = MaterialTheme.typography.bodyMedium)
 				}
 				if (config.description.isNotEmpty()) {
 					Text(
@@ -745,10 +538,7 @@ private fun ConfigItem(
 							.dpadFocusIndicator()
 					) {
 						if (launchInProgress) {
-							CircularProgressIndicator(
-								modifier = Modifier.size(20.dp),
-								strokeWidth = 2.dp
-							)
+							CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
 						} else {
 							Icon(
 								Icons.Default.PlayArrow,
@@ -757,10 +547,7 @@ private fun ConfigItem(
 							)
 						}
 					}
-					IconButton(
-						onClick = actions.onLoad,
-						modifier = Modifier.dpadFocusIndicator()
-					) {
+					IconButton(onClick = actions.onLoad, modifier = Modifier.dpadFocusIndicator()) {
 						Icon(
 							Icons.Default.Edit,
 							contentDescription = stringResource(R.string.action_edit_named, config.name),
@@ -780,10 +567,7 @@ private fun ConfigItem(
 								modifier = Modifier.size(24.dp)
 							)
 						}
-						DropdownMenu(
-							expanded = showMenu,
-							onDismissRequest = { showMenu = false }
-						) {
+						DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
 							DropdownMenuItem(
 								text = { Text(stringResource(R.string.action_edit_advanced_imgui)) },
 								modifier = Modifier.dpadFocusIndicator(),
@@ -855,8 +639,8 @@ private fun ConfigItem(
 }
 
 /**
- * The selected configuration on a wide window: its name and description, every action
- * as a labelled button, and the machine it describes.
+ * The selected machine on a wide window: its name and description, every action as a
+ * labelled button, and the machine it describes.
  */
 @Composable
 private fun ConfigDetailPane(
@@ -870,16 +654,16 @@ private fun ConfigDetailPane(
 	modifier: Modifier = Modifier
 ) {
 	val context = LocalContext.current
-	val roms by FileRepository.getInstance(context).roms.collectAsState()
+	val roms by com.blitterstudio.amiberry.data.FileRepository.getInstance(context).roms.collectAsState()
 	var dialog by remember(config.path) { mutableStateOf<ConfigDialog?>(null) }
 	// Null while reading; a failure to read shows a message instead of the summary.
-	val summary by produceState<Result<QuickStartEffectiveSummary>?>(null, config.path, config.lastModified, roms) {
-		// Browsing the list restarts this for every configuration focused: show "reading"
+	val summary by produceState<Result<MachineSummary>?>(null, config.path, config.lastModified, roms) {
+		// Browsing the list restarts this for every machine focused: show "reading"
 		// rather than the previous one's summary, and let a cancelled read stay cancelled
 		// instead of reporting it as unreadable.
 		value = null
 		value = try {
-			Result.success(QuickStartUiState.buildConfigurationSummary(loadSettings(config.path), roms))
+			Result.success(MachineSummaries.build(loadSettings(config.path), roms))
 		} catch (e: CancellationException) {
 			throw e
 		} catch (e: Exception) {
@@ -894,6 +678,9 @@ private fun ConfigDetailPane(
 		verticalArrangement = Arrangement.spacedBy(12.dp)
 	) {
 		Text(config.name, style = MaterialTheme.typography.headlineSmall)
+		if (config.category.isNotBlank()) {
+			Text(config.category, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+		}
 		if (config.description.isNotEmpty()) {
 			Text(config.description, style = MaterialTheme.typography.bodyMedium)
 		}
@@ -913,7 +700,7 @@ private fun ConfigDetailPane(
 				enabled = !launchInProgress,
 				modifier = Modifier
 					.focusRequester(launchFocus)
-					// Left returns to the card list (the 2D search went to the rail past it).
+					// Left returns to the card list (the 2D search went past it).
 					.focusProperties { left = listFocus }
 					.dpadFocusIndicator()
 			) {
@@ -989,18 +776,14 @@ private fun ConfigDetailAction(
 	enabled: Boolean = true,
 	tint: Color = Color.Unspecified
 ) {
-	OutlinedButton(
-		onClick = onClick,
-		enabled = enabled,
-		modifier = Modifier.dpadFocusIndicator()
-	) {
+	OutlinedButton(onClick = onClick, enabled = enabled, modifier = Modifier.dpadFocusIndicator()) {
 		Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp), tint = if (tint == Color.Unspecified) LocalContentColor.current else tint)
 		Spacer(modifier = Modifier.width(8.dp))
 		Text(label, color = tint)
 	}
 }
 
-/** The rename, duplicate and delete dialogs of a configuration's card or detail pane. */
+/** The rename, duplicate and delete dialogs of a machine's card or detail pane. */
 @Composable
 private fun ConfigDialogs(
 	config: ConfigInfo,
@@ -1046,18 +829,18 @@ private fun ConfigDialogs(
 				}
 			},
 			confirmButton = {
-				TextButton(onClick = {
-					actions.onDelete()
-					onDismiss()
-				}, modifier = Modifier.dpadFocusIndicator()) {
+				TextButton(
+					onClick = {
+						actions.onDelete()
+						onDismiss()
+					},
+					modifier = Modifier.dpadFocusIndicator()
+				) {
 					Text(stringResource(R.string.action_delete), color = MaterialTheme.colorScheme.error)
 				}
 			},
 			dismissButton = {
-				TextButton(
-					onClick = onDismiss,
-					modifier = Modifier.dpadFocusIndicator()
-				) {
+				TextButton(onClick = onDismiss, modifier = Modifier.dpadFocusIndicator()) {
 					Text(stringResource(R.string.action_cancel))
 				}
 			}
@@ -1066,7 +849,7 @@ private fun ConfigDialogs(
 }
 
 /**
- * Asks for a configuration name, prefilled with [initialName] (selected, ready to type over).
+ * Asks for a machine name, prefilled with [initialName] (selected, ready to type over).
  * [problemFor] says why a name cannot be used; the reason shows under the field and the
  * confirm button waits until there is none.
  */
@@ -1130,10 +913,7 @@ private fun ConfigNameDialog(
 			}
 		},
 		dismissButton = {
-			TextButton(
-				onClick = onDismiss,
-				modifier = Modifier.dpadFocusIndicator()
-			) {
+			TextButton(onClick = onDismiss, modifier = Modifier.dpadFocusIndicator()) {
 				Text(stringResource(R.string.action_cancel))
 			}
 		}
@@ -1153,7 +933,7 @@ private fun formatDate(timestamp: Long): String {
 }
 
 /**
- * The machine line of a configuration's card: "Amiga 1200 · 68030 · 66 MB · DF0: Lost Pixel.adf"
+ * The machine line of a card: "Amiga 1200 · 68030 · 66 MB · DF0: Lost Pixel.adf"
  * (the RAM fitted in total; the first medium it inserts, if any).
  */
 @Composable
@@ -1167,7 +947,7 @@ private fun configMachineText(machine: ConfigMachine): String {
 	return listOfNotNull(machine.model, machine.cpu.toString(), memory, machine.firstMedium).joinToString(" · ")
 }
 
-/** Marks the configuration Settings holds: a label, not a link. */
+/** Marks the machine the editor holds: a label, not a link. */
 @Composable
 private fun LoadedInSettingsChip(modifier: Modifier = Modifier) {
 	Surface(
@@ -1185,11 +965,11 @@ private fun LoadedInSettingsChip(modifier: Modifier = Modifier) {
 }
 
 /**
- * Asks before Edit or New replaces what Settings holds: Save (the default for D-pad
- * focus, so an OK pressed at once keeps the edits), Don't Save or Cancel.
+ * Asks before Edit or New Machine replaces what the editor holds: Save (the default for
+ * D-pad focus, so an OK pressed at once keeps the edits), Don't Save or Cancel.
  */
 @Composable
-private fun UnsavedSettingsDialog(
+internal fun UnsavedSettingsDialog(
 	message: String,
 	onSave: () -> Unit,
 	onDontSave: () -> Unit,

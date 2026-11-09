@@ -240,23 +240,6 @@ fun Modifier.dpadSliderKeys(): Modifier = composed {
 	}
 }
 
-/**
- * The right-hand column of a two-column layout whose controls sit one per row (Quick
- * Start's notices). Their short left-aligned buttons overlap horizontally, so the 2D
- * search took Left/Right to another button in the same column. Left always returns to
- * [leadingPane] (give it focusRestorer() to land on the control last focused there) and
- * Right, with nothing beyond this column, stays put.
- */
-fun Modifier.dpadTrailingPane(leadingPane: FocusRequester): Modifier = onPreviewKeyEvent { event ->
-	when (event.key) {
-		Key.DirectionLeft -> {
-			if (event.type == KeyEventType.KeyDown) leadingPane.requestFocus()
-			true
-		}
-		Key.DirectionRight -> true
-		else -> false
-	}
-}
 
 /**
  * A TV IME opens as soon as an editable text field gains focus and then takes the

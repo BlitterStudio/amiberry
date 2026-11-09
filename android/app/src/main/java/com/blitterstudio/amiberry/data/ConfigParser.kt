@@ -21,6 +21,8 @@ object ConfigParser {
 		val settings: EmulatorSettings,
 		val unknownLines: List<String>,
 		val description: String,
+		/** The group the file declares itself part of (config_category), for the Library's filters. */
+		val category: String = "",
 		val explicitKeys: Set<String> = emptySet()
 	)
 
@@ -31,7 +33,7 @@ object ConfigParser {
 		"gfx_width", "gfx_height", "gfx_correct_aspect", "gfx_auto_crop", "scaling_method",
 		"input.default_osk",
 		"amiberry.android_joyport1", "amiberry.android_preset",
-		"config_description", "config_hardware_path"
+		"config_description", "config_category", "config_hardware_path"
 	)
 
 	/** A schema option without a field: kept in EmulatorSettings.options. */
@@ -123,8 +125,9 @@ object ConfigParser {
 		val settings = buildSettings(kvPairs, hardDrives)
 			.copy(options = legacyPresetOptions(kvPairs["amiberry.android_preset"]) + options)
 		val description = kvPairs["config_description"] ?: ""
+		val category = kvPairs["config_category"] ?: ""
 
-		return ParsedConfig(settings, unknownLines, description, kvPairs.keys + options.keys)
+		return ParsedConfig(settings, unknownLines, description, category, kvPairs.keys + options.keys)
 	}
 
 	/**

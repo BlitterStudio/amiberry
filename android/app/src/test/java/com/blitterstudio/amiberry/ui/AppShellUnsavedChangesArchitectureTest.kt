@@ -16,13 +16,14 @@ class AppShellUnsavedChangesArchitectureTest {
 	}
 
 	@Test
-	fun `navigation away from a dirty Settings screen is guarded`() {
-		// Bottom-nav/rail clicks route through a guard rather than navigating directly.
-		assertTrue(source.contains("guardedNavigate("))
+	fun `back from a dirty editor is guarded before popping to the library`() {
 		assertTrue(
-			Regex("""Screen\.Settings\.route[\s\S]*settingsViewModel\.isDirty""")
-				.containsMatchIn(source) ||
-			Regex("""settingsViewModel\.isDirty[\s\S]*Screen\.Settings\.route""")
+			"Back on the editor route should be intercepted while the editor is dirty.",
+			source.contains("enabled = onSettingsRoute && settingsViewModel.isDirty")
+		)
+		assertTrue(
+			"The guarded Back should answer by popping back to the Library.",
+			Regex("""BackHandler\(enabled = onSettingsRoute && settingsViewModel\.isDirty\) \{[\s\S]*navController\.popBackStack\(\)""")
 				.containsMatchIn(source)
 		)
 	}
@@ -32,12 +33,6 @@ class AppShellUnsavedChangesArchitectureTest {
 		assertTrue(source.contains("R.string.dialog_unsaved_changes_title"))
 		assertTrue(source.contains("settingsViewModel.saveTracked()"))
 		assertTrue(source.contains("settingsViewModel.discardChanges()"))
-	}
-
-	@Test
-	fun `guard does not fire when re-selecting the current Settings tab`() {
-		assertTrue(source.contains("targetRoute != Screen.Settings.route"))
-		assertTrue(source.contains("guardedNavigate(screen.route)"))
 	}
 
 	@Test

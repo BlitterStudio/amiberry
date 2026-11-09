@@ -1,6 +1,6 @@
 package com.blitterstudio.amiberry.ui.navigation
 
-private val topLevelRoutes = Screen.bottomNavItems.map { it.route }.toSet()
+private val topLevelRoutes = Screen.topLevel.map { it.route }.toSet()
 
 internal fun shouldMoveTaskToBack(
 	route: String?,
