@@ -835,6 +835,11 @@ extern bool fp_jit_inline_verify(void);
 extern uae_u64 REGPARAM3 fp_jit_verify_save(uae_u64 value);
 extern void REGPARAM3 fp_jit_verify_check(uae_u32 opext, uae_u64 value, uae_u8 *pc_p, uae_u32 pc, void *fn);
 extern uae_u32 fp_jit_out_inline_kind(uae_u16 opcode, uae_u16 extra);
+struct fpj_fmovem {
+	int n, reg[8], off[8], final;
+	bool to_mem, reversed;
+};
+extern bool fp_jit_fmovem_plan(uae_u16 opcode, uae_u16 extra, struct fpj_fmovem *p);
 extern uae_u64 REGPARAM3 fp_jit_verify_out_save(uae_u64 ea, uae_u32 opext);
 extern void REGPARAM3 fp_jit_verify_out_check(uae_u32 opext, uae_u64 ea, uae_u8 *next_p, uae_u64 lenpc, void *fn);
 extern void fpuop_dbcc(uae_u32, uae_u16);

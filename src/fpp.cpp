@@ -4333,6 +4333,66 @@ uae_u32 REGPARAM3 fpp_jit_generic(uae_u32 opext, uae_u64 ea, uae_u8 *next_p, uae
 	return 1;
 }
 
+/* FMOVEM FPn<->memory with a static register list, as fpuop_arithmetic2()
+ * does it (the same incr and regdir choice, quirks included): the transfers
+ * in order, as (register, byte offset from the effective address), whether
+ * the words go in reverse order, and the offset (An)+ or -(An) ends at.
+ * False: not that case (a dynamic list, an invalid mode). For the JIT's
+ * inline FMOVEM (compemu_midfunc_arm64.cpp fpx_emit_fmovem()). */
+bool fp_jit_fmovem_plan(uae_u16 opcode, uae_u16 extra, struct fpj_fmovem *p)
+{
+	if (((extra >> 13) & 6) != 6)
+		return false;
+	const int mode = (extra >> 11) & 3;
+	if (mode == 1 || mode == 3) // dynamic list
+		return false;
+	if ((extra & 0x2000) && ((opcode & 0x38) == 0x18 || (opcode & 0x3f) >= 0x3a))
+		return false;
+	if (!(extra & 0x2000) && (opcode & 0x38) == 0x20)
+		return false;
+	uae_u32 list = extra & 0xff;
+	int incr = 1, regdir = 1;
+	if (currprefs.fpu_model >= 68881) {
+		if ((opcode & 0x38) == 0x20)
+			incr = -1;
+		if (mode == 0)
+			regdir = -1;
+	} else if (currprefs.fpu_model == 68040) {
+		if ((opcode & 0x38) == 0x20)
+			incr = -1;
+		if (mode == 0 && ((opcode & 0x38) == 0x20 || (extra & 0x2000)))
+			regdir = -1;
+		if (list && (extra & 0x2000) && regdir < 0 && incr > 0 && (opcode & 0x38) != 0x20)
+			regdir = -2;
+		if (list && (extra & 0x2000) && regdir > 0 && incr < 0)
+			regdir = 2;
+	} else {
+		if ((opcode & 0x38) == 0x20) {
+			incr = -1;
+			regdir = -1;
+		}
+	}
+	p->to_mem = (extra & 0x2000) != 0;
+	p->reversed = p->to_mem && (regdir < -1 || regdir > 1);
+	p->n = 0;
+	int ad = 0;
+	for (int r = 0; r < 8; r++) {
+		const int reg = regdir < 0 ? 7 - r : r;
+		if (list & 0x80) {
+			if (incr < 0)
+				ad -= 12;
+			p->reg[p->n] = reg;
+			p->off[p->n] = ad;
+			p->n++;
+			if (incr > 0)
+				ad += 12;
+		}
+		list <<= 1;
+	}
+	p->final = ad;
+	return true;
+}
+
 bool jit_fpu_generic_ok(uae_u16 opcode, uae_u16 extra)
 {
 	if (jit_fpu_enabled() || !currprefs.fpu_model || currprefs.mmu_model)
