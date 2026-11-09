@@ -1824,7 +1824,7 @@ MIDFUNC(7,jitx_fpp_generic,(IMPTR fn, RR4 a, IM8 hasea, IM32 opext, IMPTR nextp,
 	struct fpj_fmovem fmovem;
 	const bool is_fmovem = inl && fp_jit_fmovem_plan(opext >> 16, (uae_u16)opext, &fmovem);
 	const bool is_fmovecr = inl && (opext & 0xfc00) == 0x5c00;
-	if (inl && (is_fmovecr || (is_fmovem ? (fmovem.to_mem ? fpx_out_direct(4) : fpx_in_direct())
+	if (inl && (is_fmovecr || (is_fmovem ? (fmovem.to_mem ? fpx_out_direct(0) : fpx_in_direct())
 			: ((opext >> 19) & 7) == 0 || fpx_out_direct(((uae_u16)opext >> 10) & 7)))) {
 		const bool verify = fp_jit_inline_verify();
 		if (verify) {
