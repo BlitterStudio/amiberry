@@ -92,6 +92,37 @@ class RecentLaunchesTest {
 	}
 
 	@Test
+	fun `a renamed machine keeps the Play In entries that played it`() {
+		val played = playin(path = "/configs/Workbench.uae", df0 = "/floppies/Game.adf")
+		val quickstart = this.quickstart(model = "a500", df0 = "/floppies/Game.adf")
+
+		val updated = RecentLaunches.replaceConfigPath(
+			listOf(played, quickstart),
+			oldPath = "/configs/Workbench.uae",
+			newPath = "/configs/Workbench 3.1.uae"
+		)
+
+		// The Play In follows its machine, keeping its media; a Quick Start has no
+		// configuration path to rewrite.
+		assertEquals("/configs/Workbench 3.1.uae", updated.first().optString("path"))
+		assertEquals("/floppies/Game.adf", updated.first().optString("df0"))
+		assertEquals(quickstart, updated.last())
+	}
+
+	@Test
+	fun `a machine deleted in the app takes its Play In entries out of Recent`() {
+		val played = playin(path = "/configs/Workbench.uae", cd = "/cds/Game.cue")
+		val other = playin(path = "/configs/Games.uae", df0 = "/floppies/Game.adf")
+
+		val updated = RecentLaunches.removeConfigPath(
+			listOf(played, other),
+			path = "/configs/./Workbench.uae"
+		)
+
+		assertEquals(listOf(other), updated)
+	}
+
+	@Test
 	fun `a configuration deleted in the app leaves Recent while other entries stay`() {
 		val deleted = entry("config", path = "/configs/Workbench.uae")
 		val other = entry("config", path = "/configs/Games.uae")
@@ -206,4 +237,10 @@ class RecentLaunchesTest {
 	private fun entry(type: String, path: String): JSONObject = JSONObject()
 		.put("type", type)
 		.put("path", path)
+
+	private fun playin(path: String, df0: String = "", cd: String = ""): JSONObject = JSONObject()
+		.put("type", "playin")
+		.put("path", path)
+		.put("df0", df0)
+		.put("cd", cd)
 }

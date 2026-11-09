@@ -96,13 +96,14 @@ object RecentLaunches {
 	}
 
 	/**
-	 * [entries] with configuration launches of [oldPath] pointing at [newPath], so a renamed
-	 * configuration stays in Recent instead of showing as gone.
+	 * [entries] with launches of the configuration at [oldPath] pointing at [newPath] — a
+	 * Configuration played, or the machine a Play In played — so a renamed configuration
+	 * stays in Recent (and keeps replaying) instead of showing as gone.
 	 */
 	fun replaceConfigPath(entries: List<JSONObject>, oldPath: String, newPath: String): List<JSONObject> =
 		entries
 			.map { entry ->
-				if (Type.of(entry) == Type.Configuration && ConfigFiles.sameConfigPath(entry.optString("path"), oldPath)) {
+				if (entry.namesConfiguration(oldPath)) {
 					JSONObject(entry.toString()).put("path", newPath)
 				} else {
 					entry
@@ -111,13 +112,17 @@ object RecentLaunches {
 			.distinctBy { identity(it) }
 
 	/**
-	 * [entries] without launches of the configuration at [path]: one the user deleted in the app
-	 * leaves Recent, while files that vanish outside the app stay listed as missing.
+	 * [entries] without launches of the configuration at [path] (a Configuration's own
+	 * launch, or a Play In's machine): one the user deleted in the app leaves Recent,
+	 * while files that vanish outside the app stay listed as missing.
 	 */
 	fun removeConfigPath(entries: List<JSONObject>, path: String): List<JSONObject> =
-		entries.filterNot { entry ->
-			Type.of(entry) == Type.Configuration && ConfigFiles.sameConfigPath(entry.optString("path"), path)
-		}
+		entries.filterNot { entry -> entry.namesConfiguration(path) }
+
+	/** Whether the entry's path names the configuration/machine at [path] (Configurations and Play Ins). */
+	private fun JSONObject.namesConfiguration(path: String): Boolean =
+		(Type.of(this) == Type.Configuration || Type.of(this) == Type.PlayIn) &&
+			ConfigFiles.sameConfigPath(optString("path"), path)
 
 	// The same launch whatever model ID spelling it was stored with ("A500"
 	// before the launcher used the emulator's presets, "a500" since) and
