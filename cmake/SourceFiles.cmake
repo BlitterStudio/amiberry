@@ -546,8 +546,15 @@ if(IOS)
             XCODE_ATTRIBUTE_SUPPORTS_MACCATALYST "NO"
     )
 else()
+    # The icon sits at the top of Resources: App Store validation looks for
+    # CFBundleIconFile there and does not follow a subfolder path.
+    if(APPLE)
+        target_sources(${PROJECT_NAME} PRIVATE "${CMAKE_SOURCE_DIR}/data/icon.icns")
+        set_source_files_properties("${CMAKE_SOURCE_DIR}/data/icon.icns" PROPERTIES
+                MACOSX_PACKAGE_LOCATION Resources)
+    endif()
     set_target_properties(${PROJECT_NAME} PROPERTIES
-            MACOSX_BUNDLE_ICON_FILE "data/icon"
+            MACOSX_BUNDLE_ICON_FILE "icon"
             MACOSX_BUNDLE_INFO_PLIST "${CMAKE_SOURCE_DIR}/packaging/MacOSXBundleInfo.plist.in"
     )
 endif()
