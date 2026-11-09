@@ -4288,7 +4288,11 @@ static bool jit_fpu_arith_opmode(uae_u16 extra)
 
 bool jit_fpu_arith_ok(uae_u16 opcode, uae_u16 extra)
 {
-	if (jit_fpu_enabled() || !currprefs.fpu_model || currprefs.mmu_model)
+	// only with the exact core active: the helpers (fp_jit_fast_helper(),
+	// fp_jit_out_helper()) work on its 80-bit registers. The host core
+	// without the JIT FPU (the JIT FPU hotkey turns it off without a
+	// rebuild of the opcode table) leaves FPU instructions to the interpreter.
+	if (!fpu_softfloat_core() || !currprefs.fpu_model || currprefs.mmu_model)
 		return false;
 	// 68040/68060 without the emulated FPSP: unimplemented instructions and data types trap
 	if (currprefs.cpu_model >= 68040 && currprefs.fpu_no_unimplemented)
@@ -4470,7 +4474,8 @@ bool fp_jit_fmovecr(uae_u16 extra, uae_u16 *hi, uae_u64 *lo, uae_u32 *ccexc, uae
 
 bool jit_fpu_generic_ok(uae_u16 opcode, uae_u16 extra)
 {
-	if (jit_fpu_enabled() || !currprefs.fpu_model || currprefs.mmu_model)
+	// only with the exact core active, as jit_fpu_arith_ok()
+	if (!fpu_softfloat_core() || !currprefs.fpu_model || currprefs.mmu_model)
 		return false;
 	if (currprefs.cpu_model >= 68040 && currprefs.fpu_no_unimplemented)
 		return false;
