@@ -1869,6 +1869,48 @@ MIDFUNC(7,jitx_fpp_generic,(IMPTR fn, RR4 a, IM8 hasea, IM32 opext, IMPTR nextp,
 }
 MENDFUNC(7,jitx_fpp_generic,(IMPTR fn, RR4 a, IM8 hasea, IM32 opext, IMPTR nextp, IMPTR lenpc, IM32 inl))
 
+/* FBcc/FScc of the exact core (fpsr_cc): what the interpreter checks first.
+ * An exception pending, an enabled BSUN trap (bsun: an IEEE-nonaware
+ * predicate) or a disabled 68060 FPU: the interpreter handler runs it and the
+ * block is left. FBcc on the 68060 (fpiar) sets FPIAR. All registers are
+ * flushed. */
+MIDFUNC(5,fpx_cc_gate,(IM32 opcode, IMPTR pcp, IM32 pc, IM8 bsun, IM8 fpiar))
+{
+	clobber_flags();
+	prepare_for_call_1();
+	prepare_for_call_2();
+	const uae_u32 pend = (uae_u32)((uintptr)&regs.fp_exp_pend - (uintptr)&regs);
+	static_assert(offsetof(struct regstruct, fp_unimp_pend) == offsetof(struct regstruct, fp_exp_pend) + 4,
+		"fp_exp_pend and fp_unimp_pend are adjacent");
+	uae_u32 *slow[3];
+	int n = 0;
+	LDR_xXi(REG_WORK1, R_REGSTRUCT, pend);
+	slow[n++] = (uae_u32 *)get_target(); CBNZ_xi(REG_WORK1, 0);
+	if (bsun) {
+		LDR_wXi(REG_WORK1, R_REGSTRUCT, (uae_u32)((uintptr)&regs.fpcr - (uintptr)&regs));
+		slow[n++] = (uae_u32 *)get_target(); TBNZ_wii(REG_WORK1, 15, 0);   // BSUN enabled
+	}
+	if (currprefs.cpu_model == 68060) {
+		LDR_wXi(REG_WORK1, R_REGSTRUCT, (uae_u32)((uintptr)&regs.pcr - (uintptr)&regs));
+		slow[n++] = (uae_u32 *)get_target(); TBNZ_wii(REG_WORK1, 1, 0);    // DFP
+	}
+	if (fpiar) {
+		LOAD_U32(REG_WORK1, pc);
+		STR_wXi(REG_WORK1, R_REGSTRUCT, (uae_u32)((uintptr)&regs.fpiar - (uintptr)&regs));
+	}
+	uae_u32 *fast = (uae_u32 *)get_target(); B_i(0);
+	for (int i = 0; i < n; i++)
+		write_jmp_target(slow[i], (uintptr)get_target());
+	LOAD_U32(REG_PAR1, opcode);
+	LOAD_U64(REG_PAR2, pcp);
+	LOAD_U32(R2_INDEX, pc);
+	fpx_call4((uintptr)fpp_jit_interp_leave);
+	uae_u32 *leave = (uae_u32 *)get_target(); B_i(0);
+	write_jmp_target(leave, (uintptr)popall_do_nothing);
+	write_jmp_target(fast, (uintptr)get_target());
+}
+MENDFUNC(5,fpx_cc_gate,(IM32 opcode, IMPTR pcp, IM32 pc, IM8 bsun, IM8 fpiar))
+
 /* The exact core: the FPSR CC are always valid. d low byte = $FF/$00 from the
  * predicate's truth mask over the CC nibble (fpp_get_cond_mask()); with bsun
  * (IEEE-nonaware predicate) and NAN set, BSUN and the accrued IOP are set
