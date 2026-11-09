@@ -8435,7 +8435,7 @@ static void warpmode_reset()
 static void (*cpu_thread_current_run_func)(void);
 static bool cpu_thread_wanted(void (*run_func)(void))
 {
-	static const int host_cpus = SDL_GetNumLogicalCPUCores();
+	static const unsigned int host_cpus = std::thread::hardware_concurrency();
 	if (!currprefs.cpu_thread || cpu_thread_start_failed || host_cpus < 2)
 		return false;
 	if (currprefs.cpu_cycle_exact || currprefs.cpu_memory_cycle_exact)
