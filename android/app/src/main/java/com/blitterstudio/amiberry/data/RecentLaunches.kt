@@ -16,6 +16,8 @@ object RecentLaunches {
 		Configuration(R.string.recent_type_configuration),
 		WhdLoad(R.string.recent_type_whdload),
 		Rp9(R.string.recent_type_rp9),
+		/** A media file played in a saved machine; the entry's path names the machine. */
+		PlayIn(R.string.recent_type_playin),
 		Unknown(R.string.recent_type_unknown);
 
 		companion object {
@@ -24,6 +26,7 @@ object RecentLaunches {
 				"config" -> Configuration
 				"whdload" -> WhdLoad
 				"rp9" -> Rp9
+				"playin" -> PlayIn
 				else -> Unknown
 			}
 		}
@@ -152,6 +155,14 @@ object RecentLaunches {
 				val path = entry.optString("path")
 				if (path.isNotBlank() && fileExists(path)) Status.Available else Status.MissingFiles
 			}
+			// The machine and every medium the launch inserted must still be there.
+			Type.PlayIn -> {
+				val machineThere = entry.optString("path").isNotBlank() && fileExists(entry.optString("path"))
+				val mediaThere = MEDIA_KEYS.all { key ->
+					entry.optString(key).isBlank() || fileExists(entry.optString(key))
+				}
+				if (machineThere && mediaThere) Status.Available else Status.MissingFiles
+			}
 			Type.QuickStart -> {
 				val mediaPresent = MEDIA_KEYS.all { key ->
 					val path = entry.optString(key)
@@ -185,6 +196,11 @@ object RecentLaunches {
 				.ifEmpty { "WHDLoad" }
 			Type.Rp9 -> stripSuffixCaseInsensitive(fileName(entry.optString("path")), ".rp9")
 				.ifEmpty { "RP9" }
+			// The media names the launch; the machine is the detail beside it.
+			Type.PlayIn -> MEDIA_KEYS
+				.mapNotNull { key -> fileName(entry.optString(key)).takeIf { it.isNotBlank() } }
+				.joinToString(", ")
+				.ifEmpty { "Machine" }
 			Type.Unknown -> "?"
 		}
 	}
@@ -202,6 +218,12 @@ object RecentLaunches {
 				title = WhdLoadTitles.clean(fileName(entry.optString("path"))).ifEmpty { "WHDLoad" },
 				type = type,
 				detail = fileName(entry.optString("path"))
+			)
+			Type.PlayIn -> Details(
+				title = label(entry),
+				type = type,
+				detail = stripSuffixCaseInsensitive(fileName(entry.optString("path")), ".uae")
+					.ifEmpty { "Machine" }
 			)
 			Type.Unknown -> Details(title = "?", type = type, detail = "")
 		}

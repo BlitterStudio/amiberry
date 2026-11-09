@@ -1,8 +1,8 @@
 package com.blitterstudio.amiberry.ui.screens.library
 
 import com.blitterstudio.amiberry.R
-import com.blitterstudio.amiberry.data.ConfigParser
 import com.blitterstudio.amiberry.data.ConfigInfo
+import com.blitterstudio.amiberry.data.ConfigParser
 import com.blitterstudio.amiberry.data.RecentLaunches
 import com.blitterstudio.amiberry.data.model.AmigaFile
 import com.blitterstudio.amiberry.data.model.AmigaModel
@@ -14,8 +14,8 @@ import com.blitterstudio.amiberry.data.model.ModelRomAvailability
 import com.blitterstudio.amiberry.data.model.SettingsSchema
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -232,16 +232,35 @@ class LibraryStateTest {
 
 	@Test
 	fun `play in leaves a stable recent entry of the machine with the media`() {
-		val machine = EmulatorSettings.fromModel(AmigaModel.A1200)
+		val machine = config("Workbench")
 
 		val diskEntry = LibraryLaunch.playInRecentEntry(machine, file("LostPixel.adf"))
-		assertEquals("quickstart", diskEntry.optString("type"))
-		assertEquals("a1200", diskEntry.optString("model"))
+		assertEquals("playin", diskEntry.optString("type"))
+		assertEquals("/configs/Workbench.uae", diskEntry.optString("path"))
 		assertEquals("/floppies/LostPixel.adf", diskEntry.optString("df0"))
 
 		val cd = AmigaFile("/cds/Game.cue", "Game.cue", "cue", 0, 0, FileCategory.CD_IMAGES)
 		val cdEntry = LibraryLaunch.playInRecentEntry(machine, cd)
 		assertEquals("/cds/Game.cue", cdEntry.optString("cd"))
+	}
+
+	@Test
+	fun `a play in recent entry replays its machine and media`() {
+		val entry = JSONObject("""{"type":"playin","path":"/configs/Workbench.uae","df0":"/floppies/LostPixel.adf"}""")
+
+		val request = LibraryLaunch.recentPlayIn(entry)!!
+		assertEquals("/configs/Workbench.uae", request.machinePath)
+		assertEquals("/floppies/LostPixel.adf", request.media.path)
+		assertEquals(FileCategory.FLOPPIES, request.media.category)
+
+		val cd = LibraryLaunch.recentPlayIn(
+			JSONObject("""{"type":"playin","path":"/configs/CD32.uae","cd":"/cds/Game.cue"}""")
+		)!!
+		assertEquals(FileCategory.CD_IMAGES, cd.media.category)
+
+		// An entry without its machine or its media cannot replay.
+		assertNull(LibraryLaunch.recentPlayIn(JSONObject("""{"type":"playin","df0":"/floppies/x.adf"}""")))
+		assertNull(LibraryLaunch.recentPlayIn(JSONObject("""{"type":"playin","path":"/configs/Workbench.uae"}""")))
 	}
 
 	@Test

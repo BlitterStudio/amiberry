@@ -115,7 +115,13 @@ internal object LibraryLaunch {
 	}
 
 	/** A recent entry again, as it was launched. */
-	suspend fun playRecent(context: Context, entry: JSONObject, roms: List<AmigaFile>): PlayResult {
+	suspend fun playRecent(
+		context: Context,
+		entry: JSONObject,
+		roms: List<AmigaFile>,
+		loadMachine: suspend (String) -> ConfigParser.ParsedConfig,
+		writeConfig: (EmulatorSettings, List<String>) -> File
+	): PlayResult {
 		val path = entry.optString("path")
 		return when (RecentLaunches.Type.of(entry)) {
 			RecentLaunches.Type.Configuration -> {
@@ -138,6 +144,22 @@ internal object LibraryLaunch {
 				PlayResult.Started
 			}
 			RecentLaunches.Type.QuickStart -> playRecentQuickStart(context, entry, roms)
+			// The machine plays the media again, through the same path a Play In takes
+			// (its hardware, hard drives and other disks with the file in its drive).
+			RecentLaunches.Type.PlayIn -> {
+				val request = recentPlayIn(entry)
+					?: return PlayResult.Refused(R.string.recent_type_unknown)
+				val machine = ConfigInfo(
+					path = request.machinePath,
+					name = File(request.machinePath).nameWithoutExtension,
+					lastModified = 0,
+					description = ""
+				)
+				if (!withContext(Dispatchers.IO) { File(request.machinePath).exists() }) {
+					return PlayResult.Refused(R.string.library_play_in_machine_gone, machine.name)
+				}
+				playIn(context, request.media, machine, loadMachine, writeConfig)
+			}
 			RecentLaunches.Type.Unknown -> PlayResult.Refused(R.string.recent_type_unknown)
 		}
 	}
@@ -299,25 +321,49 @@ internal object LibraryLaunch {
 		withContext(Dispatchers.IO) {
 			EmulatorLauncher.launchWithConfig(context, configFile.absolutePath)
 		}
-		// The launch recorded the transient configuration; Recent keeps the machine with
-		// the media in its drive, which replays stably however many Play Ins follow.
+		// The launch recorded the transient configuration; Recent keeps the machine it
+		// played with the media in its drive, which replays stably however many follow.
 		val preferences = AppPreferences.getInstance(context)
-		preferences.addRecentLaunch(playInRecentEntry(launch.settings, file))
+		preferences.addRecentLaunch(playInRecentEntry(machine, file))
 		preferences.removeRecentLaunch(
 			JSONObject().put("type", "config").put("path", configFile.absolutePath)
 		)
 		return PlayResult.Started
 	}
 
-	/** The Recent entry a Play In leaves: the machine's model with the media in its drive. */
-	internal fun playInRecentEntry(settings: EmulatorSettings, file: AmigaFile): JSONObject =
+	/** The Recent entry a Play In leaves: the machine it played, with the media in its drive. */
+	internal fun playInRecentEntry(machine: ConfigInfo, file: AmigaFile): JSONObject =
 		JSONObject().apply {
-			put("type", "quickstart")
-			put("model", settings.baseModel.cmdArg)
+			put("type", "playin")
+			put("path", machine.path)
 			when (file.category) {
 				FileCategory.FLOPPIES -> put("df0", file.path)
 				FileCategory.CD_IMAGES -> put("cd", file.path)
 				else -> Unit
 			}
 		}
+
+	/** What a Play In Recent entry replays: the saved machine and the media it played. */
+	internal data class PlayInRequest(val machinePath: String, val media: AmigaFile)
+
+	/** The machine and media a Play In entry names; null when the entry holds neither. */
+	internal fun recentPlayIn(entry: JSONObject): PlayInRequest? {
+		val machinePath = entry.optString("path")
+		if (machinePath.isBlank()) return null
+		val mediaPath = entry.optString("df0").takeIf { it.isNotBlank() }
+			?: entry.optString("cd").takeIf { it.isNotBlank() }
+			?: return null
+		val category = if (entry.has("cd")) FileCategory.CD_IMAGES else FileCategory.FLOPPIES
+		return PlayInRequest(
+			machinePath = machinePath,
+			media = AmigaFile(
+				path = mediaPath,
+				name = mediaPath.substringAfterLast('/').substringAfterLast('\\'),
+				extension = mediaPath.substringAfterLast('.').lowercase(),
+				size = 0,
+				lastModified = 0,
+				category = category
+			)
+		)
+	}
 }

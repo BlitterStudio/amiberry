@@ -65,6 +65,7 @@ import com.blitterstudio.amiberry.data.AppPreferences
 import com.blitterstudio.amiberry.data.ConfigurationActions
 import com.blitterstudio.amiberry.data.ConfigurationSaveActions
 import com.blitterstudio.amiberry.data.ConfigInfo
+import com.blitterstudio.amiberry.data.FileListing
 import com.blitterstudio.amiberry.data.FileManager
 import com.blitterstudio.amiberry.data.FilePickerFilters
 import com.blitterstudio.amiberry.data.FileRepository
@@ -258,7 +259,17 @@ fun LibraryScreen(
 	fun playRecent(entry: JSONObject) {
 		if (launchInProgress) return
 		scope.launchGuarded(launchGuard) {
-			showResult(LibraryLaunch.playRecent(context, entry, repository.roms.value))
+			showResult(
+				LibraryLaunch.playRecent(
+					context = context,
+					entry = entry,
+					roms = repository.roms.value,
+					loadMachine = { path -> configurationsViewModel.loadConfig(path) },
+					writeConfig = { settings, unknownLines ->
+						settingsViewModel.writeSettingsConfig(settings, LibraryLaunch.PLAY_IN_CONFIG, unknownLines)
+					}
+				)
+			)
 		}
 	}
 
@@ -291,6 +302,26 @@ fun LibraryScreen(
 		scope.launch { snackbarHostState.showSnackbar(message) }
 	}
 
+	/**
+	 * A pick or a folder can hold other kinds than ROMs (a whole folder imported from the
+	 * in-app browser often does): every category the import filled is rescanned, so its
+	 * files reach their shelves at once, not only the ROMs.
+	 */
+	suspend fun rescanImported(results: List<FileManager.ImportResult>) {
+		val imported = FileListing.importSummary(results, FileCategory.ROMS).categories + FileCategory.ROMS
+		imported.distinct().forEach { repository.rescanCategory(it) }
+	}
+
+	// A new machine that boots AROS moves to the model's Kickstart; a named
+	// configuration keeps the ROM it was saved with.
+	fun importedKickstartInstalled() {
+		if (settingsViewModel.currentConfigName == null) {
+			ModelRomAvailability.withInstalledKickstart(settingsViewModel.settings, repository.roms.value)?.let {
+				settingsViewModel.updateSettings { it }
+			}
+		}
+	}
+
 	/** Imports ROM files and says what the scan found, as the banner reports it. */
 	fun importRoms(uris: List<Uri>) {
 		if (uris.isEmpty() || importInProgress) return
@@ -298,17 +329,11 @@ fun LibraryScreen(
 			val results = withContext(Dispatchers.IO) {
 				val before = repository.roms.value.size
 				val imported = uris.map { FileManager.importFileWithResult(context, it, FileCategory.ROMS) }
-				repository.rescanCategory(FileCategory.ROMS)
+				rescanImported(imported)
 				romReport = RomImportReport.of(before, repository.roms.value)
 				imported
 			}
-			// A new machine that boots AROS moves to the model's Kickstart; a named
-			// configuration keeps the ROM it was saved with.
-			if (settingsViewModel.currentConfigName == null) {
-				ModelRomAvailability.withInstalledKickstart(settingsViewModel.settings, repository.roms.value)?.let {
-					settingsViewModel.updateSettings { it }
-				}
-			}
+			importedKickstartInstalled()
 			romImportFeedback(results)
 		}
 	}
@@ -322,18 +347,15 @@ fun LibraryScreen(
 					is PickedFolder.Tree -> FileManager.importFolderWithResults(context, folder.uri)
 					is PickedFolder.Local -> FileManager.importDirectoryWithResults(context, folder.dir)
 				}
-				repository.rescanCategory(FileCategory.ROMS)
+				rescanImported(imported)
 				romReport = RomImportReport.of(before, repository.roms.value)
 				imported
 			}
-			if (settingsViewModel.currentConfigName == null) {
-				ModelRomAvailability.withInstalledKickstart(settingsViewModel.settings, repository.roms.value)?.let {
-					settingsViewModel.updateSettings { it }
-				}
-			}
+			importedKickstartInstalled()
 			romImportFeedback(results)
 		}
 	}
+
 
 	// Play a File: the picked file is imported and started, as a file manager's Open does.
 	val playFilePicker = rememberImportPicker(

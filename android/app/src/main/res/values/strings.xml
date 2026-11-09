@@ -43,6 +43,7 @@
     <string name="library_play_in_title">Play "%1$s" in</string>
     <string name="library_play_in_no_cd_drive">%1$s has no CD drive. Play the CD on its own, or in a CD32 or CDTV machine.</string>
     <string name="library_play_in_no_floppy_drive">%1$s has no floppy drive.</string>
+    <string name="library_play_in_machine_gone">The machine %1$s is gone. It may have been renamed or deleted.</string>
     <string name="library_play_unsupported">"%1$s" is not a disk, CD or WHDLoad archive.</string>
     <string name="library_cd_needs_rom">The CD32 and CDTV need their own Kickstart ROMs, which AROS cannot replace. Import them, then play the CD.</string>
     <string name="library_recent_remove">Remove from Recent</string>
@@ -302,6 +303,7 @@
     <string name="recent_type_configuration">Configuration</string>
     <string name="recent_type_whdload">WHDLoad</string>
     <string name="recent_type_rp9">RP9 package</string>
+    <string name="recent_type_playin">Played in a machine</string>
     <string name="recent_type_unknown">Unknown</string>
     <string name="recent_entry_summary">%1$s · %2$s</string>
     <string name="recent_status_missing">No longer available: a file it uses is gone.</string>
