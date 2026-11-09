@@ -103,7 +103,7 @@ if [ "$platform" = macos ]; then
 	min_os=0
 	while IFS= read -r -d '' file; do
 		if file -b "$file" | grep -q 'Mach-O'; then
-			v=$(vtool -show-build "$file" 2>/dev/null | awk '/minos/ {print $2; exit}')
+			v=$(vtool -show-build "$file" 2>/dev/null | awk '/minos/ {print $2}' | sort -V | tail -1)
 			if [ -n "$v" ] && [ "$(printf '%s\n%s\n' "$min_os" "$v" | sort -V | tail -1)" = "$v" ]; then
 				min_os=$v
 			fi
