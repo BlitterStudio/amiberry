@@ -1338,6 +1338,67 @@ static void fpx_emit_inline(fpx_fails &f, uae_u32 kind, uae_u32 opext, uae_u32 p
  * directly (as writelong() decides at compile time), at the address in w1;
  * (An)+ and -(An) are stepped here. Every case it does not handle branches
  * to the helper call. */
+/* FMOVEM FPn<->memory inline (static register list, fp_jit_fmovem_plan()):
+ * the raw words copied, memory read or written directly; the address is in
+ * w1, (An)+ and -(An) are stepped here. FMOVEM leaves the FPSR and FPIAR
+ * alone. A pending exception, or a disabled 68060 FPU: the helper call. */
+static void fpx_emit_fmovem(fpx_fails &f, uae_u32 kind, uae_u32 opext, const struct fpj_fmovem &p)
+{
+	const uae_u16 opcode = opext >> 16;
+	const int mode = (opcode >> 3) & 7, reg = opcode & 7;
+	LDR_wXi(16, R_REGSTRUCT, FPX_OFF(fp_exp_pend));
+	LDR_wXi(12, R_REGSTRUCT, FPX_OFF(fp_unimp_pend));
+	ORR_www(16, 16, 12);
+	if ((kind >> 13) & 1) {
+		LDR_wXi(12, R_REGSTRUCT, FPX_OFF(pcr));
+		UBFX_wwii(12, 12, 1, 1);
+		ORR_www(16, 16, 12);
+	}
+	f.add(); CBNZ_wi(16, 0);
+	for (int i = 0; i < p.n; i++) {
+		const int off = p.off[i], r = p.reg[i];
+		if (off >= 0)
+			ADD_wwi(4, 1, off);
+		else
+			SUB_wwi(4, 1, -off);
+		ADD_wwi(5, 4, 4);
+		ADD_wwi(6, 4, 8);
+		if (p.to_mem) {
+			LDRH_wXi(2, R_REGSTRUCT, FPX_OFF(fp[r].fpx.high));
+			LSL_wwi(2, 2, 16);                             // word 1: the exponent
+			LDR_xXi(3, R_REGSTRUCT, FPX_OFF(fp[r].fpx.low));
+			LSR_xxi(16, 3, 32);                            // word 2, word 3 in w3
+			REV_ww(2, 2);
+			REV_ww(16, 16);
+			REV_ww(3, 3);
+			STR_wXx(p.reversed ? 3 : 2, 4, R_MEMSTART);
+			STR_wXx(16, 5, R_MEMSTART);
+			STR_wXx(p.reversed ? 2 : 3, 6, R_MEMSTART);
+		} else {
+			LDR_wXx(2, 4, R_MEMSTART);
+			LDR_wXx(3, 5, R_MEMSTART);
+			LDR_wXx(16, 6, R_MEMSTART);
+			REV_ww(2, 2);
+			REV_ww(3, 3);
+			REV_ww(16, 16);
+			LSR_wwi(2, 2, 16);
+			ORR_xxxLSLi(3, 16, 3, 32);
+			STRH_wXi(2, R_REGSTRUCT, FPX_OFF(fp[r].fpx.high));
+			STR_xXi(3, R_REGSTRUCT, FPX_OFF(fp[r].fpx.low));
+		}
+	}
+	if (mode == 3 || mode == 4) {
+		if (p.final >= 0)
+			ADD_wwi(2, 1, p.final);
+		else
+			SUB_wwi(2, 1, -p.final);
+		STR_wXi(2, R_REGSTRUCT, FPX_OFF(regs[8 + reg]));
+	}
+	MOV_wi(3, 1);
+	STR_wXi(3, R_REGSTRUCT, FPX_OFF(fpu_state));
+	STRB_wXi(31, R_REGSTRUCT, FPX_OFF(fp_exception));
+}
+
 // the JIT may read a long of this instruction's memory directly (readlong())
 static bool fpx_in_direct(void)
 {
@@ -1653,7 +1714,10 @@ MIDFUNC(7,jitx_fpp_generic,(IMPTR fn, RR4 a, IM8 hasea, IM32 opext, IMPTR nextp,
 	// inl: an FMOVE to <ea> inline, the call only when that does not apply
 	fpx_fails fails;
 	fails.n = 0;
-	if (inl && ((((uae_u16)opext >> 13) & 7) != 3 || ((opext >> 19) & 7) == 0 || fpx_out_direct(((uae_u16)opext >> 10) & 7))) {
+	struct fpj_fmovem fmovem;
+	const bool is_fmovem = inl && fp_jit_fmovem_plan(opext >> 16, (uae_u16)opext, &fmovem);
+	if (inl && (is_fmovem ? (fmovem.to_mem ? fpx_out_direct(4) : fpx_in_direct())
+			: ((opext >> 19) & 7) == 0 || fpx_out_direct(((uae_u16)opext >> 10) & 7))) {
 		const bool verify = fp_jit_inline_verify();
 		if (verify) {
 			MOV_xx(REG_PAR1, REG_PAR2);
@@ -1661,7 +1725,10 @@ MIDFUNC(7,jitx_fpp_generic,(IMPTR fn, RR4 a, IM8 hasea, IM32 opext, IMPTR nextp,
 			fpx_call4((uintptr)fp_jit_verify_out_save);
 			MOV_xx(REG_PAR2, REG_RESULT);
 		}
-		fpx_emit_out(fails, inl, opext, (uae_u32)lenpc);
+		if (is_fmovem)
+			fpx_emit_fmovem(fails, inl, opext, fmovem);
+		else
+			fpx_emit_out(fails, inl, opext, (uae_u32)lenpc);
 		if (verify) {
 			LOAD_U32(REG_PAR1, (uae_u32)opext);
 			LOAD_U64(R2_INDEX, nextp);

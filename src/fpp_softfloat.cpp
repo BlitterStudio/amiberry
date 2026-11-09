@@ -1094,6 +1094,9 @@ uae_u32 fp_jit_out_inline_kind(uae_u16 opcode, uae_u16 extra)
 {
 	if (!fp_jit_inline_kind(0xf200, 0x0000))            // inline code off, or not the exact core
 		return 0;
+	struct fpj_fmovem plan;
+	if (fp_jit_fmovem_plan(opcode, extra, &plan))       // FMOVEM, static list
+		return 1 | (currprefs.cpu_model == 68060 ? 1 << 13 : 0);
 	if (((extra >> 13) & 7) != 3)
 		return 0;
 	switch ((extra >> 10) & 7) {
@@ -1139,12 +1142,26 @@ bool fp_jit_inline_verify(void)
  * destination's memory too (the helper rerun must find them as before). */
 static struct {
 	uae_u32 regs[16];
-	uae_u8 mem[12];
+	uae_u8 mem[96];
 } fpj_verify_out;
 
-static int fpj_out_bytes(uae_u32 opext)
+// the destination's memory: from ea + *lo, the number of bytes
+static int fpj_out_bytes(uae_u32 opext, int *lo)
 {
 	const int size = (opext >> 10) & 7, mode = (opext >> 19) & 7;
+	struct fpj_fmovem plan;
+	*lo = 0;
+	if (fp_jit_fmovem_plan(opext >> 16, (uae_u16)opext, &plan)) {
+		if (!plan.to_mem || !plan.n)
+			return 0;
+		int a = plan.off[0], b = plan.off[0];
+		for (int i = 1; i < plan.n; i++) {
+			a = plan.off[i] < a ? plan.off[i] : a;
+			b = plan.off[i] > b ? plan.off[i] : b;
+		}
+		*lo = a;
+		return b - a + 12;
+	}
 	if (mode == 0)
 		return 0;
 	return size == 6 ? 1 : size == 4 ? 2 : size == 5 ? 8 : size == 2 ? 12 : 4;
@@ -1155,23 +1172,27 @@ uae_u64 REGPARAM3 fp_jit_verify_out_save(uae_u64 ea, uae_u32 opext)
 	fp_jit_verify_save(0);
 	for (int i = 0; i < 16; i++)
 		fpj_verify_out.regs[i] = regs.regs[i];
-	for (int i = 0; i < fpj_out_bytes(opext); i++)
-		fpj_verify_out.mem[i] = get_byte((uaecptr)ea + i);
+	int lo;
+	const int n = fpj_out_bytes(opext, &lo);
+	for (int i = 0; i < n; i++)
+		fpj_verify_out.mem[i] = get_byte((uaecptr)ea + lo + i);
 	return ea;
 }
 
 void REGPARAM3 fp_jit_verify_out_check(uae_u32 opext, uae_u64 ea, uae_u8 *next_p, uae_u64 lenpc, void *fn)
 {
-	const int n = fpj_out_bytes(opext);
+	int lo;
+	const int n = fpj_out_bytes(opext, &lo);
+	const uaecptr mea = (uaecptr)ea + lo;
 	uae_u32 got_regs[16];
-	uae_u8 got_mem[12];
+	uae_u8 got_mem[96];
 	floatx80 got[8];
 	for (int i = 0; i < 8; i++)
 		got[i] = regs.fp[i].fpx;
 	for (int i = 0; i < 16; i++)
 		got_regs[i] = regs.regs[i];
 	for (int i = 0; i < n; i++)
-		got_mem[i] = get_byte((uaecptr)ea + i);
+		got_mem[i] = get_byte(mea + i);
 	const uae_u32 got_fpsr = regs.fpsr, got_fpiar = regs.fpiar;
 	// the state before, then the helper from it (keeping the compiled code's PC state)
 	for (int i = 0; i < 8; i++)
@@ -1179,7 +1200,7 @@ void REGPARAM3 fp_jit_verify_out_check(uae_u32 opext, uae_u64 ea, uae_u8 *next_p
 	for (int i = 0; i < 16; i++)
 		regs.regs[i] = fpj_verify_out.regs[i];
 	for (int i = 0; i < n; i++)
-		put_byte((uaecptr)ea + i, fpj_verify_out.mem[i]);
+		put_byte(mea + i, fpj_verify_out.mem[i]);
 	regs.fpsr = fpj_verify_state.fpsr;
 	regs.fpiar = fpj_verify_state.fpiar;
 	regs.fpu_state = fpj_verify_state.fpu_state;
@@ -1197,15 +1218,15 @@ void REGPARAM3 fp_jit_verify_out_check(uae_u32 opext, uae_u64 ea, uae_u8 *next_p
 	for (int i = 0; i < 16; i++)
 		same &= regs.regs[i] == got_regs[i];
 	for (int i = 0; i < n; i++)
-		same &= get_byte((uaecptr)ea + i) == got_mem[i];
+		same &= get_byte(mea + i) == got_mem[i];
 	fpj_verify_checks++;
 	if (!same && fpj_verify_mismatches++ < 50) {
 		const int sr = (opext >> 7) & 7;
 		write_log(_T("JIT FPU verify (FMOVE out): %08x ea %08x: helper %u, FPSR %08x (inline %08x), FP%d %04x.%016llx, mem %02x%02x%02x%02x (inline %02x%02x%02x%02x), D%d %08x (inline %08x)\n"),
 			opext, (uae_u32)ea, r, regs.fpsr, got_fpsr, sr, fpj_verify_state.fp[sr].high,
 			(unsigned long long)fpj_verify_state.fp[sr].low,
-			n > 0 ? get_byte((uaecptr)ea) : 0, n > 1 ? get_byte((uaecptr)ea + 1) : 0, n > 2 ? get_byte((uaecptr)ea + 2) : 0,
-			n > 3 ? get_byte((uaecptr)ea + 3) : 0, n > 0 ? got_mem[0] : 0, n > 1 ? got_mem[1] : 0, n > 2 ? got_mem[2] : 0,
+			n > 0 ? get_byte(mea) : 0, n > 1 ? get_byte(mea + 1) : 0, n > 2 ? get_byte(mea + 2) : 0,
+			n > 3 ? get_byte(mea + 3) : 0, n > 0 ? got_mem[0] : 0, n > 1 ? got_mem[1] : 0, n > 2 ? got_mem[2] : 0,
 			n > 3 ? got_mem[3] : 0, (opext >> 16) & 7, regs.regs[(opext >> 16) & 7], got_regs[(opext >> 16) & 7]);
 	}
 	if (fpj_verify_checks == 1 || !(fpj_verify_checks & 0xfffff))
