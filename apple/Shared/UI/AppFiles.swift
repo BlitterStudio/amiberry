@@ -128,23 +128,43 @@ enum AppFiles {
 		}
 		let manager = FileManager.default
 		try manager.createDirectory(at: folder, withIntermediateDirectories: true)
-		if url.pathExtension.lowercased() == "cue" {
-			return try importCueSheet(url, into: folder)
-		}
-		let name = url.deletingPathExtension().lastPathComponent
-		let suffix = url.pathExtension.isEmpty ? "" : "." + url.pathExtension
-		var number = 1
-		while true {
-			let candidate = folder.appendingPathComponent(number == 1 ? name + suffix : "\(name) \(number)\(suffix)")
-			if !manager.fileExists(atPath: candidate.path) {
-				try manager.copyItem(at: url, to: candidate)
-				return candidate.path
+		// A file provider's file (OneDrive, iCloud Drive) need not be on the
+		// device yet: a coordinated read has the provider deliver it first.
+		return try coordinatedRead(url) { source in
+			if source.pathExtension.lowercased() == "cue" {
+				return try importCueSheet(source, into: folder)
 			}
-			if manager.contentsEqual(atPath: candidate.path, andPath: url.path) {
-				return candidate.path
+			let name = source.deletingPathExtension().lastPathComponent
+			let suffix = source.pathExtension.isEmpty ? "" : "." + source.pathExtension
+			var number = 1
+			while true {
+				let candidate = folder.appendingPathComponent(number == 1 ? name + suffix : "\(name) \(number)\(suffix)")
+				if !manager.fileExists(atPath: candidate.path) {
+					try manager.copyItem(at: source, to: candidate)
+					return candidate.path
+				}
+				if manager.contentsEqual(atPath: candidate.path, andPath: source.path) {
+					return candidate.path
+				}
+				number += 1
 			}
-			number += 1
 		}
+	}
+
+	/// Runs `body` on the URL a coordinated read of `url` hands over.
+	private static func coordinatedRead<T>(_ url: URL, _ body: (URL) throws -> T) throws -> T {
+		var coordinationError: NSError?
+		var outcome: Result<T, Error>?
+		NSFileCoordinator().coordinate(readingItemAt: url, options: [], error: &coordinationError) { source in
+			outcome = Result { try body(source) }
+		}
+		if let coordinationError {
+			throw coordinationError
+		}
+		guard let outcome else {
+			throw CocoaError(.fileReadUnknown, userInfo: [NSURLErrorKey: url])
+		}
+		return try outcome.get()
 	}
 
 	/// A cue sheet is nothing without its tracks: it goes into a folder of

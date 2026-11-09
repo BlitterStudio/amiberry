@@ -154,10 +154,22 @@ enum ModalWait {
 		presenter.present(controller, animated: animated)
 		guard controller.presentingViewController != nil else { return false }
 		while !done(), controller.presentingViewController != nil {
-			_ = RunLoop.current.run(mode: .default, before: Date(timeIntervalSinceNow: 0.05))
-			hook?()
+			turn()
 		}
 		return true
+	}
+
+	/// Runs the main run loop until `done` holds or `timeout` has passed.
+	static func wait(until done: () -> Bool, timeout: TimeInterval) {
+		let deadline = Date(timeIntervalSinceNow: timeout)
+		while !done(), Date() < deadline {
+			turn()
+		}
+	}
+
+	private static func turn() {
+		_ = RunLoop.current.run(mode: .default, before: Date(timeIntervalSinceNow: 0.05))
+		hook?()
 	}
 }
 
@@ -286,7 +298,12 @@ enum FilePanels {
 		picker.isModalInPresentation = true
 		let delegate = PickerDelegate()
 		picker.delegate = delegate
-		ModalWait.present(picker, from: presenter, animated: true) { delegate.finished }
+		guard ModalWait.present(picker, from: presenter, animated: true, until: { delegate.finished }) else { return [] }
+		// The picker can close before it answers: a file provider (OneDrive,
+		// iCloud Drive) hands over the chosen files after it has gone. It
+		// always answers, with the files or a cancel; the limit only keeps a
+		// provider that never does from hanging the app.
+		ModalWait.wait(until: { delegate.finished }, timeout: 120)
 		return delegate.urls
 	}
 
