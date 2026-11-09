@@ -131,7 +131,7 @@ bool fpu_exact_core(const uae_prefs& p)
 		return true;
 	if (p.fpu_mode != FPU_MODE_AUTO)
 		return false;
-#if defined(CPU_AARCH64)
+#if defined(CPU_AARCH64) && defined(WITH_SOFTFLOAT)
 	return !(effective_jit_cache(p) && p.compfpu);
 #else
 	return false;
