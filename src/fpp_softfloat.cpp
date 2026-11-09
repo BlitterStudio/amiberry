@@ -1099,6 +1099,8 @@ uae_u32 fp_jit_out_inline_kind(uae_u16 opcode, uae_u16 extra)
 	struct fpj_fmovem plan;
 	if (fp_jit_fmovem_plan(opcode, extra, &plan))       // FMOVEM, static list
 		return 1 | (currprefs.cpu_model == 68060 ? 1 << 13 : 0);
+	if ((extra & 0xfc00) == 0x5c00)                     // FMOVECR
+		return (extra & 0x40) ? 0 : 1 | (fpj_fpiar_always ? 1 << 12 : 0) | (currprefs.cpu_model == 68060 ? 1 << 13 : 0);
 	if (((extra >> 13) & 7) != 3)
 		return 0;
 	switch ((extra >> 10) & 7) {

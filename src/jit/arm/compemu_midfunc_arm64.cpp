@@ -1458,6 +1458,53 @@ static void fpx_emit_fmovem(fpx_fails &f, uae_u32 kind, uae_u32 opext, const str
 	STRB_wXi(31, R_REGSTRUCT, FPX_OFF(fp_exception));
 }
 
+/* FMOVECR #ofs,FPn inline: the constant and its FPSR bits from
+ * fp_jit_fmovecr() at compile time, valid at round to nearest, extended
+ * precision; another FPCR, a pending exception or a disabled 68060 FPU:
+ * the helper call. */
+static void fpx_emit_fmovecr(fpx_fails &f, uae_u32 kind, uae_u32 opext, uae_u32 pc)
+{
+	uae_u16 hi;
+	uae_u64 lo;
+	uae_u32 ccexc, accr;
+	fp_jit_fmovecr((uae_u16)opext, &hi, &lo, &ccexc, &accr);
+	const int dreg = (opext >> 7) & 7;
+	LDR_wXi(16, R_REGSTRUCT, FPX_OFF(fpcr));
+	MOV_wi(12, 0xfff0);
+	AND_www(16, 16, 12);
+	LDR_wXi(12, R_REGSTRUCT, FPX_OFF(fp_exp_pend));
+	ORR_www(16, 16, 12);
+	LDR_wXi(12, R_REGSTRUCT, FPX_OFF(fp_unimp_pend));
+	ORR_www(16, 16, 12);
+	if ((kind >> 13) & 1) {
+		LDR_wXi(12, R_REGSTRUCT, FPX_OFF(pcr));
+		UBFX_wwii(12, 12, 1, 1);
+		ORR_www(16, 16, 12);
+	}
+	f.add(); CBNZ_wi(16, 0);
+	MOV_wi(2, hi);
+	STRH_wXi(2, R_REGSTRUCT, FPX_OFF(fp[dreg].fpx.high));
+	LOAD_U64(3, lo);
+	STR_xXi(3, R_REGSTRUCT, FPX_OFF(fp[dreg].fpx.low));
+	LDR_wXi(2, R_REGSTRUCT, FPX_OFF(fpsr));
+	fpx_mov32(3, (ccexc >> 24) & 0xf);
+	BFI_wwii(2, 3, 24, 4);
+	fpx_mov32(3, (ccexc >> 8) & 0xff);
+	BFI_wwii(2, 3, 8, 8);
+	if (accr) {
+		fpx_mov32(3, accr);
+		ORR_www(2, 2, 3);
+	}
+	STR_wXi(2, R_REGSTRUCT, FPX_OFF(fpsr));
+	MOV_wi(3, 1);
+	STR_wXi(3, R_REGSTRUCT, FPX_OFF(fpu_state));
+	STRB_wXi(31, R_REGSTRUCT, FPX_OFF(fp_exception));
+	if ((kind >> 12) & 1) {
+		fpx_mov32(3, pc);
+		STR_wXi(3, R_REGSTRUCT, FPX_OFF(fpiar));
+	}
+}
+
 // the JIT may read a long of this instruction's memory directly (readlong())
 static bool fpx_in_direct(void)
 {
@@ -1795,8 +1842,9 @@ MIDFUNC(7,jitx_fpp_generic,(IMPTR fn, RR4 a, IM8 hasea, IM32 opext, IMPTR nextp,
 	fails.n = 0;
 	struct fpj_fmovem fmovem;
 	const bool is_fmovem = inl && fp_jit_fmovem_plan(opext >> 16, (uae_u16)opext, &fmovem);
-	if (inl && (is_fmovem ? (fmovem.to_mem ? fpx_out_direct(4) : fpx_in_direct())
-			: ((opext >> 19) & 7) == 0 || fpx_out_direct(((uae_u16)opext >> 10) & 7))) {
+	const bool is_fmovecr = inl && (opext & 0xfc00) == 0x5c00;
+	if (inl && (is_fmovecr || (is_fmovem ? (fmovem.to_mem ? fpx_out_direct(4) : fpx_in_direct())
+			: ((opext >> 19) & 7) == 0 || fpx_out_direct(((uae_u16)opext >> 10) & 7)))) {
 		const bool verify = fp_jit_inline_verify();
 		if (verify) {
 			MOV_xx(REG_PAR1, REG_PAR2);
@@ -1804,7 +1852,9 @@ MIDFUNC(7,jitx_fpp_generic,(IMPTR fn, RR4 a, IM8 hasea, IM32 opext, IMPTR nextp,
 			fpx_call4((uintptr)fp_jit_verify_out_save);
 			MOV_xx(REG_PAR2, REG_RESULT);
 		}
-		if (is_fmovem)
+		if (is_fmovecr)
+			fpx_emit_fmovecr(fails, inl, opext, (uae_u32)lenpc);
+		else if (is_fmovem)
 			fpx_emit_fmovem(fails, inl, opext, fmovem);
 		else
 			fpx_emit_out(fails, inl, opext, (uae_u32)lenpc);
