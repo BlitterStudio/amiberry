@@ -1,17 +1,21 @@
 package com.blitterstudio.amiberry.ui.screens.library
 
 import com.blitterstudio.amiberry.R
+import com.blitterstudio.amiberry.data.ConfigParser
+import com.blitterstudio.amiberry.data.ConfigInfo
 import com.blitterstudio.amiberry.data.RecentLaunches
 import com.blitterstudio.amiberry.data.model.AmigaFile
 import com.blitterstudio.amiberry.data.model.AmigaModel
 import com.blitterstudio.amiberry.data.model.EmulatorSettings
 import com.blitterstudio.amiberry.data.model.FileCategory
 import com.blitterstudio.amiberry.data.model.MediaCarryOverRules
+import com.blitterstudio.amiberry.data.model.MediaDrive
 import com.blitterstudio.amiberry.data.model.ModelRomAvailability
-import com.blitterstudio.amiberry.data.ConfigInfo
+import com.blitterstudio.amiberry.data.model.SettingsSchema
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -152,7 +156,7 @@ class LibraryStateTest {
 
 		assertEquals("/floppies/LostPixel.adf", carried.settings.floppy0)
 		// The A1200 has no CD drive: the CD goes.
-		assertEquals(listOf(com.blitterstudio.amiberry.data.model.MediaDrive.CD), carried.dropped)
+		assertEquals(listOf(MediaDrive.CD), carried.dropped)
 	}
 
 	@Test
@@ -179,6 +183,79 @@ class LibraryStateTest {
 		assertEquals(R.string.library_rom_report_no_new, nothingNew.stringRes)
 	}
 
+	@Test
+	fun `play in enables a disabled DF0 and refuses models without the drive`() {
+		val disk = file("LostPixel.adf")
+		val noDrive = ConfigParser.ParsedConfig(
+			EmulatorSettings.fromModel(AmigaModel.CD32),
+			emptyList(), ""
+		)
+		// A CD32 has no floppy drive: the disk is refused, not silently dropped.
+		val refused = LibraryLaunch.playInLaunchSettings(noDrive, disk, EmulatorSettings())
+			as LibraryLaunch.PlayInOutcome.Refused
+		assertEquals(R.string.library_play_in_no_floppy_drive, refused.messageRes)
+
+		// A machine saved with DF0 disabled gets the drive back with the disk in it.
+		val disabledDf0 = ConfigParser.ParsedConfig(
+			EmulatorSettings.fromModel(AmigaModel.A1200).copy(floppy0Type = -1),
+			emptyList(), ""
+		)
+		val launch = LibraryLaunch.playInLaunchSettings(disabledDf0, disk, EmulatorSettings())
+			as LibraryLaunch.PlayInOutcome.Launch
+		assertEquals(disk.path, launch.settings.floppy0)
+		assertTrue(launch.settings.floppy0Type != -1)
+
+		// The CD refusal the Apple apps make too.
+		val cd = AmigaFile(disk.path, disk.name, "cue", 0, 0, FileCategory.CD_IMAGES)
+		val cdRefused = LibraryLaunch.playInLaunchSettings(disabledDf0, cd, EmulatorSettings())
+			as LibraryLaunch.PlayInOutcome.Refused
+		assertEquals(R.string.library_play_in_no_cd_drive, cdRefused.messageRes)
+	}
+
+	@Test
+	fun `play in fills unset control groups from the remembered controls`() {
+		val machine = EmulatorSettings.fromModel(AmigaModel.A1200).copy(joyport0 = "joy0")
+		val remembered = EmulatorSettings.fromModel(AmigaModel.A500).copy(
+			joyport0 = "mouse",
+			joyport1 = "joy1"
+		)
+		val parsed = ConfigParser.ParsedConfig(machine, emptyList(), "", explicitKeys = setOf("joyport0"))
+
+		val launch = LibraryLaunch.playInLaunchSettings(parsed, file("Game.adf"), remembered)
+			as LibraryLaunch.PlayInOutcome.Launch
+
+		// The machine's own port 0 stays; the port it leaves unset comes from the controls
+		// the user played with last, so the launch honours them.
+		assertEquals("joy0", launch.settings.joyport0)
+		assertEquals("joy1", launch.settings.joyport1)
+	}
+
+	@Test
+	fun `play in leaves a stable recent entry of the machine with the media`() {
+		val machine = EmulatorSettings.fromModel(AmigaModel.A1200)
+
+		val diskEntry = LibraryLaunch.playInRecentEntry(machine, file("LostPixel.adf"))
+		assertEquals("quickstart", diskEntry.optString("type"))
+		assertEquals("a1200", diskEntry.optString("model"))
+		assertEquals("/floppies/LostPixel.adf", diskEntry.optString("df0"))
+
+		val cd = AmigaFile("/cds/Game.cue", "Game.cue", "cue", 0, 0, FileCategory.CD_IMAGES)
+		val cdEntry = LibraryLaunch.playInRecentEntry(machine, cd)
+		assertEquals("/cds/Game.cue", cdEntry.optString("cd"))
+	}
+
+	@Test
+	fun `aros-only installs need both aros files on the availability list`() {
+		val aros = SettingsSchema.current?.aros ?: return
+		val bothFiles = listOf(arosFile(aros.mainFile), arosFile(aros.extFile))
+
+		// Availability from the complete inventory: an A500 boots the built-in AROS.
+		assertTrue(ModelRomAvailability.isModelAvailable(AmigaModel.A500, bothFiles))
+		// The display list hides the extension ROM; reading availability from it (the bug)
+		// would leave the model unavailable.
+		assertFalse(ModelRomAvailability.isModelAvailable(AmigaModel.A500, listOf(arosFile(aros.mainFile))))
+	}
+
 	private fun rom(name: String, crc32: Long): AmigaFile = AmigaFile(
 		path = "/roms/$name",
 		name = name,
@@ -196,5 +273,14 @@ class LibraryStateTest {
 		size = 901120,
 		lastModified = 0,
 		category = FileCategory.FLOPPIES
+	)
+
+	private fun arosFile(name: String): AmigaFile = AmigaFile(
+		path = "/roms/$name",
+		name = name,
+		extension = "bin",
+		size = 512000,
+		lastModified = 0,
+		category = FileCategory.ROMS
 	)
 }

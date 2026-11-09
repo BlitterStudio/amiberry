@@ -42,6 +42,7 @@
     <string name="library_action_play_in">Play in…</string>
     <string name="library_play_in_title">Play "%1$s" in</string>
     <string name="library_play_in_no_cd_drive">%1$s has no CD drive. Play the CD on its own, or in a CD32 or CDTV machine.</string>
+    <string name="library_play_in_no_floppy_drive">%1$s has no floppy drive.</string>
     <string name="library_play_unsupported">"%1$s" is not a disk, CD or WHDLoad archive.</string>
     <string name="library_cd_needs_rom">The CD32 and CDTV need their own Kickstart ROMs, which AROS cannot replace. Import them, then play the CD.</string>
     <string name="library_recent_remove">Remove from Recent</string>

@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import com.blitterstudio.amiberry.R
 import com.blitterstudio.amiberry.data.model.AmigaFile
 import com.blitterstudio.amiberry.data.model.AmigaModel
+import androidx.compose.ui.text.style.TextAlign
 import com.blitterstudio.amiberry.data.model.ModelRomAvailability
 import com.blitterstudio.amiberry.data.model.RomIdentity
 import com.blitterstudio.amiberry.ui.components.ImportPicker
@@ -57,7 +58,10 @@ import com.blitterstudio.amiberry.ui.dpadFocusIndicator
 @Composable
 internal fun LibraryKickstartRomsPage(
 	modifier: Modifier,
+	/** The ROM files listed; the display list, which hides the AROS extension ROM. */
 	roms: List<AmigaFile>,
+	/** The complete ROM inventory, which the models' readiness is read from. */
+	modelRoms: List<AmigaFile>,
 	query: String,
 	importInProgress: Boolean,
 	importPicker: ImportPicker,
@@ -73,7 +77,7 @@ internal fun LibraryKickstartRomsPage(
 
 	// The models whose Kickstart is installed; a model whose ROM is missing still shows,
 	// with what it boots meanwhile (or the ROMs it needs, where AROS cannot stand in).
-	val modelStates = remember(roms) { romModelStates(roms) }
+	val modelStates = remember(modelRoms) { romModelStates(modelRoms) }
 	val shownModels = filterRomModels(modelStates, query)
 
 	// Deleting a ROM takes its focused row away, which dropped D-pad focus: once the
@@ -225,18 +229,25 @@ private fun RomModelRow(state: RomModelState) {
 		modifier = Modifier
 			.fillMaxWidth()
 			.padding(horizontal = 4.dp, vertical = 10.dp),
+		horizontalArrangement = Arrangement.spacedBy(16.dp),
 		verticalAlignment = Alignment.CenterVertically
 	) {
-		Text(state.model.displayName, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+		// The name keeps its own width, on one line; a long status wraps beside it rather
+		// than squeezing it ("CD / 32", a one-letter "CDTV").
+		Text(state.model.displayName, style = MaterialTheme.typography.bodyLarge, maxLines = 1, softWrap = false)
+		val status = Modifier.weight(1f, fill = false)
 		if (state.ready) {
-			Row(verticalAlignment = Alignment.CenterVertically) {
+			Row(
+				modifier = status,
+				horizontalArrangement = Arrangement.spacedBy(4.dp),
+				verticalAlignment = Alignment.CenterVertically
+			) {
 				Icon(
 					Icons.Default.CheckCircle,
 					contentDescription = null,
 					tint = MaterialTheme.colorScheme.primary,
 					modifier = Modifier.size(18.dp)
 				)
-				Spacer(modifier = Modifier.width(4.dp))
 				Text(
 					stringResource(R.string.library_rom_model_ready),
 					style = MaterialTheme.typography.bodyMedium,
@@ -246,12 +257,16 @@ private fun RomModelRow(state: RomModelState) {
 		} else if (state.bootsAros) {
 			Text(
 				stringResource(R.string.library_rom_model_boots_aros),
+				modifier = status,
+				textAlign = TextAlign.End,
 				style = MaterialTheme.typography.bodyMedium,
 				color = MaterialTheme.colorScheme.onSurfaceVariant
 			)
 		} else {
 			Text(
 				stringResource(R.string.library_rom_model_needs_rom, state.neededRoms.joinToString(", ")),
+				modifier = status,
+				textAlign = TextAlign.End,
 				style = MaterialTheme.typography.bodyMedium,
 				color = MaterialTheme.colorScheme.onSurfaceVariant
 			)

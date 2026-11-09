@@ -137,8 +137,14 @@ fun LibraryScreen(
 	val whdloadGames by fileViewModel.whdloadGames.collectAsState()
 	val hardDrives by fileViewModel.hardDrives.collectAsState()
 	val isScanning by fileViewModel.isScanning.collectAsState()
-	val availableModels = remember(roms) { ModelRomAvailability.availableModels(roms) }
-	val kickstartInstalled = availableModels.any { ModelRomAvailability.hasKickstart(it, roms) }
+	// The complete ROM inventory decides what can run (the display list below hides the
+	// AROS extension ROM, which availability also needs); the filtered list is display only.
+	val allRoms by repository.roms.collectAsState()
+	val availableModels = remember(allRoms) { ModelRomAvailability.availableModels(allRoms) }
+	val kickstartInstalled = availableModels.any { ModelRomAvailability.hasKickstart(it, allRoms) }
+	// A shelf import runs through the view model: its busy state keeps the Import action
+	// honest while it works (and stops a second batch from being silently dropped).
+	val filesImporting by fileViewModel.isImporting.collectAsState()
 
 	// What was played last, most recent first.
 	val recentEntries by preferences.recentLaunches
@@ -409,6 +415,7 @@ fun LibraryScreen(
 			launchGuard = launchGuard,
 			preferences = preferences,
 			roms = roms,
+			allRoms = allRoms,
 			floppies = floppies,
 			cds = cds,
 			whdloadGames = whdloadGames,
@@ -417,6 +424,7 @@ fun LibraryScreen(
 			isScanning = isScanning,
 			launchInProgress = launchInProgress,
 			importInProgress = importInProgress,
+			filesImporting = filesImporting,
 			shelfPicker = shelfPicker,
 			romPicker = romPicker,
 			fileViewModel = fileViewModel,
@@ -563,11 +571,22 @@ fun LibraryScreen(
 								badge = counts[index]
 							)
 						},
-						selectedIndex = filters.indexOfFirst { it == filter }.coerceAtLeast(0),
+					selectedIndex = filters.indexOfFirst { it == filter }.coerceAtLeast(0),
 						onSelect = { selectFilter(it) },
 						modifier = Modifier.contentEntryFocus(),
 						contentFocus = contentFocus,
-						selectOnFocus = isTv
+						selectOnFocus = isTv,
+						// Wide enough that every label and its count keep one line, with the
+						// sections the filter menu also shows.
+						paneWidth = 280.dp,
+						headers = mapOf(
+							0 to stringResource(R.string.library_filter_machines),
+							filters.indexOfFirst {
+								it is LibraryFilter.Media && it.shelf == MediaShelf.Recent
+							} to stringResource(R.string.library_filter_media),
+							filters.indexOfFirst { it == LibraryFilter.KickstartRoms } to
+								stringResource(R.string.library_filter_system)
+						)
 					)
 					VerticalDivider()
 					content(
@@ -649,6 +668,8 @@ private fun LibraryContent(
 	settingsViewModel: SettingsViewModel,
 	configurationsViewModel: ConfigurationsViewModel,
 	roms: List<AmigaFile>,
+	allRoms: List<AmigaFile>,
+	filesImporting: Boolean,
 	floppies: List<AmigaFile>,
 	cds: List<AmigaFile>,
 	whdloadGames: List<AmigaFile>,
@@ -701,7 +722,7 @@ private fun LibraryContent(
 			machines = configs,
 			isScanning = isScanning,
 			launchInProgress = launchInProgress,
-			importInProgress = importInProgress,
+			importInProgress = importInProgress || filesImporting,
 			importPicker = shelfPicker,
 			onDelete = fileViewModel::deleteFile,
 			onQuickPlay = onQuickPlay,
@@ -713,6 +734,7 @@ private fun LibraryContent(
 		LibraryFilter.KickstartRoms -> LibraryKickstartRomsPage(
 			modifier = modifier,
 			roms = roms,
+			modelRoms = allRoms,
 			query = searchQuery,
 			importInProgress = importInProgress,
 			importPicker = romPicker,

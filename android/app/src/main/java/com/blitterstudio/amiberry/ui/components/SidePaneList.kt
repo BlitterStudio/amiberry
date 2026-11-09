@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -25,6 +26,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.blitterstudio.amiberry.ui.dpadFocusIndicator
 
@@ -54,7 +56,11 @@ fun SidePaneList(
 	onSelect: (Int) -> Unit,
 	modifier: Modifier = Modifier,
 	contentFocus: FocusRequester? = null,
-	selectOnFocus: Boolean = false
+	selectOnFocus: Boolean = false,
+	/** The pane's width; wide enough that the longest label keeps one line. */
+	paneWidth: Dp = SIDE_PANE_WIDTH,
+	/** Section headers by the index of the entry each heads; not focusable. */
+	headers: Map<Int, String> = emptyMap()
 ) {
 	val requesters = remember(entries.size) { List(entries.size) { FocusRequester() } }
 	var focusedIndex by remember { mutableIntStateOf(-1) }
@@ -71,13 +77,22 @@ fun SidePaneList(
 	}
 	Column(
 		modifier = modifier
-			.width(SIDE_PANE_WIDTH)
+			.width(paneWidth)
 			.fillMaxHeight()
 			.focusRestorer(requesters.getOrElse(selectedIndex) { FocusRequester.Default })
 			.verticalScroll(rememberScrollState())
 			.padding(horizontal = 12.dp, vertical = 8.dp)
 	) {
 		entries.forEachIndexed { index, entry ->
+			headers[index]?.let { header ->
+				Text(
+					header,
+					style = MaterialTheme.typography.labelMedium,
+					color = MaterialTheme.colorScheme.onSurfaceVariant,
+					modifier = Modifier
+						.padding(start = 16.dp, top = 12.dp, bottom = 4.dp)
+				)
+			}
 			NavigationDrawerItem(
 				label = { Text(entry.label) },
 				selected = index == selectedIndex,

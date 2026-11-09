@@ -11,9 +11,11 @@ import com.blitterstudio.amiberry.data.EmulatorLauncher
 import com.blitterstudio.amiberry.data.RecentLaunches
 import com.blitterstudio.amiberry.data.model.AmigaFile
 import com.blitterstudio.amiberry.data.model.AmigaModel
+import com.blitterstudio.amiberry.data.AndroidControlSettings
 import com.blitterstudio.amiberry.data.model.EmulatorSettings
 import com.blitterstudio.amiberry.data.model.FileCategory
 import com.blitterstudio.amiberry.data.model.ModelRomAvailability
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -44,6 +46,9 @@ internal object LibraryLaunch {
 
 	/** The configuration a Play In writes, beside the machines it plays. */
 	internal const val PLAY_IN_CONFIG = ".library_play_in.uae"
+
+	/** The drive type DF0: takes when the machine was saved without one. */
+	private const val FLOPPY_DRIVE_TYPE = 0
 
 	/** What playing a file ended in: started, or the message to show instead. */
 	sealed interface PlayResult {
@@ -86,20 +91,26 @@ internal object LibraryLaunch {
 		playWhdloadPath(context, game.path)
 
 	private suspend fun playWhdloadPath(context: Context, path: String): PlayResult {
-		withContext(Dispatchers.IO) {
-			val prepared = AndroidLaunchConfig.prepareWhdLoad(
-				context,
-				path,
-				AndroidLaunchConfig.loadLastSessionSettings(context)
-			)
-			EmulatorLauncher.launchWhdload(
-				context = context,
-				lhaPath = path,
-				configPath = prepared.configFile.absolutePath,
-				shaderOverride = prepared.shaderOverride,
-				controlOverrides = prepared.controlOverrides
-			)
-		}
+		val prepared = withContext(Dispatchers.IO) {
+			try {
+				AndroidLaunchConfig.prepareWhdLoad(
+					context,
+					path,
+					AndroidLaunchConfig.loadLastSessionSettings(context)
+				)
+			} catch (e: CancellationException) {
+				throw e
+			} catch (_: Exception) {
+				null
+			}
+		} ?: return PlayResult.Refused(R.string.msg_failed_save_config)
+		EmulatorLauncher.launchWhdload(
+			context = context,
+			lhaPath = path,
+			configPath = prepared.configFile.absolutePath,
+			shaderOverride = prepared.shaderOverride,
+			controlOverrides = prepared.controlOverrides
+		)
 		return PlayResult.Started
 	}
 
@@ -154,17 +165,25 @@ internal object LibraryLaunch {
 		floppy0: String = "",
 		floppy1: String = "",
 		cdImage: String = ""
-	) {
+	): PlayResult {
+		val configFile = withContext(Dispatchers.IO) {
+			try {
+				val settings = recentQuickStartSettingsSnapshot(
+					model = model,
+					roms = roms,
+					currentSettings = AndroidLaunchConfig.loadLastSessionSettings(context),
+					floppy0 = floppy0,
+					floppy1 = floppy1,
+					cdImage = cdImage
+				)
+				ConfigGenerator.writeConfig(context, settings, AndroidLaunchConfig.QUICKSTART_CONFIG)
+			} catch (e: CancellationException) {
+				throw e
+			} catch (_: Exception) {
+				null
+			}
+		} ?: return PlayResult.Refused(R.string.msg_failed_save_config)
 		withContext(Dispatchers.IO) {
-			val settings = recentQuickStartSettingsSnapshot(
-				model = model,
-				roms = roms,
-				currentSettings = AndroidLaunchConfig.loadLastSessionSettings(context),
-				floppy0 = floppy0,
-				floppy1 = floppy1,
-				cdImage = cdImage
-			)
-			val configFile = ConfigGenerator.writeConfig(context, settings, AndroidLaunchConfig.QUICKSTART_CONFIG)
 			EmulatorLauncher.launchQuickStart(
 				context = context,
 				model = model,
@@ -174,6 +193,7 @@ internal object LibraryLaunch {
 				cdPath = cdImage.takeIf { it.isNotBlank() }
 			)
 		}
+		return PlayResult.Started
 	}
 
 	/**
@@ -196,11 +216,53 @@ internal object LibraryLaunch {
 		cdImage = cdImage
 	)
 
+	/** What a Play In launches, or why it is refused. */
+	internal sealed interface PlayInOutcome {
+		data class Launch(val settings: EmulatorSettings, val unknownLines: List<String>) : PlayInOutcome
+		data class Refused(val messageRes: Int, val argument: String? = null) : PlayInOutcome
+	}
+
 	/**
-	 * Plays [file] in [machine]: loads the machine, puts the file in DF0: (a disk) or its
-	 * CD drive (a CD) and starts it. A CD is refused for a machine whose model has no CD
-	 * drive, as setting the empty cdimage0 would add one the machine was never set up for.
-	 * [loadMachine] reads the machine's file; [writeConfig] writes the launch configuration.
+	 * The machine [file] plays in: its settings, the file in DF0: (whose drive a machine
+	 * saved without one gets back, [driveType]) or its CD drive, and the remembered
+	 * Android controls ([fallbackControls]) filling the groups the machine leaves unset —
+	 * or the refusal: a disk needs a model with a floppy drive, a CD the model's CD drive.
+	 */
+	internal fun playInLaunchSettings(
+		parsed: ConfigParser.ParsedConfig,
+		file: AmigaFile,
+		fallbackControls: EmulatorSettings,
+		driveType: Int = FLOPPY_DRIVE_TYPE
+	): PlayInOutcome {
+		val model = parsed.settings.baseModel
+		val settings = when (file.category) {
+			FileCategory.FLOPPIES -> {
+				if (!model.hasFloppy) {
+					return PlayInOutcome.Refused(R.string.library_play_in_no_floppy_drive, model.displayName)
+				}
+				parsed.settings.copy(
+					floppy0 = file.path,
+					floppy0Type = parsed.settings.floppy0Type.takeIf { it != -1 } ?: driveType
+				)
+			}
+			FileCategory.CD_IMAGES -> {
+				if (!model.hasCd) {
+					return PlayInOutcome.Refused(R.string.library_play_in_no_cd_drive, model.displayName)
+				}
+				parsed.settings.copy(cdImage = file.path)
+			}
+			else -> return PlayInOutcome.Refused(R.string.library_play_unsupported, file.name)
+		}
+		return PlayInOutcome.Launch(
+			AndroidControlSettings.withFallback(settings, parsed.explicitKeys, fallbackControls),
+			parsed.unknownLines
+		)
+	}
+
+	/**
+	 * Plays [file] in [machine]: loads the machine, puts the file in DF0: or its CD drive
+	 * and starts it. [loadMachine] reads the machine's file; [writeConfig] writes the
+	 * launch configuration.
 	 */
 	suspend fun playIn(
 		context: Context,
@@ -211,27 +273,51 @@ internal object LibraryLaunch {
 	): PlayResult {
 		val parsed = try {
 			loadMachine(machine.path)
+		} catch (e: CancellationException) {
+			throw e
 		} catch (_: Exception) {
 			return PlayResult.Refused(R.string.msg_failed_load_config)
 		}
-		val settings = when (file.category) {
-			FileCategory.FLOPPIES -> parsed.settings.copy(floppy0 = file.path)
-			FileCategory.CD_IMAGES ->
-				if (!parsed.settings.baseModel.hasCd) {
-					return PlayResult.Refused(R.string.library_play_in_no_cd_drive, machine.name)
-				} else {
-					parsed.settings.copy(cdImage = file.path)
-				}
-			else -> return PlayResult.Refused(R.string.library_play_unsupported, file.name)
+		val launch = when (val outcome = playInLaunchSettings(
+			parsed = parsed,
+			file = file,
+			fallbackControls = AppPreferences.getInstance(context).rememberedAndroidControls()
+		)) {
+			is PlayInOutcome.Launch -> outcome
+			is PlayInOutcome.Refused ->
+				return PlayResult.Refused(outcome.messageRes, outcome.argument)
 		}
+		val configFile = withContext(Dispatchers.IO) {
+			try {
+				writeConfig(launch.settings, launch.unknownLines)
+			} catch (e: CancellationException) {
+				throw e
+			} catch (_: Exception) {
+				null
+			}
+		} ?: return PlayResult.Refused(R.string.msg_failed_save_config)
 		withContext(Dispatchers.IO) {
-			val configFile = writeConfig(settings, parsed.unknownLines)
-			EmulatorLauncher.launchWithConfig(
-				context,
-				configFile.absolutePath,
-				rememberedControls = AppPreferences.getInstance(context).rememberedAndroidControls()
-			)
+			EmulatorLauncher.launchWithConfig(context, configFile.absolutePath)
 		}
+		// The launch recorded the transient configuration; Recent keeps the machine with
+		// the media in its drive, which replays stably however many Play Ins follow.
+		val preferences = AppPreferences.getInstance(context)
+		preferences.addRecentLaunch(playInRecentEntry(launch.settings, file))
+		preferences.removeRecentLaunch(
+			JSONObject().put("type", "config").put("path", configFile.absolutePath)
+		)
 		return PlayResult.Started
 	}
+
+	/** The Recent entry a Play In leaves: the machine's model with the media in its drive. */
+	internal fun playInRecentEntry(settings: EmulatorSettings, file: AmigaFile): JSONObject =
+		JSONObject().apply {
+			put("type", "quickstart")
+			put("model", settings.baseModel.cmdArg)
+			when (file.category) {
+				FileCategory.FLOPPIES -> put("df0", file.path)
+				FileCategory.CD_IMAGES -> put("cd", file.path)
+				else -> Unit
+			}
+		}
 }

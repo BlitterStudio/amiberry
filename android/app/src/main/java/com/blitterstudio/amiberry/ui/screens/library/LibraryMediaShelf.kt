@@ -15,6 +15,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
@@ -783,10 +785,14 @@ private fun PlayInDialog(
 		onDismissRequest = onDismiss,
 		title = { Text(stringResource(R.string.library_play_in_title, file.name)) },
 		text = {
-			Column {
-				val firstFocus = remember { FocusRequester() }
-				LaunchedEffect(Unit) { firstFocus.requestFocus() }
-				machines.forEachIndexed { index, machine ->
+			val firstFocus = remember { FocusRequester() }
+			LaunchedEffect(Unit) { firstFocus.requestFocus() }
+			// Bounded and lazy: every machine stays reachable however many there are.
+			LazyColumn(
+				modifier = Modifier.heightIn(max = 320.dp),
+				verticalArrangement = Arrangement.spacedBy(4.dp)
+			) {
+				itemsIndexed(machines, key = { _, machine -> machine.path }) { index, machine ->
 					TextButton(
 						onClick = { onPick(machine) },
 						modifier = Modifier
