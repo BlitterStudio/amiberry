@@ -366,6 +366,7 @@ struct SourceOfferHeader: View {
 			Text("Copyright (C) 2016-2026 Dimitris Panokostas and the Amiberry contributors.")
 			Text("This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.")
 			Text("This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.")
+			Text("Some copyright holders also allow their code to be distributed through Apple's App Store, by an additional permission under section 7 of the GNU GPL version 3. The permission, shown with the Amiberry and WinUAE entries, names them.")
 			revision(document.source)
 			if !document.source.thirdPartyURL.isEmpty {
 				Link("Source code of the third-party libraries in this build",

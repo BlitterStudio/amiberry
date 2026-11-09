@@ -27,7 +27,10 @@
 		<key>NSHumanReadableCopyright</key>
 		<string>${MACOSX_BUNDLE_COPYRIGHT}</string>
 		<key>LSApplicationCategoryType</key>
-		<string>public.app-category.games</string>
+		<string>public.app-category.entertainment</string>
+		<!-- Game Mode came with the games category; Entertainment keeps it this way. -->
+		<key>LSSupportsGameMode</key>
+		<true/>
 		<key>ITSAppUsesNonExemptEncryption</key>
 		<false/>
 		<!-- The genlock capture source: the camera, through SDL3 (AVFoundation). -->

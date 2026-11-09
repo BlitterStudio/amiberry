@@ -6,9 +6,12 @@
       "version": "8.5.0",
       "copyright": "2016-2026 Dimitris Panokostas and the Amiberry contributors",
       "licence": "GPL-3.0-or-later",
-      "licence_name": "GNU General Public License, version 3 or later",
+      "licence_name": "GNU General Public License, version 3 or later, with an additional permission for Apple's App Store",
       "url": "https://github.com/BlitterStudio/amiberry",
-      "text": "GPL-3.0.txt",
+      "text": [
+        "GPL-3.0-AppStore-permission.txt",
+        "GPL-3.0.txt"
+      ],
       "platforms": [
         "macos",
         "macos-store",
@@ -21,9 +24,12 @@
       "version": "",
       "copyright": "Bernd Schmidt, Toni Wilen and many other UAE and WinUAE contributors",
       "licence": "GPL-2.0-or-later",
-      "licence_name": "GNU General Public License, version 2 or later",
-      "url": "https://github.com/toniwilen/winuae",
-      "text": "GPL-2.0.txt",
+      "licence_name": "GNU General Public License, version 2 or later, with Toni Wilen's additional permission for Apple's App Store",
+      "url": "https://github.com/tonioni/WinUAE",
+      "text": [
+        "GPL-3.0-AppStore-permission.txt",
+        "GPL-2.0.txt"
+      ],
       "platforms": [
         "macos",
         "macos-store",
