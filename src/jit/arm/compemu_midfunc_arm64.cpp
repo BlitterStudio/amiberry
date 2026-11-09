@@ -1047,8 +1047,8 @@ static void fpx_emit_inline(fpx_fails &f, uae_u32 kind, uae_u32 opext, uae_u32 p
 	f.add(); CBNZ_wi(16, 0);
 	MOV_wi(17, 0x7ffd);                                    // w17: the normal exponent limit, throughout
 
-	// zeros too (not for FADD/FSUB/FMUL): FMOVE, FABS, FNEG, FTST, FCMP of +-0
-	const bool zeros = op == K_MOVE || op == K_ABS || op == K_NEG || op == K_TST || op == K_CMP;
+	// zeros too: +-0 operands (FADD/FSUB/FMUL: softfloat's zero rules below)
+	const bool zeros = true;
 	uae_u32 *src_zero_done = nullptr;
 	// the source in (w6, x7)
 	if (src == S_FPM || src == S_X) {
@@ -1171,7 +1171,11 @@ static void fpx_emit_inline(fpx_fails &f, uae_u32 kind, uae_u32 opext, uae_u32 p
 		// to the packing below: w16 sign, w2 exponent, x14 significand, x15 lost bits
 		uae_u32 *to_pack[4];
 		int npack = 0;
+		// zero results, handled after the packing: (w10, x11) set there, inexact (w5) clear
+		uae_u32 *z_mul[2] = { nullptr, nullptr }, *z_bzero = nullptr, *z_azero = nullptr, *z_cancel = nullptr;
 		if (op == K_MUL) {
+			z_mul[0] = (uae_u32 *)get_target(); CBZ_xi(9, 0);
+			z_mul[1] = (uae_u32 *)get_target(); CBZ_xi(7, 0);
 			EOR_www(16, 8, 6);
 			LSR_wwi(16, 16, 15);
 			UBFX_wwii(2, 8, 0, 15);
@@ -1192,6 +1196,8 @@ static void fpx_emit_inline(fpx_fails &f, uae_u32 kind, uae_u32 opext, uae_u32 p
 				MOV_wi(0, 1);
 				EOR_www(13, 13, 0);
 			}
+			z_bzero = (uae_u32 *)get_target(); CBZ_xi(7, 0);
+			z_azero = (uae_u32 *)get_target(); CBZ_xi(9, 0);
 			UBFX_wwii(14, 8, 0, 15);
 			UBFX_wwii(15, 6, 0, 15);
 			SUBS_xxx(31, 9, 7);                            // C clear: |a| < |b|, swap
@@ -1229,7 +1235,7 @@ static void fpx_emit_inline(fpx_fails &f, uae_u32 kind, uae_u32 opext, uae_u32 p
 			NEGS_xx(15, 15);
 			SBC_xxx(14, 4, 14);
 			ORR_xxx(3, 14, 15);
-			f.add(); CBZ_xi(3, 0);                         // exact zero: its sign depends on the mode
+			z_cancel = (uae_u32 *)get_target(); CBZ_xi(3, 0);   // exact zero: +0 (round to nearest)
 			to_pack[npack++] = (uae_u32 *)get_target(); TBNZ_xii(14, 63, 0);
 			uae_u32 *hi_zero = (uae_u32 *)get_target(); CBZ_xi(14, 0);
 			CLZ_xx(3, 14);
@@ -1268,6 +1274,47 @@ static void fpx_emit_inline(fpx_fails &f, uae_u32 kind, uae_u32 opext, uae_u32 p
 		MOV_xx(11, 14);
 		CMP_xi(15, 0);
 		CSET_wc(5, NATIVE_CC_NE);
+		// zero operands, exact, as softfloat (SOFTFLOAT_68K) rounds to nearest
+		uae_u32 *tail[4];
+		int ntail = 0;
+		tail[ntail++] = (uae_u32 *)get_target(); B_i(0);
+		if (op == K_MUL) {                                 // 0 * y: +-0, the signs' exclusive or
+			for (int i = 0; i < 2; i++)
+				write_jmp_target(z_mul[i], (uintptr)get_target());
+			EOR_www(0, 8, 6);
+			LSR_wwi(0, 0, 15);
+			LSL_wwi(10, 0, 15);
+			MOV_xi(11, 0);
+			MOV_wi(5, 0);
+		} else {
+			// b +-0: a, or with a +-0 too: that zero if the signs agree, else +0
+			write_jmp_target(z_bzero, (uintptr)get_target());
+			uae_u32 *both = (uae_u32 *)get_target(); CBZ_xi(9, 0);
+			MOV_ww(10, 8);
+			MOV_xx(11, 9);
+			MOV_wi(5, 0);
+			tail[ntail++] = (uae_u32 *)get_target(); B_i(0);
+			write_jmp_target(both, (uintptr)get_target());
+			AND_www(0, 12, 13);
+			LSL_wwi(10, 0, 15);
+			MOV_xi(11, 0);
+			MOV_wi(5, 0);
+			tail[ntail++] = (uae_u32 *)get_target(); B_i(0);
+			// a +-0, b normal: b (its sign as added)
+			write_jmp_target(z_azero, (uintptr)get_target());
+			UBFX_wwii(10, 6, 0, 15);
+			ORR_wwwLSLi(10, 10, 13, 15);
+			MOV_xx(11, 7);
+			MOV_wi(5, 0);
+			tail[ntail++] = (uae_u32 *)get_target(); B_i(0);
+			// x - x: +0
+			write_jmp_target(z_cancel, (uintptr)get_target());
+			MOV_wi(10, 0);
+			MOV_xi(11, 0);
+			MOV_wi(5, 0);
+		}
+		for (int i = 0; i < ntail; i++)
+			write_jmp_target(tail[i], (uintptr)get_target());
 	} else if (op == K_CMP) {
 		// floatx80_cmp() of normal values: Z when equal, N when dst < src
 		CMP_ww(8, 6);
@@ -1458,7 +1505,10 @@ static void fpx_emit_out(fpx_fails &f, uae_u32 kind, uae_u32 opext, uae_u32 pc)
 	MOV_wi(17, 0x7ffd);
 	LDRH_wXi(6, R_REGSTRUCT, FPX_OFF(fp[sreg].fpx.high));
 	LDR_xXi(7, R_REGSTRUCT, FPX_OFF(fp[sreg].fpx.low));
-	fpx_normal(f, 6, 7);
+	fpx_normal_or_zero(f, 6, 7);
+	uae_u32 *to_zero = size != 2 ? (uae_u32 *)get_target() : nullptr;
+	if (to_zero)
+		CBZ_xi(7, 0);                                      // +-0: stored as the format's zero
 
 	bool inexact = true;                                   // w5
 	if (size == 0 || size == 4 || size == 6) {             // fx80_to_int(), the FPCR's rounding mode
@@ -1538,6 +1588,21 @@ static void fpx_emit_out(fpx_fails &f, uae_u32 kind, uae_u32 opext, uae_u32 pc)
 	if (inexact) {
 		CMP_xi(15, 0);
 		CSET_wc(5, NATIVE_CC_NE);
+	}
+	if (to_zero) {                                         // the format's zero of the sign: exact
+		uae_u32 *skip = (uae_u32 *)get_target(); B_i(0);
+		write_jmp_target(to_zero, (uintptr)get_target());
+		if (size == 1) {
+			LSR_wwi(3, 6, 15);
+			LSL_wwi(10, 3, 31);
+		} else if (size == 5) {
+			LSR_wwi(3, 6, 15);
+			LSL_xxi(10, 3, 63);
+		} else {
+			MOV_wi(10, 0);
+		}
+		MOV_wi(5, 0);
+		write_jmp_target(skip, (uintptr)get_target());
 	}
 
 	if (mode == 0) {
