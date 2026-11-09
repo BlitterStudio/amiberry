@@ -579,8 +579,13 @@ struct KickstartROMsView: View {
 				ForEach(shown) { preset in
 					LabeledContent(preset.label) {
 						if model.readyModels.contains(preset.id) {
-							Label("Ready", systemImage: "checkmark.circle.fill")
-								.foregroundStyle(.green)
+							// Not a Label: an iOS form row lays a Label out as its own
+							// icon row, twice as tall, with its separator under it.
+							HStack(spacing: 4) {
+								Image(systemName: "checkmark.circle.fill")
+								Text("Ready")
+							}
+							.foregroundStyle(.green)
 						} else {
 							Text("ROM not installed \u{2014} boots AROS")
 								.foregroundStyle(.secondary)
