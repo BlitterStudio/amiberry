@@ -994,17 +994,44 @@ static void fpx_mov32(int r, uae_u32 v)
 }
 
 // a normal value (wh, xl): exponent 1..0x7ffe, the integer bit set; else
-// fail. w17 holds 0x7ffd.
+// fail.
 static void fpx_normal(fpx_fails &f, int wh, int xl)
 {
 	f.add(); TBZ_xii(xl, 63, 0);
-	UBFX_wwii(16, wh, 0, 15);
-	SUB_wwi(16, 16, 1);
-	CMP_ww(16, 17);
-	f.add(); BHI_i(0);
+	ADD_wwi(16, wh, 1);                                // exponent 0 or $7FFF: bits 14-1 of it + 1 clear
+	TST_wbm(16, 31, 13);                               // $7FFE
+	f.add(); BEQ_i(0);
 }
 
-// a normal value or a zero (wh, xl); else fail. w17 holds 0x7ffd.
+/* The inline code's gate: none of the FPCR bits in mask set, no exception
+ * pending, and (pcr060) the 68060 FPU enabled; else fail. fp_exp_pend and
+ * fp_unimp_pend are one 64-bit load. */
+static void fpx_gate(fpx_fails &f, uae_u32 mask, bool pcr060)
+{
+	static_assert(offsetof(struct regstruct, fp_unimp_pend) == offsetof(struct regstruct, fp_exp_pend) + 4,
+		"fp_exp_pend and fp_unimp_pend are adjacent");
+	static_assert(offsetof(struct regstruct, fp_exp_pend) % 8 == 0, "fp_exp_pend is 8-byte aligned");
+	if (mask) {
+		LDR_wXi(16, R_REGSTRUCT, FPX_OFF(fpcr));
+		if (mask == 0xfff0) {
+			TST_wbm(16, 28, 11);
+		} else if (mask == 0xff00) {
+			TST_wbm(16, 24, 7);
+		} else {
+			fpx_mov32(12, mask);
+			TST_ww(16, 12);
+		}
+		f.add(); BNE_i(0);
+	}
+	LDR_xXi(12, R_REGSTRUCT, FPX_OFF(fp_exp_pend));
+	f.add(); CBNZ_xi(12, 0);
+	if (pcr060) {
+		LDR_wXi(12, R_REGSTRUCT, FPX_OFF(pcr));
+		f.add(); TBNZ_wii(12, 1, 0);                   // DFP: the FPU disabled
+	}
+}
+
+// a normal value or a zero (wh, xl); else fail.
 static void fpx_normal_or_zero(fpx_fails &f, int wh, int xl)
 {
 	uae_u32 *normal = (uae_u32 *)get_target(); TBNZ_xii(xl, 63, 0);
@@ -1013,10 +1040,9 @@ static void fpx_normal_or_zero(fpx_fails &f, int wh, int xl)
 	f.add(); CBNZ_wi(16, 0);                           // infinity, or an unnormal zero
 	uae_u32 *done = (uae_u32 *)get_target(); B_i(0);
 	write_jmp_target(normal, (uintptr)get_target());
-	UBFX_wwii(16, wh, 0, 15);
-	SUB_wwi(16, 16, 1);
-	CMP_ww(16, 17);
-	f.add(); BHI_i(0);
+	ADD_wwi(16, wh, 1);
+	TST_wbm(16, 31, 13);
+	f.add(); BEQ_i(0);
 	write_jmp_target(done, (uintptr)get_target());
 }
 
@@ -1032,19 +1058,7 @@ static void fpx_emit_inline(fpx_fails &f, uae_u32 kind, uae_u32 opext, uae_u32 p
 	enum { S_FPM, S_L, S_S, S_W, S_B, S_D, S_X };                                    // FJS_*
 
 	// FPCR: no exception enabled, extended precision, round to nearest; nothing pending
-	LDR_wXi(16, R_REGSTRUCT, FPX_OFF(fpcr));
-	MOV_wi(12, 0xfff0);
-	AND_www(16, 16, 12);
-	LDR_wXi(12, R_REGSTRUCT, FPX_OFF(fp_exp_pend));
-	ORR_www(16, 16, 12);
-	LDR_wXi(12, R_REGSTRUCT, FPX_OFF(fp_unimp_pend));
-	ORR_www(16, 16, 12);
-	if (pcr060) {
-		LDR_wXi(12, R_REGSTRUCT, FPX_OFF(pcr));
-		UBFX_wwii(12, 12, 1, 1);                           // DFP: the FPU disabled
-		ORR_www(16, 16, 12);
-	}
-	f.add(); CBNZ_wi(16, 0);
+	fpx_gate(f, 0xfff0, pcr060);
 	MOV_wi(17, 0x7ffd);                                    // w17: the normal exponent limit, throughout
 
 	// zeros too: +-0 operands (FADD/FSUB/FMUL: softfloat's zero rules below)
@@ -1405,15 +1419,7 @@ static void fpx_emit_fmovem(fpx_fails &f, uae_u32 kind, uae_u32 opext, const str
 {
 	const uae_u16 opcode = opext >> 16;
 	const int mode = (opcode >> 3) & 7, reg = opcode & 7;
-	LDR_wXi(16, R_REGSTRUCT, FPX_OFF(fp_exp_pend));
-	LDR_wXi(12, R_REGSTRUCT, FPX_OFF(fp_unimp_pend));
-	ORR_www(16, 16, 12);
-	if ((kind >> 13) & 1) {
-		LDR_wXi(12, R_REGSTRUCT, FPX_OFF(pcr));
-		UBFX_wwii(12, 12, 1, 1);
-		ORR_www(16, 16, 12);
-	}
-	f.add(); CBNZ_wi(16, 0);
+	fpx_gate(f, 0, (kind >> 13) & 1);
 	for (int i = 0; i < p.n; i++) {
 		const int off = p.off[i], r = p.reg[i];
 		if (off >= 0)
@@ -1469,19 +1475,7 @@ static void fpx_emit_fmovecr(fpx_fails &f, uae_u32 kind, uae_u32 opext, uae_u32 
 	uae_u32 ccexc, accr;
 	fp_jit_fmovecr((uae_u16)opext, &hi, &lo, &ccexc, &accr);
 	const int dreg = (opext >> 7) & 7;
-	LDR_wXi(16, R_REGSTRUCT, FPX_OFF(fpcr));
-	MOV_wi(12, 0xfff0);
-	AND_www(16, 16, 12);
-	LDR_wXi(12, R_REGSTRUCT, FPX_OFF(fp_exp_pend));
-	ORR_www(16, 16, 12);
-	LDR_wXi(12, R_REGSTRUCT, FPX_OFF(fp_unimp_pend));
-	ORR_www(16, 16, 12);
-	if ((kind >> 13) & 1) {
-		LDR_wXi(12, R_REGSTRUCT, FPX_OFF(pcr));
-		UBFX_wwii(12, 12, 1, 1);
-		ORR_www(16, 16, 12);
-	}
-	f.add(); CBNZ_wi(16, 0);
+	fpx_gate(f, 0xfff0, (kind >> 13) & 1);
 	MOV_wi(2, hi);
 	STRH_wXi(2, R_REGSTRUCT, FPX_OFF(fp[dreg].fpx.high));
 	LOAD_U64(3, lo);
@@ -1536,20 +1530,7 @@ static void fpx_emit_out(fpx_fails &f, uae_u32 kind, uae_u32 opext, uae_u32 pc)
 	const bool fltfmt = size == 1 || size == 5;
 
 	// FPCR: no exception enabled; round to nearest for single and double
-	LDR_wXi(16, R_REGSTRUCT, FPX_OFF(fpcr));
-	MOV_wi(12, fltfmt ? 0xff30 : 0xff00);
-	AND_www(16, 16, 12);
-	LDR_wXi(12, R_REGSTRUCT, FPX_OFF(fp_exp_pend));
-	ORR_www(16, 16, 12);
-	LDR_wXi(12, R_REGSTRUCT, FPX_OFF(fp_unimp_pend));
-	ORR_www(16, 16, 12);
-	if (pcr060) {
-		LDR_wXi(12, R_REGSTRUCT, FPX_OFF(pcr));
-		UBFX_wwii(12, 12, 1, 1);
-		ORR_www(16, 16, 12);
-	}
-	f.add(); CBNZ_wi(16, 0);
-	MOV_wi(17, 0x7ffd);
+	fpx_gate(f, fltfmt ? 0xff30 : 0xff00, pcr060);
 	LDRH_wXi(6, R_REGSTRUCT, FPX_OFF(fp[sreg].fpx.high));
 	LDR_xXi(7, R_REGSTRUCT, FPX_OFF(fp[sreg].fpx.low));
 	fpx_normal_or_zero(f, 6, 7);
