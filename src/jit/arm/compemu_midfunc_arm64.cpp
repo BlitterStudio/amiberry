@@ -948,6 +948,18 @@ MIDFUNC(0,fp_bsun_iop,(void))
 }
 MENDFUNC(0,fp_bsun_iop,(void))
 
+// AMIBERRY_JIT_FPU_STATS: counts[key * 4 + path]++ (x2, x16 clobbered; the registers are flushed)
+static void fpx_count(uae_u32 opext, int path)
+{
+	uae_u64 *s = fp_jit_stats();
+	if (!s)
+		return;
+	LOAD_U64(16, (uintptr)&s[fp_jit_stats_key(opext >> 16, (uae_u16)opext) * 4 + path]);
+	LDR_xXi(2, 16, 0);
+	ADD_xxi(2, 2, 1);
+	STR_xXi(2, 16, 0);
+}
+
 /* A call of a helper with up to four arguments in x0-x3: through x16, as
  * compemu_raw_call() loads its target into x2 (REG_WORK1), the third
  * argument. All registers are flushed before. */
@@ -1643,6 +1655,7 @@ MIDFUNC(10,jitx_fpp_arith,(IMPTR fn, RR4 v1, RR4 v2, IM8 nvals, IM32 opext, IMPT
 			MOV_xx(REG_PAR2, REG_RESULT);
 		}
 		fpx_emit_inline(fails, inl, opext, pc);
+		fpx_count(opext, FPJ_ST_INLINE);
 		if (verify) {                                      // the helper's result from that state must be the same
 			LOAD_U32(REG_PAR1, (uae_u32)opext);
 			LOAD_U64(R2_INDEX, pcp);
@@ -1664,6 +1677,7 @@ MIDFUNC(10,jitx_fpp_arith,(IMPTR fn, RR4 v1, RR4 v2, IM8 nvals, IM32 opext, IMPT
 		for (int i = 0; i < fails.n; i++)
 			write_jmp_target(fails.at[i], (uintptr)get_target());
 	}
+	fpx_count(opext, inline_done ? FPJ_ST_INLINE_FAIL : FPJ_ST_HELPER);
 #endif
 	LOAD_U32(REG_PAR1, (uae_u32)opext);
 	LOAD_U64(R2_INDEX, pcp);
@@ -1729,6 +1743,7 @@ MIDFUNC(7,jitx_fpp_generic,(IMPTR fn, RR4 a, IM8 hasea, IM32 opext, IMPTR nextp,
 			fpx_emit_fmovem(fails, inl, opext, fmovem);
 		else
 			fpx_emit_out(fails, inl, opext, (uae_u32)lenpc);
+		fpx_count(opext, FPJ_ST_INLINE);
 		if (verify) {
 			LOAD_U32(REG_PAR1, (uae_u32)opext);
 			LOAD_U64(R2_INDEX, nextp);
@@ -1741,6 +1756,7 @@ MIDFUNC(7,jitx_fpp_generic,(IMPTR fn, RR4 a, IM8 hasea, IM32 opext, IMPTR nextp,
 		for (int i = 0; i < fails.n; i++)
 			write_jmp_target(fails.at[i], (uintptr)get_target());
 	}
+	fpx_count(opext, inline_done ? FPJ_ST_INLINE_FAIL : FPJ_ST_HELPER);
 #endif
 	LOAD_U32(REG_PAR1, (uae_u32)opext);
 	LOAD_U64(R2_INDEX, nextp);

@@ -4204,6 +4204,10 @@ static NOINLINE void fpuop_arithmetic2 (uae_u32 opcode, uae_u16 extra, const uae
 
 void fpuop_arithmetic (uae_u32 opcode, uae_u16 extra)
 {
+#ifdef JIT
+	if (currprefs.cachesize && fp_jit_stats())
+		fp_jit_stats_count(opcode, extra, FPJ_ST_INTERP);
+#endif
 	regs.fpu_state = 1;
 	regs.fp_exception = false;
 	fpu_mmu_fixup = false;
