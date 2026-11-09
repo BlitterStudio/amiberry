@@ -182,18 +182,7 @@ fun DisplaySoundPage(viewModel: SettingsViewModel) {
 						viewModel.updateSettings { s -> s.copy(autoCrop = it) }
 					}
 				)
-				// Launcher-only: one switch for the scaling method and resolution autoswitch pair.
-				SettingSwitchRow(
-					label = stringResource(R.string.settings_display_integer_scaling),
-					checked = settings.scalingMethod == 2 && settings.gfxAutoresolution == 1,
-					onCheckedChange = { on ->
-						viewModel.updateSettings { s ->
-							if (on) s.copy(scalingMethod = 2, gfxAutoresolution = 1)
-							else s.copy(scalingMethod = -1, gfxAutoresolution = 0)
-						}
-					},
-					help = stringResource(R.string.settings_display_integer_scaling_desc)
-				)
+				IntegerScalingRow(viewModel)
 
 				Spacer(modifier = Modifier.height(8.dp))
 
@@ -473,4 +462,25 @@ internal fun ShaderDropdownRow(viewModel: SettingsViewModel) {
 	}
 	// Under the field like every other row's help, not inside it (Material indents that).
 	SupportingText(shaderSupportingText)
+}
+
+/**
+ * Integer scaling as one switch: the scaling method and the resolution
+ * autoswitch the launcher's constraints keep together — turning either
+ * alone off is restored from the other, so no page may edit one half of
+ * the pair by itself. Shared by the Display & Sound page and All Settings.
+ */
+@Composable
+internal fun IntegerScalingRow(viewModel: SettingsViewModel) {
+	SettingSwitchRow(
+		label = stringResource(R.string.settings_display_integer_scaling),
+		checked = viewModel.settings.scalingMethod == 2 && viewModel.settings.gfxAutoresolution == 1,
+		onCheckedChange = { on ->
+			viewModel.updateSettings { s ->
+				if (on) s.copy(scalingMethod = 2, gfxAutoresolution = 1)
+				else s.copy(scalingMethod = -1, gfxAutoresolution = 0)
+			}
+		},
+		help = stringResource(R.string.settings_display_integer_scaling_desc)
+	)
 }

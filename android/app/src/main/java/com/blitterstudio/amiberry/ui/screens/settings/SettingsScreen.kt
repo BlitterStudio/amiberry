@@ -219,11 +219,17 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel(LocalContext.current
 
 	// Another screen switched here with a button (the Library's Edit or New), whose
 	// focus is gone with it: D-pad focus starts on the page list or the side list
-	// instead of falling back to the navigation rail.
+	// instead of falling back to the navigation rail. Entering starts at the list —
+	// the category focus is attached to the phone's page list or the side list, and
+	// a page left open would leave it attached nowhere (a page's content focus is
+	// only requested once composed; every other requestFocus target in this screen
+	// — the overflow button, the dialogs' buttons, the hard-drive rows' — is
+	// composed before its effect can run).
 	LaunchedEffect(viewModel.focusOnEntry) {
 		if (!viewModel.focusOnEntry) return@LaunchedEffect
 		viewModel.focusOnEntry = false
 		if (keyboardMode) {
+			pageOpen = false
 			withFrameNanos { }
 			categoryFocus.requestFocus()
 		}

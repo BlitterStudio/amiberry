@@ -3,6 +3,7 @@ package com.blitterstudio.amiberry.ui.screens.settings
 import com.blitterstudio.amiberry.data.ConfigGenerator
 import com.blitterstudio.amiberry.data.ConfigParser
 import com.blitterstudio.amiberry.data.model.EmulatorSettings
+import com.blitterstudio.amiberry.data.model.EmulatorSettingsConstraints
 import com.blitterstudio.amiberry.data.model.SettingsSchema
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -48,14 +49,16 @@ class SettingsGroupsTest {
 	}
 
 	@Test
-	fun `all settings lists every option a row can edit, except the managed ones`() {
+	fun `all settings lists every option a row can edit, except the managed and coupled ones`() {
 		val all = SettingsGroups.groupsOf(SettingsPage.AllSettings, schema)
-			.flatMap { SettingsGroups.options(schema, it, placed = SettingsGroups.managed).map { o -> o.id } }
+			.flatMap { SettingsGroups.allSettingsRows(schema, it) { _ -> true }.map { o -> o.id } }
 		val listed = schema.options.values
 			.filter { !it.presetOnly && SettingsGroups.rowKind(it) != null }
 			.map { it.id }
 			// The launcher writes these itself (or resets them): no control works.
 			.filter { it !in SettingsGroups.managed }
+			// A coupled pair shows as its first member's row alone.
+			.filter { id -> SettingsGroups.coupledPairOf(id)?.let { it.first() == id } ?: true }
 		assertEquals(listed.toSet(), all.toSet())
 		// Every group the layer has, in the layer's order.
 		assertEquals(schema.options.values.map { it.group }.distinct(), SettingsGroups.groupsOf(SettingsPage.AllSettings, schema))
@@ -70,6 +73,49 @@ class SettingsGroupsTest {
 		assertTrue(accepts(128))
 		assertFalse(accepts(64))
 		assertTrue(SettingsGroups.numberAccepts("ramsey")(3))
+	}
+
+	@Test
+	fun `a coupled pair shows as one row that matches when either half does`() {
+		assertEquals(
+			listOf("amiberry.scaling_method", "gfx_autoresolution"),
+			SettingsGroups.coupledPairOf("gfx_autoresolution")
+		)
+
+		// Both halves' rows collapse into the first's, shown once.
+		assertEquals(
+			listOf("amiberry.scaling_method"),
+			SettingsGroups.allSettingsRows(schema, "display") { _ -> true }
+				.map { it.id }.filter { SettingsGroups.coupledPairOf(it) != null }
+		)
+		// A search that matches only the second half still finds the pair's row.
+		assertEquals(
+			listOf("amiberry.scaling_method"),
+			SettingsGroups.allSettingsRows(schema, "display") { it == "gfx_autoresolution" }.map { it.id }
+		)
+		// A search that matches neither half shows neither.
+		assertTrue(SettingsGroups.allSettingsRows(schema, "display") { false }.isEmpty())
+	}
+
+	@Test
+	fun `the constraints restore a coupled half edited alone, so pages pair the update`() {
+		val integer = EmulatorSettings().copy(scalingMethod = 2, gfxAutoresolution = 1)
+
+		// Turning one half off alone is restored from the other.
+		val halfOff = EmulatorSettingsConstraints.apply(
+			integer.withOption("amiberry.scaling_method", "0"),
+			hasTouchScreen = true
+		)
+		assertEquals(2, halfOff.scalingMethod)
+		assertEquals(1, halfOff.gfxAutoresolution)
+
+		// Both together turn it off (the paired row's update).
+		val bothOff = EmulatorSettingsConstraints.apply(
+			integer.copy(scalingMethod = -1, gfxAutoresolution = 0),
+			hasTouchScreen = true
+		)
+		assertEquals(-1, bothOff.scalingMethod)
+		assertEquals(0, bothOff.gfxAutoresolution)
 	}
 
 	@Test

@@ -93,19 +93,21 @@ fun AllSettingsPage(
 	LaunchedEffect(viewModel) {
 		viewModel.refreshShaderCatalog()
 	}
-	// The rows of every group that has a match, in the layer's order. Unlike a
-	// page's group sections these leave out only the managed options, and the
-	// memory boards a page shows only while in use are listed too.
+	// The rows of every group that has a match, in the layer's order
+	// (SettingsGroups.allSettingsRows: coupled pairs as one row, the managed
+	// options left out), and the memory boards a page shows only while in
+	// use listed too.
 	val sections = remember(settings, schema, terms, onlyChanged, frozenChanged) {
 		val changed = frozenChanged
+		fun matches(id: String): Boolean {
+			if (onlyChanged && id !in changed.orEmpty()) return false
+			if (terms.isEmpty()) return true
+			val option = schema.option(id) ?: return false
+			val text = "${option.label} ${option.help.orEmpty()} $id".lowercase()
+			return terms.all { text.contains(it) }
+		}
 		SettingsGroups.groupsOf(SettingsPage.AllSettings, schema).mapNotNull { group ->
-			val rows = SettingsGroups.options(schema, group, placed = SettingsGroups.managed)
-				.filter { option ->
-					(!onlyChanged || option.id in changed.orEmpty()) &&
-						terms.all {
-							"${option.label} ${option.help.orEmpty()} ${option.id}".lowercase().contains(it)
-						}
-				}
+			val rows = SettingsGroups.allSettingsRows(schema, group, ::matches)
 			if (rows.isEmpty()) {
 				null
 			} else {
@@ -227,6 +229,9 @@ private fun AllSettingsOptionRow(
 	sectionTitle: String
 ) {
 	when (option.id) {
+		// The integer scaling pair: one switch for the scaling method and the
+		// resolution autoswitch the constraints keep together.
+		"amiberry.scaling_method" -> IntegerScalingRow(viewModel)
 		// The schema has no device list (the layer enumerates the host's
 		// devices at run time), so the launcher offers its own.
 		"joyport0" -> SchemaChoiceRow(

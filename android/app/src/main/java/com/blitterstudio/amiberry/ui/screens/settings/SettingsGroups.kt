@@ -157,6 +157,39 @@ object SettingsGroups {
 		schema.options.values.filter { it.group == group && !it.presetOnly && it.id !in placed && rowKind(it) != null }
 
 	/**
+	 * The options the launcher's constraints set together, so no page may
+	 * edit one half alone — the constraints would restore it from the other
+	 * (the integer scaling pair: EmulatorSettingsConstraints keeps the
+	 * scaling method and the resolution autoswitch in step). The first of a
+	 * pair is where a page shows its one row for it; the rest follow it.
+	 */
+	val coupledPairs: List<List<String>> = listOf(
+		listOf("amiberry.scaling_method", "gfx_autoresolution")
+	)
+
+	/** The coupled pair [id] belongs to, else null. */
+	fun coupledPairOf(id: String): List<String>? = coupledPairs.firstOrNull { id in it }
+
+	/**
+	 * The options the All Settings page lists for [group] given which option
+	 * ids [matches]: the group's rows, a coupled pair as its first member
+	 * alone, shown when it or any of its mates matches.
+	 */
+	fun allSettingsRows(
+		schema: SettingsSchema,
+		group: String,
+		matches: (String) -> Boolean
+	): List<SettingsSchema.Option> = options(schema, group, placed = managed).filter { option ->
+		val pair = coupledPairOf(option.id)
+		if (pair == null) {
+			matches(option.id)
+		} else {
+			option.id == pair.first() && pair.any(matches)
+		}
+	}
+
+
+	/**
 	 * The memory boards that show once the board before them is fitted
 	 * (Apple's HiddenWhenUnavailable.after): most machines have one Zorro
 	 * board of a kind or none, so a second to fourth appears only when used.
