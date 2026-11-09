@@ -159,9 +159,10 @@ enum ModalWait {
 		return true
 	}
 
-	/// Runs the main run loop until `done` holds or `timeout` has passed.
-	static func wait(until done: () -> Bool, timeout: TimeInterval) {
-		let deadline = Date(timeIntervalSinceNow: timeout)
+	/// Runs the main run loop until `done` holds or `timeout` (if any) has
+	/// passed.
+	static func wait(until done: () -> Bool, timeout: TimeInterval? = nil) {
+		let deadline = timeout.map { Date(timeIntervalSinceNow: $0) } ?? .distantFuture
 		while !done(), Date() < deadline {
 			turn()
 		}
@@ -304,6 +305,12 @@ enum FilePanels {
 		// always answers, with the files or a cancel; the limit only keeps a
 		// provider that never does from hanging the app.
 		ModalWait.wait(until: { delegate.finished }, timeout: 120)
+		if !delegate.finished {
+			Alerts.show(
+				title: "The Files Did Not Arrive",
+				message: "The app that holds them did not hand them over. Try again, or copy them into Amiberry\u{2019}s folder with the Files app first.",
+				buttons: ["OK"])
+		}
 		return delegate.urls
 	}
 
