@@ -6376,13 +6376,46 @@ void process_cpu_indirect_memory_write(uae_u32 addr, uae_u32 data, int size)
 	cpu_thread_wait_reply(0xff);
 }
 
+// A nasty blit (DMACON BLTPRI) keeps the CPU off the bus until it ends:
+// unthreaded, do_specialties() waits for it. Trackloaders start a blit and
+// use its result without waiting for the blitter. The CPU thread waits in
+// its next access instead: the chipset loop serves a request, or replies to
+// the write that started the blit, only once the blit is done. Other callers
+// (pauses, the end of the thread) release a held access at once.
+static uae_u32 cpu_thread_blit_held;   // main thread: 1 request held, 0xff reply held
+
+static inline bool cpu_thread_blit_nasty()
+{
+	return blt_info.blit_main && !blitter_cycle_exact
+		&& (dmacon & (DMA_MASTER | DMA_BLITTER | DMA_BLITPRI)) == (DMA_MASTER | DMA_BLITTER | DMA_BLITPRI);
+}
+
 // Service one indirect memory request from the CPU thread.
 // Returns true if a request was processed.
-static inline bool service_cpu_indirect_request(void)
+static inline bool service_cpu_indirect_request(bool chipset = false)
 {
+	if (CPU_THREAD_RARE(cpu_thread_blit_held)) {
+		if (chipset && cpu_thread_blit_nasty())
+			return false;
+		const uae_u32 held = cpu_thread_blit_held;
+		cpu_thread_blit_held = 0;
+		if (held == 0xff) {
+			// the chipset ran on meanwhile
+			if (!cpu_threaded_timed && cpu_thread_snap_main.armed)
+				cpu_thread_snap_publish(false);
+			if (cpu_threaded_timed)
+				cpu_thread_publish_chip();
+			cpu_thread_post_reply(0xff);
+			return true;
+		}
+	}
 	uae_u32 mode = __atomic_load_n(&cpu_thread_indirect_mode, __ATOMIC_ACQUIRE);
 	if (mode != 1 && mode != 2)
 		return false;
+	if (CPU_THREAD_RARE(chipset && cpu_thread_blit_nasty())) {
+		cpu_thread_blit_held = 1;
+		return false;
+	}
 
 	uaecptr addr = cpu_thread_indirect_addr;
 	uae_u32 data = cpu_thread_indirect_val;
@@ -6421,6 +6454,10 @@ static inline bool service_cpu_indirect_request(void)
 		if (CPU_THREAD_RARE(cpu_thread_snap_main.armed))
 			cpu_thread_snap_publish(false);
 	}
+	if (CPU_THREAD_RARE(mode == 0xff && chipset && cpu_thread_blit_nasty())) {
+		cpu_thread_blit_held = 0xff;
+		return true;
+	}
 	// the reply resynchronises the CPU thread to this time (CIA E-clock waits)
 	if (cpu_threaded_timed)
 		cpu_thread_publish_chip();
@@ -6433,7 +6470,7 @@ static inline bool service_cpu_indirect_request(void)
 // requests.
 static bool cpu_thread_unpaced()
 {
-	return regs.stopped || regs.halted || m68k_reset_delay
+	return regs.stopped || regs.halted || m68k_reset_delay || cpu_thread_blit_held
 		|| (regs.spcflags & (SPCFLAG_CPUINRESET | SPCFLAG_MODE_CHANGE | SPCFLAG_CALLBACK))
 		|| __atomic_load_n(&cpu_thread_reset, __ATOMIC_RELAXED);
 }
@@ -6702,7 +6739,7 @@ static void run_cpu_thread(int (*f)(void *))
 		// CPU: in the wait for the CPU below.
 		const bool serve_any = !timed || !__atomic_load_n(&cpu_thread_paced, __ATOMIC_ACQUIRE);
 		if (serve_any)
-			service_cpu_indirect_request();
+			service_cpu_indirect_request(true);
 
 		// Check for CPU reset request
 		service_cpu_thread_reset();
@@ -6720,7 +6757,7 @@ static void run_cpu_thread(int (*f)(void *))
 		for (int i = 0; i < cycles_to_do; i++) {
 			// Check for incoming IO request EVERY cycle for minimal latency
 			if (i > 0 && serve_any) {
-				service_cpu_indirect_request();
+				service_cpu_indirect_request(true);
 			}
 
 			const int paced = __atomic_load_n(&cpu_thread_paced, __ATOMIC_ACQUIRE);
@@ -6746,7 +6783,7 @@ static void run_cpu_thread(int (*f)(void *))
 					while (credit < CYCLE_UNIT) {
 						// a request served is progress too (the JIT counts
 						// down only at the end of a block)
-						if (service_cpu_indirect_request()) {
+						if (service_cpu_indirect_request(true)) {
 							if (timed) {
 								cpu_thread_progress(&tokens_seen);
 								credit = tokens_seen - (uae_s64)(get_cycles() - cpu_thread_chip_base);
@@ -6788,7 +6825,7 @@ static void run_cpu_thread(int (*f)(void *))
 				if (credit < CYCLE_UNIT) {
 					// unpaced: run on
 					if (!serve_any)
-						service_cpu_indirect_request();
+						service_cpu_indirect_request(true);
 					credit = CYCLE_UNIT;
 				}
 			}
@@ -6858,7 +6895,7 @@ static void run_cpu_thread(int (*f)(void *))
 				unsigned int polls = 0;
 				while (next > c && next - c < vsyncmaxtime * 2) {
 					// Even during frame limiter sleep, service IO requests
-					service_cpu_indirect_request();
+					service_cpu_indirect_request(true);
 					// Read spcflags only every 64 polls (and after a sleep):
 					// the CPU thread sets and clears its own flags on that
 					// line (exceptions, ends of JIT blocks), and a read per
