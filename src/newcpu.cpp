@@ -2084,7 +2084,7 @@ static void build_cpufunctbl ()
 		currprefs.fpu_model, currprefs.fpu_model ? _T(" (") : _T(""), currprefs.fpu_model ? fpu_core_name() : _T(""),
 		currprefs.fpu_model ? _T(")") : _T(""),
 		currprefs.mmu_model,
-		currprefs.cachesize ? (jit_fpu_enabled() && currprefs.fpu_model ? _T("=CPU/FPU") : _T("=CPU")) : _T(""),
+		currprefs.cachesize ? (currprefs.compfpu && !fpu_exact_wanted() && currprefs.fpu_model ? _T("=CPU/FPU") : _T("=CPU")) : _T(""),
 		currprefs.cachesize);
 
 	regs.address_space_mask = 0xffffffff;

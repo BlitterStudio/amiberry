@@ -258,7 +258,11 @@ uae_u8* comp_pc_p;
 static uae_u32 cache_size = 0;            // Size of total cache allocated for compiled blocks
 static uae_u32 current_cache_size   = 0;  // Cache grows upwards: how much has been consumed already
 #ifdef USE_JIT_FPU
-#define avoid_fpu (!jit_fpu_enabled() || !currprefs.fpu_model)
+/* build_comp() runs before the FPU reset selects the core: from the settings,
+ * not jit_fpu_enabled(). The exact core's FPU instructions compile to calls
+ * into it whether the JIT FPU is on or not; comp_fpp_opp() picks native or
+ * calls when it compiles, after the core is selected. */
+#define avoid_fpu (!currprefs.fpu_model || (!currprefs.compfpu && !fpu_exact_wanted()))
 #define lazy_flush (!currprefs.comp_hardflush)
 #else
 #define avoid_fpu (true)
