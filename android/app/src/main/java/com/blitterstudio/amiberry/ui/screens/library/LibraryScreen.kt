@@ -123,6 +123,9 @@ fun LibraryScreen(
 	val launchGuard = rememberLaunchInFlightGuard()
 	val importGuard = rememberImportInFlightGuard()
 	val launchInProgress = launchGuard.isLaunching
+	// One launch admission for the whole Library: a Play a File copy runs in the
+	// activity's own guard, so its state keeps every other Play action waiting too.
+	val launchBusy = launchInProgress || (activity?.importLaunchInProgress == true)
 	val importInProgress = importGuard.isImporting
 	val isTv = isTvDevice()
 	val preferences = remember { AppPreferences.getInstance(context) }
@@ -253,7 +256,7 @@ fun LibraryScreen(
 
 	/** Quick play: the file's kind in its machine. */
 	fun quickPlay(file: AmigaFile) {
-		if (launchInProgress) return
+		if (launchBusy) return
 		scope.launchGuarded(launchGuard) {
 			showResult(LibraryLaunch.play(context, file, repository.roms.value))
 		}
@@ -261,7 +264,7 @@ fun LibraryScreen(
 
 	/** A recent entry again, as it was launched. */
 	fun playRecent(entry: JSONObject) {
-		if (launchInProgress) return
+		if (launchBusy) return
 		scope.launchGuarded(launchGuard) {
 			showResult(
 				LibraryLaunch.playRecent(
@@ -279,7 +282,7 @@ fun LibraryScreen(
 
 	/** A file in a saved machine: the machine loads, the file goes in DF0: or its CD drive. */
 	fun playIn(file: AmigaFile, machine: ConfigInfo) {
-		if (launchInProgress) return
+		if (launchBusy) return
 		scope.launchGuarded(launchGuard) {
 			showResult(
 				LibraryLaunch.playIn(
@@ -448,7 +451,7 @@ fun LibraryScreen(
 			hardDrives = hardDrives,
 			recentItems = recentItems,
 			isScanning = isScanning,
-			launchInProgress = launchInProgress,
+			launchInProgress = launchBusy,
 			importInProgress = importInProgress,
 			filesImporting = filesImporting,
 			shelfPicker = shelfPicker,
@@ -456,7 +459,7 @@ fun LibraryScreen(
 			fileViewModel = fileViewModel,
 			onEditMachine = ::editMachine,
 			onNewMachine = ::newMachine,
-			onPlayFile = { if (!launchInProgress) playFilePicker.pickFiles() },
+			onPlayFile = { if (!launchBusy) playFilePicker.pickFiles() },
 			onQuickPlay = ::quickPlay,
 			onPlayIn = ::playIn,
 			onPlayRecent = ::playRecent,
@@ -500,8 +503,8 @@ fun LibraryScreen(
 				title = { Text(filterTitle(filter)) },
 				actions = {
 					IconButton(
-						onClick = { if (!launchInProgress) playFilePicker.pickFiles() },
-						enabled = !launchInProgress,
+						onClick = { if (!launchBusy) playFilePicker.pickFiles() },
+						enabled = !launchBusy,
 						modifier = Modifier.dpadFocusIndicator()
 					) {
 						Icon(

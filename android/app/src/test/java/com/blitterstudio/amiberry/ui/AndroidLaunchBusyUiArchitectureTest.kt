@@ -16,12 +16,16 @@ class AndroidLaunchBusyUiArchitectureTest {
 			library.contains("val launchInProgress = launchGuard.isLaunching")
 		)
 		assertTrue(
+			"One launch admission for the whole Library: a Play a File copy runs in the activity's own guard.",
+			library.contains("activity?.importLaunchInProgress == true")
+		)
+		assertTrue(
 			"LibraryScreen quick play should not start while a launch is already being prepared.",
-			library.split("if (launchInProgress) return").size - 1 >= 3
+			library.split("if (launchBusy) return").size - 1 >= 3
 		)
 		assertTrue(
 			"The Play a File toolbar action should be disabled while a launch is in progress.",
-			Regex("""IconButton\([\s\S]*onClick = \{ if \(!launchInProgress\) playFilePicker\.pickFiles\(\) \}[\s\S]*enabled = !launchInProgress""")
+			Regex("""IconButton\([\s\S]*onClick = \{ if \(!launchBusy\) playFilePicker\.pickFiles\(\) \}[\s\S]*enabled = !launchBusy""")
 				.containsMatchIn(library)
 		)
 		assertTrue(

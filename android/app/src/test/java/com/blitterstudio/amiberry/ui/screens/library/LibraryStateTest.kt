@@ -231,6 +231,27 @@ class LibraryStateTest {
 	}
 
 	@Test
+	fun `recent media for play in comes from the drives the entry names`() {
+		// A Quick Start keeps its media in df0/cd, with no path of its own.
+		val quickstart = JSONObject("""{"type":"quickstart","model":"a500","df0":"/floppies/Game.adf","df1":"","cd":""}""")
+		assertEquals("/floppies/Game.adf", recentMediaFor(quickstart)?.path)
+		assertEquals(FileCategory.FLOPPIES, recentMediaFor(quickstart)?.category)
+
+		val quickstartCd = JSONObject("""{"type":"quickstart","model":"cd32","df0":"","df1":"","cd":"/cds/Game.cue"}""")
+		assertEquals(FileCategory.CD_IMAGES, recentMediaFor(quickstartCd)?.category)
+
+		// A Play In's path names its machine: the media comes from df0, not the .uae.
+		val playIn = JSONObject("""{"type":"playin","path":"/configs/Workbench.uae","df0":"/floppies/Game.adf"}""")
+		assertEquals("/floppies/Game.adf", recentMediaFor(playIn)?.path)
+
+		// WHDLoad runs on the machine WHDBooter picks; configurations and RP9s have no
+		// medium; media of no other kind is offered either.
+		assertNull(recentMediaFor(JSONObject("""{"type":"whdload","path":"/games/Game.lha"}""")))
+		assertNull(recentMediaFor(JSONObject("""{"type":"config","path":"/configs/Workbench.uae"}""")))
+		assertNull(recentMediaFor(JSONObject("""{"type":"rp9","path":"/rp9/Game.rp9"}""")))
+		assertNull(recentMediaFor(JSONObject("""{"type":"quickstart","model":"a500","df0":"","cd":""}""")))
+	}
+	@Test
 	fun `play in leaves a stable recent entry of the machine with the media`() {
 		val machine = config("Workbench")
 

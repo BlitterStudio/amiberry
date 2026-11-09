@@ -298,7 +298,7 @@ internal fun LibraryMediaShelfPage(
 			},
 			onPlayIn = {
 				recentActionsFor = null
-				playInFor = recentFileFor(item)
+				playInFor = recentMediaFor(item.entry)
 			},
 			onRemove = {
 				recentActionsFor = null
@@ -382,18 +382,26 @@ internal fun LibraryMediaShelfPage(
 }
 
 
-/** A recent media entry back as the file it played, for Play In. */
-private fun recentFileFor(item: RecentLaunches.Item): AmigaFile? {
-	val path = item.entry.optString("path")
-	if (path.isBlank()) return null
-	val category = when (RecentLaunches.Type.of(item.entry)) {
-		RecentLaunches.Type.WhdLoad -> FileCategory.WHDLOAD_GAMES
-		else -> FileCategory.fromExtension(path.substringAfterLast('.'))
+/**
+ * The disk or CD a Recent entry played, for Play In; null where Play In does not apply.
+ * Quick Start and Play In entries keep their media in df0/df1/cd (a Play In's path names
+ * its machine, not a file to play), and WHDLoad archives are left to WHDBooter, which
+ * decides their hardware.
+ */
+internal fun recentMediaFor(entry: JSONObject): AmigaFile? {
+	if (RecentLaunches.Type.of(entry) !in setOf(RecentLaunches.Type.QuickStart, RecentLaunches.Type.PlayIn)) {
+		return null
+	}
+	val path = listOf("df0", "df1", "cd").firstNotNullOfOrNull { key ->
+		entry.optString(key).takeIf { it.isNotBlank() }
 	} ?: return null
-	val name = path.substringAfterLast('/').substringAfterLast('\\')
+	val category = FileCategory.fromExtension(path.substringAfterLast('.'))
+		?: return null
+	// Only the drives a machine takes a file in.
+	if (category != FileCategory.FLOPPIES && category != FileCategory.CD_IMAGES) return null
 	return AmigaFile(
 		path = path,
-		name = name,
+		name = path.substringAfterLast('/').substringAfterLast('\\'),
 		extension = path.substringAfterLast('.').lowercase(),
 		size = 0,
 		lastModified = 0,
@@ -728,8 +736,8 @@ private fun RecentActionsDialog(
 	onRemove: () -> Unit
 ) {
 	val launchable = item.status == RecentLaunches.Status.Available
-	val file = recentFileFor(item)
-	val playableIn = launchable && file != null && file.category != FileCategory.WHDLOAD_GAMES
+	val file = recentMediaFor(item.entry)
+	val playableIn = launchable && file != null
 	AlertDialog(
 		onDismissRequest = onDismiss,
 		title = { Text(item.details.title) },
