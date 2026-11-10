@@ -62,6 +62,21 @@ if grep -q '^joyportdefault0=' "$work/joyport-invalid-default.txt"; then
 	exit 1
 fi
 
+# Input device mappings whose block begins with the mapping line itself,
+# without the name/empty/... header lines the editors write, must load for
+# the device kind the option spells. Without the header the parser used to
+# keep the previous device kind, took the missing-device path for the
+# keyboard and strdup'ed its absent names (SIGSEGV in read_inputdevice_config;
+# configs hand-written after desktop Amiberry/WinUAE examples do this).
+printf 'input.config=1\ninput.1.keyboard.0.button.58=SPC_FLOPPY0\ninput.1.mouse.0.axis.0=MOUSE1_HORIZ.0\ninput.1.joystick.0.button.0=JOY1_FIRE_BUTTON.0\ninput.1.joystick.1.button.0=JOY1_FIRE_BUTTON.0\n' > "$work/headerless-input.uae"
+"$bin" --dump-config -f "$work/headerless-input.uae" > "$work/headerless-input.txt" 2> "$work/headerless-input_err.txt" \
+	|| { echo "headerless input mapping lines crashed config parsing" >&2; exit 1; }
+if grep -q '^input\.1\.' "$work/headerless-input_err.txt"; then
+	echo "headerless input mapping lines were not consumed by the input parser:" >&2
+	grep '^input\.1\.' "$work/headerless-input_err.txt" >&2
+	exit 1
+fi
+
 # Defaults-only dump: header present, exits cleanly.
 "$bin" --dump-config > "$work/def.txt" 2> "$work/def_err.txt"
 check "$work/def.txt" '^; --dump-config: resolved configuration'

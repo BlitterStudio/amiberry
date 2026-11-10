@@ -1879,6 +1879,25 @@ void read_inputdevice_config (struct uae_prefs *pr, const TCHAR *option, TCHAR *
 		return;
 	idf = &idev[devtype];
 
+	// A device's mapping data can begin without the header lines
+	// (name/empty/...) that set its identity, as hand-written and foreign
+	// configs do. Without a header the kind recorded in tid is stale (the
+	// previous device's, or joystick 0 after a reset), so a keyboard line
+	// would take the missing-device path of another kind. Adopt the kind
+	// and number the option itself spells whenever they change.
+	if (devnum != tid->devnum || devtype != tid->devtype) {
+		xfree(temp_uid.configname);
+		xfree(temp_uid.name);
+		temp_uid.name = NULL;
+		temp_uid.configname = NULL;
+		temp_uid.custom = false;
+		temp_uid.empty = false;
+		temp_uid.disabled = false;
+		tid->devnum = devnum;
+		tid->devtype = devtype;
+		tid->joystick = joystick;
+	}
+
 	if (devtype != tid->lastdevtype) {
 		tid->lastdevtype = devtype;
 #if 0
@@ -2044,10 +2063,12 @@ void read_inputdevice_config (struct uae_prefs *pr, const TCHAR *option, TCHAR *
 			set_kbr_default(pr, idnum, devnum, keyboard_default);
 		}
 		tid->initialized = true;
-		// device didn't exist but keep the data
-		if (newmissingdev && tid->nonmatcheddevices[tid->devtype] >= 0) {
-			id->configname = my_strdup(tid->configname);
-			id->name = my_strdup(tid->name);
+		// Device didn't exist but keep the data. newmissingdev implies
+		// nonmatcheddevices[devnum] was just written above; the names are
+		// NULL when the block had no header lines, so guard the copies.
+		if (newmissingdev) {
+			id->configname = tid->configname ? my_strdup(tid->configname) : NULL;
+			id->name = tid->name ? my_strdup(tid->name) : NULL;
 		}
 		xfree(tid->configname);
 		xfree(tid->name);
