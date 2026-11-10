@@ -6742,9 +6742,20 @@ static void run_cpu_thread(int (*f)(void *))
 					}
 					// No pause while polling: every request waits for this
 					// loop, and reading the clock already paces it.
-					if (next - c >= syncbase / 1000 && c - poll_until > 0) {
-						cpu_thread_main_sleep(1);
-						polls = 63;
+					if (c - poll_until > 0) {
+						const frame_time_t left = next - c;
+						if (left >= syncbase / 1000) {
+							cpu_thread_main_sleep(1);
+							polls = 63;
+						} else if (left >= syncbase / 50000) {
+							// A wait shorter than a millisecond (a line while the
+							// CPU thread reads the snapshot, the last lines of a
+							// frame): sleep it out too, or an idle guest costs a
+							// host core. Not wakeable, but no request came for a
+							// millisecond, and the next one makes this loop poll.
+							SDL_DelayNS((Uint64)left * 1000000000 / syncbase);
+							polls = 63;
+						}
 					}
 				}
 			}

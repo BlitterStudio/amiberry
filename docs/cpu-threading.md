@@ -64,7 +64,9 @@ and use its result without waiting for the blitter depend on this.
 Host CPU use: the worker runs the CPU as fast as it can, as single-threaded
 "fastest possible" emulation does, and the chipset runs on a second core.
 The main thread polls while the worker uses the hardware and sleeps in the
-frame limiter otherwise.
+frame limiter otherwise. An idle Workbench, whose CPU waits in STOP, uses less
+host CPU than single-threaded "fastest possible" emulation; a guest that
+busy-polls the hardware keeps both cores busy.
 
 Pausing parks the worker at an instruction or JIT-dispatch boundary, including
 when the guest is in STOP. Bounded JIT recording/recompilation already in progress
@@ -86,12 +88,13 @@ before stopping the worker.
 While the worker is accessing hardware, both threads poll for each other so
 that an access does not wait for a thread wake-up. After about a millisecond
 without hardware accesses, the main thread sleeps in the frame limiter instead
-of spinning. A worker that has waited 0.1 ms for a reply also sleeps until
-woken. The handshake is sequentially consistent: a request or reply is
-stored before the other thread's sleeping flag is read, and a thread that
-goes to sleep sets its flag before it reads the mailbox, so a wake-up cannot
-be lost. The other thread is signalled only when it has announced that it
-sleeps.
+of spinning, including waits shorter than a millisecond (a line at a time
+while the worker reads the beam position from the snapshot). A worker that
+has waited 0.1 ms for a reply also sleeps until woken. The handshake is
+sequentially consistent: a request or reply is stored before the other
+thread's sleeping flag is read, and a thread that goes to sleep sets its flag
+before it reads the mailbox, so a wake-up cannot be lost. The other thread is
+signalled only when it has announced that it sleeps.
 Pause requests raise a special flag, as debugger breaks already do.
 The interpreter's per-instruction check therefore stays a single test.
 
