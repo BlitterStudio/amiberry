@@ -75,4 +75,26 @@ class DeviceStorageTest {
 
 		assertEquals(listOf("Amiberry.log", "retroarch.cfg"), entries.map { it.file.name })
 	}
+
+	@Test
+	fun `every configured category folder below the imported folder is left out`() {
+		// A folder holding a configured library root (a path setting moved
+		// it out of the app's own storage) must not import the library
+		// into itself.
+		val picked = tempDir.newFolder("picked")
+		val appFiles = File(picked, "Android/data/app/files/LHA").also { it.mkdirs() }
+		val roms = File(picked, "configured/ROMs").also { it.mkdirs() }
+		File(roms, "kick.rom").writeText("rom")
+		val floppies = File(picked, "configured/Floppies").also { it.mkdirs() }
+		File(floppies, "game.adf").writeText("disk")
+		File(appFiles, "inside.lha").writeText("packed")
+
+		val files = DeviceStorage.supportedFilesUnder(
+			picked,
+			setOf("rom", "adf", "lha"),
+			excluded = listOf(appFiles, roms, floppies)
+		)
+
+		assertEquals(emptyList<File>(), files)
+	}
 }

@@ -206,7 +206,7 @@ object FileManager {
 		val files = DeviceStorage.supportedFilesUnder(
 			dir,
 			FileCategory.allExtensions,
-			excluded = listOfNotNull(context.getExternalFilesDir(null))
+			excluded = importExcludedDirs(context)
 		)
 		val withCue = importIncludesCue(files.map { it.name })
 		return files.map { file ->
@@ -308,6 +308,16 @@ object FileManager {
 
 		return results.sortedBy { it.name.lowercase() }
 	}
+
+	/**
+	 * The folders a recursive import must not descend into: the app's own
+	 * storage and every configured category folder (a path setting may
+	 * have moved one outside it), so importing a folder that holds a
+	 * library root cannot copy the library into itself.
+	 */
+	internal fun importExcludedDirs(context: Context): List<File> =
+		listOfNotNull(context.getExternalFilesDir(null)) +
+			FileCategory.entries.map { ContentFolders.categoryDir(context, it) }
 
 	fun ensureDirectories(context: Context) {
 		val base = context.getExternalFilesDir(null) ?: return

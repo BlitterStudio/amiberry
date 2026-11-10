@@ -35,6 +35,16 @@ final class AppSettingsWindowTests: XCTestCase {
 		}
 	}
 
+	/// The layer's FILE kind (a single file: the RetroArch config, the log)
+	/// keeps the path controls — Choose, and the security-scoped grant — with
+	/// the row's own switch picking the file or folder picker.
+	func testFileSettingsKeepThePathKind() throws {
+		for id in ["retroarch_config", "logfile_path"] {
+			let setting = try XCTUnwrap(HostSettings.all.first { $0.id == id }, id)
+			XCTAssertEqual(setting.kind, .path, id)
+		}
+	}
+
 	func testSearchFindsSettingsByEveryWord() {
 		let all = AppSettingsModel.groups.flatMap { $0.settings(matching: "") }
 		XCTAssertEqual(all.count, HostSettings.all.count, "an empty search shows everything")
