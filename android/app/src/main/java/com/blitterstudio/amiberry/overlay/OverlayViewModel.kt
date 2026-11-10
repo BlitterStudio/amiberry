@@ -39,6 +39,19 @@ data class SlotState(
 /** A short message under the menu's title: what an action did, or why it failed. */
 data class OverlayNotice(@StringRes val text: Int, val slot: Int? = null, val error: Boolean = false)
 
+/** gui_ask_disk's request, as [OverlayNative.dialogRequest] hands it over. */
+data class FloppyRecoveryRequest(val drive: Int, val missingPath: String) {
+	companion object {
+		/** [fields]: drive number and the missing image's path; null when malformed. */
+		fun parse(fields: Array<String>): FloppyRecoveryRequest? {
+			if (fields.size != 2) return null
+			val drive = fields[0].toIntOrNull() ?: return null
+			if (drive !in 0..3) return null
+			return FloppyRecoveryRequest(drive, fields[1])
+		}
+	}
+}
+
 /**
  * The in-emulation menu's state and actions. The menu shows while the
  * native loop (android_overlay_run) holds the emulation paused; everything
@@ -71,6 +84,18 @@ class OverlayViewModel(application: Application) : AndroidViewModel(application)
 		private set
 	var notice by mutableStateOf<OverlayNotice?>(null)
 		private set
+	/** The menu's loop runs; false while only a native dialog shows (or nothing). */
+	var menuUp by mutableStateOf(false)
+		private set
+	/** gui_message's texts, shown one at a time over whatever runs. */
+	var nativeMessages by mutableStateOf<List<String>>(emptyList())
+		private set
+	/** gui_ask_disk's recovery dialog; null when none is open. */
+	var recovery by mutableStateOf<FloppyRecoveryRequest?>(null)
+		private set
+	/** The recovery dialog is listing replacement images (Locate pressed). */
+	var recoveryPicking by mutableStateOf(false)
+		private set
 
 	private val files = FileRepository.getInstance(application)
 	val floppies: StateFlow<List<AmigaFile>> = files.floppies
@@ -88,8 +113,14 @@ class OverlayViewModel(application: Application) : AndroidViewModel(application)
 	/** Changes made and not yet committed; main thread only. */
 	private var pendingWrites = 0
 
-	/** The overlay became visible: a fresh menu over the current machine. */
-	fun shown() {
+	/**
+	 * The overlay became visible: a fresh menu over the current machine.
+	 * [pageKey] is what a media or state hotkey asked the native side for;
+	 * [OverlayMenu.pageFor] maps it, and -1 (or any unknown key) opens the
+	 * menu's Home.
+	 */
+	fun shown(pageKey: Int = -1) {
+		menuUp = true
 		menu = OverlayMenu.HOME
 		openings++
 		notice = null
@@ -97,6 +128,7 @@ class OverlayViewModel(application: Application) : AndroidViewModel(application)
 		polling?.cancel()
 		// The media a session's states are named after may have changed since.
 		sources = null
+		OverlayMenu.pageFor(pageKey)?.let { open(it, OverlayKeys.MEDIA) }
 		polling = viewModelScope.launch {
 			while (isActive) {
 				refreshStatus()
@@ -107,8 +139,53 @@ class OverlayViewModel(application: Application) : AndroidViewModel(application)
 		viewModelScope.launch { loadSlots() }
 	}
 
+	/** The recovery dialog opened: [FloppyRecoveryRequest.parse] of the native request. */
+	fun recoveryShown(request: FloppyRecoveryRequest?) {
+		recovery = request
+		recoveryPicking = false
+		if (request != null) {
+			// The emulator process starts with no scan: the list fills once
+			// the category is scanned, as the menu's picker does.
+			viewModelScope.launch { files.rescanCategory(FileCategory.FLOPPIES) }
+		}
+	}
+
+	/** The recovery dialog left without an answer (the native side gave up). */
+	fun recoveryHidden() {
+		recovery = null
+		recoveryPicking = false
+	}
+
+	/** gui_message's texts arrived; they show one at a time until dismissed. */
+	fun messagesQueued(texts: List<String>) {
+		nativeMessages = nativeMessages + texts
+	}
+
+	/** The message box's OK: the next message, or none left. */
+	fun dismissMessage() {
+		nativeMessages = nativeMessages.drop(1)
+	}
+
+	/** Locate: list the replacement images for the recovery dialog. */
+	fun openRecoveryPicker() {
+		recoveryPicking = true
+	}
+
+	/** Back from the replacement list: the recovery dialog again. */
+	fun closeRecoveryPicker() {
+		recoveryPicking = false
+	}
+
+	/** The recovery dialog's answer: [OverlayNative.RECOVERY_*] with the chosen path. */
+	fun answerRecovery(answer: Int, path: String = "") {
+		recovery = null
+		recoveryPicking = false
+		OverlayNative.answerDialog(answer, path)
+	}
+
 	/** The overlay was hidden. */
 	fun hidden() {
+		menuUp = false
 		polling?.cancel()
 		polling = null
 	}
@@ -384,4 +461,5 @@ class OverlayViewModel(application: Application) : AndroidViewModel(application)
 			return BitmapFactory.decodeFile(path, options)?.asImageBitmap()
 		}
 	}
+
 }

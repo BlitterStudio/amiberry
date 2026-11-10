@@ -42,6 +42,9 @@ public class AmiberryActivity extends SDLActivity {
 	// Messages from src/osdep/android_overlay.cpp (SDL_SendAndroidMessage).
 	private static final int COMMAND_SHOW_OVERLAY = COMMAND_USER + 1;
 	private static final int COMMAND_HIDE_OVERLAY = COMMAND_USER + 2;
+	private static final int COMMAND_MESSAGE = COMMAND_USER + 3;
+	private static final int COMMAND_SHOW_DIALOG = COMMAND_USER + 4;
+	private static final int COMMAND_HIDE_DIALOG = COMMAND_USER + 5;
 	/** How long after the start the first hint shows. */
 	private static final long HINT_DELAY_MS = 2500;
 
@@ -147,11 +150,24 @@ public class AmiberryActivity extends SDLActivity {
 			return super.onUnhandledMessage(command, param);
 		}
 		if (command == COMMAND_SHOW_OVERLAY) {
-			overlay.show();
+			// The param is the page a media or state hotkey asked for (-1: Home).
+			overlay.show(param instanceof Integer ? (Integer) param : -1);
 			return true;
 		}
 		if (command == COMMAND_HIDE_OVERLAY) {
 			overlay.hide();
+			return true;
+		}
+		if (command == COMMAND_MESSAGE) {
+			overlay.showMessages();
+			return true;
+		}
+		if (command == COMMAND_SHOW_DIALOG) {
+			overlay.showRecoveryDialog();
+			return true;
+		}
+		if (command == COMMAND_HIDE_DIALOG) {
+			overlay.hideDialog();
 			return true;
 		}
 		return super.onUnhandledMessage(command, param);

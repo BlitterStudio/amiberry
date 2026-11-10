@@ -812,12 +812,6 @@ static void native_disk_selection(const int shortcut, uae_prefs* prefs)
 }
 #endif
 
-#if !defined(AMIBERRY_NATIVE_HOST) && defined(USE_IMGUI)
-// gui_ask_disk's recovery dialog is part of the built-in GUI, which must
-// show for it even where a native menu replaces the GUI (Android).
-static bool floppy_recovery_open = false;
-#endif
-
 bool gui_ask_disk(const int drv, TCHAR* name, const int name_len)
 {
 	if (drv < 0 || drv >= 4 || !name || name_len <= 0)
@@ -836,6 +830,19 @@ bool gui_ask_disk(const int drv, TCHAR* name, const int name_len)
 	amiberry_media_grant_access(chosen.c_str());
 	_tcscpy(name, chosen.c_str());
 	return true;
+#elif defined(__ANDROID__)
+	// The recovery requester without the built-in GUI: the overlay's
+	// Compose dialog (Locate, Skip, Eject) answers over JNI while this
+	// thread waits. An empty replacement ejects the drive in the caller.
+	std::string chosen;
+	if (!android_overlay_ask_disk(drv, name, chosen))
+		return false;
+	if (chosen.length() >= static_cast<size_t>(name_len)) {
+		write_log(_T("Replacement disk path is too long.\n"));
+		return false;
+	}
+	_tcscpy(name, chosen.c_str());
+	return true;
 #elif defined(USE_IMGUI)
 	static bool active;
 	if (active)
@@ -843,9 +850,7 @@ bool gui_ask_disk(const int drv, TCHAR* name, const int name_len)
 
 	active = true;
 	FloppyRecoveryDialog_Open(drv, name);
-	floppy_recovery_open = true;
 	gui_display(-1);
-	floppy_recovery_open = false;
 
 	std::string selected_path;
 	const bool selected = FloppyRecoveryDialog_ConsumeResult(selected_path);
@@ -867,17 +872,19 @@ bool gui_ask_disk(const int drv, TCHAR* name, const int name_len)
 
 // The settings UI: the native window on macOS native UI builds, the
 // built-in (ImGui) GUI everywhere else. Over a running emulation the
-// Android app shows its own menu instead, unless a hotkey's requester is
-// what opens (it needs the built-in GUI) or the launcher turned the menu
-// off; the menu's Classic settings window opens the built-in GUI after it.
-static void run_settings_ui([[maybe_unused]] const bool requester = false)
+// Android app shows its own menu instead, at [page] for a media or state
+// hotkey (its pickers and state slots take the requesters), or at its Home
+// for the settings, unless the launcher turned the menu off; the menu's
+// Classic settings window opens the built-in GUI after it.
+static void run_settings_ui([[maybe_unused]] const bool requester = false,
+	[[maybe_unused]] const int page = 0)
 {
 #ifdef AMIBERRY_NATIVE_HOST
 	native_host_run_settings();
 #else
 #ifdef __ANDROID__
-	if (emulating && !requester && !floppy_recovery_open && android_overlay_enabled()
-		&& android_overlay_run() == android_overlay_result::resume)
+	if (emulating && android_overlay_enabled()
+		&& android_overlay_run(page) == android_overlay_result::resume)
 		return;
 #endif
 	run_gui();
@@ -1062,13 +1069,25 @@ void gui_display(int shortcut)
 	}
 
 	bool requester = false;
+	int page = 0;
 #if !defined(AMIBERRY_NATIVE_HOST) && defined(USE_IMGUI)
 	// A hotkey's requester shows over the GUI, which closes once it is
 	// answered.
 	if (shortcut >= 0 && shortcut <= 6) {
-		request_disk_selection(shortcut, true);
+		page = shortcut;
 		shortcut = -1;
 		requester = true;
+#ifdef __ANDROID__
+		// The menu's own pickers and state slots take the hotkeys over a
+		// running emulation (run_settings_ui opens it at [page], and its
+		// actions insert, load and save); the GUI's file requester stays
+		// for the menu turned off in the launcher.
+		const bool menu_takes_requester = emulating && android_overlay_enabled();
+#else
+		const bool menu_takes_requester = false;
+#endif
+		if (!menu_takes_requester)
+			request_disk_selection(page, true);
 	}
 #endif
 	if (shortcut == -1)
@@ -1080,7 +1099,7 @@ void gui_display(int shortcut)
 			load_gui_theme();
 		else
 			prefs_to_gui();
-		run_settings_ui(requester);
+		run_settings_ui(requester, requester ? page : -1);
 		gui_to_prefs();
 
 		gui_update();
@@ -1384,6 +1403,12 @@ void gui_message(const char* format, ...)
 		native_host_message("Message", msg);
 	else
 		native_host_message_deferred(msg);
+#elif defined(__ANDROID__)
+	// The overlay's Compose message box, over whatever runs (the
+	// emulation does not stop for it); worker threads report here too.
+	// The text is in the log as everywhere.
+	write_log(_T("%s\n"), msg);
+	android_overlay_message(msg);
 #elif defined(USE_IMGUI)
 	ShowMessageBox("Message", msg);
 #endif

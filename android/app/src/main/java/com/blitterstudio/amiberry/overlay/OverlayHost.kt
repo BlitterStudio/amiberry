@@ -58,6 +58,10 @@ class OverlayHost(
 		)[OverlayViewModel::class.java].also { it.hideView = ::hide }
 	}
 	private var view: ComposeView? = null
+	/** The native menu's loop runs (its show/hide commands from android_overlay.cpp). */
+	private var menuShowing = false
+	/** A native dialog (gui_ask_disk's requester) is open. */
+	private var dialogShowing = false
 
 	val isShowing: Boolean
 		get() = view?.visibility == View.VISIBLE
@@ -97,13 +101,12 @@ class OverlayHost(
 		if (hasFocus && isShowing) takeFocus()
 	}
 
-	/** The native loop started: show the menu. */
-	fun show() {
+	/** The native loop started: show the menu, at [page] where a media or state hotkey asked for it. */
+	fun show(page: Int = 0) {
 		val menu = view ?: createView().also { view = it }
-		if (menu.visibility == View.VISIBLE) return
-		menu.visibility = View.VISIBLE
-		menu.bringToFront()
-		viewModel.shown()
+		menuShowing = true
+		syncVisibility()
+		viewModel.shown(page)
 		// Out of touch mode, where Compose's clickables cannot take focus:
 		// the menu opens with Resume focused, ready for the D-pad or a gamepad.
 		menu.requestFocusFromTouch()
@@ -111,11 +114,54 @@ class OverlayHost(
 
 	/** The menu closed, or the native loop ended (a reset, quit or state load). */
 	fun hide() {
-		val menu = view ?: return
-		if (menu.visibility != View.VISIBLE) return
-		menu.visibility = View.GONE
+		if (!menuShowing) return
+		menuShowing = false
 		viewModel.hidden()
-		sdlSurface.requestFocus()
+		syncVisibility()
+		if (!isShowing) sdlSurface.requestFocus()
+	}
+
+	/** gui_message's boxes arrived; they show one at a time over whatever runs. */
+	fun showMessages() {
+		val texts = OverlayNative.pendingMessages().toList()
+		if (texts.isEmpty()) return
+		val menu = view ?: createView().also { view = it }
+		viewModel.messagesQueued(texts)
+		dialogShowing = true
+		syncVisibility()
+		// The box takes the focus (modal over a running emulation, too).
+		menu.requestFocusFromTouch()
+	}
+
+	/** gui_ask_disk's requester opened ([OverlayNative.dialogRequest]). */
+	fun showRecoveryDialog() {
+		val request = OverlayNative.dialogRequest()?.let(FloppyRecoveryRequest::parse) ?: return
+		val menu = view ?: createView().also { view = it }
+		viewModel.recoveryShown(request)
+		dialogShowing = true
+		syncVisibility()
+		menu.requestFocusFromTouch()
+	}
+
+	/** The native side stopped waiting for the dialog (the emulation is quitting). */
+	fun hideDialog() {
+		if (!dialogShowing) return
+		dialogShowing = false
+		viewModel.recoveryHidden()
+		syncVisibility()
+		if (!isShowing) sdlSurface.requestFocus()
+	}
+
+	private fun syncVisibility() {
+		val menu = view ?: return
+		if (menuShowing || dialogShowing) {
+			if (menu.visibility != View.VISIBLE) {
+				menu.visibility = View.VISIBLE
+				menu.bringToFront()
+			}
+		} else if (menu.visibility == View.VISIBLE) {
+			menu.visibility = View.GONE
+		}
 	}
 
 	/** Back while the menu shows: its previous page, or out of it. */
@@ -174,7 +220,10 @@ class OverlayHost(
 			visibility = View.GONE
 			setContent {
 				AmiberryTheme {
-					OverlayScreen(viewModel)
+					// The menu while its loop runs; otherwise only the native
+					// dialogs (a message box or the recovery requester over a
+					// running emulation) compose.
+					if (viewModel.menuUp) OverlayScreen(viewModel) else OverlayDialogs(viewModel)
 				}
 			}
 			layout.addView(this, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))

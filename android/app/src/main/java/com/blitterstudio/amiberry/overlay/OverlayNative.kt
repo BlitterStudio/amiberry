@@ -19,6 +19,11 @@ object OverlayNative {
 	/** [close]: back to the emulation with the on-screen keyboard shown. */
 	const val CLOSE_KEYBOARD = 2
 
+	/** [answerDialog] answers for the recovery dialog. */
+	const val RECOVERY_LOCATE = 1
+	const val RECOVERY_SKIP = 2
+	const val RECOVERY_EJECT = 3
+
 	/** [poll] results (amiberry_action_result). */
 	const val RESULT_PENDING = 0
 	const val RESULT_DONE = 1
@@ -62,6 +67,16 @@ object OverlayNative {
 	@JvmStatic external fun status(): Array<String>
 	/** The disk swapper's entries, "" for an empty one. */
 	@JvmStatic external fun swapperEntries(): Array<String>
+
+	// The native dialogs (gui_message, gui_ask_disk); locks only, so any
+	// thread, including the UI thread.
+
+	/** The queued message texts ([.pendingMessages] drains them). */
+	@JvmStatic external fun pendingMessages(): Array<String>
+	/** The recovery dialog's request ([drive, missing path]), null when none is open. */
+	@JvmStatic external fun dialogRequest(): Array<String>?
+	/** Answers the recovery dialog ([RECOVERY_*]); the path belongs to [RECOVERY_LOCATE]. */
+	@JvmStatic external fun answerDialog(answer: Int, path: String)
 
 	// Emulator thread.
 	/** For each id its pending value, then "1" when the option is offered now. */

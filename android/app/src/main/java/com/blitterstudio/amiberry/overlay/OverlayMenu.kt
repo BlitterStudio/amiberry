@@ -63,6 +63,13 @@ class OverlayMenu private constructor(private val stack: List<Entry>) {
 	companion object {
 		/** The menu as it opens: Home, with focus on Resume. */
 		val HOME = OverlayMenu(listOf(Entry(OverlayPage.Home, OverlayKeys.RESUME)))
+		/** A media or state hotkey's page key (gui_display's shortcut) as the menu's opening page; null for Home. */
+		fun pageFor(key: Int): OverlayPage? = when (key) {
+			in 0..3 -> OverlayPage.Picker(MediaTarget.Floppy(key))
+			4, 5 -> OverlayPage.States
+			6 -> OverlayPage.Picker(MediaTarget.Cd)
+			else -> null
+		}
 	}
 }
 
