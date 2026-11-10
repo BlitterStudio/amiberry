@@ -29,13 +29,20 @@ final class SettingsPagesTests: XCTestCase {
 		for page in SettingsPage.placing {
 			guard let layout = page.layout else { continue }
 			let mine = Set(page.groups.flatMap(SettingsCatalog.descriptors(in:)).map(\.id))
-			let placed = layout.flatMap(\.ids)
+			let placed = layout.flatMap { $0.descriptors.map(\.id) }
 			XCTAssertEqual(Set(placed).count, placed.count, "\(page.title): an option placed twice")
 			for id in placed {
-				XCTAssertTrue(mine.contains(id), "\(page.title): \(id) is not an option of the page's groups")
+				XCTAssertNotNil(SettingsCatalog.descriptor(for: id), "\(page.title): \(id) is no option the layer has")
 			}
-			XCTAssertEqual(Set(placed).union(page.unplaced.map(\.id)), mine, page.title)
-			XCTAssertTrue(Set(placed).isDisjoint(with: page.unplaced.map(\.id)), page.title)
+			// The page's own options sit in its sections (a section's
+			// prefixes cover their families), in another page's, or under
+			// More.
+			let placedAnywhere: (String) -> Bool = { id in
+				SettingsPage.placing.contains { other in
+					(other == page || other.layout != nil) && (other.layout ?? []).contains { $0.places(id) }
+				}
+			}
+			XCTAssertEqual(mine.filter { !placedAnywhere($0) }, Set(page.unplaced.map(\.id)), page.title)
 		}
 	}
 
@@ -58,7 +65,7 @@ final class SettingsPagesTests: XCTestCase {
 		// pages' and the generated ones' (a section per layer group, as
 		// All Settings and search show them).
 		var sections: [(title: String, ids: [String])] = SettingsPage.placing.flatMap { page in
-			(page.layout ?? []).map { ($0.title, $0.ids) }
+			(page.layout ?? []).map { ($0.title, $0.descriptors.map(\.id)) }
 		}
 		sections += SettingsCatalog.groups.map { (SettingsPage.groupTitle($0), SettingsCatalog.descriptors(in: $0).map(\.id)) }
 		for section in sections {
@@ -349,13 +356,13 @@ final class SettingsPagesTests: XCTestCase {
 		XCTAssertEqual(hidden.shown(descriptors) { _ in false }.map(\.id), ["floppy0", "cpuboard_type"],
 			"the others stay, dimmed")
 		XCTAssertEqual(hidden.shown(descriptors) { $0 != "floppy1" }.map(\.id), ["floppy0", "cpuboard_type", "cpuboard_settings"])
-		// The pages: a disabled drive's mode and image, a silent drive's
-		// volumes, an absent accelerator's jumpers, memory and ROM.
-		let hardware = SettingsPage.hardware.hiddenWhenUnavailable
+		// The Hardware page's sections: an absent accelerator's jumpers,
+		// memory and boot ROM mean nothing until a board is picked.
+		let accelerator = try XCTUnwrap(SettingsPage.hardware.layout?.first { $0.title == "Accelerator board" })
 		for id in ["cpuboard_settings", "cpuboard_settings:hwrev", "cpuboardmem1_size", "cpuboard_rom_file"] {
-			XCTAssertTrue(hardware.contains(id), id)
+			XCTAssertTrue(accelerator.hiddenWhenUnavailable.contains(id), id)
 		}
-		XCTAssertFalse(hardware.contains("cpuboard_type"))
+		XCTAssertFalse(accelerator.hiddenWhenUnavailable.contains("cpuboard_type"))
 		XCTAssertTrue(SettingsPage.overview.hiddenWhenUnavailable.contains("floppy1"))
 		XCTAssertEqual(SettingsPage.advanced.hiddenWhenUnavailable, HiddenWhenUnavailable(), "All Settings lists everything")
 		let storage = try XCTUnwrap(SettingsPage.storage.layout?.first { $0.title == "DF1:" })
@@ -374,19 +381,20 @@ final class SettingsPagesTests: XCTestCase {
 	}
 
 	func testFurtherMemoryBoardsAppearOnceTheOneBeforeIsFitted() throws {
-		let hardware = SettingsPage.hardware.hiddenWhenUnavailable
-		let ids = ["fastmem_size", "fastmem_size_k", "fastmem2_size", "fastmem2_size_k", "fastmem3_size",
+		let memory = try XCTUnwrap(SettingsPage.hardware.layout?.first { $0.title == "Memory" })
+		let ids = ["fastmem_size", "fastmem2_size", "fastmem2_size_k", "fastmem3_size",
 			"z3mem_size", "z3mem2_size", "z3mem3_size"]
 		let descriptors = try ids.map { try XCTUnwrap(SettingsCatalog.descriptor(for: $0), $0) }
 		func shown(_ values: [String: String]) -> [String] {
-			hardware.shown(descriptors, available: { _ in true }, value: { values[$0] ?? "0" }).map(\.id)
+			memory.hiddenWhenUnavailable.shown(descriptors, available: { _ in true }, value: { values[$0] ?? "0" }).map(\.id)
 		}
-		XCTAssertEqual(shown([:]), ["fastmem_size", "fastmem_size_k", "z3mem_size"],
+		XCTAssertEqual(shown([:]), ["fastmem_size", "z3mem_size"],
 			"one board of each kind while none is fitted")
 		XCTAssertEqual(shown(["fastmem_size": "4"]),
-			["fastmem_size", "fastmem_size_k", "fastmem2_size", "fastmem2_size_k", "z3mem_size"])
+			["fastmem_size", "fastmem2_size", "fastmem2_size_k", "z3mem_size"])
 		XCTAssertEqual(shown(["fastmem_size_k": "512"]),
-			["fastmem_size", "fastmem_size_k", "fastmem2_size", "fastmem2_size_k", "z3mem_size"], "a board below 1 MB counts")
+			["fastmem_size", "fastmem2_size", "fastmem2_size_k", "z3mem_size"],
+			"a board below 1 MB counts, although its slot sits behind the Advanced disclosure")
 		XCTAssertTrue(shown(["fastmem3_size": "2"]).contains("fastmem3_size"), "a fitted board always shows")
 		XCTAssertEqual(shown(["z3mem_size": "64", "z3mem2_size": "none"]).filter { $0.hasPrefix("z3") },
 			["z3mem_size", "z3mem2_size"])
@@ -394,19 +402,30 @@ final class SettingsPagesTests: XCTestCase {
 
 	func testPortsAndMiscIsLaidOutByTask() throws {
 		let layout = try XCTUnwrap(SettingsPage.portsMisc.layout)
-		// Every option of its groups once, or under More: the designed
-		// pages' coverage test covers it with the others.
+		// Every option of its groups once, here, on the Input page that
+		// holds the shortcuts, or under More: the designed pages' coverage
+		// test covers it with the others.
 		let placed = layout.flatMap(\.ids)
 		let mine = Set(SettingsPage.portsMisc.groups.flatMap(SettingsCatalog.descriptors(in:)).map(\.id))
 		XCTAssertEqual(Set(placed).count, placed.count)
-		XCTAssertEqual(Set(placed).union(SettingsPage.portsMisc.unplaced.map(\.id)), mine)
+		let elsewhere = SettingsPage.placing.filter { $0 != .portsMisc }.flatMap { $0.layout?.flatMap(\.ids) ?? [] }
+		XCTAssertEqual(mine.subtracting(placed).subtracting(elsewhere), Set(SettingsPage.portsMisc.unplaced.map(\.id)))
 		let section = { (title: String) in layout.first { $0.title == title }?.ids ?? [] }
 		XCTAssertEqual(section("Priority"), SettingsCatalog.descriptors(in: "priority").map(\.id), "the group's own order")
+		XCTAssertTrue(layout.first { $0.title == "Priority" }?.collapsed ?? false, "collapsed")
+		// The serial and MIDI devices show; their details sit behind a
+		// collapsed Advanced disclosure.
+		XCTAssertEqual(Set(section("Serial & MIDI")),
+			Set(["serial_port", "amiberry.midiout_device_name", "amiberry.midiin_device_name"]))
+		XCTAssertEqual(Set(section("Serial & MIDI · Advanced")),
+			Set(["serial_on_demand", "serial_hardware_ctsrts", "serial_status", "serial_ri", "serial_direct",
+				"serial_translate", "uaeserial", "amiberry.midirouter"]))
+		XCTAssertTrue(layout.first { $0.title == "Serial & MIDI · Advanced" }?.collapsed ?? false)
+		XCTAssertTrue(section("Safety & Debugging").contains("floppy_write_protect"))
+		// The shortcut hotkeys are the Input page's now.
 		let hotkeys = SettingsCatalog.descriptors(in: "misc").filter { $0.kind == .hotkey }.map(\.id)
 		XCTAssertFalse(hotkeys.isEmpty)
-		XCTAssertEqual(Set(section("Keyboard Shortcuts")), Set(hotkeys))
-		XCTAssertTrue(section("Serial & MIDI").contains("serial_port"))
-		XCTAssertTrue(section("Safety & Debugging").contains("floppy_write_protect"))
+		XCTAssertFalse(placed.contains { hotkeys.contains($0) })
 	}
 
 	func testTheKickstartPopUpOffersAROSTheScannedROMsAndAnother() throws {

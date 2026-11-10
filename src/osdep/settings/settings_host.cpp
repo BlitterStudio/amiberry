@@ -286,6 +286,15 @@ host_setting not_on_android(host_setting s)
 	return s;
 }
 
+// A setting the iOS app has no use for (its emulation is the one window
+// the screen holds): the schema says so, as it does for the options the
+// platform cannot use.
+host_setting not_on_ios(host_setting s)
+{
+	s.hidden_on = AMIBERRY_SETTINGS_HIDE_ON_IOS;
+	return s;
+}
+
 // A setting only the classic settings window has (its theme and scale,
 // the Quickstart panel's own options): the native front ends hide it, so
 // the schema says so. The layer gate already keeps it out of builds
@@ -429,13 +438,13 @@ const std::vector<host_setting>& settings()
 		// from (gfx_monitor[0]'s windowed size); the windowed/full-window
 		// choice starts both the native and the RTG screen mode, so no one
 		// option holds it and it stays unnamed. Both mean nothing on
-		// Android's always full-window screen.
-		sets(not_on_android(measured("default_width", "global_display", "Default width",
+		// Android's always full-window screen, nor on iOS's one full screen.
+		sets(not_on_ios(not_on_android(measured("default_width", "global_display", "Default width",
 			"Default native display window width.", "720", 1, 16384, &amiberry_options::default_width,
-			"px", false)), "gfx_width_windowed"),
-		sets(not_on_android(measured("default_height", "global_display", "Default height",
+			"px", false))), "gfx_width_windowed"),
+		sets(not_on_ios(not_on_android(measured("default_height", "global_display", "Default height",
 			"Default native display window height.", "568", 1, 16384, &amiberry_options::default_height,
-			"px", false)), "gfx_height_windowed"),
+			"px", false))), "gfx_height_windowed"),
 		not_on_android(choices_of("default_fullscreen_mode", "global_display", "Screen mode",
 			"Default native and RTG screen mode. The legacy exclusive full-screen value is full-window.",
 			"0", fullscreen_choices, sizeof fullscreen_choices / sizeof fullscreen_choices[0],

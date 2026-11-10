@@ -2899,6 +2899,16 @@ void check_platform_visibility()
 	CHECK(drawbridge && drawbridge->hidden_on == AMIBERRY_SETTINGS_HIDE_ON_IOS);
 	const amiberry_setting_descriptor* on_top = amiberry_settings_find("amiberry.always_on_top");
 	CHECK(on_top && on_top->hidden_on == AMIBERRY_SETTINGS_HIDE_ON_IOS);
+	// The host's default window sizes follow their machine options
+	// (gfx_width_windowed/gfx_height_windowed): iOS runs one always
+	// full-screen window. The default screen mode stays, as
+	// gfx_fullscreen_amiga/picasso do (a full-window pick reaches iOS too).
+	const amiberry_setting_descriptor* default_width = amiberry_host_settings_find("default_width");
+	CHECK(default_width && default_width->hidden_on == AMIBERRY_SETTINGS_HIDE_ON_IOS);
+	const amiberry_setting_descriptor* default_height = amiberry_host_settings_find("default_height");
+	CHECK(default_height && default_height->hidden_on == AMIBERRY_SETTINGS_HIDE_ON_IOS);
+	const amiberry_setting_descriptor* default_mode = amiberry_host_settings_find("default_fullscreen_mode");
+	CHECK(default_mode && default_mode->hidden_on == 0);
 	// Nothing is hidden on the desktop GUI this test compiles, and the
 	// reasoning-based marks are gone: the mouse pair stays visible.
 	const amiberry_setting_descriptor* magic_mouse = amiberry_settings_find("magic_mouse");
