@@ -330,11 +330,6 @@ constexpr unsigned int desktop_window_hidden = AMIBERRY_SETTINGS_HIDE_ON_IOS;
 // is absolute and never captured, so capture and untrap settings do
 // nothing there.
 constexpr unsigned int pointer_capture_hidden = AMIBERRY_SETTINGS_HIDE_ON_IOS;
-// No RTG board can be configured on Android (every board option is
-// preset_only in the launcher's schema), so the RTG status line never
-// shows there.
-constexpr unsigned int android_rtg_hidden = AMIBERRY_SETTINGS_HIDE_ON_ANDROID;
-
 const definition definitions[] = {
 	{CHOICE_OPTION("use_gui", "misc", "Open settings on startup",
 			"Show the settings when Amiberry starts, before the emulation runs.",
@@ -364,10 +359,9 @@ const definition definitions[] = {
 	BOOL_DEF("show_leds", "misc", "Native on-screen display",
 		"Show the status line with the drive and power LEDs on the native Amiga display.",
 		AMIBERRY_APPLY_LIVE, "false", show_leds),
-	hidden_on(BOOL_DEF("show_leds_rtg", "misc", "RTG on-screen display",
+	BOOL_DEF("show_leds_rtg", "misc", "RTG on-screen display",
 		"Show the status line with the drive and power LEDs on the RTG display.",
 		AMIBERRY_APPLY_LIVE, "false", show_leds_rtg),
-		android_rtg_hidden),
 	BOOL_DEF("log_illegal_mem", "misc", "Log illegal memory accesses",
 		"Log reads and writes to addresses where no memory is.",
 		AMIBERRY_APPLY_RESTART, "false", illegal_mem),

@@ -839,10 +839,11 @@ bool linemode_available(const uae_prefs& p, const context&)
 	{id, group, label, help, AMIBERRY_SETTING_STRING, apply, 0, 0, 0, def, nullptr, 0, constraint}
 
 // iOS runs one always-full screen: the windowed sizes and resize, the
-// borderless window, the host display pick, adaptive sync and the host
-// refresh entries are desktop-window concepts, and the window/full-window
-// modes have no visible effect on the single window it reuses
-// (gfx_window.cpp reuses one window there).
+// borderless window, the host display pick, adaptive sync and the
+// window/full-window modes are desktop-window concepts with no visible
+// effect on the single window it reuses (gfx_window.cpp reuses one window
+// there). The PAL/NTSC refresh entries stay: set_displaydata() sets the
+// emulated chipset's rate (custom.cpp), not a host mode.
 constexpr unsigned int desktop_window_hidden = AMIBERRY_SETTINGS_HIDE_ON_IOS;
 // Android never switches the host display mode, so the blanking period
 // while PAL/NTSC switching re-syncs a host mode never runs.
@@ -959,20 +960,18 @@ const definition definitions[] = {
 			"that must switch before the render resolution changes.",
 			AMIBERRY_APPLY_LIVE, "0", autoresolution_choices, nullptr),
 		get_gfx_autoresolution, set_gfx_autoresolution, nullptr, nullptr, nullptr, nullptr},
-	hidden_on({STRING_OPTION("displaydata_pal", "display", "PAL refresh entry",
+	{STRING_OPTION("displaydata_pal", "display", "PAL refresh entry",
 			"The custom PAL refresh entry: the rate in Hz, then optional fields (,locked,pal,lace,...). "
 			"0 follows the PAL standard of 50 Hz.",
 			AMIBERRY_APPLY_LIVE, "0",
 			"The writer saves the entry only while it is locked, so a rate locks it."),
 		get_displaydata_pal, set_displaydata_pal, nullptr, nullptr, nullptr, displaydata_accepts},
-		desktop_window_hidden),
-	hidden_on({STRING_OPTION("displaydata_ntsc", "display", "NTSC refresh entry",
+	{STRING_OPTION("displaydata_ntsc", "display", "NTSC refresh entry",
 			"The custom NTSC refresh entry: the rate in Hz, then optional fields (,locked,ntsc,lace,...). "
 			"0 follows the NTSC standard of 60 Hz.",
 			AMIBERRY_APPLY_LIVE, "0",
 			"The writer saves the entry only while it is locked, so a rate locks it."),
 		get_displaydata_ntsc, set_displaydata_ntsc, nullptr, nullptr, nullptr, displaydata_accepts},
-		desktop_window_hidden),
 	{ATTRIBUTE_OPTION("gfx_luminance", "Brightness",
 			"Brightness adjustment from -200 to +200; 0 leaves the picture as it is."),
 		get_gfx_luminance, set_gfx_luminance, nullptr, nullptr, nullptr, nullptr},

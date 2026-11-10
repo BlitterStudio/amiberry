@@ -546,12 +546,16 @@ const std::vector<host_setting>& settings()
 			"Default shader for RTG modes: a built-in CRT shader or a preset from the shaders folder.",
 			listing::shader),
 			"amiberry.shader_rtg"),
-		sets(boolean("use_bezel", "global_visual", "Built-in CRT bezel",
+		// The two bezel switches name no option: the copy
+		// target_default_options makes of them depends on the bezel file
+		// (a custom bezel turns the built-in one off), so a front end
+		// writing a fresh configuration leaves both to the emulator's own
+		// copy, which the load runs.
+		boolean("use_bezel", "global_visual", "Built-in CRT bezel",
 			"Show the built-in CRT bezel overlay.", "false", &amiberry_options::use_bezel),
-			"amiberry.use_bezel"),
-		sets(boolean("use_custom_bezel", "global_visual", "Use custom bezel",
+		boolean("use_custom_bezel", "global_visual", "Use custom bezel",
 			"Show a bezel from the bezels folder instead of the built-in one.",
-			"false", &amiberry_options::use_custom_bezel), "amiberry.use_custom_bezel"),
+			"false", &amiberry_options::use_custom_bezel),
 		sets(catalog("custom_bezel", "Custom bezel",
 			"Bezel image from the bezels folder. Picking one turns Use custom bezel on and the built-in "
 			"bezel off; None turns Use custom bezel off.", listing::bezel), "amiberry.custom_bezel"),

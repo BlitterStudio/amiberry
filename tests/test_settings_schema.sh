@@ -202,8 +202,6 @@ assert sets == {
     "default_soundcard": "amiberry.soundcard",
     "shader": "amiberry.shader",
     "shader_rtg": "amiberry.shader_rtg",
-    "use_bezel": "amiberry.use_bezel",
-    "use_custom_bezel": "amiberry.use_custom_bezel",
     "custom_bezel": "amiberry.custom_bezel",
 }, sets
 # A default may name an option this export does not describe (the hotkeys,
@@ -213,6 +211,32 @@ assert all(o in ids_set or o in {"amiberry.open_gui", "amiberry.quit_amiberry",
            "amiberry.action_replay", "amiberry.fullscreen_toggle", "amiberry.soundcard",
            "amiberry.shader_rtg", "amiberry.use_custom_bezel", "amiberry.custom_bezel"}
            for o in sets.values()), "a named option is neither described nor one of the known unlisted ones"
+
+# Every default names the option a fresh configuration starts with in the
+# option's own spelling: the export computes each value's copy (the same
+# target_default_options default_prefs runs) and lists the values whose
+# spelling differs. Pairs left without a map keep the stored value; the
+# two bezel switches name no option at all (their copy depends on the
+# bezel file, so a fresh configuration leaves them to the emulator).
+option_values = {h["id"]: h.get("sets_option_values") for h in host if "sets_option" in h}
+assert option_values == {
+    id: None for id in (
+        "default_controller1", "default_mouse1", "default_joystick_deadzone",
+        "input_default_mouse_speed", "default_open_gui_key", "default_quit_key",
+        "default_ar_key", "default_fullscreen_toggle_key", "default_retroarch_quit",
+        "default_retroarch_menu", "default_retroarch_reset", "default_scaling_method",
+        "default_gfx_autoresolution", "default_auto_crop", "default_stereo_separation",
+        "default_sound_frequency", "default_soundcard", "shader", "shader_rtg",
+        "custom_bezel")
+} | {
+    "default_line_mode": {"0": "none", "1": "double2", "2": "scanlines2"},
+    "default_horizontal_centering": {"false": "none", "true": "smart"},
+    "default_vertical_centering": {"false": "none", "true": "smart"},
+    "default_correct_aspect_ratio": {"false": "0", "true": "1"},
+    # The minimum buffer the host default names is not one the core keeps:
+    # default_prefs leaves a fresh configuration at its own 16384.
+    "default_sound_buffer": {"0": "16384"},
+}, option_values
 
 # The per-platform visibility mask travels with every option and host
 # setting: iOS has no serial backend or desktop window, Android never
@@ -226,7 +250,6 @@ by_id = {o["id"]: o for o in schema["options"]}
 assert hidden_on(by_id["magic_mouse"]) == {"ios", "android"}
 assert hidden_on(by_id["magic_mousecursor"]) == {"ios", "android"}
 assert hidden_on(by_id["gfx_monitorblankdelay"]) == {"android"}
-assert hidden_on(by_id["show_leds_rtg"]) == {"android"}
 assert not hidden_on(by_id["use_gui"]) and not hidden_on(by_id["gfx_vsync"])
 gui_only = {"macos", "ios", "android"}
 for id in ("Quickstart", "read_config_descriptions", "gui_joystick_control",

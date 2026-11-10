@@ -117,6 +117,14 @@ class SettingsSchema(
 		 */
 		val setsOption: String? = null,
 		/**
+		 * A host setting only: the machine-option value each value of this
+		 * setting produces in a fresh configuration (the schema's
+		 * sets_option_values, computed by the layer from the copy
+		 * target_default_options makes). Pairs whose spelling is the same
+		 * at both ends carry no map and keep the stored value.
+		 */
+		val setsOptionValues: Map<String, String> = emptyMap(),
+		/**
 		 * The platforms this setting does nothing on and is hidden from,
 		 * as the schema's hidden_on names ("ios", "android"). The launcher
 		 * still writes a hidden setting's stored value (the classic
@@ -396,6 +404,9 @@ class SettingsSchema(
 				level = o.optBoolean("level", false),
 				presetOnly = o.optBoolean("preset_only", false),
 				setsOption = text("sets_option"),
+				setsOptionValues = o.optJSONObject("sets_option_values")?.let { values ->
+					buildMap { for (key in values.keys()) put(key, values.getString(key)) }
+				}.orEmpty(),
 				hiddenOn = o.optJSONArray("hidden_on")?.toStringList().orEmpty()
 			)
 		}

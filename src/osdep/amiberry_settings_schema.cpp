@@ -1457,6 +1457,54 @@ void aros(std::string& out)
 	out += '}';
 }
 
+// The machine-option values a host setting's values produce, as
+// "sets_option_values": for each value the host setting can hold, the
+// value its option holds in a fresh configuration. Computed by setting
+// the host value, resetting to a fresh pending configuration (whose
+// default_prefs() runs target_default_options(), the copy that reads the
+// host default) and reading the option back, so the translation is the
+// copy's own, not a restatement of it. Bool and fixed-choice settings are
+// enumerable; numbers, hotkeys, free text and the host-device lists keep
+// the stored spelling in both places and carry no map.
+void sets_option_values(std::string& out, const char* option, const amiberry_setting_descriptor* d)
+{
+	if (d->type != AMIBERRY_SETTING_BOOL && d->choice_count == 0)
+		return;
+	char original[512];
+	if (amiberry_host_settings_get(d->id, original, sizeof original) != AMIBERRY_SETTINGS_OK)
+		return;
+	std::vector<std::string> values;
+	if (d->type == AMIBERRY_SETTING_BOOL) {
+		values.push_back("false");
+		values.push_back("true");
+	} else {
+		for (size_t c = 0; c < d->choice_count; c++)
+			values.push_back(d->choices[c].value);
+	}
+	std::string map;
+	for (const std::string& value : values) {
+		if (amiberry_host_settings_set(d->id, value.c_str()) != AMIBERRY_SETTINGS_OK)
+			continue;
+		reset_pending();
+		amiberry_settings_session* session = amiberry_settings_session_open();
+		if (!session)
+			break;
+		const std::string option_value = value_of(session, option);
+		amiberry_settings_session_close(session);
+		if (!option_value.empty() && option_value != value) {
+			if (!map.empty())
+				map += ',';
+			json_string(map, value.c_str());
+			map += ':';
+			json_string(map, option_value.c_str());
+		}
+	}
+	amiberry_host_settings_set(d->id, original);
+	if (map.empty())
+		return;
+	out += ",\"sets_option_values\":{" + map + "}";
+}
+
 // One host setting (amiberry.conf, not a machine's configuration): every
 // one the layer lists except those the Android build has no use for (the
 // update checker: it has no self-update), then the ones only that build
@@ -1527,6 +1575,7 @@ void host_settings(std::string& out)
 		if (sets_option) {
 			out += ",\"sets_option\":";
 			json_string(out, sets_option);
+			sets_option_values(out, sets_option, d);
 		}
 		out += '}';
 	};

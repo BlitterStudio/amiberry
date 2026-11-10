@@ -3,6 +3,7 @@ package com.blitterstudio.amiberry.data.model
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -88,8 +89,6 @@ class HostSettingsSchemaTest {
 				"default_soundcard" to "amiberry.soundcard",
 				"shader" to "amiberry.shader",
 				"shader_rtg" to "amiberry.shader_rtg",
-				"use_bezel" to "amiberry.use_bezel",
-				"use_custom_bezel" to "amiberry.use_custom_bezel",
 				"custom_bezel" to "amiberry.custom_bezel"
 			),
 			schema.hostSettings.mapNotNull { it.setsOption?.let { option -> it.id to option } }.toMap()
@@ -187,6 +186,26 @@ class HostSettingsSchemaTest {
 		// The launcher shows these.
 		assertFalse(schema.hostSetting("shader")!!.hiddenOnAndroid)
 		assertFalse(schema.hostSetting("default_open_gui_key")!!.hiddenOnAndroid)
+	}
+
+	/**
+	 * The value translation is the layer's, not the launcher's: each map
+	 * is what the copy target_default_options makes of the value, in the
+	 * option's own spelling (a bool onto a named choice, a number onto a
+	 * name, a bool onto a 0/1 switch). Pairs that keep the stored value
+	 * carry no map; the two bezel switches name no option, because their
+	 * copy depends on the bezel file.
+	 */
+	@Test
+	fun `a default's values map onto the option's own spelling`() {
+		assertEquals(mapOf("0" to "none", "1" to "double2", "2" to "scanlines2"),
+			schema.hostSetting("default_line_mode")?.setsOptionValues)
+		assertEquals(mapOf("false" to "none", "true" to "smart"),
+			schema.hostSetting("default_horizontal_centering")?.setsOptionValues)
+		assertEquals(mapOf("false" to "0", "true" to "1"),
+			schema.hostSetting("default_correct_aspect_ratio")?.setsOptionValues)
+		assertEquals(emptyMap<String, String>(), schema.hostSetting("default_sound_frequency")?.setsOptionValues)
+		assertNull(schema.hostSetting("use_bezel")?.setsOption)
 	}
 
 	@Test

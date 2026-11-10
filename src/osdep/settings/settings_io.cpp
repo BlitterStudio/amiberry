@@ -352,9 +352,11 @@ constexpr unsigned int midi_hidden = AMIBERRY_SETTINGS_HIDE_ON_IOS
 	| AMIBERRY_SETTINGS_HIDE_ON_THIS_BUILD
 #endif
 	;
-// The printer and sampler options enumerate the host's printers and
-// audio inputs; iOS apps see none (the export's device lists are empty).
-constexpr unsigned int printer_sampler_hidden = AMIBERRY_SETTINGS_HIDE_ON_IOS;
+// The sampler options enumerate the host's audio inputs, which iOS apps
+// see none of (the export's device lists are empty). The parallel port's
+// printer itself stays: printing to files (FILE:<folder>, parser.cpp's
+// open_file_printer) works there, only the host-printer list is empty.
+constexpr unsigned int sampler_hidden = AMIBERRY_SETTINGS_HIDE_ON_IOS;
 
 #define BOOL_OPTION(id, group, label, help, apply, def, constraint) \
 	{id, group, label, help, AMIBERRY_SETTING_BOOL, apply, 0, 0, 0, def, nullptr, 0, constraint}
@@ -371,26 +373,24 @@ constexpr unsigned int printer_sampler_hidden = AMIBERRY_SETTINGS_HIDE_ON_IOS;
 		get_##name, set_##name, serial_selected, nullptr, nullptr}
 
 const definition definitions[] = {
-	hidden_on({STRING_OPTION("amiberry.parallel_port", "io", "Printer",
+	{STRING_OPTION("amiberry.parallel_port", "io", "Printer",
 			"The parallel port printer: none, a host printer, or \"FILE:<folder>\" to print to numbered Print_###.dat files.",
 			AMIBERRY_APPLY_LIVE, "none", "The parallel port has the printer or the sampler."),
 		get_parallel_port, set_parallel_port, nullptr, nullptr, nullptr, parallel_port_accepts},
-		printer_sampler_hidden),
-	hidden_on({PATH_OPTION("amiberry.parallel_port:folder", "io", "Print to folder",
+	{PATH_OPTION("amiberry.parallel_port:folder", "io", "Print to folder",
 			"Print to numbered Print_###.dat files in this folder; empty for no printer.",
 			AMIBERRY_APPLY_LIVE, "", "The parallel port has the printer or the sampler."),
 		get_print_folder, set_print_folder, nullptr, nullptr, nullptr, print_folder_accepts},
-		printer_sampler_hidden),
 	hidden_on({DYNAMIC_CHOICE_OPTION("amiberry.samplersoundcard", "io", "Sampler",
 			"An audio input the Amiga samples through the parallel port.",
 			AMIBERRY_APPLY_LIVE, "-1", "The parallel port has the printer or the sampler."),
 		get_sampler, set_sampler, nullptr, nullptr, nullptr, nullptr, sampler_choices},
-		printer_sampler_hidden),
+		sampler_hidden),
 	hidden_on({BOOL_OPTION("sampler_stereo", "io", "Stereo sampler",
 			"Sample in stereo instead of mono.",
 			AMIBERRY_APPLY_LIVE, "false", "Only with a sampler."),
 		get_sampler_stereo, set_sampler_stereo, sampler_selected, nullptr, nullptr},
-		printer_sampler_hidden),
+		sampler_hidden),
 	hidden_on({DYNAMIC_CHOICE_OPTION("serial_port", "io", "Serial port",
 			"The host serial port (or network connection) the Amiga's RS-232 port goes to.",
 			AMIBERRY_APPLY_LIVE, "none", nullptr),
