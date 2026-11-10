@@ -193,6 +193,24 @@ class PresetMachineTest {
 	}
 
 	@Test
+	fun `another accelerator takes the old one's RAM out of fast RAM`() {
+		val a530 = EmulatorSettings.fromModel(AmigaModel.A500)
+			.withOption("cpuboard_type", "GVPA530").withOption("cpuboardmem1_size", "8")
+		assertEquals("8", a530.optionValue("fastmem_size"))
+		// set_cpuboard_type clears the slot the old board's RAM was copied to.
+		val blizzard = a530.withOption("cpuboard_type", "Blizzard1230IV")
+		assertEquals("0", blizzard.optionValue("fastmem_size"))
+		assertEquals("0", a530.withOption("cpuboard_type", "none").optionValue("fastmem_size"))
+	}
+
+	@Test
+	fun `a model change keeps the new preset's accelerator jumpers`() {
+		val draco = EmulatorSettings.fromModel(AmigaModel.A500)
+			.withModel(requireNotNull(AmigaModel.find("macrosystem")), 0)
+		assertEquals("true", draco.acceleratorJumpers["pckbd"])
+	}
+
+	@Test
 	fun `the add menu offers optional internal boards but no built-in controller`() {
 		val schema = requireNotNull(SettingsSchema.current)
 		val addable = BoardEditor.addable(schema).map { it.id }

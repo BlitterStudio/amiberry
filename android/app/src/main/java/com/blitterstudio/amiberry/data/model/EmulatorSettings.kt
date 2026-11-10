@@ -184,10 +184,12 @@ data class EmulatorSettings(
 	}
 
 	/**
-	 * The accelerator's RAM, as the layer's setters keep it: another board
-	 * fits it to the board's maximum and puts it in the memory slot the
-	 * board uses (fit_board_memory, the fixup_prefs clamp and copy at
-	 * load); a board whose RAM is a memory option's (a Zorro II board's
+	 * The accelerator's RAM, as the layer's setters keep it. Another board
+	 * (none included) takes the old board's RAM out of the memory slot it
+	 * was copied to when the new one puts its RAM elsewhere, then fits the
+	 * RAM to the new board's maximum and puts it in that board's slot
+	 * (set_cpuboard_type, fit_board_memory: the fixup_prefs clamp and copy
+	 * at load). A board whose RAM is a memory option's (a Zorro II board's
 	 * fastmem_size) keeps the two equal, the board's size landing in the
 	 * option (mirror_cpuboard_mem) and the option's in the board, up to its
 	 * maximum (sync_cpuboard_mem). So a launch never brings back a size the
@@ -199,14 +201,22 @@ data class EmulatorSettings(
 		value: String,
 		schema: SettingsSchema?
 	): EmulatorSettings {
-		val board = schema?.acceleratorBoard(optionValue("cpuboard_type") ?: "none") ?: return this
-		val slot = board.memoryOption
+		schema ?: return this
+		val board = schema.acceleratorBoard(optionValue("cpuboard_type") ?: "none")
+		val slot = board?.memoryOption
 		if (id == "cpuboard_type") {
-			val size = optionValue("cpuboardmem1_size")?.toIntOrNull() ?: 0
-			val fitted = if (size > board.memoryMax) withField("cpuboardmem1_size", board.memoryMax.toString(), schema) ?: this else this
-			return slot?.let { fitted.withField(it, fitted.optionValue("cpuboardmem1_size") ?: "0", schema) } ?: fitted
+			var result = this
+			val oldSlot = schema.acceleratorBoard(before.optionValue("cpuboard_type") ?: "none")?.memoryOption
+			if (oldSlot != null && oldSlot != slot &&
+				before.optionValue(oldSlot) == before.optionValue("cpuboardmem1_size"))
+				result = result.withField(oldSlot, "0", schema) ?: result
+			board ?: return result
+			val size = result.optionValue("cpuboardmem1_size")?.toIntOrNull() ?: 0
+			if (size > board.memoryMax)
+				result = result.withField("cpuboardmem1_size", board.memoryMax.toString(), schema) ?: result
+			return slot?.let { result.withField(it, result.optionValue("cpuboardmem1_size") ?: "0", schema) } ?: result
 		}
-		slot ?: return this
+		if (board == null || slot == null) return this
 		if (id == "cpuboardmem1_size") return withField(slot, value, schema) ?: this
 		if (optionValue(slot) == before.optionValue(slot)) return this
 		val mb = optionValue(slot)?.toIntOrNull() ?: return this
@@ -257,7 +267,6 @@ data class EmulatorSettings(
 		}
 		return machine.copy(
 			boards = emptyList(),
-			acceleratorJumpers = emptyMap(),
 			customControls = customControls,
 			shader = shader,
 			joyport0 = joyport0,
