@@ -133,6 +133,15 @@ fun OverlayScreen(viewModel: OverlayViewModel) {
 			}
 		}
 	}
+	// The native dialogs (NativeDialogs.kt) layer over the panel too: a
+	// message box or the recovery requester can open while the menu shows.
+	NativeDialogs(viewModel)
+}
+
+/** Only the native dialogs compose while no menu runs (a message box or the recovery requester alone). */
+@Composable
+fun OverlayDialogs(viewModel: OverlayViewModel) {
+	NativeDialogs(viewModel)
 }
 
 @Composable

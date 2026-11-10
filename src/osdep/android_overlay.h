@@ -1,14 +1,18 @@
 /*
- * The Android app's in-emulation menu: a Compose overlay over the SDL
- * surface (android/app/src/main/java/com/blitterstudio/amiberry/overlay).
+ * The Android app's in-emulation UI (android/app/src/main/java/com/
+ * blitterstudio/amiberry/overlay): a Compose overlay over the SDL surface.
  * Where the built-in GUI would open over a running emulation (Back, the
  * gamepad's Start or Guide, the two-finger swipe, F12, the RetroArch combo,
  * the open_settings action), the emulator shows this menu instead, paused as
- * under the GUI. The built-in GUI stays for startup without -G, for the
- * media hotkeys' file requesters, as the menu's Classic settings window, and for
- * people who turn the menu off in the launcher.
+ * under the GUI, and the media and state hotkeys open it at their picker or
+ * the states list. gui_message's message boxes and gui_ask_disk's recovery
+ * requester are native dialogs of the same view. The built-in GUI stays for
+ * startup without -G, as the menu's Classic settings window, and for people
+ * who turn the menu off in the launcher.
  */
 #pragma once
+
+#include <string>
 
 #ifdef __ANDROID__
 
@@ -24,8 +28,22 @@ bool android_overlay_enabled();
 
 // Shows the menu and runs until it closes, in place of run_gui(): queued
 // actions keep running, and a reset, quit or state load among them closes
-// it as the built-in GUI's buttons do. Main thread, inside gui_display().
-android_overlay_result android_overlay_run();
+// it as the built-in GUI's buttons do. The page is the media or state
+// hotkey's shortcut as gui_display received it: 0-3 the DF0-3 picker, 4 and
+// 5 the states list, 6 the CD picker; -1 (or anything else) the menu's
+// Home. Main thread, inside gui_display().
+android_overlay_result android_overlay_run(int page = -1);
+
+// gui_message's message box: queued, and shown by the overlay's Compose
+// view over whatever runs, without stopping the emulation. Any thread.
+void android_overlay_message(const char* text);
+
+// gui_ask_disk's requester: the recovery dialog shows over the last frame
+// while this waits, as the built-in GUI's did (the emulator thread,
+// mid-instruction, keeps SDL alive). True with the replacement image in
+// chosen (empty: eject the drive), false when the dialog was skipped or
+// cancelled. Main thread.
+bool android_overlay_ask_disk(int drive, const char* missing_path, std::string& chosen);
 
 // Between frames (handle_events): shows the on-screen keyboard the menu's
 // Show keyboard asked for, once the emulation runs with the keyboard on.
@@ -38,4 +56,4 @@ void android_overlay_service();
 // so the Amiga sees it. Main thread.
 void android_remote_joystick_pump();
 
-#endif
+#endif // __ANDROID__

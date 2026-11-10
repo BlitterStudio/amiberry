@@ -46,6 +46,9 @@ namespace {
 // COMMAND_USER range starts at 0x8000).
 constexpr Uint32 command_show_overlay = 0x8001;
 constexpr Uint32 command_hide_overlay = 0x8002;
+constexpr Uint32 command_message = 0x8003;
+constexpr Uint32 command_show_dialog = 0x8004;
+constexpr Uint32 command_hide_dialog = 0x8005;
 
 // OverlayNative.CLOSE_*: how the overlay asked the loop to end.
 constexpr int close_none = -1;
@@ -57,6 +60,30 @@ std::atomic<bool> enabled{true};
 std::atomic<int> close_request{close_none};
 // Show keyboard was chosen; android_overlay_service() shows it.
 std::atomic<bool> keyboard_requested{false};
+
+// gui_message's texts, waiting for the overlay to show them: any thread
+// queues (android_overlay_message), the activity drains them when the
+// command arrives. As gui_message, not modal: nothing waits for them.
+std::mutex message_lock;
+std::vector<std::string> pending_gui_messages;
+
+// gui_ask_disk's dialog, shared with the Android UI thread: the emulator
+// thread opens the request (android_overlay_ask_disk) and polls for the
+// answer; the dialog reads the request and posts the answer through JNI.
+// Answers as OverlayNative.RECOVERY_*.
+constexpr int recovery_answer_none = -1;
+constexpr int recovery_answer_locate = 1;
+constexpr int recovery_answer_skip = 2;
+constexpr int recovery_answer_eject = 3;
+struct recovery_dialog_state {
+	std::mutex lock;
+	bool open = false;
+	int drive = 0;
+	std::string missing;
+	int answer = recovery_answer_none;
+	std::string chosen;
+};
+recovery_dialog_state recovery_dialog;
 
 // The TV remote as the port 2 joystick: OverlayNative.REMOTE_* bits.
 constexpr unsigned remote_up = 1;
@@ -191,6 +218,47 @@ std::string setting_value(const amiberry_settings_session* session, const std::s
 	return found ? value : "";
 }
 
+// What showing a native UI does to the input around its wait, as
+// gui_display() does for the built-in GUI: a direction or fire held when
+// the menu or a dialog opened must not stay held after it. Emulator thread.
+void begin_native_ui_wait()
+{
+	inputdevice_unacquire();
+	wait_keyrelease();
+	clearallkeys();
+}
+
+void end_native_ui_wait()
+{
+	inputdevice_acquire(FALSE);
+	inputdevice_releasebuttons();
+}
+
+// The one event pump every native UI waits on (the menu's loop, a
+// dialog's): waiting also runs the overlay's SDL_RunOnMainThread calls,
+// controllers plugged in meanwhile are picked up, and a rotation waits
+// for the emulation, which is blocked while the UI shows. False when the
+// app is quitting: the caller ends its wait then.
+bool pump_native_ui_events(SDL_Event& resize, bool& resized)
+{
+	SDL_Event event;
+	if (!SDL_WaitEventTimeout(&event, 16))
+		return true;
+	do {
+		if (event.type == SDL_EVENT_QUIT || event.type == SDL_EVENT_TERMINATING) {
+			uae_quit();
+			return false;
+		} else if (event.type == SDL_EVENT_JOYSTICK_ADDED || event.type == SDL_EVENT_JOYSTICK_REMOVED) {
+			// As run_gui: controllers plugged in meanwhile are picked up.
+			handle_joy_device_event(event.jdevice.which, event.type == SDL_EVENT_JOYSTICK_REMOVED);
+		} else if (is_window_size_event(event)) {
+			resize = event;
+			resized = true;
+		}
+	} while (SDL_PollEvent(&event));
+	return true;
+}
+
 } // namespace
 
 bool android_overlay_enabled()
@@ -198,10 +266,13 @@ bool android_overlay_enabled()
 	return enabled.load();
 }
 
-android_overlay_result android_overlay_run()
+android_overlay_result android_overlay_run(const int page)
 {
 	close_request.store(close_none);
-	SDL_SendAndroidMessage(command_show_overlay, 0);
+	// The page (a media or state hotkey's shortcut) tells the activity
+	// where the menu opens.
+	SDL_SendAndroidMessage(command_show_overlay, page);
+	begin_native_ui_wait();
 
 	// The emulation handles a rotation once it runs again: the last size
 	// change waits for it.
@@ -221,35 +292,95 @@ android_overlay_result android_overlay_run()
 		if (result != close_none)
 			break;
 
-		// Waiting also runs the overlay's SDL_RunOnMainThread calls. Input
-		// is the overlay's while it shows (it has the Android focus); what
-		// still reaches SDL is dropped, as under the built-in GUI.
-		SDL_Event event;
-		if (!SDL_WaitEventTimeout(&event, 16))
-			continue;
-		do {
-			if (event.type == SDL_EVENT_QUIT || event.type == SDL_EVENT_TERMINATING) {
-				uae_quit();
-				result = close_resume;
-			} else if (event.type == SDL_EVENT_JOYSTICK_ADDED || event.type == SDL_EVENT_JOYSTICK_REMOVED) {
-				// As run_gui: controllers plugged in meanwhile are picked up.
-				handle_joy_device_event(event.jdevice.which, event.type == SDL_EVENT_JOYSTICK_REMOVED);
-			} else if (is_window_size_event(event)) {
-				resize = event;
-				resized = true;
-			}
-		} while (SDL_PollEvent(&event));
+		// Input is the overlay's while it shows (it has the Android focus);
+		// what still reaches SDL is dropped, as under the built-in GUI.
+		if (!pump_native_ui_events(resize, resized)) {
+			result = close_resume;
+			break;
+		}
 	}
 
 	// What the overlay posted as it closed (Pause, Quit) runs now, so the
 	// emulation loop sees it before it resumes.
 	amiberry_actions_run_pending();
+	end_native_ui_wait();
 	SDL_SendAndroidMessage(command_hide_overlay, 0);
 	if (resized)
 		SDL_PushEvent(&resize);
 	if (result == close_keyboard)
 		keyboard_requested.store(true);
 	return result == close_advanced ? android_overlay_result::advanced : android_overlay_result::resume;
+}
+
+void android_overlay_message(const char* text)
+{
+	if (!text || !text[0])
+		return;
+	{
+		std::lock_guard<std::mutex> guard(message_lock);
+		pending_gui_messages.emplace_back(text);
+	}
+	// Without the activity there is no view to show the box; the text is
+	// in the log either way.
+	if (!SDL_SendAndroidMessage(command_message, 0)) {
+		std::lock_guard<std::mutex> guard(message_lock);
+		if (!pending_gui_messages.empty())
+			pending_gui_messages.pop_back();
+	}
+}
+
+bool android_overlay_ask_disk(const int drive, const char* missing_path, std::string& chosen)
+{
+	{
+		std::lock_guard<std::mutex> guard(recovery_dialog.lock);
+		recovery_dialog.open = true;
+		recovery_dialog.drive = drive;
+		recovery_dialog.missing = missing_path ? missing_path : "";
+		recovery_dialog.answer = recovery_answer_none;
+		recovery_dialog.chosen.clear();
+	}
+	if (!SDL_SendAndroidMessage(command_show_dialog, 0)) {
+		std::lock_guard<std::mutex> guard(recovery_dialog.lock);
+		recovery_dialog.open = false;
+		return false;
+	}
+	begin_native_ui_wait();
+
+	// The emulator thread waits mid-instruction until the dialog answers
+	// (pump_native_ui_events keeps SDL alive); a quit cancels it, and the
+	// caller keeps its missing image then.
+	SDL_Event resize{};
+	bool resized = false;
+	bool quit = false;
+	int answer = recovery_answer_none;
+	while (true) {
+		{
+			std::lock_guard<std::mutex> guard(recovery_dialog.lock);
+			if (recovery_dialog.answer != recovery_answer_none) {
+				answer = recovery_dialog.answer;
+				chosen = recovery_dialog.chosen;
+				break;
+			}
+		}
+		if (!pump_native_ui_events(resize, resized)) {
+			quit = true;
+			break;
+		}
+	}
+	{
+		std::lock_guard<std::mutex> guard(recovery_dialog.lock);
+		recovery_dialog.open = false;
+	}
+	end_native_ui_wait();
+	SDL_SendAndroidMessage(command_hide_dialog, 0);
+	if (resized)
+		SDL_PushEvent(&resize);
+	if (quit || (answer != recovery_answer_locate && answer != recovery_answer_eject))
+		return false;
+	// Eject clears the drive: an empty replacement does that in the caller.
+	if (answer == recovery_answer_eject)
+		chosen.clear();
+	return true;
 }
 
 void android_overlay_service()
@@ -341,6 +472,42 @@ JNIEXPORT jboolean JNICALL OVERLAY_JNI(remoteKey)(JNIEnv*, jclass, jint button, 
 	remote_held.fetch_or(bit);
 	remote_taps.fetch_or(bit);
 	return JNI_TRUE;
+}
+
+// The native dialogs: any thread (a lock, never a wait on the emulator).
+
+// gui_message's texts, in the order they arrived; showing them is the
+// activity's business (nothing answers them).
+JNIEXPORT jobjectArray JNICALL OVERLAY_JNI(pendingMessages)(JNIEnv* env, jclass)
+{
+	std::vector<std::string> texts;
+	{
+		std::lock_guard<std::mutex> guard(message_lock);
+		texts.swap(pending_gui_messages);
+	}
+	return to_java(env, texts);
+}
+
+// The recovery dialog's request ([drive, missing path]), null when no
+// request is open.
+JNIEXPORT jobjectArray JNICALL OVERLAY_JNI(dialogRequest)(JNIEnv* env, jclass)
+{
+	std::lock_guard<std::mutex> guard(recovery_dialog.lock);
+	if (!recovery_dialog.open)
+		return nullptr;
+	return to_java(env, { std::to_string(recovery_dialog.drive), recovery_dialog.missing });
+}
+
+// What the recovery dialog was answered with: RECOVERY_*; the path belongs
+// to RECOVERY_LOCATE.
+JNIEXPORT void JNICALL OVERLAY_JNI(answerDialog)(JNIEnv* env, jclass, jint answer, jstring path)
+{
+	std::string chosen = from_java(env, path);
+	std::lock_guard<std::mutex> guard(recovery_dialog.lock);
+	if (!recovery_dialog.open)
+		return;
+	recovery_dialog.answer = answer;
+	recovery_dialog.chosen = std::move(chosen);
 }
 
 // Runtime actions: any thread. The id is 0 when the action was rejected.

@@ -402,6 +402,15 @@
     <string name="overlay_show_keyboard_help">Back to the emulation with the on-screen keyboard up</string>
     <string name="overlay_show_keyboard_off">Turn the on-screen keyboard on first</string>
     <string name="overlay_settings_unavailable">The settings list could not be read.</string>
+    <string name="overlay_message_title">Message</string>
+    <string name="overlay_message_ok">OK</string>
+    <string name="overlay_recovery_title">Disk for DF%1$d: not found</string>
+    <string name="overlay_recovery_text">The disk image for DF%1$d: (%2$s) could not be found. Locate it or a replacement, keep going without it, or eject the disk.</string>
+    <string name="overlay_recovery_locate">Locate…</string>
+    <string name="overlay_recovery_skip">Skip</string>
+    <string name="overlay_recovery_eject">Eject</string>
+    <string name="overlay_recovery_pick_title">Select a replacement disk for DF%1$d:</string>
+    <string name="overlay_recovery_browse">Browse device</string>
     <!-- The settings layer's groups, worded as the Apple app titles them (SettingsModel.swift groupTitle), in sentence case. -->
     <string name="settings_group_cpu">CPU</string>
     <string name="settings_group_mmu">MMU</string>
