@@ -3868,6 +3868,7 @@ static const char* setting_type_name(amiberry_setting_type type)
 	case AMIBERRY_SETTING_REAL: return "real";
 	case AMIBERRY_SETTING_CHOICE: return "choice";
 	case AMIBERRY_SETTING_PATH: return "path";
+	case AMIBERRY_SETTING_FILE: return "file";
 	case AMIBERRY_SETTING_STRING: return "string";
 	case AMIBERRY_SETTING_HOTKEY: return "hotkey";
 	}

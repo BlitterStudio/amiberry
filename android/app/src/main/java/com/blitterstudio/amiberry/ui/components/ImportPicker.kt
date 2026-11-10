@@ -72,6 +72,9 @@ class ImportPicker internal constructor(
 	/** The in-app browser of the device's storage and USB drives, whatever pickers exist. */
 	fun browseDevice() = browse(BrowseMode.Files)
 
+	/** The in-app browser choosing a folder (a real path, not a document tree). */
+	fun browseFolders() = browse(BrowseMode.Folder)
+
 	/**
 	 * Straight to the grant screen (the caller has already said why), then the browser
 	 * once the user returns with access.
@@ -93,6 +96,7 @@ fun rememberImportPicker(
 	extensions: Set<String>,
 	multiple: Boolean = false,
 	onFolder: ((PickedFolder) -> Unit)? = null,
+	folderLabelRes: Int? = null,
 	onFiles: (List<Uri>) -> Unit
 ): ImportPicker {
 	val context = LocalContext.current
@@ -187,6 +191,7 @@ fun rememberImportPicker(
 			extensions = extensions,
 			multiple = multiple,
 			allowFolder = mode == BrowseMode.Folder || (onFolder != null && multiple),
+			folderLabelRes = folderLabelRes,
 			onDismiss = { browserMode = null },
 			onPickFiles = { files ->
 				browserMode = null

@@ -84,7 +84,8 @@ internal fun DeviceFileBrowserDialog(
 	allowFolder: Boolean,
 	onDismiss: () -> Unit,
 	onPickFiles: (List<File>) -> Unit,
-	onPickFolder: (File) -> Unit
+	onPickFolder: (File) -> Unit,
+	folderLabelRes: Int? = null
 ) {
 	val context = LocalContext.current
 	var roots by remember { mutableStateOf<List<DeviceStorage.Root>>(emptyList()) }
@@ -190,7 +191,7 @@ internal fun DeviceFileBrowserDialog(
 					) {
 						if (allowFolder) {
 							OutlinedButton(onClick = { onPickFolder(dir) }, modifier = Modifier.dpadFocusIndicator()) {
-								Text(stringResource(R.string.device_browser_import_folder))
+								Text(stringResource(folderLabelRes ?: R.string.device_browser_import_folder))
 							}
 						}
 						if (multiple) {

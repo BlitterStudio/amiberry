@@ -66,12 +66,16 @@ object FileManager {
 		val failures: List<DocumentTreeFailure>
 	)
 
-	fun getAppStoragePath(context: Context): String {
-		return context.getExternalFilesDir(null)?.absolutePath ?: ""
-	}
+	/** The base content root the repositories scan: the one amiberry.conf resolves to. */
+	fun getAppStoragePath(context: Context): String =
+		ContentFolders.baseRoot(
+			ShaderCatalog.findSettingsFile(context.filesDir, context.getExternalFilesDir(null)),
+			context.getExternalFilesDir(null)
+		)?.absolutePath ?: ""
 
+	/** The category's folder, following the path setting amiberry.conf holds for it. */
 	fun getCategoryDir(context: Context, category: FileCategory): File {
-		return File(getAppStoragePath(context), category.dirName)
+		return ContentFolders.categoryDir(context, category)
 	}
 
 	/**
@@ -290,10 +294,14 @@ object FileManager {
 			if (seenPaths.add(file.path)) results.add(file)
 		}
 
-		// For ROMs, also check WHDBoot/Kickstarts
+		// For ROMs, also check the WHDBoot folder's kickstarts, wherever
+		// the WHDBoot setting points (the extracted support files' home).
 		if (category == FileCategory.ROMS) {
-			val kickstartsDir = File(rootDir, StoragePaths.WHDBOOT_KICKSTARTS)
-			for (file in scanDirectory(kickstartsDir, category.extensions, category)) {
+			val kickstartsDir = ContentFolders.kickstartsDir(
+				ShaderCatalog.findSettingsFile(context.filesDir, context.getExternalFilesDir(null)),
+				context.getExternalFilesDir(null)
+			)
+			for (file in kickstartsDir?.let { scanDirectory(it, category.extensions, category) }.orEmpty()) {
 				if (seenPaths.add(file.path)) results.add(file)
 			}
 		}

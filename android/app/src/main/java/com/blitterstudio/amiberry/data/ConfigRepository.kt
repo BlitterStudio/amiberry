@@ -1,7 +1,6 @@
 package com.blitterstudio.amiberry.data
 
 import android.content.Context
-import com.blitterstudio.amiberry.data.model.StoragePaths
 import com.blitterstudio.amiberry.data.model.EmulatorSettings
 import com.blitterstudio.amiberry.data.model.LauncherChoices
 import com.blitterstudio.amiberry.data.model.SettingsSchema
@@ -48,7 +47,7 @@ data class ConfigMachine(val model: String, val cpu: Int, val memoryKb: Int, val
 class ConfigRepository(private val context: Context) {
 
 	private val confDir: File
-		get() = File(context.getExternalFilesDir(null), StoragePaths.CONFIGURATIONS).also {
+		get() = ContentFolders.configurationsDir(context).also {
 			if (!it.exists()) it.mkdirs()
 		}
 

@@ -1,10 +1,18 @@
 package com.blitterstudio.amiberry.ui.screens.appsettings
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -14,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.unit.dp
 import com.blitterstudio.amiberry.R
 import com.blitterstudio.amiberry.data.model.LauncherChoices
 import com.blitterstudio.amiberry.data.model.SettingsSchema
@@ -25,6 +34,7 @@ import com.blitterstudio.amiberry.ui.components.settings.SchemaNumberRow
 import com.blitterstudio.amiberry.ui.components.settings.SchemaSwitchRow
 import com.blitterstudio.amiberry.ui.components.settings.SettingChoiceRow
 import com.blitterstudio.amiberry.ui.components.settings.settingText
+import com.blitterstudio.amiberry.ui.dpadFocusIndicator
 import com.blitterstudio.amiberry.ui.dpadVerticalMovesFocus
 import com.blitterstudio.amiberry.ui.rememberDpadTypingGate
 
@@ -49,9 +59,21 @@ internal fun HostSettingRow(
 	onSet: (String) -> Unit,
 	shaderCatalog: List<String>,
 	bezels: List<String>,
-	modifier: Modifier = Modifier
+	modifier: Modifier = Modifier,
+	folder: FolderState? = null,
+	onResetFolder: (() -> Unit)? = null,
+	onChooseFolder: (() -> Unit)? = null
 ) {
 	when {
+		(option.type == SettingsSchema.TYPE_PATH || option.type == SettingsSchema.TYPE_FILE) &&
+			folder != null ->
+			FolderSettingRow(
+				option = option,
+				folder = folder,
+				onChoose = onChooseFolder ?: {},
+				onReset = onResetFolder,
+				modifier = modifier
+			)
 		option.type == SettingsSchema.TYPE_BOOL ->
 			SchemaSwitchRow(
 				id = option.id,
@@ -188,4 +210,78 @@ internal fun HostTextRow(
 			.fillMaxWidth()
 	)
 	RowFooter(option.help, enabled = true, reason = null)
+}
+
+/**
+ * One folder setting as the Folders section shows it: the path the file
+ * holds ([stored], null at its default), the folder in effect (the stored
+ * one, else the base content root's), and whether that folder is there.
+ */
+data class FolderState(
+	val id: String,
+	val stored: String?,
+	val effective: java.io.File?,
+	val exists: Boolean
+) {
+	/** The setting's line names a folder of its own. */
+	val overridden: Boolean get() = stored != null
+}
+
+/**
+ * One path host setting: the folder in effect and where it comes from, a
+ * picker of the device's storage ([onChoose]), and — while the file names
+ * one — a reset to the default. The RetroArch config picks a file; every
+ * other setting a folder, as the Apple apps' settings do.
+ */
+@Composable
+internal fun FolderSettingRow(
+	option: SettingsSchema.Option,
+	folder: FolderState,
+	onChoose: () -> Unit,
+	onReset: (() -> Unit)?,
+	modifier: Modifier = Modifier
+) {
+	Column(modifier = modifier.fillMaxWidth()) {
+		Text(option.label, style = MaterialTheme.typography.titleSmall)
+		Spacer(modifier = Modifier.height(2.dp))
+		val pathText = folder.effective?.path
+		Text(
+			text = when {
+				folder.overridden -> pathText.orEmpty()
+				pathText != null -> stringResource(R.string.appsettings_folder_default_path, pathText)
+				else -> stringResource(R.string.appsettings_folder_default)
+			},
+			style = MaterialTheme.typography.bodySmall,
+			color = MaterialTheme.colorScheme.onSurfaceVariant
+		)
+		// A file setting never warns: the log is written when logging
+		// starts and the RetroArch config is optional, and a folder with
+		// no default of its own (the sounds, the plugins) has none to miss.
+		if (!folder.exists && folder.effective != null && option.type == SettingsSchema.TYPE_PATH) {
+			Spacer(modifier = Modifier.height(2.dp))
+			Text(
+				stringResource(R.string.appsettings_folder_missing),
+				style = MaterialTheme.typography.bodySmall,
+				color = MaterialTheme.colorScheme.error
+			)
+		}
+		Spacer(modifier = Modifier.height(8.dp))
+		Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+			OutlinedButton(
+				onClick = onChoose,
+				modifier = Modifier.weight(1f).dpadFocusIndicator()
+			) {
+				Text(stringResource(R.string.appsettings_folder_choose))
+			}
+			if (folder.overridden && onReset != null) {
+				TextButton(
+					onClick = onReset,
+					modifier = Modifier.weight(1f).dpadFocusIndicator()
+				) {
+					Text(stringResource(R.string.appsettings_folder_reset))
+				}
+			}
+		}
+		RowFooter(option.help, enabled = true, reason = null)
+	}
 }

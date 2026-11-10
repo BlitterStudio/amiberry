@@ -60,7 +60,7 @@ const choice channel_choices[] = {{"0", "Stable"}, {"1", "Preview"}};
 const choice left_command_q_choices[] = {{"1", "Asks to quit"}, {"2", "Quits"}, {"0", "Goes to the Amiga"}};
 #endif
 
-enum class kind { boolean, integer, choice_list, text, hotkey, real, path };
+enum class kind { boolean, integer, choice_list, text, hotkey, real, path, file_path };
 
 // Where a choice setting's list comes from: its own static list, or what
 // the host offers now, enumerated by the configuration options that pick
@@ -256,18 +256,31 @@ host_setting language(const char* id, const char* group, const char* label, cons
 	return s;
 }
 
-host_setting path(const char* id, const char* label, const char* help,
+host_setting path_setting(const char* id, kind k, const char* label, const char* help,
 	std::string (*get)(), void (*set)(const std::string&))
 {
 	host_setting s{};
-	s.id = id; s.group = "global_paths"; s.label = label; s.help = help; s.k = kind::path;
+	s.id = id; s.group = "global_paths"; s.label = label; s.help = help; s.k = k;
 	s.default_value = ""; s.path_get = get; s.path_set = set;
-	// The Android launcher's own repositories (machines, ROMs, the media
-	// shelves) do not follow folder overrides, so its settings do not
-	// offer the folders: the classic settings window (Advanced) changes
-	// them there, as before.
-	s.android_unused = true;
+	// The Android launcher follows each folder the way the emulator
+	// resolves it (its own copy of amiberry.conf) and offers a picker,
+	// so the paths the Android build honours reach its App Settings; the
+	// desktop-only ones in the list below stay out of that export.
 	return s;
+}
+
+host_setting path(const char* id, const char* label, const char* help,
+	std::string (*get)(), void (*set)(const std::string&))
+{
+	return path_setting(id, kind::path, label, help, get, set);
+}
+
+// A setting that names one file (the log to write, the RetroArch config to
+// read) rather than a folder, so a front end attaches a file picker.
+host_setting file(const char* id, const char* label, const char* help,
+	std::string (*get)(), void (*set)(const std::string&))
+{
+	return path_setting(id, kind::file_path, label, help, get, set);
 }
 
 // A setting whose default the Android build spells differently, so the
@@ -572,14 +585,17 @@ const std::vector<host_setting>& settings()
 		boolean("write_logfile", "global_paths", "Write logfile",
 			"Write emulator log output to the configured logfile.",
 			"false", &amiberry_options::write_logfile),
-		path("base_content_path", "Base content",
+		// A desktop portable install's whole content root: Android's
+		// assets live in the app's own storage, and each folder below is
+		// settable on its own, so the launcher does not offer it.
+		not_on_android(path("base_content_path", "Base content",
 			"Optional root used to derive most standard content folders.",
-			get_base_content_path, set_base_content_path),
+			get_base_content_path, set_base_content_path)),
 		path("config_path", "Configurations", "Folder containing user .uae configurations.",
 			get_configuration_path, set_configuration_path),
 		path("controllers_path", "Controllers", "Folder containing SDL controller database files.",
 			get_controllers_path, set_controllers_path),
-		path("retroarch_config", "RetroArch config",
+		file("retroarch_config", "RetroArch config",
 			"RetroArch configuration file used for compatible controller mappings.",
 			get_retroarch_file, set_retroarch_file),
 		path("whdboot_path", "WHDBoot", "Folder containing WHDBooter support files.",
@@ -592,7 +608,7 @@ const std::vector<host_setting>& settings()
 			get_harddrive_path, set_harddrive_path),
 		path("cdrom_path", "CD-ROMs", "Default folder for CD images.",
 			get_cdrom_path, set_cdrom_path),
-		path("logfile_path", "Logfile", "Log file path used when logfile output is enabled.",
+		file("logfile_path", "Logfile", "Log file path used when logfile output is enabled.",
 			get_logfile_path, set_logfile_path),
 		path("rom_path", "System ROMs", "Folder containing Kickstart and other system ROM files.",
 			get_rom_path, set_rom_path),
@@ -613,10 +629,13 @@ const std::vector<host_setting>& settings()
 		path("plugins_dir", "Plugins override",
 			"Optional folder searched after AMIBERRY_PLUGINS_DIR and before the user plugins folder.",
 			get_plugins_override_path, set_plugins_path),
-		path("video_dir", "Videos", "Default folder for video output files.",
-			get_video_path, set_video_path),
-		path("themes_path", "Themes", "Folder containing GUI theme files.",
-			get_themes_path, set_themes_path),
+		// Only the genlock's video output lands there, and the genlock
+		// options are preset-only on Android: nothing can write to it.
+		not_on_android(path("video_dir", "Videos", "Default folder for video output files.",
+			get_video_path, set_video_path)),
+		// GUI themes load in the classic settings window only.
+		not_on_android(path("themes_path", "Themes", "Folder containing GUI theme files.",
+			get_themes_path, set_themes_path)),
 		path("shaders_path", "Shaders", "Folder containing shader presets.",
 			get_shaders_path, set_shaders_path),
 		path("bezels_path", "Bezels", "Folder containing bezel overlay assets.",
@@ -710,6 +729,7 @@ amiberry_setting_type setting_type(kind k)
 	case kind::choice_list: return AMIBERRY_SETTING_CHOICE;
 	case kind::real: return AMIBERRY_SETTING_REAL;
 	case kind::path: return AMIBERRY_SETTING_PATH;
+	case kind::file_path: return AMIBERRY_SETTING_FILE;
 	case kind::text: return AMIBERRY_SETTING_STRING;
 	case kind::hotkey: return AMIBERRY_SETTING_HOTKEY;
 	}
@@ -994,6 +1014,7 @@ amiberry_settings_status host_settings_get(std::string_view id, char* out, size_
 		break;
 	}
 	case kind::path:
+	case kind::file_path:
 		value = s->path_get();
 		break;
 	}
@@ -1082,6 +1103,7 @@ amiberry_settings_status host_settings_set(std::string_view id, std::string_view
 		return AMIBERRY_SETTINGS_OK;
 	}
 	case kind::path:
+	case kind::file_path:
 		// The loader reads amiberry.conf in CONFIG_BLEN chunks and trims
 		// trailing whitespace, so a longer line or a trailing space is not
 		// what the next start loads. "key=value\n" must fit the chunk.

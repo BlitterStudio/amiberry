@@ -62,6 +62,7 @@ import androidx.navigation.NavController
 import com.blitterstudio.amiberry.R
 import com.blitterstudio.amiberry.data.AppPreferences
 import com.blitterstudio.amiberry.data.ConfigurationActions
+import com.blitterstudio.amiberry.data.ContentFolders
 import com.blitterstudio.amiberry.data.ConfigurationSaveActions
 import com.blitterstudio.amiberry.data.ConfigInfo
 import com.blitterstudio.amiberry.data.FileListing
@@ -194,6 +195,17 @@ fun LibraryScreen(
 		}
 		lifecycleOwner.lifecycle.addObserver(observer)
 		onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+	}
+
+	// A folder changed in App Settings moves what the shelves and the
+	// machines list: rescan while the Library is composed, so the change
+	// lands without a restart (a return to the Library resumes it too).
+	val folderChanges by ContentFolders.changes.collectAsState()
+	LaunchedEffect(folderChanges) {
+		if (folderChanges > 0) {
+			configurationsViewModel.refresh()
+			fileViewModel.rescan()
+		}
 	}
 
 	// The ROM advice over the Library, and what the last import found.
