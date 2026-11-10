@@ -171,7 +171,13 @@ fun LibraryScreen(
 	LaunchedEffect(filterName) {
 		if (searchQuery.isNotEmpty()) searchQuery = ""
 	}
-	BackHandler(enabled = searchOpen) { searchOpen = false }
+	// Closing the search takes its filter with it: a query no field shows would leave
+	// the list empty with nothing to explain it.
+	fun closeSearch() {
+		searchOpen = false
+		searchQuery = ""
+	}
+	BackHandler(enabled = searchOpen) { closeSearch() }
 
 	fun actionMessage(message: ConfigurationActions.Message): String =
 		message.argument?.let { context.getString(message.stringRes, it) }
@@ -566,7 +572,7 @@ fun LibraryScreen(
 					filter = filter,
 					query = searchQuery,
 					onQueryChange = { searchQuery = it },
-					onClose = { searchOpen = false }
+					onClose = ::closeSearch
 				)
 			}
 			if (showRomAdvice || romReport != null) {
@@ -982,7 +988,7 @@ private fun RomNotice(
 }
 
 /** What a ROM import found, in the Library's words. */
-internal data class RomImportReport(val stringRes: Int, val args: List<String>) {
+internal data class RomImportReport(val stringRes: Int, val args: List<Any>) {
 	companion object {
 		/** The report of the change from [before] files to the scanned [roms]. */
 		fun of(before: Int, roms: List<AmigaFile>): RomImportReport {
@@ -993,7 +999,7 @@ internal data class RomImportReport(val stringRes: Int, val args: List<String>) 
 			return when {
 				added <= 0 -> RomImportReport(R.string.library_rom_report_no_new, emptyList())
 				ready.isEmpty() ->
-					RomImportReport(R.string.library_rom_report_no_kickstart, listOf(added.toString()))
+					RomImportReport(R.string.library_rom_report_no_kickstart, listOf(added))
 				else -> RomImportReport(R.string.library_rom_report_ready, listOf(ready.joinToString(", ")))
 			}
 		}

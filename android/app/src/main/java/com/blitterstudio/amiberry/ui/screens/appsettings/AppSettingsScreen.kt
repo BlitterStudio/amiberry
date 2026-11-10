@@ -411,7 +411,11 @@ private fun AppSettingsContent(
 			page.groups.forEach { group ->
 				HostGroupSection(group, viewModel, query)
 			}
-			LauncherSettings(page = page.id, preferences = preferences, viewModel = viewModel)
+			// The launcher's own cards are not host settings: they show on the page,
+			// never among a search's matches.
+			if (query.isBlank()) {
+				LauncherSettings(page = page.id, preferences = preferences, viewModel = viewModel)
+			}
 		}
 		if (pageId == null && pages.isEmpty()) {
 			Text(stringResource(R.string.appsettings_search_none), color = MaterialTheme.colorScheme.onSurfaceVariant)
