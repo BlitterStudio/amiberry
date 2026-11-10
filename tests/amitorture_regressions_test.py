@@ -1296,7 +1296,10 @@ int main() {
 
     beam = 0x00012c40;
     cpu_thread_snap_arm(&custom_bank, 0xdff006, 1);
-    cpu_thread_snap_publish(false);
+    // reads from the copy take a budget refilled from the colour clocks
+    // published: give the checks below a line's worth
+    for (int t = 0; t < CPU_THREAD_SNAP_BUDGET_TICKS; t++)
+        cpu_thread_snap_publish(true);
     assert(must(custom_bank, 0xdff006, 1) == 0x2c40);
     assert(must(custom_bank, 0xdff004, 2) == 0x00012c40);   // VPOSR:VHPOSR together
     assert(must(custom_bank, 0xdff006, 0) == 0x2c);
@@ -1382,13 +1385,34 @@ int main() {
             ++i;
         assert(i == CPU_THREAD_SNAP_CIA_PER_TICK);
     }
-    for (int t = 0; t < 4 * CPU_THREAD_SNAP_CIA_BUDGET_TICKS; t++)
+    for (int t = 0; t < 4 * CPU_THREAD_SNAP_BUDGET_TICKS; t++)
         cpu_thread_snap_publish(true);
     {
         int i = 0;                                          // at most a line's worth kept
         while (rd(cia_bank, 0xbfe001, 0, &v))
             ++i;
-        assert(i == CPU_THREAD_SNAP_CIA_BUDGET_TICKS * CPU_THREAD_SNAP_CIA_PER_TICK);
+        assert(i == CPU_THREAD_SNAP_BUDGET_TICKS * CPU_THREAD_SNAP_CIA_PER_TICK);
+    }
+    cpu_thread_snap_publish(true);
+    // The custom registers have a budget of their own: a polling loop with an
+    // iteration bound must not run out of iterations at one chipset time.
+    while (rd(custom_bank, 0xdff006, 1, &v)) {}
+    assert(!rd(custom_bank, 0xdff01e, 1, &v));             // beam and regs share it
+    assert(must(cia_bank, 0xbfe001, 0) == 0xbc);           // the CIA's is separate
+    cpu_thread_snap_publish(true);
+    {
+        int i = 0;
+        while (rd(custom_bank, 0xdff006, 1, &v))
+            ++i;
+        assert(i == CPU_THREAD_SNAP_CUSTOM_PER_TICK);
+    }
+    for (int t = 0; t < 4 * CPU_THREAD_SNAP_BUDGET_TICKS; t++)
+        cpu_thread_snap_publish(true);
+    {
+        int i = 0;                                          // at most a line's worth kept
+        while (rd(custom_bank, 0xdff006, 1, &v))
+            ++i;
+        assert(i == CPU_THREAD_SNAP_BUDGET_TICKS * CPU_THREAD_SNAP_CUSTOM_PER_TICK);
     }
     cpu_thread_snap_publish(true);
     pra_ok = false;                                        // input recording started
@@ -1417,7 +1441,7 @@ int main() {
     std::thread chipset([&] {
         for (uae_u32 n = 0; n < 2000000; n++) {
             beam = (n & 0xffff) << 16 | (uae_u16)~n;
-            cpu_thread_snap_publish(false);
+            cpu_thread_snap_publish(!(n % 64));   // colour clocks refill the read budget
         }
         done = true;
     });
