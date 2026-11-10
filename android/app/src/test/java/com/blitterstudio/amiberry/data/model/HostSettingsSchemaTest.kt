@@ -29,10 +29,12 @@ class HostSettingsSchemaTest {
 	}
 
 	/**
-	 * The defaults the launcher cannot honour are not offered: the touch
-	 * controls a launcher machine starts from are its remembered ones, and
-	 * the windowed sizes and screen mode mean nothing on Android's always
-	 * full-window screen.
+	 * The settings the launcher cannot honour are not offered: the touch
+	 * controls a launcher machine starts from are its remembered ones, the
+	 * windowed sizes and screen mode mean nothing on Android's always
+	 * full-window screen, and the content folders change only in the
+	 * classic settings window — the launcher's own repositories do not
+	 * follow them.
 	 */
 	@Test
 	fun `settings a launcher machine cannot honour are not listed`() {
@@ -40,7 +42,13 @@ class HostSettingsSchemaTest {
 		for (unused in listOf(
 			"default_onscreen_joystick", "default_vkbd_enabled", "default_vkbd_transparency",
 			"default_vkbd_language", "default_vkbd_toggle", "default_retroarch_vkbd",
-			"default_width", "default_height", "default_fullscreen_mode"
+			"default_width", "default_height", "default_fullscreen_mode",
+			"base_content_path", "config_path", "rom_path", "shaders_path", "bezels_path",
+			"controllers_path", "retroarch_config", "whdboot_path", "whdload_arch_path",
+			"floppy_path", "harddrive_path", "cdrom_path", "logfile_path", "rp9_path",
+			"floppy_sounds_dir", "saveimage_dir", "savestate_dir", "ripper_path",
+			"inputrecordings_dir", "screenshot_dir", "nvram_dir", "plugins_dir",
+			"video_dir", "themes_path"
 		)) {
 			assertFalse(unused in ids)
 		}

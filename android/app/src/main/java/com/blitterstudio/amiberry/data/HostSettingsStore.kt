@@ -22,9 +22,7 @@ import java.util.concurrent.atomic.AtomicLong
  */
 class HostSettingsStore(
 	private val file: File,
-	private val schema: SettingsSchema,
-	/** The default content root (the app's external files dir); what a cleared base returns the derived folders to. */
-	private val defaultContentRoot: File? = null
+	private val schema: SettingsSchema
 ) {
 	/** The values the file holds, by setting ID; a setting the file lacks is absent. */
 	fun read(): Map<String, String> {
@@ -52,16 +50,14 @@ class HostSettingsStore(
 	 */
 	suspend fun write(values: Map<String, String>): Boolean = writeMutex.withLock {
 		if (values.any { (id, value) -> !accepts(id, value) }) return@withLock false
-		val fileLines = readLines()
-		val expanded = expandBaseContentChange(values, fileLines)
-		val lines = fileLines.toMutableList()
-		for ((id, value) in expanded) {
+		val lines = readLines().toMutableList()
+		for ((id, value) in values) {
 			val option = schema.hostSetting(id) ?: continue
 			val key = option.id
 			val written = fileText(option, value)
 			val at = lines.indexOfLast { line -> parseKey(line) == key }
 			if (at < 0) {
-				if (written != null) lines += written
+				lines += written
 			} else {
 				// Earlier repeats would fight the last line, which the
 				// loader honours; the emulator's writer keeps one of each.
@@ -70,25 +66,21 @@ class HostSettingsStore(
 					.filter { index -> index != at && parseKey(lines[index]) == key }
 					.forEach(lines::removeAt)
 				val position = at - repeats
-				if (written != null) lines[position] = written else lines.removeAt(position)
+				lines[position] = written
 			}
 		}
 		writeAtomically(lines)
 	}
 
 	/**
-	 * The line [value] writes, null to have the setting's line gone: a
-	 * missing line is the built-in default, which is what an empty folder
-	 * means (an empty text or hotkey value — no key, no quit key — is a
-	 * value of its own, so its line stays).
+	 * The line [value] writes: an empty text or hotkey value — no key, no
+	 * quit key — is a value of its own, so its line stays.
 	 */
-	private fun fileText(option: SettingsSchema.Option, value: String): String? {
-		if (value.isEmpty() && option.type == TYPE_PATH) return null
-		return when (option.type) {
+	private fun fileText(option: SettingsSchema.Option, value: String): String =
+		when (option.type) {
 			TYPE_BOOL -> if (value == "true") "yes" else "no"
 			else -> value
 		}.let { "${option.id}=$it" }
-	}
 
 	/** Whether [value] is one the loader keeps for [id] (the UI offers only such). */
 	fun accepts(id: String, value: String): Boolean {
@@ -155,26 +147,6 @@ class HostSettingsStore(
 		return key.ifEmpty { null }
 	}
 
-	/**
-	 * A write of base_content_path rewrites the folder lines the base
-	 * derives, exactly as the emulator's setter does
-	 * (set_base_content_path: the merge in BaseContentPaths) — only
-	 * clearing a set base changes anything, and a folder the file had set
-	 * away from its baseline keeps its line. Explicit writes of the
-	 * derived folders still win.
-	 */
-	private fun expandBaseContentChange(values: Map<String, String>, lines: List<String>): Map<String, String> {
-		if (!values.containsKey("base_content_path")) return values
-		val fileValues = lines.mapNotNull(::parseLine).toMap()
-		val previousBase = fileValues["base_content_path"].orEmpty()
-		val newBase = values.getValue("base_content_path")
-		// Clearing with no base set is the setter's no-op.
-		if (newBase.isEmpty() && previousBase.isEmpty()) return values
-		val defaults = BaseContentPaths.derivedSet(defaultContentRoot?.path)
-		val merged = BaseContentPaths.mergedLines(newBase, previousBase, fileValues, defaults)
-		return merged + values
-	}
-
 	private fun readLines(): List<String> = try {
 		val text = file.readText()
 		when {
@@ -213,7 +185,6 @@ class HostSettingsStore(
 		private val TYPE_INT = "int"
 		private val TYPE_REAL = "real"
 		private val TYPE_CHOICE = "choice"
-		private val TYPE_PATH = "path"
 		private val TYPE_STRING = "string"
 		private val TYPE_HOTKEY = "hotkey"
 

@@ -54,19 +54,11 @@ class HostSettingsStoreTest {
 			"\"apply\":\"live\",\"default\":\"${values.first()}\",\"choices\":[$choices]}"
 	}
 
-	private fun path(id: String): String =
-		"{\"id\":\"$id\",\"group\":\"g\",\"label\":\"$id\",\"help\":\"\",\"type\":\"path\"," +
-			"\"apply\":\"live\",\"default\":\"\"}"
-
-	private fun store(
-		content: String?,
-		schema: SettingsSchema,
-		defaultContentRoot: File? = null
-	): Pair<HostSettingsStore, File> {
+	private fun store(content: String?, schema: SettingsSchema): Pair<HostSettingsStore, File> {
 		val file = tempDir.newFile("amiberry.conf")
 		if (content != null) file.writeText(content)
 		else file.delete()
-		return HostSettingsStore(file, schema, defaultContentRoot) to file
+		return HostSettingsStore(file, schema) to file
 	}
 
 	@Test
@@ -128,15 +120,6 @@ class HostSettingsStoreTest {
 		assertTrue(store.writeSync(mapOf("write_logfile" to "true")))
 		assertEquals(1, file.readText().lines().count { it.startsWith("write_logfile=") })
 		assertEquals("true", store.read()["write_logfile"])
-	}
-
-	@Test
-	fun `an empty folder value is the line gone`() {
-		val schema = schemaOf(path("base_content_path"))
-		val (store, file) = store("base_content_path=/storage/content\n", schema)
-		assertTrue(store.writeSync(mapOf("base_content_path" to "")))
-		assertEquals("", file.readText())
-		assertTrue(store.read().isEmpty())
 	}
 
 	@Test
@@ -206,115 +189,4 @@ class HostSettingsStoreTest {
 	/** The store's suspending write, run to completion (the UI awaits it on IO). */
 	private fun HostSettingsStore.writeSync(values: Map<String, String>): Boolean = runBlocking { write(values) }
 
-	/**
-	 * A base content folder as the emulator saves it: the base, the folders
-	 * it derives and the folders set away from it, plus one the base does
-	 * not manage.
-	 */
-	private fun nativeSavedBaseFixture(): String {
-		val base = "/storage/emulated/0/BASE"
-		return listOf(
-			"base_content_path=$base",
-			"config_path=$base/Configurations",
-			"rom_path=$base/ROMs",
-			"controllers_path=$base/Controllers",
-			"shaders_path=/storage/emulated/0/CUSTOM/Shaders",
-			"retroarch_config=/storage/emulated/0/retroarch.cfg"
-		).joinToString("\n", postfix = "\n")
-	}
-
-	private fun baseSchema(): SettingsSchema = schemaOf(
-		path("base_content_path"), path("config_path"), path("rom_path"), path("controllers_path"),
-		path("shaders_path"), path("retroarch_config")
-	)
-
-	@Test
-	fun `clearing the base content folder returns the folders it derived to the defaults`() {
-		val root = tempDir.newFolder("content-defaults")
-		val (store, file) = store(nativeSavedBaseFixture(), baseSchema(), root)
-
-		assertTrue(store.writeSync(mapOf("base_content_path" to "")))
-
-		val lines = file.readText().lines()
-		// The base is gone; the folders it derived are the default root's…
-		assertFalse(lines.any { it.startsWith("base_content_path=") })
-		assertTrue(lines.contains("config_path=" + File(root, "Configurations").path))
-		assertTrue("rom_path=${File(root, "ROMs").path}" in lines)
-		assertTrue("controllers_path=${File(root, "Controllers").path}" in lines)
-		// …a folder set away from the base's spelling keeps its override…
-		assertTrue("shaders_path=/storage/emulated/0/CUSTOM/Shaders" in lines)
-		// …and a folder the base does not manage is untouched.
-		assertTrue("retroarch_config=/storage/emulated/0/retroarch.cfg" in lines)
-	}
-
-	@Test
-	fun `a new base content folder rederives its folders and keeps the overrides`() {
-		val root = tempDir.newFolder("content-new-defaults")
-		val (store, file) = store(nativeSavedBaseFixture(), baseSchema(), root)
-
-		assertTrue(store.writeSync(mapOf("base_content_path" to "/storage/emulated/0/NEW")))
-
-		val lines = file.readText().lines()
-		assertTrue("base_content_path=/storage/emulated/0/NEW" in lines)
-		assertTrue("config_path=/storage/emulated/0/NEW/Configurations" in lines)
-		assertTrue("rom_path=/storage/emulated/0/NEW/ROMs" in lines)
-		assertTrue("controllers_path=/storage/emulated/0/NEW/Controllers" in lines)
-		assertTrue("shaders_path=/storage/emulated/0/CUSTOM/Shaders" in lines)
-		assertTrue("retroarch_config=/storage/emulated/0/retroarch.cfg" in lines)
-	}
-
-	@Test
-	fun `clearing without a base set changes nothing`() {
-		val content = "config_path=/storage/emulated/0/Configurations\n"
-		val (store, file) = store(content, baseSchema())
-
-		assertTrue(store.writeSync(mapOf("base_content_path" to "")))
-
-		assertEquals(content, file.readText())
-	}
-
-	@Test
-	fun `a folder with no entry under a base follows the base, not the default root`() {
-		// The emulator saved the base and its Configurations, then the user
-		// cleared ROMs: the line is gone, so ROMs sit at the base.
-		val root = tempDir.newFolder("content-missing-base")
-		val base = "/storage/emulated/0/BASE"
-		val content = "base_content_path=$base\nconfig_path=$base/Configurations\n"
-		val (store, file) = store(content, baseSchema(), root)
-
-		assertTrue(store.writeSync(mapOf("base_content_path" to "/storage/emulated/0/NEW")))
-
-		val lines = file.readText().lines()
-		assertTrue(lines.contains("rom_path=/storage/emulated/0/NEW/ROMs"))
-		// Clearing the base takes it to the default root, the same way.
-		assertTrue(store.writeSync(mapOf("base_content_path" to "")))
-		assertTrue("rom_path=${File(root, "ROMs").path}" in storeRead(file))
-	}
-
-	@Test
-	fun `a folder with no entry and no previous base takes the new base`() {
-		val root = tempDir.newFolder("content-missing-default")
-		val content = "config_path=/storage/emulated/0/Configurations\n"
-		val (store, file) = store(content, baseSchema(), root)
-
-		assertTrue(store.writeSync(mapOf("base_content_path" to "/storage/emulated/0/NEW")))
-
-		// No base was set, so a missing line means the default root — at its
-		// baseline, and the folder follows the new base.
-		assertTrue("rom_path=/storage/emulated/0/NEW/ROMs" in file.readText().lines())
-	}
-
-	private fun storeRead(file: File): List<String> = file.readText().lines()
-
-	@Test
-	fun `a base change leaves the folders an explicit write names to that write`() {
-		val root = tempDir.newFolder("content-explicit")
-		val (store, file) = store(nativeSavedBaseFixture(), baseSchema(), root)
-
-		assertTrue(store.writeSync(mapOf("base_content_path" to "/storage/emulated/0/NEW", "rom_path" to "/my/roms")))
-
-		val lines = file.readText().lines()
-		assertTrue("rom_path=/my/roms" in lines)
-		assertTrue("config_path=/storage/emulated/0/NEW/Configurations" in lines)
-	}
 }

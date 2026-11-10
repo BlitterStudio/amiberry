@@ -171,9 +171,7 @@ internal fun HostTextRow(
 		singleLine = true,
 		readOnly = typingGate.readOnly,
 		label = { Text(option.label) },
-		placeholder = {
-			Text(stringResource(if (option.type == "path") R.string.appsettings_default_folder else R.string.settings_option_none))
-		},
+		placeholder = { Text(stringResource(R.string.settings_option_none)) },
 		keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
 		keyboardActions = KeyboardActions(onDone = {
 			commit()

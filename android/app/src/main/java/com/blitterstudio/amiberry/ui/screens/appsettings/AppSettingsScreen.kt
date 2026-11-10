@@ -98,8 +98,11 @@ private val PAGES = listOf(
 	// controls are its remembered ones, so they cannot reach it.
 	AppSettingsPage("defaults", R.string.appsettings_group_defaults,
 		listOf("global_input", "global_display", "global_sound", "global_whdload")),
-	AppSettingsPage("folders", R.string.appsettings_group_folders, listOf("global_paths")),
-	AppSettingsPage("advanced", R.string.appsettings_group_advanced, listOf("global_advanced"))
+	// The folders group is here for its log switch; the folder settings
+	// themselves stay in the classic settings window (Advanced) on Android —
+	// the launcher's own repositories do not follow them.
+	AppSettingsPage("advanced", R.string.appsettings_group_advanced,
+		listOf("global_paths", "global_advanced"))
 )
 
 /** The page About & Licences is, after the groups. */
@@ -115,7 +118,7 @@ private fun groupTitle(group: String): Int = when (group) {
 	"global_whdload" -> R.string.appsettings_section_whdload
 	"global_touch" -> R.string.appsettings_section_touch_defaults
 	"global_visual" -> R.string.appsettings_section_visual
-	"global_paths" -> R.string.appsettings_section_paths
+	"global_paths" -> R.string.appsettings_section_logging
 	"global_advanced" -> R.string.appsettings_section_advanced
 	else -> R.string.appsettings_group_general
 }
@@ -453,7 +456,7 @@ private fun LauncherSettings(page: String, preferences: AppPreferences, viewMode
 	when (page) {
 		"general" -> GeneralLauncherSettings(preferences)
 		"defaults" -> RememberedControlsSetting(preferences)
-		"folders" -> StorageLocationSetting()
+		"advanced" -> StorageLocationSetting()
 	}
 }
 
@@ -582,7 +585,7 @@ private fun RememberedControlsSetting(preferences: AppPreferences) {
 	}
 }
 
-/** Where the launcher's content lives and whether it may reach all of it. */
+/** Where the launcher's content lives, whether it may reach all of it, and where folders change. */
 @Composable
 private fun StorageLocationSetting() {
 	val context = LocalContext.current
@@ -605,6 +608,12 @@ private fun StorageLocationSetting() {
 					color = MaterialTheme.colorScheme.onSurfaceVariant
 				)
 			}
+			Spacer(modifier = Modifier.height(8.dp))
+			Text(
+				stringResource(R.string.appsettings_storage_folders_footer),
+				style = MaterialTheme.typography.bodySmall,
+				color = MaterialTheme.colorScheme.onSurfaceVariant
+			)
 		}
 	}
 }

@@ -257,6 +257,11 @@ host_setting path(const char* id, const char* label, const char* help,
 	host_setting s{};
 	s.id = id; s.group = "global_paths"; s.label = label; s.help = help; s.k = kind::path;
 	s.default_value = ""; s.path_get = get; s.path_set = set;
+	// The Android launcher's own repositories (machines, ROMs, the media
+	// shelves) do not follow folder overrides, so its settings do not
+	// offer the folders: the classic settings window (Advanced) changes
+	// them there, as before.
+	s.android_unused = true;
 	return s;
 }
 

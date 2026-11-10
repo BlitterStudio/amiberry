@@ -142,17 +142,24 @@ assert schema["aros"] == {"rom_file": ":AROS", "main_file": "aros-rom.bin", "ext
 host = schema["host_settings"]
 host_ids = [h["id"] for h in host]
 assert len(host_ids) == len(set(host_ids)), "host settings"
-assert {"Quickstart", "shader", "rom_path", "input_default_mouse_speed", "gui_layout_scale",
-        "default_controller1", "default_soundcard", "default_vkbd_toggle", "use_adpf"} <= set(host_ids), host_ids
-assert not {"update_check", "update_channel", "skipped_version", "macos_left_command_q",
-           "default_onscreen_joystick", "default_vkbd_enabled", "default_vkbd_toggle",
-           "default_width", "default_height", "default_fullscreen_mode"} & set(host_ids), host_ids
+assert {"Quickstart", "shader", "input_default_mouse_speed", "gui_layout_scale",
+        "default_controller1", "default_soundcard", "use_adpf"} <= set(host_ids), host_ids
+folders = {"config_path", "controllers_path", "retroarch_config", "whdboot_path", "whdload_arch_path",
+           "floppy_path", "harddrive_path", "cdrom_path", "logfile_path", "rom_path", "rp9_path",
+           "floppy_sounds_dir", "saveimage_dir", "savestate_dir", "ripper_path", "inputrecordings_dir",
+           "screenshot_dir", "nvram_dir", "plugins_dir", "video_dir", "themes_path", "shaders_path",
+           "bezels_path", "base_content_path"}
+assert not ({"update_check", "update_channel", "skipped_version", "macos_left_command_q",
+             "default_onscreen_joystick", "default_vkbd_enabled", "default_vkbd_toggle",
+             "default_width", "default_height", "default_fullscreen_mode"} | folders) & set(host_ids), host_ids
 for setting in host:
     assert setting["type"] in ("bool", "int", "real", "choice", "path", "string", "hotkey"), setting
     assert setting["apply"] == "live", setting["id"]
     if setting["type"] == "choice":
         assert isinstance(setting["choices"], list), setting["id"]
 host_by_id = {h["id"]: h for h in host}
+# The folders group stays for the log switch the launcher does honour.
+assert host_by_id["write_logfile"]["type"] == "bool" and host_by_id["write_logfile"]["group"] == "global_paths"
 # The lists that name the host's devices, shaders and bezels travel empty.
 for dynamic in ("default_controller1", "default_mouse1", "default_soundcard", "shader", "shader_rtg", "custom_bezel"):
     assert host_by_id[dynamic]["type"] == "choice" and host_by_id[dynamic]["choices"] == [], dynamic
@@ -160,9 +167,6 @@ for dynamic in ("default_controller1", "default_mouse1", "default_soundcard", "s
 android_host = {h["id"]: h["android_default"] for h in host if "android_default" in h}
 assert android_host.get("default_sound_frequency") == "48000", android_host
 assert android_host.get("default_sound_buffer") == "8192", android_host
-assert android_host.get("default_onscreen_joystick") == "true", android_host
-assert android_host.get("default_vkbd_enabled") == "true", android_host
-assert android_host.get("default_vkbd_toggle") == "leftstick", android_host
 assert android_host.get("gui_layout_scale") == "70", android_host
 assert host_by_id["gui_layout_scale"]["default"] == "100", host_by_id["gui_layout_scale"]
 # A level a front end may show as a slider, with its unit.

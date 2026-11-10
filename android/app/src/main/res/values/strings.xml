@@ -519,7 +519,6 @@
     <string name="appsettings_write_failed">The setting could not be saved.</string>
     <string name="appsettings_group_general">General</string>
     <string name="appsettings_group_defaults">Defaults for new machines</string>
-    <string name="appsettings_group_folders">Folders</string>
     <string name="appsettings_group_advanced">Advanced</string>
     <string name="appsettings_section_startup">GUI (Advanced Settings)</string>
     <string name="appsettings_section_input_defaults">Input</string>
@@ -528,11 +527,10 @@
     <string name="appsettings_section_whdload">WHDLoad</string>
     <string name="appsettings_section_touch_defaults">On-screen controls</string>
     <string name="appsettings_section_visual">Appearance</string>
-    <string name="appsettings_section_paths">Folders &amp; logging</string>
     <string name="appsettings_section_advanced">Advanced</string>
+    <string name="appsettings_section_logging">Logging</string>
     <string name="appsettings_device_automatic">Automatic</string>
     <string name="appsettings_sound_system_default">System default</string>
-    <string name="appsettings_default_folder">Default</string>
     <string name="appsettings_library_title">Library</string>
     <string name="appsettings_show_rom_advice">Kickstart ROM advice</string>
     <string name="appsettings_show_rom_advice_help">Show the advice banner while no Kickstart ROM is installed (machines then run the built-in AROS).</string>
@@ -543,4 +541,5 @@
     <string name="appsettings_storage_title">Storage</string>
     <string name="appsettings_storage_full_access">All Files Access granted: the whole shared storage can be browsed.</string>
     <string name="appsettings_storage_limited_access">All Files Access not granted: only the app\'s own folders and picked files can be read.</string>
+    <string name="appsettings_storage_folders_footer">Content folders change from the classic settings window: open Advanced settings from a machine\'s editor.</string>
 </resources>
