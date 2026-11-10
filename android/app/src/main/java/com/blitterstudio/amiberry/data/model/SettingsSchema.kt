@@ -281,7 +281,9 @@ class SettingsSchema(
 	 * ":NOROM"/":ENABLED" while it names no ROM), &lt;id&gt;_rom_options
 	 * (the variant, the SCSI ID, the switches and the selectors) and
 	 * &lt;id&gt;_mem_size. [option] is a built-in controller's chipset
-	 * option, which switches the board where the layer owns the rules.
+	 * option, which switches the board where the layer owns the rules;
+	 * [builtIn] marks every controller a machine's chipset puts in (with
+	 * or without such an option), which no configuration adds.
 	 */
 	data class BoardType(
 		val id: String,
@@ -290,12 +292,11 @@ class SettingsSchema(
 		val categories: List<String>,
 		val units: Int,
 		val option: String?,
-		val fields: List<BoardField>
+		val fields: List<BoardField>,
+		val builtIn: Boolean = false
 	) {
 		/** The type's field [fieldId]; null when it does not have it. */
 		fun field(fieldId: String): BoardField? = fields.firstOrNull { it.id == fieldId }
-
-		val internal: Boolean get() = "internal" in categories
 	}
 
 	/** One field of a board unit, as the settings layer describes it. */
@@ -591,6 +592,7 @@ class SettingsSchema(
 						categories = type.optJSONArray("categories")?.toStringList().orEmpty(),
 						units = type.optInt("units", 1),
 						option = if (type.has("option") && !type.isNull("option")) type.getString("option") else null,
+						builtIn = type.optBoolean("built_in", false),
 						fields = type.optJSONArray("fields")?.let { fields ->
 							List(fields.length()) { f ->
 								val field = fields.getJSONObject(f)

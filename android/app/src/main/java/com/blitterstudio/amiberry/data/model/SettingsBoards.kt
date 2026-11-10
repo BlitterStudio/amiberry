@@ -399,7 +399,7 @@ object BoardEditor {
 	fun units(schema: SettingsSchema, settings: EmulatorSettings): List<BoardUnit> {
 		val units = settings.boards.toMutableList()
 		for (type in schema.boardTypes) {
-			if (!type.internal || type.option == null) continue
+			if (type.option == null) continue
 			val on = settings.optionValue(type.option) == "true"
 			if (on && units.none { it.typeId == type.id }) units += BoardUnit(type.id, 0, "", entry = false)
 		}
@@ -419,9 +419,14 @@ object BoardEditor {
 		return (0 until type.units).firstOrNull { unit -> settings.boards.none { it.typeId == typeId && it.unit == unit } }
 	}
 
-	/** The types the Add menu offers: not built into a machine, in the layer's order. */
+	/**
+	 * The types the Add menu offers, in the layer's order: every type but
+	 * the built-in controllers a machine's chipset puts in. An optional
+	 * board of the internal category (the CDTV's SRAM card and SCSI
+	 * expansion) is added by its entry line like any other.
+	 */
 	fun addable(schema: SettingsSchema): List<SettingsSchema.BoardType> =
-		schema.boardTypes.filter { !it.internal }
+		schema.boardTypes.filter { !it.builtIn }
 
 	/** The settings with a unit of [typeId] added (its entry line marks it in the machine). */
 	fun add(settings: EmulatorSettings, schema: SettingsSchema, typeId: String): EmulatorSettings {

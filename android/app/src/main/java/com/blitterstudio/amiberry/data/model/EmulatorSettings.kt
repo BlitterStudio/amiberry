@@ -184,12 +184,14 @@ data class EmulatorSettings(
 	}
 
 	/**
-	 * An accelerator whose RAM is a memory option's (a Zorro II board's
-	 * fastmem_size) keeps the two equal, as the layer's setters do: the
-	 * board's size lands in the option (mirror_cpuboard_mem, the copy
-	 * fixup_prefs makes at load) and the option's in the board, up to its
-	 * maximum (sync_cpuboard_mem), so a launch does not bring back a size
-	 * the editor no longer shows.
+	 * The accelerator's RAM, as the layer's setters keep it: another board
+	 * fits it to the board's maximum and puts it in the memory slot the
+	 * board uses (fit_board_memory, the fixup_prefs clamp and copy at
+	 * load); a board whose RAM is a memory option's (a Zorro II board's
+	 * fastmem_size) keeps the two equal, the board's size landing in the
+	 * option (mirror_cpuboard_mem) and the option's in the board, up to its
+	 * maximum (sync_cpuboard_mem). So a launch never brings back a size the
+	 * editor no longer shows.
 	 */
 	private fun withAcceleratorMemorySynced(
 		before: EmulatorSettings,
@@ -198,7 +200,13 @@ data class EmulatorSettings(
 		schema: SettingsSchema?
 	): EmulatorSettings {
 		val board = schema?.acceleratorBoard(optionValue("cpuboard_type") ?: "none") ?: return this
-		val slot = board.memoryOption ?: return this
+		val slot = board.memoryOption
+		if (id == "cpuboard_type") {
+			val size = optionValue("cpuboardmem1_size")?.toIntOrNull() ?: 0
+			val fitted = if (size > board.memoryMax) withField("cpuboardmem1_size", board.memoryMax.toString(), schema) ?: this else this
+			return slot?.let { fitted.withField(it, fitted.optionValue("cpuboardmem1_size") ?: "0", schema) } ?: fitted
+		}
+		slot ?: return this
 		if (id == "cpuboardmem1_size") return withField(slot, value, schema) ?: this
 		if (optionValue(slot) == before.optionValue(slot)) return this
 		val mb = optionValue(slot)?.toIntOrNull() ?: return this

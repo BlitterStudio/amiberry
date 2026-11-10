@@ -817,4 +817,10 @@ const char* board_option(const amiberry_settings_board_type* type)
 	return t && t->internal ? t->internal->option : nullptr;
 }
 
+bool board_built_in(const amiberry_settings_board_type* type)
+{
+	const board_type* t = type && type->id ? find_type(type->id) : nullptr;
+	return t && t->internal;
+}
+
 } // namespace amiberry_settings

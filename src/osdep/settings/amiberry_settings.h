@@ -410,6 +410,12 @@ AMIBERRY_SETTINGS_API amiberry_settings_status amiberry_settings_board_field_lay
    a front end switches the board through, whose rules the layer owns.
    NULL for a board that is not built into a machine. */
 AMIBERRY_SETTINGS_API const char *amiberry_settings_board_option(const amiberry_settings_board_type *type);
+/* Whether the board is a built-in controller a machine's chipset puts in
+   (the motherboard IDE, the A3000/A4000T SCSI, the CD32 cartridge, PCMCIA,
+   the CDTV's DMAC and clock), rather than an expansion a configuration
+   adds. Not every board of the internal category is one: the CDTV's SRAM
+   card and SCSI expansion are optional boards. */
+AMIBERRY_SETTINGS_API bool amiberry_settings_board_built_in(const amiberry_settings_board_type *type);
 
 /*
  * Custom controls: the Amiga input event each button and axis of the

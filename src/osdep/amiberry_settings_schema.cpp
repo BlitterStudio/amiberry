@@ -1544,6 +1544,8 @@ void board_types(std::string& out)
 			out += ",\"option\":";
 			json_string(out, option);
 		}
+		if (amiberry_settings_board_built_in(type))
+			out += ",\"built_in\":true";
 		bool started = false;
 		for (size_t f = 0; f < type->field_count; f++) {
 			const amiberry_setting_descriptor* d = amiberry_settings_board_field_at(type, f);

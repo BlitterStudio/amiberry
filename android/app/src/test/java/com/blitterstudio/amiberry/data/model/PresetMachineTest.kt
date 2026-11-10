@@ -184,6 +184,25 @@ class PresetMachineTest {
 	}
 
 	@Test
+	fun `another accelerator fits the board RAM to its maximum`() {
+		val blizzard = EmulatorSettings.fromModel(AmigaModel.A1200)
+			.withOption("cpuboard_type", "Blizzard1230IV").withOption("cpuboardmem1_size", "256")
+		assertEquals("256", blizzard.optionValue("cpuboardmem1_size"))
+		// fit_board_memory: the E-Matrix 530 takes at most 128 MB.
+		assertEquals("128", blizzard.withOption("cpuboard_type", "e-matrix530").optionValue("cpuboardmem1_size"))
+	}
+
+	@Test
+	fun `the add menu offers optional internal boards but no built-in controller`() {
+		val schema = requireNotNull(SettingsSchema.current)
+		val addable = BoardEditor.addable(schema).map { it.id }
+		assertTrue("cdtvsram" in addable)
+		assertTrue("cdtvscsi" in addable)
+		assertFalse("ide_mb" in addable)
+		assertFalse("pcmcia_mb" in addable)
+	}
+
+	@Test
 	fun `picking a sub-1 MB fast RAM size clears the MB size`() {
 		val small = EmulatorSettings(fastRam = 2).withOption("fastmem_size_k", "256")
 		assertEquals(0, small.fastRam)

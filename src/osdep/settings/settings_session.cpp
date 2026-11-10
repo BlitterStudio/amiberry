@@ -615,6 +615,11 @@ const char* amiberry_settings_board_option(const amiberry_settings_board_type* t
 		[type] { return amiberry_settings::board_option(type); });
 }
 
+bool amiberry_settings_board_built_in(const amiberry_settings_board_type* type)
+{
+	return amiberry_settings::no_throw(false, [type] { return amiberry_settings::board_built_in(type); });
+}
+
 size_t amiberry_settings_custom_control_count(void)
 {
 	return amiberry_settings::no_throw(size_t{0}, [] { return amiberry_settings::custom_control_count(); });
