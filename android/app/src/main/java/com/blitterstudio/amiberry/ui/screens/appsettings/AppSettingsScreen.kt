@@ -168,7 +168,8 @@ fun AppSettingsScreen(
 			TopAppBar(
 				navigationIcon = {
 					IconButton(
-						onClick = { navController.popBackStack() },
+						// On a phone with a page open, the arrow returns to the list of pages.
+						onClick = { if (!wide && pageOpen) pageOpen = false else navController.popBackStack() },
 						modifier = Modifier.dpadFocusIndicator()
 					) {
 						Icon(
@@ -177,7 +178,8 @@ fun AppSettingsScreen(
 						)
 					}
 				},
-				title = { Text(pageTitle()) },
+				// The phone's list of pages has no page selected yet: it shows the screen's title.
+				title = { Text(if (!wide && !pageOpen) stringResource(R.string.appsettings_title) else pageTitle()) },
 				actions = {
 					IconButton(
 						onClick = {

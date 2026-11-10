@@ -75,7 +75,7 @@ object SettingsGroups {
 			),
 			// The adv_chipset group minus its on-board interfaces: the
 			// compatibility internals the presets and chipset_compatible set.
-			Placement(R.string.settings_group_adv_chipset, group = "adv_chipset", collapsed = true),
+			Placement(R.string.settings_section_chipset_compatibility, group = "adv_chipset", collapsed = true),
 			Placement(
 				R.string.settings_section_memory_advanced,
 				ids = listOf("z3mapping", "a3000mem_size", "mbresmem_size", "megachipmem_size"),

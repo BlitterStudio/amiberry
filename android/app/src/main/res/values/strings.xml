@@ -435,6 +435,7 @@
     <string name="settings_section_on_board_interfaces">On-board interfaces</string>
     <string name="settings_section_cpu_advanced">CPU · Advanced</string>
     <string name="settings_section_chipset_advanced">Chipset · Advanced</string>
+    <string name="settings_section_chipset_compatibility">Chipset · Compatibility</string>
     <string name="settings_section_memory_advanced">Memory · Advanced</string>
     <string name="settings_section_rom_advanced">ROMs · Advanced</string>
     <string name="settings_section_display_advanced">Display · Advanced</string>
@@ -444,7 +445,7 @@
     <string name="settings_section_host_integration">Host integration</string>
     <string name="settings_section_keyboard">Keyboard</string>
     <string name="settings_section_retroarch_buttons">RetroArch buttons</string>
-    <string name="settings_section_protection">Protection</string>
+    <string name="settings_section_protection">Write protection</string>
     <string name="settings_section_compatibility">Compatibility</string>
     <string name="settings_section_debug">Debugging</string>
 
