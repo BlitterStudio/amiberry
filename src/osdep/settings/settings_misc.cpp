@@ -319,10 +319,17 @@ constexpr const char* inactive_constraint =
 	{HOTKEY_OPTION(id, "misc", label, help, AMIBERRY_APPLY_LIVE, def, nullptr), get_##field, set_##field, \
 		nullptr, nullptr, nullptr, fits_##field}
 
-// The desktop-window and host-scheduling options iOS does not have: no
-// window to keep on top or minimize, no inactive or minimized state to
-// schedule (the priority group), and no host keyboard lock lights.
+// The desktop-window options iOS does not have: no window to keep on top
+// or minimize, and no host keyboard lock lights.
 constexpr unsigned int desktop_window_hidden = AMIBERRY_SETTINGS_HIDE_ON_IOS;
+// Process priority is desktop-only: setpriority() (amiberry.cpp, #2605)
+// is a no-op on every Apple platform, because SDL_SetCurrentThreadPriority
+// maps to pthread_setschedparam there, which can stall the thread while
+// the app moves to the background and whose high level needs privileges
+// an app lacks. The priority group's pause/mute/input half stays visible:
+// it reacts to focus loss and backgrounding, which iOS delivers too.
+constexpr unsigned int apple_priority_hidden =
+	AMIBERRY_SETTINGS_HIDE_ON_IOS | AMIBERRY_SETTINGS_HIDE_ON_MACOS;
 const definition definitions[] = {
 	{CHOICE_OPTION("use_gui", "misc", "Open settings on startup",
 			"Show the settings when Amiberry starts, before the emulation runs.",
@@ -460,55 +467,45 @@ const definition definitions[] = {
 			"The emulator's process priority while its window is active.",
 			AMIBERRY_APPLY_LIVE, "1", priority_choices, nullptr),
 		get_active_capture_priority, set_active_capture_priority, nullptr, nullptr, nullptr, nullptr},
-		desktop_window_hidden),
-	hidden_on(BOOL_DEF("amiberry.active_not_captured_pause", "priority",
-		"Pause when active but not captured",
+		apple_priority_hidden),
+	BOOL_DEF("amiberry.active_not_captured_pause", "priority", "Pause when active but not captured",
 		"Pause the emulation while its window is active but the mouse is not captured.",
 		AMIBERRY_APPLY_LIVE, "false", active_nocapture_pause),
-		desktop_window_hidden),
-	hidden_on(BOOL_DEF("amiberry.active_not_captured_nosound", "priority",
-		"No sound when active but not captured",
+	BOOL_DEF("amiberry.active_not_captured_nosound", "priority", "No sound when active but not captured",
 		"Mute the emulation while its window is active but the mouse is not captured.",
 		AMIBERRY_APPLY_LIVE, "false", active_nocapture_nosound),
-		desktop_window_hidden),
 	hidden_on({CHOICE_OPTION("amiberry.inactive_priority", "priority", "Priority when inactive",
 			"The emulator's process priority while another window is active.",
 			AMIBERRY_APPLY_LIVE, "0", priority_choices, nullptr),
 		get_inactive_priority, set_inactive_priority, nullptr, nullptr, nullptr, nullptr},
-		desktop_window_hidden),
-	hidden_on({BOOL_OPTION("amiberry.inactive_pause", "priority", "Pause when inactive",
+		apple_priority_hidden),
+	{BOOL_OPTION("amiberry.inactive_pause", "priority", "Pause when inactive",
 			"Pause the emulation while another window is active.",
 			AMIBERRY_APPLY_LIVE, "false", inactive_constraint),
 		get_inactive_pause, set_inactive_pause, inactive_options_available, nullptr, nullptr, nullptr},
-		desktop_window_hidden),
-	hidden_on({BOOL_OPTION("amiberry.inactive_nosound", "priority", "No sound when inactive",
+	{BOOL_OPTION("amiberry.inactive_nosound", "priority", "No sound when inactive",
 			"Mute the emulation while another window is active.",
 			AMIBERRY_APPLY_LIVE, "false", inactive_constraint),
 		get_inactive_nosound, set_inactive_nosound, inactive_options_available, nullptr, nullptr, nullptr},
-		desktop_window_hidden),
-	hidden_on({CHOICE_OPTION("amiberry.inactive_input", "priority", "Input when inactive",
+	{CHOICE_OPTION("amiberry.inactive_input", "priority", "Input when inactive",
 			"Whether controllers reach the emulation while another window is active.",
 			AMIBERRY_APPLY_LIVE, "0", input_choices, inactive_constraint),
 		get_inactive_input, set_inactive_input, inactive_options_available, nullptr, nullptr, nullptr},
-		desktop_window_hidden),
 	hidden_on({CHOICE_OPTION("amiberry.minimized_priority", "priority", "Priority when minimized",
 			"The emulator's process priority while its window is minimized.",
 			AMIBERRY_APPLY_LIVE, "0", priority_choices, nullptr),
 		get_minimized_priority, set_minimized_priority, nullptr, nullptr, nullptr, nullptr},
-		desktop_window_hidden),
-	hidden_on(BOOL_DEF("amiberry.minimized_pause", "priority", "Pause when minimized",
+		apple_priority_hidden),
+	BOOL_DEF("amiberry.minimized_pause", "priority", "Pause when minimized",
 		"Pause the emulation while its window is minimized.",
 		AMIBERRY_APPLY_LIVE, "true", minimized_pause),
-		desktop_window_hidden),
-	hidden_on(BOOL_DEF("amiberry.minimized_nosound", "priority", "No sound when minimized",
+	BOOL_DEF("amiberry.minimized_nosound", "priority", "No sound when minimized",
 		"Mute the emulation while its window is minimized.",
 		AMIBERRY_APPLY_LIVE, "true", minimized_nosound),
-		desktop_window_hidden),
-	hidden_on({CHOICE_OPTION("amiberry.minimized_input", "priority", "Input when minimized",
+	{CHOICE_OPTION("amiberry.minimized_input", "priority", "Input when minimized",
 			"Whether controllers reach the emulation while the window is minimized.",
 			AMIBERRY_APPLY_LIVE, "0", input_choices, nullptr),
 		get_minimized_input, set_minimized_input, nullptr, nullptr, nullptr, nullptr},
-		desktop_window_hidden),
 	{STRING_OPTION("config_description", "config", "Description",
 			"A description of the configuration, shown with it in the configuration list.",
 			AMIBERRY_APPLY_LIVE, "UAE default configuration", nullptr),

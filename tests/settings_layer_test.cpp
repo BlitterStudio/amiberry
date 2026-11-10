@@ -2893,6 +2893,14 @@ void check_platform_visibility()
 	CHECK(magic_mouse && magic_mouse->hidden_on == 0);
 	const amiberry_setting_descriptor* use_gui = amiberry_settings_find("use_gui");
 	CHECK(use_gui && use_gui->hidden_on == 0);
+	// Process priority is a no-op on every Apple platform (setpriority,
+	// amiberry.cpp #2605); its pause/mute/input siblings stay, as iOS
+	// delivers focus loss and backgrounding.
+	const amiberry_setting_descriptor* priority = amiberry_settings_find("amiberry.active_priority");
+	CHECK(priority && priority->hidden_on
+		== (AMIBERRY_SETTINGS_HIDE_ON_IOS | AMIBERRY_SETTINGS_HIDE_ON_MACOS));
+	const amiberry_setting_descriptor* minimized_pause = amiberry_settings_find("amiberry.minimized_pause");
+	CHECK(minimized_pause && minimized_pause->hidden_on == 0);
 }
 
 // Units, scales and levels: only numbers carry them, a level has a finite
