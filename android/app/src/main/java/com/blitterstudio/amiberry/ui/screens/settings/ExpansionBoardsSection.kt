@@ -89,7 +89,7 @@ fun ExpansionBoardsSection(viewModel: SettingsViewModel) {
 			onDismiss = { adding = false },
 			onAdd = { typeId ->
 				adding = false
-				viewModel.updateSettings { BoardEditor.add(it, schema, typeId) }
+				viewModel.updateSettings { BoardEditor.add(it, schema, typeId, viewModel.availableRoms.value) }
 			}
 		)
 	}
@@ -152,7 +152,9 @@ private fun BoardRomRow(unit: BoardUnit, viewModel: SettingsViewModel) {
 			viewModel.updateSettings { BoardEditor.setField(it, schema, unit, "rom_file", path) }
 		},
 		onClear = {
-			viewModel.updateSettings { BoardEditor.setField(it, schema, unit, "rom_file", "") }
+			// Scanned ROM: the one of the board's type found, as the layer's add_entry names it.
+			val scanned = BoardEditor.scannedRom(type, roms).orEmpty()
+			viewModel.updateSettings { BoardEditor.setField(it, schema, unit, "rom_file", scanned) }
 		}
 	)
 }

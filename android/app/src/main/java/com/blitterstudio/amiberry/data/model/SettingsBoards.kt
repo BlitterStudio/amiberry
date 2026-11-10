@@ -428,11 +428,26 @@ object BoardEditor {
 	fun addable(schema: SettingsSchema): List<SettingsSchema.BoardType> =
 		schema.boardTypes.filter { !it.builtIn }
 
-	/** The settings with a unit of [typeId] added (its entry line marks it in the machine). */
-	fun add(settings: EmulatorSettings, schema: SettingsSchema, typeId: String): EmulatorSettings {
+	/**
+	 * The settings with a unit of [typeId] added. Its entry names the
+	 * first of [roms] the board loads, as the layer's add_entry names the
+	 * scanned ROM; the ":NOROM" marker the codec writes otherwise switches
+	 * the board's ROM off (read_device_from_romconfig).
+	 */
+	fun add(
+		settings: EmulatorSettings,
+		schema: SettingsSchema,
+		typeId: String,
+		roms: List<AmigaFile> = emptyList()
+	): EmulatorSettings {
+		val type = schema.boardType(typeId) ?: return settings
 		val unit = freeUnit(schema, settings, typeId) ?: return settings
-		return settings.copy(boards = settings.boards + BoardUnit(typeId, unit, ""))
+		return settings.copy(boards = settings.boards + BoardUnit(typeId, unit, scannedRom(type, roms).orEmpty()))
 	}
+
+	/** The first of [roms] a board of [type] loads; null when none is (or the board takes no ROM). */
+	fun scannedRom(type: SettingsSchema.BoardType, roms: List<AmigaFile>): String? =
+		roms.firstOrNull { rom -> ModelRomAvailability.detectRomId(rom)?.let { it in type.romIds } == true }?.path
 
 	/**
 	 * The settings with [unit] removed: a board of the configuration loses

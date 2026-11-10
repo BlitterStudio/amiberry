@@ -293,7 +293,9 @@ class SettingsSchema(
 		val units: Int,
 		val option: String?,
 		val fields: List<BoardField>,
-		val builtIn: Boolean = false
+		val builtIn: Boolean = false,
+		/** The ROM table IDs the board loads (its ROM type's); empty for a ROM-less board. */
+		val romIds: List<Int> = emptyList()
 	) {
 		/** The type's field [fieldId]; null when it does not have it. */
 		fun field(fieldId: String): BoardField? = fields.firstOrNull { it.id == fieldId }
@@ -593,6 +595,7 @@ class SettingsSchema(
 						units = type.optInt("units", 1),
 						option = if (type.has("option") && !type.isNull("option")) type.getString("option") else null,
 						builtIn = type.optBoolean("built_in", false),
+						romIds = type.optJSONArray("rom_ids")?.let { ids -> List(ids.length()) { ids.getInt(it) } }.orEmpty(),
 						fields = type.optJSONArray("fields")?.let { fields ->
 							List(fields.length()) { f ->
 								val field = fields.getJSONObject(f)

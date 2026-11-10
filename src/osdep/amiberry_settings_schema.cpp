@@ -386,6 +386,36 @@ const char* rom_role(int id)
 	return "other";
 }
 
+// The ROMs a board type loads (its ROM type's, as scanned_rom and
+// read_device_from_romconfig match them), so a front end writing the
+// board's entry itself can name the scanned ROM, as the layer's add_entry
+// does: ":NOROM" would switch the ROM off. None for a ROM-less board.
+std::vector<int> board_rom_ids(const char* type_id)
+{
+	std::vector<int> ids;
+	const expansionromtype* ert = nullptr;
+	for (int i = 0; expansionroms[i].name; i++) {
+		if (!std::strcmp(expansionroms[i].name, type_id)) {
+			ert = &expansionroms[i];
+			break;
+		}
+	}
+	if (!ert || (ert->romtype & ROMTYPE_NOT))
+		return ids;
+	const uae_u32 main = ert->romtype & ROMTYPE_MASK;
+	const uae_u32 extra = ert->romtype_extra & ROMTYPE_MASK;
+	// ROM IDs are small and sparse; the table has no count of its own.
+	for (int id = 1; id < 4096; id++) {
+		const romdata* rd = getromdatabyid(id);
+		if (!rd || rd->id != id)
+			continue;
+		const uae_u32 type = rd->type & ROMTYPE_MASK;
+		if (type == main || (ert->romtype_extra && type == extra))
+			ids.push_back(id);
+	}
+	return ids;
+}
+
 // The ROM sets a preset configuration can be built with: its builder is
 // run with each pattern of found and missing ROMs (configure_rom_probe),
 // as fallbacks are only asked for when an earlier ROM is missing and add-on
@@ -532,6 +562,13 @@ bool presets(std::string& out)
 			out += '}';
 		}
 		out += "]}";
+	}
+	// The boards' ROMs join the table too (board_types names them by ID).
+	for (size_t t = 0; t < amiberry_settings_board_type_count(); t++) {
+		if (const amiberry_settings_board_type* type = amiberry_settings_board_type_at(t)) {
+			for (const int id : board_rom_ids(type->id))
+				requested_roms.insert(id);
+		}
 	}
 	out += "\n],\n\"roms\":[";
 	// The ROMs the presets ask for, so a front end that finds ROM files by
@@ -1543,6 +1580,16 @@ void board_types(std::string& out)
 		if (const char* option = amiberry_settings_board_option(type)) {
 			out += ",\"option\":";
 			json_string(out, option);
+		}
+		const std::vector<int> rom_ids = board_rom_ids(type->id);
+		if (!rom_ids.empty()) {
+			out += ",\"rom_ids\":[";
+			for (size_t i = 0; i < rom_ids.size(); i++) {
+				if (i)
+					out += ',';
+				json_number(out, rom_ids[i]);
+			}
+			out += ']';
 		}
 		if (amiberry_settings_board_built_in(type))
 			out += ",\"built_in\":true";

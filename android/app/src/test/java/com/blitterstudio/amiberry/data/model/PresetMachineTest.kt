@@ -222,6 +222,18 @@ class PresetMachineTest {
 	}
 
 	@Test
+	fun `an added board names the scanned ROM of its type, not the ROM-off marker`() {
+		val schema = requireNotNull(SettingsSchema.current)
+		// A4091 v40.13, by its checksum.
+		val rom = AmigaFile("/roms/a4091.rom", "a4091.rom", "rom", 32768, 0, FileCategory.ROMS, 0x54cb9e85L)
+		val kick = AmigaFile("/roms/kick.rom", "kick.rom", "rom", 524288, 0, FileCategory.ROMS, 0x12345678L)
+		val added = BoardEditor.add(EmulatorSettings(), schema, "a4091", listOf(kick, rom))
+		assertEquals("/roms/a4091.rom", added.boards.single().romFile)
+		// None found: the ROM-off marker, as add_entry writes then.
+		assertEquals(":NOROM", SettingsBoards.entryValue(schema.boardType("a4091")!!, BoardEditor.add(EmulatorSettings(), schema, "a4091").boards.single().romFile))
+	}
+
+	@Test
 	fun `the add menu offers optional internal boards but no built-in controller`() {
 		val schema = requireNotNull(SettingsSchema.current)
 		val addable = BoardEditor.addable(schema).map { it.id }

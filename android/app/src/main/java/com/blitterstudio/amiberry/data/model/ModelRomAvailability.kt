@@ -142,7 +142,7 @@ object ModelRomAvailability {
 		return SelectedRoms(null, null, aros = canBootAros(model) && hasBuiltInAros(roms))
 	}
 
-	private fun detectRomId(rom: AmigaFile): Int? {
+	internal fun detectRomId(rom: AmigaFile): Int? {
 		val crc = rom.crc32 ?: return null
 		val masked = crc and 0xffffffffL
 		// The emulator identifies a few ROMs from several files; the schema
