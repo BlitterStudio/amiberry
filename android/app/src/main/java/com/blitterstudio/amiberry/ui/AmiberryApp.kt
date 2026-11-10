@@ -33,7 +33,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -167,7 +166,7 @@ fun AmiberryApp() {
 	val navScope = rememberCoroutineScope()
 	var pendingGuard by remember { mutableStateOf<UnsavedChangesGuard.Pending?>(null) }
 
-	val onSettingsRoute = currentDestination?.hierarchy?.any { it.route == Screen.Settings.route } == true
+
 
 	// Settings' Start asks the same question while a named configuration has unsaved edits.
 	val startGuard = remember(settingsViewModel) {
@@ -191,13 +190,9 @@ fun AmiberryApp() {
 		activity?.moveTaskToBack(true)
 	}
 
-	// Back from the editor to the Library asks about unsaved edits first; without any,
-	// Back simply pops to the Library.
-	BackHandler(enabled = onSettingsRoute && settingsViewModel.isDirty) {
-		pendingGuard = UnsavedChangesGuard.Pending(UnsavedChangesGuard.Trigger.Leave) {
-			navController.popBackStack()
-		}
-	}
+	// Back from the editor to the Library asks about unsaved edits first (the handler
+	// sits in the Settings destination, AmiberryNavHost below); without any, Back
+	// simply pops to the Library.
 
 	pendingGuard?.let { pending ->
 		val configName = settingsViewModel.currentConfigName.orEmpty()
@@ -299,6 +294,12 @@ fun AmiberryApp() {
 			AmiberryNavHost(
 				navController,
 				startGuard,
+				editorDirty = settingsViewModel.isDirty,
+				onGuardedBack = {
+					pendingGuard = UnsavedChangesGuard.Pending(UnsavedChangesGuard.Trigger.Leave) {
+						navController.popBackStack()
+					}
+				},
 				contentModifier.padding(innerPadding).consumeWindowInsets(innerPadding)
 			)
 		}
@@ -309,7 +310,13 @@ fun AmiberryApp() {
 private const val CONTENT_FOCUS_ATTEMPTS = 30
 
 @Composable
-private fun AmiberryNavHost(navController: NavHostController, startGuard: StartGuard, modifier: Modifier = Modifier) {
+private fun AmiberryNavHost(
+	navController: NavHostController,
+	startGuard: StartGuard,
+	editorDirty: Boolean,
+	onGuardedBack: () -> Unit,
+	modifier: Modifier = Modifier
+) {
 	NavHost(
 		navController = navController,
 		startDestination = Screen.Library.route,
@@ -322,6 +329,11 @@ private fun AmiberryNavHost(navController: NavHostController, startGuard: StartG
 			AppSettingsScreen(navController = navController)
 		}
 		composable(Screen.Settings.route) {
+			// Back from a dirty editor asks about the edits first. This handler must sit
+			// inside the destination: at the shell's level the NavHost's own Back would
+			// pop the editor without asking. The editor's page handler (registered while
+			// SettingsScreen composes, after this one) still closes an open page first.
+			BackHandler(enabled = editorDirty, onBack = onGuardedBack)
 			CompositionLocalProvider(LocalStartGuard provides startGuard) {
 				SettingsScreen()
 			}

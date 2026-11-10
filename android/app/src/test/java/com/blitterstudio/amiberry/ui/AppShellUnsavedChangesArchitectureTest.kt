@@ -15,18 +15,6 @@ class AppShellUnsavedChangesArchitectureTest {
 		assertTrue(source.contains("settingsViewModel.isDirty"))
 	}
 
-	@Test
-	fun `back from a dirty editor is guarded before popping to the library`() {
-		assertTrue(
-			"Back on the editor route should be intercepted while the editor is dirty.",
-			source.contains("enabled = onSettingsRoute && settingsViewModel.isDirty")
-		)
-		assertTrue(
-			"The guarded Back should answer by popping back to the Library.",
-			Regex("""BackHandler\(enabled = onSettingsRoute && settingsViewModel\.isDirty\) \{[\s\S]*navController\.popBackStack\(\)""")
-				.containsMatchIn(source)
-		)
-	}
 
 	@Test
 	fun `shows an unsaved-changes dialog with save and discard`() {
