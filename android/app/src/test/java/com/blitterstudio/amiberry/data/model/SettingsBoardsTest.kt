@@ -277,6 +277,75 @@ class SettingsBoardsTest {
 	}
 
 	@Test
+	fun `two settings a table names alike stay two fields`() {
+		// The A1060 sidecar's RAM size and address sector selectors are both
+		// "memory": the layer gives the second its table index (the
+		// positions differ, so the tokens never collide).
+		val dup = JSONObject()
+			.put("id", "a1060").put("label", "A1060 Sidecar").put("manufacturer", "Commodore")
+			.put("categories", JSONArray().put("x86_bridge")).put("units", 1)
+			.put(
+				"fields", JSONArray(
+					listOf(
+						field("enabled", "bool", "false"),
+						// The real sidecar runs without a ROM (ROMTYPE_NONE).
+						JSONObject().put("id", "setting:memory").put("label", "Memory")
+							.put("type", "choice").put("apply", "reset").put("default", "128k")
+							.put("choices", JSONArray(
+								listOf(choice("128k", "128K"), choice("512k", "512K"))
+							)),
+						JSONObject().put("id", "setting:memory#3").put("label", "Address sector")
+							.put("type", "choice").put("apply", "reset").put("default", "sector_a0000_1")
+							.put("choices", JSONArray(
+								listOf(choice("sector_a0000_1", "A0000 (1)"), choice("sector_d0000", "D0000"))
+							))
+					)
+				)
+			)
+		val emptyTable = JSONObject().put("inputs", JSONArray()).put("free", JSONArray()).put("rows", JSONArray())
+		val dupSchema = SettingsSchema.parse(
+			JSONObject()
+				.put("options", JSONArray())
+				.put("presets", JSONArray())
+				.put("compatibility_levels", JSONArray())
+				.put("roms", JSONArray())
+				.put("resolutions", emptyTable)
+				.put("memory_resolutions", emptyTable)
+				.put("board_types", JSONArray(listOf(dup)))
+				.put("custom_controls", JSONArray())
+				.put("input_events", JSONArray())
+				.put("accelerator_boards", JSONArray())
+		)
+		var settings = BoardEditor.add(EmulatorSettings(), dupSchema, "a1060")
+		settings = BoardEditor.setField(settings, dupSchema, settings.boards[0], "setting:memory", "512k")
+		settings = BoardEditor.setField(settings, dupSchema, settings.boards[0], "setting:memory#3", "sector_d0000")
+		// Both configured: neither token collapses into the other.
+		assertEquals(
+			listOf("a1060_rom_file=:ENABLED", "a1060_rom_options=512k,sector_d0000"),
+			SettingsBoards.render(dupSchema, settings.boards)
+		)
+		val parsed = SettingsBoards.parse(
+			dupSchema,
+			SettingsBoards.render(dupSchema, settings.boards).associate { it.substringBefore("=") to it.substringAfter("=") }
+		)
+		assertEquals(mapOf("setting:memory" to "512k", "setting:memory#3" to "sector_d0000"), parsed[0].fields)
+	}
+
+	@Test
+	fun `a change the board's own rows make reads in the summary`() {
+		var settings = BoardEditor.add(EmulatorSettings(), schema, "a2091")
+		val plain = BoardEditor.summary(schema, settings)
+		settings = BoardEditor.setField(settings, schema, settings.boards[0], "scsi_id", "6")
+		val edited = BoardEditor.summary(schema, settings)
+		// The board is the same; what is configured about it is not, so
+		// Review changes and Revert stay available.
+		assertTrue(plain != edited)
+		val before = BoardEditor.add(EmulatorSettings(), schema, "a2091")
+		val changes = SettingsChangeSummary.diff(before, settings, schema)
+		assertTrue(changes.isNotEmpty())
+	}
+
+	@Test
 	fun `text settings escape what the line needs`() {
 		assertEquals("plain", SettingsBoards.escapeMin("plain"))
 		assertEquals("\"a,b\"", SettingsBoards.escapeMin("a,b"))

@@ -184,8 +184,14 @@ object SettingsBoards {
 		return tokens.joinToString(",")
 	}
 
-	private fun settingToken(field: SettingsSchema.BoardField, value: String = "true"): String =
-		field.id.removePrefix("setting:")
+	/**
+	 * The token the field's own name spells (a switch, or a text setting's
+	 * name): the configuration name, without the layer's index suffix for
+	 * a setting a table names twice (the A1060 sidecar's two memory
+	 * selectors), which is addressing only.
+	 */
+	private fun settingToken(field: SettingsSchema.BoardField): String =
+		field.id.removePrefix("setting:").substringBefore('#')
 
 	/**
 	 * The field's value in [tokens], or null when the line leaves it at the
@@ -441,7 +447,28 @@ object BoardEditor {
 		return settings.copy(boards = (settings.boards - own) + next)
 	}
 
-	/** The units' labels for the change summary, joined; "" when none. */
+	/**
+	 * The units as the change summary shows them, joined: each with what is
+	 * configured about it (its ROM and the fields away from their
+	 * defaults), so an edit the board's own rows made reads as a change
+	 * and Review changes and Revert stay available.
+	 */
 	fun summary(schema: SettingsSchema, settings: EmulatorSettings): String =
-		units(schema, settings).joinToString(" · ") { title(schema, it) }
+		units(schema, settings).joinToString(" · ") { unit -> describe(schema, unit) }
+
+	/** One unit with what is configured about it. */
+	private fun describe(schema: SettingsSchema, unit: BoardUnit): String {
+		val type = schema.boardType(unit.typeId) ?: return unit.typeId
+		val configured = type.fields.mapNotNull { field ->
+			when (field.id) {
+				"enabled" -> null
+				"rom_file" -> SettingsBoards.romFileOf(unit.romFile).takeIf { it.isNotEmpty() }
+					?.let { it.substringAfterLast('/') }
+				else -> unit.fields[field.id]?.takeIf { it != field.default }
+					?.let { "${field.label} ${field.valueLabel(it)}" }
+			}
+		}
+		val title = title(schema, unit)
+		return if (configured.isEmpty()) title else "$title (${configured.joinToString(", ")})"
+	}
 }

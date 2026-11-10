@@ -1033,6 +1033,10 @@ void on_screen_joystick_set_enabled(bool enabled)
 			// emulation loop must re-run inputdevice_updateconfig.
 			inputdevice_config_change();
 			joystick_refresh_needed = true;
+			// The configuration's custom-control lines for port 1 could not
+			// apply while the file parsed (it does not name this device);
+			// they waited for exactly this assignment.
+			amiberry_apply_pending_custom_options(1);
 		}
 	}
 	else if (osj_initialized) {

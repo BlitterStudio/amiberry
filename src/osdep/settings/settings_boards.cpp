@@ -28,6 +28,7 @@
 
 #include <cstdio>
 #include <cstring>
+#include <set>
 #include <deque>
 #include <string>
 #include <vector>
@@ -236,25 +237,36 @@ void build_fields(board_type& t)
 		fields.push_back({FIELD_INSERTED, -1, "inserted", "PCMCIA card inserted"});
 	if (flags & EXPANSIONTYPE_DMA24)
 		fields.push_back({FIELD_DMA24, -1, "dma24bit", "24-bit DMA"});
+	std::set<std::string> setting_ids;
 	for (int i = 0; ert.settings && ert.settings[i].name; i++) {
 		const expansionboardsettings& e = ert.settings[i];
 		const bool selector = e.type == EXPANSIONBOARD_MULTI;
 		board_field f{FIELD_SETTING, i};
+		std::string id;
 		if (selector) {
 			const std::vector<const char*> configs = board_setting_names(e.configname);
 			const std::vector<const char*> names = board_setting_names(e.name);
 			if (configs.size() < 2 || names.empty())
 				continue;
-			f.id = std::string("setting:") + configs[0];
+			id = configs[0];
 			f.label = names[0];
 			for (size_t k = 1; k < configs.size(); k++) {
 				f.values.emplace_back(configs[k]);
 				f.labels.emplace_back(k < names.size() ? names[k] : configs[k]);
 			}
 		} else {
-			f.id = std::string("setting:") + e.configname;
+			id = e.configname;
 			f.label = e.name;
 		}
+		// A settings table can name two settings alike (the A1060 sidecar's
+		// two "memory" selectors: the RAM size and the address sector).
+		// The first keeps the name the configuration's tokens use; a later
+		// one takes its table index, so every setting of a board is its own
+		// field. The tokens stay the table's own (its positions differ).
+		f.id = std::string("setting:") + id;
+		if (!setting_ids.insert(f.id).second)
+			f.id += "#" + std::to_string(i);
+		setting_ids.insert(f.id);
 		fields.push_back(std::move(f));
 	}
 	// Descriptors last: they point into the fields, which stay put now.
