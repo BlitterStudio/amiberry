@@ -36,6 +36,23 @@ final class SettingsCatalogTests: XCTestCase {
 		}
 	}
 
+	func testPlatformVisibilityMirrorTheLayer() throws {
+		// The layer's per-platform mask reaches the bridge: iOS has no
+		// serial backend or desktop window; Android never switches host
+		// display modes and never traps its pointer. The Mac app shows all
+		// of these, so the catalog's filter leaves them in there.
+		let serial = try XCTUnwrap(SettingsCatalog.descriptor(for: "serial_port"))
+		XCTAssertEqual(serial.hiddenPlatforms, [.iOS])
+		let magicMouse = try XCTUnwrap(SettingsCatalog.descriptor(for: "magic_mouse"))
+		XCTAssertEqual(magicMouse.hiddenPlatforms, [.iOS, .android])
+		let monitorBlank = try XCTUnwrap(SettingsCatalog.descriptor(for: "gfx_monitorblankdelay"))
+		XCTAssertEqual(monitorBlank.hiddenPlatforms, [.android])
+		let useGUI = try XCTUnwrap(SettingsCatalog.descriptor(for: "use_gui"))
+		XCTAssertTrue(useGUI.hiddenPlatforms.isEmpty)
+		XCTAssertFalse(serial.hiddenHere)
+		XCTAssertFalse(magicMouse.hiddenHere)
+	}
+
 	func testPresetsMirrorTheLayer() throws {
 		let a500 = try XCTUnwrap(MachinePresets.preset(for: "a500"))
 		XCTAssertFalse(a500.configurations.isEmpty)

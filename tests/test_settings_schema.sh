@@ -180,6 +180,18 @@ sets = {h["id"]: h["sets_option"] for h in host if "sets_option" in h}
 assert sets == {
     "default_controller1": "joyport1",
     "default_mouse1": "joyport0",
+    "default_joystick_deadzone": "input.joystick_deadzone",
+    "input_default_mouse_speed": "input.mouse_speed",
+    "default_open_gui_key": "amiberry.open_gui",
+    "default_quit_key": "amiberry.quit_amiberry",
+    "default_ar_key": "amiberry.action_replay",
+    "default_fullscreen_toggle_key": "amiberry.fullscreen_toggle",
+    "default_retroarch_quit": "amiberry.use_retroarch_quit",
+    "default_retroarch_menu": "amiberry.use_retroarch_menu",
+    "default_retroarch_reset": "amiberry.use_retroarch_reset",
+    "default_line_mode": "gfx_linemode",
+    "default_horizontal_centering": "gfx_center_horizontal",
+    "default_vertical_centering": "gfx_center_vertical",
     "default_scaling_method": "amiberry.scaling_method",
     "default_gfx_autoresolution": "gfx_autoresolution",
     "default_correct_aspect_ratio": "amiberry.gfx_correct_aspect",
@@ -187,9 +199,40 @@ assert sets == {
     "default_stereo_separation": "sound_stereo_separation",
     "default_sound_frequency": "sound_frequency",
     "default_sound_buffer": "sound_max_buff",
+    "default_soundcard": "amiberry.soundcard",
     "shader": "amiberry.shader",
+    "shader_rtg": "amiberry.shader_rtg",
+    "use_bezel": "amiberry.use_bezel",
+    "use_custom_bezel": "amiberry.use_custom_bezel",
+    "custom_bezel": "amiberry.custom_bezel",
 }, sets
-assert all(o in ids_set for o in sets.values()), "every named option is described"
+# A default may name an option this export does not describe (the hotkeys,
+# the bezel toggles): the launcher's machineOptionDefaults skips those
+# itself; the pinned map above keeps a typo from slipping in.
+assert all(o in ids_set or o in {"amiberry.open_gui", "amiberry.quit_amiberry",
+           "amiberry.action_replay", "amiberry.fullscreen_toggle", "amiberry.soundcard",
+           "amiberry.shader_rtg", "amiberry.use_custom_bezel", "amiberry.custom_bezel"}
+           for o in sets.values()), "a named option is neither described nor one of the known unlisted ones"
+
+# The per-platform visibility mask travels with every option and host
+# setting: iOS has no serial backend or desktop window, Android never
+# switches host display modes or traps its pointer, and the classic
+# settings window's own settings are the desktop GUI's alone.
+platforms = {"desktop", "macos", "ios", "android"}
+def hidden_on(entry):
+    return set(entry.get("hidden_on", []))
+assert all(hidden_on(o) <= platforms for o in schema["options"] + host), "hidden_on names"
+by_id = {o["id"]: o for o in schema["options"]}
+assert hidden_on(by_id["magic_mouse"]) == {"ios", "android"}
+assert hidden_on(by_id["magic_mousecursor"]) == {"ios", "android"}
+assert hidden_on(by_id["gfx_monitorblankdelay"]) == {"android"}
+assert hidden_on(by_id["show_leds_rtg"]) == {"android"}
+assert not hidden_on(by_id["use_gui"]) and not hidden_on(by_id["gfx_vsync"])
+gui_only = {"macos", "ios", "android"}
+for id in ("Quickstart", "read_config_descriptions", "gui_joystick_control",
+           "disable_shutdown_button", "default_quickstart_compatibility", "gui_theme",
+           "gui_layout_scale"):
+    assert hidden_on(host_by_id[id]) == gui_only, id
 PY
 
 printf 'cpu_model\nnot_an_option\n' > "$work/bad.txt"

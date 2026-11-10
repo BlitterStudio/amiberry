@@ -90,6 +90,29 @@ const char* type_name(amiberry_setting_type type)
 	return "string";
 }
 
+// A descriptor's hidden_on mask as the schema's platform names, so a
+// front end drops the settings its platform hides.
+void json_hidden_on(std::string& out, unsigned int hidden_on)
+{
+	static const struct { unsigned int bit; const char* name; } names[] = {
+		{AMIBERRY_SETTINGS_HIDE_ON_DESKTOP, "desktop"},
+		{AMIBERRY_SETTINGS_HIDE_ON_MACOS, "macos"},
+		{AMIBERRY_SETTINGS_HIDE_ON_IOS, "ios"},
+		{AMIBERRY_SETTINGS_HIDE_ON_ANDROID, "android"},
+	};
+	out += "[";
+	bool first = true;
+	for (const auto& platform : names) {
+		if (!(hidden_on & platform.bit))
+			continue;
+		if (!first)
+			out += ',';
+		first = false;
+		json_string(out, platform.name);
+	}
+	out += ']';
+}
+
 const char* apply_name(amiberry_apply_class apply)
 {
 	switch (apply) {
@@ -178,6 +201,12 @@ void options(std::string& out, const std::set<std::string>* only, const std::set
 			&& std::strcmp(definition->android_default, d->default_value ? d->default_value : "") != 0) {
 			out += ",\"android_default\":";
 			json_string(out, definition->android_default);
+		}
+		// The platforms the option does nothing on; a front end for one
+		// of them leaves the option out.
+		if (d->hidden_on) {
+			out += ",\"hidden_on\":";
+			json_hidden_on(out, d->hidden_on);
 		}
 		if (d->type == AMIBERRY_SETTING_INT || d->type == AMIBERRY_SETTING_REAL) {
 			out += ",\"min\":";
@@ -1458,6 +1487,12 @@ void host_settings(std::string& out)
 			&& std::strcmp(android_default, d->default_value ? d->default_value : "") != 0) {
 			out += ",\"android_default\":";
 			json_string(out, android_default);
+		}
+		// The platforms the setting does nothing on (the classic settings
+		// window's own are the desktop GUI's alone).
+		if (d->hidden_on) {
+			out += ",\"hidden_on\":";
+			json_hidden_on(out, d->hidden_on);
 		}
 		if (d->type == AMIBERRY_SETTING_INT || d->type == AMIBERRY_SETTING_REAL) {
 			out += ",\"min\":";

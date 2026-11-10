@@ -50,6 +50,30 @@ public struct SettingChoice: Hashable, Sendable, Identifiable {
 	}
 }
 
+/// The native-UI platforms the layer can hide a setting on
+/// (amiberry_settings.h's AMIBERRY_SETTINGS_HIDE_ON_* bits): `desktopGUI`
+/// is the desktop build's built-in GUI, which shows everything, so its
+/// bit marks a setting only that GUI has (the classic settings window's
+/// own).
+public struct SettingPlatforms: OptionSet, Hashable, Sendable {
+	public let rawValue: UInt32
+	public init(rawValue: UInt32) { self.rawValue = rawValue }
+
+	public static let desktopGUI = SettingPlatforms(rawValue: 0x01)
+	public static let macOS = SettingPlatforms(rawValue: 0x02)
+	public static let iOS = SettingPlatforms(rawValue: 0x04)
+	public static let android = SettingPlatforms(rawValue: 0x08)
+
+	/// The platform this app runs on.
+	public static let current: SettingPlatforms = {
+		#if os(iOS)
+		return .iOS
+		#else
+		return .macOS
+		#endif
+	}()
+}
+
 /// An option of the settings layer. `id` is its .uae configuration key and
 /// every value uses the .uae spelling.
 public struct SettingDescriptor: Hashable, Sendable, Identifiable {
@@ -100,6 +124,16 @@ public struct SettingDescriptor: Hashable, Sendable, Identifiable {
 	/// A level people set by feel (a volume, the brightness, a dead zone)
 	/// rather than a number they look up: shown as a slider.
 	public let level: Bool
+	/// The platforms the layer hides the option on, because it does nothing
+	/// there (see `hiddenHere`).
+	public let hiddenPlatforms: SettingPlatforms
+
+	/// Whether the layer hides the option on the platform this app runs on
+	/// (iOS: no serial backend or desktop window; the Mac app: nothing so
+	/// far, besides what its build compiles out).
+	public var hiddenHere: Bool {
+		hiddenPlatforms.contains(SettingPlatforms.current)
+	}
 
 	/// The number a person sees for a stored one: a reversed option's
 	/// range turned around (100 - 0 = full volume), then divided by the
@@ -208,6 +242,7 @@ public struct SettingDescriptor: Hashable, Sendable, Identifiable {
 		unit = number ? optionalLayerString(d.unit) : nil
 		scale = number && d.scale != 0 ? d.scale : 1
 		level = number && d.level
+		hiddenPlatforms = SettingPlatforms(rawValue: d.hidden_on)
 	}
 }
 
@@ -216,10 +251,13 @@ public enum SettingsCatalog {
 	/// The version of amiberry_settings.h this module was built against.
 	public static let apiVersion = Int(AMIBERRY_SETTINGS_API_VERSION)
 
+	/// Every option the layer offers this platform, in the layer's order:
+	/// the ones hidden on it (audit §1b/§1c) are left out everywhere,
+	/// including `descriptor(for:)`, so no page shows them.
 	public static let descriptors: [SettingDescriptor] = {
 		(0..<amiberry_settings_count()).compactMap { index in
 			amiberry_settings_at(index).map { SettingDescriptor($0.pointee) }
-		}
+		}.filter { !$0.hiddenHere }
 	}()
 
 	private static let byID: [String: SettingDescriptor] = Dictionary(
@@ -431,6 +469,9 @@ public struct HostSetting: Hashable, Sendable, Identifiable {
 
 /// The host settings, in the layer's order.
 public enum HostSettings {
+	/// The host settings this platform shows; the classic settings window's
+	/// own (its theme and scale, the Quickstart panel's options) are left
+	/// out, as builds without the built-in GUI never list them.
 	public static let all: [HostSetting] = {
 		(0..<amiberry_host_settings_count()).compactMap { index in
 			amiberry_host_settings_at(index).map {
@@ -440,7 +481,7 @@ public enum HostSettings {
 					label: descriptor.label, kind: descriptor.kind,
 					defaultValue: descriptor.defaultValue, descriptor: descriptor)
 			}
-		}
+		}.filter { !$0.descriptor.hiddenHere }
 	}()
 
 	@MainActor

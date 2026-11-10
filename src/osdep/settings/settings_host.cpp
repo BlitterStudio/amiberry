@@ -106,6 +106,11 @@ struct host_setting {
 	// and the windowed choice mean nothing on an always full-window
 	// screen), so the schema export leaves it out.
 	bool android_unused = false;
+	// The platforms the setting is hidden on (the descriptor's
+	// hidden_on): the native front ends for them leave it out. The
+	// classic settings window's own settings carry the native bits, so
+	// the schema says they are the desktop GUI's alone.
+	unsigned int hidden_on = 0;
 	// The machine option this default builds a fresh configuration with
 	// (target_default_options copies it there unchanged): a front end that
 	// writes its own configurations starts a new one from it, as the
@@ -281,6 +286,18 @@ host_setting not_on_android(host_setting s)
 	return s;
 }
 
+// A setting only the classic settings window has (its theme and scale,
+// the Quickstart panel's own options): the native front ends hide it, so
+// the schema says so. The layer gate already keeps it out of builds
+// without the built-in GUI (AMIBERRY_NO_IMGUI); the mask is what the
+// Android launcher, whose emulator still has the window, reads.
+host_setting gui_only(host_setting s)
+{
+	s.hidden_on = AMIBERRY_SETTINGS_HIDE_ON_MACOS | AMIBERRY_SETTINGS_HIDE_ON_IOS
+		| AMIBERRY_SETTINGS_HIDE_ON_ANDROID;
+	return s;
+}
+
 // A default that builds a fresh configuration with [option]'s value (the
 // copy target_default_options makes), so a front end writing its own
 // configurations can start a new one from it.
@@ -296,22 +313,22 @@ const std::vector<host_setting>& settings()
 		// The ImGui GUI's own settings: the native Apple apps have no ImGui
 		// (AMIBERRY_NO_IMGUI), so there they would change nothing.
 #ifndef AMIBERRY_NO_IMGUI
-		boolean("Quickstart", "global_startup", "Quickstart on startup",
+		gui_only(boolean("Quickstart", "global_startup", "Quickstart on startup",
 			"Open the Quickstart panel by default when the GUI starts without a loaded configuration.",
-			"true", &amiberry_options::quickstart_start),
-		boolean("read_config_descriptions", "global_startup", "Read config metadata",
+			"true", &amiberry_options::quickstart_start)),
+		gui_only(boolean("read_config_descriptions", "global_startup", "Read config metadata",
 			"Read descriptions and categories while building the configurations list.",
-			"true", &amiberry_options::read_config_descriptions),
-		boolean("gui_joystick_control", "global_startup", "GUI joystick control",
+			"true", &amiberry_options::read_config_descriptions)),
+		gui_only(boolean("gui_joystick_control", "global_startup", "GUI joystick control",
 			"Allow joystick and gamepad navigation in the GUI.",
-			"true", &amiberry_options::gui_joystick_control),
-		boolean("disable_shutdown_button", "global_startup", "Disable shutdown button",
+			"true", &amiberry_options::gui_joystick_control)),
+		gui_only(boolean("disable_shutdown_button", "global_startup", "Disable shutdown button",
 			"Hide the GUI shutdown button.",
-			"true", &amiberry_options::disable_shutdown_button),
-		choices_of("default_quickstart_compatibility", "global_startup", "Quickstart compatibility",
+			"true", &amiberry_options::disable_shutdown_button)),
+		gui_only(choices_of("default_quickstart_compatibility", "global_startup", "Quickstart compatibility",
 			"Default Quickstart compatibility level for built-in model presets.",
 			"0", compatibility_choices, sizeof compatibility_choices / sizeof compatibility_choices[0],
-			&amiberry_options::default_quickstart_compatibility),
+			&amiberry_options::default_quickstart_compatibility)),
 #endif
 
 		boolean("rctrl_as_ramiga", "global_input", "Right Ctrl as Right Amiga",
@@ -325,32 +342,38 @@ const std::vector<host_setting>& settings()
 			"1", left_command_q_choices, sizeof left_command_q_choices / sizeof left_command_q_choices[0],
 			&amiberry_options::macos_left_command_q),
 #endif
-		measured("input_default_mouse_speed", "global_input", "Default mouse speed",
+		// inputdevice_default_prefs(), which every fresh configuration
+		// runs, copies the mouse speed into it (inputdevice.cpp:9147).
+		sets(measured("input_default_mouse_speed", "global_input", "Default mouse speed",
 			"Mouse speed applied to new configurations (100% is normal).",
 			"100", 1, 1000, &amiberry_options::input_default_mouse_speed, "%", false),
+			"input.mouse_speed"),
 		boolean("input_keyboard_as_joystick_stop_keypresses", "global_input", "Keyboard joystick stops keypresses",
 			"Stop keyboard-as-joystick mappings from also generating Amiga key presses.",
 			"false", &amiberry_options::input_keyboard_as_joystick_stop_keypresses),
-		measured("default_joystick_deadzone", "global_input", "Joystick dead zone",
+		sets(measured("default_joystick_deadzone", "global_input", "Joystick dead zone",
 			"Default analog stick dead zone for new configurations, as a percentage of full deflection.",
 			"33", 0, 100, &amiberry_options::default_joystick_deadzone, "%", true),
-		hotkey("default_open_gui_key", "global_input", "Open GUI key",
-			"Default key or controller button that opens the GUI.", "F12"),
-		hotkey("default_quit_key", "global_input", "Quit key",
-			"Default key or controller button that quits Amiberry.", ""),
-		hotkey("default_ar_key", "global_input", "Action Replay key",
+			"input.joystick_deadzone"),
+		sets(hotkey("default_open_gui_key", "global_input", "Open Settings key",
+			"Default key or controller button that opens the settings.", "F12"), "amiberry.open_gui"),
+		sets(hotkey("default_quit_key", "global_input", "Quit key",
+			"Default key or controller button that quits Amiberry.", ""), "amiberry.quit_amiberry"),
+		sets(hotkey("default_ar_key", "global_input", "Action Replay key",
 			"Default key or controller button that activates Action Replay or HRTmon.", "Pause"),
-		hotkey("default_fullscreen_toggle_key", "global_input", "Full-window toggle key",
+			"amiberry.action_replay"),
+		sets(hotkey("default_fullscreen_toggle_key", "global_input", "Full-window toggle key",
 			"Default key or controller button that switches between windowed and full-window modes.", ""),
-		boolean("default_retroarch_quit", "global_input", "RetroArch quit",
+			"amiberry.fullscreen_toggle"),
+		sets(boolean("default_retroarch_quit", "global_input", "RetroArch quit",
 			"Enable the RetroArch-style quit button by default when a mapping exists.",
-			"true", &amiberry_options::default_retroarch_quit),
-		boolean("default_retroarch_menu", "global_input", "RetroArch menu",
+			"true", &amiberry_options::default_retroarch_quit), "amiberry.use_retroarch_quit"),
+		sets(boolean("default_retroarch_menu", "global_input", "RetroArch menu",
 			"Enable the RetroArch-style menu button by default when a mapping exists.",
-			"true", &amiberry_options::default_retroarch_menu),
-		boolean("default_retroarch_reset", "global_input", "RetroArch reset",
+			"true", &amiberry_options::default_retroarch_menu), "amiberry.use_retroarch_menu"),
+		sets(boolean("default_retroarch_reset", "global_input", "RetroArch reset",
 			"Enable the RetroArch-style reset button by default when a mapping exists.",
-			"false", &amiberry_options::default_retroarch_reset),
+			"false", &amiberry_options::default_retroarch_reset), "amiberry.use_retroarch_reset"),
 		// An empty device makes the emulator fall back, as amiberry.cpp's
 		// default options and the WHDLoad booter do; each list names the
 		// fallback.
@@ -373,16 +396,17 @@ const std::vector<host_setting>& settings()
 			"Second mouse device, used on port 2, the joystick port, for mouse-controlled WHDLoad content. "
 			"Automatic uses the Controller 1 device.", "joy0", "Automatic"),
 
-		choices_of("default_line_mode", "global_display", "Line mode",
+		sets(choices_of("default_line_mode", "global_display", "Line mode",
 			"Default native display line mode for new configurations.",
 			"1", line_mode_choices, sizeof line_mode_choices / sizeof line_mode_choices[0],
 			&amiberry_options::default_line_mode),
-		boolean("default_horizontal_centering", "global_display", "Horizontal centering",
+			"gfx_linemode"),
+		sets(boolean("default_horizontal_centering", "global_display", "Horizontal centering",
 			"Center the native display horizontally by default.",
-			"false", &amiberry_options::default_horizontal_centering),
-		boolean("default_vertical_centering", "global_display", "Vertical centering",
+			"false", &amiberry_options::default_horizontal_centering), "gfx_center_horizontal"),
+		sets(boolean("default_vertical_centering", "global_display", "Vertical centering",
 			"Center the native display vertically by default.",
-			"false", &amiberry_options::default_vertical_centering),
+			"false", &amiberry_options::default_vertical_centering), "gfx_center_vertical"),
 		sets(choices_of("default_scaling_method", "global_display", "Scaling method",
 			"Default image scaling method.",
 			"-1", scaling_choices, sizeof scaling_choices / sizeof scaling_choices[0],
@@ -401,14 +425,17 @@ const std::vector<host_setting>& settings()
 			"Enable automatic border crop by default.",
 			"false", &amiberry_options::default_auto_crop),
 			"amiberry.gfx_auto_crop"),
-		// The windowed sizes and the windowed/full-window choice mean
-		// nothing on Android's always full-window screen.
-		not_on_android(measured("default_width", "global_display", "Default width",
+		// The windowed sizes the emulator's own new configuration starts
+		// from (gfx_monitor[0]'s windowed size); the windowed/full-window
+		// choice starts both the native and the RTG screen mode, so no one
+		// option holds it and it stays unnamed. Both mean nothing on
+		// Android's always full-window screen.
+		sets(not_on_android(measured("default_width", "global_display", "Default width",
 			"Default native display window width.", "720", 1, 16384, &amiberry_options::default_width,
-			"px", false)),
-		not_on_android(measured("default_height", "global_display", "Default height",
+			"px", false)), "gfx_width_windowed"),
+		sets(not_on_android(measured("default_height", "global_display", "Default height",
 			"Default native display window height.", "568", 1, 16384, &amiberry_options::default_height,
-			"px", false)),
+			"px", false)), "gfx_height_windowed"),
 		not_on_android(choices_of("default_fullscreen_mode", "global_display", "Screen mode",
 			"Default native and RTG screen mode. The legacy exclusive full-screen value is full-window.",
 			"0", fullscreen_choices, sizeof fullscreen_choices / sizeof fullscreen_choices[0],
@@ -441,8 +468,9 @@ const std::vector<host_setting>& settings()
 			&amiberry_options::default_sound_buffer),
 			"sound_max_buff"),
 			AMIBERRY_SETTINGS_TEXT_OF(ANDROID_DEFAULT_SOUND_BUFFER)),
-		sound_device("default_soundcard", "Audio device",
+		sets(sound_device("default_soundcard", "Audio device",
 			"Default sound output device. System default follows the operating system's choice."),
+			"amiberry.soundcard"),
 
 		boolean("default_whd_buttonwait", "global_whdload", "Button wait",
 			"Wait for a button press before starting WHDLoad games by default.",
@@ -469,59 +497,64 @@ const std::vector<host_setting>& settings()
 		// The on-screen controls a launcher machine starts from are the
 		// launcher's remembered ones, which write the machine options
 		// themselves, so these defaults never reach such a machine.
-		not_on_android(android(boolean("default_onscreen_joystick", "global_touch", "On-screen joystick",
+		not_on_android(android(sets(boolean("default_onscreen_joystick", "global_touch", "On-screen joystick",
 			"Show virtual joystick controls by default on touchscreen devices.",
 #ifdef __ANDROID__
 			"true",
 #else
 			"false",
 #endif
-			&amiberry_options::default_onscreen_joystick), "true")),
-		not_on_android(android(boolean("default_vkbd_enabled", "global_touch", "On-screen keyboard",
+			&amiberry_options::default_onscreen_joystick), "amiberry.onscreen_joystick"), "true")),
+		not_on_android(android(sets(boolean("default_vkbd_enabled", "global_touch", "On-screen keyboard",
 			"Enable the on-screen Amiga keyboard by default.",
 #ifdef __ANDROID__
 			"true",
 #else
 			"false",
 #endif
-			&amiberry_options::default_vkbd_enabled), "true")),
+			&amiberry_options::default_vkbd_enabled), "amiberry.vkbd_enabled"), "true")),
 		not_on_android(measured("default_vkbd_transparency", "global_touch", "On-screen keyboard opacity",
 			"Opacity of the on-screen keyboard in new configurations (100% is opaque); 0 uses the "
 			"default of 85%.",
 			"0", 0, 100, &amiberry_options::default_vkbd_transparency, "%", false)),
 		not_on_android(language("default_vkbd_language", "global_touch", "On-screen keyboard layout",
 			"Default on-screen keyboard layout.", "US")),
-		not_on_android(android(hotkey("default_vkbd_toggle", "global_touch", "On-screen keyboard toggle",
+		not_on_android(android(sets(hotkey("default_vkbd_toggle", "global_touch", "On-screen keyboard toggle",
 			"Default key or controller button that shows and hides the on-screen keyboard.",
 #if defined(__ANDROID__) || defined(LIBRETRO)
 			"leftstick"),
 #else
 			"guide"),
 #endif
-			"leftstick")),
+			"amiberry.vkbd_toggle"), "leftstick")),
 		not_on_android(boolean("default_retroarch_vkbd", "global_touch", "RetroArch on-screen keyboard button",
 			"Use the RetroArch on-screen keyboard button by default when a mapping exists.",
 			"false", &amiberry_options::default_retroarch_vkbd)),
 
 #ifndef AMIBERRY_NO_IMGUI
-		text("gui_theme", "global_visual", "GUI theme",
-			"Theme file loaded by the ImGui interface.", "Default.theme"),
+		gui_only(text("gui_theme", "global_visual", "GUI theme",
+			"Theme file loaded by the ImGui interface.", "Default.theme")),
 #endif
-		sets(catalog("shader", "Native shader",
+		// The labels match the machine options' (amiberry.shader,
+		// amiberry.shader_rtg, amiberry.use_bezel), so the same setting
+		// reads the same at both scopes.
+		sets(catalog("shader", "Screen shader",
 			"Default shader for native chipset modes: a built-in CRT shader or a preset from the shaders folder.",
 			listing::shader),
 			"amiberry.shader"),
-		catalog("shader_rtg", "RTG shader",
+		sets(catalog("shader_rtg", "RTG shader",
 			"Default shader for RTG modes: a built-in CRT shader or a preset from the shaders folder.",
 			listing::shader),
-		boolean("use_bezel", "global_visual", "Use bezel",
+			"amiberry.shader_rtg"),
+		sets(boolean("use_bezel", "global_visual", "Built-in CRT bezel",
 			"Show the built-in CRT bezel overlay.", "false", &amiberry_options::use_bezel),
-		boolean("use_custom_bezel", "global_visual", "Use custom bezel",
+			"amiberry.use_bezel"),
+		sets(boolean("use_custom_bezel", "global_visual", "Use custom bezel",
 			"Show a bezel from the bezels folder instead of the built-in one.",
-			"false", &amiberry_options::use_custom_bezel),
-		catalog("custom_bezel", "Custom bezel",
+			"false", &amiberry_options::use_custom_bezel), "amiberry.use_custom_bezel"),
+		sets(catalog("custom_bezel", "Custom bezel",
 			"Bezel image from the bezels folder. Picking one turns Use custom bezel on and the built-in "
-			"bezel off; None turns Use custom bezel off.", listing::bezel),
+			"bezel off; None turns Use custom bezel off.", listing::bezel), "amiberry.custom_bezel"),
 
 		boolean("write_logfile", "global_paths", "Write logfile",
 			"Write emulator log output to the configured logfile.",
@@ -630,6 +663,8 @@ host_setting scale_setting()
 	s.real = &amiberry_options::gui_layout_scale_percent;
 	s.clamp_scale = true;
 	s.unit = "%";
+	s.hidden_on = AMIBERRY_SETTINGS_HIDE_ON_MACOS | AMIBERRY_SETTINGS_HIDE_ON_IOS
+		| AMIBERRY_SETTINGS_HIDE_ON_ANDROID;
 	return s;
 }
 #endif
@@ -688,6 +723,7 @@ amiberry_setting_descriptor descriptor_of(const host_setting& s)
 	d.choice_count = s.choice_count;
 	d.unit = s.unit;
 	d.level = s.level;
+	d.hidden_on = s.hidden_on;
 	return d;
 }
 

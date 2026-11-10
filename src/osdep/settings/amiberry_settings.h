@@ -48,7 +48,7 @@
 extern "C" {
 #endif
 
-#define AMIBERRY_SETTINGS_API_VERSION 9
+#define AMIBERRY_SETTINGS_API_VERSION 10
 
 /* Large enough for every value a descriptor can produce, including the
    terminating NUL. */
@@ -121,7 +121,24 @@ typedef struct amiberry_setting_descriptor {
 	   front end may offer a slider over the current range instead of a
 	   number field. */
 	bool level;
+	/* The platforms this setting is hidden on, because it does nothing
+	   there (the AMIBERRY_SETTINGS_HIDE_ON_* bits below): iOS has no
+	   serial backend or desktop window, Android never switches host
+	   display modes or traps its pointer, and the desktop bit marks the
+	   settings the built-in GUI alone has (the classic settings window's
+	   own). 0: shown everywhere. The desktop GUI itself shows every
+	   setting, so a front end only needs the bit for its own platform. */
+	unsigned int hidden_on;
 } amiberry_setting_descriptor;
+
+/* The native-UI platforms a setting can be hidden on (hidden_on bits).
+   DESKTOP is the desktop build's built-in GUI, which shows everything:
+   its bit marks a setting only that GUI has. */
+#define AMIBERRY_SETTINGS_HIDE_ON_DESKTOP 0x01u
+#define AMIBERRY_SETTINGS_HIDE_ON_MACOS   0x02u /* the native Mac app */
+#define AMIBERRY_SETTINGS_HIDE_ON_IOS     0x04u
+#define AMIBERRY_SETTINGS_HIDE_ON_ANDROID 0x08u
+#define AMIBERRY_SETTINGS_HIDE_ON_ALL (0x01u | 0x02u | 0x04u | 0x08u)
 
 AMIBERRY_SETTINGS_API size_t amiberry_settings_count(void);
 /* NULL when index >= amiberry_settings_count(). */

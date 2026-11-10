@@ -228,7 +228,7 @@ extension SettingsPage {
 		LayoutSection(title: "Copy Protection", content: .options(["dongle"])),
 		LayoutSection(title: "Startup & Window", content: .options([
 			"use_gui", "amiberry.start_minimized", "warpboot", "cpu_reset_pause", "amiberry.always_on_top",
-			"amiberry.gui_always_on_top", "amiberry.inactive_minimize", "amiberry.blank_monitors",
+			"amiberry.inactive_minimize", "amiberry.blank_monitors",
 		])),
 		LayoutSection(title: "Mouse & Keyboard", content: .options([
 			"amiberry.start_not_captured", "amiberry.active_capture_automatically", "amiberry.ctrl_alt_release",

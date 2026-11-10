@@ -771,14 +771,19 @@ const definition definitions[] = {
 			"Show the RTG screen instead of the native chipset display at start.",
 			AMIBERRY_APPLY_RESET, "false", board_constraint),
 		get_initial, set_initial, board_available, nullptr, nullptr, nullptr, nullptr},
-	{DYNAMIC_CHOICE_OPTION("zz9000_net", "rtg", "ZZ9000 network",
+	// The ZZ9000 options need the card's host backends, which the iOS
+	// build forces out (USE_LIBENET off for the network, CMakeLists.txt:188;
+	// store builds also lose the media codecs, CMakeLists.txt:241).
+	hidden_on({DYNAMIC_CHOICE_OPTION("zz9000_net", "rtg", "ZZ9000 network",
 			"The host network the ZZ9000's network device uses.",
 			AMIBERRY_APPLY_RESTART, "slirp", "Needs a ZZ9000 board."),
 		get_zz9000_net, set_zz9000_net, zz9000_available, nullptr, nullptr, nullptr, zz9000_net_choices},
-	{BOOL_OPTION("zz9000_int2", "rtg", "ZZ9000 INT2",
+		AMIBERRY_SETTINGS_HIDE_ON_IOS),
+	hidden_on({BOOL_OPTION("zz9000_int2", "rtg", "ZZ9000 INT2",
 			"Interrupt on INT2 instead of INT6, matching the real card's ZZ9K_INT2 setting.",
 			AMIBERRY_APPLY_RESTART, "false", "Needs a ZZ9000 board."),
 		get_zz9000_int2, set_zz9000_int2, zz9000_available, nullptr, nullptr, nullptr, nullptr},
+		AMIBERRY_SETTINGS_HIDE_ON_IOS),
 	{STRING_OPTION("rtg_modes", "rtg", "RTG colour modes",
 			"The pixel formats the UAE board offers, as the configuration writes them.",
 			AMIBERRY_APPLY_RESTART, "0x112", nullptr),

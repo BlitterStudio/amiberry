@@ -401,7 +401,9 @@ private fun AppSettingsContent(
 			return@Column
 		}
 		val pages = when (pageId) {
-			null -> PAGES.filter { page -> page.groups.any { group -> schema.hostSettings.any { it.group == group && it.matches(query) } } }
+			null -> PAGES.filter { page -> page.groups.any { group ->
+			schema.hostSettings.any { it.group == group && !it.hiddenOnAndroid && it.matches(query) }
+		} }
 			else -> PAGES.filter { it.id == pageId }
 		}
 		pages.forEach { page ->
@@ -427,7 +429,7 @@ private fun AppSettingsContent(
 @Composable
 private fun HostGroupSection(group: String, viewModel: AppSettingsViewModel, query: String) {
 	val options = viewModel.schema?.hostSettings.orEmpty()
-		.filter { it.group == group && it.matches(query) }
+		.filter { it.group == group && !it.hiddenOnAndroid && it.matches(query) }
 	if (options.isEmpty()) return
 	SettingsSection(title = stringResource(groupTitle(group))) {
 		options.forEach { option ->

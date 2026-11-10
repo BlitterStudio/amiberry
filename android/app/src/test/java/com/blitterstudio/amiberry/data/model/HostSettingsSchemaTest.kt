@@ -66,6 +66,18 @@ class HostSettingsSchemaTest {
 			mapOf(
 				"default_controller1" to "joyport1",
 				"default_mouse1" to "joyport0",
+				"default_joystick_deadzone" to "input.joystick_deadzone",
+				"input_default_mouse_speed" to "input.mouse_speed",
+				"default_open_gui_key" to "amiberry.open_gui",
+				"default_quit_key" to "amiberry.quit_amiberry",
+				"default_ar_key" to "amiberry.action_replay",
+				"default_fullscreen_toggle_key" to "amiberry.fullscreen_toggle",
+				"default_retroarch_quit" to "amiberry.use_retroarch_quit",
+				"default_retroarch_menu" to "amiberry.use_retroarch_menu",
+				"default_retroarch_reset" to "amiberry.use_retroarch_reset",
+				"default_line_mode" to "gfx_linemode",
+				"default_horizontal_centering" to "gfx_center_horizontal",
+				"default_vertical_centering" to "gfx_center_vertical",
 				"default_scaling_method" to "amiberry.scaling_method",
 				"default_gfx_autoresolution" to "gfx_autoresolution",
 				"default_correct_aspect_ratio" to "amiberry.gfx_correct_aspect",
@@ -73,7 +85,12 @@ class HostSettingsSchemaTest {
 				"default_stereo_separation" to "sound_stereo_separation",
 				"default_sound_frequency" to "sound_frequency",
 				"default_sound_buffer" to "sound_max_buff",
-				"shader" to "amiberry.shader"
+				"default_soundcard" to "amiberry.soundcard",
+				"shader" to "amiberry.shader",
+				"shader_rtg" to "amiberry.shader_rtg",
+				"use_bezel" to "amiberry.use_bezel",
+				"use_custom_bezel" to "amiberry.use_custom_bezel",
+				"custom_bezel" to "amiberry.custom_bezel"
 			),
 			schema.hostSettings.mapNotNull { it.setsOption?.let { option -> it.id to option } }.toMap()
 		)
@@ -150,6 +167,26 @@ class HostSettingsSchemaTest {
 		assertEquals(true, deadzone?.level)
 		assertEquals(0.0, deadzone?.min)
 		assertEquals(100.0, deadzone?.max)
+	}
+
+	/**
+	 * The classic settings window's own settings still travel (the
+	 * emulator has them) but are hidden on Android, as the launcher's
+	 * App Settings rows read; the launcher keeps writing any stored value.
+	 */
+	@Test
+	fun `the classic settings window's own settings are hidden on android`() {
+		for (id in listOf(
+			"Quickstart", "read_config_descriptions", "gui_joystick_control", "disable_shutdown_button",
+			"default_quickstart_compatibility", "gui_theme", "gui_layout_scale"
+		)) {
+			val setting = requireNotNull(schema.hostSetting(id)) { id }
+			assertEquals(listOf("macos", "ios", "android"), setting.hiddenOn)
+			assertTrue(id, setting.hiddenOnAndroid)
+		}
+		// The launcher shows these.
+		assertFalse(schema.hostSetting("shader")!!.hiddenOnAndroid)
+		assertFalse(schema.hostSetting("default_open_gui_key")!!.hiddenOnAndroid)
 	}
 
 	@Test

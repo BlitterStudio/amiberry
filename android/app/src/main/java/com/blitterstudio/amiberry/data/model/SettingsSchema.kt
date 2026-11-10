@@ -115,8 +115,18 @@ class SettingsSchema(
 		 * front end writing its own configurations starts a new one from
 		 * it; null where the default is no option of its own.
 		 */
-		val setsOption: String? = null
+		val setsOption: String? = null,
+		/**
+		 * The platforms this setting does nothing on and is hidden from,
+		 * as the schema's hidden_on names ("ios", "android"). The launcher
+		 * still writes a hidden setting's stored value (the classic
+		 * settings window reads it); it just offers no row for it.
+		 */
+		val hiddenOn: List<String> = emptyList()
 	) {
+		/** Whether the setting is hidden on Android, the platform this launcher runs on. */
+		val hiddenOnAndroid: Boolean
+			get() = ANDROID in hiddenOn
 		/** The default the Android emulator gives the option. */
 		val defaultOnAndroid: String
 			get() = androidDefault ?: default
@@ -285,6 +295,9 @@ class SettingsSchema(
 	companion object {
 		const val ASSET = "settings_schema.json"
 
+		/** The schema's name for this launcher's platform (hidden_on). */
+		private const val ANDROID = "android"
+
 		/**
 		 * The features a preset configuration can require that the Android
 		 * build has: none so far, it has no PowerPC boards (CMakeLists.txt
@@ -382,7 +395,8 @@ class SettingsSchema(
 				group = text("group").orEmpty(),
 				level = o.optBoolean("level", false),
 				presetOnly = o.optBoolean("preset_only", false),
-				setsOption = text("sets_option")
+				setsOption = text("sets_option"),
+				hiddenOn = o.optJSONArray("hidden_on")?.toStringList().orEmpty()
 			)
 		}
 

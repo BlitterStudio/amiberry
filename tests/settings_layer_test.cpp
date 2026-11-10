@@ -2863,6 +2863,39 @@ void check_reversed_volumes()
 		CHECK(!amiberry_host_settings_at(i)->reversed);
 }
 
+// The per-platform visibility mask: only known bits, the classic settings
+// window's own settings hidden on every native front end, and the
+// platform no-ops the native settings audit marked hidden where it lists
+// them. (The audit's PPC set needs no mark: WITH_PPC already compiles the
+// options out of the builds without PPC.)
+void check_platform_visibility()
+{
+	for (size_t i = 0; i < amiberry_settings_count(); i++)
+		CHECK((amiberry_settings_at(i)->hidden_on & ~AMIBERRY_SETTINGS_HIDE_ON_ALL) == 0);
+	for (size_t i = 0; i < amiberry_host_settings_count(); i++)
+		CHECK((amiberry_host_settings_at(i)->hidden_on & ~AMIBERRY_SETTINGS_HIDE_ON_ALL) == 0);
+
+	const unsigned int native = AMIBERRY_SETTINGS_HIDE_ON_MACOS | AMIBERRY_SETTINGS_HIDE_ON_IOS
+		| AMIBERRY_SETTINGS_HIDE_ON_ANDROID;
+#ifndef AMIBERRY_NO_IMGUI
+	for (const char* id : {"Quickstart", "gui_theme"}) {
+		const amiberry_setting_descriptor* d = amiberry_host_settings_find(id);
+		CHECK(d && d->hidden_on == native);
+	}
+#endif
+	const amiberry_setting_descriptor* magic_mouse = amiberry_settings_find("magic_mouse");
+	CHECK(magic_mouse && magic_mouse->hidden_on
+		== (AMIBERRY_SETTINGS_HIDE_ON_IOS | AMIBERRY_SETTINGS_HIDE_ON_ANDROID));
+	const amiberry_setting_descriptor* serial = amiberry_settings_find("serial_port");
+	CHECK(serial && serial->hidden_on == AMIBERRY_SETTINGS_HIDE_ON_IOS);
+	const amiberry_setting_descriptor* monitor_blank = amiberry_settings_find("gfx_monitorblankdelay");
+	CHECK(monitor_blank && monitor_blank->hidden_on == AMIBERRY_SETTINGS_HIDE_ON_ANDROID);
+	// The desktop build this test compiles has all of these.
+	CHECK(serial && !(serial->hidden_on & AMIBERRY_SETTINGS_HIDE_ON_DESKTOP));
+	const amiberry_setting_descriptor* use_gui = amiberry_settings_find("use_gui");
+	CHECK(use_gui && use_gui->hidden_on == 0);
+}
+
 // Units, scales and levels: only numbers carry them, a level has a finite
 // range a slider can span, and a label does not repeat its unit.
 void check_number_metadata()
@@ -4477,6 +4510,7 @@ int main(int argc, char** argv)
 	check_reversed_volumes();
 	check_number_metadata();
 	check_host_settings();
+	check_platform_visibility();
 	check_host_choices();
 	check_config_text();
 	check_mount_list();

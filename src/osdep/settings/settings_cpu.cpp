@@ -903,10 +903,18 @@ const definition definitions[] = {
 			AMIBERRY_APPLY_LIVE, "disabled", ppc_cpu_idle_choices, nullptr),
 		get_ppc_cpu_idle, set_ppc_cpu_idle, ppc_cpu_idle_available, nullptr, nullptr},
 #endif
-	{NUMBER_OPTION("cpu_x86_throttle", "x86", "x86 CPU speed",
+	// The x86 bridgeboard needs 86Box, which iOS builds force out
+	// (CMakeLists.txt:181); a build without it has no bridgeboard to
+	// throttle, whichever platform it is.
+	hidden_on({NUMBER_OPTION("cpu_x86_throttle", "x86", "x86 CPU speed",
 			"x86 CPU speed as a percentage of maximum. Only has an effect when not running at fastest possible speed.",
 			AMIBERRY_SETTING_REAL, AMIBERRY_APPLY_LIVE, 0, 100000, 100, "0.0", nullptr),
 		get_x86_throttle, set_x86_throttle, x86_throttle_available, nullptr, nullptr},
+		AMIBERRY_SETTINGS_HIDE_ON_IOS
+#ifndef USE_86BOX
+		| AMIBERRY_SETTINGS_HIDE_ON_THIS_BUILD
+#endif
+		),
 	{MEASURED_OPTION("cachesize", "jit", "JIT cache size",
 			"Just-In-Time compilation cache; 0 turns the JIT off. Greatly speeds up CPU emulation but reduces compatibility.",
 			AMIBERRY_SETTING_INT, AMIBERRY_APPLY_LIVE, 0, max_jit_cache, 1, "0",
