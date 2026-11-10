@@ -16,7 +16,7 @@ class AndroidBackBehaviorTest {
 	@Test
 	fun `pushed destinations keep normal navigation back behavior`() {
 		assertFalse(shouldMoveTaskToBack(Screen.Settings.route))
-		assertFalse(shouldMoveTaskToBack(Screen.About.route))
+		assertFalse(shouldMoveTaskToBack(Screen.AppSettings.route))
 	}
 
 	@Test

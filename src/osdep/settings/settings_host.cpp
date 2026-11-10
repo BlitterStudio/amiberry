@@ -96,6 +96,21 @@ struct host_setting {
 	// The descriptor's unit and level (amiberry_settings.h).
 	const char* unit = nullptr;
 	bool level = false;
+	// The Android build's default where it differs from default_value; the
+	// schema export (--settings-schema, made on a desktop build) carries it
+	// to the Android launcher, as it does for options.
+	const char* android_default = nullptr;
+	// The Android build has no use for the setting (the update checker:
+	// Android has no self-update; the touch controls a launcher machine
+	// starts from are the launcher's remembered ones; the windowed sizes
+	// and the windowed choice mean nothing on an always full-window
+	// screen), so the schema export leaves it out.
+	bool android_unused = false;
+	// The machine option this default builds a fresh configuration with
+	// (target_default_options copies it there unchanged): a front end that
+	// writes its own configurations starts a new one from it, as the
+	// emulator does. nullptr where it is no option of its own.
+	const char* sets_option = nullptr;
 };
 
 // The text fields, by address, so a pointer-to-member of differing array
@@ -242,6 +257,36 @@ host_setting path(const char* id, const char* label, const char* help,
 	host_setting s{};
 	s.id = id; s.group = "global_paths"; s.label = label; s.help = help; s.k = kind::path;
 	s.default_value = ""; s.path_get = get; s.path_set = set;
+	// The Android launcher's own repositories (machines, ROMs, the media
+	// shelves) do not follow folder overrides, so its settings do not
+	// offer the folders: the classic settings window (Advanced) changes
+	// them there, as before.
+	s.android_unused = true;
+	return s;
+}
+
+// A setting whose default the Android build spells differently, so the
+// schema export carries that default too (as it does for options).
+host_setting android(host_setting s, const char* def)
+{
+	s.android_default = def;
+	return s;
+}
+
+// A setting the Android build has no use for, so the schema export leaves
+// it out.
+host_setting not_on_android(host_setting s)
+{
+	s.android_unused = true;
+	return s;
+}
+
+// A default that builds a fresh configuration with [option]'s value (the
+// copy target_default_options makes), so a front end writing its own
+// configurations can start a new one from it.
+host_setting sets(host_setting s, const char* option)
+{
+	s.sets_option = option;
 	return s;
 }
 
@@ -309,9 +354,10 @@ const std::vector<host_setting>& settings()
 		// An empty device makes the emulator fall back, as amiberry.cpp's
 		// default options and the WHDLoad booter do; each list names the
 		// fallback.
-		port_device("default_controller1", "Controller 1",
+		sets(port_device("default_controller1", "Controller 1",
 			"Default device for port 2, the joystick port, in new configurations and autobooted content. "
 			"Automatic uses the first joystick, or the second one for WHDLoad.", "joy1", "Automatic"),
+			"joyport1"),
 		port_device("default_controller2", "Controller 2",
 			"Second controller, used on port 1, the mouse port, by WHDLoad and CD32 autoboot. "
 			"Automatic keeps the mouse there.", "joy2", "Automatic"),
@@ -319,9 +365,10 @@ const std::vector<host_setting>& settings()
 			"Default device for parallel joystick port 3 in new configurations and WHDLoad autoboot."),
 		parallel_port_device("default_controller4", "Controller 4",
 			"Default device for parallel joystick port 4 in new configurations and WHDLoad autoboot."),
-		port_device("default_mouse1", "Mouse 1",
+		sets(port_device("default_mouse1", "Mouse 1",
 			"Default device for port 1, the mouse port, in new configurations and mouse-controlled "
 			"autobooted content. Automatic uses the mouse.", "mouse", "Automatic"),
+			"joyport0"),
 		port_device("default_mouse2", "Mouse 2",
 			"Second mouse device, used on port 2, the joystick port, for mouse-controlled WHDLoad content. "
 			"Automatic uses the Controller 1 device.", "joy0", "Automatic"),
@@ -336,36 +383,43 @@ const std::vector<host_setting>& settings()
 		boolean("default_vertical_centering", "global_display", "Vertical centering",
 			"Center the native display vertically by default.",
 			"false", &amiberry_options::default_vertical_centering),
-		choices_of("default_scaling_method", "global_display", "Scaling method",
+		sets(choices_of("default_scaling_method", "global_display", "Scaling method",
 			"Default image scaling method.",
 			"-1", scaling_choices, sizeof scaling_choices / sizeof scaling_choices[0],
 			&amiberry_options::default_scaling_method),
-		choices_of("default_gfx_autoresolution", "global_display", "Auto resolution",
+			"amiberry.scaling_method"),
+		sets(choices_of("default_gfx_autoresolution", "global_display", "Auto resolution",
 			"Enable native display auto-resolution switching by default.",
 			"0", autoresolution_choices, sizeof autoresolution_choices / sizeof autoresolution_choices[0],
 			&amiberry_options::default_gfx_autoresolution),
-		boolean("default_correct_aspect_ratio", "global_display", "Correct aspect ratio",
+			"gfx_autoresolution"),
+		sets(boolean("default_correct_aspect_ratio", "global_display", "Correct aspect ratio",
 			"Preserve the Amiga display aspect ratio by default.",
 			"true", &amiberry_options::default_correct_aspect_ratio),
-		boolean("default_auto_crop", "global_display", "Auto crop",
+			"amiberry.gfx_correct_aspect"),
+		sets(boolean("default_auto_crop", "global_display", "Auto crop",
 			"Enable automatic border crop by default.",
 			"false", &amiberry_options::default_auto_crop),
-		measured("default_width", "global_display", "Default width",
+			"amiberry.gfx_auto_crop"),
+		// The windowed sizes and the windowed/full-window choice mean
+		// nothing on Android's always full-window screen.
+		not_on_android(measured("default_width", "global_display", "Default width",
 			"Default native display window width.", "720", 1, 16384, &amiberry_options::default_width,
-			"px", false),
-		measured("default_height", "global_display", "Default height",
+			"px", false)),
+		not_on_android(measured("default_height", "global_display", "Default height",
 			"Default native display window height.", "568", 1, 16384, &amiberry_options::default_height,
-			"px", false),
-		choices_of("default_fullscreen_mode", "global_display", "Screen mode",
+			"px", false)),
+		not_on_android(choices_of("default_fullscreen_mode", "global_display", "Screen mode",
 			"Default native and RTG screen mode. The legacy exclusive full-screen value is full-window.",
 			"0", fullscreen_choices, sizeof fullscreen_choices / sizeof fullscreen_choices[0],
-			&amiberry_options::default_fullscreen_mode),
+			&amiberry_options::default_fullscreen_mode)),
 
-		choices_of("default_stereo_separation", "global_sound", "Stereo separation",
+		sets(choices_of("default_stereo_separation", "global_sound", "Stereo separation",
 			"Default stereo separation between the left and right channels.",
 			"7", stereo_choices, sizeof stereo_choices / sizeof stereo_choices[0],
 			&amiberry_options::default_stereo_separation),
-		choices_of("default_sound_frequency", "global_sound", "Sound frequency",
+			"sound_stereo_separation"),
+		android(sets(choices_of("default_sound_frequency", "global_sound", "Sound frequency",
 			"Default audio output sample rate in Hz.",
 #ifdef __ANDROID__
 			AMIBERRY_SETTINGS_TEXT_OF(ANDROID_DEFAULT_SOUND_FREQUENCY),
@@ -374,7 +428,9 @@ const std::vector<host_setting>& settings()
 #endif
 			frequency_choices, sizeof frequency_choices / sizeof frequency_choices[0],
 			&amiberry_options::default_sound_frequency),
-		choices_of("default_sound_buffer", "global_sound", "Sound buffer",
+			"sound_frequency"),
+			AMIBERRY_SETTINGS_TEXT_OF(ANDROID_DEFAULT_SOUND_FREQUENCY)),
+		android(sets(choices_of("default_sound_buffer", "global_sound", "Sound buffer",
 			"Default audio buffer size. Smaller values reduce latency.",
 #ifdef __ANDROID__
 			AMIBERRY_SETTINGS_TEXT_OF(ANDROID_DEFAULT_SOUND_BUFFER),
@@ -383,6 +439,8 @@ const std::vector<host_setting>& settings()
 #endif
 			buffer_choices, sizeof buffer_choices / sizeof buffer_choices[0],
 			&amiberry_options::default_sound_buffer),
+			"sound_max_buff"),
+			AMIBERRY_SETTINGS_TEXT_OF(ANDROID_DEFAULT_SOUND_BUFFER)),
 		sound_device("default_soundcard", "Audio device",
 			"Default sound output device. System default follows the operating system's choice."),
 
@@ -408,46 +466,51 @@ const std::vector<host_setting>& settings()
 			"Allow the WHDLoad JSON booter database to override display defaults.",
 			"true", &amiberry_options::allow_display_settings_from_json),
 
-		boolean("default_onscreen_joystick", "global_touch", "On-screen joystick",
+		// The on-screen controls a launcher machine starts from are the
+		// launcher's remembered ones, which write the machine options
+		// themselves, so these defaults never reach such a machine.
+		not_on_android(android(boolean("default_onscreen_joystick", "global_touch", "On-screen joystick",
 			"Show virtual joystick controls by default on touchscreen devices.",
 #ifdef __ANDROID__
 			"true",
 #else
 			"false",
 #endif
-			&amiberry_options::default_onscreen_joystick),
-		boolean("default_vkbd_enabled", "global_touch", "On-screen keyboard",
+			&amiberry_options::default_onscreen_joystick), "true")),
+		not_on_android(android(boolean("default_vkbd_enabled", "global_touch", "On-screen keyboard",
 			"Enable the on-screen Amiga keyboard by default.",
 #ifdef __ANDROID__
 			"true",
 #else
 			"false",
 #endif
-			&amiberry_options::default_vkbd_enabled),
-		measured("default_vkbd_transparency", "global_touch", "On-screen keyboard opacity",
+			&amiberry_options::default_vkbd_enabled), "true")),
+		not_on_android(measured("default_vkbd_transparency", "global_touch", "On-screen keyboard opacity",
 			"Opacity of the on-screen keyboard in new configurations (100% is opaque); 0 uses the "
 			"default of 85%.",
-			"0", 0, 100, &amiberry_options::default_vkbd_transparency, "%", false),
-		language("default_vkbd_language", "global_touch", "On-screen keyboard layout",
-			"Default on-screen keyboard layout.", "US"),
-		hotkey("default_vkbd_toggle", "global_touch", "On-screen keyboard toggle",
+			"0", 0, 100, &amiberry_options::default_vkbd_transparency, "%", false)),
+		not_on_android(language("default_vkbd_language", "global_touch", "On-screen keyboard layout",
+			"Default on-screen keyboard layout.", "US")),
+		not_on_android(android(hotkey("default_vkbd_toggle", "global_touch", "On-screen keyboard toggle",
 			"Default key or controller button that shows and hides the on-screen keyboard.",
 #if defined(__ANDROID__) || defined(LIBRETRO)
 			"leftstick"),
 #else
 			"guide"),
 #endif
-		boolean("default_retroarch_vkbd", "global_touch", "RetroArch on-screen keyboard button",
+			"leftstick")),
+		not_on_android(boolean("default_retroarch_vkbd", "global_touch", "RetroArch on-screen keyboard button",
 			"Use the RetroArch on-screen keyboard button by default when a mapping exists.",
-			"false", &amiberry_options::default_retroarch_vkbd),
+			"false", &amiberry_options::default_retroarch_vkbd)),
 
 #ifndef AMIBERRY_NO_IMGUI
 		text("gui_theme", "global_visual", "GUI theme",
 			"Theme file loaded by the ImGui interface.", "Default.theme"),
 #endif
-		catalog("shader", "Native shader",
+		sets(catalog("shader", "Native shader",
 			"Default shader for native chipset modes: a built-in CRT shader or a preset from the shaders folder.",
 			listing::shader),
+			"amiberry.shader"),
 		catalog("shader_rtg", "RTG shader",
 			"Default shader for RTG modes: a built-in CRT shader or a preset from the shaders folder.",
 			listing::shader),
@@ -515,16 +578,18 @@ const std::vector<host_setting>& settings()
 
 		// Store builds are updated by the App Store: no update settings.
 #if !defined(AMIBERRY_IOS) && !defined(MACOS_APP_STORE)
-		choices_of("update_check", "global_updates", "Startup update check",
+		// Android has no self-update either (get_update_method is DISABLED
+		// there), so the schema export leaves these out.
+		not_on_android(choices_of("update_check", "global_updates", "Startup update check",
 			"Check for Amiberry updates on startup when the installation type supports it.",
 			"1", enabled_choices, sizeof enabled_choices / sizeof enabled_choices[0],
-			&amiberry_options::update_check),
-		choices_of("update_channel", "global_updates", "Update channel",
+			&amiberry_options::update_check)),
+		not_on_android(choices_of("update_channel", "global_updates", "Update channel",
 			"Stable checks only releases. Preview can include pre-release versions.",
 			"0", channel_choices, sizeof channel_choices / sizeof channel_choices[0],
-			&amiberry_options::update_channel),
-		text("skipped_version", "global_updates", "Skipped version",
-			"Version string to skip during update checks. Empty stops skipping a version.", ""),
+			&amiberry_options::update_channel)),
+		not_on_android(text("skipped_version", "global_updates", "Skipped version",
+			"Version string to skip during update checks. Empty stops skipping a version.", "")),
 #endif
 
 		boolean("perf_log", "global_advanced", "Performance log",
@@ -561,6 +626,7 @@ host_setting scale_setting()
 #endif
 	s.min = gui_layout_scale_min_percent;
 	s.max = gui_layout_scale_max_percent;
+	s.android_default = "70";
 	s.real = &amiberry_options::gui_layout_scale_percent;
 	s.clamp_scale = true;
 	s.unit = "%";
@@ -602,32 +668,42 @@ amiberry_setting_type setting_type(kind k)
 	return AMIBERRY_SETTING_STRING;
 }
 
+// A host_setting as the layer's front ends see it (amiberry_settings.h).
+amiberry_setting_descriptor descriptor_of(const host_setting& s)
+{
+	amiberry_setting_descriptor d{};
+	d.id = s.id;
+	d.group = s.group;
+	d.label = s.label;
+	d.help = s.help;
+	d.type = setting_type(s.k);
+	d.apply = AMIBERRY_APPLY_LIVE;
+	// A choice's range is its list (the audio device keeps its index range
+	// for the setter only).
+	d.min = s.k == kind::choice_list ? 0 : s.min;
+	d.max = s.k == kind::choice_list ? 0 : s.max;
+	d.step = s.k == kind::integer || s.k == kind::real ? 1 : 0;
+	d.default_value = s.default_value;
+	d.choices = reinterpret_cast<const amiberry_setting_choice*>(s.choices);
+	d.choice_count = s.choice_count;
+	d.unit = s.unit;
+	d.level = s.level;
+	return d;
+}
+
+// The machine option a host default builds a fresh configuration with, as
+// this build's layer knows it; nullptr when the build has no such option.
+const char* host_setting_sets_option(const host_setting& s)
+{
+	return s.sets_option && amiberry_settings_find(s.sets_option) ? s.sets_option : nullptr;
+}
+
 std::vector<amiberry_setting_descriptor>& descriptors()
 {
 	static std::vector<amiberry_setting_descriptor> list = [] {
 		std::vector<amiberry_setting_descriptor> out;
-		auto add = [&out](const host_setting& s) {
-			amiberry_setting_descriptor d{};
-			d.id = s.id;
-			d.group = s.group;
-			d.label = s.label;
-			d.help = s.help;
-			d.type = setting_type(s.k);
-			d.apply = AMIBERRY_APPLY_LIVE;
-			// A choice's range is its list (the audio device keeps its
-			// index range for the setter only).
-			d.min = s.k == kind::choice_list ? 0 : s.min;
-			d.max = s.k == kind::choice_list ? 0 : s.max;
-			d.step = s.k == kind::integer || s.k == kind::real ? 1 : 0;
-			d.default_value = s.default_value;
-			d.choices = reinterpret_cast<const amiberry_setting_choice*>(s.choices);
-			d.choice_count = s.choice_count;
-			d.unit = s.unit;
-			d.level = s.level;
-			out.push_back(d);
-		};
 		for (const host_setting& s : settings())
-			add(s);
+			out.push_back(descriptor_of(s));
 #ifndef AMIBERRY_NO_IMGUI
 		// The GUI scale (ImGui's) sits after the other display defaults.
 		const host_setting scale = scale_setting();
@@ -636,12 +712,7 @@ std::vector<amiberry_setting_descriptor>& descriptors()
 			if (std::strcmp(it->group, "global_display") == 0)
 				at = it + 1;
 		}
-		amiberry_setting_descriptor d{};
-		d.id = scale.id; d.group = scale.group; d.label = scale.label; d.help = scale.help;
-		d.type = AMIBERRY_SETTING_REAL; d.apply = AMIBERRY_APPLY_LIVE;
-		d.min = scale.min; d.max = scale.max; d.step = 1; d.default_value = scale.default_value;
-		d.unit = scale.unit;
-		out.insert(at, d);
+		out.insert(at, descriptor_of(scale));
 #endif
 		return out;
 	}();
@@ -785,6 +856,40 @@ bool text_choice_accepted(const host_setting& s, std::string_view value)
 }
 
 } // namespace
+
+android_host_setting host_setting_on_android(std::string_view id)
+{
+	const host_setting* s = find_setting(id);
+	if (!s)
+		return {};
+	android_host_setting info;
+	info.default_value = s->android_default;
+	info.present = !s->android_unused;
+	info.sets_option = host_setting_sets_option(*s);
+	return info;
+}
+
+#ifdef __ANDROID__
+// The Android build lists these with the others (settings()).
+const std::vector<amiberry_setting_descriptor>& android_only_host_settings()
+{
+	static const std::vector<amiberry_setting_descriptor> list;
+	return list;
+}
+#else
+// Host settings only the Android build compiles (Android ADPF): the schema
+// export, made on a desktop build, carries them to the Android launcher,
+// which cannot enumerate them from its own list.
+const std::vector<amiberry_setting_descriptor>& android_only_host_settings()
+{
+	static const std::vector<amiberry_setting_descriptor> list = {
+		descriptor_of(boolean("use_adpf", "global_advanced", "Android ADPF",
+			"Use Android Dynamic Performance Framework hints when available.",
+			"true", &amiberry_options::use_adpf)),
+	};
+	return list;
+}
+#endif
 
 size_t host_settings_count()
 {

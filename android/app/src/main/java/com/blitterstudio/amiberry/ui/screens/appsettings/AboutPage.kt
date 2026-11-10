@@ -1,4 +1,4 @@
-package com.blitterstudio.amiberry.ui.screens
+package com.blitterstudio.amiberry.ui.screens.appsettings
 
 import android.content.ActivityNotFoundException
 import android.content.ClipData
@@ -12,37 +12,24 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -58,21 +45,17 @@ import com.blitterstudio.amiberry.ui.dpadFocusable
 import com.blitterstudio.amiberry.ui.hasFullStorageAccess
 import com.blitterstudio.amiberry.ui.isTvDevice
 import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
+/**
+ * About & Licences: the app's identity and version, its links, the support
+ * info to copy, the credits and the licence — the About screen the Library
+ * once opened, as a page of App Settings. [showMessage] carries its
+ * feedback to the screen's snackbar.
+ */
 @Composable
-fun AboutScreen(onBack: () -> Unit) {
+fun AboutPage(showMessage: (String) -> Unit) {
 	val context = LocalContext.current
-	val scope = rememberCoroutineScope()
-	val snackbarHostState = remember { SnackbarHostState() }
 	val tv = isTvDevice()
-	// On a TV, focus starts on Back, so OK returns where About was opened from.
-	val backFocus = remember { FocusRequester() }
-	if (tv) LaunchedEffect(Unit) { backFocus.requestFocus() }
 	val packageInfo = try {
 		context.packageManager.getPackageInfo(context.packageName, 0)
 	} catch (_: Exception) {
@@ -105,33 +88,14 @@ fun AboutScreen(onBack: () -> Unit) {
 	val linkOpenFailedMessage = actionMessage(AboutActions.openLinkFailedMessage())
 	val supportInfoCopiedMessage = actionMessage(AboutActions.supportInfoCopiedMessage())
 
-	Scaffold(
-		snackbarHost = { SnackbarHost(snackbarHostState) },
-		topBar = {
-			TopAppBar(
-				title = { Text(stringResource(R.string.about_title)) },
-				navigationIcon = {
-					IconButton(
-						onClick = onBack,
-						modifier = Modifier.focusRequester(backFocus).dpadFocusIndicator()
-					) {
-						Icon(
-							Icons.AutoMirrored.Filled.ArrowBack,
-							contentDescription = stringResource(R.string.action_back)
-						)
-					}
-				}
-			)
-		}
-	) { innerPadding ->
-		Column(
-			modifier = Modifier
-				.fillMaxSize()
-				.padding(innerPadding)
-				.verticalScroll(rememberScrollState())
-				.padding(16.dp),
-			verticalArrangement = Arrangement.spacedBy(16.dp)
-		) {
+	// The page frame (AppSettingsContent) scrolls; a second vertical scroll
+	// here would nest and crash.
+	Column(
+		modifier = Modifier
+			.fillMaxWidth()
+			.padding(16.dp),
+		verticalArrangement = Arrangement.spacedBy(16.dp)
+	) {
 			// App identity + version
 			Card(
 				modifier = Modifier.fillMaxWidth(),
@@ -178,7 +142,7 @@ fun AboutScreen(onBack: () -> Unit) {
 								text = stringResource(link.labelRes),
 								onClick = {
 									openExternalLink(context, link.url) {
-										scope.launch { snackbarHostState.showSnackbar(linkOpenFailedMessage) }
+										showMessage(linkOpenFailedMessage)
 									}
 								}
 							)
@@ -206,7 +170,7 @@ fun AboutScreen(onBack: () -> Unit) {
 								clipboard.setPrimaryClip(
 									ClipData.newPlainText(context.getString(R.string.about_support_title), supportInfo)
 								)
-								scope.launch { snackbarHostState.showSnackbar(supportInfoCopiedMessage) }
+								showMessage(supportInfoCopiedMessage)
 							},
 							modifier = Modifier.dpadFocusIndicator()
 						) {
@@ -258,7 +222,6 @@ fun AboutScreen(onBack: () -> Unit) {
 			}
 
 			Spacer(modifier = Modifier.height(16.dp))
-		}
 	}
 }
 

@@ -17,9 +17,8 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FilterList
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Memory
-import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
@@ -418,7 +417,6 @@ fun LibraryScreen(
 	val wide = windowWidthClass().showsSideList
 	val showRomAdvice = filter != LibraryFilter.KickstartRoms && !romAdviceDismissed && !kickstartInstalled
 	var showFilterMenu by remember { mutableStateOf(false) }
-	var showOverflowMenu by remember { mutableStateOf(false) }
 	var showNewMachineMenu by remember { mutableStateOf(false) }
 	// Each filter's row count, for the badges of the side list and the filter menu.
 	val counts = remember(configs, categories, recentItems, floppies, cds, whdloadGames, hardDrives) {
@@ -541,24 +539,15 @@ fun LibraryScreen(
 							contentDescription = stringResource(R.string.library_search)
 						)
 					}
-					Box {
-						IconButton(
-							onClick = { showOverflowMenu = true },
-							modifier = Modifier.dpadFocusIndicator()
-						) {
-							Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.more_options))
-						}
-						DropdownMenu(expanded = showOverflowMenu, onDismissRequest = { showOverflowMenu = false }) {
-							DropdownMenuItem(
-								text = { Text(stringResource(R.string.nav_about)) },
-								modifier = Modifier.dpadFocusIndicator(),
-								leadingIcon = { Icon(Icons.Default.Info, contentDescription = null) },
-								onClick = {
-									showOverflowMenu = false
-									navController.navigate(Screen.About.route)
-								}
-							)
-						}
+					// The gear, as the Apple apps' Library: App Settings and About & Licences.
+					IconButton(
+						onClick = { navController.navigate(Screen.AppSettings.route) },
+						modifier = Modifier.dpadFocusIndicator()
+					) {
+						Icon(
+							Icons.Default.Settings,
+							contentDescription = stringResource(R.string.appsettings_title)
+						)
 					}
 				}
 			)

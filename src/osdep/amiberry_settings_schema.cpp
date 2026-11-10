@@ -1428,6 +1428,93 @@ void aros(std::string& out)
 	out += '}';
 }
 
+// One host setting (amiberry.conf, not a machine's configuration): every
+// one the layer lists except those the Android build has no use for (the
+// update checker: it has no self-update), then the ones only that build
+// compiles. Device lists are left out, as for options; the settings that
+// list the host's devices, shaders and bezels still say choice, and the
+// front end lists them itself.
+void host_settings(std::string& out)
+{
+	auto write = [&](const amiberry_setting_descriptor* d, const char* android_default,
+		const char* sets_option) {
+		out += "{\"id\":";
+		json_string(out, d->id);
+		out += ",\"group\":";
+		json_string(out, d->group);
+		out += ",\"label\":";
+		json_string(out, d->label);
+		out += ",\"help\":";
+		json_string(out, d->help);
+		out += ",\"type\":";
+		json_string(out, type_name(d->type));
+		out += ",\"apply\":";
+		json_string(out, apply_name(d->apply));
+		out += ",\"default\":";
+		json_string(out, d->default_value);
+		// The Android build's default where it differs (this file is made
+		// on a desktop build).
+		if (android_default
+			&& std::strcmp(android_default, d->default_value ? d->default_value : "") != 0) {
+			out += ",\"android_default\":";
+			json_string(out, android_default);
+		}
+		if (d->type == AMIBERRY_SETTING_INT || d->type == AMIBERRY_SETTING_REAL) {
+			out += ",\"min\":";
+			json_number(out, d->min);
+			out += ",\"max\":";
+			json_number(out, d->max);
+			out += ",\"step\":";
+			json_number(out, d->step);
+		}
+		if (d->unit) {
+			out += ",\"unit\":";
+			json_string(out, d->unit);
+		}
+		// A level a front end may show as a slider.
+		if (d->level)
+			out += ",\"level\":true";
+		if (d->type == AMIBERRY_SETTING_CHOICE) {
+			out += ",\"choices\":[";
+			for (size_t c = 0; c < d->choice_count; c++) {
+				if (c)
+					out += ',';
+				out += "{\"value\":";
+				json_string(out, d->choices[c].value);
+				out += ",\"label\":";
+				json_string(out, d->choices[c].label);
+				out += '}';
+			}
+			out += ']';
+		}
+		// The machine option a new configuration starts from (the copy
+		// target_default_options makes of this default).
+		if (sets_option) {
+			out += ",\"sets_option\":";
+			json_string(out, sets_option);
+		}
+		out += '}';
+	};
+	out += ",\n\"host_settings\":[";
+	bool first = true;
+	for (size_t i = 0; i < amiberry_host_settings_count(); i++) {
+		const amiberry_setting_descriptor* d = amiberry_host_settings_at(i);
+		const amiberry_settings::android_host_setting on_android =
+			amiberry_settings::host_setting_on_android(d->id);
+		if (!on_android.present)
+			continue;
+		out += first ? "\n" : ",\n";
+		first = false;
+		write(d, on_android.default_value, on_android.sets_option);
+	}
+	for (const amiberry_setting_descriptor& d : amiberry_settings::android_only_host_settings()) {
+		out += first ? "\n" : ",\n";
+		first = false;
+		write(&d, nullptr, nullptr);
+	}
+	out += "\n]";
+}
+
 } // namespace
 
 // Writes the schema to stdout; 0 on success.
@@ -1468,6 +1555,7 @@ int settings_schema_and_exit(const char* option_list)
 		return 1;
 	}
 	aros(out);
+	host_settings(out);
 	out += "\n}\n";
 	if (std::fwrite(out.data(), 1, out.size(), stdout) != out.size() || std::fflush(stdout) != 0) {
 		std::fprintf(stderr, "--settings-schema: writing to stdout failed\n");

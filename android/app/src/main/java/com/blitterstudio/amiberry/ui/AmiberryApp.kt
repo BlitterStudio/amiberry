@@ -46,7 +46,7 @@ import com.blitterstudio.amiberry.data.PendingImportState
 import com.blitterstudio.amiberry.ui.findActivity
 import com.blitterstudio.amiberry.ui.navigation.Screen
 import com.blitterstudio.amiberry.ui.navigation.shouldMoveTaskToBack
-import com.blitterstudio.amiberry.ui.screens.AboutScreen
+import com.blitterstudio.amiberry.ui.screens.appsettings.AppSettingsScreen
 import com.blitterstudio.amiberry.ui.screens.library.LibraryScreen
 import com.blitterstudio.amiberry.ui.screens.settings.SettingsScreen
 import com.blitterstudio.amiberry.ui.viewmodel.SettingsViewModel
@@ -276,14 +276,11 @@ fun AmiberryApp() {
 		.focusGroup()
 	val currentRoute = currentDestination?.route
 	val tv = isTvDevice()
-	// On a TV, focus starts in the content, not on a top bar; About opens and closes from
-	// the content (the Library's overflow menu), so focus stays in the content both ways.
+	// On a TV, focus starts in the content, not on a top bar; the editor and App Settings
+	// take it from there (their page lists), the Library's content has it.
 	var initialFocusDone by rememberSaveable { mutableStateOf(false) }
-	var previousRoute by remember { mutableStateOf<String?>(null) }
 	LaunchedEffect(currentRoute) {
-		val fromOrToAbout = currentRoute == Screen.About.route || previousRoute == Screen.About.route
-		previousRoute = currentRoute
-		if (!tv || currentRoute == null || (initialFocusDone && !fromOrToAbout)) return@LaunchedEffect
+		if (!tv || currentRoute == null || initialFocusDone) return@LaunchedEffect
 		// The destination's controls compose over the next frames.
 		repeat(CONTENT_FOCUS_ATTEMPTS) {
 			withFrameNanos { }
@@ -321,8 +318,8 @@ private fun AmiberryNavHost(navController: NavHostController, startGuard: StartG
 		composable(Screen.Library.route) {
 			LibraryScreen(navController = navController)
 		}
-		composable(Screen.About.route) {
-			AboutScreen(onBack = { navController.popBackStack() })
+		composable(Screen.AppSettings.route) {
+			AppSettingsScreen(navController = navController)
 		}
 		composable(Screen.Settings.route) {
 			CompositionLocalProvider(LocalStartGuard provides startGuard) {

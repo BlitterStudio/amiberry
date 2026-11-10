@@ -381,4 +381,22 @@ inline void write_choice(char* out, size_t size, const choice_list& choices, int
 	write_choice(out, size, choices.items, choices.count, index);
 }
 
+// A host setting (settings_host.cpp) as the Android build has it, for the
+// schema export: its default there where it differs from the building
+// one's, and whether that build has the setting at all.
+struct android_host_setting {
+	const char* default_value = nullptr;
+	bool present = true;
+	// The machine option this default builds a fresh configuration with,
+	// as this build's layer knows it (nullptr when there is none).
+	const char* sets_option = nullptr;
+};
+
+android_host_setting host_setting_on_android(std::string_view id);
+
+// Host settings only the Android build compiles (Android ADPF), which a
+// desktop build still describes for the schema export; empty on the
+// Android build itself, where settings() lists them.
+const std::vector<amiberry_setting_descriptor>& android_only_host_settings();
+
 } // namespace amiberry_settings
