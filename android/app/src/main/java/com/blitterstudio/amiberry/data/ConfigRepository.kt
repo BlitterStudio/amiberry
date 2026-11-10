@@ -156,9 +156,10 @@ class ConfigRepository(private val context: Context) {
 			if (category.isNotBlank()) {
 				target.appendText("config_category=$category\n")
 			}
-			if (unknownLines.isNotEmpty()) {
+			val preserved = ConfigGenerator.preservedLines(settings, unknownLines)
+			if (preserved.isNotEmpty()) {
 				target.appendText("\n; Preserved settings from original config\n")
-				unknownLines.forEach { target.appendText("$it\n") }
+				preserved.forEach { target.appendText("$it\n") }
 			}
 			ConfigurationSaveActions.SaveResult.Saved(target)
 		} catch (_: IOException) {

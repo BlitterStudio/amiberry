@@ -95,10 +95,13 @@ object SettingsBoards {
 				// A unit exists while the file has its entry line, or its
 				// options line (a built-in controller the chipset option
 				// puts in the machine, configured without a ROM of its own).
-				if (entry == null && options == null) continue
+				// An empty entry is none: cfgfile_read_board_rom creates the
+				// board only for a non-empty value (cfgfile.cpp:6381-6388).
+				val hasEntry = !entry.isNullOrEmpty()
+				if (!hasEntry && options == null) continue
 				val board = units.getOrPut("${type.id}#$unit") { MutableBoard() }
-				board.entry = entry != null
-				board.romFile = entry ?: ""
+				board.entry = hasEntry
+				board.romFile = entry.orEmpty()
 				val tokens = splitTokens(options ?: "")
 				for (field in type.fields) {
 					if (field.id == "enabled" || field.id == "rom_file") continue

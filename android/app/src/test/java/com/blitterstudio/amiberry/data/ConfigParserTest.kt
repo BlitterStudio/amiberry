@@ -764,4 +764,24 @@ class ConfigParserTest {
 		assertTrue(result.settings.hardDrives.isEmpty())
 		assertTrue(result.unknownLines.any { it.startsWith("hardfile2=") })
 	}
+
+	@Test
+	fun `the accelerator ROM checksum stays only while it alone names the ROM`() {
+		val named = ConfigParser.parse(tempDir.newFile("named.uae").apply { writeText("""
+			cpuboard_type=A2630
+			cpuboard_rom_file=/roms/a2630.rom
+			cpuboard_rom_file_id=12345678,A2630
+		""".trimIndent()) })
+		assertTrue(named.unknownLines.none { it.startsWith("cpuboard_rom_file_id=") })
+
+		val checksumOnly = ConfigParser.parse(tempDir.newFile("checksum.uae").apply { writeText("""
+			cpuboard_type=A2630
+			cpuboard_rom_file_id=12345678,A2630
+		""".trimIndent()) })
+		assertEquals(listOf("cpuboard_rom_file_id=12345678,A2630"), checksumOnly.unknownLines)
+
+		// A ROM picked afterwards replaces the checksum.
+		val picked = checksumOnly.settings.withOption("cpuboard_rom_file", "/roms/new.rom")
+		assertTrue(ConfigGenerator.preservedLines(picked, checksumOnly.unknownLines).isEmpty())
+	}
 }

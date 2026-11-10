@@ -121,6 +121,12 @@ class SettingsBoardsTest {
 	}
 
 	@Test
+	fun `an empty entry line is no board`() {
+		// cfgfile_read_board_rom creates a board only for a non-empty value.
+		assertEquals(emptyList<BoardUnit>(), parse("a2091_rom_file="))
+	}
+
+	@Test
 	fun `a second unit's lines carry its number`() {
 		val units = parse("a2091-2_rom_file=:NOROM")
 		assertEquals(1, units.size)

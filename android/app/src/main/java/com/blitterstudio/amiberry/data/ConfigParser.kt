@@ -79,6 +79,7 @@ object ConfigParser {
 		val identityLines = mutableListOf<String>()
 		val customLines = LinkedHashMap<String, String>()
 		var packedJumpers: String? = null
+		var acceleratorRomIdentity: String? = null
 
 		for (line in lines) {
 			val trimmed = line.trim()
@@ -123,6 +124,8 @@ object ConfigParser {
 					identityLines.add(line)
 				CustomControls.lineKey(key) != null -> if (value.isNotEmpty()) customLines[key] = value
 				key == "cpuboard_settings" -> packedJumpers = value
+				// The accelerator ROM's checksum: see below.
+				key == "cpuboard_rom_file_id" -> acceleratorRomIdentity = line
 				key in knownKeys -> kvPairs[key] = value
 				isMapOption(key) -> options[key] = value
 				else -> unknownLines.add(line)
@@ -155,10 +158,21 @@ object ConfigParser {
 			.copy(options = legacyPresetOptions(kvPairs["amiberry.android_preset"]) + options)
 		val schema = SettingsSchema.current
 		val boards = schema?.let { SettingsBoards.parse(it, boardLines) }.orEmpty()
-		val ownedTypes = boardLines.keys.mapNotNull { SettingsBoards.line(it)?.typeId }.toSet()
+		// An empty entry line is no unit (SettingsBoards.parse), so it owns no identity either.
+		val ownedTypes = boardLines.filter { (key, value) ->
+			value.isNotEmpty() || SettingsBoards.line(key)?.kind == SettingsBoards.Line.Kind.Options
+		}.keys.mapNotNull { SettingsBoards.line(it)?.typeId }.toSet()
 		for (identity in identityLines) {
 			if (SettingsBoards.line(configKey(identity) ?: "")?.typeId !in ownedTypes)
 				unknownLines.add(identity)
+		}
+		// The accelerator ROM's checksum stays only for a file that names
+		// its ROM by nothing else: with the ROM file named, the file line
+		// decides (the writer spells both alike), and a picked or cleared
+		// ROM must not come back from the old checksum, which
+		// cfgfile_read_board_rom resolves into the entry after the path.
+		acceleratorRomIdentity?.let { identity ->
+			if (settings.optionValue("cpuboard_rom_file").isNullOrEmpty()) unknownLines.add(identity)
 		}
 		val customControls = CustomControls(
 			customLines.entries.associate { (line, event) ->
