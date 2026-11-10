@@ -38,6 +38,17 @@ internal data class AppSettingsPage(
  */
 internal object AppSettingsSections {
 
+	/** The path settings the Folders section offers, in the layer's order. */
+	private val FOLDER_IDS = listOf(
+		"config_path", "controllers_path", "retroarch_config",
+		"whdboot_path", "whdload_arch_path",
+		"floppy_path", "harddrive_path", "cdrom_path",
+		"rom_path", "rp9_path", "floppy_sounds_dir", "saveimage_dir",
+		"savestate_dir", "ripper_path", "inputrecordings_dir",
+		"screenshot_dir", "nvram_dir", "plugins_dir",
+		"shaders_path", "bezels_path"
+	)
+
 	val pages = listOf(
 		AppSettingsPage("appearance", R.string.appsettings_group_appearance, listOf(
 			AppSettingsSection(R.string.appsettings_section_visual, group = "global_visual")
@@ -64,11 +75,16 @@ internal object AppSettingsSections {
 			AppSettingsSection(R.string.appsettings_section_sound_defaults, group = "global_sound"),
 			AppSettingsSection(R.string.appsettings_section_whdload, group = "global_whdload")
 		)),
-		// The folders group is here for its log switch; the folder settings
-		// themselves stay in the classic settings window (Advanced) on Android —
-		// the launcher's own repositories do not follow them.
+		// The paths group as the Apple apps' settings split it (audit §3b):
+		// the log switch with its log file, and every content folder the
+		// Android build honours — the launcher's repositories follow them
+		// (ContentFolders), so they change here, not in the classic window.
 		AppSettingsPage("advanced", R.string.appsettings_group_advanced, listOf(
-			AppSettingsSection(R.string.appsettings_section_logging, group = "global_paths"),
+			AppSettingsSection(
+				R.string.appsettings_section_logging,
+				ids = listOf("write_logfile", "logfile_path")
+			),
+			AppSettingsSection(R.string.appsettings_section_folders, ids = FOLDER_IDS),
 			AppSettingsSection(R.string.appsettings_section_advanced, group = "global_advanced")
 		))
 	)

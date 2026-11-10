@@ -66,8 +66,11 @@ typedef enum amiberry_setting_type {
 	   get call reports AMIBERRY_SETTINGS_BUFFER_TOO_SMALL until it fits)
 	   and never through amiberry_settings_adjustment, which truncates.
 	   A PATH longer than the host's path limit (PATH_MAX, 1024 bytes on
-	   macOS) is refused with AMIBERRY_SETTINGS_INVALID_VALUE. */
+	   macOS) is refused with AMIBERRY_SETTINGS_INVALID_VALUE.
+	   FILE is the same, for a single file rather than a folder, so a
+	   front end attaches a file picker instead of a folder one. */
 	AMIBERRY_SETTING_PATH,
+	AMIBERRY_SETTING_FILE,
 	AMIBERRY_SETTING_STRING,
 	/* A keyboard shortcut, read and written like a STRING: "" (none), a key
 	   with optional modifiers, a modifier key alone, or a controller

@@ -1,7 +1,6 @@
 package com.blitterstudio.amiberry.data
 
 import android.content.Context
-import com.blitterstudio.amiberry.data.model.StoragePaths
 import com.blitterstudio.amiberry.data.model.EmulatorSettings
 import com.blitterstudio.amiberry.data.model.LauncherChoices
 import com.blitterstudio.amiberry.data.model.SettingsSchema
@@ -48,7 +47,7 @@ data class ConfigMachine(val model: String, val cpu: Int, val memoryKb: Int, val
 class ConfigRepository(private val context: Context) {
 
 	private val confDir: File
-		get() = File(context.getExternalFilesDir(null), StoragePaths.CONFIGURATIONS).also {
+		get() = ContentFolders.configurationsDir(context).also {
 			if (!it.exists()) it.mkdirs()
 		}
 
@@ -108,13 +107,13 @@ class ConfigRepository(private val context: Context) {
 	fun saveResolved(
 		settings: EmulatorSettings,
 		requestedName: String,
-		currentConfigName: String?,
+		currentConfigPath: String?,
 		unknownLines: List<String> = emptyList(),
 		description: String = "",
 		category: String = "",
 		allowOverwrite: Boolean = false
 	): ConfigurationSaveActions.SaveResult {
-		val target = when (val resolution = ConfigSaveResolver.resolve(confDir, requestedName, currentConfigName)) {
+		val target = when (val resolution = ConfigSaveResolver.resolve(confDir, requestedName, currentConfigPath)) {
 			ConfigSaveResolver.Resolution.InvalidName -> return ConfigurationSaveActions.SaveResult.InvalidName
 			is ConfigSaveResolver.Resolution.WriteNew -> resolution.file
 			is ConfigSaveResolver.Resolution.OverwriteTracked -> resolution.file

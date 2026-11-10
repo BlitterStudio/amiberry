@@ -73,6 +73,19 @@ class HostSettingsStore(
 	}
 
 	/**
+	 * Drops each setting's line, the emulator's own reset: its writer omits
+	 * a setting at its default, and the loader then derives it again.
+	 * Everything else stays as [write] keeps it.
+	 */
+	suspend fun clear(ids: Collection<String>): Boolean = writeMutex.withLock {
+		val lines = readLines().toMutableList()
+		lines.indices.reversed()
+			.filter { index -> parseKey(lines[index]) in ids }
+			.forEach(lines::removeAt)
+		writeAtomically(lines)
+	}
+
+	/**
 	 * The line [value] writes: an empty text or hotkey value — no key, no
 	 * quit key — is a value of its own, so its line stays.
 	 */

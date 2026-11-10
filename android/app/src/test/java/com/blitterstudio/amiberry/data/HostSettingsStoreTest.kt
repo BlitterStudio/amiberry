@@ -189,4 +189,18 @@ class HostSettingsStoreTest {
 	/** The store's suspending write, run to completion (the UI awaits it on IO). */
 	private fun HostSettingsStore.writeSync(values: Map<String, String>): Boolean = runBlocking { write(values) }
 
+
+	private fun path(id: String): String =
+		"{\"id\":\"$id\",\"group\":\"g\",\"label\":\"$id\",\"help\":\"\",\"type\":\"path\",\"apply\":\"live\",\"default\":\"\"}"
+
+	@Test
+	fun `a clear drops the setting's lines and keeps everything else`() = runBlocking {
+		val (store, file) = store("write_logfile=yes\nfloppy_path=/storage/disks\n; comment\nfloppy_path=/other\n", schemaOf(bool("write_logfile", "false"), path("floppy_path")))
+		assertTrue(store.clear(listOf("floppy_path")))
+		assertEquals("true", store.read()["write_logfile"])
+		assertNull(store.read()["floppy_path"])
+		val text = file.readText()
+		assertFalse(text.contains("floppy_path"))
+		assertTrue(text.contains("; comment"))
+	}
 }

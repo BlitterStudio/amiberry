@@ -6,9 +6,11 @@ import androidx.lifecycle.viewModelScope
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.blitterstudio.amiberry.data.ContentFolders
 import com.blitterstudio.amiberry.data.HostSettingsStore
 import com.blitterstudio.amiberry.data.ShaderCatalog
 import com.blitterstudio.amiberry.data.model.SettingsSchema
+import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -67,9 +69,12 @@ class AppSettingsViewModel(application: Application) : AndroidViewModel(applicat
 	/** The shader catalog (the built-ins and the shaders folder scan) for the shader defaults. */
 	var shaderCatalogEntries by mutableStateOf(ShaderCatalog.BUILT_INS)
 		private set
-
-	/** The bezel files of the bezels folder, for the custom bezel default. */
+	/** The bezel files of the bezel folder, for the custom bezel default. */
 	var bezelEntries by mutableStateOf<List<String>>(emptyList())
+		private set
+
+	/** One folder setting's current state, as the Folders section shows it. */
+	var folderStates by mutableStateOf<Map<String, FolderState>>(emptyMap())
 		private set
 
 	/** Reads amiberry.conf and the catalogs again (the screen calls it on entry and on resume). */
@@ -77,23 +82,47 @@ class AppSettingsViewModel(application: Application) : AndroidViewModel(applicat
 		val store = store
 		if (store == null) {
 			values = schema?.hostDefaults.orEmpty()
+			folderStates = emptyMap()
 			return
 		}
 		viewModelScope.launch {
 			val read = withContext(Dispatchers.IO) {
 				val settingsFile = HostSettingsStore.settingsFile(app.filesDir, app.getExternalFilesDir(null))
+				val external = app.getExternalFilesDir(null)
 				val fileValues = store.read()
 				// Both catalogs resolve their folder from amiberry.conf the
 				// way the emulator does (ShaderCatalog's shared resolver).
-				val shaders = ShaderCatalog.scan(ShaderCatalog.resolveScanRoots(settingsFile, app.getExternalFilesDir(null)))
-				val bezels = ShaderCatalog.scanBezels(ShaderCatalog.resolveBezelScanRoots(settingsFile, app.getExternalFilesDir(null)))
-				Triple(fileValues, shaders, bezels)
+				val shaders = ShaderCatalog.scan(ShaderCatalog.resolveScanRoots(settingsFile, external))
+				val bezels = ShaderCatalog.scanBezels(ShaderCatalog.resolveBezelScanRoots(settingsFile, external))
+				val folders = folderIds.associateWith { id ->
+					val effective = ContentFolders.effective(id, settingsFile, external)
+					// A file setting names a file; every other path a folder.
+					val isFile = schema?.hostSetting(id)?.type == SettingsSchema.TYPE_FILE
+					FolderState(
+						id = id,
+						stored = fileValues[id],
+						effective = effective,
+						exists = effective?.let { if (isFile) safeIsFile(it) else safeIsDir(it) } == true
+					)
+				}
+				ReadResult(fileValues, shaders, bezels, folders)
 			}
-			values = schema?.hostDefaults.orEmpty() + read.first
-			shaderCatalogEntries = read.second
-			bezelEntries = read.third
+			values = schema?.hostDefaults.orEmpty() + read.fileValues
+			shaderCatalogEntries = read.shaders
+			bezelEntries = read.bezels
+			folderStates = read.folders
 		}
 	}
+
+	/** The folder settings the schema carries, in the layer's order. */
+	private val folderIds: List<String>
+		get() = schema?.hostSettings
+			?.filter {
+				(it.type == SettingsSchema.TYPE_PATH || it.type == SettingsSchema.TYPE_FILE) &&
+					!it.hiddenOnAndroid
+			}
+			?.map { it.id }
+			.orEmpty()
 
 	/** Sets one host setting and saves the file; false (with a notice) when it was refused. */
 	fun set(id: String, value: String) {
@@ -115,13 +144,55 @@ class AppSettingsViewModel(application: Application) : AndroidViewModel(applicat
 				}
 				store.write(mapOf(id to value) + extra)
 			}
-			if (written) {
-				notice = null
-				reload()
-			} else {
-				notice = com.blitterstudio.amiberry.R.string.appsettings_write_failed
-			}
+			writeFinished(id, written)
 		}
+	}
+
+	/**
+	 * Returns a folder setting to its default: its line leaves the file,
+	 * as the emulator's own writer leaves a setting at its default.
+	 */
+	fun resetFolder(id: String) {
+		val store = store
+		if (store == null) {
+			notice = com.blitterstudio.amiberry.R.string.appsettings_unavailable
+			return
+		}
+		viewModelScope.launch {
+			val cleared = withContext(Dispatchers.IO) { store.clear(listOf(id)) }
+			writeFinished(id, cleared)
+		}
+	}
+
+	private fun writeFinished(id: String, written: Boolean) {
+		if (written) {
+			// A folder change moves what the repositories list: the Library
+			// and the pickers rescan at once, without a restart.
+			if (id in folderIds) ContentFolders.notifyChanged()
+			notice = null
+			reload()
+		} else {
+			notice = com.blitterstudio.amiberry.R.string.appsettings_write_failed
+		}
+	}
+
+	private data class ReadResult(
+		val fileValues: Map<String, String>,
+		val shaders: List<String>,
+		val bezels: List<String>,
+		val folders: Map<String, FolderState>
+	)
+
+	private fun safeIsDir(dir: File): Boolean = try {
+		dir.isDirectory
+	} catch (_: Exception) {
+		false
+	}
+
+	private fun safeIsFile(file: File): Boolean = try {
+		file.isFile
+	} catch (_: Exception) {
+		false
 	}
 
 }

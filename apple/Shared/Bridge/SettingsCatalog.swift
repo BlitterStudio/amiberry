@@ -217,6 +217,10 @@ public struct SettingDescriptor: Hashable, Sendable, Identifiable {
 		case AMIBERRY_SETTING_REAL: kind = .real
 		case AMIBERRY_SETTING_CHOICE: kind = .choice
 		case AMIBERRY_SETTING_PATH: kind = .path
+		// A single file rather than a folder: the same controls, with the
+		// row choosing a file (the RetroArch config) or the folder to keep
+		// a file's name in (the log) as its own switch says.
+		case AMIBERRY_SETTING_FILE: kind = .path
 		case AMIBERRY_SETTING_HOTKEY: kind = .hotkey
 		default: kind = .string
 		}

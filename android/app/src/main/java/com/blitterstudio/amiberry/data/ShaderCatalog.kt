@@ -1,9 +1,7 @@
 package com.blitterstudio.amiberry.data
 
-import com.blitterstudio.amiberry.data.model.StoragePaths
 import java.io.File
 import java.nio.file.Files
-import java.util.Locale
 
 /**
  * Builds the Android Native shader choices using the same catalog contract as ImGui.
@@ -19,35 +17,6 @@ object ShaderCatalog {
 	private const val SETTINGS_FILE_NAME = "amiberry.conf"
 	private const val LEGACY_SETTINGS_DIRECTORY = "conf"
 
-	internal val managedPathSuffixes = mapOf(
-		"config_path" to StoragePaths.CONFIGURATIONS,
-		"controllers_path" to StoragePaths.CONTROLLERS,
-		"whdboot_path" to StoragePaths.WHDBOOT,
-		"whdload_arch_path" to StoragePaths.WHDLOAD_ARCHIVES,
-		"floppy_path" to StoragePaths.FLOPPIES,
-		"harddrive_path" to StoragePaths.HARD_DRIVES,
-		"cdrom_path" to StoragePaths.CDROMS,
-		"logfile_path" to "Amiberry.log",
-		"rom_path" to StoragePaths.ROMS,
-		"rp9_path" to StoragePaths.RP9,
-		"saveimage_dir" to "",
-		"savestate_dir" to StoragePaths.SAVE_STATES,
-		"ripper_path" to "Ripper",
-		"inputrecordings_dir" to StoragePaths.INPUT_RECORDINGS,
-		"screenshot_dir" to StoragePaths.SCREENSHOTS,
-		"nvram_dir" to StoragePaths.NVRAM,
-		"video_dir" to StoragePaths.VIDEOS,
-		"themes_path" to "${StoragePaths.VISUALS}/${StoragePaths.THEMES}",
-		"shaders_path" to "${StoragePaths.VISUALS}/${StoragePaths.SHADERS}",
-		"bezels_path" to "${StoragePaths.VISUALS}/${StoragePaths.BEZELS}"
-	)
-
-	private val visualDirectoryNames = mapOf(
-		"themes_path" to StoragePaths.THEMES,
-		"shaders_path" to StoragePaths.SHADERS,
-		"bezels_path" to StoragePaths.BEZELS
-	)
-
 	/** Select the settings file native Android would use before legacy migration runs. */
 	fun findSettingsFile(internalFilesDir: File, externalFilesDir: File?): File? {
 		val candidates = buildList {
@@ -57,43 +26,16 @@ object ShaderCatalog {
 				add(File(File(externalRoot, LEGACY_SETTINGS_DIRECTORY), SETTINGS_FILE_NAME))
 			}
 		}
-		return candidates.firstOrNull(::safeIsFile)
+		return candidates.firstOrNull(GlobalSettingsPaths::safeIsFile)
 	}
 
 	/** Read the native-display shader default from amiberry.conf. */
 	fun resolveGlobalShader(globalSettingsFile: File?): String =
-		readGlobalSettings(globalSettingsFile).shader.ifEmpty { "none" }
+		GlobalSettingsPaths.readGlobalSettings(globalSettingsFile).shader.ifEmpty { "none" }
 
 	/** Resolve the configuration directory used by native after loading amiberry.conf. */
-	fun resolveConfigurationRoot(globalSettingsFile: File?, externalFilesDir: File?): File? {
-		val paths = readGlobalSettings(globalSettingsFile)
-		val inferredBasePath = inferSerializedBaseContentPath(paths.managedPaths)
-		var resolvedRoot = when {
-			paths.hasBaseContentPath && paths.baseContentPath.isNotEmpty() ->
-				File(paths.baseContentPath, StoragePaths.CONFIGURATIONS)
-			else -> externalFilesDir?.let { File(it, StoragePaths.CONFIGURATIONS) }
-		}
-
-		val serializedBasePathToSkip = inferredBasePath.takeIf {
-			paths.hasBaseContentPath &&
-				paths.baseContentPath.isNotEmpty() &&
-				it.isNotEmpty() &&
-				!pathsMatch(it, paths.baseContentPath)
-		}
-		for (line in paths.managedPaths) {
-			if (line.key != "config_path") continue
-			if (serializedBasePathToSkip != null &&
-				pathsMatch(
-					line.value,
-					File(serializedBasePathToSkip, StoragePaths.CONFIGURATIONS).path
-				)
-			) {
-				continue
-			}
-			resolvedRoot = line.value.takeIf { it.isNotEmpty() }?.let(::File)
-		}
-		return resolvedRoot
-	}
+	fun resolveConfigurationRoot(globalSettingsFile: File?, externalFilesDir: File?): File? =
+		GlobalSettingsPaths.resolveConfigurationRoot(globalSettingsFile, externalFilesDir)
 
 	/**
 	 * Resolve the shader root used by native Android.
@@ -102,7 +44,7 @@ object ShaderCatalog {
 	 * as a built-ins-only catalog instead of falling back to another content location.
 	 */
 	fun resolveRoot(globalSettingsFile: File?, externalFilesDir: File?): File? =
-		resolveRoots(SHADERS_KEY, StoragePaths.SHADERS, globalSettingsFile, externalFilesDir).configuredRoot
+		resolveRoots(SHADERS_KEY, globalSettingsFile, externalFilesDir).configuredRoot
 
 	/**
 	 * Resolve the directories that are available for the Kotlin catalog to scan.
@@ -113,7 +55,7 @@ object ShaderCatalog {
 	 * remain authoritative.
 	 */
 	fun resolveScanRoots(globalSettingsFile: File?, externalFilesDir: File?): List<File> =
-		resolveVisualScanRoots(SHADERS_KEY, StoragePaths.SHADERS, globalSettingsFile, externalFilesDir)
+		resolveVisualScanRoots(SHADERS_KEY, globalSettingsFile, externalFilesDir)
 
 	/**
 	 * The bezels folder the emulator resolves its bezel names in
@@ -122,88 +64,35 @@ object ShaderCatalog {
 	 * sources the shaders catalog scans until native has merged them.
 	 */
 	fun resolveBezelScanRoots(globalSettingsFile: File?, externalFilesDir: File?): List<File> =
-		resolveVisualScanRoots(BEZELS_KEY, StoragePaths.BEZELS, globalSettingsFile, externalFilesDir)
+		resolveVisualScanRoots(BEZELS_KEY, globalSettingsFile, externalFilesDir)
 
 	/** One visuals folder's scan roots, as the shaders ones are resolved. */
 	private fun resolveVisualScanRoots(
 		key: String,
-		directoryName: String,
 		globalSettingsFile: File?,
 		externalFilesDir: File?
 	): List<File> {
-		val roots = resolveRoots(key, directoryName, globalSettingsFile, externalFilesDir)
+		val roots = resolveRoots(key, globalSettingsFile, externalFilesDir)
 		val configuredRoot = roots.configuredRoot ?: return emptyList()
 
 		val canonicalRoot = roots.canonicalRoot ?: return listOf(configuredRoot)
-		if (!pathsMatch(configuredRoot.path, canonicalRoot.path)) return listOf(configuredRoot)
+		if (!GlobalSettingsPaths.pathsMatch(configuredRoot.path, canonicalRoot.path)) return listOf(configuredRoot)
 
 		val availableRoots = (listOf(configuredRoot) + roots.legacyScanRoots)
-			.distinctBy { normalizePathForCompare(it.path) }
-			.filter(::safeIsDirectory)
+			.distinctBy { GlobalSettingsPaths.normalizePathForCompare(it.path) }
+			.filter(GlobalSettingsPaths::safeIsDirectory)
 		return availableRoots.ifEmpty { listOf(configuredRoot) }
 	}
 
-	/** The amiberry.conf key and the Visuals subfolder of each catalog the launcher mirrors. */
+	/** The amiberry.conf key of each catalog the launcher mirrors. */
 	private const val SHADERS_KEY = "shaders_path"
 	private const val BEZELS_KEY = "bezels_path"
 
 	private fun resolveRoots(
 		key: String,
-		directoryName: String,
 		globalSettingsFile: File?,
 		externalFilesDir: File?
-	): ResolvedRoots {
-		val paths = readGlobalSettings(globalSettingsFile)
-		val inferredBasePath = inferSerializedBaseContentPath(paths.managedPaths)
-		val defaultRoot = externalFilesDir?.let { canonicalVisualRoot(it, directoryName) }
-		val usesInferredBasePath = !paths.hasBaseContentPath &&
-			inferredBasePath.isNotEmpty() &&
-			paths.managedPaths.any { it.matchesLegacyVisualPath(inferredBasePath) }
-		val canonicalRoot = when {
-			paths.hasBaseContentPath && paths.baseContentPath.isNotEmpty() ->
-				canonicalVisualRoot(paths.baseContentPath, directoryName)
-			usesInferredBasePath ->
-				canonicalVisualRoot(inferredBasePath, directoryName)
-			else -> defaultRoot
-		}
-		var resolvedRoot = canonicalRoot
-
-		val serializedBasePathToSkip = inferredBasePath.takeIf {
-			paths.hasBaseContentPath &&
-				paths.baseContentPath.isNotEmpty() &&
-				it.isNotEmpty() &&
-				!pathsMatch(it, paths.baseContentPath)
-		}
-		val legacyVisualRoots = buildList {
-			add(externalFilesDir?.let { File(it, StoragePaths.CONFIGURATIONS) }
-				?: File(StoragePaths.CONFIGURATIONS))
-			paths.baseContentPath.takeIf { it.isNotEmpty() }
-				?.let { add(File(it, StoragePaths.CONFIGURATIONS)) }
-			inferredBasePath.takeIf { it.isNotEmpty() }
-				?.let { add(File(it, StoragePaths.CONFIGURATIONS)) }
-		}
-
-		for (line in paths.managedPaths) {
-			if (line.key != key) continue
-			if (serializedBasePathToSkip != null &&
-				pathsMatch(line.value, canonicalVisualRoot(serializedBasePathToSkip, directoryName).path)
-			) {
-				continue
-			}
-			if (legacyVisualRoots.any { line.matchesLegacyVisualPath(it) }) continue
-			resolvedRoot = line.value.takeIf { it.isNotEmpty() }?.let(::File)
-		}
-
-		val legacyScanRoots = buildList {
-			externalFilesDir?.let { add(legacyVisualRoot(it, directoryName)) }
-			when {
-				paths.hasBaseContentPath && paths.baseContentPath.isNotEmpty() ->
-					add(legacyVisualRoot(File(paths.baseContentPath), directoryName))
-				usesInferredBasePath -> add(legacyVisualRoot(File(inferredBasePath), directoryName))
-			}
-		}
-		return ResolvedRoots(resolvedRoot, canonicalRoot, legacyScanRoots)
-	}
+	) = GlobalSettingsPaths.resolveRoots(key, globalSettingsFile, externalFilesDir)
 
 	/**
 	 * The bezel images of the bezels folder, by their name from the root —
@@ -242,7 +131,7 @@ object ShaderCatalog {
 		}
 
 		for (root in roots) {
-			if (safeIsDirectory(root)) visit(root, "")
+			if (GlobalSettingsPaths.safeIsDirectory(root)) visit(root, "")
 		}
 		return images.sorted()
 	}
@@ -264,7 +153,6 @@ object ShaderCatalog {
 		roots: List<File>,
 		listChildren: (File) -> List<File>?
 	): List<String> {
-
 		val external = linkedSetOf<String>()
 		val visitedDirectories = mutableSetOf<String>()
 
@@ -303,102 +191,13 @@ object ShaderCatalog {
 		}
 
 		for (root in roots) {
-			if (safeIsDirectory(root)) visit(root, "")
+			if (GlobalSettingsPaths.safeIsDirectory(root)) visit(root, "")
 		}
 		return BUILT_INS + external.sorted()
 	}
 
 	private fun relativeName(directory: String, name: String): String =
 		if (directory.isEmpty()) name else "$directory/$name"
-
-	private fun canonicalVisualRoot(base: File, directoryName: String): File =
-		File(File(base, StoragePaths.VISUALS), directoryName)
-
-	private fun canonicalVisualRoot(base: String, directoryName: String): File =
-		canonicalVisualRoot(File(base), directoryName)
-
-	private fun legacyVisualRoot(base: File, directoryName: String): File =
-		File(File(base, StoragePaths.CONFIGURATIONS), directoryName)
-
-	private fun ManagedPath.matchesLegacyVisualPath(baseContentPath: String): Boolean =
-		matchesLegacyVisualPath(File(baseContentPath, StoragePaths.CONFIGURATIONS))
-
-	private fun ManagedPath.matchesLegacyVisualPath(configurationsRoot: File): Boolean {
-		val directoryName = visualDirectoryNames[key] ?: return false
-		return pathsMatch(value, File(configurationsRoot, directoryName).path)
-	}
-
-	private fun inferSerializedBaseContentPath(lines: List<ManagedPath>): String {
-		val candidateCounts = sortedMapOf<String, Int>()
-		for (line in lines) {
-			val suffix = managedPathSuffixes[line.key] ?: continue
-			val candidate = extractBaseContentRoot(line.value, suffix)
-			if (candidate.isNotEmpty()) {
-				candidateCounts[candidate] = candidateCounts.getOrDefault(candidate, 0) + 1
-			}
-		}
-
-		var bestCandidate = ""
-		var bestCount = 0
-		for ((candidate, count) in candidateCounts) {
-			if (count > bestCount) {
-				bestCandidate = candidate
-				bestCount = count
-			}
-		}
-		return bestCandidate.takeIf { bestCount >= 3 }.orEmpty()
-	}
-
-	private fun extractBaseContentRoot(value: String, suffix: String): String {
-		val normalizedValue = normalizePathForCompare(value)
-		if (normalizedValue.isEmpty()) return ""
-
-		val normalizedSuffix = normalizePathForCompare(suffix)
-		if (normalizedSuffix.isEmpty()) return normalizedValue
-
-		val suffixWithSeparator = "/${normalizedSuffix.lowercase(Locale.ROOT)}"
-		if (normalizedValue.length <= suffixWithSeparator.length ||
-			!normalizedValue.lowercase(Locale.ROOT).endsWith(suffixWithSeparator)
-		) {
-			return ""
-		}
-		return normalizePathForCompare(
-			normalizedValue.dropLast(suffixWithSeparator.length)
-		)
-	}
-
-	internal fun pathsMatch(first: String, second: String): Boolean =
-		normalizePathForCompare(first) == normalizePathForCompare(second)
-
-	private fun normalizePathForCompare(path: String): String {
-		if (path.isEmpty()) return ""
-		var normalized = try {
-			File(path).toPath().normalize().toString()
-		} catch (_: Exception) {
-			path
-		}
-		if (File.separatorChar == '\\') normalized = normalized.replace('\\', '/')
-		if (normalized.isEmpty()) normalized = "."
-		while (normalized.length > 1 && normalized.endsWith('/')) {
-			if (normalized.length == 3 && normalized[1] == ':') break
-			normalized = normalized.dropLast(1)
-		}
-		return normalized
-	}
-
-	private fun safeIsDirectory(file: File): Boolean =
-		try {
-			file.isDirectory
-		} catch (_: Exception) {
-			false
-		}
-
-	private fun safeIsFile(file: File): Boolean =
-		try {
-			file.isFile
-		} catch (_: Exception) {
-			false
-		}
 
 	private fun safeTraversalKey(directory: File): String? =
 		try {
@@ -410,49 +209,4 @@ object ShaderCatalog {
 				null
 			}
 		}
-
-	private fun readGlobalSettings(file: File?): GlobalSettings {
-		val settings = GlobalSettings()
-		if (file == null) return settings
-
-		try {
-			file.forEachLine { rawLine ->
-				val line = rawLine.trim()
-				if (line.isEmpty() || line.startsWith(";")) return@forEachLine
-
-				val separator = line.indexOf('=')
-				if (separator < 0) return@forEachLine
-				val key = line.substring(0, separator).trim()
-				val value = line.substring(separator + 1).trim()
-				if (key == "base_content_path") {
-					settings.hasBaseContentPath = true
-					settings.baseContentPath = value
-				}
-				if (key in managedPathSuffixes) {
-					settings.managedPaths.add(ManagedPath(key, value))
-				}
-				if (key == "shader") {
-					settings.shader = value
-				}
-			}
-		} catch (_: Exception) {
-			// Missing, unreadable, or partially readable settings are non-fatal.
-		}
-		return settings
-	}
-
-	private data class GlobalSettings(
-		var baseContentPath: String = "",
-		var hasBaseContentPath: Boolean = false,
-		var shader: String = "none",
-		val managedPaths: MutableList<ManagedPath> = mutableListOf()
-	)
-
-	private data class ResolvedRoots(
-		val configuredRoot: File?,
-		val canonicalRoot: File?,
-		val legacyScanRoots: List<File>
-	)
-
-	private data class ManagedPath(val key: String, val value: String)
 }

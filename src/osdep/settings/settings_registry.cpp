@@ -151,6 +151,7 @@ amiberry_settings_status check_value(const definition& d, const uae_prefs& p,
 		return AMIBERRY_SETTINGS_OK;
 	}
 	case AMIBERRY_SETTING_PATH:
+	case AMIBERRY_SETTING_FILE:
 		// Every path option is stored in a MAX_DPATH field, and MAX_DPATH
 		// follows the host's PATH_MAX (1024 on macOS): a longer path is
 		// refused rather than truncated into another file's name.

@@ -69,6 +69,9 @@ import com.blitterstudio.amiberry.R
 import com.blitterstudio.amiberry.data.AppPreferences
 import com.blitterstudio.amiberry.data.model.SettingsSchema
 import com.blitterstudio.amiberry.ui.components.SidePaneEntry
+import com.blitterstudio.amiberry.ui.components.PickedFolder
+import com.blitterstudio.amiberry.ui.components.rememberImportPicker
+import java.io.File
 import com.blitterstudio.amiberry.ui.components.SidePaneList
 import com.blitterstudio.amiberry.ui.components.settings.CollapsibleSettingsSection
 import com.blitterstudio.amiberry.ui.components.settings.SettingSwitchRow
@@ -91,6 +94,13 @@ private val PAGES = AppSettingsSections.pages
 
 /** The page About & Licences is, after the sections' pages. */
 private const val ABOUT_PAGE = "about"
+
+/**
+ * The file settings the emulator reads, so their picker chooses a file;
+ * every other file setting names a file the emulator writes (the log), so
+ * the picker chooses the folder to keep the file's name in.
+ */
+private val FILE_PICKER_SETTINGS = setOf("retroarch_config")
 
 /**
  * App Settings, under the Library's gear: the emulator's own settings
@@ -135,6 +145,50 @@ fun AppSettingsScreen(
 		LaunchedEffect(notice) {
 			snackbarHostState.showSnackbar(context.getString(notice))
 			viewModel.clearNotice()
+		}
+	}
+	// The folder settings pick real paths from the device's storage (the
+	// emulator opens files by path; there is no SAF bridge), so the in-app
+	// browser is the picker: its folders are real paths, and the document
+	// tree is never offered.
+	var choosingFolder by rememberSaveable { mutableStateOf<String?>(null) }
+	val folderPicker = rememberImportPicker(
+		mimeTypes = arrayOf("*/*"),
+		extensions = emptySet(),
+		onFolder = { picked ->
+			val id = choosingFolder
+			choosingFolder = null
+			val dir = (picked as? PickedFolder.Local)?.dir ?: return@rememberImportPicker
+			// A file setting picks the folder to keep its file name in
+			// (the log); a folder setting takes the folder itself.
+			if (id != null && viewModel.schema?.hostSetting(id)?.type == SettingsSchema.TYPE_FILE) {
+				val name = viewModel.values[id]?.takeIf { it.isNotEmpty() }?.substringAfterLast('/')
+					?: "Amiberry.log"
+				viewModel.set(id, File(dir, name).path)
+			} else {
+				id?.let { viewModel.set(it, dir.path) }
+			}
+		},
+		folderLabelRes = R.string.appsettings_folder_use,
+		onFiles = { uris ->
+			val id = choosingFolder
+			choosingFolder = null
+			// Only a read-side file setting's Choose opens the file browser.
+			if (id != null && id in FILE_PICKER_SETTINGS) {
+				uris.firstOrNull()?.path?.let { viewModel.set(id, it) }
+			}
+		}
+	)
+
+	fun chooseFolder(id: String) {
+		choosingFolder = id
+		// An input file the emulator reads is picked as a file; a file the
+		// emulator writes (the log) is created in the folder picked, keeping
+		// its name — picking an existing file there would truncate it.
+		if (id in FILE_PICKER_SETTINGS) {
+			folderPicker.browseDevice()
+		} else {
+			folderPicker.browseFolders()
 		}
 	}
 
@@ -227,6 +281,7 @@ fun AppSettingsScreen(
 						pageId = if (searching) null else selectedPage,
 						query = query,
 						showMessage = ::showMessage,
+						onChooseFolder = ::chooseFolder,
 						modifier = Modifier
 							.weight(1f)
 							.fillMaxSize()
@@ -253,6 +308,7 @@ fun AppSettingsScreen(
 					pageId = if (searching) null else selectedPage,
 					query = query,
 					showMessage = ::showMessage,
+					onChooseFolder = ::chooseFolder,
 					modifier = Modifier
 						.fillMaxSize()
 						.focusRequester(pageContentFocus)
@@ -353,6 +409,7 @@ private fun AppSettingsContent(
 	pageId: String?,
 	query: String,
 	showMessage: (String) -> Unit,
+	onChooseFolder: (String) -> Unit,
 	modifier: Modifier = Modifier
 ) {
 	val context = LocalContext.current
@@ -383,7 +440,7 @@ private fun AppSettingsContent(
 				Text(stringResource(page.titleRes), style = MaterialTheme.typography.titleMedium)
 			}
 			page.sections.forEach { section ->
-				HostSection(section, viewModel, query)
+			HostSection(section, viewModel, query, onChooseFolder)
 			}
 			// The launcher's own cards are not host settings: they show on the page,
 			// never among a search's matches.
@@ -403,7 +460,12 @@ private fun AppSettingsContent(
  * otherwise (AppSettingsViewModel remembers).
  */
 @Composable
-private fun HostSection(section: AppSettingsSection, viewModel: AppSettingsViewModel, query: String) {
+private fun HostSection(
+	section: AppSettingsSection,
+	viewModel: AppSettingsViewModel,
+	query: String,
+	onChooseFolder: (String) -> Unit
+) {
 	val options = viewModel.schema?.let { AppSettingsSections.settingsOf(it, section) { it.matches(query) } }.orEmpty()
 	if (options.isEmpty()) return
 	val content: @Composable ColumnScope.() -> Unit = {
@@ -413,7 +475,10 @@ private fun HostSection(section: AppSettingsSection, viewModel: AppSettingsViewM
 				value = viewModel.values[option.id] ?: option.defaultOnAndroid,
 				onSet = { value -> viewModel.set(option.id, value) },
 				shaderCatalog = viewModel.shaderCatalogEntries,
-				bezels = viewModel.bezelEntries
+				bezels = viewModel.bezelEntries,
+				folder = viewModel.folderStates[option.id],
+				onResetFolder = { viewModel.resetFolder(option.id) },
+				onChooseFolder = { onChooseFolder(option.id) }
 			)
 		}
 	}
@@ -584,7 +649,7 @@ private fun RememberedControlsSetting(preferences: AppPreferences) {
 	}
 }
 
-/** Where the launcher's content lives, whether it may reach all of it, and where folders change. */
+/** Where the launcher's content lives, and whether it may reach all of it; the Folders section above changes each folder. */
 @Composable
 private fun StorageLocationSetting() {
 	val context = LocalContext.current

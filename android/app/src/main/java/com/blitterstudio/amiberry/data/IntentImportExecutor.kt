@@ -6,8 +6,6 @@ import android.util.Log
 import com.blitterstudio.amiberry.data.model.AmigaModel
 import com.blitterstudio.amiberry.data.model.EmulatorSettings
 import com.blitterstudio.amiberry.data.model.FileCategory
-import com.blitterstudio.amiberry.data.model.StoragePaths
-import java.io.File
 
 object IntentImportExecutor {
 
@@ -91,9 +89,7 @@ object IntentImportExecutor {
 		}
 
 	private fun importConfig(context: Context, uri: Uri, safeName: String): PreparedImport {
-		val baseDir = context.getExternalFilesDir(null)
-			?: return PreparedImport(ImportFeedback.importFailed(safeName))
-		val confDir = File(baseDir, StoragePaths.CONFIGURATIONS)
+		val confDir = ContentFolders.configurationsDir(context)
 		if (!confDir.exists() && !confDir.mkdirs()) {
 			Log.e(TAG, "Failed to create config directory: ${confDir.absolutePath}")
 			return PreparedImport(ImportFeedback.importFailed(safeName))
@@ -123,9 +119,11 @@ object IntentImportExecutor {
 	}
 
 	private fun importRp9(context: Context, uri: Uri, safeName: String): PreparedImport {
-		val baseDir = context.getExternalFilesDir(null)
-			?: return PreparedImport(ImportFeedback.importFailed(safeName))
-		val rp9Dir = File(baseDir, StoragePaths.RP9)
+		val rp9Dir = ContentFolders.effective(
+			"rp9_path",
+			ShaderCatalog.findSettingsFile(context.filesDir, context.getExternalFilesDir(null)),
+			context.getExternalFilesDir(null)
+		) ?: return PreparedImport(ImportFeedback.importFailed(safeName))
 		if (!rp9Dir.exists() && !rp9Dir.mkdirs())
 			return PreparedImport(ImportFeedback.importFailed(safeName))
 		val targetFile = FileManager.uniqueImportTarget(rp9Dir, safeName)

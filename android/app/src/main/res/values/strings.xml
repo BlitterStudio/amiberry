@@ -489,6 +489,7 @@
     <string name="device_browser_unreadable">This folder can\'t be opened.</string>
     <string name="device_browser_empty">No folders or supported files here.</string>
     <string name="device_browser_import_folder">Import this folder</string>
+    <string name="device_browser_folder_write_denied">Writing into a chosen folder needs storage access; the folder was not changed.</string>
     <string name="device_browser_import_selected">Import (%1$d)</string>
     <string name="device_browser_up">Up one folder</string>
     <string name="device_browser_close">Close</string>
@@ -550,6 +551,13 @@
     <string name="appsettings_section_whdload">WHDLoad</string>
     <string name="appsettings_section_advanced">Advanced</string>
     <string name="appsettings_section_logging">Logging</string>
+    <string name="appsettings_section_folders">Folders</string>
+    <string name="appsettings_folder_choose">Choose…</string>
+    <string name="appsettings_folder_use">Use this folder</string>
+    <string name="appsettings_folder_reset">Reset to default</string>
+    <string name="appsettings_folder_default">Default</string>
+    <string name="appsettings_folder_default_path">Default: %1$s</string>
+    <string name="appsettings_folder_missing">Folder not found on the device.</string>
     <string name="appsettings_device_automatic">Automatic</string>
     <string name="appsettings_sound_system_default">System default</string>
     <string name="appsettings_library_title">Library</string>
@@ -562,5 +570,5 @@
     <string name="appsettings_storage_title">Storage</string>
     <string name="appsettings_storage_full_access">All Files Access granted: the whole shared storage can be browsed.</string>
     <string name="appsettings_storage_limited_access">All Files Access not granted: only the app\'s own folders and picked files can be read.</string>
-    <string name="appsettings_storage_folders_footer">Content folders change from the classic settings window: open Advanced settings from a machine\'s editor.</string>
+    <string name="appsettings_storage_folders_footer">Each content folder changes in the Folders section, and the Library and the pickers follow at once.</string>
 </resources>

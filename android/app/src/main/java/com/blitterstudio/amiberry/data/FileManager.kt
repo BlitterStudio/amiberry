@@ -66,12 +66,16 @@ object FileManager {
 		val failures: List<DocumentTreeFailure>
 	)
 
-	fun getAppStoragePath(context: Context): String {
-		return context.getExternalFilesDir(null)?.absolutePath ?: ""
-	}
+	/** The base content root the repositories scan: the one amiberry.conf resolves to. */
+	fun getAppStoragePath(context: Context): String =
+		ContentFolders.baseRoot(
+			ShaderCatalog.findSettingsFile(context.filesDir, context.getExternalFilesDir(null)),
+			context.getExternalFilesDir(null)
+		)?.absolutePath ?: ""
 
+	/** The category's folder, following the path setting amiberry.conf holds for it. */
 	fun getCategoryDir(context: Context, category: FileCategory): File {
-		return File(getAppStoragePath(context), category.dirName)
+		return ContentFolders.categoryDir(context, category)
 	}
 
 	/**
@@ -202,7 +206,7 @@ object FileManager {
 		val files = DeviceStorage.supportedFilesUnder(
 			dir,
 			FileCategory.allExtensions,
-			excluded = listOfNotNull(context.getExternalFilesDir(null))
+			excluded = importExcludedDirs(context)
 		)
 		val withCue = importIncludesCue(files.map { it.name })
 		return files.map { file ->
@@ -270,35 +274,38 @@ object FileManager {
 			?: emptyList()
 	}
 
-	/**
-	 * Scan all known directories for files of a given category.
-	 * Also checks the root app storage dir for matching files (users may put files there).
-	 */
+	/** The folders the Library lists a category's files from: see [ContentFolders.libraryRoots]. */
+	fun scanRoots(context: Context, category: FileCategory): List<File> =
+		ContentFolders.libraryRoots(
+			category,
+			ShaderCatalog.findSettingsFile(context.filesDir, context.getExternalFilesDir(null)),
+			context.getExternalFilesDir(null)
+		)
+
+	/** Scan every root of a category (see [scanRoots]) for its files. */
 	fun scanForCategory(context: Context, category: FileCategory): List<AmigaFile> {
 		val results = mutableListOf<AmigaFile>()
 		val seenPaths = mutableSetOf<String>()
-
-		// Scan the category-specific directory
-		val categoryDir = getCategoryDir(context, category)
-		for (file in scanDirectory(categoryDir, category.extensions, category)) {
-			if (seenPaths.add(file.path)) results.add(file)
-		}
-
-		// Also scan the root app directory for matching files
-		val rootDir = File(getAppStoragePath(context))
-		for (file in scanDirectory(rootDir, category.extensions, category)) {
-			if (seenPaths.add(file.path)) results.add(file)
-		}
-
-		// For ROMs, also check WHDBoot/Kickstarts
-		if (category == FileCategory.ROMS) {
-			val kickstartsDir = File(rootDir, StoragePaths.WHDBOOT_KICKSTARTS)
-			for (file in scanDirectory(kickstartsDir, category.extensions, category)) {
+		for (root in scanRoots(context, category)) {
+			for (file in scanDirectory(root, category.extensions, category)) {
 				if (seenPaths.add(file.path)) results.add(file)
 			}
 		}
-
 		return results.sortedBy { it.name.lowercase() }
+	}
+
+	/**
+	 * The folders a recursive import must not descend into: the app's own
+	 * storage and every folder the Library lists a category from (a path
+	 * setting may have moved one outside it), so importing a folder that
+	 * holds a library root cannot copy the library into itself. The base
+	 * content root is not one of them: only its loose files are listed, and
+	 * a base pointing at shared storage would otherwise block every import.
+	 */
+	internal fun importExcludedDirs(context: Context): List<File> {
+		val base = File(getAppStoragePath(context))
+		return listOfNotNull(context.getExternalFilesDir(null)) +
+			FileCategory.entries.flatMap { scanRoots(context, it) }.filter { it != base }
 	}
 
 	fun ensureDirectories(context: Context) {
@@ -364,20 +371,26 @@ object FileManager {
 		return candidate
 	}
 
-	internal fun isManagedCategoryFile(baseDir: File, file: AmigaFile): Boolean {
+	/**
+	 * Whether [file] is one the Files tab may delete: inside one of
+	 * [baseDirs] — the app's own storage and the category's configured
+	 * folder, which a path setting may have moved outside it — and of the
+	 * category's kind.
+	 */
+	internal fun isManagedCategoryFile(baseDirs: List<File>, file: AmigaFile): Boolean {
 		return try {
-			val canonicalBase = baseDir.canonicalFile
+			val canonicalBases = baseDirs.map { it.canonicalFile }
 			val target = File(file.path).canonicalFile
 			target.isFile &&
-				target.isUnder(canonicalBase) &&
+				canonicalBases.any { target.isUnder(it) } &&
 				target.extension.lowercase() in file.category.extensions
 		} catch (_: IOException) {
 			false
 		}
 	}
 
-	fun deleteManagedFile(baseDir: File, file: AmigaFile): Boolean {
-		if (!isManagedCategoryFile(baseDir, file)) return false
+	fun deleteManagedFile(baseDirs: List<File>, file: AmigaFile): Boolean {
+		if (!isManagedCategoryFile(baseDirs, file)) return false
 		return try {
 			File(file.path).canonicalFile.delete()
 		} catch (_: IOException) {

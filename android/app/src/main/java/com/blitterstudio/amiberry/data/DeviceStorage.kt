@@ -98,8 +98,9 @@ object DeviceStorage {
 		null
 	}
 
+	/** Empty [extensions] means no filter: every file is supported (a file-setting picker). */
 	private fun File.isSupportedFile(extensions: Set<String>): Boolean =
-		isFile && extension.lowercase() in extensions
+		isFile && (extensions.isEmpty() || extension.lowercase() in extensions)
 
 	private const val MAX_DEPTH = 16
 }

@@ -72,6 +72,9 @@ class ImportPicker internal constructor(
 	/** The in-app browser of the device's storage and USB drives, whatever pickers exist. */
 	fun browseDevice() = browse(BrowseMode.Files)
 
+	/** The in-app browser choosing a folder (a real path, not a document tree). */
+	fun browseFolders() = browse(BrowseMode.Folder)
+
 	/**
 	 * Straight to the grant screen (the caller has already said why), then the browser
 	 * once the user returns with access.
@@ -93,6 +96,7 @@ fun rememberImportPicker(
 	extensions: Set<String>,
 	multiple: Boolean = false,
 	onFolder: ((PickedFolder) -> Unit)? = null,
+	folderLabelRes: Int? = null,
 	onFiles: (List<Uri>) -> Unit
 ): ImportPicker {
 	val context = LocalContext.current
@@ -114,10 +118,28 @@ fun rememberImportPicker(
 	val treeLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
 		if (uri != null) currentOnFolder?.invoke(PickedFolder.Tree(uri))
 	}
-	val readPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+	val writePermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
 		val mode = browseAfterGrant
 		browseAfterGrant = null
-		if (granted && mode != null) browserMode = mode
+		when {
+			granted && mode != null -> browserMode = mode
+			// A folder the picker writes into is not usable without write
+			// access; a plain browse still opens on read alone.
+			mode == BrowseMode.Folder ->
+				Toast.makeText(context, R.string.device_browser_folder_write_denied, Toast.LENGTH_SHORT).show()
+			mode != null -> browserMode = mode
+		}
+	}
+	val readPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+		val mode = browseAfterGrant
+		if (granted && mode != null && legacyFolderPickNeedsWrite() &&
+			!hasGranted(context, Manifest.permission.WRITE_EXTERNAL_STORAGE)
+		) {
+			writePermissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+		} else {
+			browseAfterGrant = null
+			if (granted && mode != null) browserMode = mode
+		}
 	}
 
 	val lifecycleOwner = LocalLifecycleOwner.current
@@ -144,7 +166,11 @@ fun rememberImportPicker(
 			}
 		} else {
 			browseAfterGrant = mode
-			readPermissionLauncher.launch(Manifest.permission.READ_EXTERNAL_STORAGE)
+			if (hasGranted(context, Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
+				readPermissionLauncher.launch(Manifest.permission.READ_EXTERNAL_STORAGE)
+			} else {
+				writePermissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+			}
 		}
 	}
 
@@ -160,6 +186,9 @@ fun rememberImportPicker(
 			},
 			browse = { mode ->
 				when {
+					// A folder the launcher writes into needs write access,
+					// not the read alone a browse takes.
+					mode == BrowseMode.Folder && !hasWritableDeviceStorageAccess(context) -> requestAccess(mode)
 					hasDeviceStorageAccess(context) -> browserMode = mode
 					// Android 11+: say why before sending the user to the grant screen.
 					Build.VERSION.SDK_INT >= Build.VERSION_CODES.R -> accessDialogMode = mode
@@ -167,7 +196,11 @@ fun rememberImportPicker(
 				}
 			},
 			requestAccess = { mode ->
-				if (hasDeviceStorageAccess(context)) browserMode = mode else requestAccess(mode)
+				when {
+					mode == BrowseMode.Folder && !hasWritableDeviceStorageAccess(context) -> requestAccess(mode)
+					hasDeviceStorageAccess(context) -> browserMode = mode
+					else -> requestAccess(mode)
+				}
 			}
 		)
 	}
@@ -187,6 +220,7 @@ fun rememberImportPicker(
 			extensions = extensions,
 			multiple = multiple,
 			allowFolder = mode == BrowseMode.Folder || (onFolder != null && multiple),
+			folderLabelRes = folderLabelRes,
 			onDismiss = { browserMode = null },
 			onPickFiles = { files ->
 				browserMode = null
@@ -201,6 +235,24 @@ fun rememberImportPicker(
 
 	return picker
 }
+
+/**
+ * Whether a folder the picker picks — a destination the launcher writes
+ * into — may be written: All Files Access on Android 11+, read and write
+ * storage permissions below it (the app's minSdk is 29, with
+ * requestLegacyExternalStorage set, so the permissions reach the whole
+ * shared storage there).
+ */
+fun hasWritableDeviceStorageAccess(context: Context): Boolean =
+	if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) hasDeviceStorageAccess(context)
+	else hasDeviceStorageAccess(context) && hasGranted(context, Manifest.permission.WRITE_EXTERNAL_STORAGE)
+
+/** Whether a folder pick also needs the write permission, decided from the SDK level. */
+internal fun legacyFolderPickNeedsWrite(sdkInt: Int = Build.VERSION.SDK_INT): Boolean =
+	sdkInt < Build.VERSION_CODES.R
+
+internal fun hasGranted(context: Context, permission: String): Boolean =
+	ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
 
 /** Whether the in-app browser can read shared storage and USB drives. */
 fun hasDeviceStorageAccess(context: Context): Boolean =

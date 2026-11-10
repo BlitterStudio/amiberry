@@ -317,7 +317,8 @@ class SettingsSchema(
 		const val TYPE_INT = "int"
 		const val TYPE_REAL = "real"
 		const val TYPE_CHOICE = "choice"
-
+		const val TYPE_PATH = "path"
+		const val TYPE_FILE = "file"
 		/** The labels that make a first choice of "0" read as off (see [Option.isSwitch]). */
 		private val OFF_LABELS = setOf("disabled", "off", "no", "none")
 

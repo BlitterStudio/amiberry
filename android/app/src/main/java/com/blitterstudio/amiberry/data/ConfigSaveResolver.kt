@@ -1,6 +1,7 @@
 package com.blitterstudio.amiberry.data
 
 import java.io.File
+import java.io.IOException
 
 /**
  * Classifies a save request against the config currently being edited.
@@ -19,14 +20,26 @@ object ConfigSaveResolver {
 		data class CollisionWithOther(val file: File) : Resolution
 	}
 
-	fun resolve(confDir: File, requestedName: String, currentConfigName: String?): Resolution {
+	/**
+	 * [openConfigPath] is the file the editor has open, by its whole path
+	 * (wherever it was loaded from), not its name: the configurations
+	 * folder may have changed since, and the same name under the new
+	 * folder is another machine's config, not the open one's.
+	 */
+	fun resolve(confDir: File, requestedName: String, openConfigPath: String?): Resolution {
 		val target = ConfigFiles.targetFileForName(confDir, requestedName)
 			?: return Resolution.InvalidName
-		val trackedTarget = currentConfigName?.let { ConfigFiles.targetFileForName(confDir, it) }
+		val trackedTarget = openConfigPath?.let(::File)
 		return when {
-			trackedTarget != null && target == trackedTarget -> Resolution.OverwriteTracked(target)
+			trackedTarget != null && sameFile(target, trackedTarget) -> Resolution.OverwriteTracked(target)
 			target.exists() -> Resolution.CollisionWithOther(target)
 			else -> Resolution.WriteNew(target)
 		}
+	}
+
+	private fun sameFile(first: File, second: File): Boolean = try {
+		first.canonicalFile == second.canonicalFile
+	} catch (_: IOException) {
+		first.absolutePath == second.absolutePath
 	}
 }
