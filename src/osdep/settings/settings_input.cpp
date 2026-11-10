@@ -635,15 +635,6 @@ bool tablet_option_available(const uae_prefs& p, const context&)
 	{id, group, label, help, AMIBERRY_SETTING_INT, apply, min, max, step, def, nullptr, 0, constraint, \
 		false, unit, 0, level}
 
-// The pointer-capture options desktops have and iOS does not: its
-// pointer is absolute and never captured, so capturing, untrapping and
-// per-device mice do nothing there.
-constexpr unsigned int pointer_capture_hidden = AMIBERRY_SETTINGS_HIDE_ON_IOS;
-// The Magic Mouse pair (untrap-on-move and its cursor choice): capture
-// concepts, dead on iOS and on Android, whose pointers are never trapped.
-constexpr unsigned int magic_mouse_hidden =
-	AMIBERRY_SETTINGS_HIDE_ON_IOS | AMIBERRY_SETTINGS_HIDE_ON_ANDROID;
-
 const definition definitions[] = {
 	{DYNAMIC_CHOICE_OPTION("joyport0", "input", "Port 1 device",
 			"Input device for joyport 1, the mouse port.",
@@ -701,11 +692,10 @@ const definition definitions[] = {
 			"Switch the port devices automatically based on input activity.",
 			AMIBERRY_APPLY_LIVE, "true", nullptr),
 		get_input_autoswitch, set_input_autoswitch, nullptr, nullptr, nullptr, nullptr},
-	hidden_on({BOOL_OPTION("input.multi_mouse", "input", "Multi-mouse support",
+	{BOOL_OPTION("input.multi_mouse", "input", "Multi-mouse support",
 			"Treat each physical mouse as a separate device for two-player mouse games.",
 			AMIBERRY_APPLY_LIVE, "false", nullptr),
 		get_input_multi_mouse, set_input_multi_mouse, nullptr, nullptr, nullptr, nullptr},
-		pointer_capture_hidden),
 	{BOOL_OPTION("input.joystick_up_button", "input", "Left face button as Joy Up",
 			"Bind the left face button (Xbox X / PS Square) as an extra Joy Up.",
 			AMIBERRY_APPLY_LIVE, "true", nullptr),
@@ -736,23 +726,20 @@ const definition definitions[] = {
 			AMIBERRY_APPLY_LIVE, 1, 1000, 1, "100",
 			"Between 1 and 1000; the core resets anything else to 100.", "%", false),
 		get_input_mouse_speed, set_input_mouse_speed, nullptr, nullptr, nullptr, nullptr},
-	hidden_on({BOOL_OPTION("magic_mouse", "input", "Release pointer on move",
+	{BOOL_OPTION("magic_mouse", "input", "Release pointer on move",
 			"Release the captured mouse pointer when it moves out of the emulator window.",
 			AMIBERRY_APPLY_LIVE, "false", nullptr),
 		get_magic_mouse, set_magic_mouse, nullptr, nullptr, nullptr, nullptr},
-		magic_mouse_hidden),
-	hidden_on({BOOL_OPTION("amiberry.middle_mouse", "input", "Middle button untrap",
+	{BOOL_OPTION("amiberry.middle_mouse", "input", "Middle button untrap",
 			"Release the mouse from the emulator window with the middle button.",
 			AMIBERRY_APPLY_LIVE, "true", nullptr),
 		get_middle_mouse, set_middle_mouse, nullptr, nullptr, nullptr, nullptr},
-		pointer_capture_hidden),
-	hidden_on({CHOICE_OPTION("magic_mousecursor", "input", "Released pointer cursor",
+	{CHOICE_OPTION("magic_mousecursor", "input", "Released pointer cursor",
 			"Which host cursor the pointer shows while it is released.",
 			AMIBERRY_APPLY_LIVE, "both", magic_cursor_choices,
 			"Needs the virtual mouse driver installed."),
 		get_magic_mousecursor, set_magic_mousecursor, tablet_option_available, nullptr, nullptr,
 		nullptr},
-		magic_mouse_hidden),
 	{BOOL_OPTION("tablet_library", "input", "Tablet.library emulation",
 			"Emulate the Amiga tablet.library for graphics tablets. AmigaOS sees the library after a reset.",
 			AMIBERRY_APPLY_RESET, "false",

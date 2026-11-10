@@ -2883,15 +2883,14 @@ void check_platform_visibility()
 		CHECK(d && d->hidden_on == native);
 	}
 #endif
-	const amiberry_setting_descriptor* magic_mouse = amiberry_settings_find("magic_mouse");
-	CHECK(magic_mouse && magic_mouse->hidden_on
-		== (AMIBERRY_SETTINGS_HIDE_ON_IOS | AMIBERRY_SETTINGS_HIDE_ON_ANDROID));
 	const amiberry_setting_descriptor* serial = amiberry_settings_find("serial_port");
 	CHECK(serial && serial->hidden_on == AMIBERRY_SETTINGS_HIDE_ON_IOS);
-	const amiberry_setting_descriptor* monitor_blank = amiberry_settings_find("gfx_monitorblankdelay");
-	CHECK(monitor_blank && monitor_blank->hidden_on == AMIBERRY_SETTINGS_HIDE_ON_ANDROID);
-	// The desktop build this test compiles has all of these.
-	CHECK(serial && !(serial->hidden_on & AMIBERRY_SETTINGS_HIDE_ON_DESKTOP));
+	const amiberry_setting_descriptor* on_top = amiberry_settings_find("amiberry.always_on_top");
+	CHECK(on_top && on_top->hidden_on == AMIBERRY_SETTINGS_HIDE_ON_IOS);
+	// Nothing is hidden on the desktop GUI this test compiles, and the
+	// reasoning-based marks are gone: the mouse pair stays visible.
+	const amiberry_setting_descriptor* magic_mouse = amiberry_settings_find("magic_mouse");
+	CHECK(magic_mouse && magic_mouse->hidden_on == 0);
 	const amiberry_setting_descriptor* use_gui = amiberry_settings_find("use_gui");
 	CHECK(use_gui && use_gui->hidden_on == 0);
 }

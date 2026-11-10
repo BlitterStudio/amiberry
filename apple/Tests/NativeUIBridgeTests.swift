@@ -37,16 +37,19 @@ final class SettingsCatalogTests: XCTestCase {
 	}
 
 	func testPlatformVisibilityMirrorTheLayer() throws {
-		// The layer's per-platform mask reaches the bridge: iOS has no
-		// serial backend or desktop window; Android never switches host
-		// display modes and never traps its pointer. The Mac app shows all
-		// of these, so the catalog's filter leaves them in there.
+		// The layer's per-platform mask reaches the bridge. Only compile
+		// gates and platform facts hide anything: iOS compiles no serial
+		// backend and has no window to keep on top, and the Mac app shows
+		// both, so the catalog's filter leaves them in there. The
+		// reasoning-based marks are gone: the mouse pair stays everywhere.
 		let serial = try XCTUnwrap(SettingsCatalog.descriptor(for: "serial_port"))
 		XCTAssertEqual(serial.hiddenPlatforms, [.iOS])
+		let onTop = try XCTUnwrap(SettingsCatalog.descriptor(for: "amiberry.always_on_top"))
+		XCTAssertEqual(onTop.hiddenPlatforms, [.iOS])
 		let magicMouse = try XCTUnwrap(SettingsCatalog.descriptor(for: "magic_mouse"))
-		XCTAssertEqual(magicMouse.hiddenPlatforms, [.iOS, .android])
+		XCTAssertTrue(magicMouse.hiddenPlatforms.isEmpty)
 		let monitorBlank = try XCTUnwrap(SettingsCatalog.descriptor(for: "gfx_monitorblankdelay"))
-		XCTAssertEqual(monitorBlank.hiddenPlatforms, [.android])
+		XCTAssertTrue(monitorBlank.hiddenPlatforms.isEmpty)
 		let useGUI = try XCTUnwrap(SettingsCatalog.descriptor(for: "use_gui"))
 		XCTAssertTrue(useGUI.hiddenPlatforms.isEmpty)
 		XCTAssertFalse(serial.hiddenHere)

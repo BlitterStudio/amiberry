@@ -838,25 +838,18 @@ bool linemode_available(const uae_prefs& p, const context&)
 #define STRING_OPTION(id, group, label, help, apply, def, constraint) \
 	{id, group, label, help, AMIBERRY_SETTING_STRING, apply, 0, 0, 0, def, nullptr, 0, constraint}
 
-// iOS runs one always-full screen: the windowed sizes and resize, the
-// borderless window, the host display pick, adaptive sync and the
-// window/full-window modes are desktop-window concepts with no visible
-// effect on the single window it reuses (gfx_window.cpp reuses one window
-// there). The PAL/NTSC refresh entries stay: set_displaydata() sets the
-// emulated chipset's rate (custom.cpp), not a host mode.
+// iOS apps have one window of a fixed size and no border or title bar:
+// the windowed sizes and the borderless window are desktop concepts the
+// platform cannot honour.
 constexpr unsigned int desktop_window_hidden = AMIBERRY_SETTINGS_HIDE_ON_IOS;
-// Android never switches the host display mode, so the blanking period
-// while PAL/NTSC switching re-syncs a host mode never runs.
-constexpr unsigned int android_host_mode_hidden = AMIBERRY_SETTINGS_HIDE_ON_ANDROID;
 
 const definition definitions[] = {
-	hidden_on({DYNAMIC_CHOICE_OPTION("gfx_display", "display", "Host display",
+	{DYNAMIC_CHOICE_OPTION("gfx_display", "display", "Host display",
 			"Which connected monitor shows the Amiga screen; the primary display when 0.",
 			AMIBERRY_APPLY_LIVE, "0",
 			"Needs more than one connected monitor. Applies to the native and the RTG screen."),
 		get_gfx_display, set_gfx_display, gfx_display_available, nullptr, gfx_display_range,
 		nullptr, gfx_display_dynamic_choices},
-		desktop_window_hidden),
 	{DYNAMIC_CHOICE_OPTION("gfx_display_rtg", "rtg", "RTG host display",
 			"Which connected monitor shows the RTG screen; the primary display when 0.",
 			AMIBERRY_APPLY_LIVE, "0", "Needs more than one connected monitor."),
@@ -877,41 +870,37 @@ const definition definitions[] = {
 		get_gfx_height_windowed, set_gfx_height_windowed, window_sizes_available, nullptr, nullptr,
 		nullptr},
 		desktop_window_hidden),
-	hidden_on({BOOL_OPTION("gfx_resize_windowed", "display", "Window resize",
+	{BOOL_OPTION("gfx_resize_windowed", "display", "Window resize",
 			"Allow resizing the emulator window by dragging its edges.",
 			AMIBERRY_APPLY_LIVE, "true", "Not available while the display mode is forced full-window."),
 		get_gfx_resize_windowed, set_gfx_resize_windowed, window_sizes_available, nullptr, nullptr,
 		nullptr},
-		desktop_window_hidden),
 	hidden_on({BOOL_OPTION("amiberry.borderless", "display", "Borderless",
 			"Remove the window title bar and borders in windowed mode.",
 			AMIBERRY_APPLY_LIVE, "false", "Only in windowed native mode."),
 		get_borderless, set_borderless, borderless_available, nullptr, nullptr, nullptr},
 		desktop_window_hidden),
-	hidden_on({CHOICE_OPTION("gfx_fullscreen_amiga", "display", "Native screen mode",
+	{CHOICE_OPTION("gfx_fullscreen_amiga", "display", "Native screen mode",
 			"Show the native chipset screen in a window or full-window (borderless desktop).",
 			AMIBERRY_APPLY_LIVE, "false", fullscreen_choices,
 			"KMSDRM and Android always use the display full-window."),
 		get_gfx_fullscreen_amiga, set_gfx_fullscreen_amiga, fullscreen_amiga_available,
 		fullscreen_choice_available, nullptr, nullptr},
-		desktop_window_hidden),
 	{CHOICE_OPTION("gfx_vsync", "display", "Native vertical sync",
 			"Standard waits for vertical blank, 50/60Hz enforces the emulated refresh rate.",
 			AMIBERRY_APPLY_LIVE, "false", vsync_choices,
 			"Not available under KMSDRM, which paces with the console driver."),
 		get_gfx_vsync, set_gfx_vsync, vsync_available, nullptr, nullptr, nullptr},
-	hidden_on({BOOL_OPTION("gfx_vrr_monitor", "display", "Adaptive sync",
+	{BOOL_OPTION("gfx_vrr_monitor", "display", "Adaptive sync",
 			"Use VRR (FreeSync/G-SYNC) with a late-swap tearing fallback; needs Standard vsync.",
 			AMIBERRY_APPLY_LIVE, "false", "Not available under KMSDRM."),
 		get_gfx_vrr_monitor, set_gfx_vrr_monitor, vsync_available, nullptr, nullptr, nullptr},
-		desktop_window_hidden),
-	hidden_on({CHOICE_OPTION("gfx_fullscreen_picasso", "display", "RTG screen mode",
+	{CHOICE_OPTION("gfx_fullscreen_picasso", "display", "RTG screen mode",
 			"Show the Picasso96 (graphics card) screen in a window or full-window.",
 			AMIBERRY_APPLY_LIVE, "false", fullscreen_choices,
 			"Needs an RTG board with memory. KMSDRM and Android always use the display full-window."),
 		get_gfx_fullscreen_picasso, set_gfx_fullscreen_picasso, fullscreen_picasso_available,
 		fullscreen_choice_available, nullptr, nullptr},
-		desktop_window_hidden),
 	{CHOICE_OPTION("gfx_vsync_picasso", "display", "RTG vertical sync",
 			"Vertical sync for the Picasso96 screen.",
 			AMIBERRY_APPLY_LIVE, "false", vsync_choices,
@@ -941,11 +930,10 @@ const definition definitions[] = {
 			"Needs HighRes and Double line mode, the only modes where it can trigger."),
 		get_gfx_autoresolution_vga, set_gfx_autoresolution_vga, vga_autoswitch_available, nullptr,
 		nullptr, nullptr},
-	hidden_on({MEASURED_OPTION("gfx_monitorblankdelay", "display", "Display resync blanking",
+	{MEASURED_OPTION("gfx_monitorblankdelay", "display", "Display resync blanking",
 			"Blank the screen for this long after a display mode change.",
 			AMIBERRY_SETTING_INT, AMIBERRY_APPLY_LIVE, 0, 60000, 1, "0", nullptr, "ms", 0, false),
 		get_gfx_monitorblankdelay, set_gfx_monitorblankdelay, nullptr, nullptr, nullptr, nullptr},
-		android_host_mode_hidden),
 	{CHOICE_OPTION("gfx_resolution", "display", "Amiga resolution",
 			"Internal render resolution relative to the Amiga's video output.",
 			AMIBERRY_APPLY_LIVE, "hires", resolution_choices,

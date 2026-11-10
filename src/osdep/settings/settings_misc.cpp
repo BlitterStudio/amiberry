@@ -320,16 +320,9 @@ constexpr const char* inactive_constraint =
 		nullptr, nullptr, nullptr, fits_##field}
 
 // The desktop-window and host-scheduling options iOS does not have: no
-// window to keep on top, minimize, blank or switch between window and
-// full-window (one fixed screen), no inactive or minimized state to
-// schedule (the priority group), no host keyboard lock lights, and no
-// console for the debugger trigger, which without the built-in GUI goes
-// to stdout, which an iOS app has none of.
+// window to keep on top or minimize, no inactive or minimized state to
+// schedule (the priority group), and no host keyboard lock lights.
 constexpr unsigned int desktop_window_hidden = AMIBERRY_SETTINGS_HIDE_ON_IOS;
-// The pointer-capture options desktops have and iOS does not: its pointer
-// is absolute and never captured, so capture and untrap settings do
-// nothing there.
-constexpr unsigned int pointer_capture_hidden = AMIBERRY_SETTINGS_HIDE_ON_IOS;
 const definition definitions[] = {
 	{CHOICE_OPTION("use_gui", "misc", "Open settings on startup",
 			"Show the settings when Amiberry starts, before the emulation runs.",
@@ -365,14 +358,12 @@ const definition definitions[] = {
 	BOOL_DEF("log_illegal_mem", "misc", "Log illegal memory accesses",
 		"Log reads and writes to addresses where no memory is.",
 		AMIBERRY_APPLY_RESTART, "false", illegal_mem),
-	hidden_on(BOOL_DEF("amiberry.blank_monitors", "misc", "Blank unused displays",
+	BOOL_DEF("amiberry.blank_monitors", "misc", "Blank unused displays",
 		"Blank the other displays while the emulation runs full-window.",
 		AMIBERRY_APPLY_LIVE, "false", blankmonitors),
-		desktop_window_hidden),
-	hidden_on(BOOL_DEF("amiberry.start_not_captured", "misc", "Start mouse uncaptured",
+	BOOL_DEF("amiberry.start_not_captured", "misc", "Start mouse uncaptured",
 		"Start the emulation without capturing the mouse.",
 		AMIBERRY_APPLY_RESTART, "false", start_uncaptured),
-		pointer_capture_hidden),
 	hidden_on(BOOL_DEF("amiberry.start_minimized", "misc", "Start minimized",
 		"Start the emulation with its window minimized.",
 		AMIBERRY_APPLY_RESTART, "false", start_minimized),
@@ -397,11 +388,10 @@ const definition definitions[] = {
 			"Show the power LED at half brightness while the audio filter is off, as on an A500.",
 			AMIBERRY_APPLY_LIVE, "0", power_led_dim_choices, nullptr),
 		get_power_led_dim, set_power_led_dim, nullptr, nullptr, nullptr, nullptr},
-	hidden_on(BOOL_DEF("amiberry.active_capture_automatically", "misc",
+	BOOL_DEF("amiberry.active_capture_automatically", "misc",
 		"Capture mouse when the window is activated",
 		"Capture the mouse when the emulator window is clicked.",
 		AMIBERRY_APPLY_LIVE, "true", capture_always),
-		pointer_capture_hidden),
 	BOOL_DEF("debug_mem", "misc", "Debug memory space",
 		"Add a memory space for debugging tools.",
 		AMIBERRY_APPLY_RESTART, "false", debug_mem),
@@ -414,14 +404,12 @@ const definition definitions[] = {
 	BOOL_DEF("warpboot", "misc", "Warp mode reset",
 		"Run at warp speed while the Amiga boots after a reset.",
 		AMIBERRY_APPLY_LIVE, "false", turbo_boot),
-	hidden_on(BOOL_DEF("amiberry.alt_tab_release", "misc", "Alt-Tab releases control",
+	BOOL_DEF("amiberry.alt_tab_release", "misc", "Alt-Tab releases control",
 		"Leave Alt-Tab to the host and release the mouse and keyboard when the focus moves.",
 		AMIBERRY_APPLY_LIVE, "false", alt_tab_release),
-		pointer_capture_hidden),
-	hidden_on(BOOL_DEF("amiberry.ctrl_alt_release", "misc", "Ctrl+Alt releases capture",
+	BOOL_DEF("amiberry.ctrl_alt_release", "misc", "Ctrl+Alt releases capture",
 		"Release the mouse with Ctrl+Alt (for laptops without a middle button).",
 		AMIBERRY_APPLY_LIVE, "true", ctrl_alt_release),
-		pointer_capture_hidden),
 	BOOL_DEF("amiberry.use_retroarch_quit", "misc", "Use RetroArch quit button",
 		"Quit with the controller's RetroArch quit button combination.",
 		AMIBERRY_APPLY_LIVE, "true", use_retroarch_quit),
@@ -438,10 +426,9 @@ const definition definitions[] = {
 	HOTKEY_DEF("amiberry.action_replay", "Action Replay",
 		"Key or controller button that activates the Action Replay cartridge; empty uses Pause.", "Pause",
 		action_replay),
-	hidden_on(HOTKEY_DEF("amiberry.fullscreen_toggle", "Full-window",
+	HOTKEY_DEF("amiberry.fullscreen_toggle", "Full-window",
 		"Key or controller button that switches between window and full-window; empty unbinds it.", "",
 		fullscreen_toggle),
-		desktop_window_hidden),
 	hidden_on(HOTKEY_DEF("amiberry.minimize", "Minimize",
 		"Key or controller button that minimizes the emulator window; empty unbinds it.", "", minimize),
 		desktop_window_hidden),
@@ -451,9 +438,8 @@ const definition definitions[] = {
 		"Key that acts as the right Amiga key; empty unbinds it.", "", right_amiga),
 	HOTKEY_DEF("amiberry.screenshot", "Screenshot",
 		"Key or controller button that saves a screenshot; empty unbinds it.", "", screenshot),
-	hidden_on(HOTKEY_DEF("amiberry.debugger_trigger", "Debugger",
+	HOTKEY_DEF("amiberry.debugger_trigger", "Debugger",
 		"Key or controller button that opens the debugger; empty unbinds it.", "", debugger_trigger),
-		desktop_window_hidden),
 	hidden_on({CHOICE_OPTION("amiberry.kbd_led_num", "misc", "NumLock LED",
 			"The emulated LED the host keyboard's NumLock light shows.",
 			AMIBERRY_APPLY_LIVE, "-1", led_choices, nullptr),
@@ -479,12 +465,12 @@ const definition definitions[] = {
 		"Pause when active but not captured",
 		"Pause the emulation while its window is active but the mouse is not captured.",
 		AMIBERRY_APPLY_LIVE, "false", active_nocapture_pause),
-		pointer_capture_hidden),
+		desktop_window_hidden),
 	hidden_on(BOOL_DEF("amiberry.active_not_captured_nosound", "priority",
 		"No sound when active but not captured",
 		"Mute the emulation while its window is active but the mouse is not captured.",
 		AMIBERRY_APPLY_LIVE, "false", active_nocapture_nosound),
-		pointer_capture_hidden),
+		desktop_window_hidden),
 	hidden_on({CHOICE_OPTION("amiberry.inactive_priority", "priority", "Priority when inactive",
 			"The emulator's process priority while another window is active.",
 			AMIBERRY_APPLY_LIVE, "0", priority_choices, nullptr),
