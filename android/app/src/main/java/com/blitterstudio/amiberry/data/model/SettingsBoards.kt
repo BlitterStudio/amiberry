@@ -67,27 +67,20 @@ object SettingsBoards {
 	}
 
 	/**
-	 * Whether [type] is switched on by a configuration line of its own name
-	 * that is no schema option: the CD32 FMV cartridge's `cd32fmv=true`,
-	 * which the reader turns into the board (cfgfile.cpp:6960-6963) and the
-	 * writer spells for an enabled one (cfgfile.cpp:3337-3339). The line
-	 * belongs to the board: it goes when the board does.
-	 */
-	private fun hasFlag(schema: SettingsSchema, type: SettingsSchema.BoardType): Boolean =
-		type.builtIn && type.option == null && schema.option(type.id) == null
-
-	/**
 	 * The configuration line [key] spells about an expansion board, when
 	 * the schema knows its type: the unit's entry (`<id>_rom_file`), its
-	 * options (`<id>_rom_options`), the ROM identity the emulator records
-	 * (`<id>_rom`, `<id>_rom_file_id`; kept for a unit the codec does not
-	 * own, dropped with the layer's rom_file setter otherwise) or a line
-	 * the launcher drops outright (the accepted-for-compatibility
-	 * `scsi_<id>` switch, whose value the reader ignores).
+	 * options (`<id>_rom_options`), its memory (`<id>_mem_size`), the line
+	 * that switches it on when no option does (the CD32 FMV cartridge's
+	 * `cd32fmv`, which the reader turns into the board, cfgfile.cpp:6960,
+	 * and the writer spells for an enabled one, cfgfile.cpp:3337), the ROM
+	 * identity the emulator records (`<id>_rom`, `<id>_rom_file_id`; kept
+	 * for a unit the codec does not own, dropped with the layer's rom_file
+	 * setter otherwise) or a line the launcher drops outright (the
+	 * accepted-for-compatibility `scsi_<id>` switch, whose value the reader
+	 * ignores).
 	 */
 	fun line(key: String, schema: SettingsSchema? = SettingsSchema.current): Line? {
-		schema ?: return null
-		val typeId = schema.boardTypes
+		val typeId = schema?.boardTypes ?: return null
 		for (type in typeId) {
 			for (unit in 0 until type.units) {
 				val name = if (unit == 0) type.id else "${type.id}-${unit + 1}"
@@ -96,7 +89,7 @@ object SettingsBoards {
 					"${name}_rom_options" -> return Line(type.id, unit, Line.Kind.Options, "")
 					"${name}_rom", "${name}_rom_file_id" -> return Line(type.id, unit, Line.Kind.Identity, "")
 					"${type.id}_mem_size" -> if (unit == 0) return Line(type.id, 0, Line.Kind.Memory, "")
-					type.id -> if (unit == 0 && hasFlag(schema, type)) return Line(type.id, 0, Line.Kind.Flag, "")
+					type.flag -> if (unit == 0) return Line(type.id, 0, Line.Kind.Flag, "")
 					"scsi_${type.id}" -> return Line(type.id, 0, Line.Kind.Drop, "")
 				}
 			}
@@ -113,13 +106,13 @@ object SettingsBoards {
 				val entry = values["${name}_rom_file"]
 				val options = values["${name}_rom_options"]
 				val memory = if (unit == 0) values["${type.id}_mem_size"] else null
-				val flag = unit == 0 && hasFlag(schema, type) &&
-					values[type.id]?.lowercase() in setOf("true", "yes")
+				val flag = unit == 0 && type.flag != null &&
+					values[type.flag]?.lowercase() in setOf("true", "yes")
 				// A unit exists while the file has its entry line, or its
 				// options line (a built-in controller the chipset option
 				// puts in the machine, configured without a ROM of its own),
 				// a non-zero memory size (which makes the board,
-				// cfgfile.cpp:6488-6490) or its enabling flag (hasFlag). An
+				// cfgfile.cpp:6488-6490) or its enabling flag (the type's flag line). An
 				// empty entry is none: cfgfile_read_board_rom creates the
 				// board only for a non-empty value (cfgfile.cpp:6381-6388).
 				val hasEntry = !entry.isNullOrEmpty()
@@ -172,7 +165,7 @@ object SettingsBoards {
 			// what exists (cfgfile.cpp:6415). The option's own entry marker
 			// (addbcromtype's ":ENABLED", cfgfile.cpp:6504) is what the
 			// writer keeps for it.
-			if (unit.unit == 0 && hasFlag(schema, type)) lines += "${type.id}=true"
+			if (unit.unit == 0) type.flag?.let { lines += "$it=true" }
 			if (options.isNotEmpty() && !unit.entry && unit.romFile.isEmpty())
 				lines += "${name}_rom_file=:ENABLED"
 			if (unit.entry || unit.romFile.isNotEmpty())

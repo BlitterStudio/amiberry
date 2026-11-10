@@ -255,6 +255,8 @@ class PresetMachineTest {
 		val addable = BoardEditor.addable(schema).map { it.id }
 		assertTrue("cdtvsram" in addable)
 		assertTrue("cdtvscsi" in addable)
+		// The CD32 FMV cartridge is optional; its own line switches it.
+		assertTrue("cd32fmv" in addable)
 		assertFalse("ide_mb" in addable)
 		assertFalse("pcmcia_mb" in addable)
 	}

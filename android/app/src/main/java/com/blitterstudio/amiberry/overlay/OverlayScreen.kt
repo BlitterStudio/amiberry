@@ -369,7 +369,9 @@ private fun MediaPage(viewModel: OverlayViewModel, focus: FocusTargets) {
 					onClick = { viewModel.open(OverlayPage.Picker(MediaTarget.Swapper(index)), OverlayKeys.insert(MediaTarget.Swapper(index))) },
 					modifier = Modifier
 						.weight(1f)
-						.focusRequester(focus.requester("swapper_${index}_change"))
+						// The picker returns here (OverlayKeys.insert): a slot's
+						// Change and the Add that fills it share the slot's key.
+						.focusRequester(focus.requester(OverlayKeys.insert(MediaTarget.Swapper(index))))
 						.dpadFocusIndicator()
 				) {
 					Text(stringResource(R.string.overlay_swapper_change))
@@ -403,7 +405,7 @@ private fun MediaPage(viewModel: OverlayViewModel, focus: FocusTargets) {
 				onClick = { viewModel.open(OverlayPage.Picker(MediaTarget.Swapper(nextEmpty)), OverlayKeys.insert(MediaTarget.Swapper(nextEmpty))) },
 				modifier = Modifier
 					.fillMaxWidth()
-					.focusRequester(focus.requester("swapper_${nextEmpty}_add"))
+					.focusRequester(focus.requester(OverlayKeys.insert(MediaTarget.Swapper(nextEmpty))))
 					.dpadFocusIndicator()
 			) {
 				Text(stringResource(R.string.overlay_swapper_add))

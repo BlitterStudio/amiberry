@@ -105,16 +105,19 @@ struct board_field {
 
 // The built-in controllers whose entries the core derives from chipset
 // fields. A chipset option (PCMCIA, CDTV) switches them through its rules;
-// the others are written here.
+// the others are written here. The CD32 FMV cartridge is the one a
+// configuration line of its own switches (cd32fmv, cfgfile.cpp), which no
+// option of the layer is: an optional cartridge rather than a fixed part.
 struct internal_board {
 	uae_u32 romtype;
 	const char* option; // nullptr: written directly
+	const char* flag = nullptr; // the configuration line enabling it, when no option does
 };
 const internal_board internal_boards[] = {
 	{ROMTYPE_MB_IDE, nullptr},
 	{ROMTYPE_SCSI_A3000, nullptr},
 	{ROMTYPE_SCSI_A4000T, nullptr},
-	{ROMTYPE_CD32CART, nullptr},
+	{ROMTYPE_CD32CART, nullptr, "cd32fmv"},
 	{ROMTYPE_MB_PCMCIA, "pcmcia"},
 	{ROMTYPE_CDTVDMAC, "cdtvcd"},
 	{ROMTYPE_CDTVCR, "cdtv-cr"},
@@ -820,7 +823,13 @@ const char* board_option(const amiberry_settings_board_type* type)
 bool board_built_in(const amiberry_settings_board_type* type)
 {
 	const board_type* t = type && type->id ? find_type(type->id) : nullptr;
-	return t && t->internal;
+	return t && t->internal && !t->internal->flag;
+}
+
+const char* board_flag(const amiberry_settings_board_type* type)
+{
+	const board_type* t = type && type->id ? find_type(type->id) : nullptr;
+	return t && t->internal ? t->internal->flag : nullptr;
 }
 
 } // namespace amiberry_settings

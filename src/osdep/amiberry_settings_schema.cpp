@@ -1593,6 +1593,10 @@ void board_types(std::string& out)
 		}
 		if (amiberry_settings_board_built_in(type))
 			out += ",\"built_in\":true";
+		if (const char* flag = amiberry_settings_board_flag(type)) {
+			out += ",\"flag\":";
+			json_string(out, flag);
+		}
 		bool started = false;
 		for (size_t f = 0; f < type->field_count; f++) {
 			const amiberry_setting_descriptor* d = amiberry_settings_board_field_at(type, f);
