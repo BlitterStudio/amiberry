@@ -274,6 +274,39 @@ class HostSettingsStoreTest {
 	}
 
 	@Test
+	fun `a folder with no entry under a base follows the base, not the default root`() {
+		// The emulator saved the base and its Configurations, then the user
+		// cleared ROMs: the line is gone, so ROMs sit at the base.
+		val root = tempDir.newFolder("content-missing-base")
+		val base = "/storage/emulated/0/BASE"
+		val content = "base_content_path=$base\nconfig_path=$base/Configurations\n"
+		val (store, file) = store(content, baseSchema(), root)
+
+		assertTrue(store.writeSync(mapOf("base_content_path" to "/storage/emulated/0/NEW")))
+
+		val lines = file.readText().lines()
+		assertTrue(lines.contains("rom_path=/storage/emulated/0/NEW/ROMs"))
+		// Clearing the base takes it to the default root, the same way.
+		assertTrue(store.writeSync(mapOf("base_content_path" to "")))
+		assertTrue("rom_path=${File(root, "ROMs").path}" in storeRead(file))
+	}
+
+	@Test
+	fun `a folder with no entry and no previous base takes the new base`() {
+		val root = tempDir.newFolder("content-missing-default")
+		val content = "config_path=/storage/emulated/0/Configurations\n"
+		val (store, file) = store(content, baseSchema(), root)
+
+		assertTrue(store.writeSync(mapOf("base_content_path" to "/storage/emulated/0/NEW")))
+
+		// No base was set, so a missing line means the default root — at its
+		// baseline, and the folder follows the new base.
+		assertTrue("rom_path=/storage/emulated/0/NEW/ROMs" in file.readText().lines())
+	}
+
+	private fun storeRead(file: File): List<String> = file.readText().lines()
+
+	@Test
 	fun `a base change leaves the folders an explicit write names to that write`() {
 		val root = tempDir.newFolder("content-explicit")
 		val (store, file) = store(nativeSavedBaseFixture(), baseSchema(), root)

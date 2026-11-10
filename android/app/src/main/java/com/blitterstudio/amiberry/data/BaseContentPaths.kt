@@ -28,13 +28,16 @@ object BaseContentPaths {
 	}
 
 	/**
-	 * The folder lines a change of the base rewrites: [fileValues] as the
-	 * file holds them (a key without a line sits at [defaultSet]), the
-	 * previous base's derived set the baseline, and the new base's (or the
-	 * defaults', when [newBase] is empty) the target. A value at its
-	 * baseline follows the target; one away from it is an override and
-	 * stays. Native compares normalized, case-insensitively
-	 * (path_strings_match); so does this.
+	 * The folder lines a change of the base rewrites. First every managed
+	 * folder's effective value, as the emulator resolves it when it loads
+	 * the file: the line the file has, else what the previous base derives
+	 * (a base is set), else the installation's default — a folder with no
+	 * entry under a configured base sits at that base, not at the default.
+	 * That value against the baseline (the previous base's derived set, or
+	 * the defaults' without a base) decides: at it, the folder follows the
+	 * target (the new base's set, or the defaults' when cleared); away from
+	 * it, the folder is an override and keeps its line. Native compares
+	 * normalized, case-insensitively (path_strings_match); so does this.
 	 */
 	fun mergedLines(
 		newBase: String?,
@@ -42,13 +45,18 @@ object BaseContentPaths {
 		fileValues: Map<String, String>,
 		defaultSet: Map<String, String>
 	): Map<String, String> {
-		val previous = managedSuffixes.keys.associateWith { key ->
-			fileValues[key] ?: defaultSet[key].orEmpty()
+		val baseDerived = derivedSet(previousBase).takeIf { !previousBase.isNullOrEmpty() }
+		val effective = managedSuffixes.keys.associateWith { key ->
+			// A line the file has is the value, an empty one included (a
+			// hand-edited unset); only a missing line falls through to the
+			// previous base's derivation, else the default.
+			val derived = baseDerived?.get(key).orEmpty()
+			fileValues[key] ?: derived.ifEmpty { defaultSet[key].orEmpty() }
 		}
-		val baseline = if (!previousBase.isNullOrEmpty()) derivedSet(previousBase) else defaultSet
+		val baseline = baseDerived ?: defaultSet
 		val target = if (!newBase.isNullOrEmpty()) derivedSet(newBase) else defaultSet
 		return managedSuffixes.keys.associateWith { key ->
-			val was = previous.getValue(key)
+			val was = effective.getValue(key)
 			if (!pathsEqual(was, baseline.getValue(key))) was else target.getValue(key)
 		}
 	}
