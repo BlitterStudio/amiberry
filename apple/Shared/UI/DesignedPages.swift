@@ -84,12 +84,33 @@ struct LayoutSection: Identifiable, Equatable {
 
 	var id: String { title }
 
-	/// Whether the section places an option: by id, or by the prefix the
-	/// families of options it lays out share — "cpuboard_settings" covers
-	/// the jumpers' "cpuboard_settings:<name>" ids too.
-	func places(_ id: String) -> Bool {
-		ids.contains(id) || hiddenWhenUnavailable.prefixes.contains { id.hasPrefix($0) }
+	/// The descriptors the section renders, in order: each id's, with the
+	/// family a prefix covers (the accelerator's jumpers) after its base —
+	/// the id the prefix names — in the catalogue's order. Rendering and
+	/// placement (`places`) both read this, so an option can never count
+	/// as placed without being rendered.
+	var descriptors: [SettingDescriptor] {
+		var rendered: [SettingDescriptor] = []
+		for id in ids {
+			guard let descriptor = SettingsCatalog.descriptor(for: id) else { continue }
+			rendered.append(descriptor)
+			if hiddenWhenUnavailable.prefixes.contains(id) {
+				rendered += SettingsCatalog.descriptors.filter { $0.id != id && $0.id.hasPrefix(id) }
+			}
+		}
+		// A prefix whose base the section does not name: its family still
+		// renders, at the end.
+		for prefix in hiddenWhenUnavailable.prefixes where !ids.contains(prefix) {
+			rendered += SettingsCatalog.descriptors.filter { $0.id.hasPrefix(prefix) }
+		}
+		return rendered
 	}
+
+	/// Whether the section renders an option.
+	func places(_ id: String) -> Bool {
+		descriptors.contains { $0.id == id }
+	}
+
 
 	var ids: [String] {
 		switch content {
@@ -163,20 +184,14 @@ extension SettingsPage {
 		return titles
 	}
 
-	/// Each option's page: the designed page whose sections place it, else
-	/// the page covering its group. The sidebar's edited mark and the
+	/// Each option's page: the designed page whose sections render it,
+	/// else the page covering its group. The sidebar's edited mark and the
 	/// coverage tests read it; every option must land in it.
 	static let pageOfOption: [String: SettingsPage] = {
 		var pages: [String: SettingsPage] = [:]
 		for page in placing {
 			for layoutSection in page.layout ?? [] {
-				for id in layoutSection.ids where pages[id] == nil {
-					pages[id] = page
-				}
-				// The families a section's prefixes cover, as many ids as
-				// the layer has of them.
-				for descriptor in SettingsCatalog.descriptors
-				where pages[descriptor.id] == nil && layoutSection.places(descriptor.id) {
+				for descriptor in layoutSection.descriptors where pages[descriptor.id] == nil {
 					pages[descriptor.id] = page
 				}
 			}
@@ -437,8 +452,10 @@ struct DesignedSections: View {
 	var body: some View {
 		ForEach(page.layout ?? []) { section in
 			switch section.content {
-			case let .options(ids):
-				let descriptors = ids.compactMap(SettingsCatalog.descriptor(for:))
+			case .options:
+				// What the section renders is what it places: ids and the
+				// families its prefixes cover (LayoutSection.descriptors).
+				let descriptors = section.descriptors
 				if !descriptors.isEmpty {
 					OptionSection(title: section.title, descriptors: descriptors, store: model.store,
 						hiddenWhenUnavailable: section.hiddenWhenUnavailable,

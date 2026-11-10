@@ -29,7 +29,7 @@ final class SettingsPagesTests: XCTestCase {
 		for page in SettingsPage.placing {
 			guard let layout = page.layout else { continue }
 			let mine = Set(page.groups.flatMap(SettingsCatalog.descriptors(in:)).map(\.id))
-			let placed = layout.flatMap(\.ids)
+			let placed = layout.flatMap { $0.descriptors.map(\.id) }
 			XCTAssertEqual(Set(placed).count, placed.count, "\(page.title): an option placed twice")
 			for id in placed {
 				XCTAssertNotNil(SettingsCatalog.descriptor(for: id), "\(page.title): \(id) is no option the layer has")
@@ -65,7 +65,7 @@ final class SettingsPagesTests: XCTestCase {
 		// pages' and the generated ones' (a section per layer group, as
 		// All Settings and search show them).
 		var sections: [(title: String, ids: [String])] = SettingsPage.placing.flatMap { page in
-			(page.layout ?? []).map { ($0.title, $0.ids) }
+			(page.layout ?? []).map { ($0.title, $0.descriptors.map(\.id)) }
 		}
 		sections += SettingsCatalog.groups.map { (SettingsPage.groupTitle($0), SettingsCatalog.descriptors(in: $0).map(\.id)) }
 		for section in sections {

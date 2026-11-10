@@ -19,7 +19,7 @@ final class DesignedPagesTests: XCTestCase {
 		var seen: [String: SettingsPage] = [:]
 		for page in SettingsPage.placing {
 			for layoutSection in page.layout ?? [] {
-				for id in layoutSection.ids {
+				for id in layoutSection.descriptors.map(\.id) {
 					if let first = seen[id] {
 						XCTFail("\(id) is placed on two pages: \(first.title) and \(page.title)")
 						continue
@@ -53,6 +53,40 @@ final class DesignedPagesTests: XCTestCase {
 		// An id the catalogue lacks can be on no page (a layer change the
 		// front end has not followed).
 		XCTAssertNil(SettingsPage.pageOfOption["not_an_option"])
+	}
+
+	/// An accelerator's jumper rows (the "cpuboard_settings:<name>"
+	/// family) render in the Accelerator board section — placed and
+	/// rendered are the same list — and show once a board that has them
+	/// is picked.
+	func testAnAcceleratorsJumperRowsRenderOnceItsBoardIsPicked() throws {
+		let store = try SettingsStore()
+		let accelerator = try section("Accelerator board", of: .hardware)
+		let jumpers = SettingsCatalog.descriptors(in: "accelerator").filter { $0.id.hasPrefix("cpuboard_settings:") }
+		XCTAssertFalse(jumpers.isEmpty, "the layer lists jumper options")
+		let rendered = Set(accelerator.descriptors.map(\.id))
+		for jumper in jumpers {
+			XCTAssertTrue(rendered.contains(jumper.id), "\(jumper.id) is not rendered by the section")
+			XCTAssertTrue(accelerator.places(jumper.id), "\(jumper.id) is not placed by the section")
+		}
+		// While no board is picked none of its rows but the type show.
+		XCTAssertEqual(accelerator.hiddenWhenUnavailable.shown(accelerator.descriptors, available: { _ in false },
+			value: { _ in "" }).map(\.id), ["cpuboard_type"])
+		// Pick each board the layer offers until one has jumpers: its
+		// rows then render on the page.
+		var picked: (board: String, jumper: String)?
+		for choice in store.choices(for: "cpuboard_type") {
+			guard store.set(choice.value, for: "cpuboard_type") else { continue }
+			if let jumper = jumpers.first(where: { store.isAvailable($0.id) }) {
+				picked = (choice.value, jumper.id)
+				break
+			}
+		}
+		let board = try XCTUnwrap(picked, "no cpuboard_type the layer offers has jumpers")
+		let shown = accelerator.hiddenWhenUnavailable.shown(accelerator.descriptors, available: { store.isAvailable($0) },
+			value: { store.value(of: $0) }).map(\.id)
+		XCTAssertTrue(shown.contains(board.jumper), "\(board.board) renders its \(board.jumper) row")
+		XCTAssertTrue(shown.contains("cpuboardmem1_size"), "the board's memory row renders beside it")
 	}
 
 	/// The Hardware page's designed sections, with its expert rows behind
