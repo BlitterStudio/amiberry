@@ -133,8 +133,8 @@ class ConfigRepositoryTest {
 		val source = File("src/main/java/com/blitterstudio/amiberry/data/ConfigRepository.kt").readText()
 
 		assertTrue(
-			"ConfigRepository should expose saveResolved(...) with currentConfigName and allowOverwrite.",
-			Regex("""fun saveResolved\([\s\S]*currentConfigName[\s\S]*allowOverwrite""")
+			"ConfigRepository should expose saveResolved(...) with currentConfigPath and allowOverwrite.",
+			Regex("""fun saveResolved\([\s\S]*currentConfigPath[\s\S]*allowOverwrite""")
 				.containsMatchIn(source)
 		)
 		assertTrue(

@@ -107,13 +107,13 @@ class ConfigRepository(private val context: Context) {
 	fun saveResolved(
 		settings: EmulatorSettings,
 		requestedName: String,
-		currentConfigName: String?,
+		currentConfigPath: String?,
 		unknownLines: List<String> = emptyList(),
 		description: String = "",
 		category: String = "",
 		allowOverwrite: Boolean = false
 	): ConfigurationSaveActions.SaveResult {
-		val target = when (val resolution = ConfigSaveResolver.resolve(confDir, requestedName, currentConfigName)) {
+		val target = when (val resolution = ConfigSaveResolver.resolve(confDir, requestedName, currentConfigPath)) {
 			ConfigSaveResolver.Resolution.InvalidName -> return ConfigurationSaveActions.SaveResult.InvalidName
 			is ConfigSaveResolver.Resolution.WriteNew -> resolution.file
 			is ConfigSaveResolver.Resolution.OverwriteTracked -> resolution.file

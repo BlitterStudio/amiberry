@@ -63,4 +63,16 @@ class DeviceStorageTest {
 		assertEquals(listOf("Turrican.lha"), files.map { it.name })
 		assertEquals(emptyList<File>(), DeviceStorage.supportedFilesUnder(appFiles, setOf("adf"), excluded = listOf(appFiles)))
 	}
+
+	@Test
+	fun `an empty extension set lists every file, for a file-setting picker`() {
+		val root = tempDir.root
+		File(root, "retroarch.cfg").writeText("input_driver")
+		File(root, "Amiberry.log").writeText("log")
+		File(root, ".hidden.cfg").writeText("hidden")
+
+		val entries = DeviceStorage.entries(root, emptySet())!!
+
+		assertEquals(listOf("Amiberry.log", "retroarch.cfg"), entries.map { it.file.name })
+	}
 }

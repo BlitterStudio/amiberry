@@ -8,6 +8,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.blitterstudio.amiberry.R
 import com.blitterstudio.amiberry.data.FileListing
+import com.blitterstudio.amiberry.data.ContentFolders
 import com.blitterstudio.amiberry.data.FileManager
 import com.blitterstudio.amiberry.data.FileRepository
 import com.blitterstudio.amiberry.data.ImportBatchFeedback
@@ -145,8 +146,13 @@ class FileManagerViewModel(application: Application) : AndroidViewModel(applicat
 		viewModelScope.launch(Dispatchers.IO) {
 			try {
 				val app = getApplication<Application>()
-				val baseDir = app.getExternalFilesDir(null)
-				val deleted = baseDir != null && FileManager.deleteManagedFile(baseDir, file)
+				// The category's configured folder may lie outside the app's
+				// own storage (a path setting moved it); both are managed.
+				val baseDirs = listOfNotNull(
+					app.getExternalFilesDir(null),
+					ContentFolders.categoryDir(app, file.category)
+				)
+				val deleted = FileManager.deleteManagedFile(baseDirs, file)
 				if (deleted) {
 					_importResult.value = app.getString(R.string.msg_deleted_file, file.name)
 					repository.rescanCategory(file.category)

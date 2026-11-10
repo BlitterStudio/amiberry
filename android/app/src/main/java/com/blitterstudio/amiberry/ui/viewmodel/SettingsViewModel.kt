@@ -337,7 +337,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 			configRepository.saveResolved(
 				settings = savedSettings,
 				requestedName = name,
-				currentConfigName = currentConfigName,
+				currentConfigPath = currentConfigPath,
 				unknownLines = savedUnknownLines,
 				description = description,
 				category = currentConfigCategory,

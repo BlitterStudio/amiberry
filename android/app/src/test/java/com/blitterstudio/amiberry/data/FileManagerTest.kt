@@ -200,7 +200,7 @@ class FileManagerTest {
 		val floppyDir = File(baseDir, StoragePaths.FLOPPIES).also { it.mkdirs() }
 		val floppy = File(floppyDir, "game.adf").also { it.writeText("disk") }
 
-		val deleted = FileManager.deleteManagedFile(baseDir, amigaFile(floppy, FileCategory.FLOPPIES))
+		val deleted = FileManager.deleteManagedFile(listOf(baseDir), amigaFile(floppy, FileCategory.FLOPPIES))
 
 		assertTrue(deleted)
 		assertFalse(floppy.exists())
@@ -211,7 +211,7 @@ class FileManagerTest {
 		val baseDir = tempDir.newFolder("app-storage")
 		val floppy = File(baseDir, "game.adf").also { it.writeText("disk") }
 
-		val deleted = FileManager.deleteManagedFile(baseDir, amigaFile(floppy, FileCategory.FLOPPIES))
+		val deleted = FileManager.deleteManagedFile(listOf(baseDir), amigaFile(floppy, FileCategory.FLOPPIES))
 
 		assertTrue(deleted)
 		assertFalse(floppy.exists())
@@ -223,7 +223,7 @@ class FileManagerTest {
 		val romDir = File(baseDir, StoragePaths.ROMS).also { it.mkdirs() }
 		val rom = File(romDir, "Kickstart.A1200").also { it.writeText("rom") }
 
-		val deleted = FileManager.deleteManagedFile(baseDir, amigaFile(rom, FileCategory.ROMS))
+		val deleted = FileManager.deleteManagedFile(listOf(baseDir), amigaFile(rom, FileCategory.ROMS))
 
 		assertTrue(deleted)
 		assertFalse(rom.exists())
@@ -234,7 +234,7 @@ class FileManagerTest {
 		val baseDir = tempDir.newFolder("app-storage")
 		val outside = tempDir.newFile("outside.adf").also { it.writeText("disk") }
 
-		val deleted = FileManager.deleteManagedFile(baseDir, amigaFile(outside, FileCategory.FLOPPIES))
+		val deleted = FileManager.deleteManagedFile(listOf(baseDir), amigaFile(outside, FileCategory.FLOPPIES))
 
 		assertFalse(deleted)
 		assertTrue(outside.exists())
@@ -246,8 +246,8 @@ class FileManagerTest {
 		val wrongExtension = File(baseDir, "notes.txt").also { it.writeText("text") }
 		val directory = File(baseDir, "folder.adf").also { it.mkdirs() }
 
-		assertFalse(FileManager.deleteManagedFile(baseDir, amigaFile(wrongExtension, FileCategory.FLOPPIES)))
-		assertFalse(FileManager.deleteManagedFile(baseDir, amigaFile(directory, FileCategory.FLOPPIES)))
+		assertFalse(FileManager.deleteManagedFile(listOf(baseDir), amigaFile(wrongExtension, FileCategory.FLOPPIES)))
+		assertFalse(FileManager.deleteManagedFile(listOf(baseDir), amigaFile(directory, FileCategory.FLOPPIES)))
 		assertTrue(wrongExtension.exists())
 		assertTrue(directory.exists())
 	}
@@ -260,7 +260,7 @@ class FileManagerTest {
 
 		assertFalse(
 			FileManager.isManagedCategoryFile(
-				baseDir,
+				listOf(baseDir),
 				amigaFile(File(traversalPath), FileCategory.FLOPPIES)
 			)
 		)
@@ -489,4 +489,35 @@ class FileManagerTest {
 			lastModified = file.lastModified(),
 			category = category
 		)
+
+	@Test
+	fun `deleteManagedFile deletes files in the category's configured folder`() {
+		val baseDir = tempDir.newFolder("app-storage-configured")
+		val configured = tempDir.newFolder("configured-floppies")
+		val floppy = File(configured, "game.adf").also { it.writeText("disk") }
+
+		val deleted = FileManager.deleteManagedFile(
+			listOf(baseDir, configured),
+			amigaFile(floppy, FileCategory.FLOPPIES)
+		)
+
+		assertTrue(deleted)
+		assertFalse(floppy.exists())
+	}
+
+	@Test
+	fun `deleteManagedFile refuses a folder that is neither app storage nor the configured one`() {
+		val baseDir = tempDir.newFolder("app-storage-other")
+		val configured = tempDir.newFolder("configured-other")
+		val elsewhere = tempDir.newFolder("elsewhere")
+		val floppy = File(elsewhere, "game.adf").also { it.writeText("disk") }
+
+		assertFalse(
+			FileManager.deleteManagedFile(
+				listOf(baseDir, configured),
+				amigaFile(floppy, FileCategory.FLOPPIES)
+			)
+		)
+		assertTrue(floppy.exists())
+	}
 }

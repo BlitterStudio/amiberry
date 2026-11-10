@@ -129,4 +129,21 @@ class ContentFoldersTest {
 		assertEquals(before + 1, ContentFolders.changes.value)
 		assertFalse(ContentFolders.changes.value == before)
 	}
+
+	@Test
+	fun `a path setting the base does not derive keeps its own line`() {
+		val external = tempDir.newFolder("external-unmanaged")
+		val sounds = tempDir.newFolder("sounds")
+		val conf = settings(
+			"""
+				retroarch_config=/storage/configs/retroarch.cfg
+				floppy_sounds_dir=${sounds.path}
+				plugins_dir=/storage/plugins
+			""".trimIndent()
+		)
+
+		assertEquals(File("/storage/configs/retroarch.cfg"), ContentFolders.effective("retroarch_config", conf, external))
+		assertEquals(sounds, ContentFolders.effective("floppy_sounds_dir", conf, external))
+		assertEquals(File("/storage/plugins"), ContentFolders.effective("plugins_dir", conf, external))
+	}
 }

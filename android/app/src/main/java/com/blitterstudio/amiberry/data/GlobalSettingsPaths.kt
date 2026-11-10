@@ -43,6 +43,15 @@ internal object GlobalSettingsPaths {
 		"bezels_path" to "${StoragePaths.VISUALS}/${StoragePaths.BEZELS}"
 	)
 
+	/**
+	 * Every amiberry.conf key that names a path: the managed set above,
+	 * whose folders the base content root derives, and the three the
+	 * loader reads on their own (the RetroArch config, the floppy
+	 * sounds, the plugins override), whose defaults it computes itself.
+	 */
+	internal val pathSettingKeys = managedPathSuffixes.keys +
+		setOf("retroarch_config", "floppy_sounds_dir", "plugins_dir")
+
 	/** The `Visuals` subfolders, whose folders had a legacy spelling beside `Configurations`. */
 	private val visualDirectoryNames = mapOf(
 		"themes_path" to StoragePaths.THEMES,
@@ -77,7 +86,7 @@ internal object GlobalSettingsPaths {
 					settings.hasBaseContentPath = true
 					settings.baseContentPath = value
 				}
-				if (key in managedPathSuffixes) {
+				if (key in pathSettingKeys) {
 					settings.managedPaths.add(ManagedPath(key, value))
 				}
 				if (key == "shader") {

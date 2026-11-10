@@ -372,20 +372,26 @@ object FileManager {
 		return candidate
 	}
 
-	internal fun isManagedCategoryFile(baseDir: File, file: AmigaFile): Boolean {
+	/**
+	 * Whether [file] is one the Files tab may delete: inside one of
+	 * [baseDirs] — the app's own storage and the category's configured
+	 * folder, which a path setting may have moved outside it — and of the
+	 * category's kind.
+	 */
+	internal fun isManagedCategoryFile(baseDirs: List<File>, file: AmigaFile): Boolean {
 		return try {
-			val canonicalBase = baseDir.canonicalFile
+			val canonicalBases = baseDirs.map { it.canonicalFile }
 			val target = File(file.path).canonicalFile
 			target.isFile &&
-				target.isUnder(canonicalBase) &&
+				canonicalBases.any { target.isUnder(it) } &&
 				target.extension.lowercase() in file.category.extensions
 		} catch (_: IOException) {
 			false
 		}
 	}
 
-	fun deleteManagedFile(baseDir: File, file: AmigaFile): Boolean {
-		if (!isManagedCategoryFile(baseDir, file)) return false
+	fun deleteManagedFile(baseDirs: List<File>, file: AmigaFile): Boolean {
+		if (!isManagedCategoryFile(baseDirs, file)) return false
 		return try {
 			File(file.path).canonicalFile.delete()
 		} catch (_: IOException) {
