@@ -163,11 +163,14 @@ data class EmulatorSettings(
 	 * [id] set to [value] (.uae spelling) with the changes the emulator's
 	 * setting makes with it, as the schema's transition table recorded them
 	 * from the settings layer's setters (a 68000 drops the JIT, cycle-exact
-	 * turns immediate blits off). A value the layer refuses in this state
 	 * turns immediate blits off); the fast RAM boards' tables make the MB
 	 * and KB keys of a board agree. A value the layer refuses in this state
+	 * leaves the settings as they are. The accelerator board already in the
+	 * machine is no change (set_cpuboard_type returns early): its jumpers
+	 * stay.
 	 */
 	fun withOption(id: String, value: String, schema: SettingsSchema? = SettingsSchema.current): EmulatorSettings {
+		if (id == "cpuboard_type" && value == (optionValue(id) ?: "none")) return this
 		val stateValue = if (id == "cachesize") jitState(value.toIntOrNull() ?: return this) else value
 		val state = schemaState(schema)
 		val transition = schema?.transitions?.of(state, id, stateValue)
@@ -205,7 +208,8 @@ data class EmulatorSettings(
 		val board = schema.acceleratorBoard(optionValue("cpuboard_type") ?: "none")
 		val slot = board?.memoryOption
 		if (id == "cpuboard_type") {
-			var result = this
+			// Another board's jumpers start over (set_cpuboard_type).
+			var result = copy(acceleratorJumpers = emptyMap())
 			val oldSlot = schema.acceleratorBoard(before.optionValue("cpuboard_type") ?: "none")?.memoryOption
 			if (oldSlot != null && oldSlot != slot &&
 				before.optionValue(oldSlot) == before.optionValue("cpuboardmem1_size"))

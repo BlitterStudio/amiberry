@@ -222,6 +222,22 @@ class PresetMachineTest {
 	}
 
 	@Test
+	fun `the FMV cartridge's enabling line belongs to the board`() {
+		val schema = requireNotNull(SettingsSchema.current)
+		val units = SettingsBoards.parse(schema, mapOf("cd32fmv" to "true"))
+		assertEquals(listOf("cd32fmv"), units.map { it.typeId })
+		assertTrue("cd32fmv=true" in SettingsBoards.render(schema, units))
+		// Removed, nothing turns it back on.
+		assertTrue(SettingsBoards.render(schema, emptyList()).none { it.startsWith("cd32fmv") })
+	}
+
+	@Test
+	fun `picking the accelerator already fitted keeps its jumpers`() {
+		val draco = EmulatorSettings.fromModel(requireNotNull(AmigaModel.find("macrosystem")))
+		assertEquals(draco, draco.withOption("cpuboard_type", "draco"))
+	}
+
+	@Test
 	fun `an added board names the scanned ROM of its type, not the ROM-off marker`() {
 		val schema = requireNotNull(SettingsSchema.current)
 		// A4091 v40.13, by its checksum.

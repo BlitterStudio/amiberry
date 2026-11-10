@@ -114,7 +114,8 @@ object ConfigParser {
 					boardLines[key] = value
 				boardLine != null && boardLine.kind == SettingsBoards.Line.Kind.Options ->
 					boardLines[key] = value
-				boardLine != null && boardLine.kind == SettingsBoards.Line.Kind.Memory ->
+				boardLine != null && (boardLine.kind == SettingsBoards.Line.Kind.Memory ||
+					boardLine.kind == SettingsBoards.Line.Kind.Flag) ->
 					boardLines[key] = value
 				// A unit's ROM identity lines are dropped when the codec
 				// owns the unit (its entry or options line is there) and

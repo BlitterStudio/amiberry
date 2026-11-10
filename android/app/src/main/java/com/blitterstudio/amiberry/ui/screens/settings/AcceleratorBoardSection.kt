@@ -66,10 +66,9 @@ internal fun AcceleratorTypeRow(viewModel: SettingsViewModel) {
 		choices = listOf(ChoiceItem("none", none)) + boards.map { ChoiceItem(it.id, it.label) },
 		help = typeOption?.help?.takeIf { it.isNotBlank() },
 		onSelect = { value ->
-			viewModel.updateSettings { s ->
-				// Another board: its jumpers start over, as the layer's setter does.
-				s.copy(acceleratorJumpers = emptyMap()).withOption("cpuboard_type", value)
-			}
+			// withOption starts another board's jumpers over and leaves the
+			// current board alone, as the layer's setter does.
+			viewModel.updateSettings { s -> s.withOption("cpuboard_type", value) }
 		}
 	)
 }
