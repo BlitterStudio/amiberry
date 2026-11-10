@@ -38,7 +38,14 @@ class SettingsSchema(
 	 * What setting a Zorro II fast RAM board's size does, one table per
 	 * board: its MB and KB keys are one size, so setting either changes both.
 	 */
-	val memoryTransitions: List<Transitions> = emptyList()
+	val memoryTransitions: List<Transitions> = emptyList(),
+	/**
+	 * The host settings (amiberry.conf), the emulator's own rather than a
+	 * machine's, in the layer's order; empty in a schema without them. The
+	 * entries are [Option]s of the same shape as the machine options, keyed
+	 * by the amiberry.conf line they write.
+	 */
+	val hostSettings: List<Option> = emptyList()
 ) {
 	/** One ROM a preset needs: the first installed of [ids] ([role] "kick", "ext" or "other"). */
 	data class RomRequest(val role: String, val ids: List<Int>)
@@ -213,6 +220,15 @@ class SettingsSchema(
 	/** The Android emulator's default of every option, by ID: the values a state has where nothing sets them. */
 	val defaults: Map<String, String> by lazy { options.mapValues { it.value.defaultOnAndroid } }
 
+	/** The host setting [id] describes; null when the schema does not list it. */
+	fun hostSetting(id: String): Option? = hostSettings.firstOrNull { it.id == id }
+
+	/** The groups of the host settings, in the layer's order. */
+	val hostSettingGroups: List<String> by lazy { hostSettings.map { it.group }.distinct() }
+
+	/** The Android emulator's default of every host setting, by ID. */
+	val hostDefaults: Map<String, String> by lazy { hostSettings.associate { it.id to it.defaultOnAndroid } }
+
 	/** Why [id] may be unavailable, as the layer words it; null when it always is. */
 	fun constraint(id: String): String? = options[id]?.constraint?.takeIf { it.isNotBlank() }
 
@@ -314,41 +330,45 @@ class SettingsSchema(
 		fun parse(input: InputStream): SettingsSchema =
 			parse(JSONObject(input.bufferedReader(Charsets.UTF_8).readText()))
 
+		/** One entry of an options-shaped array ([Option] fields, by key). */
+		private fun parseOption(o: JSONObject): Option {
+			// A choice that needs a feature the Android build leaves out
+			// (the genlock's video sources need VIDEOGRAB) is not offered.
+			val choices = o.optJSONArray("choices")?.let { array ->
+				List(array.length()) { array.getJSONObject(it) }
+					.filter { choice -> choice.optJSONArray("requires")?.toStringList().orEmpty().all { it in ANDROID_FEATURES } }
+					.map { choice -> Choice(choice.getString("value"), choice.getString("label")) }
+			} ?: emptyList()
+			fun text(key: String): String? = if (o.has(key) && !o.isNull(key)) o.getString(key) else null
+			fun number(key: String): Double? = if (o.has(key) && !o.isNull(key)) o.getDouble(key) else null
+			val id = o.getString("id")
+			return Option(
+				id = id,
+				type = o.getString("type"),
+				apply = o.getString("apply"),
+				default = o.getString("default"),
+				min = number("min"),
+				max = number("max"),
+				choices = choices,
+				label = text("label")?.takeIf { it.isNotBlank() } ?: id,
+				help = text("help").orEmpty(),
+				constraint = text("constraint")?.takeIf { it.isNotBlank() },
+				step = number("step"),
+				unit = text("unit")?.takeIf { it.isNotBlank() },
+				scale = number("scale")?.takeIf { it != 0.0 } ?: 1.0,
+				reversed = o.optBoolean("reversed", false),
+				androidDefault = text("android_default"),
+				group = text("group").orEmpty(),
+				level = o.optBoolean("level", false),
+				presetOnly = o.optBoolean("preset_only", false)
+			)
+		}
+
 		fun parse(json: JSONObject): SettingsSchema {
 			val options = LinkedHashMap<String, Option>()
 			val optionArray = json.getJSONArray("options")
 			for (i in 0 until optionArray.length()) {
-				val o = optionArray.getJSONObject(i)
-				// A choice that needs a feature the Android build leaves out
-				// (the genlock's video sources need VIDEOGRAB) is not offered.
-				val choices = o.optJSONArray("choices")?.let { array ->
-					List(array.length()) { array.getJSONObject(it) }
-						.filter { choice -> choice.optJSONArray("requires")?.toStringList().orEmpty().all { it in ANDROID_FEATURES } }
-						.map { choice -> Choice(choice.getString("value"), choice.getString("label")) }
-				} ?: emptyList()
-				fun text(key: String): String? = if (o.has(key) && !o.isNull(key)) o.getString(key) else null
-				fun number(key: String): Double? = if (o.has(key) && !o.isNull(key)) o.getDouble(key) else null
-				val id = o.getString("id")
-				val option = Option(
-					id = id,
-					type = o.getString("type"),
-					apply = o.getString("apply"),
-					default = o.getString("default"),
-					min = number("min"),
-					max = number("max"),
-					choices = choices,
-					label = text("label")?.takeIf { it.isNotBlank() } ?: id,
-					help = text("help").orEmpty(),
-					constraint = text("constraint")?.takeIf { it.isNotBlank() },
-					step = number("step"),
-					unit = text("unit")?.takeIf { it.isNotBlank() },
-					scale = number("scale")?.takeIf { it != 0.0 } ?: 1.0,
-					reversed = o.optBoolean("reversed", false),
-					androidDefault = text("android_default"),
-					group = text("group").orEmpty(),
-					level = o.optBoolean("level", false),
-					presetOnly = o.optBoolean("preset_only", false)
-				)
+				val option = parseOption(optionArray.getJSONObject(i))
 				options[option.id] = option
 			}
 
@@ -402,9 +422,12 @@ class SettingsSchema(
 			val memoryTransitions = json.optJSONArray("memory_transitions")?.let { array ->
 				List(array.length()) { Transitions.parse(array.getJSONObject(it)) }
 			}.orEmpty()
+			val hostSettings = json.optJSONArray("host_settings")?.let { array ->
+				List(array.length()) { parseOption(array.getJSONObject(it)) }
+			}.orEmpty()
 			return SettingsSchema(
 				options, presets, levels, roms, resolutions, memoryResolutions,
-				soundResolutions, availability, transitions, aros, memoryTransitions
+				soundResolutions, availability, transitions, aros, memoryTransitions, hostSettings
 			)
 		}
 

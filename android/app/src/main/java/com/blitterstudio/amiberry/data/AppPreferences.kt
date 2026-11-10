@@ -86,6 +86,21 @@ class AppPreferences private constructor(context: Context) {
 		}
 	}
 
+	/** Drops what the machines edited since filled in: new machines start from the device's defaults. */
+	fun resetRememberedControls() {
+		prefs.edit {
+			remove(KEY_LAST_JOYPORT0)
+			remove(KEY_LAST_JOYPORT1)
+			remove(KEY_LAST_ON_SCREEN_JOYSTICK)
+			remove(KEY_LAST_ON_SCREEN_KEYBOARD_BUTTON)
+			remove(KEY_LAST_ON_SCREEN_KEYBOARD_NUMPAD)
+			remove(KEY_LAST_ON_SCREEN_KEYBOARD_TOGGLE)
+			remove(KEY_LAST_JOYPORT0_MOUSEMAP)
+			remove(KEY_LAST_JOYPORT1_MOUSEMAP)
+			remove(KEY_LAST_ANALOG_MOUSE_SPEED)
+		}
+	}
+
 	/**
 	 * [KEY_LAST_ON_SCREEN_KEYBOARD] used to hold the keyboard master switch. Off meant
 	 * no keyboard at all, so carry it over as button off plus a disabled gamepad toggle;
@@ -189,6 +204,12 @@ class AppPreferences private constructor(context: Context) {
 	/** The Library's "No Kickstart ROMs" advice was closed: machines run on AROS by choice. */
 	var romAdviceDismissed = mutableStateOf(prefs.getBoolean(KEY_ROM_ADVICE_DISMISSED, false))
 		private set
+
+	/** The Library's Kickstart ROM advice again, for a user who closed it while it still applies. */
+	fun showRomAdviceAgain() {
+		romAdviceDismissed.value = false
+		prefs.edit { putBoolean(KEY_ROM_ADVICE_DISMISSED, false) }
+	}
 
 	fun dismissRomAdvice() {
 		romAdviceDismissed.value = true

@@ -1,6 +1,5 @@
 package com.blitterstudio.amiberry.ui.screens.settings
 
-import android.os.Build
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -19,22 +18,19 @@ import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.blitterstudio.amiberry.R
-import com.blitterstudio.amiberry.data.AppPreferences
 import com.blitterstudio.amiberry.data.model.LauncherChoices
 import com.blitterstudio.amiberry.ui.components.settings.SchemaLevelRow
 import com.blitterstudio.amiberry.ui.components.settings.SchemaSwitchRow
@@ -162,67 +158,6 @@ fun DisplaySoundPage(viewModel: SettingsViewModel) {
 		SchemaGroupSection("filter", viewModel)
 
 		SoundSections(viewModel)
-
-		OutlinedCard(modifier = Modifier.fillMaxWidth()) {
-			Column(modifier = Modifier.padding(16.dp)) {
-				Text(stringResource(R.string.settings_display_app_theme), style = MaterialTheme.typography.titleMedium)
-				Spacer(modifier = Modifier.height(8.dp))
-
-				val context = LocalContext.current
-				val appPrefs = AppPreferences.getInstance(context)
-
-				// Theme mode selector
-				val themeMode by appPrefs.themeMode
-				val themeModeOptions = listOf(
-					"system" to stringResource(R.string.settings_display_theme_system),
-					"light" to stringResource(R.string.settings_display_theme_light),
-					"dark" to stringResource(R.string.settings_display_theme_dark)
-				)
-				var themeExpanded by remember { mutableStateOf(false) }
-				ExposedDropdownMenuBox(
-					expanded = themeExpanded,
-					onExpandedChange = { themeExpanded = it }
-				) {
-					OutlinedTextField(
-						value = themeModeOptions.firstOrNull { it.first == themeMode }?.second ?: themeMode,
-						onValueChange = {},
-						readOnly = true,
-						label = { Text(stringResource(R.string.settings_display_theme_label)) },
-						trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = themeExpanded) },
-						modifier = Modifier
-							.dpadFieldFocusIndicator()
-							.dpadArrowsMoveFocus()
-							.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
-							.fillMaxWidth()
-					)
-					ExposedDropdownMenu(
-						expanded = themeExpanded,
-						onDismissRequest = { themeExpanded = false }
-					) {
-						themeModeOptions.forEach { (value, label) ->
-							DropdownMenuItem(
-								text = { Text(label) },
-								modifier = Modifier.dpadMenuItemInitialFocus(value == themeMode),
-								onClick = {
-									appPrefs.setThemeMode(value)
-									themeExpanded = false
-								}
-							)
-						}
-					}
-				}
-
-				if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-					Spacer(modifier = Modifier.height(8.dp))
-					val useDynamicColor by appPrefs.useDynamicColor
-					SettingSwitchRow(
-						label = stringResource(R.string.settings_display_dynamic_color),
-						checked = useDynamicColor,
-						onCheckedChange = { appPrefs.setDynamicColor(it) }
-					)
-				}
-			}
-		}
 	}
 }
 

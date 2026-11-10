@@ -73,7 +73,9 @@ internal fun nextLevelStop(current: Float, step: Float, up: Boolean, range: Clos
  * about it (settings_schema.json): its label, help, choice labels and unit.
  * While a row is unavailable it is dimmed and shows the reason: the
  * caller's, or else the layer's constraint. Pass showReason = false when
- * the section footer says it once for several rows.
+ * the section footer says it once for several rows. An [option] overrides
+ * what the schema resolves the id to, for the host settings (App Settings)
+ * whose entries share the option shape but live in their own list.
  */
 
 /** The bundled settings schema (loaded by MainActivity; read here if it was not yet). */
@@ -111,9 +113,10 @@ fun SchemaSwitchRow(
 	showReason: Boolean = true,
 	label: String? = null,
 	help: String? = null,
-	semanticsLabel: String? = null
+	semanticsLabel: String? = null,
+	option: SettingsSchema.Option? = null
 ) {
-	val option = schemaOption(id)
+	val option = option ?: schemaOption(id)
 	SettingSwitchRow(
 		label = label ?: option?.label ?: id,
 		checked = checked,
@@ -149,9 +152,10 @@ fun SchemaChoiceRow(
 	help: String? = null,
 	testTag: String? = null,
 	optionTestTag: ((String) -> String)? = null,
-	semanticsLabel: String? = null
+	semanticsLabel: String? = null,
+	option: SettingsSchema.Option? = null
 ) {
-	val option = schemaOption(id)
+	val option = option ?: schemaOption(id)
 	if (choices == null && option != null && option.type == SettingsSchema.TYPE_CHOICE && option.showsAsSwitch(value)) {
 		SchemaSwitchRow(
 			id = id,
@@ -237,9 +241,10 @@ fun SchemaLevelRow(
 	stops: List<Int>? = null,
 	valueText: ((Int) -> String)? = null,
 	testTag: String? = null,
-	semanticsLabel: String? = null
+	semanticsLabel: String? = null,
+	option: SettingsSchema.Option? = null
 ) {
-	val option = schemaOption(id)
+	val option = option ?: schemaOption(id)
 	val title = label ?: option?.label ?: id
 	val choiceStops = option?.takeIf { it.type == SettingsSchema.TYPE_CHOICE }
 		?.choices?.mapNotNull { it.value.toIntOrNull() }
@@ -380,9 +385,10 @@ fun SchemaNumberRow(
 	help: String? = null,
 	suggestions: List<Int> = emptyList(),
 	accepts: (Int) -> Boolean = { true },
-	semanticsLabel: String? = null
+	semanticsLabel: String? = null,
+	option: SettingsSchema.Option? = null
 ) {
-	val option = schemaOption(id)
+	val option = option ?: schemaOption(id)
 	val title = label ?: option?.label ?: id
 	fun shownText(value: Int): String =
 		option?.let { it.shownText(it.shown(value.toDouble())) } ?: value.toString()

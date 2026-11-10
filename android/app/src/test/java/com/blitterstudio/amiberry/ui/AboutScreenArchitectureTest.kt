@@ -5,22 +5,22 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
 
-class AboutScreenArchitectureTest {
+class AboutPageArchitectureTest {
 
 	@Test
 	fun `about screen uses centralized link actions instead of hardcoded urls`() {
 		val source = aboutScreenSource()
 
 		assertTrue(
-			"AboutScreen should render links from AboutActions so URL changes are testable outside Compose.",
+			"AboutPage should render links from AboutActions so URL changes are testable outside Compose.",
 			source.contains("AboutActions.externalLinks()")
 		)
 		assertFalse(
-			"AboutScreen should not hardcode the GitHub URL inline.",
+			"AboutPage should not hardcode the GitHub URL inline.",
 			source.contains("https://github.com/BlitterStudio/amiberry")
 		)
 		assertFalse(
-			"AboutScreen should not hardcode the Discord URL inline.",
+			"AboutPage should not hardcode the Discord URL inline.",
 			source.contains("https://discord.gg/wWndKTGpGV")
 		)
 	}
@@ -30,15 +30,15 @@ class AboutScreenArchitectureTest {
 		val source = aboutScreenSource()
 
 		assertTrue(
-			"AboutScreen should report whether the app has All Files Access.",
+			"AboutPage should report whether the app has All Files Access.",
 			source.contains("hasFullStorageAccess = hasFullStorageAccess(context)")
 		)
 		assertTrue(
-			"AboutScreen should include the app external files directory in copied support info.",
+			"AboutPage should include the app external files directory in copied support info.",
 			source.contains("externalFilesDir = context.getExternalFilesDir(null)?.absolutePath")
 		)
 	}
 
 	private fun aboutScreenSource(): String =
-		File("src/main/java/com/blitterstudio/amiberry/ui/screens/AboutScreen.kt").readText()
+		File("src/main/java/com/blitterstudio/amiberry/ui/screens/appsettings/AboutPage.kt").readText()
 }
