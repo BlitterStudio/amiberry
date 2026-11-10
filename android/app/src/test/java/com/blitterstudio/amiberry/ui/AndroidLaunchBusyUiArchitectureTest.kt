@@ -33,20 +33,24 @@ class AndroidLaunchBusyUiArchitectureTest {
 			machines.contains("launchInProgress = launchInProgress")
 		)
 		assertTrue(
-			"Saved machine Advanced launch menu item should be disabled while a launch is in progress.",
-			Regex("""DropdownMenuItem\([\s\S]*text = \{ Text\(stringResource\(R\.string\.action_edit_advanced_imgui\)\) \}[\s\S]*enabled = !launchInProgress""")
+			"The machine menu's Rename item follows the machine row's enabled state.",
+			Regex("""DropdownMenuItem\([\s\S]*text = \{ Text\(stringResource\(R\.string\.action_rename\)\) \}""")
 				.containsMatchIn(machines)
 		)
 	}
 
 	@Test
-	fun `secondary launch actions are disabled while preparing SDL launch`() {
+	fun `no launch path opens the removed classic settings window`() {
 		val settings = source("screens/settings/SettingsScreen.kt")
+		val machines = source("screens/library/LibraryMachinesPane.kt")
 
 		assertTrue(
-			"Settings Advanced launch menu item should be disabled while a launch is in progress.",
-			Regex("""DropdownMenuItem\([\s\S]*text = \{ Text\(stringResource\(R\.string\.action_advanced\)\) \}[\s\S]*enabled = !launchInProgress""")
-				.containsMatchIn(settings)
+			"The settings editor has no Classic settings window entry.",
+			!settings.contains("R.string.action_advanced")
+		)
+		assertTrue(
+			"The Library has no classic settings window entry.",
+			!machines.contains("R.string.action_edit_advanced_imgui")
 		)
 	}
 

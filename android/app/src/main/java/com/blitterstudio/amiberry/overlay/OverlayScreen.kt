@@ -41,7 +41,6 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.filled.Save
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SportsEsports
 import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.material.icons.filled.Tune
@@ -313,8 +312,6 @@ private fun HomePage(viewModel: OverlayViewModel, focus: FocusTargets) {
 		OverlayKeys.RESET, focus, { viewModel.open(OverlayPage.Confirm(ConfirmAction.Reset), OverlayKeys.RESET) })
 	MenuItem(Icons.Filled.PowerSettingsNew, stringResource(R.string.overlay_hard_reset), stringResource(R.string.overlay_hard_reset_help),
 		OverlayKeys.HARD_RESET, focus, { viewModel.open(OverlayPage.Confirm(ConfirmAction.HardReset), OverlayKeys.HARD_RESET) })
-	MenuItem(Icons.Filled.Settings, stringResource(R.string.overlay_advanced), stringResource(R.string.overlay_advanced_help),
-		OverlayKeys.ADVANCED, focus, viewModel::advancedSettings)
 	MenuItem(Icons.AutoMirrored.Filled.ExitToApp, stringResource(R.string.overlay_quit), stringResource(R.string.overlay_quit_help),
 		OverlayKeys.QUIT, focus, { viewModel.open(OverlayPage.Confirm(ConfirmAction.Quit), OverlayKeys.QUIT) })
 }
@@ -350,8 +347,7 @@ private fun MediaPage(viewModel: OverlayViewModel, focus: FocusTargets) {
 		DriveRow(stringResource(R.string.overlay_cd_name), status.cdPath, empty, MediaTarget.Cd, viewModel, focus)
 	}
 	// The disk swapper: every filled entry inserts into a drive, and can
-	// be changed or cleared here too (the classic window's swapper panel);
-	// one empty entry can be filled next.
+	// be changed or cleared here too; one empty entry can be filled next.
 	val filled = viewModel.swapper.withIndex().filter { it.value.isNotEmpty() }
 	val nextEmpty = viewModel.swapper.indexOfFirst { it.isEmpty() }
 	if (filled.isNotEmpty() || nextEmpty >= 0) {

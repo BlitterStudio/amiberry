@@ -85,7 +85,6 @@ object OverlayKeys {
 	const val SETTINGS = "settings"
 	const val RESET = "reset"
 	const val HARD_RESET = "hard_reset"
-	const val ADVANCED = "advanced"
 	const val QUIT = "quit"
 	const val SWAP_PORTS = "swap_ports"
 

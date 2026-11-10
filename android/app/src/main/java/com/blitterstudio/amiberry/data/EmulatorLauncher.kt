@@ -129,21 +129,6 @@ object EmulatorLauncher {
 		})
 	}
 
-	/**
-	 * Open the full ImGui GUI, optionally loading a config file for editing.
-	 * Does NOT write a session marker or mark as emulator launch, since this
-	 * is a GUI-only session — the user expects to return cleanly to the
-	 * Kotlin UI without seeing a crash dialog.
-	 */
-	fun launchAdvancedGui(context: Context, configPath: String? = null) {
-		// No -G: ImGui GUI will open for the user
-
-		launchRequest(
-			context = context,
-			request = LaunchRequest.AdvancedGui(configPath = configPath)
-		)
-	}
-
 	private const val SESSION_MARKER = ".emulator_session"
 	private const val CLEAN_EXIT_MARKER = ".clean_exit"
 
@@ -154,8 +139,8 @@ object EmulatorLauncher {
 	/**
 	 * @param trackSession If true, writes a crash-detection marker and marks the
 	 *                     launch for review-prompt tracking. Set to false for
-	 *                     GUI-only sessions (Advanced/ImGui) where process exit
-	 *                     is expected and should not trigger the crash dialog.
+	 *                     launches whose process exit is expected and should not
+	 *                     trigger the crash dialog.
 	 */
 	private fun launchSdlActivity(
 		context: Context,

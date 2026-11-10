@@ -61,18 +61,6 @@ class LaunchRequestTest {
 	}
 
 	@Test
-	fun `advanced gui request includes config and use gui override`() {
-		val configPath = "/tmp/edit.uae"
-
-		val args = LaunchRequest.AdvancedGui(configPath = configPath).toArgs()
-
-		assertArrayEquals(
-			arrayOf("--rescan-roms", "--config", configPath, "-s", "use_gui=yes"),
-			args
-		)
-	}
-
-	@Test
 	fun `whdload request uses autoload and skip gui`() {
 		val lhaPath = "/tmp/game.lha"
 
@@ -464,37 +452,23 @@ class LaunchRequestTest {
 	}
 
 	@Test
-	fun `launch matrix tracks emulator sessions but not advanced gui`() {
-		assertTrue(LaunchRequest.QuickStart(AmigaModel.A500, configPath = "/tmp/quick.uae").trackSession)
-		assertTrue(LaunchRequest.SavedConfig("/tmp/saved.uae").trackSession)
-		assertTrue(LaunchRequest.SettingsConfig("/tmp/current.uae").trackSession)
-		assertTrue(LaunchRequest.WhdLoad("/tmp/game.lha", configPath = "/tmp/controls.uae").trackSession)
-		assertTrue(LaunchRequest.Rp9("/tmp/game.rp9").trackSession)
-
-		assertFalse(LaunchRequest.AdvancedGui(configPath = "/tmp/edit.uae").trackSession)
-	}
-
-	@Test
-	fun `launch matrix does not mix advanced gui with skip gui`() {
+	fun `every launch request tracks an emulator session and starts the emulation`() {
 		val requests = listOf(
 			LaunchRequest.QuickStart(AmigaModel.A500, configPath = "/tmp/quick.uae"),
 			LaunchRequest.SavedConfig("/tmp/saved.uae"),
 			LaunchRequest.SettingsConfig("/tmp/current.uae"),
 			LaunchRequest.WhdLoad("/tmp/game.lha", configPath = "/tmp/controls.uae"),
-			LaunchRequest.Rp9("/tmp/game.rp9"),
-			LaunchRequest.AdvancedGui(configPath = "/tmp/edit.uae")
+			LaunchRequest.Rp9("/tmp/game.rp9")
 		)
 
 		requests.forEach { request ->
+			assertTrue("${request::class.simpleName} should track the emulator session", request.trackSession)
 			val args = request.toArgs().toList()
-			val hasSkipGui = "-G" in args
-			val hasUseGuiYes = args.windowed(2).any { it == listOf("-s", "use_gui=yes") }
-
-			assertFalse("${request::class.simpleName} must not combine -G with use_gui=yes", hasSkipGui && hasUseGuiYes)
-			if (request is LaunchRequest.AdvancedGui) {
-				assertTrue("Advanced GUI must force native GUI mode", hasUseGuiYes)
-				assertFalse("Advanced GUI must not skip native GUI", hasSkipGui)
-			}
+			assertTrue("${request::class.simpleName} must start the emulation (-G): there is no classic settings window", "-G" in args)
+			assertFalse(
+				"${request::class.simpleName} must not force the settings open",
+				args.windowed(2).any { it == listOf("-s", "use_gui=yes") }
+			)
 		}
 	}
 }

@@ -34,7 +34,6 @@ import androidx.compose.material.icons.filled.DriveFileRenameOutline
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
@@ -82,7 +81,6 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import com.blitterstudio.amiberry.R
-import com.blitterstudio.amiberry.data.AdvancedLaunchActions
 import com.blitterstudio.amiberry.data.AppPreferences
 import com.blitterstudio.amiberry.data.ConfigFiles
 import com.blitterstudio.amiberry.data.ConfigInfo
@@ -113,8 +111,8 @@ import java.util.Locale
 
 /**
  * The Library's machines: the saved configurations as cards (a wide window shows the
- * chosen one beside the list), each to play, edit, duplicate, rename, delete, share or
- * edit in the classic settings window. With none saved, the models start a new machine.
+ * chosen one beside the list), each to play, edit, duplicate, rename, delete or
+ * share. With none saved, the models start a new machine.
  */
 @Composable
 internal fun LibraryMachinesPane(
@@ -204,21 +202,6 @@ internal fun LibraryMachinesPane(
 					scope.launch { snackbarHostState.showSnackbar(actionMessage(target.message)) }
 			}
 		}),
-		onAdvancedEdit = {
-			when (val target = AdvancedLaunchActions.savedConfigTarget(config.path)) {
-				is AdvancedLaunchActions.ConfigTarget.Ready -> {
-					scope.launchGuarded(launchGuard) {
-						runCatching {
-							EmulatorLauncher.launchAdvancedGui(context, target.path)
-						}.onFailure {
-							snackbarHostState.showSnackbar(actionMessage(AdvancedLaunchActions.launchFailedMessage()))
-						}
-					}
-				}
-				is AdvancedLaunchActions.ConfigTarget.Failed ->
-					scope.launch { snackbarHostState.showSnackbar(actionMessage(target.message)) }
-			}
-		},
 		onLaunch = {
 			val configPath = config.path
 			// Not the editor state: that may belong to another configuration.
@@ -412,7 +395,6 @@ private class ConfigItemActions(
 	val onRename: (String) -> Unit,
 	/** Null where no app can take a shared file (Google TV). */
 	val onShare: (() -> Unit)?,
-	val onAdvancedEdit: () -> Unit,
 	val onLaunch: () -> Unit
 )
 
@@ -569,16 +551,6 @@ private fun ConfigItem(
 						}
 						DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
 							DropdownMenuItem(
-								text = { Text(stringResource(R.string.action_edit_advanced_imgui)) },
-								modifier = Modifier.dpadFocusIndicator(),
-								onClick = {
-									actions.onAdvancedEdit()
-									showMenu = false
-								},
-								enabled = !launchInProgress,
-								leadingIcon = { Icon(Icons.Default.Settings, contentDescription = null) }
-							)
-							DropdownMenuItem(
 								text = { Text(stringResource(R.string.action_rename)) },
 								modifier = Modifier.dpadFocusIndicator(),
 								onClick = {
@@ -713,12 +685,6 @@ private fun ConfigDetailPane(
 				Text(stringResource(R.string.action_launch))
 			}
 			ConfigDetailAction(Icons.Default.Edit, stringResource(R.string.action_edit_config), actions.onLoad)
-			ConfigDetailAction(
-				Icons.Default.Settings,
-				stringResource(R.string.action_edit_advanced_imgui),
-				actions.onAdvancedEdit,
-				enabled = !launchInProgress
-			)
 			ConfigDetailAction(
 				Icons.Default.DriveFileRenameOutline,
 				stringResource(R.string.action_rename),

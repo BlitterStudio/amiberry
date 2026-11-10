@@ -871,22 +871,19 @@ bool gui_ask_disk(const int drv, TCHAR* name, const int name_len)
 }
 
 // The settings UI: the native window on macOS native UI builds, the
-// built-in (ImGui) GUI everywhere else. Over a running emulation the
-// Android app shows its own menu instead, at [page] for a media or state
-// hotkey (its pickers and state slots take the requesters), or at its Home
-// for the settings, unless the launcher turned the menu off; the menu's
-// Classic settings window opens the built-in GUI after it.
+// Android app's own menu there (at [page] for a media or state hotkey,
+// whose pickers and state slots take the requesters, or at its Home for
+// the settings), and the built-in (ImGui) GUI everywhere else. Android
+// has no built-in GUI: a start without -G (a direct one of the binary)
+// opens the menu before the emulation instead.
 static void run_settings_ui([[maybe_unused]] const bool requester = false,
-	[[maybe_unused]] const int page = 0)
+	[[maybe_unused]] const int page = -1)
 {
-#ifdef AMIBERRY_NATIVE_HOST
+#if defined(AMIBERRY_NATIVE_HOST)
 	native_host_run_settings();
+#elif defined(__ANDROID__)
+	android_overlay_run(page);
 #else
-#ifdef __ANDROID__
-	if (emulating && android_overlay_enabled()
-		&& android_overlay_run(page) == android_overlay_result::resume)
-		return;
-#endif
 	run_gui();
 #endif
 }
@@ -1070,24 +1067,24 @@ void gui_display(int shortcut)
 
 	bool requester = false;
 	int page = 0;
-#if !defined(AMIBERRY_NATIVE_HOST) && defined(USE_IMGUI)
+#ifdef __ANDROID__
+	// A hotkey opens the menu at its page: the menu's own pickers and
+	// state slots answer it (run_settings_ui opens it at [page], and its
+	// actions insert, load and save). There is no built-in GUI whose file
+	// requester could take it instead.
+	if (shortcut >= 0 && shortcut <= 6) {
+		page = shortcut;
+		shortcut = -1;
+		requester = true;
+	}
+#elif defined(USE_IMGUI)
 	// A hotkey's requester shows over the GUI, which closes once it is
 	// answered.
 	if (shortcut >= 0 && shortcut <= 6) {
 		page = shortcut;
 		shortcut = -1;
 		requester = true;
-#ifdef __ANDROID__
-		// The menu's own pickers and state slots take the hotkeys over a
-		// running emulation (run_settings_ui opens it at [page], and its
-		// actions insert, load and save); the GUI's file requester stays
-		// for the menu turned off in the launcher.
-		const bool menu_takes_requester = emulating && android_overlay_enabled();
-#else
-		const bool menu_takes_requester = false;
-#endif
-		if (!menu_takes_requester)
-			request_disk_selection(page, true);
+		request_disk_selection(page, true);
 	}
 #endif
 	if (shortcut == -1)

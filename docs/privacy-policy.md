@@ -51,7 +51,7 @@ The App connects to the internet only in these cases:
    - the kickstart relocation files, the JST booter and Amiga libraries (XPK, MMULib, explode, medplayer) from `aminet.net`;
    - the boot files and the WHDLoad game database from GitHub (`github.com`, `raw.githubusercontent.com`): the Amiberry project's files, or, if its game database can't be reached, the older one from the Amiberry XML Builder project.
 
-   In the versions with the classic settings window (all except the iPhone, iPad and Mac App Store apps), the "Update Controllers DB" button also downloads the SDL game controller database from GitHub.
+   In the versions with the classic settings window (the desktop builds), the "Update Controllers DB" button also downloads the SDL game controller database from GitHub.
 
    Like any download, these servers see your IP address. The App sends them nothing else.
 2. **Emulated networking.** Amiga software running inside the emulator can use the network (bsdsocket.library and the emulated network cards), just as on a real Amiga. That traffic goes where the Amiga software sends it.

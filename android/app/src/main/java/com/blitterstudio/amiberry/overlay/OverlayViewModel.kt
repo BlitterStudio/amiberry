@@ -321,8 +321,6 @@ class OverlayViewModel(application: Application) : AndroidViewModel(application)
 		close(OverlayNative.CLOSE_RESUME)
 	}
 
-	fun advancedSettings() = close(OverlayNative.CLOSE_ADVANCED)
-
 	fun showKeyboard() = close(OverlayNative.CLOSE_KEYBOARD)
 
 	fun insert(target: MediaTarget, path: String) {

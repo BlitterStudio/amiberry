@@ -496,18 +496,14 @@ private fun HostSection(
 
 /**
  * The launcher's own app-level settings, in the page they belong: the app
- * theme and the in-game menu under Appearance, the remembered controls
- * under Defaults, the storage location and the Library's state under
- * Advanced. Everything a machine of its own sets stays in the machine
- * editor.
+ * theme under Appearance, the remembered controls under Defaults, the
+ * storage location and the Library's state under Advanced. Everything a
+ * machine of its own sets stays in the machine editor.
  */
 @Composable
 private fun LauncherSettings(page: String, preferences: AppPreferences, viewModel: AppSettingsViewModel) {
 	when (page) {
-		"appearance" -> {
-			AppThemeCard(preferences)
-			InGameMenuCard(preferences)
-		}
+		"appearance" -> AppThemeCard(preferences)
 		"defaults" -> RememberedControlsSetting(preferences)
 		"advanced" -> {
 			StorageLocationSetting()
@@ -575,24 +571,6 @@ private fun AppThemeCard(preferences: AppPreferences) {
 					onCheckedChange = { preferences.setDynamicColor(it) }
 				)
 			}
-		}
-	}
-}
-
-/** Which menu a game opens: the native overlay's, or the emulator's classic window. */
-@Composable
-private fun InGameMenuCard(preferences: AppPreferences) {
-	OutlinedCard(modifier = Modifier.fillMaxWidth()) {
-		Column(modifier = Modifier.padding(16.dp)) {
-			Text(stringResource(R.string.settings_display_in_game_menu), style = MaterialTheme.typography.titleMedium)
-			Spacer(modifier = Modifier.height(8.dp))
-			val useClassicMenu by preferences.useClassicInGameMenu
-			SettingSwitchRow(
-				label = stringResource(R.string.settings_display_classic_menu),
-				checked = useClassicMenu,
-				onCheckedChange = { preferences.setClassicInGameMenu(it) },
-				help = stringResource(R.string.settings_display_classic_menu_help)
-			)
 		}
 	}
 }
