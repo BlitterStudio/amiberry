@@ -45,6 +45,18 @@ void android_overlay_message(const char* text);
 // cancelled. Main thread.
 bool android_overlay_ask_disk(int drive, const char* missing_path, std::string& chosen);
 
+// The native on-screen Amiga keyboard (the Compose overlay's
+// OverlayKeyboard, in place of the ImGui one): shown over the running
+// emulation, it pauses nothing. The emulator thread toggles it (every way
+// in arrives there: the AKS_OSK hotkey, a controller button, the on-screen
+// joystick's KB button, the menu's Keyboard entry); the view owns the keys
+// it has down (they go through amiberry_actions_key) and hides with them
+// released, so a hide from here only has to tell it. Emulator thread for
+// the toggle; any thread for the rest.
+void android_osk_toggle();
+void android_osk_hide();
+bool android_osk_is_active();
+
 // Between frames (handle_events): shows the on-screen keyboard the menu's
 // Show keyboard asked for, once the emulation runs with the keyboard on.
 void android_overlay_service();

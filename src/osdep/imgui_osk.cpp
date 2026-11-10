@@ -1092,8 +1092,16 @@ void imgui_osk_shutdown()
 
 void imgui_osk_toggle()
 {
+#if defined(__ANDROID__) && !defined(LIBRETRO)
+	// The Android app's on-screen keyboard is the native Compose one
+	// (android_osk_toggle); the ImGui keyboard is never shown there. The
+	// AMIBERRY_NO_IMGUI build will drop this file's keyboard from Android
+	// entirely.
+	return;
+#else
 	if (!s_initialized)
 		return;
+#endif
 
 	if (s_visible) {
 		imgui_osk_hide();

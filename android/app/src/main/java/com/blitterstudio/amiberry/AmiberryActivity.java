@@ -45,6 +45,8 @@ public class AmiberryActivity extends SDLActivity {
 	private static final int COMMAND_MESSAGE = COMMAND_USER + 3;
 	private static final int COMMAND_SHOW_DIALOG = COMMAND_USER + 4;
 	private static final int COMMAND_HIDE_DIALOG = COMMAND_USER + 5;
+	private static final int COMMAND_SHOW_KEYBOARD = COMMAND_USER + 6;
+	private static final int COMMAND_HIDE_KEYBOARD = COMMAND_USER + 7;
 	/** How long after the start the first hint shows. */
 	private static final long HINT_DELAY_MS = 2500;
 
@@ -168,6 +170,14 @@ public class AmiberryActivity extends SDLActivity {
 		}
 		if (command == COMMAND_HIDE_DIALOG) {
 			overlay.hideDialog();
+			return true;
+		}
+		if (command == COMMAND_SHOW_KEYBOARD) {
+			overlay.showKeyboard();
+			return true;
+		}
+		if (command == COMMAND_HIDE_KEYBOARD) {
+			overlay.hideKeyboard();
 			return true;
 		}
 		return super.onUnhandledMessage(command, param);
