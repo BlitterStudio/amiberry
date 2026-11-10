@@ -68,8 +68,14 @@ internal object GlobalSettingsPaths {
 		val managedPaths: MutableList<ManagedPath> = mutableListOf()
 	}
 
-	/** The amiberry.conf [file] holds, read non-fatally: missing keys keep their defaults. */
-	internal fun readGlobalSettings(file: File?): GlobalSettings {
+	/**
+	 * The amiberry.conf [file] holds, read non-fatally: missing keys keep
+	 * their defaults. Every path value — the base content root included —
+	 * is resolved here, once, the way the native loader resolves each line
+	 * as it reads it (`target_resolve_relative_path`), so no later reader
+	 * can miss it.
+	 */
+	internal fun readGlobalSettings(file: File?, base: File? = null): GlobalSettings {
 		val settings = GlobalSettings()
 		if (file == null) return settings
 
@@ -84,10 +90,10 @@ internal object GlobalSettingsPaths {
 				val value = line.substring(separator + 1).trim()
 				if (key == "base_content_path") {
 					settings.hasBaseContentPath = true
-					settings.baseContentPath = value
+					settings.baseContentPath = resolveBaseRelative(value, base)?.path.orEmpty()
 				}
 				if (key in pathSettingKeys) {
-					settings.managedPaths.add(ManagedPath(key, value))
+					settings.managedPaths.add(ManagedPath(key, resolveBaseRelative(value, base)?.path.orEmpty()))
 				}
 				if (key == "shader") {
 					settings.shader = value
@@ -258,8 +264,7 @@ internal object GlobalSettingsPaths {
 					continue
 				}
 				if (legacyVisualRoots.any { line.matchesLegacyVisualPath(it) }) continue
-				resolvedRoot = line.value.takeIf { it.isNotEmpty() }
-					?.let { resolveBaseRelative(it, externalFilesDir) }
+				resolvedRoot = line.value.takeIf { it.isNotEmpty() }?.let(::File)
 			}
 
 			val legacyScanRoots = if (key in visualDirectoryNames && suffix != null) {
@@ -301,8 +306,7 @@ internal object GlobalSettingsPaths {
 				) {
 					continue
 				}
-				resolvedRoot = line.value.takeIf { it.isNotEmpty() }
-					?.let { resolveBaseRelative(it, externalFilesDir) }
+				resolvedRoot = line.value.takeIf { it.isNotEmpty() }?.let(::File)
 			}
 			return resolvedRoot
 		}
@@ -321,7 +325,9 @@ internal object GlobalSettingsPaths {
 		companion object {
 			/** The resolver for the settings [globalSettingsFile] holds. */
 			fun of(globalSettingsFile: File?, externalFilesDir: File?): Resolver {
-				val paths = readGlobalSettings(globalSettingsFile)
+				// The app's own storage is the content home a `./x` line
+				// resolves against, as native loads it.
+				val paths = readGlobalSettings(globalSettingsFile, externalFilesDir)
 				return Resolver(paths, inferSerializedBaseContentPath(paths.managedPaths), externalFilesDir)
 			}
 		}

@@ -221,4 +221,33 @@ class ContentFoldersTest {
 			ContentFolders.effective("harddrive_path", conf, external)
 		)
 	}
+
+	@Test
+	fun `a dot-relative base content root resolves against the app's storage`() {
+		val external = tempDir.newFolder("external-relative-base")
+		val sub = File(external, "AmiberryData")
+		val conf = settings("base_content_path=./AmiberryData")
+
+		assertEquals(sub, ContentFolders.baseRoot(conf, external))
+		assertEquals(
+			File(sub, "Configurations"),
+			ContentFolders.effective("config_path", conf, external)
+		)
+		assertEquals(
+			File(sub, "ROMs"),
+			ContentFolders.effective("rom_path", conf, external)
+		)
+	}
+
+	@Test
+	fun `a base content root of a lone dot names the app's storage itself`() {
+		val external = tempDir.newFolder("external-lone-dot")
+		val conf = settings("base_content_path=./")
+
+		assertEquals(external, ContentFolders.baseRoot(conf, external))
+		assertEquals(
+			File(external, "Floppies"),
+			ContentFolders.effective("floppy_path", conf, external)
+		)
+	}
 }

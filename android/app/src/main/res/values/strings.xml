@@ -489,6 +489,7 @@
     <string name="device_browser_unreadable">This folder can\'t be opened.</string>
     <string name="device_browser_empty">No folders or supported files here.</string>
     <string name="device_browser_import_folder">Import this folder</string>
+    <string name="device_browser_folder_write_denied">Writing into a chosen folder needs storage access; the folder was not changed.</string>
     <string name="device_browser_import_selected">Import (%1$d)</string>
     <string name="device_browser_up">Up one folder</string>
     <string name="device_browser_close">Close</string>
