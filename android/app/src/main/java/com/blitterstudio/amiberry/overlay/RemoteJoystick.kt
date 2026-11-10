@@ -24,7 +24,7 @@ import com.blitterstudio.amiberry.ui.isTvDevice
  *
  * The keys go to the emulator directly (OverlayNative.remoteKey), not
  * through SDL, which may take a remote for a joystick of its own; the
- * emulator gives them back while the classic settings window has the D-pad.
+ * emulator gives them back while the in-game menu has the D-pad.
  */
 object RemoteJoystick {
 	/** Whether the remote drives port 2 now; the in-game menu's Controls page says so. */

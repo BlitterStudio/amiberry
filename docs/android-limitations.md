@@ -28,10 +28,7 @@ The launcher writes the whole machine a Quick Start model builds into its config
 Changing the model keeps the inserted disks and CD. A medium the new model has no drive for (floppies on a CD32, a CD on an A500) is ejected, and a message offers Undo. Quick Start opens in **Recent** once something was launched, in **WHDLoad** when games are installed, and in **Disk** otherwise.
 
 ### Settings coverage
-The launcher's Settings tabs show every option of the shared settings layer that means something on Android: each tab's own controls first, then one section per settings group (CPU, MMU, FPU, CPU speed, JIT; Chipset, Advanced chipset and Genlock, which start collapsed; Memory and ROMs; Display and Filters; Sound; Autofire, controllers and mouse, and On-screen controls; Floppy, CD and Filesystem), and a **Misc** tab for the miscellaneous options, expansions and the protection dongle. An option that is unavailable in the current machine is dimmed, and its section says why once. The second to fourth memory boards of a kind appear once the board before is fitted. Configured in the classic settings window only, for now:
-- RTG and accelerator boards (the board type is not yet in the launcher), and their memory and options;
-- the disk swapper list, joystick ports 3 and 4, custom bezel images and the RTG shader;
-- hotkeys.
+The launcher's Settings tabs show every option of the shared settings layer that means something on Android: each tab's own controls first, then one section per settings group (CPU, MMU, FPU, CPU speed, JIT; Chipset, Advanced chipset and Genlock, which start collapsed; Memory and ROMs; Display and Filters; Sound; Autofire, controllers and mouse, and On-screen controls; Floppy, CD and Filesystem), and a **Misc** tab for the miscellaneous options, expansions and the protection dongle. An option that is unavailable in the current machine is dimmed, and its section says why once. The second to fourth memory boards of a kind appear once the board before is fitted. The classic settings window is gone: expansion and accelerator boards, custom controls and the disk swapper list have their own editors, and the settings the window kept to itself (its theme and scale, the Quickstart panel's options) no longer exist on Android.
 
 Options for host windows, devices, serial ports, MIDI and PowerPC do not apply on Android and are not shown.
 
@@ -87,7 +84,7 @@ The red **Hide** key in the top-right corner of the keyboard, above the arrow ke
 
 On Android TV (a leanback device) a new installation starts without the touch overlays: no on-screen joystick and no KB button, with Port 2 set to a controller. While no gamepad is connected, the remote's D-pad moves the Port 2 joystick and OK fires; Back still opens the menu. This is decided while the emulation runs, so configurations saved on a TV are the same as anywhere else, and connecting a gamepad hands Port 2 back to the configuration's device. A one-time hint says what the remote does; on other devices a one-time hint says that Back opens the menu.
 
-The in-game menu's **Controls** page shows the Port 1 and Port 2 devices, with **Swap ports**. Port changes there apply to the session; the on-screen joystick and keyboard switches are kept for the next launch. The **Settings** page's changes apply to the session only. Reset, Hard reset, Quit and saving over a used state slot ask first, with Cancel focused. The menu's **Classic settings window** opens the built-in settings window, with every option.
+The in-game menu's **Controls** page shows the Port 1 and Port 2 devices, with **Swap ports**. Port changes there apply to the session; the on-screen joystick and keyboard switches are kept for the next launch. The **Settings** page's changes apply to the session only. Reset, Hard reset, Quit and saving over a used state slot ask first, with Cancel focused. The menu is the only settings UI over a running emulation: the built-in window it once offered is gone from the Android build.
 
 ## Desktop-Style Use on ChromeOS
 
@@ -101,9 +98,9 @@ The launcher adapts to the window width (Material 3 window size classes). From 6
 
 When the host exposes only its native fullscreen mode, Picasso96 mode lists on Android are supplemented with a set of virtual resolutions (up to 2560x1440, subject to the configured RTG memory). These are marked with an `ANDROID` suffix.
 
-## GUI Scale
+## Building without the built-in GUI
 
-The GUI defaults to roughly 70% of automatic DPI scaling on Android (the desktop default is unchanged). Adjust it with the **GUI scale** setting under Display defaults (50–200%).
+The Android app is built with `AMIBERRY_NO_IMGUI` (`android/app/build.gradle`): none of the Dear ImGui GUI's code is compiled in, and the launcher, the in-game menu, the native dialogs and the on-screen keyboard replace it. The desktop, iOS and Mac App Store builds are unaffected.
 
 ## Building the APK on Windows
 

@@ -78,7 +78,7 @@ internal object AppSettingsSections {
 		// The paths group as the Apple apps' settings split it (audit §3b):
 		// the log switch with its log file, and every content folder the
 		// Android build honours — the launcher's repositories follow them
-		// (ContentFolders), so they change here, not in the classic window.
+		// (ContentFolders), so they change here.
 		AppSettingsPage("advanced", R.string.appsettings_group_advanced, listOf(
 			AppSettingsSection(
 				R.string.appsettings_section_logging,

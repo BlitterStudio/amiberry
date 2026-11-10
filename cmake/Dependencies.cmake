@@ -752,7 +752,8 @@ if(ANDROID AND DEFINED sdl3_image_SOURCE_DIR)
     target_include_directories(${PROJECT_NAME} PRIVATE "${sdl3_image_SOURCE_DIR}/include")
 endif()
 
-# ImGui: everywhere but the native Apple apps (AMIBERRY_IMGUI).
+# ImGui: everywhere but the native Apple apps and the Android app
+# (AMIBERRY_IMGUI).
 if(AMIBERRY_IMGUI)
     target_compile_definitions(${PROJECT_NAME} PRIVATE USE_IMGUI)
 else()

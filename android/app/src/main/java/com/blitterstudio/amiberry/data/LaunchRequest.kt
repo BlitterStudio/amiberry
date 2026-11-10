@@ -51,22 +51,6 @@ sealed interface LaunchRequest {
 		}
 	}
 
-	data class AdvancedGui(
-		val configPath: String? = null
-	) : LaunchRequest {
-		override val trackSession: Boolean = false
-
-		override fun toArgs(): Array<String> {
-			val args = mutableListOf("--rescan-roms")
-
-			if (configPath != null) {
-				args.addAll(listOf("--config", configPath))
-			}
-			args.addAll(listOf("-s", "use_gui=yes"))
-			return args.toTypedArray()
-		}
-	}
-
 	data class WhdLoad(
 		val lhaPath: String,
 		val configPath: String? = null,

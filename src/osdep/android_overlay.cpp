@@ -55,10 +55,8 @@ constexpr Uint32 command_hide_osk = 0x8007;
 // OverlayNative.CLOSE_*: how the overlay asked the loop to end.
 constexpr int close_none = -1;
 constexpr int close_resume = 0;
-constexpr int close_advanced = 1;
 constexpr int close_keyboard = 2;
 
-std::atomic<bool> enabled{true};
 std::atomic<int> close_request{close_none};
 // Show keyboard was chosen; android_overlay_service() shows it.
 std::atomic<bool> keyboard_requested{false};
@@ -266,12 +264,7 @@ bool pump_native_ui_events(SDL_Event& resize, bool& resized)
 
 } // namespace
 
-bool android_overlay_enabled()
-{
-	return enabled.load();
-}
-
-android_overlay_result android_overlay_run(const int page)
+void android_overlay_run(const int page)
 {
 	close_request.store(close_none);
 	// The page (a media or state hotkey's shortcut) tells the activity
@@ -314,7 +307,6 @@ android_overlay_result android_overlay_run(const int page)
 		SDL_PushEvent(&resize);
 	if (result == close_keyboard)
 		keyboard_requested.store(true);
-	return result == close_advanced ? android_overlay_result::advanced : android_overlay_result::resume;
 }
 
 void android_overlay_message(const char* text)
@@ -459,14 +451,9 @@ void android_remote_joystick_pump()
 
 extern "C" {
 
-JNIEXPORT void JNICALL OVERLAY_JNI(setEnabled)(JNIEnv*, jclass, jboolean on)
-{
-	enabled.store(on == JNI_TRUE);
-}
-
 JNIEXPORT void JNICALL OVERLAY_JNI(close)(JNIEnv*, jclass, jint how)
 {
-	if (how == close_resume || how == close_advanced || how == close_keyboard)
+	if (how == close_resume || how == close_keyboard)
 		close_request.store(how);
 }
 
@@ -482,11 +469,11 @@ JNIEXPORT void JNICALL OVERLAY_JNI(setRemoteJoystick)(JNIEnv*, jclass, jboolean 
 }
 
 // A remote key (one REMOTE_* bit) while remote_joystick is on: true when it
-// moves the joystick. A press is not taken while the built-in GUI is open,
-// where the D-pad moves its focus: over a running emulation (gui_active) and
-// at startup without -G, which runs the GUI before any emulation and never
-// raises gui_active (gui_running covers both). A release always is taken, so
-// none sticks, and nothing is recorded for presses the GUI gets.
+// moves the joystick. A press is not taken while a native UI has the input
+// (the menu gui_display opened, which raised gui_active; gui_running covers
+// a built-in GUI on a build with one), where the D-pad moves its focus. A
+// release always is taken, so none sticks, and nothing is recorded for
+// presses the UI gets.
 JNIEXPORT jboolean JNICALL OVERLAY_JNI(remoteKey)(JNIEnv*, jclass, jint button, jboolean down)
 {
 	const unsigned bit = static_cast<unsigned>(button) & remote_all;

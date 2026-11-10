@@ -20,7 +20,9 @@ object ConfigGenerator {
 		".intent_quickstart_settings.uae",
 		".last_session.uae",
 		".quickstart_settings.uae",
-		AdvancedLaunchActions.SETTINGS_ADVANCED_CONFIG
+		// The classic settings window's launch wrote this; it must not
+		// surface as a machine on devices that still have one.
+		".temp_native_ui.uae"
 	)
 
 	fun generate(settings: EmulatorSettings): String {

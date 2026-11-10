@@ -270,7 +270,7 @@ public class AmiberryActivity extends SDLActivity {
 		backCallback = null;
 	}
 
-	/** -G: the launcher starts the emulation rather than the classic settings window. */
+	/** -G: the launcher always starts the emulation; without it (a direct start) the menu shows first. */
 	private boolean startsEmulation() {
 		return java.util.Arrays.asList(getArguments()).contains("-G");
 	}

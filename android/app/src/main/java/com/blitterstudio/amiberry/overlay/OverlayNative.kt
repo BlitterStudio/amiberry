@@ -5,7 +5,7 @@ package com.blitterstudio.amiberry.overlay
  * libamiberry, which SDLActivity loads before AmiberryActivity uses this.
  *
  * Threads: the action posts, [poll], [status], [swapperEntries], [close],
- * [setEnabled], [setRemoteJoystick] and [remoteKey] may be called from any
+ * [setRemoteJoystick] and [remoteKey] may be called from any
  * thread and never wait. The settings and state-name calls run on the
  * emulator thread and wait for it, so they must never be called from the
  * Android UI thread; they return null
@@ -14,11 +14,8 @@ package com.blitterstudio.amiberry.overlay
 object OverlayNative {
 	/** [close]: back to the emulation. */
 	const val CLOSE_RESUME = 0
-	/** [close]: open the built-in (ImGui) settings within the same pause. */
-	const val CLOSE_ADVANCED = 1
 	/** [close]: back to the emulation with the on-screen keyboard shown. */
 	const val CLOSE_KEYBOARD = 2
-
 	/** [answerDialog] answers for the recovery dialog. */
 	const val RECOVERY_LOCATE = 1
 	const val RECOVERY_SKIP = 2
@@ -37,15 +34,14 @@ object OverlayNative {
 	const val REMOTE_RIGHT = 8
 	const val REMOTE_FIRE = 16
 
-	@JvmStatic external fun setEnabled(enabled: Boolean)
 	@JvmStatic external fun close(how: Int)
 
 	/** Whether the remote drives port 2 (a TV with no gamepad); see [RemoteJoystick]. */
 	@JvmStatic external fun setRemoteJoystick(enabled: Boolean)
 	/**
 	 * A remote button pressed or released; true when it moved the joystick
-	 * (false while the classic settings window has the D-pad, or while the
-	 * remote does not drive port 2). A release is always taken.
+	 * (false while the in-game menu has the D-pad, or while the remote does
+	 * not drive port 2). A release is always taken.
 	 */
 	@JvmStatic external fun remoteKey(button: Int, down: Boolean): Boolean
 

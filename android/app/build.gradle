@@ -127,6 +127,9 @@ android {
                 cppFlags = ["-std=c++17"]
                 arguments = [
                         "-DANDROID_STL=c++_shared",
+                        // The launcher's own UI replaces the built-in GUI:
+                        // no ImGui code is compiled into the app.
+                        "-DAMIBERRY_NO_IMGUI=ON",
                         // Short-path bootstrap for Windows hosts: fires at the end of
                         // project() in the top-level CMakeLists.txt, before
                         // cmake/Dependencies.cmake runs FetchContent.

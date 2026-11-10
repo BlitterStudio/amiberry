@@ -22,7 +22,6 @@ import androidx.savedstate.SavedStateRegistry
 import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
-import com.blitterstudio.amiberry.data.AppPreferences
 import com.blitterstudio.amiberry.ui.theme.AmiberryTheme
 import org.libsdl.app.SDLActivity
 
@@ -77,8 +76,6 @@ class OverlayHost(
 		savedState.performAttach()
 		savedState.performRestore(savedInstanceState)
 		lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
-		// The launcher's choice: the menu, or the built-in GUI as before.
-		OverlayNative.setEnabled(!AppPreferences.getInstance(activity).useClassicInGameMenu.value)
 		// The menu leaves touch mode for its D-pad focus; SDL's surface gets the
 		// focus back afterwards and must not draw the system's focus frame
 		// around the emulation.

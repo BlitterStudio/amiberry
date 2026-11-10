@@ -310,9 +310,9 @@ host_setting not_on_ios(host_setting s)
 
 // A setting only the classic settings window has (its theme and scale,
 // the Quickstart panel's own options): the native front ends hide it, so
-// the schema says so. The layer gate already keeps it out of builds
-// without the built-in GUI (AMIBERRY_NO_IMGUI); the mask is what the
-// Android launcher, whose emulator still has the window, reads.
+// the schema says so. The layer gate keeps it out of builds without the
+// built-in GUI (the Android build and the native Apple apps); the mask is
+// what the Android launcher, whose schema a desktop build exports, reads.
 host_setting gui_only(host_setting s)
 {
 	s.hidden_on = AMIBERRY_SETTINGS_HIDE_ON_MACOS | AMIBERRY_SETTINGS_HIDE_ON_IOS

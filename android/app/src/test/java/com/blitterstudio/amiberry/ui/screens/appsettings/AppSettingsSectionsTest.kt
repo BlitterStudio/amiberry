@@ -93,7 +93,7 @@ class AppSettingsSectionsTest {
 	}
 
 	@Test
-	fun `general became appearance, and the startup settings left with the classic window`() {
+	fun `general became appearance, and the startup settings left`() {
 		assertEquals(
 			listOf("appearance", "defaults", "advanced"),
 			AppSettingsSections.pages.map { it.id }

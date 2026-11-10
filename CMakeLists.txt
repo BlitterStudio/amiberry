@@ -14,9 +14,11 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE BOOL "Export compile_commands.json")
 # macOS 14.0). macOS without the native UI keeps the platform default.
 option(AMIBERRY_NATIVE_APPLE_UI "Build the native Apple UI layer (Swift) into the app; macOS and iOS only" OFF)
 # The built-in ImGui GUI and its overlays (the on-screen keyboard, the
-# overlay frame): the native Apple apps have their own and build without
-# ImGui; every other build has it.
-if(AMIBERRY_NATIVE_APPLE_UI)
+# overlay frame): the native Apple apps have their own, and the Android
+# app's launcher, menus, dialogs and on-screen keyboard replace it there;
+# every other build has it.
+option(AMIBERRY_NO_IMGUI "Build without the built-in ImGui GUI; the platform's own UI takes its place" OFF)
+if(AMIBERRY_NATIVE_APPLE_UI OR AMIBERRY_NO_IMGUI)
     set(AMIBERRY_IMGUI OFF)
 else()
     set(AMIBERRY_IMGUI ON)
@@ -92,9 +94,13 @@ option(WITH_PGO_USE      "Use profile data for Profile-Guided Optimization" OFF)
 option(WITH_OPTIMIZE     "Enable native CPU optimizations" OFF)
 option(WITH_STRIP        "Strip symbols from the Release binary" ON)
 option(BUNDLE_SDL        "Bundle SDL3 shared libraries into the package (for distros without SDL3)" OFF)
-# Native Apple UI is Apple-only; validated after project() sets APPLE/IOS.
-if(AMIBERRY_NATIVE_APPLE_UI AND USE_VULKAN)
-    message(FATAL_ERROR "AMIBERRY_NATIVE_APPLE_UI builds without ImGui, which the Vulkan renderer's overlay needs: build it with USE_VULKAN=OFF")
+# A build without the built-in GUI has no ImGui, which the Vulkan
+# renderer's overlay needs.
+if(NOT AMIBERRY_IMGUI AND USE_VULKAN)
+    message(FATAL_ERROR "This build has no ImGui (AMIBERRY_NATIVE_APPLE_UI or AMIBERRY_NO_IMGUI), which the Vulkan renderer's overlay needs: build it with USE_VULKAN=OFF")
+endif()
+if(AMIBERRY_NO_IMGUI AND NOT ANDROID)
+    message(FATAL_ERROR "AMIBERRY_NO_IMGUI needs the Android app's UI; other platforms build the built-in GUI (the Apple apps use AMIBERRY_NATIVE_APPLE_UI)")
 endif()
 if(AMIBERRY_NATIVE_APPLE_UI AND NOT APPLE)
     message(FATAL_ERROR "AMIBERRY_NATIVE_APPLE_UI requires an Apple platform (macOS or iOS)")

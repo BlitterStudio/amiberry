@@ -33,7 +33,6 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Save
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -89,7 +88,6 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.blitterstudio.amiberry.R
-import com.blitterstudio.amiberry.data.AdvancedLaunchActions
 import com.blitterstudio.amiberry.data.ConfigurationSaveActions
 import com.blitterstudio.amiberry.data.EmulatorLauncher
 import com.blitterstudio.amiberry.data.FileManager
@@ -193,7 +191,6 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel(LocalContext.current
 	val romRequiredMessage = stringResource(R.string.msg_rom_required_before_start)
 	val configWriteFailedMessage = stringResource(R.string.msg_failed_save_config)
 	val launchFailedMessage = stringResource(R.string.msg_failed_launch_config)
-	val advancedLaunchFailedMessage = stringResource(AdvancedLaunchActions.launchFailedMessage().stringRes)
 	fun saveMessage(result: ConfigurationSaveActions.SaveResult): String {
 		val message = ConfigurationSaveActions.messageFor(result)
 		return message.argument?.let { context.getString(message.stringRes, it) }
@@ -334,36 +331,6 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel(LocalContext.current
 							onClick = {
 								showTopBarMenu = false
 								showQuickSetups = true
-							}
-						)
-						DropdownMenuItem(
-							text = { Text(stringResource(R.string.action_advanced)) },
-							modifier = Modifier.dpadFocusIndicator(),
-							leadingIcon = { Icon(Icons.Default.Settings, contentDescription = null) },
-							enabled = !launchInProgress,
-							onClick = {
-								showTopBarMenu = false
-								val advancedSettings = viewModel.settings
-								val advancedUnknownLines = viewModel.currentUnknownLines
-								scope.launchGuarded(launchGuard) {
-									val configFile = try {
-										withContext(Dispatchers.IO) {
-											viewModel.writeSettingsConfig(
-												advancedSettings,
-												AdvancedLaunchActions.SETTINGS_ADVANCED_CONFIG,
-												advancedUnknownLines
-											)
-										}
-									} catch (_: Exception) {
-										snackbarHostState.showSnackbar(advancedLaunchFailedMessage)
-										return@launchGuarded
-									}
-									runCatching {
-										EmulatorLauncher.launchAdvancedGui(context, configFile.absolutePath)
-									}.onFailure {
-										snackbarHostState.showSnackbar(advancedLaunchFailedMessage)
-									}
-								}
 							}
 						)
 					}

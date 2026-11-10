@@ -409,7 +409,8 @@ hotkey button held (`hotkey`):
 Host settings are the Global Settings panel (`amiberry.conf`), process-wide
 rather than part of a configuration. The list depends on the build: the
 ImGui GUI's own settings (`Quickstart`, `gui_layout_scale`, `gui_theme`, …)
-are absent from builds without ImGui (the native Apple apps), `use_adpf`
+are absent from builds without ImGui (the native Apple apps, and Android,
+whose IPC socket is off anyway), `use_adpf`
 exists only on Android, and the update settings are absent from iOS and Mac
 App Store builds:
 

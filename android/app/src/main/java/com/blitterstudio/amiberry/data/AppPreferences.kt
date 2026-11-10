@@ -53,20 +53,6 @@ class AppPreferences private constructor(context: Context) {
 		get() = prefs.getString(KEY_LAST_WHDLOAD, "") ?: ""
 		set(value) { prefs.edit { putString(KEY_LAST_WHDLOAD, value) } }
 
-	/**
-	 * Whether the open-GUI path during emulation (Back, Start, the swipe)
-	 * shows the built-in ImGui settings instead of the in-game menu. Read
-	 * by the emulator process as it starts, so a change applies to the next
-	 * launch.
-	 */
-	var useClassicInGameMenu = mutableStateOf(prefs.getBoolean(KEY_CLASSIC_IN_GAME_MENU, false))
-		private set
-
-	fun setClassicInGameMenu(enabled: Boolean) {
-		useClassicInGameMenu.value = enabled
-		prefs.edit { putBoolean(KEY_CLASSIC_IN_GAME_MENU, enabled) }
-	}
-
 	fun rememberedAndroidControls(): EmulatorSettings {
 		// A port nothing remembered takes amiberry.conf's default, else this device's.
 		val hostDefaults = hostPortDefaults()
@@ -245,7 +231,6 @@ class AppPreferences private constructor(context: Context) {
 		private const val KEY_STORAGE_ACCESS_CARD_DISMISSED = "storage_access_card_dismissed"
 		private const val KEY_ROM_ADVICE_DISMISSED = "rom_advice_dismissed"
 		private const val KEY_LAST_WHDLOAD = "last_whdload_path"
-		private const val KEY_CLASSIC_IN_GAME_MENU = "classic_in_game_menu"
 		private const val KEY_LAST_JOYPORT0 = "last_joyport0"
 		private const val KEY_LAST_JOYPORT1 = "last_joyport1"
 		private const val KEY_LAST_ON_SCREEN_JOYSTICK = "last_on_screen_joystick"

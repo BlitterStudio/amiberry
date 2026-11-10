@@ -418,7 +418,8 @@ set(IMGUI_GUI_FILES
 		src/osdep/imgui/whdload.cpp
 )
 
-# The ImGui GUI and overlays: everywhere but the native Apple apps.
+# The ImGui GUI and overlays: everywhere but the native Apple apps and the
+# Android app, whose own UI replaces them.
 if(AMIBERRY_IMGUI)
     message(STATUS "Using ImGui for GUI")
     list(APPEND SOURCE_FILES
@@ -429,7 +430,7 @@ if(AMIBERRY_IMGUI)
             external/ImGuiFileDialog/ImGuiFileDialog.cpp
             ${IMGUI_GUI_FILES})
 else()
-    message(STATUS "Built without ImGui: the native Apple UI")
+    message(STATUS "Built without ImGui: the platform's own UI replaces it")
 endif()
 
 # 86Box: the x86 bridgeboards, ATonce, DraCo and the RTG video cards. The

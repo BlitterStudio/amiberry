@@ -175,9 +175,10 @@ class HostSettingsSchemaTest {
 	}
 
 	/**
-	 * The classic settings window's own settings still travel (the
-	 * emulator has them) but are hidden on Android, as the launcher's
-	 * App Settings rows read; the launcher keeps writing any stored value.
+	 * The classic settings window's own settings still travel in the schema
+	 * (a desktop build exports it) but are hidden on Android, as the
+	 * launcher's App Settings rows read; the emulator, built without the
+	 * window, does not have them at all.
 	 */
 	@Test
 	fun `the classic settings window's own settings are hidden on android`() {

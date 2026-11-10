@@ -72,9 +72,7 @@
     <string name="action_duplicate">Duplicate</string>
     <string name="action_launch">Launch</string>
     <string name="action_edit_config">Edit</string>
-    <string name="action_advanced">Classic settings window</string>
     <string name="action_save_as">Save as…</string>
-    <string name="action_edit_advanced_imgui">Edit in the classic settings window</string>
     <string name="action_share">Share</string>
     <string name="action_clear_search">Clear search</string>
     <string name="action_dismiss">Dismiss</string>
@@ -125,7 +123,6 @@
     <string name="msg_failed_duplicate_config">Failed to duplicate configuration</string>
     <string name="msg_failed_share_config">Failed to share configuration</string>
     <string name="msg_failed_launch_config">Failed to launch configuration</string>
-    <string name="msg_failed_launch_advanced">Could not open the classic settings window</string>
     <string name="msg_config_duplicated_as">Duplicated as “%1$s”</string>
     <string name="msg_link_open_failed">No app can open this link</string>
     <string name="msg_support_info_copied">Support info copied</string>
@@ -196,9 +193,6 @@
     <string name="settings_display_theme_light">Light</string>
     <string name="settings_display_theme_dark">Dark</string>
     <string name="settings_display_dynamic_color">Use Material You colors</string>
-    <string name="settings_display_in_game_menu">In-game menu</string>
-    <string name="settings_display_classic_menu">Use the classic settings window</string>
-    <string name="settings_display_classic_menu_help">Back, Start and the two-finger swipe open the classic settings window during emulation instead of the in-game menu.</string>
     <string name="settings_display_integer_scaling">Integer scaling</string>
     <string name="settings_display_integer_scaling_desc">Sharp, evenly sized pixels. Sets the scaling method to Integer and resolution autoswitch to Always on.</string>
     <string name="settings_display_shader_label">Native screen shader</string>
@@ -379,8 +373,6 @@
     <string name="overlay_reset_help">Restart the Amiga</string>
     <string name="overlay_hard_reset">Hard reset</string>
     <string name="overlay_hard_reset_help">Switch the Amiga off and on</string>
-    <string name="overlay_advanced">Classic settings window</string>
-    <string name="overlay_advanced_help">Every Amiberry setting, in one window</string>
     <string name="overlay_quit">Quit to launcher</string>
     <string name="overlay_quit_help">Stop the emulation</string>
     <string name="overlay_confirm_hard_reset_title">Hard reset the Amiga?</string>
