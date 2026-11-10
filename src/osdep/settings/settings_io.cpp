@@ -352,12 +352,6 @@ constexpr unsigned int midi_hidden = AMIBERRY_SETTINGS_HIDE_ON_IOS
 	| AMIBERRY_SETTINGS_HIDE_ON_THIS_BUILD
 #endif
 	;
-// The sampler options enumerate the host's audio inputs, which iOS apps
-// see none of (the export's device lists are empty). The parallel port's
-// printer itself stays: printing to files (FILE:<folder>, parser.cpp's
-// open_file_printer) works there, only the host-printer list is empty.
-constexpr unsigned int sampler_hidden = AMIBERRY_SETTINGS_HIDE_ON_IOS;
-
 #define BOOL_OPTION(id, group, label, help, apply, def, constraint) \
 	{id, group, label, help, AMIBERRY_SETTING_BOOL, apply, 0, 0, 0, def, nullptr, 0, constraint}
 #define CHOICE_OPTION(id, group, label, help, apply, def, choices, constraint) \
@@ -381,16 +375,19 @@ const definition definitions[] = {
 			"Print to numbered Print_###.dat files in this folder; empty for no printer.",
 			AMIBERRY_APPLY_LIVE, "", "The parallel port has the printer or the sampler."),
 		get_print_folder, set_print_folder, nullptr, nullptr, nullptr, print_folder_accepts},
-	hidden_on({DYNAMIC_CHOICE_OPTION("amiberry.samplersoundcard", "io", "Sampler",
+	// The printer and sampler both enumerate the host's devices at
+	// runtime (SDL's printers, the audio recording inputs the iOS bundle's
+	// microphone permission feeds), so an empty list in the desktop export
+	// says nothing about a platform: every io option stays visible, and
+	// file printing (FILE:<folder>, parser.cpp) needs no host device.
+	{DYNAMIC_CHOICE_OPTION("amiberry.samplersoundcard", "io", "Sampler",
 			"An audio input the Amiga samples through the parallel port.",
 			AMIBERRY_APPLY_LIVE, "-1", "The parallel port has the printer or the sampler."),
 		get_sampler, set_sampler, nullptr, nullptr, nullptr, nullptr, sampler_choices},
-		sampler_hidden),
-	hidden_on({BOOL_OPTION("sampler_stereo", "io", "Stereo sampler",
+	{BOOL_OPTION("sampler_stereo", "io", "Stereo sampler",
 			"Sample in stereo instead of mono.",
 			AMIBERRY_APPLY_LIVE, "false", "Only with a sampler."),
 		get_sampler_stereo, set_sampler_stereo, sampler_selected, nullptr, nullptr},
-		sampler_hidden),
 	hidden_on({DYNAMIC_CHOICE_OPTION("serial_port", "io", "Serial port",
 			"The host serial port (or network connection) the Amiga's RS-232 port goes to.",
 			AMIBERRY_APPLY_LIVE, "none", nullptr),
