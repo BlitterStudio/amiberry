@@ -331,23 +331,20 @@ void set_dongle(uae_prefs& p, const value& v)
 
 // ---------------------------------------------------------------- table
 
-// The serial and MIDI options need the serial and PortMidi backends.
-// iOS forces both off and so does the Mac App Store build, whose sandbox
-// has neither (CMakeLists.txt:180,186,237); a build that compiles a
-// backend out itself is on a platform the options do nothing on too, so
-// it hides them on its own platform as well.
+// The serial and MIDI options need their own backends, and each mark is
+// derived from that backend's compile gate alone (never from a platform
+// or store proxy): iOS forces USE_LIBSERIALPORT off (CMakeLists.txt:180)
+// and USE_PORTMIDI off (:186), and the Mac App Store build forces
+// USE_LIBSERIALPORT off too (:237) — which the gate term below catches
+// by itself. PortMidi stays on there (USE_PORTMIDI defaults on, and
+// enummidiports() and setbaud() open MIDI without libserialport), so
+// the MIDI options are not hidden on the store build.
 constexpr unsigned int serial_hidden = AMIBERRY_SETTINGS_HIDE_ON_IOS
-#if defined(MACOS_APP_STORE)
-	| AMIBERRY_SETTINGS_HIDE_ON_MACOS
-#endif
 #ifndef USE_LIBSERIALPORT
 	| AMIBERRY_SETTINGS_HIDE_ON_THIS_BUILD
 #endif
 	;
 constexpr unsigned int midi_hidden = AMIBERRY_SETTINGS_HIDE_ON_IOS
-#if defined(MACOS_APP_STORE)
-	| AMIBERRY_SETTINGS_HIDE_ON_MACOS
-#endif
 #ifndef USE_PORTMIDI
 	| AMIBERRY_SETTINGS_HIDE_ON_THIS_BUILD
 #endif

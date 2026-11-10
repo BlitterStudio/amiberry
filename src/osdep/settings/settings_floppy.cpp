@@ -378,6 +378,19 @@ const char* const driver_constraint = "Needs a DrawBridge driver that supports i
 			AMIBERRY_APPLY_LIVE, "", nullptr), \
 		get_diskimage<n>, set_diskimage<n>, nullptr, nullptr, nullptr, nullptr, nullptr}
 
+// DrawBridge is a serial-port floppy controller, so its options are dead
+// wherever the serial backend is not compiled, derived from that backend's
+// gate alone: iOS forces USE_LIBSERIALPORT off (CMakeLists.txt:180) and so
+// does the Mac App Store build (:237), which the gate term catches by
+// itself. iOS also does not compile FloppyBridge (Dependencies.cmake
+// leaves it out there), so the hardware cannot be attached there in any
+// case.
+constexpr unsigned int drawbridge_hidden = AMIBERRY_SETTINGS_HIDE_ON_IOS
+#ifndef USE_LIBSERIALPORT
+	| AMIBERRY_SETTINGS_HIDE_ON_THIS_BUILD
+#endif
+	;
+
 const definition definitions[] = {
 	DRIVE(0, "0"),
 	DRIVE(1, "0"),
@@ -391,47 +404,43 @@ const definition definitions[] = {
 	DISKIMAGE(5, 6), DISKIMAGE(6, 7), DISKIMAGE(7, 8), DISKIMAGE(8, 9), DISKIMAGE(9, 10),
 	DISKIMAGE(10, 11), DISKIMAGE(11, 12), DISKIMAGE(12, 13), DISKIMAGE(13, 14), DISKIMAGE(14, 15),
 	DISKIMAGE(15, 16), DISKIMAGE(16, 17), DISKIMAGE(17, 18), DISKIMAGE(18, 19), DISKIMAGE(19, 20),
-	// DrawBridge is a serial-port floppy controller: iOS builds have no
-	// serial backend (CMakeLists.txt:180) and do not compile FloppyBridge
-	// (Dependencies.cmake leaves it out there), so the hardware the
-	// options drive cannot be attached.
 	hidden_on({DYNAMIC_CHOICE_OPTION("amiberry.drawbridge_driver", "drawbridge", "DrawBridge driver",
 			"The FloppyBridge driver for the hardware that connects real floppy drives.",
 			AMIBERRY_APPLY_LIVE, "0", "Needs a build with FloppyBridge support."),
 		get_drawbridge_driver, set_drawbridge_driver, drawbridge_available, nullptr, nullptr,
 		nullptr, driver_dynamic_choices},
-		AMIBERRY_SETTINGS_HIDE_ON_IOS),
+		drawbridge_hidden),
 	hidden_on({BOOL_OPTION("amiberry.drawbridge_serial_autodetect", "drawbridge", "Auto-detect serial port",
 			"Find the serial port the hardware is connected to automatically.",
 			AMIBERRY_APPLY_LIVE, "true", driver_constraint),
 		get_drawbridge_serial_auto, set_drawbridge_serial_auto, serial_auto_available, nullptr,
 		nullptr, nullptr, nullptr},
-		AMIBERRY_SETTINGS_HIDE_ON_IOS),
+		drawbridge_hidden),
 	hidden_on({STRING_OPTION("amiberry.drawbridge_serial_port", "drawbridge", "Serial port",
 			"The serial port the hardware is connected to; empty for none.",
 			AMIBERRY_APPLY_LIVE, "",
 			"Needs a DrawBridge driver that uses a serial port, with auto-detection off."),
 		get_drawbridge_serial_port, set_drawbridge_serial_port, serial_port_available, nullptr,
 		nullptr, serial_port_fits, nullptr},
-		AMIBERRY_SETTINGS_HIDE_ON_IOS),
+		drawbridge_hidden),
 	hidden_on({BOOL_OPTION("amiberry.drawbridge_smartspeed", "drawbridge", "Smart Speed",
 			"Switch to Turbo dynamically when that does not break compatibility.",
 			AMIBERRY_APPLY_LIVE, "false", driver_constraint),
 		get_drawbridge_smartspeed, set_drawbridge_smartspeed, smartspeed_available, nullptr,
 		nullptr, nullptr, nullptr},
-		AMIBERRY_SETTINGS_HIDE_ON_IOS),
+		drawbridge_hidden),
 	hidden_on({BOOL_OPTION("amiberry.drawbridge_autocache", "drawbridge", "Auto-Cache",
 			"Cache disk data while the drive is idle.",
 			AMIBERRY_APPLY_LIVE, "false", driver_constraint),
 		get_drawbridge_autocache, set_drawbridge_autocache, autocache_available, nullptr,
 		nullptr, nullptr, nullptr},
-		AMIBERRY_SETTINGS_HIDE_ON_IOS),
+		drawbridge_hidden),
 	hidden_on({CHOICE_OPTION("amiberry.drawbridge_drive_cable", "drawbridge", "Drive cable",
 			"Which drive select line of the cable the real drive is on.",
 			AMIBERRY_APPLY_LIVE, "0", drive_cable_choices, driver_constraint),
 		get_drawbridge_drive_cable, set_drawbridge_drive_cable, drive_cable_available,
 		drive_cable_choice_available, nullptr, nullptr, nullptr},
-		AMIBERRY_SETTINGS_HIDE_ON_IOS),
+		drawbridge_hidden),
 };
 
 bool commit_floppy(const uae_prefs& base, const uae_prefs& from, uae_prefs& to,

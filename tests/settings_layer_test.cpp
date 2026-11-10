@@ -2883,8 +2883,20 @@ void check_platform_visibility()
 		CHECK(d && d->hidden_on == native);
 	}
 #endif
+	// The compile-gate marks, each derived from its backend's own gate
+	// (this desktop build compiles every backend in, so only the iOS
+	// data bit shows): serial ← USE_LIBSERIALPORT (also forced off in the
+	// Mac App Store sandbox, which the gate term itself catches), MIDI ←
+	// USE_PORTMIDI (on in store builds, so not hidden there), 86Box ←
+	// USE_86BOX, DrawBridge ← the serial backend its hardware needs.
 	const amiberry_setting_descriptor* serial = amiberry_settings_find("serial_port");
 	CHECK(serial && serial->hidden_on == AMIBERRY_SETTINGS_HIDE_ON_IOS);
+	const amiberry_setting_descriptor* midi = amiberry_settings_find("amiberry.midiout_device_name");
+	CHECK(midi && midi->hidden_on == AMIBERRY_SETTINGS_HIDE_ON_IOS);
+	const amiberry_setting_descriptor* x86 = amiberry_settings_find("cpu_x86_throttle");
+	CHECK(x86 && x86->hidden_on == AMIBERRY_SETTINGS_HIDE_ON_IOS);
+	const amiberry_setting_descriptor* drawbridge = amiberry_settings_find("amiberry.drawbridge_driver");
+	CHECK(drawbridge && drawbridge->hidden_on == AMIBERRY_SETTINGS_HIDE_ON_IOS);
 	const amiberry_setting_descriptor* on_top = amiberry_settings_find("amiberry.always_on_top");
 	CHECK(on_top && on_top->hidden_on == AMIBERRY_SETTINGS_HIDE_ON_IOS);
 	// Nothing is hidden on the desktop GUI this test compiles, and the
