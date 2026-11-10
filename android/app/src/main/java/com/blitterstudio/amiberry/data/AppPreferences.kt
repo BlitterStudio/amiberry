@@ -6,15 +6,30 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.core.content.edit
 import com.blitterstudio.amiberry.data.model.EmulatorSettings
 import com.blitterstudio.amiberry.data.model.EmulatorSettingsConstraints
+import com.blitterstudio.amiberry.data.model.SettingsSchema
 import com.blitterstudio.amiberry.ui.isTvDevice
 import org.json.JSONObject
 
 class AppPreferences private constructor(context: Context) {
 
-	private val prefs: SharedPreferences =
-		context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+	private val appContext = context.applicationContext
 
-	private val controlDefaults = AndroidControlSettings.defaults(isTv = isTvDevice(context))
+	private val prefs: SharedPreferences =
+		appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+
+	private val controlDefaults = AndroidControlSettings.defaults(isTv = isTvDevice(appContext))
+
+	/**
+	 * The port devices amiberry.conf's defaults give a fresh configuration
+	 * (default_mouse1/default_controller1): what the remembered controls
+	 * fall back to before this device's own defaults, so the "Defaults for
+	 * new machines" rows reach a machine the launcher builds.
+	 */
+	private fun hostPortDefaults(): Map<String, String> =
+		HostSettingsStore.machineOptionDefaults(
+			ShaderCatalog.findSettingsFile(appContext.filesDir, appContext.getExternalFilesDir(null)),
+			SettingsSchema.bundled(appContext)
+		).filterKeys { it == "joyport0" || it == "joyport1" }
 
 	init {
 		migrateLegacyKeyboardSwitch()
@@ -52,10 +67,14 @@ class AppPreferences private constructor(context: Context) {
 		prefs.edit { putBoolean(KEY_CLASSIC_IN_GAME_MENU, enabled) }
 	}
 
-	fun rememberedAndroidControls(): EmulatorSettings =
-		EmulatorSettings(
-			joyport0 = prefs.getString(KEY_LAST_JOYPORT0, controlDefaults.joyport0) ?: controlDefaults.joyport0,
-			joyport1 = prefs.getString(KEY_LAST_JOYPORT1, controlDefaults.joyport1) ?: controlDefaults.joyport1,
+	fun rememberedAndroidControls(): EmulatorSettings {
+		// A port nothing remembered takes amiberry.conf's default, else this device's.
+		val hostDefaults = hostPortDefaults()
+		fun port(key: String, option: String, fallback: String): String =
+			prefs.getString(key, null) ?: hostDefaults[option] ?: fallback
+		return EmulatorSettings(
+			joyport0 = port(KEY_LAST_JOYPORT0, "joyport0", controlDefaults.joyport0),
+			joyport1 = port(KEY_LAST_JOYPORT1, "joyport1", controlDefaults.joyport1),
 			onScreenJoystick = prefs.getBoolean(KEY_LAST_ON_SCREEN_JOYSTICK, controlDefaults.onScreenJoystick),
 			onScreenKeyboardButton = prefs.getBoolean(KEY_LAST_ON_SCREEN_KEYBOARD_BUTTON, controlDefaults.onScreenKeyboardButton),
 			onScreenKeyboardNumpad = prefs.getBoolean(KEY_LAST_ON_SCREEN_KEYBOARD_NUMPAD, false),
@@ -64,6 +83,7 @@ class AppPreferences private constructor(context: Context) {
 			joyport1MouseMap = prefs.getBoolean(KEY_LAST_JOYPORT1_MOUSEMAP, false),
 			analogMouseSpeed = prefs.getInt(KEY_LAST_ANALOG_MOUSE_SPEED, EmulatorSettingsConstraints.DEFAULT_ANALOG_MOUSE_SPEED)
 		)
+	}
 
 	fun applyRememberedAndroidControls(settings: EmulatorSettings, explicitKeys: Set<String>): EmulatorSettings =
 		AndroidControlSettings.withFallback(

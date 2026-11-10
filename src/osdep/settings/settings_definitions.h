@@ -387,6 +387,9 @@ inline void write_choice(char* out, size_t size, const choice_list& choices, int
 struct android_host_setting {
 	const char* default_value = nullptr;
 	bool present = true;
+	// The machine option this default builds a fresh configuration with,
+	// as this build's layer knows it (nullptr when there is none).
+	const char* sets_option = nullptr;
 };
 
 android_host_setting host_setting_on_android(std::string_view id);

@@ -11,6 +11,36 @@ class ConfigSettingsResolverTest {
 	val tempDir = TemporaryFolder()
 
 	@Test
+	fun newMachinesStartFromAmiberryConfDefaults() {
+		val global = tempDir.newFile("defaults-global.conf").also {
+			it.writeText(
+				"shader=pc\n" +
+					"default_sound_frequency=11025\n" +
+					"default_sound_buffer=1024\n" +
+					"default_correct_aspect_ratio=no\n" +
+					"default_scaling_method=2\n"
+			)
+		}
+
+		val settings = ConfigSettingsResolver.defaults(global)
+
+		assertEquals("pc", settings.shader)
+		assertEquals(11025, settings.soundFreq)
+		assertEquals(1024, settings.soundBuffer)
+		assertEquals(false, settings.correctAspect)
+		assertEquals(2, settings.scalingMethod)
+	}
+
+	@Test
+	fun newMachinesUseAndroidDefaultsWithoutAmiberryConf() {
+		val settings = ConfigSettingsResolver.defaults(null)
+
+		// The Android build's own defaults (the schema's android_default).
+		assertEquals(48000, settings.soundFreq)
+		assertEquals(8192, settings.soundBuffer)
+	}
+
+	@Test
 	fun legacySessionFallsBackToNativeGlobalShader() {
 		val session = tempDir.newFile(".last_session.uae").also {
 			it.writeText("cpu_model=68020")

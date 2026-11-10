@@ -1,7 +1,10 @@
 package com.blitterstudio.amiberry.data
 
 import com.blitterstudio.amiberry.data.model.SettingsSchema
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.io.File
+import java.util.concurrent.atomic.AtomicLong
 
 /**
  * The emulator's own settings, read and written as the [SettingsSchema]'s
@@ -32,16 +35,21 @@ class HostSettingsStore(
 		return values
 	}
 
+	/** One change at a time: each write re-reads a file no other write is mid-way through. */
+	private val writeMutex = Mutex()
+
 	/**
 	 * Writes [values] into the file: each setting's line (the last one when
 	 * the file repeats it, the repeats dropped) takes its value, a setting
 	 * without a line is appended, and everything else stays as it is. The
-	 * file is read again before anything is written, and the new content
-	 * lands in a temporary file renamed over it, so a failure leaves the old
-	 * one. False when a value is refused; the file is then not written.
+	 * whole read-modify-write is serialized ([writeMutex]) so concurrent
+	 * changes cannot lose each other, the file is read again before
+	 * anything is written, and the new content lands in a uniquely named
+	 * temporary file renamed over it, so a failure leaves the old one.
+	 * False when a value is refused; the file is then not written.
 	 */
-	fun write(values: Map<String, String>): Boolean {
-		if (values.any { (id, value) -> !accepts(id, value) }) return false
+	suspend fun write(values: Map<String, String>): Boolean = writeMutex.withLock {
+		if (values.any { (id, value) -> !accepts(id, value) }) return@withLock false
 		val lines = readLines().toMutableList()
 		for ((id, value) in values) {
 			val option = schema.hostSetting(id) ?: continue
@@ -61,7 +69,7 @@ class HostSettingsStore(
 				if (written != null) lines[position] = written else lines.removeAt(position)
 			}
 		}
-		return writeAtomically(lines)
+		writeAtomically(lines)
 	}
 
 	/**
@@ -159,7 +167,7 @@ class HostSettingsStore(
 		val text = if (lines.isEmpty()) "" else lines.joinToString(separator = "\n", postfix = "\n")
 		return try {
 			file.parentFile?.mkdirs()
-			val temp = File(file.parentFile, file.name + ".tmp")
+			val temp = File(file.parentFile, "${file.name}.${tempCounter.incrementAndGet()}.tmp")
 			temp.writeText(text)
 			if (!temp.renameTo(file)) {
 				// A rename across filesystems cannot happen (the temporary
@@ -205,5 +213,38 @@ class HostSettingsStore(
 		fun settingsFile(internalFilesDir: File, externalFilesDir: File?): File =
 			ShaderCatalog.findSettingsFile(internalFilesDir, externalFilesDir)
 				?: File(internalFilesDir, SETTINGS_FILE_NAME)
+
+		private val tempCounter = AtomicLong()
+
+		/**
+		 * The machine options a fresh configuration starts from, as
+		 * amiberry.conf's defaults set them (the schema's sets_option
+		 * mapping): the file's value, else the Android default. A missing
+		 * or unreadable file gives the Android defaults; a missing schema,
+		 * an empty map.
+		 */
+		fun machineOptionDefaults(globalSettingsFile: File?, schema: SettingsSchema?): Map<String, String> {
+			if (schema == null || globalSettingsFile == null) return emptyMap()
+			val values = try {
+				HostSettingsStore(globalSettingsFile, schema).read()
+			} catch (_: Exception) {
+				emptyMap()
+			}
+			return buildMap {
+				for (setting in schema.hostSettings) {
+					val option = setting.setsOption?.takeIf { it in schema.options } ?: continue
+					val value = values[setting.id] ?: setting.defaultOnAndroid
+					// A switch option the host spells as a bool ("true"/"false")
+					// stores 1 and 0; everything else keeps its value.
+					val machine = schema.options.getValue(option)
+					val stored = when {
+						machine.isSwitch && value == "true" -> "1"
+						machine.isSwitch && value == "false" -> "0"
+						else -> value
+					}
+					put(option, stored)
+				}
+			}
+		}
 	}
 }

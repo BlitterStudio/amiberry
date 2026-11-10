@@ -19,14 +19,57 @@ class HostSettingsSchemaTest {
 	@Test
 	fun `the schema lists the host settings in the layer's groups`() {
 		assertTrue(schema.hostSettings.isNotEmpty())
-		val groups = schema.hostSettingGroups
 		assertEquals(
 			listOf(
 				"global_startup", "global_input", "global_display", "global_sound", "global_whdload",
-				"global_touch", "global_visual", "global_paths", "global_advanced"
+				"global_visual", "global_paths", "global_advanced"
 			),
-			groups
+			schema.hostSettingGroups
 		)
+	}
+
+	/**
+	 * The defaults the launcher cannot honour are not offered: the touch
+	 * controls a launcher machine starts from are its remembered ones, and
+	 * the windowed sizes and screen mode mean nothing on Android's always
+	 * full-window screen.
+	 */
+	@Test
+	fun `settings a launcher machine cannot honour are not listed`() {
+		val ids = schema.hostSettings.map { it.id }
+		for (unused in listOf(
+			"default_onscreen_joystick", "default_vkbd_enabled", "default_vkbd_transparency",
+			"default_vkbd_language", "default_vkbd_toggle", "default_retroarch_vkbd",
+			"default_width", "default_height", "default_fullscreen_mode"
+		)) {
+			assertFalse(unused in ids)
+		}
+	}
+
+	/**
+	 * Every default a new machine starts from names the machine option it
+	 * builds (target_default_options' copy), and each is an option this
+	 * schema describes — what a launcher machine writes, so the row reaches
+	 * it.
+	 */
+	@Test
+	fun `the defaults that build a new machine name options the launcher writes`() {
+		assertEquals(
+			mapOf(
+				"default_controller1" to "joyport1",
+				"default_mouse1" to "joyport0",
+				"default_scaling_method" to "amiberry.scaling_method",
+				"default_gfx_autoresolution" to "gfx_autoresolution",
+				"default_correct_aspect_ratio" to "amiberry.gfx_correct_aspect",
+				"default_auto_crop" to "amiberry.gfx_auto_crop",
+				"default_stereo_separation" to "sound_stereo_separation",
+				"default_sound_frequency" to "sound_frequency",
+				"default_sound_buffer" to "sound_max_buff",
+				"shader" to "amiberry.shader"
+			),
+			schema.hostSettings.mapNotNull { it.setsOption?.let { option -> it.id to option } }.toMap()
+		)
+		assertTrue(schema.hostDefaultsForOptions.keys.all { it in schema.options })
 	}
 
 	@Test
@@ -51,9 +94,6 @@ class HostSettingsSchemaTest {
 	fun `defaults that differ on Android read as the Android build's`() {
 		assertEquals("48000", schema.hostSetting("default_sound_frequency")?.defaultOnAndroid)
 		assertEquals("8192", schema.hostSetting("default_sound_buffer")?.defaultOnAndroid)
-		assertEquals("true", schema.hostSetting("default_onscreen_joystick")?.defaultOnAndroid)
-		assertEquals("true", schema.hostSetting("default_vkbd_enabled")?.defaultOnAndroid)
-		assertEquals("leftstick", schema.hostSetting("default_vkbd_toggle")?.defaultOnAndroid)
 		assertEquals("70", schema.hostSetting("gui_layout_scale")?.defaultOnAndroid)
 		// The desktop export's own default stays beside it.
 		assertEquals("100", schema.hostSetting("gui_layout_scale")?.default)

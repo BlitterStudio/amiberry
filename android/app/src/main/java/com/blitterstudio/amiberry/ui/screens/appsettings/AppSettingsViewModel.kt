@@ -9,11 +9,9 @@ import androidx.compose.runtime.setValue
 import com.blitterstudio.amiberry.data.HostSettingsStore
 import com.blitterstudio.amiberry.data.ShaderCatalog
 import com.blitterstudio.amiberry.data.model.SettingsSchema
-import com.blitterstudio.amiberry.data.model.StoragePaths
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.File
 
 /**
  * App Settings' state: the host settings' values as amiberry.conf holds
@@ -70,14 +68,12 @@ class AppSettingsViewModel(application: Application) : AndroidViewModel(applicat
 		}
 		viewModelScope.launch {
 			val read = withContext(Dispatchers.IO) {
+				val settingsFile = HostSettingsStore.settingsFile(app.filesDir, app.getExternalFilesDir(null))
 				val fileValues = store.read()
-				val shaders = ShaderCatalog.scan(
-					ShaderCatalog.resolveScanRoots(
-						HostSettingsStore.settingsFile(app.filesDir, app.getExternalFilesDir(null)),
-						app.getExternalFilesDir(null)
-					)
-				)
-				val bezels = scanBezels()
+				// Both catalogs resolve their folder from amiberry.conf the
+				// way the emulator does (ShaderCatalog's shared resolver).
+				val shaders = ShaderCatalog.scan(ShaderCatalog.resolveScanRoots(settingsFile, app.getExternalFilesDir(null)))
+				val bezels = ShaderCatalog.scanBezels(ShaderCatalog.resolveBezelScanRoots(settingsFile, app.getExternalFilesDir(null)))
 				Triple(fileValues, shaders, bezels)
 			}
 			values = schema?.hostDefaults.orEmpty() + read.first
@@ -115,11 +111,4 @@ class AppSettingsViewModel(application: Application) : AndroidViewModel(applicat
 		}
 	}
 
-	/** The bezel images of the canonical bezels folder, as the bezel default names them. */
-	private fun scanBezels(): List<String> {
-		val external = app.getExternalFilesDir(null) ?: return emptyList()
-		val folder = File(File(external, StoragePaths.VISUALS), StoragePaths.BEZELS)
-		val files = folder.listFiles { file -> file.isFile } ?: return emptyList()
-		return files.map { it.name }.filter { it.lowercase().endsWith(".png") || it.lowercase().endsWith(".jpg") }.sorted()
-	}
 }

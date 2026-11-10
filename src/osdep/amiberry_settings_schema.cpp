@@ -1436,7 +1436,8 @@ void aros(std::string& out)
 // front end lists them itself.
 void host_settings(std::string& out)
 {
-	auto write = [&](const amiberry_setting_descriptor* d, const char* android_default) {
+	auto write = [&](const amiberry_setting_descriptor* d, const char* android_default,
+		const char* sets_option) {
 		out += "{\"id\":";
 		json_string(out, d->id);
 		out += ",\"group\":";
@@ -1486,6 +1487,12 @@ void host_settings(std::string& out)
 			}
 			out += ']';
 		}
+		// The machine option a new configuration starts from (the copy
+		// target_default_options makes of this default).
+		if (sets_option) {
+			out += ",\"sets_option\":";
+			json_string(out, sets_option);
+		}
 		out += '}';
 	};
 	out += ",\n\"host_settings\":[";
@@ -1498,12 +1505,12 @@ void host_settings(std::string& out)
 			continue;
 		out += first ? "\n" : ",\n";
 		first = false;
-		write(d, on_android.default_value);
+		write(d, on_android.default_value, on_android.sets_option);
 	}
 	for (const amiberry_setting_descriptor& d : amiberry_settings::android_only_host_settings()) {
 		out += first ? "\n" : ",\n";
 		first = false;
-		write(&d, nullptr);
+		write(&d, nullptr, nullptr);
 	}
 	out += "\n]";
 }

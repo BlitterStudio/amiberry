@@ -94,8 +94,10 @@ private data class AppSettingsPage(
 /** The pages, as the Apple apps' settings group them (U12: General, Defaults for new machines, …). */
 private val PAGES = listOf(
 	AppSettingsPage("general", R.string.appsettings_group_general, listOf("global_startup", "global_visual")),
+	// The touch-control defaults are not among them: a launcher machine's
+	// controls are its remembered ones, so they cannot reach it.
 	AppSettingsPage("defaults", R.string.appsettings_group_defaults,
-		listOf("global_input", "global_touch", "global_display", "global_sound", "global_whdload")),
+		listOf("global_input", "global_display", "global_sound", "global_whdload")),
 	AppSettingsPage("folders", R.string.appsettings_group_folders, listOf("global_paths")),
 	AppSettingsPage("advanced", R.string.appsettings_group_advanced, listOf("global_advanced"))
 )
@@ -244,7 +246,9 @@ fun AppSettingsScreen(
 					VerticalDivider()
 					AppSettingsContent(
 						viewModel = viewModel,
-						pageId = selectedPage,
+						// Searching covers every page on both layouts; the
+						// phone branch below passes the same.
+						pageId = if (searching) null else selectedPage,
 						query = query,
 						showMessage = ::showMessage,
 						modifier = Modifier

@@ -9,6 +9,10 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import java.io.File
 
 /**
@@ -84,7 +88,7 @@ class HostSettingsStoreTest {
 	fun `a write spells bools as the emulator's own writer does`() {
 		val schema = schemaOf(bool("write_logfile", "false"))
 		val (store, file) = store("; the settings\nDiskfile=/keep/disk.adf\n", schema)
-		assertTrue(store.write(mapOf("write_logfile" to "true")))
+		assertTrue(store.writeSync(mapOf("write_logfile" to "true")))
 		assertEquals("; the settings\nDiskfile=/keep/disk.adf\nwrite_logfile=yes\n", file.readText())
 	}
 
@@ -93,7 +97,7 @@ class HostSettingsStoreTest {
 		val schema = schemaOf(bool("write_logfile", "false"))
 		val content = "; Amiberry settings\nDiskfile=/a.adf\nDiskfile=/b.adf\nconfig_path=/conf\nwrite_logfile=no\n; tail\n"
 		val (store, file) = store(content, schema)
-		assertTrue(store.write(mapOf("write_logfile" to "true")))
+		assertTrue(store.writeSync(mapOf("write_logfile" to "true")))
 		val lines = file.readText().lines()
 		assertTrue("; Amiberry settings" in lines)
 		assertTrue("Diskfile=/a.adf" in lines)
@@ -107,7 +111,7 @@ class HostSettingsStoreTest {
 	fun `a setting without a line is appended and reads back`() {
 		val schema = schemaOf(intSetting("default_whd_configdelay", "0", 0, 1000))
 		val (store, file) = store("perf_log=no\n", schema)
-		assertTrue(store.write(mapOf("default_whd_configdelay" to "5")))
+		assertTrue(store.writeSync(mapOf("default_whd_configdelay" to "5")))
 		assertEquals("perf_log=no\ndefault_whd_configdelay=5\n", file.readText())
 		assertEquals("5", store.read()["default_whd_configdelay"])
 	}
@@ -117,7 +121,7 @@ class HostSettingsStoreTest {
 		val schema = schemaOf(bool("write_logfile", "false"))
 		val (store, file) = store("write_logfile=yes\nwrite_logfile=no\n", schema)
 		assertEquals("false", store.read()["write_logfile"])
-		assertTrue(store.write(mapOf("write_logfile" to "true")))
+		assertTrue(store.writeSync(mapOf("write_logfile" to "true")))
 		assertEquals(1, file.readText().lines().count { it.startsWith("write_logfile=") })
 		assertEquals("true", store.read()["write_logfile"])
 	}
@@ -126,7 +130,7 @@ class HostSettingsStoreTest {
 	fun `an empty folder value is the line gone`() {
 		val schema = schemaOf(path("base_content_path"))
 		val (store, file) = store("base_content_path=/storage/content\n", schema)
-		assertTrue(store.write(mapOf("base_content_path" to "")))
+		assertTrue(store.writeSync(mapOf("base_content_path" to "")))
 		assertEquals("", file.readText())
 		assertTrue(store.read().isEmpty())
 	}
@@ -136,10 +140,10 @@ class HostSettingsStoreTest {
 		val schema = schemaOf(intSetting("input_default_mouse_speed", "100", 1, 1000), choice("default_line_mode", "0", "1", "2"))
 		val content = "input_default_mouse_speed=100\n"
 		val (store, file) = store(content, schema)
-		assertFalse(store.write(mapOf("input_default_mouse_speed" to "2000")))
-		assertFalse(store.write(mapOf("input_default_mouse_speed" to "fast")))
-		assertFalse(store.write(mapOf("default_line_mode" to "7")))
-		assertFalse(store.write(mapOf("input_default_mouse_speed" to " 100")))
+		assertFalse(store.writeSync(mapOf("input_default_mouse_speed" to "2000")))
+		assertFalse(store.writeSync(mapOf("input_default_mouse_speed" to "fast")))
+		assertFalse(store.writeSync(mapOf("default_line_mode" to "7")))
+		assertFalse(store.writeSync(mapOf("input_default_mouse_speed" to " 100")))
 		assertEquals(content, file.readText())
 	}
 
@@ -150,7 +154,7 @@ class HostSettingsStoreTest {
 		store.read()
 		// The emulator's own window saved while the settings were open.
 		file.writeText("write_logfile=no\nperf_log=yes\n")
-		assertTrue(store.write(mapOf("write_logfile" to "true")))
+		assertTrue(store.writeSync(mapOf("write_logfile" to "true")))
 		assertTrue("perf_log=yes" in file.readText())
 	}
 
@@ -158,7 +162,7 @@ class HostSettingsStoreTest {
 	fun `the write lands through a temporary file that is gone after`() {
 		val schema = schemaOf(bool("write_logfile", "false"))
 		val (store, file) = store(null, schema)
-		assertTrue(store.write(mapOf("write_logfile" to "true")))
+		assertTrue(store.writeSync(mapOf("write_logfile" to "true")))
 		assertEquals("write_logfile=yes\n", file.readText())
 		assertNull(file.parentFile!!.list { _, name -> name.endsWith(".tmp") }?.firstOrNull())
 	}
@@ -168,7 +172,7 @@ class HostSettingsStoreTest {
 		val schema = schemaOf(bool("write_logfile", "false"))
 		val (store, file) = store("; write_logfile=yes\nnot a setting\n\n", schema)
 		assertTrue(store.read().isEmpty())
-		assertTrue(store.write(mapOf("write_logfile" to "true")))
+		assertTrue(store.writeSync(mapOf("write_logfile" to "true")))
 		val lines = file.readText().lines()
 		assertTrue("; write_logfile=yes" in lines)
 		assertTrue("not a setting" in lines)
@@ -178,8 +182,23 @@ class HostSettingsStoreTest {
 	fun `a port device's empty value stays a line, distinct from the default`() {
 		val schema = schemaOf(choice("default_controller1", "joy1"))
 		val (store, file) = store("", schema)
-		assertTrue(store.write(mapOf("default_controller1" to "")))
+		assertTrue(store.writeSync(mapOf("default_controller1" to "")))
 		assertEquals("default_controller1=\n", file.readText())
 		assertEquals("", store.read()["default_controller1"])
 	}
+
+	@Test
+	fun `concurrent writes each keep their change`() = runBlocking {
+		val schema = schemaOf(bool("a", "false"), bool("b", "false"), bool("c", "false"), bool("d", "false"))
+		val (store, _) = store("", schema)
+		val writes = listOf("a", "b", "c", "d").associateWith { "true" }
+		coroutineScope {
+			writes.map { (id, value) -> launch(Dispatchers.IO) { assertTrue(store.write(mapOf(id to value))) } }
+		}
+		val values = store.read()
+		writes.forEach { (id, _) -> assertEquals("true", values[id]) }
+	}
+
+	/** The store's suspending write, run to completion (the UI awaits it on IO). */
+	private fun HostSettingsStore.writeSync(values: Map<String, String>): Boolean = runBlocking { write(values) }
 }

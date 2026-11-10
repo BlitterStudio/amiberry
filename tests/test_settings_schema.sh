@@ -144,7 +144,9 @@ host_ids = [h["id"] for h in host]
 assert len(host_ids) == len(set(host_ids)), "host settings"
 assert {"Quickstart", "shader", "rom_path", "input_default_mouse_speed", "gui_layout_scale",
         "default_controller1", "default_soundcard", "default_vkbd_toggle", "use_adpf"} <= set(host_ids), host_ids
-assert not {"update_check", "update_channel", "skipped_version", "macos_left_command_q"} & set(host_ids), host_ids
+assert not {"update_check", "update_channel", "skipped_version", "macos_left_command_q",
+           "default_onscreen_joystick", "default_vkbd_enabled", "default_vkbd_toggle",
+           "default_width", "default_height", "default_fullscreen_mode"} & set(host_ids), host_ids
 for setting in host:
     assert setting["type"] in ("bool", "int", "real", "choice", "path", "string", "hotkey"), setting
     assert setting["apply"] == "live", setting["id"]
@@ -167,6 +169,23 @@ assert host_by_id["gui_layout_scale"]["default"] == "100", host_by_id["gui_layou
 assert host_by_id["default_joystick_deadzone"]["level"] is True, host_by_id["default_joystick_deadzone"]
 assert host_by_id["default_joystick_deadzone"]["unit"] == "%", host_by_id["default_joystick_deadzone"]
 assert host_by_id["use_adpf"]["type"] == "bool" and host_by_id["use_adpf"]["group"] == "global_advanced"
+# A default's machine option (target_default_options' copy): every named
+# option is one this export describes, and the defaults the launcher writes
+# itself are the ones named.
+sets = {h["id"]: h["sets_option"] for h in host if "sets_option" in h}
+assert sets == {
+    "default_controller1": "joyport1",
+    "default_mouse1": "joyport0",
+    "default_scaling_method": "amiberry.scaling_method",
+    "default_gfx_autoresolution": "gfx_autoresolution",
+    "default_correct_aspect_ratio": "amiberry.gfx_correct_aspect",
+    "default_auto_crop": "amiberry.gfx_auto_crop",
+    "default_stereo_separation": "sound_stereo_separation",
+    "default_sound_frequency": "sound_frequency",
+    "default_sound_buffer": "sound_max_buff",
+    "shader": "amiberry.shader",
+}, sets
+assert all(o in ids_set for o in sets.values()), "every named option is described"
 PY
 
 printf 'cpu_model\nnot_an_option\n' > "$work/bad.txt"

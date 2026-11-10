@@ -102,7 +102,7 @@ object ShaderCatalog {
 	 * as a built-ins-only catalog instead of falling back to another content location.
 	 */
 	fun resolveRoot(globalSettingsFile: File?, externalFilesDir: File?): File? =
-		resolveRoots(globalSettingsFile, externalFilesDir).configuredRoot
+		resolveRoots(SHADERS_KEY, StoragePaths.SHADERS, globalSettingsFile, externalFilesDir).configuredRoot
 
 	/**
 	 * Resolve the directories that are available for the Kotlin catalog to scan.
@@ -112,8 +112,26 @@ object ShaderCatalog {
 	 * so Kotlin exposes the same eventual catalog. Explicit empty and custom shader paths
 	 * remain authoritative.
 	 */
-	fun resolveScanRoots(globalSettingsFile: File?, externalFilesDir: File?): List<File> {
-		val roots = resolveRoots(globalSettingsFile, externalFilesDir)
+	fun resolveScanRoots(globalSettingsFile: File?, externalFilesDir: File?): List<File> =
+		resolveVisualScanRoots(SHADERS_KEY, StoragePaths.SHADERS, globalSettingsFile, externalFilesDir)
+
+	/**
+	 * The bezels folder the emulator resolves its bezel names in
+	 * (get_bezels_path, display_catalog.cpp): the folder amiberry.conf
+	 * names, the base content's, or the default — with the same legacy
+	 * sources the shaders catalog scans until native has merged them.
+	 */
+	fun resolveBezelScanRoots(globalSettingsFile: File?, externalFilesDir: File?): List<File> =
+		resolveVisualScanRoots(BEZELS_KEY, StoragePaths.BEZELS, globalSettingsFile, externalFilesDir)
+
+	/** One visuals folder's scan roots, as the shaders ones are resolved. */
+	private fun resolveVisualScanRoots(
+		key: String,
+		directoryName: String,
+		globalSettingsFile: File?,
+		externalFilesDir: File?
+	): List<File> {
+		val roots = resolveRoots(key, directoryName, globalSettingsFile, externalFilesDir)
 		val configuredRoot = roots.configuredRoot ?: return emptyList()
 
 		val canonicalRoot = roots.canonicalRoot ?: return listOf(configuredRoot)
@@ -125,21 +143,27 @@ object ShaderCatalog {
 		return availableRoots.ifEmpty { listOf(configuredRoot) }
 	}
 
+	/** The amiberry.conf key and the Visuals subfolder of each catalog the launcher mirrors. */
+	private const val SHADERS_KEY = "shaders_path"
+	private const val BEZELS_KEY = "bezels_path"
+
 	private fun resolveRoots(
+		key: String,
+		directoryName: String,
 		globalSettingsFile: File?,
 		externalFilesDir: File?
 	): ResolvedRoots {
 		val paths = readGlobalSettings(globalSettingsFile)
 		val inferredBasePath = inferSerializedBaseContentPath(paths.managedPaths)
-		val defaultRoot = externalFilesDir?.let(::canonicalShadersRoot)
+		val defaultRoot = externalFilesDir?.let { canonicalVisualRoot(it, directoryName) }
 		val usesInferredBasePath = !paths.hasBaseContentPath &&
 			inferredBasePath.isNotEmpty() &&
 			paths.managedPaths.any { it.matchesLegacyVisualPath(inferredBasePath) }
 		val canonicalRoot = when {
 			paths.hasBaseContentPath && paths.baseContentPath.isNotEmpty() ->
-				canonicalShadersRoot(paths.baseContentPath)
+				canonicalVisualRoot(paths.baseContentPath, directoryName)
 			usesInferredBasePath ->
-				canonicalShadersRoot(inferredBasePath)
+				canonicalVisualRoot(inferredBasePath, directoryName)
 			else -> defaultRoot
 		}
 		var resolvedRoot = canonicalRoot
@@ -160,9 +184,9 @@ object ShaderCatalog {
 		}
 
 		for (line in paths.managedPaths) {
-			if (line.key != "shaders_path") continue
+			if (line.key != key) continue
 			if (serializedBasePathToSkip != null &&
-				pathsMatch(line.value, canonicalShadersRoot(serializedBasePathToSkip).path)
+				pathsMatch(line.value, canonicalVisualRoot(serializedBasePathToSkip, directoryName).path)
 			) {
 				continue
 			}
@@ -171,14 +195,56 @@ object ShaderCatalog {
 		}
 
 		val legacyScanRoots = buildList {
-			externalFilesDir?.let { add(legacyShadersRoot(it)) }
+			externalFilesDir?.let { add(legacyVisualRoot(it, directoryName)) }
 			when {
 				paths.hasBaseContentPath && paths.baseContentPath.isNotEmpty() ->
-					add(legacyShadersRoot(File(paths.baseContentPath)))
-				usesInferredBasePath -> add(legacyShadersRoot(File(inferredBasePath)))
+					add(legacyVisualRoot(File(paths.baseContentPath), directoryName))
+				usesInferredBasePath -> add(legacyVisualRoot(File(inferredBasePath), directoryName))
 			}
 		}
 		return ResolvedRoots(resolvedRoot, canonicalRoot, legacyScanRoots)
+	}
+
+	/**
+	 * The bezel images of the bezels folder, by their name from the root —
+	 * how the emulator lists them (scan_bezels in display_catalog.cpp:
+	 * png/jpg/jpeg, nested folders included, sorted).
+	 */
+	fun scanBezels(roots: List<File>): List<String> {
+		val images = linkedSetOf<String>()
+		val visitedDirectories = mutableSetOf<String>()
+
+		fun visit(directory: File, relativeDirectory: String) {
+			val traversalKey = safeTraversalKey(directory)
+			if (traversalKey != null && !visitedDirectories.add(traversalKey)) return
+
+			val children = try {
+				directory.listFiles()?.toList()
+			} catch (_: Exception) {
+				null
+			} ?: return
+
+			for (entry in children) {
+				try {
+					if (entry.isDirectory) {
+						if (Files.isSymbolicLink(entry.toPath())) continue
+						visit(entry, relativeName(relativeDirectory, entry.name))
+						continue
+					}
+					if (!entry.isFile) continue
+					val name = entry.name.lowercase()
+					if (!name.endsWith(".png") && !name.endsWith(".jpg") && !name.endsWith(".jpeg")) continue
+					images.add(relativeName(relativeDirectory, entry.name))
+				} catch (_: Exception) {
+					// Match native's non-fatal traversal: keep discoveries made so far.
+				}
+			}
+		}
+
+		for (root in roots) {
+			if (safeIsDirectory(root)) visit(root, "")
+		}
+		return images.sorted()
 	}
 
 	/** Return built-ins followed by sorted, deduplicated external shader names. */
@@ -245,13 +311,14 @@ object ShaderCatalog {
 	private fun relativeName(directory: String, name: String): String =
 		if (directory.isEmpty()) name else "$directory/$name"
 
-	private fun canonicalShadersRoot(base: File): File =
-		File(File(base, StoragePaths.VISUALS), StoragePaths.SHADERS)
+	private fun canonicalVisualRoot(base: File, directoryName: String): File =
+		File(File(base, StoragePaths.VISUALS), directoryName)
 
-	private fun canonicalShadersRoot(base: String): File = canonicalShadersRoot(File(base))
+	private fun canonicalVisualRoot(base: String, directoryName: String): File =
+		canonicalVisualRoot(File(base), directoryName)
 
-	private fun legacyShadersRoot(base: File): File =
-		File(File(base, StoragePaths.CONFIGURATIONS), StoragePaths.SHADERS)
+	private fun legacyVisualRoot(base: File, directoryName: String): File =
+		File(File(base, StoragePaths.CONFIGURATIONS), directoryName)
 
 	private fun ManagedPath.matchesLegacyVisualPath(baseContentPath: String): Boolean =
 		matchesLegacyVisualPath(File(baseContentPath, StoragePaths.CONFIGURATIONS))

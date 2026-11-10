@@ -108,7 +108,14 @@ class SettingsSchema(
 		val androidDefault: String? = null,
 		val group: String = "",
 		val level: Boolean = false,
-		val presetOnly: Boolean = false
+		val presetOnly: Boolean = false,
+		/**
+		 * A host setting only: the machine option this default builds a
+		 * fresh configuration with (target_default_options' copy), so a
+		 * front end writing its own configurations starts a new one from
+		 * it; null where the default is no option of its own.
+		 */
+		val setsOption: String? = null
 	) {
 		/** The default the Android emulator gives the option. */
 		val defaultOnAndroid: String
@@ -225,6 +232,20 @@ class SettingsSchema(
 
 	/** The groups of the host settings, in the layer's order. */
 	val hostSettingGroups: List<String> by lazy { hostSettings.map { it.group }.distinct() }
+
+	/**
+	 * Every host default that builds a fresh configuration with a machine
+	 * option, as option ID to the default's value on Android: what a new
+	 * configuration starts from, as the emulator's own new one does
+	 * (target_default_options).
+	 */
+	val hostDefaultsForOptions: Map<String, String> by lazy {
+		hostSettings.mapNotNull { setting ->
+			setting.setsOption?.takeIf { it in options }?.let { option ->
+				option to setting.defaultOnAndroid
+			}
+		}.toMap()
+	}
 
 	/** The Android emulator's default of every host setting, by ID. */
 	val hostDefaults: Map<String, String> by lazy { hostSettings.associate { it.id to it.defaultOnAndroid } }
@@ -360,7 +381,8 @@ class SettingsSchema(
 				androidDefault = text("android_default"),
 				group = text("group").orEmpty(),
 				level = o.optBoolean("level", false),
-				presetOnly = o.optBoolean("preset_only", false)
+				presetOnly = o.optBoolean("preset_only", false),
+				setsOption = text("sets_option")
 			)
 		}
 

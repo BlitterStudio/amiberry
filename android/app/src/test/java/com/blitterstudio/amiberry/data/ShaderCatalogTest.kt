@@ -537,4 +537,39 @@ class ShaderCatalogTest {
 
 	private fun shaderFile(directory: File, name: String): File =
 		File(directory, name).also { it.writeText("shader") }
+
+	@Test
+	fun bezelsResolveTheFolderAmiberryConfNames() {
+		val external = tempDir.newFolder("bezel-external")
+		val custom = tempDir.newFolder("bezel-custom")
+		File(custom, "crt.png").writeBytes(byteArrayOf(1))
+		File(custom, "flat").mkdir()
+		File(File(custom, "flat"), "widescreen.jpg").writeBytes(byteArrayOf(1))
+		File(custom, "readme.txt").writeBytes(byteArrayOf(1))
+		val global = tempDir.newFile("bezel-override.conf").also {
+			it.writeText("bezels_path=" + custom.absolutePath)
+		}
+
+		assertEquals(
+			listOf("crt.png", "flat/widescreen.jpg"),
+			ShaderCatalog.scanBezels(ShaderCatalog.resolveBezelScanRoots(global, external))
+		)
+	}
+
+	@Test
+	fun bezelsResolveTheBaseContentFoldersWithoutAnOverride() {
+		val external = tempDir.newFolder("bezel-default-external")
+		val base = tempDir.newFolder("bezel-base")
+		val bezels = File(File(base, "Visuals"), "Bezels")
+		bezels.mkdirs()
+		File(bezels, "crt.png").writeBytes(byteArrayOf(1))
+		val global = tempDir.newFile("bezel-base.conf").also {
+			it.writeText("base_content_path=" + base.absolutePath)
+		}
+
+		assertEquals(
+			listOf("crt.png"),
+			ShaderCatalog.scanBezels(ShaderCatalog.resolveBezelScanRoots(global, external))
+		)
+	}
 }
