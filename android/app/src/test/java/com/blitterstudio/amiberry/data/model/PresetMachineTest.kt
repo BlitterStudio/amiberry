@@ -148,6 +148,18 @@ class PresetMachineTest {
 	}
 
 	@Test
+	fun `a 68020 accelerator on an A500 turns 24-bit addressing off`() {
+		val a500 = EmulatorSettings.fromModel(AmigaModel.A500)
+		assertTrue(a500.address24Bit)
+
+		// cpuboard_set_cpu sets the board's CPU and 32-bit addressing.
+		val settings = a500.withOption("cpuboard_type", "A2630")
+
+		assertEquals(68020, settings.cpuModel)
+		assertFalse(settings.address24Bit)
+	}
+
+	@Test
 	fun `picking a sub-1 MB fast RAM size clears the MB size`() {
 		val small = EmulatorSettings(fastRam = 2).withOption("fastmem_size_k", "256")
 		assertEquals(0, small.fastRam)

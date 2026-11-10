@@ -1431,8 +1431,9 @@ bool transition_table_json(std::string& out, const transition_table& table)
 
 // The accelerator board a configuration names sets the CPU its variant
 // needs (cpuboard_set_cpu), so a front end writing the file itself must
-// write that CPU too: one table for every board, from every CPU (and FPU
-// and MMU, which the setter reads). The board's jumpers and memory are not
+// write that CPU too: one table for every board, from every CPU (and FPU,
+// MMU and addressing, which the setter reads and writes: a 68020+ board
+// turns 24-bit addressing off). The board's jumpers and memory are not
 // fields here: from a fresh configuration neither changes (the jumpers are
 // cleared, no memory is set), so no probe can tell a value it forces from
 // one it keeps; the launcher leaves both alone, as cfgfile's own writer
@@ -1461,13 +1462,13 @@ std::vector<const char*> accelerator_type_values()
 transition_table accelerator_transitions()
 {
 	return {{{{"cpu_model", choice_values("cpu_model")}, {"fpu_model", choice_values("fpu_model")},
-			{"mmu_model", choice_values("mmu_model")}}, {}},
+			{"mmu_model", choice_values("mmu_model")}, {"cpu_24bit_addressing", {"true", "false"}}}, {}},
 		{{"cpuboard_type", accelerator_type_values()}},
 		// Only the fields a probe varies besides the inputs: the guard
 		// needs each other field to change under one, to tell a value the
 		// setter forces from one it keeps.
-		{"cpu_model", "fpu_model", "mmu_model", "cpu_speed", "immediate_blits", "compfpu", "cpu_data_cache",
-			"cpu_multiplier", "waiting_blits", "fastmem_size", "z3mem_size"}};
+		{"cpu_model", "fpu_model", "mmu_model", "cpu_24bit_addressing", "cpu_speed", "immediate_blits", "compfpu",
+			"cpu_data_cache", "cpu_multiplier", "waiting_blits", "fastmem_size", "z3mem_size"}};
 }
 
 // The CPU table, then the memory boards' tables.

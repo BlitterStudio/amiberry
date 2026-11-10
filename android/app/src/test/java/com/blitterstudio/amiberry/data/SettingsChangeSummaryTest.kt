@@ -8,6 +8,7 @@ import com.blitterstudio.amiberry.data.model.SettingText
 import com.blitterstudio.amiberry.data.model.SettingsChange
 import com.blitterstudio.amiberry.data.model.SettingsChangeSummary
 import com.blitterstudio.amiberry.data.model.SettingsSchema
+import com.blitterstudio.amiberry.data.model.CustomControls
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -74,6 +75,17 @@ class SettingsChangeSummaryTest {
 		val settings = EmulatorSettings.fromModel(AmigaModel.A1200)
 
 		assertTrue(SettingsChangeSummary.diff(settings, settings).isEmpty())
+	}
+
+	@Test
+	fun `remapping a custom control is a change although the count stays`() {
+		val key = CustomControls.Key(port = 1, hotkey = false, axis = false, control = "a")
+		val before = EmulatorSettings(customControls = CustomControls().with(key, "JOY2_FIRE_BUTTON"))
+		val after = before.copy(customControls = before.customControls.with(key, "KEY_SPACE"))
+
+		val changes = SettingsChangeSummary.diff(before, after)
+
+		assertEquals(listOf(R.string.settings_input_custom_controls_changed), changes.map { (it.label as SettingText.Resource).id })
 	}
 
 	@Test

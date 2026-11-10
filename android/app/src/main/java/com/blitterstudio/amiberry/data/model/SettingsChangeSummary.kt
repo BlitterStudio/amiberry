@@ -29,7 +29,7 @@ object SettingsChangeSummary {
 		schema: SettingsSchema? = SettingsSchema.current
 	): List<SettingsChange> = Diff(schema, before, after).apply {
 		launcher(R.string.settings_cpu_model_preset) { SettingText.Plain(it.baseModel.displayName) }
-		launcher(R.string.settings_change_model_configuration, ::presetConfiguration)
+		launcher(R.string.settings_change_model_configuration, text = ::presetConfiguration)
 		launcher(R.string.settings_compatibility_level) { settings ->
 			SettingText.Plain(schema?.compatibilityLevels?.getOrNull(settings.baseLevel) ?: settings.baseLevel.toString())
 		}
@@ -106,7 +106,9 @@ object SettingsChangeSummary {
 				SettingText.Plain(board?.let { b -> AcceleratorJumpers.pack(b, it.acceleratorJumpers) } ?: "")
 			}
 		}
-		launcher(R.string.settings_input_custom_controls_changed) {
+		// The count reads well in Review changes; the mappings themselves
+		// decide whether anything changed (a remapped control keeps the count).
+		launcher(R.string.settings_input_custom_controls_changed, changed = { it.customControls.mappings }) {
 			SettingText.Plain(it.customControls.mappings.size.toString())
 		}
 		hardDrives()
@@ -124,9 +126,16 @@ object SettingsChangeSummary {
 			if (old != new) changes += SettingsChange(label, old, new, optionId)
 		}
 
-		/** A launcher-only setting, named by a launcher string. */
-		fun launcher(labelRes: Int, text: (EmulatorSettings) -> SettingText) {
-			add(SettingText.Resource(labelRes), text(before), text(after))
+		/**
+		 * A launcher-only setting, named by a launcher string. [changed] is
+		 * what decides whether it changed when its text does not show every
+		 * difference; by default, the text.
+		 */
+		fun launcher(labelRes: Int, changed: ((EmulatorSettings) -> Any)? = null, text: (EmulatorSettings) -> SettingText) {
+			val old = text(before)
+			val new = text(after)
+			val differs = if (changed != null) changed(before) != changed(after) else old != new
+			if (differs) changes += SettingsChange(SettingText.Resource(labelRes), old, new)
 		}
 
 		private fun label(id: String): SettingText = SettingText.Plain(schema?.label(id) ?: id)

@@ -158,25 +158,7 @@ object ConfigGenerator {
 		sb.appendLine("joyport1mousemap=${if (settings.joyport1MouseMap) "1" else "0"}")
 		sb.appendLine("input.joymouse_speed_analog=${settings.analogMouseSpeed}")
 
-		// Custom controls (CustomControls), after the joyport lines they
-		// apply to (load_custom_options reads the port's device,
-		// amiberry_input.cpp:1820-1825). The writer spells every control of
-		// a joystick port, an empty value included (cfgfile.cpp:2847-2880):
-		// the reader applies an empty line as the slot's default
-		// (custom_event_of, amiberry_input.cpp:1790), so an earlier binding
-		// of the port does not survive a control set back to Default.
-		SettingsSchema.current?.let { schema ->
-			val keys = settings.customControls.mappings.keys
-			for (port in keys.map { it.port }.distinct().sorted()) {
-				for (hotkey in listOf(false, true)) {
-					if (keys.none { it.port == port && it.hotkey == hotkey }) continue
-					for (control in schema.customControls) {
-						val key = CustomControls.Key(port, hotkey, control.axis, control.id)
-						sb.appendLine("${key.id}=${settings.customControls.event(key)}")
-					}
-				}
-			}
-		}
+		appendCustomControls(sb, settings)
 
 		// Amiberry-specific
 		sb.appendLine("amiberry.onscreen_joystick=${settings.onScreenJoystick.toCfg()}")
@@ -218,6 +200,7 @@ object ConfigGenerator {
 		sb.appendLine("joyport0mousemap=${if (settings.joyport0MouseMap) "1" else "0"}")
 		sb.appendLine("joyport1mousemap=${if (settings.joyport1MouseMap) "1" else "0"}")
 		sb.appendLine("input.joymouse_speed_analog=${settings.analogMouseSpeed}")
+		appendCustomControls(sb, settings)
 		sb.appendLine("amiberry.onscreen_joystick=${settings.onScreenJoystick.toCfg()}")
 		sb.appendLine("amiberry.vkbd_enabled=${settings.onScreenKeyboardAvailable.toCfg()}")
 		sb.appendLine("amiberry.vkbd_touch_button=${settings.onScreenKeyboardButton.toCfg()}")
@@ -230,6 +213,30 @@ object ConfigGenerator {
 		sb.appendLine("use_gui=no")
 
 		return sb.toString()
+	}
+
+	/**
+	 * The custom controls (CustomControls), after the joyport lines they
+	 * apply to (load_custom_options reads the port's device,
+	 * amiberry_input.cpp:1820-1825). The writer spells every control of a
+	 * joystick port, an empty value included (cfgfile.cpp:2847-2880): the
+	 * reader applies an empty line as the slot's default (custom_event_of,
+	 * amiberry_input.cpp:1790), so an earlier binding of the port does not
+	 * survive a control set back to Default. A full configuration and the
+	 * WHDLoad launch's control configuration both carry them.
+	 */
+	private fun appendCustomControls(sb: StringBuilder, settings: EmulatorSettings) {
+		val schema = SettingsSchema.current ?: return
+		val keys = settings.customControls.mappings.keys
+		for (port in keys.map { it.port }.distinct().sorted()) {
+			for (hotkey in listOf(false, true)) {
+				if (keys.none { it.port == port && it.hotkey == hotkey }) continue
+				for (control in schema.customControls) {
+					val key = CustomControls.Key(port, hotkey, control.axis, control.id)
+					sb.appendLine("${key.id}=${settings.customControls.event(key)}")
+				}
+			}
+		}
 	}
 
 	fun writeConfig(context: Context, settings: EmulatorSettings, filename: String): File {

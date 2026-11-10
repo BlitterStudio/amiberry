@@ -1845,6 +1845,24 @@ static bool is_custom_control_option(const std::string& option, const int port)
 	return false;
 }
 
+// The configuration name of the joystick a port names while the file
+// parses: its joyportname line's (configname), else the one its joyport
+// line's short id spells ("joy1" is JOY1), which a file without a
+// joyportname line (the Android launcher's) only has; empty for a port
+// with no joystick named.
+static std::string port_joystick_configname(const jport& jp)
+{
+	if (amiberry_get_joystick_index(jp.idc.configname) != -1)
+		return jp.idc.configname;
+	if (_tcsnicmp(jp.idc.shortid, _T("joy"), 3) == 0) {
+		std::string configname = "JOY";
+		configname += jp.idc.shortid + 3;
+		if (amiberry_get_joystick_index(configname.c_str()) != -1)
+			return configname;
+	}
+	return {};
+}
+
 bool load_custom_options(uae_prefs* p, const std::string& option, const TCHAR* value)
 {
 	// Only do this loop if the option starts with "joyport"
@@ -1856,10 +1874,10 @@ bool load_custom_options(uae_prefs* p, const std::string& option, const TCHAR* v
 		{
 			const jport *jp = &p->jports[i];
 
-			const int joy_index = amiberry_get_joystick_index(jp->idc.configname);
-			if (joy_index == -1) {
-				// The port has no joystick yet: a custom-control line for it
-				// waits for the device, which the file never names (the
+			const std::string configname = port_joystick_configname(*jp);
+			if (configname.empty()) {
+				// The port names no joystick: a custom-control line for it
+				// waits for the device the file does not name (the
 				// on-screen joystick, assigned later by
 				// on_screen_joystick_set_enabled), and is applied by
 				// amiberry_apply_pending_custom_options.
@@ -1872,7 +1890,7 @@ bool load_custom_options(uae_prefs* p, const std::string& option, const TCHAR* v
 
 			controller_mapping mapping{};
 			amiberry_get_port_joystick_custom_mapping(
-				i, jp->idc.name, jp->idc.configname, mapping);
+				i, jp->idc.name, configname.c_str(), mapping);
 
 			for (int m = 0; m < 2; ++m)
 			{
@@ -1888,7 +1906,7 @@ bool load_custom_options(uae_prefs* p, const std::string& option, const TCHAR* v
 						else
 							mapping.amiberry_custom_hotkey[n] = b;
 						amiberry_set_port_joystick_custom_mapping(
-							i, jp->idc.name, jp->idc.configname, mapping);
+							i, jp->idc.name, configname.c_str(), mapping);
 						return true;
 					}
 				}
@@ -1904,7 +1922,7 @@ bool load_custom_options(uae_prefs* p, const std::string& option, const TCHAR* v
 						else
 							mapping.amiberry_custom_axis_hotkey[n] = b;
 						amiberry_set_port_joystick_custom_mapping(
-							i, jp->idc.name, jp->idc.configname, mapping);
+							i, jp->idc.name, configname.c_str(), mapping);
 						return true;
 					}
 				}
