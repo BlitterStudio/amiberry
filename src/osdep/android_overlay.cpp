@@ -218,6 +218,47 @@ std::string setting_value(const amiberry_settings_session* session, const std::s
 	return found ? value : "";
 }
 
+// What showing a native UI does to the input around its wait, as
+// gui_display() does for the built-in GUI: a direction or fire held when
+// the menu or a dialog opened must not stay held after it. Emulator thread.
+void begin_native_ui_wait()
+{
+	inputdevice_unacquire();
+	wait_keyrelease();
+	clearallkeys();
+}
+
+void end_native_ui_wait()
+{
+	inputdevice_acquire(FALSE);
+	inputdevice_releasebuttons();
+}
+
+// The one event pump every native UI waits on (the menu's loop, a
+// dialog's): waiting also runs the overlay's SDL_RunOnMainThread calls,
+// controllers plugged in meanwhile are picked up, and a rotation waits
+// for the emulation, which is blocked while the UI shows. False when the
+// app is quitting: the caller ends its wait then.
+bool pump_native_ui_events(SDL_Event& resize, bool& resized)
+{
+	SDL_Event event;
+	if (!SDL_WaitEventTimeout(&event, 16))
+		return true;
+	do {
+		if (event.type == SDL_EVENT_QUIT || event.type == SDL_EVENT_TERMINATING) {
+			uae_quit();
+			return false;
+		} else if (event.type == SDL_EVENT_JOYSTICK_ADDED || event.type == SDL_EVENT_JOYSTICK_REMOVED) {
+			// As run_gui: controllers plugged in meanwhile are picked up.
+			handle_joy_device_event(event.jdevice.which, event.type == SDL_EVENT_JOYSTICK_REMOVED);
+		} else if (is_window_size_event(event)) {
+			resize = event;
+			resized = true;
+		}
+	} while (SDL_PollEvent(&event));
+	return true;
+}
+
 } // namespace
 
 bool android_overlay_enabled()
@@ -231,6 +272,7 @@ android_overlay_result android_overlay_run(const int page)
 	// The page (a media or state hotkey's shortcut) tells the activity
 	// where the menu opens.
 	SDL_SendAndroidMessage(command_show_overlay, page);
+	begin_native_ui_wait();
 
 	// The emulation handles a rotation once it runs again: the last size
 	// change waits for it.
@@ -250,29 +292,18 @@ android_overlay_result android_overlay_run(const int page)
 		if (result != close_none)
 			break;
 
-		// Waiting also runs the overlay's SDL_RunOnMainThread calls. Input
-		// is the overlay's while it shows (it has the Android focus); what
-		// still reaches SDL is dropped, as under the built-in GUI.
-		SDL_Event event;
-		if (!SDL_WaitEventTimeout(&event, 16))
-			continue;
-		do {
-			if (event.type == SDL_EVENT_QUIT || event.type == SDL_EVENT_TERMINATING) {
-				uae_quit();
-				result = close_resume;
-			} else if (event.type == SDL_EVENT_JOYSTICK_ADDED || event.type == SDL_EVENT_JOYSTICK_REMOVED) {
-				// As run_gui: controllers plugged in meanwhile are picked up.
-				handle_joy_device_event(event.jdevice.which, event.type == SDL_EVENT_JOYSTICK_REMOVED);
-			} else if (is_window_size_event(event)) {
-				resize = event;
-				resized = true;
-			}
-		} while (SDL_PollEvent(&event));
+		// Input is the overlay's while it shows (it has the Android focus);
+		// what still reaches SDL is dropped, as under the built-in GUI.
+		if (!pump_native_ui_events(resize, resized)) {
+			result = close_resume;
+			break;
+		}
 	}
 
 	// What the overlay posted as it closed (Pause, Quit) runs now, so the
 	// emulation loop sees it before it resumes.
 	amiberry_actions_run_pending();
+	end_native_ui_wait();
 	SDL_SendAndroidMessage(command_hide_overlay, 0);
 	if (resized)
 		SDL_PushEvent(&resize);
@@ -313,16 +344,16 @@ bool android_overlay_ask_disk(const int drive, const char* missing_path, std::st
 		recovery_dialog.open = false;
 		return false;
 	}
+	begin_native_ui_wait();
 
-	// As the menu's loop, without running its actions: the emulator thread
-	// waits mid-instruction, keeping SDL alive (a rotation waits for the
-	// emulation, which is blocked here) until the dialog answers. A quit
-	// cancels it; the caller keeps its missing image then.
+	// The emulator thread waits mid-instruction until the dialog answers
+	// (pump_native_ui_events keeps SDL alive); a quit cancels it, and the
+	// caller keeps its missing image then.
 	SDL_Event resize{};
 	bool resized = false;
 	bool quit = false;
 	int answer = recovery_answer_none;
-	while (!quit) {
+	while (true) {
 		{
 			std::lock_guard<std::mutex> guard(recovery_dialog.lock);
 			if (recovery_dialog.answer != recovery_answer_none) {
@@ -331,23 +362,16 @@ bool android_overlay_ask_disk(const int drive, const char* missing_path, std::st
 				break;
 			}
 		}
-		SDL_Event event;
-		if (!SDL_WaitEventTimeout(&event, 16))
-			continue;
-		do {
-			if (event.type == SDL_EVENT_QUIT || event.type == SDL_EVENT_TERMINATING) {
-				uae_quit();
-				quit = true;
-			} else if (is_window_size_event(event)) {
-				resize = event;
-				resized = true;
-			}
-		} while (SDL_PollEvent(&event));
+		if (!pump_native_ui_events(resize, resized)) {
+			quit = true;
+			break;
+		}
 	}
 	{
 		std::lock_guard<std::mutex> guard(recovery_dialog.lock);
 		recovery_dialog.open = false;
 	}
+	end_native_ui_wait();
 	SDL_SendAndroidMessage(command_hide_dialog, 0);
 	if (resized)
 		SDL_PushEvent(&resize);

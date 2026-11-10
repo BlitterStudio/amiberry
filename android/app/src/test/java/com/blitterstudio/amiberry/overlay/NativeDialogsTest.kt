@@ -33,4 +33,49 @@ class NativeDialogsTest {
 		assertNull(FloppyRecoveryRequest.parse(arrayOf("4", "/storage/Game.adf")))
 		assertNull(FloppyRecoveryRequest.parse(arrayOf("-1", "/storage/Game.adf")))
 	}
+
+	@Test
+	fun `message boxes alone keep the view up`() {
+		val presence = OverlayViewPresence(messages = 1)
+		assertEquals(true, presence.dialogs)
+		assertEquals(true, presence.view)
+	}
+
+	@Test
+	fun `the recovery requester alone keeps the view up`() {
+		val presence = OverlayViewPresence(recovery = true)
+		assertEquals(true, presence.dialogs)
+		assertEquals(true, presence.view)
+	}
+
+	@Test
+	fun `messages over the recovery requester keep the view up`() {
+		val presence = OverlayViewPresence(messages = 3, recovery = true)
+		assertEquals(true, presence.dialogs)
+		assertEquals(true, presence.view)
+	}
+
+	@Test
+	fun `the menu keeps the view up with and without dialogs`() {
+		assertEquals(true, OverlayViewPresence(menu = true).view)
+		assertEquals(true, OverlayViewPresence(menu = true, messages = 1).view)
+	}
+
+	@Test
+	fun `nothing showing hides the view, so the emulation gets its input back`() {
+		val presence = OverlayViewPresence()
+		assertEquals(false, presence.dialogs)
+		assertEquals(false, presence.view)
+	}
+
+	@Test
+	fun `dismissing the last message of many hides the view only then`() {
+		val queued = OverlayViewPresence(messages = 2)
+		val dismissed = queued.copy(messages = 1)
+		val lastDismissed = dismissed.copy(messages = 0)
+		assertEquals(true, queued.view)
+		assertEquals(true, dismissed.view)
+		assertEquals(false, lastDismissed.view)
+	}
+
 }

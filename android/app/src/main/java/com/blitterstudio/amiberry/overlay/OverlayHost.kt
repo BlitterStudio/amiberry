@@ -55,12 +55,15 @@ class OverlayHost(
 		ViewModelProvider(
 			this,
 			ViewModelProvider.AndroidViewModelFactory.getInstance(activity.application)
-		)[OverlayViewModel::class.java].also { it.hideView = ::hide }
+		)[OverlayViewModel::class.java].also {
+			it.hideView = ::hide
+			it.dialogsChanged = ::dialogsChanged
+		}
 	}
 	private var view: ComposeView? = null
 	/** The native menu's loop runs (its show/hide commands from android_overlay.cpp). */
 	private var menuShowing = false
-	/** A native dialog (gui_ask_disk's requester) is open. */
+	/** A native dialog (message box, gui_ask_disk's requester) is open. */
 	private var dialogShowing = false
 
 	val isShowing: Boolean
@@ -148,6 +151,23 @@ class OverlayHost(
 		if (!dialogShowing) return
 		dialogShowing = false
 		viewModel.recoveryHidden()
+		syncVisibility()
+		if (!isShowing) sdlSurface.requestFocus()
+	}
+
+	/**
+	 * A dialog came or went ([OverlayViewModel.dialogsChanged]): the last
+	 * one leaving takes the view with it — nothing of the overlay may keep
+	 * the emulation's input, or its Back, after its dialogs are gone. The
+	 * menu keeps the view up on its own show/hide commands.
+	 */
+	private fun dialogsChanged(showing: Boolean) {
+		if (showing) {
+			dialogShowing = true
+		} else {
+			if (!dialogShowing) return
+			dialogShowing = false
+		}
 		syncVisibility()
 		if (!isShowing) sdlSurface.requestFocus()
 	}

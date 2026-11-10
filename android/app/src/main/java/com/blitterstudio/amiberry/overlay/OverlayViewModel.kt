@@ -53,6 +53,24 @@ data class FloppyRecoveryRequest(val drive: Int, val missingPath: String) {
 }
 
 /**
+ * What keeps the overlay's Compose view up: the menu's native loop, a
+ * queued message box, or the recovery requester. The view hides — and SDL
+ * gets its focus back — when [view] turns false, so nothing keeps
+ * intercepting the emulation's input.
+ */
+data class OverlayViewPresence(
+	val menu: Boolean = false,
+	val messages: Int = 0,
+	val recovery: Boolean = false
+) {
+	/** A native dialog shows, alone or over the menu. */
+	val dialogs: Boolean get() = messages > 0 || recovery
+
+	/** The view shows anything at all. */
+	val view: Boolean get() = menu || dialogs
+}
+
+/**
  * The in-emulation menu's state and actions. The menu shows while the
  * native loop (android_overlay_run) holds the emulation paused; everything
  * it changes goes through [OverlayNative]: actions are posted from the UI
@@ -105,6 +123,9 @@ class OverlayViewModel(application: Application) : AndroidViewModel(application)
 	/** Hides the overlay's view; set by [OverlayHost]. */
 	internal var hideView: () -> Unit = {}
 
+	/** Told whenever a native dialog comes or goes, with whether any shows; set by [OverlayHost]. */
+	internal var dialogsChanged: (Boolean) -> Unit = {}
+
 	private var polling: Job? = null
 	private var noticeTimeout: Job? = null
 	private var sources: StateNameSources? = null
@@ -139,6 +160,15 @@ class OverlayViewModel(application: Application) : AndroidViewModel(application)
 		viewModelScope.launch { loadSlots() }
 	}
 
+	/** Tells [OverlayHost] whether a native dialog shows now (message boxes, recovery). */
+	private fun notifyDialogsChanged() {
+		dialogsChanged(OverlayViewPresence(
+			menu = menuUp,
+			messages = nativeMessages.size,
+			recovery = recovery != null
+		).dialogs)
+	}
+
 	/** The recovery dialog opened: [FloppyRecoveryRequest.parse] of the native request. */
 	fun recoveryShown(request: FloppyRecoveryRequest?) {
 		recovery = request
@@ -148,23 +178,28 @@ class OverlayViewModel(application: Application) : AndroidViewModel(application)
 			// the category is scanned, as the menu's picker does.
 			viewModelScope.launch { files.rescanCategory(FileCategory.FLOPPIES) }
 		}
+		notifyDialogsChanged()
 	}
 
 	/** The recovery dialog left without an answer (the native side gave up). */
 	fun recoveryHidden() {
 		recovery = null
 		recoveryPicking = false
+		notifyDialogsChanged()
 	}
 
 	/** gui_message's texts arrived; they show one at a time until dismissed. */
 	fun messagesQueued(texts: List<String>) {
 		nativeMessages = nativeMessages + texts
+		notifyDialogsChanged()
 	}
 
 	/** The message box's OK: the next message, or none left. */
 	fun dismissMessage() {
 		nativeMessages = nativeMessages.drop(1)
+		notifyDialogsChanged()
 	}
+
 
 	/** Locate: list the replacement images for the recovery dialog. */
 	fun openRecoveryPicker() {
@@ -181,6 +216,7 @@ class OverlayViewModel(application: Application) : AndroidViewModel(application)
 		recovery = null
 		recoveryPicking = false
 		OverlayNative.answerDialog(answer, path)
+		notifyDialogsChanged()
 	}
 
 	/** The overlay was hidden. */
