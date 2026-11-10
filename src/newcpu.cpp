@@ -5921,7 +5921,7 @@ static inline void cpu_thread_post_reply(uae_u32 mode)
 // so the CPU thread sees its own writes.
 enum { CPU_THREAD_SNAP_POS = 1, CPU_THREAD_SNAP_REGS = 2, CPU_THREAD_SNAP_CIA = 4 };
 #define CPU_THREAD_SNAP_TTL 65536        // about a frame
-#define CPU_THREAD_SNAP_REFRESH 128      // republish an unchanged copy (see cpu_thread_snap_min)
+#define CPU_THREAD_SNAP_REFRESH 128      // republish an unchanged copy (see cpu_thread_snap_worker.min)
 #define CPU_THREAD_SNAP_CIA_REFRESH 16   // CIA-A PRA is costlier to read
 // Sequence locks: odd while written or not armed.
 static struct alignas(64) {
@@ -5934,8 +5934,9 @@ static struct alignas(64) {
 	uae_u16 reg[4];    // DMACONR, INTENAR, INTREQR, ADKCONR
 	uae_u8 ciaa_pra;
 } cpu_thread_snap_regs;
-// main thread only
-static struct {
+// main thread only; on lines of its own, as both threads use their state on
+// every access
+static struct alignas(64) {
 	int ttl[3];        // POS, REGS, CIA
 	unsigned int armed;
 	unsigned int tick;
@@ -5943,9 +5944,6 @@ static struct {
 	uae_u16 reg[4];
 	uae_u8 ciaa_pra;
 } cpu_thread_snap_main;
-// CPU thread only: the regs copy must be at least this new. After an
-// interrupt, a copy from before INTREQ changed would hide the request.
-static uae_u32 cpu_thread_snap_min;
 // The chipset time stands still while the main thread waits for the frame,
 // renders it or is descheduled. A guest polling a register with an iteration
 // bound would then run out of iterations at one chipset time. Unthreaded, the
@@ -5957,11 +5955,14 @@ static struct alignas(64) {
 	uae_u32 v;         // colour clocks published
 } cpu_thread_snap_clock;
 // CPU thread only
-static struct {
+static struct alignas(64) {
 	uae_u32 reads;
 	uae_u32 clock;
 	uae_u64 since;     // host time the clock was last seen to move
 	bool frozen;
+	// The regs copy must be at least this new. After an interrupt, a copy
+	// from before INTREQ changed would hide the request.
+	uae_u32 min;
 } cpu_thread_snap_worker;
 
 // 0, or the snapshot group and the register's index in it
@@ -6108,9 +6109,9 @@ static void cpu_thread_snap_reset()
 	cpu_thread_snap_main = {};
 	cpu_thread_snap_pos.seq |= 1;
 	cpu_thread_snap_regs.seq |= 1;
-	cpu_thread_snap_min = cpu_thread_snap_regs.seq + 1;
 	cpu_thread_snap_clock.v = 0;
 	cpu_thread_snap_worker = {};
+	cpu_thread_snap_worker.min = cpu_thread_snap_regs.seq + 1;
 }
 
 // CPU thread: an interrupt is taken. INTREQ was set before the flag was
@@ -6118,7 +6119,7 @@ static void cpu_thread_snap_reset()
 static inline void cpu_thread_snap_interrupt()
 {
 	__atomic_thread_fence(__ATOMIC_ACQUIRE);
-	cpu_thread_snap_min = (__atomic_load_n(&cpu_thread_snap_regs.seq, __ATOMIC_ACQUIRE) | 1) + 1;
+	cpu_thread_snap_worker.min = (__atomic_load_n(&cpu_thread_snap_regs.seq, __ATOMIC_ACQUIRE) | 1) + 1;
 }
 
 static inline uae_u16 cpu_thread_snap_value(int r)
@@ -6160,7 +6161,7 @@ static inline bool cpu_thread_snap_read(const addrbank *ab, uaecptr addr, int si
 	if (s & 1)
 		return false;
 	if (group != CPU_THREAD_SNAP_POS
-		&& ((uae_s32)(s - cpu_thread_snap_min) < 0
+		&& ((uae_s32)(s - w.min) < 0
 			|| !(__atomic_load_n(&cpu_thread_snap_regs.valid, __ATOMIC_RELAXED) & group)))
 		return false;
 	uae_u32 v;
