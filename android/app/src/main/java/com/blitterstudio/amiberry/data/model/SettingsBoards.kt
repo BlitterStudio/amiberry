@@ -474,13 +474,28 @@ object BoardEditor {
 		value: String
 	): EmulatorSettings {
 		val type = schema.boardType(unit.typeId) ?: return settings
-		val default = type.field(fieldId)?.default ?: return settings
+		val field = type.field(fieldId) ?: return settings
+		val default = field.default
 		val own = settings.boards.firstOrNull { it.typeId == unit.typeId && it.unit == unit.unit }
 			?: unit // the internal board's synthetic unit: materialize it
 		val nextFields = if (value == default) own.fields - fieldId else own.fields + (fieldId to value)
+		if (field.type == "string" && !textsFit(type, nextFields)) return settings
 		val next = if (fieldId == "rom_file") own.copy(romFile = value) else own.copy(fields = nextFields)
 		return settings.copy(boards = (settings.boards - own) + next)
 	}
+
+	/** The size of a board's text settings buffer, NUL terminators included (ROMCONFIG_CONFIGTEXT_LEN). */
+	private const val CONFIG_TEXT_LEN = 256
+
+	/**
+	 * Whether a unit's text settings fit the one buffer the emulator keeps
+	 * them in, each with its terminator: the reader copies them without a
+	 * bound (cfgfile_read_rom_settings), so the editor takes no text that
+	 * would not, as the layer's put_texts refuses one.
+	 */
+	fun textsFit(type: SettingsSchema.BoardType, fields: Map<String, String>): Boolean =
+		type.fields.filter { it.type == "string" && it.id.startsWith("setting:") }
+			.sumOf { (fields[it.id] ?: it.default).toByteArray(Charsets.UTF_8).size + 1 } <= CONFIG_TEXT_LEN
 
 	/**
 	 * The units as the change summary shows them, joined: each with what is

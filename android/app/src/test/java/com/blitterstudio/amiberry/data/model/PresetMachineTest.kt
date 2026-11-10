@@ -211,6 +211,17 @@ class PresetMachineTest {
 	}
 
 	@Test
+	fun `a board's text settings stay within the emulator's buffer`() {
+		val schema = requireNotNull(SettingsSchema.current)
+		val added = BoardEditor.add(EmulatorSettings(), schema, "a1060")
+		val unit = added.boards.single()
+		val fits = BoardEditor.setField(added, schema, unit, "setting:config", "x".repeat(255))
+		assertEquals("x".repeat(255), fits.boards.single().fields["setting:config"])
+		// 256 characters and the terminator do not fit ROMCONFIG_CONFIGTEXT_LEN.
+		assertEquals(fits, BoardEditor.setField(fits, schema, fits.boards.single(), "setting:config", "x".repeat(256)))
+	}
+
+	@Test
 	fun `the add menu offers optional internal boards but no built-in controller`() {
 		val schema = requireNotNull(SettingsSchema.current)
 		val addable = BoardEditor.addable(schema).map { it.id }
