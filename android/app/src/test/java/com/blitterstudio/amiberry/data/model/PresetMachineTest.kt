@@ -148,6 +148,120 @@ class PresetMachineTest {
 	}
 
 	@Test
+	fun `a 68020 accelerator on an A500 turns 24-bit addressing off`() {
+		val a500 = EmulatorSettings.fromModel(AmigaModel.A500)
+		assertTrue(a500.address24Bit)
+
+		// cpuboard_set_cpu sets the board's CPU and 32-bit addressing.
+		val settings = a500.withOption("cpuboard_type", "A2630")
+
+		assertEquals(68020, settings.cpuModel)
+		assertFalse(settings.address24Bit)
+	}
+
+	@Test
+	fun `a Zorro II accelerator's RAM and fast RAM stay one size`() {
+		val a530 = EmulatorSettings.fromModel(AmigaModel.A500).withOption("cpuboard_type", "GVPA530")
+
+		// The board's size lands in fast RAM (mirror_cpuboard_mem)...
+		val board4 = a530.withOption("cpuboardmem1_size", "4")
+		assertEquals("4", board4.optionValue("fastmem_size"))
+		// ...and fast RAM's in the board (sync_cpuboard_mem), so a launch's
+		// fixup does not restore the old size.
+		val fast8 = board4.withOption("fastmem_size", "8")
+		assertEquals("8", fast8.optionValue("cpuboardmem1_size"))
+	}
+
+	@Test
+	fun `a preset's accelerator jumpers are the editor's, written once`() {
+		val draco = EmulatorSettings.fromModel(requireNotNull(AmigaModel.find("macrosystem")))
+		assertEquals("true", draco.acceleratorJumpers["pckbd"])
+		assertNull(draco.options["cpuboard_settings"])
+
+		val rev4 = draco.copy(acceleratorJumpers = draco.acceleratorJumpers + ("hwrev" to "4"))
+		val lines = ConfigGenerator.generate(rev4).lines().filter { it.startsWith("cpuboard_settings=") }
+		assertEquals(listOf("cpuboard_settings=4,pckbd"), lines)
+	}
+
+	@Test
+	fun `another accelerator fits the board RAM to its maximum`() {
+		val blizzard = EmulatorSettings.fromModel(AmigaModel.A1200)
+			.withOption("cpuboard_type", "Blizzard1230IV").withOption("cpuboardmem1_size", "256")
+		assertEquals("256", blizzard.optionValue("cpuboardmem1_size"))
+		// fit_board_memory: the E-Matrix 530 takes at most 128 MB.
+		assertEquals("128", blizzard.withOption("cpuboard_type", "e-matrix530").optionValue("cpuboardmem1_size"))
+	}
+
+	@Test
+	fun `another accelerator takes the old one's RAM out of fast RAM`() {
+		val a530 = EmulatorSettings.fromModel(AmigaModel.A500)
+			.withOption("cpuboard_type", "GVPA530").withOption("cpuboardmem1_size", "8")
+		assertEquals("8", a530.optionValue("fastmem_size"))
+		// set_cpuboard_type clears the slot the old board's RAM was copied to.
+		val blizzard = a530.withOption("cpuboard_type", "Blizzard1230IV")
+		assertEquals("0", blizzard.optionValue("fastmem_size"))
+		assertEquals("0", a530.withOption("cpuboard_type", "none").optionValue("fastmem_size"))
+	}
+
+	@Test
+	fun `a model change keeps the new preset's accelerator jumpers`() {
+		val draco = EmulatorSettings.fromModel(AmigaModel.A500)
+			.withModel(requireNotNull(AmigaModel.find("macrosystem")), 0)
+		assertEquals("true", draco.acceleratorJumpers["pckbd"])
+	}
+
+	@Test
+	fun `a board's text settings stay within the emulator's buffer`() {
+		val schema = requireNotNull(SettingsSchema.current)
+		val added = BoardEditor.add(EmulatorSettings(), schema, "a1060")
+		val unit = added.boards.single()
+		val fits = BoardEditor.setField(added, schema, unit, "setting:config", "x".repeat(255))
+		assertEquals("x".repeat(255), fits.boards.single().fields["setting:config"])
+		// 256 characters and the terminator do not fit ROMCONFIG_CONFIGTEXT_LEN.
+		assertEquals(fits, BoardEditor.setField(fits, schema, fits.boards.single(), "setting:config", "x".repeat(256)))
+	}
+
+	@Test
+	fun `the FMV cartridge's enabling line belongs to the board`() {
+		val schema = requireNotNull(SettingsSchema.current)
+		val units = SettingsBoards.parse(schema, mapOf("cd32fmv" to "true"))
+		assertEquals(listOf("cd32fmv"), units.map { it.typeId })
+		assertTrue("cd32fmv=true" in SettingsBoards.render(schema, units))
+		// Removed, nothing turns it back on.
+		assertTrue(SettingsBoards.render(schema, emptyList()).none { it.startsWith("cd32fmv") })
+	}
+
+	@Test
+	fun `picking the accelerator already fitted keeps its jumpers`() {
+		val draco = EmulatorSettings.fromModel(requireNotNull(AmigaModel.find("macrosystem")))
+		assertEquals(draco, draco.withOption("cpuboard_type", "draco"))
+	}
+
+	@Test
+	fun `an added board names the scanned ROM of its type, not the ROM-off marker`() {
+		val schema = requireNotNull(SettingsSchema.current)
+		// A4091 v40.13, by its checksum.
+		val rom = AmigaFile("/roms/a4091.rom", "a4091.rom", "rom", 32768, 0, FileCategory.ROMS, 0x54cb9e85L)
+		val kick = AmigaFile("/roms/kick.rom", "kick.rom", "rom", 524288, 0, FileCategory.ROMS, 0x12345678L)
+		val added = BoardEditor.add(EmulatorSettings(), schema, "a4091", listOf(kick, rom))
+		assertEquals("/roms/a4091.rom", added.boards.single().romFile)
+		// None found: the ROM-off marker, as add_entry writes then.
+		assertEquals(":NOROM", SettingsBoards.entryValue(schema.boardType("a4091")!!, BoardEditor.add(EmulatorSettings(), schema, "a4091").boards.single().romFile))
+	}
+
+	@Test
+	fun `the add menu offers optional internal boards but no built-in controller`() {
+		val schema = requireNotNull(SettingsSchema.current)
+		val addable = BoardEditor.addable(schema).map { it.id }
+		assertTrue("cdtvsram" in addable)
+		assertTrue("cdtvscsi" in addable)
+		// The CD32 FMV cartridge is optional; its own line switches it.
+		assertTrue("cd32fmv" in addable)
+		assertFalse("ide_mb" in addable)
+		assertFalse("pcmcia_mb" in addable)
+	}
+
+	@Test
 	fun `picking a sub-1 MB fast RAM size clears the MB size`() {
 		val small = EmulatorSettings(fastRam = 2).withOption("fastmem_size_k", "256")
 		assertEquals(0, small.fastRam)

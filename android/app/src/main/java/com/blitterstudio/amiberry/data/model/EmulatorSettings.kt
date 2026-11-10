@@ -57,6 +57,10 @@ data class EmulatorSettings(
 	// Hard drives (hardfiles)
 	val hardDrives: List<HardDrive> = emptyList(),
 
+	// The expansion boards the configuration lists (SettingsBoards; machine
+	// hardware: a model change replaces them, as it replaces the memory).
+	val boards: List<BoardUnit> = emptyList(),
+
 	// Sound
 	val soundOutput: String = "exact",  // none, interrupts, normal, exact
 	val soundFreq: Int = EmulatorSettingsConstraints.DEFAULT_SOUND_FREQUENCY,
@@ -109,6 +113,11 @@ data class EmulatorSettings(
 	/** Pointer speed when the left stick drives the mouse (input.joymouse_speed_analog). */
 	val analogMouseSpeed: Int = EmulatorSettingsConstraints.DEFAULT_ANALOG_MOUSE_SPEED,
 
+	// The port mappings that outlive a model change (how the user plays).
+	val customControls: CustomControls = CustomControls(),
+	/** The accelerator jumpers by name, as the cpuboard_settings line packs them (AcceleratorJumpers). */
+	val acceleratorJumpers: Map<String, String> = emptyMap(),
+
 	/**
 	 * The schema options without a field of their own (see [FIELD_IDS]):
 	 * option ID to .uae value, as a preset sets them or a configuration file
@@ -143,21 +152,30 @@ data class EmulatorSettings(
 	 * [options]; null when [options] does not set it (the emulator's default
 	 * applies).
 	 */
-	fun optionValue(id: String): String? = FIELDS[id]?.get?.invoke(this) ?: options[id]
+	fun optionValue(id: String): String? = when (id) {
+		// The packed line of the jumpers (withPackedJumpersAdopted).
+		"cpuboard_settings" -> SettingsSchema.current?.acceleratorBoard(optionValue("cpuboard_type") ?: "none")
+			?.let { AcceleratorJumpers.pack(it, acceleratorJumpers) }?.ifEmpty { null } ?: options[id]
+		else -> FIELDS[id]?.get?.invoke(this) ?: options[id]
+	}
 
 	/**
 	 * [id] set to [value] (.uae spelling) with the changes the emulator's
 	 * setting makes with it, as the schema's transition table recorded them
 	 * from the settings layer's setters (a 68000 drops the JIT, cycle-exact
-	 * turns immediate blits off). A value the layer refuses in this state
 	 * turns immediate blits off); the fast RAM boards' tables make the MB
 	 * and KB keys of a board agree. A value the layer refuses in this state
+	 * leaves the settings as they are. The accelerator board already in the
+	 * machine is no change (set_cpuboard_type returns early): its jumpers
+	 * stay.
 	 */
 	fun withOption(id: String, value: String, schema: SettingsSchema? = SettingsSchema.current): EmulatorSettings {
+		if (id == "cpuboard_type" && value == (optionValue(id) ?: "none")) return this
 		val stateValue = if (id == "cachesize") jitState(value.toIntOrNull() ?: return this) else value
 		val state = schemaState(schema)
 		val transition = schema?.transitions?.of(state, id, stateValue)
 			?: schema?.memoryTransitions?.firstNotNullOfOrNull { it.of(state, id, stateValue) }
+			?: schema?.acceleratorTransitions?.of(state, id, stateValue)
 		if (transition?.refused == true) return this
 		var result = withField(id, value, schema) ?: return this
 		transition?.writes?.forEach { (field, written) ->
@@ -165,7 +183,61 @@ data class EmulatorSettings(
 			if (field == "cachesize" && written != "0" && result.jitCacheSize > 0) return@forEach
 			result = result.withField(field, written, schema) ?: result
 		}
-		return result
+		return result.withAcceleratorMemorySynced(this, id, value, schema)
+	}
+
+	/**
+	 * The accelerator's RAM, as the layer's setters keep it. Another board
+	 * (none included) takes the old board's RAM out of the memory slot it
+	 * was copied to when the new one puts its RAM elsewhere, then fits the
+	 * RAM to the new board's maximum and puts it in that board's slot
+	 * (set_cpuboard_type, fit_board_memory: the fixup_prefs clamp and copy
+	 * at load). A board whose RAM is a memory option's (a Zorro II board's
+	 * fastmem_size) keeps the two equal, the board's size landing in the
+	 * option (mirror_cpuboard_mem) and the option's in the board, up to its
+	 * maximum (sync_cpuboard_mem). So a launch never brings back a size the
+	 * editor no longer shows.
+	 */
+	private fun withAcceleratorMemorySynced(
+		before: EmulatorSettings,
+		id: String,
+		value: String,
+		schema: SettingsSchema?
+	): EmulatorSettings {
+		schema ?: return this
+		val board = schema.acceleratorBoard(optionValue("cpuboard_type") ?: "none")
+		val slot = board?.memoryOption
+		if (id == "cpuboard_type") {
+			// Another board's jumpers start over (set_cpuboard_type).
+			var result = copy(acceleratorJumpers = emptyMap())
+			val oldSlot = schema.acceleratorBoard(before.optionValue("cpuboard_type") ?: "none")?.memoryOption
+			if (oldSlot != null && oldSlot != slot &&
+				before.optionValue(oldSlot) == before.optionValue("cpuboardmem1_size"))
+				result = result.withField(oldSlot, "0", schema) ?: result
+			board ?: return result
+			val size = result.optionValue("cpuboardmem1_size")?.toIntOrNull() ?: 0
+			if (size > board.memoryMax)
+				result = result.withField("cpuboardmem1_size", board.memoryMax.toString(), schema) ?: result
+			return slot?.let { result.withField(it, result.optionValue("cpuboardmem1_size") ?: "0", schema) } ?: result
+		}
+		if (board == null || slot == null) return this
+		if (id == "cpuboardmem1_size") return withField(slot, value, schema) ?: this
+		if (optionValue(slot) == before.optionValue(slot)) return this
+		val mb = optionValue(slot)?.toIntOrNull() ?: return this
+		return withField("cpuboardmem1_size", minOf(mb, board.memoryMax).toString(), schema) ?: this
+	}
+
+	/**
+	 * The accelerator's jumpers have one home, [acceleratorJumpers], which
+	 * the configuration's one cpuboard_settings line is written from: a
+	 * preset level's packed line (the DraCo's "3,pckbd") moves there, so
+	 * the editor shows it and an edit replaces it rather than a second
+	 * line, which the reader would apply over the first.
+	 */
+	fun withPackedJumpersAdopted(schema: SettingsSchema? = SettingsSchema.current): EmulatorSettings {
+		val packed = options["cpuboard_settings"] ?: return this
+		val board = schema?.acceleratorBoard(optionValue("cpuboard_type") ?: "none") ?: return this
+		return copy(acceleratorJumpers = AcceleratorJumpers.unpack(board, packed), options = options - "cpuboard_settings")
 	}
 
 	/**
@@ -198,6 +270,8 @@ data class EmulatorSettings(
 			id !in machine.options && preset[id] != value && schema?.option(id)?.group in PLAY_GROUPS
 		}
 		return machine.copy(
+			boards = emptyList(),
+			customControls = customControls,
 			shader = shader,
 			joyport0 = joyport0,
 			joyport1 = joyport1,
@@ -245,7 +319,7 @@ data class EmulatorSettings(
 				else -> result.copy(options = result.options + (id to value))
 			}
 		}
-		return result
+		return result.withPackedJumpersAdopted()
 	}
 
 	/**
@@ -261,7 +335,7 @@ data class EmulatorSettings(
 			val set = field.set ?: continue
 			preset = set(preset, field.get(this)) ?: preset
 		}
-		return preset.copy(hardDrives = hardDrives)
+		return preset.copy(hardDrives = hardDrives, customControls = customControls)
 	}
 
 	companion object {
@@ -316,7 +390,7 @@ data class EmulatorSettings(
 				val value = values[id] ?: defaultOf(id) ?: continue
 				settings = field.set?.invoke(settings, value) ?: settings
 			}
-			return settings.copy(options = values.filterKeys { it !in FIELDS })
+			return settings.copy(options = values.filterKeys { it !in FIELDS }).withPackedJumpersAdopted()
 		}
 
 		// The choices the emulator offers for these options (value, label),

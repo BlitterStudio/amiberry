@@ -28,6 +28,7 @@
 
 #include <cstdio>
 #include <cstring>
+#include <set>
 #include <deque>
 #include <string>
 #include <vector>
@@ -104,16 +105,19 @@ struct board_field {
 
 // The built-in controllers whose entries the core derives from chipset
 // fields. A chipset option (PCMCIA, CDTV) switches them through its rules;
-// the others are written here.
+// the others are written here. The CD32 FMV cartridge is the one a
+// configuration line of its own switches (cd32fmv, cfgfile.cpp), which no
+// option of the layer is: an optional cartridge rather than a fixed part.
 struct internal_board {
 	uae_u32 romtype;
 	const char* option; // nullptr: written directly
+	const char* flag = nullptr; // the configuration line enabling it, when no option does
 };
 const internal_board internal_boards[] = {
 	{ROMTYPE_MB_IDE, nullptr},
 	{ROMTYPE_SCSI_A3000, nullptr},
 	{ROMTYPE_SCSI_A4000T, nullptr},
-	{ROMTYPE_CD32CART, nullptr},
+	{ROMTYPE_CD32CART, nullptr, "cd32fmv"},
 	{ROMTYPE_MB_PCMCIA, "pcmcia"},
 	{ROMTYPE_CDTVDMAC, "cdtvcd"},
 	{ROMTYPE_CDTVCR, "cdtv-cr"},
@@ -236,25 +240,36 @@ void build_fields(board_type& t)
 		fields.push_back({FIELD_INSERTED, -1, "inserted", "PCMCIA card inserted"});
 	if (flags & EXPANSIONTYPE_DMA24)
 		fields.push_back({FIELD_DMA24, -1, "dma24bit", "24-bit DMA"});
+	std::set<std::string> setting_ids;
 	for (int i = 0; ert.settings && ert.settings[i].name; i++) {
 		const expansionboardsettings& e = ert.settings[i];
 		const bool selector = e.type == EXPANSIONBOARD_MULTI;
 		board_field f{FIELD_SETTING, i};
+		std::string id;
 		if (selector) {
 			const std::vector<const char*> configs = board_setting_names(e.configname);
 			const std::vector<const char*> names = board_setting_names(e.name);
 			if (configs.size() < 2 || names.empty())
 				continue;
-			f.id = std::string("setting:") + configs[0];
+			id = configs[0];
 			f.label = names[0];
 			for (size_t k = 1; k < configs.size(); k++) {
 				f.values.emplace_back(configs[k]);
 				f.labels.emplace_back(k < names.size() ? names[k] : configs[k]);
 			}
 		} else {
-			f.id = std::string("setting:") + e.configname;
+			id = e.configname;
 			f.label = e.name;
 		}
+		// A settings table can name two settings alike (the A1060 sidecar's
+		// two "memory" selectors: the RAM size and the address sector).
+		// The first keeps the name the configuration's tokens use; a later
+		// one takes its table index, so every setting of a board is its own
+		// field. The tokens stay the table's own (its positions differ).
+		f.id = std::string("setting:") + id;
+		if (!setting_ids.insert(f.id).second)
+			f.id += "#" + std::to_string(i);
+		setting_ids.insert(f.id);
 		fields.push_back(std::move(f));
 	}
 	// Descriptors last: they point into the fields, which stay put now.
@@ -775,6 +790,46 @@ bool board_field_available(const uae_prefs& p, const context& ctx, std::string_v
 	const board_type* t = find_type(type);
 	const board_field* f = t ? find_field(*t, field) : nullptr;
 	return f && valid_unit(*t, unit) && available(p, ctx, *t, unit, *f);
+}
+
+amiberry_settings_status board_field_layout(const amiberry_settings_board_type* type, std::string_view field,
+	int* shift, int* bits, bool* invert)
+{
+	const board_type* t = type && type->id ? find_type(type->id) : nullptr;
+	const board_field* f = t ? find_field(*t, field) : nullptr;
+	if (!f || f->kind != FIELD_SETTING)
+		return AMIBERRY_SETTINGS_UNKNOWN_ID;
+	const expansionboardsettings& e = t->ert->settings[f->setting];
+	if (e.type == EXPANSIONBOARD_STRING) {
+		// A text setting keeps no bits; it lives in the entry's configtext.
+		if (shift) *shift = 0;
+		if (bits) *bits = 0;
+		if (invert) *invert = false;
+		return AMIBERRY_SETTINGS_OK;
+	}
+	const board_setting_bits layout = board_setting_bits_of(t->ert->settings, f->setting);
+	if (shift) *shift = layout.shift;
+	if (bits) *bits = layout.bits;
+	if (invert) *invert = e.invert;
+	return AMIBERRY_SETTINGS_OK;
+}
+
+const char* board_option(const amiberry_settings_board_type* type)
+{
+	const board_type* t = type && type->id ? find_type(type->id) : nullptr;
+	return t && t->internal ? t->internal->option : nullptr;
+}
+
+bool board_built_in(const amiberry_settings_board_type* type)
+{
+	const board_type* t = type && type->id ? find_type(type->id) : nullptr;
+	return t && t->internal && !t->internal->flag;
+}
+
+const char* board_flag(const amiberry_settings_board_type* type)
+{
+	const board_type* t = type && type->id ? find_type(type->id) : nullptr;
+	return t && t->internal ? t->internal->flag : nullptr;
 }
 
 } // namespace amiberry_settings

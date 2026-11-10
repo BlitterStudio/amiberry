@@ -13,6 +13,7 @@
 #include "sysdeps.h"
 #include "options.h"
 #include "cpuboard.h"
+#include "autoconf.h"
 #include "memory.h"
 #include "rommgr.h"
 
@@ -385,6 +386,36 @@ const char* rom_role(int id)
 	return "other";
 }
 
+// The ROMs a board type loads (its ROM type's, as scanned_rom and
+// read_device_from_romconfig match them), so a front end writing the
+// board's entry itself can name the scanned ROM, as the layer's add_entry
+// does: ":NOROM" would switch the ROM off. None for a ROM-less board.
+std::vector<int> board_rom_ids(const char* type_id)
+{
+	std::vector<int> ids;
+	const expansionromtype* ert = nullptr;
+	for (int i = 0; expansionroms[i].name; i++) {
+		if (!std::strcmp(expansionroms[i].name, type_id)) {
+			ert = &expansionroms[i];
+			break;
+		}
+	}
+	if (!ert || (ert->romtype & ROMTYPE_NOT))
+		return ids;
+	const uae_u32 main = ert->romtype & ROMTYPE_MASK;
+	const uae_u32 extra = ert->romtype_extra & ROMTYPE_MASK;
+	// ROM IDs are small and sparse; the table has no count of its own.
+	for (int id = 1; id < 4096; id++) {
+		const romdata* rd = getromdatabyid(id);
+		if (!rd || rd->id != id)
+			continue;
+		const uae_u32 type = rd->type & ROMTYPE_MASK;
+		if (type == main || (ert->romtype_extra && type == extra))
+			ids.push_back(id);
+	}
+	return ids;
+}
+
 // The ROM sets a preset configuration can be built with: its builder is
 // run with each pattern of found and missing ROMs (configure_rom_probe),
 // as fallbacks are only asked for when an earlier ROM is missing and add-on
@@ -531,6 +562,13 @@ bool presets(std::string& out)
 			out += '}';
 		}
 		out += "]}";
+	}
+	// The boards' ROMs join the table too (board_types names them by ID).
+	for (size_t t = 0; t < amiberry_settings_board_type_count(); t++) {
+		if (const amiberry_settings_board_type* type = amiberry_settings_board_type_at(t)) {
+			for (const int id : board_rom_ids(type->id))
+				requested_roms.insert(id);
+		}
 	}
 	out += "\n],\n\"roms\":[";
 	// The ROMs the presets ask for, so a front end that finds ROM files by
@@ -1428,6 +1466,48 @@ bool transition_table_json(std::string& out, const transition_table& table)
 	return true;
 }
 
+// The accelerator board a configuration names sets the CPU its variant
+// needs (cpuboard_set_cpu), so a front end writing the file itself must
+// write that CPU too: one table for every board, from every CPU (and FPU,
+// MMU and addressing, which the setter reads and writes: a 68020+ board
+// turns 24-bit addressing off). The board's jumpers and memory are not
+// fields here: from a fresh configuration neither changes (the jumpers are
+// cleared, no memory is set), so no probe can tell a value it forces from
+// one it keeps; the launcher leaves both alone, as cfgfile's own writer
+// does until they are edited.
+std::vector<const char*> accelerator_type_values()
+{
+	// The texts outlive the call: the table keeps pointers to them.
+	static std::set<std::string> texts;
+	std::vector<const char*> values;
+	values.push_back("none");
+	reset_pending();
+	amiberry_settings_session* session = amiberry_settings_session_open();
+	if (!session)
+		return values;
+	const amiberry_setting_choice* choices = nullptr;
+	const size_t count = amiberry_settings_choices(session, "cpuboard_type", &choices);
+	for (size_t c = 0; c < count && choices; c++) {
+		if (std::strcmp(choices[c].value, "none") == 0)
+			continue;
+		values.push_back(texts.insert(choices[c].value).first->c_str());
+	}
+	amiberry_settings_session_close(session);
+	return values;
+}
+
+transition_table accelerator_transitions()
+{
+	return {{{{"cpu_model", choice_values("cpu_model")}, {"fpu_model", choice_values("fpu_model")},
+			{"mmu_model", choice_values("mmu_model")}, {"cpu_24bit_addressing", {"true", "false"}}}, {}},
+		{{"cpuboard_type", accelerator_type_values()}},
+		// Only the fields a probe varies besides the inputs: the guard
+		// needs each other field to change under one, to tell a value the
+		// setter forces from one it keeps.
+		{"cpu_model", "fpu_model", "mmu_model", "cpu_24bit_addressing", "cpu_speed", "immediate_blits", "compfpu",
+			"cpu_data_cache", "cpu_multiplier", "waiting_blits", "fastmem_size", "z3mem_size"}};
+}
+
 // The CPU table, then the memory boards' tables.
 bool transitions(std::string& out)
 {
@@ -1442,7 +1522,267 @@ bool transitions(std::string& out)
 			return false;
 	}
 	out += "\n]";
+	out += ",\n\"accelerator_transitions\":";
+	if (!transition_table_json(out, accelerator_transitions()))
+		return false;
 	return true;
+}
+
+// The expansion board types a configuration can list, with the fields a
+// unit of each has, for a front end that writes configuration files
+// without a session (the Android launcher). A front end spells a unit the
+// way the configuration writer does: <id>_rom_file (the unit's entry, with
+// ":NOROM" or ":ENABLED" while it has no ROM of its own), <id>_rom_options
+// (the variant, the SCSI ID, the switches and the selectors, as
+// cfgfile_write_board_rom packs them) and <id>_mem_size; a unit of a type
+// exists while its <id>_rom_file line does. The network boards' mode
+// selector is left out: its positions name the host's network drivers,
+// which the schema must not depend on (a configuration's own value for it
+// rides along, see the launcher's codec).
+void board_types(std::string& out)
+{
+	static const struct { unsigned int bit; const char* name; } category_names[] = {
+		{AMIBERRY_BOARD_INTERNAL, "internal"}, {AMIBERRY_BOARD_SCSI, "scsi"}, {AMIBERRY_BOARD_IDE, "ide"},
+		{AMIBERRY_BOARD_SASI, "sasi"}, {AMIBERRY_BOARD_CUSTOM, "custom"},
+		{AMIBERRY_BOARD_PCI_BRIDGE, "pci_bridge"}, {AMIBERRY_BOARD_X86_BRIDGE, "x86_bridge"},
+		{AMIBERRY_BOARD_RTG, "rtg"}, {AMIBERRY_BOARD_SOUND, "sound"}, {AMIBERRY_BOARD_NETWORK, "network"},
+		{AMIBERRY_BOARD_FLOPPY, "floppy"}, {AMIBERRY_BOARD_X86_EXPANSION, "x86_expansion"},
+	};
+	out += ",\n\"board_types\":[";
+	for (size_t t = 0; t < amiberry_settings_board_type_count(); t++) {
+		const amiberry_settings_board_type* type = amiberry_settings_board_type_at(t);
+		if (!type)
+			continue;
+		if (t)
+			out += ',';
+		out += "\n{\"id\":";
+		json_string(out, type->id);
+		out += ",\"label\":";
+		json_string(out, type->label);
+		out += ",\"manufacturer\":";
+		if (type->manufacturer)
+			json_string(out, type->manufacturer);
+		else
+			out += "null";
+		out += ",\"categories\":[";
+		bool first = true;
+		for (const auto& category : category_names) {
+			if (!(type->categories & category.bit))
+				continue;
+			if (!first)
+				out += ',';
+			first = false;
+			json_string(out, category.name);
+		}
+		out += ']';
+		out += ",\"units\":";
+		json_number(out, type->units);
+		if (const char* option = amiberry_settings_board_option(type)) {
+			out += ",\"option\":";
+			json_string(out, option);
+		}
+		const std::vector<int> rom_ids = board_rom_ids(type->id);
+		if (!rom_ids.empty()) {
+			out += ",\"rom_ids\":[";
+			for (size_t i = 0; i < rom_ids.size(); i++) {
+				if (i)
+					out += ',';
+				json_number(out, rom_ids[i]);
+			}
+			out += ']';
+		}
+		if (amiberry_settings_board_built_in(type))
+			out += ",\"built_in\":true";
+		if (const char* flag = amiberry_settings_board_flag(type)) {
+			out += ",\"flag\":";
+			json_string(out, flag);
+		}
+		bool started = false;
+		for (size_t f = 0; f < type->field_count; f++) {
+			const amiberry_setting_descriptor* d = amiberry_settings_board_field_at(type, f);
+			if (!d)
+				continue;
+			// The board's own settings: where each keeps its value in the
+			// unit's settings word, so a front end can pack _rom_options
+			// itself. The network mode selector is skipped: its positions
+			// name the host's network drivers, which the schema must not
+			// depend on (a configuration's own value for it rides along).
+			if (std::strncmp(d->id, "setting:", 8) == 0 && std::strcmp(d->id, "setting:netmode") == 0)
+				continue;
+			int shift = 0, bits = 0;
+			bool invert = false;
+			const bool setting = std::strncmp(d->id, "setting:", 8) == 0
+				&& amiberry_settings_board_field_layout(type, d->id, &shift, &bits, &invert)
+					== AMIBERRY_SETTINGS_OK;
+			out += started ? ",{\"id\":" : ",\"fields\":[{\"id\":";
+			started = true;
+			json_string(out, d->id);
+			out += ",\"label\":";
+			json_string(out, d->label);
+			out += ",\"help\":";
+			json_string(out, d->help);
+			out += ",\"type\":";
+			json_string(out, type_name(d->type));
+			out += ",\"apply\":";
+			json_string(out, apply_name(d->apply));
+			out += ",\"default\":";
+			json_string(out, d->default_value);
+			if (d->constraint && d->constraint[0]) {
+				out += ",\"constraint\":";
+				json_string(out, d->constraint);
+			}
+			if (d->choice_count) {
+				out += ",\"choices\":[";
+				for (size_t c = 0; c < d->choice_count; c++) {
+					if (c)
+					out += ',';
+				out += "{\"value\":";
+				json_string(out, d->choices[c].value);
+				out += ",\"label\":";
+				json_string(out, d->choices[c].label);
+					out += '}';
+				}
+				out += ']';
+			}
+			if (setting) {
+				out += ",\"shift\":";
+				json_number(out, shift);
+				out += ",\"bits\":";
+				json_number(out, bits);
+				out += ",\"invert\":";
+				out += invert ? "true" : "false";
+			}
+			out += '}';
+		}
+		if (started)
+		out += ']';
+		out += '}';
+	}
+	out += "\n]";
+}
+
+// The custom controls a configuration can map (the gamepad buttons and
+// axes of a joystick port), and the input events they can trigger, named
+// as the configuration's joyport<N>_amiberry_custom lines spell them.
+void custom_controls(std::string& out)
+{
+	out += ",\n\"custom_controls\":[";
+	for (size_t c = 0; c < amiberry_settings_custom_control_count(); c++) {
+		const amiberry_settings_custom_control* control = amiberry_settings_custom_control_at(c);
+		if (!control)
+			continue;
+		if (c)
+			out += ',';
+		out += "{\"id\":";
+		json_string(out, control->id);
+		out += ",\"label\":";
+		json_string(out, control->label);
+		out += ",\"axis\":";
+		out += control->axis ? "true" : "false";
+		out += '}';
+	}
+	out += "],\n\"input_events\":[";
+	for (size_t e = 0; e < amiberry_settings_input_event_count(); e++) {
+		const amiberry_setting_choice* event = amiberry_settings_input_event_at(e);
+		if (!event)
+			continue;
+		if (e)
+			out += ',';
+		out += "{\"value\":";
+		json_string(out, event->value);
+		out += ",\"label\":";
+		json_string(out, event->label);
+		out += '}';
+	}
+	out += ']';
+}
+
+// The accelerator boards (the cpuboard_type values), with each variant's
+// jumpers as the cpuboard_settings line packs them, so a front end writes
+// that line itself: one option per jumper is not a configuration key. The
+// positions of a selector are its configuration names; the label is the
+// layer's choice label. PPC variants are marked, so a build without PPC
+// (the Android one) can leave them out of the list it offers.
+void accelerator_boards(std::string& out)
+{
+	out += ",\n\"accelerator_boards\":[";
+	bool first = true;
+	for (int t = 1; cpuboards[t].name; t++) {
+		const cpuboardsubtype* subtypes = cpuboards[t].subtypes;
+		for (int s = 0; subtypes && subtypes[s].name; s++) {
+			const cpuboardsubtype& variant = subtypes[s];
+			if (!first)
+				out += ',';
+			first = false;
+			out += "\n{\"id\":";
+			json_string(out, variant.configname);
+			out += ",\"label\":";
+			json_string(out, (std::string(variant.name) + " (" + cpuboards[t].name + ")").c_str());
+			out += ",\"memory_max\":";
+			json_number(out, static_cast<double>(variant.maxmemory >> 20));
+			// The memory option the board's RAM is (cpuboard_memorytype):
+			// the layer's memory setters copy that option into the board
+			// (sync_cpuboard_mem) and the board's into it
+			// (mirror_cpuboard_mem, the copy fixup_prefs makes), so a front
+			// end writing the file keeps the two equal the same way. A slot
+			// no option of the schema shows has none.
+			const char* memory_option = variant.memorytype == BOARD_MEMORY_Z2 ? "fastmem_size"
+				: variant.memorytype == BOARD_MEMORY_HIGHMEM ? "mbresmem_size" : nullptr;
+			if (memory_option) {
+				out += ",\"memory_option\":";
+				json_string(out, memory_option);
+			}
+			if (cpuboard_is_ppc_accelerator_subtype(t, s))
+				out += ",\"requires\":[\"ppc\"]";
+			const expansionboardsettings* table = variant.settings;
+			if (table && table[0].name) {
+				out += ",\"settings\":[";
+				for (int i = 0; table[i].name; i++) {
+					const expansionboardsettings& e = table[i];
+					const amiberry_settings::board_setting_bits bits =
+					amiberry_settings::board_setting_bits_of(table, i);
+					const bool selector = e.type == EXPANSIONBOARD_MULTI;
+					if (i)
+						out += ',';
+					out += "{\"name\":";
+					const std::vector<const char*> own_names = amiberry_settings::board_setting_names(e.name);
+					const std::vector<const char*> own_configs = amiberry_settings::board_setting_names(e.configname);
+					json_string(out, selector ? own_configs[0] : e.configname);
+					out += ",\"label\":";
+					json_string(out, selector ? own_names[0] : e.name);
+					out += ",\"type\":";
+					json_string(out, e.type == EXPANSIONBOARD_STRING ? "text" : selector ? "selector" : "switch");
+					out += ",\"invert\":";
+					out += e.invert ? "true" : "false";
+					out += ",\"shift\":";
+					json_number(out, bits.shift);
+					out += ",\"bits\":";
+					json_number(out, bits.bits);
+					if (selector) {
+						const std::vector<const char*> names = amiberry_settings::board_setting_names(e.configname);
+						const std::vector<const char*> labels = amiberry_settings::board_setting_names(e.name);
+						out += ",\"positions\":[";
+						for (size_t n = 1; n < names.size(); n++) {
+							if (n > 1)
+								out += ',';
+							json_string(out, names[n]);
+						}
+						out += "],\"position_labels\":[";
+						for (size_t n = 1; n < names.size(); n++) {
+							if (n > 1)
+								out += ',';
+							json_string(out, n < labels.size() ? labels[n] : names[n]);
+						}
+						out += ']';
+					}
+					out += '}';
+				}
+				out += ']';
+			}
+			out += '}';
+		}
+	}
+	out += "\n]";
 }
 
 // The built-in AROS Kickstart replacement (memory.cpp): the ROM file name
@@ -1639,6 +1979,9 @@ int settings_schema_and_exit(const char* option_list)
 		std::fprintf(stderr, "--settings-schema: the availability or transition tables cannot be made\n");
 		return 1;
 	}
+	board_types(out);
+	custom_controls(out);
+	accelerator_boards(out);
 	aros(out);
 	host_settings(out);
 	out += "\n}\n";

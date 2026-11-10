@@ -220,7 +220,9 @@ final class SettingsSessionTests: XCTestCase {
 	func testCustomControlsNeedAJoystickOnThePort() throws {
 		let controls = CustomControlCatalog.controls
 		XCTAssertEqual(controls.first?.id, "a")
-		XCTAssertTrue(try XCTUnwrap(controls.first { $0.id == "leftx" }).isAxis)
+		XCTAssertTrue(try XCTUnwrap(controls.first { $0.id == "rightx" }).isAxis)
+		// The left stick moves the joystick itself; no mapping moves it.
+		XCTAssertFalse(controls.contains { $0.id == "leftx" || $0.id == "lefty" })
 		XCTAssertTrue(CustomControlCatalog.events.contains("Space"))
 		let session = try SettingsSession()
 		// The test host has no joystick on port 1.

@@ -79,6 +79,13 @@ std::array<cached_joystick_custom_mapping, MAX_INPUT_DEVICES> cached_joystick_cu
 int cached_joystick_custom_mapping_count;
 uae_u64 cached_joystick_custom_mapping_generation;
 std::array<preserved_port_joystick_custom_mapping, MAX_JPORTS> preserved_port_joystick_custom_mappings;
+// A configuration's joyportN_amiberry_custom lines for a port that has no
+// joystick while the file parses: the on-screen joystick, which the file
+// does not name (the launcher leaves joyport1 out and the runtime assigns
+// the device later, on_screen_joystick_set_enabled). The lines wait here
+// and are applied when the port's device appears; cleared with the
+// preserved mappings when the next configuration loads (cfgfile.cpp).
+std::array<std::vector<std::pair<std::string, std::string>>, MAX_JPORTS> pending_config_custom_options;
 
 bool matches_joystick_config(const struct inputdevconfig& idc,
 	const TCHAR* name, const TCHAR* configname)
@@ -194,6 +201,7 @@ void amiberry_clear_port_joystick_custom_mapping(const int portnum)
 void amiberry_clear_port_joystick_custom_mappings()
 {
 	preserved_port_joystick_custom_mappings = {};
+	pending_config_custom_options = {};
 }
 
 bool amiberry_get_port_joystick_custom_mapping(const int portnum,
@@ -1812,6 +1820,49 @@ const TCHAR* custom_event_name(const int event)
 	return _T("");
 }
 
+// Whether [option] is one of port [port]'s custom-control lines, spelled
+// as the configuration writes it.
+static bool is_custom_control_option(const std::string& option, const int port)
+{
+	const std::string prefix = "joyport" + std::to_string(port) + "_amiberry_custom_";
+	if (option.rfind(prefix, 0) != 0)
+		return false;
+	const std::string rest = option.substr(prefix.length());
+	for (const auto& mode : {"none_", "hotkey_"}) {
+		const size_t at = rest.find(mode);
+		if (at == 0)
+			return rest.length() > strlen(mode);
+	}
+	const std::string axis_prefix = "axis_";
+	if (rest.rfind(axis_prefix, 0) != 0)
+		return false;
+	const std::string axis_rest = rest.substr(axis_prefix.length());
+	for (const auto& mode : {"none_", "hotkey_"}) {
+		const size_t at = axis_rest.find(mode);
+		if (at == 0)
+			return axis_rest.length() > strlen(mode);
+	}
+	return false;
+}
+
+// The configuration name of the joystick a port names while the file
+// parses: its joyportname line's (configname), else the one its joyport
+// line's short id spells ("joy1" is JOY1), which a file without a
+// joyportname line (the Android launcher's) only has; empty for a port
+// with no joystick named.
+static std::string port_joystick_configname(const jport& jp)
+{
+	if (amiberry_get_joystick_index(jp.idc.configname) != -1)
+		return jp.idc.configname;
+	if (_tcsnicmp(jp.idc.shortid, _T("joy"), 3) == 0) {
+		std::string configname = "JOY";
+		configname += jp.idc.shortid + 3;
+		if (amiberry_get_joystick_index(configname.c_str()) != -1)
+			return configname;
+	}
+	return {};
+}
+
 bool load_custom_options(uae_prefs* p, const std::string& option, const TCHAR* value)
 {
 	// Only do this loop if the option starts with "joyport"
@@ -1823,13 +1874,23 @@ bool load_custom_options(uae_prefs* p, const std::string& option, const TCHAR* v
 		{
 			const jport *jp = &p->jports[i];
 
-			const int joy_index = amiberry_get_joystick_index(jp->idc.configname);
-			if (joy_index == -1)
+			const std::string configname = port_joystick_configname(*jp);
+			if (configname.empty()) {
+				// The port names no joystick: a custom-control line for it
+				// waits for the device the file does not name (the
+				// on-screen joystick, assigned later by
+				// on_screen_joystick_set_enabled), and is applied by
+				// amiberry_apply_pending_custom_options.
+				if (is_custom_control_option(option, i)) {
+					pending_config_custom_options[i].emplace_back(option, value);
+					return true;
+				}
 				continue;
+			}
 
 			controller_mapping mapping{};
 			amiberry_get_port_joystick_custom_mapping(
-				i, jp->idc.name, jp->idc.configname, mapping);
+				i, jp->idc.name, configname.c_str(), mapping);
 
 			for (int m = 0; m < 2; ++m)
 			{
@@ -1845,7 +1906,7 @@ bool load_custom_options(uae_prefs* p, const std::string& option, const TCHAR* v
 						else
 							mapping.amiberry_custom_hotkey[n] = b;
 						amiberry_set_port_joystick_custom_mapping(
-							i, jp->idc.name, jp->idc.configname, mapping);
+							i, jp->idc.name, configname.c_str(), mapping);
 						return true;
 					}
 				}
@@ -1861,7 +1922,7 @@ bool load_custom_options(uae_prefs* p, const std::string& option, const TCHAR* v
 						else
 							mapping.amiberry_custom_axis_hotkey[n] = b;
 						amiberry_set_port_joystick_custom_mapping(
-							i, jp->idc.name, jp->idc.configname, mapping);
+							i, jp->idc.name, configname.c_str(), mapping);
 						return true;
 					}
 				}
@@ -1870,6 +1931,34 @@ bool load_custom_options(uae_prefs* p, const std::string& option, const TCHAR* v
 	}
 
 	return false;
+}
+
+// Applies the custom-control lines a configuration carried for [portnum]
+// while the port had no joystick, now that its device is there (the
+// on-screen joystick's assignment): replayed through the file's own codec,
+// against the port's device as the configuration would have named it.
+void amiberry_apply_pending_custom_options(const int portnum)
+{
+	if (portnum < 0 || portnum >= MAX_JPORTS)
+		return;
+	auto& pending = pending_config_custom_options[portnum];
+	if (pending.empty())
+		return;
+	jport& jp = changed_prefs.jports[portnum];
+	const int joy = jp.id - JSEM_JOYS;
+	if (joy >= 0 && joy < num_joystick && !jp.idc.configname[0]) {
+		// The port's device was assigned by index; the codec reads the
+		// device by its configuration name (JOY<n>, as the joyport line
+		// would name it).
+		_tcsncpy(jp.idc.name, di_joystick[joy].name.c_str(), MAX_JPORT_NAME - 1);
+		_sntprintf(jp.idc.configname, MAX_JPORT_CONFIG, _T("JOY%d"), joy);
+		jp.idc.name[MAX_JPORT_NAME - 1] = 0;
+	}
+	for (const auto& [option, value] : pending) {
+		const TCHAR* text = value.c_str();
+		load_custom_options(&changed_prefs, option, text);
+	}
+	pending.clear();
 }
 
 static void close_joystick()

@@ -156,7 +156,10 @@ object SettingsGroups {
 		SettingsPage.Hardware to setOf(
 			"cpu_model", "cpu_compatible", "cpu_24bit_addressing", "cpu_speed", "fpu_model",
 			"chipset", "chipset_compatible", "cycle_exact", "immediate_blits", "ntsc", "collision_level",
-			"chipmem_size", "bogomem_size", "fastmem_size", "z3mem_size"
+			"chipmem_size", "bogomem_size", "fastmem_size", "z3mem_size",
+			// The accelerator's own rows (AcceleratorBoardSection): the
+			// board list and the jumpers come from the schema's catalogs.
+			"cpuboard_type", "cpuboard_settings", "cpuboardmem1_size", "cpuboard_rom_file"
 		),
 		SettingsPage.DisplaySound to setOf(
 			"amiberry.gfx_correct_aspect", "amiberry.gfx_auto_crop", "amiberry.scaling_method", "gfx_autoresolution",
@@ -169,7 +172,9 @@ object SettingsGroups {
 			"amiberry.onscreen_joystick", "amiberry.vkbd_touch_button", "amiberry.vkbd_numpad", "amiberry.vkbd_toggle"
 		),
 		SettingsPage.Storage to setOf("cdimage0") +
-			(0..3).flatMap { listOf("floppy$it", "floppy${it}type") },
+			(0..3).flatMap { listOf("floppy$it", "floppy${it}type") } +
+			// The disk swapper's entries (DiskSwapperSection).
+			(0 until 20).map { "diskimage$it" },
 		SettingsPage.PortsMisc to emptySet()
 	)
 
@@ -236,6 +241,7 @@ object SettingsGroups {
 		"ppc" -> R.string.settings_group_ppc
 		"rtg" -> R.string.settings_group_rtg
 		"accelerator" -> R.string.settings_group_accelerator
+		"diskswapper" -> R.string.settings_group_diskswapper
 		else -> throw IllegalArgumentException("no page places the group $group")
 	}
 

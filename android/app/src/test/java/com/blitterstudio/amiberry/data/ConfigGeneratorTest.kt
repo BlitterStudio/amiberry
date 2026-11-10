@@ -356,6 +356,19 @@ class ConfigGeneratorTest {
 	}
 
 	@Test
+	fun `the WHDLoad control config carries the custom controls`() {
+		val control = requireNotNull(com.blitterstudio.amiberry.data.model.SettingsSchema.current).customControls.first()
+		val key = com.blitterstudio.amiberry.data.model.CustomControls.Key(1, false, control.axis, control.id)
+		val settings = EmulatorSettings(
+			joyport1 = "joy0",
+			customControls = com.blitterstudio.amiberry.data.model.CustomControls().with(key, "KEY_SPACE")
+		)
+		val lines = ConfigGenerator.generateControlConfig(settings).lines()
+
+		assertContainsLine(lines, "${key.id}=KEY_SPACE")
+	}
+
+	@Test
 	fun `transient generated configs are written under no-backup storage`() {
 		val externalFilesDir = tempDir.newFolder("external")
 		val noBackupFilesDir = tempDir.newFolder("no_backup")

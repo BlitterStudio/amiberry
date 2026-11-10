@@ -1,8 +1,11 @@
 package com.blitterstudio.amiberry.data
 
 import android.content.Context
+import com.blitterstudio.amiberry.data.model.AcceleratorJumpers
+import com.blitterstudio.amiberry.data.model.CustomControls
 import com.blitterstudio.amiberry.data.model.StoragePaths
 import com.blitterstudio.amiberry.data.model.EmulatorSettings
+import com.blitterstudio.amiberry.data.model.SettingsBoards
 import com.blitterstudio.amiberry.data.model.SettingsSchema
 import java.io.File
 
@@ -95,6 +98,28 @@ object ConfigGenerator {
 			}
 		}
 
+		// Expansion boards: the units' own lines (SettingsBoards), each
+		// unit's options after its entry, as the reader needs it
+		// (cfgfile_read_board_rom creates the entry from the _rom_file line
+		// and reads _rom_options with the entry in hand, cfgfile.cpp:6380).
+		SettingsSchema.current?.let { schema ->
+			SettingsBoards.render(schema, settings.boards).forEach(sb::appendLine)
+		}
+		// The accelerator's board and its jumpers, in the writer's order:
+		// the packed jumpers line is read against the board the file has
+		// selected so far (cfgfile.cpp:7077-7082), so the type comes first.
+		SettingsSchema.current?.let { schema ->
+			val type = settings.optionValue("cpuboard_type") ?: "none"
+			if (type != "none") {
+				sb.appendLine("cpuboard_type=$type")
+				val board = schema.acceleratorBoard(type)
+				if (board != null) {
+					val packed = AcceleratorJumpers.pack(board, settings.acceleratorJumpers)
+					if (packed.isNotEmpty()) sb.appendLine("cpuboard_settings=$packed")
+				}
+			}
+		}
+
 		// Sound
 		sb.appendLine("sound_output=${settings.soundOutput}")
 		sb.appendLine("sound_frequency=${settings.soundFreq}")
@@ -133,6 +158,8 @@ object ConfigGenerator {
 		sb.appendLine("joyport1mousemap=${if (settings.joyport1MouseMap) "1" else "0"}")
 		sb.appendLine("input.joymouse_speed_analog=${settings.analogMouseSpeed}")
 
+		appendCustomControls(sb, settings)
+
 		// Amiberry-specific
 		sb.appendLine("amiberry.onscreen_joystick=${settings.onScreenJoystick.toCfg()}")
 		sb.appendLine("amiberry.vkbd_enabled=${settings.onScreenKeyboardAvailable.toCfg()}")
@@ -147,7 +174,10 @@ object ConfigGenerator {
 		// The schema options without a field (the rest of the preset's machine
 		// and options a configuration had), in the layer's order: after the
 		// fields, so a chipset extra loads after the CPU it depends on.
-		optionsInLayerOrder(settings.options).forEach { (id, value) -> sb.appendLine("$id=$value") }
+		// cpuboard_type is written with its jumpers above (the reader needs
+		// the board before the packed line).
+		// cpuboard_settings is the jumpers' line, written above.
+		optionsInLayerOrder(settings.options - "cpuboard_type" - "cpuboard_settings").forEach { (id, value) -> sb.appendLine("$id=$value") }
 
 		// Skip GUI when launched from Android native UI
 		sb.appendLine("use_gui=no")
@@ -171,6 +201,7 @@ object ConfigGenerator {
 		sb.appendLine("joyport0mousemap=${if (settings.joyport0MouseMap) "1" else "0"}")
 		sb.appendLine("joyport1mousemap=${if (settings.joyport1MouseMap) "1" else "0"}")
 		sb.appendLine("input.joymouse_speed_analog=${settings.analogMouseSpeed}")
+		appendCustomControls(sb, settings)
 		sb.appendLine("amiberry.onscreen_joystick=${settings.onScreenJoystick.toCfg()}")
 		sb.appendLine("amiberry.vkbd_enabled=${settings.onScreenKeyboardAvailable.toCfg()}")
 		sb.appendLine("amiberry.vkbd_touch_button=${settings.onScreenKeyboardButton.toCfg()}")
@@ -183,6 +214,43 @@ object ConfigGenerator {
 		sb.appendLine("use_gui=no")
 
 		return sb.toString()
+	}
+
+	/**
+	 * The custom controls (CustomControls), after the joyport lines they
+	 * apply to (load_custom_options reads the port's device,
+	 * amiberry_input.cpp:1820-1825). The writer spells every control of a
+	 * joystick port, an empty value included (cfgfile.cpp:2847-2880): the
+	 * reader applies an empty line as the slot's default (custom_event_of,
+	 * amiberry_input.cpp:1790), so an earlier binding of the port does not
+	 * survive a control set back to Default. A full configuration and the
+	 * WHDLoad launch's control configuration both carry them.
+	 */
+	private fun appendCustomControls(sb: StringBuilder, settings: EmulatorSettings) {
+		val schema = SettingsSchema.current ?: return
+		val keys = settings.customControls.mappings.keys
+		for (port in keys.map { it.port }.distinct().sorted()) {
+			for (hotkey in listOf(false, true)) {
+				if (keys.none { it.port == port && it.hotkey == hotkey }) continue
+				for (control in schema.customControls) {
+					val key = CustomControls.Key(port, hotkey, control.axis, control.id)
+					sb.appendLine("${key.id}=${settings.customControls.event(key)}")
+				}
+			}
+		}
+	}
+
+	/**
+	 * The original configuration's lines the launcher keeps verbatim, minus
+	 * what the generated lines now decide: the accelerator ROM's checksum
+	 * once the configuration names the ROM file. cfgfile_read_board_rom
+	 * resolves `cpuboard_rom_file_id` into the board's entry after the path,
+	 * so a stale checksum would bring the old ROM back over the one picked.
+	 * A file that identifies its ROM only by the checksum keeps it.
+	 */
+	fun preservedLines(settings: EmulatorSettings, unknownLines: List<String>): List<String> {
+		if (settings.optionValue("cpuboard_rom_file").isNullOrEmpty()) return unknownLines
+		return unknownLines.filterNot { it.substringBefore('=').trim() == "cpuboard_rom_file_id" }
 	}
 
 	fun writeConfig(context: Context, settings: EmulatorSettings, filename: String): File {

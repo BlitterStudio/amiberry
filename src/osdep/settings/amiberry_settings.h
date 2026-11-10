@@ -48,7 +48,7 @@
 extern "C" {
 #endif
 
-#define AMIBERRY_SETTINGS_API_VERSION 10
+#define AMIBERRY_SETTINGS_API_VERSION 11
 
 /* Large enough for every value a descriptor can produce, including the
    terminating NUL. */
@@ -395,6 +395,31 @@ AMIBERRY_SETTINGS_API bool amiberry_settings_board_field_available(
 /* Whether the session's expansion boards differ from the running
    emulation's: they take effect when it restarts. */
 AMIBERRY_SETTINGS_API bool amiberry_settings_boards_differ_from_active(const amiberry_settings_session *session);
+
+/*
+ * Where a board unit's "setting:<name>" field keeps its value in the
+ * board's settings word, as the configuration's _rom_options line packs
+ * it (cfgfile_read_rom_settings): a switch takes one bit, a selector the
+ * bits its positions need. A front end that writes configuration files
+ * without a session packs the field itself with this. OK only for a
+ * "setting:" field; UNKNOWN_ID for any other (they keep no bits).
+ */
+AMIBERRY_SETTINGS_API amiberry_settings_status amiberry_settings_board_field_layout(
+	const amiberry_settings_board_type *type, const char *field, int *shift, int *bits, bool *invert);
+/* A built-in controller's chipset option ("pcmcia", "cdtvcd"): the option
+   a front end switches the board through, whose rules the layer owns.
+   NULL for a board that is not built into a machine. */
+AMIBERRY_SETTINGS_API const char *amiberry_settings_board_option(const amiberry_settings_board_type *type);
+/* Whether the board is a built-in controller a machine's chipset puts in
+   (the motherboard IDE, the A3000/A4000T SCSI, PCMCIA, the CDTV's DMAC and
+   clock), rather than an expansion a configuration adds. Not every board
+   of the internal category is one: the CDTV's SRAM card and SCSI
+   expansion, and the CD32 FMV cartridge, are optional. */
+AMIBERRY_SETTINGS_API bool amiberry_settings_board_built_in(const amiberry_settings_board_type *type);
+/* The configuration line ("cd32fmv") that switches a board no option of
+   the layer does: a front end writing the file itself writes it for the
+   board and drops it with the board. NULL for any other board. */
+AMIBERRY_SETTINGS_API const char *amiberry_settings_board_flag(const amiberry_settings_board_type *type);
 
 /*
  * Custom controls: the Amiga input event each button and axis of the

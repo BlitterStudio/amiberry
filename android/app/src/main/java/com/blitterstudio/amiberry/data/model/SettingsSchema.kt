@@ -45,7 +45,26 @@ class SettingsSchema(
 	 * entries are [Option]s of the same shape as the machine options, keyed
 	 * by the amiberry.conf line they write.
 	 */
-	val hostSettings: List<Option> = emptyList()
+	val hostSettings: List<Option> = emptyList(),
+	/**
+	 * The expansion board types a configuration can list, with the fields a
+	 * unit of each has (SettingsBoards edits them as the configuration's
+	 * own lines); empty in a schema without them.
+	 */
+	val boardTypes: List<BoardType> = emptyList(),
+	/** The gamepad buttons and axes a custom control can map; empty in a schema without them. */
+	val customControls: List<CustomControl> = emptyList(),
+	/** The input events a custom control can trigger, by configuration name. */
+	val inputEvents: List<Choice> = emptyList(),
+	/**
+	 * The accelerator boards (the cpuboard_type values), each with its
+	 * jumpers as the cpuboard_settings line packs them (the launcher writes
+	 * that line itself; one jumper is no configuration key); PPC variants
+	 * are marked, for a build without PPC support.
+	 */
+	val acceleratorBoards: List<AcceleratorBoard> = emptyList(),
+	/** What setting cpuboard_type changes with it (the CPU its board needs); null in a schema without it. */
+	val acceleratorTransitions: Transitions? = null
 ) {
 	/** One ROM a preset needs: the first installed of [ids] ([role] "kick", "ext" or "other"). */
 	data class RomRequest(val role: String, val ids: List<Int>)
@@ -247,6 +266,100 @@ class SettingsSchema(
 
 	/** The host setting [id] describes; null when the schema does not list it. */
 	fun hostSetting(id: String): Option? = hostSettings.firstOrNull { it.id == id }
+
+	/** The board type [id] describes; null when the schema does not list it. */
+	fun boardType(id: String): BoardType? = boardTypes.firstOrNull { it.id == id }
+
+	/** The accelerator board [configname] (a cpuboard_type value); null for an unknown one. */
+	fun acceleratorBoard(id: String): AcceleratorBoard? = acceleratorBoards.firstOrNull { it.id == id }
+
+	/**
+	 * One expansion board type: SCSI, IDE and network controllers,
+	 * bridgeboards, sound and graphics cards and the machines' built-in
+	 * controllers. A unit of it is one board entry, which the launcher
+	 * spells as the configuration does: &lt;id&gt;_rom_file (the entry,
+	 * ":NOROM"/":ENABLED" while it names no ROM), &lt;id&gt;_rom_options
+	 * (the variant, the SCSI ID, the switches and the selectors) and
+	 * &lt;id&gt;_mem_size. [option] is a built-in controller's chipset
+	 * option, which switches the board where the layer owns the rules;
+	 * [builtIn] marks every controller a machine's chipset puts in (with
+	 * or without such an option), which no configuration adds.
+	 */
+	data class BoardType(
+		val id: String,
+		val label: String,
+		val manufacturer: String?,
+		val categories: List<String>,
+		val units: Int,
+		val option: String?,
+		val fields: List<BoardField>,
+		val builtIn: Boolean = false,
+		/** The ROM table IDs the board loads (its ROM type's); empty for a ROM-less board. */
+		val romIds: List<Int> = emptyList(),
+		/** The configuration line that switches the board on ("cd32fmv"), when no option does. */
+		val flag: String? = null
+	) {
+		/** The type's field [fieldId]; null when it does not have it. */
+		fun field(fieldId: String): BoardField? = fields.firstOrNull { it.id == fieldId }
+	}
+
+	/** One field of a board unit, as the settings layer describes it. */
+	data class BoardField(
+		val id: String,
+		val label: String,
+		val help: String,
+		val type: String,
+		val apply: String,
+		val default: String,
+		val constraint: String? = null,
+		val choices: List<Choice> = emptyList()
+	) {
+		/** The field's label of [value]; the value itself when it is no choice. */
+		fun valueLabel(value: String): String =
+			if (type == TYPE_CHOICE) choices.firstOrNull { it.value == value }?.label ?: value else value
+	}
+
+	/** A gamepad button or axis of a joystick port, whose input event a configuration can map. */
+	data class CustomControl(val id: String, val label: String, val axis: Boolean)
+
+	/**
+	 * One accelerator board: a cpuboard_type value. [settings] are its
+	 * jumpers as the cpuboard_settings line spells them: a switch is on
+	 * while its name is in the line, a selector while one of its
+	 * positions is, a text setting as name=value.
+	 */
+	data class AcceleratorBoard(
+		val id: String,
+		val label: String,
+		/** The most board memory the variant takes, in MB; 0 when it takes none. */
+		val memoryMax: Int,
+		/** Features a build needs to offer the board ("ppc"); empty for any build. */
+		val requires: List<String>,
+		val settings: List<AcceleratorJumper>,
+		/**
+		 * The memory option the board's RAM is ("fastmem_size" for a Zorro II
+		 * board's); null when no option shows it. The emulator keeps that
+		 * option and cpuboardmem1_size equal.
+		 */
+		val memoryOption: String? = null
+	) {
+		fun jumper(name: String): AcceleratorJumper? = settings.firstOrNull { it.name == name }
+	}
+
+	data class AcceleratorJumper(
+		/** The jumper's configuration name (how the packed line spells it). */
+		val name: String,
+		/** What the layer calls the jumper. */
+		val label: String = "",
+		val type: String,
+		val invert: Boolean,
+		val positions: List<String> = emptyList(),
+		/** The positions' display names, parallel to [positions]. */
+		val positionLabels: List<String> = emptyList()
+	) {
+		val selector: Boolean get() = type == "selector"
+	}
+
 
 	/** The groups of the host settings, in the layer's order. */
 	val hostSettingGroups: List<String> by lazy { hostSettings.map { it.group }.distinct() }
@@ -473,9 +586,86 @@ class SettingsSchema(
 			val hostSettings = json.optJSONArray("host_settings")?.let { array ->
 				List(array.length()) { parseOption(array.getJSONObject(it)) }
 			}.orEmpty()
+			val boardTypes = json.optJSONArray("board_types")?.let { array ->
+				List(array.length()) { t ->
+					val type = array.getJSONObject(t)
+					SettingsSchema.BoardType(
+						id = type.getString("id"),
+						label = type.getString("label"),
+						manufacturer = if (type.isNull("manufacturer")) null else type.getString("manufacturer"),
+						categories = type.optJSONArray("categories")?.toStringList().orEmpty(),
+						units = type.optInt("units", 1),
+						option = if (type.has("option") && !type.isNull("option")) type.getString("option") else null,
+						builtIn = type.optBoolean("built_in", false),
+						romIds = type.optJSONArray("rom_ids")?.let { ids -> List(ids.length()) { ids.getInt(it) } }.orEmpty(),
+						flag = type.optString("flag").ifEmpty { null },
+						fields = type.optJSONArray("fields")?.let { fields ->
+							List(fields.length()) { f ->
+								val field = fields.getJSONObject(f)
+								SettingsSchema.BoardField(
+									id = field.getString("id"),
+									label = field.getString("label"),
+									help = field.optString("help"),
+									type = field.getString("type"),
+									apply = field.getString("apply"),
+									default = field.getString("default"),
+									constraint = if (field.has("constraint") && !field.isNull("constraint"))
+										field.getString("constraint") else null,
+									choices = field.optJSONArray("choices")?.let { choices ->
+										List(choices.length()) {
+											Choice(choices.getJSONObject(it).getString("value"),
+												choices.getJSONObject(it).getString("label"))
+										}
+									}.orEmpty()
+								)
+							}
+						}.orEmpty()
+					)
+				}
+			}.orEmpty()
+			val customControls = json.optJSONArray("custom_controls")?.let { array ->
+				List(array.length()) {
+					val control = array.getJSONObject(it)
+					SettingsSchema.CustomControl(
+						control.getString("id"), control.getString("label"), control.getBoolean("axis")
+					)
+				}
+			}.orEmpty()
+			val inputEvents = json.optJSONArray("input_events")?.let { array ->
+				List(array.length()) {
+					Choice(array.getJSONObject(it).getString("value"), array.getJSONObject(it).getString("label"))
+				}
+			}.orEmpty()
+			val acceleratorBoards = json.optJSONArray("accelerator_boards")?.let { array ->
+				List(array.length()) { b ->
+					val board = array.getJSONObject(b)
+					SettingsSchema.AcceleratorBoard(
+						id = board.getString("id"),
+						label = board.getString("label"),
+						memoryMax = board.optInt("memory_max", 0),
+						requires = board.optJSONArray("requires")?.toStringList().orEmpty(),
+						memoryOption = board.optString("memory_option").ifEmpty { null },
+						settings = board.optJSONArray("settings")?.let { settings ->
+							List(settings.length()) { j ->
+								val jumper = settings.getJSONObject(j)
+								SettingsSchema.AcceleratorJumper(
+									name = jumper.getString("name"),
+									label = jumper.optString("label").ifEmpty { jumper.getString("name") },
+									type = jumper.getString("type"),
+									invert = jumper.optBoolean("invert", false),
+									positions = jumper.optJSONArray("positions")?.toStringList().orEmpty(),
+									positionLabels = jumper.optJSONArray("position_labels")?.toStringList().orEmpty()
+								)
+							}
+						}.orEmpty()
+					)
+				}
+			}.orEmpty()
 			return SettingsSchema(
 				options, presets, levels, roms, resolutions, memoryResolutions,
-				soundResolutions, availability, transitions, aros, memoryTransitions, hostSettings
+				soundResolutions, availability, transitions, aros, memoryTransitions, hostSettings,
+				boardTypes, customControls, inputEvents, acceleratorBoards,
+				json.optJSONObject("accelerator_transitions")?.let { Transitions.parse(it) }
 			)
 		}
 

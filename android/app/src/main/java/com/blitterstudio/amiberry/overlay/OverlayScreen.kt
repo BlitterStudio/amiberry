@@ -186,6 +186,7 @@ private fun Header(viewModel: OverlayViewModel) {
 		is OverlayPage.Picker -> when (val target = page.target) {
 			is MediaTarget.Floppy -> stringResource(R.string.overlay_picker_floppy_title, target.drive)
 			MediaTarget.Cd -> stringResource(R.string.overlay_picker_cd_title)
+			is MediaTarget.Swapper -> stringResource(R.string.overlay_swapper)
 		}
 		OverlayPage.States -> stringResource(R.string.overlay_states)
 		OverlayPage.Controls -> stringResource(R.string.overlay_controls)
@@ -348,12 +349,43 @@ private fun MediaPage(viewModel: OverlayViewModel, focus: FocusTargets) {
 	if (status.hasCd) {
 		DriveRow(stringResource(R.string.overlay_cd_name), status.cdPath, empty, MediaTarget.Cd, viewModel, focus)
 	}
-	val swapper = viewModel.swapper.withIndex().filter { it.value.isNotEmpty() }
-	if (swapper.isNotEmpty()) {
+	// The disk swapper: every filled entry inserts into a drive, and can
+	// be changed or cleared here too (the classic window's swapper panel);
+	// one empty entry can be filled next.
+	val filled = viewModel.swapper.withIndex().filter { it.value.isNotEmpty() }
+	val nextEmpty = viewModel.swapper.indexOfFirst { it.isEmpty() }
+	if (filled.isNotEmpty() || nextEmpty >= 0) {
 		HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 		Text(stringResource(R.string.overlay_swapper), style = MaterialTheme.typography.titleSmall)
-		swapper.forEach { (index, path) ->
-			Text(fileLabel(path, empty), style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+		filled.forEach { (index, path) ->
+			Text(
+				stringResource(R.string.overlay_swapper_slot, index + 1) + " · " + fileLabel(path, empty),
+				style = MaterialTheme.typography.bodyMedium,
+				maxLines = 1,
+				overflow = TextOverflow.Ellipsis
+			)
+			Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+				Button(
+					onClick = { viewModel.open(OverlayPage.Picker(MediaTarget.Swapper(index)), OverlayKeys.insert(MediaTarget.Swapper(index))) },
+					modifier = Modifier
+						.weight(1f)
+						// The picker returns here (OverlayKeys.insert): a slot's
+						// Change and the Add that fills it share the slot's key.
+						.focusRequester(focus.requester(OverlayKeys.insert(MediaTarget.Swapper(index))))
+						.dpadFocusIndicator()
+				) {
+					Text(stringResource(R.string.overlay_swapper_change))
+				}
+				OutlinedButton(
+					onClick = { viewModel.setSwapperEntry(index, "") },
+					modifier = Modifier
+						.weight(1f)
+						.focusRequester(focus.requester("swapper_${index}_clear"))
+						.dpadFocusIndicator()
+				) {
+					Text(stringResource(R.string.overlay_swapper_clear))
+				}
+			}
 			Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
 				status.enabledDrives.forEach { drive ->
 					OutlinedButton(
@@ -366,6 +398,17 @@ private fun MediaPage(viewModel: OverlayViewModel, focus: FocusTargets) {
 						Text(stringResource(R.string.overlay_swapper_insert, drive.drive))
 					}
 				}
+			}
+		}
+		if (nextEmpty >= 0) {
+			OutlinedButton(
+				onClick = { viewModel.open(OverlayPage.Picker(MediaTarget.Swapper(nextEmpty)), OverlayKeys.insert(MediaTarget.Swapper(nextEmpty))) },
+				modifier = Modifier
+					.fillMaxWidth()
+					.focusRequester(focus.requester(OverlayKeys.insert(MediaTarget.Swapper(nextEmpty))))
+					.dpadFocusIndicator()
+			) {
+				Text(stringResource(R.string.overlay_swapper_add))
 			}
 		}
 	}

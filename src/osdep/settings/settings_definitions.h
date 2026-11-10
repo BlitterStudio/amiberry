@@ -277,6 +277,13 @@ amiberry_settings_status board_set(uae_prefs& p, const context& ctx, std::string
 	std::string_view field, std::string_view value);
 bool board_field_available(const uae_prefs& p, const context& ctx, std::string_view type, int unit,
 	std::string_view field);
+// The settings-word layout of a "setting:" field (amiberry_settings_
+// board_field_layout), and a built-in controller's chipset option.
+amiberry_settings_status board_field_layout(const amiberry_settings_board_type* type, std::string_view field,
+	int* shift, int* bits, bool* invert);
+const char* board_option(const amiberry_settings_board_type* type);
+bool board_built_in(const amiberry_settings_board_type* type);
+const char* board_flag(const amiberry_settings_board_type* type);
 
 // Custom controls (amiberry_settings_custom_control_*,
 // settings_custom_controls.cpp): edits are staged per port and applied to

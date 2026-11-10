@@ -595,6 +595,13 @@ JNIEXPORT jlong JNICALL OVERLAY_JNI(insertSwapperEntry)(JNIEnv*, jclass, jint in
 	return static_cast<jlong>(amiberry_actions_insert_swapper_entry(index, drive));
 }
 
+// Fills or clears a swapper slot ("" empties it), as the disk swapper
+// panel's file dialog does; the entry reaches the pending configuration.
+JNIEXPORT jlong JNICALL OVERLAY_JNI(setSwapperEntry)(JNIEnv* env, jclass, jint index, jstring path)
+{
+	return static_cast<jlong>(amiberry_actions_set_swapper_entry(index, from_java(env, path).c_str()));
+}
+
 JNIEXPORT jlong JNICALL OVERLAY_JNI(reset)(JNIEnv*, jclass, jboolean hard)
 {
 	return static_cast<jlong>(amiberry_actions_reset(hard == JNI_TRUE, false));

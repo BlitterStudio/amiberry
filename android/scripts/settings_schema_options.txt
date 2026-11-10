@@ -161,6 +161,12 @@ z3mapping
 boot_rom_uae
 uaeboard
 kickshifter
+# accelerator (the launcher's own rows: the board list and the jumper
+# codec come from the schema's accelerator_boards)
+cpuboard_type
+cpuboard_settings
+cpuboardmem1_size
+cpuboard_rom_file
 # display
 gfx_vsync
 gfx_blacker_than_black
@@ -212,6 +218,27 @@ amiberry.vkbd_language
 amiberry.use_retroarch_vkbd
 # floppy
 floppy_speed
+# diskswapper
+diskimage0
+diskimage1
+diskimage2
+diskimage3
+diskimage4
+diskimage5
+diskimage6
+diskimage7
+diskimage8
+diskimage9
+diskimage10
+diskimage11
+diskimage12
+diskimage13
+diskimage14
+diskimage15
+diskimage16
+diskimage17
+diskimage18
+diskimage19
 # cd
 cd_speed
 # filesystem

@@ -67,6 +67,8 @@ object OverlayNative {
 	@JvmStatic external fun insertCd(path: String): Long
 	@JvmStatic external fun ejectCd(): Long
 	@JvmStatic external fun insertSwapperEntry(index: Int, drive: Int): Long
+	/** Sets the swapper slot's image; an empty path empties it. */
+	@JvmStatic external fun setSwapperEntry(index: Int, path: String): Long
 	@JvmStatic external fun reset(hard: Boolean): Long
 	@JvmStatic external fun pause(): Long
 	@JvmStatic external fun quit(): Long

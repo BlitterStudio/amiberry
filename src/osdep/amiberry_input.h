@@ -158,6 +158,10 @@ extern void amiberry_preserve_port_joystick_custom_mapping(int portnum,
 	const TCHAR* name, const TCHAR* configname);
 extern void amiberry_clear_port_joystick_custom_mapping(int portnum);
 extern void amiberry_clear_port_joystick_custom_mappings();
+// Applies the custom-control lines a configuration carried for a port that
+// had no joystick while the file parsed, now that the port's device is
+// assigned (the on-screen joystick); see amiberry_input.cpp.
+extern void amiberry_apply_pending_custom_options(int portnum);
 extern bool amiberry_get_port_joystick_custom_mapping(int portnum,
 	const TCHAR* name, const TCHAR* configname, controller_mapping& mapping);
 extern void amiberry_set_port_joystick_custom_mapping(int portnum,
