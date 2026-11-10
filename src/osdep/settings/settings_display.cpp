@@ -838,6 +838,11 @@ bool linemode_available(const uae_prefs& p, const context&)
 #define STRING_OPTION(id, group, label, help, apply, def, constraint) \
 	{id, group, label, help, AMIBERRY_SETTING_STRING, apply, 0, 0, 0, def, nullptr, 0, constraint}
 
+// iOS apps have one window of a fixed size and no border or title bar:
+// the windowed sizes and the borderless window are desktop concepts the
+// platform cannot honour.
+constexpr unsigned int desktop_window_hidden = AMIBERRY_SETTINGS_HIDE_ON_IOS;
+
 const definition definitions[] = {
 	{DYNAMIC_CHOICE_OPTION("gfx_display", "display", "Host display",
 			"Which connected monitor shows the Amiga screen; the primary display when 0.",
@@ -850,28 +855,31 @@ const definition definitions[] = {
 			AMIBERRY_APPLY_LIVE, "0", "Needs more than one connected monitor."),
 		get_gfx_display_rtg, set_gfx_display_rtg, gfx_display_available, nullptr, gfx_display_range,
 		nullptr, gfx_display_dynamic_choices},
-	{MEASURED_OPTION("gfx_width_windowed", "display", "Windowed width",
+	hidden_on({MEASURED_OPTION("gfx_width_windowed", "display", "Windowed width",
 			"Width of the emulator window in windowed mode.",
 			AMIBERRY_SETTING_INT, AMIBERRY_APPLY_LIVE, 160, 8192, 4, "720",
 			"Multiples of 4 between 160 and 8192, the range the core's dimension fixup keeps.",
 			"px", 0, false),
 		get_gfx_width_windowed, set_gfx_width_windowed, window_sizes_available, nullptr, nullptr,
 		nullptr},
-	{MEASURED_OPTION("gfx_height_windowed", "display", "Windowed height",
+		desktop_window_hidden),
+	hidden_on({MEASURED_OPTION("gfx_height_windowed", "display", "Windowed height",
 			"Height of the emulator window in windowed mode.",
 			AMIBERRY_SETTING_INT, AMIBERRY_APPLY_LIVE, 128, 8192, 1, "568",
 			"Between 128 and 8192, the range the core's dimension fixup keeps.", "px", 0, false),
 		get_gfx_height_windowed, set_gfx_height_windowed, window_sizes_available, nullptr, nullptr,
 		nullptr},
+		desktop_window_hidden),
 	{BOOL_OPTION("gfx_resize_windowed", "display", "Window resize",
 			"Allow resizing the emulator window by dragging its edges.",
 			AMIBERRY_APPLY_LIVE, "true", "Not available while the display mode is forced full-window."),
 		get_gfx_resize_windowed, set_gfx_resize_windowed, window_sizes_available, nullptr, nullptr,
 		nullptr},
-	{BOOL_OPTION("amiberry.borderless", "display", "Borderless",
+	hidden_on({BOOL_OPTION("amiberry.borderless", "display", "Borderless",
 			"Remove the window title bar and borders in windowed mode.",
 			AMIBERRY_APPLY_LIVE, "false", "Only in windowed native mode."),
 		get_borderless, set_borderless, borderless_available, nullptr, nullptr, nullptr},
+		desktop_window_hidden),
 	{CHOICE_OPTION("gfx_fullscreen_amiga", "display", "Native screen mode",
 			"Show the native chipset screen in a window or full-window (borderless desktop).",
 			AMIBERRY_APPLY_LIVE, "false", fullscreen_choices,

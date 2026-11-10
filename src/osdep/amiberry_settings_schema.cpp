@@ -90,6 +90,29 @@ const char* type_name(amiberry_setting_type type)
 	return "string";
 }
 
+// A descriptor's hidden_on mask as the schema's platform names, so a
+// front end drops the settings its platform hides.
+void json_hidden_on(std::string& out, unsigned int hidden_on)
+{
+	static const struct { unsigned int bit; const char* name; } names[] = {
+		{AMIBERRY_SETTINGS_HIDE_ON_DESKTOP, "desktop"},
+		{AMIBERRY_SETTINGS_HIDE_ON_MACOS, "macos"},
+		{AMIBERRY_SETTINGS_HIDE_ON_IOS, "ios"},
+		{AMIBERRY_SETTINGS_HIDE_ON_ANDROID, "android"},
+	};
+	out += "[";
+	bool first = true;
+	for (const auto& platform : names) {
+		if (!(hidden_on & platform.bit))
+			continue;
+		if (!first)
+			out += ',';
+		first = false;
+		json_string(out, platform.name);
+	}
+	out += ']';
+}
+
 const char* apply_name(amiberry_apply_class apply)
 {
 	switch (apply) {
@@ -178,6 +201,12 @@ void options(std::string& out, const std::set<std::string>* only, const std::set
 			&& std::strcmp(definition->android_default, d->default_value ? d->default_value : "") != 0) {
 			out += ",\"android_default\":";
 			json_string(out, definition->android_default);
+		}
+		// The platforms the option does nothing on; a front end for one
+		// of them leaves the option out.
+		if (d->hidden_on) {
+			out += ",\"hidden_on\":";
+			json_hidden_on(out, d->hidden_on);
 		}
 		if (d->type == AMIBERRY_SETTING_INT || d->type == AMIBERRY_SETTING_REAL) {
 			out += ",\"min\":";
@@ -1428,6 +1457,54 @@ void aros(std::string& out)
 	out += '}';
 }
 
+// The machine-option values a host setting's values produce, as
+// "sets_option_values": for each value the host setting can hold, the
+// value its option holds in a fresh configuration. Computed by setting
+// the host value, resetting to a fresh pending configuration (whose
+// default_prefs() runs target_default_options(), the copy that reads the
+// host default) and reading the option back, so the translation is the
+// copy's own, not a restatement of it. Bool and fixed-choice settings are
+// enumerable; numbers, hotkeys, free text and the host-device lists keep
+// the stored spelling in both places and carry no map.
+void sets_option_values(std::string& out, const char* option, const amiberry_setting_descriptor* d)
+{
+	if (d->type != AMIBERRY_SETTING_BOOL && d->choice_count == 0)
+		return;
+	char original[512];
+	if (amiberry_host_settings_get(d->id, original, sizeof original) != AMIBERRY_SETTINGS_OK)
+		return;
+	std::vector<std::string> values;
+	if (d->type == AMIBERRY_SETTING_BOOL) {
+		values.push_back("false");
+		values.push_back("true");
+	} else {
+		for (size_t c = 0; c < d->choice_count; c++)
+			values.push_back(d->choices[c].value);
+	}
+	std::string map;
+	for (const std::string& value : values) {
+		if (amiberry_host_settings_set(d->id, value.c_str()) != AMIBERRY_SETTINGS_OK)
+			continue;
+		reset_pending();
+		amiberry_settings_session* session = amiberry_settings_session_open();
+		if (!session)
+			break;
+		const std::string option_value = value_of(session, option);
+		amiberry_settings_session_close(session);
+		if (!option_value.empty() && option_value != value) {
+			if (!map.empty())
+				map += ',';
+			json_string(map, value.c_str());
+			map += ':';
+			json_string(map, option_value.c_str());
+		}
+	}
+	amiberry_host_settings_set(d->id, original);
+	if (map.empty())
+		return;
+	out += ",\"sets_option_values\":{" + map + "}";
+}
+
 // One host setting (amiberry.conf, not a machine's configuration): every
 // one the layer lists except those the Android build has no use for (the
 // update checker: it has no self-update), then the ones only that build
@@ -1458,6 +1535,12 @@ void host_settings(std::string& out)
 			&& std::strcmp(android_default, d->default_value ? d->default_value : "") != 0) {
 			out += ",\"android_default\":";
 			json_string(out, android_default);
+		}
+		// The platforms the setting does nothing on (the classic settings
+		// window's own are the desktop GUI's alone).
+		if (d->hidden_on) {
+			out += ",\"hidden_on\":";
+			json_hidden_on(out, d->hidden_on);
 		}
 		if (d->type == AMIBERRY_SETTING_INT || d->type == AMIBERRY_SETTING_REAL) {
 			out += ",\"min\":";
@@ -1492,6 +1575,7 @@ void host_settings(std::string& out)
 		if (sets_option) {
 			out += ",\"sets_option\":";
 			json_string(out, sets_option);
+			sets_option_values(out, sets_option, d);
 		}
 		out += '}';
 	};

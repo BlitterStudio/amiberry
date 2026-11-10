@@ -331,6 +331,24 @@ void set_dongle(uae_prefs& p, const value& v)
 
 // ---------------------------------------------------------------- table
 
+// The serial and MIDI options need their own backends, and each mark is
+// derived from that backend's compile gate alone (never from a platform
+// or store proxy): iOS forces USE_LIBSERIALPORT off (CMakeLists.txt:180)
+// and USE_PORTMIDI off (:186), and the Mac App Store build forces
+// USE_LIBSERIALPORT off too (:237) — which the gate term below catches
+// by itself. PortMidi stays on there (USE_PORTMIDI defaults on, and
+// enummidiports() and setbaud() open MIDI without libserialport), so
+// the MIDI options are not hidden on the store build.
+constexpr unsigned int serial_hidden = AMIBERRY_SETTINGS_HIDE_ON_IOS
+#ifndef USE_LIBSERIALPORT
+	| AMIBERRY_SETTINGS_HIDE_ON_THIS_BUILD
+#endif
+	;
+constexpr unsigned int midi_hidden = AMIBERRY_SETTINGS_HIDE_ON_IOS
+#ifndef USE_PORTMIDI
+	| AMIBERRY_SETTINGS_HIDE_ON_THIS_BUILD
+#endif
+	;
 #define BOOL_OPTION(id, group, label, help, apply, def, constraint) \
 	{id, group, label, help, AMIBERRY_SETTING_BOOL, apply, 0, 0, 0, def, nullptr, 0, constraint}
 #define CHOICE_OPTION(id, group, label, help, apply, def, choices, constraint) \
@@ -354,6 +372,11 @@ const definition definitions[] = {
 			"Print to numbered Print_###.dat files in this folder; empty for no printer.",
 			AMIBERRY_APPLY_LIVE, "", "The parallel port has the printer or the sampler."),
 		get_print_folder, set_print_folder, nullptr, nullptr, nullptr, print_folder_accepts},
+	// The printer and sampler both enumerate the host's devices at
+	// runtime (SDL's printers, the audio recording inputs the iOS bundle's
+	// microphone permission feeds), so an empty list in the desktop export
+	// says nothing about a platform: every io option stays visible, and
+	// file printing (FILE:<folder>, parser.cpp) needs no host device.
 	{DYNAMIC_CHOICE_OPTION("amiberry.samplersoundcard", "io", "Sampler",
 			"An audio input the Amiga samples through the parallel port.",
 			AMIBERRY_APPLY_LIVE, "-1", "The parallel port has the printer or the sampler."),
@@ -362,37 +385,44 @@ const definition definitions[] = {
 			"Sample in stereo instead of mono.",
 			AMIBERRY_APPLY_LIVE, "false", "Only with a sampler."),
 		get_sampler_stereo, set_sampler_stereo, sampler_selected, nullptr, nullptr},
-	{DYNAMIC_CHOICE_OPTION("serial_port", "io", "Serial port",
+	hidden_on({DYNAMIC_CHOICE_OPTION("serial_port", "io", "Serial port",
 			"The host serial port (or network connection) the Amiga's RS-232 port goes to.",
 			AMIBERRY_APPLY_LIVE, "none", nullptr),
 		get_serial_port, set_serial_port, nullptr, nullptr, nullptr, nullptr, serial_choices},
-	SERIAL_OPTION("serial_on_demand", "Shared", "Open the host port only while the Amiga uses it, so others can share it.",
-		AMIBERRY_APPLY_LIVE, "false", serial_on_demand),
-	SERIAL_OPTION("serial_hardware_ctsrts", "Host RTS/CTS", "Hardware flow control on the host port.",
-		AMIBERRY_APPLY_LIVE, "true", serial_hardware_ctsrts),
-	SERIAL_OPTION("serial_status", "Serial status (RTS/CTS/DTR/DSR/CD)", "Pass the status lines through.",
-		AMIBERRY_APPLY_RESTART, "true", serial_status),
-	SERIAL_OPTION("serial_ri", "Ring indicator", "Pass the ring indicator line through (for modems).",
-		AMIBERRY_APPLY_RESTART, "false", serial_ri),
-	SERIAL_OPTION("serial_direct", "Direct", "Bypass the emulated serial timing.", AMIBERRY_APPLY_LIVE, "false", serial_direct),
-	{CHOICE_OPTION("serial_translate", "io", "Line ending conversion",
+		serial_hidden),
+	hidden_on(SERIAL_OPTION("serial_on_demand", "Shared",
+		"Open the host port only while the Amiga uses it, so others can share it.",
+		AMIBERRY_APPLY_LIVE, "false", serial_on_demand), serial_hidden),
+	hidden_on(SERIAL_OPTION("serial_hardware_ctsrts", "Host RTS/CTS", "Hardware flow control on the host port.",
+		AMIBERRY_APPLY_LIVE, "true", serial_hardware_ctsrts), serial_hidden),
+	hidden_on(SERIAL_OPTION("serial_status", "Serial status (RTS/CTS/DTR/DSR/CD)", "Pass the status lines through.",
+		AMIBERRY_APPLY_RESTART, "true", serial_status), serial_hidden),
+	hidden_on(SERIAL_OPTION("serial_ri", "Ring indicator", "Pass the ring indicator line through (for modems).",
+		AMIBERRY_APPLY_RESTART, "false", serial_ri), serial_hidden),
+	hidden_on(SERIAL_OPTION("serial_direct", "Direct", "Bypass the emulated serial timing.",
+		AMIBERRY_APPLY_LIVE, "false", serial_direct), serial_hidden),
+	hidden_on({CHOICE_OPTION("serial_translate", "io", "Line ending conversion",
 			"Convert the line endings the Amiga sends.",
 			AMIBERRY_APPLY_RESTART, "disabled", serial_translate_choices, "Only with a serial port."),
 		get_serial_translate, set_serial_translate, serial_selected, nullptr, nullptr},
-	SERIAL_OPTION("uaeserial", "uaeserial.device", "A serial device for Amiga programs on the host's ports.",
-		AMIBERRY_APPLY_RESTART, "false", uaeserial),
-	{DYNAMIC_CHOICE_OPTION("amiberry.midiout_device_name", "io", "MIDI out",
+		serial_hidden),
+	hidden_on(SERIAL_OPTION("uaeserial", "uaeserial.device", "A serial device for Amiga programs on the host's ports.",
+		AMIBERRY_APPLY_RESTART, "false", uaeserial), serial_hidden),
+	hidden_on({DYNAMIC_CHOICE_OPTION("amiberry.midiout_device_name", "io", "MIDI out",
 			"The host MIDI device the Amiga's MIDI out (through the serial port) plays on.",
 			AMIBERRY_APPLY_LIVE, "none", nullptr),
 		get_midi_out, set_midi_out, nullptr, nullptr, nullptr, nullptr, midi_out_choices},
-	{DYNAMIC_CHOICE_OPTION("amiberry.midiin_device_name", "io", "MIDI in",
+		midi_hidden),
+	hidden_on({DYNAMIC_CHOICE_OPTION("amiberry.midiin_device_name", "io", "MIDI in",
 			"The host MIDI device the Amiga receives MIDI from.",
 			AMIBERRY_APPLY_LIVE, "none", "Only with MIDI out."),
 		get_midi_in, set_midi_in, midi_out_selected, nullptr, nullptr, nullptr, midi_in_choices},
-	{BOOL_OPTION("amiberry.midirouter", "io", "Route MIDI in to MIDI out",
+		midi_hidden),
+	hidden_on({BOOL_OPTION("amiberry.midirouter", "io", "Route MIDI in to MIDI out",
 			"Pass MIDI input straight through to the MIDI output.",
 			AMIBERRY_APPLY_LIVE, "false", "Only with MIDI in."),
 		get_midirouter, set_midirouter, midi_in_selected, nullptr, nullptr},
+		midi_hidden),
 	{CHOICE_OPTION("dongle", "io", "Protection dongle",
 			"The copy protection dongle a game checks for.",
 			AMIBERRY_APPLY_LIVE, "none", dongle_choices, nullptr),

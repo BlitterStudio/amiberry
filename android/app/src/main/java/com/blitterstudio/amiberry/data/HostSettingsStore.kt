@@ -214,9 +214,11 @@ class HostSettingsStore(
 		/**
 		 * The machine options a fresh configuration starts from, as
 		 * amiberry.conf's defaults set them (the schema's sets_option
-		 * mapping): the file's value, else the Android default. A missing
-		 * or unreadable file gives the Android defaults; a missing schema,
-		 * an empty map.
+		 * mapping): the file's value, else the Android default, each
+		 * translated to the option's own spelling by the layer's
+		 * sets_option_values (the copy target_default_options makes); a
+		 * pair with no map keeps the stored value. A missing or unreadable
+		 * file gives the Android defaults; a missing schema, an empty map.
 		 */
 		fun machineOptionDefaults(globalSettingsFile: File?, schema: SettingsSchema?): Map<String, String> {
 			if (schema == null || globalSettingsFile == null) return emptyMap()
@@ -229,15 +231,7 @@ class HostSettingsStore(
 				for (setting in schema.hostSettings) {
 					val option = setting.setsOption?.takeIf { it in schema.options } ?: continue
 					val value = values[setting.id] ?: setting.defaultOnAndroid
-					// A switch option the host spells as a bool ("true"/"false")
-					// stores 1 and 0; everything else keeps its value.
-					val machine = schema.options.getValue(option)
-					val stored = when {
-						machine.isSwitch && value == "true" -> "1"
-						machine.isSwitch && value == "false" -> "0"
-						else -> value
-					}
-					put(option, stored)
+					put(option, setting.setsOptionValues[value] ?: value)
 				}
 			}
 		}

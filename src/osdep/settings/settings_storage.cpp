@@ -143,10 +143,12 @@ const definition definitions[] = {
 			AMIBERRY_APPLY_RESTART, "100", cd_speed_choices,
 			"The running emulation keeps the speed it started with."),
 		get_cd_speed, set_cd_speed, nullptr, nullptr, nullptr, nullptr, nullptr},
-	{BOOL_OPTION("amiberry.map_cd_drives", "cd", "CDFS automount CD/DVD drives",
+	// The host has no CD or DVD drives to automount on iOS.
+	hidden_on({BOOL_OPTION("amiberry.map_cd_drives", "cd", "CDFS automount CD/DVD drives",
 			"Mount the host's CD and DVD drives in AmigaOS automatically.",
 			AMIBERRY_APPLY_RESTART, "false", "The filesystem reads it when the emulation starts."),
 		get_map_cd_drives, set_map_cd_drives, nullptr, nullptr, nullptr, nullptr, nullptr},
+		AMIBERRY_SETTINGS_HIDE_ON_IOS),
 	{BOOL_OPTION("filesys_custom_uaefsdb", "filesystem", "Create .uaem metadata files",
 			"Store Amiga file attributes and comments in .uaem files next to the host files.",
 			AMIBERRY_APPLY_LIVE, "true", nullptr),

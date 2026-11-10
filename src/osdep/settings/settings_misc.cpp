@@ -31,7 +31,12 @@ namespace {
 	}
 
 BOOL_FIELD(main_alwaysontop)
+#ifndef AMIBERRY_NO_IMGUI
+// The classic settings window's own always-on-top switch: without the
+// built-in GUI the setting changes nothing (the native apps have no such
+// window), so like the GUI's own host settings it is not offered there.
 BOOL_FIELD(gui_alwaysontop)
+#endif
 BOOL_FIELD(tod_hack)
 BOOL_FIELD(reset_delay)
 BOOL_FIELD(clipboard_sharing)
@@ -314,17 +319,31 @@ constexpr const char* inactive_constraint =
 	{HOTKEY_OPTION(id, "misc", label, help, AMIBERRY_APPLY_LIVE, def, nullptr), get_##field, set_##field, \
 		nullptr, nullptr, nullptr, fits_##field}
 
+// The desktop-window options iOS does not have: no window to keep on top
+// or minimize, and no host keyboard lock lights.
+constexpr unsigned int desktop_window_hidden = AMIBERRY_SETTINGS_HIDE_ON_IOS;
+// Process priority is desktop-only: setpriority() (amiberry.cpp, #2605)
+// is a no-op on every Apple platform, because SDL_SetCurrentThreadPriority
+// maps to pthread_setschedparam there, which can stall the thread while
+// the app moves to the background and whose high level needs privileges
+// an app lacks. The priority group's pause/mute/input half stays visible:
+// it reacts to focus loss and backgrounding, which iOS delivers too.
+constexpr unsigned int apple_priority_hidden =
+	AMIBERRY_SETTINGS_HIDE_ON_IOS | AMIBERRY_SETTINGS_HIDE_ON_MACOS;
 const definition definitions[] = {
-	{CHOICE_OPTION("use_gui", "misc", "Show GUI on startup",
+	{CHOICE_OPTION("use_gui", "misc", "Open settings on startup",
 			"Show the settings when Amiberry starts, before the emulation runs.",
 			AMIBERRY_APPLY_RESTART, "yes", use_gui_choices, nullptr),
 		get_start_gui, set_start_gui, nullptr, nullptr, nullptr, nullptr},
-	BOOL_DEF("amiberry.always_on_top", "misc", "Always on top",
+	hidden_on(BOOL_DEF("amiberry.always_on_top", "misc", "Always on top",
 		"Keep the emulator window above other windows.",
 		AMIBERRY_APPLY_LIVE, "false", main_alwaysontop),
+		desktop_window_hidden),
+#ifndef AMIBERRY_NO_IMGUI
 	BOOL_DEF("amiberry.gui_always_on_top", "misc", "GUI always on top",
 		"Keep the settings window above other windows.",
 		AMIBERRY_APPLY_LIVE, "false", gui_alwaysontop),
+#endif
 	BOOL_DEF("synchronize_clock", "misc", "Synchronize clock",
 		"Keep the Amiga's clock in step with the host's time.",
 		AMIBERRY_APPLY_RESTART, "false", tod_hack),
@@ -352,12 +371,14 @@ const definition definitions[] = {
 	BOOL_DEF("amiberry.start_not_captured", "misc", "Start mouse uncaptured",
 		"Start the emulation without capturing the mouse.",
 		AMIBERRY_APPLY_RESTART, "false", start_uncaptured),
-	BOOL_DEF("amiberry.start_minimized", "misc", "Start minimized",
+	hidden_on(BOOL_DEF("amiberry.start_minimized", "misc", "Start minimized",
 		"Start the emulation with its window minimized.",
 		AMIBERRY_APPLY_RESTART, "false", start_minimized),
-	BOOL_DEF("amiberry.inactive_minimize", "misc", "Minimize when focus is lost",
+		desktop_window_hidden),
+	hidden_on(BOOL_DEF("amiberry.inactive_minimize", "misc", "Minimize when focus is lost",
 		"Minimize the emulator window when another window takes the focus.",
 		AMIBERRY_APPLY_LIVE, "false", minimize_inactive),
+		desktop_window_hidden),
 	BOOL_DEF("floppy_write_protect", "misc", "Master floppy write protection",
 		"Write-protect every floppy disk image.",
 		AMIBERRY_APPLY_LIVE, "false", floppy_read_only),
@@ -374,7 +395,8 @@ const definition definitions[] = {
 			"Show the power LED at half brightness while the audio filter is off, as on an A500.",
 			AMIBERRY_APPLY_LIVE, "0", power_led_dim_choices, nullptr),
 		get_power_led_dim, set_power_led_dim, nullptr, nullptr, nullptr, nullptr},
-	BOOL_DEF("amiberry.active_capture_automatically", "misc", "Capture mouse when the window is activated",
+	BOOL_DEF("amiberry.active_capture_automatically", "misc",
+		"Capture mouse when the window is activated",
 		"Capture the mouse when the emulator window is clicked.",
 		AMIBERRY_APPLY_LIVE, "true", capture_always),
 	BOOL_DEF("debug_mem", "misc", "Debug memory space",
@@ -414,8 +436,9 @@ const definition definitions[] = {
 	HOTKEY_DEF("amiberry.fullscreen_toggle", "Full-window",
 		"Key or controller button that switches between window and full-window; empty unbinds it.", "",
 		fullscreen_toggle),
-	HOTKEY_DEF("amiberry.minimize", "Minimize",
+	hidden_on(HOTKEY_DEF("amiberry.minimize", "Minimize",
 		"Key or controller button that minimizes the emulator window; empty unbinds it.", "", minimize),
+		desktop_window_hidden),
 	HOTKEY_DEF("amiberry.left_amiga", "Left Amiga",
 		"Key that acts as the left Amiga key; empty unbinds it.", "", left_amiga),
 	HOTKEY_DEF("amiberry.right_amiga", "Right Amiga",
@@ -424,33 +447,38 @@ const definition definitions[] = {
 		"Key or controller button that saves a screenshot; empty unbinds it.", "", screenshot),
 	HOTKEY_DEF("amiberry.debugger_trigger", "Debugger",
 		"Key or controller button that opens the debugger; empty unbinds it.", "", debugger_trigger),
-	{CHOICE_OPTION("amiberry.kbd_led_num", "misc", "NumLock LED",
+	hidden_on({CHOICE_OPTION("amiberry.kbd_led_num", "misc", "NumLock LED",
 			"The emulated LED the host keyboard's NumLock light shows.",
 			AMIBERRY_APPLY_LIVE, "-1", led_choices, nullptr),
 		get_kbd_led_num, set_kbd_led_num, nullptr, nullptr, nullptr, nullptr},
-	{CHOICE_OPTION("amiberry.kbd_led_scr", "misc", "ScrollLock LED",
+		desktop_window_hidden),
+	hidden_on({CHOICE_OPTION("amiberry.kbd_led_scr", "misc", "ScrollLock LED",
 			"The emulated LED the host keyboard's ScrollLock light shows.",
 			AMIBERRY_APPLY_LIVE, "-1", led_choices, nullptr),
 		get_kbd_led_scr, set_kbd_led_scr, nullptr, nullptr, nullptr, nullptr},
-	{CHOICE_OPTION("amiberry.kbd_led_cap", "misc", "CapsLock LED",
+		desktop_window_hidden),
+	hidden_on({CHOICE_OPTION("amiberry.kbd_led_cap", "misc", "CapsLock LED",
 			"The emulated LED the host keyboard's CapsLock light shows.",
 			AMIBERRY_APPLY_LIVE, "-1", led_choices, nullptr),
 		get_kbd_led_cap, set_kbd_led_cap, nullptr, nullptr, nullptr, nullptr},
+		desktop_window_hidden),
 
-	{CHOICE_OPTION("amiberry.active_priority", "priority", "Priority when active",
+	hidden_on({CHOICE_OPTION("amiberry.active_priority", "priority", "Priority when active",
 			"The emulator's process priority while its window is active.",
 			AMIBERRY_APPLY_LIVE, "1", priority_choices, nullptr),
 		get_active_capture_priority, set_active_capture_priority, nullptr, nullptr, nullptr, nullptr},
+		apple_priority_hidden),
 	BOOL_DEF("amiberry.active_not_captured_pause", "priority", "Pause when active but not captured",
 		"Pause the emulation while its window is active but the mouse is not captured.",
 		AMIBERRY_APPLY_LIVE, "false", active_nocapture_pause),
 	BOOL_DEF("amiberry.active_not_captured_nosound", "priority", "No sound when active but not captured",
 		"Mute the emulation while its window is active but the mouse is not captured.",
 		AMIBERRY_APPLY_LIVE, "false", active_nocapture_nosound),
-	{CHOICE_OPTION("amiberry.inactive_priority", "priority", "Priority when inactive",
+	hidden_on({CHOICE_OPTION("amiberry.inactive_priority", "priority", "Priority when inactive",
 			"The emulator's process priority while another window is active.",
 			AMIBERRY_APPLY_LIVE, "0", priority_choices, nullptr),
 		get_inactive_priority, set_inactive_priority, nullptr, nullptr, nullptr, nullptr},
+		apple_priority_hidden),
 	{BOOL_OPTION("amiberry.inactive_pause", "priority", "Pause when inactive",
 			"Pause the emulation while another window is active.",
 			AMIBERRY_APPLY_LIVE, "false", inactive_constraint),
@@ -463,10 +491,11 @@ const definition definitions[] = {
 			"Whether controllers reach the emulation while another window is active.",
 			AMIBERRY_APPLY_LIVE, "0", input_choices, inactive_constraint),
 		get_inactive_input, set_inactive_input, inactive_options_available, nullptr, nullptr, nullptr},
-	{CHOICE_OPTION("amiberry.minimized_priority", "priority", "Priority when minimized",
+	hidden_on({CHOICE_OPTION("amiberry.minimized_priority", "priority", "Priority when minimized",
 			"The emulator's process priority while its window is minimized.",
 			AMIBERRY_APPLY_LIVE, "0", priority_choices, nullptr),
 		get_minimized_priority, set_minimized_priority, nullptr, nullptr, nullptr, nullptr},
+		apple_priority_hidden),
 	BOOL_DEF("amiberry.minimized_pause", "priority", "Pause when minimized",
 		"Pause the emulation while its window is minimized.",
 		AMIBERRY_APPLY_LIVE, "true", minimized_pause),

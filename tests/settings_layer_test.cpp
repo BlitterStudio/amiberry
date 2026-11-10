@@ -2863,6 +2863,58 @@ void check_reversed_volumes()
 		CHECK(!amiberry_host_settings_at(i)->reversed);
 }
 
+// The per-platform visibility mask: only known bits, the classic settings
+// window's own settings hidden on every native front end, and the
+// platform no-ops the native settings audit marked hidden where it lists
+// them. (The audit's PPC set needs no mark: WITH_PPC already compiles the
+// options out of the builds without PPC.)
+void check_platform_visibility()
+{
+	for (size_t i = 0; i < amiberry_settings_count(); i++)
+		CHECK((amiberry_settings_at(i)->hidden_on & ~AMIBERRY_SETTINGS_HIDE_ON_ALL) == 0);
+	for (size_t i = 0; i < amiberry_host_settings_count(); i++)
+		CHECK((amiberry_host_settings_at(i)->hidden_on & ~AMIBERRY_SETTINGS_HIDE_ON_ALL) == 0);
+
+	const unsigned int native = AMIBERRY_SETTINGS_HIDE_ON_MACOS | AMIBERRY_SETTINGS_HIDE_ON_IOS
+		| AMIBERRY_SETTINGS_HIDE_ON_ANDROID;
+#ifndef AMIBERRY_NO_IMGUI
+	for (const char* id : {"Quickstart", "gui_theme"}) {
+		const amiberry_setting_descriptor* d = amiberry_host_settings_find(id);
+		CHECK(d && d->hidden_on == native);
+	}
+#endif
+	// The compile-gate marks, each derived from its backend's own gate
+	// (this desktop build compiles every backend in, so only the iOS
+	// data bit shows): serial ← USE_LIBSERIALPORT (also forced off in the
+	// Mac App Store sandbox, which the gate term itself catches), MIDI ←
+	// USE_PORTMIDI (on in store builds, so not hidden there), 86Box ←
+	// USE_86BOX, DrawBridge ← the serial backend its hardware needs.
+	const amiberry_setting_descriptor* serial = amiberry_settings_find("serial_port");
+	CHECK(serial && serial->hidden_on == AMIBERRY_SETTINGS_HIDE_ON_IOS);
+	const amiberry_setting_descriptor* midi = amiberry_settings_find("amiberry.midiout_device_name");
+	CHECK(midi && midi->hidden_on == AMIBERRY_SETTINGS_HIDE_ON_IOS);
+	const amiberry_setting_descriptor* x86 = amiberry_settings_find("cpu_x86_throttle");
+	CHECK(x86 && x86->hidden_on == AMIBERRY_SETTINGS_HIDE_ON_IOS);
+	const amiberry_setting_descriptor* drawbridge = amiberry_settings_find("amiberry.drawbridge_driver");
+	CHECK(drawbridge && drawbridge->hidden_on == AMIBERRY_SETTINGS_HIDE_ON_IOS);
+	const amiberry_setting_descriptor* on_top = amiberry_settings_find("amiberry.always_on_top");
+	CHECK(on_top && on_top->hidden_on == AMIBERRY_SETTINGS_HIDE_ON_IOS);
+	// Nothing is hidden on the desktop GUI this test compiles, and the
+	// reasoning-based marks are gone: the mouse pair stays visible.
+	const amiberry_setting_descriptor* magic_mouse = amiberry_settings_find("magic_mouse");
+	CHECK(magic_mouse && magic_mouse->hidden_on == 0);
+	const amiberry_setting_descriptor* use_gui = amiberry_settings_find("use_gui");
+	CHECK(use_gui && use_gui->hidden_on == 0);
+	// Process priority is a no-op on every Apple platform (setpriority,
+	// amiberry.cpp #2605); its pause/mute/input siblings stay, as iOS
+	// delivers focus loss and backgrounding.
+	const amiberry_setting_descriptor* priority = amiberry_settings_find("amiberry.active_priority");
+	CHECK(priority && priority->hidden_on
+		== (AMIBERRY_SETTINGS_HIDE_ON_IOS | AMIBERRY_SETTINGS_HIDE_ON_MACOS));
+	const amiberry_setting_descriptor* minimized_pause = amiberry_settings_find("amiberry.minimized_pause");
+	CHECK(minimized_pause && minimized_pause->hidden_on == 0);
+}
+
 // Units, scales and levels: only numbers carry them, a level has a finite
 // range a slider can span, and a label does not repeat its unit.
 void check_number_metadata()
@@ -4477,6 +4529,7 @@ int main(int argc, char** argv)
 	check_reversed_volumes();
 	check_number_metadata();
 	check_host_settings();
+	check_platform_visibility();
 	check_host_choices();
 	check_config_text();
 	check_mount_list();

@@ -115,8 +115,26 @@ class SettingsSchema(
 		 * front end writing its own configurations starts a new one from
 		 * it; null where the default is no option of its own.
 		 */
-		val setsOption: String? = null
+		val setsOption: String? = null,
+		/**
+		 * A host setting only: the machine-option value each value of this
+		 * setting produces in a fresh configuration (the schema's
+		 * sets_option_values, computed by the layer from the copy
+		 * target_default_options makes). Pairs whose spelling is the same
+		 * at both ends carry no map and keep the stored value.
+		 */
+		val setsOptionValues: Map<String, String> = emptyMap(),
+		/**
+		 * The platforms this setting does nothing on and is hidden from,
+		 * as the schema's hidden_on names ("ios", "android"). The launcher
+		 * still writes a hidden setting's stored value (the classic
+		 * settings window reads it); it just offers no row for it.
+		 */
+		val hiddenOn: List<String> = emptyList()
 	) {
+		/** Whether the setting is hidden on Android, the platform this launcher runs on. */
+		val hiddenOnAndroid: Boolean
+			get() = ANDROID in hiddenOn
 		/** The default the Android emulator gives the option. */
 		val defaultOnAndroid: String
 			get() = androidDefault ?: default
@@ -285,6 +303,9 @@ class SettingsSchema(
 	companion object {
 		const val ASSET = "settings_schema.json"
 
+		/** The schema's name for this launcher's platform (hidden_on). */
+		private const val ANDROID = "android"
+
 		/**
 		 * The features a preset configuration can require that the Android
 		 * build has: none so far, it has no PowerPC boards (CMakeLists.txt
@@ -382,7 +403,11 @@ class SettingsSchema(
 				group = text("group").orEmpty(),
 				level = o.optBoolean("level", false),
 				presetOnly = o.optBoolean("preset_only", false),
-				setsOption = text("sets_option")
+				setsOption = text("sets_option"),
+				setsOptionValues = o.optJSONObject("sets_option_values")?.let { values ->
+					buildMap { for (key in values.keys()) put(key, values.getString(key)) }
+				}.orEmpty(),
+				hiddenOn = o.optJSONArray("hidden_on")?.toStringList().orEmpty()
 			)
 		}
 

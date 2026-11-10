@@ -29,7 +29,7 @@ class SettingsGroupsTest {
 
 	@Test
 	fun `every listed option shows exactly once across the pages`() {
-		val listed = schema.options.values.filter { !it.presetOnly }.map { it.id }
+		val listed = schema.options.values.filter { !it.presetOnly && !it.hiddenOnAndroid }.map { it.id }
 		val shown = shownByPage().values.flatten() + SettingsGroups.managed
 		assertEquals(shown.size, shown.toSet().size)
 		assertEquals(listed.toSet(), shown.toSet())
@@ -37,7 +37,7 @@ class SettingsGroupsTest {
 	@Test
 	fun `each option lands on exactly one page, the page that owns it`() {
 		for (option in schema.options.values) {
-			if (option.presetOnly || option.id in SettingsGroups.managed) continue
+			if (option.presetOnly || option.hiddenOnAndroid || option.id in SettingsGroups.managed) continue
 			assertEquals(option.id, SettingsGroups.pageFor(option.id), pageOwning(option.id))
 		}
 	}
@@ -53,7 +53,7 @@ class SettingsGroupsTest {
 		val all = SettingsGroups.groupsOf(SettingsPage.AllSettings, schema)
 			.flatMap { SettingsGroups.allSettingsRows(schema, it) { _ -> true }.map { o -> o.id } }
 		val listed = schema.options.values
-			.filter { !it.presetOnly && SettingsGroups.rowKind(it) != null }
+			.filter { !it.presetOnly && !it.hiddenOnAndroid && SettingsGroups.rowKind(it) != null }
 			.map { it.id }
 			// The launcher writes these itself (or resets them): no control works.
 			.filter { it !in SettingsGroups.managed }

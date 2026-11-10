@@ -12,7 +12,8 @@ import com.blitterstudio.amiberry.data.model.SettingsSchema
  * layer's order. An option the schema lists (settings_schema_options.txt)
  * shows exactly once — on the page that owns it (SettingsGroups.pageFor) —
  * and All Settings lists them all again; one the schema has only because a
- * preset sets it does not show. The Overview re-shows a few of the Storage
+ * preset sets it does not show, nor one hidden on Android (the schema's
+ * hidden_on: settings that do nothing here). The Overview re-shows a few of the Storage
  * page's rows (the first drives) at a glance, as the Apple Overview does.
  */
 object SettingsGroups {
@@ -154,7 +155,7 @@ object SettingsGroups {
 	 * [placed], so it lists every listed option its row can edit.
 	 */
 	fun options(schema: SettingsSchema, group: String, placed: Set<String> = SettingsGroups.placed): List<SettingsSchema.Option> =
-		schema.options.values.filter { it.group == group && !it.presetOnly && it.id !in placed && rowKind(it) != null }
+		schema.options.values.filter { it.group == group && !it.presetOnly && !it.hiddenOnAndroid && it.id !in placed && rowKind(it) != null }
 
 	/**
 	 * The options the launcher's constraints set together, so no page may
