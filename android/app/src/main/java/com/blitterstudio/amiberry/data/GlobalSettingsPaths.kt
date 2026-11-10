@@ -307,10 +307,14 @@ internal object GlobalSettingsPaths {
 			return resolvedRoot
 		}
 
-		/** The base content root in effect: the one named, implied, or the app's own storage. */
+		/**
+		 * The base content root in effect: the one the file names, else the
+		 * app's own storage. A base the file's own lines merely imply moves
+		 * nothing: native reads it for the legacy visual folders alone, so
+		 * it is not a base in effect for anything else.
+		 */
 		fun baseRoot(): File? = when {
 			paths.hasBaseContentPath && paths.baseContentPath.isNotEmpty() -> File(paths.baseContentPath)
-			inferredBasePath.isNotEmpty() -> File(inferredBasePath)
 			else -> externalFilesDir
 		}
 
@@ -344,8 +348,9 @@ internal object GlobalSettingsPaths {
 		Resolver.of(globalSettingsFile, externalFilesDir).configurationRoot()
 
 	/**
-	 * The base content root in effect: the one the file names, the one its
-	 * own lines imply, or the app's own storage.
+	 * The base content root in effect: the one the file names, else the
+	 * app's own storage (an implied base is the legacy visual folders'
+	 * alone, and never moves the rest).
 	 */
 	internal fun baseContentRoot(globalSettingsFile: File?, externalFilesDir: File?): File? =
 		Resolver.of(globalSettingsFile, externalFilesDir).baseRoot()

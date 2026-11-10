@@ -96,6 +96,13 @@ private val PAGES = AppSettingsSections.pages
 private const val ABOUT_PAGE = "about"
 
 /**
+ * The file settings the emulator reads, so their picker chooses a file;
+ * every other file setting names a file the emulator writes (the log), so
+ * the picker chooses the folder to keep the file's name in.
+ */
+private val FILE_PICKER_SETTINGS = setOf("retroarch_config")
+
+/**
  * App Settings, under the Library's gear: the emulator's own settings
  * (amiberry.conf) as the schema's host settings describe them, the
  * launcher's app-level settings among them, and About & Licences. Changes
@@ -166,8 +173,8 @@ fun AppSettingsScreen(
 		onFiles = { uris ->
 			val id = choosingFolder
 			choosingFolder = null
-			// Only a file setting's Choose opens the file browser.
-			if (id != null && viewModel.schema?.hostSetting(id)?.type == SettingsSchema.TYPE_FILE) {
+			// Only a read-side file setting's Choose opens the file browser.
+			if (id != null && id in FILE_PICKER_SETTINGS) {
 				uris.firstOrNull()?.path?.let { viewModel.set(id, it) }
 			}
 		}
@@ -175,7 +182,10 @@ fun AppSettingsScreen(
 
 	fun chooseFolder(id: String) {
 		choosingFolder = id
-		if (viewModel.schema?.hostSetting(id)?.type == SettingsSchema.TYPE_FILE) {
+		// An input file the emulator reads is picked as a file; a file the
+		// emulator writes (the log) is created in the folder picked, keeping
+		// its name — picking an existing file there would truncate it.
+		if (id in FILE_PICKER_SETTINGS) {
 			folderPicker.browseDevice()
 		} else {
 			folderPicker.browseFolders()

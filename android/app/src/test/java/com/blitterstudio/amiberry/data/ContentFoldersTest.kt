@@ -194,4 +194,31 @@ class ContentFoldersTest {
 			ContentFolders.effective("config_path", conf, external)
 		)
 	}
+
+	@Test
+	fun `a base the file's lines merely imply is no base in effect`() {
+		val external = tempDir.newFolder("external-implied")
+		val other = tempDir.newFolder("implied-root")
+		// Three standard-suffix overrides under one root imply that root —
+		// native reads the implication for the legacy visual folders alone.
+		val conf = settings(
+			"""
+				config_path=${File(other, "Configurations").path}
+				rom_path=${File(other, "ROMs").path}
+				floppy_path=${File(other, "Floppies").path}
+			""".trimIndent()
+		)
+
+		// The fallback root stays the app's own storage, and the folders
+		// the lines name stand (each by its own line).
+		assertEquals(external, ContentFolders.baseRoot(conf, external))
+		assertEquals(
+			File(other, "Floppies"),
+			ContentFolders.effective("floppy_path", conf, external)
+		)
+		assertEquals(
+			File(external, "HardDrives"),
+			ContentFolders.effective("harddrive_path", conf, external)
+		)
+	}
 }
