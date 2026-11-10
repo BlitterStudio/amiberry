@@ -160,6 +160,19 @@ class PresetMachineTest {
 	}
 
 	@Test
+	fun `a Zorro II accelerator's RAM and fast RAM stay one size`() {
+		val a530 = EmulatorSettings.fromModel(AmigaModel.A500).withOption("cpuboard_type", "GVPA530")
+
+		// The board's size lands in fast RAM (mirror_cpuboard_mem)...
+		val board4 = a530.withOption("cpuboardmem1_size", "4")
+		assertEquals("4", board4.optionValue("fastmem_size"))
+		// ...and fast RAM's in the board (sync_cpuboard_mem), so a launch's
+		// fixup does not restore the old size.
+		val fast8 = board4.withOption("fastmem_size", "8")
+		assertEquals("8", fast8.optionValue("cpuboardmem1_size"))
+	}
+
+	@Test
 	fun `picking a sub-1 MB fast RAM size clears the MB size`() {
 		val small = EmulatorSettings(fastRam = 2).withOption("fastmem_size_k", "256")
 		assertEquals(0, small.fastRam)

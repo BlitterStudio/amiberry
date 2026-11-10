@@ -175,7 +175,29 @@ data class EmulatorSettings(
 			if (field == "cachesize" && written != "0" && result.jitCacheSize > 0) return@forEach
 			result = result.withField(field, written, schema) ?: result
 		}
-		return result
+		return result.withAcceleratorMemorySynced(this, id, value, schema)
+	}
+
+	/**
+	 * An accelerator whose RAM is a memory option's (a Zorro II board's
+	 * fastmem_size) keeps the two equal, as the layer's setters do: the
+	 * board's size lands in the option (mirror_cpuboard_mem, the copy
+	 * fixup_prefs makes at load) and the option's in the board, up to its
+	 * maximum (sync_cpuboard_mem), so a launch does not bring back a size
+	 * the editor no longer shows.
+	 */
+	private fun withAcceleratorMemorySynced(
+		before: EmulatorSettings,
+		id: String,
+		value: String,
+		schema: SettingsSchema?
+	): EmulatorSettings {
+		val board = schema?.acceleratorBoard(optionValue("cpuboard_type") ?: "none") ?: return this
+		val slot = board.memoryOption ?: return this
+		if (id == "cpuboardmem1_size") return withField(slot, value, schema) ?: this
+		if (optionValue(slot) == before.optionValue(slot)) return this
+		val mb = optionValue(slot)?.toIntOrNull() ?: return this
+		return withField("cpuboardmem1_size", minOf(mb, board.memoryMax).toString(), schema) ?: this
 	}
 
 	/**

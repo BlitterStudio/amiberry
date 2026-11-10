@@ -330,7 +330,13 @@ class SettingsSchema(
 		val memoryMax: Int,
 		/** Features a build needs to offer the board ("ppc"); empty for any build. */
 		val requires: List<String>,
-		val settings: List<AcceleratorJumper>
+		val settings: List<AcceleratorJumper>,
+		/**
+		 * The memory option the board's RAM is ("fastmem_size" for a Zorro II
+		 * board's); null when no option shows it. The emulator keeps that
+		 * option and cpuboardmem1_size equal.
+		 */
+		val memoryOption: String? = null
 	) {
 		fun jumper(name: String): AcceleratorJumper? = settings.firstOrNull { it.name == name }
 	}
@@ -630,6 +636,7 @@ class SettingsSchema(
 						label = board.getString("label"),
 						memoryMax = board.optInt("memory_max", 0),
 						requires = board.optJSONArray("requires")?.toStringList().orEmpty(),
+						memoryOption = board.optString("memory_option").ifEmpty { null },
 						settings = board.optJSONArray("settings")?.let { settings ->
 							List(settings.length()) { j ->
 								val jumper = settings.getJSONObject(j)

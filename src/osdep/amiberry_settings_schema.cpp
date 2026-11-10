@@ -1667,6 +1667,18 @@ void accelerator_boards(std::string& out)
 			json_string(out, (std::string(variant.name) + " (" + cpuboards[t].name + ")").c_str());
 			out += ",\"memory_max\":";
 			json_number(out, static_cast<double>(variant.maxmemory >> 20));
+			// The memory option the board's RAM is (cpuboard_memorytype):
+			// the layer's memory setters copy that option into the board
+			// (sync_cpuboard_mem) and the board's into it
+			// (mirror_cpuboard_mem, the copy fixup_prefs makes), so a front
+			// end writing the file keeps the two equal the same way. A slot
+			// no option of the schema shows has none.
+			const char* memory_option = variant.memorytype == BOARD_MEMORY_Z2 ? "fastmem_size"
+				: variant.memorytype == BOARD_MEMORY_HIGHMEM ? "mbresmem_size" : nullptr;
+			if (memory_option) {
+				out += ",\"memory_option\":";
+				json_string(out, memory_option);
+			}
 			if (cpuboard_is_ppc_accelerator_subtype(t, s))
 				out += ",\"requires\":[\"ppc\"]";
 			const expansionboardsettings* table = variant.settings;
