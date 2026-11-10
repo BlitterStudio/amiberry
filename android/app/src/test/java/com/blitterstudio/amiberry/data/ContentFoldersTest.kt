@@ -99,6 +99,19 @@ class ContentFoldersTest {
 	}
 
 	@Test
+	fun `the retroarch default stays in the starting configuration folder when config_path moves`() {
+		val external = tempDir.newFolder("external-retroarch")
+		val machines = tempDir.newFolder("machines")
+		// init_amiberry_dirs sets retroarch_file before amiberry.conf loads.
+		val conf = settings("config_path=${machines.path}")
+
+		assertEquals(
+			File(File(external, "Configurations"), "retroarch.cfg"),
+			ContentFolders.effective("retroarch_config", conf, external)
+		)
+	}
+
+	@Test
 	fun `each media category follows its own setting`() {
 		assertEquals("rom_path", ContentFolders.categoryKey(FileCategory.ROMS))
 		assertEquals("floppy_path", ContentFolders.categoryKey(FileCategory.FLOPPIES))

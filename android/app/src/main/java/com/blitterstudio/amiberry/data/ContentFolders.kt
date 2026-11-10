@@ -79,9 +79,11 @@ object ContentFolders {
 
 	/**
 	 * The base content root's own [key] folder: the default a reset returns
-	 * to. The RetroArch config's default is the configuration folder's
-	 * `retroarch.cfg` (init_amiberry_dirs); the floppy sounds and the
-	 * plugins override have none of the launcher's to name.
+	 * to. The RetroArch config's default is `retroarch.cfg` in the
+	 * configuration folder init_amiberry_dirs starts with (the app's
+	 * storage's), set before amiberry.conf loads: neither `config_path` nor
+	 * `base_content_path` moves it. The floppy sounds and the plugins
+	 * override have none of the launcher's to name.
 	 */
 	fun default(key: String, globalSettingsFile: File?, externalFilesDir: File?): File? {
 		val suffix = GlobalSettingsPaths.managedPathSuffixes[key]
@@ -89,8 +91,7 @@ object ContentFolders {
 			return externalFilesDir?.let { base -> if (suffix.isEmpty()) base else File(base, suffix) }
 		}
 		if (key == "retroarch_config") {
-			return GlobalSettingsPaths.resolveConfigurationRoot(globalSettingsFile, externalFilesDir)
-				?.let { File(it, "retroarch.cfg") }
+			return default("config_path", globalSettingsFile, externalFilesDir)?.let { File(it, "retroarch.cfg") }
 		}
 		return null
 	}
