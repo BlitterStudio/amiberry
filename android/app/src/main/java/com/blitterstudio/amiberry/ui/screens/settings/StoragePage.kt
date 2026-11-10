@@ -236,7 +236,44 @@ fun StoragePage(
 			}
 		}
 
-		SchemaGroupSection("filesystem", viewModel)
+		SettingsGroups.placementOf(SettingsPage.Storage, "filesystem")?.let { SchemaGroupSection(it, viewModel) }
+	}
+}
+
+/**
+ * The Kickstart picker: the scanned ROMs by what they are, with the
+ * built-in AROS and an empty (the model's own) entry. The Overview leads
+ * with it, and the Hardware page's ROMs section re-shows it (the Apple
+ * Hardware page's first ROM row).
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun KickstartRomRow(viewModel: SettingsViewModel) {
+	val roms by viewModel.availableRoms.collectAsState()
+	val settings = viewModel.settings
+	if (!shouldShowStorageFileDropdown(roms, settings.romFile)) {
+		Text(
+			stringResource(R.string.settings_storage_no_roms_found),
+			style = MaterialTheme.typography.bodySmall,
+			color = MaterialTheme.colorScheme.error
+		)
+	} else {
+		FileDropdown(
+			label = schemaLabel("kickstart_rom_file"),
+			files = kickstartRomFiles(roms),
+			selectedPath = settings.romFile,
+			onSelect = { path -> viewModel.updateSettings { s -> s.withKickstartRom(path) } },
+			onClear = { viewModel.updateSettings { s -> s.copy(romFile = "") } },
+			emptyLabel = stringResource(R.string.settings_storage_rom_automatic),
+			extraPaths = if (ModelRomAvailability.hasBuiltInAros(roms)) {
+				listOf(ModelRomAvailability.arosRomFile)
+			} else {
+				emptyList()
+			},
+			help = schemaOption("kickstart_rom_file")?.help?.takeIf { it.isNotBlank() },
+			fileLabel = { romLabel(it) },
+			pathLabel = { path -> romPathLabel(path, roms) }
+		)
 	}
 }
 

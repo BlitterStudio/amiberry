@@ -154,8 +154,9 @@ fun DisplaySoundPage(viewModel: SettingsViewModel) {
 			}
 		}
 
-		SchemaGroupSection("display", viewModel, title = stringResource(R.string.settings_display_more_title))
-		SchemaGroupSection("filter", viewModel)
+		// The layer's technical display rows, behind the page's own card.
+		SettingsGroups.placementOf(SettingsPage.DisplaySound, "display")?.let { SchemaGroupSection(it, viewModel) }
+		SettingsGroups.placementOf(SettingsPage.DisplaySound, "filter")?.let { SchemaGroupSection(it, viewModel) }
 
 		SoundSections(viewModel)
 	}
@@ -171,11 +172,13 @@ private fun SoundSections(viewModel: SettingsViewModel) {
 	val needsSound = if (soundOn) null else settingsSchema()?.constraint("sound_channels")
 
 	Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-		SchemaGroupSection("sound", viewModel, title = stringResource(R.string.settings_sound_title), footer = needsSound) {
-			SettingsOptionRow("sound_output", viewModel)
-			SettingsOptionRow("sound_channels", viewModel)
-			SettingsOptionRow("sound_frequency", viewModel)
-			SettingsOptionRow("sound_max_buff", viewModel)
+		SettingsGroups.placementOf(SettingsPage.DisplaySound, "sound")?.let { sound ->
+			SchemaGroupSection(sound, viewModel, footer = needsSound) {
+				SettingsOptionRow("sound_output", viewModel)
+				SettingsOptionRow("sound_channels", viewModel)
+				SettingsOptionRow("sound_frequency", viewModel)
+				SettingsOptionRow("sound_max_buff", viewModel)
+			}
 		}
 
 		SettingsSection(title = stringResource(R.string.settings_sound_volume_title), footer = needsSound) {

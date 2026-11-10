@@ -70,6 +70,19 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 	var currentUnknownLines by mutableStateOf<List<String>>(emptyList())
 		private set
 
+	/**
+	 * The collapsed sections the user opened (SettingsGroups.Placement.key):
+	 * remembered while the editor is open, across page switches, so a
+	 * disclosure opened for one change stays open for the next.
+	 */
+	var expandedSections by mutableStateOf(emptySet<String>())
+		private set
+
+	/** Opens or closes a collapsed section; only the user's own opens are kept. */
+	fun setSectionExpanded(key: String, expanded: Boolean) {
+		expandedSections = if (expanded) expandedSections + key else expandedSections - key
+	}
+
 	var currentConfigName by mutableStateOf<String?>(null)
 		private set
 

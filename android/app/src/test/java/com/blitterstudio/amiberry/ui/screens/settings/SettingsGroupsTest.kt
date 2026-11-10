@@ -20,11 +20,11 @@ class SettingsGroupsTest {
 
 	private val schema = SettingsSchema.current!!
 
-	/** Every option each content page shows: its own rows, then its groups' sections. */
+	/** Every option each content page shows: its own rows, then its sections' options. */
 	private fun shownByPage(): Map<SettingsPage, List<String>> =
 		SettingsPages.all.associateWith { page ->
 			SettingsGroups.laidOut[page].orEmpty().toList() +
-				SettingsGroups.byPage[page].orEmpty().flatMap { SettingsGroups.options(schema, it.group).map { o -> o.id } }
+				SettingsGroups.sectionsOf(page).flatMap { SettingsGroups.options(schema, it).map { o -> o.id } }
 		}
 
 	@Test
@@ -42,11 +42,12 @@ class SettingsGroupsTest {
 		}
 	}
 
-	/** The page the option's group section or own row shows it on, computed independently of pageFor. */
+	/** The page the option's section or own row shows it on, computed independently of pageFor. */
 	private fun pageOwning(optionId: String): SettingsPage {
 		val own = shownByPage().entries.singleOrNull { (_, ids) -> optionId in ids }
 		return own?.key ?: error("$optionId shows on no page")
 	}
+
 
 	@Test
 	fun `all settings lists every option a row can edit, except the managed and coupled ones`() {
@@ -119,26 +120,123 @@ class SettingsGroupsTest {
 	}
 
 	@Test
-	fun `each group has exactly one page and every page has a place`() {
+	fun `each group is placed once, and a group no section takes is named by one`() {
 		assertEquals(SettingsPages.all.filter { it != SettingsPage.AllSettings }.toSet(), SettingsGroups.byPage.keys)
-		val groups = SettingsGroups.byPage.values.flatten().map { it.group }
+		val groups = SettingsGroups.byPage.values.flatten().mapNotNull { it.group }
 		assertEquals(groups.size, groups.toSet().size)
-		// Every group the layer has is placed (Apple's pages, without the ones the
-		// launcher's layer does not have: no x86, diskswapper, drawbridge or priority).
-		assertEquals(schema.options.values.map { it.group }.distinct().toSet(), groups.toSet())
-		groups.forEach { SettingsGroups.titleRes(it) }
+		val ids = SettingsGroups.byPage.values.flatten().flatMap { it.ids }
+		assertEquals(ids.size, ids.toSet().size)
+		// Every group the layer has is either a section of its own or fully
+		// named by id sections (Apple's pages, without the ones the launcher's
+		// layer does not have: no x86, diskswapper, drawbridge or priority).
+		val unplaced = schema.options.values
+			.filter { !it.presetOnly && !it.hiddenOnAndroid && it.group !in groups && SettingsGroups.rowKind(it) != null }
+			.filter { it.id !in SettingsGroups.placed && it.id !in SettingsGroups.managed }
+		assertTrue(unplaced.joinToString(",") { it.id }, unplaced.isEmpty())
 	}
 
 	@Test
-	fun `the pages cover the Apple app's groups`() {
+	fun `every listed option lands in exactly one section, the expert rows in collapsed ones`() {
+		val landed = HashMap<String, Pair<SettingsPage, SettingsGroups.Placement?>>()
+		for (page in SettingsPages.all.filter { it != SettingsPage.AllSettings }) {
+			SettingsGroups.laidOut[page].orEmpty().forEach { id ->
+				assertNull("$id shows both as the page's own row and in a section", landed[id])
+				landed[id] = page to null
+			}
+			for (placement in SettingsGroups.sectionsOf(page)) {
+				for (option in SettingsGroups.options(schema, placement)) {
+					assertNull("${option.id} shows in two sections", landed[option.id])
+					landed[option.id] = page to placement
+				}
+			}
+		}
+		// Every listed option a row can edit lands somewhere (the managed and
+		// coupled ones aside), and All Settings lists it again whatever section
+		// holds it — a search there reaches the rows a page keeps collapsed.
+		val listed = schema.options.values
+			.filter { !it.presetOnly && !it.hiddenOnAndroid && it.id !in SettingsGroups.managed && SettingsGroups.rowKind(it) != null }
+			.filter { option -> SettingsGroups.coupledPairOf(option.id)?.let { it.first() == option.id } ?: true }
+			.map { it.id }
+		// The pages' own rows without an editable control (the Kickstart and
+		// drive paths, the hotkey options) show nowhere else by design.
+		assertEquals(listed.toSet(), landed.keys intersect listed)
+		val allSettings = SettingsGroups.groupsOf(SettingsPage.AllSettings, schema)
+			.flatMap { SettingsGroups.allSettingsRows(schema, it) { _ -> true }.map { o -> o.id } }
+		(landed.keys intersect listed).forEach { id -> assertTrue(id, id in allSettings) }
+
+		fun collapsed(id: String) = landed[id]?.second?.collapsed ?: false
+		listOf(
+			// CPU · Advanced
+			"cpu_throttle", "cpu_multiplier", "amiberry.cpu_idle", "cpu_threaded", "cachesize", "compfpu",
+			"comp_constjump", "comp_flushmode", "comp_nf", "comp_catchfault", "comp_trustbyte",
+			"cpu_no_unimplemented", "cpu_data_cache", "mmu_model", "fpu_strict", "fpu_softfloat", "fpu_no_unimplemented",
+			// Chipset · Advanced and the compatibility internals
+			"waiting_blits", "keyboard_type", "keyboard_nkro", "display_optimizations", "hvcsync",
+			"rtc", "agnusrev", "denisemodel",
+			// On-board interfaces, Memory · Advanced, ROMs · Advanced, Display · Advanced, Genlock
+			"pcmcia", "scsi_a3000", "z3mapping", "megachipmem_size", "boot_rom_uae", "kickshifter",
+			"gfx_monitorblankdelay", "genlock",
+			// Ports & Misc's collapsed Compatibility and Debugging
+			"uae_hide_autoconfig", "log_illegal_mem"
+		).forEach { id -> assertEquals(id, true, collapsed(id)) }
+		listOf(
+			"cpu_model", "chipset", "chipset_compatible", "cycle_exact", "chipmem_size", "bsdsocket_emu",
+			"show_leds", "dongle", "cpu_reset_pause", "floppy_write_protect", "amiberry.use_retroarch_menu"
+		).forEach { id -> assertEquals(id, false, collapsed(id)) }
+	}
+
+	@Test
+	fun `the pages' designed sections mirror the Apple app's`() {
 		assertEquals(
-			listOf("cpu", "mmu", "fpu", "cpu_speed", "jit", "chipset", "adv_chipset", "memory", "rom", "accelerator", "rtg", "expansions", "ppc", "genlock"),
-			SettingsGroups.byPage.getValue(SettingsPage.Hardware).map { it.group }
+			listOf(
+				"cpu", "chipset", "memory", "rom", "expansions",
+				"pcmcia,ide,scsi_a3000,scsi_a4000t",
+				"cpu_throttle,cpu_multiplier,amiberry.cpu_idle,cpu_threaded,cachesize,compfpu,comp_constjump,comp_flushmode,comp_nf,comp_catchfault,comp_trustbyte,cpu_no_unimplemented,cpu_data_cache,mmu_model,fpu_strict,fpu_softfloat,fpu_no_unimplemented",
+				"waiting_blits,keyboard_type,keyboard_nkro,display_optimizations,hvcsync",
+				"adv_chipset", "z3mapping,a3000mem_size,mbresmem_size,megachipmem_size",
+				"boot_rom_uae,uaeboard,kickshifter", "genlock"
+			),
+			SettingsGroups.byPage.getValue(SettingsPage.Hardware).map { it.key }
 		)
-		assertEquals(listOf("display", "filter", "sound"), SettingsGroups.byPage.getValue(SettingsPage.DisplaySound).map { it.group })
-		assertEquals(listOf("input", "onscreen"), SettingsGroups.byPage.getValue(SettingsPage.Input).map { it.group })
-		assertEquals(listOf("floppy", "cd", "filesystem"), SettingsGroups.byPage.getValue(SettingsPage.Storage).map { it.group })
-		assertEquals(listOf("misc", "io"), SettingsGroups.byPage.getValue(SettingsPage.PortsMisc).map { it.group })
+		assertEquals(
+			listOf("display", "filter", "sound"),
+			SettingsGroups.byPage.getValue(SettingsPage.DisplaySound).mapNotNull { it.group }
+		)
+		assertEquals(listOf("input", "onscreen"), SettingsGroups.byPage.getValue(SettingsPage.Input).mapNotNull { it.group })
+		assertEquals(listOf("floppy", "cd", "filesystem"), SettingsGroups.byPage.getValue(SettingsPage.Storage).mapNotNull { it.group })
+		// The misc group split by purpose, the io group's dongle its own section.
+		assertEquals(
+			listOf(
+				"show_leds,show_leds_rtg,power_led_dim",
+				"io",
+				"cpu_reset_pause,warpboot",
+				"clipboard_sharing,synchronize_clock",
+				"amiberry.right_control_is_right_win",
+				"amiberry.use_retroarch_quit,amiberry.use_retroarch_menu,amiberry.use_retroarch_reset",
+				"floppy_write_protect,harddrive_write_protect",
+				"uae_hide_autoconfig,scsidevice_disable",
+				"log_illegal_mem,debug_mem,cpu_halt_auto_reset"
+			),
+			SettingsGroups.byPage.getValue(SettingsPage.PortsMisc).map { it.key }
+		)
+	}
+
+	@Test
+	fun `only the expert sections start collapsed`() {
+		val collapsed = SettingsGroups.byPage.values.flatten().filter { it.collapsed }.map { it.key }
+		assertEquals(
+			listOf(
+				"pcmcia,ide,scsi_a3000,scsi_a4000t",
+				"cpu_throttle,cpu_multiplier,amiberry.cpu_idle,cpu_threaded,cachesize,compfpu,comp_constjump,comp_flushmode,comp_nf,comp_catchfault,comp_trustbyte,cpu_no_unimplemented,cpu_data_cache,mmu_model,fpu_strict,fpu_softfloat,fpu_no_unimplemented",
+				"waiting_blits,keyboard_type,keyboard_nkro,display_optimizations,hvcsync",
+				"adv_chipset", "z3mapping,a3000mem_size,mbresmem_size,megachipmem_size",
+				"boot_rom_uae,uaeboard,kickshifter", "genlock",
+				"display",
+				"uae_hide_autoconfig,scsidevice_disable",
+				"log_illegal_mem,debug_mem,cpu_halt_auto_reset"
+			),
+			collapsed
+		)
 	}
 
 	@Test
@@ -150,14 +248,20 @@ class SettingsGroupsTest {
 	}
 
 	@Test
-	fun `a group section follows the layer order and leaves out the page's own rows`() {
-		val cpu = SettingsGroups.options(schema, "cpu").map { it.id }
-		assertEquals(listOf("cpu_no_unimplemented", "cpu_data_cache"), cpu)
+	fun `a section follows the layer order and leaves out the page's own rows`() {
+		// The designed sections take the group's remainder: the CPU and
+		// Chipset sections' rows are the page's own alone (their groups'
+		// experts sit in the Advanced sections), the sound section's follow
+		// the layer's order.
+		val cpu = SettingsGroups.options(schema, SettingsGroups.placementOf(SettingsPage.Hardware, "cpu")!!)
+		assertTrue(cpu.isEmpty())
+		val chipset = SettingsGroups.options(schema, SettingsGroups.placementOf(SettingsPage.Hardware, "chipset")!!)
+		assertTrue(chipset.isEmpty())
 		val order = schema.options.keys.toList()
-		val chipset = SettingsGroups.options(schema, "chipset").map { it.id }
-		assertEquals(chipset.sortedBy { order.indexOf(it) }, chipset)
-		assertFalse("cycle_exact" in chipset)
-		assertTrue("chipset_compatible" in chipset)
+		val sound = SettingsGroups.options(schema, SettingsGroups.placementOf(SettingsPage.DisplaySound, "sound")!!)
+		assertEquals(sound.sortedBy { order.indexOf(it.id) }, sound)
+		assertFalse("sound_output" in sound.map { it.id })
+		assertTrue("sound_stereo_separation" in sound.map { it.id })
 	}
 
 	@Test
@@ -172,14 +276,6 @@ class SettingsGroupsTest {
 		assertEquals(SettingsGroups.RowKind.Number, kind("gfx_monitorblankdelay"))
 		assertEquals(SettingsGroups.RowKind.Number, kind("ramsey"))
 		assertNull(kind("kickstart_rom_file"))
-	}
-
-	@Test
-	fun `only advanced groups start collapsed`() {
-		assertTrue(SettingsGroups.startsCollapsed("adv_chipset"))
-		assertTrue(SettingsGroups.startsCollapsed("display"))
-		assertFalse(SettingsGroups.startsCollapsed("cpu"))
-		assertFalse(SettingsGroups.startsCollapsed("misc"))
 	}
 
 	@Test

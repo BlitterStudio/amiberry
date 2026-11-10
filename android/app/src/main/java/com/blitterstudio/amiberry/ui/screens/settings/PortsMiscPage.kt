@@ -11,7 +11,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.blitterstudio.amiberry.ui.viewmodel.SettingsViewModel
 
-/** The Ports & Misc page (Apple's generated one): a section per layer group it covers. */
+/**
+ * The Ports & Misc page: the designed sections of the registry
+ * (SettingsGroups.byPage) — the misc group split by purpose and the io
+ * group's dongle, as the Apple app's Ports & Misc page is sectioned
+ * (audit §3a).
+ */
 @Composable
 fun PortsMiscPage(viewModel: SettingsViewModel) {
 	Column(
@@ -22,7 +27,7 @@ fun PortsMiscPage(viewModel: SettingsViewModel) {
 		verticalArrangement = Arrangement.spacedBy(16.dp)
 	) {
 		SettingsGroups.byPage.getValue(SettingsPage.PortsMisc).forEach { placement ->
-			SchemaGroupSection(placement.group, viewModel)
+			SchemaGroupSection(placement, viewModel)
 		}
 	}
 }

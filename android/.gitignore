@@ -4,6 +4,7 @@ gen
 out
 build
 .gradle
+.kotlin
 
 # IDE - IntelliJ
 .idea

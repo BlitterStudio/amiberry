@@ -73,34 +73,36 @@ fun InputPage(viewModel: SettingsViewModel) {
 		}
 
 		// Not "Input" on the Input page: the section holds autofire, port modes and mouse options.
-		SchemaGroupSection("input", viewModel, title = stringResource(R.string.settings_input_controller_options_title))
+		SettingsGroups.placementOf(SettingsPage.Input, "input")?.let { SchemaGroupSection(it, viewModel) }
 
 		// The keyboard can be driven by a game controller, so its settings stay
 		// on non-touch devices too. The registry rows hide the touch-only ones;
 		// the gamepad toggle is a hotkey option the schema has no list for.
-		SchemaGroupSection("onscreen", viewModel, title = stringResource(R.string.settings_input_on_screen_controls_title)) {
-			SettingsOptionRow("amiberry.onscreen_joystick", viewModel)
-			SettingsOptionRow("amiberry.vkbd_touch_button", viewModel)
-			SettingsOptionRow("amiberry.vkbd_numpad", viewModel)
+		SettingsGroups.placementOf(SettingsPage.Input, "onscreen")?.let { onScreen ->
+			SchemaGroupSection(onScreen, viewModel) {
+				SettingsOptionRow("amiberry.onscreen_joystick", viewModel)
+				SettingsOptionRow("amiberry.vkbd_touch_button", viewModel)
+				SettingsOptionRow("amiberry.vkbd_numpad", viewModel)
 
-			if (!hasTouchScreen()) {
-				Text(
-					stringResource(R.string.settings_input_on_screen_keyboard_toggle_hint),
-					style = MaterialTheme.typography.bodySmall
+				if (!hasTouchScreen()) {
+					Text(
+						stringResource(R.string.settings_input_on_screen_keyboard_toggle_hint),
+						style = MaterialTheme.typography.bodySmall
+					)
+				}
+
+				// A hotkey option: the schema has no button list, so the launcher
+				// offers the gamepad buttons the toggle takes.
+				SettingChoiceRow(
+					label = toggleOption?.label ?: stringResource(R.string.settings_input_on_screen_keyboard_toggle),
+					valueText = settingText(LauncherChoices.oskToggle(settings.onScreenKeyboardToggle)),
+					choices = toggleChoices,
+					help = toggleOption?.help,
+					testTag = "input-osk-toggle-dropdown",
+					optionTestTag = { "input-osk-toggle-option-$it" },
+					onSelect = { value -> viewModel.updateSettings { s -> s.copy(onScreenKeyboardToggle = value) } }
 				)
 			}
-
-			// A hotkey option: the schema has no button list, so the launcher
-			// offers the gamepad buttons the toggle takes.
-			SettingChoiceRow(
-				label = toggleOption?.label ?: stringResource(R.string.settings_input_on_screen_keyboard_toggle),
-				valueText = settingText(LauncherChoices.oskToggle(settings.onScreenKeyboardToggle)),
-				choices = toggleChoices,
-				help = toggleOption?.help,
-				testTag = "input-osk-toggle-dropdown",
-				optionTestTag = { "input-osk-toggle-option-$it" },
-				onSelect = { value -> viewModel.updateSettings { s -> s.copy(onScreenKeyboardToggle = value) } }
-			)
 		}
 	}
 }
