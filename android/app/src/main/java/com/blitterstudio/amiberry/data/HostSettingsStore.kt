@@ -22,7 +22,9 @@ import java.util.concurrent.atomic.AtomicLong
  */
 class HostSettingsStore(
 	private val file: File,
-	private val schema: SettingsSchema
+	private val schema: SettingsSchema,
+	/** The default content root (the app's external files dir); what a cleared base returns the derived folders to. */
+	private val defaultContentRoot: File? = null
 ) {
 	/** The values the file holds, by setting ID; a setting the file lacks is absent. */
 	fun read(): Map<String, String> {
@@ -50,8 +52,10 @@ class HostSettingsStore(
 	 */
 	suspend fun write(values: Map<String, String>): Boolean = writeMutex.withLock {
 		if (values.any { (id, value) -> !accepts(id, value) }) return@withLock false
-		val lines = readLines().toMutableList()
-		for ((id, value) in values) {
+		val fileLines = readLines()
+		val expanded = expandBaseContentChange(values, fileLines)
+		val lines = fileLines.toMutableList()
+		for ((id, value) in expanded) {
 			val option = schema.hostSetting(id) ?: continue
 			val key = option.id
 			val written = fileText(option, value)
@@ -149,6 +153,26 @@ class HostSettingsStore(
 		if (separator < 0) return null
 		val key = trimmed.substring(0, separator).trim()
 		return key.ifEmpty { null }
+	}
+
+	/**
+	 * A write of base_content_path rewrites the folder lines the base
+	 * derives, exactly as the emulator's setter does
+	 * (set_base_content_path: the merge in BaseContentPaths) — only
+	 * clearing a set base changes anything, and a folder the file had set
+	 * away from its baseline keeps its line. Explicit writes of the
+	 * derived folders still win.
+	 */
+	private fun expandBaseContentChange(values: Map<String, String>, lines: List<String>): Map<String, String> {
+		if (!values.containsKey("base_content_path")) return values
+		val fileValues = lines.mapNotNull(::parseLine).toMap()
+		val previousBase = fileValues["base_content_path"].orEmpty()
+		val newBase = values.getValue("base_content_path")
+		// Clearing with no base set is the setter's no-op.
+		if (newBase.isEmpty() && previousBase.isEmpty()) return values
+		val defaults = BaseContentPaths.derivedSet(defaultContentRoot?.path)
+		val merged = BaseContentPaths.mergedLines(newBase, previousBase, fileValues, defaults)
+		return merged + values
 	}
 
 	private fun readLines(): List<String> = try {

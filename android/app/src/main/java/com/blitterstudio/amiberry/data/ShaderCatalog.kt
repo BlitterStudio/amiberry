@@ -19,7 +19,7 @@ object ShaderCatalog {
 	private const val SETTINGS_FILE_NAME = "amiberry.conf"
 	private const val LEGACY_SETTINGS_DIRECTORY = "conf"
 
-	private val managedPathSuffixes = mapOf(
+	internal val managedPathSuffixes = mapOf(
 		"config_path" to StoragePaths.CONFIGURATIONS,
 		"controllers_path" to StoragePaths.CONTROLLERS,
 		"whdboot_path" to StoragePaths.WHDBOOT,
@@ -367,7 +367,7 @@ object ShaderCatalog {
 		)
 	}
 
-	private fun pathsMatch(first: String, second: String): Boolean =
+	internal fun pathsMatch(first: String, second: String): Boolean =
 		normalizePathForCompare(first) == normalizePathForCompare(second)
 
 	private fun normalizePathForCompare(path: String): String {

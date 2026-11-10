@@ -146,8 +146,10 @@ fun AppSettingsScreen(
 	val searching = query.isNotBlank()
 
 	// The values as the emulator's own Advanced settings window may have left them: the
-	// file is read again on entry and every time the launcher comes back to the front.
-	viewModel.reload()
+	// file is read again on entry (once per viewModel, not per recomposition — a search
+	// keystroke must not scan the shader and bezel folders) and every time the launcher
+	// comes back to the front.
+	LaunchedEffect(viewModel) { viewModel.reload() }
 	val lifecycleOwner = LocalLifecycleOwner.current
 	DisposableEffect(lifecycleOwner) {
 		val observer = LifecycleEventObserver { _, event ->

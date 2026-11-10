@@ -33,7 +33,9 @@ class AppSettingsViewModel(application: Application) : AndroidViewModel(applicat
 		schema?.let {
 			HostSettingsStore(
 				HostSettingsStore.settingsFile(app.filesDir, app.getExternalFilesDir(null)),
-				it
+				it,
+				// What a cleared base content folder returns the derived folders to.
+				app.getExternalFilesDir(null)
 			)
 		}
 	}
