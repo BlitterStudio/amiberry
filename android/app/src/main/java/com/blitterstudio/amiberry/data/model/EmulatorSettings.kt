@@ -152,7 +152,12 @@ data class EmulatorSettings(
 	 * [options]; null when [options] does not set it (the emulator's default
 	 * applies).
 	 */
-	fun optionValue(id: String): String? = FIELDS[id]?.get?.invoke(this) ?: options[id]
+	fun optionValue(id: String): String? = when (id) {
+		// The packed line of the jumpers (withPackedJumpersAdopted).
+		"cpuboard_settings" -> SettingsSchema.current?.acceleratorBoard(optionValue("cpuboard_type") ?: "none")
+			?.let { AcceleratorJumpers.pack(it, acceleratorJumpers) }?.ifEmpty { null } ?: options[id]
+		else -> FIELDS[id]?.get?.invoke(this) ?: options[id]
+	}
 
 	/**
 	 * [id] set to [value] (.uae spelling) with the changes the emulator's
@@ -198,6 +203,19 @@ data class EmulatorSettings(
 		if (optionValue(slot) == before.optionValue(slot)) return this
 		val mb = optionValue(slot)?.toIntOrNull() ?: return this
 		return withField("cpuboardmem1_size", minOf(mb, board.memoryMax).toString(), schema) ?: this
+	}
+
+	/**
+	 * The accelerator's jumpers have one home, [acceleratorJumpers], which
+	 * the configuration's one cpuboard_settings line is written from: a
+	 * preset level's packed line (the DraCo's "3,pckbd") moves there, so
+	 * the editor shows it and an edit replaces it rather than a second
+	 * line, which the reader would apply over the first.
+	 */
+	fun withPackedJumpersAdopted(schema: SettingsSchema? = SettingsSchema.current): EmulatorSettings {
+		val packed = options["cpuboard_settings"] ?: return this
+		val board = schema?.acceleratorBoard(optionValue("cpuboard_type") ?: "none") ?: return this
+		return copy(acceleratorJumpers = AcceleratorJumpers.unpack(board, packed), options = options - "cpuboard_settings")
 	}
 
 	/**
@@ -280,7 +298,7 @@ data class EmulatorSettings(
 				else -> result.copy(options = result.options + (id to value))
 			}
 		}
-		return result
+		return result.withPackedJumpersAdopted()
 	}
 
 	/**
@@ -351,7 +369,7 @@ data class EmulatorSettings(
 				val value = values[id] ?: defaultOf(id) ?: continue
 				settings = field.set?.invoke(settings, value) ?: settings
 			}
-			return settings.copy(options = values.filterKeys { it !in FIELDS })
+			return settings.copy(options = values.filterKeys { it !in FIELDS }).withPackedJumpersAdopted()
 		}
 
 		// The choices the emulator offers for these options (value, label),

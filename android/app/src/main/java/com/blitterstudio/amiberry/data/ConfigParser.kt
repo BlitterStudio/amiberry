@@ -114,6 +114,8 @@ object ConfigParser {
 					boardLines[key] = value
 				boardLine != null && boardLine.kind == SettingsBoards.Line.Kind.Options ->
 					boardLines[key] = value
+				boardLine != null && boardLine.kind == SettingsBoards.Line.Kind.Memory ->
+					boardLines[key] = value
 				// A unit's ROM identity lines are dropped when the codec
 				// owns the unit (its entry or options line is there) and
 				// kept verbatim when it does not, so a board a file
@@ -158,10 +160,8 @@ object ConfigParser {
 			.copy(options = legacyPresetOptions(kvPairs["amiberry.android_preset"]) + options)
 		val schema = SettingsSchema.current
 		val boards = schema?.let { SettingsBoards.parse(it, boardLines) }.orEmpty()
-		// An empty entry line is no unit (SettingsBoards.parse), so it owns no identity either.
-		val ownedTypes = boardLines.filter { (key, value) ->
-			value.isNotEmpty() || SettingsBoards.line(key)?.kind == SettingsBoards.Line.Kind.Options
-		}.keys.mapNotNull { SettingsBoards.line(it)?.typeId }.toSet()
+		// The units the codec parsed own their identity lines.
+		val ownedTypes = boards.map { it.typeId }.toSet()
 		for (identity in identityLines) {
 			if (SettingsBoards.line(configKey(identity) ?: "")?.typeId !in ownedTypes)
 				unknownLines.add(identity)
@@ -179,19 +179,22 @@ object ConfigParser {
 				CustomControls.lineKey(line)!! to event
 			}
 		)
-		// The packed jumper line unpacks against the board the file names;
-		// one the schema does not know keeps its line verbatim.
+		// The packed jumper line unpacks against the board the file names
+		// (a preset record's line where the file has none); one the schema
+		// does not know keeps its line verbatim.
+		val packed = packedJumpers ?: settings.options["cpuboard_settings"]
 		val board = schema?.acceleratorBoard(settings.optionValue("cpuboard_type") ?: "none")
 		var jumpers: Map<String, String> = emptyMap()
-		if (board != null && packedJumpers != null)
-			jumpers = AcceleratorJumpers.unpack(board, packedJumpers!!)
-		else if (packedJumpers != null)
-			unknownLines.add("cpuboard_settings=$packedJumpers")
+		if (board != null && packed != null)
+			jumpers = AcceleratorJumpers.unpack(board, packed)
+		else if (packed != null)
+			unknownLines.add("cpuboard_settings=$packed")
 		val description = kvPairs["config_description"] ?: ""
 		val category = kvPairs["config_category"] ?: ""
 
 		return ParsedConfig(
 			settings.copy(
+				options = settings.options - "cpuboard_settings",
 				boards = boards,
 				customControls = customControls,
 				acceleratorJumpers = jumpers

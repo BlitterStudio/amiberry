@@ -42,7 +42,14 @@ data class BoardUnit(
 	 * mode selector, whose positions name the host's drivers): kept as they
 	 * came, and written back with the rest.
 	 */
-	val extras: List<String> = emptyList()
+	val extras: List<String> = emptyList(),
+	/**
+	 * The board's `<id>_mem_size` value (its RAM in 256 KB units) as the
+	 * configuration had it; null when it had none. Only the first unit of
+	 * a type has one (cfgfile.cpp:6486-6491). Kept with the board and gone
+	 * with it: a non-zero size alone puts the board back in the machine.
+	 */
+	val memory: String? = null
 ) {
 	val key: String get() = "$typeId#$unit"
 }
@@ -56,7 +63,7 @@ object SettingsBoards {
 		val kind: Kind,
 		val value: String
 	) {
-		enum class Kind { Entry, Options, Identity, Drop }
+		enum class Kind { Entry, Options, Memory, Identity, Drop }
 	}
 
 	/**
@@ -77,6 +84,7 @@ object SettingsBoards {
 					"${name}_rom_file" -> return Line(type.id, unit, Line.Kind.Entry, "")
 					"${name}_rom_options" -> return Line(type.id, unit, Line.Kind.Options, "")
 					"${name}_rom", "${name}_rom_file_id" -> return Line(type.id, unit, Line.Kind.Identity, "")
+					"${type.id}_mem_size" -> if (unit == 0) return Line(type.id, 0, Line.Kind.Memory, "")
 					"scsi_${type.id}" -> return Line(type.id, 0, Line.Kind.Drop, "")
 				}
 			}
@@ -92,16 +100,21 @@ object SettingsBoards {
 				val name = if (unit == 0) type.id else "${type.id}-${unit + 1}"
 				val entry = values["${name}_rom_file"]
 				val options = values["${name}_rom_options"]
+				val memory = if (unit == 0) values["${type.id}_mem_size"] else null
 				// A unit exists while the file has its entry line, or its
 				// options line (a built-in controller the chipset option
-				// puts in the machine, configured without a ROM of its own).
-				// An empty entry is none: cfgfile_read_board_rom creates the
-				// board only for a non-empty value (cfgfile.cpp:6381-6388).
+				// puts in the machine, configured without a ROM of its own),
+				// or a non-zero memory size (which makes the board,
+				// cfgfile.cpp:6488-6490). An empty entry is none:
+				// cfgfile_read_board_rom creates the board only for a
+				// non-empty value (cfgfile.cpp:6381-6388).
 				val hasEntry = !entry.isNullOrEmpty()
-				if (!hasEntry && options == null) continue
+				val hasMemory = memory != null && memory.trim().toIntOrNull() != 0
+				if (!hasEntry && options == null && !hasMemory) continue
 				val board = units.getOrPut("${type.id}#$unit") { MutableBoard() }
 				board.entry = hasEntry
 				board.romFile = entry.orEmpty()
+				board.memory = memory
 				val tokens = splitTokens(options ?: "")
 				for (field in type.fields) {
 					if (field.id == "enabled" || field.id == "rom_file") continue
@@ -114,7 +127,7 @@ object SettingsBoards {
 		}
 		return units.map { (key, board) ->
 			val (typeId, unit) = key.split('#')
-			BoardUnit(typeId, unit.toInt(), board.romFile, board.entry, board.fields, board.extras)
+			BoardUnit(typeId, unit.toInt(), board.romFile, board.entry, board.fields, board.extras, board.memory)
 		}
 	}
 
@@ -123,6 +136,7 @@ object SettingsBoards {
 		var romFile: String = ""
 		var fields = LinkedHashMap<String, String>()
 		var extras: List<String> = emptyList()
+		var memory: String? = null
 	}
 
 	/**
@@ -149,6 +163,7 @@ object SettingsBoards {
 			if (unit.entry || unit.romFile.isNotEmpty())
 				lines += "${name}_rom_file=${unit.romFile.ifEmpty { entryValue(type, unit.romFile) }}"
 			if (options.isNotEmpty()) lines += "${name}_rom_options=$options"
+			unit.memory?.let { lines += "${type.id}_mem_size=$it" }
 		}
 		return lines
 	}
@@ -326,21 +341,33 @@ object SettingsBoards {
 object AcceleratorJumpers {
 
 	/**
-	 * The jumpers of [board] the [values] set away from their defaults, as
-	 * the cpuboard_settings line writes them; "" when none is, which writes
-	 * no line at all.
+	 * The jumpers of [board] the [values] set, as the native writer spells
+	 * the cpuboard_settings line: none while every jumper is at its default
+	 * (the settings word is 0, cfgfile.cpp:3404), else every selector's
+	 * position, the first one too (cfgfile.cpp:1785-1814), each switch that
+	 * is on and each text setting with a value.
 	 */
 	fun pack(board: SettingsSchema.AcceleratorBoard, values: Map<String, String>): String {
 		val tokens = mutableListOf<String>()
+		var set = false
 		for (jumper in board.settings) {
-			val value = values[jumper.name] ?: continue
 			when {
-				jumper.selector -> if (value != boardDefault(jumper) && value in jumper.positions) tokens += value
-				jumper.type == "text" -> if (value.isNotEmpty()) tokens += "${jumper.name}=${SettingsBoards.escapeMin(value)}"
-				else -> if (value == "true") tokens += jumper.name
+				jumper.selector -> {
+					val value = values[jumper.name]?.takeIf { it in jumper.positions } ?: boardDefault(jumper)
+					if (value.isNotEmpty()) tokens += value
+					if (value != boardDefault(jumper)) set = true
+				}
+				jumper.type == "text" -> values[jumper.name]?.takeIf { it.isNotEmpty() }?.let {
+					tokens += "${jumper.name}=${SettingsBoards.escapeMin(it)}"
+					set = true
+				}
+				else -> if (values[jumper.name] == "true") {
+					tokens += jumper.name
+					set = true
+				}
 			}
 		}
-		return tokens.joinToString(",")
+		return if (set) tokens.joinToString(",") else ""
 	}
 
 	/** The jumpers of [board] as the packed [line] sets them: the line's tokens by display value. */

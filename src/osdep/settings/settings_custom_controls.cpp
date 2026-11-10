@@ -73,7 +73,11 @@ const std::vector<control>& controls()
 			const char* name = SDL_GetGamepadStringForButton(static_cast<SDL_GamepadButton>(i));
 			out.push_back({name ? name : std::to_string(i), button_labels[i], false, i});
 		}
-		for (int i = 0; i < SDL_GAMEPAD_AXIS_COUNT; i++) {
+		// The left stick's axes are the joystick's own movement: the
+		// mapper gives them their horizontal and vertical events whatever a
+		// custom mapping says (input_get_default_joystick applies custom
+		// axes from the third one on), so they are no control to offer.
+		for (int i = SDL_GAMEPAD_AXIS_RIGHTX; i < SDL_GAMEPAD_AXIS_COUNT; i++) {
 			const char* name = SDL_GetGamepadStringForAxis(static_cast<SDL_GamepadAxis>(i));
 			out.push_back({name ? name : std::to_string(i), axis_labels[i], true, i});
 		}

@@ -176,7 +176,8 @@ object ConfigGenerator {
 		// fields, so a chipset extra loads after the CPU it depends on.
 		// cpuboard_type is written with its jumpers above (the reader needs
 		// the board before the packed line).
-		optionsInLayerOrder(settings.options - "cpuboard_type").forEach { (id, value) -> sb.appendLine("$id=$value") }
+		// cpuboard_settings is the jumpers' line, written above.
+		optionsInLayerOrder(settings.options - "cpuboard_type" - "cpuboard_settings").forEach { (id, value) -> sb.appendLine("$id=$value") }
 
 		// Skip GUI when launched from Android native UI
 		sb.appendLine("use_gui=no")

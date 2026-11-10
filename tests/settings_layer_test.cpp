@@ -873,6 +873,7 @@ void check_descriptors()
 			break;
 		}
 		case AMIBERRY_SETTING_PATH:
+		case AMIBERRY_SETTING_FILE:
 		case AMIBERRY_SETTING_STRING:
 		case AMIBERRY_SETTING_HOTKEY:
 			// Free-form values only need a non-null default string.
@@ -3143,12 +3144,14 @@ void check_hotkeys()
 // port has, and commit hands it to the input code live.
 void check_custom_controls()
 {
-	// The controls (buttons, then axes) and the events they can trigger.
-	CHECK(amiberry_settings_custom_control_count() == SDL_GAMEPAD_BUTTON_COUNT + SDL_GAMEPAD_AXIS_COUNT);
+	// The controls (buttons, then the axes a custom mapping can move: not
+	// the left stick's, which is the joystick's own movement) and the
+	// events they can trigger.
+	CHECK(amiberry_settings_custom_control_count() == SDL_GAMEPAD_BUTTON_COUNT + SDL_GAMEPAD_AXIS_COUNT - 2);
 	const amiberry_settings_custom_control* south = amiberry_settings_custom_control_at(0);
 	CHECK(south && !std::strcmp(south->id, "a") && !south->axis);
-	const amiberry_settings_custom_control* leftx = amiberry_settings_custom_control_at(SDL_GAMEPAD_BUTTON_COUNT);
-	CHECK(leftx && !std::strcmp(leftx->id, "leftx") && leftx->axis);
+	const amiberry_settings_custom_control* rightx = amiberry_settings_custom_control_at(SDL_GAMEPAD_BUTTON_COUNT);
+	CHECK(rightx && !std::strcmp(rightx->id, "rightx") && rightx->axis);
 	CHECK(!amiberry_settings_custom_control_at(amiberry_settings_custom_control_count()));
 	CHECK(amiberry_settings_input_event_count() == 3);
 	CHECK(!std::strcmp(amiberry_settings_input_event_at(1)->value, "Space"));

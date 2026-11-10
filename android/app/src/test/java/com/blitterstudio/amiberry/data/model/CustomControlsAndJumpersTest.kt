@@ -124,9 +124,10 @@ class CustomControlsAndJumpersTest {
 	}
 
 	@Test
-	fun `an inverted switch packs by its name like any other`() {
+	fun `an inverted switch packs by its name, the selector at its first position`() {
 		val board = schema.acceleratorBoard("Blizzard1230IV")!!
-		assertEquals("clock", AcceleratorJumpers.pack(board, mapOf("clock" to "true")))
+		// The native writer spells every selector once any jumper is set.
+		assertEquals("off,clock", AcceleratorJumpers.pack(board, mapOf("clock" to "true")))
 	}
 
 	@Test

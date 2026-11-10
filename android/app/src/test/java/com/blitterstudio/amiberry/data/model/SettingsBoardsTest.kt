@@ -127,6 +127,18 @@ class SettingsBoardsTest {
 	}
 
 	@Test
+	fun `a board's memory line stays with the board and goes with it`() {
+		val units = parse("a2091_rom_file=:NOROM", "a2091_mem_size=8")
+		assertEquals("8", units.single().memory)
+		assertTrue("a2091_mem_size=8" in SettingsBoards.render(schema, units))
+		// Removed, the board takes its memory line along.
+		assertTrue(SettingsBoards.render(schema, emptyList()).none { it.startsWith("a2091_mem_size") })
+		// A non-zero size alone is a board, as the reader makes one of it.
+		assertEquals(1, parse("a2091_mem_size=8").size)
+		assertEquals(emptyList<BoardUnit>(), parse("a2091_mem_size=0"))
+	}
+
+	@Test
 	fun `a second unit's lines carry its number`() {
 		val units = parse("a2091-2_rom_file=:NOROM")
 		assertEquals(1, units.size)

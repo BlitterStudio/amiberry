@@ -173,6 +173,17 @@ class PresetMachineTest {
 	}
 
 	@Test
+	fun `a preset's accelerator jumpers are the editor's, written once`() {
+		val draco = EmulatorSettings.fromModel(requireNotNull(AmigaModel.find("macrosystem")))
+		assertEquals("true", draco.acceleratorJumpers["pckbd"])
+		assertNull(draco.options["cpuboard_settings"])
+
+		val rev4 = draco.copy(acceleratorJumpers = draco.acceleratorJumpers + ("hwrev" to "4"))
+		val lines = ConfigGenerator.generate(rev4).lines().filter { it.startsWith("cpuboard_settings=") }
+		assertEquals(listOf("cpuboard_settings=4,pckbd"), lines)
+	}
+
+	@Test
 	fun `picking a sub-1 MB fast RAM size clears the MB size`() {
 		val small = EmulatorSettings(fastRam = 2).withOption("fastmem_size_k", "256")
 		assertEquals(0, small.fastRam)
