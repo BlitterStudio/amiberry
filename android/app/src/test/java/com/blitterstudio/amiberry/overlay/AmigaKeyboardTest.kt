@@ -1,6 +1,7 @@
 package com.blitterstudio.amiberry.overlay
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -13,7 +14,7 @@ class AmigaKeyboardTest {
 
 	private val posted = mutableListOf<Pair<Int, Boolean>>()
 
-	private fun keyboard() = AmigaKeyboardModel { code, pressed -> posted.add(code to pressed) }
+	private fun keyboard() = AmigaKeyboardModel(post = { code, pressed -> posted.add(code to pressed) })
 
 	private fun key(code: Int): AmigaKey =
 		AmigaKeyboardLayout.ALL_KEYS.first { it.code == code }
@@ -121,6 +122,37 @@ class AmigaKeyboardTest {
 		keyboard.touchCancelled(shift)
 		assertTrue(0x60 in keyboard.latched)
 		assertEquals(listOf(0x60 to false, 0x60 to true), posted.takeLast(2))
+	}
+
+	@Test
+	fun `caps lock is a plain key when the keyboard model has no caps led`() {
+		// The UAE keyboard model's status follows the host keyboard's Caps,
+		// so nothing can show this keyboard's own Caps back (see
+		// KeyboardOptions.capsLatches): every tap is one toggle of the
+		// Amiga's Caps, and a held Caps comes up like any key.
+		val keyboard = AmigaKeyboardModel({ code, pressed -> posted.add(code to pressed) }, capsLatches = false)
+		val caps = key(AmigaKey.CAPS_LOCK)
+		keyboard.touchDown(caps)
+		keyboard.touchUp(caps)
+		assertEquals(listOf(0x62 to true, 0x62 to false), posted)
+		keyboard.syncCapsLock(true)
+		assertTrue(keyboard.down.isEmpty())
+		assertTrue(keyboard.latched.isEmpty())
+		keyboard.touchDown(caps)
+		keyboard.releaseAll()
+		assertEquals(0x62 to false, posted.last())
+		assertTrue(keyboard.down.isEmpty())
+	}
+
+	@Test
+	fun `only the MCU keyboard models latch caps lock`() {
+		fun options(vararg pairs: Pair<String, String>) =
+			pairs.associate { (id, value) -> id to SettingState(value, true) }
+		assertFalse(KeyboardOptions.from(options()).capsLatches)
+		assertFalse(KeyboardOptions.from(options(KeyboardOptions.KEYBOARD_TYPE to "UAE")).capsLatches)
+		assertFalse(KeyboardOptions.from(options(KeyboardOptions.KEYBOARD_TYPE to "disconnected")).capsLatches)
+		assertTrue(KeyboardOptions.from(options(KeyboardOptions.KEYBOARD_TYPE to "a500_6570-036")).capsLatches)
+		assertTrue(KeyboardOptions.from(options(KeyboardOptions.KEYBOARD_TYPE to "a1200_6805")).capsLatches)
 	}
 
 	@Test

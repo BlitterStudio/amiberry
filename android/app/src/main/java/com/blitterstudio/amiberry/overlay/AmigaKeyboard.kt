@@ -149,7 +149,11 @@ object AmigaKeyboardLayout {
  * down until it is tapped again. Every press is released: [releaseAll] lets
  * go of everything when the keyboard hides.
  */
-class AmigaKeyboardModel(private val post: (code: Int, pressed: Boolean) -> Unit) {
+class AmigaKeyboardModel(
+	private val post: (code: Int, pressed: Boolean) -> Unit,
+	/** Set before the keyboard shows (see [syncCapsLock]): only keyboards whose LED follows the guest's Caps state can latch it. */
+	var capsLatches: Boolean = true
+) {
 	/** Keys down, whether touched or latched. */
 	val down = mutableStateSetOf<Int>()
 	/** Modifiers and Caps Lock held down by a tap. */
@@ -160,7 +164,7 @@ class AmigaKeyboardModel(private val post: (code: Int, pressed: Boolean) -> Unit
 
 	/** A finger went down on the key. */
 	fun touchDown(key: AmigaKey) {
-		when (key.behaviour) {
+		when (behaviour(key)) {
 			AmigaKey.Behaviour.PLAIN ->
 				if (key.code !in down) send(key.code, pressed = true)
 			AmigaKey.Behaviour.MODIFIER, AmigaKey.Behaviour.TOGGLE -> {
@@ -171,6 +175,11 @@ class AmigaKeyboardModel(private val post: (code: Int, pressed: Boolean) -> Unit
 		}
 	}
 
+	/** How [key] behaves here: with the UAE keyboard model Caps Lock is a plain key, for nothing reflects its state back (see [syncCapsLock]). */
+	private fun behaviour(key: AmigaKey) =
+		if (key.code == AmigaKey.CAPS_LOCK && !capsLatches) AmigaKey.Behaviour.PLAIN else key.behaviour
+
+
 	private fun setLatched(code: Int, on: Boolean) {
 		if (on) latched.add(code) else latched.remove(code)
 		send(code, pressed = on)
@@ -179,7 +188,7 @@ class AmigaKeyboardModel(private val post: (code: Int, pressed: Boolean) -> Unit
 	/** The finger lifted (or left the key). */
 	fun touchUp(key: AmigaKey) {
 		toggledByTouch.remove(key.code)
-		if (key.behaviour != AmigaKey.Behaviour.PLAIN || key.code !in down) return
+		if (behaviour(key) != AmigaKey.Behaviour.PLAIN || key.code !in down) return
 		send(key.code, pressed = false)
 		// One key typed with the latched modifiers: they come up after it.
 		for (code in latched.toSortedSet()) {
@@ -196,7 +205,7 @@ class AmigaKeyboardModel(private val post: (code: Int, pressed: Boolean) -> Unit
 	 * for the next key.
 	 */
 	fun touchCancelled(key: AmigaKey) {
-		when (key.behaviour) {
+		when (behaviour(key)) {
 			AmigaKey.Behaviour.PLAIN ->
 				if (key.code in down) send(key.code, pressed = false)
 			AmigaKey.Behaviour.MODIFIER, AmigaKey.Behaviour.TOGGLE -> {
@@ -210,9 +219,17 @@ class AmigaKeyboardModel(private val post: (code: Int, pressed: Boolean) -> Unit
 	/**
 	 * Follows the emulation's Caps Lock (its LED), which a hardware
 	 * keyboard or a restored state can change: the key shows it, and the
-	 * next tap turns it the other way. Nothing is sent.
+	 * next tap turns it the other way. Nothing is sent. Only a keyboard
+	 * model whose LED the guest itself drives (the MCU keyboards, whose
+	 * controller reads the CIA LED back) reflects the keys this keyboard
+	 * sends; the UAE model's status follows the host keyboard's Caps
+	 * instead, so syncing from it would clear a latch this keyboard set,
+	 * and the next tap would send another press instead of the release.
+	 * There [capsLatches] is false and Caps Lock behaves as a plain key:
+	 * one press and release per tap is one toggle of the Amiga's Caps.
 	 */
 	fun syncCapsLock(on: Boolean) {
+		if (!capsLatches) return
 		if ((AmigaKey.CAPS_LOCK in latched) == on) return
 		if (on) {
 			latched.add(AmigaKey.CAPS_LOCK)
@@ -225,15 +242,16 @@ class AmigaKeyboardModel(private val post: (code: Int, pressed: Boolean) -> Unit
 
 	/**
 	 * Lets go of every key, latched modifiers included, when the keyboard
-	 * hides or the emulation stops taking input. Caps Lock stays as it is:
-	 * it is the Amiga's state, not a key held.
+	 * hides or the emulation stops taking input. A latched Caps Lock stays
+	 * as it is: it is the Amiga's state, not a key held (a plain Caps, see
+	 * [syncCapsLock], is a key held like any other and comes up).
 	 */
 	fun releaseAll() {
 		for (code in down.toSortedSet()) {
-			if (code == AmigaKey.CAPS_LOCK) continue
+			if (capsLatches && code == AmigaKey.CAPS_LOCK) continue
 			send(code, pressed = false)
 		}
-		latched.retainAll { it == AmigaKey.CAPS_LOCK }
+		if (capsLatches) latched.retainAll { it == AmigaKey.CAPS_LOCK } else latched.clear()
 		toggledByTouch.clear()
 	}
 

@@ -23,6 +23,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -51,13 +54,27 @@ data class KeyboardOptions(
 	/** "US", "UK", "DE" or "FR", as amiberry.vkbd_language holds. */
 	val layout: String = "US",
 	/** 0..1; amiberry.vkbd_transparency's 0 means the default. */
-	val opacity: Float = 0.85f
+	val opacity: Float = 0.85f,
+	/**
+	 * Whether Caps Lock can latch: only the MCU keyboard models' LED
+	 * follows the guest's own Caps state (the CIA LED), so only they can
+	 * show it back. The UAE model's status follows the host keyboard's
+	 * Caps, which never reflects this keyboard's keys.
+	 */
+	val capsLatches: Boolean = false
 ) {
 	companion object {
 		const val LANGUAGE = "amiberry.vkbd_language"
 		const val NUMPAD = "amiberry.vkbd_numpad"
 		const val TRANSPARENCY = "amiberry.vkbd_transparency"
-		val IDS = listOf(LANGUAGE, NUMPAD, TRANSPARENCY)
+		const val KEYBOARD_TYPE = "keyboard_type"
+		val IDS = listOf(LANGUAGE, NUMPAD, TRANSPARENCY, KEYBOARD_TYPE)
+
+		/** The keyboard models whose controller emulates the Caps LED the guest writes. */
+		private val CAPS_LED_KEYBOARD_TYPES = setOf(
+			"a500_6570-036", "a600_6570-036", "a1000_6500-1", "a1000_6570-036",
+			"a1200_6805", "a2000_8039", "ax000_6570-036"
+		)
 
 		/** The options of the [SettingState]s [OverlayNative.readSettings] returned; unknown values fall back. */
 		fun from(settings: Map<String, SettingState>): KeyboardOptions {
@@ -65,7 +82,8 @@ data class KeyboardOptions(
 			val keypad = settings[NUMPAD]?.value == "true"
 			val percent = settings[TRANSPARENCY]?.value?.toFloatOrNull()
 			val opacity = if (percent != null && percent > 0f) min(percent, 100f) / 100f else 0.85f
-			return KeyboardOptions(keypad = keypad, layout = layout, opacity = opacity)
+			val capsLatches = settings[KEYBOARD_TYPE]?.value in CAPS_LED_KEYBOARD_TYPES
+			return KeyboardOptions(keypad = keypad, layout = layout, opacity = opacity, capsLatches = capsLatches)
 		}
 	}
 }
@@ -88,6 +106,10 @@ fun OverlayKeyboard(
 	modifier: Modifier = Modifier
 ) {
 	val blocks = remember(options.keypad) { blocks(options.keypad) }
+	// The key the D-pad has pressed (Center, Enter, the gamepad's A): the
+	// focus may have moved to another key by the time it comes up, so the
+	// release goes to this one, never to whichever keycap sees the key up.
+	val selected = remember { mutableStateOf<Cell?>(null) }
 	Box(
 		modifier = modifier
 			.fillMaxWidth()
@@ -111,13 +133,20 @@ fun OverlayKeyboard(
 			) {
 				blocks.forEach { block ->
 					Column(verticalArrangement = Arrangement.spacedBy(Gap)) {
+						// Every row has the fixed key height, the empty ones
+						// between Hide and the cursor keys included, so the
+						// cluster lines up with the main block's rows and
+						// D-pad navigation pairs with the right neighbours.
 						block.forEach { row ->
-							Row(horizontalArrangement = Arrangement.spacedBy(Gap)) {
+							Row(
+								horizontalArrangement = Arrangement.spacedBy(Gap),
+								modifier = Modifier.height(unit - Gap)
+							) {
 								row.forEach { cell ->
 									if (cell == null) {
 										Spacer(Modifier.width(unit - Gap).height(unit - Gap))
 									} else {
-										KeyCap(cell, unit, options.layout, model, onHide)
+										KeyCap(cell, unit, options.layout, model, selected, onHide)
 									}
 								}
 							}
@@ -154,6 +183,8 @@ private fun KeyCap(
 	unit: Dp,
 	layout: String,
 	model: AmigaKeyboardModel,
+	/** The key the D-pad holds down, shared by every cap (see [OverlayKeyboard]). */
+	selected: MutableState<Cell?>,
 	onHide: () -> Unit
 ) {
 	val key = cell.key ?: return
@@ -162,6 +193,21 @@ private fun KeyCap(
 	val press = { if (cell.hide) Unit else model.touchDown(key) }
 	val lift = { if (cell.hide) onHide() else model.touchUp(key) }
 	val cancel = { if (cell.hide) Unit else model.touchCancelled(key) }
+	// The select key pressed here; releasing it releases what it pressed,
+	// even if the focus (and so the key-up) has moved to another cap.
+	val selectDown = {
+		if (selected.value == null) {
+			selected.value = cell
+			press()
+		}
+	}
+	val selectUp = {
+		selected.value?.let { held ->
+			selected.value = null
+			if (held.hide) onHide() else model.touchUp(held.key!!)
+		}
+		Unit
+	}
 	val contentColor = if (down) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
 	Box(
 		modifier = Modifier
@@ -176,6 +222,11 @@ private fun KeyCap(
 				}
 			)
 			.dpadFocusIndicator()
+			.onFocusChanged { state ->
+				// The focus moved while the select key was held: what it
+				// pressed comes up, or it would stay down in the Amiga.
+				if (!state.isFocused && selected.value != null) selectUp()
+			}
 			.focusable()
 			.semantics {
 				role = Role.Button
@@ -185,10 +236,10 @@ private fun KeyCap(
 				val select = event.key == Key.DirectionCenter || event.key == Key.Enter
 				when {
 					event.type == KeyEventType.KeyDown && select && event.nativeKeyEvent.repeatCount == 0 -> {
-						press(); true
+						selectDown(); true
 					}
 					event.type == KeyEventType.KeyUp && select -> {
-						lift(); true
+						selectUp(); true
 					}
 					else -> false
 				}

@@ -115,7 +115,7 @@ class OverlayViewModel(application: Application) : AndroidViewModel(application)
 	var recoveryPicking by mutableStateOf(false)
 		private set
 	/** The on-screen keyboard's keys; its posts go through [OverlayNative.key]. */
-	val keyboard = AmigaKeyboardModel { code, pressed -> OverlayNative.key(code, pressed) }
+	val keyboard = AmigaKeyboardModel(post = { code, pressed -> OverlayNative.key(code, pressed) })
 	/** The native on-screen keyboard shows, over the running emulation (android_osk_toggle). */
 	var keyboardVisible by mutableStateOf(false)
 		private set
@@ -243,8 +243,11 @@ class OverlayViewModel(application: Application) : AndroidViewModel(application)
 		capsPolling = viewModelScope.launch {
 			while (isActive) {
 				// The emulation's Caps Lock can change under the view (a
-				// hardware keyboard, a restored state); the key shows it.
-				keyboard.syncCapsLock(OverlayNative.capsLockOn())
+				// hardware keyboard, a restored state); the key shows it —
+				// but only a keyboard model whose LED the guest drives
+				// reflects this keyboard's own Caps, so the poll runs only
+				// while it latches (KeyboardOptions.capsLatches).
+				if (keyboard.capsLatches) keyboard.syncCapsLock(OverlayNative.capsLockOn())
 				delay(STATUS_INTERVAL_MS)
 			}
 		}
@@ -271,7 +274,10 @@ class OverlayViewModel(application: Application) : AndroidViewModel(application)
 		val read = withContext(Dispatchers.IO) {
 			SettingState.parse(ids.toList(), OverlayNative.readSettings(ids))
 		}
-		if (read.isNotEmpty()) keyboardOptions = KeyboardOptions.from(read)
+		if (read.isNotEmpty()) {
+			keyboardOptions = KeyboardOptions.from(read)
+			keyboard.capsLatches = keyboardOptions.capsLatches
+		}
 	}
 
 	fun open(page: OverlayPage, from: String) {
