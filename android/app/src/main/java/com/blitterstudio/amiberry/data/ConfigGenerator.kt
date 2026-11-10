@@ -2,6 +2,7 @@ package com.blitterstudio.amiberry.data
 
 import android.content.Context
 import com.blitterstudio.amiberry.data.model.AcceleratorJumpers
+import com.blitterstudio.amiberry.data.model.CustomControls
 import com.blitterstudio.amiberry.data.model.StoragePaths
 import com.blitterstudio.amiberry.data.model.EmulatorSettings
 import com.blitterstudio.amiberry.data.model.SettingsBoards
@@ -97,15 +98,25 @@ object ConfigGenerator {
 			}
 		}
 
-		// Expansion boards: the units' own lines (SettingsBoards).
+		// Expansion boards: the units' own lines (SettingsBoards), each
+		// unit's options after its entry, as the reader needs it
+		// (cfgfile_read_board_rom creates the entry from the _rom_file line
+		// and reads _rom_options with the entry in hand, cfgfile.cpp:6380).
 		SettingsSchema.current?.let { schema ->
 			SettingsBoards.render(schema, settings.boards).forEach(sb::appendLine)
-			// The accelerator's jumpers: one packed line, as the emulator
-			// writes it (one jumper is no configuration key of its own).
-			val board = schema.acceleratorBoard(settings.optionValue("cpuboard_type") ?: "none")
-			if (board != null) {
-				val packed = AcceleratorJumpers.pack(board, settings.acceleratorJumpers)
-				if (packed.isNotEmpty()) sb.appendLine("cpuboard_settings=$packed")
+		}
+		// The accelerator's board and its jumpers, in the writer's order:
+		// the packed jumpers line is read against the board the file has
+		// selected so far (cfgfile.cpp:7077-7082), so the type comes first.
+		SettingsSchema.current?.let { schema ->
+			val type = settings.optionValue("cpuboard_type") ?: "none"
+			if (type != "none") {
+				sb.appendLine("cpuboard_type=$type")
+				val board = schema.acceleratorBoard(type)
+				if (board != null) {
+					val packed = AcceleratorJumpers.pack(board, settings.acceleratorJumpers)
+					if (packed.isNotEmpty()) sb.appendLine("cpuboard_settings=$packed")
+				}
 			}
 		}
 
@@ -147,9 +158,24 @@ object ConfigGenerator {
 		sb.appendLine("joyport1mousemap=${if (settings.joyport1MouseMap) "1" else "0"}")
 		sb.appendLine("input.joymouse_speed_analog=${settings.analogMouseSpeed}")
 
-		// Custom controls (CustomControls): only what differs from the default.
-		settings.customControls.mappings.keys.sortedBy { it.id }.forEach { key ->
-			sb.appendLine("${key.id}=${settings.customControls.event(key)}")
+		// Custom controls (CustomControls), after the joyport lines they
+		// apply to (load_custom_options reads the port's device,
+		// amiberry_input.cpp:1820-1825). The writer spells every control of
+		// a joystick port, an empty value included (cfgfile.cpp:2847-2880):
+		// the reader applies an empty line as the slot's default
+		// (custom_event_of, amiberry_input.cpp:1790), so an earlier binding
+		// of the port does not survive a control set back to Default.
+		SettingsSchema.current?.let { schema ->
+			val keys = settings.customControls.mappings.keys
+			for (port in keys.map { it.port }.distinct().sorted()) {
+				for (hotkey in listOf(false, true)) {
+					if (keys.none { it.port == port && it.hotkey == hotkey }) continue
+					for (control in schema.customControls) {
+						val key = CustomControls.Key(port, hotkey, control.axis, control.id)
+						sb.appendLine("${key.id}=${settings.customControls.event(key)}")
+					}
+				}
+			}
 		}
 
 		// Amiberry-specific
@@ -166,7 +192,9 @@ object ConfigGenerator {
 		// The schema options without a field (the rest of the preset's machine
 		// and options a configuration had), in the layer's order: after the
 		// fields, so a chipset extra loads after the CPU it depends on.
-		optionsInLayerOrder(settings.options).forEach { (id, value) -> sb.appendLine("$id=$value") }
+		// cpuboard_type is written with its jumpers above (the reader needs
+		// the board before the packed line).
+		optionsInLayerOrder(settings.options - "cpuboard_type").forEach { (id, value) -> sb.appendLine("$id=$value") }
 
 		// Skip GUI when launched from Android native UI
 		sb.appendLine("use_gui=no")

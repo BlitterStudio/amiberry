@@ -141,7 +141,7 @@ private fun BoardRomRow(unit: BoardUnit, viewModel: SettingsViewModel) {
 	val schema = settingsSchema() ?: return
 	val type = schema.boardType(unit.typeId) ?: return
 	val roms by viewModel.availableRoms.collectAsState()
-	val value = unit.romFile
+	val value = SettingsBoards.romFileOf(unit.romFile)
 	FileDropdown(
 		label = type.field("rom_file")?.label
 			?: stringResource(R.string.settings_hardware_boards_rom_automatic),
@@ -163,7 +163,7 @@ private fun BoardFieldRow(unit: BoardUnit, field: SettingsSchema.BoardField, vie
 	val schema = settingsSchema() ?: return
 	val own = viewModel.settings.boards.firstOrNull { it.typeId == unit.typeId && it.unit == unit.unit }
 	val value = when (field.id) {
-		"rom_file" -> own?.romFile ?: ""
+		"rom_file" -> SettingsBoards.romFileOf(own?.romFile ?: unit.romFile)
 		else -> (own?.fields ?: unit.fields)[field.id] ?: field.default
 	}
 	when (field.type) {

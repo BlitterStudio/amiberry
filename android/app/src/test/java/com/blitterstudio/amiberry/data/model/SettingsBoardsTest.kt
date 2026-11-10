@@ -39,11 +39,19 @@ class SettingsBoardsTest {
 					.put(field("autoboot_disabled", "bool", "false"))
 					.put(field("dma24bit", "bool", "false"))
 					.put(field("setting:dma", "bool", "false", "dma"))
+					.put(
+						field("setting:model", "choice", "mk1", "model")
+							.put("choices", JSONArray().put(choice("mk1", "MK I")).put(choice("mk2", "MK II")))
+					)
 			)
 		val pcmcia = JSONObject()
 			.put("id", "pcmcia_mb").put("label", "PCMCIA").put("manufacturer", null)
 			.put("categories", JSONArray().put("internal")).put("units", 1).put("option", "pcmcia")
-			.put("fields", JSONArray().put(field("enabled", "bool", "false")).put(field("rom_file", "path", "")))
+			.put(
+				"fields", JSONArray().put(field("enabled", "bool", "false"))
+					.put(field("rom_file", "path", ""))
+					.put(field("inserted", "bool", "false"))
+			)
 		val xsurf = JSONObject()
 			.put("id", "xsurf").put("label", "X-Surf").put("manufacturer", "Individual Computers")
 			.put("categories", JSONArray().put("network")).put("units", 1)
@@ -107,7 +115,7 @@ class SettingsBoardsTest {
 			"a2091_rom_options=subtype=a2091,id=7,autoboot_disabled=true"
 		)
 		assertEquals(1, units.size)
-		assertEquals(BoardUnit("a2091", 0, "", true, mapOf(
+		assertEquals(BoardUnit("a2091", 0, ":NOROM", true, mapOf(
 			"subtype" to "a2091", "scsi_id" to "7", "autoboot_disabled" to "true"
 		)), units[0])
 	}
@@ -234,11 +242,38 @@ class SettingsBoardsTest {
 
 	@Test
 	fun `the identity lines of known boards are recognised for the parser to drop`() {
-		assertEquals(SettingsBoards.Line.Kind.Drop, SettingsBoards.line("a2091_rom")?.kind)
-		assertEquals(SettingsBoards.Line.Kind.Drop, SettingsBoards.line("a2091_rom_file_id")?.kind)
+		assertEquals(SettingsBoards.Line.Kind.Identity, SettingsBoards.line("a2091_rom")?.kind)
+		assertEquals(SettingsBoards.Line.Kind.Identity, SettingsBoards.line("a2091_rom_file_id")?.kind)
 		assertEquals(SettingsBoards.Line.Kind.Drop, SettingsBoards.line("scsi_a2091")?.kind)
 		assertEquals(SettingsBoards.Line.Kind.Entry, SettingsBoards.line("a2091-3_rom_file")?.kind)
 		assertNull(SettingsBoards.line("unknown_rom_file"))
+	}
+
+	@Test
+	fun `a selector setting writes the position it is on, not its name`() {
+		// cfgfile_write_rom_settings appends the position's configuration
+		// name (cfgfile.cpp:1809-1812) and cfgfile_read_rom_settings looks
+		// for the position tokens (cfgfile.cpp:1722-1725), so the FastATA's
+		// model selector writes "mk2", never "model".
+		var settings = BoardEditor.add(EmulatorSettings(), schema, "a2091")
+		settings = BoardEditor.setField(settings, schema, settings.boards[0], "setting:model", "mk2")
+		assertEquals(
+			listOf("a2091_rom_file=:NOROM", "a2091_rom_options=mk2"),
+			SettingsBoards.render(schema, settings.boards)
+		)
+	}
+
+	@Test
+	fun `a configured built-in board carries the option's entry marker`() {
+		// cdtvcd builds the entry only after the whole file parses (unlike
+		// pcmcia, which makes it while the option parses, cfgfile.cpp:6936),
+		// so the options line needs the :ENABLED entry the writer keeps
+		// (addbcromtype, cfgfile.cpp:6504) before it.
+		val unit = BoardUnit("pcmcia_mb", 0, "", entry = false, fields = mapOf("inserted" to "true"))
+		assertEquals(
+			listOf("pcmcia_mb_rom_file=:ENABLED", "pcmcia_mb_rom_options=inserted=true"),
+			SettingsBoards.render(schema, listOf(unit))
+		)
 	}
 
 	@Test

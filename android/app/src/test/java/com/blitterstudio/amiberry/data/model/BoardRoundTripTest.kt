@@ -87,14 +87,28 @@ class BoardRoundTripTest {
 											JSONObject().put("id", "scsi_id").put("label", "SCSI ID")
 												.put("type", "choice").put("apply", "restart").put("default", "7"),
 											JSONObject().put("id", "autoboot_disabled").put("label", "Disable autoboot")
-												.put("type", "bool").put("apply", "restart").put("default", "false")
+												.put("type", "bool").put("apply", "restart").put("default", "false"),
+											JSONObject().put("id", "setting:model").put("label", "Model")
+												.put("type", "choice").put("apply", "restart").put("default", "mk1")
+												.put("choices", JSONArray(
+													listOf(JSONObject().put("value", "mk1").put("label", "MK I"),
+														JSONObject().put("value", "mk2").put("label", "MK II"))
+												))
 										)
 									)
 								)
 						)
 					)
 				)
-				.put("custom_controls", JSONArray())
+				.put(
+					"custom_controls", JSONArray(
+						listOf(
+							JSONObject().put("id", "south").put("label", "South").put("axis", false),
+							JSONObject().put("id", "east").put("label", "East").put("axis", false),
+							JSONObject().put("id", "righttrigger").put("label", "Right trigger").put("axis", true)
+						)
+					)
+				)
 				.put("input_events", JSONArray())
 				.put(
 					"accelerator_boards", JSONArray(
@@ -193,7 +207,7 @@ class BoardRoundTripTest {
 	}
 
 	@Test
-	fun `the board identity lines are dropped`() {
+	fun `the board identity lines are dropped for a unit the codec owns`() {
 		val file = tempDir.newFile("identity.uae")
 		file.writeText(
 			"""
@@ -205,6 +219,77 @@ class BoardRoundTripTest {
 		val parsed = ConfigParser.parse(file)
 		assertEquals(1, parsed.settings.boards.size)
 		assertTrue(parsed.unknownLines.isEmpty())
+	}
+
+	@Test
+	fun `the board's selector setting survives as its position token`() {
+		var settings = EmulatorSettings()
+		settings = BoardEditor.add(settings, schema, "a2091")
+		settings = BoardEditor.setField(settings, schema, settings.boards[0], "setting:model", "mk2")
+		val text = ConfigGenerator.generate(settings)
+		// The reader looks for the position's token, not the field's name
+		// (cfgfile_read_rom_settings, cfgfile.cpp:1722-1725).
+		assertTrue(text, "a2091_rom_options=mk2" in text.lines())
+		val loaded = roundTrip(settings)
+		assertEquals(mapOf("setting:model" to "mk2"), loaded.settings.boards[0].fields)
+	}
+
+	@Test
+	fun `the accelerator's jumpers line follows the board that owns them`() {
+		var settings = EmulatorSettings().withOption("cpuboard_type", "Blizzard1230IV")
+		settings = settings.copy(acceleratorJumpers = mapOf("maprom" to "true"))
+		val lines = ConfigGenerator.generate(settings).lines()
+		// cfgfile.cpp:7077-7082 reads the packed line against the selected
+		// board, so the type must come first.
+		val type = lines.indexOfFirst { it.startsWith("cpuboard_type=") }
+		val jumpers = lines.indexOfFirst { it.startsWith("cpuboard_settings=") }
+		assertTrue(type in lines.indices)
+		assertEquals(type + 1, jumpers)
+		// And the type is written exactly once.
+		assertEquals(1, lines.count { it.startsWith("cpuboard_type=") })
+	}
+
+	@Test
+	fun `a control set back to Default resets what the port had`() {
+		val south = CustomControls.Key(1, hotkey = false, axis = false, control = "south")
+		val east = CustomControls.Key(1, hotkey = false, axis = false, control = "east")
+		var settings = EmulatorSettings()
+		settings = settings.copy(customControls = settings.customControls.with(east, "Joy2Fire"))
+
+		val lines = ConfigGenerator.generate(settings).lines()
+		// The writer spells every control of a mapped port and mode, an
+		// empty value included (cfgfile.cpp:2847-2880): the reader applies
+		// an empty line as the slot's default (custom_event_of,
+		// amiberry_input.cpp:1790), so a binding an earlier file set on the
+		// port does not survive a Default.
+		assertTrue("joyport1_amiberry_custom_none_south=" in lines)
+		assertTrue("joyport1_amiberry_custom_none_east=Joy2Fire" in lines)
+		// The hotkey mode the user has not mapped writes nothing.
+		assertTrue(lines.none { it.startsWith("joyport1_amiberry_custom_hotkey_") })
+
+		val loaded = roundTrip(settings)
+		// The empty reset line is no mapping.
+		assertEquals(settings.customControls, loaded.settings.customControls)
+	}
+
+	@Test
+	fun `a board identified only by its ROM checksum keeps its identity line`() {
+		val file = tempDir.newFile("crc.uae")
+		file.writeText(
+			"""
+			a2091_rom_file_id=12345678,A590 ROM
+			a2091_rom=A590 ROM
+			""".trimIndent()
+		)
+		val parsed = ConfigParser.parse(file)
+		// The codec owns no unit (no entry, no options), so the identity
+		// lines survive for the reader to resolve (cfgfile_rom,
+		// cfgfile.cpp:6393-6399).
+		assertEquals(emptyList<BoardUnit>(), parsed.settings.boards)
+		assertEquals(
+			listOf("a2091_rom_file_id=12345678,A590 ROM", "a2091_rom=A590 ROM"),
+			parsed.unknownLines
+		)
 	}
 
 	@Test

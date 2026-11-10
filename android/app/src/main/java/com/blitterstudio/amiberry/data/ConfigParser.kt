@@ -76,6 +76,7 @@ object ConfigParser {
 		// lines, collected by their line keys; the accelerator's packed
 		// jumper line waits for the board it belongs to.
 		val boardLines = LinkedHashMap<String, String>()
+		val identityLines = mutableListOf<String>()
 		val customLines = LinkedHashMap<String, String>()
 		var packedJumpers: String? = null
 
@@ -108,9 +109,18 @@ object ConfigParser {
 				// lines (SettingsBoards, CustomControls): consumed here, and
 				// written back by ConfigGenerator. What the schema does not
 				// know stays verbatim below.
-				boardLine != null && boardLine.kind != SettingsBoards.Line.Kind.Drop ->
+				boardLine != null && boardLine.kind == SettingsBoards.Line.Kind.Entry ->
 					boardLines[key] = value
-				boardLine != null -> Unit // the ROM identity the emulator records itself
+				boardLine != null && boardLine.kind == SettingsBoards.Line.Kind.Options ->
+					boardLines[key] = value
+				// A unit's ROM identity lines are dropped when the codec
+				// owns the unit (its entry or options line is there) and
+				// kept verbatim when it does not, so a board a file
+				// identifies only by its ROM checksum survives a save
+				// (cfgfile_rom resolves the checksum into the entry,
+				// cfgfile.cpp:6393-6399).
+				boardLine != null && boardLine.kind == SettingsBoards.Line.Kind.Identity ->
+					identityLines.add(line)
 				CustomControls.lineKey(key) != null -> if (value.isNotEmpty()) customLines[key] = value
 				key == "cpuboard_settings" -> packedJumpers = value
 				key in knownKeys -> kvPairs[key] = value
@@ -145,6 +155,11 @@ object ConfigParser {
 			.copy(options = legacyPresetOptions(kvPairs["amiberry.android_preset"]) + options)
 		val schema = SettingsSchema.current
 		val boards = schema?.let { SettingsBoards.parse(it, boardLines) }.orEmpty()
+		val ownedTypes = boardLines.keys.mapNotNull { SettingsBoards.line(it)?.typeId }.toSet()
+		for (identity in identityLines) {
+			if (SettingsBoards.line(configKey(identity) ?: "")?.typeId !in ownedTypes)
+				unknownLines.add(identity)
+		}
 		val customControls = CustomControls(
 			customLines.entries.associate { (line, event) ->
 				CustomControls.lineKey(line)!! to event

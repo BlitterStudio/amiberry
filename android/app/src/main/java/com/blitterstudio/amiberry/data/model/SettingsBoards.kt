@@ -24,8 +24,9 @@ data class BoardUnit(
 	/** The unit's number below the type's count; 0 is the only one of most types. */
 	val unit: Int,
 	/**
-	 * The board's ROM image, as rom_file holds it: "" while it has none of
-	 * its own (the configuration keeps the :NOROM/:ENABLED marker instead).
+	 * The unit's entry-line value as the configuration keeps it: the ROM
+	 * image, or the ":NOROM"/":ENABLED" marker while it has none of its
+	 * own. [romFileOf] is what the editor shows.
 	 */
 	val romFile: String = "",
 	/**
@@ -55,15 +56,17 @@ object SettingsBoards {
 		val kind: Kind,
 		val value: String
 	) {
-		enum class Kind { Entry, Options, Drop }
+		enum class Kind { Entry, Options, Identity, Drop }
 	}
 
 	/**
 	 * The configuration line [key] spells about an expansion board, when
 	 * the schema knows its type: the unit's entry (`<id>_rom_file`), its
-	 * options (`<id>_rom_options`) or a line the launcher drops because it
-	 * describes what it wrote itself (the ROM identity and checksum the
-	 * emulator records, the accepted-for-compatibility `scsi_<id>` switch).
+	 * options (`<id>_rom_options`), the ROM identity the emulator records
+	 * (`<id>_rom`, `<id>_rom_file_id`; kept for a unit the codec does not
+	 * own, dropped with the layer's rom_file setter otherwise) or a line
+	 * the launcher drops outright (the accepted-for-compatibility
+	 * `scsi_<id>` switch, whose value the reader ignores).
 	 */
 	fun line(key: String, schema: SettingsSchema? = SettingsSchema.current): Line? {
 		val typeId = schema?.boardTypes ?: return null
@@ -73,7 +76,7 @@ object SettingsBoards {
 				when (key) {
 					"${name}_rom_file" -> return Line(type.id, unit, Line.Kind.Entry, "")
 					"${name}_rom_options" -> return Line(type.id, unit, Line.Kind.Options, "")
-					"${name}_rom", "${name}_rom_file_id" -> return Line(type.id, unit, Line.Kind.Drop, "")
+					"${name}_rom", "${name}_rom_file_id" -> return Line(type.id, unit, Line.Kind.Identity, "")
 					"scsi_${type.id}" -> return Line(type.id, 0, Line.Kind.Drop, "")
 				}
 			}
@@ -95,7 +98,7 @@ object SettingsBoards {
 				if (entry == null && options == null) continue
 				val board = units.getOrPut("${type.id}#$unit") { MutableBoard() }
 				board.entry = entry != null
-				board.romFile = romFileOf(entry ?: "")
+				board.romFile = entry ?: ""
 				val tokens = splitTokens(options ?: "")
 				for (field in type.fields) {
 					if (field.id == "enabled" || field.id == "rom_file") continue
@@ -129,9 +132,19 @@ object SettingsBoards {
 		for (unit in units.sortedWith(compareBy({ it.typeId }, { it.unit }))) {
 			val type = schema.boardType(unit.typeId) ?: continue
 			val name = if (unit.unit == 0) type.id else "${type.id}-${unit.unit + 1}"
-			if (unit.entry || unit.romFile.isNotEmpty())
-				lines += "${name}_rom_file=${entryValue(type, unit.romFile)}"
 			val options = renderOptions(type, unit)
+			// A configured board the chipset option puts in the machine, but
+			// whose entry the reader only builds after the whole file parses
+			// (cdtvcd, unlike pcmcia, which makes it while parsing the
+			// option, cfgfile.cpp:6936-6940), needs the entry line first:
+			// the options are read with get_device_rom, which only finds
+			// what exists (cfgfile.cpp:6415). The option's own entry marker
+			// (addbcromtype's ":ENABLED", cfgfile.cpp:6504) is what the
+			// writer keeps for it.
+			if (options.isNotEmpty() && !unit.entry && unit.romFile.isEmpty())
+				lines += "${name}_rom_file=:ENABLED"
+			if (unit.entry || unit.romFile.isNotEmpty())
+				lines += "${name}_rom_file=${unit.romFile.ifEmpty { entryValue(type, unit.romFile) }}"
 			if (options.isNotEmpty()) lines += "${name}_rom_options=$options"
 		}
 		return lines
@@ -156,9 +169,11 @@ object SettingsBoards {
 					when (field.type) {
 						SettingsSchema.TYPE_BOOL -> if (value == "true") tokens += settingToken(field)
 						SettingsSchema.TYPE_CHOICE -> {
-							// The first position is the line's absence.
+							// A selector's positions are bare tokens of their own, whichever is chosen
+							// (cfgfile_write_rom_settings appends the position's name,
+							// cfgfile.cpp:1809-1812); the first is the line's absence.
 							if (value != field.default && field.choices.any { it.value == value })
-								tokens += settingToken(field, value)
+								tokens += value
 						}
 						else -> if (value.isNotEmpty()) tokens += "${settingToken(field)}=${escapeMin(value)}"
 					}
