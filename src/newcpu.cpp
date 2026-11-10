@@ -51,6 +51,7 @@
 #include "cpuboard.h"
 #include "threaddep/thread.h"
 #include "cpu_thread.h"
+#include <algorithm>
 #include <thread>
 #ifdef WITH_X86
 #include "x86.h"
@@ -5951,6 +5952,16 @@ static struct alignas(64) {
 // the CPU thread reads through the mailbox until the chipset moves on.
 #define CPU_THREAD_SNAP_FROZEN_NS 128000
 #define CPU_THREAD_SNAP_CLOCK_READS 1024   // reads between clock checks
+// The CPU on the main thread pays E-clock time for every CIA access (at
+// fastest speed with the JIT about 2 reads per colour clock), a read from the
+// copy costs next to nothing, and in fastest mode the CPU thread runs ahead of
+// the chipset without a bound: CIA-A PRA polling ran 10-17 times as many reads
+// per chipset time, so delay loops reading a CIA and polling loops with an
+// iteration bound shrank by as much. CIA reads from the copy therefore take
+// a budget refilled from the colour clocks published (at most a line's worth
+// kept); without budget they go through the mailbox, which is paced.
+#define CPU_THREAD_SNAP_CIA_PER_TICK 2
+#define CPU_THREAD_SNAP_CIA_BUDGET_TICKS 227
 static struct alignas(64) {
 	uae_u32 v;         // colour clocks published
 } cpu_thread_snap_clock;
@@ -5963,6 +5974,8 @@ static struct alignas(64) {
 	// The regs copy must be at least this new. After an interrupt, a copy
 	// from before INTREQ changed would hide the request.
 	uae_u32 min;
+	int cia_budget;    // CIA reads left
+	uae_u32 cia_clock; // the colour clock it was refilled at
 } cpu_thread_snap_worker;
 
 // 0, or the snapshot group and the register's index in it
@@ -6146,6 +6159,21 @@ static NOINLINE bool cpu_thread_snap_clock_moves()
 	return !w.frozen;
 }
 
+// CPU thread: the CIA read budget ran out. Refill it from the colour clocks
+// published since; true if there are reads again.
+static NOINLINE bool cpu_thread_snap_cia_refill()
+{
+	auto &w = cpu_thread_snap_worker;
+	const uae_u32 clock = __atomic_load_n(&cpu_thread_snap_clock.v, __ATOMIC_RELAXED);
+	const uae_u32 ticks = std::min<uae_u32>(clock - w.cia_clock, CPU_THREAD_SNAP_CIA_BUDGET_TICKS);
+	if (!ticks)
+		return false;
+	w.cia_clock = clock;
+	w.cia_budget = std::min<int>(w.cia_budget + (int)ticks * CPU_THREAD_SNAP_CIA_PER_TICK,
+		CPU_THREAD_SNAP_CIA_BUDGET_TICKS * CPU_THREAD_SNAP_CIA_PER_TICK);
+	return w.cia_budget > 0;
+}
+
 // CPU thread: read from the snapshot if it has a current copy.
 static inline bool cpu_thread_snap_read(const addrbank *ab, uaecptr addr, int size, uae_u32 *out)
 {
@@ -6155,6 +6183,8 @@ static inline bool cpu_thread_snap_read(const addrbank *ab, uaecptr addr, int si
 		return false;
 	auto &w = cpu_thread_snap_worker;
 	if (CPU_THREAD_RARE(w.frozen || !(++w.reads % CPU_THREAD_SNAP_CLOCK_READS)) && !cpu_thread_snap_clock_moves())
+		return false;
+	if (group == CPU_THREAD_SNAP_CIA && w.cia_budget <= 0 && !cpu_thread_snap_cia_refill())
 		return false;
 	uae_u32 *seq = group == CPU_THREAD_SNAP_POS ? &cpu_thread_snap_pos.seq : &cpu_thread_snap_regs.seq;
 	const uae_u32 s = __atomic_load_n(seq, __ATOMIC_ACQUIRE);
@@ -6179,6 +6209,8 @@ static inline bool cpu_thread_snap_read(const addrbank *ab, uaecptr addr, int si
 	__atomic_thread_fence(__ATOMIC_ACQUIRE);
 	if (__atomic_load_n(seq, __ATOMIC_RELAXED) != s)
 		return false;
+	if (group == CPU_THREAD_SNAP_CIA)
+		cpu_thread_snap_worker.cia_budget--;
 	*out = v;
 	return true;
 }

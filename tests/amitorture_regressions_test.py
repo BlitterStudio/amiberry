@@ -1371,6 +1371,26 @@ int main() {
         cpu_thread_snap_publish(true);
     assert(pra_reads == before + 1);
     assert(must(cia_bank, 0xbfe001, 0) == 0xbc);
+    // CIA reads take a budget refilled from the colour clocks published, as
+    // the CPU on the main thread pays E-clock time for each one.
+    while (rd(cia_bank, 0xbfe001, 0, &v)) {}
+    assert(must(custom_bank, 0xdff01e, 1) == 0x0024);      // custom registers have none
+    cpu_thread_snap_publish(true);
+    {
+        int i = 0;
+        while (rd(cia_bank, 0xbfe001, 0, &v))
+            ++i;
+        assert(i == CPU_THREAD_SNAP_CIA_PER_TICK);
+    }
+    for (int t = 0; t < 4 * CPU_THREAD_SNAP_CIA_BUDGET_TICKS; t++)
+        cpu_thread_snap_publish(true);
+    {
+        int i = 0;                                          // at most a line's worth kept
+        while (rd(cia_bank, 0xbfe001, 0, &v))
+            ++i;
+        assert(i == CPU_THREAD_SNAP_CIA_BUDGET_TICKS * CPU_THREAD_SNAP_CIA_PER_TICK);
+    }
+    cpu_thread_snap_publish(true);
     pra_ok = false;                                        // input recording started
     cpu_thread_snap_publish(false);
     assert(!rd(cia_bank, 0xbfe001, 0, &v));
