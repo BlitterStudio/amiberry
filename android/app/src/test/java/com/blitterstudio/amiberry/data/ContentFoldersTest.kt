@@ -146,4 +146,52 @@ class ContentFoldersTest {
 		assertEquals(sounds, ContentFolders.effective("floppy_sounds_dir", conf, external))
 		assertEquals(File("/storage/plugins"), ContentFolders.effective("plugins_dir", conf, external))
 	}
+
+	@Test
+	fun `a dot-relative value resolves against the app's storage, as native loads it`() {
+		val external = tempDir.newFolder("external-relative")
+		val conf = settings("floppy_path=./Floppies/\nfloppy_sounds_dir=./sounds")
+
+		assertEquals(
+			File(external, "Floppies"),
+			ContentFolders.effective("floppy_path", conf, external)
+		)
+		assertEquals(
+			File(external, "sounds"),
+			ContentFolders.effective("floppy_sounds_dir", conf, external)
+		)
+	}
+
+	@Test
+	fun `a dot-dot value resolves above the storage, a bare name stays as it is`() {
+		val external = tempDir.newFolder("external-parent")
+		val sibling = File(external.parentFile, "Elsewhere")
+		val conf = settings("rom_path=../Elsewhere\ncdrom_path=CDs")
+
+		assertEquals(sibling, ContentFolders.effective("rom_path", conf, external))
+		// No "./" prefix is not one of the base-relative spellings; native
+		// leaves it to the working directory, so the folder is not resolved.
+		assertEquals(File("CDs"), ContentFolders.effective("cdrom_path", conf, external))
+	}
+
+	@Test
+	fun `a dot alone names the storage itself and an absolute path stands`() {
+		val external = tempDir.newFolder("external-dot")
+		val absolute = tempDir.newFolder("absolute-disks")
+		val conf = settings("saveimage_dir=./\nharddrive_path=${absolute.path}")
+
+		assertEquals(external, ContentFolders.effective("saveimage_dir", conf, external))
+		assertEquals(absolute, ContentFolders.effective("harddrive_path", conf, external))
+	}
+
+	@Test
+	fun `a relative configurations folder resolves against the storage too`() {
+		val external = tempDir.newFolder("external-config")
+		val conf = settings("config_path=./MyMachines")
+
+		assertEquals(
+			File(external, "MyMachines"),
+			ContentFolders.effective("config_path", conf, external)
+		)
+	}
 }

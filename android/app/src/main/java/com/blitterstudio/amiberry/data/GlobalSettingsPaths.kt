@@ -183,6 +183,26 @@ internal object GlobalSettingsPaths {
 	)
 
 	/**
+	 * A `./x` or `../x` value, as native loads it: resolved against the
+	 * relative path base (target_resolve_relative_path), which on Android
+	 * is the content home — the app's own storage the launcher passes as
+	 * [externalFilesDir]. `./` alone names the base; a bare `x` (no `./`
+	 * prefix) is not one of the base-relative spellings and stays as it is.
+	 * The app's working directory is that same base, so a relative path
+	 * existing only there cannot win over the base join (native's
+	 * working-directory exception cannot fire).
+	 */
+	internal fun resolveBaseRelative(value: String, base: File?): File? {
+		val baseRelative = value.startsWith("./") || value.startsWith("../")
+		if (base == null || !baseRelative) return File(value)
+		return try {
+			File(base, value).toPath().normalize().toFile()
+		} catch (_: Exception) {
+			File(value)
+		}
+	}
+
+	/**
 	 * The resolver for one reading of the settings: every managed path
 	 * resolved over the same lines, so a caller resolving many folders
 	 * reads the file once. What [resolveRoots] and its companions compute.
@@ -238,7 +258,8 @@ internal object GlobalSettingsPaths {
 					continue
 				}
 				if (legacyVisualRoots.any { line.matchesLegacyVisualPath(it) }) continue
-				resolvedRoot = line.value.takeIf { it.isNotEmpty() }?.let(::File)
+				resolvedRoot = line.value.takeIf { it.isNotEmpty() }
+					?.let { resolveBaseRelative(it, externalFilesDir) }
 			}
 
 			val legacyScanRoots = if (key in visualDirectoryNames && suffix != null) {
@@ -280,7 +301,8 @@ internal object GlobalSettingsPaths {
 				) {
 					continue
 				}
-				resolvedRoot = line.value.takeIf { it.isNotEmpty() }?.let(::File)
+				resolvedRoot = line.value.takeIf { it.isNotEmpty() }
+					?.let { resolveBaseRelative(it, externalFilesDir) }
 			}
 			return resolvedRoot
 		}
