@@ -71,14 +71,19 @@ internal object GlobalSettingsPaths {
 	/**
 	 * The amiberry.conf [file] holds, read non-fatally: missing keys keep
 	 * their defaults. Every path value — the base content root included —
-	 * is resolved here, once, the way the native loader resolves each line
-	 * as it reads it (`target_resolve_relative_path`), so no later reader
-	 * can miss it.
+	 * is resolved here, once, as the native loader resolves it
+	 * (`target_resolve_relative_path`), so no later reader can miss it. The
+	 * loader applies an explicit `base_content_path` before the other lines
+	 * (load_amiberry_settings_from_file's first pass), and that moves the
+	 * relative-path base (`home_dir`, `get_relative_path_base`): so the base
+	 * resolves against [base], and every other path against the base in
+	 * effect.
 	 */
 	internal fun readGlobalSettings(file: File?, base: File? = null): GlobalSettings {
 		val settings = GlobalSettings()
 		if (file == null) return settings
 
+		val rawPaths = mutableListOf<ManagedPath>()
 		try {
 			file.forEachLine { rawLine ->
 				val line = rawLine.trim()
@@ -93,7 +98,7 @@ internal object GlobalSettingsPaths {
 					settings.baseContentPath = resolveBaseRelative(value, base)?.path.orEmpty()
 				}
 				if (key in pathSettingKeys) {
-					settings.managedPaths.add(ManagedPath(key, resolveBaseRelative(value, base)?.path.orEmpty()))
+					rawPaths.add(ManagedPath(key, value))
 				}
 				if (key == "shader") {
 					settings.shader = value
@@ -102,6 +107,9 @@ internal object GlobalSettingsPaths {
 		} catch (_: Exception) {
 			// Missing, unreadable, or partially readable settings are non-fatal.
 		}
+		val pathBase = settings.baseContentPath.takeIf { settings.hasBaseContentPath && it.isNotEmpty() }
+			?.let(::File) ?: base
+		rawPaths.mapTo(settings.managedPaths) { ManagedPath(it.key, resolveBaseRelative(it.value, pathBase)?.path.orEmpty()) }
 		return settings
 	}
 

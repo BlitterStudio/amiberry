@@ -250,4 +250,14 @@ class ContentFoldersTest {
 			ContentFolders.effective("floppy_path", conf, external)
 		)
 	}
+
+	@Test
+	fun `a dot-relative override resolves against an explicit base content root`() {
+		val external = tempDir.newFolder("external-explicit-base")
+		val content = tempDir.newFolder("shared-content")
+		// The base moves the relative-path base (home_dir), whichever line comes first.
+		val conf = settings("floppy_path=./MyDisks/\nbase_content_path=${content.path}")
+
+		assertEquals(File(content, "MyDisks"), ContentFolders.effective("floppy_path", conf, external))
+	}
 }
