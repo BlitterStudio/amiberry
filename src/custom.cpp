@@ -7880,9 +7880,12 @@ static void REGPARAM2 custom_wput(uaecptr addr, uae_u32 value)
 		addr &= ~1;
 		custom_wput_1(addr, (value >> 8) | (value & 0xff00), 0);
 		custom_wput_1(addr + 2, (value << 8) | (value & 0x00ff), 0);
+		blitter_cpu_write_nasty();
 		return;
 	}
 	custom_wput_1(addr, value, 0);
+	// the CPU's write may have started a nasty blit or set BLTPRI (the copper's do not come here)
+	blitter_cpu_write_nasty();
 }
 
 static void REGPARAM2 custom_bput(uaecptr addr, uae_u32 value)
