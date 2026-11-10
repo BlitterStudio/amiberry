@@ -869,6 +869,7 @@ Uint64 SDL_GetPerformanceFrequency(void);
 Uint64 SDL_GetTicks(void);
 Uint64 SDL_GetTicksNS(void);
 void SDL_Delay(Uint32 ms);
+void SDL_DelayNS(Uint64 ns);
 
 int SDL_GetVersion(void);
 const char* SDL_GetPlatform(void);
