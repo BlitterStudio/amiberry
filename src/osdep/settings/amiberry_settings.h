@@ -48,7 +48,7 @@
 extern "C" {
 #endif
 
-#define AMIBERRY_SETTINGS_API_VERSION 10
+#define AMIBERRY_SETTINGS_API_VERSION 11
 
 /* Large enough for every value a descriptor can produce, including the
    terminating NUL. */
@@ -395,6 +395,21 @@ AMIBERRY_SETTINGS_API bool amiberry_settings_board_field_available(
 /* Whether the session's expansion boards differ from the running
    emulation's: they take effect when it restarts. */
 AMIBERRY_SETTINGS_API bool amiberry_settings_boards_differ_from_active(const amiberry_settings_session *session);
+
+/*
+ * Where a board unit's "setting:<name>" field keeps its value in the
+ * board's settings word, as the configuration's _rom_options line packs
+ * it (cfgfile_read_rom_settings): a switch takes one bit, a selector the
+ * bits its positions need. A front end that writes configuration files
+ * without a session packs the field itself with this. OK only for a
+ * "setting:" field; UNKNOWN_ID for any other (they keep no bits).
+ */
+AMIBERRY_SETTINGS_API amiberry_settings_status amiberry_settings_board_field_layout(
+	const amiberry_settings_board_type *type, const char *field, int *shift, int *bits, bool *invert);
+/* A built-in controller's chipset option ("pcmcia", "cdtvcd"): the option
+   a front end switches the board through, whose rules the layer owns.
+   NULL for a board that is not built into a machine. */
+AMIBERRY_SETTINGS_API const char *amiberry_settings_board_option(const amiberry_settings_board_type *type);
 
 /*
  * Custom controls: the Amiga input event each button and axis of the

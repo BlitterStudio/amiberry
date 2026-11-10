@@ -54,7 +54,10 @@ object SettingsPages {
 					R.string.settings_change_model_configuration,
 					R.string.settings_compatibility_level -> add(SettingsPage.Overview)
 					R.string.settings_display_resolution_label -> add(SettingsPage.DisplaySound)
-					R.string.settings_storage_hard_drive_label,
+					R.string.settings_hardware_boards_changed,
+				R.string.settings_hardware_accelerator_jumpers -> add(SettingsPage.Hardware)
+				R.string.settings_input_custom_controls_changed -> add(SettingsPage.Input)
+				R.string.settings_storage_hard_drive_label,
 					R.string.settings_change_hard_drive_read_only,
 					R.string.settings_change_hard_drive_boot_priority -> add(SettingsPage.Storage)
 				}

@@ -777,4 +777,32 @@ bool board_field_available(const uae_prefs& p, const context& ctx, std::string_v
 	return f && valid_unit(*t, unit) && available(p, ctx, *t, unit, *f);
 }
 
+amiberry_settings_status board_field_layout(const amiberry_settings_board_type* type, std::string_view field,
+	int* shift, int* bits, bool* invert)
+{
+	const board_type* t = type && type->id ? find_type(type->id) : nullptr;
+	const board_field* f = t ? find_field(*t, field) : nullptr;
+	if (!f || f->kind != FIELD_SETTING)
+		return AMIBERRY_SETTINGS_UNKNOWN_ID;
+	const expansionboardsettings& e = t->ert->settings[f->setting];
+	if (e.type == EXPANSIONBOARD_STRING) {
+		// A text setting keeps no bits; it lives in the entry's configtext.
+		if (shift) *shift = 0;
+		if (bits) *bits = 0;
+		if (invert) *invert = false;
+		return AMIBERRY_SETTINGS_OK;
+	}
+	const board_setting_bits layout = board_setting_bits_of(t->ert->settings, f->setting);
+	if (shift) *shift = layout.shift;
+	if (bits) *bits = layout.bits;
+	if (invert) *invert = e.invert;
+	return AMIBERRY_SETTINGS_OK;
+}
+
+const char* board_option(const amiberry_settings_board_type* type)
+{
+	const board_type* t = type && type->id ? find_type(type->id) : nullptr;
+	return t && t->internal ? t->internal->option : nullptr;
+}
+
 } // namespace amiberry_settings

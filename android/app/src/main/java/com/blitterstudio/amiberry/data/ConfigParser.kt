@@ -4,7 +4,10 @@ import android.util.Log
 import com.blitterstudio.amiberry.data.model.AmigaModel
 import com.blitterstudio.amiberry.data.model.EmulatorSettings
 import com.blitterstudio.amiberry.data.model.EmulatorSettingsConstraints
+import com.blitterstudio.amiberry.data.model.AcceleratorJumpers
+import com.blitterstudio.amiberry.data.model.CustomControls
 import com.blitterstudio.amiberry.data.model.HardDrive
+import com.blitterstudio.amiberry.data.model.SettingsBoards
 import com.blitterstudio.amiberry.data.model.SettingsSchema
 import java.io.File
 import java.io.IOException
@@ -69,6 +72,12 @@ object ConfigParser {
 		// uaehf=hdf lines, deferred until the whole file is scanned: a uaehf only duplicates
 		// a hardfile2 mount when we actually adopted a hardfile2 on the same controller.
 		val uaehfHdfLines = mutableListOf<Pair<String, String?>>()
+		// Expansion board lines (SettingsBoards) and the custom control
+		// lines, collected by their line keys; the accelerator's packed
+		// jumper line waits for the board it belongs to.
+		val boardLines = LinkedHashMap<String, String>()
+		val customLines = LinkedHashMap<String, String>()
+		var packedJumpers: String? = null
 
 		for (line in lines) {
 			val trimmed = line.trim()
@@ -82,6 +91,7 @@ object ConfigParser {
 
 			val key = trimmed.substring(0, eqIndex).trim().lowercase()
 			val value = trimmed.substring(eqIndex + 1).trim()
+			val boardLine = SettingsBoards.line(key)
 
 			when {
 				key == "hardfile2" -> {
@@ -94,6 +104,15 @@ object ConfigParser {
 					}
 				}
 				isUaehfHdf(key, value) -> uaehfHdfLines.add(line to uaehfController(value))
+				// The expansion boards and custom controls keep their own
+				// lines (SettingsBoards, CustomControls): consumed here, and
+				// written back by ConfigGenerator. What the schema does not
+				// know stays verbatim below.
+				boardLine != null && boardLine.kind != SettingsBoards.Line.Kind.Drop ->
+					boardLines[key] = value
+				boardLine != null -> Unit // the ROM identity the emulator records itself
+				CustomControls.lineKey(key) != null -> if (value.isNotEmpty()) customLines[key] = value
+				key == "cpuboard_settings" -> packedJumpers = value
 				key in knownKeys -> kvPairs[key] = value
 				isMapOption(key) -> options[key] = value
 				else -> unknownLines.add(line)
@@ -124,10 +143,35 @@ object ConfigParser {
 		// A file's own keys win over what its preset record fills in.
 		val settings = buildSettings(kvPairs, hardDrives)
 			.copy(options = legacyPresetOptions(kvPairs["amiberry.android_preset"]) + options)
+		val schema = SettingsSchema.current
+		val boards = schema?.let { SettingsBoards.parse(it, boardLines) }.orEmpty()
+		val customControls = CustomControls(
+			customLines.entries.associate { (line, event) ->
+				CustomControls.lineKey(line)!! to event
+			}
+		)
+		// The packed jumper line unpacks against the board the file names;
+		// one the schema does not know keeps its line verbatim.
+		val board = schema?.acceleratorBoard(settings.optionValue("cpuboard_type") ?: "none")
+		var jumpers: Map<String, String> = emptyMap()
+		if (board != null && packedJumpers != null)
+			jumpers = AcceleratorJumpers.unpack(board, packedJumpers!!)
+		else if (packedJumpers != null)
+			unknownLines.add("cpuboard_settings=$packedJumpers")
 		val description = kvPairs["config_description"] ?: ""
 		val category = kvPairs["config_category"] ?: ""
 
-		return ParsedConfig(settings, unknownLines, description, category, kvPairs.keys + options.keys)
+		return ParsedConfig(
+			settings.copy(
+				boards = boards,
+				customControls = customControls,
+				acceleratorJumpers = jumpers
+			),
+			unknownLines,
+			description,
+			category,
+			kvPairs.keys + options.keys
+		)
 	}
 
 	/**

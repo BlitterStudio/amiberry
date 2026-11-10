@@ -1,8 +1,10 @@
 package com.blitterstudio.amiberry.data
 
 import android.content.Context
+import com.blitterstudio.amiberry.data.model.AcceleratorJumpers
 import com.blitterstudio.amiberry.data.model.StoragePaths
 import com.blitterstudio.amiberry.data.model.EmulatorSettings
+import com.blitterstudio.amiberry.data.model.SettingsBoards
 import com.blitterstudio.amiberry.data.model.SettingsSchema
 import java.io.File
 
@@ -95,6 +97,18 @@ object ConfigGenerator {
 			}
 		}
 
+		// Expansion boards: the units' own lines (SettingsBoards).
+		SettingsSchema.current?.let { schema ->
+			SettingsBoards.render(schema, settings.boards).forEach(sb::appendLine)
+			// The accelerator's jumpers: one packed line, as the emulator
+			// writes it (one jumper is no configuration key of its own).
+			val board = schema.acceleratorBoard(settings.optionValue("cpuboard_type") ?: "none")
+			if (board != null) {
+				val packed = AcceleratorJumpers.pack(board, settings.acceleratorJumpers)
+				if (packed.isNotEmpty()) sb.appendLine("cpuboard_settings=$packed")
+			}
+		}
+
 		// Sound
 		sb.appendLine("sound_output=${settings.soundOutput}")
 		sb.appendLine("sound_frequency=${settings.soundFreq}")
@@ -132,6 +146,11 @@ object ConfigGenerator {
 		sb.appendLine("joyport0mousemap=${if (settings.joyport0MouseMap) "1" else "0"}")
 		sb.appendLine("joyport1mousemap=${if (settings.joyport1MouseMap) "1" else "0"}")
 		sb.appendLine("input.joymouse_speed_analog=${settings.analogMouseSpeed}")
+
+		// Custom controls (CustomControls): only what differs from the default.
+		settings.customControls.mappings.keys.sortedBy { it.id }.forEach { key ->
+			sb.appendLine("${key.id}=${settings.customControls.event(key)}")
+		}
 
 		// Amiberry-specific
 		sb.appendLine("amiberry.onscreen_joystick=${settings.onScreenJoystick.toCfg()}")

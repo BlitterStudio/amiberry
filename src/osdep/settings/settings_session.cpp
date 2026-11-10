@@ -599,6 +599,22 @@ bool amiberry_settings_board_field_available(const amiberry_settings_session* se
 	});
 }
 
+amiberry_settings_status amiberry_settings_board_field_layout(const amiberry_settings_board_type* type,
+	const char* field, int* shift, int* bits, bool* invert)
+{
+	if (!type || !field)
+		return AMIBERRY_SETTINGS_UNKNOWN_ID;
+	return amiberry_settings::no_throw(AMIBERRY_SETTINGS_UNKNOWN_ID, [=] {
+		return amiberry_settings::board_field_layout(type, field, shift, bits, invert);
+	});
+}
+
+const char* amiberry_settings_board_option(const amiberry_settings_board_type* type)
+{
+	return amiberry_settings::no_throw(static_cast<const char*>(nullptr),
+		[type] { return amiberry_settings::board_option(type); });
+}
+
 size_t amiberry_settings_custom_control_count(void)
 {
 	return amiberry_settings::no_throw(size_t{0}, [] { return amiberry_settings::custom_control_count(); });

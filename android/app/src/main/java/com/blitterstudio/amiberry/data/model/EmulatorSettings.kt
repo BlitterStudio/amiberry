@@ -57,6 +57,10 @@ data class EmulatorSettings(
 	// Hard drives (hardfiles)
 	val hardDrives: List<HardDrive> = emptyList(),
 
+	// The expansion boards the configuration lists (SettingsBoards; machine
+	// hardware: a model change replaces them, as it replaces the memory).
+	val boards: List<BoardUnit> = emptyList(),
+
 	// Sound
 	val soundOutput: String = "exact",  // none, interrupts, normal, exact
 	val soundFreq: Int = EmulatorSettingsConstraints.DEFAULT_SOUND_FREQUENCY,
@@ -109,6 +113,11 @@ data class EmulatorSettings(
 	/** Pointer speed when the left stick drives the mouse (input.joymouse_speed_analog). */
 	val analogMouseSpeed: Int = EmulatorSettingsConstraints.DEFAULT_ANALOG_MOUSE_SPEED,
 
+	// The port mappings that outlive a model change (how the user plays).
+	val customControls: CustomControls = CustomControls(),
+	/** The accelerator jumpers by name, as the cpuboard_settings line packs them (AcceleratorJumpers). */
+	val acceleratorJumpers: Map<String, String> = emptyMap(),
+
 	/**
 	 * The schema options without a field of their own (see [FIELD_IDS]):
 	 * option ID to .uae value, as a preset sets them or a configuration file
@@ -158,6 +167,7 @@ data class EmulatorSettings(
 		val state = schemaState(schema)
 		val transition = schema?.transitions?.of(state, id, stateValue)
 			?: schema?.memoryTransitions?.firstNotNullOfOrNull { it.of(state, id, stateValue) }
+			?: schema?.acceleratorTransitions?.of(state, id, stateValue)
 		if (transition?.refused == true) return this
 		var result = withField(id, value, schema) ?: return this
 		transition?.writes?.forEach { (field, written) ->
@@ -198,6 +208,9 @@ data class EmulatorSettings(
 			id !in machine.options && preset[id] != value && schema?.option(id)?.group in PLAY_GROUPS
 		}
 		return machine.copy(
+			boards = emptyList(),
+			acceleratorJumpers = emptyMap(),
+			customControls = customControls,
 			shader = shader,
 			joyport0 = joyport0,
 			joyport1 = joyport1,
@@ -261,7 +274,7 @@ data class EmulatorSettings(
 			val set = field.set ?: continue
 			preset = set(preset, field.get(this)) ?: preset
 		}
-		return preset.copy(hardDrives = hardDrives)
+		return preset.copy(hardDrives = hardDrives, customControls = customControls)
 	}
 
 	companion object {

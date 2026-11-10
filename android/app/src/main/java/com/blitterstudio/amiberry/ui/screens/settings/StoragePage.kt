@@ -68,6 +68,7 @@ import com.blitterstudio.amiberry.ui.components.settings.SettingSwitchRow
 import com.blitterstudio.amiberry.ui.components.settings.SupportingText
 import com.blitterstudio.amiberry.ui.components.settings.schemaLabel
 import com.blitterstudio.amiberry.ui.components.settings.schemaOption
+import com.blitterstudio.amiberry.ui.components.settings.settingsSchema
 import com.blitterstudio.amiberry.ui.ImportInFlightGuard
 import com.blitterstudio.amiberry.ui.dpadFocusIndicator
 import com.blitterstudio.amiberry.ui.dpadArrowsMoveFocus
@@ -236,9 +237,60 @@ fun StoragePage(
 			}
 		}
 
+		DiskSwapperSection(viewModel, onImportResult)
+
 		SettingsGroups.placementOf(SettingsPage.Storage, "filesystem")?.let { SchemaGroupSection(it, viewModel) }
 	}
 }
+
+/**
+ * The disk swapper: the twenty entries a configuration keeps (diskimage0
+ * to diskimage19), as the Apple editor's growing list — the filled ones
+ * and one empty one to fill next, never fewer while it shows (clearing an
+ * entry to retype it must not take its row away mid-edit). The entries
+ * reach the in-game menu's swapper during emulation.
+ */
+@Composable
+internal fun DiskSwapperSection(
+	viewModel: SettingsViewModel,
+	onImportResult: (FileManager.ImportResult) -> Unit
+) {
+	val schema = settingsSchema() ?: return
+	val settings = viewModel.settings
+	val floppies by viewModel.availableFloppies.collectAsState()
+	val ids = (0 until DISK_SWAPPER_SLOTS).map { "diskimage$it" }
+	val filled = ids.indexOfLast { !(settings.optionValue(it) ?: "").isEmpty() }
+	val shown = ids.take(minOf(filled + 2, ids.count()))
+
+	OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+		Column(modifier = Modifier.padding(16.dp)) {
+			Text(
+				stringResource(R.string.settings_storage_diskswapper_title),
+				style = MaterialTheme.typography.titleMedium
+			)
+			Spacer(modifier = Modifier.height(8.dp))
+			shown.forEach { id ->
+				val index = id.removePrefix("diskimage").toIntOrNull() ?: return@forEach
+				FileDropdown(
+					label = stringResource(R.string.overlay_swapper_slot, index + 1),
+					files = floppies,
+					selectedPath = settings.optionValue(id) ?: "",
+					onSelect = { path -> viewModel.updateSettings { it.withOption(id, path) } },
+					onClear = { viewModel.updateSettings { it.withOption(id, "") } }
+				)
+				Spacer(modifier = Modifier.height(8.dp))
+			}
+			Text(
+				stringResource(R.string.settings_storage_diskswapper_footer),
+				style = MaterialTheme.typography.bodySmall,
+				color = MaterialTheme.colorScheme.onSurfaceVariant
+			)
+		}
+	}
+}
+
+/** The disk swapper entries a configuration keeps (AMIBERRY_ACTIONS_SWAPPER_ENTRIES). */
+internal const val DISK_SWAPPER_SLOTS = 20
 
 /**
  * The Kickstart picker: the scanned ROMs by what they are, with the

@@ -329,6 +329,7 @@ class OverlayViewModel(application: Application) : AndroidViewModel(application)
 		when (target) {
 			is MediaTarget.Floppy -> OverlayNative.insertFloppy(target.drive, path)
 			MediaTarget.Cd -> OverlayNative.insertCd(path)
+			is MediaTarget.Swapper -> setSwapperEntry(target.index, path)
 		}
 		menu = menu.back() ?: OverlayMenu.HOME
 		viewModelScope.launch { refreshSoon() }
@@ -338,12 +339,19 @@ class OverlayViewModel(application: Application) : AndroidViewModel(application)
 		when (target) {
 			is MediaTarget.Floppy -> OverlayNative.ejectFloppy(target.drive)
 			MediaTarget.Cd -> OverlayNative.ejectCd()
+			is MediaTarget.Swapper -> setSwapperEntry(target.index, "")
 		}
 		viewModelScope.launch { refreshSoon() }
 	}
 
 	fun insertSwapperEntry(index: Int, drive: Int) {
 		OverlayNative.insertSwapperEntry(index, drive)
+		viewModelScope.launch { refreshSoon() }
+	}
+
+	/** Fills or clears a swapper slot, as the disk swapper panel's file dialog does. */
+	fun setSwapperEntry(index: Int, path: String) {
+		OverlayNative.setSwapperEntry(index, path)
 		viewModelScope.launch { refreshSoon() }
 	}
 

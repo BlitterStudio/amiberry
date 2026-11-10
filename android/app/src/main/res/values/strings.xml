@@ -210,6 +210,22 @@
     <string name="settings_sound_buffer_option">%1$s (%2$d ms)</string>
 
     <string name="settings_input_port_assignments_title">Port assignments</string>
+    <string name="settings_input_custom_controls_title">Custom controls</string>
+    <string name="settings_input_custom_controls_port">Port</string>
+    <string name="settings_input_custom_controls_port_0">Mouse port</string>
+    <string name="settings_input_custom_controls_port_1">Joystick port</string>
+    <string name="settings_input_custom_controls_port_2">Parallel port 1</string>
+    <string name="settings_input_custom_controls_port_3">Parallel port 2</string>
+    <string name="settings_input_custom_controls_mapping">Mapping</string>
+    <string name="settings_input_custom_controls_alone">Alone</string>
+    <string name="settings_input_custom_controls_hotkey">With the hotkey held</string>
+    <string name="settings_input_custom_controls_none_connected">No joystick is connected to this port.</string>
+    <string name="settings_input_custom_controls_footer">Default leaves a control to what the port\'s mode gives it; None makes it do nothing.</string>
+    <string name="settings_input_custom_controls_value_default">Default</string>
+    <string name="settings_input_custom_controls_value_none">None</string>
+    <string name="settings_input_custom_controls_changed">Custom controls</string>
+    <string name="settings_hardware_boards_changed">Expansion boards</string>
+    <string name="settings_hardware_accelerator_jumpers">Accelerator jumpers</string>
     <string name="settings_input_on_screen_controls_title">On-screen controls</string>
     <string name="settings_input_on_screen_keyboard_toggle">On-screen keyboard toggle button</string>
     <string name="settings_input_on_screen_keyboard_toggle_hint">Gamepad button that shows or hides the on-screen keyboard. Back always hides it.</string>
@@ -236,6 +252,9 @@
     <string name="settings_storage_disk_label">Disk</string>
     <string name="settings_storage_import_disk_image">Import disk image...</string>
     <string name="settings_storage_hard_drives_title">Hard drives</string>
+    <string name="settings_group_diskswapper">Disk swapper</string>
+    <string name="settings_storage_diskswapper_title">Disk swapper</string>
+    <string name="settings_storage_diskswapper_footer">Entries the in-game menu\'s swapper lists during emulation.</string>
     <string name="settings_storage_hard_drive_label">Hard drive %1$d</string>
     <string name="settings_storage_hardfile_label">HDF image</string>
     <string name="settings_storage_import_hardfile">Import HDF image...</string>
@@ -376,6 +395,10 @@
     <string name="overlay_eject">Eject</string>
     <string name="overlay_swapper">Disk swapper</string>
     <string name="overlay_swapper_insert">Into DF%1$d:</string>
+    <string name="overlay_swapper_change">Change disk</string>
+    <string name="overlay_swapper_clear">Clear</string>
+    <string name="overlay_swapper_add">Add disk</string>
+    <string name="overlay_swapper_slot">Slot %1$d</string>
     <string name="overlay_picker_floppy_title">Insert into DF%1$d:</string>
     <string name="overlay_picker_cd_title">Insert a CD</string>
     <string name="overlay_picker_empty_floppy">No disk images in the Floppies folder. Add some in the launcher\'s Files tab.</string>
@@ -430,6 +453,15 @@
     <string name="settings_group_ppc">PowerPC</string>
     <string name="settings_group_rtg">RTG board</string>
     <string name="settings_group_accelerator">Accelerator board</string>
+    <string name="settings_hardware_boards_title">Expansion boards</string>
+    <string name="settings_hardware_boards_empty">No expansion boards.</string>
+    <string name="settings_hardware_boards_add">Add board</string>
+    <string name="settings_hardware_boards_add_title">Add expansion board</string>
+    <string name="settings_hardware_boards_remove">Remove board</string>
+    <string name="settings_hardware_boards_footer">Boards are built when the emulation starts.</string>
+    <string name="settings_hardware_boards_search_hint">Search boards</string>
+    <string name="settings_hardware_boards_no_room">Every slot of this board type is in use</string>
+    <string name="settings_hardware_boards_rom_automatic">Scanned ROM</string>
     <!-- The editor's designed sections (the Apple app's DesignedPages): the
          expert rows sit behind collapsed Advanced disclosures. -->
     <string name="settings_section_on_board_interfaces">On-board interfaces</string>

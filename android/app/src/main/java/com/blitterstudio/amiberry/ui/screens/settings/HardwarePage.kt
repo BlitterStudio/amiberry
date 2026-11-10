@@ -36,6 +36,13 @@ fun HardwarePage(viewModel: SettingsViewModel) {
 		SettingsGroups.byPage.getValue(SettingsPage.Hardware).forEach { placement ->
 			SchemaGroupSection(placement, viewModel, leading = leadingRows(placement.group, viewModel))
 		}
+
+		// The accelerator board (its own collapsed section: the board list
+		// and the jumper codec come from the schema's catalogs, not the
+		// options) and the expansion boards, as the Apple Hardware page
+		// ends with its boards.
+		AcceleratorBoardSection(viewModel)
+		ExpansionBoardsSection(viewModel)
 	}
 }
 

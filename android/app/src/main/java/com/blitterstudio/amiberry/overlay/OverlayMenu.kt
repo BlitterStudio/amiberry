@@ -1,9 +1,11 @@
 package com.blitterstudio.amiberry.overlay
 
-/** What a drive row inserts into. */
+/** What a media row inserts into. */
 sealed interface MediaTarget {
 	data class Floppy(val drive: Int) : MediaTarget
 	data object Cd : MediaTarget
+	/** A disk swapper slot: the picker fills it, an empty path clears it. */
+	data class Swapper(val index: Int) : MediaTarget
 }
 
 /** What a confirmation page asks about. */
@@ -92,5 +94,6 @@ object OverlayKeys {
 	fun insert(target: MediaTarget): String = when (target) {
 		is MediaTarget.Floppy -> "insert_df${target.drive}"
 		MediaTarget.Cd -> "insert_cd"
+		is MediaTarget.Swapper -> "swapper_${target.index}"
 	}
 }

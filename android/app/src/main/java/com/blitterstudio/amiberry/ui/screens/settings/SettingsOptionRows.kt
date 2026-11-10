@@ -39,7 +39,12 @@ object SettingsOptionRows {
 		"joyport0", "joyport1", "joyport1mousemap", "input.joymouse_speed_analog",
 		"amiberry.onscreen_joystick", "amiberry.vkbd_touch_button", "amiberry.vkbd_numpad",
 		"amiberry.shader", "amiberry.scaling_method",
-		"fpu_model", "chipmem_size", "bogomem_size", "sound_max_buff"
+		"fpu_model", "chipmem_size", "bogomem_size", "sound_max_buff",
+		// The accelerator's board and memory: the schema's catalogs carry
+		// the list and the limit, not the option's choices. The boot ROM
+		// stays in the Accelerator section alone: no row of its own shows a
+		// path in All Settings.
+		"cpuboard_type", "cpuboardmem1_size"
 	) + (0..3).map { "floppy${it}sound" }
 
 	/**
@@ -183,6 +188,12 @@ fun SettingsOptionRow(id: String, viewModel: SettingsViewModel, sectionTitle: St
 				}
 			)
 		}
+		// The accelerator board's rows (AcceleratorBoardSection's).
+		"cpuboard_type" -> AcceleratorTypeRow(viewModel)
+		"cpuboardmem1_size" -> settingsSchema()?.acceleratorBoard(
+			settings.optionValue("cpuboard_type") ?: "none"
+		)?.let { board -> AcceleratorMemoryRow(viewModel, board) }
+		"cpuboard_rom_file" -> AcceleratorRomRow(viewModel)
 		// The drive sounds offered: off and the built-in A500 drive (external
 		// samples are kept when stored, not offered).
 		else -> if (id in OFFERED_DRIVE_SOUNDS) {

@@ -75,6 +75,8 @@ fun InputPage(viewModel: SettingsViewModel) {
 		// Not "Input" on the Input page: the section holds autofire, port modes and mouse options.
 		SettingsGroups.placementOf(SettingsPage.Input, "input")?.let { SchemaGroupSection(it, viewModel) }
 
+		CustomControlsSection(viewModel)
+
 		// The keyboard can be driven by a game controller, so its settings stay
 		// on non-touch devices too. The registry rows hide the touch-only ones;
 		// the gamepad toggle is a hotkey option the schema has no list for.

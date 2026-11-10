@@ -94,6 +94,21 @@ object SettingsChangeSummary {
 			optionText("floppy${drive.index}") { file(drive.path(it)) }
 		}
 		optionText("cdimage0") { file(it.cdImage) }
+		// What is no option: the boards, the accelerator's jumpers and the
+		// custom controls keep their own configuration lines.
+		val catalogs = schema
+		if (catalogs != null) {
+			launcher(R.string.settings_hardware_boards_changed) {
+				SettingText.Plain(BoardEditor.summary(catalogs, it))
+			}
+			launcher(R.string.settings_hardware_accelerator_jumpers) {
+				val board = catalogs.acceleratorBoard(it.optionValue("cpuboard_type") ?: "none")
+				SettingText.Plain(board?.let { b -> AcceleratorJumpers.pack(b, it.acceleratorJumpers) } ?: "")
+			}
+		}
+		launcher(R.string.settings_input_custom_controls_changed) {
+			SettingText.Plain(it.customControls.mappings.size.toString())
+		}
 		hardDrives()
 		options()
 	}.changes
