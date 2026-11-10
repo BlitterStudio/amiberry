@@ -2,11 +2,7 @@ package com.blitterstudio.amiberry.ui.screens.settings
 
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.stringResource
 import com.blitterstudio.amiberry.data.model.EmulatorSettings
 import com.blitterstudio.amiberry.data.model.SettingsSchema
@@ -22,30 +18,28 @@ import kotlin.math.roundToInt
 
 /**
  * The section of a settings layer group: the page's own rows for the group
- * ([leading], when the page has some) and then every option of the group
- * that [placed] leaves out (SettingsGroups.options), each as its type's
- * row. Options are named in the section's words (SettingsGroups.labelIn);
- * unavailable rows are dimmed, and why is said once in the footer
- * (SettingsGroups.constraintNotes), [footer]'s own text first. A collapsed
- * section (SettingsGroups.byPage) starts closed. Nothing shows for a group
- * without rows.
+ * ([leading], when the page has some) and then the options the section
+ * takes (SettingsGroups.options), each as its type's row. Options are named
+ * in the section's words (SettingsGroups.labelIn); unavailable rows are
+ * dimmed, and why is said once in the footer (SettingsGroups.constraintNotes),
+ * [footer]'s own text first. A collapsed section (SettingsGroups.byPage)
+ * starts closed, and stays open once opened wherever the user goes (the
+ * editor's view model remembers). Nothing shows for a section without rows.
  */
 @Composable
 fun SchemaGroupSection(
-	group: String,
+	placement: SettingsGroups.Placement,
 	viewModel: SettingsViewModel,
 	placed: Set<String> = SettingsGroups.placed,
-	title: String? = null,
 	footer: String? = null,
-	collapsed: Boolean = SettingsGroups.startsCollapsed(group),
 	leading: (@Composable ColumnScope.() -> Unit)? = null
 ) {
 	val schema = settingsSchema() ?: return
 	val settings = viewModel.settings
 	val state = remember(settings, schema) { settings.schemaState(schema) }
-	val rows = shownOptions(schema, settings, group, placed)
+	val rows = shownOptions(settings, schema, SettingsGroups.options(schema, placement, placed))
 	if (rows.isEmpty() && leading == null) return
-	val sectionTitle = title ?: stringResource(SettingsGroups.titleRes(group))
+	val sectionTitle = stringResource(placement.titleRes)
 	val notes = SettingsGroups.constraintNotes(rows) { SettingsControlAvailability.isAvailable(state, it, schema) }
 	val sectionFooter = (listOfNotNull(footer) + notes).joinToString("\n").ifBlank { null }
 	val content: @Composable ColumnScope.() -> Unit = {
@@ -54,12 +48,11 @@ fun SchemaGroupSection(
 			viewModel.updateSettings { s -> s.withOption(id, value) }
 		}
 	}
-	if (collapsed) {
-		var expanded by rememberSaveable(group) { mutableStateOf(false) }
+	if (placement.collapsed) {
 		CollapsibleSettingsSection(
 			title = sectionTitle,
-			expanded = expanded,
-			onExpandedChange = { expanded = it },
+			expanded = placement.key in viewModel.expandedSections,
+			onExpandedChange = { expanded -> viewModel.setSectionExpanded(placement.key, expanded) },
 			footer = sectionFooter,
 			content = content
 		)
@@ -77,18 +70,20 @@ fun SchemaGroupInlineRows(group: String, viewModel: SettingsViewModel, placed: S
 	val schema = settingsSchema() ?: return
 	val settings = viewModel.settings
 	val state = remember(settings, schema) { settings.schemaState(schema) }
-	SchemaGroupRows(shownOptions(schema, settings, group, placed), settings, state, schema, showReasons = true) { id, value ->
+	SchemaGroupRows(
+		shownOptions(settings, schema, SettingsGroups.options(schema, group, placed)),
+		settings, state, schema, showReasons = true
+	) { id, value ->
 		viewModel.updateSettings { s -> s.withOption(id, value) }
 	}
 }
 
-/** [group]'s options for its rows, without the memory boards that follow boards not in use. */
+/** [options] without the memory boards that follow boards not in use. */
 private fun shownOptions(
-	schema: SettingsSchema,
 	settings: EmulatorSettings,
-	group: String,
-	placed: Set<String>
-): List<SettingsSchema.Option> = SettingsGroups.options(schema, group, placed).filter { option ->
+	schema: SettingsSchema,
+	options: List<SettingsSchema.Option>
+): List<SettingsSchema.Option> = options.filter { option ->
 	SettingsGroups.shows(option.id) { id -> settings.optionValue(id) ?: schema.option(id)?.defaultOnAndroid }
 }
 

@@ -7,58 +7,155 @@ import com.blitterstudio.amiberry.data.model.SettingsSchema
 /**
  * Where the editor's pages (SettingsPage) show the settings layer's options,
  * after the Apple app's pages (apple/Shared/UI/SettingsModel.swift,
- * DesignedPages.swift): each page shows its own rows first, then a section
- * per layer group for the group's options those rows do not show, in the
- * layer's order. An option the schema lists (settings_schema_options.txt)
- * shows exactly once — on the page that owns it (SettingsGroups.pageFor) —
- * and All Settings lists them all again; one the schema has only because a
- * preset sets it does not show, nor one hidden on Android (the schema's
- * hidden_on: settings that do nothing here). The Overview re-shows a few of the Storage
- * page's rows (the first drives) at a glance, as the Apple Overview does.
+ * DesignedPages.swift): each page shows designed sections, and a section is
+ * either a layer group's options no other section takes or exactly the
+ * options it names, so a group can split the way the Apple app splits it
+ * (Hardware's CPU rows and its CPU Advanced disclosure). An option the
+ * schema lists (settings_schema_options.txt) shows exactly once — in one
+ * section of the page that owns it (SettingsGroups.pageFor) — and All
+ * Settings lists them all again, by layer group; one the schema has only
+ * because a preset sets it does not show, nor one hidden on Android (the
+ * schema's hidden_on: settings that do nothing here). The Overview re-shows
+ * a few of the Storage page's rows (the first drives) at a glance and
+ * Hardware re-shows the Overview's Kickstart picker, as the Apple pages do.
  */
 object SettingsGroups {
 
-	/** A group's section on a page; [collapsed] starts closed (options few people change). */
-	data class Placement(val group: String, val collapsed: Boolean = false)
+	/**
+	 * A section of a page: the [group]'s listed options no other section or
+	 * row takes, or exactly [ids] (a designed split, of one group or more).
+	 * [collapsed] starts the section closed — the expert rows, in Apple's
+	 * Advanced disclosures; the editor remembers a section opened
+	 * (SettingsViewModel.expandedSections), whatever page it is on.
+	 */
+	data class Placement(
+		@param:StringRes val titleRes: Int,
+		val group: String? = null,
+		val ids: List<String> = emptyList(),
+		val collapsed: Boolean = false
+	) {
+		/** The section's stable identity (a group has one section; an id list is its own), for remembering it open. */
+		val key: String get() = group ?: ids.joinToString(",")
+	}
 
-	/** The groups each page shows, in order. The Overview's rows are the launcher's own. */
+	/** The sections each page shows, in order. The Overview's rows are the launcher's own. */
 	val byPage: Map<SettingsPage, List<Placement>> = linkedMapOf(
 		SettingsPage.Overview to emptyList(),
-		// Apple's SettingsPage.groups for hardware, without x86 (the launcher's
-		// layer has none): the empty sections (ppc, accelerator, rtg) show nothing.
+		// Apple's designed Hardware page (audit §3a): CPU, Chipset, Memory,
+		// ROMs and Expansions, the on-board interfaces the layer still lists,
+		// then the expert rows in collapsed Advanced sections at the bottom.
+		// The accelerator/RTG/PPC groups are preset_only here, so they have no
+		// section (their options show nowhere).
 		SettingsPage.Hardware to listOf(
-			Placement("cpu"), Placement("mmu"), Placement("fpu"), Placement("cpu_speed"), Placement("jit"),
-			Placement("chipset"), Placement("adv_chipset", collapsed = true), Placement("memory"), Placement("rom"),
-			Placement("accelerator"), Placement("rtg"), Placement("expansions"), Placement("ppc"),
-			Placement("genlock", collapsed = true)
+			Placement(R.string.settings_group_cpu, group = "cpu"),
+			Placement(R.string.settings_group_chipset, group = "chipset"),
+			Placement(R.string.settings_group_memory, group = "memory"),
+			Placement(R.string.settings_group_rom, group = "rom"),
+			Placement(R.string.settings_group_expansions, group = "expansions"),
+			Placement(
+				R.string.settings_section_on_board_interfaces,
+				ids = listOf("pcmcia", "ide", "scsi_a3000", "scsi_a4000t"),
+				collapsed = true
+			),
+			Placement(
+				R.string.settings_section_cpu_advanced,
+				ids = listOf(
+					"cpu_throttle", "cpu_multiplier", "amiberry.cpu_idle", "cpu_threaded",
+					"cachesize", "compfpu", "comp_constjump", "comp_flushmode", "comp_nf",
+					"comp_catchfault", "comp_trustbyte",
+					"cpu_no_unimplemented", "cpu_data_cache", "mmu_model",
+					"fpu_strict", "fpu_softfloat", "fpu_no_unimplemented"
+				),
+				collapsed = true
+			),
+			Placement(
+				R.string.settings_section_chipset_advanced,
+				ids = listOf("waiting_blits", "keyboard_type", "keyboard_nkro", "display_optimizations", "hvcsync"),
+				collapsed = true
+			),
+			// The adv_chipset group minus its on-board interfaces: the
+			// compatibility internals the presets and chipset_compatible set.
+			Placement(R.string.settings_group_adv_chipset, group = "adv_chipset", collapsed = true),
+			Placement(
+				R.string.settings_section_memory_advanced,
+				ids = listOf("z3mapping", "a3000mem_size", "mbresmem_size", "megachipmem_size"),
+				collapsed = true
+			),
+			Placement(
+				R.string.settings_section_rom_advanced,
+				ids = listOf("boot_rom_uae", "uaeboard", "kickshifter"),
+				collapsed = true
+			),
+			Placement(R.string.settings_group_genlock, group = "genlock", collapsed = true)
 		),
 		SettingsPage.DisplaySound to listOf(
 			// The page's own Display card comes first; the technical rows start closed.
-			Placement("display", collapsed = true),
-			Placement("filter"),
-			Placement("sound")
+			Placement(R.string.settings_section_display_advanced, group = "display", collapsed = true),
+			Placement(R.string.settings_group_filter, group = "filter"),
+			Placement(R.string.settings_group_sound, group = "sound")
 		),
-		SettingsPage.Input to listOf(Placement("input"), Placement("onscreen")),
-		SettingsPage.Storage to listOf(Placement("floppy"), Placement("cd"), Placement("filesystem")),
-		SettingsPage.PortsMisc to listOf(Placement("misc"), Placement("io"))
+		SettingsPage.Input to listOf(
+			Placement(R.string.settings_input_controller_options_title, group = "input"),
+			Placement(R.string.settings_input_on_screen_controls_title, group = "onscreen")
+		),
+		SettingsPage.Storage to listOf(
+			// The floppy and cd groups are the Storage page's own drive cards
+			// (their rows show inside them); the placements name the page that
+			// owns the groups.
+			Placement(R.string.settings_group_floppy, group = "floppy"),
+			Placement(R.string.settings_group_cd, group = "cd"),
+			Placement(R.string.settings_group_filesystem, group = "filesystem")
+		),
+		// Apple's Ports & Misc sections (audit §3a) on the options the layer
+		// offers here: the misc group split by purpose, the io group's dongle
+		// its own section.
+		SettingsPage.PortsMisc to listOf(
+			Placement(R.string.settings_section_status_line, ids = listOf("show_leds", "show_leds_rtg", "power_led_dim")),
+			Placement(R.string.settings_section_copy_protection, group = "io"),
+			Placement(R.string.settings_section_startup, ids = listOf("cpu_reset_pause", "warpboot")),
+			Placement(R.string.settings_section_host_integration, ids = listOf("clipboard_sharing", "synchronize_clock")),
+			Placement(R.string.settings_section_keyboard, ids = listOf("amiberry.right_control_is_right_win")),
+			Placement(
+				R.string.settings_section_retroarch_buttons,
+				ids = listOf("amiberry.use_retroarch_quit", "amiberry.use_retroarch_menu", "amiberry.use_retroarch_reset")
+			),
+			Placement(
+				R.string.settings_section_protection,
+				ids = listOf("floppy_write_protect", "harddrive_write_protect")
+			),
+			Placement(
+				R.string.settings_section_compatibility,
+				ids = listOf("uae_hide_autoconfig", "scsidevice_disable"),
+				collapsed = true
+			),
+			Placement(
+				R.string.settings_section_debug,
+				ids = listOf("log_illegal_mem", "debug_mem", "cpu_halt_auto_reset"),
+				collapsed = true
+			)
+		)
 	)
 
-	/** Every group a page shows, in order; [page] AllSettings names them all, in the layer's order. */
+	/** Every section a page shows; the AllSettings page lists the layer's groups instead, in their order. */
+	fun sectionsOf(page: SettingsPage): List<Placement> =
+		if (page == SettingsPage.AllSettings) emptyList() else byPage.getValue(page)
+
+	/** The [page]'s section that shows the layer's [group], if it has one. */
+	fun placementOf(page: SettingsPage, group: String): Placement? =
+		byPage[page]?.firstOrNull { it.group == group }
+
+	/** Every group a page's sections take, in order; the AllSettings page names every group the layer has, in the layer's order. */
 	fun groupsOf(page: SettingsPage, schema: SettingsSchema): List<String> =
 		if (page == SettingsPage.AllSettings) schema.options.values.map { it.group }.distinct()
-		else byPage.getValue(page).map { it.group }
-
-	/** Whether [group]'s section starts closed ([Placement.collapsed]). */
-	fun startsCollapsed(group: String): Boolean = byPage.values.any { list -> list.any { it.group == group && it.collapsed } }
+		else byPage.getValue(page).mapNotNull { it.group }
 
 	/** The options each page's own rows show (the launcher's own controls for them). */
 	val laidOut: Map<SettingsPage, Set<String>> = mapOf(
 		// The Kickstart picker; withKickstartRom keeps the extended ROM beside it.
 		SettingsPage.Overview to setOf("kickstart_rom_file", "kickstart_ext_rom_file"),
 		SettingsPage.Hardware to setOf(
-			"cpu_model", "cpu_speed", "cpu_compatible", "cpu_24bit_addressing", "fpu_model",
-			"cachesize", "compfpu",
-			"chipset", "cycle_exact", "immediate_blits", "ntsc", "collision_level",
+			"cpu_model", "cpu_compatible", "cpu_24bit_addressing", "cpu_speed", "fpu_model",
+			"chipset", "chipset_compatible", "cycle_exact", "immediate_blits", "ntsc", "collision_level",
 			"chipmem_size", "bogomem_size", "fastmem_size", "z3mem_size"
 		),
 		SettingsPage.DisplaySound to setOf(
@@ -85,25 +182,34 @@ object SettingsGroups {
 	 */
 	val managed: Set<String> = setOf("amiberry.vkbd_enabled", "joyport0mousemap", "use_gui")
 
-	/** The options no group section shows: the pages' own rows and the [managed] ones. */
-	val placed: Set<String> = laidOut.values.flatten().toSet() + managed
+	/**
+	 * The options no section's rows show: the pages' own rows, the [managed]
+	 * ones and the options a section names by id (its own rows).
+	 */
+	val placed: Set<String> = laidOut.values.flatten().toSet() + managed +
+		byPage.values.flatten().flatMap { it.ids }
+
+	private val idPages: Map<String, SettingsPage> = byPage.entries.flatMap { (page, list) ->
+		list.flatMap { placement -> placement.ids.map { it to page } }
+	}.toMap()
 
 	private val groupPages: Map<String, SettingsPage> = byPage.entries.flatMap { (page, list) ->
-		list.map { it.group to page }
+		list.mapNotNull { placement -> placement.group?.let { it to page } }
 	}.toMap()
 
 	/**
 	 * The page that owns [optionId]: the page whose own rows lay it out,
-	 * else its group's page; null when the schema does not list the option.
+	 * else the section that names it, else its group's page; null when the
+	 * schema does not list the option.
 	 */
 	fun pageFor(optionId: String): SettingsPage? {
 		laidOut.forEach { (page, ids) -> if (optionId in ids) return page }
-		return groupPages[schemaGroupOf(optionId)]
+		return idPages[optionId] ?: groupPages[schemaGroupOf(optionId)]
 	}
 
 	private fun schemaGroupOf(optionId: String): String? = SettingsSchema.current?.option(optionId)?.group
 
-	/** The title of a group's section, worded as the Apple app titles it. */
+	/** The title of a layer group, as All Settings heads the group's rows. */
 	@StringRes
 	fun titleRes(group: String): Int = when (group) {
 		"cpu" -> R.string.settings_group_cpu
@@ -150,9 +256,22 @@ object SettingsGroups {
 	}
 
 	/**
-	 * The options [group]'s section shows: the group's listed options
-	 * [placed] leaves out, in the layer's order. All Settings passes no
-	 * [placed], so it lists every listed option its row can edit.
+	 * The options [placement]'s section shows: exactly its ids, or its
+	 * group's listed options [placed] leaves out, in the layer's order.
+	 */
+	fun options(schema: SettingsSchema, placement: Placement, placed: Set<String> = SettingsGroups.placed): List<SettingsSchema.Option> =
+		if (placement.ids.isNotEmpty()) {
+			placement.ids.mapNotNull { schema.option(it) }
+				.filter { !it.presetOnly && !it.hiddenOnAndroid && it.id !in managed && rowKind(it) != null }
+		} else {
+			options(schema, placement.group.orEmpty(), placed)
+		}
+
+	/**
+	 * The options [group]'s own rows show: the group's listed options
+	 * [placed] leaves out, in the layer's order (a page's drive cards, the
+	 * All Settings list). All Settings passes no [placed], so it lists every
+	 * listed option its row can edit.
 	 */
 	fun options(schema: SettingsSchema, group: String, placed: Set<String> = SettingsGroups.placed): List<SettingsSchema.Option> =
 		schema.options.values.filter { it.group == group && !it.presetOnly && !it.hiddenOnAndroid && it.id !in placed && rowKind(it) != null }

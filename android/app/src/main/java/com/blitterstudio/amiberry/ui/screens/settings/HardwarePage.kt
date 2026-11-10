@@ -2,6 +2,7 @@ package com.blitterstudio.amiberry.ui.screens.settings
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -9,15 +10,16 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.blitterstudio.amiberry.R
 import com.blitterstudio.amiberry.ui.viewmodel.SettingsViewModel
 
 /**
- * The Hardware page: a section per layer group, from the CPU to the genlock
- * (Apple's generated Hardware page), the launcher's own rows first in the
- * groups that have them. The model picker is on the Overview.
+ * The Hardware page: the designed sections of the registry
+ * (SettingsGroups.byPage), as the Apple app's Hardware page is designed
+ * (audit §3a) — CPU, Chipset, Memory, ROMs and Expansions, the on-board
+ * interfaces and the expert rows in collapsed Advanced sections — with the
+ * launcher's own rows leading the sections that have them. The model picker
+ * is on the Overview.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -30,45 +32,50 @@ fun HardwarePage(viewModel: SettingsViewModel) {
 		verticalArrangement = Arrangement.spacedBy(16.dp)
 	) {
 		// Every option's row comes from the registry (SettingsOptionRow), the
-		// same rows All Settings shows.
-		SchemaGroupSection("cpu", viewModel, title = stringResource(R.string.settings_cpu_section_title)) {
+		// same rows All Settings shows, in the registry's order.
+		SettingsGroups.byPage.getValue(SettingsPage.Hardware).forEach { placement ->
+			SchemaGroupSection(placement, viewModel, leading = leadingRows(placement.group, viewModel))
+		}
+	}
+}
+
+/**
+ * The page's own rows a designed section leads with (Apple's §3a layout):
+ * the CPU, Chipset and Memory choices people make, and the Kickstart picker
+ * the Overview shows under ROMs (its row, re-shown here as the Apple
+ * Hardware page shows it). Sections without own rows take their options
+ * from the layer's group alone.
+ */
+private fun leadingRows(group: String?, viewModel: SettingsViewModel): (@Composable ColumnScope.() -> Unit)? = when (group) {
+	"cpu" -> {
+		{
 			SettingsOptionRow("cpu_model", viewModel)
-			SettingsOptionRow("cpu_speed", viewModel)
 			SettingsOptionRow("cpu_compatible", viewModel)
 			SettingsOptionRow("cpu_24bit_addressing", viewModel)
+			SettingsOptionRow("cpu_speed", viewModel)
 			SettingsOptionRow("fpu_model", viewModel)
 		}
-
-		SchemaGroupSection("mmu", viewModel)
-		SchemaGroupSection("fpu", viewModel)
-		SchemaGroupSection("cpu_speed", viewModel)
-
-		SchemaGroupSection("jit", viewModel, title = stringResource(R.string.settings_cpu_jit_section_title)) {
-			SettingsOptionRow("cachesize", viewModel)
-			SettingsOptionRow("compfpu", viewModel)
-		}
-
-		SchemaGroupSection("chipset", viewModel, title = stringResource(R.string.settings_chipset_section_title)) {
+	}
+	"chipset" -> {
+		{
 			SettingsOptionRow("chipset", viewModel)
+			SettingsOptionRow("chipset_compatible", viewModel)
+			SettingsOptionRow("ntsc", viewModel)
 			SettingsOptionRow("cycle_exact", viewModel)
 			SettingsOptionRow("immediate_blits", viewModel)
-			SettingsOptionRow("ntsc", viewModel)
 			SettingsOptionRow("collision_level", viewModel)
 		}
-		SchemaGroupSection("adv_chipset", viewModel)
-
-		SchemaGroupSection("memory", viewModel, title = stringResource(R.string.settings_memory_config_title)) {
+	}
+	"memory" -> {
+		{
 			SettingsOptionRow("chipmem_size", viewModel)
 			SettingsOptionRow("bogomem_size", viewModel)
 			SettingsOptionRow("fastmem_size", viewModel)
 			SettingsOptionRow("z3mem_size", viewModel)
 		}
-
-		SchemaGroupSection("rom", viewModel)
-		SchemaGroupSection("accelerator", viewModel)
-		SchemaGroupSection("rtg", viewModel)
-		SchemaGroupSection("expansions", viewModel)
-		SchemaGroupSection("ppc", viewModel)
-		SchemaGroupSection("genlock", viewModel)
 	}
+	"rom" -> {
+		{ KickstartRomRow(viewModel) }
+	}
+	else -> null
 }

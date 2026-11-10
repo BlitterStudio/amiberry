@@ -8,6 +8,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -69,6 +70,7 @@ import com.blitterstudio.amiberry.data.AppPreferences
 import com.blitterstudio.amiberry.data.model.SettingsSchema
 import com.blitterstudio.amiberry.ui.components.SidePaneEntry
 import com.blitterstudio.amiberry.ui.components.SidePaneList
+import com.blitterstudio.amiberry.ui.components.settings.CollapsibleSettingsSection
 import com.blitterstudio.amiberry.ui.components.settings.SettingSwitchRow
 import com.blitterstudio.amiberry.ui.components.settings.dpadMenuItemInitialFocus
 import com.blitterstudio.amiberry.ui.components.settings.SettingsSection
@@ -84,44 +86,11 @@ import com.blitterstudio.amiberry.ui.windowWidthClass
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.rememberCoroutineScope
 
-/** One page of App Settings: the host settings' groups it holds, in the layer's order. */
-private data class AppSettingsPage(
-	val id: String,
-	@param:StringRes val titleRes: Int,
-	val groups: List<String>
-)
+/** The pages, as the Apple apps' settings group them (AppSettingsSections). */
+private val PAGES = AppSettingsSections.pages
 
-/** The pages, as the Apple apps' settings group them (U12: General, Defaults for new machines, …). */
-private val PAGES = listOf(
-	AppSettingsPage("general", R.string.appsettings_group_general, listOf("global_startup", "global_visual")),
-	// The touch-control defaults are not among them: a launcher machine's
-	// controls are its remembered ones, so they cannot reach it.
-	AppSettingsPage("defaults", R.string.appsettings_group_defaults,
-		listOf("global_input", "global_display", "global_sound", "global_whdload")),
-	// The folders group is here for its log switch; the folder settings
-	// themselves stay in the classic settings window (Advanced) on Android —
-	// the launcher's own repositories do not follow them.
-	AppSettingsPage("advanced", R.string.appsettings_group_advanced,
-		listOf("global_paths", "global_advanced"))
-)
-
-/** The page About & Licences is, after the groups. */
+/** The page About & Licences is, after the sections' pages. */
 private const val ABOUT_PAGE = "about"
-
-/** The section title of a host settings' group. */
-@StringRes
-private fun groupTitle(group: String): Int = when (group) {
-	"global_startup" -> R.string.appsettings_section_startup
-	"global_input" -> R.string.appsettings_section_input_defaults
-	"global_display" -> R.string.appsettings_section_display_defaults
-	"global_sound" -> R.string.appsettings_section_sound_defaults
-	"global_whdload" -> R.string.appsettings_section_whdload
-	"global_touch" -> R.string.appsettings_section_touch_defaults
-	"global_visual" -> R.string.appsettings_section_visual
-	"global_paths" -> R.string.appsettings_section_logging
-	"global_advanced" -> R.string.appsettings_section_advanced
-	else -> R.string.appsettings_group_general
-}
 
 /**
  * App Settings, under the Library's gear: the emulator's own settings
@@ -371,9 +340,10 @@ private fun AppSettingsSearchRow(
 }
 
 /**
- * One page's settings — every group's rows in the layer's order, the
- * launcher's own settings in their cards — or, with a query, every host
- * setting that matches across the pages, a section per page.
+ * One page's settings — its sections' rows, the launcher's own settings in
+ * their cards — or, with a query, every host setting that matches across
+ * the pages, a heading per page. A match inside a collapsed section shows
+ * it: a search never leaves a setting hidden behind its disclosure.
  */
 @Composable
 private fun AppSettingsContent(
@@ -401,17 +371,17 @@ private fun AppSettingsContent(
 			return@Column
 		}
 		val pages = when (pageId) {
-			null -> PAGES.filter { page -> page.groups.any { group ->
-			schema.hostSettings.any { it.group == group && !it.hiddenOnAndroid && it.matches(query) }
-		} }
+			null -> PAGES.filter { page ->
+				page.sections.any { section -> AppSettingsSections.settingsOf(schema, section) { it.matches(query) }.isNotEmpty() }
+			}
 			else -> PAGES.filter { it.id == pageId }
 		}
 		pages.forEach { page ->
 			if (pageId == null) {
 				Text(stringResource(page.titleRes), style = MaterialTheme.typography.titleMedium)
 			}
-			page.groups.forEach { group ->
-				HostGroupSection(group, viewModel, query)
+			page.sections.forEach { section ->
+				HostSection(section, viewModel, query)
 			}
 			// The launcher's own cards are not host settings: they show on the page,
 			// never among a search's matches.
@@ -425,13 +395,16 @@ private fun AppSettingsContent(
 	}
 }
 
-/** The settings of one host settings' group, in the layer's order, narrowed by [query]. */
+/**
+ * One section's settings, in the layer's order, narrowed by [query]. A
+ * collapsed section opens for the search and stays as the user left it
+ * otherwise (AppSettingsViewModel remembers).
+ */
 @Composable
-private fun HostGroupSection(group: String, viewModel: AppSettingsViewModel, query: String) {
-	val options = viewModel.schema?.hostSettings.orEmpty()
-		.filter { it.group == group && !it.hiddenOnAndroid && it.matches(query) }
+private fun HostSection(section: AppSettingsSection, viewModel: AppSettingsViewModel, query: String) {
+	val options = viewModel.schema?.let { AppSettingsSections.settingsOf(it, section) { it.matches(query) } }.orEmpty()
 	if (options.isEmpty()) return
-	SettingsSection(title = stringResource(groupTitle(group))) {
+	val content: @Composable ColumnScope.() -> Unit = {
 		options.forEach { option ->
 			HostSettingRow(
 				option = option,
@@ -442,33 +415,43 @@ private fun HostGroupSection(group: String, viewModel: AppSettingsViewModel, que
 			)
 		}
 	}
-}
-
-/** Whether the setting's label, help or key holds every word of [query]. */
-private fun SettingsSchema.Option.matches(query: String): Boolean {
-	if (query.isBlank()) return true
-	val text = "$label $help $id".lowercase()
-	return query.lowercase().split(Regex("\\s+")).filter { it.isNotBlank() }.all { text.contains(it) }
+	if (section.collapsed && query.isBlank()) {
+		CollapsibleSettingsSection(
+			title = stringResource(section.titleRes),
+			expanded = section.key in viewModel.expandedSections,
+			onExpandedChange = { expanded -> viewModel.setSectionExpanded(section.key, expanded) },
+			content = content
+		)
+	} else {
+		SettingsSection(title = stringResource(section.titleRes), content = content)
+	}
 }
 
 /**
- * The launcher's own app-level settings, in the page they belong: the
- * theme and the Library's state under General, the remembered controls
- * under Defaults, the storage location under Folders. Everything a machine
- * of its own sets stays in the machine editor.
+ * The launcher's own app-level settings, in the page they belong: the app
+ * theme and the in-game menu under Appearance, the remembered controls
+ * under Defaults, the storage location and the Library's state under
+ * Advanced. Everything a machine of its own sets stays in the machine
+ * editor.
  */
 @Composable
 private fun LauncherSettings(page: String, preferences: AppPreferences, viewModel: AppSettingsViewModel) {
 	when (page) {
-		"general" -> GeneralLauncherSettings(preferences)
+		"appearance" -> {
+			AppThemeCard(preferences)
+			InGameMenuCard(preferences)
+		}
 		"defaults" -> RememberedControlsSetting(preferences)
-		"advanced" -> StorageLocationSetting()
+		"advanced" -> {
+			StorageLocationSetting()
+			LibraryCard(preferences)
+		}
 	}
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun GeneralLauncherSettings(preferences: AppPreferences) {
+private fun AppThemeCard(preferences: AppPreferences) {
 	val context = LocalContext.current
 
 	OutlinedCard(modifier = Modifier.fillMaxWidth()) {
@@ -527,7 +510,11 @@ private fun GeneralLauncherSettings(preferences: AppPreferences) {
 			}
 		}
 	}
+}
 
+/** Which menu a game opens: the native overlay's, or the emulator's classic window. */
+@Composable
+private fun InGameMenuCard(preferences: AppPreferences) {
 	OutlinedCard(modifier = Modifier.fillMaxWidth()) {
 		Column(modifier = Modifier.padding(16.dp)) {
 			Text(stringResource(R.string.settings_display_in_game_menu), style = MaterialTheme.typography.titleMedium)
@@ -541,7 +528,11 @@ private fun GeneralLauncherSettings(preferences: AppPreferences) {
 			)
 		}
 	}
+}
 
+/** The Library's own state: the ROM advice it shows, and the launches it remembers. */
+@Composable
+private fun LibraryCard(preferences: AppPreferences) {
 	OutlinedCard(modifier = Modifier.fillMaxWidth()) {
 		Column(modifier = Modifier.padding(16.dp)) {
 			Text(stringResource(R.string.appsettings_library_title), style = MaterialTheme.typography.titleMedium)

@@ -176,11 +176,7 @@
 
     <string name="settings_cpu_model_preset">Amiga model</string>
     <string name="settings_cpu_model_preset_help">Sets the CPU, chipset and memory to the model\'s defaults.</string>
-    <string name="settings_cpu_section_title">CPU</string>
 
-    <string name="settings_chipset_section_title">Chipset</string>
-
-    <string name="settings_memory_config_title">Memory configuration</string>
     <string name="settings_memory_summary_title">Summary</string>
     <string name="settings_memory_summary_total">Total: %1$s</string>
     <string name="settings_memory_value_mb">%1$d MB</string>
@@ -211,7 +207,6 @@
     <string name="settings_display_shader_unavailable_value">%1$s — %2$s</string>
     <string name="settings_display_shader_unavailable_help">The configured shader is unavailable. Choose another shader or restore its file.</string>
 
-    <string name="settings_sound_title">Sound settings</string>
     <string name="settings_sound_buffer_option">%1$s (%2$d ms)</string>
 
     <string name="settings_input_port_assignments_title">Port assignments</string>
@@ -323,7 +318,6 @@
     <string name="settings_value_off">Off</string>
     <string name="settings_value_range">Enter a value from %1$s to %2$s.</string>
     <string name="settings_label_value">%1$s: %2$s</string>
-    <string name="settings_cpu_jit_section_title">JIT compiler</string>
     <string name="settings_sound_volume_title">Volume</string>
     <string name="settings_sound_drive_sounds_title">Drive sounds</string>
     <string name="settings_input_needs_on_screen_joystick">Needs the on-screen joystick.</string>
@@ -436,6 +430,24 @@
     <string name="settings_group_ppc">PowerPC</string>
     <string name="settings_group_rtg">RTG board</string>
     <string name="settings_group_accelerator">Accelerator board</string>
+    <!-- The editor's designed sections (the Apple app's DesignedPages): the
+         expert rows sit behind collapsed Advanced disclosures. -->
+    <string name="settings_section_on_board_interfaces">On-board interfaces</string>
+    <string name="settings_section_cpu_advanced">CPU · Advanced</string>
+    <string name="settings_section_chipset_advanced">Chipset · Advanced</string>
+    <string name="settings_section_memory_advanced">Memory · Advanced</string>
+    <string name="settings_section_rom_advanced">ROMs · Advanced</string>
+    <string name="settings_section_display_advanced">Display · Advanced</string>
+    <string name="settings_section_status_line">Status line</string>
+    <string name="settings_section_copy_protection">Copy protection</string>
+    <string name="settings_section_startup">Startup</string>
+    <string name="settings_section_host_integration">Host integration</string>
+    <string name="settings_section_keyboard">Keyboard</string>
+    <string name="settings_section_retroarch_buttons">RetroArch buttons</string>
+    <string name="settings_section_protection">Protection</string>
+    <string name="settings_section_compatibility">Compatibility</string>
+    <string name="settings_section_debug">Debugging</string>
+
     <!-- The machine editor's pages (the Apple app's SettingsPage) and its marks. -->
     <string name="settings_page_overview">Overview</string>
     <string name="settings_page_hardware">Hardware</string>
@@ -488,7 +500,6 @@
     <string name="recent_launched_just_now">just now</string>
     <string name="summary_rom_missing">Missing: %1$s</string>
     <string name="summary_rom_missing_aros">Missing: %1$s (boots AROS)</string>
-    <string name="settings_display_more_title">More display options</string>
 
     <!-- Settings and Configurations: quick setups, review changes, new configurations -->
     <string name="settings_input_controller_options_title">Autofire, controllers and mouse</string>
@@ -526,16 +537,16 @@
     <string name="appsettings_search_none">No setting matches.</string>
     <string name="appsettings_unavailable">The settings schema could not be read.</string>
     <string name="appsettings_write_failed">The setting could not be saved.</string>
-    <string name="appsettings_group_general">General</string>
+    <string name="appsettings_group_appearance">Appearance</string>
     <string name="appsettings_group_defaults">Defaults for new machines</string>
     <string name="appsettings_group_advanced">Advanced</string>
-    <string name="appsettings_section_startup">GUI (Advanced Settings)</string>
-    <string name="appsettings_section_input_defaults">Input</string>
+    <string name="appsettings_section_visual">Appearance</string>
+    <string name="appsettings_section_controllers_mouse">Controllers &amp; mouse</string>
+    <string name="appsettings_section_default_shortcuts">Default shortcuts</string>
+    <string name="appsettings_section_retroarch_buttons">RetroArch buttons</string>
     <string name="appsettings_section_display_defaults">Display</string>
     <string name="appsettings_section_sound_defaults">Sound</string>
     <string name="appsettings_section_whdload">WHDLoad</string>
-    <string name="appsettings_section_touch_defaults">On-screen controls</string>
-    <string name="appsettings_section_visual">Appearance</string>
     <string name="appsettings_section_advanced">Advanced</string>
     <string name="appsettings_section_logging">Logging</string>
     <string name="appsettings_device_automatic">Automatic</string>

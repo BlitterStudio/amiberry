@@ -185,30 +185,7 @@ fun OverviewPage(
 				)
 			}
 
-			if (!shouldShowStorageFileDropdown(roms, settings.romFile)) {
-				Text(
-					stringResource(R.string.settings_storage_no_roms_found),
-					style = MaterialTheme.typography.bodySmall,
-					color = MaterialTheme.colorScheme.error
-				)
-			} else {
-				FileDropdown(
-					label = schemaLabel("kickstart_rom_file"),
-					files = kickstartRomFiles(roms),
-					selectedPath = settings.romFile,
-					onSelect = { path -> viewModel.updateSettings { s -> s.withKickstartRom(path) } },
-					onClear = { viewModel.updateSettings { s -> s.copy(romFile = "") } },
-					emptyLabel = stringResource(R.string.settings_storage_rom_automatic),
-					extraPaths = if (ModelRomAvailability.hasBuiltInAros(roms)) {
-						listOf(ModelRomAvailability.arosRomFile)
-					} else {
-						emptyList()
-					},
-					help = schemaOption("kickstart_rom_file")?.help?.takeIf { it.isNotBlank() },
-					fileLabel = { romLabel(it) },
-					pathLabel = { path -> romPathLabel(path, roms) }
-				)
-			}
+			KickstartRomRow(viewModel)
 
 			Spacer(modifier = Modifier.height(8.dp))
 

@@ -46,6 +46,19 @@ class AppSettingsViewModel(application: Application) : AndroidViewModel(applicat
 	var notice by mutableStateOf<Int?>(null)
 		private set
 
+	/**
+	 * The collapsed sections the user opened (AppSettingsSection.key):
+	 * remembered while the settings are open, so a disclosure opened for one
+	 * change stays open for the next.
+	 */
+	var expandedSections by mutableStateOf(emptySet<String>())
+		private set
+
+	/** Opens or closes a collapsed section; only the user's own opens are kept. */
+	fun setSectionExpanded(key: String, expanded: Boolean) {
+		expandedSections = if (expanded) expandedSections + key else expandedSections - key
+	}
+
 	/** The message was shown; the next change states its own. */
 	fun clearNotice() {
 		notice = null
