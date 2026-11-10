@@ -114,6 +114,14 @@ class OverlayViewModel(application: Application) : AndroidViewModel(application)
 	/** The recovery dialog is listing replacement images (Locate pressed). */
 	var recoveryPicking by mutableStateOf(false)
 		private set
+	/** The on-screen keyboard's keys; its posts go through [OverlayNative.key]. */
+	val keyboard = AmigaKeyboardModel { code, pressed -> OverlayNative.key(code, pressed) }
+	/** The native on-screen keyboard shows, over the running emulation (android_osk_toggle). */
+	var keyboardVisible by mutableStateOf(false)
+		private set
+	/** The on-screen keyboard's options, read each time it shows. */
+	var keyboardOptions by mutableStateOf(KeyboardOptions())
+		private set
 
 	private val files = FileRepository.getInstance(application)
 	val floppies: StateFlow<List<AmigaFile>> = files.floppies
@@ -133,6 +141,8 @@ class OverlayViewModel(application: Application) : AndroidViewModel(application)
 	private val settingWrites = Mutex()
 	/** Changes made and not yet committed; main thread only. */
 	private var pendingWrites = 0
+	/** Follows the emulation's Caps Lock while the keyboard shows. */
+	private var capsPolling: Job? = null
 
 	/**
 	 * The overlay became visible: a fresh menu over the current machine.
@@ -200,7 +210,6 @@ class OverlayViewModel(application: Application) : AndroidViewModel(application)
 		notifyDialogsChanged()
 	}
 
-
 	/** Locate: list the replacement images for the recovery dialog. */
 	fun openRecoveryPicker() {
 		recoveryPicking = true
@@ -224,6 +233,45 @@ class OverlayViewModel(application: Application) : AndroidViewModel(application)
 		menuUp = false
 		polling?.cancel()
 		polling = null
+	}
+
+	/** The native side showed the on-screen keyboard (a hotkey, a button, the menu's Keyboard entry). */
+	fun keyboardShown() {
+		keyboardVisible = true
+		viewModelScope.launch { readKeyboardOptions() }
+		capsPolling?.cancel()
+		capsPolling = viewModelScope.launch {
+			while (isActive) {
+				// The emulation's Caps Lock can change under the view (a
+				// hardware keyboard, a restored state); the key shows it.
+				keyboard.syncCapsLock(OverlayNative.capsLockOn())
+				delay(STATUS_INTERVAL_MS)
+			}
+		}
+	}
+
+	/** The keyboard hid itself (its Hide key, Back, the B button): what it holds is released on the way down. */
+	fun hideKeyboard() {
+		if (!keyboardVisible) return
+		keyboardHidden()
+		OverlayNative.hideKeyboard()
+	}
+
+	/** The native side hid the keyboard (Back through SDL, the menu opening, the app backgrounding). */
+	fun keyboardHidden() {
+		if (!keyboardVisible) return
+		keyboard.releaseAll()
+		keyboardVisible = false
+		capsPolling?.cancel()
+		capsPolling = null
+	}
+
+	private suspend fun readKeyboardOptions() {
+		val ids = KeyboardOptions.IDS.toTypedArray()
+		val read = withContext(Dispatchers.IO) {
+			SettingState.parse(ids.toList(), OverlayNative.readSettings(ids))
+		}
+		if (read.isNotEmpty()) keyboardOptions = KeyboardOptions.from(read)
 	}
 
 	fun open(page: OverlayPage, from: String) {

@@ -49,6 +49,18 @@ object OverlayNative {
 	 */
 	@JvmStatic external fun remoteKey(button: Int, down: Boolean): Boolean
 
+	// The native on-screen keyboard (android_osk_*); any thread, locks only.
+
+	/**
+	 * A key of the keyboard, pressed or released: the same injection the
+	 * built-in GUI's keyboard uses. The action's id, 0 when rejected.
+	 */
+	@JvmStatic external fun key(amigaKey: Int, pressed: Boolean): Long
+	/** The keyboard hid itself: only the shared visibility flag is the native side's. */
+	@JvmStatic external fun hideKeyboard()
+	/** The emulation's Caps Lock, as its LED shows; the keyboard follows it. */
+	@JvmStatic external fun capsLockOn(): Boolean
+
 	// Runtime actions; each returns the action's id, 0 when it was rejected.
 	@JvmStatic external fun insertFloppy(drive: Int, path: String): Long
 	@JvmStatic external fun ejectFloppy(drive: Int): Long

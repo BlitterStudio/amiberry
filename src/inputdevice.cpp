@@ -30,6 +30,9 @@
 #include "gdb_server.h"
 #ifdef AMIBERRY
 #include "amiberry_input_helpers.h"
+#ifdef __ANDROID__
+#include "osdep/android_overlay.h"
+#endif
 #endif
 
 #include "inputrecord.h"
@@ -5741,6 +5744,8 @@ static bool inputdevice_handle_inputcode2(int monid, int code, int state, const 
 		if (vkbd_allowed(0)) {
 #if defined(AMIBERRY_NATIVE_HOST)
 			native_host_toggle_keyboard();
+#elif defined(__ANDROID__)
+			android_osk_toggle();
 #else
 			imgui_osk_toggle();
 #endif

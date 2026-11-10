@@ -583,6 +583,9 @@ static bool SDLCALL app_lifecycle_watch(void*, SDL_Event* event)
 #ifdef AMIBERRY_NATIVE_HOST
 		native_host_hide_keyboard();
 #endif
+#ifdef __ANDROID__
+		android_osk_hide();
+#endif
 		if (!background_pause.active) {
 			background_pause.active = true;
 			background_pause.owned = pause_emulation == 0;
@@ -1970,6 +1973,7 @@ void target_inputdevice_unacquire(const bool full)
 	native_host_hide_keyboard();
 #endif
 #ifdef __ANDROID__
+	android_osk_hide();
 	amiberry_android_touch_mouse_neutralize();
 	amiberry_android_clear_all_mouse_button_sources();
 #endif
@@ -3480,7 +3484,11 @@ static void handle_key_event(const SDL_Event& event)
 	// keyboard while it is visible or animating, then keep Back as the GUI shortcut.
 	if (event.key.scancode == SDL_SCANCODE_AC_BACK) {
 		if (event.key.down && !event.key.repeat) {
-			if (imgui_osk_should_render())
+			// The native keyboard takes Back while it shows (the overlay
+			// has the focus); a predictive Back reaches SDL directly.
+			if (android_osk_is_active())
+				android_osk_hide();
+			else if (imgui_osk_should_render())
 				imgui_osk_hide();
 			else
 				inputdevice_add_inputcode(AKS_ENTERGUI, 1, nullptr);
@@ -4474,6 +4482,8 @@ static void process_event(const SDL_Event& event)
 					neutralize_touch_controls();
 #if defined(AMIBERRY_NATIVE_HOST)
 					native_host_toggle_keyboard();
+#elif defined(__ANDROID__)
+					android_osk_toggle();
 #else
 					imgui_osk_toggle();
 #endif

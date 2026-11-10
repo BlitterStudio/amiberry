@@ -18,7 +18,7 @@
 #include "inputdevice.h"
 #include "keyboard.h"
 #include "target.h"
-#include "imgui_osk.h"
+
 #include "gui/gui_handling.h"
 #include "amiberry_actions_host.h"
 #include "settings/amiberry_actions.h"
@@ -49,6 +49,8 @@ constexpr Uint32 command_hide_overlay = 0x8002;
 constexpr Uint32 command_message = 0x8003;
 constexpr Uint32 command_show_dialog = 0x8004;
 constexpr Uint32 command_hide_dialog = 0x8005;
+constexpr Uint32 command_show_osk = 0x8006;
+constexpr Uint32 command_hide_osk = 0x8007;
 
 // OverlayNative.CLOSE_*: how the overlay asked the loop to end.
 constexpr int close_none = -1;
@@ -60,6 +62,9 @@ std::atomic<bool> enabled{true};
 std::atomic<int> close_request{close_none};
 // Show keyboard was chosen; android_overlay_service() shows it.
 std::atomic<bool> keyboard_requested{false};
+// The native on-screen keyboard shows (android_osk_toggle turned it on);
+// its view is up over the running emulation.
+std::atomic<bool> osk_visible{false};
 
 // gui_message's texts, waiting for the overlay to show them: any thread
 // queues (android_overlay_message), the activity drains them when the
@@ -395,8 +400,32 @@ void android_overlay_service()
 		return;
 	}
 	keyboard_requested.store(false);
-	if (!imgui_osk_is_active())
+	if (!android_osk_is_active())
 		inputdevice_add_inputcode(AKS_OSK, 1, nullptr);
+}
+
+void android_osk_toggle()
+{
+	if (osk_visible.load()) {
+		android_osk_hide();
+		return;
+	}
+	osk_visible.store(true);
+	SDL_SendAndroidMessage(command_show_osk, 0);
+}
+
+void android_osk_hide()
+{
+	if (!osk_visible.exchange(false))
+		return;
+	// The view releases what it had down as it goes; the emulation keeps
+	// running, so those posts reach it between frames.
+	SDL_SendAndroidMessage(command_hide_osk, 0);
+}
+
+bool android_osk_is_active()
+{
+	return osk_visible.load();
 }
 
 void android_remote_joystick_pump()
@@ -508,6 +537,35 @@ JNIEXPORT void JNICALL OVERLAY_JNI(answerDialog)(JNIEnv* env, jclass, jint answe
 		return;
 	recovery_dialog.answer = answer;
 	recovery_dialog.chosen = std::move(chosen);
+}
+
+// The native on-screen keyboard: any thread (the actions post, the flag
+// and the status snapshot take locks only).
+
+// A key of the keyboard, pressed or released: the same injection the
+// built-in GUI's keyboard uses, in order with the other actions. The
+// action's id, 0 when it was rejected.
+JNIEXPORT jlong JNICALL OVERLAY_JNI(key)(JNIEnv*, jclass, jint amiga_key, jboolean pressed)
+{
+	return static_cast<jlong>(amiberry_actions_key(amiga_key, pressed == JNI_TRUE));
+}
+
+// The keyboard hid itself (its Hide key, Back, the B button): the shared
+// visibility flag is ours, the view is already going away. What it had
+// down was released through key() first.
+JNIEXPORT void JNICALL OVERLAY_JNI(hideKeyboard)(JNIEnv*, jclass)
+{
+	osk_visible.store(false);
+}
+
+// The emulation's Caps Lock, as its LED shows: the keyboard follows it (a
+// hardware keyboard or a restored state can change it under the view).
+JNIEXPORT jboolean JNICALL OVERLAY_JNI(capsLockOn)(JNIEnv*, jclass)
+{
+	// About 20 KB of paths: the heap, not a JNI thread's stack.
+	const auto status = std::make_unique<amiberry_actions_status>();
+	amiberry_actions_get_status(status.get());
+	return status->caps_lock ? JNI_TRUE : JNI_FALSE;
 }
 
 // Runtime actions: any thread. The id is 0 when the action was rejected.
