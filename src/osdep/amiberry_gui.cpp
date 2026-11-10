@@ -877,7 +877,7 @@ bool gui_ask_disk(const int drv, TCHAR* name, const int name_len)
 // has no built-in GUI: a start without -G (a direct one of the binary)
 // opens the menu before the emulation instead.
 static void run_settings_ui([[maybe_unused]] const bool requester = false,
-	[[maybe_unused]] const int page = 0)
+	[[maybe_unused]] const int page = -1)
 {
 #if defined(AMIBERRY_NATIVE_HOST)
 	native_host_run_settings();
