@@ -153,6 +153,7 @@ if(AMIBERRY_NATIVE_UI_TESTS)
 
     add_library(amiberry_native_ui_tests MODULE
             apple/Tests/MacOSHostTests.swift
+            apple/Tests/DesignedPagesTests.swift
             apple/Tests/NativeUIBridgeTests.swift
             apple/Tests/SharedUITests.swift
             apple/Tests/LibraryViewTests.swift

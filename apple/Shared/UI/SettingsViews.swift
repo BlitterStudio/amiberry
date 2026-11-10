@@ -51,7 +51,7 @@ struct SettingsRootView: View {
 						.navigationTitle(model.page.title)
 						#endif
 				} else {
-					SearchResultsView(query: search, store: model.store)
+					SearchResultsView(query: search, model: model)
 						#if os(iOS)
 						.navigationTitle("Search")
 						#endif
@@ -107,15 +107,9 @@ struct PageView: View {
 		switch page {
 		case .overview:
 			OverviewPage(model: model)
-		case .displaySound, .input, .storage, .portsMisc:
+		case .hardware, .displaySound, .input, .storage, .portsMisc:
 			Form {
 				DesignedSections(page: page, model: model)
-			}
-			.formStyle(.grouped)
-		case .hardware:
-			Form {
-				GroupSections(groups: page.groups, store: model.store, hiddenWhenUnavailable: page.hiddenWhenUnavailable)
-				BoardsSections(store: model.store)
 			}
 			.formStyle(.grouped)
 		case .advanced:
@@ -128,9 +122,11 @@ struct PageView: View {
 }
 
 /// Every option whose label, help or key matches the query, by group.
+/// A hit inside a designed page's collapsed section reveals it, so the
+/// option is found on its page too.
 struct SearchResultsView: View {
 	let query: String
-	let store: SettingsStore
+	let model: SettingsWindowModel
 
 	static func matches(_ query: String) -> [SettingDescriptor] {
 		let terms = query.lowercased().split(separator: " ").map(String.init)
@@ -142,17 +138,29 @@ struct SearchResultsView: View {
 
 	var body: some View {
 		let results = SearchResultsView.matches(query)
-		if results.isEmpty {
-			ContentUnavailableView.search(text: query)
-		} else {
-			Form {
-				ForEach(SettingsCatalog.groups.filter { group in results.contains { $0.group == group } }, id: \.self) { group in
-					OptionSection(title: SettingsPage.groupTitle(group), descriptors: results.filter { $0.group == group },
-						store: store)
+		Group {
+			if results.isEmpty {
+				ContentUnavailableView.search(text: query)
+			} else {
+				Form {
+					ForEach(SettingsCatalog.groups.filter { group in results.contains { $0.group == group } }, id: \.self) { group in
+						OptionSection(title: SettingsPage.groupTitle(group), descriptors: results.filter { $0.group == group },
+							store: model.store)
+					}
 				}
+				.formStyle(.grouped)
 			}
-			.formStyle(.grouped)
 		}
+		.onAppear { reveal(results) }
+		.onChange(of: query) {
+			reveal(SearchResultsView.matches(query))
+		}
+	}
+
+	/// The collapsed sections the results sit in show expanded on their
+	/// page until the user collapses them: a search hit expands one.
+	private func reveal(_ results: [SettingDescriptor]) {
+		model.revealSections(Set(results.flatMap { SettingsPage.collapsedSections(containing: $0.id) }))
 	}
 }
 
@@ -174,12 +182,15 @@ struct GroupSections: View {
 /// and why is said once under the section rather than under each of them:
 /// five serial options waiting for a serial port say so once. Options are
 /// named in the section's words: "Image" under "DF0:", not "DF0: image".
-/// The hidden ones that are unavailable do not show at all.
+/// The hidden ones that are unavailable do not show at all. A section
+/// with a `disclosure` starts collapsed behind it (the designed pages'
+/// Advanced sections); its rows show only while it is expanded.
 struct OptionSection: View {
 	let title: String
 	let descriptors: [SettingDescriptor]
 	let store: SettingsStore
 	var hiddenWhenUnavailable = HiddenWhenUnavailable()
+	var disclosure: Binding<Bool>?
 
 	var body: some View {
 		let shown = hiddenWhenUnavailable.shown(descriptors, available: { store.isAvailable($0) },
@@ -187,13 +198,28 @@ struct OptionSection: View {
 			.map { $0.labelled(OptionSection.label($0.label, in: title)) }
 		let notes = OptionSection.constraintNotes(shown) { store.isAvailable($0) }
 		Section {
-			ForEach(shown) { descriptor in
-				OptionRow(descriptor: descriptor, store: store, showsConstraint: false)
+			if let disclosure {
+				DisclosureGroup(isExpanded: disclosure) {
+					ForEach(shown) { descriptor in
+						OptionRow(descriptor: descriptor, store: store, showsConstraint: false)
+					}
+				} label: {
+					Text(title)
+				}
+				.accessibilityIdentifier("section.\(title)")
+			} else {
+				ForEach(shown) { descriptor in
+					OptionRow(descriptor: descriptor, store: store, showsConstraint: false)
+				}
 			}
 		} header: {
-			Text(title)
+			if disclosure == nil {
+				Text(title)
+			}
 		} footer: {
-			if !notes.isEmpty {
+			// The notes explain rows the user can see: a collapsed
+			// disclosure's rows wait behind it.
+			if disclosure?.wrappedValue ?? true, !notes.isEmpty {
 				Text(notes.joined(separator: "\n"))
 			}
 		}

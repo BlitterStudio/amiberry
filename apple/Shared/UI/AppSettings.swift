@@ -149,10 +149,43 @@ final class AppSettingsModel {
 		default: return fallbackSymbol
 		}
 	}
+
+	/// The settings' collapsed disclosures the user has expanded (the
+	/// RetroArch defaults), remembered while the settings show.
+	var expandedDisclosures: Set<String> = []
+
+	/// Whether a collapsed disclosure shows its settings.
+	func disclosureExpanded(_ key: String) -> Bool {
+		expandedDisclosures.contains(key)
+	}
+
+	func setDisclosureExpanded(_ expanded: Bool, _ key: String) {
+		if expanded {
+			expandedDisclosures.insert(key)
+		} else {
+			expandedDisclosures.remove(key)
+		}
+	}
 }
 
-/// A group of host settings: a page of the Mac's Settings window, a section
-/// of iOS's.
+/// One section of a group's settings on its page. Most groups are one
+/// section of their own title; the ones that mix concerns split (the
+/// audit §3b), so a page says what its rows are about. `title` nil: the
+/// group's own title stands for it.
+struct AppSettingsSection: Identifiable {
+	let title: String?
+	/// The section's settings, in the layer's order.
+	let settings: [HostSetting]
+	/// The settings that sit inside a collapsed disclosure at the end of
+	/// the section (the RetroArch defaults), by id.
+	let disclosedTitle: String?
+	let disclosed: Set<String>
+
+	var id: String { title ?? "" }
+}
+
+/// A group of host settings: a page of the Mac's Settings window, a
+/// section of iOS's, split into the sections the page shows.
 struct AppSettingsGroup: Identifiable, Hashable {
 	let id: String
 	let title: String
@@ -172,6 +205,69 @@ struct AppSettingsGroup: Identifiable, Hashable {
 			return terms.allSatisfy(text.contains)
 		}
 	}
+
+	/// The group's settings as the sections of its page: what each setting
+	/// is about sits together, in the layer's order within a section. A
+	/// section this platform has none of does not show.
+	var sections: [AppSettingsSection] {
+		AppSettingsGroup.split(id, settings: settings).filter { !$0.settings.isEmpty }
+	}
+
+	/// The group's sections narrowed to the settings that match, empty
+	/// ones left out.
+	func sections(matching query: String) -> [AppSettingsSection] {
+		let matching = Set(settings(matching: query).map(\.id))
+		return sections.map { section in
+			AppSettingsSection(title: section.title, settings: section.settings.filter { matching.contains($0.id) },
+				disclosedTitle: section.disclosedTitle, disclosed: section.disclosed)
+		}.filter { !$0.settings.isEmpty }
+	}
+
+	/// How the groups whose settings mix concerns split; a group not here
+	/// is one section of its own title.
+	private static func split(_ group: String, settings: [HostSetting]) -> [AppSettingsSection] {
+		let inThisOrder = { (ids: [String]) in settings.filter { ids.contains($0.id) } }
+		switch group {
+		case "global_input":
+			return [
+				AppSettingsSection(title: "Controllers & Mouse", settings: inThisOrder([
+					"default_controller1", "default_controller2", "default_controller3", "default_controller4",
+					"default_mouse1", "default_mouse2", "input_default_mouse_speed", "default_joystick_deadzone",
+					"input_keyboard_as_joystick_stop_keypresses", "rctrl_as_ramiga",
+				]), disclosedTitle: nil, disclosed: []),
+				AppSettingsSection(title: "Default Shortcuts", settings: inThisOrder([
+					"macos_left_command_q", "default_open_gui_key", "default_quit_key", "default_ar_key",
+					"default_fullscreen_toggle_key", "default_retroarch_quit", "default_retroarch_menu",
+					"default_retroarch_reset",
+				]), disclosedTitle: "RetroArch",
+					disclosed: ["default_retroarch_quit", "default_retroarch_menu", "default_retroarch_reset"]),
+			]
+		case "global_display":
+			return [
+				AppSettingsSection(title: "Display Defaults", settings: inThisOrder([
+					"default_line_mode", "default_horizontal_centering", "default_vertical_centering",
+					"default_scaling_method", "default_gfx_autoresolution", "default_correct_aspect_ratio",
+					"default_auto_crop",
+				]), disclosedTitle: nil, disclosed: []),
+				// The window sizes mean nothing on iOS (the layer hides
+				// them there); the screen mode default stays with its
+				// machine options.
+				AppSettingsSection(title: "Window Defaults", settings: inThisOrder([
+					"default_width", "default_height", "default_fullscreen_mode",
+				]), disclosedTitle: nil, disclosed: []),
+			]
+		case "global_paths":
+			let logging = ["write_logfile", "logfile_path"]
+			return [
+				AppSettingsSection(title: "Logging", settings: inThisOrder(logging),
+					disclosedTitle: nil, disclosed: []),
+				AppSettingsSection(title: "Folders", settings: settings.filter { !logging.contains($0.id) },
+					disclosedTitle: nil, disclosed: []),
+			]
+		default:
+			return [AppSettingsSection(title: nil, settings: settings, disclosedTitle: nil, disclosed: [])]
+		}
+	}
 }
 
 /// Every group in one form, a section each: iOS's settings sheet. The
@@ -189,10 +285,10 @@ struct AppSettingsView: View {
 				}
 			}
 			ForEach(AppSettingsModel.groups) { group in
-				let matching = group.settings(matching: query)
-				if !matching.isEmpty {
-					Section(group.title) {
-						AppSettingsGroupRows(group: group, settings: matching, model: model, showsDownloads: !searching)
+				ForEach(searching ? group.sections(matching: query) : group.sections) { section in
+					Section(section.title ?? group.title) {
+						AppSettingsSectionRows(group: group, section: section, model: model,
+							flat: searching, showsDownloads: !searching)
 					}
 				}
 			}
@@ -255,7 +351,7 @@ struct AppSettingsSplitView: View {
 		} detail: {
 			if !query.trimmingCharacters(in: .whitespaces).isEmpty {
 				// Every group's matches, as System Settings searches.
-				let results = AppSettingsModel.groups.map { ($0, $0.settings(matching: query)) }.filter { !$0.1.isEmpty }
+				let results = AppSettingsModel.groups.map { ($0, $0.sections(matching: query)) }.filter { !$0.1.isEmpty }
 				if results.isEmpty {
 					ContentUnavailableView.search(text: query)
 				} else {
@@ -265,9 +361,12 @@ struct AppSettingsSplitView: View {
 								AppSettingsNotice(text: notice)
 							}
 						}
-						ForEach(results, id: \.0.id) { group, matching in
-							Section(group.title) {
-								AppSettingsGroupRows(group: group, settings: matching, model: model, showsDownloads: false)
+						ForEach(results, id: \.0.id) { group, sections in
+							ForEach(sections) { section in
+								Section(section.title ?? group.title) {
+									AppSettingsSectionRows(group: group, section: section, model: model, flat: true,
+										showsDownloads: false)
+								}
 							}
 						}
 					}
@@ -276,15 +375,22 @@ struct AppSettingsSplitView: View {
 				}
 			} else if let group {
 				// A page of its own identity: groups must not share a scroll
-				// position, and leaving one commits its fields' drafts.
+				// position, and leaving one commits its fields' drafts. Its
+				// sections stand under the page's title, each with its own.
 				Form {
 					if let notice = model.notice {
 						Section {
 							AppSettingsNotice(text: notice)
 						}
 					}
-					Section {
-						AppSettingsGroupRows(group: group, settings: group.settings, model: model, showsDownloads: true)
+					ForEach(group.sections) { section in
+						Section {
+							AppSettingsSectionRows(group: group, section: section, model: model, showsDownloads: true)
+						} header: {
+							if let title = section.title {
+								Text(title)
+							}
+						}
 					}
 				}
 				.formStyle(.grouped)
@@ -301,17 +407,38 @@ struct AppSettingsSplitView: View {
 }
 #endif
 
-/// A group's settings, with the WHDLoad group's file downloads after them
-/// (not among search results: they are no setting).
-private struct AppSettingsGroupRows: View {
+/// One section's settings, with the settings its collapsed disclosure
+/// holds (the RetroArch defaults) behind it and the WHDLoad group's file
+/// downloads after them (not among search results: they are no setting).
+/// Search results show the disclosed settings flat.
+private struct AppSettingsSectionRows: View {
 	let group: AppSettingsGroup
-	let settings: [HostSetting]
+	let section: AppSettingsSection
 	let model: AppSettingsModel
+	var flat = false
 	let showsDownloads: Bool
 
 	var body: some View {
-		ForEach(settings) { setting in
+		ForEach(section.settings.filter { !section.disclosed.contains($0.id) }) { setting in
 			HostSettingRow(setting: setting, model: model)
+		}
+		let disclosed = section.settings.filter { section.disclosed.contains($0.id) }
+		if !disclosed.isEmpty {
+			if flat {
+				ForEach(disclosed) { setting in
+					HostSettingRow(setting: setting, model: model)
+				}
+			} else if let title = section.disclosedTitle {
+				let key = "\(group.id).\(title)"
+				DisclosureGroup(title, isExpanded: Binding(
+					get: { model.disclosureExpanded(key) },
+					set: { model.setDisclosureExpanded($0, key) })) {
+					ForEach(disclosed) { setting in
+						HostSettingRow(setting: setting, model: model)
+					}
+				}
+				.accessibilityIdentifier("appSettings.disclosure.\(title)")
+			}
 		}
 		if showsDownloads, group.id == "global_whdload" {
 			WHDBootFilesRow()

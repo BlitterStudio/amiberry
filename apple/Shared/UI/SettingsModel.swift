@@ -85,14 +85,11 @@ enum SettingsPage: String, Hashable, Identifiable, CaseIterable {
 		"floppy0", "floppy1"]
 
 	/// Whether the page shows any of these options (the edited ones, for
-	/// the sidebar's mark).
+	/// the sidebar's mark): the page whose sections place an option, which
+	/// a designed page's layout decides (Input places the shortcut hotkeys
+	/// although their group is Ports & Misc's).
 	func shows(anyOf ids: Set<String>) -> Bool {
-		ids.contains { id in
-			if self == .overview, SettingsPage.overviewOptions.contains(id) {
-				return true
-			}
-			return SettingsCatalog.descriptor(for: id).map { groups.contains($0.group) } ?? false
-		}
+		ids.contains { id in places(id) }
 	}
 
 	/// Whether the store holds edits the page shows: its options, and the
@@ -139,6 +136,14 @@ final class SettingsWindowModel {
 	/// window does not close over it, and the field shows it again when it
 	/// comes back into view.
 	var invalidDrafts: [String: String] = [:]
+
+	/// The designed pages' collapsed sections the user has expanded, by
+	/// section title: remembered per section while the window is open,
+	/// across changes of page.
+	var expandedSections: Set<String> = []
+	/// Collapsed sections a search found hits in: they show expanded on
+	/// their page until the user collapses them.
+	private(set) var revealedSections: Set<String> = []
 
 	/// The machine being edited, opened from the Library: nil for a new one
 	/// until it is saved.
@@ -558,6 +563,29 @@ final class SettingsWindowModel {
 	/// previous value).
 	func commitForExternalRequest() {
 		_ = commit()
+	}
+
+	/// Whether a collapsed section shows its rows: the user opened it, or
+	/// a search found hits in it.
+	func sectionExpanded(_ title: String) -> Bool {
+		expandedSections.contains(title) || revealedSections.contains(title)
+	}
+
+	/// Opens or closes a collapsed section; closing one a search revealed
+	/// closes it for good (until it is opened again).
+	func setSectionExpanded(_ expanded: Bool, _ title: String) {
+		if expanded {
+			expandedSections.insert(title)
+		} else {
+			expandedSections.remove(title)
+		}
+		revealedSections.remove(title)
+	}
+
+	/// Notes the collapsed sections the current search results sit in,
+	/// forgetting the ones an earlier search revealed.
+	func revealSections(_ titles: Set<String>) {
+		revealedSections = titles.subtracting(expandedSections)
 	}
 
 	/// The name of a field holding refused text: an option's label, or a
