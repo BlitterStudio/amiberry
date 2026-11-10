@@ -520,4 +520,19 @@ class FileManagerTest {
 		)
 		assertTrue(floppy.exists())
 	}
+
+	@Test
+	fun `a ROM listed from a moved WHDBoot folder's kickstarts can be deleted`() {
+		val external = tempDir.newFolder("app-storage-whdboot")
+		val whdboot = tempDir.newFolder("shared-whdboot")
+		val kickstarts = File(whdboot, "save-data/Kickstarts").also { it.mkdirs() }
+		val rom = File(kickstarts, "kick40068.A1200").also { it.writeText("rom") }
+		val conf = tempDir.newFile("amiberry-whdboot.conf").also { it.writeText("whdboot_path=${whdboot.path}\n") }
+
+		// The same roots the Library lists the ROMs from authorise the delete.
+		val roots = ContentFolders.libraryRoots(FileCategory.ROMS, conf, external)
+		assertTrue(roots.contains(kickstarts))
+		assertTrue(FileManager.deleteManagedFile(roots, amigaFile(rom, FileCategory.ROMS)))
+		assertFalse(rom.exists())
+	}
 }

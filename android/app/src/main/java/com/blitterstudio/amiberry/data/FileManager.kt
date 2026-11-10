@@ -274,50 +274,39 @@ object FileManager {
 			?: emptyList()
 	}
 
-	/**
-	 * Scan all known directories for files of a given category.
-	 * Also checks the root app storage dir for matching files (users may put files there).
-	 */
+	/** The folders the Library lists a category's files from: see [ContentFolders.libraryRoots]. */
+	fun scanRoots(context: Context, category: FileCategory): List<File> =
+		ContentFolders.libraryRoots(
+			category,
+			ShaderCatalog.findSettingsFile(context.filesDir, context.getExternalFilesDir(null)),
+			context.getExternalFilesDir(null)
+		)
+
+	/** Scan every root of a category (see [scanRoots]) for its files. */
 	fun scanForCategory(context: Context, category: FileCategory): List<AmigaFile> {
 		val results = mutableListOf<AmigaFile>()
 		val seenPaths = mutableSetOf<String>()
-
-		// Scan the category-specific directory
-		val categoryDir = getCategoryDir(context, category)
-		for (file in scanDirectory(categoryDir, category.extensions, category)) {
-			if (seenPaths.add(file.path)) results.add(file)
-		}
-
-		// Also scan the root app directory for matching files
-		val rootDir = File(getAppStoragePath(context))
-		for (file in scanDirectory(rootDir, category.extensions, category)) {
-			if (seenPaths.add(file.path)) results.add(file)
-		}
-
-		// For ROMs, also check the WHDBoot folder's kickstarts, wherever
-		// the WHDBoot setting points (the extracted support files' home).
-		if (category == FileCategory.ROMS) {
-			val kickstartsDir = ContentFolders.kickstartsDir(
-				ShaderCatalog.findSettingsFile(context.filesDir, context.getExternalFilesDir(null)),
-				context.getExternalFilesDir(null)
-			)
-			for (file in kickstartsDir?.let { scanDirectory(it, category.extensions, category) }.orEmpty()) {
+		for (root in scanRoots(context, category)) {
+			for (file in scanDirectory(root, category.extensions, category)) {
 				if (seenPaths.add(file.path)) results.add(file)
 			}
 		}
-
 		return results.sortedBy { it.name.lowercase() }
 	}
 
 	/**
 	 * The folders a recursive import must not descend into: the app's own
-	 * storage and every configured category folder (a path setting may
-	 * have moved one outside it), so importing a folder that holds a
-	 * library root cannot copy the library into itself.
+	 * storage and every folder the Library lists a category from (a path
+	 * setting may have moved one outside it), so importing a folder that
+	 * holds a library root cannot copy the library into itself. The base
+	 * content root is not one of them: only its loose files are listed, and
+	 * a base pointing at shared storage would otherwise block every import.
 	 */
-	internal fun importExcludedDirs(context: Context): List<File> =
-		listOfNotNull(context.getExternalFilesDir(null)) +
-			FileCategory.entries.map { ContentFolders.categoryDir(context, it) }
+	internal fun importExcludedDirs(context: Context): List<File> {
+		val base = File(getAppStoragePath(context))
+		return listOfNotNull(context.getExternalFilesDir(null)) +
+			FileCategory.entries.flatMap { scanRoots(context, it) }.filter { it != base }
+	}
 
 	fun ensureDirectories(context: Context) {
 		val base = context.getExternalFilesDir(null) ?: return

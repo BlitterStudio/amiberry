@@ -146,12 +146,10 @@ class FileManagerViewModel(application: Application) : AndroidViewModel(applicat
 		viewModelScope.launch(Dispatchers.IO) {
 			try {
 				val app = getApplication<Application>()
-				// The category's configured folder may lie outside the app's
-				// own storage (a path setting moved it); both are managed.
-				val baseDirs = listOfNotNull(
-					app.getExternalFilesDir(null),
-					ContentFolders.categoryDir(app, file.category)
-				)
+				// Every folder the Library lists the category from may lie
+				// outside the app's own storage (a path setting moved it).
+				val baseDirs = listOfNotNull(app.getExternalFilesDir(null)) +
+					FileManager.scanRoots(app, file.category)
 				val deleted = FileManager.deleteManagedFile(baseDirs, file)
 				if (deleted) {
 					_importResult.value = app.getString(R.string.msg_deleted_file, file.name)

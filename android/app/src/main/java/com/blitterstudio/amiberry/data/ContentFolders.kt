@@ -118,4 +118,19 @@ object ContentFolders {
 	fun kickstartsDir(globalSettingsFile: File?, externalFilesDir: File?): File? =
 		effective("whdboot_path", globalSettingsFile, externalFilesDir)
 			?.let { whdboot -> File(whdboot, "save-data/Kickstarts") }
+
+	/**
+	 * The folders the Library lists a category's files from: the category's
+	 * folder, the base content root (users may put files there) and, for
+	 * ROMs, the WHDBoot folder's kickstarts. Listing, deleting and the
+	 * recursive import's exclusions all read this, so a file the Library
+	 * shows is always one it may delete.
+	 */
+	fun libraryRoots(category: FileCategory, globalSettingsFile: File?, externalFilesDir: File?): List<File> =
+		listOfNotNull(
+			effective(categoryKey(category), globalSettingsFile, externalFilesDir)
+				?: externalFilesDir?.let { File(it, category.dirName) },
+			baseRoot(globalSettingsFile, externalFilesDir),
+			if (category == FileCategory.ROMS) kickstartsDir(globalSettingsFile, externalFilesDir) else null
+		)
 }
