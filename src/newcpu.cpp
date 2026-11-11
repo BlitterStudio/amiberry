@@ -5958,18 +5958,35 @@ static struct alignas(64) {
 // serves reads at about the rate the CPU on the main thread makes them per
 // chipset time, from a budget refilled from the colour clocks published (at
 // most a line's worth kept); without budget reads go through the mailbox,
-// which is paced. Custom registers: the JIT on the main thread polls about 20
-// per colour clock; the budget is set above that, since the reads through the
-// mailbox once it has run out are slow. Unbounded, a polling loop with an
-// iteration bound ran out of iterations within a line of chipset time
-// (amitorture's display module hung its watchdog under host load). CIA
-// registers: the CPU on the main thread pays E-clock time for every access,
-// about 2 reads per colour clock with the JIT; unbounded, CIA-A PRA polling
-// ran 10-17 times as many reads per chipset time, and delay loops reading a
-// CIA shrank by as much.
-#define CPU_THREAD_SNAP_CUSTOM_PER_TICK 32
-#define CPU_THREAD_SNAP_CIA_PER_TICK 2
+// which is paced. Unbounded, CIA-A PRA polling ran 10-17 times as many reads
+// per chipset time as on the main thread, delay loops reading a CIA shrank by
+// as much, and a polling loop with an iteration bound ran out of iterations
+// within a line of chipset time (amitorture's display module hung its
+// watchdog under host load).
+// The main thread's rate depends on the host: in fastest mode the CPU there
+// runs while the chipset waits for the frame, so it makes as many reads per
+// chipset time as the host executes in that time. The budgets therefore
+// follow the host's speed, timed on the CPU thread now and then, between a
+// floor and a ceiling: with the JIT on the main thread a fast x86-64 host
+// makes about 9 CIA and 65 custom reads per colour clock, a Raspberry Pi 5
+// about 2 and 20. A longword custom read takes two, like the two bus
+// accesses it is.
+#define CPU_THREAD_SNAP_CUSTOM_MIN 64
+#define CPU_THREAD_SNAP_CUSTOM_MAX 96
+#define CPU_THREAD_SNAP_CIA_MIN 2
+#define CPU_THREAD_SNAP_CIA_MAX 16
+// reads per colour clock = these / host time of one timing step in ns
+#define CPU_THREAD_SNAP_CUSTOM_NS 116
+#define CPU_THREAD_SNAP_CIA_NS 12
+#define CPU_THREAD_SNAP_RATE_STEPS 2048
+#define CPU_THREAD_SNAP_RATE_NS 1000000000ULL   // timed again after this
 #define CPU_THREAD_SNAP_BUDGET_TICKS 227
+// CPU thread only; kept over restarts (the host's speed)
+static struct {
+	int custom = CPU_THREAD_SNAP_CUSTOM_MIN, cia = CPU_THREAD_SNAP_CIA_MIN;   // reads per colour clock
+	uae_u64 step_ps = 0;   // fastest timing step seen
+	uae_u64 next_ns = 0;   // host time of the next timing
+} cpu_thread_snap_rate;
 static struct alignas(64) {
 	uae_u32 v;         // colour clocks published
 } cpu_thread_snap_clock;
@@ -6150,6 +6167,61 @@ static inline uae_u16 cpu_thread_snap_value(int r)
 	return __atomic_load_n(&cpu_thread_snap_regs.reg[r & 15], __ATOMIC_RELAXED);
 }
 
+// Budgets for a timing step of step_ps picoseconds (0: not timed)
+static void cpu_thread_snap_set_rate(uae_u64 step_ps)
+{
+	auto &r = cpu_thread_snap_rate;
+	if (!step_ps || (r.step_ps && step_ps >= r.step_ps))
+		return;
+	r.step_ps = step_ps;
+	r.custom = (int)std::clamp<uae_u64>(CPU_THREAD_SNAP_CUSTOM_NS * 1000ULL / step_ps,
+		CPU_THREAD_SNAP_CUSTOM_MIN, CPU_THREAD_SNAP_CUSTOM_MAX);
+	r.cia = (int)std::clamp<uae_u64>(CPU_THREAD_SNAP_CIA_NS * 1000ULL / step_ps,
+		CPU_THREAD_SNAP_CIA_MIN, CPU_THREAD_SNAP_CIA_MAX);
+}
+
+// The timing step: a dispatch through a table on data-dependent indexes,
+// like the read paths of an interpreter.
+static uae_u32 cpu_thread_snap_step_table[256];
+static NOINLINE uae_u32 cpu_thread_snap_step0(uae_u32 v)
+{
+	cpu_thread_snap_step_table[v & 255] += v;
+	return v * 2654435761u + cpu_thread_snap_step_table[(v >> 7) & 255];
+}
+static NOINLINE uae_u32 cpu_thread_snap_step1(uae_u32 v)
+{
+	return (v ^ (v >> 13)) + cpu_thread_snap_step_table[v & 255] + 1;
+}
+static NOINLINE uae_u32 cpu_thread_snap_step2(uae_u32 v)
+{
+	return (v & 0x100) ? v + cpu_thread_snap_step_table[(v >> 3) & 255] : v ^ 0x5bd1e995;
+}
+static NOINLINE uae_u32 cpu_thread_snap_step3(uae_u32 v)
+{
+	cpu_thread_snap_step_table[(v >> 5) & 255] = v;
+	return v + (v << 3) + 7;
+}
+
+// CPU thread: time the host, keep the fastest result.
+static NOINLINE void cpu_thread_snap_time_host(uae_u64 now)
+{
+	static uae_u32 (*const steps[4])(uae_u32) = {
+		cpu_thread_snap_step0, cpu_thread_snap_step1, cpu_thread_snap_step2, cpu_thread_snap_step3
+	};
+	uae_u32 (*const *volatile table)(uae_u32) = steps;
+	uae_u64 best = ~0ULL;
+	uae_u32 v = (uae_u32)now | 1;
+	for (int run = 0; run < 4; run++) {
+		const uae_u64 t0 = SDL_GetTicksNS();
+		for (int i = 0; i < CPU_THREAD_SNAP_RATE_STEPS; i++)
+			v = table[v & 3](v);
+		best = std::min<uae_u64>(best, SDL_GetTicksNS() - t0);
+	}
+	cpu_thread_snap_step_table[0] ^= v;
+	cpu_thread_snap_set_rate(best * 1000 / CPU_THREAD_SNAP_RATE_STEPS);
+	cpu_thread_snap_rate.next_ns = now + CPU_THREAD_SNAP_RATE_NS;
+}
+
 // CPU thread: false while the chipset time has stood still for too long.
 static NOINLINE bool cpu_thread_snap_clock_moves()
 {
@@ -6159,6 +6231,8 @@ static NOINLINE bool cpu_thread_snap_clock_moves()
 		w.clock = clock;
 		w.since = SDL_GetTicksNS();
 		w.frozen = false;
+		if (w.since >= cpu_thread_snap_rate.next_ns)
+			cpu_thread_snap_time_host(w.since);
 		return true;
 	}
 	if (w.frozen)
@@ -6177,10 +6251,10 @@ static NOINLINE bool cpu_thread_snap_refill(bool cia)
 	if (!ticks)
 		return false;
 	w.budget_clock = clock;
-	w.custom_budget = std::min<int>(w.custom_budget + (int)ticks * CPU_THREAD_SNAP_CUSTOM_PER_TICK,
-		CPU_THREAD_SNAP_BUDGET_TICKS * CPU_THREAD_SNAP_CUSTOM_PER_TICK);
-	w.cia_budget = std::min<int>(w.cia_budget + (int)ticks * CPU_THREAD_SNAP_CIA_PER_TICK,
-		CPU_THREAD_SNAP_BUDGET_TICKS * CPU_THREAD_SNAP_CIA_PER_TICK);
+	w.custom_budget = std::min<int>(w.custom_budget + (int)ticks * cpu_thread_snap_rate.custom,
+		CPU_THREAD_SNAP_BUDGET_TICKS * cpu_thread_snap_rate.custom);
+	w.cia_budget = std::min<int>(w.cia_budget + (int)ticks * cpu_thread_snap_rate.cia,
+		CPU_THREAD_SNAP_BUDGET_TICKS * cpu_thread_snap_rate.cia);
 	return (cia ? w.cia_budget : w.custom_budget) > 0;
 }
 
@@ -6223,7 +6297,7 @@ static inline bool cpu_thread_snap_read(const addrbank *ab, uaecptr addr, int si
 	if (cia)
 		cpu_thread_snap_worker.cia_budget--;
 	else
-		cpu_thread_snap_worker.custom_budget--;
+		cpu_thread_snap_worker.custom_budget -= size == 2 ? 2 : 1;
 	*out = v;
 	return true;
 }
@@ -8155,6 +8229,16 @@ cont:
 
 #endif
 
+// Opcode fetch of the fast loops. Without the indirect call when it is
+// get_diword(): where the predictor keeps that call depends on code layout,
+// which made the same loop up to 8% slower in one build than another.
+static inline __attribute__((always_inline)) uae_u32 get_opcode_fast(void)
+{
+	if (x_get_iword == get_diword)
+		return do_get_mem_word((uae_u16 *)regs.pc_p);
+	return x_get_iword(0);
+}
+
 #ifdef WITH_THREADED_CPU
 static int cpu_thread_run_2(void *v)
 {
@@ -8180,7 +8264,7 @@ static int cpu_thread_run_2(void *v)
 			while (!exit) {
 				r->instruction_pc = m68k_getpc();
 
-				r->opcode = x_get_iword(0);
+				r->opcode = get_opcode_fast();
 				count_instr(r->opcode);
 #ifdef DEBUGGER
 				if (debug_opcode_watch) {
@@ -8214,7 +8298,7 @@ static void m68k_run_2_000()
 			while (!exit) {
 				r->instruction_pc = m68k_getpc ();
 
-				r->opcode = x_get_iword(0);
+				r->opcode = get_opcode_fast();
 				count_instr (r->opcode);
 #ifdef DEBUGGER
 				if (debug_opcode_watch) {
@@ -8252,7 +8336,7 @@ static void m68k_run_2_020()
 			while (!exit) {
 				r->instruction_pc = m68k_getpc();
 
-				r->opcode = x_get_iword(0);
+				r->opcode = get_opcode_fast();
 				count_instr(r->opcode);
 
 #ifdef DEBUGGER

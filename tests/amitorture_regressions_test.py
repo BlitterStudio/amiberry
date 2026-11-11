@@ -1257,6 +1257,7 @@ int main() {
         snapshot = text[text.index("// Register snapshot."):
                         text.index("uae_u32 process_cpu_indirect_memory_read(")]
         run_cpp(r"""
+#include <algorithm>
 #define NOINLINE __attribute__((noinline))
 #define CPU_THREAD_RARE(x) __builtin_expect(!!(x), 0)
 uint64_t host_ns;
@@ -1383,7 +1384,7 @@ int main() {
         int i = 0;
         while (rd(cia_bank, 0xbfe001, 0, &v))
             ++i;
-        assert(i == CPU_THREAD_SNAP_CIA_PER_TICK);
+        assert(i == cpu_thread_snap_rate.cia);
     }
     for (int t = 0; t < 4 * CPU_THREAD_SNAP_BUDGET_TICKS; t++)
         cpu_thread_snap_publish(true);
@@ -1391,7 +1392,7 @@ int main() {
         int i = 0;                                          // at most a line's worth kept
         while (rd(cia_bank, 0xbfe001, 0, &v))
             ++i;
-        assert(i == CPU_THREAD_SNAP_BUDGET_TICKS * CPU_THREAD_SNAP_CIA_PER_TICK);
+        assert(i == CPU_THREAD_SNAP_BUDGET_TICKS * cpu_thread_snap_rate.cia);
     }
     cpu_thread_snap_publish(true);
     // The custom registers have a budget of their own: a polling loop with an
@@ -1404,7 +1405,7 @@ int main() {
         int i = 0;
         while (rd(custom_bank, 0xdff006, 1, &v))
             ++i;
-        assert(i == CPU_THREAD_SNAP_CUSTOM_PER_TICK);
+        assert(i == cpu_thread_snap_rate.custom);
     }
     for (int t = 0; t < 4 * CPU_THREAD_SNAP_BUDGET_TICKS; t++)
         cpu_thread_snap_publish(true);
@@ -1412,7 +1413,39 @@ int main() {
         int i = 0;                                          // at most a line's worth kept
         while (rd(custom_bank, 0xdff006, 1, &v))
             ++i;
-        assert(i == CPU_THREAD_SNAP_BUDGET_TICKS * CPU_THREAD_SNAP_CUSTOM_PER_TICK);
+        assert(i == CPU_THREAD_SNAP_BUDGET_TICKS * cpu_thread_snap_rate.custom);
+    }
+    // A longword read takes two, like the two bus accesses it is.
+    cpu_thread_snap_publish(true);
+    {
+        int i = 0;
+        while (rd(custom_bank, 0xdff004, 2, &v))
+            ++i;
+        assert(i == cpu_thread_snap_rate.custom / 2);
+    }
+    // The budgets follow the host's speed, between a floor and a ceiling;
+    // only a faster timing changes them.
+    assert(cpu_thread_snap_rate.custom == CPU_THREAD_SNAP_CUSTOM_MIN);  // untimed
+    assert(cpu_thread_snap_rate.cia == CPU_THREAD_SNAP_CIA_MIN);
+    cpu_thread_snap_set_rate(0);
+    assert(cpu_thread_snap_rate.custom == CPU_THREAD_SNAP_CUSTOM_MIN);
+    cpu_thread_snap_set_rate(CPU_THREAD_SNAP_CIA_NS * 1000 / 3);        // 3 CIA reads
+    assert(cpu_thread_snap_rate.cia == 3);
+    assert(cpu_thread_snap_rate.custom == CPU_THREAD_SNAP_CUSTOM_MIN);
+    cpu_thread_snap_set_rate(1000000);                                  // slower: kept
+    assert(cpu_thread_snap_rate.cia == 3);
+    cpu_thread_snap_set_rate(CPU_THREAD_SNAP_CUSTOM_NS * 1000 / (CPU_THREAD_SNAP_CUSTOM_MIN + 8));
+    assert(cpu_thread_snap_rate.custom == CPU_THREAD_SNAP_CUSTOM_MIN + 8);
+    cpu_thread_snap_set_rate(1);
+    assert(cpu_thread_snap_rate.custom == CPU_THREAD_SNAP_CUSTOM_MAX);
+    assert(cpu_thread_snap_rate.cia == CPU_THREAD_SNAP_CIA_MAX);
+    for (int t = 0; t < 4 * CPU_THREAD_SNAP_BUDGET_TICKS; t++)
+        cpu_thread_snap_publish(true);
+    {
+        int i = 0;
+        while (rd(custom_bank, 0xdff006, 1, &v))
+            ++i;
+        assert(i == CPU_THREAD_SNAP_BUDGET_TICKS * CPU_THREAD_SNAP_CUSTOM_MAX);
     }
     cpu_thread_snap_publish(true);
     pra_ok = false;                                        // input recording started
