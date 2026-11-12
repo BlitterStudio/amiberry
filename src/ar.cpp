@@ -2259,6 +2259,10 @@ uae_u8 *restore_action_replay (uae_u8 *src)
 
 void restore_ar_finish(void)
 {
+	// No cartridge: a state without one must not make the freezer look
+	// present (action_replay_freezer_active() keeps the CPU thread off).
+	if (!armemory_rom)
+		return;
 	if (ar_state2 < 0) {
 		if (m68k_getpc () >= arrom_start && m68k_getpc () <= arrom_start + arrom_size) {
 			action_replay_flag = ACTION_REPLAY_ACTIVE;
