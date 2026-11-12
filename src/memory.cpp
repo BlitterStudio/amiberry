@@ -14,9 +14,7 @@
 #include "sysconfig.h"
 #include "sysdeps.h"
 
-#ifdef WITH_THREADED_CPU
 #include <vector>
-#endif
 
 #include "options.h"
 #include "uae.h"
@@ -2599,18 +2597,14 @@ bool mapped_malloc (addrbank *ab)
 
 #endif
 
-#ifdef WITH_THREADED_CPU
 extern addrbank *thread_mem_banks[MEMORY_BANKS];
-#endif
 
 static void init_mem_banks (void)
 {
 	// unsigned so i << 16 won't overflow to negative when i >= 32768
 	for (unsigned int i = 0; i < MEMORY_BANKS; i++) {
 		put_mem_bank (i << 16, &dummy_bank, 0);
-#ifdef WITH_THREADED_CPU
 		thread_mem_banks[i] = &dummy_bank;
-#endif
 	}
 #ifdef NATMEM_OFFSET
 	delete_shmmaps (0, 0xFFFF0000);
@@ -3646,7 +3640,6 @@ void map_banks_cond (addrbank *bank, int start, int size, int realsize)
 	map_banks (bank, start, size, realsize);
 }
 
-#ifdef WITH_THREADED_CPU
 
 struct addrbank_thread {
 	addrbank *orig;
@@ -3767,7 +3760,6 @@ void memory_set_cpu_thread_banks(bool threaded)
 	flush_icache(3);
 	fill_ce_banks();
 }
-#endif
 
 static void set_memory_cacheable(int bnr, addrbank *bank)
 {
@@ -3793,14 +3785,12 @@ static void map_banks2 (addrbank *bank, int start, int size, int realsize, int q
 
 	bank->flags |= ABFLAG_MAPPED;
 
-#ifdef WITH_THREADED_CPU
 	if (cpu_threaded_run) {
 		addrbank *b = bank;
 		bank = get_bank_cpu_thread(bank);
 		if (b != bank)
 			orig_bank = b;
 	}
-#endif
 
 #ifdef DEBUGGER
 	if (quick <= 0)
@@ -3834,9 +3824,7 @@ static void map_banks2 (addrbank *bank, int start, int size, int realsize, int q
 			}
 			put_mem_bank (bnr << 16, bank, realstart << 16);
 			set_memory_cacheable(bnr, bank);
-#ifdef WITH_THREADED_CPU
 			thread_mem_banks[bnr] = orig_bank ? orig_bank : bank;
-#endif
 			real_left--;
 		}
 #ifdef DEBUGGER
@@ -3864,9 +3852,7 @@ static void map_banks2 (addrbank *bank, int start, int size, int realsize, int q
 			}
 			put_mem_bank ((bnr + hioffs) << 16, bank, realstart << 16);
 			set_memory_cacheable(bnr + hioffs, bank);
-#ifdef WITH_THREADED_CPU
 			thread_mem_banks[bnr + hioffs] = orig_bank ? orig_bank : bank;
-#endif
 			real_left--;
 		}
 	}

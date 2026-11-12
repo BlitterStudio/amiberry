@@ -49,9 +49,7 @@
 #if defined(ENFORCER)
 #include "enforcer.h"
 #endif
-#ifdef WITH_THREADED_CPU
 #include "cpu_thread.h"
-#endif
 #ifdef WITH_LUA
 #include "luascript.h"
 #endif
@@ -5465,9 +5463,7 @@ static void vsync_handler_post(void)
 	prevtime = read_processor_time();
 
 	check_nocustom();
-#ifdef WITH_THREADED_CPU
 	cpu_thread_check_selection();
-#endif
 
 #if CUSTOM_DEBUG > 1
 	if ((intreq & 0x0020) && (intena & 0x0020))
@@ -7248,10 +7244,8 @@ int custom_init(void)
 		org(pos);
 	}
 #endif
-#ifdef WITH_THREADED_CPU
 	/* Initialize CPU threading diagnostics */
 	cpu_thread_diag_init();
-#endif
 
 	build_blitfilltable();
 
@@ -7262,7 +7256,6 @@ int custom_init(void)
 	return 1;
 }
 
-#ifdef WITH_THREADED_CPU
 // What a CPU read of these registers would return now (custom_wget_1()).
 // VHPOSR has a side effect only for slow_cpu_access.
 bool custom_cpu_thread_pos(uae_u16 *vposr, uae_u16 *vhposr)
@@ -7281,7 +7274,6 @@ void custom_cpu_thread_regs(uae_u16 *v)
 	v[2] = INTREQR();
 	v[3] = ADKCONR();
 }
-#endif
 
 /* Custom chip memory bank */
 
@@ -12719,7 +12711,6 @@ static void sync_imm_evhandler(void)
 
 int do_cycles_cck(int cycles)
 {
-#ifdef WITH_THREADED_CPU
 	if (cpu_threaded_run && !is_mainthread()) {
 		/* CPU thread is skipping cycle accounting */
 		if (cpu_thread_diag.enable_diagnostics) {
@@ -12727,7 +12718,6 @@ int do_cycles_cck(int cycles)
 		}
 		return (cycles / CYCLE_UNIT) * CYCLE_UNIT;
 	}
-#endif
 	int c = 0;
 	while (cycles >= CYCLE_UNIT) {
 		do_cck(true);
@@ -13038,14 +13028,12 @@ void wait_cpu_cycle_write_ce020(uaecptr addr, int mode, uae_u32 v)
 
 void do_cycles_ce(int cycles)
 {
-#ifdef WITH_THREADED_CPU
 	if (cpu_threaded_run && !is_mainthread()) {
 		if (cpu_thread_diag.enable_diagnostics) {
 			cpu_thread_diag_log_stall(cycles);
 		}
 		return;
 	}
-#endif
 	cycles += extra_cycle;
 	while (cycles >= CYCLE_UNIT) {
 		do_cck(true);
@@ -13056,14 +13044,12 @@ void do_cycles_ce(int cycles)
 
 void do_cycles_ce020(int cycles)
 {
-#ifdef WITH_THREADED_CPU
 	if (cpu_threaded_run && !is_mainthread()) {
 		if (cpu_thread_diag.enable_diagnostics) {
 			cpu_thread_diag_log_stall(cycles);
 		}
 		return;
 	}
-#endif
 	static int extra;
 
 	cycles += extra;

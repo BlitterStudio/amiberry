@@ -21,7 +21,7 @@ class CpuThreadRegressionTests(unittest.TestCase):
             fixture.write_text(source, encoding="utf-8")
             command = shlex.split(os.environ.get("CXX", "c++")) + [
                 "-std=c++17", "-Wall", "-Wextra", "-Werror", "-pthread",
-                "-DWITH_THREADED_CPU", "-DAMIBERRY",
+                "-DAMIBERRY",
                 "-I", str(ROOT / "src/include"), str(fixture), "-o", str(executable),
             ]
             result = subprocess.run(command, capture_output=True, text=True, timeout=60)
@@ -156,7 +156,7 @@ int main() {
     def test_wrapper_capacity_identity_and_remap_refresh(self):
         production = (ROOT / "src/memory.cpp").read_text(encoding="utf-8")
         start = production.index("struct addrbank_thread {")
-        end = production.index("\n#endif\n\nstatic void set_memory_cacheable", start)
+        end = production.index("\nstatic void set_memory_cacheable", start)
         self.compile_and_run("banks", r'''
 #include <cassert>
 #include <cstdint>

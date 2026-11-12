@@ -11,7 +11,6 @@
 
 #include "uae/types.h"
 
-#ifdef WITH_THREADED_CPU
 #include <atomic>
 
 /* Thread diagnostics and profiling */
@@ -43,6 +42,5 @@ void cpu_thread_diag_log_wait(uae_u64 nanoseconds);
 void cpu_thread_diag_log_stall(evt_t duration);
 void cpu_thread_diag_print_stats(void);
 
-#endif /* WITH_THREADED_CPU */
 
 #endif /* UAE_CPU_THREAD_H */

@@ -20,9 +20,7 @@
 #include "xwin.h"
 #include "audio.h"
 #include "custom.h"
-#ifdef WITH_THREADED_CPU
 #include "cpu_thread.h"
-#endif
 
 extern uae_u8 agnus_hpos;
 int custom_fastmode;
@@ -276,7 +274,6 @@ static int cycles_to_add_remain;
 
 void do_cycles_slow(int cycles_to_add)
 {
-#ifdef WITH_THREADED_CPU
 	if (cpu_threaded_run) {
 		if (cpu_thread_is_worker()) {
 			cpu_thread_worker_cycles(cycles_to_add);
@@ -285,7 +282,6 @@ void do_cycles_slow(int cycles_to_add)
 		if (!is_mainthread())
 			return;
 	}
-#endif
 
 #ifdef WITH_X86
 #if 0

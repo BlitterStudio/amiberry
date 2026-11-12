@@ -18,10 +18,8 @@
 bool cpu_thread_pause();
 void cpu_thread_resume();
 bool cpu_thread_is_waiting_on_main();
-#ifdef WITH_THREADED_CPU
 void cpu_thread_check_selection();
 void cpu_thread_charge_access(int cycles);
-#endif
 
 class cpu_thread_guard {
 	bool held;

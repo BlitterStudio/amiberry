@@ -88,7 +88,6 @@ extern int pissoff;
 // loop runs.
 extern bool cpu_threaded_run;
 
-#ifdef WITH_THREADED_CPU
 bool cpu_thread_is_worker();
 void cpu_thread_kick();
 void cpu_thread_worker_cycles(int cycles);
@@ -96,7 +95,6 @@ void cpu_thread_worker_cycles(int cycles);
 bool custom_cpu_thread_pos(uae_u16 *vposr, uae_u16 *vhposr);
 void custom_cpu_thread_regs(uae_u16 *dmaconr_intenar_intreqr_adkconr);
 bool cia_cpu_thread_pra(uae_u8 *v);
-#endif
 
 extern int do_cycles_cck(int);
 
@@ -111,7 +109,6 @@ extern int custom_fastmode;
 
 STATIC_INLINE void cycles_do_special (void)
 {
-#ifdef WITH_THREADED_CPU
 	// Threaded: the countdown also accounts executed cycles, so compiled code
 	// is made to leave without losing them (see cpu_thread_kick()).
 	if (cpu_threaded_run) {
@@ -121,7 +118,6 @@ STATIC_INLINE void cycles_do_special (void)
 #endif
 		return;
 	}
-#endif
 #ifdef JIT
 	if (currprefs.cachesize) {
 		if (pissoff >= 0)
@@ -135,10 +131,8 @@ STATIC_INLINE void cycles_do_special (void)
 
 STATIC_INLINE void do_extra_cycles(int cycles_to_add)
 {
-#ifdef WITH_THREADED_CPU
 	if (cpu_threaded_run && !cpu_thread_is_worker())
 		return;
-#endif
 	pissoff -= cycles_to_add;
 }
 

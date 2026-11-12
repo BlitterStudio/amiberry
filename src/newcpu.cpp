@@ -125,7 +125,6 @@ static volatile uae_atomic uae_interrupts6[IRQ_SOURCE_MAX];
 
 bool cpu_threaded_run;
 
-#ifdef WITH_THREADED_CPU
 // Keyboard reset left for the CPU thread: bit 0 = pending, bit 1 = hard reset.
 static volatile uae_atomic cpu_thread_kbreset;
 static thread_local bool cpu_worker;
@@ -139,9 +138,6 @@ static void cpu_thread_debugger_resume();
 #ifdef JIT
 static void cpu_thread_jit_break();
 static void cpu_thread_jit_unkick();
-#endif
-#else
-static void cpu_thread_safepoint() {}
 #endif
 
 static int cacheisets04060, cacheisets04060mask, cacheitag04060mask;
@@ -3677,7 +3673,6 @@ static void m68k_reset2(bool hardreset)
 
 	cpu_halt_clear();
 
-#ifdef WITH_THREADED_CPU
 	if (is_cpu_thread()) {
 		// RESET instruction on a board that forces a hard reset (cpureset()). A
 		// keyboard reset the CPU thread has not taken yet must still hold the CPU.
@@ -3689,9 +3684,6 @@ static void m68k_reset2(bool hardreset)
 		regs.spcflags = 0;
 		atomic_set(&cpu_thread_kbreset, 0);
 	}
-#else
-	regs.spcflags = 0;
-#endif
 	m68k_reset_delay = false;
 	regs.ipl[0] = regs.ipl[1] = regs.ipl_pin = 0;
 	for (int i = 0; i < IRQ_SOURCE_MAX; i++) {
@@ -4742,7 +4734,6 @@ static void doint_delayed(uae_u32 v)
 	update_ipl(v);
 }
 
-#ifdef WITH_THREADED_CPU
 // Threaded CPU coordination state, on lines of its own: the CPU thread
 // writes regflags and regs on almost every instruction, and the main thread
 // polls some of these fields while it waits. Sharing a line with regflags
@@ -4777,7 +4768,6 @@ static struct alignas(64) {
 // or announces that it sleeps at an instruction boundary (IDLE, in STOP or in
 // the debugger), where a pause takes it over without waking it (IDLE_HELD).
 enum { CPU_THREAD_RUNNING, CPU_THREAD_PARKED, CPU_THREAD_IDLE, CPU_THREAD_IDLE_HELD };
-#endif
 
 void doint()
 {
@@ -4788,12 +4778,10 @@ void doint()
 	}
 #endif
 	int ipl = intlev();
-#ifdef WITH_THREADED_CPU
 	// Publish chipset changes before raising flags, not at the next CCK poll.
 	// CPU-side calls may hold a stale sample and must not overwrite this latch.
 	if (cpu_threaded_run && is_mainthread())
 		atomic_set(&cpu_thread_ilvl, ipl);
-#endif
 
 	if (regs.ipl_pin != ipl) {
 
@@ -4836,11 +4824,9 @@ static bool take_special(uae_u32 x)
 
 static void check_debugger()
 {
-#ifdef WITH_THREADED_CPU
 	// The main thread owns the debugger; its guard parks the worker first.
 	if (cpu_threaded_run && cpu_thread_debugger_wait())
 		return;
-#endif
 	// Plain load first: this runs on every JIT dispatch of the CPU thread.
 	if ((regs.spcflags & SPCFLAG_BRK) && take_special(SPCFLAG_BRK)) {
 #ifdef DEBUGGER
@@ -4848,9 +4834,7 @@ static void check_debugger()
 			debug();
 		}
 #endif
-#ifdef WITH_THREADED_CPU
 		cpu_thread_debugger_resume();
-#endif
 	}
 }
 
@@ -4911,11 +4895,9 @@ static int do_specialties_check()
 
 static int do_specialties (int cycles)
 {
-#ifdef WITH_THREADED_CPU
 	// An interpreter loop running on the CPU thread (see cpu_thread_run_loop())
 	if (cpu_worker)
 		return cpu_thread_slow_path();
-#endif
 	uaecptr pc = m68k_getpc();
 	uae_atomic spcflags = regs.spcflags;
 
@@ -5403,7 +5385,6 @@ static uae_u16 get_word_020_prefetchf (uae_u32 pc)
 }
 #endif
 
-#ifdef WITH_THREADED_CPU
 #if defined(__GNUC__) || defined(__clang__)
 #define CPU_THREAD_RARE(x) __builtin_expect(!!(x), 0)
 #else
@@ -6986,15 +6967,9 @@ static void run_cpu_thread(int (*f)(void *))
 		uae_sem_destroy(sem);
 }
 
-#else
-bool cpu_thread_pause() { return false; }
-void cpu_thread_resume() {}
-bool cpu_thread_is_waiting_on_main() { return false; }
-#endif
 
 static void custom_reset_cpu(bool hardreset, bool keyboardreset)
 {
-#ifdef WITH_THREADED_CPU
 	if (is_cpu_thread()) {
 		__atomic_store_n(&cpu_thread_reset, 1 | (hardreset ? 2 : 0) | (keyboardreset ? 4 : 0), __ATOMIC_RELEASE);
 		cpu_thread_wake_main();
@@ -7002,16 +6977,12 @@ static void custom_reset_cpu(bool hardreset, bool keyboardreset)
 	} else {
 		custom_reset(hardreset, keyboardreset);
 	}
-#else
-	custom_reset(hardreset, keyboardreset);
-#endif
 }
 
 // Chipset reset for a keyboard reset. hold keeps the CPU in reset afterwards;
 // without hold a uae_reset() follows.
 void cpu_keyboard_reset(bool hardreset, bool hold)
 {
-#ifdef WITH_THREADED_CPU
 	// The CPU thread may be running, so it does the reset itself from the hold in
 	// do_specialties_thread(). Without hold, m68k_go() resets everything after the
 	// CPU thread has stopped.
@@ -7023,7 +6994,6 @@ void cpu_keyboard_reset(bool hardreset, bool hold)
 		}
 		return;
 	}
-#endif
 	custom_reset_cpu(hardreset, true);
 	if (hold)
 		cpu_inreset();
@@ -7031,7 +7001,6 @@ void cpu_keyboard_reset(bool hardreset, bool hold)
 
 #ifdef JIT  /* Completely different run_2 replacement */
 
-#ifdef WITH_THREADED_CPU
 // Threaded JIT: change countdown without changing jit_base - countdown, the
 // cumulative progress the main thread reads (cpu_thread_jit_total()).
 // A plain store, like compiled code's subtraction: only this thread counts
@@ -7050,18 +7019,12 @@ static void cpu_thread_jit_set_countdown(int value)
 	__atomic_store_n(&cpu_thread_jit_base, cpu_thread_jit_base + value - left, __ATOMIC_RELAXED);
 	__atomic_store_n(&cpu_thread_jit_seq, seq + 2, __ATOMIC_RELEASE);
 }
-#endif
 
 static void cpu_thread_jit_refill()
 {
-#ifdef WITH_THREADED_CPU
 	cpu_thread_jit_set_countdown(pissoff_value);
-#else
-	countdown = pissoff_value;
-#endif
 }
 
-#ifdef WITH_THREADED_CPU
 static void cpu_thread_jit_break()
 {
 	// Shorten a dispatch for pause/reconfiguration; work done so far stays counted.
@@ -7102,7 +7065,6 @@ static void cpu_thread_jit_unkick()
 		countdown = 0;
 	__atomic_store_n(&cpu_thread_kick_lock, 0, __ATOMIC_RELEASE);
 }
-#endif
 
 #ifdef CPU_AARCH64 // Used by the AARCH64 JIT implementation
 void execute_exception(uae_u32 cycles)
@@ -7152,13 +7114,11 @@ void do_nothing (void)
 
 void jit_end_dispatch(void)
 {
-#ifdef WITH_THREADED_CPU
 	if (cpu_threaded_run) {
 		// keeps the executed-cycle accounting and any kick
 		cpu_thread_jit_break();
 		return;
 	}
-#endif
 	countdown = 0;
 }
 
@@ -7182,11 +7142,7 @@ static uae_u32 get_jit_opcode(void)
 
 static bool cpu_thread_exit_dispatch()
 {
-#ifdef WITH_THREADED_CPU
 	return cpu_threaded_run && cpu_thread_leave_jit();
-#else
-	return false;
-#endif
 }
 
 void exec_nostats (void)
@@ -7314,7 +7270,7 @@ typedef void compiled_handler (void);
 static bool jit_needs_interpreter()
 {
 	bool special = regs.t0 || regs.t1 || regs.m;
-#if defined(WITH_THREADED_CPU) && defined(DEBUGGER)
+#ifdef DEBUGGER
 	special = special || (cpu_threaded_run && debugging);
 #endif
 	return special;
@@ -7328,13 +7284,10 @@ static bool jit_interpret_special()
 	bool exit = false;
 	TRY(prb) {
 		while (!exit && jit_needs_interpreter()) {
-#ifdef WITH_THREADED_CPU
 			cpu_thread_safepoint();
-#endif
 			if (regs.spcflags & SPCFLAG_MODE_CHANGE)
 				return true;
 			check_debugger();
-#ifdef WITH_THREADED_CPU
 			if (cpu_threaded_run && regs.stopped) {
 				if (do_specialties_thread())
 					return true;
@@ -7343,7 +7296,6 @@ static bool jit_interpret_special()
 					continue;
 				}
 			}
-#endif
 			regs.instruction_pc = m68k_getpc();
 			regs.opcode = x_get_iword(0);
 			(*cpufunctbl[regs.opcode])(regs.opcode);
@@ -7353,11 +7305,9 @@ static bool jit_interpret_special()
 			else
 				do_cycles(4 * CYCLE_UNIT);
 			if (regs.spcflags) {
-#ifdef WITH_THREADED_CPU
 				if (cpu_threaded_run)
 					exit = do_specialties_thread() != 0;
 				else
-#endif
 					exit = do_specialties(cpu_cycles) != 0;
 			}
 		}
@@ -7368,7 +7318,6 @@ static bool jit_interpret_special()
 	return exit;
 }
 
-#ifdef WITH_THREADED_CPU
 static int cpu_thread_run_jit(void *v)
 {
 #ifdef __ANDROID__
@@ -7454,7 +7403,6 @@ static int cpu_thread_run_jit(void *v)
 #endif
 	return 0;
 }
-#endif
 
 static void m68k_run_jit(void)
 {
@@ -7470,12 +7418,10 @@ static void m68k_run_jit(void)
 		return;
 	}
 
-#ifdef WITH_THREADED_CPU
 	if (cpu_threaded_run) {
 		run_cpu_thread(cpu_thread_run_jit);
 		return;
 	}
-#endif
 
 	if (regs.spcflags) {
 		if (do_specialties(0)) {
@@ -8319,7 +8265,6 @@ static inline __attribute__((always_inline)) uae_u32 get_opcode_fast(void)
 	return x_get_iword(0);
 }
 
-#ifdef WITH_THREADED_CPU
 static int cpu_thread_run_2(void *v)
 {
 	bool exit = false;
@@ -8364,7 +8309,6 @@ static int cpu_thread_run_2(void *v)
 	}
 	return 0;
 }
-#endif
 
 /* Same thing, but don't use prefetch to get opcode.  */
 static void m68k_run_2_000()
@@ -8499,7 +8443,6 @@ static void warpmode_reset()
 	}
 }
 
-#ifdef WITH_THREADED_CPU
 // The CPU gets a thread of its own when the host has a core to spare and the
 // emulation allows one. Cycle-exact emulation needs the CPU and the chipset in
 // step, and a few features expect the CPU loop on the main thread: they run
@@ -8665,7 +8608,6 @@ void cpu_thread_check_selection()
 	if (cpu_thread_wanted(cpu_thread_current_run_func) != cpu_threaded_run)
 		set_special(SPCFLAG_MODE_CHANGE);
 }
-#endif
 
 void m68k_run(void)
 {
@@ -8689,7 +8631,6 @@ void m68k_run(void)
 
 		currprefs.cpu_model < 68020 ? m68k_run_2_000 : m68k_run_2_020;
 
-#ifdef WITH_THREADED_CPU
 	cpu_thread_current_run_func = run_func;
 	cpu_thread_select(cpu_thread_wanted(run_func));
 	bool own_thread = false;
@@ -8706,7 +8647,6 @@ void m68k_run(void)
 		}
 		return;
 	}
-#endif
 
 	run_func();
 }
@@ -10050,12 +9990,10 @@ void exception2_setup(uae_u32 opcode, uaecptr addr, bool read, int size, uae_u32
 // Common hardware bus error entry point. Both for MMU and non-MMU emulation.
 void hardware_exception2(uaecptr addr, uae_u32 v, bool read, bool ins, int size)
 {
-#ifdef WITH_THREADED_CPU
 	if (is_mainthread() && cpu_thread_servicing) {
 		cpu_thread_fault = { addr, v, read, ins, size, 2, true };
 		THROW(2);
 	}
-#endif
 	if (currprefs.cpu_model <= 68010 && currprefs.cpu_compatible && HARDWARE_BUS_ERROR_EMULATION) {
 		hardware_bus_error = 1;
 	} else if (currprefs.mmu_model) {

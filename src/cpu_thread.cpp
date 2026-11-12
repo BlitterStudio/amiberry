@@ -15,7 +15,6 @@
 #include <cstdlib>
 #include <cstring>
 
-#ifdef WITH_THREADED_CPU
 cpu_thread_diagnostics cpu_thread_diag = {};
 
 void cpu_thread_diag_init(void)
@@ -102,4 +101,3 @@ void cpu_thread_diag_print_stats(void)
 	write_log(_T("================= END DIAGNOSTICS REPORT =================\n\n"));
 }
 
-#endif

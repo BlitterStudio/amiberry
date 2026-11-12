@@ -6233,11 +6233,9 @@ void target_fixup_options(uae_prefs* p)
 		if (p->gfx_monitor[i].enabled)
 			heal_unavailable_display_index(p->gfx_monitor[i].gfx_display, "monitor");
 	}
-#ifdef WITH_THREADED_CPU
 	// JIT and CPU Thread can now work together.
 	// cpu_thread_run_jit() handles JIT execution on a separate thread,
 	// while run_cpu_thread() manages cycle timing on the main thread.
-#endif
 #endif
 	
 	if (p->rtgboards[0].rtgmem_type >= GFXBOARD_HARDWARE) {

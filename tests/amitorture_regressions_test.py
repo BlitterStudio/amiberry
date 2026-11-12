@@ -682,7 +682,7 @@ int main() {
 
     def test_threaded_jit_kicks_end_compiled_code_without_losing_cycles(self):
         text = source("src/newcpu.cpp")
-        declarations = text[text.index("#ifdef WITH_THREADED_CPU\n#if defined(__GNUC__)") + len("#ifdef WITH_THREADED_CPU\n"):
+        declarations = text[text.index("#if defined(__GNUC__) || defined(__clang__)\n#define CPU_THREAD_RARE(x)"):
                             text.index("static inline void cpu_thread_spin_pause()")]
         kick_state = text[text.index("// Kicking the threaded JIT."):
                           text.index("// A consistent JIT total;")]
@@ -694,7 +694,6 @@ int main() {
         for path in ("src/osdep/sigsegv_handler.cpp",):
             self.assertNotIn("countdown = 0;", source(path))
         run_cpp(r"""
-#define WITH_THREADED_CPU
 constexpr int CYCLE_UNIT = 512;
 int countdown, pissoff_value = 1000000;
 thread_local bool cpu_worker;
@@ -794,8 +793,8 @@ int main() {
 
     def test_threaded_cpu_progress_and_bounded_chipset_waits(self):
         text = source("src/newcpu.cpp")
-        pacing = "#ifdef WITH_THREADED_CPU\n#if defined(__GNUC__)"
-        declarations = text[text.index(pacing) + len("#ifdef WITH_THREADED_CPU\n"):
+        pacing = "#if defined(__GNUC__) || defined(__clang__)\n#define CPU_THREAD_RARE(x)"
+        declarations = text[text.index(pacing):
                             text.index("static inline void cpu_thread_spin_pause()")]
         kick_state = text[text.index("// Kicking the threaded JIT."):
                           text.index("// A consistent JIT total;")]
@@ -803,7 +802,6 @@ int main() {
         start = thread.index("\t\tfor (int i = 0; i < cycles_to_do; i++)")
         batch = thread[start:thread.index("\n\t\tcheck_debugger();", start)]
         run_cpp(r"""
-#define WITH_THREADED_CPU
 constexpr int CYCLE_UNIT = 512;
 constexpr int SPCFLAG_CPUINRESET = 1, SPCFLAG_MODE_CHANGE = 2, SPCFLAG_CALLBACK = 4;
 constexpr int SPCFLAG_INT = 8, SPCFLAG_CPU_THREAD_SYNC = 16, SPCFLAG_BRK = 32;
@@ -940,7 +938,6 @@ int main() {
     def test_threaded_cpu_unbounded_jit_fallback_yields_for_pause(self):
         text = source("src/newcpu.cpp")
         run_cpp(r"""
-#define WITH_THREADED_CPU
 constexpr int SPCFLAG_MODE_CHANGE = 1, SPCFLAG_CPU_THREAD_SYNC = 2, CYCLE_UNIT = 512;
 struct regstruct { uaecptr instruction_pc; uae_u32 opcode; int spcflags; } regs;
 bool cpu_threaded_run = true;
@@ -975,7 +972,6 @@ int main() {
     def test_threaded_cpu_pause_does_not_abandon_expired_jit_recompilation(self):
         text = source("src/newcpu.cpp")
         run_cpp(r"""
-#define WITH_THREADED_CPU
 constexpr int SPCFLAG_MODE_CHANGE = 1, SPCFLAG_CPU_THREAD_SYNC = 2, CYCLE_UNIT = 512, MAXRUN = 4;
 bool cpu_threaded_run = true;
 struct regstruct {
@@ -1042,7 +1038,6 @@ int main() {
 #include <mutex>
 #include <condition_variable>
 #include <chrono>
-#define WITH_THREADED_CPU
 #define DEBUGGER
 #define _T(x) x
 #define TRY(x) try

@@ -2483,7 +2483,6 @@ static int cia_cycles(int delay, int phase, int val, int post)
 
 static void cia_wait_pre(int cianummask)
 {
-#ifdef WITH_THREADED_CPU
 	// Served for the CPU thread, the E-clock wait becomes chipset time the
 	// main thread may run without waiting for the CPU's progress (see
 	// cpu_thread_charge_access()).
@@ -2495,7 +2494,6 @@ static void cia_wait_pre(int cianummask)
 		}
 		return;
 	}
-#endif
 	if (currprefs.cachesize)
 		return;
 #ifdef WITH_PPC
@@ -2540,12 +2538,10 @@ static void cia_wait_post(int cianummask, uaecptr addr, uae_u32 value, bool rw)
 	if (ppc_state)
 		return;
 #endif
-#ifdef WITH_THREADED_CPU
 	if (cpu_threaded_run) {
 		cpu_thread_charge_access(currprefs.cachesize ? 12 * E_CYCLE_UNIT : e_clock_end * E_CYCLE_UNIT);
 		return;
 	}
-#endif
 	if (currprefs.cachesize) {
 		do_cycles(12 * E_CYCLE_UNIT);
 	} else {
@@ -2728,7 +2724,6 @@ static uae_u32 REGPARAM2 cia_bget(uaecptr addr)
 	return v;
 }
 
-#ifdef WITH_THREADED_CPU
 // CIA-A PRA as a CPU read of 0xbfe001 would return it now (cia_bget()), for
 // the CPU thread's register snapshot. Not with inputs that need each read.
 bool cia_cpu_thread_pra(uae_u8 *v)
@@ -2738,7 +2733,6 @@ bool cia_cpu_thread_pra(uae_u8 *v)
 	*v = ReadCIAA(0, nullptr);
 	return true;
 }
-#endif
 
 static uae_u32 REGPARAM2 cia_wget(uaecptr addr)
 {

@@ -966,7 +966,7 @@ static bool amiberry_renderframe(const int monid, int mode, int immediate)
 	// Consume the zero-copy refresh request. The flag is set by picasso96
 	// state changes (SetDisplay, SetPanning) and forces the host surface
 	// binding to follow the current Amiga VRAM address. This is orthogonal
-	// to WITH_THREADED_CPU so must not be wrapped by that define.
+	// to the threaded CPU.
 	if (ad->picasso_zero_copy_update_needed) {
 		const_cast<amigadisplay*>(ad)->picasso_zero_copy_update_needed = false;
 		if (p96_is_zero_copy_enabled(monid)) {
