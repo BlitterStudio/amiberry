@@ -3,7 +3,7 @@
 ; the Kickstart checksum.
 ;
 ; Rebuild fault_resume.bin after editing (vasm, e.g. from the
-; amigadev/crosstools:m68k-amigaos-gcc10 image):
+; amigadev/crosstools:m68k-amigaos image):
 ;   vasmm68k_mot -Fbin -m68030 -no-opt -o fault_resume.bin fault_resume.s
 ;
 ; Page $40000 starts out invalid. The bus error handler maps it and returns,
