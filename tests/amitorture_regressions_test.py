@@ -1650,7 +1650,10 @@ int main() {
     assert(!cpu_thread_servicing);
 
     // Idle main thread: it sleeps between requests, and replies late enough
-    // that the CPU thread sleeps too. Both wakeups must be delivered.
+    // that the CPU thread sleeps too. Both wakeups must be delivered. Late
+    // means well past the reply spin (CPU_THREAD_REPLY_SPIN_NS, its clock
+    // read every 256 spins): 300 us was not always past it on a CI runner,
+    // where a yield can take a microsecond.
     regs.spcflags = 0;
     done = false;
     std::thread idle([&] { transactions(200); done = true; });
@@ -1660,7 +1663,7 @@ int main() {
         cpu_thread_main_sleep(1);
         if (__atomic_load_n(&cpu_thread_indirect_mode, __ATOMIC_ACQUIRE) <= 2
             && ++served % 8 == 0)
-            std::this_thread::sleep_for(std::chrono::microseconds(300));
+            std::this_thread::sleep_for(std::chrono::milliseconds(2));
     }
     idle.join();
     assert(reads == 303 && writes == 300);
