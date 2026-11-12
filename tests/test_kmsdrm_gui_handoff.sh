@@ -147,7 +147,7 @@ fi
 if ! awk '
 	/void OpenGLRenderer::update_vsync\(int monid\)/ { in_update_vsync = 1 }
 	in_update_vsync && /if \(kmsdrm_detected\) \{/ { in_kmsdrm_policy = 1 }
-	in_kmsdrm_policy && /interval = SDL_GetVersion\(\) < SDL_VERSIONNUM\(3, 4, 0\) \? 0 : 1;/ {
+	in_kmsdrm_policy && /interval = SDL_GetVersion\(\) < SDL_VERSIONNUM\(3, 4, 0\) \|\| !amiberry_hw_vsync_refresh_matches\(\) \? 0 : 1;/ {
 		versioned_interval = 1
 	}
 	in_kmsdrm_policy && /^	}/ {
@@ -155,7 +155,7 @@ if ! awk '
 	}
 	END { if (!in_update_vsync) exit 1 }
 ' "$opengl_renderer_file"; then
-	echo "OpenGL KMSDRM must use interval 0 for SDL 3.2.x and interval 1 for SDL 3.4+" >&2
+	echo "OpenGL KMSDRM must use interval 0 for SDL 3.2.x and for a mismatched refresh, interval 1 for SDL 3.4+ with a matched one" >&2
 	exit 1
 fi
 

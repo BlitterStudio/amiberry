@@ -2735,13 +2735,8 @@ void amiberry_hw_vsync_pacing_invalidate(void)
 // This runs on the emulator thread (via isvsync_chipset() → framewait()).
 // It does NOT call any SDL video APIs: it only reads the cached monitor Hz and
 // blocking-presentation capability published by the presentation thread.
-static bool amiberry_hw_vsync_pacing_ok(void)
+bool amiberry_hw_vsync_refresh_matches(void)
 {
-#ifdef USE_VULKAN
-	return false;
-#else
-	if (!hw_vsync_cached_presentation_blocking.load(std::memory_order_relaxed))
-		return false;
 	if (vblank_hz <= 0.0f)
 		return false;
 	const uint32_t hz_x1000 = hw_vsync_cached_monitor_hz_x1000.load(std::memory_order_relaxed);
@@ -2749,6 +2744,16 @@ static bool amiberry_hw_vsync_pacing_ok(void)
 		return false;  // Main thread hasn't probed yet (or the probe failed).
 	const float monitor_hz = static_cast<float>(hz_x1000) / 1000.0f;
 	return std::fabs(monitor_hz - vblank_hz) < 1.0f;
+}
+
+static bool amiberry_hw_vsync_pacing_ok(void)
+{
+#ifdef USE_VULKAN
+	return false;
+#else
+	if (!hw_vsync_cached_presentation_blocking.load(std::memory_order_relaxed))
+		return false;
+	return amiberry_hw_vsync_refresh_matches();
 #endif
 }
 #elif defined(AMIBERRY)
@@ -2756,6 +2761,7 @@ static bool amiberry_hw_vsync_pacing_ok(void)
 // provide an empty body here so callers link without the full pacing logic.
 void amiberry_hw_vsync_pacing_invalidate(void) {}
 void amiberry_hw_vsync_pacing_set_blocking(const bool) {}
+bool amiberry_hw_vsync_refresh_matches(void) { return false; }
 #endif
 
 int isvsync_chipset(void)

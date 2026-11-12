@@ -70,6 +70,10 @@ extern void amiberry_hw_vsync_pacing_invalidate(void);
 // Publishes whether the active renderer has successfully configured blocking
 // presentation. Called on the presentation thread and read by frame pacing.
 extern void amiberry_hw_vsync_pacing_set_blocking(bool blocking);
+
+// Whether the host monitor's refresh matches the chipset's within ~1 Hz,
+// whatever the presentation mode (false until the monitor has been probed).
+extern bool amiberry_hw_vsync_refresh_matches(void);
 #endif
 
 extern void flush_line(struct vidbuffer*, int);
