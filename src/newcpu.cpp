@@ -53,6 +53,8 @@
 #include "cpu_thread.h"
 #include <algorithm>
 #include <thread>
+#include <mutex>
+#include <condition_variable>
 #ifdef WITH_X86
 #include "x86.h"
 #endif
@@ -5515,6 +5517,13 @@ static uae_s64 cpu_thread_progress(uae_s64 *seen)
 	return d;
 }
 static uae_sem_t cpu_in_sema, cpu_wakeup_sema, cpu_reply_sema, cpu_request_sema;
+// The main thread's waits shorter than a millisecond (cpu_thread_main_nap()):
+// SDL's semaphores time out in whole milliseconds. cpu_thread_main_sleeping
+// is 1 while it waits for cpu_request_sema, 2 while it naps here.
+static std::mutex cpu_thread_nap_lock;
+static std::condition_variable cpu_thread_nap_cv;
+static bool cpu_thread_nap_woken;   // under cpu_thread_nap_lock
+static void cpu_thread_wake_main();
 static uae_sem_t cpu_park_sema, cpu_resume_sema;
 
 // Request/reply mailbox: written by both threads, kept off other data's lines.
@@ -5573,7 +5582,7 @@ static void cpu_thread_safepoint()
 		return;
 	__atomic_store_n(&cpu_thread_parked, CPU_THREAD_PARKED, __ATOMIC_RELEASE);
 	uae_sem_post(&cpu_park_sema);
-	uae_sem_post(&cpu_request_sema);
+	cpu_thread_wake_main();
 	// A resume posts cpu_resume_sema even when the wait below is not reached;
 	// a stale count only costs a further pass of the loop.
 	cpu_thread_poll_while([] { return __atomic_load_n(&cpu_thread_pause_requested, __ATOMIC_ACQUIRE) != 0; });
@@ -5643,7 +5652,7 @@ static bool cpu_thread_debugger_wait()
 			&& !__atomic_load_n(&cpu_thread_debugger_waiting, __ATOMIC_ACQUIRE);
 	if (regs.spcflags & SPCFLAG_BRK) {
 		__atomic_store_n(&cpu_thread_debugger_waiting, 1, __ATOMIC_RELEASE);
-		uae_sem_post(&cpu_request_sema);
+		cpu_thread_wake_main();
 		while (__atomic_load_n(&cpu_thread_debugger_waiting, __ATOMIC_ACQUIRE)
 			&& !(regs.spcflags & SPCFLAG_MODE_CHANGE)) {
 			cpu_thread_safepoint();
@@ -5897,12 +5906,23 @@ static inline void cpu_thread_wait_reply(uae_u32 completion)
 	cpu_thread_wait_reply_slow(completion);
 }
 
+// Wake the main thread from cpu_thread_main_sleep() or cpu_thread_main_nap().
+static NOINLINE void cpu_thread_wake_main()
+{
+	uae_sem_post(&cpu_request_sema);
+	if (__atomic_load_n(&cpu_thread_main_sleeping, __ATOMIC_SEQ_CST) == 2) {
+		std::lock_guard<std::mutex> lock(cpu_thread_nap_lock);
+		cpu_thread_nap_woken = true;
+		cpu_thread_nap_cv.notify_one();
+	}
+}
+
 // Request after addr/size/value: wake the main thread only if it sleeps.
 static inline void cpu_thread_post_request(uae_u32 mode)
 {
 	__atomic_store_n(&cpu_thread_indirect_mode, mode, __ATOMIC_SEQ_CST);
 	if (CPU_THREAD_RARE(__atomic_load_n(&cpu_thread_main_sleeping, __ATOMIC_SEQ_CST)))
-		uae_sem_post(&cpu_request_sema);
+		cpu_thread_wake_main();
 }
 
 static inline void cpu_thread_post_reply(uae_u32 mode)
@@ -6496,6 +6516,23 @@ static void cpu_thread_main_sleep(int ms)
 	__atomic_store_n(&cpu_thread_main_sleeping, 0, __ATOMIC_RELAXED);
 }
 
+// Main thread: sleep up to ns, less than a millisecond, woken like
+// cpu_thread_main_sleep(). A count it leaves in cpu_request_sema only
+// shortens a later cpu_thread_main_sleep().
+static void cpu_thread_main_nap(uae_u64 ns)
+{
+	{
+		std::lock_guard<std::mutex> lock(cpu_thread_nap_lock);
+		cpu_thread_nap_woken = false;
+	}
+	__atomic_store_n(&cpu_thread_main_sleeping, 2, __ATOMIC_SEQ_CST);
+	if (!cpu_thread_settle(cpu_thread_main_has_work)) {
+		std::unique_lock<std::mutex> lock(cpu_thread_nap_lock);
+		cpu_thread_nap_cv.wait_for(lock, std::chrono::nanoseconds(ns), [] { return cpu_thread_nap_woken; });
+	}
+	__atomic_store_n(&cpu_thread_main_sleeping, 0, __ATOMIC_RELAXED);
+}
+
 static void service_cpu_thread_reset()
 {
 	uae_u32 reset_val = __atomic_load_n(&cpu_thread_reset, __ATOMIC_ACQUIRE);
@@ -6908,9 +6945,8 @@ static void run_cpu_thread(int (*f)(void *))
 							// A wait shorter than a millisecond (a line while the
 							// CPU thread reads the snapshot, the last lines of a
 							// frame): sleep it out too, or an idle guest costs a
-							// host core. Not wakeable, but no request came for a
-							// millisecond, and the next one makes this loop poll.
-							SDL_DelayNS((Uint64)left * 1000000000 / syncbase);
+							// host core. A request ends it.
+							cpu_thread_main_nap((uae_u64)left * 1000000000 / syncbase);
 							polls = 63;
 						}
 					}
@@ -6954,7 +6990,7 @@ static void custom_reset_cpu(bool hardreset, bool keyboardreset)
 #ifdef WITH_THREADED_CPU
 	if (is_cpu_thread()) {
 		__atomic_store_n(&cpu_thread_reset, 1 | (hardreset ? 2 : 0) | (keyboardreset ? 4 : 0), __ATOMIC_RELEASE);
-		uae_sem_post(&cpu_request_sema);
+		cpu_thread_wake_main();
 		uae_sem_wait(&cpu_in_sema);
 	} else {
 		custom_reset(hardreset, keyboardreset);
