@@ -5598,7 +5598,10 @@ static void cpu_thread_safepoint()
 // Interrupts usually follow one another closely (audio, CIA timers): poll
 // first, so that the main thread, which waits for an interrupt to be taken
 // (cpu_thread_main_wait_wake()), does not wait for a host wake-up each time.
-#define CPU_THREAD_IDLE_SPIN_NS 500000
+// Only briefly: an idle AmigaOS is woken more than a thousand times a second,
+// and a longer spin, outlasted by about half of those waits anyway, kept a
+// host core busy for an idle Workbench.
+#define CPU_THREAD_IDLE_SPIN_NS 50000
 static void cpu_thread_idle_wait(bool spin)
 {
 	__atomic_store_n(&cpu_thread_parked, CPU_THREAD_IDLE, __ATOMIC_RELEASE);
