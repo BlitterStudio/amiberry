@@ -8511,15 +8511,16 @@ static void (*cpu_thread_current_run_func)(void);
 // the unthreaded CPU keeps up. While that lasts the CPU runs on the main
 // thread, and the thread is tried again after a hold-off, doubled each time
 // the flood comes back soon after.
-#define CPU_THREAD_FLOOD_FRAMES 50          // measured over this many frames
+#define CPU_THREAD_FLOOD_FRAMES 10          // measured over this many frames
+#define CPU_THREAD_FLOOD_LATE 8             // of which at least this many are long
 #define CPU_THREAD_FLOOD_REQUESTS 4000      // requests per frame
-#define CPU_THREAD_FLOOD_SLOW 105           // percent of the frame time
+#define CPU_THREAD_FLOOD_SLOW 104           // percent of the frame time: a long frame
 #define CPU_THREAD_FLOOD_HOLD_MAX 32        // seconds
 #define CPU_THREAD_FLOOD_SETTLE 2           // seconds on the thread before measuring
 static struct {
 	frame_time_t last, sum, hold_until, threaded_since;
 	uae_u32 requests_seen;
-	int frames;
+	int frames, late;
 	int hold_seconds;
 	bool held, was_threaded;
 } cpu_thread_flood;
@@ -8622,10 +8623,16 @@ static void cpu_thread_check_flood()
 		// a new window, or a frame held up by something else (a pause, the GUI)
 		f.frames = 1;
 		f.sum = 0;
+		f.late = 0;
 		f.requests_seen = served;
 		f.last = now;
 		return;
 	}
+	// A flood makes nearly every frame long; a savestate, a reset or the GUI
+	// makes one frame very long, which an average over a short window would
+	// take for a flood. So long frames are counted.
+	if ((now - f.last) * 100 > vsynctimebase * CPU_THREAD_FLOOD_SLOW)
+		f.late++;
 	f.sum += now - f.last;
 	f.last = now;
 	if (++f.frames <= CPU_THREAD_FLOOD_FRAMES)
@@ -8633,8 +8640,7 @@ static void cpu_thread_check_flood()
 	const int n = f.frames - 1;
 	const uae_u32 requests = served - f.requests_seen;
 	f.frames = 0;
-	if (f.sum * 100 <= vsynctimebase * n * CPU_THREAD_FLOOD_SLOW
-		|| requests < (uae_u32)CPU_THREAD_FLOOD_REQUESTS * n) {
+	if (f.late < CPU_THREAD_FLOOD_LATE || requests < (uae_u32)CPU_THREAD_FLOOD_REQUESTS * n) {
 		// a quiet minute on the thread forgets earlier floods
 		if (f.hold_seconds && now - f.threaded_since > syncbase * 60)
 			f.hold_seconds = 0;
@@ -8643,8 +8649,8 @@ static void cpu_thread_check_flood()
 	f.hold_seconds = !f.hold_seconds ? 1 : std::min(f.hold_seconds * 2, CPU_THREAD_FLOOD_HOLD_MAX);
 	f.hold_until = now + syncbase * f.hold_seconds;
 	f.held = true;
-	write_log(_T("CPU thread: %u requests per frame, frames %d%% long: the CPU runs on the main thread for %d s.\n"),
-		requests / n, (int)(f.sum * 100 / (vsynctimebase * n)) - 100, f.hold_seconds);
+	write_log(_T("CPU thread: %u requests per frame, %d of %d frames long (%d%% on average): the CPU runs on the main thread for %d s.\n"),
+		requests / n, f.late, n, (int)(f.sum * 100 / (vsynctimebase * n)) - 100, f.hold_seconds);
 }
 
 void cpu_thread_check_selection()
