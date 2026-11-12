@@ -186,9 +186,16 @@ addrbank *mem_banks[MEMORY_BANKS];
 int icache_flushes, ce_fills;
 void flush_icache(int) { ++icache_flushes; }
 void fill_ce_banks() { ++ce_fills; }
+enum { CPU_BANKS_PLAIN, CPU_BANKS_THREAD, CPU_BANKS_COUNT };
+uae_u32 cpu_thread_flood_requests;
+int counted_reads;
+void cpu_thread_count_read(const addrbank *, uaecptr, int) { ++counted_reads; }
+int bankindex(uaecptr addr) { return addr >> 16; }
 ''' + production[start:end] + r'''
 uae_u32 instruction_a(uaecptr) { return 1; }
 uae_u32 instruction_b(uaecptr) { return 2; }
+uae_u32 written;
+void record_write(uaecptr, uae_u32 v) { written = v; }
 int main() {
     assert(get_bank_cpu_thread(&dummy_bank) == &dummy_bank);
     addrbank safe{};
@@ -244,14 +251,31 @@ int main() {
     mem_banks[0] = &dummy_bank;
     mem_banks[1] = &safe;
     mem_banks[2] = &originals[1];
-    memory_set_cpu_thread_banks(true);
+    memory_set_cpu_thread_banks(CPU_BANKS_THREAD);
     assert(mem_banks[0] == &dummy_bank && mem_banks[1] == &safe);
     assert(mem_banks[2] == wrappers[1] && !mem_banks[3]);
     assert(icache_flushes == 1 && ce_fills == 1);
-    memory_set_cpu_thread_banks(false);
+    memory_set_cpu_thread_banks(CPU_BANKS_PLAIN);
     assert(mem_banks[0] == &dummy_bank && mem_banks[1] == &safe);
     assert(mem_banks[2] == &originals[1] && !mem_banks[3]);
     assert(thread_banks.size() == originals.size());
+    // A request flood holds the CPU on the main thread: the same banks count
+    // the accesses that would have been requests, and pass them on.
+    originals[1].lput = originals[1].wput = originals[1].bput = record_write;
+    originals[1].lget = originals[1].wget = originals[1].bget = instruction_a;
+    memory_set_cpu_thread_banks(CPU_BANKS_COUNT);
+    assert(mem_banks[0] == &dummy_bank && mem_banks[1] == &safe);
+    addrbank *counting = mem_banks[2];
+    assert(counting != &originals[1] && counting != wrappers[1]);
+    assert(counting->jit_read_flag == S_READ && counting->jit_write_flag == S_WRITE);
+    counting->wput(2u << 16, 0x1234);
+    counting->bput(2u << 16, 0x56);
+    assert(cpu_thread_flood_requests == 2 && written == 0x56);
+    assert(counting->lget(2u << 16) == 1 && counted_reads == 1);
+    memory_set_cpu_thread_banks(CPU_BANKS_PLAIN);
+    assert(mem_banks[2] == &originals[1]);
+    for (auto *wrapper : count_banks)
+        std::free(wrapper);
     // Production intentionally retains wrappers while mappings can reference them.
     for (auto *wrapper : thread_banks)
         std::free(wrapper);

@@ -525,7 +525,11 @@ extern addrbank *get_mem_bank_real(uaecptr);
 extern void memory_init (void);
 extern void memory_cleanup(void);
 extern void restore_banks(void);
-extern void memory_set_cpu_thread_banks(bool threaded);
+// Which banks the CPU's memory map uses: the plain ones, the CPU thread's
+// (hand-offs to the main thread), or counting ones on the main thread while a
+// request flood holds the CPU there (newcpu.cpp cpu_thread_check_flood()).
+enum { CPU_BANKS_PLAIN, CPU_BANKS_THREAD, CPU_BANKS_COUNT };
+extern void memory_set_cpu_thread_banks(int mode);
 extern void map_banks (addrbank *bank, int first, int count, int realsize);
 extern bool map_banks_z2(addrbank *bank, int first, int count);
 extern uae_u32 map_banks_z2_autosize(addrbank *bank, int first);

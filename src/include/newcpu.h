@@ -20,6 +20,11 @@ void cpu_thread_resume();
 bool cpu_thread_is_waiting_on_main();
 void cpu_thread_check_selection();
 void cpu_thread_charge_access(int cycles);
+// Counting banks (memory.cpp) while a request flood holds the CPU on the main
+// thread: the accesses that would have been requests to the main thread.
+extern uae_u32 cpu_thread_flood_requests;
+struct addrbank;
+void cpu_thread_count_read(const struct addrbank *ab, uaecptr addr, int size);
 
 class cpu_thread_guard {
 	bool held;

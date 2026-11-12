@@ -3732,11 +3732,87 @@ static addrbank *get_bank_cpu_thread(addrbank *bank)
 	return tb;
 }
 
+// While a request flood holds the CPU on the main thread, the banks the CPU
+// thread would reach through the mailbox count the accesses that would be
+// requests (cpu_thread_count_read(), cpu_thread_flood_requests), so that the
+// CPU goes back to its thread once the flood is over.
+static std::vector<addrbank_thread *> count_banks;
+static int cpu_banks_mode;
+
+static uae_u32 REGPARAM2 countcpu_lget(uaecptr addr)
+{
+	addrbank *o = thread_mem_banks[bankindex(addr)];
+	cpu_thread_count_read(o, addr, 2);
+	return o->lget(addr);
+}
+static uae_u32 REGPARAM2 countcpu_wget(uaecptr addr)
+{
+	addrbank *o = thread_mem_banks[bankindex(addr)];
+	cpu_thread_count_read(o, addr, 1);
+	return o->wget(addr);
+}
+static uae_u32 REGPARAM2 countcpu_bget(uaecptr addr)
+{
+	addrbank *o = thread_mem_banks[bankindex(addr)];
+	cpu_thread_count_read(o, addr, 0);
+	return o->bget(addr);
+}
+static void REGPARAM2 countcpu_lput(uaecptr addr, uae_u32 l)
+{
+	cpu_thread_flood_requests++;
+	thread_mem_banks[bankindex(addr)]->lput(addr, l);
+}
+static void REGPARAM2 countcpu_wput(uaecptr addr, uae_u32 w)
+{
+	cpu_thread_flood_requests++;
+	thread_mem_banks[bankindex(addr)]->wput(addr, w);
+}
+static void REGPARAM2 countcpu_bput(uaecptr addr, uae_u32 b)
+{
+	cpu_thread_flood_requests++;
+	thread_mem_banks[bankindex(addr)]->bput(addr, b);
+}
+
+// The counting twin of get_bank_cpu_thread(), for the same banks.
+static addrbank *get_bank_cpu_count(addrbank *bank)
+{
+#ifdef AMIBERRY
+	if (bank->flags & ABFLAG_THREADSAFE)
+#endif
+		return bank;
+	if (bank == &dummy_bank)
+		return bank;
+	addrbank_thread *at = nullptr;
+	for (auto *candidate : count_banks) {
+		if (candidate->orig == bank) {
+			at = candidate;
+			break;
+		}
+	}
+	if (!at) {
+		at = xcalloc(addrbank_thread, 1);
+		at->orig = bank;
+		count_banks.push_back(at);
+	}
+	memcpy(&at->ab, bank, sizeof(addrbank));
+	addrbank *cb = &at->ab;
+	cb->jit_read_flag = S_READ;
+	cb->jit_write_flag = S_WRITE;
+	cb->lget = countcpu_lget;
+	cb->wget = countcpu_wget;
+	cb->bget = countcpu_bget;
+	cb->lput = countcpu_lput;
+	cb->wput = countcpu_wput;
+	cb->bput = countcpu_bput;
+	return cb;
+}
+
 // The CPU loop decides at its start whether the CPU runs on a thread of its
 // own (m68k_run()); map_banks2() records every bank, so the wrappers can be
 // put in or taken out of the map then. The CPU must not be running.
-void memory_set_cpu_thread_banks(bool threaded)
+void memory_set_cpu_thread_banks(int mode)
 {
+	cpu_banks_mode = mode;
 #ifdef DEBUGGER
 	int old = debug_bankchange(-1);
 #endif
@@ -3744,7 +3820,8 @@ void memory_set_cpu_thread_banks(bool threaded)
 		addrbank *orig = thread_mem_banks[i];
 		if (!orig)
 			continue;
-		addrbank *b = threaded ? get_bank_cpu_thread(orig) : orig;
+		addrbank *b = mode == CPU_BANKS_THREAD ? get_bank_cpu_thread(orig)
+			: mode == CPU_BANKS_COUNT ? get_bank_cpu_count(orig) : orig;
 		if (mem_banks[i] == b)
 			continue;
 		mem_banks[i] = b;
@@ -3785,9 +3862,9 @@ static void map_banks2 (addrbank *bank, int start, int size, int realsize, int q
 
 	bank->flags |= ABFLAG_MAPPED;
 
-	if (cpu_threaded_run) {
+	if (cpu_threaded_run || cpu_banks_mode == CPU_BANKS_COUNT) {
 		addrbank *b = bank;
-		bank = get_bank_cpu_thread(bank);
+		bank = cpu_threaded_run ? get_bank_cpu_thread(bank) : get_bank_cpu_count(bank);
 		if (b != bank)
 			orig_bank = b;
 	}

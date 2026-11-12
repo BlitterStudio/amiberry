@@ -131,6 +131,7 @@ static thread_local bool cpu_worker;
 static bool is_cpu_thread();
 static bool cpu_thread_start_failed;
 static void cpu_thread_select(bool on);
+void cpu_thread_flood_forget(const TCHAR *why);
 static int cpu_thread_slow_path();
 static void cpu_thread_safepoint();
 static bool cpu_thread_debugger_wait();
@@ -2330,9 +2331,12 @@ void check_prefs_changed_cpu()
 	currprefs.reset_delay = changed_prefs.reset_delay;
 	currprefs.cpuboard_settings = changed_prefs.cpuboard_settings;
 	// applied by cpu_thread_check_selection() at the next frame
+	if (currprefs.cpu_thread != changed_prefs.cpu_thread)
+		cpu_thread_flood_forget(_T("the CPU thread setting changed"));
 	currprefs.cpu_thread = changed_prefs.cpu_thread;
 
 	if (check_prefs_changed_cpu2()) {
+		cpu_thread_flood_forget(_T("the CPU settings changed"));
 		set_special(SPCFLAG_MODE_CHANGE);
 		reset_frame_rate_hack();
 	}
@@ -6053,6 +6057,16 @@ static inline int cpu_thread_snap_group(const addrbank *ab, uaecptr addr, int si
 	return 0;
 }
 
+// Counting banks: a read the register snapshot could serve would not have
+// been a request (it ignores the snapshot's read budget, so it may count low).
+uae_u32 cpu_thread_flood_requests;
+void cpu_thread_count_read(const addrbank *ab, uaecptr addr, int size)
+{
+	int r0 = 0, r1 = 0;
+	if (!cpu_thread_snap_group(ab, addr, size, &r0, &r1))
+		cpu_thread_flood_requests++;
+}
+
 static inline void cpu_thread_snap_write_begin(uae_u32 *seq)
 {
 	const uae_u32 s = *seq;
@@ -8456,13 +8470,18 @@ static void (*cpu_thread_current_run_func)(void);
 // the LED with back-to-back CIA writes) can take more of the main thread
 // than the chipset can spare: the chipset then runs below real time, where
 // the unthreaded CPU keeps up. While that lasts the CPU runs on the main
-// thread, and the thread is tried again after a hold-off, doubled each time
-// the flood comes back soon after.
+// thread, where counting banks (memory.cpp) count the accesses that would
+// have been requests: once they fall below the flood's rate the CPU goes
+// back to its thread. A hold-off, doubled each time the flood comes back
+// soon after, only sends it back sooner or later if the count stays high.
+// A reset, a state load, a CPU setting change or warp forgets the flood
+// (cpu_thread_flood_forget()).
 #define CPU_THREAD_FLOOD_FRAMES 10          // measured over this many frames
 #define CPU_THREAD_FLOOD_LATE 8             // of which at least this many are long
 #define CPU_THREAD_FLOOD_REQUESTS 4000      // requests per frame
 #define CPU_THREAD_FLOOD_SLOW 104           // percent of the frame time: a long frame
-#define CPU_THREAD_FLOOD_HOLD_MAX 32        // seconds
+#define CPU_THREAD_FLOOD_QUIET 25           // frames under the request rate that end a hold
+#define CPU_THREAD_FLOOD_HOLD_MAX 256       // seconds
 #define CPU_THREAD_FLOOD_SETTLE 2           // seconds on the thread before measuring
 static struct {
 	frame_time_t last, sum, hold_until, threaded_since;
@@ -8507,13 +8526,35 @@ static bool cpu_thread_wanted(void (*run_func)(void))
 	return true;
 }
 
+// The banks for the CPU's place: the thread's, counting ones while a flood
+// holds it on the main thread, else the plain ones.
+static int cpu_thread_banks_now = CPU_BANKS_PLAIN;
+static int cpu_thread_bank_mode()
+{
+	return cpu_threaded_run ? CPU_BANKS_THREAD : cpu_thread_flood.held ? CPU_BANKS_COUNT : CPU_BANKS_PLAIN;
+}
+
 static void cpu_thread_select(bool on)
 {
-	if (on == cpu_threaded_run)
-		return;
+	const bool changed = on != cpu_threaded_run;
 	cpu_threaded_run = on;
-	memory_set_cpu_thread_banks(on);
-	write_log(_T("CPU emulation runs on the %s thread.\n"), on ? _T("CPU") : _T("main"));
+	const int mode = cpu_thread_bank_mode();
+	if (mode != cpu_thread_banks_now) {
+		cpu_thread_banks_now = mode;
+		memory_set_cpu_thread_banks(mode);
+	}
+	if (changed)
+		write_log(_T("CPU emulation runs on the %s thread.\n"), on ? _T("CPU") : _T("main"));
+}
+
+// Forget a request flood: the workload has changed (a reset, a state load, a
+// CPU setting) or is no longer paced (warp). The next check selects again.
+void cpu_thread_flood_forget(const TCHAR *why)
+{
+	auto &f = cpu_thread_flood;
+	if (f.held || f.hold_seconds)
+		write_log(_T("CPU thread: %s, the request flood is forgotten.\n"), why);
+	f = {};
 }
 
 // Any interpreter loop on the CPU thread. do_cycles() counts its cycles
@@ -8543,15 +8584,37 @@ static void cpu_thread_check_flood()
 {
 	auto &f = cpu_thread_flood;
 	const frame_time_t now = read_processor_time();
+	if (currprefs.turbo_emulation) {
+		cpu_thread_flood_forget(_T("warp"));
+		return;
+	}
 	if (f.held) {
+		const char *why = nullptr;
 		if (now - f.hold_until >= 0) {
+			why = "the hold is over";
+		} else if (!cpu_threaded_run) {
+			// count the would-be requests over CPU_THREAD_FLOOD_QUIET frames
+			const uae_u32 counted = cpu_thread_flood_requests;
+			if (f.frames == 0 || now - f.last > vsynctimebase * 4) {
+				f.frames = 1;
+				f.requests_seen = counted;
+			} else if (++f.frames > CPU_THREAD_FLOOD_QUIET) {
+				const int n = f.frames - 1;
+				f.frames = 0;
+				if (counted - f.requests_seen < (uae_u32)CPU_THREAD_FLOOD_REQUESTS * n)
+					why = "the flood is over";
+			}
+			f.last = now;
+		}
+		if (why) {
 			f.held = false;
 			f.frames = 0;
-			write_log(_T("CPU thread: trying the CPU thread again.\n"));
+			f.was_threaded = false;   // the retry settles like a first start
+			write_log(_T("CPU thread: %s, trying the CPU thread again.\n"), why);
 		}
 		return;
 	}
-	if (!cpu_threaded_run || currprefs.turbo_emulation) {
+	if (!cpu_threaded_run) {
 		f.frames = 0;
 		f.was_threaded = false;
 		return;
@@ -8605,7 +8668,8 @@ void cpu_thread_check_selection()
 	if (!cpu_thread_current_run_func || (regs.spcflags & SPCFLAG_MODE_CHANGE))
 		return;
 	cpu_thread_check_flood();
-	if (cpu_thread_wanted(cpu_thread_current_run_func) != cpu_threaded_run)
+	if (cpu_thread_wanted(cpu_thread_current_run_func) != cpu_threaded_run
+		|| cpu_thread_bank_mode() != cpu_thread_banks_now)
 		set_special(SPCFLAG_MODE_CHANGE);
 }
 
@@ -8823,6 +8887,8 @@ void m68k_go (int may_quit)
 			custom_prepare();
 			mman_set_barriers(false);
 			protect_roms(true);
+			// a hard reset or a state load: another program
+			cpu_thread_flood_forget(restored ? _T("state loaded") : _T("hard reset"));
 		}
 		if ((cpu_keyboardreset || hardboot) && !restored) {
 			warpmode_reset();
