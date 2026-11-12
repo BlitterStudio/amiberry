@@ -8462,10 +8462,35 @@ static void warpmode_reset()
 // step, and a few features expect the CPU loop on the main thread: they run
 // without the thread, silently.
 static void (*cpu_thread_current_run_func)(void);
+
+// Request floods. Every hardware access the snapshot does not cover is a
+// round trip through the mailbox, and serving it costs the main thread
+// several cache line transfers, where the unthreaded CPU makes a function
+// call. A guest that does little else (Kickstart 1.3's Alert routine blinks
+// the LED with back-to-back CIA writes) can take more of the main thread
+// than the chipset can spare: the chipset then runs below real time, where
+// the unthreaded CPU keeps up. While that lasts the CPU runs on the main
+// thread, and the thread is tried again after a hold-off, doubled each time
+// the flood comes back soon after.
+#define CPU_THREAD_FLOOD_FRAMES 50          // measured over this many frames
+#define CPU_THREAD_FLOOD_REQUESTS 4000      // requests per frame
+#define CPU_THREAD_FLOOD_SLOW 105           // percent of the frame time
+#define CPU_THREAD_FLOOD_HOLD_MAX 32        // seconds
+#define CPU_THREAD_FLOOD_SETTLE 2           // seconds on the thread before measuring
+static struct {
+	frame_time_t last, sum, hold_until, threaded_since;
+	uae_u32 requests_seen;
+	int frames;
+	int hold_seconds;
+	bool held, was_threaded;
+} cpu_thread_flood;
+
 static bool cpu_thread_wanted(void (*run_func)(void))
 {
 	static const unsigned int host_cpus = std::thread::hardware_concurrency();
 	if (!currprefs.cpu_thread || cpu_thread_start_failed || host_cpus < 2)
+		return false;
+	if (cpu_thread_flood.held)
 		return false;
 	// "Fastest possible" 68020+ only: the CPU thread runs as fast as it can,
 	// so at an approximate speed it would only add host CPU use, and 68000
@@ -8526,10 +8551,68 @@ static int cpu_thread_run_loop(void *)
 
 // Frame-level check (vsync handler): restart the CPU loop when the thread
 // should be started or stopped.
+// Once per frame (vsync handler), main thread: watch for a request flood.
+static void cpu_thread_check_flood()
+{
+	auto &f = cpu_thread_flood;
+	const frame_time_t now = read_processor_time();
+	if (f.held) {
+		if (now - f.hold_until >= 0) {
+			f.held = false;
+			f.frames = 0;
+			write_log(_T("CPU thread: trying the CPU thread again.\n"));
+		}
+		return;
+	}
+	if (!cpu_threaded_run || currprefs.turbo_emulation) {
+		f.frames = 0;
+		f.was_threaded = false;
+		return;
+	}
+	// the first frames on the thread are slow anyway (JIT compiles, display set-up)
+	if (!f.was_threaded) {
+		f.was_threaded = true;
+		f.threaded_since = now;
+	}
+	if (now - f.threaded_since < syncbase * CPU_THREAD_FLOOD_SETTLE) {
+		f.frames = 0;
+		return;
+	}
+	const uae_u32 served = cpu_thread_requests_served;
+	if (f.frames == 0 || now - f.last > vsynctimebase * 4) {
+		// a new window, or a frame held up by something else (a pause, the GUI)
+		f.frames = 1;
+		f.sum = 0;
+		f.requests_seen = served;
+		f.last = now;
+		return;
+	}
+	f.sum += now - f.last;
+	f.last = now;
+	if (++f.frames <= CPU_THREAD_FLOOD_FRAMES)
+		return;
+	const int n = f.frames - 1;
+	const uae_u32 requests = served - f.requests_seen;
+	f.frames = 0;
+	if (f.sum * 100 <= vsynctimebase * n * CPU_THREAD_FLOOD_SLOW
+		|| requests < (uae_u32)CPU_THREAD_FLOOD_REQUESTS * n) {
+		// a quiet minute on the thread forgets earlier floods
+		if (f.hold_seconds && now - f.threaded_since > syncbase * 60)
+			f.hold_seconds = 0;
+		return;
+	}
+	f.hold_seconds = !f.hold_seconds ? 1 : std::min(f.hold_seconds * 2, CPU_THREAD_FLOOD_HOLD_MAX);
+	f.hold_until = now + syncbase * f.hold_seconds;
+	f.held = true;
+	write_log(_T("CPU thread: %u requests per frame, frames %d%% long: the CPU runs on the main thread for %d s.\n"),
+		requests / n, (int)(f.sum * 100 / (vsynctimebase * n)) - 100, f.hold_seconds);
+}
+
 void cpu_thread_check_selection()
 {
 	if (!cpu_thread_current_run_func || (regs.spcflags & SPCFLAG_MODE_CHANGE))
 		return;
+	cpu_thread_check_flood();
 	if (cpu_thread_wanted(cpu_thread_current_run_func) != cpu_threaded_run)
 		set_special(SPCFLAG_MODE_CHANGE);
 }
