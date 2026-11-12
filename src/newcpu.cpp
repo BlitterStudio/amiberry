@@ -6809,7 +6809,11 @@ static void run_cpu_thread(int (*f)(void *))
 						// a request served is progress too (the JIT counts
 						// down only at the end of a block)
 						if (service_cpu_indirect_request(true)) {
-							credit += cpu_thread_take_served_credit();
+							// at least the shortest instruction: a held reply
+							// let go adds no request's credit, and the wait
+							// must still move on
+							const uae_s64 served = cpu_thread_take_served_credit();
+							credit += served ? served : CPU_THREAD_INSN_CREDIT;
 							continue;
 						}
 						// back off: every read of the progress counters takes

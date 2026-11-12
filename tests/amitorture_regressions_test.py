@@ -3,6 +3,7 @@
 import os
 from pathlib import Path
 import platform
+import re
 import shlex
 import subprocess
 import tempfile
@@ -39,6 +40,23 @@ def function(text, signature):
     while ";" in text[start:text.index("{", start)]:
         start = text.index(signature, start + len(signature))
     return text[start:text.index("\n}", start) + 2]
+
+
+def served_credit(text):
+    """The progress credit of served requests (newcpu.cpp): what
+    service_cpu_indirect_request() adds to and the chipset loop takes."""
+    insn = re.search(r"^#define CPU_THREAD_INSN_CREDIT\b.*$", text, re.M)[0]
+    start = text.index("static uae_s64 cpu_thread_served_credit;")
+    return ("\n" + insn + "\n" + text[start:text.index("\n", start) + 1] +
+            function(text, "static inline uae_s64 cpu_thread_take_served_credit("))
+
+
+def wake_main(text):
+    """cpu_thread_wake_main() and the nap state it signals (newcpu.cpp)."""
+    start = text.index("static std::mutex cpu_thread_nap_lock;")
+    end = text.index("static void cpu_thread_wake_main();", start)
+    return ("\n#ifndef NOINLINE\n#define NOINLINE __attribute__((noinline))\n#endif\n" + text[start:end] +
+            function(text, "static NOINLINE void cpu_thread_wake_main("))
 
 
 def run_cpp(code):
@@ -824,6 +842,7 @@ void cpu_thread_main_wait_wake() {}
 void cpu_thread_flush_resume() {}
 struct { unsigned armed; } cpu_thread_snap_main;   // no register snapshot armed
 void cpu_thread_snap_publish(bool) { assert(false); }
+""" + served_credit(text) + r"""
 void run_batch(int cycles_to_do) {
     uae_s64 tokens_seen = 0, credit = 0;
     int cck_cnt = 0, intlev_prev = 0;
@@ -1089,7 +1108,8 @@ struct { bool loop_running, resume_deferred; } cpu_thread_main;
 struct { bool armed; } cpu_thread_snap_main;
 void cpu_thread_snap_publish(bool) {}
 void debug();
-""" + "template <typename Busy>\n" + function(threaded, "static bool cpu_thread_poll_while(") +
+int cpu_thread_main_sleeping;
+""" + wake_main(text) + "template <typename Busy>\n" + function(threaded, "static bool cpu_thread_poll_while(") +
                 function(threaded, "static void cpu_thread_safepoint(") +
                 function(threaded, "static void cpu_thread_idle_wait(") +
                 function(threaded, "static bool cpu_thread_hold_idle(") +
@@ -1580,18 +1600,21 @@ constexpr unsigned SPCFLAG_MODE_CHANGE = 1, SPCFLAG_CALLBACK = 2;
 struct { unsigned spcflags = SPCFLAG_MODE_CHANGE; } regs;
 #define CPU_THREAD_RARE(x) (x)
 #define NOINLINE __attribute__((noinline))
+constexpr int CYCLE_UNIT = 512;
 constexpr uae_u64 CPU_THREAD_SETTLE_NS = 5000;
 """ + function(text, "static inline bool cpu_thread_reply_ready(") +
                 "template <typename Ready>\n" +
                 function(text, "static bool cpu_thread_settle(") +
                 function(text, "static NOINLINE void cpu_thread_wait_reply_slow(") +
                 function(text, "static inline void cpu_thread_wait_reply(") +
+                wake_main(text) +
                 function(text, "static inline void cpu_thread_post_request(") +
                 function(text, "static inline void cpu_thread_post_reply(") +
                 function(text, "static bool cpu_thread_main_has_work(") +
                 function(text, "static void cpu_thread_main_sleep(") +
                 function(text, "uae_u32 process_cpu_indirect_memory_read(") +
                 function(text, "void process_cpu_indirect_memory_write(") +
+                served_credit(text) +
                 function(text, "static inline bool service_cpu_indirect_request(") + r"""
 void transactions(unsigned count) {
     worker = true;
