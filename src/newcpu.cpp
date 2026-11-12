@@ -6369,6 +6369,29 @@ void process_cpu_indirect_memory_write(uae_u32 addr, uae_u32 data, int size)
 // (pauses, the end of the thread) release a held access at once.
 static uae_u32 cpu_thread_blit_held;   // main thread: 1 request held, 0xff reply held
 
+// Progress credit of the requests served (see the pacing comment at
+// CPU_THREAD_CREDIT_MAX): the shortest instruction for each, plus the bus
+// cycles the access stalls the CPU for. A CIA access waits for the E-clock:
+// unthreaded, cia_wait_pre() and cia_wait_post() run the chipset for those
+// cycles, and here they become chipset time that needs no further progress.
+// A guest that keeps accessing the CIAs makes little progress otherwise (the
+// JIT publishes it only at the end of a block), and the chipset, waiting for
+// it, ran below real time.
+static uae_s64 cpu_thread_served_credit;   // main thread
+
+void cpu_thread_charge_access(int cycles)
+{
+	if (cpu_thread_servicing && cycles > 0 && is_mainthread())
+		cpu_thread_served_credit += cycles;
+}
+
+static inline uae_s64 cpu_thread_take_served_credit()
+{
+	const uae_s64 v = cpu_thread_served_credit;
+	cpu_thread_served_credit = 0;
+	return v;
+}
+
 static inline bool cpu_thread_blit_nasty()
 {
 	return blt_info.blit_main && !blitter_cycle_exact
@@ -6430,6 +6453,7 @@ static inline bool service_cpu_indirect_request(bool chipset = false)
 	} ENDTRY
 	cpu_thread_servicing = false;
 	cpu_thread_requests_served++;
+	cpu_thread_served_credit += CPU_THREAD_INSN_CREDIT;
 	if (mode == 0xfe)
 		cpu_thread_snap_arm(ab, addr, size);
 	// the CPU thread must see what this access changed
@@ -6642,6 +6666,7 @@ static int cpu_thread_entry(void *)
 static void run_cpu_thread(int (*f)(void *))
 {
 	int vp = 0;
+	frame_time_t frame_origin = 0, frame_start_seen = 0;
 	int intlev_prev = 0;
 	int cck_cnt = 0;
 	uae_s64 tokens_seen = 0, credit = CPU_THREAD_CREDIT_MAX;
@@ -6661,6 +6686,7 @@ static void run_cpu_thread(int (*f)(void *))
 	__atomic_store_n(&cpu_thread_pause_requested, 0, __ATOMIC_RELEASE);
 	__atomic_store_n(&cpu_thread_parked, CPU_THREAD_RUNNING, __ATOMIC_RELEASE);
 	cpu_thread_indirect_mode = 0xff;
+	cpu_thread_served_credit = 0;
 	atomic_set(&cpu_thread_reset, 0);
 	cpu_thread_snap_reset();
 
@@ -6728,7 +6754,7 @@ static void run_cpu_thread(int (*f)(void *))
 
 			const int paced = __atomic_load_n(&cpu_thread_paced, __ATOMIC_ACQUIRE);
 			if (paced && credit < CYCLE_UNIT) {
-				credit += cpu_thread_progress(&tokens_seen);
+				credit += cpu_thread_progress(&tokens_seen) + cpu_thread_take_served_credit();
 				if (credit > CPU_THREAD_CREDIT_MAX)
 					credit = CPU_THREAD_CREDIT_MAX;
 				if (credit < CYCLE_UNIT && !cpu_thread_unpaced()) {
@@ -6743,7 +6769,7 @@ static void run_cpu_thread(int (*f)(void *))
 						// a request served is progress too (the JIT counts
 						// down only at the end of a block)
 						if (service_cpu_indirect_request(true)) {
-							credit += CPU_THREAD_INSN_CREDIT;
+							credit += cpu_thread_take_served_credit();
 							continue;
 						}
 						// back off: every read of the progress counters takes
@@ -6829,10 +6855,21 @@ static void run_cpu_thread(int (*f)(void *))
 		// an iteration bound would run out at one chipset time: wait for
 		// every line then, as the unthreaded CPU loop runs at most a line of
 		// host time at one chipset time.
+		// The lines are timed from where the frame should have started, not
+		// from its vsync (vsyncmintimepre), so that a frame that ran late is
+		// made up in the next one, as framewait()'s adjust does unthreaded.
+		// Only up to half a frame: beyond that the host cannot keep up.
 		if (vp != vpos) {
 			vp = vpos;
+			if (vsyncmintimepre != frame_start_seen) {
+				const frame_time_t ideal = frame_origin + vsynctimebase;
+				const frame_time_t late = vsyncmintimepre - ideal;
+				frame_origin = frame_start_seen && late > -vsynctimebase / 2 && late < vsynctimebase / 2
+					? ideal : vsyncmintimepre;
+				frame_start_seen = vsyncmintimepre;
+			}
 			if (((vpos & 31) == 0 || vpos >= maxvpos - 32 || cpu_thread_snap_main.armed) && !currprefs.turbo_emulation) {
-				frame_time_t next = vsyncmintimepre + (vsynctimebase * vpos / (maxvpos + 1));
+				frame_time_t next = frame_origin + (vsynctimebase * vpos / (maxvpos + 1));
 				frame_time_t c = read_processor_time();
 				unsigned int polls = 0;
 				while (next > c && next - c < vsyncmaxtime * 2) {

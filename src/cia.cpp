@@ -2483,7 +2483,20 @@ static int cia_cycles(int delay, int phase, int val, int post)
 
 static void cia_wait_pre(int cianummask)
 {
-	if (currprefs.cachesize || cpu_threaded_run)
+#ifdef WITH_THREADED_CPU
+	// Served for the CPU thread, the E-clock wait becomes chipset time the
+	// main thread may run without waiting for the CPU's progress (see
+	// cpu_thread_charge_access()).
+	if (cpu_threaded_run) {
+		if (!currprefs.cachesize) {
+			int syncdelay = 0;
+			int delay = get_cia_sync_cycles(&syncdelay);
+			cpu_thread_charge_access(syncdelay + delay);
+		}
+		return;
+	}
+#endif
+	if (currprefs.cachesize)
 		return;
 #ifdef WITH_PPC
 	if (ppc_state)
@@ -2527,8 +2540,12 @@ static void cia_wait_post(int cianummask, uaecptr addr, uae_u32 value, bool rw)
 	if (ppc_state)
 		return;
 #endif
-	if (cpu_threaded_run)
+#ifdef WITH_THREADED_CPU
+	if (cpu_threaded_run) {
+		cpu_thread_charge_access(currprefs.cachesize ? 12 * E_CYCLE_UNIT : e_clock_end * E_CYCLE_UNIT);
 		return;
+	}
+#endif
 	if (currprefs.cachesize) {
 		do_cycles(12 * E_CYCLE_UNIT);
 	} else {
