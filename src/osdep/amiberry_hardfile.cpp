@@ -8,6 +8,7 @@
 
 #include <dirent.h>
 #include <sys/stat.h>
+#include <climits>
 #ifndef _WIN32
 #include <unistd.h>
 #endif
@@ -781,6 +782,89 @@ static int isharddrive(const TCHAR* name)
 
 static const TCHAR *hdz[] = { _T("hdz"), _T("zip"), _T("7z"), nullptr };
 
+#ifdef AMIBERRY_MACOS
+// A stream over an inherited descriptor with its own file position. A dup() would share
+// one position between all streams of the device, and hardfile I/O from different threads
+// would then read and write at each other's offsets; pread/pwrite keep them apart.
+struct inherited_fd_stream {
+	int fd;
+	off_t pos;
+};
+
+static int ifd_read(void* c, char* buf, int len)
+{
+	auto* s = static_cast<inherited_fd_stream*>(c);
+	const ssize_t n = pread(s->fd, buf, len, s->pos);
+	if (n > 0)
+		s->pos += n;
+	return static_cast<int>(n);
+}
+
+static int ifd_write(void* c, const char* buf, int len)
+{
+	auto* s = static_cast<inherited_fd_stream*>(c);
+	const ssize_t n = pwrite(s->fd, buf, len, s->pos);
+	if (n > 0)
+		s->pos += n;
+	return static_cast<int>(n);
+}
+
+static off_t ifd_size(int fd)
+{
+#ifdef AMIBERRY_MACOS
+	uint32_t block_size = 0;
+	uint64_t block_count = 0;
+	if (ioctl(fd, DKIOCGETBLOCKSIZE, &block_size) == 0 && ioctl(fd, DKIOCGETBLOCKCOUNT, &block_count) == 0)
+		return static_cast<off_t>(block_size) * static_cast<off_t>(block_count);
+#endif
+	const off_t end = lseek(fd, 0, SEEK_END);
+	return end < 0 ? 0 : end;
+}
+
+static fpos_t ifd_seek(void* c, fpos_t off, int whence)
+{
+	auto* s = static_cast<inherited_fd_stream*>(c);
+	off_t base = 0;
+	if (whence == SEEK_CUR)
+		base = s->pos;
+	else if (whence == SEEK_END)
+		base = ifd_size(s->fd);
+	if (base + off < 0) {
+		errno = EINVAL;
+		return -1;
+	}
+	s->pos = base + off;
+	return s->pos;
+}
+
+static int ifd_close(void* c)
+{
+	delete static_cast<inherited_fd_stream*>(c); // the inherited descriptor itself stays open
+	return 0;
+}
+
+static FILE* open_inherited_fd(const char* name, bool& readonly)
+{
+	char* endp = nullptr;
+	const long n = strtol(name + 8, &endp, 10);
+	if (endp == name + 8 || *endp != 0 || n < 0 || n > INT_MAX)
+		return nullptr;
+	const int acc = fcntl(static_cast<int>(n), F_GETFL);
+	if (acc < 0)
+		return nullptr;
+	if ((acc & O_ACCMODE) != O_RDWR)
+		readonly = true;
+	auto* s = new inherited_fd_stream{ static_cast<int>(n), 0 };
+	FILE* f = funopen(s, ifd_read, readonly ? nullptr : ifd_write, ifd_seek, ifd_close);
+	if (f == nullptr) {
+		delete s;
+		return nullptr;
+	}
+	setvbuf(f, nullptr, _IONBF, 0); // raw devices need whole blocks: no stdio buffering
+	return f;
+}
+#endif
+
 int hdf_open_target(struct hardfiledata *hfd, const TCHAR *pname)
 {
 	FILE *h = nullptr;
@@ -827,6 +911,18 @@ int hdf_open_target(struct hardfiledata *hfd, const TCHAR *pname)
 		if (h != nullptr)
 			hfd->ci.readonly = true;
 	}
+#ifdef AMIBERRY_MACOS
+	// "/dev/fd/N": a descriptor inherited from the program that started Amiberry, which
+	// already holds the device open (for example through macOS authopen). On macOS, opening
+	// /dev/fd/N checks the device's permissions again, so the inherited descriptor is used
+	// instead. Every Amiga reset reopens the hardfile; the inherited descriptor stays open,
+	// so no new authorization is needed.
+	if (h == nullptr && !strncmp(name, "/dev/fd/", 8)) {
+		h = open_inherited_fd(name, hfd->ci.readonly);
+		if (h != nullptr)
+			write_log("hfd: using inherited descriptor for '%s'%s\n", name, hfd->ci.readonly ? " (read-only)" : "");
+	}
+#endif
 	open_error = errno;
 #ifdef AMIBERRY_MACOS
 	if (h == nullptr && !strncmp(name, "/dev/", 5) && (open_error == EACCES || open_error == EPERM)) {
