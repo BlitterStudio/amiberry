@@ -1784,39 +1784,50 @@ int main() {
     gap();
     frames(20, 150, 1000);
     assert(!f.held);
-    // A flood: long frames at more than 4000 requests per frame.
+    // A flood: long frames at more than 4000 requests per frame. The hold's
+    // safety net starts at 16 s, after the counts.
     gap();
-    frames(20, 150, 6000);
-    assert(f.held && f.hold_seconds == 1);
+    for (int i = 0; i < 20 && !f.held; i++)
+        frame(150, 6000);
+    assert(f.held && f.hold_seconds == 16);
     cpu_threaded_run = false;
-    // A short hold runs out on the plain banks: no counting before
-    // CPU_THREAD_FLOOD_PROBE seconds.
-    frames(30, 100, 6000);
+    // The first count comes a second into the hold, on the plain banks until then.
+    frames(49, 100, 6000);
     assert(f.held && cpu_thread_bank_mode() == CPU_BANKS_PLAIN);
-    frames(20, 100, 6000);
-    assert(!f.held && !f.was_threaded);
-    // The retry settles like a first start; the flood comes back: 2 s.
-    flood();
-    assert(f.held && f.hold_seconds == 2);
-    frames(100, 100, 0);
-    assert(!f.held);
-    // A long hold counts for half a second every 10 s.
-    f.hold_seconds = 32;
-    flood();
-    assert(f.held && f.hold_seconds == 64);
-    frames(499, 100, 3000);
-    assert(cpu_thread_bank_mode() == CPU_BANKS_PLAIN);
-    frame(100, 3000);
+    frame(100, 6000);
     assert(cpu_thread_bank_mode() == CPU_BANKS_COUNT);
-    // Above half the flood's rate the hold stays, with no move back and forth,
-    // and the plain banks come back.
+    // Still a flood: the hold stays, the plain banks come back, and the next
+    // count comes in 2 s, then 4 s (doubling up to CPU_THREAD_FLOOD_PROBE).
+    frames(26, 100, 6000);
+    assert(f.held && cpu_thread_bank_mode() == CPU_BANKS_PLAIN);
+    frames(99, 100, 6000);
+    assert(cpu_thread_bank_mode() == CPU_BANKS_PLAIN);
+    frame(100, 6000);
+    assert(cpu_thread_bank_mode() == CPU_BANKS_COUNT);
+    // Above half the flood's rate the hold stays, with no move back and forth.
     frames(26, 100, 3000);
     assert(f.held && cpu_thread_bank_mode() == CPU_BANKS_PLAIN);
-    // The flood is over: the next count, under half the rate, ends the hold.
-    frames(500, 100, 1500);
-    assert(f.held && cpu_thread_bank_mode() == CPU_BANKS_COUNT);
+    // The flood is over: the next count, under half the rate, ends the hold,
+    // 8.5 s in, before the safety net.
+    frames(199, 100, 1500);
+    assert(f.held && cpu_thread_bank_mode() == CPU_BANKS_PLAIN);
+    frame(100, 1500);
+    assert(cpu_thread_bank_mode() == CPU_BANKS_COUNT);
     frames(26, 100, 1500);
-    assert(!f.held && !f.probing && !f.was_threaded && f.hold_seconds == 64);
+    assert(!f.held && !f.probing && !f.was_threaded && f.hold_seconds == 16);
+    // The retry settles like a first start; the flood comes back: 32 s. It
+    // is over at once, and the first count, a second in, ends the hold.
+    flood();
+    assert(f.held && f.hold_seconds == 32);
+    frames(76, 100, 0);
+    assert(!f.held);
+    // A count that stays high: only the safety net ends the hold, at 64 s.
+    flood();
+    assert(f.held && f.hold_seconds == 64);
+    frames(3199, 100, 6000);
+    assert(f.held);
+    frame(100, 6000);
+    assert(!f.held && f.hold_seconds == 64);
     // A reset, a state load, warp: the flood is forgotten.
     flood();
     assert(f.held && f.hold_seconds == 128);

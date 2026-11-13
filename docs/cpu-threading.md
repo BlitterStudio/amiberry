@@ -136,13 +136,15 @@ per frame, the CPU moves to the main thread. The first 2 s on the thread
 (JIT compilation, display set-up) are not measured.
 
 While held on the main thread, the CPU's memory banks count the accesses that
-would have been requests, for 25 frames every 10 s (counting slows a custom
-register read by up to a quarter, so it is not left on). The CPU returns to
-its thread when such a count averages fewer than 2000 per frame, half the
-rate that starts a hold, so a workload near the limit does not move back and
-forth (each move flushes the JIT cache). A safety net returns it anyway after
-1 s; each new flood doubles this, up to 256 s, and a minute on the thread
-without one resets it. A reset,
+would have been requests, for 25 frames at a time (counting slows a custom
+register read by up to a quarter, so it is not left on). The first count comes
+a second into the hold, so that a short flood ends a short hold; while the
+flood lasts, the counts come at doubling intervals up to 10 s. The CPU returns
+to its thread when a count averages fewer than 2000 per frame, half the rate
+that starts a hold, so a workload near the limit does not move back and forth
+(each move flushes the JIT cache). A safety net returns it anyway after 16 s,
+after the first counts; each new flood doubles this, up to 256 s, and a minute
+on the thread without one resets it. A reset,
 a state load, a CPU setting change or warp mode forgets the flood. The log
 reports each move.
 
