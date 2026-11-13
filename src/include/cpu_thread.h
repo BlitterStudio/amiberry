@@ -43,4 +43,10 @@ void cpu_thread_diag_log_stall(evt_t duration);
 void cpu_thread_diag_print_stats(void);
 
 
+/* Host CPUs this process may run on: the affinity mask and, on Linux, a
+ * cgroup v2 CPU quota, not the machine's count. A container, a VM or taskset
+ * that leaves one CPU must not get a CPU thread that shares it with the main
+ * thread (every hand-off then waits for the scheduler). */
+int cpu_thread_usable_host_cpus(void);
+
 #endif /* UAE_CPU_THREAD_H */

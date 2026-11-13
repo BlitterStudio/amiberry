@@ -14,6 +14,75 @@
 
 #include <cstdlib>
 #include <cstring>
+#include <cstdio>
+#include <string>
+#include <thread>
+#if defined(__linux__)
+#include <sched.h>
+#elif defined(_WIN32)
+#define WIN32_LEAN_AND_MEAN
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+#endif
+
+#if defined(__linux__)
+// A cgroup v2 CPU quota (cpu.max "<quota> <period>"), rounded up, or 0.
+static int cgroup_cpu_quota(void)
+{
+	FILE *f = fopen("/proc/self/cgroup", "r");
+	if (!f)
+		return 0;
+	char line[512];
+	std::string path;
+	while (fgets(line, sizeof line, f)) {
+		if (strncmp(line, "0::", 3) == 0) {
+			path = line + 3;
+			while (!path.empty() && (path.back() == '\n' || path.back() == '\r'))
+				path.pop_back();
+			break;
+		}
+	}
+	fclose(f);
+	if (path.empty())
+		return 0;
+	f = fopen(("/sys/fs/cgroup" + path + "/cpu.max").c_str(), "r");
+	if (!f)
+		return 0;
+	char quota[32] = {0};
+	long long period = 0;
+	const int got = fscanf(f, "%31s %lld", quota, &period);
+	fclose(f);
+	if (got != 2 || period <= 0 || strcmp(quota, "max") == 0)
+		return 0;
+	const long long q = atoll(quota);
+	return q > 0 ? (int)((q + period - 1) / period) : 0;
+}
+#endif
+
+int cpu_thread_usable_host_cpus(void)
+{
+	int cpus = (int)std::thread::hardware_concurrency();
+#if defined(__linux__)
+	cpu_set_t set;
+	CPU_ZERO(&set);
+	if (sched_getaffinity(0, sizeof set, &set) == 0 && CPU_COUNT(&set) > 0)
+		cpus = CPU_COUNT(&set);
+	const int quota = cgroup_cpu_quota();
+	if (quota > 0 && quota < cpus)
+		cpus = quota;
+#elif defined(_WIN32)
+	DWORD_PTR process_mask = 0, system_mask = 0;
+	if (GetProcessAffinityMask(GetCurrentProcess(), &process_mask, &system_mask) && process_mask) {
+		int n = 0;
+		for (DWORD_PTR m = process_mask; m; m &= m - 1)
+			n++;
+		cpus = n;
+	}
+#endif
+	return cpus > 0 ? cpus : 1;
+}
 
 cpu_thread_diagnostics cpu_thread_diag = {};
 

@@ -8539,7 +8539,13 @@ static struct {
 
 static bool cpu_thread_wanted(void (*run_func)(void))
 {
-	static const unsigned int host_cpus = std::thread::hardware_concurrency();
+	// usable, not installed: a single CPU left by affinity or a quota would
+	// make every hand-off between the threads wait for the scheduler
+	static const int host_cpus = [] {
+		const int n = cpu_thread_usable_host_cpus();
+		write_log(_T("CPU thread: %d usable host CPU(s)%s.\n"), n, n < 2 ? _T(", the CPU runs on the main thread") : _T(""));
+		return n;
+	}();
 	if (!currprefs.cpu_thread || cpu_thread_start_failed || host_cpus < 2)
 		return false;
 	if (cpu_thread_flood.held)

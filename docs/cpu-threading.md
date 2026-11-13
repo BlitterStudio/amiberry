@@ -18,7 +18,11 @@ Emulation stays on the main thread (single-threaded, as before) when:
 - PPC emulation is enabled;
 - a freezer cartridge (Action Replay and similar) is active;
 - the GDB server is enabled;
-- the host has a single logical CPU, or the worker thread cannot be started;
+- the process may run on a single host CPU (counted from its affinity mask and,
+  on Linux, a cgroup v2 CPU quota, as a container, a VM or `taskset` can leave
+  one), or the worker thread cannot be started. Two threads sharing one CPU
+  would make every hand-off wait for the scheduler; the log reports the count
+  ("CPU thread: N usable host CPU(s)");
 - the guest floods the hardware with accesses (see [Request floods](#request-floods)).
 
 At an approximate speed a CPU thread would only add host CPU use, and 68000

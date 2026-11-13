@@ -180,8 +180,9 @@ class CpuThreadLiveTests(unittest.TestCase):
                     self.request("GET_STATUS")
                 self.request("QUIT")
                 self.assertEqual(emu.proc.wait(timeout=10), 0)
-                # The CPU thread is chosen only with two or more host CPUs.
-                ran_threaded = threaded and (os.cpu_count() or 1) >= 2
+                # The CPU thread is chosen only with two or more usable host CPUs.
+                usable = len(os.sched_getaffinity(0)) if hasattr(os, "sched_getaffinity") else (os.cpu_count() or 1)
+                ran_threaded = threaded and usable >= 2
                 deadline = time.monotonic() + 1
                 while "END DIAGNOSTICS REPORT" not in emu.text() and time.monotonic() < deadline:
                     time.sleep(0.01)
