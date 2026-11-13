@@ -5894,23 +5894,38 @@ static inline void cpu_thread_wait_reply(uae_u32 completion)
 	cpu_thread_wait_reply_slow(completion);
 }
 
-// Wake the main thread from cpu_thread_main_sleep() or cpu_thread_main_nap().
+// Wake the main thread from cpu_thread_main_nap().
+static NOINLINE void cpu_thread_wake_nap()
+{
+	std::lock_guard<std::mutex> lock(cpu_thread_nap_lock);
+	cpu_thread_nap_woken = true;
+	cpu_thread_nap_cv.notify_one();
+}
+
+// Wake the main thread from cpu_thread_main_sleep() or cpu_thread_main_nap(),
+// for what cpu_thread_main_has_work() does not see (parking, debugger waits,
+// resets): the semaphore is posted unconditionally, so that a sleep that
+// starts later ends at once.
 static NOINLINE void cpu_thread_wake_main()
 {
 	uae_sem_post(&cpu_request_sema);
-	if (__atomic_load_n(&cpu_thread_main_sleeping, __ATOMIC_SEQ_CST) == 2) {
-		std::lock_guard<std::mutex> lock(cpu_thread_nap_lock);
-		cpu_thread_nap_woken = true;
-		cpu_thread_nap_cv.notify_one();
-	}
+	if (__atomic_load_n(&cpu_thread_main_sleeping, __ATOMIC_SEQ_CST) == 2)
+		cpu_thread_wake_nap();
 }
 
-// Request after addr/size/value: wake the main thread only if it sleeps.
+// Request after addr/size/value: wake the main thread only if it sleeps, and
+// only the sleep it is in. A sleep that starts later sees the request
+// (cpu_thread_main_has_work()), so a nap leaves no count in the semaphore.
 static inline void cpu_thread_post_request(uae_u32 mode)
 {
 	__atomic_store_n(&cpu_thread_indirect_mode, mode, __ATOMIC_SEQ_CST);
-	if (CPU_THREAD_RARE(__atomic_load_n(&cpu_thread_main_sleeping, __ATOMIC_SEQ_CST)))
-		cpu_thread_wake_main();
+	const int sleeping = __atomic_load_n(&cpu_thread_main_sleeping, __ATOMIC_SEQ_CST);
+	if (CPU_THREAD_RARE(sleeping)) {
+		if (sleeping == 2)
+			cpu_thread_wake_nap();
+		else
+			uae_sem_post(&cpu_request_sema);
+	}
 }
 
 static inline void cpu_thread_post_reply(uae_u32 mode)
@@ -6515,8 +6530,8 @@ static void cpu_thread_main_sleep(int ms)
 }
 
 // Main thread: sleep up to ns, less than a millisecond, woken like
-// cpu_thread_main_sleep(). A count it leaves in cpu_request_sema only
-// shortens a later cpu_thread_main_sleep().
+// cpu_thread_main_sleep(). No settle spin first: an idle guest naps about ten
+// thousand times a second, and the spin would cost more than a request waits.
 static void cpu_thread_main_nap(uae_u64 ns)
 {
 	{
@@ -6524,7 +6539,7 @@ static void cpu_thread_main_nap(uae_u64 ns)
 		cpu_thread_nap_woken = false;
 	}
 	__atomic_store_n(&cpu_thread_main_sleeping, 2, __ATOMIC_SEQ_CST);
-	if (!cpu_thread_settle(cpu_thread_main_has_work)) {
+	if (!cpu_thread_main_has_work()) {
 		std::unique_lock<std::mutex> lock(cpu_thread_nap_lock);
 		cpu_thread_nap_cv.wait_for(lock, std::chrono::nanoseconds(ns), [] { return cpu_thread_nap_woken; });
 	}
