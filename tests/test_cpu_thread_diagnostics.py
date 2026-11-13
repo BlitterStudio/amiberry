@@ -170,6 +170,8 @@ constexpr unsigned MEMORY_BANKS = 65536, ABFLAG_THREADSAFE = 1;
 constexpr int S_READ = 2, S_WRITE = 4;
 using read_handler = uae_u32 (*)(uaecptr);
 using write_handler = void (*)(uaecptr, uae_u32);
+using mem_get_func = read_handler;
+using mem_put_func = write_handler;
 struct addrbank {
     read_handler lget, wget, bget, lgeti, wgeti;
     write_handler lput, wput, bput;

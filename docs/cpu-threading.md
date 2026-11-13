@@ -18,7 +18,8 @@ Emulation stays on the main thread (single-threaded, as before) when:
 - PPC emulation is enabled;
 - a freezer cartridge (Action Replay and similar) is active;
 - the GDB server is enabled;
-- the host has a single logical CPU, or the worker thread cannot be started.
+- the host has a single logical CPU, or the worker thread cannot be started;
+- the guest floods the hardware with accesses (see [Request floods](#request-floods)).
 
 At an approximate speed a CPU thread would only add host CPU use, and 68000
 software tends to depend on the CPU's timing. The log reports `CPU emulation
@@ -44,8 +45,9 @@ the CPU never runs far ahead of the chipset:
   worker to take it, so it is not delivered late even when the host keeps the
   worker off a core for a few milliseconds (the wait gives up only after
   100 ms, against a worker that will not leave STOP). A stopped
-  worker polls for 0.5 ms before it sleeps, because interrupts tend to follow
-  one another closely.
+  worker polls for 50 µs before it sleeps, because interrupts tend to follow
+  one another closely, but an idle AmigaOS stops and is woken over a thousand
+  times a second.
 
 The CPU loop paces the frame. While the chipset waits for the worker, it
 answers each hardware access at once, rather than after a polling back-off.
@@ -88,8 +90,10 @@ before stopping the worker.
 While the worker is accessing hardware, both threads poll for each other so
 that an access does not wait for a thread wake-up. After about a millisecond
 without hardware accesses, the main thread sleeps in the frame limiter instead
-of spinning, including waits shorter than a millisecond (a line at a time
-while the worker reads the beam position from the snapshot). A worker that
+of spinning. It also naps through waits shorter than a millisecond (a line
+at a time while the worker reads the beam position from the snapshot), on a
+condition variable with a nanosecond timeout; a request ends the nap at once,
+as it ends a longer sleep. A worker that
 has waited 0.1 ms for a reply also sleeps until woken. The handshake is
 sequentially consistent: a request or reply is stored before the other
 thread's sleeping flag is read, and a thread that goes to sleep sets its flag
@@ -120,6 +124,27 @@ chipset has not yet moved to the shift register. To prevent this, a resume
 inside the chipset loop is deferred until the loop next advances time. All
 pauses taken in between (for example, a run of IPC commands handled in one
 event) share one park.
+
+## Request floods
+
+Each hardware access the snapshot cannot answer costs a round trip between the
+threads. A guest that makes thousands of them per frame, a CIA write loop or a
+demo polling custom registers in a tight loop, can then run slower threaded
+than unthreaded, and the frames run long. When at least 8 of 10 frames
+overrun by more than 4% and the worker made at least 4000 hardware requests
+per frame, the CPU moves to the main thread. The first 2 s on the thread
+(JIT compilation, display set-up) are not measured.
+
+While held on the main thread, the CPU's memory banks count the accesses that
+would have been requests, for 25 frames every 10 s (counting slows a custom
+register read by up to a quarter, so it is not left on). The CPU returns to
+its thread when such a count averages fewer than 2000 per frame, half the
+rate that starts a hold, so a workload near the limit does not move back and
+forth (each move flushes the JIT cache). A safety net returns it anyway after
+1 s; each new flood doubles this, up to 256 s, and a minute on the thread
+without one resets it. A reset,
+a state load, a CPU setting change or warp mode forgets the flood. The log
+reports each move.
 
 ## Register snapshot
 

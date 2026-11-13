@@ -52,10 +52,12 @@ def served_credit(text):
 
 
 def wake_main(text):
-    """cpu_thread_wake_main() and the nap state it signals (newcpu.cpp)."""
+    """cpu_thread_wake_nap(), cpu_thread_wake_main() and the nap state they
+    signal (newcpu.cpp)."""
     start = text.index("static std::mutex cpu_thread_nap_lock;")
     end = text.index("static void cpu_thread_wake_main();", start)
     return ("\n#ifndef NOINLINE\n#define NOINLINE __attribute__((noinline))\n#endif\n" + text[start:end] +
+            function(text, "static NOINLINE void cpu_thread_wake_nap(") +
             function(text, "static NOINLINE void cpu_thread_wake_main("))
 
 
@@ -1607,15 +1609,18 @@ constexpr uae_u64 CPU_THREAD_SETTLE_NS = 5000;
                 function(text, "static inline void cpu_thread_post_reply(") +
                 function(text, "static bool cpu_thread_main_has_work(") +
                 function(text, "static void cpu_thread_main_sleep(") +
+                function(text, "static void cpu_thread_main_nap(") +
                 function(text, "uae_u32 process_cpu_indirect_memory_read(") +
                 function(text, "void process_cpu_indirect_memory_write(") +
                 served_credit(text) +
                 function(text, "static inline bool service_cpu_indirect_request(") + r"""
-void transactions(unsigned count) {
+void transactions(unsigned count, unsigned pause_every = 0) {
     worker = true;
     for (unsigned value = 0; value < count; ++value) {
         process_cpu_indirect_memory_write(0, value, 2);
         assert(process_cpu_indirect_memory_read(0, 2) == value);
+        if (pause_every && value % pause_every == 0)
+            std::this_thread::sleep_for(std::chrono::microseconds(200));
     }
 }
 int main() {
@@ -1665,6 +1670,160 @@ int main() {
     assert(worker_sleeps > 0);
     assert(lost_wakeups == 0);   // SEQ_CST handshake: no wakeup is lost
     assert(!cpu_thread_main_sleeping && !cpu_thread_worker_sleeping);
+
+    // The frame limiter's naps: a request ends one, and leaves no count in
+    // the semaphore, which would end a later millisecond sleep at once. A nap
+    // that sleeps its whole 100 ms with a request pending lost its wakeup.
+    cpu_request_sema.count = 0;
+    done = false;
+    unsigned woken_naps = 0, lost_naps = 0;
+    std::thread napping([&] { transactions(200, 8); done = true; });
+    while (!done) {
+        if (service_cpu_indirect_request())
+            continue;
+        const auto start = std::chrono::steady_clock::now();
+        cpu_thread_main_nap(100000000);
+        if (std::chrono::steady_clock::now() - start < std::chrono::milliseconds(100))
+            ++woken_naps;
+        else if (missed(&cpu_request_sema))
+            ++lost_naps;
+    }
+    napping.join();
+    assert(reads == 503 && writes == 500);
+    assert(woken_naps > 0 && lost_naps == 0);
+    assert(cpu_request_sema.count == 0);
+    assert(!cpu_thread_main_sleeping);
+}
+""")
+
+    def test_restoring_a_state_without_a_cartridge_keeps_the_freezer_off(self):
+        text = source("src/ar.cpp")
+        run_cpp(r"""
+#define ACTION_REPLAY_INACTIVE -2
+#define ACTION_REPLAY_IDLE 1
+#define ACTION_REPLAY_ACTIVE 3
+#define SPCFLAG_ACTION_REPLAY 1
+uae_u8 *armemory_rom;
+int action_replay_flag = ACTION_REPLAY_INACTIVE, hrtmon_flag = ACTION_REPLAY_INACTIVE;
+int ar_state1, ar_state2 = -1, hidden = -1;
+uaecptr arrom_start = 0x400000, arrom_size = 0x40000;
+uaecptr m68k_getpc() { return 0xf80000; }
+void hide_cart(int hide) { hidden = hide; }
+void set_special(int) {}
+""" + function(text, "bool action_replay_freezer_active(") +
+                function(text, "void restore_ar_finish(") + r"""
+int main() {
+    // every state load runs restore_ar_finish(), with or without a chunk
+    restore_ar_finish();
+    assert(!action_replay_freezer_active() && hidden == -1);
+    uae_u8 rom[1];
+    armemory_rom = rom;
+    restore_ar_finish();
+    assert(action_replay_flag == ACTION_REPLAY_IDLE && hidden == 1);
+}
+""")
+
+    def test_threaded_cpu_flood_hold_starts_and_ends_with_hysteresis(self):
+        text = source("src/newcpu.cpp")
+        state = text[text.index("#define CPU_THREAD_FLOOD_FRAMES"):
+                     text.index("} cpu_thread_flood;") + len("} cpu_thread_flood;")]
+        run_cpp(r"""
+#include <algorithm>
+#include <cstdio>
+using frame_time_t = int64_t;
+using TCHAR = char;
+#define _T(x) x
+void write_log(const char *, ...) {}
+enum { CPU_BANKS_PLAIN, CPU_BANKS_THREAD, CPU_BANKS_COUNT };
+frame_time_t now_time;
+frame_time_t read_processor_time() { return now_time; }
+constexpr frame_time_t vsynctimebase = 1000, syncbase = 50000;   // 50 frames a second
+struct { bool turbo_emulation; } currprefs;
+bool cpu_threaded_run;
+uae_u32 cpu_thread_requests_served, cpu_thread_flood_requests;
+""" + state + function(text, "static int cpu_thread_bank_mode(") +
+                function(text, "static void cpu_thread_flood_forget(") +
+                function(text, "static void cpu_thread_check_flood(") + r"""
+// One frame: its length in percent of the frame time, and the requests the
+// mailbox served (on the thread) or the counting banks counted (main thread).
+void frame(int percent, uae_u32 requests) {
+    now_time += vsynctimebase * percent / 100;
+    if (cpu_threaded_run)
+        cpu_thread_requests_served += requests;
+    else if (cpu_thread_bank_mode() == CPU_BANKS_COUNT)
+        cpu_thread_flood_requests += requests;
+    cpu_thread_check_flood();
+}
+void frames(int n, int percent, uae_u32 requests) {
+    for (int i = 0; i < n; i++)
+        frame(percent, requests);
+}
+// A gap (a pause, the GUI) starts a new window.
+void gap() { frame(600, 0); }
+void flood() {
+    cpu_threaded_run = true;
+    frames(100, 100, 0);   // settles first
+    for (int i = 0; i < 20 && !cpu_thread_flood.held; i++)
+        frame(150, 6000);
+    cpu_threaded_run = false;
+}
+int main() {
+    auto &f = cpu_thread_flood;
+    cpu_threaded_run = true;
+    // Nothing is measured while the thread settles (2 s).
+    frames(60, 150, 50000);
+    assert(!f.held);
+    frames(15, 100, 0);
+    // A single very long frame (a savestate, a reset) is not a flood.
+    gap();
+    frames(3, 100, 50000);
+    frame(400, 50000);
+    frames(20, 100, 50000);
+    assert(!f.held);
+    // Long frames with few requests are not a flood either.
+    gap();
+    frames(20, 150, 1000);
+    assert(!f.held);
+    // A flood: long frames at more than 4000 requests per frame.
+    gap();
+    frames(20, 150, 6000);
+    assert(f.held && f.hold_seconds == 1);
+    cpu_threaded_run = false;
+    // A short hold runs out on the plain banks: no counting before
+    // CPU_THREAD_FLOOD_PROBE seconds.
+    frames(30, 100, 6000);
+    assert(f.held && cpu_thread_bank_mode() == CPU_BANKS_PLAIN);
+    frames(20, 100, 6000);
+    assert(!f.held && !f.was_threaded);
+    // The retry settles like a first start; the flood comes back: 2 s.
+    flood();
+    assert(f.held && f.hold_seconds == 2);
+    frames(100, 100, 0);
+    assert(!f.held);
+    // A long hold counts for half a second every 10 s.
+    f.hold_seconds = 32;
+    flood();
+    assert(f.held && f.hold_seconds == 64);
+    frames(499, 100, 3000);
+    assert(cpu_thread_bank_mode() == CPU_BANKS_PLAIN);
+    frame(100, 3000);
+    assert(cpu_thread_bank_mode() == CPU_BANKS_COUNT);
+    // Above half the flood's rate the hold stays, with no move back and forth,
+    // and the plain banks come back.
+    frames(26, 100, 3000);
+    assert(f.held && cpu_thread_bank_mode() == CPU_BANKS_PLAIN);
+    // The flood is over: the next count, under half the rate, ends the hold.
+    frames(500, 100, 1500);
+    assert(f.held && cpu_thread_bank_mode() == CPU_BANKS_COUNT);
+    frames(26, 100, 1500);
+    assert(!f.held && !f.probing && !f.was_threaded && f.hold_seconds == 64);
+    // A reset, a state load, warp: the flood is forgotten.
+    flood();
+    assert(f.held && f.hold_seconds == 128);
+    currprefs.turbo_emulation = true;
+    frame(100, 0);
+    assert(!f.held && !f.hold_seconds && cpu_thread_bank_mode() == CPU_BANKS_PLAIN);
+    currprefs.turbo_emulation = false;
 }
 """)
 
