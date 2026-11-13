@@ -131,7 +131,7 @@ static thread_local bool cpu_worker;
 static bool is_cpu_thread();
 static bool cpu_thread_start_failed;
 static void cpu_thread_select(bool on);
-void cpu_thread_flood_forget(const TCHAR *why);
+static void cpu_thread_flood_forget(const TCHAR *why);
 static int cpu_thread_slow_path();
 static void cpu_thread_safepoint();
 static bool cpu_thread_debugger_wait();
@@ -8486,24 +8486,33 @@ static void (*cpu_thread_current_run_func)(void);
 // than the chipset can spare: the chipset then runs below real time, where
 // the unthreaded CPU keeps up. While that lasts the CPU runs on the main
 // thread, where counting banks (memory.cpp) count the accesses that would
-// have been requests: once they fall below the flood's rate the CPU goes
-// back to its thread. A hold-off, doubled each time the flood comes back
-// soon after, only sends it back sooner or later if the count stays high.
+// have been requests: once they fall to half the flood's rate the CPU goes
+// back to its thread. Counting slows a custom register read by up to a
+// quarter, so the banks count only for CPU_THREAD_FLOOD_QUIET frames every
+// CPU_THREAD_FLOOD_PROBE seconds. A hold-off, doubled each time the flood
+// comes back soon after, only sends it back sooner or later if the count
+// stays high.
 // A reset, a state load, a CPU setting change or warp forgets the flood
 // (cpu_thread_flood_forget()).
 #define CPU_THREAD_FLOOD_FRAMES 10          // measured over this many frames
 #define CPU_THREAD_FLOOD_LATE 8             // of which at least this many are long
 #define CPU_THREAD_FLOOD_REQUESTS 4000      // requests per frame
 #define CPU_THREAD_FLOOD_SLOW 104           // percent of the frame time: a long frame
-#define CPU_THREAD_FLOOD_QUIET 25           // frames under the request rate that end a hold
+#define CPU_THREAD_FLOOD_QUIET 25           // frames under the quiet rate that end a hold
+// A hold ends at half the rate that starts one: the main thread counts low
+// (no snapshot read budget, and less CPU time per frame than a thread of its
+// own), and a workload near the rate must not move back and forth, each move
+// costing the JIT its cache.
+#define CPU_THREAD_FLOOD_QUIET_REQUESTS (CPU_THREAD_FLOOD_REQUESTS / 2)
 #define CPU_THREAD_FLOOD_HOLD_MAX 256       // seconds
+#define CPU_THREAD_FLOOD_PROBE 10           // seconds on the plain banks between counts
 #define CPU_THREAD_FLOOD_SETTLE 2           // seconds on the thread before measuring
 static struct {
-	frame_time_t last, sum, hold_until, threaded_since;
+	frame_time_t last, sum, hold_until, threaded_since, probe_at;
 	uae_u32 requests_seen;
 	int frames, late;
 	int hold_seconds;
-	bool held, was_threaded;
+	bool held, was_threaded, probing;
 } cpu_thread_flood;
 
 static bool cpu_thread_wanted(void (*run_func)(void))
@@ -8542,11 +8551,12 @@ static bool cpu_thread_wanted(void (*run_func)(void))
 }
 
 // The banks for the CPU's place: the thread's, counting ones while a flood
-// holds it on the main thread, else the plain ones.
+// hold counts requests on the main thread, else the plain ones.
 static int cpu_thread_banks_now = CPU_BANKS_PLAIN;
 static int cpu_thread_bank_mode()
 {
-	return cpu_threaded_run ? CPU_BANKS_THREAD : cpu_thread_flood.held ? CPU_BANKS_COUNT : CPU_BANKS_PLAIN;
+	return cpu_threaded_run ? CPU_BANKS_THREAD
+		: cpu_thread_flood.held && cpu_thread_flood.probing ? CPU_BANKS_COUNT : CPU_BANKS_PLAIN;
 }
 
 static void cpu_thread_select(bool on)
@@ -8564,7 +8574,7 @@ static void cpu_thread_select(bool on)
 
 // Forget a request flood: the workload has changed (a reset, a state load, a
 // CPU setting) or is no longer paced (warp). The next check selects again.
-void cpu_thread_flood_forget(const TCHAR *why)
+static void cpu_thread_flood_forget(const TCHAR *why)
 {
 	auto &f = cpu_thread_flood;
 	if (f.held || f.hold_seconds)
@@ -8592,8 +8602,6 @@ static int cpu_thread_run_loop(void *)
 	return 0;
 }
 
-// Frame-level check (vsync handler): restart the CPU loop when the thread
-// should be started or stopped.
 // Once per frame (vsync handler), main thread: watch for a request flood.
 static void cpu_thread_check_flood()
 {
@@ -8607,6 +8615,12 @@ static void cpu_thread_check_flood()
 		const char *why = nullptr;
 		if (now - f.hold_until >= 0) {
 			why = "the hold is over";
+		} else if (!cpu_threaded_run && !f.probing) {
+			// the counting banks go in at the next mode change
+			if (now - f.probe_at >= 0) {
+				f.probing = true;
+				f.frames = 0;
+			}
 		} else if (!cpu_threaded_run) {
 			// count the would-be requests over CPU_THREAD_FLOOD_QUIET frames
 			const uae_u32 counted = cpu_thread_flood_requests;
@@ -8616,13 +8630,18 @@ static void cpu_thread_check_flood()
 			} else if (++f.frames > CPU_THREAD_FLOOD_QUIET) {
 				const int n = f.frames - 1;
 				f.frames = 0;
-				if (counted - f.requests_seen < (uae_u32)CPU_THREAD_FLOOD_REQUESTS * n)
+				if (counted - f.requests_seen < (uae_u32)CPU_THREAD_FLOOD_QUIET_REQUESTS * n) {
 					why = "the flood is over";
+				} else {
+					f.probing = false;
+					f.probe_at = now + syncbase * CPU_THREAD_FLOOD_PROBE;
+				}
 			}
 			f.last = now;
 		}
 		if (why) {
 			f.held = false;
+			f.probing = false;
 			f.frames = 0;
 			f.was_threaded = false;   // the retry settles like a first start
 			write_log(_T("CPU thread: %s, trying the CPU thread again.\n"), why);
@@ -8673,6 +8692,7 @@ static void cpu_thread_check_flood()
 	}
 	f.hold_seconds = !f.hold_seconds ? 1 : std::min(f.hold_seconds * 2, CPU_THREAD_FLOOD_HOLD_MAX);
 	f.hold_until = now + syncbase * f.hold_seconds;
+	f.probe_at = now + syncbase * CPU_THREAD_FLOOD_PROBE;
 	f.held = true;
 	write_log(_T("CPU thread: %u requests per frame, %d of %d frames long (%d%% on average): the CPU runs on the main thread for %d s.\n"),
 		requests / n, f.late, n, (int)(f.sum * 100 / (vsynctimebase * n)) - 100, f.hold_seconds);

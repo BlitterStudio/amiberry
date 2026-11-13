@@ -3695,7 +3695,11 @@ static uae_u32 REGPARAM2 threadcpu_bget(uaecptr addr)
 	return v;
 }
 
-static addrbank *get_bank_cpu_thread(addrbank *bank)
+// A wrapper of bank whose data accesses go through the given handlers, kept
+// in wrappers (one per original bank); thread-safe banks need none.
+static addrbank *get_bank_wrapper(addrbank *bank, std::vector<addrbank_thread *> &wrappers,
+	mem_get_func lget, mem_get_func wget, mem_get_func bget,
+	mem_put_func lput, mem_put_func wput, mem_put_func bput)
 {
 #ifdef AMIBERRY
 	if (bank->flags & ABFLAG_THREADSAFE)
@@ -3705,7 +3709,7 @@ static addrbank *get_bank_cpu_thread(addrbank *bank)
 		return bank;
 
 	addrbank_thread *at = nullptr;
-	for (auto *candidate : thread_banks) {
+	for (auto *candidate : wrappers) {
 		if (candidate->orig == bank) {
 			at = candidate;
 			break;
@@ -3714,22 +3718,28 @@ static addrbank *get_bank_cpu_thread(addrbank *bank)
 	if (!at) {
 		at = xcalloc(addrbank_thread, 1);
 		at->orig = bank;
-		thread_banks.push_back(at);
+		wrappers.push_back(at);
 	}
 	// Remapping can change descriptor fields. Refresh them before restoring
 	// the indirect data handlers; the caller must quiesce the CPU for remaps.
 	memcpy(&at->ab, bank, sizeof(addrbank));
-	addrbank *tb = &at->ab;
-	tb->jit_read_flag = S_READ;
-	tb->jit_write_flag = S_WRITE;
-	tb->lget = threadcpu_lget;
-	tb->wget = threadcpu_wget;
-	tb->bget = threadcpu_bget;
-	tb->lput = threadcpu_lput;
-	tb->wput = threadcpu_wput;
-	tb->bput = threadcpu_bput;
+	addrbank *wb = &at->ab;
+	wb->jit_read_flag = S_READ;
+	wb->jit_write_flag = S_WRITE;
+	wb->lget = lget;
+	wb->wget = wget;
+	wb->bget = bget;
+	wb->lput = lput;
+	wb->wput = wput;
+	wb->bput = bput;
 	// wgeti/lgeti should always point to real RAM
-	return tb;
+	return wb;
+}
+
+static addrbank *get_bank_cpu_thread(addrbank *bank)
+{
+	return get_bank_wrapper(bank, thread_banks, threadcpu_lget, threadcpu_wget, threadcpu_bget,
+		threadcpu_lput, threadcpu_wput, threadcpu_bput);
 }
 
 // While a request flood holds the CPU on the main thread, the banks the CPU
@@ -3776,35 +3786,8 @@ static void REGPARAM2 countcpu_bput(uaecptr addr, uae_u32 b)
 // The counting twin of get_bank_cpu_thread(), for the same banks.
 static addrbank *get_bank_cpu_count(addrbank *bank)
 {
-#ifdef AMIBERRY
-	if (bank->flags & ABFLAG_THREADSAFE)
-#endif
-		return bank;
-	if (bank == &dummy_bank)
-		return bank;
-	addrbank_thread *at = nullptr;
-	for (auto *candidate : count_banks) {
-		if (candidate->orig == bank) {
-			at = candidate;
-			break;
-		}
-	}
-	if (!at) {
-		at = xcalloc(addrbank_thread, 1);
-		at->orig = bank;
-		count_banks.push_back(at);
-	}
-	memcpy(&at->ab, bank, sizeof(addrbank));
-	addrbank *cb = &at->ab;
-	cb->jit_read_flag = S_READ;
-	cb->jit_write_flag = S_WRITE;
-	cb->lget = countcpu_lget;
-	cb->wget = countcpu_wget;
-	cb->bget = countcpu_bget;
-	cb->lput = countcpu_lput;
-	cb->wput = countcpu_wput;
-	cb->bput = countcpu_bput;
-	return cb;
+	return get_bank_wrapper(bank, count_banks, countcpu_lget, countcpu_wget, countcpu_bget,
+		countcpu_lput, countcpu_wput, countcpu_bput);
 }
 
 // The CPU loop decides at its start whether the CPU runs on a thread of its
