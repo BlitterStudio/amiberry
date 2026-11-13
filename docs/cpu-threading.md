@@ -142,9 +142,13 @@ a second into the hold, so that a short flood ends a short hold; while the
 flood lasts, the counts come at doubling intervals up to 10 s. The CPU returns
 to its thread when a count averages fewer than 2000 per frame, half the rate
 that starts a hold, so a workload near the limit does not move back and forth
-(each move flushes the JIT cache). A safety net returns it anyway after 16 s,
-after the first counts; each new flood doubles this, up to 256 s, and a minute
-on the thread without one resets it. A reset,
+(each move flushes the JIT cache). If a retry's very first measured window is
+a flood again, the count on the main thread missed what the thread sees: each
+such re-flood doubles the wait for the next hold's first count, until the
+hold runs to its safety net, and the log says so. A flood that comes back
+after a quiet window on the thread is a new flood. A safety net returns it
+anyway after 16 s, after the first counts; each new flood doubles this, up to
+256 s, and a minute on the thread without one resets it. A reset,
 a state load, a CPU setting change or warp mode forgets the flood. The log
 reports each move.
 
@@ -168,7 +172,12 @@ that, so guests that never poll pay nothing. A stopped group falls back to
 the main thread, which re-arms it.
 
 The snapshot is a sequence lock: the worker never sees a torn or partly
-updated group. It stays coherent with the CPU's own accesses because every
+updated group. A read that catches a group mid-write reads it again, a few
+times, before it makes a round trip: the main thread rewrites the beam
+position every colour clock, and a beam polling loop would otherwise send a
+few percent of its reads through the mailbox (about 4,500 per frame on the
+Jim Power title screen), which the counts on the main thread during a flood
+hold never see. It stays coherent with the CPU's own accesses because every
 access served on the main thread republishes the armed groups before the
 reply, and a resume after a pause or a reset republishes them before the worker
 continues. When the worker takes an interrupt, it does not use the interrupt

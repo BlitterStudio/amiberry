@@ -1279,6 +1279,7 @@ int main() {
 #define CPU_THREAD_RARE(x) __builtin_expect(!!(x), 0)
 uint64_t host_ns;
 uint64_t SDL_GetTicksNS() { return host_ns; }
+void cpu_thread_spin_pause() {}
 struct addrbank { int id; };
 addrbank custom_bank{1}, cia_bank{2}, chip_bank{3};
 struct { int cs_fatgaryrev = -1; } currprefs;
@@ -1815,22 +1816,54 @@ int main() {
     assert(cpu_thread_bank_mode() == CPU_BANKS_COUNT);
     frames(26, 100, 1500);
     assert(!f.held && !f.probing && !f.was_threaded && f.hold_seconds == 16);
-    // The retry settles like a first start; the flood comes back: 32 s. It
-    // is over at once, and the first count, a second in, ends the hold.
+    // Ten quiet seconds on the thread, then the flood comes back: 32 s. It is
+    // over at once, and the first count, a second in, ends the hold.
+    cpu_threaded_run = true;
+    frames(500, 100, 0);
     flood();
-    assert(f.held && f.hold_seconds == 32);
+    assert(f.held && f.hold_seconds == 32 && f.refloods == 0);
     frames(76, 100, 0);
     assert(!f.held);
-    // A count that stays high: only the safety net ends the hold, at 64 s.
+    // A retry whose first measured window is a flood again (a workload the
+    // count on the main thread sees as quiet, such as beam polling): each
+    // such re-flood doubles the wait for the first count, 2 s, then 4 s.
     flood();
-    assert(f.held && f.hold_seconds == 64);
-    frames(3199, 100, 6000);
+    assert(f.held && f.refloods == 1);
+    frames(76, 100, 0);
+    assert(f.held && cpu_thread_bank_mode() == CPU_BANKS_PLAIN);
+    frames(50, 100, 0);
+    assert(!f.held);
+    flood();
+    assert(f.held && f.refloods == 2);
+    frames(176, 100, 0);
+    assert(f.held);
+    frames(50, 100, 0);
+    assert(!f.held);
+    // A flood that comes back after a quiet window on the thread is a new
+    // flood (flood after flood with quiet work between): the first count
+    // comes a second in again.
+    cpu_threaded_run = true;
+    frames(100, 100, 0);      // the retry's settle
+    frames(11, 100, 0);       // one quiet window measured
+    for (int i = 0; i < 20 && !f.held; i++)
+        frame(150, 6000);
+    assert(f.held && f.refloods == 0 && f.probe_gap == syncbase * 1);
+    cpu_threaded_run = false;
+    frames(76, 100, 0);
+    assert(!f.held);
+    // Re-floods past the safety net's length: the hold runs to the safety net.
+    f.refloods = 15;
+    flood();
+    assert(f.held && f.refloods == 16 && f.probe_gap == syncbase * f.hold_seconds);
+    // A count that stays high: only the safety net ends the hold.
+    const int hold = f.hold_seconds;
+    frames(hold * 50 - 1, 100, 6000);
     assert(f.held);
     frame(100, 6000);
-    assert(!f.held && f.hold_seconds == 64);
+    assert(!f.held && f.hold_seconds == hold);
     // A reset, a state load, warp: the flood is forgotten.
     flood();
-    assert(f.held && f.hold_seconds == 128);
+    assert(f.held && f.hold_seconds == std::min(hold * 2, 256));
     currprefs.turbo_emulation = true;
     frame(100, 0);
     assert(!f.held && !f.hold_seconds && cpu_thread_bank_mode() == CPU_BANKS_PLAIN);

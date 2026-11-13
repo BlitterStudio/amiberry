@@ -5975,6 +5975,7 @@ static struct alignas(64) {
 // the CPU thread reads through the mailbox until the chipset moves on.
 #define CPU_THREAD_SNAP_FROZEN_NS 128000
 #define CPU_THREAD_SNAP_CLOCK_READS 1024   // reads between clock checks
+#define CPU_THREAD_SNAP_RETRIES 8          // reads again of a copy caught mid-write
 // A read from the copy costs next to nothing, and in fastest mode the CPU
 // thread runs ahead of the chipset without a bound; how far depends on the
 // host: on a loaded one the main thread falls behind. The copy therefore
@@ -6305,34 +6306,48 @@ static inline bool cpu_thread_snap_read(const addrbank *ab, uaecptr addr, int si
 	if ((cia ? w.cia_budget : w.custom_budget) <= 0 && !cpu_thread_snap_refill(cia))
 		return false;
 	uae_u32 *seq = group == CPU_THREAD_SNAP_POS ? &cpu_thread_snap_pos.seq : &cpu_thread_snap_regs.seq;
-	const uae_u32 s = __atomic_load_n(seq, __ATOMIC_ACQUIRE);
-	if (s & 1)
-		return false;
-	if (group != CPU_THREAD_SNAP_POS
-		&& ((uae_s32)(s - w.min) < 0
-			|| !(__atomic_load_n(&cpu_thread_snap_regs.valid, __ATOMIC_RELAXED) & group)))
-		return false;
-	uae_u32 v;
-	if (group == CPU_THREAD_SNAP_CIA) {
-		v = __atomic_load_n(&cpu_thread_snap_regs.ciaa_pra, __ATOMIC_RELAXED);
-	} else {
-		const uae_u16 w = cpu_thread_snap_value(r0);
-		if (size == 2)
-			v = ((uae_u32)w << 16) | cpu_thread_snap_value(r1);
-		else if (size == 1)
-			v = w;
+	// The main thread rewrites the beam position every colour clock: a beam
+	// polling loop catches it mid-write a few percent of the time. Read again
+	// rather than make a round trip, which a probe on the main thread (see
+	// cpu_thread_check_flood()) would never see.
+	for (int attempt = 0;; attempt++) {
+		const uae_u32 s = __atomic_load_n(seq, __ATOMIC_ACQUIRE);
+		if (s & 1) {
+			if (attempt < CPU_THREAD_SNAP_RETRIES) {
+				cpu_thread_spin_pause();
+				continue;
+			}
+			return false;
+		}
+		if (group != CPU_THREAD_SNAP_POS
+			&& ((uae_s32)(s - w.min) < 0
+				|| !(__atomic_load_n(&cpu_thread_snap_regs.valid, __ATOMIC_RELAXED) & group)))
+			return false;
+		uae_u32 v;
+		if (group == CPU_THREAD_SNAP_CIA) {
+			v = __atomic_load_n(&cpu_thread_snap_regs.ciaa_pra, __ATOMIC_RELAXED);
+		} else {
+			const uae_u16 w = cpu_thread_snap_value(r0);
+			if (size == 2)
+				v = ((uae_u32)w << 16) | cpu_thread_snap_value(r1);
+			else if (size == 1)
+				v = w;
+			else
+				v = (addr & 1) ? (w & 0xff) : (w >> 8);
+		}
+		__atomic_thread_fence(__ATOMIC_ACQUIRE);
+		if (__atomic_load_n(seq, __ATOMIC_RELAXED) != s) {
+			if (attempt < CPU_THREAD_SNAP_RETRIES)
+				continue;
+			return false;
+		}
+		if (cia)
+			cpu_thread_snap_worker.cia_budget--;
 		else
-			v = (addr & 1) ? (w & 0xff) : (w >> 8);
+			cpu_thread_snap_worker.custom_budget -= size == 2 ? 2 : 1;
+		*out = v;
+		return true;
 	}
-	__atomic_thread_fence(__ATOMIC_ACQUIRE);
-	if (__atomic_load_n(seq, __ATOMIC_RELAXED) != s)
-		return false;
-	if (cia)
-		cpu_thread_snap_worker.cia_budget--;
-	else
-		cpu_thread_snap_worker.custom_budget -= size == 2 ? 2 : 1;
-	*out = v;
-	return true;
 }
 
 uae_u32 process_cpu_indirect_memory_read(uae_u32 addr, int size)
@@ -8513,7 +8528,9 @@ static void (*cpu_thread_current_run_func)(void);
 #define CPU_THREAD_FLOOD_PROBE 10           // at most this many seconds between counts
 #define CPU_THREAD_FLOOD_SETTLE 2           // seconds on the thread before measuring
 static struct {
-	frame_time_t last, sum, hold_until, threaded_since, probe_at, probe_gap;
+	frame_time_t last, sum, hold_until, threaded_since, probe_at, probe_gap, released_at;
+	int refloods;   // holds in a row whose retry measured a flood at once
+	int quiet_windows;   // windows measured on the thread since the retry, with no flood
 	uae_u32 requests_seen;
 	int frames, late;
 	int hold_seconds;
@@ -8651,6 +8668,8 @@ static void cpu_thread_check_flood()
 			f.probing = false;
 			f.frames = 0;
 			f.was_threaded = false;   // the retry settles like a first start
+			f.released_at = now;
+			f.quiet_windows = 0;
 			write_log(_T("CPU thread: %s, trying the CPU thread again.\n"), why);
 		}
 		return;
@@ -8692,6 +8711,7 @@ static void cpu_thread_check_flood()
 	const uae_u32 requests = served - f.requests_seen;
 	f.frames = 0;
 	if (f.late < CPU_THREAD_FLOOD_LATE || requests < (uae_u32)CPU_THREAD_FLOOD_REQUESTS * n) {
+		f.quiet_windows = std::min(f.quiet_windows + 1, 1000);
 		// a quiet minute on the thread forgets earlier floods
 		if (f.hold_seconds && now - f.threaded_since > syncbase * 60)
 			f.hold_seconds = 0;
@@ -8699,9 +8719,20 @@ static void cpu_thread_check_flood()
 	}
 	f.hold_seconds = !f.hold_seconds ? CPU_THREAD_FLOOD_HOLD_MIN : std::min(f.hold_seconds * 2, CPU_THREAD_FLOOD_HOLD_MAX);
 	f.hold_until = now + syncbase * f.hold_seconds;
-	// the first count comes soon, so that a short flood ends a short hold
-	f.probe_gap = syncbase * CPU_THREAD_FLOOD_PROBE_FIRST;
+	// The first count comes soon, so that a short flood ends a short hold.
+	// A retry whose very first measured window is a flood again means the
+	// count on the main thread saw less than the thread does (a workload can
+	// do that): each such re-flood doubles the wait for the first count,
+	// until the hold runs to its safety net, so that it cannot go back and
+	// forth. A flood that comes back after a quiet window is a new flood.
+	f.refloods = f.released_at && !f.quiet_windows ? std::min(f.refloods + 1, 16) : 0;
+	f.probe_gap = std::min((frame_time_t)(syncbase * CPU_THREAD_FLOOD_PROBE_FIRST) << f.refloods,
+		(frame_time_t)syncbase * f.hold_seconds);
 	f.probe_at = now + f.probe_gap;
+	if (f.refloods)
+		write_log(_T("CPU thread: the flood came back as soon as the CPU thread was tried again (%d in a row): ")
+			_T("the count on the main thread missed it; the next count waits %d s.\n"),
+			f.refloods, (int)(f.probe_gap / syncbase));
 	f.held = true;
 	write_log(_T("CPU thread: %u requests per frame, %d of %d frames long (%d%% on average): the CPU runs on the main thread for %d s.\n"),
 		requests / n, f.late, n, (int)(f.sum * 100 / (vsynctimebase * n)) - 100, f.hold_seconds);
