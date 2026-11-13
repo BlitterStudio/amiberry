@@ -2919,6 +2919,9 @@ floatx80 floatx80_rem(floatx80 a, floatx80 b, uint64_t *q, flag *s, float_status
     if (bExp == 0x7FFF) {
         if ((uint64_t)(bSig << 1)) return propagateFloatx80NaN(a, b, status);
         *s = (aSign != bSign);
+        // x mod/rem infinity is x; a zero needs no rounding (rounding its
+        // zero significand raised a false underflow)
+        if (aExp == 0 && aSig0 == 0) return a;
         return normalizeRoundAndPackFloatx80(status->floatx80_rounding_precision, aSign, aExp, aSig0, 0, status);
     }
     if (bExp == 0) {
@@ -3027,6 +3030,9 @@ floatx80 floatx80_mod(floatx80 a, floatx80 b, uint64_t *q, flag *s, float_status
     if (bExp == 0x7FFF) {
         if ((uint64_t)(bSig << 1)) return propagateFloatx80NaN(a, b, status);
         *s = (aSign != bSign);
+        // x mod/rem infinity is x; a zero needs no rounding (rounding its
+        // zero significand raised a false underflow)
+        if (aExp == 0 && aSig0 == 0) return a;
         return normalizeRoundAndPackFloatx80(status->floatx80_rounding_precision, aSign, aExp, aSig0, 0, status);
     }
     if (bExp == 0) {

@@ -308,6 +308,9 @@ bool custom_controls_commit(amiberry_settings_custom_controls_stage* stage, uae_
 // not compiled in, inhibited, below a 68020 or in memory cycle-exact
 // mode). The memory domain uses it for the sizes the JIT cannot map.
 int jit_cache_after_fixup_cpu(const uae_prefs& p);
+// Whether the FPU core fpp.cpp selects for p is the exact one (Automatic
+// resolved for this host, as fpu_core_wanted() does).
+bool fpu_exact_core_after_fixup(const uae_prefs& p);
 
 // fixup_prefs()'s RAM clamps that depend on other options (the JIT, the
 // Gayle/Gary address conflict). Setters of those options run it, so the RAM

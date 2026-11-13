@@ -508,6 +508,12 @@ static inline void
 
 static inline void mul64To128( uint64_t a, uint64_t b, uint64_t *z0Ptr, uint64_t *z1Ptr )
 {
+#ifdef __SIZEOF_INT128__
+    // one 64x64->128 multiply (MUL + UMULH on AArch64, MUL on x86-64)
+    unsigned __int128 z = (unsigned __int128) a * b;
+    *z1Ptr = (uint64_t) z;
+    *z0Ptr = (uint64_t) ( z >> 64 );
+#else
     uint32_t aHigh, aLow, bHigh, bLow;
     uint64_t z0, zMiddleA, zMiddleB, z1;
 
@@ -526,7 +532,7 @@ static inline void mul64To128( uint64_t a, uint64_t b, uint64_t *z0Ptr, uint64_t
     z0 += ( z1 < zMiddleA );
     *z1Ptr = z1;
     *z0Ptr = z0;
-
+#endif
 }
 
 /*----------------------------------------------------------------------------

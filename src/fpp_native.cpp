@@ -431,6 +431,22 @@ static bool fp_is_unnormal(fpdata *fpd)
 #endif
 }
 
+static bool fp_is_denormal_or_unnormal(fpdata *fpd)
+{
+	return fp_is_denormal(fpd) || fp_is_unnormal(fpd);
+}
+static uae_u32 fp_get_cc(fpdata *fpd)
+{
+	uae_u32 cc = fp_is_neg(fpd) ? 8 : 0;
+	if (fp_is_nan(fpd))
+		cc |= 1;
+	else if (fp_is_zero(fpd))
+		cc |= 4;
+	else if (fp_is_infinity(fpd))
+		cc |= 2;
+	return cc;
+}
+
 /* Functions for converting between float formats */
 /* FIXME: how to preserve/fix denormals and unnormals? */
 
@@ -1866,6 +1882,8 @@ void fp_init_native(void)
 	fpp_is_neg = fp_is_neg;
 	fpp_is_denormal = fp_is_denormal;
 	fpp_is_unnormal = fp_is_unnormal;
+	fpp_is_denormal_or_unnormal = fp_is_denormal_or_unnormal;
+	fpp_get_cc = fp_get_cc;
 	fpp_fix_infinity = NULL;
 
 	fpp_get_status = fp_get_status;

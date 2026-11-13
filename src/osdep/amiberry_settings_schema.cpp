@@ -881,6 +881,18 @@ state_space cpu_mmu_states()
 	return space;
 }
 
+// The FPU and its core, cpu_model first (loading it resets the FPU).
+state_space fpu_core_states()
+{
+	return {
+		{
+			{"cpu_model", choice_values("cpu_model")},
+			{"fpu_model", choice_values("fpu_model")},
+			{"fpu_core", choice_values("fpu_core")},
+		},
+		{}};
+}
+
 // The IDs of a group's options, in layer order.
 std::vector<const char*> group_options(const char* group)
 {
@@ -1098,10 +1110,14 @@ std::vector<availability_table> availability_tables()
 		// otherwise, and the answers here are those without one.
 		{cpu_mmu_states(),
 			{"cpu_24bit_addressing", "cpu_compatible", "cachesize", "compfpu", "z3mem_size",
-				"cpu_no_unimplemented", "cpu_data_cache", "mmu_model", "fpu_strict", "fpu_softfloat",
+				"cpu_no_unimplemented", "cpu_data_cache", "mmu_model", "fpu_softfloat", "fpu_core",
 				"fpu_no_unimplemented", "cpu_threaded", "comp_constjump", "comp_flushmode", "comp_nf",
 				"comp_catchfault", "comp_trustbyte"},
 			{"fpu_model", "cycle_exact", "mmu_model"}},
+		// More compatible against the FPU core (not with Exact). The JIT
+		// FPU stays in the table above, answered for Automatic: a front end
+		// without the FPU core option (Android) still finds its row.
+		{fpu_core_states(), {"fpu_strict"}, {}},
 		// The speed options against the cycle-exact modes, CPU
 		// compatibility and the speed.
 		{{{{"cycle_exact", choice_values("cycle_exact")}, {"cpu_compatible", {"true", "false"}},

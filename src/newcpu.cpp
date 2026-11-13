@@ -2079,11 +2079,12 @@ static void build_cpufunctbl ()
 	build_comp ();
 #endif
 
-	write_log(_T("CPU=%d, FPU=%d%s, MMU=%d, JIT%s=%d."),
+	write_log(_T("CPU=%d, FPU=%d%s%s%s, MMU=%d, JIT%s=%d."),
 		currprefs.cpu_model,
-		currprefs.fpu_model, currprefs.fpu_model ? (currprefs.fpu_mode > 0 ? _T(" (softfloat)") : (currprefs.fpu_mode < 0 ? _T(" (host 80b)") : _T(" (host 64b)"))) : _T(""),
+		currprefs.fpu_model, currprefs.fpu_model ? _T(" (") : _T(""), currprefs.fpu_model ? fpu_core_name() : _T(""),
+		currprefs.fpu_model ? _T(")") : _T(""),
 		currprefs.mmu_model,
-		currprefs.cachesize ? (currprefs.compfpu && currprefs.fpu_model ? _T("=CPU/FPU") : _T("=CPU")) : _T(""),
+		currprefs.cachesize ? (currprefs.compfpu && !fpu_exact_wanted() && currprefs.fpu_model ? _T("=CPU/FPU") : _T("=CPU")) : _T(""),
 		currprefs.cachesize);
 
 	regs.address_space_mask = 0xffffffff;

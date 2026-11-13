@@ -815,7 +815,44 @@ extern void mmu_op (uae_u32, uae_u32);
 extern bool mmu_op30 (uaecptr, uae_u32, uae_u16, uaecptr);
 
 extern void fpuop_arithmetic(uae_u32, uae_u16);
+// The JIT compiles FPU instructions (compfpu) and the FPU core keeps host
+// doubles for it; false while the exact FPU core is active.
+extern bool jit_fpu_enabled(void);
+// The FPU registers are softfloat extended values (fpx), not host doubles
+extern bool fpu_softfloat_core(void);
+// The settings select the exact FPU core. Known before the FPU reset picks
+// the core, so the JIT's opcode table (build_comp) can depend on it.
+extern bool fpu_exact_wanted(void);
+extern const TCHAR *fpu_core_name(void);
 extern void REGPARAM3 fpuop_arithmetic_jit(uae_u32 instruction, uaecptr ea);
+// compiled FPU arithmetic for a JIT without native FPU code (fpp.cpp)
+extern bool jit_fpu_arith_ok(uae_u16 opcode, uae_u16 extra);
+extern uae_u32 REGPARAM3 fpp_jit_arith(uae_u32 opext, uae_u64 value, uae_u8 *pc_p, uae_u32 pc);
+// its specialised versions for the common instructions, or nullptr (fpp_softfloat.cpp)
+extern void *fp_jit_fast_helper(uae_u16 opcode, uae_u16 extra);
+extern bool jit_fpu_generic_ok(uae_u16 opcode, uae_u16 extra);
+extern uae_u32 REGPARAM3 fpp_jit_generic(uae_u32 opext, uae_u64 ea, uae_u8 *next_p, uae_u64 lenpc);
+extern void *fp_jit_out_helper(uae_u16 opcode, uae_u16 extra);
+extern void REGPARAM3 fpp_jit_interp_leave(uae_u32 opcode, uae_u8 *pc_p, uae_u32 pc);
+extern uae_u32 fp_jit_inline_kind(uae_u16 opcode, uae_u16 extra);
+extern uae_u32 fp_jit_inexact_status(void);
+extern bool fp_jit_inline_verify(void);
+extern uae_u64 REGPARAM3 fp_jit_verify_save(uae_u64 value);
+extern void REGPARAM3 fp_jit_verify_check(uae_u32 opext, uae_u64 value, uae_u8 *pc_p, uae_u32 pc, void *fn);
+extern uae_u32 fp_jit_out_inline_kind(uae_u16 opcode, uae_u16 extra);
+#define FPJ_STATS_KEYS (1 << 16)
+enum { FPJ_ST_INLINE, FPJ_ST_INLINE_FAIL, FPJ_ST_HELPER, FPJ_ST_INTERP };
+extern uae_u64 *fp_jit_stats(void);
+extern uae_u32 fp_jit_stats_key(uae_u16 opcode, uae_u16 extra);
+extern void fp_jit_stats_count(uae_u16 opcode, uae_u16 extra, int path);
+struct fpj_fmovem {
+	int n, reg[8], off[8], final;
+	bool to_mem, reversed;
+};
+extern bool fp_jit_fmovem_plan(uae_u16 opcode, uae_u16 extra, struct fpj_fmovem *p);
+extern bool fp_jit_fmovecr(uae_u16 extra, uae_u16 *hi, uae_u64 *lo, uae_u32 *ccexc, uae_u32 *accr);
+extern uae_u64 REGPARAM3 fp_jit_verify_out_save(uae_u64 ea, uae_u32 opext);
+extern void REGPARAM3 fp_jit_verify_out_check(uae_u32 opext, uae_u64 ea, uae_u8 *next_p, uae_u64 lenpc, void *fn);
 extern void fpuop_dbcc(uae_u32, uae_u16);
 extern void fpuop_scc(uae_u32, uae_u16);
 extern void fpuop_trapcc(uae_u32, uaecptr, uae_u16);
@@ -907,6 +944,7 @@ extern cpuop_func *cpufunctbl[65536] ASM_SYM_FOR_FUNC("cpufunctbl");
 #ifdef JIT
 extern void (*flush_icache)(int);
 extern void compemu_reset(void);
+extern void set_cache_state(int enabled);
 #else
 #define flush_icache(int) do {} while (0)
 #define flush_icache_hard(int) do {} while (0)

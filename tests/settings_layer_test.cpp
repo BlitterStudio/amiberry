@@ -1112,26 +1112,38 @@ void check_fixup_consistency()
 		CHECK(set(p, "fpu_model", "68881") == AMIBERRY_SETTINGS_OK);
 		CHECK(set(p, "cachesize", "8192") == AMIBERRY_SETTINGS_OK);
 		CHECK(p.compfpu);
-		// The JIT FPU refuses softfloat but keeps host floating point
-		// selectable.
+		// The exact core works with the JIT: every FPU core stays selectable.
 		CHECK(available(p, "fpu_softfloat"));
-		CHECK(!choice_available(p, "fpu_softfloat", "true"));
-		CHECK(choice_available(p, "fpu_softfloat", "false"));
-		CHECK(set(p, "fpu_softfloat", "true") == AMIBERRY_SETTINGS_INVALID_VALUE);
-		CHECK(set(p, "fpu_softfloat", "false") == AMIBERRY_SETTINGS_OK);
+		CHECK(choice_available(p, "fpu_softfloat", "true"));
+		CHECK(set(p, "fpu_softfloat", "true") == AMIBERRY_SETTINGS_OK);
+		CHECK(p.fpu_mode == FPU_MODE_EXACT);
+		CHECK(value_of(p, "fpu_core") == "exact");
+		// the JIT FPU only selects the host core's compiled code
+		CHECK(!available(p, "compfpu"));
+		CHECK(set(p, "fpu_core", "host") == AMIBERRY_SETTINGS_OK);
+		CHECK(p.fpu_mode == FPU_MODE_HOST);
+		CHECK(available(p, "compfpu"));
+		CHECK(available(p, "fpu_strict"));
+		CHECK(set(p, "fpu_core", "auto") == AMIBERRY_SETTINGS_OK);
+		CHECK(p.fpu_mode == FPU_MODE_AUTO);
+		// with the JIT FPU, Automatic is the host core on every host
+		CHECK(!amiberry_settings::fpu_exact_core_after_fixup(p));
+		// the layer's answer for Automatic does not depend on the host
+		CHECK(available(p, "fpu_strict"));
+		CHECK(survives("fpu_core"));
 		CHECK(set(p, "cpu_model", "68000") == AMIBERRY_SETTINGS_OK);
 		CHECK(p.cachesize == 0 && p.fpu_model == 68881);
-		CHECK(choice_available(p, "fpu_softfloat", "true"));
 		CHECK(set(p, "fpu_softfloat", "true") == AMIBERRY_SETTINGS_OK);
 		CHECK(survives("fpu_softfloat"));
 
-		// Turning the JIT FPU on switches softfloat off, as fixup_cpu() would.
+		// Turning the JIT on keeps the exact core and its JIT FPU setting.
 		CHECK(set(p, "cpu_model", "68020") == AMIBERRY_SETTINGS_OK);
 		CHECK(set(p, "cpu_24bit_addressing", "false") == AMIBERRY_SETTINGS_OK);
 		CHECK(set(p, "cachesize", "8192") == AMIBERRY_SETTINGS_OK);
-		CHECK(!p.compfpu); // softfloat kept the JIT FPU off
-		CHECK(set(p, "compfpu", "true") == AMIBERRY_SETTINGS_OK);
-		CHECK(p.fpu_mode == 0);
+		CHECK(!p.compfpu); // the exact core does not use the JIT FPU
+		CHECK(p.fpu_mode == FPU_MODE_EXACT);
+		// More compatible changes only the host core
+		CHECK(!available(p, "fpu_strict"));
 	}
 
 	// A speed set with cpu_speed=N reads back as N, not as "real", and
@@ -1161,16 +1173,21 @@ void check_fixup_consistency()
 		CHECK(!available(p, "cachesize"));
 	}
 
-	// Turning softfloat off leaves the host 80-bit mode of MSVC long double
-	// builds alone.
+	// Turning softfloat off leaves the host modes alone (MSVC long double:
+	// host 80-bit) and returns from the exact core to Automatic.
 	reset_prefs(p);
 	p.fpu_model = 68881;
-	p.fpu_mode = -1;
+	p.fpu_mode = FPU_MODE_HOST80;
 	CHECK(set(p, "fpu_softfloat", "false") == AMIBERRY_SETTINGS_OK);
-	CHECK(p.fpu_mode == -1);
+	CHECK(p.fpu_mode == FPU_MODE_HOST80);
+	CHECK(value_of(p, "fpu_core") == "host");
+	CHECK(set(p, "fpu_core", "host") == AMIBERRY_SETTINGS_OK);
+	CHECK(p.fpu_mode == FPU_MODE_HOST80);
 	CHECK(set(p, "fpu_softfloat", "true") == AMIBERRY_SETTINGS_OK);
 	CHECK(set(p, "fpu_softfloat", "false") == AMIBERRY_SETTINGS_OK);
-	CHECK(p.fpu_mode == 0);
+	CHECK(p.fpu_mode == FPU_MODE_AUTO);
+	CHECK(set(p, "fpu_core", "exact") == AMIBERRY_SETTINGS_OK);
+	CHECK(value_of(p, "fpu_softfloat") == "true");
 }
 
 void check_rejections()
@@ -1402,6 +1419,8 @@ void emit_roundtrip()
 	apply("cpu_model", "68030");
 	apply("mmu_model", "68ec030");
 	apply("fpu_model", "68882");
+	apply("fpu_core", "host");
+	apply("fpu_strict", "true");
 	apply("cpu_data_cache", "true");
 	apply("cpu_multiplier", "8");
 	emit("a3000_ec030", p);
@@ -1410,8 +1429,7 @@ void emit_roundtrip()
 	apply("cpu_model", "68060");
 	apply("fpu_model", "68060");
 	apply("mmu_model", "68060");
-	apply("fpu_softfloat", "true");
-	apply("fpu_strict", "true");
+	apply("fpu_softfloat", "true"); // the exact core: More compatible does not apply
 	apply("cpu_no_unimplemented", "true");
 	apply("fpu_no_unimplemented", "true");
 	emit("a4000_060_softfloat", p);

@@ -57,6 +57,8 @@ template<class... A> static bool fault_if_unimplemented_680x0(A...) { return fal
 template<class... A> static bool fault_if_nonexisting_opmode(A...) { return false; }
 template<class... A> static bool fault_if_no_packed_support(A...) { return false; }
 static bool fault_if_60() { return false; }
+uae_u64 *fp_jit_stats(void) { return nullptr; }
+void fp_jit_stats_count(uae_u16, uae_u16, int) {}
 static bool if_no_fpu() { return false; }
 template<class... A> static void fp_unimp_datatype(A...) { assert(false); }
 template<class... A> static void fpu_noinst(A...) { assert(false); }
@@ -88,10 +90,12 @@ static bool fpsr_check_arithmetic_exception(
         "static int get_fp_ad (", "static int put_fp_value(",
         "static uaecptr fmovem2mem (", "static uaecptr fmovem2fpp (",
         "static bool fp_arithmetic(fpdata *src, fpdata *dst, int extra)\n{",
-        "static void fpuop_arithmetic2 (", "void fpuop_arithmetic (",
+        "static void fpuop_arith_regmem(", "static inline bool fpuop_arith_regmem_direct(",
+        "static NOINLINE void fpuop_arithmetic2 (", "void fpuop_arithmetic (",
         "void REGPARAM3 fpuop_arithmetic_jit(",
     )
-    return stubs + "\n".join(function(signature) for signature in functions) + r"""
+    return stubs + "\n".join(function(signature) for signature in functions).replace(
+        "static NOINLINE void", "static void") + r"""
 #undef m68k_setpc_j
 #undef write_log
 """
