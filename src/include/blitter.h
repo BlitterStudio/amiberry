@@ -52,6 +52,8 @@ extern void decide_blitter(int hpos);
 extern void blitter_done_notify(void);
 extern void blitter_slowdown(int, int, int, int);
 extern void blitter_check_start(void);
+// after a CPU write to a custom register, with the JIT: a nasty blit holds the CPU until it ends
+extern void blitter_cpu_write_nasty(void);
 extern void blitter_reset(void);
 extern void blitter_debugdump(void);
 extern void restore_blitter_start(void);

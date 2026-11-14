@@ -9683,7 +9683,7 @@ void default_prefs (struct uae_prefs *p, bool reset, int type)
 	p->prtname[0] = 0;
 	p->sername[0] = 0;
 
-	p->cpu_thread = false;
+	p->cpu_thread = true;
 
 	p->fpu_model = 0;
 	p->cpu_model = 68000;

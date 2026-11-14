@@ -167,7 +167,6 @@
 #define WITH_DRACO
 #endif
 
-#define WITH_THREADED_CPU
 #define WITH_SOFTFLOAT
 #define FLOPPYBRIDGE
 #define WITH_MIDIEMU

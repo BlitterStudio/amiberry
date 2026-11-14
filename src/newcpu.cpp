@@ -44,12 +44,17 @@
 #include "audio.h"
 #include "fpp.h"
 #include "statusline.h"
+#include "xwin.h"
 #ifdef WITH_PPC
 #include "uae/ppc.h"
 #endif
 #include "cpuboard.h"
 #include "threaddep/thread.h"
+#include "cpu_thread.h"
+#include <algorithm>
 #include <thread>
+#include <mutex>
+#include <condition_variable>
 #ifdef WITH_X86
 #include "x86.h"
 #endif
@@ -61,11 +66,11 @@
 #include "jit/compemu.h"
 #include "uae/vm.h"
 #include <signal.h>
-volatile int jit_exception_pending = 0;
+thread_local volatile int jit_exception_pending = 0;
 #if defined(JIT_HAS_BUS_ERROR_RECOVERY)
 #include <setjmp.h>
-jmp_buf jit_bus_error_jmpbuf;
-volatile bool jit_in_compiled_code = false;
+thread_local jmp_buf jit_bus_error_jmpbuf;
+thread_local volatile bool jit_in_compiled_code = false;
 #endif
 #else
 /* Need to have these somewhere */
@@ -118,10 +123,22 @@ static volatile uae_atomic uae_interrupt;
 static volatile uae_atomic uae_interrupts2[IRQ_SOURCE_MAX];
 static volatile uae_atomic uae_interrupts6[IRQ_SOURCE_MAX];
 
-#ifdef WITH_THREADED_CPU
+bool cpu_threaded_run;
+
 // Keyboard reset left for the CPU thread: bit 0 = pending, bit 1 = hard reset.
 static volatile uae_atomic cpu_thread_kbreset;
+static thread_local bool cpu_worker;
 static bool is_cpu_thread();
+static bool cpu_thread_start_failed;
+static void cpu_thread_select(bool on);
+static void cpu_thread_flood_forget(const TCHAR *why);
+static int cpu_thread_slow_path();
+static void cpu_thread_safepoint();
+static bool cpu_thread_debugger_wait();
+static void cpu_thread_debugger_resume();
+#ifdef JIT
+static void cpu_thread_jit_break();
+static void cpu_thread_jit_unkick();
 #endif
 
 static int cacheisets04060, cacheisets04060mask, cacheitag04060mask;
@@ -2313,8 +2330,13 @@ void check_prefs_changed_cpu()
 	currprefs.ppc_cpu_idle = changed_prefs.ppc_cpu_idle;
 	currprefs.reset_delay = changed_prefs.reset_delay;
 	currprefs.cpuboard_settings = changed_prefs.cpuboard_settings;
+	// applied by cpu_thread_check_selection() at the next frame
+	if (currprefs.cpu_thread != changed_prefs.cpu_thread)
+		cpu_thread_flood_forget(_T("the CPU thread setting changed"));
+	currprefs.cpu_thread = changed_prefs.cpu_thread;
 
 	if (check_prefs_changed_cpu2()) {
+		cpu_thread_flood_forget(_T("the CPU settings changed"));
 		set_special(SPCFLAG_MODE_CHANGE);
 		reset_frame_rate_hack();
 	}
@@ -2554,7 +2576,7 @@ static void MakeFromSR_x(int t0trace)
 	} else {
 		/* Keep SPCFLAG_DOTRACE, we still want a trace exception for
 		SR-modifying instructions (including STOP).  */
-		unset_special (SPCFLAG_TRACE);
+		unset_special_cpu (SPCFLAG_TRACE);
 	}
 	// Stop SR-modification does not generate T0
 	// If this SR modification set Tx bit, no trace until next instruction.
@@ -2584,7 +2606,7 @@ static bool internalexception(const int nr)
 
 static void exception_check_trace (int nr)
 {
-	unset_special (SPCFLAG_TRACE | SPCFLAG_DOTRACE);
+	unset_special_cpu (SPCFLAG_TRACE | SPCFLAG_DOTRACE);
 	if (regs.t1) {
 		/* trace stays pending if exception is div by zero, chk,
 		* trapv or trap #x. Except if 68040 or 68060.
@@ -3655,7 +3677,6 @@ static void m68k_reset2(bool hardreset)
 
 	cpu_halt_clear();
 
-#ifdef WITH_THREADED_CPU
 	if (is_cpu_thread()) {
 		// RESET instruction on a board that forces a hard reset (cpureset()). A
 		// keyboard reset the CPU thread has not taken yet must still hold the CPU.
@@ -3667,9 +3688,6 @@ static void m68k_reset2(bool hardreset)
 		regs.spcflags = 0;
 		atomic_set(&cpu_thread_kbreset, 0);
 	}
-#else
-	regs.spcflags = 0;
-#endif
 	m68k_reset_delay = false;
 	regs.ipl[0] = regs.ipl[1] = regs.ipl_pin = 0;
 	for (int i = 0; i < IRQ_SOURCE_MAX; i++) {
@@ -4720,10 +4738,40 @@ static void doint_delayed(uae_u32 v)
 	update_ipl(v);
 }
 
-#ifdef WITH_THREADED_CPU
-// Main-thread-published interrupt level consumed by the threaded CPU.
-static volatile uae_atomic cpu_thread_ilvl;
-#endif
+// Threaded CPU coordination state, on lines of its own: the CPU thread
+// writes regflags and regs on almost every instruction, and the main thread
+// polls some of these fields while it waits. Sharing a line with regflags
+// made every poll take that line from the CPU thread.
+static struct alignas(64) {
+	volatile uae_atomic ilvl;    // main-thread-published interrupt level
+	int active;                  // 0 starting/inactive, 1 running, 2 exited
+	int pause_depth;
+	int pause_requested;
+	int parked;                  // CPU_THREAD_RUNNING .. CPU_THREAD_IDLE_HELD
+	int debugger_waiting;
+	int (*function)(void *);
+} cpu_thread_ctl;
+// Main thread only, written for every hardware access: kept apart from the
+// fields above, which the CPU thread reads.
+static struct alignas(64) {
+	bool servicing;
+	bool loop_running;     // in run_cpu_thread()'s chipset loop
+	bool resume_deferred;  // paused at depth 0: released by cpu_thread_flush_resume()
+	uae_u32 requests_served;
+} cpu_thread_main;
+#define cpu_thread_ilvl (cpu_thread_ctl.ilvl)
+#define cpu_thread_active (cpu_thread_ctl.active)
+#define cpu_thread_servicing (cpu_thread_main.servicing)
+#define cpu_thread_requests_served (cpu_thread_main.requests_served)
+#define cpu_thread_pause_depth (cpu_thread_ctl.pause_depth)
+#define cpu_thread_pause_requested (cpu_thread_ctl.pause_requested)
+#define cpu_thread_parked (cpu_thread_ctl.parked)
+#define cpu_thread_debugger_waiting (cpu_thread_ctl.debugger_waiting)
+#define cpu_thread_function (cpu_thread_ctl.function)
+// cpu_thread_parked: the CPU thread parks itself on a pause request (PARKED),
+// or announces that it sleeps at an instruction boundary (IDLE, in STOP or in
+// the debugger), where a pause takes it over without waking it (IDLE_HELD).
+enum { CPU_THREAD_RUNNING, CPU_THREAD_PARKED, CPU_THREAD_IDLE, CPU_THREAD_IDLE_HELD };
 
 void doint()
 {
@@ -4734,12 +4782,10 @@ void doint()
 	}
 #endif
 	int ipl = intlev();
-#ifdef WITH_THREADED_CPU
 	// Publish chipset changes before raising flags, not at the next CCK poll.
 	// CPU-side calls may hold a stale sample and must not overwrite this latch.
-	if (currprefs.cpu_thread && is_mainthread())
+	if (cpu_threaded_run && is_mainthread())
 		atomic_set(&cpu_thread_ilvl, ipl);
-#endif
 
 	if (regs.ipl_pin != ipl) {
 
@@ -4782,6 +4828,9 @@ static bool take_special(uae_u32 x)
 
 static void check_debugger()
 {
+	// The main thread owns the debugger; its guard parks the worker first.
+	if (cpu_threaded_run && cpu_thread_debugger_wait())
+		return;
 	// Plain load first: this runs on every JIT dispatch of the CPU thread.
 	if ((regs.spcflags & SPCFLAG_BRK) && take_special(SPCFLAG_BRK)) {
 #ifdef DEBUGGER
@@ -4789,6 +4838,7 @@ static void check_debugger()
 			debug();
 		}
 #endif
+		cpu_thread_debugger_resume();
 	}
 }
 
@@ -4809,12 +4859,13 @@ static int do_specialties_check()
 	unset_special(SPCFLAG_CHECK);
 	if (regs.halted) {
 		if (regs.halted == CPU_HALT_ACCELERATOR_CPU_FALLBACK) {
-			if (currprefs.cpu_thread)
+			if (cpu_threaded_run)
 				set_special(SPCFLAG_MODE_CHANGE);
 			return 1;
 		}
-		if (currprefs.cpu_thread) {
+		if (cpu_threaded_run) {
 			while (regs.halted) {
+				cpu_thread_safepoint();
 				check_debugger();
 				if (regs.spcflags & SPCFLAG_MODE_CHANGE)
 					return 1;
@@ -4828,7 +4879,8 @@ static int do_specialties_check()
 		int vsynccnt = 60;
 		int vsyncstate = -1;
 		while (vsynccnt > 0 && !quit_program) {
-			if (currprefs.cpu_thread) {
+			if (cpu_threaded_run) {
+				cpu_thread_safepoint();
 				if (regs.spcflags & SPCFLAG_MODE_CHANGE)
 					return 1;
 				sleep_millis(1);
@@ -4847,6 +4899,9 @@ static int do_specialties_check()
 
 static int do_specialties (int cycles)
 {
+	// An interpreter loop running on the CPU thread (see cpu_thread_run_loop())
+	if (cpu_worker)
+		return cpu_thread_slow_path();
 	uaecptr pc = m68k_getpc();
 	uae_atomic spcflags = regs.spcflags;
 
@@ -5334,27 +5389,48 @@ static uae_u16 get_word_020_prefetchf (uae_u32 pc)
 }
 #endif
 
-#ifdef WITH_THREADED_CPU
-static volatile int cpu_thread_active;
+#if defined(__GNUC__) || defined(__clang__)
+#define CPU_THREAD_RARE(x) __builtin_expect(!!(x), 0)
+#else
+#define CPU_THREAD_RARE(x) (x)
+#endif
 // Threaded CPU pacing: the main thread spends CPU progress as chipset time
 // and waits (bounded) when there is none, so the chipset cannot run far
 // ahead of a CPU thread that the host delays. Without it a late CPU thread
 // merged interrupts (two CIA timer underflows seen by one handler).
-// Progress: the interpreter counts its instructions in cpu_thread_tokens,
-// each worth CPU_THREAD_INSN_CREDIT (paced 1; an add and a store per
-// instruction); the JIT counts its cycles down in countdown (paced 2), and
+// Progress: the interpreter and JIT publish cumulative cycle credit, and
 // an indirect request served counts as progress of either. The main thread
 // reads the counters only when its credit has run out: a shared cache line
 // written per instruction and read per colour clock slowed both threads
 // down several times.
+// The JIT's cumulative credit is jit_base - countdown. Compiled code only
+// decrements countdown, other threads only kick it (cpu_thread_kick()); every
+// other change goes through cpu_thread_jit_set_countdown(), which keeps the
+// difference under jit_seq (a sequence lock), so progress can be read at any
+// time.
 static struct alignas(64) {
-	volatile uae_s64 v;
-	char pad[64 - sizeof(uae_s64)];
-} cpu_thread_tokens_line;   // a cache line of its own
-#define cpu_thread_tokens (cpu_thread_tokens_line.v)
+	volatile uae_s64 tokens;     // interpreter cumulative credit
+	volatile uae_s64 jit_base;
+	volatile uae_u32 jit_seq;    // odd while jit_base and countdown change
+} cpu_thread_progress_line;      // written only by the CPU thread
+#define cpu_thread_tokens (cpu_thread_progress_line.tokens)
+#define cpu_thread_jit_base (cpu_thread_progress_line.jit_base)
+#define cpu_thread_jit_seq (cpu_thread_progress_line.jit_seq)
 static int cpu_thread_paced;   // written by the CPU thread, read by the main thread: __atomic_*
-#define CPU_THREAD_CREDIT_MAX (227 * CYCLE_UNIT)   /* one raster line */
+// Set only around a sleep, so that the other thread posts a semaphore only
+// when needed. Each has a line of its own: they are read on hot paths.
+static struct alignas(64) { int v; } cpu_thread_main_sleeping_line, cpu_thread_worker_sleeping_line;
+#define cpu_thread_main_sleeping (cpu_thread_main_sleeping_line.v)
+#define cpu_thread_worker_sleeping (cpu_thread_worker_sleeping_line.v)   // waiting for a reply
+// How far the chipset may run on credit while the CPU thread shows no
+// progress (a JIT compile, an exception, a host deschedule): what a timing
+// measurement by the CPU can be off by, in fastest mode.
+#define CPU_THREAD_CREDIT_MAX (64 * CYCLE_UNIT)
 #define CPU_THREAD_INSN_CREDIT (2 * CYCLE_UNIT)    /* the shortest 68000 instruction */
+#define CPU_THREAD_REPLY_SPIN_NS 100000            /* covers a sleeping main thread's wake-up */
+
+static uae_s64 cpu_thread_my_tokens;     // CPU thread: its progress credit
+static bool cpu_thread_counts_cycles;    // CPU thread: an interpreter loop that calls do_cycles()
 
 static inline void cpu_thread_spin_pause()
 {
@@ -5367,45 +5443,249 @@ static inline void cpu_thread_spin_pause()
 #endif
 }
 
+// Kicking the threaded JIT. Compiled code leaves a dispatch only when its
+// countdown goes negative; it subtracts from the countdown without a lock.
+// A thread raising a special flag (cycles_do_special()) swaps the countdown
+// for CPU_THREAD_KICK, saving the value it replaced in cpu_thread_kick_old
+// first. A countdown below CPU_THREAD_KICKED stands for cpu_thread_kick_old
+// less what was counted since the kick, so no executed cycle is lost.
+// Only a kick changes a countdown that is not kicked into a kicked one, and
+// kicks are serialised: the saved value always belongs to the current kick.
+// A block's unlocked subtraction or a store by the CPU thread can overwrite a
+// kick: the kick is lost, no cycles are. run_cpu_thread() repeats kicks while
+// flags are pending.
+#define CPU_THREAD_KICK (-0x40000000)
+#define CPU_THREAD_KICKED (-0x20000000)
+static int cpu_thread_kick_old;    // __atomic_*: stored before the kick
+static int cpu_thread_kick_lock;   // __atomic_*: one kicker at a time
+#define CPU_THREAD_KICK_FLAGS (SPCFLAG_INT | SPCFLAG_DOINT | SPCFLAG_CPU_THREAD_SYNC | SPCFLAG_BRK | SPCFLAG_MODE_CHANGE)
+
+static inline int cpu_thread_unkicked(int cd)
+{
+	if (cd >= CPU_THREAD_KICKED)
+		return cd;
+	__atomic_thread_fence(__ATOMIC_ACQUIRE);
+	return cd - CPU_THREAD_KICK + __atomic_load_n(&cpu_thread_kick_old, __ATOMIC_RELAXED);
+}
+
+// A consistent JIT total; false if the CPU thread is changing it right now.
+static bool cpu_thread_jit_total(uae_s64 *total)
+{
+	for (int tries = 0; tries < 8; tries++) {
+		const uae_u32 seq = __atomic_load_n(&cpu_thread_jit_seq, __ATOMIC_ACQUIRE);
+		const uae_s64 base = __atomic_load_n(&cpu_thread_jit_base, __ATOMIC_RELAXED);
+		const int cd = cpu_thread_unkicked(__atomic_load_n(&countdown, __ATOMIC_RELAXED));
+		__atomic_thread_fence(__ATOMIC_ACQUIRE);
+		if (!(seq & 1) && __atomic_load_n(&cpu_thread_jit_seq, __ATOMIC_RELAXED) == seq) {
+			*total = base - cd;
+			return true;
+		}
+		cpu_thread_spin_pause();
+	}
+	return false;
+}
+
 static uae_s64 cpu_thread_progress(uae_s64 *seen)
 {
+	uae_s64 t;
 	if (__atomic_load_n(&cpu_thread_paced, __ATOMIC_ACQUIRE) == 2) {
-		int cd = __atomic_load_n(&countdown, __ATOMIC_RELAXED);
-		int last = (int)*seen;
-		*seen = cd;
-		if (cd <= last)
-			return last - cd;
-		// Refilled (do_nothing(), or the main thread's own write while the
-		// chipset waits for vsync): count only what ran since the refill.
-		return cd < pissoff_value ? pissoff_value - cd : 0;
+		if (!cpu_thread_jit_total(&t))
+			return 0;
+	} else {
+		t = __atomic_load_n(&cpu_thread_tokens, __ATOMIC_RELAXED);
 	}
-	uae_s64 t = __atomic_load_n(&cpu_thread_tokens, __ATOMIC_RELAXED);
-	uae_s64 d = t - *seen;
+	// A countdown read before a decrement became visible can look like less.
+	const uae_s64 d = t - *seen;
+	if (d <= 0)
+		return 0;
 	*seen = t;
-	return d * CPU_THREAD_INSN_CREDIT;
+	return d;
 }
-static uae_sem_t cpu_in_sema, cpu_wakeup_sema;
+static uae_sem_t cpu_in_sema, cpu_wakeup_sema, cpu_reply_sema, cpu_request_sema;
+// The main thread's waits shorter than a millisecond (cpu_thread_main_nap()):
+// SDL's semaphores time out in whole milliseconds. cpu_thread_main_sleeping
+// is 1 while it waits for cpu_request_sema, 2 while it naps here.
+static std::mutex cpu_thread_nap_lock;
+static std::condition_variable cpu_thread_nap_cv;
+static bool cpu_thread_nap_woken;   // under cpu_thread_nap_lock
+static void cpu_thread_wake_main();
+static uae_sem_t cpu_park_sema, cpu_resume_sema;
 
-static volatile uae_atomic cpu_thread_indirect_mode;
-static volatile uae_u32 cpu_thread_indirect_addr;
-static volatile uae_u32 cpu_thread_indirect_val;
-static volatile uae_u32 cpu_thread_indirect_size;
+// Request/reply mailbox: written by both threads, kept off other data's lines.
+static struct alignas(64) {
+	volatile uae_atomic mode;
+	volatile uae_u32 addr;
+	volatile uae_u32 val;
+	volatile uae_u32 size;
+} cpu_thread_mailbox;
+#define cpu_thread_indirect_mode (cpu_thread_mailbox.mode)
+#define cpu_thread_indirect_addr (cpu_thread_mailbox.addr)
+#define cpu_thread_indirect_val (cpu_thread_mailbox.val)
+#define cpu_thread_indirect_size (cpu_thread_mailbox.size)
 static volatile uae_atomic cpu_thread_reset;
 static SDL_Thread* cpu_thread;
-static SDL_ThreadID cpu_thread_tid;
+static struct {
+	uaecptr addr;
+	uae_u32 value;
+	bool read, instruction;
+	int size;
+	int exception;
+	bool hardware;
+} cpu_thread_fault;
+
+bool cpu_thread_is_worker()
+{
+	return cpu_worker;
+}
+
+bool cpu_thread_is_waiting_on_main()
+{
+	return is_mainthread() && (cpu_thread_servicing
+		|| (__atomic_load_n(&cpu_thread_reset, __ATOMIC_ACQUIRE) & 1));
+}
+
+// Pauses are often short (an IPC memory read, a register dump): both sides
+// poll for this long before sleeping, so a pause costs no wake-ups.
+#define CPU_THREAD_PARK_SPIN_NS 50000
+
+// Poll while busy() holds, up to CPU_THREAD_PARK_SPIN_NS; true if it ended.
+template <typename Busy>
+static bool cpu_thread_poll_while(Busy busy)
+{
+	const uae_u64 until = SDL_GetTicksNS() + CPU_THREAD_PARK_SPIN_NS;
+	for (unsigned int spins = 1; busy(); ++spins) {
+		cpu_thread_spin_pause();
+		if (!(spins & 63) && SDL_GetTicksNS() >= until)
+			return false;
+	}
+	return true;
+}
+
+static void cpu_thread_safepoint()
+{
+	if (!cpu_worker || !__atomic_load_n(&cpu_thread_pause_requested, __ATOMIC_ACQUIRE))
+		return;
+	__atomic_store_n(&cpu_thread_parked, CPU_THREAD_PARKED, __ATOMIC_RELEASE);
+	uae_sem_post(&cpu_park_sema);
+	cpu_thread_wake_main();
+	// A resume posts cpu_resume_sema even when the wait below is not reached;
+	// a stale count only costs a further pass of the loop.
+	cpu_thread_poll_while([] { return __atomic_load_n(&cpu_thread_pause_requested, __ATOMIC_ACQUIRE) != 0; });
+	while (__atomic_load_n(&cpu_thread_pause_requested, __ATOMIC_ACQUIRE))
+		uae_sem_wait(&cpu_resume_sema);
+	__atomic_store_n(&cpu_thread_parked, CPU_THREAD_RUNNING, __ATOMIC_RELEASE);
+	uae_sem_post(&cpu_park_sema);
+}
+
+// Sleep (for at most 1 ms) on the wakeup semaphore at an instruction boundary.
+// A pause meanwhile holds the CPU thread where it is instead of waking it up
+// to park: many pauses (IPC memory reads) arrive while the CPU is in STOP.
+// Interrupts usually follow one another closely (audio, CIA timers): poll
+// first, so that the main thread, which waits for an interrupt to be taken
+// (cpu_thread_main_wait_wake()), does not wait for a host wake-up each time.
+// Only briefly: an idle AmigaOS is woken more than a thousand times a second,
+// and a longer spin, outlasted by about half of those waits anyway, kept a
+// host core busy for an idle Workbench.
+#define CPU_THREAD_IDLE_SPIN_NS 50000
+static void cpu_thread_idle_wait(bool spin)
+{
+	__atomic_store_n(&cpu_thread_parked, CPU_THREAD_IDLE, __ATOMIC_RELEASE);
+	// a flag the slow path leaves set must not turn this into a busy loop
+	const uae_atomic flags0 = regs.spcflags;
+	const uae_u64 spin_until = SDL_GetTicksNS() + (spin ? CPU_THREAD_IDLE_SPIN_NS : 0);
+	for (unsigned int spins = 1;; ++spins) {
+		if ((regs.spcflags & ~flags0) || __atomic_load_n(&cpu_thread_parked, __ATOMIC_ACQUIRE) != CPU_THREAD_IDLE)
+			break;
+		cpu_thread_spin_pause();
+		if (!(spins & 63)) {
+			if (uae_sem_trywait(&cpu_wakeup_sema) == 0)
+				break;
+			if (SDL_GetTicksNS() >= spin_until) {
+				uae_sem_trywait_delay(&cpu_wakeup_sema, 1);
+				break;
+			}
+		}
+	}
+	for (;;) {
+		int idle = CPU_THREAD_IDLE;
+		if (__atomic_compare_exchange_n(&cpu_thread_parked, &idle, CPU_THREAD_RUNNING,
+				false, __ATOMIC_ACQ_REL, __ATOMIC_ACQUIRE))
+			return;
+		// held by a pause: wait for the resume to hand it back
+		if (!cpu_thread_poll_while([] { return __atomic_load_n(&cpu_thread_parked, __ATOMIC_ACQUIRE) == CPU_THREAD_IDLE_HELD; }))
+			uae_sem_trywait_delay(&cpu_resume_sema, 1);
+	}
+}
+
+// Main thread: take over an idle CPU thread; true if it is now held.
+static bool cpu_thread_hold_idle()
+{
+	int idle = CPU_THREAD_IDLE;
+	return __atomic_compare_exchange_n(&cpu_thread_parked, &idle, CPU_THREAD_IDLE_HELD,
+		false, __ATOMIC_ACQ_REL, __ATOMIC_ACQUIRE);
+}
+
+static void cpu_thread_release_idle()
+{
+	int held = CPU_THREAD_IDLE_HELD;
+	if (__atomic_compare_exchange_n(&cpu_thread_parked, &held, CPU_THREAD_IDLE,
+			false, __ATOMIC_ACQ_REL, __ATOMIC_ACQUIRE))
+		uae_sem_post(&cpu_resume_sema);
+}
+
+static bool cpu_thread_debugger_wait()
+{
+	if (!cpu_worker)
+		return __atomic_load_n(&cpu_thread_active, __ATOMIC_ACQUIRE) == 1
+			&& !__atomic_load_n(&cpu_thread_debugger_waiting, __ATOMIC_ACQUIRE);
+	if (regs.spcflags & SPCFLAG_BRK) {
+		__atomic_store_n(&cpu_thread_debugger_waiting, 1, __ATOMIC_RELEASE);
+		cpu_thread_wake_main();
+		while (__atomic_load_n(&cpu_thread_debugger_waiting, __ATOMIC_ACQUIRE)
+			&& !(regs.spcflags & SPCFLAG_MODE_CHANGE)) {
+			cpu_thread_safepoint();
+			cpu_thread_idle_wait(false);
+		}
+	}
+	return true;
+}
+
+static void cpu_thread_debugger_resume()
+{
+	if (__atomic_exchange_n(&cpu_thread_debugger_waiting, 0, __ATOMIC_ACQ_REL))
+		uae_sem_post(&cpu_wakeup_sema);
+}
 
 static void custom_reset_cpu(bool hardreset, bool keyboardreset);
+
+static inline void cpu_thread_snap_interrupt();
 
 static int do_specialties_thread()
 {
 	uae_atomic spcflags = regs.spcflags;
 
+	// The main thread stores its request before raising the flag: clear the
+	// flag first, then look at the requests.
+	if (spcflags & SPCFLAG_CPU_THREAD_SYNC) {
+		unset_special(SPCFLAG_CPU_THREAD_SYNC);
+		cpu_thread_safepoint();
+		spcflags = regs.spcflags;
+	}
+
 	if (spcflags & SPCFLAG_MODE_CHANGE)
 		return 1;
+
+	if (spcflags & SPCFLAG_BRK) {
+		check_debugger();
+		spcflags = regs.spcflags;
+		if (spcflags & SPCFLAG_MODE_CHANGE)
+			return 1;
+	}
 
 	// Held in reset by the keyboard. The main thread ends the hold with a mode change.
 	if (spcflags & SPCFLAG_CPUINRESET) {
 		while (regs.spcflags & SPCFLAG_CPUINRESET) {
+			cpu_thread_safepoint();
 			check_debugger();
 			if (regs.spcflags & SPCFLAG_MODE_CHANGE)
 				return 1;
@@ -5462,24 +5742,612 @@ static int do_specialties_thread()
 			// before raising a flag, so a level not visible yet leaves it set.
 			unset_special(SPCFLAG_INT | SPCFLAG_DOINT);
 			int intr = atomic_read(&cpu_thread_ilvl);
+			cpu_thread_snap_interrupt();
 			if (intr > regs.intmask || (intr == 7 && intr > regs.lastipl)) {
 				do_interrupt(intr);
 			}
 			regs.lastipl = intr;
 		}
 	}
-	check_debugger();
 	// SPCFLAG_BRK alone must not end this thread: run_cpu_thread() keeps running
 	// until SPCFLAG_MODE_CHANGE, so the emulation would stop with no CPU.
 	return (regs.spcflags & SPCFLAG_MODE_CHANGE) ? 1 : 0;
+}
+
+// The interpreter's only per-instruction check is regs.spcflags || regs.stopped;
+// everything else (parking, debugger, mode change, STOP) is handled here.
+// Kept out of line and marked rare: otherwise the compiler lays the call out
+// inside the instruction loop (an extra taken branch per instruction) and
+// treats the STOP wait loop as the innermost loop when aligning code.
+static NOINLINE int cpu_thread_slow_path()
+{
+	for (;;) {
+		if (regs.spcflags && do_specialties_thread())
+			return 1;
+		if (!regs.stopped)
+			return 0;
+		// Interrupts, parking and mode changes post the wakeup semaphore.
+		cpu_thread_idle_wait(true);
+	}
 }
 
 extern addrbank *thread_mem_banks[MEMORY_BANKS];
 
 static bool is_cpu_thread()
 {
-	static thread_local const SDL_ThreadID tid = uae_thread_get_id(nullptr);
-	return cpu_thread_tid == tid;
+	return cpu_worker;
+}
+
+// Park, pause and debugger requests raise SPCFLAG_CPU_THREAD_SYNC after
+// storing the request, so compiled code can be left on the special flags
+// alone, without reading main-thread-written state on every access.
+static inline bool cpu_thread_leave_jit()
+{
+	return (regs.spcflags & (SPCFLAG_CPU_THREAD_SYNC | SPCFLAG_MODE_CHANGE)) != 0;
+}
+
+static inline bool cpu_thread_reply_ready(uae_u32 mode, uae_u32 completion)
+{
+	return mode == completion || mode == 0xfd;
+}
+
+// Handoff between the threads (Dekker): a waker stores the mailbox mode and
+// then loads the peer's sleeping flag; a sleeper stores its flag and then
+// loads the mode. All four are SEQ_CST, so at least one side sees the other's
+// store and no wakeup is lost. The sleeper still polls for
+// CPU_THREAD_SETTLE_NS before it sleeps, as a reply usually follows within
+// that time, and every sleep has a timeout.
+#define CPU_THREAD_SETTLE_NS 5000
+template <typename Ready>
+static bool cpu_thread_settle(Ready ready)
+{
+	const uae_u64 until = SDL_GetTicksNS() + CPU_THREAD_SETTLE_NS;
+	for (unsigned int spins = 1;; ++spins) {
+		if (ready())
+			return true;
+		cpu_thread_spin_pause();
+		if (!(spins & 15) && SDL_GetTicksNS() >= until)
+			return false;
+	}
+}
+
+// do_cycles() on the CPU thread: an interpreter loop counting its cycles.
+void cpu_thread_worker_cycles(int cycles)
+{
+	if (!cpu_thread_counts_cycles)
+		return;   // the JIT and cpu_thread_run_2() count on their own
+	cpu_thread_my_tokens += CPU_THREAD_INSN_CREDIT;
+	__atomic_store_n(&cpu_thread_tokens, cpu_thread_my_tokens, __ATOMIC_RELAXED);
+	// STOP is executed again and again; interrupts raise a flag and post the
+	// wakeup semaphore.
+	if (CPU_THREAD_RARE(regs.stopped) && !regs.spcflags)
+		cpu_thread_idle_wait(true);
+}
+
+// Poll for the reply; it usually arrives within a colour clock. Sleep only
+// after CPU_THREAD_REPLY_SPIN_NS, announcing it so that the reply posts.
+static NOINLINE void cpu_thread_wait_reply_slow(uae_u32 completion)
+{
+	const bool diagnose = cpu_thread_diag_enabled();
+	const uae_u64 start = diagnose ? SDL_GetTicksNS() : 0;
+	uae_u64 spin_until = 0;
+	for (unsigned int spins = 1;; ++spins) {
+		uae_u32 mode = __atomic_load_n(&cpu_thread_indirect_mode, __ATOMIC_ACQUIRE);
+		if (cpu_thread_reply_ready(mode, completion)) {
+			if (diagnose)
+				cpu_thread_diag_log_wait(SDL_GetTicksNS() - start);
+#ifdef JIT
+			if (currprefs.cachesize && cpu_thread_leave_jit())
+				cpu_thread_jit_break();
+#endif
+			if (mode == 0xfd) {
+				if (cpu_thread_fault.hardware) {
+					hardware_exception2(cpu_thread_fault.addr, cpu_thread_fault.value,
+						cpu_thread_fault.read, cpu_thread_fault.instruction, cpu_thread_fault.size);
+				} else {
+#if defined(JIT_HAS_BUS_ERROR_RECOVERY)
+					if (jit_in_compiled_code)
+						longjmp(jit_bus_error_jmpbuf, cpu_thread_fault.exception);
+#endif
+					THROW(cpu_thread_fault.exception);
+				}
+			}
+			return;
+		}
+		// A mode change must finish this instruction, not fabricate an I/O result.
+		cpu_thread_spin_pause();
+		if (spins & 255)
+			continue;
+		const uae_u64 now = SDL_GetTicksNS();
+		if (!spin_until)
+			spin_until = now + CPU_THREAD_REPLY_SPIN_NS;
+		if (now < spin_until)
+			continue;
+		__atomic_store_n(&cpu_thread_worker_sleeping, 1, __ATOMIC_SEQ_CST);
+		if (!cpu_thread_settle([completion] {
+				return cpu_thread_reply_ready(
+					__atomic_load_n(&cpu_thread_indirect_mode, __ATOMIC_SEQ_CST), completion);
+			}))
+			uae_sem_trywait_delay(&cpu_reply_sema, 1);
+		__atomic_store_n(&cpu_thread_worker_sleeping, 0, __ATOMIC_RELAXED);
+	}
+}
+
+// The common case, a reply within a few hundred spins, stays inline.
+static inline void cpu_thread_wait_reply(uae_u32 completion)
+{
+	if (CPU_THREAD_RARE(cpu_thread_diag_enabled()))
+		return cpu_thread_wait_reply_slow(completion);
+	for (int spins = 0; spins < 256; spins++) {
+		const uae_u32 mode = __atomic_load_n(&cpu_thread_indirect_mode, __ATOMIC_ACQUIRE);
+		if (mode == completion) {
+#ifdef JIT
+			if (currprefs.cachesize && CPU_THREAD_RARE(cpu_thread_leave_jit()))
+				cpu_thread_jit_break();
+#endif
+			return;
+		}
+		if (mode == 0xfd)
+			break;
+		cpu_thread_spin_pause();
+	}
+	cpu_thread_wait_reply_slow(completion);
+}
+
+// Wake the main thread from cpu_thread_main_nap().
+static NOINLINE void cpu_thread_wake_nap()
+{
+	std::lock_guard<std::mutex> lock(cpu_thread_nap_lock);
+	cpu_thread_nap_woken = true;
+	cpu_thread_nap_cv.notify_one();
+}
+
+// Wake the main thread from cpu_thread_main_sleep() or cpu_thread_main_nap(),
+// for what cpu_thread_main_has_work() does not see (parking, debugger waits,
+// resets): the semaphore is posted unconditionally, so that a sleep that
+// starts later ends at once.
+static NOINLINE void cpu_thread_wake_main()
+{
+	uae_sem_post(&cpu_request_sema);
+	if (__atomic_load_n(&cpu_thread_main_sleeping, __ATOMIC_SEQ_CST) == 2)
+		cpu_thread_wake_nap();
+}
+
+// Request after addr/size/value: wake the main thread only if it sleeps, and
+// only the sleep it is in. A sleep that starts later sees the request
+// (cpu_thread_main_has_work()), so a nap leaves no count in the semaphore.
+static inline void cpu_thread_post_request(uae_u32 mode)
+{
+	__atomic_store_n(&cpu_thread_indirect_mode, mode, __ATOMIC_SEQ_CST);
+	const int sleeping = __atomic_load_n(&cpu_thread_main_sleeping, __ATOMIC_SEQ_CST);
+	if (CPU_THREAD_RARE(sleeping)) {
+		if (sleeping == 2)
+			cpu_thread_wake_nap();
+		else
+			uae_sem_post(&cpu_request_sema);
+	}
+}
+
+static inline void cpu_thread_post_reply(uae_u32 mode)
+{
+	__atomic_store_n(&cpu_thread_indirect_mode, mode, __ATOMIC_SEQ_CST);
+	if (CPU_THREAD_RARE(__atomic_load_n(&cpu_thread_worker_sleeping, __ATOMIC_SEQ_CST)))
+		uae_sem_post(&cpu_reply_sema);
+}
+
+// Register snapshot. The CPU thread reads some registers
+// without a round trip: the beam position, DMACONR, INTENAR, INTREQR, ADKCONR
+// and CIA-A PRA. Reading them has no side effect, and through the mailbox the
+// main thread would answer at its current chipset time too. The main thread
+// keeps a copy only while one is in use: a read served through the mailbox
+// arms it for CPU_THREAD_SNAP_TTL colour clocks. The copy is updated every
+// colour clock (the beam position) or when it changes, and before every reply,
+// so the CPU thread sees its own writes.
+enum { CPU_THREAD_SNAP_POS = 1, CPU_THREAD_SNAP_REGS = 2, CPU_THREAD_SNAP_CIA = 4 };
+#define CPU_THREAD_SNAP_TTL 65536        // about a frame
+#define CPU_THREAD_SNAP_REFRESH 128      // republish an unchanged copy (see cpu_thread_snap_worker.min)
+#define CPU_THREAD_SNAP_CIA_REFRESH 16   // CIA-A PRA is costlier to read
+// Sequence locks: odd while written or not armed.
+static struct alignas(64) {
+	uae_u32 seq;
+	uae_u16 vposr, vhposr;
+} cpu_thread_snap_pos;
+static struct alignas(64) {
+	uae_u32 seq;
+	uae_u32 valid;     // CPU_THREAD_SNAP_REGS, CPU_THREAD_SNAP_CIA
+	uae_u16 reg[4];    // DMACONR, INTENAR, INTREQR, ADKCONR
+	uae_u8 ciaa_pra;
+} cpu_thread_snap_regs;
+// main thread only; on lines of its own, as both threads use their state on
+// every access
+static struct alignas(64) {
+	int ttl[3];        // POS, REGS, CIA
+	unsigned int armed;
+	unsigned int tick;
+	uae_u32 valid;
+	uae_u16 reg[4];
+	uae_u8 ciaa_pra;
+} cpu_thread_snap_main;
+// The chipset time stands still while the main thread waits for the frame,
+// renders it or is descheduled. A guest polling a register with an iteration
+// bound would then run out of iterations at one chipset time. Unthreaded, the
+// CPU runs at most about a line of host time at one chipset time: after that
+// the CPU thread reads through the mailbox until the chipset moves on.
+#define CPU_THREAD_SNAP_FROZEN_NS 128000
+#define CPU_THREAD_SNAP_CLOCK_READS 1024   // reads between clock checks
+#define CPU_THREAD_SNAP_RETRIES 8          // reads again of a copy caught mid-write
+// A read from the copy costs next to nothing, and in fastest mode the CPU
+// thread runs ahead of the chipset without a bound; how far depends on the
+// host: on a loaded one the main thread falls behind. The copy therefore
+// serves reads at about the rate the CPU on the main thread makes them per
+// chipset time, from a budget refilled from the colour clocks published (at
+// most a line's worth kept); without budget reads go through the mailbox,
+// which is paced. Unbounded, CIA-A PRA polling ran 10-17 times as many reads
+// per chipset time as on the main thread, delay loops reading a CIA shrank by
+// as much, and a polling loop with an iteration bound ran out of iterations
+// within a line of chipset time (amitorture's display module hung its
+// watchdog under host load).
+// The main thread's rate depends on the host: in fastest mode the CPU there
+// runs while the chipset waits for the frame, so it makes as many reads per
+// chipset time as the host executes in that time. The budgets therefore
+// follow the host's speed, timed on the CPU thread now and then, between a
+// floor and a ceiling: with the JIT on the main thread a fast x86-64 host
+// makes about 9 CIA and 65 custom reads per colour clock, a Raspberry Pi 5
+// about 2 and 20. A longword custom read takes two, like the two bus
+// accesses it is.
+#define CPU_THREAD_SNAP_CUSTOM_MIN 64
+#define CPU_THREAD_SNAP_CUSTOM_MAX 96
+#define CPU_THREAD_SNAP_CIA_MIN 2
+#define CPU_THREAD_SNAP_CIA_MAX 16
+// reads per colour clock = these / host time of one timing step in ns
+#define CPU_THREAD_SNAP_CUSTOM_NS 116
+#define CPU_THREAD_SNAP_CIA_NS 12
+#define CPU_THREAD_SNAP_RATE_STEPS 2048
+#define CPU_THREAD_SNAP_RATE_NS 1000000000ULL   // timed again after this
+#define CPU_THREAD_SNAP_BUDGET_TICKS 227
+// CPU thread only; kept over restarts (the host's speed)
+static struct {
+	int custom = CPU_THREAD_SNAP_CUSTOM_MIN, cia = CPU_THREAD_SNAP_CIA_MIN;   // reads per colour clock
+	uae_u64 step_ps = 0;   // fastest timing step seen
+	uae_u64 next_ns = 0;   // host time of the next timing
+} cpu_thread_snap_rate;
+static struct alignas(64) {
+	uae_u32 v;         // colour clocks published
+} cpu_thread_snap_clock;
+// CPU thread only
+static struct alignas(64) {
+	uae_u32 reads;
+	uae_u32 clock;
+	uae_u64 since;     // host time the clock was last seen to move
+	bool frozen;
+	// The regs copy must be at least this new. After an interrupt, a copy
+	// from before INTREQ changed would hide the request.
+	uae_u32 min;
+	int custom_budget, cia_budget;   // reads left
+	uae_u32 budget_clock;            // the colour clock they were refilled at
+} cpu_thread_snap_worker;
+
+// 0, or the snapshot group and the register's index in it
+static inline int cpu_thread_snap_custom_reg(uaecptr addr)
+{
+	switch (addr & 0x1fe) {
+	case 0x004: return (CPU_THREAD_SNAP_POS << 4) | 0;
+	case 0x006: return (CPU_THREAD_SNAP_POS << 4) | 1;
+	case 0x002: return (CPU_THREAD_SNAP_REGS << 4) | 0;
+	case 0x01c: return (CPU_THREAD_SNAP_REGS << 4) | 1;
+	case 0x01e: return (CPU_THREAD_SNAP_REGS << 4) | 2;
+	case 0x010: return (CPU_THREAD_SNAP_REGS << 4) | 3;
+	}
+	return 0;
+}
+
+// The snapshot group serving a read, 0 if none. Mirrors the address decoding
+// of custom_wget()/custom_bget()/custom_lget() and cia_bget().
+static inline int cpu_thread_snap_group(const addrbank *ab, uaecptr addr, int size, int *r0, int *r1)
+{
+#ifdef DEBUGGER
+	if (memwatch_access_validator)
+		return 0;
+#endif
+	if (ab == &custom_bank) {
+		if ((addr & 1) && size)
+			return 0;
+		if ((addr & 0xffff) < 0x8000 && currprefs.cs_fatgaryrev >= 0)
+			return 0;
+		*r0 = cpu_thread_snap_custom_reg(addr & ~1);
+		if (!*r0)
+			return 0;
+		if (size == 2) {
+			*r1 = cpu_thread_snap_custom_reg(addr + 2);
+			if ((*r1 >> 4) != (*r0 >> 4))
+				return 0;
+		}
+		return *r0 >> 4;
+	}
+	if (ab == &cia_bank) {
+		// CIA-A PRA, unmirrored (0xbfe041 and up decode to the ATonce)
+		if (size || (addr & 0xffff) != 0xe001)
+			return 0;
+		return CPU_THREAD_SNAP_CIA;
+	}
+	return 0;
+}
+
+// Counting banks: a read the register snapshot could serve would not have
+// been a request (it ignores the snapshot's read budget, so it may count low).
+uae_u32 cpu_thread_flood_requests;
+void cpu_thread_count_read(const addrbank *ab, uaecptr addr, int size)
+{
+	int r0 = 0, r1 = 0;
+	if (!cpu_thread_snap_group(ab, addr, size, &r0, &r1))
+		cpu_thread_flood_requests++;
+}
+
+static inline void cpu_thread_snap_write_begin(uae_u32 *seq)
+{
+	const uae_u32 s = *seq;
+	if (!(s & 1))
+		__atomic_store_n(seq, s + 1, __ATOMIC_RELAXED);
+	__atomic_thread_fence(__ATOMIC_RELEASE);
+}
+
+static inline void cpu_thread_snap_write_end(uae_u32 *seq)
+{
+	__atomic_store_n(seq, *seq + 1, __ATOMIC_RELEASE);
+}
+
+// Main thread: publish the armed copies. tick: one colour clock passed.
+static NOINLINE void cpu_thread_snap_publish(bool tick)
+{
+	auto &m = cpu_thread_snap_main;
+	unsigned int expired = 0;
+	if (tick) {
+		m.tick++;
+		__atomic_store_n(&cpu_thread_snap_clock.v, m.tick, __ATOMIC_RELAXED);
+		for (int i = 0; i < 3; i++) {
+			if ((m.armed & (1 << i)) && --m.ttl[i] <= 0)
+				expired |= 1 << i;
+		}
+		m.armed &= ~expired;
+	}
+	if (expired & CPU_THREAD_SNAP_POS)
+		cpu_thread_snap_write_begin(&cpu_thread_snap_pos.seq);
+	if (m.armed & CPU_THREAD_SNAP_POS) {
+		uae_u16 vposr, vhposr;
+		if (custom_cpu_thread_pos(&vposr, &vhposr)) {
+			cpu_thread_snap_write_begin(&cpu_thread_snap_pos.seq);
+			__atomic_store_n(&cpu_thread_snap_pos.vposr, vposr, __ATOMIC_RELAXED);
+			__atomic_store_n(&cpu_thread_snap_pos.vhposr, vhposr, __ATOMIC_RELAXED);
+			cpu_thread_snap_write_end(&cpu_thread_snap_pos.seq);
+		} else {
+			m.armed &= ~CPU_THREAD_SNAP_POS;
+			cpu_thread_snap_write_begin(&cpu_thread_snap_pos.seq);
+		}
+	}
+	const unsigned int regs = m.armed & (CPU_THREAD_SNAP_REGS | CPU_THREAD_SNAP_CIA);
+	if (!regs && !(expired & (CPU_THREAD_SNAP_REGS | CPU_THREAD_SNAP_CIA)))
+		return;
+	bool changed = (expired & (CPU_THREAD_SNAP_REGS | CPU_THREAD_SNAP_CIA)) != 0
+		|| !tick || !(m.tick % CPU_THREAD_SNAP_REFRESH);
+	if (regs & CPU_THREAD_SNAP_REGS) {
+		uae_u16 v[4];
+		custom_cpu_thread_regs(v);
+		if (memcmp(v, m.reg, sizeof v)) {
+			memcpy(m.reg, v, sizeof v);
+			changed = true;
+		}
+	}
+	if ((regs & CPU_THREAD_SNAP_CIA) && (!tick || !(m.tick % CPU_THREAD_SNAP_CIA_REFRESH))) {
+		uae_u8 v;
+		if (!cia_cpu_thread_pra(&v)) {
+			m.armed &= ~CPU_THREAD_SNAP_CIA;
+			changed = true;
+		} else if (v != m.ciaa_pra) {
+			m.ciaa_pra = v;
+			changed = true;
+		}
+	}
+	const uae_u32 valid = m.armed & (CPU_THREAD_SNAP_REGS | CPU_THREAD_SNAP_CIA);
+	if (valid != m.valid)
+		changed = true;
+	if (!changed)
+		return;
+	m.valid = valid;
+	cpu_thread_snap_write_begin(&cpu_thread_snap_regs.seq);
+	if (valid) {
+		for (int i = 0; i < 4; i++)
+			__atomic_store_n(&cpu_thread_snap_regs.reg[i], m.reg[i], __ATOMIC_RELAXED);
+		__atomic_store_n(&cpu_thread_snap_regs.ciaa_pra, m.ciaa_pra, __ATOMIC_RELAXED);
+		__atomic_store_n(&cpu_thread_snap_regs.valid, valid, __ATOMIC_RELAXED);
+		cpu_thread_snap_write_end(&cpu_thread_snap_regs.seq);
+	}
+}
+
+// Main thread, after serving a read through the mailbox
+static inline void cpu_thread_snap_arm(const addrbank *ab, uaecptr addr, int size)
+{
+	int r0 = 0, r1 = 0;
+	const int group = cpu_thread_snap_group(ab, addr, size, &r0, &r1);
+	if (!group)
+		return;
+	auto &m = cpu_thread_snap_main;
+	m.ttl[group == CPU_THREAD_SNAP_POS ? 0 : group == CPU_THREAD_SNAP_REGS ? 1 : 2] = CPU_THREAD_SNAP_TTL;
+	m.armed |= group;
+}
+
+// Main thread, while no CPU thread runs
+static void cpu_thread_snap_reset()
+{
+	cpu_thread_snap_main = {};
+	cpu_thread_snap_pos.seq |= 1;
+	cpu_thread_snap_regs.seq |= 1;
+	cpu_thread_snap_clock.v = 0;
+	cpu_thread_snap_worker = {};
+	cpu_thread_snap_worker.min = cpu_thread_snap_regs.seq + 1;
+}
+
+// CPU thread: an interrupt is taken. INTREQ was set before the flag was
+// raised; a copy published before that is not used for the handler.
+static inline void cpu_thread_snap_interrupt()
+{
+	__atomic_thread_fence(__ATOMIC_ACQUIRE);
+	cpu_thread_snap_worker.min = (__atomic_load_n(&cpu_thread_snap_regs.seq, __ATOMIC_ACQUIRE) | 1) + 1;
+}
+
+static inline uae_u16 cpu_thread_snap_value(int r)
+{
+	if ((r >> 4) == CPU_THREAD_SNAP_POS)
+		return __atomic_load_n((r & 15) ? &cpu_thread_snap_pos.vhposr : &cpu_thread_snap_pos.vposr, __ATOMIC_RELAXED);
+	return __atomic_load_n(&cpu_thread_snap_regs.reg[r & 15], __ATOMIC_RELAXED);
+}
+
+// Budgets for a timing step of step_ps picoseconds (0: not timed)
+static void cpu_thread_snap_set_rate(uae_u64 step_ps)
+{
+	auto &r = cpu_thread_snap_rate;
+	if (!step_ps || (r.step_ps && step_ps >= r.step_ps))
+		return;
+	r.step_ps = step_ps;
+	r.custom = (int)std::clamp<uae_u64>(CPU_THREAD_SNAP_CUSTOM_NS * 1000ULL / step_ps,
+		CPU_THREAD_SNAP_CUSTOM_MIN, CPU_THREAD_SNAP_CUSTOM_MAX);
+	r.cia = (int)std::clamp<uae_u64>(CPU_THREAD_SNAP_CIA_NS * 1000ULL / step_ps,
+		CPU_THREAD_SNAP_CIA_MIN, CPU_THREAD_SNAP_CIA_MAX);
+}
+
+// The timing step: a dispatch through a table on data-dependent indexes,
+// like the read paths of an interpreter.
+static uae_u32 cpu_thread_snap_step_table[256];
+static NOINLINE uae_u32 cpu_thread_snap_step0(uae_u32 v)
+{
+	cpu_thread_snap_step_table[v & 255] += v;
+	return v * 2654435761u + cpu_thread_snap_step_table[(v >> 7) & 255];
+}
+static NOINLINE uae_u32 cpu_thread_snap_step1(uae_u32 v)
+{
+	return (v ^ (v >> 13)) + cpu_thread_snap_step_table[v & 255] + 1;
+}
+static NOINLINE uae_u32 cpu_thread_snap_step2(uae_u32 v)
+{
+	return (v & 0x100) ? v + cpu_thread_snap_step_table[(v >> 3) & 255] : v ^ 0x5bd1e995;
+}
+static NOINLINE uae_u32 cpu_thread_snap_step3(uae_u32 v)
+{
+	cpu_thread_snap_step_table[(v >> 5) & 255] = v;
+	return v + (v << 3) + 7;
+}
+
+// CPU thread: time the host, keep the fastest result.
+static NOINLINE void cpu_thread_snap_time_host(uae_u64 now)
+{
+	static uae_u32 (*const steps[4])(uae_u32) = {
+		cpu_thread_snap_step0, cpu_thread_snap_step1, cpu_thread_snap_step2, cpu_thread_snap_step3
+	};
+	uae_u32 (*const *volatile table)(uae_u32) = steps;
+	uae_u64 best = ~0ULL;
+	uae_u32 v = (uae_u32)now | 1;
+	for (int run = 0; run < 4; run++) {
+		const uae_u64 t0 = SDL_GetTicksNS();
+		for (int i = 0; i < CPU_THREAD_SNAP_RATE_STEPS; i++)
+			v = table[v & 3](v);
+		best = std::min<uae_u64>(best, SDL_GetTicksNS() - t0);
+	}
+	cpu_thread_snap_step_table[0] ^= v;
+	cpu_thread_snap_set_rate(best * 1000 / CPU_THREAD_SNAP_RATE_STEPS);
+	cpu_thread_snap_rate.next_ns = now + CPU_THREAD_SNAP_RATE_NS;
+}
+
+// CPU thread: false while the chipset time has stood still for too long.
+static NOINLINE bool cpu_thread_snap_clock_moves()
+{
+	auto &w = cpu_thread_snap_worker;
+	const uae_u32 clock = __atomic_load_n(&cpu_thread_snap_clock.v, __ATOMIC_RELAXED);
+	if (clock != w.clock) {
+		w.clock = clock;
+		w.since = SDL_GetTicksNS();
+		w.frozen = false;
+		if (w.since >= cpu_thread_snap_rate.next_ns)
+			cpu_thread_snap_time_host(w.since);
+		return true;
+	}
+	if (w.frozen)
+		return false;
+	w.frozen = SDL_GetTicksNS() - w.since >= CPU_THREAD_SNAP_FROZEN_NS;
+	return !w.frozen;
+}
+
+// CPU thread: a read budget ran out. Refill both from the colour clocks
+// published since; true if the group's budget has reads again.
+static NOINLINE bool cpu_thread_snap_refill(bool cia)
+{
+	auto &w = cpu_thread_snap_worker;
+	const uae_u32 clock = __atomic_load_n(&cpu_thread_snap_clock.v, __ATOMIC_RELAXED);
+	const uae_u32 ticks = std::min<uae_u32>(clock - w.budget_clock, CPU_THREAD_SNAP_BUDGET_TICKS);
+	if (!ticks)
+		return false;
+	w.budget_clock = clock;
+	w.custom_budget = std::min<int>(w.custom_budget + (int)ticks * cpu_thread_snap_rate.custom,
+		CPU_THREAD_SNAP_BUDGET_TICKS * cpu_thread_snap_rate.custom);
+	w.cia_budget = std::min<int>(w.cia_budget + (int)ticks * cpu_thread_snap_rate.cia,
+		CPU_THREAD_SNAP_BUDGET_TICKS * cpu_thread_snap_rate.cia);
+	return (cia ? w.cia_budget : w.custom_budget) > 0;
+}
+
+// CPU thread: read from the snapshot if it has a current copy.
+static inline bool cpu_thread_snap_read(const addrbank *ab, uaecptr addr, int size, uae_u32 *out)
+{
+	int r0 = 0, r1 = 0;
+	const int group = cpu_thread_snap_group(ab, addr, size, &r0, &r1);
+	if (!group)
+		return false;
+	auto &w = cpu_thread_snap_worker;
+	if (CPU_THREAD_RARE(w.frozen || !(++w.reads % CPU_THREAD_SNAP_CLOCK_READS)) && !cpu_thread_snap_clock_moves())
+		return false;
+	const bool cia = group == CPU_THREAD_SNAP_CIA;
+	if ((cia ? w.cia_budget : w.custom_budget) <= 0 && !cpu_thread_snap_refill(cia))
+		return false;
+	uae_u32 *seq = group == CPU_THREAD_SNAP_POS ? &cpu_thread_snap_pos.seq : &cpu_thread_snap_regs.seq;
+	// The main thread rewrites the beam position every colour clock: a beam
+	// polling loop catches it mid-write a few percent of the time. Read again
+	// rather than make a round trip, which a probe on the main thread (see
+	// cpu_thread_check_flood()) would never see.
+	for (int attempt = 0;; attempt++) {
+		const uae_u32 s = __atomic_load_n(seq, __ATOMIC_ACQUIRE);
+		if (s & 1) {
+			if (attempt < CPU_THREAD_SNAP_RETRIES) {
+				cpu_thread_spin_pause();
+				continue;
+			}
+			return false;
+		}
+		if (group != CPU_THREAD_SNAP_POS
+			&& ((uae_s32)(s - w.min) < 0
+				|| !(__atomic_load_n(&cpu_thread_snap_regs.valid, __ATOMIC_RELAXED) & group)))
+			return false;
+		uae_u32 v;
+		if (group == CPU_THREAD_SNAP_CIA) {
+			v = __atomic_load_n(&cpu_thread_snap_regs.ciaa_pra, __ATOMIC_RELAXED);
+		} else {
+			const uae_u16 w = cpu_thread_snap_value(r0);
+			if (size == 2)
+				v = ((uae_u32)w << 16) | cpu_thread_snap_value(r1);
+			else if (size == 1)
+				v = w;
+			else
+				v = (addr & 1) ? (w & 0xff) : (w >> 8);
+		}
+		__atomic_thread_fence(__ATOMIC_ACQUIRE);
+		if (__atomic_load_n(seq, __ATOMIC_RELAXED) != s) {
+			if (attempt < CPU_THREAD_SNAP_RETRIES)
+				continue;
+			return false;
+		}
+		if (cia)
+			cpu_thread_snap_worker.cia_budget--;
+		else
+			cpu_thread_snap_worker.custom_budget -= size == 2 ? 2 : 1;
+		*out = v;
+		return true;
+	}
 }
 
 uae_u32 process_cpu_indirect_memory_read(uae_u32 addr, int size)
@@ -5503,31 +6371,16 @@ uae_u32 process_cpu_indirect_memory_read(uae_u32 addr, int size)
 		return data;
 	}
 
+	uae_u32 snap;
+	if (cpu_thread_snap_read(thread_mem_banks[bankindex(addr)], addr, size, &snap))
+		return snap;
+
 	cpu_thread_indirect_addr = addr;
 	cpu_thread_indirect_size = size;
-	// Signal request: set mode LAST (after addr/size are visible) with release semantics.
-	// The main thread polls cpu_thread_indirect_mode with acquire - no semaphore needed.
-	__atomic_store_n(&cpu_thread_indirect_mode, 2, __ATOMIC_RELEASE);
-
-	// Spin-wait for main thread to complete the read.
-	// The main thread sets mode to 0xfe when done (data in cpu_thread_indirect_val).
-	for (;;) {
-		uae_u32 mode = __atomic_load_n(&cpu_thread_indirect_mode, __ATOMIC_ACQUIRE);
-		if (mode == 0xfe) {
-			return cpu_thread_indirect_val;
-		}
-		// Break out if mode change requested (shutdown)
-		if (regs.spcflags & SPCFLAG_MODE_CHANGE) {
-			return 0;
-		}
-#if defined(CPU_AARCH64)
-		__asm__ __volatile__ ("yield");
-#elif defined(CPU_x86_64)
-		__asm__ __volatile__ ("pause");
-#elif defined(__riscv)
-		__asm__ __volatile__ (".insn i 0x0f, 0, x0, x0, 0x010");
-#endif
-	}
+	// Mode LAST, after addr/size; the main thread polls it with acquire.
+	cpu_thread_post_request(2);
+	cpu_thread_wait_reply(0xfe);
+	return cpu_thread_indirect_val;
 }
 
 void process_cpu_indirect_memory_write(uae_u32 addr, uae_u32 data, int size)
@@ -5552,62 +6405,113 @@ void process_cpu_indirect_memory_write(uae_u32 addr, uae_u32 data, int size)
 	cpu_thread_indirect_addr = addr;
 	cpu_thread_indirect_size = size;
 	cpu_thread_indirect_val = data;
-	// Signal request: set mode LAST with release semantics.
-	__atomic_store_n(&cpu_thread_indirect_mode, 1, __ATOMIC_RELEASE);
+	cpu_thread_post_request(1);
+	cpu_thread_wait_reply(0xff);
+}
 
-	// Spin-wait for main thread to complete the write.
-	// The main thread sets mode to 0xff when done.
-	for (;;) {
-		uae_u32 mode = __atomic_load_n(&cpu_thread_indirect_mode, __ATOMIC_ACQUIRE);
-		if (mode == 0xff) {
-			return;
-		}
-		// Break out if mode change requested (shutdown)
-		if (regs.spcflags & SPCFLAG_MODE_CHANGE) {
-			return;
-		}
-#if defined(CPU_AARCH64)
-		__asm__ __volatile__ ("yield");
-#elif defined(CPU_x86_64)
-		__asm__ __volatile__ ("pause");
-#elif defined(__riscv)
-		__asm__ __volatile__ (".insn i 0x0f, 0, x0, x0, 0x010");
-#endif
-	}
+// A nasty blit (DMACON BLTPRI) keeps the CPU off the bus until it ends:
+// unthreaded, do_specialties() waits for it. Trackloaders start a blit and
+// use its result without waiting for the blitter. The CPU thread waits in
+// its next access instead: the chipset loop serves a request, or replies to
+// the write that started the blit, only once the blit is done. Other callers
+// (pauses, the end of the thread) release a held access at once.
+static uae_u32 cpu_thread_blit_held;   // main thread: 1 request held, 0xff reply held
+
+// Progress credit of the requests served (see the pacing comment at
+// CPU_THREAD_CREDIT_MAX): the shortest instruction for each, plus the bus
+// cycles the access stalls the CPU for. A CIA access waits for the E-clock:
+// unthreaded, cia_wait_pre() and cia_wait_post() run the chipset for those
+// cycles, and here they become chipset time that needs no further progress.
+// A guest that keeps accessing the CIAs makes little progress otherwise (the
+// JIT publishes it only at the end of a block), and the chipset, waiting for
+// it, ran below real time.
+static uae_s64 cpu_thread_served_credit;   // main thread
+
+void cpu_thread_charge_access(int cycles)
+{
+	if (cpu_thread_servicing && cycles > 0 && is_mainthread())
+		cpu_thread_served_credit += cycles;
+}
+
+static inline uae_s64 cpu_thread_take_served_credit()
+{
+	const uae_s64 v = cpu_thread_served_credit;
+	cpu_thread_served_credit = 0;
+	return v;
+}
+
+static inline bool cpu_thread_blit_nasty()
+{
+	return blt_info.blit_main && !blitter_cycle_exact
+		&& (dmacon & (DMA_MASTER | DMA_BLITTER | DMA_BLITPRI)) == (DMA_MASTER | DMA_BLITTER | DMA_BLITPRI);
 }
 
 // Service one indirect memory request from the CPU thread.
 // Returns true if a request was processed.
-static inline bool service_cpu_indirect_request(void)
+static inline bool service_cpu_indirect_request(bool chipset = false)
 {
+	if (CPU_THREAD_RARE(cpu_thread_blit_held)) {
+		if (chipset && cpu_thread_blit_nasty())
+			return false;
+		const uae_u32 held = cpu_thread_blit_held;
+		cpu_thread_blit_held = 0;
+		if (held == 0xff) {
+			// the chipset ran on meanwhile
+			if (cpu_thread_snap_main.armed)
+				cpu_thread_snap_publish(false);
+			cpu_thread_post_reply(0xff);
+			return true;
+		}
+	}
 	uae_u32 mode = __atomic_load_n(&cpu_thread_indirect_mode, __ATOMIC_ACQUIRE);
 	if (mode != 1 && mode != 2)
 		return false;
+	if (CPU_THREAD_RARE(chipset && cpu_thread_blit_nasty())) {
+		cpu_thread_blit_held = 1;
+		return false;
+	}
 
 	uaecptr addr = cpu_thread_indirect_addr;
 	uae_u32 data = cpu_thread_indirect_val;
 	uae_u32 size = cpu_thread_indirect_size;
 
-	if (mode == 1) {
-		// Write
-		addrbank* ab = thread_mem_banks[bankindex(addr)];
-		switch (size) {
-		case 0: ab->bput(addr, data & 0xff); break;
-		case 1: ab->wput(addr, data & 0xffff); break;
-		case 2: ab->lput(addr, data); break;
+	cpu_thread_servicing = true;
+	cpu_thread_fault.hardware = false;
+	addrbank *ab = thread_mem_banks[bankindex(addr)];
+	TRY(prb) {
+		if (mode == 1) {
+			switch (size) {
+			case 0: ab->bput(addr, data & 0xff); break;
+			case 1: ab->wput(addr, data & 0xffff); break;
+			case 2: ab->lput(addr, data); break;
+			}
+			mode = 0xff;
+		} else {
+			switch (size) {
+			case 0: data = ab->bget(addr) & 0xff; break;
+			case 1: data = ab->wget(addr) & 0xffff; break;
+			case 2: data = ab->lget(addr); break;
+			}
+			cpu_thread_indirect_val = data;
+			mode = 0xfe;
 		}
-		__atomic_store_n(&cpu_thread_indirect_mode, 0xff, __ATOMIC_RELEASE);
-	} else {
-		// Read
-		addrbank* ab = thread_mem_banks[bankindex(addr)];
-		switch (size) {
-		case 0: data = ab->bget(addr) & 0xff; break;
-		case 1: data = ab->wget(addr) & 0xffff; break;
-		case 2: data = ab->lget(addr); break;
-		}
-		cpu_thread_indirect_val = data;
-		__atomic_store_n(&cpu_thread_indirect_mode, 0xfe, __ATOMIC_RELEASE);
+	} CATCH(prb) {
+		cpu_thread_fault.exception = int(prb);
+		mode = 0xfd;
+	} ENDTRY
+	cpu_thread_servicing = false;
+	cpu_thread_requests_served++;
+	cpu_thread_served_credit += CPU_THREAD_INSN_CREDIT;
+	if (mode == 0xfe)
+		cpu_thread_snap_arm(ab, addr, size);
+	// the CPU thread must see what this access changed
+	if (CPU_THREAD_RARE(cpu_thread_snap_main.armed))
+		cpu_thread_snap_publish(false);
+	if (CPU_THREAD_RARE(mode == 0xff && chipset && cpu_thread_blit_nasty())) {
+		cpu_thread_blit_held = 0xff;
+		return true;
 	}
+	cpu_thread_post_reply(mode);
 	return true;
 }
 
@@ -5616,78 +6520,293 @@ static inline bool service_cpu_indirect_request(void)
 // requests.
 static bool cpu_thread_unpaced()
 {
-	return regs.stopped || regs.halted
+	return regs.stopped || regs.halted || m68k_reset_delay || cpu_thread_blit_held
 		|| (regs.spcflags & (SPCFLAG_CPUINRESET | SPCFLAG_MODE_CHANGE | SPCFLAG_CALLBACK))
 		|| __atomic_load_n(&cpu_thread_reset, __ATOMIC_RELAXED);
+}
+
+static bool cpu_thread_main_has_work()
+{
+	const uae_u32 mode = __atomic_load_n(&cpu_thread_indirect_mode, __ATOMIC_SEQ_CST);
+	return mode == 1 || mode == 2
+		|| (__atomic_load_n(&cpu_thread_reset, __ATOMIC_SEQ_CST) & 1)
+		|| (regs.spcflags & (SPCFLAG_CALLBACK | SPCFLAG_MODE_CHANGE));
+}
+
+// Main thread: sleep up to ms. A request posts the semaphore only while
+// cpu_thread_main_sleeping is set (see cpu_thread_post_request()).
+// Resets, parking and debugger waits post it unconditionally.
+static void cpu_thread_main_sleep(int ms)
+{
+	__atomic_store_n(&cpu_thread_main_sleeping, 1, __ATOMIC_SEQ_CST);
+	if (!cpu_thread_settle(cpu_thread_main_has_work))
+		uae_sem_trywait_delay(&cpu_request_sema, ms);
+	__atomic_store_n(&cpu_thread_main_sleeping, 0, __ATOMIC_RELAXED);
+}
+
+// Main thread: sleep up to ns, less than a millisecond, woken like
+// cpu_thread_main_sleep(). No settle spin first: an idle guest naps about ten
+// thousand times a second, and the spin would cost more than a request waits.
+static void cpu_thread_main_nap(uae_u64 ns)
+{
+	{
+		std::lock_guard<std::mutex> lock(cpu_thread_nap_lock);
+		cpu_thread_nap_woken = false;
+	}
+	__atomic_store_n(&cpu_thread_main_sleeping, 2, __ATOMIC_SEQ_CST);
+	if (!cpu_thread_main_has_work()) {
+		std::unique_lock<std::mutex> lock(cpu_thread_nap_lock);
+		cpu_thread_nap_cv.wait_for(lock, std::chrono::nanoseconds(ns), [] { return cpu_thread_nap_woken; });
+	}
+	__atomic_store_n(&cpu_thread_main_sleeping, 0, __ATOMIC_RELAXED);
+}
+
+static void service_cpu_thread_reset()
+{
+	uae_u32 reset_val = __atomic_load_n(&cpu_thread_reset, __ATOMIC_ACQUIRE);
+	if (!(reset_val & 1))
+		return;
+	bool hardreset = reset_val & 2;
+	if (reset_val & 4) {
+		inputdevice_kb_custom_reset(hardreset, true);
+	} else if (atomic_read(&cpu_thread_kbreset)) {
+		inputdevice_kb_custom_reset(hardreset, false);
+		set_special(SPCFLAG_CPUINRESET);
+	} else {
+		custom_reset(hardreset, false);
+	}
+	if (cpu_thread_snap_main.armed)
+		cpu_thread_snap_publish(false);
+	__atomic_store_n(&cpu_thread_reset, 0, __ATOMIC_RELEASE);
+	uae_sem_post(&cpu_in_sema);
+}
+
+static inline bool cpu_thread_interrupt_wakes(int level)
+{
+	return regs.stopped && (level > regs.intmask || level == 7);
+}
+
+// Main thread: the CPU is in STOP and the interrupt level now wakes it. The
+// chipset runs on unpaced while the CPU is stopped; hold it until the CPU
+// thread has left STOP, so that the interrupt is taken at this colour clock,
+// not a host wake-up later. A loaded host can keep the CPU thread off a core
+// for several milliseconds, so the bound only guards against a CPU thread
+// that will not leave STOP at all.
+static inline void cpu_thread_flush_resume();
+#define CPU_THREAD_WAKE_WAIT_NS 100000000
+#define CPU_THREAD_WAKE_SPIN_NS 1000000
+static void cpu_thread_main_wait_wake()
+{
+	cpu_thread_flush_resume();
+	const uae_u64 start = SDL_GetTicksNS();
+	for (unsigned int spins = 1; regs.stopped; ++spins) {
+		if (service_cpu_indirect_request())
+			continue;
+		service_cpu_thread_reset();
+		if (regs.halted || (regs.spcflags & (SPCFLAG_MODE_CHANGE | SPCFLAG_CPUINRESET))
+			|| __atomic_load_n(&cpu_thread_active, __ATOMIC_ACQUIRE) != 1
+			|| __atomic_load_n(&cpu_thread_debugger_waiting, __ATOMIC_ACQUIRE))
+			break;
+		if (regs.spcflags & SPCFLAG_CALLBACK) {
+			unset_special(SPCFLAG_CALLBACK);
+			device_call_main_thread_callbacks();
+			cpu_thread_flush_resume();
+			// a callback may have withdrawn the interrupt
+			if (!cpu_thread_interrupt_wakes(intlev()))
+				break;
+		}
+		cpu_thread_spin_pause();
+		if (!(spins & 63)) {
+			const uae_u64 waited = SDL_GetTicksNS() - start;
+			if (waited >= CPU_THREAD_WAKE_WAIT_NS)
+				break;
+			// it is asleep or descheduled: let it have this core if it needs one
+			if (waited >= CPU_THREAD_WAKE_SPIN_NS)
+				cpu_thread_main_sleep(1);
+			else if (waited >= CPU_THREAD_SETTLE_NS)
+				std::this_thread::yield();
+		}
+	}
+}
+
+bool cpu_thread_pause()
+{
+	if (!is_mainthread() || __atomic_load_n(&cpu_thread_active, __ATOMIC_ACQUIRE) != 1)
+		return false;
+	if (cpu_thread_pause_depth++ > 0)
+		return true;
+	if (cpu_thread_main.resume_deferred) {
+		cpu_thread_main.resume_deferred = false;
+		return true;
+	}
+	if (cpu_thread_hold_idle())
+		return true;
+	while (uae_sem_trywait(&cpu_park_sema) == 0) {}
+	__atomic_store_n(&cpu_thread_pause_requested, 1, __ATOMIC_RELEASE);
+	// The flag takes the worker off its fast path (and out of compiled code).
+	set_special(SPCFLAG_CPU_THREAD_SYNC);
+	uae_sem_post(&cpu_wakeup_sema);
+	const uae_u64 spin_until = SDL_GetTicksNS() + CPU_THREAD_PARK_SPIN_NS;
+	for (unsigned int spins = 1; __atomic_load_n(&cpu_thread_parked, __ATOMIC_ACQUIRE) != CPU_THREAD_PARKED
+		&& __atomic_load_n(&cpu_thread_active, __ATOMIC_ACQUIRE) == 1; ++spins) {
+		// it went to sleep before it saw the request
+		if (cpu_thread_hold_idle())
+			break;
+		if (service_cpu_indirect_request())
+			continue;
+		service_cpu_thread_reset();
+		if (regs.spcflags & SPCFLAG_CALLBACK) {
+			unset_special(SPCFLAG_CALLBACK);
+			device_call_main_thread_callbacks();
+		}
+		if (!(spins & 63) && SDL_GetTicksNS() >= spin_until)
+			cpu_thread_main_sleep(1);
+		else
+			cpu_thread_spin_pause();
+	}
+	return true;
+}
+
+static void cpu_thread_release_pause()
+{
+	// the pause holder may have changed registers the CPU thread reads directly
+	if (cpu_thread_snap_main.armed)
+		cpu_thread_snap_publish(false);
+	__atomic_store_n(&cpu_thread_pause_requested, 0, __ATOMIC_RELEASE);
+	if (__atomic_load_n(&cpu_thread_parked, __ATOMIC_ACQUIRE) == CPU_THREAD_IDLE_HELD) {
+		cpu_thread_release_idle();
+		return;
+	}
+	uae_sem_post(&cpu_resume_sema);
+	// Do not let a subsequent guard mistake the preceding acknowledgement for its own.
+	cpu_thread_poll_while([] { return __atomic_load_n(&cpu_thread_parked, __ATOMIC_ACQUIRE) == CPU_THREAD_PARKED; });
+	while (__atomic_load_n(&cpu_thread_parked, __ATOMIC_ACQUIRE) == CPU_THREAD_PARKED)
+		uae_sem_trywait_delay(&cpu_park_sema, 1);
+}
+
+// A pause serves the access the CPU thread is making, at the chipset time the
+// pause is made: the chipset does not run meanwhile. Several pauses in one
+// event (IPC commands handled at vsync) would each let the CPU thread make
+// one more access, all at that one colour clock. So inside the chipset loop
+// the CPU thread stays parked until the chipset runs again.
+void cpu_thread_resume()
+{
+	if (!is_mainthread() || !cpu_thread_pause_depth || --cpu_thread_pause_depth)
+		return;
+	if (cpu_thread_main.loop_running) {
+		cpu_thread_main.resume_deferred = true;
+		return;
+	}
+	cpu_thread_release_pause();
+}
+
+// Main thread: before the chipset runs on or waits for the CPU thread.
+static inline void cpu_thread_flush_resume()
+{
+	if (CPU_THREAD_RARE(cpu_thread_main.resume_deferred)) {
+		cpu_thread_main.resume_deferred = false;
+		cpu_thread_release_pause();
+	}
+}
+
+static int cpu_thread_entry(void *)
+{
+	cpu_worker = true;
+	__atomic_store_n(&cpu_thread_active, 1, __ATOMIC_RELEASE);
+	TRY(prb) {
+		cpu_thread_function(nullptr);
+	} CATCH(prb) {
+		write_log(_T("CPU worker stopped after unhandled exception %d.\n"), int(prb));
+		set_special(SPCFLAG_MODE_CHANGE);
+	} ENDTRY
+#if defined(JIT_HAS_BUS_ERROR_RECOVERY)
+	jit_in_compiled_code = false;
+#endif
+	__atomic_store_n(&cpu_thread_active, 2, __ATOMIC_RELEASE);
+	uae_sem_post(&cpu_park_sema);
+	cpu_worker = false;
+	return 0;
 }
 
 static void run_cpu_thread(int (*f)(void *))
 {
 	int vp = 0;
+	frame_time_t frame_origin = 0, frame_start_seen = 0;
 	int intlev_prev = 0;
 	int cck_cnt = 0;
 	uae_s64 tokens_seen = 0, credit = CPU_THREAD_CREDIT_MAX;
+	uae_u32 requests_seen = cpu_thread_requests_served;
+	frame_time_t poll_until = read_processor_time();
 
-	cpu_thread_active = 0;
+	cpu_thread_my_tokens = 0;
+	cpu_thread_counts_cycles = false;
+	__atomic_store_n(&cpu_thread_active, 0, __ATOMIC_RELEASE);
 	__atomic_store_n(&cpu_thread_paced, 0, __ATOMIC_RELEASE);
 	__atomic_store_n(&cpu_thread_tokens, 0, __ATOMIC_RELAXED);
-	cpu_thread_tid = 0;
+	__atomic_store_n(&cpu_thread_main_sleeping, 0, __ATOMIC_RELAXED);
+	__atomic_store_n(&cpu_thread_worker_sleeping, 0, __ATOMIC_RELAXED);
+	unset_special(SPCFLAG_CPU_THREAD_SYNC);
+	__atomic_store_n(&cpu_thread_debugger_waiting, 0, __ATOMIC_RELAXED);
+	cpu_thread_pause_depth = 0;
+	__atomic_store_n(&cpu_thread_pause_requested, 0, __ATOMIC_RELEASE);
+	__atomic_store_n(&cpu_thread_parked, CPU_THREAD_RUNNING, __ATOMIC_RELEASE);
 	cpu_thread_indirect_mode = 0xff;
+	cpu_thread_served_credit = 0;
 	atomic_set(&cpu_thread_reset, 0);
+	cpu_thread_snap_reset();
 
 	// uae_sem_init() only signals an existing semaphore. Counts left by the previous
 	// run would let custom_reset_cpu() return before custom_reset() has run.
-	uae_sem_destroy(&cpu_in_sema);
-	uae_sem_destroy(&cpu_wakeup_sema);
-	uae_sem_init(&cpu_in_sema, 0, 0);
-	uae_sem_init(&cpu_wakeup_sema, 0, 0);
+	uae_sem_t *semaphores[] = { &cpu_in_sema, &cpu_wakeup_sema, &cpu_reply_sema,
+		&cpu_request_sema, &cpu_park_sema, &cpu_resume_sema };
+	for (auto *sem : semaphores) {
+		uae_sem_destroy(sem);
+		if (uae_sem_init(sem, 0, 0)) {
+			write_log(_T("Could not create CPU synchronization semaphore: %s\n"), SDL_GetError());
+			for (auto *created : semaphores)
+				uae_sem_destroy(created);
+			cpu_thread_start_failed = true;
+			cpu_thread_select(false);
+			return;
+		}
+	}
 
-	if (!uae_start_thread(_T("cpu"), f, nullptr, &cpu_thread)) {
+	cpu_thread_function = f;
+	if (!uae_start_thread(_T("cpu"), cpu_thread_entry, nullptr, &cpu_thread)) {
 		// m68k_go() would retry forever; run on this thread instead.
 		write_log(_T("Could not start the CPU thread, running the CPU on the main thread.\n"));
-		currprefs.cpu_thread = false;
+		cpu_thread_start_failed = true;
+		cpu_thread_select(false);
+		for (auto *sem : semaphores)
+			uae_sem_destroy(sem);
 		return;
 	}
-	cpu_thread_tid = uae_thread_get_id(cpu_thread);
-	while (!cpu_thread_active) {
+	while (__atomic_load_n(&cpu_thread_active, __ATOMIC_ACQUIRE) == 0) {
 		sleep_millis(1);
 	}
 
-	while (!(regs.spcflags & SPCFLAG_MODE_CHANGE)) {
+	cpu_thread_main.loop_running = true;
+	while (!(regs.spcflags & SPCFLAG_MODE_CHANGE)
+		&& __atomic_load_n(&cpu_thread_active, __ATOMIC_ACQUIRE) == 1) {
 		if (regs.spcflags & SPCFLAG_CALLBACK) {
 			unset_special(SPCFLAG_CALLBACK);
 			device_call_main_thread_callbacks();
 		}
+		// check_debugger() and the callbacks may have paused it
+		cpu_thread_flush_resume();
 
-		// Service any pending indirect memory request (lockless fast path)
-		service_cpu_indirect_request();
+		// Service any pending indirect memory request (lockless fast path).
+		service_cpu_indirect_request(true);
 
 		// Check for CPU reset request
-		uae_u32 reset_val = __atomic_load_n(&cpu_thread_reset, __ATOMIC_ACQUIRE);
-		if (reset_val & 1) {
-			bool hardreset = reset_val & 2;
-			bool keyboardreset = reset_val & 4;
-			if (keyboardreset) {
-				inputdevice_kb_custom_reset(hardreset, true);
-			} else if (atomic_read(&cpu_thread_kbreset)) {
-				// The reset keys were pressed while the CPU thread waited here (RESET
-				// instruction). custom_reset() would end that hold: it clears
-				// SPCFLAG_CPUINRESET and the keyboard reset sequence.
-				inputdevice_kb_custom_reset(hardreset, false);
-				set_special(SPCFLAG_CPUINRESET);
-			} else {
-				custom_reset(hardreset, false);
-			}
-			__atomic_store_n(&cpu_thread_reset, 0, __ATOMIC_RELEASE);
-			uae_sem_post(&cpu_in_sema);
-		}
+		service_cpu_thread_reset();
 
 		// Advance time - determine how many CCKs to run before re-checking IO
 		// When idle (no pending request), run more cycles per iteration.
 		// When a request just completed, re-check immediately after 1 cycle.
 		int cycles_to_do;
 		if (__atomic_load_n(&cpu_thread_indirect_mode, __ATOMIC_RELAXED) > 2) {
-			cycles_to_do = currprefs.m68k_speed < 0 ? 256 : 128;
+			cycles_to_do = 256;
 		} else {
 			cycles_to_do = 1;
 		}
@@ -5695,12 +6814,12 @@ static void run_cpu_thread(int (*f)(void *))
 		for (int i = 0; i < cycles_to_do; i++) {
 			// Check for incoming IO request EVERY cycle for minimal latency
 			if (i > 0) {
-				service_cpu_indirect_request();
+				service_cpu_indirect_request(true);
 			}
 
 			const int paced = __atomic_load_n(&cpu_thread_paced, __ATOMIC_ACQUIRE);
 			if (paced && credit < CYCLE_UNIT) {
-				credit += cpu_thread_progress(&tokens_seen);
+				credit += cpu_thread_progress(&tokens_seen) + cpu_thread_take_served_credit();
 				if (credit > CPU_THREAD_CREDIT_MAX)
 					credit = CPU_THREAD_CREDIT_MAX;
 				if (credit < CYCLE_UNIT && !cpu_thread_unpaced()) {
@@ -5714,13 +6833,23 @@ static void run_cpu_thread(int (*f)(void *))
 					while (credit < CYCLE_UNIT) {
 						// a request served is progress too (the JIT counts
 						// down only at the end of a block)
-						if (service_cpu_indirect_request()) {
-							credit += CPU_THREAD_INSN_CREDIT;
+						if (service_cpu_indirect_request(true)) {
+							// at least the shortest instruction: a held reply
+							// let go adds no request's credit, and the wait
+							// must still move on
+							const uae_s64 served = cpu_thread_take_served_credit();
+							credit += served ? served : CPU_THREAD_INSN_CREDIT;
 							continue;
 						}
-						// back off: every read takes the line from the writer
-						for (int k = 0; k < 32; k++)
+						// back off: every read of the progress counters takes
+						// the line from the writer. The mailbox line changes only
+						// with a request: poll it, a request is served at once.
+						for (int k = 0; k < 32; k++) {
+							const uae_u32 m = __atomic_load_n(&cpu_thread_indirect_mode, __ATOMIC_RELAXED);
+							if (m == 1 || m == 2)
+								break;
 							cpu_thread_spin_pause();
+						}
 						credit += cpu_thread_progress(&tokens_seen);
 						if (cpu_thread_unpaced())
 							break;
@@ -5736,21 +6865,33 @@ static void run_cpu_thread(int (*f)(void *))
 					if (credit > CPU_THREAD_CREDIT_MAX)
 						credit = CPU_THREAD_CREDIT_MAX;
 				}
-				if (credit < CYCLE_UNIT)
-					credit = CYCLE_UNIT;   // unpaced: run on
+				if (credit < CYCLE_UNIT) {
+					// unpaced: run on
+					credit = CYCLE_UNIT;
+				}
 			}
 
 			// charge the chipset time that passed (none while it waits for vsync)
 			const evt_t c0 = get_cycles();
 			do_cycles(CYCLE_UNIT);
+			cpu_thread_flush_resume();
 			if (paced)
 				credit -= (uae_s64)(get_cycles() - c0);
+			// the chipset changed (doint() raised flags already: see
+			// cpu_thread_snap_interrupt())
+			if (CPU_THREAD_RARE(cpu_thread_snap_main.armed))
+				cpu_thread_snap_publish(true);
 
 			if (++cck_cnt >= 227) {
 				cck_cnt = 0;
 			}
 
 			if ((cck_cnt & 1) == 0) {
+#ifdef JIT
+				// a kick lost to a compiled block's countdown update
+				if (paced == 2 && CPU_THREAD_RARE(regs.spcflags & CPU_THREAD_KICK_FLAGS))
+					cpu_thread_kick();
+#endif
 				check_uae_int_request();
 				int intr = intlev();
 				if (intr != intlev_prev) {
@@ -5760,6 +6901,8 @@ static void run_cpu_thread(int (*f)(void *))
 						// are only noticed here; raise the flag after storing the level.
 						set_special(SPCFLAG_INT);
 						uae_sem_post(&cpu_wakeup_sema);
+						if (cpu_thread_interrupt_wakes(intr))
+							cpu_thread_main_wait_wake();
 					}
 					intlev_prev = intr;
 				}
@@ -5767,66 +6910,127 @@ static void run_cpu_thread(int (*f)(void *))
 		}
 
 		check_debugger();
+		cpu_thread_flush_resume();
 
 		if (regs.spcflags & SPCFLAG_UAEINT) {
 			check_uae_int_request();
 			unset_special(SPCFLAG_UAEINT);
 		}
 
-		// Horizontal position sync and frame rate limiter
+		// Horizontal position sync and frame rate limiter.
+		// The chipset time stands still while it waits here, and the CPU
+		// thread runs on. While it reads registers from the snapshot, which
+		// costs it no round trip, a guest loop that polls the hardware with
+		// an iteration bound would run out at one chipset time: wait for
+		// every line then, as the unthreaded CPU loop runs at most a line of
+		// host time at one chipset time.
+		// The lines are timed from where the frame should have started, not
+		// from its vsync (vsyncmintimepre), so that a frame that ran late is
+		// made up in the next one, as framewait()'s adjust does unthreaded.
+		// Only up to half a frame: beyond that the host cannot keep up.
 		if (vp != vpos) {
 			vp = vpos;
-			if (((vpos & 31) == 0 || vpos >= maxvpos - 32) && (currprefs.m68k_speed >= 0 || !currprefs.turbo_emulation)) {
-				frame_time_t next = vsyncmintimepre + (vsynctimebase * vpos / (maxvpos + 1));
+			if (vsyncmintimepre != frame_start_seen) {
+				const frame_time_t ideal = frame_origin + vsynctimebase;
+				const frame_time_t late = vsyncmintimepre - ideal;
+				frame_origin = frame_start_seen && late > -vsynctimebase / 2 && late < vsynctimebase / 2
+					? ideal : vsyncmintimepre;
+				frame_start_seen = vsyncmintimepre;
+			}
+			if (((vpos & 31) == 0 || vpos >= maxvpos - 32 || cpu_thread_snap_main.armed) && !currprefs.turbo_emulation) {
+				frame_time_t next = frame_origin + (vsynctimebase * vpos / (maxvpos + 1));
 				frame_time_t c = read_processor_time();
+				unsigned int polls = 0;
 				while (next > c && next - c < vsyncmaxtime * 2) {
 					// Even during frame limiter sleep, service IO requests
-					service_cpu_indirect_request();
-					if (regs.spcflags & SPCFLAG_CALLBACK) {
-						unset_special(SPCFLAG_CALLBACK);
-						device_call_main_thread_callbacks();
+					service_cpu_indirect_request(true);
+					// Read spcflags only every 64 polls (and after a sleep):
+					// the CPU thread sets and clears its own flags on that
+					// line (exceptions, ends of JIT blocks), and a read per
+					// poll takes the line from it every time.
+					if (!(++polls & 63)) {
+						const uae_atomic flags = regs.spcflags;
+						if (flags & SPCFLAG_CALLBACK) {
+							unset_special(SPCFLAG_CALLBACK);
+							device_call_main_thread_callbacks();
+							cpu_thread_flush_resume();
+						}
+						if (flags & SPCFLAG_MODE_CHANGE)
+							break;
 					}
 					c = read_processor_time();
+					// Poll while the CPU thread uses the chipset: a sleeping
+					// main thread adds a wake-up to every access. Sleep (in
+					// wakeable slices) only after a quiet millisecond.
+					if (requests_seen != cpu_thread_requests_served) {
+						requests_seen = cpu_thread_requests_served;
+						poll_until = c + syncbase / 1000;
+					}
+					// No pause while polling: every request waits for this
+					// loop, and reading the clock already paces it.
+					if (c - poll_until > 0) {
+						const frame_time_t left = next - c;
+						if (left >= syncbase / 1000) {
+							cpu_thread_main_sleep(1);
+							polls = 63;
+						} else if (left >= syncbase / 50000) {
+							// A wait shorter than a millisecond (a line while the
+							// CPU thread reads the snapshot, the last lines of a
+							// frame): sleep it out too, or an idle guest costs a
+							// host core. A request ends it.
+							cpu_thread_main_nap((uae_u64)left * 1000000000 / syncbase);
+							polls = 63;
+						}
+					}
 				}
 			}
 		}
 	}
 
-	while (cpu_thread_active) {
-		uae_sem_post(&cpu_in_sema);
+	cpu_thread_main.loop_running = false;
+	cpu_thread_main.resume_deferred = false;
+	__atomic_store_n(&cpu_thread_pause_requested, 0, __ATOMIC_RELEASE);
+	uae_sem_post(&cpu_resume_sema);
+	cpu_thread_release_idle();
+	while (__atomic_load_n(&cpu_thread_active, __ATOMIC_ACQUIRE) == 1) {
+		service_cpu_indirect_request();
+		service_cpu_thread_reset();
 		uae_sem_post(&cpu_wakeup_sema);
 		sleep_millis(1);
 	}
 	uae_wait_thread(&cpu_thread);
 	cpu_thread = nullptr;
+	cpu_thread_counts_cycles = false;
+#ifdef JIT
+	cpu_thread_jit_unkick();
+#endif
+	__atomic_store_n(&cpu_thread_active, 0, __ATOMIC_RELEASE);
+	cpu_thread_pause_depth = 0;
+	unset_special(SPCFLAG_CPU_THREAD_SYNC);
+	for (auto *sem : semaphores)
+		uae_sem_destroy(sem);
 }
 
-#endif
 
 static void custom_reset_cpu(bool hardreset, bool keyboardreset)
 {
-#ifdef WITH_THREADED_CPU
 	if (is_cpu_thread()) {
 		__atomic_store_n(&cpu_thread_reset, 1 | (hardreset ? 2 : 0) | (keyboardreset ? 4 : 0), __ATOMIC_RELEASE);
-		uae_sem_post(&cpu_wakeup_sema);
+		cpu_thread_wake_main();
 		uae_sem_wait(&cpu_in_sema);
 	} else {
 		custom_reset(hardreset, keyboardreset);
 	}
-#else
-	custom_reset(hardreset, keyboardreset);
-#endif
 }
 
 // Chipset reset for a keyboard reset. hold keeps the CPU in reset afterwards;
 // without hold a uae_reset() follows.
 void cpu_keyboard_reset(bool hardreset, bool hold)
 {
-#ifdef WITH_THREADED_CPU
 	// The CPU thread may be running, so it does the reset itself from the hold in
 	// do_specialties_thread(). Without hold, m68k_go() resets everything after the
 	// CPU thread has stopped.
-	if (cpu_thread_active && !is_cpu_thread()) {
+	if (__atomic_load_n(&cpu_thread_active, __ATOMIC_ACQUIRE) == 1 && !is_cpu_thread()) {
 		if (hold) {
 			atomic_set(&cpu_thread_kbreset, 1 | (hardreset ? 2 : 0));
 			set_special(SPCFLAG_CPUINRESET);
@@ -5834,13 +7038,77 @@ void cpu_keyboard_reset(bool hardreset, bool hold)
 		}
 		return;
 	}
-#endif
 	custom_reset_cpu(hardreset, true);
 	if (hold)
 		cpu_inreset();
 }
 
 #ifdef JIT  /* Completely different run_2 replacement */
+
+// Threaded JIT: change countdown without changing jit_base - countdown, the
+// cumulative progress the main thread reads (cpu_thread_jit_total()).
+// A plain store, like compiled code's subtraction: only this thread counts
+// down and a kick keeps the effective value, so a kick made between the load
+// and the store is lost, never cycles (run_cpu_thread() repeats kicks). This
+// runs for every exception: a locked instruction here cost 15% of trap/RTE.
+static void cpu_thread_jit_set_countdown(int value)
+{
+	const uae_u32 seq = cpu_thread_jit_seq;
+	__atomic_store_n(&cpu_thread_jit_seq, seq + 1, __ATOMIC_RELAXED);
+	__atomic_thread_fence(__ATOMIC_RELEASE);
+	// Read the kick's saved value before the store: once the countdown is not
+	// kicked any more, the next kick may replace it.
+	const int left = cpu_thread_unkicked(__atomic_load_n(&countdown, __ATOMIC_RELAXED));
+	__atomic_store_n(&countdown, value, __ATOMIC_RELAXED);
+	__atomic_store_n(&cpu_thread_jit_base, cpu_thread_jit_base + value - left, __ATOMIC_RELAXED);
+	__atomic_store_n(&cpu_thread_jit_seq, seq + 2, __ATOMIC_RELEASE);
+}
+
+static void cpu_thread_jit_refill()
+{
+	cpu_thread_jit_set_countdown(pissoff_value);
+}
+
+static void cpu_thread_jit_break()
+{
+	// Shorten a dispatch for pause/reconfiguration; work done so far stays counted.
+	// A negative countdown (a kick included) already ends it at the next block.
+	if (__atomic_load_n(&countdown, __ATOMIC_RELAXED) >= 0)
+		cpu_thread_jit_set_countdown(-1);
+}
+
+void cpu_thread_kick()
+{
+	if (__atomic_load_n(&cpu_thread_paced, __ATOMIC_ACQUIRE) != 2)
+		return;
+	if (cpu_worker) {
+		// From the CPU thread's own code (trace, exceptions): no lost update.
+		cpu_thread_jit_break();
+		return;
+	}
+	if (__atomic_load_n(&countdown, __ATOMIC_RELAXED) < CPU_THREAD_KICKED)
+		return;
+	if (__atomic_exchange_n(&cpu_thread_kick_lock, 1, __ATOMIC_ACQUIRE))
+		return;   // a kick is being made right now
+	int cd = __atomic_load_n(&countdown, __ATOMIC_RELAXED);
+	while (cd >= CPU_THREAD_KICKED) {
+		__atomic_store_n(&cpu_thread_kick_old, cd, __ATOMIC_RELAXED);
+		if (__atomic_compare_exchange_n(&countdown, &cd, CPU_THREAD_KICK, false, __ATOMIC_SEQ_CST, __ATOMIC_RELAXED))
+			break;
+	}
+	__atomic_store_n(&cpu_thread_kick_lock, 0, __ATOMIC_RELEASE);
+}
+
+// The CPU thread has ended: leave no kick behind for the next CPU loop.
+static void cpu_thread_jit_unkick()
+{
+	while (__atomic_exchange_n(&cpu_thread_kick_lock, 1, __ATOMIC_ACQUIRE))
+		cpu_thread_spin_pause();
+	__atomic_store_n(&cpu_thread_paced, 0, __ATOMIC_RELEASE);
+	if (countdown < CPU_THREAD_KICKED)
+		countdown = 0;
+	__atomic_store_n(&cpu_thread_kick_lock, 0, __ATOMIC_RELEASE);
+}
 
 #ifdef CPU_AARCH64 // Used by the AARCH64 JIT implementation
 void execute_exception(uae_u32 cycles)
@@ -5855,12 +7123,13 @@ void execute_exception(uae_u32 cycles)
 #endif
 
 // Threaded CPU, interpreted instructions of the JIT: count them down like
-// compiled blocks do, so the main thread sees the progress (paced 2).
+// compiled blocks do.
 static void cpu_thread_jit_count(int cycles)
 {
-	countdown -= cycles;
-	if (countdown < 0)
-		countdown = pissoff_value;
+	const int cd = __atomic_load_n(&countdown, __ATOMIC_RELAXED) - cycles;
+	__atomic_store_n(&countdown, cd, __ATOMIC_RELAXED);
+	if (cd < 0)
+		cpu_thread_jit_refill();
 }
 
 void do_nothing (void)
@@ -5877,14 +7146,24 @@ void do_nothing (void)
 #endif
 
 
-	if (!currprefs.cpu_thread) {
+	if (!cpu_threaded_run) {
 		/* What did you expect this to do? */
 		do_cycles (0);
 		/* I bet you didn't expect *that* ;-) */
 	} else {
 		// The chipset thread cannot replenish the CPU's JIT dispatch budget.
-		countdown = pissoff_value;
+		cpu_thread_jit_refill();
 	}
+}
+
+void jit_end_dispatch(void)
+{
+	if (cpu_threaded_run) {
+		// keeps the executed-cycle accounting and any kick
+		cpu_thread_jit_break();
+		return;
+	}
+	countdown = 0;
 }
 
 static uae_u32 get_jit_opcode(void)
@@ -5905,6 +7184,11 @@ static uae_u32 get_jit_opcode(void)
 	return opcode;
 }
 
+static bool cpu_thread_exit_dispatch()
+{
+	return cpu_threaded_run && cpu_thread_leave_jit();
+}
+
 void exec_nostats (void)
 {
 #ifdef JIT_DEBUG_MEM_CORRUPTION
@@ -5920,6 +7204,8 @@ void exec_nostats (void)
 
 	for (;;)
 	{
+		if (cpu_thread_exit_dispatch())
+			return;
 		r->instruction_pc = m68k_getpc();
 		r->opcode = get_jit_opcode();
 
@@ -5927,7 +7213,7 @@ void exec_nostats (void)
 
 		cpu_cycles = 4 * CYCLE_UNIT; // adjust_cycles(cpu_cycles);
 
-		if (!currprefs.cpu_thread) {
+		if (!cpu_threaded_run) {
 			do_cycles (cpu_cycles);
 
 #ifdef WITH_PPC
@@ -5967,6 +7253,8 @@ void execute_normal(void)
 	blocklen = 0;
 	start_pc_p = r->pc_oldp;
 	start_pc = r->pc;
+	// Complete this bounded recording even if parking is requested: recompile_block()
+	// may already have expired the block's counter, which the compilation must consume.
 	for (;;) {
 		/* Take note: This is the do-it-normal loop */
 		r->instruction_pc = m68k_getpc();
@@ -5989,7 +7277,7 @@ void execute_normal(void)
 		cpu_cycles = 4 * CYCLE_UNIT;
 
 //		cpu_cycles = adjust_cycles(cpu_cycles);
-		if (!currprefs.cpu_thread) {
+		if (!cpu_threaded_run) {
 			do_cycles (cpu_cycles);
 		} else {
 			cpu_thread_jit_count(cpu_cycles);
@@ -6023,10 +7311,59 @@ void execute_normal(void)
 
 typedef void compiled_handler (void);
 
-#ifdef WITH_THREADED_CPU
+static bool jit_needs_interpreter()
+{
+	bool special = regs.t0 || regs.t1 || regs.m;
+#ifdef DEBUGGER
+	special = special || (cpu_threaded_run && debugging);
+#endif
+	return special;
+}
+
+static bool jit_interpret_special()
+{
+	if (!jit_needs_interpreter())
+		return false;
+	flush_icache(3);
+	bool exit = false;
+	TRY(prb) {
+		while (!exit && jit_needs_interpreter()) {
+			cpu_thread_safepoint();
+			if (regs.spcflags & SPCFLAG_MODE_CHANGE)
+				return true;
+			check_debugger();
+			if (cpu_threaded_run && regs.stopped) {
+				if (do_specialties_thread())
+					return true;
+				if (regs.stopped) {
+					cpu_thread_idle_wait(true);
+					continue;
+				}
+			}
+			regs.instruction_pc = m68k_getpc();
+			regs.opcode = x_get_iword(0);
+			(*cpufunctbl[regs.opcode])(regs.opcode);
+			count_instr(regs.opcode);
+			if (cpu_threaded_run)
+				cpu_thread_jit_count(4 * CYCLE_UNIT);
+			else
+				do_cycles(4 * CYCLE_UNIT);
+			if (regs.spcflags) {
+				if (cpu_threaded_run)
+					exit = do_specialties_thread() != 0;
+				else
+					exit = do_specialties(cpu_cycles) != 0;
+			}
+		}
+	} CATCH(prb) {
+		bus_error();
+	} ENDTRY
+	unset_special(SPCFLAG_END_COMPILE);
+	return exit;
+}
+
 static int cpu_thread_run_jit(void *v)
 {
-	cpu_thread_tid = uae_thread_get_id(nullptr);
 #ifdef __ANDROID__
 	// This thread runs the m68k core in cpu_threaded mode; target_run() tuned
 	// the main thread before this thread existed, so tune ourselves here too.
@@ -6035,14 +7372,30 @@ static int cpu_thread_run_jit(void *v)
 	__atomic_store_n(&cpu_thread_indirect_mode, 0xff, __ATOMIC_RELEASE);
 	__atomic_store_n(&cpu_thread_reset, 0, __ATOMIC_RELEASE);
 	countdown = pissoff_value;
+	cpu_thread_jit_base = countdown;   // no progress yet
 	__atomic_store_n(&cpu_thread_paced, 2, __ATOMIC_RELEASE);
-	cpu_thread_active = 1;
 #ifdef USE_STRUCTURED_EXCEPTION_HANDLING
 	__try
 #endif
 	{
 		for (;;) {
+			cpu_thread_safepoint();
+			if (regs.spcflags & SPCFLAG_MODE_CHANGE)
+				break;
+			if (regs.stopped) {
+				check_debugger();
+				if (do_specialties_thread())
+					break;
+				if (regs.stopped) {
+					cpu_thread_idle_wait(true);
+					continue;
+				}
+			}
+			if (jit_interpret_special())
+				break;
 			check_debugger();
+			if (jit_needs_interpreter())
+				continue;
 #if defined(JIT_HAS_BUS_ERROR_RECOVERY)
 			{
 				int bus_error_exc = setjmp(jit_bus_error_jmpbuf);
@@ -6055,6 +7408,9 @@ static int cpu_thread_run_jit(void *v)
 			jit_in_compiled_code = true;
 #endif
 				((compiled_handler*)(pushall_call_handler))();
+#if defined(JIT_HAS_BUS_ERROR_RECOVERY)
+			jit_in_compiled_code = false;
+#endif
 			/* Check for pending exception from SIGSEGV handler (x86-64) */
 #if defined(CPU_x86_64) || defined(_M_AMD64)
 			if (jit_exception_pending) {
@@ -6066,9 +7422,6 @@ static int cpu_thread_run_jit(void *v)
 				jit_in_compiled_code = false;
 #endif
 				Exception(exc);
-#if defined(JIT_HAS_BUS_ERROR_RECOVERY)
-				jit_in_compiled_code = true;
-#endif
 			}
 #endif
 			/* A nonzero IPL alone needs no work: interrupt handling is flag-driven. */
@@ -6079,12 +7432,6 @@ static int cpu_thread_run_jit(void *v)
 				if (do_specialties_thread()) {
 					break;
 				}
-#if defined(JIT_HAS_BUS_ERROR_RECOVERY)
-				jit_in_compiled_code = true;
-#endif
-			}
-			if (regs.stopped) {
-				uae_sem_wait(&cpu_wakeup_sema);
 			}
 		}
 	}
@@ -6098,10 +7445,8 @@ static int cpu_thread_run_jit(void *v)
 		// EvalException does the good stuff...
 	}
 #endif
-	cpu_thread_active = 0;
 	return 0;
 }
-#endif
 
 static void m68k_run_jit(void)
 {
@@ -6117,12 +7462,10 @@ static void m68k_run_jit(void)
 		return;
 	}
 
-#ifdef WITH_THREADED_CPU
-	if (currprefs.cpu_thread) {
+	if (cpu_threaded_run) {
 		run_cpu_thread(cpu_thread_run_jit);
 		return;
 	}
-#endif
 
 	if (regs.spcflags) {
 		if (do_specialties(0)) {
@@ -6201,35 +7544,14 @@ static void m68k_run_jit(void)
 					jit_in_compiled_code = true;
 #endif
 				}
-				// If T0, T1 or M got set: run normal emulation loop
-				if (regs.t0 || regs.t1 || regs.m) {
 #if defined(JIT_HAS_BUS_ERROR_RECOVERY)
-					jit_in_compiled_code = false;
+				jit_in_compiled_code = false;
 #endif
-					flush_icache(3);
-					struct regstruct *r = &regs;
-					bool exit = false;
-					check_debugger();
-					TRY(prb2) {
-						while (!exit && (regs.t0 || regs.t1 || regs.m)) {
-							r->instruction_pc = m68k_getpc();
-							r->opcode = x_get_iword(0);
-							(*cpufunctbl[r->opcode])(r->opcode);
-							count_instr(r->opcode);
-							do_cycles(4 * CYCLE_UNIT);
-							if (r->spcflags) {
-								if (do_specialties(cpu_cycles))
-									exit = true;
-							}
-						}
-					} CATCH(prb2) {
-						bus_error();
-					} ENDTRY
-					unset_special(SPCFLAG_END_COMPILE);
+				if (jit_interpret_special())
+					return;
 #if defined(JIT_HAS_BUS_ERROR_RECOVERY)
-					jit_in_compiled_code = true;
+				jit_in_compiled_code = true;
 #endif
-				}
 			}
 #ifdef USE_STRUCTURED_EXCEPTION_HANDLING
 		} __except (EvalException(GetExceptionInformation())) {
@@ -6977,13 +8299,21 @@ cont:
 
 #endif
 
-#ifdef WITH_THREADED_CPU
+// Opcode fetch of the fast loops. Without the indirect call when it is
+// get_diword(): where the predictor keeps that call depends on code layout,
+// which made the same loop up to 8% slower in one build than another.
+static inline __attribute__((always_inline)) uae_u32 get_opcode_fast(void)
+{
+	if (x_get_iword == get_diword)
+		return do_get_mem_word((uae_u16 *)regs.pc_p);
+	return x_get_iword(0);
+}
+
 static int cpu_thread_run_2(void *v)
 {
 	bool exit = false;
 	struct regstruct *r = &regs;
 
-	cpu_thread_tid = uae_thread_get_id(nullptr);
 #ifdef __ANDROID__
 	// This thread runs the m68k core in cpu_threaded mode; target_run() tuned
 	// the main thread before this thread existed, so tune ourselves here too.
@@ -6992,17 +8322,18 @@ static int cpu_thread_run_2(void *v)
 	__atomic_store_n(&cpu_thread_indirect_mode, 0xff, __ATOMIC_RELEASE);
 	__atomic_store_n(&cpu_thread_reset, 0, __ATOMIC_RELEASE);
 
-	uae_s64 insns = 0;
+	uae_s64 cycles = 0;
 	__atomic_store_n(&cpu_thread_paced, 1, __ATOMIC_RELEASE);
-	cpu_thread_active = 1;
 	while (!exit) {
-		check_debugger();
 		TRY(prb)
 		{
+			// Parking, debugger, mode change and STOP all raise one of these.
+			// Checked on entry too: at thread start and after a bus error.
+			exit = CPU_THREAD_RARE(r->spcflags || r->stopped) && cpu_thread_slow_path();
 			while (!exit) {
 				r->instruction_pc = m68k_getpc();
 
-				r->opcode = x_get_iword(0);
+				r->opcode = get_opcode_fast();
 				count_instr(r->opcode);
 #ifdef DEBUGGER
 				if (debug_opcode_watch) {
@@ -7010,30 +8341,18 @@ static int cpu_thread_run_2(void *v)
 				}
 #endif
 				(*cpufunctbl[r->opcode])(r->opcode);
-				__atomic_store_n(&cpu_thread_tokens, ++insns, __ATOMIC_RELAXED);
-
-				if (regs.spcflags) {
-					if (do_specialties_thread())
-						exit = true;
-				}
-				if (regs.stopped) {
-					uae_sem_wait(&cpu_wakeup_sema);
-				}
-
+				cycles += CPU_THREAD_INSN_CREDIT;
+				__atomic_store_n(&cpu_thread_tokens, cycles, __ATOMIC_RELAXED);
+				if (CPU_THREAD_RARE(r->spcflags || r->stopped))
+					exit = cpu_thread_slow_path();
 			}
 		} CATCH(prb)
 		{
 			bus_error();
-			if (r->spcflags) {
-				if (do_specialties_thread())
-					exit = true;
-			}
 		} ENDTRY
 	}
-	cpu_thread_active = 0;
 	return 0;
 }
-#endif
 
 /* Same thing, but don't use prefetch to get opcode.  */
 static void m68k_run_2_000()
@@ -7047,7 +8366,7 @@ static void m68k_run_2_000()
 			while (!exit) {
 				r->instruction_pc = m68k_getpc ();
 
-				r->opcode = x_get_iword(0);
+				r->opcode = get_opcode_fast();
 				count_instr (r->opcode);
 #ifdef DEBUGGER
 				if (debug_opcode_watch) {
@@ -7076,13 +8395,6 @@ static void m68k_run_2_000()
 
 static void m68k_run_2_020()
 {
-#ifdef WITH_THREADED_CPU
-	if (currprefs.cpu_thread) {
-		run_cpu_thread(cpu_thread_run_2);
-		return;
-	}
-#endif
-
 	struct regstruct *r = &regs;
 	bool exit = false;
 
@@ -7092,7 +8404,7 @@ static void m68k_run_2_020()
 			while (!exit) {
 				r->instruction_pc = m68k_getpc();
 
-				r->opcode = x_get_iword(0);
+				r->opcode = get_opcode_fast();
 				count_instr(r->opcode);
 
 #ifdef DEBUGGER
@@ -7175,18 +8487,276 @@ static void warpmode_reset()
 	}
 }
 
+// The CPU gets a thread of its own when the host has a core to spare and the
+// emulation allows one. Cycle-exact emulation needs the CPU and the chipset in
+// step, and a few features expect the CPU loop on the main thread: they run
+// without the thread, silently.
+static void (*cpu_thread_current_run_func)(void);
+
+// Request floods. Every hardware access the snapshot does not cover is a
+// round trip through the mailbox, and serving it costs the main thread
+// several cache line transfers, where the unthreaded CPU makes a function
+// call. A guest that does little else (Kickstart 1.3's Alert routine blinks
+// the LED with back-to-back CIA writes) can take more of the main thread
+// than the chipset can spare: the chipset then runs below real time, where
+// the unthreaded CPU keeps up. While that lasts the CPU runs on the main
+// thread, where counting banks (memory.cpp) count the accesses that would
+// have been requests: once they fall to half the flood's rate the CPU goes
+// back to its thread. Counting slows a custom register read by up to a
+// quarter, so the banks count only for CPU_THREAD_FLOOD_QUIET frames at a
+// time: the first count CPU_THREAD_FLOOD_PROBE_FIRST seconds into a hold,
+// so that a short flood ends a short hold, then at doubling intervals up to
+// CPU_THREAD_FLOOD_PROBE seconds while the flood lasts. A hold-off of
+// CPU_THREAD_FLOOD_HOLD_MIN seconds, doubled each time the flood comes back
+// soon after, only sends it back sooner or later if the count stays high;
+// it starts long enough not to cut the first counts short.
+// A reset, a state load, a CPU setting change or warp forgets the flood
+// (cpu_thread_flood_forget()).
+#define CPU_THREAD_FLOOD_FRAMES 10          // measured over this many frames
+#define CPU_THREAD_FLOOD_LATE 8             // of which at least this many are long
+#define CPU_THREAD_FLOOD_REQUESTS 4000      // requests per frame
+#define CPU_THREAD_FLOOD_SLOW 104           // percent of the frame time: a long frame
+#define CPU_THREAD_FLOOD_QUIET 25           // frames under the quiet rate that end a hold
+// A hold ends at half the rate that starts one: the main thread counts low
+// (no snapshot read budget, and less CPU time per frame than a thread of its
+// own), and a workload near the rate must not move back and forth, each move
+// costing the JIT its cache.
+#define CPU_THREAD_FLOOD_QUIET_REQUESTS (CPU_THREAD_FLOOD_REQUESTS / 2)
+#define CPU_THREAD_FLOOD_HOLD_MIN 16        // seconds: the safety net, after the probes
+#define CPU_THREAD_FLOOD_HOLD_MAX 256       // seconds
+#define CPU_THREAD_FLOOD_PROBE_FIRST 1      // seconds from a hold's start to its first count
+#define CPU_THREAD_FLOOD_PROBE 10           // at most this many seconds between counts
+#define CPU_THREAD_FLOOD_SETTLE 2           // seconds on the thread before measuring
+static struct {
+	frame_time_t last, sum, hold_until, threaded_since, probe_at, probe_gap, released_at;
+	int refloods;   // holds in a row whose retry measured a flood at once
+	int quiet_windows;   // windows measured on the thread since the retry, with no flood
+	uae_u32 requests_seen;
+	int frames, late;
+	int hold_seconds;
+	bool held, was_threaded, probing;
+} cpu_thread_flood;
+
+static bool cpu_thread_wanted(void (*run_func)(void))
+{
+	// usable, not installed: a single CPU left by affinity or a quota would
+	// make every hand-off between the threads wait for the scheduler
+	static const int host_cpus = [] {
+		const int n = cpu_thread_usable_host_cpus();
+		write_log(_T("CPU thread: %d usable host CPU(s)%s.\n"), n, n < 2 ? _T(", the CPU runs on the main thread") : _T(""));
+		return n;
+	}();
+	if (!currprefs.cpu_thread || cpu_thread_start_failed || host_cpus < 2)
+		return false;
+	if (cpu_thread_flood.held)
+		return false;
+	// "Fastest possible" 68020+ only: the CPU thread runs as fast as it can,
+	// so at an approximate speed it would only add host CPU use, and 68000
+	// software tends to depend on the CPU's timing.
+	if (currprefs.m68k_speed >= 0 || currprefs.cpu_model < 68020)
+		return false;
+	if (currprefs.cpu_cycle_exact || currprefs.cpu_memory_cycle_exact)
+		return false;
+	if (run_func == m68k_run_1_ce || run_func == m68k_run_2ce || run_func == m68k_run_3ce)
+		return false;
+	// Beam racing waits for the display on the main thread, line by line.
+	if (isvsync_chipset() < 0)
+		return false;
+	// the PPC thread shares the memory map and locking with the main thread
+	if (currprefs.ppc_mode)
+		return false;
+#ifdef ACTION_REPLAY
+	// Freezer cartridges are entered and left in do_specialties().
+	if (action_replay_freezer_active())
+		return false;
+#endif
+#ifdef DEBUGGER
+	// debug() and remote breakpoints would change state under a running thread
+	if (currprefs.debugging_features & DEBUG_FEATURE_GDBSERVER)
+		return false;
+#endif
+	return true;
+}
+
+// The banks for the CPU's place: the thread's, counting ones while a flood
+// hold counts requests on the main thread, else the plain ones.
+static int cpu_thread_banks_now = CPU_BANKS_PLAIN;
+static int cpu_thread_bank_mode()
+{
+	return cpu_threaded_run ? CPU_BANKS_THREAD
+		: cpu_thread_flood.held && cpu_thread_flood.probing ? CPU_BANKS_COUNT : CPU_BANKS_PLAIN;
+}
+
+static void cpu_thread_select(bool on)
+{
+	const bool changed = on != cpu_threaded_run;
+	cpu_threaded_run = on;
+	const int mode = cpu_thread_bank_mode();
+	if (mode != cpu_thread_banks_now) {
+		cpu_thread_banks_now = mode;
+		memory_set_cpu_thread_banks(mode);
+	}
+	if (changed)
+		write_log(_T("CPU emulation runs on the %s thread.\n"), on ? _T("CPU") : _T("main"));
+}
+
+// Forget a request flood: the workload has changed (a reset, a state load, a
+// CPU setting) or is no longer paced (warp). The next check selects again.
+static void cpu_thread_flood_forget(const TCHAR *why)
+{
+	auto &f = cpu_thread_flood;
+	if (f.held || f.hold_seconds)
+		write_log(_T("CPU thread: %s, the request flood is forgotten.\n"), why);
+	f = {};
+}
+
+// Any interpreter loop on the CPU thread. do_cycles() counts its cycles
+// (cpu_thread_worker_cycles()) and do_specialties() takes the CPU thread's
+// path (cpu_thread_slow_path()); memory goes through the CPU thread's banks.
+static void (*cpu_thread_loop)(void);
+static int cpu_thread_run_loop(void *)
+{
+#ifdef __ANDROID__
+	amiberry_tune_emulation_thread();
+#endif
+	cpu_thread_counts_cycles = true;
+	__atomic_store_n(&cpu_thread_paced, 1, __ATOMIC_RELEASE);
+	while (!(regs.spcflags & SPCFLAG_MODE_CHANGE)) {
+		cpu_thread_loop();
+		// An MMU loop ends without a mode change after a double fault (halted).
+		if (!(regs.spcflags & SPCFLAG_MODE_CHANGE) && cpu_thread_slow_path())
+			break;
+	}
+	return 0;
+}
+
+// Once per frame (vsync handler), main thread: watch for a request flood.
+static void cpu_thread_check_flood()
+{
+	auto &f = cpu_thread_flood;
+	const frame_time_t now = read_processor_time();
+	if (currprefs.turbo_emulation) {
+		cpu_thread_flood_forget(_T("warp"));
+		return;
+	}
+	if (f.held) {
+		const char *why = nullptr;
+		if (now - f.hold_until >= 0) {
+			why = "the hold is over";
+		} else if (!cpu_threaded_run && !f.probing) {
+			// the counting banks go in at the next mode change
+			if (now - f.probe_at >= 0) {
+				f.probing = true;
+				f.frames = 0;
+			}
+		} else if (!cpu_threaded_run) {
+			// count the would-be requests over CPU_THREAD_FLOOD_QUIET frames
+			const uae_u32 counted = cpu_thread_flood_requests;
+			if (f.frames == 0 || now - f.last > vsynctimebase * 4) {
+				f.frames = 1;
+				f.requests_seen = counted;
+			} else if (++f.frames > CPU_THREAD_FLOOD_QUIET) {
+				const int n = f.frames - 1;
+				f.frames = 0;
+				if (counted - f.requests_seen < (uae_u32)CPU_THREAD_FLOOD_QUIET_REQUESTS * n) {
+					why = "the flood is over";
+				} else {
+					f.probing = false;
+					// still a flood: count again later, ever less often
+					f.probe_gap = std::min(f.probe_gap * 2, (frame_time_t)(syncbase * CPU_THREAD_FLOOD_PROBE));
+					f.probe_at = now + f.probe_gap;
+				}
+			}
+			f.last = now;
+		}
+		if (why) {
+			f.held = false;
+			f.probing = false;
+			f.frames = 0;
+			f.was_threaded = false;   // the retry settles like a first start
+			f.released_at = now;
+			f.quiet_windows = 0;
+			write_log(_T("CPU thread: %s, trying the CPU thread again.\n"), why);
+		}
+		return;
+	}
+	if (!cpu_threaded_run) {
+		f.frames = 0;
+		f.was_threaded = false;
+		return;
+	}
+	// the first frames on the thread are slow anyway (JIT compiles, display set-up)
+	if (!f.was_threaded) {
+		f.was_threaded = true;
+		f.threaded_since = now;
+	}
+	if (now - f.threaded_since < syncbase * CPU_THREAD_FLOOD_SETTLE) {
+		f.frames = 0;
+		return;
+	}
+	const uae_u32 served = cpu_thread_requests_served;
+	if (f.frames == 0 || now - f.last > vsynctimebase * 4) {
+		// a new window, or a frame held up by something else (a pause, the GUI)
+		f.frames = 1;
+		f.sum = 0;
+		f.late = 0;
+		f.requests_seen = served;
+		f.last = now;
+		return;
+	}
+	// A flood makes nearly every frame long; a savestate, a reset or the GUI
+	// makes one frame very long, which an average over a short window would
+	// take for a flood. So long frames are counted.
+	if ((now - f.last) * 100 > vsynctimebase * CPU_THREAD_FLOOD_SLOW)
+		f.late++;
+	f.sum += now - f.last;
+	f.last = now;
+	if (++f.frames <= CPU_THREAD_FLOOD_FRAMES)
+		return;
+	const int n = f.frames - 1;
+	const uae_u32 requests = served - f.requests_seen;
+	f.frames = 0;
+	if (f.late < CPU_THREAD_FLOOD_LATE || requests < (uae_u32)CPU_THREAD_FLOOD_REQUESTS * n) {
+		f.quiet_windows = std::min(f.quiet_windows + 1, 1000);
+		// a quiet minute on the thread forgets earlier floods
+		if (f.hold_seconds && now - f.threaded_since > syncbase * 60)
+			f.hold_seconds = 0;
+		return;
+	}
+	f.hold_seconds = !f.hold_seconds ? CPU_THREAD_FLOOD_HOLD_MIN : std::min(f.hold_seconds * 2, CPU_THREAD_FLOOD_HOLD_MAX);
+	f.hold_until = now + syncbase * f.hold_seconds;
+	// The first count comes soon, so that a short flood ends a short hold.
+	// A retry whose very first measured window is a flood again means the
+	// count on the main thread saw less than the thread does (a workload can
+	// do that): each such re-flood doubles the wait for the first count,
+	// until the hold runs to its safety net, so that it cannot go back and
+	// forth. A flood that comes back after a quiet window is a new flood.
+	f.refloods = f.released_at && !f.quiet_windows ? std::min(f.refloods + 1, 16) : 0;
+	f.probe_gap = std::min((frame_time_t)(syncbase * CPU_THREAD_FLOOD_PROBE_FIRST) << f.refloods,
+		(frame_time_t)syncbase * f.hold_seconds);
+	f.probe_at = now + f.probe_gap;
+	if (f.refloods)
+		write_log(_T("CPU thread: the flood came back as soon as the CPU thread was tried again (%d in a row): ")
+			_T("the count on the main thread missed it; the next count waits %d s.\n"),
+			f.refloods, (int)(f.probe_gap / syncbase));
+	f.held = true;
+	write_log(_T("CPU thread: %u requests per frame, %d of %d frames long (%d%% on average): the CPU runs on the main thread for %d s.\n"),
+		requests / n, f.late, n, (int)(f.sum * 100 / (vsynctimebase * n)) - 100, f.hold_seconds);
+}
+
+void cpu_thread_check_selection()
+{
+	if (!cpu_thread_current_run_func || (regs.spcflags & SPCFLAG_MODE_CHANGE))
+		return;
+	cpu_thread_check_flood();
+	if (cpu_thread_wanted(cpu_thread_current_run_func) != cpu_threaded_run
+		|| cpu_thread_bank_mode() != cpu_thread_banks_now)
+		set_special(SPCFLAG_MODE_CHANGE);
+}
+
 void m68k_run(void)
 {
 	void (*run_func)(void);
-
-#if defined(WITH_THREADED_CPU) && defined(ACTION_REPLAY)
-	// Freezer cartridges are entered and left in do_specialties(), which only the
-	// CPU loops on the main thread run.
-	if (currprefs.cpu_thread && action_replay_freezer_active()) {
-		write_log(_T("Freezer cartridge active, running the CPU on the main thread.\n"));
-		currprefs.cpu_thread = false;
-	}
-#endif
 
 	run_func = currprefs.cpu_cycle_exact && currprefs.cpu_model <= 68010 ? m68k_run_1_ce :
 		currprefs.cpu_compatible && currprefs.cpu_model <= 68010 ? m68k_run_1 :
@@ -7206,25 +8776,24 @@ void m68k_run(void)
 
 		currprefs.cpu_model < 68020 ? m68k_run_2_000 : m68k_run_2_020;
 
-#ifdef WITH_THREADED_CPU
-	// Only these two loops start a CPU thread. Code that tests cpu_thread, such as
-	// the waits in do_specialties_check(), assumes another thread runs the chipset;
-	// a CPU fallback can switch to a loop without one.
-	if (currprefs.cpu_thread && run_func != m68k_run_2_020
+	cpu_thread_current_run_func = run_func;
+	cpu_thread_select(cpu_thread_wanted(run_func));
+	bool own_thread = false;
 #ifdef JIT
-		&& run_func != m68k_run_jit
+	own_thread = run_func == m68k_run_jit;   // starts the thread itself
 #endif
-		) {
-		write_log(_T("Selected CPU emulation has no CPU thread, running the CPU on the main thread.\n"));
-		currprefs.cpu_thread = false;
+	if (cpu_threaded_run && !own_thread) {
+		// "Fastest possible" 68020+: a loop of its own, with no cycle counting.
+		if (run_func == m68k_run_2_020 && currprefs.m68k_speed < 0) {
+			run_cpu_thread(cpu_thread_run_2);
+		} else {
+			cpu_thread_loop = run_func;
+			run_cpu_thread(cpu_thread_run_loop);
+		}
+		return;
 	}
-#endif
 
 	run_func();
-
-#ifdef WITH_THREADED_CPU
-	cpu_thread_tid = 0;
-#endif
 }
 
 #ifdef LIBRETRO
@@ -7399,6 +8968,8 @@ void m68k_go (int may_quit)
 			custom_prepare();
 			mman_set_barriers(false);
 			protect_roms(true);
+			// a hard reset or a state load: another program
+			cpu_thread_flood_forget(restored ? _T("state loaded") : _T("hard reset"));
 		}
 		if ((cpu_keyboardreset || hardboot) && !restored) {
 			warpmode_reset();
@@ -8566,6 +10137,10 @@ void exception2_setup(uae_u32 opcode, uaecptr addr, bool read, int size, uae_u32
 // Common hardware bus error entry point. Both for MMU and non-MMU emulation.
 void hardware_exception2(uaecptr addr, uae_u32 v, bool read, bool ins, int size)
 {
+	if (is_mainthread() && cpu_thread_servicing) {
+		cpu_thread_fault = { addr, v, read, ins, size, 2, true };
+		THROW(2);
+	}
 	if (currprefs.cpu_model <= 68010 && currprefs.cpu_compatible && HARDWARE_BUS_ERROR_EMULATION) {
 		hardware_bus_error = 1;
 	} else if (currprefs.mmu_model) {

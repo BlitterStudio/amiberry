@@ -1099,7 +1099,7 @@ std::vector<availability_table> availability_tables()
 		{cpu_mmu_states(),
 			{"cpu_24bit_addressing", "cpu_compatible", "cachesize", "compfpu", "z3mem_size",
 				"cpu_no_unimplemented", "cpu_data_cache", "mmu_model", "fpu_strict", "fpu_softfloat",
-				"fpu_no_unimplemented", "cpu_threaded", "comp_constjump", "comp_flushmode", "comp_nf",
+				"fpu_no_unimplemented", "comp_constjump", "comp_flushmode", "comp_nf",
 				"comp_catchfault", "comp_trustbyte"},
 			{"fpu_model", "cycle_exact", "mmu_model"}},
 		// The speed options against the cycle-exact modes, CPU
@@ -1107,6 +1107,10 @@ std::vector<availability_table> availability_tables()
 		{{{{"cycle_exact", choice_values("cycle_exact")}, {"cpu_compatible", {"true", "false"}},
 			{"cpu_speed", choice_values("cpu_speed")}}, {}},
 			{"cpu_throttle", "amiberry.cpu_idle", "cpu_multiplier"}, {}},
+		// The CPU thread against the CPU, the cycle-exact modes and the speed.
+		{{{{"cpu_model", choice_values("cpu_model")}, {"cycle_exact", choice_values("cycle_exact")},
+			{"cpu_speed", choice_values("cpu_speed")}}, {}},
+			{"cpu_threaded"}, {}},
 		// Waiting blits against immediate blits and the 68000/010 memory
 		// cycle-exact mode.
 		{{{{"cpu_model", choice_values("cpu_model")}, {"cycle_exact", choice_values("cycle_exact")},

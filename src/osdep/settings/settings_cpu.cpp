@@ -516,13 +516,12 @@ void set_cpu_threaded(uae_prefs& p, const value& v)
 	p.cpu_thread = v.number != 0;
 }
 
-// Only the JIT and the plain 68020+ interpreter can run on the CPU thread,
-// and the thread is chosen when emulation starts.
-bool cpu_threaded_available(const uae_prefs& p, const context& ctx)
+// The CPU thread is used only at the fastest speed with a 68020 or later,
+// and not with cycle-exact or PPC emulation (cpu_thread_wanted()).
+bool cpu_threaded_available(const uae_prefs& p, const context&)
 {
-	const bool no_thread = p.cpu_compatible || p.ppc_mode || p.cpu_memory_cycle_exact
-		|| p.cpu_cycle_exact || (p.mmu_model && !p.cachesize) || p.cpu_model < 68020;
-	return !no_thread && !ctx.emulating;
+	return p.cpu_model >= 68020 && p.m68k_speed < 0 && !p.cpu_cycle_exact
+		&& !p.cpu_memory_cycle_exact && !p.ppc_mode;
 }
 
 // ---------------------------------------------------------------- PPC
@@ -885,9 +884,9 @@ const definition definitions[] = {
 			"Needs More compatible or cycle-exact mode, and not the fastest speed."),
 		get_cpu_multiplier, set_cpu_multiplier, cpu_multiplier_available, nullptr, nullptr},
 	{BOOL_OPTION("cpu_threaded", "cpu_speed", "Multi-threaded CPU",
-			"Run CPU emulation on a separate thread. Experimental. May help CPU-heavy software, but hardware-register accesses require synchronization and can make it slower.",
-			AMIBERRY_APPLY_RESTART, "false",
-			"The CPU thread needs a 68020 or later and is not available with PPC emulation, More compatible, cycle-exact or MMU modes."),
+			"Run the CPU emulation on a thread of its own, at the fastest speed with a 68020 or later, when the host has two or more cores. Beam racing, the GDB server and freezer cartridges run it on the main thread automatically.",
+			AMIBERRY_APPLY_LIVE, "true",
+			"The CPU thread needs a 68020 or later at the fastest speed, and is not used with cycle-exact or PPC emulation."),
 		get_cpu_threaded, set_cpu_threaded, cpu_threaded_available, nullptr, nullptr},
 #ifdef WITH_PPC
 	{CHOICE_OPTION("ppc_model", "ppc", "PPC CPU emulation",

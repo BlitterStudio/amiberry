@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 class FramePacingProductionTest(unittest.TestCase):
     def test_production_wait(self):
         source = (ROOT / "src/custom.cpp").read_text()
-        start = source.index("\t\tif (!currprefs.cpu_thread) {", source.index("static bool framewait(void)"))
+        start = source.index("\t\tif (!cpu_threaded_run) {", source.index("static bool framewait(void)"))
         end = source.index("\n\t\tevt_t tnow =", start)
         wait = source[start:end]
         fixture = r"""
@@ -23,7 +23,8 @@ class FramePacingProductionTest(unittest.TestCase):
 #define AMIBERRY 1
 using frame_time_t = int64_t;
 static constexpr int64_t syncbase = 1000000;
-static struct { bool cpu_thread = false; bool turbo_emulation = false; } currprefs;
+static struct { bool turbo_emulation = false; } currprefs;
+static bool cpu_threaded_run;
 static int64_t now, deadline;
 static int sleeps, audio_calls, rtg_calls, audio_cost, overshoot;
 static bool sleep_fails;
@@ -52,7 +53,8 @@ static void reset(int period) {
     now = 0; deadline = period;
     sleeps = audio_calls = rtg_calls = audio_cost = overshoot = 0;
     sleep_fails = false;
-    currprefs.cpu_thread = currprefs.turbo_emulation = false;
+    currprefs.turbo_emulation = false;
+    cpu_threaded_run = false;
 }
 int main() {
     for (int period : {16683, 20032}) {
@@ -81,8 +83,9 @@ int main() {
         production_wait();
         assert(sleeps == 0 && audio_calls == 0);
 
+        // A threaded CPU (fastest speed only) paces the frame itself.
         reset(period);
-        currprefs.cpu_thread = true;
+        cpu_threaded_run = true;
         production_wait();
         assert(sleeps == 0 && now == 0);
 

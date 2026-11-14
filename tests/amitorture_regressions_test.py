@@ -3,6 +3,7 @@
 import os
 from pathlib import Path
 import platform
+import re
 import shlex
 import subprocess
 import tempfile
@@ -39,6 +40,25 @@ def function(text, signature):
     while ";" in text[start:text.index("{", start)]:
         start = text.index(signature, start + len(signature))
     return text[start:text.index("\n}", start) + 2]
+
+
+def served_credit(text):
+    """The progress credit of served requests (newcpu.cpp): what
+    service_cpu_indirect_request() adds to and the chipset loop takes."""
+    insn = re.search(r"^#define CPU_THREAD_INSN_CREDIT\b.*$", text, re.M)[0]
+    start = text.index("static uae_s64 cpu_thread_served_credit;")
+    return ("\n" + insn + "\n" + text[start:text.index("\n", start) + 1] +
+            function(text, "static inline uae_s64 cpu_thread_take_served_credit("))
+
+
+def wake_main(text):
+    """cpu_thread_wake_nap(), cpu_thread_wake_main() and the nap state they
+    signal (newcpu.cpp)."""
+    start = text.index("static std::mutex cpu_thread_nap_lock;")
+    end = text.index("static void cpu_thread_wake_main();", start)
+    return ("\n#ifndef NOINLINE\n#define NOINLINE __attribute__((noinline))\n#endif\n" + text[start:end] +
+            function(text, "static NOINLINE void cpu_thread_wake_nap(") +
+            function(text, "static NOINLINE void cpu_thread_wake_main("))
 
 
 def run_cpp(code):
@@ -215,6 +235,7 @@ struct { int cachesize, cpu_model, mmu_model; } currprefs;
 bool m68k_accurate_ipl;
 void set_special(int f) { regs.spcflags |= f; }
 void unset_special(int f) { regs.spcflags &= ~f; }
+void unset_special_cpu(int f) { regs.spcflags &= ~f; }
 void mmu_set_super(bool) {}
 void activate_trace() {}
 """ + function(source("src/newcpu.cpp"), "static void MakeFromSR_x(") + r"""
@@ -661,33 +682,154 @@ int main() {
             self.assertNotRegex(function(generator, f"static void gen_{operation}("),
                                 r'comprintf\("[^"]*dont_care_flags')
 
+    def test_threaded_jit_kicks_end_compiled_code_without_losing_cycles(self):
+        text = source("src/newcpu.cpp")
+        declarations = text[text.index("#if defined(__GNUC__) || defined(__clang__)\n#define CPU_THREAD_RARE(x)"):
+                            text.index("static inline void cpu_thread_spin_pause()")]
+        kick_state = text[text.index("// Kicking the threaded JIT."):
+                          text.index("// A consistent JIT total;")]
+        events = source("src/include/events.h")
+        self.assertIn("cpu_thread_kick();", function(events, "STATIC_INLINE void cycles_do_special ("))
+        thread = function(text, "static void run_cpu_thread(")
+        self.assertRegex(thread, r"paced == 2 && CPU_THREAD_RARE\(regs\.spcflags & CPU_THREAD_KICK_FLAGS\)\)\s*cpu_thread_kick\(\);")
+        self.assertIn("cpu_thread_jit_unkick();", thread)
+        for path in ("src/osdep/sigsegv_handler.cpp",):
+            self.assertNotIn("countdown = 0;", source(path))
+        run_cpp(r"""
+constexpr int CYCLE_UNIT = 512;
+int countdown, pissoff_value = 1000000;
+thread_local bool cpu_worker;
+using evt_t = uae_u64;
+void cpu_thread_spin_pause() {}
+uae_s64 cpu_thread_jit_own_total() { return 0; }
+void cpu_thread_timed_check(uae_s64) { assert(false); }   // timed pacing only
+""" + declarations + kick_state +
+                function(text, "static bool cpu_thread_jit_total(") +
+                function(text, "static uae_s64 cpu_thread_progress(") +
+                function(text, "static void cpu_thread_jit_set_countdown(") +
+                function(text, "static void cpu_thread_jit_refill(") +
+                function(text, "static void cpu_thread_jit_break(") +
+                function(text, "void cpu_thread_kick()") +
+                function(text, "static void cpu_thread_jit_unkick()") +
+                function(text, "static void cpu_thread_jit_count(") + r"""
+int main() {
+    // Single-threaded: a kick ends the dispatch and keeps the count exact.
+    cpu_thread_paced = 2;
+    uae_s64 seen = 0;
+    countdown = cpu_thread_jit_base = pissoff_value;
+    countdown -= 100;
+    cpu_thread_kick();
+    assert(countdown == CPU_THREAD_KICK && cpu_thread_progress(&seen) == 100);
+    cpu_thread_kick();   // kicked already
+    assert(countdown == CPU_THREAD_KICK);
+    countdown -= 7;      // the block running ends: still negative
+    assert(countdown < 0 && cpu_thread_progress(&seen) == 7);
+    cpu_thread_jit_count(5);   // interpreted instructions consume the kick
+    assert(countdown == pissoff_value && cpu_thread_progress(&seen) == 5);
+    cpu_thread_kick();
+    cpu_thread_jit_break();    // a kick is left alone
+    assert(countdown == CPU_THREAD_KICK && cpu_thread_progress(&seen) == 0);
+    cpu_thread_jit_refill();
+    assert(countdown == pissoff_value && cpu_thread_progress(&seen) == 0);
+    cpu_worker = true;         // the CPU thread kicks itself without a swap
+    countdown -= 3;
+    cpu_thread_kick();
+    assert(countdown == -1 && cpu_thread_progress(&seen) == 3);
+    cpu_worker = false;
+    cpu_thread_kick();
+    assert(countdown == CPU_THREAD_KICK && cpu_thread_progress(&seen) == 0);
+    cpu_thread_jit_unkick();   // nothing left for the next CPU loop
+    assert(countdown == 0 && cpu_thread_paced == 0);
+    cpu_thread_kick();         // not running the JIT: no kick
+    assert(countdown == 0);
+
+    // Concurrent: compiled blocks subtract without a lock while another
+    // thread kicks. Kicks end dispatches; not one cycle is lost or made up.
+    cpu_thread_paced = 2;
+    seen = 0;
+    countdown = cpu_thread_jit_base = pissoff_value;
+    std::atomic<bool> done{false};
+    uae_s64 executed = 0;
+    int kicked_exits = 0, natural_exits = 0;
+    std::thread worker([&] {
+        cpu_worker = true;
+        uae_u32 r = 1;
+        for (int i = 0; i < 3000000; i++) {
+            r = r * 1103515245u + 12345u;
+            const int c = (r >> 16) % 64 + 1;
+            const int cd = __atomic_load_n(&countdown, __ATOMIC_RELAXED);
+            __atomic_store_n(&countdown, cd - c, __ATOMIC_RELAXED);
+            executed += c;
+            if (cd - c < 0) {
+                if (cd - c < CPU_THREAD_KICKED)
+                    ++kicked_exits;
+                else
+                    ++natural_exits;
+                cpu_thread_jit_refill();
+            }
+            if ((i & 1023) == 0) {
+                cpu_thread_jit_count(c);
+                executed += c;
+            }
+            if ((i & 8191) == 0)
+                cpu_thread_kick();
+        }
+        done = true;
+    });
+    uae_s64 total = 0;
+    int kicks = 0;
+    while (!done) {
+        cpu_thread_kick();
+        ++kicks;
+        total += cpu_thread_progress(&seen);
+        for (int k = 0; k < 200; k++)
+            __atomic_signal_fence(__ATOMIC_SEQ_CST);
+    }
+    worker.join();
+    total += cpu_thread_progress(&seen);
+    assert(total == executed);
+    assert(kicks > 0 && kicked_exits > 0);
+    return 0;
+}
+""")
+
     def test_threaded_cpu_progress_and_bounded_chipset_waits(self):
         text = source("src/newcpu.cpp")
-        declarations = text[text.index("static struct alignas(64) {"):
+        pacing = "#if defined(__GNUC__) || defined(__clang__)\n#define CPU_THREAD_RARE(x)"
+        declarations = text[text.index(pacing):
                             text.index("static inline void cpu_thread_spin_pause()")]
+        kick_state = text[text.index("// Kicking the threaded JIT."):
+                          text.index("// A consistent JIT total;")]
         thread = function(text, "static void run_cpu_thread(")
         start = thread.index("\t\tfor (int i = 0; i < cycles_to_do; i++)")
         batch = thread[start:thread.index("\n\t\tcheck_debugger();", start)]
         run_cpp(r"""
 constexpr int CYCLE_UNIT = 512;
 constexpr int SPCFLAG_CPUINRESET = 1, SPCFLAG_MODE_CHANGE = 2, SPCFLAG_CALLBACK = 4;
-constexpr int SPCFLAG_INT = 8;
+constexpr int SPCFLAG_INT = 8, SPCFLAG_CPU_THREAD_SYNC = 16, SPCFLAG_BRK = 32;
 using frame_time_t = uae_s64;
 using evt_t = uae_u64;
 struct { bool stopped, halted; int spcflags; } regs;
-int countdown, pissoff_value = 100000, cpu_thread_reset;
+int countdown, pissoff_value = 100000, cpu_thread_reset, m68k_reset_delay;
 int cpu_thread_ilvl, cpu_wakeup_sema;
-""" + declarations +
+uae_u32 cpu_thread_indirect_mode;
+int clock_reads, spins, requests;
+void cpu_thread_spin_pause() { ++spins; }
+bool cpu_worker;
+uae_u32 cpu_thread_blit_held;
+""" + declarations + kick_state +
+                function(text, "static bool cpu_thread_jit_total(") +
                 function(text, "static uae_s64 cpu_thread_progress(") +
                 function(text, "static bool cpu_thread_unpaced(") +
+                function(text, "static void cpu_thread_jit_set_countdown(") +
+                function(text, "static void cpu_thread_jit_refill(") +
+                function(text, "static void cpu_thread_jit_break(") +
                 function(text, "static void cpu_thread_jit_count(") + r"""
 evt_t chipset_cycles;
 frame_time_t syncbase = 1000000, vsynctimebase = 20000;
-int clock_reads, spins, requests;
 bool indirect;
 frame_time_t read_processor_time() { return ++clock_reads * 50; }
-void cpu_thread_spin_pause() { ++spins; }
-bool service_cpu_indirect_request() { ++requests; return indirect; }
+bool service_cpu_indirect_request(bool = false) { ++requests; return indirect; }
 evt_t get_cycles() { return chipset_cycles; }
 void do_cycles(int n) { chipset_cycles += n; }
 void check_uae_int_request() {}
@@ -695,6 +837,12 @@ int intlev() { return 0; }
 void atomic_set(int *p, int value) { *p = value; }
 void set_special(int flag) { regs.spcflags |= flag; }
 void uae_sem_post(int *) {}
+bool cpu_thread_interrupt_wakes(int) { return false; }
+void cpu_thread_main_wait_wake() {}
+void cpu_thread_flush_resume() {}
+struct { unsigned armed; } cpu_thread_snap_main;   // no register snapshot armed
+void cpu_thread_snap_publish(bool) { assert(false); }
+""" + served_credit(text) + r"""
 void run_batch(int cycles_to_do) {
     uae_s64 tokens_seen = 0, credit = 0;
     int cck_cnt = 0, intlev_prev = 0;
@@ -704,25 +852,56 @@ int main() {
     cpu_thread_paced = 1;
     uae_s64 seen = 0;
     cpu_thread_tokens = 3;
-    assert(cpu_thread_progress(&seen) == 3 * CPU_THREAD_INSN_CREDIT);
+    assert(cpu_thread_progress(&seen) == 3);
     assert(seen == 3 && cpu_thread_progress(&seen) == 0);
     cpu_thread_tokens = 5;
-    assert(cpu_thread_progress(&seen) == 2 * CPU_THREAD_INSN_CREDIT);
+    assert(cpu_thread_progress(&seen) == 2);
+    // A stale total adds nothing and does not move the mark back.
+    cpu_thread_tokens = 4;
+    assert(cpu_thread_progress(&seen) == 0 && seen == 5);
+    cpu_thread_tokens = 6;
+    assert(cpu_thread_progress(&seen) == 1);
 
+    // The JIT: progress is live, read from countdown at any time.
     cpu_thread_paced = 2;
-    seen = countdown = pissoff_value;
+    seen = 0;
+    countdown = cpu_thread_jit_base = pissoff_value;
+    assert(cpu_thread_progress(&seen) == 0);
+    countdown -= 11;   // a compiled block
+    assert(cpu_thread_progress(&seen) == 11);
     cpu_thread_jit_count(42);
     assert(cpu_thread_progress(&seen) == 42);
     assert(cpu_thread_progress(&seen) == 0);
-    countdown = 10;
-    seen = 10;
-    countdown = pissoff_value - 17;
-    assert(cpu_thread_progress(&seen) == 17);
-    countdown = pissoff_value;
+    // Work is counted once however many refills happen between chipset
+    // samples; a refill itself adds no progress.
+    countdown -= 17;
+    cpu_thread_jit_refill();
+    countdown -= pissoff_value + 3;
+    cpu_thread_jit_refill();
+    assert(countdown == pissoff_value);
+    assert(cpu_thread_progress(&seen) == 17 + pissoff_value + 3);
+    cpu_thread_jit_refill();
     assert(cpu_thread_progress(&seen) == 0);
-    countdown = 1;
+    countdown -= 31;
+    cpu_thread_jit_break();
+    assert(countdown == -1 && cpu_thread_progress(&seen) == 31);
+    cpu_thread_jit_break();   // already leaving: nothing changes
+    assert(countdown == -1 && cpu_thread_progress(&seen) == 0);
+    cpu_thread_jit_refill();
+    assert(cpu_thread_progress(&seen) == 0);
+    cpu_thread_jit_set_countdown(1);
+    assert(cpu_thread_progress(&seen) == 0);
     cpu_thread_jit_count(2);
     assert(countdown == pissoff_value);
+    assert(cpu_thread_progress(&seen) == 2);
+    // A sample taken while the CPU thread changes countdown is skipped.
+    ++cpu_thread_jit_seq;
+    countdown -= 5;
+    spins = 0;
+    assert(cpu_thread_progress(&seen) == 0 && spins > 0);
+    ++cpu_thread_jit_seq;
+    assert(cpu_thread_progress(&seen) == 5);
+    assert(!(cpu_thread_jit_seq & 1));
 
     cpu_thread_paced = 1;
     cpu_thread_tokens = 0;
@@ -755,6 +934,940 @@ int main() {
     run_batch(128);
     assert(chipset_cycles == 128 * CYCLE_UNIT && requests > 0);
     assert(spins == 0);
+}
+""")
+
+    def test_threaded_cpu_unbounded_jit_fallback_yields_for_pause(self):
+        text = source("src/newcpu.cpp")
+        run_cpp(r"""
+constexpr int SPCFLAG_MODE_CHANGE = 1, SPCFLAG_CPU_THREAD_SYNC = 2, CYCLE_UNIT = 512;
+struct regstruct { uaecptr instruction_pc; uae_u32 opcode; int spcflags; } regs;
+bool cpu_threaded_run = true;
+int cpu_thread_pause_requested, cpu_cycles, uae_int_requested, steps, accounted;
+bool changing_mode;
+uaecptr m68k_getpc() { return 0x30000; }
+uae_u32 get_jit_opcode() { return 0; }
+void instruction(uae_u32) {
+    if (++steps == 5) {
+        if (changing_mode) regs.spcflags = SPCFLAG_MODE_CHANGE;
+        else { cpu_thread_pause_requested = 1; regs.spcflags = SPCFLAG_CPU_THREAD_SYNC; }
+    }
+    assert(steps <= 5);
+}
+void (*cpufunctbl[])(uae_u32) = {instruction};
+bool end_block(uae_u32) { return false; } // e.g. a constant-jump loop
+void do_cycles(int) { assert(false); }
+void cpu_thread_jit_count(int) { ++accounted; }
+""" + function(text, "static inline bool cpu_thread_leave_jit(") +
+                function(text, "static bool cpu_thread_exit_dispatch(") +
+                function(text, "void exec_nostats (") + r"""
+int main() {
+    for (bool mode_change : {false, true}) {
+        changing_mode = mode_change;
+        steps = accounted = cpu_thread_pause_requested = regs.spcflags = 0;
+        exec_nostats();
+        assert(steps == 5 && accounted == 5);
+    }
+}
+""")
+
+    def test_threaded_cpu_pause_does_not_abandon_expired_jit_recompilation(self):
+        text = source("src/newcpu.cpp")
+        run_cpp(r"""
+constexpr int SPCFLAG_MODE_CHANGE = 1, SPCFLAG_CPU_THREAD_SYNC = 2, CYCLE_UNIT = 512, MAXRUN = 4;
+bool cpu_threaded_run = true;
+struct regstruct {
+    uaecptr instruction_pc, pc;
+    uae_u32 opcode;
+    uae_u16 *pc_oldp, *pc_p;
+    int spcflags;
+} regs;
+struct cpu_history { uae_u16 *location; int specmem; };
+int cpu_cycles, uae_int_requested, steps, accounted, compiled, hot_count;
+int cpu_thread_pause_requested, special_mem, special_mem_default;
+uae_u16 *start_pc_p;
+uaecptr start_pc;
+uae_u16 words[MAXRUN + 1];
+bool check_for_cache_miss() { return false; }
+uaecptr m68k_getpc() { return regs.pc; }
+uae_u32 get_jit_opcode() { return 0; }
+void instruction(uae_u32) {
+    ++steps;
+    regs.pc += 2;
+    regs.pc_p = words + steps;
+    if (steps == 2) { cpu_thread_pause_requested = 1; regs.spcflags |= SPCFLAG_CPU_THREAD_SYNC; }
+    assert(steps <= MAXRUN);
+}
+void (*cpufunctbl[])(uae_u32) = {instruction};
+bool end_block(uae_u32) { return false; }
+void do_cycles(int) { assert(false); }
+void cpu_thread_jit_count(int) { ++accounted; }
+void compile_block(cpu_history *history, int length, int cycles) {
+    assert(history[0].location == words);
+    assert(length == steps && cycles == steps * 4 * CYCLE_UNIT);
+    assert(hot_count == -1); // The generated handler already decremented it.
+    hot_count = 7;
+    ++compiled;
+}
+""" + function(text, "static inline bool cpu_thread_leave_jit(") +
+                function(text, "static bool cpu_thread_exit_dispatch(") +
+                function(text, "void execute_normal(") + r"""
+int main() {
+    for (int scenario : {0, 1, 2}) {
+        regs = {};
+        regs.pc = 0x1000;
+        regs.pc_oldp = regs.pc_p = words;
+        steps = accounted = compiled = 0;
+        hot_count = -1;
+        cpu_thread_pause_requested = scenario == 0;
+        regs.spcflags = scenario == 2 ? SPCFLAG_MODE_CHANGE
+            : scenario == 0 ? SPCFLAG_CPU_THREAD_SYNC : 0;
+        execute_normal();
+        assert(cpu_thread_exit_dispatch());
+        assert(compiled == 1 && hot_count == 7);
+        // Any special flag (pause raises SPCFLAG_CPU_THREAD_SYNC) ends the
+        // recording, but the expired block must still be compiled.
+        assert(steps == (scenario == 1 ? 2 : 1));
+        assert(accounted == steps);
+    }
+}
+""")
+
+    def test_threaded_cpu_safepoints_nesting_and_fast_worker_exit(self):
+        text = source("src/newcpu.cpp")
+        threaded = text[text.index("template <typename Busy>\nstatic bool cpu_thread_poll_while("):]
+        run_cpp(r"""
+#include <mutex>
+#include <condition_variable>
+#include <chrono>
+#define DEBUGGER
+#define _T(x) x
+#define TRY(x) try
+#define CATCH(x) catch (int x)
+#define ENDTRY
+constexpr int SPCFLAG_MODE_CHANGE = 1, SPCFLAG_CALLBACK = 2, SPCFLAG_BRK = 4;
+constexpr int SPCFLAG_CPU_THREAD_SYNC = 8;
+struct { volatile int spcflags; } regs;
+int debugging = 1;
+struct uae_sem_t {
+    std::mutex mutex;
+    std::condition_variable changed;
+    unsigned count = 0;
+};
+uae_sem_t cpu_park_sema, cpu_resume_sema, cpu_wakeup_sema, cpu_request_sema;
+void uae_sem_post(uae_sem_t *s) {
+    std::lock_guard<std::mutex> lock(s->mutex);
+    ++s->count;
+    s->changed.notify_one();
+}
+void uae_sem_wait(uae_sem_t *s) {
+    std::unique_lock<std::mutex> lock(s->mutex);
+    s->changed.wait(lock, [s] { return s->count != 0; });
+    --s->count;
+}
+int uae_sem_trywait(uae_sem_t *s) {
+    std::lock_guard<std::mutex> lock(s->mutex);
+    if (!s->count) return -1;
+    --s->count;
+    return 0;
+}
+void uae_sem_trywait_delay(uae_sem_t *s, int ms) {
+    std::unique_lock<std::mutex> lock(s->mutex);
+    if (s->changed.wait_for(lock, std::chrono::milliseconds(ms),
+                           [s] { return s->count != 0; }))
+        --s->count;
+}
+int cpu_thread_active, cpu_thread_pause_depth;
+int cpu_thread_pause_requested, cpu_thread_parked;
+int cpu_thread_debugger_waiting;
+thread_local bool cpu_worker;
+bool is_mainthread() { return !cpu_worker; }
+int (*cpu_thread_function)(void *);
+bool service_cpu_indirect_request() { return false; }
+void service_cpu_thread_reset() {}
+void unset_special(int flag) { __atomic_fetch_and(&regs.spcflags, ~flag, __ATOMIC_SEQ_CST); }
+void set_special(int flag) { __atomic_fetch_or(&regs.spcflags, flag, __ATOMIC_SEQ_CST); }
+void device_call_main_thread_callbacks() {}
+void write_log(const char *, ...) {}
+void cpu_thread_main_sleep(int ms) { uae_sem_trywait_delay(&cpu_request_sema, ms); }
+void cpu_thread_spin_pause() { std::this_thread::yield(); }
+uint64_t SDL_GetTicksNS() {
+    return std::chrono::duration_cast<std::chrono::nanoseconds>(
+        std::chrono::steady_clock::now().time_since_epoch()).count();
+}
+constexpr uint64_t CPU_THREAD_PARK_SPIN_NS = 50000, CPU_THREAD_IDLE_SPIN_NS = 500000;
+enum { CPU_THREAD_RUNNING, CPU_THREAD_PARKED, CPU_THREAD_IDLE, CPU_THREAD_IDLE_HELD };
+using uae_atomic = int;
+bool cpu_threaded_run = true;
+void cpu_thread_timed_resync() {}
+#define CPU_THREAD_RARE(x) __builtin_expect(!!(x), 0)
+struct { bool loop_running, resume_deferred; } cpu_thread_main;
+struct { bool armed; } cpu_thread_snap_main;
+void cpu_thread_snap_publish(bool) {}
+void debug();
+int cpu_thread_main_sleeping;
+""" + wake_main(text) + "template <typename Busy>\n" + function(threaded, "static bool cpu_thread_poll_while(") +
+                function(threaded, "static void cpu_thread_safepoint(") +
+                function(threaded, "static void cpu_thread_idle_wait(") +
+                function(threaded, "static bool cpu_thread_hold_idle(") +
+                function(threaded, "static void cpu_thread_release_idle(") +
+                function(text, "static bool cpu_thread_debugger_wait(") +
+                function(text, "static void cpu_thread_debugger_resume(") +
+                function(text, "static bool take_special(") +
+                function(text, "static void check_debugger(") +
+                function(text, "bool cpu_thread_pause(") +
+                function(text, "static void cpu_thread_release_pause(") +
+                function(text, "void cpu_thread_resume(") +
+                function(text, "static inline void cpu_thread_flush_resume(") +
+                function(text, "static int cpu_thread_entry(") + r"""
+std::atomic<bool> finish, cpu_stopped;
+std::atomic<unsigned> instructions;
+std::vector<unsigned> debug_stops;
+void debug() {
+    assert(!cpu_worker);
+    if (!cpu_thread_pause()) {
+        // The worker finished after its last single step armed one more stop.
+        assert(__atomic_load_n(&cpu_thread_active, __ATOMIC_ACQUIRE) == 2);
+        return;
+    }
+    assert(__atomic_load_n(&cpu_thread_parked, __ATOMIC_ACQUIRE));
+    debug_stops.push_back(instructions);
+    // Single-step arms the next boundary before the parked worker resumes.
+    set_special(SPCFLAG_BRK);
+    cpu_thread_resume();
+}
+int execute(void *) {
+    assert(!cpu_thread_pause());
+    while (!finish.load()) {
+        // As the fast paths do: a park request is seen only through the flag.
+        if (regs.spcflags & SPCFLAG_CPU_THREAD_SYNC) {
+            unset_special(SPCFLAG_CPU_THREAD_SYNC);
+            cpu_thread_safepoint();
+        }
+        ++instructions;
+    }
+    return 0;
+}
+void started() {
+    while (!__atomic_load_n(&cpu_thread_active, __ATOMIC_ACQUIRE))
+        std::this_thread::yield();
+}
+int main() {
+    assert(!cpu_thread_pause());
+    cpu_thread_function = execute;
+    std::thread worker([] { cpu_thread_entry(nullptr); });
+    started();
+    for (unsigned attempt = 0; attempt < 100; ++attempt) {
+        assert(cpu_thread_pause());
+        assert(__atomic_load_n(&cpu_thread_parked, __ATOMIC_ACQUIRE));
+        assert(cpu_thread_pause());
+        unsigned frozen = instructions.load();
+        cpu_thread_resume();
+        std::this_thread::sleep_for(std::chrono::microseconds(20));
+        assert(instructions == frozen);
+        cpu_thread_resume();
+        while (instructions == frozen)
+            std::this_thread::yield();
+    }
+    // Inside the chipset loop, back-to-back guards share one park: the worker
+    // stays frozen until the loop flushes the deferred resume.
+    cpu_thread_main.loop_running = true;
+    for (unsigned attempt = 0; attempt < 100; ++attempt) {
+        assert(cpu_thread_pause());
+        unsigned frozen = instructions.load();
+        cpu_thread_resume();
+        assert(cpu_thread_main.resume_deferred);
+        assert(cpu_thread_pause());
+        assert(!cpu_thread_main.resume_deferred);
+        cpu_thread_resume();
+        std::this_thread::sleep_for(std::chrono::microseconds(20));
+        assert(instructions == frozen);
+        assert(__atomic_load_n(&cpu_thread_parked, __ATOMIC_ACQUIRE) == CPU_THREAD_PARKED);
+        cpu_thread_flush_resume();
+        assert(!cpu_thread_main.resume_deferred);
+        while (instructions == frozen)
+            std::this_thread::yield();
+    }
+    cpu_thread_flush_resume();
+    cpu_thread_main.loop_running = false;
+    finish = true;
+    worker.join();
+    assert(cpu_thread_active == 2 && !cpu_thread_parked);
+    assert(!cpu_thread_pause());
+
+    // A worker sleeping in STOP is held where it is, without being woken up,
+    // and stays held when an interrupt wakes it before the resume.
+    cpu_thread_active = 0;
+    finish = false;
+    instructions = 0;
+    cpu_thread_function = [](void *) {
+        while (!finish.load()) {
+            if (regs.spcflags & SPCFLAG_CPU_THREAD_SYNC) {
+                unset_special(SPCFLAG_CPU_THREAD_SYNC);
+                cpu_thread_safepoint();
+            }
+            if (cpu_stopped.load()) {
+                cpu_thread_idle_wait(true);
+                continue;
+            }
+            ++instructions;
+        }
+        return 0;
+    };
+    std::thread idling([] { cpu_thread_entry(nullptr); });
+    started();
+    unsigned held = 0;
+    for (unsigned attempt = 0; attempt < 300; ++attempt) {
+        cpu_stopped = attempt % 3 != 0;
+        std::this_thread::sleep_for(std::chrono::microseconds(attempt % 7 * 20));
+        assert(cpu_thread_pause());
+        int state = __atomic_load_n(&cpu_thread_parked, __ATOMIC_ACQUIRE);
+        assert(state == CPU_THREAD_PARKED || state == CPU_THREAD_IDLE_HELD);
+        held += state == CPU_THREAD_IDLE_HELD;
+        assert(cpu_thread_pause());
+        cpu_thread_resume();
+        unsigned frozen = instructions.load();
+        cpu_stopped = false;
+        uae_sem_post(&cpu_wakeup_sema);
+        std::this_thread::sleep_for(std::chrono::microseconds(20));
+        assert(instructions == frozen);
+        cpu_thread_resume();
+        while (instructions == frozen)
+            std::this_thread::yield();
+    }
+    assert(held > 0);
+    finish = true;
+    uae_sem_post(&cpu_wakeup_sema);
+    idling.join();
+    assert(cpu_thread_active == 2 && !cpu_thread_parked);
+    // Exiting before the starter samples state must not look like "not started".
+    cpu_thread_active = 0;
+    cpu_thread_function = [](void *) { return 0; };
+    std::thread immediate([] { cpu_thread_entry(nullptr); });
+    immediate.join();
+    started();
+    assert(cpu_thread_active == 2);
+
+    cpu_thread_active = 0;
+    instructions = 0;
+    set_special(SPCFLAG_BRK);
+    cpu_thread_function = [](void *) {
+        while (instructions < 3) {
+            check_debugger();
+            ++instructions;
+        }
+        return 0;
+    };
+    std::thread stepping([] { cpu_thread_entry(nullptr); });
+    started();
+    while (__atomic_load_n(&cpu_thread_active, __ATOMIC_ACQUIRE) == 1) {
+        check_debugger();
+        std::this_thread::yield();
+    }
+    stepping.join();
+    assert((debug_stops == std::vector<unsigned>{0, 1, 2}));
+}
+""")
+
+    def test_threaded_cpu_register_snapshot(self):
+        text = source("src/newcpu.cpp")
+        snapshot = text[text.index("// Register snapshot."):
+                        text.index("uae_u32 process_cpu_indirect_memory_read(")]
+        run_cpp(r"""
+#include <algorithm>
+#define NOINLINE __attribute__((noinline))
+#define CPU_THREAD_RARE(x) __builtin_expect(!!(x), 0)
+uint64_t host_ns;
+uint64_t SDL_GetTicksNS() { return host_ns; }
+void cpu_thread_spin_pause() {}
+struct addrbank { int id; };
+addrbank custom_bank{1}, cia_bank{2}, chip_bank{3};
+struct { int cs_fatgaryrev = -1; } currprefs;
+std::atomic<uae_u32> beam{0x2c00};
+uae_u16 chip_regs[4] = {0x0200, 0x4020, 0x0020, 0x1100};
+uae_u8 pra = 0xfc;
+bool pra_ok = true;
+unsigned pra_reads;
+bool custom_cpu_thread_pos(uae_u16 *vposr, uae_u16 *vhposr) {
+    const uae_u32 b = beam.load(std::memory_order_relaxed);
+    *vposr = b >> 16;
+    *vhposr = (uae_u16)b;
+    return true;
+}
+void custom_cpu_thread_regs(uae_u16 *v) { memcpy(v, chip_regs, sizeof chip_regs); }
+bool cia_cpu_thread_pra(uae_u8 *v) { ++pra_reads; *v = pra; return pra_ok; }
+""" + snapshot + r"""
+bool rd(const addrbank &ab, uaecptr addr, int size, uae_u32 *v) {
+    return cpu_thread_snap_read(&ab, addr, size, v);
+}
+uae_u32 must(const addrbank &ab, uaecptr addr, int size) {
+    uae_u32 v = 0xdeadbeef;
+    assert(rd(ab, addr, size, &v));
+    return v;
+}
+int main() {
+    uae_u32 v;
+    cpu_thread_snap_reset();
+    // Nothing is used before a read through the mailbox arms it.
+    assert(!rd(custom_bank, 0xdff006, 1, &v));
+    cpu_thread_snap_publish(true);
+    assert(!rd(custom_bank, 0xdff006, 1, &v));
+
+    beam = 0x00012c40;
+    cpu_thread_snap_arm(&custom_bank, 0xdff006, 1);
+    // reads from the copy take a budget refilled from the colour clocks
+    // published: give the checks below a line's worth
+    for (int t = 0; t < CPU_THREAD_SNAP_BUDGET_TICKS; t++)
+        cpu_thread_snap_publish(true);
+    assert(must(custom_bank, 0xdff006, 1) == 0x2c40);
+    assert(must(custom_bank, 0xdff004, 2) == 0x00012c40);   // VPOSR:VHPOSR together
+    assert(must(custom_bank, 0xdff006, 0) == 0x2c);
+    assert(must(custom_bank, 0xdff007, 0) == 0x40);
+    assert(must(custom_bank, 0xc0f006, 1) == 0x2c40);       // register mirrors
+    assert(!rd(custom_bank, 0xdff007, 1, &v));              // odd word: two registers
+    currprefs.cs_fatgaryrev = 0;                            // Fat Gary: unmapped below 0xdf8000
+    assert(!rd(custom_bank, 0xdf7006, 1, &v));
+    currprefs.cs_fatgaryrev = -1;
+    assert(must(custom_bank, 0xdf7006, 1) == 0x2c40);
+    assert(!rd(chip_bank, 0xdff006, 1, &v));
+    assert(!rd(custom_bank, 0xdff018, 1, &v));              // SERDATR has side effects
+    // The beam position is copied every colour clock.
+    beam = 0x00012c41;
+    cpu_thread_snap_publish(true);
+    assert(must(custom_bank, 0xdff006, 1) == 0x2c41);
+    // Only armed groups are used.
+    assert(!rd(custom_bank, 0xdff01e, 1, &v));
+    cpu_thread_snap_arm(&custom_bank, 0xdff01e, 1);
+    cpu_thread_snap_publish(false);
+    assert(must(custom_bank, 0xdff002, 1) == 0x0200);
+    assert(must(custom_bank, 0xdff01c, 2) == 0x40200020);
+    assert(must(custom_bank, 0xdff010, 1) == 0x1100);
+    assert(!rd(custom_bank, 0xdff002, 2, &v));              // DMACONR + VPOSR: two copies
+    // A change is published at the next colour clock.
+    chip_regs[2] = 0x0024;
+    cpu_thread_snap_publish(true);
+    assert(must(custom_bank, 0xdff01e, 1) == 0x0024);
+    // While the chipset time stands still for longer than a line of host
+    // time, reads go through the mailbox until it moves on.
+    for (int i = 0; i < 2 * CPU_THREAD_SNAP_CLOCK_READS; i++)
+        must(custom_bank, 0xdff006, 1);
+    host_ns += CPU_THREAD_SNAP_FROZEN_NS - 1;
+    for (int i = 0; i < CPU_THREAD_SNAP_CLOCK_READS; i++)
+        must(custom_bank, 0xdff006, 1);
+    host_ns += 1;
+    {
+        int i = 0;
+        while (rd(custom_bank, 0xdff006, 1, &v))
+            assert(++i <= CPU_THREAD_SNAP_CLOCK_READS);
+    }
+    assert(!rd(custom_bank, 0xdff01e, 1, &v));
+    cpu_thread_snap_publish(true);
+    assert(must(custom_bank, 0xdff006, 1) == 0x2c41);
+    host_ns += 10 * CPU_THREAD_SNAP_FROZEN_NS;
+    assert(must(custom_bank, 0xdff01e, 1) == 0x0024);      // checked again only later
+    // After an interrupt only a copy published later is used.
+    const uae_u32 seq = cpu_thread_snap_regs.seq;
+    cpu_thread_snap_interrupt();
+    assert(!rd(custom_bank, 0xdff01e, 1, &v));
+    assert(must(custom_bank, 0xdff006, 1) == 0x2c41);       // the beam is not affected
+    for (int i = 1; i < CPU_THREAD_SNAP_REFRESH && cpu_thread_snap_regs.seq == seq; i++)
+        cpu_thread_snap_publish(true);                     // unchanged: republished
+    assert(cpu_thread_snap_regs.seq != seq);
+    assert(must(custom_bank, 0xdff01e, 1) == 0x0024);
+    cpu_thread_snap_interrupt();
+    assert(!rd(custom_bank, 0xdff01e, 1, &v));
+    cpu_thread_snap_publish(false);                        // a served request republishes
+    assert(must(custom_bank, 0xdff01e, 1) == 0x0024);
+    // CIA-A PRA, byte reads of 0xbfe001 only
+    assert(!rd(cia_bank, 0xbfe001, 0, &v));
+    cpu_thread_snap_arm(&cia_bank, 0xbfe001, 0);
+    cpu_thread_snap_publish(false);
+    assert(must(cia_bank, 0xbfe001, 0) == 0xfc);
+    assert(!rd(cia_bank, 0xbfe041, 0, &v));
+    assert(!rd(cia_bank, 0xbfe101, 0, &v));
+    assert(!rd(cia_bank, 0xbfe000, 1, &v));
+    assert(!rd(cia_bank, 0xbfd000, 0, &v));
+    pra = 0xbc;
+    const unsigned before = pra_reads;
+    for (int i = 0; i < CPU_THREAD_SNAP_CIA_REFRESH; i++)
+        cpu_thread_snap_publish(true);
+    assert(pra_reads == before + 1);
+    assert(must(cia_bank, 0xbfe001, 0) == 0xbc);
+    // CIA reads take a budget refilled from the colour clocks published, as
+    // the CPU on the main thread pays E-clock time for each one.
+    while (rd(cia_bank, 0xbfe001, 0, &v)) {}
+    assert(must(custom_bank, 0xdff01e, 1) == 0x0024);      // custom registers have none
+    cpu_thread_snap_publish(true);
+    {
+        int i = 0;
+        while (rd(cia_bank, 0xbfe001, 0, &v))
+            ++i;
+        assert(i == cpu_thread_snap_rate.cia);
+    }
+    for (int t = 0; t < 4 * CPU_THREAD_SNAP_BUDGET_TICKS; t++)
+        cpu_thread_snap_publish(true);
+    {
+        int i = 0;                                          // at most a line's worth kept
+        while (rd(cia_bank, 0xbfe001, 0, &v))
+            ++i;
+        assert(i == CPU_THREAD_SNAP_BUDGET_TICKS * cpu_thread_snap_rate.cia);
+    }
+    cpu_thread_snap_publish(true);
+    // The custom registers have a budget of their own: a polling loop with an
+    // iteration bound must not run out of iterations at one chipset time.
+    while (rd(custom_bank, 0xdff006, 1, &v)) {}
+    assert(!rd(custom_bank, 0xdff01e, 1, &v));             // beam and regs share it
+    assert(must(cia_bank, 0xbfe001, 0) == 0xbc);           // the CIA's is separate
+    cpu_thread_snap_publish(true);
+    {
+        int i = 0;
+        while (rd(custom_bank, 0xdff006, 1, &v))
+            ++i;
+        assert(i == cpu_thread_snap_rate.custom);
+    }
+    for (int t = 0; t < 4 * CPU_THREAD_SNAP_BUDGET_TICKS; t++)
+        cpu_thread_snap_publish(true);
+    {
+        int i = 0;                                          // at most a line's worth kept
+        while (rd(custom_bank, 0xdff006, 1, &v))
+            ++i;
+        assert(i == CPU_THREAD_SNAP_BUDGET_TICKS * cpu_thread_snap_rate.custom);
+    }
+    // A longword read takes two, like the two bus accesses it is.
+    cpu_thread_snap_publish(true);
+    {
+        int i = 0;
+        while (rd(custom_bank, 0xdff004, 2, &v))
+            ++i;
+        assert(i == cpu_thread_snap_rate.custom / 2);
+    }
+    // The budgets follow the host's speed, between a floor and a ceiling;
+    // only a faster timing changes them.
+    assert(cpu_thread_snap_rate.custom == CPU_THREAD_SNAP_CUSTOM_MIN);  // untimed
+    assert(cpu_thread_snap_rate.cia == CPU_THREAD_SNAP_CIA_MIN);
+    cpu_thread_snap_set_rate(0);
+    assert(cpu_thread_snap_rate.custom == CPU_THREAD_SNAP_CUSTOM_MIN);
+    cpu_thread_snap_set_rate(CPU_THREAD_SNAP_CIA_NS * 1000 / 3);        // 3 CIA reads
+    assert(cpu_thread_snap_rate.cia == 3);
+    assert(cpu_thread_snap_rate.custom == CPU_THREAD_SNAP_CUSTOM_MIN);
+    cpu_thread_snap_set_rate(1000000);                                  // slower: kept
+    assert(cpu_thread_snap_rate.cia == 3);
+    cpu_thread_snap_set_rate(CPU_THREAD_SNAP_CUSTOM_NS * 1000 / (CPU_THREAD_SNAP_CUSTOM_MIN + 8));
+    assert(cpu_thread_snap_rate.custom == CPU_THREAD_SNAP_CUSTOM_MIN + 8);
+    cpu_thread_snap_set_rate(1);
+    assert(cpu_thread_snap_rate.custom == CPU_THREAD_SNAP_CUSTOM_MAX);
+    assert(cpu_thread_snap_rate.cia == CPU_THREAD_SNAP_CIA_MAX);
+    for (int t = 0; t < 4 * CPU_THREAD_SNAP_BUDGET_TICKS; t++)
+        cpu_thread_snap_publish(true);
+    {
+        int i = 0;
+        while (rd(custom_bank, 0xdff006, 1, &v))
+            ++i;
+        assert(i == CPU_THREAD_SNAP_BUDGET_TICKS * CPU_THREAD_SNAP_CUSTOM_MAX);
+    }
+    cpu_thread_snap_publish(true);
+    pra_ok = false;                                        // input recording started
+    cpu_thread_snap_publish(false);
+    assert(!rd(cia_bank, 0xbfe001, 0, &v));
+    assert(must(custom_bank, 0xdff01e, 1) == 0x0024);
+    pra_ok = true;
+    // Unused copies expire.
+    for (int i = 0; i < CPU_THREAD_SNAP_TTL; i++)
+        cpu_thread_snap_publish(true);
+    assert(!cpu_thread_snap_main.armed);
+    assert(!rd(custom_bank, 0xdff006, 1, &v));
+    assert(!rd(custom_bank, 0xdff01e, 1, &v));
+    assert(!rd(cia_bank, 0xbfe001, 0, &v));
+    // A stopped CPU thread finds nothing on its next start.
+    cpu_thread_snap_arm(&custom_bank, 0xdff006, 1);
+    cpu_thread_snap_publish(false);
+    cpu_thread_snap_reset();
+    assert(!rd(custom_bank, 0xdff006, 1, &v));
+
+    // Concurrent copies are never torn: VPOSR and VHPOSR always match.
+    beam = 0x0000ffff;
+    cpu_thread_snap_arm(&custom_bank, 0xdff006, 1);
+    cpu_thread_snap_publish(false);
+    std::atomic<bool> done{false};
+    std::thread chipset([&] {
+        for (uae_u32 n = 0; n < 2000000; n++) {
+            beam = (n & 0xffff) << 16 | (uae_u16)~n;
+            cpu_thread_snap_publish(!(n % 64));   // colour clocks refill the read budget
+        }
+        done = true;
+    });
+    unsigned hits = 0;
+    while (!done) {
+        if (rd(custom_bank, 0xdff004, 2, &v)) {
+            assert((uae_u16)v == (uae_u16)~(v >> 16));
+            ++hits;
+        }
+    }
+    chipset.join();
+    assert(hits > 0);
+}
+""")
+
+    def test_threaded_cpu_mailbox_completes_during_mode_changes(self):
+        text = source("src/newcpu.cpp")
+        run_cpp(r"""
+#include <mutex>
+#include <condition_variable>
+#include <chrono>
+#define TRY(x) try
+#define CATCH(x) catch (int x)
+#define THROW(x) throw (x)
+#define ENDTRY
+using uae_atomic = int;
+struct uae_sem_t {
+    std::mutex mutex;
+    std::condition_variable changed;
+    unsigned count = 0;
+};
+uae_sem_t cpu_reply_sema, cpu_request_sema;
+void uae_sem_post(uae_sem_t *s) {
+    std::lock_guard<std::mutex> lock(s->mutex);
+    ++s->count;
+    s->changed.notify_one();
+}
+volatile uae_atomic cpu_thread_indirect_mode = 0xff;
+std::atomic<unsigned> lost_wakeups, worker_sleeps;
+bool missed(uae_sem_t *s) {
+    uae_u32 mode = __atomic_load_n(&cpu_thread_indirect_mode, __ATOMIC_SEQ_CST);
+    return s == &cpu_request_sema ? mode == 1 || mode == 2 : mode >= 0xfd;
+}
+void uae_sem_trywait_delay(uae_sem_t *s, int ms) {
+    if (s == &cpu_reply_sema) ++worker_sleeps;
+    std::unique_lock<std::mutex> lock(s->mutex);
+    if (s->changed.wait_for(lock, std::chrono::milliseconds(ms),
+                           [s] { return s->count != 0; }))
+        --s->count;
+    else if (missed(s))
+        ++lost_wakeups;   // slept a whole timeout with the peer's work pending
+}
+volatile uae_u32 cpu_thread_indirect_addr, cpu_thread_indirect_val, cpu_thread_indirect_size;
+struct { uaecptr addr; uae_u32 value; bool read, instruction; int size, exception;
+         bool hardware; } cpu_thread_fault;
+bool cpu_thread_servicing;
+uae_u32 cpu_thread_requests_served;
+int cpu_thread_main_sleeping, cpu_thread_worker_sleeping, cpu_thread_reset;
+constexpr uae_u64 CPU_THREAD_REPLY_SPIN_NS = 100000;
+thread_local bool worker;
+bool is_cpu_thread() { return worker; }
+bool cpu_thread_diag_enabled() { return false; }
+uae_u64 SDL_GetTicksNS() {
+    return std::chrono::duration_cast<std::chrono::nanoseconds>(
+        std::chrono::steady_clock::now().time_since_epoch()).count();
+}
+void cpu_thread_diag_log_wait(uae_u64) {}
+void cpu_thread_spin_pause() { std::this_thread::yield(); }
+int bankindex(uaecptr) { return 0; }
+void hardware_exception2(uaecptr, uae_u32, bool, bool, int) { throw 2; }
+unsigned reads, writes;
+uae_u32 stored;
+uae_u32 read(uaecptr addr) {
+    assert(!worker && cpu_thread_servicing);
+    ++reads;
+    if (addr == 1) {
+        cpu_thread_fault = {addr, 0, true, false, 1, 2, true};
+        throw 2;
+    }
+    if (addr == 2) throw 3;
+    return stored;
+}
+void write(uaecptr, uae_u32 value) {
+    assert(!worker && cpu_thread_servicing);
+    ++writes;
+    stored = value;
+}
+struct addrbank {
+    uae_u32 (*bget)(uaecptr) = read, (*wget)(uaecptr) = read, (*lget)(uaecptr) = read;
+    void (*bput)(uaecptr, uae_u32) = write, (*wput)(uaecptr, uae_u32) = write,
+         (*lput)(uaecptr, uae_u32) = write;
+} bank;
+addrbank *thread_mem_banks[] = {&bank};
+// the register snapshot has its own test; nothing here is in it
+bool cpu_thread_snap_read(const addrbank *, uaecptr, int, uae_u32 *) { return false; }
+struct { unsigned armed; } cpu_thread_snap_main;
+void cpu_thread_snap_arm(const addrbank *, uaecptr, int) {}
+void cpu_thread_snap_publish(bool) { assert(false); }
+uae_u32 cpu_thread_blit_held;   // no nasty blit here
+bool cpu_thread_blit_nasty() { return false; }
+// A pending mode change cannot cancel an instruction's hardware transaction.
+constexpr unsigned SPCFLAG_MODE_CHANGE = 1, SPCFLAG_CALLBACK = 2;
+struct { unsigned spcflags = SPCFLAG_MODE_CHANGE; } regs;
+#define CPU_THREAD_RARE(x) (x)
+#define NOINLINE __attribute__((noinline))
+constexpr int CYCLE_UNIT = 512;
+constexpr uae_u64 CPU_THREAD_SETTLE_NS = 5000;
+""" + function(text, "static inline bool cpu_thread_reply_ready(") +
+                "template <typename Ready>\n" +
+                function(text, "static bool cpu_thread_settle(") +
+                function(text, "static NOINLINE void cpu_thread_wait_reply_slow(") +
+                function(text, "static inline void cpu_thread_wait_reply(") +
+                wake_main(text) +
+                function(text, "static inline void cpu_thread_post_request(") +
+                function(text, "static inline void cpu_thread_post_reply(") +
+                function(text, "static bool cpu_thread_main_has_work(") +
+                function(text, "static void cpu_thread_main_sleep(") +
+                function(text, "static void cpu_thread_main_nap(") +
+                function(text, "uae_u32 process_cpu_indirect_memory_read(") +
+                function(text, "void process_cpu_indirect_memory_write(") +
+                served_credit(text) +
+                function(text, "static inline bool service_cpu_indirect_request(") + r"""
+void transactions(unsigned count, unsigned pause_every = 0) {
+    worker = true;
+    for (unsigned value = 0; value < count; ++value) {
+        process_cpu_indirect_memory_write(0, value, 2);
+        assert(process_cpu_indirect_memory_read(0, 2) == value);
+        if (pause_every && value % pause_every == 0)
+            std::this_thread::sleep_for(std::chrono::microseconds(200));
+    }
+}
+int main() {
+    std::atomic<bool> done{false};
+    std::thread cpu([&] {
+        transactions(100);
+        worker = true;
+        for (unsigned address : {1, 2}) {
+            try {
+                process_cpu_indirect_memory_read(address, 1);
+                assert(false);
+            } catch (int exc) {
+                assert(exc == (address == 1 ? 2 : 3));
+            }
+        }
+        // A fault response must not poison the next successful transaction.
+        assert(process_cpu_indirect_memory_read(0, 2) == 99);
+        done = true;
+    });
+    while (!done) {
+        service_cpu_indirect_request();
+        std::this_thread::yield();
+    }
+    cpu.join();
+    assert(reads == 103 && writes == 100);
+    assert(cpu_thread_requests_served == 203);
+    assert(!cpu_thread_servicing);
+
+    // Idle main thread: it sleeps between requests, and replies late enough
+    // that the CPU thread sleeps too. Both wakeups must be delivered. Late
+    // means well past the reply spin (CPU_THREAD_REPLY_SPIN_NS, its clock
+    // read every 256 spins): 300 us was not always past it on a CI runner,
+    // where a yield can take a microsecond.
+    regs.spcflags = 0;
+    done = false;
+    std::thread idle([&] { transactions(200); done = true; });
+    for (unsigned served = 0; !done;) {
+        if (service_cpu_indirect_request())
+            continue;
+        cpu_thread_main_sleep(1);
+        if (__atomic_load_n(&cpu_thread_indirect_mode, __ATOMIC_ACQUIRE) <= 2
+            && ++served % 8 == 0)
+            std::this_thread::sleep_for(std::chrono::milliseconds(2));
+    }
+    idle.join();
+    assert(reads == 303 && writes == 300);
+    assert(worker_sleeps > 0);
+    assert(lost_wakeups == 0);   // SEQ_CST handshake: no wakeup is lost
+    assert(!cpu_thread_main_sleeping && !cpu_thread_worker_sleeping);
+
+    // The frame limiter's naps: a request ends one, and leaves no count in
+    // the semaphore, which would end a later millisecond sleep at once. A nap
+    // that sleeps its whole 100 ms with a request pending lost its wakeup.
+    cpu_request_sema.count = 0;
+    done = false;
+    unsigned woken_naps = 0, lost_naps = 0;
+    std::thread napping([&] { transactions(200, 8); done = true; });
+    while (!done) {
+        if (service_cpu_indirect_request())
+            continue;
+        const auto start = std::chrono::steady_clock::now();
+        cpu_thread_main_nap(100000000);
+        if (std::chrono::steady_clock::now() - start < std::chrono::milliseconds(100))
+            ++woken_naps;
+        else if (missed(&cpu_request_sema))
+            ++lost_naps;
+    }
+    napping.join();
+    assert(reads == 503 && writes == 500);
+    assert(woken_naps > 0 && lost_naps == 0);
+    assert(cpu_request_sema.count == 0);
+    assert(!cpu_thread_main_sleeping);
+}
+""")
+
+    def test_restoring_a_state_without_a_cartridge_keeps_the_freezer_off(self):
+        text = source("src/ar.cpp")
+        run_cpp(r"""
+#define ACTION_REPLAY_INACTIVE -2
+#define ACTION_REPLAY_IDLE 1
+#define ACTION_REPLAY_ACTIVE 3
+#define SPCFLAG_ACTION_REPLAY 1
+uae_u8 *armemory_rom;
+int action_replay_flag = ACTION_REPLAY_INACTIVE, hrtmon_flag = ACTION_REPLAY_INACTIVE;
+int ar_state1, ar_state2 = -1, hidden = -1;
+uaecptr arrom_start = 0x400000, arrom_size = 0x40000;
+uaecptr m68k_getpc() { return 0xf80000; }
+void hide_cart(int hide) { hidden = hide; }
+void set_special(int) {}
+""" + function(text, "bool action_replay_freezer_active(") +
+                function(text, "void restore_ar_finish(") + r"""
+int main() {
+    // every state load runs restore_ar_finish(), with or without a chunk
+    restore_ar_finish();
+    assert(!action_replay_freezer_active() && hidden == -1);
+    uae_u8 rom[1];
+    armemory_rom = rom;
+    restore_ar_finish();
+    assert(action_replay_flag == ACTION_REPLAY_IDLE && hidden == 1);
+}
+""")
+
+    def test_threaded_cpu_flood_hold_starts_and_ends_with_hysteresis(self):
+        text = source("src/newcpu.cpp")
+        state = text[text.index("#define CPU_THREAD_FLOOD_FRAMES"):
+                     text.index("} cpu_thread_flood;") + len("} cpu_thread_flood;")]
+        run_cpp(r"""
+#include <algorithm>
+#include <cstdio>
+using frame_time_t = int64_t;
+using TCHAR = char;
+#define _T(x) x
+void write_log(const char *, ...) {}
+enum { CPU_BANKS_PLAIN, CPU_BANKS_THREAD, CPU_BANKS_COUNT };
+frame_time_t now_time;
+frame_time_t read_processor_time() { return now_time; }
+constexpr frame_time_t vsynctimebase = 1000, syncbase = 50000;   // 50 frames a second
+struct { bool turbo_emulation; } currprefs;
+bool cpu_threaded_run;
+uae_u32 cpu_thread_requests_served, cpu_thread_flood_requests;
+""" + state + function(text, "static int cpu_thread_bank_mode(") +
+                function(text, "static void cpu_thread_flood_forget(") +
+                function(text, "static void cpu_thread_check_flood(") + r"""
+// One frame: its length in percent of the frame time, and the requests the
+// mailbox served (on the thread) or the counting banks counted (main thread).
+void frame(int percent, uae_u32 requests) {
+    now_time += vsynctimebase * percent / 100;
+    if (cpu_threaded_run)
+        cpu_thread_requests_served += requests;
+    else if (cpu_thread_bank_mode() == CPU_BANKS_COUNT)
+        cpu_thread_flood_requests += requests;
+    cpu_thread_check_flood();
+}
+void frames(int n, int percent, uae_u32 requests) {
+    for (int i = 0; i < n; i++)
+        frame(percent, requests);
+}
+// A gap (a pause, the GUI) starts a new window.
+void gap() { frame(600, 0); }
+void flood() {
+    cpu_threaded_run = true;
+    frames(100, 100, 0);   // settles first
+    for (int i = 0; i < 20 && !cpu_thread_flood.held; i++)
+        frame(150, 6000);
+    cpu_threaded_run = false;
+}
+int main() {
+    auto &f = cpu_thread_flood;
+    cpu_threaded_run = true;
+    // Nothing is measured while the thread settles (2 s).
+    frames(60, 150, 50000);
+    assert(!f.held);
+    frames(15, 100, 0);
+    // A single very long frame (a savestate, a reset) is not a flood.
+    gap();
+    frames(3, 100, 50000);
+    frame(400, 50000);
+    frames(20, 100, 50000);
+    assert(!f.held);
+    // Long frames with few requests are not a flood either.
+    gap();
+    frames(20, 150, 1000);
+    assert(!f.held);
+    // A flood: long frames at more than 4000 requests per frame. The hold's
+    // safety net starts at 16 s, after the counts.
+    gap();
+    for (int i = 0; i < 20 && !f.held; i++)
+        frame(150, 6000);
+    assert(f.held && f.hold_seconds == 16);
+    cpu_threaded_run = false;
+    // The first count comes a second into the hold, on the plain banks until then.
+    frames(49, 100, 6000);
+    assert(f.held && cpu_thread_bank_mode() == CPU_BANKS_PLAIN);
+    frame(100, 6000);
+    assert(cpu_thread_bank_mode() == CPU_BANKS_COUNT);
+    // Still a flood: the hold stays, the plain banks come back, and the next
+    // count comes in 2 s, then 4 s (doubling up to CPU_THREAD_FLOOD_PROBE).
+    frames(26, 100, 6000);
+    assert(f.held && cpu_thread_bank_mode() == CPU_BANKS_PLAIN);
+    frames(99, 100, 6000);
+    assert(cpu_thread_bank_mode() == CPU_BANKS_PLAIN);
+    frame(100, 6000);
+    assert(cpu_thread_bank_mode() == CPU_BANKS_COUNT);
+    // Above half the flood's rate the hold stays, with no move back and forth.
+    frames(26, 100, 3000);
+    assert(f.held && cpu_thread_bank_mode() == CPU_BANKS_PLAIN);
+    // The flood is over: the next count, under half the rate, ends the hold,
+    // 8.5 s in, before the safety net.
+    frames(199, 100, 1500);
+    assert(f.held && cpu_thread_bank_mode() == CPU_BANKS_PLAIN);
+    frame(100, 1500);
+    assert(cpu_thread_bank_mode() == CPU_BANKS_COUNT);
+    frames(26, 100, 1500);
+    assert(!f.held && !f.probing && !f.was_threaded && f.hold_seconds == 16);
+    // Ten quiet seconds on the thread, then the flood comes back: 32 s. It is
+    // over at once, and the first count, a second in, ends the hold.
+    cpu_threaded_run = true;
+    frames(500, 100, 0);
+    flood();
+    assert(f.held && f.hold_seconds == 32 && f.refloods == 0);
+    frames(76, 100, 0);
+    assert(!f.held);
+    // A retry whose first measured window is a flood again (a workload the
+    // count on the main thread sees as quiet, such as beam polling): each
+    // such re-flood doubles the wait for the first count, 2 s, then 4 s.
+    flood();
+    assert(f.held && f.refloods == 1);
+    frames(76, 100, 0);
+    assert(f.held && cpu_thread_bank_mode() == CPU_BANKS_PLAIN);
+    frames(50, 100, 0);
+    assert(!f.held);
+    flood();
+    assert(f.held && f.refloods == 2);
+    frames(176, 100, 0);
+    assert(f.held);
+    frames(50, 100, 0);
+    assert(!f.held);
+    // A flood that comes back after a quiet window on the thread is a new
+    // flood (flood after flood with quiet work between): the first count
+    // comes a second in again.
+    cpu_threaded_run = true;
+    frames(100, 100, 0);      // the retry's settle
+    frames(11, 100, 0);       // one quiet window measured
+    for (int i = 0; i < 20 && !f.held; i++)
+        frame(150, 6000);
+    assert(f.held && f.refloods == 0 && f.probe_gap == syncbase * 1);
+    cpu_threaded_run = false;
+    frames(76, 100, 0);
+    assert(!f.held);
+    // Re-floods past the safety net's length: the hold runs to the safety net.
+    f.refloods = 15;
+    flood();
+    assert(f.held && f.refloods == 16 && f.probe_gap == syncbase * f.hold_seconds);
+    // A count that stays high: only the safety net ends the hold.
+    const int hold = f.hold_seconds;
+    frames(hold * 50 - 1, 100, 6000);
+    assert(f.held);
+    frame(100, 6000);
+    assert(!f.held && f.hold_seconds == hold);
+    // A reset, a state load, warp: the flood is forgotten.
+    flood();
+    assert(f.held && f.hold_seconds == std::min(hold * 2, 256));
+    currprefs.turbo_emulation = true;
+    frame(100, 0);
+    assert(!f.held && !f.hold_seconds && cpu_thread_bank_mode() == CPU_BANKS_PLAIN);
+    currprefs.turbo_emulation = false;
 }
 """)
 

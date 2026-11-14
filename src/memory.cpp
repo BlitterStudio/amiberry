@@ -14,6 +14,8 @@
 #include "sysconfig.h"
 #include "sysdeps.h"
 
+#include <vector>
+
 #include "options.h"
 #include "uae.h"
 #include "memory.h"
@@ -2595,11 +2597,14 @@ bool mapped_malloc (addrbank *ab)
 
 #endif
 
+extern addrbank *thread_mem_banks[MEMORY_BANKS];
+
 static void init_mem_banks (void)
 {
 	// unsigned so i << 16 won't overflow to negative when i >= 32768
 	for (unsigned int i = 0; i < MEMORY_BANKS; i++) {
 		put_mem_bank (i << 16, &dummy_bank, 0);
+		thread_mem_banks[i] = &dummy_bank;
 	}
 #ifdef NATMEM_OFFSET
 	delete_shmmaps (0, 0xFFFF0000);
@@ -3635,17 +3640,16 @@ void map_banks_cond (addrbank *bank, int start, int size, int realsize)
 	map_banks (bank, start, size, realsize);
 }
 
-#ifdef WITH_THREADED_CPU
 
 struct addrbank_thread {
 	addrbank *orig;
 	addrbank ab;
 };
 
-#define MAX_THREAD_BANKS 200
-static addrbank_thread *thread_banks[MAX_THREAD_BANKS];
+// Wrappers remain allocated for the process lifetime: mapped banks may retain
+// their addresses, and growing the pointer vector must not invalidate them.
+static std::vector<addrbank_thread *> thread_banks;
 addrbank *thread_mem_banks[MEMORY_BANKS];
-static int thread_banks_used;
 
 static void REGPARAM2 threadcpu_lput(uaecptr addr, uae_u32 l)
 {
@@ -3691,7 +3695,11 @@ static uae_u32 REGPARAM2 threadcpu_bget(uaecptr addr)
 	return v;
 }
 
-static addrbank *get_bank_cpu_thread(addrbank *bank)
+// A wrapper of bank whose data accesses go through the given handlers, kept
+// in wrappers (one per original bank); thread-safe banks need none.
+static addrbank *get_bank_wrapper(addrbank *bank, std::vector<addrbank_thread *> &wrappers,
+	mem_get_func lget, mem_get_func wget, mem_get_func bget,
+	mem_put_func lput, mem_put_func wput, mem_put_func bput)
 {
 #ifdef AMIBERRY
 	if (bank->flags & ABFLAG_THREADSAFE)
@@ -3700,30 +3708,118 @@ static addrbank *get_bank_cpu_thread(addrbank *bank)
 	if (bank == &dummy_bank)
 		return bank;
 
-	for (int i = 0; i < thread_banks_used; i++) {
-		if (thread_banks[i]->orig == bank) {
-			return &thread_banks[i]->ab;
+	addrbank_thread *at = nullptr;
+	for (auto *candidate : wrappers) {
+		if (candidate->orig == bank) {
+			at = candidate;
+			break;
 		}
 	}
-	struct addrbank_thread *at = thread_banks[thread_banks_used];
-	if (!at)
+	if (!at) {
 		at = xcalloc(addrbank_thread, 1);
-	thread_banks[thread_banks_used++] = at;
-	at->orig = bank;
+		at->orig = bank;
+		wrappers.push_back(at);
+	}
+	// Remapping can change descriptor fields. Refresh them before restoring
+	// the indirect data handlers; the caller must quiesce the CPU for remaps.
 	memcpy(&at->ab, bank, sizeof(addrbank));
-	addrbank *tb = &at->ab;
-	tb->jit_read_flag = S_READ;
-	tb->jit_write_flag = S_WRITE;
-	tb->lget = threadcpu_lget;
-	tb->wget = threadcpu_wget;
-	tb->bget = threadcpu_bget;
-	tb->lput = threadcpu_lput;
-	tb->wput = threadcpu_wput;
-	tb->bput = threadcpu_bput;
+	addrbank *wb = &at->ab;
+	wb->jit_read_flag = S_READ;
+	wb->jit_write_flag = S_WRITE;
+	wb->lget = lget;
+	wb->wget = wget;
+	wb->bget = bget;
+	wb->lput = lput;
+	wb->wput = wput;
+	wb->bput = bput;
 	// wgeti/lgeti should always point to real RAM
-	return tb;
+	return wb;
 }
+
+static addrbank *get_bank_cpu_thread(addrbank *bank)
+{
+	return get_bank_wrapper(bank, thread_banks, threadcpu_lget, threadcpu_wget, threadcpu_bget,
+		threadcpu_lput, threadcpu_wput, threadcpu_bput);
+}
+
+// While a request flood holds the CPU on the main thread, the banks the CPU
+// thread would reach through the mailbox count the accesses that would be
+// requests (cpu_thread_count_read(), cpu_thread_flood_requests), so that the
+// CPU goes back to its thread once the flood is over.
+static std::vector<addrbank_thread *> count_banks;
+static int cpu_banks_mode;
+
+static uae_u32 REGPARAM2 countcpu_lget(uaecptr addr)
+{
+	addrbank *o = thread_mem_banks[bankindex(addr)];
+	cpu_thread_count_read(o, addr, 2);
+	return o->lget(addr);
+}
+static uae_u32 REGPARAM2 countcpu_wget(uaecptr addr)
+{
+	addrbank *o = thread_mem_banks[bankindex(addr)];
+	cpu_thread_count_read(o, addr, 1);
+	return o->wget(addr);
+}
+static uae_u32 REGPARAM2 countcpu_bget(uaecptr addr)
+{
+	addrbank *o = thread_mem_banks[bankindex(addr)];
+	cpu_thread_count_read(o, addr, 0);
+	return o->bget(addr);
+}
+static void REGPARAM2 countcpu_lput(uaecptr addr, uae_u32 l)
+{
+	cpu_thread_flood_requests++;
+	thread_mem_banks[bankindex(addr)]->lput(addr, l);
+}
+static void REGPARAM2 countcpu_wput(uaecptr addr, uae_u32 w)
+{
+	cpu_thread_flood_requests++;
+	thread_mem_banks[bankindex(addr)]->wput(addr, w);
+}
+static void REGPARAM2 countcpu_bput(uaecptr addr, uae_u32 b)
+{
+	cpu_thread_flood_requests++;
+	thread_mem_banks[bankindex(addr)]->bput(addr, b);
+}
+
+// The counting twin of get_bank_cpu_thread(), for the same banks.
+static addrbank *get_bank_cpu_count(addrbank *bank)
+{
+	return get_bank_wrapper(bank, count_banks, countcpu_lget, countcpu_wget, countcpu_bget,
+		countcpu_lput, countcpu_wput, countcpu_bput);
+}
+
+// The CPU loop decides at its start whether the CPU runs on a thread of its
+// own (m68k_run()); map_banks2() records every bank, so the wrappers can be
+// put in or taken out of the map then. The CPU must not be running.
+void memory_set_cpu_thread_banks(int mode)
+{
+	cpu_banks_mode = mode;
+#ifdef DEBUGGER
+	int old = debug_bankchange(-1);
 #endif
+	for (unsigned int i = 0; i < MEMORY_BANKS; i++) {
+		addrbank *orig = thread_mem_banks[i];
+		if (!orig)
+			continue;
+		addrbank *b = mode == CPU_BANKS_THREAD ? get_bank_cpu_thread(orig)
+			: mode == CPU_BANKS_COUNT ? get_bank_cpu_count(orig) : orig;
+		if (mem_banks[i] == b)
+			continue;
+		mem_banks[i] = b;
+#ifdef JIT
+		// a wrapper copies baseaddr; banks without one are marked by address
+		if (!b->baseaddr)
+			baseaddr[i] = (uae_u8*)(((uae_u8*)b) + 1);
+#endif
+	}
+#ifdef DEBUGGER
+	debug_bankchange(old);
+#endif
+	flush_icache(3);
+	fill_ce_banks();
+}
 
 static void set_memory_cacheable(int bnr, addrbank *bank)
 {
@@ -3740,6 +3836,8 @@ static void set_memory_cacheable(int bnr, addrbank *bank)
 
 static void map_banks2 (addrbank *bank, int start, int size, int realsize, int quick)
 {
+	// Hardware/reset requests already block the worker inside an instruction.
+	cpu_thread_guard cpu_guard(!cpu_thread_is_waiting_on_main());
 	int bnr, old;
 	unsigned long int hioffs = 0, endhioffs = 0x100;
 	uae_u32 realstart = start;
@@ -3747,14 +3845,12 @@ static void map_banks2 (addrbank *bank, int start, int size, int realsize, int q
 
 	bank->flags |= ABFLAG_MAPPED;
 
-#ifdef WITH_THREADED_CPU
-	if (currprefs.cpu_thread) {
+	if (cpu_threaded_run || cpu_banks_mode == CPU_BANKS_COUNT) {
 		addrbank *b = bank;
-		bank = get_bank_cpu_thread(bank);
+		bank = cpu_threaded_run ? get_bank_cpu_thread(bank) : get_bank_cpu_count(bank);
 		if (b != bank)
 			orig_bank = b;
 	}
-#endif
 
 #ifdef DEBUGGER
 	if (quick <= 0)
@@ -3788,13 +3884,7 @@ static void map_banks2 (addrbank *bank, int start, int size, int realsize, int q
 			}
 			put_mem_bank (bnr << 16, bank, realstart << 16);
 			set_memory_cacheable(bnr, bank);
-#ifdef WITH_THREADED_CPU
-			if (currprefs.cpu_thread) {
-#ifdef AMIBERRY
-				thread_mem_banks[bnr] = orig_bank ? orig_bank : bank;
-#endif
-			}
-#endif
+			thread_mem_banks[bnr] = orig_bank ? orig_bank : bank;
 			real_left--;
 		}
 #ifdef DEBUGGER
@@ -3822,13 +3912,7 @@ static void map_banks2 (addrbank *bank, int start, int size, int realsize, int q
 			}
 			put_mem_bank ((bnr + hioffs) << 16, bank, realstart << 16);
 			set_memory_cacheable(bnr + hioffs, bank);
-#ifdef WITH_THREADED_CPU
-			if (currprefs.cpu_thread) {
-#ifdef AMIBERRY
-				thread_mem_banks[bnr + hioffs] = orig_bank ? orig_bank : bank;
-#endif
-			}
-#endif
+			thread_mem_banks[bnr + hioffs] = orig_bank ? orig_bank : bank;
 			real_left--;
 		}
 	}

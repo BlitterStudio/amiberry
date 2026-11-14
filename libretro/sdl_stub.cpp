@@ -2,6 +2,7 @@
 #include "sdl_compat.h"
 
 #include <ctype.h>
+#include <errno.h>
 #include <pthread.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -267,6 +268,8 @@ Uint64 SDL_GetPerformanceFrequency(void)
 
 Uint64 SDL_GetTicks(void) { return (Uint64)GetTickCount64(); }
 void SDL_Delay(Uint32 ms) { Sleep(ms); }
+// Sleep() has millisecond granularity; shorter waits become Sleep(0), a yield.
+void SDL_DelayNS(Uint64 ns) { Sleep((DWORD)(ns / 1000000ull)); }
 #else
 Uint64 SDL_GetPerformanceCounter(void)
 {
@@ -277,6 +280,14 @@ Uint64 SDL_GetPerformanceCounter(void)
 Uint64 SDL_GetPerformanceFrequency(void) { return 1000000000ull; }
 Uint64 SDL_GetTicks(void) { return SDL_GetPerformanceCounter() / 1000000ull; }
 void SDL_Delay(Uint32 ms) { usleep((useconds_t)ms * 1000); }
+void SDL_DelayNS(Uint64 ns)
+{
+	struct timespec ts;
+	ts.tv_sec = (time_t)(ns / 1000000000ull);
+	ts.tv_nsec = (long)(ns % 1000000000ull);
+	while (nanosleep(&ts, &ts) == -1 && errno == EINTR)
+		;
+}
 #endif
 
 int SDL_GetVersion(void) { return (3 << 16); }

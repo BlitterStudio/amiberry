@@ -2346,6 +2346,12 @@ static evt_t fpu_timing_clock(void)
 
 static void fpu_timing_begin(void)
 {
+	// Only cycle-exact timing uses it. The CPU thread would otherwise read
+	// the chipset's cycle counter, written all the time by the main thread,
+	// for every FPU instruction.
+	if (!currprefs.cpu_cycle_exact || currprefs.cpu_model < 68020) {
+		return;
+	}
 	fpu_timing_start = get_cycles();
 	if (fpu_busy_until > fpu_timing_start + FPU_TIMING_MAX_BUSY * fpu_timing_clock()) {
 		fpu_busy_until = 0;

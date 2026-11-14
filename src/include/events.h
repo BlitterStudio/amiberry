@@ -83,6 +83,19 @@ extern int pissoff_value;
 extern int pissoff_nojit_value;
 extern int pissoff;
 
+// The CPU runs on a thread of its own. Decided by m68k_run() from the
+// cpu_threaded option and the CPU emulation in use; only changed while no CPU
+// loop runs.
+extern bool cpu_threaded_run;
+
+bool cpu_thread_is_worker();
+void cpu_thread_kick();
+void cpu_thread_worker_cycles(int cycles);
+// Register values for the CPU thread's snapshot (newcpu.cpp), main thread only.
+bool custom_cpu_thread_pos(uae_u16 *vposr, uae_u16 *vhposr);
+void custom_cpu_thread_regs(uae_u16 *dmaconr_intenar_intreqr_adkconr);
+bool cia_cpu_thread_pra(uae_u8 *v);
+
 extern int do_cycles_cck(int);
 
 #define countdown pissoff
@@ -96,6 +109,15 @@ extern int custom_fastmode;
 
 STATIC_INLINE void cycles_do_special (void)
 {
+	// Threaded: the countdown also accounts executed cycles, so compiled code
+	// is made to leave without losing them (see cpu_thread_kick()).
+	if (cpu_threaded_run) {
+#ifdef JIT
+		if (currprefs.cachesize)
+			cpu_thread_kick();
+#endif
+		return;
+	}
 #ifdef JIT
 	if (currprefs.cachesize) {
 		if (pissoff >= 0)
@@ -109,6 +131,8 @@ STATIC_INLINE void cycles_do_special (void)
 
 STATIC_INLINE void do_extra_cycles(int cycles_to_add)
 {
+	if (cpu_threaded_run && !cpu_thread_is_worker())
+		return;
 	pissoff -= cycles_to_add;
 }
 

@@ -26,10 +26,9 @@ amiberry -s debugging_features=gdbserver -s gdb_port=2345
 The standalone application and libretro core build the server when both
 `DEBUGGER` and `GDBSERVER` are defined. Both poll it from `handle_events()`.
 
-The server is not available with the threaded CPU option
-(`cpu_threaded=true`). In that mode Amiberry logs
-`WinUAE GDB: not available with the threaded CPU (cpu_threaded=true)` and does
-not listen.
+While the server is enabled, the CPU emulation runs on the main thread
+instead of a CPU thread of its own (see `docs/cpu-threading.md`). Enabling it
+at run time restarts the CPU loop that way before the server listens.
 
 
 `gdb_server_poll()` runs from Amiberry's `handle_events()` loop. It never

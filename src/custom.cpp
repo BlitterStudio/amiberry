@@ -49,9 +49,7 @@
 #if defined(ENFORCER)
 #include "enforcer.h"
 #endif
-#ifdef WITH_THREADED_CPU
 #include "cpu_thread.h"
-#endif
 #ifdef WITH_LUA
 #include "luascript.h"
 #endif
@@ -599,7 +597,7 @@ int firstword_bplcon1;
 
 static int copper_access;
 
-uae_u16 clxdat;
+clxdat_reg clxdat;
 static uae_u16 clxcon, clxcon2;
 
 #define COP_INS_MOVE 0
@@ -1146,8 +1144,13 @@ static void setup_fmodes(uae_u16 con0)
 		fetchmode_size = 16 << fetchmode;
 		fetchmode_mask = fetchmode_size - 1;
 		if (!savestate_state) {
-			// Fetch mode/modulo change is delayed by 2 CCK
-			event2_newevent_xx(-1, 2 * CYCLE_UNIT, fmode, setup_fmodes_delayed);
+			// Fetch mode/modulo change is delayed by 2 CCK. Threaded, writes
+			// can be served at one chipset cycle, and events due at the same
+			// cycle do not run in queue order: keep only the latest value.
+			if (cpu_threaded_run)
+				event2_newevent_x_replace(2, fmode, setup_fmodes_delayed);
+			else
+				event2_newevent_xx(-1, 2 * CYCLE_UNIT, fmode, setup_fmodes_delayed);
 		} else {
 			setup_fmodes_delayed(fmode);
 		}
@@ -3197,8 +3200,8 @@ static void DMACON(int hpos, uae_u16 v)
 	}
 #endif
 
-	// See do_blitter(): the threaded CPU never waits for a nasty blit.
-	if ((dmacon & DMA_BLITPRI) > (oldcon & DMA_BLITPRI) && (blt_info.blit_main || blt_info.blit_queued) && !currprefs.cpu_thread) {
+	// See do_blitter(): the CPU thread is held by the main thread instead.
+	if ((dmacon & DMA_BLITPRI) > (oldcon & DMA_BLITPRI) && (blt_info.blit_main || blt_info.blit_queued) && !cpu_threaded_run) {
 		set_special(SPCFLAG_BLTNASTY);
 	}
 
@@ -4849,7 +4852,8 @@ static bool framewait(void)
 			frame_rendered = crender_screen(0, 1, false);
 			t = read_processor_time() - start;
 		}
-		if (!currprefs.cpu_thread) {
+		// Threaded, the CPU loop paces the frame.
+		if (!cpu_threaded_run) {
 #ifdef AMIBERRY
 			static amiberry_frame_pacer pacer;
 			while (!currprefs.turbo_emulation) {
@@ -5459,6 +5463,7 @@ static void vsync_handler_post(void)
 	prevtime = read_processor_time();
 
 	check_nocustom();
+	cpu_thread_check_selection();
 
 #if CUSTOM_DEBUG > 1
 	if ((intreq & 0x0020) && (intena & 0x0020))
@@ -6478,7 +6483,7 @@ static void hsync_handler_post(bool onvsync)
 
 	bool input_read_done = false;
 
-	if (currprefs.cpu_thread) {
+	if (cpu_threaded_run) {
 
 		maybe_process_pull_audio();
 
@@ -6498,7 +6503,7 @@ static void hsync_handler_post(bool onvsync)
 				input_read_done = linesync_beam_multi_single();
 		}
 #endif
-	} else if (!currprefs.cpu_thread && !cpu_sleepmode && currprefs.m68k_speed < 0 && !currprefs.cpu_memory_cycle_exact) {
+	} else if (!cpu_threaded_run && !cpu_sleepmode && currprefs.m68k_speed < 0 && !currprefs.cpu_memory_cycle_exact) {
 
 		static int sleeps_remaining;
 		if (is_last_line()) {
@@ -6566,7 +6571,7 @@ static void hsync_handler_post(bool onvsync)
 			maybe_process_pull_audio();
 		}
 
-	} else if (!currprefs.cpu_thread) {
+	} else if (!cpu_threaded_run) {
 
 		// the rest
 		static int linecounter;
@@ -7239,10 +7244,8 @@ int custom_init(void)
 		org(pos);
 	}
 #endif
-#ifdef WITH_THREADED_CPU
 	/* Initialize CPU threading diagnostics */
 	cpu_thread_diag_init();
-#endif
 
 	build_blitfilltable();
 
@@ -7251,6 +7254,25 @@ int custom_init(void)
 	update_mirrors();
 
 	return 1;
+}
+
+// What a CPU read of these registers would return now (custom_wget_1()).
+// VHPOSR has a side effect only for slow_cpu_access.
+bool custom_cpu_thread_pos(uae_u16 *vposr, uae_u16 *vhposr)
+{
+	if (slow_cpu_access & 2)
+		return false;
+	*vposr = VPOSR();
+	*vhposr = VHPOSR();
+	return true;
+}
+
+void custom_cpu_thread_regs(uae_u16 *v)
+{
+	v[0] = DMACONR();
+	v[1] = INTENAR();
+	v[2] = INTREQR();
+	v[3] = ADKCONR();
 }
 
 /* Custom chip memory bank */
@@ -7850,9 +7872,12 @@ static void REGPARAM2 custom_wput(uaecptr addr, uae_u32 value)
 		addr &= ~1;
 		custom_wput_1(addr, (value >> 8) | (value & 0xff00), 0);
 		custom_wput_1(addr + 2, (value << 8) | (value & 0x00ff), 0);
+		blitter_cpu_write_nasty();
 		return;
 	}
 	custom_wput_1(addr, value, 0);
+	// the CPU's write may have started a nasty blit or set BLTPRI (the copper's do not come here)
+	blitter_cpu_write_nasty();
 }
 
 static void REGPARAM2 custom_bput(uaecptr addr, uae_u32 value)
@@ -12686,15 +12711,13 @@ static void sync_imm_evhandler(void)
 
 int do_cycles_cck(int cycles)
 {
-#ifdef WITH_THREADED_CPU
-	if (currprefs.cpu_thread && !is_mainthread()) {
+	if (cpu_threaded_run && !is_mainthread()) {
 		/* CPU thread is skipping cycle accounting */
 		if (cpu_thread_diag.enable_diagnostics) {
 			cpu_thread_diag_log_stall(cycles);
 		}
 		return (cycles / CYCLE_UNIT) * CYCLE_UNIT;
 	}
-#endif
 	int c = 0;
 	while (cycles >= CYCLE_UNIT) {
 		do_cck(true);
@@ -13005,14 +13028,12 @@ void wait_cpu_cycle_write_ce020(uaecptr addr, int mode, uae_u32 v)
 
 void do_cycles_ce(int cycles)
 {
-#ifdef WITH_THREADED_CPU
-	if (currprefs.cpu_thread && !is_mainthread()) {
+	if (cpu_threaded_run && !is_mainthread()) {
 		if (cpu_thread_diag.enable_diagnostics) {
 			cpu_thread_diag_log_stall(cycles);
 		}
 		return;
 	}
-#endif
 	cycles += extra_cycle;
 	while (cycles >= CYCLE_UNIT) {
 		do_cck(true);
@@ -13023,14 +13044,12 @@ void do_cycles_ce(int cycles)
 
 void do_cycles_ce020(int cycles)
 {
-#ifdef WITH_THREADED_CPU
-	if (currprefs.cpu_thread && !is_mainthread()) {
+	if (cpu_threaded_run && !is_mainthread()) {
 		if (cpu_thread_diag.enable_diagnostics) {
 			cpu_thread_diag_log_stall(cycles);
 		}
 		return;
 	}
-#endif
 	static int extra;
 
 	cycles += extra;

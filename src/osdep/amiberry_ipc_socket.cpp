@@ -900,6 +900,7 @@ static std::string HandleSendKey(const std::vector<std::string>& args)
 
 static std::string HandleReadMem(const std::vector<std::string>& args)
 {
+	cpu_thread_guard cpu_guard;
 	if (!currprefs.ipc_disable_logging) {
 		std::cout << "IPC: Received READ_MEM " << std::endl;
 	}
@@ -932,6 +933,7 @@ static std::string HandleReadMem(const std::vector<std::string>& args)
 
 static std::string HandleWriteMem(const std::vector<std::string>& args)
 {
+	cpu_thread_guard cpu_guard;
 	if (!currprefs.ipc_disable_logging) {
 		std::cout << "IPC: Received WRITE_MEM " << std::endl;
 	}
@@ -2958,13 +2960,8 @@ static bool monitor_reads_guest(const std::string& text)
 
 static std::string monitor_refusal(const std::string& text)
 {
-	// gdb_server.cpp refuses the threaded CPU because debug() and bank remaps
-	// can run while the other thread is still executing. The same constraint
-	// applies to MONITOR mutations and guest-memory reads.
 	if (monitor_prefix(text, "input sequence"))
 		return "input sequence is advanced only while a GDB client is connected; use input event";
-	if (currprefs.cpu_thread && (monitor_changes_state(text) || monitor_reads_guest(text)))
-		return "not available with the threaded CPU (cpu_threaded=true)";
 	// A connected GDB client owns the shared monitor object, and its detach
 	// clears all of it, held input included.
 	if (gdb_server_connected() && (monitor_changes_state(text) ||
@@ -3023,6 +3020,8 @@ static std::string HandleMonitor(const std::vector<std::string>& args)
 		return make_response(false, {refusal});
 
 	std::string result, error;
+	// Debugger state, bank remaps and guest reads must not race a running CPU thread.
+	cpu_thread_guard cpu_guard(monitor_changes_state(text) || monitor_reads_guest(text));
 	if (!gdb_monitor_command(text, result, error))
 		return make_response(false, {error.empty() ? std::string("monitor command failed") : error});
 	// Conditions, history and program-entry breaks all depend on
@@ -3036,6 +3035,7 @@ static std::string HandleMonitor(const std::vector<std::string>& args)
 
 static std::string HandleGetCPURegs(const std::vector<std::string>& args)
 {
+	cpu_thread_guard cpu_guard;
 	if (!currprefs.ipc_disable_logging) {
 		std::cout << "IPC: Received GET_CPU_REGS" << std::endl;
 	}
@@ -3119,6 +3119,7 @@ static std::string HandleGetCustomRegs(const std::vector<std::string>& args)
 
 static std::string HandleDisassemble(const std::vector<std::string>& args)
 {
+	cpu_thread_guard cpu_guard;
 	if (!currprefs.ipc_disable_logging) {
 		std::cout << "IPC: Received DISASSEMBLE" << std::endl;
 	}

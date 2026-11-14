@@ -18,6 +18,8 @@
 #include "sounddep/sound.h"
 #ifdef AMIBERRY
 #include "debug.h"
+#include "memory.h"
+#include "newcpu.h"
 #endif
 #include <memory>
 
@@ -45,7 +47,6 @@ std::unique_ptr<winuae_gdb::Session> session, retired_session;
 std::string pending;
 bool polling, sockets_started, restoring;
 int configured_port;
-bool threaded_cpu_warned;
 
 void disconnect_client()
 {
@@ -137,16 +138,12 @@ void gdb_server_poll()
 {
 	if (polling || restoring) return;
 	int port = (currprefs.debugging_features & DEBUG_FEATURE_GDBSERVER) ? currprefs.gdb_port : 0;
-	// With the threaded CPU, debug() runs on either thread while the other
-	// keeps executing, so remote breakpoint, watchpoint and detach handling
-	// would change debugger and memory bank state under a running thread.
-	if (port && currprefs.cpu_thread) {
-		if (!threaded_cpu_warned)
-			write_log(_T("WinUAE GDB: not available with the threaded CPU (cpu_threaded=true)\n"));
-		threaded_cpu_warned = true;
+	// Remote breakpoint, watchpoint and detach handling change debugger and
+	// memory bank state, so m68k_run() keeps the CPU on the main thread while
+	// the server is enabled. Restart the CPU loop if it still runs threaded.
+	if (port && cpu_threaded_run) {
+		set_special(SPCFLAG_MODE_CHANGE);
 		port = 0;
-	} else {
-		threaded_cpu_warned = false;
 	}
 	if (quit_program) port = 0;
 	if (port != configured_port) {
