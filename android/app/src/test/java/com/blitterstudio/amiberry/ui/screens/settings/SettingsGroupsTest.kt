@@ -171,7 +171,7 @@ class SettingsGroupsTest {
 			"comp_constjump", "comp_flushmode", "comp_nf", "comp_catchfault", "comp_trustbyte",
 			"cpu_no_unimplemented", "cpu_data_cache", "mmu_model", "fpu_strict", "fpu_softfloat", "fpu_no_unimplemented",
 			// Chipset · Advanced and the compatibility internals
-			"waiting_blits", "keyboard_type", "keyboard_nkro", "display_optimizations", "hvcsync",
+			"waiting_blits", "amiberry.multithreaded_denise", "keyboard_type", "keyboard_nkro", "display_optimizations", "hvcsync",
 			"rtc", "agnusrev", "denisemodel",
 			// On-board interfaces, Memory · Advanced, ROMs · Advanced, Display · Advanced, Genlock
 			"pcmcia", "scsi_a3000", "z3mapping", "megachipmem_size", "boot_rom_uae", "kickshifter",
@@ -192,7 +192,7 @@ class SettingsGroupsTest {
 				"cpu", "chipset", "memory", "rom", "expansions",
 				"pcmcia,ide,scsi_a3000,scsi_a4000t",
 				"cpu_throttle,cpu_multiplier,amiberry.cpu_idle,cpu_threaded,cachesize,compfpu,comp_constjump,comp_flushmode,comp_nf,comp_catchfault,comp_trustbyte,cpu_no_unimplemented,cpu_data_cache,mmu_model,fpu_strict,fpu_softfloat,fpu_no_unimplemented",
-				"waiting_blits,keyboard_type,keyboard_nkro,display_optimizations,hvcsync",
+				"waiting_blits,amiberry.multithreaded_denise,keyboard_type,keyboard_nkro,display_optimizations,hvcsync",
 				"adv_chipset", "z3mapping,a3000mem_size,mbresmem_size,megachipmem_size",
 				"boot_rom_uae,uaeboard,kickshifter", "genlock"
 			),
@@ -228,7 +228,7 @@ class SettingsGroupsTest {
 			listOf(
 				"pcmcia,ide,scsi_a3000,scsi_a4000t",
 				"cpu_throttle,cpu_multiplier,amiberry.cpu_idle,cpu_threaded,cachesize,compfpu,comp_constjump,comp_flushmode,comp_nf,comp_catchfault,comp_trustbyte,cpu_no_unimplemented,cpu_data_cache,mmu_model,fpu_strict,fpu_softfloat,fpu_no_unimplemented",
-				"waiting_blits,keyboard_type,keyboard_nkro,display_optimizations,hvcsync",
+				"waiting_blits,amiberry.multithreaded_denise,keyboard_type,keyboard_nkro,display_optimizations,hvcsync",
 				"adv_chipset", "z3mapping,a3000mem_size,mbresmem_size,megachipmem_size",
 				"boot_rom_uae,uaeboard,kickshifter", "genlock",
 				"display",

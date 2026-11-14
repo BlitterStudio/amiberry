@@ -238,8 +238,9 @@ extension SettingsPage {
 		// The chipset group's experts and the Advanced Chipset group's
 		// compatibility internals, which the presets set for a machine.
 		LayoutSection(title: "Chipset · Advanced", content: .options([
-			"waiting_blits", "keyboard_type", "keyboard_nkro", "display_optimizations", "hvcsync",
-			"rtc", "chipset_rtc_adjust", "ciaatod", "cia_overlay", "a1000ram", "df0idhw", "cd32cd",
+			"waiting_blits", "amiberry.multithreaded_denise", "keyboard_type", "keyboard_nkro",
+			"display_optimizations", "hvcsync", "rtc", "chipset_rtc_adjust", "ciaatod", "cia_overlay",
+			"a1000ram", "df0idhw", "cd32cd",
 			"cd32c2p", "cd32nvram", "cdtvcd", "cdtvram", "cdtv-cr", "ksmirror_e0", "ksmirror_a8",
 			"color_burst", "resetwarning", "cia_todbug", "cs_bytecustomwritebug", "memory_pattern",
 			"rom_is_slow", "toshiba_gary", "z3_autoconfig", "1mchipjumper", "ciaa_type",

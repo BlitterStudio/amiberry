@@ -70,7 +70,7 @@ object SettingsGroups {
 			),
 			Placement(
 				R.string.settings_section_chipset_advanced,
-				ids = listOf("waiting_blits", "keyboard_type", "keyboard_nkro", "display_optimizations", "hvcsync"),
+				ids = listOf("waiting_blits", "amiberry.multithreaded_denise", "keyboard_type", "keyboard_nkro", "display_optimizations", "hvcsync"),
 				collapsed = true
 			),
 			// The adv_chipset group minus its on-board interfaces: the
