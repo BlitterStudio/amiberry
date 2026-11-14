@@ -629,6 +629,10 @@ static void update_geometry()
 	if (width <= 0 || height <= 0)
 		return;
 
+	// RTG screens have square pixels and are never cropped.
+	if (!crop.active && adisplays[0].picasso_on)
+		aspect = static_cast<float>(width) / static_cast<float>(height);
+
 	if (width == last_geometry_width && height == last_geometry_height
 		&& aspect == last_geometry_aspect)
 		return;
