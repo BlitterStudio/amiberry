@@ -247,7 +247,7 @@ struct AppSettingsGroup: Identifiable, Hashable {
 				AppSettingsSection(title: "Display Defaults", settings: inThisOrder([
 					"default_line_mode", "default_horizontal_centering", "default_vertical_centering",
 					"default_scaling_method", "default_gfx_autoresolution", "default_correct_aspect_ratio",
-					"default_auto_crop",
+					"default_auto_crop", "default_multithreaded_denise",
 				]), disclosedTitle: nil, disclosed: []),
 				// The window sizes mean nothing on iOS (the layer hides
 				// them there); the screen mode default stays with its

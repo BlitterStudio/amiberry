@@ -19,6 +19,7 @@ chipset
 ntsc
 cycle_exact
 immediate_blits
+amiberry.multithreaded_denise
 collision_level
 chipmem_size
 bogomem_size

@@ -121,6 +121,10 @@ int check_prefs_changed_gfx()
 			target_hotkeys_changed(&currprefs);
 	}
 #endif
+	if (currprefs.multithreaded_denise != changed_prefs.multithreaded_denise) {
+		set_multithreaded_denise(changed_prefs.multithreaded_denise);
+		currprefs.multithreaded_denise = changed_prefs.multithreaded_denise;
+	}
 
 	if (!config_changed && !display_change_requested) {
 		extra_passes = 0;

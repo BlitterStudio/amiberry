@@ -6284,6 +6284,8 @@ void target_fixup_options(uae_prefs* p)
 
 	set_key_configs(p);
 #endif
+	if (p == &currprefs && !fixup_prefs_preview_active)
+		set_multithreaded_denise(p->multithreaded_denise);
 }
 
 void target_default_options(uae_prefs* p, const int type)
@@ -6383,13 +6385,14 @@ void target_default_options(uae_prefs* p, const int type)
 	// Global state, not prefs: a settings preview (built_in_prefs_preview)
 	// computes defaults for a copy and must leave it alone.
 	const bool write_globals = !fixup_prefs_preview_active;
-	if (write_globals) {
+
+	// libretro keeps Denise on the emulation thread: the queue flush on
+	// reset stalls there.
 #ifdef LIBRETRO
-		multithread_enabled = false;
+	p->multithreaded_denise = false;
 #else
-		multithread_enabled = true;
+	p->multithreaded_denise = amiberry_options.default_multithreaded_denise;
 #endif
-	}
 
 	p->kbd_led_num = -1; // No status on numlock
 	p->kbd_led_scr = -1; // No status on scrollock
@@ -6691,6 +6694,9 @@ void target_save_options(zfile* f, uae_prefs* p)
 	// Written either way: a default_auto_crop application setting would
 	// otherwise turn auto crop back on for a configuration without it.
 	cfgfile_target_dwrite_bool(f, _T("gfx_auto_crop"), p->gfx_auto_crop);
+	// Written either way: a global default would otherwise turn it back on
+	// for a configuration without it.
+	cfgfile_target_write_bool(f, _T("multithreaded_denise"), p->multithreaded_denise);
 	if (!p->gfx_auto_crop && p->gfx_manual_crop)
 	{
 		cfgfile_target_dwrite_bool(f, _T("gfx_manual_crop"), p->gfx_manual_crop);
@@ -6861,6 +6867,7 @@ static int target_parse_option_host(uae_prefs *p, const TCHAR *option, const TCH
 		|| cfgfile_yesno(option, value, _T("gfx_auto_height"), &p->gfx_auto_crop)
 		|| cfgfile_yesno(option, value, _T("gfx_auto_crop"), &p->gfx_auto_crop)
 		|| cfgfile_yesno(option, value, _T("gfx_manual_crop"), &p->gfx_manual_crop)
+		|| cfgfile_yesno(option, value, _T("multithreaded_denise"), &p->multithreaded_denise)
 		|| cfgfile_intval(option, value, "gfx_correct_aspect", &p->gfx_correct_aspect, 1)
 		|| cfgfile_intval(option, value, "scaling_method", &p->scaling_method, 1)
 		|| cfgfile_string(option, value, "open_gui", p->open_gui, sizeof p->open_gui)
@@ -8056,6 +8063,7 @@ static bool write_amiberry_settings()
 
 	// Enable Auto-Crop by default?
 	write_bool_option("default_auto_crop", amiberry_options.default_auto_crop);
+	write_bool_option("default_multithreaded_denise", amiberry_options.default_multithreaded_denise);
 
 	// Default Screen Width
 	write_int_option("default_width", amiberry_options.default_width);
@@ -8582,6 +8590,7 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		ret |= cfgfile_yesno(option, value, "default_correct_aspect_ratio", &amiberry_options.default_correct_aspect_ratio);
 		ret |= cfgfile_yesno(option, value, "default_auto_height", &amiberry_options.default_auto_crop);
 		ret |= cfgfile_yesno(option, value, "default_auto_crop", &amiberry_options.default_auto_crop);
+		ret |= cfgfile_yesno(option, value, "default_multithreaded_denise", &amiberry_options.default_multithreaded_denise);
 		ret |= cfgfile_intval(option, value, "default_width", &amiberry_options.default_width, 1);
 		ret |= cfgfile_intval(option, value, "default_height", &amiberry_options.default_height, 1);
 		ret |= cfgfile_intval(option, value, "default_fullscreen_mode", &amiberry_options.default_fullscreen_mode, 1);

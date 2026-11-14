@@ -9072,3 +9072,11 @@ void draw_denise_line_queue_flush(void)
 
 	}
 }
+
+void set_multithreaded_denise(const bool enabled)
+{
+	if (multithread_enabled == static_cast<int>(enabled))
+		return;
+	draw_denise_line_queue_flush();
+	multithread_enabled = enabled;
+}

@@ -447,6 +447,10 @@ const std::vector<host_setting>& settings()
 			"Enable automatic border crop by default.",
 			"false", &amiberry_options::default_auto_crop),
 			"amiberry.gfx_auto_crop"),
+		sets(boolean("default_multithreaded_denise", "global_display", "Multithreaded Denise",
+			"Run Denise graphics chip emulation on a separate thread by default.",
+			"true", &amiberry_options::default_multithreaded_denise),
+			"amiberry.multithreaded_denise"),
 		// The windowed sizes the emulator's own new configuration starts
 		// from (gfx_monitor[0]'s windowed size); the windowed/full-window
 		// choice starts both the native and the RTG screen mode, so no one

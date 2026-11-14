@@ -556,6 +556,8 @@ void render_panel_global_settings()
 			"Preserve the Amiga display aspect ratio by default.");
 		render_bool_row("Auto crop", &amiberry_options.default_auto_crop,
 			"Enable automatic border crop by default.");
+		render_bool_row("Multithreaded Denise", &amiberry_options.default_multithreaded_denise,
+			"Run Denise graphics chip emulation on a separate thread by default.");
 		render_int_row("Default width", &amiberry_options.default_width,
 			"Default native display window width.", 1, 1, 16384);
 		render_int_row("Default height", &amiberry_options.default_height,

@@ -207,6 +207,7 @@ void denise_restore_registers(void);
 bool denise_is_vb(void);
 void draw_denise_vsync_queue(int);
 void draw_denise_line_queue_flush(void);
+void set_multithreaded_denise(bool enabled);
 void quick_denise_rga_queue(uae_u32 linecnt, int startpos, int endpos);
 void denise_handle_quick_strobe_queue(uae_u16 strobe, int strobe_pos, int endpos);
 bool drawing_can_lineoptimizations(void);
