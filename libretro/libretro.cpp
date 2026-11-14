@@ -3904,6 +3904,11 @@ static void keyboard_cb(bool down, unsigned keycode, uint32_t character, uint16_
 	case RETROK_LEFTBRACKET: scancode = SDL_SCANCODE_LEFTBRACKET; break;
 	case RETROK_BACKSLASH: scancode = SDL_SCANCODE_BACKSLASH; break;
 	case RETROK_RIGHTBRACKET: scancode = SDL_SCANCODE_RIGHTBRACKET; break;
+	case RETROK_QUOTE: scancode = SDL_SCANCODE_APOSTROPHE; break;
+	// The ISO key next to left Shift: RetroArch sends OEM_102, other
+	// front ends send LESS.
+	case RETROK_LESS:
+	case RETROK_OEM_102: scancode = SDL_SCANCODE_NONUSBACKSLASH; break;
 	case RETROK_BACKQUOTE: scancode = SDL_SCANCODE_GRAVE; break;
 	case RETROK_a: scancode = SDL_SCANCODE_A; break;
 	case RETROK_b: scancode = SDL_SCANCODE_B; break;
