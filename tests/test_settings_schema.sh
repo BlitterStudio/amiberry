@@ -196,6 +196,7 @@ assert sets == {
     "default_gfx_autoresolution": "gfx_autoresolution",
     "default_correct_aspect_ratio": "amiberry.gfx_correct_aspect",
     "default_auto_crop": "amiberry.gfx_auto_crop",
+    "default_multithreaded_denise": "amiberry.multithreaded_denise",
     "default_stereo_separation": "sound_stereo_separation",
     "default_sound_frequency": "sound_frequency",
     "default_sound_buffer": "sound_max_buff",
@@ -225,8 +226,9 @@ assert option_values == {
         "input_default_mouse_speed", "default_open_gui_key", "default_quit_key",
         "default_ar_key", "default_fullscreen_toggle_key", "default_retroarch_quit",
         "default_retroarch_menu", "default_retroarch_reset", "default_scaling_method",
-        "default_gfx_autoresolution", "default_auto_crop", "default_stereo_separation",
-        "default_sound_frequency", "default_soundcard", "shader", "shader_rtg",
+        "default_gfx_autoresolution", "default_auto_crop", "default_multithreaded_denise",
+        "default_stereo_separation", "default_sound_frequency", "default_soundcard", "shader",
+        "shader_rtg",
         "custom_bezel")
 } | {
     "default_line_mode": {"0": "none", "1": "double2", "2": "scanlines2"},

@@ -89,6 +89,7 @@ class HostSettingsSchemaTest {
 				"default_gfx_autoresolution" to "gfx_autoresolution",
 				"default_correct_aspect_ratio" to "amiberry.gfx_correct_aspect",
 				"default_auto_crop" to "amiberry.gfx_auto_crop",
+				"default_multithreaded_denise" to "amiberry.multithreaded_denise",
 				"default_stereo_separation" to "sound_stereo_separation",
 				"default_sound_frequency" to "sound_frequency",
 				"default_sound_buffer" to "sound_max_buff",

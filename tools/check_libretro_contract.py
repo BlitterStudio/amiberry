@@ -337,7 +337,7 @@ def main():
 		failures,
 	)
 	require(
-		"#ifdef LIBRETRO\n\tmultithread_enabled = false;\n#else\n\tmultithread_enabled = true;\n#endif" in amiberry_text,
+		"#ifdef LIBRETRO\n\tp->multithreaded_denise = false;\n#else\n\tp->multithreaded_denise = amiberry_options.default_multithreaded_denise;\n#endif" in amiberry_text,
 		"libretro must default multithreaded Denise drawing off to avoid reset-time queue flush stalls",
 		failures,
 	)

@@ -192,6 +192,16 @@ void set_immediate_blits(uae_prefs& p, const value& v)
 		p.waiting_blits = 0;
 }
 
+void get_multithreaded_denise(const uae_prefs& p, char* out, size_t size)
+{
+	write_bool(out, size, p.multithreaded_denise);
+}
+
+void set_multithreaded_denise(uae_prefs& p, const value& v)
+{
+	p.multithreaded_denise = v.number != 0;
+}
+
 const amiberry_setting_choice waiting_blits_choices[] = {
 	{"disabled", "Disabled"},
 	{"automatic", "Automatic"},
@@ -878,6 +888,10 @@ const definition definitions[] = {
 			AMIBERRY_APPLY_LIVE, "disabled", waiting_blits_choices,
 			"Not available with immediate blits, nor in the cycle-exact modes on a 68000 or 68010."),
 		get_waiting_blits, set_waiting_blits, waiting_blits_available, nullptr, nullptr},
+	{BOOL_OPTION("amiberry.multithreaded_denise", "chipset", "Multithreaded Denise",
+			"Run Denise graphics chip emulation on a separate thread. Turn off to lower host CPU use.",
+			AMIBERRY_APPLY_LIVE, "true", nullptr),
+		get_multithreaded_denise, set_multithreaded_denise, nullptr, nullptr, nullptr},
 	{CHOICE_OPTION("keyboard_type", "chipset", "Amiga keyboard model",
 			"The keyboard controller of the emulated Amiga, a hardware revision (A500, A1200), not a key layout.",
 			AMIBERRY_APPLY_LIVE, "UAE", keyboard_type_choices, nullptr),
@@ -1081,6 +1095,7 @@ bool commit_chipset(const uae_prefs& base, const uae_prefs& from, uae_prefs& to,
 	FIELD(blitter_cycle_exact);
 	FIELD(immediate_blits);
 	FIELD(waiting_blits);
+	FIELD(multithreaded_denise);
 	FIELD(keyboard_mode);
 	FIELD(keyboard_nkro);
 	FIELD(collision_level);

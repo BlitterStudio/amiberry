@@ -1028,6 +1028,7 @@ struct uae_prefs {
 	int gfx_vertical_offset;
 	int gfx_correct_aspect;
 	int scaling_method;
+	bool multithreaded_denise;
 #ifdef AMIBERRY
 	char shader[128];
 	char shader_rtg[128];
@@ -1511,6 +1512,7 @@ struct amiberry_options
 	int default_quickstart_compatibility = 0;
 	bool default_correct_aspect_ratio = true;
 	bool default_auto_crop = false;
+	bool default_multithreaded_denise = true;
 	int default_width = 720;
 	int default_height = 568;
 	int default_fullscreen_mode = 0;

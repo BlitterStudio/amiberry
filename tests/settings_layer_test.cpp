@@ -713,6 +713,7 @@ void reset_prefs(uae_prefs& p)
 	p.gfx_windowed_resize = true;
 	p.gfx_correct_aspect = 1;
 	p.scaling_method = -1;
+	p.multithreaded_denise = true;
 	// The display filters (target_default_options, default application
 	// settings): no shader, no bezel, the manual crop window the whole
 	// frame at the render resolution.

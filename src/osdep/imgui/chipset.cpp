@@ -24,6 +24,7 @@ struct chipset_options {
     const settings::definition& cycle_exact = settings::require("cycle_exact");
     const settings::definition& immediate_blits = settings::require("immediate_blits");
     const settings::definition& waiting_blits = settings::require("waiting_blits");
+    const settings::definition& multithreaded_denise = settings::require("amiberry.multithreaded_denise");
     const settings::definition& keyboard_type = settings::require("keyboard_type");
     const settings::definition& keyboard_nkro = settings::require("keyboard_nkro");
     const settings::definition& display_optimizations = settings::require("display_optimizations");
@@ -283,11 +284,8 @@ void render_panel_chipset() {
             ShowHelpMarker("CPU waits for Blitter to finish. More compatible than Immediate Blitter.");
             ImGui::EndDisabled();
 
-            bool mt = multithread_enabled != 0;
-            if (AmigaCheckbox("Multithreaded Denise", &mt)) {
-                multithread_enabled = mt ? 1 : 0;
-            }
-            ShowHelpMarker("Run Denise graphics chip emulation on a separate thread.");
+            option_checkbox("Multithreaded Denise", o.multithreaded_denise, ctx);
+            ShowHelpMarker("Run Denise graphics chip emulation on a separate thread. Turn off to lower host CPU use.");
 
             ImGui::Spacing();
             ImGui::AlignTextToFramePadding();

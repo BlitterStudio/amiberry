@@ -82,6 +82,14 @@ fi
 check "$work/def.txt" '^; --dump-config: resolved configuration'
 check "$work/def.txt" '^; configuration file: (built-in defaults)$'
 
+# The target option is parsed from a config and from -s, then the same
+# serialization path a saved .uae uses retains its explicit false value.
+printf 'amiberry.multithreaded_denise=false\n' > "$work/multithreaded-denise.uae"
+"$bin" --dump-config -f "$work/multithreaded-denise.uae" > "$work/multithreaded-denise.txt" 2>/dev/null
+check "$work/multithreaded-denise.txt" '^amiberry.multithreaded_denise=false$'
+"$bin" --dump-config -s amiberry.multithreaded_denise=false > "$work/multithreaded-denise-cli.txt" 2>/dev/null
+check "$work/multithreaded-denise-cli.txt" '^amiberry.multithreaded_denise=false$'
+
 # PearPC was removed: a configuration that chose it resolves to the
 # automatic PPC implementation, and QEMU still round-trips. The option is
 # written only while PPC is on, and only by builds with PPC support: the
