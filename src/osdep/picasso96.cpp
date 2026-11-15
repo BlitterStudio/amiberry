@@ -5111,25 +5111,31 @@ static uae_u32 REGPARAM2 picasso_BlitTemplate(TrapContext *ctx)
 		bgpen = tmp.BgPen;
 		endianswap (&bgpen, Bpp);
 
+		// One bit per pixel: each row uses the bytes from XOffset / 8 that
+		// cover XOffset % 8 + W bits.
+		if (!W || !H || tmp.BytesPerRow < 0) {
+			return 1;
+		}
+		const int tmpl_offset = tmp.XOffset / 8;
+		const int tmpl_rowbytes = (bitoffset + W + 7) / 8;
+		const int tmpl_size = tmpl_offset + (H - 1) * tmp.BytesPerRow + tmpl_rowbytes;
 		uae_u8 *tmpl_buffer = nullptr;
 		if (indirect) {
-			// One bit per pixel: each row reads from XOffset / 8 up to one
-			// byte past the bytes that cover the width.
-			if (!W || !H || tmp.BytesPerRow < 0) {
-				return 1;
-			}
-			const int tmpl_offset = tmp.XOffset / 8;
-			const int tmpl_size = tmpl_offset + (H - 1) * tmp.BytesPerRow + (W + 7) / 8 + 1;
 			tmpl_buffer = xcalloc(uae_u8, tmpl_size + 1);
 			trap_get_bytes(ctx, tmpl_buffer, tmp.AMemory, tmpl_size);
 			tmpl_base = tmpl_buffer + tmpl_offset;
 		} else {
-			tmpl_base = tmp.Memory + tmp.XOffset / 8;
+			if (!trap_valid_address(ctx, tmp.AMemory, tmpl_size)) {
+				write_log(_T("ERROR - Invalid Template memory region %08x (%d bytes)\n"), tmp.AMemory, tmpl_size);
+				return 0;
+			}
+			tmpl_base = tmp.Memory + tmpl_offset;
 		}
 
 		for (int rows = 0; rows < H; rows++, uae_mem += ri.BytesPerRow, tmpl_base += tmp.BytesPerRow) {
 			uae_u8 *uae_mem2 = uae_mem;
 			const uae_u8 *tmpl_mem = tmpl_base;
+			int tmpl_index = 0;
 			unsigned int data;
 
 			data = *tmpl_mem;
@@ -5141,7 +5147,11 @@ static uae_u32 REGPARAM2 picasso_BlitTemplate(TrapContext *ctx)
 				max = std::min(max, 8);
 
 				data <<= 8;
-				data |= *++tmpl_mem;
+				// The last byte of a row is not needed when the remaining
+				// bits fit in the previous one.
+				if (++tmpl_index < tmpl_rowbytes) {
+					data |= tmpl_mem[tmpl_index];
+				}
 
 				byte = data >> (8 - bitoffset);
 				byte ^= inversion;
