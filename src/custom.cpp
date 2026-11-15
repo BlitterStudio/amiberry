@@ -10825,6 +10825,9 @@ static bool draw_line_fast(int ldv, uaecptr bplptp[8], bool addbpl)
 		// advance bpl pointers
 		for (int i = 0; i < planes; i++) {
 			int mod = getbplmod(i);
+			if (ldv > 0) {
+				scandb[ldv - 1].scandoubled_bpl_ptr[lof_store][i] = bplpt[i];
+			}
 			bplpt[i] += mod + len;
 		}
 	}

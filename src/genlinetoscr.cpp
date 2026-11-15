@@ -357,16 +357,18 @@ static void gen_shiftspr(int shift)
 	}
 }
 
-static void gen_ecsshresspr(void)
+// allpixels: write all four sprite pixel outputs, each resolved against its
+// own playfield half-pixel. Needed when the caller filters or stores
+// dpix_val1/dpix_val3; with NULL they keep their playfield values and
+// filter_pixel() would blend an opaque sprite with the background.
+static void gen_ecsshresspr(bool allpixels)
 {
 	outf("if (sv0 || sv1) {");
-	outf("get_shres_spr_pix(pix0, pix1, pix2, pix3, sv0, sv1, &dpix_val0, &dpix_val2);");
-	outf("if (sv0) {");
-	outf("dpix_val1 = dpix_val0;");
-	outf("}");
-	outf("if (sv1) {");
-	outf("dpix_val3 = dpix_val2;");
-	outf("}");
+	if (allpixels) {
+		outf("get_shres_spr_pix(pix0, pix1, pix2, pix3, sv0, sv1, &dpix_val0, &dpix_val1, &dpix_val2, &dpix_val3);");
+	} else {
+		outf("get_shres_spr_pix(pix0, pix1, pix2, pix3, sv0, sv1, &dpix_val0, NULL, &dpix_val2, NULL);");
+	}
 	outf("}");
 }
 
@@ -1141,7 +1143,7 @@ static void gen_fastdraw_mode(int off, int total)
 		} else {
 			outf("get_shres_pix(c0, c1, &dpix_val0, &dpix_val1);");
 		}
-		if (doubling < 0) {
+		if (doubling < 0 && filtered) {
 			outf("dpix_val0 = filter_pixel(dpix_val0, dpix_val1);");
 			if (genlock) {
 				outf("gpix0 = filter_pixel_genlock(gpix0, gpix1);");
@@ -1847,7 +1849,7 @@ int main (int argc, char *argv[])
 					gen_matchspr(0);
 					gen_sprpix(1);
 					gen_matchspr(2);
-					gen_ecsshresspr();
+					gen_ecsshresspr(filtered);
 					outf("if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_2x) {");
 					if (filtered) {
 						outf("dpix_val0 = filter_pixel(dpix_val0, dpix_val1);");
@@ -1865,7 +1867,7 @@ int main (int argc, char *argv[])
 					gen_matchspr(0);
 					gen_sprpix(1);
 					gen_matchspr(2);
-					gen_ecsshresspr();
+					gen_ecsshresspr(true);
 					outf("if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_4x) {");
 					gen_storepix(0, 0);
 					gen_storepix(1, 1);

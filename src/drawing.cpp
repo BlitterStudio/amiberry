@@ -5049,7 +5049,8 @@ static void track_autoscale_sprite_zero(void)
 #endif
 
 // sv0 covers the superhires pixels pf0 and pf1, sv1 covers pf2 and pf3
-static void get_shres_spr_pix(uae_u8 pf0, uae_u8 pf1, uae_u8 pf2, uae_u8 pf3, uae_u32 sv0, uae_u32 sv1, uae_u32 *dpix0, uae_u32 *dpix1)
+static void get_shres_spr_pix(uae_u8 pf0, uae_u8 pf1, uae_u8 pf2, uae_u8 pf3, uae_u32 sv0, uae_u32 sv1,
+	uae_u32 *dpix0, uae_u32 *dpix1, uae_u32 *dpix2, uae_u32 *dpix3)
 {
 	uae_u16 v;
 	// Sprite-playfield collisions see every playfield pixel under the sprite.
@@ -5063,18 +5064,48 @@ static void get_shres_spr_pix(uae_u8 pf0, uae_u8 pf1, uae_u8 pf2, uae_u8 pf3, ua
 			denise_collide_sprites(pf3, sv1);
 		}
 	}
-	uae_u8 p0 = denise_sprite_colour(0, sv0);
-	uae_u8 p1 = denise_sprite_colour(0, sv1);
-	uae_u8 off = ((p1 & 3) * 4) + (p0 & 3) + ((p0 | p1) & 16);
-	if (p0) {
-		v = (denise_colors.color_regs_ecs[off] & 0xccc) << 0;
-		v |= v >> 2;
-		*dpix0 = xcolors[v];
-	}
-	if (p1) {
-		v = (denise_colors.color_regs_ecs[off] & 0x333) << 2;
-		v |= v >> 2;
-		*dpix1 = xcolors[v];
+	if (dpix1) {
+		uae_u8 p0 = denise_sprite_colour(pf0, sv0);
+		uae_u8 p1 = denise_sprite_colour(pf1, sv0);
+		uae_u8 off = ((p1 & 3) * 4) + (p0 & 3) + ((p0 | p1) & 16);
+		if (p0) {
+			v = (denise_colors.color_regs_ecs[off] & 0xccc) << 0;
+			v |= v >> 2;
+			*dpix0 = xcolors[v];
+		}
+		if (p1) {
+			v = (denise_colors.color_regs_ecs[off] & 0x333) << 2;
+			v |= v >> 2;
+			*dpix1 = xcolors[v];
+		}
+		p0 = denise_sprite_colour(pf2, sv1);
+		p1 = denise_sprite_colour(pf3, sv1);
+		off = ((p1 & 3) * 4) + (p0 & 3) + ((p0 | p1) & 16);
+		if (p0) {
+			v = (denise_colors.color_regs_ecs[off] & 0xccc) << 0;
+			v |= v >> 2;
+			*dpix2 = xcolors[v];
+		}
+		if (p1) {
+			v = (denise_colors.color_regs_ecs[off] & 0x333) << 2;
+			v |= v >> 2;
+			*dpix3 = xcolors[v];
+		}
+
+	} else {
+		uae_u8 p0 = denise_sprite_colour(pf0, sv0);
+		uae_u8 p1 = denise_sprite_colour(pf2, sv1);
+		uae_u8 off = ((p1 & 3) * 4) + (p0 & 3) + ((p0 | p1) & 16);
+		if (p0) {
+			v = (denise_colors.color_regs_ecs[off] & 0xccc) << 0;
+			v |= v >> 2;
+			*dpix0 = xcolors[v];
+		}
+		if (p1) {
+			v = (denise_colors.color_regs_ecs[off] & 0x333) << 2;
+			v |= v >> 2;
+			*dpix2 = xcolors[v];
+		}
 	}
 }
 
