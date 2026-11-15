@@ -798,6 +798,12 @@ TCHAR* validatedevicename(TCHAR* s, const TCHAR*)
 		s[30] = 0;
 	return s;
 }
+TCHAR* validatevolumename(TCHAR* s, const TCHAR*)
+{
+	if (std::strlen(s) > 30)
+		s[30] = 0;
+	return s;
+}
 bool cfgfile_mount_entry_fits(uae_prefs* p, int index)
 {
 	char value[CONFIG_BLEN];

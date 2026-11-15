@@ -668,6 +668,9 @@ amiberry_settings_status mount_value_out(const uaedev_config_info& ci, char* buf
 void default_volume_name(const char* path, TCHAR* volume, size_t volume_size)
 {
 	std::string name = path ? path : "";
+	// A folder picked as "/path/Work/" is named after Work.
+	while (name.size() > 1 && (name.back() == '/' || name.back() == '\\'))
+		name.pop_back();
 	const size_t separator = name.find_last_of("/\\");
 	if (separator != std::string::npos)
 		name.erase(0, separator + 1);
@@ -685,6 +688,9 @@ void default_volume_name(const char* path, TCHAR* volume, size_t volume_size)
 			c = '_';
 	}
 	std::snprintf(volume, volume_size, "%s", name.c_str());
+	// As add_filesys_config() will store it (no ';', the Amiga character
+	// set, 30 characters), so adding the entry does not change it.
+	validatevolumename(volume, nullptr);
 }
 
 void default_device_name(const uae_prefs& p, TCHAR* name, size_t size)
@@ -852,9 +858,18 @@ amiberry_settings_status amiberry_settings_mount_field_set(const amiberry_settin
 		} else if (!std::strcmp(field, "device") || !std::strcmp(field, "volume")) {
 			// The entry's spelling separates names with ':' and ',' and
 			// cannot escape a quote in them.
-			TCHAR* name = !std::strcmp(field, "device") ? ci.devname : ci.volname;
+			const bool device = !std::strcmp(field, "device");
+			TCHAR* name = device ? ci.devname : ci.volname;
 			if (!field_value[0] || std::strpbrk(field_value, ":,\"")
 				|| !copy_mount_field(name, sizeof ci.devname, field_value))
+				return AMIBERRY_SETTINGS_INVALID_VALUE;
+			// As add_filesys_config() will store it, so adding the entry
+			// does not change it again.
+			if (device)
+				validatedevicename(name, nullptr);
+			else
+				validatevolumename(name, nullptr);
+			if (!name[0])
 				return AMIBERRY_SETTINGS_INVALID_VALUE;
 		} else if (!std::strcmp(field, "read_only")) {
 			if (!std::strcmp(field_value, "true")) ci.readonly = true;

@@ -1173,7 +1173,10 @@ final class SettingsWindowModelTests: XCTestCase {
 		let session = try SettingsSession()
 		let entry = try session.defaultMount(kind: "dir", path: path)
 		XCTAssertEqual(try session.mountField("path", in: entry), path)
-		XCTAssertEqual(try session.mountField("volume", in: entry), created.lastPathComponent)
+		// The label is the folder's name as the core stores it: ',' cannot
+		// be in it, and it holds at most 30 characters.
+		let label = String(created.lastPathComponent.replacingOccurrences(of: ",", with: "_").prefix(30))
+		XCTAssertEqual(try session.mountField("volume", in: entry), label)
 		let before = try session.mounts().count
 		try session.addMount(entry)
 		XCTAssertEqual(try session.mounts().count, before + 1)
