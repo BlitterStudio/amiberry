@@ -7529,6 +7529,9 @@ static uae_u32 REGPARAM2 picasso_SetFeatureAttrs(TrapContext *ctx)
 #if OVERLAY_DEBUG > 1
 	write_log(_T("picasso_SetFeatureAttrs %08x %d\n"), tagp, type);
 #endif
+	const uae_u32 old_format = overlay_format;
+	const int old_src_width_in = overlay_src_width_in;
+	const int old_src_height_in = overlay_src_height_in;
 	int budget = OVERLAY_MAX_TAGS;
 	for (;;) {
 		uae_u32 tag, val;
@@ -7539,6 +7542,16 @@ static uae_u32 REGPARAM2 picasso_SetFeatureAttrs(TrapContext *ctx)
 		write_log(_T("picasso_SetFeatureAttrs %08x tag %08x (%d) %08x\n"), tagp - 8, tag, tag & 0x7fffffff, val);
 #endif
 		overlaygettag(ctx, tag, val);
+	}
+	// The overlay bitmap was allocated for one format and size. Scanout
+	// reads FA_SourceWidth/Height pixels from it, so a different format
+	// or a larger source would read outside the bitmap.
+	if (overlay_bitmap && (overlay_format != old_format ||
+		overlay_src_width_in < 1 || overlay_src_width_in > overlay_src_width ||
+		overlay_src_height_in < 1 || overlay_src_height_in > overlay_src_height)) {
+		overlay_format = old_format;
+		overlay_src_width_in = old_src_width_in;
+		overlay_src_height_in = old_src_height_in;
 	}
 #if OVERLAY_DEBUG > 1
 	write_log(_T("RTG Overlay: X=%d Y=%d W=%d H=%d Act=%d SrcW=%d SrcH=%d BPP=%d VRAM=%08x\n"),
@@ -7673,9 +7686,33 @@ static uae_u32 REGPARAM2 picasso_CreateFeature(TrapContext *ctx)
 		return 0;
 	}
 	// probably should use GetBitMapAttr() but function is not documented enough.
-	overlay_src_width = trap_get_word(ctx, overlay_bitmap + 0) / overlay_pix;
-	overlay_src_height = trap_get_word(ctx, overlay_bitmap + 2);
-	overlay_vram = trap_get_long(ctx, overlay_bitmap + 8);
+	int src_width = 0, src_height = 0;
+	uaecptr vram = 0;
+	if (trap_valid_address(ctx, overlay_bitmap, 12)) {
+		src_width = trap_get_word(ctx, overlay_bitmap + 0) / overlay_pix;
+		src_height = trap_get_word(ctx, overlay_bitmap + 2);
+		vram = trap_get_long(ctx, overlay_bitmap + 8);
+	}
+	// Scanout reads the bitmap directly from VRAM, so it must be there and
+	// hold the requested source size.
+	const addrbank *ovl_bank = gfxmem_banks[0];
+	if (src_width < overlay_src_width_in || src_height < overlay_src_height_in ||
+		vram < ovl_bank->start || vram >= ovl_bank->start + ovl_bank->allocated_size ||
+		(uae_u64)(vram - ovl_bank->start) + (uae_u64)src_width * overlay_pix * src_height > ovl_bank->allocated_size) {
+#if OVERLAY_DEBUG
+		write_log(_T("picasso_CreateFeature overlay bitmap %08x unusable (vram %08x %dx%d)\n"), overlay_bitmap, vram, src_width, src_height);
+#endif
+		const uaecptr freefunc = trap_get_long(ctx, bi + PSSO_BoardInfo_FreeBitMap);
+		trap_call_add_areg(ctx, 0, bi);
+		trap_call_add_areg(ctx, 1, overlay_bitmap);
+		trap_call_add_areg(ctx, 2, 0);
+		trap_call_func(ctx, freefunc);
+		overlay_bitmap = 0;
+		return 0;
+	}
+	overlay_src_width = src_width;
+	overlay_src_height = src_height;
+	overlay_vram = vram;
 	overlay_vram_offset = static_cast<int>(overlay_vram - gfxmem_banks[0]->start);
 	overlay_convert = getconvert(static_cast<int>(overlay_format), picasso_vidinfo[0].pixbytes);
 	if (!p96_rgbx16_ovl)
@@ -7716,6 +7753,8 @@ static uae_u32 REGPARAM2 picasso_DeleteFeature(TrapContext *ctx)
 	overlay_bitmap = 0;
 	overlay_vram = 0;
 	overlay_active = 0;
+	// Redraw the screen without the overlay.
+	picasso_vidinfo[0].full_refresh = 1;
 	return 1;
 }
 
