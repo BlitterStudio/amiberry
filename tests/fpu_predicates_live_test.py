@@ -11,7 +11,7 @@ import sys
 import tempfile
 import time
 
-from ipc_actions_test import Connection, Emulator
+from ipc_actions_test import HEADLESS_SDL_ENV, Connection, Emulator
 
 
 def expected_condition(control, condition):
@@ -77,9 +77,7 @@ def main(binary):
             "XDG_CONFIG_HOME": str(work / "config"), "XDG_DATA_HOME": str(work / "data"),
             "AMIBERRY_HOME_DIR": str(work / "home"), "LOCALAPPDATA": str(work / "local"),
             "APPDATA": str(work / "roaming"),
-            "SDL_VIDEO_DRIVER": "dummy" if sys.platform == "darwin" else "offscreen",
-            "SDL_VIDEODRIVER": "dummy" if sys.platform == "darwin" else "offscreen",
-            "SDL_AUDIO_DRIVER": "dummy", "SDL_AUDIODRIVER": "dummy",
+            **HEADLESS_SDL_ENV,
         })
         env.pop("AMIBERRY_CONFIG_DIR", None)
         for cache in (0, 8192):

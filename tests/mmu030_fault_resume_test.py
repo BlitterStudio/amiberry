@@ -22,6 +22,8 @@ import tempfile
 import threading
 import time
 
+from ipc_actions_test import HEADLESS_SDL_ENV
+
 IS_WINDOWS = sys.platform == "win32"
 ROM_CODE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "mmu030", "fault_resume.bin")
 ROM_SIZE = 512 * 1024
@@ -106,9 +108,7 @@ def run(binary, rom, work, compatible):
     env.update({"HOME": home, "XDG_RUNTIME_DIR": home, "XDG_CONFIG_HOME": os.path.join(home, "config"),
                 "XDG_DATA_HOME": os.path.join(home, "data"), "AMIBERRY_HOME_DIR": os.path.join(home, "home"),
                 "LOCALAPPDATA": os.path.join(home, "local"), "APPDATA": os.path.join(home, "roaming"),
-                "SDL_VIDEO_DRIVER": "dummy" if sys.platform == "darwin" else "offscreen",
-                "SDL_VIDEODRIVER": "dummy" if sys.platform == "darwin" else "offscreen",
-                "SDL_AUDIO_DRIVER": "dummy", "SDL_AUDIODRIVER": "dummy"})
+                **HEADLESS_SDL_ENV})
     env.pop("AMIBERRY_CONFIG_DIR", None)
     os.makedirs(home)
     args = [binary, "--model", "A4000", "-G"]

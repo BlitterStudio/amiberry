@@ -36,6 +36,8 @@ trap 'rm -rf "$work"' EXIT
 log="$work/tests.log"
 status=0
 # A scratch home: no user settings, ROMs or media; no window or audio device.
+# SDL3 reads SDL_VIDEO_DRIVER/SDL_AUDIO_DRIVER first and SDL2 only the older
+# names, so set both or an inherited SDL3 name wins.
 # perl's alarm bounds a hang (a test waiting on an action nobody runs).
 HOME="$work" SDL_VIDEO_DRIVER=dummy SDL_VIDEODRIVER=dummy SDL_AUDIO_DRIVER=dummy SDL_AUDIODRIVER=dummy \
 	perl -e 'alarm 300; exec @ARGV' "$AMIBERRY_BIN" --native-ui-tests="$bundle" > "$log" 2>&1 || status=$?
