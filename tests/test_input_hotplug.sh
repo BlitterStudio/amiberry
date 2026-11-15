@@ -195,7 +195,7 @@ joystick_configname = region_between(
 custom_loader = region_between(
 	amiberry_input,
 	"bool load_custom_options(",
-	"static void close_joystick()",
+	"void amiberry_apply_pending_custom_options(",
 )
 if "if (amiberry_get_joystick_index(jp.idc.configname) != -1)" not in joystick_configname:
 	fail("Custom mapping loads must use the same bounded joystick index parser as saves")
