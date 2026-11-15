@@ -124,14 +124,15 @@ static void ahi_poll()
 static void ahi_write_block(const uaecptr addr)
 {
 	const int bytes = amigablksize * 4;
-	auto* dst = reinterpret_cast<uae_u32*>(ahisndbuffer);
-	for (int i = 0; i < amigablksize; i++)
-		dst[i] = get_long(addr + i * 4);
-
-	if (currprefs.sound_stereo_swap_ahi) {
-		auto p = reinterpret_cast<uae_s16*>(ahisndbuffer);
-		for (int i = 0; i < bytes / 2; i += 2)
-			std::swap(p[i], p[i + 1]);
+	const bool swap = currprefs.sound_stereo_swap_ahi;
+	auto* dst = reinterpret_cast<uae_s16*>(ahisndbuffer);
+	for (int i = 0; i < amigablksize; i++) {
+		// Each long is a big-endian left/right pair, left in the high word.
+		const uae_u32 v = get_long(addr + i * 4);
+		const auto left = static_cast<uae_s16>(v >> 16);
+		const auto right = static_cast<uae_s16>(v);
+		dst[i * 2 + 0] = swap ? right : left;
+		dst[i * 2 + 1] = swap ? left : right;
 	}
 
 	// Always queue what the guest wrote: dropping a block is an audible gap.
