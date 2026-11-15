@@ -167,14 +167,18 @@ final class SettingsSessionTests: XCTestCase {
 
 		let session = try SettingsSession()
 		let before = try session.mounts()
-		let entry = "dir,rw,DH7:Work:\(folder.path),0"
+		let entry = try session.defaultMount(kind: "dir", path: folder.path)
+		XCTAssertEqual(try session.mountField("kind", in: entry), "dir")
+		XCTAssertEqual(try session.mountField("path", in: entry), folder.path)
+		XCTAssertEqual(try session.mountField("read_only", in: entry), "false")
+		let readOnly = try session.settingMountField("read_only", to: "true", in: entry)
+		XCTAssertEqual(try session.mountField("read_only", in: readOnly), "true")
 		try session.addMount(entry)
 		XCTAssertEqual(try session.mounts(), before + [entry])
 		XCTAssertThrowsError(try session.addMount(entry), "a device name another entry uses")
 		XCTAssertThrowsError(try session.addMount("not an entry")) {
 			XCTAssertEqual($0 as? SettingsError, .invalidValue(id: "mount", value: "not an entry"))
 		}
-		let readOnly = "dir,ro,DH7:Work:\(folder.path),0"
 		try session.replaceMount(at: before.count, with: readOnly)
 		XCTAssertEqual(try session.mounts().last, readOnly)
 		try session.removeMount(at: before.count)
@@ -182,6 +186,23 @@ final class SettingsSessionTests: XCTestCase {
 		XCTAssertThrowsError(try session.removeMount(at: before.count)) {
 			XCTAssertEqual($0 as? SettingsError, .unknownID("mount \(before.count)"))
 		}
+	}
+
+	func testMountControllersExposeTheirUnits() throws {
+		let session = try SettingsSession()
+		let controllers = try session.mountControllers(for: "hdf")
+		XCTAssertFalse(controllers.isEmpty)
+		XCTAssertTrue(controllers.contains { !$0.units.isEmpty })
+	}
+
+	func testHardfileCreatorReturnsTheCreatedPath() throws {
+		let directory = FileManager.default.temporaryDirectory.appendingPathComponent("bridge-hardfile-\(UUID().uuidString)")
+		try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+		defer { try? FileManager.default.removeItem(at: directory) }
+		let path = directory.appendingPathComponent("Disk.hdf").path
+		let created = try MediaLibrary.createHardfile(at: path, sizeMB: 1, dynamicVHD: false)
+		XCTAssertEqual(created, path)
+		XCTAssertTrue(FileManager.default.fileExists(atPath: created))
 	}
 
 	func testBoardTypesDescribeTheirFields() throws {

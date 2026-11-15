@@ -27,7 +27,7 @@ class NewConfigurationReviewTest {
 			joyport1 = "joy0",
 			onScreenJoystick = false,
 			shader = "tv",
-			hardDrives = listOf(HardDrive(path = "/hd/Work.hdf"))
+			hardDrives = listOf(MountEntry(MountKind.Hardfile, path = "/hd/Work.hdf"))
 		)
 
 		assertEquals(settings, settings.presetMachine())

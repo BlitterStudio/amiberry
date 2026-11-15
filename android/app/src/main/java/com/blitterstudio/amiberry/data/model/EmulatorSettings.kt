@@ -54,8 +54,8 @@ data class EmulatorSettings(
 	// CD
 	val cdImage: String = "",
 
-	// Hard drives (hardfiles)
-	val hardDrives: List<HardDrive> = emptyList(),
+	// Storage mounts (directories, hardfiles, CD and tape units).
+	val hardDrives: List<MountEntry> = emptyList(),
 
 	// The expansion boards the configuration lists (SettingsBoards; machine
 	// hardware: a model change replaces them, as it replaces the memory).

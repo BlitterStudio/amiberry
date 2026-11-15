@@ -1187,6 +1187,13 @@ extern void cfgfile_target_dwrite_str_escape(struct zfile *f, const TCHAR *optio
 
 extern void cfgfile_backup(const TCHAR* path);
 extern struct uaedev_config_data* add_filesys_config(struct uae_prefs* p, int index, struct uaedev_config_info*);
+// The controller field of a mount entry on controller type ct (board unit
+// ct_unit), with "%d" where the controller unit goes: "uae%d",
+// "ide%d_mainboard", "scsi%d_a2091-2"; empty for an unknown type.
+extern void cfgfile_controller_template(int ct, int ct_unit, TCHAR* out, size_t size);
+// The complete uaehfN spelling of an entry without adding it to a
+// configuration; false for a NULL entry or output buffer.
+extern bool cfgfile_mount_value_ci(const struct uaedev_config_info* ci, TCHAR* out, size_t size);
 // The uaehfN value of mount entry index, the complete .uae spelling of the
 // entry; false when index is not an entry.
 extern bool cfgfile_mount_value(struct uae_prefs* p, int index, TCHAR* out, size_t size);

@@ -94,6 +94,18 @@ object FileManager {
 		return importFileWithResult(context, uri, category, getFileName(context, uri))
 	}
 
+	/** Imports an archive selected specifically to mount as a directory volume. */
+	fun importMountArchiveWithResult(context: Context, uri: Uri): ImportResult {
+		val name = safeImportFileName(getFileName(context, uri))
+		val extension = name.substringAfterLast('.', missingDelimiterValue = "").lowercase()
+		if (extension !in MOUNT_ARCHIVE_EXTENSIONS) return ImportResult.Unsupported(name, extension)
+		return copyImportFile(context, uri, FileCategory.HARD_DRIVES, name)
+	}
+
+	/** Imports an arbitrary tape image; tape formats do not have a reliable extension list. */
+	fun importTapeImageWithResult(context: Context, uri: Uri): ImportResult =
+		copyImportFile(context, uri, FileCategory.HARD_DRIVES, safeImportFileName(getFileName(context, uri)))
+
 	/**
 	 * Imports each file into the category its extension belongs to (an .adf to Floppies);
 	 * a .bin goes by its size and the other files picked with it (see [sortedImportCategory]).
@@ -541,6 +553,7 @@ object FileManager {
 	private const val FOLDER_IMPORT_FAILURE_NAME = "folder"
 	/** The largest .bin taken for a Kickstart: the biggest ROMs (CD32 with its extension) are 1 MiB. */
 	private const val MAX_ROM_BIN_SIZE = 2L * 1024 * 1024
+	private val MOUNT_ARCHIVE_EXTENSIONS = setOf("zip", "7z", "rar", "lha", "lzh", "lzx")
 
 	private fun importTargetName(baseName: String, extension: String, counter: Int): String =
 		if (extension.isBlank()) "${baseName}_$counter" else "${baseName}_$counter.$extension"

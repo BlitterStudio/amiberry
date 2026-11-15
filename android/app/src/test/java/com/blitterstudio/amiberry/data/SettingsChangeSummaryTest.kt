@@ -3,7 +3,8 @@ package com.blitterstudio.amiberry.data
 import com.blitterstudio.amiberry.R
 import com.blitterstudio.amiberry.data.model.AmigaModel
 import com.blitterstudio.amiberry.data.model.EmulatorSettings
-import com.blitterstudio.amiberry.data.model.HardDrive
+import com.blitterstudio.amiberry.data.model.MountEntry
+import com.blitterstudio.amiberry.data.model.MountKind
 import com.blitterstudio.amiberry.data.model.SettingText
 import com.blitterstudio.amiberry.data.model.SettingsChange
 import com.blitterstudio.amiberry.data.model.SettingsChangeSummary
@@ -136,7 +137,7 @@ class SettingsChangeSummaryTest {
 			floppy0 = "/disks/a.adf", floppy0Type = 1, floppy1 = "/disks/b.adf", floppy1Type = 2,
 			floppy2 = "/disks/c.adf", floppy2Type = 7, floppy3 = "/disks/d.adf", floppy3Type = 3,
 			cdImage = "/cds/game.iso",
-			hardDrives = listOf(HardDrive(path = "/hd/work.hdf", readOnly = true, bootPriority = 1)),
+			hardDrives = listOf(MountEntry(MountKind.Hardfile, path = "/hd/work.hdf", readOnly = true, bootPriority = 1)),
 			soundOutput = "normal", soundFreq = 32000, soundBuffer = 4096, soundChannels = "mono",
 			soundVolume = 10, soundVolumePaula = 10, soundVolumeCd = 10, soundVolumeAhi = 10, soundVolumeMidi = 10,
 			floppy0Sound = 1, floppy1Sound = 1, floppy2Sound = 1, floppy3Sound = 1,
@@ -166,6 +167,6 @@ class SettingsChangeSummaryTest {
 		assertEquals("100%", masterVolume.before)
 		assertEquals("90%", masterVolume.after)
 		assertEquals("8192 KB", rows.single { it.label == schema.label("cachesize") }.after)
-		assertEquals("work.hdf", rows.single { it.label == read(SettingText.Resource(R.string.settings_storage_hard_drive_label, listOf(0))) }.after)
+		assertTrue(rows.single { it.label == read(SettingText.Resource(R.string.settings_storage_hard_drive_label, listOf(0))) }.after.contains("work.hdf"))
 	}
 }

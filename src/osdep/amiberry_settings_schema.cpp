@@ -1944,6 +1944,68 @@ void host_settings(std::string& out)
 	out += "\n]";
 }
 
+void mount_controllers(std::string& out)
+{
+	const auto kinds = [](std::string& json, unsigned int values) {
+		json += '[';
+		bool first = true;
+		for (const auto& kind : {std::pair<unsigned int, const char*>{amiberry_settings::MOUNT_KIND_HDF, "hdf"},
+			{amiberry_settings::MOUNT_KIND_CD, "cd"}, {amiberry_settings::MOUNT_KIND_TAPE, "tape"}}) {
+			if (!(values & kind.first))
+				continue;
+			if (!first)
+				json += ',';
+			first = false;
+			json_string(json, kind.second);
+		}
+		json += ']';
+	};
+	out += ",\n\"mount_controllers\":[";
+	bool first_controller = true;
+	for (const amiberry_settings::mount_controller& controller : amiberry_settings::mount_controllers(nullptr)) {
+		out += first_controller ? "\n{" : ",\n{";
+		first_controller = false;
+		out += "\"id\":";
+		json_string(out, controller.id.c_str());
+		out += ",\"label\":";
+		json_string(out, controller.label.c_str());
+		out += ",\"kinds\":";
+		kinds(out, controller.kinds);
+		if (!controller.board.empty()) {
+			out += ",\"board\":";
+			json_string(out, controller.board.c_str());
+			out += ",\"board_unit\":";
+			json_number(out, controller.board_unit);
+		}
+		if (!controller.accelerators.empty()) {
+			out += ",\"accelerators\":[";
+			for (size_t i = 0; i < controller.accelerators.size(); i++) {
+				if (i)
+					out += ',';
+				json_string(out, controller.accelerators[i].c_str());
+			}
+			out += ']';
+		}
+		out += ",\"units\":[";
+		for (size_t i = 0; i < controller.units.size(); i++) {
+			const amiberry_settings::mount_controller_unit& unit = controller.units[i];
+			if (i)
+				out += ',';
+			out += "{\"value\":";
+			json_number(out, unit.value);
+			out += ",\"label\":";
+			json_string(out, unit.label.c_str());
+			if (unit.kinds != controller.kinds) {
+				out += ",\"kinds\":";
+				kinds(out, unit.kinds);
+			}
+			out += '}';
+		}
+		out += "]}";
+	}
+	out += "\n]";
+}
+
 } // namespace
 
 // Writes the schema to stdout; 0 on success.
@@ -1988,6 +2050,7 @@ int settings_schema_and_exit(const char* option_list)
 	accelerator_boards(out);
 	aros(out);
 	host_settings(out);
+	mount_controllers(out);
 	out += "\n}\n";
 	if (std::fwrite(out.data(), 1, out.size(), stdout) != out.size() || std::fflush(stdout) != 0) {
 		std::fprintf(stderr, "--settings-schema: writing to stdout failed\n");

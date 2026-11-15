@@ -308,6 +308,7 @@ set(SOURCE_FILES
         src/osdep/settings/settings_io.cpp
         src/osdep/settings/settings_registry.cpp
         src/osdep/settings/settings_session.cpp
+        src/osdep/settings/settings_mounts.cpp
         src/osdep/settings/settings_sound.cpp
         src/osdep/settings/settings_storage.cpp
         src/osdep/gui/gui_shared.cpp

@@ -950,81 +950,415 @@ struct ModelSections: View {
 	}
 }
 
-/// The mounted hard drives (folders and hardfiles).
+/// The mounted folders, archives, hardfiles and controller drives.
 struct MountSections: View {
 	let model: SettingsWindowModel
+	@State private var editing: MountEdit?
+	@State private var showingCreateHardfile = false
+	/// The new hardfile's entry, edited once the create sheet has gone:
+	/// SwiftUI presents one sheet at a time.
+	@State private var createdEntry: String?
 
 	var body: some View {
-		let mounts = model.store.mounts
 		Group {
-			Section("Hard drives") {
-				if mounts.isEmpty {
+			Section("Hard Drives") {
+				if model.store.mounts.isEmpty {
 					Text("No drives are mounted.").foregroundStyle(.secondary)
 				}
-				ForEach(Array(mounts.enumerated()), id: \.offset) { index, entry in
-					HStack {
-						Text(entry).font(.system(.body, design: .monospaced)).lineLimit(1).truncationMode(.middle)
-						Spacer()
-						Button("Remove") { model.store.removeMount(at: index) }
+				ForEach(Array(model.store.mounts.enumerated()), id: \.offset) { index, entry in
+					MountRow(store: model.store, entry: entry) {
+						editing = MountEdit(index: index, entry: entry)
+					} remove: {
+						model.store.removeMount(at: index)
 					}
 				}
 			}
 			Section {
+				// Borderless: in an iOS form row a bordered button takes
+				// the whole row's tap, so every button in it would fire.
 				HStack {
 					Button("Add Folder\u{2026}") { addFolder() }
+					Button("Add Archive\u{2026}") { addArchive() }
 					Button("Add Hardfile\u{2026}") { addHardfile() }
 				}
+				.buttonStyle(.borderless)
+				HStack {
+					Button("Add CD Drive") { add(kind: "cd") }
+					Button("Add Tape Drive\u{2026}") { add(kind: "tape") }
+					Button("Create Hardfile\u{2026}") { showingCreateHardfile = true }
+				}
+				.buttonStyle(.borderless)
 			} footer: {
 				Text("Drives attach when the emulation starts or resets.")
 			}
 		}
-	}
-
-	/// The first DHn device name the mounts do not use.
-	private func freeDevice() -> String {
-		let used = Set(model.store.mounts.compactMap { entry -> String? in
-			entry.split(separator: ",").dropFirst(2).first?.split(separator: ":").first.map { $0.uppercased() }
-		})
-		var number = 0
-		while used.contains("DH\(number)") {
-			number += 1
+		.sheet(item: $editing) { edit in
+			MountPropertiesSheet(model: model, edit: edit)
 		}
-		return "DH\(number)"
-	}
-
-	/// A uaehfN path field: quoted when it holds a comma or starts or ends
-	/// with a space, as the configuration writer does. nil for a path with a
-	/// double quote, which a mount entry cannot hold (its path field is read
-	/// without escapes, so a quote ends a quoted path).
-	static func mountField(_ path: String) -> String? {
-		guard !path.contains("\"") else { return nil }
-		guard path.contains(",") || path.hasPrefix(" ") || path.hasSuffix(" ") else {
-			return path
+		.sheet(isPresented: $showingCreateHardfile, onDismiss: {
+			if let entry = createdEntry {
+				createdEntry = nil
+				editing = MountEdit(index: nil, entry: entry)
+			}
+		}) {
+			CreateHardfileSheet(model: model) { entry in
+				createdEntry = entry
+			}
 		}
-		return "\"" + path + "\""
-	}
-
-	private func add(_ entry: (String) -> String, path: String) {
-		guard let field = MountSections.mountField(path) else {
-			model.notice = "\u{201C}\(path)\u{201D} cannot be mounted: a mounted path cannot contain a double quote."
-			return
-		}
-		model.notice = nil
-		model.store.addMount(entry(field))
 	}
 
 	private func addFolder() {
 		guard let path = FilePanels.chooseFolder(title: "Choose a folder to mount", startingAt: "") else { return }
-		let volume = URL(fileURLWithPath: path).lastPathComponent
-			.replacingOccurrences(of: ":", with: "_").replacingOccurrences(of: ",", with: "_")
-		let device = freeDevice()
-		add({ "dir,rw,\(device):\(volume.isEmpty ? "Work" : volume):\($0),0" }, path: path)
+		add(kind: "dir", path: path)
+	}
+
+	private func addArchive() {
+		guard let path = FilePanels.choose(.archive, title: "Choose an archive to mount", startingAt: "") else { return }
+		add(kind: "dir", path: path)
 	}
 
 	private func addHardfile() {
 		guard let path = FilePanels.choose(.hardfile, title: "Choose a hardfile to mount", startingAt: "") else { return }
-		let device = freeDevice()
-		add({ "hdf,rw,\(device):\($0),32,1,2,512,0,,uae0" }, path: path)
+		add(kind: "hdf", path: path)
+	}
+
+	private func add(kind: String, path: String = "") {
+		guard let entry = model.store.defaultMount(kind: kind, path: path) else {
+			model.notice = model.store.lastError.map(SettingsWindowModel.describe)
+			return
+		}
+		model.notice = nil
+		editing = MountEdit(index: nil, entry: entry)
+	}
+}
+
+private struct MountEdit: Identifiable {
+	let id = UUID()
+	let index: Int?
+	let entry: String
+}
+
+private struct MountRow: View {
+	let store: SettingsStore
+	let entry: String
+	let properties: () -> Void
+	let remove: () -> Void
+
+	var body: some View {
+		let kind = store.mountField("kind", in: entry) ?? "unknown"
+		let device = store.mountField("device", in: entry) ?? ""
+		let volume = store.mountField("volume", in: entry) ?? ""
+		let path = store.mountField("path", in: entry) ?? ""
+		let readOnly = store.mountField("read_only", in: entry) == "true"
+		let bootPriority = store.mountField("boot_priority", in: entry)
+		HStack(alignment: .firstTextBaseline) {
+			VStack(alignment: .leading, spacing: 2) {
+				Text([device, volume.isEmpty ? MountRow.kindLabel(kind) : volume].filter { !$0.isEmpty }.joined(separator: " \u{00B7} "))
+				Text(path.isEmpty ? MountRow.kindLabel(kind) : (path as NSString).lastPathComponent)
+					.font(.caption)
+					.foregroundStyle(.secondary)
+					.lineLimit(1)
+					.truncationMode(.middle)
+			}
+			Spacer()
+			Text(readOnly ? "RO" : "RW").font(.caption).foregroundStyle(.secondary)
+			if let bootPriority {
+				Text("Boot \(bootPriority)").font(.caption).foregroundStyle(.secondary)
+			}
+			Button("Properties\u{2026}", action: properties)
+				.buttonStyle(.borderless)
+			Button("Remove", role: .destructive, action: remove)
+				.buttonStyle(.borderless)
+		}
+	}
+
+	static func kindLabel(_ kind: String) -> String {
+		switch kind {
+		case "dir": return "Folder"
+		case "hdf": return "Hardfile"
+		case "cd": return "CD drive"
+		case "tape": return "Tape drive"
+		default: return kind
+		}
+	}
+}
+
+private struct MountPropertiesSheet: View {
+	let model: SettingsWindowModel
+	let edit: MountEdit
+	@Environment(\.dismiss) private var dismiss
+	@State private var draft: String
+	@State private var values: [String: String] = [:]
+	@State private var message: String?
+	@State private var invalidFields: Set<String> = []
+
+	init(model: SettingsWindowModel, edit: MountEdit) {
+		self.model = model
+		self.edit = edit
+		_draft = State(initialValue: edit.entry)
+	}
+
+	private var store: SettingsStore { model.store }
+	private var kind: String { field("kind") }
+	private var controllers: [MountController] { store.mountControllers(for: kind) }
+
+	var body: some View {
+		VStack(alignment: .leading, spacing: 12) {
+			Text(edit.index == nil ? "Add \(MountRow.kindLabel(kind))" : "\(MountRow.kindLabel(kind)) Properties")
+				.font(.headline)
+			Form {
+				pathFields
+				if kind == "dir" || kind == "hdf" {
+					TextField("Device", text: fieldBinding("device"))
+				}
+				if kind == "dir" {
+					TextField("Volume", text: fieldBinding("volume"))
+				}
+				if kind == "hdf" {
+					geometryFields
+				}
+				if kind == "hdf" || kind == "cd" || kind == "tape" {
+					controllerFields
+				}
+				if kind == "dir" || kind == "hdf" {
+					Toggle("Read/Write", isOn: Binding(
+						get: { field("read_only") != "true" },
+						set: { setField("read_only", to: $0 ? "false" : "true") }))
+					Toggle("Bootable", isOn: Binding(
+						get: { field("boot_priority") != "-128" },
+						set: { setField("boot_priority", to: $0 ? "0" : "-128") }))
+					Stepper("Boot priority \(bootPriority)", value: Binding(
+						get: { bootPriority },
+						set: { setField("boot_priority", to: String($0)) }), in: -129...127)
+						.disabled(field("boot_priority") == "-128")
+				}
+			}
+			if let message {
+				Label(message, systemImage: "exclamationmark.triangle.fill")
+					.foregroundStyle(.red)
+					.font(.callout)
+			}
+			HStack {
+				Spacer()
+				Button("Cancel", role: .cancel) { dismiss() }
+				Button("OK") { save() }
+					.keyboardShortcut(.defaultAction)
+			}
+		}
+		.padding(20)
+		.frame(minWidth: 380)
+		.onAppear { loadFields() }
+	}
+
+	@ViewBuilder private var pathFields: some View {
+		if kind != "cd" {
+			HStack {
+				TextField("Path", text: fieldBinding("path"))
+				if kind == "dir" {
+					Button("Choose\u{2026}") { chooseFolder() }
+					Button("Archive\u{2026}") { choose(.archive) }
+				} else if kind == "hdf" {
+					Button("Choose\u{2026}") { choose(.hardfile) }
+				} else {
+					Button("Choose Folder\u{2026}") { chooseFolder() }
+					Button("Choose Image\u{2026}") { choose(.tapeImage) }
+				}
+			}
+		}
+	}
+
+	@ViewBuilder private var geometryFields: some View {
+		Section("Geometry") {
+			TextField("Sectors", text: fieldBinding("sectors"))
+			TextField("Surfaces", text: fieldBinding("surfaces"))
+			TextField("Reserved", text: fieldBinding("reserved"))
+			TextField("Block size", text: fieldBinding("block_size"))
+			if field("sectors") == "0" {
+				Text("RDB mode: the disk’s partition table supplies its geometry.")
+					.foregroundStyle(.secondary)
+			}
+		}
+	}
+
+	@ViewBuilder private var controllerFields: some View {
+		let selectedController = field("controller")
+		let selectedUnit = Int(field("unit")) ?? 0
+		let choices = controllerChoices(selected: selectedController, unit: selectedUnit)
+		Picker("Controller", selection: Binding(
+			get: { selectedController },
+			set: { selectController($0) })) {
+			ForEach(choices) { controller in
+				Text(controller.label).tag(controller.id)
+			}
+		}
+		let units = choices.first { $0.id == field("controller") }?.units
+			?? [MountControllerUnit(value: selectedUnit, label: String(selectedUnit))]
+		Picker("Unit", selection: Binding(
+			get: { Int(field("unit")) ?? selectedUnit },
+			set: { setField("unit", to: String($0)) })) {
+			ForEach(units) { unit in
+				Text(unit.label).tag(unit.value)
+			}
+		}
+	}
+
+	private var bootPriority: Int {
+		min(max(Int(field("boot_priority")) ?? 0, -129), 127)
+	}
+
+	private func field(_ name: String) -> String {
+		values[name] ?? store.mountField(name, in: draft) ?? ""
+	}
+
+	private func fieldBinding(_ name: String) -> Binding<String> {
+		Binding(get: { field(name) }, set: { setField(name, to: $0) })
+	}
+
+	private func loadFields() {
+		let names: [String]
+		switch kind {
+		case "dir": names = ["kind", "path", "device", "volume", "read_only", "boot_priority"]
+		case "hdf": names = ["kind", "path", "device", "read_only", "boot_priority", "sectors", "surfaces", "reserved", "block_size", "controller", "unit"]
+		case "cd": names = ["kind", "read_only", "controller", "unit"]
+		case "tape": names = ["kind", "path", "read_only", "controller", "unit"]
+		default: names = ["kind"]
+		}
+		values = Dictionary(uniqueKeysWithValues: names.map { ($0, store.mountField($0, in: draft) ?? "") })
+	}
+
+	private func setField(_ name: String, to value: String) {
+		values[name] = value
+		guard let changed = store.settingMountField(name, to: value, in: draft) else {
+			invalidFields.insert(name)
+			message = store.lastError.map(SettingsWindowModel.describe)
+			return
+		}
+		invalidFields.remove(name)
+		draft = changed
+		message = nil
+	}
+
+	private func controllerChoices(selected: String, unit: Int) -> [MountController] {
+		var choices = controllers
+		if !selected.isEmpty, !choices.contains(where: { $0.id == selected }) {
+			choices.append(MountController(id: selected, label: "\(selected) (current)", units: [
+				MountControllerUnit(value: unit, label: String(unit)),
+			]))
+		}
+		return choices
+	}
+
+	private func selectController(_ controller: String) {
+		setField("controller", to: controller)
+		guard let selected = controllers.first(where: { $0.id == controller }),
+			!selected.units.contains(where: { $0.value == (Int(field("unit")) ?? 0) }),
+			let first = selected.units.first
+		else { return }
+		setField("unit", to: String(first.value))
+	}
+
+	private func chooseFolder() {
+		if let path = FilePanels.chooseFolder(title: "Choose a folder", startingAt: field("path")) {
+			setField("path", to: path)
+		}
+	}
+
+	private func choose(_ request: FileRequest) {
+		if let path = FilePanels.choose(request, title: "Choose \(request == .archive ? "an archive" : "an image")", startingAt: field("path")) {
+			setField("path", to: path)
+		}
+	}
+
+	private func save() {
+		guard invalidFields.isEmpty else {
+			message = "Correct \(invalidFields.sorted().joined(separator: ", ")) first."
+			return
+		}
+		let added: Bool
+		if let index = edit.index {
+			added = store.replaceMount(at: index, with: draft)
+		} else {
+			added = store.addMount(draft)
+		}
+		guard added else {
+			message = store.lastError.map(SettingsWindowModel.describe)
+			return
+		}
+		model.notice = nil
+		dismiss()
+	}
+}
+
+private struct CreateHardfileSheet: View {
+	let model: SettingsWindowModel
+	let created: (String) -> Void
+	@Environment(\.dismiss) private var dismiss
+	@State private var sizeMB = 100
+	@State private var dynamicVHD = false
+	@State private var path = ""
+	@State private var message: String?
+
+	var body: some View {
+		VStack(alignment: .leading, spacing: 12) {
+			Text("Create Hardfile").font(.headline)
+			Form {
+				TextField("Size (MB)", value: $sizeMB, format: .number)
+				Toggle("Dynamic VHD", isOn: $dynamicVHD)
+				HStack {
+					Text(path.isEmpty ? "Hard Drives folder" : (path as NSString).lastPathComponent)
+						.foregroundStyle(path.isEmpty ? .secondary : .primary)
+						.lineLimit(1)
+						.truncationMode(.middle)
+					Spacer()
+					Button("Choose\u{2026}") { chooseLocation() }
+				}
+			}
+			if let message {
+				Label(message, systemImage: "exclamationmark.triangle.fill")
+					.foregroundStyle(.red)
+					.font(.callout)
+			}
+			HStack {
+				Spacer()
+				Button("Cancel", role: .cancel) { dismiss() }
+				Button("Create") { create() }
+					.keyboardShortcut(.defaultAction)
+			}
+		}
+		.padding(20)
+		.frame(minWidth: 380)
+		.onAppear { chooseLocation() }
+	}
+
+	private func chooseLocation() {
+		let folder = (try? MediaLibrary.path(of: .hardDrives)) ?? ""
+		let name = dynamicVHD ? "Hardfile.vhd" : "Hardfile.hdf"
+		if let selected = FilePanels.chooseHardfileLocation(title: "Create Hardfile", startingAt: folder, defaultName: name) {
+			path = selected
+			message = nil
+		}
+	}
+
+	private func create() {
+		guard !path.isEmpty else {
+			message = "Choose where to create the hardfile."
+			return
+		}
+		guard sizeMB >= 1 else {
+			message = "Enter a size of at least 1 MB."
+			return
+		}
+		do {
+			let file = try MediaLibrary.createHardfile(at: path, sizeMB: sizeMB, dynamicVHD: dynamicVHD)
+			guard let entry = model.store.defaultMount(kind: "hdf", path: file) else {
+				message = model.store.lastError.map(SettingsWindowModel.describe)
+				return
+			}
+			created(entry)
+			dismiss()
+		} catch {
+			message = SettingsWindowModel.describe(error)
+		}
 	}
 }
 

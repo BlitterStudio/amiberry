@@ -5,6 +5,8 @@ import com.blitterstudio.amiberry.data.model.AcceleratorJumpers
 import com.blitterstudio.amiberry.data.model.CustomControls
 import com.blitterstudio.amiberry.data.model.StoragePaths
 import com.blitterstudio.amiberry.data.model.EmulatorSettings
+import com.blitterstudio.amiberry.data.model.MountEntry
+import com.blitterstudio.amiberry.data.model.MountKind
 import com.blitterstudio.amiberry.data.model.SettingsBoards
 import com.blitterstudio.amiberry.data.model.SettingsSchema
 import java.io.File
@@ -92,11 +94,25 @@ object ConfigGenerator {
 			sb.appendLine("cdimage0=${settings.cdImage}")
 		}
 
-		// Hard drives (hardfiles on the UAE controller)
-		settings.hardDrives.forEachIndexed { index, hd ->
-			if (hd.path.isNotEmpty()) {
-				val access = if (hd.readOnly) "ro" else "rw"
-				sb.appendLine("hardfile2=$access,:${hd.path},0,0,0,512,${hd.bootPriority},,uae$index")
+		// cfgfile's writer keeps the filesystem2/hardfile2 twins so old
+		// desktop configurations and uaehf-only readers load the same mounts.
+		settings.hardDrives.take(MountEntry.MAX_MOUNTS).forEachIndexed { index, mount ->
+			when (mount.kind) {
+				MountKind.Directory -> if (mount.path.isNotBlank() && mount.device.isNotBlank()) {
+					val value = directoryValue(mount)
+					sb.appendLine("filesystem2=$value")
+					sb.appendLine("uaehf$index=dir,$value")
+					if (mount.injectIcons) sb.appendLine("filesystem_extra=${mount.device},inject_icons=true")
+				}
+				MountKind.Hardfile -> if (mount.path.isNotBlank()) {
+					val value = hardfileValue(mount)
+					sb.appendLine("hardfile2=$value")
+					sb.appendLine("uaehf$index=hdf,$value")
+				}
+				MountKind.Cd, MountKind.Tape -> {
+					val type = if (mount.kind == MountKind.Cd) "cd${mount.unit}" else "tape${mount.unit}"
+					sb.appendLine("uaehf$index=$type,${hardfileValue(mount)}")
+				}
 			}
 		}
 
@@ -294,4 +310,36 @@ object ConfigGenerator {
 	}
 
 	private fun Boolean.toCfg(): String = if (this) "true" else "false"
+
+	/** cfgfile_escape_min: quote fields containing a comma, quote or outer space. */
+	private fun escapeMountField(value: String): String {
+		if (value.none { it == ',' || it == '"' } && value.trim() == value) return value
+		return "\"" + value.replace("\"", "\\\"") + "\""
+	}
+
+	private fun directoryValue(mount: MountEntry): String =
+		"${if (mount.readOnly) "ro" else "rw"},${mount.device}:${mount.volume}:${escapeMountField(mount.path)},${mount.bootPriority}"
+
+	private fun hardfileValue(mount: MountEntry): String {
+		val path = escapeMountField(mount.path)
+		val base = StringBuilder(
+			"${if (mount.readOnly) "ro" else "rw"},${mount.device}:$path," +
+				"${mount.sectors},${mount.surfaces},${mount.reserved},${mount.blockSize}," +
+				"${mount.bootPriority},${escapeMountField(mount.filesystem)},${mount.controller}"
+		)
+		if (mount.highCyl != 0 || mount.physicalGeometry.isNotBlank() || mount.geometry.isNotBlank()) {
+			base.append(",${mount.highCyl}")
+			if (mount.physicalGeometry.isNotBlank() || mount.geometry.isNotBlank()) {
+				base.append(",${mount.physicalGeometry.ifBlank { "0/0/0" }}")
+				if (mount.geometry.isNotBlank()) base.append(",${escapeMountField(mount.geometry)}")
+			}
+		}
+		if (mount.compactFlash) base.append(",CF")
+		if (mount.featureLevel.isNotBlank()) base.append(",${mount.featureLevel}")
+		if (mount.flags.isNotBlank()) base.append(",flags=${mount.flags}")
+		if (mount.lock) base.append(",lock")
+		if (mount.identity) base.append(",identity")
+		mount.extras.forEach { base.append(",$it") }
+		return base.toString()
+	}
 }

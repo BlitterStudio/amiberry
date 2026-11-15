@@ -1432,7 +1432,52 @@ static void cat_bounded (TCHAR *dst, size_t count, const TCHAR *src)
 	_tcsncat (dst, src, count - used - 1);
 }
 
-static void mount_entry_values (struct uae_prefs *p, int i, TCHAR *fs2, size_t fs2_size, TCHAR *uaehf, size_t uaehf_size)
+void cfgfile_controller_template (int ct, int ct_unit, TCHAR *out, size_t size)
+{
+	const TCHAR *name = nullptr;
+	const TCHAR *prefix = nullptr;
+	int romtype = 0;
+	out[0] = 0;
+	if (ct >= HD_CONTROLLER_TYPE_SCSI_EXPANSION_FIRST && ct <= HD_CONTROLLER_TYPE_SCSI_LAST) {
+		prefix = _T("scsi");
+		name = expansionroms[ct - HD_CONTROLLER_TYPE_SCSI_EXPANSION_FIRST].name;
+		romtype = expansionroms[ct - HD_CONTROLLER_TYPE_SCSI_EXPANSION_FIRST].romtype;
+	} else if (ct >= HD_CONTROLLER_TYPE_IDE_EXPANSION_FIRST && ct <= HD_CONTROLLER_TYPE_IDE_LAST) {
+		prefix = _T("ide");
+		name = expansionroms[ct - HD_CONTROLLER_TYPE_IDE_EXPANSION_FIRST].name;
+		romtype = expansionroms[ct - HD_CONTROLLER_TYPE_IDE_EXPANSION_FIRST].romtype;
+	} else if (ct >= HD_CONTROLLER_TYPE_CUSTOM_FIRST && ct <= HD_CONTROLLER_TYPE_CUSTOM_LAST) {
+		prefix = _T("custom");
+		name = expansionroms[ct - HD_CONTROLLER_TYPE_CUSTOM_FIRST].name;
+		romtype = expansionroms[ct - HD_CONTROLLER_TYPE_CUSTOM_FIRST].romtype;
+	} else if (ct == HD_CONTROLLER_TYPE_SCSI_AUTO) {
+		prefix = _T("scsi");
+	} else if (ct == HD_CONTROLLER_TYPE_IDE_AUTO) {
+		prefix = _T("ide");
+	} else if (ct == HD_CONTROLLER_TYPE_UAE) {
+		prefix = _T("uae");
+	}
+	if (!prefix)
+		return;
+	if (name)
+		_sntprintf (out, size, _T("%s%%d_%s"), prefix, name);
+	else
+		_sntprintf (out, size, _T("%s%%d"), prefix);
+	// The machines' own controllers have names of their own.
+	if (romtype) {
+		for (int j = 0; hdcontrollers[j].label; j++) {
+			if (hdcontrollers[j].romtype == (romtype & ROMTYPE_MASK)) {
+				_tcsncpy (out, hdcontrollers[j].label, size - 1);
+				out[size - 1] = 0;
+				break;
+			}
+		}
+	}
+	if (ct_unit > 0)
+		cfgfile_append_optionf (out, size, _T("-%d"), ct_unit + 1);
+}
+
+static void mount_entry_values (const struct uaedev_config_info *ci, TCHAR *fs2, size_t fs2_size, TCHAR *uaehf, size_t uaehf_size)
 {
 	// Built in line-sized buffers, so an entry too long for the loader is
 	// seen whole by cfgfile_mount_entry_fits() instead of cut to a path.
@@ -1441,8 +1486,6 @@ static void mount_entry_values (struct uae_prefs *p, int i, TCHAR *fs2, size_t f
 	fs2[0] = 0;
 	uaehf[0] = 0;
 	{
-		auto* uci = &p->mountconfig[i];
-		auto* ci = &uci->ci;
 		const auto bp = ci->bootpri;
 
 		const auto* str2 = "";
@@ -1460,34 +1503,10 @@ static void mount_entry_values (struct uae_prefs *p, int i, TCHAR *fs2, size_t f
 		} else {
 			cfgfile_to_path_save(ci->rootdir, str1, ci->type == UAEDEV_DIR ? PATH_DIR : (ci->type == UAEDEV_CD ? PATH_CD : (ci->type == UAEDEV_HDF ? PATH_HDF : PATH_TAPE)));
 		}
-		int ct = ci->controller_type;
-		int romtype = 0;
-		if (ct >= HD_CONTROLLER_TYPE_SCSI_EXPANSION_FIRST && ct <= HD_CONTROLLER_TYPE_SCSI_LAST) {
-			_sntprintf(hdcs, sizeof hdcs, _T("scsi%d_%s"), ci->controller_unit, expansionroms[ct - HD_CONTROLLER_TYPE_SCSI_EXPANSION_FIRST].name);
-			romtype = expansionroms[ct - HD_CONTROLLER_TYPE_SCSI_EXPANSION_FIRST].romtype;
-		} else if (ct >= HD_CONTROLLER_TYPE_IDE_EXPANSION_FIRST && ct <= HD_CONTROLLER_TYPE_IDE_LAST) {
-			_sntprintf(hdcs, sizeof hdcs, _T("ide%d_%s"), ci->controller_unit, expansionroms[ct - HD_CONTROLLER_TYPE_IDE_EXPANSION_FIRST].name);
-			romtype = expansionroms[ct - HD_CONTROLLER_TYPE_IDE_EXPANSION_FIRST].romtype;
-		} else if (ct >= HD_CONTROLLER_TYPE_CUSTOM_FIRST && ct <= HD_CONTROLLER_TYPE_CUSTOM_LAST) {
-			_sntprintf(hdcs, sizeof hdcs, _T("custom%d_%s"), ci->controller_unit, expansionroms[ct - HD_CONTROLLER_TYPE_CUSTOM_FIRST].name);
-			romtype = expansionroms[ct - HD_CONTROLLER_TYPE_CUSTOM_FIRST].romtype;
-		} else if (ct == HD_CONTROLLER_TYPE_SCSI_AUTO) {
-			_sntprintf(hdcs, sizeof hdcs, _T("scsi%d"), ci->controller_unit);
-		} else if (ct == HD_CONTROLLER_TYPE_IDE_AUTO) {
-			_sntprintf(hdcs, sizeof hdcs, _T("ide%d"), ci->controller_unit);
-		} else if (ct == HD_CONTROLLER_TYPE_UAE) {
-			_sntprintf(hdcs, sizeof hdcs, _T("uae%d"), ci->controller_unit);
-		}
-		if (romtype) {
-			for (int j = 0; hdcontrollers[j].label; j++) {
-				if (hdcontrollers[j].romtype == (romtype & ROMTYPE_MASK)) {
-					_sntprintf(hdcs, sizeof hdcs, hdcontrollers[j].label, ci->controller_unit);
-					break;
-				}
-			}
-		}
-		if (ci->controller_type_unit > 0)
-			cfgfile_append_optionf(hdcs, sizeof hdcs / sizeof(TCHAR), _T("-%d"), ci->controller_type_unit + 1);
+		const int ct = ci->controller_type;
+		TCHAR hdct[MAX_DPATH];
+		cfgfile_controller_template (ci->controller_type, ci->controller_type_unit, hdct, sizeof hdct / sizeof (TCHAR));
+		_sntprintf (hdcs, sizeof hdcs, hdct, ci->controller_unit);
 
 		auto* str1b = cfgfile_escape (str1, _T(":,"), true, false);
 		auto* str1c = cfgfile_escape_min(str1);
@@ -1601,13 +1620,20 @@ static void mount_entry_values (struct uae_prefs *p, int i, TCHAR *fs2, size_t f
 	}
 }
 
+bool cfgfile_mount_value_ci (const struct uaedev_config_info *ci, TCHAR *out, size_t size)
+{
+	if (!ci || size == 0)
+		return false;
+	TCHAR fs2[CONFIG_BLEN];
+	mount_entry_values (ci, fs2, sizeof fs2 / sizeof (TCHAR), out, size);
+	return true;
+}
+
 bool cfgfile_mount_value (struct uae_prefs *p, int index, TCHAR *out, size_t size)
 {
 	if (index < 0 || index >= p->mountitems || index >= MOUNT_CONFIG_SIZE || size == 0)
 		return false;
-	TCHAR fs2[CONFIG_BLEN];
-	mount_entry_values (p, index, fs2, sizeof fs2 / sizeof (TCHAR), out, size);
-	return true;
+	return cfgfile_mount_value_ci (&p->mountconfig[index].ci, out, size);
 }
 
 bool cfgfile_mount_entry_fits (struct uae_prefs *p, int index)
@@ -1615,7 +1641,7 @@ bool cfgfile_mount_entry_fits (struct uae_prefs *p, int index)
 	if (index < 0 || index >= p->mountitems || index >= MOUNT_CONFIG_SIZE)
 		return false;
 	TCHAR fs2[CONFIG_BLEN], uaehf[CONFIG_BLEN];
-	mount_entry_values (p, index, fs2, sizeof fs2 / sizeof (TCHAR), uaehf, sizeof uaehf / sizeof (TCHAR));
+	mount_entry_values (&p->mountconfig[index].ci, fs2, sizeof fs2 / sizeof (TCHAR), uaehf, sizeof uaehf / sizeof (TCHAR));
 	// Each line, with its option name, "=" and the line feed, must fit the
 	// CONFIG_BLEN line the loader reads (a value that filled the buffer was
 	// cut short), and each value the MAX_DPATH buffer the loader copies it
@@ -1631,7 +1657,7 @@ static void write_filesys_config (struct uae_prefs *p, struct zfile *f)
 
 	for (auto i = 0; i < p->mountitems; i++) {
 		const auto* ci = &p->mountconfig[i].ci;
-		mount_entry_values (p, i, fs2, sizeof fs2 / sizeof (TCHAR), uaehf, sizeof uaehf / sizeof (TCHAR));
+		mount_entry_values (ci, fs2, sizeof fs2 / sizeof (TCHAR), uaehf, sizeof uaehf / sizeof (TCHAR));
 		if (p->got_fs2_hdf2 >= 0) {
 			if (ci->type == UAEDEV_DIR)
 				cfgfile_write_str (f, _T("filesystem2"), fs2);

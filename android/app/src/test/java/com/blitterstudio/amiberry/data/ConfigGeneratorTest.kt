@@ -3,7 +3,8 @@ package com.blitterstudio.amiberry.data
 import com.blitterstudio.amiberry.data.model.AmigaModel
 import com.blitterstudio.amiberry.data.model.EmulatorSettings
 import com.blitterstudio.amiberry.data.model.EmulatorSettingsConstraints
-import com.blitterstudio.amiberry.data.model.HardDrive
+import com.blitterstudio.amiberry.data.model.MountEntry
+import com.blitterstudio.amiberry.data.model.MountKind
 import com.blitterstudio.amiberry.data.model.StoragePaths
 import org.junit.Assert.*
 import org.junit.Rule
@@ -175,22 +176,41 @@ class ConfigGeneratorTest {
 		val output = ConfigGenerator.generate(
 			EmulatorSettings(
 				hardDrives = listOf(
-					HardDrive(path = "/hd/system.hdf", readOnly = false, bootPriority = 0),
-					HardDrive(path = "/hd/work.hdf", readOnly = true, bootPriority = -1)
+					MountEntry(MountKind.Hardfile, path = "/hd/system.hdf", readOnly = false, bootPriority = 0, controller = "uae0"),
+					MountEntry(MountKind.Hardfile, path = "/hd/work.hdf", readOnly = true, bootPriority = -1, controller = "uae1")
 				)
 			)
 		)
 		val lines = output.lines()
-		assertContainsLine(lines, "hardfile2=rw,:/hd/system.hdf,0,0,0,512,0,,uae0")
-		assertContainsLine(lines, "hardfile2=ro,:/hd/work.hdf,0,0,0,512,-1,,uae1")
+		assertContainsLine(lines, "hardfile2=rw,:/hd/system.hdf,32,1,2,512,0,,uae0")
+		assertContainsLine(lines, "hardfile2=ro,:/hd/work.hdf,32,1,2,512,-1,,uae1")
 	}
 
 	@Test
 	fun `generate skips hard drive with empty path`() {
 		val output = ConfigGenerator.generate(
-			EmulatorSettings(hardDrives = listOf(HardDrive(path = "")))
+			EmulatorSettings(hardDrives = listOf(MountEntry(MountKind.Hardfile, path = "")))
 		)
 		assertNotContains(output, "hardfile2=")
+	}
+
+	@Test
+	fun `generate round trips every mount spelling`() {
+		val mounts = listOf(
+			MountEntry(MountKind.Directory, "/host/Work, files", "DH0", "Work", injectIcons = true),
+			MountEntry(MountKind.Hardfile, "/hd/system.hdf", "DH1", readOnly = true, bootPriority = -128,
+				sectors = 0, surfaces = 0, reserved = 0, controller = "ide0"),
+			MountEntry(MountKind.Cd, "", readOnly = true, sectors = 0, surfaces = 0, reserved = 0,
+				blockSize = 2048, controller = "scsi0", unit = 1),
+			MountEntry(MountKind.Tape, "/tapes", sectors = 0, surfaces = 0, reserved = 0,
+				controller = "uae0", unit = 2)
+		)
+		val file = tempDir.newFile("mounts.uae").apply { writeText(ConfigGenerator.generate(EmulatorSettings(hardDrives = mounts))) }
+		val parsed = ConfigParser.parse(file)
+
+		assertEquals(mounts, parsed.settings.hardDrives)
+		assertTrue(parsed.unknownLines.isEmpty())
+		assertContains(file.readText(), """filesystem2=rw,DH0:Work:"/host/Work, files",0""")
 	}
 
 	// --- Joystick port 1 special handling ---
@@ -654,8 +674,8 @@ class ConfigGeneratorTest {
 	fun `round-trip preserves hard drives`() {
 		val original = EmulatorSettings(
 			hardDrives = listOf(
-				HardDrive(path = "/hd/system.hdf", readOnly = false, bootPriority = 0),
-				HardDrive(path = "/hd/work.hdf", readOnly = true, bootPriority = 2)
+				MountEntry(MountKind.Hardfile, path = "/hd/system.hdf", readOnly = false, bootPriority = 0),
+				MountEntry(MountKind.Hardfile, path = "/hd/work.hdf", readOnly = true, bootPriority = 2)
 			)
 		)
 		val file = tempDir.newFile("roundtrip_hd.uae")

@@ -163,29 +163,33 @@ object SettingsChangeSummary {
 
 		private fun onOff(on: Boolean) = SettingText.Resource(if (on) R.string.settings_value_on else R.string.settings_value_off)
 
-		/** Hard drives by position: added, removed, or a changed image, read-only flag or boot priority. */
+		/** Storage mounts by position, described as people see them rather than cfgfile tokens. */
 		fun hardDrives() {
 			val count = maxOf(before.hardDrives.size, after.hardDrives.size)
 			for (index in 0 until count) {
 				val old = before.hardDrives.getOrNull(index)
 				val new = after.hardDrives.getOrNull(index)
 				val label = SettingText.Resource(R.string.settings_storage_hard_drive_label, listOf(index))
-				if (old == null || new == null) {
-					add(label, old?.let { file(it.path) } ?: none, new?.let { file(it.path) } ?: none)
-					continue
-				}
-				add(label, file(old.path), file(new.path))
-				add(
-					SettingText.Resource(R.string.settings_change_hard_drive_read_only, listOf(index)),
-					onOff(old.readOnly),
-					onOff(new.readOnly)
-				)
-				add(
-					SettingText.Resource(R.string.settings_change_hard_drive_boot_priority, listOf(index)),
-					SettingText.Plain(old.bootPriority.toString()),
-					SettingText.Plain(new.bootPriority.toString())
-				)
+				add(label, old?.let(::mountText) ?: none, new?.let(::mountText) ?: none)
 			}
+		}
+
+		private fun mountText(mount: MountEntry): SettingText {
+			val kind = when (mount.kind) {
+				MountKind.Directory -> "Directory"
+				MountKind.Hardfile -> "Hardfile"
+				MountKind.Cd -> "CD drive"
+				MountKind.Tape -> "Tape drive"
+			}
+			val name = when (mount.kind) {
+				MountKind.Directory -> mount.volume.ifBlank { LauncherChoices.fileName(mount.path) }
+				MountKind.Cd -> "Controller ${mount.controller}, unit ${mount.unit}"
+				else -> LauncherChoices.fileName(mount.path)
+			}.ifBlank { "None" }
+			val access = if (mount.readOnly) "Read-only" else "Read/write"
+			val boot = if (mount.kind == MountKind.Directory || mount.kind == MountKind.Hardfile)
+				", boot priority ${mount.bootPriority}" else ""
+			return SettingText.Plain("$kind: $name, $access$boot")
 		}
 
 		/**
