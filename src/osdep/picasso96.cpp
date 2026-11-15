@@ -7319,22 +7319,23 @@ static void overlaygettag(TrapContext *ctx, uae_u32 tag, uae_u32 val)
 		break;
 	case FA_Colors32:
 		{
+			// LoadRGB32() table: count/first header, count RGB triplets,
+			// repeated until a header with a zero count.
 			while(val) {
-				uae_u8 tmpbuf[256 * 3 * 4 + 4];
+				uae_u8 tmpbuf[256 * 3 * 4];
 				const uae_u32 v = trap_get_long(ctx, val);
 				val += 4;
 				const uae_u16 num = v >> 16;
-				if (num > 256)
+				if (num == 0 || num > 256) {
 					break;
+				}
 				const uae_u16 first = v & 0xffff;
-				trap_get_bytes(ctx, tmpbuf, val, num * 3 * 4 + 4);
+				trap_get_bytes(ctx, tmpbuf, val, num * 3 * 4);
 				for (int i = 0; i < num && (first + i) < 256; i++) {
 					overlay_clutc[first + i].Red = tmpbuf[i * 3 * 4 + 0];
 					overlay_clutc[first + i].Green = tmpbuf[i * 3 * 4 + 4];
 					overlay_clutc[first + i].Blue = tmpbuf[i * 3 * 4 + 8];
 				}
-				if (!tmpbuf[num])
-					break;
 				val += num * 3 * 4;
 			}
 			if (picasso_palette(overlay_clutc, overlay_clut))
