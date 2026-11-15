@@ -875,6 +875,7 @@ extern uae_u32 fp_jit_out_inline_kind(uae_u16 opcode, uae_u16 extra);
 #define FPJ_STATS_KEYS (1 << 16)
 enum { FPJ_ST_INLINE, FPJ_ST_INLINE_FAIL, FPJ_ST_HELPER, FPJ_ST_INTERP };
 extern uae_u64 *fp_jit_stats(void);
+extern uae_u64 *fp_jit_stats_table;
 extern uae_u32 fp_jit_stats_key(uae_u16 opcode, uae_u16 extra);
 extern void fp_jit_stats_count(uae_u16 opcode, uae_u16 extra, int path);
 struct fpj_fmovem {

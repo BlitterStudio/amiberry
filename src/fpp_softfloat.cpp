@@ -1117,18 +1117,19 @@ uae_u32 fp_jit_out_inline_kind(uae_u16 opcode, uae_u16 extra)
  * runs, by its kind (fp_jit_stats_key(): EA mode, source format, opmode or
  * opclass) and path (FPJ_ST_*), written to the file at exit as a table,
  * the most frequent first. The compiled code increments the counters. */
-static uae_u64 *fpj_stats;
+// set once, by fp_jit_stats() (fpu_reset() calls it): nullptr unless counting
+uae_u64 *fp_jit_stats_table;
 static const char *fpj_stats_file;
 
 static void fpj_stats_dump(void)
 {
 	FILE *f = fpj_stats_file ? fopen(fpj_stats_file, "w") : nullptr;
-	if (!f || !fpj_stats)
+	if (!f || !fp_jit_stats_table)
 		return;
 	struct row { uae_u64 n[4], total; uae_u32 key; };
 	std::vector<row> rows;
 	for (uae_u32 k = 0; k < FPJ_STATS_KEYS; k++) {
-		row r = { { fpj_stats[k * 4], fpj_stats[k * 4 + 1], fpj_stats[k * 4 + 2], fpj_stats[k * 4 + 3] }, 0, k };
+		row r = { { fp_jit_stats_table[k * 4], fp_jit_stats_table[k * 4 + 1], fp_jit_stats_table[k * 4 + 2], fp_jit_stats_table[k * 4 + 3] }, 0, k };
 		r.total = r.n[0] + r.n[1] + r.n[2] + r.n[3];
 		if (r.total)
 			rows.push_back(r);
@@ -1152,12 +1153,12 @@ uae_u64 *fp_jit_stats(void)
 		init = 1;
 		fpj_stats_file = getenv("AMIBERRY_JIT_FPU_STATS");
 		if (fpj_stats_file && fpj_stats_file[0]) {
-			fpj_stats = (uae_u64 *)calloc(FPJ_STATS_KEYS * 4, sizeof(uae_u64));
+			fp_jit_stats_table = (uae_u64 *)calloc(FPJ_STATS_KEYS * 4, sizeof(uae_u64));
 			atexit(fpj_stats_dump);
 			write_log(_T("JIT FPU: instruction counts to %s at exit\n"), fpj_stats_file);
 		}
 	}
-	return fpj_stats;
+	return fp_jit_stats_table;
 }
 
 // the counter key of an FPU instruction: EA mode, opclass, source format, opmode
@@ -1170,7 +1171,7 @@ uae_u32 fp_jit_stats_key(uae_u16 opcode, uae_u16 extra)
 
 void fp_jit_stats_count(uae_u16 opcode, uae_u16 extra, int path)
 {
-	uae_u64 *s = fp_jit_stats();
+	uae_u64 *s = fp_jit_stats_table;
 	if (s)
 		s[fp_jit_stats_key(opcode, extra) * 4 + path]++;
 }

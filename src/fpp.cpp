@@ -4241,7 +4241,7 @@ static NOINLINE void fpuop_arithmetic2 (uae_u32 opcode, uae_u16 extra, const uae
 void fpuop_arithmetic (uae_u32 opcode, uae_u16 extra)
 {
 #ifdef JIT
-	if (currprefs.cachesize && fp_jit_stats())
+	if (fp_jit_stats_table && currprefs.cachesize)
 		fp_jit_stats_count(opcode, extra, FPJ_ST_INTERP);
 #endif
 	regs.fpu_state = 1;
@@ -4682,6 +4682,9 @@ void fpu_reset (void)
 #ifndef CPU_TESTER
 	currprefs.fpu_mode = changed_prefs.fpu_mode;
 	fpu_select_core();
+#ifdef JIT
+	fp_jit_stats(); // reads AMIBERRY_JIT_FPU_STATS once
+#endif
 
 #if defined(CPU_x86_64)
 #ifndef __MACH__
