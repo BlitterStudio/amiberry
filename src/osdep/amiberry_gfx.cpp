@@ -1737,7 +1737,7 @@ void updatepicasso96(struct AmigaMonitor* mon)
 	vidinfo->height = mon->currentmode.current_height;
 	vidinfo->width = mon->currentmode.current_width;
 	vidinfo->offset = 0;
-	vidinfo->splitypos = -1;
+	vidinfo->splitypos = mon->screen_is_picasso ? picasso_get_splitypos(mon->monitor_id) : -1;
 }
 
 void gfx_set_picasso_modeinfo(const int monid, const RGBFTYPE rgbfmt)
