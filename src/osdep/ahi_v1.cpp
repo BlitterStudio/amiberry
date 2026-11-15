@@ -7,9 +7,6 @@
 * Based on WinUAE code by Toni Wilen
 */
 
-#define NATIVBUFFNUM 4
-#define RECORDBUFFER 50 //survive 9 sec of blocking at 44100
-
 #include "sysconfig.h"
 #include "sysdeps.h"
 
@@ -41,23 +38,22 @@
 static long intcount;
 static int record_enabled;
 int ahi_on;
-static uae_u8 soundneutral;
 
-extern uae_u32 chipmem_mask;
-static uae_u8 *ahisndbuffer;
-static int ahisndbufsize, ahitweak;
+static uae_u8 *ahisndbuffer; // one guest block, see ahi_write_block()
+static int ahitweak;
 int ahi_pollrate = 40;
 
 int sound_freq_ahi, sound_channels_ahi, sound_bits_ahi;
 
 static int amigablksize;
-
-static uae_u32 sound_flushes2 = 0;
+// Bytes of audio to keep queued in ahi_stream; set in ahi_init_sound().
+static int ahi_queue_target;
+// Last mute state passed to setvolume_ahi(), applied again when the stream opens.
+static int ahi_master_mute;
 
 static SDL_AudioStream* ahi_stream = nullptr;
 static SDL_AudioStream* ahi_rec_stream = nullptr;
 
-static int ahi_write_pos;
 static int ahi_record_read_count;
 static bool ahi_record_nonzero_seen;
 
@@ -78,7 +74,7 @@ void ahi_close_sound()
 		return;
 	ahi_on = 0;
 	record_enabled = 0;
-	ahi_write_pos = 0;
+	ahi_queue_target = 0;
 
 	if (ahi_stream) {
 		SDL_PauseAudioStreamDevice(ahi_stream);
@@ -101,80 +97,49 @@ void ahi_close_sound()
 	}
 }
 
-void ahi_updatesound(int force)
+// The uae.audio driver mixes one block ahead. Its EXTER interrupt server asks
+// for a pending request (op 4); if there is one it writes the block it has
+// already mixed (op 2) and Causes a soft interrupt that mixes the next one.
+// Request a block only while the host queue is below its target, so the guest
+// mixes at the rate the audio device plays: no bursts of back-to-back mixing,
+// and no more latency than the target.
+static bool ahi_queue_wants_block()
 {
-	int pos;
-	uint32_t dwBytes1;
-	uint8_t *dwData1;
-	static int oldpos;
+	const int queued = SDL_GetAudioStreamQueued(ahi_stream);
+	const int target = std::max(ahi_queue_target - ahitweak, amigablksize * 4);
+	return queued >= 0 && queued < target;
+}
 
-	if (sound_flushes2 == 1) {
-		oldpos = 0;
-		ahi_write_pos = 0;
+static void ahi_poll()
+{
+	if (ahi_queue_wants_block()) {
 		intcount = 1;
 		INTREQ(0x8000 | 0x2000);
-
-		// Start playing audio
-		SDL_ResumeAudioStreamDevice(ahi_stream);
-	}
-
-	SDL_LockAudioStream(ahi_stream);
-	pos = SDL_GetAudioStreamQueued(ahi_stream);
-	SDL_UnlockAudioStream(ahi_stream);
-	// safety check — error or too much data queued
-	if (pos < 0 || pos > 65536) return;
-
-	pos -= ahitweak;
-	if (pos < 0)
-		pos += ahisndbufsize;
-	if (pos >= ahisndbufsize)
-		pos -= ahisndbufsize;
-	pos = (pos / (amigablksize * 4)) * (amigablksize * 4);
-	if (force == 1) {
-		if (oldpos != pos) {
-			intcount = 1;
-			INTREQ(0x8000 | 0x2000);
-			return; //to generate amiga ints every amigablksize
-		}
-		else {
-			return;
-		}
-	}
-
-	if (oldpos == ahi_write_pos)
-		return; // buffer is empty
-
-	dwBytes1 = amigablksize * 4;
-	dwData1 = ahisndbuffer + oldpos;
-
-	if (currprefs.sound_stereo_swap_ahi) {
-		int i;
-		auto p = reinterpret_cast<uae_s16*>(dwData1);
-		for (i = 0; i < dwBytes1 / 2; i += 2) {
-			uae_s16 tmp;
-			tmp = p[i + 0];
-			p[i + 0] = p[i + 1];
-			p[i + 1] = tmp;
-		}
-	}
-
-	SDL_PutAudioStreamData(ahi_stream, dwData1, dwBytes1);
-
-	oldpos += amigablksize * 4;
-	if (oldpos >= ahisndbufsize)
-		oldpos = 0;
-
-	if (oldpos != pos) {
-		intcount = 1;
-		INTREQ(0x8000 | 0x2000);
+	} else {
+		// EXTER is shared with CIA-B and Zorro cards. Withdraw a request that
+		// has not been taken yet, so one of their interrupts cannot make the
+		// driver write a block the queue has no room for.
+		intcount = 0;
 	}
 }
 
-
-void ahi_finish_sound_buffer ()
+static void ahi_write_block(const uaecptr addr)
 {
-	sound_flushes2++;
-	ahi_updatesound(2);
+	const int bytes = amigablksize * 4;
+	const bool swap = currprefs.sound_stereo_swap_ahi;
+	auto* dst = reinterpret_cast<uae_s16*>(ahisndbuffer);
+	for (int i = 0; i < amigablksize; i++) {
+		// Each long is a big-endian left/right pair, left in the high word.
+		const uae_u32 v = get_long(addr + i * 4);
+		const auto left = static_cast<uae_s16>(v >> 16);
+		const auto right = static_cast<uae_s16>(v);
+		dst[i * 2 + 0] = swap ? right : left;
+		dst[i * 2 + 1] = swap ? left : right;
+	}
+
+	// Always queue what the guest wrote: dropping a block is an audible gap.
+	SDL_PutAudioStreamData(ahi_stream, ahisndbuffer, bytes);
+	ahi_poll();
 }
 
 static int ahi_init_record ()
@@ -216,13 +181,26 @@ static int ahi_init_record ()
 	return 1;
 }
 
-void setvolume_ahi (int volume)
+void ahi_apply_volume()
 {
 	if (!ahi_stream)
 		return;
-	// SDL3 AudioStream doesn't support device-level volume control directly.
-	// AHI V1 pushes raw buffers from Amiga — volume scaling would need software mixing.
-	// For now, no-op.
+	float gain = 0.0f;
+	if (!ahi_master_mute) {
+		// Read the volumes from the prefs: without Paula sound, set_volume()
+		// never runs, but the configured attenuation still applies to AHI.
+		const int board = std::clamp(currprefs.sound_volume_board, 0, 100);
+		const int master = std::clamp(currprefs.sound_volume_master, 0, 100);
+		gain = static_cast<float>((100 - board) * (100 - master)) / 10000.0f;
+	}
+	if (!SDL_SetAudioStreamGain(ahi_stream, gain))
+		write_log(_T("AHI: SDL_SetAudioStreamGain failed: %s\n"), SDL_GetError());
+}
+
+void setvolume_ahi(int mute)
+{
+	ahi_master_mute = mute;
+	ahi_apply_volume();
 }
 
 static int ahi_init_sound()
@@ -242,12 +220,19 @@ static int ahi_init_sound()
 
 	if (!amigablksize)
 		return 0;
-	soundneutral = 0;
-	// Use 4 native buffers as per WinUAE
-	ahisndbufsize = (amigablksize * 4) * NATIVBUFFNUM;
-	ahisndbuffer = xmalloc(uae_u8, ahisndbufsize + 32);
-	if (!ahisndbuffer)
-		return 0;
+
+	// Keep as much queued as the Paula push path at its high-water mark, three
+	// buffers of the Sound buffer setting, but at least two emulated frames:
+	// the emulator runs each frame in a burst, and nothing is mixed between
+	// bursts. Two guest blocks is the floor, so the guest can mix the next
+	// block while the queue still holds one.
+	const int frame_bytes = sound_channels_ahi * sound_bits_ahi / 8;
+	const int paula_frames = std::max((currprefs.sound_maxbsiz >> 2) & ~63, 0x80);
+	const auto buffer_frames = static_cast<int64_t>(paula_frames) * 3 * sound_freq_ahi
+		/ std::max(currprefs.sound_freq, 1);
+	const auto vsync_frames = static_cast<int64_t>(2.0f * sound_freq_ahi / std::max(vblank_hz, 1.0f));
+	ahi_queue_target = static_cast<int>(std::max({ buffer_frames * frame_bytes,
+		vsync_frames * frame_bytes, static_cast<int64_t>(amigablksize) * 4 * 2 }));
 
 	// Honor selected output device, matching the Paula audio path in sound.cpp
 	const int sndcard = currprefs.soundcard;
@@ -270,13 +255,18 @@ static int ahi_init_sound()
 		write_log(_T("AHI: Failed to open SDL3 audio device stream: %s\n"), SDL_GetError());
 		return 0;
 	}
+	ahisndbuffer = xmalloc(uae_u8, amigablksize * 4);
+	if (!ahisndbuffer) {
+		SDL_DestroyAudioStream(ahi_stream);
+		ahi_stream = nullptr;
+		return 0;
+	}
+	write_log(_T("AHI: queue target %d bytes\n"), ahi_queue_target);
 
 	SDL_ResumeAudioStreamDevice(ahi_stream);
 
-	setvolume_ahi(0);
+	ahi_apply_volume();
 
-	ahi_write_pos = 0;
-	memset(ahisndbuffer, soundneutral, static_cast<size_t>(amigablksize) * 8);
 	ahi_on = 1;
 	return sound_freq_ahi;
 }
@@ -290,7 +280,6 @@ int ahi_open_sound ()
 		return 0;
 	if (ahi_on)
 		ahi_close_sound ();
-	sound_flushes2 = 1;
 	if ((rate = ahi_init_sound ()))
 		return rate;
 	return 0;
@@ -363,18 +352,8 @@ uae_u32 REGPARAM2 ahi_demux (TrapContext *context)
 		return 0;
 
 	case 2:
-		{
-			uaecptr addr = m68k_areg (regs, 0);
-			auto* ahisndbufpt = reinterpret_cast<int*>(ahisndbuffer + ahi_write_pos);
-			for (int i = 0; i < amigablksize * 4; i += 4)
-				*ahisndbufpt++ = static_cast<int>(get_long(addr + i));
-
-			ahi_write_pos += amigablksize * 4;
-			if (ahi_write_pos >= ahisndbufsize)
-				ahi_write_pos = 0;
-
-			ahi_finish_sound_buffer();
-		}
+		if (ahi_on)
+			ahi_write_block(m68k_areg (regs, 0));
 		return amigablksize;
 
 	case 3:
@@ -449,7 +428,7 @@ uae_u32 REGPARAM2 ahi_demux (TrapContext *context)
 	case 5:
 		if (!ahi_on)
 			return 0;
-		ahi_updatesound ( 1 );
+		ahi_poll();
 		return 1;
 
 	case 10:
@@ -595,7 +574,7 @@ void ahi_hsync()
 		count++;
 		//15625/count freebuffer check
 		if (count > ahi_pollrate) {
-			ahi_updatesound(1);
+			ahi_poll();
 			count = 0;
 		}
 	}

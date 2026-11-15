@@ -2233,6 +2233,11 @@ void set_audio (void)
 #ifdef WITH_SNDBOARD
 	sndboard_ext_volume();
 #endif
+#ifdef AHI
+	// The AHI stream is separate from Paula's, so refresh its gain here too:
+	// with Paula sound off, init_audio() below never reaches set_volume().
+	ahi_apply_volume();
+#endif
 
 	if (1) { // always reset if (1 || ch >= 0) {
 		if (currprefs.produce_sound >= 2) {
