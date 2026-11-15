@@ -859,6 +859,7 @@ extern void REGPARAM3 fpuop_arithmetic_jit(uae_u32 instruction, uaecptr ea);
 // compiled FPU arithmetic for a JIT without native FPU code (fpp.cpp)
 extern bool jit_fpu_arith_ok(uae_u16 opcode, uae_u16 extra);
 extern uae_u32 REGPARAM3 fpp_jit_arith(uae_u32 opext, uae_u64 value, uae_u8 *pc_p, uae_u32 pc);
+extern uae_u32 REGPARAM3 fpp_jit_arith_slow(uae_u32 opcode, uae_u8 *pc_p, uae_u32 pc);
 // its specialised versions for the common instructions, or nullptr (fpp_softfloat.cpp)
 extern void *fp_jit_fast_helper(uae_u16 opcode, uae_u16 extra);
 extern bool jit_fpu_generic_ok(uae_u16 opcode, uae_u16 extra);

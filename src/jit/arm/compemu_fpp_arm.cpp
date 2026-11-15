@@ -538,7 +538,9 @@ static bool comp_fpp_generic_call(uae_u32 opcode, uae_u16 extra)
 /* FPU arithmetic (opclass 0 and 2) without native FPU code: the source
  * operand is loaded here, the operation is a call of fpp_jit_arith()
  * (jitx_fpp_arith). An (An)+/-(An) update waits for the call: if the
- * interpreter handler runs instead (exceptions enabled), it does it. */
+ * interpreter handler runs instead (exceptions enabled), it does it. A memory
+ * operand is read after a gate (jitx_fpp_arith_gate): with an exception
+ * enabled or pending only the interpreter handler reads it. */
 static bool comp_fpp_arith_call(uae_u32 opcode, uae_u16 extra)
 {
 	if (!jit_fpu_arith_ok(opcode, extra))
@@ -620,6 +622,11 @@ static bool comp_fpp_arith_call(uae_u32 opcode, uae_u16 extra)
 				break;
 			}
 			break;
+		}
+		if (!imm && size != 2) {
+			// no read when the interpreter handler does the instruction (an
+			// exception enabled or pending): it reads the operand itself
+			jitx_fpp_arith_gate(opcode, (uintptr)insn, pc);
 		}
 		if (!imm) {
 			switch (size) {

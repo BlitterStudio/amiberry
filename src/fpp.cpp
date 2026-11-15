@@ -4327,8 +4327,12 @@ bool jit_fpu_arith_ok(uae_u16 opcode, uae_u16 extra)
 	return true;
 }
 
-// the interpreter handler for the instruction, with the PC state it expects
-static NOINLINE uae_u32 fpp_jit_arith_slow(uae_u16 opcode, uae_u8 *pc_p, uae_u32 pc)
+/* The interpreter handler for the instruction, with the PC state it expects:
+ * fpp_jit_arith() when an exception is possible, and the compiled code's gate
+ * before it reads a memory operand (jitx_fpp_arith_gate), so the operand is
+ * read only once, by the handler, and after a pending exception. Returns 1,
+ * or 2: leave the block (exception or special flags). */
+uae_u32 REGPARAM3 fpp_jit_arith_slow(uae_u32 opcode, uae_u8 *pc_p, uae_u32 pc)
 {
 	uae_u8 *const save_pc_p = regs.pc_p, *const save_pc_oldp = regs.pc_oldp;
 	const uae_u32 save_pc = regs.pc, save_ipc = regs.instruction_pc;

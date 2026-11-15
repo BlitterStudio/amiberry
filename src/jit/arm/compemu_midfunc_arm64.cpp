@@ -1707,6 +1707,60 @@ static void fpx_emit_out(fpx_fails &f, uae_u32 kind, uae_u32 opext, uae_u32 pc)
 }
 #endif
 
+/* Before compiled FPU arithmetic of the exact core reads a memory operand:
+ * what the helpers check first (fpj_arith(), fpp_jit_arith()). An exception
+ * enabled or pending, or a disabled 68060 FPU: the interpreter handler runs
+ * the instruction instead (fpp_jit_arith_slow()), and reads the operand itself,
+ * once and after a pending exception is taken. Then the compiled code skips
+ * the operand read and the call (jitx_fpp_arith joins it) or leaves the block
+ * (2). The check uses no allocated register and leaves the flags alone; only
+ * that path flushes the registers (and the flags), out of line, with the
+ * allocator state of the fast path restored after it: where it joins, after
+ * jitx_fpp_arith's call, everything is in memory. */
+static uae_u32 *fpx_arith_gate_skip;
+
+MIDFUNC(3,jitx_fpp_arith_gate,(IM32 opcode, IMPTR pcp, IM32 pc))
+{
+	static_assert(offsetof(struct regstruct, fp_unimp_pend) == offsetof(struct regstruct, fp_exp_pend) + 4,
+		"fp_exp_pend and fp_unimp_pend are adjacent");
+	static_assert(offsetof(struct regstruct, fp_exp_pend) % 8 == 0, "fp_exp_pend is 8-byte aligned");
+	uae_u32 *slow[3];
+	int n = 0;
+	LDR_xXi(REG_WORK1, R_REGSTRUCT, (uae_u32)((uintptr)&regs.fp_exp_pend - (uintptr)&regs));
+	slow[n++] = (uae_u32 *)get_target(); CBNZ_xi(REG_WORK1, 0);
+	LDR_wXi(REG_WORK1, R_REGSTRUCT, (uae_u32)((uintptr)&regs.fpcr - (uintptr)&regs));
+	UBFX_wwii(REG_WORK1, REG_WORK1, 8, 8);    // the exception enable byte
+	slow[n++] = (uae_u32 *)get_target(); CBNZ_wi(REG_WORK1, 0);
+	if (currprefs.cpu_model == 68060) {
+		LDR_wXi(REG_WORK1, R_REGSTRUCT, (uae_u32)((uintptr)&regs.pcr - (uintptr)&regs));
+		slow[n++] = (uae_u32 *)get_target(); TBNZ_wii(REG_WORK1, 1, 0);    // DFP
+	}
+	uae_u32 *fast = (uae_u32 *)get_target(); B_i(0);
+	for (int i = 0; i < n; i++)
+		write_jmp_target(slow[i], (uintptr)get_target());
+
+	bigstate saved = live;
+	const bool saved_carry_inverted = flags_carry_inverted;
+	clobber_flags();
+	writeback_consts();                        // the interpreter handler uses the 68k registers in memory
+	prepare_for_call_1();
+	prepare_for_call_2();
+	LOAD_U32(REG_PAR1, opcode);
+	LOAD_U64(REG_PAR2, pcp);
+	LOAD_U32(R2_INDEX, pc);
+	fpx_call4((uintptr)fpp_jit_arith_slow);
+	uae_u32 *leave = (uae_u32 *)get_target(); TBNZ_wii(REG_RESULT, 1, 0);
+	fpx_arith_gate_skip = (uae_u32 *)get_target(); B_i(0);   // 1: after the instruction
+	write_jmp_target(leave, (uintptr)get_target());
+	uae_u32 *leave2 = (uae_u32 *)get_target(); B_i(0);       // 2: leave the block
+	write_jmp_target(leave2, (uintptr)popall_do_nothing);
+	live = saved;
+	flags_carry_inverted = saved_carry_inverted;
+
+	write_jmp_target(fast, (uintptr)get_target());
+}
+MENDFUNC(3,jitx_fpp_arith_gate,(IM32 opcode, IMPTR pcp, IM32 pc))
+
 /* Compiled FPU arithmetic without native FPU code (the exact core): a call of
  * fpp_jit_arith(opext, value, pc_p, pc). nvals: 0 no operand, 1 v1 (32 bits),
  * 2 v1:v2 (a double). On return 0 the (An)+/-(An) update anreg += delta is
@@ -1799,6 +1853,10 @@ MIDFUNC(10,jitx_fpp_arith,(IMPTR fn, RR4 v1, RR4 v2, IM8 nvals, IM32 opext, IMPT
 	write_jmp_target(branch_slow_join, (uintptr)get_target());
 	if (inline_done)
 		write_jmp_target(inline_done, (uintptr)get_target());
+	if (fpx_arith_gate_skip) {                 // jitx_fpp_arith_gate ran the instruction
+		write_jmp_target(fpx_arith_gate_skip, (uintptr)get_target());
+		fpx_arith_gate_skip = nullptr;
+	}
 }
 MENDFUNC(10,jitx_fpp_arith,(IMPTR fn, RR4 v1, RR4 v2, IM8 nvals, IM32 opext, IMPTR pcp, IM32 pc, IM8 anreg, IM32 delta, IM32 inl))
 
