@@ -4379,8 +4379,20 @@ static uae_u32 REGPARAM2 picasso_SetPanning (TrapContext *ctx)
 		oldscr = start_of_screen;
 	}
 
-	bme_width = trap_get_word(ctx, bmeptr + PSSO_BitMapExtra_Width);
-	bme_height = trap_get_word(ctx, bmeptr + PSSO_BitMapExtra_Height);
+	// Without a BitMapExtra the visible size is all there is.
+	if (bmeptr) {
+		bme_width = trap_get_word(ctx, bmeptr + PSSO_BitMapExtra_Width);
+		bme_height = trap_get_word(ctx, bmeptr + PSSO_BitMapExtra_Height);
+	} else {
+		bme_width = Width;
+		bme_height = state->Height;
+	}
+	if (!bme_width) {
+		bme_width = state->Width;
+	}
+	if (!bme_height) {
+		bme_height = state->Height;
+	}
 	rgbf = state->RGBFormat;
 
 	state->Address = start_of_screen; /* Amiga-side address */
