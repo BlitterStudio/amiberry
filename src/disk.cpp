@@ -1027,7 +1027,7 @@ static void updatemfmpos (drive *drv)
 	drv->prevtracklen = drv->tracklen;
 }
 
-static void track_reset (drive *drv)
+static void track_reset(drive *drv, bool formatted)
 {
 	drv->tracklen = FLOPPY_WRITE_LEN * drv->ddhd * 2 * 8;
 	drv->revolutions = 1;
@@ -1035,28 +1035,44 @@ static void track_reset (drive *drv)
 	drv->buffered_side = -1;
 	drv->skipoffset = -1;
 	drv->tracktiming[0] = 0;
-	memset (drv->bigmfmbuf, 0xaa, FLOPPY_WRITE_LEN * 2 * drv->ddhd);
+	// 0x00 should be random but it would also require random timing info which is not worth the trouble.
+	memset (drv->bigmfmbuf, formatted ? 0xaa : 0x00, FLOPPY_WRITE_LEN * 2 * drv->ddhd);
 	updatemfmpos (drv);
 }
 
 static int read_header_ext2 (struct zfile *diskfile, trackid *trackdata, int *num_tracks, int *ddhd)
 {
-	uae_u8 buffer[2 + 2 + 4 + 4];
+	uae_u8 buffer[2 + 2 + 4 + 4] = { 0 };
 	trackid *tid;
 	int offs;
-	int i;
+
+	for (int i = 0; i < MAX_TRACKS; i++) {
+		tid = trackdata + i;
+		tid->type = TRACK_NONE;
+		tid->bitlen = 0;
+	}
 
 	zfile_fseek (diskfile, 0, SEEK_SET);
 	zfile_fread (buffer, 1, 8, diskfile);
-	if (strncmp ((char*)buffer, "UAE-1ADF", 8))
+	if (strncmp ((char*)buffer, "UAE-1ADF", 8)) {
 		return 0;
+	}
 	zfile_fread (buffer, 1, 4, diskfile);
 	*num_tracks = buffer[2] * 256 + buffer[3];
+	if (*num_tracks < 0) {
+		return 0;
+	}
+	if (*num_tracks > MAX_TRACKS) {
+		write_log(_T("extadf: Too many tracks (%d), using %d\n"), *num_tracks, MAX_TRACKS);
+		*num_tracks = MAX_TRACKS;
+	}
 	offs = 8 + 2 + 2 + (*num_tracks) * (2 + 2 + 4 + 4);
 
-	for (i = 0; i < (*num_tracks); i++) {
+	for (int i = 0; i < (*num_tracks); i++) {
 		tid = trackdata + i;
-		zfile_fread (buffer, 2 + 2 + 4 + 4, 1, diskfile);
+		if (!zfile_fread(buffer, 2 + 2 + 4 + 4, 1, diskfile)) {
+			break;
+		}
 		tid->type = (image_tracktype)buffer[3];
 		tid->revolutions = buffer[2] + 1;
 		tid->len = buffer[5] * 65536 + buffer[6] * 256 + buffer[7];
@@ -1208,7 +1224,7 @@ static int iswritefileempty(struct uae_prefs *p, int num, const TCHAR *name)
 {
 	struct zfile *zf;
 	bool wrprot;
-	uae_char buffer[8];
+	uae_char buffer[8] = { 0 };
 	trackid td[MAX_TRACKS];
 	int tracks, ddhd, i, ret;
 
@@ -1391,7 +1407,7 @@ static int drive_insert (drive *drv, struct uae_prefs *p, int dnum, const TCHAR 
 #else
 	if (drv->diskfile == NULL && !drv->catweasel) {
 #endif
-		track_reset (drv);
+		track_reset (drv, true);
 		return 0;
 	}
 
@@ -2380,7 +2396,7 @@ static void drive_fill_bigbuf(drive *drv, int tside, int force)
 #else
 	if ((!drv->diskfile && !drv->catweasel) || tr >= drv->num_tracks) {
 #endif
-		track_reset (drv);
+		track_reset(drv, true);
 		return;
 	}
 
@@ -2435,7 +2451,7 @@ static void drive_fill_bigbuf(drive *drv, int tside, int force)
 		}
 		drv->buffered_cyl = -1;
 		if (!drv->tracklen) {
-			track_reset (drv);
+			track_reset(drv, true);
 			return;
 		}
 #endif
@@ -2471,7 +2487,7 @@ static void drive_fill_bigbuf(drive *drv, int tside, int force)
 
 	} else if (ti->type == TRACK_NONE) {
 
-		;
+		track_reset(drv, false);
 
 	} else {
 		int i;
