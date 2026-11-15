@@ -429,11 +429,18 @@ def main():
         reply = control.request("HOST_SETTINGS_GET\tnope")
         check("an unknown host setting is refused", reply == "ERROR\tUnknown host setting: nope", reply)
 
-        # Custom controls: the controls and events are listed; without a
-        # joystick connected (headless), a port has none to edit.
+        # Custom controls list buttons, followed only by axes a custom
+        # mapping can move (not the left stick).
         reply = control.request("SETTINGS_CUSTOM_CONTROLS")
-        check("SETTINGS_CUSTOM_CONTROLS lists buttons, then axes",
-              reply.startswith("OK\ta=button\tb=button") and "\tleftx=axis" in reply, reply[:200])
+        controls = reply.split("\t")[1:]
+        first_axis = next((i for i, entry in enumerate(controls) if entry.endswith("=axis")), len(controls))
+        check("SETTINGS_CUSTOM_CONTROLS lists buttons, then mappable axes",
+              controls[:15] == [
+                  "a=button", "b=button", "x=button", "y=button", "back=button", "guide=button", "start=button",
+                  "leftstick=button", "rightstick=button", "leftshoulder=button", "rightshoulder=button",
+                  "dpup=button", "dpdown=button", "dpleft=button", "dpright=button",
+              ] and all(entry.endswith("=button") for entry in controls[:first_axis])
+              and controls[first_axis:] == ["rightx=axis", "righty=axis", "lefttrigger=axis", "righttrigger=axis"], reply)
         reply = control.request("SETTINGS_INPUT_EVENTS")
         check("SETTINGS_INPUT_EVENTS lists events by their configuration names",
               reply.startswith("OK\t") and "\tSpace\t" in reply and "\tJoy2 Fire/Mouse2 Left Button\t" in reply,

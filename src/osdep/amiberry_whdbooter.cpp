@@ -1123,6 +1123,7 @@ game_hardware_options parse_settings_from_json(uae_prefs* prefs, const char* fil
 	whdload_prefs.slave_count = game.value("slave_count", 0);
 	whdload_prefs.slave_default = game.value("slave_default", "");
 	whdload_prefs.slave_libraries = game.value("slave_libraries", false);
+	whdload_prefs.exp_chip = game.value("exp_chip", false);
 
 	write_log("WHDBooter - Selected Slave: %s \n", whdload_prefs.slave_default.c_str());
 
@@ -1657,6 +1658,11 @@ void create_startup_sequence()
 			whd_bootscript << " NOWRITECACHE";
 	}
 
+	// EXPCHIP: the slave's expansion memory must come from Chip RAM. JST
+	// has no such option.
+	if (whdload_prefs.exp_chip && !amiberry_options.use_jst_instead_of_whd)
+		whd_bootscript << " EXPCHIP";
+
 	// CUSTOM options
 	for (int i = 1; i <= 5; ++i) {
 		auto& custom = whdload_prefs.selected_slave.get_custom(i);
@@ -1839,6 +1845,7 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath, const bool prese
 	whdload_prefs.slave_count = 0;
 	whdload_prefs.slave_default.clear();
 	whdload_prefs.slave_libraries = false;
+	whdload_prefs.exp_chip = false;
 	whdload_prefs.slaves.clear();
 	whdload_prefs.selected_slave = whdload_slave{};
 

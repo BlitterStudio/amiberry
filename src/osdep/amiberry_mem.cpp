@@ -558,6 +558,22 @@ static uae_u8 *va (uae_u32 offset, uae_u32 len, unsigned int alloc, unsigned int
 	return nullptr;
 }
 
+// Amiga addresses below this offset can be reached by JIT direct through natmem.
+static size_t jit_direct_limit(const struct uae_prefs *p)
+{
+	size_t limit = natmem_reserved_size;
+#if defined(CPU_AARCH64)
+	// The ARM64 JIT treats a host pointer that fits in 32 bits as a signed
+	// value in places, so natmem + address must stay below 2 GB when natmem
+	// itself lies below 4 GB. Desktop hosts reserve natmem above 4 GB; a
+	// program embedding the core with its own memory map may not.
+	const auto base = reinterpret_cast<uintptr_t>(natmem_reserved);
+	if (p->cachesize && base < 0x100000000ULL)
+		limit = base < 0x80000000ULL ? std::min<size_t>(limit, 0x80000000ULL - base) : 0;
+#endif
+	return limit;
+}
+
 static int doinit_shm ()
 {
 	struct rtgboardconfig *rbc = &changed_prefs.rtgboards[0];
@@ -586,6 +602,7 @@ static int doinit_shm ()
 	end_rtg = 0;
 
 	jit_direct_compatible_memory = p->cachesize && (!p->comptrustbyte || !p->comptrustword || !p->comptrustlong);
+	const size_t direct_limit = jit_direct_limit(p);
 
 	// 1G Z3chip?
 	if ((Z3BASE_UAE + p->z3chipmem.size > Z3BASE_REAL) ||
@@ -596,7 +613,7 @@ static int doinit_shm ()
 		// Wanted UAE || Blizzard RAM
 		p->z3_mapping_mode == Z3MAPPING_UAE || cpuboard_memorytype(&changed_prefs) == BOARD_MEMORY_BLIZZARD_12xx ||
 		// JIT && Automatic && Real does not fit in NATMEM && UAE fits in NATMEM
-		(expamem_z3_highram_real + extra >= natmem_reserved_size && expamem_z3_highram_uae + extra <= natmem_reserved_size && p->z3_mapping_mode == Z3MAPPING_AUTO && jit_direct_compatible_memory)) {
+		(expamem_z3_highram_real + extra >= direct_limit && expamem_z3_highram_uae + extra <= direct_limit && p->z3_mapping_mode == Z3MAPPING_AUTO && jit_direct_compatible_memory)) {
 		changed_prefs.z3autoconfig_start = currprefs.z3autoconfig_start = Z3BASE_UAE;
 		if (p->z3_mapping_mode == Z3MAPPING_AUTO)
 			write_log(_T("MMAN: Selected UAE Z3 mapping mode\n"));
@@ -609,7 +626,7 @@ static int doinit_shm ()
 		set_expamem_z3_hack_mode(Z3MAPPING_REAL);
 		if (expamem_z3_highram_real > totalsize_z3 && jit_direct_compatible_memory) {
 			totalsize_z3 = expamem_z3_highram_real;
-			if (totalsize_z3 + extra >= natmem_reserved_size) {
+			if (totalsize_z3 + extra >= direct_limit) {
 				jit_direct_compatible_memory = false;
 				write_log(_T("MMAN: Not enough direct memory for Z3REAL. Switching off JIT Direct.\n"));
 			}
@@ -621,7 +638,7 @@ static int doinit_shm ()
 
 	expansion_scan_autoconfig(&currprefs, true);
 
-	if (jit_direct_compatible_memory && (totalsize > size64 || totalsize + extra >= natmem_reserved_size)) {
+	if (jit_direct_compatible_memory && (totalsize > size64 || totalsize + extra >= direct_limit)) {
 		jit_direct_compatible_memory = false;
 		write_log(_T("MMAN: Not enough direct memory. Switching off JIT Direct.\n"));
 	}
@@ -661,6 +678,10 @@ static int doinit_shm ()
 		notify_user(NUMSG_NOMEMORY);
 		return -1;
 	} else {
+		if (end_rtg > direct_limit && jit_direct_compatible_memory) {
+			write_log(_T("MMAN: VRAM above the JIT direct limit (%08x > %zx), switching off JIT Direct.\n"), end_rtg, direct_limit);
+			jit_direct_compatible_memory = false;
+		}
 		start_rtg = 0;
 		end_rtg = 0;
 	}
@@ -677,8 +698,8 @@ static int doinit_shm ()
 				ab->flags &= ~ABFLAG_ALLOCINDIRECT;
 				ab->jit_read_flag = 0;
 				ab->jit_write_flag = 0;
-				if (aci->start + aci->size > natmem_reserved_size) {
-					write_log(_T("%s %08x-%08x: not JIT direct capable (>%zx)!\n"), ab->name, aci->start, aci->start + aci->size - 1, natmem_reserved_size);
+				if (aci->start + aci->size > direct_limit) {
+					write_log(_T("%s %08x-%08x: not JIT direct capable (>%zx)!\n"), ab->name, aci->start, aci->start + aci->size - 1, direct_limit);
 					ab->flags |= ABFLAG_ALLOCINDIRECT;
 					ab->jit_read_flag = S_READ;
 					ab->jit_write_flag = S_WRITE;
