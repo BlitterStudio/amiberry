@@ -5822,7 +5822,9 @@ static void copyrow(int monid, uae_u8 *src, uae_u8 *dst, int x, int y, int width
 	int convert_mode = convert_modep[0];
 
 	if (y >= vidinfo->splitypos && vidinfo->splitypos >= 0) {
-		src = gfxmem_banks[monid]->start + natmem_offset;
+		// The split screen is a uaegfx feature and uaegfx is board 0,
+		// whichever monitor it is shown on.
+		src = gfxmem_banks[0]->start + natmem_offset;
 		if (state->dualclut) {
 			clut += 256;
 		}
@@ -6399,8 +6401,9 @@ uae_u8 *uaegfx_getrtgbuffer(const int monid, int *widthp, int *heightp, int *pit
 {
 	const struct picasso_vidbuf_description *vidinfo = &picasso_vidinfo[monid];
 	const struct picasso96_state_struct *state = &picasso96_state[monid];
-	uae_u8 *src = gfxmem_banks[monid]->start + natmem_offset;
-	const int off = state->XYOffset - gfxmem_banks[monid]->start;
+	// uaegfx is board 0, whichever monitor it is shown on.
+	uae_u8 *src = gfxmem_banks[0]->start + natmem_offset;
+	const int off = state->XYOffset - gfxmem_banks[0]->start;
 	int width, height, pixbytes;
 	uae_u8 *dst;
 	int convert[2];
