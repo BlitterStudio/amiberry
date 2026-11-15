@@ -434,7 +434,22 @@ void *uae_vm_reserve(size_t size, int flags)
 	if (flags & UAE_VM_32BIT) {
 		address = vm_reserve_probe_downward(size, flags);
 	} else {
+#if defined(__APPLE__) && defined(CPU_x86_64)
+		/* macOS x86-64 places anonymous mappings directly above the
+		 * executable image, so an OS-chosen reservation (natmem is 4 GiB)
+		 * can cover the whole RIP-relative window around the JIT's globals
+		 * and force the block-pool allocation back to interpretation.
+		 * Hint 4 GiB above a data anchor: mmap treats the address as a
+		 * non-fixed hint, so keep the OS-chosen fallback when it fails. */
+		static int jit_room_anchor;
+		address = vm_reserve_at(reinterpret_cast<void *>(
+			reinterpret_cast<uintptr_t>(&jit_room_anchor) + 0x100000000ULL),
+			size, flags);
+		if (address == nullptr)
+			address = vm_reserve_at(nullptr, size, flags);
+#else
 		address = vm_reserve_at(nullptr, size, flags);
+#endif
 	}
 
 #endif

@@ -333,9 +333,14 @@ void fsdb_dir_writeback (a_inode *dir)
 			changes_needed = 1;
 	}
 	if (! entries_needed) {
-		kill_fsdb (dir);
-		TRACE ((_T("fsdb removed\n")));
-		return;
+		/* Cached children cover only part of the directory: the aino cache
+		 * is recycled under memory pressure and children are added lazily,
+		 * so records of uncached entries live only in this file.  Keep it
+		 * and let fsdb_clean_dir () prune records whose files are gone.  */
+		f = get_fsdb (dir, _T("rb"));
+		if (! f)
+			return;
+		fclose (f);
 	}
 
 	if (! changes_needed) {

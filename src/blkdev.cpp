@@ -344,15 +344,14 @@ static int sys_command_open_internal (int unitnum, const TCHAR *ident, cd_standa
 	return ret;
 }
 
-static int getunitinfo (int unitnum, int drive, cd_standard_unit csu, int *isaudio)
+static int getunitinfo (int unitnum, cd_standard_unit csu, bool *isaudio)
 {
 	struct device_info di;
 	if (sys_command_info (unitnum, &di, 0)) {
 		write_log (_T("Scanning drive %s: "), di.label);
 		if (di.media_inserted) {
 			if (isaudiotrack (&di.toc, 0)) {
-				if (*isaudio == 0)
-					*isaudio = drive;
+				*isaudio = true;
 				write_log (_T("CDA"));
 			}
 			uae_u8 buffer[2048];
@@ -387,7 +386,7 @@ static int getunitinfo (int unitnum, int drive, cd_standard_unit csu, int *isaud
 static int get_standard_cd_unit2 (struct uae_prefs *p, cd_standard_unit csu)
 {
 	int unitnum = 0;
-	int isaudio = 0;
+	TCHAR audio_name[MAX_DPATH] = { 0 };
 	if (p->cdslots[unitnum].name[0] || p->cdslots[unitnum].inuse) {
 		if (p->cdslots[unitnum].name[0]) {
 			device_func_init (SCSI_UNIT_IOCTL);
@@ -409,8 +408,11 @@ static int get_standard_cd_unit2 (struct uae_prefs *p, cd_standard_unit csu)
 		int drivetype = GetDriveType (vol);
 		if (drivetype == DRIVE_CDROM) {
 			if (sys_command_open_internal (unitnum, vol, csu)) {
-				if (getunitinfo (unitnum, drive, csu, &isaudio))
+				bool isaudio = false;
+				if (getunitinfo (unitnum, csu, &isaudio))
 					return unitnum;
+				if (isaudio && !audio_name[0])
+					_tcscpy (audio_name, vol);
 				sys_command_close (unitnum);
 			}
 		}
@@ -420,26 +422,21 @@ static int get_standard_cd_unit2 (struct uae_prefs *p, cd_standard_unit csu)
 		auto drives = get_cd_drives();
 		for (const auto& drive : drives) {
 			if (sys_command_open_internal (unitnum, drive.c_str(), csu)) {
-				if (getunitinfo (unitnum, 0, csu, &isaudio))
+				bool isaudio = false;
+				if (getunitinfo (unitnum, csu, &isaudio))
 					return unitnum;
+				if (isaudio && !audio_name[0])
+					_tcscpy (audio_name, drive.c_str());
 				sys_command_close (unitnum);
 			}
 		}
 	}
 #endif
-	if (isaudio) {
-#ifdef _WIN32
-		TCHAR vol[100];
-		_sntprintf (vol, sizeof vol, _T("%c:\\"), isaudio);
-		if (sys_command_open_internal (unitnum, vol, csu)) 
+	if (audio_name[0]) {
+		/* No data disc in any drive: fall back to the first drive that
+		 * held an audio disc, like the Windows drive-letter path does. */
+		if (sys_command_open_internal (unitnum, audio_name, csu))
 			return unitnum;
-#else
-		auto drives = get_cd_drives();
-		if (!drives.empty()) {
-			if (sys_command_open_internal (unitnum, drives[0].c_str(), csu)) 
-				return unitnum;
-		}
-#endif
 	}
 fallback:
 	device_func_init (SCSI_UNIT_IMAGE);
