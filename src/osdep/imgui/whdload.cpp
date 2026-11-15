@@ -191,6 +191,8 @@ void render_panel_whdload()
 
     AmigaCheckbox("Slave Libraries", &whdload_prefs.slave_libraries);
     ShowHelpMarker("Use slave-specific libraries");
+    if (AmigaCheckbox("ExpChip", &whdload_prefs.exp_chip)) create_startup_sequence();
+    ShowHelpMarker("Allocate the slave's expansion memory in Chip RAM (WHDLoad EXPCHIP option)");
     
     ImGui::AlignTextToFramePadding();
     ImGui::Text("Slaves:");
