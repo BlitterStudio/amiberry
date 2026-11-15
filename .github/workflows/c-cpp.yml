@@ -152,6 +152,11 @@ jobs:
     permissions:
       contents: read
       actions: write
+    env:
+      # Pull requests from forks get no repository secrets, so signing and
+      # notarization run only where the Apple credentials are available. The
+      # bundle and dependency checks above run for every pull request.
+      SIGN_MACOS: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
     steps:
       - name: Check out repository code
         uses: actions/checkout@v6
@@ -437,6 +442,7 @@ jobs:
           fi
 
       - name: Install the Apple certificate
+        if: env.SIGN_MACOS == 'true'
         env:
           APPLE_DEVID_CERT_BASE64: ${{ secrets.APPLE_DEVID_CERT_BASE64 }}
           APPLE_DEVID_CERT_P12_PASSWORD: ${{ secrets.APPLE_DEVID_CERT_P12_PASSWORD }}
@@ -454,6 +460,7 @@ jobs:
           security list-keychains -d user -s $KEYCHAIN_PATH
 
       - name: Codesign the dylibs
+        if: env.SIGN_MACOS == 'true'
         env:
           CODESIGN_IDENTITY: ${{ secrets.APPLE_CODESIGN_IDENTITY }}
         run: |
@@ -469,22 +476,26 @@ jobs:
           done
 
       - name: Codesign the app
+        if: env.SIGN_MACOS == 'true'
         env:
           CODESIGN_IDENTITY: ${{ secrets.APPLE_CODESIGN_IDENTITY }}
         run: |
           codesign -s "$CODESIGN_IDENTITY" -f -o runtime,hard --entitlements packaging/macos/Amiberry.entitlements universal-app/Amiberry.app
 
       - name: Verify app entitlements and signature
+        if: env.SIGN_MACOS == 'true'
         run: |
           codesign -d --entitlements :- universal-app/Amiberry.app
           codesign --verify --deep --strict universal-app/Amiberry.app
           echo "Signature verification passed"
 
       - name: Create a zip to send to the notary service
+        if: env.SIGN_MACOS == 'true'
         run: |
           ditto -c -k --keepParent universal-app/Amiberry.app Amiberry-${{ github.sha }}-macOS-universal.zip
 
       - name: Send the file to be notarized by Apple
+        if: env.SIGN_MACOS == 'true'
         run: |
           set -uo pipefail
           ZIP="Amiberry-${{ github.sha }}-macOS-universal.zip"
@@ -510,6 +521,7 @@ jobs:
           fi
 
       - name: Staple the notary receipt to the application bundle
+        if: env.SIGN_MACOS == 'true'
         run: |
           # Right after notarization is accepted, fetching the ticket from
           # Apple's CloudKit service can fail ("The network connection was
@@ -553,11 +565,22 @@ jobs:
           cp packaging/dmg/AppDMGBackground.tiff "$STAGING/.background/background.tiff"
 
           # Create a writable DMG, apply Finder layout/background, then compress.
+          # A runner's disk image services can briefly refuse a new image with
+          # "Resource busy", so retry the create with backoff.
           RW_DMG="${DMG_NAME}-rw.dmg"
-          hdiutil create -volname "Amiberry" \
-            -srcfolder "$STAGING" \
-            -ov -format UDRW \
-            "$RW_DMG"
+          for attempt in 1 2 3 4 5; do
+            if hdiutil create -volname "Amiberry" \
+              -srcfolder "$STAGING" \
+              -ov -format UDRW \
+              "$RW_DMG"; then
+              break
+            fi
+            if [ "$attempt" -eq 5 ]; then
+              echo "::error::hdiutil create failed after $attempt attempts"
+              exit 1
+            fi
+            sleep $((attempt * 5))
+          done
 
           DEVICE=""
 
@@ -1725,7 +1748,7 @@ jobs:
       - name: Submit SignPath signing request
         if: steps.signpath-config.outputs.enabled == 'true'
         id: signpath
-        uses: SignPath/github-action-submit-signing-request@v2
+        uses: SignPath/github-action-submit-signing-request@v3
         with:
           api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
           organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
@@ -2185,7 +2208,7 @@ jobs:
       - name: Submit SignPath signing request
         if: steps.signpath-config.outputs.enabled == 'true'
         id: signpath
-        uses: SignPath/github-action-submit-signing-request@v2
+        uses: SignPath/github-action-submit-signing-request@v3
         with:
           api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
           organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
