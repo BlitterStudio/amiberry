@@ -681,7 +681,7 @@ void default_volume_name(const char* path, TCHAR* volume, size_t volume_size)
 			name.erase(dot);
 	}
 	for (char& c : name) {
-		if (c == ':' || c == ',')
+		if (c == ':' || c == ',' || c == '\"')
 			c = '_';
 	}
 	std::snprintf(volume, volume_size, "%s", name.c_str());
@@ -830,14 +830,31 @@ amiberry_settings_status amiberry_settings_mount_field_set(const amiberry_settin
 		if (!std::strcmp(field, "kind") || !mount_has_field(ci, field))
 			return AMIBERRY_SETTINGS_UNKNOWN_ID;
 		if (!std::strcmp(field, "path")) {
-			if (!copy_mount_field(ci.rootdir, sizeof ci.rootdir, field_value)
+			const bool changed = std::strcmp(ci.rootdir, field_value) != 0;
+			// A quoted path ends at its first quote when the loader reads it.
+			if (std::strchr(field_value, '\"') || !copy_mount_field(ci.rootdir, sizeof ci.rootdir, field_value)
 				|| (ci.type != UAEDEV_CD && !field_value[0]))
 				return AMIBERRY_SETTINGS_INVALID_VALUE;
-		} else if (!std::strcmp(field, "device")) {
-			if (!copy_mount_field(ci.devname, sizeof ci.devname, field_value) || !field_value[0])
-				return AMIBERRY_SETTINGS_INVALID_VALUE;
-		} else if (!std::strcmp(field, "volume")) {
-			if (!copy_mount_field(ci.volname, sizeof ci.volname, field_value) || !field_value[0])
+			// A newly picked hardfile is probed as the panel does: its RDB
+			// sets RDB mode; without one an entry in RDB mode gets the plain
+			// geometry and a set geometry stays. The boot priority is the
+			// user's either way.
+			if (ci.type == UAEDEV_HDF && changed) {
+				const int bootpri = ci.bootpri;
+				if (!amiberry_settings::mount_rdb_geometry(ci.rootdir, ci) && ci.sectors == 0) {
+					ci.sectors = 32;
+					ci.surfaces = 1;
+					ci.reserved = 2;
+					ci.blocksize = 512;
+				}
+				ci.bootpri = bootpri;
+			}
+		} else if (!std::strcmp(field, "device") || !std::strcmp(field, "volume")) {
+			// The entry's spelling separates names with ':' and ',' and
+			// cannot escape a quote in them.
+			TCHAR* name = !std::strcmp(field, "device") ? ci.devname : ci.volname;
+			if (!field_value[0] || std::strpbrk(field_value, ":,\"")
+				|| !copy_mount_field(name, sizeof ci.devname, field_value))
 				return AMIBERRY_SETTINGS_INVALID_VALUE;
 		} else if (!std::strcmp(field, "read_only")) {
 			if (!std::strcmp(field_value, "true")) ci.readonly = true;

@@ -4537,6 +4537,24 @@ void check_mount_list()
 		== AMIBERRY_SETTINGS_OK);
 	CHECK(amiberry_settings_mount_field_get(session, mount, "sectors", field, sizeof field)
 		== AMIBERRY_SETTINGS_OK && !std::strcmp(field, "0"));
+	// Picking another image probes it: an RDB sets RDB mode, and leaving
+	// it for an image without one gets the plain geometry back.
+	char picked[256];
+	CHECK(amiberry_settings_mount_field_set(session, "hdf,rw,DH5:/plain.hdf,32,1,2,512,3,,uae0", "path",
+		probe_path, picked, sizeof picked) == AMIBERRY_SETTINGS_OK);
+	CHECK(amiberry_settings_mount_field_get(session, picked, "sectors", field, sizeof field)
+		== AMIBERRY_SETTINGS_OK && !std::strcmp(field, "0"));
+	CHECK(amiberry_settings_mount_field_get(session, picked, "boot_priority", field, sizeof field)
+		== AMIBERRY_SETTINGS_OK && !std::strcmp(field, "3"));
+	CHECK(amiberry_settings_mount_field_set(session, picked, "path", "/other.hdf", mount, sizeof mount)
+		== AMIBERRY_SETTINGS_OK);
+	CHECK(amiberry_settings_mount_field_get(session, mount, "sectors", field, sizeof field)
+		== AMIBERRY_SETTINGS_OK && !std::strcmp(field, "32"));
+	// A name the entry's spelling cannot hold is refused.
+	CHECK(amiberry_settings_mount_field_set(session, mount, "device", "DH:5", picked, sizeof picked)
+		== AMIBERRY_SETTINGS_INVALID_VALUE);
+	CHECK(amiberry_settings_mount_field_set(session, mount, "path", "/a\"b.hdf", picked, sizeof picked)
+		== AMIBERRY_SETTINGS_INVALID_VALUE);
 	std::remove(probe_path);
 	CHECK(amiberry_settings_mount_default(session, "cd", "", mount, sizeof mount)
 		== AMIBERRY_SETTINGS_OK);

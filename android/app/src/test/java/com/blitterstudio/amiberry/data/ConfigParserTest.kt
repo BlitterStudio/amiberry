@@ -743,6 +743,20 @@ class ConfigParserTest {
 	}
 
 	@Test
+	fun `quoted file names keep their backslashes and the geometry file is unescaped`() {
+		// The native writer quotes a file name with a comma and leaves its
+		// backslashes alone; the geometry file has every backslash escaped.
+		val result = ConfigParser.parse(writeConfig(
+			"""hardfile2=rw,DH0:"C:\hd\a,b.hdf",32,1,2,512,0,"fs,dir\l\Fast",uae0,0,980/10/17,"C:\\geo\\disk.geo""""
+		))
+		val mount = result.settings.hardDrives.single()
+
+		assertEquals("""C:\hd\a,b.hdf""", mount.path)
+		assertEquals("""fs,dir\l\Fast""", mount.filesystem)
+		assertEquals("""C:\geo\disk.geo""", mount.geometry)
+	}
+
+	@Test
 	fun `unknown mount overrides remain verbatim`() {
 		val result = ConfigParser.parse(writeConfig("""
 			hardfile2=rw,DH0::physical:drive,0,0,0,512,0,,scsi0

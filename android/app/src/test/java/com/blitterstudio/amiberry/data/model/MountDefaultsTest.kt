@@ -4,7 +4,11 @@ import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import com.blitterstudio.amiberry.data.HardfileCreator
+import org.junit.Assert.assertFalse
 import java.io.File
+import java.io.RandomAccessFile
+import java.util.zip.GZIPOutputStream
 
 class MountDefaultsTest {
 	@get:Rule val folder = TemporaryFolder()
@@ -31,6 +35,41 @@ class MountDefaultsTest {
 	@Test
 	fun `an image without an RDB gets the plain partition geometry`() {
 		assertEquals(MountDefaults.Geometry(32, 1, 2, 512), MountDefaults.hdfGeometry(image("plain.hdf", 0, ByteArray(0)).path))
+	}
+
+	@Test
+	fun `a dynamic VHD is probed through its block table`() {
+		val vhd = HardfileCreator.create(File(folder.root, "disk.vhd"), 8L * 1024 * 1024, dynamicVhd = true)
+		// Unallocated: the disk reads as zeros.
+		assertEquals(MountDefaults.Geometry(32, 1, 2, 512), MountDefaults.hdfGeometry(vhd.path))
+		RandomAccessFile(vhd, "rw").use { raf ->
+			val blockStart = raf.length()
+			raf.seek(1536) // the block table
+			raf.writeInt((blockStart / 512).toInt())
+			// The block: its sector bitmap padded to one sector, then the
+			// disk's first sectors, with the RDB in sector 1.
+			raf.seek(blockStart)
+			raf.write(ByteArray(512) { 0xff.toByte() })
+			raf.write(ByteArray(512))
+			raf.write(rdsk("RDSK", 512))
+			raf.write(ByteArray(512 * 1024 - 1024))
+		}
+		assertEquals(MountDefaults.Geometry(0, 0, 0, 512), MountDefaults.hdfGeometry(vhd.path))
+	}
+
+	@Test
+	fun `a gzipped hdz image is probed unpacked`() {
+		val plain = image("inner.hdf", 2, rdsk("RDSK", 512))
+		val hdz = File(folder.root, "disk.hdz").also { out -> GZIPOutputStream(out.outputStream()).use { it.write(plain.readBytes()) } }
+		assertEquals(MountDefaults.Geometry(0, 0, 0, 512), MountDefaults.hdfGeometry(hdz.path))
+	}
+
+	@Test
+	fun `names drop what a mount line cannot carry`() {
+		assertEquals("Work", MountNames.clean("Wo:r,k;\"", device = false))
+		assertEquals("MyDisk", MountNames.clean("My Disk", device = true))
+		assertEquals("My Disk", MountNames.clean("My Disk", device = false))
+		assertFalse(MountNames.allowed(':', device = false))
 	}
 
 	@Test

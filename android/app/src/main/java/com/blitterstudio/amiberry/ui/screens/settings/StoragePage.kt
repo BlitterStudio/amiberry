@@ -26,6 +26,7 @@ import com.blitterstudio.amiberry.data.model.EmulatorSettings
 import com.blitterstudio.amiberry.data.model.MountDefaults
 import com.blitterstudio.amiberry.data.model.MountEntry
 import com.blitterstudio.amiberry.data.model.MountKind
+import com.blitterstudio.amiberry.data.model.MountNames
 import com.blitterstudio.amiberry.data.model.SettingsSchema
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Switch
@@ -810,12 +811,14 @@ private fun MountRow(
 		}
 
 		if (drive.kind == MountKind.Directory || drive.kind == MountKind.Hardfile) {
-			MountTextField(stringResource(R.string.settings_storage_device_name), drive.device) {
+			MountTextField(stringResource(R.string.settings_storage_device_name), drive.device,
+				allowed = { MountNames.allowed(it, device = true) }) {
 				onMountChange(drive.copy(device = it))
 			}
 		}
 		if (drive.kind == MountKind.Directory) {
-			MountTextField(stringResource(R.string.settings_storage_volume_label), drive.volume) {
+			MountTextField(stringResource(R.string.settings_storage_volume_label), drive.volume,
+				allowed = { MountNames.allowed(it, device = false) }) {
 				onMountChange(drive.copy(volume = it))
 			}
 		}
@@ -830,18 +833,18 @@ private fun MountRow(
 		}
 		if (drive.kind == MountKind.Hardfile) {
 			Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-				MountTextField(stringResource(R.string.settings_storage_sectors), drive.sectors.toString(), KeyboardType.Number, Modifier.weight(1f)) {
+				MountTextField(stringResource(R.string.settings_storage_sectors), drive.sectors.toString(), KeyboardType.Number, Modifier.weight(1f), allowed = Char::isDigit) {
 					it.toIntOrNull()?.let { value -> onMountChange(drive.copy(sectors = value)) }
 				}
-				MountTextField(stringResource(R.string.settings_storage_surfaces), drive.surfaces.toString(), KeyboardType.Number, Modifier.weight(1f)) {
+				MountTextField(stringResource(R.string.settings_storage_surfaces), drive.surfaces.toString(), KeyboardType.Number, Modifier.weight(1f), allowed = Char::isDigit) {
 					it.toIntOrNull()?.let { value -> onMountChange(drive.copy(surfaces = value)) }
 				}
 			}
 			Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-				MountTextField(stringResource(R.string.settings_storage_reserved), drive.reserved.toString(), KeyboardType.Number, Modifier.weight(1f)) {
+				MountTextField(stringResource(R.string.settings_storage_reserved), drive.reserved.toString(), KeyboardType.Number, Modifier.weight(1f), allowed = Char::isDigit) {
 					it.toIntOrNull()?.let { value -> onMountChange(drive.copy(reserved = value)) }
 				}
-				MountTextField(stringResource(R.string.settings_storage_block_size), drive.blockSize.toString(), KeyboardType.Number, Modifier.weight(1f)) {
+				MountTextField(stringResource(R.string.settings_storage_block_size), drive.blockSize.toString(), KeyboardType.Number, Modifier.weight(1f), allowed = Char::isDigit) {
 					it.toIntOrNull()?.let { value -> onMountChange(drive.copy(blockSize = value)) }
 				}
 			}
@@ -1027,15 +1030,18 @@ private fun MountTextField(
 	keyboardType: KeyboardType = KeyboardType.Text,
 	modifier: Modifier = Modifier,
 	enabled: Boolean = true,
+	/** Characters the field takes; others are dropped as they are typed. */
+	allowed: (Char) -> Boolean = { true },
 	onValueChange: (String) -> Unit
 ) {
 	var text by remember(value) { mutableStateOf(value) }
 	val typing = rememberDpadTypingGate()
 	OutlinedTextField(
 		value = text,
-		onValueChange = {
-			text = it
-			onValueChange(it)
+		onValueChange = { typed ->
+			val kept = typed.filter(allowed)
+			text = kept
+			onValueChange(kept)
 		},
 		label = { Text(label) },
 		singleLine = true,

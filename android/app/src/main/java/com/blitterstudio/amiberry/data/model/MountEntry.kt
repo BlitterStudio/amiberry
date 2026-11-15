@@ -2,6 +2,8 @@ package com.blitterstudio.amiberry.data.model
 
 import java.io.File
 import java.io.RandomAccessFile
+import java.util.zip.GZIPInputStream
+import java.util.zip.ZipInputStream
 
 /**
  * A storage mount as cfgfile writes it. Directories and hardfiles have a
@@ -87,13 +89,16 @@ object MountDefaults {
 	}
 
 	/**
-	 * [mount] pointed at [path]. A hardfile takes the new image's geometry,
-	 * as the panel probes the RDB again whenever an image is picked: an RDB
-	 * disk mounted with the plain 32/1/2 geometry reads as one partition.
+	 * [mount] pointed at [path]. A hardfile is probed again, as the panel
+	 * does when an image is picked: an RDB disk mounted with a partition's
+	 * geometry reads as one partition. With no RDB found, an entry in RDB
+	 * mode gets the plain geometry and a set geometry stays.
+	 * The same rule as amiberry_settings_mount_field_set("path").
 	 */
 	fun withPath(mount: MountEntry, path: String): MountEntry {
 		if (mount.kind != MountKind.Hardfile || path == mount.path) return mount.copy(path = path)
-		val geometry = hdfGeometry(path)
+		val geometry = rdbGeometry(path) ?: if (mount.sectors == 0) plainGeometry else
+			return mount.copy(path = path)
 		return mount.copy(
 			path = path, sectors = geometry.sectors, surfaces = geometry.surfaces,
 			reserved = geometry.reserved, blockSize = geometry.blockSize
@@ -140,32 +145,36 @@ object MountDefaults {
 		return value.replaceRange(match.range, match.groupValues[1] + "#")
 	}
 
-	/** The folder's name, or an archive's without its extension; ':' and ',' cannot be in a label. */
+	/**
+	 * The folder's name, or an archive's without its extension, with ':', ','
+	 * and '"' turned into '_' as default_volume_name does in the C layer.
+	 */
 	internal fun volumeName(path: String): String {
 		val file = File(path.trimEnd('/', '\\'))
 		val name = if (file.isFile) file.name.substringBeforeLast('.') else file.name
-		return name.replace(':', '_').replace(',', '_').ifBlank { "Harddrive" }
+		val replaced = name.map { if (it in ":,\"") '_' else it }.joinToString("")
+		return MountNames.clean(replaced, device = false).ifBlank { "Harddrive" }
 	}
 
 	internal data class Geometry(val sectors: Int, val surfaces: Int, val reserved: Int, val blockSize: Int)
 
-	/** hardfile_testrdb (src/osdep/amiberry_gui.cpp): an RDB in one of the first 16 blocks means RDB mode. */
-	internal fun hdfGeometry(path: String): Geometry {
-		val plain = Geometry(32, 1, 2, 512)
+	private val plainGeometry = Geometry(32, 1, 2, 512)
+
+	/** The geometry a new hardfile entry for [path] starts with: its RDB's, else the plain partition's. */
+	internal fun hdfGeometry(path: String): Geometry = rdbGeometry(path) ?: plainGeometry
+
+	/**
+	 * hardfile_testrdb (src/osdep/amiberry_gui.cpp): an RDB in one of the
+	 * disk's first 16 blocks means RDB mode; null when there is none.
+	 */
+	internal fun rdbGeometry(path: String): Geometry? {
 		val file = File(path)
-		if (!file.isFile) return plain
-		val bytes = ByteArray(16 * 512)
-		val count = runCatching {
-			RandomAccessFile(file, "r").use { raf ->
-				val wanted = minOf(bytes.size.toLong(), raf.length()).toInt()
-				raf.readFully(bytes, 0, wanted)
-				wanted
-			}
-		}.getOrDefault(0)
+		if (!file.isFile) return null
+		val bytes = runCatching { diskHead(file) }.getOrNull() ?: return null
 		fun u(i: Int) = bytes[i].toInt() and 0xff
 		fun tag(offset: Int, text: String, zeros: Int) =
 			text.indices.all { u(offset + it) == text[it].code } && (0 until zeros).all { u(offset + text.length + it) == 0 }
-		for (offset in 0..count - 512 step 512) {
+		for (offset in 0..bytes.size - 512 step 512) {
 			val babe = u(offset) == 0xba && u(offset + 1) == 0xbe // A2090
 			// RDSK, or ADIDE's "encoded" RDSK.
 			val adide = u(offset) == 0x53 && u(offset + 1) == 0x10 && u(offset + 2) == 0x9b &&
@@ -175,6 +184,74 @@ object MountDefaults {
 				(u(offset + 16) shl 24) or (u(offset + 17) shl 16) or (u(offset + 18) shl 8) or u(offset + 19)
 			return Geometry(0, 0, 0, if (blockSize >= 512) blockSize else 512)
 		}
-		return plain
+		return null
 	}
+
+	private const val HEAD = 16 * 512
+
+	/**
+	 * The first 16 blocks of the disk the image holds, read the way the
+	 * core's hdf_open sees them: a dynamic VHD through its block table, a
+	 * gzip (.hdz) or zip image unpacked, anything else as raw sectors
+	 * (a fixed VHD keeps its footer at the end). Zeros past the disk's end.
+	 */
+	private fun diskHead(file: File): ByteArray {
+		val out = ByteArray(HEAD)
+		RandomAccessFile(file, "r").use { raf ->
+			val magic = ByteArray(8)
+			val got = if (raf.length() >= 8) { raf.readFully(magic); 8 } else 0
+			fun be(b: ByteArray, at: Int, n: Int) = (0 until n).fold(0L) { v, i -> (v shl 8) or (b[at + i].toLong() and 0xff) }
+			when {
+				got == 8 && magic.decodeToString() == "conectix" -> {
+					// Dynamic VHD: the footer's copy at 0 points to the dynamic
+					// header, which points to the block table.
+					val footer = ByteArray(512).also { raf.seek(0); raf.readFully(it) }
+					val header = ByteArray(1024).also { raf.seek(be(footer, 0x10, 8)); raf.readFully(it) }
+					val table = be(header, 0x10, 8)
+					val blockSize = be(header, 0x20, 4)
+					raf.seek(table)
+					val first = raf.readInt().toLong() and 0xffffffffL
+					if (first != 0xffffffffL) {
+						// Each block starts with its sector bitmap, padded to a sector.
+						val bitmap = ((blockSize / 512 / 8 + 511) / 512) * 512
+						raf.seek(first * 512 + bitmap)
+						readUpTo(raf::read, out, minOf(HEAD.toLong(), blockSize).toInt())
+					}
+				}
+				got >= 2 && magic[0] == 0x1f.toByte() && magic[1] == 0x8b.toByte() ->
+					GZIPInputStream(file.inputStream()).use { readUpTo(it::read, out, HEAD) }
+				got >= 4 && magic.decodeToString(0, 4) == "PK\u0003\u0004" ->
+					ZipInputStream(file.inputStream()).use { zip ->
+						generateSequence { zip.nextEntry }.firstOrNull { !it.isDirectory }?.let { readUpTo(zip::read, out, HEAD) }
+					}
+				else -> {
+					raf.seek(0)
+					readUpTo(raf::read, out, HEAD)
+				}
+			}
+		}
+		return out
+	}
+
+	private fun readUpTo(read: (ByteArray, Int, Int) -> Int, into: ByteArray, count: Int) {
+		var done = 0
+		while (done < count) {
+			val n = read(into, done, count - done)
+			if (n <= 0) break
+			done += n
+		}
+	}
+}
+
+/**
+ * AmigaDOS device and volume names as a mount line can carry them: the line
+ * separates them with ':' and ',', and quotes cannot be escaped there; the
+ * core drops ';' (validatedevicename, validatevolumename) and spaces from
+ * device names.
+ */
+object MountNames {
+	fun allowed(char: Char, device: Boolean): Boolean =
+		char !in ":,;\"" && !char.isISOControl() && !(device && char.isWhitespace())
+
+	fun clean(name: String, device: Boolean): String = name.filter { allowed(it, device) }.take(30)
 }

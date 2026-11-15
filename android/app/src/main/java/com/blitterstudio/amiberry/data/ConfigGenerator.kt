@@ -98,11 +98,13 @@ object ConfigGenerator {
 		// desktop configurations and uaehf-only readers load the same mounts.
 		settings.hardDrives.take(MountEntry.MAX_MOUNTS).forEachIndexed { index, mount ->
 			when (mount.kind) {
-				MountKind.Directory -> if (mount.path.isNotBlank() && mount.device.isNotBlank()) {
+				// A blank device name is the core's to fill in (add_filesys_config).
+				MountKind.Directory -> if (mount.path.isNotBlank()) {
 					val value = directoryValue(mount)
 					sb.appendLine("filesystem2=$value")
 					sb.appendLine("uaehf$index=dir,$value")
-					if (mount.injectIcons) sb.appendLine("filesystem_extra=${mount.device},inject_icons=true")
+					if (mount.injectIcons && mount.device.isNotBlank())
+						sb.appendLine("filesystem_extra=${mount.device},inject_icons=true")
 				}
 				MountKind.Hardfile -> if (mount.path.isNotBlank()) {
 					val value = hardfileValue(mount)

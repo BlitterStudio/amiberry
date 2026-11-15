@@ -431,10 +431,10 @@ object ConfigParser {
 		val prefix = parts[1]
 		val first = prefix.indexOf(':')
 		val second = prefix.indexOf(':', first + 1)
-		if (first <= 0 || second <= first + 1) return null
+		if (first < 0 || second < 0) return null
 		val device = prefix.substring(0, first)
 		val volume = prefix.substring(first + 1, second)
-		val path = unescapeMountField(prefix.substring(second + 1))
+		val path = decodeFilename(prefix.substring(second + 1))
 		val boot = parts[2].toIntOrNull()?.takeIf { it in MountEntry.BOOTPRI_NOAUTOMOUNT..127 } ?: return null
 		if (path.isEmpty()) return null
 		return MountEntry(
@@ -451,7 +451,7 @@ object ConfigParser {
 		val separator = pathField.indexOf(':')
 		if (separator < 0) return null
 		val device = pathField.substring(0, separator)
-		val rawPath = unescapeMountField(pathField.substring(separator + 1))
+		val rawPath = decodeFilename(pathField.substring(separator + 1))
 		// A second colon starts cfgfile's physical-drive `:name` form.
 		if (kind == MountKind.Hardfile && rawPath.startsWith(':')) return null
 		val numbers = parts.subList(2, 7).map { it.toIntOrNull() ?: return null }
@@ -475,13 +475,14 @@ object ConfigParser {
 			token.startsWith("flags=", true) -> flags = token.substringAfter('=')
 			token.equals("lock", true) -> lock = true
 			token.equals("identity", true) -> identity = true
-			geometry.isEmpty() && token.isNotEmpty() -> geometry = unescapeMountField(token)
+			// The loader takes the geometry file only in its quoted spelling.
+			geometry.isEmpty() && token.startsWith('"') -> geometry = decodeGeometry(token)
 			else -> extras += token
 		}
 		return MountEntry(
 			kind = kind, path = rawPath, device = device, readOnly = access,
 			bootPriority = numbers[4], sectors = numbers[0], surfaces = numbers[1],
-			reserved = numbers[2], blockSize = numbers[3], filesystem = unescapeMountField(parts[7]),
+			reserved = numbers[2], blockSize = numbers[3], filesystem = decodeFilename(parts[7]),
 			controller = controller, unit = emuUnit, highCyl = highCyl, physicalGeometry = physical,
 			geometry = geometry, compactFlash = compactFlash, featureLevel = feature, flags = flags,
 			lock = lock, identity = identity, extras = extras
@@ -494,31 +495,71 @@ object ConfigParser {
 		else -> null
 	}
 
-	/** cfgfile_escape_min fields: commas and quotes are quoted; backslashes stay literal except `\"`. */
+	/**
+	 * The comma-separated fields of a mount value, each as written: a quoted
+	 * field keeps its quotes and escapes for its own decoder. Inside quotes a
+	 * backslash pairs with the next character, so `\"` does not end the field.
+	 */
 	private fun splitMountFields(value: String): List<String> {
 		val fields = mutableListOf<String>()
 		val field = StringBuilder()
 		var quoted = false
-		var escapeQuote = false
-		for (char in value) {
-			if (escapeQuote) {
-				field.append(char)
-				escapeQuote = false
-			} else if (quoted && char == '\\') {
-				escapeQuote = true
-			} else if (char == '"') {
-				quoted = !quoted
-			} else if (char == ',' && !quoted) {
-				fields += field.toString()
-				field.clear()
-			} else field.append(char)
+		var i = 0
+		while (i < value.length) {
+			val char = value[i]
+			when {
+				quoted && char == '\\' && i + 1 < value.length && (value[i + 1] == '"' || value[i + 1] == '\\') -> {
+					field.append(char).append(value[i + 1])
+					i++
+				}
+				char == '"' -> {
+					quoted = !quoted
+					field.append(char)
+				}
+				char == ',' && !quoted -> {
+					fields += field.toString()
+					field.clear()
+				}
+				else -> field.append(char)
+			}
+			i++
 		}
-		if (quoted || escapeQuote) return emptyList()
+		if (quoted) return emptyList()
 		fields += field.toString()
 		return fields
 	}
 
-	private fun unescapeMountField(value: String): String = value
+	/**
+	 * A file name field as cfgfile_escape_min wrote it and
+	 * cfgfile_unescape_quoted_filename reads it: quoted only when needed,
+	 * backslashes literal (Windows paths), `\"` a quote in the name.
+	 */
+	internal fun decodeFilename(value: String): String {
+		if (!value.startsWith('"') || value.length < 2 || !value.endsWith('"')) return value
+		return value.substring(1, value.length - 1).replace("\\\"", "\"")
+	}
+
+	/**
+	 * The geometry file field, which cfgfile_escape(…, nullptr, true, false)
+	 * always quotes with every backslash escaped; cfgfile_unescape reads it
+	 * (\r and \n for those characters, any other escaped character as it is).
+	 */
+	internal fun decodeGeometry(value: String): String {
+		val inner = value.removePrefix("\"").removeSuffix("\"")
+		val out = StringBuilder()
+		var i = 0
+		while (i < inner.length) {
+			val char = inner[i]
+			if (char == '\\' && i + 1 < inner.length) {
+				out.append(when (val next = inner[i + 1]) { 'r' -> '\r'; 'n' -> '\n'; else -> next })
+				i += 2
+			} else {
+				out.append(char)
+				i++
+			}
+		}
+		return out.toString()
+	}
 
 	/**
 	 * cycle_exact as the emulator reads it (cfgfile_strval in cfgfile.cpp):

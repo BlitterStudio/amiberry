@@ -233,6 +233,13 @@ class ConfigGeneratorTest {
 		assertEquals(dirs + cd, roundTrip(settings, "late-cd.uae").hardDrives)
 	}
 
+	@Test
+	fun `a directory whose device name was cleared is still saved`() {
+		val dir = MountEntry(MountKind.Directory, "/host/Work", "", "Work")
+		assertContains(ConfigGenerator.generate(EmulatorSettings(hardDrives = listOf(dir))), "filesystem2=rw,:Work:/host/Work,0")
+		assertEquals(listOf(dir), roundTrip(EmulatorSettings(hardDrives = listOf(dir)), "blank-device.uae").hardDrives)
+	}
+
 	// --- Joystick port 1 special handling ---
 
 	@Test

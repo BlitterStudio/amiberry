@@ -1252,6 +1252,14 @@ private struct MountPropertiesSheet: View {
 		invalidFields.remove(name)
 		draft = changed
 		message = nil
+		// The layer changes some fields with others: a new hardfile image
+		// brings its own geometry, a new controller a unit it has.
+		let dependents = name == "path" && kind == "hdf" ? ["sectors", "surfaces", "reserved", "block_size"]
+			: name == "controller" ? ["unit"] : []
+		for dependent in dependents {
+			values[dependent] = store.mountField(dependent, in: draft) ?? ""
+			invalidFields.remove(dependent)
+		}
 	}
 
 	private func controllerChoices(selected: String, unit: Int) -> [MountController] {

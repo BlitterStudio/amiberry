@@ -332,9 +332,14 @@ AMIBERRY_SETTINGS_API amiberry_settings_status amiberry_settings_mount_remove(
  * Fields, by id, with the kinds that have them and the spelling of their
  * values:
  *   "kind"           all; "dir", "hdf", "cd" or "tape"; read only
- *   "path"           dir, hdf, tape (and cd, where it is empty): host path
+ *   "path"           dir, hdf, tape (and cd, where it is empty): host path,
+ *                    without a double quote; setting a hardfile's path to
+ *                    another image probes it as amiberry_settings_mount_default
+ *                    does (an RDB sets RDB mode; without one, RDB mode
+ *                    becomes 32/1/2/512 and a set geometry stays)
  *   "device"         dir, hdf: AmigaDOS device name without the colon
  *   "volume"         dir: volume label
+ *                    (device and volume names cannot hold ':', ',' or '"')
  *   "read_only"      all; "true" or "false"
  *   "boot_priority"  dir, hdf; -128 is not bootable, -129 not mounted
  *                    automatically, otherwise -127..127
