@@ -655,6 +655,7 @@ extern void init_hz_p96(int monid);
 extern void picasso_update_native_cursor(int monid);
 extern void picasso_handle_vsync();
 extern void picasso_trigger_vblank();
+extern int picasso_get_splitypos(int monid);
 extern bool picasso_is_active(int monid);
 extern int picasso_setwincursor(int monid);
 extern int picasso_palette(struct MyCLUTEntry *MCLUT, uae_u32 *clut);

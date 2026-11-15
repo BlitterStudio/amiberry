@@ -1737,7 +1737,7 @@ void updatepicasso96(struct AmigaMonitor* mon)
 	vidinfo->height = mon->currentmode.current_height;
 	vidinfo->width = mon->currentmode.current_width;
 	vidinfo->offset = 0;
-	vidinfo->splitypos = -1;
+	vidinfo->splitypos = mon->screen_is_picasso ? picasso_get_splitypos(mon->monitor_id) : -1;
 }
 
 void gfx_set_picasso_modeinfo(const int monid, const RGBFTYPE rgbfmt)
@@ -2045,7 +2045,12 @@ bool target_graphics_buffer_update(const int monid, const bool force)
 		int host_bpp = SDL_BYTESPERPIXEL(pixel_format);
 
 		if (rtg_render_ptr != nullptr && p96_bpp == host_bpp &&
-			p96_rgbformat_matches_host_pixel_format(state->RGBFormat, pixel_format)) {
+			p96_rgbformat_matches_host_pixel_format(state->RGBFormat, pixel_format) &&
+			p96_screen_fits_board_memory(mon->monitor_id) &&
+			picasso_vidinfo[mon->monitor_id].splitypos < 0) {
+			// A wrapped (SetPanning past the end of VRAM) or split screen
+			// must go through the copying path: a zero-copy surface is the
+			// board memory itself and cannot wrap or compose rows.
 			is_zero_copy_eligible = true;
 		}
 	}
@@ -2072,6 +2077,9 @@ bool target_graphics_buffer_update(const int monid, const bool force)
 	}
 	if (surface_ref && !is_zero_copy_eligible && oldtex_zero_copy[monid]) {
 		recreate_surface = true;
+		// The fresh copying surface starts empty; force the repaint that
+		// fills it (wrapping rows past the end of the board memory).
+		picasso_vidinfo[mon->monitor_id].full_refresh = 1;
 	}
 
 	if (recreate_surface) {
