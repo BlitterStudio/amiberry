@@ -5865,6 +5865,11 @@ static void copyrow(int monid, uae_u8 *src, uae_u8 *dst, int x, int y, int width
 		case RGBFB_A8R8G8B8_32:
 #else
 		case RGBFB_R8G8B8A8_32:
+			// Direct copy only when the host surface has the same byte order.
+			// libretro's XRGB8888 frame is B8G8R8A8, so convert it below.
+			if (vidinfo->host_mode != RGBFB_R8G8B8A8)
+				break;
+			[[fallthrough]];
 #endif
 		case RGBFB_R5G6B5PC_16:
 		memcpy(dst2 + dx * dstpix, src2 + x * srcpix, width * dstpix);

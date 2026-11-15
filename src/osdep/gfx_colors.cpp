@@ -41,7 +41,9 @@ SDL_PixelFormat p96_get_host_pixel_format(const RGBFTYPE rgbfmt, const bool hard
 SDL_PixelFormat p96_get_host_pixel_format_for_monitor(const int monid)
 {
 	const int safe_monid = monid >= 0 && monid < MAX_AMIGAMONITORS ? monid : 0;
-	return p96_get_host_pixel_format(picasso96_state[safe_monid].RGBFormat, p96_monitor_uses_hardware_rtg(safe_monid));
+	SDL_PixelFormat format = p96_get_host_pixel_format(picasso96_state[safe_monid].RGBFormat, p96_monitor_uses_hardware_rtg(safe_monid));
+	gfx_platform_override_pixel_format(&format);
+	return format;
 }
 
 bool p96_rgbformat_matches_host_pixel_format(const RGBFTYPE rgbfmt, const SDL_PixelFormat format)
@@ -65,10 +67,6 @@ RGBFTYPE p96_get_host_rgb_format_for_monitor(const int monid, const int pixbytes
 
 void update_pixel_format(const int monid)
 {
-	// TODO LIBRETRO support picasso96 ABGR
-	if (gfx_platform_override_pixel_format(&pixel_format))
-		return;
-
 	// Keep RTG presentation on the mature 32-bit host path. The native
 	// 16-bit host path is incomplete across backends, so 15/16-bit RTG modes
 	// are converted into one of these directly presentable 32-bit layouts.
