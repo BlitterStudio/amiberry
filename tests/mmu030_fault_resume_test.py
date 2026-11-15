@@ -107,7 +107,8 @@ def run(binary, rom, work, compatible):
                 "XDG_DATA_HOME": os.path.join(home, "data"), "AMIBERRY_HOME_DIR": os.path.join(home, "home"),
                 "LOCALAPPDATA": os.path.join(home, "local"), "APPDATA": os.path.join(home, "roaming"),
                 "SDL_VIDEO_DRIVER": "dummy" if sys.platform == "darwin" else "offscreen",
-                "SDL_AUDIO_DRIVER": "dummy"})
+                "SDL_VIDEODRIVER": "dummy" if sys.platform == "darwin" else "offscreen",
+                "SDL_AUDIO_DRIVER": "dummy", "SDL_AUDIODRIVER": "dummy"})
     env.pop("AMIBERRY_CONFIG_DIR", None)
     os.makedirs(home)
     args = [binary, "--model", "A4000", "-G"]

@@ -36,7 +36,8 @@ def main():
             "LOCALAPPDATA": os.path.join(work, "local"),
             "APPDATA": os.path.join(work, "roaming"),
             "SDL_VIDEO_DRIVER": "dummy" if sys.platform == "darwin" else "offscreen",
-            "SDL_AUDIO_DRIVER": "dummy",
+            "SDL_VIDEODRIVER": "dummy" if sys.platform == "darwin" else "offscreen",
+            "SDL_AUDIO_DRIVER": "dummy", "SDL_AUDIODRIVER": "dummy",
         })
         env.pop("AMIBERRY_CONFIG_DIR", None)
         startup_config = os.path.join(work, "virtual-pad.uae")

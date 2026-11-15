@@ -78,7 +78,8 @@ def main(binary):
             "AMIBERRY_HOME_DIR": str(work / "home"), "LOCALAPPDATA": str(work / "local"),
             "APPDATA": str(work / "roaming"),
             "SDL_VIDEO_DRIVER": "dummy" if sys.platform == "darwin" else "offscreen",
-            "SDL_AUDIO_DRIVER": "dummy",
+            "SDL_VIDEODRIVER": "dummy" if sys.platform == "darwin" else "offscreen",
+            "SDL_AUDIO_DRIVER": "dummy", "SDL_AUDIODRIVER": "dummy",
         })
         env.pop("AMIBERRY_CONFIG_DIR", None)
         for cache in (0, 8192):

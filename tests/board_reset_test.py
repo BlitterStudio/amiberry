@@ -27,14 +27,15 @@ import ipc_actions_test as ipc  # noqa: E402  (Emulator, Connection)
 
 def environment(windowed):
     work = tempfile.mkdtemp(prefix="amiberry-boards-")
-    env = dict(os.environ, HOME=work, AMIBERRY_HOME_DIR=os.path.join(work, "home"), SDL_AUDIO_DRIVER="dummy")
+    env = dict(os.environ, HOME=work, AMIBERRY_HOME_DIR=os.path.join(work, "home"),
+               SDL_AUDIO_DRIVER="dummy", SDL_AUDIODRIVER="dummy")
     if windowed:
         env.pop("SDL_VIDEO_DRIVER", None)
         env.pop("SDL_VIDEODRIVER", None)
     else:
         # SDL's offscreen driver cannot create windows on macOS; the dummy
         # driver can.
-        env["SDL_VIDEO_DRIVER"] = "dummy" if sys.platform == "darwin" else "offscreen"
+        env["SDL_VIDEO_DRIVER"] = env["SDL_VIDEODRIVER"] = "dummy" if sys.platform == "darwin" else "offscreen"
     return env
 
 

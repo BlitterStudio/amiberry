@@ -189,7 +189,8 @@ def main():
                 "XDG_DATA_HOME": os.path.join(work, "data"), "AMIBERRY_HOME_DIR": os.path.join(work, "home"),
                 "LOCALAPPDATA": os.path.join(work, "local"), "APPDATA": os.path.join(work, "roaming"),
                 "SDL_VIDEO_DRIVER": "dummy" if sys.platform == "darwin" else "offscreen",
-                "SDL_AUDIO_DRIVER": "dummy"})
+                "SDL_VIDEODRIVER": "dummy" if sys.platform == "darwin" else "offscreen",
+                "SDL_AUDIO_DRIVER": "dummy", "SDL_AUDIODRIVER": "dummy"})
     env.pop("AMIBERRY_CONFIG_DIR", None)
 
     emu = ipc.Emulator(binary, env, model, prerequisites)
