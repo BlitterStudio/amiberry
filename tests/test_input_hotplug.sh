@@ -187,7 +187,17 @@ preserve_mapping = region_between(
 if """if (preserved.valid && matches_joystick_config(preserved.idc, name, configname)) {
 		preserved.mapping = did.mapping;""" not in preserve_mapping:
 	fail("Hotplug preservation must refresh an existing snapshot from the live mapping")
-if "const int joy_index = amiberry_get_joystick_index(jp->idc.configname);" not in amiberry_input:
+joystick_configname = region_between(
+	amiberry_input,
+	"static std::string port_joystick_configname(",
+	"bool load_custom_options(",
+)
+custom_loader = region_between(
+	amiberry_input,
+	"bool load_custom_options(",
+	"void amiberry_apply_pending_custom_options(",
+)
+if "if (amiberry_get_joystick_index(jp.idc.configname) != -1)" not in joystick_configname:
 	fail("Custom mapping loads must use the same bounded joystick index parser as saves")
 if """if (!amiberry_get_port_joystick_custom_mapping(
 			i, jp->idc.name, jp->idc.configname, mapping))""" not in cfgfile:
@@ -201,7 +211,7 @@ if not (0 <= apply_mapping < validate_port < clear_mapping):
 	fail("A rematched controller must receive its deferred mapping before the rematch is finalized and the snapshot is cleared")
 if """controller_mapping mapping{};
 			amiberry_get_port_joystick_custom_mapping(
-				i, jp->idc.name, jp->idc.configname, mapping);""" not in amiberry_input:
+				i, jp->idc.name, configname.c_str(), mapping);""" not in custom_loader:
 	fail("Custom mapping loads must start from the durable per-port representation")
 if "amiberry_set_port_joystick_custom_mapping(" not in amiberry_input:
 	fail("Custom mapping loads must persist without requiring a live SDL device")
@@ -221,11 +231,6 @@ apply_custom_mapping = region_between(
 )
 if "amiberry_resolve_port_joystick(portnum, resolved_joystick)" not in apply_custom_mapping:
 	fail("Deferred mappings must be applied only to the resolved physical controller")
-custom_loader = region_between(
-	amiberry_input,
-	"bool load_custom_options(",
-	"static void close_joystick()",
-)
 if "di_joystick[" in custom_loader:
 	fail("Custom mapping loads must not write into an unenumerated SDL device slot")
 if "copy_custom_mapping(preserved.mapping, did.mapping);" not in amiberry_input:

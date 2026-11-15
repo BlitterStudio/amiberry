@@ -136,29 +136,35 @@ assert [v for v, r in genlock.items() if not r] == ["none", "noise", "testcard",
 assert all(r == ["videograb"] for r in genlock.values() if r), genlock
 assert schema["aros"] == {"rom_file": ":AROS", "main_file": "aros-rom.bin", "ext_file": "aros-ext.bin"}, schema["aros"]
 
-# Host settings (amiberry.conf): the Android build's own, as a desktop
-# export describes them. The update checker is left out (no self-update on
-# Android) and the Android-only ones (ADPF) are carried.
+# Host settings (amiberry.conf): the Android build's own desktop export.
+# The update checker is left out (no self-update on Android), the Android-only
+# ADPF setting is carried, and the launcher follows these folder overrides.
 host = schema["host_settings"]
 host_ids = [h["id"] for h in host]
 assert len(host_ids) == len(set(host_ids)), "host settings"
 assert {"Quickstart", "shader", "input_default_mouse_speed", "gui_layout_scale",
         "default_controller1", "default_soundcard", "use_adpf"} <= set(host_ids), host_ids
-folders = {"config_path", "controllers_path", "retroarch_config", "whdboot_path", "whdload_arch_path",
-           "floppy_path", "harddrive_path", "cdrom_path", "logfile_path", "rom_path", "rp9_path",
-           "floppy_sounds_dir", "saveimage_dir", "savestate_dir", "ripper_path", "inputrecordings_dir",
-           "screenshot_dir", "nvram_dir", "plugins_dir", "video_dir", "themes_path", "shaders_path",
-           "bezels_path", "base_content_path"}
+android_folders = {"config_path", "controllers_path", "retroarch_config", "whdboot_path",
+                   "whdload_arch_path", "floppy_path", "harddrive_path", "cdrom_path",
+                   "logfile_path", "rom_path", "rp9_path", "floppy_sounds_dir",
+                   "saveimage_dir", "savestate_dir", "ripper_path", "inputrecordings_dir",
+                   "screenshot_dir", "nvram_dir", "plugins_dir", "shaders_path",
+                   "bezels_path"}
+assert android_folders <= set(host_ids), host_ids
+desktop_only_folders = {"base_content_path", "video_dir", "themes_path"}
 assert not ({"update_check", "update_channel", "skipped_version", "macos_left_command_q",
              "default_onscreen_joystick", "default_vkbd_enabled", "default_vkbd_toggle",
-             "default_width", "default_height", "default_fullscreen_mode"} | folders) & set(host_ids), host_ids
+             "default_width", "default_height", "default_fullscreen_mode"} | desktop_only_folders) & set(host_ids), host_ids
 for setting in host:
-    assert setting["type"] in ("bool", "int", "real", "choice", "path", "string", "hotkey"), setting
+    assert setting["type"] in ("bool", "int", "real", "choice", "path", "file", "string", "hotkey"), setting
     assert setting["apply"] == "live", setting["id"]
     if setting["type"] == "choice":
         assert isinstance(setting["choices"], list), setting["id"]
 host_by_id = {h["id"]: h for h in host}
-# The folders group stays for the log switch the launcher does honour.
+# The two file settings use file pickers; all other listed folders use folders.
+assert host_by_id["retroarch_config"]["type"] == "file"
+assert host_by_id["logfile_path"]["type"] == "file"
+# Host folder settings and the log switch share the folders group.
 assert host_by_id["write_logfile"]["type"] == "bool" and host_by_id["write_logfile"]["group"] == "global_paths"
 # The lists that name the host's devices, shaders and bezels travel empty.
 for dynamic in ("default_controller1", "default_mouse1", "default_soundcard", "shader", "shader_rtg", "custom_bezel"):
