@@ -133,8 +133,9 @@ def main():
                 "LOCALAPPDATA": os.path.join(work, "local"), "APPDATA": os.path.join(work, "roaming"),
                 # SDL's offscreen driver is EGL-based and cannot create even
                 # a plain window on macOS; the dummy driver can.
+                "SDL_VIDEO_DRIVER": "dummy" if sys.platform == "darwin" else "offscreen",
                 "SDL_VIDEODRIVER": "dummy" if sys.platform == "darwin" else "offscreen",
-                "SDL_AUDIODRIVER": "dummy"})
+                "SDL_AUDIO_DRIVER": "dummy", "SDL_AUDIODRIVER": "dummy"})
     env.pop("AMIBERRY_CONFIG_DIR", None)
 
     first = Emulator(binary, env)
