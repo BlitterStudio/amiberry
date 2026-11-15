@@ -1357,7 +1357,10 @@ private struct CreateHardfileSheet: View {
 	private func chooseLocation() {
 		let folder = (try? MediaLibrary.path(of: .hardDrives)) ?? ""
 		let name = dynamicVHD ? "Hardfile.vhd" : "Hardfile.hdf"
-		if let selected = FilePanels.chooseHardfileLocation(title: "Create Hardfile", startingAt: folder, defaultName: name) {
+		// A candidate file, not the folder: the panels propose the last path
+		// component as the file name.
+		let candidate = path.isEmpty ? (folder.isEmpty ? "" : (folder as NSString).appendingPathComponent(name)) : path
+		if let selected = FilePanels.chooseHardfileLocation(title: "Create Hardfile", startingAt: candidate, defaultName: name) {
 			path = selected
 			message = nil
 		}

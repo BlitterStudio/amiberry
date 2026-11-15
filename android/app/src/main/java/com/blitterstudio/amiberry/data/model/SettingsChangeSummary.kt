@@ -174,6 +174,10 @@ object SettingsChangeSummary {
 			}
 		}
 
+		/**
+		 * Every property the Storage page edits, so any edit shows up here
+		 * (a row is listed when its two texts differ).
+		 */
 		private fun mountText(mount: MountEntry): SettingText {
 			val kind = when (mount.kind) {
 				MountKind.Directory -> "Directory"
@@ -181,15 +185,32 @@ object SettingsChangeSummary {
 				MountKind.Cd -> "CD drive"
 				MountKind.Tape -> "Tape drive"
 			}
-			val name = when (mount.kind) {
-				MountKind.Directory -> mount.volume.ifBlank { LauncherChoices.fileName(mount.path) }
-				MountKind.Cd -> "Controller ${mount.controller}, unit ${mount.unit}"
-				else -> LauncherChoices.fileName(mount.path)
-			}.ifBlank { "None" }
-			val access = if (mount.readOnly) "Read-only" else "Read/write"
-			val boot = if (mount.kind == MountKind.Directory || mount.kind == MountKind.Hardfile)
-				", boot priority ${mount.bootPriority}" else ""
-			return SettingText.Plain("$kind: $name, $access$boot")
+			val parts = mutableListOf<String>()
+			if (mount.kind == MountKind.Directory || mount.kind == MountKind.Hardfile)
+				parts += mount.device.ifBlank { "automatic device name" }
+			if (mount.kind == MountKind.Directory) parts += "volume ${mount.volume.ifBlank { "unnamed" }}"
+			if (mount.kind != MountKind.Cd) parts += mount.path.ifBlank { "no file" }
+			parts += if (mount.readOnly) "read-only" else "read/write"
+			if (mount.kind == MountKind.Directory || mount.kind == MountKind.Hardfile) parts += when (mount.bootPriority) {
+				MountEntry.BOOTPRI_NOAUTOBOOT -> "not bootable"
+				MountEntry.BOOTPRI_NOAUTOMOUNT -> "not mounted automatically"
+				else -> "boot priority ${mount.bootPriority}"
+			}
+			if (mount.kind == MountKind.Hardfile) parts += if (mount.sectors == 0) "RDB geometry, ${mount.blockSize}-byte blocks"
+				else "geometry ${mount.sectors}/${mount.surfaces}/${mount.reserved}/${mount.blockSize}"
+			if (mount.kind != MountKind.Directory) parts += controllerText(mount.controller)
+			return SettingText.Plain("$kind: ${parts.joinToString(", ")}")
+		}
+
+		/** "A600/A1200/A4000 IDE, unit 1" for ide1_mainboard, by the schema's controller label. */
+		private fun controllerText(controller: String): String {
+			val unit = Regex("""^(?:uae|ide|scsi|custom)(\d+)""").find(controller)?.groupValues?.get(1)
+			val row = schema?.mountControllers?.firstOrNull { row ->
+				Regex("^" + row.id.split("%d").joinToString("\\d+") { Regex.escape(it) } + "$").matches(controller)
+			}
+			val name = row?.label ?: controller
+			val unitLabel = row?.units?.firstOrNull { it.value.toString() == unit }?.label ?: unit
+			return if (unitLabel != null) "$name, unit $unitLabel" else name
 		}
 
 		/**

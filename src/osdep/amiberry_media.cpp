@@ -304,7 +304,9 @@ amiberry_settings_status store_recent(std::vector<std::string>& recent, std::vec
 	return AMIBERRY_SETTINGS_OK;
 }
 
-
+// Creates path, which must not exist, holding size zero bytes; created
+// tells whether the file was made (so a failure can remove it). With size 0
+// it only claims the name, which no other writer can then take.
 bool create_raw_hardfile(const std::string& path, unsigned long long size, bool& created)
 {
 	created = false;
@@ -344,18 +346,6 @@ bool create_raw_hardfile(const std::string& path, unsigned long long size, bool&
 	}
 	close(file);
 	return complete;
-#endif
-}
-
-bool move_without_overwrite(const std::string& from, const std::string& to)
-{
-#ifdef _WIN32
-	return MoveFileA(from.c_str(), to.c_str()) != 0;
-#else
-	if (link(from.c_str(), to.c_str()) != 0)
-		return false;
-	unlink(from.c_str());
-	return true;
 #endif
 }
 } // namespace
@@ -512,13 +502,11 @@ amiberry_settings_status amiberry_media_create_hardfile(const char* path,
 		bool complete = false;
 		bool raw_created = false;
 		if (dynamic_vhd) {
-			const std::string temporary = target + ".amiberry-create";
-			if (std::filesystem::exists(from_utf8(temporary), ec) || ec)
-				return AMIBERRY_SETTINGS_UNAVAILABLE;
-			complete = vhd_create(temporary.c_str(), size_bytes, 0) != 0
-				&& move_without_overwrite(temporary, target);
-			if (!complete)
-				std::filesystem::remove(from_utf8(temporary), ec);
+			// Claim the name first, so an existing file is never written over
+			// (vhd_create opens with "wb"), then write the image into it. No
+			// rename or hard link: exFAT and FAT volumes have no hard links.
+			complete = create_raw_hardfile(target, 0, raw_created)
+				&& vhd_create(target.c_str(), size_bytes, 0) != 0;
 		} else {
 			complete = create_raw_hardfile(target, size_bytes, raw_created);
 		}
