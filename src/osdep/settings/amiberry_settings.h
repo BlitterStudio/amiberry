@@ -48,7 +48,7 @@
 extern "C" {
 #endif
 
-#define AMIBERRY_SETTINGS_API_VERSION 11
+#define AMIBERRY_SETTINGS_API_VERSION 12
 
 /* Large enough for every value a descriptor can produce, including the
    terminating NUL. */
@@ -321,6 +321,89 @@ AMIBERRY_SETTINGS_API amiberry_settings_status amiberry_settings_mount_replace(
    past the list. */
 AMIBERRY_SETTINGS_API amiberry_settings_status amiberry_settings_mount_remove(
 	amiberry_settings_session *session, size_t index);
+
+/*
+ * Building and reading mount entries field by field, so a front end never
+ * spells a uaehfN value itself. Entry kinds: "dir" (a host folder or an
+ * archive mounted as a volume), "hdf" (a hardfile), "cd" (a CD drive on an
+ * IDE or SCSI controller, which plays the CD image setting's disc) and
+ * "tape" (a tape drive: a folder or an image file).
+ *
+ * Fields, by id, with the kinds that have them and the spelling of their
+ * values:
+ *   "kind"           all; "dir", "hdf", "cd" or "tape"; read only
+ *   "path"           dir, hdf, tape (and cd, where it is empty): host path,
+ *                    without a double quote; setting a hardfile's path to
+ *                    another image probes it as amiberry_settings_mount_default
+ *                    does (an RDB sets RDB mode; without one, RDB mode
+ *                    becomes 32/1/2/512 and a set geometry stays)
+ *   "device"         dir, hdf: AmigaDOS device name without the colon
+ *   "volume"         dir: volume label
+ *                    (device and volume names cannot hold ':', ',' or '"')
+ *   "read_only"      all; "true" or "false"
+ *   "boot_priority"  dir, hdf; -128 is not bootable, -129 not mounted
+ *                    automatically, otherwise -127..127
+ *   "sectors", "surfaces", "reserved", "block_size"
+ *                    hdf; decimal; sectors 0 is RDB mode (the disk's own
+ *                    partition table), with block_size the RDB's
+ *   "controller"     hdf, cd, tape: a controller id as
+ *                    amiberry_settings_mount_controller_get() lists it
+ *                    ("uae%d", "ide%d", "scsi%d_a2091-2")
+ *   "unit"           hdf, cd, tape: the unit on that controller, a value
+ *                    of amiberry_settings_mount_controller_unit_get()
+ * What a field list does not carry (physical geometry, feature levels, a
+ * filesystem handler, flags) is kept as the entry has it.
+ */
+
+/*
+ * A new entry of kind for path (empty for a CD drive), as the hard drive
+ * panel starts one: the first free DHn device name, a directory's volume
+ * label from the folder's or archive's name, a hardfile's geometry read
+ * from its RDB (RDB mode when it has one, 32 sectors, 1 surface and 2
+ * reserved blocks of 512 bytes when it has none), boot priority 0, and the
+ * first controller amiberry_settings_mount_controller_get() lists for the
+ * kind (for a CD drive SCSI when a SCSI board is configured, IDE
+ * otherwise), and a CD or tape drive the first emulated unit (cdN, tapeN)
+ * no entry of its kind uses. The result is not added; pass it to
+ * amiberry_settings_mount_add(). UNKNOWN_ID for an unknown kind,
+ * INVALID_VALUE for a path an entry cannot hold (a tape drive needs one),
+ * UNAVAILABLE when every emulated CD or tape unit is in use.
+ */
+AMIBERRY_SETTINGS_API amiberry_settings_status amiberry_settings_mount_default(
+	const amiberry_settings_session *session, const char *kind, const char *path, char *buffer, size_t size);
+/* Field id of the entry spelled value. INVALID_VALUE for a value that is not
+   an entry, UNKNOWN_ID for a field its kind does not have. */
+AMIBERRY_SETTINGS_API amiberry_settings_status amiberry_settings_mount_field_get(
+	const amiberry_settings_session *session, const char *value, const char *field, char *buffer, size_t size);
+/* The entry spelled value with field id set to field_value, into buffer.
+   INVALID_VALUE for a value that is not an entry or a field value out of
+   range, UNKNOWN_ID for "kind" or a field the entry's kind does not have.
+   Whether the entry fits the list (a device name in use, a taken unit) is
+   checked when it is added or replaced. */
+AMIBERRY_SETTINGS_API amiberry_settings_status amiberry_settings_mount_field_set(
+	const amiberry_settings_session *session, const char *value, const char *field, const char *field_value,
+	char *buffer, size_t size);
+
+/*
+ * The controllers an entry of kind ("hdf", "cd", "tape") can attach to, in
+ * the hard drive panel's order: the UAE controller (not for CDs), IDE and
+ * SCSI with the machine's own controller picked automatically, then the
+ * controllers of the configured expansion and accelerator boards, each
+ * unit of a board that has several. The id is the controller field of a
+ * uaehfN value with "%d" where the unit goes.
+ */
+AMIBERRY_SETTINGS_API size_t amiberry_settings_mount_controller_count(
+	const amiberry_settings_session *session, const char *kind);
+AMIBERRY_SETTINGS_API amiberry_settings_status amiberry_settings_mount_controller_get(
+	const amiberry_settings_session *session, const char *kind, size_t index,
+	char *id, size_t id_size, char *label, size_t label_size);
+/* The units of controller index: value is what the "unit" field takes,
+   label what the panel shows ("0", "XT", "ST-506 #1"). */
+AMIBERRY_SETTINGS_API size_t amiberry_settings_mount_controller_unit_count(
+	const amiberry_settings_session *session, const char *kind, size_t index);
+AMIBERRY_SETTINGS_API amiberry_settings_status amiberry_settings_mount_controller_unit_get(
+	const amiberry_settings_session *session, const char *kind, size_t index, size_t unit,
+	int *value, char *label, size_t label_size);
 
 /*
  * Expansion boards: SCSI, IDE and network controllers, bridgeboards, sound

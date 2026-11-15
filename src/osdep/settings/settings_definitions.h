@@ -17,7 +17,7 @@
 struct uae_prefs;
 struct expansionboardsettings;
 struct amiberry_settings_custom_controls_stage;
-
+struct uaedev_config_info;
 // A number macro's value as .uae text, for descriptor defaults that
 // options.h keeps as numbers (ANDROID_DEFAULT_SOUND_FREQUENCY).
 #define AMIBERRY_SETTINGS_TEXT_OF(number) AMIBERRY_SETTINGS_TEXT_OF_(number)
@@ -414,6 +414,36 @@ inline void write_choice(char* out, size_t size, const choice_list& choices, int
 {
 	write_choice(out, size, choices.items, choices.count, index);
 }
+
+enum mount_kind_mask {
+	MOUNT_KIND_HDF = 1u << 0,
+	MOUNT_KIND_CD = 1u << 1,
+	MOUNT_KIND_TAPE = 1u << 2
+};
+
+struct mount_controller_unit {
+	int value;
+	std::string label;
+	unsigned int kinds;
+};
+
+struct mount_controller {
+	int type;
+	int type_unit;
+	std::string id;
+	std::string label;
+	std::string board;
+	int board_unit;
+	std::vector<std::string> accelerators;
+	unsigned int kinds;
+	std::vector<mount_controller_unit> units;
+};
+
+// The hard drive panel, native settings APIs and schema exporter share this
+// controller catalog. p filters it to the controllers configured in a
+// machine; a null p exports every controller a machine can configure.
+std::vector<mount_controller> mount_controllers(const uae_prefs* p);
+bool mount_rdb_geometry(const char* path, uaedev_config_info& ci);
 
 // A host setting (settings_host.cpp) as the Android build has it, for the
 // schema export: its default there where it differs from the building

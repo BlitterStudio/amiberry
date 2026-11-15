@@ -33,6 +33,7 @@
 #include "memory.h"
 #include "amiberry_gfx.h"
 #include "expansion_display_name.h"
+#include "settings/settings_definitions.h"
 #include "amiberry_reset_chipset_prefs.h"
 #include "amiberry_actions_host.h"
 #include "native_ui_tests.h"
@@ -1542,40 +1543,9 @@ struct tapedlg_vals current_tapedlg;
 struct fsvdlg_vals current_fsvdlg;
 struct hfdlg_vals current_hfdlg;
 
-void hardfile_testrdb (struct hfdlg_vals* hdf) 
+void hardfile_testrdb (struct hfdlg_vals* hdf)
 {
-	uae_u8 id[512];
-	struct hardfiledata hfd{};
-
-	memset(id, 0, sizeof id);
-	memset(&hfd, 0, sizeof hfd);
-	hfd.ci.readonly = true;
-	hfd.ci.blocksize = 512;
-	hdf->rdb = 0;
-	if (hdf_open(&hfd, hdf->ci.rootdir) > 0) {
-		for (auto i = 0; i < 16; i++) {
-			hdf_read_rdb(&hfd, id, i * 512, 512);
-			auto babe = id[0] == 0xBA && id[1] == 0xBE; // A2090
-			if (!memcmp(id, "RDSK\0\0\0", 7) || !memcmp(id, "CDSK\0\0\0", 7) || !memcmp(id, "DRKS\0\0", 6) ||
-				(id[0] == 0x53 && id[1] == 0x10 && id[2] == 0x9b && id[3] == 0x13 && id[4] == 0 && id[5] == 0) || babe) {
-				// RDSK or ADIDE "encoded" RDSK
-				auto blocksize = 512;
-				if (!babe)
-					blocksize = (id[16] << 24) | (id[17] << 16) | (id[18] << 8) | (id[19] << 0);
-				hdf->ci.cyls = hdf->ci.highcyl = hdf->forcedcylinders = 0;
-				hdf->ci.sectors = 0;
-				hdf->ci.surfaces = 0;
-				hdf->ci.reserved = 0;
-				hdf->ci.bootpri = 0;
-				//hdf->ci.devname[0] = 0;
-				if (blocksize >= 512)
-					hdf->ci.blocksize = blocksize;
-				hdf->rdb = 1;
-				break;
-			}
-		}
-		hdf_close(&hfd);
-	}
+	hdf->rdb = amiberry_settings::mount_rdb_geometry(hdf->ci.rootdir, hdf->ci) ? 1 : 0;
 }
 
 void default_fsvdlg(struct fsvdlg_vals* f)
@@ -1802,122 +1772,35 @@ void new_harddrive(int entry)
 	}
 }
 
-void addhdcontroller(const struct expansionromtype* erc, int firstid, int flags)
-{
-	TCHAR name[MAX_DPATH];
-	const TCHAR* display_name = expansion_display_name(erc->friendlyname, erc->friendlymanufacturer);
-	name[0] = 0;
-	if (erc->friendlymanufacturer && _tcsicmp(erc->friendlymanufacturer, display_name)) {
-		_tcscat(name, erc->friendlymanufacturer);
-		_tcscat(name, _T(" "));
-	}
-	_tcscat(name, display_name);
-	if (changed_prefs.cpuboard_type && erc->romtype == ROMTYPE_CPUBOARD) {
-		const struct cpuboardsubtype* cbt = &cpuboards[changed_prefs.cpuboard_type].subtypes[changed_prefs.cpuboard_subtype];
-		if (!(cbt->deviceflags & flags))
-			return;
-		_tcscat(name, _T(" ("));
-		_tcscat(name, cbt->name);
-		_tcscat(name, _T(")"));
-	}
-	if (get_boardromconfig(&changed_prefs, erc->romtype, nullptr) || get_boardromconfig(&changed_prefs, erc->romtype_extra, nullptr)) {
-		auto name_string = std::string(name);
-		controller.push_back({ firstid, name_string });
-		for (int j = 1; j < MAX_DUPLICATE_EXPANSION_BOARDS; j++) {
-			if (is_board_enabled(&changed_prefs, erc->romtype, j)) {
-				TCHAR tmp[MAX_DPATH];
-				_sntprintf(tmp, sizeof tmp, _T("%s [%d]"), name, j + 1);
-				auto tmp_string = std::string(tmp);
-				controller.push_back({ firstid + j * HD_CONTROLLER_NEXT_UNIT, tmp_string });
-			}
-		}
-	}
-}
 
 void inithdcontroller(int ctype, int ctype_unit, int devtype, bool media)
 {
+	(void)media;
 	controller.clear();
-	// A CD-ROM cannot be attached to the UAE (uaehf.device) controller as a
-	// mountconfig entry: add_filesys_config() rejects it (UAE CDs are handled
-	// via the uaescsi.device/cdslot mechanism instead). Offering it here would
-	// let the user pick a controller that silently fails to apply.
-	if (devtype != UAEDEV_CD)
-		controller.push_back({ HD_CONTROLLER_TYPE_UAE, _T("UAE (uaehf.device)") });
-	controller.push_back({ HD_CONTROLLER_TYPE_IDE_AUTO, _T("IDE (Auto)") });
-
-	for (auto i = 0; expansionroms[i].name; i++) {
-		const auto* const erc = &expansionroms[i];
-		if (erc->deviceflags & EXPANSIONTYPE_IDE) {
-			addhdcontroller(erc, HD_CONTROLLER_TYPE_IDE_EXPANSION_FIRST + i, EXPANSIONTYPE_IDE);
-		}
-	}
-
-	controller.push_back({ HD_CONTROLLER_TYPE_SCSI_AUTO, _T("SCSI (Auto)") });
-	for (int i = 0; expansionroms[i].name; i++) {
-		const struct expansionromtype* erc = &expansionroms[i];
-		if (erc->deviceflags & EXPANSIONTYPE_SCSI) {
-			addhdcontroller(erc, HD_CONTROLLER_TYPE_SCSI_EXPANSION_FIRST + i, EXPANSIONTYPE_SCSI);
-		}
-	}
-
-	for (int i = 0; expansionroms[i].name; i++) {
-		const struct expansionromtype* erc = &expansionroms[i];
-		if (erc->deviceflags & EXPANSIONTYPE_CUSTOMDISK) {
-			addhdcontroller(erc, HD_CONTROLLER_TYPE_CUSTOM_FIRST + i, EXPANSIONTYPE_CUSTOMDISK);
-			break;
-		}
+	const unsigned int kind = devtype == UAEDEV_CD ? amiberry_settings::MOUNT_KIND_CD
+		: devtype == UAEDEV_TAPE ? amiberry_settings::MOUNT_KIND_TAPE : amiberry_settings::MOUNT_KIND_HDF;
+	const std::vector<amiberry_settings::mount_controller> controllers =
+		amiberry_settings::mount_controllers(&changed_prefs);
+	for (const amiberry_settings::mount_controller& item : controllers) {
+		if (item.kinds & kind)
+			controller.push_back({item.type + item.type_unit * HD_CONTROLLER_NEXT_UNIT, item.label});
 	}
 
 	controller_unit.clear();
-	if (ctype >= HD_CONTROLLER_TYPE_IDE_FIRST && ctype <= HD_CONTROLLER_TYPE_IDE_LAST) {
-		const struct expansionromtype* ert = get_unit_expansion_rom(ctype);
-		int ports = 2 + (ert ? ert->extrahdports : 0);
-		for (int i = 0; i < ports; i += 2) {
-			TCHAR tmp[100];
-			_sntprintf(tmp, sizeof tmp, _T("%d"), i + 0);
-			controller_unit.push_back({ std::string(tmp) });
-			_sntprintf(tmp, sizeof tmp, _T("%d"), i + 1);
-			controller_unit.push_back({ std::string(tmp) });
-		}
-		//if (media)
-		//	ew(hDlg, IDC_HDF_CONTROLLER_UNIT, TRUE);
-	}
-	else if (ctype >= HD_CONTROLLER_TYPE_SCSI_FIRST && ctype <= HD_CONTROLLER_TYPE_SCSI_LAST) {
-		const struct expansionromtype* ert = get_unit_expansion_rom(ctype);
-		controller_unit.emplace_back("0");
-		controller_unit.emplace_back("1");
-		if (!ert || !(ert->deviceflags & (EXPANSIONTYPE_SASI | EXPANSIONTYPE_CUSTOM))) {
-			controller_unit.emplace_back("2");
-			controller_unit.emplace_back("3");
-			controller_unit.emplace_back("4");
-			controller_unit.emplace_back("5");
-			controller_unit.emplace_back("6");
-			controller_unit.emplace_back("7");
-			if (devtype == UAEDEV_HDF && ert && !_tcscmp(ert->name, _T("a2091")))
-				controller_unit.emplace_back("XT");
-			if (devtype == UAEDEV_HDF && ert && !_tcscmp(ert->name, _T("a2090a"))) {
-				controller_unit.emplace_back("ST-506 #1");
-				controller_unit.emplace_back("ST-506 #2");
+	const auto add_units = [&](const std::vector<amiberry_settings::mount_controller>& list) {
+		for (const amiberry_settings::mount_controller& item : list) {
+			if (item.type != ctype || item.type_unit != ctype_unit)
+				continue;
+			for (const amiberry_settings::mount_controller_unit& unit : item.units) {
+				if (unit.kinds & kind)
+					controller_unit.push_back(unit.label);
 			}
+			return true;
 		}
-		//if (media)
-		//	ew(hDlg, IDC_HDF_CONTROLLER_UNIT, TRUE);
-	}
-	else if (ctype >= HD_CONTROLLER_TYPE_CUSTOM_FIRST && ctype <= HD_CONTROLLER_TYPE_CUSTOM_LAST) {
-		//ew(hDlg, IDC_HDF_CONTROLLER_UNIT, FALSE);
-	}
-	else if (ctype == HD_CONTROLLER_TYPE_UAE) {
-		for (int i = 0; i < MAX_FILESYSTEM_UNITS; i++) {
-			TCHAR tmp[100];
-			_sntprintf(tmp, sizeof tmp, _T("%d"), i);
-			controller_unit.push_back({ std::string(tmp) });
-		}
-		//if (media)
-		//	ew(hDlg, IDC_HDF_CONTROLLER_UNIT, TRUE);
-	}
-	//else {
-	//	ew(hDlg, IDC_HDF_CONTROLLER_UNIT, FALSE);
-	//}
+		return false;
+	};
+	if (!add_units(controllers))
+		add_units(amiberry_settings::mount_controllers(nullptr));
 
 	controller_type.clear();
 	controller_type.emplace_back("HD");
@@ -1928,8 +1811,7 @@ void inithdcontroller(int ctype, int ctype_unit, int devtype, bool media)
 		controller_feature_level.emplace_back("ATA-1");
 		controller_feature_level.emplace_back("ATA-2+");
 		controller_feature_level.emplace_back("ATA-2+ Strict");
-	}
-	else if (ctype >= HD_CONTROLLER_TYPE_SCSI_FIRST && ctype <= HD_CONTROLLER_TYPE_SCSI_LAST) {
+	} else if (ctype >= HD_CONTROLLER_TYPE_SCSI_FIRST && ctype <= HD_CONTROLLER_TYPE_SCSI_LAST) {
 		const struct expansionromtype* ert = get_unit_expansion_rom(ctype);
 		controller_feature_level.emplace_back("SCSI-1");
 		controller_feature_level.emplace_back("SCSI-2");
@@ -1939,6 +1821,7 @@ void inithdcontroller(int ctype, int ctype_unit, int devtype, bool media)
 		}
 	}
 }
+
 
 bool isguiactive()
 {

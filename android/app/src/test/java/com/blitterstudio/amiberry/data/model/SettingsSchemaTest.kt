@@ -5,6 +5,9 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.json.JSONArray
+import org.json.JSONObject
+import java.io.File
 
 class SettingsSchemaTest {
 
@@ -100,5 +103,31 @@ class SettingsSchemaTest {
 		for (model in AmigaModel.entries) for (config in model.configs) for (set in config.romSets) for (request in set) {
 			assertTrue("${model.cmdArg}: ${request.ids}", request.ids.any { it in schema.roms })
 		}
+	}
+
+	@Test
+	fun `mount controllers honor board and accelerator availability`() {
+		val json = JSONObject(File("src/main/settings/settings_schema.json").readText())
+		json.put("mount_controllers", JSONArray()
+			.put(JSONObject("""{"id":"uae%d","label":"UAE","kinds":["hdf"],"units":[{"value":0,"label":"0"}]}"""))
+			.put(JSONObject("""{"id":"scsi%d_a2091","label":"A2091","kinds":["hdf"],"board":"a2091","board_unit":1,"units":[{"value":0,"label":"0"}]}"""))
+			.put(JSONObject("""{"id":"scsi%d_accel","label":"Accelerator","kinds":["hdf"],"accelerators":["warp"],"units":[{"value":0,"label":"0"}]}"""))
+		)
+		val fixture = SettingsSchema.parse(json)
+		val base = EmulatorSettings()
+
+		assertEquals(listOf("uae%d"), fixture.mountControllersFor(MountKind.Hardfile, base).map { it.id })
+		assertEquals(
+			listOf("uae%d", "scsi%d_a2091"),
+			fixture.mountControllersFor(MountKind.Hardfile, base.copy(boards = listOf(BoardUnit("a2091", 0)))).map { it.id }
+		)
+		assertEquals(
+			listOf("uae%d", "scsi%d_accel"),
+			fixture.mountControllersFor(MountKind.Hardfile, base.copy(options = mapOf("cpuboard_type" to "warp"))).map { it.id }
+		)
+		assertEquals(
+			listOf("uae%d", "scsi%d_a2091"),
+			fixture.mountControllersFor(MountKind.Hardfile, base, "scsi0_a2091").map { it.id }
+		)
 	}
 }

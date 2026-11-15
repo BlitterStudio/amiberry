@@ -253,6 +253,10 @@ enum FilePanels {
 		let types: [UTType]
 		switch request {
 		case .loadState: types = [UTType(filenameExtension: "uss") ?? .data]
+		case .archive:
+			types = ["zip", "7z", "rar", "lha", "lzh", "lzx"].compactMap { UTType(filenameExtension: $0) }
+		case .hardfile:
+			types = ["hdf", "hdz", "hda", "img", "lha", "zip", "vhd", "chd", "7z"].compactMap { UTType(filenameExtension: $0) }
 		// What quick play takes, so nothing else is copied in.
 		case .media: types = QuickPlay.extensions.sorted().compactMap { UTType(filenameExtension: $0) }
 		default: types = [.item]
@@ -285,6 +289,25 @@ enum FilePanels {
 			return nil
 		}
 		return url.path
+	}
+
+	/// Names a hardfile inside Amiberry's Hard Drives folder. A sandboxed iOS
+	/// app owns that folder, so the settings layer can create the file there.
+	static func chooseHardfileLocation(title: String, startingAt startPath: String, defaultName: String) -> String? {
+		guard let folderPath = try? MediaLibrary.path(of: .hardDrives) else { return nil }
+		let folder = URL(fileURLWithPath: folderPath, isDirectory: true)
+		let initial = startPath.isEmpty ? defaultName : (startPath as NSString).lastPathComponent
+		while true {
+			guard let typed = Alerts.askName(title: title, message: "Name the hardfile.", initial: initial) else {
+				return nil
+			}
+			let name = typed.trimmingCharacters(in: .whitespacesAndNewlines)
+			guard !name.isEmpty, !name.contains("/"), name != ".", name != ".." else {
+				Alerts.show(title: title, message: "Enter a file name without \u{201C}/\u{201D}.", buttons: ["OK"])
+				continue
+			}
+			return folder.appendingPathComponent(name).path
+		}
 	}
 
 	/// ROM files to import (several at once); empty when cancelled. They are

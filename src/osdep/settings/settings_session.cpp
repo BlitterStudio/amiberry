@@ -6,9 +6,11 @@
 #include "target.h"
 #include "rommgr.h"
 #include "autoconf.h"
+#include "filesys.h"
 
 #include "settings_definitions.h"
 
+#include <cctype>
 #include <algorithm>
 #include <cstdlib>
 #include <cstring>
@@ -539,6 +541,485 @@ amiberry_settings_status amiberry_settings_mount_remove(amiberry_settings_sessio
 		return AMIBERRY_SETTINGS_UNKNOWN_ID;
 	remove_mount(*session->working, static_cast<int>(index));
 	return AMIBERRY_SETTINGS_OK;
+}
+
+namespace {
+
+unsigned int mount_kind(const uaedev_config_info& ci)
+{
+	switch (ci.type) {
+	case UAEDEV_DIR: return 0;
+	case UAEDEV_HDF: return amiberry_settings::MOUNT_KIND_HDF;
+	case UAEDEV_CD: return amiberry_settings::MOUNT_KIND_CD;
+	case UAEDEV_TAPE: return amiberry_settings::MOUNT_KIND_TAPE;
+	default: return 0;
+	}
+}
+
+const char* mount_kind_name(const uaedev_config_info& ci)
+{
+	switch (ci.type) {
+	case UAEDEV_DIR: return "dir";
+	case UAEDEV_HDF: return "hdf";
+	case UAEDEV_CD: return "cd";
+	case UAEDEV_TAPE: return "tape";
+	default: return nullptr;
+	}
+}
+
+bool mount_has_field(const uaedev_config_info& ci, const char* field)
+{
+	if (!std::strcmp(field, "kind") || !std::strcmp(field, "read_only"))
+		return true;
+	if (!std::strcmp(field, "path"))
+		return true;
+	if (!std::strcmp(field, "device") || !std::strcmp(field, "boot_priority"))
+		return ci.type == UAEDEV_DIR || ci.type == UAEDEV_HDF;
+	if (!std::strcmp(field, "volume"))
+		return ci.type == UAEDEV_DIR;
+	if (!std::strcmp(field, "sectors") || !std::strcmp(field, "surfaces")
+		|| !std::strcmp(field, "reserved") || !std::strcmp(field, "block_size"))
+		return ci.type == UAEDEV_HDF;
+	if (!std::strcmp(field, "controller") || !std::strcmp(field, "unit"))
+		return ci.type == UAEDEV_HDF || ci.type == UAEDEV_CD || ci.type == UAEDEV_TAPE;
+	return false;
+}
+
+amiberry_settings_status mount_copy_out(const char* text, char* buffer, size_t size)
+{
+	if (!buffer || std::strlen(text) >= size)
+		return AMIBERRY_SETTINGS_BUFFER_TOO_SMALL;
+	std::strcpy(buffer, text);
+	return AMIBERRY_SETTINGS_OK;
+}
+
+bool copy_mount_field(TCHAR* target, size_t target_size, const char* value)
+{
+	if (!value || std::strlen(value) >= target_size)
+		return false;
+	for (const char* c = value; *c; c++) {
+		if (static_cast<unsigned char>(*c) < 0x20 || *c == 0x7f)
+			return false;
+	}
+	std::strcpy(target, value);
+	return true;
+}
+
+bool parse_mount_integer(const char* text, int minimum, int maximum, int& value)
+{
+	if (!text || !*text)
+		return false;
+	char* end = nullptr;
+	const long parsed = std::strtol(text, &end, 10);
+	if (*end || parsed < minimum || parsed > maximum)
+		return false;
+	value = static_cast<int>(parsed);
+	return true;
+}
+
+bool mount_controller_by_id(const char* id, unsigned int kind, int& type, int& type_unit)
+{
+	for (const amiberry_settings::mount_controller& controller : amiberry_settings::mount_controllers(nullptr)) {
+		if (controller.id == id && (controller.kinds & kind)) {
+			type = controller.type;
+			type_unit = controller.type_unit;
+			return true;
+		}
+	}
+	return false;
+}
+
+bool mount_unit_valid(const uaedev_config_info& ci, int unit)
+{
+	const unsigned int kind = mount_kind(ci);
+	for (const amiberry_settings::mount_controller& controller : amiberry_settings::mount_controllers(nullptr)) {
+		if (controller.type != ci.controller_type || controller.type_unit != ci.controller_type_unit)
+			continue;
+		for (const amiberry_settings::mount_controller_unit& candidate : controller.units) {
+			if (candidate.value == unit && (candidate.kinds & kind))
+				return true;
+		}
+	}
+	return false;
+}
+
+int mount_first_unit(const uaedev_config_info& ci)
+{
+	const unsigned int kind = mount_kind(ci);
+	for (const amiberry_settings::mount_controller& controller : amiberry_settings::mount_controllers(nullptr)) {
+		if (controller.type != ci.controller_type || controller.type_unit != ci.controller_type_unit)
+			continue;
+		for (const amiberry_settings::mount_controller_unit& unit : controller.units) {
+			if (unit.kinds & kind)
+				return unit.value;
+		}
+	}
+	return 0;
+}
+
+amiberry_settings_status mount_value_out(const uaedev_config_info& ci, char* buffer, size_t size)
+{
+	TCHAR value[CONFIG_BLEN];
+	if (!cfgfile_mount_value_ci(&ci, value, sizeof value / sizeof value[0]))
+		return AMIBERRY_SETTINGS_INVALID_VALUE;
+	return mount_copy_out(value, buffer, size);
+}
+
+void default_volume_name(const char* path, TCHAR* volume, size_t volume_size)
+{
+	std::string name = path ? path : "";
+	// A folder picked as "/path/Work/" is named after Work.
+	while (name.size() > 1 && (name.back() == '/' || name.back() == '\\'))
+		name.pop_back();
+	const size_t separator = name.find_last_of("/\\");
+	if (separator != std::string::npos)
+		name.erase(0, separator + 1);
+	const size_t dot = name.find_last_of('.');
+	if (dot != std::string::npos) {
+		std::string extension = name.substr(dot + 1);
+		std::transform(extension.begin(), extension.end(), extension.begin(),
+			[](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+		if (extension == "zip" || extension == "7z" || extension == "rar" || extension == "lha"
+			|| extension == "lzh" || extension == "lzx")
+			name.erase(dot);
+	}
+	for (char& c : name) {
+		if (c == ':' || c == ',' || c == '\"')
+			c = '_';
+	}
+	std::snprintf(volume, volume_size, "%s", name.c_str());
+	// As add_filesys_config() will store it (no ';', the Amiga character
+	// set, 30 characters), so adding the entry does not change it.
+	validatevolumename(volume, nullptr);
+}
+
+void default_device_name(const uae_prefs& p, TCHAR* name, size_t size)
+{
+	for (int number = 0; number < MOUNT_CONFIG_SIZE; number++) {
+		std::snprintf(name, size, "DH%d", number);
+		bool present = false;
+		for (int i = 0; i < p.mountitems; i++) {
+			const uaedev_config_info& ci = p.mountconfig[i].ci;
+			if (!_tcsicmp(name, ci.devname) || !_tcsicmp(name, ci.volname)) {
+				present = true;
+				break;
+			}
+		}
+		if (!present)
+			return;
+	}
+	name[0] = 0;
+}
+
+} // namespace
+
+amiberry_settings_status amiberry_settings_mount_default(const amiberry_settings_session* session,
+	const char* kind, const char* path, char* buffer, size_t size)
+{
+	return amiberry_settings::no_throw(AMIBERRY_SETTINGS_UNAVAILABLE, [=] {
+		if (!session || !kind)
+			return AMIBERRY_SETTINGS_UNKNOWN_ID;
+		uaedev_config_info ci{};
+		if (!std::strcmp(kind, "dir")) {
+			if (!copy_mount_field(ci.rootdir, sizeof ci.rootdir, path) || !path[0])
+				return AMIBERRY_SETTINGS_INVALID_VALUE;
+			ci.type = UAEDEV_DIR;
+			ci.bootpri = 0;
+			default_device_name(*session->working, ci.devname, sizeof ci.devname);
+			default_volume_name(path, ci.volname, sizeof ci.volname);
+			if (!ci.volname[0])
+				return AMIBERRY_SETTINGS_INVALID_VALUE;
+		} else if (!std::strcmp(kind, "hdf")) {
+			if (!copy_mount_field(ci.rootdir, sizeof ci.rootdir, path) || !path[0])
+				return AMIBERRY_SETTINGS_INVALID_VALUE;
+			ci.type = UAEDEV_HDF;
+			ci.sectors = 32;
+			ci.surfaces = 1;
+			ci.reserved = 2;
+			ci.blocksize = 512;
+			ci.bootpri = 0;
+			default_device_name(*session->working, ci.devname, sizeof ci.devname);
+			amiberry_settings::mount_rdb_geometry(ci.rootdir, ci);
+		} else if (!std::strcmp(kind, "cd")) {
+			if (!path || path[0])
+				return AMIBERRY_SETTINGS_INVALID_VALUE;
+			ci.type = UAEDEV_CD;
+			ci.readonly = true;
+			ci.blocksize = 2048;
+			ci.controller_type = (is_board_enabled(session->working, ROMTYPE_A2091, 0)
+				|| is_board_enabled(session->working, ROMTYPE_GVPS2, 0)
+				|| is_board_enabled(session->working, ROMTYPE_A4091, 0)
+				|| (session->working->cs_mbdmac & 3)) ? HD_CONTROLLER_TYPE_SCSI_AUTO : HD_CONTROLLER_TYPE_IDE_AUTO;
+		} else if (!std::strcmp(kind, "tape")) {
+			if (!copy_mount_field(ci.rootdir, sizeof ci.rootdir, path) || !path[0])
+				return AMIBERRY_SETTINGS_INVALID_VALUE;
+			ci.type = UAEDEV_TAPE;
+			ci.blocksize = 512;
+			ci.controller_type = HD_CONTROLLER_TYPE_UAE;
+		} else {
+			return AMIBERRY_SETTINGS_UNKNOWN_ID;
+		}
+		// A CD or tape drive needs an emulated unit of its own (cdN, tapeN):
+		// add_filesys_config() refuses a second CD on a unit in use.
+		if (ci.type == UAEDEV_CD || ci.type == UAEDEV_TAPE) {
+			const uae_prefs& p = *session->working;
+			int unit = 0;
+			for (bool taken = true; taken && unit < MAX_TOTAL_SCSI_DEVICES; ) {
+				taken = false;
+				for (int i = 0; i < p.mountitems && i < MOUNT_CONFIG_SIZE; i++) {
+					if (p.mountconfig[i].ci.type == ci.type && p.mountconfig[i].ci.device_emu_unit == unit) {
+						taken = true;
+						unit++;
+						break;
+					}
+				}
+			}
+			if (unit >= MAX_TOTAL_SCSI_DEVICES)
+				return AMIBERRY_SETTINGS_UNAVAILABLE;
+			ci.device_emu_unit = unit;
+		}
+		return mount_value_out(ci, buffer, size);
+	});
+}
+
+amiberry_settings_status amiberry_settings_mount_field_get(const amiberry_settings_session* session,
+	const char* value, const char* field, char* buffer, size_t size)
+{
+	return amiberry_settings::no_throw(AMIBERRY_SETTINGS_INVALID_VALUE, [=] {
+		if (!session || !field)
+			return AMIBERRY_SETTINGS_UNKNOWN_ID;
+		uaedev_config_info ci{};
+		if (!cfgfile_parse_mount_value(session->working, value, &ci))
+			return AMIBERRY_SETTINGS_INVALID_VALUE;
+		if (!mount_has_field(ci, field))
+			return AMIBERRY_SETTINGS_UNKNOWN_ID;
+		if (!std::strcmp(field, "kind"))
+			return mount_copy_out(mount_kind_name(ci), buffer, size);
+		if (!std::strcmp(field, "path"))
+			return mount_copy_out(ci.rootdir, buffer, size);
+		if (!std::strcmp(field, "device"))
+			return mount_copy_out(ci.devname, buffer, size);
+		if (!std::strcmp(field, "volume"))
+			return mount_copy_out(ci.volname, buffer, size);
+		if (!std::strcmp(field, "read_only"))
+			return mount_copy_out(ci.readonly ? "true" : "false", buffer, size);
+		if (!std::strcmp(field, "controller")) {
+			for (const amiberry_settings::mount_controller& controller : amiberry_settings::mount_controllers(nullptr)) {
+				if (controller.type == ci.controller_type && controller.type_unit == ci.controller_type_unit)
+					return mount_copy_out(controller.id.c_str(), buffer, size);
+			}
+			return AMIBERRY_SETTINGS_INVALID_VALUE;
+		}
+		int number = 0;
+		if (!std::strcmp(field, "boot_priority")) number = ci.bootpri;
+		else if (!std::strcmp(field, "sectors")) number = ci.sectors;
+		else if (!std::strcmp(field, "surfaces")) number = ci.surfaces;
+		else if (!std::strcmp(field, "reserved")) number = ci.reserved;
+		else if (!std::strcmp(field, "block_size")) number = ci.blocksize;
+		else if (!std::strcmp(field, "unit")) number = ci.controller_unit;
+		else return AMIBERRY_SETTINGS_UNKNOWN_ID;
+		char text[32];
+		std::snprintf(text, sizeof text, "%d", number);
+		return mount_copy_out(text, buffer, size);
+	});
+}
+
+amiberry_settings_status amiberry_settings_mount_field_set(const amiberry_settings_session* session,
+	const char* value, const char* field, const char* field_value, char* buffer, size_t size)
+{
+	return amiberry_settings::no_throw(AMIBERRY_SETTINGS_INVALID_VALUE, [=] {
+		if (!session || !field || !field_value)
+			return AMIBERRY_SETTINGS_UNKNOWN_ID;
+		uaedev_config_info ci{};
+		if (!cfgfile_parse_mount_value(session->working, value, &ci))
+			return AMIBERRY_SETTINGS_INVALID_VALUE;
+		if (!std::strcmp(field, "kind") || !mount_has_field(ci, field))
+			return AMIBERRY_SETTINGS_UNKNOWN_ID;
+		if (!std::strcmp(field, "path")) {
+			const bool changed = std::strcmp(ci.rootdir, field_value) != 0;
+			// A quoted path ends at its first quote when the loader reads it.
+			if (std::strchr(field_value, '\"') || !copy_mount_field(ci.rootdir, sizeof ci.rootdir, field_value)
+				|| (ci.type != UAEDEV_CD && !field_value[0]))
+				return AMIBERRY_SETTINGS_INVALID_VALUE;
+			// A newly picked hardfile is probed as the panel does: its RDB
+			// sets RDB mode; without one an entry in RDB mode gets the plain
+			// geometry and a set geometry stays. The boot priority is the
+			// user's either way.
+			if (ci.type == UAEDEV_HDF && changed) {
+				const int bootpri = ci.bootpri;
+				if (!amiberry_settings::mount_rdb_geometry(ci.rootdir, ci) && ci.sectors == 0) {
+					ci.sectors = 32;
+					ci.surfaces = 1;
+					ci.reserved = 2;
+					ci.blocksize = 512;
+				}
+				ci.bootpri = bootpri;
+			}
+		} else if (!std::strcmp(field, "device") || !std::strcmp(field, "volume")) {
+			// The entry's spelling separates names with ':' and ',' and
+			// cannot escape a quote in them.
+			const bool device = !std::strcmp(field, "device");
+			TCHAR* name = device ? ci.devname : ci.volname;
+			if (!field_value[0] || std::strpbrk(field_value, ":,\"")
+				|| !copy_mount_field(name, sizeof ci.devname, field_value))
+				return AMIBERRY_SETTINGS_INVALID_VALUE;
+			// As add_filesys_config() will store it, so adding the entry
+			// does not change it again.
+			if (device)
+				validatedevicename(name, nullptr);
+			else
+				validatevolumename(name, nullptr);
+			if (!name[0])
+				return AMIBERRY_SETTINGS_INVALID_VALUE;
+		} else if (!std::strcmp(field, "read_only")) {
+			if (!std::strcmp(field_value, "true")) ci.readonly = true;
+			else if (!std::strcmp(field_value, "false")) ci.readonly = false;
+			else return AMIBERRY_SETTINGS_INVALID_VALUE;
+		} else if (!std::strcmp(field, "controller")) {
+			if (!mount_controller_by_id(field_value, mount_kind(ci), ci.controller_type, ci.controller_type_unit))
+				return AMIBERRY_SETTINGS_INVALID_VALUE;
+			if (!mount_unit_valid(ci, ci.controller_unit))
+				ci.controller_unit = mount_first_unit(ci);
+		} else {
+			int number;
+			const int minimum = !std::strcmp(field, "boot_priority") ? -129 : 0;
+			const int maximum = !std::strcmp(field, "boot_priority") ? 127 : 1 << 20;
+			if (!parse_mount_integer(field_value, minimum, maximum, number))
+				return AMIBERRY_SETTINGS_INVALID_VALUE;
+			if (!std::strcmp(field, "boot_priority")) ci.bootpri = number;
+			else if (!std::strcmp(field, "sectors")) ci.sectors = number;
+			else if (!std::strcmp(field, "surfaces")) ci.surfaces = number;
+			else if (!std::strcmp(field, "reserved")) ci.reserved = number;
+			else if (!std::strcmp(field, "block_size")) ci.blocksize = number;
+			else if (!std::strcmp(field, "unit")) {
+				if (!mount_unit_valid(ci, number))
+					return AMIBERRY_SETTINGS_INVALID_VALUE;
+				ci.controller_unit = number;
+			} else return AMIBERRY_SETTINGS_UNKNOWN_ID;
+		}
+		TCHAR spelling[CONFIG_BLEN];
+		if (!cfgfile_mount_value_ci(&ci, spelling, sizeof spelling / sizeof spelling[0]))
+			return AMIBERRY_SETTINGS_INVALID_VALUE;
+		uaedev_config_info parsed{};
+		if (!cfgfile_parse_mount_value(session->working, spelling, &parsed))
+			return AMIBERRY_SETTINGS_INVALID_VALUE;
+		return mount_copy_out(spelling, buffer, size);
+	});
+}
+
+size_t amiberry_settings_mount_controller_count(const amiberry_settings_session* session, const char* kind)
+{
+	return amiberry_settings::no_throw(size_t{0}, [=] {
+		if (!session || !kind)
+			return size_t{0};
+		const unsigned int wanted = !std::strcmp(kind, "hdf") ? amiberry_settings::MOUNT_KIND_HDF
+			: !std::strcmp(kind, "cd") ? amiberry_settings::MOUNT_KIND_CD
+			: !std::strcmp(kind, "tape") ? amiberry_settings::MOUNT_KIND_TAPE : 0;
+		if (!wanted)
+			return size_t{0};
+		size_t count = 0;
+		for (const amiberry_settings::mount_controller& controller :
+			amiberry_settings::mount_controllers(session->working)) {
+			if (controller.kinds & wanted)
+				count++;
+		}
+		return count;
+	});
+}
+
+namespace {
+
+unsigned int controller_kind(const char* kind)
+{
+	if (!kind)
+		return 0;
+	if (!std::strcmp(kind, "hdf"))
+		return amiberry_settings::MOUNT_KIND_HDF;
+	if (!std::strcmp(kind, "cd"))
+		return amiberry_settings::MOUNT_KIND_CD;
+	if (!std::strcmp(kind, "tape"))
+		return amiberry_settings::MOUNT_KIND_TAPE;
+	return 0;
+}
+
+const amiberry_settings::mount_controller* controller_at(const amiberry_settings_session* session,
+	const char* kind, size_t index, std::vector<amiberry_settings::mount_controller>& controllers)
+{
+	if (!session)
+		return nullptr;
+	const unsigned int wanted = controller_kind(kind);
+	if (!wanted)
+		return nullptr;
+	controllers = amiberry_settings::mount_controllers(session->working);
+	for (const amiberry_settings::mount_controller& controller : controllers) {
+		if (!(controller.kinds & wanted))
+			continue;
+		if (!index--)
+			return &controller;
+	}
+	return nullptr;
+}
+
+} // namespace
+
+amiberry_settings_status amiberry_settings_mount_controller_get(const amiberry_settings_session* session,
+	const char* kind, size_t index, char* id, size_t id_size, char* label, size_t label_size)
+{
+	return amiberry_settings::no_throw(AMIBERRY_SETTINGS_UNAVAILABLE, [=] {
+		std::vector<amiberry_settings::mount_controller> controllers;
+		const amiberry_settings::mount_controller* controller = controller_at(session, kind, index, controllers);
+		if (!controller)
+			return AMIBERRY_SETTINGS_UNKNOWN_ID;
+		const amiberry_settings_status id_status = mount_copy_out(controller->id.c_str(), id, id_size);
+		const amiberry_settings_status label_status = mount_copy_out(controller->label.c_str(), label, label_size);
+		return id_status != AMIBERRY_SETTINGS_OK ? id_status : label_status;
+	});
+}
+
+size_t amiberry_settings_mount_controller_unit_count(const amiberry_settings_session* session,
+	const char* kind, size_t index)
+{
+	return amiberry_settings::no_throw(size_t{0}, [=] {
+		std::vector<amiberry_settings::mount_controller> controllers;
+		const amiberry_settings::mount_controller* controller = controller_at(session, kind, index, controllers);
+		if (!controller)
+			return size_t{0};
+		const unsigned int wanted = controller_kind(kind);
+		size_t count = 0;
+		for (const amiberry_settings::mount_controller_unit& unit : controller->units) {
+			if (unit.kinds & wanted)
+				count++;
+		}
+		return count;
+	});
+}
+
+amiberry_settings_status amiberry_settings_mount_controller_unit_get(const amiberry_settings_session* session,
+	const char* kind, size_t index, size_t unit, int* value, char* label, size_t label_size)
+{
+	return amiberry_settings::no_throw(AMIBERRY_SETTINGS_UNAVAILABLE, [=] {
+		if (!value)
+			return AMIBERRY_SETTINGS_BUFFER_TOO_SMALL;
+		std::vector<amiberry_settings::mount_controller> controllers;
+		const amiberry_settings::mount_controller* controller = controller_at(session, kind, index, controllers);
+		if (!controller)
+			return AMIBERRY_SETTINGS_UNKNOWN_ID;
+		const unsigned int wanted = controller_kind(kind);
+		size_t remaining = unit;
+		for (const amiberry_settings::mount_controller_unit& candidate : controller->units) {
+			if (!(candidate.kinds & wanted))
+				continue;
+			if (remaining--) {
+				continue;
+			}
+			const amiberry_settings_status status = mount_copy_out(candidate.label.c_str(), label, label_size);
+			if (status != AMIBERRY_SETTINGS_OK)
+				return status;
+			*value = candidate.value;
+			return AMIBERRY_SETTINGS_OK;
+		}
+		return AMIBERRY_SETTINGS_UNKNOWN_ID;
+	});
 }
 
 // The board catalog is built on first use (std::vector, std::string);

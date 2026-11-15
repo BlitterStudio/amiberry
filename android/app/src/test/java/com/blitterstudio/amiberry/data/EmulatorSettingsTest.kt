@@ -3,7 +3,6 @@ package com.blitterstudio.amiberry.data
 import com.blitterstudio.amiberry.data.model.AmigaModel
 import com.blitterstudio.amiberry.data.model.EmulatorSettings
 import com.blitterstudio.amiberry.data.model.EmulatorSettingsConstraints
-import com.blitterstudio.amiberry.data.model.HardDrive
 import com.blitterstudio.amiberry.data.model.SettingsSchema
 import org.junit.Assert.*
 import org.junit.Test

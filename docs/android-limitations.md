@@ -55,6 +55,8 @@ Files ▸ ⋮ ▸ **Storage location** shows this path (with **Copy path**, exce
 
 Imports use the system document picker. Where none exists (Google TV resolves it to a stub that only says "You don't have an app that can do this"), and from Files ▸ Import ▸ **Browse device storage** on other devices, the launcher opens its own browser of internal storage, Downloads and USB drives. That browser needs the `MANAGE_EXTERNAL_STORAGE` (All Files Access) permission (READ_EXTERNAL_STORAGE on Android 10). It is not requested at startup: the Files tab shows an optional, dismissible card, and the browser explains the permission before opening the system grant screen, then opens by itself once the user returns with it granted.
 
+Storage ▸ **Hard drives** mounts host folders where they are (the device browser picks them, so it needs the same permission), archives, hardfiles, CD drives on an IDE or SCSI controller and tape drives, and creates new hardfiles (raw or dynamic VHD) in `HardDrives`. Physical drives, which the desktop's Add Hard Drive mounts, cannot be: Android gives apps no raw access to block devices. The Controller list holds the UAE, IDE and SCSI controllers and those of the expansion boards the machine has; the machine's own IDE or SCSI controller (A600, A1200, A3000, A4000) is the IDE (Auto) or SCSI (Auto) entry.
+
 ## Performance Notes
 
 - The JIT compiler is available on ARM64 devices and provides much faster than native M68K speeds

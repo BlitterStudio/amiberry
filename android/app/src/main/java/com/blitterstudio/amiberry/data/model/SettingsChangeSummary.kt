@@ -163,29 +163,54 @@ object SettingsChangeSummary {
 
 		private fun onOff(on: Boolean) = SettingText.Resource(if (on) R.string.settings_value_on else R.string.settings_value_off)
 
-		/** Hard drives by position: added, removed, or a changed image, read-only flag or boot priority. */
+		/** Storage mounts by position, described as people see them rather than cfgfile tokens. */
 		fun hardDrives() {
 			val count = maxOf(before.hardDrives.size, after.hardDrives.size)
 			for (index in 0 until count) {
 				val old = before.hardDrives.getOrNull(index)
 				val new = after.hardDrives.getOrNull(index)
 				val label = SettingText.Resource(R.string.settings_storage_hard_drive_label, listOf(index))
-				if (old == null || new == null) {
-					add(label, old?.let { file(it.path) } ?: none, new?.let { file(it.path) } ?: none)
-					continue
-				}
-				add(label, file(old.path), file(new.path))
-				add(
-					SettingText.Resource(R.string.settings_change_hard_drive_read_only, listOf(index)),
-					onOff(old.readOnly),
-					onOff(new.readOnly)
-				)
-				add(
-					SettingText.Resource(R.string.settings_change_hard_drive_boot_priority, listOf(index)),
-					SettingText.Plain(old.bootPriority.toString()),
-					SettingText.Plain(new.bootPriority.toString())
-				)
+				add(label, old?.let(::mountText) ?: none, new?.let(::mountText) ?: none)
 			}
+		}
+
+		/**
+		 * Every property the Storage page edits, so any edit shows up here
+		 * (a row is listed when its two texts differ).
+		 */
+		private fun mountText(mount: MountEntry): SettingText {
+			val kind = when (mount.kind) {
+				MountKind.Directory -> "Directory"
+				MountKind.Hardfile -> "Hardfile"
+				MountKind.Cd -> "CD drive"
+				MountKind.Tape -> "Tape drive"
+			}
+			val parts = mutableListOf<String>()
+			if (mount.kind == MountKind.Directory || mount.kind == MountKind.Hardfile)
+				parts += mount.device.ifBlank { "automatic device name" }
+			if (mount.kind == MountKind.Directory) parts += "volume ${mount.volume.ifBlank { "unnamed" }}"
+			if (mount.kind != MountKind.Cd) parts += mount.path.ifBlank { "no file" }
+			parts += if (mount.readOnly) "read-only" else "read/write"
+			if (mount.kind == MountKind.Directory || mount.kind == MountKind.Hardfile) parts += when (mount.bootPriority) {
+				MountEntry.BOOTPRI_NOAUTOBOOT -> "not bootable"
+				MountEntry.BOOTPRI_NOAUTOMOUNT -> "not mounted automatically"
+				else -> "boot priority ${mount.bootPriority}"
+			}
+			if (mount.kind == MountKind.Hardfile) parts += if (mount.sectors == 0) "RDB geometry, ${mount.blockSize}-byte blocks"
+				else "geometry ${mount.sectors}/${mount.surfaces}/${mount.reserved}/${mount.blockSize}"
+			if (mount.kind != MountKind.Directory) parts += controllerText(mount.controller)
+			return SettingText.Plain("$kind: ${parts.joinToString(", ")}")
+		}
+
+		/** "A600/A1200/A4000 IDE, unit 1" for ide1_mainboard, by the schema's controller label. */
+		private fun controllerText(controller: String): String {
+			val unit = Regex("""^(?:uae|ide|scsi|custom)(\d+)""").find(controller)?.groupValues?.get(1)
+			val row = schema?.mountControllers?.firstOrNull { row ->
+				Regex("^" + row.id.split("%d").joinToString("\\d+") { Regex.escape(it) } + "$").matches(controller)
+			}
+			val name = row?.label ?: controller
+			val unitLabel = row?.units?.firstOrNull { it.value.toString() == unit }?.label ?: unit
+			return if (unitLabel != null) "$name, unit $unitLabel" else name
 		}
 
 		/**

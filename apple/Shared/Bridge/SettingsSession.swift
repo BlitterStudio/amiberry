@@ -29,6 +29,21 @@ public struct CommitResult: Hashable, Sendable {
 	public let applyClass: ApplyClass
 }
 
+/// A controller and the units the settings layer currently offers for a
+/// hardfile, CD or tape drive.
+public struct MountController: Hashable, Sendable, Identifiable {
+	public let id: String
+	public let label: String
+	public let units: [MountControllerUnit]
+}
+
+/// One selectable unit on a mount controller.
+public struct MountControllerUnit: Hashable, Sendable, Identifiable {
+	public let value: Int
+	public let label: String
+	public var id: Int { value }
+}
+
 /// The session handle. Only the main actor uses it; the wrapper lets the
 /// (nonisolated) deinit hand it back there to be closed.
 private struct SessionHandle: @unchecked Sendable {
@@ -260,6 +275,78 @@ public final class SettingsSession {
 	public func customControlUse(_ control: String, port: Int, hotkey: Bool = false) -> String? {
 		guard let handle else { return nil }
 		return optionalLayerString(amiberry_settings_custom_control_use(handle, Int32(clamping: port), hotkey, control))
+	}
+
+	/// A new mount entry with the hard drive panel's defaults. It is not
+	/// added until `addMount(_:)` accepts it.
+	public func defaultMount(kind: String, path: String = "") throws -> String {
+		let session = try session("mount \(kind)")
+		let (entry, status) = readLayerString(capacity: 1024) {
+			amiberry_settings_mount_default(session, kind, path, $0, $1)
+		}
+		try SettingsError.check(status, id: "mount \(kind)", value: path)
+		return entry
+	}
+
+	/// A field of a uaehfN mount value. Fields are defined by the settings
+	/// layer, so the native UI never parses or spells mount values itself.
+	public func mountField(_ field: String, in entry: String) throws -> String {
+		let session = try session("mount \(field)")
+		let (value, status) = readLayerString(capacity: 1024) {
+			amiberry_settings_mount_field_get(session, entry, field, $0, $1)
+		}
+		try SettingsError.check(status, id: "mount \(field)", value: entry)
+		return value
+	}
+
+	/// Returns `entry` with one field changed. The result remains a draft
+	/// until it is passed to `addMount(_:)` or `replaceMount(at:with:)`.
+	public func settingMountField(_ field: String, to value: String, in entry: String) throws -> String {
+		let session = try session("mount \(field)")
+		let (changed, status) = readLayerString(capacity: 1024) {
+			amiberry_settings_mount_field_set(session, entry, field, value, $0, $1)
+		}
+		try SettingsError.check(status, id: "mount \(field)", value: value)
+		return changed
+	}
+
+	/// The controllers and units this session currently offers for `kind`.
+	public func mountControllers(for kind: String) throws -> [MountController] {
+		let session = try session("mount \(kind)")
+		let count = amiberry_settings_mount_controller_count(session, kind)
+		return try (0..<count).map { index in
+			var size = 128
+			var id = ""
+			var label = ""
+			var status = AMIBERRY_SETTINGS_BUFFER_TOO_SMALL
+			while size <= layerStringLimit {
+				var identifier = [CChar](repeating: 0, count: size)
+				var name = [CChar](repeating: 0, count: size)
+				status = identifier.withUnsafeMutableBufferPointer { identifier in
+					name.withUnsafeMutableBufferPointer { name in
+						amiberry_settings_mount_controller_get(
+							session, kind, index, identifier.baseAddress, identifier.count, name.baseAddress, name.count)
+					}
+				}
+				if status != AMIBERRY_SETTINGS_BUFFER_TOO_SMALL {
+					id = status == AMIBERRY_SETTINGS_OK ? decodedString(identifier) : ""
+					label = status == AMIBERRY_SETTINGS_OK ? decodedString(name) : ""
+					break
+				}
+				size *= 2
+			}
+			try SettingsError.check(status, id: "mount \(kind) controller \(index)")
+			let unitCount = amiberry_settings_mount_controller_unit_count(session, kind, index)
+			let units = try (0..<unitCount).map { unit in
+				var value: Int32 = 0
+				let (name, unitStatus) = readLayerString(capacity: 128) {
+					amiberry_settings_mount_controller_unit_get(session, kind, index, unit, &value, $0, $1)
+				}
+				try SettingsError.check(unitStatus, id: "mount \(kind) controller \(index) unit \(unit)")
+				return MountControllerUnit(value: Int(value), label: name)
+			}
+			return MountController(id: id, label: label, units: units)
+		}
 	}
 
 	public func addMount(_ entry: String) throws {

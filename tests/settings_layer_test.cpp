@@ -10,6 +10,7 @@
 #include "sysdeps.h"
 #include "options.h"
 #include "uae/ppc.h"
+#include "filesys.h"
 #include "memory.h"
 #include "newcpu.h"
 #include "cpuboard.h"
@@ -368,6 +369,24 @@ const expansionromtype expansionroms[] = {
 	{"cdtvcr", "CDTV-CR", "Commodore", nullptr, nullptr, nullptr, nullptr, ROMTYPE_CDTVCR | ROMTYPE_NOT, 0, 0,
 		BOARD_NONAUTOCONFIG_AFTER_Z2, true, nullptr, 0, false, EXPANSIONTYPE_INTERNAL},
 	{nullptr}};
+
+boardromconfig* get_boardromconfig(uae_prefs* p, int romtype, int*)
+{
+	for (boardromconfig& board : p->expansionboard) {
+		if (board.device_type && (board.device_type & ROMTYPE_MASK) == (romtype & ROMTYPE_MASK))
+			return &board;
+	}
+	return nullptr;
+}
+bool is_board_enabled(uae_prefs* p, int romtype, int unit)
+{
+	for (boardromconfig& board : p->expansionboard) {
+		if (board.device_type && (board.device_type & ROMTYPE_MASK) == (romtype & ROMTYPE_MASK)
+			&& board.device_num == unit)
+			return true;
+	}
+	return false;
+}
 void ethernet_updateselection() {}
 
 // The board ROM lookups, over the configuration's board list like the
@@ -588,32 +607,154 @@ int built_in_prefs_preview(uae_prefs* p, int model, int config, int compa)
 	return built_in_prefs(p, model, config, compa, 0);
 }
 
-// Mount list stand-ins: the harness cannot link cfgfile.cpp, so entries
-// use a reduced uaehfN spelling, "dir,rw,DEVICE:PATH", and the adder keeps
-// the hard drive panel's device-name and capacity checks. The session logic
-// around them (copies, placement, merging, apply class) is the layer's own;
-// the IPC test drives the real parser and writer.
+// Mount list stand-ins: the harness cannot link cfgfile.cpp, but keeps the
+// shared layer's uaehfN spelling for field-level tests.
 static size_t stub_mount_line_max = 200;
+
+static std::vector<std::string> split_mount(const char* text, char separator)
+{
+	std::vector<std::string> fields;
+	std::string field;
+	for (const char* c = text; *c; c++) {
+		if (*c == '\\' && c[1]) {
+			field += *++c;
+		} else if (*c == separator) {
+			fields.push_back(field);
+			field.clear();
+		} else {
+			field += *c;
+		}
+	}
+	fields.push_back(field);
+	return fields;
+}
+
+static std::string escape_mount(const char* text)
+{
+	std::string escaped;
+	for (const char* c = text; *c; c++) {
+		if (*c == ',' || *c == '\\')
+			escaped += '\\';
+		escaped += *c;
+	}
+	return escaped;
+}
+
 bool cfgfile_parse_mount_value(uae_prefs*, const TCHAR* value, uaedev_config_info* ci)
 {
-	const char* prefix = "dir,rw,";
-	if (!value || std::strncmp(value, prefix, std::strlen(prefix)) != 0)
+	if (!value || !ci)
 		return false;
-	const char* device = value + std::strlen(prefix);
-	const char* colon = std::strchr(device, ':');
-	if (!colon || colon == device || static_cast<size_t>(colon - device) >= sizeof ci->devname
-		|| std::strlen(colon + 1) >= sizeof ci->rootdir)
+	const std::vector<std::string> fields = split_mount(value, ',');
+	if (fields.size() < 3)
 		return false;
 	std::memset(ci, 0, sizeof *ci);
-	ci->type = UAEDEV_DIR;
-	std::memcpy(ci->devname, device, static_cast<size_t>(colon - device));
-	std::strcpy(ci->rootdir, colon + 1);
+	if (fields[0] == "dir") {
+		const std::vector<std::string> names = split_mount(fields[2].c_str(), ':');
+		if (names.size() < 2 || names[0].empty())
+			return false;
+		ci->type = UAEDEV_DIR;
+		std::strncpy(ci->devname, names[0].c_str(), sizeof ci->devname - 1);
+		if (names.size() > 2) {
+			std::strncpy(ci->volname, names[1].c_str(), sizeof ci->volname - 1);
+			std::strncpy(ci->rootdir, names[2].c_str(), sizeof ci->rootdir - 1);
+		} else {
+			std::strncpy(ci->rootdir, names[1].c_str(), sizeof ci->rootdir - 1);
+		}
+		ci->bootpri = fields.size() > 3 ? std::atoi(fields[3].c_str()) : 0;
+	} else {
+		if (fields[0].rfind("hdf", 0) == 0) ci->type = UAEDEV_HDF;
+		else if (fields[0].rfind("cd", 0) == 0) {
+			ci->type = UAEDEV_CD;
+			ci->device_emu_unit = std::atoi(fields[0].c_str() + 2);
+		} else if (fields[0].rfind("tape", 0) == 0) {
+			ci->type = UAEDEV_TAPE;
+			ci->device_emu_unit = std::atoi(fields[0].c_str() + 4);
+		} else return false;
+		const std::vector<std::string> names = split_mount(fields[2].c_str(), ':');
+		if (names.size() < 2)
+			return false;
+		std::strncpy(ci->devname, names[0].c_str(), sizeof ci->devname - 1);
+		std::strncpy(ci->rootdir, names[1].c_str(), sizeof ci->rootdir - 1);
+		if (fields.size() >= 8) {
+			ci->sectors = std::atoi(fields[3].c_str());
+			ci->surfaces = std::atoi(fields[4].c_str());
+			ci->reserved = std::atoi(fields[5].c_str());
+			ci->blocksize = std::atoi(fields[6].c_str());
+			ci->bootpri = std::atoi(fields[7].c_str());
+		}
+		const std::string controller = fields.size() > 9 ? fields[9] : "uae0";
+		const size_t digit = controller.find_first_of("0123456789");
+		ci->controller_unit = digit == std::string::npos ? 0 : std::atoi(controller.c_str() + digit);
+		if (controller.rfind("ide", 0) == 0) ci->controller_type = HD_CONTROLLER_TYPE_IDE_AUTO;
+		else if (controller.rfind("scsi", 0) == 0) ci->controller_type = HD_CONTROLLER_TYPE_SCSI_AUTO;
+		else if (controller.rfind("custom", 0) == 0) ci->controller_type = HD_CONTROLLER_TYPE_CUSTOM_FIRST;
+		else ci->controller_type = HD_CONTROLLER_TYPE_UAE;
+		const size_t underscore = controller.find('_');
+		if (underscore != std::string::npos) {
+			std::string name = controller.substr(underscore + 1);
+			const size_t dash = name.rfind('-');
+			if (dash != std::string::npos && dash + 2 == name.size() && name[dash + 1] >= '2'
+				&& name[dash + 1] <= '9') {
+				ci->controller_type_unit = name[dash + 1] - '1';
+				name.erase(dash);
+			}
+			if (name == "mainboard")
+				name = "ide_mb";
+			for (int i = 0; expansionroms[i].name; i++) {
+				if (name != expansionroms[i].name)
+					continue;
+				if (controller.rfind("ide", 0) == 0)
+					ci->controller_type = HD_CONTROLLER_TYPE_IDE_EXPANSION_FIRST + i;
+				else if (controller.rfind("scsi", 0) == 0)
+					ci->controller_type = HD_CONTROLLER_TYPE_SCSI_EXPANSION_FIRST + i;
+				else if (controller.rfind("custom", 0) == 0)
+					ci->controller_type = HD_CONTROLLER_TYPE_CUSTOM_FIRST + i;
+				break;
+			}
+		}
+	}
+	ci->readonly = fields[1] == "ro";
 	return true;
+}
+
+void cfgfile_controller_template(int ct, int ct_unit, TCHAR* out, size_t size)
+{
+	const char* prefix = ct == HD_CONTROLLER_TYPE_UAE ? "uae%d"
+		: ct == HD_CONTROLLER_TYPE_IDE_AUTO ? "ide%d"
+		: ct == HD_CONTROLLER_TYPE_SCSI_AUTO ? "scsi%d" : nullptr;
+	if (!prefix) {
+		int index = -1;
+		if (ct >= HD_CONTROLLER_TYPE_IDE_EXPANSION_FIRST && ct <= HD_CONTROLLER_TYPE_IDE_LAST) {
+			prefix = "ide%d_";
+			index = ct - HD_CONTROLLER_TYPE_IDE_EXPANSION_FIRST;
+		} else if (ct >= HD_CONTROLLER_TYPE_SCSI_EXPANSION_FIRST && ct <= HD_CONTROLLER_TYPE_SCSI_LAST) {
+			prefix = "scsi%d_";
+			index = ct - HD_CONTROLLER_TYPE_SCSI_EXPANSION_FIRST;
+		} else if (ct >= HD_CONTROLLER_TYPE_CUSTOM_FIRST && ct <= HD_CONTROLLER_TYPE_CUSTOM_LAST) {
+			prefix = "custom%d_";
+			index = ct - HD_CONTROLLER_TYPE_CUSTOM_FIRST;
+		}
+		if (index >= 0 && expansionroms[index].name) {
+			const char* name = !std::strcmp(expansionroms[index].name, "ide_mb") ? "mainboard"
+				: expansionroms[index].name;
+			std::snprintf(out, size, "%s%s", prefix, name);
+		} else {
+			out[0] = 0;
+			return;
+		}
+	} else {
+		std::snprintf(out, size, "%s", prefix);
+	}
+	if (ct_unit > 0) {
+		char suffix[8];
+		std::snprintf(suffix, sizeof suffix, "-%d", ct_unit + 1);
+		std::strncat(out, suffix, size - std::strlen(out) - 1);
+	}
 }
 uaedev_config_data* add_filesys_config(uae_prefs* p, int index, uaedev_config_info* ci)
 {
 	if (index >= 0)
-		return nullptr; // the layer only appends
+		return nullptr;
 	for (int i = 0; i < p->mountitems; i++) {
 		if (!std::strcmp(p->mountconfig[i].ci.devname, ci->devname))
 			return nullptr;
@@ -626,22 +767,78 @@ uaedev_config_data* add_filesys_config(uae_prefs* p, int index, uaedev_config_in
 	std::memcpy(&uci->ci, ci, sizeof *ci);
 	return uci;
 }
+bool cfgfile_mount_value_ci(const uaedev_config_info* ci, TCHAR* out, size_t size)
+{
+	if (!ci || !out || !size)
+		return false;
+	const char* rw = ci->readonly ? "ro" : "rw";
+	if (ci->type == UAEDEV_DIR) {
+		if (ci->volname[0])
+			std::snprintf(out, size, "dir,%s,%s:%s:%s,%d", rw, ci->devname, ci->volname,
+				escape_mount(ci->rootdir).c_str(), ci->bootpri);
+		else
+			std::snprintf(out, size, "dir,%s,%s:%s", rw, ci->devname, escape_mount(ci->rootdir).c_str());
+	} else {
+		const char* prefix = ci->type == UAEDEV_HDF ? "hdf" : ci->type == UAEDEV_CD ? "cd" : "tape";
+		const char* controller = ci->controller_type == HD_CONTROLLER_TYPE_IDE_AUTO ? "ide"
+			: ci->controller_type == HD_CONTROLLER_TYPE_SCSI_AUTO ? "scsi" : "uae";
+		std::snprintf(out, size, "%s%d,%s,%s:%s,%d,%d,%d,%d,%d,,%s%d", prefix,
+			ci->type == UAEDEV_HDF ? 0 : ci->device_emu_unit, rw, ci->devname, escape_mount(ci->rootdir).c_str(),
+			ci->sectors, ci->surfaces, ci->reserved, ci->blocksize, ci->bootpri, controller, ci->controller_unit);
+	}
+	return std::strlen(out) < size;
+}
 bool cfgfile_mount_value(uae_prefs* p, int index, TCHAR* out, size_t size)
 {
-	if (index < 0 || index >= p->mountitems)
-		return false;
-	std::snprintf(out, size, "dir,rw,%s:%s", p->mountconfig[index].ci.devname, p->mountconfig[index].ci.rootdir);
-	return true;
+	return index >= 0 && index < p->mountitems && cfgfile_mount_value_ci(&p->mountconfig[index].ci, out, size);
 }
 TCHAR* validatedevicename(TCHAR* s, const TCHAR*)
 {
 	if (std::strlen(s) > 30)
-		s[30] = 0; // the core's striplength(s, 30)
+		s[30] = 0;
+	return s;
+}
+TCHAR* validatevolumename(TCHAR* s, const TCHAR*)
+{
+	if (std::strlen(s) > 30)
+		s[30] = 0;
 	return s;
 }
 bool cfgfile_mount_entry_fits(uae_prefs* p, int index)
 {
-	return std::strlen(p->mountconfig[index].ci.rootdir) < stub_mount_line_max;
+	char value[CONFIG_BLEN];
+	return cfgfile_mount_value(p, index, value, sizeof value)
+		&& std::strlen(value) < stub_mount_line_max;
+}
+
+static std::map<hardfiledata*, FILE*> test_hardfiles;
+int hdf_open(hardfiledata* hfd, const TCHAR* path)
+{
+	FILE* file = std::fopen(path, "rb");
+	if (!file)
+		return 0;
+	test_hardfiles[hfd] = file;
+	return 1;
+}
+int hdf_open(hardfiledata* hfd)
+{
+	return hdf_open(hfd, hfd->ci.rootdir);
+}
+void hdf_close(hardfiledata* hfd)
+{
+	auto it = test_hardfiles.find(hfd);
+	if (it != test_hardfiles.end()) {
+		std::fclose(it->second);
+		test_hardfiles.erase(it);
+	}
+}
+int hdf_read_rdb(hardfiledata* hfd, void* buffer, uae_u64 offset, int length)
+{
+	auto it = test_hardfiles.find(hfd);
+	if (it == test_hardfiles.end())
+		return 0;
+	std::fseek(it->second, static_cast<long>(offset), SEEK_SET);
+	return static_cast<int>(std::fread(buffer, 1, length, it->second));
 }
 
 namespace settings = amiberry_settings;
@@ -4308,6 +4505,73 @@ void check_mount_list()
 	CHECK(amiberry_settings_mount_get(session, 0, value, 4) == AMIBERRY_SETTINGS_BUFFER_TOO_SMALL);
 	CHECK(amiberry_settings_mount_get(session, 1, value, sizeof value) == AMIBERRY_SETTINGS_UNKNOWN_ID);
 
+	// Field APIs preserve escaped paths and both non-bootable priorities.
+	char mount[CONFIG_BLEN], field[64];
+	CHECK(amiberry_settings_mount_field_get(session, "hdf,rw,DH9:/a\\,b.hdf,32,1,2,512,-128,,uae0",
+		"path", field, sizeof field) == AMIBERRY_SETTINGS_OK && !std::strcmp(field, "/a,b.hdf"));
+	CHECK(amiberry_settings_mount_field_set(session, "hdf,rw,DH9:/a\\,b.hdf,32,1,2,512,-128,,uae0",
+		"boot_priority", "-129", mount, sizeof mount) == AMIBERRY_SETTINGS_OK);
+	CHECK(amiberry_settings_mount_field_get(session, mount, "boot_priority", field, sizeof field)
+		== AMIBERRY_SETTINGS_OK && !std::strcmp(field, "-129"));
+	CHECK(amiberry_settings_mount_field_set(session, mount, "kind", "hdf", mount, sizeof mount)
+		== AMIBERRY_SETTINGS_UNKNOWN_ID);
+	CHECK(amiberry_settings_mount_field_set(session, mount, "sectors", "-1", mount, sizeof mount)
+		== AMIBERRY_SETTINGS_INVALID_VALUE);
+
+	CHECK(amiberry_settings_mount_default(session, "dir", "/archives/Work.zip", mount, sizeof mount)
+		== AMIBERRY_SETTINGS_OK);
+	CHECK(amiberry_settings_mount_field_get(session, mount, "device", field, sizeof field)
+		== AMIBERRY_SETTINGS_OK && !std::strcmp(field, "DH1"));
+	CHECK(amiberry_settings_mount_field_get(session, mount, "volume", field, sizeof field)
+		== AMIBERRY_SETTINGS_OK && !std::strcmp(field, "Work"));
+	const char* const probe_path = "settings-layer-rdb.hdf";
+	FILE* probe = std::fopen(probe_path, "wb");
+	uae_u8 block[512]{};
+	std::fwrite(block, 1, sizeof block, probe);
+	std::fwrite(block, 1, sizeof block, probe);
+	std::fclose(probe);
+	CHECK(amiberry_settings_mount_default(session, "hdf", probe_path, mount, sizeof mount)
+		== AMIBERRY_SETTINGS_OK);
+	CHECK(amiberry_settings_mount_field_get(session, mount, "sectors", field, sizeof field)
+		== AMIBERRY_SETTINGS_OK && !std::strcmp(field, "32"));
+	probe = std::fopen(probe_path, "r+b");
+	std::memcpy(block, "RDSK\0\0\0", 7);
+	std::fseek(probe, 512, SEEK_SET);
+	std::fwrite(block, 1, sizeof block, probe);
+	std::fclose(probe);
+	CHECK(amiberry_settings_mount_default(session, "hdf", probe_path, mount, sizeof mount)
+		== AMIBERRY_SETTINGS_OK);
+	CHECK(amiberry_settings_mount_field_get(session, mount, "sectors", field, sizeof field)
+		== AMIBERRY_SETTINGS_OK && !std::strcmp(field, "0"));
+	// Picking another image probes it: an RDB sets RDB mode, and leaving
+	// it for an image without one gets the plain geometry back.
+	char picked[256];
+	CHECK(amiberry_settings_mount_field_set(session, "hdf,rw,DH5:/plain.hdf,32,1,2,512,3,,uae0", "path",
+		probe_path, picked, sizeof picked) == AMIBERRY_SETTINGS_OK);
+	CHECK(amiberry_settings_mount_field_get(session, picked, "sectors", field, sizeof field)
+		== AMIBERRY_SETTINGS_OK && !std::strcmp(field, "0"));
+	CHECK(amiberry_settings_mount_field_get(session, picked, "boot_priority", field, sizeof field)
+		== AMIBERRY_SETTINGS_OK && !std::strcmp(field, "3"));
+	CHECK(amiberry_settings_mount_field_set(session, picked, "path", "/other.hdf", mount, sizeof mount)
+		== AMIBERRY_SETTINGS_OK);
+	CHECK(amiberry_settings_mount_field_get(session, mount, "sectors", field, sizeof field)
+		== AMIBERRY_SETTINGS_OK && !std::strcmp(field, "32"));
+	// A name the entry's spelling cannot hold is refused.
+	CHECK(amiberry_settings_mount_field_set(session, mount, "device", "DH:5", picked, sizeof picked)
+		== AMIBERRY_SETTINGS_INVALID_VALUE);
+	CHECK(amiberry_settings_mount_field_set(session, mount, "path", "/a\"b.hdf", picked, sizeof picked)
+		== AMIBERRY_SETTINGS_INVALID_VALUE);
+	std::remove(probe_path);
+	CHECK(amiberry_settings_mount_default(session, "cd", "", mount, sizeof mount)
+		== AMIBERRY_SETTINGS_OK);
+	CHECK(amiberry_settings_mount_field_get(session, mount, "controller", field, sizeof field)
+		== AMIBERRY_SETTINGS_OK && !std::strcmp(field, "ide%d"));
+	CHECK(amiberry_settings_mount_default(session, "tape", "/tape", mount, sizeof mount)
+		== AMIBERRY_SETTINGS_OK);
+	CHECK(amiberry_settings_mount_field_get(session, mount, "controller", field, sizeof field)
+		== AMIBERRY_SETTINGS_OK && !std::strcmp(field, "uae%d"));
+	CHECK(amiberry_settings_mount_controller_count(session, "hdf") == 3);
+
 	CHECK(amiberry_settings_mount_add(session, "dir,rw,DH1:/games") == AMIBERRY_SETTINGS_OK);
 	CHECK(amiberry_settings_mount_add(session, "dir,rw,DH2:/music") == AMIBERRY_SETTINGS_OK);
 	// Refused like the panel refuses them: a device name in use, a value
@@ -4370,7 +4634,43 @@ void check_mount_list()
 	CHECK(amiberry_settings_mount_count(session) == AMIBERRY_SETTINGS_MOUNT_MAX - 1);
 	CHECK(amiberry_settings_mount_count(nullptr) == 0);
 	amiberry_settings_session_close(session);
+
+	// A configured A2091 contributes its SCSI controller and the XT unit,
+	// whose unit-level kind is restricted to hardfiles.
+	reset_prefs(changed_prefs);
+	CHECK(get_device_rom_new(&changed_prefs, ROMTYPE_A2091, 0, nullptr) != nullptr);
+	session = amiberry_settings_session_open();
+	CHECK(amiberry_settings_mount_controller_count(session, "hdf") == 4);
+	CHECK(amiberry_settings_mount_controller_unit_count(session, "hdf", 3) == 9);
+	int unit_value = -1;
+	CHECK(amiberry_settings_mount_controller_unit_get(session, "hdf", 3, 8, &unit_value, field, sizeof field)
+		== AMIBERRY_SETTINGS_OK && unit_value == 8 && !std::strcmp(field, "XT"));
+	CHECK(amiberry_settings_mount_controller_unit_count(session, "cd", 2) == 8);
+	CHECK(amiberry_settings_mount_default(session, "cd", "", mount, sizeof mount)
+		== AMIBERRY_SETTINGS_OK);
+	CHECK(amiberry_settings_mount_field_get(session, mount, "controller", field, sizeof field)
+		== AMIBERRY_SETTINGS_OK && !std::strcmp(field, "scsi%d"));
+	// A second CD drive takes the next emulated unit, so adding it succeeds.
+	CHECK(!std::strncmp(mount, "cd0,", 4) && amiberry_settings_mount_add(session, mount) == AMIBERRY_SETTINGS_OK);
+	CHECK(amiberry_settings_mount_default(session, "cd", "", mount, sizeof mount) == AMIBERRY_SETTINGS_OK
+		&& !std::strncmp(mount, "cd1,", 4));
+	amiberry_settings_session_close(session);
 	changed_prefs.mountitems = 0;
+
+	// Every controller id is the configuration file's spelling: with its
+	// first unit put in, the loader reads it back as the same controller
+	// (the machines' own ones are "ide%d_mainboard", not their board ids).
+	bool mainboard = false;
+	for (const settings::mount_controller& controller : settings::mount_controllers(nullptr)) {
+		mainboard |= controller.id == "ide%d_mainboard";
+		char spelled[MAX_DPATH];
+		std::snprintf(spelled, sizeof spelled, controller.id.c_str(), controller.units.front().value);
+		const std::string entry = std::string("hdf,rw,DH0:/x.hdf,32,1,2,512,0,,") + spelled;
+		uaedev_config_info ci{};
+		CHECK(cfgfile_parse_mount_value(&changed_prefs, entry.c_str(), &ci));
+		CHECK(ci.controller_type == controller.type && ci.controller_type_unit == controller.type_unit);
+	}
+	CHECK(mainboard);
 }
 
 // get_active reads the configuration the emulation runs with, not the

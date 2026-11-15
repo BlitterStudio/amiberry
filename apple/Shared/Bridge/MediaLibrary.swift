@@ -178,4 +178,20 @@ public enum MediaLibrary {
 		guard status == AMIBERRY_SETTINGS_OK else { return nil }
 		return (decodedString(description), decodedString(category))
 	}
+
+	/// Creates an empty raw hardfile or dynamic VHD. The layer chooses the
+	/// resulting `.vhd` spelling for a dynamic image and returns it.
+	/// A raw image may be written away from the main actor (it touches no
+	/// emulator state and gigabytes take a while); a dynamic VHD goes
+	/// through the core's file layer and must be created on the main actor.
+	nonisolated public static func createHardfile(at path: String, sizeMB: Int, dynamicVHD: Bool) throws -> String {
+		let bytes = UInt64(exactly: sizeMB).flatMap {
+			$0 <= UInt64.max / (1_024 * 1_024) ? $0 * 1_024 * 1_024 : nil
+		} ?? 0
+		let (created, status) = readLayerString(capacity: 1024) {
+			amiberry_media_create_hardfile(path, bytes, dynamicVHD, $0, $1)
+		}
+		try SettingsError.check(status, id: "hardfile", value: path)
+		return created
+	}
 }

@@ -14,6 +14,7 @@
 #include "rommgr.h"
 #include "uae.h"
 #include "settings/settings_definitions.h"
+#include "settings/amiberry_media.h"
 
 namespace settings = amiberry_settings;
 
@@ -52,36 +53,6 @@ static bool create_hdf_dynamic = false;
 static std::string create_hdf_error;
 static std::string harddrive_modal_error;
 
-static bool path_has_extension(const TCHAR* path, const TCHAR* extension)
-{
-	const auto path_len = _tcslen(path);
-	const auto ext_len = _tcslen(extension);
-	return path_len >= ext_len && !_tcsicmp(path + path_len - ext_len, extension);
-}
-
-static bool create_raw_hdf(const TCHAR* path, const uae_u64 size)
-{
-	if (path[0] == 0 || size == 0)
-		return false;
-
-	auto* const file = zfile_fopen(path, _T("wb"), 0);
-	if (!file)
-		return false;
-
-	static const uae_u8 zero_buffer[1024 * 1024] = {};
-	uae_u64 remaining = size;
-	bool created = true;
-	while (remaining > 0) {
-		const size_t to_write = static_cast<size_t>(std::min<uae_u64>(remaining, sizeof zero_buffer));
-		if (zfile_fwrite(zero_buffer, to_write, 1, file) != 1) {
-			created = false;
-			break;
-		}
-		remaining -= to_write;
-	}
-	zfile_fclose(file);
-	return created;
-}
 
 // Cache get_filesys_unitconfig() results to avoid expensive per-frame I/O.
 // HDF: hdf_open()/hdf_close(). CD/TAPE: blkdev_get_info() opens+closes the
@@ -1009,24 +980,16 @@ static void ShowCreateHardfileModal()
             _tcsncpy(create_path, current_hfdlg.ci.rootdir, MAX_DPATH - 1);
             create_path[MAX_DPATH - 1] = 0;
 
-            bool created = false;
-            if (create_hdf_dynamic) {
-                bool path_was_converted = false;
-                if (path_has_extension(create_path, _T(".hdf"))) {
-                    _tcscpy(create_path + _tcslen(create_path) - 4, _T(".vhd"));
-                    path_was_converted = true;
-                }
-                if (path_was_converted && zfile_exists(create_path)) {
-                    char* path = ua(create_path);
-                    create_hdf_error = "Dynamic VHD target already exists: ";
-                    create_hdf_error += path ? path : "";
-                    xfree(path);
-                } else {
-                    created = vhd_create(create_path, size_bytes, 0) != 0;
-                }
-            } else {
-                created = create_raw_hdf(create_path, size_bytes);
-            }
+            TCHAR created_path[MAX_DPATH];
+            const amiberry_settings_status status = amiberry_media_create_hardfile(create_path, size_bytes,
+                create_hdf_dynamic, created_path, sizeof created_path / sizeof created_path[0]);
+            const bool created = status == AMIBERRY_SETTINGS_OK;
+            if (created)
+                _tcsncpy(current_hfdlg.ci.rootdir, created_path, MAX_DPATH - 1);
+            else if (status == AMIBERRY_SETTINGS_INVALID_VALUE)
+                create_hdf_error = "Hardfile target already exists or the size is invalid.";
+            else if (status == AMIBERRY_SETTINGS_UNAVAILABLE)
+                create_hdf_error = "Could not create hardfile.";
 
             if (created) {
                 show_create_hdf_modal = false;
