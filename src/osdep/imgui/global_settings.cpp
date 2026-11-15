@@ -25,12 +25,20 @@ struct StringComboOption
 	const char* label;
 };
 
+// Every group is its own table, so the label column width is shared: each
+// frame measures the widest label and the next frame sizes all tables to it.
+// A fixed button-based width let long labels run under the value column.
+static float label_column_width = 0.0f;
+static float label_column_width_next = 0.0f;
+
 static bool begin_settings_table(const char* id)
 {
 	if (!ImGui::BeginTable(id, 2, ImGuiTableFlags_SizingStretchProp))
 		return false;
 
-	ImGui::TableSetupColumn("Setting", ImGuiTableColumnFlags_WidthFixed, BUTTON_WIDTH * 2.1f);
+	const float width = std::max(BUTTON_WIDTH * 2.1f,
+		label_column_width + ImGui::GetStyle().ItemSpacing.x);
+	ImGui::TableSetupColumn("Setting", ImGuiTableColumnFlags_WidthFixed, width);
 	ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthStretch);
 	return true;
 }
@@ -41,6 +49,7 @@ static void next_setting_row(const char* label)
 	ImGui::TableSetColumnIndex(0);
 	ImGui::AlignTextToFramePadding();
 	ImGui::TextUnformatted(label);
+	label_column_width_next = std::max(label_column_width_next, ImGui::GetItemRectSize().x);
 	ImGui::TableSetColumnIndex(1);
 	ImGui::PushID(label);
 }
@@ -411,6 +420,8 @@ static void save_global_settings()
 void render_panel_global_settings()
 {
 	ImGui::Indent(4.0f);
+	label_column_width = label_column_width_next;
+	label_column_width_next = 0.0f;
 
 	if (AmigaButton(ICON_FA_FLOPPY_DISK " Save Global Settings", ImVec2(BUTTON_WIDTH * 2.0f, BUTTON_HEIGHT)))
 		save_global_settings();
