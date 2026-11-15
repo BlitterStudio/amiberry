@@ -12,6 +12,7 @@
 """
 
 import os
+import platform
 from pathlib import Path
 import struct
 import sys
@@ -23,6 +24,11 @@ from cpu_thread_live_test import rom_image
 from ipc_actions_test import Connection, Emulator
 
 CODE_BASE = 0x30000  # rom_image() copies the code there and jumps to it
+
+# Only the ARM64 JIT compiles the exact core's FPU instructions (the x86-64
+# JIT leaves them to the interpreter): elsewhere the JIT case still checks the
+# results, but not that the instruction was compiled.
+JIT_COMPILES_EXACT_FPU = platform.machine().lower() in ("aarch64", "arm64")
 
 
 class Asm:
@@ -213,7 +219,7 @@ class FpuLiveTests(unittest.TestCase):
 
     def cia_case(self, cache):
         with tempfile.TemporaryDirectory(prefix="amiberry-fpucia-") as directory:
-            stats = str(Path(directory) / "fpustats.txt") if cache else None
+            stats = str(Path(directory) / "fpustats.txt") if cache and JIT_COMPILES_EXACT_FPU else None
             emu = self.start(directory, cia_code(), "exact", cache, stats)
             try:
                 deadline = time.monotonic() + 10
