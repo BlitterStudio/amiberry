@@ -181,7 +181,7 @@ static int ahi_init_record ()
 	return 1;
 }
 
-static void ahi_apply_volume()
+void ahi_apply_volume()
 {
 	if (!ahi_stream)
 		return;
