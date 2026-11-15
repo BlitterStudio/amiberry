@@ -1225,6 +1225,13 @@ bool p96_is_zero_copy_surface(int monid, const void* pixels)
 	return rtg_vram && pixels == rtg_vram;
 }
 
+// The feature overlay (PIP) is composited into the copied frame by
+// picasso_flushoverlay(), which a zero-copy surface never receives.
+bool p96_overlay_active()
+{
+	return overlay_vram && overlay_active;
+}
+
 // True if ptr lies inside any RTG board's VRAM, using the same natmem mapping as
 // p96_get_render_buffer_pointer(). A zero-copy surface wraps VRAM at whatever
 // XYOffset was current when it was created, so a range test still catches it

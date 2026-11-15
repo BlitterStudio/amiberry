@@ -947,6 +947,8 @@ bool vkbd_allowed(const int monid)
 	return currprefs.vkbd_enabled;
 }
 
+static bool zero_copy_saw_overlay[MAX_AMIGAMONITORS];
+
 static bool amiberry_renderframe(const int monid, int mode, int immediate)
 {
 	// Skip all rendering if in headless mode
@@ -963,10 +965,19 @@ static bool amiberry_renderframe(const int monid, int mode, int immediate)
 	{
 		update_leds(monid);
 	}
+	// A feature overlay starts and stops without a mode change. Rebind the
+	// surface so zero-copy gives way to the copy path while it is shown.
+	if (AMonitors[monid].screen_is_picasso && p96_is_zero_copy_enabled(monid)) {
+		const bool overlay = p96_overlay_active();
+		if (overlay != zero_copy_saw_overlay[monid]) {
+			zero_copy_saw_overlay[monid] = overlay;
+			const_cast<amigadisplay*>(ad)->picasso_zero_copy_update_needed = true;
+		}
+	}
 	// Consume the zero-copy refresh request. The flag is set by picasso96
-	// state changes (SetDisplay, SetPanning) and forces the host surface
-	// binding to follow the current Amiga VRAM address. This is orthogonal
-	// to the threaded CPU.
+	// state changes (SetGC, SetDisplay, SetPanning, SetSplitPosition) and by
+	// the overlay check above, and forces the host surface binding to follow
+	// the current Amiga VRAM address. This is orthogonal to the threaded CPU.
 	if (ad->picasso_zero_copy_update_needed) {
 		const_cast<amigadisplay*>(ad)->picasso_zero_copy_update_needed = false;
 		if (p96_is_zero_copy_enabled(monid)) {
@@ -2047,10 +2058,13 @@ bool target_graphics_buffer_update(const int monid, const bool force)
 		if (rtg_render_ptr != nullptr && p96_bpp == host_bpp &&
 			p96_rgbformat_matches_host_pixel_format(state->RGBFormat, pixel_format) &&
 			p96_screen_fits_board_memory(mon->monitor_id) &&
-			picasso_vidinfo[mon->monitor_id].splitypos < 0) {
+			picasso_vidinfo[mon->monitor_id].splitypos < 0 &&
+			!p96_overlay_active()) {
 			// A wrapped (SetPanning past the end of VRAM) or split screen
 			// must go through the copying path: a zero-copy surface is the
-			// board memory itself and cannot wrap or compose rows.
+			// board memory itself and cannot wrap or compose rows. Neither
+			// can it show the feature overlay, which is composited into the
+			// copied frame.
 			is_zero_copy_eligible = true;
 		}
 	}

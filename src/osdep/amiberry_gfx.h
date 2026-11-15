@@ -22,6 +22,7 @@ extern bool p96_is_zero_copy_enabled(int monid);
 extern bool p96_is_zero_copy_surface(int monid, const void* pixels);
 extern bool p96_is_vram_pointer(const void* ptr);
 extern bool p96_screen_fits_board_memory(int monid);
+extern bool p96_overlay_active();
 #endif
 
 #define GUI_WIDTH  860
