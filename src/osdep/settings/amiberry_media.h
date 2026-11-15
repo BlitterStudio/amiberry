@@ -202,6 +202,9 @@ AMIBERRY_SETTINGS_API amiberry_settings_status amiberry_media_configuration_info
  * never overwritten. INVALID_VALUE for a size below 1 MiB or an existing
  * path, UNAVAILABLE when the file cannot be written (any partial file is
  * removed), BUFFER_TOO_SMALL for a missing or too small created buffer.
+ * A raw image touches no emulator state and may be created on any thread
+ * (writing gigabytes takes a while); a dynamic VHD, which is small and
+ * written through the core's file layer, only on the main thread.
  */
 AMIBERRY_SETTINGS_API amiberry_settings_status amiberry_media_create_hardfile(const char *path,
 	unsigned long long size_bytes, bool dynamic_vhd, char *created, size_t created_size);

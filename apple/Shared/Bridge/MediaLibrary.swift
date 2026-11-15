@@ -181,7 +181,10 @@ public enum MediaLibrary {
 
 	/// Creates an empty raw hardfile or dynamic VHD. The layer chooses the
 	/// resulting `.vhd` spelling for a dynamic image and returns it.
-	public static func createHardfile(at path: String, sizeMB: Int, dynamicVHD: Bool) throws -> String {
+	/// A raw image may be written away from the main actor (it touches no
+	/// emulator state and gigabytes take a while); a dynamic VHD goes
+	/// through the core's file layer and must be created on the main actor.
+	nonisolated public static func createHardfile(at path: String, sizeMB: Int, dynamicVHD: Bool) throws -> String {
 		let bytes = UInt64(exactly: sizeMB).flatMap {
 			$0 <= UInt64.max / (1_024 * 1_024) ? $0 * 1_024 * 1_024 : nil
 		} ?? 0

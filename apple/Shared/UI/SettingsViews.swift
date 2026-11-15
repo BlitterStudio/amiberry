@@ -1321,6 +1321,8 @@ private struct CreateHardfileSheet: View {
 	@State private var dynamicVHD = false
 	@State private var path = ""
 	@State private var message: String?
+	/// While the file is written (a large raw image takes a while).
+	@State private var creating = false
 
 	var body: some View {
 		VStack(alignment: .leading, spacing: 12) {
@@ -1343,14 +1345,20 @@ private struct CreateHardfileSheet: View {
 					.font(.callout)
 			}
 			HStack {
+				if creating {
+					ProgressView().controlSize(.small)
+				}
 				Spacer()
 				Button("Cancel", role: .cancel) { dismiss() }
+					.disabled(creating)
 				Button("Create") { create() }
 					.keyboardShortcut(.defaultAction)
+					.disabled(creating)
 			}
 		}
 		.padding(20)
 		.frame(minWidth: 380)
+		.interactiveDismissDisabled(creating)
 		.onAppear { chooseLocation() }
 	}
 
@@ -1375,16 +1383,35 @@ private struct CreateHardfileSheet: View {
 			message = "Enter a size of at least 1 MB."
 			return
 		}
-		do {
-			let file = try MediaLibrary.createHardfile(at: path, sizeMB: sizeMB, dynamicVHD: dynamicVHD)
-			guard let entry = model.store.defaultMount(kind: "hdf", path: file) else {
-				message = model.store.lastError.map(SettingsWindowModel.describe)
-				return
+		let target = path
+		let size = sizeMB
+		let dynamic = dynamicVHD
+		creating = true
+		message = nil
+		Task {
+			// A raw image of gigabytes is written off the main actor so the
+			// window keeps working; a dynamic VHD is a few kilobytes written
+			// through the core's file layer, which only the main thread uses.
+			let result: Result<String, any Error>
+			if dynamic {
+				result = Result { try MediaLibrary.createHardfile(at: target, sizeMB: size, dynamicVHD: true) }
+			} else {
+				result = await Task.detached(priority: .userInitiated) {
+					Result { try MediaLibrary.createHardfile(at: target, sizeMB: size, dynamicVHD: false) }
+				}.value
 			}
-			created(entry)
-			dismiss()
-		} catch {
-			message = SettingsWindowModel.describe(error)
+			creating = false
+			switch result {
+			case .success(let file):
+				guard let entry = model.store.defaultMount(kind: "hdf", path: file) else {
+					message = model.store.lastError.map(SettingsWindowModel.describe)
+					return
+				}
+				created(entry)
+				dismiss()
+			case .failure(let error):
+				message = SettingsWindowModel.describe(error)
+			}
 		}
 	}
 }
