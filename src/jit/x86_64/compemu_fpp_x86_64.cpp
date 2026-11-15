@@ -699,7 +699,7 @@ static void get_fp_condition(int condition)
 void comp_fscc_opp(uae_u32 opcode, uae_u16 extra)
 {
 	// Signaling predicates must update BSUN and honor its FPCR enable.
-	if (!currprefs.compfpu || jit_disable.fscc || (extra & 0x30) || (opcode & 0x38)) {
+	if (!jit_fpu_enabled() || jit_disable.fscc || (extra & 0x30) || (opcode & 0x38)) {
 		FAIL(1);
 		return;
 	}
@@ -722,7 +722,7 @@ void comp_fbcc_opp(uae_u32 opcode)
 	uintptr v1;
 	uintptr v2;
 
-	if (!currprefs.compfpu)
+	if (!jit_fpu_enabled())
 	{
 		FAIL(1);
 		return;
@@ -1181,13 +1181,13 @@ void comp_fpp_opp(uae_u32 opcode, uae_u16 extra)
 		FAIL(1);
 		return;
 	}
-	if (!currprefs.compfpu)
+	if (!jit_fpu_enabled())
 	{
 		FAIL(1);
 		return;
 	}
 #ifdef USE_LONG_DOUBLE
-	if (currprefs.fpu_mode == 0) {
+	if (currprefs.fpu_mode == FPU_MODE_AUTO || currprefs.fpu_mode == FPU_MODE_HOST) { // the host long double core
 		const int opclass = extra >> 13;
 		if (opclass == 0 || opclass == 2 || opclass == 3 || opclass == 6 || opclass == 7) {
 			if (fp_native_disabled(extra)) {

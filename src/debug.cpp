@@ -967,7 +967,7 @@ static int readregx(TCHAR **c, uae_u32 *valp, debugfloatx80 *valx80p)
 #ifdef WITH_SOFTFLOAT
 	if (idx >= BREAKPOINT_REG_FPx && idx < BREAKPOINT_REG_FPx + 8) {
 		int fpureg = idx - BREAKPOINT_REG_FPx;
-		if (currprefs.fpu_mode > 0) {
+		if (fpu_softfloat_core()) {
 			*valx80p = regs.fp[fpureg].fpx;
 		} else {
 			*valx80p = doubletof80(regs.fp[fpureg].fp);

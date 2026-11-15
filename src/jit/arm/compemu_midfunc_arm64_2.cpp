@@ -3252,13 +3252,10 @@ MIDFUNC(2,jff_DIVU,(RW4 d, RR4 s))
 		SET_xxVflag(REG_WORK1, REG_WORK1);
 		CLEAR_xxCflag(REG_WORK1, REG_WORK1);
 	} else if (currprefs.cpu_model >= 68020) {
-		// 68020/030 preserve incoming Z/C and N, except a negative dividend sets N.
-		int saved_flags = readreg(FLAGTMP);
-		MOV_ww(REG_WORK1, saved_flags);
-		unlock2(saved_flags);
-		SET_xxVflag(REG_WORK1, REG_WORK1);
+		// 68020/030, as setdivuflags(): V set, C and Z clear, N = dividend < 0.
+		MOV_wish(REG_WORK1, 0x1000, 16);  // V
 		TBZ_wii(d, 31, 2);
-		SET_xxNflag(REG_WORK1, REG_WORK1);
+		MOV_wish(REG_WORK1, 0x9000, 16);  // N V
 	} else if (currprefs.cpu_model == 68010) {
 		// 68010: V set, Z/C cleared, N cleared only if both operands are negative.
 		MOV_wish(REG_WORK1, 0x9000, 16);
@@ -3495,29 +3492,57 @@ MIDFUNC(2,jff_DIVS,(RW4 d, RR4 s))
 }
 MENDFUNC(2,jff_DIVS,(RW4 d, RR4 s))
 
+/* DIVL division by zero: the flags of divsl_divbyzero()/divul_divbyzero().
+ * 68040/060: C clear, N/Z/V unchanged. 68020/030: DIVS.L N clear, Z set;
+ * DIVU.L N/Z from the dividend, V set; C clear. */
+static void emit_divl_div0_flags(int d, bool issigned)
+{
+	if (currprefs.cpu_model >= 68040) {
+		MRS_NZCV_x(REG_WORK1);
+		CLEAR_xxCflag(REG_WORK1, REG_WORK1);
+	} else if (issigned) {
+		MOV_wish(REG_WORK1, 0x4000, 16);    // Z
+	} else {
+		MOV_wish(REG_WORK1, 0x1000, 16);    // V
+		TBZ_wii(d, 31, 2);
+		MOV_wish(REG_WORK1, 0x9000, 16);    // N V
+		CBNZ_wi(d, 2);
+		MOV_wish(REG_WORK1, 0x5000, 16);    // Z V
+	}
+	MSR_NZCV_x(REG_WORK1);
+}
+
+/* DIVU.L <ea>,Dq / DIVUL.L <ea>,Dr:Dq (32-bit dividend): no overflow is
+ * possible; division by zero signals exception 5 with Dq/Dr unchanged. */
+static void emit_divlu32(int d, int s1, int rem, bool flags)
+{
+	uae_u32 *branch_div0 = (uae_u32 *)get_target();
+	CBZ_wi(s1, 0);                          // -> division by zero
+
+	UDIV_www(REG_WORK1, d, s1);
+	MSUB_wwww(rem, s1, REG_WORK1, d);       // remainder
+	MOV_ww(d, REG_WORK1);
+	if (flags)
+		TST_ww(d, d);
+	uae_u32 *branch_end = (uae_u32 *)get_target();
+	B_i(0);
+
+	write_jmp_target(branch_div0, (uintptr)get_target());
+	if (flags)
+		emit_divl_div0_flags(d, false);
+	MOV_wi(REG_WORK1, 5);                   // signal exception 5
+	uintptr idx = (uintptr)(&regs.jit_exception) - (uintptr)(&regs);
+	STR_wXi(REG_WORK1, R_REGSTRUCT, idx);
+
+	write_jmp_target(branch_end, (uintptr)get_target());
+}
+
 MIDFUNC(3,jnf_DIVLU32,(RW4 d, RR4 s1, W4 rem))
 {
 	s1 = readreg(s1);
 	d = rmw(d);
-	rem = writereg(rem);
-
-	CBNZ_wi(s1, 4);     // src is not 0
-
-	// Signal exception 5
-	MOV_wi(REG_WORK1, 5);
-	uintptr idx = (uintptr)(&regs.jit_exception) - (uintptr)(&regs);
-	STR_wXi(REG_WORK1, R_REGSTRUCT, idx);
-	B_i(4);        // end_of_op
-
-	// src is not 0
-	UDIV_www(REG_WORK1, d, s1);
-
-	// Here we have to calc remainder
-	MSUB_wwww(rem, s1, REG_WORK1, d);
-	MOV_ww(d, REG_WORK1);
-
-// end_of_op
-
+	rem = rmw(rem);     // unchanged on division by zero: load it
+	emit_divlu32(d, s1, rem, false);
 	unlock2(rem);
 	unlock2(d);
 	unlock2(s1);
@@ -3528,28 +3553,8 @@ MIDFUNC(3,jff_DIVLU32,(RW4 d, RR4 s1, W4 rem))
 {
 	s1 = readreg(s1);
 	d = rmw(d);
-	rem = writereg(rem);
-
-	CBNZ_wi(s1, 4);     // src is not 0
-
-	// Signal exception 5
-	MOV_wi(REG_WORK1, 5);
-	uintptr idx = (uintptr)(&regs.jit_exception) - (uintptr)(&regs);
-	STR_wXi(REG_WORK1, R_REGSTRUCT, idx);
-
-	B_i(5);        // end_of_op
-
-	// src is not 0
-	UDIV_www(REG_WORK1, d, s1);
-
-	// Here we have to calc flags and remainder
-	TST_ww(REG_WORK1, REG_WORK1);
-
-	MSUB_wwww(rem, s1, REG_WORK1, d);
-	MOV_ww(d, REG_WORK1);
-
-	// end_of_op
-
+	rem = rmw(rem);     // unchanged on division by zero: load it
+	emit_divlu32(d, s1, rem, true);
 	flags_carry_inverted = false;
 	unlock2(rem);
 	unlock2(d);
@@ -3557,34 +3562,67 @@ MIDFUNC(3,jff_DIVLU32,(RW4 d, RR4 s1, W4 rem))
 }
 MENDFUNC(3,jff_DIVLU32,(RW4 d, RR4 s1, W4 rem))
 
+/* DIVS.L <ea>,Dq / DIVSL.L <ea>,Dr:Dq (32-bit dividend). Division by zero
+ * signals exception 5 and $80000000 / -1 overflows; in both cases Dq and Dr
+ * are unchanged, so rem is taken read-modify-write: a writereg() left its
+ * old value unloaded, and the skipped paths stored garbage in Dr.
+ * Overflow flags as divsl_overflow() for this case: V set, C clear, and
+ * N = 1, Z = 0 on the 68020/030 (dividend negative); on the 68040/060 N and
+ * Z are undefined (cleared here). */
+static void emit_divls32(int d, int s1, int rem, bool flags)
+{
+	uae_u32 *branch_div0 = (uae_u32 *)get_target();
+	CBZ_wi(s1, 0);                          // -> division by zero
+
+	ADD_wwi(REG_WORK1, s1, 1);
+	uae_u32 *branch_ok1 = (uae_u32 *)get_target();
+	CBNZ_wi(REG_WORK1, 0);                  // divisor != -1 -> divide
+	MOV_wish(REG_WORK2, 0x8000, 16);
+	CMP_ww(d, REG_WORK2);
+	uae_u32 *branch_ok2 = (uae_u32 *)get_target();
+	BNE_i(0);                               // dividend != $80000000 -> divide
+	if (flags) {
+		// overflow: V set, C clear
+		if (currprefs.cpu_model >= 68040)
+			MOV_wish(REG_WORK1, 0x1000, 16);    // V
+		else
+			MOV_wish(REG_WORK1, 0x9000, 16);    // N V
+		MSR_NZCV_x(REG_WORK1);
+	}
+	uae_u32 *branch_end1 = (uae_u32 *)get_target();
+	B_i(0);
+
+	write_jmp_target(branch_ok1, (uintptr)get_target());
+	write_jmp_target(branch_ok2, (uintptr)get_target());
+	SDIV_www(REG_WORK1, d, s1);
+	// remainder, with the sign of the dividend
+	MSUB_wwww(rem, s1, REG_WORK1, d);
+	EOR_www(REG_WORK3, rem, d);
+	TBZ_wii(REG_WORK3, 31, 2);
+	NEG_ww(rem, rem);
+	MOV_ww(d, REG_WORK1);
+	if (flags)
+		TST_ww(d, d);
+	uae_u32 *branch_end2 = (uae_u32 *)get_target();
+	B_i(0);
+
+	write_jmp_target(branch_div0, (uintptr)get_target());
+	if (flags)
+		emit_divl_div0_flags(d, true);
+	MOV_wi(REG_WORK1, 5);                   // signal exception 5
+	uintptr idx = (uintptr)(&regs.jit_exception) - (uintptr)(&regs);
+	STR_wXi(REG_WORK1, R_REGSTRUCT, idx);
+
+	write_jmp_target(branch_end1, (uintptr)get_target());
+	write_jmp_target(branch_end2, (uintptr)get_target());
+}
+
 MIDFUNC(3,jnf_DIVLS32,(RW4 d, RR4 s1, W4 rem))
 {
 	s1 = readreg(s1);
 	d = rmw(d);
-	rem = writereg(rem);
-
-	CBNZ_wi(s1, 4);     // src is not 0
-
-	// Signal exception 5
-	MOV_wi(REG_WORK1, 5);
-	uintptr idx = (uintptr)(&regs.jit_exception) - (uintptr)(&regs);
-	STR_wXi(REG_WORK1, R_REGSTRUCT, idx);
-	B_i(7);        // end_of_op
-
-	// src is not 0
-	SDIV_www(REG_WORK1, d, s1);
-
-	// Here we have to calc remainder
-	MSUB_wwww(rem, s1, REG_WORK1, d);
-
-	EOR_www(REG_WORK3, rem, d);	// If sign of remainder and first operand differs, change sign of remainder
-	TBZ_wii(REG_WORK3, 31, 2);
-	NEG_ww(rem, rem);
-
-	MOV_ww(d, REG_WORK1);
-
-	// end_of_op
-
+	rem = rmw(rem);
+	emit_divls32(d, s1, rem, false);
 	unlock2(rem);
 	unlock2(d);
 	unlock2(s1);
@@ -3595,31 +3633,8 @@ MIDFUNC(3,jff_DIVLS32,(RW4 d, RR4 s1, W4 rem))
 {
 	s1 = readreg(s1);
 	d = rmw(d);
-	rem = writereg(rem);
-
-	CBNZ_wi(s1, 4);     // src is not 0
-
-	// Signal exception 5
-	MOV_wi(REG_WORK1, 5);
-	uintptr idx = (uintptr)(&regs.jit_exception) - (uintptr)(&regs);
-	STR_wXi(REG_WORK1, R_REGSTRUCT, idx);
-	B_i(8);        // end_of_op
-
-	// src is not 0
-	SDIV_www(REG_WORK1, d, s1);
-
-	// Here we have to calc remainder
-	MSUB_wwww(rem, s1, REG_WORK1, d);
-
-	EOR_www(REG_WORK3, rem, d);	// If sign of remainder and first operand differs, change sign of remainder
-	TBZ_wii(REG_WORK3, 31, 2);
-	NEG_ww(rem, rem);
-
-	MOV_ww(d, REG_WORK1);
-	TST_ww(d, d);
-
-	// end_of_op
-
+	rem = rmw(rem);
+	emit_divls32(d, s1, rem, true);
 	flags_carry_inverted = false;
 	unlock2(rem);
 	unlock2(d);
@@ -5587,10 +5602,18 @@ MIDFUNC(1,jff_NEGX_b,(RW1 d))
 
 	SIGNED8_REG_2_REG(REG_WORK1, d);
 	NGCS_ww(REG_WORK1, REG_WORK1);
+	// The 32-bit NGCS of the sign-extended operand gives the right C, X
+	// and Z, but its N and V are those of a 32-bit result: 0 - $80 is
+	// +$80 there, N and V clear. 68k: N = Rm, V = Dm & Rm (bit 7).
+	AND_www(REG_WORK3, d, REG_WORK1);
 	BFI_wwii(d, REG_WORK1, 0, 8);
 
 	MRS_NZCV_x(REG_WORK4);
 	EOR_xxCflag(REG_WORK4, REG_WORK4);
+	LSR_wwi(REG_WORK1, REG_WORK1, 7);
+	BFI_wwii(REG_WORK4, REG_WORK1, 31, 1);     // N
+	LSR_wwi(REG_WORK3, REG_WORK3, 7);
+	BFI_wwii(REG_WORK4, REG_WORK3, 28, 1);     // V
 	AND_www(REG_WORK4, REG_WORK4, REG_WORK2);
 	MSR_NZCV_x(REG_WORK4);
 	flags_carry_inverted = false;
@@ -5616,10 +5639,18 @@ MIDFUNC(1,jff_NEGX_w,(RW2 d))
 
 	SIGNED16_REG_2_REG(REG_WORK1, d);
 	NGCS_ww(REG_WORK1, REG_WORK1);
+	// The 32-bit NGCS of the sign-extended operand gives the right C, X
+	// and Z, but its N and V are those of a 32-bit result: 0 - $80 is
+	// +$80 there, N and V clear. 68k: N = Rm, V = Dm & Rm (bit 15).
+	AND_www(REG_WORK3, d, REG_WORK1);
 	BFI_wwii(d, REG_WORK1, 0, 16);
 
 	MRS_NZCV_x(REG_WORK4);
 	EOR_xxCflag(REG_WORK4, REG_WORK4);
+	LSR_wwi(REG_WORK1, REG_WORK1, 15);
+	BFI_wwii(REG_WORK4, REG_WORK1, 31, 1);     // N
+	LSR_wwi(REG_WORK3, REG_WORK3, 15);
+	BFI_wwii(REG_WORK4, REG_WORK3, 28, 1);     // V
 	AND_www(REG_WORK4, REG_WORK4, REG_WORK2);
 	MSR_NZCV_x(REG_WORK4);
 	flags_carry_inverted = false;

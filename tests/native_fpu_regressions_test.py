@@ -30,6 +30,7 @@ def production_frontend():
     flags = text[text.index("#define FPSR_CC_N "):text.index("static struct {")]
     functions = (
         "static void fpsr_set_result_always(", "static void fpsr_set_result(",
+        "static void fpsr_set_result_all(",
         "static void updateaccrued(", "static uae_u32 fpsr_make_status(",
         "static void fpsr_set_quotient(", "static void fpset (",
         "uae_u32 fpp_get_fpsr (", "void fpp_set_fpsr (", "bool fpu_get_constant(",
@@ -40,6 +41,7 @@ def production_frontend():
             "bool fpu_fpsr_cc_written;\nstatic uae_u32 fpsr_mask = 0x0ffffff8;\n"
             "uae_u32 xhex_nan[] = {0x7fff0000, 0xffffffff, 0xffffffff};\n"
             "static bool jit_fpu() { return currprefs.cachesize && currprefs.compfpu; }\n"
+            "bool fpu_softfloat_core() { return currprefs.fpu_mode == FPU_MODE_EXACT; }\n"
             "static int trapped_vector;\n"
             "static bool fp_exception_pending(bool) { trapped_vector = regs.fp_exp_pend; if (trapped_vector) regs.fp_exception = true; return trapped_vector != 0; }\n" +
             "\n".join(function(signature) for signature in functions) + "\n" +

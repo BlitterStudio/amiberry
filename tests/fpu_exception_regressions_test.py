@@ -19,7 +19,8 @@ class FpuExceptionRegressions(unittest.TestCase):
             return source[start:source.index("\n}", start) + 2]
 
         production = "\n".join(function(signature) for signature in (
-            "static bool fp_exception_pending(bool pre)",
+            "static bool fp_exception_pending_slow(bool pre)",
+            "static inline bool fp_exception_pending(bool pre)",
             "static void fp_unimp_instruction_exception_pending(",
             "void fpuop_trapcc (", "void fpuop_bcc(",
             "void fpuop_restore (",
