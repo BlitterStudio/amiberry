@@ -1708,7 +1708,7 @@ uae_u32 host_IoctlSocket(TrapContext *ctx, SB, uae_u32 sd, uae_u32 request, uae_
 		case SIOCGIFPHYS:
 			{
 				int idx = get_net_if(ctx, arg, true);
-				if (idx >= 0) {
+				if (idx >= 0 && net_interfaces2) {
 					struct bsdsock_interface_info *ii2 = &net_interfaces2[idx];
 					if (ii2->inuse) {
 						if (request == SIOCGIFMETRIC) {
