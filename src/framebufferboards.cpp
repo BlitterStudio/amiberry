@@ -321,7 +321,7 @@ static void harlequin_convert(struct fb_struct *data)
 	for (int y = 0; y < h; y++) {
 		uae_u8 *s = data->fb + offset + laceoffset + sy * data->width * 4;
 		if (r && g && b) {
-			fb_copyrow(data->monitor_id, s, data->surface, 0, 0, data->width, 4, y);
+			fb_copyrow(data->monitor_id, s, data->surface, 0, 0, w, 4, y);
 		} else {
 			uae_u8 tmp[1000 * 4];
 			uae_u8 *d = tmp;
@@ -331,7 +331,7 @@ static void harlequin_convert(struct fb_struct *data)
 				d[x + 2] = b ? s[x + 2] : 0;
 				d[x + 3] = 0;
 			}
-			fb_copyrow(data->monitor_id, d, data->surface, 0, 0, data->width, 4, y);
+			fb_copyrow(data->monitor_id, d, data->surface, 0, 0, w, 4, y);
 		}
 		if (data->lace) {
 			laceoffset = laceoffset ? 0 : laceoffsetv;
@@ -566,9 +566,9 @@ static void rainbow2_convert(struct fb_struct *data)
 		if (!(data->data[0] & 2)) {
 			uae_u32 tmp[768];
 			memset(tmp, 0, sizeof(tmp));
-			fb_copyrow(data->monitor_id, (uae_u8*)tmp, data->surface, 0, 0, data->width, 4, y);
+			fb_copyrow(data->monitor_id, (uae_u8*)tmp, data->surface, 0, 0, w, 4, y);
 		} else {
-			fb_copyrow(data->monitor_id, s, data->surface, 0, 0, data->width, 4, y);
+			fb_copyrow(data->monitor_id, s, data->surface, 0, 0, w, 4, y);
 		}
 		sy++;
 	}
