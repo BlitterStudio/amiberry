@@ -1058,15 +1058,15 @@ static int read_header_ext2 (struct zfile *diskfile, trackid *trackdata, int *nu
 		return 0;
 	}
 	zfile_fread (buffer, 1, 4, diskfile);
-	*num_tracks = buffer[2] * 256 + buffer[3];
-	if (*num_tracks < 0) {
-		return 0;
-	}
+	const int declared_tracks = buffer[2] * 256 + buffer[3];
+	*num_tracks = declared_tracks;
 	if (*num_tracks > MAX_TRACKS) {
 		write_log(_T("extadf: Too many tracks (%d), using %d\n"), *num_tracks, MAX_TRACKS);
 		*num_tracks = MAX_TRACKS;
 	}
-	offs = 8 + 2 + 2 + (*num_tracks) * (2 + 2 + 4 + 4);
+	/* Track data starts after every header the image declares, including
+	 * the ones beyond MAX_TRACKS that are not parsed. */
+	offs = 8 + 2 + 2 + declared_tracks * (2 + 2 + 4 + 4);
 
 	for (int i = 0; i < (*num_tracks); i++) {
 		tid = trackdata + i;
