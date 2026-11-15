@@ -4670,7 +4670,8 @@ static int BlitRectHelper(TrapContext *ctx)
 
 	if (!validatecoords(ctx, ri, RGBFmt, &srcx, &srcy, &width, &height))
 		return 1;
-	if (!validatecoords(ctx, dstri, RGBFmt, &dstx, &dsty, &width, &height))
+	// Without a destination RenderInfo the blit writes into the source.
+	if (!validatecoords(ctx, dstri ? dstri : ri, RGBFmt, &dstx, &dsty, &width, &height))
 		return 1;
 
 	uae_u8 Bpp = GetBytesPerPixel(RGBFmt);
@@ -5521,7 +5522,7 @@ static uae_u32 REGPARAM2 picasso_BlitPlanar2Chunky (TrapContext *ctx)
 	const uae_u32 srcy = static_cast<uae_u16>(trap_get_dreg(ctx, 1));
 	const uae_u32 dstx = static_cast<uae_u16>(trap_get_dreg(ctx, 2));
 	const uae_u32 dsty = static_cast<uae_u16>(trap_get_dreg(ctx, 3));
-	const uae_u32 width = static_cast<uae_u16>(trap_get_dreg(ctx, 4));
+	uae_u32 width = static_cast<uae_u16>(trap_get_dreg(ctx, 4));
 	const uae_u32 height = static_cast<uae_u16>(trap_get_dreg(ctx, 5));
 	const uae_u8 minterm = static_cast<uae_u8>(trap_get_dreg(ctx, 6)) & 0xFF;
 	const uae_u8 mask = static_cast<uae_u8>(trap_get_dreg(ctx, 7)) & 0xFF;
@@ -5533,6 +5534,9 @@ static uae_u32 REGPARAM2 picasso_BlitPlanar2Chunky (TrapContext *ctx)
 		return 0;
 
 	if (CopyRenderInfoStructureA2U(ctx, ri, &local_ri) && CopyBitMapStructureA2U(ctx, bm, &local_bm)) {
+		if (!validatecoords(ctx, &local_ri, local_ri.RGBFormat, &dstx, &dsty, &width, &height)) {
+			return 1;
+		}
 		P96TRACE((_T("BlitPlanar2Chunky(%d, %d, %d, %d, %d, %d) Minterm 0x%x, Mask 0x%x, Depth %d\n"),
 			srcx, srcy, dstx, dsty, width, height, minterm, mask, local_bm.Depth));
 		P96TRACE((_T("P2C - BitMap has %d BPR, %d rows\n"), local_bm.BytesPerRow, local_bm.Rows));
@@ -5783,7 +5787,7 @@ static uae_u32 REGPARAM2 picasso_BlitPlanar2Direct(TrapContext *ctx)
 	const uae_u32 srcy = static_cast<uae_u16>(trap_get_dreg(ctx, 1));
 	const uae_u32 dstx = static_cast<uae_u16>(trap_get_dreg(ctx, 2));
 	const uae_u32 dsty = static_cast<uae_u16>(trap_get_dreg(ctx, 3));
-	const uae_u32 width = static_cast<uae_u16>(trap_get_dreg(ctx, 4));
+	uae_u32 width = static_cast<uae_u16>(trap_get_dreg(ctx, 4));
 	const uae_u32 height = static_cast<uae_u16>(trap_get_dreg(ctx, 5));
 	const auto minterm = static_cast<uae_u8>(trap_get_dreg(ctx, 6));
 	const auto Mask = static_cast<uae_u8>(trap_get_dreg(ctx, 7));
@@ -5795,6 +5799,9 @@ static uae_u32 REGPARAM2 picasso_BlitPlanar2Direct(TrapContext *ctx)
 		return 0;
 
 	if (CopyRenderInfoStructureA2U(ctx, ri, &local_ri) && CopyBitMapStructureA2U(ctx, bm, &local_bm)) {
+		if (!validatecoords(ctx, &local_ri, local_ri.RGBFormat, &dstx, &dsty, &width, &height)) {
+			return 1;
+		}
 		P96TRACE((_T("BlitPlanar2Direct(%d, %d, %d, %d, %d, %d) Minterm 0x%x, Mask 0x%x, Depth %d\n"),
 			srcx, srcy, dstx, dsty, width, height, minterm, Mask, local_bm.Depth));
 		PlanarToDirect(ctx, &local_ri, &local_bm, srcx, srcy, dstx, dsty, width, height, minterm, Mask, cim);
