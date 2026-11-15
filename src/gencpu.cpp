@@ -585,6 +585,12 @@ static void check_ipl_always(void)
 
 static void addcycles_020(int cycles)
 {
+	if (cpu_level >= 4) {
+		cycles /= 6;
+		if (cycles <= 1) {
+			return;
+		}
+	}
 	if (using_ce020) {
 		out("%s(%d);\n", do_cycles, cycles);
 	} else if (using_prefetch_020) {
