@@ -4645,6 +4645,9 @@ void fpu_modechange(void)
 	}
 	fpu_select_core();
 	get_features();
+	// the new core starts with its own rounding mode and precision (its
+	// defaults, or what it had before): the guest's FPCR applies to it too
+	fpp_set_fpcr(regs.fpcr);
 	for (int i = 0; i < 8; i++) {
 		fpp_to_exten_fmovem(&regs.fp[i], temp_ext[i][0], temp_ext[i][1], temp_ext[i][2]);
 	}
