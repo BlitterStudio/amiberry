@@ -371,6 +371,10 @@
 
 #define CLS_ww(Wd,Wn)             _W((0b01011010110 << 21) | (0b00000000101 << 10) | ((Wn) << 5) | (Wd))
 #define CLZ_ww(Wd,Wn)             _W((0b01011010110 << 21) | (0b00000000100 << 10) | ((Wn) << 5) | (Wd))
+// TST Wn, #bitmask: ANDS WZR with a logical immediate (immr, imms: the
+// rotation and the count of ones - 1, element size 32)
+#define TST_wbm(Wn,immr,imms)     _W((0b0111001000 << 22) | (((immr) & 0x3f) << 16) | (((imms) & 0x3f) << 10) | ((Wn) << 5) | 0b11111)
+#define CLZ_xx(Xd,Xn)             _W((0b11011010110 << 21) | (0b00000000100 << 10) | ((Xn) << 5) | (Xd))
 
 
 /*----------------------------------------

@@ -368,10 +368,8 @@ void fixup_cpu (struct uae_prefs *p)
 		error_log (_T("JIT is not compatible with unimplemented CPU/FPU instruction emulation."));
 		p->fpu_no_unimplemented = p->int_no_unimplemented = false;
 	}
-	if (p->cachesize && p->compfpu && p->fpu_model && p->fpu_mode > 0) {
-		error_log (_T("JIT FPU emulation is not compatible with softfloat FPU emulation."));
-		p->fpu_mode = 0;
-	}
+	// The exact FPU core works with the JIT too: the JIT then compiles FPU
+	// instructions as calls into it instead of to host floating point.
 
 #ifdef JIT
 	if (p->comptrustbyte < 0 || p->comptrustbyte > 3) {

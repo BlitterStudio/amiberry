@@ -3,6 +3,8 @@
 #include "imgui.h"
 #include "imgui_panels.h"
 #include "options.h"
+#include "memory.h"
+#include "newcpu.h"
 #include "settings/settings_definitions.h"
 
 #include <cstdio>
@@ -23,7 +25,7 @@ struct cpu_options {
     const settings::definition& mmu_model = settings::require("mmu_model");
     const settings::definition& fpu_model = settings::require("fpu_model");
     const settings::definition& fpu_strict = settings::require("fpu_strict");
-    const settings::definition& fpu_softfloat = settings::require("fpu_softfloat");
+    const settings::definition& fpu_core = settings::require("fpu_core");
     const settings::definition& fpu_no_unimplemented = settings::require("fpu_no_unimplemented");
     const settings::definition& cpu_speed = settings::require("cpu_speed");
     const settings::definition& cpu_throttle = settings::require("cpu_throttle");
@@ -252,37 +254,41 @@ void render_panel_cpu() {
         ShowHelpMarker("Use the FPU built into 68040/68060.");
         ImGui::EndDisabled();
 
-        ImGui::BeginDisabled(!available(o.fpu_strict, ctx));
+        // Also off when Automatic picks the exact core here, which More
+        // compatible does not change (the layer only knows about Exact).
+        ImGui::BeginDisabled(!available(o.fpu_strict, ctx) || settings::fpu_exact_core_after_fixup(changed_prefs));
         option_checkbox("More compatible##FPU", o.fpu_strict, ctx);
         ShowHelpMarker(o.fpu_strict.descriptor.help);
         ImGui::EndDisabled();
 
-        // The host modes stay selectable with the JIT FPU; only softfloat is
-        // refused then.
-        ImGui::BeginDisabled(!available(o.fpu_softfloat, ctx));
+        // The FPU core: Automatic, Host or Exact. With the JIT, Exact is slower
+        // than the host core with the JIT FPU: say so.
+        ImGui::BeginDisabled(!available(o.fpu_core, ctx));
+#ifdef USE_LONG_DOUBLE // newcpu.h: the x87 host core keeps 80-bit values
+        static const char* const host_label = "Host (80-bit)";
+#else
+        static const char* const host_label = "Host (64-bit)";
+#endif
 #ifdef MSVC_LONG_DOUBLE
         static const settings::definition& fpu_long_double = settings::require("fpu_msvc_long_double");
-        const char* fpu_mode_items[] = { "Host (64-bit)", "Host (80-bit)", "Softfloat (80-bit)" };
-        const int softfloat_idx = 2;
-        const int fpu_mode_idx = settings::get_bool(o.fpu_softfloat, changed_prefs) ? softfloat_idx
-            : settings::get_bool(fpu_long_double, changed_prefs) ? 1 : 0;
+        const char* fpu_mode_items[] = { "Automatic", host_label, "Host (80-bit)", "Exact (80-bit)" };
+        const char* const fpu_mode_values[] = { "auto", "host", "host", "exact" };
+        int fpu_mode_idx = has_value(o.fpu_core, "exact") ? 3 : has_value(o.fpu_core, "host")
+            ? (settings::get_bool(fpu_long_double, changed_prefs) ? 2 : 1) : 0;
 #else
-        const char* fpu_mode_items[] = { "Host (64-bit)", "Softfloat (80-bit)" };
-        const int softfloat_idx = 1;
-        const int fpu_mode_idx = settings::get_bool(o.fpu_softfloat, changed_prefs) ? softfloat_idx : 0;
+        const char* fpu_mode_items[] = { "Automatic", host_label, "Exact (80-bit)" };
+        const char* const fpu_mode_values[] = { "auto", "host", "exact" };
+        int fpu_mode_idx = has_value(o.fpu_core, "exact") ? 2 : has_value(o.fpu_core, "host") ? 1 : 0;
 #endif
-        const bool softfloat_possible = settings::is_choice_available(o.fpu_softfloat, changed_prefs, ctx, "true");
         ImGui::SetNextItemWidth(slider_width);
         if (ImGui::BeginCombo("##FPUMode", fpu_mode_items[fpu_mode_idx])) {
             for (int i = 0; i < IM_ARRAYSIZE(fpu_mode_items); i++) {
-                const ImGuiSelectableFlags flags = i == softfloat_idx && !softfloat_possible
-                    ? ImGuiSelectableFlags_Disabled : ImGuiSelectableFlags_None;
-                if (ImGui::Selectable(fpu_mode_items[i], i == fpu_mode_idx, flags)) {
-                    settings::set_bool(o.fpu_softfloat, changed_prefs, ctx, i == softfloat_idx);
+                if (ImGui::Selectable(fpu_mode_items[i], i == fpu_mode_idx)) {
 #ifdef MSVC_LONG_DOUBLE
-                    if (i != softfloat_idx)
-                        settings::set_bool(fpu_long_double, changed_prefs, ctx, i == 1);
+                    if (std::strcmp(fpu_mode_values[i], "host") == 0)
+                        settings::set_bool(fpu_long_double, changed_prefs, ctx, i == 2);
 #endif
+                    settings::set(o.fpu_core, changed_prefs, ctx, fpu_mode_values[i]);
                 }
                 if (i == fpu_mode_idx)
                     ImGui::SetItemDefaultFocus();
@@ -290,7 +296,15 @@ void render_panel_cpu() {
             ImGui::EndCombo();
         }
         AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
-        ShowHelpMarker(o.fpu_softfloat.descriptor.help);
+        ShowHelpMarker(o.fpu_core.descriptor.help);
+        if (has_value(o.fpu_core, "exact") && changed_prefs.cachesize > 0) {
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.85f, 0.55f, 0.0f, 1.0f));
+            ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + left_group_min_width);
+            ImGui::TextWrapped("Exact FPU with JIT: 80-bit results like a real FPU, but FPU-heavy "
+                "programs (for example 3D rendering) run several times slower than with the Host FPU.");
+            ImGui::PopTextWrapPos();
+            ImGui::PopStyleColor();
+        }
         ImGui::EndDisabled();
 
         ImGui::BeginDisabled(!available(o.fpu_no_unimplemented, ctx));
