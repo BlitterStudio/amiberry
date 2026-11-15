@@ -621,6 +621,7 @@ struct whdload_options
 	int slave_count;
 	std::string slave_default;
 	bool slave_libraries;
+	bool exp_chip;
 	std::vector<whdload_slave> slaves;
 	whdload_slave selected_slave;
 	std::string custom;

@@ -3650,6 +3650,7 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 	cfgfile_write_str(f, _T("whdload_uuid"), whdload_prefs.variant_uuid.c_str());
 	cfgfile_write_str(f, _T("whdload_slave_default"), whdload_prefs.slave_default.c_str());
 	cfgfile_write_bool(f, _T("whdload_slave_libraries"), whdload_prefs.slave_libraries);
+	cfgfile_write_bool(f, _T("whdload_exp_chip"), whdload_prefs.exp_chip);
 	cfgfile_write_str(f, _T("whdload_slave"), whdload_prefs.selected_slave.filename.c_str());
 	// The drawer of an auto-detected slave, so one picked from a drawer
 	// other than the default boots from it after a reload.
@@ -5297,6 +5298,7 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 			|| cfgfile_string(option, value, _T("whdload_uuid"), whdload_prefs.variant_uuid)
 			|| cfgfile_string(option, value, _T("whdload_slave_default"), whdload_prefs.slave_default)
 			|| cfgfile_yesno(option, value, _T("whdload_slave_libraries"), &whdload_prefs.slave_libraries)
+			|| cfgfile_yesno(option, value, _T("whdload_exp_chip"), &whdload_prefs.exp_chip)
 			|| cfgfile_string(option, value, _T("whdload_slave"), whdload_prefs.selected_slave.filename)
 			|| cfgfile_string(option, value, _T("whdload_slave_sub_path"), whdload_prefs.selected_slave.sub_path)
 			|| cfgfile_string(option, value, _T("whdload_slave_data_path"), whdload_prefs.selected_slave.data_path)
