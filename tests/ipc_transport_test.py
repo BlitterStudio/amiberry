@@ -19,6 +19,8 @@ import tempfile
 import threading
 import time
 
+from ipc_actions_test import HEADLESS_SDL_ENV
+
 IS_WINDOWS = sys.platform == "win32"
 REQUEST_LIMIT = 64 * 1024
 MAX_CLIENTS = 16
@@ -131,11 +133,7 @@ def main():
     env.update({"HOME": work, "XDG_RUNTIME_DIR": work, "XDG_CONFIG_HOME": os.path.join(work, "config"),
                 "XDG_DATA_HOME": os.path.join(work, "data"), "AMIBERRY_HOME_DIR": os.path.join(work, "home"),
                 "LOCALAPPDATA": os.path.join(work, "local"), "APPDATA": os.path.join(work, "roaming"),
-                # SDL's offscreen driver is EGL-based and cannot create even
-                # a plain window on macOS; the dummy driver can.
-                "SDL_VIDEO_DRIVER": "dummy" if sys.platform == "darwin" else "offscreen",
-                "SDL_VIDEODRIVER": "dummy" if sys.platform == "darwin" else "offscreen",
-                "SDL_AUDIO_DRIVER": "dummy", "SDL_AUDIODRIVER": "dummy"})
+                **HEADLESS_SDL_ENV})
     env.pop("AMIBERRY_CONFIG_DIR", None)
 
     first = Emulator(binary, env)

@@ -21,7 +21,7 @@ import time
 import unittest
 
 from cpu_thread_live_test import rom_image
-from ipc_actions_test import Connection, Emulator
+from ipc_actions_test import HEADLESS_SDL_ENV, Connection, Emulator
 
 CODE_BASE = 0x30000  # rom_image() copies the code there and jumps to it
 
@@ -158,12 +158,10 @@ class FpuLiveTests(unittest.TestCase):
         work = Path(directory)
         rom = work / "synthetic.rom"
         rom.write_bytes(rom_image(code))
-        offscreen = "dummy" if sys.platform == "darwin" else "offscreen"
         env = dict(os.environ, HOME=directory, XDG_RUNTIME_DIR=directory,
                    XDG_CONFIG_HOME=str(work / "config"), XDG_DATA_HOME=str(work / "data"),
                    AMIBERRY_HOME_DIR=str(work / "home"), LOCALAPPDATA=str(work / "local"),
-                   APPDATA=str(work / "roaming"), SDL_AUDIODRIVER="dummy", SDL_AUDIO_DRIVER="dummy",
-                   SDL_VIDEODRIVER=offscreen, SDL_VIDEO_DRIVER=offscreen)
+                   APPDATA=str(work / "roaming"), **HEADLESS_SDL_ENV)
         env.pop("AMIBERRY_CONFIG_DIR", None)
         if stats:
             env["AMIBERRY_JIT_FPU_STATS"] = stats

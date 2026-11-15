@@ -11,7 +11,7 @@ import sys
 import time
 
 import ipc_actions_test
-from ipc_actions_test import Connection, Emulator, check
+from ipc_actions_test import HEADLESS_SDL_ENV, Connection, Emulator, check
 
 
 def exit_status():
@@ -35,9 +35,7 @@ def main():
             "AMIBERRY_HOME_DIR": os.path.join(work, "home"),
             "LOCALAPPDATA": os.path.join(work, "local"),
             "APPDATA": os.path.join(work, "roaming"),
-            "SDL_VIDEO_DRIVER": "dummy" if sys.platform == "darwin" else "offscreen",
-            "SDL_VIDEODRIVER": "dummy" if sys.platform == "darwin" else "offscreen",
-            "SDL_AUDIO_DRIVER": "dummy", "SDL_AUDIODRIVER": "dummy",
+            **HEADLESS_SDL_ENV,
         })
         env.pop("AMIBERRY_CONFIG_DIR", None)
         startup_config = os.path.join(work, "virtual-pad.uae")

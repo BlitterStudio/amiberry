@@ -10,7 +10,7 @@ import time
 import unittest
 import zlib
 
-from ipc_actions_test import Connection, Emulator
+from ipc_actions_test import HEADLESS_SDL_ENV, Connection, Emulator
 
 
 def words(*values):
@@ -129,10 +129,8 @@ class CpuThreadLiveTests(unittest.TestCase):
             env = dict(os.environ, HOME=directory, XDG_RUNTIME_DIR=directory,
                        XDG_CONFIG_HOME=str(work / "config"), XDG_DATA_HOME=str(work / "data"),
                        AMIBERRY_HOME_DIR=str(work / "home"), LOCALAPPDATA=str(work / "local"),
-                       APPDATA=str(work / "roaming"), SDL_AUDIO_DRIVER="dummy", SDL_AUDIODRIVER="dummy",
-                       SDL_VIDEO_DRIVER="dummy" if sys.platform == "darwin" else "offscreen",
-                       SDL_VIDEODRIVER="dummy" if sys.platform == "darwin" else "offscreen",
-                       AMIBERRY_CPU_THREAD_DIAGNOSTICS="1")
+                       APPDATA=str(work / "roaming"), AMIBERRY_CPU_THREAD_DIAGNOSTICS="1",
+                       **HEADLESS_SDL_ENV)
             env.pop("AMIBERRY_CONFIG_DIR", None)
             options = [f"kickstart_rom_file={rom}", "cpu_model=68020", "fpu_model=0",
                        "cpu_compatible=false", "cpu_memory_cycle_exact=false",

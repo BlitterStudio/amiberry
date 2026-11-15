@@ -62,4 +62,6 @@ ffmpeg -nostdin -loglevel error -i "$mp3" -i "$picture_png" -map 0:a -map 1:v \
   -c:a copy -c:v png -disposition:v attached_pic -id3v2_version 3 "$id3_mp3"
 . tests/lib/zz9000_sdk_build.sh
 zz9000_sdk_compile "$out" tests/zz9000_sdk_test.cpp libmpg123 -DHAVE_MPG123
+# SDL3 reads SDL_AUDIO_DRIVER first and SDL2 only SDL_AUDIODRIVER, so set both
+# or an inherited SDL3 name wins.
 SDL_AUDIO_DRIVER=dummy SDL_AUDIODRIVER=dummy "$out" "$mp3" "$mono_mp3" "$low_mp3" "$flac16" "$flac24" "$vorbis" "$flac16_ref" "$flac24_ref" "$vorbis_ref" "$flac_picture" "$vorbis_long" "$vorbis_long_ref" "$flac_long" "$flac_long_ref" "$id3_mp3"

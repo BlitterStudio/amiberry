@@ -22,6 +22,17 @@ import shutil
 IS_WINDOWS = sys.platform == "win32"
 failures = []
 
+# SDL drivers that keep a test emulator off the display and the sound card.
+# SDL3 reads SDL_VIDEO_DRIVER/SDL_AUDIO_DRIVER first, so an inherited value
+# (a console profile's kmsdrm,wayland,x11) would win over the SDL2 names; SDL2
+# reads only SDL_VIDEODRIVER/SDL_AUDIODRIVER. Set both. SDL's offscreen driver
+# is EGL-based and cannot create even a plain window on macOS; dummy can.
+SDL_VIDEO_DRIVER_NAMES = ("SDL_VIDEO_DRIVER", "SDL_VIDEODRIVER")
+HEADLESS_SDL_ENV = {
+    **dict.fromkeys(SDL_VIDEO_DRIVER_NAMES, "dummy" if sys.platform == "darwin" else "offscreen"),
+    "SDL_AUDIO_DRIVER": "dummy", "SDL_AUDIODRIVER": "dummy",
+}
+
 
 def check(name, condition, detail=""):
     print(("ok   " if condition else "FAIL ") + name + (f" ({detail})" if detail else ""), flush=True)
@@ -139,12 +150,7 @@ def main():
     env.update({"HOME": work, "XDG_RUNTIME_DIR": work, "XDG_CONFIG_HOME": os.path.join(work, "config"),
                 "XDG_DATA_HOME": os.path.join(work, "data"), "AMIBERRY_HOME_DIR": os.path.join(work, "home"),
                 "LOCALAPPDATA": os.path.join(work, "local"), "APPDATA": os.path.join(work, "roaming"),
-                # SDL's offscreen driver cannot create windows on macOS; the
-                # dummy driver can. SDL3 reads SDL_VIDEO_DRIVER/SDL_AUDIO_DRIVER
-                # first (an inherited one would win), SDL2 only the old names.
-                "SDL_VIDEO_DRIVER": "dummy" if sys.platform == "darwin" else "offscreen",
-                "SDL_VIDEODRIVER": "dummy" if sys.platform == "darwin" else "offscreen",
-                "SDL_AUDIO_DRIVER": "dummy", "SDL_AUDIODRIVER": "dummy"})
+                **HEADLESS_SDL_ENV})
     env.pop("AMIBERRY_CONFIG_DIR", None)
 
     emu = Emulator(binary, env)
