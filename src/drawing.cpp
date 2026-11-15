@@ -2686,8 +2686,9 @@ void drawing_init(void)
 
 #if defined(AMIBERRY) && !defined(LIBRETRO)
 // Cached host-monitor refresh rate in millihertz. Written ONLY on the SDL
-// main thread via amiberry_hw_vsync_pacing_invalidate(); read on the
-// emulator thread by amiberry_hw_vsync_pacing_ok(). 0 means "not probed
+// main thread via amiberry_hw_vsync_pacing_invalidate(); read by
+// amiberry_hw_vsync_refresh_matches(), on the emulator thread (frame pacing)
+// and the presentation thread (OpenGL swap interval). 0 means "not probed
 // yet" or "probe failed / display not ready". Millihertz (×1000) lets us
 // use std::atomic<uint32_t> (guaranteed lock-free on all targets) instead
 // of std::atomic<float>, with enough precision for a ~1 Hz match tolerance.
@@ -2721,27 +2722,12 @@ void amiberry_hw_vsync_pacing_invalidate(void)
 }
 
 // Returns true when the host monitor refresh matches the Amiga chipset target
-// within ~1 Hz, so SDL_GL_SwapWindow / SDL_RenderPresent blocking on the next
-// vblank paces the emulator at the correct rate. When this is true we can
-// safely use the vs>0 framewait() path (hardware pacing) which preserves
-// smooth scrolling on matched setups (e.g. 50 Hz monitor + PAL). When false,
-// framewait() stays on the software-timing path — this avoids the #1947
-// audio-delay scenario (60 Hz monitor + 50 Hz PAL game: swap-block would
-// pace at 60 Hz).
-//
-// The Vulkan renderer's present path does not block on vblank (see
-// vulkan_renderer.cpp), so hardware pacing is disabled there unconditionally.
-//
-// This runs on the emulator thread (via isvsync_chipset() → framewait()).
-// It does NOT call any SDL video APIs: it only reads the cached monitor Hz and
-// blocking-presentation capability published by the presentation thread.
-static bool amiberry_hw_vsync_pacing_ok(void)
+// within ~1 Hz, whatever the presentation mode. Besides hardware pacing below,
+// the OpenGL renderer uses it on every presented frame to pick the KMSDRM swap
+// interval: a blocking flip only on a matched display. It does NOT call any
+// SDL video APIs: it only reads the monitor Hz cached by the main thread.
+bool amiberry_hw_vsync_refresh_matches(void)
 {
-#ifdef USE_VULKAN
-	return false;
-#else
-	if (!hw_vsync_cached_presentation_blocking.load(std::memory_order_relaxed))
-		return false;
 	if (vblank_hz <= 0.0f)
 		return false;
 	const uint32_t hz_x1000 = hw_vsync_cached_monitor_hz_x1000.load(std::memory_order_relaxed);
@@ -2749,6 +2735,31 @@ static bool amiberry_hw_vsync_pacing_ok(void)
 		return false;  // Main thread hasn't probed yet (or the probe failed).
 	const float monitor_hz = static_cast<float>(hz_x1000) / 1000.0f;
 	return std::fabs(monitor_hz - vblank_hz) < 1.0f;
+}
+
+// Returns true when blocking presentation paces the emulator at the correct
+// rate: the active renderer blocks on the next vblank (SDL_GL_SwapWindow /
+// SDL_RenderPresent) and the monitor refresh matches the chipset. When this is
+// true we can safely use the vs>0 framewait() path (hardware pacing), which
+// preserves smooth scrolling on matched setups (e.g. 50 Hz monitor + PAL).
+// When false, framewait() stays on the software-timing path. This avoids the
+// #1947 audio-delay scenario (60 Hz monitor + 50 Hz PAL game: swap-block would
+// pace at 60 Hz).
+//
+// The Vulkan renderer's present path does not block on vblank (see
+// vulkan_renderer.cpp), so hardware pacing is disabled there unconditionally.
+//
+// This runs on the emulator thread (via isvsync_chipset() → framewait()).
+// It only reads the blocking-presentation capability published by the
+// presentation thread and the cached monitor Hz.
+static bool amiberry_hw_vsync_pacing_ok(void)
+{
+#ifdef USE_VULKAN
+	return false;
+#else
+	if (!hw_vsync_cached_presentation_blocking.load(std::memory_order_relaxed))
+		return false;
+	return amiberry_hw_vsync_refresh_matches();
 #endif
 }
 #elif defined(AMIBERRY)
@@ -2756,6 +2767,7 @@ static bool amiberry_hw_vsync_pacing_ok(void)
 // provide an empty body here so callers link without the full pacing logic.
 void amiberry_hw_vsync_pacing_invalidate(void) {}
 void amiberry_hw_vsync_pacing_set_blocking(const bool) {}
+bool amiberry_hw_vsync_refresh_matches(void) { return false; }
 #endif
 
 int isvsync_chipset(void)

@@ -23,7 +23,13 @@ import androidx.compose.material.icons.filled.Storage
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import com.blitterstudio.amiberry.data.model.EmulatorSettings
-import com.blitterstudio.amiberry.data.model.HardDrive
+import com.blitterstudio.amiberry.data.model.MountDefaults
+import com.blitterstudio.amiberry.data.model.MountEntry
+import com.blitterstudio.amiberry.data.model.MountKind
+import com.blitterstudio.amiberry.data.model.MountNames
+import com.blitterstudio.amiberry.data.model.SettingsSchema
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Switch
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
@@ -54,6 +60,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.blitterstudio.amiberry.R
+import com.blitterstudio.amiberry.data.ContentFolders
+import com.blitterstudio.amiberry.data.HardfileCreator
 import com.blitterstudio.amiberry.data.FileManager
 import com.blitterstudio.amiberry.data.FilePickerFilters
 import com.blitterstudio.amiberry.data.FileRepository
@@ -63,6 +71,7 @@ import com.blitterstudio.amiberry.data.model.LauncherChoices
 import com.blitterstudio.amiberry.data.model.ModelRomAvailability
 import com.blitterstudio.amiberry.data.model.RomIdentity
 import com.blitterstudio.amiberry.ui.components.rememberImportPicker
+import com.blitterstudio.amiberry.ui.components.PickedFolder
 import com.blitterstudio.amiberry.ui.components.settings.SchemaChoiceRow
 import com.blitterstudio.amiberry.ui.components.settings.SettingSwitchRow
 import com.blitterstudio.amiberry.ui.components.settings.SupportingText
@@ -90,12 +99,96 @@ fun StoragePage(
 	onImportResult: (FileManager.ImportResult) -> Unit = {}
 ) {
 	val context = LocalContext.current
+	val mountSchema = settingsSchema()
 	val settings = viewModel.settings
 	val floppies by viewModel.availableFloppies.collectAsState()
 	val cds by viewModel.availableCds.collectAsState()
 	val hardDrives by viewModel.availableHardDrives.collectAsState()
 	val importGuard = rememberImportInFlightGuard()
 	val importInProgress = importGuard.isImporting
+	val mountScope = rememberCoroutineScope()
+	var creatingHardfile by remember { mutableStateOf(false) }
+	var hardfileError by remember { mutableStateOf<Int?>(null) }
+	var pendingFolderMount by remember { mutableStateOf<MountKind?>(null) }
+	val mountFolderPicker = rememberImportPicker(
+		mimeTypes = arrayOf("*/*"),
+		extensions = emptySet(),
+		// The folder is mounted where it is, not copied into the library.
+		folderLabelRes = R.string.settings_storage_mount_folder,
+		onFolder = { picked ->
+			val kind = pendingFolderMount
+			pendingFolderMount = null
+			val path = (picked as? PickedFolder.Local)?.dir?.path ?: return@rememberImportPicker
+			if (kind != null) viewModel.updateSettings { current -> MountDefaults.added(current, kind, path, mountSchema) }
+		},
+		onFiles = {}
+	)
+	val archivePicker = rememberImportPicker(
+		mimeTypes = arrayOf("application/zip", "application/x-7z-compressed", "application/x-rar-compressed", "application/octet-stream"),
+		extensions = setOf("zip", "7z", "rar", "lha", "lzh", "lzx")
+	) { uris ->
+		uris.firstOrNull()?.let { uri ->
+			mountScope.launchImportGuarded(importGuard) {
+				val result = withContext(Dispatchers.IO) {
+					FileManager.importMountArchiveWithResult(context, uri).also {
+						if (it is FileManager.ImportResult.Imported) FileRepository.getInstance(context).rescanCategory(FileCategory.HARD_DRIVES)
+					}
+				}
+				if (result is FileManager.ImportResult.Imported) {
+					viewModel.updateSettings { current -> MountDefaults.added(current, MountKind.Directory, result.path, mountSchema) }
+				}
+				onImportResult(result)
+			}
+		}
+	}
+	val tapeImagePicker = rememberImportPicker(
+		mimeTypes = arrayOf("*/*"),
+		extensions = emptySet()
+	) { uris ->
+		uris.firstOrNull()?.let { uri ->
+			mountScope.launchImportGuarded(importGuard) {
+				val result = withContext(Dispatchers.IO) {
+					FileManager.importTapeImageWithResult(context, uri).also {
+						if (it is FileManager.ImportResult.Imported) FileRepository.getInstance(context).rescanCategory(FileCategory.HARD_DRIVES)
+					}
+				}
+				if (result is FileManager.ImportResult.Imported) {
+					viewModel.updateSettings { current -> MountDefaults.added(current, MountKind.Tape, result.path, mountSchema) }
+				}
+				onImportResult(result)
+			}
+		}
+	}
+	if (creatingHardfile) {
+		HardfileCreateDialog(
+			error = hardfileError,
+			onDismiss = {
+				creatingHardfile = false
+				hardfileError = null
+			},
+			onCreate = { name, sizeMb, dynamic ->
+				mountScope.launchImportGuarded(importGuard) {
+					val created = runCatching {
+						withContext(Dispatchers.IO) {
+							val targetName = if (dynamic && name.endsWith(".hdf", ignoreCase = true)) name.dropLast(4) + ".vhd" else name
+							HardfileCreator.create(
+								ContentFolders.categoryDir(context, FileCategory.HARD_DRIVES).resolve(targetName),
+								sizeMb.toLong() * 1024 * 1024,
+								dynamic
+							).path
+						}
+					}.getOrElse {
+						hardfileError = R.string.settings_storage_create_failed
+						return@launchImportGuarded
+					}
+					creatingHardfile = false
+					hardfileError = null
+					FileRepository.getInstance(context).rescanCategory(FileCategory.HARD_DRIVES)
+					viewModel.updateSettings { current -> MountDefaults.added(current, MountKind.Hardfile, created, mountSchema) }
+				}
+			}
+		)
+	}
 
 	Column(
 		modifier = Modifier
@@ -189,13 +282,15 @@ fun StoragePage(
 				}
 
 				settings.hardDrives.forEachIndexed { index, drive ->
-					HardDriveRow(
+					MountRow(
+						settings = settings,
+						schema = mountSchema,
 						index = index,
 						drive = drive,
 						files = hardDrives,
 						onPathChange = { newPath ->
 							viewModel.updateSettings { s ->
-								s.copy(hardDrives = s.hardDrives.updatedAt(index) { it.copy(path = newPath) })
+								s.copy(hardDrives = s.hardDrives.updatedAt(index) { MountDefaults.withPath(it, newPath) })
 							}
 						},
 						onReadOnlyChange = { ro ->
@@ -207,6 +302,9 @@ fun StoragePage(
 							viewModel.updateSettings { s ->
 								s.copy(hardDrives = s.hardDrives.updatedAt(index) { it.copy(bootPriority = bp) })
 							}
+						},
+						onMountChange = { updated ->
+							viewModel.updateSettings { s -> s.copy(hardDrives = s.hardDrives.updatedAt(index) { updated }) }
 						},
 						onRemove = {
 							pendingFocus = addDriveFocus to settings.hardDrives.size
@@ -223,16 +321,79 @@ fun StoragePage(
 					Spacer(modifier = Modifier.height(8.dp))
 				}
 
-				TextButton(
-					onClick = {
-						pendingFocus = newDriveFocus to settings.hardDrives.size
-						viewModel.updateSettings { s -> s.copy(hardDrives = s.hardDrives + HardDrive(path = "")) }
-					},
-					modifier = Modifier.focusRequester(addDriveFocus).dpadFocusIndicator()
-				) {
-					Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-					Spacer(modifier = Modifier.width(4.dp))
-					Text(stringResource(R.string.settings_storage_add_hard_drive))
+				Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+					TextButton(
+						onClick = {
+							if (!MountDefaults.canAdd(MountKind.Hardfile, settings, mountSchema)) return@TextButton
+							pendingFocus = newDriveFocus to settings.hardDrives.size
+							viewModel.updateSettings { s -> MountDefaults.added(s, MountKind.Hardfile, "", mountSchema) }
+						},
+						enabled = MountDefaults.canAdd(MountKind.Hardfile, settings, mountSchema),
+						modifier = Modifier.fillMaxWidth().focusRequester(addDriveFocus).dpadFocusIndicator()
+					) {
+						Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+						Spacer(modifier = Modifier.width(4.dp))
+						Text(stringResource(R.string.settings_storage_add_hard_drive))
+						Spacer(modifier = Modifier.weight(1f))
+					}
+					TextButton(
+						onClick = {
+							pendingFolderMount = MountKind.Directory
+							mountFolderPicker.browseFolders()
+						},
+						enabled = MountDefaults.canAdd(MountKind.Directory, settings, mountSchema),
+						modifier = Modifier.fillMaxWidth().dpadFocusIndicator()
+					) {
+						Text(stringResource(R.string.settings_storage_add_directory))
+						Spacer(modifier = Modifier.weight(1f))
+					}
+					TextButton(
+						onClick = archivePicker::pickFiles,
+						enabled = MountDefaults.canAdd(MountKind.Directory, settings, mountSchema) && !importInProgress,
+						modifier = Modifier.fillMaxWidth().dpadFocusIndicator()
+					) {
+						Text(stringResource(R.string.settings_storage_add_archive))
+						Spacer(modifier = Modifier.weight(1f))
+					}
+					TextButton(
+						onClick = {
+							if (!MountDefaults.canAdd(MountKind.Cd, settings, mountSchema)) return@TextButton
+							pendingFocus = newDriveFocus to settings.hardDrives.size
+							viewModel.updateSettings { current -> MountDefaults.added(current, MountKind.Cd, "", mountSchema) }
+						},
+						enabled = MountDefaults.canAdd(MountKind.Cd, settings, mountSchema),
+						modifier = Modifier.fillMaxWidth().dpadFocusIndicator()
+					) {
+						Text(stringResource(R.string.settings_storage_add_cd_drive))
+						Spacer(modifier = Modifier.weight(1f))
+					}
+					TextButton(
+						onClick = {
+							pendingFolderMount = MountKind.Tape
+							mountFolderPicker.browseFolders()
+						},
+						enabled = MountDefaults.canAdd(MountKind.Tape, settings, mountSchema),
+						modifier = Modifier.fillMaxWidth().dpadFocusIndicator()
+					) {
+						Text(stringResource(R.string.settings_storage_add_tape_drive))
+						Spacer(modifier = Modifier.weight(1f))
+					}
+					TextButton(
+						onClick = tapeImagePicker::pickFiles,
+						enabled = MountDefaults.canAdd(MountKind.Tape, settings, mountSchema) && !importInProgress,
+						modifier = Modifier.fillMaxWidth().dpadFocusIndicator()
+					) {
+						Text(stringResource(R.string.settings_storage_add_tape_image))
+						Spacer(modifier = Modifier.weight(1f))
+					}
+					TextButton(
+						onClick = { creatingHardfile = true },
+						enabled = MountDefaults.canAdd(MountKind.Hardfile, settings, mountSchema),
+						modifier = Modifier.fillMaxWidth().dpadFocusIndicator()
+					) {
+						Text(stringResource(R.string.settings_storage_create_hardfile))
+						Spacer(modifier = Modifier.weight(1f))
+					}
 				}
 			}
 		}
@@ -541,21 +702,24 @@ internal fun FloppyDriveRow(
 	}
 }
 
-private fun List<HardDrive>.updatedAt(index: Int, transform: (HardDrive) -> HardDrive): List<HardDrive> =
-	mapIndexed { i, hd -> if (i == index) transform(hd) else hd }
+private fun List<MountEntry>.updatedAt(index: Int, transform: (MountEntry) -> MountEntry): List<MountEntry> =
+	mapIndexed { i, mount -> if (i == index) transform(mount) else mount }
 
-private fun List<HardDrive>.removedAt(index: Int): List<HardDrive> =
+private fun List<MountEntry>.removedAt(index: Int): List<MountEntry> =
 	filterIndexed { i, _ -> i != index }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun HardDriveRow(
+private fun MountRow(
+	settings: EmulatorSettings,
+	schema: SettingsSchema?,
 	index: Int,
-	drive: HardDrive,
+	drive: MountEntry,
 	files: List<AmigaFile>,
 	onPathChange: (String) -> Unit,
 	onReadOnlyChange: (Boolean) -> Unit,
 	onBootPriorityChange: (Int) -> Unit,
+	onMountChange: (MountEntry) -> Unit,
 	onRemove: () -> Unit,
 	fieldFocus: FocusRequester?,
 	context: android.content.Context,
@@ -564,14 +728,12 @@ private fun HardDriveRow(
 	onImportResult: (FileManager.ImportResult) -> Unit
 ) {
 	val scope = rememberCoroutineScope()
-	// The small Delete button above the right end of the HDF field lost the focus search to
-	// the full-width field above it, so Up from the HDF field goes to it explicitly.
 	val deleteFocus = remember { FocusRequester() }
 
 	Column(modifier = Modifier.fillMaxWidth()) {
 		Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
 			Text(
-				stringResource(R.string.settings_storage_hard_drive_label, index),
+				"${stringResource(R.string.settings_storage_hard_drive_label, index)} — ${mountKindLabel(drive.kind)}",
 				style = MaterialTheme.typography.labelMedium,
 				modifier = Modifier.weight(1f)
 			)
@@ -583,76 +745,319 @@ private fun HardDriveRow(
 			}
 		}
 
-		FileDropdown(
-			label = stringResource(R.string.settings_storage_hardfile_label),
-			files = files,
-			selectedPath = drive.path,
-			onSelect = onPathChange,
-			onClear = { onPathChange("") },
-			fieldModifier = Modifier
-				.focusProperties { up = deleteFocus }
-				.then(if (fieldFocus != null) Modifier.focusRequester(fieldFocus) else Modifier)
-		)
-
-		val importPicker = rememberImportPicker(
-			mimeTypes = FilePickerFilters.mimeTypesFor(FileCategory.HARD_DRIVES),
-			extensions = FileCategory.HARD_DRIVES.extensions
-		) { uris ->
-			uris.first().let {
-				scope.launchImportGuarded(importGuard) {
-					val result = withContext(Dispatchers.IO) {
-						FileManager.importFileWithResult(context, it, FileCategory.HARD_DRIVES).also { importResult ->
-							if (importResult is FileManager.ImportResult.Imported) {
-								FileRepository.getInstance(context).rescanCategory(FileCategory.HARD_DRIVES)
+		when (drive.kind) {
+			MountKind.Hardfile -> {
+				FileDropdown(
+					label = stringResource(R.string.settings_storage_hardfile_label),
+					files = files,
+					selectedPath = drive.path,
+					onSelect = onPathChange,
+					onClear = { onPathChange("") },
+					fieldModifier = Modifier
+						.focusProperties { up = deleteFocus }
+						.then(if (fieldFocus != null) Modifier.focusRequester(fieldFocus) else Modifier)
+				)
+				val importPicker = rememberImportPicker(
+					mimeTypes = FilePickerFilters.mimeTypesFor(FileCategory.HARD_DRIVES),
+					extensions = FileCategory.HARD_DRIVES.extensions
+				) { uris ->
+					uris.firstOrNull()?.let {
+						scope.launchImportGuarded(importGuard) {
+							val result = withContext(Dispatchers.IO) {
+								FileManager.importFileWithResult(context, it, FileCategory.HARD_DRIVES).also { importResult ->
+									if (importResult is FileManager.ImportResult.Imported) FileRepository.getInstance(context).rescanCategory(FileCategory.HARD_DRIVES)
+								}
 							}
+							if (result is FileManager.ImportResult.Imported) onPathChange(result.path)
+							onImportResult(result)
 						}
 					}
-					if (result is FileManager.ImportResult.Imported) onPathChange(result.path)
-					onImportResult(result)
+				}
+				TextButton(
+					onClick = importPicker::pickFiles,
+					enabled = !importInProgress,
+					modifier = Modifier.fillMaxWidth().dpadFocusIndicator()
+				) {
+					if (importInProgress) {
+						CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+						Spacer(modifier = Modifier.width(4.dp))
+					}
+					Text(stringResource(if (importInProgress) R.string.action_importing else R.string.settings_storage_import_hardfile))
+					Spacer(modifier = Modifier.weight(1f))
 				}
 			}
-		}
-		TextButton(
-			onClick = importPicker::pickFiles,
-			enabled = !importInProgress,
-			// Full width so D-pad Up/Down reach it (see the floppy import button).
-			modifier = Modifier.fillMaxWidth().dpadFocusIndicator()
-		) {
-			if (importInProgress) {
-				CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-				Spacer(modifier = Modifier.width(4.dp))
-			}
-			Text(
-				stringResource(
-					if (importInProgress) R.string.action_importing else R.string.settings_storage_import_hardfile
-				)
+			MountKind.Directory, MountKind.Tape -> MountTextField(
+				stringResource(R.string.settings_storage_path),
+				drive.path,
+				modifier = if (fieldFocus != null) Modifier.focusRequester(fieldFocus) else Modifier,
+				onValueChange = onPathChange
 			)
-			Spacer(modifier = Modifier.weight(1f))
+			MountKind.Cd -> Unit
 		}
 
-		SettingSwitchRow(
-			label = stringResource(R.string.settings_storage_hard_drive_read_only),
-			checked = drive.readOnly,
-			onCheckedChange = onReadOnlyChange
-		)
+		if (drive.kind == MountKind.Directory || drive.kind == MountKind.Hardfile) {
+			// The core refuses a device name in use (add_filesys_config), so
+			// the second drive would vanish when the machine starts.
+			val usedNames = settings.hardDrives.filterIndexed { i, other ->
+				i != index && (other.kind == MountKind.Directory || other.kind == MountKind.Hardfile)
+			}.map { it.device.lowercase() }.filter { it.isNotEmpty() }.toSet()
+			val inUse = stringResource(R.string.settings_storage_device_in_use)
+			MountTextField(stringResource(R.string.settings_storage_device_name), drive.device,
+				allowed = { MountNames.allowed(it, device = true) },
+				refusal = { name -> if (name.lowercase() in usedNames) inUse else null }) {
+				onMountChange(drive.copy(device = it))
+			}
+		}
+		if (drive.kind == MountKind.Directory) {
+			MountTextField(stringResource(R.string.settings_storage_volume_label), drive.volume,
+				allowed = { MountNames.allowed(it, device = false) }) {
+				onMountChange(drive.copy(volume = it))
+			}
+		}
+		if (drive.kind != MountKind.Directory) {
+			MountControllerControls(
+				schema = schema,
+				settings = settings,
+				kind = drive.kind,
+				controller = drive.controller,
+				// A CD drive has no path field: its controller takes the
+				// focus a newly added drive gets.
+				focus = if (drive.kind == MountKind.Cd) fieldFocus else null,
+				onControllerChange = { onMountChange(drive.copy(controller = it)) }
+			)
+		}
+		if (drive.kind == MountKind.Hardfile) {
+			Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+				MountTextField(stringResource(R.string.settings_storage_sectors), drive.sectors.toString(), KeyboardType.Number, Modifier.weight(1f), allowed = Char::isDigit) {
+					it.toIntOrNull()?.let { value -> onMountChange(drive.copy(sectors = value)) }
+				}
+				MountTextField(stringResource(R.string.settings_storage_surfaces), drive.surfaces.toString(), KeyboardType.Number, Modifier.weight(1f), allowed = Char::isDigit) {
+					it.toIntOrNull()?.let { value -> onMountChange(drive.copy(surfaces = value)) }
+				}
+			}
+			Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+				MountTextField(stringResource(R.string.settings_storage_reserved), drive.reserved.toString(), KeyboardType.Number, Modifier.weight(1f), allowed = Char::isDigit) {
+					it.toIntOrNull()?.let { value -> onMountChange(drive.copy(reserved = value)) }
+				}
+				MountTextField(stringResource(R.string.settings_storage_block_size), drive.blockSize.toString(), KeyboardType.Number, Modifier.weight(1f), allowed = Char::isDigit) {
+					it.toIntOrNull()?.let { value -> onMountChange(drive.copy(blockSize = value)) }
+				}
+			}
+			Text(stringResource(R.string.settings_storage_rdb_geometry), style = MaterialTheme.typography.bodySmall)
+		}
 
-		var bootText by remember(drive.bootPriority) { mutableStateOf(drive.bootPriority.toString()) }
-		val bootTyping = rememberDpadTypingGate()
-		OutlinedTextField(
-			value = bootText,
-			onValueChange = { input ->
-				bootText = input
-				input.toIntOrNull()?.let { onBootPriorityChange(it) }
-			},
-			label = { Text(stringResource(R.string.settings_storage_boot_priority)) },
-			singleLine = true,
-			readOnly = bootTyping.readOnly,
-			keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
-			keyboardActions = KeyboardActions(onDone = { bootTyping.stopTyping() }),
-			modifier = Modifier
-				.fillMaxWidth()
-				.dpadVerticalMovesFocus()
-				.then(bootTyping.modifier)
-		)
+		if (drive.kind == MountKind.Directory || drive.kind == MountKind.Hardfile) {
+			SettingSwitchRow(
+				label = stringResource(R.string.settings_storage_hard_drive_read_only),
+				checked = drive.readOnly,
+				onCheckedChange = onReadOnlyChange
+			)
+			val bootable = drive.bootPriority > MountEntry.BOOTPRI_NOAUTOBOOT
+			SettingSwitchRow(
+				label = stringResource(R.string.settings_storage_bootable),
+				checked = bootable,
+				onCheckedChange = { enabled ->
+					onBootPriorityChange(if (enabled) 0 else MountEntry.BOOTPRI_NOAUTOBOOT)
+				}
+			)
+			MountTextField(
+				label = stringResource(R.string.settings_storage_boot_priority),
+				value = drive.bootPriority.toString(),
+				keyboardType = KeyboardType.Number,
+				enabled = bootable,
+				onValueChange = { input ->
+					input.toIntOrNull()?.takeIf { it in MountEntry.BOOTPRI_NOAUTOMOUNT..127 }?.let(onBootPriorityChange)
+				}
+			)
+		}
 	}
+}
+
+@Composable
+private fun mountKindLabel(kind: MountKind): String = stringResource(when (kind) {
+	MountKind.Directory -> R.string.settings_storage_mount_directory
+	MountKind.Hardfile -> R.string.settings_storage_mount_hardfile
+	MountKind.Cd -> R.string.settings_storage_mount_cd
+	MountKind.Tape -> R.string.settings_storage_mount_tape
+})
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun MountControllerControls(
+	schema: SettingsSchema?,
+	settings: EmulatorSettings,
+	kind: MountKind,
+	controller: String,
+	focus: FocusRequester? = null,
+	onControllerChange: (String) -> Unit
+) {
+	val controllers = schema?.mountControllersFor(kind, settings, controller).orEmpty()
+	val selected = controllers.firstOrNull { controllerMatches(controller, it.id) }
+	val controllerChoices = if (selected == null) {
+		listOf(controller to controller) + controllers.map { it.id to it.label }
+	} else {
+		controllers.map { it.id to it.label }
+	}
+	MountChoiceDropdown(
+		label = stringResource(R.string.settings_storage_controller),
+		focus = focus,
+		selected = selected?.label ?: controller,
+		choices = controllerChoices,
+		onSelect = { id ->
+			val choice = controllers.firstOrNull { it.id == id } ?: return@MountChoiceDropdown
+			val units = choice.units.filter { it.supports(kind) }
+			val currentUnit = controllerUnit(controller)
+			val unit = units.firstOrNull { it.value == currentUnit } ?: units.firstOrNull() ?: return@MountChoiceDropdown
+			onControllerChange(controllerValue(choice.id, unit.value))
+		}
+	)
+	selected?.let { choice ->
+		val units = choice.units.filter { it.supports(kind) }
+		if (units.isNotEmpty()) {
+			val currentUnit = controllerUnit(controller)
+			MountChoiceDropdown(
+				label = stringResource(R.string.settings_storage_unit),
+				selected = units.firstOrNull { it.value == currentUnit }?.label ?: currentUnit.toString(),
+				choices = units.map { it.value.toString() to it.label },
+				onSelect = { value -> value.toIntOrNull()?.let { onControllerChange(controllerValue(choice.id, it)) } }
+			)
+		}
+	}
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun MountChoiceDropdown(
+	label: String,
+	selected: String,
+	choices: List<Pair<String, String>>,
+	focus: FocusRequester? = null,
+	onSelect: (String) -> Unit
+) {
+	var expanded by remember { mutableStateOf(false) }
+	ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
+		OutlinedTextField(
+			value = selected,
+			onValueChange = {},
+			readOnly = true,
+			label = { Text(label) },
+			trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
+			modifier = Modifier
+				.then(if (focus != null) Modifier.focusRequester(focus) else Modifier)
+				.dpadFieldFocusIndicator()
+				.dpadArrowsMoveFocus()
+				.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
+				.fillMaxWidth()
+		)
+		ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+			choices.forEach { (value, text) ->
+				DropdownMenuItem(
+					text = { Text(text) },
+					modifier = Modifier.dpadMenuItemInitialFocus(text == selected),
+					onClick = {
+						onSelect(value)
+						expanded = false
+					}
+				)
+			}
+		}
+	}
+}
+
+private fun controllerMatches(value: String, template: String): Boolean =
+	Regex("^" + template.split("%d").joinToString("\\d+") { Regex.escape(it) } + "$").matches(value)
+
+private fun controllerUnit(value: String): Int =
+	Regex("""^(?:uae|ide|scsi|custom)(\d+)""").find(value)?.groupValues?.get(1)?.toIntOrNull() ?: 0
+
+private fun controllerValue(template: String, unit: Int): String = template.replace("%d", unit.toString())
+
+@Composable
+private fun HardfileCreateDialog(
+	error: Int?,
+	onDismiss: () -> Unit,
+	onCreate: (String, Int, Boolean) -> Unit
+) {
+	var name by remember { mutableStateOf("hardfile.hdf") }
+	var sizeText by remember { mutableStateOf("100") }
+	var dynamic by remember { mutableStateOf(false) }
+	val size = sizeText.toIntOrNull()?.takeIf { it >= 1 }
+	AlertDialog(
+		onDismissRequest = onDismiss,
+		title = { Text(stringResource(R.string.settings_storage_create_hardfile)) },
+		text = {
+			Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+				OutlinedTextField(
+					value = name,
+					onValueChange = { name = it },
+					label = { Text(stringResource(R.string.settings_storage_hardfile_label)) },
+					singleLine = true,
+					modifier = Modifier.fillMaxWidth().dpadVerticalMovesFocus()
+				)
+				OutlinedTextField(
+					value = sizeText,
+					onValueChange = { sizeText = it },
+					label = { Text(stringResource(R.string.settings_storage_hardfile_size_mb)) },
+					singleLine = true,
+					keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+					modifier = Modifier.fillMaxWidth().dpadVerticalMovesFocus()
+				)
+				if (sizeText.isNotBlank() && size == null) {
+					Text(stringResource(R.string.settings_storage_size_minimum), color = MaterialTheme.colorScheme.error)
+				}
+				error?.let { Text(stringResource(it), color = MaterialTheme.colorScheme.error) }
+				Row(verticalAlignment = Alignment.CenterVertically) {
+					Text(stringResource(R.string.settings_storage_dynamic_vhd), modifier = Modifier.weight(1f))
+					Switch(checked = dynamic, onCheckedChange = { dynamic = it })
+				}
+			}
+		},
+		confirmButton = {
+			TextButton(
+				onClick = { onCreate(name, size!!, dynamic) },
+				enabled = name.isNotBlank() && size != null,
+				modifier = Modifier.dpadFocusIndicator()
+			) { Text(stringResource(R.string.action_create)) }
+		},
+		dismissButton = {
+			TextButton(onClick = onDismiss, modifier = Modifier.dpadFocusIndicator()) {
+				Text(stringResource(R.string.action_cancel))
+			}
+		}
+	)
+}
+
+@Composable
+private fun MountTextField(
+	label: String,
+	value: String,
+	keyboardType: KeyboardType = KeyboardType.Text,
+	modifier: Modifier = Modifier,
+	enabled: Boolean = true,
+	/** Characters the field takes; others are dropped as they are typed. */
+	allowed: (Char) -> Boolean = { true },
+	/** Why a value cannot be kept (shown under the field, which then keeps the last good value), or null. */
+	refusal: (String) -> String? = { null },
+	onValueChange: (String) -> Unit
+) {
+	var text by remember(value) { mutableStateOf(value) }
+	val problem = refusal(text)
+	val typing = rememberDpadTypingGate()
+	OutlinedTextField(
+		value = text,
+		onValueChange = { typed ->
+			val kept = typed.filter(allowed)
+			text = kept
+			if (refusal(kept) == null) onValueChange(kept)
+		},
+		label = { Text(label) },
+		singleLine = true,
+		readOnly = typing.readOnly,
+		enabled = enabled,
+		isError = problem != null,
+		supportingText = problem?.let { { Text(it) } },
+		keyboardOptions = KeyboardOptions(keyboardType = keyboardType, imeAction = ImeAction.Done),
+		keyboardActions = KeyboardActions(onDone = { typing.stopTyping() }),
+		modifier = modifier.fillMaxWidth().dpadVerticalMovesFocus().then(typing.modifier)
+	)
 }

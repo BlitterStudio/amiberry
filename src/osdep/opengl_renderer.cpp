@@ -445,11 +445,14 @@ void OpenGLRenderer::update_vsync(int monid)
 	// KMSDRM has no Adaptive/VRR presentation mode. SDL 3.2.x maps interval 0
 	// to an asynchronous DRM page flip and retains its default triple-buffered
 	// path, with software timing pacing the emulator. SDL 3.4+ retains the
-	// double-buffered blocking atomic path, so use interval 1 there and let
-	// matched-refresh hardware pacing account for it.
-	// Mismatched-refresh atomic presentation needs a separate scheduler.
+	// double-buffered blocking atomic path: use interval 1 there only when the
+	// display refresh matches the chipset, and let hardware pacing account
+	// for it. On a mismatched display (a 60 Hz console and a 50 Hz PAL game)
+	// the emulator paces itself in software, and a flip blocking at the
+	// display's rate added up to a display frame of waiting to every emulated
+	// frame: a busy PAL screen fell to 40 FPS on a 60 Hz Raspberry Pi console.
 	if (kmsdrm_detected) {
-		interval = SDL_GetVersion() < SDL_VERSIONNUM(3, 4, 0) ? 0 : 1;
+		interval = SDL_GetVersion() < SDL_VERSIONNUM(3, 4, 0) || !amiberry_hw_vsync_refresh_matches() ? 0 : 1;
 	}
 
 	if (m_vsync.current_interval != interval) {

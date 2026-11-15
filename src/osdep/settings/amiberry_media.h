@@ -34,7 +34,7 @@
 extern "C" {
 #endif
 
-#define AMIBERRY_MEDIA_API_VERSION 1
+#define AMIBERRY_MEDIA_API_VERSION 2
 
 typedef enum amiberry_folder {
 	AMIBERRY_FOLDER_ROMS,
@@ -193,6 +193,21 @@ AMIBERRY_SETTINGS_API void amiberry_media_add_rom_key(const char *path);
 
 AMIBERRY_SETTINGS_API amiberry_settings_status amiberry_media_configuration_info(const char *path,
 	char *description, size_t description_size, char *category, size_t category_size);
+
+/*
+ * Creates an empty hardfile of size_bytes at path, as the hard drive
+ * panel's Create Hardfile does: a raw image, or with dynamic_vhd a dynamic
+ * VHD that grows as it is written (a path ending in .hdf gets .vhd
+ * instead; the path written is copied into created). An existing file is
+ * never overwritten. INVALID_VALUE for a size below 1 MiB or an existing
+ * path, UNAVAILABLE when the file cannot be written (any partial file is
+ * removed), BUFFER_TOO_SMALL for a missing or too small created buffer.
+ * A raw image touches no emulator state and may be created on any thread
+ * (writing gigabytes takes a while); a dynamic VHD, which is small and
+ * written through the core's file layer, only on the main thread.
+ */
+AMIBERRY_SETTINGS_API amiberry_settings_status amiberry_media_create_hardfile(const char *path,
+	unsigned long long size_bytes, bool dynamic_vhd, char *created, size_t created_size);
 
 #ifdef __cplusplus
 }

@@ -114,7 +114,8 @@ final class SettingsPagesTests: XCTestCase {
 		XCTAssertFalse(SettingsPage.placing.contains { $0.isEdited(in: model.store) })
 
 		// Hard drives are no option, but Storage lays them out.
-		XCTAssertTrue(model.store.addMount("dir,rw,DH9:Work:\(NSTemporaryDirectory()),0"))
+		let mount = try XCTUnwrap(model.store.defaultMount(kind: "dir", path: NSTemporaryDirectory()))
+		XCTAssertTrue(model.store.addMount(mount))
 		XCTAssertEqual(SettingsPage.placing.filter { $0.isEdited(in: model.store) }, [.storage])
 		try model.store.revert()
 		XCTAssertFalse(SettingsPage.storage.isEdited(in: model.store))
@@ -1162,14 +1163,7 @@ final class SettingsWindowModelTests: XCTestCase {
 		try model.store.commit()
 	}
 
-	func testMountFieldsAreSpelledAsTheWriterSpellsThem() {
-		XCTAssertEqual(MountSections.mountField("/Volumes/Work"), "/Volumes/Work")
-		XCTAssertEqual(MountSections.mountField("/a,b"), "\"/a,b\"")
-		XCTAssertEqual(MountSections.mountField("/a "), "\"/a \"")
-		XCTAssertNil(MountSections.mountField("/a\"b"))
-	}
-
-	func testMountedPathsWithCommasAreAccepted() throws {
+	func testMountDefaultsHandlePathsWithCommas() throws {
 		let created = FileManager.default.temporaryDirectory.appendingPathComponent("a,b \(UUID().uuidString)")
 		try FileManager.default.createDirectory(at: created, withIntermediateDirectories: true)
 		defer { try? FileManager.default.removeItem(at: created) }
@@ -1177,10 +1171,15 @@ final class SettingsWindowModelTests: XCTestCase {
 		defer { free(real) }
 		let path = String(cString: real)
 		let session = try SettingsSession()
+		let entry = try session.defaultMount(kind: "dir", path: path)
+		XCTAssertEqual(try session.mountField("path", in: entry), path)
+		// The label is the folder's name as the core stores it: ',' cannot
+		// be in it, and it holds at most 30 characters.
+		let label = String(created.lastPathComponent.replacingOccurrences(of: ",", with: "_").prefix(30))
+		XCTAssertEqual(try session.mountField("volume", in: entry), label)
 		let before = try session.mounts().count
-		try session.addMount("dir,rw,DH9:Work:\(try XCTUnwrap(MountSections.mountField(path))),0")
+		try session.addMount(entry)
 		XCTAssertEqual(try session.mounts().count, before + 1)
-		XCTAssertTrue(try session.mounts().last?.contains("a,") ?? false)
 	}
 
 	func testErrorsReadAsSentences() {

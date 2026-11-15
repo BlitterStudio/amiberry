@@ -120,6 +120,50 @@ public final class SettingsStore {
 		perform { try session.removeMount(at: index) }
 	}
 
+	/// The layer's initial value for a new mount, not yet part of the
+	/// session. A refusal is retained for the properties sheet to show.
+	public func defaultMount(kind: String, path: String = "") -> String? {
+		do {
+			let entry = try session.defaultMount(kind: kind, path: path)
+			lastError = nil
+			return entry
+		} catch let error as SettingsError {
+			lastError = error
+			return nil
+		} catch {
+			lastError = .unavailable("\(error)")
+			return nil
+		}
+	}
+
+	/// Reads a field of an existing entry or a draft mount entry.
+	public func mountField(_ field: String, in entry: String) -> String? {
+		_ = revision
+		return try? session.mountField(field, in: entry)
+	}
+
+	/// Changes one draft mount field without adding or replacing the entry.
+	/// Final duplicate-device and taken-unit checks happen on add or replace.
+	public func settingMountField(_ field: String, to value: String, in entry: String) -> String? {
+		do {
+			let changed = try session.settingMountField(field, to: value, in: entry)
+			lastError = nil
+			return changed
+		} catch let error as SettingsError {
+			lastError = error
+			return nil
+		} catch {
+			lastError = .unavailable("\(error)")
+			return nil
+		}
+	}
+
+	/// The session's available controller and unit choices for a mount kind.
+	public func mountControllers(for kind: String) -> [MountController] {
+		_ = revision
+		return (try? session.mountControllers(for: kind)) ?? []
+	}
+
 	// MARK: Expansion boards (see `BoardType`)
 
 	/// A field of a board unit; nil for a field or unit the type does not have.

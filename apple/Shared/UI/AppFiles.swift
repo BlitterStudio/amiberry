@@ -14,8 +14,12 @@ import Foundation
 /// are the settings UI's own.
 enum FileRequest: Int32 {
 	case floppy = 0, cd, loadState, saveState
-	/// A hard disk image to mount.
+	/// A hard disk image to mount or create.
 	case hardfile
+	/// An archive mounted as a directory volume.
+	case archive
+	/// A tape image mounted by a tape drive.
+	case tapeImage
 	/// A Kickstart, extended or cartridge ROM.
 	case rom
 	/// Any other file an option names.
@@ -91,7 +95,7 @@ enum AppFiles {
 		case .floppy: folder = .floppies
 		case .cd: folder = .cds
 		case .loadState, .saveState: folder = .saveStates
-		case .hardfile: folder = .hardDrives
+		case .hardfile, .archive, .tapeImage: folder = .hardDrives
 		case .rom: folder = .roms
 		case .file, .media:
 			// Next to the media folders (Documents/Amiberry/Imports).

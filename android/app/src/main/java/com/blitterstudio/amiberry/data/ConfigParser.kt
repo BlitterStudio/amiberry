@@ -6,7 +6,8 @@ import com.blitterstudio.amiberry.data.model.EmulatorSettings
 import com.blitterstudio.amiberry.data.model.EmulatorSettingsConstraints
 import com.blitterstudio.amiberry.data.model.AcceleratorJumpers
 import com.blitterstudio.amiberry.data.model.CustomControls
-import com.blitterstudio.amiberry.data.model.HardDrive
+import com.blitterstudio.amiberry.data.model.MountEntry
+import com.blitterstudio.amiberry.data.model.MountKind
 import com.blitterstudio.amiberry.data.model.SettingsBoards
 import com.blitterstudio.amiberry.data.model.SettingsSchema
 import java.io.File
@@ -66,12 +67,10 @@ object ConfigParser {
 		val kvPairs = mutableMapOf<String, String>()
 		val options = LinkedHashMap<String, String>()
 		val unknownLines = mutableListOf<String>()
-		val hardDrives = mutableListOf<HardDrive>()
-		// UAE controller units of the simple hardfile2 lines we adopted into hardDrives.
-		val adoptedControllers = mutableSetOf<String>()
-		// uaehf=hdf lines, deferred until the whole file is scanned: a uaehf only duplicates
-		// a hardfile2 mount when we actually adopted a hardfile2 on the same controller.
-		val uaehfHdfLines = mutableListOf<Pair<String, String?>>()
+		val mounts = mutableListOf<MountEntry>()
+		var gotFs2Hdf2 = false
+		val deferredTwins = mutableListOf<Pair<String, MountEntry>>()
+		val filesystemExtras = mutableListOf<Pair<String, String>>()
 		// Expansion board lines (SettingsBoards) and the custom control
 		// lines, collected by their line keys; the accelerator's packed
 		// jumper line waits for the board it belongs to.
@@ -96,16 +95,31 @@ object ConfigParser {
 			val boardLine = SettingsBoards.line(key)
 
 			when {
-				key == "hardfile2" -> {
-					val drive = parseHardfile2(value)
-					if (drive != null) {
-						hardDrives.add(drive)
-						hardfile2Controller(value)?.let { adoptedControllers.add(it) }
-					} else {
-						unknownLines.add(line)
+				key == "filesystem2" -> {
+					val mount = parseDirectory(value)
+					if (mount == null) unknownLines.add(line) else {
+						mounts += mount
+						gotFs2Hdf2 = true
 					}
 				}
-				isUaehfHdf(key, value) -> uaehfHdfLines.add(line to uaehfController(value))
+				key == "hardfile2" -> {
+					val mount = parseHardfile(value, MountKind.Hardfile)
+					if (mount == null) unknownLines.add(line) else {
+						mounts += mount
+						gotFs2Hdf2 = true
+					}
+				}
+				key == "filesystem_extra" -> parseFilesystemExtra(value)?.let(filesystemExtras::add) ?: unknownLines.add(line)
+				isUaehf(key) -> {
+					val mount = parseUaehf(value)
+					if (mount == null) {
+						unknownLines.add(line)
+					} else if (mount.kind == MountKind.Directory || mount.kind == MountKind.Hardfile) {
+						deferredTwins += line to mount
+					} else {
+						mounts += mount
+					}
+				}
 				// The expansion boards and custom controls keep their own
 				// lines (SettingsBoards, CustomControls): consumed here, and
 				// written back by ConfigGenerator. What the schema does not
@@ -135,11 +149,19 @@ object ConfigParser {
 			}
 		}
 
-		// Drop a uaehf=hdf line only when it twins a hardfile2 we adopted (same controller);
-		// otherwise preserve it verbatim so standalone/legacy mounts survive a save.
-		for ((line, controller) in uaehfHdfLines) {
-			if (controller == null || controller !in adoptedControllers) {
-				unknownLines.add(line)
+		// filesystem2/hardfile2 make their uaehfN twins redundant to the loader.
+		// An unsupported primary line and its twin stay together as unknown data.
+		for ((_, mount) in deferredTwins) {
+			if (!gotFs2Hdf2) mounts += mount
+		}
+		for ((device, extra) in filesystemExtras) {
+			val index = mounts.indexOfFirst { it.kind == MountKind.Directory && it.device.equals(device, ignoreCase = true) }
+			if (index < 0) {
+				unknownLines.add("filesystem_extra=$device,$extra")
+			} else if (extra.equals("inject_icons=true", ignoreCase = true)) {
+				mounts[index] = mounts[index].copy(injectIcons = true)
+			} else {
+				unknownLines.add("filesystem_extra=$device,$extra")
 			}
 		}
 
@@ -157,7 +179,7 @@ object ConfigParser {
 		}
 
 		// A file's own keys win over what its preset record fills in.
-		val settings = buildSettings(kvPairs, hardDrives)
+		val settings = buildSettings(kvPairs, mounts)
 			.copy(options = legacyPresetOptions(kvPairs["amiberry.android_preset"]) + options)
 		val schema = SettingsSchema.current
 		val boards = schema?.let { SettingsBoards.parse(it, boardLines) }.orEmpty()
@@ -222,7 +244,7 @@ object ConfigParser {
 		return model.levelValues(config, 0).filterKeys { it !in EmulatorSettings.FIELD_IDS }
 	}
 
-	private fun buildSettings(kv: Map<String, String>, hardDrives: List<HardDrive>): EmulatorSettings {
+	private fun buildSettings(kv: Map<String, String>, hardDrives: List<MountEntry>): EmulatorSettings {
 		// vkbd_enabled is the native master switch; the KB touch button and the
 		// gamepad toggle are only reachable while it is on (see ConfigGenerator).
 		val keyboardAvailable = kv["amiberry.vkbd_enabled"]?.toBool(true) ?: kv["input.default_osk"].toBool(true)
@@ -375,43 +397,168 @@ object ConfigParser {
 		}
 	}
 
-	private val uaehfKeyRegex = Regex("""uaehf[0-7]""")
-	private val uaeControllerRegex = Regex("""uae\d+""")
+	private val uaehfKeyRegex = Regex("""uaehf(\d{1,2})""")
 
-	/** A uaehf<n>=hdf,... line (the twin native also writes for an HDF mount). */
-	private fun isUaehfHdf(key: String, value: String): Boolean =
-		uaehfKeyRegex.matches(key) && value.trimStart().startsWith("hdf,")
+	/** uaehf0..uaehf49: cfgfile reads one line per possible mount (MAX_FILESYSTEM_UNITS). */
+	private fun isUaehf(key: String): Boolean =
+		uaehfKeyRegex.matchEntire(key)?.groupValues?.get(1)?.toInt()?.let { it < MountEntry.MAX_MOUNTS } == true
 
-	/** UAE controller unit (e.g. "uae0") of an adopted simple hardfile2 line. */
-	private fun hardfile2Controller(value: String): String? =
-		value.split(',').getOrNull(8)?.trim()?.takeIf { uaeControllerRegex.matches(it) }
+	private fun parseFilesystemExtra(value: String): Pair<String, String>? {
+		val parts = splitMountFields(value)
+		return if (parts.size == 2 && parts[0].isNotBlank()) parts[0] to parts[1] else null
+	}
 
-	/** UAE controller unit of a uaehf=hdf line: one of its fields holds a `uae<n>` token. */
-	private fun uaehfController(value: String): String? =
-		value.split(',').map { it.trim() }.firstOrNull { uaeControllerRegex.matches(it) }
+	private fun parseUaehf(value: String): MountEntry? {
+		val split = splitMountFields(value)
+		val kindToken = split.firstOrNull()?.lowercase() ?: return null
+		val body = value.substringAfter(',', missingDelimiterValue = "")
+		if (body.isEmpty()) return null
+		return when {
+			kindToken == "dir" -> parseDirectory(body)
+			kindToken == "hdf" -> parseHardfile(body, MountKind.Hardfile)
+			kindToken.matches(Regex("""cd\d?""")) ->
+				parseHardfile(body, MountKind.Cd, kindToken.removePrefix("cd").toIntOrNull() ?: 0)
+			kindToken.matches(Regex("""tape\d?""")) ->
+				parseHardfile(body, MountKind.Tape, kindToken.removePrefix("tape").toIntOrNull() ?: 0)
+			else -> null
+		}
+	}
+
+	private fun parseDirectory(value: String): MountEntry? {
+		val parts = splitMountFields(value)
+		if (parts.size != 3) return null
+		val access = readOnly(parts[0]) ?: return null
+		val prefix = parts[1]
+		val first = prefix.indexOf(':')
+		val second = prefix.indexOf(':', first + 1)
+		if (first < 0 || second < 0) return null
+		val device = prefix.substring(0, first)
+		val volume = prefix.substring(first + 1, second)
+		val path = decodeFilename(prefix.substring(second + 1))
+		val boot = parts[2].toIntOrNull()?.takeIf { it in MountEntry.BOOTPRI_NOAUTOMOUNT..127 } ?: return null
+		if (path.isEmpty()) return null
+		return MountEntry(
+			kind = MountKind.Directory, path = path, device = device, volume = volume,
+			readOnly = access, bootPriority = boot, controller = "uae0"
+		)
+	}
+
+	private fun parseHardfile(value: String, kind: MountKind, emuUnit: Int = 0): MountEntry? {
+		val parts = splitMountFields(value)
+		if (parts.size < 9) return null
+		val access = readOnly(parts[0]) ?: return null
+		val pathField = parts[1]
+		val separator = pathField.indexOf(':')
+		if (separator < 0) return null
+		val device = pathField.substring(0, separator)
+		val rawPath = decodeFilename(pathField.substring(separator + 1))
+		// A second colon starts cfgfile's physical-drive `:name` form.
+		if (kind == MountKind.Hardfile && rawPath.startsWith(':')) return null
+		val numbers = parts.subList(2, 7).map { it.toIntOrNull() ?: return null }
+		if (numbers[4] !in MountEntry.BOOTPRI_NOAUTOMOUNT..127) return null
+		val controller = parts[8].takeIf { it.isNotBlank() } ?: "uae0"
+		val tail = parts.drop(9)
+		var highCyl = 0
+		var physical = ""
+		var geometry = ""
+		var compactFlash = false
+		var feature = ""
+		var flags = ""
+		var lock = false
+		var identity = false
+		val extras = mutableListOf<String>()
+		for (token in tail) when {
+			token.toIntOrNull() != null && highCyl == 0 -> highCyl = token.toInt()
+			token.matches(Regex("""\d+/\d+/\d+""")) && physical.isEmpty() -> physical = token
+			token.equals("CF", true) -> compactFlash = true
+			token in setOf("SCSI1", "SASI", "SASIE", "SASI_CHS", "ATA1", "ATA2+S") -> feature = token
+			token.startsWith("flags=", true) -> flags = token.substringAfter('=')
+			token.equals("lock", true) -> lock = true
+			token.equals("identity", true) -> identity = true
+			// The loader takes the geometry file only in its quoted spelling.
+			geometry.isEmpty() && token.startsWith('"') -> geometry = decodeGeometry(token)
+			else -> extras += token
+		}
+		return MountEntry(
+			kind = kind, path = rawPath, device = device, readOnly = access,
+			bootPriority = numbers[4], sectors = numbers[0], surfaces = numbers[1],
+			reserved = numbers[2], blockSize = numbers[3], filesystem = decodeFilename(parts[7]),
+			controller = controller, unit = emuUnit, highCyl = highCyl, physicalGeometry = physical,
+			geometry = geometry, compactFlash = compactFlash, featureLevel = feature, flags = flags,
+			lock = lock, identity = identity, extras = extras
+		)
+	}
+
+	private fun readOnly(value: String): Boolean? = when (value.lowercase()) {
+		"ro" -> true
+		"rw" -> false
+		else -> null
+	}
 
 	/**
-	 * Parse a `hardfile2` value ONLY when it is the exact simple UAE-controller RDB form
-	 * this app generates: `<ro|rw>,:<path>,0,0,0,512,<bootpri>,,uae<n>`. Any other form
-	 * (custom geometry/blocksize, an explicit filesystem, a device name, extra trailing
-	 * fields/flags, or a non-UAE controller) returns null so the caller preserves the line
-	 * verbatim — otherwise those mount parameters would be lost on a parse/save round trip.
+	 * The comma-separated fields of a mount value, each as written: a quoted
+	 * field keeps its quotes and escapes for its own decoder. Inside quotes a
+	 * backslash pairs with the next character, so `\"` does not end the field.
 	 */
-	private fun parseHardfile2(value: String): HardDrive? {
-		val parts = value.split(',')
-		if (parts.size != 9) return null
-		val access = parts[0].trim()
-		if (!access.equals("ro", ignoreCase = true) && !access.equals("rw", ignoreCase = true)) return null
-		if (!parts[1].startsWith(":")) return null                       // empty device name only
-		if (parts[2].trim() != "0" || parts[3].trim() != "0" ||
-			parts[4].trim() != "0" || parts[5].trim() != "512") return null  // RDB / auto geometry
-		if (parts[7].trim().isNotEmpty()) return null                    // no explicit filesystem
-		if (!uaeControllerRegex.matches(parts[8].trim())) return null
-		val path = parts[1].substring(1).trim()
-		if (path.isEmpty()) return null
-		val bootPriority = parts[6].trim().toIntOrNull() ?: return null
-		val readOnly = access.equals("ro", ignoreCase = true)
-		return HardDrive(path = path, readOnly = readOnly, bootPriority = bootPriority)
+	private fun splitMountFields(value: String): List<String> {
+		val fields = mutableListOf<String>()
+		val field = StringBuilder()
+		var quoted = false
+		var i = 0
+		while (i < value.length) {
+			val char = value[i]
+			when {
+				quoted && char == '\\' && i + 1 < value.length && (value[i + 1] == '"' || value[i + 1] == '\\') -> {
+					field.append(char).append(value[i + 1])
+					i++
+				}
+				char == '"' -> {
+					quoted = !quoted
+					field.append(char)
+				}
+				char == ',' && !quoted -> {
+					fields += field.toString()
+					field.clear()
+				}
+				else -> field.append(char)
+			}
+			i++
+		}
+		if (quoted) return emptyList()
+		fields += field.toString()
+		return fields
+	}
+
+	/**
+	 * A file name field as cfgfile_escape_min wrote it and
+	 * cfgfile_unescape_quoted_filename reads it: quoted only when needed,
+	 * backslashes literal (Windows paths), `\"` a quote in the name.
+	 */
+	internal fun decodeFilename(value: String): String {
+		if (!value.startsWith('"') || value.length < 2 || !value.endsWith('"')) return value
+		return value.substring(1, value.length - 1).replace("\\\"", "\"")
+	}
+
+	/**
+	 * The geometry file field, which cfgfile_escape(…, nullptr, true, false)
+	 * always quotes with every backslash escaped; cfgfile_unescape reads it
+	 * (\r and \n for those characters, any other escaped character as it is).
+	 */
+	internal fun decodeGeometry(value: String): String {
+		val inner = value.removePrefix("\"").removeSuffix("\"")
+		val out = StringBuilder()
+		var i = 0
+		while (i < inner.length) {
+			val char = inner[i]
+			if (char == '\\' && i + 1 < inner.length) {
+				out.append(when (val next = inner[i + 1]) { 'r' -> '\r'; 'n' -> '\n'; else -> next })
+				i += 2
+			} else {
+				out.append(char)
+				i++
+			}
+		}
+		return out.toString()
 	}
 
 	/**

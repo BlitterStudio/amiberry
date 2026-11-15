@@ -295,6 +295,19 @@ def main():
         check("the long controller entry is stored as a UAE unit",
               reply.split("\t")[-1] == f'hdf,rw,DH4:"{hdf}",32,1,2,512,0,,uae2', reply)
         check("SETTINGS_MOUNT_REMOVE it again", control.request("SETTINGS_MOUNT_REMOVE\t2") == "OK")
+        # A hardfile entry reads back as the reader takes it: an apostrophe
+        # (and a Windows backslash) is not escaped, so the spelling the list
+        # returns can be handed back unchanged.
+        quoted_name = os.path.join(base, "it's.hdf")
+        check("SETTINGS_MOUNT_ADD a hardfile with an apostrophe",
+              control.request(f"SETTINGS_MOUNT_ADD\thdf,rw,DH6:{quoted_name},32,1,2,512,0,,uae2") == "OK")
+        listed = control.request("SETTINGS_MOUNTS").split("\t")[-1]
+        check("SETTINGS_MOUNTS keeps the apostrophe as it is",
+              listed == f"hdf,rw,DH6:{quoted_name},32,1,2,512,0,,uae2", listed)
+        check("the listed spelling replaces the entry unchanged",
+              control.request(f"SETTINGS_MOUNT_REPLACE\t2\t{listed}") == "OK"
+              and control.request("SETTINGS_MOUNTS").split("\t")[-1] == listed)
+        check("SETTINGS_MOUNT_REMOVE it again", control.request("SETTINGS_MOUNT_REMOVE\t2") == "OK")
         reply = control.request("SETTINGS_MOUNT_ADD\tdir,rw,DH5:Long:/" + "x" * 3000 + ",0")
         check("SETTINGS_MOUNT_ADD refuses an entry too long for its fields", reply.startswith("ERROR"), reply)
         if sys.platform == "darwin":

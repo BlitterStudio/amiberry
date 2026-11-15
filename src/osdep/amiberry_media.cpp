@@ -13,6 +13,7 @@
 #include "settings/settings_definitions.h"
 #include "macos_bookmarks.h"
 #include "rommgr.h"
+#include "filesys.h"
 #include "amiberry_filesys_charset.h"
 
 #include <algorithm>
@@ -22,6 +23,11 @@
 #include <string>
 #include <system_error>
 #include <utility>
+
+#ifndef _WIN32
+#include <fcntl.h>
+#include <unistd.h>
+#endif
 #include <vector>
 
 #ifdef _WIN32
@@ -298,6 +304,50 @@ amiberry_settings_status store_recent(std::vector<std::string>& recent, std::vec
 	return AMIBERRY_SETTINGS_OK;
 }
 
+// Creates path, which must not exist, holding size zero bytes; created
+// tells whether the file was made (so a failure can remove it). With size 0
+// it only claims the name, which no other writer can then take.
+bool create_raw_hardfile(const std::string& path, unsigned long long size, bool& created)
+{
+	created = false;
+	static const uae_u8 zeroes[1024 * 1024]{};
+#ifdef _WIN32
+	HANDLE file = CreateFileA(path.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, nullptr);
+	if (file == INVALID_HANDLE_VALUE)
+		return false;
+	created = true;
+	bool complete = true;
+	unsigned long long remaining = size;
+	while (remaining) {
+		const DWORD bytes = static_cast<DWORD>(std::min<unsigned long long>(remaining, sizeof zeroes));
+		DWORD written = 0;
+		if (!WriteFile(file, zeroes, bytes, &written, nullptr) || written != bytes) {
+			complete = false;
+			break;
+		}
+		remaining -= bytes;
+	}
+	CloseHandle(file);
+	return complete;
+#else
+	const int file = open(path.c_str(), O_WRONLY | O_CREAT | O_EXCL, 0666);
+	if (file < 0)
+		return false;
+	created = true;
+	bool complete = true;
+	unsigned long long remaining = size;
+	while (remaining) {
+		const size_t bytes = static_cast<size_t>(std::min<unsigned long long>(remaining, sizeof zeroes));
+		if (write(file, zeroes, bytes) != static_cast<ssize_t>(bytes)) {
+			complete = false;
+			break;
+		}
+		remaining -= bytes;
+	}
+	close(file);
+	return complete;
+#endif
+}
 } // namespace
 
 extern "C" {
@@ -430,6 +480,43 @@ void amiberry_media_forget_current_configuration(void)
 	amiberry_settings::no_throw(0, [] {
 		forget_loaded_config();
 		return 0;
+	});
+}
+
+amiberry_settings_status amiberry_media_create_hardfile(const char* path,
+	unsigned long long size_bytes, bool dynamic_vhd, char* created, size_t created_size)
+{
+	return amiberry_settings::no_throw(AMIBERRY_SETTINGS_UNAVAILABLE, [=] {
+		if (!path || !path[0] || size_bytes < 1024ull * 1024ull)
+			return AMIBERRY_SETTINGS_INVALID_VALUE;
+		std::string target(path);
+		if (dynamic_vhd && has_extension(from_utf8(target), ".hdf"))
+			target.replace(target.size() - 4, 4, ".vhd");
+		if (!created || target.size() >= created_size)
+			return AMIBERRY_SETTINGS_BUFFER_TOO_SMALL;
+		std::error_code ec;
+		if (std::filesystem::exists(from_utf8(target), ec))
+			return AMIBERRY_SETTINGS_INVALID_VALUE;
+		if (ec)
+			return AMIBERRY_SETTINGS_UNAVAILABLE;
+		bool complete = false;
+		bool raw_created = false;
+		if (dynamic_vhd) {
+			// Claim the name first, so an existing file is never written over
+			// (vhd_create opens with "wb"), then write the image into it. No
+			// rename or hard link: exFAT and FAT volumes have no hard links.
+			complete = create_raw_hardfile(target, 0, raw_created)
+				&& vhd_create(target.c_str(), size_bytes, 0) != 0;
+		} else {
+			complete = create_raw_hardfile(target, size_bytes, raw_created);
+		}
+		if (!complete) {
+			if (raw_created)
+				std::filesystem::remove(from_utf8(target), ec);
+			return AMIBERRY_SETTINGS_UNAVAILABLE;
+		}
+		std::memcpy(created, target.c_str(), target.size() + 1);
+		return AMIBERRY_SETTINGS_OK;
 	});
 }
 

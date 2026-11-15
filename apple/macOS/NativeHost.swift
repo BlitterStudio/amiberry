@@ -138,6 +138,10 @@ enum FilePanels {
 		switch request {
 		case .loadState, .saveState:
 			return UTType(filenameExtension: "uss").map { [$0] } ?? []
+		case .archive:
+			return ["zip", "7z", "rar", "lha", "lzh", "lzx"].compactMap { UTType(filenameExtension: $0) }
+		case .hardfile:
+			return ["hdf", "hdz", "hda", "img", "lha", "zip", "vhd", "chd", "7z"].compactMap { UTType(filenameExtension: $0) }
 		case .media:
 			return QuickPlay.extensions.sorted().compactMap { UTType(filenameExtension: $0) }
 		default:
@@ -274,6 +278,27 @@ enum FilePanels {
 			return nil
 		}
 		return granted(url.path)
+	}
+
+	/// Asks where the hardfile creator writes a new image. The layer creates
+	/// the file itself, so sandbox access is retained for its containing
+	/// folder before it does.
+	static func chooseHardfileLocation(title: String, startingAt startPath: String, defaultName: String) -> String? {
+		let panel = NSSavePanel()
+		panel.message = title
+		panel.directoryURL = startDirectory(startPath)
+		panel.nameFieldStringValue = startPath.isEmpty ? defaultName : (startPath as NSString).lastPathComponent
+		panel.canCreateDirectories = true
+		NSApplication.shared.activate(ignoringOtherApps: true)
+		guard panel.runModal() == .OK, let url = panel.url else { return nil }
+		guard MediaLibrary.grantAccess(to: url.deletingLastPathComponent().path) else {
+			Alerts.show(
+				title: "Cannot Keep Access",
+				message: "Amiberry could not keep access to \u{201C}\(url.deletingLastPathComponent().path)\u{201D} for later launches, so the hardfile was not created.",
+				buttons: ["OK"])
+			return nil
+		}
+		return url.path
 	}
 
 	/// The folder to open a panel in: the path itself when it is a folder,

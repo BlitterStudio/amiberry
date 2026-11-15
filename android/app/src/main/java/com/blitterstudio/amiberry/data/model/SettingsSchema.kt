@@ -63,6 +63,8 @@ class SettingsSchema(
 	 * are marked, for a build without PPC support.
 	 */
 	val acceleratorBoards: List<AcceleratorBoard> = emptyList(),
+	/** The storage controllers a live settings session can offer. */
+	val mountControllers: List<MountController> = emptyList(),
 	/** What setting cpuboard_type changes with it (the CPU its board needs); null in a schema without it. */
 	val acceleratorTransitions: Transitions? = null
 ) {
@@ -96,6 +98,44 @@ class SettingsSchema(
 	}
 
 	data class Choice(val value: String, val label: String)
+
+	data class MountController(
+		val id: String,
+		val label: String,
+		val kinds: List<String>,
+		val units: List<MountUnit>,
+		val board: String? = null,
+		val boardUnit: Int = 1,
+		val accelerators: List<String> = emptyList()
+	) {
+		fun supports(kind: MountKind): Boolean = kind.token in kinds
+	}
+
+	data class MountUnit(val value: Int, val label: String, val kinds: List<String> = emptyList()) {
+		fun supports(kind: MountKind): Boolean = kinds.isEmpty() || kind.token in kinds
+	}
+
+	/**
+	 * Controller choices are data from the native schema, filtered exactly as
+	 * the settings panel does. A stale file's current controller remains
+	 * selectable so opening its properties cannot silently change hardware.
+	 */
+	fun mountControllersFor(kind: MountKind, settings: EmulatorSettings, currentController: String? = null): List<MountController> {
+		val accelerator = settings.optionValue("cpuboard_type")
+		return mountControllers.filter { controller ->
+			controller.supports(kind) && (
+				(controller.board == null && controller.accelerators.isEmpty()) ||
+					settings.boards.any { it.typeId == controller.board && it.unit == controller.boardUnit - 1 } ||
+					accelerator in controller.accelerators ||
+					currentController?.matchesController(controller.id) == true
+				)
+		}
+	}
+
+	private fun String.matchesController(template: String): Boolean {
+		val expression = "^" + template.split("%d").joinToString("\\d+") { Regex.escape(it) } + "(?:-\\d+)?$"
+		return Regex(expression).matches(this)
+	}
 
 	/**
 	 * One option of the settings layer, as people should see it: the
@@ -661,11 +701,37 @@ class SettingsSchema(
 					)
 				}
 			}.orEmpty()
+			val mountControllers = json.optJSONArray("mount_controllers")?.let { array ->
+				List(array.length()) { i ->
+					val controller = array.getJSONObject(i)
+					MountController(
+						id = controller.getString("id"),
+						label = controller.getString("label"),
+						kinds = controller.getJSONArray("kinds").toStringList(),
+						units = controller.getJSONArray("units").let { units ->
+							List(units.length()) { u ->
+								val unit = units.getJSONObject(u)
+								MountUnit(
+									value = unit.getInt("value"),
+									label = unit.getString("label"),
+									kinds = unit.optJSONArray("kinds")?.toStringList().orEmpty()
+								)
+							}
+						},
+						board = controller.optString("board").ifEmpty { null },
+						boardUnit = controller.optInt("board_unit", 1),
+						accelerators = controller.optJSONArray("accelerators")?.toStringList().orEmpty()
+					)
+				}
+			}.orEmpty()
 			return SettingsSchema(
-				options, presets, levels, roms, resolutions, memoryResolutions,
-				soundResolutions, availability, transitions, aros, memoryTransitions, hostSettings,
-				boardTypes, customControls, inputEvents, acceleratorBoards,
-				json.optJSONObject("accelerator_transitions")?.let { Transitions.parse(it) }
+				options = options, presets = presets, compatibilityLevels = levels, roms = roms,
+				resolutions = resolutions, memoryResolutions = memoryResolutions,
+				soundResolutions = soundResolutions, availability = availability, transitions = transitions,
+				aros = aros, memoryTransitions = memoryTransitions, hostSettings = hostSettings,
+				boardTypes = boardTypes, customControls = customControls, inputEvents = inputEvents,
+				acceleratorBoards = acceleratorBoards, mountControllers = mountControllers,
+				acceleratorTransitions = json.optJSONObject("accelerator_transitions")?.let { Transitions.parse(it) }
 			)
 		}
 

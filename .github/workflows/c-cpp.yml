@@ -36,6 +36,7 @@ env:
 
 jobs:
   build-macOS:
+    name: build-macOS-${{ matrix.name }}
     runs-on: ${{ matrix.runner }}
     timeout-minutes: ${{ matrix.arch == 'intel' && 120 || 45 }}
     permissions:
@@ -1153,6 +1154,7 @@ jobs:
         path: amiberry-*.zip
 
   build-debian-amd64:
+    name: build-debian-${{ matrix.name }}-amd64
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
@@ -1225,6 +1227,7 @@ jobs:
           path: "amiberry-*.zip"
 
   build-debian-arm64:
+    name: build-debian-${{ matrix.name }}-arm64
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
