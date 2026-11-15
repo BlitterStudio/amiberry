@@ -3019,9 +3019,11 @@ static uae_u32 setspriteimage(TrapContext *ctx, uaecptr bi)
 		goto end;
 	}
 
-	cursordata = xmalloc (uae_u8, w * h);
+	// Build the full image, then keep what fits the cursor surface.
+	uae_u8 *image = xmalloc(uae_u8, w * h);
+	cursordata = nullptr;
 	for (y = 0, yy = 0; y < h; y++, yy++) {
-		uae_u8 *p = cursordata + w * y;
+		uae_u8 *p = image + w * y;
 		const uae_u8 *pprev = p;
 		const uaecptr img = iptr + 4 * hiressprite + yy * 4 * hiressprite;
 		x = 0;
@@ -3042,7 +3044,8 @@ static uae_u32 setspriteimage(TrapContext *ctx, uaecptr bi)
 				}
 			}
 		}
-		if (doubledsprite && y < h) {
+		// With an odd height the last row has no copy.
+		if (doubledsprite && y + 1 < h) {
 			y++;
 			memcpy(p, pprev, w);
 		}
@@ -3054,6 +3057,14 @@ static uae_u32 setspriteimage(TrapContext *ctx, uaecptr bi)
 	cursorheight = h;
 	if (cursorheight > CURSORMAXHEIGHT)
 		cursorheight = CURSORMAXHEIGHT;
+	// Readers walk rows of cursorwidth bytes, so store with that stride.
+	cursordata = xcalloc(uae_u8, cursorwidth * cursorheight);
+	if (cursordata) {
+		for (y = 0; y < cursorheight; y++) {
+			memcpy(cursordata + cursorwidth * y, image + w * y, cursorwidth);
+		}
+	}
+	xfree(image);
 
 	createwindowscursor(currprefs.rtgboards[0].monitor_id, 1, 0);
 
