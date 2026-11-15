@@ -7222,10 +7222,12 @@ static uae_u32 REGPARAM2 picasso_SetMemoryMode(TrapContext *ctx)
 #if USE_OVERLAY
 
 #define OVERLAY_COOKIE 0x12345678
+// Limit for a whole tag list walk, so a TAG_MORE loop cannot hang the emulator.
+#define OVERLAY_MAX_TAGS 4096
 
-static uaecptr gettag(TrapContext *ctx, uaecptr p, uae_u32 *tagp, uae_u32 *valp)
+static uaecptr gettag(TrapContext *ctx, uaecptr p, uae_u32 *tagp, uae_u32 *valp, int *budget)
 {
-	for (;;) {
+	while (p && (*budget)-- > 0) {
 		uae_u32 tag = trap_get_long(ctx, p);
 		uae_u32 val = trap_get_long(ctx, p + 4);
 #if OVERLAY_DEBUG > 2
@@ -7249,6 +7251,7 @@ static uaecptr gettag(TrapContext *ctx, uaecptr p, uae_u32 *tagp, uae_u32 *valp)
 		*valp = val;
 		return p + 8;
 	}
+	return 0;
 }
 static void settag(TrapContext *ctx, uaecptr p, uae_u32 v)
 {
@@ -7444,9 +7447,10 @@ static uae_u32 REGPARAM2 picasso_SetFeatureAttrs(TrapContext *ctx)
 #if OVERLAY_DEBUG > 1
 	write_log(_T("picasso_SetFeatureAttrs %08x %d\n"), tagp, type);
 #endif
+	int budget = OVERLAY_MAX_TAGS;
 	for (;;) {
 		uae_u32 tag, val;
-		tagp = gettag(ctx, tagp, &tag, &val);
+		tagp = gettag(ctx, tagp, &tag, &val, &budget);
 		if (!tagp)
 			break;
 #if OVERLAY_DEBUG > 1
@@ -7474,9 +7478,10 @@ static uae_u32 REGPARAM2 picasso_GetFeatureAttrs(TrapContext *ctx)
 #if OVERLAY_DEBUG > 1
 	write_log(_T("picasso_GetFeatureAttrs %08x %d\n"), tagp, type);
 #endif
+	int budget = OVERLAY_MAX_TAGS;
 	for (;;) {
 		uae_u32 tag, val;
-		tagp = gettag(ctx, tagp, &tag, &val);
+		tagp = gettag(ctx, tagp, &tag, &val, &budget);
 		if (!tagp)
 			break;
 		overlaysettag(ctx, tag, val);
@@ -7528,9 +7533,10 @@ static uae_u32 REGPARAM2 picasso_CreateFeature(TrapContext *ctx)
 	overlay_src_width_in = -1;
 	overlay_src_height_in = -1;
 	overlay_format = 0;
+	int budget = OVERLAY_MAX_TAGS;
 	for (;;) {
 		uae_u32 tag, val;
-		tagp = gettag(ctx, tagp, &tag, &val);
+		tagp = gettag(ctx, tagp, &tag, &val, &budget);
 		if (!tagp)
 			break;
 #if OVERLAY_DEBUG
