@@ -1141,7 +1141,7 @@ static void gen_fastdraw_mode(int off, int total)
 		} else {
 			outf("get_shres_pix(c0, c1, &dpix_val0, &dpix_val1);");
 		}
-		if (doubling < 0) {
+		if (doubling < 0 && filtered) {
 			outf("dpix_val0 = filter_pixel(dpix_val0, dpix_val1);");
 			if (genlock) {
 				outf("gpix0 = filter_pixel_genlock(gpix0, gpix1);");
