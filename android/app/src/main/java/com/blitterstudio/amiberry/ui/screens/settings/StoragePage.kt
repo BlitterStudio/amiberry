@@ -811,8 +811,15 @@ private fun MountRow(
 		}
 
 		if (drive.kind == MountKind.Directory || drive.kind == MountKind.Hardfile) {
+			// The core refuses a device name in use (add_filesys_config), so
+			// the second drive would vanish when the machine starts.
+			val usedNames = settings.hardDrives.filterIndexed { i, other ->
+				i != index && (other.kind == MountKind.Directory || other.kind == MountKind.Hardfile)
+			}.map { it.device.lowercase() }.filter { it.isNotEmpty() }.toSet()
+			val inUse = stringResource(R.string.settings_storage_device_in_use)
 			MountTextField(stringResource(R.string.settings_storage_device_name), drive.device,
-				allowed = { MountNames.allowed(it, device = true) }) {
+				allowed = { MountNames.allowed(it, device = true) },
+				refusal = { name -> if (name.lowercase() in usedNames) inUse else null }) {
 				onMountChange(drive.copy(device = it))
 			}
 		}
@@ -828,6 +835,9 @@ private fun MountRow(
 				settings = settings,
 				kind = drive.kind,
 				controller = drive.controller,
+				// A CD drive has no path field: its controller takes the
+				// focus a newly added drive gets.
+				focus = if (drive.kind == MountKind.Cd) fieldFocus else null,
 				onControllerChange = { onMountChange(drive.copy(controller = it)) }
 			)
 		}
@@ -893,6 +903,7 @@ private fun MountControllerControls(
 	settings: EmulatorSettings,
 	kind: MountKind,
 	controller: String,
+	focus: FocusRequester? = null,
 	onControllerChange: (String) -> Unit
 ) {
 	val controllers = schema?.mountControllersFor(kind, settings, controller).orEmpty()
@@ -904,6 +915,7 @@ private fun MountControllerControls(
 	}
 	MountChoiceDropdown(
 		label = stringResource(R.string.settings_storage_controller),
+		focus = focus,
 		selected = selected?.label ?: controller,
 		choices = controllerChoices,
 		onSelect = { id ->
@@ -930,7 +942,13 @@ private fun MountControllerControls(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun MountChoiceDropdown(label: String, selected: String, choices: List<Pair<String, String>>, onSelect: (String) -> Unit) {
+private fun MountChoiceDropdown(
+	label: String,
+	selected: String,
+	choices: List<Pair<String, String>>,
+	focus: FocusRequester? = null,
+	onSelect: (String) -> Unit
+) {
 	var expanded by remember { mutableStateOf(false) }
 	ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
 		OutlinedTextField(
@@ -940,6 +958,7 @@ private fun MountChoiceDropdown(label: String, selected: String, choices: List<P
 			label = { Text(label) },
 			trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
 			modifier = Modifier
+				.then(if (focus != null) Modifier.focusRequester(focus) else Modifier)
 				.dpadFieldFocusIndicator()
 				.dpadArrowsMoveFocus()
 				.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
@@ -1032,21 +1051,26 @@ private fun MountTextField(
 	enabled: Boolean = true,
 	/** Characters the field takes; others are dropped as they are typed. */
 	allowed: (Char) -> Boolean = { true },
+	/** Why a value cannot be kept (shown under the field, which then keeps the last good value), or null. */
+	refusal: (String) -> String? = { null },
 	onValueChange: (String) -> Unit
 ) {
 	var text by remember(value) { mutableStateOf(value) }
+	val problem = refusal(text)
 	val typing = rememberDpadTypingGate()
 	OutlinedTextField(
 		value = text,
 		onValueChange = { typed ->
 			val kept = typed.filter(allowed)
 			text = kept
-			onValueChange(kept)
+			if (refusal(kept) == null) onValueChange(kept)
 		},
 		label = { Text(label) },
 		singleLine = true,
 		readOnly = typing.readOnly,
 		enabled = enabled,
+		isError = problem != null,
+		supportingText = problem?.let { { Text(it) } },
 		keyboardOptions = KeyboardOptions(keyboardType = keyboardType, imeAction = ImeAction.Done),
 		keyboardActions = KeyboardActions(onDone = { typing.stopTyping() }),
 		modifier = modifier.fillMaxWidth().dpadVerticalMovesFocus().then(typing.modifier)

@@ -1626,6 +1626,18 @@ bool cfgfile_mount_value_ci (const struct uaedev_config_info *ci, TCHAR *out, si
 		return false;
 	TCHAR fs2[CONFIG_BLEN];
 	mount_entry_values (ci, fs2, sizeof fs2 / sizeof (TCHAR), out, size);
+	// The uaehfN hdf spelling escapes the path fully (an apostrophe becomes
+	// \', a Windows path quoted with doubled backslashes), but the uaehf
+	// reader takes the path as it stands: a configuration file is read
+	// through its hardfile2 twin, which spells the path as the reader
+	// reverses it. An entry handed around on its own uses that spelling,
+	// except a physical drive's ":name" path, which only the uaehf form
+	// carries.
+	if (ci->type == UAEDEV_HDF && ci->rootdir[0] != ':') {
+		if (_tcslen (_T("hdf,")) + _tcslen (fs2) >= size)
+			return false;
+		_sntprintf (out, size, _T("hdf,%s"), fs2);
+	}
 	return true;
 }
 

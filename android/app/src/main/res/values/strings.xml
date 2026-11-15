@@ -259,6 +259,7 @@
     <string name="settings_storage_boot_priority">Boot priority</string>
     <string name="settings_storage_add_directory">Add directory</string>
     <string name="settings_storage_mount_folder">Mount this folder</string>
+    <string name="settings_storage_device_in_use">Another drive uses this device name; the drive keeps its last name until this one is changed.</string>
     <string name="settings_storage_add_archive">Add archive</string>
     <string name="settings_storage_add_cd_drive">Add CD drive</string>
     <string name="settings_storage_add_tape_drive">Add tape drive</string>
