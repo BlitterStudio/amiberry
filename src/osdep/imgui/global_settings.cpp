@@ -542,10 +542,13 @@ void render_panel_global_settings()
 		render_combo_row("Line mode", &amiberry_options.default_line_mode,
 			line_mode_options, IM_ARRAYSIZE(line_mode_options),
 			"Default native display line mode for new configurations.");
+		// Auto crop overrides centering at config fixup, as in the Display panel.
+		ImGui::BeginDisabled(amiberry_options.default_auto_crop);
 		render_bool_row("Horizontal centering", &amiberry_options.default_horizontal_centering,
-			"Center the native display horizontally by default.");
+			"Center the native display horizontally by default. Ignored while Auto crop is on.");
 		render_bool_row("Vertical centering", &amiberry_options.default_vertical_centering,
-			"Center the native display vertically by default.");
+			"Center the native display vertically by default. Ignored while Auto crop is on.");
+		ImGui::EndDisabled();
 		render_combo_row("Scaling method", &amiberry_options.default_scaling_method,
 			scaling_method_options, scaling_method_option_count,
 			"Default image scaling method.");
