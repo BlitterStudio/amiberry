@@ -585,6 +585,12 @@ static void check_ipl_always(void)
 
 static void addcycles_020(int cycles)
 {
+	if (cpu_level >= 4) {
+		cycles /= 6;
+		if (cycles <= 1) {
+			return;
+		}
+	}
 	if (using_ce020) {
 		out("%s(%d);\n", do_cycles, cycles);
 	} else if (using_prefetch_020) {
@@ -7121,8 +7127,8 @@ static void gen_opcode (unsigned int opcode)
 			addcycles_ce020 (6);
 		    out("if (frame == 0x0) {\nm68k_areg(regs, 7) += offset; break; }\n");
 			if (cpu_level >= 2) {
-				// 68020+
-				if (cpu_level < 5) {
+				// 68020+; the 68060 has no throwaway frame (format $1):
+				if (cpu_level <= 4) {
 					out("else if (frame == 0x1) {\nm68k_areg(regs, 7) += offset; }\n");
 				}
 				out("else if (frame == 0x2) {\nm68k_areg(regs, 7) += offset + 4; break; }\n");
