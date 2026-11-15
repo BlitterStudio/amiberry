@@ -48,6 +48,8 @@ int sound_freq_ahi, sound_channels_ahi, sound_bits_ahi;
 static int amigablksize;
 // Bytes of audio to keep queued in ahi_stream; set in ahi_init_sound().
 static int ahi_queue_target;
+// Last mute state passed to setvolume_ahi(), applied again when the stream opens.
+static int ahi_master_mute;
 
 static SDL_AudioStream* ahi_stream = nullptr;
 static SDL_AudioStream* ahi_rec_stream = nullptr;
@@ -179,13 +181,26 @@ static int ahi_init_record ()
 	return 1;
 }
 
-void setvolume_ahi (int volume)
+static void ahi_apply_volume()
 {
 	if (!ahi_stream)
 		return;
-	// SDL3 AudioStream doesn't support device-level volume control directly.
-	// AHI V1 pushes raw buffers from Amiga — volume scaling would need software mixing.
-	// For now, no-op.
+	float gain = 0.0f;
+	if (!ahi_master_mute) {
+		// Read the volumes from the prefs: without Paula sound, set_volume()
+		// never runs, but the configured attenuation still applies to AHI.
+		const int board = std::clamp(currprefs.sound_volume_board, 0, 100);
+		const int master = std::clamp(currprefs.sound_volume_master, 0, 100);
+		gain = static_cast<float>((100 - board) * (100 - master)) / 10000.0f;
+	}
+	if (!SDL_SetAudioStreamGain(ahi_stream, gain))
+		write_log(_T("AHI: SDL_SetAudioStreamGain failed: %s\n"), SDL_GetError());
+}
+
+void setvolume_ahi(int mute)
+{
+	ahi_master_mute = mute;
+	ahi_apply_volume();
 }
 
 static int ahi_init_sound()
@@ -250,7 +265,7 @@ static int ahi_init_sound()
 
 	SDL_ResumeAudioStreamDevice(ahi_stream);
 
-	setvolume_ahi(0);
+	ahi_apply_volume();
 
 	ahi_on = 1;
 	return sound_freq_ahi;

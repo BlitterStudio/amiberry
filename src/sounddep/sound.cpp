@@ -421,7 +421,7 @@ static void close_audio_sdl(struct sound_data* sd)
 	s->stream = nullptr;
 }
 
-extern void setvolume_ahi (int);
+extern void setvolume_ahi (int mute);
 
 void set_volume_sound_device (struct sound_data *sd, int volume, int mute)
 {
@@ -446,7 +446,7 @@ void set_volume(int volume, int mute)
 {
 	volume_mute = mute != 0;
 	set_volume_sound_device(sdp, volume, mute);
-	setvolume_ahi(volume);
+	setvolume_ahi(mute);
 #ifdef VIDEOGRAB
 	setmastervolumevideograb(volume, mute != 0);
 #endif
