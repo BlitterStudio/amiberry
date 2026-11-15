@@ -119,11 +119,7 @@ fun StoragePage(
 			val kind = pendingFolderMount
 			pendingFolderMount = null
 			val path = (picked as? PickedFolder.Local)?.dir?.path ?: return@rememberImportPicker
-			if (kind != null && viewModel.settings.hardDrives.size < MountEntry.MAX_MOUNTS) {
-				viewModel.updateSettings { current ->
-					current.copy(hardDrives = current.hardDrives + MountDefaults.newMount(kind, path, current, mountSchema))
-				}
-			}
+			if (kind != null) viewModel.updateSettings { current -> MountDefaults.added(current, kind, path, mountSchema) }
 		},
 		onFiles = {}
 	)
@@ -138,10 +134,8 @@ fun StoragePage(
 						if (it is FileManager.ImportResult.Imported) FileRepository.getInstance(context).rescanCategory(FileCategory.HARD_DRIVES)
 					}
 				}
-				if (result is FileManager.ImportResult.Imported && viewModel.settings.hardDrives.size < MountEntry.MAX_MOUNTS) {
-					viewModel.updateSettings { current ->
-						current.copy(hardDrives = current.hardDrives + MountDefaults.newMount(MountKind.Directory, result.path, current, mountSchema))
-					}
+				if (result is FileManager.ImportResult.Imported) {
+					viewModel.updateSettings { current -> MountDefaults.added(current, MountKind.Directory, result.path, mountSchema) }
 				}
 				onImportResult(result)
 			}
@@ -158,10 +152,8 @@ fun StoragePage(
 						if (it is FileManager.ImportResult.Imported) FileRepository.getInstance(context).rescanCategory(FileCategory.HARD_DRIVES)
 					}
 				}
-				if (result is FileManager.ImportResult.Imported && viewModel.settings.hardDrives.size < MountEntry.MAX_MOUNTS) {
-					viewModel.updateSettings { current ->
-						current.copy(hardDrives = current.hardDrives + MountDefaults.newMount(MountKind.Tape, result.path, current, mountSchema))
-					}
+				if (result is FileManager.ImportResult.Imported) {
+					viewModel.updateSettings { current -> MountDefaults.added(current, MountKind.Tape, result.path, mountSchema) }
 				}
 				onImportResult(result)
 			}
@@ -192,10 +184,7 @@ fun StoragePage(
 					creatingHardfile = false
 					hardfileError = null
 					FileRepository.getInstance(context).rescanCategory(FileCategory.HARD_DRIVES)
-					viewModel.updateSettings { current ->
-						if (current.hardDrives.size >= MountEntry.MAX_MOUNTS) current else
-							current.copy(hardDrives = current.hardDrives + MountDefaults.newMount(MountKind.Hardfile, created, current, mountSchema))
-					}
+					viewModel.updateSettings { current -> MountDefaults.added(current, MountKind.Hardfile, created, mountSchema) }
 				}
 			}
 		)
@@ -335,13 +324,11 @@ fun StoragePage(
 				Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
 					TextButton(
 						onClick = {
-							if (settings.hardDrives.size >= MountEntry.MAX_MOUNTS) return@TextButton
+							if (!MountDefaults.canAdd(MountKind.Hardfile, settings, mountSchema)) return@TextButton
 							pendingFocus = newDriveFocus to settings.hardDrives.size
-							viewModel.updateSettings { s ->
-								s.copy(hardDrives = s.hardDrives + MountDefaults.newMount(MountKind.Hardfile, "", s, mountSchema))
-							}
+							viewModel.updateSettings { s -> MountDefaults.added(s, MountKind.Hardfile, "", mountSchema) }
 						},
-						enabled = settings.hardDrives.size < MountEntry.MAX_MOUNTS,
+						enabled = MountDefaults.canAdd(MountKind.Hardfile, settings, mountSchema),
 						modifier = Modifier.fillMaxWidth().focusRequester(addDriveFocus).dpadFocusIndicator()
 					) {
 						Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -354,7 +341,7 @@ fun StoragePage(
 							pendingFolderMount = MountKind.Directory
 							mountFolderPicker.browseFolders()
 						},
-						enabled = settings.hardDrives.size < MountEntry.MAX_MOUNTS,
+						enabled = MountDefaults.canAdd(MountKind.Directory, settings, mountSchema),
 						modifier = Modifier.fillMaxWidth().dpadFocusIndicator()
 					) {
 						Text(stringResource(R.string.settings_storage_add_directory))
@@ -362,7 +349,7 @@ fun StoragePage(
 					}
 					TextButton(
 						onClick = archivePicker::pickFiles,
-						enabled = settings.hardDrives.size < MountEntry.MAX_MOUNTS && !importInProgress,
+						enabled = MountDefaults.canAdd(MountKind.Directory, settings, mountSchema) && !importInProgress,
 						modifier = Modifier.fillMaxWidth().dpadFocusIndicator()
 					) {
 						Text(stringResource(R.string.settings_storage_add_archive))
@@ -370,13 +357,11 @@ fun StoragePage(
 					}
 					TextButton(
 						onClick = {
+							if (!MountDefaults.canAdd(MountKind.Cd, settings, mountSchema)) return@TextButton
 							pendingFocus = newDriveFocus to settings.hardDrives.size
-							viewModel.updateSettings { current ->
-								if (current.hardDrives.size >= MountEntry.MAX_MOUNTS) current else
-									current.copy(hardDrives = current.hardDrives + MountDefaults.newMount(MountKind.Cd, "", current, mountSchema))
-							}
+							viewModel.updateSettings { current -> MountDefaults.added(current, MountKind.Cd, "", mountSchema) }
 						},
-						enabled = settings.hardDrives.size < MountEntry.MAX_MOUNTS,
+						enabled = MountDefaults.canAdd(MountKind.Cd, settings, mountSchema),
 						modifier = Modifier.fillMaxWidth().dpadFocusIndicator()
 					) {
 						Text(stringResource(R.string.settings_storage_add_cd_drive))
@@ -387,7 +372,7 @@ fun StoragePage(
 							pendingFolderMount = MountKind.Tape
 							mountFolderPicker.browseFolders()
 						},
-						enabled = settings.hardDrives.size < MountEntry.MAX_MOUNTS,
+						enabled = MountDefaults.canAdd(MountKind.Tape, settings, mountSchema),
 						modifier = Modifier.fillMaxWidth().dpadFocusIndicator()
 					) {
 						Text(stringResource(R.string.settings_storage_add_tape_drive))
@@ -395,7 +380,7 @@ fun StoragePage(
 					}
 					TextButton(
 						onClick = tapeImagePicker::pickFiles,
-						enabled = settings.hardDrives.size < MountEntry.MAX_MOUNTS && !importInProgress,
+						enabled = MountDefaults.canAdd(MountKind.Tape, settings, mountSchema) && !importInProgress,
 						modifier = Modifier.fillMaxWidth().dpadFocusIndicator()
 					) {
 						Text(stringResource(R.string.settings_storage_add_tape_image))
@@ -403,7 +388,7 @@ fun StoragePage(
 					}
 					TextButton(
 						onClick = { creatingHardfile = true },
-						enabled = settings.hardDrives.size < MountEntry.MAX_MOUNTS,
+						enabled = MountDefaults.canAdd(MountKind.Hardfile, settings, mountSchema),
 						modifier = Modifier.fillMaxWidth().dpadFocusIndicator()
 					) {
 						Text(stringResource(R.string.settings_storage_create_hardfile))

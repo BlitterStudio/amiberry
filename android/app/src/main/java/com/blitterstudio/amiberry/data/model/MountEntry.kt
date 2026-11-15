@@ -60,10 +60,11 @@ data class MountEntry(
 
 /** Launcher-side defaults mirror add_filesys_config and hardfile_testrdb. */
 object MountDefaults {
+	/** A new drive's entry; callers check [canAdd] first (use [added]). */
 	fun newMount(kind: MountKind, path: String, settings: EmulatorSettings, schema: SettingsSchema?): MountEntry {
-		val controller = defaultController(kind, settings, schema)
-		val controllerUnit = firstFreeUnit(controller, settings.hardDrives)
-		val emuUnit = firstFreeEmuUnit(kind, settings.hardDrives)
+		val (template, controllerUnit) = placement(kind, settings, schema) ?: (defaultController(kind, settings, schema) to 0)
+		val controller = template
+		val emuUnit = freeEmuUnit(kind, settings.hardDrives) ?: 0
 		return when (kind) {
 			MountKind.Directory -> MountEntry(
 				kind = kind, path = path, device = firstFreeDevice(settings.hardDrives),
@@ -107,11 +108,13 @@ object MountDefaults {
 
 	private fun defaultController(kind: MountKind, settings: EmulatorSettings, schema: SettingsSchema?): String {
 		val offered = schema?.mountControllersFor(kind, settings).orEmpty()
+		// A CD drive goes on SCSI when the machine has a SCSI controller the
+		// panel counts (amiberry_settings_mount_default: an A2091, GVP Series
+		// II or A4091 board, or the A3000/A4000T built-in SCSI), else IDE.
 		if (kind == MountKind.Cd) {
-			val hasScsi = settings.boards.any { board ->
-				schema?.boardTypes?.firstOrNull { it.id == board.typeId }?.categories?.contains("scsi") == true
-			}
-			if (hasScsi) offered.firstOrNull { it.id == "scsi%d" }?.let { return it.id }
+			val scsiBoard = settings.boards.any { it.typeId in setOf("a2091", "gvp", "a4091") && it.unit == 0 }
+			val builtInScsi = settings.optionValue("scsi_a3000") == "true" || settings.optionValue("scsi_a4000t") == "true"
+			if (scsiBoard || builtInScsi) offered.firstOrNull { it.id == "scsi%d" }?.let { return it.id }
 		}
 		// The Android editor can open a configuration before the desktop-generated
 		// schema is installed, so preserve a cfgfile-compatible auto controller.
@@ -127,22 +130,49 @@ object MountDefaults {
 		return generateSequence(0) { it + 1 }.map { "DH$it" }.first { it.lowercase() !in used }
 	}
 
-	private fun firstFreeEmuUnit(kind: MountKind, mounts: List<MountEntry>): Int =
-		generateSequence(0) { it + 1 }.first { candidate ->
-			mounts.none { it.kind == kind && it.unit == candidate }
-		}
+	/** The first cdN/tapeN unit no entry of its kind uses; null when all MAX_EMU_UNITS are taken. */
+	internal fun freeEmuUnit(kind: MountKind, mounts: List<MountEntry>): Int? =
+		(0 until MAX_EMU_UNITS).firstOrNull { candidate -> mounts.none { it.kind == kind && it.unit == candidate } }
 
-	private fun firstFreeUnit(controller: String, mounts: List<MountEntry>): Int {
-		val template = controllerTemplate(controller)
-		val used = mounts.filter { controllerTemplate(it.controller) == template }
-			.map { Regex("""^(?:uae|ide|scsi|custom)(\d+)""").find(it.controller)?.groupValues?.get(1)?.toIntOrNull() }
-			.filterNotNull().toSet()
-		return generateSequence(0) { it + 1 }.first { it !in used }
+	/** cfgfile reads cd0..cd7 and tape0..tape7 (MAX_TOTAL_SCSI_DEVICES). */
+	private const val MAX_EMU_UNITS = 8
+
+	/** Whether a drive of [kind] can be added: the list has room, and a CD or tape drive a free unit of each kind. */
+	fun canAdd(kind: MountKind, settings: EmulatorSettings, schema: SettingsSchema?): Boolean {
+		if (settings.hardDrives.size >= MountEntry.MAX_MOUNTS) return false
+		if ((kind == MountKind.Cd || kind == MountKind.Tape) && freeEmuUnit(kind, settings.hardDrives) == null) return false
+		return kind == MountKind.Directory || placement(kind, settings, schema) != null
 	}
 
-	private fun controllerTemplate(value: String): String {
-		val match = Regex("""^(uae|ide|scsi|custom)\d+""").find(value) ?: return value
-		return value.replaceRange(match.range, match.groupValues[1] + "#")
+	/**
+	 * The controller and unit a new drive of [kind] goes on: the default
+	 * controller's first free unit, else the first other offered controller
+	 * with one (two CD drives fill IDE (Auto)); null when none is free.
+	 */
+	private fun placement(kind: MountKind, settings: EmulatorSettings, schema: SettingsSchema?): Pair<String, Int>? {
+		val preferred = defaultController(kind, settings, schema)
+		val others = schema?.mountControllersFor(kind, settings).orEmpty().map { it.id }.filter { it != preferred }
+		return (listOf(preferred) + others).firstNotNullOfOrNull { template ->
+			freeControllerUnit(template, kind, settings.hardDrives, schema)?.let { template to it }
+		}
+	}
+
+	/** [settings] with a new drive of [kind] for [path] at the end; unchanged when [canAdd] says no. */
+	fun added(settings: EmulatorSettings, kind: MountKind, path: String, schema: SettingsSchema?): EmulatorSettings =
+		if (!canAdd(kind, settings, schema)) settings
+		else settings.copy(hardDrives = settings.hardDrives + newMount(kind, path, settings, schema))
+
+	/**
+	 * The first unit of controller [template] ("ide%d") that no drive uses,
+	 * among the units the schema gives it for [kind] (add_filesys_config
+	 * refuses a controller with none free); null when all are taken.
+	 */
+	private fun freeControllerUnit(template: String, kind: MountKind, mounts: List<MountEntry>, schema: SettingsSchema?): Int? {
+		val pattern = Regex("^" + template.split("%d").joinToString("(\\d+)") { Regex.escape(it) } + "$")
+		val used = mounts.mapNotNull { pattern.matchEntire(it.controller)?.groupValues?.get(1)?.toIntOrNull() }.toSet()
+		val row = schema?.mountControllers?.firstOrNull { it.id == template }
+		val candidates = row?.units?.filter { it.supports(kind) }?.map { it.value } ?: (0 until MountEntry.MAX_MOUNTS).toList()
+		return candidates.firstOrNull { it !in used }
 	}
 
 	/**

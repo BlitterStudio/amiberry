@@ -6,6 +6,7 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import com.blitterstudio.amiberry.data.HardfileCreator
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import java.io.File
 import java.io.RandomAccessFile
 import java.util.zip.GZIPOutputStream
@@ -70,6 +71,39 @@ class MountDefaultsTest {
 		assertEquals("MyDisk", MountNames.clean("My Disk", device = true))
 		assertEquals("My Disk", MountNames.clean("My Disk", device = false))
 		assertFalse(MountNames.allowed(':', device = false))
+	}
+
+	/** The schema the launcher ships, with the real mount_controllers table. */
+	private fun bundledSchema() = SettingsSchema.parse(org.json.JSONObject(File("src/main/settings/settings_schema.json").readText()))
+
+	@Test
+	fun `a new CD drive goes on SCSI when the machine has built-in SCSI`() {
+		val schema = bundledSchema()
+		val plain = EmulatorSettings()
+		val a3000 = EmulatorSettings(options = mapOf("scsi_a3000" to "true"))
+		assertEquals("ide0", MountDefaults.newMount(MountKind.Cd, "", plain, schema).controller)
+		assertEquals("scsi0", MountDefaults.newMount(MountKind.Cd, "", a3000, schema).controller)
+	}
+
+	@Test
+	fun `no ninth CD drive can be added`() {
+		val schema = bundledSchema()
+		var settings = EmulatorSettings()
+		repeat(8) { settings = MountDefaults.added(settings, MountKind.Cd, "", schema) }
+		assertEquals((0 until 8).toList(), settings.hardDrives.map { it.unit })
+		assertFalse(MountDefaults.canAdd(MountKind.Cd, settings, schema))
+		assertEquals(settings, MountDefaults.added(settings, MountKind.Cd, "", schema))
+		// Tape drives have units of their own.
+		assertTrue(MountDefaults.canAdd(MountKind.Tape, settings, schema))
+	}
+
+	@Test
+	fun `CD drives fill IDE before moving to SCSI, one per unit`() {
+		val schema = bundledSchema()
+		var settings = EmulatorSettings()
+		repeat(3) { settings = MountDefaults.added(settings, MountKind.Cd, "", schema) }
+		// IDE (Auto) has a master and a slave; the third goes on SCSI (Auto).
+		assertEquals(listOf("ide0", "ide1", "scsi0"), settings.hardDrives.map { it.controller })
 	}
 
 	@Test
