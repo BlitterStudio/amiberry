@@ -186,7 +186,7 @@ static void lts_ecs_shres_dhires_filtered(void)
 			}
 			matchsprites_ecs_shres(cnt + 2);
 			if (sv0 || sv1) {
-				get_shres_spr_pix(pix0, pix1, pix2, pix3, sv0, sv1, &dpix_val0, NULL, &dpix_val2, NULL);
+				get_shres_spr_pix(pix0, pix1, pix2, pix3, sv0, sv1, &dpix_val0, &dpix_val1, &dpix_val2, &dpix_val3);
 			}
 			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_2x) {
 				dpix_val0 = filter_pixel(dpix_val0, dpix_val1);
@@ -569,7 +569,7 @@ static void lts_ecs_shres_dhires_genlock_filtered(void)
 			}
 			matchsprites_ecs_shres(cnt + 2);
 			if (sv0 || sv1) {
-				get_shres_spr_pix(pix0, pix1, pix2, pix3, sv0, sv1, &dpix_val0, NULL, &dpix_val2, NULL);
+				get_shres_spr_pix(pix0, pix1, pix2, pix3, sv0, sv1, &dpix_val0, &dpix_val1, &dpix_val2, &dpix_val3);
 			}
 			if (denise_pixtotal >= 0 && buf1 < denise_pixtotal_max_buf_2x) {
 				dpix_val0 = filter_pixel(dpix_val0, dpix_val1);
