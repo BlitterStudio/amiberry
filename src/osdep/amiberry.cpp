@@ -14850,6 +14850,7 @@ void clear_whdload_prefs()
 	whdload_prefs.slave_count = 0;
 	whdload_prefs.slave_default.clear();
 	whdload_prefs.slave_libraries = false;
+	whdload_prefs.exp_chip = false;
 	whdload_prefs.slaves = {};
 	whdload_prefs.selected_slave = {};
 	whdload_prefs.custom.clear();
