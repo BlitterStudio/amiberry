@@ -358,9 +358,11 @@ AMIBERRY_SETTINGS_API amiberry_settings_status amiberry_settings_mount_remove(
  * reserved blocks of 512 bytes when it has none), boot priority 0, and the
  * first controller amiberry_settings_mount_controller_get() lists for the
  * kind (for a CD drive SCSI when a SCSI board is configured, IDE
- * otherwise). The result is not added; pass it to
+ * otherwise), and a CD or tape drive the first emulated unit (cdN, tapeN)
+ * no entry of its kind uses. The result is not added; pass it to
  * amiberry_settings_mount_add(). UNKNOWN_ID for an unknown kind,
- * INVALID_VALUE for a path an entry cannot hold.
+ * INVALID_VALUE for a path an entry cannot hold (a tape drive needs one),
+ * UNAVAILABLE when every emulated CD or tape unit is in use.
  */
 AMIBERRY_SETTINGS_API amiberry_settings_status amiberry_settings_mount_default(
 	const amiberry_settings_session *session, const char *kind, const char *path, char *buffer, size_t size);

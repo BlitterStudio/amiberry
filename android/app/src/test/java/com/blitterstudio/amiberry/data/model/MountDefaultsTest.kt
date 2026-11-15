@@ -51,6 +51,16 @@ class MountDefaultsTest {
 	}
 
 	@Test
+	fun `picking an RDB image for a hardfile switches it to RDB mode`() {
+		val blank = MountEntry(MountKind.Hardfile, "", "DH0", controller = "uae0")
+		val picked = MountDefaults.withPath(blank, image("rdb.hdf", 0, rdsk("RDSK", 512)).path)
+		assertEquals(listOf(0, 0, 0, 512), listOf(picked.sectors, picked.surfaces, picked.reserved, picked.blockSize))
+		// A directory's path carries no geometry.
+		val dir = MountEntry(MountKind.Directory, "/a", "DH1", "A")
+		assertEquals(dir.copy(path = "/b"), MountDefaults.withPath(dir, "/b"))
+	}
+
+	@Test
 	fun `volume names keep a folder's dots and drop an archive's extension`() {
 		val dir = folder.newFolder("My.Games")
 		val archive = folder.newFile("Work,Disk.lha")

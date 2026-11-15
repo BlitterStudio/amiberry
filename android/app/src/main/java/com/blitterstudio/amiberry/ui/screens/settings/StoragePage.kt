@@ -300,7 +300,7 @@ fun StoragePage(
 						files = hardDrives,
 						onPathChange = { newPath ->
 							viewModel.updateSettings { s ->
-								s.copy(hardDrives = s.hardDrives.updatedAt(index) { it.copy(path = newPath) })
+								s.copy(hardDrives = s.hardDrives.updatedAt(index) { MountDefaults.withPath(it, newPath) })
 							}
 						},
 						onReadOnlyChange = { ro ->

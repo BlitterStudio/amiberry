@@ -86,6 +86,20 @@ object MountDefaults {
 		}
 	}
 
+	/**
+	 * [mount] pointed at [path]. A hardfile takes the new image's geometry,
+	 * as the panel probes the RDB again whenever an image is picked: an RDB
+	 * disk mounted with the plain 32/1/2 geometry reads as one partition.
+	 */
+	fun withPath(mount: MountEntry, path: String): MountEntry {
+		if (mount.kind != MountKind.Hardfile || path == mount.path) return mount.copy(path = path)
+		val geometry = hdfGeometry(path)
+		return mount.copy(
+			path = path, sectors = geometry.sectors, surfaces = geometry.surfaces,
+			reserved = geometry.reserved, blockSize = geometry.blockSize
+		)
+	}
+
 	private fun defaultController(kind: MountKind, settings: EmulatorSettings, schema: SettingsSchema?): String {
 		val offered = schema?.mountControllersFor(kind, settings).orEmpty()
 		if (kind == MountKind.Cd) {

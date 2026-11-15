@@ -4626,6 +4626,10 @@ void check_mount_list()
 		== AMIBERRY_SETTINGS_OK);
 	CHECK(amiberry_settings_mount_field_get(session, mount, "controller", field, sizeof field)
 		== AMIBERRY_SETTINGS_OK && !std::strcmp(field, "scsi%d"));
+	// A second CD drive takes the next emulated unit, so adding it succeeds.
+	CHECK(!std::strncmp(mount, "cd0,", 4) && amiberry_settings_mount_add(session, mount) == AMIBERRY_SETTINGS_OK);
+	CHECK(amiberry_settings_mount_default(session, "cd", "", mount, sizeof mount) == AMIBERRY_SETTINGS_OK
+		&& !std::strncmp(mount, "cd1,", 4));
 	amiberry_settings_session_close(session);
 	changed_prefs.mountitems = 0;
 

@@ -317,6 +317,14 @@ object ConfigGenerator {
 		return "\"" + value.replace("\"", "\\\"") + "\""
 	}
 
+	/**
+	 * cfgfile_escape(geometry, nullptr, true, false), as the native writer
+	 * spells the geometry file: always quoted, with \, " and ' escaped. The
+	 * loader takes the field only when it starts with a quote.
+	 */
+	private fun quoteGeometry(value: String): String =
+		"\"" + value.replace("\\", "\\\\").replace("\"", "\\\"").replace("'", "\\'") + "\""
+
 	private fun directoryValue(mount: MountEntry): String =
 		"${if (mount.readOnly) "ro" else "rw"},${mount.device}:${mount.volume}:${escapeMountField(mount.path)},${mount.bootPriority}"
 
@@ -331,7 +339,7 @@ object ConfigGenerator {
 			base.append(",${mount.highCyl}")
 			if (mount.physicalGeometry.isNotBlank() || mount.geometry.isNotBlank()) {
 				base.append(",${mount.physicalGeometry.ifBlank { "0/0/0" }}")
-				if (mount.geometry.isNotBlank()) base.append(",${escapeMountField(mount.geometry)}")
+				if (mount.geometry.isNotBlank()) base.append(",${quoteGeometry(mount.geometry)}")
 			}
 		}
 		if (mount.compactFlash) base.append(",CF")

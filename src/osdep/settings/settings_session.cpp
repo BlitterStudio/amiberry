@@ -753,6 +753,25 @@ amiberry_settings_status amiberry_settings_mount_default(const amiberry_settings
 		} else {
 			return AMIBERRY_SETTINGS_UNKNOWN_ID;
 		}
+		// A CD or tape drive needs an emulated unit of its own (cdN, tapeN):
+		// add_filesys_config() refuses a second CD on a unit in use.
+		if (ci.type == UAEDEV_CD || ci.type == UAEDEV_TAPE) {
+			const uae_prefs& p = *session->working;
+			int unit = 0;
+			for (bool taken = true; taken && unit < MAX_TOTAL_SCSI_DEVICES; ) {
+				taken = false;
+				for (int i = 0; i < p.mountitems && i < MOUNT_CONFIG_SIZE; i++) {
+					if (p.mountconfig[i].ci.type == ci.type && p.mountconfig[i].ci.device_emu_unit == unit) {
+						taken = true;
+						unit++;
+						break;
+					}
+				}
+			}
+			if (unit >= MAX_TOTAL_SCSI_DEVICES)
+				return AMIBERRY_SETTINGS_UNAVAILABLE;
+			ci.device_emu_unit = unit;
+		}
 		return mount_value_out(ci, buffer, size);
 	});
 }

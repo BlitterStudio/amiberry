@@ -958,6 +958,7 @@ struct MountSections: View {
 	/// The new hardfile's entry, edited once the create sheet has gone:
 	/// SwiftUI presents one sheet at a time.
 	@State private var createdEntry: String?
+	@State private var choosingTape = false
 
 	var body: some View {
 		Group {
@@ -984,13 +985,20 @@ struct MountSections: View {
 				.buttonStyle(.borderless)
 				HStack {
 					Button("Add CD Drive") { add(kind: "cd") }
-					Button("Add Tape Drive\u{2026}") { add(kind: "tape") }
+					Button("Add Tape Drive\u{2026}") { choosingTape = true }
 					Button("Create Hardfile\u{2026}") { showingCreateHardfile = true }
 				}
 				.buttonStyle(.borderless)
 			} footer: {
 				Text("Drives attach when the emulation starts or resets.")
 			}
+		}
+		// A tape drive needs its folder or image before the layer can start
+		// an entry for it.
+		.confirmationDialog("Add a tape drive from", isPresented: $choosingTape) {
+			Button("A Folder\u{2026}") { addTape(folder: true) }
+			Button("An Image File\u{2026}") { addTape(folder: false) }
+			Button("Cancel", role: .cancel) {}
 		}
 		.sheet(item: $editing) { edit in
 			MountPropertiesSheet(model: model, edit: edit)
@@ -1020,6 +1028,14 @@ struct MountSections: View {
 	private func addHardfile() {
 		guard let path = FilePanels.choose(.hardfile, title: "Choose a hardfile to mount", startingAt: "") else { return }
 		add(kind: "hdf", path: path)
+	}
+
+	private func addTape(folder: Bool) {
+		let path = folder
+			? FilePanels.chooseFolder(title: "Choose the tape drive's folder", startingAt: "")
+			: FilePanels.choose(.tapeImage, title: "Choose a tape image", startingAt: "")
+		guard let path else { return }
+		add(kind: "tape", path: path)
 	}
 
 	private func add(kind: String, path: String = "") {

@@ -397,9 +397,11 @@ object ConfigParser {
 		}
 	}
 
-	private val uaehfKeyRegex = Regex("""uaehf[0-7]""")
+	private val uaehfKeyRegex = Regex("""uaehf(\d{1,2})""")
 
-	private fun isUaehf(key: String): Boolean = uaehfKeyRegex.matches(key)
+	/** uaehf0..uaehf49: cfgfile reads one line per possible mount (MAX_FILESYSTEM_UNITS). */
+	private fun isUaehf(key: String): Boolean =
+		uaehfKeyRegex.matchEntire(key)?.groupValues?.get(1)?.toInt()?.let { it < MountEntry.MAX_MOUNTS } == true
 
 	private fun parseFilesystemExtra(value: String): Pair<String, String>? {
 		val parts = splitMountFields(value)

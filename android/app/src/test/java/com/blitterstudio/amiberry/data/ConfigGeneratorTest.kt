@@ -213,6 +213,26 @@ class ConfigGeneratorTest {
 		assertContains(file.readText(), """filesystem2=rw,DH0:Work:"/host/Work, files",0""")
 	}
 
+	@Test
+	fun `generate quotes the geometry file as the native writer does`() {
+		val mount = MountEntry(MountKind.Hardfile, "/hd/system.hdf", "DH0", controller = "uae0",
+			physicalGeometry = "980/10/17", geometry = "/storage/disks/custom.geo")
+		val output = ConfigGenerator.generate(EmulatorSettings(hardDrives = listOf(mount)))
+		// The loader reads the geometry field only when it starts with a quote.
+		assertContains(output, """,uae0,0,980/10/17,"/storage/disks/custom.geo"""")
+		assertEquals(listOf(mount), roundTrip(EmulatorSettings(hardDrives = listOf(mount)), "geometry.uae").hardDrives)
+	}
+
+	@Test
+	fun `a CD drive after eight mounts stays editable`() {
+		val dirs = (0 until 9).map { MountEntry(MountKind.Directory, "/host/d$it", "DH$it", "V$it") }
+		val cd = MountEntry(MountKind.Cd, "", readOnly = true, sectors = 0, surfaces = 0, reserved = 0,
+			blockSize = 2048, controller = "scsi0", unit = 0)
+		val settings = EmulatorSettings(hardDrives = dirs + cd)
+		assertContains(ConfigGenerator.generate(settings), "uaehf9=cd0,")
+		assertEquals(dirs + cd, roundTrip(settings, "late-cd.uae").hardDrives)
+	}
+
 	// --- Joystick port 1 special handling ---
 
 	@Test
