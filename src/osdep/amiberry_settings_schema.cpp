@@ -1830,6 +1830,14 @@ void rtg_boards(std::string& out)
 		json_string(out, config);
 		out += ",\"label\":";
 		json_string(out, label.c_str());
+		int vmin = 0, vmax = 0;
+		gfxboard_get_vram_range(id, &vmin, &vmax);
+		const int min_mb = vmin > 0 ? vmin / (1024 * 1024) : 1;
+		const int max_mb = vmax > 0 ? vmax / (1024 * 1024) : id == GFXBOARD_UAE_Z2 ? 8 : 256;
+		out += ",\"min_mb\":";
+		json_number(out, min_mb);
+		out += ",\"max_mb\":";
+		json_number(out, max_mb);
 		out += ",\"bus\":";
 		json_number(out, gfxboard_get_configtype_of(id));
 		out += '}';

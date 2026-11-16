@@ -311,7 +311,11 @@ class SettingsSchema(
 
 	/** Machine options whose matching global setting otherwise supplies a launch-time default. */
 	val optionsWithHostDefaults: Set<String> by lazy {
-		hostSettings.mapNotNullTo(LinkedHashSet()) { it.setsOption }
+		// target_default_options() also copies these coupled bezel flags
+		// (src/osdep/amiberry.cpp:6442-6447), but their host descriptors
+		// cannot each name a distinct machine option.
+		hostSettings.mapNotNullTo(LinkedHashSet()) { it.setsOption } +
+			setOf("amiberry.use_custom_bezel", "amiberry.use_bezel")
 	}
 
 	/** The board type [id] describes; null when the schema does not list it. */
@@ -370,7 +374,7 @@ class SettingsSchema(
 	data class CustomControl(val id: String, val label: String, val axis: Boolean)
 
 	/** A dynamic RTG board choice and the autoconfig bus it requires. */
-	data class RtgBoard(val id: String, val label: String, val bus: Int)
+	data class RtgBoard(val id: String, val label: String, val bus: Int, val minMb: Int, val maxMb: Int)
 
 	/**
 	 * One accelerator board: a cpuboard_type value. [settings] are its
@@ -716,7 +720,10 @@ class SettingsSchema(
 			val rtgBoards = json.optJSONArray("rtg_boards")?.let { array ->
 				List(array.length()) { b ->
 					val board = array.getJSONObject(b)
-					RtgBoard(board.getString("id"), board.getString("label"), board.optInt("bus"))
+					RtgBoard(
+						board.getString("id"), board.getString("label"), board.optInt("bus"),
+						board.optInt("min_mb", 1), board.optInt("max_mb", 256)
+					)
 				}
 			}.orEmpty()
 			val mountControllers = json.optJSONArray("mount_controllers")?.let { array ->

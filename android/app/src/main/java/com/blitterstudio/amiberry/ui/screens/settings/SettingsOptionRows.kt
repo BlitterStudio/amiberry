@@ -58,7 +58,7 @@ object SettingsOptionRows {
 		"joyport0", "joyport1", "joyport2", "joyport3", "joyport1mousemap",
 		"input.joymouse_speed_analog", "amiberry.onscreen_joystick", "amiberry.vkbd_touch_button",
 		"amiberry.vkbd_numpad", "amiberry.shader", "amiberry.shader_rtg", "amiberry.custom_bezel",
-		"amiberry.scaling_method", "cart_file", "genlock_image", "genlock_video", "rtc_file", "gfxcard_type",
+		"amiberry.scaling_method", "cart_file", "genlock_image", "genlock_video", "rtc_file", "gfxcard_type", "gfxcard_size",
 		"fpu_model", "chipmem_size", "bogomem_size", "sound_max_buff",
 		// The accelerator's board and memory: the schema's catalogs carry
 		// the list and the limit, not the option's choices. The boot ROM
@@ -183,6 +183,19 @@ fun SettingsOptionRow(id: String, viewModel: SettingsViewModel, sectionTitle: St
 				value = settings.optionValue(id) ?: option.default,
 				choices = boards,
 				enabled = available(id),
+				onSelect = { value -> viewModel.updateSettings { s -> s.withOption(id, value) } }
+			)
+		}
+		"gfxcard_size" -> {
+			val board = schema.rtgBoards.firstOrNull { it.id == (settings.optionValue("gfxcard_type") ?: "ZorroIII") }
+			val choices = option.choices.filter { choice ->
+				val size = choice.value.toIntOrNull() ?: return@filter false
+				size == 0 || board == null || size in board.minMb..board.maxMb
+			}
+			SchemaChoiceRow(
+				id = id,
+				value = settings.optionValue(id) ?: option.default,
+				choices = choices,
 				onSelect = { value -> viewModel.updateSettings { s -> s.withOption(id, value) } }
 			)
 		}

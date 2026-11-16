@@ -695,6 +695,7 @@ class ConfigGeneratorTest {
 		assertEquals("false", picked.schemaState().getValue("amiberry.use_bezel"))
 		val cleared = picked.withOption("amiberry.custom_bezel", "none")
 		assertEquals("false", cleared.schemaState().getValue("amiberry.use_custom_bezel"))
+		assertContains(ConfigGenerator.generate(cleared), "amiberry.use_custom_bezel=false")
 	}
 
 	@Test

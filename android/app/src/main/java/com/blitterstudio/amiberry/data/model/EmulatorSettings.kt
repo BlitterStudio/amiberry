@@ -204,6 +204,7 @@ data class EmulatorSettings(
 			result = result.withField(field, written, schema) ?: result
 		}
 		return result.withRtgSizeSideEffects(this, id, normalizedValue, schema)
+			.withRtgTypeSideEffects(this, id, normalizedValue, schema)
 			.withCustomBezelSideEffects(id, normalizedValue, schema)
 			.withAcceleratorMemorySynced(this, id, normalizedValue, schema)
 	}
@@ -235,6 +236,24 @@ data class EmulatorSettings(
 		val bus = schema?.rtgBoards?.firstOrNull { it.id == id }?.bus ?: return true
 		return (bus != 3 || !settings.address24Bit) &&
 			(bus != 2 || chipRamKb(settings.chipRam) <= 2048)
+	}
+
+	/** set_gfxcard_type starts an off board and clamps an existing board to its VRAM range. */
+	private fun withRtgTypeSideEffects(
+		before: EmulatorSettings,
+		id: String,
+		value: String,
+		schema: SettingsSchema?
+	): EmulatorSettings {
+		if (id != "gfxcard_type") return this
+		val board = schema?.rtgBoards?.firstOrNull { it.id == value } ?: return this
+		val previousSize = before.optionValue("gfxcard_size")?.toIntOrNull() ?: 0
+		val size = if (previousSize == 0) when (value) {
+			"ZorroII" -> 4
+			"ZorroIII" -> 16
+			else -> board.minMb
+		} else previousSize.coerceIn(board.minMb, board.maxMb)
+		return withField("gfxcard_size", size.toString(), schema) ?: this
 	}
 
 	/** set_custom_bezel enables a picked image and turns off the built-in bezel. */
