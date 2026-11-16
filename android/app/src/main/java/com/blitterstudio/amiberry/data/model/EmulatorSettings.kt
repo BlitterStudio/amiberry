@@ -222,11 +222,19 @@ data class EmulatorSettings(
 			result = result.withField("gfxcard_options", "", schema) ?: result
 			return result
 		}
-		if ((before.optionValue("gfxcard_size")?.toIntOrNull() ?: 0) != 0 || !before.address24Bit) return this
+		if ((before.optionValue("gfxcard_size")?.toIntOrNull() ?: 0) != 0 ||
+			rtgBoardFits(before.optionValue("gfxcard_type") ?: "ZorroIII", before, schema))
+			return this
 		var result = withField("gfxcard_type", "ZorroII", schema) ?: this
 		if (size > 8)
 			result = result.withField("gfxcard_size", "8", schema) ?: result
 		return result
+	}
+
+	private fun rtgBoardFits(id: String, settings: EmulatorSettings, schema: SettingsSchema?): Boolean {
+		val bus = schema?.rtgBoards?.firstOrNull { it.id == id }?.bus ?: return true
+		return (bus != 3 || !settings.address24Bit) &&
+			(bus != 2 || chipRamKb(settings.chipRam) <= 2048)
 	}
 
 	/** set_custom_bezel enables a picked image and turns off the built-in bezel. */

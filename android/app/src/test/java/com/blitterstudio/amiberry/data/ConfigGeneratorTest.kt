@@ -667,10 +667,14 @@ class ConfigGeneratorTest {
 	}
 
 	@Test
-	fun `enabling RTG under 24 bit addressing selects and fits Zorro II`() {
-		val settings = EmulatorSettings(address24Bit = true).withOption("gfxcard_size", "32")
-		assertEquals("ZorroII", settings.optionValue("gfxcard_type"))
-		assertEquals("8", settings.optionValue("gfxcard_size"))
+	fun `enabling RTG under 24 bit addressing keeps fitting boards`() {
+		val picasso = EmulatorSettings(address24Bit = true, options = mapOf("gfxcard_type" to "PicassoII"))
+			.withOption("gfxcard_size", "4")
+		assertEquals("PicassoII", picasso.optionValue("gfxcard_type"))
+		assertEquals("4", picasso.optionValue("gfxcard_size"))
+		val zorroThree = EmulatorSettings(address24Bit = true).withOption("gfxcard_size", "32")
+		assertEquals("ZorroII", zorroThree.optionValue("gfxcard_type"))
+		assertEquals("8", zorroThree.optionValue("gfxcard_size"))
 	}
 
 	@Test
