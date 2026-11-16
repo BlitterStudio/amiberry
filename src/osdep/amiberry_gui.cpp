@@ -1020,28 +1020,16 @@ void gui_update()
 	// renaming it to the slot's would restore the wrong file, or none.
 	if (savestate_state & (STATE_DORESTORE | STATE_RESTORE)) return;
 
-	std::string filename;
+	const std::string name = current_content_name();
+	if (name.empty())
+		return;
 	const std::string suffix = current_state_num >= 1 && current_state_num <= 14 ?
 		"-" + std::to_string(current_state_num) : "";
 
-	if (strlen(currprefs.floppyslots[0].df) > 0)
-		filename = extract_filename(currprefs.floppyslots[0].df);
-	else if (currprefs.cdslots[0].inuse && strlen(currprefs.cdslots[0].name) > 0)
-		filename = extract_filename(currprefs.cdslots[0].name);
-	else if (!whdload_prefs.whdload_filename.empty())
-		filename = extract_filename(whdload_prefs.whdload_filename);
-	else if (strlen(last_active_config) > 0)
-		filename = std::string(last_active_config) + ".uss";
-	else
-		return;
-
 	get_savestate_path(savestate_fname, MAX_DPATH - 1);
-	strncat(savestate_fname, filename.c_str(), MAX_DPATH - 1);
-	remove_file_extension(savestate_fname);
-	strncat(savestate_fname, (suffix + ".uss").c_str(), MAX_DPATH - 1);
+	strncat(savestate_fname, (name + suffix + ".uss").c_str(), MAX_DPATH - 1 - strlen(savestate_fname));
 
-	screenshot_filename = remove_file_extension(get_screenshot_path() + filename);
-	screenshot_filename.append(suffix + ".png");
+	screenshot_filename = get_screenshot_path() + name + suffix + ".png";
 }
 
 /* if drive is -1, show the full GUI, otherwise file-requester for DF[drive] */

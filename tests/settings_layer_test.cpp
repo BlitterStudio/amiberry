@@ -2994,7 +2994,7 @@ void check_host_choices()
 
 	// Hotkeys are their own type and list nothing.
 	for (const char* id : {"default_open_gui_key", "default_quit_key", "default_ar_key",
-		"default_fullscreen_toggle_key", "default_vkbd_toggle"}) {
+		"default_fullscreen_toggle_key", "default_screenshot_key", "default_vkbd_toggle"}) {
 		const amiberry_setting_descriptor* hotkey = amiberry_host_settings_find(id);
 		CHECK(hotkey && hotkey->type == AMIBERRY_SETTING_HOTKEY);
 		CHECK(amiberry_host_settings_choices(id, &list) == 0 && !list);

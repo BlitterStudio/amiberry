@@ -6509,6 +6509,7 @@ void target_default_options(uae_prefs* p, const int type)
 	_tcscpy(p->quit_amiberry, amiberry_options.default_quit_key);
 	_tcscpy(p->action_replay, amiberry_options.default_ar_key);
 	_tcscpy(p->fullscreen_toggle, amiberry_options.default_fullscreen_toggle_key);
+	_tcscpy(p->screenshot, amiberry_options.default_screenshot_key);
 
 	p->drawbridge_serial_auto = true;
 	p->drawbridge_smartspeed = false;
@@ -7853,6 +7854,20 @@ std::string remove_file_extension(const std::string& filename)
 	return filename.substr(0, last_dot);
 }
 
+// The name screenshots and save states take after the running content:
+// DF0's disk, the CD, the WHDLoad game, else the configuration. Empty when
+// nothing names it.
+std::string current_content_name()
+{
+	if (currprefs.floppyslots[0].df[0])
+		return remove_file_extension(extract_filename(currprefs.floppyslots[0].df));
+	if (currprefs.cdslots[0].inuse && currprefs.cdslots[0].name[0])
+		return remove_file_extension(extract_filename(currprefs.cdslots[0].name));
+	if (!whdload_prefs.whdload_filename.empty())
+		return remove_file_extension(extract_filename(whdload_prefs.whdload_filename));
+	return last_active_config;
+}
+
 void read_directory(const std::string& path, std::vector<std::string>* dirs, std::vector<std::string>* files)
 {
 	if (dirs != nullptr)
@@ -8050,6 +8065,9 @@ static bool write_amiberry_settings()
 
 	// Default key for Fullscreen Toggle
 	write_string_option("default_fullscreen_toggle_key", amiberry_options.default_fullscreen_toggle_key);
+
+	// Default key for saving a screenshot
+	write_string_option("default_screenshot_key", amiberry_options.default_screenshot_key);
 
 	// Enable Horizontal Centering by default?
 	write_bool_option("default_horizontal_centering", amiberry_options.default_horizontal_centering);
@@ -8590,6 +8608,7 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		ret |= cfgfile_string(option, value, "default_quit_key", amiberry_options.default_quit_key, sizeof amiberry_options.default_quit_key);
 		ret |= cfgfile_string(option, value, "default_ar_key", amiberry_options.default_ar_key, sizeof amiberry_options.default_ar_key);
 		ret |= cfgfile_string(option, value, "default_fullscreen_toggle_key", amiberry_options.default_fullscreen_toggle_key, sizeof amiberry_options.default_fullscreen_toggle_key);
+		ret |= cfgfile_string(option, value, "default_screenshot_key", amiberry_options.default_screenshot_key, sizeof amiberry_options.default_screenshot_key);
 		ret |= cfgfile_yesno(option, value, "default_horizontal_centering", &amiberry_options.default_horizontal_centering);
 		ret |= cfgfile_yesno(option, value, "default_vertical_centering", &amiberry_options.default_vertical_centering);
 		ret |= cfgfile_intval(option, value, "default_scaling_method", &amiberry_options.default_scaling_method, 1);

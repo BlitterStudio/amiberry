@@ -237,8 +237,8 @@ struct AppSettingsGroup: Identifiable, Hashable {
 				]), disclosedTitle: nil, disclosed: []),
 				AppSettingsSection(title: "Default Shortcuts", settings: inThisOrder([
 					"macos_left_command_q", "default_open_gui_key", "default_quit_key", "default_ar_key",
-					"default_fullscreen_toggle_key", "default_retroarch_quit", "default_retroarch_menu",
-					"default_retroarch_reset",
+					"default_fullscreen_toggle_key", "default_screenshot_key", "default_retroarch_quit",
+					"default_retroarch_menu", "default_retroarch_reset",
 				]), disclosedTitle: "RetroArch",
 					disclosed: ["default_retroarch_quit", "default_retroarch_menu", "default_retroarch_reset"]),
 			]
