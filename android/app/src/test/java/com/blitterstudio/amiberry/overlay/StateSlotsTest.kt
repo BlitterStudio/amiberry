@@ -81,6 +81,18 @@ class StateSlotsTest {
 	}
 
 	@Test
+	fun `a named state cannot use a numbered slot's path`() {
+		assertEquals(
+			true,
+			StateSlots.isSlotPath(base, StateSlots.namedPaths(base, "default-1"))
+		)
+		assertEquals(
+			false,
+			StateSlots.isSlotPath(base, StateSlots.namedPaths(base, "default-named"))
+		)
+	}
+
+	@Test
 	fun `named states list only state files newest first`() {
 		val states = Files.createTempDirectory("amiberry-states").toFile()
 		val screenshots = Files.createTempDirectory("amiberry-screens").toFile()

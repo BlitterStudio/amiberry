@@ -434,6 +434,7 @@ class OverlayViewModel(application: Application) : AndroidViewModel(application)
 			}
 			if (pendingWrites == 0) {
 				readSettings()
+				if (menu.page == OverlayPage.AllSettings) readSettingChoices()
 				if (values.keys.any { it in OverlaySettings.PORTS || it == OverlaySettings.ON_SCREEN_JOYSTICK }) readPortChoices()
 			}
 		}
@@ -457,6 +458,10 @@ class OverlayViewModel(application: Application) : AndroidViewModel(application)
 			is ConfirmAction.Overwrite -> {
 				menu = menu.back() ?: OverlayMenu.HOME
 				saveSlot(action.slot)
+			}
+			is ConfirmAction.OverwriteNamed -> {
+				menu = menu.back() ?: OverlayMenu.HOME
+				saveNamedState(action.paths)
 			}
 		}
 	}
@@ -497,17 +502,37 @@ class OverlayViewModel(application: Application) : AndroidViewModel(application)
 		}
 	}
 
-	/** Saves a named state in the same folders and with the same thumbnail rule as slots. */
-	fun saveNamedState(name: String) {
+	/** Resolves a named state before deciding whether saving needs confirmation. */
+	fun requestSaveNamedState(name: String) {
+		if (busy) return
+		notice = null
+		viewModelScope.launch {
+			val destination = withContext(Dispatchers.IO) {
+				stateSources()?.let { sources ->
+					val paths = StateSlots.namedPaths(sources, name)
+					paths to StateSlots.isSlotPath(sources, paths)
+				}
+			}
+			when {
+				destination == null -> showNotice(OverlayNotice(R.string.overlay_named_state_save_failed, error = true))
+				destination.second -> showNotice(OverlayNotice(R.string.overlay_named_state_slot_name, error = true))
+				File(destination.first.state).isFile ->
+					open(OverlayPage.Confirm(ConfirmAction.OverwriteNamed(destination.first)), "save_named")
+				else -> saveNamedState(destination.first)
+			}
+		}
+	}
+
+	/** Saves a resolved named state in the same folders and with the same thumbnail rule as slots. */
+	private fun saveNamedState(paths: NamedStatePaths) {
 		if (busy) return
 		busy = true
 		notice = null
 		viewModelScope.launch {
-			val paths = withContext(Dispatchers.IO) { stateSources()?.let { StateSlots.namedPaths(it, name) } }
-			val saved = paths != null && finished(OverlayNative.saveState(paths.state))
-			if (saved) finished(OverlayNative.screenshot(paths!!.thumbnail))
+			val saved = finished(OverlayNative.saveState(paths.state))
+			if (saved) finished(OverlayNative.screenshot(paths.thumbnail))
 			showNotice(
-				if (saved) OverlayNotice(R.string.overlay_named_state_saved, detail = paths!!.name)
+				if (saved) OverlayNotice(R.string.overlay_named_state_saved, detail = paths.name)
 				else OverlayNotice(R.string.overlay_named_state_save_failed, error = true)
 			)
 			loadNamedStates()

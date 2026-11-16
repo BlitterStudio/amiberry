@@ -17,6 +17,8 @@ sealed interface ConfirmAction {
 	data object Quit : ConfirmAction
 	/** Saving over the state in a used slot. */
 	data class Overwrite(val slot: SlotState) : ConfirmAction
+	/** Saving over an existing named state. */
+	data class OverwriteNamed(val paths: NamedStatePaths) : ConfirmAction
 }
 
 /** The menu's pages. */

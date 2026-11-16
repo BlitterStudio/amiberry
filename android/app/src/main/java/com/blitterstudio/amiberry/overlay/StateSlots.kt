@@ -88,6 +88,10 @@ object StateSlots {
 		)
 	}
 
+	/** Whether [named] would overwrite a numbered slot for this session. */
+	fun isSlotPath(sources: StateNameSources, named: NamedStatePaths): Boolean =
+		slots.any { paths(sources, it).state == named.state }
+
 	/** The named .uss files in [sources]' state folder, newest first. */
 	fun namedStates(sources: StateNameSources): List<NamedStatePaths> {
 		val folder = java.io.File(sources.stateDir)

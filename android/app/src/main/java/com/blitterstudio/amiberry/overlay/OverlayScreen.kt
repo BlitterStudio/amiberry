@@ -212,6 +212,7 @@ private fun Header(viewModel: OverlayViewModel) {
 			ConfirmAction.RestartWithChanges -> stringResource(R.string.overlay_confirm_restart_with_changes_title)
 			ConfirmAction.Quit -> stringResource(R.string.overlay_confirm_quit_title)
 			is ConfirmAction.Overwrite -> stringResource(R.string.overlay_confirm_overwrite_title, action.slot.paths.slot)
+			is ConfirmAction.OverwriteNamed -> stringResource(R.string.overlay_confirm_named_overwrite_title, action.paths.name)
 		}
 	}
 	Row(
@@ -640,7 +641,7 @@ private fun StatesPage(viewModel: OverlayViewModel, focus: FocusTargets) {
 			},
 			confirmButton = {
 				Button(onClick = {
-					viewModel.saveNamedState(saveName)
+					viewModel.requestSaveNamedState(saveName)
 					enterName = false
 				}, enabled = saveName.isNotBlank()) { Text(stringResource(R.string.overlay_save)) }
 			},
@@ -945,7 +946,7 @@ private fun AllSettingsPage(viewModel: OverlayViewModel, focus: FocusTargets) {
 private fun ConfirmPage(viewModel: OverlayViewModel, action: ConfirmAction, focus: FocusTargets) {
 	val format = remember { DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT) }
 	Text(
-		when (action) {
+		text = when (action) {
 			ConfirmAction.Reset -> stringResource(R.string.overlay_confirm_reset_text)
 			ConfirmAction.HardReset -> stringResource(R.string.overlay_confirm_hard_reset_text)
 			ConfirmAction.ResetWithChanges -> stringResource(R.string.overlay_confirm_reset_with_changes_text)
@@ -955,6 +956,7 @@ private fun ConfirmPage(viewModel: OverlayViewModel, action: ConfirmAction, focu
 				R.string.overlay_confirm_overwrite_text,
 				action.slot.savedAt?.let { format.format(Date(it)) }.orEmpty()
 			)
+			is ConfirmAction.OverwriteNamed -> stringResource(R.string.overlay_confirm_named_overwrite_text)
 		},
 		style = MaterialTheme.typography.bodyLarge,
 		modifier = Modifier.padding(8.dp)
@@ -989,7 +991,7 @@ private fun ConfirmPage(viewModel: OverlayViewModel, action: ConfirmAction, focu
 						ConfirmAction.ResetWithChanges -> R.string.overlay_reset_with_changes
 						ConfirmAction.RestartWithChanges -> R.string.overlay_restart_with_changes
 						ConfirmAction.Quit -> R.string.overlay_quit
-						is ConfirmAction.Overwrite -> R.string.overlay_overwrite
+						is ConfirmAction.Overwrite, is ConfirmAction.OverwriteNamed -> R.string.overlay_overwrite
 					}
 				)
 			)

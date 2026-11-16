@@ -454,6 +454,9 @@
     <string name="overlay_named_state_saved">Saved “%1$s”</string>
     <string name="overlay_named_state_save_failed">Could not save the named state</string>
     <string name="overlay_named_state_load_failed">Could not load “%1$s”</string>
+    <string name="overlay_confirm_named_overwrite_title">Overwrite “%1$s”?</string>
+    <string name="overlay_confirm_named_overwrite_text">The named state is replaced.</string>
+    <string name="overlay_named_state_slot_name">That name belongs to a numbered state slot.</string>
     <string name="overlay_state_load_failed">Could not load slot %1$d</string>
     <string name="overlay_setting_failed">The setting could not be changed</string>
     <string name="overlay_show_keyboard">Show keyboard</string>
