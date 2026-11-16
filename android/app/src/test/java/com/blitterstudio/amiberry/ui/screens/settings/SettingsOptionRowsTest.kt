@@ -25,7 +25,7 @@ class SettingsOptionRowsTest {
 				"joyport0", "joyport1", "joyport2", "joyport3", "joyport1mousemap",
 				"input.joymouse_speed_analog", "amiberry.onscreen_joystick", "amiberry.vkbd_touch_button",
 				"amiberry.vkbd_numpad", "amiberry.shader", "amiberry.shader_rtg", "amiberry.custom_bezel",
-				"amiberry.scaling_method", "cart_file", "genlock_image", "genlock_video", "rtc_file",
+				"amiberry.scaling_method", "cart_file", "genlock_image", "genlock_video", "rtc_file", "gfxcard_type",
 				"fpu_model", "chipmem_size", "bogomem_size", "sound_max_buff",
 				"cpuboard_type", "cpuboardmem1_size"
 			) + (0..3).map { "floppy${it}sound" },
@@ -53,10 +53,11 @@ class SettingsOptionRowsTest {
 	@Test
 	fun `every registered row is placed explicitly or by its schema group`() {
 		val laidOut = SettingsGroups.laidOut.values.flatten().toSet()
+		val explicit = SettingsGroups.byPage.values.flatten().flatMap { it.ids }.toSet()
 		val grouped = SettingsGroups.byPage.values.flatten().mapNotNull { it.group }.toSet()
 		SettingsOptionRows.customIds.forEach { id ->
 			val option = schema.option(id)!!
-			assertTrue(id, id in laidOut || option.group in grouped)
+			assertTrue(id, id in laidOut || id in explicit || option.group in grouped)
 			assertTrue(id, !option.presetOnly && SettingsGroups.rowKind(option) != null)
 		}
 	}

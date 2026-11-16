@@ -170,20 +170,26 @@ data class EmulatorSettings(
 	 * stay.
 	 */
 	fun withOption(id: String, value: String, schema: SettingsSchema? = SettingsSchema.current): EmulatorSettings {
-		if (id == "cpuboard_type" && value == (optionValue(id) ?: "none")) return this
-		val stateValue = if (id == "cachesize") jitState(value.toIntOrNull() ?: return this) else value
+		RtgConfig.parent(id)?.let { parent ->
+			val current = optionValue(parent) ?: schema?.option(parent)?.default.orEmpty()
+			return withOption(parent, RtgConfig.pack(parent, current, id, value), schema)
+		}
+		val normalizedValue = if (id == "maprom" && value.matches(Regex("[0-9a-fA-F]+")))
+			"0x$value" else value
+		if (id == "cpuboard_type" && normalizedValue == (optionValue(id) ?: "none")) return this
+		val stateValue = if (id == "cachesize") jitState(normalizedValue.toIntOrNull() ?: return this) else normalizedValue
 		val state = schemaState(schema)
 		val transition = schema?.transitions?.of(state, id, stateValue)
 			?: schema?.memoryTransitions?.firstNotNullOfOrNull { it.of(state, id, stateValue) }
 			?: schema?.acceleratorTransitions?.of(state, id, stateValue)
 		if (transition?.refused == true) return this
-		var result = withField(id, value, schema) ?: return this
+		var result = withField(id, normalizedValue, schema) ?: return this
 		transition?.writes?.forEach { (field, written) ->
 			// An enabled JIT keeps the cache size chosen.
 			if (field == "cachesize" && written != "0" && result.jitCacheSize > 0) return@forEach
 			result = result.withField(field, written, schema) ?: result
 		}
-		return result.withAcceleratorMemorySynced(this, id, value, schema)
+		return result.withAcceleratorMemorySynced(this, id, normalizedValue, schema)
 	}
 
 	/**

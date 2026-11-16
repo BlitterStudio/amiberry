@@ -58,7 +58,7 @@ object SettingsOptionRows {
 		"joyport0", "joyport1", "joyport2", "joyport3", "joyport1mousemap",
 		"input.joymouse_speed_analog", "amiberry.onscreen_joystick", "amiberry.vkbd_touch_button",
 		"amiberry.vkbd_numpad", "amiberry.shader", "amiberry.shader_rtg", "amiberry.custom_bezel",
-		"amiberry.scaling_method", "cart_file", "genlock_image", "genlock_video", "rtc_file",
+		"amiberry.scaling_method", "cart_file", "genlock_image", "genlock_video", "rtc_file", "gfxcard_type",
 		"fpu_model", "chipmem_size", "bogomem_size", "sound_max_buff",
 		// The accelerator's board and memory: the schema's catalogs carry
 		// the list and the limit, not the option's choices. The boot ROM
@@ -167,6 +167,15 @@ fun SettingsOptionRow(id: String, viewModel: SettingsViewModel, sectionTitle: St
 		// The shader and bezel lists come from their configured folders, not the schema.
 		"amiberry.shader", "amiberry.shader_rtg" -> ShaderDropdownRow(viewModel, id)
 		"amiberry.custom_bezel" -> BezelDropdownRow(viewModel)
+		// The RTG board list is dynamic in the settings layer, so the schema
+		// exports its catalog separately from gfxcard_type's descriptor.
+		"gfxcard_type" -> SchemaChoiceRow(
+			id = id,
+			value = settings.optionValue(id) ?: option.default,
+			choices = schema.rtgBoards,
+			enabled = available(id),
+			onSelect = { value -> viewModel.updateSettings { s -> s.withOption(id, value) } }
+		)
 		"amiberry.scaling_method" -> IntegerScalingRow(viewModel)
 		// A single offered FPU is no choice (an internal one the CPU carries).
 		"fpu_model" -> {

@@ -604,6 +604,11 @@ class ConfigGeneratorTest {
 			.withOption("amiberry.open_gui", "LCtrl+F12")
 			.withOption("joyport2", "joy0")
 			.withOption("joyport2autofire", "1")
+			.withOption("rtg_modes:16bit", "R5G5B5PC")
+			.withOption("gfxcard_options:monitor", "1")
+			.withOption("gfxcard_options:autoswitch", "false")
+			.withOption("gfxcard_options:initial", "true")
+			.withOption("maprom", "e00000")
 		val expected = mapOf(
 			"gfxcard_size" to "8",
 			"cart_file" to "/ROMs/ActionReplay.rom",
@@ -612,14 +617,23 @@ class ConfigGeneratorTest {
 			"rtc_file" to "/RTC/clock.bin",
 			"amiberry.open_gui" to "LCtrl+F12",
 			"joyport2" to "joy0",
-			"joyport2autofire" to "1"
+			"joyport2autofire" to "1",
+			"rtg_modes" to "0x122",
+			"gfxcard_options" to "monitor=1,noautoswitch,initial",
+			"maprom" to "0xe00000"
 		)
 		val config = ConfigGenerator.generate(settings)
 		expected.forEach { (id, value) -> assertContains(config, "$id=$value") }
+		assertFalse(config.contains("rtg_modes:"))
+		assertFalse(config.contains("gfxcard_options:"))
 		val file = tempDir.newFile("editor-options.uae")
 		file.writeText(config)
 		val parsed = ConfigParser.parse(file)
 		expected.forEach { (id, value) -> assertEquals(id, value, parsed.settings.optionValue(id)) }
+		assertEquals("R5G5B5PC", parsed.settings.optionValue("rtg_modes:16bit"))
+		assertEquals("1", parsed.settings.optionValue("gfxcard_options:monitor"))
+		assertEquals("false", parsed.settings.optionValue("gfxcard_options:autoswitch"))
+		assertEquals("true", parsed.settings.optionValue("gfxcard_options:initial"))
 		assertTrue(parsed.unknownLines.none { line -> expected.keys.any { id -> line.startsWith("$id=") } })
 	}
 

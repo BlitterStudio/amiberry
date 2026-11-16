@@ -84,6 +84,9 @@ internal object AndroidHotkeyFormat {
 		else -> null
 	}
 
+	fun releasedModifier(keyCode: Int, held: String?): String? =
+		modifier(keyCode)?.takeIf { it == held }
+
 	fun format(keyCode: Int, metaState: Int, allowModifiers: Boolean): String? {
 		val key = when {
 			keyCode in AndroidKeyEvent.KEYCODE_A..AndroidKeyEvent.KEYCODE_Z ->
@@ -154,8 +157,8 @@ fun SchemaHotkeyRow(
 						true
 					} else true
 					KeyEventType.KeyUp -> {
-						if (AndroidHotkeyFormat.modifier(native.keyCode) == heldModifier) {
-							onValueChange(heldModifier!!)
+						AndroidHotkeyFormat.releasedModifier(native.keyCode, heldModifier)?.let { modifier ->
+							onValueChange(modifier)
 							stop()
 						}
 						true

@@ -63,6 +63,8 @@ class SettingsSchema(
 	 * are marked, for a build without PPC support.
 	 */
 	val acceleratorBoards: List<AcceleratorBoard> = emptyList(),
+	/** The RTG boards gfxcard_type dynamically offers. */
+	val rtgBoards: List<Choice> = emptyList(),
 	/** The storage controllers a live settings session can offer. */
 	val mountControllers: List<MountController> = emptyList(),
 	/** What setting cpuboard_type changes with it (the CPU its board needs); null in a schema without it. */
@@ -703,6 +705,12 @@ class SettingsSchema(
 					)
 				}
 			}.orEmpty()
+			val rtgBoards = json.optJSONArray("rtg_boards")?.let { array ->
+				List(array.length()) { b ->
+					val board = array.getJSONObject(b)
+					Choice(board.getString("id"), board.getString("label"))
+				}
+			}.orEmpty()
 			val mountControllers = json.optJSONArray("mount_controllers")?.let { array ->
 				List(array.length()) { i ->
 					val controller = array.getJSONObject(i)
@@ -732,7 +740,7 @@ class SettingsSchema(
 				soundResolutions = soundResolutions, availability = availability, transitions = transitions,
 				aros = aros, memoryTransitions = memoryTransitions, hostSettings = hostSettings,
 				boardTypes = boardTypes, customControls = customControls, inputEvents = inputEvents,
-				acceleratorBoards = acceleratorBoards, mountControllers = mountControllers,
+				acceleratorBoards = acceleratorBoards, rtgBoards = rtgBoards, mountControllers = mountControllers,
 				acceleratorTransitions = json.optJSONObject("accelerator_transitions")?.let { Transitions.parse(it) }
 			)
 		}

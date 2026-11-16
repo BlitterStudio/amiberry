@@ -28,4 +28,10 @@ class AndroidHotkeyFormatTest {
 		)
 		assertNull(AndroidHotkeyFormat.format(KeyEvent.KEYCODE_VOLUME_UP, 0, allowModifiers = true))
 	}
+
+	@Test
+	fun `unsupported release cannot complete an empty modifier recording`() {
+		assertNull(AndroidHotkeyFormat.releasedModifier(KeyEvent.KEYCODE_VOLUME_UP, null))
+		assertEquals("LCtrl", AndroidHotkeyFormat.releasedModifier(KeyEvent.KEYCODE_CTRL_LEFT, "LCtrl"))
+	}
 }

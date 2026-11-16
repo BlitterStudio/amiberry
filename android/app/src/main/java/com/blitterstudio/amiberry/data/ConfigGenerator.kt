@@ -7,6 +7,7 @@ import com.blitterstudio.amiberry.data.model.StoragePaths
 import com.blitterstudio.amiberry.data.model.EmulatorSettings
 import com.blitterstudio.amiberry.data.model.MountEntry
 import com.blitterstudio.amiberry.data.model.MountKind
+import com.blitterstudio.amiberry.data.model.RtgConfig
 import com.blitterstudio.amiberry.data.model.SettingsBoards
 import com.blitterstudio.amiberry.data.model.SettingsSchema
 import java.io.File
@@ -197,7 +198,8 @@ object ConfigGenerator {
 		// cpuboard_type is written with its jumpers above (the reader needs
 		// the board before the packed line).
 		// cpuboard_settings is the jumpers' line, written above.
-		optionsInLayerOrder(settings.options - "cpuboard_type" - "cpuboard_settings").forEach { (id, value) -> sb.appendLine("$id=$value") }
+		optionsInLayerOrder((settings.options - "cpuboard_type" - "cpuboard_settings")
+			.filterKeys { RtgConfig.parent(it) == null }).forEach { (id, value) -> sb.appendLine("$id=$value") }
 
 		// Skip GUI when launched from Android native UI
 		sb.appendLine("use_gui=no")
