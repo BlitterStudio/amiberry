@@ -8134,7 +8134,10 @@ static void m68k_run_2ce ()
 
 				wait_memory_cycles();
 				regs.instruction_cnt++;
-				regs.ce020extracycles++;
+				// The 68020 per-instruction timing is calibrated against real A1200 hardware
+				// and needs no extra 2 clocks every 16 instructions.
+				if (currprefs.cpu_model != 68020 || currprefs.m68k_speed < 0)
+					regs.ce020extracycles++;
 
 		cont:
 				if (r->spcflags || regs.ipl[0] > 0) {
