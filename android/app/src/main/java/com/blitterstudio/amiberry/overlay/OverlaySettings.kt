@@ -15,12 +15,20 @@ object OverlaySettings {
 	const val PORT_2 = "joyport1"
 	const val SHADER = "amiberry.shader"
 	const val CD_VOLUME = "sound_volume_cd"
+	const val MOUSE_SPEED = "input.mouse_speed"
+	const val ANALOG_MOUSE_SPEED = "input.joymouse_speed_analog"
 
 	/** The Controls page's port devices (choices the layer lists at run time). */
 	val PORTS = listOf(PORT_1, PORT_2)
 
 	/** The Controls page's switches. */
 	val CONTROLS = listOf(ON_SCREEN_JOYSTICK, ON_SCREEN_KEYBOARD)
+
+	/**
+	 * The Controls page's pointer speeds, set while a game runs: the mouse
+	 * and touch pointer's, and the stick mouse's.
+	 */
+	val POINTER = listOf(MOUSE_SPEED, ANALOG_MOUSE_SPEED)
 
 	/** The Settings page's options, in the order shown. */
 	val SETTINGS = listOf(
@@ -33,7 +41,7 @@ object OverlaySettings {
 	)
 
 	/** Every option the menu reads. */
-	val ALL: List<String> = PORTS + CONTROLS + SETTINGS
+	val ALL: List<String> = PORTS + CONTROLS + POINTER + SETTINGS
 
 	/** The values of the two ports swapped, as [OverlayNative.changeSettings] sets them; null unless both are known. */
 	fun swappedPorts(settings: Map<String, SettingState>): Map<String, String>? {
