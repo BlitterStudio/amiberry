@@ -28,6 +28,7 @@ enum class kind {
 	pause,
 	resume,
 	save_state,           // path
+	autosave_state,       // path, preserves rewind and input recording
 	load_state,           // path
 	save_state_slot,      // slot
 	load_state_slot,      // slot

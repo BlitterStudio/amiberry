@@ -70,6 +70,12 @@ object OverlayNative {
 	@JvmStatic external fun insertSwapperEntry(index: Int, drive: Int): Long
 	/** Sets the swapper slot's image; an empty path empties it. */
 	@JvmStatic external fun setSwapperEntry(index: Int, path: String): Long
+	/**
+	 * Saves the running machine for a backgrounded Android activity and returns its
+	 * state path and display name. This waits for the emulator thread before SDL
+	 * pauses it, so it must be called only from the activity lifecycle callback.
+	 */
+	@JvmStatic external fun autosave(): Array<String>?
 	@JvmStatic external fun reset(hard: Boolean): Long
 	@JvmStatic external fun pause(): Long
 	@JvmStatic external fun quit(): Long

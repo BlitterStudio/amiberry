@@ -12,8 +12,11 @@ import android.window.OnBackInvokedDispatcher;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
+import com.blitterstudio.amiberry.data.AndroidAutosave;
+import com.blitterstudio.amiberry.data.LaunchRequest;
 import com.blitterstudio.amiberry.overlay.EmulationHints;
 import com.blitterstudio.amiberry.overlay.OverlayHost;
+import com.blitterstudio.amiberry.overlay.OverlayNative;
 import com.blitterstudio.amiberry.overlay.RemoteJoystick;
 import com.blitterstudio.amiberry.overlay.RemoteJoystickHost;
 import com.blitterstudio.amiberry.ui.FocusUtilsKt;
@@ -55,10 +58,17 @@ public class AmiberryActivity extends SDLActivity {
 	private RemoteJoystickHost remote;
 	/** The emulation started (-G) and its first hint is due or shown. */
 	private boolean hintsReady;
+	/** An autosave is made at most once until the activity returns to the foreground. */
+	private boolean autosaveRequested;
+	/** SDL keeps emulation running while a multi-window activity is paused but visible. */
+	private boolean autosaveNeedsRefreshOnStop;
+	private String[] recoveryArgs;
+	private boolean returnToLauncher;
 	private final Handler hints = new Handler(Looper.getMainLooper());
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
+		prepareRecovery(savedInstanceState);
 		super.onCreate(savedInstanceState);
 		// Without its libraries SDLActivity shows an error and has no layout.
 		if (!mBrokenLibraries && mLayout != null) {
@@ -73,6 +83,12 @@ public class AmiberryActivity extends SDLActivity {
 					showHintIfNew();
 				}, HINT_DELAY_MS);
 			}
+		}
+		if (returnToLauncher) {
+			startActivity(new Intent(this, com.blitterstudio.amiberry.ui.MainActivity.class)
+				.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP));
+			finish();
+			return;
 		}
 		registerBackCallback();
 		enterImmersiveMode();
@@ -89,6 +105,8 @@ public class AmiberryActivity extends SDLActivity {
 	@Override
 	protected void onResume() {
 		super.onResume();
+		autosaveRequested = false;
+		autosaveNeedsRefreshOnStop = false;
 		if (overlay != null) {
 			overlay.onResume();
 		}
@@ -96,6 +114,8 @@ public class AmiberryActivity extends SDLActivity {
 
 	@Override
 	protected void onPause() {
+		autosaveNeedsRefreshOnStop |= isInMultiWindowMode();
+		saveAutosave(false);
 		if (overlay != null) {
 			overlay.onPause();
 		}
@@ -104,10 +124,37 @@ public class AmiberryActivity extends SDLActivity {
 
 	@Override
 	protected void onStop() {
+		if (autosaveNeedsRefreshOnStop) {
+			// SDL pauses only here after a visible multi-window pause, so replace the
+			// earlier checkpoint with the last frame before that pause.
+			saveAutosave(true);
+		}
 		if (overlay != null) {
 			overlay.onStop();
 		}
 		super.onStop();
+	}
+
+	/**
+	 * SDLActivity pauses its native thread in super.onPause(). The native call therefore
+	 * happens first and waits for its bounded emulator-thread handoff to finish.
+	 */
+	private void saveAutosave(boolean refresh) {
+		if ((!refresh && autosaveRequested) || !startsEmulation()) {
+			return;
+		}
+		try {
+			String[] autosave = OverlayNative.autosave();
+			if (autosave != null && autosave.length >= 2) {
+				AndroidAutosave.INSTANCE.record(
+					this, autosave[0], autosave[1], getArguments(),
+					java.util.Arrays.copyOfRange(autosave, 2, autosave.length)
+				);
+				autosaveRequested = true;
+			}
+		} catch (LinkageError | RuntimeException ignored) {
+			// The session marker still records an interrupted emulator when saving fails.
+		}
 	}
 
 	@Override
@@ -120,8 +167,15 @@ public class AmiberryActivity extends SDLActivity {
 
 	@Override
 	public void onWindowFocusChanged(boolean hasFocus) {
+		if (!hasFocus) {
+			// SDLActivity may pause native from its focus callback before onPause.
+			autosaveNeedsRefreshOnStop |= isInMultiWindowMode();
+			saveAutosave(false);
+		}
 		super.onWindowFocusChanged(hasFocus);
 		if (hasFocus) {
+			autosaveRequested = false;
+			autosaveNeedsRefreshOnStop = false;
 			enterImmersiveMode();
 		}
 		if (overlay != null) {
@@ -199,8 +253,30 @@ public class AmiberryActivity extends SDLActivity {
 		};
 	}
 
+	/**
+	 * Recents may recreate this activity after its dedicated SDL process died. Its
+	 * intent still carries the old launch arguments, so replace them before SDLActivity
+	 * starts native code rather than overwriting the session with a cold boot.
+	 */
+	private void prepareRecovery(Bundle savedInstanceState) {
+		Intent intent = getIntent();
+		if (savedInstanceState == null || intent == null || intent.getStringArrayExtra("SDL_ARGS") == null) {
+			return;
+		}
+		AndroidAutosave.Session session = AndroidAutosave.INSTANCE.load(this);
+		if (session == null) {
+			returnToLauncher = true;
+			return;
+		}
+		recoveryArgs = new LaunchRequest.Autosave(
+			session.getStateFile().getAbsolutePath(), session.getLaunchArgs()).toArgs();
+	}
+
 	@Override
 	protected String[] getArguments() {
+		if (recoveryArgs != null) {
+			return recoveryArgs;
+		}
 		Intent intent = getIntent();
 		if (intent != null) {
 			String[] args = intent.getStringArrayExtra("SDL_ARGS");

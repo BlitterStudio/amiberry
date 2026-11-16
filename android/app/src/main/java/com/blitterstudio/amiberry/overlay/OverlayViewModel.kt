@@ -12,6 +12,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.blitterstudio.amiberry.R
+import com.blitterstudio.amiberry.data.AndroidAutosave
 import com.blitterstudio.amiberry.data.FileRepository
 import com.blitterstudio.amiberry.data.InGameControls
 import com.blitterstudio.amiberry.data.model.AmigaFile
@@ -621,7 +622,12 @@ class OverlayViewModel(application: Application) : AndroidViewModel(application)
 
 	private suspend fun loadSlots() {
 		val loaded = withContext(Dispatchers.IO) {
-			val names = sources ?: StateNameSources.parse(OverlayNative.stateNameSources())
+			val native = StateNameSources.parse(OverlayNative.stateNameSources())
+			val restored = AndroidAutosave.load(getApplication())
+			val names = sources ?: restored?.slotSources
+				?.takeIf { it.size == 7 && native?.stateDir?.endsWith(AndroidAutosave.STATE_FILE_NAME) == true }
+				?.let(StateNameSources::parse)
+				?: native
 			names?.let { found ->
 				found to StateSlots.slots.map { slot -> readSlot(StateSlots.paths(found, slot)) }
 			}

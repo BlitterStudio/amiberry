@@ -130,6 +130,8 @@ AMIBERRY_ACTIONS_API amiberry_action_id amiberry_actions_reset(bool hard, bool k
 AMIBERRY_ACTIONS_API amiberry_action_id amiberry_actions_pause(void);
 AMIBERRY_ACTIONS_API amiberry_action_id amiberry_actions_resume(void);
 AMIBERRY_ACTIONS_API amiberry_action_id amiberry_actions_save_state(const char *path);
+/* Like save_state, but preserves rewind history and input recording. */
+AMIBERRY_ACTIONS_API amiberry_action_id amiberry_actions_autosave_state(const char *path);
 AMIBERRY_ACTIONS_API amiberry_action_id amiberry_actions_load_state(const char *path);
 AMIBERRY_ACTIONS_API amiberry_action_id amiberry_actions_save_state_slot(int slot);
 AMIBERRY_ACTIONS_API amiberry_action_id amiberry_actions_load_state_slot(int slot);

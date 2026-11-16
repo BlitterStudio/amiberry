@@ -85,6 +85,23 @@ class EmulatorLauncherTest {
 	}
 
 	@Test
+	fun `autosave launch restores the saved machine and its original controls`() {
+		val request = LaunchRequest.Autosave(
+			"/states/Autosave.uss",
+			arrayOf("--config", "/configs/game.uae", "--gfx_filter", "shader", "-G")
+		)
+
+		assertTrue(request.trackSession)
+		assertArrayEquals(
+			arrayOf(
+				"--rescan-roms", "--config", "/configs/game.uae", "--gfx_filter", "shader",
+				"-G", "--statefile", "/states/Autosave.uss"
+			),
+			request.toArgs()
+		)
+	}
+
+	@Test
 	fun `tracked launch clears stale clean exit marker before writing session marker`() {
 		val baseDir = tempDir.newFolder()
 		val cleanExitMarker = baseDir.resolve(".clean_exit")

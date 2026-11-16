@@ -426,6 +426,7 @@ bool execute(const request& r, void*, std::string* error)
 		return true;
 
 	case kind::save_state:
+	case kind::autosave_state:
 	case kind::save_state_slot:
 		if (debugger_holds_cpu(error, "Cannot save state while the debugger has the CPU stopped; resume or PAUSE first")) {
 			return false;
@@ -435,13 +436,21 @@ bool execute(const request& r, void*, std::string* error)
 		if (state_operation_pending(error)) {
 			return false;
 		}
-		if (r.k == kind::save_state) {
-			savestate_initsave(r.path.c_str(), 1, true, true);
+		if (r.k == kind::save_state || r.k == kind::autosave_state) {
+			TCHAR previous[MAX_DPATH];
+			_tcscpy(previous, savestate_fname);
+			const bool user_save = r.k == kind::save_state;
+			savestate_initsave(r.path.c_str(), 1, true, user_save);
 			// save_state() returns 0 when the file cannot be written (or -1
 			// while a filesystem is active); the transports must not report
 			// success, and SAVESTATE must not write its companion config,
 			// when no usable state was saved.
-			if (save_state(r.path.c_str(), "...") <= 0) {
+			const int saved = save_state(r.path.c_str(), user_save ? "..." : "Autosave");
+			// A user save makes this file the session's state file, as before;
+			// an autosave leaves the user's state file as it was.
+			if (!user_save)
+				_tcscpy(savestate_fname, previous);
+			if (saved <= 0) {
 				*error = "Failed to save state to: " + r.path;
 				return false;
 			}
@@ -747,6 +756,13 @@ amiberry_action_id amiberry_actions_save_state(const char* path)
 	if (!valid_path(path))
 		return 0;
 	return post(kind::save_state, 0, 0, false, false, path);
+}
+
+amiberry_action_id amiberry_actions_autosave_state(const char* path)
+{
+	if (!valid_path(path))
+		return 0;
+	return post(kind::autosave_state, 0, 0, false, false, path);
 }
 
 amiberry_action_id amiberry_actions_load_state(const char* path)

@@ -89,6 +89,11 @@ object EmulatorLauncher {
 		launchRequest(context, LaunchRequest.SettingsConfig(configPath = configPath))
 	}
 
+	/** Restores a background autosave with the original launch's controls and settings. */
+	fun launchAutosave(context: Context, session: AndroidAutosave.Session) {
+		launchRequest(context, LaunchRequest.Autosave(session.stateFile.absolutePath, session.launchArgs))
+	}
+
 	/**
 	 * Launch a WHDLoad game via the --autoload mechanism: WHDBooter chooses
 	 * the hardware from its game database, the installed Kickstarts or the

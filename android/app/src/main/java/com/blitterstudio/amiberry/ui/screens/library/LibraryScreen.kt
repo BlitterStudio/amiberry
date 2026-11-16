@@ -29,6 +29,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -62,11 +63,13 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.blitterstudio.amiberry.R
+import com.blitterstudio.amiberry.data.AndroidAutosave
 import com.blitterstudio.amiberry.data.AppPreferences
 import com.blitterstudio.amiberry.data.ConfigurationActions
 import com.blitterstudio.amiberry.data.ContentFolders
 import com.blitterstudio.amiberry.data.ConfigurationSaveActions
 import com.blitterstudio.amiberry.data.ConfigInfo
+import com.blitterstudio.amiberry.data.EmulatorLauncher
 import com.blitterstudio.amiberry.data.FileListing
 import com.blitterstudio.amiberry.data.FileManager
 import com.blitterstudio.amiberry.data.FilePickerFilters
@@ -107,6 +110,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
+import java.text.DateFormat
+import java.util.Date
 
 /**
  * The Library the app opens to: the saved machines, the media shelves and the Kickstart
@@ -136,6 +141,7 @@ fun LibraryScreen(
 	val isTv = isTvDevice()
 	val preferences = remember { AppPreferences.getInstance(context) }
 	val repository = remember { FileRepository.getInstance(context) }
+	var autosave by remember { mutableStateOf(AndroidAutosave.load(context)) }
 
 	// The machines and their categories; the media folders; the ROMs.
 	val configs by configurationsViewModel.configs.collectAsState()
@@ -197,6 +203,7 @@ fun LibraryScreen(
 			if (event == Lifecycle.Event.ON_RESUME) {
 				configurationsViewModel.refresh()
 				fileViewModel.rescan()
+				autosave = AndroidAutosave.load(context)
 			}
 		}
 		lifecycleOwner.lifecycle.addObserver(observer)
@@ -469,6 +476,22 @@ fun LibraryScreen(
 		filters.getOrNull(index)?.let { filterName = it.persistName }
 	}
 
+	fun resumeAutosave() {
+		val session = autosave ?: return
+		if (launchBusy) return
+		scope.launchGuarded(launchGuard) {
+			runCatching { EmulatorLauncher.launchAutosave(context, session) }
+				.onFailure {
+					snackbarHostState.showSnackbar(actionMessage(ConfigurationActions.Message(R.string.msg_failed_launch_config)))
+				}
+		}
+	}
+
+	fun discardAutosave() {
+		AndroidAutosave.discard(context)
+		autosave = null
+	}
+
 	// The machines, a shelf or the ROMs: the whole content on a phone, the pane beside the
 	// filter list on a wide window.
 	val content: @Composable (Modifier) -> Unit = { modifier ->
@@ -620,6 +643,16 @@ fun LibraryScreen(
 					onDismissAdvice = { preferences.dismissRomAdvice() },
 					onDismissReport = { romReport = null }
 				)
+			}
+			if (activity?.emulatorRunning != true) {
+				autosave?.let { session ->
+					AutosaveNotice(
+						session = session,
+						launchInProgress = launchBusy,
+						onResume = ::resumeAutosave,
+						onDiscard = ::discardAutosave
+					)
+				}
 			}
 			if (wide) {
 				Row(modifier = Modifier.fillMaxSize()) {
@@ -1049,6 +1082,51 @@ private fun RomNotice(
 				modifier = Modifier.dpadFocusIndicator()
 			) {
 				Icon(Icons.Default.Close, contentDescription = stringResource(R.string.action_close))
+			}
+		}
+	}
+}
+
+/** A finished background save is offered before any Library content. */
+@Composable
+private fun AutosaveNotice(
+	session: AndroidAutosave.Session,
+	launchInProgress: Boolean,
+	onResume: () -> Unit,
+	onDiscard: () -> Unit
+) {
+	val savedAt = remember(session.modifiedAt) {
+		DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(session.modifiedAt))
+	}
+	Surface(color = MaterialTheme.colorScheme.surfaceVariant) {
+		Row(
+			modifier = Modifier
+				.fillMaxWidth()
+				.padding(horizontal = 16.dp, vertical = 12.dp),
+			verticalAlignment = Alignment.CenterVertically
+		) {
+			Column(modifier = Modifier.weight(1f)) {
+				Text(stringResource(R.string.library_resume_last_session), style = MaterialTheme.typography.titleSmall)
+				Text(
+					stringResource(R.string.library_resume_last_session_detail, session.title, savedAt),
+					style = MaterialTheme.typography.bodySmall,
+					color = MaterialTheme.colorScheme.onSurfaceVariant
+				)
+			}
+			OutlinedButton(
+				onClick = onDiscard,
+				enabled = !launchInProgress,
+				modifier = Modifier.dpadFocusIndicator()
+			) {
+				Text(stringResource(R.string.action_discard))
+			}
+			Spacer(modifier = Modifier.width(8.dp))
+			Button(
+				onClick = onResume,
+				enabled = !launchInProgress,
+				modifier = Modifier.dpadFocusIndicator()
+			) {
+				Text(stringResource(R.string.action_resume))
 			}
 		}
 	}
