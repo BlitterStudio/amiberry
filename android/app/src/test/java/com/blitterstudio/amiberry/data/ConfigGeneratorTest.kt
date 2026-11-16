@@ -593,9 +593,18 @@ class ConfigGeneratorTest {
 	}
 
 	@Test
-	fun `round-trip preserves editor RTG paths hotkeys and parallel ports`() {
-		val options = mapOf(
-			"gfxcard_type" to "ZorroIII",
+	fun `editor rows retain RTG and cartridge settings through config`() {
+		val settings = EmulatorSettings()
+			.withOption("gfxcard_type", "ZorroIII")
+			.withOption("gfxcard_size", "8")
+			.withOption("cart_file", "/ROMs/ActionReplay.rom")
+			.withOption("genlock_image", "/Images/genlock.png")
+			.withOption("genlock_video", "/Videos/genlock.mp4")
+			.withOption("rtc_file", "/RTC/clock.bin")
+			.withOption("amiberry.open_gui", "LCtrl+F12")
+			.withOption("joyport2", "joy0")
+			.withOption("joyport2autofire", "1")
+		val expected = mapOf(
 			"gfxcard_size" to "8",
 			"cart_file" to "/ROMs/ActionReplay.rom",
 			"genlock_image" to "/Images/genlock.png",
@@ -605,14 +614,13 @@ class ConfigGeneratorTest {
 			"joyport2" to "joy0",
 			"joyport2autofire" to "1"
 		)
-		val config = ConfigGenerator.generate(EmulatorSettings(options = options))
-		options.forEach { (id, value) -> assertContains(config, "$id=$value") }
-
+		val config = ConfigGenerator.generate(settings)
+		expected.forEach { (id, value) -> assertContains(config, "$id=$value") }
 		val file = tempDir.newFile("editor-options.uae")
 		file.writeText(config)
 		val parsed = ConfigParser.parse(file)
-		options.forEach { (id, value) -> assertEquals(id, value, parsed.settings.optionValue(id)) }
-		assertTrue(parsed.unknownLines.none { line -> options.keys.any { id -> line.startsWith("$id=") } })
+		expected.forEach { (id, value) -> assertEquals(id, value, parsed.settings.optionValue(id)) }
+		assertTrue(parsed.unknownLines.none { line -> expected.keys.any { id -> line.startsWith("$id=") } })
 	}
 
 	@Test
