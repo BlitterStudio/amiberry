@@ -94,8 +94,18 @@ internal object LibraryLaunch {
 	internal suspend fun retryWhdload(context: Context, path: String): PlayResult = playWhdloadPath(context, path)
 
 	private suspend fun playWhdloadPath(context: Context, path: String): PlayResult {
-		val status = withContext(Dispatchers.IO) { WhdbootTools.status(context) }
-		if (!status.readyForSelectedTool)
+		val status = withContext(Dispatchers.IO) {
+			try {
+				WhdbootTools.status(context)
+			} catch (e: CancellationException) {
+				throw e
+			} catch (_: Exception) {
+				null
+			} catch (_: LinkageError) {
+				null
+			}
+		}
+		if (status != null && !status.readyForSelectedTool)
 			return PlayResult.NeedsWhdboot(path, if (status.useJst) "JST" else "WHDLoad")
 		val prepared = withContext(Dispatchers.IO) {
 			try {

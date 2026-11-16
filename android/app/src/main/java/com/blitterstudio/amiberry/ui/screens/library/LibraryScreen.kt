@@ -72,7 +72,10 @@ import com.blitterstudio.amiberry.data.FileManager
 import com.blitterstudio.amiberry.data.FilePickerFilters
 import com.blitterstudio.amiberry.data.FileRepository
 import com.blitterstudio.amiberry.data.ImportBatchFeedback
+import com.blitterstudio.amiberry.ui.components.WhdbootDownloadProgress
 import com.blitterstudio.amiberry.data.WhdbootTools
+import com.blitterstudio.amiberry.ui.components.WhdbootDownloadState
+import com.blitterstudio.amiberry.ui.components.whdbootResultString
 import com.blitterstudio.amiberry.data.ImportFeedback
 import com.blitterstudio.amiberry.data.RecentLaunches
 import com.blitterstudio.amiberry.data.model.AmigaFile
@@ -232,7 +235,7 @@ fun LibraryScreen(
 	var saveNewName by remember { mutableStateOf<String?>(null) }
 	var saveNewThen by remember { mutableStateOf<(() -> Unit)?>(null) }
 	var whdbootRequest by remember { mutableStateOf<LibraryLaunch.PlayResult.NeedsWhdboot?>(null) }
-	var whdbootDownloading by remember { mutableStateOf(false) }
+	val whdbootDownload = remember { WhdbootDownloadState() }
 	fun saveMessage(result: ConfigurationSaveActions.SaveResult): String {
 		val message = ConfigurationSaveActions.messageFor(result)
 		return message.argument?.let { context.getString(message.stringRes, it) }
@@ -708,32 +711,47 @@ fun LibraryScreen(
 	}
 	whdbootRequest?.let { request ->
 		AlertDialog(
-			onDismissRequest = { if (!whdbootDownloading) whdbootRequest = null },
+			onDismissRequest = { if (!whdbootDownload.downloading) whdbootRequest = null },
 			title = { Text(stringResource(R.string.whdboot_download_before_play_title)) },
-			text = { Text(stringResource(R.string.whdboot_download_before_play_message, request.tool)) },
+			text = {
+				Column {
+					Text(stringResource(R.string.whdboot_download_before_play_message, request.tool))
+					if (whdbootDownload.downloading) WhdbootDownloadProgress(whdbootDownload)
+					whdbootDownload.result?.let { result ->
+						Text(stringResource(whdbootResultString(result)))
+					}
+				}
+			},
 			confirmButton = {
-				TextButton(
-					onClick = {
-						whdbootDownloading = true
-						scope.launch {
-							val result = withContext(Dispatchers.IO) { WhdbootTools.download(context) { false } }
-							whdbootDownloading = false
-							whdbootRequest = null
-							if (result == WhdbootTools.RESULT_OK) {
-								showResult(LibraryLaunch.retryWhdload(context, request.path))
-							} else {
-								snackbarHostState.showSnackbar(context.getString(R.string.whdboot_result_failed))
+				if (!whdbootDownload.downloading) {
+					TextButton(
+						onClick = {
+							whdbootDownload.download(scope, context) { finished ->
+								if (finished.result == WhdbootTools.RESULT_PARTIAL) {
+									scope.launch {
+										snackbarHostState.showSnackbar(
+											context.getString(R.string.whdboot_result_partial)
+										)
+									}
+								}
+								if (finished.status?.readyForSelectedTool == true) {
+									whdbootRequest = null
+									scope.launch {
+										showResult(LibraryLaunch.retryWhdload(context, request.path))
+									}
+								}
 							}
 						}
-					},
-					enabled = !whdbootDownloading
-				) {
-					Text(stringResource(R.string.whdboot_download))
+					) {
+						Text(stringResource(R.string.whdboot_download))
+					}
 				}
 			},
 			dismissButton = {
-				TextButton(onClick = { whdbootRequest = null }, enabled = !whdbootDownloading) {
-					Text(stringResource(R.string.action_cancel))
+				if (!whdbootDownload.downloading) {
+					TextButton(onClick = { whdbootRequest = null }) {
+						Text(stringResource(R.string.action_cancel))
+					}
 				}
 			}
 		)

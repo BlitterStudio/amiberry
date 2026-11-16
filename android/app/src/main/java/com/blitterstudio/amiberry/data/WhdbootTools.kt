@@ -44,6 +44,7 @@ object WhdbootTools {
 	const val RESULT_CANCELLED = 3
 	const val RESULT_UNAVAILABLE = 4
 	const val RESULT_BUSY = 5
+	const val RESULT_EMULATION_RUNNING = 6
 
 	init {
 		System.loadLibrary("amiberry")
@@ -58,6 +59,8 @@ object WhdbootTools {
 	}
 
 	fun download(context: Context, onProgress: (WhdbootProgress) -> Boolean): Int {
+		if (EmulatorLauncher.hasSessionMarker(context))
+			return RESULT_EMULATION_RUNNING
 		val input = input(context)
 		return nativeDownload(input.path, input.useJst, NativeProgressListener(onProgress))
 	}

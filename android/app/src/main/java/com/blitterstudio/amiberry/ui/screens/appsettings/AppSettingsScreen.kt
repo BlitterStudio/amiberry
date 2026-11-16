@@ -32,7 +32,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -69,6 +68,8 @@ import androidx.navigation.NavController
 import com.blitterstudio.amiberry.R
 import com.blitterstudio.amiberry.data.AppPreferences
 import com.blitterstudio.amiberry.data.model.SettingsSchema
+import com.blitterstudio.amiberry.ui.components.WhdbootDownloadProgress
+import com.blitterstudio.amiberry.ui.components.whdbootResultString
 import com.blitterstudio.amiberry.ui.components.SidePaneEntry
 import com.blitterstudio.amiberry.ui.components.PickedFolder
 import com.blitterstudio.amiberry.ui.components.rememberImportPicker
@@ -502,7 +503,7 @@ private fun HostSection(
 private fun WhdbootFilesRow(viewModel: AppSettingsViewModel) {
 	val status = viewModel.whdbootStatus ?: return
 	val installed = status.readyForSelectedTool && status.rtbFilesInstalled && status.librariesInstalled
-	val progress = viewModel.whdbootProgress
+	val download = viewModel.whdbootDownload
 	OutlinedCard(modifier = Modifier.fillMaxWidth()) {
 		Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
 			Text(stringResource(R.string.whdboot_files_title), style = MaterialTheme.typography.titleSmall)
@@ -523,22 +524,8 @@ private fun WhdbootFilesRow(viewModel: AppSettingsViewModel) {
 				style = MaterialTheme.typography.bodySmall,
 				color = MaterialTheme.colorScheme.onSurfaceVariant
 			)
-			if (progress != null) {
-				Text(
-					stringResource(R.string.whdboot_progress, progress.step, progress.totalSteps, progress.label),
-					style = MaterialTheme.typography.bodySmall
-				)
-				if (progress.bytesTotal > 0) {
-					LinearProgressIndicator(
-						progress = { progress.bytesDownloaded.toFloat() / progress.bytesTotal.toFloat() },
-						modifier = Modifier.fillMaxWidth()
-					)
-				} else {
-					LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-				}
-				TextButton(onClick = viewModel::cancelWhdbootDownload, modifier = Modifier.testTag("whdboot-cancel")) {
-					Text(stringResource(R.string.whdboot_cancel))
-				}
+			if (download.downloading) {
+				WhdbootDownloadProgress(download, Modifier.testTag("whdboot-cancel"))
 			} else {
 				TextButton(
 					onClick = viewModel::downloadWhdboot,
@@ -548,7 +535,7 @@ private fun WhdbootFilesRow(viewModel: AppSettingsViewModel) {
 					Text(stringResource(if (installed) R.string.whdboot_update else R.string.whdboot_download))
 				}
 			}
-			viewModel.whdbootResult?.let { result ->
+			download.result?.let { result ->
 				Text(
 					stringResource(whdbootResultString(result)),
 					style = MaterialTheme.typography.bodySmall,
@@ -557,15 +544,6 @@ private fun WhdbootFilesRow(viewModel: AppSettingsViewModel) {
 			}
 		}
 	}
-}
-
-private fun whdbootResultString(result: Int): Int = when (result) {
-	0 -> R.string.whdboot_result_ok
-	1 -> R.string.whdboot_result_partial
-	2 -> R.string.whdboot_result_failed
-	3 -> R.string.whdboot_result_cancelled
-	4 -> R.string.whdboot_result_unavailable
-	else -> R.string.whdboot_result_busy
 }
 
 /**

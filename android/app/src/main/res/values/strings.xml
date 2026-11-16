@@ -634,12 +634,14 @@
     <string name="whdboot_update">Update WHDLoad files</string>
     <string name="whdboot_cancel">Cancel download</string>
     <string name="whdboot_progress">%1$d of %2$d: %3$s</string>
+    <string name="whdboot_progress_bytes">%1$s / %2$s</string>
     <string name="whdboot_result_ok">WHDLoad files were downloaded.</string>
     <string name="whdboot_result_partial">Some WHDLoad files could not be downloaded.</string>
     <string name="whdboot_result_failed">WHDLoad files could not be downloaded.</string>
     <string name="whdboot_result_cancelled">WHDLoad download cancelled.</string>
     <string name="whdboot_result_unavailable">WHDLoad downloads are unavailable.</string>
     <string name="whdboot_result_busy">WHDLoad download is busy.</string>
+    <string name="whdboot_result_emulation_running">Close the running emulation session before downloading WHDLoad files.</string>
     <string name="whdboot_download_before_play_title">Download WHDLoad files?</string>
     <string name="whdboot_download_before_play_message">This game needs %1$s. Download the required WHDLoad files before playing?</string>
 </resources>

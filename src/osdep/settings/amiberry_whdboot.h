@@ -30,7 +30,7 @@
 extern "C" {
 #endif
 
-#define AMIBERRY_WHDBOOT_API_VERSION 3
+#define AMIBERRY_WHDBOOT_API_VERSION 4
 
 typedef struct amiberry_whdboot_status {
 	bool whdload_installed;   /* WHDLoad, from whdload.de */
@@ -46,6 +46,13 @@ typedef struct amiberry_whdboot_status {
 
 /* Which of the on-demand WHDBoot tools are installed in the WHDBoot folder. */
 AMIBERRY_SETTINGS_API void amiberry_whdboot_status_get(amiberry_whdboot_status *status);
+
+/*
+ * Reads a WHDBoot folder without changing the emulator's configured path.
+ * Front ends that run outside the emulator process use this during a download.
+ */
+AMIBERRY_SETTINGS_API void amiberry_whdboot_status_get_at_path(
+	const char *path, amiberry_whdboot_status *status);
 
 typedef struct amiberry_whdboot_progress {
 	int step;

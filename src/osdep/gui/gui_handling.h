@@ -405,8 +405,9 @@ extern whdboot_download_result download_whdboot_assets(
 // are fetched on demand.
 extern bool whdboot_can_download();
 extern const std::vector<std::string>& whdboot_skick_rtb_files();
-// True once every optional Amiga library above is installed in the
+// True once every optional Amiga library above is installed in the supplied
 // WHDBoot folder's Libs drawer.
+extern bool whdboot_optional_libraries_installed(const std::string& root);
 extern bool whdboot_optional_libraries_installed();
 // True while a machine runs unpaused (the built-in GUI or the native
 // settings window hold a paused one): downloads wait until it does not.

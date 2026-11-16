@@ -10,14 +10,13 @@
 
 #include <jni.h>
 
-#include <mutex>
+#include <atomic>
 #include <string>
 #include <vector>
 
 namespace {
 
-std::mutex whdboot_jni_lock;
-JavaVM* whdboot_jvm = nullptr;
+std::atomic_flag whdboot_download_running = ATOMIC_FLAG_INIT;
 
 std::string from_java(JNIEnv* env, jstring text)
 {
@@ -54,6 +53,7 @@ void configure_whdboot(const std::string& path, const jboolean use_jst)
 }
 
 struct progress_callback {
+	JavaVM* jvm;
 	jobject listener;
 	jmethodID on_progress;
 };
@@ -63,8 +63,8 @@ int report_progress(const amiberry_whdboot_progress* progress, void* data)
 	auto* callback = static_cast<progress_callback*>(data);
 	JNIEnv* env = nullptr;
 	bool attached = false;
-	if (whdboot_jvm->GetEnv(reinterpret_cast<void**>(&env), JNI_VERSION_1_6) != JNI_OK) {
-		if (whdboot_jvm->AttachCurrentThread(&env, nullptr) != JNI_OK)
+	if (callback->jvm->GetEnv(reinterpret_cast<void**>(&env), JNI_VERSION_1_6) != JNI_OK) {
+		if (callback->jvm->AttachCurrentThread(&env, nullptr) != JNI_OK)
 			return 1;
 		attached = true;
 	}
@@ -77,7 +77,7 @@ int report_progress(const amiberry_whdboot_progress* progress, void* data)
 	if (failed)
 		env->ExceptionClear();
 	if (attached)
-		whdboot_jvm->DetachCurrentThread();
+		callback->jvm->DetachCurrentThread();
 	return failed || cancel == JNI_TRUE;
 }
 
@@ -85,13 +85,11 @@ int report_progress(const amiberry_whdboot_progress* progress, void* data)
 
 
 extern "C" JNIEXPORT jobjectArray JNICALL
-Java_com_blitterstudio_amiberry_data_WhdbootTools_nativeStatus(JNIEnv* env, jobject, jstring path, jboolean use_jst)
+Java_com_blitterstudio_amiberry_data_WhdbootTools_nativeStatus(JNIEnv* env, jobject, jstring path, jboolean)
 {
-	std::lock_guard<std::mutex> guard(whdboot_jni_lock);
-	env->GetJavaVM(&whdboot_jvm);
-	configure_whdboot(from_java(env, path), use_jst);
+	const auto root = from_java(env, path);
 	amiberry_whdboot_status status{};
-	amiberry_whdboot_status_get(&status);
+	amiberry_whdboot_status_get_at_path(root.c_str(), &status);
 	return to_java(env, {
 		status.whdload_installed ? "1" : "0",
 		status.jst_installed ? "1" : "0",
@@ -105,8 +103,14 @@ extern "C" JNIEXPORT jint JNICALL
 Java_com_blitterstudio_amiberry_data_WhdbootTools_nativeDownload(JNIEnv* env, jobject, jstring path, jboolean use_jst,
 	jobject listener)
 {
-	std::lock_guard<std::mutex> guard(whdboot_jni_lock);
-	if (env->GetJavaVM(&whdboot_jvm) != JNI_OK)
+	if (whdboot_download_running.test_and_set())
+		return AMIBERRY_WHDBOOT_DOWNLOAD_BUSY;
+	struct running_download {
+		~running_download() { whdboot_download_running.clear(); }
+	} clear_running;
+
+	JavaVM* jvm = nullptr;
+	if (env->GetJavaVM(&jvm) != JNI_OK)
 		return AMIBERRY_WHDBOOT_DOWNLOAD_FAILED;
 	configure_whdboot(from_java(env, path), use_jst);
 	auto listener_class = env->GetObjectClass(listener);
@@ -114,7 +118,7 @@ Java_com_blitterstudio_amiberry_data_WhdbootTools_nativeDownload(JNIEnv* env, jo
 	env->DeleteLocalRef(listener_class);
 	if (on_progress == nullptr)
 		return AMIBERRY_WHDBOOT_DOWNLOAD_FAILED;
-	progress_callback callback{env->NewGlobalRef(listener), on_progress};
+	progress_callback callback{jvm, env->NewGlobalRef(listener), on_progress};
 	const auto result = amiberry_whdboot_download(report_progress, &callback);
 	env->DeleteGlobalRef(callback.listener);
 	return result;
