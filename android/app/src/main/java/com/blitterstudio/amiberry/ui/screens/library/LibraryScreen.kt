@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -35,6 +36,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -70,6 +72,7 @@ import com.blitterstudio.amiberry.data.FileManager
 import com.blitterstudio.amiberry.data.FilePickerFilters
 import com.blitterstudio.amiberry.data.FileRepository
 import com.blitterstudio.amiberry.data.ImportBatchFeedback
+import com.blitterstudio.amiberry.data.WhdbootTools
 import com.blitterstudio.amiberry.data.ImportFeedback
 import com.blitterstudio.amiberry.data.RecentLaunches
 import com.blitterstudio.amiberry.data.model.AmigaFile
@@ -228,6 +231,8 @@ fun LibraryScreen(
 	// Save chosen for a new configuration: the name dialog, and the action waiting for it.
 	var saveNewName by remember { mutableStateOf<String?>(null) }
 	var saveNewThen by remember { mutableStateOf<(() -> Unit)?>(null) }
+	var whdbootRequest by remember { mutableStateOf<LibraryLaunch.PlayResult.NeedsWhdboot?>(null) }
+	var whdbootDownloading by remember { mutableStateOf(false) }
 	fun saveMessage(result: ConfigurationSaveActions.SaveResult): String {
 		val message = ConfigurationSaveActions.messageFor(result)
 		return message.argument?.let { context.getString(message.stringRes, it) }
@@ -265,10 +270,15 @@ fun LibraryScreen(
 	}
 
 	fun showResult(result: LibraryLaunch.PlayResult) {
-		val refused = result as? LibraryLaunch.PlayResult.Refused ?: return
-		val message = refused.argument?.let { context.getString(refused.messageRes, it) }
-			?: context.getString(refused.messageRes)
-		scope.launch { snackbarHostState.showSnackbar(message) }
+		when (result) {
+			is LibraryLaunch.PlayResult.NeedsWhdboot -> whdbootRequest = result
+			is LibraryLaunch.PlayResult.Refused -> {
+				val message = result.argument?.let { context.getString(result.messageRes, it) }
+					?: context.getString(result.messageRes)
+				scope.launch { snackbarHostState.showSnackbar(message) }
+			}
+			LibraryLaunch.PlayResult.Started -> Unit
+		}
 	}
 
 	/** Quick play: the file's kind in its machine. */
@@ -692,6 +702,38 @@ fun LibraryScreen(
 						saveNewThen = null
 					}
 					snackbarHostState.showSnackbar(saveMessage(result))
+				}
+			}
+		)
+	}
+	whdbootRequest?.let { request ->
+		AlertDialog(
+			onDismissRequest = { if (!whdbootDownloading) whdbootRequest = null },
+			title = { Text(stringResource(R.string.whdboot_download_before_play_title)) },
+			text = { Text(stringResource(R.string.whdboot_download_before_play_message, request.tool)) },
+			confirmButton = {
+				TextButton(
+					onClick = {
+						whdbootDownloading = true
+						scope.launch {
+							val result = withContext(Dispatchers.IO) { WhdbootTools.download(context) { false } }
+							whdbootDownloading = false
+							whdbootRequest = null
+							if (result == WhdbootTools.RESULT_OK) {
+								showResult(LibraryLaunch.retryWhdload(context, request.path))
+							} else {
+								snackbarHostState.showSnackbar(context.getString(R.string.whdboot_result_failed))
+							}
+						}
+					},
+					enabled = !whdbootDownloading
+				) {
+					Text(stringResource(R.string.whdboot_download))
+				}
+			},
+			dismissButton = {
+				TextButton(onClick = { whdbootRequest = null }, enabled = !whdbootDownloading) {
+					Text(stringResource(R.string.action_cancel))
 				}
 			}
 		)

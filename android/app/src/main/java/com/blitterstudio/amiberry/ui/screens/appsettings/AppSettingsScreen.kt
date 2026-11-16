@@ -32,6 +32,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -467,7 +468,7 @@ private fun HostSection(
 	onChooseFolder: (String) -> Unit
 ) {
 	val options = viewModel.schema?.let { AppSettingsSections.settingsOf(it, section) { it.matches(query) } }.orEmpty()
-	if (options.isEmpty()) return
+	if (options.isEmpty() && section.group != "global_whdload") return
 	val content: @Composable ColumnScope.() -> Unit = {
 		options.forEach { option ->
 			HostSettingRow(
@@ -481,6 +482,9 @@ private fun HostSection(
 				onChooseFolder = { onChooseFolder(option.id) }
 			)
 		}
+		if (section.group == "global_whdload") {
+			WhdbootFilesRow(viewModel)
+		}
 	}
 	if (section.collapsed && query.isBlank()) {
 		CollapsibleSettingsSection(
@@ -492,6 +496,76 @@ private fun HostSection(
 	} else {
 		SettingsSection(title = stringResource(section.titleRes), content = content)
 	}
+}
+
+@Composable
+private fun WhdbootFilesRow(viewModel: AppSettingsViewModel) {
+	val status = viewModel.whdbootStatus ?: return
+	val installed = status.readyForSelectedTool && status.rtbFilesInstalled && status.librariesInstalled
+	val progress = viewModel.whdbootProgress
+	OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+		Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+			Text(stringResource(R.string.whdboot_files_title), style = MaterialTheme.typography.titleSmall)
+			Text(
+				stringResource(if (installed) R.string.whdboot_files_installed else R.string.whdboot_files_missing),
+				style = MaterialTheme.typography.bodyMedium
+			)
+			val yes = stringResource(R.string.whdboot_yes)
+			val no = stringResource(R.string.whdboot_no)
+			Text(
+				stringResource(
+					R.string.whdboot_files_detail,
+					if (status.whdloadInstalled) yes else no,
+					if (status.jstInstalled) yes else no,
+					if (status.rtbFilesInstalled) yes else no,
+					if (status.librariesInstalled) yes else no
+				),
+				style = MaterialTheme.typography.bodySmall,
+				color = MaterialTheme.colorScheme.onSurfaceVariant
+			)
+			if (progress != null) {
+				Text(
+					stringResource(R.string.whdboot_progress, progress.step, progress.totalSteps, progress.label),
+					style = MaterialTheme.typography.bodySmall
+				)
+				if (progress.bytesTotal > 0) {
+					LinearProgressIndicator(
+						progress = { progress.bytesDownloaded.toFloat() / progress.bytesTotal.toFloat() },
+						modifier = Modifier.fillMaxWidth()
+					)
+				} else {
+					LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+				}
+				TextButton(onClick = viewModel::cancelWhdbootDownload, modifier = Modifier.testTag("whdboot-cancel")) {
+					Text(stringResource(R.string.whdboot_cancel))
+				}
+			} else {
+				TextButton(
+					onClick = viewModel::downloadWhdboot,
+					enabled = status.downloadsAvailable,
+					modifier = Modifier.testTag("whdboot-download")
+				) {
+					Text(stringResource(if (installed) R.string.whdboot_update else R.string.whdboot_download))
+				}
+			}
+			viewModel.whdbootResult?.let { result ->
+				Text(
+					stringResource(whdbootResultString(result)),
+					style = MaterialTheme.typography.bodySmall,
+					color = MaterialTheme.colorScheme.onSurfaceVariant
+				)
+			}
+		}
+	}
+}
+
+private fun whdbootResultString(result: Int): Int = when (result) {
+	0 -> R.string.whdboot_result_ok
+	1 -> R.string.whdboot_result_partial
+	2 -> R.string.whdboot_result_failed
+	3 -> R.string.whdboot_result_cancelled
+	4 -> R.string.whdboot_result_unavailable
+	else -> R.string.whdboot_result_busy
 }
 
 /**

@@ -9,10 +9,14 @@ import androidx.compose.runtime.setValue
 import com.blitterstudio.amiberry.data.ContentFolders
 import com.blitterstudio.amiberry.data.HostSettingsStore
 import com.blitterstudio.amiberry.data.ShaderCatalog
+import com.blitterstudio.amiberry.data.WhdbootProgress
+import com.blitterstudio.amiberry.data.WhdbootStatus
+import com.blitterstudio.amiberry.data.WhdbootTools
 import com.blitterstudio.amiberry.data.model.SettingsSchema
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.withContext
 
 /**
@@ -77,6 +81,15 @@ class AppSettingsViewModel(application: Application) : AndroidViewModel(applicat
 	var folderStates by mutableStateOf<Map<String, FolderState>>(emptyMap())
 		private set
 
+	/** The on-demand WHDBoot tools; native work stays in the launcher process. */
+	var whdbootStatus by mutableStateOf<WhdbootStatus?>(null)
+		private set
+	var whdbootProgress by mutableStateOf<WhdbootProgress?>(null)
+		private set
+	var whdbootResult by mutableStateOf<Int?>(null)
+		private set
+	private val cancelWhdbootDownload = AtomicBoolean(false)
+
 	/** Reads amiberry.conf and the catalogs again (the screen calls it on entry and on resume). */
 	fun reload() {
 		val store = store
@@ -105,12 +118,13 @@ class AppSettingsViewModel(application: Application) : AndroidViewModel(applicat
 						exists = effective?.let { if (isFile) safeIsFile(it) else safeIsDir(it) } == true
 					)
 				}
-				ReadResult(fileValues, shaders, bezels, folders)
+				ReadResult(fileValues, shaders, bezels, folders, runCatching { WhdbootTools.status(app) }.getOrNull())
 			}
 			values = schema?.hostDefaults.orEmpty() + read.fileValues
 			shaderCatalogEntries = read.shaders
 			bezelEntries = read.bezels
 			folderStates = read.folders
+			whdbootStatus = read.whdbootStatus
 		}
 	}
 
@@ -176,11 +190,33 @@ class AppSettingsViewModel(application: Application) : AndroidViewModel(applicat
 		}
 	}
 
+	fun downloadWhdboot() {
+		if (whdbootProgress != null) return
+		cancelWhdbootDownload.set(false)
+		whdbootResult = null
+		viewModelScope.launch {
+			val result = withContext(Dispatchers.IO) {
+				WhdbootTools.download(app) { progress ->
+					viewModelScope.launch { whdbootProgress = progress }
+					cancelWhdbootDownload.get()
+				}
+			}
+			whdbootProgress = null
+			whdbootResult = result
+			whdbootStatus = withContext(Dispatchers.IO) { runCatching { WhdbootTools.status(app) }.getOrNull() }
+		}
+	}
+
+	fun cancelWhdbootDownload() {
+		cancelWhdbootDownload.set(true)
+	}
+
 	private data class ReadResult(
 		val fileValues: Map<String, String>,
 		val shaders: List<String>,
 		val bezels: List<String>,
-		val folders: Map<String, FolderState>
+		val folders: Map<String, FolderState>,
+		val whdbootStatus: WhdbootStatus?
 	)
 
 	private fun safeIsDir(dir: File): Boolean = try {

@@ -17,6 +17,14 @@ bool is_readable_regular_file(const std::string& path)
 	return input.good();
 }
 
+bool is_readable_directory(const std::string& path)
+{
+	if (path.empty())
+		return false;
+	std::error_code error;
+	return std::filesystem::is_directory(path, error) && !error;
+}
+
 void append_environment_path(std::vector<std::string>& candidates, const char* name)
 {
 	const auto* value = std::getenv(name);
@@ -33,6 +41,23 @@ std::string select_readable_ca_bundle(const std::vector<std::string>& candidates
 		if (is_readable_regular_file(candidate))
 			return candidate;
 	}
+	return {};
+}
+
+std::string get_android_ca_path()
+{
+#if defined(__ANDROID__)
+	// Android's Conscrypt store contains one PEM certificate per file. curl's
+	// mbedTLS backend loads such a directory through mbedtls_x509_crt_parse_path;
+	// do not fall back to disabling verification when a device has no bundle.
+	for (const auto* path : {
+		"/apex/com.android.conscrypt/cacerts",
+		"/system/etc/security/cacerts"
+	}) {
+		if (is_readable_directory(path))
+			return path;
+	}
+#endif
 	return {};
 }
 
@@ -98,6 +123,17 @@ bool apply_ca_bundle_to_curl(CURL* handle, const std::string& ca_bundle, std::st
 
 bool apply_effective_ca_bundle_to_curl(CURL* handle, std::string* error_out)
 {
+#if defined(__ANDROID__)
+	const auto ca_path = get_android_ca_path();
+	if (!ca_path.empty()) {
+		const CURLcode result = curl_easy_setopt(handle, CURLOPT_CAPATH, ca_path.c_str());
+		if (result != CURLE_OK) {
+			if (error_out != nullptr)
+				*error_out = curl_easy_strerror(result);
+			return false;
+		}
+	}
+#endif
 #if defined(__linux__)
 	return apply_ca_bundle_to_curl(handle, get_effective_ca_bundle(), error_out);
 #else

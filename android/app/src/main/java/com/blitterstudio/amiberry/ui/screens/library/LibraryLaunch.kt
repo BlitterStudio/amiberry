@@ -14,6 +14,7 @@ import com.blitterstudio.amiberry.data.model.AmigaModel
 import com.blitterstudio.amiberry.data.AndroidControlSettings
 import com.blitterstudio.amiberry.data.model.EmulatorSettings
 import com.blitterstudio.amiberry.data.model.FileCategory
+import com.blitterstudio.amiberry.data.WhdbootTools
 import com.blitterstudio.amiberry.data.model.ModelRomAvailability
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -50,9 +51,10 @@ internal object LibraryLaunch {
 	/** The drive type DF0: takes when the machine was saved without one. */
 	private const val FLOPPY_DRIVE_TYPE = 0
 
-	/** What playing a file ended in: started, or the message to show instead. */
+	/** What playing a file ended in: started, needs the WHDBoot download, or the message to show instead. */
 	sealed interface PlayResult {
 		data object Started : PlayResult
+		data class NeedsWhdboot(val path: String, val tool: String) : PlayResult
 		data class Refused(val messageRes: Int, val argument: String? = null) : PlayResult
 	}
 
@@ -88,7 +90,13 @@ internal object LibraryLaunch {
 	suspend fun playWhdload(context: Context, game: AmigaFile): PlayResult =
 		playWhdloadPath(context, game.path)
 
+	/** Starts a WHDLoad path again after the launcher downloaded its missing tool. */
+	internal suspend fun retryWhdload(context: Context, path: String): PlayResult = playWhdloadPath(context, path)
+
 	private suspend fun playWhdloadPath(context: Context, path: String): PlayResult {
+		val status = withContext(Dispatchers.IO) { WhdbootTools.status(context) }
+		if (!status.readyForSelectedTool)
+			return PlayResult.NeedsWhdboot(path, if (status.useJst) "JST" else "WHDLoad")
 		val prepared = withContext(Dispatchers.IO) {
 			try {
 				AndroidLaunchConfig.prepareWhdLoad(
