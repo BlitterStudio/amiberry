@@ -1,7 +1,9 @@
 package com.blitterstudio.amiberry.ui.screens.settings
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.res.stringResource
 import com.blitterstudio.amiberry.R
 import com.blitterstudio.amiberry.data.model.EmulatorSettings
@@ -12,6 +14,7 @@ import com.blitterstudio.amiberry.ui.components.settings.SchemaChoiceRow
 import com.blitterstudio.amiberry.ui.components.settings.SchemaLevelRow
 import com.blitterstudio.amiberry.ui.components.settings.SchemaSwitchRow
 import com.blitterstudio.amiberry.ui.components.settings.schemaOption
+import com.blitterstudio.amiberry.ui.components.settings.schemaLabel
 import com.blitterstudio.amiberry.ui.components.settings.settingText
 import com.blitterstudio.amiberry.ui.components.settings.settingsSchema
 import com.blitterstudio.amiberry.ui.hasTouchScreen
@@ -36,9 +39,10 @@ object SettingsOptionRows {
 	 * or a labelled choice list (the sound buffer's latency).
 	 */
 	val customIds: Set<String> = setOf(
-		"joyport0", "joyport1", "joyport1mousemap", "input.joymouse_speed_analog",
-		"amiberry.onscreen_joystick", "amiberry.vkbd_touch_button", "amiberry.vkbd_numpad",
-		"amiberry.shader", "amiberry.scaling_method",
+		"joyport0", "joyport1", "joyport2", "joyport3", "joyport1mousemap",
+		"input.joymouse_speed_analog", "amiberry.onscreen_joystick", "amiberry.vkbd_touch_button",
+		"amiberry.vkbd_numpad", "amiberry.shader", "amiberry.shader_rtg", "amiberry.custom_bezel",
+		"amiberry.scaling_method", "cart_file",
 		"fpu_model", "chipmem_size", "bogomem_size", "sound_max_buff",
 		// The accelerator's board and memory: the schema's catalogs carry
 		// the list and the limit, not the option's choices. The boot ROM
@@ -99,6 +103,7 @@ fun SettingsOptionRow(id: String, viewModel: SettingsViewModel, sectionTitle: St
 			optionTestTag = { "input-port1-option-$it" },
 			onSelect = { value -> viewModel.updateSettings { s -> InputSettingsActions.selectPort1Device(s, value) } }
 		)
+		"joyport2", "joyport3" -> ParallelJoyportRow(id, viewModel, touch)
 		"joyport1mousemap" -> SchemaChoiceRow(
 			id = id,
 			value = if (settings.joyport1MouseMap) "1" else "0",
@@ -140,8 +145,10 @@ fun SettingsOptionRow(id: String, viewModel: SettingsViewModel, sectionTitle: St
 				viewModel.updateSettings { s -> s.copy(onScreenKeyboardNumpad = it) }
 			}
 		)
-		// The shader list is the catalog's, not the schema's.
-		"amiberry.shader" -> ShaderDropdownRow(viewModel)
+		// The shader and bezel lists come from their configured folders, not the schema.
+		"amiberry.shader", "amiberry.shader_rtg" -> ShaderDropdownRow(viewModel, id)
+		"amiberry.custom_bezel" -> BezelDropdownRow(viewModel)
+		"cart_file" -> CartridgeRomRow(viewModel)
 		// The scaling method and the resolution autoswitch are one switch.
 		"amiberry.scaling_method" -> IntegerScalingRow(viewModel)
 		// A single offered FPU is no choice (an internal one the CPU carries).
@@ -223,6 +230,36 @@ fun SettingsOptionRow(id: String, viewModel: SettingsViewModel, sectionTitle: St
 			}
 		}
 	}
+}
+
+/** A cartridge ROM is picked from the same installed ROM library as Kickstart images. */
+@Composable
+private fun CartridgeRomRow(viewModel: SettingsViewModel) {
+	val roms by viewModel.availableRoms.collectAsState()
+	val settings = viewModel.settings
+	FileDropdown(
+		label = schemaLabel("cart_file"),
+		files = roms,
+		selectedPath = settings.optionValue("cart_file") ?: "",
+		onSelect = { path -> viewModel.updateSettings { it.withOption("cart_file", path) } },
+		onClear = { viewModel.updateSettings { it.withOption("cart_file", "") } },
+		help = schemaOption("cart_file")?.help
+	)
+}
+
+/** Parallel-port joyports use the same Android device choices as the native ports. */
+@Composable
+private fun ParallelJoyportRow(id: String, viewModel: SettingsViewModel, touch: Boolean) {
+	val settings = viewModel.settings
+	val portIndex = id.removePrefix("joyport").toIntOrNull() ?: return
+	SchemaChoiceRow(
+		id = id,
+		value = settings.optionValue(id) ?: "none",
+		choices = inputDeviceOptionIds(touch, portIndex).map { token ->
+			SettingsSchema.Choice(token, settingText(LauncherChoices.portDevice(token)))
+		},
+		onSelect = { value -> viewModel.updateSettings { it.withOption(id, value) } }
+	)
 }
 
 /** The drive sounds offered, by option id. */

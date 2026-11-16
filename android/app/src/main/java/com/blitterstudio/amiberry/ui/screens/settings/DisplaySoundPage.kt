@@ -39,6 +39,7 @@ import com.blitterstudio.amiberry.ui.components.settings.SettingSwitchRow
 import com.blitterstudio.amiberry.ui.components.settings.SupportingText
 import com.blitterstudio.amiberry.ui.components.settings.dpadMenuItemInitialFocus
 import com.blitterstudio.amiberry.ui.components.settings.settingText
+import com.blitterstudio.amiberry.ui.components.settings.schemaOption
 import com.blitterstudio.amiberry.ui.components.settings.settingsSchema
 import com.blitterstudio.amiberry.ui.dpadArrowsMoveFocus
 import com.blitterstudio.amiberry.ui.dpadFieldFocusIndicator
@@ -240,14 +241,15 @@ private fun SoundSections(viewModel: SettingsViewModel) {
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun ShaderDropdownRow(viewModel: SettingsViewModel) {
+internal fun ShaderDropdownRow(viewModel: SettingsViewModel, id: String = "amiberry.shader") {
 	val settings = viewModel.settings
+	val value = if (id == "amiberry.shader") settings.shader else settings.optionValue(id) ?: "none"
 	var shaderExpanded by remember { mutableStateOf(false) }
 	val shaderUnavailable =
 		viewModel.shaderCatalogStatus == SettingsViewModel.ShaderCatalogStatus.LOADED &&
-			settings.shader !in viewModel.shaderCatalogEntries
+			if (id == "amiberry.shader") settings.shader !in viewModel.shaderCatalogEntries else value !in viewModel.shaderCatalogEntries
 	val unavailableLabel = stringResource(R.string.settings_display_shader_unavailable)
-	val shaderName = settingText(LauncherChoices.shader(settings.shader))
+	val shaderName = settingText(LauncherChoices.shader(value))
 	val shaderDisplayValue = if (shaderUnavailable) {
 		stringResource(
 			R.string.settings_display_shader_unavailable_value,
@@ -273,7 +275,9 @@ internal fun ShaderDropdownRow(viewModel: SettingsViewModel) {
 			value = shaderDisplayValue,
 			onValueChange = {},
 			readOnly = true,
-			label = { Text(stringResource(R.string.settings_display_shader_label)) },
+			label = {
+				Text(if (id == "amiberry.shader") stringResource(R.string.settings_display_shader_label) else schemaOption(id)?.label ?: id)
+			},
 			isError = shaderUnavailable,
 			trailingIcon = {
 				ExposedDropdownMenuDefaults.TrailingIcon(expanded = shaderExpanded)
@@ -291,10 +295,14 @@ internal fun ShaderDropdownRow(viewModel: SettingsViewModel) {
 			viewModel.shaderCatalogEntries.forEach { shader ->
 				DropdownMenuItem(
 					text = { Text(settingText(LauncherChoices.shader(shader))) },
-					modifier = Modifier.dpadMenuItemInitialFocus(shader == settings.shader),
+					modifier = Modifier.dpadMenuItemInitialFocus(shader == value),
 					onClick = {
-						if (shader != settings.shader) {
-							viewModel.updateSettings { s -> s.copy(shader = shader) }
+						if (id == "amiberry.shader") {
+							if (shader != settings.shader) {
+								viewModel.updateSettings { s -> s.copy(shader = shader) }
+							}
+						} else if (shader != value) {
+							viewModel.updateSettings { s -> s.withOption(id, shader) }
 						}
 						shaderExpanded = false
 					}
@@ -311,6 +319,49 @@ internal fun ShaderDropdownRow(viewModel: SettingsViewModel) {
 	}
 	// Under the field like every other row's help, not inside it (Material indents that).
 	SupportingText(shaderSupportingText)
+}
+
+/** A custom bezel is a filename relative to the configured bezels folder. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun BezelDropdownRow(viewModel: SettingsViewModel) {
+	val id = "amiberry.custom_bezel"
+	val value = viewModel.settings.optionValue(id) ?: "none"
+	val entries = listOf("none") + viewModel.bezelCatalogEntries
+	val unavailable = viewModel.shaderCatalogStatus == SettingsViewModel.ShaderCatalogStatus.LOADED &&
+		value != "none" && value !in viewModel.bezelCatalogEntries
+	var expanded by remember { mutableStateOf(false) }
+	ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
+		OutlinedTextField(
+			value = value,
+			onValueChange = {},
+			readOnly = true,
+			label = { Text(schemaOption(id)?.label ?: id) },
+			isError = unavailable,
+			trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+			modifier = Modifier
+				.dpadFieldFocusIndicator()
+				.dpadArrowsMoveFocus()
+				.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
+				.fillMaxWidth()
+		)
+		ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+			entries.forEach { bezel ->
+				DropdownMenuItem(
+					text = { Text(if (bezel == "none") stringResource(R.string.placeholder_none) else bezel) },
+					modifier = Modifier.dpadMenuItemInitialFocus(bezel == value),
+					onClick = {
+						viewModel.updateSettings { it.withOption(id, bezel) }
+						expanded = false
+					}
+				)
+			}
+			if (unavailable) {
+				DropdownMenuItem(text = { Text(value) }, onClick = {}, enabled = false)
+			}
+		}
+	}
+	SupportingText(schemaOption(id)?.help ?: "")
 }
 
 /**

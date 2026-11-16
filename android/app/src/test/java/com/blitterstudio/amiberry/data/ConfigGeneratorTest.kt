@@ -593,6 +593,29 @@ class ConfigGeneratorTest {
 	}
 
 	@Test
+	fun `round-trip preserves editor RTG paths hotkeys and parallel ports`() {
+		val options = mapOf(
+			"gfxcard_type" to "ZorroIII",
+			"gfxcard_size" to "8",
+			"cart_file" to "/ROMs/ActionReplay.rom",
+			"genlock_image" to "/Images/genlock.png",
+			"genlock_video" to "/Videos/genlock.mp4",
+			"rtc_file" to "/RTC/clock.bin",
+			"amiberry.open_gui" to "LCtrl+F12",
+			"joyport2" to "joy0",
+			"joyport2autofire" to "1"
+		)
+		val config = ConfigGenerator.generate(EmulatorSettings(options = options))
+		options.forEach { (id, value) -> assertContains(config, "$id=$value") }
+
+		val file = tempDir.newFile("editor-options.uae")
+		file.writeText(config)
+		val parsed = ConfigParser.parse(file)
+		options.forEach { (id, value) -> assertEquals(id, value, parsed.settings.optionValue(id)) }
+		assertTrue(parsed.unknownLines.none { line -> options.keys.any { id -> line.startsWith("$id=") } })
+	}
+
+	@Test
 	fun `round-trip preserves onscreen_joy joyport1`() {
 		val original = EmulatorSettings(joyport1 = "onscreen_joy", onScreenJoystick = true)
 		val configText = ConfigGenerator.generate(original)

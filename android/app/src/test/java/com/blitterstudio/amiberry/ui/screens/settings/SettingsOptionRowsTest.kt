@@ -22,9 +22,10 @@ class SettingsOptionRowsTest {
 	fun `the registry names every option whose page row has a rule of its own`() {
 		assertEquals(
 			setOf(
-				"joyport0", "joyport1", "joyport1mousemap", "input.joymouse_speed_analog",
-				"amiberry.onscreen_joystick", "amiberry.vkbd_touch_button", "amiberry.vkbd_numpad",
-				"amiberry.shader", "amiberry.scaling_method",
+				"joyport0", "joyport1", "joyport2", "joyport3", "joyport1mousemap",
+				"input.joymouse_speed_analog", "amiberry.onscreen_joystick", "amiberry.vkbd_touch_button",
+				"amiberry.vkbd_numpad", "amiberry.shader", "amiberry.shader_rtg", "amiberry.custom_bezel",
+				"amiberry.scaling_method", "cart_file",
 				"fpu_model", "chipmem_size", "bogomem_size", "sound_max_buff",
 				"cpuboard_type", "cpuboardmem1_size"
 			) + (0..3).map { "floppy${it}sound" },
@@ -50,11 +51,13 @@ class SettingsOptionRowsTest {
 	}
 
 	@Test
-	fun `every registered row is one the launcher's pages lay out`() {
+	fun `every registered row is placed explicitly or by its schema group`() {
 		val laidOut = SettingsGroups.laidOut.values.flatten().toSet()
+		val grouped = SettingsGroups.byPage.values.flatten().mapNotNull { it.group }.toSet()
 		SettingsOptionRows.customIds.forEach { id ->
-			assertTrue(id, id in laidOut)
-			assertTrue(id, schema.option(id)!!.let { !it.presetOnly && SettingsGroups.rowKind(it) != null })
+			val option = schema.option(id)!!
+			assertTrue(id, id in laidOut || option.group in grouped)
+			assertTrue(id, !option.presetOnly && SettingsGroups.rowKind(option) != null)
 		}
 	}
 

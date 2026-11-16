@@ -98,7 +98,7 @@ fun schemaValueText(id: String, value: String): String {
 	return schemaOption(id)?.valueText(value, on, off) ?: value
 }
 
-private fun rowReason(option: SettingsSchema.Option?, enabled: Boolean, reason: String?, showReason: Boolean): String? =
+internal fun rowReason(option: SettingsSchema.Option?, enabled: Boolean, reason: String?, showReason: Boolean): String? =
 	if (enabled || !showReason) null else reason ?: option?.constraint
 
 /** A bool option (or a 0/1 option that reads as a switch) as a switch row. */
@@ -508,6 +508,73 @@ fun SchemaNumberRow(
 				}
 			}
 		}
+		RowFooter(help ?: option?.help, enabled, rowReason(option, enabled, reason, showReason))
+	}
+}
+
+/**
+ * A text or path option. The complete value applies on Done or when focus
+ * leaves the field, so the emulator never receives a partially typed path.
+ */
+@Composable
+fun SchemaTextRow(
+	id: String,
+	value: String,
+	onValueChange: (String) -> Unit,
+	modifier: Modifier = Modifier,
+	enabled: Boolean = true,
+	reason: String? = null,
+	showReason: Boolean = true,
+	label: String? = null,
+	help: String? = null,
+	semanticsLabel: String? = null,
+	option: SettingsSchema.Option? = null,
+	accepts: (String) -> Boolean = { true }
+) {
+	val option = option ?: schemaOption(id)
+	val title = label ?: option?.label ?: id
+	var text by remember { mutableStateOf(value) }
+	var syncedValue by remember { mutableStateOf(value) }
+	if (value != syncedValue) {
+		syncedValue = value
+		if (text != value) text = value
+	}
+	var editStart by remember { mutableStateOf(value) }
+	val typingGate = rememberDpadTypingGate()
+	fun finish() {
+		if (accepts(text)) {
+			if (text != value) onValueChange(text)
+			editStart = text
+		} else {
+			text = editStart
+		}
+	}
+	Column(modifier = modifier.fillMaxWidth()) {
+		OutlinedTextField(
+			value = text,
+			onValueChange = { text = it },
+			enabled = enabled,
+			readOnly = typingGate.readOnly,
+			singleLine = true,
+			isError = text.isNotEmpty() && !accepts(text),
+			label = { Text(title) },
+			supportingText = if (text.isNotEmpty() && !accepts(text)) {
+				{ Text(option?.constraint ?: stringResource(R.string.settings_value_invalid)) }
+			} else null,
+			keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+			keyboardActions = KeyboardActions(onDone = {
+				finish()
+				typingGate.stopTyping()
+			}),
+			modifier = Modifier
+				.dpadVerticalMovesFocus()
+				.then(typingGate.modifier)
+				.semantics { if (semanticsLabel != null) contentDescription = semanticsLabel }
+				.onFocusChanged {
+					if (it.isFocused) editStart = value else finish()
+				}
+				.fillMaxWidth()
+		)
 		RowFooter(help ?: option?.help, enabled, rowReason(option, enabled, reason, showReason))
 	}
 }

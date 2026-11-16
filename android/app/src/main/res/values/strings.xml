@@ -363,6 +363,9 @@
     <string name="settings_value_on">On</string>
     <string name="settings_value_off">Off</string>
     <string name="settings_value_range">Enter a value from %1$s to %2$s.</string>
+    <string name="settings_value_invalid">Enter a valid value.</string>
+    <string name="settings_hotkey_record">Record</string>
+    <string name="settings_hotkey_recording">Press a key…</string>
     <string name="settings_label_value">%1$s: %2$s</string>
     <string name="settings_sound_volume_title">Volume</string>
     <string name="settings_sound_drive_sounds_title">Drive sounds</string>
@@ -519,6 +522,10 @@
     <string name="settings_section_memory_advanced">Memory · Advanced</string>
     <string name="settings_section_rom_advanced">ROMs · Advanced</string>
     <string name="settings_section_display_advanced">Display · Advanced</string>
+    <string name="settings_section_rtg_board">RTG board</string>
+    <string name="settings_section_rtg_advanced">RTG · Advanced</string>
+    <string name="settings_section_parallel_port_adapter">Parallel port adapter</string>
+    <string name="settings_section_keyboard_shortcuts">Keyboard shortcuts</string>
     <string name="settings_section_status_line">Status line</string>
     <string name="settings_section_copy_protection">Copy protection</string>
     <string name="settings_section_startup">Startup</string>

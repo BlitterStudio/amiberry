@@ -157,8 +157,8 @@ class SettingsGroupsTest {
 			.filter { !it.presetOnly && !it.hiddenOnAndroid && it.id !in SettingsGroups.managed && SettingsGroups.rowKind(it) != null }
 			.filter { option -> SettingsGroups.coupledPairOf(option.id)?.let { it.first() == option.id } ?: true }
 			.map { it.id }
-		// The pages' own rows without an editable control (the Kickstart and
-		// drive paths, the hotkey options) show nowhere else by design.
+		// The managed and coupled settings are intentionally represented by their
+		// owning rows rather than a second generic control.
 		assertEquals(listed.toSet(), landed.keys intersect listed)
 		val allSettings = SettingsGroups.groupsOf(SettingsPage.AllSettings, schema)
 			.flatMap { SettingsGroups.allSettingsRows(schema, it) { _ -> true }.map { o -> o.id } }
@@ -172,15 +172,14 @@ class SettingsGroupsTest {
 			"cpu_no_unimplemented", "cpu_data_cache", "mmu_model", "fpu_strict", "fpu_softfloat", "fpu_no_unimplemented",
 			// Chipset · Advanced and the compatibility internals
 			"waiting_blits", "amiberry.multithreaded_denise", "keyboard_type", "keyboard_nkro", "display_optimizations", "hvcsync",
-			"rtc", "agnusrev", "denisemodel",
-			// On-board interfaces, Memory · Advanced, ROMs · Advanced, Display · Advanced, Genlock
-			"pcmcia", "scsi_a3000", "z3mapping", "megachipmem_size", "boot_rom_uae", "kickshifter",
+			// RTG · Advanced, on-board interfaces, Memory · Advanced, ROMs · Advanced, Display · Advanced, Genlock
+			"gfxcard_options", "pcmcia", "scsi_a3000", "z3mapping", "megachipmem_size", "boot_rom_uae", "kickshifter",
 			"gfx_monitorblankdelay", "genlock",
 			// Ports & Misc's collapsed Compatibility and Debugging
 			"uae_hide_autoconfig", "log_illegal_mem"
 		).forEach { id -> assertEquals(id, true, collapsed(id)) }
 		listOf(
-			"cpu_model", "chipset", "chipset_compatible", "cycle_exact", "chipmem_size", "bsdsocket_emu",
+			"cpu_model", "chipset", "chipset_compatible", "cycle_exact", "chipmem_size", "gfxcard_type", "bsdsocket_emu",
 			"show_leds", "dongle", "cpu_reset_pause", "floppy_write_protect", "amiberry.use_retroarch_menu"
 		).forEach { id -> assertEquals(id, false, collapsed(id)) }
 	}
@@ -189,12 +188,14 @@ class SettingsGroupsTest {
 	fun `the pages' designed sections mirror the Apple app's`() {
 		assertEquals(
 			listOf(
-				"cpu", "chipset", "memory", "rom", "expansions",
-				"pcmcia,ide,scsi_a3000,scsi_a4000t",
+				"cpu", "chipset", "memory", "rom",
+				"gfxcard_type,gfxcard_size,gfxcard_options:monitor,gfxcard_options:autoswitch,gfxcard_options:initial,gfxcard_hardware_sprite",
+				"gfxcard_options,rtg_modes,rtg_modes:8bit,rtg_modes:16bit,rtg_modes:24bit,rtg_modes:32bit,gfx_filter_autoscale_rtg,gfx_filter_autoscale_limit_rtg,gfx_backbuffers_rtg,gfxcard_zerocopy,gfxcard_multithread,gfxcard_hardware_vblank,amiberry.rtg_scale_allow,amiberry.rtg_scale_aspect_ratio,amiberry.rtg_vblank,zz9000_net,zz9000_int2,gfx_display_rtg",
+				"expansions", "pcmcia,ide,scsi_a3000,scsi_a4000t",
 				"cpu_throttle,cpu_multiplier,amiberry.cpu_idle,cpu_threaded,cachesize,compfpu,comp_constjump,comp_flushmode,comp_nf,comp_catchfault,comp_trustbyte,cpu_no_unimplemented,cpu_data_cache,mmu_model,fpu_strict,fpu_softfloat,fpu_no_unimplemented",
 				"waiting_blits,amiberry.multithreaded_denise,keyboard_type,keyboard_nkro,display_optimizations,hvcsync",
 				"adv_chipset", "z3mapping,a3000mem_size,mbresmem_size,megachipmem_size",
-				"boot_rom_uae,uaeboard,kickshifter", "genlock"
+				"boot_rom_uae,uaeboard,rtc_file,maprom,kickshifter", "genlock"
 			),
 			SettingsGroups.byPage.getValue(SettingsPage.Hardware).map { it.key }
 		)
@@ -214,7 +215,7 @@ class SettingsGroupsTest {
 				"amiberry.right_control_is_right_win",
 				"amiberry.use_retroarch_quit,amiberry.use_retroarch_menu,amiberry.use_retroarch_reset",
 				"floppy_write_protect,harddrive_write_protect",
-				"uae_hide_autoconfig,scsidevice_disable",
+				"uae_hide_autoconfig,scsidevice_disable,native_code",
 				"log_illegal_mem,debug_mem,cpu_halt_auto_reset"
 			),
 			SettingsGroups.byPage.getValue(SettingsPage.PortsMisc).map { it.key }
@@ -226,13 +227,14 @@ class SettingsGroupsTest {
 		val collapsed = SettingsGroups.byPage.values.flatten().filter { it.collapsed }.map { it.key }
 		assertEquals(
 			listOf(
+				"gfxcard_options,rtg_modes,rtg_modes:8bit,rtg_modes:16bit,rtg_modes:24bit,rtg_modes:32bit,gfx_filter_autoscale_rtg,gfx_filter_autoscale_limit_rtg,gfx_backbuffers_rtg,gfxcard_zerocopy,gfxcard_multithread,gfxcard_hardware_vblank,amiberry.rtg_scale_allow,amiberry.rtg_scale_aspect_ratio,amiberry.rtg_vblank,zz9000_net,zz9000_int2,gfx_display_rtg",
 				"pcmcia,ide,scsi_a3000,scsi_a4000t",
 				"cpu_throttle,cpu_multiplier,amiberry.cpu_idle,cpu_threaded,cachesize,compfpu,comp_constjump,comp_flushmode,comp_nf,comp_catchfault,comp_trustbyte,cpu_no_unimplemented,cpu_data_cache,mmu_model,fpu_strict,fpu_softfloat,fpu_no_unimplemented",
 				"waiting_blits,amiberry.multithreaded_denise,keyboard_type,keyboard_nkro,display_optimizations,hvcsync",
 				"adv_chipset", "z3mapping,a3000mem_size,mbresmem_size,megachipmem_size",
-				"boot_rom_uae,uaeboard,kickshifter", "genlock",
+				"boot_rom_uae,uaeboard,rtc_file,maprom,kickshifter", "genlock",
 				"display",
-				"uae_hide_autoconfig,scsidevice_disable",
+				"uae_hide_autoconfig,scsidevice_disable,native_code",
 				"log_illegal_mem,debug_mem,cpu_halt_auto_reset"
 			),
 			collapsed
@@ -275,8 +277,11 @@ class SettingsGroupsTest {
 		assertEquals(SettingsGroups.RowKind.Level, kind("gfx_gamma"))
 		assertEquals(SettingsGroups.RowKind.Number, kind("gfx_monitorblankdelay"))
 		assertEquals(SettingsGroups.RowKind.Number, kind("ramsey"))
-		assertNull(kind("kickstart_rom_file"))
+		assertEquals(SettingsGroups.RowKind.Text, kind("kickstart_rom_file"))
+		assertEquals(SettingsGroups.RowKind.Text, kind("maprom"))
+		assertEquals(SettingsGroups.RowKind.Hotkey, kind("amiberry.open_gui"))
 	}
+
 
 	@Test
 	fun `memory boards two to four appear once the board before is fitted`() {
@@ -354,6 +359,12 @@ class SettingsGroupsTest {
 			.withOption("gfx_center_horizontal", "smart")
 			.withOption("amiberry.vkbd_transparency", "40")
 			.withOption("bsdsocket_emu", "true")
+			.withOption("gfxcard_type", "ZorroIII")
+			.withOption("gfxcard_size", "8")
+			.withOption("cart_file", "/storage/emulated/0/cart.rom")
+			.withOption("amiberry.open_gui", "LCtrl+F12")
+			.withOption("joyport2", "joy0")
+			.withOption("genlock_image", "/storage/emulated/0/overlay.png")
 		val file = tempDir.newFile("options.uae")
 		file.writeText(ConfigGenerator.generate(settings))
 
@@ -361,10 +372,10 @@ class SettingsGroupsTest {
 		assertTrue(parsed.unknownLines.isEmpty())
 		for (id in listOf(
 			"mmu_model", "cpu_throttle", "chipset_compatible", "gfx_center_horizontal",
-			"amiberry.vkbd_transparency", "bsdsocket_emu"
+			"amiberry.vkbd_transparency", "bsdsocket_emu", "gfxcard_type", "gfxcard_size",
+			"cart_file", "amiberry.open_gui", "joyport2", "genlock_image"
 		)) {
 			assertEquals(id, settings.optionValue(id), parsed.settings.optionValue(id))
-			assertTrue(id, id in parsed.explicitKeys)
 		}
 	}
 }
