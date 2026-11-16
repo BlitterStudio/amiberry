@@ -72,6 +72,7 @@
 #include "amiberry_curl.h"
 #include "amiberry_update_asset_policy.h"
 #include "settings/amiberry_actions.h"
+#include "settings/amiberry_media.h"
 #include "clipboard.h"
 #include "gui_layout_scale.h"
 #include "fsdb.h"
@@ -6150,6 +6151,19 @@ void target_quit()
 
 #ifdef __ANDROID__
 	adpf_cleanup();
+	// A normal exit consumes the background recovery state. A restart keeps
+	// it: the next emulation instance is still the same session.
+	if (!uae_restart_pending()) {
+		android_overlay_disable_autosave();
+		std::string autosave = get_savestate_path();
+		if (!autosave.empty()) {
+			if (autosave.back() != '/')
+				autosave += '/';
+			autosave += AMIBERRY_AUTOSAVE_STATE_NAME;
+			std::remove(autosave.c_str());
+			std::remove((autosave + ".partial").c_str());
+		}
+	}
 	// Write a clean-exit marker so the Kotlin launcher knows this was
 	// an intentional quit, not a crash.  SDL3's SDLActivity calls
 	// System.exit(0) after native main() returns, which kills the

@@ -51,6 +51,10 @@ bool android_osk_is_active();
 // Show keyboard asked for, once the emulation runs with the keyboard on.
 void android_overlay_service();
 
+// A normal emulator exit must not leave a lifecycle autosave started while
+// Android finishes the activity. Any thread.
+void android_overlay_disable_autosave();
+
 // Once per frame (handle_msgpump): moves the port 2 joystick as the TV
 // remote's D-pad and OK are held. The activity turns this on for a TV with
 // no gamepad and hands those keys over (OverlayNative.remoteKey) while the

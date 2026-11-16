@@ -12,8 +12,10 @@ import android.window.OnBackInvokedDispatcher;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
+import com.blitterstudio.amiberry.data.AndroidAutosave;
 import com.blitterstudio.amiberry.overlay.EmulationHints;
 import com.blitterstudio.amiberry.overlay.OverlayHost;
+import com.blitterstudio.amiberry.overlay.OverlayNative;
 import com.blitterstudio.amiberry.overlay.RemoteJoystick;
 import com.blitterstudio.amiberry.overlay.RemoteJoystickHost;
 import com.blitterstudio.amiberry.ui.FocusUtilsKt;
@@ -55,6 +57,8 @@ public class AmiberryActivity extends SDLActivity {
 	private RemoteJoystickHost remote;
 	/** The emulation started (-G) and its first hint is due or shown. */
 	private boolean hintsReady;
+	/** An autosave is made at most once until the activity returns to the foreground. */
+	private boolean autosaveRequested;
 	private final Handler hints = new Handler(Looper.getMainLooper());
 
 	@Override
@@ -89,6 +93,7 @@ public class AmiberryActivity extends SDLActivity {
 	@Override
 	protected void onResume() {
 		super.onResume();
+		autosaveRequested = false;
 		if (overlay != null) {
 			overlay.onResume();
 		}
@@ -96,6 +101,7 @@ public class AmiberryActivity extends SDLActivity {
 
 	@Override
 	protected void onPause() {
+		saveAutosave();
 		if (overlay != null) {
 			overlay.onPause();
 		}
@@ -108,6 +114,25 @@ public class AmiberryActivity extends SDLActivity {
 			overlay.onStop();
 		}
 		super.onStop();
+	}
+
+	/**
+	 * SDLActivity pauses its native thread in super.onPause(). The native call therefore
+	 * happens first and waits for its bounded emulator-thread handoff to finish.
+	 */
+	private void saveAutosave() {
+		if (autosaveRequested || !startsEmulation()) {
+			return;
+		}
+		autosaveRequested = true;
+		try {
+			String[] autosave = OverlayNative.autosave();
+			if (autosave != null && autosave.length == 2) {
+				AndroidAutosave.INSTANCE.record(this, autosave[0], autosave[1]);
+			}
+		} catch (LinkageError | RuntimeException ignored) {
+			// The session marker still records an interrupted emulator when saving fails.
+		}
 	}
 
 	@Override

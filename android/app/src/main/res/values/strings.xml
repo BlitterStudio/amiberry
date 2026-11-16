@@ -24,6 +24,8 @@
     <string name="library_new_machine_needs_rom">%1$s (ROM not installed)</string>
     <string name="library_no_saved_machines">No Saved Machines</string>
     <string name="library_no_saved_machines_message">Start from a model, set it up, then save it to find it here. Or play a disk, CD or WHDLoad archive straight away.</string>
+    <string name="library_resume_last_session">Resume last session</string>
+    <string name="library_resume_last_session_detail">%1$s · Saved %2$s when Amiberry last went to the background.</string>
     <string name="library_rom_notice_title">No Kickstart ROMs</string>
     <string name="library_rom_notice_message">Machines boot the free AROS ROM. For the Amiga\'s own, import your Kickstart ROM files (from Amiga Forever or dumped from your Amiga).</string>
     <string name="action_import_roms">Import ROMs…</string>
@@ -77,6 +79,8 @@
     <string name="action_share">Share</string>
     <string name="action_clear_search">Clear search</string>
     <string name="action_dismiss">Dismiss</string>
+    <string name="action_discard">Discard</string>
+    <string name="action_resume">Resume</string>
     <string name="action_review_changes">Review changes</string>
     <string name="action_launch_named">Launch %1$s</string>
     <string name="action_edit_named">Edit %1$s</string>

@@ -14,6 +14,7 @@
 #include "android_overlay.h"
 
 #include "options.h"
+#include "savestate.h"
 #include "uae.h"
 #include "inputdevice.h"
 #include "keyboard.h"
@@ -22,6 +23,7 @@
 #include "gui/gui_handling.h"
 #include "amiberry_actions_host.h"
 #include "settings/amiberry_actions.h"
+#include "settings/amiberry_media.h"
 #include "settings/amiberry_settings.h"
 #include "custom.h"
 
@@ -33,6 +35,7 @@
 #include <memory>
 #include <chrono>
 #include <condition_variable>
+#include <cstdio>
 #include <functional>
 #include <mutex>
 #include <string>
@@ -63,6 +66,10 @@ std::atomic<bool> keyboard_requested{false};
 // The native on-screen keyboard shows (android_osk_toggle turned it on);
 // its view is up over the running emulation.
 std::atomic<bool> osk_visible{false};
+
+// Once quitting starts, Android lifecycle callbacks must not create a new
+// recovery state after target_quit() removes the old one.
+std::atomic<bool> autosave_allowed{true};
 
 // gui_message's texts, waiting for the overlay to show them: any thread
 // queues (android_overlay_message), the activity drains them when the
@@ -263,6 +270,70 @@ bool pump_native_ui_events(SDL_Event& resize, bool& resized)
 }
 
 } // namespace
+
+namespace {
+
+struct autosave_result {
+	std::string path;
+	std::string title;
+};
+
+std::string autosave_title()
+{
+	std::string title = currprefs.description;
+	if (title.empty())
+		title = whdload_prefs.whdload_filename;
+	if (title.empty())
+		title = last_active_config;
+	if (title.empty())
+		title = currprefs.floppyslots[0].df;
+	if (title.empty() && currprefs.cdslots[0].inuse)
+		title = currprefs.cdslots[0].name;
+	const size_t name = title.find_last_of("/\\");
+	if (name != std::string::npos)
+		title.erase(0, name + 1);
+	const size_t extension = title.find_last_of('.');
+	if (extension != std::string::npos)
+		title.erase(extension);
+	return title.empty() ? "Amiga" : title;
+}
+
+autosave_result save_android_autosave()
+{
+	if (!autosave_allowed.load() || !emulating || savestate_state != 0 || quit_program != 0)
+		return {};
+	std::string path = get_savestate_path();
+	if (path.empty())
+		return {};
+	if (path.back() != '/')
+		path += '/';
+	path += AMIBERRY_AUTOSAVE_STATE_NAME;
+	const std::string partial = path + ".partial";
+	TCHAR previous[MAX_DPATH];
+	_tcscpy(previous, savestate_fname);
+	// As the iOS autosave, preserve rewind and input recording around a save
+	// the user did not explicitly request.
+	savestate_initsave(partial.c_str(), 1, true, false);
+	const int saved = save_state(partial.c_str(), "Autosave");
+	_tcscpy(savestate_fname, previous);
+	if (!autosave_allowed.load()) {
+		std::remove(partial.c_str());
+		return {};
+	}
+	if (saved <= 0 || std::rename(partial.c_str(), path.c_str()) != 0) {
+		write_log("Android autosave to %s failed\n", path.c_str());
+		std::remove(partial.c_str());
+		return {};
+	}
+	return {path, autosave_title()};
+}
+
+} // namespace
+
+void android_overlay_disable_autosave()
+{
+	autosave_allowed.store(false);
+}
 
 void android_overlay_run(const int page)
 {
@@ -602,6 +673,16 @@ JNIEXPORT jlong JNICALL OVERLAY_JNI(pause)(JNIEnv*, jclass)
 JNIEXPORT jlong JNICALL OVERLAY_JNI(quit)(JNIEnv*, jclass)
 {
 	return static_cast<jlong>(amiberry_actions_quit());
+}
+
+JNIEXPORT jobjectArray JNICALL OVERLAY_JNI(autosave)(JNIEnv* env, jclass)
+{
+	autosave_result saved;
+	// Called before SDLActivity pauses the native thread. on_emulator_thread()
+	// bounds the handoff if the emulator can no longer service its event queue.
+	if (!on_emulator_thread([&] { saved = save_android_autosave(); }) || saved.path.empty())
+		return nullptr;
+	return to_java(env, {saved.path, saved.title});
 }
 
 JNIEXPORT jlong JNICALL OVERLAY_JNI(saveState)(JNIEnv* env, jclass, jstring path)

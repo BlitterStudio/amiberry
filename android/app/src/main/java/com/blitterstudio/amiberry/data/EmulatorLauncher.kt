@@ -89,6 +89,11 @@ object EmulatorLauncher {
 		launchRequest(context, LaunchRequest.SettingsConfig(configPath = configPath))
 	}
 
+	/** Restores the full machine configuration embedded in a background autosave. */
+	fun launchAutosave(context: Context, statePath: String) {
+		launchRequest(context, LaunchRequest.Autosave(statePath))
+	}
+
 	/**
 	 * Launch a WHDLoad game via the --autoload mechanism: WHDBooter chooses
 	 * the hardware from its game database, the installed Kickstarts or the

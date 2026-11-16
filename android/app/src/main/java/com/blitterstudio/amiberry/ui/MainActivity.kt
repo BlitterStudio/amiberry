@@ -24,6 +24,7 @@ import androidx.compose.runtime.setValue
 import com.blitterstudio.amiberry.AmiberryActivity
 import com.blitterstudio.amiberry.R
 import com.blitterstudio.amiberry.data.model.SettingsSchema
+import com.blitterstudio.amiberry.data.AndroidAutosave
 import com.blitterstudio.amiberry.data.AppPreferences
 import com.blitterstudio.amiberry.data.AssetExtraction
 import com.blitterstudio.amiberry.data.AssetExtractionFailureActions
@@ -48,6 +49,8 @@ class MainActivity : ComponentActivity() {
 	var isReady by mutableStateOf(false)
 		private set
 	var emulatorCrashDetected by mutableStateOf(false)
+		private set
+	var emulatorRunning by mutableStateOf(false)
 		private set
 	var assetExtractionFailed by mutableStateOf(false)
 		private set
@@ -366,6 +369,7 @@ class MainActivity : ComponentActivity() {
 	override fun onResume() {
 		super.onResume()
 		isActivityResumed = true
+		emulatorRunning = isEmulatorRunning()
 		processResumeRecovery()
 	}
 
@@ -382,8 +386,13 @@ class MainActivity : ComponentActivity() {
 		// before checking for crashes. Clean exit takes priority.
 		val hadTrackedSession = EmulatorLauncher.hasSessionMarker(this)
 		val wasCleanExit = EmulatorLauncher.checkAndClearCleanExit(this)
+		if (wasCleanExit) {
+			// target_quit removes the completed state. This also removes a partial
+			// save that Android started while the activity was being finished.
+			AndroidAutosave.discard(this)
+		}
 		// The session marker of an emulator that is still running is no crash: leave it.
-		val wasCrash = EmulatorResumeRecovery.shouldCheckForCrash(wasCleanExit, isEmulatorRunning()) &&
+		val wasCrash = EmulatorResumeRecovery.shouldCheckForCrash(wasCleanExit, emulatorRunning) &&
 			EmulatorLauncher.checkAndClearCrashMarker(this)
 		val decision = EmulatorResumeRecovery.decide(
 			wasCleanExit = wasCleanExit,
@@ -412,6 +421,7 @@ class MainActivity : ComponentActivity() {
 	/** Called by EmulatorLauncher before starting the SDL activity. */
 	fun markEmulatorLaunched() {
 		emulatorWasLaunched = true
+		emulatorRunning = true
 	}
 
 	/** The emulator runs in its own process (":sdl", see the manifest). */
