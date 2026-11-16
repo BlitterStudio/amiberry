@@ -16,7 +16,7 @@ class AndroidAutosaveTest {
 	fun `recorded autosave keeps its state path title date and launch options`() {
 		val state = tempDir.newFile(AndroidAutosave.STATE_FILE_NAME).apply { writeText("state") }
 		val record = tempDir.newFile("session")
-		val args = arrayOf("--config", "/configs/game.uae", "--gfx_filter", "shader", "-G")
+		val args = arrayOf("-G")
 
 		val saved = AndroidAutosave.record(record, state, "Lotus II", args)
 		val loaded = AndroidAutosave.load(record)
@@ -26,6 +26,29 @@ class AndroidAutosaveTest {
 		assertEquals("Lotus II", loaded?.title)
 		assertEquals(state.lastModified(), loaded?.modifiedAt)
 		assertTrue(args.contentEquals(loaded?.launchArgs))
+	}
+
+	@Test
+	fun `recorded autosave snapshots transient config and skips WHDBooter on resume`() {
+		val state = tempDir.newFile(AndroidAutosave.STATE_FILE_NAME).apply { writeText("state") }
+		val config = tempDir.newFile(".quickstart_settings.uae").apply { writeText("joyport0=mouse") }
+		val record = tempDir.newFile("session")
+
+		AndroidAutosave.record(
+			record, state, "Game",
+			arrayOf("--config", config.absolutePath, "--autoload", "/games/Game.lha", "-G")
+		)
+		config.writeText("joyport0=joy1")
+		val loaded = AndroidAutosave.load(record)
+		val snapshot = requireNotNull(state.parentFile).resolve("${state.name}.config")
+
+		assertTrue(snapshot.isFile)
+		assertEquals("joyport0=mouse", snapshot.readText())
+		assertTrue(loaded!!.launchArgs.contentEquals(arrayOf("--config", snapshot.absolutePath, "-G")))
+
+		AndroidAutosave.discard(record)
+
+		assertFalse(snapshot.exists())
 	}
 
 	@Test
