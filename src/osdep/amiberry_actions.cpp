@@ -446,7 +446,10 @@ bool execute(const request& r, void*, std::string* error)
 			// success, and SAVESTATE must not write its companion config,
 			// when no usable state was saved.
 			const int saved = save_state(r.path.c_str(), user_save ? "..." : "Autosave");
-			_tcscpy(savestate_fname, previous);
+			// A user save makes this file the session's state file, as before;
+			// an autosave leaves the user's state file as it was.
+			if (!user_save)
+				_tcscpy(savestate_fname, previous);
 			if (saved <= 0) {
 				*error = "Failed to save state to: " + r.path;
 				return false;
