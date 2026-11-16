@@ -22,6 +22,7 @@ class FileManagerTest {
 		assertEquals(FileCategory.FLOPPIES, FileCategory.fromExtension("adz"))
 		assertEquals(FileCategory.FLOPPIES, FileCategory.fromExtension("dms"))
 		assertEquals(FileCategory.FLOPPIES, FileCategory.fromExtension("ipf"))
+		assertEquals(FileCategory.FLOPPIES, FileCategory.fromExtension("7z"))
 	}
 
 	@Test
@@ -61,7 +62,7 @@ class FileManagerTest {
 		assertNull(FileCategory.fromExtension("exe"))
 		assertNull(FileCategory.fromExtension("txt"))
 		assertNull(FileCategory.fromExtension("jpg"))
-		assertNull(FileCategory.fromExtension("roz"))
+		assertEquals(FileCategory.ROMS, FileCategory.fromExtension("roz"))
 		assertNull(FileCategory.fromExtension("U1"))
 		assertNull(FileCategory.fromExtension(""))
 	}
@@ -110,33 +111,38 @@ class FileManagerTest {
 	}
 
 	@Test
-	fun `importFileNameForCategory accepts every supported ROM extension`() {
-		val expectedExtensions = setOf("rom", "bin", "a1000", "a500", "a600", "a1200", "a3000", "a4000", "cdtv", "cd32")
+	fun `importFileNameForCategory accepts every supported ROM filename`() {
+		val expectedExtensions = setOf("rom", "bin", "a1000", "a500", "a600", "a1200", "a3000", "a4000", "cdtv", "cd32", "roz")
 
 		expectedExtensions.forEach { extension ->
 			val name = "Kickstart.${extension.uppercase()}"
 			assertEquals(name, FileManager.importFileNameForCategory(name, FileCategory.ROMS))
 		}
+		assertEquals("rom.key", FileManager.importFileNameForCategory("rom.key", FileCategory.ROMS))
+		assertEquals("Kickstart.U1", FileManager.importFileNameForCategory("Kickstart.U1", FileCategory.ROMS))
+		assertEquals("Kickstart.u123", FileManager.importFileNameForCategory("Kickstart.u123", FileCategory.ROMS))
 	}
 
 	@Test
-	fun `importFileNameForCategory rejects missing or unsupported extensions`() {
+	fun `importFileNameForCategory rejects unsupported ROM filenames`() {
 		assertNull(FileManager.importFileNameForCategory("disk", FileCategory.FLOPPIES))
 		assertNull(FileManager.importFileNameForCategory("notes.txt", FileCategory.FLOPPIES))
 		assertNull(FileManager.importFileNameForCategory("archive.zip", FileCategory.WHDLOAD_GAMES))
 		assertNull(FileManager.importFileNameForCategory("kickstart", FileCategory.ROMS))
-		assertNull(FileManager.importFileNameForCategory("kickstart.roz", FileCategory.ROMS))
-		assertNull(FileManager.importFileNameForCategory("kickstart.U1", FileCategory.ROMS))
+		assertNull(FileManager.importFileNameForCategory("other.key", FileCategory.ROMS))
+		assertNull(FileManager.importFileNameForCategory("kickstart.ux", FileCategory.ROMS))
 		assertNull(FileManager.importFileNameForCategory("kickstart.zip", FileCategory.ROMS))
 		assertNull(FileManager.importFileNameForCategory("kickstart.lha", FileCategory.ROMS))
 		assertNull(FileManager.importFileNameForCategory("kickstart.txt", FileCategory.ROMS))
 	}
 
 	@Test
-	fun `sorted imports go to the category of the extension whichever tab is open`() {
+	fun `sorted imports go to the category of their filename whichever tab is open`() {
 		assertEquals(FileCategory.FLOPPIES, FileManager.sortedImportCategory("/downloads/Lotus.ADF"))
 		assertEquals(FileCategory.WHDLOAD_GAMES, FileManager.sortedImportCategory("Turrican.lha"))
 		assertEquals(FileCategory.ROMS, FileManager.sortedImportCategory("kick40068.A1200"))
+		assertEquals(FileCategory.ROMS, FileManager.sortedImportCategory("rom.key"))
+		assertEquals(FileCategory.ROMS, FileManager.sortedImportCategory("kickstart.U1"))
 		assertEquals(FileCategory.CD_IMAGES, FileManager.sortedImportCategory("game.cue"))
 		assertEquals(FileCategory.HARD_DRIVES, FileManager.sortedImportCategory("wb.hdf"))
 		assertNull(FileManager.sortedImportCategory("notes.txt"))
@@ -169,7 +175,7 @@ class FileManagerTest {
 	}
 
 	@Test
-	fun `importCandidateForCategory rejects unsupported and extensionless names with feedback details`() {
+	fun `importCandidateForCategory reports unsupported names and accepts ROM filenames`() {
 		assertEquals(
 			FileManager.ImportCandidate.Unsupported("notes.txt", "txt"),
 			FileManager.importCandidateForCategory("notes.txt", FileCategory.FLOPPIES)
@@ -179,11 +185,15 @@ class FileManagerTest {
 			FileManager.importCandidateForCategory("disk", FileCategory.FLOPPIES)
 		)
 		assertEquals(
-			FileManager.ImportCandidate.Unsupported("kickstart.roz", "roz"),
+			FileManager.ImportCandidate.Importable("rom.key"),
+			FileManager.importCandidateForCategory("rom.key", FileCategory.ROMS)
+		)
+		assertEquals(
+			FileManager.ImportCandidate.Importable("kickstart.roz"),
 			FileManager.importCandidateForCategory("kickstart.roz", FileCategory.ROMS)
 		)
 		assertEquals(
-			FileManager.ImportCandidate.Unsupported("kickstart.U1", "u1"),
+			FileManager.ImportCandidate.Importable("kickstart.U1"),
 			FileManager.importCandidateForCategory("kickstart.U1", FileCategory.ROMS)
 		)
 		assertEquals(
@@ -366,18 +376,22 @@ class FileManagerTest {
 	}
 
 	@Test
-	fun `scanDirectory finds supported model ROM extensions and rejects deep scan formats`() {
+	fun `scanDirectory finds every supported Kickstart ROM filename`() {
 		val dir = tempDir.newFolder(StoragePaths.ROMS)
 		File(dir, "Kickstart.A500").writeText("a500")
 		File(dir, "Bootstrap.A1000").writeText("a1000")
 		File(dir, "CDTV.CdTv").writeText("cdtv")
 		File(dir, "Encrypted.roz").writeText("roz")
 		File(dir, "Cloanto.U1").writeText("u1")
+		File(dir, "rom.key").writeText("key")
 		File(dir, "Archive.zip").writeText("zip")
 
 		val result = FileManager.scanDirectory(dir, FileCategory.ROMS.extensions, FileCategory.ROMS)
 
-		assertEquals(listOf("Bootstrap.A1000", "CDTV.CdTv", "Kickstart.A500"), result.map { it.name })
+		assertEquals(
+			listOf("Bootstrap.A1000", "CDTV.CdTv", "Cloanto.U1", "Encrypted.roz", "Kickstart.A500", "rom.key"),
+			result.map { it.name }
+		)
 		assertTrue(result.all { it.category == FileCategory.ROMS && it.crc32 != null })
 	}
 

@@ -17,7 +17,12 @@ class FilePickerFiltersTest {
 	@Test
 	fun `floppy picker includes archive types`() {
 		assertArrayEquals(
-			arrayOf("application/octet-stream", "application/zip", "application/gzip"),
+			arrayOf(
+				"application/octet-stream",
+				"application/zip",
+				"application/gzip",
+				"application/x-7z-compressed"
+			),
 			FilePickerFilters.mimeTypesFor(FileCategory.FLOPPIES)
 		)
 	}
@@ -33,7 +38,7 @@ class FilePickerFiltersTest {
 	@Test
 	fun `ROM labels include every supported extension`() {
 		assertArrayEquals(
-			arrayOf(".rom", ".bin", ".a1000", ".a500", ".a600", ".a1200", ".a3000", ".a4000", ".cdtv", ".cd32"),
+			arrayOf(".rom", ".bin", ".roz", ".a1000", ".a500", ".a600", ".a1200", ".a3000", ".a4000", ".cdtv", ".cd32"),
 			FilePickerFilters.extensionLabelsFor(FileCategory.ROMS)
 		)
 	}

@@ -34,11 +34,17 @@ class SettingsScreenSaveArchitectureTest {
 	}
 
 	@Test
-	fun `save dialog is seeded with the current name and description`() {
+	fun `save dialog is seeded with the current name description and category`() {
 		assertTrue(
-			Regex("""SaveConfigDialog\([\s\S]*initialName[\s\S]*initialDescription""")
+			Regex("""SaveConfigDialog\([\s\S]*initialName[\s\S]*initialDescription[\s\S]*initialCategory""")
 				.containsMatchIn(source)
 		)
+	}
+
+	@Test
+	fun `save dialog offers existing machine categories`() {
+		assertTrue(source.contains("machineCategories(configs.map { it.category })"))
+		assertTrue(source.contains("categorySuggestions = categorySuggestions"))
 	}
 
 	@Test

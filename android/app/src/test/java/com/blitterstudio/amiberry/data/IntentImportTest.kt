@@ -52,21 +52,17 @@ class IntentImportTest {
 	}
 
 	@Test
-	fun `classify rejects unsupported and extensionless names`() {
+	fun `classify accepts additional Kickstart ROM files`() {
 		assertEquals(
-			IntentImport.Classification.Unsupported("readme.txt", "txt"),
-			IntentImport.classify("readme.txt")
+			IntentImport.Classification.Media("rom.key", FileCategory.ROMS),
+			IntentImport.classify("rom.key")
 		)
 		assertEquals(
-			IntentImport.Classification.Unsupported("imported_file", ""),
-			IntentImport.classify("..")
-		)
-		assertEquals(
-			IntentImport.Classification.Unsupported("kickstart.roz", "roz"),
+			IntentImport.Classification.Media("kickstart.roz", FileCategory.ROMS),
 			IntentImport.classify("kickstart.roz")
 		)
 		assertEquals(
-			IntentImport.Classification.Unsupported("kickstart.U1", "u1"),
+			IntentImport.Classification.Media("kickstart.U1", FileCategory.ROMS),
 			IntentImport.classify("kickstart.U1")
 		)
 	}

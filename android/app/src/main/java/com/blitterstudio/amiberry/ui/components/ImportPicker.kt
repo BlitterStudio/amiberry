@@ -97,6 +97,7 @@ fun rememberImportPicker(
 	multiple: Boolean = false,
 	onFolder: ((PickedFolder) -> Unit)? = null,
 	folderLabelRes: Int? = null,
+	acceptsFileName: ((String) -> Boolean)? = null,
 	onFiles: (List<Uri>) -> Unit
 ): ImportPicker {
 	val context = LocalContext.current
@@ -218,6 +219,7 @@ fun rememberImportPicker(
 	browserMode?.let { mode ->
 		DeviceFileBrowserDialog(
 			extensions = extensions,
+			acceptsFileName = acceptsFileName,
 			multiple = multiple,
 			allowFolder = mode == BrowseMode.Folder || (onFolder != null && multiple),
 			folderLabelRes = folderLabelRes,

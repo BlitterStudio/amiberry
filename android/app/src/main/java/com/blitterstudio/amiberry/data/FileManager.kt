@@ -150,7 +150,8 @@ object FileManager {
 		importIncludesCue: Boolean = false,
 		size: () -> Long? = { null }
 	): FileCategory? {
-		val extension = safeImportFileName(rawName).substringAfterLast('.', missingDelimiterValue = "").lowercase()
+		val fileName = safeImportFileName(rawName)
+		val extension = fileName.substringAfterLast('.', missingDelimiterValue = "").lowercase()
 		if (extension == "bin") {
 			val bytes = size()
 			return when {
@@ -159,7 +160,7 @@ object FileManager {
 				else -> null
 			}
 		}
-		return FileCategory.fromExtension(extension)
+		return FileCategory.fromFileName(fileName)
 	}
 
 	internal fun importIncludesCue(names: List<String?>): Boolean =
@@ -181,7 +182,7 @@ object FileManager {
 
 	/**
 	 * Import every supported file below a Storage Access Framework directory tree, each
-	 * into the category of its extension. Subdirectories are traversed so users can select
+	 * into the category its filename belongs to. Subdirectories are traversed so users can select
 	 * a collection root once.
 	 */
 	fun importFolderWithResults(
@@ -210,7 +211,7 @@ object FileManager {
 
 	/**
 	 * Import the supported files below a folder of the device's storage (the in-app
-	 * browser, with All Files Access), each into the category of its extension. The
+	 * browser, with All Files Access), each into the category its filename belongs to. The
 	 * app's own storage is left out: importing Internal storage would otherwise import
 	 * the whole library again into itself.
 	 */
@@ -218,7 +219,8 @@ object FileManager {
 		val files = DeviceStorage.supportedFilesUnder(
 			dir,
 			FileCategory.allExtensions,
-			excluded = importExcludedDirs(context)
+			excluded = importExcludedDirs(context),
+			acceptsFileName = { FileCategory.fromFileName(it) != null }
 		)
 		val withCue = importIncludesCue(files.map { it.name })
 		return files.map { file ->
@@ -268,7 +270,7 @@ object FileManager {
 
 		return dir.listFiles()
 			?.filter { file ->
-				file.isFile && file.extension.lowercase() in extensions
+				file.isFile && (categoryOverride?.acceptsFileName(file.name) ?: (file.extension.lowercase() in extensions))
 			}
 			?.map { file ->
 				val crc = if (category == FileCategory.ROMS) calculateCrc32(file) else null
@@ -362,7 +364,7 @@ object FileManager {
 	internal fun importCandidateForCategory(rawName: String?, category: FileCategory): ImportCandidate {
 		val fileName = safeImportFileName(rawName)
 		val extension = fileName.substringAfterLast('.', missingDelimiterValue = "").lowercase()
-		if (extension.isBlank() || extension !in category.extensions) {
+		if (!category.acceptsFileName(fileName)) {
 			return ImportCandidate.Unsupported(fileName, extension)
 		}
 		return ImportCandidate.Importable(fileName)
@@ -395,7 +397,7 @@ object FileManager {
 			val target = File(file.path).canonicalFile
 			target.isFile &&
 				canonicalBases.any { target.isUnder(it) } &&
-				target.extension.lowercase() in file.category.extensions
+				file.category.acceptsFileName(target.name)
 		} catch (_: IOException) {
 			false
 		}

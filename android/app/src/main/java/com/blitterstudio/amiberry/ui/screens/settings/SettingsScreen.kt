@@ -41,6 +41,9 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
@@ -115,6 +118,8 @@ import com.blitterstudio.amiberry.ui.launchImportGuarded
 import com.blitterstudio.amiberry.ui.rememberDpadTypingGate
 import com.blitterstudio.amiberry.ui.rememberImportInFlightGuard
 import com.blitterstudio.amiberry.ui.rememberLaunchInFlightGuard
+import com.blitterstudio.amiberry.ui.screens.library.machineCategories
+import com.blitterstudio.amiberry.ui.viewmodel.ConfigurationsViewModel
 import com.blitterstudio.amiberry.ui.viewmodel.SettingsViewModel
 import com.blitterstudio.amiberry.ui.windowWidthClass
 import kotlinx.coroutines.Dispatchers
@@ -124,12 +129,17 @@ import kotlin.math.min
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(viewModel: SettingsViewModel = viewModel(LocalContext.current.findActivity() as androidx.activity.ComponentActivity)) {
+fun SettingsScreen(
+	viewModel: SettingsViewModel = viewModel(LocalContext.current.findActivity() as androidx.activity.ComponentActivity),
+	configurationsViewModel: ConfigurationsViewModel = viewModel()
+) {
 	val context = LocalContext.current
 	val scope = rememberCoroutineScope()
 	val snackbarHostState = remember { SnackbarHostState() }
 	val launchGuard = rememberLaunchInFlightGuard()
 	val launchInProgress = launchGuard.isLaunching
+	val configs by configurationsViewModel.configs.collectAsState()
+	val categorySuggestions = remember(configs) { machineCategories(configs.map { it.category }) }
 	val importGuard = rememberImportInFlightGuard()
 	val importInProgress = importGuard.isImporting
 	var selectedPage by rememberSaveable { mutableIntStateOf(0) }
@@ -168,7 +178,8 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel(LocalContext.current
 
 	val romPicker = rememberImportPicker(
 		mimeTypes = FilePickerFilters.mimeTypesFor(FileCategory.ROMS),
-		extensions = FileCategory.ROMS.extensions
+		extensions = FileCategory.ROMS.extensions,
+		acceptsFileName = FileCategory.ROMS::acceptsFileName,
 	) { uris ->
 		uris.first().let {
 			scope.launchImportGuarded(importGuard) {
@@ -481,16 +492,19 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel(LocalContext.current
 			SaveConfigDialog(
 				initialName = initialName,
 				initialDescription = viewModel.currentConfigDescription,
+				initialCategory = viewModel.currentConfigCategory,
+				categorySuggestions = categorySuggestions,
 				onDismiss = { saveAsName = null },
-				onSave = { name, description ->
+				onSave = { name, description, category ->
 					scope.launch {
-						when (val result = viewModel.saveAs(name, description, allowOverwrite = false)) {
+						when (val result = viewModel.saveAs(name, description, category, allowOverwrite = false)) {
 							is ConfigurationSaveActions.SaveResult.Saved -> {
 								saveAsName = null
+								configurationsViewModel.refresh()
 								snackbarHostState.showSnackbar(saveMessage(result))
 							}
 							ConfigurationSaveActions.SaveResult.AlreadyExists ->
-								overwriteRequest = OverwriteRequest(name, description)
+								overwriteRequest = OverwriteRequest(name, description, category)
 							else -> snackbarHostState.showSnackbar(saveMessage(result))
 						}
 					}
@@ -584,7 +598,12 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel(LocalContext.current
 				confirmButton = {
 					TextButton(onClick = {
 						scope.launch {
-							val result = viewModel.saveAs(request.name, request.description, allowOverwrite = true)
+							val result = viewModel.saveAs(
+								request.name,
+								request.description,
+								request.category,
+								allowOverwrite = true
+							)
 							overwriteRequest = null
 							if (result is ConfigurationSaveActions.SaveResult.Saved) {
 								saveAsName = null
@@ -1051,24 +1070,29 @@ private fun SettingsChangesDialog(
 	)
 }
 
-private data class OverwriteRequest(val name: String, val description: String)
+private data class OverwriteRequest(val name: String, val description: String, val category: String)
 
 /**
  * Asks for a configuration's name (prefilled with [initialName] and selected, so typing
- * replaces it) and description. On a TV the Save button starts with D-pad focus, so OK
- * saves under the offered name without the on-screen keyboard.
+ * replaces it), description and Library category. On a TV the Save button starts with D-pad
+ * focus, so OK saves under the offered name without the on-screen keyboard.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SaveConfigDialog(
 	initialName: String,
 	initialDescription: String,
+	initialCategory: String,
+	categorySuggestions: List<String>,
 	onDismiss: () -> Unit,
-	onSave: (String, String) -> Unit
+	onSave: (String, String, String) -> Unit
 ) {
 	var name by remember {
 		mutableStateOf(TextFieldValue(initialName, selection = TextRange(0, initialName.length)))
 	}
 	var description by remember { mutableStateOf(initialDescription) }
+	var category by remember { mutableStateOf(initialCategory) }
+	var categorySuggestionsExpanded by remember { mutableStateOf(false) }
 	val saveFocus = remember { FocusRequester() }
 	val tv = isTvDevice()
 	LaunchedEffect(Unit) {
@@ -1085,6 +1109,7 @@ fun SaveConfigDialog(
 			// IME. Created here, inside the dialog's window, so the gates drive its keyboard.
 			val nameTyping = rememberDpadTypingGate()
 			val descriptionTyping = rememberDpadTypingGate()
+			val categoryTyping = rememberDpadTypingGate()
 			Column {
 				Text(stringResource(R.string.dialog_save_config_message))
 				Spacer(modifier = Modifier.height(8.dp))
@@ -1109,11 +1134,52 @@ fun SaveConfigDialog(
 					keyboardActions = KeyboardActions(onDone = { descriptionTyping.stopTyping() }),
 					modifier = Modifier.dpadVerticalMovesFocus().then(descriptionTyping.modifier)
 				)
+				Spacer(modifier = Modifier.height(8.dp))
+				ExposedDropdownMenuBox(
+					expanded = categorySuggestionsExpanded && categorySuggestions.isNotEmpty(),
+					onExpandedChange = { categorySuggestionsExpanded = it }
+				) {
+					OutlinedTextField(
+						value = category,
+						onValueChange = { category = it },
+						label = { Text(stringResource(R.string.label_configuration_category)) },
+						singleLine = true,
+						readOnly = categoryTyping.readOnly,
+						trailingIcon = if (categorySuggestions.isNotEmpty()) {
+							{
+								ExposedDropdownMenuDefaults.TrailingIcon(
+									expanded = categorySuggestionsExpanded,
+									modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.SecondaryEditable)
+								)
+							}
+						} else null,
+						keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+						keyboardActions = KeyboardActions(onDone = { categoryTyping.stopTyping() }),
+						modifier = Modifier
+							.dpadVerticalMovesFocus()
+							.then(categoryTyping.modifier)
+							.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable)
+					)
+					ExposedDropdownMenu(
+						expanded = categorySuggestionsExpanded && categorySuggestions.isNotEmpty(),
+						onDismissRequest = { categorySuggestionsExpanded = false }
+					) {
+						categorySuggestions.forEach { suggestion ->
+							DropdownMenuItem(
+								text = { Text(suggestion) },
+								onClick = {
+									category = suggestion
+									categorySuggestionsExpanded = false
+								}
+							)
+						}
+					}
+				}
 			}
 		},
 		confirmButton = {
 			TextButton(
-				onClick = { onSave(name.text.trim(), description.trim()) },
+				onClick = { onSave(name.text.trim(), description.trim(), category.trim()) },
 				enabled = name.text.isNotBlank(),
 				modifier = Modifier.focusRequester(saveFocus).dpadFocusIndicator()
 			) {

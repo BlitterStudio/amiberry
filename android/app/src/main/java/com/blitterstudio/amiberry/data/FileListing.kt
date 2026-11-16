@@ -49,7 +49,7 @@ object FileListing {
 		)
 	}
 
-	/** Imports are sorted by extension, so the file's extension names its category. */
+	/** Imports are sorted by filename, so the filename names its category. */
 	fun importedCategory(result: FileManager.ImportResult.Imported): FileCategory? =
-		FileCategory.fromExtension(File(result.path).extension)
+		FileCategory.fromFileName(File(result.path).name)
 }

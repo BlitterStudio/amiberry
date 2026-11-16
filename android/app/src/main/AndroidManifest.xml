@@ -89,6 +89,7 @@
                 <data android:pathPattern=".*\\.adz" />
                 <data android:pathPattern=".*\\.dms" />
                 <data android:pathPattern=".*\\.ipf" />
+                <data android:pathPattern=".*\\.7z" />
                 <data android:pathPattern=".*\\.hdf" />
                 <data android:pathPattern=".*\\.iso" />
                 <data android:pathPattern=".*\\.cue" />

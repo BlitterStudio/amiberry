@@ -299,7 +299,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 		if (path == null) {
 			// No exact path tracked — fall back to name-based save.
 			val name = currentConfigName ?: return ConfigurationSaveActions.SaveResult.InvalidName
-			return saveAs(name, currentConfigDescription, allowOverwrite = true)
+			return saveAs(name, currentConfigDescription, currentConfigCategory, allowOverwrite = true)
 		}
 		val savedSettings = settings
 		val savedUnknownLines = currentUnknownLines
@@ -329,6 +329,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 	suspend fun saveAs(
 		name: String,
 		description: String,
+		category: String,
 		allowOverwrite: Boolean
 	): ConfigurationSaveActions.SaveResult {
 		val savedSettings = settings
@@ -340,7 +341,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 				currentConfigPath = currentConfigPath,
 				unknownLines = savedUnknownLines,
 				description = description,
-				category = currentConfigCategory,
+				category = category,
 				allowOverwrite = allowOverwrite
 			)
 		}
@@ -348,6 +349,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 			currentConfigName = result.file.nameWithoutExtension
 			currentConfigPath = result.file.absolutePath
 			currentConfigDescription = description
+			currentConfigCategory = category
 			baselineSettings = savedSettings
 			baselineUnknownLines = savedUnknownLines
 		}

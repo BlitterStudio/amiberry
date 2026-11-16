@@ -6,7 +6,12 @@ object FilePickerFilters {
 
 	fun mimeTypesFor(category: FileCategory): Array<String> = when (category) {
 		FileCategory.ROMS -> arrayOf("*/*")
-		FileCategory.FLOPPIES -> arrayOf("application/octet-stream", "application/zip", "application/gzip")
+		FileCategory.FLOPPIES -> arrayOf(
+			"application/octet-stream",
+			"application/zip",
+			"application/gzip",
+			"application/x-7z-compressed"
+		)
 		FileCategory.HARD_DRIVES -> arrayOf("application/octet-stream")
 		FileCategory.CD_IMAGES -> arrayOf("application/x-iso9660-image", "application/octet-stream", "application/x-cue", "application/x-chd")
 		FileCategory.WHDLOAD_GAMES -> arrayOf("application/x-lha", "application/x-lzh-compressed", "application/octet-stream")
