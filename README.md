@@ -114,7 +114,7 @@ pkg install amiberry
 Each Amiberry release also ships packages for FreeBSD 14 and 15 (amd64 and aarch64) on the [releases page](https://github.com/BlitterStudio/amiberry/releases/latest), which can be newer than the ports tree. Download the one matching your FreeBSD version and CPU, then install it with `pkg install`, which fetches the dependencies from your configured repository:
 
 ```bash
-pkg install ./amiberry-v8.5.0-freebsd15-amd64.pkg
+pkg install ./amiberry-v8.6.0-freebsd15-amd64.pkg
 ```
 
 These packages are built against the `quarterly` package branch, which is the default on FreeBSD. If your system uses `latest`, a dependency may have moved to a newer library version; use the ports package in that case.
@@ -132,7 +132,7 @@ make install
 Each release ships a Haiku (R1/beta) package for 64-bit x86 on the [releases page](https://github.com/BlitterStudio/amiberry/releases/latest). Download the `.hpkg` and install it with `pkgman`, which pulls the dependencies in from HaikuPorts, or just double-click the downloaded file:
 
 ```bash
-pkgman install ./amiberry-v8.5.0-haiku-x86_64.hpkg
+pkgman install ./amiberry-v8.6.0-haiku-x86_64.hpkg
 ```
 
 The package installs the binary into `/boot/system/bin`, its data into `/boot/system/data/amiberry`, and a Deskbar entry under Applications. All dependencies (SDL3, FFmpeg, and friends) come from HaikuPorts; there is no Amiberry recipe in HaikuPorts, so the release package is the only supported way to install it.

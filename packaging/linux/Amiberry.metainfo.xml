@@ -67,6 +67,11 @@
         </screenshot>
     </screenshots>
     <releases>
+        <release version="8.6.0" date="2026-11-16">
+            <description>
+                <p>On multi-core hosts, 68020 to 68060 configurations set to the fastest CPU speed run the CPU on its own thread. A new Exact FPU core emulates 80-bit precision and works with the ARM64 JIT, 68020 cycle-exact timing matches a real A1200, and FPU instructions take their real time in cycle-exact mode. x86 bridgeboards and PC graphics chips run on 86Box instead of PCem, images can be copied between the Amiga and host clipboards, and a global screenshot key names screenshots after the WHDLoad game. Fixes from WinUAE and the amitorture test suite cover the CPU, MMU, FPU, JIT, ECS superhires, Picasso96 split screens, sound boards, the AHI driver, MIDI, bsdsocket multicast and non-ASCII directory hard drives. 32-bit hosts are no longer supported.</p>
+            </description>
+        </release>
         <release version="8.5.0" date="2026-10-27">
             <description>
                 <p>WHDBooter now downloads WHDLoad, JST, the Kickstart RTB files and the optional XPK, MMULib, explode and medplayer libraries from their authors' sites instead of bundling them, and host-quit replaces AmiQuit. LhA archives are read with Lhasa and LZX archives with a new decoder; an LZX archive in the ROMs folder no longer crashes the ROM scan. PearPC is removed (PPC uses QEMU) and DBus control is replaced by IPC, with new settings commands. Fixes crashes when switching RTG boards between Zorro II and III and on Blizzard boards without RAM, a ZZ9000 slirp hang on reboot, file requesters for the media and state hotkeys, and many configuration save and load issues. Each release now includes the source of its third-party libraries.</p>

@@ -2,7 +2,7 @@
 %global debug_package %{nil}
 
 Name:           amiberry
-Version:        8.5.0
+Version:        8.6.0
 Release:        1%{?dist}
 Summary:        Optimized Amiga emulator for ARM64, AMD64 and RISC-V platforms
 
@@ -89,6 +89,14 @@ fi
 %{_mandir}/man1/amiberry.1.gz
 
 %changelog
+* Mon Nov 16 2026 Dimitris Panokostas <midwan@gmail.com> - 8.6.0-1
+- Release v8.6.0
+- The CPU runs on its own thread on multi-core hosts for 68020-68060 configurations at the fastest speed
+- Exact 80-bit FPU core with ARM64 JIT support; A1200-accurate 68020 cycle-exact timing; FPU timing in cycle-exact mode
+- x86 bridgeboards and PC graphics chips use 86Box instead of PCem; image sharing through the clipboard
+- WinUAE and amitorture fixes for the CPU, MMU, FPU, JIT, chipset, Picasso96, sound boards, AHI, MIDI and bsdsocket
+- 32-bit hosts are no longer supported
+
 * Tue Oct 27 2026 Dimitris Panokostas <midwan@gmail.com> - 8.5.0-1
 - Release v8.5.0
 - WHDBooter: WHDLoad, JST, RTB files and the XPK, MMULib, explode and medplayer libraries are downloaded from their authors' sites; host-quit replaces AmiQuit

@@ -36,7 +36,7 @@ if(NOT DEFINED CMAKE_OSX_DEPLOYMENT_TARGET)
 endif()
 
 project(amiberry
-    VERSION 8.5.0
+    VERSION 8.6.0
     LANGUAGES C CXX
     DESCRIPTION "Optimized Amiga emulator for various platforms"
     HOMEPAGE_URL "https://amiberry.com"
