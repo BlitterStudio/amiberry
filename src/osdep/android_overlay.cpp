@@ -129,6 +129,9 @@ struct emulator_call {
 };
 
 constexpr auto emulator_call_timeout = std::chrono::seconds(30);
+// An Android lifecycle callback runs on the UI thread. It must not block long
+// enough for Android to report an ANR if SDL has already paused emulation.
+constexpr auto android_autosave_timeout = std::chrono::seconds(3);
 
 // Runs work on the emulator thread and waits for it, at most
 // emulator_call_timeout; false when it did not run. The loop below (and
@@ -310,11 +313,11 @@ autosave_result save_android_autosave()
 		path += '/';
 	path += AMIBERRY_AUTOSAVE_STATE_NAME;
 	const std::string partial = path + ".partial";
-	const amiberry_action_id action = amiberry_actions_save_state(partial.c_str());
+	const amiberry_action_id action = amiberry_actions_autosave_state(partial.c_str());
 	if (!action)
 		return {};
 
-	const auto deadline = std::chrono::steady_clock::now() + emulator_call_timeout;
+	const auto deadline = std::chrono::steady_clock::now() + android_autosave_timeout;
 	amiberry_action_result result = AMIBERRY_ACTION_PENDING;
 	while (std::chrono::steady_clock::now() < deadline) {
 		result = amiberry_actions_poll(action, nullptr, 0);

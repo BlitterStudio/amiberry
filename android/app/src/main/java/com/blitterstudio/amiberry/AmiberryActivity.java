@@ -134,11 +134,11 @@ public class AmiberryActivity extends SDLActivity {
 		if (autosaveRequested || !startsEmulation()) {
 			return;
 		}
-		autosaveRequested = true;
 		try {
 			String[] autosave = OverlayNative.autosave();
 			if (autosave != null && autosave.length == 2) {
 				AndroidAutosave.INSTANCE.record(this, autosave[0], autosave[1], getArguments());
+				autosaveRequested = true;
 			}
 		} catch (LinkageError | RuntimeException ignored) {
 			// The session marker still records an interrupted emulator when saving fails.
@@ -155,6 +155,10 @@ public class AmiberryActivity extends SDLActivity {
 
 	@Override
 	public void onWindowFocusChanged(boolean hasFocus) {
+		if (!hasFocus) {
+			// SDLActivity may pause native from its focus callback before onPause.
+			saveAutosave();
+		}
 		super.onWindowFocusChanged(hasFocus);
 		if (hasFocus) {
 			enterImmersiveMode();
