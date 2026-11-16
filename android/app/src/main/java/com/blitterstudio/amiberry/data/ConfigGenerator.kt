@@ -275,6 +275,10 @@ object ConfigGenerator {
 		return unknownLines.filterNot { it.substringBefore('=').trim() == "cpuboard_rom_file_id" }
 	}
 
+	/** cart= is read after cart_file= and must not survive a changed cartridge. */
+	internal fun withoutCartIdentity(lines: List<String>): List<String> =
+		lines.filterNot { it.substringBefore('=').trim().equals("cart", ignoreCase = true) }
+
 	fun writeConfig(context: Context, settings: EmulatorSettings, filename: String): File {
 		val file = configFile(context, filename)
 		file.writeText(generate(settings))

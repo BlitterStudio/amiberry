@@ -1,5 +1,7 @@
 package com.blitterstudio.amiberry.data.model
 
+import java.util.Locale
+
 /**
  * All emulator settings that the native Android UI can configure.
  * Maps to .uae config file keys used by cfgfile.cpp.
@@ -152,11 +154,17 @@ data class EmulatorSettings(
 	 * [options]; null when [options] does not set it (the emulator's default
 	 * applies).
 	 */
-	fun optionValue(id: String): String? = when (id) {
-		// The packed line of the jumpers (withPackedJumpersAdopted).
-		"cpuboard_settings" -> SettingsSchema.current?.acceleratorBoard(optionValue("cpuboard_type") ?: "none")
-			?.let { AcceleratorJumpers.pack(it, acceleratorJumpers) }?.ifEmpty { null } ?: options[id]
-		else -> FIELDS[id]?.get?.invoke(this) ?: options[id]
+	fun optionValue(id: String): String? {
+		RtgConfig.parent(id)?.let { parent ->
+			val packed = options[parent] ?: SettingsSchema.current?.option(parent)?.default.orEmpty()
+			return RtgConfig.value(parent, packed, id)
+		}
+		return when (id) {
+			// The packed line of the jumpers (withPackedJumpersAdopted).
+			"cpuboard_settings" -> SettingsSchema.current?.acceleratorBoard(optionValue("cpuboard_type") ?: "none")
+				?.let { AcceleratorJumpers.pack(it, acceleratorJumpers) }?.ifEmpty { null } ?: options[id]
+			else -> FIELDS[id]?.get?.invoke(this) ?: options[id]
+		}
 	}
 
 	/**
@@ -174,8 +182,14 @@ data class EmulatorSettings(
 			val current = optionValue(parent) ?: schema?.option(parent)?.default.orEmpty()
 			return withOption(parent, RtgConfig.pack(parent, current, id, value), schema)
 		}
-		val normalizedValue = if (id == "maprom" && value.matches(Regex("[0-9a-fA-F]+")))
-			"0x$value" else value
+		val normalizedValue = when {
+			id == "maprom" && value.matches(Regex("[0-9a-fA-F]+")) -> "0x$value"
+			id in setOf("displaydata_pal", "displaydata_ntsc") && ',' !in value -> value.toDoubleOrNull()
+				?.takeIf { it > 0 }?.let { rate ->
+					String.format(Locale.US, "%.6f,t=%s,locked", rate, if (id == "displaydata_ntsc") "NTSC" else "PAL")
+				} ?: value
+			else -> value
+		}
 		if (id == "cpuboard_type" && normalizedValue == (optionValue(id) ?: "none")) return this
 		val stateValue = if (id == "cachesize") jitState(normalizedValue.toIntOrNull() ?: return this) else normalizedValue
 		val state = schemaState(schema)
@@ -255,7 +269,12 @@ data class EmulatorSettings(
 	private fun withField(id: String, value: String, schema: SettingsSchema? = SettingsSchema.current): EmulatorSettings? {
 		val field = FIELDS[id]
 		if (field == null) {
-			val stored = value.takeIf { it != schema?.option(id)?.defaultOnAndroid }
+			// An empty hotkey line explicitly unbinds the global amiberry.conf
+			// default; omitting it would restore that binding at launch.
+			val stored = value.takeIf {
+				(it.isEmpty() && schema?.option(id)?.type == "hotkey") ||
+					it != schema?.option(id)?.defaultOnAndroid
+			}
 			return copy(options = stored?.let { options + (id to it) } ?: options - id)
 		}
 		return field.set?.invoke(this, value)

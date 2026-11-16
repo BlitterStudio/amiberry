@@ -39,6 +39,21 @@ object RtgConfig {
 		return result
 	}
 
+	fun value(parent: String, packed: String, id: String): String? = when (parent) {
+		"rtg_modes" -> unpackMode(packed, id)
+		"gfxcard_options" -> {
+			val values = packed.split(',').filter { it.isNotEmpty() }.toSet()
+			when (id) {
+				"gfxcard_options:monitor" -> values.firstOrNull { it.startsWith("monitor=") }
+					?.substringAfter('=') ?: "0"
+				"gfxcard_options:autoswitch" -> (!values.contains("noautoswitch")).toString()
+				"gfxcard_options:initial" -> values.contains("initial").toString()
+				else -> null
+			}
+		}
+		else -> null
+	}
+
 	private fun modeValue(text: String): Int =
 		text.toIntOrNull() ?: text.removePrefix("0x").removePrefix("0X").toIntOrNull(16) ?: 0
 

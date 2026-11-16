@@ -638,6 +638,33 @@ class ConfigGeneratorTest {
 	}
 
 	@Test
+	fun `editor option writer keeps packed and explicit native values`() {
+		val settings = EmulatorSettings(options = mapOf(
+			"rtg_modes" to "0x122",
+			"rtg_modes:16bit" to "R5G6B5PC",
+			"gfxcard_options" to "monitor=1,initial",
+			"gfxcard_options:initial" to "false"
+		))
+			.withOption("amiberry.open_gui", "")
+			.withOption("displaydata_pal", "55")
+		assertEquals("R5G5B5PC", settings.optionValue("rtg_modes:16bit"))
+		assertEquals("true", settings.optionValue("gfxcard_options:initial"))
+		val config = ConfigGenerator.generate(settings)
+		assertContains(config, "amiberry.open_gui=")
+		assertContains(config, "displaydata_pal=55.000000,t=PAL,locked")
+		assertFalse(config.contains("rtg_modes:"))
+		assertFalse(config.contains("gfxcard_options:"))
+	}
+
+	@Test
+	fun `changed cartridge drops its stale identity line`() {
+		assertEquals(
+			listOf("use_gui=no", "cart_file=/ROMs/new.rom"),
+			ConfigGenerator.withoutCartIdentity(listOf("cart=:action_replay", "use_gui=no", "cart_file=/ROMs/new.rom"))
+		)
+	}
+
+	@Test
 	fun `round-trip preserves onscreen_joy joyport1`() {
 		val original = EmulatorSettings(joyport1 = "onscreen_joy", onScreenJoystick = true)
 		val configText = ConfigGenerator.generate(original)

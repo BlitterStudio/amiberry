@@ -470,7 +470,13 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 	}
 
 	fun updateSettings(transform: (EmulatorSettings) -> EmulatorSettings) {
-		val newSettings = transform(settings)
+		val previous = settings
+		val newSettings = transform(previous)
+		if (previous.optionValue("cart_file") != newSettings.optionValue("cart_file")) {
+			// cart= is read after cart_file= and wins. The layer clears it
+			// when a cartridge changes, then only restores an ident it scans.
+			currentUnknownLines = ConfigGenerator.withoutCartIdentity(currentUnknownLines)
+		}
 		applyConstrainedSettings(newSettings, publishNotices = true)
 		appPreferences.saveAndroidControls(settings)
 		saveLastSession()
