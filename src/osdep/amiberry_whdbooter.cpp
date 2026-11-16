@@ -2008,6 +2008,12 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath, const bool prese
 				native_host_message(boot_tool, message);
 			else
 				native_host_message_deferred(message);
+#elif defined(__ANDROID__)
+			snprintf(message, sizeof message,
+				"%s is not installed.\n%s.\nDownload it from App Settings \u2192 WHDLoad.",
+				boot_tool, boot_tool_source);
+			write_log("WHDBooter - %s\n", message);
+			gui_message("%s", message);
 #else
 			snprintf(message, sizeof message,
 				"%s is not installed.\n%s.\nUse the Paths panel's 'Update WHDBooter files' button "

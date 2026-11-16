@@ -14,6 +14,7 @@
 #include <atomic>
 #include <filesystem>
 #include <string>
+#include <system_error>
 
 namespace
 {
@@ -24,10 +25,37 @@ std::filesystem::path whdboot_root()
 	return path.empty() ? std::filesystem::path{} : std::filesystem::path(path);
 }
 
-bool whdboot_file_exists(const std::filesystem::path& relative)
+bool whdboot_file_exists(const std::filesystem::path& root, const std::filesystem::path& relative)
 {
-	const auto root = whdboot_root();
-	return !root.empty() && std::filesystem::exists(root / relative);
+	std::error_code error;
+	return !root.empty() && std::filesystem::exists(root / relative, error) && !error;
+}
+
+void get_status(const std::filesystem::path& root, amiberry_whdboot_status* status)
+{
+	status->downloads_available = whdboot_can_download();
+	status->emulation_running = whdboot_emulation_blocks_downloads();
+	status->whdload_installed = whdboot_file_exists(root, "WHDLoad");
+	status->jst_installed = whdboot_file_exists(root, "JST");
+	status->host_quit_installed = whdboot_file_exists(root, "host-quit");
+	status->boot_data_installed = whdboot_file_exists(root, "boot-data.zip")
+		|| whdboot_file_exists(root, "boot-data");
+	status->database_installed = whdboot_file_exists(root, "game-data/whdload_db.json")
+		|| whdboot_file_exists(root, "game-data/whdload_db.xml");
+
+	// kick31034.A1000.RTB is not in skick346 and stays bundled.
+	// (kick33192.A500.RTB is skick346's kick33180.A500.RTB byte for
+	// byte; the download creates it as a copy, so it is not required.)
+	bool rtb_files_installed = true;
+	for (const auto& filename : whdboot_skick_rtb_files())
+	{
+		if (!whdboot_file_exists(root, std::filesystem::path("save-data") / "Kickstarts" / filename))
+			rtb_files_installed = false;
+	}
+	if (!whdboot_file_exists(root, std::filesystem::path("save-data") / "Kickstarts" / "kick31034.A1000.RTB"))
+		rtb_files_installed = false;
+	status->rtb_files_installed = rtb_files_installed;
+	status->libraries_installed = whdboot_optional_libraries_installed(root.string());
 }
 
 }
@@ -36,30 +64,14 @@ extern "C" void amiberry_whdboot_status_get(amiberry_whdboot_status* status)
 {
 	if (status == nullptr)
 		return;
+	get_status(whdboot_root(), status);
+}
 
-	status->downloads_available = whdboot_can_download();
-	status->emulation_running = whdboot_emulation_blocks_downloads();
-	status->whdload_installed = whdboot_file_exists("WHDLoad");
-	status->jst_installed = whdboot_file_exists("JST");
-	status->host_quit_installed = whdboot_file_exists("host-quit");
-	status->boot_data_installed = whdboot_file_exists("boot-data.zip")
-		|| whdboot_file_exists("boot-data");
-	status->database_installed = whdboot_file_exists("game-data/whdload_db.json")
-		|| whdboot_file_exists("game-data/whdload_db.xml");
-
-	// kick31034.A1000.RTB is not in skick346 and stays bundled.
-	// (kick33192.A500.RTB is skick346's kick33180.A500.RTB byte for
-	// byte; the download creates it as a copy, so it is not required.)
-	bool rtb_files_installed = true;
-	for (const auto& filename : whdboot_skick_rtb_files())
-	{
-		if (!whdboot_file_exists(std::filesystem::path("save-data") / "Kickstarts" / filename))
-			rtb_files_installed = false;
-	}
-	if (!whdboot_file_exists(std::filesystem::path("save-data") / "Kickstarts" / "kick31034.A1000.RTB"))
-		rtb_files_installed = false;
-	status->rtb_files_installed = rtb_files_installed;
-	status->libraries_installed = whdboot_optional_libraries_installed();
+extern "C" void amiberry_whdboot_status_get_at_path(const char* path, amiberry_whdboot_status* status)
+{
+	if (status == nullptr)
+		return;
+	get_status(path ? std::filesystem::path(path) : std::filesystem::path{}, status);
 }
 
 extern "C" amiberry_whdboot_download_result amiberry_whdboot_download(

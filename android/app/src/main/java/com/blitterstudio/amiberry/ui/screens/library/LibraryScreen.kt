@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -35,6 +36,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -70,6 +72,8 @@ import com.blitterstudio.amiberry.data.FileManager
 import com.blitterstudio.amiberry.data.FilePickerFilters
 import com.blitterstudio.amiberry.data.FileRepository
 import com.blitterstudio.amiberry.data.ImportBatchFeedback
+import com.blitterstudio.amiberry.ui.components.WhdbootDownloadProgress
+import com.blitterstudio.amiberry.ui.components.whdbootResultString
 import com.blitterstudio.amiberry.data.ImportFeedback
 import com.blitterstudio.amiberry.data.RecentLaunches
 import com.blitterstudio.amiberry.data.model.AmigaFile
@@ -97,6 +101,7 @@ import com.blitterstudio.amiberry.ui.screens.settings.SaveConfigDialog
 import com.blitterstudio.amiberry.ui.viewmodel.ConfigurationsViewModel
 import com.blitterstudio.amiberry.ui.viewmodel.FileManagerViewModel
 import com.blitterstudio.amiberry.ui.viewmodel.SettingsViewModel
+import com.blitterstudio.amiberry.ui.viewmodel.WhdbootViewModel
 import com.blitterstudio.amiberry.ui.windowWidthClass
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -118,6 +123,7 @@ fun LibraryScreen(
 ) {
 	val context = LocalContext.current
 	val activity = context.findActivity() as? MainActivity
+	val whdbootViewModel: WhdbootViewModel = viewModel(context.findActivity() as ComponentActivity)
 	val scope = rememberCoroutineScope()
 	val snackbarHostState = remember { SnackbarHostState() }
 	val launchGuard = rememberLaunchInFlightGuard()
@@ -265,10 +271,27 @@ fun LibraryScreen(
 	}
 
 	fun showResult(result: LibraryLaunch.PlayResult) {
-		val refused = result as? LibraryLaunch.PlayResult.Refused ?: return
-		val message = refused.argument?.let { context.getString(refused.messageRes, it) }
-			?: context.getString(refused.messageRes)
-		scope.launch { snackbarHostState.showSnackbar(message) }
+		when (result) {
+			is LibraryLaunch.PlayResult.NeedsWhdboot -> whdbootViewModel.requestLaunch(result)
+			is LibraryLaunch.PlayResult.Refused -> {
+				val message = result.argument?.let { context.getString(result.messageRes, it) }
+					?: context.getString(result.messageRes)
+				scope.launch { snackbarHostState.showSnackbar(message) }
+			}
+			LibraryLaunch.PlayResult.Started -> Unit
+		}
+	}
+
+	whdbootViewModel.launchResult?.let {
+		LaunchedEffect(it) {
+			whdbootViewModel.consumeLaunchResult()?.let(::showResult)
+		}
+	}
+	whdbootViewModel.libraryResult?.let { result ->
+		LaunchedEffect(result) {
+			snackbarHostState.showSnackbar(context.getString(whdbootResultString(result)))
+			whdbootViewModel.clearLibraryResult()
+		}
 	}
 
 	/** Quick play: the file's kind in its machine. */
@@ -692,6 +715,35 @@ fun LibraryScreen(
 						saveNewThen = null
 					}
 					snackbarHostState.showSnackbar(saveMessage(result))
+				}
+			}
+		)
+	}
+	whdbootViewModel.pendingLaunch?.let { request ->
+		val whdbootDownload = whdbootViewModel.download
+		AlertDialog(
+			onDismissRequest = {
+				if (!whdbootDownload.downloading) whdbootViewModel.clearPendingLaunch()
+			},
+			title = { Text(stringResource(R.string.whdboot_download_before_play_title)) },
+			text = {
+				Column {
+					Text(stringResource(R.string.whdboot_download_before_play_message, request.tool))
+					if (whdbootDownload.downloading) WhdbootDownloadProgress(whdbootDownload)
+				}
+			},
+			confirmButton = {
+				if (!whdbootDownload.downloading) {
+					TextButton(onClick = whdbootViewModel::downloadForPendingLaunch) {
+						Text(stringResource(R.string.whdboot_download))
+					}
+				}
+			},
+			dismissButton = {
+				if (!whdbootDownload.downloading) {
+					TextButton(onClick = whdbootViewModel::clearPendingLaunch) {
+						Text(stringResource(R.string.action_cancel))
+					}
 				}
 			}
 		)

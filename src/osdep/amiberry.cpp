@@ -8752,8 +8752,8 @@ bool file_exists(const std::string& file)
 #else
 	namespace fs = std::filesystem;
 #endif
-	fs::path f{ file };
-	return (fs::exists(f));
+	std::error_code error;
+	return fs::exists(fs::path(file), error) && !error;
 }
 
 #ifdef _WIN32
@@ -12497,18 +12497,18 @@ const std::vector<std::string>& whdboot_xpk_compressor_files()
 	return files;
 }
 
-static std::string whdboot_library_destination(const std::string& filename)
+static std::string whdboot_library_destination(const std::string& root, const std::string& filename)
 {
-	return join_path(whdboot_path, join_path("Libs", filename));
+	return join_path(root, join_path("Libs", filename));
 }
 
-static bool whdboot_xpk_libraries_missing()
+static bool whdboot_xpk_libraries_missing(const std::string& root)
 {
-	if (!file_exists(whdboot_library_destination("xpkmaster.library")))
+	if (!file_exists(whdboot_library_destination(root, "xpkmaster.library")))
 		return true;
 	for (const auto& filename : whdboot_xpk_compressor_files())
 	{
-		if (!file_exists(whdboot_library_destination(join_path("Compressors", filename))))
+		if (!file_exists(whdboot_library_destination(root, join_path("Compressors", filename))))
 			return true;
 	}
 	return false;
@@ -12519,33 +12519,38 @@ static const char* const whdboot_mmulib_files[] = {
 	"68040.library", "mmu.library", "680x0.library"
 };
 
-static bool whdboot_mmu_library_missing()
+static bool whdboot_mmu_library_missing(const std::string& root)
 {
 	for (const auto* filename : whdboot_mmulib_files)
 	{
-		if (!file_exists(whdboot_library_destination(filename)))
+		if (!file_exists(whdboot_library_destination(root, filename)))
 			return true;
 	}
 	return false;
 }
 
-static bool whdboot_explode_library_missing()
+static bool whdboot_explode_library_missing(const std::string& root)
 {
-	return !file_exists(whdboot_library_destination("explode.library"));
+	return !file_exists(whdboot_library_destination(root, "explode.library"));
 }
 
-static bool whdboot_medplayer_library_missing()
+static bool whdboot_medplayer_library_missing(const std::string& root)
 {
-	return !file_exists(whdboot_library_destination("medplayer.library"));
+	return !file_exists(whdboot_library_destination(root, "medplayer.library"));
 }
 
 // True once every optional Amiga library the download installs is
 // present. Each of them is optional for a given game, so the status only
 // reports that none is missing.
+bool whdboot_optional_libraries_installed(const std::string& root)
+{
+	return !whdboot_xpk_libraries_missing(root) && !whdboot_mmu_library_missing(root)
+		&& !whdboot_explode_library_missing(root) && !whdboot_medplayer_library_missing(root);
+}
+
 bool whdboot_optional_libraries_installed()
 {
-	return !whdboot_xpk_libraries_missing() && !whdboot_mmu_library_missing()
-		&& !whdboot_explode_library_missing() && !whdboot_medplayer_library_missing();
+	return whdboot_optional_libraries_installed(whdboot_path);
 }
 
 // Whether a machine runs that the download's archive handling must not
@@ -12992,10 +12997,10 @@ whdboot_download_result download_whdboot_assets(
 	const bool jst_step = amiberry_options.use_jst_instead_of_whd
 		&& !file_exists(join_path(whdboot_path, "JST"));
 	const bool rtbs_step = whdboot_skick_rtbs_missing();
-	const bool xpk_step = whdboot_xpk_libraries_missing();
-	const bool mmu_step = whdboot_mmu_library_missing();
-	const bool explode_step = whdboot_explode_library_missing();
-	const bool medplayer_step = whdboot_medplayer_library_missing();
+	const bool xpk_step = whdboot_xpk_libraries_missing(whdboot_path);
+	const bool mmu_step = whdboot_mmu_library_missing(whdboot_path);
+	const bool explode_step = whdboot_explode_library_missing(whdboot_path);
+	const bool medplayer_step = whdboot_medplayer_library_missing(whdboot_path);
 	const int total_steps = 4 + (jst_step ? 1 : 0) + (rtbs_step ? 1 : 0)
 		+ (xpk_step ? 1 : 0) + (mmu_step ? 1 : 0)
 		+ (explode_step ? 1 : 0) + (medplayer_step ? 1 : 0);
@@ -13156,11 +13161,11 @@ whdboot_download_result download_whdboot_assets(
 		ensure_directory_exists(join_path(whdboot_path, "Libs/Compressors"));
 		std::vector<std::pair<std::string, std::string>> members;
 		members.emplace_back("xpk_User/Libs/xpkmaster.library",
-			whdboot_library_destination("xpkmaster.library"));
+			whdboot_library_destination(whdboot_path, "xpkmaster.library"));
 		for (const auto& filename : whdboot_xpk_compressor_files())
 		{
 			members.emplace_back("xpk_User/Libs/compressors/" + filename,
-				whdboot_library_destination(join_path("Compressors", filename)));
+				whdboot_library_destination(whdboot_path, join_path("Compressors", filename)));
 		}
 		if (whdboot_install_pinned_library_archive(++step, total_steps, "XPK libraries (Aminet)",
 			xpk_user_url, xpk_user_sha256, "xpk_User.lha.download", members, progress_cb, cancel_flag))
@@ -13178,7 +13183,7 @@ whdboot_download_result download_whdboot_assets(
 	{
 		std::vector<std::pair<std::string, std::string>> members;
 		for (const auto* filename : whdboot_mmulib_files)
-			members.emplace_back(std::string("MMULib/Libs/") + filename, whdboot_library_destination(filename));
+			members.emplace_back(std::string("MMULib/Libs/") + filename, whdboot_library_destination(whdboot_path, filename));
 		if (whdboot_install_pinned_library_archive(++step, total_steps, "68040.library (Aminet)",
 			mmulib_url, nullptr, "MMULib.lha.download", members, progress_cb, cancel_flag))
 			any_success = true;
@@ -13193,7 +13198,7 @@ whdboot_download_result download_whdboot_assets(
 	if (explode_step)
 	{
 		const std::vector<std::pair<std::string, std::string>> members = {
-			{ "explode.library", whdboot_library_destination("explode.library") }
+			{ "explode.library", whdboot_library_destination(whdboot_path, "explode.library") }
 		};
 		if (whdboot_install_pinned_library_archive(++step, total_steps, "explode.library (Aminet)",
 			explode_url, explode_sha256, "explode-7.lha.download", members, progress_cb, cancel_flag))
@@ -13209,7 +13214,7 @@ whdboot_download_result download_whdboot_assets(
 	if (medplayer_step)
 	{
 		const std::vector<std::pair<std::string, std::string>> members = {
-			{ "libs/medplayer.library", whdboot_library_destination("medplayer.library") }
+			{ "libs/medplayer.library", whdboot_library_destination(whdboot_path, "medplayer.library") }
 		};
 		if (whdboot_install_pinned_library_archive(++step, total_steps, "medplayer.library (Aminet)",
 			medplayer_url, medplayer_sha256, "OctV5_Tut4.lha.download", members, progress_cb, cancel_flag))
