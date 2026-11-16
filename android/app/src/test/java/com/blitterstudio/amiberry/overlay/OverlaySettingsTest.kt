@@ -40,6 +40,7 @@ class OverlaySettingsTest {
 	@Test
 	fun `the bundled schema offers every control and setting of the menu`() {
 		assertEquals(OverlaySettings.CONTROLS, OverlaySettings.offered(bundled, OverlaySettings.CONTROLS).map { it.id })
+		assertEquals(OverlaySettings.POINTER, OverlaySettings.offered(bundled, OverlaySettings.POINTER).map { it.id })
 		assertEquals(OverlaySettings.SETTINGS, OverlaySettings.offered(bundled, OverlaySettings.SETTINGS).map { it.id })
 	}
 

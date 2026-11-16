@@ -82,8 +82,10 @@ import com.blitterstudio.amiberry.R
 import com.blitterstudio.amiberry.data.model.SettingsSchema
 import com.blitterstudio.amiberry.ui.components.settings.SchemaChoiceRow
 import com.blitterstudio.amiberry.ui.components.settings.SchemaLevelRow
+import com.blitterstudio.amiberry.ui.components.settings.SchemaNumberRow
 import com.blitterstudio.amiberry.ui.components.settings.settingsSchema
 import com.blitterstudio.amiberry.ui.dpadFocusIndicator
+import com.blitterstudio.amiberry.ui.screens.settings.SettingsGroups
 import java.text.DateFormat
 import java.util.Date
 
@@ -642,6 +644,39 @@ private fun ControlsPage(viewModel: OverlayViewModel, focus: FocusTargets) {
 		onClick = viewModel::showKeyboard,
 		enabled = keyboardOn
 	)
+	val pointer = OverlaySettings.offered(schema, OverlaySettings.POINTER)
+	if (pointer.isNotEmpty()) HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+	pointer.forEach { option ->
+		val state = viewModel.settings[option.id] ?: return@forEach
+		val modifier = Modifier
+			.padding(horizontal = 12.dp)
+			.focusRequester(focus.requester(option.id))
+		val change: (Int) -> Unit = { viewModel.change(option.id, it.toString()) }
+		val stored = state.value.toIntOrNull() ?: option.defaultOnAndroid.toIntOrNull() ?: 0
+		if (option.type == SettingsSchema.TYPE_INT) {
+			// A percentage up to 1000: a field, with the usual speeds in its menu for the D-pad.
+			SchemaNumberRow(
+				id = option.id,
+				stored = stored,
+				onStoredChange = change,
+				enabled = state.available,
+				suggestions = SettingsGroups.numberSuggestions(option),
+				accepts = SettingsGroups.numberAccepts(option),
+				option = option,
+				modifier = modifier
+			)
+		} else {
+			// The stick speed's steps, as the launcher's Input page slides them.
+			SchemaLevelRow(
+				id = option.id,
+				stored = stored,
+				onStoredChange = change,
+				enabled = state.available,
+				option = option,
+				modifier = modifier
+			)
+		}
+	}
 	Note(stringResource(R.string.overlay_controls_kept))
 }
 

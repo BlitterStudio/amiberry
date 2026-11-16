@@ -334,9 +334,15 @@ object SettingsGroups {
 	/** The JIT cache sizes offered in the cachesize field's menu (stored KB; 0 turns the JIT off). */
 	val jitCacheSuggestions = listOf(0, 1024, 2048, 4096, 8192, 16384)
 
-	/** The numbers a number field's menu offers (the JIT cache's sizes). */
-	fun numberSuggestions(option: SettingsSchema.Option): List<Int> =
-		if (option.id == "cachesize") jitCacheSuggestions else emptyList()
+	/** The mouse speeds (%) offered in the mouse speed field's menu; 100 is normal. */
+	val mouseSpeedSuggestions = listOf(25, 50, 75, 100, 150, 200)
+
+	/** The numbers a number field's menu offers (the JIT cache's sizes, the mouse speeds). */
+	fun numberSuggestions(option: SettingsSchema.Option): List<Int> = when (option.id) {
+		"cachesize" -> jitCacheSuggestions
+		"input.mouse_speed" -> mouseSpeedSuggestions
+		else -> emptyList()
+	}
 
 	/**
 	 * The numbers a field accepts, shared by every row that edits [id]: the
