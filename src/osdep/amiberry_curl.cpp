@@ -17,6 +17,7 @@ bool is_readable_regular_file(const std::string& path)
 	return input.good();
 }
 
+#if defined(__ANDROID__)
 bool is_readable_directory(const std::string& path)
 {
 	if (path.empty())
@@ -24,6 +25,7 @@ bool is_readable_directory(const std::string& path)
 	std::error_code error;
 	return std::filesystem::is_directory(path, error) && !error;
 }
+#endif
 
 void append_environment_path(std::vector<std::string>& candidates, const char* name)
 {
