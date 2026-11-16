@@ -26,7 +26,7 @@ class SettingsOptionRowsTest {
 				"input.joymouse_speed_analog", "amiberry.onscreen_joystick", "amiberry.vkbd_touch_button",
 				"amiberry.vkbd_numpad", "amiberry.shader", "amiberry.shader_rtg", "amiberry.custom_bezel",
 				"amiberry.scaling_method", "cart_file", "genlock_image", "genlock_video", "rtc_file", "gfxcard_type", "gfxcard_size",
-				"fpu_model", "chipmem_size", "bogomem_size", "sound_max_buff",
+				"zz9000_net", "fpu_model", "chipmem_size", "bogomem_size", "sound_max_buff",
 				"cpuboard_type", "cpuboardmem1_size"
 			) + (0..3).map { "floppy${it}sound" },
 			SettingsOptionRows.customIds

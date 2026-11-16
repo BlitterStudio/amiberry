@@ -59,7 +59,7 @@ object SettingsOptionRows {
 		"input.joymouse_speed_analog", "amiberry.onscreen_joystick", "amiberry.vkbd_touch_button",
 		"amiberry.vkbd_numpad", "amiberry.shader", "amiberry.shader_rtg", "amiberry.custom_bezel",
 		"amiberry.scaling_method", "cart_file", "genlock_image", "genlock_video", "rtc_file", "gfxcard_type", "gfxcard_size",
-		"fpu_model", "chipmem_size", "bogomem_size", "sound_max_buff",
+		"zz9000_net", "fpu_model", "chipmem_size", "bogomem_size", "sound_max_buff",
 		// The accelerator's board and memory: the schema's catalogs carry
 		// the list and the limit, not the option's choices. The boot ROM
 		// stays in the Accelerator section alone: no row of its own shows a
@@ -197,6 +197,19 @@ fun SettingsOptionRow(id: String, viewModel: SettingsViewModel, sectionTitle: St
 				value = settings.optionValue(id) ?: option.default,
 				choices = choices,
 				onSelect = { value -> viewModel.updateSettings { s -> s.withOption(id, value) } }
+			)
+		}
+		// Android has no selectable host ethernet backend. A retained
+		// desktop backend remains visible until the user disconnects it.
+		"zz9000_net" -> {
+			val value = settings.optionValue(id) ?: "none"
+			val choices = listOf(SettingsSchema.Choice("none", stringResource(R.string.settings_option_none))) +
+				if (value == "none") emptyList() else listOf(SettingsSchema.Choice(value, value))
+			SchemaChoiceRow(
+				id = id,
+				value = value,
+				choices = choices,
+				onSelect = { selected -> viewModel.updateSettings { s -> s.withOption(id, selected) } }
 			)
 		}
 		"amiberry.scaling_method" -> IntegerScalingRow(viewModel)
