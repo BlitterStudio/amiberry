@@ -6155,7 +6155,7 @@ void target_quit()
 	// it: the next emulation instance is still the same session.
 	if (!uae_restart_pending()) {
 		android_overlay_disable_autosave();
-		std::string autosave = get_savestate_path();
+		std::string autosave = get_savestate_folder();
 		if (!autosave.empty()) {
 			if (autosave.back() != '/')
 				autosave += '/';

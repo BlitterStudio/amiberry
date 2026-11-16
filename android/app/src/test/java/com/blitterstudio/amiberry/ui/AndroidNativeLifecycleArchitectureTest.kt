@@ -46,7 +46,7 @@ class AndroidNativeLifecycleArchitectureTest {
 
 		assertTrue(
 			"An exiting emulator must not start an autosave after target_quit clears it.",
-			overlay.contains("savestate_state != 0 || quit_program != 0")
+			overlay.contains("!autosave_allowed.load() || !emulating || quit_program != 0")
 		)
 	}
 

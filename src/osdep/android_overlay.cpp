@@ -39,6 +39,7 @@
 #include <functional>
 #include <mutex>
 #include <string>
+#include <thread>
 #include <vector>
 
 extern int gui_active;
@@ -300,27 +301,32 @@ std::string autosave_title()
 
 autosave_result save_android_autosave()
 {
-	if (!autosave_allowed.load() || !emulating || savestate_state != 0 || quit_program != 0)
+	if (!autosave_allowed.load() || !emulating || quit_program != 0)
 		return {};
-	std::string path = get_savestate_path();
+	std::string path = get_savestate_folder();
 	if (path.empty())
 		return {};
 	if (path.back() != '/')
 		path += '/';
 	path += AMIBERRY_AUTOSAVE_STATE_NAME;
 	const std::string partial = path + ".partial";
-	TCHAR previous[MAX_DPATH];
-	_tcscpy(previous, savestate_fname);
-	// As the iOS autosave, preserve rewind and input recording around a save
-	// the user did not explicitly request.
-	savestate_initsave(partial.c_str(), 1, true, false);
-	const int saved = save_state(partial.c_str(), "Autosave");
-	_tcscpy(savestate_fname, previous);
+	const amiberry_action_id action = amiberry_actions_save_state(partial.c_str());
+	if (!action)
+		return {};
+
+	const auto deadline = std::chrono::steady_clock::now() + emulator_call_timeout;
+	amiberry_action_result result = AMIBERRY_ACTION_PENDING;
+	while (std::chrono::steady_clock::now() < deadline) {
+		result = amiberry_actions_poll(action, nullptr, 0);
+		if (result != AMIBERRY_ACTION_PENDING)
+			break;
+		std::this_thread::sleep_for(std::chrono::milliseconds(10));
+	}
 	if (!autosave_allowed.load()) {
 		std::remove(partial.c_str());
 		return {};
 	}
-	if (saved <= 0 || std::rename(partial.c_str(), path.c_str()) != 0) {
+	if (result != AMIBERRY_ACTION_DONE || std::rename(partial.c_str(), path.c_str()) != 0) {
 		write_log("Android autosave to %s failed\n", path.c_str());
 		std::remove(partial.c_str());
 		return {};
@@ -677,10 +683,10 @@ JNIEXPORT jlong JNICALL OVERLAY_JNI(quit)(JNIEnv*, jclass)
 
 JNIEXPORT jobjectArray JNICALL OVERLAY_JNI(autosave)(JNIEnv* env, jclass)
 {
-	autosave_result saved;
-	// Called before SDLActivity pauses the native thread. on_emulator_thread()
-	// bounds the handoff if the emulator can no longer service its event queue.
-	if (!on_emulator_thread([&] { saved = save_android_autosave(); }) || saved.path.empty())
+	// save_state is an action the emulation drains between frames. Waiting here
+	// leaves that thread free to reach its safe point before SDL pauses it.
+	const autosave_result saved = save_android_autosave();
+	if (saved.path.empty())
 		return nullptr;
 	return to_java(env, {saved.path, saved.title});
 }

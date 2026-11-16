@@ -13,6 +13,7 @@ import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
 import com.blitterstudio.amiberry.data.AndroidAutosave;
+import com.blitterstudio.amiberry.data.LaunchRequest;
 import com.blitterstudio.amiberry.overlay.EmulationHints;
 import com.blitterstudio.amiberry.overlay.OverlayHost;
 import com.blitterstudio.amiberry.overlay.OverlayNative;
@@ -59,10 +60,13 @@ public class AmiberryActivity extends SDLActivity {
 	private boolean hintsReady;
 	/** An autosave is made at most once until the activity returns to the foreground. */
 	private boolean autosaveRequested;
+	private String[] recoveryArgs;
+	private boolean returnToLauncher;
 	private final Handler hints = new Handler(Looper.getMainLooper());
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
+		prepareRecovery(savedInstanceState);
 		super.onCreate(savedInstanceState);
 		// Without its libraries SDLActivity shows an error and has no layout.
 		if (!mBrokenLibraries && mLayout != null) {
@@ -77,6 +81,12 @@ public class AmiberryActivity extends SDLActivity {
 					showHintIfNew();
 				}, HINT_DELAY_MS);
 			}
+		}
+		if (returnToLauncher) {
+			startActivity(new Intent(this, com.blitterstudio.amiberry.ui.MainActivity.class)
+				.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP));
+			finish();
+			return;
 		}
 		registerBackCallback();
 		enterImmersiveMode();
@@ -128,7 +138,7 @@ public class AmiberryActivity extends SDLActivity {
 		try {
 			String[] autosave = OverlayNative.autosave();
 			if (autosave != null && autosave.length == 2) {
-				AndroidAutosave.INSTANCE.record(this, autosave[0], autosave[1]);
+				AndroidAutosave.INSTANCE.record(this, autosave[0], autosave[1], getArguments());
 			}
 		} catch (LinkageError | RuntimeException ignored) {
 			// The session marker still records an interrupted emulator when saving fails.
@@ -224,8 +234,30 @@ public class AmiberryActivity extends SDLActivity {
 		};
 	}
 
+	/**
+	 * Recents may recreate this activity after its dedicated SDL process died. Its
+	 * intent still carries the old launch arguments, so replace them before SDLActivity
+	 * starts native code rather than overwriting the session with a cold boot.
+	 */
+	private void prepareRecovery(Bundle savedInstanceState) {
+		Intent intent = getIntent();
+		if (savedInstanceState == null || intent == null || intent.getStringArrayExtra("SDL_ARGS") == null) {
+			return;
+		}
+		AndroidAutosave.Session session = AndroidAutosave.INSTANCE.load(this);
+		if (session == null) {
+			returnToLauncher = true;
+			return;
+		}
+		recoveryArgs = new LaunchRequest.Autosave(
+			session.getStateFile().getAbsolutePath(), session.getLaunchArgs()).toArgs();
+	}
+
 	@Override
 	protected String[] getArguments() {
+		if (recoveryArgs != null) {
+			return recoveryArgs;
+		}
 		Intent intent = getIntent();
 		if (intent != null) {
 			String[] args = intent.getStringArrayExtra("SDL_ARGS");

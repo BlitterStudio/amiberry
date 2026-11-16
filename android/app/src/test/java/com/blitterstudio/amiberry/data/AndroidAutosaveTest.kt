@@ -13,17 +13,19 @@ class AndroidAutosaveTest {
 	val tempDir = TemporaryFolder()
 
 	@Test
-	fun `recorded autosave keeps its state path title and date`() {
+	fun `recorded autosave keeps its state path title date and launch options`() {
 		val state = tempDir.newFile(AndroidAutosave.STATE_FILE_NAME).apply { writeText("state") }
 		val record = tempDir.newFile("session")
+		val args = arrayOf("--config", "/configs/game.uae", "--gfx_filter", "shader", "-G")
 
-		val saved = AndroidAutosave.record(record, state, "Lotus II")
+		val saved = AndroidAutosave.record(record, state, "Lotus II", args)
 		val loaded = AndroidAutosave.load(record)
 
 		assertEquals("Lotus II", saved?.title)
 		assertEquals(state.absolutePath, loaded?.stateFile?.absolutePath)
 		assertEquals("Lotus II", loaded?.title)
 		assertEquals(state.lastModified(), loaded?.modifiedAt)
+		assertTrue(args.contentEquals(loaded?.launchArgs))
 	}
 
 	@Test

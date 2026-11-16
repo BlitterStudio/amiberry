@@ -89,9 +89,9 @@ object EmulatorLauncher {
 		launchRequest(context, LaunchRequest.SettingsConfig(configPath = configPath))
 	}
 
-	/** Restores the full machine configuration embedded in a background autosave. */
-	fun launchAutosave(context: Context, statePath: String) {
-		launchRequest(context, LaunchRequest.Autosave(statePath))
+	/** Restores a background autosave with the original launch's controls and settings. */
+	fun launchAutosave(context: Context, session: AndroidAutosave.Session) {
+		launchRequest(context, LaunchRequest.Autosave(session.stateFile.absolutePath, session.launchArgs))
 	}
 
 	/**

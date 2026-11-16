@@ -480,7 +480,7 @@ fun LibraryScreen(
 		val session = autosave ?: return
 		if (launchBusy) return
 		scope.launchGuarded(launchGuard) {
-			runCatching { EmulatorLauncher.launchAutosave(context, session.stateFile.absolutePath) }
+			runCatching { EmulatorLauncher.launchAutosave(context, session) }
 				.onFailure {
 					snackbarHostState.showSnackbar(actionMessage(ConfigurationActions.Message(R.string.msg_failed_launch_config)))
 				}

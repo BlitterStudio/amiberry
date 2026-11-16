@@ -1,6 +1,7 @@
 package com.blitterstudio.amiberry.data
 
 import android.content.Context
+import org.json.JSONArray
 import java.io.File
 import java.io.FileOutputStream
 import java.util.Properties
@@ -11,13 +12,22 @@ object AndroidAutosave {
 	private const val RECORD_FILE_NAME = ".autosave_session"
 	private const val PATH_KEY = "path"
 	private const val TITLE_KEY = "title"
+	private const val ARGS_KEY = "args"
 
-	data class Session(val stateFile: File, val title: String, val modifiedAt: Long)
+	data class Session(
+		val stateFile: File,
+		val title: String,
+		val modifiedAt: Long,
+		val launchArgs: Array<String>
+	)
 
 	fun load(context: Context): Session? = load(recordFile(context))
 
+	fun record(context: Context, path: String, title: String, launchArgs: Array<String>): Session? =
+		record(recordFile(context), File(path), title, launchArgs)
+
 	fun record(context: Context, path: String, title: String): Session? =
-		record(recordFile(context), File(path), title)
+		record(context, path, title, emptyArray())
 
 	fun discard(context: Context) = discard(recordFile(context))
 
@@ -45,16 +55,18 @@ object AndroidAutosave {
 		return Session(
 			stateFile = stateFile,
 			title = properties.getProperty(TITLE_KEY).orEmpty().ifBlank { "Amiga" },
-			modifiedAt = stateFile.lastModified()
+			modifiedAt = stateFile.lastModified(),
+			launchArgs = launchArgs(properties)
 		)
 	}
 
-	internal fun record(recordFile: File, stateFile: File, title: String): Session? {
+	internal fun record(recordFile: File, stateFile: File, title: String, launchArgs: Array<String> = emptyArray()): Session? {
 		if (!stateFile.isFile || stateFile.length() == 0L) return null
 		val temporary = File(recordFile.parentFile, "${recordFile.name}.partial")
 		val properties = Properties().apply {
 			setProperty(PATH_KEY, stateFile.absolutePath)
 			setProperty(TITLE_KEY, title.ifBlank { "Amiga" })
+			setProperty(ARGS_KEY, JSONArray(launchArgs.toList()).toString())
 		}
 		return try {
 			FileOutputStream(temporary).use { properties.store(it, null) }
@@ -62,11 +74,23 @@ object AndroidAutosave {
 				recordFile.delete()
 				if (!temporary.renameTo(recordFile)) return null
 			}
-			Session(stateFile, properties.getProperty(TITLE_KEY), stateFile.lastModified())
+			Session(
+				stateFile,
+				properties.getProperty(TITLE_KEY),
+				stateFile.lastModified(),
+				launchArgs
+			)
 		} catch (_: Exception) {
 			temporary.delete()
 			null
 		}
+	}
+
+	private fun launchArgs(properties: Properties): Array<String> = try {
+		val array = JSONArray(properties.getProperty(ARGS_KEY, "[]"))
+		Array(array.length()) { index -> array.getString(index) }
+	} catch (_: Exception) {
+		emptyArray()
 	}
 
 	private fun recordedStateFile(recordFile: File): File? {

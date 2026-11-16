@@ -171,10 +171,23 @@ sealed interface LaunchRequest {
 		}
 	}
 
-	/** Restores an Android background autosave with the machine stored in its state. */
-	data class Autosave(val statePath: String) : LaunchRequest {
-		override fun toArgs(): Array<String> =
-			arrayOf("--rescan-roms", "--statefile", statePath, "-G")
+	/** Restores a background autosave with the original launch's controls and settings. */
+	data class Autosave(val statePath: String, val launchArgs: Array<String>) : LaunchRequest {
+		override fun toArgs(): Array<String> {
+			val args = mutableListOf<String>()
+			var index = 0
+			while (index < launchArgs.size) {
+				if (launchArgs[index] == "--statefile") {
+					index += 2
+					continue
+				}
+				args.add(launchArgs[index++])
+			}
+			if (!args.contains("--rescan-roms")) args.add(0, "--rescan-roms")
+			if (!args.contains("-G")) args.add("-G")
+			args.addAll(listOf("--statefile", statePath))
+			return args.toTypedArray()
+		}
 	}
 
 	data class SavedConfig(

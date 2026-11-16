@@ -85,12 +85,18 @@ class EmulatorLauncherTest {
 	}
 
 	@Test
-	fun `autosave launch restores the saved machine as a tracked session`() {
-		val request = LaunchRequest.Autosave("/states/Autosave.uss")
+	fun `autosave launch restores the saved machine and its original controls`() {
+		val request = LaunchRequest.Autosave(
+			"/states/Autosave.uss",
+			arrayOf("--config", "/configs/game.uae", "--gfx_filter", "shader", "-G")
+		)
 
 		assertTrue(request.trackSession)
 		assertArrayEquals(
-			arrayOf("--rescan-roms", "--statefile", "/states/Autosave.uss", "-G"),
+			arrayOf(
+				"--rescan-roms", "--config", "/configs/game.uae", "--gfx_filter", "shader",
+				"-G", "--statefile", "/states/Autosave.uss"
+			),
 			request.toArgs()
 		)
 	}
