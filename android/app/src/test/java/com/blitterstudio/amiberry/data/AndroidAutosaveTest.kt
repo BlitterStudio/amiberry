@@ -40,7 +40,7 @@ class AndroidAutosaveTest {
 		)
 		config.writeText("joyport0=joy1")
 		val loaded = AndroidAutosave.load(record)
-		val snapshot = requireNotNull(state.parentFile).resolve("${state.name}.config")
+		val snapshot = requireNotNull(state.parentFile).resolve("${state.name}.uae")
 
 		assertTrue(snapshot.isFile)
 		assertEquals("joyport0=mouse", snapshot.readText())

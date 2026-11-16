@@ -9,7 +9,7 @@ import java.util.Properties
 /** The state and metadata kept when Android backgrounds an emulation. */
 object AndroidAutosave {
 	const val STATE_FILE_NAME = "Autosave.uss"
-	private const val CONFIG_SUFFIX = ".config"
+	private const val CONFIG_SUFFIX = ".uae"
 	private const val RECORD_FILE_NAME = ".autosave_session"
 	private const val PATH_KEY = "path"
 	private const val TITLE_KEY = "title"

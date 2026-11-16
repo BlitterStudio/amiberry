@@ -6162,7 +6162,7 @@ void target_quit()
 			autosave += AMIBERRY_AUTOSAVE_STATE_NAME;
 			std::remove(autosave.c_str());
 			std::remove((autosave + ".partial").c_str());
-			std::remove((autosave + ".config").c_str());
+			std::remove((autosave + ".uae").c_str());
 		}
 	}
 	// Write a clean-exit marker so the Kotlin launcher knows this was
