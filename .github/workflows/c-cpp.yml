@@ -1675,33 +1675,23 @@ jobs:
           SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
           SIGNPATH_ORGANIZATION_ID: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
           SIGNPATH_PROJECT_SLUG: ${{ vars.SIGNPATH_PROJECT_SLUG }}
-          SIGNPATH_TEST_SIGNING_POLICY_SLUG: ${{ vars.SIGNPATH_TEST_SIGNING_POLICY_SLUG || vars.SIGNPATH_SIGNING_POLICY_SLUG }}
           SIGNPATH_RELEASE_SIGNING_POLICY_SLUG: ${{ vars.SIGNPATH_RELEASE_SIGNING_POLICY_SLUG }}
           SIGNPATH_ARTIFACT_CONFIGURATION_SLUG: ${{ vars.SIGNPATH_ARTIFACT_CONFIGURATION_SLUG }}
         run: |
-          if ($env:GITHUB_EVENT_NAME -eq "pull_request") {
+          # Only release tags are signed. SignPath counts every uploaded
+          # artifact against a yearly size quota, and test-signing each
+          # master push used it up in November 2026.
+          if ($env:GITHUB_REF_TYPE -ne "tag") {
             "enabled=false" >> $env:GITHUB_OUTPUT
-            Write-Host "SignPath disabled for pull_request events."
+            Write-Host "SignPath signing runs for release tags only."
             exit 0
-          }
-
-          $isReleaseTag = $env:GITHUB_REF_TYPE -eq "tag"
-          if ($isReleaseTag) {
-            $policyKind = "release"
-            $signingPolicySlug = $env:SIGNPATH_RELEASE_SIGNING_POLICY_SLUG
-            $signingPolicySetting = "SIGNPATH_RELEASE_SIGNING_POLICY_SLUG"
-            $waitTimeoutSeconds = "5400"
-          } else {
-            $policyKind = "test"
-            $signingPolicySlug = $env:SIGNPATH_TEST_SIGNING_POLICY_SLUG
-            $signingPolicySetting = "SIGNPATH_TEST_SIGNING_POLICY_SLUG (or legacy SIGNPATH_SIGNING_POLICY_SLUG)"
-            $waitTimeoutSeconds = "1200"
           }
 
           $required = [ordered]@{
             SIGNPATH_API_TOKEN = $env:SIGNPATH_API_TOKEN
             SIGNPATH_ORGANIZATION_ID = $env:SIGNPATH_ORGANIZATION_ID
             SIGNPATH_PROJECT_SLUG = $env:SIGNPATH_PROJECT_SLUG
+            SIGNPATH_RELEASE_SIGNING_POLICY_SLUG = $env:SIGNPATH_RELEASE_SIGNING_POLICY_SLUG
             SIGNPATH_ARTIFACT_CONFIGURATION_SLUG = $env:SIGNPATH_ARTIFACT_CONFIGURATION_SLUG
             AMIBERRY_PRODUCT_VERSION = $env:AMIBERRY_PRODUCT_VERSION
           }
@@ -1711,26 +1701,17 @@ jobs:
               $missing += $item.Key
             }
           }
-          if ([string]::IsNullOrWhiteSpace($signingPolicySlug)) {
-            $missing += $signingPolicySetting
-          }
           $missing = $missing | Sort-Object
 
           if ($missing.Count -gt 0) {
-            if ($isReleaseTag) {
-              throw "SignPath release signing is required for release tags, but the following settings are missing: $($missing -join ', ')"
-            }
-            "enabled=false" >> $env:GITHUB_OUTPUT
-            Write-Host "SignPath disabled because the following settings are missing: $($missing -join ', ')"
-            exit 0
+            throw "SignPath release signing is required for release tags, but the following settings are missing: $($missing -join ', ')"
           }
 
           "enabled=true" >> $env:GITHUB_OUTPUT
-          "signing-policy-slug=$signingPolicySlug" >> $env:GITHUB_OUTPUT
-          "policy-kind=$policyKind" >> $env:GITHUB_OUTPUT
-          "wait-timeout-seconds=$waitTimeoutSeconds" >> $env:GITHUB_OUTPUT
+          "signing-policy-slug=$($env:SIGNPATH_RELEASE_SIGNING_POLICY_SLUG)" >> $env:GITHUB_OUTPUT
+          "wait-timeout-seconds=5400" >> $env:GITHUB_OUTPUT
           "product-version=$($env:AMIBERRY_PRODUCT_VERSION)" >> $env:GITHUB_OUTPUT
-          Write-Host "SignPath $policyKind signing enabled with policy '$signingPolicySlug'."
+          Write-Host "SignPath release signing enabled with policy '$($env:SIGNPATH_RELEASE_SIGNING_POLICY_SLUG)'."
 
       - name: Upload unsigned Windows artifacts for SignPath
         if: steps.signpath-config.outputs.enabled == 'true'
@@ -2135,33 +2116,23 @@ jobs:
           SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
           SIGNPATH_ORGANIZATION_ID: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
           SIGNPATH_PROJECT_SLUG: ${{ vars.SIGNPATH_PROJECT_SLUG }}
-          SIGNPATH_TEST_SIGNING_POLICY_SLUG: ${{ vars.SIGNPATH_TEST_SIGNING_POLICY_SLUG || vars.SIGNPATH_SIGNING_POLICY_SLUG }}
           SIGNPATH_RELEASE_SIGNING_POLICY_SLUG: ${{ vars.SIGNPATH_RELEASE_SIGNING_POLICY_SLUG }}
           SIGNPATH_ARTIFACT_CONFIGURATION_SLUG: ${{ vars.SIGNPATH_ARTIFACT_CONFIGURATION_SLUG }}
         run: |
-          if ($env:GITHUB_EVENT_NAME -eq "pull_request") {
+          # Only release tags are signed. SignPath counts every uploaded
+          # artifact against a yearly size quota, and test-signing each
+          # master push used it up in November 2026.
+          if ($env:GITHUB_REF_TYPE -ne "tag") {
             "enabled=false" >> $env:GITHUB_OUTPUT
-            Write-Host "SignPath disabled for pull_request events."
+            Write-Host "SignPath signing runs for release tags only."
             exit 0
-          }
-
-          $isReleaseTag = $env:GITHUB_REF_TYPE -eq "tag"
-          if ($isReleaseTag) {
-            $policyKind = "release"
-            $signingPolicySlug = $env:SIGNPATH_RELEASE_SIGNING_POLICY_SLUG
-            $signingPolicySetting = "SIGNPATH_RELEASE_SIGNING_POLICY_SLUG"
-            $waitTimeoutSeconds = "5400"
-          } else {
-            $policyKind = "test"
-            $signingPolicySlug = $env:SIGNPATH_TEST_SIGNING_POLICY_SLUG
-            $signingPolicySetting = "SIGNPATH_TEST_SIGNING_POLICY_SLUG (or legacy SIGNPATH_SIGNING_POLICY_SLUG)"
-            $waitTimeoutSeconds = "1200"
           }
 
           $required = [ordered]@{
             SIGNPATH_API_TOKEN = $env:SIGNPATH_API_TOKEN
             SIGNPATH_ORGANIZATION_ID = $env:SIGNPATH_ORGANIZATION_ID
             SIGNPATH_PROJECT_SLUG = $env:SIGNPATH_PROJECT_SLUG
+            SIGNPATH_RELEASE_SIGNING_POLICY_SLUG = $env:SIGNPATH_RELEASE_SIGNING_POLICY_SLUG
             SIGNPATH_ARTIFACT_CONFIGURATION_SLUG = $env:SIGNPATH_ARTIFACT_CONFIGURATION_SLUG
             AMIBERRY_PRODUCT_VERSION = $env:AMIBERRY_PRODUCT_VERSION
           }
@@ -2171,26 +2142,17 @@ jobs:
               $missing += $item.Key
             }
           }
-          if ([string]::IsNullOrWhiteSpace($signingPolicySlug)) {
-            $missing += $signingPolicySetting
-          }
           $missing = $missing | Sort-Object
 
           if ($missing.Count -gt 0) {
-            if ($isReleaseTag) {
-              throw "SignPath release signing is required for release tags, but the following settings are missing: $($missing -join ', ')"
-            }
-            "enabled=false" >> $env:GITHUB_OUTPUT
-            Write-Host "SignPath disabled because the following settings are missing: $($missing -join ', ')"
-            exit 0
+            throw "SignPath release signing is required for release tags, but the following settings are missing: $($missing -join ', ')"
           }
 
           "enabled=true" >> $env:GITHUB_OUTPUT
-          "signing-policy-slug=$signingPolicySlug" >> $env:GITHUB_OUTPUT
-          "policy-kind=$policyKind" >> $env:GITHUB_OUTPUT
-          "wait-timeout-seconds=$waitTimeoutSeconds" >> $env:GITHUB_OUTPUT
+          "signing-policy-slug=$($env:SIGNPATH_RELEASE_SIGNING_POLICY_SLUG)" >> $env:GITHUB_OUTPUT
+          "wait-timeout-seconds=5400" >> $env:GITHUB_OUTPUT
           "product-version=$($env:AMIBERRY_PRODUCT_VERSION)" >> $env:GITHUB_OUTPUT
-          Write-Host "SignPath $policyKind signing enabled with policy '$signingPolicySlug'."
+          Write-Host "SignPath release signing enabled with policy '$($env:SIGNPATH_RELEASE_SIGNING_POLICY_SLUG)'."
 
       - name: Upload unsigned Windows artifacts for SignPath
         if: steps.signpath-config.outputs.enabled == 'true'
