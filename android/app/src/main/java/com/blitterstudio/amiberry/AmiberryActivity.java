@@ -136,8 +136,11 @@ public class AmiberryActivity extends SDLActivity {
 		}
 		try {
 			String[] autosave = OverlayNative.autosave();
-			if (autosave != null && autosave.length == 2) {
-				AndroidAutosave.INSTANCE.record(this, autosave[0], autosave[1], getArguments());
+			if (autosave != null && autosave.length >= 2) {
+				AndroidAutosave.INSTANCE.record(
+					this, autosave[0], autosave[1], getArguments(),
+					java.util.Arrays.copyOfRange(autosave, 2, autosave.length)
+				);
 				autosaveRequested = true;
 			}
 		} catch (LinkageError | RuntimeException ignored) {
@@ -161,6 +164,7 @@ public class AmiberryActivity extends SDLActivity {
 		}
 		super.onWindowFocusChanged(hasFocus);
 		if (hasFocus) {
+			autosaveRequested = false;
 			enterImmersiveMode();
 		}
 		if (overlay != null) {

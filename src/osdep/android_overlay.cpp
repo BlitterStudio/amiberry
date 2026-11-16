@@ -280,6 +280,7 @@ namespace {
 struct autosave_result {
 	std::string path;
 	std::string title;
+	std::vector<std::string> slot_sources;
 };
 
 std::string autosave_title()
@@ -334,7 +335,19 @@ autosave_result save_android_autosave()
 		std::remove(partial.c_str());
 		return {};
 	}
-	return {path, autosave_title()};
+	return {
+		path,
+		autosave_title(),
+		{
+			get_savestate_folder(),
+			get_screenshot_path(),
+			currprefs.floppyslots[0].df,
+			currprefs.cdslots[0].inuse ? currprefs.cdslots[0].name : "",
+			whdload_prefs.whdload_filename,
+			last_active_config,
+			currprefs.description,
+		}
+	};
 }
 
 } // namespace
@@ -691,7 +704,9 @@ JNIEXPORT jobjectArray JNICALL OVERLAY_JNI(autosave)(JNIEnv* env, jclass)
 	const autosave_result saved = save_android_autosave();
 	if (saved.path.empty())
 		return nullptr;
-	return to_java(env, {saved.path, saved.title});
+	std::vector<std::string> fields{saved.path, saved.title};
+	fields.insert(fields.end(), saved.slot_sources.begin(), saved.slot_sources.end());
+	return to_java(env, fields);
 }
 
 JNIEXPORT jlong JNICALL OVERLAY_JNI(saveState)(JNIEnv* env, jclass, jstring path)

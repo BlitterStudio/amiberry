@@ -14,21 +14,28 @@ object AndroidAutosave {
 	private const val PATH_KEY = "path"
 	private const val TITLE_KEY = "title"
 	private const val ARGS_KEY = "args"
+	private const val SLOT_SOURCES_KEY = "slotSources"
 
 	data class Session(
 		val stateFile: File,
 		val title: String,
 		val modifiedAt: Long,
-		val launchArgs: Array<String>
+		val launchArgs: Array<String>,
+		val slotSources: Array<String>
 	)
 
 	fun load(context: Context): Session? = load(recordFile(context))
 
-	fun record(context: Context, path: String, title: String, launchArgs: Array<String>): Session? =
-		record(recordFile(context), File(path), title, launchArgs)
+	fun record(
+		context: Context,
+		path: String,
+		title: String,
+		launchArgs: Array<String>,
+		slotSources: Array<String>
+	): Session? = record(recordFile(context), File(path), title, launchArgs, slotSources)
 
 	fun record(context: Context, path: String, title: String): Session? =
-		record(context, path, title, emptyArray())
+		record(context, path, title, emptyArray(), emptyArray())
 
 	fun discard(context: Context) = discard(recordFile(context))
 
@@ -58,11 +65,18 @@ object AndroidAutosave {
 			stateFile = stateFile,
 			title = properties.getProperty(TITLE_KEY).orEmpty().ifBlank { "Amiga" },
 			modifiedAt = stateFile.lastModified(),
-			launchArgs = launchArgs(properties)
+			launchArgs = launchArgs(properties),
+			slotSources = slotSources(properties)
 		)
 	}
 
-	internal fun record(recordFile: File, stateFile: File, title: String, launchArgs: Array<String> = emptyArray()): Session? {
+	internal fun record(
+		recordFile: File,
+		stateFile: File,
+		title: String,
+		launchArgs: Array<String> = emptyArray(),
+		slotSources: Array<String> = emptyArray()
+	): Session? {
 		if (!stateFile.isFile || stateFile.length() == 0L) return null
 		val savedArgs = snapshotLaunchArgs(stateFile, launchArgs)
 		val temporary = File(recordFile.parentFile, "${recordFile.name}.partial")
@@ -70,6 +84,7 @@ object AndroidAutosave {
 			setProperty(PATH_KEY, stateFile.absolutePath)
 			setProperty(TITLE_KEY, title.ifBlank { "Amiga" })
 			setProperty(ARGS_KEY, JSONArray(savedArgs.toList()).toString())
+			setProperty(SLOT_SOURCES_KEY, JSONArray(slotSources.toList()).toString())
 		}
 		return try {
 			FileOutputStream(temporary).use { properties.store(it, null) }
@@ -81,7 +96,8 @@ object AndroidAutosave {
 				stateFile,
 				properties.getProperty(TITLE_KEY),
 				stateFile.lastModified(),
-				savedArgs
+				savedArgs,
+				slotSources
 			)
 		} catch (_: Exception) {
 			temporary.delete()
@@ -125,6 +141,13 @@ object AndroidAutosave {
 
 	private fun launchArgs(properties: Properties): Array<String> = try {
 		val array = JSONArray(properties.getProperty(ARGS_KEY, "[]"))
+		Array(array.length()) { index -> array.getString(index) }
+	} catch (_: Exception) {
+		emptyArray()
+	}
+
+	private fun slotSources(properties: Properties): Array<String> = try {
+		val array = JSONArray(properties.getProperty(SLOT_SOURCES_KEY, "[]"))
 		Array(array.length()) { index -> array.getString(index) }
 	} catch (_: Exception) {
 		emptyArray()

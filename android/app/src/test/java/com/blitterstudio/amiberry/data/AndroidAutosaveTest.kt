@@ -52,6 +52,20 @@ class AndroidAutosaveTest {
 	}
 
 	@Test
+	fun `recorded autosave keeps original state slot identity`() {
+		val state = tempDir.newFile(AndroidAutosave.STATE_FILE_NAME).apply { writeText("state") }
+		val record = tempDir.newFile("session")
+		val sources = arrayOf(
+			"/states", "/screenshots", "/games/Lotus2.adf", "", "",
+			"Lotus 2", "Amiga 500"
+		)
+
+		AndroidAutosave.record(record, state, "Lotus 2", emptyArray(), sources)
+
+		assertTrue(sources.contentEquals(AndroidAutosave.load(record)?.slotSources))
+	}
+
+	@Test
 	fun `missing autosave is not offered and its record is removed`() {
 		val record = tempDir.newFile("session")
 		val missing = tempDir.root.resolve(AndroidAutosave.STATE_FILE_NAME)
