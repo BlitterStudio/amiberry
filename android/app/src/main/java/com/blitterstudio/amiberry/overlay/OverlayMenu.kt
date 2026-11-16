@@ -12,6 +12,8 @@ sealed interface MediaTarget {
 sealed interface ConfirmAction {
 	data object Reset : ConfirmAction
 	data object HardReset : ConfirmAction
+	data object ResetWithChanges : ConfirmAction
+	data object RestartWithChanges : ConfirmAction
 	data object Quit : ConfirmAction
 	/** Saving over the state in a used slot. */
 	data class Overwrite(val slot: SlotState) : ConfirmAction
@@ -25,6 +27,7 @@ sealed interface OverlayPage {
 	data object States : OverlayPage
 	data object Controls : OverlayPage
 	data object Settings : OverlayPage
+	data object AllSettings : OverlayPage
 	data class Confirm(val action: ConfirmAction) : OverlayPage
 }
 
@@ -83,8 +86,11 @@ object OverlayKeys {
 	const val STATES = "states"
 	const val CONTROLS = "controls"
 	const val SETTINGS = "settings"
+	const val ALL_SETTINGS = "all_settings"
 	const val RESET = "reset"
 	const val HARD_RESET = "hard_reset"
+	const val RESET_WITH_CHANGES = "reset_with_changes"
+	const val RESTART_WITH_CHANGES = "restart_with_changes"
 	const val QUIT = "quit"
 	const val SWAP_PORTS = "swap_ports"
 

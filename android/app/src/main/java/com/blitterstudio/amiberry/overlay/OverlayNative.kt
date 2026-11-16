@@ -27,6 +27,11 @@ object OverlayNative {
 	const val RESULT_FAILED = 2
 	const val RESULT_UNKNOWN = 3
 
+	/** [applySettings] classes (amiberry_apply_class). */
+	const val APPLY_LIVE = 0
+	const val APPLY_RESET = 1
+	const val APPLY_RESTART = 2
+
 	/** [remoteKey] buttons: the port 2 joystick's directions and fire. */
 	const val REMOTE_UP = 1
 	const val REMOTE_DOWN = 2
@@ -93,8 +98,10 @@ object OverlayNative {
 	@JvmStatic external fun readSettings(ids: Array<String>): Array<String>?
 	/** The choices offered now as value, label pairs. */
 	@JvmStatic external fun settingChoices(id: String): Array<String>?
-	/** Sets and commits options together; the apply class, -1 when one was refused. */
+	/** Sets and commits options together without applying them; the apply class, -1 when one was refused. */
 	@JvmStatic external fun changeSettings(ids: Array<String>, values: Array<String>): Int
+	/** Applies the committed pending configuration at [apply]'s class. */
+	@JvmStatic external fun applySettings(apply: Int): Long
 	/** What state slots are named after, as [StateNameSources.parse] reads it. */
 	@JvmStatic external fun stateNameSources(): Array<String>?
 }

@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.selection.toggleable
@@ -44,6 +45,7 @@ import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.SportsEsports
 import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.LinearProgressIndicator
@@ -52,6 +54,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -59,7 +62,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -83,11 +88,14 @@ import com.blitterstudio.amiberry.data.model.SettingsSchema
 import com.blitterstudio.amiberry.ui.components.settings.SchemaChoiceRow
 import com.blitterstudio.amiberry.ui.components.settings.SchemaLevelRow
 import com.blitterstudio.amiberry.ui.components.settings.SchemaNumberRow
+import com.blitterstudio.amiberry.ui.components.settings.SchemaSwitchRow
 import com.blitterstudio.amiberry.ui.components.settings.settingsSchema
 import com.blitterstudio.amiberry.ui.dpadFocusIndicator
 import com.blitterstudio.amiberry.ui.screens.settings.SettingsGroups
+import com.blitterstudio.amiberry.ui.screens.settings.SettingsPage
 import java.text.DateFormat
 import java.util.Date
+import kotlin.math.roundToInt
 
 /**
  * The in-emulation menu: a panel over the paused emulation's last frame.
@@ -157,7 +165,11 @@ private fun Notice(notice: OverlayNotice, modifier: Modifier) {
 			.semantics { liveRegion = LiveRegionMode.Polite }
 	) {
 		Text(
-			text = if (notice.slot != null) stringResource(notice.text, notice.slot) else stringResource(notice.text),
+			text = when {
+				notice.detail != null -> stringResource(notice.text, notice.detail)
+				notice.slot != null -> stringResource(notice.text, notice.slot)
+				else -> stringResource(notice.text)
+			},
 			style = MaterialTheme.typography.bodyMedium,
 			modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
 		)
@@ -192,9 +204,12 @@ private fun Header(viewModel: OverlayViewModel) {
 		OverlayPage.States -> stringResource(R.string.overlay_states)
 		OverlayPage.Controls -> stringResource(R.string.overlay_controls)
 		OverlayPage.Settings -> stringResource(R.string.overlay_settings)
+		OverlayPage.AllSettings -> stringResource(R.string.overlay_all_settings)
 		is OverlayPage.Confirm -> when (val action = page.action) {
 			ConfirmAction.Reset -> stringResource(R.string.overlay_confirm_reset_title)
 			ConfirmAction.HardReset -> stringResource(R.string.overlay_confirm_hard_reset_title)
+			ConfirmAction.ResetWithChanges -> stringResource(R.string.overlay_confirm_reset_with_changes_title)
+			ConfirmAction.RestartWithChanges -> stringResource(R.string.overlay_confirm_restart_with_changes_title)
 			ConfirmAction.Quit -> stringResource(R.string.overlay_confirm_quit_title)
 			is ConfirmAction.Overwrite -> stringResource(R.string.overlay_confirm_overwrite_title, action.slot.paths.slot)
 		}
@@ -234,6 +249,7 @@ private fun PageContent(viewModel: OverlayViewModel, focus: FocusTargets) {
 		OverlayPage.States -> ScrollingPage { StatesPage(viewModel, focus) }
 		OverlayPage.Controls -> ScrollingPage { ControlsPage(viewModel, focus) }
 		OverlayPage.Settings -> ScrollingPage { SettingsPage(viewModel, focus) }
+		OverlayPage.AllSettings -> AllSettingsPage(viewModel, focus)
 		is OverlayPage.Confirm -> ScrollingPage { ConfirmPage(viewModel, page.action, focus) }
 	}
 }
@@ -309,6 +325,17 @@ private fun HomePage(viewModel: OverlayViewModel, focus: FocusTargets) {
 		OverlayKeys.CONTROLS, focus, { viewModel.open(OverlayPage.Controls, OverlayKeys.CONTROLS) })
 	MenuItem(Icons.Filled.Tune, stringResource(R.string.overlay_settings), stringResource(R.string.overlay_settings_help),
 		OverlayKeys.SETTINGS, focus, { viewModel.open(OverlayPage.Settings, OverlayKeys.SETTINGS) })
+	MenuItem(Icons.Filled.Tune, stringResource(R.string.overlay_all_settings), stringResource(R.string.overlay_all_settings_help),
+		OverlayKeys.ALL_SETTINGS, focus, { viewModel.open(OverlayPage.AllSettings, OverlayKeys.ALL_SETTINGS) })
+	if (viewModel.pendingApply == PendingApply.RESTART) {
+		MenuItem(Icons.Filled.RestartAlt, stringResource(R.string.overlay_restart_with_changes), stringResource(R.string.overlay_restart_with_changes_help),
+			OverlayKeys.RESTART_WITH_CHANGES, focus, { viewModel.open(OverlayPage.Confirm(ConfirmAction.RestartWithChanges), OverlayKeys.RESTART_WITH_CHANGES) },
+			emphasis = true)
+	} else if (viewModel.pendingApply == PendingApply.RESET) {
+		MenuItem(Icons.Filled.RestartAlt, stringResource(R.string.overlay_reset_with_changes), stringResource(R.string.overlay_reset_with_changes_help),
+			OverlayKeys.RESET_WITH_CHANGES, focus, { viewModel.open(OverlayPage.Confirm(ConfirmAction.ResetWithChanges), OverlayKeys.RESET_WITH_CHANGES) },
+			emphasis = true)
+	}
 	HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 	MenuItem(Icons.Filled.RestartAlt, stringResource(R.string.overlay_reset), stringResource(R.string.overlay_reset_help),
 		OverlayKeys.RESET, focus, { viewModel.open(OverlayPage.Confirm(ConfirmAction.Reset), OverlayKeys.RESET) })
@@ -528,16 +555,39 @@ private fun StatesPage(viewModel: OverlayViewModel, focus: FocusTargets) {
 		Text(stringResource(R.string.overlay_states_unavailable), modifier = Modifier.padding(8.dp))
 		return
 	}
+	var saveName by remember { mutableStateOf("") }
+	var enterName by remember { mutableStateOf(false) }
+	var showNamed by remember { mutableStateOf(false) }
 	val format = remember { DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT) }
 	// Saving or loading: the buttons wait for it.
 	if (viewModel.busy) LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+	Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+		Button(
+			onClick = { enterName = true },
+			modifier = Modifier.weight(1f).focusRequester(focus.requester("save_named")).dpadFocusIndicator()
+		) { Text(stringResource(R.string.overlay_save_state_as)) }
+		OutlinedButton(
+			onClick = { showNamed = !showNamed },
+			modifier = Modifier.weight(1f).focusRequester(focus.requester("load_named")).dpadFocusIndicator()
+		) { Text(stringResource(R.string.overlay_load_state)) }
+	}
+	if (showNamed) {
+		Text(stringResource(R.string.overlay_named_states), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 8.dp))
+		if (viewModel.namedStates.isEmpty()) {
+			Note(stringResource(R.string.overlay_named_states_empty))
+		} else {
+			viewModel.namedStates.forEach { state ->
+				NamedStateRow(state, format, viewModel, focus)
+			}
+		}
+		HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+	}
 	viewModel.slots.forEach { slot ->
 		val number = slot.paths.slot
 		Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 6.dp)) {
 			Box(
 				contentAlignment = Alignment.Center,
-				modifier = Modifier
-					.size(width = 112.dp, height = 84.dp)
+				modifier = Modifier.size(width = 112.dp, height = 84.dp)
 					.background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp))
 			) {
 				val thumbnail = slot.thumbnail
@@ -565,26 +615,67 @@ private fun StatesPage(viewModel: OverlayViewModel, focus: FocusTargets) {
 				Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
 					Button(
 						onClick = { viewModel.requestSave(slot) },
-						// Busy ignores presses rather than disabling: a disabled
-						// button drops the D-pad focus.
-						modifier = Modifier
-							.weight(1f)
-							.focusRequester(focus.requester(OverlayKeys.save(number)))
-							.dpadFocusIndicator()
-					) {
-						Text(stringResource(R.string.overlay_save))
-					}
+						modifier = Modifier.weight(1f).focusRequester(focus.requester(OverlayKeys.save(number))).dpadFocusIndicator()
+					) { Text(stringResource(R.string.overlay_save)) }
 					OutlinedButton(
 						onClick = { viewModel.loadSlot(slot) },
 						enabled = slot.savedAt != null,
-						modifier = Modifier
-							.weight(1f)
-							.dpadFocusIndicator()
-					) {
-						Text(stringResource(R.string.overlay_load))
-					}
+						modifier = Modifier.weight(1f).dpadFocusIndicator()
+					) { Text(stringResource(R.string.overlay_load)) }
 				}
 			}
+		}
+	}
+	if (enterName) {
+		AlertDialog(
+			onDismissRequest = { enterName = false },
+			title = { Text(stringResource(R.string.overlay_save_state_as)) },
+			text = {
+				OutlinedTextField(
+					value = saveName,
+					onValueChange = { saveName = it },
+					label = { Text(stringResource(R.string.overlay_state_name)) },
+					singleLine = true
+				)
+			},
+			confirmButton = {
+				Button(onClick = {
+					viewModel.saveNamedState(saveName)
+					enterName = false
+				}, enabled = saveName.isNotBlank()) { Text(stringResource(R.string.overlay_save)) }
+			},
+			dismissButton = { OutlinedButton(onClick = { enterName = false }) { Text(stringResource(R.string.overlay_cancel)) } }
+		)
+	}
+}
+
+@Composable
+private fun NamedStateRow(state: NamedState, format: DateFormat, viewModel: OverlayViewModel, focus: FocusTargets) {
+	Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 6.dp)) {
+		Box(
+			contentAlignment = Alignment.Center,
+			modifier = Modifier.size(width = 112.dp, height = 84.dp)
+				.background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp))
+		) {
+			if (state.thumbnail != null) {
+				Image(
+					bitmap = state.thumbnail,
+					contentDescription = stringResource(R.string.overlay_named_state_thumbnail, state.paths.name),
+					contentScale = ContentScale.Fit,
+					modifier = Modifier.fillMaxSize()
+				)
+			} else {
+				Icon(Icons.Filled.History, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+			}
+		}
+		Spacer(modifier = Modifier.width(12.dp))
+		Column(modifier = Modifier.weight(1f)) {
+			Text(state.paths.name, style = MaterialTheme.typography.titleMedium)
+			Text(stringResource(R.string.overlay_slot_saved_at, format.format(Date(state.savedAt))), style = MaterialTheme.typography.bodySmall)
+			OutlinedButton(
+				onClick = { viewModel.loadNamedState(state) },
+				modifier = Modifier.fillMaxWidth().focusRequester(focus.requester("load_${state.paths.name}")).dpadFocusIndicator()
+			) { Text(stringResource(R.string.overlay_load)) }
 		}
 	}
 }
@@ -782,12 +873,83 @@ private fun SettingsPage(viewModel: OverlayViewModel, focus: FocusTargets) {
 }
 
 @Composable
+private fun AllSettingsPage(viewModel: OverlayViewModel, focus: FocusTargets) {
+	val schema = settingsSchema()
+	if (schema == null || viewModel.settings.isEmpty()) {
+		Text(stringResource(R.string.overlay_settings_unavailable), modifier = Modifier.padding(8.dp))
+		return
+	}
+	val groups = SettingsGroups.groupsOf(SettingsPage.AllSettings, schema)
+		.map { group -> group to OverlaySettings.allSettings(schema).filter { it.group == group } }
+		.filter { (_, options) -> options.isNotEmpty() }
+	LazyColumn(
+		modifier = Modifier.fillMaxWidth().heightIn(max = 640.dp),
+		verticalArrangement = Arrangement.spacedBy(4.dp)
+	) {
+		item { Note(stringResource(R.string.overlay_all_settings_note)) }
+		groups.forEach { (group, options) ->
+			item(key = "group-$group") {
+				Text(
+					stringResource(SettingsGroups.titleRes(group)),
+					style = MaterialTheme.typography.titleMedium,
+					modifier = Modifier.padding(start = 28.dp, top = 12.dp, bottom = 4.dp)
+				)
+			}
+			items(options, key = { it.id }) { option ->
+				val state = viewModel.settings[option.id] ?: return@items
+				val modifier = Modifier.padding(horizontal = 28.dp).focusRequester(focus.requester(option.id))
+				when (SettingsGroups.rowKind(option)) {
+					SettingsGroups.RowKind.Switch -> SchemaSwitchRow(
+						id = option.id,
+						checked = state.value.lowercase() in setOf("true", "yes", "1"),
+						onCheckedChange = { viewModel.change(option.id, it.toString()) },
+						enabled = state.available,
+						option = option,
+						modifier = modifier
+					)
+					SettingsGroups.RowKind.Choice -> SchemaChoiceRow(
+						id = option.id,
+						value = state.value,
+						onSelect = { viewModel.change(option.id, it) },
+						enabled = state.available,
+						choices = viewModel.settingChoices[option.id],
+						option = option,
+						modifier = modifier
+					)
+					SettingsGroups.RowKind.Level -> SchemaLevelRow(
+						id = option.id,
+						stored = (state.value.toDoubleOrNull() ?: option.defaultOnAndroid.toDoubleOrNull() ?: 0.0).roundToInt(),
+						onStoredChange = { viewModel.change(option.id, it.toString()) },
+						enabled = state.available,
+						option = option,
+						modifier = modifier
+					)
+					SettingsGroups.RowKind.Number -> SchemaNumberRow(
+						id = option.id,
+						stored = (state.value.toDoubleOrNull() ?: option.defaultOnAndroid.toDoubleOrNull() ?: 0.0).roundToInt(),
+						onStoredChange = { viewModel.change(option.id, it.toString()) },
+						enabled = state.available,
+						suggestions = SettingsGroups.numberSuggestions(option),
+						accepts = SettingsGroups.numberAccepts(option),
+						option = option,
+						modifier = modifier
+					)
+					null -> Unit
+				}
+			}
+		}
+	}
+}
+
+@Composable
 private fun ConfirmPage(viewModel: OverlayViewModel, action: ConfirmAction, focus: FocusTargets) {
 	val format = remember { DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT) }
 	Text(
 		when (action) {
 			ConfirmAction.Reset -> stringResource(R.string.overlay_confirm_reset_text)
 			ConfirmAction.HardReset -> stringResource(R.string.overlay_confirm_hard_reset_text)
+			ConfirmAction.ResetWithChanges -> stringResource(R.string.overlay_confirm_reset_with_changes_text)
+			ConfirmAction.RestartWithChanges -> stringResource(R.string.overlay_confirm_restart_with_changes_text)
 			ConfirmAction.Quit -> stringResource(R.string.overlay_confirm_quit_text)
 			is ConfirmAction.Overwrite -> stringResource(
 				R.string.overlay_confirm_overwrite_text,
@@ -824,6 +986,8 @@ private fun ConfirmPage(viewModel: OverlayViewModel, action: ConfirmAction, focu
 					when (action) {
 						ConfirmAction.Reset -> R.string.overlay_reset
 						ConfirmAction.HardReset -> R.string.overlay_hard_reset
+						ConfirmAction.ResetWithChanges -> R.string.overlay_reset_with_changes
+						ConfirmAction.RestartWithChanges -> R.string.overlay_restart_with_changes
 						ConfirmAction.Quit -> R.string.overlay_quit
 						is ConfirmAction.Overwrite -> R.string.overlay_overwrite
 					}

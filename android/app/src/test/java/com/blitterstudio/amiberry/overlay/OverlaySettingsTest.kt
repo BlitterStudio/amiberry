@@ -1,6 +1,7 @@
 package com.blitterstudio.amiberry.overlay
 
 import com.blitterstudio.amiberry.data.model.SettingsSchema
+import com.blitterstudio.amiberry.ui.screens.settings.SettingsGroups
 import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
@@ -45,9 +46,23 @@ class OverlaySettingsTest {
 	}
 
 	@Test
-	fun `a bundled option needing a reset is not offered`() {
-		val notLive = bundled.options.values.first { it.apply != "live" }
-		assertTrue(OverlaySettings.offered(bundled, listOf(notLive.id)).isEmpty())
+	fun `all settings includes generic rows but not dedicated pages or hidden rows`() {
+		val ids = OverlaySettings.allSettings(bundled).map { it.id }.toSet()
+		assertTrue("input.joystick_deadzone" in ids)
+		assertTrue("floppy_speed" in ids)
+		assertTrue("chipmem_size" in ids)
+		assertTrue(OverlaySettings.PORTS.none { it in ids })
+		assertTrue(OverlaySettings.CONTROLS.none { it in ids })
+		assertTrue("floppy0" !in ids)
+		assertTrue("floppy0type" !in ids)
+		assertTrue(SettingsGroups.managed.none { it in ids })
+	}
+
+	@Test
+	fun `non-live commits stage the strongest required application`() {
+		assertEquals(PendingApply.RESET, PendingApply.merge(PendingApply.NONE, OverlayNative.APPLY_RESET))
+		assertEquals(PendingApply.RESTART, PendingApply.merge(PendingApply.RESET, OverlayNative.APPLY_RESTART))
+		assertEquals(PendingApply.RESTART, PendingApply.merge(PendingApply.RESTART, OverlayNative.APPLY_LIVE))
 	}
 
 	@Test

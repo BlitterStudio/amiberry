@@ -1,5 +1,6 @@
 package com.blitterstudio.amiberry.overlay
 
+import java.nio.file.Files
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -69,6 +70,30 @@ class StateSlotsTest {
 		val sources = base.copy(stateDir = "/s", screenshotDir = "/p", floppy0 = "/f/disk.adz")
 		assertEquals("/s/disk-1.uss", StateSlots.paths(sources, 1).state)
 		assertEquals("/p/disk-1.png", StateSlots.paths(sources, 1).thumbnail)
+	}
+
+	@Test
+	fun `named state paths are safe and keep their matching screenshot name`() {
+		val paths = StateSlots.namedPaths(base, "  My state/one.uss  ")
+		assertEquals("My state_one_uss", paths.name)
+		assertEquals("/data/Savestates/My state_one_uss.uss", paths.state)
+		assertEquals("/data/Screenshots/My state_one_uss.png", paths.thumbnail)
+	}
+
+	@Test
+	fun `named states list only state files newest first`() {
+		val states = Files.createTempDirectory("amiberry-states").toFile()
+		val screenshots = Files.createTempDirectory("amiberry-screens").toFile()
+		try {
+			val old = states.resolve("old.uss").apply { writeText("old"); setLastModified(1_000) }
+			val newest = states.resolve("new.uss").apply { writeText("new"); setLastModified(2_000) }
+			states.resolve("ignore.txt").writeText("ignore")
+			val sources = base.copy(stateDir = states.path, screenshotDir = screenshots.path)
+			assertEquals(listOf(newest.path, old.path), StateSlots.namedStates(sources).map { it.state })
+		} finally {
+			states.deleteRecursively()
+			screenshots.deleteRecursively()
+		}
 	}
 
 	@Test
