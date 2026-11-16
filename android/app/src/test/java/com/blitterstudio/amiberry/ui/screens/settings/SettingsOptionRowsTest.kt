@@ -70,6 +70,15 @@ class SettingsOptionRowsTest {
 	}
 
 	@Test
+	fun `placed choice rows have schema or custom choices`() {
+		SettingsGroups.byPage.values.flatten().flatMap { it.ids }.forEach { id ->
+			val option = schema.option(id) ?: return@forEach
+			if (option.type == "choice")
+				assertTrue(id, option.choices.isNotEmpty() || id in SettingsOptionRows.customIds)
+		}
+	}
+
+	@Test
 	fun `touch-only rows show only with a touchscreen, which the constraints enforce`() {
 		val settings = EmulatorSettings()
 		assertFalse(SettingsOptionRows.shows("amiberry.onscreen_joystick", settings, hasTouchScreen = false))

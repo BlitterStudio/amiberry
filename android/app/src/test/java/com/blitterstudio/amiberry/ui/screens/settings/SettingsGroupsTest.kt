@@ -190,7 +190,7 @@ class SettingsGroupsTest {
 			listOf(
 				"cpu", "chipset", "memory", "rom",
 				"gfxcard_type,gfxcard_size,gfxcard_options:monitor,gfxcard_options:autoswitch,gfxcard_options:initial,gfxcard_hardware_sprite",
-				"gfxcard_options,rtg_modes,rtg_modes:8bit,rtg_modes:16bit,rtg_modes:24bit,rtg_modes:32bit,gfx_filter_autoscale_rtg,gfx_filter_autoscale_limit_rtg,gfx_backbuffers_rtg,gfxcard_zerocopy,gfxcard_multithread,gfxcard_hardware_vblank,amiberry.rtg_scale_allow,amiberry.rtg_scale_aspect_ratio,amiberry.rtg_vblank,zz9000_net,zz9000_int2,gfx_display_rtg",
+				"gfxcard_options,rtg_modes,rtg_modes:8bit,rtg_modes:16bit,rtg_modes:24bit,rtg_modes:32bit,gfx_filter_autoscale_rtg,gfx_filter_autoscale_limit_rtg,gfx_backbuffers_rtg,gfxcard_zerocopy,gfxcard_multithread,gfxcard_hardware_vblank,amiberry.rtg_scale_allow,amiberry.rtg_scale_aspect_ratio,amiberry.rtg_vblank,zz9000_net,zz9000_int2",
 				"expansions", "pcmcia,ide,scsi_a3000,scsi_a4000t",
 				"cpu_throttle,cpu_multiplier,amiberry.cpu_idle,cpu_threaded,cachesize,compfpu,comp_constjump,comp_flushmode,comp_nf,comp_catchfault,comp_trustbyte,cpu_no_unimplemented,cpu_data_cache,mmu_model,fpu_strict,fpu_softfloat,fpu_no_unimplemented",
 				"waiting_blits,amiberry.multithreaded_denise,keyboard_type,keyboard_nkro,display_optimizations,hvcsync",
@@ -227,7 +227,7 @@ class SettingsGroupsTest {
 		val collapsed = SettingsGroups.byPage.values.flatten().filter { it.collapsed }.map { it.key }
 		assertEquals(
 			listOf(
-				"gfxcard_options,rtg_modes,rtg_modes:8bit,rtg_modes:16bit,rtg_modes:24bit,rtg_modes:32bit,gfx_filter_autoscale_rtg,gfx_filter_autoscale_limit_rtg,gfx_backbuffers_rtg,gfxcard_zerocopy,gfxcard_multithread,gfxcard_hardware_vblank,amiberry.rtg_scale_allow,amiberry.rtg_scale_aspect_ratio,amiberry.rtg_vblank,zz9000_net,zz9000_int2,gfx_display_rtg",
+				"gfxcard_options,rtg_modes,rtg_modes:8bit,rtg_modes:16bit,rtg_modes:24bit,rtg_modes:32bit,gfx_filter_autoscale_rtg,gfx_filter_autoscale_limit_rtg,gfx_backbuffers_rtg,gfxcard_zerocopy,gfxcard_multithread,gfxcard_hardware_vblank,amiberry.rtg_scale_allow,amiberry.rtg_scale_aspect_ratio,amiberry.rtg_vblank,zz9000_net,zz9000_int2",
 				"pcmcia,ide,scsi_a3000,scsi_a4000t",
 				"cpu_throttle,cpu_multiplier,amiberry.cpu_idle,cpu_threaded,cachesize,compfpu,comp_constjump,comp_flushmode,comp_nf,comp_catchfault,comp_trustbyte,cpu_no_unimplemented,cpu_data_cache,mmu_model,fpu_strict,fpu_softfloat,fpu_no_unimplemented",
 				"waiting_blits,amiberry.multithreaded_denise,keyboard_type,keyboard_nkro,display_optimizations,hvcsync",

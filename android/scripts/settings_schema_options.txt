@@ -129,7 +129,6 @@ gfxcard_hardware_vblank
 amiberry.rtg_scale_allow
 amiberry.rtg_scale_aspect_ratio
 amiberry.rtg_vblank
-gfx_display_rtg
 zz9000_net
 zz9000_int2
 # genlock

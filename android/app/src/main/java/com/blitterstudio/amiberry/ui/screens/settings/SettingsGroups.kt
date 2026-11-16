@@ -64,7 +64,7 @@ object SettingsGroups {
 					"gfx_filter_autoscale_limit_rtg", "gfx_backbuffers_rtg", "gfxcard_zerocopy",
 					"gfxcard_multithread", "gfxcard_hardware_vblank", "amiberry.rtg_scale_allow",
 					"amiberry.rtg_scale_aspect_ratio", "amiberry.rtg_vblank", "zz9000_net",
-					"zz9000_int2", "gfx_display_rtg"
+					"zz9000_int2"
 				),
 				collapsed = true
 			),
