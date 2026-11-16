@@ -108,30 +108,50 @@ STATIC_INLINE void do_head_cycles_ce020 (int h)
 }
 #endif
 
+// The 68020 cannot continue executing until read data arrives, so unlike posted
+// writes, internal cycles never overlap a data read (matches real A1200 timing).
+STATIC_INLINE void end_read_ce020(void)
+{
+	regs.ce020startcycle = regs.ce020endcycle;
+}
 STATIC_INLINE uae_u32 get_long_ce020 (uaecptr addr)
 {
-	return mem_access_delay_long_read_ce020 (addr);
+	uae_u32 v = mem_access_delay_long_read_ce020 (addr);
+	end_read_ce020();
+	return v;
 }
 STATIC_INLINE uae_u32 get_word_ce020 (uaecptr addr)
 {
-	return mem_access_delay_word_read_ce020 (addr);
+	uae_u32 v = mem_access_delay_word_read_ce020 (addr);
+	end_read_ce020();
+	return v;
 }
 STATIC_INLINE uae_u32 get_byte_ce020 (uaecptr addr)
 {
-	return mem_access_delay_byte_read_ce020 (addr);
+	uae_u32 v = mem_access_delay_byte_read_ce020 (addr);
+	end_read_ce020();
+	return v;
 }
 
+// A posted write's last clock also overlaps the next instruction (write tail).
+STATIC_INLINE void end_write_ce020(void)
+{
+	regs.ce020startcycle -= cpucycleunit;
+}
 STATIC_INLINE void put_long_ce020 (uaecptr addr, uae_u32 v)
 {
 	mem_access_delay_long_write_ce020 (addr, v);
+	end_write_ce020();
 }
 STATIC_INLINE void put_word_ce020 (uaecptr addr, uae_u32 v)
 {
 	mem_access_delay_word_write_ce020 (addr, v);
+	end_write_ce020();
 }
 STATIC_INLINE void put_byte_ce020 (uaecptr addr, uae_u32 v)
 {
 	mem_access_delay_byte_write_ce020 (addr, v);
+	end_write_ce020();
 }
 
 extern void continue_ce020_prefetch(void);

@@ -4994,6 +4994,17 @@ static void shift_ce(amodes dmode, int size)
 	}
 }
 
+// 68020 LSd #imm,Dn: cache-case clocks from the timing table (4, matching real A1200
+// measurements); the opcode word already charged 2.
+static void shift_imm_ce020(struct instr *curi)
+{
+	if (using_ce020 != 1 || !isreg(curi->dmode) || curi->smode != immi)
+		return;
+	int extra = curi->clocks - 2;
+	if (extra > 0)
+		out("do_cycles_ce020_internal(%d);\n", extra);
+}
+
 // BCHG/BSET/BCLR Dx,Dx or #xx,Dx adds 2 cycles if bit number > 15 
 static void bsetcycles(struct instr *curi)
 {
@@ -8121,6 +8132,11 @@ bccl_not68020:
 			count_readw++;
 		}
 
+		if (using_ce020 == 1) {
+			// 68020 taken DBcc: 6 clocks (cache case) on real A1200 hardware, 7 when the
+			// opcode is longword aligned. The two instruction words already charged 4.
+			out("do_cycles_ce020_internal((oldpc & 2) ? 2 : 3);\n");
+		}
 		fill_prefetch_full_020();
 		returncycles(10);
 		out("}\n");
@@ -8520,6 +8536,7 @@ bccl_not68020:
 		out("}\n");
 		genflags (flag_logical_noclobber, curi->size, "val", "", "");
 		shift_ce (curi->dmode, curi->size);
+		shift_imm_ce020(curi);
 		genastore("val", curi->dmode, "dstreg", curi->size, "data");
 		break;
 	case i_LSL:
@@ -8557,6 +8574,7 @@ bccl_not68020:
 		out("}\n");
 		genflags(flag_logical_noclobber, curi->size, "val", "", "");
 		shift_ce(curi->dmode, curi->size);
+		shift_imm_ce020(curi);
 		genastore("val", curi->dmode, "dstreg", curi->size, "data");
 		break;
 	case i_ROL:

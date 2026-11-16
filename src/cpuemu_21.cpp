@@ -22953,6 +22953,7 @@ void REGPARAM2 op_50c8_21_ff(uae_u32 opcode)
 			return;
 		}
 		if (src) {
+			do_cycles_ce020_internal((oldpc & 2) ? 2 : 3);
 			fill_prefetch_020();
 			return;
 		}
@@ -23904,6 +23905,7 @@ void REGPARAM2 op_51c8_21_ff(uae_u32 opcode)
 			return;
 		}
 		if (src) {
+			do_cycles_ce020_internal((oldpc & 2) ? 2 : 3);
 			fill_prefetch_020();
 			return;
 		}
@@ -24127,6 +24129,7 @@ void REGPARAM2 op_52c8_21_ff(uae_u32 opcode)
 			return;
 		}
 		if (src) {
+			do_cycles_ce020_internal((oldpc & 2) ? 2 : 3);
 			fill_prefetch_020();
 			return;
 		}
@@ -24350,6 +24353,7 @@ void REGPARAM2 op_53c8_21_ff(uae_u32 opcode)
 			return;
 		}
 		if (src) {
+			do_cycles_ce020_internal((oldpc & 2) ? 2 : 3);
 			fill_prefetch_020();
 			return;
 		}
@@ -24573,6 +24577,7 @@ void REGPARAM2 op_54c8_21_ff(uae_u32 opcode)
 			return;
 		}
 		if (src) {
+			do_cycles_ce020_internal((oldpc & 2) ? 2 : 3);
 			fill_prefetch_020();
 			return;
 		}
@@ -24796,6 +24801,7 @@ void REGPARAM2 op_55c8_21_ff(uae_u32 opcode)
 			return;
 		}
 		if (src) {
+			do_cycles_ce020_internal((oldpc & 2) ? 2 : 3);
 			fill_prefetch_020();
 			return;
 		}
@@ -25019,6 +25025,7 @@ void REGPARAM2 op_56c8_21_ff(uae_u32 opcode)
 			return;
 		}
 		if (src) {
+			do_cycles_ce020_internal((oldpc & 2) ? 2 : 3);
 			fill_prefetch_020();
 			return;
 		}
@@ -25242,6 +25249,7 @@ void REGPARAM2 op_57c8_21_ff(uae_u32 opcode)
 			return;
 		}
 		if (src) {
+			do_cycles_ce020_internal((oldpc & 2) ? 2 : 3);
 			fill_prefetch_020();
 			return;
 		}
@@ -25465,6 +25473,7 @@ void REGPARAM2 op_58c8_21_ff(uae_u32 opcode)
 			return;
 		}
 		if (src) {
+			do_cycles_ce020_internal((oldpc & 2) ? 2 : 3);
 			fill_prefetch_020();
 			return;
 		}
@@ -25688,6 +25697,7 @@ void REGPARAM2 op_59c8_21_ff(uae_u32 opcode)
 			return;
 		}
 		if (src) {
+			do_cycles_ce020_internal((oldpc & 2) ? 2 : 3);
 			fill_prefetch_020();
 			return;
 		}
@@ -25911,6 +25921,7 @@ void REGPARAM2 op_5ac8_21_ff(uae_u32 opcode)
 			return;
 		}
 		if (src) {
+			do_cycles_ce020_internal((oldpc & 2) ? 2 : 3);
 			fill_prefetch_020();
 			return;
 		}
@@ -26134,6 +26145,7 @@ void REGPARAM2 op_5bc8_21_ff(uae_u32 opcode)
 			return;
 		}
 		if (src) {
+			do_cycles_ce020_internal((oldpc & 2) ? 2 : 3);
 			fill_prefetch_020();
 			return;
 		}
@@ -26357,6 +26369,7 @@ void REGPARAM2 op_5cc8_21_ff(uae_u32 opcode)
 			return;
 		}
 		if (src) {
+			do_cycles_ce020_internal((oldpc & 2) ? 2 : 3);
 			fill_prefetch_020();
 			return;
 		}
@@ -26580,6 +26593,7 @@ void REGPARAM2 op_5dc8_21_ff(uae_u32 opcode)
 			return;
 		}
 		if (src) {
+			do_cycles_ce020_internal((oldpc & 2) ? 2 : 3);
 			fill_prefetch_020();
 			return;
 		}
@@ -26803,6 +26817,7 @@ void REGPARAM2 op_5ec8_21_ff(uae_u32 opcode)
 			return;
 		}
 		if (src) {
+			do_cycles_ce020_internal((oldpc & 2) ? 2 : 3);
 			fill_prefetch_020();
 			return;
 		}
@@ -27026,6 +27041,7 @@ void REGPARAM2 op_5fc8_21_ff(uae_u32 opcode)
 			return;
 		}
 		if (src) {
+			do_cycles_ce020_internal((oldpc & 2) ? 2 : 3);
 			fill_prefetch_020();
 			return;
 		}
@@ -39467,6 +39483,7 @@ void REGPARAM2 op_e008_21_ff(uae_u32 opcode)
 	}
 	SET_ZFLG(((uae_s8)(val)) == 0);
 	SET_NFLG(((uae_s8)(val)) < 0);
+	do_cycles_ce020_internal(2);
 	regs.irc = get_word_ce020_prefetch_opcode(2);
 	m68k_dreg(regs, dstreg) = (m68k_dreg(regs, dstreg) & ~0xff) | ((val) & 0xff);
 	m68k_incpci(2);
@@ -39756,6 +39773,7 @@ void REGPARAM2 op_e048_21_ff(uae_u32 opcode)
 	}
 	SET_ZFLG(((uae_s16)(val)) == 0);
 	SET_NFLG(((uae_s16)(val)) < 0);
+	do_cycles_ce020_internal(2);
 	regs.irc = get_word_ce020_prefetch_opcode(2);
 	m68k_dreg(regs, dstreg) = (m68k_dreg(regs, dstreg) & ~0xffff) | ((val) & 0xffff);
 	m68k_incpci(2);
@@ -40044,6 +40062,7 @@ void REGPARAM2 op_e088_21_ff(uae_u32 opcode)
 	}
 	SET_ZFLG(((uae_s32)(val)) == 0);
 	SET_NFLG(((uae_s32)(val)) < 0);
+	do_cycles_ce020_internal(2);
 	regs.irc = get_word_ce020_prefetch_opcode(2);
 	m68k_dreg(regs, dstreg) = (val);
 	m68k_incpci(2);
@@ -40520,6 +40539,7 @@ void REGPARAM2 op_e108_21_ff(uae_u32 opcode)
 	}
 	SET_ZFLG(((uae_s8)(val)) == 0);
 	SET_NFLG(((uae_s8)(val)) < 0);
+	do_cycles_ce020_internal(2);
 	regs.irc = get_word_ce020_prefetch_opcode(2);
 	m68k_dreg(regs, dstreg) = (m68k_dreg(regs, dstreg) & ~0xff) | ((val) & 0xff);
 	m68k_incpci(2);
@@ -40807,6 +40827,7 @@ void REGPARAM2 op_e148_21_ff(uae_u32 opcode)
 	}
 	SET_ZFLG(((uae_s16)(val)) == 0);
 	SET_NFLG(((uae_s16)(val)) < 0);
+	do_cycles_ce020_internal(2);
 	regs.irc = get_word_ce020_prefetch_opcode(2);
 	m68k_dreg(regs, dstreg) = (m68k_dreg(regs, dstreg) & ~0xffff) | ((val) & 0xffff);
 	m68k_incpci(2);
@@ -41093,6 +41114,7 @@ void REGPARAM2 op_e188_21_ff(uae_u32 opcode)
 	}
 	SET_ZFLG(((uae_s32)(val)) == 0);
 	SET_NFLG(((uae_s32)(val)) < 0);
+	do_cycles_ce020_internal(2);
 	regs.irc = get_word_ce020_prefetch_opcode(2);
 	m68k_dreg(regs, dstreg) = (val);
 	m68k_incpci(2);
