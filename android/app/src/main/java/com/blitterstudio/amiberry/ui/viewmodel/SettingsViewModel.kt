@@ -56,6 +56,9 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 	var shaderCatalogEntries by mutableStateOf(ShaderCatalog.BUILT_INS)
 		private set
 
+	var bezelCatalogEntries by mutableStateOf<List<String>>(emptyList())
+		private set
+
 	var shaderCatalogStatus by mutableStateOf(ShaderCatalogStatus.NOT_LOADED)
 		private set
 
@@ -180,15 +183,22 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 					application.filesDir,
 					externalFilesDir
 				)
-				val roots = ShaderCatalog.resolveScanRoots(
-					settingsFile,
+				val roots = ShaderCatalog.resolveScanRoots(settingsFile, externalFilesDir)
+				ShaderCatalog.scan(roots)
+			}
+			val bezelEntries = withContext(Dispatchers.IO) {
+				val application = getApplication<Application>()
+				val externalFilesDir = application.getExternalFilesDir(null)
+				val settingsFile = ShaderCatalog.findSettingsFile(
+					application.filesDir,
 					externalFilesDir
 				)
-				ShaderCatalog.scan(roots)
+				ShaderCatalog.scanBezels(ShaderCatalog.resolveBezelScanRoots(settingsFile, externalFilesDir))
 			}
 
 			if (refreshGeneration != shaderCatalogRefreshGeneration) return@launch
 			shaderCatalogEntries = catalogEntries
+			bezelCatalogEntries = bezelEntries
 			shaderCatalogStatus = ShaderCatalogStatus.LOADED
 		}
 	}
@@ -460,7 +470,13 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 	}
 
 	fun updateSettings(transform: (EmulatorSettings) -> EmulatorSettings) {
-		val newSettings = transform(settings)
+		val previous = settings
+		val newSettings = transform(previous)
+		val changedCompanions = ConfigGenerator.companionLines.keys.filterTo(LinkedHashSet()) { id ->
+			previous.optionValue(id) != newSettings.optionValue(id)
+		}
+		if (changedCompanions.isNotEmpty())
+			currentUnknownLines = ConfigGenerator.withoutCompanionLines(currentUnknownLines, changedCompanions)
 		applyConstrainedSettings(newSettings, publishNotices = true)
 		appPreferences.saveAndroidControls(settings)
 		saveLastSession()

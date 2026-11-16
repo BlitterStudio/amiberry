@@ -16,6 +16,7 @@
 #include "autoconf.h"
 #include "memory.h"
 #include "rommgr.h"
+#include "gfxboard.h"
 
 #include "settings/amiberry_settings.h"
 #include "target.h"
@@ -1805,6 +1806,45 @@ void accelerator_boards(std::string& out)
 	out += "\n]";
 }
 
+// RTG boards are dynamically listed by gfxcard_type_choices. The Android
+// launcher uses this catalog because the descriptor has no static choices.
+void rtg_boards(std::string& out)
+{
+	out += ",\n\"rtg_boards\":[";
+	bool first = true;
+	for (int index = 0;; index++) {
+		const int id = gfxboard_get_id_from_index(index);
+		if (id < 0)
+			break;
+		const TCHAR* config = gfxboard_get_configname(id);
+		const TCHAR* name = gfxboard_get_name(id);
+		if (!config || !name)
+			continue;
+		if (!first)
+			out += ',';
+		first = false;
+		std::string label = name;
+		if (const TCHAR* maker = gfxboard_get_manufacturername(id))
+			label += std::string(" (") + maker + ")";
+		out += "\n{\"id\":";
+		json_string(out, config);
+		out += ",\"label\":";
+		json_string(out, label.c_str());
+		int vmin = 0, vmax = 0;
+		gfxboard_get_vram_range(id, &vmin, &vmax);
+		const int min_mb = vmin > 0 ? vmin / (1024 * 1024) : 1;
+		const int max_mb = vmax > 0 ? vmax / (1024 * 1024) : id == GFXBOARD_UAE_Z2 ? 8 : 256;
+		out += ",\"min_mb\":";
+		json_number(out, min_mb);
+		out += ",\"max_mb\":";
+		json_number(out, max_mb);
+		out += ",\"bus\":";
+		json_number(out, gfxboard_get_configtype_of(id));
+		out += '}';
+	}
+	out += "\n]";
+}
+
 // The built-in AROS Kickstart replacement (memory.cpp): the ROM file name
 // that selects it and the files it needs in a ROM directory.
 void aros(std::string& out)
@@ -2064,6 +2104,7 @@ int settings_schema_and_exit(const char* option_list)
 	board_types(out);
 	custom_controls(out);
 	accelerator_boards(out);
+	rtg_boards(out);
 	aros(out);
 	host_settings(out);
 	mount_controllers(out);

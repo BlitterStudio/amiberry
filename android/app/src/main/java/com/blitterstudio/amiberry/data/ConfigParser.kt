@@ -8,6 +8,7 @@ import com.blitterstudio.amiberry.data.model.AcceleratorJumpers
 import com.blitterstudio.amiberry.data.model.CustomControls
 import com.blitterstudio.amiberry.data.model.MountEntry
 import com.blitterstudio.amiberry.data.model.MountKind
+import com.blitterstudio.amiberry.data.model.RtgConfig
 import com.blitterstudio.amiberry.data.model.SettingsBoards
 import com.blitterstudio.amiberry.data.model.SettingsSchema
 import java.io.File
@@ -178,9 +179,10 @@ object ConfigParser {
 			}
 		}
 
-		// A file's own keys win over what its preset record fills in.
+		// rtg_modes and gfxcard_options are the .uae keys. Their editor
+		// controls are views of those packed values, never .uae keys.
 		val settings = buildSettings(kvPairs, mounts)
-			.copy(options = legacyPresetOptions(kvPairs["amiberry.android_preset"]) + options)
+			.copy(options = RtgConfig.unpack(legacyPresetOptions(kvPairs["amiberry.android_preset"]) + options))
 		val schema = SettingsSchema.current
 		val boards = schema?.let { SettingsBoards.parse(it, boardLines) }.orEmpty()
 		// The units the codec parsed own their identity lines.

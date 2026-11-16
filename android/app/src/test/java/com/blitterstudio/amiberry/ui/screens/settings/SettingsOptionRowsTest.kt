@@ -22,10 +22,11 @@ class SettingsOptionRowsTest {
 	fun `the registry names every option whose page row has a rule of its own`() {
 		assertEquals(
 			setOf(
-				"joyport0", "joyport1", "joyport1mousemap", "input.joymouse_speed_analog",
-				"amiberry.onscreen_joystick", "amiberry.vkbd_touch_button", "amiberry.vkbd_numpad",
-				"amiberry.shader", "amiberry.scaling_method",
-				"fpu_model", "chipmem_size", "bogomem_size", "sound_max_buff",
+				"joyport0", "joyport1", "joyport2", "joyport3", "joyport1mousemap",
+				"input.joymouse_speed_analog", "amiberry.onscreen_joystick", "amiberry.vkbd_touch_button",
+				"amiberry.vkbd_numpad", "amiberry.shader", "amiberry.shader_rtg", "amiberry.custom_bezel",
+				"amiberry.scaling_method", "cart_file", "genlock_image", "genlock_video", "rtc_file", "gfxcard_type", "gfxcard_size",
+				"zz9000_net", "fpu_model", "chipmem_size", "bogomem_size", "sound_max_buff",
 				"cpuboard_type", "cpuboardmem1_size"
 			) + (0..3).map { "floppy${it}sound" },
 			SettingsOptionRows.customIds
@@ -50,11 +51,30 @@ class SettingsOptionRowsTest {
 	}
 
 	@Test
-	fun `every registered row is one the launcher's pages lay out`() {
+	fun `every registered row is placed explicitly or by its schema group`() {
 		val laidOut = SettingsGroups.laidOut.values.flatten().toSet()
+		val explicit = SettingsGroups.byPage.values.flatten().flatMap { it.ids }.toSet()
+		val grouped = SettingsGroups.byPage.values.flatten().mapNotNull { it.group }.toSet()
 		SettingsOptionRows.customIds.forEach { id ->
-			assertTrue(id, id in laidOut)
-			assertTrue(id, schema.option(id)!!.let { !it.presetOnly && SettingsGroups.rowKind(it) != null })
+			val option = schema.option(id)!!
+			assertTrue(id, id in laidOut || id in explicit || option.group in grouped)
+			assertTrue(id, !option.presetOnly && SettingsGroups.rowKind(option) != null)
+		}
+	}
+
+	@Test
+	fun `RTG choices fit addressing and chip RAM`() {
+		assertFalse("ZorroIII" in rtgBoardChoices(schema, EmulatorSettings(address24Bit = true)).map { it.value })
+		assertTrue("ZorroIII" in rtgBoardChoices(schema, EmulatorSettings(address24Bit = false)).map { it.value })
+		assertFalse("ZorroII" in rtgBoardChoices(schema, EmulatorSettings(chipRam = 8)).map { it.value })
+	}
+
+	@Test
+	fun `placed choice rows have schema or custom choices`() {
+		SettingsGroups.byPage.values.flatten().flatMap { it.ids }.forEach { id ->
+			val option = schema.option(id) ?: return@forEach
+			if (option.type == "choice")
+				assertTrue(id, option.choices.isNotEmpty() || id in SettingsOptionRows.customIds)
 		}
 	}
 

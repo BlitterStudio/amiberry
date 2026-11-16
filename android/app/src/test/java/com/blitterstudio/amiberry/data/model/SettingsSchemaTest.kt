@@ -86,6 +86,12 @@ class SettingsSchemaTest {
 	}
 
 	@Test
+	fun `RTG catalog carries board buses for availability`() {
+		assertEquals(2, schema.rtgBoards.single { it.id == "ZorroII" }.bus)
+		assertEquals(3, schema.rtgBoards.single { it.id == "ZorroIII" }.bus)
+	}
+
+	@Test
 	fun `the preset configuration survives a save and reload`() {
 		val file = java.io.File.createTempFile("preset", ".uae")
 		try {

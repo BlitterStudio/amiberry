@@ -41,16 +41,33 @@ object SettingsGroups {
 	/** The sections each page shows, in order. The Overview's rows are the launcher's own. */
 	val byPage: Map<SettingsPage, List<Placement>> = linkedMapOf(
 		SettingsPage.Overview to emptyList(),
-		// Apple's designed Hardware page (audit §3a): CPU, Chipset, Memory,
-		// ROMs and Expansions, the on-board interfaces the layer still lists,
-		// then the expert rows in collapsed Advanced sections at the bottom.
-		// The accelerator/RTG/PPC groups are preset_only here, so they have no
-		// section (their options show nowhere).
+		// Apple's designed Hardware page: CPU, Chipset, Memory, ROMs, RTG
+		// and expansion hardware, followed by collapsed expert sections.
 		SettingsPage.Hardware to listOf(
 			Placement(R.string.settings_group_cpu, group = "cpu"),
 			Placement(R.string.settings_group_chipset, group = "chipset"),
 			Placement(R.string.settings_group_memory, group = "memory"),
 			Placement(R.string.settings_group_rom, group = "rom"),
+			Placement(
+				R.string.settings_section_rtg_board,
+				ids = listOf(
+					"gfxcard_type", "gfxcard_size", "gfxcard_options:monitor",
+					"gfxcard_options:autoswitch", "gfxcard_options:initial",
+					"gfxcard_hardware_sprite"
+				)
+			),
+			Placement(
+				R.string.settings_section_rtg_advanced,
+				ids = listOf(
+					"gfxcard_options", "rtg_modes", "rtg_modes:8bit", "rtg_modes:16bit",
+					"rtg_modes:24bit", "rtg_modes:32bit", "gfx_filter_autoscale_rtg",
+					"gfx_filter_autoscale_limit_rtg", "gfx_backbuffers_rtg", "gfxcard_zerocopy",
+					"gfxcard_multithread", "gfxcard_hardware_vblank", "amiberry.rtg_scale_allow",
+					"amiberry.rtg_scale_aspect_ratio", "amiberry.rtg_vblank", "zz9000_net",
+					"zz9000_int2"
+				),
+				collapsed = true
+			),
 			Placement(R.string.settings_group_expansions, group = "expansions"),
 			Placement(
 				R.string.settings_section_on_board_interfaces,
@@ -83,7 +100,7 @@ object SettingsGroups {
 			),
 			Placement(
 				R.string.settings_section_rom_advanced,
-				ids = listOf("boot_rom_uae", "uaeboard", "kickshifter"),
+				ids = listOf("boot_rom_uae", "uaeboard", "rtc_file", "maprom", "kickshifter"),
 				collapsed = true
 			),
 			Placement(R.string.settings_group_genlock, group = "genlock", collapsed = true)
@@ -95,6 +112,18 @@ object SettingsGroups {
 			Placement(R.string.settings_group_sound, group = "sound")
 		),
 		SettingsPage.Input to listOf(
+			Placement(
+				R.string.settings_section_parallel_port_adapter,
+				ids = listOf("joyport2", "joyport2autofire", "joyport3", "joyport3autofire")
+			),
+			Placement(
+				R.string.settings_section_keyboard_shortcuts,
+				ids = listOf(
+					"amiberry.open_gui", "amiberry.quit_amiberry", "amiberry.action_replay",
+					"amiberry.fullscreen_toggle", "amiberry.minimize", "amiberry.screenshot",
+					"amiberry.debugger_trigger", "amiberry.left_amiga", "amiberry.right_amiga"
+				)
+			),
 			Placement(R.string.settings_input_controller_options_title, group = "input"),
 			Placement(R.string.settings_input_on_screen_controls_title, group = "onscreen")
 		),
@@ -125,7 +154,7 @@ object SettingsGroups {
 			),
 			Placement(
 				R.string.settings_section_compatibility,
-				ids = listOf("uae_hide_autoconfig", "scsidevice_disable"),
+				ids = listOf("uae_hide_autoconfig", "scsidevice_disable", "native_code"),
 				collapsed = true
 			),
 			Placement(
@@ -245,19 +274,19 @@ object SettingsGroups {
 		else -> throw IllegalArgumentException("no page places the group $group")
 	}
 
-	/** How a group section shows an option. */
-	enum class RowKind { Switch, Choice, Level, Number }
+	enum class RowKind { Switch, Choice, Level, Number, Text, Hotkey }
 
 	/**
-	 * The row for [option]: a switch for a bool, a slider for a level (a
-	 * number or choice the layer marks as set by feel), a dropdown for
-	 * another choice, a field for another number; null for a type no
-	 * group row edits (paths, text, hotkeys).
+	 * The row for an option: switches, choices and numbers have their
+	 * schema controls; paths and strings use an editable field, and hotkeys
+	 * use a keyboard recorder.
 	 */
 	fun rowKind(option: SettingsSchema.Option): RowKind? = when (option.type) {
 		SettingsSchema.TYPE_BOOL -> RowKind.Switch
 		SettingsSchema.TYPE_CHOICE -> if (option.level) RowKind.Level else RowKind.Choice
 		SettingsSchema.TYPE_INT, SettingsSchema.TYPE_REAL -> if (option.level) RowKind.Level else RowKind.Number
+		SettingsSchema.TYPE_PATH, SettingsSchema.TYPE_STRING -> RowKind.Text
+		SettingsSchema.TYPE_HOTKEY -> RowKind.Hotkey
 		else -> null
 	}
 
@@ -357,6 +386,16 @@ object SettingsGroups {
 
 	/** [numberAccepts] for an option. */
 	fun numberAccepts(option: SettingsSchema.Option): (Int) -> Boolean = numberAccepts(option.id)
+
+	/** Text validation matching the layer's accepted one-field formats. */
+	fun textAccepts(id: String, value: String): Boolean = when (id) {
+		"maprom" -> value.matches(Regex("""(?:0[xX])?[0-9a-fA-F]{1,8}"""))
+		"displaydata_pal", "displaydata_ntsc" -> {
+			val rate = value.substringBefore(',').toDoubleOrNull()
+			rate == 0.0 || rate != null && rate in 1.0..300.0
+		}
+		else -> true
+	}
 
 	/**
 	 * Whether [id] shows, given each option's value ([value]): a board of

@@ -56,6 +56,8 @@ class OverlaySettingsTest {
 		assertTrue("floppy0" !in ids)
 		assertTrue("floppy0type" !in ids)
 		assertTrue(SettingsGroups.managed.none { it in ids })
+		assertTrue("cart_file" !in ids)
+		assertTrue("amiberry.open_gui" !in ids)
 	}
 
 	@Test

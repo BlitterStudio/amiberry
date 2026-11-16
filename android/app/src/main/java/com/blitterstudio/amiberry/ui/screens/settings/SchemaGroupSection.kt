@@ -8,9 +8,11 @@ import com.blitterstudio.amiberry.data.model.EmulatorSettings
 import com.blitterstudio.amiberry.data.model.SettingsSchema
 import com.blitterstudio.amiberry.ui.components.settings.CollapsibleSettingsSection
 import com.blitterstudio.amiberry.ui.components.settings.SchemaChoiceRow
+import com.blitterstudio.amiberry.ui.components.settings.SchemaHotkeyRow
 import com.blitterstudio.amiberry.ui.components.settings.SchemaLevelRow
 import com.blitterstudio.amiberry.ui.components.settings.SchemaNumberRow
 import com.blitterstudio.amiberry.ui.components.settings.SchemaSwitchRow
+import com.blitterstudio.amiberry.ui.components.settings.SchemaTextRow
 import com.blitterstudio.amiberry.ui.components.settings.SettingsSection
 import com.blitterstudio.amiberry.ui.components.settings.settingsSchema
 import com.blitterstudio.amiberry.ui.viewmodel.SettingsViewModel
@@ -44,8 +46,8 @@ fun SchemaGroupSection(
 	val sectionFooter = (listOfNotNull(footer) + notes).joinToString("\n").ifBlank { null }
 	val content: @Composable ColumnScope.() -> Unit = {
 		leading?.invoke(this)
-		SchemaGroupRows(rows, settings, state, schema, showReasons = false, sectionTitle = sectionTitle) { id, value ->
-			viewModel.updateSettings { s -> s.withOption(id, value) }
+		rows.forEach { option ->
+			SettingsOptionRow(option.id, viewModel, sectionTitle)
 		}
 	}
 	if (placement.collapsed) {
@@ -69,12 +71,9 @@ fun SchemaGroupSection(
 fun SchemaGroupInlineRows(group: String, viewModel: SettingsViewModel, placed: Set<String> = SettingsGroups.placed) {
 	val schema = settingsSchema() ?: return
 	val settings = viewModel.settings
-	val state = remember(settings, schema) { settings.schemaState(schema) }
-	SchemaGroupRows(
-		shownOptions(settings, schema, SettingsGroups.options(schema, group, placed)),
-		settings, state, schema, showReasons = true
-	) { id, value ->
-		viewModel.updateSettings { s -> s.withOption(id, value) }
+	val rows = shownOptions(settings, schema, SettingsGroups.options(schema, group, placed))
+	rows.forEach { option ->
+		SettingsOptionRow(option.id, viewModel)
 	}
 }
 
@@ -152,8 +151,27 @@ internal fun SchemaGroupRows(
 				accepts = SettingsGroups.numberAccepts(option),
 				onStoredChange = { onChange(id, numberValue(option, it)) }
 			)
+			SettingsGroups.RowKind.Text -> SchemaTextRow(
+				id = id,
+				value = value,
+				enabled = enabled,
+				showReason = showReasons,
+				label = shownLabel,
+				semanticsLabel = semanticsLabel,
+				accepts = { SettingsGroups.textAccepts(id, it) },
+				onValueChange = { onChange(id, it) }
+			)
+			SettingsGroups.RowKind.Hotkey -> SchemaHotkeyRow(
+				id = id,
+				value = value,
+				enabled = enabled,
+				showReason = showReasons,
+				label = shownLabel,
+				semanticsLabel = semanticsLabel,
+				onValueChange = { onChange(id, it) }
+			)
 			null -> Unit
-		}
+	}
 	}
 }
 

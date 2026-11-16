@@ -7,6 +7,7 @@ import com.blitterstudio.amiberry.data.model.StoragePaths
 import com.blitterstudio.amiberry.data.model.EmulatorSettings
 import com.blitterstudio.amiberry.data.model.MountEntry
 import com.blitterstudio.amiberry.data.model.MountKind
+import com.blitterstudio.amiberry.data.model.RtgConfig
 import com.blitterstudio.amiberry.data.model.SettingsBoards
 import com.blitterstudio.amiberry.data.model.SettingsSchema
 import java.io.File
@@ -197,7 +198,8 @@ object ConfigGenerator {
 		// cpuboard_type is written with its jumpers above (the reader needs
 		// the board before the packed line).
 		// cpuboard_settings is the jumpers' line, written above.
-		optionsInLayerOrder(settings.options - "cpuboard_type" - "cpuboard_settings").forEach { (id, value) -> sb.appendLine("$id=$value") }
+		optionsInLayerOrder((settings.options - "cpuboard_type" - "cpuboard_settings")
+			.filterKeys { RtgConfig.parent(it) == null }).forEach { (id, value) -> sb.appendLine("$id=$value") }
 
 		// Skip GUI when launched from Android native UI
 		sb.appendLine("use_gui=no")
@@ -271,6 +273,33 @@ object ConfigGenerator {
 	fun preservedLines(settings: EmulatorSettings, unknownLines: List<String>): List<String> {
 		if (settings.optionValue("cpuboard_rom_file").isNullOrEmpty()) return unknownLines
 		return unknownLines.filterNot { it.substringBefore('=').trim() == "cpuboard_rom_file_id" }
+	}
+
+	/** cart= is read after cart_file= and must not survive a changed cartridge. */
+	internal fun withoutCartIdentity(lines: List<String>): List<String> =
+		lines.filterNot { it.substringBefore('=').trim().equals("cart", ignoreCase = true) }
+
+	/** FloppyBridge's dfxsubtypeid follows the subtype setting and wins on load. */
+	internal fun withoutFloppyBridgeIdentities(lines: List<String>, changedDrives: Set<Int>): List<String> =
+		lines.filterNot { line ->
+			val key = line.substringBefore('=').trim().lowercase()
+			changedDrives.any { key == "floppy${it}subtypeid" }
+		}
+
+	/** Companion records cfgfile reads after their owning option. */
+	internal val companionLines = mapOf(
+		"cart_file" to setOf("cart"),
+		"joyport0" to setOf("joyportfriendlyname0", "joyportname0"),
+		"joyport1" to setOf("joyportfriendlyname1", "joyportname1"),
+		"joyport2" to setOf("joyportfriendlyname2", "joyportname2"),
+		"joyport3" to setOf("joyportfriendlyname3", "joyportname3")
+	) + (0..3).flatMap { drive ->
+		listOf("floppy${drive}type", "floppy${drive}subtype").map { it to setOf("floppy${drive}subtypeid") }
+	}.toMap()
+
+	internal fun withoutCompanionLines(lines: List<String>, changed: Set<String>): List<String> {
+		val keys = changed.flatMapTo(HashSet()) { companionLines[it].orEmpty() }
+		return lines.filterNot { it.substringBefore('=').trim().lowercase() in keys }
 	}
 
 	fun writeConfig(context: Context, settings: EmulatorSettings, filename: String): File {

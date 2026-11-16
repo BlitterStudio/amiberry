@@ -1,5 +1,7 @@
 package com.blitterstudio.amiberry.data.model
 
+import java.util.Locale
+
 /**
  * All emulator settings that the native Android UI can configure.
  * Maps to .uae config file keys used by cfgfile.cpp.
@@ -152,11 +154,17 @@ data class EmulatorSettings(
 	 * [options]; null when [options] does not set it (the emulator's default
 	 * applies).
 	 */
-	fun optionValue(id: String): String? = when (id) {
-		// The packed line of the jumpers (withPackedJumpersAdopted).
-		"cpuboard_settings" -> SettingsSchema.current?.acceleratorBoard(optionValue("cpuboard_type") ?: "none")
-			?.let { AcceleratorJumpers.pack(it, acceleratorJumpers) }?.ifEmpty { null } ?: options[id]
-		else -> FIELDS[id]?.get?.invoke(this) ?: options[id]
+	fun optionValue(id: String): String? {
+		RtgConfig.parent(id)?.let { parent ->
+			val packed = options[parent] ?: SettingsSchema.current?.option(parent)?.default.orEmpty()
+			return RtgConfig.value(parent, packed, id)
+		}
+		return when (id) {
+			// The packed line of the jumpers (withPackedJumpersAdopted).
+			"cpuboard_settings" -> SettingsSchema.current?.acceleratorBoard(optionValue("cpuboard_type") ?: "none")
+				?.let { AcceleratorJumpers.pack(it, acceleratorJumpers) }?.ifEmpty { null } ?: options[id]
+			else -> FIELDS[id]?.get?.invoke(this) ?: options[id]
+		}
 	}
 
 	/**
@@ -170,20 +178,94 @@ data class EmulatorSettings(
 	 * stay.
 	 */
 	fun withOption(id: String, value: String, schema: SettingsSchema? = SettingsSchema.current): EmulatorSettings {
-		if (id == "cpuboard_type" && value == (optionValue(id) ?: "none")) return this
-		val stateValue = if (id == "cachesize") jitState(value.toIntOrNull() ?: return this) else value
+		RtgConfig.parent(id)?.let { parent ->
+			val current = optionValue(parent) ?: schema?.option(parent)?.default.orEmpty()
+			return withOption(parent, RtgConfig.pack(parent, current, id, value), schema)
+		}
+		val normalizedValue = when {
+			id == "maprom" && value.matches(Regex("[0-9a-fA-F]+")) -> "0x$value"
+			id in setOf("displaydata_pal", "displaydata_ntsc") && ',' !in value -> value.toDoubleOrNull()
+				?.takeIf { it > 0 }?.let { rate ->
+					String.format(Locale.US, "%.6f,t=%s,locked", rate, if (id == "displaydata_ntsc") "NTSC" else "PAL")
+				} ?: value
+			else -> value
+		}
+		if (id == "cpuboard_type" && normalizedValue == (optionValue(id) ?: "none")) return this
+		val stateValue = if (id == "cachesize") jitState(normalizedValue.toIntOrNull() ?: return this) else normalizedValue
 		val state = schemaState(schema)
 		val transition = schema?.transitions?.of(state, id, stateValue)
 			?: schema?.memoryTransitions?.firstNotNullOfOrNull { it.of(state, id, stateValue) }
 			?: schema?.acceleratorTransitions?.of(state, id, stateValue)
 		if (transition?.refused == true) return this
-		var result = withField(id, value, schema) ?: return this
+		var result = withField(id, normalizedValue, schema) ?: return this
 		transition?.writes?.forEach { (field, written) ->
 			// An enabled JIT keeps the cache size chosen.
 			if (field == "cachesize" && written != "0" && result.jitCacheSize > 0) return@forEach
 			result = result.withField(field, written, schema) ?: result
 		}
-		return result.withAcceleratorMemorySynced(this, id, value, schema)
+		return result.withRtgSizeSideEffects(this, id, normalizedValue, schema)
+			.withRtgTypeSideEffects(this, id, normalizedValue, schema)
+			.withCustomBezelSideEffects(id, normalizedValue, schema)
+			.withAcceleratorMemorySynced(this, id, normalizedValue, schema)
+	}
+
+	/** Mirrors set_gfxcard_size's fallback where a Zorro III board cannot fit. */
+	private fun withRtgSizeSideEffects(
+		before: EmulatorSettings,
+		id: String,
+		value: String,
+		schema: SettingsSchema?
+	): EmulatorSettings {
+		if (id != "gfxcard_size") return this
+		val size = value.toIntOrNull() ?: return this
+		if (size == 0) {
+			var result = withField("gfxcard_type", schema?.option("gfxcard_type")?.default ?: "ZorroIII", schema) ?: this
+			result = result.withField("gfxcard_options", "", schema) ?: result
+			return result
+		}
+		if ((before.optionValue("gfxcard_size")?.toIntOrNull() ?: 0) != 0 ||
+			rtgBoardFits(before.optionValue("gfxcard_type") ?: "ZorroIII", before, schema))
+			return this
+		if (!rtgBoardFits("ZorroII", before, schema))
+			return withField("gfxcard_size", "0", schema) ?: this
+		var result = withField("gfxcard_type", "ZorroII", schema) ?: this
+		if (size > 8)
+			result = result.withField("gfxcard_size", "8", schema) ?: result
+		return result
+	}
+
+	private fun rtgBoardFits(id: String, settings: EmulatorSettings, schema: SettingsSchema?): Boolean {
+		val bus = schema?.rtgBoards?.firstOrNull { it.id == id }?.bus ?: return true
+		return (bus != 3 || !settings.address24Bit) &&
+			(bus != 2 || chipRamKb(settings.chipRam) <= 2048)
+	}
+
+	/** set_gfxcard_type starts an off board and clamps an existing board to its VRAM range. */
+	private fun withRtgTypeSideEffects(
+		before: EmulatorSettings,
+		id: String,
+		value: String,
+		schema: SettingsSchema?
+	): EmulatorSettings {
+		if (id != "gfxcard_type") return this
+		val board = schema?.rtgBoards?.firstOrNull { it.id == value } ?: return this
+		val previousSize = before.optionValue("gfxcard_size")?.toIntOrNull() ?: 0
+		val size = if (previousSize == 0) when (value) {
+			"ZorroII" -> 4
+			"ZorroIII" -> 16
+			else -> board.minMb
+		} else previousSize.coerceIn(board.minMb, board.maxMb)
+		return withField("gfxcard_size", size.toString(), schema) ?: this
+	}
+
+	/** set_custom_bezel enables a picked image and turns off the built-in bezel. */
+	private fun withCustomBezelSideEffects(id: String, value: String, schema: SettingsSchema?): EmulatorSettings {
+		if (id != "amiberry.custom_bezel") return this
+		val enabled = value != "none"
+		var result = withField("amiberry.use_custom_bezel", enabled.toString(), schema) ?: this
+		if (enabled)
+			result = result.withField("amiberry.use_bezel", "false", schema) ?: result
+		return result
 	}
 
 	/**
@@ -249,7 +331,13 @@ data class EmulatorSettings(
 	private fun withField(id: String, value: String, schema: SettingsSchema? = SettingsSchema.current): EmulatorSettings? {
 		val field = FIELDS[id]
 		if (field == null) {
-			val stored = value.takeIf { it != schema?.option(id)?.defaultOnAndroid }
+			// An empty hotkey line explicitly unbinds the global amiberry.conf
+			// default; omitting it would restore that binding at launch.
+			val stored = value.takeIf {
+				(it.isEmpty() && schema?.option(id)?.type == "hotkey") ||
+					id in schema?.optionsWithHostDefaults.orEmpty() ||
+					it != schema?.option(id)?.defaultOnAndroid
+			}
 			return copy(options = stored?.let { options + (id to it) } ?: options - id)
 		}
 		return field.set?.invoke(this, value)

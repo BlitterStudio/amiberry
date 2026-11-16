@@ -63,6 +63,8 @@ class SettingsSchema(
 	 * are marked, for a build without PPC support.
 	 */
 	val acceleratorBoards: List<AcceleratorBoard> = emptyList(),
+	/** The RTG boards gfxcard_type dynamically offers. */
+	val rtgBoards: List<RtgBoard> = emptyList(),
 	/** The storage controllers a live settings session can offer. */
 	val mountControllers: List<MountController> = emptyList(),
 	/** What setting cpuboard_type changes with it (the CPU its board needs); null in a schema without it. */
@@ -307,6 +309,15 @@ class SettingsSchema(
 	/** The host setting [id] describes; null when the schema does not list it. */
 	fun hostSetting(id: String): Option? = hostSettings.firstOrNull { it.id == id }
 
+	/** Machine options whose matching global setting otherwise supplies a launch-time default. */
+	val optionsWithHostDefaults: Set<String> by lazy {
+		// target_default_options() also copies these coupled bezel flags
+		// (src/osdep/amiberry.cpp:6442-6447), but their host descriptors
+		// cannot each name a distinct machine option.
+		hostSettings.mapNotNullTo(LinkedHashSet()) { it.setsOption } +
+			setOf("amiberry.use_custom_bezel", "amiberry.use_bezel")
+	}
+
 	/** The board type [id] describes; null when the schema does not list it. */
 	fun boardType(id: String): BoardType? = boardTypes.firstOrNull { it.id == id }
 
@@ -361,6 +372,9 @@ class SettingsSchema(
 
 	/** A gamepad button or axis of a joystick port, whose input event a configuration can map. */
 	data class CustomControl(val id: String, val label: String, val axis: Boolean)
+
+	/** A dynamic RTG board choice and the autoconfig bus it requires. */
+	data class RtgBoard(val id: String, val label: String, val bus: Int, val minMb: Int, val maxMb: Int)
 
 	/**
 	 * One accelerator board: a cpuboard_type value. [settings] are its
@@ -472,6 +486,8 @@ class SettingsSchema(
 		const val TYPE_CHOICE = "choice"
 		const val TYPE_PATH = "path"
 		const val TYPE_FILE = "file"
+		const val TYPE_STRING = "string"
+		const val TYPE_HOTKEY = "hotkey"
 		/** The labels that make a first choice of "0" read as off (see [Option.isSwitch]). */
 		private val OFF_LABELS = setOf("disabled", "off", "no", "none")
 
@@ -701,6 +717,15 @@ class SettingsSchema(
 					)
 				}
 			}.orEmpty()
+			val rtgBoards = json.optJSONArray("rtg_boards")?.let { array ->
+				List(array.length()) { b ->
+					val board = array.getJSONObject(b)
+					RtgBoard(
+						board.getString("id"), board.getString("label"), board.optInt("bus"),
+						board.optInt("min_mb", 1), board.optInt("max_mb", 256)
+					)
+				}
+			}.orEmpty()
 			val mountControllers = json.optJSONArray("mount_controllers")?.let { array ->
 				List(array.length()) { i ->
 					val controller = array.getJSONObject(i)
@@ -730,7 +755,7 @@ class SettingsSchema(
 				soundResolutions = soundResolutions, availability = availability, transitions = transitions,
 				aros = aros, memoryTransitions = memoryTransitions, hostSettings = hostSettings,
 				boardTypes = boardTypes, customControls = customControls, inputEvents = inputEvents,
-				acceleratorBoards = acceleratorBoards, mountControllers = mountControllers,
+				acceleratorBoards = acceleratorBoards, rtgBoards = rtgBoards, mountControllers = mountControllers,
 				acceleratorTransitions = json.optJSONObject("accelerator_transitions")?.let { Transitions.parse(it) }
 			)
 		}

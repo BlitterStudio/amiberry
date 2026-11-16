@@ -65,12 +65,16 @@ amiberry.vkbd_touch_button
 amiberry.vkbd_toggle
 floppy0
 floppy0type
+floppy0subtype
 floppy1
 floppy1type
+floppy1subtype
 floppy2
 floppy2type
+floppy2subtype
 floppy3
 floppy3type
+floppy3subtype
 cdimage0
 use_gui
 
@@ -103,6 +107,33 @@ display_optimizations
 chipset_compatible
 hvcsync
 # genlock
+# rtg
+gfxcard_type
+gfxcard_size
+gfxcard_hardware_sprite
+gfxcard_options
+gfxcard_options:monitor
+gfxcard_options:autoswitch
+gfxcard_options:initial
+rtg_modes
+rtg_modes:8bit
+rtg_modes:16bit
+rtg_modes:24bit
+rtg_modes:32bit
+gfx_filter_autoscale_rtg
+gfx_filter_autoscale_limit_rtg
+gfx_backbuffers_rtg
+gfxcard_zerocopy
+gfxcard_multithread
+gfxcard_hardware_vblank
+amiberry.rtg_scale_allow
+amiberry.rtg_scale_aspect_ratio
+amiberry.rtg_vblank
+zz9000_net
+zz9000_int2
+# genlock
+genlock_image
+genlock_video
 genlock
 genlockmode
 genlock_mix
@@ -132,6 +163,7 @@ rom_is_slow
 toshiba_gary
 z3_autoconfig
 pcmcia
+ide
 1mchipjumper
 ciaa_type
 scsi_a3000
@@ -159,6 +191,9 @@ mbresmem_size
 megachipmem_size
 z3mapping
 # rom
+cart_file
+rtc_file
+maprom
 boot_rom_uae
 uaeboard
 kickshifter
@@ -189,6 +224,10 @@ gfx_center_horizontal
 gfx_center_vertical
 gfx_ntscpixelspal
 gfx_linemode
+gfx_vsync_picasso
+gfx_vrr_monitor
+displaydata_pal
+displaydata_ntsc
 # sound
 sound_auto
 sound_stereo_separation
@@ -213,6 +252,12 @@ magic_mouse
 magic_mousecursor
 tablet_library
 absolute_mouse
+joyport2
+joyport3
+joyport2autofire
+joyport3autofire
+input.multi_mouse
+amiberry.middle_mouse
 # onscreen
 amiberry.vkbd_transparency
 amiberry.vkbd_language
@@ -261,6 +306,16 @@ debug_mem
 cpu_halt_auto_reset
 scsidevice_disable
 warpboot
+native_code
+amiberry.open_gui
+amiberry.quit_amiberry
+amiberry.action_replay
+amiberry.fullscreen_toggle
+amiberry.minimize
+amiberry.screenshot
+amiberry.debugger_trigger
+amiberry.left_amiga
+amiberry.right_amiga
 amiberry.use_retroarch_quit
 amiberry.use_retroarch_menu
 amiberry.use_retroarch_reset
@@ -274,5 +329,8 @@ amiberry.gfx_manual_crop_height
 amiberry.gfx_horizontal_offset
 amiberry.gfx_vertical_offset
 amiberry.use_bezel
+amiberry.shader_rtg
+amiberry.use_custom_bezel
+amiberry.custom_bezel
 # io
 dongle

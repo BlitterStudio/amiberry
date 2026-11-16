@@ -593,6 +593,125 @@ class ConfigGeneratorTest {
 	}
 
 	@Test
+	fun `editor rows retain RTG and cartridge settings through config`() {
+		val settings = EmulatorSettings()
+			.withOption("gfxcard_type", "ZorroIII")
+			.withOption("gfxcard_size", "8")
+			.withOption("cart_file", "/ROMs/ActionReplay.rom")
+			.withOption("genlock_image", "/Images/genlock.png")
+			.withOption("genlock_video", "/Videos/genlock.mp4")
+			.withOption("rtc_file", "/RTC/clock.bin")
+			.withOption("amiberry.open_gui", "LCtrl+F12")
+			.withOption("joyport2", "joy0")
+			.withOption("joyport2autofire", "1")
+			.withOption("rtg_modes:16bit", "R5G5B5PC")
+			.withOption("gfxcard_options:monitor", "1")
+			.withOption("gfxcard_options:autoswitch", "false")
+			.withOption("gfxcard_options:initial", "true")
+			.withOption("maprom", "e00000")
+		val expected = mapOf(
+			"gfxcard_size" to "8",
+			"cart_file" to "/ROMs/ActionReplay.rom",
+			"genlock_image" to "/Images/genlock.png",
+			"genlock_video" to "/Videos/genlock.mp4",
+			"rtc_file" to "/RTC/clock.bin",
+			"amiberry.open_gui" to "LCtrl+F12",
+			"joyport2" to "joy0",
+			"joyport2autofire" to "1",
+			"rtg_modes" to "0x122",
+			"gfxcard_options" to "monitor=1,noautoswitch,initial",
+			"maprom" to "0xe00000"
+		)
+		val config = ConfigGenerator.generate(settings)
+		expected.forEach { (id, value) -> assertContains(config, "$id=$value") }
+		assertFalse(config.contains("rtg_modes:"))
+		assertFalse(config.contains("gfxcard_options:"))
+		val file = tempDir.newFile("editor-options.uae")
+		file.writeText(config)
+		val parsed = ConfigParser.parse(file)
+		expected.forEach { (id, value) -> assertEquals(id, value, parsed.settings.optionValue(id)) }
+		assertEquals("R5G5B5PC", parsed.settings.optionValue("rtg_modes:16bit"))
+		assertEquals("1", parsed.settings.optionValue("gfxcard_options:monitor"))
+		assertEquals("false", parsed.settings.optionValue("gfxcard_options:autoswitch"))
+		assertEquals("true", parsed.settings.optionValue("gfxcard_options:initial"))
+		assertTrue(parsed.unknownLines.none { line -> expected.keys.any { id -> line.startsWith("$id=") } })
+	}
+
+	@Test
+	fun `editor option writer keeps packed and explicit native values`() {
+		val settings = EmulatorSettings(options = mapOf(
+			"rtg_modes" to "0x122",
+			"rtg_modes:16bit" to "R5G6B5PC",
+			"gfxcard_options" to "monitor=1,initial",
+			"gfxcard_options:initial" to "false"
+		))
+			.withOption("amiberry.open_gui", "")
+			.withOption("amiberry.shader_rtg", "none")
+			.withOption("displaydata_pal", "55")
+		assertEquals("R5G5B5PC", settings.optionValue("rtg_modes:16bit"))
+		assertEquals("true", settings.optionValue("gfxcard_options:initial"))
+		val config = ConfigGenerator.generate(settings)
+		assertContains(config, "amiberry.open_gui=")
+		assertContains(config, "displaydata_pal=55.000000,t=PAL,locked")
+		assertContains(config, "amiberry.shader_rtg=none")
+		assertFalse(config.contains("rtg_modes:"))
+		assertFalse(config.contains("gfxcard_options:"))
+	}
+
+	@Test
+	fun `changed cartridge drops its stale identity line`() {
+		assertEquals(
+			listOf("use_gui=no", "cart_file=/ROMs/new.rom"),
+			ConfigGenerator.withoutCartIdentity(listOf("cart=:action_replay", "use_gui=no", "cart_file=/ROMs/new.rom"))
+		)
+	}
+
+	@Test
+	fun `enabling RTG under 24 bit addressing keeps fitting boards`() {
+		val picasso = EmulatorSettings(address24Bit = true, options = mapOf("gfxcard_type" to "PicassoII"))
+			.withOption("gfxcard_size", "4")
+		assertEquals("PicassoII", picasso.optionValue("gfxcard_type"))
+		assertEquals("4", picasso.optionValue("gfxcard_size"))
+		val zorroThree = EmulatorSettings(address24Bit = true).withOption("gfxcard_size", "32")
+		assertEquals("ZorroII", zorroThree.optionValue("gfxcard_type"))
+		assertEquals("8", zorroThree.optionValue("gfxcard_size"))
+		val noFit = EmulatorSettings(address24Bit = true, chipRam = 8).withOption("gfxcard_size", "4")
+		assertEquals("0", noFit.optionValue("gfxcard_size") ?: "0")
+	}
+
+	@Test
+	fun `changed floppy bridge profile drops its stale subtype identity`() {
+		assertEquals(
+			listOf("floppy0subtype=2", "floppy1subtypeid=1:Normal"),
+			ConfigGenerator.withoutFloppyBridgeIdentities(
+				listOf("floppy0subtypeid=1:Normal", "floppy0subtype=2", "floppy1subtypeid=1:Normal"),
+				setOf(0)
+			)
+		)
+	}
+
+	@Test
+	fun `custom bezel selection mirrors the native bezel toggles`() {
+		val picked = EmulatorSettings().withOption("amiberry.custom_bezel", "frame.png")
+		assertEquals("true", picked.schemaState().getValue("amiberry.use_custom_bezel"))
+		assertEquals("false", picked.schemaState().getValue("amiberry.use_bezel"))
+		val cleared = picked.withOption("amiberry.custom_bezel", "none")
+		assertEquals("false", cleared.schemaState().getValue("amiberry.use_custom_bezel"))
+		assertContains(ConfigGenerator.generate(cleared), "amiberry.use_custom_bezel=false")
+	}
+
+	@Test
+	fun `changed owner drops every companion identity`() {
+		assertEquals(
+			listOf("joyportname1=keep"),
+			ConfigGenerator.withoutCompanionLines(
+				listOf("joyportname2=old", "joyportfriendlyname2=Old", "joyportname1=keep"),
+				setOf("joyport2")
+			)
+		)
+	}
+
+	@Test
 	fun `round-trip preserves onscreen_joy joyport1`() {
 		val original = EmulatorSettings(joyport1 = "onscreen_joy", onScreenJoystick = true)
 		val configText = ConfigGenerator.generate(original)
