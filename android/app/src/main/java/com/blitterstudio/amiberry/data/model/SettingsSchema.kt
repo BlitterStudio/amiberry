@@ -309,6 +309,11 @@ class SettingsSchema(
 	/** The host setting [id] describes; null when the schema does not list it. */
 	fun hostSetting(id: String): Option? = hostSettings.firstOrNull { it.id == id }
 
+	/** Machine options whose matching global setting otherwise supplies a launch-time default. */
+	val optionsWithHostDefaults: Set<String> by lazy {
+		hostSettings.mapNotNullTo(LinkedHashSet()) { it.setsOption }
+	}
+
 	/** The board type [id] describes; null when the schema does not list it. */
 	fun boardType(id: String): BoardType? = boardTypes.firstOrNull { it.id == id }
 

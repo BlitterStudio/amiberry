@@ -203,7 +203,29 @@ data class EmulatorSettings(
 			if (field == "cachesize" && written != "0" && result.jitCacheSize > 0) return@forEach
 			result = result.withField(field, written, schema) ?: result
 		}
-		return result.withAcceleratorMemorySynced(this, id, normalizedValue, schema)
+		return result.withRtgSizeSideEffects(this, id, normalizedValue, schema)
+			.withAcceleratorMemorySynced(this, id, normalizedValue, schema)
+	}
+
+	/** Mirrors set_gfxcard_size's fallback where a Zorro III board cannot fit. */
+	private fun withRtgSizeSideEffects(
+		before: EmulatorSettings,
+		id: String,
+		value: String,
+		schema: SettingsSchema?
+	): EmulatorSettings {
+		if (id != "gfxcard_size") return this
+		val size = value.toIntOrNull() ?: return this
+		if (size == 0) {
+			var result = withField("gfxcard_type", schema?.option("gfxcard_type")?.default ?: "ZorroIII", schema) ?: this
+			result = result.withField("gfxcard_options", "", schema) ?: result
+			return result
+		}
+		if ((before.optionValue("gfxcard_size")?.toIntOrNull() ?: 0) != 0 || !before.address24Bit) return this
+		var result = withField("gfxcard_type", "ZorroII", schema) ?: this
+		if (size > 8)
+			result = result.withField("gfxcard_size", "8", schema) ?: result
+		return result
 	}
 
 	/**
@@ -273,6 +295,7 @@ data class EmulatorSettings(
 			// default; omitting it would restore that binding at launch.
 			val stored = value.takeIf {
 				(it.isEmpty() && schema?.option(id)?.type == "hotkey") ||
+					id in schema?.optionsWithHostDefaults.orEmpty() ||
 					it != schema?.option(id)?.defaultOnAndroid
 			}
 			return copy(options = stored?.let { options + (id to it) } ?: options - id)

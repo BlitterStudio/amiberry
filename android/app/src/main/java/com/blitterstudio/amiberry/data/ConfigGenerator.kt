@@ -279,6 +279,13 @@ object ConfigGenerator {
 	internal fun withoutCartIdentity(lines: List<String>): List<String> =
 		lines.filterNot { it.substringBefore('=').trim().equals("cart", ignoreCase = true) }
 
+	/** FloppyBridge's dfxsubtypeid follows the subtype setting and wins on load. */
+	internal fun withoutFloppyBridgeIdentities(lines: List<String>, changedDrives: Set<Int>): List<String> =
+		lines.filterNot { line ->
+			val key = line.substringBefore('=').trim().lowercase()
+			changedDrives.any { key == "floppy${it}subtypeid" }
+		}
+
 	fun writeConfig(context: Context, settings: EmulatorSettings, filename: String): File {
 		val file = configFile(context, filename)
 		file.writeText(generate(settings))

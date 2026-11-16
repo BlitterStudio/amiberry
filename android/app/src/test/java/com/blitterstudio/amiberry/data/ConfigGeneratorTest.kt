@@ -646,12 +646,14 @@ class ConfigGeneratorTest {
 			"gfxcard_options:initial" to "false"
 		))
 			.withOption("amiberry.open_gui", "")
+			.withOption("amiberry.shader_rtg", "none")
 			.withOption("displaydata_pal", "55")
 		assertEquals("R5G5B5PC", settings.optionValue("rtg_modes:16bit"))
 		assertEquals("true", settings.optionValue("gfxcard_options:initial"))
 		val config = ConfigGenerator.generate(settings)
 		assertContains(config, "amiberry.open_gui=")
 		assertContains(config, "displaydata_pal=55.000000,t=PAL,locked")
+		assertContains(config, "amiberry.shader_rtg=none")
 		assertFalse(config.contains("rtg_modes:"))
 		assertFalse(config.contains("gfxcard_options:"))
 	}
@@ -661,6 +663,24 @@ class ConfigGeneratorTest {
 		assertEquals(
 			listOf("use_gui=no", "cart_file=/ROMs/new.rom"),
 			ConfigGenerator.withoutCartIdentity(listOf("cart=:action_replay", "use_gui=no", "cart_file=/ROMs/new.rom"))
+		)
+	}
+
+	@Test
+	fun `enabling RTG under 24 bit addressing selects and fits Zorro II`() {
+		val settings = EmulatorSettings(address24Bit = true).withOption("gfxcard_size", "32")
+		assertEquals("ZorroII", settings.optionValue("gfxcard_type"))
+		assertEquals("8", settings.optionValue("gfxcard_size"))
+	}
+
+	@Test
+	fun `changed floppy bridge profile drops its stale subtype identity`() {
+		assertEquals(
+			listOf("floppy0subtype=2", "floppy1subtypeid=1:Normal"),
+			ConfigGenerator.withoutFloppyBridgeIdentities(
+				listOf("floppy0subtypeid=1:Normal", "floppy0subtype=2", "floppy1subtypeid=1:Normal"),
+				setOf(0)
+			)
 		)
 	}
 

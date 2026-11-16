@@ -478,6 +478,12 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 			currentUnknownLines = ConfigGenerator.withoutCartIdentity(currentUnknownLines)
 		}
 		applyConstrainedSettings(newSettings, publishNotices = true)
+		val changedBridgeDrives = (0..3).filterTo(LinkedHashSet()) { drive ->
+			previous.optionValue("floppy${drive}subtype") != newSettings.optionValue("floppy${drive}subtype") ||
+				previous.optionValue("floppy${drive}type") != newSettings.optionValue("floppy${drive}type")
+		}
+		if (changedBridgeDrives.isNotEmpty())
+			currentUnknownLines = ConfigGenerator.withoutFloppyBridgeIdentities(currentUnknownLines, changedBridgeDrives)
 		appPreferences.saveAndroidControls(settings)
 		saveLastSession()
 	}
