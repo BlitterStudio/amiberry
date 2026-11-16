@@ -38,11 +38,21 @@
 #include <cstdio>
 #include <functional>
 #include <mutex>
+#include <filesystem>
 #include <string>
 #include <thread>
 #include <vector>
 
 extern int gui_active;
+std::string android_overlay_autosave_path()
+{
+	std::string path = get_savestate_folder();
+	if (path.empty())
+		return {};
+	if (path.back() != '/')
+		path += '/';
+	return path + ".recovery/" + AMIBERRY_AUTOSAVE_STATE_NAME;
+}
 
 namespace {
 
@@ -303,16 +313,16 @@ std::string autosave_title()
 	return title.empty() ? "Amiga" : title;
 }
 
+
 autosave_result save_android_autosave()
 {
-	if (!autosave_allowed.load() || !emulating || quit_program != 0)
-		return {};
-	std::string path = get_savestate_folder();
+	const std::string path = android_overlay_autosave_path();
 	if (path.empty())
 		return {};
-	if (path.back() != '/')
-		path += '/';
-	path += AMIBERRY_AUTOSAVE_STATE_NAME;
+	std::error_code error;
+	std::filesystem::create_directories(std::filesystem::path(path).parent_path(), error);
+	if (error)
+		return {};
 	const std::string partial = path + ".partial";
 	const amiberry_action_id action = amiberry_actions_autosave_state(partial.c_str());
 	if (!action)

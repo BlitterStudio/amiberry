@@ -6155,28 +6155,25 @@ void target_quit()
 	// it: the next emulation instance is still the same session.
 	if (!uae_restart_pending()) {
 		android_overlay_disable_autosave();
-		std::string autosave = get_savestate_folder();
+		const std::string autosave = android_overlay_autosave_path();
 		if (!autosave.empty()) {
-			if (autosave.back() != '/')
-				autosave += '/';
-			autosave += AMIBERRY_AUTOSAVE_STATE_NAME;
 			std::remove(autosave.c_str());
 			std::remove((autosave + ".partial").c_str());
 			std::remove((autosave + ".uae").c_str());
 		}
-	}
-	// Write a clean-exit marker so the Kotlin launcher knows this was
-	// an intentional quit, not a crash.  SDL3's SDLActivity calls
-	// System.exit(0) after native main() returns, which kills the
-	// process without running onDestroy() — so marker cleanup from
-	// Java never executes.  Write from native code instead.
-	const char* ext = SDL_GetAndroidExternalStoragePath();
-	if (ext) {
-		std::string marker = std::string(ext) + "/.clean_exit";
-		FILE* f = fopen(marker.c_str(), "w");
-		if (f) {
-			fputs("1", f);
-			fclose(f);
+		// Write a clean-exit marker so the Kotlin launcher knows this was
+		// an intentional quit, not a crash. SDL3's SDLActivity calls
+		// System.exit(0) after native main() returns, which kills the
+		// process without running onDestroy() — so marker cleanup from
+		// Java never executes. Write from native code instead.
+		const char* ext = SDL_GetAndroidExternalStoragePath();
+		if (ext) {
+			std::string marker = std::string(ext) + "/.clean_exit";
+			FILE* f = fopen(marker.c_str(), "w");
+			if (f) {
+				fputs("1", f);
+				fclose(f);
+			}
 		}
 	}
 #endif

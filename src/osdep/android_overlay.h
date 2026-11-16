@@ -55,6 +55,10 @@ void android_overlay_service();
 // Android finishes the activity. Any thread.
 void android_overlay_disable_autosave();
 
+// The lifecycle recovery state lives below the normal state folder so user
+// saves, including one named Autosave, are never selected or removed.
+std::string android_overlay_autosave_path();
+
 // Once per frame (handle_msgpump): moves the port 2 joystick as the TV
 // remote's D-pad and OK are held. The activity turns this on for a TV with
 // no gamepad and hands those keys over (OverlayNative.remoteKey) while the

@@ -7,6 +7,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import java.io.File
 
 class AndroidAutosaveTest {
 	@get:Rule
@@ -106,5 +107,19 @@ class AndroidAutosaveTest {
 		assertFalse(state.exists())
 		assertFalse(partial.exists())
 		assertFalse(record.exists())
+	}
+
+	@Test
+	fun `discard leaves a user state with the autosave name alone`() {
+		val userState = tempDir.newFile(AndroidAutosave.STATE_FILE_NAME).apply { writeText("user state") }
+		val recoveryDir = tempDir.newFolder(".recovery")
+		val recoveryState = File(recoveryDir, AndroidAutosave.STATE_FILE_NAME).apply { writeText("recovery state") }
+		val record = tempDir.newFile("session")
+		AndroidAutosave.record(record, recoveryState, "Amiga")
+
+		AndroidAutosave.discard(record)
+
+		assertTrue(userState.exists())
+		assertFalse(recoveryState.exists())
 	}
 }

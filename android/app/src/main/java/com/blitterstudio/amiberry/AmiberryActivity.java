@@ -60,6 +60,8 @@ public class AmiberryActivity extends SDLActivity {
 	private boolean hintsReady;
 	/** An autosave is made at most once until the activity returns to the foreground. */
 	private boolean autosaveRequested;
+	/** SDL keeps emulation running while a multi-window activity is paused but visible. */
+	private boolean autosaveNeedsRefreshOnStop;
 	private String[] recoveryArgs;
 	private boolean returnToLauncher;
 	private final Handler hints = new Handler(Looper.getMainLooper());
@@ -104,6 +106,7 @@ public class AmiberryActivity extends SDLActivity {
 	protected void onResume() {
 		super.onResume();
 		autosaveRequested = false;
+		autosaveNeedsRefreshOnStop = false;
 		if (overlay != null) {
 			overlay.onResume();
 		}
@@ -111,7 +114,8 @@ public class AmiberryActivity extends SDLActivity {
 
 	@Override
 	protected void onPause() {
-		saveAutosave();
+		autosaveNeedsRefreshOnStop |= isInMultiWindowMode();
+		saveAutosave(false);
 		if (overlay != null) {
 			overlay.onPause();
 		}
@@ -120,6 +124,11 @@ public class AmiberryActivity extends SDLActivity {
 
 	@Override
 	protected void onStop() {
+		if (autosaveNeedsRefreshOnStop) {
+			// SDL pauses only here after a visible multi-window pause, so replace the
+			// earlier checkpoint with the last frame before that pause.
+			saveAutosave(true);
+		}
 		if (overlay != null) {
 			overlay.onStop();
 		}
@@ -130,8 +139,8 @@ public class AmiberryActivity extends SDLActivity {
 	 * SDLActivity pauses its native thread in super.onPause(). The native call therefore
 	 * happens first and waits for its bounded emulator-thread handoff to finish.
 	 */
-	private void saveAutosave() {
-		if (autosaveRequested || !startsEmulation()) {
+	private void saveAutosave(boolean refresh) {
+		if ((!refresh && autosaveRequested) || !startsEmulation()) {
 			return;
 		}
 		try {
@@ -160,11 +169,13 @@ public class AmiberryActivity extends SDLActivity {
 	public void onWindowFocusChanged(boolean hasFocus) {
 		if (!hasFocus) {
 			// SDLActivity may pause native from its focus callback before onPause.
-			saveAutosave();
+			autosaveNeedsRefreshOnStop |= isInMultiWindowMode();
+			saveAutosave(false);
 		}
 		super.onWindowFocusChanged(hasFocus);
 		if (hasFocus) {
 			autosaveRequested = false;
+			autosaveNeedsRefreshOnStop = false;
 			enterImmersiveMode();
 		}
 		if (overlay != null) {
