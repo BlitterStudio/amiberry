@@ -32,12 +32,14 @@ enum class FileCategory(
 		val lowerName = name.lowercase()
 		val extension = lowerName.substringAfterLast('.', missingDelimiterValue = "")
 		return extension in extensions ||
-			(this == ROMS && (lowerName == "rom.key" || ROM_CHIP_EXTENSION.matches(extension)))
+			(this == ROMS && isRomKeyFileName(lowerName)) ||
+			(this == ROMS && ROM_CHIP_EXTENSION.matches(extension))
 	}
 
 	companion object {
 		private val ROM_CHIP_EXTENSION = Regex("""u\d+""")
 
+		fun isRomKeyFileName(name: String): Boolean = name.equals("rom.key", ignoreCase = true)
 		fun fromExtension(ext: String): FileCategory? {
 			val lower = ext.lowercase()
 			return entries.firstOrNull { lower in it.extensions }

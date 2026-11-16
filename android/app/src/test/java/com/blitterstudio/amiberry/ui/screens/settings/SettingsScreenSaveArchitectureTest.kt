@@ -48,6 +48,11 @@ class SettingsScreenSaveArchitectureTest {
 	}
 
 	@Test
+	fun `importing an Amiga Forever key preserves the selected Kickstart`() {
+		assertTrue(source.contains("!FileCategory.isRomKeyFileName(result.safeName)"))
+	}
+
+	@Test
 	fun `settings screen exposes a review changes dialog`() {
 		assertTrue(source.contains("R.string.action_review_changes"))
 		assertTrue(source.contains("SettingsChangesDialog("))

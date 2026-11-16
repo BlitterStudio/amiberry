@@ -124,6 +124,13 @@ class FileManagerTest {
 	}
 
 	@Test
+	fun `only rom key is recognized as an Amiga Forever key`() {
+		assertTrue(FileCategory.isRomKeyFileName("rom.key"))
+		assertTrue(FileCategory.isRomKeyFileName("ROM.KEY"))
+		assertFalse(FileCategory.isRomKeyFileName("other.key"))
+	}
+
+	@Test
 	fun `importFileNameForCategory rejects unsupported ROM filenames`() {
 		assertNull(FileManager.importFileNameForCategory("disk", FileCategory.FLOPPIES))
 		assertNull(FileManager.importFileNameForCategory("notes.txt", FileCategory.FLOPPIES))
