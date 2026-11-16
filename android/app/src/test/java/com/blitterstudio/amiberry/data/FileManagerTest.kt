@@ -143,6 +143,18 @@ class FileManagerTest {
 	}
 
 	@Test
+	fun `importing the canonical ROM key onto itself retains its bytes`() {
+		val key = tempDir.newFile("rom.key")
+		val bytes = byteArrayOf(1, 2, 3, 4)
+		key.writeBytes(bytes)
+
+		val replaced = key.inputStream().use { FileManager.replaceImportedFile(it, key, key) }
+
+		assertTrue(replaced)
+		assertArrayEquals(bytes, key.readBytes())
+	}
+
+	@Test
 	fun `importFileNameForCategory rejects unsupported ROM filenames`() {
 		assertNull(FileManager.importFileNameForCategory("disk", FileCategory.FLOPPIES))
 		assertNull(FileManager.importFileNameForCategory("notes.txt", FileCategory.FLOPPIES))

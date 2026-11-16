@@ -247,8 +247,9 @@ object FileManager {
 				return ImportResult.Failed(fileName)
 			}
 			inputStream.use { input ->
-				finalFile.outputStream().use { output ->
-					input.copyTo(output)
+				if (!replaceImportedFile(input, uri.takeIf { it.scheme == "file" }?.path?.let(::File), finalFile)) {
+					Log.e(TAG, "Failed to replace imported file: ${finalFile.absolutePath}")
+					return ImportResult.Failed(fileName)
 				}
 			}
 			Log.d(TAG, "Imported ${finalFile.name} to ${finalFile.absolutePath}")
@@ -263,6 +264,21 @@ object FileManager {
 		} catch (e: Exception) {
 			Log.e(TAG, "Failed to import file from URI: $uri", e)
 			ImportResult.Failed(fileName)
+		}
+	}
+
+	/**
+	 * Writes through a sibling temporary file before replacing [target]. A file URI may
+	 * already name [target], so the canonical comparison makes that import a successful no-op.
+	 */
+	internal fun replaceImportedFile(input: java.io.InputStream, source: File?, target: File): Boolean {
+		if (source != null && runCatching { source.canonicalFile == target.canonicalFile }.getOrDefault(false)) return true
+		val temporary = File.createTempFile(".${target.name}.", ".import", target.parentFile)
+		return try {
+			temporary.outputStream().use { output -> input.copyTo(output) }
+			temporary.renameTo(target)
+		} finally {
+			temporary.delete()
 		}
 	}
 
