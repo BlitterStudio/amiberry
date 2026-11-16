@@ -675,6 +675,8 @@ class ConfigGeneratorTest {
 		val zorroThree = EmulatorSettings(address24Bit = true).withOption("gfxcard_size", "32")
 		assertEquals("ZorroII", zorroThree.optionValue("gfxcard_type"))
 		assertEquals("8", zorroThree.optionValue("gfxcard_size"))
+		val noFit = EmulatorSettings(address24Bit = true, chipRam = 8).withOption("gfxcard_size", "4")
+		assertEquals("0", noFit.optionValue("gfxcard_size") ?: "0")
 	}
 
 	@Test
@@ -696,6 +698,17 @@ class ConfigGeneratorTest {
 		val cleared = picked.withOption("amiberry.custom_bezel", "none")
 		assertEquals("false", cleared.schemaState().getValue("amiberry.use_custom_bezel"))
 		assertContains(ConfigGenerator.generate(cleared), "amiberry.use_custom_bezel=false")
+	}
+
+	@Test
+	fun `changed owner drops every companion identity`() {
+		assertEquals(
+			listOf("joyportname1=keep"),
+			ConfigGenerator.withoutCompanionLines(
+				listOf("joyportname2=old", "joyportfriendlyname2=Old", "joyportname1=keep"),
+				setOf("joyport2")
+			)
+		)
 	}
 
 	@Test

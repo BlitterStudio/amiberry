@@ -472,18 +472,12 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 	fun updateSettings(transform: (EmulatorSettings) -> EmulatorSettings) {
 		val previous = settings
 		val newSettings = transform(previous)
-		if (previous.optionValue("cart_file") != newSettings.optionValue("cart_file")) {
-			// cart= is read after cart_file= and wins. The layer clears it
-			// when a cartridge changes, then only restores an ident it scans.
-			currentUnknownLines = ConfigGenerator.withoutCartIdentity(currentUnknownLines)
+		val changedCompanions = ConfigGenerator.companionLines.keys.filterTo(LinkedHashSet()) { id ->
+			previous.optionValue(id) != newSettings.optionValue(id)
 		}
+		if (changedCompanions.isNotEmpty())
+			currentUnknownLines = ConfigGenerator.withoutCompanionLines(currentUnknownLines, changedCompanions)
 		applyConstrainedSettings(newSettings, publishNotices = true)
-		val changedBridgeDrives = (0..3).filterTo(LinkedHashSet()) { drive ->
-			previous.optionValue("floppy${drive}subtype") != newSettings.optionValue("floppy${drive}subtype") ||
-				previous.optionValue("floppy${drive}type") != newSettings.optionValue("floppy${drive}type")
-		}
-		if (changedBridgeDrives.isNotEmpty())
-			currentUnknownLines = ConfigGenerator.withoutFloppyBridgeIdentities(currentUnknownLines, changedBridgeDrives)
 		appPreferences.saveAndroidControls(settings)
 		saveLastSession()
 	}

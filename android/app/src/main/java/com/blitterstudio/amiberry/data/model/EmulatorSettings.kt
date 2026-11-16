@@ -226,6 +226,8 @@ data class EmulatorSettings(
 		if ((before.optionValue("gfxcard_size")?.toIntOrNull() ?: 0) != 0 ||
 			rtgBoardFits(before.optionValue("gfxcard_type") ?: "ZorroIII", before, schema))
 			return this
+		if (!rtgBoardFits("ZorroII", before, schema))
+			return withField("gfxcard_size", "0", schema) ?: this
 		var result = withField("gfxcard_type", "ZorroII", schema) ?: this
 		if (size > 8)
 			result = result.withField("gfxcard_size", "8", schema) ?: result

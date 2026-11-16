@@ -286,6 +286,22 @@ object ConfigGenerator {
 			changedDrives.any { key == "floppy${it}subtypeid" }
 		}
 
+	/** Companion records cfgfile reads after their owning option. */
+	internal val companionLines = mapOf(
+		"cart_file" to setOf("cart"),
+		"joyport0" to setOf("joyportfriendlyname0", "joyportname0"),
+		"joyport1" to setOf("joyportfriendlyname1", "joyportname1"),
+		"joyport2" to setOf("joyportfriendlyname2", "joyportname2"),
+		"joyport3" to setOf("joyportfriendlyname3", "joyportname3")
+	) + (0..3).flatMap { drive ->
+		listOf("floppy${drive}type", "floppy${drive}subtype").map { it to setOf("floppy${drive}subtypeid") }
+	}.toMap()
+
+	internal fun withoutCompanionLines(lines: List<String>, changed: Set<String>): List<String> {
+		val keys = changed.flatMapTo(HashSet()) { companionLines[it].orEmpty() }
+		return lines.filterNot { it.substringBefore('=').trim().lowercase() in keys }
+	}
+
 	fun writeConfig(context: Context, settings: EmulatorSettings, filename: String): File {
 		val file = configFile(context, filename)
 		file.writeText(generate(settings))
