@@ -51,6 +51,19 @@ object OverlaySettings {
 	private val MEDIA = setOf("cdimage0") + (0..3).flatMap { listOf("floppy$it", "floppy${it}type") } +
 		(0 until 20).map { "diskimage$it" }
 
+	/**
+	 * The in-game overlay changes settings through the live native bridge; it
+	 * has no file browser or keyboard recorder, so paths, text and hotkeys
+	 * stay in the machine editor.
+	 */
+	fun supportsInlineRow(option: SettingsSchema.Option): Boolean =
+		SettingsGroups.rowKind(option) in setOf(
+			SettingsGroups.RowKind.Switch,
+			SettingsGroups.RowKind.Choice,
+			SettingsGroups.RowKind.Level,
+			SettingsGroups.RowKind.Number
+		)
+
 	fun allSettings(schema: SettingsSchema): List<SettingsSchema.Option> =
 		schema.options.values.filter { option ->
 			option.id !in MEDIA &&
@@ -58,7 +71,7 @@ object OverlaySettings {
 				option.id !in (SettingsGroups.managed + PORTS + CONTROLS) &&
 				!option.presetOnly &&
 				!option.hiddenOnAndroid &&
-				SettingsGroups.rowKind(option) != null
+				supportsInlineRow(option)
 		}
 
 	/** Every option the overlay reads while its menu is open. */

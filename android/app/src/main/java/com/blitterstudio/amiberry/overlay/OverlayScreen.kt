@@ -935,7 +935,7 @@ private fun AllSettingsPage(viewModel: OverlayViewModel, focus: FocusTargets) {
 						option = option,
 						modifier = modifier
 					)
-					null -> Unit
+					SettingsGroups.RowKind.Text, SettingsGroups.RowKind.Hotkey, null -> Unit
 				}
 			}
 		}
