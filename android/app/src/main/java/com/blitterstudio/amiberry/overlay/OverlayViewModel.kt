@@ -337,9 +337,10 @@ class OverlayViewModel(application: Application) : AndroidViewModel(application)
 		close(OverlayNative.CLOSE_RESUME)
 	}
 
-	/** Resets the running machine without applying staged settings. */
+	/** Resets the running machine; it also applies staged reset-class settings. */
 	fun reset(hard: Boolean) {
 		OverlayNative.reset(hard)
+		if (pendingApply == PendingApply.RESET) pendingApply = PendingApply.NONE
 		close(OverlayNative.CLOSE_RESUME)
 	}
 
