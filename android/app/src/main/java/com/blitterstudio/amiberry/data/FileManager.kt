@@ -34,7 +34,9 @@ object FileManager {
 			val path: String,
 			override val safeName: String,
 			/** An .lha/.lzh imported as a WHDLoad game that holds no `.slave`, so it won't start as one. */
-			val notWhdloadGame: Boolean = false
+			val notWhdloadGame: Boolean = false,
+			/** The source was Amiga Forever's rom.key, even when its target already existed. */
+			val isRomKey: Boolean = false
 		) : ImportResult
 
 		data class Unsupported(
@@ -150,7 +152,8 @@ object FileManager {
 		importIncludesCue: Boolean = false,
 		size: () -> Long? = { null }
 	): FileCategory? {
-		val extension = safeImportFileName(rawName).substringAfterLast('.', missingDelimiterValue = "").lowercase()
+		val fileName = safeImportFileName(rawName)
+		val extension = fileName.substringAfterLast('.', missingDelimiterValue = "").lowercase()
 		if (extension == "bin") {
 			val bytes = size()
 			return when {
@@ -159,7 +162,7 @@ object FileManager {
 				else -> null
 			}
 		}
-		return FileCategory.fromExtension(extension)
+		return FileCategory.fromFileName(fileName)
 	}
 
 	internal fun importIncludesCue(names: List<String?>): Boolean =
@@ -181,7 +184,7 @@ object FileManager {
 
 	/**
 	 * Import every supported file below a Storage Access Framework directory tree, each
-	 * into the category of its extension. Subdirectories are traversed so users can select
+	 * into the category its filename belongs to. Subdirectories are traversed so users can select
 	 * a collection root once.
 	 */
 	fun importFolderWithResults(
@@ -210,7 +213,7 @@ object FileManager {
 
 	/**
 	 * Import the supported files below a folder of the device's storage (the in-app
-	 * browser, with All Files Access), each into the category of its extension. The
+	 * browser, with All Files Access), each into the category its filename belongs to. The
 	 * app's own storage is left out: importing Internal storage would otherwise import
 	 * the whole library again into itself.
 	 */
@@ -218,7 +221,8 @@ object FileManager {
 		val files = DeviceStorage.supportedFilesUnder(
 			dir,
 			FileCategory.allExtensions,
-			excluded = importExcludedDirs(context)
+			excluded = importExcludedDirs(context),
+			acceptsFileName = { FileCategory.fromFileName(it) != null }
 		)
 		val withCue = importIncludesCue(files.map { it.name })
 		return files.map { file ->
@@ -234,9 +238,8 @@ object FileManager {
 	): ImportResult {
 		val targetDir = getCategoryDir(context, category)
 		if (!targetDir.exists()) targetDir.mkdirs()
-
-		val finalFile = uniqueImportTarget(targetDir, fileName)
-
+		val isRomKey = isRomKeyImport(category, fileName)
+		val finalFile = importTarget(targetDir, category, fileName)
 		return try {
 			val inputStream = context.contentResolver.openInputStream(uri)
 			if (inputStream == null) {
@@ -244,19 +247,47 @@ object FileManager {
 				return ImportResult.Failed(fileName)
 			}
 			inputStream.use { input ->
-				finalFile.outputStream().use { output ->
-					input.copyTo(output)
+				if (!replaceImportedFile(input, uri.takeIf { it.scheme == "file" }?.path?.let(::File), finalFile)) {
+					Log.e(TAG, "Failed to replace imported file: ${finalFile.absolutePath}")
+					return ImportResult.Failed(fileName)
 				}
 			}
 			Log.d(TAG, "Imported ${finalFile.name} to ${finalFile.absolutePath}")
 			val notWhdloadGame = category == FileCategory.WHDLOAD_GAMES &&
 				WhdloadArchive.hasSlave(finalFile) == false
-			ImportResult.Imported(finalFile.absolutePath, finalFile.name, notWhdloadGame)
+			ImportResult.Imported(
+				path = finalFile.absolutePath,
+				safeName = finalFile.name,
+				notWhdloadGame = notWhdloadGame,
+				isRomKey = isRomKey
+			)
 		} catch (e: Exception) {
 			Log.e(TAG, "Failed to import file from URI: $uri", e)
 			ImportResult.Failed(fileName)
 		}
 	}
+
+	/**
+	 * Writes through a sibling temporary file before replacing [target]. A file URI may
+	 * already name [target], so the canonical comparison makes that import a successful no-op.
+	 */
+	internal fun replaceImportedFile(input: java.io.InputStream, source: File?, target: File): Boolean {
+		if (source != null && runCatching { source.canonicalFile == target.canonicalFile }.getOrDefault(false)) return true
+		val temporary = File.createTempFile(".${target.name}.", ".import", target.parentFile)
+		return try {
+			temporary.outputStream().use { output -> input.copyTo(output) }
+			temporary.renameTo(target)
+		} finally {
+			temporary.delete()
+		}
+	}
+
+	/** The destination keeps Amiga Forever's key at the exact name the native scanner uses. */
+	internal fun importTarget(targetDir: File, category: FileCategory, fileName: String): File =
+		if (isRomKeyImport(category, fileName)) File(targetDir, "rom.key") else uniqueImportTarget(targetDir, fileName)
+
+	internal fun isRomKeyImport(category: FileCategory, fileName: String): Boolean =
+		category == FileCategory.ROMS && FileCategory.isRomKeyFileName(fileName)
 
 	/**
 	 * Scan a directory for files matching the given extensions.
@@ -268,7 +299,7 @@ object FileManager {
 
 		return dir.listFiles()
 			?.filter { file ->
-				file.isFile && file.extension.lowercase() in extensions
+				file.isFile && (categoryOverride?.acceptsFileName(file.name) ?: (file.extension.lowercase() in extensions))
 			}
 			?.map { file ->
 				val crc = if (category == FileCategory.ROMS) calculateCrc32(file) else null
@@ -362,7 +393,7 @@ object FileManager {
 	internal fun importCandidateForCategory(rawName: String?, category: FileCategory): ImportCandidate {
 		val fileName = safeImportFileName(rawName)
 		val extension = fileName.substringAfterLast('.', missingDelimiterValue = "").lowercase()
-		if (extension.isBlank() || extension !in category.extensions) {
+		if (!category.acceptsFileName(fileName)) {
 			return ImportCandidate.Unsupported(fileName, extension)
 		}
 		return ImportCandidate.Importable(fileName)
@@ -395,7 +426,7 @@ object FileManager {
 			val target = File(file.path).canonicalFile
 			target.isFile &&
 				canonicalBases.any { target.isUnder(it) } &&
-				target.extension.lowercase() in file.category.extensions
+				file.category.acceptsFileName(target.name)
 		} catch (_: IOException) {
 			false
 		}

@@ -53,23 +53,32 @@ object DeviceStorage {
 		}
 
 	/**
-	 * The folders and the files with one of [extensions] in [dir], folders first, each
+	 * The folders and the files [acceptsFileName] accepts in [dir], folders first, each
 	 * group by name; hidden entries are left out. Null when the folder cannot be read.
 	 */
-	fun entries(dir: File, extensions: Set<String>): List<Entry>? {
+	fun entries(
+		dir: File,
+		extensions: Set<String>,
+		acceptsFileName: (String) -> Boolean = { extensions.isEmpty() || it.substringAfterLast('.', "").lowercase() in extensions }
+	): List<Entry>? {
 		val children = dir.listFiles() ?: return null
 		return children
-			.filter { !it.name.startsWith(".") && (it.isDirectory || it.isSupportedFile(extensions)) }
+			.filter { !it.name.startsWith(".") && (it.isDirectory || (it.isFile && acceptsFileName(it.name))) }
 			.map { Entry(it, it.isDirectory) }
 			.sortedWith(compareBy<Entry> { !it.isDirectory }.thenBy { it.file.name.lowercase() })
 	}
 
 	/**
-	 * Every file with one of [extensions] below [dir], at most [MAX_DEPTH] folders deep.
+	 * Every file [acceptsFileName] accepts below [dir], at most [MAX_DEPTH] folders deep.
 	 * Each folder is read once, so links that loop back are harmless. Folders that are,
 	 * or lie inside, one of [excluded] (the app's own storage) are skipped.
 	 */
-	fun supportedFilesUnder(dir: File, extensions: Set<String>, excluded: List<File> = emptyList()): List<File> {
+	fun supportedFilesUnder(
+		dir: File,
+		extensions: Set<String>,
+		excluded: List<File> = emptyList(),
+		acceptsFileName: (String) -> Boolean = { extensions.isEmpty() || it.substringAfterLast('.', "").lowercase() in extensions }
+	): List<File> {
 		val files = mutableListOf<File>()
 		val visited = mutableSetOf<String>()
 		val excludedPaths = excluded.mapNotNull { canonicalOrNull(it) }
@@ -85,7 +94,7 @@ object DeviceStorage {
 				when {
 					child.name.startsWith(".") -> Unit
 					child.isDirectory -> if (depth < MAX_DEPTH) pending.add(child to depth + 1)
-					child.isSupportedFile(extensions) -> files += child
+					child.isFile && acceptsFileName(child.name) -> files += child
 				}
 			}
 		}
@@ -98,9 +107,6 @@ object DeviceStorage {
 		null
 	}
 
-	/** Empty [extensions] means no filter: every file is supported (a file-setting picker). */
-	private fun File.isSupportedFile(extensions: Set<String>): Boolean =
-		isFile && (extensions.isEmpty() || extension.lowercase() in extensions)
 
 	private const val MAX_DEPTH = 16
 }

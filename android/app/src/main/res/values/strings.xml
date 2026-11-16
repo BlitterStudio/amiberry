@@ -85,6 +85,7 @@
 
     <string name="label_configuration_name">Configuration name</string>
     <string name="label_configuration_description">Description (optional)</string>
+    <string name="label_configuration_category">Category (optional)</string>
     <string name="dialog_save_config_title">Save configuration</string>
     <string name="dialog_save_config_message">Enter a name for this configuration.</string>
     <string name="settings_new_configuration">New configuration</string>

@@ -26,7 +26,7 @@ object IntentImport {
 			return Classification.Rp9(rp9Name)
 		}
 
-		val category = FileCategory.fromExtension(extension)
+		val category = FileCategory.fromFileName(safeName)
 		return if (category != null && FileManager.importFileNameForCategory(safeName, category) != null) {
 			Classification.Media(safeName, category)
 		} else {

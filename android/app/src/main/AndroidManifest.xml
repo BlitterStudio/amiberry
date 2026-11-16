@@ -76,7 +76,7 @@
             <!--
                 Open Amiga disk images, configs, and WHDLoad archives from file managers.
                 Split into two filters: file:// uses pathPattern matching; content:// uses
-                application/octet-stream since pathPattern is unreliable with SAF URIs.
+                archive MIME types because pathPattern is unreliable with SAF URIs.
                 Non-Amiga files are rejected in importAndLaunch() via extension check.
             -->
             <intent-filter>
@@ -89,6 +89,7 @@
                 <data android:pathPattern=".*\\.adz" />
                 <data android:pathPattern=".*\\.dms" />
                 <data android:pathPattern=".*\\.ipf" />
+                <data android:pathPattern=".*\\.7z" />
                 <data android:pathPattern=".*\\.hdf" />
                 <data android:pathPattern=".*\\.iso" />
                 <data android:pathPattern=".*\\.cue" />
@@ -105,6 +106,9 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="content" />
                 <data android:mimeType="application/octet-stream" />
+                <data android:mimeType="application/zip" />
+                <data android:mimeType="application/gzip" />
+                <data android:mimeType="application/x-7z-compressed" />
                 <data android:mimeType="application/vnd.cloanto.rp9" />
             </intent-filter>
         </activity>

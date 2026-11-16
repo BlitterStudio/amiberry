@@ -392,6 +392,7 @@ fun LibraryScreen(
 	val romPicker = rememberImportPicker(
 		mimeTypes = FilePickerFilters.mimeTypesFor(FileCategory.ROMS),
 		extensions = FileCategory.ROMS.extensions,
+		acceptsFileName = FileCategory.ROMS::acceptsFileName,
 		multiple = true,
 		onFolder = { folder -> importRomFolder(folder) }
 	) { uris ->
@@ -675,13 +676,15 @@ fun LibraryScreen(
 		SaveConfigDialog(
 			initialName = initialName,
 			initialDescription = "",
+			initialCategory = "",
+			categorySuggestions = categories,
 			onDismiss = {
 				saveNewName = null
 				saveNewThen = null
 			},
-			onSave = { name, description ->
+			onSave = { name, description, category ->
 				scope.launch {
-					val result = settingsViewModel.saveAs(name, description, allowOverwrite = false)
+					val result = settingsViewModel.saveAs(name, description, category, allowOverwrite = false)
 					if (result is ConfigurationSaveActions.SaveResult.Saved) {
 						saveNewName = null
 						configurationsViewModel.refresh()

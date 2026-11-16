@@ -80,6 +80,7 @@ private sealed interface BrowserListing {
 @Composable
 internal fun DeviceFileBrowserDialog(
 	extensions: Set<String>,
+	acceptsFileName: ((String) -> Boolean)? = null,
 	multiple: Boolean,
 	allowFolder: Boolean,
 	onDismiss: () -> Unit,
@@ -102,7 +103,9 @@ internal fun DeviceFileBrowserDialog(
 			if (dir == null) {
 				BrowserListing.Roots(DeviceStorage.roots(context).also { roots = it })
 			} else {
-				BrowserListing.Folder(DeviceStorage.entries(dir, extensions))
+				BrowserListing.Folder(DeviceStorage.entries(dir, extensions, acceptsFileName ?: {
+					extensions.isEmpty() || it.substringAfterLast('.', "").lowercase() in extensions
+				}))
 			}
 		}
 	}
