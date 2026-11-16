@@ -555,6 +555,7 @@
     <string name="dialog_revert_message_preset">The machine goes back to the %1$s preset.</string>
     <string name="settings_section_show">Show %1$s</string>
     <string name="settings_section_hide">Hide %1$s</string>
+    <string name="settings_file_choose">Choose</string>
     <!-- Files tab, imports and the device storage browser -->
     <string name="file_manager_browse_device">Browse device storage</string>
     <string name="file_manager_import_sorted_into">Added to: %1$s</string>

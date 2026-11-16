@@ -72,6 +72,14 @@ fun InputPage(viewModel: SettingsViewModel) {
 			SettingsOptionRow("input.joymouse_speed_analog", viewModel)
 		}
 
+		SettingsGroups.sectionsOf(SettingsPage.Input)
+			.firstOrNull { "joyport2" in it.ids }
+			?.let { SchemaGroupSection(it, viewModel) }
+
+		SettingsGroups.sectionsOf(SettingsPage.Input)
+			.firstOrNull { "amiberry.open_gui" in it.ids }
+			?.let { SchemaGroupSection(it, viewModel) }
+
 		// Not "Input" on the Input page: the section holds autofire, port modes and mouse options.
 		SettingsGroups.placementOf(SettingsPage.Input, "input")?.let { SchemaGroupSection(it, viewModel) }
 

@@ -1,22 +1,38 @@
 package com.blitterstudio.amiberry.ui.screens.settings
 
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Eject
+import androidx.compose.material.icons.filled.FolderOpen
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.blitterstudio.amiberry.R
 import com.blitterstudio.amiberry.data.model.EmulatorSettings
 import com.blitterstudio.amiberry.data.model.EmulatorSettingsConstraints
 import com.blitterstudio.amiberry.data.model.LauncherChoices
 import com.blitterstudio.amiberry.data.model.SettingsSchema
+import com.blitterstudio.amiberry.ui.components.rememberImportPicker
 import com.blitterstudio.amiberry.ui.components.settings.SchemaChoiceRow
 import com.blitterstudio.amiberry.ui.components.settings.SchemaLevelRow
 import com.blitterstudio.amiberry.ui.components.settings.SchemaSwitchRow
+import com.blitterstudio.amiberry.ui.components.settings.SupportingText
 import com.blitterstudio.amiberry.ui.components.settings.schemaOption
 import com.blitterstudio.amiberry.ui.components.settings.schemaLabel
 import com.blitterstudio.amiberry.ui.components.settings.settingText
 import com.blitterstudio.amiberry.ui.components.settings.settingsSchema
+import com.blitterstudio.amiberry.ui.dpadFocusIndicator
 import com.blitterstudio.amiberry.ui.hasTouchScreen
 import com.blitterstudio.amiberry.ui.viewmodel.SettingsViewModel
 import kotlin.math.roundToInt
@@ -42,7 +58,7 @@ object SettingsOptionRows {
 		"joyport0", "joyport1", "joyport2", "joyport3", "joyport1mousemap",
 		"input.joymouse_speed_analog", "amiberry.onscreen_joystick", "amiberry.vkbd_touch_button",
 		"amiberry.vkbd_numpad", "amiberry.shader", "amiberry.shader_rtg", "amiberry.custom_bezel",
-		"amiberry.scaling_method", "cart_file",
+		"amiberry.scaling_method", "cart_file", "genlock_image", "genlock_video", "rtc_file",
 		"fpu_model", "chipmem_size", "bogomem_size", "sound_max_buff",
 		// The accelerator's board and memory: the schema's catalogs carry
 		// the list and the limit, not the option's choices. The boot ROM
@@ -145,11 +161,12 @@ fun SettingsOptionRow(id: String, viewModel: SettingsViewModel, sectionTitle: St
 				viewModel.updateSettings { s -> s.copy(onScreenKeyboardNumpad = it) }
 			}
 		)
+		// Files outside the launcher's scanned libraries need the device picker,
+		// which retains the selected storage path in the .uae file.
+		"cart_file", "genlock_image", "genlock_video", "rtc_file" -> DevicePathRow(id, viewModel)
 		// The shader and bezel lists come from their configured folders, not the schema.
 		"amiberry.shader", "amiberry.shader_rtg" -> ShaderDropdownRow(viewModel, id)
 		"amiberry.custom_bezel" -> BezelDropdownRow(viewModel)
-		"cart_file" -> CartridgeRomRow(viewModel)
-		// The scaling method and the resolution autoswitch are one switch.
 		"amiberry.scaling_method" -> IntegerScalingRow(viewModel)
 		// A single offered FPU is no choice (an internal one the CPU carries).
 		"fpu_model" -> {
@@ -232,19 +249,51 @@ fun SettingsOptionRow(id: String, viewModel: SettingsViewModel, sectionTitle: St
 	}
 }
 
-/** A cartridge ROM is picked from the same installed ROM library as Kickstart images. */
+/**
+ * A path option selected from Android shared storage. It is deliberately not
+ * an editable field: Android users cannot reasonably type a storage path.
+ */
 @Composable
-private fun CartridgeRomRow(viewModel: SettingsViewModel) {
-	val roms by viewModel.availableRoms.collectAsState()
-	val settings = viewModel.settings
-	FileDropdown(
-		label = schemaLabel("cart_file"),
-		files = roms,
-		selectedPath = settings.optionValue("cart_file") ?: "",
-		onSelect = { path -> viewModel.updateSettings { it.withOption("cart_file", path) } },
-		onClear = { viewModel.updateSettings { it.withOption("cart_file", "") } },
-		help = schemaOption("cart_file")?.help
-	)
+private fun DevicePathRow(id: String, viewModel: SettingsViewModel) {
+	val selectedPath = viewModel.settings.optionValue(id).orEmpty()
+	val picker = rememberImportPicker(
+		mimeTypes = arrayOf("*/*"),
+		extensions = emptySet()
+	) { uris ->
+		val path = uris.firstOrNull()?.path ?: return@rememberImportPicker
+		viewModel.updateSettings { it.withOption(id, path) }
+	}
+	Column(modifier = Modifier.fillMaxWidth()) {
+		Row(verticalAlignment = Alignment.CenterVertically) {
+			OutlinedTextField(
+				value = selectedPath.takeIf { it.isNotBlank() }?.let(LauncherChoices::fileName)
+					?: stringResource(R.string.placeholder_none),
+				onValueChange = {},
+				readOnly = true,
+				label = { Text(schemaLabel(id)) },
+				modifier = Modifier.weight(1f)
+			)
+			TextButton(onClick = { picker.browseDevice() }, modifier = Modifier.dpadFocusIndicator()) {
+				Icon(Icons.Default.FolderOpen, contentDescription = null)
+				Text(stringResource(R.string.settings_file_choose))
+			}
+			if (selectedPath.isNotBlank()) {
+				IconButton(
+					onClick = { viewModel.updateSettings { it.withOption(id, "") } },
+					modifier = Modifier.dpadFocusIndicator()
+				) {
+					Icon(
+						Icons.Default.Eject,
+						contentDescription = stringResource(
+							R.string.action_eject_named,
+							LauncherChoices.fileName(selectedPath)
+						)
+					)
+				}
+			}
+		}
+		schemaOption(id)?.help?.takeIf { it.isNotBlank() }?.let { SupportingText(it) }
+	}
 }
 
 /** Parallel-port joyports use the same Android device choices as the native ports. */

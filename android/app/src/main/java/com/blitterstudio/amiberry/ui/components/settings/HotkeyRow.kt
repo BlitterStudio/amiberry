@@ -1,6 +1,7 @@
 package com.blitterstudio.amiberry.ui.components.settings
 
 import android.view.KeyEvent as AndroidKeyEvent
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -8,12 +9,15 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
@@ -117,9 +121,13 @@ fun SchemaHotkeyRow(
 	val takesModifiers = id != "amiberry.left_amiga" && id != "amiberry.right_amiga"
 	var recording by remember { mutableStateOf(false) }
 	var heldModifier by remember { mutableStateOf<String?>(null) }
+	val recorderFocus = remember { FocusRequester() }
 	fun stop() {
 		recording = false
 		heldModifier = null
+	}
+	LaunchedEffect(recording) {
+		if (recording) recorderFocus.requestFocus()
 	}
 	fun record(keyCode: Int, metaState: Int) {
 		if (keyCode == AndroidKeyEvent.KEYCODE_ESCAPE && metaState == 0) {
@@ -131,7 +139,31 @@ fun SchemaHotkeyRow(
 			stop()
 		}
 	}
-	Column(modifier = modifier.fillMaxWidth()) {
+	Column(
+		modifier = modifier
+			.fillMaxWidth()
+			.focusRequester(recorderFocus)
+			.focusable()
+			.onPreviewKeyEvent { event ->
+				if (!recording) return@onPreviewKeyEvent false
+				val native = event.nativeKeyEvent
+				when (event.type) {
+					KeyEventType.KeyDown -> if (native.repeatCount == 0) {
+						AndroidHotkeyFormat.modifier(native.keyCode)?.let { heldModifier = it }
+							?: record(native.keyCode, native.metaState)
+						true
+					} else true
+					KeyEventType.KeyUp -> {
+						if (AndroidHotkeyFormat.modifier(native.keyCode) == heldModifier) {
+							onValueChange(heldModifier!!)
+							stop()
+						}
+						true
+					}
+					else -> true
+				}
+			}
+	) {
 		Row(verticalAlignment = Alignment.CenterVertically) {
 			OutlinedTextField(
 				value = if (recording) stringResource(R.string.settings_hotkey_recording) else value.ifEmpty { stringResource(R.string.placeholder_none) },
@@ -144,27 +176,7 @@ fun SchemaHotkeyRow(
 			Button(
 				onClick = { if (recording) stop() else recording = true },
 				enabled = enabled,
-				modifier = Modifier
-					.dpadFocusIndicator()
-					.onPreviewKeyEvent { event ->
-						if (!recording) return@onPreviewKeyEvent false
-						val native = event.nativeKeyEvent
-						when (event.type) {
-							KeyEventType.KeyDown -> if (native.repeatCount == 0) {
-								AndroidHotkeyFormat.modifier(native.keyCode)?.let { heldModifier = it }
-									?: record(native.keyCode, native.metaState)
-								true
-							} else true
-							KeyEventType.KeyUp -> {
-								if (AndroidHotkeyFormat.modifier(native.keyCode) == heldModifier) {
-									onValueChange(heldModifier!!)
-									stop()
-								}
-								true
-							}
-							else -> true
-						}
-					}
+				modifier = Modifier.dpadFocusIndicator()
 			) { Text(stringResource(if (recording) R.string.action_cancel else R.string.settings_hotkey_record)) }
 			if (value.isNotEmpty()) {
 				Button(onClick = { stop(); onValueChange("") }, enabled = enabled, modifier = Modifier.dpadFocusIndicator()) {

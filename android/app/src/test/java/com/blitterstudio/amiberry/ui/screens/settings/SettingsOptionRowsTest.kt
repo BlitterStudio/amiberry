@@ -25,7 +25,7 @@ class SettingsOptionRowsTest {
 				"joyport0", "joyport1", "joyport2", "joyport3", "joyport1mousemap",
 				"input.joymouse_speed_analog", "amiberry.onscreen_joystick", "amiberry.vkbd_touch_button",
 				"amiberry.vkbd_numpad", "amiberry.shader", "amiberry.shader_rtg", "amiberry.custom_bezel",
-				"amiberry.scaling_method", "cart_file",
+				"amiberry.scaling_method", "cart_file", "genlock_image", "genlock_video", "rtc_file",
 				"fpu_model", "chipmem_size", "bogomem_size", "sound_max_buff",
 				"cpuboard_type", "cpuboardmem1_size"
 			) + (0..3).map { "floppy${it}sound" },
