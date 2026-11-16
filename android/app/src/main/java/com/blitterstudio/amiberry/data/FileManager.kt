@@ -34,7 +34,9 @@ object FileManager {
 			val path: String,
 			override val safeName: String,
 			/** An .lha/.lzh imported as a WHDLoad game that holds no `.slave`, so it won't start as one. */
-			val notWhdloadGame: Boolean = false
+			val notWhdloadGame: Boolean = false,
+			/** The source was Amiga Forever's rom.key, even when its target already existed. */
+			val isRomKey: Boolean = false
 		) : ImportResult
 
 		data class Unsupported(
@@ -236,9 +238,8 @@ object FileManager {
 	): ImportResult {
 		val targetDir = getCategoryDir(context, category)
 		if (!targetDir.exists()) targetDir.mkdirs()
-
-		val finalFile = uniqueImportTarget(targetDir, fileName)
-
+		val isRomKey = isRomKeyImport(category, fileName)
+		val finalFile = importTarget(targetDir, category, fileName)
 		return try {
 			val inputStream = context.contentResolver.openInputStream(uri)
 			if (inputStream == null) {
@@ -253,12 +254,24 @@ object FileManager {
 			Log.d(TAG, "Imported ${finalFile.name} to ${finalFile.absolutePath}")
 			val notWhdloadGame = category == FileCategory.WHDLOAD_GAMES &&
 				WhdloadArchive.hasSlave(finalFile) == false
-			ImportResult.Imported(finalFile.absolutePath, finalFile.name, notWhdloadGame)
+			ImportResult.Imported(
+				path = finalFile.absolutePath,
+				safeName = finalFile.name,
+				notWhdloadGame = notWhdloadGame,
+				isRomKey = isRomKey
+			)
 		} catch (e: Exception) {
 			Log.e(TAG, "Failed to import file from URI: $uri", e)
 			ImportResult.Failed(fileName)
 		}
 	}
+
+	/** The destination keeps Amiga Forever's key at the exact name the native scanner uses. */
+	internal fun importTarget(targetDir: File, category: FileCategory, fileName: String): File =
+		if (isRomKeyImport(category, fileName)) File(targetDir, "rom.key") else uniqueImportTarget(targetDir, fileName)
+
+	internal fun isRomKeyImport(category: FileCategory, fileName: String): Boolean =
+		category == FileCategory.ROMS && FileCategory.isRomKeyFileName(fileName)
 
 	/**
 	 * Scan a directory for files matching the given extensions.

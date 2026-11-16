@@ -190,9 +190,7 @@ fun SettingsScreen(
 						}
 					}
 				}
-				if (result is FileManager.ImportResult.Imported &&
-					!FileCategory.isRomKeyFileName(result.safeName)
-				) {
+				if (result is FileManager.ImportResult.Imported && !result.isRomKey) {
 					viewModel.updateSettings { s -> s.copy(romFile = result.path) }
 				}
 				snackbarHostState.showSnackbar(importResultMessage(result))

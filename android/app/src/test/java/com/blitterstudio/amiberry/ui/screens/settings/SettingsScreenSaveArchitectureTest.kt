@@ -49,7 +49,7 @@ class SettingsScreenSaveArchitectureTest {
 
 	@Test
 	fun `importing an Amiga Forever key preserves the selected Kickstart`() {
-		assertTrue(source.contains("!FileCategory.isRomKeyFileName(result.safeName)"))
+		assertTrue(source.contains("!result.isRomKey"))
 	}
 
 	@Test

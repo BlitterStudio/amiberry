@@ -131,6 +131,18 @@ class FileManagerTest {
 	}
 
 	@Test
+	fun `a second ROM key import replaces the native scanner key target`() {
+		val roms = tempDir.newFolder(StoragePaths.ROMS)
+		File(roms, "rom.key").writeText("first key")
+
+		val target = FileManager.importTarget(roms, FileCategory.ROMS, "ROM.KEY")
+
+		assertEquals("rom.key", target.name)
+		assertEquals(File(roms, "rom.key"), target)
+		assertTrue(FileManager.isRomKeyImport(FileCategory.ROMS, "ROM.KEY"))
+	}
+
+	@Test
 	fun `importFileNameForCategory rejects unsupported ROM filenames`() {
 		assertNull(FileManager.importFileNameForCategory("disk", FileCategory.FLOPPIES))
 		assertNull(FileManager.importFileNameForCategory("notes.txt", FileCategory.FLOPPIES))
