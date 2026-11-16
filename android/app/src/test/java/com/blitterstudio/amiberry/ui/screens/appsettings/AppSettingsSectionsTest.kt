@@ -67,7 +67,7 @@ class AppSettingsSectionsTest {
 			ids(defaults.sections.single { it.key == "default_controller1,default_controller2,default_controller3,default_controller4,default_mouse1,default_mouse2,input_default_mouse_speed,default_joystick_deadzone,input_keyboard_as_joystick_stop_keypresses,rctrl_as_ramiga" })
 		)
 		assertEquals(
-			listOf("default_open_gui_key", "default_quit_key", "default_ar_key", "default_fullscreen_toggle_key"),
+			listOf("default_open_gui_key", "default_quit_key", "default_ar_key", "default_fullscreen_toggle_key", "default_screenshot_key"),
 			ids(defaults.sections.single { it.group == "global_input" })
 		)
 		val retroarch = defaults.sections.single { it.key == "default_retroarch_quit,default_retroarch_menu,default_retroarch_reset" }

@@ -192,6 +192,7 @@ assert sets == {
     "default_quit_key": "amiberry.quit_amiberry",
     "default_ar_key": "amiberry.action_replay",
     "default_fullscreen_toggle_key": "amiberry.fullscreen_toggle",
+    "default_screenshot_key": "amiberry.screenshot",
     "default_retroarch_quit": "amiberry.use_retroarch_quit",
     "default_retroarch_menu": "amiberry.use_retroarch_menu",
     "default_retroarch_reset": "amiberry.use_retroarch_reset",
@@ -230,7 +231,7 @@ assert option_values == {
     id: None for id in (
         "default_controller1", "default_mouse1", "default_joystick_deadzone",
         "input_default_mouse_speed", "default_open_gui_key", "default_quit_key",
-        "default_ar_key", "default_fullscreen_toggle_key", "default_retroarch_quit",
+        "default_ar_key", "default_fullscreen_toggle_key", "default_screenshot_key", "default_retroarch_quit",
         "default_retroarch_menu", "default_retroarch_reset", "default_scaling_method",
         "default_gfx_autoresolution", "default_auto_crop", "default_multithreaded_denise",
         "default_stereo_separation", "default_sound_frequency", "default_soundcard", "shader",

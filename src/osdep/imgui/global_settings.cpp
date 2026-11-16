@@ -522,6 +522,9 @@ void render_panel_global_settings()
 		render_hotkey_row("Full-window toggle key", amiberry_options.default_fullscreen_toggle_key,
 			sizeof amiberry_options.default_fullscreen_toggle_key,
 			"Default keyboard shortcut for toggling Windowed and Full-window modes.");
+		render_hotkey_row("Screenshot key", amiberry_options.default_screenshot_key,
+			sizeof amiberry_options.default_screenshot_key,
+			"Default keyboard shortcut for saving a screenshot.");
 		render_bool_row("RetroArch quit", &amiberry_options.default_retroarch_quit,
 			"Enable RetroArch-style quit button mapping by default when a mapping exists.");
 		render_bool_row("RetroArch menu", &amiberry_options.default_retroarch_menu,

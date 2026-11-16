@@ -209,7 +209,7 @@ final class AppSettingsSectionsTests: XCTestCase {
 		XCTAssertEqual(shortcuts.disclosedTitle, "RetroArch")
 		XCTAssertEqual(shortcuts.settings.map(\.id).filter { !shortcuts.disclosed.contains($0) },
 			["macos_left_command_q", "default_open_gui_key", "default_quit_key", "default_ar_key",
-				"default_fullscreen_toggle_key"])
+				"default_fullscreen_toggle_key", "default_screenshot_key"])
 		XCTAssertEqual(shortcuts.disclosed,
 			Set(["default_retroarch_quit", "default_retroarch_menu", "default_retroarch_reset"]))
 		// Search still finds a disclosed setting.

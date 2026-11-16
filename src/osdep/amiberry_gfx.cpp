@@ -3045,23 +3045,17 @@ bool screenshot_save(int monid, const TCHAR* path)
 
 void screenshot(int monid, int mode, int doprepare)
 {
-	std::string filename;
-
 	if (!create_screenshot())
 	{
 		write_log(_T("Failed to create screenshot\n"));
 		return;
 	}
 
-	if (strlen(currprefs.floppyslots[0].df) > 0)
-		filename = extract_filename(currprefs.floppyslots[0].df);
-	else if (currprefs.cdslots[0].inuse && strlen(currprefs.cdslots[0].name) > 0)
-		filename = extract_filename(currprefs.cdslots[0].name);
-	else
-		filename = "default.uae";
+	std::string name = current_content_name();
+	if (name.empty())
+		name = "default";
 
-	std::string base_path = get_screenshot_path();
-	base_path += remove_file_extension(filename);
+	const std::string base_path = get_screenshot_path() + name;
 
 	screenshot_filename = base_path + ".png";
 
