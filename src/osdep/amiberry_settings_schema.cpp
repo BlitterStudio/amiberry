@@ -1830,6 +1830,8 @@ void rtg_boards(std::string& out)
 		json_string(out, config);
 		out += ",\"label\":";
 		json_string(out, label.c_str());
+		out += ",\"bus\":";
+		json_number(out, gfxboard_get_configtype_of(id));
 		out += '}';
 	}
 	out += "\n]";

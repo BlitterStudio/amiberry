@@ -204,6 +204,7 @@ data class EmulatorSettings(
 			result = result.withField(field, written, schema) ?: result
 		}
 		return result.withRtgSizeSideEffects(this, id, normalizedValue, schema)
+			.withCustomBezelSideEffects(id, normalizedValue, schema)
 			.withAcceleratorMemorySynced(this, id, normalizedValue, schema)
 	}
 
@@ -225,6 +226,16 @@ data class EmulatorSettings(
 		var result = withField("gfxcard_type", "ZorroII", schema) ?: this
 		if (size > 8)
 			result = result.withField("gfxcard_size", "8", schema) ?: result
+		return result
+	}
+
+	/** set_custom_bezel enables a picked image and turns off the built-in bezel. */
+	private fun withCustomBezelSideEffects(id: String, value: String, schema: SettingsSchema?): EmulatorSettings {
+		if (id != "amiberry.custom_bezel") return this
+		val enabled = value != "none"
+		var result = withField("amiberry.use_custom_bezel", enabled.toString(), schema) ?: this
+		if (enabled)
+			result = result.withField("amiberry.use_bezel", "false", schema) ?: result
 		return result
 	}
 

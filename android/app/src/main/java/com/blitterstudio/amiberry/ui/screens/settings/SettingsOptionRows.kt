@@ -81,6 +81,13 @@ object SettingsOptionRows {
 	}
 }
 
+/** RTG boards fitting the addressing and chip RAM limits of type_fits(). */
+internal fun rtgBoardChoices(schema: SettingsSchema, settings: EmulatorSettings): List<SettingsSchema.Choice> =
+	schema.rtgBoards.filter { board ->
+		(board.bus != 3 || !settings.address24Bit) &&
+			(board.bus != 2 || EmulatorSettings.chipRamKb(settings.chipRam) <= 2048)
+	}.map { SettingsSchema.Choice(it.id, it.label) }
+
 /**
  * The row for option [id] as the page that owns it shows it: the page's own
  * row where [SettingsOptionRows.customIds] names one, else the generic row of
@@ -169,13 +176,16 @@ fun SettingsOptionRow(id: String, viewModel: SettingsViewModel, sectionTitle: St
 		"amiberry.custom_bezel" -> BezelDropdownRow(viewModel)
 		// The RTG board list is dynamic in the settings layer, so the schema
 		// exports its catalog separately from gfxcard_type's descriptor.
-		"gfxcard_type" -> SchemaChoiceRow(
-			id = id,
-			value = settings.optionValue(id) ?: option.default,
-			choices = schema.rtgBoards,
-			enabled = available(id),
-			onSelect = { value -> viewModel.updateSettings { s -> s.withOption(id, value) } }
-		)
+		"gfxcard_type" -> {
+			val boards = rtgBoardChoices(schema, settings)
+			SchemaChoiceRow(
+				id = id,
+				value = settings.optionValue(id) ?: option.default,
+				choices = boards,
+				enabled = available(id),
+				onSelect = { value -> viewModel.updateSettings { s -> s.withOption(id, value) } }
+			)
+		}
 		"amiberry.scaling_method" -> IntegerScalingRow(viewModel)
 		// A single offered FPU is no choice (an internal one the CPU carries).
 		"fpu_model" -> {

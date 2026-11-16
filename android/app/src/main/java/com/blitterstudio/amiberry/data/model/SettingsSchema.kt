@@ -64,7 +64,7 @@ class SettingsSchema(
 	 */
 	val acceleratorBoards: List<AcceleratorBoard> = emptyList(),
 	/** The RTG boards gfxcard_type dynamically offers. */
-	val rtgBoards: List<Choice> = emptyList(),
+	val rtgBoards: List<RtgBoard> = emptyList(),
 	/** The storage controllers a live settings session can offer. */
 	val mountControllers: List<MountController> = emptyList(),
 	/** What setting cpuboard_type changes with it (the CPU its board needs); null in a schema without it. */
@@ -368,6 +368,9 @@ class SettingsSchema(
 
 	/** A gamepad button or axis of a joystick port, whose input event a configuration can map. */
 	data class CustomControl(val id: String, val label: String, val axis: Boolean)
+
+	/** A dynamic RTG board choice and the autoconfig bus it requires. */
+	data class RtgBoard(val id: String, val label: String, val bus: Int)
 
 	/**
 	 * One accelerator board: a cpuboard_type value. [settings] are its
@@ -713,7 +716,7 @@ class SettingsSchema(
 			val rtgBoards = json.optJSONArray("rtg_boards")?.let { array ->
 				List(array.length()) { b ->
 					val board = array.getJSONObject(b)
-					Choice(board.getString("id"), board.getString("label"))
+					RtgBoard(board.getString("id"), board.getString("label"), board.optInt("bus"))
 				}
 			}.orEmpty()
 			val mountControllers = json.optJSONArray("mount_controllers")?.let { array ->

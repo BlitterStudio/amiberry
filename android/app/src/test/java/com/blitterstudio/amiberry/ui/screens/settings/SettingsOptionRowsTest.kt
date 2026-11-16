@@ -63,6 +63,13 @@ class SettingsOptionRowsTest {
 	}
 
 	@Test
+	fun `RTG choices fit addressing and chip RAM`() {
+		assertFalse("ZorroIII" in rtgBoardChoices(schema, EmulatorSettings(address24Bit = true)).map { it.value })
+		assertTrue("ZorroIII" in rtgBoardChoices(schema, EmulatorSettings(address24Bit = false)).map { it.value })
+		assertFalse("ZorroII" in rtgBoardChoices(schema, EmulatorSettings(chipRam = 8)).map { it.value })
+	}
+
+	@Test
 	fun `touch-only rows show only with a touchscreen, which the constraints enforce`() {
 		val settings = EmulatorSettings()
 		assertFalse(SettingsOptionRows.shows("amiberry.onscreen_joystick", settings, hasTouchScreen = false))

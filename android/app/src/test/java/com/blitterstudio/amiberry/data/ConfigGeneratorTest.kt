@@ -685,6 +685,15 @@ class ConfigGeneratorTest {
 	}
 
 	@Test
+	fun `custom bezel selection mirrors the native bezel toggles`() {
+		val picked = EmulatorSettings().withOption("amiberry.custom_bezel", "frame.png")
+		assertEquals("true", picked.schemaState().getValue("amiberry.use_custom_bezel"))
+		assertEquals("false", picked.schemaState().getValue("amiberry.use_bezel"))
+		val cleared = picked.withOption("amiberry.custom_bezel", "none")
+		assertEquals("false", cleared.schemaState().getValue("amiberry.use_custom_bezel"))
+	}
+
+	@Test
 	fun `round-trip preserves onscreen_joy joyport1`() {
 		val original = EmulatorSettings(joyport1 = "onscreen_joy", onScreenJoystick = true)
 		val configText = ConfigGenerator.generate(original)
