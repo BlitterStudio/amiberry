@@ -10,7 +10,9 @@ import androidx.compose.material.icons.filled.SportsEsports
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Folder
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import com.blitterstudio.amiberry.R
 import com.blitterstudio.amiberry.data.model.FileCategory
 
@@ -78,13 +80,12 @@ sealed interface LibraryFilter {
 		}
 
 	/** The search field's prompt, naming what the filter lists. */
-	@get:StringRes
-	val searchPromptRes: Int
-		get() = when (this) {
-			AllMachines, is Category -> R.string.library_search_machines
-			is Media -> R.string.library_search_media
-			KickstartRoms -> R.string.library_search_roms
-		}
+	@Composable
+	fun searchPrompt(): String = when (this) {
+		AllMachines, is Category -> stringResource(R.string.library_search_machines)
+		is Media -> stringResource(R.string.library_search_media, stringResource(shelf.titleRes))
+		KickstartRoms -> stringResource(R.string.library_search_roms)
+	}
 
 	companion object {
 		/** The Library's filters in the sidebar's order, with each machine category under Machines. */

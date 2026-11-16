@@ -913,7 +913,7 @@ private fun SearchRow(
 			OutlinedTextField(
 				value = query,
 				onValueChange = onQueryChange,
-				placeholder = { Text(stringResource(filter.searchPromptRes)) },
+				placeholder = { Text(filter.searchPrompt()) },
 				singleLine = true,
 				readOnly = typingGate.readOnly,
 				modifier = Modifier
