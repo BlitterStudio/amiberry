@@ -1,6 +1,7 @@
 package com.blitterstudio.amiberry.ui.screens.appsettings
 
 import android.os.Build
+import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.annotation.StringRes
 import androidx.compose.foundation.background
@@ -88,6 +89,8 @@ import com.blitterstudio.amiberry.ui.hasFullStorageAccess
 import com.blitterstudio.amiberry.ui.isTvDevice
 import com.blitterstudio.amiberry.ui.rememberDpadTypingGate
 import com.blitterstudio.amiberry.ui.windowWidthClass
+import com.blitterstudio.amiberry.ui.findActivity
+import com.blitterstudio.amiberry.ui.viewmodel.WhdbootViewModel
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.rememberCoroutineScope
 
@@ -119,6 +122,7 @@ fun AppSettingsScreen(
 	viewModel: AppSettingsViewModel = viewModel()
 ) {
 	val context = LocalContext.current
+	val whdbootViewModel: WhdbootViewModel = viewModel(context.findActivity() as ComponentActivity)
 	val snackbarHostState = remember { SnackbarHostState() }
 	val scope = rememberCoroutineScope()
 	val wide = windowWidthClass().showsSideList
@@ -133,11 +137,17 @@ fun AppSettingsScreen(
 	// file is read again on entry (once per viewModel, not per recomposition — a search
 	// keystroke must not scan the shader and bezel folders) and every time the launcher
 	// comes back to the front.
-	LaunchedEffect(viewModel) { viewModel.reload() }
+	LaunchedEffect(viewModel, whdbootViewModel) {
+		viewModel.reload()
+		whdbootViewModel.reload()
+	}
 	val lifecycleOwner = LocalLifecycleOwner.current
 	DisposableEffect(lifecycleOwner) {
 		val observer = LifecycleEventObserver { _, event ->
-			if (event == Lifecycle.Event.ON_RESUME) viewModel.reload()
+			if (event == Lifecycle.Event.ON_RESUME) {
+				viewModel.reload()
+				whdbootViewModel.reload()
+			}
 		}
 		lifecycleOwner.lifecycle.addObserver(observer)
 		onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
@@ -278,6 +288,7 @@ fun AppSettingsScreen(
 					VerticalDivider()
 					AppSettingsContent(
 						viewModel = viewModel,
+						whdbootViewModel = whdbootViewModel,
 						// Searching covers every page on both layouts; the
 						// phone branch below passes the same.
 						pageId = if (searching) null else selectedPage,
@@ -307,6 +318,7 @@ fun AppSettingsScreen(
 				// A page, or the search results over the whole of the settings.
 				AppSettingsContent(
 					viewModel = viewModel,
+					whdbootViewModel = whdbootViewModel,
 					pageId = if (searching) null else selectedPage,
 					query = query,
 					showMessage = ::showMessage,
@@ -408,6 +420,7 @@ private fun AppSettingsSearchRow(
 @Composable
 private fun AppSettingsContent(
 	viewModel: AppSettingsViewModel,
+	whdbootViewModel: WhdbootViewModel,
 	pageId: String?,
 	query: String,
 	showMessage: (String) -> Unit,
@@ -442,7 +455,7 @@ private fun AppSettingsContent(
 				Text(stringResource(page.titleRes), style = MaterialTheme.typography.titleMedium)
 			}
 			page.sections.forEach { section ->
-			HostSection(section, viewModel, query, onChooseFolder)
+				HostSection(section, viewModel, whdbootViewModel, query, onChooseFolder)
 			}
 			// The launcher's own cards are not host settings: they show on the page,
 			// never among a search's matches.
@@ -465,6 +478,7 @@ private fun AppSettingsContent(
 private fun HostSection(
 	section: AppSettingsSection,
 	viewModel: AppSettingsViewModel,
+	whdbootViewModel: WhdbootViewModel,
 	query: String,
 	onChooseFolder: (String) -> Unit
 ) {
@@ -484,7 +498,7 @@ private fun HostSection(
 			)
 		}
 		if (section.group == "global_whdload") {
-			WhdbootFilesRow(viewModel)
+			WhdbootFilesRow(whdbootViewModel)
 		}
 	}
 	if (section.collapsed && query.isBlank()) {
@@ -500,10 +514,10 @@ private fun HostSection(
 }
 
 @Composable
-private fun WhdbootFilesRow(viewModel: AppSettingsViewModel) {
-	val status = viewModel.whdbootStatus ?: return
+private fun WhdbootFilesRow(viewModel: WhdbootViewModel) {
+	val status = viewModel.status ?: return
 	val installed = status.readyForSelectedTool && status.rtbFilesInstalled && status.librariesInstalled
-	val download = viewModel.whdbootDownload
+	val download = viewModel.download
 	OutlinedCard(modifier = Modifier.fillMaxWidth()) {
 		Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
 			Text(stringResource(R.string.whdboot_files_title), style = MaterialTheme.typography.titleSmall)
@@ -528,7 +542,7 @@ private fun WhdbootFilesRow(viewModel: AppSettingsViewModel) {
 				WhdbootDownloadProgress(download, Modifier.testTag("whdboot-cancel"))
 			} else {
 				TextButton(
-					onClick = viewModel::downloadWhdboot,
+					onClick = viewModel::downloadForSettings,
 					enabled = status.downloadsAvailable,
 					modifier = Modifier.testTag("whdboot-download")
 				) {

@@ -73,8 +73,6 @@ import com.blitterstudio.amiberry.data.FilePickerFilters
 import com.blitterstudio.amiberry.data.FileRepository
 import com.blitterstudio.amiberry.data.ImportBatchFeedback
 import com.blitterstudio.amiberry.ui.components.WhdbootDownloadProgress
-import com.blitterstudio.amiberry.data.WhdbootTools
-import com.blitterstudio.amiberry.ui.components.WhdbootDownloadState
 import com.blitterstudio.amiberry.ui.components.whdbootResultString
 import com.blitterstudio.amiberry.data.ImportFeedback
 import com.blitterstudio.amiberry.data.RecentLaunches
@@ -103,6 +101,7 @@ import com.blitterstudio.amiberry.ui.screens.settings.SaveConfigDialog
 import com.blitterstudio.amiberry.ui.viewmodel.ConfigurationsViewModel
 import com.blitterstudio.amiberry.ui.viewmodel.FileManagerViewModel
 import com.blitterstudio.amiberry.ui.viewmodel.SettingsViewModel
+import com.blitterstudio.amiberry.ui.viewmodel.WhdbootViewModel
 import com.blitterstudio.amiberry.ui.windowWidthClass
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -124,6 +123,7 @@ fun LibraryScreen(
 ) {
 	val context = LocalContext.current
 	val activity = context.findActivity() as? MainActivity
+	val whdbootViewModel: WhdbootViewModel = viewModel(context.findActivity() as ComponentActivity)
 	val scope = rememberCoroutineScope()
 	val snackbarHostState = remember { SnackbarHostState() }
 	val launchGuard = rememberLaunchInFlightGuard()
@@ -234,8 +234,6 @@ fun LibraryScreen(
 	// Save chosen for a new configuration: the name dialog, and the action waiting for it.
 	var saveNewName by remember { mutableStateOf<String?>(null) }
 	var saveNewThen by remember { mutableStateOf<(() -> Unit)?>(null) }
-	var whdbootRequest by remember { mutableStateOf<LibraryLaunch.PlayResult.NeedsWhdboot?>(null) }
-	val whdbootDownload = remember { WhdbootDownloadState() }
 	fun saveMessage(result: ConfigurationSaveActions.SaveResult): String {
 		val message = ConfigurationSaveActions.messageFor(result)
 		return message.argument?.let { context.getString(message.stringRes, it) }
@@ -274,13 +272,25 @@ fun LibraryScreen(
 
 	fun showResult(result: LibraryLaunch.PlayResult) {
 		when (result) {
-			is LibraryLaunch.PlayResult.NeedsWhdboot -> whdbootRequest = result
+			is LibraryLaunch.PlayResult.NeedsWhdboot -> whdbootViewModel.requestLaunch(result)
 			is LibraryLaunch.PlayResult.Refused -> {
 				val message = result.argument?.let { context.getString(result.messageRes, it) }
 					?: context.getString(result.messageRes)
 				scope.launch { snackbarHostState.showSnackbar(message) }
 			}
 			LibraryLaunch.PlayResult.Started -> Unit
+		}
+	}
+
+	whdbootViewModel.launchResult?.let {
+		LaunchedEffect(it) {
+			whdbootViewModel.consumeLaunchResult()?.let(::showResult)
+		}
+	}
+	whdbootViewModel.libraryResult?.let { result ->
+		LaunchedEffect(result) {
+			snackbarHostState.showSnackbar(context.getString(whdbootResultString(result)))
+			whdbootViewModel.clearLibraryResult()
 		}
 	}
 
@@ -709,47 +719,29 @@ fun LibraryScreen(
 			}
 		)
 	}
-	whdbootRequest?.let { request ->
+	whdbootViewModel.pendingLaunch?.let { request ->
+		val whdbootDownload = whdbootViewModel.download
 		AlertDialog(
-			onDismissRequest = { if (!whdbootDownload.downloading) whdbootRequest = null },
+			onDismissRequest = {
+				if (!whdbootDownload.downloading) whdbootViewModel.clearPendingLaunch()
+			},
 			title = { Text(stringResource(R.string.whdboot_download_before_play_title)) },
 			text = {
 				Column {
 					Text(stringResource(R.string.whdboot_download_before_play_message, request.tool))
 					if (whdbootDownload.downloading) WhdbootDownloadProgress(whdbootDownload)
-					whdbootDownload.result?.let { result ->
-						Text(stringResource(whdbootResultString(result)))
-					}
 				}
 			},
 			confirmButton = {
 				if (!whdbootDownload.downloading) {
-					TextButton(
-						onClick = {
-							whdbootDownload.download(scope, context) { finished ->
-								if (finished.result == WhdbootTools.RESULT_PARTIAL) {
-									scope.launch {
-										snackbarHostState.showSnackbar(
-											context.getString(R.string.whdboot_result_partial)
-										)
-									}
-								}
-								if (finished.status?.readyForSelectedTool == true) {
-									whdbootRequest = null
-									scope.launch {
-										showResult(LibraryLaunch.retryWhdload(context, request.path))
-									}
-								}
-							}
-						}
-					) {
+					TextButton(onClick = whdbootViewModel::downloadForPendingLaunch) {
 						Text(stringResource(R.string.whdboot_download))
 					}
 				}
 			},
 			dismissButton = {
 				if (!whdbootDownload.downloading) {
-					TextButton(onClick = { whdbootRequest = null }) {
+					TextButton(onClick = whdbootViewModel::clearPendingLaunch) {
 						Text(stringResource(R.string.action_cancel))
 					}
 				}

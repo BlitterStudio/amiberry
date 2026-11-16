@@ -14,6 +14,7 @@
 #include <atomic>
 #include <filesystem>
 #include <string>
+#include <system_error>
 
 namespace
 {
@@ -26,7 +27,8 @@ std::filesystem::path whdboot_root()
 
 bool whdboot_file_exists(const std::filesystem::path& root, const std::filesystem::path& relative)
 {
-	return !root.empty() && std::filesystem::exists(root / relative);
+	std::error_code error;
+	return !root.empty() && std::filesystem::exists(root / relative, error) && !error;
 }
 
 void get_status(const std::filesystem::path& root, amiberry_whdboot_status* status)

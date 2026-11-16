@@ -9,10 +9,7 @@ import androidx.compose.runtime.setValue
 import com.blitterstudio.amiberry.data.ContentFolders
 import com.blitterstudio.amiberry.data.HostSettingsStore
 import com.blitterstudio.amiberry.data.ShaderCatalog
-import com.blitterstudio.amiberry.data.WhdbootStatus
-import com.blitterstudio.amiberry.data.WhdbootTools
 import com.blitterstudio.amiberry.data.model.SettingsSchema
-import com.blitterstudio.amiberry.ui.components.WhdbootDownloadState
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -80,11 +77,6 @@ class AppSettingsViewModel(application: Application) : AndroidViewModel(applicat
 	var folderStates by mutableStateOf<Map<String, FolderState>>(emptyMap())
 		private set
 
-	/** The on-demand WHDBoot tools; native work stays in the launcher process. */
-	var whdbootStatus by mutableStateOf<WhdbootStatus?>(null)
-		private set
-	val whdbootDownload = WhdbootDownloadState()
-
 	/** Reads amiberry.conf and the catalogs again (the screen calls it on entry and on resume). */
 	fun reload() {
 		val store = store
@@ -113,13 +105,12 @@ class AppSettingsViewModel(application: Application) : AndroidViewModel(applicat
 						exists = effective?.let { if (isFile) safeIsFile(it) else safeIsDir(it) } == true
 					)
 				}
-				ReadResult(fileValues, shaders, bezels, folders, runCatching { WhdbootTools.status(app) }.getOrNull())
+				ReadResult(fileValues, shaders, bezels, folders)
 			}
 			values = schema?.hostDefaults.orEmpty() + read.fileValues
 			shaderCatalogEntries = read.shaders
 			bezelEntries = read.bezels
 			folderStates = read.folders
-			whdbootStatus = read.whdbootStatus
 		}
 	}
 
@@ -185,22 +176,11 @@ class AppSettingsViewModel(application: Application) : AndroidViewModel(applicat
 		}
 	}
 
-	fun downloadWhdboot() {
-		whdbootDownload.download(viewModelScope, app) { finished ->
-			whdbootStatus = finished.status
-		}
-	}
-
-	fun cancelWhdbootDownload() {
-		whdbootDownload.cancel()
-	}
-
 	private data class ReadResult(
 		val fileValues: Map<String, String>,
 		val shaders: List<String>,
 		val bezels: List<String>,
-		val folders: Map<String, FolderState>,
-		val whdbootStatus: WhdbootStatus?
+		val folders: Map<String, FolderState>
 	)
 
 	private fun safeIsDir(dir: File): Boolean = try {

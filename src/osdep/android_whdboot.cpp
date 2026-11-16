@@ -42,6 +42,15 @@ jobjectArray to_java(JNIEnv* env, const std::vector<std::string>& values)
 	return result;
 }
 
+void throw_status_exception(JNIEnv* env)
+{
+	auto exception_class = env->FindClass("java/lang/RuntimeException");
+	if (exception_class != nullptr) {
+		env->ThrowNew(exception_class, "Could not read WHDBoot status");
+		env->DeleteLocalRef(exception_class);
+	}
+}
+
 void configure_whdboot(const std::string& path, const jboolean use_jst)
 {
 	// Kotlin resolves amiberry.conf with the same managed-path rules the core
@@ -87,16 +96,21 @@ int report_progress(const amiberry_whdboot_progress* progress, void* data)
 extern "C" JNIEXPORT jobjectArray JNICALL
 Java_com_blitterstudio_amiberry_data_WhdbootTools_nativeStatus(JNIEnv* env, jobject, jstring path, jboolean)
 {
-	const auto root = from_java(env, path);
-	amiberry_whdboot_status status{};
-	amiberry_whdboot_status_get_at_path(root.c_str(), &status);
-	return to_java(env, {
-		status.whdload_installed ? "1" : "0",
-		status.jst_installed ? "1" : "0",
-		status.rtb_files_installed ? "1" : "0",
-		status.libraries_installed ? "1" : "0",
-		status.downloads_available ? "1" : "0"
-	});
+	try {
+		const auto root = from_java(env, path);
+		amiberry_whdboot_status status{};
+		amiberry_whdboot_status_get_at_path(root.c_str(), &status);
+		return to_java(env, {
+			status.whdload_installed ? "1" : "0",
+			status.jst_installed ? "1" : "0",
+			status.rtb_files_installed ? "1" : "0",
+			status.libraries_installed ? "1" : "0",
+			status.downloads_available ? "1" : "0"
+		});
+	} catch (...) {
+		throw_status_exception(env);
+		return nullptr;
+	}
 }
 
 extern "C" JNIEXPORT jint JNICALL
@@ -109,17 +123,27 @@ Java_com_blitterstudio_amiberry_data_WhdbootTools_nativeDownload(JNIEnv* env, jo
 		~running_download() { whdboot_download_running.clear(); }
 	} clear_running;
 
-	JavaVM* jvm = nullptr;
-	if (env->GetJavaVM(&jvm) != JNI_OK)
+	jobject listener_ref = nullptr;
+	try {
+		JavaVM* jvm = nullptr;
+		if (env->GetJavaVM(&jvm) != JNI_OK)
+			return AMIBERRY_WHDBOOT_DOWNLOAD_FAILED;
+		configure_whdboot(from_java(env, path), use_jst);
+		auto listener_class = env->GetObjectClass(listener);
+		auto on_progress = env->GetMethodID(listener_class, "onProgress", "(IILjava/lang/String;JJ)Z");
+		env->DeleteLocalRef(listener_class);
+		if (on_progress == nullptr)
+			return AMIBERRY_WHDBOOT_DOWNLOAD_FAILED;
+		listener_ref = env->NewGlobalRef(listener);
+		if (listener_ref == nullptr)
+			return AMIBERRY_WHDBOOT_DOWNLOAD_FAILED;
+		progress_callback callback{jvm, listener_ref, on_progress};
+		const auto result = amiberry_whdboot_download(report_progress, &callback);
+		env->DeleteGlobalRef(listener_ref);
+		return result;
+	} catch (...) {
+		if (listener_ref != nullptr)
+			env->DeleteGlobalRef(listener_ref);
 		return AMIBERRY_WHDBOOT_DOWNLOAD_FAILED;
-	configure_whdboot(from_java(env, path), use_jst);
-	auto listener_class = env->GetObjectClass(listener);
-	auto on_progress = env->GetMethodID(listener_class, "onProgress", "(IILjava/lang/String;JJ)Z");
-	env->DeleteLocalRef(listener_class);
-	if (on_progress == nullptr)
-		return AMIBERRY_WHDBOOT_DOWNLOAD_FAILED;
-	progress_callback callback{jvm, env->NewGlobalRef(listener), on_progress};
-	const auto result = amiberry_whdboot_download(report_progress, &callback);
-	env->DeleteGlobalRef(callback.listener);
-	return result;
+	}
 }
