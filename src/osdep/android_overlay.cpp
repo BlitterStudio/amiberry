@@ -702,10 +702,11 @@ JNIEXPORT jobjectArray JNICALL OVERLAY_JNI(settingChoices)(JNIEnv* env, jclass, 
 	return ran ? to_java(env, fields) : nullptr;
 }
 
-// Sets options as the settings editors do (one session, committed together)
-// and has the running emulation pick them up; together, so swapping the
-// port devices is not refused halfway. The apply class committed, or -1
-// when a value was refused or the emulator thread could not be reached.
+// Sets options as the settings editors do (one session, committed together).
+// Applying is separate: live values apply immediately, while the overlay
+// leaves reset and restart values staged until the user explicitly asks.
+// The apply class committed, or -1 when a value was refused or the emulator
+// thread could not be reached.
 JNIEXPORT jint JNICALL OVERLAY_JNI(changeSettings)(JNIEnv* env, jclass, jobjectArray ids, jobjectArray values)
 {
 	const std::vector<std::string> options = from_java(env, ids);
@@ -723,13 +724,18 @@ JNIEXPORT jint JNICALL OVERLAY_JNI(changeSettings)(JNIEnv* env, jclass, jobjectA
 		if (accepted) {
 			bool changed = false;
 			const amiberry_apply_class apply = amiberry_settings_commit(session, &changed);
-			if (changed)
-				amiberry_actions_apply_settings(apply);
 			result = apply;
 		}
 		amiberry_settings_session_close(session);
 	});
 	return result;
+}
+
+// Brings the committed pending configuration up to the requested class. This
+// posts an action, like reset and saveState, so it is safe from the UI thread.
+JNIEXPORT jlong JNICALL OVERLAY_JNI(applySettings)(JNIEnv*, jclass, jint apply)
+{
+	return static_cast<jlong>(amiberry_actions_apply_settings(static_cast<amiberry_apply_class>(apply)));
 }
 
 // What the built-in GUI names state slots after (gui_update): the state and

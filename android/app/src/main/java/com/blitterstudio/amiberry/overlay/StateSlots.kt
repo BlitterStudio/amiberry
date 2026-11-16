@@ -27,6 +27,9 @@ data class StateNameSources(
 /** Where a slot's state and its thumbnail (a screenshot taken as it is saved) go. */
 data class SlotPaths(val slot: Int, val state: String, val thumbnail: String)
 
+/** A state saved under a name, with the matching screenshot name when present. */
+data class NamedStatePaths(val name: String, val state: String, val thumbnail: String)
+
 /**
  * The menu's save state slots: the built-in GUI's slots 1 to [COUNT], with
  * its file names, so either UI loads what the other saved. The GUI names a
@@ -74,6 +77,38 @@ object StateSlots {
 		if ('.' in name) name.substringBeforeLast('.') else name
 
 	private fun folder(path: String): String = if (path.isEmpty() || path.endsWith('/')) path else "$path/"
+
+	/** A user-entered state name, made safe for one .uss file in the state folder. */
+	fun namedPaths(sources: StateNameSources, name: String): NamedStatePaths {
+		val fileName = safeName(name)
+		return NamedStatePaths(
+			name = fileName,
+			state = folder(sources.stateDir) + fileName + ".uss",
+			thumbnail = folder(sources.screenshotDir) + fileName + ".png"
+		)
+	}
+
+	/** Whether [named] would overwrite a numbered slot for this session. */
+	fun isSlotPath(sources: StateNameSources, named: NamedStatePaths): Boolean =
+		slots.any { paths(sources, it).state == named.state }
+
+	/** The named .uss files in [sources]' state folder, newest first. */
+	fun namedStates(sources: StateNameSources): List<NamedStatePaths> {
+		val folder = java.io.File(sources.stateDir)
+		return folder.listFiles()
+			.orEmpty()
+			.asSequence()
+			.filter { it.isFile && it.extension.equals("uss", ignoreCase = true) }
+			.sortedByDescending { it.lastModified() }
+			.map { file ->
+				NamedStatePaths(
+					name = file.nameWithoutExtension,
+					state = file.path,
+					thumbnail = folder(sources.screenshotDir) + file.nameWithoutExtension + ".png"
+				)
+			}
+			.toList()
+	}
 
 	/** A description as a file name: no path separators or dots, never empty. */
 	internal fun safeName(description: String): String {

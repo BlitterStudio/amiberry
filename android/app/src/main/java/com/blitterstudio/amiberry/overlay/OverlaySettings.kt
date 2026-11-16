@@ -1,12 +1,11 @@
 package com.blitterstudio.amiberry.overlay
 
 import com.blitterstudio.amiberry.data.model.SettingsSchema
-
+import com.blitterstudio.amiberry.ui.screens.settings.SettingsGroups
 /**
- * The configuration options the menu changes over a running emulation. Only
- * options the settings layer applies live are offered: the menu commits each
- * change at once and the running machine picks it up between frames, so an
- * option needing a reset or restart would silently wait.
+ * The configuration options the menu changes over a running emulation. The
+ * quick pages keep frequently used controls together; All settings adds the
+ * generic rows that do not already belong to another in-game page.
  */
 object OverlaySettings {
 	const val ON_SCREEN_JOYSTICK = "amiberry.onscreen_joystick"
@@ -40,8 +39,31 @@ object OverlaySettings {
 		"amiberry.gfx_auto_crop"
 	)
 
-	/** Every option the menu reads. */
+	/** Every option the quick pages read. */
 	val ALL: List<String> = PORTS + CONTROLS + POINTER + SETTINGS
+
+	/**
+	 * The generic options All settings shows. Ports and on-screen controls
+	 * already have purpose-built Controls rows; the drive image and type
+	 * fields stay on Drives, while its other settings (such as speed) remain
+	 * available here.
+	 */
+	private val MEDIA = setOf("cdimage0") + (0..3).flatMap { listOf("floppy$it", "floppy${it}type") } +
+		(0 until 20).map { "diskimage$it" }
+
+	fun allSettings(schema: SettingsSchema): List<SettingsSchema.Option> =
+		schema.options.values.filter { option ->
+			option.id !in MEDIA &&
+				option.group != "diskswapper" &&
+				option.id !in (SettingsGroups.managed + PORTS + CONTROLS) &&
+				!option.presetOnly &&
+				!option.hiddenOnAndroid &&
+				SettingsGroups.rowKind(option) != null
+		}
+
+	/** Every option the overlay reads while its menu is open. */
+	fun readIds(schema: SettingsSchema?): List<String> =
+		(ALL + schema?.let(::allSettings).orEmpty().map { it.id }).distinct()
 
 	/** The values of the two ports swapped, as [OverlayNative.changeSettings] sets them; null unless both are known. */
 	fun swappedPorts(settings: Map<String, SettingState>): Map<String, String>? {
@@ -55,6 +77,19 @@ object OverlaySettings {
 	/** The options of [ids] the schema lists as live, in order; the rest are not offered. */
 	fun offered(schema: SettingsSchema?, ids: List<String>): List<SettingsSchema.Option> =
 		ids.mapNotNull { schema?.option(it) }.filter { it.apply == APPLY_LIVE }
+}
+
+/** The strongest application still needed for committed non-live changes. */
+enum class PendingApply {
+	NONE, RESET, RESTART;
+
+	companion object {
+		fun merge(current: PendingApply, apply: Int): PendingApply = when {
+			current == RESTART || apply == OverlayNative.APPLY_RESTART -> RESTART
+			current == RESET || apply == OverlayNative.APPLY_RESET -> RESET
+			else -> NONE
+		}
+	}
 }
 
 /** An option's pending value and whether the layer offers it now. */

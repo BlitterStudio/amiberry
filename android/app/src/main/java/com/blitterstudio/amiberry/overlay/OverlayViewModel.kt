@@ -36,8 +36,20 @@ data class SlotState(
 	val thumbnail: ImageBitmap?
 )
 
+/** A saved named state, with its thumbnail when the matching screenshot exists. */
+data class NamedState(
+	val paths: NamedStatePaths,
+	val savedAt: Long,
+	val thumbnail: ImageBitmap?
+)
+
 /** A short message under the menu's title: what an action did, or why it failed. */
-data class OverlayNotice(@StringRes val text: Int, val slot: Int? = null, val error: Boolean = false)
+data class OverlayNotice(
+	@StringRes val text: Int,
+	val slot: Int? = null,
+	val error: Boolean = false,
+	val detail: String? = null
+)
 
 /** gui_ask_disk's request, as [OverlayNative.dialogRequest] hands it over. */
 data class FloppyRecoveryRequest(val drive: Int, val missingPath: String) {
@@ -92,14 +104,23 @@ class OverlayViewModel(application: Application) : AndroidViewModel(application)
 	/** The layer's shader choices (built-ins and the shaders folder); null until read. */
 	var shaderChoices by mutableStateOf<List<SettingsSchema.Choice>?>(null)
 		private set
+	/** The choices each All settings row may take now. */
+	var settingChoices by mutableStateOf<Map<String, List<SettingsSchema.Choice>>>(emptyMap())
+		private set
 	/** The devices each port may take now, by port option; read as the Controls page opens. */
 	var portChoices by mutableStateOf<Map<String, List<SettingsSchema.Choice>>>(emptyMap())
 		private set
 	var slots by mutableStateOf<List<SlotState>>(emptyList())
 		private set
+	var namedStates by mutableStateOf<List<NamedState>>(emptyList())
+		private set
+	/** The strongest committed settings change waiting for a reset or restart. */
+	var pendingApply by mutableStateOf(PendingApply.NONE)
+		private set
 	/** A save or load is running; the States page waits for it. */
 	var busy by mutableStateOf(false)
 		private set
+	/** A transient result of a menu action. */
 	var notice by mutableStateOf<OverlayNotice?>(null)
 		private set
 	/** The menu's loop runs; false while only a native dialog shows (or nothing). */
@@ -168,6 +189,7 @@ class OverlayViewModel(application: Application) : AndroidViewModel(application)
 		}
 		viewModelScope.launch { readSettings() }
 		viewModelScope.launch { loadSlots() }
+		viewModelScope.launch { loadNamedStates() }
 	}
 
 	/** Tells [OverlayHost] whether a native dialog shows now (message boxes, recovery). */
@@ -288,6 +310,10 @@ class OverlayViewModel(application: Application) : AndroidViewModel(application)
 				files.rescanCategory(if (page.target == MediaTarget.Cd) FileCategory.CD_IMAGES else FileCategory.FLOPPIES)
 			}
 			OverlayPage.Settings -> if (shaderChoices == null) viewModelScope.launch { readShaderChoices() }
+			OverlayPage.AllSettings -> viewModelScope.launch {
+				readSettings()
+				readSettingChoices()
+			}
 			// Controllers may have come or gone since the last opening.
 			OverlayPage.Controls -> viewModelScope.launch { readPortChoices() }
 			else -> Unit
@@ -311,8 +337,24 @@ class OverlayViewModel(application: Application) : AndroidViewModel(application)
 		close(OverlayNative.CLOSE_RESUME)
 	}
 
+	/** Resets the running machine; it also applies staged reset-class settings. */
 	fun reset(hard: Boolean) {
 		OverlayNative.reset(hard)
+		if (pendingApply == PendingApply.RESET) pendingApply = PendingApply.NONE
+		close(OverlayNative.CLOSE_RESUME)
+	}
+
+	/** Applies staged settings with a hard reset, then returns to the emulation. */
+	fun resetWithChanges() {
+		OverlayNative.applySettings(OverlayNative.APPLY_RESET)
+		pendingApply = PendingApply.NONE
+		close(OverlayNative.CLOSE_RESUME)
+	}
+
+	/** Restarts the emulator with staged settings, then returns to the emulation. */
+	fun restartWithChanges() {
+		OverlayNative.applySettings(OverlayNative.APPLY_RESTART)
+		pendingApply = PendingApply.NONE
 		close(OverlayNative.CLOSE_RESUME)
 	}
 
@@ -353,7 +395,7 @@ class OverlayViewModel(application: Application) : AndroidViewModel(application)
 		viewModelScope.launch { refreshSoon() }
 	}
 
-	/** Changes one live option (see [changeAll]). */
+	/** Changes one setting (see [changeAll]). */
 	fun change(id: String, value: String) = changeAll(mapOf(id to value))
 
 	/** Port 1's device into port 2 and port 2's into port 1, in one commit. */
@@ -362,12 +404,9 @@ class OverlayViewModel(application: Application) : AndroidViewModel(application)
 	}
 
 	/**
-	 * Changes live options, committed together; the running machine picks
-	 * them up between frames. Changes commit one at a time in the order made
-	 * (a held D-pad key on a slider makes many), and the menu reads the
-	 * values back only after the last, so the slider never snaps back to an
-	 * older one. The on-screen control switches are also kept for the next
-	 * launch (InGameControls); the rest apply to this session.
+	 * Commits settings one at a time in the order made. Live changes apply
+	 * between frames; reset and restart changes remain staged until the user
+	 * explicitly applies them from Home.
 	 */
 	private fun changeAll(values: Map<String, String>) {
 		values.forEach { (id, value) -> settings[id]?.let { settings = settings + (id to it.copy(value = value)) } }
@@ -375,7 +414,6 @@ class OverlayViewModel(application: Application) : AndroidViewModel(application)
 		viewModelScope.launch {
 			val ids = values.keys.toTypedArray()
 			val texts = values.values.toTypedArray()
-			// Main.immediate: each launch queues on the fair mutex in call order.
 			val applied = settingWrites.withLock {
 				withContext(Dispatchers.IO) { OverlayNative.changeSettings(ids, texts) }
 			}
@@ -383,6 +421,11 @@ class OverlayViewModel(application: Application) : AndroidViewModel(application)
 			if (applied < 0) {
 				showNotice(OverlayNotice(R.string.overlay_setting_failed, error = true))
 			} else {
+				if (applied == OverlayNative.APPLY_LIVE) {
+					OverlayNative.applySettings(OverlayNative.APPLY_LIVE)
+				} else {
+					pendingApply = PendingApply.merge(pendingApply, applied)
+				}
 				withContext(Dispatchers.IO) {
 					values.filterKeys { it in OverlaySettings.CONTROLS }.forEach { (id, value) ->
 						InGameControls.record(getApplication(), id, value == "true")
@@ -391,6 +434,7 @@ class OverlayViewModel(application: Application) : AndroidViewModel(application)
 			}
 			if (pendingWrites == 0) {
 				readSettings()
+				if (menu.page == OverlayPage.AllSettings) readSettingChoices()
 				if (values.keys.any { it in OverlaySettings.PORTS || it == OverlaySettings.ON_SCREEN_JOYSTICK }) readPortChoices()
 			}
 		}
@@ -408,10 +452,16 @@ class OverlayViewModel(application: Application) : AndroidViewModel(application)
 		when (action) {
 			ConfirmAction.Reset -> reset(hard = false)
 			ConfirmAction.HardReset -> reset(hard = true)
+			ConfirmAction.ResetWithChanges -> resetWithChanges()
+			ConfirmAction.RestartWithChanges -> restartWithChanges()
 			ConfirmAction.Quit -> quit()
 			is ConfirmAction.Overwrite -> {
 				menu = menu.back() ?: OverlayMenu.HOME
 				saveSlot(action.slot)
+			}
+			is ConfirmAction.OverwriteNamed -> {
+				menu = menu.back() ?: OverlayMenu.HOME
+				saveNamedState(action.paths)
 			}
 		}
 	}
@@ -452,6 +502,59 @@ class OverlayViewModel(application: Application) : AndroidViewModel(application)
 		}
 	}
 
+	/** Resolves a named state before deciding whether saving needs confirmation. */
+	fun requestSaveNamedState(name: String) {
+		if (busy) return
+		notice = null
+		viewModelScope.launch {
+			val destination = withContext(Dispatchers.IO) {
+				stateSources()?.let { sources ->
+					val paths = StateSlots.namedPaths(sources, name)
+					paths to StateSlots.isSlotPath(sources, paths)
+				}
+			}
+			when {
+				destination == null -> showNotice(OverlayNotice(R.string.overlay_named_state_save_failed, error = true))
+				destination.second -> showNotice(OverlayNotice(R.string.overlay_named_state_slot_name, error = true))
+				File(destination.first.state).isFile ->
+					open(OverlayPage.Confirm(ConfirmAction.OverwriteNamed(destination.first)), "save_named")
+				else -> saveNamedState(destination.first)
+			}
+		}
+	}
+
+	/** Saves a resolved named state in the same folders and with the same thumbnail rule as slots. */
+	private fun saveNamedState(paths: NamedStatePaths) {
+		if (busy) return
+		busy = true
+		notice = null
+		viewModelScope.launch {
+			val saved = finished(OverlayNative.saveState(paths.state))
+			if (saved) finished(OverlayNative.screenshot(paths.thumbnail))
+			showNotice(
+				if (saved) OverlayNotice(R.string.overlay_named_state_saved, detail = paths.name)
+				else OverlayNotice(R.string.overlay_named_state_save_failed, error = true)
+			)
+			loadNamedStates()
+			busy = false
+		}
+	}
+
+	/** Loads a named state; a successful load ends the native menu loop. */
+	fun loadNamedState(state: NamedState) {
+		if (busy) return
+		busy = true
+		notice = null
+		viewModelScope.launch {
+			if (finished(OverlayNative.loadState(state.paths.state))) {
+				close(OverlayNative.CLOSE_RESUME)
+			} else {
+				showNotice(OverlayNotice(R.string.overlay_named_state_load_failed, detail = state.paths.name, error = true))
+			}
+			busy = false
+		}
+	}
+
 	private fun close(how: Int) {
 		hideView()
 		OverlayNative.close(how)
@@ -479,7 +582,8 @@ class OverlayViewModel(application: Application) : AndroidViewModel(application)
 	}
 
 	private suspend fun readSettings() {
-		val ids = OverlaySettings.ALL
+		val schema = SettingsSchema.current ?: SettingsSchema.bundled(getApplication())
+		val ids = OverlaySettings.readIds(schema)
 		val read = withContext(Dispatchers.IO) {
 			SettingState.parse(ids, OverlayNative.readSettings(ids.toTypedArray()))
 		}
@@ -501,6 +605,20 @@ class OverlayViewModel(application: Application) : AndroidViewModel(application)
 		portChoices = read.filterValues { it != null }.mapValues { it.value.orEmpty() }
 	}
 
+	private suspend fun readSettingChoices() {
+		val schema = SettingsSchema.current ?: SettingsSchema.bundled(getApplication()) ?: return
+		val ids = OverlaySettings.allSettings(schema)
+			.filter { it.type == SettingsSchema.TYPE_CHOICE }
+			.map { it.id }
+		val choices = withContext(Dispatchers.IO) {
+			ids.associateWith { id ->
+				OverlayNative.settingChoices(id)?.toList()?.chunked(2)?.filter { it.size == 2 }
+					?.map { SettingsSchema.Choice(it[0], it[1]) }
+			}
+		}
+		settingChoices = choices.filterValues { it != null }.mapValues { it.value.orEmpty() }
+	}
+
 	private suspend fun loadSlots() {
 		val loaded = withContext(Dispatchers.IO) {
 			val names = sources ?: StateNameSources.parse(OverlayNative.stateNameSources())
@@ -510,6 +628,21 @@ class OverlayViewModel(application: Application) : AndroidViewModel(application)
 		} ?: return
 		sources = loaded.first
 		slots = loaded.second
+	}
+
+	private suspend fun stateSources(): StateNameSources? =
+		sources ?: withContext(Dispatchers.IO) { StateNameSources.parse(OverlayNative.stateNameSources()) }
+			?.also { sources = it }
+
+	private suspend fun loadNamedStates() {
+		val named = withContext(Dispatchers.IO) {
+			stateSources()?.let { sources ->
+				StateSlots.namedStates(sources).map { paths ->
+					NamedState(paths, File(paths.state).lastModified(), decodeThumbnail(paths.thumbnail))
+				}
+			}
+		} ?: return
+		namedStates = named
 	}
 
 	/** Polls a posted action until it has run; false when it was rejected, failed or never ran. */
