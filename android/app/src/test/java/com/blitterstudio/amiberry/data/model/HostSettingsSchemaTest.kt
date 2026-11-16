@@ -79,6 +79,7 @@ class HostSettingsSchemaTest {
 				"default_quit_key" to "amiberry.quit_amiberry",
 				"default_ar_key" to "amiberry.action_replay",
 				"default_fullscreen_toggle_key" to "amiberry.fullscreen_toggle",
+				"default_screenshot_key" to "amiberry.screenshot",
 				"default_retroarch_quit" to "amiberry.use_retroarch_quit",
 				"default_retroarch_menu" to "amiberry.use_retroarch_menu",
 				"default_retroarch_reset" to "amiberry.use_retroarch_reset",

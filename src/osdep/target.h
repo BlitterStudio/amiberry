@@ -256,6 +256,8 @@ extern void extract_path(const char* str, char* buffer);
 extern std::string extract_path(const std::string& filename);
 extern void remove_file_extension(char* filename);
 extern std::string remove_file_extension(const std::string& filename);
+// What screenshots and save states are named after; empty when nothing is.
+extern std::string current_content_name();
 extern void set_last_active_config(const char* filename);
 // The configuration file the pending configuration came from or was last
 // saved to; empty for a default or an RP9 package.
