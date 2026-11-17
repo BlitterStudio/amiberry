@@ -1,6 +1,6 @@
 # QEMU-UAE PPC Plugin
 
-Amiberry PPC emulation uses an external `qemu-uae` plugin built from QEMU 11.0.1 plus the UAE PPC patch deck. The plugin is loaded at runtime, so Amiberry can keep the emulator core and the QEMU-derived code in separate build and release pipelines.
+Amiberry PPC emulation uses an external `qemu-uae` plugin built from QEMU 11.1.3 plus the UAE PPC patch deck. The plugin is loaded at runtime, so Amiberry can keep the emulator core and the QEMU-derived code in separate build and release pipelines.
 
 ## Architecture
 
@@ -11,14 +11,12 @@ Amiberry PPC emulation uses an external `qemu-uae` plugin built from QEMU 11.0.1
 
 ## Plugin Source
 
-The initial plugin work is based on:
+The plugin is built and released from https://github.com/BlitterStudio/amiberry-qemu-uae, which applies its ordered patch deck to the official QEMU 11.1.3 release archive and publishes per-platform plugin artifacts. Amiberry CI and the AppImage build download a pinned release tag from that repository.
 
-- QEMU release: https://download.qemu.org/qemu-11.0.1.tar.xz
-- QEMU-UAE fork: https://github.com/reinauer/qemu-uae/tree/qemu-v11.0.1-uae
+The patch deck descends from:
+
 - UAE PPC patch deck: https://github.com/reinauer/uae-ppc-plugin
 - WinUAE packaging reference: https://github.com/reinauer/WinUAE/commit/35a6df1537961a507bea0f1bd1ab9d0e3f711132
-
-The preferred long-term layout is a separate Amiberry-owned plugin repository that tracks the upstream QEMU release, applies the UAE patch deck in order, and publishes per-platform plugin artifacts.
 
 ## Runtime Placement
 
