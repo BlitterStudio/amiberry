@@ -5510,11 +5510,11 @@ static void vsync_handler_post(void)
 	check_lineoptimizations();
 }
 
-// Returns false if no word moved: the FIFO was full (write) or empty (read).
-// The pointer then stays put. In >100% floppy speed modes disk.cpp moves
-// words between the FIFO and memory itself, after the slots for them were
-// requested: advancing the pointer anyway left a stale word in memory for
-// each such slot (read) or skipped one (write).
+static bool is_accurate_disk(void)
+{
+	return currprefs.floppy_speed == 100 && currprefs.cpu_memory_cycle_exact && currprefs.m68k_speed >= 0;
+}
+
 static bool dmal_emu_disk(struct rgabuf *rga, int slot, bool w, bool fast)
 {
 	uae_u16 dat = 0;
@@ -5523,10 +5523,13 @@ static bool dmal_emu_disk(struct rgabuf *rga, int slot, bool w, bool fast)
 		fast = true;
 	}
 
+	// disk_fifostatus() needed in >100% disk speed modes
 	if (w) {
 		uaecptr pt = rga->pv;
-		if (disk_fifostatus() > 0) {
-			return false;
+		if (!is_accurate_disk()) {
+			if (disk_fifostatus() > 0) {
+				return false;
+			}
 		}
 		if (fast) {
 			dat = chipmem_wget_indirect(pt);
@@ -5551,19 +5554,26 @@ static bool dmal_emu_disk(struct rgabuf *rga, int slot, bool w, bool fast)
 			}
 #endif
 			regs.chipset_latch_rw = last_custom_value = dat;
-			DSKDAT(dat);
+			if (disk_fifostatus() <= 0) {
+				DSKDAT(dat);
+			}
 		}
 	} else {
 		// read from disk
 		uaecptr pt = rga->pv;
-		if (disk_fifostatus() < 0) {
-			return false;
+		if (!is_accurate_disk()) {
+			if (disk_fifostatus() < 0) {
+				return false;
+			}
 		}
-		dat = DSKDATR(slot);
 		if (fast) {
+			dat = DSKDATR(slot);
 			chipmem_wput_indirect(pt, dat);
 			regs.chipset_latch_rw = last_custom_value = dat;
 		} else {
+			if (disk_fifostatus() >= 0) {
+				dat = DSKDATR(slot);
+			}
 #ifdef DEBUGGER
 			if (debug_dma) {
 				record_dma_write(rga->reg, dat, pt, DMARECORD_DISK, slot);
@@ -12378,14 +12388,16 @@ static void handle_rga_out(void)
 		if (r->type & CYCLE_DISK) {
 			// >100% floppy speeds: disk.cpp also moves words and DSKPT itself,
 			// possibly after this slot latched the pointer.
-			if (currprefs.floppy_speed > 100 && !r->conflict) {
+			if (!is_accurate_disk() && !r->conflict) {
 				r->pv = *r->p;
 			}
 			uaecptr pt = r->pv;
-			if (dmal_emu_disk(r, r->dskdat & 3, (r->dskdat & 0x100) != 0, false) && !disinc) {
-				pt += 2;
-				*r->p = pt;
-				r->pv = pt;
+			if (dmal_emu_disk(r, r->dskdat & 3, (r->dskdat & 0x100) != 0, false)) {
+				if (!disinc) {
+					pt += 2;
+					*r->p = pt;
+					r->pv = pt;
+				}
 			}
 			done = true;
 		}

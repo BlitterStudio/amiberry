@@ -979,6 +979,10 @@ void OpenGLRenderer::render_shader_resolve(
 
 void OpenGLRenderer::present_frame(int monid, int mode)
 {
+	// Headless mode has no window or GL context to present to.
+	if (currprefs.headless)
+		return;
+
 	AmigaMonitor* mon = &AMonitors[monid];
 	SDL_Surface* surface = get_amiga_surface(monid);
 
