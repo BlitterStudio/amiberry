@@ -304,13 +304,13 @@ void refreshtitle()
 
 int open_windows(AmigaMonitor* mon, bool mousecapture, bool started)
 {
-	// Skip window creation entirely if headless mode
+	// Headless: no window, but doInit still sets up the frame surface and
+	// buffers the chipset renderer draws into.
 	if (currprefs.headless) {
 		write_log("Headless mode: Skipping window creation for monitor %d.\n", mon->monitor_id);
-		mon->screen_is_initialized = 1;
 		mon->amiga_window = nullptr;
 		mon->amiga_renderer = nullptr;
-		return 1;
+		return doInit(mon);
 	}
 
 	bool recapture = false;
@@ -476,41 +476,40 @@ int reopen(struct AmigaMonitor* mon, int full, bool unacquire)
 	return 0;
 }
 
-void close_windows(struct AmigaMonitor* mon, const bool force_destroy_fullwindow)
+// Clear the drawbuffer's references into the frame surface before destroying
+// it (see doInit for the full explanation), then free the soft buffers.
+static void release_frame_buffers(struct AmigaMonitor* mon)
 {
-	if (currprefs.headless) {
-		write_log("Headless mode: Skipping SDL resource cleanup for monitor %d.\n", mon->monitor_id);
-		if (amiga_surface) {
-			SDL_DestroySurface(amiga_surface);
-			amiga_surface = nullptr;
-		}
-		return;
-	}
-
 	vidbuf_description* avidinfo = &adisplays[mon->monitor_id].gfxvidinfo;
 
-	if (mon->monitor_id == 0)
-		reset_sound();
-
-#ifdef AMIBERRY
-	// Reset drawbuffer state that may point into the surface pixel buffer
-	// before destroying the surface (see doInit for the full explanation).
 	avidinfo->drawbuffer.bufmem = nullptr;
 	avidinfo->drawbuffer.width_allocated = 0;
 	avidinfo->drawbuffer.height_allocated = 0;
 	avidinfo->drawbuffer.rowbytes = 0;
 	avidinfo->drawbuffer.locked = false;
 
-	if (mon->monitor_id == 0) {
-		SDL_DestroySurface(amiga_surface);
-		amiga_surface = nullptr;
-	} else {
-		if (mon->amiga_surface) {
-			SDL_DestroySurface(mon->amiga_surface);
-			mon->amiga_surface = nullptr;
-		}
+	SDL_Surface*& surface_ref = (mon->monitor_id > 0) ? mon->amiga_surface : amiga_surface;
+	if (surface_ref) {
+		SDL_DestroySurface(surface_ref);
+		surface_ref = nullptr;
 	}
-#endif
+
+	freevidbuffer(mon->monitor_id, &avidinfo->drawbuffer);
+	freevidbuffer(mon->monitor_id, &avidinfo->tempbuffer);
+}
+
+void close_windows(struct AmigaMonitor* mon, const bool force_destroy_fullwindow)
+{
+	if (currprefs.headless) {
+		write_log("Headless mode: Skipping SDL resource cleanup for monitor %d.\n", mon->monitor_id);
+		release_frame_buffers(mon);
+		return;
+	}
+
+	if (mon->monitor_id == 0)
+		reset_sound();
+
+	release_frame_buffers(mon);
 	if (mon->statusline_surface) {
 		SDL_DestroySurface(mon->statusline_surface);
 		mon->statusline_surface = nullptr;
@@ -520,8 +519,6 @@ void close_windows(struct AmigaMonitor* mon, const bool force_destroy_fullwindow
 		mon->statusline_texture = nullptr;
 	}
 
-	freevidbuffer(mon->monitor_id, &avidinfo->drawbuffer);
-	freevidbuffer(mon->monitor_id, &avidinfo->tempbuffer);
 	close_hwnds(mon, force_destroy_fullwindow);
 	mon->active = false;
 }
@@ -1101,10 +1098,11 @@ bool doInit(AmigaMonitor* mon)
 		avidinfo->outbuffer = &avidinfo->drawbuffer;
 		avidinfo->inbuffer = &avidinfo->tempbuffer;
 
-		// Create internal surface if needed
-		if (amiga_surface == nullptr) {
-			amiga_surface = SDL_CreateSurface(display_width, display_height, pixel_format);
-			if (!amiga_surface) {
+		// Create the frame surface lockscr() hands to the chipset renderer
+		SDL_Surface*& surface_ref = (mon->monitor_id > 0) ? mon->amiga_surface : amiga_surface;
+		if (surface_ref == nullptr) {
+			surface_ref = SDL_CreateSurface(display_width, display_height, pixel_format);
+			if (!surface_ref) {
 				write_log("Failed to create amiga_surface: %s\n", SDL_GetError());
 				return false;
 			}

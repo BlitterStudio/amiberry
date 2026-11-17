@@ -18,6 +18,7 @@ import tempfile
 import threading
 import time
 import shutil
+import zlib
 
 IS_WINDOWS = sys.platform == "win32"
 failures = []
@@ -707,6 +708,8 @@ def main():
         except subprocess.TimeoutExpired:
             pass
         check("process exits after QUIT", emu.proc.poll() is not None)
+
+        check_headless_rendering(binary, env, work)
     finally:
         emu.kill()
         shutil.rmtree(work, ignore_errors=True)
@@ -714,6 +717,47 @@ def main():
     if failures:
         sys.exit(f"{len(failures)} action check(s) failed")
     print("IPC actions behavioral test passed")
+
+
+def png_pixel_bytes(path):
+    """The decompressed (still row-filtered) image data of a PNG."""
+    with open(path, "rb") as f:
+        data = f.read()
+    pos, idat = 8, b""
+    while pos + 8 <= len(data):
+        length = int.from_bytes(data[pos:pos + 4], "big")
+        kind = data[pos + 4:pos + 8]
+        if kind == b"IDAT":
+            idat += data[pos + 8:pos + 8 + length]
+        pos += 12 + length
+    return zlib.decompress(idat)
+
+
+def check_headless_rendering(binary, env, work):
+    """headless=true opens no window but still draws the chipset frame:
+    the Denise renderer gets its frame lock (no per-line "Denise queue
+    without lock!" log flood, issue #2705) and SCREENSHOT shows the guest's
+    display instead of an empty frame."""
+    emu = Emulator(binary, env, options=("headless=true",))
+    try:
+        control = Connection(emu.endpoint, 30)
+        check("headless: emulation is running", control.request("GET_FPS").startswith("OK\t"))
+        # Give the AROS ROM time to put its boot display up.
+        time.sleep(5)
+        shot = os.path.join(work, "headless.png")
+        check("headless: SCREENSHOT replies OK",
+              control.request(f"SCREENSHOT\t{shot}") == f"OK\t{shot}")
+        # An undrawn frame is one colour, which filters to at most the five
+        # filter-type bytes plus that colour's components.
+        distinct = len(set(png_pixel_bytes(shot))) if os.path.exists(shot) else 0
+        check("headless: the screenshot shows the drawn frame", distinct > 8,
+              f"{distinct} distinct bytes")
+        check("headless: Denise draws with its frame lock",
+              "Denise queue without lock" not in emu.text())
+        control.request("QUIT")
+        control.close()
+    finally:
+        emu.kill()
 
 
 if __name__ == "__main__":
