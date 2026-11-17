@@ -1252,7 +1252,8 @@ int lockscr(struct vidbuffer* vb, bool fullupdate, bool skip)
 
 	SDL_Surface* surface = get_amiga_surface(vb->monitor_id);
 
-	if ((gfx_platform_requires_window() && !mon->amiga_window) || !surface)
+	// Headless mode has no window but still draws into the frame surface.
+	if ((gfx_platform_requires_window() && !mon->amiga_window && !currprefs.headless) || !surface)
 		return ret;
 
 	// Ensure blanking limits are open and synchronized at the start of frame locking
@@ -1810,20 +1811,13 @@ int graphics_init(bool mousecapture)
 		g_renderer = create_renderer();
 	}
 
-	// Skip all graphics initialization if running in headless mode
+	// Headless: no window or renderer setup, but open_windows still creates
+	// the frame surface and buffers so the chipset renderer can lock them.
 	if (currprefs.headless) {
 		write_log("Headless mode: Skipping graphics initialization.\n");
 		g_renderer->vsync_state().wait_vblank_timestamp = read_processor_time();
 		update_pixel_format(0);
-		if (amiga_surface == nullptr) {
-			amiga_surface = SDL_CreateSurface(1920, 1080, pixel_format);
-			if (!amiga_surface) {
-				write_log("Failed to create amiga_surface: %s\n", SDL_GetError());
-				return false;
-			}
-			update_system_pixel_format();
-		}
-		return amiga_surface != nullptr;
+		return open_windows(&AMonitors[0], mousecapture, false);
 	}
 
 	g_renderer->vsync_state().wait_vblank_timestamp = read_processor_time();
