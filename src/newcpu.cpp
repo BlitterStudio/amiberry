@@ -4552,9 +4552,6 @@ static bool haltloop()
 {
 #ifdef WITH_PPC
 	if (regs.halted < 0) {
-		int rpt_end = 0;
-		int ovpos = vpos;
-
 		while (regs.halted) {
 			int vsynctimeline = static_cast<int>(vsynctimebase / (maxvpos_display + 1));
 			int lines;
@@ -8567,7 +8564,7 @@ static bool cpu_thread_wanted(void (*run_func)(void))
 	if (isvsync_chipset() < 0)
 		return false;
 	// the PPC thread shares the memory map and locking with the main thread
-	if (currprefs.ppc_mode)
+	if (currprefs.ppc_mode || is_ppc_cpu(&currprefs))
 		return false;
 #ifdef ACTION_REPLAY
 	// Freezer cartridges are entered and left in do_specialties().

@@ -95,6 +95,7 @@ bool UAECALL uae_ppc_io_mem_read64(uint32_t addr, uint64_t *data);
 bool UAECALL uae_ppc_io_mem_write64(uint32_t addr, uint64_t data);
 
 void uae_ppc_get_model(const TCHAR **model, uint32_t *hid1);
+void uae_ppc_set_loaded_model(const TCHAR *model);
 void uae_ppc_cpu_reboot(void);
 void uae_ppc_cpu_stop(void);
 void uae_ppc_interrupt(bool active);
