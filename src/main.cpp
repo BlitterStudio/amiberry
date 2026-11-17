@@ -330,10 +330,13 @@ void fixup_cpu (struct uae_prefs *p)
 		}
 		p->cpuboardmem1.size = std::max<uae_u32>(p->cpuboardmem1.size, 8 * 1024 * 1024);
 	}
-	// A PPC board starts the PPC whether or not ppc_model was given, and
-	// everything that has to know about the PPC tests ppc_mode.
-	if (!p->ppc_mode && cpuboard_is_ppc_accelerator(p))
+	// A PPC board always runs the PPC, as on the hardware, and everything
+	// that has to know about the PPC tests ppc_mode: a missing or empty
+	// ppc_model becomes manual.
+	if (!p->ppc_mode && cpuboard_is_ppc_accelerator(p)) {
+		error_log(_T("PPC CPU emulation cannot be disabled while a PPC accelerator board is selected: set to manual."));
 		p->ppc_mode = 2;
+	}
 #endif
 
 	if (p->cachesize_inhibit) {
