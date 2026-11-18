@@ -5708,8 +5708,11 @@ static bool inputdevice_handle_inputcode2(int monid, int code, int state, const 
 		inputdevice_updateconfig(&changed_prefs, &currprefs);
 		break;
 	case AKS_SHUTDOWN:
+#ifndef __APPLE__
+		// Host poweroff is not possible on macOS/iOS; ignore instead of just quitting.
 		uae_quit();
 		host_poweroff = true;
+#endif
 		break;
 	case AKS_TOGGLE_JIT:
 #ifdef JIT

@@ -2921,14 +2921,21 @@ void run_gui()
 		const auto& footer_pressed = run_footer_action;
 		constexpr ImGuiHoveredFlags footer_tooltip_flags = ImGuiHoveredFlags_None;
 #endif
+		// Shutdown runs "sudo poweroff", which cannot work on macOS/iOS
+		// (no poweroff command, no terminal for sudo), so it is never offered there.
+#ifdef __APPLE__
+		constexpr bool show_shutdown = false;
+#else
+		const bool show_shutdown = !amiberry_options.disable_shutdown_button;
+#endif
 		ImVec2 footer_button(BUTTON_WIDTH, BUTTON_HEIGHT);
 		if (narrow_layout) {
 			// The left-hand buttons share the first row; Start/Resume and Help go below.
-			const float left_count = amiberry_options.disable_shutdown_button ? 3.0f : 4.0f;
+			const float left_count = show_shutdown ? 4.0f : 3.0f;
 			footer_button.x = std::min(BUTTON_WIDTH,
 				(ImGui::GetContentRegionAvail().x - style.ItemSpacing.x * (left_count - 1.0f)) / left_count);
 		}
-		if (!amiberry_options.disable_shutdown_button) {
+		if (show_shutdown) {
 			if (AmigaButton(ICON_FA_POWER_OFF " Shutdown", footer_button))
 				footer_pressed(footer_action::shutdown);
 			if (ImGui::IsItemHovered(footer_tooltip_flags))

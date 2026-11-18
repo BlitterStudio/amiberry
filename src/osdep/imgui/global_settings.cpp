@@ -490,8 +490,11 @@ void render_panel_global_settings()
 			"This enables richer display and grouping, but opens each .uae file and can be slower for large libraries.");
 		render_bool_row("GUI joystick control", &amiberry_options.gui_joystick_control,
 			"Allow joystick/gamepad navigation in the GUI.");
+#ifndef __APPLE__
+		// macOS/iOS: no host poweroff from Amiberry, so the button is never shown
 		render_bool_row("Disable shutdown button", &amiberry_options.disable_shutdown_button,
 			"Hide the GUI Shutdown button. Useful on systems where users should not power off the host from Amiberry.");
+#endif
 		render_combo_row("Quickstart compatibility", &amiberry_options.default_quickstart_compatibility,
 			compatibility_options, IM_ARRAYSIZE(compatibility_options),
 			"Default Quickstart compatibility level used when applying built-in model presets.");

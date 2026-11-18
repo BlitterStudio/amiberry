@@ -14085,8 +14085,9 @@ uae_u32 emulib_target_getcpurate(const uae_u32 v, uae_u32* low)
 
 void target_shutdown()
 {
-#ifndef AMIBERRY_IOS
-	system("sudo poweroff");
+#ifndef __APPLE__
+	if (system("sudo poweroff") != 0)
+		write_log("Host shutdown failed: 'sudo poweroff' needs passwordless sudo for this user\n");
 #endif
 }
 
@@ -14708,12 +14709,12 @@ int amiberry_main(int argc, char* argv[])
 	free_keyring();
 	rp9_cleanup();
 
-	logging_cleanup();
-
 	osdep_platform_shutdown_sdl();
 
 	if (host_poweroff)
 		target_shutdown();
+
+	logging_cleanup();
 #ifdef AMIBERRY_NATIVE_UI_TESTS
 	if (native_ui_tests_requested())
 		return native_ui_tests_exit_status();
