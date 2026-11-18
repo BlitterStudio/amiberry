@@ -24,6 +24,7 @@
 #include "newcpu.h"
 #include "fpp.h"
 #include "savestate.h"
+#include "events.h"
 #include "cpummu030.h"
 #include "uae.h"
 
@@ -773,6 +774,53 @@ static void fpu_jit_clear_x87(void)
 #endif
 	fpu_jit_x87_dirty = 0;
 }
+
+void fpu_jit_x87_thread_sync(void)
+{
+	if (fpu_jit_x87_dirty)
+		fpu_jit_merge_x87();
+}
+#endif
+
+#if defined(JIT) && (defined(CPU_x86_64) || defined(CPU_AARCH64))
+// A compiled block entered with an FPCR of another FPU JIT mode is recompiled
+// for <mode> (trips: the times it was since it was invalidated). Logged for
+// the tests, a bounded number of times.
+void fpu_jit_log_recompile(uae_u32 pc, int mode, int trips)
+{
+	static const TCHAR *const modes[] = { _T("fast"), _T("single"), _T("exact") };
+	static int logged;
+	if (logged > 256)
+		return;
+	if (++logged > 256) {
+		write_log(_T("JIT: further FPU mode recompiles are not logged\n"));
+		return;
+	}
+	write_log(_T("JIT: FPU block %08x entered with FPCR %04x, recompiled for %s mode (trip %d)\n"),
+		pc, regs.fpcr, modes[mode], trips);
+}
+#endif
+
+#if defined(JIT) && defined(CPU_AARCH64)
+// the accrued exception bits of the host FPSR bits collected from compiled code
+static uae_u32 fpu_jit_host_accrued(void)
+{
+	const uae_u32 f = regs.fpu_jit_host_fpsr;
+	uae_u32 v = 0;
+	if (!f || !jit_fpu() || !currprefs.fpu_model)
+		return 0;
+	if (f & 0x01)	// IOC
+		v |= FPSR_AE_IOP;
+	if (f & 0x02)	// DZC
+		v |= FPSR_AE_DZ;
+	if (f & 0x04)	// OFC
+		v |= FPSR_AE_OVFL | FPSR_AE_INEX;
+	if (f & 0x08)	// UFC
+		v |= FPSR_AE_UNFL;
+	if (f & 0x10)	// IXC
+		v |= FPSR_AE_INEX;
+	return v;
+}
 #endif
 
 // regs.fpu_state and the accrued exceptions including those of compiled code
@@ -784,20 +832,8 @@ static void fpu_jit_sync(void)
 #elif defined(JIT) && defined(CPU_AARCH64)
 	// Compiled host FPU code leaves its exceptions in the host sticky flags,
 	// collected into regs.fpu_jit_host_fpsr
-	const uae_u32 f = regs.fpu_jit_host_fpsr;
+	regs.fpsr |= fpu_jit_host_accrued();
 	regs.fpu_jit_host_fpsr = 0;
-	if (f && jit_fpu() && currprefs.fpu_model) {
-		if (f & 0x01)	// IOC
-			regs.fpsr |= FPSR_AE_IOP;
-		if (f & 0x02)	// DZC
-			regs.fpsr |= FPSR_AE_DZ;
-		if (f & 0x04)	// OFC
-			regs.fpsr |= FPSR_AE_OVFL | FPSR_AE_INEX;
-		if (f & 0x08)	// UFC
-			regs.fpsr |= FPSR_AE_UNFL;
-		if (f & 0x10)	// IXC
-			regs.fpsr |= FPSR_AE_INEX;
-	}
 #endif
 }
 
@@ -1676,8 +1712,8 @@ static void fpu_null (void)
 	fpu_jit_sync();
 	regs.fpu_state = 0;
 	regs.fpu_exp_state = 0;
-	regs.fpcr = 0;
-	fpu_jit_fpcr_changed();
+	// also the host mode, and the end of a block compiled for the old mode
+	fpp_set_fpcr(0);
 	fpp_set_fpsr(0);
 	regs.fpiar = 0;
 	for (int i = 0; i < 8; i++)
@@ -4953,8 +4989,19 @@ uae_u8 *save_fpu(size_t *len, uae_u8 *dstptr)
 		save_u32 (w2);
 		save_u32 (w3);
 	}
+#if defined(JIT) && defined(CPU_x86_64)
+	// the x87 belongs to the thread that runs the compiled code; a parked CPU
+	// thread has merged it already (fpu_jit_x87_thread_sync())
+	if (!cpu_threaded_run || cpu_thread_is_worker())
+		fpu_jit_x87_thread_sync();
+#endif
 	save_u32 (regs.fpcr);
+#if defined(JIT) && defined(CPU_AARCH64)
+	// with the exceptions compiled code collected, without merging them here
+	save_u32 (regs.fpsr | fpu_jit_host_accrued());
+#else
 	save_u32 (regs.fpsr);
+#endif
 	save_u32 (regs.fpiar);
 
 	save_u32 (-1);
@@ -4962,7 +5009,7 @@ uae_u8 *save_fpu(size_t *len, uae_u8 *dstptr)
 
 	v = regs.fpu_state;
 #if defined(JIT) && defined(CPU_x86_64)
-	// set by compiled code (not merged here: another thread may own the x87)
+	// set by compiled code whose x87 status the main thread cannot read
 	if (fpu_jit_x87_dirty)
 		v = 1;
 #endif

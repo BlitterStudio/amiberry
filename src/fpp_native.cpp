@@ -228,7 +228,13 @@ static void set_fpucw_x87(uae_u32 m68k_cw)
 #else
 		0x127f, 0x1e7f, 0x167f, 0x1a7f,	/* Double */
 #endif
+#ifdef USE_LONG_DOUBLE
 		0x107f, 0x1c7f, 0x147f, 0x187f,	/* Single */
+#else
+		/* Single: the operations of the double core are rounded to single
+		   afterwards (fp_round_single()), so does compiled x87 code */
+		0x127f, 0x1e7f, 0x167f, 0x1a7f,
+#endif
 		0x127f, 0x1e7f, 0x167f, 0x1a7f,	/* Double */
 		0x127f, 0x1e7f, 0x167f, 0x1a7f,	/* undefined (Double) */
 	};

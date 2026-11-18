@@ -934,10 +934,16 @@ static inline int fpu_jit_fpcr_mode(uae_u32 fpcr)
 		return FPU_JIT_MODE_EXACT;
 	return (fpcr & 0xc0) == 0x40 ? FPU_JIT_MODE_SINGLE : FPU_JIT_MODE_FAST;
 }
+// a block entered in another mode is recompiled for <mode> (FPU_JIT_MODE_*)
+extern void fpu_jit_log_recompile(uae_u32 pc, int mode, int trips);
 #endif
 #if defined(JIT) && defined(CPU_x86_64)
 // compiled inline x87 code ran since the x87 status was last merged into the FPSR
 extern uae_u8 fpu_jit_x87_dirty;
+// Merge the x87 status of compiled code into the FPSR. Only on the thread that
+// runs the compiled code: the CPU thread does it before it parks or sleeps, so
+// that a pause holder (save_state()) sees all accrued exceptions.
+extern void fpu_jit_x87_thread_sync(void);
 #endif
 
 extern void exception3_read(uae_u32 opcode, uaecptr addr, int size, int fc);

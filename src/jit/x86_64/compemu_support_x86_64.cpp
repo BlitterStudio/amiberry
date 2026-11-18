@@ -4624,6 +4624,8 @@ static void fpu_mode_recompile(void)
 		jit_abort("fpu_mode_recompile");
 	if (bi->fpu_trips < FPU_JIT_FPCR_TRIPS)
 		bi->fpu_trips++;
+	fpu_jit_log_recompile(m68k_getpc(), bi->fpu_trips >= FPU_JIT_FPCR_TRIPS ?
+		FPU_JIT_MODE_EXACT : fpu_jit_fpcr_mode(regs.fpcr), bi->fpu_trips);
 	bi->status=BI_NEED_RECOMP;
 	raise_in_cl_list(bi);
 	execute_normal();

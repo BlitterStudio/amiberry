@@ -729,14 +729,14 @@ STATIC_INLINE void write_jmp_target(uae_u32* jmpaddr, uintptr a)
 		/* branch always */
 		off = off & 0x3ffffff;
 		*(jmpaddr) = (*(jmpaddr) & 0xfc000000) | off;
-	} else if((*(jmpaddr) & 0x7c000000) == 0x34000000) {
-		/* TBZ/TBNZ/CBZ/CBNZ */
+	} else if((*(jmpaddr) & 0x7e000000) == 0x36000000) {
+		/* TBZ/TBNZ: 14-bit offset */
 		if((a > (uintptr)jmpaddr && off > 0x1fff) || (a < (uintptr)jmpaddr && (~off) > 0x1fff))
 			write_log("JIT: TBZ/TBNZ branch to target too long.\n");
 		off = off & 0x3fff;
 		*(jmpaddr) = (*(jmpaddr) & 0xfffc001f) | (off << 5);
 	} else {
-		/* conditional branch */
+		/* B.cond and CBZ/CBNZ: 19-bit offset at bits 5-23 */
 		if((a > (uintptr)jmpaddr && off > 0x3ffff) || (a < (uintptr)jmpaddr && (~off) > 0x3ffff))
 			write_log("JIT: Branch to target too long.\n");
 		off = off & 0x7ffff;

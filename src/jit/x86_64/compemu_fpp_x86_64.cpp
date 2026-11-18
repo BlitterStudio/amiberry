@@ -1021,8 +1021,9 @@ void comp_frestore_opp(uae_u32 opcode)
 /* x87 control words, indexed with fldcw_m_indexed() by the rounding precision
    and mode bits of the 68k FPCR (byte offset fpcr & 0xf0): those
    set_fpucw_x87() (fpp_native.cpp) loads for the interpreted instructions, so
-   that the extended (and the undefined) precision is the double precision
-   unless the FPU registers are long doubles */
+   that unless the FPU registers are long doubles, every precision is the
+   double precision: like the host core, single precision rounds the double
+   result (the store after the operation) */
 static uae_u16 x86_fpucw[]={
 #ifdef USE_LONG_DOUBLE
     0x137f, 0x137f, 0x137f, 0x137f, 0x137f, 0x137f, 0x137f, 0x137f, /* p0r0 */
@@ -1036,10 +1037,17 @@ static uae_u16 x86_fpucw[]={
     0x1a7f, 0x1a7f, 0x1a7f, 0x1a7f, 0x1a7f, 0x1a7f, 0x1a7f, 0x1a7f, /* p0r3 */
 #endif
 
+#ifdef USE_LONG_DOUBLE
     0x107f, 0x107f, 0x107f, 0x107f, 0x107f, 0x107f, 0x107f, 0x107f, /* p1r0 */
     0x1c7f, 0x1c7f, 0x1c7f, 0x1c7f, 0x1c7f, 0x1c7f, 0x1c7f, 0x1c7f, /* p1r1 */
     0x147f, 0x147f, 0x147f, 0x147f, 0x147f, 0x147f, 0x147f, 0x147f, /* p1r2 */
     0x187f, 0x187f, 0x187f, 0x187f, 0x187f, 0x187f, 0x187f, 0x187f, /* p1r3 */
+#else
+    0x127f, 0x127f, 0x127f, 0x127f, 0x127f, 0x127f, 0x127f, 0x127f, /* p1r0 */
+    0x1e7f, 0x1e7f, 0x1e7f, 0x1e7f, 0x1e7f, 0x1e7f, 0x1e7f, 0x1e7f, /* p1r1 */
+    0x167f, 0x167f, 0x167f, 0x167f, 0x167f, 0x167f, 0x167f, 0x167f, /* p1r2 */
+    0x1a7f, 0x1a7f, 0x1a7f, 0x1a7f, 0x1a7f, 0x1a7f, 0x1a7f, 0x1a7f, /* p1r3 */
+#endif
 
     0x127f, 0x127f, 0x127f, 0x127f, 0x127f, 0x127f, 0x127f, 0x127f, /* p2r0 */
     0x1e7f, 0x1e7f, 0x1e7f, 0x1e7f, 0x1e7f, 0x1e7f, 0x1e7f, 0x1e7f, /* p2r1 */
@@ -1463,13 +1471,13 @@ static void comp_fpp_fast(uae_u32 opcode, uae_u16 extra)
 	if (!prec && jit_fpu_single_block && base != 0x01 && base != 0x03)
 		prec = 1;
 	const bool arith = base == 0x04 || base >= 0x20;
-	/* the x87 control word gives single (from the FPCR) or double precision:
-	   the store after the operation rounds to single as the host core does
-	   after its double operation, and double needs nothing */
+	/* the x87 control word gives double precision (x86_fpucw[]): the store
+	   after the operation rounds to single as the host core does after its
+	   double operation, and double needs nothing */
 #ifdef USE_LONG_DOUBLE
 	const bool set_cw = prec && arith;
 #else
-	const bool set_cw = prec == 2 && arith && jit_fpu_single_block;
+	const bool set_cw = false;
 #endif
 	/* moves of a source the precision holds exactly need no rounding */
 	const int size = (extra >> 10) & 7;

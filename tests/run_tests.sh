@@ -34,6 +34,7 @@ BEHAVIORAL_TESTS=(
 	"test_fpu_core_switch_live.sh"
 	"test_fpu_jit_loads_live.sh"
 	"test_fpu_jit_guard_live.sh"
+	"test_fpu_jit_savestate_live.sh"
 	"test_cpu_thread_live.sh"
 	"test_plugin_search_paths.sh"
 	"test_relocatable_install_paths.sh"

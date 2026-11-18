@@ -399,9 +399,8 @@ STATIC_INLINE void compemu_raw_fpsr_settle(void)
    regs.fpu_jit_host_state with live in that mode, and the rest is out of line
    (compemu_raw_fpu_enter_stub()). Unless the host FPSR still holds the
    uncollected exceptions of compiled FPU code, it holds those of C code, which
-   do not count: clear it. Entered with an FPCR of another mode (the exact
-   check misses the undefined precision, which trips until the block stays
-   exact), recompile the block. Leaves NZCV alone. */
+   do not count: clear it. Entered with an FPCR of another mode, recompile
+   the block. Leaves NZCV alone. */
 STATIC_INLINE uae_u32* compemu_raw_fpu_enter(int mode)
 {
 	LDR_wXi(REG_WORK1, R_REGSTRUCT, FPU_JIT_HOST_STATE_OFFS);
