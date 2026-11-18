@@ -1958,11 +1958,22 @@ static void netdev_start_threads(void)
 		uae_sem_init(&async_sem, 0, 1);
 }
 
+static bool netdev_units_open(void)
+{
+	for (int i = 0; i < MAX_TOTAL_NET_DEVICES; i++) {
+		if (devst[i].opencnt)
+			return true;
+	}
+	return false;
+}
+
 static void netdev_reset(int hardreset)
 {
 	uaenet_signal_state = 1;
 	netdev_start_threads();
-	if (!currprefs.sana2)
+	// A reset that turned uaenet.device off (virtualdevice_init) still has
+	// to close the units the guest had open.
+	if (!currprefs.sana2 && !netdev_units_open())
 		return;
 	dev_reset();
 }
@@ -1996,6 +2007,8 @@ void netdev_install (void)
 	uae_u32 initcode, openfunc, closefunc, expungefunc;
 	uae_u32 beginiofunc, abortiofunc;
 
+	// Registered when off too: see netdev_reset().
+	device_add_reset(netdev_reset);
 	if (!currprefs.sana2)
 		return;
 	if (log_net)

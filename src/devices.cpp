@@ -493,6 +493,18 @@ void virtualdevice_init (void)
 		uae_sem_init(&thread_sema, 0, 1);
 	}
 
+	// bsdsocket.library, uaenet.device and uaeserial.device live in the UAE
+	// Boot ROM rebuilt below: their install, the boot ROM placement and the
+	// resident scan read these currprefs flags, so the settings take effect
+	// here and nowhere else. A configuration loaded while emulating reaches
+	// changed_prefs only, and a hard reset does not copy them (#2709).
+	// fixup_prefs() rule: no bsdsocket.library with the indirect boot ROM,
+	// which only a restart changes. uaescsi.device keeps the running
+	// setting: blkdev picked the host CD backends by it.
+	currprefs.socket_emu = changed_prefs.socket_emu && currprefs.uaeboard < 3;
+	currprefs.sana2 = changed_prefs.sana2;
+	currprefs.uaeserial = changed_prefs.uaeserial;
+
 	reset_device_items();
 
 #ifdef CD32

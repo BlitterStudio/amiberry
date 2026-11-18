@@ -4629,7 +4629,9 @@ int init_socket_layer(void)
 	ensure_winsock();
 
 	if (currprefs.socket_emu) {
-		if (uae_sem_init(&sem_queue, 0, 1) < 0) {
+		// Every Boot ROM rebuild installs the library again; uae_sem_init() on
+		// the existing semaphore would signal it and break the queue lock.
+		if (!sem_queue && uae_sem_init(&sem_queue, 0, 1)) {
 			write_log("Can't create sem %d\n", errno);
 			return 0;
 		}
