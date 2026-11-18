@@ -17,6 +17,7 @@
 
 #include "sysconfig.h"
 #include "sysdeps.h"
+#include <cfenv>
 
 #include "options.h"
 #include "memory.h"
@@ -184,7 +185,7 @@ static int fpu_core_wanted(void)
 	case FPU_MODE_HOST80:
 		return -1;
 	default:
-#if defined(CPU_AARCH64) && defined(WITH_SOFTFLOAT)
+#if (defined(CPU_AARCH64) || defined(CPU_x86_64)) && !defined(USE_LONG_DOUBLE) && defined(WITH_SOFTFLOAT)
 		return currprefs.cachesize && currprefs.compfpu ? 0 : 1;
 #else
 		return 0;
@@ -735,8 +736,82 @@ static void fpsr_set_result(fpdata *result)
 		regs.fpsr |= FPSR_CC_I;
 	}
 }
+#if defined(JIT) && defined(CPU_x86_64)
+uae_u8 fpu_jit_x87_dirty;
+
+// Compiled inline x87 code (compemu_fpp_x86_64.cpp) leaves its exceptions in
+// the x87 sticky flags: fold them into the accrued byte. The exception byte
+// keeps the last value an interpreted or helper instruction set. The compiled
+// code sets only fpu_jit_x87_dirty, which also stands for regs.fpu_state = 1.
+static void fpu_jit_merge_x87(void)
+{
+	regs.fpu_state = 1;
+#if defined(__GNUC__)
+	uae_u16 sw;
+	__asm__ __volatile__("fnstsw %0" : "=m" (sw));
+	if (sw & 0x01)
+		regs.fpsr |= FPSR_AE_IOP;
+	if (sw & 0x04)
+		regs.fpsr |= FPSR_AE_DZ;
+	if (sw & 0x08)
+		regs.fpsr |= FPSR_AE_OVFL | FPSR_AE_INEX;
+	if ((sw & 0x30) == 0x30)
+		regs.fpsr |= FPSR_AE_UNFL;
+	if (sw & 0x20)
+		regs.fpsr |= FPSR_AE_INEX;
+	__asm__ __volatile__("fnclex");
+#endif
+	fpu_jit_x87_dirty = 0;
+}
+
+static void fpu_jit_clear_x87(void)
+{
+	if (fpu_jit_x87_dirty)
+		regs.fpu_state = 1;
+#if defined(__GNUC__)
+	__asm__ __volatile__("fnclex");
+#endif
+	fpu_jit_x87_dirty = 0;
+}
+#endif
+
+// regs.fpu_state and the accrued exceptions including those of compiled code
+static void fpu_jit_sync(void)
+{
+#if defined(JIT) && defined(CPU_x86_64)
+	if (fpu_jit_x87_dirty)
+		fpu_jit_merge_x87();
+#elif defined(JIT) && defined(CPU_AARCH64)
+	// Compiled host FPU code leaves its exceptions in the host sticky flags,
+	// collected into regs.fpu_jit_host_fpsr
+	const uae_u32 f = regs.fpu_jit_host_fpsr;
+	regs.fpu_jit_host_fpsr = 0;
+	if (f && jit_fpu() && currprefs.fpu_model) {
+		if (f & 0x01)	// IOC
+			regs.fpsr |= FPSR_AE_IOP;
+		if (f & 0x02)	// DZC
+			regs.fpsr |= FPSR_AE_DZ;
+		if (f & 0x04)	// OFC
+			regs.fpsr |= FPSR_AE_OVFL | FPSR_AE_INEX;
+		if (f & 0x08)	// UFC
+			regs.fpsr |= FPSR_AE_UNFL;
+		if (f & 0x10)	// IXC
+			regs.fpsr |= FPSR_AE_INEX;
+	}
+#endif
+}
+
+// regs.fpcr changed: the AArch64 JIT's copy of its mode
+static void fpu_jit_fpcr_changed(void)
+{
+#if defined(JIT) && defined(CPU_AARCH64)
+	regs.fpu_jit_host_state = (regs.fpu_jit_host_state & 1) | (fpu_jit_fpcr_mode(regs.fpcr) << 1);
+#endif
+}
+
 static void fpsr_clear_status(void)
 {
+	fpu_jit_sync();
 	// clear exception status byte only
 	regs.fpsr &= 0x0fff00f8;
 	
@@ -811,6 +886,7 @@ static void fpsr_get_quotient(uae_u64 *quot, uae_u8 *sign)
 
 uae_u32 fpp_get_fpsr (void)
 {
+	fpu_jit_sync();
 #ifdef JIT
 	if (jit_fpu() && !fpu_fpsr_cc_written) {
 		regs.fpsr &= 0x00fffff8; // clear cc
@@ -836,8 +912,14 @@ uae_u32 fpp_get_fpcr(void)
 
 void fpp_set_fpcr (uae_u32 val)
 {
+#if defined(JIT) && (defined(CPU_x86_64) || defined(CPU_AARCH64))
+	// Compiled blocks check their FPU mode only when they are entered
+	if (currprefs.cachesize && fpu_jit_fpcr_mode(val & fpcr_mask) != fpu_jit_fpcr_mode(regs.fpcr))
+		set_special(SPCFLAG_END_COMPILE);
+#endif
 	fpp_set_mode(val);
 	regs.fpcr = val & fpcr_mask;
+	fpu_jit_fpcr_changed();
 }
 
 static void fpnan (fpdata *fpd)
@@ -856,6 +938,14 @@ static void fpset (fpdata *fpd, uae_s32 val)
 
 void fpp_set_fpsr (uae_u32 val)
 {
+#if defined(JIT) && defined(CPU_x86_64)
+	// exceptions raised before the write must not accrue into the new value
+	fpu_jit_clear_x87();
+#elif defined(JIT) && defined(CPU_AARCH64)
+	regs.fpu_jit_host_fpsr = 0;
+	if (jit_fpu())
+		feclearexcept(FE_ALL_EXCEPT);
+#endif
 	regs.fpsr = val & fpsr_mask;
 #if defined(CPU_x86_64) || defined(CPU_AARCH64)
 	// FP_RESULT cannot represent independent N, Z, I and NAN bits: the JIT
@@ -1583,9 +1673,11 @@ static int get_fpu_version (int model)
 
 static void fpu_null (void)
 {
+	fpu_jit_sync();
 	regs.fpu_state = 0;
 	regs.fpu_exp_state = 0;
 	regs.fpcr = 0;
+	fpu_jit_fpcr_changed();
 	fpp_set_fpsr(0);
 	regs.fpiar = 0;
 	for (int i = 0; i < 8; i++)
@@ -2991,6 +3083,8 @@ void fpuop_save (uae_u32 opcode)
 
 	if (fault_if_no_fpu (opcode, 0, ad, adset, pc))
 		return;
+
+	fpu_jit_sync();
 
 //	write_log(_T("FSAVE %08x %08x\n"), M68K_GETPC, ad);
 
@@ -4482,6 +4576,43 @@ bool fp_jit_fmovecr(uae_u16 extra, uae_u16 *hi, uae_u64 *lo, uae_u32 *ccexc, uae
 	return true;
 }
 
+#if defined(JIT) && (defined(CPU_x86_64) || defined(CPU_AARCH64))
+/* FMOVECR #ofs as the host core computes it at extended precision, for each
+ * FPCR rounding mode (val[mode], accr[mode]: the accrued bits it sets), for
+ * the x86-64 and AArch64 JITs' inline FMOVECR. Run at compile time on a scratch FPSR.
+ * False: an offset whose FPSR is not that of a plain constant (undefined
+ * offsets) or the 6888x refuses ($40-$7f). */
+bool fp_jit_fmovecr_host(uae_u16 extra, double *val, uae_u32 *accr)
+{
+	if ((extra & 0x40) || sizeof(fptype) != sizeof(double))
+		return false;
+	fpu_jit_sync();
+	const uae_u32 fpsr = regs.fpsr, fpcr = regs.fpcr;
+	const fpdata result = regs.fp_result;
+	const bool cc_written = fpu_fpsr_cc_written;
+	bool ok = true;
+	for (int mode = 0; mode < 4; mode++) {
+		regs.fpcr = mode << 4;
+		fpp_set_mode(regs.fpcr);
+		regs.fpsr = 0;
+		fpsr_clear_status();
+		fpdata d;
+		if (!fpu_get_constant(&d, extra & 0x7f))
+			ok = false;
+		fpsr_make_status();
+		memcpy(&val[mode], &d.fp, sizeof(double));
+		accr[mode] = regs.fpsr & 0xf8;
+	}
+	regs.fpcr = fpcr;
+	fpp_set_mode(fpcr);
+	fpp_clear_status();
+	regs.fpsr = fpsr;
+	regs.fp_result = result;
+	fpu_fpsr_cc_written = cc_written;
+	return ok;
+}
+#endif
+
 bool jit_fpu_generic_ok(uae_u16 opcode, uae_u16 extra)
 {
 	// only with the exact core active, as jit_fpu_arith_ok()
@@ -4743,6 +4874,7 @@ uae_u8 *restore_fpu (uae_u8 *src)
 		fpp_to_exten_fmovem(&regs.fp[i], w1, w2, w3);
 	}
 	regs.fpcr = restore_u32 ();
+	fpu_jit_fpcr_changed();
 	regs.fpsr = restore_u32 ();
 	regs.fpiar = restore_u32 ();
 	regs.fp_ea_set = (flags & 0x00000001) != 0;
@@ -4754,6 +4886,11 @@ uae_u8 *restore_fpu (uae_u8 *src)
 	if (flags & 0x20000000) {
 		uae_u32 v = restore_u32();
 		regs.fpu_state = (v >> 0) & 15;
+#if defined(JIT) && defined(CPU_x86_64)
+		fpu_jit_x87_dirty = 0;
+#elif defined(JIT) && defined(CPU_AARCH64)
+		regs.fpu_jit_host_fpsr = 0;
+#endif
 		regs.fpu_exp_state = (v >> 4) & 15;
 		regs.fp_unimp_pend = (v >> 8) & 15;
 		regs.fp_exp_pend = (v >> 16) & 0xff;
@@ -4824,6 +4961,11 @@ uae_u8 *save_fpu(size_t *len, uae_u8 *dstptr)
 	save_u32 (1);
 
 	v = regs.fpu_state;
+#if defined(JIT) && defined(CPU_x86_64)
+	// set by compiled code (not merged here: another thread may own the x87)
+	if (fpu_jit_x87_dirty)
+		v = 1;
+#endif
 	v |= regs.fpu_exp_state << 4;
 	v |= regs.fp_unimp_pend << 8;
 	v |= regs.fp_exp_pend << 16;

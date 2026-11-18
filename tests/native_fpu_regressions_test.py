@@ -29,12 +29,16 @@ def production_frontend():
     tables = text[text.index("struct fpp_cr_entry {"):text.index("uae_u32 xhex_nan[]")]
     flags = text[text.index("#define FPSR_CC_N "):text.index("static struct {")]
     functions = (
+        "static void fpu_jit_sync(",
         "static void fpsr_set_result_always(", "static void fpsr_set_result(",
         "static void fpsr_set_result_all(",
         "static void updateaccrued(", "static uae_u32 fpsr_make_status(",
         "static void fpsr_set_quotient(", "static void fpset (",
         "uae_u32 fpp_get_fpsr (", "void fpp_set_fpsr (", "bool fpu_get_constant(",
     )
+    x87_start = text.index("#if defined(JIT) && defined(CPU_x86_64)\nuae_u8 fpu_jit_x87_dirty;")
+    x87_clear = text.index("static void fpu_jit_clear_x87(", x87_start)
+    x87_hooks = text[x87_start:text.index("\n#endif\n", text.index("\n}\n", x87_clear)) + 8]
     conditions = text[text.index("static const bool condition_table_040_060"):
                       text.index("int fpp_cond(")]
     return (tables + flags + "\nstatic bool support_exceptions = true;\n"
@@ -44,7 +48,7 @@ def production_frontend():
             "bool fpu_softfloat_core() { return currprefs.fpu_mode == FPU_MODE_EXACT; }\n"
             "static int trapped_vector;\n"
             "static bool fp_exception_pending(bool) { trapped_vector = regs.fp_exp_pend; if (trapped_vector) regs.fp_exception = true; return trapped_vector != 0; }\n" +
-            "\n".join(function(signature) for signature in functions) + "\n" +
+            x87_hooks + "\n" + "\n".join(function(signature) for signature in functions) + "\n" +
             function("static uae_u32 fpsr_get_vector(") +
             "\n#define write_log(...) ((void)0)\n" +
             function("static int fpsr_set_bsun(") + "\n#undef write_log\n" +

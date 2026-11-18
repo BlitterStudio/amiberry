@@ -825,6 +825,32 @@ static void* popall_execute_normal=NULL;
 static void* popall_cache_miss=NULL;
 static void* popall_recompile_block=NULL;
 static void* popall_check_checksum=NULL;
+static void* popall_fpu_mode_recompile=NULL;
+/* The block being compiled may use inline x87 FPU code (comp_fpp_opp) */
+bool jit_fpu_fast_block;
+bool jit_fpu_single_block;
+/* fpu_jit_x87_dirty is set at this point of the block */
+bool jit_fpu_fast_state;
+/* the FPIAR store of the last inline FPU instruction is still to be made
+   (comp_fpp_fpiar_flush()) */
+bool jit_fpu_fpiar_pending;
+uae_u32 jit_fpu_fpiar_pending_pc;
+bool jit_fpu_cc_fpsr;
+/* Where a jump from this block back to its own start may enter, past the
+   FPCR guard (and the first fpu_jit_x87_dirty store), or 0. Only the block
+   itself can change FPCR between its end and the jump back, and it only
+   does so through the interpreter, which also clears jit_fpu_loop_ok. */
+uintptr jit_fpu_loop_target;
+bool jit_fpu_loop_ok;
+
+static uintptr get_handler(uintptr addr);
+
+static uintptr block_jump_target(blockinfo *bi, uintptr pc)
+{
+	if (jit_fpu_loop_target && jit_fpu_loop_ok && pc == (uintptr)bi->pc_p)
+		return jit_fpu_loop_target;
+	return get_handler(pc);
+}
 
 /* The 68k only ever executes from even addresses. So right now, we
  * waste half the entries in this array
@@ -1150,6 +1176,7 @@ static inline void invalidate_block(blockinfo* bi)
 	set_dhtu(bi,bi->direct_pen);
 	bi->needed_flags=0xff;
 	bi->status=BI_INVALID;
+	bi->fpu_trips=0;
 	for (i=0;i<2;i++) {
 		bi->dep[i].jmp_off=NULL;
 		bi->dep[i].target=NULL;
@@ -1513,6 +1540,17 @@ static inline uae_u8* get_target_noopt(void)
 inline uae_u8* get_target(void)
 {
 	return get_target_noopt();
+}
+
+/* Emits the store of fpu_jit_x87_dirty. If nothing precedes it after the
+   FPCR guard, a jump back to the block start skips it too: the flag is
+   still set there. */
+void jit_fpu_mark_x87_dirty(void)
+{
+	const bool first = jit_fpu_loop_target == JITPTR target;
+	mov_b_mi(JITPTR &fpu_jit_x87_dirty, 1);
+	if (first)
+		jit_fpu_loop_target = JITPTR target;
 }
 
 /********************************************************************
@@ -2873,6 +2911,27 @@ static void bt_l_ri_noclobber(RR4 r, IMM i)
  * FPU register status handling. EMIT TIME!                         *
  ********************************************************************/
 
+static bool f_tomem_flags_free;
+
+/* *p = v; skipped by a load and a branch if *p is already v (FPU loops are
+   often store-bound). Only between instructions or in flush(), where the host
+   flags are saved or dead: a midfunc can evict a register between a raw
+   flag-setting instruction and its use. */
+void jit_store_flag_byte(uae_u8 *p, uae_u8 v)
+{
+	if (live.flags_in_flags != VALID || live.flags_on_stack == VALID) {
+		live.flags_in_flags = TRASH;
+		raw_cmp_b_mi(JITPTR p, v);
+		raw_jz_b_oponly();
+		uae_u8 *skip = get_target();
+		skip_byte();
+		raw_mov_b_mi(JITPTR p, v);
+		*skip = JITPTR get_target() - (JITPTR skip + 1);
+	} else {
+		raw_mov_b_mi(JITPTR p, v);
+	}
+}
+
 static void f_tomem(int r)
 {
 	if (live.fate[r].status==DIRTY) {
@@ -2886,6 +2945,12 @@ static void f_tomem(int r)
 		}
 #endif
 		live.fate[r].status=CLEAN;
+		if (r == FP_RESULT) {
+			if (f_tomem_flags_free)
+				jit_store_flag_byte((uae_u8 *)&fpu_fpsr_cc_written, 0);
+			else
+				raw_mov_b_mi(JITPTR &fpu_fpsr_cc_written, 0);
+		}
 	}
 }
 
@@ -2902,6 +2967,12 @@ static void f_tomem_drop(int r)
 		}
 #endif
 		live.fate[r].status=INMEM;
+		if (r == FP_RESULT) {
+			if (f_tomem_flags_free)
+				jit_store_flag_byte((uae_u8 *)&fpu_fpsr_cc_written, 0);
+			else
+				raw_mov_b_mi(JITPTR &fpu_fpsr_cc_written, 0);
+		}
 	}
 }
 
@@ -2909,6 +2980,13 @@ static void f_tomem_drop(int r)
 static inline int f_isinreg(int r)
 {
 	return live.fate[r].status==CLEAN || live.fate[r].status==DIRTY;
+}
+
+/* FP_RESULT is in an x87 register: the latest compiled result, and
+   fpu_fpsr_cc_written is 0 only once it is written back (f_tomem). */
+bool jit_fp_result_live(void)
+{
+	return f_isinreg(FP_RESULT);
 }
 
 static void f_evict(int r)
@@ -3751,12 +3829,14 @@ void flush(int save_regs)
 		for (i=0;i<VREGS;i++) {
 			flush_reg(i);
 		}
+		f_tomem_flags_free = true;
 		for (i=0;i<VFREGS;i++) {
 			if (live.fate[i].needflush==NF_TOMEM &&
 				live.fate[i].status==DIRTY) {
 				f_evict(i);
 			}
 		}
+		f_tomem_flags_free = false;
 		raw_fp_cleanup_drop();
 	}
 	if (needflags) {
@@ -4533,6 +4613,22 @@ static void recompile_block(void)
 	execute_normal();
 	return;
 }
+
+/* A block was entered with an FPCR whose mode (fpu_jit_fpcr_mode()) is not the
+   one its FPU code was compiled for. Recompile it for the current FPCR. */
+static void fpu_mode_recompile(void)
+{
+	blockinfo*  bi=get_blockinfo_addr(regs.pc_p);
+
+	Dif (!bi)
+		jit_abort("fpu_mode_recompile");
+	if (bi->fpu_trips < FPU_JIT_FPCR_TRIPS)
+		bi->fpu_trips++;
+	bi->status=BI_NEED_RECOMP;
+	raise_in_cl_list(bi);
+	execute_normal();
+}
+
 static void cache_miss(void)
 {
 	blockinfo*  bi=get_blockinfo_addr(regs.pc_p);
@@ -4772,6 +4868,12 @@ static inline void create_popalls(void)
 	raw_inc_sp(stack_space);
 	raw_pop_preserved_regs();
 	compemu_raw_jmp(uae_p32(check_checksum));
+
+	align_target(align_jumps);
+	popall_fpu_mode_recompile=get_target();
+	raw_inc_sp(stack_space);
+	raw_pop_preserved_regs();
+	compemu_raw_jmp(uae_p32(fpu_mode_recompile));
 
 #if defined(USE_DATA_BUFFER)
 	reset_data_buffer();
@@ -5579,10 +5681,13 @@ static void compile_block(cpu_history* pc_hist, int blocklen)
 			jit_n_addr_unsafe && !jit_n_addr_bank_unsafe &&
 			isinrom((uintptr)pc_hist[0].location) != 0;
 		bool unsafe_special_mem_block = high_natmem_rom_block;
+		bool has_fpu_gen = false;
 		i=blocklen;
 		while (i--) {
 			uae_u16* currpcp=pc_hist[i].location;
 			uae_u32 op=DO_GET_OPCODE(currpcp);
+			if ((cft_map(op) & 0xff00) == 0xf200)	/* arithmetic, FScc, FBcc */
+				has_fpu_gen = true;
 			if ((unsafe_compile_fallbacks || unsafe_memory_helpers) && pc_hist[i].specmem)
 				unsafe_special_mem_block = true;
 
@@ -5667,6 +5772,40 @@ static void compile_block(cpu_history* pc_hist, int blocklen)
 			init_comp();
 			was_comp=1;
 
+			jit_fpu_fast_state = false;
+			jit_fpu_fpiar_pending = false;
+			jit_fpu_cc_fpsr = false;
+			jit_fpu_loop_target = 0;
+			jit_fpu_loop_ok = true;
+			const bool fpu_gen = has_fpu_gen && jit_fpu_fast_enabled();
+			const int fpcr_mode = fpu_jit_fpcr_mode(regs.fpcr);
+			jit_fpu_fast_block = fpu_gen && fpcr_mode != FPU_JIT_MODE_EXACT &&
+				bi->fpu_trips < FPU_JIT_FPCR_TRIPS;
+			jit_fpu_single_block = jit_fpu_fast_block && fpcr_mode == FPU_JIT_MODE_SINGLE;
+			if (fpu_gen && bi->fpu_trips < FPU_JIT_FPCR_TRIPS) {
+				/* entered in another mode: fpu_mode_recompile(). The exact
+				   check misses the undefined precision, which trips until the
+				   block stays on the helper. */
+				if (jit_fpu_single_block) {
+					/* nothing is in registers at the start of a block */
+					raw_mov_l_rm(REG_PC_TMP, JITPTR &regs.fpcr);
+					raw_and_l_ri(REG_PC_TMP, FPU_JIT_EXACT_FPCR_MASK | 0xc0);
+					raw_cmp_l_ri(REG_PC_TMP, 0x40);
+					compemu_raw_jz_b_oponly();
+				} else if (jit_fpu_fast_block) {
+					raw_test_l_mi(JITPTR &regs.fpcr, FPU_JIT_EXACT_FPCR_MASK | 0x40);
+					compemu_raw_jz_b_oponly();
+				} else {
+					raw_test_l_mi(JITPTR &regs.fpcr, FPU_JIT_EXACT_FPCR_MASK);
+					compemu_raw_jnz_b_oponly();
+				}
+				uae_u8 *same = get_target();
+				skip_byte();
+				raw_mov_q_mi((uintptr)&regs.pc_p, (uintptr)pc_hist[0].location);
+				compemu_raw_jmp(JITPTR popall_fpu_mode_recompile);
+				*same = JITPTR get_target() - (JITPTR same + 1);
+			}
+
 #ifdef USE_CPU_EMUL_SERVICES
 			compemu_raw_sub_l_mi((uintptr)&emulated_ticks,blocklen);
 			compemu_raw_jcc_b_oponly(NATIVE_CC_GT);
@@ -5684,6 +5823,10 @@ static void compile_block(cpu_history* pc_hist, int blocklen)
 				raw_mov_q_mi((uintptr)&last_compiled_block_addr,current_block_start_target);
 			}
 #endif
+
+			/* no countdown code above the guard */
+			if (jit_fpu_fast_block && bi->count < 0)
+				jit_fpu_loop_target = JITPTR get_target();
 
 			for (i=0;i<blocklen && get_target_noopt() < MAX_COMPILE_PTR;i++) {
 				cpuop_func **cputbl;
@@ -5732,6 +5875,7 @@ static void compile_block(cpu_history* pc_hist, int blocklen)
 				}
 #endif
 
+				comp_fpp_fpiar_next(opcode, (const uae_u16 *)pc_hist[i].location);
 				failure = 1; // gb-- defaults to failure state
 				prepare_compiled_exception_state((uintptr)pc_hist[i].location, opcode);
 				if (comptbl[opcode] && optlev>1 && !unsafe_control_flow && !unsafe_flags) {
@@ -5827,6 +5971,8 @@ static void compile_block(cpu_history* pc_hist, int blocklen)
 						flush(1);
 						was_comp=0;
 					}
+					jit_fpu_fast_state = false;	/* the interpreter may clear it */
+					jit_fpu_loop_ok = false;
 					compemu_raw_mov_l_ri(REG_PAR1,(uae_u32)opcode);
 #if USE_NORMAL_CALLING_CONVENTION
 					raw_push_l_r(REG_PAR1);
@@ -5905,6 +6051,7 @@ static void compile_block(cpu_history* pc_hist, int blocklen)
 				}
 			}
 #endif
+			comp_fpp_fpiar_flush();
 			log_flush();
 
 			if (next_pc_p) { /* A branch was registered */
@@ -5945,7 +6092,7 @@ static void compile_block(cpu_history* pc_hist, int blocklen)
 				compemu_raw_jcc_l_oponly(NATIVE_CC_EQ);
 #endif
 				tba=(uae_u32*)get_target();
-				emit_jmp_target(JITPTR get_handler(t1));
+				emit_jmp_target(block_jump_target(bi, t1));
 				raw_mov_q_mi((uintptr)&regs.pc_p, t1);
 				flush_reg_count();
 				compemu_raw_jmp(JITPTR popall_do_nothing);
@@ -5967,7 +6114,7 @@ static void compile_block(cpu_history* pc_hist, int blocklen)
 				compemu_raw_jcc_l_oponly(NATIVE_CC_EQ);
 #endif
 				tba=(uae_u32*)get_target();
-				emit_jmp_target(JITPTR get_handler(t2));
+				emit_jmp_target(block_jump_target(bi, t2));
 				raw_mov_q_mi((uintptr)&regs.pc_p, t2);
 				flush_reg_count();
 				compemu_raw_jmp(JITPTR popall_do_nothing);
@@ -6015,7 +6162,7 @@ static void compile_block(cpu_history* pc_hist, int blocklen)
 					compemu_raw_jcc_l_oponly(NATIVE_CC_EQ);
 #endif
 					tba=(uae_u32*)get_target();
-					emit_jmp_target(JITPTR get_handler(v));
+					emit_jmp_target(block_jump_target(bi, v));
 					raw_mov_q_mi((uintptr)&regs.pc_p, v);
 					compemu_raw_jmp(JITPTR popall_do_nothing);
 					create_jmpdep(bi,0,tba, JITPTR v);

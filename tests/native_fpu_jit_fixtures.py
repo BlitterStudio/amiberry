@@ -63,6 +63,8 @@ static bool if_no_fpu() { return false; }
 template<class... A> static void fp_unimp_datatype(A...) { assert(false); }
 template<class... A> static void fpu_noinst(A...) { assert(false); }
 static void trace_t0_68040() {}
+// Ending a compiled block on an FPCR write is the JIT's concern.
+#define set_special(x) ((void)(x))
 // Cycle-exact FPU timing does not take part in these checks.
 static void fpu_timing_begin() {}
 static void fpu_timing_store_wait(uae_u16) {}
@@ -80,6 +82,7 @@ static bool fpsr_check_arithmetic_exception(
 """
     functions = (
         "STATIC_INLINE bool fp_is_dyadic(",
+        "static void fpu_jit_fpcr_changed(",
         "static void fpsr_clear_status(", "static void fpsr_get_quotient(",
         "static void maybe_set_fpiar(", "uae_u32 fpp_get_fpcr(",
         "void fpp_set_fpcr (", "void fpp_set_fpiar(", "uae_u32 fpp_get_fpiar(",
@@ -98,4 +101,5 @@ static bool fpsr_check_arithmetic_exception(
         "static NOINLINE void", "static void") + r"""
 #undef m68k_setpc_j
 #undef write_log
+#undef set_special
 """

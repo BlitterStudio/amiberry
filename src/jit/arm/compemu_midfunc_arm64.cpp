@@ -965,6 +965,7 @@ static void fpx_count(uae_u32 opext, int path)
  * argument. All registers are flushed before. */
 static void fpx_call4(uintptr fn)
 {
+	jit_fpu_loop_ok = false;	// the FPU core may change FPCR
 	LOAD_U64(16, fn);
 	compemu_raw_call_r(16);
 }
@@ -2215,16 +2216,6 @@ MIDFUNC(2,frndintz_rr,(FW d, FR s))
 }
 MENDFUNC(2,frndintz_rr,(FW d, FR s))
 
-MIDFUNC(2,fmod_rr,(FRW d, FR s))
-{
-	s = f_readreg(s);
-	d = f_rmw(d);
-	raw_fmod_rr(d, s);
-	f_unlock(s);
-	f_unlock(d);
-}
-MENDFUNC(2,fmod_rr,(FRW d, FR s))
-
 MIDFUNC(2,fsgldiv_rr,(FRW d, FR s))
 {
 	s = f_readreg(s);
@@ -2242,16 +2233,6 @@ MIDFUNC(1,fcuts_r,(FRW r))
 	f_unlock(r);
 }
 MENDFUNC(1,fcuts_r,(FRW r))
-
-MIDFUNC(2,frem1_rr,(FRW d, FR s))
-{
-	s = f_readreg(s);
-	d = f_rmw(d);
-	raw_frem1_rr(d, s);
-	f_unlock(s);
-	f_unlock(d);
-}
-MENDFUNC(2,frem1_rr,(FRW d, FR s))
 
 MIDFUNC(2,fsglmul_rr,(FRW d, FR s))
 {
