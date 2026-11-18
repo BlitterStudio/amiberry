@@ -55,7 +55,9 @@ if ! grep -F -q 'QEMU_QUICK_HANDOFF_IDLE_MAX' src/ppc/ppc.cpp ||
 	! grep -F -q 'const int sleep_interval = QEMU_QUICK_HANDOFF_IDLE_MAX + 1 - idle;' src/ppc/ppc.cpp ||
 	! grep -F -q 'idle <= 0' src/ppc/ppc.cpp ||
 	! grep -F -q 'idle >= QEMU_QUICK_HANDOFF_IDLE_MAX' src/ppc/ppc.cpp ||
-	! printf '%s\n' "$ppc_quick_body" | grep -F -q 'sleep_millis_main(qemu_ppc_quick_handoff_sleep_ms());'; then
+	! printf '%s\n' "$ppc_quick_body" | grep -F -q 'const int sleep_ms = qemu_ppc_quick_handoff_sleep_ms();' ||
+	! printf '%s\n' "$ppc_quick_body" | grep -F -q 'sleep_millis_main(sleep_ms);' ||
+	! printf '%s\n' "$ppc_quick_body" | grep -F -q 'std::this_thread::yield();'; then
 	echo "QEMU PPC quick handoffs must scale throttling with PPC idle" >&2
 	missing=1
 fi

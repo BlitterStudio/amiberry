@@ -5,6 +5,7 @@
 #include "options.h"
 #include "memory.h"
 #include "newcpu.h"
+#include "cpuboard.h"
 #include "settings/settings_definitions.h"
 
 #include <cstdio>
@@ -417,6 +418,8 @@ void render_panel_cpu() {
         }
         ShowHelpMarker(o.ppc_model.descriptor.help);
         ImGui::EndDisabled();
+        if (changed_prefs.ppc_mode != 1 && is_ppc_cpu(&changed_prefs))
+            ImGui::TextWrapped("The PPC board selected in Expansions always runs the PPC.");
 
         ImGui::AlignTextToFramePadding();
         ImGui::Text("PPC implementation");

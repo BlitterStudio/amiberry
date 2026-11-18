@@ -19,6 +19,9 @@
 #include "uae/qemu.h"
 #include "devices.h"
 
+#include <atomic>
+#include <thread>
+
 #define SPINLOCK_DEBUG 0
 #define PPC_ACCESS_LOG 0
 
@@ -35,8 +38,11 @@
 static volatile int spinlock_cnt;
 #endif
 
-static volatile bool ppc_spinlock_waiting;
-static volatile bool qemu_ppc_jit_flush_pending;
+/* Set by the PPC thread while it waits for the handoff lock; polled lock-free
+ * by the emulation thread. The mutexes provide the real synchronization, so
+ * relaxed ordering is enough for this hint. */
+static std::atomic<bool> ppc_spinlock_waiting;
+static std::atomic<bool> qemu_ppc_jit_flush_pending;
 static constexpr int QEMU_QUICK_HANDOFF_IDLE_MAX = 10;
 static int qemu_ppc_quick_handoff_count;
 
@@ -83,15 +89,15 @@ void uae_ppc_spinlock_get(void)
 {
 #ifdef WIN32_SPINLOCK
 	EnterCriticalSection(&ppc_cs2);
-	ppc_spinlock_waiting = true;
+	ppc_spinlock_waiting.store(true, std::memory_order_relaxed);
 	EnterCriticalSection(&ppc_cs1);
-	ppc_spinlock_waiting = false;
+	ppc_spinlock_waiting.store(false, std::memory_order_relaxed);
 	LeaveCriticalSection(&ppc_cs2);
 #else
 	ppc_spinlock_lock(ppc_mutex2);
-	ppc_spinlock_waiting = true;
+	ppc_spinlock_waiting.store(true, std::memory_order_relaxed);
 	ppc_spinlock_lock(ppc_mutex);
-	ppc_spinlock_waiting = false;
+	ppc_spinlock_waiting.store(false, std::memory_order_relaxed);
 	SDL_UnlockMutex(ppc_mutex2);
 #endif
 #if SPINLOCK_DEBUG
@@ -151,11 +157,12 @@ static void uae_ppc_spinlock_create(void)
 }
 
 volatile int ppc_state;
-static volatile bool ppc_thread_running;
-static volatile bool ppc_access;
-static volatile int ppc_cpu_lock_state;
+static std::atomic<bool> ppc_thread_running;
+static int ppc_cpu_lock_state;
 static int ppc_implementation;
 static bool ppc_paused;
+static bool ppc_implementation_loaded;
+static std::atomic<bool> ppc_retry_implementation;
 
 #define KB * 1024
 #define MB * (1024 * 1024)
@@ -337,19 +344,21 @@ static int qemu_ppc_quick_handoff_sleep_ms(void)
 
 void uae_ppc_mark_code_cache_dirty(void)
 {
-	qemu_ppc_jit_flush_pending = true;
+	qemu_ppc_jit_flush_pending.store(true, std::memory_order_relaxed);
 }
 
 /* QEMU PPC can execute direct-mapped shared RAM that the m68k patched outside
  * QEMU's softmmu. Use m68k cache flushes as the dirty signal and consume one
  * JIT/TLB flush at the next m68k->PPC handoff (#2114), instead of flushing on
- * every scheduler poll. */
+ * every scheduler poll. Also while the m68k is halted: code it flushed just
+ * before halting is what the PPC runs next, and a halted m68k cannot set the
+ * flag again, so this costs one flush at most. */
 static void request_qemu_ppc_jit_flush(void)
 {
-	if (!qemu_ppc_jit_flush_pending || !using_qemu() || !impl.flush_jit || regs.halted) {
+	if (!qemu_ppc_jit_flush_pending.load(std::memory_order_relaxed) || !using_qemu() || !impl.flush_jit) {
 		return;
 	}
-	qemu_ppc_jit_flush_pending = false;
+	qemu_ppc_jit_flush_pending.store(false, std::memory_order_relaxed);
 	impl.flush_jit();
 }
 
@@ -381,7 +390,7 @@ static PPCLockStatus get_ppc_lock(PPCLockMethod method)
 
 		bool trylock_called = false;
 		while (true) {
-			if (ppc_spinlock_waiting) {
+			if (ppc_spinlock_waiting.load(std::memory_order_relaxed)) {
 				/* PPC CPU is waiting for the spinlock and the UAE side
 				 * owns the spinlock - no additional locking needed */
 				if (trylock_called) {
@@ -417,22 +426,42 @@ static void release_ppc_lock(PPCLockStatus status)
 	}
 }
 
+static bool wants_qemu(void)
+{
+	return currprefs.ppc_implementation == PPC_IMPLEMENTATION_AUTO ||
+		currprefs.ppc_implementation == PPC_IMPLEMENTATION_QEMU;
+}
+
 static void initialize(void)
 {
 	static bool initialized = false;
+
+	/* If QEMU could not be loaded (e.g. the plugin was not installed yet),
+	 * try again once after a hard reset instead of staying on the dummy
+	 * implementation for the rest of the session. The QEMU plugin itself is
+	 * never unloaded: its threads live for the whole process. */
+	if (ppc_implementation_loaded && !using_qemu() && !ppc_thread_running &&
+		wants_qemu() && ppc_retry_implementation.exchange(false)) {
+		ppc_implementation_loaded = false;
+	}
+	if (!ppc_implementation_loaded) {
+		ppc_implementation_loaded = true;
+		load_ppc_implementation();
+	}
+
 	if (initialized) {
 		return;
 	}
-
 	initialized = true;
-
-	load_ppc_implementation();
 
 	uae_ppc_spinlock_create();
 	/* Grab the lock for the first time. This lock will be released
-	 * by the UAE emulation thread when the PPC CPU can do I/O. */
+	 * by the UAE emulation thread when the PPC CPU can do I/O. The lock
+	 * lives for the whole process, like the QEMU plugin. */
 	uae_ppc_spinlock_get();
 }
+
+static bool ppc_regions_mapped;
 
 static void map_banks(void)
 {
@@ -448,8 +477,11 @@ static void map_banks(void)
 
 	PPCMemoryRegion regions[UAE_MEMORY_REGIONS_MAX];
 	UaeMemoryMap map;
+	map.num_regions = 0;
 #ifdef DEBUGGER
 	uae_memory_map(&map);
+#else
+	write_log(_T("PPC: no memory map available (built without DEBUGGER)\n"));
 #endif
 
 	for (int i = 0; i < map.num_regions; i++) {
@@ -466,6 +498,7 @@ static void map_banks(void)
 		uae_ppc_spinlock_release();
 	}
 	impl.map_memory(regions, map.num_regions);
+	ppc_regions_mapped = true;
 	if (impl.in_cpu_thread && impl.in_cpu_thread() == false) {
 		uae_ppc_spinlock_get();
 	}
@@ -605,6 +638,28 @@ void uae_ppc_get_model(const TCHAR **model, uint32_t *hid1)
 	}
 }
 
+static TCHAR qemu_loaded_model[MAX_DPATH];
+
+void uae_ppc_set_loaded_model(const TCHAR *model)
+{
+	_tcsncpy(qemu_loaded_model, model, MAX_DPATH - 1);
+}
+
+/* The plugin creates its CPU once per process, so the model is fixed at the
+ * first load, but ppc_cpu_init() stores HID1 before that check and reset
+ * applies it: calling it again keeps HID1 matched to the current board. */
+static void refresh_qemu_model(void)
+{
+	const TCHAR *model;
+	uint32_t hid1;
+	uae_ppc_get_model(&model, &hid1);
+	if (qemu_loaded_model[0] && _tcsicmp(qemu_loaded_model, model))
+		write_log(_T("PPC: model %s needs a restart, %s stays in use\n"), model, qemu_loaded_model);
+	char *model_s = ua(model);
+	impl.init(model_s, hid1);
+	free(model_s);
+}
+
 static void uae_ppc_cpu_reset(void)
 {
 	TRACE(_T("uae_ppc_cpu_reset\n"));
@@ -615,8 +670,9 @@ static void uae_ppc_cpu_reset(void)
 	map_banks();
 
 	if (using_qemu()) {
+		refresh_qemu_model();
 		impl.reset();
-		qemu_ppc_jit_flush_pending = true;
+		qemu_ppc_jit_flush_pending.store(true, std::memory_order_relaxed);
 	}
 
 	ppc_cpu_lock_state = 0;
@@ -641,7 +697,7 @@ static int ppc_thread(void *v)
 
 void uae_ppc_execute_check(void)
 {
-	if (ppc_spinlock_waiting) {
+	if (ppc_spinlock_waiting.load(std::memory_order_relaxed)) {
 		request_qemu_ppc_jit_flush();
 		uae_ppc_spinlock_release();
 		uae_ppc_spinlock_get();
@@ -652,7 +708,13 @@ void uae_ppc_execute_quick()
 {
 	request_qemu_ppc_jit_flush();
 	uae_ppc_spinlock_release();
-	sleep_millis_main(qemu_ppc_quick_handoff_sleep_ms());
+	const int sleep_ms = qemu_ppc_quick_handoff_sleep_ms();
+	if (sleep_ms > 0) {
+		sleep_millis_main(sleep_ms);
+	} else {
+		// PPC idle disabled: keep polling, but let other threads use the core.
+		std::this_thread::yield();
+	}
 	uae_ppc_spinlock_get();
 }
 
@@ -673,11 +735,32 @@ STATIC_INLINE void spinlock_post(bool locked)
 		uae_ppc_spinlock_release();
 }
 
+static bool is_intena_or_intreq(uint32_t addr)
+{
+	const int reg = addr & 0x1fe;
+	return reg == 0x09a || reg == 0x09c;
+}
+
+/* Does this write set (SET/CLR bit 15) bits in INTENA or INTREQ? A long write
+ * covers two registers; a byte write's bit 7 becomes the SET/CLR bit (custom
+ * byte writes are duplicated into both halves of the word). */
+static bool ppc_write_sets_interrupt_bits(uint32_t addr, uint32_t data, int size)
+{
+	switch (size) {
+	case 4:
+		return (is_intena_or_intreq(addr) && (data & 0x80000000)) ||
+			(is_intena_or_intreq(addr + 2) && (data & 0x8000));
+	case 2:
+		return is_intena_or_intreq(addr) && (data & 0x8000);
+	case 1:
+		return is_intena_or_intreq(addr) && (data & 0x80);
+	}
+	return false;
+}
+
 bool UAECALL uae_ppc_io_mem_write(uint32_t addr, uint32_t data, int size)
 {
 	bool locked = false;
-
-	while (ppc_thread_running && ppc_cpu_lock_state < 0 && ppc_state);
 
 #if PPC_ACCESS_LOG > 0 && PPC_ACCESS_LOG < 2
 	if (!valid_address(addr, size)) {
@@ -700,18 +783,10 @@ bool UAECALL uae_ppc_io_mem_write(uint32_t addr, uint32_t data, int size)
 		break;
 	}
 
-	if (addr >= 0xdff000 && addr < 0xe00000) {
-		int reg = addr & 0x1fe;
-		switch (reg) {
-			case 0x09c: // INTREQ
-			case 0x09a: // INTENA
-			if (data & 0x8000) {
-				// possible interrupt change:
-				// make sure M68K thread reacts to it ASAP.
-				atomic_or(&uae_int_requested, 0x010000);
-			}
-			break;
-		}
+	if (addr >= 0xdff000 && addr < 0xe00000 && ppc_write_sets_interrupt_bits(addr, data, size)) {
+		// possible interrupt change:
+		// make sure M68K thread reacts to it ASAP.
+		atomic_or(&uae_int_requested, 0x010000);
 	}
 
 	spinlock_post(locked);
@@ -725,20 +800,18 @@ bool UAECALL uae_ppc_io_mem_write(uint32_t addr, uint32_t data, int size)
 
 bool UAECALL uae_ppc_io_mem_read(uint32_t addr, uint32_t *data, int size)
 {
-	uint32_t v;
+	uint32_t v = 0;
 	bool locked = false;
 
-	while (ppc_thread_running && ppc_cpu_lock_state < 0 && ppc_state);
-
-	if (addr >= 0xdff000 && addr < 0xe00000) {
-		int reg = addr & 0x1fe;
-		// shortcuts for common registers
-		switch (reg) {
+	if (size == 2 && (addr & 1) == 0 && addr >= 0xdff000 && addr < 0xe00000) {
+		// Lock-free shortcuts for common registers. Byte, long and odd
+		// accesses take the normal path so they get the right bytes.
+		switch (addr & 0x1fe) {
 			case 0x01c: // INTENAR
-			*data = intena;
+			*data = intena & 0x7fff;
 			return true;
 			case 0x01e: // INTREQR
-			*data = intreq;
+			*data = intreq & 0x7fff;
 			return true;
 		}
 	}
@@ -776,8 +849,6 @@ bool UAECALL uae_ppc_io_mem_write64(uint32_t addr, uint64_t data)
 {
 	bool locked = false;
 
-	while (ppc_thread_running && ppc_cpu_lock_state < 0 && ppc_state);
-
 	locked = spinlock_pre(addr);
 	put_long(addr + 0, data >> 32);
 	put_long(addr + 4, data & 0xffffffff);
@@ -794,8 +865,6 @@ bool UAECALL uae_ppc_io_mem_read64(uint32_t addr, uint64_t *data)
 {
 	bool locked = false;
 	uint32_t v1, v2;
-
-	while (ppc_thread_running && ppc_cpu_lock_state < 0 && ppc_state);
 
 	locked = spinlock_pre(addr);
 	v1 = get_long(addr + 0);
@@ -814,7 +883,7 @@ void uae_ppc_cpu_stop(void)
 {
 	if (ppc_state == PPC_STATE_INACTIVE)
 		return;
-	TRACE(_T("uae_ppc_cpu_stop %d %d\n"), ppc_thread_running, ppc_state);
+	TRACE(_T("uae_ppc_cpu_stop %d %d\n"), ppc_thread_running.load() ? 1 : 0, ppc_state);
 	if (using_qemu()) {
 		write_log(_T("PPC: Stopping...\n"));
 		set_and_wait_for_state(PPC_CPU_STATE_PAUSED, 1);
@@ -834,9 +903,11 @@ void uae_ppc_cpu_reboot(void)
 		ppc_thread_running = true;
 		if (using_qemu()) {
 			uae_ppc_cpu_reset();
-			//qemu_uae_ppc_start();
+			// ppc_paused is false here, so set_and_wait_for_state()
+			// would do nothing. Same locking as it uses, though.
+			uae_ppc_spinlock_release();
 			impl.set_state(PPC_CPU_STATE_RUNNING);
-			//set_and_wait_for_state(PPC_CPU_STATE_RUNNING, 0);
+			uae_ppc_spinlock_get();
 		} else {
 			uae_start_thread(NULL, ppc_thread, NULL, NULL);
 		}
@@ -856,26 +927,32 @@ void uae_ppc_reset(bool hardreset)
 	    set_and_wait_for_state(PPC_CPU_STATE_PAUSED, 1);
 	}
 	ppc_state = PPC_STATE_INACTIVE;
+	if (hardreset)
+		ppc_retry_implementation = true;
 }
 
 void uae_ppc_free(void)
 {
-	bool wasactive = ppc_state != PPC_STATE_INACTIVE;
 	uae_ppc_cpu_stop();
-	if (wasactive && impl.map_memory)
+	// uae_ppc_reset() may already have left the state inactive: the
+	// regions still point at memory that is about to be freed.
+	if (ppc_regions_mapped && impl.map_memory) {
+		ppc_regions_mapped = false;
+		const bool unlock = impl.in_cpu_thread() == false;
+		if (unlock)
+			uae_ppc_spinlock_release();
 		impl.map_memory(NULL, 0);
+		if (unlock)
+			uae_ppc_spinlock_get();
+	}
 }
 
 void uae_ppc_cpu_lock(void)
 {
-	// when called, lock was already set by other CPU
-	if (ppc_access) {
-		// ppc accessing but m68k already locked
-		ppc_cpu_lock_state = -1;
-	} else {
-		// m68k accessing but ppc already locked
-		ppc_cpu_lock_state = 1;
-	}
+	// When called, the lock was already set by the other CPU. Only the
+	// m68k side of the CSIII lock handshake is emulated: a PPC that loses
+	// the race is not stalled.
+	ppc_cpu_lock_state = 1;
 }
 
 bool uae_ppc_cpu_unlock(void)
