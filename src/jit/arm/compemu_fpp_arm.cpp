@@ -129,8 +129,11 @@ STATIC_INLINE int comp_fp_get (uae_u32 opcode, uae_u16 extra, int treg)
               wrd2 = comp_get_ilong(m68k_pc_offset - 8);
               wrd1 = comp_get_iword(m68k_pc_offset - 12) << 16;
 			  fp_to_exten(&tmp, wrd1, wrd2, wrd3);
-              mov_l_ri(S1, ((uae_u32*)&tmp)[0]);
-              mov_l_ri(S2, ((uae_u32*)&tmp)[1]);
+              // tmp.fp, not the start of tmp: that is fpx with WITH_SOFTFLOAT
+              uae_u64 bits;
+              memcpy(&bits, &tmp.fp, sizeof(bits));
+              mov_l_ri(S1, (uae_u32)bits);
+              mov_l_ri(S2, (uae_u32)(bits >> 32));
               fmov_d_rrr (treg, S1, S2);
       				return 0;
             }
