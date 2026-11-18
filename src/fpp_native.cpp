@@ -23,6 +23,16 @@
 #define SOFTFLOAT_CONVERSIONS 1
 #endif
 
+// Extended <-> double conversions. The x86-64 JIT does its own conversions
+// with the x87, so the host core can always use the exact (correctly
+// rounded, flag-exact) softfloat ones; AArch64 keeps the arithmetic
+// conversions with the JIT FPU so they match its compiled code.
+#ifdef CPU_x86_64
+#define FP_EXACT_EXTEN_CONVERSIONS 1
+#else
+#define FP_EXACT_EXTEN_CONVERSIONS (!currprefs.cachesize || !currprefs.compfpu)
+#endif
+
 #include "options.h"
 #include "memory.h"
 #include "newcpu.h"
@@ -84,6 +94,8 @@ static const double twoto32 = 4294967296.0;
 static struct float_status fs;
 #endif
 static uae_u32 fpu_mode_control = ~0U;
+// ~0U also reads as a valid FPCR (RP): no mode has been applied until this is set
+static bool fpu_mode_applied;
 static int fpu_prec;
 static int temp_prec;
 
@@ -216,7 +228,13 @@ static void set_fpucw_x87(uae_u32 m68k_cw)
 #else
 		0x127f, 0x1e7f, 0x167f, 0x1a7f,	/* Double */
 #endif
+#ifdef USE_LONG_DOUBLE
 		0x107f, 0x1c7f, 0x147f, 0x187f,	/* Single */
+#else
+		/* Single: the operations of the double core are rounded to single
+		   afterwards (fp_round_single()), so does compiled x87 code */
+		0x127f, 0x1e7f, 0x167f, 0x1a7f,
+#endif
 		0x127f, 0x1e7f, 0x167f, 0x1a7f,	/* Double */
 		0x127f, 0x1e7f, 0x167f, 0x1a7f,	/* undefined (Double) */
 	};
@@ -245,7 +263,7 @@ static void native_set_fpucw(uae_u32 m68k_cw)
 /* Functions for setting host/library modes and getting status */
 static void fp_set_mode(uae_u32 mode_control)
 {
-	if (mode_control == fpu_mode_control && !(currprefs.cachesize && currprefs.compfpu))
+	if (fpu_mode_applied && mode_control == fpu_mode_control && !(currprefs.cachesize && currprefs.compfpu))
 		return;
     switch(mode_control & FPCR_ROUNDING_PRECISION) {
         case FPCR_PRECISION_EXTENDED: // X
@@ -260,7 +278,7 @@ static void fp_set_mode(uae_u32 mode_control)
             break;
     }
 #if USE_HOST_ROUNDING
-	if ((mode_control & FPCR_ROUNDING_MODE) != (fpu_mode_control & FPCR_ROUNDING_MODE)) {
+	if (!fpu_mode_applied || (mode_control & FPCR_ROUNDING_MODE) != (fpu_mode_control & FPCR_ROUNDING_MODE)) {
 		switch(mode_control & FPCR_ROUNDING_MODE) {
 			case FPCR_ROUND_NEAR: // to neareset
 				fesetround(FE_TONEAREST);
@@ -288,6 +306,7 @@ static void fp_set_mode(uae_u32 mode_control)
 		fpu_prec == PREC_DOUBLE ? 64 : 80, &fs);
 #endif
 	fpu_mode_control = mode_control;
+	fpu_mode_applied = true;
 }
 
 
@@ -588,7 +607,7 @@ static void fp_to_exten(fpdata *fpd, uae_u32 wrd1, uae_u32 wrd2, uae_u32 wrd3)
 #endif
 {
 #if SOFTFLOAT_CONVERSIONS
-	if (!currprefs.cachesize || !currprefs.compfpu) {
+	if (FP_EXACT_EXTEN_CONVERSIONS) {
 		floatx80 fx80;
 		fx80.high = wrd1 >> 16;
 		fx80.low = (((uae_u64)wrd2) << 32) | wrd3;
@@ -600,25 +619,52 @@ static void fp_to_exten(fpdata *fpd, uae_u32 wrd1, uae_u32 wrd2, uae_u32 wrd3)
 		}
 		fp_to_double(fpd, f >> 32, (uae_u32)f);
 	} else {
-		double frac;
-		if ((wrd1 & 0x7fff0000) == 0 && wrd2 == 0 && wrd3 == 0) {
-			fpd->fp = (wrd1 & 0x80000000) ? -0.0 : +0.0;
-			return;
-		}
+		// Rounded once in the FPCR rounding mode, after the sign is applied,
+		// as the AArch64 JIT's compiled code does (raw_fp_to_exten_rm)
+		const bool neg = (wrd1 & 0x80000000) != 0;
 		if ((wrd1 & 0x7fff0000) == 0x7fff0000) {
 			// infinity if the fraction (without the explicit integer bit) is zero, else NaN
 			if ((wrd2 & 0x7fffffff) == 0 && wrd3 == 0) {
-				fpd->fp = copysign(INFINITY, (wrd1 & 0x80000000) ? -1.0 : 1.0);
+				fpd->fp = copysign(INFINITY, neg ? -1.0 : 1.0);
 			} else {
-				fpd->fp = copysign(NAN, (wrd1 & 0x80000000) ? -1.0 : 1.0);
+				fpd->fp = copysign(NAN, neg ? -1.0 : 1.0);
 			}
 			return;
 		}
-		frac = ((double)wrd2 + ((double)wrd3 / twoto32)) / 2147483648.0;
-		if (wrd1 & 0x80000000) {
-			frac = -frac;
+		uae_u64 m = ((uae_u64)wrd2 << 32) | wrd3;
+		if (!m) {
+			fpd->fp = neg ? -0.0 : +0.0;
+			return;
 		}
-		fpd->fp = ldexp (frac, ((wrd1 >> 16) & 0x7fff) - 16383);
+		int e = (wrd1 >> 16) & 0x7fff;
+		if (!e)
+			e = 1;	// denormal
+		const int z = __builtin_clzll(m);
+		m <<= z;
+		const int k = e - z - 16446;	// value = m * 2^k, m in [2^63, 2^64)
+		if (k > -1086) {
+			// one bit shifted out (sticky) to fit a signed integer; the
+			// scale is exact unless the result overflows
+			const uae_u64 h = (m >> 1) | (m & 1);
+			const double d = (double)(neg ? -(uae_s64)h : (uae_s64)h);
+			fpd->fp = ldexp(d, k + 1 > 2000 ? 2000 : k + 1);
+		} else {
+			// below 2^-1022: the multiple of 2^-1074 below the value, and
+			// two rounding bits of which the second one is sticky
+			int sh = -(k + 1074);
+			if (sh > 65)
+				sh = 65;	// below half the last place either way
+			const uae_u64 sticky = (m << (66 - sh)) != 0;
+			const uae_u64 q = ((m >> (sh - 2)) & 3) | sticky;
+			const uae_u64 n = sh < 64 ? m >> sh : 0;
+			uae_s64 w = (uae_s64)(q | ((n & 1) << 2));
+			uae_s64 ne = (uae_s64)(n & ~(uae_u64)1);
+			if (neg) {
+				w = -w;
+				ne = -ne;
+			}
+			fpd->fp = fma((double)w * 0x1p-538, 0x1p-538, (double)ne * 0x1p-1074);
+		}
 	}
 #else
 		double frac;
@@ -645,7 +691,7 @@ static void fp_to_exten(fpdata *fpd, uae_u32 wrd1, uae_u32 wrd2, uae_u32 wrd3)
 static void fp_from_exten(fpdata *fpd, uae_u32 *wrd1, uae_u32 *wrd2, uae_u32 *wrd3)
 {
 #if SOFTFLOAT_CONVERSIONS
-	if (!currprefs.cachesize || !currprefs.compfpu) {
+	if (FP_EXACT_EXTEN_CONVERSIONS) {
 		uae_u32 w1, w2;
 		fp_from_double(fpd, &w1, &w2);
 		floatx80 f = float64_to_floatx80(((uae_u64)w1 << 32) | w2, &fs);
@@ -1863,6 +1909,7 @@ static void fp_to_pack (fpdata *fpd, uae_u32 *wrd, int dummy)
 void fp_init_native(void)
 {
 	fpu_mode_control = ~0U;
+	fpu_mode_applied = false;
 #ifdef SOFTFLOAT_CONVERSIONS
 	set_floatx80_rounding_precision(80, &fs);
 	set_float_rounding_mode(float_round_to_zero, &fs);

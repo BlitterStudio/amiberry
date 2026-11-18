@@ -5563,6 +5563,10 @@ static void cpu_thread_safepoint()
 {
 	if (!cpu_worker || !__atomic_load_n(&cpu_thread_pause_requested, __ATOMIC_ACQUIRE))
 		return;
+#if defined(JIT) && defined(CPU_x86_64)
+	// a pause holder may save the FPU state: give it the x87 exceptions
+	fpu_jit_x87_thread_sync();
+#endif
 	__atomic_store_n(&cpu_thread_parked, CPU_THREAD_PARKED, __ATOMIC_RELEASE);
 	uae_sem_post(&cpu_park_sema);
 	cpu_thread_wake_main();
@@ -5587,6 +5591,10 @@ static void cpu_thread_safepoint()
 #define CPU_THREAD_IDLE_SPIN_NS 50000
 static void cpu_thread_idle_wait(bool spin)
 {
+#if defined(JIT) && defined(CPU_x86_64)
+	// a pause holder may save the FPU state: give it the x87 exceptions
+	fpu_jit_x87_thread_sync();
+#endif
 	__atomic_store_n(&cpu_thread_parked, CPU_THREAD_IDLE, __ATOMIC_RELEASE);
 	// a flag the slow path leaves set must not turn this into a busy loop
 	const uae_atomic flags0 = regs.spcflags;
@@ -6720,6 +6728,10 @@ static int cpu_thread_entry(void *)
 #if defined(JIT_HAS_BUS_ERROR_RECOVERY)
 	jit_in_compiled_code = false;
 #endif
+#if defined(JIT) && defined(CPU_x86_64)
+	// the main thread runs the CPU (and saves its state) from now on
+	fpu_jit_x87_thread_sync();
+#endif
 	__atomic_store_n(&cpu_thread_active, 2, __ATOMIC_RELEASE);
 	uae_sem_post(&cpu_park_sema);
 	cpu_worker = false;
@@ -6769,6 +6781,10 @@ static void run_cpu_thread(int (*f)(void *))
 		}
 	}
 
+#if defined(JIT) && defined(CPU_x86_64)
+	// the x87 flags of code compiled on this thread stay on this thread
+	fpu_jit_x87_thread_sync();
+#endif
 	cpu_thread_function = f;
 	if (!uae_start_thread(_T("cpu"), cpu_thread_entry, nullptr, &cpu_thread)) {
 		// m68k_go() would retry forever; run on this thread instead.

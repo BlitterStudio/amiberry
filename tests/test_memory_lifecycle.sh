@@ -55,6 +55,7 @@ try:
 	release = between(memory, re.escape("static size_t page_round("), "static int find_shmid_by_address(")
 	next_key = between(memory, re.escape("static uae_key_t get_next_shmkey ()"), "STATIC_INLINE uae_key_t find_shmkey")
 	clear = between(memory, r"static void clear_shm\s*\(", "bool preinit_shm ()")
+	direct_layout = between(memory, re.escape("static bool shm_laid_out;"), "bool jit_direct_pending(")
 	lifecycle = between(memory, re.escape("static uae_u32 oz3fastmem_size"), "void mapped_free (")
 	allocation = between(memory, re.escape("bool uae_mman_alloc_nodirect("), "void *uae_shmat")
 except ValueError as exc:
@@ -101,6 +102,7 @@ struct rtgboardconfig { uae_u32 rtgmem_size; int rtgmem_type; };
 struct uae_prefs {
 	ramboard fastmem[MAX_RAM_BOARDS]{}, z3fastmem[MAX_RAM_BOARDS]{}, z3chipmem{};
 	rtgboardconfig rtgboards[MAX_RTG_BOARDS]{};
+	int cachesize = 0, comptrustbyte = 1, comptrustword = 1, comptrustlong = 1;
 } changed_prefs;
 struct shmpiece;
 static shmpiece* shm_start;
@@ -111,8 +113,12 @@ static addrbank* shm_heapowners[MAX_SHMID];
 addrbank rtarea_bank, kickmem_bank;
 static size_t uae_vm_page_size() { return 4096; }
 static bool VirtualProtect(void*, size_t, DWORD, DWORD*) { return true; }
-''' + release + next_key + clear + r'''
-static int doinit_shm() { return 0; }
+''' + release + next_key + clear + direct_layout + r'''
+static int doinit_shm() {
+	shm_laid_out = true;
+	shm_laid_out_direct = jit_direct_wanted(&changed_prefs);
+	return 0;
+}
 static void resetmem(bool) {}
 static void memory_hardreset(int) {}
 ''' + lifecycle + r'''

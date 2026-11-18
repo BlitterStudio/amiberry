@@ -498,9 +498,6 @@ void render_panel_cpu() {
         if (ImGui::SliderInt("##Cache size", &jit_slider_val, 0, 5, "%d", ImGuiSliderFlags_AlwaysClamp)) {
             settings::set_number(o.cachesize, changed_prefs, ctx,
                 jit_slider_val == 0 ? 0 : 1024 << (jit_slider_val - 1)); // 1->1024, 2->2048... 5->16384
-
-            if (changed_prefs.cachesize > 0 && jit_slider_val > 0)
-                canbang = true;
         }
         AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), false);
         ImGui::EndDisabled();
@@ -561,6 +558,13 @@ void render_panel_cpu() {
             settings::set(o.comp_trustbyte, changed_prefs, ctx, "indirect");
         }
         ShowHelpMarker("Indirect memory access. Slower but more compatible.");
+        if (emulating && jit_direct_wanted(&changed_prefs) && !canbang) {
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.85f, 0.55f, 0.0f, 1.0f));
+            ImGui::TextWrapped(jit_direct_pending(&changed_prefs)
+                ? "Direct memory access takes effect after a reset. Indirect is used until then."
+                : "Direct memory access is not possible with this memory configuration. Indirect is used.");
+            ImGui::PopStyleColor();
+        }
         ImGui::EndDisabled();
 
         ImGui::Dummy(ImVec2(right_group_min_width, 0.0f));

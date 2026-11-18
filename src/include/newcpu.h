@@ -130,11 +130,8 @@ typedef uae_u8 flagtype;
 
 #ifdef FPUEMU
 
-#if !defined(USE_LONG_DOUBLE) && (defined(CPU_x86_64)) && defined(__LDBL_MANT_DIG__) && __LDBL_MANT_DIG__ == 64
-// The native core and x87 JIT can retain the complete MC6888x register format.
-#define USE_LONG_DOUBLE
-#endif
-
+// The host core uses doubles (USE_LONG_DOUBLE gives x87 long doubles): it is
+// the fast one, and the exact (softfloat) core gives the full 80-bit format.
 #ifdef USE_LONG_DOUBLE
 typedef long double fptype;
 #else
@@ -327,6 +324,17 @@ struct regstruct
 	uae_u32* raw_cputbl_count;
 	uintptr mem_banks;
 	uintptr cache_tags;
+	// (last, so that the fields above keep their offsets)
+	// host FPSR exception bits (IOC..IXC) compiled host FPU code raised since
+	// they were last merged into the FPSR, collected whenever compiled code
+	// calls or returns to C code (whose flags must not count)
+	uae_u32 fpu_jit_host_fpsr;
+	// bit 0 (live): the host FPSR holds uncollected exceptions of compiled
+	// host FPU code; set when a block with host FPU code is entered, cleared
+	// when they are collected before C code runs. Bits 1-2: the FPU JIT mode
+	// of regs.fpcr (fpu_jit_fpcr_mode()), kept by fpu_jit_fpcr_changed(), so
+	// that one compare checks both at block entry.
+	uae_u32 fpu_jit_host_state;
 #endif
 #endif
 };
@@ -884,6 +892,9 @@ struct fpj_fmovem {
 };
 extern bool fp_jit_fmovem_plan(uae_u16 opcode, uae_u16 extra, struct fpj_fmovem *p);
 extern bool fp_jit_fmovecr(uae_u16 extra, uae_u16 *hi, uae_u64 *lo, uae_u32 *ccexc, uae_u32 *accr);
+#if defined(JIT) && (defined(CPU_x86_64) || defined(CPU_AARCH64))
+extern bool fp_jit_fmovecr_host(uae_u16 extra, double *val, uae_u32 *accr);
+#endif
 extern uae_u64 REGPARAM3 fp_jit_verify_out_save(uae_u64 ea, uae_u32 opext);
 extern void REGPARAM3 fp_jit_verify_out_check(uae_u32 opext, uae_u64 ea, uae_u8 *next_p, uae_u64 lenpc, void *fn);
 extern void fpuop_dbcc(uae_u32, uae_u16);
@@ -897,6 +908,43 @@ extern bool fpu_get_constant(fpdata *fp, int cr);
 extern int fpp_cond(int condition);
 extern uae_u32 fpp_get_cond_mask(int condition);
 extern bool fpu_fpsr_cc_written;
+#if defined(JIT) && (defined(CPU_x86_64) || defined(CPU_AARCH64))
+// FPCR bits the JITs' inline host FPU code cannot follow: the exception
+// enables; on x86-64 also the rounding mode where the x87 control word does not
+// follow the FPCR, and the rounding precision where the FPU registers are long
+// doubles.
+#if defined(CPU_x86_64) && (defined(__MACH__) || defined(__ANDROID__))
+#define FPU_JIT_ROUNDING_MASK 0x0030
+#else
+#define FPU_JIT_ROUNDING_MASK 0
+#endif
+#if defined(CPU_x86_64) && defined(USE_LONG_DOUBLE)
+#define FPU_JIT_EXACT_FPCR_MASK (0xffc0 | FPU_JIT_ROUNDING_MASK)
+#else
+#define FPU_JIT_EXACT_FPCR_MASK (0xff00 | FPU_JIT_ROUNDING_MASK)
+#endif
+// The FPU code of a compiled block, chosen by the FPCR the block is compiled
+// for and checked on every entry: inline code; inline code that rounds results
+// to single precision as the host core does; or calls into the FPU core (also
+// for the undefined rounding precision).
+enum { FPU_JIT_MODE_FAST, FPU_JIT_MODE_SINGLE, FPU_JIT_MODE_EXACT };
+static inline int fpu_jit_fpcr_mode(uae_u32 fpcr)
+{
+	if ((fpcr & FPU_JIT_EXACT_FPCR_MASK) || (fpcr & 0xc0) == 0xc0)
+		return FPU_JIT_MODE_EXACT;
+	return (fpcr & 0xc0) == 0x40 ? FPU_JIT_MODE_SINGLE : FPU_JIT_MODE_FAST;
+}
+// a block entered in another mode is recompiled for <mode> (FPU_JIT_MODE_*)
+extern void fpu_jit_log_recompile(uae_u32 pc, int mode, int trips);
+#endif
+#if defined(JIT) && defined(CPU_x86_64)
+// compiled inline x87 code ran since the x87 status was last merged into the FPSR
+extern uae_u8 fpu_jit_x87_dirty;
+// Merge the x87 status of compiled code into the FPSR. Only on the thread that
+// runs the compiled code: the CPU thread does it before it parks or sleeps, so
+// that a pause holder (save_state()) sees all accrued exceptions.
+extern void fpu_jit_x87_thread_sync(void);
+#endif
 
 extern void exception3_read(uae_u32 opcode, uaecptr addr, int size, int fc);
 extern void exception3_write(uae_u32 opcode, uaecptr addr, int size, uae_u32 val, int fc);

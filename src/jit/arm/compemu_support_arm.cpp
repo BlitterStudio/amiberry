@@ -357,6 +357,15 @@ static void* popall_exec_nostats_setpc = NULL;
 static void* popall_execute_normal_setpc = NULL;
 static void* popall_check_checksum_setpc = NULL;
 static void* popall_execute_exception = NULL;
+static void* popall_fpu_mode_recompile = NULL;
+bool jit_fpu_exact_block;
+bool jit_fpu_single_block;
+bool jit_fpu_host_flags;
+bool jit_fpu_host_settle;
+bool jit_fpu_loop_ok;
+/* the FPU JIT mode of the block being compiled (fpu_chain), -2: not an FPU
+   block */
+static int jit_fpu_chain_mode;
 #endif
 
 /* The 68k only ever executes from even addresses. So right now, we
@@ -953,6 +962,17 @@ static inline void adjust_jmpdep(dependency* d, cpuop_func* a)
  * Soft flush handling support functions                            *
  ********************************************************************/
 
+/* Where a jump from a block that leaves the host FPSR live in FPU JIT mode
+   <chain> (blockinfo::fpu_chain) enters block <bi> while its direct handler
+   is <dh>: past the FPU block entry when the entry would pass anyway. */
+static inline cpuop_func* fpu_chain_target(int chain, blockinfo* bi, cpuop_func* dh)
+{
+    if (chain >= -1 && bi->fpu_resume && dh == bi->direct_handler
+        && (bi->fpu_mode < 0 || bi->fpu_mode == chain))
+        return (cpuop_func*)bi->fpu_resume;
+    return dh;
+}
+
 static inline void set_dhtu(blockinfo* bi, cpuop_func* dh)
 {
     jit_log2("bi is %p", bi);
@@ -965,12 +985,19 @@ static inline void set_dhtu(blockinfo* bi, cpuop_func* dh)
             jit_log2("x->prev_p is %p", x->prev_p);
 
             if (x->jmp_off) {
-                adjust_jmpdep(x, dh);
+                adjust_jmpdep(x, fpu_chain_target(x->source->fpu_chain, bi, dh));
             }
             x = x->next;
         }
         bi->direct_handler_to_use = (cpuop_func*)dh;
     }
+}
+
+static inline void clear_fpu_chain(blockinfo* bi)
+{
+    bi->fpu_mode = -1;
+    bi->fpu_chain = -2;
+    bi->fpu_resume = NULL;
 }
 
 void invalidate_block(blockinfo* bi)
@@ -982,9 +1009,11 @@ void invalidate_block(blockinfo* bi)
     bi->handler = NULL;
     bi->handler_to_use = (cpuop_func*)popall_execute_normal;
     bi->direct_handler = NULL;
+    clear_fpu_chain(bi);
     set_dhtu(bi, bi->direct_pen);
     bi->needed_flags = 0xff;
     bi->status = BI_INVALID;
+    bi->fpu_trips = 0;
     for (i = 0; i < 2; i++) {
         bi->dep[i].jmp_off = NULL;
         bi->dep[i].target = NULL;
@@ -1013,6 +1042,7 @@ static inline void block_need_recompile(blockinfo* bi)
 {
     uae_u32 cl = cacheline(bi->pc_p);
 
+    clear_fpu_chain(bi);
     set_dhtu(bi, bi->direct_pen);
     bi->direct_handler = bi->direct_pen;
 
@@ -2491,6 +2521,14 @@ static uintptr get_handler(uintptr addr)
     return (uintptr)bi->direct_handler_to_use;
 }
 
+/* the jump target of the block being compiled to the block at <pc> */
+static uintptr block_jump_target(uintptr pc)
+{
+    blockinfo* tbi = get_blockinfo_addr_new((void*)pc);
+    int chain = jit_fpu_loop_ok ? jit_fpu_chain_mode : -2;
+    return (uintptr)fpu_chain_target(chain, tbi, tbi->direct_handler_to_use);
+}
+
 /* This version assumes that it is writing *real* memory, and *will* fail
  *  if that assumption is wrong! No branches, no second chances, just
  *  straight go-for-it attitude */
@@ -2966,6 +3004,23 @@ static void recompile_block(void)
     execute_normal();
 }
 
+/* A block was entered with an FPCR whose mode (fpu_jit_fpcr_mode()) is not the
+   one its FPU code was compiled for. Recompile it for the current FPCR. */
+static void fpu_mode_recompile(void)
+{
+    blockinfo* bi = get_blockinfo_addr(regs.pc_p);
+
+    Dif(!bi)
+        jit_abort("fpu_mode_recompile");
+    if (bi->fpu_trips < FPU_JIT_FPCR_TRIPS)
+        bi->fpu_trips++;
+    fpu_jit_log_recompile(m68k_getpc(), bi->fpu_trips >= FPU_JIT_FPCR_TRIPS ?
+        FPU_JIT_MODE_EXACT : fpu_jit_fpcr_mode(regs.fpcr), bi->fpu_trips);
+    bi->status = BI_NEED_RECOMP;
+    raise_in_cl_list(bi);
+    execute_normal();
+}
+
 static void cache_miss(void)
 {
 #ifdef JIT_DEBUG_MEM_CORRUPTION
@@ -3158,33 +3213,45 @@ STATIC_INLINE void create_popalls(void)
     popall_execute_normal_setpc = get_target();
     compemu_raw_store_pc_state_from_work1();
     popall_execute_normal = get_target();
+    compemu_raw_fpsr_settle();
     raw_pop_preserved_regs();
     compemu_raw_jmp((uintptr)execute_normal);
 
     popall_check_checksum_setpc = get_target();
     compemu_raw_store_pc_state_from_work1();
     popall_check_checksum = get_target();
+    compemu_raw_fpsr_settle();
     raw_pop_preserved_regs();
     compemu_raw_jmp((uintptr)check_checksum);
 
     popall_exec_nostats_setpc = get_target();
     compemu_raw_store_pc_state_from_work1();
+    compemu_raw_fpsr_settle();
     raw_pop_preserved_regs();
     compemu_raw_jmp((uintptr)exec_nostats);
 
     popall_recompile_block = get_target();
+    compemu_raw_fpsr_settle();
     raw_pop_preserved_regs();
     compemu_raw_jmp((uintptr)recompile_block);
 
+    popall_fpu_mode_recompile = get_target();
+    compemu_raw_fpsr_settle();
+    raw_pop_preserved_regs();
+    compemu_raw_jmp((uintptr)fpu_mode_recompile);
+
     popall_do_nothing = get_target();
+    compemu_raw_fpsr_settle();
     raw_pop_preserved_regs();
     compemu_raw_jmp((uintptr)do_nothing);
 
     popall_cache_miss = get_target();
+    compemu_raw_fpsr_settle();
     raw_pop_preserved_regs();
     compemu_raw_jmp((uintptr)cache_miss);
 
     popall_execute_exception = get_target();
+    compemu_raw_fpsr_settle();
     raw_pop_preserved_regs();
     compemu_raw_jmp((uintptr)execute_exception);
 
@@ -3600,10 +3667,14 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
         bi->csi = NULL;
 
         liveflags[blocklen] = successor_flags; /* Use successor info if available, else FLAG_ALL */
+        bool has_fpu_gen = false;
         i = blocklen;
         while (i--) {
             uae_u16* currpcp = pc_hist[i].location;
             uae_u32 op = DO_GET_OPCODE(currpcp);
+
+            if ((op & 0xff00) == 0xf200)	/* arithmetic, FScc, FBcc */
+                has_fpu_gen = true;
 
             if ((unsafe_compile_fallbacks || unsafe_memory_helpers) && pc_hist[i].specmem)
                 unsafe_special_mem_block = true;
@@ -3663,10 +3734,22 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
         /* This is the non-direct handler */
         was_comp = 0;
 
+        /* Start each block on a cache line. The padding is never executed. */
+        while ((uintptr)get_target() & 63)
+            _W(0xd503201f); /* NOP */
+
         bi->direct_handler = (cpuop_func*)get_target();
+        clear_fpu_chain(bi);
         set_dhtu(bi, bi->direct_handler);
         bi->status = BI_COMPILING;
         current_block_start_target = (uintptr)get_target();
+        uae_u32* fpu_enter_branch = NULL;
+        uae_u32* fpu_enter_resume = NULL;
+        int fpu_enter_mode = -1;
+        jit_fpu_host_flags = false;
+        jit_fpu_host_settle = jit_fpu_enabled() && currprefs.fpu_model;
+        jit_fpu_chain_mode = -2;
+        jit_fpu_loop_ok = true;
 
         if (bi->count >= 0) { /* Need to generate countdown code */
             compemu_raw_set_pc_i((uintptr)pc_hist[0].location);
@@ -3687,6 +3770,28 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
             comp_pc_p = (uae_u8*)pc_hist[0].location;
             init_comp();
             was_comp = 1;
+
+            /* compile for the mode of the current FPCR, and recompile when
+               the block is entered in another (fpu_mode_recompile()) */
+            const bool fpu_gen = has_fpu_gen && jit_fpu_enabled() && currprefs.fpu_model;
+            int fpcr_mode = fpu_jit_fpcr_mode(regs.fpcr);
+            if (bi->fpu_trips >= FPU_JIT_FPCR_TRIPS)
+                fpcr_mode = FPU_JIT_MODE_EXACT;
+            jit_fpu_exact_block = fpcr_mode == FPU_JIT_MODE_EXACT;
+            jit_fpu_single_block = fpcr_mode == FPU_JIT_MODE_SINGLE;
+            if (fpu_gen) {
+                fpu_enter_mode = bi->fpu_trips < FPU_JIT_FPCR_TRIPS ? fpcr_mode : -1;
+                fpu_enter_branch = compemu_raw_fpu_enter(fpu_enter_mode);
+                fpu_enter_resume = (uae_u32*)get_target();
+                jit_fpu_host_flags = true;
+                jit_fpu_host_settle = false;
+                jit_fpu_chain_mode = fpu_enter_mode;
+                /* no countdown code above the entry */
+                if (bi->count < 0) {
+                    bi->fpu_mode = fpu_enter_mode;
+                    bi->fpu_resume = fpu_enter_resume;
+                }
+            }
 
             for (i = 0; i < blocklen && get_target() < MAX_COMPILE_PTR; i++) {
                 may_raise_exception = false;
@@ -3737,6 +3842,7 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
                         flush(1);
                         was_comp = 0;
                     }
+                    jit_fpu_loop_ok = false;
                     compemu_raw_mov_l_ri(REG_PAR1, (uae_u32)opcode);
                     compemu_raw_mov_l_rr(REG_PAR2, R_REGSTRUCT);
                     compemu_raw_set_pc_i((uintptr)pc_hist[i].location);
@@ -3829,7 +3935,7 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
                 match_states(tbi);
 
                 tba = compemu_raw_endblock_pc_isconst(scaled_cycles(totcycles), t1);
-                write_jmp_target(tba, get_handler(t1));
+                write_jmp_target(tba, block_jump_target(t1));
                 create_jmpdep(bi, 0, tba, t1);
 
                 /* not-predicted outcome */
@@ -3838,7 +3944,7 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
                 match_states(tbi);
 
                 tba = compemu_raw_endblock_pc_isconst(scaled_cycles(totcycles), t2);
-                write_jmp_target(tba, get_handler(t2));
+                write_jmp_target(tba, block_jump_target(t2));
                 create_jmpdep(bi, 1, tba, t2);
             } else {
                 if (was_comp) {
@@ -3865,7 +3971,7 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
                     data_check_end(4, 64);
 #endif
                     tba = compemu_raw_endblock_pc_isconst(scaled_cycles(totcycles), v);
-                    write_jmp_target(tba, get_handler(v));
+                    write_jmp_target(tba, block_jump_target(v));
                     create_jmpdep(bi, 0, tba, v);
                 } else {
                     r = REG_PC_TMP;
@@ -3875,6 +3981,21 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
 #endif
                     compemu_raw_endblock_pc_inreg(r, scaled_cycles(totcycles));
                 }
+            }
+        }
+
+        /* the slow path of the FPU block entry, out of line */
+        if (fpu_enter_branch)
+            compemu_raw_fpu_enter_stub(fpu_enter_branch, fpu_enter_resume,
+                fpu_enter_mode, (uintptr)pc_hist[0].location);
+
+        /* blocks compiled earlier that jump here with the host FPSR live in
+           this block's mode may now enter past the FPU block entry */
+        bi->fpu_chain = jit_fpu_loop_ok ? jit_fpu_chain_mode : -2;
+        if (bi->fpu_resume) {
+            for (dependency* x = bi->deplist; x; x = x->next) {
+                if (x->jmp_off && x->source != bi)
+                    adjust_jmpdep(x, fpu_chain_target(x->source->fpu_chain, bi, bi->direct_handler_to_use));
             }
         }
 

@@ -58,9 +58,11 @@
 /* read/write flags */
 // move from sysreg
 #define MRS_NZCV_x(Xt)    _W((0b1101010100111 << 19) | (MIN_EL0 << 16) | (0b0100 << 12) | (0b0010 << 8) | (0b000 << 5) | (Xt))
+#define MRS_FPSR_x(Xt)    _W((0b1101010100111 << 19) | (MIN_EL0 << 16) | (0b0100 << 12) | (0b0100 << 8) | (0b001 << 5) | (Xt))
 #define MRS_FPCR_x(Xt)    _W((0b1101010100111 << 19) | (MIN_EL0 << 16) | (0b0100 << 12) | (0b0100 << 8) | (0b000 << 5) | (Xt))
 // move to sysreg
 #define MSR_NZCV_x(Xt)		_W((0b1101010100011 << 19) | (MIN_EL0 << 16) | (0b0100 << 12) | (0b0010 << 8) | (0b000 << 5) | (Xt))
+#define MSR_FPSR_x(Xt)    _W((0b1101010100011 << 19) | (MIN_EL0 << 16) | (0b0100 << 12) | (0b0100 << 8) | (0b001 << 5) | (Xt))
 #define MSR_FPCR_x(Xt)    _W((0b1101010100011 << 19) | (MIN_EL0 << 16) | (0b0100 << 12) | (0b0100 << 8) | (0b000 << 5) | (Xt))
 
 
@@ -485,6 +487,7 @@
 #define FDIV_sss(Sd,Sn,Sm)    _W((0b00011110001 << 21) | ((Sm) << 16) | (0b000110 << 10) | ((Sn) << 5) | (Sd))
 #define FMUL_ddd(Dd,Dn,Dm)    _W((0b00011110011 << 21) | ((Dm) << 16) | (0b000010 << 10) | ((Dn) << 5) | (Dd))
 #define FMUL_sss(Sd,Sn,Sm)    _W((0b00011110001 << 21) | ((Sm) << 16) | (0b000010 << 10) | ((Sn) << 5) | (Sd))
+#define FMADD_dddd(Dd,Dn,Dm,Da) _W((0b00011111010 << 21) | ((Dm) << 16) | (0 << 15) | ((Da) << 10) | ((Dn) << 5) | (Dd))
 #define FMSUB_dddd(Dd,Dn,Dm,Da) _W((0b00011111010 << 21) | ((Dm) << 16) | (1 << 15) | ((Da) << 10) | ((Dn) << 5) | (Dd))
 #define FNEG_dd(Dd,Dn)        _W((0b00011110011 << 21) | (0b00001010000 << 10) | ((Dn) << 5) | (Dd))
 #define FNEG_ss(Sd,Sn)        _W((0b00011110001 << 21) | (0b00001010000 << 10) | ((Sn) << 5) | (Sd))

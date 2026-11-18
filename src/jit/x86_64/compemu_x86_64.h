@@ -220,6 +220,26 @@ extern struct jit_disable_opcodes jit_disable;
 
 
 extern void comp_fpp_opp (uae_u32 opcode, uae_u16 extra);
+extern bool jit_fpu_fast_block;
+/* the inline x87 code of the block rounds results to single precision */
+extern bool jit_fpu_single_block;
+/* A block whose FPU code was compiled for one FPCR mode (fpu_jit_fpcr_mode())
+   and is entered in another is recompiled; after this many such recompiles it
+   stays on the helper. */
+#define FPU_JIT_FPCR_TRIPS 4
+extern bool jit_fpu_fast_state;
+extern uintptr jit_fpu_loop_target;
+extern bool jit_fpu_loop_ok;
+extern void jit_fpu_mark_x87_dirty(void);
+extern bool jit_fpu_fpiar_pending;
+extern uae_u32 jit_fpu_fpiar_pending_pc;
+extern void comp_fpp_fpiar_flush(void);
+extern void comp_fpp_fpiar_next(uae_u32 opcode, const uae_u16 *location);
+/* The FPSR holds the FPU condition codes at run time (not regs.fp_result) */
+extern bool jit_fpu_cc_fpsr;
+extern bool jit_fp_result_live(void);
+extern void jit_store_flag_byte(uae_u8 *p, uae_u8 v);
+extern bool jit_fpu_fast_enabled(void);
 extern void comp_fbcc_opp (uae_u32 opcode);
 extern void comp_fscc_opp (uae_u32 opcode, uae_u16 extra);
 void comp_fdbcc_opp (uae_u32 opcode, uae_u16 extra);
@@ -462,6 +482,7 @@ typedef struct blockinfo_t {
     uae_u8 needed_flags;
     uae_u8 status;
     uae_u8 havestate;
+    uae_u8 fpu_trips; /* FPCR guard trips (FPU_JIT_FPCR_TRIPS: stays on the helper) */
 
     dependency  dep[2];  /* Holds things we depend on */
     dependency* deplist; /* List of things that depend on this */

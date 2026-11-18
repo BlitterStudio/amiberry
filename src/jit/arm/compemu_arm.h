@@ -128,6 +128,28 @@ extern int check_for_cache_miss(void);
 
 /* JIT FPU compilation */
 extern void comp_fpp_opp (uae_u32 opcode, uae_u16 extra);
+/* A block with FPU instructions is compiled for the mode
+   (fpu_jit_fpcr_mode()) of the FPCR it is first entered with: inline host
+   code, inline code rounding to single precision, or calls into the FPU core.
+   Entered in another mode, it is recompiled; after FPU_JIT_FPCR_TRIPS such
+   recompiles it stays on the calls. */
+#define FPU_JIT_FPCR_TRIPS 4
+/* the block being compiled calls into the FPU core instead of inline code */
+extern bool jit_fpu_exact_block;
+/* the inline code of the block rounds results to single precision */
+extern bool jit_fpu_single_block;
+/* the block being compiled has host FPU code: it leaves its exceptions in the
+   host FPSR sticky flags, which the C functions the block calls must neither
+   see nor add to (regs.fpu_jit_host_fpsr) */
+extern bool jit_fpu_host_flags;
+/* the block being compiled has no host FPU code, but blocks that ran before
+   may have left their exceptions in the host FPSR (regs.fpu_jit_host_state) */
+extern bool jit_fpu_host_settle;
+/* The block being compiled leaves FPCR in the mode it was entered in: the
+   host FPSR stays live through an FPU block, and only the FPU core or the
+   interpreter can change FPCR in it, and they clear this. Its jumps to blocks
+   compiled for that mode may then enter past their FPU block entry. */
+extern bool jit_fpu_loop_ok;
 extern void comp_fbcc_opp (uae_u32 opcode);
 extern void comp_fscc_opp (uae_u32 opcode, uae_u16 extra);
 
@@ -347,6 +369,15 @@ typedef struct blockinfo_t {
   uae_u8 optlevel;
   uae_u8 needed_flags;
   uae_u8 status;
+  uae_u8 fpu_trips; /* FPCR guard trips (FPU_JIT_FPCR_TRIPS) */
+  /* FPU block entry mode (fpu_jit_fpcr_mode(), -1: any mode) */
+  uae_s8 fpu_mode;
+  /* the FPU JIT mode of FPCR when this block jumps to another, with the host
+     FPSR live (-1: any mode), or -2: not an FPU block, or it may change FPCR */
+  uae_s8 fpu_chain;
+  /* where jumps from blocks whose fpu_chain matches fpu_mode may enter, past
+     the FPU block entry, or NULL */
+  uae_u32* fpu_resume;
 
   dependency  dep[2];  /* Holds things we depend on */
   dependency* deplist; /* List of things that depend on this */
