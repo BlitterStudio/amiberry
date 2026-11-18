@@ -1377,16 +1377,16 @@ void check_fixup_consistency()
 		CHECK(!available(p, "cachesize"));
 	}
 
-	// Turning softfloat off leaves the host modes alone (MSVC long double:
-	// host 80-bit) and returns from the exact core to Automatic.
+	// Turning softfloat off leaves Host alone and returns from the exact core
+	// to Automatic.
 	reset_prefs(p);
 	p.fpu_model = 68881;
-	p.fpu_mode = FPU_MODE_HOST80;
+	p.fpu_mode = FPU_MODE_HOST;
 	CHECK(set(p, "fpu_softfloat", "false") == AMIBERRY_SETTINGS_OK);
-	CHECK(p.fpu_mode == FPU_MODE_HOST80);
+	CHECK(p.fpu_mode == FPU_MODE_HOST);
 	CHECK(value_of(p, "fpu_core") == "host");
 	CHECK(set(p, "fpu_core", "host") == AMIBERRY_SETTINGS_OK);
-	CHECK(p.fpu_mode == FPU_MODE_HOST80);
+	CHECK(p.fpu_mode == FPU_MODE_HOST);
 	CHECK(set(p, "fpu_softfloat", "true") == AMIBERRY_SETTINGS_OK);
 	CHECK(set(p, "fpu_softfloat", "false") == AMIBERRY_SETTINGS_OK);
 	CHECK(p.fpu_mode == FPU_MODE_AUTO);

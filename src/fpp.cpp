@@ -35,16 +35,7 @@
 extern void cputester_fault(void);
 #endif
 
-#ifdef WITH_SOFTFLOAT
 #include "softfloat/softfloat.h"
-#endif
-
-// global variable for JIT FPU
-#ifdef USE_LONG_DOUBLE
-bool use_long_double = true;
-#else
-bool use_long_double = false;
-#endif
 
 static bool support_exceptions;
 static bool support_denormals;
@@ -151,12 +142,11 @@ STATIC_INLINE int isinrom (void)
 }
 
 /* The FPU core (fpu_mode, FPU_MODE_*): exact (80-bit softfloat, with the
- * double-double transcendentals) or host floating point (64-bit doubles unless
- * USE_LONG_DOUBLE). Automatic picks the exact core on x86-64 and AArch64
- * unless the JIT compiles FPU instructions to host doubles (JIT with JIT
- * FPU). Chosen at FPU reset and when the settings change (fpu_modechange());
- * with the exact core the JIT compiles FPU instructions as calls into it
- * (jit_fpu_enabled() false). */
+ * double-double transcendentals) or host floating point (64-bit doubles).
+ * Automatic picks the exact core unless the JIT compiles FPU instructions to
+ * host doubles (JIT with JIT FPU). Chosen at FPU reset and when the settings change
+ * (fpu_modechange()); with the exact core the JIT compiles FPU instructions
+ * as calls into it (jit_fpu_enabled() false). */
 static bool fpu_exact_active;
 static int fpu_core_active = -2;
 
@@ -175,7 +165,7 @@ static bool jit_fpu(void)
 	return currprefs.cachesize && jit_fpu_enabled();
 }
 
-// 1: the exact core, 0: host floating point, -1: host 80-bit (MSVC long double)
+// 1: the exact core, 0: host floating point
 static int fpu_core_wanted(void)
 {
 	switch (currprefs.fpu_mode) {
@@ -183,73 +173,31 @@ static int fpu_core_wanted(void)
 		return 1;
 	case FPU_MODE_HOST:
 		return 0;
-	case FPU_MODE_HOST80:
-		return -1;
 	default:
-#if (defined(CPU_AARCH64) || defined(CPU_x86_64)) && !defined(USE_LONG_DOUBLE) && defined(WITH_SOFTFLOAT)
 		return currprefs.cachesize && currprefs.compfpu ? 0 : 1;
-#else
-		return 0;
-#endif
 	}
 }
 
 bool fpu_exact_wanted(void)
 {
-#ifdef WITH_SOFTFLOAT
 	return fpu_core_wanted() > 0;
-#else
-	return false;
-#endif
 }
 
 // the core the settings select, for the log
 const TCHAR *fpu_core_name(void)
 {
-	switch (fpu_core_wanted()) {
-	case 1:
-		return _T("exact");
-	case -1:
-		return _T("host 80b");
-	default:
-#ifdef USE_LONG_DOUBLE
-		return _T("host 80b");
-#else
-		return _T("host 64b");
-#endif
-	}
+	return fpu_core_wanted() ? _T("exact") : _T("host 64b");
 }
 
 static void fpu_select_core(void)
 {
-	int core = fpu_core_wanted();
-#ifndef WITH_SOFTFLOAT
-	if (core > 0)
-		core = 0;
-#endif
+	const int core = fpu_core_wanted();
 	fpu_core_active = core;
-#ifdef MSVC_LONG_DOUBLE
-	use_long_double = false;
-	if (core < 0) {
-		use_long_double = true;
-		if (!fp_init_native_80()) {
-			use_long_double = false;
-#ifdef WITH_SOFTFLOAT
-			core = 1;                              // as before: the softfloat core
-#else
-			core = 0;
-#endif
-		}
-	}
-#endif
 	fpu_exact_active = core > 0;
-	if (core > 0) {
-#ifdef WITH_SOFTFLOAT
+	if (core > 0)
 		fp_init_softfloat_exact(currprefs.fpu_model);
-#endif
-	} else if (core == 0) {
+	else
 		fp_init_native();
-	}
 }
 
 static int warned = 100;
@@ -4860,13 +4808,9 @@ void fpu_reset (void)
 #endif
 #endif
 
-#ifdef MSVC_LONG_DOUBLE
-	init_fpucw_x87_80();
-#endif
 #endif
 #else
 	fp_init_softfloat(currprefs.fpu_model);
-	use_long_double = false;
 #endif
 
 	regs.fpu_exp_state = 0;

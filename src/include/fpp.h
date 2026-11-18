@@ -18,9 +18,6 @@
 #define FPSR_INEX1      0x00000100
 
 extern void fp_init_native(void);
-#ifdef MSVC_LONG_DOUBLE
-extern bool fp_init_native_80(void);
-#endif
 extern void fp_init_softfloat(int);
 // softfloat with the fast double-double exponential functions (the exact FPU core)
 extern void fp_init_softfloat_exact(int);
@@ -39,9 +36,6 @@ extern uae_u32 fpp_get_fpiar(void);
 
 #if defined(CPU_x86_64)
 extern void init_fpucw_x87(void);
-#ifdef MSVC_LONG_DOUBLE
-extern void init_fpucw_x87_80(void);
-#endif
 #endif
 extern void fpu_reset(void);
 

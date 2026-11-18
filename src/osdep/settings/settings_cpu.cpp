@@ -124,30 +124,14 @@ bool has_fpu(const uae_prefs& p, const context&)
 }
 
 // The FPU core fpp.cpp's fpu_core_wanted() picks: the exact one, or host
-// floating point (Automatic: exact on AArch64 and x86-64 unless the JIT FPU
-// is on). Elsewhere (32-bit ARM and x86, RISC-V, PowerPC) Automatic is the
-// host core: the help texts describe the build they are compiled into.
-#if (defined(CPU_AARCH64) || defined(CPU_x86_64)) && !defined(USE_LONG_DOUBLE) && defined(WITH_SOFTFLOAT)
-#define FPU_AUTO_EXACT 1
-#define FPU_AUTO_STRICT_HELP "The Exact core always does; Automatic picks it unless the JIT FPU is on."
-#define FPU_AUTO_CORE_HELP "Automatic is Exact unless the JIT FPU is on, else Host."
-#else
-#define FPU_AUTO_EXACT 0
-#define FPU_AUTO_STRICT_HELP "The Exact core always does."
-#define FPU_AUTO_CORE_HELP "Automatic is Host on this platform."
-#endif
-
+// floating point (Automatic: exact unless the JIT FPU is on).
 bool fpu_exact_core(const uae_prefs& p)
 {
 	if (p.fpu_mode == FPU_MODE_EXACT)
 		return true;
 	if (p.fpu_mode != FPU_MODE_AUTO)
 		return false;
-#if FPU_AUTO_EXACT
 	return !(effective_jit_cache(p) && p.compfpu);
-#else
-	return false;
-#endif
 }
 
 // More compatible changes the host core only (rounding to the FPCR
@@ -407,16 +391,15 @@ const amiberry_setting_choice fpu_core_choices[] = {
 void get_fpu_core(const uae_prefs& p, char* out, size_t size)
 {
 	write_choice(out, size, CHOICES(fpu_core_choices),
-		p.fpu_mode == FPU_MODE_EXACT ? 2 : p.fpu_mode == FPU_MODE_HOST || p.fpu_mode == FPU_MODE_HOST80 ? 1 : 0);
+		p.fpu_mode == FPU_MODE_EXACT ? 2 : p.fpu_mode == FPU_MODE_HOST ? 1 : 0);
 }
 
-// Host keeps the host 80-bit mode of MSVC long double builds.
 void set_fpu_core(uae_prefs& p, const value& v)
 {
 	if (v.text == "exact")
 		p.fpu_mode = FPU_MODE_EXACT;
 	else if (v.text == "host")
-		p.fpu_mode = p.fpu_mode == FPU_MODE_HOST80 ? FPU_MODE_HOST80 : FPU_MODE_HOST;
+		p.fpu_mode = FPU_MODE_HOST;
 	else
 		p.fpu_mode = FPU_MODE_AUTO;
 }
@@ -436,22 +419,6 @@ void set_fpu_softfloat(uae_prefs& p, const value& v)
 		p.fpu_mode = FPU_MODE_AUTO;
 }
 
-#ifdef MSVC_LONG_DOUBLE
-// Host 80-bit floating point only exists in MSVC long double builds, where
-// cfgfile reads and writes fpu_msvc_long_double.
-void get_fpu_msvc_long_double(const uae_prefs& p, char* out, size_t size)
-{
-	write_bool(out, size, p.fpu_mode < 0);
-}
-
-void set_fpu_msvc_long_double(uae_prefs& p, const value& v)
-{
-	if (v.number != 0)
-		p.fpu_mode = FPU_MODE_HOST80;
-	else if (p.fpu_mode == FPU_MODE_HOST80)
-		p.fpu_mode = FPU_MODE_HOST;
-}
-#endif
 
 // The exact core works with the JIT (it compiles FPU instructions as calls
 // into it), so every core can be selected with any JIT setting.
@@ -906,24 +873,18 @@ const definition definitions[] = {
 		get_fpu_model, set_fpu_model, nullptr, fpu_model_choice_available, nullptr},
 	{BOOL_OPTION("fpu_strict", "fpu", "More compatible FPU",
 			"Host FPU core: round results to the FPCR precision and compare special values like the 68k (slower). "
-			FPU_AUTO_STRICT_HELP,
+			"The Exact core always does; Automatic picks it unless the JIT FPU is on.",
 			fpu_strict_apply, "false", "Needs an FPU and not the Exact FPU core (which always rounds and compares exactly)."),
 		get_fpu_strict, set_fpu_strict, fpu_strict_available, nullptr, nullptr},
 	{CHOICE_OPTION("fpu_core", "fpu", "FPU core",
 			"Exact computes in 80-bit extended precision like a real 68881/68882/68040/68060; Host uses the host's 64-bit "
-			"double precision (faster, most of all with the JIT FPU). " FPU_AUTO_CORE_HELP,
+			"double precision (faster, most of all with the JIT FPU). Automatic is Exact unless the JIT FPU is on, else Host.",
 			AMIBERRY_APPLY_LIVE, "auto", fpu_core_choices, "Needs an FPU."),
 		get_fpu_core, set_fpu_core, has_fpu, nullptr, nullptr},
 	{BOOL_OPTION("fpu_softfloat", "fpu", "Exact FPU core (80-bit softfloat)",
 			"The exact FPU core (fpu_core=exact); kept for older configurations.",
 			AMIBERRY_APPLY_LIVE, "false", "Needs an FPU."),
 		get_fpu_softfloat, set_fpu_softfloat, has_fpu, nullptr, nullptr, fpu_softfloat_accepts},
-#ifdef MSVC_LONG_DOUBLE
-	{BOOL_OPTION("fpu_msvc_long_double", "fpu", "Host FPU (80-bit)",
-			"Use the host's 80-bit floating point for the FPU.",
-			AMIBERRY_APPLY_LIVE, "false", nullptr),
-		get_fpu_msvc_long_double, set_fpu_msvc_long_double, has_fpu, nullptr, nullptr},
-#endif
 	{BOOL_OPTION("fpu_no_unimplemented", "fpu", "No unimplemented FPU emulation",
 			"Trap the FPU instructions a real 68040/68060 lacks, as the hardware does, so 68040.library or 68060.library must handle them.",
 			AMIBERRY_APPLY_LIVE, "false", "Not available without an FPU, nor with the JIT, which always emulates them."),
