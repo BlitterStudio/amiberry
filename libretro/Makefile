@@ -20,6 +20,8 @@
 #   NO_CHD_SPECIAL_FILES=1  CHD's file layer opens every name as a file
 #                           (no "socket.", "domain." or pty names)
 # Such a program can also make the calls in libretro/amiberry_embed.h.
+# To shrink uae_prefs (three copies of its input tables, ~10 MB each at the
+# default of 20 devices), pass CPPFLAGS=-DMAX_INPUT_DEVICES=<n>, 4 to 32.
 
 STATIC_LINKING := 0
 ARGT := 

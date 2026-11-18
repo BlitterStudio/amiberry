@@ -55,7 +55,17 @@ struct strlist {
 #define MAX_TOTAL_SCSI_DEVICES 8
 
 /* maximum number native input devices supported (single type) */
+#ifndef MAX_INPUT_DEVICES
 #define MAX_INPUT_DEVICES 20
+#endif
+#ifdef AMIBERRY
+// Builds may override MAX_INPUT_DEVICES (e.g. -DMAX_INPUT_DEVICES=8) to shrink uae_prefs.
+// The libretro core always registers 4 joysticks, and custom gameport
+// autoswitching keeps one bit per device in an int (custom_autoswitch_joy/mouse).
+#if MAX_INPUT_DEVICES < 4 || MAX_INPUT_DEVICES > 32
+#error "MAX_INPUT_DEVICES must be between 4 and 32"
+#endif
+#endif
 /* maximum number of native input device's buttons and axles supported */
 #define MAX_INPUT_DEVICE_EVENTS 256
 /* 4 different customization settings */
