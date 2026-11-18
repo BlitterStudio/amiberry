@@ -125,14 +125,25 @@ bool has_fpu(const uae_prefs& p, const context&)
 
 // The FPU core fpp.cpp's fpu_core_wanted() picks: the exact one, or host
 // floating point (Automatic: exact on AArch64 and x86-64 unless the JIT FPU
-// is on).
+// is on). Elsewhere (32-bit ARM and x86, RISC-V, PowerPC) Automatic is the
+// host core: the help texts describe the build they are compiled into.
+#if (defined(CPU_AARCH64) || defined(CPU_x86_64)) && !defined(USE_LONG_DOUBLE) && defined(WITH_SOFTFLOAT)
+#define FPU_AUTO_EXACT 1
+#define FPU_AUTO_STRICT_HELP "The Exact core always does; Automatic picks it unless the JIT FPU is on."
+#define FPU_AUTO_CORE_HELP "Automatic is Exact unless the JIT FPU is on, else Host."
+#else
+#define FPU_AUTO_EXACT 0
+#define FPU_AUTO_STRICT_HELP "The Exact core always does."
+#define FPU_AUTO_CORE_HELP "Automatic is Host on this platform."
+#endif
+
 bool fpu_exact_core(const uae_prefs& p)
 {
 	if (p.fpu_mode == FPU_MODE_EXACT)
 		return true;
 	if (p.fpu_mode != FPU_MODE_AUTO)
 		return false;
-#if (defined(CPU_AARCH64) || defined(CPU_x86_64)) && !defined(USE_LONG_DOUBLE) && defined(WITH_SOFTFLOAT)
+#if FPU_AUTO_EXACT
 	return !(effective_jit_cache(p) && p.compfpu);
 #else
 	return false;
@@ -386,8 +397,7 @@ void set_fpu_strict(uae_prefs& p, const value& v)
 	p.fpu_strict = v.number != 0;
 }
 
-// The FPU core (fpu_mode, options.h FPU_MODE_*): Automatic is the exact core
-// where it costs no speed (AArch64 without the JIT FPU), else the host core.
+// The FPU core (fpu_mode, options.h FPU_MODE_*): Automatic per fpu_exact_core().
 const amiberry_setting_choice fpu_core_choices[] = {
 	{"auto", "Automatic"},
 	{"host", "Host"},
@@ -870,12 +880,13 @@ const definition definitions[] = {
 			"24-bit addressing is not available on a 68040 or 68060, with the JIT, or with a 32-bit accelerator board."),
 		get_address_space_24, set_address_space_24, address_space_24_available, nullptr, nullptr},
 	{BOOL_OPTION("cpu_compatible", "cpu", "More compatible",
-			"Approximates prefetch pipeline of 68000/010. Required for some timing sensitive games.",
+			"Emulates the prefetch pipeline of the 68000/010, and the prefetch and instruction cache of the 68020 and later "
+			"(slower). Required for some timing-sensitive games and programs that modify their own code.",
 			AMIBERRY_APPLY_LIVE, "true",
 			"More compatible is always on in cycle-exact modes and always off for a 68040 or 68060 with the JIT."),
 		get_cpu_compatible, set_cpu_compatible, cpu_compatible_available, nullptr, nullptr},
 	{BOOL_OPTION("cpu_no_unimplemented", "cpu", "No unimplemented CPU emulation",
-			"Do not emulate the 68060 instructions the CPU traps as unimplemented.",
+			"Trap the instructions a real 68060 lacks, as the hardware does, so 68060.library must handle them.",
 			AMIBERRY_APPLY_LIVE, "false", "Only on a 68060; unimplemented instruction emulation is always on with the JIT."),
 		get_cpu_no_unimplemented, set_cpu_no_unimplemented, cpu_no_unimplemented_available, nullptr, nullptr},
 	{BOOL_OPTION("cpu_data_cache", "cpu", "Data cache emulation",
@@ -895,12 +906,12 @@ const definition definitions[] = {
 		get_fpu_model, set_fpu_model, nullptr, fpu_model_choice_available, nullptr},
 	{BOOL_OPTION("fpu_strict", "fpu", "More compatible FPU",
 			"Host FPU core: round results to the FPCR precision and compare special values like the 68k (slower). "
-			"The Exact core always does; Automatic picks it on AArch64 unless the JIT FPU is on.",
+			FPU_AUTO_STRICT_HELP,
 			fpu_strict_apply, "false", "Needs an FPU and not the Exact FPU core (which always rounds and compares exactly)."),
 		get_fpu_strict, set_fpu_strict, fpu_strict_available, nullptr, nullptr},
 	{CHOICE_OPTION("fpu_core", "fpu", "FPU core",
-			"Exact computes in 80-bit extended precision like a real 68881/68882/68040/68060; Host uses the host's floating point "
-			"(64-bit on AArch64, faster with the JIT FPU). Automatic is Exact on AArch64 unless the JIT FPU is on, else Host.",
+			"Exact computes in 80-bit extended precision like a real 68881/68882/68040/68060; Host uses the host's 64-bit "
+			"double precision (faster, most of all with the JIT FPU). " FPU_AUTO_CORE_HELP,
 			AMIBERRY_APPLY_LIVE, "auto", fpu_core_choices, "Needs an FPU."),
 		get_fpu_core, set_fpu_core, has_fpu, nullptr, nullptr},
 	{BOOL_OPTION("fpu_softfloat", "fpu", "Exact FPU core (80-bit softfloat)",
@@ -914,7 +925,7 @@ const definition definitions[] = {
 		get_fpu_msvc_long_double, set_fpu_msvc_long_double, has_fpu, nullptr, nullptr},
 #endif
 	{BOOL_OPTION("fpu_no_unimplemented", "fpu", "No unimplemented FPU emulation",
-			"Do not emulate the FPU instructions the CPU traps as unimplemented.",
+			"Trap the FPU instructions a real 68040/68060 lacks, as the hardware does, so 68040.library or 68060.library must handle them.",
 			AMIBERRY_APPLY_LIVE, "false", "Not available without an FPU, nor with the JIT, which always emulates them."),
 		get_fpu_no_unimplemented, set_fpu_no_unimplemented, fpu_no_unimplemented_available, nullptr, nullptr},
 	{CHOICE_OPTION("cpu_speed", "cpu_speed", "CPU speed",

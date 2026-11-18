@@ -151,12 +151,12 @@ STATIC_INLINE int isinrom (void)
 }
 
 /* The FPU core (fpu_mode, FPU_MODE_*): exact (80-bit softfloat, with the
- * double-double transcendentals) or host floating point. Automatic picks the
- * exact core on AArch64, which has no extended-precision hardware, unless the
- * JIT compiles FPU instructions to host doubles (JIT with JIT FPU); x86-64's
- * host core is x87 80-bit already. Chosen at FPU reset and when the settings
- * change (fpu_modechange()); with the exact core the JIT compiles FPU
- * instructions as calls into it (jit_fpu_enabled() false). */
+ * double-double transcendentals) or host floating point (64-bit doubles unless
+ * USE_LONG_DOUBLE). Automatic picks the exact core on x86-64 and AArch64
+ * unless the JIT compiles FPU instructions to host doubles (JIT with JIT
+ * FPU). Chosen at FPU reset and when the settings change (fpu_modechange());
+ * with the exact core the JIT compiles FPU instructions as calls into it
+ * (jit_fpu_enabled() false). */
 static bool fpu_exact_active;
 static int fpu_core_active = -2;
 
