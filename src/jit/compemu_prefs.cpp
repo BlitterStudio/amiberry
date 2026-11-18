@@ -9,18 +9,30 @@
 
 extern bool have_done_picasso;
 
+/* Direct access needs memory laid out for it (canbang). Memory laid out for
+   indirect access or without the JIT stays so until the next reset
+   (init_shm()): run indirect until then, but keep the choice. */
+static int comp_trust_effective(int v)
+{
+	return canbang && changed_prefs.cachesize ? v : 1;
+}
+
 bool check_prefs_changed_comp (bool checkonly)
 {
 	bool changed = 0;
-	static int cachesize_prev, comptrust_prev;
-	static bool canbang_prev;
+	static bool pending_logged;
+
+	const bool pending = jit_direct_pending(&changed_prefs);
+	if (pending && !pending_logged)
+		write_log(_T("JIT: \"direct\" access takes effect after a reset, memory is laid out for \"indirect\" access\n"));
+	pending_logged = pending;
 
 	special_mem_default = currprefs.comptrustbyte ? (S_READ | S_WRITE | S_N_ADDR) : 0;
 
-	if (currprefs.comptrustbyte != changed_prefs.comptrustbyte ||
-		currprefs.comptrustword != changed_prefs.comptrustword ||
-		currprefs.comptrustlong != changed_prefs.comptrustlong ||
-		currprefs.comptrustnaddr!= changed_prefs.comptrustnaddr ||
+	if (currprefs.comptrustbyte != comp_trust_effective(changed_prefs.comptrustbyte) ||
+		currprefs.comptrustword != comp_trust_effective(changed_prefs.comptrustword) ||
+		currprefs.comptrustlong != comp_trust_effective(changed_prefs.comptrustlong) ||
+		currprefs.comptrustnaddr != comp_trust_effective(changed_prefs.comptrustnaddr) ||
 		currprefs.compnf != changed_prefs.compnf ||
 		currprefs.comp_hardflush != changed_prefs.comp_hardflush ||
 		currprefs.comp_constjump != changed_prefs.comp_constjump ||
@@ -32,10 +44,11 @@ bool check_prefs_changed_comp (bool checkonly)
 	if (checkonly)
 		return changed;
 
-	currprefs.comptrustbyte = changed_prefs.comptrustbyte;
-	currprefs.comptrustword = changed_prefs.comptrustword;
-	currprefs.comptrustlong = changed_prefs.comptrustlong;
-	currprefs.comptrustnaddr= changed_prefs.comptrustnaddr;
+	const bool was_direct = currprefs.cachesize && !currprefs.comptrustbyte;
+	currprefs.comptrustbyte = comp_trust_effective(changed_prefs.comptrustbyte);
+	currprefs.comptrustword = comp_trust_effective(changed_prefs.comptrustword);
+	currprefs.comptrustlong = comp_trust_effective(changed_prefs.comptrustlong);
+	currprefs.comptrustnaddr = comp_trust_effective(changed_prefs.comptrustnaddr);
 	currprefs.compnf = changed_prefs.compnf;
 	currprefs.comp_hardflush = changed_prefs.comp_hardflush;
 	currprefs.comp_constjump = changed_prefs.comp_constjump;
@@ -43,16 +56,6 @@ bool check_prefs_changed_comp (bool checkonly)
 	currprefs.fpu_strict = changed_prefs.fpu_strict;
 
 	if (currprefs.cachesize != changed_prefs.cachesize) {
-		if (currprefs.cachesize && !changed_prefs.cachesize) {
-			cachesize_prev = currprefs.cachesize;
-			comptrust_prev = currprefs.comptrustbyte;
-			canbang_prev = canbang;
-		} else if (!currprefs.cachesize && changed_prefs.cachesize == cachesize_prev) {
-			changed_prefs.comptrustbyte = currprefs.comptrustbyte = comptrust_prev;
-			changed_prefs.comptrustword = currprefs.comptrustword = comptrust_prev;
-			changed_prefs.comptrustlong = currprefs.comptrustlong = comptrust_prev;
-			changed_prefs.comptrustnaddr = currprefs.comptrustnaddr = comptrust_prev;
-		}
 		currprefs.cachesize = changed_prefs.cachesize;
 		alloc_cache();
 		changed = 1;
@@ -69,16 +72,16 @@ bool check_prefs_changed_comp (bool checkonly)
 		currprefs.comptrustlong = 1;
 		currprefs.comptrustnaddr= 1;
 
-		changed_prefs.comptrustbyte = 1;
-		changed_prefs.comptrustword = 1;
-		changed_prefs.comptrustlong = 1;
-		changed_prefs.comptrustnaddr= 1;
-
 		changed = 1;
 
 		if (currprefs.cachesize)
 			write_log (_T("JIT: Reverting to \"indirect\" access, because canbang is zero!\n"));
 	}
+
+	// A reset may have laid out Direct memory while ROM protection was
+	// still skipped for the previous effective Indirect preferences.
+	if (!was_direct && currprefs.cachesize && !currprefs.comptrustbyte)
+		protect_roms(true);
 
 	if (changed)
 		write_log (_T("JIT: cache=%d. b=%d w=%d l=%d fpu=%d nf=%d inline=%d hard=%d\n"),

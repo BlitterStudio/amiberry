@@ -31,6 +31,11 @@ bool preinit_shm (void);
 extern bool rom_write_enabled;
 extern bool canbang;
 extern bool jit_direct_compatible_memory;
+// The configuration asks for JIT direct memory access.
+extern bool jit_direct_wanted(const struct uae_prefs *p);
+// Direct access is asked for but the memory is laid out for indirect access
+// until the next reset.
+extern bool jit_direct_pending(const struct uae_prefs *p);
 extern uaecptr highest_ram;
 
 #define Z3BASE_UAE 0x10000000

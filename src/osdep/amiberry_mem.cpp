@@ -208,6 +208,19 @@ static uaecptr start_rtg = 0;
 static uaecptr end_rtg = 0;
 int maxmem;
 bool jit_direct_compatible_memory;
+// doinit_shm() has laid memory out, and whether it was asked for JIT direct
+static bool shm_laid_out;
+static bool shm_laid_out_direct;
+
+bool jit_direct_wanted(const struct uae_prefs *p)
+{
+	return p->cachesize && (!p->comptrustbyte || !p->comptrustword || !p->comptrustlong);
+}
+
+bool jit_direct_pending(const struct uae_prefs *p)
+{
+	return jit_direct_wanted(p) && !canbang && shm_laid_out && !shm_laid_out_direct;
+}
 
 bool can_have_1gb()
 {
@@ -601,7 +614,9 @@ static int doinit_shm ()
 	start_rtg = 0;
 	end_rtg = 0;
 
-	jit_direct_compatible_memory = p->cachesize && (!p->comptrustbyte || !p->comptrustword || !p->comptrustlong);
+	jit_direct_compatible_memory = jit_direct_wanted(p);
+	shm_laid_out = true;
+	shm_laid_out_direct = jit_direct_compatible_memory;
 	const size_t direct_limit = jit_direct_limit(p);
 
 	// 1G Z3chip?
@@ -744,6 +759,9 @@ bool init_shm()
 		if (ortgmem_type[i] != changed_prefs.rtgboards[i].rtgmem_type)
 			changed = true;
 	}
+	// JIT direct access (or the JIT) switched on or off since the layout
+	if (shm_laid_out && shm_laid_out_direct != jit_direct_wanted(&changed_prefs))
+		changed = true;
 	if (!changed && oz3chipmem_size == changed_prefs.z3chipmem.size)
 		return true;
 
