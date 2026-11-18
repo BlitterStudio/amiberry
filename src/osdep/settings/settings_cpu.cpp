@@ -943,8 +943,9 @@ const definition definitions[] = {
 		get_cpu_threaded, set_cpu_threaded, cpu_threaded_available, nullptr, nullptr},
 #ifdef WITH_PPC
 	{CHOICE_OPTION("ppc_model", "ppc", "PPC CPU emulation",
-			"Enable PowerPC CPU emulation for CyberStorm PPC or Blizzard PPC boards.",
-			AMIBERRY_APPLY_RESTART, "", ppc_model_choices, nullptr),
+			"Enable PowerPC CPU emulation for CyberStorm PPC or Blizzard PPC boards. Automatic installs such a board; a PPC board selected in Expansions always runs the PPC.",
+			AMIBERRY_APPLY_RESTART, "", ppc_model_choices,
+			"A PPC accelerator board always runs the PPC: PPC CPU emulation cannot be disabled while one is selected."),
 		get_ppc_model, set_ppc_model, ppc_model_available, nullptr, nullptr},
 	{CHOICE_OPTION("ppc_implementation", "ppc", "PPC implementation",
 			"Select the PPC backend. Automatic tries QEMU first when plugin support is compiled, then falls back to other available implementations.",

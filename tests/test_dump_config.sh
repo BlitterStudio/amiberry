@@ -106,6 +106,17 @@ if grep -q '^ppc_implementation=' "$work/qemu.txt"; then
 		echo "ppc_implementation=pearpc was reported as an unknown value" >&2
 		exit 1
 	fi
+
+	# A PPC board always runs the PPC: without ppc_model, or with an empty one
+	# (Disabled), the PPC is set to manual, saved so, and reported.
+	printf 'cpu_type=68060\ncpuboard_type=CyberStormPPC\n' > "$work/ppc-board.uae"
+	"$bin" --dump-config -f "$work/ppc-board.uae" > "$work/ppc-board.txt" 2> "$work/ppc-board_err.txt"
+	check "$work/ppc-board.txt" '^ppc_model=manual$'
+	check "$work/ppc-board_err.txt" 'cannot be disabled while a PPC accelerator board is selected'
+	printf 'cpu_type=68060\ncpuboard_type=CyberStormPPC\nppc_model=\n' > "$work/ppc-board-off.uae"
+	"$bin" --dump-config -f "$work/ppc-board-off.uae" > "$work/ppc-board-off.txt" 2> "$work/ppc-board-off_err.txt"
+	check "$work/ppc-board-off.txt" '^ppc_model=manual$'
+	check "$work/ppc-board-off_err.txt" 'cannot be disabled while a PPC accelerator board is selected'
 fi
 
 # Deterministic: two runs of the same config are byte-identical, so dumps

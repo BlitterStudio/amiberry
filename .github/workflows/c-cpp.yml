@@ -31,7 +31,7 @@ permissions:
 
 env:
   QEMU_UAE_RELEASE_REPO: BlitterStudio/amiberry-qemu-uae
-  QEMU_UAE_RELEASE_TAG: v11.0.1-amiberry.7
+  QEMU_UAE_RELEASE_TAG: v11.1.3-amiberry.1
   GH_TOKEN: ${{ github.token }}
 
 jobs:
@@ -79,7 +79,6 @@ jobs:
 
           glib_prefix="$(brew --prefix glib)"
           test -f "$glib_prefix/lib/libglib-2.0.0.dylib"
-          test -f "$glib_prefix/lib/libgmodule-2.0.0.dylib"
 
       - name: Install dependencies (Homebrew)
         run: |
@@ -797,7 +796,7 @@ jobs:
 
       - name: Verify QEMU-UAE plugin dependencies
         run: |
-          for needed in libglib-2.0.so.0 libgmodule-2.0.so.0 libz.so.1; do
+          for needed in libglib-2.0.so.0 libz.so.1; do
             readelf -d "$QEMU_UAE_PLUGIN" | grep -F "Shared library: [$needed]"
           done
 
@@ -1147,7 +1146,7 @@ jobs:
             QEMU_PLUGIN="$1"
             test -f "$QEMU_PLUGIN"
             dnf install -y ffmpeg-free-devel libwebp-devel
-            for needed in libglib-2.0.so.0 libgmodule-2.0.so.0 libz.so.1; do
+            for needed in libglib-2.0.so.0 libz.so.1; do
               readelf -d "$QEMU_PLUGIN" | grep -F "Shared library: [$needed]"
             done
             cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr -DDISTRO_CODENAME=${{ matrix.codename }} -DQEMU_UAE_PLUGIN="$QEMU_PLUGIN"
@@ -1218,7 +1217,7 @@ jobs:
               test -f "$QEMU_PLUGIN"
               apt-get update
               apt-get install -y libavformat-dev libavcodec-dev libavutil-dev libswscale-dev libswresample-dev libwebp-dev
-              for needed in libglib-2.0.so.0 libgmodule-2.0.so.0 libz.so.1; do
+              for needed in libglib-2.0.so.0 libz.so.1; do
                 readelf -d "$QEMU_PLUGIN" | grep -F "Shared library: [$needed]"
               done
               cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr -DDISTRO_CODENAME=${{ matrix.codename }} -DQEMU_UAE_PLUGIN="$QEMU_PLUGIN" ${{ matrix.extra_cmake_args }}
@@ -1293,7 +1292,7 @@ jobs:
             # This job cross-compiles; the FFmpeg and WebP headers and libraries
             # must be the arm64 ones, or CMake silently drops ZZ9000 media codecs.
             apt-get install -y libavformat-dev:arm64 libavcodec-dev:arm64 libavutil-dev:arm64 libswscale-dev:arm64 libswresample-dev:arm64 libwebp-dev:arm64
-            for needed in libglib-2.0.so.0 libgmodule-2.0.so.0 libz.so.1; do
+            for needed in libglib-2.0.so.0 libz.so.1; do
               readelf -d "$QEMU_PLUGIN" | grep -F "Shared library: [$needed]"
             done
             cmake -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchain-aarch64-linux-gnu.cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr -DDISTRO_CODENAME=${{ matrix.codename }} -DQEMU_UAE_PLUGIN="$QEMU_PLUGIN" ${{ matrix.extra_cmake_args }}

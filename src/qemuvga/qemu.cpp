@@ -68,6 +68,7 @@ static bool init_ppc(UAE_DLHANDLE handle)
 		write_log(_T("PPC: qemu_uae_ppc_init failed for model %s\n"), model);
 		return false;
 	}
+	uae_ppc_set_loaded_model(model);
 #endif
 	return true;
 }
@@ -93,18 +94,21 @@ UAE_DLHANDLE uae_qemu_uae_init(void)
 	if (initialized) {
 		return handle;
 	}
-	initialized = true;
 
 #ifdef MACOS_APP_STORE
+	initialized = true;
 	write_log(_T("PPC emulation via qemu-uae plugin is not available in App Store builds\n"));
 	return handle;
 #endif
 
 	handle = uae_dlopen_plugin(_T("qemu-uae"));
 	if (!handle) {
+		// Not latched: the plugin may be installed later in the session.
 		gui_message(_T("Error loading qemu-uae plugin\n"));
 		return handle;
 	}
+	// Anything after this point initializes QEMU, which must only happen once.
+	initialized = true;
 	write_log(_T("Loaded qemu-uae library at %p\n"), handle);
 
 	/* Check major version (=) and minor version (>=) */

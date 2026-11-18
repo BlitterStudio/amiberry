@@ -1882,6 +1882,11 @@ void cpuboard_reset(int hardreset)
 		io_reg[CSIII_REG_IPL_EMU] = 0x40;
 		io_reg[CSIII_REG_LOCK] = 0x01;
 	}
+#ifdef WITH_PPC
+	// IPL_EMU now masks PPC interrupts, so check_ppc_int_lvl() would never
+	// clear a latch left over from before the reset.
+	ppc_irq_pending = false;
+#endif
 	if (hardreset || is_keyboardreset())
 		a2630_io = 0;
 
