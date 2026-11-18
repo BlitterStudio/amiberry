@@ -108,11 +108,19 @@ STATIC_INLINE void do_head_cycles_ce020 (int h)
 }
 #endif
 
-// The 68020 cannot continue executing until read data arrives, so unlike posted
-// writes, internal cycles never overlap a data read (matches real A1200 timing).
+// The 68020 cannot continue executing until read data arrives, so on real A1200
+// hardware internal cycles do not overlap a data read (chip_read = 16 clocks).
+// We still let them overlap the read's last clock, which makes 68020 CE slightly
+// faster than real (chip_read about 15 clocks). The rest of the 68020 CE model is
+// not exact yet, and some demos break when the CPU is even slightly too slow:
+// with no overlap, one part of Roots V2.0 (Sanity) drops to every second frame.
+// Keep this margin until the whole 68020 CE timing matches real hardware.
+#define CE020_READ_OVERLAP_CLOCKS 1
 STATIC_INLINE void end_read_ce020(void)
 {
-	regs.ce020startcycle = regs.ce020endcycle;
+	evt_t s = regs.ce020endcycle - CE020_READ_OVERLAP_CLOCKS * cpucycleunit;
+	if (s > regs.ce020startcycle)
+		regs.ce020startcycle = s;
 }
 STATIC_INLINE uae_u32 get_long_ce020 (uaecptr addr)
 {
