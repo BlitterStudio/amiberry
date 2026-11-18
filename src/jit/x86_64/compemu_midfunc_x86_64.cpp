@@ -258,24 +258,111 @@ MIDFUNC(1,fflags_into_flags,(W2 tmp))
 	fflags_into_flags_internal(tmp);
 }
 
-MIDFUNC(3,fpu_cond_from_fpsr,(RW4 d, W4 tmp, IMM mask))
+#define FPSR_CC_N_BIT	0x08000000
+#define FPSR_CC_Z_BIT	0x04000000
+#define FPSR_CC_I_BIT	0x02000000
+#define FPSR_CC_NAN_BIT	0x01000000
+
+/* After fflags_into_flags: discard the temporary x87 comparison flags, not
+   the saved integer CCR. */
+MIDFUNC(0,dont_care_flags_x87,(void))
 {
-	// Discard the temporary x87 comparison flags, not the saved integer CCR.
 	live.flags_in_flags = TRASH;
 	live.flags_on_stack = VALID;
-	d = rmw(d, 4, 4);
+}
+
+/* d = all ones if the FPSR condition codes satisfy the predicate in mask
+   (bit per N Z I NAN combination), else 0. With FPU_COND_CHECK_RESULT it
+   first moves the condition codes of a written-back FP_RESULT
+   (fpu_fpsr_cc_written clear) into the FPSR, as fpp_get_fpsr() does. With
+   FPU_COND_SIGNAL (a signalling predicate) it sets BSUN and AE_IOP if they
+   show a NaN. Integer code: an x87 load of regs.fp_result costs more, and its
+   compare could raise IE. */
+MIDFUNC(4,fpu_cond_from_fpsr,(W4 d, W4 tmp, IMM mask, IMM flags))
+{
+	const bool check_result = (flags & FPU_COND_CHECK_RESULT) != 0;
+	clobber_flags();
+	d = writereg(d, 4);
 	tmp = writereg(tmp, 4);
-	raw_cmp_b_mi((uintptr)&fpu_fpsr_cc_written, 0);
-	raw_jz_b_oponly();
-	uae_u8 *resume = get_target();
-	skip_byte();
+	if (check_result) {
+		const uintptr fpr = (uintptr)&regs.fp_result.fp;
+#ifdef USE_LONG_DOUBLE
+		/* x87: 64-bit mantissa with an explicit integer bit, then sign/exponent */
+		const uae_u32 fhi = 0x7fffffff, emask = 0x7fff;
+		const uintptr eaddr = fpr + 8, iaddr = fpr + 7, saddr = fpr + 9;
+#else
+		/* double: the exponent and the fraction's top 20 bits in the high word */
+		const uae_u32 fhi = 0x000fffff, emask = 0x7ff00000;
+		const uintptr eaddr = fpr + 4, iaddr = 0, saddr = fpr + 7;
+#endif
+		raw_cmp_b_mi((uintptr)&fpu_fpsr_cc_written, 0);
+		raw_jnz_b_oponly();
+		uae_u8 *skip = get_target();
+		skip_byte();
+		raw_mov_l_rm(tmp, fpr + 4);
+		raw_and_l_ri(tmp, fhi);
+		raw_or_l_rm(tmp, fpr);			/* fraction without the integer bit */
+		raw_mov_l_rm(d, eaddr);
+		raw_and_l_ri(d, emask);		/* exponent */
+		raw_cmp_l_ri(d, emask);
+		raw_jcc_b_oponly(NATIVE_CC_NE);
+		uae_u8 *finite = get_target();
+		skip_byte();
+		raw_mov_l_ri(d, FPSR_CC_I_BIT);	/* a mov: keeps the flags */
+		raw_test_l_rr(tmp, tmp);
+		raw_jcc_b_oponly(NATIVE_CC_EQ);
+		uae_u8 *inf = get_target();
+		skip_byte();
+		raw_mov_l_ri(d, FPSR_CC_NAN_BIT);
+		raw_jmp_b_oponly();
+		uae_u8 *nan = get_target();
+		skip_byte();
+		*finite = get_target() - (finite + 1);
+		raw_or_l(tmp, d);
+		raw_mov_l_ri(d, 0);
+		raw_jcc_b_oponly(NATIVE_CC_NE);
+		uae_u8 *nonzero1 = get_target();
+		skip_byte();
+		uae_u8 *nonzero2 = NULL;
+		if (iaddr) {
+			raw_test_b_mi(iaddr, 0x80);		/* integer bit */
+			raw_jcc_b_oponly(NATIVE_CC_NE);
+			nonzero2 = get_target();
+			skip_byte();
+		}
+		raw_mov_l_ri(d, FPSR_CC_Z_BIT);
+		*inf = get_target() - (inf + 1);
+		*nan = get_target() - (nan + 1);
+		*nonzero1 = get_target() - (nonzero1 + 1);
+		if (nonzero2)
+			*nonzero2 = get_target() - (nonzero2 + 1);
+		raw_test_b_mi(saddr, 0x80);		/* sign */
+		raw_jcc_b_oponly(NATIVE_CC_EQ);
+		uae_u8 *positive = get_target();
+		skip_byte();
+		raw_or_l_ri(d, FPSR_CC_N_BIT);
+		*positive = get_target() - (positive + 1);
+		raw_mov_l_rm(tmp, (uintptr)&regs.fpsr);
+		raw_and_l_ri(tmp, 0x00fffff8);
+		raw_or_l(tmp, d);
+		raw_mov_l_mr((uintptr)&regs.fpsr, tmp);
+		raw_mov_b_mi((uintptr)&fpu_fpsr_cc_written, 1);
+		*skip = get_target() - (skip + 1);
+	}
 	raw_mov_l_rm(tmp, (uintptr)&regs.fpsr);
 	raw_shrl_l_ri(tmp, 24);
 	raw_and_l_ri(tmp, 15);
+	if (flags & FPU_COND_SIGNAL) {
+		raw_test_l_ri(tmp, FPSR_CC_NAN_BIT >> 24);
+		raw_jz_b_oponly();
+		uae_u8 *skip = get_target();
+		skip_byte();
+		raw_or_l_mi((uintptr)&regs.fpsr, 0x00008080);	/* BSUN | AE_IOP */
+		*skip = JITPTR get_target() - (JITPTR skip + 1);
+	}
 	raw_mov_l_ri(d, mask);
 	raw_bt_l_rr(d, tmp);
 	raw_sbb_l(d, d);
-	*resume = get_target() - (resume + 1);
 	unlock2(tmp);
 	unlock2(d);
 }
@@ -1735,6 +1822,27 @@ MIDFUNC(2,mov_w_rm,(W2 d, MEMR s))
 	unlock2(d);
 }
 
+MIDFUNC(2,zero_extend_16_rm,(W4 d, MEMR s))
+{
+	CLOBBER_MOV;
+	d=writereg(d,4);
+
+	raw_zero_extend_16_rm(d,s);
+	unlock2(d);
+}
+
+/* d = hi << 32 | lo as one 64-bit store; hi and lo are clobbered */
+MIDFUNC(3,mov_q_mrr_pair,(MEMW d, RW4 hi, RW4 lo))
+{
+	CLOBBER_OR;
+	hi=rmw(hi,4,4);
+	lo=rmw(lo,4,4);
+
+	raw_mov_q_mrr_pair(d,hi,lo);
+	unlock2(lo);
+	unlock2(hi);
+}
+
 MIDFUNC(2,mov_b_mr,(MEMW d, RR1 s))
 {
 	if (isconst(s)) {
@@ -2472,48 +2580,6 @@ MIDFUNC(1,f_forget_about,(FW r))
 	live.fate[r].status=UNDEF;
 }
 
-MIDFUNC(1,fmov_pi,(FW r))
-{
-	r=f_writereg(r);
-	raw_fmov_pi(r);
-	f_unlock(r);
-}
-
-MIDFUNC(1,fmov_log10_2,(FW r))
-{
-	r=f_writereg(r);
-	raw_fmov_log10_2(r);
-	f_unlock(r);
-}
-
-MIDFUNC(1,fmov_log2_e,(FW r))
-{
-	r=f_writereg(r);
-	raw_fmov_log2_e(r);
-	f_unlock(r);
-}
-
-MIDFUNC(1,fmov_loge_2,(FW r))
-{
-	r=f_writereg(r);
-	raw_fmov_loge_2(r);
-	f_unlock(r);
-}
-
-MIDFUNC(1,fmov_1,(FW r))
-{
-	r=f_writereg(r);
-	raw_fmov_1(r);
-	f_unlock(r);
-}
-
-MIDFUNC(1,fmov_0,(FW r))
-{
-	r=f_writereg(r);
-	raw_fmov_0(r);
-	f_unlock(r);
-}
-
 MIDFUNC(2,fmov_rm,(FW r, MEMPTRR m))
 {
 	r=f_writereg(r);
@@ -2525,13 +2591,6 @@ MIDFUNC(2,fmovi_rm,(FW r, MEMPTRR m))
 {
 	r=f_writereg(r);
 	raw_fmovi_rm(r,m);
-	f_unlock(r);
-}
-
-MIDFUNC(2,fmovi_mr,(MEMPTRW m, FR r))
-{
-	r=f_readreg(r);
-	raw_fmovi_mr(m,r);
 	f_unlock(r);
 }
 
@@ -2622,6 +2681,15 @@ MIDFUNC(2,fldcw_m_indexed,(RR4 index, MEMR base))
 	unlock2(index);
 }
 
+MIDFUNC(3,fmov_rm_indexed,(FW r, RR4 index, MEMR base))
+{
+	index=readreg(index,4);
+	r=f_writereg(r);
+	raw_fmov_rm_indexed(r,index,base);
+	f_unlock(r);
+	unlock2(index);
+}
+
 MIDFUNC(1,ftst_r,(FR r))
 {
 	r=f_readreg(r);
@@ -2648,42 +2716,6 @@ MIDFUNC(2,fabs_rr,(FW d, FR s))
 	s=f_readreg(s);
 	d=f_writereg(d);
 	raw_fabs_rr(d,s);
-	f_unlock(s);
-	f_unlock(d);
-}
-
-MIDFUNC(2,fgetexp_rr,(FW d, FR s))
-{
-	s=f_readreg(s);
-	d=f_writereg(d);
-	raw_fgetexp_rr(d,s);
-	f_unlock(s);
-	f_unlock(d);
-}
-
-MIDFUNC(2,fgetman_rr,(FW d, FR s))
-{
-	s=f_readreg(s);
-	d=f_writereg(d);
-	raw_fgetman_rr(d,s);
-	f_unlock(s);
-	f_unlock(d);
-}
-
-MIDFUNC(2,fsin_rr,(FW d, FR s))
-{
-	s=f_readreg(s);
-	d=f_writereg(d);
-	raw_fsin_rr(d,s);
-	f_unlock(s);
-	f_unlock(d);
-}
-
-MIDFUNC(2,fcos_rr,(FW d, FR s))
-{
-	s=f_readreg(s);
-	d=f_writereg(d);
-	raw_fcos_rr(d,s);
 	f_unlock(s);
 	f_unlock(d);
 }
@@ -2717,24 +2749,6 @@ MIDFUNC(2,fscale_rr,(FRW d, FR s))
 	f_unlock(d);
 }
 
-MIDFUNC(2,ftwotox_rr,(FW d, FR s))
-{
-	s=f_readreg(s);
-	d=f_writereg(d);
-	raw_ftwotox_rr(d,s);
-	f_unlock(s);
-	f_unlock(d);
-}
-
-MIDFUNC(2,fetox_rr,(FW d, FR s))
-{
-	s=f_readreg(s);
-	d=f_writereg(d);
-	raw_fetox_rr(d,s);
-	f_unlock(s);
-	f_unlock(d);
-}
-
 MIDFUNC(2,frndint_rr,(FW d, FR s))
 {
 	s=f_readreg(s);
@@ -2758,15 +2772,6 @@ MIDFUNC(2,ftentox_rr,(FW d, FR s))
 	s=f_readreg(s);
 	d=f_writereg(d);
 	raw_ftentox_rr(d,s);
-	f_unlock(s);
-	f_unlock(d);
-}
-
-MIDFUNC(2,flog2_rr,(FW d, FR s))
-{
-	s=f_readreg(s);
-	d=f_writereg(d);
-	raw_flog2_rr(d,s);
 	f_unlock(s);
 	f_unlock(d);
 }
@@ -2888,14 +2893,14 @@ MIDFUNC(2,fsub_rr,(FRW d, FR s))
 	f_unlock(d);
 }
 
-MIDFUNC(3,fcmp_result_rrr,(FW r, FR d, FR s))
+MIDFUNC(4,fcmp_cc_rrr,(W4 r, FR d, FR s, IMM signed_nan))
 {
 	clobber_flags();
 	d=f_readreg(d);
 	s=f_readreg(s);
-	r=f_writereg(r);
-	raw_fcmp_result_rrr(r,d,s);
-	f_unlock(r);
+	r=writereg(r,4);
+	raw_fcmp_cc_rrr(r,d,s,signed_nan);
+	unlock2(r);
 	f_unlock(s);
 	f_unlock(d);
 }
@@ -2914,24 +2919,6 @@ MIDFUNC(2,fdiv_rr,(FRW d, FR s))
 	s=f_readreg(s);
 	d=f_rmw(d);
 	raw_fdiv_rr(d,s);
-	f_unlock(s);
-	f_unlock(d);
-}
-
-MIDFUNC(2,frem_rr,(FRW d, FR s))
-{
-	s=f_readreg(s);
-	d=f_rmw(d);
-	raw_frem_rr(d,s);
-	f_unlock(s);
-	f_unlock(d);
-}
-
-MIDFUNC(2,frem1_rr,(FRW d, FR s))
-{
-	s=f_readreg(s);
-	d=f_rmw(d);
-	raw_frem1_rr(d,s);
 	f_unlock(s);
 	f_unlock(d);
 }

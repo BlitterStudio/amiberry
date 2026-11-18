@@ -904,8 +904,17 @@ static void prefs_to_gui()
 	// Hard-reset-only chipset settings would otherwise snap back to the
 	// running machine's values here, hiding a pending change (#2459).
 	const auto pending_chipset = get_reset_only_chipset_prefs(changed_prefs);
+	// currprefs holds effective access modes, not a pending Direct choice.
+	const int comptrustbyte = changed_prefs.comptrustbyte;
+	const int comptrustword = changed_prefs.comptrustword;
+	const int comptrustlong = changed_prefs.comptrustlong;
+	const int comptrustnaddr = changed_prefs.comptrustnaddr;
 	copy_prefs(&currprefs, &changed_prefs);
 	set_reset_only_chipset_prefs(changed_prefs, pending_chipset);
+	changed_prefs.comptrustbyte = comptrustbyte;
+	changed_prefs.comptrustword = comptrustword;
+	changed_prefs.comptrustlong = comptrustlong;
+	changed_prefs.comptrustnaddr = comptrustnaddr;
 
 	/* filesys hack: the whole list (an entry is a uaedev_config_data, larger
 	   than the uaedev_config_info the copy was once sized by) */

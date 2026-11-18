@@ -19,41 +19,65 @@ class FpuJitCompilerRegressions(unittest.TestCase):
             return text[start:text.index("\n}", start) + 2]
 
         predicates = "\n".join(function(source, signature) for signature in (
-            "static void get_fp_condition(", "void comp_fscc_opp(", "void comp_fbcc_opp("))
+            "static void get_fp_condition(", "static void fp_signal_bsun(void)\n{",
+            "void comp_fscc_opp(", "void comp_fbcc_opp("))
         source = (ROOT / "src/fpp.cpp").read_text()
         tables = source[source.index("static const bool condition_table_040_060"):
                         source.index("int fpp_cond(")]
         source = (ROOT / "src/jit/x86_64/compemu_midfunc_x86_64.cpp").read_text()
-        override = function(source, "MIDFUNC(3,fpu_cond_from_fpsr,")
+        override = "\n".join(function(source, signature) for signature in (
+            "MIDFUNC(0,dont_care_flags_x87,", "MIDFUNC(4,fpu_cond_from_fpsr,"))
         driver = r"""
 #include <cassert>
 #include <cstdint>
+#include <cstring>
 #include <vector>
 using uae_u8 = uint8_t;
 using uae_u16 = uint16_t;
 using uae_u32 = uint32_t;
+using uae_u64 = uint64_t;
 using uae_s16 = int16_t;
 using uae_s32 = int32_t;
 using uintptr = uintptr_t;
 using IMM = uintptr;
-using RW4 = int;
 using W4 = int;
 enum {S1 = 20, S2, S3, S4, PC_P, TRASH = 0, VALID = 1};
 struct { int flags_in_flags, flags_on_stack; } live;
-struct { uae_u32 fpsr; } regs;
+#ifdef USE_LONG_DOUBLE
+struct { uae_u32 fpsr; struct { uae_u8 fp[16]; } fp_result; } regs;  // x87 long double
+#else
+struct { uae_u32 fpsr; struct { uae_u8 fp[8]; } fp_result; } regs;  // double
+#endif
 struct { bool compfpu = true; } currprefs;
 static bool jit_fpu_enabled() { return currprefs.compfpu; }  // the host core: no exact core here
 struct { bool fscc, fbcc; } jit_disable;
-static bool fpu_fpsr_cc_written, failure;
+static bool failure, jit_fpu_fast_block, result_live, jit_fpu_cc_fpsr;
+static bool jit_fp_result_live() { return result_live; }
+static bool fpu_fpsr_cc_written;
+#define FPSR_CC_N       0x08000000
+#define FPSR_CC_Z       0x04000000
+#define FPSR_CC_I       0x02000000
+#define FPSR_CC_NAN     0x01000000
+#define FPSR_CC_N_BIT   FPSR_CC_N
+#define FPSR_CC_Z_BIT   FPSR_CC_Z
+#define FPSR_CC_I_BIT   FPSR_CC_I
+#define FPSR_CC_NAN_BIT FPSR_CC_NAN
+#define FPSR_BSUN 0x00008000
+#define FPU_COND_CHECK_RESULT 1
+#define FPU_COND_SIGNAL 2
+enum {NATIVE_CC_EQ = 4, NATIVE_CC_NE = 5};
 static uintptr constants[32], vreg[32], not_taken, taken;
 static uae_u32 m68k_pc_offset;
 static uae_u8 *comp_pc_p = reinterpret_cast<uae_u8 *>(uintptr(0x123450000000));
 static int displacement, branch_cc, represented_control, flags;
 struct Op { int kind, d, s; uintptr value; };
-enum {MOVI, MOVR, ADDI, CMOV, FPFLAGS, MOVB, CMP, JZ, LOAD, SHR, AND, BT, SBB, TEST};
-static Op ops[128];
-static uae_u8 code[128];
+enum {MOVI, MOVR, ADDI, CMOV, FPFLAGS, MOVB, CMP, JCC, JMP, LOAD, SHR, AND, BT, SBB, TEST, OR,
+    ORI, ORM, CMPI, TESTB, STORE, STOREB, ORMI, TESTI};
+static Op ops[160];
+static uae_u8 code[160];
 static int length;
+static uae_u32 load(uintptr ad) { uae_u32 v; memcpy(&v, reinterpret_cast<void *>(ad), 4); return v; }
+static int zf(uintptr v) { return uae_u32(v) ? 0 : 64; }
 static void emit(int kind, int d = 0, int s = 0, uintptr value = 0) {
     ops[length++] = {kind, d, s, value};
 }
@@ -78,14 +102,26 @@ static void execute() {
                 (represented_control & 4) ? 0x40 : (represented_control & 8) ? 1 : 0;
             break;
         case MOVB: vreg[o.d] = (vreg[o.d] & ~uintptr(255)) | (vreg[o.s] & 255); break;
-        case CMP: flags = !fpu_fpsr_cc_written ? 64 : 0; break;
-        case JZ: if (flags & 64) pc += 1 + code[pc + 1]; else ++pc; break;
-        case LOAD: vreg[o.d] = regs.fpsr; break;
-        case SHR: vreg[o.d] >>= o.value; break;
-        case AND: vreg[o.d] &= o.value; break;
+        case CMP: flags = uintptr(fpu_fpsr_cc_written) == o.value ? 64 : 0; break;
+        case JCC: if (cc(o.value)) pc += 1 + code[pc + 1]; else ++pc; break;
+        case JMP: pc += 1 + code[pc + 1]; break;
+        case LOAD: vreg[o.d] = load(o.value); break;
+        case SHR: vreg[o.d] = uae_u32(vreg[o.d]) >> o.value; flags = zf(vreg[o.d]); break;
+        case AND: vreg[o.d] &= o.value; flags = zf(vreg[o.d]); break;
         case BT: flags = (vreg[o.d] >> (vreg[o.s] & 31)) & 1; break;
         case SBB: vreg[o.d] = (flags & 1) ? uae_u32(-1) : 0; break;
-        case TEST: flags = vreg[o.d] ? 0 : 64; break;
+        case TEST: flags = zf(vreg[o.d]); break;
+        case OR: vreg[o.d] |= vreg[o.s]; flags = zf(vreg[o.d]); break;
+        case ORI: vreg[o.d] |= o.value; flags = zf(vreg[o.d]); break;
+        case ORM: vreg[o.d] |= load(o.value); flags = zf(vreg[o.d]); break;
+        case CMPI:
+            flags = zf(uae_u32(vreg[o.d]) - uae_u32(o.value)) | (uae_u32(vreg[o.d]) < o.value);
+            break;
+        case TESTB: flags = (*reinterpret_cast<uae_u8 *>(o.value) & o.s) ? 0 : 64; break;
+        case STORE: { const uae_u32 v = uae_u32(vreg[o.s]); memcpy(reinterpret_cast<void *>(o.d == 1 ? o.value : uintptr(&regs.fpsr)), &v, 4); break; }
+        case STOREB: fpu_fpsr_cc_written = o.value; break;
+        case TESTI: flags = (vreg[o.d] & o.value) ? 0 : 64; break;
+        case ORMI: { const uae_u32 v = load(o.value) | uae_u32(o.s); memcpy(reinterpret_cast<void *>(o.value), &v, 4); break; }
         default: assert(false);
         }
     }
@@ -95,7 +131,14 @@ static void mov_l_rr(int d, int s) { emit(MOVR, d, s); }
 static void add_l_ri(int d, uintptr value) { constants[d] += value; emit(ADDI, d, 0, value); }
 static void mov_b_rr(int d, int s) { emit(MOVB, d, s); }
 static void cmov_l_rr(int d, int s, int condition) { emit(CMOV, d, s, condition); }
+static void clobber_flags() {
+    if (live.flags_in_flags == VALID && live.flags_on_stack != VALID)
+        live.flags_on_stack = VALID;
+    live.flags_in_flags = TRASH;
+}
 static void fflags_into_flags(int) {
+    assert(result_live);
+    clobber_flags();
     live.flags_in_flags = VALID; live.flags_on_stack = TRASH;
     emit(FPFLAGS);
 }
@@ -106,70 +149,166 @@ static void test_l_rr(int d, int) { emit(TEST, d); }
 static void register_branch(uintptr a, uintptr b, uae_u8 condition) {
     not_taken = a; taken = b; branch_cc = condition;
 }
-static int rmw(int r, int, int) {
-    assert(live.flags_in_flags == TRASH && live.flags_on_stack == VALID);
-    return r;
-}
-static int writereg(int r, int) { return r; }
+static int writereg(int r, int) { assert(live.flags_in_flags == TRASH); return r; }
 static void unlock2(int) {}
-static void raw_cmp_b_mi(uintptr, int) { emit(CMP); }
-static void raw_jz_b_oponly() { emit(JZ); }
+static void raw_cmp_b_mi(uintptr ad, int value) {
+    assert(ad == uintptr(&fpu_fpsr_cc_written)); emit(CMP, 0, 0, value);
+}
+static void raw_jcc_b_oponly(int condition) { emit(JCC, 0, 0, condition); }
+static void raw_jnz_b_oponly() { raw_jcc_b_oponly(NATIVE_CC_NE); }
+static void raw_jz_b_oponly() { raw_jcc_b_oponly(NATIVE_CC_EQ); }
+static void raw_or_l_mi(uintptr ad, uintptr i) { assert(ad == uintptr(&regs.fpsr)); emit(ORMI, 0, int(i), ad); }
+static void raw_jmp_b_oponly() { emit(JMP); }
 static uae_u8 *get_target() { return code + length; }
 static void skip_byte() { ++length; }
-static void raw_mov_l_rm(int d, uintptr) { emit(LOAD, d); }
+static void raw_mov_l_rm(int d, uintptr ad) { emit(LOAD, d, 0, ad); }
+static void raw_or_l(int d, int s) { emit(OR, d, s); }
+static void raw_or_l_ri(int d, uintptr i) { emit(ORI, d, 0, i); }
+static void raw_or_l_rm(int d, uintptr ad) { emit(ORM, d, 0, ad); }
+static void raw_cmp_l_ri(int d, uintptr i) { emit(CMPI, d, 0, i); }
+static void raw_test_l_rr(int d, int s) { assert(d == s); emit(TEST, d); }
+static void raw_test_b_mi(uintptr ad, int i) { emit(TESTB, 0, i, ad); }
+static void raw_test_l_ri(int d, uintptr i) { emit(TESTI, d, 0, i); }
+static void raw_mov_l_mr(uintptr ad, int s) { assert(ad == uintptr(&regs.fpsr)); emit(STORE, 0, s); }
+static void raw_mov_b_mi(uintptr ad, int value) {
+    assert(ad == uintptr(&fpu_fpsr_cc_written)); emit(STOREB, 0, 0, value);
+}
 static void raw_shrl_l_ri(int d, int i) { emit(SHR, d, 0, i); }
 static void raw_and_l_ri(int d, int i) { emit(AND, d, 0, i); }
 static void raw_mov_l_ri(int d, uintptr i) { emit(MOVI, d, 0, i); }
 static void raw_bt_l_rr(int d, int s) { emit(BT, d, s); }
 static void raw_sbb_l(int d, int s) { assert(d == s); emit(SBB, d); }
+static void and_l_ri(int d, uintptr i) { emit(AND, d, 0, i); }
+static void or_l(int d, int s) { emit(OR, d, s); }
+static void mov_l_rm(int d, uintptr ad) { emit(LOAD, d, 0, ad); }
+static void mov_l_mr(uintptr ad, int s) { emit(STORE, 1, s, ad); }
 #define MIDFUNC(n, name, args) static void name args
 #define FAIL(x) (failure = true)
 #define JITPTR (uintptr)
+static void fp_signal_bsun(void);
 """ + tables + override + predicates + r"""
+// Compile states: FP_RESULT in an x87 register; condition codes in the FPSR
+// or a written-back FP_RESULT (run-time check); known to be in the FPSR.
+enum {LIVE, CHECK, FPSR};
+static bool representable(int control) {
+    return !(control == 3 || control == 5 || control == 6 || control == 7 ||
+        control == 11 || control >= 13);
+}
+static void compile(int mode, bool branch, bool long_branch, int condition, int offset) {
+    length = 0; failure = false; m68k_pc_offset = 2; displacement = offset;
+    result_live = mode == LIVE;
+    jit_fpu_cc_fpsr = mode == FPSR;
+    live.flags_in_flags = VALID; live.flags_on_stack = TRASH;
+    if (branch)
+        comp_fbcc_opp(0xf280 | condition | (long_branch ? 0x40 : 0));
+    else
+        comp_fscc_opp(0xf243, condition);
+    assert(!failure);
+    assert(live.flags_in_flags == TRASH && live.flags_on_stack == VALID);
+    assert(mode == LIVE || jit_fpu_cc_fpsr);
+}
+// Run the block for every run-time state of a compile state. The result
+// is checked by check(control); the FPSR must end with control.
+#ifdef USE_LONG_DOUBLE
+struct Raw { uae_u64 m; uae_u16 e; };
+static const std::vector<Raw> raws[5] = {
+    {{0x8000000000000000ULL, 0x3fff}, {0x0000000000000001ULL, 0}, {0x0000000100000000ULL, 0},
+     {0x8000000000000000ULL, 0}, {0xffffffffffffffffULL, 0x7ffe}},                     // finite
+    {{0xc000000000000000ULL, 0x7fff}, {0x8000000000000001ULL, 0x7fff},
+     {0x4000000000000000ULL, 0x7fff}, {0x0000000000000001ULL, 0x7fff}},                // NaN
+    {{0x8000000000000000ULL, 0x7fff}, {0, 0x7fff}},                                     // infinity
+    {}, {{0, 0}}};                                                                      // zero
+static void set_result(const Raw &raw, bool negative) {
+    const uae_u16 e = raw.e | (negative ? 0x8000 : 0);
+    memset(regs.fp_result.fp, 0xa5, sizeof regs.fp_result.fp);
+    memcpy(regs.fp_result.fp, &raw.m, 8);
+    memcpy(regs.fp_result.fp + 8, &e, 2);
+}
+#else
+struct Raw { uae_u64 m; };
+static const std::vector<Raw> raws[5] = {
+    {{0x3ff0000000000000ULL}, {0x0000000000000001ULL}, {0x0000000100000000ULL},
+     {0x0008000000000000ULL}, {0x7fefffffffffffffULL}},                                // finite
+    {{0x7ff8000000000000ULL}, {0x7ff0000000000001ULL}, {0x7ff0000100000000ULL}},        // NaN
+    {{0x7ff0000000000000ULL}},                                                          // infinity
+    {}, {{0}}};                                                                         // zero
+static void set_result(const Raw &raw, bool negative) {
+    const uae_u64 v = raw.m | (negative ? 0x8000000000000000ULL : 0);
+    memcpy(regs.fp_result.fp, &v, 8);
+}
+#endif
+template <typename F>
+static void run(int mode, uae_u32 extra_fpsr, F check) {
+    for (int state = 0; state <= 1; ++state) for (int control = 0; control < 16; ++control) {
+        if (mode != CHECK && state == 0)
+            continue;
+        if (mode == LIVE && !representable(control))
+            continue;
+        const int kind = control & 7;
+        const std::vector<Raw> none = {raws[4][0]};
+        for (const Raw &raw : state == 0 ? (kind == 0 || kind == 1 || kind == 2 || kind == 4 ?
+                raws[kind] : std::vector<Raw>()) : none) {
+            const uae_u32 cc = uae_u32(control) << 24;
+            fpu_fpsr_cc_written = state;
+            regs.fpsr = 0x00ab1270 | (state == 0 ? uae_u32(~control & 15) << 24 : cc);
+            set_result(raw, control & 8);
+            represented_control = (control & 1) ? 1 : (control & 4) ? (control & 12) : control;
+            vreg[3] = 0x12345678;
+            execute();
+            check(control);
+            assert(regs.fpsr == (0x00ab1270 | cc | extra_fpsr * (control & 1)));
+            assert(mode == LIVE || fpu_fpsr_cc_written);
+        }
+    }
+}
 int main() {
     for (const bool *table : {condition_table_6888x, condition_table_040_060}) {
         condition_table = table;
+        for (int mode : {LIVE, CHECK, FPSR})
         for (bool branch : {false, true}) for (bool long_branch : {false, true})
         for (int condition = 0; condition < 16; ++condition)
         for (int offset : {-100, 100}) {
-            length = 0; failure = false; m68k_pc_offset = 2; displacement = offset;
-            if (branch)
-                comp_fbcc_opp(0xf280 | condition | (long_branch ? 0x40 : 0));
-            else
-                comp_fscc_opp(0xf243, condition);
-            assert(!failure);
-            assert(live.flags_in_flags == TRASH && live.flags_on_stack == VALID);
+            compile(mode, branch, long_branch, condition, offset);
             if (branch) {
                 assert(not_taken == uintptr(comp_pc_p) + (long_branch ? 6 : 4));
                 assert(taken == uintptr(comp_pc_p) + 2 + offset);
                 assert(branch_cc == 5);
             }
-            // Reuse the emitted block after explicit FPSR writes and arithmetic.
-            for (bool written : {false, true}) for (int control = 0; control < 16; ++control) {
-                if (!written && (control == 3 || control == 5 || control == 6 ||
-                    control == 7 || control == 11 || control >= 13))
-                    continue;
-                fpu_fpsr_cc_written = written;
-                regs.fpsr = uae_u32(control) << 24;
-                represented_control = (control & 1) ? 1 :
-                    (control & 4) ? (control & 12) : control;
-                vreg[3] = 0x12345678;
-                execute();
+            run(mode, 0, [&](int control) {
                 bool expected = table[control * 32 + condition];
                 if (branch)
                     assert(cc(branch_cc) == expected);
                 else
                     assert(vreg[3] == (expected ? 0x123456ffU : 0x12345600U));
-                assert(regs.fpsr == uae_u32(control) << 24);
-            }
+            });
         }
     }
+    // Signalling predicates: the interpreter outside blocks guarded against
+    // the BSUN enable; inline inside them, setting BSUN and IOP on a NaN.
+    condition_table = condition_table_6888x;
     for (int condition = 16; condition < 32; ++condition) {
+        jit_fpu_fast_block = false;
         length = 0; failure = false;
         comp_fscc_opp(0xf240, condition);
         assert(failure && !length);
         failure = false;
         comp_fbcc_opp(0xf280 | condition);
+        assert(failure && !length);
+        jit_fpu_fast_block = true;
+        for (int mode : {LIVE, CHECK, FPSR}) for (bool branch : {false, true}) {
+            compile(mode, branch, false, condition, 100);
+            run(mode, 0x8080, [&](int control) {
+                bool expected = condition_table[control * 32 + condition];
+                if (branch)
+                    assert(cc(branch_cc) == expected);
+                else
+                    assert(vreg[3] == (expected ? 0x123456ffU : 0x12345600U));
+            });
+        }
+    }
+    for (int condition = 32; condition < 64; condition += 15) {
+        length = 0; failure = false;
+        comp_fscc_opp(0xf240, condition);
         assert(failure && !length);
     }
 }
@@ -179,10 +318,11 @@ int main() {
             cpp = directory / "driver.cpp"
             binary = directory / "predicates"
             cpp.write_text(driver)
-            subprocess.run(
-                ["c++", "-std=c++17", "-Wall", "-Wextra", "-Werror",
-                 str(cpp), "-o", str(binary)], check=True, timeout=30)
-            subprocess.run([str(binary)], check=True, timeout=10)
+            for layout in ([], ["-DUSE_LONG_DOUBLE"]):
+                subprocess.run(
+                    ["c++", "-std=c++17", "-Wall", "-Wextra", "-Werror", *layout,
+                     str(cpp), "-o", str(binary)], check=True, timeout=30)
+                subprocess.run([str(binary)], check=True, timeout=10)
 
     def test_decoded_ea_and_helper_call_state(self):
         source = (ROOT / "src/jit/x86_64/compemu_fpp_x86_64.cpp").read_text()

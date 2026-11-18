@@ -591,6 +591,11 @@ LOWFUNC(NONE,NONE,2,raw_zero_extend_16_rr,(W4 d, R2 s))
 	MOVZWLrr(s, d);
 }
 
+LOWFUNC(NONE,READ,2,raw_zero_extend_16_rm,(W4 d, MEMR s))
+{
+	ADDR32 MOVZWLmr(s, X86_NOREG, X86_NOREG, 1, d);
+}
+
 LOWFUNC(NONE,NONE,2,raw_zero_extend_8_rr,(W4 d, R1 s))
 {
 	MOVZBLrr(s, d);
@@ -901,6 +906,16 @@ LOWFUNC(NONE,WRITE,2,raw_mov_l_mr,(MEMW d, R4 s))
 	ADDR32 MOVLrm(s, d, X86_NOREG, X86_NOREG, 1);
 }
 
+/* Store the 64-bit value hi:lo with a single write, so that a following wider
+   load (FLDT) can forward it; two 32-bit stores into the same 8 bytes stall. */
+LOWFUNC(WRITE,WRITE,3,raw_mov_q_mrr_pair,(MEMW d, RW4 hi, RW4 lo))
+{
+	MOVLrr(lo, lo);
+	SHLQir(32, hi);
+	ORQrr(lo, hi);
+	ADDR32 MOVQrm(hi, d, X86_NOREG, X86_NOREG, 1);
+}
+
 LOWFUNC(NONE,WRITE,2,raw_mov_w_mr,(MEMW d, R2 s))
 {
 	ADDR32 MOVWrm(s, d, X86_NOREG, X86_NOREG, 1);
@@ -1011,6 +1026,16 @@ LOWFUNC(WRITE,NONE,2,raw_test_b_rr,(R1 d, R1 s))
 LOWFUNC(WRITE,READ,2,raw_test_b_mi,(MEMR d, IMM s))
 {
 	ADDR32 TESTBim(s, d, X86_NOREG, X86_NOREG, 1);
+}
+
+LOWFUNC(WRITE,RMW,2,raw_or_l_mi,(MEMRW d, IMM s))
+{
+	ADDR32 ORLim(s, d, X86_NOREG, X86_NOREG, 1);
+}
+
+LOWFUNC(WRITE,READ,2,raw_test_l_mi,(MEMR d, IMM s))
+{
+	ADDR32 TESTLim(s, d, X86_NOREG, X86_NOREG, 1);
 }
 
 LOWFUNC(WRITE,NONE,2,raw_xor_l_ri,(RW4 d, IMM i))
@@ -1978,11 +2003,8 @@ static inline void raw_fp_cleanup_drop(void)
 		live.tos=-1;
 	}
 #endif
-	while (live.tos>=1) {
-		emit_byte(0xde);
-		emit_byte(0xd9);
-		live.tos-=2;
-	}
+	/* fstp st(0), not fcompp: a compare raises IE for a NaN, and compiled
+	   FPU code takes the accrued exceptions from the x87 sticky flags */
 	while (live.tos>=0) {
 		emit_byte(0xdd);
 		emit_byte(0xd8);
@@ -2119,12 +2141,6 @@ LOWFUNC(NONE,READ,2,raw_fmovi_rm,(FW r, MEMPTRR m))
 	tos_make(r);
 }
 
-LOWFUNC(NONE,WRITE,2,raw_fmovi_mr,(MEMPTRW m, FR r))
-{
-	make_tos(r);
-	raw_fistl(m);
-}
-
 LOWFUNC(NONE,WRITE,3,raw_fmovi_mrb,(MEMPTRW m, FR r, double *bounds))
 {
 	/* Clamp value to the given range and convert to integer. */
@@ -2197,48 +2213,6 @@ LOWFUNC(NONE,READ,2,raw_fmov_ext_rm,(FW r, MEMPTRR m))
 	tos_make(r);
 }
 
-LOWFUNC(NONE,NONE,1,raw_fmov_pi,(FW r))
-{
-	emit_byte(0xd9);
-	emit_byte(0xeb);
-	tos_make(r);
-}
-
-LOWFUNC(NONE,NONE,1,raw_fmov_log10_2,(FW r))
-{
-	emit_byte(0xd9);
-	emit_byte(0xec);
-	tos_make(r);
-}
-
-LOWFUNC(NONE,NONE,1,raw_fmov_log2_e,(FW r))
-{
-	emit_byte(0xd9);
-	emit_byte(0xea);
-	tos_make(r);
-}
-
-LOWFUNC(NONE,NONE,1,raw_fmov_loge_2,(FW r))
-{
-	emit_byte(0xd9);
-	emit_byte(0xed);
-	tos_make(r);
-}
-
-LOWFUNC(NONE,NONE,1,raw_fmov_1,(FW r))
-{
-	emit_byte(0xd9);
-	emit_byte(0xe8);
-	tos_make(r);
-}
-
-LOWFUNC(NONE,NONE,1,raw_fmov_0,(FW r))
-{
-	emit_byte(0xd9);
-	emit_byte(0xee);
-	tos_make(r);
-}
-
 LOWFUNC(NONE,NONE,2,raw_fmov_rr,(FW d, FR s))
 {
 	int ds;
@@ -2276,6 +2250,18 @@ LOWFUNC(NONE,READ,2,raw_fldcw_m_indexed,(R4 index, MEMR base))
 	/* SIB: scale=00 (x1), index=index_reg, base=scratch */
 	emit_byte((_r(index) << 3) | _r(scratch));
 	POPQr(scratch);
+}
+
+/* FLD qword [base + index], with the base in a preserved scratch register as
+   raw_fldcw_m_indexed() */
+LOWFUNC(NONE,READ,3,raw_fmov_rm_indexed,(FW r, R4 index, MEMR base))
+{
+	int scratch = (_rR(index) == _rR(X86_RAX)) ? X86_RCX : X86_RAX;
+	PUSHQr(scratch);
+	MOVQir(base, scratch);
+	FLDLm(0, scratch, index, 1);
+	POPQr(scratch);
+	tos_make(r);
 }
 
 LOWFUNC(NONE,NONE,2,raw_fsqrt_rr,(FW d, FR s))
@@ -2338,121 +2324,7 @@ LOWFUNC(NONE,NONE,2,raw_frndint_rr,(FW d, FR s))
 	}
 }
 
-LOWFUNC(NONE,NONE,2,raw_fcos_rr,(FW d, FR s))
-{
-	int ds;
-
-	if (d!=s) {
-		usereg(s);
-		ds=stackpos(s);
-		emit_byte(0xd9);
-		emit_byte(0xc0+ds); /* duplicate source */
-		emit_byte(0xd9);
-		emit_byte(0xff); 	/* take cos */
-		tos_make(d); 		/* store to destination */
-	}
-	else {
-		make_tos(d);
-		emit_byte(0xd9);
-		emit_byte(0xff); 	/* take cos */
-	}
-}
-
-LOWFUNC(NONE,NONE,2,raw_fsin_rr,(FW d, FR s))
-{
-	int ds;
-
-	if (d!=s) {
-		usereg(s);
-		ds=stackpos(s);
-		emit_byte(0xd9);
-		emit_byte(0xc0+ds); /* fld x */
-		emit_byte(0xd9);
-		emit_byte(0xfe); 	/* fsin sin(x) */
-		tos_make(d); 		/* store to destination */
-	}
-	else {
-		make_tos(d);
-		emit_byte(0xd9);
-		emit_byte(0xfe);    /* fsin y=sin(x) */
-	}
-}
-
 static const double one = 1;
-
-LOWFUNC(NONE,NONE,2,raw_ftwotox_rr,(FW d, FR s))
-{
-	int ds;
-
-	usereg(s);
-	ds=stackpos(s);
-	emit_byte(0xd9);
-	emit_byte(0xc0+ds); /* fld x */
-	emit_byte(0xd9);
-	emit_byte(0xc0);	/* duplicate top of stack. Now up to 8 high */
-	emit_byte(0xd9);
-	emit_byte(0xfc);    /* frndint int(x) */
-	emit_byte(0xd9);
-	emit_byte(0xc9);    /* swap top two elements */
-	emit_byte(0xd8);
-	emit_byte(0xe1);    /* fsub frac(x) = x - int(x) */
-	emit_byte(0xd9);
-	emit_byte(0xf0);    /* f2xm1 (2^frac(x))-1 */
-	x86_fadd_m(JITPTR  &one); /* Add '1' without using extra stack space */
-	emit_byte(0xd9);
-	emit_byte(0xfd);    /* fscale (2^frac(x))*2^int(x) */
-	emit_byte(0xdd);
-	emit_byte(0xd9);    /* fstp copy & pop */
-	tos_make(d);        /* store y=2^x */
-}
-
-LOWFUNC(NONE,NONE,2,raw_fetox_rr,(FW d, FR s))
-{
-	int ds;
-
-	usereg(s);
-	ds=stackpos(s);
-	emit_byte(0xd9);
-	emit_byte(0xc0+ds); /* duplicate source */
-	emit_byte(0xd9);
-	emit_byte(0xea);    /* fldl2e log2(e) */
-	emit_byte(0xde);
-	emit_byte(0xc9);    /* fmulp --- multiply source by log2(e) */
-
-	emit_byte(0xd9);
-	emit_byte(0xc0);  /* duplicate top of stack. Now up to 8 high */
-	emit_byte(0xd9);
-	emit_byte(0xfc);  /* rndint */
-	emit_byte(0xd9);
-	emit_byte(0xc9);  /* swap top two elements */
-	emit_byte(0xd8);
-	emit_byte(0xe1);  /* subtract rounded from original */
-	emit_byte(0xd9);
-	emit_byte(0xf0);  /* f2xm1 */
-	x86_fadd_m(JITPTR &one);	/* Add '1' without using extra stack space */
-	emit_byte(0xd9);
-	emit_byte(0xfd);  /* and scale it */
-	emit_byte(0xdd);
-	emit_byte(0xd9);  /* take he rounded value off */
-	tos_make(d); /* store to destination */
-}
-
-LOWFUNC(NONE,NONE,2,raw_flog2_rr,(FW d, FR s))
-{
-	int ds;
-
-	usereg(s);
-	ds=stackpos(s);
-	emit_byte(0xd9);
-	emit_byte(0xc0+ds); /* duplicate source */
-	emit_byte(0xd9);
-	emit_byte(0xe8);    /* push '1' */
-	emit_byte(0xd9);
-	emit_byte(0xc9);    /* swap top two */
-	emit_byte(0xd9);
-	emit_byte(0xf1);    /* take 1*log2(x) */
-	tos_make(d); /* store to destination */
-}
 
 
 LOWFUNC(NONE,NONE,2,raw_fneg_rr,(FW d, FR s))
@@ -2532,42 +2404,114 @@ LOWFUNC(NONE,NONE,2,raw_fcmp_rr,(FR d, FR s))
 	emit_byte(0xdd);
 	emit_byte(0xe0+ds); /* cmp dest with source*/
 }
-/* FCMP: r = d - s, but equal infinities compare equal although their
-   difference is NaN. They give a zero with the sign of d instead.
-   The fixup uses fucomi, which every SSE2 host has. */
-LOWFUNC(NONE,NONE,3,raw_fcmp_result_rrr,(FW r, FR d, FR s))
+/* FCMP: r gets the FPSR condition codes (bits 24-27) of d - s like the
+   interpreter's floatx80_cmp(): N if d < s, Z if equal (with N for equal
+   zeros and infinities if d is negative), NAN if unordered (with the sign of
+   the propagated NaN as N on the 68040). Raises no x87 exception except IE
+   for a signalling NaN, as FCMP does. */
+#define FNSTSWm(D,B,I,S)	_ESCmi(D,B,I,S,075)
+#define FPSR_CC_N_BIT	0x08000000
+#define FPSR_CC_Z_BIT	0x04000000
+#define FPSR_CC_NAN_BIT	0x01000000
+static uae_u16 fcmp_fxam_sw;
+LOWFUNC(NONE,NONE,4,raw_fcmp_cc_rrr,(W4 r, FR d, FR s, IMM signed_nan))
 {
-	int ds, ss;
+	int ss;
+	uae_u8 *unordered, *unequal, *setn, *done1, *done2, *done3, *done4;
+	const uintptr fxam_c = JITPTR &fcmp_fxam_sw + 1;
 
-	raw_fmov_rr(r, d);
-	raw_fsub_rr(r, s);
-	if (!have_cmov) {
-		return;
-	}
-	make_tos(r);
-	ds = stackpos(d);
+	usereg(s);
+	usereg(d);
+	make_tos(d);
 	ss = stackpos(s);
 
 	emit_byte(0xdb);
-	emit_byte(0xe8); /* fucomi st(0),st(0) */
-	emit_byte(0x7b);
-	emit_byte(14); /* jnp: the result is a number */
-	emit_byte(0xd9);
-	emit_byte(0xc0+ds); /* fld d */
-	emit_byte(0xdf);
-	emit_byte(0xe9+ss); /* fucomip d with s, pop */
-	emit_byte(0x75);
-	emit_byte(8); /* jne: not equal */
+	emit_byte(0xe8+ss); /* fucomi st(0),s */
 	emit_byte(0x7a);
-	emit_byte(6); /* jp: unordered */
-	emit_byte(0xd9);
-	emit_byte(0xe8); /* fld1 */
-	emit_byte(0xd8);
-	emit_byte(0xf1+ds); /* fdiv d: 1/inf is a zero with its sign */
-	emit_byte(0xdd);
-	emit_byte(0xd9); /* fstp st(1): replace r, pop */
-}
+	unordered = get_target(); /* jp */
+	emit_byte(0);
+	emit_byte(0x75);
+	unequal = get_target(); /* jne */
+	emit_byte(0);
 
+	/* equal: N is the sign of d for zeros and infinities */
+	raw_mov_l_ri(r, FPSR_CC_Z_BIT);
+	emit_byte(0xd9);
+	emit_byte(0xe5); /* fxam */
+	FNSTSWm(fxam_c - 1, X86_NOREG, X86_NOREG, 1);
+	raw_test_b_mi(fxam_c, 0x02); /* C1: negative */
+	emit_byte(0x74);
+	done1 = get_target();
+	emit_byte(0);
+	raw_test_b_mi(fxam_c, 0x01); /* C0: infinity */
+	emit_byte(0x75);
+	setn = get_target();
+	emit_byte(0);
+	raw_test_b_mi(fxam_c, 0x04); /* C2 set: normal or denormal */
+	emit_byte(0x75);
+	done2 = get_target();
+	emit_byte(0);
+	*setn = get_target() - (setn + 1);
+	raw_or_l_ri(r, FPSR_CC_N_BIT);
+	emit_byte(0xeb);
+	done3 = get_target();
+	emit_byte(0);
+
+	/* unequal: N if d < s (CF from fucomi) */
+	*unequal = get_target() - (unequal + 1);
+	raw_mov_l_ri(r, 0); /* a mov: keeps CF */
+	emit_byte(0x73);
+	done4 = get_target(); /* jnc */
+	emit_byte(0);
+	raw_mov_l_ri(r, FPSR_CC_N_BIT);
+	emit_byte(0xeb);
+	uae_u8 *done5 = get_target();
+	emit_byte(0);
+
+	*unordered = get_target() - (unordered + 1);
+	raw_mov_l_ri(r, FPSR_CC_NAN_BIT);
+	uae_u8 *done6 = NULL, *src_nan = NULL;
+	if (signed_nan) {
+		/* N is the sign of d if it is a NaN, else of s */
+		emit_byte(0xd9);
+		emit_byte(0xe5); /* fxam */
+		FNSTSWm(fxam_c - 1, X86_NOREG, X86_NOREG, 1);
+		raw_test_b_mi(fxam_c, 0x04); /* C2: not a NaN */
+		emit_byte(0x75);
+		src_nan = get_target(); /* jnz */
+		emit_byte(0);
+		raw_test_b_mi(fxam_c, 0x01); /* C0 without C2: a NaN */
+		emit_byte(0x75);
+		uae_u8 *dst_nan = get_target(); /* jnz */
+		emit_byte(0);
+		*src_nan = get_target() - (src_nan + 1);
+		emit_byte(0xd9);
+		emit_byte(0xc8+ss); /* fxch s */
+		emit_byte(0xd9);
+		emit_byte(0xe5); /* fxam */
+		FNSTSWm(fxam_c - 1, X86_NOREG, X86_NOREG, 1);
+		emit_byte(0xd9);
+		emit_byte(0xc8+ss); /* fxch s */
+		*dst_nan = get_target() - (dst_nan + 1);
+		raw_test_b_mi(fxam_c, 0x02); /* C1: negative */
+		emit_byte(0x74);
+		done6 = get_target();
+		emit_byte(0);
+		raw_or_l_ri(r, FPSR_CC_N_BIT);
+	}
+
+	*done1 = get_target() - (done1 + 1);
+	*done2 = get_target() - (done2 + 1);
+	*done3 = get_target() - (done3 + 1);
+	*done4 = get_target() - (done4 + 1);
+	*done5 = get_target() - (done5 + 1);
+	if (done6)
+		*done6 = get_target() - (done6 + 1);
+}
+#undef FNSTSWm
+#undef FPSR_CC_N_BIT
+#undef FPSR_CC_Z_BIT
+#undef FPSR_CC_NAN_BIT
 
 LOWFUNC(NONE,NONE,2,raw_fmul_rr,(FRW d, FR s))
 {
@@ -2611,40 +2555,6 @@ LOWFUNC(NONE,NONE,2,raw_fdiv_rr,(FRW d, FR s))
 		emit_byte(0xd8);
 		emit_byte(0xf0+ds); /* div dest by source*/
 	}
-}
-
-LOWFUNC(NONE,NONE,2,raw_frem_rr,(FRW d, FR s))
-{
-	int ds;
-
-	usereg(s);
-	usereg(d);
-
-	make_tos2(d,s);
-	ds=stackpos(s);
-
-	if (ds!=1) {
-		jit_abort("Failed horribly in raw_frem_rr! ds is %d",ds);
-	}
-	emit_byte(0xd9);
-	emit_byte(0xf8); /* take rem from dest by source */
-}
-
-LOWFUNC(NONE,NONE,2,raw_frem1_rr,(FRW d, FR s))
-{
-	int ds;
-
-	usereg(s);
-	usereg(d);
-
-	make_tos2(d,s);
-	ds=stackpos(s);
-
-	if (ds!=1) {
-		jit_abort("Failed horribly in raw_frem1_rr! ds is %d",ds);
-	}
-	emit_byte(0xd9);
-	emit_byte(0xf5); /* take rem1 from dest by source */
 }
 
 
@@ -2849,52 +2759,6 @@ LOWFUNC(NONE,NONE,1,raw_fcut_r,(FRW r))
 	emit_byte(0x83);
 	emit_byte(0xc4);
 	emit_byte(0x08); /* add +8 to esp */
-}
-
-LOWFUNC(NONE,NONE,2,raw_fgetexp_rr,(FW d, FR s))
-{
-	int ds;
-
-	if (d!=s) {
-		ds=stackpos(s);
-		emit_byte(0xd9);
-		emit_byte(0xc0+ds); /* fld x */
-		emit_byte(0xd9);
-		emit_byte(0xf4);    /* fxtract exp push man */
-		emit_byte(0xdd);
-		emit_byte(0xd8);    /* fstp just pop man */
-		tos_make(d);        /* store exp to destination */
-	}
-	else {
-		make_tos(d);        /* tos=x=y */
-		emit_byte(0xd9);
-		emit_byte(0xf4);    /* fxtract exp push man */
-		emit_byte(0xdd);
-		emit_byte(0xd8);    /* fstp just pop man */
-	}
-}
-
-LOWFUNC(NONE,NONE,2,raw_fgetman_rr,(FW d, FR s))
-{
-	int ds;
-
-	if (d!=s) {
-		ds=stackpos(s);
-		emit_byte(0xd9);
-		emit_byte(0xc0+ds); /* fld x */
-		emit_byte(0xd9);
-		emit_byte(0xf4);    /* fxtract exp push man */
-		emit_byte(0xdd);
-		emit_byte(0xd9);    /* fstp copy man up & pop */
-		tos_make(d);        /* store man to destination */
-	}
-	else {
-		make_tos(d);        /* tos=x=y */
-		emit_byte(0xd9);
-		emit_byte(0xf4);    /* fxtract exp push man */
-		emit_byte(0xdd);
-		emit_byte(0xd9);    /* fstp copy man up & pop */
-	}
 }
 
 LOWFUNC(NONE,NONE,2,raw_flogN_rr,(FW d, FR s))

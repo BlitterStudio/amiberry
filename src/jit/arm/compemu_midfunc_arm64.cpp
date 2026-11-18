@@ -729,14 +729,14 @@ STATIC_INLINE void write_jmp_target(uae_u32* jmpaddr, uintptr a)
 		/* branch always */
 		off = off & 0x3ffffff;
 		*(jmpaddr) = (*(jmpaddr) & 0xfc000000) | off;
-	} else if((*(jmpaddr) & 0x7c000000) == 0x34000000) {
-		/* TBZ/TBNZ/CBZ/CBNZ */
+	} else if((*(jmpaddr) & 0x7e000000) == 0x36000000) {
+		/* TBZ/TBNZ: 14-bit offset */
 		if((a > (uintptr)jmpaddr && off > 0x1fff) || (a < (uintptr)jmpaddr && (~off) > 0x1fff))
 			write_log("JIT: TBZ/TBNZ branch to target too long.\n");
 		off = off & 0x3fff;
 		*(jmpaddr) = (*(jmpaddr) & 0xfffc001f) | (off << 5);
 	} else {
-		/* conditional branch */
+		/* B.cond and CBZ/CBNZ: 19-bit offset at bits 5-23 */
 		if((a > (uintptr)jmpaddr && off > 0x3ffff) || (a < (uintptr)jmpaddr && (~off) > 0x3ffff))
 			write_log("JIT: Branch to target too long.\n");
 		off = off & 0x7ffff;
@@ -965,6 +965,7 @@ static void fpx_count(uae_u32 opext, int path)
  * argument. All registers are flushed before. */
 static void fpx_call4(uintptr fn)
 {
+	jit_fpu_loop_ok = false;	// the FPU core may change FPCR
 	LOAD_U64(16, fn);
 	compemu_raw_call_r(16);
 }
@@ -2215,16 +2216,6 @@ MIDFUNC(2,frndintz_rr,(FW d, FR s))
 }
 MENDFUNC(2,frndintz_rr,(FW d, FR s))
 
-MIDFUNC(2,fmod_rr,(FRW d, FR s))
-{
-	s = f_readreg(s);
-	d = f_rmw(d);
-	raw_fmod_rr(d, s);
-	f_unlock(s);
-	f_unlock(d);
-}
-MENDFUNC(2,fmod_rr,(FRW d, FR s))
-
 MIDFUNC(2,fsgldiv_rr,(FRW d, FR s))
 {
 	s = f_readreg(s);
@@ -2242,16 +2233,6 @@ MIDFUNC(1,fcuts_r,(FRW r))
 	f_unlock(r);
 }
 MENDFUNC(1,fcuts_r,(FRW r))
-
-MIDFUNC(2,frem1_rr,(FRW d, FR s))
-{
-	s = f_readreg(s);
-	d = f_rmw(d);
-	raw_frem1_rr(d, s);
-	f_unlock(s);
-	f_unlock(d);
-}
-MENDFUNC(2,frem1_rr,(FRW d, FR s))
 
 MIDFUNC(2,fsglmul_rr,(FRW d, FR s))
 {

@@ -49,6 +49,7 @@
 #include "readcpu.h"
 #include "newcpu.h"
 #include "compemu_x86_64.h"
+#include "../compemu_fpp_common.h"
 //#include "fpu/fpu.h"
 //#include "fpu/flags.h"
 //#include "fpu/exceptions.h"
@@ -90,9 +91,11 @@ struct jit_disable_opcodes jit_disable;
 #endif
 
 //#define STATIC_INLINE static inline
+/* The condition codes come from FP_RESULT. Its writeback (f_tomem) clears
+   fpu_fpsr_cc_written, so the per-instruction store is not needed. */
 #define MAKE_FPSR(r) do { \
 	fmov_rr(FP_RESULT, r); \
-	mov_b_mi(JITPTR &fpu_fpsr_cc_written, 0); \
+	jit_fpu_cc_fpsr = false; \
 } while (0)
 
 #if 0
@@ -118,19 +121,27 @@ static void fpuop_illg(uae_u32 opcode, uae_u32 /* extra */)
 #endif
 
 uae_s32 temp_fp[4];  /* To convert between FP/integer */
-/* The x87 needs the explicit integer bit in normal numbers, infinities and
+/* Read a 68k extended value at ad into temp_fp as an x87 extended value.
+   The x87 needs the explicit integer bit in normal numbers, infinities and
    NaNs, but a zero or denormal with it set is a different, nonzero value.
-   The 68k accepts either, so set it in temp_fp if the exponent is not zero. */
-STATIC_INLINE void temp_fp_integer_bit(void)
+   The 68k accepts either, so set it if the exponent is not zero. The mantissa
+   is stored with one 64-bit write so that the FLDT can forward it. */
+STATIC_INLINE void read_fp_ext_to_temp(int ad, bool advance)
 {
-	mov_l_rm(S2, JITPTR (temp_fp) + 8);
+	readword(ad, S2, S3);
+	mov_w_mr((JITPTR temp_fp) + 8, S2);
 	and_l_ri(S2, 0x7fff);
 	add_l_ri(S2, 0x7fff);	/* bit 15 is set if the exponent is not zero */
 	and_l_ri(S2, 0x8000);
 	shll_l_ri(S2, 16);
-	mov_l_rm(S3, JITPTR (temp_fp) + 4);
-	or_l(S3, S2);
-	mov_l_mr(JITPTR (temp_fp) + 4, S3);
+	add_l_ri(ad, 4);
+	readlong(ad, S4, S3);
+	or_l(S4, S2);
+	add_l_ri(ad, 4);
+	readlong(ad, S2, S3);
+	if (advance)
+		add_l_ri(ad, 4);
+	mov_q_mrr_pair(JITPTR temp_fp, S4, S2);
 }
 
 /* return register number, or -1 for failure */
@@ -140,8 +151,6 @@ STATIC_INLINE int get_fp_value(uae_u32 opcode, uae_u16 extra)
 	int mode;
 	int reg;
 	uae_u32 ad = 0;
-	static int const sz1[8] = { 4, 4, 12, 12, 2, 8, 1, 0 };
-	static int const sz2[8] = { 4, 4, 12, 12, 2, 8, 2, 0 };
 
 	if ((extra & 0x4000) == 0)
 	{
@@ -214,11 +223,11 @@ STATIC_INLINE int get_fp_value(uae_u32 opcode, uae_u16 extra)
 	case 3: /* (An)+ */
 		ad = S1;
 		mov_l_rr(ad, reg + 8);
-		lea_l_brr(reg + 8, reg + 8, (reg == 7 ? sz2[size] : sz1[size]));
+		lea_l_brr(reg + 8, reg + 8, (reg == 7 ? fpp_ea_sz2[size] : fpp_ea_sz1[size]));
 		break;
 	case 4: /* -(An) */
 		ad = S1;
-		lea_l_brr(reg + 8, reg + 8, -(reg == 7 ? sz2[size] : sz1[size]));
+		lea_l_brr(reg + 8, reg + 8, -(reg == 7 ? fpp_ea_sz2[size] : fpp_ea_sz1[size]));
 		mov_l_rr(ad, reg + 8);
 		break;
 	case 5: /* d16(An) */
@@ -278,7 +287,7 @@ STATIC_INLINE int get_fp_value(uae_u32 opcode, uae_u16 extra)
 				if (size == 6)
 					address++;
 				mov_l_ri(ad, address);
-				m68k_pc_offset += sz2[size];
+				m68k_pc_offset += fpp_ea_sz2[size];
 			}
 			break;
 		default:
@@ -301,15 +310,7 @@ STATIC_INLINE int get_fp_value(uae_u32 opcode, uae_u16 extra)
 		fmovs_rm(FS1, JITPTR temp_fp);
 		break;
 	case 2: /* extended precision */
-		readword(ad, S2, S3);
-		mov_w_mr((JITPTR temp_fp) + 8, S2);
-		add_l_ri(ad, 4);
-		readlong(ad, S2, S3);
-		mov_l_mr(JITPTR (temp_fp) + 4, S2);
-		add_l_ri(ad, 4);
-		readlong(ad, S2, S3);
-		mov_l_mr(JITPTR (temp_fp), S2);
-		temp_fp_integer_bit();
+		read_fp_ext_to_temp(ad, false);
 		delay2;
 		fmov_ext_rm(FS1, JITPTR (temp_fp));
 		break;
@@ -323,11 +324,10 @@ STATIC_INLINE int get_fp_value(uae_u32 opcode, uae_u16 extra)
 		fmovi_rm(FS1, JITPTR temp_fp);
 		break;
 	case 5: /* double precision */
-		readlong(ad, S2, S3);
-		mov_l_mr((JITPTR temp_fp) + 4, S2);
+		readlong(ad, S4, S3);
 		add_l_ri(ad, 4);
 		readlong(ad, S2, S3);
-		mov_l_mr(JITPTR (temp_fp), S2);
+		mov_q_mrr_pair(JITPTR temp_fp, S4, S2);
 		delay2;
 		fmov_rm(FS1, JITPTR (temp_fp));
 		break;
@@ -361,8 +361,6 @@ STATIC_INLINE int put_fp_value(int val, uae_u32 opcode, uae_u16 extra)
 	int mode;
 	int reg;
 	uae_u32 ad;
-	static int const sz1[8] = { 4, 4, 12, 12, 2, 8, 1, 0 };
-	static int const sz2[8] = { 4, 4, 12, 12, 2, 8, 2, 0 };
 
 	if ((extra & 0x4000) == 0)
 	{
@@ -395,7 +393,6 @@ STATIC_INLINE int put_fp_value(int val, uae_u32 opcode, uae_u16 extra)
 			return 0;
 		case 0: /* long */
 			fmovi_mrb(JITPTR temp_fp, val, clamp_bounds.l);
-			fmovi_mr(JITPTR temp_fp, val);
 			delay;
 			mov_l_rm(reg, JITPTR temp_fp);
 			return 0;
@@ -438,11 +435,11 @@ STATIC_INLINE int put_fp_value(int val, uae_u32 opcode, uae_u16 extra)
 	case 3: /* (An)+ */
 		ad = S1;
 		mov_l_rr(ad, reg + 8);
-		lea_l_brr(reg + 8, reg + 8, (reg == 7 ? sz2[size] : sz1[size]));
+		lea_l_brr(reg + 8, reg + 8, (reg == 7 ? fpp_ea_sz2[size] : fpp_ea_sz1[size]));
 		break;
 	case 4: /* -(An) */
 		ad = S1;
-		lea_l_brr(reg + 8, reg + 8, -(reg == 7 ? sz2[size] : sz1[size]));
+		lea_l_brr(reg + 8, reg + 8, -(reg == 7 ? fpp_ea_sz2[size] : fpp_ea_sz1[size]));
 		mov_l_rr(ad, reg + 8);
 		break;
 	case 5: /* d16(An) */
@@ -498,7 +495,7 @@ STATIC_INLINE int put_fp_value(int val, uae_u32 opcode, uae_u16 extra)
 
 				ad = S1;
 				mov_l_ri(ad, address);
-				m68k_pc_offset += sz2[size];
+				m68k_pc_offset += fpp_ea_sz2[size];
 			}
 			break;
 		default:
@@ -523,8 +520,9 @@ STATIC_INLINE int put_fp_value(int val, uae_u32 opcode, uae_u16 extra)
 	case 2: /* extended precision */
 		fmov_ext_mr(JITPTR temp_fp, val);
 		delay;
-		mov_w_rm(S2, JITPTR temp_fp + 8);
-		writeword_clobber(ad, S2, S3);
+		zero_extend_16_rm(S2, JITPTR temp_fp + 8);
+		shll_l_ri(S2, 16);	/* the exponent and a zero pad word */
+		writelong_clobber(ad, S2, S3);
 		add_l_ri(ad, 4);
 		mov_l_rm(S2, JITPTR temp_fp + 4);
 		writelong_clobber(ad, S2, S3);
@@ -628,10 +626,22 @@ void comp_fdbcc_opp (uae_u32 /* opcode */, uae_u16 /* extra */)
 }
 
 
-static void get_fp_condition(int condition)
+static void fp_signal_bsun(void);
+
+/* S4 = all ones if the predicate holds. A signalling predicate also sets
+   BSUN and AE_IOP on a NaN (blocks guarded against the BSUN trap enable). */
+static void get_fp_condition(int condition, bool signalling = false)
 {
+	if (!jit_fp_result_live()) {
+		fpu_cond_from_fpsr(S4, S3, fpp_get_cond_mask(condition),
+			(jit_fpu_cc_fpsr ? 0 : FPU_COND_CHECK_RESULT) | (signalling ? FPU_COND_SIGNAL : 0));
+		jit_fpu_cc_fpsr = true;
+		return;
+	}
+	if (signalling)
+		fp_signal_bsun();
 	fflags_into_flags(S2);
-	mov_l_ri(S1, 255);
+	mov_l_ri(S1, 0xffffffff);
 	mov_l_ri(S4, 0);
 	switch (condition & 0x0f)
 	{
@@ -692,18 +702,29 @@ static void get_fp_condition(int condition)
 		mov_l_rr(S4, S1);
 		break;
 	}
+	/* Discard the temporary x87 comparison flags, not the saved integer CCR */
+	dont_care_flags_x87();
+}
 
-	fpu_cond_from_fpsr(S4, S3, fpp_get_cond_mask(condition));
+/* BSUN and AE_IOP if FP_RESULT, in an x87 register, is a NaN */
+static void fp_signal_bsun(void)
+{
+	get_fp_condition(0x08);	/* NaN: all ones */
+	and_l_ri(S4, 0x00008080);	/* BSUN | AE_IOP */
+	mov_l_rm(S1, JITPTR &regs.fpsr);
+	or_l(S1, S4);
+	mov_l_mr(JITPTR &regs.fpsr, S1);
 }
 
 void comp_fscc_opp(uae_u32 opcode, uae_u16 extra)
 {
-	// Signaling predicates must update BSUN and honor its FPCR enable.
-	if (!jit_fpu_enabled() || jit_disable.fscc || (extra & 0x30) || (opcode & 0x38)) {
+	const bool signalling = (extra & 0x10) != 0;
+	if (!jit_fpu_enabled() || jit_disable.fscc || (extra & 0x20) || (opcode & 0x38) ||
+		(signalling && !jit_fpu_fast_block)) {
 		FAIL(1);
 		return;
 	}
-	get_fp_condition(extra);
+	get_fp_condition(extra, signalling);
 	mov_b_rr(opcode & 7, S4);
 }
 
@@ -732,12 +753,12 @@ void comp_fbcc_opp(uae_u32 opcode)
 		FAIL(1);
 		return;
 	}
-	if (opcode & 0x30)
-	{	/* Signaling predicates also require interpreter BSUN handling. */
+	if ((opcode & 0x20) || ((opcode & 0x10) && !jit_fpu_fast_block))
+	{
 		FAIL(1);
 		return;
 	}
-	get_fp_condition(opcode);
+	get_fp_condition(opcode, (opcode & 0x10) != 0);
 	if ((opcode & 0x40) == 0)
 	{
 		off = (uae_s32) (uae_s16) comp_get_iword((m68k_pc_offset += 2) - 2);
@@ -997,48 +1018,47 @@ void comp_frestore_opp(uae_u32 opcode)
 }
 #endif
 
-#if defined(USE_LONG_DOUBLE) || defined(USE_QUAD_DOUBLE)
-static const fpu_register const_e	= LD(2.7182818284590452353); // LD(2.7182818284590452353602874713526625);
-static const fpu_register const_log10_e	= LD(0.4342944819032518276511289189166051);
-static const fpu_register const_loge_10	= LD(2.3025850929940456840179914546843642);
-#else
-static const fpu_register const_e	= 2.7182818284590452354;
-static const fpu_register const_log10_e	= 0.43429448190325182765;
-static const fpu_register const_loge_10	= 2.30258509299404568402;
-#endif
-
-static const fpu_register power10[]		= {
-	LD(1e0), LD(1e1), LD(1e2), LD(1e4), LD(1e8), LD(1e16), LD(1e32), LD(1e64), LD(1e128), LD(1e256)
-#if defined(USE_LONG_DOUBLE) || defined(USE_QUAD_DOUBLE)
-,	LD(1e512), LD(1e1024), LD(1e2048), LD(1e4096)
-#endif
-};
-
-/* 128 words, indexed through the low byte of the 68k fpu control word */
-#if 1
-/* unused*/
+/* x87 control words, indexed with fldcw_m_indexed() by the rounding precision
+   and mode bits of the 68k FPCR (byte offset fpcr & 0xf0): those
+   set_fpucw_x87() (fpp_native.cpp) loads for the interpreted instructions, so
+   that unless the FPU registers are long doubles, every precision is the
+   double precision: like the host core, single precision rounds the double
+   result (the store after the operation) */
 static uae_u16 x86_fpucw[]={
+#ifdef USE_LONG_DOUBLE
     0x137f, 0x137f, 0x137f, 0x137f, 0x137f, 0x137f, 0x137f, 0x137f, /* p0r0 */
     0x1f7f, 0x1f7f, 0x1f7f, 0x1f7f, 0x1f7f, 0x1f7f, 0x1f7f, 0x1f7f, /* p0r1 */
     0x177f, 0x177f, 0x177f, 0x177f, 0x177f, 0x177f, 0x177f, 0x177f, /* p0r2 */
     0x1b7f, 0x1b7f, 0x1b7f, 0x1b7f, 0x1b7f, 0x1b7f, 0x1b7f, 0x1b7f, /* p0r3 */
+#else
+    0x127f, 0x127f, 0x127f, 0x127f, 0x127f, 0x127f, 0x127f, 0x127f, /* p0r0 */
+    0x1e7f, 0x1e7f, 0x1e7f, 0x1e7f, 0x1e7f, 0x1e7f, 0x1e7f, 0x1e7f, /* p0r1 */
+    0x167f, 0x167f, 0x167f, 0x167f, 0x167f, 0x167f, 0x167f, 0x167f, /* p0r2 */
+    0x1a7f, 0x1a7f, 0x1a7f, 0x1a7f, 0x1a7f, 0x1a7f, 0x1a7f, 0x1a7f, /* p0r3 */
+#endif
 
+#ifdef USE_LONG_DOUBLE
     0x107f, 0x107f, 0x107f, 0x107f, 0x107f, 0x107f, 0x107f, 0x107f, /* p1r0 */
     0x1c7f, 0x1c7f, 0x1c7f, 0x1c7f, 0x1c7f, 0x1c7f, 0x1c7f, 0x1c7f, /* p1r1 */
     0x147f, 0x147f, 0x147f, 0x147f, 0x147f, 0x147f, 0x147f, 0x147f, /* p1r2 */
     0x187f, 0x187f, 0x187f, 0x187f, 0x187f, 0x187f, 0x187f, 0x187f, /* p1r3 */
+#else
+    0x127f, 0x127f, 0x127f, 0x127f, 0x127f, 0x127f, 0x127f, 0x127f, /* p1r0 */
+    0x1e7f, 0x1e7f, 0x1e7f, 0x1e7f, 0x1e7f, 0x1e7f, 0x1e7f, 0x1e7f, /* p1r1 */
+    0x167f, 0x167f, 0x167f, 0x167f, 0x167f, 0x167f, 0x167f, 0x167f, /* p1r2 */
+    0x1a7f, 0x1a7f, 0x1a7f, 0x1a7f, 0x1a7f, 0x1a7f, 0x1a7f, 0x1a7f, /* p1r3 */
+#endif
 
     0x127f, 0x127f, 0x127f, 0x127f, 0x127f, 0x127f, 0x127f, 0x127f, /* p2r0 */
     0x1e7f, 0x1e7f, 0x1e7f, 0x1e7f, 0x1e7f, 0x1e7f, 0x1e7f, 0x1e7f, /* p2r1 */
     0x167f, 0x167f, 0x167f, 0x167f, 0x167f, 0x167f, 0x167f, 0x167f, /* p2r2 */
     0x1a7f, 0x1a7f, 0x1a7f, 0x1a7f, 0x1a7f, 0x1a7f, 0x1a7f, 0x1a7f, /* p2r3 */
 
-    0x137f, 0x137f, 0x137f, 0x137f, 0x137f, 0x137f, 0x137f, 0x137f, /* p3r0 */
-    0x1f7f, 0x1f7f, 0x1f7f, 0x1f7f, 0x1f7f, 0x1f7f, 0x1f7f, 0x1f7f, /* p3r1 */
-    0x177f, 0x177f, 0x177f, 0x177f, 0x177f, 0x177f, 0x177f, 0x177f, /* p3r2 */
-    0x1b7f, 0x1b7f, 0x1b7f, 0x1b7f, 0x1b7f, 0x1b7f, 0x1b7f, 0x1b7f  /* p3r3 */
+    0x127f, 0x127f, 0x127f, 0x127f, 0x127f, 0x127f, 0x127f, 0x127f, /* p3r0 */
+    0x1e7f, 0x1e7f, 0x1e7f, 0x1e7f, 0x1e7f, 0x1e7f, 0x1e7f, 0x1e7f, /* p3r1 */
+    0x167f, 0x167f, 0x167f, 0x167f, 0x167f, 0x167f, 0x167f, 0x167f, /* p3r2 */
+    0x1a7f, 0x1a7f, 0x1a7f, 0x1a7f, 0x1a7f, 0x1a7f, 0x1a7f, 0x1a7f /* p3r3 */
 };
-#endif
 
 
 static bool fp_native_disabled(uae_u16 extra)
@@ -1171,11 +1191,370 @@ static int get_fp_native_ea(uae_u32 opcode, uae_u16 extra)
 	return -1;
 }
 
+/* Inline x87 code: an FPU instruction becomes a few x87 instructions instead
+   of a call into the FPU core. Used in blocks that compile_block() compiles
+   for an FPCR without the bits it cannot follow (fpu_jit_fpcr_mode()); at
+   single precision it rounds the results as the host core does. The x87
+   sticky flags
+   give the accrued exception byte (fpp.cpp); the exception byte is not
+   updated. Everything else goes through the native helper. */
+bool jit_fpu_fast_enabled(void)
+{
+	return jit_fpu_enabled() && !currprefs.fpu_strict && currprefs.fpu_model > 0 &&
+		currprefs.fpu_mode != FPU_MODE_EXACT && !(regs.pcr & 2);
+}
+
+static bool fp_fast_ea(uae_u32 opcode, uae_u16 extra, bool store)
+{
+	const int mode = (opcode >> 3) & 7;
+	const int reg = opcode & 7;
+	const int size = (extra >> 10) & 7;
+	if (size == 3 || size == 7)
+		return false;	/* packed */
+	switch (mode) {
+	case 0:
+		return size == 0 || size == 1 || size == 4 || size == 6;
+	case 1:
+		return false;
+	case 7:
+		return reg <= 1 || (!store && (reg == 2 || reg == 4));
+	default:
+		return true;
+	}
+}
+
+/* FMOVECR results for each FPCR rounding mode, 16 bytes apart so that the
+   FPCR rounding bits index them */
+static double fp_fast_fmovecr_tab[64][8] __attribute__((aligned(16)));
+
+/* Fills the table entry for FMOVECR #ofs; the accrued bits it sets in *accr.
+   False: the inline code cannot do it */
+static bool fp_fast_fmovecr(uae_u16 extra, uae_u32 *accr, bool *by_mode)
+{
+	if ((extra & 0x40) || (currprefs.cpu_model >= 68040 && currprefs.fpu_no_unimplemented))
+		return false;
+	double val[4];
+	uae_u32 acc[4];
+	if (!fp_jit_fmovecr_host(extra, val, acc))
+		return false;
+	/* where the x87 control word does not follow the FPCR rounding mode,
+	   compiled code runs only at round to nearest */
+	const int modes = FPU_JIT_ROUNDING_MASK ? 1 : 4;
+	*by_mode = false;
+	for (int i = 0; i < modes; i++) {
+		if (acc[i] != acc[0])
+			return false;
+		if (memcmp(&val[i], &val[0], sizeof(double)))
+			*by_mode = true;
+		fp_fast_fmovecr_tab[extra & 0x3f][i * 2] = val[i];
+	}
+	*accr = acc[0];
+	return true;
+}
+
+/* Decides before any code or extension word is consumed */
+static bool fp_fast_supported(uae_u32 opcode, uae_u16 extra)
+{
+	const int opclass = extra >> 13;
+	const int mode = (opcode >> 3) & 7;
+	const int reg = opcode & 7;
+	const bool fpu_040_060 = currprefs.fpu_model == 68040 || currprefs.fpu_model == 68060;
+
+	switch (opclass) {
+	case 0:
+	case 2:
+		if ((extra & 0xfc00) == 0x5c00) {
+			uae_u32 accr;
+			bool by_mode;
+			/* the precision changes the constants, see fpu_get_constant() */
+			return !jit_fpu_single_block && fp_fast_fmovecr(extra, &accr, &by_mode);
+		}
+		if (opclass == 2 && !fp_fast_ea(opcode, extra, false))
+			return false;
+		switch (extra & 0x7f) {
+		case 0x00: case 0x04: case 0x18: case 0x1a: case 0x20:
+		case 0x22: case 0x23: case 0x28: case 0x38: case 0x3a:
+			return true;
+		case 0x01: case 0x03:	/* FINT, FINTRZ: unimplemented in the 68040 */
+			return !(currprefs.cpu_model == 68040 && currprefs.fpu_no_unimplemented);
+		case 0x40: case 0x44: case 0x41: case 0x45: case 0x58: case 0x5c:
+		case 0x5a: case 0x5e: case 0x60: case 0x64: case 0x62: case 0x66:
+		case 0x63: case 0x67: case 0x68: case 0x6c:
+			return fpu_040_060;
+		}
+		return false;
+	case 3:
+		return fp_fast_ea(opcode, extra, true);
+	case 6:
+	case 7: {
+		const int list_mode = (extra >> 11) & 3;
+		if (list_mode & 1)
+			return false;	/* dynamic register list */
+		if (opclass == 7) {
+			if (list_mode == 0)
+				return mode == 4;
+			return mode == 2 || mode == 5 || (mode == 7 && reg <= 1);
+		}
+		return list_mode == 2 &&
+			(mode == 2 || mode == 3 || mode == 5 || (mode == 7 && reg <= 2));
+	}
+	}
+	return false;
+}
+
+/* The FPIAR store of an inline instruction waits until an instruction that can
+   see the FPIAR: one that is not inline FPU code without a memory access (which
+   may fault), or the end of the block */
+void comp_fpp_fpiar_flush(void)
+{
+	if (jit_fpu_fpiar_pending) {
+		mov_l_mi(JITPTR &regs.fpiar, jit_fpu_fpiar_pending_pc);
+		jit_fpu_fpiar_pending = false;
+	}
+}
+
+/* Before the instruction at location is compiled */
+void comp_fpp_fpiar_next(uae_u32 opcode, const uae_u16 *location)
+{
+	if (!jit_fpu_fpiar_pending)
+		return;
+	if ((opcode & 0xffc0) == 0xf200 && !special_mem && jit_fpu_fast_block &&
+		jit_fpu_enabled() && currprefs.fpu_mode != FPU_MODE_EXACT) {
+		const uae_u16 extra = do_get_mem_word((uae_u16 *)location + 1);
+		const int opclass = extra >> 13;
+		const int mode = (opcode >> 3) & 7;
+		const bool no_mem = opclass == 0 ||
+			((opclass == 2 || opclass == 3) && (mode == 0 || (mode == 7 && (opcode & 7) == 4)));
+		if (no_mem && !fp_native_disabled(extra) && fp_fast_supported(opcode, extra))
+			return;
+	}
+	comp_fpp_fpiar_flush();
+}
+
+/* x87 control word for the FPCR: its rounding mode and precision (0), or
+   single (1) or double (2) precision */
+static void fp_fast_set_cw(int prec)
+{
+	mov_l_rm(S1, JITPTR &regs.fpcr);
+	if (prec) {
+		and_l_ri(S1, 0x30);
+		or_l_ri(S1, prec == 1 ? 0x40 : 0x80);
+	} else {
+		and_l_ri(S1, 0xf0);
+	}
+	fldcw_m_indexed(S1, JITPTR x86_fpucw);
+}
+
+static void comp_fmovem_fast(uae_u32 opcode, uae_u16 extra)
+{
+	uae_u32 list = extra & 0xff;
+	int reg;
+	const int ad = get_fp_ad(opcode);
+
+	if (extra & 0x2000) {
+		/* FMOVEM FPP->memory */
+		if (((extra >> 11) & 3) == 0) {
+			/* predecrement: the list is FP7..FP0 */
+			for (reg = 7; reg >= 0; reg--) {
+				if (list & 0x80) {
+					fmov_ext_mr(JITPTR temp_fp, reg);
+					delay;
+					sub_l_ri(ad, 4);
+					mov_l_rm(S2, JITPTR temp_fp);
+					writelong_clobber(ad, S2, S3);
+					sub_l_ri(ad, 4);
+					mov_l_rm(S2, JITPTR temp_fp + 4);
+					writelong_clobber(ad, S2, S3);
+					sub_l_ri(ad, 4);
+					zero_extend_16_rm(S2, JITPTR temp_fp + 8);
+					shll_l_ri(S2, 16);	/* the exponent and a zero pad word */
+					writelong_clobber(ad, S2, S3);
+				}
+				list <<= 1;
+			}
+		} else {
+			for (reg = 0; reg < 8; reg++) {
+				if (list & 0x80) {
+					fmov_ext_mr(JITPTR temp_fp, reg);
+					delay;
+					zero_extend_16_rm(S2, JITPTR temp_fp + 8);
+					shll_l_ri(S2, 16);
+					writelong_clobber(ad, S2, S3);
+					add_l_ri(ad, 4);
+					mov_l_rm(S2, JITPTR temp_fp + 4);
+					writelong_clobber(ad, S2, S3);
+					add_l_ri(ad, 4);
+					mov_l_rm(S2, JITPTR temp_fp);
+					writelong_clobber(ad, S2, S3);
+					add_l_ri(ad, 4);
+				}
+				list <<= 1;
+			}
+		}
+	} else {
+		/* FMOVEM memory->FPP, postincrement or control */
+		for (reg = 0; reg < 8; reg++) {
+			if (list & 0x80) {
+				read_fp_ext_to_temp(ad, true);
+				delay2;
+				fmov_ext_rm(reg, JITPTR (temp_fp));
+			}
+			list <<= 1;
+		}
+	}
+	if ((opcode & 0x38) == 0x18 || (opcode & 0x38) == 0x20)
+		mov_l_rr((opcode & 7) + 8, ad);
+}
+
+static void comp_fpp_fast(uae_u32 opcode, uae_u16 extra)
+{
+	const int opclass = extra >> 13;
+	const uaecptr pc = start_pc + (comp_pc_p - start_pc_p) + m68k_pc_offset - 4;
+
+	if (!jit_fpu_fast_state) {
+		/* constant for the rest of the block, unless an instruction runs in
+		   the interpreter or the helper; also stands for regs.fpu_state = 1
+		   (fpp.cpp sets it when it reads the flag) */
+		jit_fpu_mark_x87_dirty();
+		jit_fpu_fast_state = true;
+	}
+	if (opclass == 6 || opclass == 7) {
+		comp_fmovem_fast(opcode, extra);
+		return;
+	}
+	if (currprefs.fpu_model == 68040 || currprefs.fpu_model == 68060) {
+		jit_fpu_fpiar_pending = true;
+		jit_fpu_fpiar_pending_pc = pc;
+	}
+	if (opclass == 3) {
+		put_fp_value((extra >> 7) & 7, opcode, extra);
+		return;
+	}
+
+	const int reg = (extra >> 7) & 7;
+	if ((extra & 0xfc00) == 0x5c00) {	/* FMOVECR */
+		uae_u32 accr = 0;
+		bool by_mode = false;
+		fp_fast_fmovecr(extra, &accr, &by_mode);
+		double *tab = fp_fast_fmovecr_tab[extra & 0x3f];
+		dont_care_fflags();
+		if (by_mode) {
+			mov_l_rm(S1, JITPTR &regs.fpcr);
+			and_l_ri(S1, 0x30);
+			fmov_rm_indexed(reg, S1, JITPTR tab);
+		} else {
+			fmov_rm(reg, JITPTR tab);
+		}
+		if (accr) {
+			mov_l_rm(S2, JITPTR &regs.fpsr);
+			or_l_ri(S2, accr);
+			mov_l_mr(JITPTR &regs.fpsr, S2);
+		}
+		MAKE_FPSR(reg);
+		return;
+	}
+	const int op = extra & 0x7f;
+	int base = op;
+	switch (op) {
+	case 0x40: case 0x44: base = 0x00; break;
+	case 0x41: case 0x45: base = 0x04; break;
+	case 0x58: case 0x5c: base = 0x18; break;
+	case 0x5a: case 0x5e: base = 0x1a; break;
+	case 0x60: case 0x64: base = 0x20; break;
+	case 0x62: case 0x66: base = 0x22; break;
+	case 0x63: case 0x67: base = 0x23; break;
+	case 0x68: case 0x6c: base = 0x28; break;
+	}
+	/* FSxxx and FDxxx round to single or double precision, and so does
+	   everything but FINT and FINTRZ at FPCR single precision */
+	int prec = (op & 0x40) ? ((op & 0x04) ? 2 : 1) : 0;
+	if (!prec && jit_fpu_single_block && base != 0x01 && base != 0x03)
+		prec = 1;
+	const bool arith = base == 0x04 || base >= 0x20;
+	/* the x87 control word gives double precision (x86_fpucw[]): the store
+	   after the operation rounds to single as the host core does after its
+	   double operation, and double needs nothing */
+#ifdef USE_LONG_DOUBLE
+	const bool set_cw = prec && arith;
+#else
+	const bool set_cw = false;
+#endif
+	/* moves of a source the precision holds exactly need no rounding */
+	const int size = (extra >> 10) & 7;
+	const bool exact_src = opclass == 2 && (base == 0x00 || base == 0x18 || base == 0x1a) &&
+		(size == 1 || size == 4 || size == 6 || (prec == 2 && (size == 0 || size == 5)));
+
+	if (base != 0x38 && base != 0x3a)
+		dont_care_fflags();
+	const int src = get_fp_value(opcode, extra);
+	if (set_cw)
+		fp_fast_set_cw(prec);
+	switch (base) {
+	case 0x00:	/* FMOVE */
+		fmov_rr(reg, src);
+		break;
+	case 0x01:	/* FINT */
+		frndint_rr(reg, src);
+		break;
+	case 0x03:	/* FINTRZ */
+		mov_l_ri(S1, 0x10);	/* round to zero */
+		fldcw_m_indexed(S1, JITPTR x86_fpucw);
+		frndint_rr(reg, src);
+		fp_fast_set_cw(0);
+		break;
+	case 0x04:	/* FSQRT */
+		fsqrt_rr(reg, src);
+		break;
+	case 0x18:	/* FABS */
+		fabs_rr(reg, src);
+		break;
+	case 0x1a:	/* FNEG */
+		fneg_rr(reg, src);
+		break;
+	case 0x20:	/* FDIV */
+		fdiv_rr(reg, src);
+		break;
+	case 0x22:	/* FADD */
+		fadd_rr(reg, src);
+		break;
+	case 0x23:	/* FMUL */
+		fmul_rr(reg, src);
+		break;
+	case 0x28:	/* FSUB */
+		fsub_rr(reg, src);
+		break;
+	case 0x38:	/* FCMP */
+		/* the condition codes straight into the FPSR, not regs.fp_result */
+		fcmp_cc_rrr(S1, reg, src, currprefs.fpu_model == 68040);
+		dont_care_fflags();
+		mov_l_rm(S2, JITPTR &regs.fpsr);
+		and_l_ri(S2, 0x00fffff8);
+		or_l(S2, S1);
+		mov_l_mr(JITPTR &regs.fpsr, S2);
+		mov_b_mi(JITPTR &fpu_fpsr_cc_written, 1);
+		jit_fpu_cc_fpsr = true;
+		return;
+	case 0x3a:	/* FTST */
+		MAKE_FPSR(src);
+		return;
+	}
+	if (prec && !exact_src) {
+		/* the store also limits the exponent range */
+		if (prec == 1) {
+			fmovs_mr(JITPTR temp_fp, reg);
+			fmovs_rm(reg, JITPTR temp_fp);
+		} else {
+			fmov_mr(JITPTR temp_fp, reg);
+			fmov_rm(reg, JITPTR temp_fp);
+		}
+	}
+	if (set_cw)
+		fp_fast_set_cw(0);
+	MAKE_FPSR(reg);
+}
+
 void comp_fpp_opp(uae_u32 opcode, uae_u16 extra)
 {
-	int reg;
-	int src;
-
 	if (special_mem)
 	{
 		FAIL(1);
@@ -1186,12 +1565,15 @@ void comp_fpp_opp(uae_u32 opcode, uae_u16 extra)
 		FAIL(1);
 		return;
 	}
-#ifdef USE_LONG_DOUBLE
-	if (currprefs.fpu_mode == FPU_MODE_AUTO || currprefs.fpu_mode == FPU_MODE_HOST) { // the host long double core
+	if (currprefs.fpu_mode != FPU_MODE_EXACT) { // the host core
 		const int opclass = extra >> 13;
 		if (opclass == 0 || opclass == 2 || opclass == 3 || opclass == 6 || opclass == 7) {
 			if (fp_native_disabled(extra)) {
 				FAIL(1);
+				return;
+			}
+			if (jit_fpu_fast_block && fp_fast_supported(opcode, extra)) {
+				comp_fpp_fast(opcode, extra);
 				return;
 			}
 			const uaecptr pc = start_pc + (comp_pc_p - start_pc_p) + m68k_pc_offset - 4;
@@ -1205,212 +1587,13 @@ void comp_fpp_opp(uae_u32 opcode, uae_u16 extra)
 			const uaecptr nextpc = start_pc + (comp_pc_p - start_pc_p) + m68k_pc_offset;
 			fpu_native_call((opcode << 16) | extra, ea, pc, nextpc);
 			mov_l_ri(PC_P, (uintptr)comp_pc_p);
+			jit_fpu_fast_state = false;
+			jit_fpu_loop_ok = false;
 			return;
 		}
 	}
-#endif
 	switch ((extra >> 13) & 0x7)
 	{
-	case 1:							/* illegal */
-		break;
-
-	case 3:							/* FMOVE Fpn,<ea> */
-		/* 2nd most common */
-		if (jit_disable.fmove)
-		{
-			FAIL(1);
-			return;
-		}
-
-		if (put_fp_value((extra >> 7) & 7, opcode, extra) < 0)
-		{
-			FAIL(1);
-			return;
-		}
-		return;
-
-	case 6:							/* FMOVEM <ea>,<reglist> */
-	case 7:							/* FMOVEM <reglist>,<ea> */
-		if (jit_disable.fmovem)
-		{
-			FAIL(1);
-			return;
-		}
-
-		{
-			int ad;
-			uae_u32 list = 0;
-			int incr = 0;
-
-			if (extra & 0x2000)
-			{
-				/* FMOVEM FPP->memory */
-				switch ((extra >> 11) & 3)
-				{						/* Get out early if failure */
-				case 0:				/* static pred */
-				case 2:				/* static postinc */
-					break;
-				case 1:				/* dynamic pred */
-				case 3:				/* dynamic postinc */
-				default:
-					FAIL(1);
-					return;
-				}
-				if ((ad = get_fp_ad(opcode)) < 0)
-				{
-					FAIL(1);
-					return;
-				}
-				switch ((extra >> 11) & 3)
-				{
-				case 0:				/* static pred */
-					list = extra & 0xff;
-					incr = -1;
-					break;
-				case 2:				/* static postinc */
-					list = extra & 0xff;
-					incr = 1;
-					break;
-				case 1:				/* dynamic pred */
-				case 3:				/* dynamic postinc */
-					abort();
-				}
-				if (incr < 0)
-				{						/* Predecrement */
-					for (reg = 7; reg >= 0; reg--)
-					{
-						if (list & 0x80)
-						{
-							fmov_ext_mr(JITPTR temp_fp, reg);
-							delay;
-							sub_l_ri(ad, 4);
-							mov_l_rm(S2, JITPTR temp_fp);
-							writelong_clobber(ad, S2, S3);
-							sub_l_ri(ad, 4);
-							mov_l_rm(S2, JITPTR temp_fp + 4);
-							writelong_clobber(ad, S2, S3);
-							sub_l_ri(ad, 4);
-							mov_w_rm(S2, JITPTR temp_fp + 8);
-							writeword_clobber(ad, S2, S3);
-						}
-						list <<= 1;
-					}
-				} else
-				{						/* Postincrement */
-					for (reg = 0; reg < 8; reg++)
-					{
-						if (list & 0x80)
-						{
-							fmov_ext_mr(JITPTR temp_fp, reg);
-							delay;
-							mov_w_rm(S2, JITPTR temp_fp + 8);
-							writeword_clobber(ad, S2, S3);
-							add_l_ri(ad, 4);
-							mov_l_rm(S2, JITPTR temp_fp + 4);
-							writelong_clobber(ad, S2, S3);
-							add_l_ri(ad, 4);
-							mov_l_rm(S2, JITPTR temp_fp);
-							writelong_clobber(ad, S2, S3);
-							add_l_ri(ad, 4);
-						}
-						list <<= 1;
-					}
-				}
-				if ((opcode & 0x38) == 0x18)
-					mov_l_rr((opcode & 7) + 8, ad);
-				if ((opcode & 0x38) == 0x20)
-					mov_l_rr((opcode & 7) + 8, ad);
-			} else
-			{
-				/* FMOVEM memory->FPP */
-
-				int ad;
-
-				switch ((extra >> 11) & 3)
-				{						/* Get out early if failure */
-				case 0:				/* static pred */
-				case 2:				/* static postinc */
-					break;
-				case 1:				/* dynamic pred */
-				case 3:				/* dynamic postinc */
-				default:
-					FAIL(1);
-					return;
-				}
-				ad = get_fp_ad(opcode);
-				if (ad < 0)
-				{
-					D(bug("no ad\n"));
-					FAIL(1);
-					return;
-				}
-				switch ((extra >> 11) & 3)
-				{
-				case 0:				/* static pred */
-					list = extra & 0xff;
-					incr = -1;
-					break;
-				case 2:				/* static postinc */
-					list = extra & 0xff;
-					incr = 1;
-					break;
-				case 1:				/* dynamic pred */
-				case 3:				/* dynamic postinc */
-					abort();
-				}
-
-				if (incr < 0)
-				{
-					// not reached
-					for (reg = 7; reg >= 0; reg--)
-					{
-						if (list & 0x80)
-						{
-							sub_l_ri(ad, 4);
-							readlong(ad, S2, S3);
-							mov_l_mr(JITPTR (temp_fp), S2);
-							sub_l_ri(ad, 4);
-							readlong(ad, S2, S3);
-							mov_l_mr(JITPTR (temp_fp) + 4, S2);
-							sub_l_ri(ad, 4);
-							readword(ad, S2, S3);
-							mov_w_mr((JITPTR temp_fp) + 8, S2);
-							temp_fp_integer_bit();
-							delay2;
-							fmov_ext_rm(reg, JITPTR (temp_fp));
-						}
-						list <<= 1;
-					}
-				} else
-				{
-					for (reg = 0; reg < 8; reg++)
-					{
-						if (list & 0x80)
-						{
-							readword(ad, S2, S3);
-							mov_w_mr((JITPTR temp_fp) + 8, S2);
-							add_l_ri(ad, 4);
-							readlong(ad, S2, S3);
-							mov_l_mr(JITPTR (temp_fp) + 4, S2);
-							add_l_ri(ad, 4);
-							readlong(ad, S2, S3);
-							mov_l_mr(JITPTR(temp_fp), S2);
-							add_l_ri(ad, 4);
-							temp_fp_integer_bit();
-							delay2;
-							fmov_ext_rm(reg, JITPTR (temp_fp));
-						}
-						list <<= 1;
-					}
-				}
-				if ((opcode & 0x38) == 0x18)
-					mov_l_rr((opcode & 7) + 8, ad);
-				if ((opcode & 0x38) == 0x20)
-					mov_l_rr((opcode & 7) + 8, ad);
-			}
-		}
-		return;
-
 	case 4:							/* FMOVEM <ea>,<control> */
 	case 5:							/* FMOVEM <control>,<ea> */
 		if (jit_disable.fmovec)
@@ -1544,669 +1727,8 @@ void comp_fpp_opp(uae_u32 opcode, uae_u16 extra)
 		FAIL(1);
 		return;
 
-	case 0:
-	case 2:							/* Extremely common */
-		reg = (extra >> 7) & 7;
-		if ((extra & 0xfc00) == 0x5c00)
-		{
-			if (jit_disable.fmovecr)
-			{
-				FAIL(1);
-				return;
-			}
-
-			switch (extra & 0x7f)
-			{
-			case 0x00:
-				fmov_pi(reg);
-				break;
-			case 0x0b:
-				fmov_log10_2(reg);
-				break;
-			case 0x0c:
-#if defined(USE_LONG_DOUBLE) || defined(USE_QUAD_DOUBLE)
-				fmov_ext_rm(reg, (uintptr) & const_e);
-#else
-				fmov_rm(reg, (uintptr) & const_e);
-#endif
-				break;
-			case 0x0d:
-				fmov_log2_e(reg);
-				break;
-			case 0x0e:
-#if defined(USE_LONG_DOUBLE) || defined(USE_QUAD_DOUBLE)
-				fmov_ext_rm(reg, (uintptr) & const_log10_e);
-#else
-				fmov_rm(reg, (uintptr) & const_log10_e);
-#endif
-				break;
-			case 0x0f:
-				fmov_0(reg);
-				break;
-			case 0x30:
-				fmov_loge_2(reg);
-				break;
-			case 0x31:
-#if defined(USE_LONG_DOUBLE) || defined(USE_QUAD_DOUBLE)
-				fmov_ext_rm(reg, (uintptr) & const_loge_10);
-#else
-				fmov_rm(reg, (uintptr) & const_loge_10);
-#endif
-				break;
-			case 0x32:
-				fmov_1(reg);
-				break;
-			case 0x33:
-			case 0x34:
-			case 0x35:
-			case 0x36:
-			case 0x37:
-			case 0x38:
-			case 0x39:
-			case 0x3a:
-			case 0x3b:
-#if defined(USE_LONG_DOUBLE) || defined(USE_QUAD_DOUBLE)
-			case 0x3c:
-			case 0x3d:
-			case 0x3e:
-			case 0x3f:
-				fmov_ext_rm(reg, (uintptr) (power10 + (extra & 0x7f) - 0x32));
-#else
-				fmov_rm(reg, (uintptr) (power10 + (extra & 0x7f) - 0x32));
-#endif
-				break;
-			default:
-				/* This is not valid, so we fail */
-				FAIL(1);
-				return;
-			}
-			return;
-		}
-
-		switch (extra & 0x7f)
-		{
-		case 0x00:						/* FMOVE */
-		case 0x40:						/* FSMOVE: Explicit rounding. This is just a quick fix. Same
-										 * for all other cases that have three choices */
-		case 0x44:						/* FDMOVE */
-			if (jit_disable.fmove)
-			{
-				FAIL(1);
-				return;
-			}
-
-			dont_care_fflags();
-			src = get_fp_value(opcode, extra);
-			if (src < 0)
-			{
-				FAIL(1);				/* Illegal instruction */
-				return;
-			}
-			fmov_rr(reg, src);
-			MAKE_FPSR(src);
-			break;
-		case 0x01:						/* FINT */
-			if (jit_disable.fint)
-			{
-				FAIL(1);
-				return;
-			}
-
-			FAIL(1);
-			return;
-			dont_care_fflags();
-			break;
-		case 0x02:						/* FSINH */
-			if (jit_disable.fsinh)
-			{
-				FAIL(1);
-				return;
-			}
-
-			FAIL(1);
-			return;
-			dont_care_fflags();
-			break;
-		case 0x03:						/* FINTRZ */
-			if (jit_disable.fintrz)
-			{
-				FAIL(1);
-				return;
-			}
-#ifdef USE_X86_FPUCW
-			/* If we have control over the CW, we can do this */
-			dont_care_fflags();
-			src = get_fp_value(opcode, extra);
-			if (src < 0)
-			{
-				FAIL(1);				/* Illegal instruction */
-				return;
-			}
-			mov_l_ri(S1, 16);			/* Switch to "round to zero" mode */
-			fldcw_m_indexed(S1, JITPTR x86_fpucw);
-
-			frndint_rr(reg, src);
-
-			/* restore control word */
-			mov_l_rm(S1, JITPTR &regs.fpcr);
-			and_l_ri(S1, 0x000000f0);
-			fldcw_m_indexed(S1, JITPTR x86_fpucw);
-
-			MAKE_FPSR(reg);
-			break;
-#endif
-			FAIL(1);
-			return;
-			break;
-		case 0x04:						/* FSQRT */
-		case 0x41:						/* FSSQRT */
-		case 0x45:						/* FDSQRT */
-			if (jit_disable.fsqrt)
-			{
-				FAIL(1);
-				return;
-			}
-
-			dont_care_fflags();
-			src = get_fp_value(opcode, extra);
-			if (src < 0)
-			{
-				FAIL(1);				/* Illegal instruction */
-				return;
-			}
-			fsqrt_rr(reg, src);
-			MAKE_FPSR(reg);
-			break;
-		case 0x06:						/* FLOGNP1 */
-			if (jit_disable.flognp1)
-			{
-				FAIL(1);
-				return;
-			}
-
-			FAIL(1);
-			return;
-			dont_care_fflags();
-			break;
-		case 0x08:						/* FETOXM1 */
-			if (jit_disable.fetoxm1)
-			{
-				FAIL(1);
-				return;
-			}
-
-			FAIL(1);
-			return;
-			dont_care_fflags();
-			break;
-		case 0x09:						/* FTANH */
-			if (jit_disable.ftanh)
-			{
-				FAIL(1);
-				return;
-			}
-
-			FAIL(1);
-			return;
-			dont_care_fflags();
-			break;
-		case 0x0a:						/* FATAN */
-			if (jit_disable.fatan)
-			{
-				FAIL(1);
-				return;
-			}
-
-			FAIL(1);
-			return;
-			dont_care_fflags();
-			break;
-		case 0x0c:						/* FASIN */
-			if (jit_disable.fasin)
-			{
-				FAIL(1);
-				return;
-			}
-
-			FAIL(1);
-			return;
-			dont_care_fflags();
-			break;
-		case 0x0d:						/* FATANH */
-			if (jit_disable.fatanh)
-			{
-				FAIL(1);
-				return;
-			}
-
-			FAIL(1);
-			return;
-			dont_care_fflags();
-			break;
-		case 0x0e:						/* FSIN */
-			if (jit_disable.fsin)
-			{
-				FAIL(1);
-				return;
-			}
-
-			dont_care_fflags();
-			src = get_fp_value(opcode, extra);
-			if (src < 0)
-			{
-				FAIL(1);				/* Illegal instruction */
-				return;
-			}
-			fsin_rr(reg, src);
-			MAKE_FPSR(reg);
-			break;
-		case 0x0f:						/* FTAN */
-			if (jit_disable.ftan)
-			{
-				FAIL(1);
-				return;
-			}
-
-			FAIL(1);
-			return;
-			dont_care_fflags();
-			break;
-		case 0x10:						/* FETOX */
-			if (jit_disable.fetox)
-			{
-				FAIL(1);
-				return;
-			}
-
-			dont_care_fflags();
-			src = get_fp_value(opcode, extra);
-			if (src < 0)
-			{
-				FAIL(1);				/* Illegal instruction */
-				return;
-			}
-			fetox_rr(reg, src);
-			MAKE_FPSR(reg);
-			break;
-		case 0x11:						/* FTWOTOX */
-			if (jit_disable.ftwotox)
-			{
-				FAIL(1);
-				return;
-			}
-
-			dont_care_fflags();
-			src = get_fp_value(opcode, extra);
-			if (src < 0)
-			{
-				FAIL(1);				/* Illegal instruction */
-				return;
-			}
-			ftwotox_rr(reg, src);
-			MAKE_FPSR(reg);
-			break;
-		case 0x12:						/* FTENTOX */
-			if (jit_disable.ftentox)
-			{
-				FAIL(1);
-				return;
-			}
-
-			FAIL(1);
-			return;
-			dont_care_fflags();
-			break;
-		case 0x14:						/* FLOGN */
-			if (jit_disable.flogn)
-			{
-				FAIL(1);
-				return;
-			}
-
-			FAIL(1);
-			return;
-			dont_care_fflags();
-			break;
-		case 0x15:						/* FLOG10 */
-			if (jit_disable.flog10)
-			{
-				FAIL(1);
-				return;
-			}
-
-			FAIL(1);
-			return;
-			dont_care_fflags();
-			break;
-		case 0x16:						/* FLOG2 */
-			if (jit_disable.flog2)
-			{
-				FAIL(1);
-				return;
-			}
-
-			dont_care_fflags();
-			src = get_fp_value(opcode, extra);
-			if (src < 0)
-			{
-				FAIL(1);				/* Illegal instruction */
-				return;
-			}
-			flog2_rr(reg, src);
-			MAKE_FPSR(reg);
-			break;
-		case 0x18:						/* FABS */
-		case 0x58:						/* FSABS */
-		case 0x5c:						/* FDABS */
-			if (jit_disable.fabs)
-			{
-				FAIL(1);
-				return;
-			}
-
-			dont_care_fflags();
-			src = get_fp_value(opcode, extra);
-			if (src < 0)
-			{
-				FAIL(1);				/* Illegal instruction */
-				return;
-			}
-			fabs_rr(reg, src);
-			MAKE_FPSR(reg);
-			break;
-		case 0x19:						/* FCOSH */
-			if (jit_disable.fcosh)
-			{
-				FAIL(1);
-				return;
-			}
-
-			FAIL(1);
-			return;
-			dont_care_fflags();
-			break;
-		case 0x1a:						/* FNEG */
-		case 0x5a:						/* FSNEG */
-		case 0x5e:						/* FDNEG */
-			if (jit_disable.fneg)
-			{
-				FAIL(1);
-				return;
-			}
-
-			dont_care_fflags();
-			src = get_fp_value(opcode, extra);
-			if (src < 0)
-			{
-				FAIL(1);				/* Illegal instruction */
-				return;
-			}
-			fneg_rr(reg, src);
-			MAKE_FPSR(reg);
-			break;
-		case 0x1c:						/* FACOS */
-			if (jit_disable.facos)
-			{
-				FAIL(1);
-				return;
-			}
-
-			FAIL(1);
-			return;
-			dont_care_fflags();
-			break;
-		case 0x1d:						/* FCOS */
-			if (jit_disable.fcos)
-			{
-				FAIL(1);
-				return;
-			}
-
-			dont_care_fflags();
-			src = get_fp_value(opcode, extra);
-			if (src < 0)
-			{
-				FAIL(1);				/* Illegal instruction */
-				return;
-			}
-			fcos_rr(reg, src);
-			MAKE_FPSR(reg);
-			break;
-		case 0x1e:						/* FGETEXP */
-			if (jit_disable.fgetexp)
-			{
-				FAIL(1);
-				return;
-			}
-
-			FAIL(1);
-			return;
-			dont_care_fflags();
-			break;
-		case 0x1f:						/* FGETMAN */
-			if (jit_disable.fgetman)
-			{
-				FAIL(1);
-				return;
-			}
-
-			FAIL(1);
-			return;
-			dont_care_fflags();
-			break;
-		case 0x20:						/* FDIV */
-		case 0x60:						/* FSDIV */
-		case 0x64:						/* FDDIV */
-			if (jit_disable.fdiv)
-			{
-				FAIL(1);
-				return;
-			}
-
-			dont_care_fflags();
-			src = get_fp_value(opcode, extra);
-			if (src < 0)
-			{
-				FAIL(1);				/* Illegal instruction */
-				return;
-			}
-			fdiv_rr(reg, src);
-			MAKE_FPSR(reg);
-			break;
-		case 0x21:						/* FMOD */
-			if (jit_disable.fmod)
-			{
-				FAIL(1);
-				return;
-			}
-
-			// FIXME: the quotient byte must be computed
-			dont_care_fflags();
-			src = get_fp_value(opcode, extra);
-			if (src < 0)
-			{
-				FAIL(1);				/* Illegal instruction */
-				return;
-			}
-			frem_rr(reg, src);
-			MAKE_FPSR(reg);
-			break;
-		case 0x22:						/* FADD */
-		case 0x62:						/* FSADD */
-		case 0x66:						/* FDADD */
-			if (jit_disable.fadd)
-			{
-				FAIL(1);
-				return;
-			}
-
-			dont_care_fflags();
-			src = get_fp_value(opcode, extra);
-			if (src < 0)
-			{
-				FAIL(1);				/* Illegal instruction */
-				return;
-			}
-			fadd_rr(reg, src);
-			MAKE_FPSR(reg);
-			break;
-		case 0x23:						/* FMUL */
-		case 0x63:						/* FSMUL */
-		case 0x67:						/* FDMUL */
-			if (jit_disable.fmul)
-			{
-				FAIL(1);
-				return;
-			}
-
-			dont_care_fflags();
-			src = get_fp_value(opcode, extra);
-			if (src < 0)
-			{
-				FAIL(1);				/* Illegal instruction */
-				return;
-			}
-			fmul_rr(reg, src);
-			MAKE_FPSR(reg);
-			break;
-		case 0x24:						/* FSGLDIV */
-			if (jit_disable.fsgldiv)
-			{
-				FAIL(1);
-				return;
-			}
-
-			dont_care_fflags();
-			src = get_fp_value(opcode, extra);
-			if (src < 0)
-			{
-				FAIL(1);				/* Illegal instruction */
-				return;
-			}
-			fdiv_rr(reg, src);
-			MAKE_FPSR(reg);
-			break;
-		case 0x25:						/* FREM */
-			if (jit_disable.frem)
-			{
-				FAIL(1);
-				return;
-			}
-			// gb-- disabled because the quotient byte must be computed
-			// otherwise, free rotation in ClarisWorks doesn't work.
-			FAIL(1);
-			return;
-			dont_care_fflags();
-			src = get_fp_value(opcode, extra);
-			if (src < 0)
-			{
-				FAIL(1);				/* Illegal instruction */
-				return;
-			}
-			frem1_rr(reg, src);
-			MAKE_FPSR(reg);
-			break;
-		case 0x26:						/* FSCALE */
-			if (jit_disable.fscale)
-			{
-				FAIL(1);
-				return;
-			}
-
-			FAIL(1);
-			return;
-			break;
-		case 0x27:						/* FSGLMUL */
-			if (jit_disable.fsglmul)
-			{
-				FAIL(1);
-				return;
-			}
-
-			dont_care_fflags();
-			src = get_fp_value(opcode, extra);
-			if (src < 0)
-			{
-				FAIL(1);				/* Illegal instruction */
-				return;
-			}
-			fmul_rr(reg, src);
-			MAKE_FPSR(reg);
-			break;
-		case 0x28:						/* FSUB */
-		case 0x68:						/* FSSUB */
-		case 0x6c:						/* FDSUB */
-			if (jit_disable.fsub)
-			{
-				FAIL(1);
-				return;
-			}
-
-			dont_care_fflags();
-			src = get_fp_value(opcode, extra);
-			if (src < 0)
-			{
-				FAIL(1);				/* Illegal instruction */
-				return;
-			}
-			fsub_rr(reg, src);
-			MAKE_FPSR(reg);
-			break;
-		case 0x30:						/* FSINCOS */
-		case 0x31:
-		case 0x32:
-		case 0x33:
-		case 0x34:
-		case 0x35:
-		case 0x36:
-		case 0x37:
-			if (jit_disable.fsincos)
-			{
-				FAIL(1);
-				return;
-			}
-
-			FAIL(1);
-			return;
-			dont_care_fflags();
-			break;
-		case 0x38:						/* FCMP */
-			if (jit_disable.fcmp)
-			{
-				FAIL(1);
-				return;
-			}
-
-			src = get_fp_value(opcode, extra);
-			if (src < 0)
-			{
-				FAIL(1);				/* Illegal instruction */
-				return;
-			}
-			fcmp_result_rrr(FP_RESULT, reg, src);
-			mov_b_mi(JITPTR &fpu_fpsr_cc_written, 0);
-			break;
-		case 0x3a:						/* FTST */
-			if (jit_disable.ftst)
-			{
-				FAIL(1);
-				return;
-			}
-
-			src = get_fp_value(opcode, extra);
-			if (src < 0)
-			{
-				FAIL(1);				/* Illegal instruction */
-				return;
-			}
-			MAKE_FPSR(src);
-			break;
-		default:
-			FAIL(1);
-			return;
-			break;
-		}
-		return;
+	default:
+		break;
 	}
 	FAIL(1);
 }

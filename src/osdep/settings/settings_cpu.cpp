@@ -124,14 +124,15 @@ bool has_fpu(const uae_prefs& p, const context&)
 }
 
 // The FPU core fpp.cpp's fpu_core_wanted() picks: the exact one, or host
-// floating point (Automatic: exact on AArch64 unless the JIT FPU is on).
+// floating point (Automatic: exact on AArch64 and x86-64 unless the JIT FPU
+// is on).
 bool fpu_exact_core(const uae_prefs& p)
 {
 	if (p.fpu_mode == FPU_MODE_EXACT)
 		return true;
 	if (p.fpu_mode != FPU_MODE_AUTO)
 		return false;
-#if defined(CPU_AARCH64) && defined(WITH_SOFTFLOAT)
+#if (defined(CPU_AARCH64) || defined(CPU_x86_64)) && !defined(USE_LONG_DOUBLE) && defined(WITH_SOFTFLOAT)
 	return !(effective_jit_cache(p) && p.compfpu);
 #else
 	return false;

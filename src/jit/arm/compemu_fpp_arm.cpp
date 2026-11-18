@@ -17,13 +17,11 @@
 #include "newcpu.h"
 #include "compemu_arm.h"
 #include "flags_arm.h"
+#include "../compemu_fpp_common.h"
 
 #if defined(USE_JIT_FPU)
 
 extern void fp_to_exten(fpdata *fpd, uae_u32 wrd1, uae_u32 wrd2, uae_u32 wrd3);
-
-static const int sz1[8] = { 4, 4, 12, 12, 2, 8, 1, 0 };
-static const int sz2[8] = { 4, 4, 12, 12, 2, 8, 2, 0 };
 
 /* return the required floating point precision or -1 for failure, 0=E, 1=S, 2=D */
 STATIC_INLINE int comp_fp_get (uae_u32 opcode, uae_u16 extra, int treg)
@@ -59,10 +57,10 @@ STATIC_INLINE int comp_fp_get (uae_u32 opcode, uae_u16 extra, int treg)
   		break;
 		case 3: /* (An)+ */
   		mov_l_rr (S1, reg + 8);
-      arm_ADD_l_ri8(reg + 8, (reg == 7 ? sz2[size] : sz1[size]));
+      arm_ADD_l_ri8(reg + 8, (reg == 7 ? fpp_ea_sz2[size] : fpp_ea_sz1[size]));
   		break;
 		case 4: /* -(An) */
-		  arm_SUB_l_ri8(reg + 8, (reg == 7 ? sz2[size] : sz1[size]));
+		  arm_SUB_l_ri8(reg + 8, (reg == 7 ? fpp_ea_sz2[size] : fpp_ea_sz1[size]));
   		mov_l_rr (S1, reg + 8);
   		break;
 		case 5: /* (d16,An)  */
@@ -102,7 +100,7 @@ STATIC_INLINE int comp_fp_get (uae_u32 opcode, uae_u16 extra, int treg)
   			case 3: /* (d8,PC,Xn) or (bd,PC,Xn) or ([bd,PC,Xn],od) or ([bd,PC],Xn,od) */
   			  return -1; /* rarely used, fallback to non-JIT */
   			case 4: /* # < data >; Constants should be converted just once by the JIT */
-    			m68k_pc_offset += sz2[size];
+    			m68k_pc_offset += fpp_ea_sz2[size];
     			switch (size) {
     				case 0:
     				{
@@ -131,8 +129,11 @@ STATIC_INLINE int comp_fp_get (uae_u32 opcode, uae_u16 extra, int treg)
               wrd2 = comp_get_ilong(m68k_pc_offset - 8);
               wrd1 = comp_get_iword(m68k_pc_offset - 12) << 16;
 			  fp_to_exten(&tmp, wrd1, wrd2, wrd3);
-              mov_l_ri(S1, ((uae_u32*)&tmp)[0]);
-              mov_l_ri(S2, ((uae_u32*)&tmp)[1]);
+              // tmp.fp, not the start of tmp: that is fpx with WITH_SOFTFLOAT
+              uae_u64 bits;
+              memcpy(&bits, &tmp.fp, sizeof(bits));
+              mov_l_ri(S1, (uae_u32)bits);
+              mov_l_ri(S2, (uae_u32)(bits >> 32));
               fmov_d_rrr (treg, S1, S2);
       				return 0;
             }
@@ -232,10 +233,10 @@ STATIC_INLINE int comp_fp_put (uae_u32 opcode, uae_u16 extra)
 		  break;
 		case 3: /* (An)+ */
 		  mov_l_rr (S1, reg + 8);
-      arm_ADD_l_ri8(reg + 8, (reg == 7 ? sz2[size] : sz1[size]));
+      arm_ADD_l_ri8(reg + 8, (reg == 7 ? fpp_ea_sz2[size] : fpp_ea_sz1[size]));
 		  break;
 		case 4: /* -(An) */
-	    arm_SUB_l_ri8(reg + 8, (reg == 7 ? sz2[size] : sz1[size]));
+	    arm_SUB_l_ri8(reg + 8, (reg == 7 ? fpp_ea_sz2[size] : fpp_ea_sz1[size]));
 		  mov_l_rr (S1, reg + 8);
 		  break;
 		case 5: /* (d16,An) */
@@ -354,7 +355,7 @@ void comp_fscc_opp (uae_u32 opcode, uae_u16 extra)
 	 * JIT FPU is on and the CPU has an FPU at all. */
 	const bool fpsr_cc = !jit_fpu_enabled() && currprefs.fpu_model && !currprefs.mmu_model
 		&& !(currprefs.cpu_model >= 68040 && currprefs.fpu_no_unimplemented);
-	if ((!jit_fpu_enabled() || !currprefs.fpu_model) && !fpsr_cc) {
+	if ((!jit_fpu_enabled() || !currprefs.fpu_model || jit_fpu_exact_block) && !fpsr_cc) {
 		FAIL (1);
 		return;
 	}
@@ -395,7 +396,7 @@ void comp_fbcc_opp (uae_u32 opcode)
 	/* without native FPU code (the exact core): the predicate from the FPSR CC */
 	const bool fpsr_cc = !jit_fpu_enabled() && currprefs.fpu_model && !currprefs.mmu_model
 		&& !(currprefs.cpu_model >= 68040 && currprefs.fpu_no_unimplemented);
-	if ((!jit_fpu_enabled() || !currprefs.fpu_model) && !fpsr_cc) {
+	if ((!jit_fpu_enabled() || !currprefs.fpu_model || jit_fpu_exact_block) && !fpsr_cc) {
 		FAIL (1);
 		return;
 	}
@@ -479,7 +480,7 @@ static uae_u32 dhex_1e32[]  ={0xB5056E17, 0x4693B8B5};
 static uae_u32 dhex_1e64[]  ={0xE93FF9F5, 0x4D384F03};
 static uae_u32 dhex_1e128[] ={0xF9301D32, 0x5A827748};
 static uae_u32 dhex_1e256[] ={0x7F73BF3C, 0x75154FDD};
-static double fp_1e8;
+static uae_u32 dhex_1e8[]   ={0x00000000, 0x4197D784};
 
 /* FMOVE FPn,<ea> (opclass 3), FMOVE(M) of control registers and FMOVEM
  * (opclass 4-7) without native FPU code: the effective address here (An not
@@ -492,7 +493,7 @@ static bool comp_fpp_generic_call(uae_u32 opcode, uae_u16 extra)
 	const uae_u8 *insn = (uae_u8 *)comp_pc_p + m68k_pc_offset - 4;
 	const uae_u32 pc = start_pc + (uae_u32)((uae_char *)insn - (uae_char *)start_pc_p);
 	const int mode = (opcode >> 3) & 7, reg = opcode & 7, size = (extra >> 10) & 7;
-	const int bytes = reg == 7 ? sz2[size] : sz1[size];
+	const int bytes = reg == 7 ? fpp_ea_sz2[size] : fpp_ea_sz1[size];
 	bool hasea = true;
 	switch (mode) {
 	case 0:
@@ -551,7 +552,7 @@ static bool comp_fpp_arith_call(uae_u32 opcode, uae_u16 extra)
 	int nvals = 0, anreg = -1, delta = 0;
 	if ((extra & 0x4000) && ((opcode >> 3) & 7) != 0) {
 		const int mode = (opcode >> 3) & 7, reg = opcode & 7, size = (extra >> 10) & 7;
-		const int bytes = reg == 7 ? sz2[size] : sz1[size];
+		const int bytes = reg == 7 ? fpp_ea_sz2[size] : fpp_ea_sz1[size];
 		bool imm = false;
 		switch (mode) {
 		case 2:
@@ -599,7 +600,7 @@ static bool comp_fpp_arith_call(uae_u32 opcode, uae_u16 extra)
 			}
 			default: // 4: #immediate
 				imm = true;
-				m68k_pc_offset += sz2[size];
+				m68k_pc_offset += fpp_ea_sz2[size];
 				switch (size) {
 				case 5:
 					mov_l_ri(S2, comp_get_ilong(m68k_pc_offset - 8));
@@ -677,7 +678,7 @@ void comp_fpp_opp (uae_u32 opcode, uae_u16 extra)
     return;
   } 
 
-	if (!jit_fpu_enabled() || !currprefs.fpu_model) {
+	if (!jit_fpu_enabled() || !currprefs.fpu_model || jit_fpu_exact_block) {
 		if (!comp_fpp_arith_call(opcode, extra) && !comp_fpp_generic_call(opcode, extra))
 			FAIL (1);
 		return;
@@ -889,7 +890,25 @@ void comp_fpp_opp (uae_u32 opcode, uae_u16 extra)
 		case 2: /* from <EA> to FPx */
 		  dont_care_fflags ();
 		  if ((extra & 0xfc00) == 0x5c00) { /* FMOVECR */
-			  //write_log (_T("JIT FMOVECR %x\n"), opmode);
+			  /* inline only the constants that are exact in a double in every rounding mode */
+			  /* the precision changes the constants, see fpu_get_constant() */
+			  if ((extra & 0x40) || jit_fpu_single_block ||
+				  (currprefs.cpu_model >= 68040 && currprefs.fpu_no_unimplemented)) {
+				  FAIL (1);
+				  return;
+			  }
+			  double cval[4];
+			  uae_u32 cacc[4];
+			  if (!fp_jit_fmovecr_host(extra, cval, cacc)) {
+				  FAIL (1);
+				  return;
+			  }
+			  for (int m = 0; m < 4; m++) {
+				  if (cacc[m] || memcmp(&cval[m], &cval[0], sizeof(double))) {
+					  FAIL (1);
+					  return;
+				  }
+			  }
 			  switch (opmode) {
 				  case 0x00:
 				    fmov_d_rm (dreg, (uintptr)&dhex_pi);
@@ -928,7 +947,7 @@ void comp_fpp_opp (uae_u32 opcode, uae_u16 extra)
 				    fmov_l_ri (dreg, 10000);
 				    break;
 				  case 0x36:
-				    fmov_rm (dreg, (uintptr)&fp_1e8);
+				    fmov_d_rm (dreg, (uintptr)&dhex_1e8);
 				    break;
 				  case 0x37:
 				    fmov_d_rm (dreg, (uintptr)&dhex_1e16);
@@ -967,6 +986,8 @@ void comp_fpp_opp (uae_u32 opcode, uae_u16 extra)
 			  return;
 		  }
 		  if (!opmode) { /* FMOVE  <EA>,FPx */
+			  if (jit_fpu_single_block && prec != 1)
+				  fcuts_r (dreg);
 			  fmov_rr (FP_RESULT, dreg);
 			  FP_RESULT_WRITTEN();
 			  return;
@@ -1054,8 +1075,9 @@ void comp_fpp_opp (uae_u32 opcode, uae_u16 extra)
 			    fdiv_rr (dreg, sreg);
 			    break;
 			  case 0x21: /* FMOD */
-			    fmod_rr (dreg, sreg);
-			    break;
+			  case 0x25: /* FREM: the helper has the quotient byte and the 68881 rounding */
+				  FAIL (1);
+				  return;
 			  case 0x22: /* FADD */
 			    fadd_rr (dreg, sreg);
 			    break;
@@ -1070,9 +1092,6 @@ void comp_fpp_opp (uae_u32 opcode, uae_u16 extra)
 			    if (!currprefs.fpu_strict) /* faster, but less strict rounding */
 				    break;
 			    fcuts_r (dreg);
-			    break;
-			  case 0x25: /* FREM */
-			    frem1_rr (dreg, sreg);
 			    break;
         case 0x27: /* FSGLMUL */
 			    fsglmul_rr (dreg, sreg);
@@ -1170,6 +1189,30 @@ void comp_fpp_opp (uae_u32 opcode, uae_u16 extra)
 			    FAIL (1);
 			    return;
       }
+		  /* at FPCR single precision the host core rounds the results of all
+		     but FINT, FINTRZ, the FDxxx and the transcendental functions */
+		  if (jit_fpu_single_block) {
+			  bool round;
+			  switch (opmode) {
+				  case 0x00: case 0x18: case 0x1a: /* FMOVE, FABS, FNEG */
+				    round = prec != 1;
+				    break;
+				  case 0x04: case 0x20: case 0x22: case 0x23: case 0x28:
+				    round = true;
+				    break;
+				  case 0x40: case 0x58: case 0x5a: /* already rounded when strict */
+				    round = prec != 1 && !currprefs.fpu_strict;
+				    break;
+				  case 0x41: case 0x60: case 0x62: case 0x63: case 0x68:
+				    round = !currprefs.fpu_strict;
+				    break;
+				  default:
+				    round = false;
+				    break;
+			  }
+			  if (round)
+				  fcuts_r (dreg);
+		  }
 		  fmov_rr (FP_RESULT, dreg);
 			  FP_RESULT_WRITTEN();
 		  return;

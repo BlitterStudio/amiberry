@@ -5713,6 +5713,11 @@ static bool inputdevice_handle_inputcode2(int monid, int code, int state, const 
 		break;
 	case AKS_TOGGLE_JIT:
 #ifdef JIT
+		// with the JIT FPU the CC live in regs.fp_result: keep them in the FPSR
+		if (currprefs.fpu_model) {
+			regs.fpsr = fpp_get_fpsr();
+			fpu_fpsr_cc_written = true;
+		}
 		if (currprefs.cachesize == 0)
 		{
 			currprefs.cpu_compatible = changed_prefs.cpu_compatible = false;
@@ -5732,6 +5737,10 @@ static bool inputdevice_handle_inputcode2(int monid, int code, int state, const 
 		break;
 	case AKS_TOGGLE_JIT_FPU:
 #ifdef USE_JIT_FPU
+		if (currprefs.fpu_model) {
+			regs.fpsr = fpp_get_fpsr();
+			fpu_fpsr_cc_written = true;
+		}
 		currprefs.compfpu = changed_prefs.compfpu = !currprefs.compfpu;
 #endif
 		break;

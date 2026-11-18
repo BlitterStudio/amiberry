@@ -29,6 +29,8 @@ def main():
                             "// do not map if it conflicts with custom banks")
     shared_memory_init = between(host_memory, "static uae_u32 oz3fastmem_size",
                                  "void free_shm ()")
+    direct_layout = between(host_memory, "static bool shm_laid_out;",
+                            "bool jit_direct_pending(")
     reset_clear = between(memory, "\tif (mem_hardreset) {\n\t\tmemory_clear ();",
                           "#ifdef NATMEM_OFFSET")
     board_types = between(options, "#define MAX_RTG_BOARDS", "struct expansion_params")
@@ -49,6 +51,7 @@ using TCHAR = char;
 #define PICASSO96
 constexpr uaecptr Z3BASE_UAE = 0x40000000;
 ''' + board_types + board_ids + r'''
+struct device_t;
 struct gfxboard_func {} a2410_func;
 ''' + board_struct + 'const gfxboard a2410_board = {' + a2410 + r'''};
 const uae_u32 a2410_min = a2410_board.vrammin, a2410_max = a2410_board.vrammax;
@@ -61,6 +64,7 @@ struct uae_prefs {
     romboard romboards[MAX_ROM_BOARDS]{};
     ramboard fastmem[MAX_RAM_BOARDS]{}, z3fastmem[MAX_RAM_BOARDS]{};
     ramboard z3chipmem{}, mbresmem_high{};
+    int cachesize = 0, comptrustbyte = 1, comptrustword = 1, comptrustlong = 1;
 } currprefs, changed_prefs;
 addrbank romboardmem_bank[MAX_ROM_BOARDS], fastmem_bank[MAX_RAM_BOARDS];
 addrbank z3fastmem_bank[MAX_RAM_BOARDS], z3chipmem_bank, graphics_bank, rtarea_bank;
@@ -69,7 +73,12 @@ static int mem_hardreset;
 
 // Host allocation is isolated; production init_shm (including its persistent
 // configuration tracking), reset request and allocation make reset decisions.
-int doinit_shm() { return 0; }
+''' + direct_layout + r'''
+int doinit_shm() {
+    shm_laid_out = true;
+    shm_laid_out_direct = jit_direct_wanted(&changed_prefs);
+    return 0;
+}
 void resetmem(bool) {}
 void clear_shm(const addrbank*) {}
 uae_u8 guest_ram_marker;

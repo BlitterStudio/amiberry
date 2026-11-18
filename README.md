@@ -194,6 +194,9 @@ compiled x86 predicates, with signaling conditions retaining BSUN handling.
 Run `python3 tests/fpu_predicates_live_test.py build/amiberry` to execute an
 original synthetic ROM's predicate matrix and integer-CCR preservation checks
 through both the interpreter and JIT, without external ROMs or disks.
+`python3 tests/fpu_jit_loads_live_test.py build/amiberry` likewise compares
+FMOVECR in every rounding mode and FMOVE/FMOVEM memory loads between the
+interpreter and the JIT FPU fast path.
 
 Interpreter handlers and x86 JIT translators are checked in. After changing
 `src/gencpu.cpp` or `src/jit/x86_64/gencomp.cpp`, regenerate their outputs;
