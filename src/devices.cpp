@@ -493,6 +493,14 @@ void virtualdevice_init (void)
 		uae_sem_init(&thread_sema, 0, 1);
 	}
 
+	// bsdsocket.library lives in the UAE Boot ROM rebuilt below: its install,
+	// the boot ROM placement and the resident scan all read
+	// currprefs.socket_emu, so the setting takes effect here and nowhere
+	// else. A configuration loaded while emulating reaches changed_prefs
+	// only, and a hard reset does not copy it (#2709). fixup_prefs() rule:
+	// not with the indirect boot ROM, which only a restart changes.
+	currprefs.socket_emu = changed_prefs.socket_emu && currprefs.uaeboard < 3;
+
 	reset_device_items();
 
 #ifdef CD32
