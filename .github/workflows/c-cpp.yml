@@ -1331,9 +1331,7 @@ jobs:
     runs-on: windows-2025
     # Cold-cache runs (vcpkg + llvm-mingw downloads) finish in ~24 min,
     # warm-cache runs in ~10-15 min — see build-windows-arm64 for comparison.
-    # Release signing can require manual SignPath approval, so keep enough
-    # headroom for the build, signing round-trip, and approval window.
-    timeout-minutes: 120
+    timeout-minutes: 60
     permissions:
       contents: read
       actions: write
@@ -1667,146 +1665,6 @@ jobs:
         run: |
           cpack -G INNOSETUP --config out/build/windows-release/CPackConfig.cmake
 
-      - name: Detect SignPath configuration
-        id: signpath-config
-        shell: pwsh
-        env:
-          SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
-          SIGNPATH_ORGANIZATION_ID: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
-          SIGNPATH_PROJECT_SLUG: ${{ vars.SIGNPATH_PROJECT_SLUG }}
-          SIGNPATH_RELEASE_SIGNING_POLICY_SLUG: ${{ vars.SIGNPATH_RELEASE_SIGNING_POLICY_SLUG }}
-          SIGNPATH_ARTIFACT_CONFIGURATION_SLUG: ${{ vars.SIGNPATH_ARTIFACT_CONFIGURATION_SLUG }}
-        run: |
-          # Only release tags are signed. SignPath counts every uploaded
-          # artifact against a yearly size quota, and test-signing each
-          # master push used it up in November 2026.
-          if ($env:GITHUB_REF_TYPE -ne "tag") {
-            "enabled=false" >> $env:GITHUB_OUTPUT
-            Write-Host "SignPath signing runs for release tags only."
-            exit 0
-          }
-
-          $required = [ordered]@{
-            SIGNPATH_API_TOKEN = $env:SIGNPATH_API_TOKEN
-            SIGNPATH_ORGANIZATION_ID = $env:SIGNPATH_ORGANIZATION_ID
-            SIGNPATH_PROJECT_SLUG = $env:SIGNPATH_PROJECT_SLUG
-            SIGNPATH_RELEASE_SIGNING_POLICY_SLUG = $env:SIGNPATH_RELEASE_SIGNING_POLICY_SLUG
-            SIGNPATH_ARTIFACT_CONFIGURATION_SLUG = $env:SIGNPATH_ARTIFACT_CONFIGURATION_SLUG
-            AMIBERRY_PRODUCT_VERSION = $env:AMIBERRY_PRODUCT_VERSION
-          }
-          $missing = @()
-          foreach ($item in $required.GetEnumerator()) {
-            if ([string]::IsNullOrWhiteSpace($item.Value)) {
-              $missing += $item.Key
-            }
-          }
-          $missing = $missing | Sort-Object
-
-          if ($missing.Count -gt 0) {
-            throw "SignPath release signing is required for release tags, but the following settings are missing: $($missing -join ', ')"
-          }
-
-          "enabled=true" >> $env:GITHUB_OUTPUT
-          "signing-policy-slug=$($env:SIGNPATH_RELEASE_SIGNING_POLICY_SLUG)" >> $env:GITHUB_OUTPUT
-          "wait-timeout-seconds=5400" >> $env:GITHUB_OUTPUT
-          "product-version=$($env:AMIBERRY_PRODUCT_VERSION)" >> $env:GITHUB_OUTPUT
-          Write-Host "SignPath release signing enabled with policy '$($env:SIGNPATH_RELEASE_SIGNING_POLICY_SLUG)'."
-
-      - name: Upload unsigned Windows artifacts for SignPath
-        if: steps.signpath-config.outputs.enabled == 'true'
-        id: signpath-unsigned
-        uses: actions/upload-artifact@v7
-        with:
-          name: ${{ matrix.artifact_name }}-signpath-unsigned
-          path: |
-            amiberry-*.zip
-            amiberry-*.exe
-          if-no-files-found: error
-          retention-days: 1
-          compression-level: 0
-
-      - name: Submit SignPath signing request
-        if: steps.signpath-config.outputs.enabled == 'true'
-        id: signpath
-        uses: SignPath/github-action-submit-signing-request@v3
-        with:
-          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
-          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
-          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
-          signing-policy-slug: ${{ steps.signpath-config.outputs.signing-policy-slug }}
-          artifact-configuration-slug: ${{ vars.SIGNPATH_ARTIFACT_CONFIGURATION_SLUG }}
-          github-artifact-id: ${{ steps.signpath-unsigned.outputs.artifact-id }}
-          wait-for-completion: true
-          wait-for-completion-timeout-in-seconds: ${{ steps.signpath-config.outputs.wait-timeout-seconds }}
-          output-artifact-directory: signpath-signed
-          parameters: |
-            version: "${{ steps.signpath-config.outputs.product-version }}"
-
-      - name: Replace unsigned artifacts with signed outputs
-        if: steps.signpath-config.outputs.enabled == 'true'
-        shell: pwsh
-        run: |
-          $downloadDir = Join-Path $PWD "signpath-signed"
-          if (-not (Test-Path $downloadDir)) {
-            throw "Signed artifact directory '$downloadDir' was not created."
-          }
-
-          $portableZip = Get-ChildItem $downloadDir -Recurse -File -Filter "amiberry-*-portable.zip" | Select-Object -First 1
-          if (-not $portableZip) {
-            throw "Signed portable ZIP was not found in '$downloadDir'."
-          }
-
-          $installer = Get-ChildItem $downloadDir -Recurse -File -Filter "amiberry-*.exe" | Select-Object -First 1
-          if (-not $installer) {
-            throw "Signed installer EXE was not found in '$downloadDir'."
-          }
-
-          Copy-Item $portableZip.FullName $PWD -Force
-          Copy-Item $installer.FullName $PWD -Force
-          Write-Host "Replaced workspace artifacts with SignPath-signed outputs."
-
-      - name: Verify SignPath-signed artifacts
-        if: steps.signpath-config.outputs.enabled == 'true'
-        shell: pwsh
-        run: |
-          $installer = Get-ChildItem "$PWD/amiberry-*.exe" | Select-Object -First 1
-          if (-not $installer) {
-            throw "Signed installer EXE not found in workspace."
-          }
-
-          $installerSignature = Get-AuthenticodeSignature $installer.FullName
-          if ($installerSignature.Status -eq "NotSigned" -or -not $installerSignature.SignerCertificate) {
-            throw "Installer EXE is missing an Authenticode signature."
-          }
-          Write-Host "Installer signature status: $($installerSignature.Status)"
-
-          $portableZip = Get-ChildItem "$PWD/amiberry-*-portable.zip" | Select-Object -First 1
-          if (-not $portableZip) {
-            throw "Signed portable ZIP not found in workspace."
-          }
-
-          $verifyRoot = Join-Path $PWD "portable-signed-smoke"
-          Remove-Item -Recurse -Force $verifyRoot -ErrorAction SilentlyContinue
-          New-Item -ItemType Directory -Path $verifyRoot | Out-Null
-          Expand-Archive -Path $portableZip.FullName -DestinationPath $verifyRoot
-
-          $portableExe = Get-ChildItem $verifyRoot -Recurse -File -Filter "Amiberry.exe" | Select-Object -First 1
-          if (-not $portableExe) {
-            throw "Portable ZIP is missing Amiberry.exe after SignPath signing."
-          }
-          $portablePlugin = Get-ChildItem $verifyRoot -Recurse -File -Filter "qemu-uae.dll" | Select-Object -First 1
-          if (-not $portablePlugin) {
-            throw "Portable ZIP is missing qemu-uae.dll after SignPath signing."
-          }
-
-          $portableSignature = Get-AuthenticodeSignature $portableExe.FullName
-          if ($portableSignature.Status -eq "NotSigned" -or -not $portableSignature.SignerCertificate) {
-            throw "Portable ZIP Amiberry.exe is missing an Authenticode signature."
-          }
-          Write-Host "Portable EXE signature status: $($portableSignature.Status)"
-
-          Write-Host "QEMU-UAE plugin present after SignPath signing: $($portablePlugin.FullName)"
-
       - name: Upload artifact
         if: github.ref_type != 'tag'
         uses: actions/upload-artifact@v7
@@ -1838,9 +1696,8 @@ jobs:
     runs-on: windows-11-arm
     # Cold-cache runs finish in ~24 min, warm-cache runs in ~8 min. The
     # extra time vs. x64 mostly comes from the InnoSetup-via-Chocolatey
-    # install path (windows-11-arm doesn't preinstall ISCC). Release signing
-    # can require manual SignPath approval, so match build-windows headroom.
-    timeout-minutes: 120
+    # install path (windows-11-arm doesn't preinstall ISCC).
+    timeout-minutes: 60
     permissions:
       contents: read
       actions: write
@@ -2108,146 +1965,6 @@ jobs:
         run: |
           cpack -G INNOSETUP --config out/build/windows-arm64-release/CPackConfig.cmake
 
-      - name: Detect SignPath configuration
-        id: signpath-config
-        shell: pwsh
-        env:
-          SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
-          SIGNPATH_ORGANIZATION_ID: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
-          SIGNPATH_PROJECT_SLUG: ${{ vars.SIGNPATH_PROJECT_SLUG }}
-          SIGNPATH_RELEASE_SIGNING_POLICY_SLUG: ${{ vars.SIGNPATH_RELEASE_SIGNING_POLICY_SLUG }}
-          SIGNPATH_ARTIFACT_CONFIGURATION_SLUG: ${{ vars.SIGNPATH_ARTIFACT_CONFIGURATION_SLUG }}
-        run: |
-          # Only release tags are signed. SignPath counts every uploaded
-          # artifact against a yearly size quota, and test-signing each
-          # master push used it up in November 2026.
-          if ($env:GITHUB_REF_TYPE -ne "tag") {
-            "enabled=false" >> $env:GITHUB_OUTPUT
-            Write-Host "SignPath signing runs for release tags only."
-            exit 0
-          }
-
-          $required = [ordered]@{
-            SIGNPATH_API_TOKEN = $env:SIGNPATH_API_TOKEN
-            SIGNPATH_ORGANIZATION_ID = $env:SIGNPATH_ORGANIZATION_ID
-            SIGNPATH_PROJECT_SLUG = $env:SIGNPATH_PROJECT_SLUG
-            SIGNPATH_RELEASE_SIGNING_POLICY_SLUG = $env:SIGNPATH_RELEASE_SIGNING_POLICY_SLUG
-            SIGNPATH_ARTIFACT_CONFIGURATION_SLUG = $env:SIGNPATH_ARTIFACT_CONFIGURATION_SLUG
-            AMIBERRY_PRODUCT_VERSION = $env:AMIBERRY_PRODUCT_VERSION
-          }
-          $missing = @()
-          foreach ($item in $required.GetEnumerator()) {
-            if ([string]::IsNullOrWhiteSpace($item.Value)) {
-              $missing += $item.Key
-            }
-          }
-          $missing = $missing | Sort-Object
-
-          if ($missing.Count -gt 0) {
-            throw "SignPath release signing is required for release tags, but the following settings are missing: $($missing -join ', ')"
-          }
-
-          "enabled=true" >> $env:GITHUB_OUTPUT
-          "signing-policy-slug=$($env:SIGNPATH_RELEASE_SIGNING_POLICY_SLUG)" >> $env:GITHUB_OUTPUT
-          "wait-timeout-seconds=5400" >> $env:GITHUB_OUTPUT
-          "product-version=$($env:AMIBERRY_PRODUCT_VERSION)" >> $env:GITHUB_OUTPUT
-          Write-Host "SignPath release signing enabled with policy '$($env:SIGNPATH_RELEASE_SIGNING_POLICY_SLUG)'."
-
-      - name: Upload unsigned Windows artifacts for SignPath
-        if: steps.signpath-config.outputs.enabled == 'true'
-        id: signpath-unsigned
-        uses: actions/upload-artifact@v7
-        with:
-          name: ${{ matrix.artifact_name }}-signpath-unsigned
-          path: |
-            amiberry-*.zip
-            amiberry-*.exe
-          if-no-files-found: error
-          retention-days: 1
-          compression-level: 0
-
-      - name: Submit SignPath signing request
-        if: steps.signpath-config.outputs.enabled == 'true'
-        id: signpath
-        uses: SignPath/github-action-submit-signing-request@v3
-        with:
-          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
-          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
-          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
-          signing-policy-slug: ${{ steps.signpath-config.outputs.signing-policy-slug }}
-          artifact-configuration-slug: ${{ vars.SIGNPATH_ARTIFACT_CONFIGURATION_SLUG }}
-          github-artifact-id: ${{ steps.signpath-unsigned.outputs.artifact-id }}
-          wait-for-completion: true
-          wait-for-completion-timeout-in-seconds: ${{ steps.signpath-config.outputs.wait-timeout-seconds }}
-          output-artifact-directory: signpath-signed
-          parameters: |
-            version: "${{ steps.signpath-config.outputs.product-version }}"
-
-      - name: Replace unsigned artifacts with signed outputs
-        if: steps.signpath-config.outputs.enabled == 'true'
-        shell: pwsh
-        run: |
-          $downloadDir = Join-Path $PWD "signpath-signed"
-          if (-not (Test-Path $downloadDir)) {
-            throw "Signed artifact directory '$downloadDir' was not created."
-          }
-
-          $portableZip = Get-ChildItem $downloadDir -Recurse -File -Filter "amiberry-*-portable.zip" | Select-Object -First 1
-          if (-not $portableZip) {
-            throw "Signed portable ZIP was not found in '$downloadDir'."
-          }
-
-          $installer = Get-ChildItem $downloadDir -Recurse -File -Filter "amiberry-*.exe" | Select-Object -First 1
-          if (-not $installer) {
-            throw "Signed installer EXE was not found in '$downloadDir'."
-          }
-
-          Copy-Item $portableZip.FullName $PWD -Force
-          Copy-Item $installer.FullName $PWD -Force
-          Write-Host "Replaced workspace artifacts with SignPath-signed outputs."
-
-      - name: Verify SignPath-signed artifacts
-        if: steps.signpath-config.outputs.enabled == 'true'
-        shell: pwsh
-        run: |
-          $installer = Get-ChildItem "$PWD/amiberry-*.exe" | Select-Object -First 1
-          if (-not $installer) {
-            throw "Signed installer EXE not found in workspace."
-          }
-
-          $installerSignature = Get-AuthenticodeSignature $installer.FullName
-          if ($installerSignature.Status -eq "NotSigned" -or -not $installerSignature.SignerCertificate) {
-            throw "Installer EXE is missing an Authenticode signature."
-          }
-          Write-Host "Installer EXE signature status: $($installerSignature.Status)"
-
-          $portableZip = Get-ChildItem "$PWD/amiberry-*-windows-arm64-portable.zip" | Select-Object -First 1
-          if (-not $portableZip) {
-            throw "Signed portable ZIP not found in workspace."
-          }
-
-          $verifyRoot = Join-Path $PWD "portable-signed-smoke"
-          Remove-Item -Recurse -Force $verifyRoot -ErrorAction SilentlyContinue
-          New-Item -ItemType Directory -Path $verifyRoot | Out-Null
-          Expand-Archive -Path $portableZip.FullName -DestinationPath $verifyRoot
-
-          $portableExe = Get-ChildItem $verifyRoot -Recurse -File -Filter "Amiberry.exe" | Select-Object -First 1
-          if (-not $portableExe) {
-            throw "Portable ZIP is missing Amiberry.exe after SignPath signing."
-          }
-          $portablePlugin = Get-ChildItem $verifyRoot -Recurse -File -Filter "qemu-uae.dll" | Select-Object -First 1
-          if (-not $portablePlugin) {
-            throw "Portable ZIP is missing qemu-uae.dll after SignPath signing."
-          }
-
-          $portableSignature = Get-AuthenticodeSignature $portableExe.FullName
-          if ($portableSignature.Status -eq "NotSigned" -or -not $portableSignature.SignerCertificate) {
-            throw "Portable ZIP Amiberry.exe is missing an Authenticode signature."
-          }
-          Write-Host "Portable EXE signature status: $($portableSignature.Status)"
-
-          Write-Host "QEMU-UAE plugin present after SignPath signing: $($portablePlugin.FullName)"
-
       - name: Upload artifact
         if: github.ref_type != 'tag'
         uses: actions/upload-artifact@v7
@@ -2266,6 +1983,68 @@ jobs:
           path: |
             amiberry-*.zip
             amiberry-*.exe
+          retention-days: 7
+
+  # Signs both Windows architectures with the Certum SimplySign cloud
+  # certificate: the installer EXE, and Amiberry.exe inside the portable ZIP.
+  # One job signs both, so there is a single SimplySign login per release,
+  # and the signing secrets live in the windows-signing environment, out of
+  # reach of the jobs that run the build.
+  sign-windows:
+    needs: [build-windows, build-windows-arm64]
+    if: github.ref_type == 'tag'
+    runs-on: windows-2025
+    timeout-minutes: 30
+    environment: windows-signing
+    steps:
+      - name: Check out signing script
+        uses: actions/checkout@v6
+        with:
+          sparse-checkout: .github/scripts
+
+      - name: Download Windows x64 artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: amiberry-windows-x64
+          path: windows-artifacts/amiberry-windows-x64
+
+      - name: Download Windows arm64 artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: amiberry-windows-arm64
+          path: windows-artifacts/amiberry-windows-arm64
+
+      - name: Sign with Certum SimplySign
+        shell: pwsh
+        env:
+          CERTUM_OTPAUTH_URI: ${{ secrets.CERTUM_OTPAUTH_URI }}
+          CERTUM_USERNAME: ${{ secrets.CERTUM_USERNAME }}
+          CERTUM_CERT_THUMBPRINT: ${{ vars.CERTUM_CERT_THUMBPRINT }}
+        run: |
+          .github/scripts/sign-windows-certum.ps1 -ArtifactDirectory `
+            windows-artifacts/amiberry-windows-x64, `
+            windows-artifacts/amiberry-windows-arm64
+
+      - name: Replace Windows x64 artifacts with signed ones
+        uses: actions/upload-artifact@v7
+        with:
+          name: amiberry-windows-x64
+          path: |
+            windows-artifacts/amiberry-windows-x64/amiberry-*.zip
+            windows-artifacts/amiberry-windows-x64/amiberry-*.exe
+          if-no-files-found: error
+          overwrite: true
+          retention-days: 7
+
+      - name: Replace Windows arm64 artifacts with signed ones
+        uses: actions/upload-artifact@v7
+        with:
+          name: amiberry-windows-arm64
+          path: |
+            windows-artifacts/amiberry-windows-arm64/amiberry-*.zip
+            windows-artifacts/amiberry-windows-arm64/amiberry-*.exe
+          if-no-files-found: error
+          overwrite: true
           retention-days: 7
 
   build-libretro:
@@ -2390,7 +2169,7 @@ jobs:
           path: amiberry/libretro/amiberry_libretro.info
 
   create-release:
-    needs: [merge-macOS-universal, build-appimage, smoke-appimage-mount, smoke-appimage-extract, build-fedora, build-ubuntu, test-settings-schema, build-debian-amd64, build-debian-arm64, build-windows, build-windows-arm64, build-libretro]
+    needs: [merge-macOS-universal, build-appimage, smoke-appimage-mount, smoke-appimage-extract, build-fedora, build-ubuntu, test-settings-schema, build-debian-amd64, build-debian-arm64, build-windows, build-windows-arm64, sign-windows, build-libretro]
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     if: github.ref_type == 'tag' && (startsWith(github.ref_name, 'v') || startsWith(github.ref_name, 'preview-v'))
@@ -2424,7 +2203,7 @@ jobs:
           omitBodyDuringUpdate: true
           generateReleaseNotes: true
           body: |
-            Windows release binaries are signed through SignPath. See the Code signing policy: https://amiberry.com/code-signing-policy
+            Windows release binaries are signed with a Certum open source code signing certificate. See the Code signing policy: https://amiberry.com/code-signing-policy
           artifacts: |
             artifacts/amiberry-*.zip
             artifacts/amiberry-libretro-*.*

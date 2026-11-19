@@ -180,7 +180,7 @@ sudo apt install amiberry</code></pre>
 
 ## Code Signing Policy
 
-Windows release binaries are signed through SignPath with a certificate provided by the SignPath Foundation. See the [Code signing policy](/code-signing-policy) for signing scope, release approval roles, and privacy notes.
+Windows release binaries are signed with a Certum open source code signing certificate. See the [Code signing policy](/code-signing-policy) for signing scope, roles, and privacy notes.
 
 ---
 
