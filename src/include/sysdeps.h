@@ -415,7 +415,6 @@ extern TCHAR* buf_out (TCHAR *buffer, int *bufsize, const TCHAR *format, ...);
 extern void gui_message (const TCHAR *,...);
 extern TCHAR* write_log_get_ts(void);
 
-extern bool use_long_double;
 
 #ifndef O_BINARY
 #define O_BINARY 0

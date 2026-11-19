@@ -5,8 +5,9 @@ The JIT's inline host FPU code assumes the FPCR exception enables (and, on
 AArch64, the single rounding precision) are clear; a compiled block checks
 the FPCR on entry and leaves for the interpreter's exact helpers when they
 are not.  An original synthetic ROM runs, with FPCR values that alternate
-between 0 and rounding precisions, an exception enable that never fires and
-an inexact enable that fires every operation (with the 80-bit host core):
+between 0 and rounding precisions and exception enables (an overflow enable
+and an inexact enable; the 64-bit host core takes no FPU exceptions, so the
+enables only make the JIT's entry check fall back to the interpreter):
 - a subroutine called through a register, so that one compiled block is
   entered with each FPCR value, past the recompilation limit;
 - an FPU-only DBRA loop that branches to itself;
@@ -21,8 +22,9 @@ restores a null FPU frame (FPCR 0) before the arithmetic. The JIT must log a
 recompilation for the FPCR's mode each time such a block is entered in
 another mode: it shows that the blocks ran compiled for the fast mode, and
 that the entry check caught the change.
-Every result, the FPSR after it and the count of FPU exceptions taken must
-be the same with the JIT as in the interpreter.
+Every result and the FPSR after it must be the same with the JIT as in the
+interpreter, and so must the count of FPU exceptions taken (0 with the host
+core; kept as a guard).
 
 Usage: python3 tests/fpu_jit_guard_live_test.py <path-to-amiberry>
 """
@@ -44,8 +46,8 @@ DONE = 0x3000
 COUNT = 0x3004  # FPU exceptions taken
 ITERATIONS = 24
 # FPCR values a register-called subroutine and a DBRA self-loop run with:
-# single and double precision, an overflow enable that does not fire, single
-# precision with round to zero, and an inexact enable that fires
+# single and double precision, an overflow enable, single precision with
+# round to zero, and an inexact enable
 CALLED = (0, 0x40, 0, 0x80, 0, 0x1000, 0, 0x50, 0, 0x0200, 0)
 INLINE = (0x40, 0x80, 0x1000, 0x50, 0x0200, 0)
 # 1/3 and sqrt(2) as extended, the FPSR, then 1 + (2^-24 + 2^-70) as extended
@@ -357,7 +359,7 @@ def main(binary):
         code = test_code()
         copies = test_code.copies
         rom.write_bytes(make_rom(code))
-        count, interpreted, warmed, log = run(binary, env, rom, 0)
+        count, interpreted, warmed, _ = run(binary, env, rom, 0)
         jit_count, compiled, jit_warmed, jit_log = run(binary, env, rom, 8192)
         # 1/3 rounded to single precision, then to double precision
         single = struct.pack(">HHII", 0x3FFD, 0, 0xAAAAAB00, 0)
@@ -368,17 +370,11 @@ def main(binary):
         # 1 + (2^-24 + 2^-70) at single precision: the 64-bit core rounds to
         # double first, and the JIT must do the same
         tie = words[CALLED_SLOT + 28:CALLED_SLOT + 40]
-        if "FPU=68882 (host 80b" in log:
-            assert tie == struct.pack(">HHII", 0x3FFF, 0, 0x80000100, 0), tie.hex()
-        else:
-            assert tie == struct.pack(">HHII", 0x3FFF, 0, 0x80000000, 0), tie.hex()
+        assert tie == struct.pack(">HHII", 0x3FFF, 0, 0x80000000, 0), tie.hex()
         # after the null FRESTORE, double precision (FPCR 0)
         nulls = warmed_size() - NULL_CALLS * CALC_BYTES
         warmed_words = struct.pack(f">{len(warmed)}I", *warmed)
         assert warmed_words[nulls:nulls + 12] == double, warmed_words[nulls:nulls + 12].hex()
-        # only the 80-bit host core takes FPU exceptions; the 64-bit one has none
-        if "FPU=68882 (host 80b" in log:
-            assert count > 0, "the inexact enable took no exception"
         fpsr = fpsr_offsets()
         failures = []
         if count != jit_count:

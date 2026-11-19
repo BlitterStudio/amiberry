@@ -286,15 +286,9 @@ MIDFUNC(4,fpu_cond_from_fpsr,(W4 d, W4 tmp, IMM mask, IMM flags))
 	tmp = writereg(tmp, 4);
 	if (check_result) {
 		const uintptr fpr = (uintptr)&regs.fp_result.fp;
-#ifdef USE_LONG_DOUBLE
-		/* x87: 64-bit mantissa with an explicit integer bit, then sign/exponent */
-		const uae_u32 fhi = 0x7fffffff, emask = 0x7fff;
-		const uintptr eaddr = fpr + 8, iaddr = fpr + 7, saddr = fpr + 9;
-#else
 		/* double: the exponent and the fraction's top 20 bits in the high word */
 		const uae_u32 fhi = 0x000fffff, emask = 0x7ff00000;
-		const uintptr eaddr = fpr + 4, iaddr = 0, saddr = fpr + 7;
-#endif
+		const uintptr eaddr = fpr + 4, saddr = fpr + 7;
 		raw_cmp_b_mi((uintptr)&fpu_fpsr_cc_written, 0);
 		raw_jnz_b_oponly();
 		uae_u8 *skip = get_target();
@@ -321,21 +315,12 @@ MIDFUNC(4,fpu_cond_from_fpsr,(W4 d, W4 tmp, IMM mask, IMM flags))
 		raw_or_l(tmp, d);
 		raw_mov_l_ri(d, 0);
 		raw_jcc_b_oponly(NATIVE_CC_NE);
-		uae_u8 *nonzero1 = get_target();
+		uae_u8 *nonzero = get_target();
 		skip_byte();
-		uae_u8 *nonzero2 = NULL;
-		if (iaddr) {
-			raw_test_b_mi(iaddr, 0x80);		/* integer bit */
-			raw_jcc_b_oponly(NATIVE_CC_NE);
-			nonzero2 = get_target();
-			skip_byte();
-		}
 		raw_mov_l_ri(d, FPSR_CC_Z_BIT);
 		*inf = get_target() - (inf + 1);
 		*nan = get_target() - (nan + 1);
-		*nonzero1 = get_target() - (nonzero1 + 1);
-		if (nonzero2)
-			*nonzero2 = get_target() - (nonzero2 + 1);
+		*nonzero = get_target() - (nonzero + 1);
 		raw_test_b_mi(saddr, 0x80);		/* sign */
 		raw_jcc_b_oponly(NATIVE_CC_EQ);
 		uae_u8 *positive = get_target();

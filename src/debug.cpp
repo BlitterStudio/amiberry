@@ -64,9 +64,7 @@
 #ifdef AMIBERRY
 #include "osdep/settings/amiberry_actions.h"
 #endif
-#ifdef WITH_SOFTFLOAT
 #include "softfloat/softfloat.h"
-#endif
 
 static int trace_mode;
 static uae_u32 trace_param[3];
@@ -379,11 +377,7 @@ static const TCHAR *help[] = {
 	_T("                        v [-2 to -5] = enable visual DMA debugger.\n"),
 	_T("  vh [<ratio> <lines>]  \"Heat map\"\n"),
 	_T("  I <custom event>      Send custom event string\n"),
-#ifdef WITH_SOFTFLOAT
 	_T("  ?<value>              Hex ($, 0x)/Bin (%)/Dec (!) converter and calculator. \"?.\" to include also floating point formats.\n"),
-#else
-	_T("  ?<value>              Hex ($ and 0x)/Bin (%)/Dec (!) converter and calculator.\n"),
-#endif
 #ifdef _WIN32
 	_T("  x                     Close debugger.\n"),
 	_T("  xx                    Switch between console and GUI debugger.\n"),
@@ -776,7 +770,6 @@ static int getoperidx(TCHAR **c, bool *opersigned)
 	return -1;
 }
 
-#ifdef WITH_SOFTFLOAT
 static double f80todouble(floatx80 v)
 {
 	float_status st = { 0 };
@@ -799,22 +792,13 @@ static floatx80 doubletof80(double d)
 	fval.d = d;
 	return float64_to_floatx80(((uae_u64)fval.u[1] << 32) | (fval.u[0]), &st);
 }
-#endif
 
 #define NUMTYTPE_S 5
 #define NUMTYTPE_D 6
 #define NUMTYTPE_X 7
 #define NUMTYTPE_P 8
 
-#ifdef WITH_SOFTFLOAT
 using debugfloatx80 = floatx80;
-#else
-struct debugfloatx80
-{
-	uae_u16 high;
-	uae_u64 low;
-};
-#endif
 
 static const TCHAR *debugregs[] = {
 	_T("D0"),
@@ -964,7 +948,6 @@ static int readregx(TCHAR **c, uae_u32 *valp, debugfloatx80 *valx80p)
 		*c = old;
 		return 0;
 	}
-#ifdef WITH_SOFTFLOAT
 	if (idx >= BREAKPOINT_REG_FPx && idx < BREAKPOINT_REG_FPx + 8) {
 		int fpureg = idx - BREAKPOINT_REG_FPx;
 		if (fpu_softfloat_core()) {
@@ -974,7 +957,6 @@ static int readregx(TCHAR **c, uae_u32 *valp, debugfloatx80 *valx80p)
 		}
 		return NUMTYTPE_X;
 	}
-#endif
 	addr = returnregx(idx);
 	*valp = addr;
 	return 1;
@@ -1045,7 +1027,6 @@ static bool readhexx (TCHAR **c, uae_u32 *valp)
 	return true;
 }
 
-#ifdef WITH_SOFTFLOAT
 static bool iscfloat(TCHAR **c)
 {
 	int cnt = 0;
@@ -1083,7 +1064,6 @@ static bool readfloatx(TCHAR **c, debugfloatx80 *valx80)
 	*valx80 = doubletof80(dval);
 	return true;
 }
-#endif
 
 static bool readintx (TCHAR **c, uae_u32 *valp)
 {
@@ -1110,7 +1090,6 @@ static int checkvaltype2(TCHAR **c, uae_u32 *val, debugfloatx80 *valx80, TCHAR d
 
 	ignore_ws(c);
 
-#ifdef WITH_SOFTFLOAT
 	// check for floating point formats
 	TCHAR *cp = *c;
 	for (;;) {
@@ -1162,7 +1141,6 @@ static int checkvaltype2(TCHAR **c, uae_u32 *val, debugfloatx80 *valx80, TCHAR d
 			return 0;
 		}
 	}
-#endif
 
 	nc = _totupper(**c);
 	if (nc == '!') {
@@ -1181,14 +1159,12 @@ static int checkvaltype2(TCHAR **c, uae_u32 *val, debugfloatx80 *valx80, TCHAR d
 		(*c)++;
 		return readbinx(c, val) ? 1: 0;
 	}
-#ifdef WITH_SOFTFLOAT
 	if (iscfloat(c)) {
 		if (readfloatx(c, valx80)) {
 			return 2;
 		}
 		return 0;
 	}
-#endif
 	if (nc >= 'A' && nc <= 'Z' && nc != 'A' && nc != 'D') {
 		int ret = readregx(c, val, valx80);
 		if (ret) {
@@ -1234,7 +1210,6 @@ static int readsize (int val, TCHAR **c)
 		return 3;
 	if (cc == 'L')
 		return 4;
-#ifdef WITH_SOFTFLOAT
 	if (cc == 'S')
 		return NUMTYTPE_S;
 	if (cc == 'D')
@@ -1243,7 +1218,6 @@ static int readsize (int val, TCHAR **c)
 		return NUMTYTPE_X;
 	if (cc == 'P')
 		return NUMTYTPE_P;
-#endif
 	return 0;
 }
 
@@ -1282,7 +1256,6 @@ static int checkvaltype(TCHAR **cp, uae_u32 *val, debugfloatx80 *valx80, int *si
 #endif
 			// stupid but works!
 			_sntprintf(p, remaining_bufsize, _T("%u"), v);
-#ifdef WITH_SOFTFLOAT
 		} else {
 			*val = 0;
 			*valx80 = vx80;
@@ -1294,7 +1267,6 @@ static int checkvaltype(TCHAR **cp, uae_u32 *val, debugfloatx80 *valx80, int *si
 				*size = NUMTYTPE_X;
 			}
 			outret = -1;
-#endif
 		}
 		p += _tcslen (p);
 		*p = 0;
@@ -1468,7 +1440,6 @@ static size_t next_string (TCHAR **c, TCHAR *out, int max, int forceupper)
 
 static void converter(TCHAR **c)
 {
-#ifdef WITH_SOFTFLOAT
 	TCHAR s[100];
 	float_status st = { 0 };
 	bool err = false;
@@ -1517,24 +1488,6 @@ static void converter(TCHAR **c)
 	} else {
 		console_out_f(_T("$%08X = %%%s = %u = %d\n"), v, s, v, (uae_s32)v);
 	}
-#else
-	bool err;
-	uae_u32 v = readint(c, &err);
-	TCHAR s[100];
-	int i, j;
-
-	if (err) {
-		return;
-	}
-	for (i = 0, j = 0; i < 32; i++) {
-		s[j++] = (v & (1 << (31 - i))) ? '1' : '0';
-		if (i < 31 && (i & 7) == 7) {
-			s[j++] = '`';
-		}
-	}
-	s[j] = 0;
-	console_out_f(_T("$%08X = %%%s = %u = %d\n"), v, s, v, (uae_s32)v);
-#endif
 }
 
 static bool isrom(uaecptr addr)

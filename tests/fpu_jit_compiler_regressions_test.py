@@ -43,11 +43,7 @@ using IMM = uintptr;
 using W4 = int;
 enum {S1 = 20, S2, S3, S4, PC_P, TRASH = 0, VALID = 1};
 struct { int flags_in_flags, flags_on_stack; } live;
-#ifdef USE_LONG_DOUBLE
-struct { uae_u32 fpsr; struct { uae_u8 fp[16]; } fp_result; } regs;  // x87 long double
-#else
 struct { uae_u32 fpsr; struct { uae_u8 fp[8]; } fp_result; } regs;  // double
-#endif
 struct { bool compfpu = true; } currprefs;
 static bool jit_fpu_enabled() { return currprefs.compfpu; }  // the host core: no exact core here
 struct { bool fscc, fbcc; } jit_disable;
@@ -209,22 +205,6 @@ static void compile(int mode, bool branch, bool long_branch, int condition, int 
 }
 // Run the block for every run-time state of a compile state. The result
 // is checked by check(control); the FPSR must end with control.
-#ifdef USE_LONG_DOUBLE
-struct Raw { uae_u64 m; uae_u16 e; };
-static const std::vector<Raw> raws[5] = {
-    {{0x8000000000000000ULL, 0x3fff}, {0x0000000000000001ULL, 0}, {0x0000000100000000ULL, 0},
-     {0x8000000000000000ULL, 0}, {0xffffffffffffffffULL, 0x7ffe}},                     // finite
-    {{0xc000000000000000ULL, 0x7fff}, {0x8000000000000001ULL, 0x7fff},
-     {0x4000000000000000ULL, 0x7fff}, {0x0000000000000001ULL, 0x7fff}},                // NaN
-    {{0x8000000000000000ULL, 0x7fff}, {0, 0x7fff}},                                     // infinity
-    {}, {{0, 0}}};                                                                      // zero
-static void set_result(const Raw &raw, bool negative) {
-    const uae_u16 e = raw.e | (negative ? 0x8000 : 0);
-    memset(regs.fp_result.fp, 0xa5, sizeof regs.fp_result.fp);
-    memcpy(regs.fp_result.fp, &raw.m, 8);
-    memcpy(regs.fp_result.fp + 8, &e, 2);
-}
-#else
 struct Raw { uae_u64 m; };
 static const std::vector<Raw> raws[5] = {
     {{0x3ff0000000000000ULL}, {0x0000000000000001ULL}, {0x0000000100000000ULL},
@@ -236,7 +216,6 @@ static void set_result(const Raw &raw, bool negative) {
     const uae_u64 v = raw.m | (negative ? 0x8000000000000000ULL : 0);
     memcpy(regs.fp_result.fp, &v, 8);
 }
-#endif
 template <typename F>
 static void run(int mode, uae_u32 extra_fpsr, F check) {
     for (int state = 0; state <= 1; ++state) for (int control = 0; control < 16; ++control) {
@@ -318,11 +297,10 @@ int main() {
             cpp = directory / "driver.cpp"
             binary = directory / "predicates"
             cpp.write_text(driver)
-            for layout in ([], ["-DUSE_LONG_DOUBLE"]):
-                subprocess.run(
-                    ["c++", "-std=c++17", "-Wall", "-Wextra", "-Werror", *layout,
-                     str(cpp), "-o", str(binary)], check=True, timeout=30)
-                subprocess.run([str(binary)], check=True, timeout=10)
+            subprocess.run(
+                ["c++", "-std=c++17", "-Wall", "-Wextra", "-Werror",
+                 str(cpp), "-o", str(binary)], check=True, timeout=30)
+            subprocess.run([str(binary)], check=True, timeout=10)
 
     def test_decoded_ea_and_helper_call_state(self):
         source = (ROOT / "src/jit/x86_64/compemu_fpp_x86_64.cpp").read_text()

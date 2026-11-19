@@ -179,7 +179,9 @@ void render_panel_cpu() {
 
         ImGui::BeginDisabled(!available(o.cpu_no_unimplemented, ctx));
         option_checkbox("Unimplemented CPU emu", o.cpu_no_unimplemented, ctx, true);
-        ShowHelpMarker("Emulate unimplemented 68060 instructions in software.");
+        ShowHelpMarker("Ticked: Amiberry executes the instructions a real 68060 lacks (MOVEP, CAS2, CHK2/CMP2, "
+            "64-bit MULx.L/DIVx.L, misaligned CAS) itself. Unticked: they trap as on a real 68060, so "
+            "68060.library must handle them.");
         ImGui::EndDisabled();
 
         ImGui::BeginDisabled(!available(o.cpu_data_cache, ctx));
@@ -265,30 +267,14 @@ void render_panel_cpu() {
         // The FPU core: Automatic, Host or Exact. With the JIT, Exact is slower
         // than the host core with the JIT FPU: say so.
         ImGui::BeginDisabled(!available(o.fpu_core, ctx));
-#ifdef USE_LONG_DOUBLE // newcpu.h: the x87 host core keeps 80-bit values
-        static const char* const host_label = "Host (80-bit)";
-#else
         static const char* const host_label = "Host (64-bit)";
-#endif
-#ifdef MSVC_LONG_DOUBLE
-        static const settings::definition& fpu_long_double = settings::require("fpu_msvc_long_double");
-        const char* fpu_mode_items[] = { "Automatic", host_label, "Host (80-bit)", "Exact (80-bit)" };
-        const char* const fpu_mode_values[] = { "auto", "host", "host", "exact" };
-        int fpu_mode_idx = has_value(o.fpu_core, "exact") ? 3 : has_value(o.fpu_core, "host")
-            ? (settings::get_bool(fpu_long_double, changed_prefs) ? 2 : 1) : 0;
-#else
         const char* fpu_mode_items[] = { "Automatic", host_label, "Exact (80-bit)" };
         const char* const fpu_mode_values[] = { "auto", "host", "exact" };
         int fpu_mode_idx = has_value(o.fpu_core, "exact") ? 2 : has_value(o.fpu_core, "host") ? 1 : 0;
-#endif
         ImGui::SetNextItemWidth(slider_width);
         if (ImGui::BeginCombo("##FPUMode", fpu_mode_items[fpu_mode_idx])) {
             for (int i = 0; i < IM_ARRAYSIZE(fpu_mode_items); i++) {
                 if (ImGui::Selectable(fpu_mode_items[i], i == fpu_mode_idx)) {
-#ifdef MSVC_LONG_DOUBLE
-                    if (std::strcmp(fpu_mode_values[i], "host") == 0)
-                        settings::set_bool(fpu_long_double, changed_prefs, ctx, i == 2);
-#endif
                     settings::set(o.fpu_core, changed_prefs, ctx, fpu_mode_values[i]);
                 }
                 if (i == fpu_mode_idx)
@@ -310,7 +296,10 @@ void render_panel_cpu() {
 
         ImGui::BeginDisabled(!available(o.fpu_no_unimplemented, ctx));
         option_checkbox("Unimplemented FPU emu", o.fpu_no_unimplemented, ctx, true);
-        ShowHelpMarker("Emulate unimplemented FPU instructions in software.");
+        ShowHelpMarker("Ticked: Amiberry executes the FPU instructions a real 68040/68060 lacks (FSIN, FETOX, "
+            "FMOVECR, packed decimal and others) itself. Unticked: they trap as on the real CPU, so "
+            "68040.library or 68060.library must handle them. On a 68881/68882 it only affects undefined "
+            "FPU opcodes.");
         ImGui::EndDisabled();
         ImGui::Dummy(ImVec2(left_group_min_width, 0.0f));
         }

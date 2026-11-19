@@ -18,11 +18,6 @@
 #include "sysconfig.h"
 #include "sysdeps.h"
 
-#define USE_HOST_ROUNDING 1
-#ifdef WITH_SOFTFLOAT
-#define SOFTFLOAT_CONVERSIONS 1
-#endif
-
 // Extended <-> double conversions. The x86-64 JIT does its own conversions
 // with the x87, so the host core can always use the exact (correctly
 // rounded, flag-exact) softfloat ones; AArch64 keeps the arithmetic
@@ -41,17 +36,15 @@
 #include "uae/vm.h"
 #include "newcpu.h"
 
-#ifdef WITH_SOFTFLOAT
 #include "softfloat/softfloat-macros.h"
 #include "softfloat/softfloat-specialize.h"
-#endif
 
 /* libm calls on fptype. Use the long double functions only where long
  * double is the x87 80-bit format (done in hardware): elsewhere it is either
  * the same as double, or IEEE binary128 done in software (aarch64, riscv64
  * Linux), which only promotes a double operand and rounds the result back,
  * at many times the cost: too slow for real time on FPU-heavy code. */
-#if defined(USE_LONG_DOUBLE) || LDBL_MANT_DIG == 64
+#if LDBL_MANT_DIG == 64
 #define FP_FN(f) f##l
 #else
 #define FP_FN(f) f
@@ -90,65 +83,12 @@ static const double twoto32 = 4294967296.0;
 #define	FPCR_PRECISION_DOUBLE	0x00000080
 #define FPCR_PRECISION_EXTENDED	0x00000000
 
-#ifdef SOFTFLOAT_CONVERSIONS
 static struct float_status fs;
-#endif
 static uae_u32 fpu_mode_control = ~0U;
 // ~0U also reads as a valid FPCR (RP): no mode has been applied until this is set
 static bool fpu_mode_applied;
 static int fpu_prec;
 static int temp_prec;
-
-#if defined(USE_LONG_DOUBLE) && defined(WITH_SOFTFLOAT) && LDBL_MANT_DIG == 64 && !defined(WORDS_BIGENDIAN)
-#define NATIVE_EXTENDED 1
-static floatx80 native_raw(const fpdata *fpd)
-{
-	floatx80 value;
-	memcpy(&value.low, &fpd->fp, sizeof(value.low));
-	memcpy(&value.high, (const uae_u8 *)&fpd->fp + 8, sizeof(value.high));
-	return value;
-}
-
-static void native_raw_set(fpdata *fpd, floatx80 value)
-{
-	memset(&fpd->fp, 0, sizeof(fpd->fp));
-	memcpy(&fpd->fp, &value.low, sizeof(value.low));
-	memcpy((uae_u8 *)&fpd->fp + 8, &value.high, sizeof(value.high));
-}
-
-static bool native_special(const fpdata *fpd)
-{
-	const floatx80 value = native_raw(fpd);
-	const int exponent = value.high & 0x7fff;
-	return exponent == 0 || exponent == 0x7fff || !(value.low >> 63);
-}
-
-static bool native_software(const fpdata *a, const fpdata *b, int prec)
-{
-	const int ae = native_raw(a).high & 0x7fff;
-	const int be = native_raw(b).high & 0x7fff;
-	return prec != PREC_NORMAL || fpu_prec != PREC_EXTENDED ||
-		(regs.fpcr & 0xff00) || currprefs.fpu_no_unimplemented ||
-		ae < 0x2000 || ae >= 0x6000 || be < 0x2000 || be >= 0x6000 ||
-		native_special(a) || native_special(b);
-}
-
-static void native_precision(int prec)
-{
-	static const uae_u8 precisions[] = { 0, 32, 64, 80 };
-	set_floatx80_rounding_precision(prec == PREC_NORMAL ?
-		(fpu_prec == PREC_FLOAT ? 32 : fpu_prec == PREC_DOUBLE ? 64 : 80) :
-		precisions[prec], &fs);
-}
-
-#define NATIVE_UNARY_SPECIAL(operation) \
-	if (native_special(b)) { \
-		native_raw_set(a, floatx80_##operation(native_raw(b), &fs)); \
-		return; \
-	}
-#else
-#define NATIVE_UNARY_SPECIAL(operation)
-#endif
 
 #if defined(CPU_x86_64)
 
@@ -223,18 +163,10 @@ static void set_fpucw_x87(uae_u32 m68k_cw)
 #endif
 #endif
 	static const uae_u16 x87_cw_tab[] = {
-#ifdef USE_LONG_DOUBLE
-		0x137f, 0x1f7f, 0x177f, 0x1b7f,	/* Extended */
-#else
-		0x127f, 0x1e7f, 0x167f, 0x1a7f,	/* Double */
-#endif
-#ifdef USE_LONG_DOUBLE
-		0x107f, 0x1c7f, 0x147f, 0x187f,	/* Single */
-#else
+		0x127f, 0x1e7f, 0x167f, 0x1a7f,	/* Extended: the host core is double */
 		/* Single: the operations of the double core are rounded to single
 		   afterwards (fp_round_single()), so does compiled x87 code */
 		0x127f, 0x1e7f, 0x167f, 0x1a7f,
-#endif
 		0x127f, 0x1e7f, 0x167f, 0x1a7f,	/* Double */
 		0x127f, 0x1e7f, 0x167f, 0x1a7f,	/* undefined (Double) */
 	};
@@ -277,7 +209,6 @@ static void fp_set_mode(uae_u32 mode_control)
 			fpu_prec = PREC_DOUBLE;
             break;
     }
-#if USE_HOST_ROUNDING
 	if (!fpu_mode_applied || (mode_control & FPCR_ROUNDING_MODE) != (fpu_mode_control & FPCR_ROUNDING_MODE)) {
 		switch(mode_control & FPCR_ROUNDING_MODE) {
 			case FPCR_ROUND_NEAR: // to neareset
@@ -295,8 +226,6 @@ static void fp_set_mode(uae_u32 mode_control)
 		}
 	}
 	native_set_fpucw(mode_control);
-#endif
-#ifdef SOFTFLOAT_CONVERSIONS
 	static const int rounding[] = {
 		float_round_nearest_even, float_round_to_zero, float_round_down, float_round_up
 	};
@@ -304,7 +233,6 @@ static void fp_set_mode(uae_u32 mode_control)
 	set_float_detect_tininess(float_tininess_before_rounding, &fs);
 	set_floatx80_rounding_precision(fpu_prec == PREC_FLOAT ? 32 :
 		fpu_prec == PREC_DOUBLE ? 64 : 80, &fs);
-#endif
 	fpu_mode_control = mode_control;
 	fpu_mode_applied = true;
 }
@@ -325,7 +253,6 @@ static void fp_get_status(uae_u32 *status)
         if (exp_flags & FE_INVALID)
             *status |= FPSR_OPERR;
     }
-#ifdef SOFTFLOAT_CONVERSIONS
 	if (fs.float_exception_flags & float_flag_signaling)
 		*status |= FPSR_SNAN;
 	if (fs.float_exception_flags & float_flag_invalid)
@@ -340,16 +267,11 @@ static void fp_get_status(uae_u32 *status)
 		*status |= FPSR_INEX2;
 	if (fs.float_exception_flags & float_flag_decimal)
 		*status |= FPSR_INEX1;
-#endif
 }
 
 static uae_u32 fp_get_support_flags(void)
 {
-#ifdef NATIVE_EXTENDED
-	return FPU_FEATURE_EXCEPTIONS | FPU_FEATURE_DENORMALS;
-#else
 	return 0;
-#endif
 }
 
 static void fp_clear_status(void)
@@ -374,9 +296,7 @@ static void fp_clear_status(void)
 #else
 	feclearexcept(FE_ALL_EXCEPT);
 #endif
-#ifdef SOFTFLOAT_CONVERSIONS
 	fs.float_exception_flags = 0;
-#endif
 }
 
 /* Functions for detecting float type */
@@ -386,68 +306,35 @@ static bool fp_is_init(fpdata *fpd)
 }
 static bool fp_is_snan(fpdata *fpd)
 {
-#ifdef NATIVE_EXTENDED
-	return floatx80_is_signaling_nan(native_raw(fpd)) != 0;
-#else
 	return false;
-#endif
 }
 static bool fp_unset_snan(fpdata *fpd)
 {
-#ifdef NATIVE_EXTENDED
-	floatx80 value = native_raw(fpd);
-	value.low |= LIT64(0x4000000000000000);
-	native_raw_set(fpd, value);
-#endif
 	return 0;
 }
 static bool fp_is_nan(fpdata *fpd)
 {
-#ifdef NATIVE_EXTENDED
-	return floatx80_is_any_nan(native_raw(fpd)) != 0;
-#else
 	return isnan(fpd->fp) != 0;
-#endif
 }
 static bool fp_is_infinity(fpdata *fpd)
 {
-#ifdef NATIVE_EXTENDED
-	return floatx80_is_infinity(native_raw(fpd)) != 0;
-#else
 	return isinf(fpd->fp) != 0;
-#endif
 }
 static bool fp_is_zero(fpdata *fpd)
 {
-#ifdef NATIVE_EXTENDED
-	return floatx80_is_zero(native_raw(fpd)) != 0;
-#else
 	return fpd->fp == 0.0;
-#endif
 }
 static bool fp_is_neg(fpdata *fpd)
 {
-#ifdef NATIVE_EXTENDED
-	return (native_raw(fpd).high & 0x8000) != 0;
-#else
 	return signbit(fpd->fp) != 0;
-#endif
 }
 static bool fp_is_denormal(fpdata *fpd)
 {
-#ifdef NATIVE_EXTENDED
-	return floatx80_is_denormal(native_raw(fpd)) != 0;
-#else
 	return false;
-#endif
 }
 static bool fp_is_unnormal(fpdata *fpd)
 {
-#ifdef NATIVE_EXTENDED
-	return floatx80_is_unnormal(native_raw(fpd)) != 0;
-#else
 	return false;
-#endif
 }
 
 static bool fp_is_denormal_or_unnormal(fpdata *fpd)
@@ -480,9 +367,6 @@ static void fp_from_native(fptype fp, fpdata *fpd)
 
 static void fp_to_single(fpdata *fpd, uae_u32 wrd1)
 {
-#ifdef NATIVE_EXTENDED
-	native_raw_set(fpd, float32_to_floatx80_allowunnormal(wrd1, &fs));
-#else
     union {
         float f;
         uae_u32 u;
@@ -490,13 +374,9 @@ static void fp_to_single(fpdata *fpd, uae_u32 wrd1)
     
     val.u = wrd1;
     fpd->fp = (fptype) val.f;
-#endif
 }
 static uae_u32 fp_from_single(fpdata *fpd)
 {
-#ifdef NATIVE_EXTENDED
-	return floatx80_to_float32(native_raw(fpd), &fs);
-#else
     union {
         float f;
         uae_u32 u;
@@ -504,15 +384,10 @@ static uae_u32 fp_from_single(fpdata *fpd)
     
     val.f = (float) fpd->fp;
     return val.u;
-#endif
 }
 
 static void fp_to_double(fpdata *fpd, uae_u32 wrd1, uae_u32 wrd2)
 {
-#ifdef NATIVE_EXTENDED
-	native_raw_set(fpd, float64_to_floatx80_allowunnormal(
-		((uae_u64)wrd1 << 32) | wrd2, &fs));
-#else
     union {
         double d;
         uae_u32 u[2];
@@ -526,15 +401,9 @@ static void fp_to_double(fpdata *fpd, uae_u32 wrd1, uae_u32 wrd2)
     val.u[0] = wrd2;
 #endif
     fpd->fp = (fptype) val.d;
-#endif
 }
 static void fp_from_double(fpdata *fpd, uae_u32 *wrd1, uae_u32 *wrd2)
 {
-#ifdef NATIVE_EXTENDED
-	const float64 value = floatx80_to_float64(native_raw(fpd), &fs);
-	*wrd1 = value >> 32;
-	*wrd2 = (uae_u32)value;
-#else
     union {
         double d;
         uae_u32 u[2];
@@ -548,65 +417,13 @@ static void fp_from_double(fpdata *fpd, uae_u32 *wrd1, uae_u32 *wrd2)
     *wrd1 = val.u[1];
     *wrd2 = val.u[0];
 #endif
-#endif
 }
-#ifdef USE_LONG_DOUBLE
-static void fp_to_exten(fpdata *fpd, uae_u32 wrd1, uae_u32 wrd2, uae_u32 wrd3)
-{
-#ifdef NATIVE_EXTENDED
-	const floatx80 value = { (uae_u16)(wrd1 >> 16), ((uae_u64)wrd2 << 32) | wrd3 };
-	native_raw_set(fpd, value);
-#else
-    union {
-        long double ld;
-        uae_u32 u[3];
-    } val;
-
-#if WORDS_BIGENDIAN
-    val.u[0] = (wrd1 & 0xffff0000) | ((wrd2 & 0xffff0000) >> 16);
-    val.u[1] = (wrd2 & 0x0000ffff) | ((wrd3 & 0xffff0000) >> 16);
-    val.u[2] = (wrd3 & 0x0000ffff) << 16;
-#else
-    val.u[0] = wrd3;
-    val.u[1] = wrd2;
-    val.u[2] = wrd1 >> 16;
-#endif
-    fpd->fp = val.ld;
-#endif
-}
-static void fp_from_exten(fpdata *fpd, uae_u32 *wrd1, uae_u32 *wrd2, uae_u32 *wrd3)
-{
-#ifdef NATIVE_EXTENDED
-	const floatx80 value = floatx80_to_floatx80(native_raw(fpd), &fs);
-	*wrd1 = (uae_u32)value.high << 16;
-	*wrd2 = value.low >> 32;
-	*wrd3 = (uae_u32)value.low;
-#else
-    union {
-        long double ld;
-        uae_u32 u[3];
-    } val;
-    
-    val.ld = fpd->fp;
-#if WORDS_BIGENDIAN
-    *wrd1 = val.u[0] & 0xffff0000;
-    *wrd2 = ((val.u[0] & 0x0000ffff) << 16) | ((val.u[1] & 0xffff0000) >> 16);
-    *wrd3 = ((val.u[1] & 0x0000ffff) << 16) | ((val.u[2] & 0xffff0000) >> 16);
-#else
-    *wrd3 = val.u[0];
-    *wrd2 = val.u[1];
-    *wrd1 = val.u[2] << 16;
-#endif
-#endif
-}
-#else // if !USE_LONG_DOUBLE
 #ifdef CPU_AARCH64
 void fp_to_exten(fpdata *fpd, uae_u32 wrd1, uae_u32 wrd2, uae_u32 wrd3)
 #else
 static void fp_to_exten(fpdata *fpd, uae_u32 wrd1, uae_u32 wrd2, uae_u32 wrd3)
 #endif
 {
-#if SOFTFLOAT_CONVERSIONS
 	if (FP_EXACT_EXTEN_CONVERSIONS) {
 		floatx80 fx80;
 		fx80.high = wrd1 >> 16;
@@ -666,31 +483,9 @@ static void fp_to_exten(fpdata *fpd, uae_u32 wrd1, uae_u32 wrd2, uae_u32 wrd3)
 			fpd->fp = fma((double)w * 0x1p-538, 0x1p-538, (double)ne * 0x1p-1074);
 		}
 	}
-#else
-		double frac;
-		if ((wrd1 & 0x7fff0000) == 0 && wrd2 == 0 && wrd3 == 0) {
-			fpd->fp = (wrd1 & 0x80000000) ? -0.0 : +0.0;
-			return;
-		}
-		if ((wrd1 & 0x7fff0000) == 0x7fff0000) {
-			// infinity if the fraction (without the explicit integer bit) is zero, else NaN
-			if ((wrd2 & 0x7fffffff) == 0 && wrd3 == 0) {
-				fpd->fp = copysign(INFINITY, (wrd1 & 0x80000000) ? -1.0 : 1.0);
-			} else {
-				fpd->fp = copysign(NAN, (wrd1 & 0x80000000) ? -1.0 : 1.0);
-			}
-			return;
-		}
-		frac = ((double)wrd2 + ((double)wrd3 / twoto32)) / 2147483648.0;
-		if (wrd1 & 0x80000000) {
-			frac = -frac;
-		}
-		fpd->fp = ldexp (frac, ((wrd1 >> 16) & 0x7fff) - 16383);
-#endif
 }
 static void fp_from_exten(fpdata *fpd, uae_u32 *wrd1, uae_u32 *wrd2, uae_u32 *wrd3)
 {
-#if SOFTFLOAT_CONVERSIONS
 	if (FP_EXACT_EXTEN_CONVERSIONS) {
 		uae_u32 w1, w2;
 		fp_from_double(fpd, &w1, &w2);
@@ -736,83 +531,10 @@ static void fp_from_exten(fpdata *fpd, uae_u32 *wrd1, uae_u32 *wrd2, uae_u32 *wr
 		*wrd2 = (uae_u32) (frac * twoto32);
 		*wrd3 = (uae_u32) ((frac * twoto32 - *wrd2) * twoto32);
 	}
-#else
-	int expon;
-	double frac;
-	fptype v;
-
-	if (fp_is_zero(fpd)) {
-		*wrd1 = signbit(fpd->fp) ? 0x80000000 : 0;
-		*wrd2 = 0;
-		*wrd3 = 0;
-		return;
-	}
-	else if (fp_is_nan(fpd)) {
-		*wrd1 = (signbit(fpd->fp) ? 0x80000000 : 0) | 0x7fff0000;
-		*wrd2 = 0xffffffff;
-		*wrd3 = 0xffffffff;
-		return;
-	} else if (fp_is_infinity(fpd)) {
-		*wrd1 = (signbit(fpd->fp) ? 0x80000000 : 0) | 0x7fff0000;
-		*wrd2 = 0;
-		*wrd3 = 0;
-		return;
-	}
-	v = fpd->fp;
-	if (v < 0) {
-		*wrd1 = 0x80000000;
-		v = -v;
-	}
-	else {
-		*wrd1 = 0;
-	}
-	frac = frexp(v, &expon);
-	frac += 0.5 / (twoto32 * twoto32);
-	if (frac >= 1.0) {
-		frac /= 2.0;
-		expon++;
-	}
-	*wrd1 |= (((expon + 16383 - 1) & 0x7fff) << 16);
-	*wrd2 = (uae_u32)(frac * twoto32);
-	*wrd3 = (uae_u32)((frac * twoto32 - *wrd2) * twoto32);
-#endif
 }
-#endif // !USE_LONG_DOUBLE
-
-#ifdef NATIVE_EXTENDED
-static void fp_from_exten_fmovem(fpdata *fpd, uae_u32 *wrd1, uae_u32 *wrd2, uae_u32 *wrd3)
-{
-	const floatx80 value = native_raw(fpd);
-	*wrd1 = (uae_u32)value.high << 16;
-	*wrd2 = value.low >> 32;
-	*wrd3 = (uae_u32)value.low;
-}
-#endif
-
-#if USE_HOST_ROUNDING == 0
-#ifdef USE_LONG_DOUBLE
-#define fp_round_to_minus_infinity(x) FP_FN(floor)(x)
-#define fp_round_to_plus_infinity(x) FP_FN(ceil)(x)
-#define fp_round_to_zero(x)	((x) >= 0.0 ? FP_FN(floor)(x) : FP_FN(ceil)(x))
-#define fp_round_to_nearest(x) FP_FN(round)(x)
-#else // if !USE_LONG_DOUBLE
-#define fp_round_to_minus_infinity(x) floor(x)
-#define fp_round_to_plus_infinity(x) ceil(x)
-#define fp_round_to_zero(x)	((x) >= 0.0 ? floor(x) : ceil(x))
-#define fp_round_to_nearest(x) round(x)
-#endif // !USE_LONG_DOUBLE
-#endif // USE_HOST_ROUNDING
 
 static uae_s64 fp_to_int(fpdata *src, int size)
 {
-#ifdef NATIVE_EXTENDED
-	switch (size) {
-		case 0: return floatx80_to_int8(native_raw(src), &fs);
-		case 1: return floatx80_to_int16(native_raw(src), &fs);
-		case 2: return floatx80_to_int32(native_raw(src), &fs);
-		default: return 0;
-	}
-#else
     static const fptype fxsizes[6] =
     {
                -128.0,        127.0,
@@ -847,28 +569,7 @@ static uae_s64 fp_to_int(fpdata *src, int size)
 	if (fp > fxsizes[size * 2 + 1]) {
 		fp = fxsizes[size * 2 + 1];
 	}
-#if USE_HOST_ROUNDING
 	return FP_FN(lrint)(fp);
-#else
-	uae_s64 result = (int)fp;
-	switch (regs.fpcr & 0x30)
-	{
-		case FPCR_ROUND_ZERO:
-			result = (int)fp_round_to_zero (fp);
-			break;
-		case FPCR_ROUND_MINF:
-			result = (int)fp_round_to_minus_infinity (fp);
-			break;
-		case FPCR_ROUND_NEAR:
-			result = fp_round_to_nearest (fp);
-			break;
-		case FPCR_ROUND_PINF:
-			result = (int)fp_round_to_plus_infinity (fp);
-			break;
-	}
-	return result;
-#endif
-#endif
 }
 static void fp_from_int(fpdata *fpd, uae_s32 src)
 {
@@ -881,49 +582,30 @@ static void fp_from_int(fpdata *fpd, uae_s32 src)
 // round to float with extended precision exponent
 static void fp_round32(fpdata *fpd)
 {
-#ifdef NATIVE_EXTENDED
-	native_raw_set(fpd, floatx80_round32(native_raw(fpd), &fs));
-#else
     int expon;
     float mant;
     mant = (float)(FP_FN(frexp)(fpd->fp, &expon) * 2.0);
     fpd->fp = FP_FN(ldexp)((fptype)mant, expon - 1);
-#endif
 }
 
 // round to double with extended precision exponent
 static void fp_round64(fpdata *fpd)
 {
-#ifdef NATIVE_EXTENDED
-	native_raw_set(fpd, floatx80_round64(native_raw(fpd), &fs));
-#else
     int expon;
     double mant;
     mant = (double)(FP_FN(frexp)(fpd->fp, &expon) * 2.0);
     fpd->fp = FP_FN(ldexp)((fptype)mant, expon - 1);
-#endif
 }
 
 // round to float
 static void fp_round_single(fpdata *fpd)
 {
-#ifdef NATIVE_EXTENDED
-	native_raw_set(fpd, floatx80_round_to_float32(native_raw(fpd), &fs));
-#else
     fpd->fp = (float) fpd->fp;
-#endif
 }
 
-// round to double
+// round to double: fptype is double already
 static void fp_round_double(fpdata *fpd)
 {
-#ifdef USE_LONG_DOUBLE
-#ifdef NATIVE_EXTENDED
-	native_raw_set(fpd, floatx80_round_to_float64(native_raw(fpd), &fs));
-#else
-	fpd->fp = (double) fpd->fp;
-#endif
-#endif
 }
 
 static const TCHAR *fp_print(fpdata *fpd, int mode)
@@ -945,11 +627,7 @@ static const TCHAR *fp_print(fpdata *fpd, int mode)
 	} else if(isnan(fpd->fp)) {
 		_sntprintf(fsout, sizeof fsout, _T("%c%s"), n ? '-' : '+', _T("nan"));
 	} else {
-#ifdef USE_LONG_DOUBLE
-		_sntprintf(fsout, sizeof fsout, _T("%Le"), fpd->fp);
-#else
 		_sntprintf(fsout, sizeof fsout, _T("%e"), fpd->fp);
-#endif
 	}
 	if (mode == 0 || mode > _tcslen(fsout))
 		return fsout;
@@ -968,10 +646,6 @@ static void fp_round_prec(fpdata *fpd, int prec)
 
 static void fp_round(fpdata *fpd)
 {
-#ifdef NATIVE_EXTENDED
-	if (fp_is_nan(fpd) && !fp_is_snan(fpd) && (fetestexcept(FE_INVALID) & FE_INVALID))
-		native_raw_set(fpd, floatx80_default_nan(&fs));
-#endif
 	if (!currprefs.fpu_strict)
 		return;
 	fp_round_prec(fpd, fpu_prec);
@@ -980,9 +654,6 @@ static void fp_round(fpdata *fpd)
 
 static void fp_set_prec(int prec)
 {
-#ifdef NATIVE_EXTENDED
-	native_precision(prec);
-#endif
 #if 0
 	temp_fpu_mode_control = fpu_mode_control;
 	if (prec && fpu_prec > prec) {
@@ -1014,9 +685,6 @@ static void fp_reset_prec(fpdata *fpd)
 	if (temp_prec == PREC_NORMAL)
 		prec = fpu_prec;
 	fp_round_prec(fpd, prec);
-#ifdef NATIVE_EXTENDED
-	native_precision(PREC_NORMAL);
-#endif
 #endif
 }
 
@@ -1024,15 +692,9 @@ static void fp_reset_prec(fpdata *fpd)
 static void fp_normal_prec(void)
 {
 	temp_prec = fpu_mode_control;
-#ifdef USE_LONG_DOUBLE
-	if ((fpu_mode_control & FPCR_ROUNDING_PRECISION) != FPCR_PRECISION_EXTENDED || (fpu_mode_control & FPCR_ROUNDING_MODE) != FPCR_ROUND_NEAR) {
-		fp_set_mode(FPCR_PRECISION_EXTENDED | FPCR_ROUND_NEAR);
-	}
-#else
 	if ((fpu_mode_control & FPCR_ROUNDING_PRECISION) == FPCR_PRECISION_SINGLE || (fpu_mode_control & FPCR_ROUNDING_MODE) != FPCR_ROUND_NEAR) {
 		fp_set_mode(FPCR_PRECISION_DOUBLE | FPCR_ROUND_NEAR);
 	}
-#endif
 }
 
 static void fp_reset_normal_prec(void)
@@ -1044,52 +706,19 @@ static void fp_reset_normal_prec(void)
 
 static void fp_move(fpdata *a, fpdata *b, int prec)
 {
-#ifdef NATIVE_EXTENDED
-	native_precision(prec);
-	native_raw_set(a, floatx80_move(native_raw(b), &fs));
-	native_precision(PREC_NORMAL);
-#else
 	fp_set_prec(prec);
 	a->fp = b->fp;
 	fp_reset_prec(a);
-#endif
 }
 
 static void fp_int(fpdata *a, fpdata *b)
 {
-#ifdef NATIVE_EXTENDED
-	native_raw_set(a, floatx80_round_to_int(native_raw(b), &fs));
-#else
 	fptype bb = b->fp;
-#if USE_HOST_ROUNDING
 	a->fp = FP_FN(rint)(bb);
-#else
-    switch (regs.fpcr & FPCR_ROUNDING_MODE)
-    {
-        case FPCR_ROUND_NEAR:
-            a->fp = fp_round_to_nearest(bb);
-            break;
-        case FPCR_ROUND_ZERO:
-            a->fp = fp_round_to_zero(bb);
-            break;
-        case FPCR_ROUND_MINF:
-            a->fp = fp_round_to_minus_infinity(bb);
-            break;
-        case FPCR_ROUND_PINF:
-            a->fp = fp_round_to_plus_infinity(bb);
-            break;
-        default: /* never reached */
-		break;
-    }
-#endif
-#endif
 }
 
 static void fp_getexp(fpdata *a, fpdata *b)
 {
-#ifdef NATIVE_EXTENDED
-	native_raw_set(a, floatx80_getexp(native_raw(b), &fs));
-#else
     int expon;
 	// 68881: FGETEXP of a zero is that zero, of an infinity a NaN
 	// (OPERR), of a NaN the NaN; frexp() gives exponent 0 for zero
@@ -1105,51 +734,24 @@ static void fp_getexp(fpdata *a, fpdata *b)
 	FP_FN(frexp)(b->fp, &expon);
 	a->fp = (fptype)expon - 1;
 	fp_reset_normal_prec();
-#endif
 }
 static void fp_getman(fpdata *a, fpdata *b)
 {
-#ifdef NATIVE_EXTENDED
-	native_raw_set(a, floatx80_getman(native_raw(b), &fs));
-#else
     int expon;
 	fp_normal_prec();
 	a->fp = FP_FN(frexp)(b->fp, &expon) * 2.0;
 	fp_reset_normal_prec();
-#endif
 }
 static void fp_div(fpdata *a, fpdata *b, int prec)
 {
-#ifdef NATIVE_EXTENDED
-	if (native_software(a, b, prec)) {
-		native_precision(prec);
-		native_raw_set(a, floatx80_div(native_raw(a), native_raw(b), &fs));
-		native_precision(PREC_NORMAL);
-		return;
-	}
-#endif
 	fp_set_prec(prec);
 	a->fp = a->fp / b->fp;
 	fp_reset_prec(a);
 }
 static void fp_mod(fpdata *a, fpdata *b, uae_u64 *q, uae_u8 *s)
 {
-#ifdef NATIVE_EXTENDED
-	if (fp_is_zero(a) && fp_is_infinity(b)) {
-		*q = 0;
-		*s = fp_is_neg(a) != fp_is_neg(b);
-		return;
-	}
-	uint64_t quotient = *q;
-	native_raw_set(a, floatx80_mod(native_raw(a), native_raw(b), &quotient, s, &fs));
-	*q = quotient;
-#else
     fptype quot;
-#if USE_HOST_ROUNDING
     quot = FP_FN(trunc)(a->fp / b->fp);
-#else
-    quot = fp_round_to_zero(a->fp / b->fp);
-#endif
     if (quot < 0.0) {
         *s = 1;
         quot = -quot;
@@ -1164,27 +766,12 @@ static void fp_mod(fpdata *a, fpdata *b, uae_u64 *q, uae_u8 *s)
     if (!nan_in && isnan(a->fp))
         a->fp = *fp_nan;
 	fp_round(a);
-#endif
 }
 
 static void fp_rem(fpdata *a, fpdata *b, uae_u64 *q, uae_u8 *s)
 {
-#ifdef NATIVE_EXTENDED
-	if (fp_is_zero(a) && fp_is_infinity(b)) {
-		*q = 0;
-		*s = fp_is_neg(a) != fp_is_neg(b);
-		return;
-	}
-	uint64_t quotient = *q;
-	native_raw_set(a, floatx80_rem(native_raw(a), native_raw(b), &quotient, s, &fs));
-	*q = quotient;
-#else
     fptype quot;
-#if USE_HOST_ROUNDING
     quot = FP_FN(round)(a->fp / b->fp);
-#else
-    quot = fp_round_to_nearest(a->fp / b->fp);
-#endif
     if (quot < 0.0) {
         *s = 1;
         quot = -quot;
@@ -1199,24 +786,18 @@ static void fp_rem(fpdata *a, fpdata *b, uae_u64 *q, uae_u8 *s)
     if (!nan_in && isnan(a->fp))
         a->fp = *fp_nan;
 	fp_round(a);
-#endif
 }
 
 static void fp_scale(fpdata *a, fpdata *b)
 {
-#ifdef NATIVE_EXTENDED
-	native_raw_set(a, floatx80_scale(native_raw(a), native_raw(b), &fs));
-#else
 	fp_normal_prec();
 	a->fp = FP_FN(ldexp)(a->fp, (int)b->fp);
 	fp_reset_normal_prec();
 	fp_round(a);
-#endif
 }
 
 static void fp_sinh(fpdata *a, fpdata *b)
 {
-	NATIVE_UNARY_SPECIAL(sinh)
 	fp_normal_prec();
 	a->fp = FP_FN(sinh)(b->fp);
 	fp_reset_normal_prec();
@@ -1224,34 +805,17 @@ static void fp_sinh(fpdata *a, fpdata *b)
 }
 static void fp_intrz(fpdata *a, fpdata *b)
 {
-#ifdef NATIVE_EXTENDED
-	native_raw_set(a, floatx80_round_to_int_toward_zero(native_raw(b), &fs));
-#else
-#if USE_HOST_ROUNDING
     a->fp = FP_FN(trunc)(b->fp);
-#else
-    a->fp = fp_round_to_zero (b->fp);
-#endif
 	fp_round(a);
-#endif
 }
 static void fp_sqrt(fpdata *a, fpdata *b, int prec)
 {
-#ifdef NATIVE_EXTENDED
-	if (native_software(b, b, prec) || fp_is_neg(b)) {
-		native_precision(prec);
-		native_raw_set(a, floatx80_sqrt(native_raw(b), &fs));
-		native_precision(PREC_NORMAL);
-		return;
-	}
-#endif
 	fp_set_prec(prec);
 	a->fp = FP_FN(sqrt)(b->fp);
 	fp_reset_prec(a);
 }
 static void fp_lognp1(fpdata *a, fpdata *b)
 {
-	NATIVE_UNARY_SPECIAL(lognp1)
 	fp_normal_prec();
 	a->fp = FP_FN(log1p)(b->fp);
 	fp_reset_normal_prec();
@@ -1259,7 +823,6 @@ static void fp_lognp1(fpdata *a, fpdata *b)
 }
 static void fp_etoxm1(fpdata *a, fpdata *b)
 {
-	NATIVE_UNARY_SPECIAL(etoxm1)
 	fp_normal_prec();
 	a->fp = FP_FN(expm1)(b->fp);
 	fp_reset_normal_prec();
@@ -1267,7 +830,6 @@ static void fp_etoxm1(fpdata *a, fpdata *b)
 }
 static void fp_tanh(fpdata *a, fpdata *b)
 {
-	NATIVE_UNARY_SPECIAL(tanh)
 	fp_normal_prec();
 	a->fp = FP_FN(tanh)(b->fp);
 	fp_reset_normal_prec();
@@ -1275,7 +837,6 @@ static void fp_tanh(fpdata *a, fpdata *b)
 }
 static void fp_atan(fpdata *a, fpdata *b)
 {
-	NATIVE_UNARY_SPECIAL(atan)
 	fp_normal_prec();
 	a->fp = FP_FN(atan)(b->fp);
 	fp_reset_normal_prec();
@@ -1283,7 +844,6 @@ static void fp_atan(fpdata *a, fpdata *b)
 }
 static void fp_atanh(fpdata *a, fpdata *b)
 {
-	NATIVE_UNARY_SPECIAL(atanh)
 	fp_normal_prec();
 	a->fp = FP_FN(atanh)(b->fp);
 	fp_reset_normal_prec();
@@ -1291,7 +851,6 @@ static void fp_atanh(fpdata *a, fpdata *b)
 }
 static void fp_sin(fpdata *a, fpdata *b)
 {
-	NATIVE_UNARY_SPECIAL(sin)
 	fp_normal_prec();
 	a->fp = FP_FN(sin)(b->fp);
 	fp_reset_normal_prec();
@@ -1299,7 +858,6 @@ static void fp_sin(fpdata *a, fpdata *b)
 }
 static void fp_asin(fpdata *a, fpdata *b)
 {
-	NATIVE_UNARY_SPECIAL(asin)
 	fp_normal_prec();
 	a->fp = FP_FN(asin)(b->fp);
 	fp_reset_normal_prec();
@@ -1307,7 +865,6 @@ static void fp_asin(fpdata *a, fpdata *b)
 }
 static void fp_tan(fpdata *a, fpdata *b)
 {
-	NATIVE_UNARY_SPECIAL(tan)
 	fp_normal_prec();
 	a->fp = FP_FN(tan)(b->fp);
 	fp_reset_normal_prec();
@@ -1315,7 +872,6 @@ static void fp_tan(fpdata *a, fpdata *b)
 }
 static void fp_etox(fpdata *a, fpdata *b)
 {
-	NATIVE_UNARY_SPECIAL(etox)
 	fp_normal_prec();
 	a->fp = FP_FN(exp)(b->fp);
 	fp_reset_normal_prec();
@@ -1323,7 +879,6 @@ static void fp_etox(fpdata *a, fpdata *b)
 }
 static void fp_twotox(fpdata *a, fpdata *b)
 {
-	NATIVE_UNARY_SPECIAL(twotox)
 	fp_normal_prec();
 	a->fp = FP_FN(exp2)(b->fp);
 	fp_reset_normal_prec();
@@ -1331,7 +886,6 @@ static void fp_twotox(fpdata *a, fpdata *b)
 }
 static void fp_tentox(fpdata *a, fpdata *b)
 {
-	NATIVE_UNARY_SPECIAL(tentox)
 	fp_normal_prec();
 #if defined(__GLIBC__) && defined(__USE_GNU)
 	a->fp = FP_FN(exp10)(b->fp);
@@ -1343,7 +897,6 @@ static void fp_tentox(fpdata *a, fpdata *b)
 }
 static void fp_logn(fpdata *a, fpdata *b)
 {
-	NATIVE_UNARY_SPECIAL(logn)
 	fp_normal_prec();
 	a->fp = FP_FN(log)(b->fp);
 	fp_reset_normal_prec();
@@ -1351,7 +904,6 @@ static void fp_logn(fpdata *a, fpdata *b)
 }
 static void fp_log10(fpdata *a, fpdata *b)
 {
-	NATIVE_UNARY_SPECIAL(log10)
 	fp_normal_prec();
 	a->fp = FP_FN(log10)(b->fp);
 	fp_reset_normal_prec();
@@ -1359,7 +911,6 @@ static void fp_log10(fpdata *a, fpdata *b)
 }
 static void fp_log2(fpdata *a, fpdata *b)
 {
-	NATIVE_UNARY_SPECIAL(log2)
 	fp_normal_prec();
 	a->fp = FP_FN(log2)(b->fp);
 	fp_reset_normal_prec();
@@ -1367,19 +918,12 @@ static void fp_log2(fpdata *a, fpdata *b)
 }
 static void fp_abs(fpdata *a, fpdata *b, int prec)
 {
-#ifdef NATIVE_EXTENDED
-	native_precision(prec);
-	native_raw_set(a, floatx80_abs(native_raw(b), &fs));
-	native_precision(PREC_NORMAL);
-#else
 	fp_set_prec(prec);
 	a->fp = FP_FN(fabs)(b->fp);
 	fp_reset_prec(a);
-#endif
 }
 static void fp_cosh(fpdata *a, fpdata *b)
 {
-	NATIVE_UNARY_SPECIAL(cosh)
 	fp_normal_prec();
 	a->fp = FP_FN(cosh)(b->fp);
 	fp_reset_normal_prec();
@@ -1387,19 +931,12 @@ static void fp_cosh(fpdata *a, fpdata *b)
 }
 static void fp_neg(fpdata *a, fpdata *b, int prec)
 {
-#ifdef NATIVE_EXTENDED
-	native_precision(prec);
-	native_raw_set(a, floatx80_neg(native_raw(b), &fs));
-	native_precision(PREC_NORMAL);
-#else
 	fp_set_prec(prec);
 	a->fp = -b->fp;
 	fp_reset_prec(a);
-#endif
 }
 static void fp_acos(fpdata *a, fpdata *b)
 {
-	NATIVE_UNARY_SPECIAL(acos)
 	fp_normal_prec();
 	a->fp = FP_FN(acos)(b->fp);
 	fp_reset_normal_prec();
@@ -1407,7 +944,6 @@ static void fp_acos(fpdata *a, fpdata *b)
 }
 static void fp_cos(fpdata *a, fpdata *b)
 {
-	NATIVE_UNARY_SPECIAL(cos)
 	fp_normal_prec();
 	a->fp = FP_FN(cos)(b->fp);
 	fp_reset_normal_prec();
@@ -1415,15 +951,6 @@ static void fp_cos(fpdata *a, fpdata *b)
 }
 static void fp_sincos(fpdata *a, fpdata *b, fpdata *c)
 {
-#ifdef NATIVE_EXTENDED
-	if (native_special(b)) {
-		floatx80 cosine;
-		const floatx80 sine = floatx80_sincos(native_raw(b), &cosine, &fs);
-		native_raw_set(a, sine);
-		native_raw_set(c, cosine);
-		return;
-	}
-#endif
 	fp_normal_prec();
 	c->fp = FP_FN(cos)(b->fp);
 	a->fp = FP_FN(sin)(b->fp);
@@ -1434,51 +961,24 @@ static void fp_sincos(fpdata *a, fpdata *b, fpdata *c)
 
 static void fp_sub(fpdata *a, fpdata *b, int prec)
 {
-#ifdef NATIVE_EXTENDED
-	if (native_software(a, b, prec)) {
-		native_precision(prec);
-		native_raw_set(a, floatx80_sub(native_raw(a), native_raw(b), &fs));
-		native_precision(PREC_NORMAL);
-		return;
-	}
-#endif
 	fp_set_prec(prec);
 	a->fp = a->fp - b->fp;
 	fp_reset_prec(a);
 }
 static void fp_add(fpdata *a, fpdata *b, int prec)
 {
-#ifdef NATIVE_EXTENDED
-	if (native_software(a, b, prec)) {
-		native_precision(prec);
-		native_raw_set(a, floatx80_add(native_raw(a), native_raw(b), &fs));
-		native_precision(PREC_NORMAL);
-		return;
-	}
-#endif
 	fp_set_prec(prec);
 	a->fp = a->fp + b->fp;
 	fp_reset_prec(a);
 }
 static void fp_mul(fpdata *a, fpdata *b, int prec)
 {
-#ifdef NATIVE_EXTENDED
-	if (native_software(a, b, prec)) {
-		native_precision(prec);
-		native_raw_set(a, floatx80_mul(native_raw(a), native_raw(b), &fs));
-		native_precision(PREC_NORMAL);
-		return;
-	}
-#endif
 	fp_set_prec(prec);
 	a->fp = a->fp * b->fp;
 	fp_reset_prec(a);
 }
 static void fp_sglmul(fpdata *a, fpdata *b)
 {
-#ifdef NATIVE_EXTENDED
-	native_raw_set(a, floatx80_sglmul(native_raw(a), native_raw(b), &fs));
-#else
     fptype z;
     float mant;
     int expon;
@@ -1487,13 +987,9 @@ static void fp_sglmul(fpdata *a, fpdata *b)
 
     mant = (float)(FP_FN(frexp)(z, &expon) * 2.0);
     a->fp = FP_FN(ldexp)((fptype)mant, expon - 1);
-#endif
 }
 static void fp_sgldiv(fpdata *a, fpdata *b)
 {
-#ifdef NATIVE_EXTENDED
-	native_raw_set(a, floatx80_sgldiv(native_raw(a), native_raw(b), &fs));
-#else
     fptype z;
     float mant;
     int expon;
@@ -1501,21 +997,14 @@ static void fp_sgldiv(fpdata *a, fpdata *b)
     
     mant = (float)(FP_FN(frexp)(z, &expon) * 2.0);
     a->fp = FP_FN(ldexp)((fptype)mant, expon - 1);
-#endif
 }
 
 static void fp_normalize(fpdata *a)
 {
-#ifdef NATIVE_EXTENDED
-	native_raw_set(a, floatx80_normalize(native_raw(a)));
-#endif
 }
 
 static void fp_cmp(fpdata *a, fpdata *b)
 {
-#ifdef NATIVE_EXTENDED
-	native_raw_set(a, floatx80_cmp(native_raw(a), native_raw(b), &fs));
-#else
 	fptype v = 1.0;
 	if (currprefs.fpu_strict) {
 		fp_is_init(a);
@@ -1572,115 +1061,51 @@ static void fp_cmp(fpdata *a, fpdata *b)
 		fp_clear_status();
 	}
 	a->fp = v;
-#endif
 }
 
 static void fp_tst(fpdata *a, fpdata *b)
 {
-#ifdef NATIVE_EXTENDED
-	native_raw_set(a, floatx80_tst(native_raw(b), &fs));
-#else
 	a->fp = b->fp;
-#endif
 }
 
 /* Functions for returning exception state data */
 
 static void fp_get_internal_overflow(fpdata *fpd)
 {
-#ifdef NATIVE_EXTENDED
-	native_raw_set(fpd, getFloatInternalOverflow());
-#else
 	fpd->fp = 0;
-#endif
 }
 static void fp_get_internal_underflow(fpdata *fpd)
 {
-#ifdef NATIVE_EXTENDED
-	native_raw_set(fpd, getFloatInternalUnderflow());
-#else
 	fpd->fp = 0;
-#endif
 }
 static void fp_get_internal_round_all(fpdata *fpd)
 {
-#ifdef NATIVE_EXTENDED
-	native_raw_set(fpd, getFloatInternalRoundedAll());
-#else
 	fpd->fp = 0;
-#endif
 }
 static void fp_get_internal_round(fpdata *fpd)
 {
-#ifdef NATIVE_EXTENDED
-	native_raw_set(fpd, getFloatInternalRoundedSome());
-#else
 	fpd->fp = 0;
-#endif
 }
 static void fp_get_internal_round_exten(fpdata *fpd)
 {
-#ifdef NATIVE_EXTENDED
-	native_raw_set(fpd, getFloatInternalFloatx80());
-#else
 	fpd->fp = 0;
-#endif
 }
 static void fp_get_internal(fpdata *fpd)
 {
-#ifdef NATIVE_EXTENDED
-	native_raw_set(fpd, getFloatInternalUnrounded());
-#else
 	fpd->fp = 0;
-#endif
 }
 static uae_u32 fp_get_internal_grs(void)
 {
-#ifdef NATIVE_EXTENDED
-	return (uae_u32)getFloatInternalGRS();
-#else
 	return 0;
-#endif
 }
 
 /* Function for denormalizing */
 static void fp_denormalize(fpdata *fpd, int esign)
 {
-#ifdef NATIVE_EXTENDED
-	native_raw_set(fpd, floatx80_denormalize(native_raw(fpd), esign));
-#endif
 }
 
 static void fp_from_pack (fpdata *src, uae_u32 *wrd, int kfactor)
 {
-#ifdef NATIVE_EXTENDED
-	floatx80 value = floatx80_to_floatdecimal(native_raw(src), &kfactor, &fs);
-	if ((value.high & 0x7fff) == 0x7fff) {
-		*wrd = (uae_u32)value.high << 16;
-		wrd[1] = value.low >> 32;
-		wrd[2] = (uae_u32)value.low;
-		return;
-	}
-	uae_u64 fraction = 0;
-	uae_u32 integer = 0, exponent = 0;
-	for (int i = kfactor - 1; i >= 0; --i) {
-		const uae_u32 digit = value.low % 10;
-		value.low /= 10;
-		if (i == 0)
-			integer = digit;
-		else
-			fraction |= (uae_u64)digit << (64 - i * 4);
-	}
-	unsigned exp = value.high & 0x3fff;
-	for (int i = 0; i < 4; ++i) {
-		exponent |= (exp % 10) << (i * 4);
-		exp /= 10;
-	}
-	wrd[0] = ((uae_u32)(value.high & 0xc000) << 16) |
-		((exponent & 0xfff) << 16) | ((exponent & 0xf000)) | integer;
-	wrd[1] = fraction >> 32;
-	wrd[2] = (uae_u32)fraction;
-#else
 	int i, j, t;
 	int exp;
 	int ndigits;
@@ -1705,11 +1130,7 @@ static void fp_from_pack (fpdata *src, uae_u32 *wrd, int kfactor)
 
 	fp_to_native(&fp, src);
 
-#ifdef USE_LONG_DOUBLE
-	_sntprintf (str, sizeof str, "%#.17Le", fp);
-#else
 	_sntprintf (str, sizeof str, "%#.17e", fp);
-#endif
 	
 	// get exponent
 	cp = str;
@@ -1828,29 +1249,10 @@ static void fp_from_pack (fpdata *src, uae_u32 *wrd, int kfactor)
 		i /= 10;
 	}
 	wrd[0] |= t << 16;
-#endif
 }
 
 static void fp_to_pack (fpdata *fpd, uae_u32 *wrd, int dummy)
 {
-#ifdef NATIVE_EXTENDED
-	if (((wrd[0] >> 16) & 0x7fff) == 0x7fff) {
-		fp_to_exten(fpd, wrd[0], wrd[1], wrd[2]);
-		return;
-	}
-	uae_u64 mantissa = wrd[0] & 15;
-	for (int i = 0; i < 16; ++i)
-		mantissa = mantissa * 10 + ((wrd[1 + i / 8] >> (28 - (i % 8) * 4)) & 15);
-	int exponent = 0;
-	for (int i = 0; i < 3; ++i)
-		exponent = exponent * 10 + ((wrd[0] >> (24 - i * 4)) & 15);
-	if (wrd[0] & 0x40000000)
-		exponent = -exponent;
-	exponent -= 16;
-	floatx80 value = { (uae_u16)((wrd[0] >> 16) & 0x8000), mantissa };
-	value.high |= (exponent < 0 ? 0x4000 : 0) | abs(exponent);
-	native_raw_set(fpd, floatdecimal_to_floatx80(value, &fs));
-#else
 	fptype d;
 	char *cp;
 	char str[100];
@@ -1896,13 +1298,8 @@ static void fp_to_pack (fpdata *fpd, uae_u32 *wrd, int dummy)
 	*cp++ = ((wrd[0] >> 20) & 0xf) + '0';
 	*cp++ = ((wrd[0] >> 16) & 0xf) + '0';
 	*cp = 0;
-#ifdef USE_LONG_DOUBLE
-	sscanf (str, "%Le", &d);
-#else
 	sscanf (str, "%le", &d);
-#endif
 	fp_from_native(d, fpd);
-#endif
 }
 
 
@@ -1910,14 +1307,12 @@ void fp_init_native(void)
 {
 	fpu_mode_control = ~0U;
 	fpu_mode_applied = false;
-#ifdef SOFTFLOAT_CONVERSIONS
 	set_floatx80_rounding_precision(80, &fs);
 	set_float_rounding_mode(float_round_to_zero, &fs);
 	// the same special-value rules as fp_init_softfloat(): the specials go
 	// to the same softfloat routines
 	set_special_flags(currprefs.fpu_model == 68040 ? cmp_signed_nan :
 		currprefs.fpu_model == 68060 ? infinity_clear_intbit : addsub_swap_inf, &fs);
-#endif
 	fpp_print = fp_print;
 	fpp_unset_snan = fp_unset_snan;
 
@@ -1951,11 +1346,7 @@ void fp_init_native(void)
 	fpp_to_exten = fp_to_exten;
 	fpp_from_exten = fp_from_exten;
 	fpp_to_exten_fmovem = fp_to_exten;
-#ifdef NATIVE_EXTENDED
-	fpp_from_exten_fmovem = fp_from_exten_fmovem;
-#else
 	fpp_from_exten_fmovem = fp_from_exten;
-#endif
 
 	fpp_round_single = fp_round_single;
 	fpp_round_double = fp_round_double;
@@ -2014,7 +1405,6 @@ void fp_init_native(void)
 
 double softfloat_tan(double v)
 {
-#if SOFTFLOAT_CONVERSIONS
 	struct float_status f = { 0 };
 	uae_u32 w1, w2;
 	fpdata fpd = { 0 };
@@ -2028,7 +1418,4 @@ double softfloat_tan(double v)
 	float64 f64 = floatx80_to_float64(fv, &fs);
 	fp_to_double(&fpd, f64 >> 32, (uae_u32)f64);
 	return fpd.fp;
-#else
-	return FP_FN(tan)(v);
-#endif
 }
