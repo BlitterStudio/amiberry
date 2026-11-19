@@ -27,6 +27,7 @@
 #include "midiemu.h"
 #include "zfile.h"
 #include "zarchive.h"
+#include "amiberry_whdload_icon.h"
 
 extern void set_last_active_config_from_media(const char* filename);
 #ifdef LIBRETRO
@@ -1554,6 +1555,125 @@ static std::string selected_slave_sub_path()
 	return whdload_prefs.sub_path;
 }
 
+// The icons in the game drawer `drawer` of an archive or a directory.
+static std::vector<WhdloadIcon> read_drawer_icons(const char* filepath, const std::string& drawer)
+{
+	// Icons with pictures stay far below this; anything bigger is not one.
+	constexpr uae_s64 max_icon_size = 1024 * 1024;
+	const auto is_icon_name = [](const std::string& name) {
+		const auto lower_name = lowercase_string(name);
+		return lower_name.length() > 5 &&
+			lower_name.compare(lower_name.length() - 5, 5, ".info") == 0;
+	};
+
+	std::vector<WhdloadIcon> icons;
+	const auto add_icon = [&](const std::string& name, const std::vector<uae_u8>& data) {
+		std::vector<std::string> tooltypes;
+		if (whdload_icon_tooltypes(data.data(), data.size(), tooltypes))
+			icons.push_back({ name.substr(0, name.length() - 5), whdload_icon_args(tooltypes) });
+	};
+
+	std::error_code ec;
+	if (std::filesystem::is_directory(filepath, ec))
+	{
+		const std::filesystem::path dir = drawer.empty()
+			? std::filesystem::path(filepath)
+			: std::filesystem::path(filepath) / drawer;
+		std::filesystem::directory_iterator it(dir, ec);
+		const std::filesystem::directory_iterator end;
+		for (; !ec && it != end; it.increment(ec))
+		{
+			std::error_code entry_ec;
+			const auto name = it->path().filename().string();
+			if (!it->is_regular_file(entry_ec) || entry_ec || !is_icon_name(name))
+				continue;
+			const auto size = it->file_size(entry_ec);
+			if (entry_ec || size == 0 || size > static_cast<uintmax_t>(max_icon_size))
+				continue;
+			std::vector<uae_u8> data(static_cast<size_t>(size));
+			std::ifstream file(it->path(), std::ios::binary);
+			if (file.read(reinterpret_cast<char*>(data.data()), static_cast<std::streamsize>(data.size())))
+				add_icon(name, data);
+		}
+		return icons;
+	}
+
+	// Archive members are opened by their node's full name: a path built with
+	// '/' does not match a member on Windows, where the names use '\'.
+	std::lock_guard<std::recursive_mutex> archive_guard(zarchive_access_mutex);
+	struct zvolume* zv = zfile_fopen_archive(filepath);
+	if (!zv)
+		return icons;
+	struct znode* node = zv->root.child;
+	std::istringstream components(drawer);
+	std::string component;
+	while (node && std::getline(components, component, '/'))
+	{
+		while (node && !(node->name && strcmpi(node->name, component.c_str()) == 0 && node->child))
+			node = node->sibling;
+		node = node ? node->child : nullptr;
+	}
+	for (; node; node = node->sibling)
+	{
+		if (node->type != ZNODE_FILE || !node->name || !node->fullname || !is_icon_name(node->name))
+			continue;
+		if (node->size <= 0 || node->size > max_icon_size)
+			continue;
+		struct zfile* f = zfile_open_archive(node->fullname, 0);
+		if (!f)
+			continue;
+		std::vector<uae_u8> data(static_cast<size_t>(node->size));
+		if (zfile_fread(data.data(), 1, data.size(), f) == data.size())
+			add_icon(node->name, data);
+	}
+	zfile_fclose_archive(zv); // closes the members' zfiles as well
+	return icons;
+}
+
+// WHDLoad options that the game's icon sets in its tool types: the CUSTOM1-5
+// values and the CUSTOM text. Applied before a per-game config, which keeps
+// the user's own choices.
+static void apply_icon_tooltypes(const char* filepath)
+{
+	auto& selected = whdload_prefs.selected_slave;
+	if (selected.filename.empty())
+		return;
+
+	const std::string drawer = selected_slave_sub_path();
+	const auto icons = read_drawer_icons(filepath, drawer);
+	const std::string drawer_name = drawer.substr(drawer.find_last_of('/') + 1);
+	const auto* icon = whdload_pick_icon(icons, drawer_name, selected.filename);
+	if (!icon)
+	{
+		if (!icons.empty())
+			write_log("WHDBooter - No single icon in \"%s\" starts %s; tool types not used\n",
+				drawer.c_str(), selected.filename.c_str());
+		return;
+	}
+
+	std::string applied;
+	for (int i = 1; i <= 5; ++i)
+	{
+		const auto& value = icon->args.custom[i - 1];
+		if (!value)
+			continue;
+		selected.get_custom(i).value = *value;
+		for (auto& slave : whdload_prefs.slaves)
+		{
+			if (strcmpi(slave.filename.c_str(), selected.filename.c_str()) == 0 && slave.sub_path == selected.sub_path)
+				slave.get_custom(i).value = *value;
+		}
+		applied += " CUSTOM" + std::to_string(i) + "=" + std::to_string(*value);
+	}
+	if (icon->args.custom_text)
+	{
+		whdload_prefs.custom = *icon->args.custom_text;
+		applied += " CUSTOM=\"" + whdload_prefs.custom + "\"";
+	}
+	if (!applied.empty())
+		write_log("WHDBooter - Tool types from icon %s.info:%s\n", icon->name.c_str(), applied.c_str());
+}
+
 // A per-game config restores only the selected slave's filename (and, from
 // configs saved since, its whdload_slave_sub_path). Re-pair it with the
 // auto-detected slave it names, so a slave from a drawer other than the
@@ -1848,6 +1968,7 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath, const bool prese
 	whdload_prefs.exp_chip = false;
 	whdload_prefs.slaves.clear();
 	whdload_prefs.selected_slave = whdload_slave{};
+	whdload_prefs.custom.clear();
 
 	write_log("WHDBooter Launched\n");
 	if (amiberry_options.use_jst_instead_of_whd)
@@ -1949,6 +2070,8 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath, const bool prese
 			used_slave_auto_detect = auto_detect_slave_from_archive(filepath, game_detail);
 		}
 	}
+
+	apply_icon_tooltypes(filepath);
 
 	build_uae_config_filename(whdload_prefs.filename);
 	if (!preserve_quickstart_hardware && std::filesystem::exists(uae_config))
