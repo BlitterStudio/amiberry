@@ -1671,18 +1671,32 @@ jobs:
         id: signpath-config
         shell: pwsh
         env:
+          WINDOWS_SIGNING_PROVIDER: ${{ vars.WINDOWS_SIGNING_PROVIDER }}
           SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
           SIGNPATH_ORGANIZATION_ID: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
           SIGNPATH_PROJECT_SLUG: ${{ vars.SIGNPATH_PROJECT_SLUG }}
           SIGNPATH_RELEASE_SIGNING_POLICY_SLUG: ${{ vars.SIGNPATH_RELEASE_SIGNING_POLICY_SLUG }}
           SIGNPATH_ARTIFACT_CONFIGURATION_SLUG: ${{ vars.SIGNPATH_ARTIFACT_CONFIGURATION_SLUG }}
         run: |
+          # WINDOWS_SIGNING_PROVIDER picks who signs release tags: "signpath"
+          # (the default, here) or "certum" (the sign-windows job).
+          $provider = if ([string]::IsNullOrWhiteSpace($env:WINDOWS_SIGNING_PROVIDER)) { "signpath" } else { $env:WINDOWS_SIGNING_PROVIDER }
+          if ($provider -notin @("signpath", "certum")) {
+            throw "WINDOWS_SIGNING_PROVIDER must be 'signpath' or 'certum', got '$provider'."
+          }
+
           # Only release tags are signed. SignPath counts every uploaded
           # artifact against a yearly size quota, and test-signing each
           # master push used it up in November 2026.
           if ($env:GITHUB_REF_TYPE -ne "tag") {
             "enabled=false" >> $env:GITHUB_OUTPUT
             Write-Host "SignPath signing runs for release tags only."
+            exit 0
+          }
+
+          if ($provider -ne "signpath") {
+            "enabled=false" >> $env:GITHUB_OUTPUT
+            Write-Host "Windows signing provider is '$provider'; the sign-windows job signs these artifacts."
             exit 0
           }
 
@@ -2112,18 +2126,32 @@ jobs:
         id: signpath-config
         shell: pwsh
         env:
+          WINDOWS_SIGNING_PROVIDER: ${{ vars.WINDOWS_SIGNING_PROVIDER }}
           SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
           SIGNPATH_ORGANIZATION_ID: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
           SIGNPATH_PROJECT_SLUG: ${{ vars.SIGNPATH_PROJECT_SLUG }}
           SIGNPATH_RELEASE_SIGNING_POLICY_SLUG: ${{ vars.SIGNPATH_RELEASE_SIGNING_POLICY_SLUG }}
           SIGNPATH_ARTIFACT_CONFIGURATION_SLUG: ${{ vars.SIGNPATH_ARTIFACT_CONFIGURATION_SLUG }}
         run: |
+          # WINDOWS_SIGNING_PROVIDER picks who signs release tags: "signpath"
+          # (the default, here) or "certum" (the sign-windows job).
+          $provider = if ([string]::IsNullOrWhiteSpace($env:WINDOWS_SIGNING_PROVIDER)) { "signpath" } else { $env:WINDOWS_SIGNING_PROVIDER }
+          if ($provider -notin @("signpath", "certum")) {
+            throw "WINDOWS_SIGNING_PROVIDER must be 'signpath' or 'certum', got '$provider'."
+          }
+
           # Only release tags are signed. SignPath counts every uploaded
           # artifact against a yearly size quota, and test-signing each
           # master push used it up in November 2026.
           if ($env:GITHUB_REF_TYPE -ne "tag") {
             "enabled=false" >> $env:GITHUB_OUTPUT
             Write-Host "SignPath signing runs for release tags only."
+            exit 0
+          }
+
+          if ($provider -ne "signpath") {
+            "enabled=false" >> $env:GITHUB_OUTPUT
+            Write-Host "Windows signing provider is '$provider'; the sign-windows job signs these artifacts."
             exit 0
           }
 
@@ -2268,6 +2296,79 @@ jobs:
             amiberry-*.exe
           retention-days: 7
 
+  # Signs both Windows architectures with the Certum SimplySign cloud
+  # certificate when the WINDOWS_SIGNING_PROVIDER variable is "certum": the
+  # installer EXE, and Amiberry.exe inside the portable ZIP. One job signs
+  # both, so there is a single SimplySign login per release, and the signing
+  # secrets live in the windows-signing environment, out of reach of the jobs
+  # that run the build. With SignPath the build jobs sign their own artifacts
+  # and every step here is skipped; the job still runs so create-release can
+  # depend on it either way.
+  sign-windows:
+    needs: [build-windows, build-windows-arm64]
+    if: github.ref_type == 'tag'
+    runs-on: windows-2025
+    timeout-minutes: 30
+    environment: ${{ vars.WINDOWS_SIGNING_PROVIDER == 'certum' && 'windows-signing' || '' }}
+    env:
+      SIGN_WINDOWS_CERTUM: ${{ vars.WINDOWS_SIGNING_PROVIDER == 'certum' }}
+    steps:
+      - name: Check out signing script
+        if: env.SIGN_WINDOWS_CERTUM == 'true'
+        uses: actions/checkout@v6
+        with:
+          sparse-checkout: .github/scripts
+
+      - name: Download Windows x64 artifacts
+        if: env.SIGN_WINDOWS_CERTUM == 'true'
+        uses: actions/download-artifact@v8
+        with:
+          name: amiberry-windows-x64
+          path: windows-artifacts/amiberry-windows-x64
+
+      - name: Download Windows arm64 artifacts
+        if: env.SIGN_WINDOWS_CERTUM == 'true'
+        uses: actions/download-artifact@v8
+        with:
+          name: amiberry-windows-arm64
+          path: windows-artifacts/amiberry-windows-arm64
+
+      - name: Sign with Certum SimplySign
+        if: env.SIGN_WINDOWS_CERTUM == 'true'
+        shell: pwsh
+        env:
+          CERTUM_OTPAUTH_URI: ${{ secrets.CERTUM_OTPAUTH_URI }}
+          CERTUM_USERNAME: ${{ secrets.CERTUM_USERNAME }}
+          CERTUM_CERT_THUMBPRINT: ${{ vars.CERTUM_CERT_THUMBPRINT }}
+        run: |
+          .github/scripts/sign-windows-certum.ps1 -ArtifactDirectory `
+            windows-artifacts/amiberry-windows-x64, `
+            windows-artifacts/amiberry-windows-arm64
+
+      - name: Replace Windows x64 artifacts with signed ones
+        if: env.SIGN_WINDOWS_CERTUM == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: amiberry-windows-x64
+          path: |
+            windows-artifacts/amiberry-windows-x64/amiberry-*.zip
+            windows-artifacts/amiberry-windows-x64/amiberry-*.exe
+          if-no-files-found: error
+          overwrite: true
+          retention-days: 7
+
+      - name: Replace Windows arm64 artifacts with signed ones
+        if: env.SIGN_WINDOWS_CERTUM == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: amiberry-windows-arm64
+          path: |
+            windows-artifacts/amiberry-windows-arm64/amiberry-*.zip
+            windows-artifacts/amiberry-windows-arm64/amiberry-*.exe
+          if-no-files-found: error
+          overwrite: true
+          retention-days: 7
+
   build-libretro:
     runs-on: ${{ matrix.os }}
     strategy:
@@ -2390,7 +2491,7 @@ jobs:
           path: amiberry/libretro/amiberry_libretro.info
 
   create-release:
-    needs: [merge-macOS-universal, build-appimage, smoke-appimage-mount, smoke-appimage-extract, build-fedora, build-ubuntu, test-settings-schema, build-debian-amd64, build-debian-arm64, build-windows, build-windows-arm64, build-libretro]
+    needs: [merge-macOS-universal, build-appimage, smoke-appimage-mount, smoke-appimage-extract, build-fedora, build-ubuntu, test-settings-schema, build-debian-amd64, build-debian-arm64, build-windows, build-windows-arm64, sign-windows, build-libretro]
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     if: github.ref_type == 'tag' && (startsWith(github.ref_name, 'v') || startsWith(github.ref_name, 'preview-v'))
@@ -2424,7 +2525,7 @@ jobs:
           omitBodyDuringUpdate: true
           generateReleaseNotes: true
           body: |
-            Windows release binaries are signed through SignPath. See the Code signing policy: https://amiberry.com/code-signing-policy
+            ${{ vars.WINDOWS_SIGNING_PROVIDER == 'certum' && 'Windows release binaries are signed with a Certum open source code signing certificate.' || 'Windows release binaries are signed through SignPath.' }} See the Code signing policy: https://amiberry.com/code-signing-policy
           artifacts: |
             artifacts/amiberry-*.zip
             artifacts/amiberry-libretro-*.*
