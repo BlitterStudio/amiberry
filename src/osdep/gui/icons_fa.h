@@ -21,6 +21,7 @@
 #define ICON_FA_VOLUME_HIGH     "\xef\x80\xa8"  // U+f028
 #define ICON_FA_BOOKMARK        "\xef\x80\xae"  // U+f02e
 #define ICON_FA_PLAY            "\xef\x81\x8b"  // U+f04b
+#define ICON_FA_STOP            "\xef\x81\x8d"  // U+f04d
 #define ICON_FA_EJECT           "\xef\x81\x92"  // U+f052
 #define ICON_FA_CHEVRON_RIGHT   "\xef\x81\x94"  // U+f054
 #define ICON_FA_CIRCLE_QUESTION "\xef\x81\x99"  // U+f059
