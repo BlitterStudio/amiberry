@@ -30,6 +30,7 @@
 #include "amiberry_whdload_icon.h"
 
 extern void set_last_active_config_from_media(const char* filename);
+extern void forget_loaded_config();
 #ifdef LIBRETRO
 // libretro.cpp: shows a message in the frontend (RETRO_ENVIRONMENT_SET_MESSAGE).
 extern void libretro_show_whdboot_message(const char* text);
@@ -451,6 +452,9 @@ void cd_auto_prefs(uae_prefs* prefs, char* filepath)
 	TCHAR tmp[MAX_DPATH];
 
 	write_log("\nCD Autoload: %s  \n\n", filepath);
+	// The CD builds a new machine: the configuration loaded before must not
+	// keep naming it (title, save name, Reload) (#2719).
+	forget_loaded_config();
 	set_last_active_config_from_media(filepath);
 
 	conf_path = get_configuration_path();
@@ -1955,6 +1959,10 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath, const bool prese
 	_tcscpy(android_vkbd_toggle, prefs->vkbd_toggle);
 #endif
 
+	// A WHDLoad game builds a new machine, or loads the game's own
+	// configuration below: the configuration loaded before must not keep
+	// naming it (title, save name, Reload) (#2719).
+	forget_loaded_config();
 	set_last_active_config_from_media(filepath);
 
 	config_loaded = false;
