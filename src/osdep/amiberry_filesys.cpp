@@ -25,13 +25,8 @@
 #include <iostream>
 #include <mutex>
 
-#ifdef USE_OLDGCC
-#include <experimental/filesystem>
-namespace fs = std::experimental::filesystem;
-#else
 #include <filesystem>
 namespace fs = std::filesystem;
-#endif
 
 #include <set>
 #include <unordered_set>

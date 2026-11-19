@@ -8784,11 +8784,7 @@ bool directory_exists(std::string directory, const std::string& sub_dir)
 
 bool file_exists(const std::string& file)
 {
-#ifdef USE_OLDGCC
-	namespace fs = std::experimental::filesystem;
-#else
 	namespace fs = std::filesystem;
-#endif
 	std::error_code error;
 	return fs::exists(fs::path(file), error) && !error;
 }
