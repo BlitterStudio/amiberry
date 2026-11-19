@@ -60,12 +60,6 @@
 
 struct jit_disable_opcodes jit_disable;
 
-#if defined(USE_LONG_DOUBLE) || defined(USE_QUAD_DOUBLE)
-#define LD(x) x ## L
-#else
-#define LD(x) x
-#endif
-
 // gb-- WARNING: get_fpcr() and set_fpcr() support is experimental
 #define HANDLE_FPCR 0
 
@@ -1021,33 +1015,18 @@ void comp_frestore_opp(uae_u32 opcode)
 /* x87 control words, indexed with fldcw_m_indexed() by the rounding precision
    and mode bits of the 68k FPCR (byte offset fpcr & 0xf0): those
    set_fpucw_x87() (fpp_native.cpp) loads for the interpreted instructions, so
-   that unless the FPU registers are long doubles, every precision is the
-   double precision: like the host core, single precision rounds the double
-   result (the store after the operation) */
+   that every precision is the double precision: like the host core, single
+   precision rounds the double result (the store after the operation) */
 static uae_u16 x86_fpucw[]={
-#ifdef USE_LONG_DOUBLE
-    0x137f, 0x137f, 0x137f, 0x137f, 0x137f, 0x137f, 0x137f, 0x137f, /* p0r0 */
-    0x1f7f, 0x1f7f, 0x1f7f, 0x1f7f, 0x1f7f, 0x1f7f, 0x1f7f, 0x1f7f, /* p0r1 */
-    0x177f, 0x177f, 0x177f, 0x177f, 0x177f, 0x177f, 0x177f, 0x177f, /* p0r2 */
-    0x1b7f, 0x1b7f, 0x1b7f, 0x1b7f, 0x1b7f, 0x1b7f, 0x1b7f, 0x1b7f, /* p0r3 */
-#else
     0x127f, 0x127f, 0x127f, 0x127f, 0x127f, 0x127f, 0x127f, 0x127f, /* p0r0 */
     0x1e7f, 0x1e7f, 0x1e7f, 0x1e7f, 0x1e7f, 0x1e7f, 0x1e7f, 0x1e7f, /* p0r1 */
     0x167f, 0x167f, 0x167f, 0x167f, 0x167f, 0x167f, 0x167f, 0x167f, /* p0r2 */
     0x1a7f, 0x1a7f, 0x1a7f, 0x1a7f, 0x1a7f, 0x1a7f, 0x1a7f, 0x1a7f, /* p0r3 */
-#endif
 
-#ifdef USE_LONG_DOUBLE
-    0x107f, 0x107f, 0x107f, 0x107f, 0x107f, 0x107f, 0x107f, 0x107f, /* p1r0 */
-    0x1c7f, 0x1c7f, 0x1c7f, 0x1c7f, 0x1c7f, 0x1c7f, 0x1c7f, 0x1c7f, /* p1r1 */
-    0x147f, 0x147f, 0x147f, 0x147f, 0x147f, 0x147f, 0x147f, 0x147f, /* p1r2 */
-    0x187f, 0x187f, 0x187f, 0x187f, 0x187f, 0x187f, 0x187f, 0x187f, /* p1r3 */
-#else
     0x127f, 0x127f, 0x127f, 0x127f, 0x127f, 0x127f, 0x127f, 0x127f, /* p1r0 */
     0x1e7f, 0x1e7f, 0x1e7f, 0x1e7f, 0x1e7f, 0x1e7f, 0x1e7f, 0x1e7f, /* p1r1 */
     0x167f, 0x167f, 0x167f, 0x167f, 0x167f, 0x167f, 0x167f, 0x167f, /* p1r2 */
     0x1a7f, 0x1a7f, 0x1a7f, 0x1a7f, 0x1a7f, 0x1a7f, 0x1a7f, 0x1a7f, /* p1r3 */
-#endif
 
     0x127f, 0x127f, 0x127f, 0x127f, 0x127f, 0x127f, 0x127f, 0x127f, /* p2r0 */
     0x1e7f, 0x1e7f, 0x1e7f, 0x1e7f, 0x1e7f, 0x1e7f, 0x1e7f, 0x1e7f, /* p2r1 */
@@ -1331,17 +1310,11 @@ void comp_fpp_fpiar_next(uae_u32 opcode, const uae_u16 *location)
 	comp_fpp_fpiar_flush();
 }
 
-/* x87 control word for the FPCR: its rounding mode and precision (0), or
-   single (1) or double (2) precision */
-static void fp_fast_set_cw(int prec)
+/* x87 control word for the FPCR's rounding mode and precision */
+static void fp_fast_set_cw(void)
 {
 	mov_l_rm(S1, JITPTR &regs.fpcr);
-	if (prec) {
-		and_l_ri(S1, 0x30);
-		or_l_ri(S1, prec == 1 ? 0x40 : 0x80);
-	} else {
-		and_l_ri(S1, 0xf0);
-	}
+	and_l_ri(S1, 0xf0);
 	fldcw_m_indexed(S1, JITPTR x86_fpucw);
 }
 
@@ -1470,15 +1443,9 @@ static void comp_fpp_fast(uae_u32 opcode, uae_u16 extra)
 	int prec = (op & 0x40) ? ((op & 0x04) ? 2 : 1) : 0;
 	if (!prec && jit_fpu_single_block && base != 0x01 && base != 0x03)
 		prec = 1;
-	const bool arith = base == 0x04 || base >= 0x20;
 	/* the x87 control word gives double precision (x86_fpucw[]): the store
 	   after the operation rounds to single as the host core does after its
 	   double operation, and double needs nothing */
-#ifdef USE_LONG_DOUBLE
-	const bool set_cw = prec && arith;
-#else
-	const bool set_cw = false;
-#endif
 	/* moves of a source the precision holds exactly need no rounding */
 	const int size = (extra >> 10) & 7;
 	const bool exact_src = opclass == 2 && (base == 0x00 || base == 0x18 || base == 0x1a) &&
@@ -1487,8 +1454,6 @@ static void comp_fpp_fast(uae_u32 opcode, uae_u16 extra)
 	if (base != 0x38 && base != 0x3a)
 		dont_care_fflags();
 	const int src = get_fp_value(opcode, extra);
-	if (set_cw)
-		fp_fast_set_cw(prec);
 	switch (base) {
 	case 0x00:	/* FMOVE */
 		fmov_rr(reg, src);
@@ -1500,7 +1465,7 @@ static void comp_fpp_fast(uae_u32 opcode, uae_u16 extra)
 		mov_l_ri(S1, 0x10);	/* round to zero */
 		fldcw_m_indexed(S1, JITPTR x86_fpucw);
 		frndint_rr(reg, src);
-		fp_fast_set_cw(0);
+		fp_fast_set_cw();
 		break;
 	case 0x04:	/* FSQRT */
 		fsqrt_rr(reg, src);
@@ -1548,8 +1513,6 @@ static void comp_fpp_fast(uae_u32 opcode, uae_u16 extra)
 			fmov_rm(reg, JITPTR temp_fp);
 		}
 	}
-	if (set_cw)
-		fp_fast_set_cw(0);
 	MAKE_FPSR(reg);
 }
 

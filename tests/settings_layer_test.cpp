@@ -1305,6 +1305,20 @@ void check_fixup_consistency()
 	p.cpu_compatible = false;
 	CHECK(!choice_available(p, "fpu_model", "68881"));
 
+	// Automatic is the exact core unless the JIT FPU is on; without the JIT
+	// compiled in, a cachesize left in the config does not change that.
+	reset_prefs(p);
+	p.fpu_mode = FPU_MODE_AUTO;
+	p.fpu_model = 68881;
+	p.cachesize = 0;
+	CHECK(amiberry_settings::fpu_exact_core_after_fixup(p));
+	if (!jit_compiled()) {
+		p.cpu_model = 68020;
+		p.cachesize = 8192;
+		p.compfpu = true;
+		CHECK(amiberry_settings::fpu_exact_core_after_fixup(p));
+	}
+
 	// A JIT left behind by a switch to a 68000 is cleared, so it cannot keep
 	// softfloat and the other JIT-gated options unavailable.
 	if (jit_compiled()) {
@@ -1377,16 +1391,16 @@ void check_fixup_consistency()
 		CHECK(!available(p, "cachesize"));
 	}
 
-	// Turning softfloat off leaves the host modes alone (MSVC long double:
-	// host 80-bit) and returns from the exact core to Automatic.
+	// Turning softfloat off leaves Host alone and returns from the exact core
+	// to Automatic.
 	reset_prefs(p);
 	p.fpu_model = 68881;
-	p.fpu_mode = FPU_MODE_HOST80;
+	p.fpu_mode = FPU_MODE_HOST;
 	CHECK(set(p, "fpu_softfloat", "false") == AMIBERRY_SETTINGS_OK);
-	CHECK(p.fpu_mode == FPU_MODE_HOST80);
+	CHECK(p.fpu_mode == FPU_MODE_HOST);
 	CHECK(value_of(p, "fpu_core") == "host");
 	CHECK(set(p, "fpu_core", "host") == AMIBERRY_SETTINGS_OK);
-	CHECK(p.fpu_mode == FPU_MODE_HOST80);
+	CHECK(p.fpu_mode == FPU_MODE_HOST);
 	CHECK(set(p, "fpu_softfloat", "true") == AMIBERRY_SETTINGS_OK);
 	CHECK(set(p, "fpu_softfloat", "false") == AMIBERRY_SETTINGS_OK);
 	CHECK(p.fpu_mode == FPU_MODE_AUTO);

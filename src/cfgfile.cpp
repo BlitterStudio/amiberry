@@ -3581,10 +3581,7 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 	cfgfile_write_bool (f, _T("fpu_strict"), p->fpu_strict);
 	cfgfile_dwrite_bool (f, _T("fpu_softfloat"), p->fpu_mode == FPU_MODE_EXACT);
 	cfgfile_dwrite_str (f, _T("fpu_core"), p->fpu_mode == FPU_MODE_EXACT ? _T("exact")
-		: p->fpu_mode == FPU_MODE_HOST || p->fpu_mode == FPU_MODE_HOST80 ? _T("host") : _T("auto"));
-#ifdef MSVC_LONG_DOUBLE
-	cfgfile_dwrite_bool(f, _T("fpu_msvc_long_double"), p->fpu_mode < 0);
-#endif
+		: p->fpu_mode == FPU_MODE_HOST ? _T("host") : _T("auto"));
 
 	cfgfile_write_bool (f, _T("rtg_nocustom"), p->picasso96_nocustom);
 	cfgfile_write (f, _T("rtg_modes"), _T("0x%x"), p->picasso96_modeflags);
@@ -6925,20 +6922,11 @@ static int cfgfile_parse_hardware (struct uae_prefs *p, const TCHAR *option, TCH
 		if (!_tcsicmp(fpu_core, _T("exact")))
 			p->fpu_mode = FPU_MODE_EXACT;
 		else if (!_tcsicmp(fpu_core, _T("host")))
-			p->fpu_mode = p->fpu_mode == FPU_MODE_HOST80 ? FPU_MODE_HOST80 : FPU_MODE_HOST;
+			p->fpu_mode = FPU_MODE_HOST;
 		else
 			p->fpu_mode = FPU_MODE_AUTO;
 		return 1;
 	}
-#ifdef MSVC_LONG_DOUBLE
-	if (cfgfile_yesno(option, value, _T("fpu_msvc_long_double"), &dummybool)) {
-		if (dummybool)
-			p->fpu_mode = FPU_MODE_HOST80;
-		else if (p->fpu_mode == FPU_MODE_HOST80)
-			p->fpu_mode = FPU_MODE_HOST;               // as the settings layer: still the host core
-		return 1;
-	}
-#endif
 
 	if (cfgfile_string(option, value, _T("uaeboard_options"), tmpbuf, sizeof tmpbuf / sizeof(TCHAR))) {
 		TCHAR *s = cfgfile_option_get(value, _T("order"));

@@ -53,16 +53,7 @@ void fp_init_native(void)
 	wprintf(_T("fp_init_native called!"));
 	exit(0);
 }
-bool fp_init_native_80(void)
-{
-	wprintf(_T("fp_init_native_80 called!"));
-	exit(0);
-	return false;
-}
 void init_fpucw_x87(void)
-{
-}
-void init_fpucw_x87_80(void)
 {
 }
 

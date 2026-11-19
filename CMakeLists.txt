@@ -260,8 +260,6 @@ endif()
 
 # Project identity & metadata
 set(AMIBERRY_DISPLAY_NAME "Amiberry")
-set(PROJECT_COMPANY_NAME "BlitterStudio")
-set(PROJECT_COMPANY_NAMESPACE "com.blitterstudio")
 file(WRITE "${CMAKE_BINARY_DIR}/amiberry-product-version.txt" "${AMIBERRY_PRODUCT_VERSION}\n")
 
 # Which catalogue distribution the Apple licences screen shows. The source

@@ -35,9 +35,7 @@ public:
 	cpu_thread_guard& operator=(const cpu_thread_guard&) = delete;
 };
 
-#ifdef WITH_SOFTFLOAT
 #include <softfloat/softfloat.h>
-#endif
 
 #ifndef SET_CFLG
 
@@ -130,13 +128,9 @@ typedef uae_u8 flagtype;
 
 #ifdef FPUEMU
 
-// The host core uses doubles (USE_LONG_DOUBLE gives x87 long doubles): it is
-// the fast one, and the exact (softfloat) core gives the full 80-bit format.
-#ifdef USE_LONG_DOUBLE
-typedef long double fptype;
-#else
+// The host core uses doubles: it is the fast one, and the exact (softfloat)
+// core gives the full 80-bit format.
 typedef double fptype;
-#endif
 #endif
 
 #define MAX68020CYCLES 4
@@ -183,27 +177,10 @@ struct mmufixup
 };
 extern struct mmufixup mmufixup[2];
 
-#ifdef MSVC_LONG_DOUBLE
-typedef struct {
-	uae_u64 m;
-	uae_u16 e;
-	uae_u16 dummy;
-} fprawtype;
-#endif
-
 typedef struct
 {
-#ifdef WITH_SOFTFLOAT
 	floatx80 fpx;
-#endif
-#ifdef MSVC_LONG_DOUBLE
-	union {
-		fptype fp;
-		fprawtype rfp;
-	};
-#else
 	fptype fp;
-#endif
 } fpdata;
 
 #ifdef CPU_AARCH64
@@ -911,18 +888,13 @@ extern bool fpu_fpsr_cc_written;
 #if defined(JIT) && (defined(CPU_x86_64) || defined(CPU_AARCH64))
 // FPCR bits the JITs' inline host FPU code cannot follow: the exception
 // enables; on x86-64 also the rounding mode where the x87 control word does not
-// follow the FPCR, and the rounding precision where the FPU registers are long
-// doubles.
+// follow the FPCR.
 #if defined(CPU_x86_64) && (defined(__MACH__) || defined(__ANDROID__))
 #define FPU_JIT_ROUNDING_MASK 0x0030
 #else
 #define FPU_JIT_ROUNDING_MASK 0
 #endif
-#if defined(CPU_x86_64) && defined(USE_LONG_DOUBLE)
-#define FPU_JIT_EXACT_FPCR_MASK (0xffc0 | FPU_JIT_ROUNDING_MASK)
-#else
 #define FPU_JIT_EXACT_FPCR_MASK (0xff00 | FPU_JIT_ROUNDING_MASK)
-#endif
 // The FPU code of a compiled block, chosen by the FPCR the block is compiled
 // for and checked on every entry: inline code; inline code that rounds results
 // to single precision as the host core does; or calls into the FPU core (also
