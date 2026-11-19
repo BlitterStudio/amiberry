@@ -139,7 +139,7 @@ The package installs the binary into `/boot/system/bin`, its data into `/boot/sy
 
 ## Code Signing
 
-Release binaries are signed through SignPath. See the [Code signing policy](https://amiberry.com/code-signing-policy) for signing scope, release approval roles, and privacy notes.
+Windows release binaries are signed with a Certum open source code signing certificate. See the [Code signing policy](https://amiberry.com/code-signing-policy) for signing scope, roles, and privacy notes.
 
 ## Documentation
 

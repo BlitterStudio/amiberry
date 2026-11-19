@@ -1,24 +1,24 @@
 # Code Signing Policy
 
-Windows release builds published by Amiberry are signed through SignPath. Free code signing provided by [SignPath.io](https://about.signpath.io/), certificate by [SignPath Foundation](https://signpath.org/).
+Windows release builds published by Amiberry are signed with a [Certum](https://www.certum.eu/) Open Source Code Signing certificate issued to the project maintainer.
 
 ## Scope
 
-SignPath signing is used for Amiberry-owned Windows release binaries built by GitHub Actions from the [BlitterStudio/amiberry](https://github.com/BlitterStudio/amiberry) source repository.
+The certificate is used only for Amiberry-owned Windows release binaries, built by GitHub Actions from the [BlitterStudio/amiberry](https://github.com/BlitterStudio/amiberry) source repository.
 
 The signed Windows artifacts are:
 
 - the Windows installer executable
 - `Amiberry.exe` inside the portable ZIP package
 
-Bundled third-party DLLs are not signed with the Amiberry SignPath subscription. They are included as open-source runtime dependencies produced by the CI build.
+Bundled third-party DLLs are not signed. They are open-source runtime dependencies produced by the CI build.
 
-Release signing requests are submitted from GitHub-hosted Actions runners and require manual approval in SignPath before release-signed artifacts are published.
+Only release tags are signed. The signing key stays in Certum's cloud HSM. Signing runs on GitHub-hosted Actions runners, in a job that can read the signing credentials only for release tags.
 
 ## Roles
 
 - Committers and reviewers: `@midwan` and repository collaborators with write access to [BlitterStudio/amiberry](https://github.com/BlitterStudio/amiberry).
-- Approvers: `@midwan`, using SignPath approval permissions for Amiberry release signing.
+- Release approver: `@midwan`, who creates release tags and holds the signing certificate.
 
 ## Privacy
 
