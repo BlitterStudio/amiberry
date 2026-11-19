@@ -2198,15 +2198,6 @@ LOWFUNC(NONE,WRITE,2,raw_fmov_ext_mr,(MEMPTRW m, FR r))
 	raw_fstpt(m);	/* store and pop it */
 }
 
-LOWFUNC(NONE,WRITE,2,raw_fmov_ext_mr_drop,(MEMPTRW m, FR r))
-{
-	make_tos(r);
-	raw_fstpt(m);	/* store and pop it */
-	live.onstack[live.tos]=-1;
-	live.tos--;
-	live.spos[r]=-2;
-}
-
 LOWFUNC(NONE,READ,2,raw_fmov_ext_rm,(FW r, MEMPTRR m))
 {
 	raw_fldt(m);

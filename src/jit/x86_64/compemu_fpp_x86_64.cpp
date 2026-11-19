@@ -60,8 +60,6 @@
 
 struct jit_disable_opcodes jit_disable;
 
-#define LD(x) x
-
 // gb-- WARNING: get_fpcr() and set_fpcr() support is experimental
 #define HANDLE_FPCR 0
 

@@ -888,8 +888,7 @@ extern bool fpu_fpsr_cc_written;
 #if defined(JIT) && (defined(CPU_x86_64) || defined(CPU_AARCH64))
 // FPCR bits the JITs' inline host FPU code cannot follow: the exception
 // enables; on x86-64 also the rounding mode where the x87 control word does not
-// follow the FPCR, and the rounding precision where the FPU registers are long
-// doubles.
+// follow the FPCR.
 #if defined(CPU_x86_64) && (defined(__MACH__) || defined(__ANDROID__))
 #define FPU_JIT_ROUNDING_MASK 0x0030
 #else

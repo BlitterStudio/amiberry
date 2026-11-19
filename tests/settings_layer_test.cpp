@@ -1305,6 +1305,20 @@ void check_fixup_consistency()
 	p.cpu_compatible = false;
 	CHECK(!choice_available(p, "fpu_model", "68881"));
 
+	// Automatic is the exact core unless the JIT FPU is on; without the JIT
+	// compiled in, a cachesize left in the config does not change that.
+	reset_prefs(p);
+	p.fpu_mode = FPU_MODE_AUTO;
+	p.fpu_model = 68881;
+	p.cachesize = 0;
+	CHECK(amiberry_settings::fpu_exact_core_after_fixup(p));
+	if (!jit_compiled()) {
+		p.cpu_model = 68020;
+		p.cachesize = 8192;
+		p.compfpu = true;
+		CHECK(amiberry_settings::fpu_exact_core_after_fixup(p));
+	}
+
 	// A JIT left behind by a switch to a 68000 is cleared, so it cannot keep
 	// softfloat and the other JIT-gated options unavailable.
 	if (jit_compiled()) {
