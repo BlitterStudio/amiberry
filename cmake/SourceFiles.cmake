@@ -669,10 +669,6 @@ if(IOS)
     target_compile_definitions(${PROJECT_NAME} PRIVATE AMIBERRY_IOS)
 endif()
 
-if(NOT USE_JIT)
-    target_compile_definitions(${PROJECT_NAME} PRIVATE AMIBERRY_NO_JIT)
-endif()
-
 # Apply accumulated compile/link options from StandardProjectSettings.cmake
 # These are target-specific so they don't leak into FetchContent-ed third-party builds.
 target_compile_options(${PROJECT_NAME} PRIVATE ${AMIBERRY_COMPILE_OPTIONS})
@@ -713,7 +709,6 @@ if(NOT ANDROID AND NOT WIN32
     endif()
 elseif(NOT IOS
         AND CMAKE_SYSTEM_NAME STREQUAL "Darwin"
-        AND USE_JIT
         AND (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|amd64|AMD64"
              OR CMAKE_OSX_ARCHITECTURES MATCHES "(^|;)x86_64($|;)"))
     # Intel macOS Mach-O binaries normally reserve a 4GB __PAGEZERO segment.
