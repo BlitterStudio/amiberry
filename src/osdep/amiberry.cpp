@@ -5649,6 +5649,12 @@ static bool get_absolute_path(const TCHAR* path, TCHAR* out)
 #ifdef _WIN32
 	return _fullpath(out, path, MAX_DPATH) != nullptr;
 #else
+	// "/dev/fd/N" names an inherited descriptor, not the file behind it, and is already
+	// absolute. macOS realpath() turns it into "/dev/fd/<file name>", which does not exist.
+	if (!_tcsncmp(path, _T("/dev/fd/"), 8) && _tcslen(path) < MAX_DPATH) {
+		_tcscpy(out, path);
+		return true;
+	}
 	return realpath(path, out) != nullptr;
 #endif
 }

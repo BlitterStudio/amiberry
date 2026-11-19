@@ -781,6 +781,118 @@ static int isharddrive(const TCHAR* name)
 
 static const TCHAR *hdz[] = { _T("hdz"), _T("zip"), _T("7z"), nullptr };
 
+#ifdef AMIBERRY_MACOS
+// A hardfile path "/dev/fd/N" names a descriptor inherited from the program that started
+// Amiberry, for example a raw disk a launcher opened through /usr/libexec/authopen.
+// Opening that path again checks the device permissions (EACCES for a normal user), and
+// where it succeeds it returns a dup() that shares one file offset with every other
+// stream of the device, so hardfile I/O from different threads would land at each
+// other's offsets. The stream below reads and writes the inherited descriptor with
+// pread/pwrite at its own position, and leaves the descriptor open when it is closed,
+// so every reset opens the hardfile again without a new authorization.
+struct inherited_fd_stream {
+	int fd;
+	off_t pos;
+};
+
+static int inherited_fd_number(const char* name)
+{
+	if (strncmp(name, "/dev/fd/", 8) != 0 || !isdigit(static_cast<unsigned char>(name[8])))
+		return -1;
+	char* endp = nullptr;
+	errno = 0;
+	const long n = strtol(name + 8, &endp, 10);
+	if (*endp != 0 || errno != 0 || n > INT_MAX)
+		return -1;
+	return static_cast<int>(n);
+}
+
+// Size without lseek(): the descriptor's offset is shared with the launcher.
+static off_t inherited_fd_size(int fd)
+{
+	struct stat st{};
+	if (fstat(fd, &st) != 0)
+		return -1;
+	if (S_ISBLK(st.st_mode) || S_ISCHR(st.st_mode)) {
+		uint32_t block_size = 0;
+		uint64_t block_count = 0;
+		if (ioctl(fd, DKIOCGETBLOCKSIZE, &block_size) != 0 || ioctl(fd, DKIOCGETBLOCKCOUNT, &block_count) != 0)
+			return -1;
+		return static_cast<off_t>(block_size) * static_cast<off_t>(block_count);
+	}
+	return st.st_size;
+}
+
+static int inherited_fd_read(void* cookie, char* buf, int len)
+{
+	auto* s = static_cast<inherited_fd_stream*>(cookie);
+	const ssize_t n = pread(s->fd, buf, len, s->pos);
+	if (n > 0)
+		s->pos += n;
+	return static_cast<int>(n);
+}
+
+static int inherited_fd_write(void* cookie, const char* buf, int len)
+{
+	auto* s = static_cast<inherited_fd_stream*>(cookie);
+	const ssize_t n = pwrite(s->fd, buf, len, s->pos);
+	if (n > 0)
+		s->pos += n;
+	return static_cast<int>(n);
+}
+
+static fpos_t inherited_fd_seek(void* cookie, fpos_t offset, int whence)
+{
+	auto* s = static_cast<inherited_fd_stream*>(cookie);
+	off_t base = 0;
+	if (whence == SEEK_CUR) {
+		base = s->pos;
+	} else if (whence == SEEK_END) {
+		base = inherited_fd_size(s->fd);
+		if (base < 0)
+			return -1;
+	}
+	if (base + offset < 0) {
+		errno = EINVAL;
+		return -1;
+	}
+	s->pos = base + offset;
+	return s->pos;
+}
+
+static int inherited_fd_close(void* cookie)
+{
+	delete static_cast<inherited_fd_stream*>(cookie);
+	return 0;
+}
+
+// Returns nullptr, with fd set to -1, when name is not "/dev/fd/N" for an open, readable
+// descriptor. A descriptor without write access makes the hardfile read-only.
+static FILE* open_inherited_fd(const char* name, bool& readonly, int& fd)
+{
+	fd = inherited_fd_number(name);
+	if (fd < 0)
+		return nullptr;
+	const int flags = fcntl(fd, F_GETFL);
+	if (flags < 0 || (flags & O_ACCMODE) == O_WRONLY) {
+		fd = -1;
+		return nullptr;
+	}
+	if ((flags & O_ACCMODE) != O_RDWR)
+		readonly = true;
+	auto* s = new inherited_fd_stream{ fd, 0 };
+	FILE* f = funopen(s, inherited_fd_read, readonly ? nullptr : inherited_fd_write, inherited_fd_seek, inherited_fd_close);
+	if (f == nullptr) {
+		delete s;
+		fd = -1;
+		return nullptr;
+	}
+	// Unbuffered: reads and writes go to the device in the caller's whole blocks.
+	setvbuf(f, nullptr, _IONBF, 0);
+	return f;
+}
+#endif
+
 int hdf_open_target(struct hardfiledata *hfd, const TCHAR *pname)
 {
 	FILE *h = nullptr;
@@ -788,6 +900,7 @@ int hdf_open_target(struct hardfiledata *hfd, const TCHAR *pname)
 	char* name = my_strdup(pname);
 	int zmode = 0;
 	int open_error = 0;
+	int inherited_fd = -1;
 	struct stat st{};
 	
 	hfd->flags = 0;
@@ -821,11 +934,18 @@ int hdf_open_target(struct hardfiledata *hfd, const TCHAR *pname)
 			hfd->flags |= 1;
 	}
 #endif
-	h = uae_tfopen(name, hfd->ci.readonly ? "rb" : "r+b");
-	if (h == nullptr && !hfd->ci.readonly) {
-		h = uae_tfopen(name, "rb");
-		if (h != nullptr)
-			hfd->ci.readonly = true;
+#ifdef AMIBERRY_MACOS
+	h = open_inherited_fd(name, hfd->ci.readonly, inherited_fd);
+	if (h != nullptr)
+		write_log("hfd: using inherited descriptor %d for '%s'%s\n", inherited_fd, name, hfd->ci.readonly ? " (read-only)" : "");
+#endif
+	if (h == nullptr) {
+		h = uae_tfopen(name, hfd->ci.readonly ? "rb" : "r+b");
+		if (h == nullptr && !hfd->ci.readonly) {
+			h = uae_tfopen(name, "rb");
+			if (h != nullptr)
+				hfd->ci.readonly = true;
+		}
 	}
 	open_error = errno;
 #ifdef AMIBERRY_MACOS
@@ -868,8 +988,10 @@ int hdf_open_target(struct hardfiledata *hfd, const TCHAR *pname)
 		uae_s64 size;
 #ifdef AMIBERRY_MACOS
 	// check type of file using fstat on the already-open descriptor
-	// (more reliable than stat-by-path on network volumes like SMB/NFS)
-	int ret = fstat(fileno(h), &st);
+	// (more reliable than stat-by-path on network volumes like SMB/NFS);
+	// an inherited-descriptor stream has no fileno() of its own
+	const int fh = inherited_fd >= 0 ? inherited_fd : fileno(h);
+	int ret = fstat(fh, &st);
 	if(ret) {
 		write_log("osx: fstat failed for '%s' (errno=%d), assuming regular file\n", name, errno);
 	}
@@ -877,7 +999,6 @@ int hdf_open_target(struct hardfiledata *hfd, const TCHAR *pname)
 		if(!ret && (S_ISBLK(st.st_mode) || S_ISCHR(st.st_mode))) {
 			uint32_t block_size;
 			uint64_t block_count;
-			int fh = fileno(h);
 			// get number of blocks
 			ret = ioctl(fh, DKIOCGETBLOCKCOUNT, &block_count);
 			if(ret) {
