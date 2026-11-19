@@ -2955,7 +2955,7 @@ void run_gui()
 		if (AmigaButton(ICON_FA_ARROWS_ROTATE " Reload", footer_button))
 			footer_pressed(footer_action::reload);
 		if (ImGui::IsItemHovered(footer_tooltip_flags))
-			ImGui::SetTooltip("Reload current configuration and restart emulation");
+			ImGui::SetTooltip("Stop emulation and reload the current configuration");
 
 		// Right-aligned buttons
 		float right_buttons_width = (footer_button.x * 2) + style.ItemSpacing.x;
@@ -3012,7 +3012,7 @@ void run_gui()
 				break;
 			case footer_action::reload:
 				title = "Reload###footer_confirm";
-				question = "Reload the configuration and restart?";
+				question = "Stop emulation and reload the configuration?";
 				confirm_label = ICON_FA_ARROWS_ROTATE " Reload";
 				break;
 			default:
