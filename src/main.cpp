@@ -1153,7 +1153,7 @@ void usage()
 	std::cout << " -F <value>                 Fastmem size, value in 1MB blocks, i.e. 2=2MB." << '\n';
 	std::cout << " -b <value>                 Bogomem size, value in 256KB blocks, i.e. 2=512KB." << '\n';
 	std::cout << " -c <value>                 Size of chip memory (in number of 512 KBytes chunks)." << '\n';
-	std::cout << " -I <value>                 Set keyboard layout language. Possible values: de, dk, us, se, fr, it, es." <<
+	std::cout << " -l <value>                 Set keyboard layout language. Possible values: de, dk, us, se, fr, it, es." <<
 		'\n';
 	std::cout << " -O <value>                 Set graphics specs." << '\n';
 	std::cout << " -H <value>                 Color mode." << '\n';
