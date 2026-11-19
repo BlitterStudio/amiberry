@@ -21,9 +21,9 @@ trap 'rm -rf "$work"' EXIT
 # Isolated environment: no user settings interfere with resolution.
 export HOME="$work"
 
-# Build the harness with the options the binary has: PPC emulation and the
-# JIT are build options (USE_PPC, USE_JIT), and cfgfile or the fixups drop
-# their settings when they are compiled out.
+# Build the harness with the options the binary has: PPC emulation is a
+# build option (USE_PPC), the JIT exists only on x86-64 and AArch64, and
+# cfgfile or the fixups drop their settings when they are compiled out.
 SETTINGS_LAYER_DEFINES="-DUSE_86BOX"
 "$AMIBERRY_BIN" --dump-config -s cpu_model=68060 -s ppc_model=automatic > "$work/ppc.txt" 2>/dev/null || true
 if grep -q '^ppc_model=' "$work/ppc.txt"; then
