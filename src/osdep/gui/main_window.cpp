@@ -2872,7 +2872,7 @@ void run_gui()
 		ImGui::Dummy(ImVec2(0, 2.0f));
 
 		// Button bar
-		// Left-aligned buttons (Shutdown, Reboot, Quit, Reload), then Start/Resume and Help on the right
+		// Left-aligned buttons (Shutdown, Reboot, Quit, Stop/Reload), then Start/Resume and Help on the right
 		enum class footer_action { none, shutdown, reboot, quit, reload };
 		auto run_footer_action = [&](const footer_action action) {
 			switch (action) {
@@ -2952,10 +2952,13 @@ void run_gui()
 		if (ImGui::IsItemHovered(footer_tooltip_flags))
 			ImGui::SetTooltip("Exit Amiberry");
 		ImGui::SameLine();
-		if (AmigaButton(ICON_FA_ARROWS_ROTATE " Reload", footer_button))
+		// Stop and Reload are one action: the reload always stops a running emulation.
+		if (AmigaButton(emulating ? ICON_FA_STOP " Stop" : ICON_FA_ARROWS_ROTATE " Reload", footer_button))
 			footer_pressed(footer_action::reload);
 		if (ImGui::IsItemHovered(footer_tooltip_flags))
-			ImGui::SetTooltip("Stop emulation and reload the current configuration");
+			ImGui::SetTooltip(emulating
+				? "Stop emulation and reload the configuration from disk. Unsaved changes are lost."
+				: "Reload the configuration from disk. Unsaved changes are lost.");
 
 		// Right-aligned buttons
 		float right_buttons_width = (footer_button.x * 2) + style.ItemSpacing.x;
@@ -3011,9 +3014,10 @@ void run_gui()
 				confirm_label = ICON_FA_ROTATE_RIGHT " Reboot";
 				break;
 			case footer_action::reload:
-				title = "Reload###footer_confirm";
-				question = "Stop emulation and reload the configuration?";
-				confirm_label = ICON_FA_ARROWS_ROTATE " Reload";
+				title = emulating ? "Stop###footer_confirm" : "Reload###footer_confirm";
+				question = emulating ? "Stop emulation and reload the configuration?\nUnsaved changes are lost."
+					: "Reload the configuration?\nUnsaved changes are lost.";
+				confirm_label = emulating ? ICON_FA_STOP " Stop" : ICON_FA_ARROWS_ROTATE " Reload";
 				break;
 			default:
 				break;
