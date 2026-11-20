@@ -63,14 +63,6 @@ static void GetSystemInfo(SYSTEM_INFO* si)
 	si->dwPageSize = sysconf(_SC_PAGESIZE);
 }
 
-#define USE_MMAP
-
-#ifdef USE_MMAP
-#ifdef MACOSX
-#define MAP_ANONYMOUS MAP_ANON
-#endif
-#endif
-
 static void* VirtualAlloc(void* lpAddress, size_t dwSize, int flAllocationType,
 	int flProtect)
 {

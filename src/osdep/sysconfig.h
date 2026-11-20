@@ -23,7 +23,6 @@
 
 #define DRIVESOUND
 /* #define GFXFILTER */
-//#define USE_SOFT_LONG_DOUBLE
 #define PACKAGE_STRING "Amiberry"
 
 // Platform discrimination for Apple targets.
@@ -51,10 +50,6 @@
 #endif
 #endif
 
-// Uncomment to enable JIT visual corruption diagnostics
-//#define JIT_DEBUG_VISUAL
-
-
 #ifndef AMIBERRY
 #define AMIBERRY
 #endif
@@ -72,7 +67,6 @@
 //#define HAVE_GET_WORD_UNSWAPPED
 #define NATMEM_OFFSET natmem_offset
 #define USE_NORMAL_CALLING_CONVENTION 0
-//#define USE_X86_FPUCW 1
 /* #define CATWEASEL */ /* Catweasel MK2/3 support */
 #define AHI /* AHI sound emulation */
 #define ENFORCER /* UAE Enforcer */
@@ -98,7 +92,6 @@
 #define SCSIEMU /* uaescsi.device emulation */
 #define UAESERIAL /* uaeserial.device emulation */
 #define FPUEMU /* FPU emulation */
-#define FPU_UAE
 #define MMUEMU /* Aranym 68040 MMU */
 #define FULLMMU /* Aranym 68040 MMU */
 #define CPUEMU_0 /* generic 680x0 emulation */
@@ -109,7 +102,6 @@
 #define CPUEMU_22 /* 68030 prefetch */
 #define CPUEMU_23 /* 68030 "cycle-exact" + blitter */
 #define CPUEMU_24 /* 68060 "cycle-exact" + blitter */
-#define CPUEMU_25 /* 68040 "cycle-exact" + blitter */
 #define CPUEMU_31 /* Aranym 68040 MMU */
 #define CPUEMU_32 /* Previous 68030 MMU */
 #define CPUEMU_33 /* 68060 MMU */
@@ -119,13 +111,11 @@
 #define CPUEMU_50 /* generic 680x0 with indirect memory access */
 #define ACTION_REPLAY /* Action Replay 1/2/3 support */
 #define PICASSO96 /* Picasso96 display card emulation */
-#define UAEGFX_INTERNAL /* built-in libs:picasso96/uaegfx.card */
 #define BSDSOCKET /* bsdsocket.library emulation */
 #define CAPS /* CAPS-image support */
 #define SCP /* SuperCardPro */
 #define FDI2RAW /* FDI 1.0 and 2.x image support */
 /* #define AVIOUTPUT */ /* Avioutput support */
-/* #define PROWIZARD */ /* Pro-Wizard module ripper */
 #define ARCADIA /* Arcadia arcade system */
 /* #define ARCHIVEACCESS */ /* ArchiveAccess decompression library */
 /* #define LOGITECHLCD */ /* Logitech G15 LCD */
@@ -239,16 +229,10 @@ typedef int32_t uae_atomic;
 /* Define to 1 if you have the `inet_aton' function. */
 #define HAVE_INET_ATON 1
 
-/* Define to 1 if you have the `inet_ntoa' function. */
-#define HAVE_INET_NTOA 1
-
 /* Define to 1 if you have POSIX serial support */
 #ifndef _WIN32
 #define POSIX_SERIAL 1
 #endif
-
-/* Define if you have the getmntent function.  */
-#define HAVE_GETMNTENT 1
 
 /* Define if your struct stat has st_blocks.  */
 /* #undef HAVE_ST_BLOCKS */
@@ -264,9 +248,6 @@ typedef int32_t uae_atomic;
 
 /* Define to `int' if <sys/types.h> doesn't define.  */
 /* #undef pid_t */
-
-/* Define as the return type of signal handlers (int or void).  */
-#define RETSIGTYPE void
 
 /* Define if you can safely include both <sys/time.h> and <time.h>.  */
 #define TIME_WITH_SYS_TIME 1
@@ -296,11 +277,6 @@ typedef int32_t uae_atomic;
 /* Define if there is a function named getmnt for reading the list of
    mounted filesystems.  [Ultrix]  */
 /* #undef MOUNTED_GETMNT */
-
-/* Define if there is a function named getmntent for reading the list
-   of mounted filesystems, and that function takes a single argument.
-   [4.3BSD, SunOS, HP-UX, Dynix, Irix]  */
-#define MOUNTED_GETMNTENT1 1
 
 /* Define if there is a function named getmntent for reading the list of
    mounted filesystems, and that function takes two arguments.  [SVR4]  */
@@ -350,12 +326,6 @@ typedef int32_t uae_atomic;
    SunOS 4.1.1 seems not to be affected.]  */
 /* #undef STATFS_TRUNCATES_BLOCK_COUNTS */
 
-/* The number of bytes in a __int64.  */
-#define SIZEOF___INT64 8
-
-/* The number of bytes in a char.  */
-#define SIZEOF_CHAR 1
-
 /* The number of bytes in an int.  */
 #define SIZEOF_INT 4
 
@@ -372,12 +342,6 @@ typedef int32_t uae_atomic;
 /* The number of bytes in a short.  */
 #define SIZEOF_SHORT 2
 
-#define SIZEOF_FLOAT 4
-#define SIZEOF_DOUBLE 8
-
-#define HAVE_ISNAN
-#define HAVE_ISINF
-
 #ifndef LT_MODULE_EXT
 #ifdef __MACH__
 #define LT_MODULE_EXT _T(".dylib")
@@ -388,98 +352,23 @@ typedef int32_t uae_atomic;
 #endif
 #endif
 
-/* Define if you have the bcopy function.  */
-#define HAVE_BCOPY 1
-
 /* Define if you have the cfmakeraw function.  */
 /* #undef HAVE_CFMAKERAW */
-
-/* Define if you have the endgrent function.  */
-#define HAVE_ENDGRENT 1
-
-/* Define if you have the endpwent function.  */
-#define HAVE_ENDPWENT 1
-
-/* Define if you have the fchdir function.  */
-#define HAVE_FCHDIR 1
-
-/* Define if you have the ftime function.  */
-#define HAVE_FTIME 1
-
-/* Define if you have the ftruncate function.  */
-#define HAVE_FTRUNCATE 1
-
-/* Define if you have the getcwd function.  */
-#define HAVE_GETCWD 1
 
 /* Define if you have the getmntinfo function.  */
 /* #undef HAVE_GETMNTINFO */
 
-/* Define if you have the getopt function.  */
-#define HAVE_GETOPT 1
-
 /* Define if you have the gettimeofday function.  */
 #define HAVE_GETTIMEOFDAY 1
 
-/* Define if you have the isascii function.  */
-#define HAVE_ISASCII 1
-
-/* Define if you have the lchown function.  */
-#define HAVE_LCHOWN 1
-
 /* Define if you have the listmntent function.  */
 /* #undef HAVE_LISTMNTENT */
-
-/* Define if you have the memcpy function.  */
-#define HAVE_MEMCPY 1
-
-/* Define if you have the mkdir function.  */
-#define HAVE_MKDIR 1
-
-/* Define if you have the mkfifo function.  */
-#define HAVE_MKFIFO 1
-
-/* Define if you have the readdir_r function.  */
-#define HAVE_READDIR_R 1
-
-/* Define if you have the rmdir function.  */
-#define HAVE_RMDIR 1
-
-/* Define if you have the select function.  */
-#define HAVE_SELECT 1
-
-/* Define if you have the sigaction function.  */
-#define HAVE_SIGACTION 1
-
-/* Define if you have the strchr function.  */
-#define HAVE_STRCHR 1
 
 /* Define if you have the strdup function.  */
 #define HAVE_STRDUP 1
 
 /* Define if you have the strerror function.  */
 #define HAVE_STRERROR 1
-
-/* Define if you have the strrchr function.  */
-#define HAVE_STRRCHR 1
-
-/* Define if you have the strstr function.  */
-#define HAVE_STRSTR 1
-
-/* Define if you have the tcgetattr function.  */
-#define HAVE_TCGETATTR 1
-
-/* Define if you have the vfprintf function.  */
-#define HAVE_VFPRINTF 1
-
-/* Define if you have the vprintf function.  */
-#define HAVE_VPRINTF 1
-
-/* Define if you have the vsprintf function.  */
-#define HAVE_VSPRINTF 1
-
-/* Define if you have the <curses.h> header file.  */
-#define HAVE_CURSES_H 1
 
 /* Define if you have the <cybergraphx/cybergraphics.h> header file.  */
 /* #undef HAVE_CYBERGRAPHX_CYBERGRAPHICS_H */
@@ -499,9 +388,6 @@ typedef int32_t uae_atomic;
 /* Define if you have the <features.h> header file.  */
 #define HAVE_FEATURES_H 1
 
-/* Define if you have the <getopt.h> header file.  */
-#define HAVE_GETOPT_H 1
-
 /* Define if you have the <ggi/libggi.h> header file.  */
 /* #undef HAVE_GGI_LIBGGI_H */
 
@@ -514,14 +400,8 @@ typedef int32_t uae_atomic;
 /* Define if you have the <machine/soundcard.h> header file.  */
 /* #undef HAVE_MACHINE_SOUNDCARD_H */
 
-/* Define if you have the <mntent.h> header file.  */
-#define HAVE_MNTENT_H 1
-
 /* Define if you have the <mnttab.h> header file.  */
 /* #undef HAVE_MNTTAB_H */
-
-/* Define if you have the <ncurses.h> header file.  */
-#define HAVE_NCURSES_H 1
 
 /* Define if you have the <ndir.h> header file.  */
 /* #undef HAVE_NDIR_H */
@@ -559,9 +439,6 @@ typedef int32_t uae_atomic;
 /* Define if you have the <sys/ioctl.h> header file.  */
 #define HAVE_SYS_IOCTL_H 1
 
-/* Define if you have the <sys/ipc.h> header file.  */
-#define HAVE_SYS_IPC_H 1
-
 /* Define if you have the <sys/mount.h> header file.  */
 #define HAVE_SYS_MOUNT_H 1
 
@@ -571,40 +448,20 @@ typedef int32_t uae_atomic;
 /* Define if you have the <sys/param.h> header file.  */
 #define HAVE_SYS_PARAM_H 1
 
-/* Define if you have the <sys/shm.h> header file.  */
-#define HAVE_SYS_SHM_H 1
-
-/* Define if you have the <sys/soundcard.h> header file.  */
-#define HAVE_SYS_SOUNDCARD_H 1
-
 /* Define if you have the <sys/stat.h> header file.  */
 #define HAVE_SYS_STAT_H 1
-
-/* Define if you have the <sys/statfs.h> header file.  */
-#define HAVE_SYS_STATFS_H 1
 
 /* Define if you have the <sys/statvfs.h> header file.  */
 /* #undef HAVE_SYS_STATVFS_H */
 
-/* Define if you have the <sys/termios.h> header file.  */
-#define HAVE_SYS_TERMIOS_H 1
-
 /* Define if you have the <sys/time.h> header file.  */
 #define HAVE_SYS_TIME_H 1
-
-/* Define if you have the <sys/timeb.h> header file. */
-#ifndef ANDROID
-#define HAVE_SYS_TIMEB_H 1
-#endif
 
 /* Define if you have the <sys/types.h> header file.  */
 #define HAVE_SYS_TYPES_H 1
 
 /* Define if you have the <sys/utime.h> header file.  */
 /* #undef HAVE_SYS_UTIME_H */
-
-/* Define if you have the <sys/vfs.h> header file.  */
-#define HAVE_SYS_VFS_H 1
 
 /* Define if you have the <unistd.h> header file.  */
 #define HAVE_UNISTD_H 1
@@ -615,40 +472,17 @@ typedef int32_t uae_atomic;
 /* Define if you have the <values.h> header file.  */
 /* #undef HAVE_VALUES_H */
 
-/* Define if you have the <windows.h> header file.  */
-/* #undef HAVE_WINDOWS_H */
-
 /* --- Windows overrides (MinGW-w64) ---
  * MinGW provides many POSIX-compatible headers, but some features
  * are genuinely unavailable on Windows. Override those here.
  */
 #ifdef _WIN32
-#undef HAVE_WINDOWS_H
-#define HAVE_WINDOWS_H 1
 #undef HAVE_SYS_UTIME_H
 #define HAVE_SYS_UTIME_H 1
 #undef POSIX_SERIAL
-#undef HAVE_SIGACTION
-#undef HAVE_LCHOWN
-#undef HAVE_MKFIFO
-#undef HAVE_READDIR_R
-#undef HAVE_TCGETATTR
-#undef HAVE_GETMNTENT
-#undef HAVE_ENDGRENT
-#undef HAVE_ENDPWENT
-#undef HAVE_MNTENT_H
 #undef HAVE_FEATURES_H
-#undef HAVE_CURSES_H
-#undef HAVE_NCURSES_H
-#undef HAVE_SYS_IPC_H
 #undef HAVE_SYS_MOUNT_H
-#undef HAVE_SYS_SHM_H
-#undef HAVE_SYS_SOUNDCARD_H
-#undef HAVE_SYS_STATFS_H
-#undef HAVE_SYS_TERMIOS_H
-#undef HAVE_SYS_VFS_H
 #undef HAVE_INET_ATON
-#undef MOUNTED_GETMNTENT1
 #undef STAT_STATVFS
 #endif /* _WIN32 */
 
@@ -693,16 +527,6 @@ static inline FILE* uae_fopen(const char* path, const char* mode)
 
 /* _WIN32 is no longer undefined -- Windows builds need it active.
    Non-Windows platforms never define it, so this is harmless. */
-
-#ifdef _GCCRES_
-#undef _GCCRES_
-#endif
-
-#ifdef UAE4ALL_NO_USE_RESTRICT
-#define _GCCRES_
-#else
-#define _GCCRES_ __restrict__
-#endif
 
 #ifndef _WIN32
 #ifndef __cdecl
