@@ -811,29 +811,6 @@ int enumserialports (void)
 	cnt++;
 	write_log(_T("Port enumeration end\n"));
 	return cnt;
-#elif defined(_WIN32)
-	int cnt = 0;
-	serial_ports.clear();
-	write_log(_T("Serial port enumeration (Windows)..\n"));
-	TCHAR devname[MAX_DPATH];
-	for (int i = 0; i < 32; i++) {
-		TCHAR comname[16];
-		_sntprintf(comname, sizeof comname / sizeof(TCHAR), _T("COM%d"), i);
-		if (QueryDosDevice(comname, devname, sizeof(devname) / sizeof(TCHAR))) {
-			serial_ports.emplace_back(comname);
-			cnt++;
-		}
-	}
-	serial_ports.emplace_back(SERIAL_INTERNAL);
-	cnt++;
-	serial_ports.emplace_back(SERIAL_LOOPBACK);
-	cnt++;
-	serial_ports.emplace_back("TCP://0.0.0.0:1234");
-	cnt++;
-	serial_ports.emplace_back("TCP://0.0.0.0:1234/wait");
-	cnt++;
-	write_log(_T("Port enumeration end\n"));
-	return cnt;
 #else
 	return 0;
 #endif
