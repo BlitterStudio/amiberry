@@ -54,7 +54,10 @@ constexpr uint32_t max_surface_bytes = 32 * 1024 * 1024;
 
 inline uint32_t pixel_bytes(uint32_t format)
 {
-	return format == 7 ? 4 : (format == 1 || format == 6 ? 2 :
+	// ARGB8888 (2), RGBA8888 (3), BGRA8888 (7), RGB888 (8), RGB565 (1),
+	// RGB555 (6), INDEX8 (4): the card's surface_format_bytes().
+	return format == 2 || format == 3 || format == 7 ? 4 :
+		format == 8 ? 3 : (format == 1 || format == 6 ? 2 :
 		(format == 4 ? 1 : 0));
 }
 
@@ -74,6 +77,12 @@ inline void write_pixel(uint8_t *dst, uint32_t format, uint8_t r, uint8_t g,
 		dst[0] = b;
 	} else if (format == 7) {
 		dst[0] = b; dst[1] = g; dst[2] = r; dst[3] = a;
+	} else if (format == 2) {
+		dst[0] = a; dst[1] = r; dst[2] = g; dst[3] = b;
+	} else if (format == 3) {
+		dst[0] = r; dst[1] = g; dst[2] = b; dst[3] = a;
+	} else if (format == 8) {
+		dst[0] = r; dst[1] = g; dst[2] = b;
 	} else {
 		const uint16_t value = format == 1 ?
 			static_cast<uint16_t>(((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3)) :

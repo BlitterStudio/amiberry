@@ -58,6 +58,12 @@ private:
 	struct Surface {
 		uint32_t handle = 0;
 		uint32_t width = 0, height = 0, pitch = 0, format = 0;
+		uint32_t flags = 0; // As reported: CPU_VISIBLE (1) or ARM_LOCAL (16).
+		// CPU-visible surfaces live in board memory, like the card's
+		// surface_allocator, so the guest reads and writes them through
+		// the Zorro window; ARM-local ones keep host-only storage.
+		uint32_t board_offset = 0;
+		uint32_t length = 0;
 		std::vector<uint8_t> pixels;
 	};
 	struct Framebuffer {
@@ -102,6 +108,17 @@ private:
 	Buffer *find_buffer(uint32_t handle);
 	const Buffer *find_buffer(uint32_t handle) const;
 	Surface *find_surface(uint32_t handle);
+	// A free, aligned board range in [start, end) clear of every guest-
+	// visible buffer and surface, or 0.
+	uint32_t place_in_board(uint32_t start, uint32_t end, uint32_t length,
+	                        uint32_t alignment) const;
+	uint16_t scale_surface(uint32_t src_handle, uint32_t dst_handle,
+	                       uint32_t sx, uint32_t sy, uint32_t sw, uint32_t sh,
+	                       uint32_t dx, uint32_t dy, uint32_t dw, uint32_t dh,
+	                       uint32_t cx, uint32_t cy, uint32_t cw, uint32_t ch,
+	                       uint32_t filter, uint32_t flags);
+	uint16_t decode_jpeg_to_surface(const uint8_t *request, uint8_t *reply,
+	                                uint16_t *reply_length);
 	uint8_t *surface_pixels(uint32_t handle);
 	uint32_t surface_width(uint32_t handle) const;
 	uint32_t surface_height(uint32_t handle) const;

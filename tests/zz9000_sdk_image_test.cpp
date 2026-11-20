@@ -24,6 +24,7 @@ struct Mailbox {
 	uint32_t request_id = 0;
 	uint32_t completion_head = 0;
 	bool last_dirty = false;
+	uint16_t last_length = 0; // The last completion's payload length.
 
 	explicit Mailbox(uint32_t size)
 		: board(size), sdk(board.data(), size),
@@ -45,6 +46,7 @@ struct Mailbox {
 		const auto *reply = mb + get32(mb + 28) + completion_head * 64;
 		assert(get32(reply) == request_id);
 		assert(get16(reply + 6) == status);
+		last_length = get16(reply + 10);
 		completion_head = (completion_head + 1) % entries;
 		put32(mb + 36, completion_head);
 		return reply + 16;
@@ -625,6 +627,281 @@ void reject_webp_input_limit(Mailbox &mailbox)
 	mailbox.call(0x0101, request, 4);
 }
 #endif
+
+// A CPU-visible surface lives in board memory, where the guest reads it
+// through the Zorro window: its reported ARM address maps back to the
+// board offset its pixels are at, like the card's surface_allocator.
+uint8_t *visible_pixels(Mailbox &mailbox, const uint8_t *reply)
+{
+	assert(get32(reply + 24) == 1); // CPU_VISIBLE, not ARM_LOCAL
+	const uint32_t arm = get32(reply + 4);
+	assert(arm >= 0x00200000);
+	const uint32_t offset = arm - 0x00200000 + 0x10000;
+	assert(offset + get32(reply + 28) <= mailbox.board.size());
+	return mailbox.board.data() + offset;
+}
+
+uint32_t alloc_surface(Mailbox &mailbox, uint32_t width, uint32_t height,
+	                   uint32_t format, uint32_t flags, uint8_t **pixels = nullptr)
+{
+	uint8_t request[48] = {};
+	put32(request, width); put32(request + 4, height);
+	put32(request + 8, format); put32(request + 12, flags);
+	const auto *reply = mailbox.call(0x0200, request, 20);
+	if (pixels)
+		*pixels = visible_pixels(mailbox, reply);
+	return get32(reply);
+}
+
+void free_surface(Mailbox &mailbox, uint32_t surface)
+{
+	uint8_t request[48] = {};
+	put32(request, surface);
+	mailbox.call(0x0201, request, 4);
+}
+
+void check_cpu_visible_surfaces(Mailbox &mailbox)
+{
+	uint8_t *pixels = nullptr;
+	// Flags 0 (the SDK default) and CPU_VISIBLE are both CPU-visible.
+	for (uint32_t flags : {0u, 1u}) {
+		const uint32_t surface = alloc_surface(mailbox, 3, 2, 7, flags, &pixels);
+		assert(std::all_of(pixels, pixels + 24, [](uint8_t b) { return b == 0; }));
+		uint8_t request[48] = {};
+		put32(request, surface);
+		put32(request + 12, 3); put32(request + 16, 2);
+		put32(request + 20, 0x00123456);
+		mailbox.call(0x0203, request, 28); // FILL
+		assert(pixels[0] == 0x56 && pixels[1] == 0x34 && pixels[2] == 0x12);
+		assert(pixels[20] == 0x56 && pixels[22] == 0x12);
+		free_surface(mailbox, surface);
+	}
+	// The card's other 32- and 24-bit formats.
+	for (uint32_t format : {2u, 3u, 8u}) {
+		const uint32_t surface = alloc_surface(mailbox, 2, 2, format, 0, &pixels);
+		free_surface(mailbox, surface);
+	}
+	// A shared buffer and a CPU-visible surface never overlap.
+	const uint32_t staging = mailbox.allocate(256);
+	const uint32_t surface = alloc_surface(mailbox, 8, 8, 7, 0, &pixels);
+	const auto *buffer = mailbox.sdk.buffer_data(staging);
+	assert(buffer + 256 <= pixels || pixels + 256 <= buffer);
+	const uint32_t staging2 = mailbox.allocate(256);
+	const auto *buffer2 = mailbox.sdk.buffer_data(staging2);
+	assert(buffer2 + 256 <= pixels || pixels + 256 <= buffer2);
+	free_surface(mailbox, surface);
+	uint8_t request[48] = {};
+	put32(request, staging);
+	mailbox.call(0x0101, request, 4);
+	put32(request, staging2);
+	mailbox.call(0x0101, request, 4);
+	// ARM_LOCAL surfaces stay card-only.
+	put32(request, 2); put32(request + 4, 2);
+	put32(request + 8, 7); put32(request + 12, 16);
+	const auto *reply = mailbox.call(0x0200, request, 20);
+	assert(get32(reply + 24) == 16);
+	free_surface(mailbox, get32(reply));
+}
+
+// DECODE_JPEG, as the card's: the picture at its own size into the
+// destination rectangle, in the surface's format; never scaled.
+void run_one_shot_jpeg(Mailbox &mailbox, const std::vector<uint8_t> &image)
+{
+	assert(!image.empty() && image.size() < 4096);
+	const uint32_t staging = mailbox.allocate(4096);
+	std::copy(image.begin(), image.end(), mailbox.sdk.buffer_data(staging));
+	uint8_t *argb = nullptr, *bgra = nullptr;
+	const uint32_t s_argb = alloc_surface(mailbox, 4, 4, 2, 0, &argb);
+	const uint32_t s_bgra = alloc_surface(mailbox, 4, 4, 7, 0, &bgra);
+	const auto decode = [&](uint32_t surface, uint32_t format, uint32_t x, uint32_t y,
+	                        uint32_t w, uint32_t h, uint32_t flags, uint16_t status) {
+		uint8_t request[48] = {};
+		put32(request, staging);
+		put32(request + 8, static_cast<uint32_t>(image.size()));
+		put32(request + 12, surface);
+		put32(request + 16, x); put32(request + 20, y);
+		put32(request + 24, w); put32(request + 28, h);
+		put32(request + 32, format); put32(request + 36, flags);
+		return mailbox.call(0x0401, request, 40, status);
+	};
+	// The 2x3 picture at (1,1); 0 x 0 runs to the surface's edges.
+	auto *reply = decode(s_argb, 2, 1, 1, 0, 0, 0, 0);
+	assert(get32(reply) == 2 && get32(reply + 4) == 3 && get32(reply + 8) == 2 &&
+	       get32(reply + 16) == 24);
+	// The SDK's reply decoder takes the whole 48-byte result payload.
+	assert(mailbox.last_length == 48);
+	decode(s_bgra, 7, 1, 1, 2, 3, 0, 0);
+	assert(mailbox.last_length == 48);
+	// RGBA8888 and RGB888: the same pixels in their own byte order.
+	uint8_t *rgba = nullptr, *rgb = nullptr;
+	const uint32_t s_rgba = alloc_surface(mailbox, 4, 4, 3, 0, &rgba);
+	const uint32_t s_rgb = alloc_surface(mailbox, 4, 4, 8, 0, &rgb);
+	reply = decode(s_rgba, 3, 1, 1, 0, 0, 0, 0);
+	assert(get32(reply + 8) == 3 && get32(reply + 16) == 24);
+	reply = decode(s_rgb, 8, 1, 1, 0, 0, 0, 0);
+	assert(get32(reply + 8) == 8 && get32(reply + 16) == 18);
+	for (uint32_t y = 1; y < 4; ++y)
+		for (uint32_t x = 1; x < 3; ++x) {
+			const uint8_t *a = argb + (y * 4 + x) * 4;
+			const uint8_t *r4 = rgba + (y * 4 + x) * 4, *r3 = rgb + (y * 4 + x) * 3;
+			assert(r4[0] == a[1] && r4[1] == a[2] && r4[2] == a[3] && r4[3] == 255);
+			assert(r3[0] == a[1] && r3[1] == a[2] && r3[2] == a[3]);
+		}
+	assert(!rgb[0] && !rgb[1] && !rgb[2] && !rgba[3]); // (0,0): untouched
+	free_surface(mailbox, s_rgba);
+	free_surface(mailbox, s_rgb);
+	for (uint32_t y = 0; y < 4; ++y)
+		for (uint32_t x = 0; x < 4; ++x) {
+			const uint8_t *a = argb + (y * 4 + x) * 4, *b = bgra + (y * 4 + x) * 4;
+			if (x >= 1 && x <= 2 && y >= 1) {
+				assert(a[0] == 255 && b[3] == 255); // opaque
+				assert(a[1] == b[2] && a[2] == b[1] && a[3] == b[0]);
+			} else {
+				assert(!a[0] && !a[1] && !a[2] && !a[3]); // outside: untouched
+			}
+		}
+	// The top-left pixel is red: the PNG's (255,0,0) through the JPEG.
+	assert(argb[(1 * 4 + 1) * 4 + 1] > 128 && argb[(1 * 4 + 1) * 4 + 3] < 128);
+	decode(s_argb, 2, 0, 0, 2, 2, 0, 9);       // too small: never scaled (I/O error)
+	decode(s_argb, 2, 3, 0, 0, 0, 0, 9);       // 1 column left: too small
+	decode(s_argb, 2, 0, 0, 5, 0, 0, 4);       // past the surface: BAD_REQUEST
+	decode(s_argb, 7, 0, 0, 0, 0, 0, 3);       // not the surface's format
+	decode(s_argb, 2, 0, 0, 0, 0, 1, 3);       // any flag (FIT is a session's)
+	uint8_t request[48] = {};
+	put32(request, staging);
+	put32(request + 8, static_cast<uint32_t>(image.size()));
+	put32(request + 12, 0x40ffffff);
+	put32(request + 32, 2);
+	mailbox.call(0x0401, request, 40, 5);     // no such surface
+	// Into the live framebuffer: a visible write.
+	mailbox.sdk.set_framebuffer(0x110000, 4, 4, 16, 7);
+	reply = decode(0x80000000, 7, 0, 0, 0, 0, 0, 0);
+	assert(get32(reply) == 2 && mailbox.last_dirty);
+	free_surface(mailbox, s_argb);
+	free_surface(mailbox, s_bgra);
+	put32(request, staging);
+	mailbox.call(0x0101, request, 4);
+}
+
+// SCALE_IMAGE: the clipped scaler with the destination as the clip.
+void run_scale_image(Mailbox &mailbox)
+{
+	uint8_t *src = nullptr, *dst = nullptr;
+	const uint32_t s = alloc_surface(mailbox, 2, 1, 7, 0, &src);
+	const uint32_t d = alloc_surface(mailbox, 4, 2, 7, 0, &dst);
+	src[0] = 0x10; src[1] = 0x20; src[2] = 0x30; src[3] = 0xff;
+	src[4] = 0x40; src[5] = 0x50; src[6] = 0x60; src[7] = 0xff;
+	uint8_t request[48] = {};
+	put32(request, s); put32(request + 4, d);
+	put32(request + 16, 2); put32(request + 20, 1);
+	put32(request + 32, 4); put32(request + 36, 2);
+	mailbox.call(0x0400, request, 48); // nearest
+	assert(dst[0] == 0x10 && dst[4] == 0x10 && dst[8] == 0x40 && dst[12] == 0x40);
+	assert(dst[16] == 0x10 && dst[28] == 0x40);
+	assert(!mailbox.last_dirty); // offscreen: no redraw
+	put32(request + 40, 2);
+	mailbox.call(0x0400, request, 48, 3); // no such filter
+	// Bilinear: between the two source pixels in the middle columns.
+	put32(request + 40, 1);
+	mailbox.call(0x0400, request, 48);
+	assert(dst[0] < dst[4] && dst[4] < dst[8] && dst[8] < dst[12]);
+	assert(dst[0] >= 0x10 && dst[12] <= 0x40 && dst[3] == 0xff);
+	// Into the live framebuffer: a visible write, reported for a redraw.
+	mailbox.sdk.set_framebuffer(0x110000, 4, 4, 16, 7);
+	put32(request + 4, 0x80000000);
+	put32(request + 40, 0);
+	mailbox.call(0x0400, request, 48);
+	assert(mailbox.last_dirty);
+	const auto *fb = mailbox.board.data() + 0x110000;
+	assert(fb[0] == 0x10 && fb[12] == 0x40);
+	free_surface(mailbox, s);
+	free_surface(mailbox, d);
+	// One format to itself: nearest for any, bilinear for 4-byte ones;
+	// across formats only BGRA8888 to RGB565/RGB555.
+	const auto scale = [&](uint32_t from, uint32_t to, uint32_t filter, uint16_t status) {
+		std::fill(std::begin(request), std::end(request), 0);
+		put32(request, from); put32(request + 4, to);
+		put32(request + 16, 2); put32(request + 20, 1);
+		put32(request + 32, 4); put32(request + 36, 2);
+		put32(request + 40, filter);
+		mailbox.call(0x0400, request, 48, status);
+	};
+	uint8_t *a = nullptr, *b = nullptr;
+	const uint32_t rgb_s = alloc_surface(mailbox, 2, 1, 8, 0, &a);
+	const uint32_t rgb_d = alloc_surface(mailbox, 4, 2, 8, 0, &b);
+	a[0] = 1; a[1] = 2; a[2] = 3; a[3] = 4; a[4] = 5; a[5] = 6;
+	scale(rgb_s, rgb_d, 0, 0);
+	assert(b[0] == 1 && b[2] == 3 && b[9] == 4 && b[11] == 6 && b[12] == 1);
+	scale(rgb_s, rgb_d, 1, 3); // RGB888 bilinear: unsupported
+	free_surface(mailbox, rgb_d); // (four surfaces at a time)
+	const uint32_t argb_s = alloc_surface(mailbox, 2, 1, 2, 0, &a);
+	const uint32_t argb_d = alloc_surface(mailbox, 4, 2, 2, 0, &b);
+	a[0] = 0xff; a[1] = 0x00; a[2] = 0x80; a[3] = 0x10;
+	a[4] = 0xff; a[5] = 0xf0; a[6] = 0x80; a[7] = 0x50;
+	scale(argb_s, argb_d, 1, 0);
+	assert(b[0] == 0xff && b[2] == 0x80 && b[1] < b[5] && b[5] < b[9] && b[9] < b[13]);
+	uint8_t *c = nullptr;
+	const uint32_t rgb565 = alloc_surface(mailbox, 4, 2, 1, 0, &c);
+	scale(argb_s, rgb565, 0, 3); // ARGB8888 to RGB565: unsupported
+	scale(rgb_s, argb_d, 0, 3);  // RGB888 to ARGB8888: unsupported
+	for (uint32_t h : {rgb_s, argb_s, argb_d, rgb565})
+		free_surface(mailbox, h);
+}
+
+// ALLOC_SURFACE's statuses and flags, as the card's handle_alloc_surface().
+void check_alloc_surface_rules(Mailbox &mailbox)
+{
+	uint8_t request[48] = {};
+	const auto alloc = [&](uint32_t w, uint32_t h, uint32_t format, uint32_t flags,
+	                       uint16_t status) {
+		std::fill(std::begin(request), std::end(request), 0);
+		put32(request, w); put32(request + 4, h);
+		put32(request + 8, format); put32(request + 12, flags);
+		return mailbox.call(0x0200, request, 20, status);
+	};
+	alloc(0, 2, 7, 0, 4);  // no width: BAD_REQUEST
+	alloc(2, 0, 7, 0, 4);  // no height
+	alloc(2, 2, 0, 0, 4);  // UNKNOWN format
+	alloc(2, 2, 5, 0, 4);  // PLANAR: no row size
+	alloc(2, 2, 99, 0, 4); // not a format
+	// FRAMEBUFFER, DISPLAYED and SHARED_BUFFER are kept as given.
+	auto *reply = alloc(2, 2, 7, 2 | 4 | 8, 0);
+	assert(get32(reply + 24) == (2u | 4u | 8u | 1u));
+	free_surface(mailbox, get32(reply));
+	reply = alloc(2, 2, 7, 1 | 8 | 16, 0); // ARM_LOCAL wins over CPU_VISIBLE
+	assert(get32(reply + 24) == (8u | 16u));
+	free_surface(mailbox, get32(reply));
+}
+
+// An image session writes its own output format into a surface of it.
+void run_session_argb_surface(Mailbox &mailbox, const std::vector<uint8_t> &image)
+{
+	assert(!image.empty() && image.size() < 4096);
+	const uint32_t staging = mailbox.allocate(4096);
+	std::copy(image.begin(), image.end(), mailbox.sdk.buffer_data(staging));
+	uint8_t *argb = nullptr;
+	const uint32_t surface = alloc_surface(mailbox, 2, 3, 2, 0, &argb);
+	uint8_t request[48] = {};
+	put32(request, 1); put32(request + 4, 1); // JPEG, DECODE_TO_SURFACE
+	put32(request + 8, surface);
+	put32(request + 20, 2); put32(request + 24, 3);
+	put32(request + 28, 7); // BGRA output into an ARGB surface: refused
+	mailbox.call(0x0404, request, 48, 3);
+	put32(request + 28, 2); // ARGB8888
+	const uint32_t session = get32(mailbox.call(0x0404, request, 48));
+	std::fill(std::begin(request), std::end(request), 0);
+	put32(request, session); put32(request + 4, staging);
+	put32(request + 12, static_cast<uint32_t>(image.size()));
+	put32(request + 16, 1);
+	const auto *reply = mailbox.call(0x0405, request, 48);
+	assert(get32(reply + 4) == 4 && get32(reply + 40) == 24);
+	assert(argb[0] == 255 && argb[1] > 128 && argb[3] < 128); // A, then a red
+	put32(request, session); put32(request + 4, 0);
+	mailbox.call(0x0406, request, 48);
+	free_surface(mailbox, surface);
+	put32(request, staging);
+	mailbox.call(0x0101, request, 4);
+}
 } // namespace
 
 int main(int argc, char **argv)
@@ -661,6 +938,18 @@ int main(int argc, char **argv)
 	reject_16bit_decode_surface(mailbox);
 	reject_changed_decode_surface(mailbox, read_file(argv[1]));
 	check_surface_dirty_reports();
+	check_cpu_visible_surfaces(mailbox);
+	check_alloc_surface_rules(mailbox);
+	run_one_shot_jpeg(mailbox, read_file(argv[2]));
+	run_scale_image(mailbox);
+	run_session_argb_surface(mailbox, read_file(argv[2]));
+	{
+		// The same on a Zorro III board, from its heap.
+		Mailbox z3(0x08000000);
+		check_cpu_visible_surfaces(z3);
+		run_one_shot_jpeg(z3, read_file(argv[2]));
+		run_scale_image(z3);
+	}
 	mailbox.sdk.reset();
 	assert(mailbox.sdk.buffer_data(1) == nullptr);
 }
