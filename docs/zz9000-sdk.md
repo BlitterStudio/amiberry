@@ -60,6 +60,23 @@ generation-2 aperture layout is acknowledged, plus card-only buffers for the
 compressed and PCM rings. Both models reset the mailbox and release every
 session, worker thread and buffer on board reset or removal.
 
+`zz9k.library` revision 38 and later tags every mailbox entry with its
+opener's client ID (flags bits 5-15) and sends `CLIENT_RELEASE` (`0x0006`)
+when that opener's last close comes. Amiberry then closes the client's
+image, media and audio sessions and frees the buffers and surfaces it
+allocated, so a program that exits without closing its session no longer
+keeps the card busy until a reset. An untagged entry (client ID 0) or one
+with a payload is `BAD_REQUEST`, as on the card; older libraries send only
+untagged entries and never use the op. Unlike the card, which frees
+everything the client allocated, Amiberry keeps a buffer or surface that
+another client's live session still uses: an image tile buffer or
+destination surface, or a media PCM ring, the cases where `FREE_SHARED` and
+`FREE_SURFACE` answer `BUSY`. It passes to the client that owns that
+session and is freed when that client is released. Audio stream rings are
+freed with their owner, since a stream keeps the ring it resolved at begin.
+The op never answers `BUSY`, because `zz9k.library` sends it again on
+`BUSY`.
+
 ## Audio streams
 
 The audio-stream service implements begin, codec-aware begin (`BeginEx`),
