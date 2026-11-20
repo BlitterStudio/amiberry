@@ -1287,6 +1287,33 @@ static uae_u32 uaelib_host_status(TrapContext* ctx, uae_u32 handle)
 	return host_shell_update_status(session);
 }
 
+#if defined(_WIN32)
+#include <objbase.h>
+#include <shellapi.h>
+#include <thread>
+
+// Open a file, directory or URL with its Windows default handler.
+// ShellExecute may hand the request to COM-based shell extensions, so it
+// runs on a short-lived thread that initialises COM, not on the emulation
+// thread.
+static bool host_shell_open_default(const char* target)
+{
+	// Let the user reach the window that opens, as target_execute does.
+	disablecapture();
+	bool opened = false;
+	std::thread worker([target, &opened] {
+		const HRESULT com = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
+		const HINSTANCE result = ShellExecuteA(nullptr, "open", target, nullptr, nullptr, SW_SHOWNORMAL);
+		opened = reinterpret_cast<INT_PTR>(result) > 32;
+		if (SUCCEEDED(com))
+			CoUninitialize();
+	});
+	worker.join();
+	if (!opened)
+		write_log("Failed to open on host: %s\n", target);
+	return opened;
+}
+#else
 static std::string quote_path(const char* path) {
 	std::string res = "'";
 	for (const char* p = path; *p; ++p) {
@@ -1296,6 +1323,7 @@ static std::string quote_path(const char* path) {
 	res += "'";
 	return res;
 }
+#endif
 
 static uae_u32 uaelib_host_view(TrapContext* ctx, uaecptr filename) {
 	char file[HOST_SHELL_CMD_MAX];
@@ -1303,8 +1331,9 @@ static uae_u32 uaelib_host_view(TrapContext* ctx, uaecptr filename) {
 		return 0;
 
 #if defined(_WIN32)
-	std::string cmd = "start \"\" ";
-#elif defined(__APPLE__)
+	return host_shell_open_default(file) ? 1 : 0;
+#else
+#if defined(__APPLE__)
 	std::string cmd = "open ";
 #else
 	std::string cmd = "xdg-open ";
@@ -1312,6 +1341,7 @@ static uae_u32 uaelib_host_view(TrapContext* ctx, uaecptr filename) {
 	cmd += quote_path(file);
 
 	return target_execute(cmd.c_str()) ? 1 : 0;
+#endif
 }
 
 static uae_u32 uaelib_midi(TrapContext *ctx, uae_u32 op, uae_u32 index, uaecptr name)

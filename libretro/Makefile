@@ -293,7 +293,7 @@ FLAGS += -D_WIN32_WINNT=0x0601
 # SDL stubs in libretro/sdl_stub.o etc.) come up undefined at link time.
 # Link winpthread explicitly. The link is also harmless under MinGW-w64
 # GCC, where it's normally pulled in implicitly.
-LDFLAGS += -lws2_32 -lz -liphlpapi -lgdi32 -lwinmm -lpthread
+LDFLAGS += -lws2_32 -lz -liphlpapi -lgdi32 -lwinmm -lole32 -lpthread
 endif
 
 # The target must have 8-byte pointers. Probed here, after the platform

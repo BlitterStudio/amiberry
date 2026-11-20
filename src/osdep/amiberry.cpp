@@ -9,6 +9,8 @@
 #include <unistd.h>
 #else
 #include <io.h>
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
 #endif
 #ifdef __ANDROID__
 #include <sched.h>
@@ -5974,7 +5976,26 @@ bool target_execute(const char* command)
 	disablecapture();
 
 	write_log("Target_execute received: %s\n", command);
-	
+
+#ifdef _WIN32
+	// cmd.exe has no background operator: a trailing "&" only separates
+	// commands, so system() would hold the emulation thread until the
+	// program exits. Start the command interpreter detached instead.
+	const char* comspec = getenv("COMSPEC");
+	if (!comspec)
+		comspec = "cmd.exe";
+	std::string cmdline = std::string("\"") + comspec + "\" /S /C \"" + command + "\"";
+	STARTUPINFOA si = {};
+	si.cb = sizeof si;
+	PROCESS_INFORMATION pi = {};
+	if (!CreateProcessA(nullptr, &cmdline[0], nullptr, nullptr, FALSE, CREATE_NO_WINDOW,
+			nullptr, nullptr, &si, &pi)) {
+		write_log("CreateProcess failed when trying to execute: %s. Error: %lu\n", command, GetLastError());
+		return false;
+	}
+	CloseHandle(pi.hThread);
+	CloseHandle(pi.hProcess);
+#else
 	std::string final_command = command;
 	// Ensure this runs in the background
 	final_command += " &";
@@ -5998,6 +6019,7 @@ bool target_execute(const char* command)
 		write_log("Exception thrown when trying to execute: %s. Exception: %s", command, e.what());
 		return false;
 	}
+#endif
 	return true;
 }
 
