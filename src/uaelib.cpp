@@ -812,8 +812,10 @@ static uae_u32 host_shell_open_terminal(const char* cmd, uae_u32 rows, uae_u32 c
 			if (!comspec)
 				comspec = "cmd.exe";
 			std::string cmdline = std::string("\"") + comspec + "\"";
+			// /V:OFF keeps "!" literal even when delayed expansion is enabled
+			// in the registry; host-shell quotes its arguments assuming it is off.
 			if (cmd[0] != '\0')
-				cmdline += std::string(" /S /C \"") + cmd + "\"";
+				cmdline += std::string(" /V:OFF /S /C \"") + cmd + "\"";
 
 			// Null standard handles with STARTF_USESTDHANDLES make the child
 			// use the pseudo console, never Amiberry's own (possibly
@@ -964,10 +966,12 @@ static uae_u32 uaelib_host_open_pipe(TrapContext* ctx, uaecptr command)
 
 	HANDLE nul = CreateFileA("NUL", GENERIC_WRITE, FILE_SHARE_WRITE, &sa, OPEN_EXISTING, 0, NULL);
 
+	// /D skips AutoRun commands, whose output would mix with the guest's
+	// data; /V:OFF keeps "!" literal even with delayed expansion enabled.
 	const char* comspec = getenv("COMSPEC");
 	if (!comspec)
 		comspec = "cmd.exe";
-	std::string cmdline = std::string("\"") + comspec + "\" /C " + cmd;
+	std::string cmdline = std::string("\"") + comspec + "\" /D /V:OFF /C " + cmd;
 
 	STARTUPINFOA si = {};
 	si.cb = sizeof si;
@@ -1048,12 +1052,11 @@ static uae_u32 uaelib_host_open_pipe(TrapContext* ctx, uaecptr command)
 		close(outpipe[0]);
 		close(outpipe[1]);
 
-		const char* shell = getenv("SHELL");
-		if (!shell) shell = "/bin/sh";
-		const char* shell_name = strrchr(shell, '/');
-		if (shell_name) shell_name++; else shell_name = shell;
-
-		execl(shell, shell_name, "-c", cmd, (char*)NULL);
+		// Pipe sessions run scripts that the guest tools generate in POSIX
+		// sh syntax, so they use /bin/sh rather than the user's login
+		// shell, which may not be POSIX (fish). Interactive terminal
+		// sessions (traps 90 and 97) keep $SHELL.
+		execl("/bin/sh", "sh", "-c", cmd, (char*)NULL);
 		_exit(127);
 	} else if (pid > 0) {
 		// Parent process
