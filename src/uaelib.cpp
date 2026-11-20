@@ -404,6 +404,7 @@ struct ShellSession {
 	void* pseudo_console = nullptr; // HPCON of a terminal session until released
 	bool terminal = false;          // ConPTY session (trap 90/97), not a pipe session
 	unsigned long long exit_tick = 0;
+	std::shared_ptr<struct HostShellInputWriter> input; // ConPTY input writer thread
 #endif
 };
 
@@ -419,6 +420,10 @@ struct ShellSession {
 #include <windows.h>
 #include <io.h>
 #include <thread>
+#include <mutex>
+#include <condition_variable>
+#include <chrono>
+#include <memory>
 #endif
 #include <fcntl.h>
 #include <signal.h>
@@ -525,6 +530,114 @@ static bool host_pseudo_console_available()
 	return host_create_pseudo_console != nullptr && host_close_pseudo_console != nullptr;
 }
 
+// Writes terminal input from a worker thread. ConPTY can stop reading input
+// while it waits for its output to be drained, and the emulation thread is
+// the only reader of that output, so it must never block on an input write.
+struct HostShellInputWriter {
+	explicit HostShellInputWriter(HANDLE h) : handle(h), worker([this] { run(); }) {}
+	~HostShellInputWriter() { stop(); }
+	HostShellInputWriter(const HostShellInputWriter&) = delete;
+	HostShellInputWriter& operator=(const HostShellInputWriter&) = delete;
+
+	// Queues up to size bytes; returns how many were accepted (0 when the
+	// queue is full), or -1 once the pipe has failed.
+	uae_u32 enqueue(const char* data, uae_u32 size)
+	{
+		std::lock_guard<std::mutex> guard(lock);
+		if (failed || stopping)
+			return static_cast<uae_u32>(-1);
+		size_t room = queued < MAX_QUEUED ? MAX_QUEUED - queued : 0;
+		size_t accept = size < room ? size : room;
+		if (accept == 0)
+			return 0;
+		pending.append(data, accept);
+		queued += accept;
+		wake.notify_one();
+		return static_cast<uae_u32>(accept);
+	}
+
+	// Ends the worker, interrupting a write that is blocked on the pipe.
+	void stop()
+	{
+		if (!worker.joinable())
+			return;
+		{
+			std::lock_guard<std::mutex> guard(lock);
+			stopping = true;
+			wake.notify_one();
+		}
+		std::unique_lock<std::mutex> guard(lock);
+		while (!finished) {
+			if (worker_handle != NULL)
+				CancelSynchronousIo(worker_handle);
+			wake.wait_for(guard, std::chrono::milliseconds(10), [this] { return finished; });
+		}
+		guard.unlock();
+		worker.join();
+		if (worker_handle != NULL) {
+			CloseHandle(worker_handle);
+			worker_handle = NULL;
+		}
+	}
+
+private:
+	static constexpr size_t MAX_QUEUED = 1024 * 1024;
+
+	void run()
+	{
+		// std::thread::native_handle is not a Win32 handle on every runtime.
+		HANDLE self = NULL;
+		DuplicateHandle(GetCurrentProcess(), GetCurrentThread(), GetCurrentProcess(),
+			&self, 0, FALSE, DUPLICATE_SAME_ACCESS);
+		{
+			std::lock_guard<std::mutex> guard(lock);
+			worker_handle = self;
+		}
+		std::string chunk;
+		for (;;) {
+			{
+				std::unique_lock<std::mutex> guard(lock);
+				wake.wait(guard, [this] { return stopping || !pending.empty(); });
+				if (stopping)
+					break;
+				chunk.swap(pending);
+			}
+			size_t offset = 0;
+			while (offset < chunk.size()) {
+				DWORD written = 0;
+				if (!WriteFile(handle, chunk.data() + offset,
+						static_cast<DWORD>(chunk.size() - offset), &written, NULL)) {
+					std::lock_guard<std::mutex> guard(lock);
+					failed = true;
+					pending.clear();
+					queued = 0;
+					finished = true;
+					wake.notify_all();
+					return;
+				}
+				offset += written;
+				std::lock_guard<std::mutex> guard(lock);
+				queued -= written;
+			}
+			chunk.clear();
+		}
+		std::lock_guard<std::mutex> guard(lock);
+		finished = true;
+		wake.notify_all();
+	}
+
+	HANDLE handle;
+	HANDLE worker_handle = NULL;
+	std::mutex lock;
+	std::condition_variable wake;
+	std::string pending;
+	size_t queued = 0;
+	bool stopping = false;
+	bool failed = false;
+	bool finished = false;
+	std::thread worker; // last member: run() starts once the rest exists
+};
+
 // ClosePseudoConsole flushes the final frame into the output pipe and, before
 // Windows 11 24H2, waits for that write. The emulation thread is the pipe's
 // only reader, so the close runs on its own thread.
@@ -548,6 +661,10 @@ static bool host_terminal_output_drained(ShellSession& session)
 	DWORD avail = 0;
 	if (h == INVALID_HANDLE_VALUE || !PeekNamedPipe(h, NULL, 0, NULL, &avail, NULL))
 		return true;
+	// Output the guest has not read yet is not lost; the timeout only
+	// covers a pipe that never closes with nothing left to read.
+	if (avail > 0)
+		return false;
 	return GetTickCount64() - session.exit_tick >= HOST_SHELL_DRAIN_TIMEOUT_MS;
 }
 #endif
@@ -740,6 +857,11 @@ static uae_u32 host_shell_open_terminal(const char* cmd, uae_u32 rows, uae_u32 c
 			CloseHandle(pi.hProcess);
 		}
 		return 0;
+	}
+
+	if (session.terminal) {
+		HANDLE input_handle = (HANDLE)_get_osfhandle(session.infd);
+		session.input = std::make_shared<HostShellInputWriter>(input_handle);
 	}
 
 	uae_u32 handle = next_session_handle++;
@@ -1054,6 +1176,12 @@ static uae_u32 uaelib_host_write(TrapContext* ctx, uae_u32 handle, uaecptr buffe
 	std::vector<char> buf(size);
 	trap_get_bytes(ctx, (uae_u8*)buf.data(), buffer, size);
 
+	// Terminal input goes through the writer thread: a direct write blocks
+	// while ConPTY waits for this thread to drain its output, and the guest
+	// cannot read that output while the trap is blocked.
+	if (session.input)
+		return session.input->enqueue(buf.data(), size);
+
 	int written = _write(session.infd, buf.data(), size);
 	return written;
 #else
@@ -1083,6 +1211,12 @@ static uae_u32 uaelib_host_close(TrapContext* ctx, uae_u32 handle)
 
 	ShellSession& session = shell_sessions[handle];
 	int closed_fd = session.infd;
+	// The input writer thread uses the descriptor's handle, so it must be
+	// gone before the descriptor is closed.
+	if (session.input) {
+		session.input->stop();
+		session.input.reset();
+	}
 	if (session.infd >= 0) {
 		_close(session.infd);
 		session.infd = -1;
