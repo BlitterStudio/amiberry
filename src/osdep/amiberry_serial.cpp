@@ -300,7 +300,6 @@ static BOOL tcpserial;
 
 static bool tcp_is_connected ()
 {
-#ifdef SERIAL_ENET
 	if (serialsocket == UAE_SOCKET_INVALID) {
 		return false;
 	}
@@ -315,26 +314,20 @@ static bool tcp_is_connected ()
 		}
 	}
 	return serialconn != UAE_SOCKET_INVALID;
-#else
-	return false;
-#endif
 }
 
 static void tcp_disconnect ()
 {
-#ifdef SERIAL_ENET
 	if (serialconn == UAE_SOCKET_INVALID) {
 		return;
 	}
 	uae_socket_close(serialconn);
 	serialconn = UAE_SOCKET_INVALID;
 	write_log(_T("TCP: Serial disconnect\n"));
-#endif
 }
 
 static void closetcp ()
 {
-#ifdef SERIAL_ENET
 	if (serialconn != UAE_SOCKET_INVALID) {
 		uae_socket_close(serialconn);
 		serialconn = UAE_SOCKET_INVALID;
@@ -343,13 +336,10 @@ static void closetcp ()
 		uae_socket_close(serialsocket);
 		serialsocket = UAE_SOCKET_INVALID;
 	}
-	// WSACleanup ();
-#endif
 }
 
 static int opentcp (const TCHAR *sername)
 {
-#ifdef SERIAL_ENET
 	serialsocket = uae_tcp_listen_uri(sername, "1234", UAE_SOCKET_DEFAULT);
 	if (serialsocket == UAE_SOCKET_INVALID) {
 		return 0;
@@ -362,18 +352,15 @@ static int opentcp (const TCHAR *sername)
 	}
 	tcpserial = TRUE;
 	return 1;
-#else
-	return 0;
-#endif
 }
 
 int openser (const TCHAR *sername)
 {
-#ifdef USE_LIBSERIALPORT
 	if (!_tcsnicmp(sername, _T("TCP:"), 4)) {
 		return opentcp(sername);
 	}
 
+#ifdef USE_LIBSERIALPORT
 	if (sp_get_port_by_name(sername, &port) != SP_OK) {
 		write_log("Error finding serial port %s\n", sername);
 		return 0;
@@ -391,8 +378,11 @@ int openser (const TCHAR *sername)
 	sp_set_parity(port, SP_PARITY_NONE);
 	sp_set_stopbits(port, 1);
 	sp_set_flowcontrol(port, SP_FLOWCONTROL_NONE);
-#endif
 	return 1;
+#else
+	write_log(_T("SERIAL: Host serial ports are not supported in this build, ignoring %s\n"), sername);
+	return 0;
+#endif
 }
 
 void closeser ()
@@ -586,15 +576,14 @@ void flushser()
 #ifdef USE_LIBSERIALPORT
 	if (port) {
 		sp_flush(port, SP_BUF_INPUT);
-	}
-	else {
-		while (readseravail(nullptr)) {
-			int data;
-			if (readser(&data) <= 0)
-				break;
-		}
+		return;
 	}
 #endif
+	while (readseravail(nullptr)) {
+		int data;
+		if (readser(&data) <= 0)
+			break;
+	}
 }
 
 int readseravail(bool* breakcond)
