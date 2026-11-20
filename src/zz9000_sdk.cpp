@@ -148,6 +148,7 @@ bool copy_rect_fits(uint32_t x, uint32_t y, uint32_t rect_w, uint32_t rect_h,
 
 struct Engine::Audio {
 	uint32_t session = 0;
+	uint16_t owner = 0; // The client that began it (CLIENT_RELEASE).
 	uint32_t codec = 1;
 	uint32_t pcm_capacity = 0;
 	uint32_t mp3_capacity = 0;
@@ -191,6 +192,7 @@ struct Engine::Audio {
 
 struct Engine::Image {
 	uint32_t session = 0;
+	uint16_t owner = 0; // The client that began it (CLIENT_RELEASE).
 	uint32_t codec = 0;
 	uint32_t output_format = 0;
 	uint32_t tile_handle = 0;
@@ -219,6 +221,7 @@ struct Engine::Image {
 
 struct Engine::Media {
 	uint32_t session = 0;
+	uint16_t owner = 0; // The client that began it (CLIENT_RELEASE).
 	uint32_t width = 0, height = 0;
 	uint32_t frame_rate_num = 0, frame_rate_den = 1;
 	uint32_t frame_number = 0;
@@ -1026,6 +1029,7 @@ uint16_t Engine::dispatch_media(uint16_t opcode, const uint8_t *request,
 		}
 		media_ = std::make_unique<Media>();
 		media_->session = next_media_session_++;
+		media_->owner = client_id_;
 		media_->width = width; media_->height = height;
 		media_->video_codec = video_codec; media_->container = container;
 		media_->audio_enabled = audio_codec != 0;
@@ -1519,6 +1523,17 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 		*reply_length = 48;
 		return ok;
 	}
+	if (opcode == 0x0006) {
+		// CLIENT_RELEASE, as the card's handle_client_release(): everything
+		// the tagged client still holds is reclaimed (zz9k.library sends it
+		// when its last opener closes, from revision 38), so a client that
+		// exits without closing its sessions does not block the card until
+		// a reset. No payload; client id 0 (an untagged entry) is refused.
+		if (request_length || !client_id_)
+			return bad_request;
+		release_client(client_id_);
+		return ok;
+	}
 	if (opcode == 0x0005) {
 		if (board_size_ != 0x00400000 || !aperture_acked_)
 			return unsupported;
@@ -1640,6 +1655,7 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 			return no_memory;
 		}
 		free_slot->handle = next_handle_++;
+		free_slot->owner = client_id_;
 		free_slot->board_offset = board_offset;
 		free_slot->length = length;
 		free_slot->flags = flags;
@@ -1745,6 +1761,7 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 		}
 		*slot = {};
 		slot->handle = surface_handle_base | next_surface_handle_++;
+		slot->owner = client_id_;
 		slot->width = width; slot->height = height;
 		slot->pitch = pitch; slot->format = format;
 		slot->flags = arm_local ? (flags | 16u) & ~1u : flags | 1u;
@@ -1949,6 +1966,7 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 		}
 		image_ = std::make_unique<Image>();
 		image_->session = next_image_session_++;
+		image_->owner = client_id_;
 		image_->codec = codec;
 		image_->output_format = format;
 		image_->tile_handle = tile_handle;
@@ -2386,6 +2404,7 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 		}
 		*slot = std::make_unique<Audio>();
 		(*slot)->session = next_audio_session_++;
+		(*slot)->owner = client_id_;
 		if (next_audio_session_ == 0)
 			next_audio_session_ = 1;
 		(*slot)->mp3_capacity = mp3_capacity;
@@ -2441,6 +2460,7 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 			return no_memory;
 		*slot = std::make_unique<Audio>();
 		(*slot)->session = next_audio_session_++;
+		(*slot)->owner = client_id_;
 		if (next_audio_session_ == 0)
 			next_audio_session_ = 1;
 		(*slot)->codec = codec;
@@ -2936,6 +2956,25 @@ uint16_t Engine::decode_mp3(const uint8_t *request, uint16_t request_length,
 #endif
 }
 
+void Engine::release_client(uint16_t client)
+{
+	// Sessions first, then what they read and write, as the card does.
+	if (image_ && image_->owner == client)
+		image_.reset();
+	if (media_ && media_->owner == client)
+		close_media();
+	for (auto &audio : audios_)
+		if (audio && audio->owner == client)
+			close_audio(audio.get());
+	for (auto &buffer : buffers_)
+		if (buffer.handle && buffer.owner == client)
+			buffer = {};
+	for (auto &surface : surfaces_)
+		if (surface.handle && surface.owner == client &&
+		    !(image_ && image_->dst_surface == surface.handle))
+			surface = {};
+}
+
 bool Engine::poll()
 {
 	bool dirty = false;
@@ -2962,6 +3001,9 @@ bool Engine::poll()
 		uint8_t payload[48] = {};
 		uint16_t payload_length = 0;
 		const uint16_t opcode = be16(request + 4);
+		// The SDK tags each entry with its opener's client id (flags
+		// bits 5-15, ZZ9K_ENTRY_CLIENT_ID_MASK); 0 for older libraries.
+		client_id_ = static_cast<uint16_t>((be16(request + 8) & 0xffe0) >> 5);
 		last_status_ = dispatch(opcode, request + 16, be16(request + 10),
 			payload, &payload_length);
 		const bool image_framebuffer_write = opcode == 0x0405 && image_ &&

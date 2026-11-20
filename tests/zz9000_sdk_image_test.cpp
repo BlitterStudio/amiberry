@@ -25,6 +25,7 @@ struct Mailbox {
 	uint32_t completion_head = 0;
 	bool last_dirty = false;
 	uint16_t last_length = 0; // The last completion's payload length.
+	uint16_t client = 0; // Stamped into each entry's flags (bits 5-15).
 
 	explicit Mailbox(uint32_t size)
 		: board(size), sdk(board.data(), size),
@@ -38,6 +39,7 @@ struct Mailbox {
 		std::fill(request, request + 64, 0);
 		put32(request, ++request_id);
 		put16(request + 4, opcode);
+		put16(request + 8, static_cast<uint16_t>(client << 5));
 		put16(request + 10, length);
 		if (payload)
 			std::copy(payload, payload + length, request + 16);
@@ -1037,6 +1039,57 @@ void copy_surface_and_query_palette(Mailbox &mailbox)
 	put32(request, staging);
 	mailbox.call(0x0101, request, 4);
 }
+
+// CLIENT_RELEASE (0x0006): what the tagged client holds is reclaimed; other
+// clients' resources stay. zz9k.library 2.38+ sends it on its last close.
+void check_client_release(Mailbox &mailbox)
+{
+	uint8_t request[48] = {};
+	mailbox.client = 3;
+	const uint32_t mine = mailbox.allocate(4096);
+	put32(request, 2); put32(request + 4, 2);
+	put32(request + 8, 7); put32(request + 12, 16);
+	const uint32_t surface = get32(mailbox.call(0x0200, request, 20));
+	std::fill(std::begin(request), std::end(request), 0);
+	put32(request, 1); // JPEG
+	put32(request + 4, 3); // TILE_BUFFER
+	put32(request + 28, 7);
+	put32(request + 32, mine);
+	put32(request + 36, 64); put32(request + 40, 4);
+	const uint32_t session = get32(mailbox.call(0x0404, request, 48));
+	assert(session);
+	mailbox.client = 4;
+	const uint32_t theirs = mailbox.allocate(256);
+	std::fill(std::begin(request), std::end(request), 0);
+	put32(request, 1); put32(request + 4, 3);
+	put32(request + 28, 7); put32(request + 32, theirs);
+	put32(request + 36, 64); put32(request + 40, 4);
+	mailbox.call(0x0404, request, 48, 2); // the card's one session: BUSY
+	// Refused: an untagged entry, and one with a payload.
+	mailbox.client = 0;
+	mailbox.call(0x0006, nullptr, 0, 4);
+	mailbox.client = 3;
+	mailbox.call(0x0006, request, 4, 4);
+	mailbox.call(0x0006, nullptr, 0);
+	assert(mailbox.sdk.buffer_data(mine) == nullptr);
+	assert(mailbox.sdk.buffer_data(theirs) != nullptr);
+	std::fill(std::begin(request), std::end(request), 0);
+	put32(request, session);
+	mailbox.call(0x0406, request, 48, 5); // its session is gone
+	put32(request, surface);
+	mailbox.call(0x0201, request, 4, 5); // and its surface
+	// The card is free again for client 4.
+	mailbox.client = 4;
+	std::fill(std::begin(request), std::end(request), 0);
+	put32(request, 1); put32(request + 4, 3);
+	put32(request + 28, 7); put32(request + 32, theirs);
+	put32(request + 36, 64); put32(request + 40, 4);
+	const uint32_t next = get32(mailbox.call(0x0404, request, 48));
+	assert(next);
+	mailbox.call(0x0006, nullptr, 0);
+	assert(mailbox.sdk.buffer_data(theirs) == nullptr);
+	mailbox.client = 0;
+}
 } // namespace
 
 int main(int argc, char **argv)
@@ -1097,6 +1150,7 @@ int main(int argc, char **argv)
 		Mailbox z2_copy(4 * 1024 * 1024);
 		copy_surface_and_query_palette(z2_copy);
 	}
+	check_client_release(mailbox);
 	mailbox.sdk.reset();
 	assert(mailbox.sdk.buffer_data(1) == nullptr);
 }

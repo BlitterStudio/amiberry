@@ -53,6 +53,7 @@ private:
 		uint32_t board_offset = 0;
 		uint32_t length = 0;
 		uint32_t flags = 0;
+		uint16_t owner = 0; // The client that allocated it (CLIENT_RELEASE).
 		// Card-only storage, shared so a session that resolved it keeps
 		// valid storage after the guest frees the buffer, like the card's
 		// cached ring addresses.
@@ -63,6 +64,7 @@ private:
 	struct Media;
 	struct Surface {
 		uint32_t handle = 0;
+		uint16_t owner = 0; // The client that allocated it (CLIENT_RELEASE).
 		uint32_t width = 0, height = 0, pitch = 0, format = 0;
 		uint32_t flags = 0; // As reported: CPU_VISIBLE (1) or ARM_LOCAL (16).
 		// CPU-visible surfaces live in board memory, like the card's
@@ -88,6 +90,7 @@ private:
 	std::array<Buffer, 16> buffers_{};
 	uint32_t next_handle_ = 1;
 	uint16_t last_status_ = 0;
+	uint16_t client_id_ = 0; // The entry being dispatched's client id.
 	// The card runs SDK_MAX_AUDIO_STREAMS (4) concurrent audio stream
 	// sessions, keyed by session id; a fifth BEGIN/BEGIN_EX answers
 	// NO_MEMORY. One session at a time may be bound to playback (PLAY).
@@ -140,6 +143,7 @@ private:
 	void pump_audio(Audio &audio);
 	void audio_result(const Audio &audio, uint8_t *reply, uint16_t *reply_length);
 	void close_media();
+	void release_client(uint16_t client);
 	void media_result(uint8_t *reply, uint16_t *reply_length,
 	                  uint32_t bytes_written = 0, uint32_t event_flags = 0);
 	void media_audio_result(uint8_t *reply, uint16_t *reply_length);
