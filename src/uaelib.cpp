@@ -14,6 +14,7 @@
 #include <assert.h>
 #include <limits.h>
 #include <string.h>
+#include <memory>
 
 #include "options.h"
 #include "uae.h"
@@ -423,7 +424,6 @@ struct ShellSession {
 #include <mutex>
 #include <condition_variable>
 #include <chrono>
-#include <memory>
 #endif
 #include <fcntl.h>
 #include <signal.h>
