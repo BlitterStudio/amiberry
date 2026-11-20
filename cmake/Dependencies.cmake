@@ -654,13 +654,34 @@ endif ()
 # running FindHelper can inject a raw '-lserialport' link flag, which fails on the NDK.
 if (USE_LIBSERIALPORT AND NOT ANDROID)
     target_compile_definitions(${PROJECT_NAME} PRIVATE USE_LIBSERIALPORT)
-    find_helper(LIBSERIALPORT libserialport libserialport.h serialport)
-    if(TARGET serialport)
+    if(WIN32)
+        # vcpkg has no libserialport port, and upstream builds only with autotools
+        # or MSBuild. Its Windows backend is three C files; LIBSERIALPORT_MSBUILD
+        # selects the configuration that needs no generated config.h.
+        include(FetchContent)
+        FetchContent_Declare(
+            libserialport
+            GIT_REPOSITORY https://github.com/sigrokproject/libserialport
+            GIT_TAG        bc8f88ef3399b76da7992a99badebada419d0e19 # libserialport-0.1.2
+        )
+        FetchContent_MakeAvailable(libserialport)
+        add_library(serialport STATIC
+            ${libserialport_SOURCE_DIR}/serialport.c
+            ${libserialport_SOURCE_DIR}/timing.c
+            ${libserialport_SOURCE_DIR}/windows.c)
+        target_compile_definitions(serialport PRIVATE LIBSERIALPORT_MSBUILD)
+        target_include_directories(serialport PUBLIC ${libserialport_SOURCE_DIR})
+        target_link_libraries(serialport PRIVATE setupapi cfgmgr32)
         target_link_libraries(${PROJECT_NAME} PRIVATE serialport)
-    elseif(LIBSERIALPORT_FOUND AND LIBSERIALPORT_LIBRARIES)
-        target_link_libraries(${PROJECT_NAME} PRIVATE ${LIBSERIALPORT_LIBRARIES})
     else()
-        message(STATUS "LibSerialPort enabled but library was not found")
+        find_helper(LIBSERIALPORT libserialport libserialport.h serialport)
+        if(TARGET serialport)
+            target_link_libraries(${PROJECT_NAME} PRIVATE serialport)
+        elseif(LIBSERIALPORT_FOUND AND LIBSERIALPORT_LIBRARIES)
+            target_link_libraries(${PROJECT_NAME} PRIVATE ${LIBSERIALPORT_LIBRARIES})
+        else()
+            message(STATUS "LibSerialPort enabled but library was not found")
+        endif()
     endif()
 endif ()
 
