@@ -1666,19 +1666,18 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 		const uint32_t width = be32(request), height = be32(request + 4);
 		const uint32_t format = be32(request + 8), flags = be32(request + 12);
 		uint32_t pitch = be32(request + 16);
-		// Like the card's handle_alloc_surface(): ARM_LOCAL (16) surfaces
-		// are card-only; any other is CPU-visible, in board memory the
-		// guest maps. Only CPU_VISIBLE and ARM_LOCAL are modelled.
+		// As the card's handle_alloc_surface(): ARM_LOCAL (16) surfaces are
+		// card-only; any other is CPU-visible, in board memory the guest
+		// maps. Other flags (FRAMEBUFFER, DISPLAYED, SHARED_BUFFER) are kept
+		// as given. A zero size, an unknown format, a short pitch or a
+		// surface too big is BAD_REQUEST; no room is NO_MEMORY.
 		const bool arm_local = (flags & 16u) != 0;
 		const uint32_t bpp = pixel_bytes(format);
-		if (!width || !height || width > 8192 || height > 8192 ||
-		    (!bpp
-#ifdef AMIBERRY_WITH_WEBP
-		     && format != 9
-#endif
-		    ) || (flags & ~17u))
-			return unsupported;
-		const uint32_t minimum_pitch = format == 9 ? ((width + 1) / 2) * 4 : width * bpp;
+		const uint32_t minimum_pitch = format == 9 ?
+			(width > 0xffff ? 0 : ((width + 1) / 2) * 4) :
+			(bpp && width <= 0xffffffffu / bpp ? width * bpp : 0);
+		if (!width || !height || !minimum_pitch)
+			return bad_request;
 		if (!pitch)
 			pitch = minimum_pitch;
 		if (pitch < minimum_pitch ||
@@ -1709,7 +1708,7 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 		slot->handle = surface_handle_base | next_surface_handle_++;
 		slot->width = width; slot->height = height;
 		slot->pitch = pitch; slot->format = format;
-		slot->flags = arm_local ? 16u : 1u;
+		slot->flags = arm_local ? (flags | 16u) & ~1u : flags | 1u;
 		slot->board_offset = board_offset;
 		slot->length = static_cast<uint32_t>(length);
 		if (arm_local)
@@ -1826,9 +1825,11 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 		} else {
 			if (!surface_pixels(dst_surface))
 				return bad_handle;
+			// As the card's validate_image_session_buffers(): the output
+			// format (ARGB8888, RGBA8888, BGRA8888 or RGB888, checked above)
+			// must be the surface's, for every codec.
 			if ((output_mode == 2 && dst_surface != framebuffer_handle) ||
-			    (codec != 4 && (format != 7 || surface_format(dst_surface) != 7)) ||
-			    (codec == 4 && surface_format(dst_surface) != format))
+			    surface_format(dst_surface) != format)
 				return unsupported;
 			if (!rect_valid(dst_x, dst_y, dst_width, dst_height,
 			                surface_width(dst_surface), surface_height(dst_surface)) ||
@@ -1975,7 +1976,9 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 				auto *dst = surface_pixels(image_->dst_surface);
 				if (!dst)
 					return bad_handle;
-				if (surface_format(image_->dst_surface) != 7)
+				// (The live framebuffer can change format under a session.)
+				const uint32_t format = image_->output_format;
+				if (surface_format(image_->dst_surface) != format)
 					return unsupported;
 				if (!rect_valid(image_->dst_x, image_->dst_y,
 				                image_->dst_width, image_->dst_height,
@@ -2005,12 +2008,12 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 						const auto *src = image_->rgba.data() +
 							(static_cast<size_t>(sy) * width + sx) * 4;
 						write_pixel(dst + static_cast<size_t>(image_->dst_y + y) * pitch +
-							static_cast<size_t>(image_->dst_x + x) * 4, 7,
+							static_cast<size_t>(image_->dst_x + x) * bpp, format,
 							src[0], src[1], src[2], src[3]);
 					}
 				}
 				tile_height = out_height;
-				bytes_written = out_width * out_height * 4;
+				bytes_written = out_width * out_height * bpp;
 				image_->next_row = image_->height;
 				state = 4; // COMPLETE
 				result_flags = 1 | ((out_width != width || out_height != image_->height) ? 4u : 0u);
@@ -2579,7 +2582,9 @@ uint16_t Engine::decode_jpeg_to_surface(const uint8_t *request, uint8_t *reply,
 	put32(reply + 8, format);
 	put32(reply + 12, 0);
 	put32(reply + 16, static_cast<uint32_t>(width) * height * bpp);
-	*reply_length = 20;
+	// The whole SDKImageDecodeResultPayload (48 bytes, 28 reserved): the
+	// SDK's reply decoder requires that length.
+	*reply_length = 48;
 	return ok;
 }
 
@@ -2593,10 +2598,16 @@ uint16_t Engine::scale_surface(uint32_t src_handle, uint32_t dst_handle,
 	auto *dst = surface_pixels(dst_handle);
 	if (!src || !dst)
 		return bad_handle;
-	if (flags || filter > 1 || surface_format(src_handle) != 7 ||
-	    (surface_format(dst_handle) != 7 &&
-	     surface_format(dst_handle) != 1 &&
-	     surface_format(dst_handle) != 6) || src_handle == dst_handle)
+	// The card's sdk_surface_scale_formats_supported(): between surfaces of
+	// one format, nearest for any and bilinear for the 4-byte ones; across
+	// formats only BGRA8888 to RGB565 or RGB555.
+	const uint32_t src_format = surface_format(src_handle);
+	const uint32_t dst_format = surface_format(dst_handle);
+	const bool same = src_format == dst_format;
+	const uint32_t src_bpp = pixel_bytes(src_format);
+	if (flags || filter > 1 || src_handle == dst_handle ||
+	    (same && (!src_bpp || (filter && src_bpp != 4))) ||
+	    (!same && (src_format != 7 || (dst_format != 1 && dst_format != 6))))
 		return unsupported;
 	if (!rect_valid(sx, sy, sw, sh, surface_width(src_handle),
 	                surface_height(src_handle)) ||
@@ -2610,7 +2621,6 @@ uint16_t Engine::scale_surface(uint32_t src_handle, uint32_t dst_handle,
 		return ok;
 	const uint32_t src_pitch = surface_pitch(src_handle);
 	const uint32_t dst_pitch = surface_pitch(dst_handle);
-	const uint32_t dst_format = surface_format(dst_handle);
 	const uint32_t dst_bpp = pixel_bytes(dst_format);
 	for (uint32_t y = y0; y < y1; ++y) {
 		int64_t yf = ((static_cast<int64_t>(2 * (y - dy) + 1) * sh) << 15) /
@@ -2626,12 +2636,15 @@ uint16_t Engine::scale_surface(uint32_t src_handle, uint32_t dst_handle,
 			const uint32_t ix = sx + static_cast<uint32_t>(xf >> 16);
 			const uint32_t jx = std::min(ix + 1, sx + sw - 1);
 			const uint32_t wx = static_cast<uint32_t>(xf & 65535);
-			const auto *p00 = src + static_cast<size_t>(iy) * src_pitch + ix * 4;
-			const auto *p10 = src + static_cast<size_t>(iy) * src_pitch + jx * 4;
-			const auto *p01 = src + static_cast<size_t>(jy) * src_pitch + ix * 4;
-			const auto *p11 = src + static_cast<size_t>(jy) * src_pitch + jx * 4;
+			const auto *p00 = src + static_cast<size_t>(iy) * src_pitch + ix * src_bpp;
+			const auto *p10 = src + static_cast<size_t>(iy) * src_pitch + jx * src_bpp;
+			const auto *p01 = src + static_cast<size_t>(jy) * src_pitch + ix * src_bpp;
+			const auto *p11 = src + static_cast<size_t>(jy) * src_pitch + jx * src_bpp;
+			// Byte by byte: one format's pixels need no knowing which byte is
+			// which (a bilinear one is always 4 bytes); BGRA8888 is converted.
+			const uint32_t components = same ? src_bpp : 4;
 			uint8_t color[4];
-			for (int component = 0; component < 4; ++component) {
+			for (uint32_t component = 0; component < components; ++component) {
 				if (filter == 0) {
 					color[component] = (wy >= 32768 ?
 						(wx >= 32768 ? p11 : p01) :
@@ -2645,8 +2658,11 @@ uint16_t Engine::scale_surface(uint32_t src_handle, uint32_t dst_handle,
 						bottom * wy + 32768u) >> 16);
 				}
 			}
-			write_pixel(dst + static_cast<size_t>(y) * dst_pitch + x * dst_bpp,
-				dst_format, color[2], color[1], color[0], color[3]);
+			auto *out = dst + static_cast<size_t>(y) * dst_pitch + x * dst_bpp;
+			if (same)
+				std::memcpy(out, color, dst_bpp);
+			else
+				write_pixel(out, dst_format, color[2], color[1], color[0], color[3]);
 		}
 	}
 	return ok;
