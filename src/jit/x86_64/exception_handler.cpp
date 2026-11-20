@@ -815,7 +815,9 @@ static void install_exception_handler(void)
 	sigemptyset (&act.sa_mask);
 	act.sa_flags = SA_SIGINFO;
 	sigaction(SIGSEGV, &act, NULL);
-#if defined(MACOSX) || defined(__FreeBSD__)
+	/* macOS raises SIGBUS, not SIGSEGV, for an access to a mapped page
+	 * without permission, such as a PROT_NONE natmem gap. */
+#if defined(__APPLE__) || defined(__FreeBSD__)
 	sigaction(SIGBUS, &act, NULL);
 #endif
 #else
