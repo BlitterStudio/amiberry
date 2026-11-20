@@ -2966,13 +2966,32 @@ void Engine::release_client(uint16_t client)
 	for (auto &audio : audios_)
 		if (audio && audio->owner == client)
 			close_audio(audio.get());
-	for (auto &buffer : buffers_)
-		if (buffer.handle && buffer.owner == client)
+	// What another client's live session still uses (an image tile buffer
+	// or destination surface, a media PCM ring: those FREE_SHARED and
+	// FREE_SURFACE refuse as busy) is not freed under it: it passes to the
+	// client whose session it is, and goes when that one is released. The
+	// card frees it regardless; Amiberry keeps it, as its FREE_SURFACE does.
+	// Never answered BUSY: zz9k.library sends CLIENT_RELEASE again on BUSY.
+	// Audio stream rings are not pinned: each stream resolved its own when
+	// it began, and keeps it.
+	for (auto &buffer : buffers_) {
+		if (!buffer.handle || buffer.owner != client)
+			continue;
+		if (image_ && image_->tile_handle == buffer.handle)
+			buffer.owner = image_->owner;
+		else if (media_ && media_->pcm_handle == buffer.handle)
+			buffer.owner = media_->owner;
+		else
 			buffer = {};
-	for (auto &surface : surfaces_)
-		if (surface.handle && surface.owner == client &&
-		    !(image_ && image_->dst_surface == surface.handle))
+	}
+	for (auto &surface : surfaces_) {
+		if (!surface.handle || surface.owner != client)
+			continue;
+		if (image_ && image_->dst_surface == surface.handle)
+			surface.owner = image_->owner;
+		else
 			surface = {};
+	}
 }
 
 bool Engine::poll()

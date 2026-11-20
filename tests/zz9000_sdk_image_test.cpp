@@ -1088,6 +1088,30 @@ void check_client_release(Mailbox &mailbox)
 	assert(next);
 	mailbox.call(0x0006, nullptr, 0);
 	assert(mailbox.sdk.buffer_data(theirs) == nullptr);
+	// A buffer one client allocated as another client's session's tile
+	// buffer: the first client's release leaves it to the session (still
+	// pinned: FREE_SHARED is BUSY); it goes with the session's client.
+	mailbox.client = 9;
+	const uint32_t lent = mailbox.allocate(4096);
+	mailbox.client = 10;
+	std::fill(std::begin(request), std::end(request), 0);
+	put32(request, 1); put32(request + 4, 3);
+	put32(request + 28, 7); put32(request + 32, lent);
+	put32(request + 36, 64); put32(request + 40, 4);
+	const uint32_t borrower = get32(mailbox.call(0x0404, request, 48));
+	assert(borrower);
+	mailbox.client = 9;
+	mailbox.call(0x0006, nullptr, 0);
+	assert(mailbox.sdk.buffer_data(lent) != nullptr);
+	std::fill(std::begin(request), std::end(request), 0);
+	put32(request, lent);
+	mailbox.call(0x0101, request, 4, 2);
+	mailbox.client = 10;
+	mailbox.call(0x0006, nullptr, 0);
+	assert(mailbox.sdk.buffer_data(lent) == nullptr);
+	std::fill(std::begin(request), std::end(request), 0);
+	put32(request, borrower);
+	mailbox.call(0x0406, request, 48, 5);
 	mailbox.client = 0;
 }
 } // namespace
