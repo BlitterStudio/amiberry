@@ -416,6 +416,12 @@ struct ShellSession {
 #ifndef _WIN32
 #include <sys/ioctl.h>
 #include <sys/wait.h>
+#if __has_include(<paths.h>)
+#include <paths.h>
+#endif
+#endif
+#if !defined(_WIN32) && !defined(_PATH_BSHELL)
+#define _PATH_BSHELL "/bin/sh"
 #endif
 #ifdef _WIN32
 #include <windows.h>
@@ -1053,10 +1059,11 @@ static uae_u32 uaelib_host_open_pipe(TrapContext* ctx, uaecptr command)
 		close(outpipe[1]);
 
 		// Pipe sessions run scripts that the guest tools generate in POSIX
-		// sh syntax, so they use /bin/sh rather than the user's login
-		// shell, which may not be POSIX (fish). Interactive terminal
-		// sessions (traps 90 and 97) keep $SHELL.
-		execl("/bin/sh", "sh", "-c", cmd, (char*)NULL);
+		// sh syntax, so they use the system sh (_PATH_BSHELL: /bin/sh, or
+		// /system/bin/sh on Android) rather than the user's login shell,
+		// which may not be POSIX (fish). Interactive terminal sessions
+		// (traps 90 and 97) keep $SHELL.
+		execl(_PATH_BSHELL, "sh", "-c", cmd, (char*)NULL);
 		_exit(127);
 	} else if (pid > 0) {
 		// Parent process
