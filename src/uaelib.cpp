@@ -14,6 +14,7 @@
 #include <assert.h>
 #include <limits.h>
 #include <string.h>
+#include <memory>
 
 #include "options.h"
 #include "uae.h"
@@ -400,7 +401,11 @@ struct ShellSession {
 	bool exited;
 	int exit_status;
 #if defined(_WIN32)
-	void* process; // HANDLE of the child process
+	void* process = nullptr;        // HANDLE of the child process
+	void* pseudo_console = nullptr; // HPCON of a terminal session until released
+	bool terminal = false;          // ConPTY session (trap 90/97), not a pipe session
+	unsigned long long exit_tick = 0;
+	std::shared_ptr<struct HostShellInputWriter> input; // ConPTY input writer thread
 #endif
 };
 
@@ -409,11 +414,22 @@ struct ShellSession {
 #include <string>
 #include <unistd.h>
 #ifndef _WIN32
+#include <sys/ioctl.h>
 #include <sys/wait.h>
+#if __has_include(<paths.h>)
+#include <paths.h>
+#endif
+#endif
+#if !defined(_WIN32) && !defined(_PATH_BSHELL)
+#define _PATH_BSHELL "/bin/sh"
 #endif
 #ifdef _WIN32
 #include <windows.h>
 #include <io.h>
+#include <thread>
+#include <mutex>
+#include <condition_variable>
+#include <chrono>
 #endif
 #include <fcntl.h>
 #include <signal.h>
@@ -438,11 +454,17 @@ static const uae_u32 HOST_SHELL_IO_MAX = 4096;
 static const int HOST_SHELL_WAIT_INTERVAL_MS = 10;
 static const int HOST_SHELL_TERM_TIMEOUT_MS = 1000;
 static const int HOST_SHELL_KILL_TIMEOUT_MS = 1000;
+#else
+// A terminal session counts as exited once its output has drained; if the
+// pseudo console never closes its end, give up after this long.
+static const unsigned long long HOST_SHELL_DRAIN_TIMEOUT_MS = 2000;
 #endif
+// Terminal size limits for trap 97; 0 or larger values select the default.
+static const uae_u32 HOST_SHELL_MAX_TERM_SIZE = 999;
 
 static constexpr bool uaelib_host_trap_requires_native_code(uae_u32 trap)
 {
-	return trap >= 88 && trap <= 95 && trap != 93;
+	return (trap >= 88 && trap <= 95 && trap != 93) || trap == 97;
 }
 
 static constexpr uae_u32 uaelib_host_trap_denied_result(uae_u32 trap)
@@ -459,10 +481,12 @@ static_assert(!uaelib_host_trap_requires_native_code(93));
 static_assert(uaelib_host_trap_requires_native_code(94));
 static_assert(uaelib_host_trap_requires_native_code(95));
 static_assert(!uaelib_host_trap_requires_native_code(96));
+static_assert(uaelib_host_trap_requires_native_code(97));
 static_assert(uaelib_host_trap_denied_result(90) == 0);
 static_assert(uaelib_host_trap_denied_result(91) == static_cast<uae_u32>(-1));
 static_assert(uaelib_host_trap_denied_result(92) == static_cast<uae_u32>(-1));
 static_assert(uaelib_host_trap_denied_result(94) == HOST_SHELL_STATUS_INVALID);
+static_assert(uaelib_host_trap_denied_result(97) == 0);
 
 #if !defined(_WIN32)
 static int host_shell_exit_code(int status)
@@ -480,24 +504,197 @@ static uae_u32 host_shell_pack_exit_status(int exit_status)
 	return HOST_SHELL_STATUS_EXITED | (exit_status & 0xff);
 }
 
+#if defined(_WIN32)
+// ConPTY (Windows 10 1809+) is looked up at run time so that Amiberry still
+// starts on older Windows, where terminal sessions are simply unavailable.
+typedef void* host_hpcon;
+typedef HRESULT (WINAPI *host_create_pseudo_console_fn)(COORD, HANDLE, HANDLE, DWORD, host_hpcon*);
+typedef void (WINAPI *host_close_pseudo_console_fn)(host_hpcon);
+#ifndef PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE
+#define PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE 0x00020016
+#endif
+#ifndef PSEUDOCONSOLE_INHERIT_CURSOR
+#define PSEUDOCONSOLE_INHERIT_CURSOR 0x1
+#endif
+
+static host_create_pseudo_console_fn host_create_pseudo_console;
+static host_close_pseudo_console_fn host_close_pseudo_console;
+
+static bool host_pseudo_console_available()
+{
+	static bool resolved = false;
+	if (!resolved) {
+		resolved = true;
+		HMODULE kernel32 = GetModuleHandleA("kernel32.dll");
+		if (kernel32) {
+			host_create_pseudo_console = reinterpret_cast<host_create_pseudo_console_fn>(
+				reinterpret_cast<void*>(GetProcAddress(kernel32, "CreatePseudoConsole")));
+			host_close_pseudo_console = reinterpret_cast<host_close_pseudo_console_fn>(
+				reinterpret_cast<void*>(GetProcAddress(kernel32, "ClosePseudoConsole")));
+		}
+	}
+	return host_create_pseudo_console != nullptr && host_close_pseudo_console != nullptr;
+}
+
+// Writes terminal input from a worker thread. ConPTY can stop reading input
+// while it waits for its output to be drained, and the emulation thread is
+// the only reader of that output, so it must never block on an input write.
+struct HostShellInputWriter {
+	explicit HostShellInputWriter(HANDLE h) : handle(h), worker([this] { run(); }) {}
+	~HostShellInputWriter() { stop(); }
+	HostShellInputWriter(const HostShellInputWriter&) = delete;
+	HostShellInputWriter& operator=(const HostShellInputWriter&) = delete;
+
+	// Queues up to size bytes; returns how many were accepted (0 when the
+	// queue is full), or -1 once the pipe has failed.
+	uae_u32 enqueue(const char* data, uae_u32 size)
+	{
+		std::lock_guard<std::mutex> guard(lock);
+		if (failed || stopping)
+			return static_cast<uae_u32>(-1);
+		size_t room = queued < MAX_QUEUED ? MAX_QUEUED - queued : 0;
+		size_t accept = size < room ? size : room;
+		if (accept == 0)
+			return 0;
+		pending.append(data, accept);
+		queued += accept;
+		wake.notify_one();
+		return static_cast<uae_u32>(accept);
+	}
+
+	// Ends the worker, interrupting a write that is blocked on the pipe.
+	void stop()
+	{
+		if (!worker.joinable())
+			return;
+		{
+			std::lock_guard<std::mutex> guard(lock);
+			stopping = true;
+			wake.notify_one();
+		}
+		std::unique_lock<std::mutex> guard(lock);
+		while (!finished) {
+			if (worker_handle != NULL)
+				CancelSynchronousIo(worker_handle);
+			wake.wait_for(guard, std::chrono::milliseconds(10), [this] { return finished; });
+		}
+		guard.unlock();
+		worker.join();
+		if (worker_handle != NULL) {
+			CloseHandle(worker_handle);
+			worker_handle = NULL;
+		}
+	}
+
+private:
+	static constexpr size_t MAX_QUEUED = 1024 * 1024;
+
+	void run()
+	{
+		// std::thread::native_handle is not a Win32 handle on every runtime.
+		HANDLE self = NULL;
+		DuplicateHandle(GetCurrentProcess(), GetCurrentThread(), GetCurrentProcess(),
+			&self, 0, FALSE, DUPLICATE_SAME_ACCESS);
+		{
+			std::lock_guard<std::mutex> guard(lock);
+			worker_handle = self;
+		}
+		std::string chunk;
+		for (;;) {
+			{
+				std::unique_lock<std::mutex> guard(lock);
+				wake.wait(guard, [this] { return stopping || !pending.empty(); });
+				if (stopping)
+					break;
+				chunk.swap(pending);
+			}
+			size_t offset = 0;
+			while (offset < chunk.size()) {
+				DWORD written = 0;
+				if (!WriteFile(handle, chunk.data() + offset,
+						static_cast<DWORD>(chunk.size() - offset), &written, NULL)) {
+					std::lock_guard<std::mutex> guard(lock);
+					failed = true;
+					pending.clear();
+					queued = 0;
+					finished = true;
+					wake.notify_all();
+					return;
+				}
+				offset += written;
+				std::lock_guard<std::mutex> guard(lock);
+				queued -= written;
+			}
+			chunk.clear();
+		}
+		std::lock_guard<std::mutex> guard(lock);
+		finished = true;
+		wake.notify_all();
+	}
+
+	HANDLE handle;
+	HANDLE worker_handle = NULL;
+	std::mutex lock;
+	std::condition_variable wake;
+	std::string pending;
+	size_t queued = 0;
+	bool stopping = false;
+	bool failed = false;
+	bool finished = false;
+	std::thread worker; // last member: run() starts once the rest exists
+};
+
+// ClosePseudoConsole flushes the final frame into the output pipe and, before
+// Windows 11 24H2, waits for that write. The emulation thread is the pipe's
+// only reader, so the close runs on its own thread.
+static void host_release_pseudo_console(ShellSession& session)
+{
+	if (session.pseudo_console == nullptr)
+		return;
+	host_hpcon console = session.pseudo_console;
+	session.pseudo_console = nullptr;
+	std::thread([console] { host_close_pseudo_console(console); }).detach();
+}
+
+// A terminal session's output pipe stays open while the pseudo console
+// exists, so the end of output is the broken pipe after its release.
+static bool host_terminal_output_drained(ShellSession& session)
+{
+	host_release_pseudo_console(session);
+	if (session.outfd < 0)
+		return true;
+	HANDLE h = (HANDLE)_get_osfhandle(session.outfd);
+	DWORD avail = 0;
+	if (h == INVALID_HANDLE_VALUE || !PeekNamedPipe(h, NULL, 0, NULL, &avail, NULL))
+		return true;
+	// Output the guest has not read yet is not lost; the timeout only
+	// covers a pipe that never closes with nothing left to read.
+	if (avail > 0)
+		return false;
+	return GetTickCount64() - session.exit_tick >= HOST_SHELL_DRAIN_TIMEOUT_MS;
+}
+#endif
+
 static uae_u32 host_shell_update_status(ShellSession& session)
 {
 #if defined(_WIN32)
 	if (session.process == NULL)
 		return HOST_SHELL_STATUS_INVALID;
-	if (session.exited)
-		return host_shell_pack_exit_status(session.exit_status);
+	if (!session.exited) {
+		DWORD code = 0;
+		if (!GetExitCodeProcess((HANDLE)session.process, &code))
+			return HOST_SHELL_STATUS_INVALID;
+		if (code == STILL_ACTIVE)
+			return HOST_SHELL_STATUS_RUNNING;
 
-	DWORD code = 0;
-	if (!GetExitCodeProcess((HANDLE)session.process, &code))
-		return HOST_SHELL_STATUS_INVALID;
-	if (code == STILL_ACTIVE)
+		session.exited = true;
+		session.exit_tick = GetTickCount64();
+		session.exit_status = (int)(code & 0xff);
+		if (code != 0 && session.exit_status == 0)
+			session.exit_status = 1;
+	}
+	if (session.terminal && !host_terminal_output_drained(session))
 		return HOST_SHELL_STATUS_RUNNING;
-
-	session.exited = true;
-	session.exit_status = (int)(code & 0xff);
-	if (code != 0 && session.exit_status == 0)
-		session.exit_status = 1;
 	return host_shell_pack_exit_status(session.exit_status);
 #else
 	if (session.exited)
@@ -556,18 +753,134 @@ static void host_shell_terminate(ShellSession& session)
 }
 #endif
 
-static uae_u32 uaelib_host_open(TrapContext* ctx, uaecptr command)
+// Start an interactive terminal session (pty, or ConPTY on Windows) running
+// cmd, or the user's shell when cmd is empty. rows and cols give the terminal
+// size; 0 keeps the platform default.
+static uae_u32 host_shell_open_terminal(const char* cmd, uae_u32 rows, uae_u32 cols)
 {
-	char cmd[HOST_SHELL_CMD_MAX];
-	if (trap_get_string(ctx, cmd, command, sizeof cmd) >= sizeof cmd)
-		return 0;
+	const bool sized = rows > 0 && cols > 0 &&
+		rows <= HOST_SHELL_MAX_TERM_SIZE && cols <= HOST_SHELL_MAX_TERM_SIZE;
 
 #if defined(_WIN32)
-	// Not supported on Windows yet
-	return 0;
+	if (!host_pseudo_console_available())
+		return 0;
+
+	HANDLE in_read = NULL, in_write = NULL;
+	HANDLE out_read = NULL, out_write = NULL;
+	if (!CreatePipe(&in_read, &in_write, NULL, 0))
+		return 0;
+	if (!CreatePipe(&out_read, &out_write, NULL, 0)) {
+		CloseHandle(in_read);
+		CloseHandle(in_write);
+		return 0;
+	}
+
+	COORD size;
+	size.X = static_cast<SHORT>(sized ? cols : 80);
+	size.Y = static_cast<SHORT>(sized ? rows : 24);
+	host_hpcon console = nullptr;
+	// Without INHERIT_CURSOR the pseudo console clears the guest's console
+	// window before its first output. With it, it asks for the cursor
+	// position (CSI 6n) and draws from there, like a POSIX pty; the guest
+	// terminal must answer that request.
+	HRESULT hr = host_create_pseudo_console(size, in_read, out_write,
+		PSEUDOCONSOLE_INHERIT_CURSOR, &console);
+	// The pseudo console holds its own references to its pipe ends.
+	CloseHandle(in_read);
+	CloseHandle(out_write);
+	if (FAILED(hr)) {
+		CloseHandle(in_write);
+		CloseHandle(out_read);
+		return 0;
+	}
+
+	ShellSession session;
+	session.pid = 0;
+	session.infd = -1;
+	session.outfd = -1;
+	session.pipe_in = NULL;
+	session.pipe_out = NULL;
+	session.exited = false;
+	session.exit_status = 0;
+	session.pseudo_console = console;
+	session.terminal = true;
+
+	SIZE_T attr_size = 0;
+	InitializeProcThreadAttributeList(NULL, 1, 0, &attr_size);
+	std::vector<uae_u8> attr_buf(attr_size);
+	auto attrs = reinterpret_cast<LPPROC_THREAD_ATTRIBUTE_LIST>(attr_buf.data());
+	PROCESS_INFORMATION pi = {};
+	BOOL created = FALSE;
+	if (InitializeProcThreadAttributeList(attrs, 1, 0, &attr_size)) {
+		if (UpdateProcThreadAttribute(attrs, 0, PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE,
+				console, sizeof console, NULL, NULL)) {
+			const char* comspec = getenv("COMSPEC");
+			if (!comspec)
+				comspec = "cmd.exe";
+			std::string cmdline = std::string("\"") + comspec + "\"";
+			// /V:OFF keeps "!" literal even when delayed expansion is enabled
+			// in the registry; host-shell quotes its arguments assuming it is off.
+			if (cmd[0] != '\0')
+				cmdline += std::string(" /V:OFF /S /C \"") + cmd + "\"";
+
+			// Null standard handles with STARTF_USESTDHANDLES make the child
+			// use the pseudo console, never Amiberry's own (possibly
+			// redirected) standard handles.
+			STARTUPINFOEXA si = {};
+			si.StartupInfo.cb = sizeof si;
+			si.StartupInfo.dwFlags = STARTF_USESTDHANDLES;
+			si.lpAttributeList = attrs;
+			created = CreateProcessA(NULL, &cmdline[0], NULL, NULL, FALSE,
+				EXTENDED_STARTUPINFO_PRESENT, NULL, NULL, &si.StartupInfo, &pi);
+		}
+		DeleteProcThreadAttributeList(attrs);
+	}
+
+	if (created) {
+		CloseHandle(pi.hThread);
+		session.pid = (int)pi.dwProcessId;
+		session.process = (void*)pi.hProcess;
+		session.infd = _open_osfhandle((intptr_t)in_write, 0);
+		if (session.infd >= 0)
+			in_write = NULL;
+		session.outfd = _open_osfhandle((intptr_t)out_read, _O_RDONLY);
+		if (session.outfd >= 0)
+			out_read = NULL;
+	}
+
+	if (!created || session.infd < 0 || session.outfd < 0) {
+		// Close our pipe ends first so the pseudo console's final write
+		// cannot block its release.
+		if (session.infd >= 0)
+			_close(session.infd);
+		if (session.outfd >= 0)
+			_close(session.outfd);
+		if (in_write)
+			CloseHandle(in_write);
+		if (out_read)
+			CloseHandle(out_read);
+		host_release_pseudo_console(session);
+		if (created) {
+			TerminateProcess(pi.hProcess, 1);
+			CloseHandle(pi.hProcess);
+		}
+		return 0;
+	}
+
+	if (session.terminal) {
+		HANDLE input_handle = (HANDLE)_get_osfhandle(session.infd);
+		session.input = std::make_shared<HostShellInputWriter>(input_handle);
+	}
+
+	uae_u32 handle = next_session_handle++;
+	shell_sessions[handle] = session;
+	return handle;
 #else
+	struct winsize ws = {};
+	ws.ws_row = static_cast<unsigned short>(rows);
+	ws.ws_col = static_cast<unsigned short>(cols);
 	int master;
-	pid_t pid = forkpty(&master, NULL, NULL, NULL);
+	pid_t pid = forkpty(&master, NULL, NULL, sized ? &ws : NULL);
 
 	if (pid == 0) {
 		// Child process
@@ -615,6 +928,22 @@ static uae_u32 uaelib_host_open(TrapContext* ctx, uaecptr command)
 #endif
 }
 
+static uae_u32 uaelib_host_open(TrapContext* ctx, uaecptr command)
+{
+	char cmd[HOST_SHELL_CMD_MAX];
+	if (trap_get_string(ctx, cmd, command, sizeof cmd) >= sizeof cmd)
+		return 0;
+	return host_shell_open_terminal(cmd, 0, 0);
+}
+
+static uae_u32 uaelib_host_open_sized(TrapContext* ctx, uaecptr command, uae_u32 rows, uae_u32 cols)
+{
+	char cmd[HOST_SHELL_CMD_MAX];
+	if (trap_get_string(ctx, cmd, command, sizeof cmd) >= sizeof cmd)
+		return 0;
+	return host_shell_open_terminal(cmd, rows, cols);
+}
+
 static uae_u32 uaelib_host_open_pipe(TrapContext* ctx, uaecptr command)
 {
 	char cmd[HOST_SHELL_CMD_MAX];
@@ -643,10 +972,12 @@ static uae_u32 uaelib_host_open_pipe(TrapContext* ctx, uaecptr command)
 
 	HANDLE nul = CreateFileA("NUL", GENERIC_WRITE, FILE_SHARE_WRITE, &sa, OPEN_EXISTING, 0, NULL);
 
+	// /D skips AutoRun commands, whose output would mix with the guest's
+	// data; /V:OFF keeps "!" literal even with delayed expansion enabled.
 	const char* comspec = getenv("COMSPEC");
 	if (!comspec)
 		comspec = "cmd.exe";
-	std::string cmdline = std::string("\"") + comspec + "\" /C " + cmd;
+	std::string cmdline = std::string("\"") + comspec + "\" /D /V:OFF /C " + cmd;
 
 	STARTUPINFOA si = {};
 	si.cb = sizeof si;
@@ -727,12 +1058,12 @@ static uae_u32 uaelib_host_open_pipe(TrapContext* ctx, uaecptr command)
 		close(outpipe[0]);
 		close(outpipe[1]);
 
-		const char* shell = getenv("SHELL");
-		if (!shell) shell = "/bin/sh";
-		const char* shell_name = strrchr(shell, '/');
-		if (shell_name) shell_name++; else shell_name = shell;
-
-		execl(shell, shell_name, "-c", cmd, (char*)NULL);
+		// Pipe sessions run scripts that the guest tools generate in POSIX
+		// sh syntax, so they use the system sh (_PATH_BSHELL: /bin/sh, or
+		// /system/bin/sh on Android) rather than the user's login shell,
+		// which may not be POSIX (fish). Interactive terminal sessions
+		// (traps 90 and 97) keep $SHELL.
+		execl(_PATH_BSHELL, "sh", "-c", cmd, (char*)NULL);
 		_exit(127);
 	} else if (pid > 0) {
 		// Parent process
@@ -855,6 +1186,12 @@ static uae_u32 uaelib_host_write(TrapContext* ctx, uae_u32 handle, uaecptr buffe
 	std::vector<char> buf(size);
 	trap_get_bytes(ctx, (uae_u8*)buf.data(), buffer, size);
 
+	// Terminal input goes through the writer thread: a direct write blocks
+	// while ConPTY waits for this thread to drain its output, and the guest
+	// cannot read that output while the trap is blocked.
+	if (session.input)
+		return session.input->enqueue(buf.data(), size);
+
 	int written = _write(session.infd, buf.data(), size);
 	return written;
 #else
@@ -884,6 +1221,12 @@ static uae_u32 uaelib_host_close(TrapContext* ctx, uae_u32 handle)
 
 	ShellSession& session = shell_sessions[handle];
 	int closed_fd = session.infd;
+	// The input writer thread uses the descriptor's handle, so it must be
+	// gone before the descriptor is closed.
+	if (session.input) {
+		session.input->stop();
+		session.input.reset();
+	}
 	if (session.infd >= 0) {
 		_close(session.infd);
 		session.infd = -1;
@@ -892,6 +1235,9 @@ static uae_u32 uaelib_host_close(TrapContext* ctx, uae_u32 handle)
 		_close(session.outfd);
 		session.outfd = -1;
 	}
+	// Our pipe ends are closed, so releasing the pseudo console cannot
+	// block on its output; it also ends the console's attached processes.
+	host_release_pseudo_console(session);
 	if ((host_shell_update_status(session) & HOST_SHELL_STATUS_EXITED) == 0) {
 		TerminateProcess((HANDLE)session.process, 1);
 		WaitForSingleObject((HANDLE)session.process, 2000);
@@ -951,6 +1297,33 @@ static uae_u32 uaelib_host_status(TrapContext* ctx, uae_u32 handle)
 	return host_shell_update_status(session);
 }
 
+#if defined(_WIN32)
+#include <objbase.h>
+#include <shellapi.h>
+#include <thread>
+
+// Open a file, directory or URL with its Windows default handler.
+// ShellExecute may hand the request to COM-based shell extensions, so it
+// runs on a short-lived thread that initialises COM, not on the emulation
+// thread.
+static bool host_shell_open_default(const char* target)
+{
+	// Let the user reach the window that opens, as target_execute does.
+	disablecapture();
+	bool opened = false;
+	std::thread worker([target, &opened] {
+		const HRESULT com = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
+		const HINSTANCE result = ShellExecuteA(nullptr, "open", target, nullptr, nullptr, SW_SHOWNORMAL);
+		opened = reinterpret_cast<INT_PTR>(result) > 32;
+		if (SUCCEEDED(com))
+			CoUninitialize();
+	});
+	worker.join();
+	if (!opened)
+		write_log("Failed to open on host: %s\n", target);
+	return opened;
+}
+#else
 static std::string quote_path(const char* path) {
 	std::string res = "'";
 	for (const char* p = path; *p; ++p) {
@@ -960,6 +1333,7 @@ static std::string quote_path(const char* path) {
 	res += "'";
 	return res;
 }
+#endif
 
 static uae_u32 uaelib_host_view(TrapContext* ctx, uaecptr filename) {
 	char file[HOST_SHELL_CMD_MAX];
@@ -967,8 +1341,9 @@ static uae_u32 uaelib_host_view(TrapContext* ctx, uaecptr filename) {
 		return 0;
 
 #if defined(_WIN32)
-	std::string cmd = "start \"\" ";
-#elif defined(__APPLE__)
+	return host_shell_open_default(file) ? 1 : 0;
+#else
+#if defined(__APPLE__)
 	std::string cmd = "open ";
 #else
 	std::string cmd = "xdg-open ";
@@ -976,6 +1351,7 @@ static uae_u32 uaelib_host_view(TrapContext* ctx, uaecptr filename) {
 	cmd += quote_path(file);
 
 	return target_execute(cmd.c_str()) ? 1 : 0;
+#endif
 }
 
 static uae_u32 uaelib_midi(TrapContext *ctx, uae_u32 op, uae_u32 index, uaecptr name)
@@ -1173,6 +1549,8 @@ static uae_u32 uaelib_demux_common(TrapContext *ctx, uae_u32 ARG0, uae_u32 ARG1,
 		case 95:
 			return uaelib_host_open_pipe(ctx, ARG1);
 		case 96: return uaelib_host_get_platform();
+		case 97:
+			return uaelib_host_open_sized(ctx, ARG1, ARG2, ARG3);
 
 		case SERVICE_TRANSPORT_TRAP:
 			return service_transport_uaelib(ctx, ARG1, ARG2, ARG3, ARG4, ARG5);
