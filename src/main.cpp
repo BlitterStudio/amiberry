@@ -13,11 +13,7 @@
 #include <cstring>
 #include <vector>
 
-#ifdef USE_OLDGCC
-#include <experimental/filesystem>
-#else
 #include <filesystem>
-#endif
 
 #include "sysconfig.h"
 #include "sysdeps.h"
