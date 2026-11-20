@@ -80,6 +80,8 @@
 // We define this externally in Amiberry
 #ifdef USE_LIBSERIALPORT
 #define SERIAL_PORT  /* serial port emulation */
+#elif defined(_WIN32)
+#define SERIAL_PORT  /* serial port emulation: TCP, loopback and internal ports only (no host ports without libserialport) */
 #endif
 
 // We define this externally in Amiberry
