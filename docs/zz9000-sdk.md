@@ -11,17 +11,27 @@ they would on older firmware.
 
 | Feature | Needs |
 |---|---|
-| MP3 audio streams (MHI, MPEGA, ZZPlay MP3) | mpg123 and AHI support |
+| MP3 streams and one-shot `DECODE_MP3` | mpg123 and AHI support |
 | FLAC and Ogg Vorbis audio streams | FFmpeg (`USE_FFMPEG`, default on) |
 | MPEG-2, WebM and Matroska media sessions | FFmpeg, Zorro III |
 | WebP stills and animations | libwebp with libwebpdemux (`USE_WEBP`, default on) |
-| JPEG/PNG, MPEG-1 media, surfaces, console encoder | always built |
+| JPEG/PNG sessions, MPEG-1 media, surfaces, console encoder | always built |
 
 FFmpeg 5.1 or newer is required. It is no longer tied to `USE_VIDEOGRAB`;
 genlock video input still uses it when both are enabled. Android, iOS and
 the libretro core build without FFmpeg and libwebp. Windows ARM64 builds
 include libwebp but not FFmpeg, because vcpkg's FFmpeg port does not build
 for `arm64-mingw-dynamic`.
+
+One-shot MP3 decode (`0x0500`) uses the same mpg123 gate as MP3 streams.
+Android forces `USE_MPG123` off. iOS does not build mpg123
+(`cmake/Dependencies.cmake`). Windows ARM64 forces it off because the
+vcpkg port does not build for `arm64-mingw-dynamic`. The libretro makefile
+does not link mpg123. Those builds do not advertise
+`ZZ9K_CAP_AUDIO_DECODE` (bit 7) on any path, and `0x0500` answers
+`UNSUPPORTED`. The SDK audio path is compiled only when `HAVE_MPG123`,
+`AHI` and not `LIBRETRO` are all set, so linking mpg123 into the libretro
+core would still not serve `0x0500`.
 
 ## Discovery and memory
 
@@ -78,17 +88,100 @@ installed guest drivers do not run AHI and MHI at the same time.
 `mpega.library` keeps the MP3's sample rate and channel count for its S16BE
 reads.
 
+`DECODE_MP3` (`0x0500`) is the card's one-shot path (`handle_decode_mp3`,
+`mp3_decode_compute`), and only when mpg123 is compiled in. A payload
+shorter than 48 bytes, a zero source, a source above 16 MiB, a destination
+shorter than 2 bytes, or a flag other than `EXPECT_END` is `BAD_REQUEST`.
+A missing buffer is `BAD_HANDLE`. An output format other than S16LE or
+S16BE is `UNSUPPORTED`. A requested rate or channel count that is nonzero
+and differs from the stream is `UNSUPPORTED`: there is no resampling.
+`EXPECT_END` is accepted and does not change the decode. The destination
+capacity is rounded down to an even length. The reply is the 48-byte
+`SDKAudioDecodeResultPayload` the SDK decoder requires: bytes consumed,
+bytes written, sample rate, channels, the requested sample format, frames
+written, and the END flag when the input was consumed. mpg123 fills the
+destination until it is full or the input ends. It has no minimp3 parse
+cursor, so a truncated trailing frame can be counted differently, and an
+ID3v1 tag the card leaves unconsumed may be skipped. Bit 7 is set in the
+mailbox capability word, the audio service word, and the Zorro III video
+service word only in a build that can serve this op.
+
+## Surfaces
+
+`ALLOC_SURFACE` (`0x0200`) follows `handle_alloc_surface`. A zero width or
+height, an unknown format, `PLANAR`, a pitch shorter than one row, or a
+surface larger than 32 MiB is `BAD_REQUEST`. A full table (four surfaces)
+or no board space is `NO_MEMORY`. `ARM_LOCAL` (flag 16) keeps the pixels
+in host memory and clears `CPU_VISIBLE`. Any other allocation is
+CPU-visible: the pixels live in board memory, the guest reads and writes
+them through the Zorro window, and the reply sets `CPU_VISIBLE` (flag 1).
+`FRAMEBUFFER`, `DISPLAYED` and `SHARED_BUFFER` are stored as given. A
+pitch of 0 means the minimum row size. Supported formats are RGB565,
+ARGB8888, RGBA8888, INDEX8, RGB555, BGRA8888, RGB888 and YUV422CGX.
+
+`FREE_SURFACE` refuses a missing handle (`BAD_HANDLE`) and a surface an
+image session still uses (`BUSY`). `MAP_FRAMEBUFFER_SURFACE` returns
+handle `0x80000000` for the live RTG framebuffer. `FILL_SURFACE` rejects
+any flag (`UNSUPPORTED`) and a rectangle outside the surface
+(`BAD_REQUEST`). The framebuffer handle is valid for fill, copy and scale.
+
+`COPY_SURFACE` (`0x0204`) follows `handle_copy_surface` and
+`sdk_surface_copy_rect`. The payload is 48 bytes. A missing source or
+destination, including the framebuffer handle when no mode is set, is
+`BAD_HANDLE`. Any flag, or a format mismatch, is `UNSUPPORTED`. A
+rectangle outside either surface, a short pitch, or a format with no byte
+size (YUV422CGX) is `BAD_REQUEST`. Each row is copied with `memmove`,
+bottom-up when the destination is the same storage and starts on a lower
+row, so an overlapping same-surface copy keeps the source bytes. A
+successful copy into the framebuffer is a redraw from `poll`, as a fill
+or a scale into the framebuffer is.
+
+`QUERY_PALETTE` (`0x0205`) follows `handle_query_palette` and
+`sdk_palette_pack_be`. The payload is at least 24 bytes. Flag bits other
+than `SECONDARY` are `BAD_REQUEST`; `SECONDARY` is `UNSUPPORTED`, because
+the secondary CLUT is not shadowed. `count` must be 1 to 256 and
+`start + count` must not pass 256, or the answer is `BAD_REQUEST`. A
+missing destination buffer, or a window that does not fit it, is
+`BAD_HANDLE`. The `surface` field is accepted and ignored: the palette is
+display-global. Entries are consecutive big-endian `0x00RRGGBB` words in
+the caller's buffer. The shadow has 256 entries and is updated whenever
+the RTG driver writes a primary CLUT entry (`set_palette_entry`). The
+card's shadow is a static table that keeps its contents over an Amiga
+reset, so after `reset()` clears it the board refills it from its CLUT.
+The card fills its shadow from the RTG driver's DMA `SET_PALETTE`
+operation (`dma_rtg.c`); Amiberry also fills it from the register-based
+palette writes, which the card does not shadow.
+The surface service advertises `ZZ9K_SERVICE_FLAG_SURFACE_PALETTE_QUERY`
+and an opcode count of 6.
+
 ## Images
 
-The image service decodes JPEG, PNG and WebP streams into RGB or 32-bit tiles
-for the installed picture DataTypes, or into an ARM-local surface for SDK
-viewers. Surface mapping, fill, and clipped bilinear scaling target the live
-32-bit or 16-bit RTG framebuffer. WebP inputs follow the firmware limits:
-8 MiB of input, 8192 pixels per side, 6 megapixels per canvas, and for
-animations 256 frames. Animated WebP sessions step frames with next, present,
-retire and restart, report frame durations and loop counts, and present
-YUV422CGX frames to the Picasso96 video window. CPU-visible SDK surface
-allocations still return `UNSUPPORTED`.
+`SCALE_IMAGE` (`0x0400`) is the clipped scaler with the destination
+rectangle as the clip, and it ignores its flags word. Same-format scaling
+is nearest for every format that has a byte size, and bilinear for the
+4-byte formats. Across formats, only BGRA8888 to RGB565 or RGB555 is
+accepted. A same-surface scale, any other format pair, or a filter above
+bilinear is `UNSUPPORTED`. `SCALE_IMAGE_CLIPPED` (`0x0407`) is the same
+scaler with an explicit clip; a nonzero flags word is `UNSUPPORTED`. An
+empty clip intersection succeeds and writes nothing. A scale that changes
+the framebuffer is a redraw.
+
+`DECODE_JPEG` (`0x0401`) follows `handle_decode_jpeg`: the picture at its
+own size, never scaled, into the destination rectangle. A destination
+width or height of 0 runs to the surface edge. The output format must be
+the surface's, and must be ARGB8888, RGBA8888, BGRA8888 or RGB888. Any
+flag is `UNSUPPORTED`. A picture that is not a JPEG, or that does not fit
+the rectangle, is `IO_ERROR`. The reply is the 48-byte
+`SDKImageDecodeResultPayload`. A decode into the framebuffer is a redraw.
+`DECODE_PNG` (`0x0402`) and `DECODE_GIF` (`0x0403`) answer `UNSUPPORTED`,
+as the card does.
+
+Streaming JPEG, PNG and WebP sessions still feed tiles or an SDK surface
+for the picture DataTypes and SDK viewers. WebP inputs follow the firmware
+limits: 8 MiB of input, 8192 pixels per side, 6 megapixels per canvas, and
+for animations 256 frames. Animated WebP sessions step frames with next,
+present, retire and restart, report frame durations and loop counts, and
+present YUV422CGX frames to the Picasso96 video window.
 
 ## Media sessions
 
@@ -152,9 +245,12 @@ unadvertised and return `UNSUPPORTED`.
 libraries `pkg-config` finds and generate their fixtures with the `ffmpeg`
 command-line tool. They cover mailbox completion, allocation, reset and
 preload buffers; MP3, FLAC and Vorbis PCM against FFmpeg-decoded references
-and chunked feeding; JPEG, PNG and WebP pixels, limits and animation
-stepping; streaming playback of every supported container and codec pair,
-truncated input, and close/reopen; and console tile output.
+and chunked feeding; one-shot MP3 decode (result fields, S16BE against
+S16LE, rate and channel mismatch, a short destination); JPEG, PNG and WebP
+pixels, limits and animation stepping; surface copy (including overlap,
+bounds and a framebuffer redraw) and palette packing; streaming playback
+of every supported container and codec pair, truncated input, and
+close/reopen; and console tile output.
 
 ## Guest qualification
 

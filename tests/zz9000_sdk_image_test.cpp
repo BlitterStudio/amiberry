@@ -902,6 +902,141 @@ void run_session_argb_surface(Mailbox &mailbox, const std::vector<uint8_t> &imag
 	put32(request, staging);
 	mailbox.call(0x0101, request, 4);
 }
+
+// COPY_SURFACE and QUERY_PALETTE, as handle_copy_surface(),
+// sdk_surface_copy_rect(), handle_query_palette() and sdk_palette_pack_be().
+void copy_surface_and_query_palette(Mailbox &mailbox)
+{
+	mailbox.sdk.set_framebuffer(0x110000, 4, 2, 16, 7);
+	uint8_t *src_px = nullptr, *dst_px = nullptr;
+	const uint32_t src = alloc_surface(mailbox, 4, 2, 7, 0, &src_px);
+	const uint32_t dst = alloc_surface(mailbox, 4, 2, 7, 0, &dst_px);
+	src_px[0] = 0x11; src_px[1] = 0x22; src_px[2] = 0x33; src_px[3] = 0x44;
+	src_px[4] = 0x55;
+	src_px[16] = 0xaa; // row 1, pitch 16
+	uint8_t request[48] = {};
+	const auto copy = [&](uint32_t from, uint32_t to, uint32_t sx, uint32_t sy,
+	                      uint32_t dx, uint32_t dy, uint32_t w, uint32_t h,
+	                      uint32_t flags, uint16_t status, uint16_t length = 48) {
+		std::fill(std::begin(request), std::end(request), 0);
+		put32(request, from); put32(request + 4, to);
+		put32(request + 8, sx); put32(request + 12, sy);
+		put32(request + 16, dx); put32(request + 20, dy);
+		put32(request + 24, w); put32(request + 28, h);
+		put32(request + 32, flags);
+		return mailbox.call(0x0204, request, length, status);
+	};
+	copy(src, dst, 0, 0, 0, 0, 4, 2, 0, 0);
+	assert(mailbox.last_length == 0); // complete_status: no inline result
+	assert(!mailbox.last_dirty);
+	assert(dst_px[0] == 0x11 && dst_px[4] == 0x55 && dst_px[16] == 0xaa);
+	assert(dst_px[8] == 0);
+	uint8_t *rgb565 = nullptr;
+	const uint32_t narrow = alloc_surface(mailbox, 4, 2, 1, 0, &rgb565);
+	copy(src, narrow, 0, 0, 0, 0, 1, 1, 0, 3); // format mismatch
+	free_surface(mailbox, narrow);
+	copy(src, dst, 0, 0, 0, 0, 1, 1, 1, 3); // any flag
+	copy(src, dst, 0, 0, 3, 0, 2, 1, 0, 4); // past the edge
+	copy(src, dst, 0, 0, 0, 0, 0, 1, 0, 4); // empty rectangle
+	copy(0x40ffffff, dst, 0, 0, 0, 0, 1, 1, 0, 5);
+	copy(src, dst, 0, 0, 0, 0, 1, 1, 0, 4, 20); // shorter than the 48-byte payload
+	uint8_t *yuv_a = nullptr, *yuv_b = nullptr;
+	const uint32_t y0 = alloc_surface(mailbox, 4, 2, 9, 0, &yuv_a);
+	const uint32_t y1 = alloc_surface(mailbox, 4, 2, 9, 0, &yuv_b);
+	copy(y0, y1, 0, 0, 0, 0, 2, 1, 0, 4); // YUV422CGX: no byte size
+	copy(y0, dst, 0, 0, 0, 0, 2, 1, 0, 3); // mismatch is checked first
+	free_surface(mailbox, y0);
+	free_surface(mailbox, y1);
+	// Horizontal overlap: memmove, not a forward copy that would smear.
+	uint8_t *row = nullptr;
+	const uint32_t overlap = alloc_surface(mailbox, 4, 1, 4, 0, &row);
+	row[0] = 1; row[1] = 2; row[2] = 3; row[3] = 4;
+	copy(overlap, overlap, 0, 0, 1, 0, 3, 1, 0, 0);
+	assert(row[0] == 1 && row[1] == 1 && row[2] == 2 && row[3] == 3);
+	free_surface(mailbox, overlap);
+	// Vertical overlap: bottom-up, so the source row is not overwritten first.
+	uint8_t *rows = nullptr;
+	const uint32_t vertical = alloc_surface(mailbox, 1, 3, 4, 0, &rows);
+	rows[0] = 0x0a; rows[1] = 0x0b; rows[2] = 0x0c;
+	copy(vertical, vertical, 0, 0, 0, 1, 1, 2, 0, 0);
+	assert(rows[0] == 0x0a && rows[1] == 0x0a && rows[2] == 0x0b);
+	free_surface(mailbox, vertical);
+	// Wider pitch than the minimum row: the copy follows the pitch.
+	uint8_t *wide = nullptr;
+	std::fill(std::begin(request), std::end(request), 0);
+	put32(request, 2); put32(request + 4, 2);
+	put32(request + 8, 7); put32(request + 16, 16);
+	const auto *wide_reply = mailbox.call(0x0200, request, 20);
+	wide = visible_pixels(mailbox, wide_reply);
+	const uint32_t wide_handle = get32(wide_reply);
+	wide[0] = 0x01; wide[16] = 0x02;
+	copy(wide_handle, dst, 0, 0, 0, 0, 2, 2, 0, 0);
+	assert(dst_px[0] == 0x01 && dst_px[16] == 0x02);
+	free_surface(mailbox, wide_handle);
+	// ARM-local source into a CPU-visible destination.
+	std::fill(std::begin(request), std::end(request), 0);
+	put32(request, 2); put32(request + 4, 1);
+	put32(request + 8, 7); put32(request + 12, 16);
+	const uint32_t arm = get32(mailbox.call(0x0200, request, 20));
+	std::fill(std::begin(request), std::end(request), 0);
+	put32(request, arm);
+	put32(request + 12, 2); put32(request + 16, 1);
+	put32(request + 20, 0x00123456);
+	mailbox.call(0x0203, request, 28);
+	copy(arm, dst, 0, 0, 2, 0, 2, 1, 0, 0);
+	assert(dst_px[8] == 0x56 && dst_px[9] == 0x34 && dst_px[10] == 0x12);
+	free_surface(mailbox, arm);
+	copy(src, 0x80000000, 0, 0, 0, 0, 2, 1, 0, 0);
+	assert(mailbox.last_dirty); // framebuffer destination is a redraw
+	const auto *fb = mailbox.board.data() + 0x110000;
+	assert(fb[0] == 0x11 && fb[1] == 0x22 && fb[2] == 0x33);
+	copy(0x80000000, dst, 0, 0, 0, 1, 2, 1, 0, 0);
+	assert(!mailbox.last_dirty);
+	assert(dst_px[16] == 0x11 && dst_px[17] == 0x22);
+	// DECODE_PNG and DECODE_GIF stay unsupported, as on the card.
+	mailbox.call(0x0402, request, 40, 3);
+	mailbox.call(0x0403, request, 40, 3);
+	const uint32_t staging = mailbox.allocate(64);
+	auto *packed = mailbox.sdk.buffer_data(staging);
+	const auto query = [&](uint32_t start, uint32_t count, uint32_t flags,
+	                       uint32_t handle, uint32_t offset, uint16_t status,
+	                       uint16_t length = 48) {
+		std::fill(std::begin(request), std::end(request), 0);
+		put32(request, 0x40ffffff); // surface is ignored
+		put32(request + 4, start);
+		put32(request + 8, count);
+		put32(request + 12, handle);
+		put32(request + 16, offset);
+		put32(request + 20, flags);
+		return mailbox.call(0x0205, request, length, status);
+	};
+	query(0, 2, 0, staging, 0, 0);
+	assert(mailbox.last_length == 0);
+	assert(packed[0] == 0 && packed[7] == 0); // reset shadow is zero
+	mailbox.sdk.set_palette_entry(1, 0x11, 0x22, 0x33);
+	mailbox.sdk.set_palette_entry(255, 0xaa, 0xbb, 0xcc);
+	query(1, 1, 0, staging, 0, 0);
+	assert(packed[0] == 0x00 && packed[1] == 0x11 &&
+	       packed[2] == 0x22 && packed[3] == 0x33);
+	query(255, 1, 0, staging, 4, 0);
+	assert(packed[4] == 0x00 && packed[5] == 0xaa &&
+	       packed[6] == 0xbb && packed[7] == 0xcc);
+	query(0, 0, 0, staging, 0, 4);
+	query(256, 1, 0, staging, 0, 4);
+	query(200, 100, 0, staging, 0, 4);
+	query(0, 1, 2, staging, 0, 4); // flag bit other than SECONDARY
+	query(0, 1, 1, staging, 0, 3); // SECONDARY
+	query(0, 1, 3, staging, 0, 4); // unknown bit is checked first
+	query(0, 1, 0, 0, 0, 5);
+	query(0, 1, 0, staging, 62, 5); // 4 bytes do not fit
+	query(0, 1, 0, staging, 0, 4, 20); // shorter than 24
+	query(1, 1, 0, staging, 8, 0, 24); // minimum payload
+	assert(packed[8] == 0x00 && packed[9] == 0x11 && packed[11] == 0x33);
+	free_surface(mailbox, src);
+	free_surface(mailbox, dst);
+	put32(request, staging);
+	mailbox.call(0x0101, request, 4);
+}
 } // namespace
 
 int main(int argc, char **argv)
@@ -919,6 +1054,13 @@ int main(int argc, char **argv)
 	assert((get32(reply + 12) & ((1u << 28) | (1u << 29))) ==
 	       ((1u << 28) | (1u << 29)));
 	assert(get32(reply + 20) == 12);
+#endif
+	put32(request, 0x200);
+	reply = mailbox.call(0x0004, request, 4);
+	assert(get32(reply + 20) == 6); // 0x0200..0x0205
+	assert((get32(reply + 12) & (1u << 16)) != 0); // PALETTE_QUERY
+#ifndef HAVE_MPG123
+	assert((get32(mailbox.mb + 44) & (1u << 7)) == 0);
 #endif
 	run_image(mailbox, read_file(argv[1]), 2, 8); // PNG RGB888
 	run_image(mailbox, read_file(argv[1]), 2, 7); // PNG BGRA8888
@@ -949,6 +1091,11 @@ int main(int argc, char **argv)
 		check_cpu_visible_surfaces(z3);
 		run_one_shot_jpeg(z3, read_file(argv[2]));
 		run_scale_image(z3);
+		copy_surface_and_query_palette(z3);
+	}
+	{
+		Mailbox z2_copy(4 * 1024 * 1024);
+		copy_surface_and_query_palette(z2_copy);
 	}
 	mailbox.sdk.reset();
 	assert(mailbox.sdk.buffer_data(1) == nullptr);
