@@ -8894,6 +8894,9 @@ static int cfgfile_handle_custom_event (TCHAR *custom, int mode)
 }
 #endif
 
+// Splits s into at most max tokens. Returns the token count, or -1 when a
+// token does not fit in MAX_DPATH (the input comes from the guest through
+// uaelib trap 82, so its length is not trusted).
 static int cmdlineparser (const TCHAR *s, TCHAR *outp[], int max)
 {
 	int j, cnt = 0;
@@ -8906,6 +8909,7 @@ static int cmdlineparser (const TCHAR *s, TCHAR *outp[], int max)
 	doout = 0;
 	prev = s;
 	j = 0;
+	tmp1[0] = 0;
 	outp[0] = nullptr;
 	while (cnt < max) {
 		TCHAR c = *s++;
@@ -8928,6 +8932,12 @@ static int cmdlineparser (const TCHAR *s, TCHAR *outp[], int max)
 			doout = 1;
 		if (!doout) {
 			if (j >= 0) {
+				if (j >= MAX_DPATH - 1) {
+					for (int i = 0; i < cnt; i++)
+						xfree (outp[i]);
+					outp[0] = nullptr;
+					return -1;
+				}
 				tmp1[j] = c;
 				tmp1[j + 1] = 0;
 			}
@@ -9178,6 +9188,11 @@ uae_u32 cfgfile_modify (uae_u32 index, const TCHAR *parms, uae_u32 size, TCHAR *
 		return 10;
 
 	argv = cmdlineparser (parms, argc, UAELIB_MAX_PARSE);
+	if (argv < 0) {
+		argv = 0;
+		err = 5;
+		goto end;
+	}
 
 	if (argv <= 1 && index == 0xffffffff) {
 		cfgfile_createconfigstore (&currprefs);
