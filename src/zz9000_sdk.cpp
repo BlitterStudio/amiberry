@@ -385,7 +385,33 @@ uint8_t *Engine::surface_pixels(uint32_t handle)
 	if (handle == framebuffer_handle)
 		return framebuffer_.width ? memory_at(framebuffer_.offset) : nullptr;
 	auto *surface = find_surface(handle);
-	return surface ? surface->pixels.data() : nullptr;
+	if (!surface)
+		return nullptr;
+	return surface->board_offset ? memory_at(surface->board_offset) :
+		surface->pixels.data();
+}
+
+uint32_t Engine::place_in_board(uint32_t start, uint32_t end, uint32_t length,
+	                            uint32_t alignment) const
+{
+	uint32_t candidate = align_up(start, alignment);
+	while (candidate <= end && length <= end - candidate) {
+		uint32_t next = 0;
+		for (const auto &buffer : buffers_)
+			if (buffer.handle && !buffer.card_only &&
+			    candidate < buffer.board_offset + buffer.length &&
+			    buffer.board_offset < candidate + length)
+				next = std::max(next, buffer.board_offset + buffer.length);
+		for (const auto &surface : surfaces_)
+			if (surface.handle && surface.board_offset &&
+			    candidate < surface.board_offset + surface.length &&
+			    surface.board_offset < candidate + length)
+				next = std::max(next, surface.board_offset + surface.length);
+		if (!next)
+			return candidate;
+		candidate = align_up(next, alignment);
+	}
+	return 0;
 }
 
 uint32_t Engine::surface_width(uint32_t handle) const
@@ -1561,23 +1587,7 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 			(aperture_acked_ ? host_window_begin + 0x4000 : host_window_end) : z3_heap_end;
 		uint32_t board_offset = 0;
 		if (!card_only) {
-			uint32_t candidate = align_up(start, alignment);
-			while (candidate <= end && length <= end - candidate) {
-				bool overlap = false;
-				for (const auto &buffer : buffers_) {
-					if (buffer.handle && !buffer.card_only &&
-					    candidate < buffer.board_offset + buffer.length &&
-					    buffer.board_offset < candidate + length) {
-						candidate = align_up(buffer.board_offset + buffer.length, alignment);
-						overlap = true;
-						break;
-					}
-				}
-				if (!overlap) {
-					board_offset = candidate;
-					break;
-				}
-			}
+			board_offset = place_in_board(start, end, length, alignment);
 			if (!board_offset)
 				return no_memory;
 		}
@@ -1656,14 +1666,19 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 		const uint32_t width = be32(request), height = be32(request + 4);
 		const uint32_t format = be32(request + 8), flags = be32(request + 12);
 		uint32_t pitch = be32(request + 16);
+		// Like the card's handle_alloc_surface(): ARM_LOCAL (16) surfaces
+		// are card-only; any other is CPU-visible, in board memory the
+		// guest maps. Only CPU_VISIBLE and ARM_LOCAL are modelled.
+		const bool arm_local = (flags & 16u) != 0;
+		const uint32_t bpp = pixel_bytes(format);
 		if (!width || !height || width > 8192 || height > 8192 ||
-		    (format != 7
+		    (!bpp
 #ifdef AMIBERRY_WITH_WEBP
 		     && format != 9
 #endif
-		    ) || (flags & ~17u) || !(flags & 16u))
+		    ) || (flags & ~17u))
 			return unsupported;
-		const uint32_t minimum_pitch = format == 9 ? ((width + 1) / 2) * 4 : width * 4;
+		const uint32_t minimum_pitch = format == 9 ? ((width + 1) / 2) * 4 : width * bpp;
 		if (!pitch)
 			pitch = minimum_pitch;
 		if (pitch < minimum_pitch ||
@@ -1675,21 +1690,39 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 			return no_memory;
 		size_t used = 0;
 		for (const auto &surface : surfaces_)
-			used += surface.pixels.size();
+			used += surface.length;
 		const size_t length = static_cast<size_t>(pitch) * height;
 		if (length > max_surface_bytes - used)
 			return no_memory;
+		uint32_t board_offset = 0;
+		if (!arm_local) {
+			const bool z2 = board_size_ == 0x00400000;
+			const uint32_t start = z2 ? host_window_begin : z3_heap_begin;
+			const uint32_t end = z2 ? (aperture_acked_ ?
+				host_window_begin + 0x4000 : host_window_end) : z3_heap_end;
+			board_offset = place_in_board(start, end,
+				static_cast<uint32_t>(length), 64);
+			if (!board_offset)
+				return no_memory;
+		}
 		*slot = {};
 		slot->handle = surface_handle_base | next_surface_handle_++;
 		slot->width = width; slot->height = height;
 		slot->pitch = pitch; slot->format = format;
-		slot->pixels.resize(length);
+		slot->flags = arm_local ? 16u : 1u;
+		slot->board_offset = board_offset;
+		slot->length = static_cast<uint32_t>(length);
+		if (arm_local)
+			slot->pixels.resize(length);
+		else
+			std::memset(memory_at(board_offset), 0, length);
 		put32(reply, slot->handle);
-		put32(reply + 4, 0x06000000 +
-			static_cast<uint32_t>(slot - surfaces_.begin()) * 0x01000000);
+		put32(reply + 4, arm_local ? 0x06000000 +
+			static_cast<uint32_t>(slot - surfaces_.begin()) * 0x01000000 :
+			arm_memory_start + board_offset - memory_base);
 		put32(reply + 8, width); put32(reply + 12, height);
 		put32(reply + 16, pitch); put32(reply + 20, format);
-		put32(reply + 24, 16); put32(reply + 28, static_cast<uint32_t>(length));
+		put32(reply + 24, slot->flags); put32(reply + 28, static_cast<uint32_t>(length));
 		*reply_length = 48;
 		return ok;
 	}
@@ -2150,78 +2183,33 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 		return ok;
 #endif
 	}
+	if (opcode == 0x0400) {
+		// SCALE_IMAGE: SCALE_IMAGE_CLIPPED's scaler with no clip (the
+		// destination rectangle is the clip), as the card's
+		// handle_scale_image(); it ignores flags.
+		if (request_length < 48)
+			return bad_request;
+		const uint32_t dx = be32(request + 24), dy = be32(request + 28);
+		const uint32_t dw = be32(request + 32), dh = be32(request + 36);
+		return scale_surface(be32(request), be32(request + 4),
+			be32(request + 8), be32(request + 12), be32(request + 16),
+			be32(request + 20), dx, dy, dw, dh, dx, dy, dw, dh,
+			be32(request + 40), 0);
+	}
+	if (opcode == 0x0401) {
+		if (request_length < 40)
+			return bad_request;
+		return decode_jpeg_to_surface(request, reply, reply_length);
+	}
 	if (opcode == 0x0407) {
 		if (request_length < 40)
 			return bad_request;
-		const uint32_t src_handle = be32(request), dst_handle = be32(request + 4);
-		const uint32_t sx = be16(request + 8), sy = be16(request + 10);
-		const uint32_t sw = be16(request + 12), sh = be16(request + 14);
-		const uint32_t dx = be16(request + 16), dy = be16(request + 18);
-		const uint32_t dw = be16(request + 20), dh = be16(request + 22);
-		const uint32_t cx = be16(request + 24), cy = be16(request + 26);
-		const uint32_t cw = be16(request + 28), ch = be16(request + 30);
-		const uint32_t filter = be32(request + 32), flags = be32(request + 36);
-		auto *src = surface_pixels(src_handle);
-		auto *dst = surface_pixels(dst_handle);
-		if (!src || !dst)
-			return bad_handle;
-		if (flags || filter > 1 || surface_format(src_handle) != 7 ||
-		    (surface_format(dst_handle) != 7 &&
-		     surface_format(dst_handle) != 1 &&
-		     surface_format(dst_handle) != 6) || src_handle == dst_handle)
-			return unsupported;
-		if (!rect_valid(sx, sy, sw, sh, surface_width(src_handle),
-		                surface_height(src_handle)) ||
-		    !rect_valid(dx, dy, dw, dh, surface_width(dst_handle),
-		                surface_height(dst_handle)) || !cw || !ch)
-			return bad_request;
-		const uint32_t x0 = std::max(dx, cx), y0 = std::max(dy, cy);
-		const uint32_t x1 = std::min(dx + dw, cx + cw);
-		const uint32_t y1 = std::min(dy + dh, cy + ch);
-		if (x0 >= x1 || y0 >= y1)
-			return ok;
-		const uint32_t src_pitch = surface_pitch(src_handle);
-		const uint32_t dst_pitch = surface_pitch(dst_handle);
-		const uint32_t dst_format = surface_format(dst_handle);
-		const uint32_t dst_bpp = pixel_bytes(dst_format);
-		for (uint32_t y = y0; y < y1; ++y) {
-			int64_t yf = ((static_cast<int64_t>(2 * (y - dy) + 1) * sh) << 15) /
-				static_cast<int64_t>(dh) - 32768;
-			yf = std::clamp<int64_t>(yf, 0, static_cast<int64_t>(sh - 1) << 16);
-			const uint32_t iy = sy + static_cast<uint32_t>(yf >> 16);
-			const uint32_t jy = std::min(iy + 1, sy + sh - 1);
-			const uint32_t wy = static_cast<uint32_t>(yf & 65535);
-			for (uint32_t x = x0; x < x1; ++x) {
-				int64_t xf = ((static_cast<int64_t>(2 * (x - dx) + 1) * sw) << 15) /
-					static_cast<int64_t>(dw) - 32768;
-				xf = std::clamp<int64_t>(xf, 0, static_cast<int64_t>(sw - 1) << 16);
-				const uint32_t ix = sx + static_cast<uint32_t>(xf >> 16);
-				const uint32_t jx = std::min(ix + 1, sx + sw - 1);
-				const uint32_t wx = static_cast<uint32_t>(xf & 65535);
-				const auto *p00 = src + static_cast<size_t>(iy) * src_pitch + ix * 4;
-				const auto *p10 = src + static_cast<size_t>(iy) * src_pitch + jx * 4;
-				const auto *p01 = src + static_cast<size_t>(jy) * src_pitch + ix * 4;
-				const auto *p11 = src + static_cast<size_t>(jy) * src_pitch + jx * 4;
-				uint8_t color[4];
-				for (int component = 0; component < 4; ++component) {
-					if (filter == 0) {
-						color[component] = (wy >= 32768 ?
-							(wx >= 32768 ? p11 : p01) :
-							(wx >= 32768 ? p10 : p00))[component];
-					} else {
-						const uint32_t top = (p00[component] * (65536u - wx) +
-							p10[component] * wx + 32768u) >> 16;
-						const uint32_t bottom = (p01[component] * (65536u - wx) +
-							p11[component] * wx + 32768u) >> 16;
-						color[component] = static_cast<uint8_t>((top * (65536u - wy) +
-							bottom * wy + 32768u) >> 16);
-					}
-				}
-				write_pixel(dst + static_cast<size_t>(y) * dst_pitch + x * dst_bpp,
-					dst_format, color[2], color[1], color[0], color[3]);
-			}
-		}
-		return ok;
+		return scale_surface(be32(request), be32(request + 4),
+			be16(request + 8), be16(request + 10), be16(request + 12),
+			be16(request + 14), be16(request + 16), be16(request + 18),
+			be16(request + 20), be16(request + 22), be16(request + 24),
+			be16(request + 26), be16(request + 28), be16(request + 30),
+			be32(request + 32), be32(request + 36));
 	}
 #if defined(ZZ9000_SDK_AUDIO) || defined(AMIBERRY_WITH_FFMPEG)
 #ifdef ZZ9000_SDK_AUDIO
@@ -2519,6 +2507,151 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 	return unsupported;
 }
 
+uint16_t Engine::decode_jpeg_to_surface(const uint8_t *request, uint8_t *reply,
+	                                    uint16_t *reply_length)
+{
+	// DECODE_JPEG, as the card's handle_decode_jpeg(): the whole picture
+	// at its own size, never scaled, into the destination rectangle at
+	// (dst_x, dst_y). A dst_width or dst_height of 0 runs to the surface's
+	// edge. Fitting a picture to a size is a session's job (FIT).
+	const auto *src = find_buffer(be32(request));
+	const uint32_t dst_handle = be32(request + 12);
+	auto *dst = surface_pixels(dst_handle);
+	if (!src || !dst)
+		return bad_handle;
+	const uint32_t src_offset = be32(request + 4), src_length = be32(request + 8);
+	const uint32_t dst_x = be32(request + 16), dst_y = be32(request + 20);
+	const uint32_t format = be32(request + 32), flags = be32(request + 36);
+	if (flags)
+		return unsupported;
+	if (format != surface_format(dst_handle) ||
+	    (format != 2 && format != 3 && format != 7 && format != 8))
+		return unsupported;
+	if (!src_length || src_offset > src->length || src_length > src->length - src_offset)
+		return bad_request;
+	// The card's decode_bounds(): the rectangle's right and bottom edges.
+	const auto bounds = [](uint32_t limit, uint32_t offset, uint32_t requested,
+	                       uint32_t &edge) {
+		if (offset > limit)
+			return false;
+		if (!requested) {
+			edge = limit;
+			return true;
+		}
+		if (requested > limit - offset)
+			return false;
+		edge = offset + requested;
+		return true;
+	};
+	uint32_t right = 0, bottom = 0;
+	if (!bounds(surface_width(dst_handle), dst_x, be32(request + 24), right) ||
+	    !bounds(surface_height(dst_handle), dst_y, be32(request + 28), bottom))
+		return bad_request;
+	const auto *data = buffer_data(src->handle) + src_offset;
+	if (src_length < 2 || data[0] != 0xff || data[1] != 0xd8)
+		return io_error;
+	HostNearestRounding host_rounding;
+	int width = 0, height = 0, channels = 0;
+	if (!stbi_info_from_memory(data, static_cast<int>(src_length), &width, &height,
+	                           &channels) || width <= 0 || height <= 0 ||
+	    static_cast<uint64_t>(width) * height > max_image_pixels ||
+	    static_cast<uint32_t>(width) > right - dst_x ||
+	    static_cast<uint32_t>(height) > bottom - dst_y)
+		return io_error;
+	int decoded_width = 0, decoded_height = 0;
+	auto *decoded = stbi_load_from_memory(data, static_cast<int>(src_length),
+		&decoded_width, &decoded_height, &channels, 4);
+	if (!decoded || decoded_width != width || decoded_height != height) {
+		stbi_image_free(decoded);
+		return io_error;
+	}
+	const uint32_t pitch = surface_pitch(dst_handle), bpp = pixel_bytes(format);
+	for (uint32_t y = 0; y < static_cast<uint32_t>(height); ++y) {
+		const auto *in = decoded + static_cast<size_t>(y) * width * 4;
+		auto *out = dst + static_cast<size_t>(dst_y + y) * pitch +
+			static_cast<size_t>(dst_x) * bpp;
+		for (uint32_t x = 0; x < static_cast<uint32_t>(width); ++x, in += 4, out += bpp)
+			write_pixel(out, format, in[0], in[1], in[2], 255);
+	}
+	stbi_image_free(decoded);
+	put32(reply, static_cast<uint32_t>(width));
+	put32(reply + 4, static_cast<uint32_t>(height));
+	put32(reply + 8, format);
+	put32(reply + 12, 0);
+	put32(reply + 16, static_cast<uint32_t>(width) * height * bpp);
+	*reply_length = 20;
+	return ok;
+}
+
+uint16_t Engine::scale_surface(uint32_t src_handle, uint32_t dst_handle,
+	                           uint32_t sx, uint32_t sy, uint32_t sw, uint32_t sh,
+	                           uint32_t dx, uint32_t dy, uint32_t dw, uint32_t dh,
+	                           uint32_t cx, uint32_t cy, uint32_t cw, uint32_t ch,
+	                           uint32_t filter, uint32_t flags)
+{
+	auto *src = surface_pixels(src_handle);
+	auto *dst = surface_pixels(dst_handle);
+	if (!src || !dst)
+		return bad_handle;
+	if (flags || filter > 1 || surface_format(src_handle) != 7 ||
+	    (surface_format(dst_handle) != 7 &&
+	     surface_format(dst_handle) != 1 &&
+	     surface_format(dst_handle) != 6) || src_handle == dst_handle)
+		return unsupported;
+	if (!rect_valid(sx, sy, sw, sh, surface_width(src_handle),
+	                surface_height(src_handle)) ||
+	    !rect_valid(dx, dy, dw, dh, surface_width(dst_handle),
+	                surface_height(dst_handle)) || !cw || !ch)
+		return bad_request;
+	const uint32_t x0 = std::max(dx, cx), y0 = std::max(dy, cy);
+	const uint32_t x1 = std::min(dx + dw, cx + cw);
+	const uint32_t y1 = std::min(dy + dh, cy + ch);
+	if (x0 >= x1 || y0 >= y1)
+		return ok;
+	const uint32_t src_pitch = surface_pitch(src_handle);
+	const uint32_t dst_pitch = surface_pitch(dst_handle);
+	const uint32_t dst_format = surface_format(dst_handle);
+	const uint32_t dst_bpp = pixel_bytes(dst_format);
+	for (uint32_t y = y0; y < y1; ++y) {
+		int64_t yf = ((static_cast<int64_t>(2 * (y - dy) + 1) * sh) << 15) /
+			static_cast<int64_t>(dh) - 32768;
+		yf = std::clamp<int64_t>(yf, 0, static_cast<int64_t>(sh - 1) << 16);
+		const uint32_t iy = sy + static_cast<uint32_t>(yf >> 16);
+		const uint32_t jy = std::min(iy + 1, sy + sh - 1);
+		const uint32_t wy = static_cast<uint32_t>(yf & 65535);
+		for (uint32_t x = x0; x < x1; ++x) {
+			int64_t xf = ((static_cast<int64_t>(2 * (x - dx) + 1) * sw) << 15) /
+				static_cast<int64_t>(dw) - 32768;
+			xf = std::clamp<int64_t>(xf, 0, static_cast<int64_t>(sw - 1) << 16);
+			const uint32_t ix = sx + static_cast<uint32_t>(xf >> 16);
+			const uint32_t jx = std::min(ix + 1, sx + sw - 1);
+			const uint32_t wx = static_cast<uint32_t>(xf & 65535);
+			const auto *p00 = src + static_cast<size_t>(iy) * src_pitch + ix * 4;
+			const auto *p10 = src + static_cast<size_t>(iy) * src_pitch + jx * 4;
+			const auto *p01 = src + static_cast<size_t>(jy) * src_pitch + ix * 4;
+			const auto *p11 = src + static_cast<size_t>(jy) * src_pitch + jx * 4;
+			uint8_t color[4];
+			for (int component = 0; component < 4; ++component) {
+				if (filter == 0) {
+					color[component] = (wy >= 32768 ?
+						(wx >= 32768 ? p11 : p01) :
+						(wx >= 32768 ? p10 : p00))[component];
+				} else {
+					const uint32_t top = (p00[component] * (65536u - wx) +
+						p10[component] * wx + 32768u) >> 16;
+					const uint32_t bottom = (p01[component] * (65536u - wx) +
+						p11[component] * wx + 32768u) >> 16;
+					color[component] = static_cast<uint8_t>((top * (65536u - wy) +
+						bottom * wy + 32768u) >> 16);
+				}
+			}
+			write_pixel(dst + static_cast<size_t>(y) * dst_pitch + x * dst_bpp,
+				dst_format, color[2], color[1], color[0], color[3]);
+		}
+	}
+	return ok;
+}
+
 bool Engine::poll()
 {
 	bool dirty = false;
@@ -2565,6 +2698,12 @@ bool Engine::poll()
 				std::max(dx, cx) < std::min(dx + dw, cx + cw) &&
 				std::max(dy, cy) < std::min(dy + dh, cy + ch);
 		}
+		if (last_status_ == ok && opcode == 0x0401 &&
+		    be32(request + 16 + 12) == framebuffer_handle)
+			surface_framebuffer_write = true;
+		if (last_status_ == ok && opcode == 0x0400 &&
+		    be32(request + 16 + 4) == framebuffer_handle)
+			surface_framebuffer_write = true;
 		const bool image_overlay_write = opcode == 0x0409 && overlay_.active;
 		if (last_status_ == ok && (surface_framebuffer_write ||
 		    image_framebuffer_write || image_overlay_write || opcode == 0x0b08))
