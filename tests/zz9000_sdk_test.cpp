@@ -52,6 +52,7 @@ struct Mailbox {
 	uint32_t entries;
 	uint32_t request_id = 0;
 	uint32_t completion_head = 0;
+	uint16_t client = 0; // Stamped into each entry's flags (bits 5-15).
 
 	explicit Mailbox(uint32_t size)
 		: board(size), sdk(board.data(), size),
@@ -65,6 +66,7 @@ struct Mailbox {
 			request[i] = 0;
 		put32(request, ++request_id);
 		put16(request + 4, opcode);
+		put16(request + 8, static_cast<uint16_t>(client << 5));
 		put16(request + 10, length);
 		for (uint16_t i = 0; i < length && i < 48; ++i)
 			request[16 + i] = payload[i];
@@ -195,6 +197,88 @@ void decode_mp3_one_shot(Mailbox &mailbox, const std::vector<uint8_t> &mp3)
 	mailbox.call(0x0101, request, 4);
 }
 }
+
+namespace {
+uint32_t release_test_allocate(Mailbox &mailbox, uint32_t length)
+{
+	uint8_t request[48] = {};
+	put32(request, length);
+	put32(request + 4, 16);
+	return get32(mailbox.call(0x0100, request, 12) + 16);
+}
+
+#ifdef HAVE_MPG123
+// CLIENT_RELEASE (0x0006) of audio streams: the released client's stream and
+// rings go, another client's stream plays on.
+void check_client_release_audio(Mailbox &z3)
+{
+	uint8_t request[48] = {};
+	const auto ack = [&](uint32_t session, uint16_t status) {
+		std::fill(std::begin(request), std::end(request), 0);
+		put32(request, session); // ACK of nothing: the stream is there or not
+		z3.call(0x0505, request, 12, status);
+	};
+	z3.client = 5;
+	const uint32_t in5 = release_test_allocate(z3, 131072);
+	const uint32_t pcm5 = release_test_allocate(z3, 262144);
+	const uint32_t s5 = get32(begin_audio(z3, in5, 131072, pcm5, 262144, 1) + 16);
+	z3.client = 6;
+	const uint32_t in6 = release_test_allocate(z3, 131072);
+	const uint32_t pcm6 = release_test_allocate(z3, 262144);
+	const uint32_t s6 = get32(begin_audio(z3, in6, 131072, pcm6, 262144, 1) + 16);
+	assert(s5 && s6 && s5 != s6);
+	z3.client = 5;
+	z3.call(0x0006, nullptr, 0);
+	ack(s5, 5);
+	ack(s6, 0);
+	assert(!z3.sdk.buffer_data(in5) && !z3.sdk.buffer_data(pcm5));
+	assert(z3.sdk.buffer_data(in6) && z3.sdk.buffer_data(pcm6));
+	z3.client = 6;
+	z3.call(0x0006, nullptr, 0);
+	ack(s6, 5);
+	assert(!z3.sdk.buffer_data(in6) && !z3.sdk.buffer_data(pcm6));
+	z3.client = 0;
+}
+#endif
+
+// CLIENT_RELEASE of a media session (MPEG-1 with MP2: pl_mpeg, no FFmpeg)
+// whose PCM ring another client allocated: that client's release leaves the
+// ring to the session (it is pinned: FREE_SHARED is BUSY), and it goes with
+// the session's own client.
+void check_client_release_media(Mailbox &z3)
+{
+	uint8_t request[48] = {};
+	const auto audio_status = [&](uint32_t session, uint16_t status) {
+		std::fill(std::begin(request), std::end(request), 0);
+		put32(request, session);
+		z3.call(0x0b0c, request, 16, status);
+	};
+	z3.client = 7;
+	const uint32_t ring = release_test_allocate(z3, 65536);
+	z3.client = 8;
+	put32(request, 1); // MPEG-1 video
+	put32(request + 4, 1); // in an MPEG program stream
+	put32(request + 8, 320); put32(request + 12, 240);
+	put32(request + 16, 1);
+	put32(request + 20, 1); // MP2 audio, into the ring
+	put32(request + 24, ring); put32(request + 28, 65536);
+	put32(request + 32, 4608); put32(request + 36, 32768);
+	const uint32_t media = get32(z3.call(0x0b04, request, 44) + 16);
+	assert(media);
+	z3.client = 7;
+	z3.call(0x0006, nullptr, 0);
+	assert(z3.sdk.buffer_data(ring) != nullptr); // the session's ring stays
+	audio_status(media, 0);
+	std::fill(std::begin(request), std::end(request), 0);
+	put32(request, ring);
+	z3.call(0x0101, request, 4, 2); // and stays pinned: BUSY
+	z3.client = 8;
+	z3.call(0x0006, nullptr, 0);
+	audio_status(media, 5);
+	assert(z3.sdk.buffer_data(ring) == nullptr); // gone with the session's client
+	z3.client = 0;
+}
+} // namespace
 
 int main(int argc, char **argv)
 {
@@ -1423,9 +1507,11 @@ int main(int argc, char **argv)
 	put32(payload, z2_session);
 	put32(payload + 4, 0);
 	z2.call(0x0506, payload, 8);
+	check_client_release_audio(z3);
 	SDL_Quit();
 #else
 	(void)argc;
 	(void)argv;
 #endif
+	check_client_release_media(z3);
 }
