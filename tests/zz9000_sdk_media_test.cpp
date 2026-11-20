@@ -442,14 +442,22 @@ int main(int argc, char **argv)
 	assert(!video.empty() && (full || video.size() < 256 * 1024));
 	Mailbox mailbox;
 	auto *mb = mailbox.mb;
-	assert((get32(mb + 44) & ((1u << 7) | (1u << 21) | (1u << 22))) ==
-	       ((1u << 7) | (1u << 21) | (1u << 22)));
+	assert((get32(mb + 44) & ((1u << 21) | (1u << 22))) ==
+	       ((1u << 21) | (1u << 22)));
+#ifdef HAVE_MPG123
+	assert((get32(mb + 44) & (1u << 7)) != 0);
+#else
+	assert((get32(mb + 44) & (1u << 7)) == 0);
+#endif
 	uint8_t request[48] = {};
 	put32(request, 0x0b00);
 	const auto *reply = mailbox.call(0x0004, request, 4);
 	assert(get32(reply + 20) == 14 &&
 	       (get32(reply + 12) & ((1u << 16) | (1u << 17) | (1u << 22))) ==
 	       ((1u << 16) | (1u << 17) | (1u << 22)));
+#ifndef HAVE_MPG123
+	assert((get32(reply + 8) & (1u << 7)) == 0);
+#endif
 	const uint32_t staging = mailbox.allocate(65536);
 	const uint32_t pcm = mailbox.allocate(131072);
 	std::fill(std::begin(request), std::end(request), 0);

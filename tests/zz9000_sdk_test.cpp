@@ -110,6 +110,90 @@ const uint8_t *begin_audio_ex(Mailbox &mailbox, uint32_t codec, uint32_t input,
 	put32(request + 28, format);
 	return mailbox.call(0x0516, request, 48);
 }
+
+void decode_mp3_one_shot(Mailbox &mailbox, const std::vector<uint8_t> &mp3)
+{
+	const bool z2 = mailbox.board.size() == 4 * 1024 * 1024;
+	const auto allocate = [&](uint32_t length) {
+		uint8_t request[48] = {};
+		put32(request, length);
+		put32(request + 4, 16);
+		// The Zorro II host window cannot hold a 48 kHz stereo buffer.
+		put32(request + 8, z2 ? 2u : 0u);
+		return get32(mailbox.call(0x0100, request, 12) + 16);
+	};
+	const uint32_t src = allocate(65536);
+	const uint32_t dst = allocate(131072);
+	assert(mp3.size() <= 65536);
+	std::copy(mp3.begin(), mp3.end(), mailbox.sdk.buffer_data(src));
+	auto *pcm = mailbox.sdk.buffer_data(dst);
+	std::fill(pcm, pcm + 131072, 0xa5);
+	uint8_t request[48] = {};
+	const auto decode = [&](uint32_t hz, uint32_t channels, uint32_t format,
+	                        uint32_t capacity, uint32_t flags, uint16_t status) {
+		std::fill(std::begin(request), std::end(request), 0);
+		put32(request, src);
+		put32(request + 8, static_cast<uint32_t>(mp3.size()));
+		put32(request + 12, dst);
+		put32(request + 20, capacity);
+		put32(request + 24, hz);
+		put32(request + 28, channels);
+		put32(request + 32, format);
+		put32(request + 36, flags);
+		return mailbox.call(0x0500, request, 48, status);
+	};
+	mailbox.call(0x0500, request, 40, 4); // shorter than the 48-byte payload
+	decode(0, 0, 1, 1, 0, 4); // dst < 2
+	decode(0, 0, 1, 0, 0, 4);
+	decode(0, 0, 3, 131072, 0, 3); // S32LE
+	decode(0, 0, 1, 131072, 2, 4); // bad flag
+	decode(44100, 0, 1, 131072, 0, 3);
+	assert(pcm[0] == 0xa5); // mismatch does not write
+	decode(0, 1, 1, 131072, 0, 3);
+	put32(request, 0);
+	put32(request + 12, dst);
+	put32(request + 8, 16);
+	put32(request + 20, 131072);
+	put32(request + 32, 1);
+	mailbox.call(0x0500, request, 48, 5);
+	const auto *reply = decode(0, 0, 1, 2, 0, 0);
+	assert(get16(reply + 10) >= 48);
+	assert(get32(reply + 20) <= 2); // bytes_written
+	assert((get32(reply + 40) & 1) ==
+	       (get32(reply + 16) >= mp3.size() ? 1u : 0u));
+	reply = decode(0, 0, 1, 131072, 1, 0); // EXPECT_END accepted
+	assert(get16(reply + 10) >= 48);
+	const uint32_t consumed = get32(reply + 16);
+	const uint32_t written = get32(reply + 20);
+	assert(consumed > 0 && consumed <= mp3.size());
+	assert(mp3.size() - consumed < 16);
+	assert(written > 100 && (written % 4) == 0);
+	assert(get32(reply + 24) == 48000);
+	assert(get32(reply + 28) == 2);
+	assert(get32(reply + 32) == 1); // S16LE
+	assert(get32(reply + 36) == written / 4);
+	assert((get32(reply + 40) & 1) == (consumed >= mp3.size() ? 1u : 0u));
+	assert(std::any_of(pcm, pcm + written, [](uint8_t b) { return b != 0; }));
+	std::vector<uint8_t> le(pcm, pcm + written);
+	reply = decode(0, 0, 2, 131072, 0, 0);
+	assert(get32(reply + 32) == 2); // S16BE
+	assert(get32(reply + 20) == written);
+	for (uint32_t i = 0; i + 1 < written; i += 2)
+		assert(pcm[i] == le[i + 1] && pcm[i + 1] == le[i]);
+	std::fill(pcm, pcm + 16, 0x5a);
+	put32(request, src);
+	put32(request + 8, 16);
+	put32(request + 12, dst);
+	put32(request + 20, 131072);
+	put32(request + 32, 1);
+	std::fill(mailbox.sdk.buffer_data(src), mailbox.sdk.buffer_data(src) + 16, 0);
+	mailbox.call(0x0500, request, 48, 4); // not an MP3
+	assert(pcm[0] == 0x5a);
+	put32(request, src);
+	mailbox.call(0x0101, request, 4);
+	put32(request, dst);
+	mailbox.call(0x0101, request, 4);
+}
 }
 
 int main(int argc, char **argv)
@@ -132,7 +216,7 @@ int main(int argc, char **argv)
 	expected_caps |= (1u << 7) | (1u << 19) | (1u << 23);
 #endif
 #ifdef AMIBERRY_WITH_FFMPEG
-	expected_caps |= (1u << 7) | (1u << 28) | (1u << 29);
+	expected_caps |= (1u << 28) | (1u << 29);
 #endif
 	assert(get32(mb + 44) == expected_caps);
 	{
@@ -242,6 +326,15 @@ int main(int argc, char **argv)
 	std::vector<uint8_t> low_mp3(std::istreambuf_iterator<char>{low_file}, {});
 	assert(!low_mp3.empty() && low_mp3.size() < 65536);
 	assert(SDL_Init(SDL_INIT_AUDIO));
+	decode_mp3_one_shot(z2, mp3);
+	decode_mp3_one_shot(z3, mp3);
+	put32(payload, 0x500);
+	reply = z3.call(0x0004, payload, 4);
+	assert(get32(reply + 24) & (1u << 7));
+	assert(get32(reply + 28) & (1u << 16)); // MP3_DECODE
+	put32(payload, 0x0b00);
+	reply = z3.call(0x0004, payload, 4);
+	assert(get32(reply + 24) & (1u << 7));
 	put32(payload, 512 * 1024);
 	put32(payload + 4, 16);
 	put32(payload + 8, 0);

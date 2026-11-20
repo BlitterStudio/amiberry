@@ -56,12 +56,16 @@ constexpr uint32_t image_service_flags = 1u | (1u << 16) | (1u << 17) |
 	;
 #if defined(ZZ9000_SDK_AUDIO) || defined(AMIBERRY_WITH_FFMPEG)
 constexpr uint32_t audio_capabilities =
-	(1u << 7)
 #ifdef ZZ9000_SDK_AUDIO
-	| (1u << 19) | (1u << 23)
+	// Bit 7 is ZZ9K_CAP_AUDIO_DECODE: only when DECODE_MP3 (0x0500) can
+	// be served. FLAC and Vorbis streams do not implement that op.
+	(1u << 7) | (1u << 19) | (1u << 23)
+#endif
+#if defined(ZZ9000_SDK_AUDIO) && defined(AMIBERRY_WITH_FFMPEG)
+	|
 #endif
 #ifdef AMIBERRY_WITH_FFMPEG
-	| (1u << 28) | (1u << 29)
+	(1u << 28) | (1u << 29)
 #endif
 	;
 #else
@@ -82,7 +86,14 @@ constexpr uint32_t audio_service_flags = 0;
 #endif
 // CARD_POOL_LIMIT_MEDIA_INPUT in the firmware's card_pool.h.
 constexpr uint32_t media_input_limit = 64 * 1024 * 1024;
-constexpr uint32_t video_capabilities = (1u << 7) | (1u << 21) | (1u << 22);
+// Bit 7 rides in the Zorro III video service word only when DECODE_MP3
+// can be served. supported_capabilities() ORs this word in on that
+// board, so an ungated bit would advertise audio decode with no handler.
+constexpr uint32_t video_capabilities =
+#ifdef ZZ9000_SDK_AUDIO
+	(1u << 7) |
+#endif
+	(1u << 21) | (1u << 22);
 constexpr uint32_t video_service_flags = 1u | (1u << 16) | (1u << 17) |
 	(1u << 18) | (1u << 19) | (1u << 21) | (1u << 22) |
 	(1u << 23) | (1u << 24) | (1u << 25)
@@ -114,6 +125,23 @@ void rgba_to_yuv422cgx(const uint8_t *rgba, uint32_t width, uint32_t height,
 			row += 4;
 		}
 	}
+}
+
+// sdk_surface.c surface_rect_valid(): the rectangle fits the pixel grid
+// and the pitch. YUV422CGX has no byte size in sdk_surface_format_bytes(),
+// so a copy of that format fails here.
+bool copy_rect_fits(uint32_t x, uint32_t y, uint32_t rect_w, uint32_t rect_h,
+	uint32_t width, uint32_t height, uint32_t pitch, uint32_t bpp)
+{
+	if (!bpp || !width || !height || !pitch || !rect_w || !rect_h)
+		return false;
+	if (x > width || y > height || rect_w > width - x || rect_h > height - y)
+		return false;
+	if (rect_w > 0xffffffffu / bpp || x > 0xffffffffu / bpp)
+		return false;
+	const uint32_t origin = x * bpp;
+	const uint32_t row = rect_w * bpp;
+	return origin <= pitch && row <= pitch - origin;
 }
 
 } // namespace
@@ -277,6 +305,7 @@ void Engine::reset()
 	for (auto &surface : surfaces_)
 		surface = {};
 	framebuffer_ = {};
+	palette_.fill(0);
 	next_surface_handle_ = 1;
 	next_handle_ = 1;
 	next_audio_session_ = 1;
@@ -296,6 +325,15 @@ void Engine::reset()
 	put32(mb + 28, mailbox_descriptor_size + ring_entries_ * mailbox_entry_size);
 	put32(mb + 32, ring_entries_);
 	put32(mb + 44, supported_capabilities());
+}
+
+void Engine::set_palette_entry(uint32_t index, uint8_t red, uint8_t green,
+	uint8_t blue)
+{
+	// sdk_palette_set(): the index is masked into the 256-entry table and
+	// only the low 24 bits are kept, as 0x00RRGGBB.
+	palette_[index & 255] = (static_cast<uint32_t>(red) << 16) |
+		(static_cast<uint32_t>(green) << 8) | blue;
 }
 
 uint16_t Engine::read_register(uint32_t offset) const
@@ -1526,12 +1564,13 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 			service == 0x8200 ? 0 : audio_capabilities);
 		put32(reply + 12, service == 0x100 ?
 			(1u | (board_size_ == 0x08000000 ? (1u << 16) : 0)) :
+			service == 0x200 ? (1u | (1u << 16)) : // PALETTE_QUERY
 			service == 0x400 ? image_service_flags :
 			service == 0x0b00 ? video_service_flags :
 			service == 0x500 ? audio_service_flags : 1u);
 		put32(reply + 16, service);
 		put32(reply + 20, service == 0 ? 6 : service == 0x100 ? 4 :
-			service == 0x200 ? 5 : service == 0x400 ?
+			service == 0x200 ? 6 : service == 0x400 ?
 #ifdef AMIBERRY_WITH_WEBP
 			12 :
 #else
@@ -1773,6 +1812,78 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 			for (uint32_t col = x; col < x + width; ++col)
 				write_pixel(pixels + static_cast<size_t>(row) * pitch + col * bpp,
 					format, color >> 16, color >> 8, color);
+		return ok;
+	}
+	if (opcode == 0x0204) {
+		// COPY_SURFACE, as handle_copy_surface() and
+		// sdk_surface_copy_rect(). Same format, no flags. memmove keeps
+		// a same-surface overlap defined; rows go bottom-up when the
+		// destination starts below the source, as the card does.
+		if (request_length < 48)
+			return bad_request;
+		const uint32_t src_handle = be32(request);
+		const uint32_t dst_handle = be32(request + 4);
+		auto *src = surface_pixels(src_handle);
+		auto *dst = surface_pixels(dst_handle);
+		if (!src || !dst)
+			return bad_handle;
+		const uint32_t src_x = be32(request + 8), src_y = be32(request + 12);
+		const uint32_t dst_x = be32(request + 16), dst_y = be32(request + 20);
+		const uint32_t width = be32(request + 24), height = be32(request + 28);
+		const uint32_t flags = be32(request + 32);
+		if (flags)
+			return unsupported;
+		const uint32_t format = surface_format(src_handle);
+		if (format != surface_format(dst_handle))
+			return unsupported;
+		const uint32_t bpp = pixel_bytes(format);
+		const uint32_t src_pitch = surface_pitch(src_handle);
+		const uint32_t dst_pitch = surface_pitch(dst_handle);
+		if (!copy_rect_fits(src_x, src_y, width, height,
+		                    surface_width(src_handle), surface_height(src_handle),
+		                    src_pitch, bpp) ||
+		    !copy_rect_fits(dst_x, dst_y, width, height,
+		                    surface_width(dst_handle), surface_height(dst_handle),
+		                    dst_pitch, bpp))
+			return bad_request;
+		const uint32_t row_bytes = width * bpp;
+		const bool bottom_up = dst == src && dst_y > src_y;
+		for (uint32_t row = 0; row < height; ++row) {
+			const uint32_t copy_row = bottom_up ? height - 1 - row : row;
+			const auto *src_row = src +
+				static_cast<size_t>(src_y + copy_row) * src_pitch +
+				static_cast<size_t>(src_x) * bpp;
+			auto *dst_row = dst +
+				static_cast<size_t>(dst_y + copy_row) * dst_pitch +
+				static_cast<size_t>(dst_x) * bpp;
+			std::memmove(dst_row, src_row, row_bytes);
+		}
+		return ok;
+	}
+	if (opcode == 0x0205) {
+		// QUERY_PALETTE, as handle_query_palette() and
+		// sdk_palette_pack_be(). The surface field is accepted and
+		// ignored: the CLUT is display-global. The result is consecutive
+		// big-endian 0x00RRGGBB words in the caller's buffer.
+		if (request_length < 24)
+			return bad_request;
+		const uint32_t start = be32(request + 4);
+		const uint32_t count = be32(request + 8);
+		const uint32_t dst_offset = be32(request + 16);
+		const uint32_t flags = be32(request + 20);
+		if (flags & ~1u)
+			return bad_request;
+		if (flags & 1u)
+			return unsupported;
+		if (!count || count > 256 || start > 256 || start + count > 256)
+			return bad_request;
+		auto *buffer = find_buffer(be32(request + 12));
+		if (!buffer || dst_offset > buffer->length ||
+		    count * 4 > buffer->length - dst_offset)
+			return bad_handle;
+		auto *packed = buffer_data(buffer->handle) + dst_offset;
+		for (uint32_t i = 0; i < count; ++i)
+			put32(packed + i * 4, palette_[start + i]);
 		return ok;
 	}
 	if (opcode == 0x0404) {
@@ -2214,6 +2325,8 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 			be16(request + 26), be16(request + 28), be16(request + 30),
 			be32(request + 32), be32(request + 36));
 	}
+	if (opcode == 0x0500)
+		return decode_mp3(request, request_length, reply, reply_length);
 #if defined(ZZ9000_SDK_AUDIO) || defined(AMIBERRY_WITH_FFMPEG)
 #ifdef ZZ9000_SDK_AUDIO
 	if (opcode == 0x0503) {
@@ -2668,6 +2781,161 @@ uint16_t Engine::scale_surface(uint32_t src_handle, uint32_t dst_handle,
 	return ok;
 }
 
+uint16_t Engine::decode_mp3(const uint8_t *request, uint16_t request_length,
+	uint8_t *reply, uint16_t *reply_length)
+{
+#ifndef ZZ9000_SDK_AUDIO
+	(void)request;
+	(void)request_length;
+	(void)reply;
+	(void)reply_length;
+	return unsupported;
+#else
+	// handle_decode_mp3() then mp3_decode_compute(). EXPECT_END is
+	// accepted and otherwise ignored: the card's compute path does not
+	// read that flag.
+	if (request_length < 48)
+		return bad_request;
+	auto *src = find_buffer(be32(request));
+	auto *dst = find_buffer(be32(request + 12));
+	if (!src || !dst)
+		return bad_handle;
+	const uint32_t src_offset = be32(request + 4);
+	const uint32_t src_length = be32(request + 8);
+	const uint32_t dst_offset = be32(request + 16);
+	const uint32_t dst_capacity = be32(request + 20);
+	const uint32_t output_hz = be32(request + 24);
+	const uint32_t output_channels = be32(request + 28);
+	const uint32_t output_format = be32(request + 32);
+	const uint32_t flags = be32(request + 36);
+	constexpr uint32_t mp3_one_shot_max_input = 16u << 20; // SDK_MP3_ONE_SHOT_MAX_INPUT
+	if (src_offset > src->length || src_length > src->length - src_offset ||
+	    dst_offset > dst->length || dst_capacity > dst->length - dst_offset ||
+	    src_length == 0 || src_length > mp3_one_shot_max_input ||
+	    dst_capacity < 2)
+		return bad_request;
+	if (flags & ~1u)
+		return bad_request;
+	if (output_format != pcm_s16le && output_format != pcm_s16be)
+		return unsupported;
+
+	HostNearestRounding host_rounding;
+	static const bool mpg123_ready = mpg123_init() == MPG123_OK;
+	if (!mpg123_ready)
+		return io_error;
+	int decoder_error = MPG123_OK;
+	mpg123_handle *decoder = mpg123_new(nullptr, &decoder_error);
+	if (!decoder)
+		return no_memory;
+	struct DeleteDecoder {
+		mpg123_handle *handle;
+		~DeleteDecoder() { if (handle) mpg123_delete(handle); }
+	} delete_decoder{decoder};
+	// No MPG123_FORCE_RATE and no channel force. The stream path forces
+	// 48000 for S16LE playback; this one-shot path must not resample.
+	// A nonzero requested rate or channel count that differs from the
+	// stream is UNSUPPORTED, as mp3_decode_compute() does.
+	bool configured = mpg123_format_none(decoder) == MPG123_OK &&
+		mpg123_param(decoder, MPG123_RESYNC_LIMIT, -1, 0.0) == MPG123_OK &&
+		mpg123_param(decoder, MPG123_ADD_FLAGS, MPG123_QUIET, 0.0) == MPG123_OK;
+	for (const long stream_rate : {8000L, 11025L, 12000L, 16000L, 22050L,
+	                              24000L, 32000L, 44100L, 48000L})
+		configured = configured &&
+			mpg123_format(decoder, stream_rate, MPG123_MONO | MPG123_STEREO,
+			              MPG123_ENC_SIGNED_16) == MPG123_OK;
+	configured = configured && mpg123_open_feed(decoder) == MPG123_OK;
+	if (!configured)
+		return io_error;
+	if (mpg123_feed(decoder, buffer_data(src->handle) + src_offset,
+	                src_length) != MPG123_OK)
+		return bad_request;
+
+	// decode_mp3_samples() fills the destination until it is full or the
+	// input ends. mpg123 has no minimp3 offset cursor: the supplied
+	// buffer is fed, and MPG123_BUFFERFILL is the unconsumed tail. A
+	// truncated trailing frame can therefore be counted differently,
+	// and mpg123 may skip an ID3v1 tag the card's buffer decoder leaves
+	// unconsumed. Output is still native-rate S16.
+	const uint32_t cap = dst_capacity & ~1u;
+	auto *out = buffer_data(dst->handle) + dst_offset;
+	uint32_t written = 0;
+	long rate = 0;
+	int channels = 0;
+	bool accepted = false;
+	uint8_t chunk[8192];
+	for (;;) {
+		if (written >= cap)
+			break;
+		size_t done = 0;
+		const int rc = mpg123_decode(decoder, nullptr, 0, chunk,
+			sizeof chunk, &done);
+		if (rc == MPG123_NEW_FORMAT) {
+			int encoding = 0;
+			long next_rate = 0;
+			int next_channels = 0;
+			if (mpg123_getformat(decoder, &next_rate, &next_channels,
+			                     &encoding) != MPG123_OK ||
+			    next_rate <= 0 || (next_channels != 1 && next_channels != 2) ||
+			    encoding != MPG123_ENC_SIGNED_16)
+				return bad_request;
+			if (!accepted) {
+				if ((output_hz && output_hz != static_cast<uint32_t>(next_rate)) ||
+				    (output_channels &&
+				     output_channels != static_cast<uint32_t>(next_channels)))
+					return unsupported;
+				std::memset(out, 0, cap);
+				accepted = true;
+				rate = next_rate;
+				channels = next_channels;
+			} else if (next_rate != rate || next_channels != channels) {
+				break;
+			}
+		}
+		if (done) {
+			if (!accepted)
+				return bad_request;
+			const uint32_t copy = std::min<uint32_t>(
+				static_cast<uint32_t>(done) & ~1u, cap - written);
+			if (copy) {
+				std::memcpy(out + written, chunk, copy);
+				written += copy;
+			}
+			if (written >= cap || copy < done)
+				break;
+		}
+		if (rc == MPG123_NEED_MORE || rc == MPG123_DONE ||
+		    (rc == MPG123_OK && !done))
+			break;
+		if (rc == MPG123_OK || rc == MPG123_NEW_FORMAT)
+			continue;
+		break;
+	}
+	if (!accepted)
+		return bad_request;
+	if (output_format == pcm_s16be)
+		for (uint32_t i = 0; i + 1 < written; i += 2)
+			std::swap(out[i], out[i + 1]);
+	long fill = 0;
+	double fill_real = 0.0;
+	uint32_t consumed = src_length;
+	if (mpg123_getstate(decoder, MPG123_BUFFERFILL, &fill,
+	                    &fill_real) == MPG123_OK &&
+	    fill >= 0 && static_cast<uint64_t>(fill) <= src_length)
+		consumed = src_length - static_cast<uint32_t>(fill);
+	std::memset(reply, 0, 48);
+	put32(reply + 0, consumed);
+	put32(reply + 4, written);
+	put32(reply + 8, static_cast<uint32_t>(rate));
+	put32(reply + 12, static_cast<uint32_t>(channels));
+	put32(reply + 16, output_format);
+	put32(reply + 20, written / (2u * static_cast<uint32_t>(channels)));
+	// SDK_AUDIO_DECODE_RESULT_END when the input was consumed.
+	put32(reply + 24, consumed >= src_length ? 1u : 0u);
+	*reply_length = 48;
+	return ok;
+#endif
+}
+
 bool Engine::poll()
 {
 	bool dirty = false;
@@ -2703,6 +2971,9 @@ bool Engine::poll()
 		bool surface_framebuffer_write = false;
 		if (last_status_ == ok && opcode == 0x0203)
 			surface_framebuffer_write = be32(request + 16) == framebuffer_handle;
+		if (last_status_ == ok && opcode == 0x0204 &&
+		    be32(request + 20) == framebuffer_handle)
+			surface_framebuffer_write = true;
 		if (last_status_ == ok && opcode == 0x0407 &&
 		    be32(request + 20) == framebuffer_handle) {
 			const auto *args = request + 16;

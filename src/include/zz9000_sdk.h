@@ -20,6 +20,12 @@ public:
 	Engine(uint8_t *io_memory, uint8_t *vram_memory, uint32_t board_size);
 	~Engine();
 	void reset();
+	// Primary CLUT shadow for QUERY_PALETTE (0x0205). The RTG driver calls
+	// this when it writes a primary entry, and again for all 256 entries
+	// after reset(), which clears the table. The index is masked to 256
+	// entries, as the card's sdk_palette_set() does.
+	void set_palette_entry(uint32_t index, uint8_t red, uint8_t green,
+	                       uint8_t blue);
 	bool poll(); // True when a visible framebuffer or PIP frame changed.
 	uint16_t read_register(uint32_t offset) const;
 	bool write_register(uint32_t offset, uint16_t value);
@@ -103,6 +109,8 @@ private:
 	} overlay_{};
 	std::array<Surface, 4> surfaces_{};
 	Framebuffer framebuffer_{};
+	// 0x00RRGGBB words, as the card's sdk_palette shadow.
+	std::array<uint32_t, 256> palette_{};
 	uint32_t next_surface_handle_ = 1;
 	uint8_t *memory_at(uint32_t offset) const;
 	Buffer *find_buffer(uint32_t handle);
@@ -145,6 +153,8 @@ private:
 	uint16_t dispatch(uint16_t opcode, const uint8_t *request,
 	                  uint16_t request_length, uint8_t *reply,
 	                  uint16_t *reply_length);
+	uint16_t decode_mp3(const uint8_t *request, uint16_t request_length,
+	                    uint8_t *reply, uint16_t *reply_length);
 };
 
 } // namespace zz9000_sdk

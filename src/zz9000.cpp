@@ -111,6 +111,10 @@ enum zz9000_register {
 	ZZ_REG_FW_CAPABILITIES = 0xe6,
 	ZZ_REG_CONFIG_KEY = 0xe8,
 	ZZ_REG_CONFIG_PRESENT = 0xea,
+	// Raw ZZ9000.CFG access for ZZTop: write 0 resets the handshake to
+	// IDLE, write 1 stages the file; reads return the status and length.
+	ZZ_REG_CONFIG_FILE = 0xec,
+	ZZ_REG_CONFIG_FILE_LEN = 0xee,
 
 	// ZZ9000AX audio (AHI card)
 	ZZ_REG_AUDIO_SWAB = 0x70,
@@ -224,6 +228,7 @@ struct zz9000_state {
 	bool overlay_feature;
 	bool secondary_palette_feature;
 	uae_u16 config_key;
+	uae_u16 config_file_status = 0xffff; // ZZ_CONFIG_FILE_IDLE
 	bool vblank_read;
 
 	int mode_id;
@@ -1027,6 +1032,10 @@ static void zz_update_palette(zz9000_state *data, int index, int red, int green,
 	if (!secondary) {
 		picasso96_state[data->monitor_id].CLUT[index] = entry;
 		zz_refresh_host_palette(data);
+		// The card's SDK keeps a shadow of the primary CLUT for
+		// QUERY_PALETTE (0x0205).
+		if (data->sdk)
+			data->sdk->set_palette_entry(index, entry.Red, entry.Green, entry.Blue);
 	}
 	data->modified = true;
 }
@@ -2058,6 +2067,15 @@ static void zz_write_register(zz9000_state *data, uae_u32 offset, uae_u16 value)
 		case ZZ_REG_CONFIG_KEY:
 			data->config_key = value;
 			break;
+		case ZZ_REG_CONFIG_FILE:
+			// As the firmware's REG_ZZ_CONFIG_FILE: 0 resets to IDLE, 1
+			// stages ZZ9000.CFG from the SD card. An emulated card has no
+			// SD card, so a read finds no file (ZZ_CONFIG_FILE_NO_FILE).
+			if (value == 0)
+				data->config_file_status = 0xffff;
+			else if (value == 1)
+				data->config_file_status = 1;
+			break;
 		case ZZ_REG_ETH_TX:
 			if (data->net) {
 				auto *net = data->net;
@@ -2216,14 +2234,15 @@ static uae_u16 zz_read_register(zz9000_state *data, uae_u32 offset)
 			data->vblank_read = !data->vblank_read;
 			return data->vblank_read ? 1 : 0;
 		case ZZ_REG_CONFIG_KEY:
-			if ((data->config_key == 5 && data->int2) ||
-			    data->config_key == 9 || data->config_key == 10 || data->config_key == 11)
-				return 1;
-			return 0;
 		case ZZ_REG_CONFIG_PRESENT:
+			// Key 10 (yuv_rect) is reserved and reads absent, as in the
+			// firmware's zz_config_query().
 			return (data->config_key == 5 && data->int2) ||
-				data->config_key == 9 || data->config_key == 10 ||
-				data->config_key == 11 ? 1 : 0;
+				data->config_key == 9 || data->config_key == 11 ? 1 : 0;
+		case ZZ_REG_CONFIG_FILE:
+			return data->config_file_status;
+		case ZZ_REG_CONFIG_FILE_LEN:
+			return 0;
 		case ZZ_REG_AUDIO_CONFIG:
 			// Libretro's SDL audio stream stub does not deliver AX samples
 			// to its frontend; do not advertise a silent card there.
@@ -2616,8 +2635,15 @@ static void zz9000_reset(void *userdata)
 #if defined(AHI) && !defined(LIBRETRO)
 	zz_ax_audio_stop(data);
 #endif
-	if (data->sdk)
+	if (data->sdk) {
 		data->sdk->reset();
+		// The palette survives an Amiga reset on the card, and so does
+		// the SDK's shadow of it.
+		for (int i = 0; i < 256; i++)
+			data->sdk->set_palette_entry(i, data->primary_palette[i].Red,
+				data->primary_palette[i].Green, data->primary_palette[i].Blue);
+	}
+	data->config_file_status = 0xffff;
 #ifdef AMIBERRY
 	picasso_clear_external_host_cursor(data->monitor_id);
 #endif
