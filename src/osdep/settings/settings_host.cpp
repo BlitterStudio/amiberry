@@ -704,7 +704,7 @@ host_setting scale_setting()
 	s.clamp_scale = true;
 	s.unit = "%";
 	s.hidden_on = AMIBERRY_SETTINGS_HIDE_ON_MACOS | AMIBERRY_SETTINGS_HIDE_ON_IOS
-		| AMIBERRY_SETTINGS_HIDE_ON_ANDROID;
+		| AMIBERRY_SETTINGS_HIDE_ON_ANDROID | AMIBERRY_SETTINGS_HIDE_ON_WINDOWS;
 	return s;
 }
 #endif
