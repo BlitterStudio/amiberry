@@ -113,6 +113,10 @@ FILE *my_opentext(const TCHAR *name) noexcept
 {
 	return fopen(name, "r");
 }
+int host_remove(const char *path)
+{
+	return remove(path);
+}
 void amiga_to_timeval(struct mytimeval *tv, int, int, int, int)
 {
 	tv->tv_sec = 0;
