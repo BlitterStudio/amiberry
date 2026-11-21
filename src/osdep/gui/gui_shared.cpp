@@ -8,6 +8,7 @@
 
 #include "target.h"
 #include "gui/gui_handling.h"
+#include "host_fs.h"
 #include "tinyxml2.h"
 
 #include <fstream>
@@ -31,16 +32,16 @@ void gui_restart()
 
 std::string get_json_timestamp(const std::string& json_filename)
 {
-	std::ifstream f(json_filename);
-	if (!f.is_open())
+	FILE* f = host_fopen(json_filename.c_str(), "rb");
+	if (!f)
 		return "";
 
 	try
 	{
-		// Read only enough to find the timestamp fields near the top
 		// Parse the full file since nlohmann doesn't support partial parsing easily
 		nlohmann::json doc = nlohmann::json::parse(f, nullptr, false);
-		f.close();
+		fclose(f);
+		f = nullptr;
 		if (doc.is_discarded())
 			return "";
 
@@ -53,6 +54,8 @@ std::string get_json_timestamp(const std::string& json_filename)
 	catch (...)
 	{
 		// Parse failed
+		if (f)
+			fclose(f);
 	}
 	return "";
 }
@@ -63,7 +66,7 @@ std::string get_xml_timestamp(const std::string& xml_filename)
 	tinyxml2::XMLDocument doc;
 	auto error = false;
 
-	auto* f = fopen(xml_filename.c_str(), _T("rb"));
+	auto* f = host_fopen(xml_filename.c_str(), _T("rb"));
 	if (f)
 	{
 		auto err = doc.LoadFile(f);

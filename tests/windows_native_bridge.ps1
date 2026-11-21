@@ -40,10 +40,15 @@ try {
         HOME = (Join-Path $scratch 'profile')
         APPDATA = (Join-Path $scratch 'profile/AppData/Roaming')
         LOCALAPPDATA = (Join-Path $scratch 'profile/AppData/Local')
+        AMIBERRY_NATIVE_TEST_STARTUP_WHD = (Join-Path $scratch ('startup-' + [char]0x6A4B + '-' + [char]0xE4))
     }
     foreach ($name in @('Configurations', 'Settings', 'profile', 'profile/AppData/Roaming', 'profile/AppData/Local')) {
         New-Item -ItemType Directory -Path (Join-Path $scratch $name) -Force | Out-Null
     }
+    # An earlier session saved a WHDBoot folder whose name is outside the ANSI code page; the core loads it at startup.
+    New-Item -ItemType Directory -Path $childEnvironment.AMIBERRY_NATIVE_TEST_STARTUP_WHD -Force | Out-Null
+    [IO.File]::WriteAllBytes((Join-Path $scratch 'Settings/amiberry.conf'),
+        (New-Object Text.UTF8Encoding($false)).GetBytes("whdboot_path=$($childEnvironment.AMIBERRY_NATIVE_TEST_STARTUP_WHD)`n"))
 
     # Start-Process inherits this environment. Restore the caller immediately, even if launch fails.
     $previousEnvironment = @{}
@@ -62,7 +67,7 @@ try {
         }
     }
 
-    if (-not $core.WaitForExit(150000)) { throw 'Native bridge core did not exit within 150 seconds after client disconnect.' }
+    if (-not $core.WaitForExit(300000)) { throw 'Native bridge core did not exit within 300 seconds after client disconnect.' }
     if (-not (Test-Path -LiteralPath $reportPath -PathType Leaf)) {
         throw "Native core exited with code $($core.ExitCode) without a bridge report. Confirm this is an AMIBERRY_NATIVE_WINDOWS_UI build."
     }

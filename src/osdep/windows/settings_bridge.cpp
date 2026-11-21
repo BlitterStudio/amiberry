@@ -742,28 +742,8 @@ json whdboot_status()
 		{"totalBytes", std::max<std::int64_t>(0, download.total_bytes)}, {"result", download.result}};
 }
 
-// The downloader and its archive reader open files through the C runtime's narrow calls, which read a char path in
-// the ANSI code page. A UTF-8 name with non-ASCII characters (as the folder picker returns) would be opened under a
-// different name there, so installation would fail or fill another folder. Paths saved by older builds are ANSI and
-// work, so only a path that is valid non-ASCII UTF-8 under a non-UTF-8 code page is refused.
-void require_whdboot_path_openable()
-{
-	if (GetACP() == CP_UTF8)
-		return;
-	const auto folder = read_text([](char* buffer, size_t size) {
-		return amiberry_host_settings_get("whdboot_path", buffer, size);
-	});
-	if (folder.status != AMIBERRY_SETTINGS_OK)
-		return;
-	const bool non_ascii = std::any_of(folder.value.begin(), folder.value.end(), [](char c) { return (static_cast<unsigned char>(c) & 0x80) != 0; });
-	if (non_ascii && amiberry_valid_utf8(folder.value))
-		throw std::runtime_error("WHDBoot tools cannot be installed into a folder whose name has non-ASCII characters on this "
-			"Windows code page. Choose a WHDBoot folder with an ASCII-only path.");
-}
-
 json start_whdboot_download()
 {
-	require_whdboot_path_openable();
 	{
 		std::lock_guard<std::mutex> lock(download.mutex);
 		if (download.running)
