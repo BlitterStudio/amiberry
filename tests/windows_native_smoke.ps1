@@ -168,19 +168,55 @@ function Save-WindowImage([string]$Path) {
     } finally { $graphics.Dispose(); $bitmap.Dispose() }
 }
 
-function Open-EmulatorSettings {
-    $emulator = Wait-For {
-        $condition = [System.Windows.Automation.PropertyCondition]::new(
-            [System.Windows.Automation.AutomationElement]::ProcessIdProperty, $core.Id)
-        $windows = [System.Windows.Automation.AutomationElement]::RootElement.FindAll(
-            [System.Windows.Automation.TreeScope]::Children, $condition)
-        foreach ($candidate in $windows) {
-            if ($candidate.Current.NativeWindowHandle -and -not $candidate.Current.IsOffscreen -and
-                [AmiberrySmokeDesktop]::IsWindowVisible([IntPtr]$candidate.Current.NativeWindowHandle)) {
-                return $candidate
-            }
+function Find-EmulationWindow {
+    $condition = [System.Windows.Automation.PropertyCondition]::new(
+        [System.Windows.Automation.AutomationElement]::ProcessIdProperty, $core.Id)
+    $windows = [System.Windows.Automation.AutomationElement]::RootElement.FindAll(
+        [System.Windows.Automation.TreeScope]::Children, $condition)
+    foreach ($candidate in $windows) {
+        if ($candidate.Current.NativeWindowHandle -and -not $candidate.Current.IsOffscreen -and
+            [AmiberrySmokeDesktop]::IsWindowVisible([IntPtr]$candidate.Current.NativeWindowHandle)) {
+            return $candidate
         }
-    } 'visible SDL emulation window'
+    }
+}
+
+# A modal the core itself owns (a classic #32770 message box in the emulator process).
+function Find-CoreDialog {
+    foreach ($handle in [AmiberrySmokeDesktop]::TopLevelWindows()) {
+        if ([AmiberrySmokeDesktop]::ProcessId($handle) -ne $core.Id -or -not [AmiberrySmokeDesktop]::IsWindowVisible($handle)) { continue }
+        if ([AmiberrySmokeDesktop]::ClassName($handle) -eq '#32770') { return [System.Windows.Automation.AutomationElement]::FromHandle($handle) }
+    }
+    return $null
+}
+
+function Get-EditorStatus {
+    $texts = $script:Window.FindAll([System.Windows.Automation.TreeScope]::Descendants,
+        [System.Windows.Automation.PropertyCondition]::new(
+            [System.Windows.Automation.AutomationElement]::ControlTypeProperty, [System.Windows.Automation.ControlType]::Text))
+    foreach ($text in $texts) {
+        $name = $text.Current.Name
+        if ($name -match '^(Unsaved changes|All changes saved|Not saved to Library)') { return $name }
+    }
+}
+
+function Wait-EditorStatus([string]$Prefix, [string]$Description) {
+    Wait-For { $status = Get-EditorStatus; if ($status -and $status.StartsWith($Prefix)) { $status } } $Description
+}
+
+# Resume from the editor; a running machine with pending changes asks to apply them first.
+function Resume-Emulation {
+    Invoke-Control 'MachineStartButton'
+    $deadline = [DateTime]::UtcNow.AddSeconds(5)
+    while ([DateTime]::UtcNow -lt $deadline -and [AmiberrySmokeDesktop]::IsWindowVisible($uiHandle)) {
+        if (Find-Control 'PrimaryButton') { Invoke-Control 'PrimaryButton'; break }
+        Start-Sleep -Milliseconds 150
+    }
+    Wait-MainWindowHidden
+}
+
+function Open-EmulatorSettings {
+    $emulator = Wait-For { Find-EmulationWindow } 'visible SDL emulation window'
     $emulator.SetFocus()
     $handle = [IntPtr]$emulator.Current.NativeWindowHandle
     if ([AmiberrySmokeDesktop]::GetForegroundWindow() -ne $handle) {
@@ -459,13 +495,54 @@ try {
     Invoke-Control 'MachinePlay_UX smoke'
     Wait-MainWindowHidden
     Open-EmulatorSettings
-    Invoke-Control 'MachineStartButton'
-    Wait-MainWindowHidden
+    Wait-EditorStatus 'All changes saved' 'clean saved machine opened with F12' | Out-Null
+
+    # Edit the running saved machine and Resume without saving. Reopening with F12
+    # must still report the edit as unsaved on disk, keep the save prompt, and
+    # persist it once saved.
+    Select-Control 'Page_hardware'
+    (Wait-For { Find-Control 'Setting_ntsc' } 'NTSC setting on the running machine').GetCurrentPattern([System.Windows.Automation.TogglePattern]::Pattern).Toggle()
+    Wait-EditorStatus 'Unsaved changes' 'edit reported unsaved' | Out-Null
+    $fileBeforeResume = [IO.File]::ReadAllText($savedMachine)
+    Resume-Emulation
+    Open-EmulatorSettings
+    Wait-EditorStatus 'Unsaved changes' 'F12 reopen still reports edits that never reached the configuration file' | Out-Null
+    if ([IO.File]::ReadAllText($savedMachine) -ne $fileBeforeResume) { throw 'Resuming without saving changed the saved machine file.' }
+    Invoke-Control 'PART_BackButton'
+    Wait-For { Find-Control 'SecondaryButton' } 'Save machine changes prompt on leaving the reopened editor' | Out-Null
+    Invoke-Control 'CloseButton'
+    Wait-EditorStatus 'Unsaved changes' 'cancelled leave keeps the unsaved state' | Out-Null
+    Invoke-Control 'MachineSaveButton'
+    Wait-For { [IO.File]::ReadAllText($savedMachine) -ne $fileBeforeResume } 'edit persisted to the saved machine file' | Out-Null
+    Wait-EditorStatus 'All changes saved' 'saving clears the unsaved state' | Out-Null
+    Resume-Emulation
+    Open-EmulatorSettings
+    Wait-EditorStatus 'All changes saved' 'F12 after saving reports a clean machine' | Out-Null
+    Resume-Emulation
+
+    # A core-owned modal blocks the thread that services the UI pipe. Closing the
+    # emulation window raises the core's real Stop confirmation; leave it open longer
+    # than the UI's former 60 s request limit, dismiss it, and require the same
+    # connection to keep working.
+    $emulationWindow = Wait-For { Find-EmulationWindow } 'visible SDL emulation window for the modal scenario'
+    $emulationWindow.GetCurrentPattern([System.Windows.Automation.WindowPattern]::Pattern).Close()
+    Wait-For { Find-CoreDialog } 'core Stop confirmation' | Out-Null
+    $modalDeadline = [DateTime]::UtcNow.AddSeconds(70)
+    while ([DateTime]::UtcNow -lt $modalDeadline) {
+        if ($core.HasExited -or $uiProcess.HasExited) { throw 'The emulator or the native UI ended while the core dialog was open.' }
+        Start-Sleep -Milliseconds 500
+    }
+    $dialog = Find-CoreDialog
+    if (-not $dialog) { throw 'The core Stop confirmation closed by itself.' }
+    (Get-PickerControl $dialog '7').GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke()
+    Wait-For { -not (Find-CoreDialog) } 'core Stop confirmation dismissed' | Out-Null
+    Start-Sleep -Seconds 3
+    if ($core.HasExited -or $uiProcess.HasExited) { throw 'Dismissing a core dialog left open past 60 s ended the emulator or the native UI.' }
     Open-EmulatorSettings
     Invoke-Control 'RuntimeStopButton'
     Invoke-Control 'PrimaryButton'
     Wait-For { [AmiberrySmokeDesktop]::IsWindowVisible($uiHandle) -and (Find-Control 'NewMachineButton') } 'Library after saved-machine Play and stop' | Out-Null
-    Write-Output 'PASS: native pages -> settings/search/narrow layout -> retained dialog errors -> native Save -> hidden emulation -> physical F12 -> resume hides -> stop restores Library -> clean Save As -> safe rename -> saved-machine Play/F12/resume/stop'
+    Write-Output 'PASS: native pages -> settings/search/narrow layout -> retained dialog errors -> native Save -> hidden emulation -> physical F12 -> resume hides -> stop restores Library -> clean Save As -> safe rename -> saved-machine Play/F12/resume/stop -> unsaved edit survives Resume/F12 and Save -> core modal held past 60 s keeps the connection'
 } finally {
     # These PIDs belong to this smoke only; leave other Amiberry instances alone.
     if ($uiProcess) {
