@@ -53,12 +53,24 @@ public sealed partial class MainWindow : Window
     private readonly Button startButton, revertButton;
     private readonly SplitButton saveButton;
 
+    // The default size is larger than a small display (a 1024x768 monitor hid the footer and most of the
+    // window off screen): clamp it to the work area and keep the default position inside it.
+    private void FitToWorkArea(int width, int height)
+    {
+        var area = DisplayArea.GetFromWindowId(AppWindow.Id, DisplayAreaFallback.Nearest).WorkArea;
+        int fitted = Math.Min(width, area.Width), fittedHeight = Math.Min(height, area.Height);
+        AppWindow.Resize(new global::Windows.Graphics.SizeInt32(fitted, fittedHeight));
+        var position = AppWindow.Position;
+        int x = Math.Clamp(position.X, area.X, area.X + area.Width - fitted), y = Math.Clamp(position.Y, area.Y, area.Y + area.Height - fittedHeight);
+        if (x != position.X || y != position.Y) AppWindow.Move(new global::Windows.Graphics.PointInt32(x, y));
+    }
+
     public MainWindow(string? pipe)
     {
         pipeName = pipe;
         Title = "Amiberry";
         SystemBackdrop = new MicaBackdrop();
-        AppWindow.Resize(new global::Windows.Graphics.SizeInt32(1220, 880));
+        FitToWorkArea(1220, 880);
         AppWindow.Closing += OnClosing;
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(appTitleBar);

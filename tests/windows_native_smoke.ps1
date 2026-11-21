@@ -365,6 +365,13 @@ try {
     } 'native Library window'
     $uiHandle = [IntPtr]$script:Window.Current.NativeWindowHandle
     Wait-For { Find-Control 'NewMachineButton' } 'Library actions' | Out-Null
+    # The default window must fit the display it opens on (a 1024x768 monitor once pushed the footer off screen).
+    # UIA bounds include the invisible resize borders, hence the tolerance.
+    $initialBounds = $script:Window.Current.BoundingRectangle
+    $displayWidth = [AmiberrySmokeDesktop]::GetSystemMetrics(0); $displayHeight = [AmiberrySmokeDesktop]::GetSystemMetrics(1)
+    if ($initialBounds.X -lt -16 -or $initialBounds.Y -lt -16 -or $initialBounds.Right -gt $displayWidth + 16 -or $initialBounds.Bottom -gt $displayHeight + 16) {
+        throw "The initial editor window $($initialBounds.X),$($initialBounds.Y) $($initialBounds.Width)x$($initialBounds.Height) does not fit the ${displayWidth}x${displayHeight} display."
+    }
     if ($ScreenshotPath) {
         $imageDirectory = Split-Path ([IO.Path]::GetFullPath($ScreenshotPath))
         $imageStem = [IO.Path]::GetFileNameWithoutExtension($ScreenshotPath)
