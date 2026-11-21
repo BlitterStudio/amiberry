@@ -145,6 +145,7 @@ void render_panel_savestates();
 void render_panel_onscreen();
 void render_panel_whdload();
 void render_panel_themes();
+void reset_themes_panel_state();
 void render_panel_filter();
 void ShaderParameters_Open(const char* shader_name, bool rtg);
 void ShaderParameters_RenderPopup();

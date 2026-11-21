@@ -1584,6 +1584,7 @@ void amiberry_gui_init()
 
 	// Load GUI theme (for font selection)
 	load_theme(amiberry_options.gui_theme);
+	reset_themes_panel_state();
 	// Apply theme colors to ImGui (map GUISAN theme fields)
 	apply_imgui_theme();
 
