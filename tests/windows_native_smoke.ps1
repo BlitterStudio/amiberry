@@ -16,6 +16,7 @@ public static class AmiberrySmokeDesktop {
     [DllImport("user32.dll")] public static extern System.IntPtr GetForegroundWindow();
     [DllImport("user32.dll")] public static extern bool SetForegroundWindow(System.IntPtr window);
     [DllImport("user32.dll")] public static extern System.IntPtr GetWindow(System.IntPtr window, uint command);
+    [DllImport("user32.dll")] public static extern int GetSystemMetrics(int index);
     [StructLayout(LayoutKind.Sequential)]
     private struct Rect { public int Left, Top, Right, Bottom; }
     [DllImport("dwmapi.dll")]
@@ -250,7 +251,9 @@ function Get-OwnedWindowDiagnostic {
     if (-not $uiHandle) { return @() }
     $ours = @($uiProcess.Id)
     if ($core) { $ours += $core.Id }
-    $lines = @("main editor enabled: $($script:Window.Current.IsEnabled)")
+    $bounds = $script:Window.Current.BoundingRectangle
+    $lines = @("main editor enabled: $($script:Window.Current.IsEnabled)",
+        "main editor bounds: $($bounds.X),$($bounds.Y) $($bounds.Width)x$($bounds.Height); primary display $([AmiberrySmokeDesktop]::GetSystemMetrics(0))x$([AmiberrySmokeDesktop]::GetSystemMetrics(1))")
     $foreground = [AmiberrySmokeDesktop]::GetForegroundWindow()
     $lines += ('foreground: hwnd=0x{0:X} pid={1} class={2}' -f [int64]$foreground, [AmiberrySmokeDesktop]::ProcessId($foreground), [AmiberrySmokeDesktop]::ClassName($foreground))
     foreach ($handle in [AmiberrySmokeDesktop]::TopLevelWindows()) {
@@ -413,6 +416,7 @@ try {
     Save-WindowImage $ScreenshotPath
 
     $transform = $script:Window.GetCurrentPattern([System.Windows.Automation.TransformPattern]::Pattern)
+    $desktopBounds = $script:Window.Current.BoundingRectangle
     $transform.Resize(700, 880)
     Wait-For {
         $bounds = $script:Window.Current.BoundingRectangle
@@ -422,8 +426,10 @@ try {
             $start.Width -gt 0 -and $start.Right -le $bounds.Right
     } 'narrow window keeps settings and primary action usable' | Out-Null
     if ($ScreenshotPath) { Save-WindowImage (Join-Path $imageDirectory "$imageStem-narrow.png") }
-    $transform.Resize(1220, 880)
-    Wait-For { $script:Window.Current.BoundingRectangle.Width -ge 1210 -and -not (Find-Control 'Setting_cpu_model').Current.IsOffscreen } 'restored desktop layout' | Out-Null
+    # Return to the size the window had before narrowing. A fixed target is unreachable on a
+    # hosted runner whose display is smaller than the app's default window.
+    $transform.Resize($desktopBounds.Width, $desktopBounds.Height)
+    Wait-For { $script:Window.Current.BoundingRectangle.Width -ge $desktopBounds.Width - 10 -and -not (Find-Control 'Setting_cpu_model').Current.IsOffscreen } 'restored desktop layout' | Out-Null
 
     # Exercise a real storage dialog error: the input must survive backend
     # rejection, and cancelling must leave the machine's mounts unchanged.
