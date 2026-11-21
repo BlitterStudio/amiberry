@@ -5485,11 +5485,11 @@ uae_u32 host_IoctlSocket(TrapContext *ctx, SB, uae_u32 sd, uae_u32 request, uae_
 
 	switch (request) {
 	case 0x4004667B: /* FIOGETOWN */
-		sb->ownertask = get_long (arg);
+		trap_put_long(ctx, arg, sb->ownertask);
 		return 0;
 
 	case 0x8004667C: /* FIOSETOWN */
-		trap_put_long(ctx, arg,sb->ownertask);
+		sb->ownertask = trap_get_long(ctx, arg);
 		return 0;
 	case 0x8004667D: /* FIOASYNC */
 #ifdef _WIN32
