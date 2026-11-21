@@ -44,6 +44,9 @@ public sealed partial class MainWindow : Window
     private string currentPage = "machines", query = "", currentPath = "";
     private bool session, dirty, closing, navigating, dialogOpen, committedNotSaved, statusReceived, windowHidden;
     private int pendingApply, committedApply, settingsEpoch, libraryEpoch, devicesEpoch;
+    // Set when a running machine was applied with edits that never reached its configuration file; the editor is
+    // closed then, so reopening it (F12) must still report those edits as unsaved. Holds the machine's file ("" if untitled).
+    private string? resumedUnsavedPath;
     private NativeClient Core => client ?? throw new InvalidOperationException("The emulator is not connected.");
     private bool Emulating => status.S("state") is "running" or "paused";
     private readonly Button stopButton;
@@ -271,7 +274,7 @@ public sealed partial class MainWindow : Window
             {
                 bool wasRunning = Emulating;
                 status = await Core.CallAsync("status", cancellation: lifetime.Token);
-                if (wasRunning && !Emulating) committedApply = 0;
+                if (wasRunning && !Emulating) { committedApply = 0; resumedUnsavedPath = null; }
                 runtimePanel.Visibility = Emulating ? Visibility.Visible : Visibility.Collapsed;
                 string machine = status.S("description");
                 string activity = status.S("state") == "paused" ? "Paused" : $"Running · {status.D("fps"):0.0} fps";

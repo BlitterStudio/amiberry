@@ -31,6 +31,11 @@ internal sealed class NativeClient : IAsyncDisposable
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token, cancellation);
         timeout.CancelAfter(TimeSpan.FromSeconds(60));
         await requests.WaitAsync(timeout.Token);
+        // The limit covers only waiting for a turn. Once a request is on the wire the core may legitimately
+        // reply late (a modal file picker or confirmation blocks the thread that services the pipe), and a
+        // cancelled partial exchange would drop the connection. A dead core still ends the read at once.
+        timeout.CancelAfter(Timeout.InfiniteTimeSpan);
+        try { timeout.Token.ThrowIfCancellationRequested(); } catch { requests.Release(); throw; }
         bool sent = false;
         try
         {
@@ -83,7 +88,8 @@ internal sealed class NativeClient : IAsyncDisposable
         timeout.CancelAfter(TimeSpan.FromSeconds(60));
         while (true)
         {
-            var result = await CallAsync("poll", new { id }, timeout.Token);
+            // The deadline applies between polls; cancelling an exchange in flight would drop the connection.
+            var result = await CallAsync("poll", new { id });
             switch (result.S("state"))
             {
                 case "done": return;

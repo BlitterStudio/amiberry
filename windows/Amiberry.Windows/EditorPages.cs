@@ -20,7 +20,12 @@ public sealed partial class MainWindow
         if (session && !await LeaveSessionAsync()) return;
         await EnsureSettingsOpenAsync();
         snapshot = await Core.CallAsync("open", request);
-        session = true; dirty = snapshot.B("changed"); committedNotSaved = false;
+        // Reopening a running machine's editor (F12) starts from its pending preferences, so the bridge cannot tell
+        // which of them were never written to the configuration file; the editor remembers that across Resume.
+        bool reopening = request.GetType().GetProperty("path") is null && request.GetType().GetProperty("preset") is null;
+        session = true; dirty = snapshot.B("changed");
+        committedNotSaved = reopening && Emulating && resumedUnsavedPath is not null && resumedUnsavedPath == snapshot.S("currentConfiguration");
+        if (!committedNotSaved) resumedUnsavedPath = null;
         currentPath = snapshot.S("currentConfiguration"); pendingApply = snapshot.I("apply");
         newMachineName = name ?? "New machine";
         SetModel(request.GetType().GetProperty("preset")?.GetValue(request) as string, (request.GetType().GetProperty("config")?.GetValue(request) as int?) ?? 0);
@@ -110,7 +115,7 @@ public sealed partial class MainWindow
             if (result == ContentDialogResult.None) return false;
             if (result == ContentDialogResult.Primary && !await SaveAsync()) return false;
         }
-        await Core.CallAsync("close"); session = false; dirty = false; committedNotSaved = false; drafts.Clear(); rows.Clear(); pendingApply = 0;
+        await Core.CallAsync("close"); session = false; dirty = false; committedNotSaved = false; resumedUnsavedPath = null; drafts.Clear(); rows.Clear(); pendingApply = 0;
         overviewState = overviewModel = overviewSummary = null;
         return true;
     }
@@ -129,7 +134,7 @@ public sealed partial class MainWindow
         committedApply = Math.Max(committedApply, pendingApply);
         var result = await Core.CallAsync("save", new { path });
         committedApply = Math.Max(committedApply, result.I("apply"));
-        currentPath = path; dirty = false; committedNotSaved = false;
+        currentPath = path; dirty = false; committedNotSaved = false; resumedUnsavedPath = null;
         snapshot = await Core.CallAsync("snapshot"); ApplySnapshot(snapshot);
         library = await Core.CallAsync("library"); UpdateFooter(); return true;
     }
@@ -154,6 +159,7 @@ public sealed partial class MainWindow
             if (answer == ContentDialogResult.None) return;
             if (answer == ContentDialogResult.Primary && !await SaveAsync()) return;
         }
+        bool unsaved = dirty || committedNotSaved;
         int apply = Math.Max(pendingApply, committedApply);
         if (Emulating && apply > 0 && await DialogAsync(apply >= 2 ? "Restart to apply changes?" : "Reset to apply changes?", "Unsaved work in the Amiga will be lost.", "Apply and Continue", cancel: "Cancel", destructive: true) != ContentDialogResult.Primary) return;
         var committed = await Core.CallAsync("commit");
@@ -163,6 +169,7 @@ public sealed partial class MainWindow
         await WaitForRunningAsync();
         committedApply = 0;
         await Core.CallAsync("close"); session = false; drafts.Clear(); dirty = false; pendingApply = 0;
+        resumedUnsavedPath = unsaved ? currentPath : null;
         currentPage = "machines"; SetNavigation(false); await RenderLibraryAsync();
     }
     private string EditorMachineName() => currentPath.Length > 0 ? Path.GetFileNameWithoutExtension(currentPath) : newMachineName;

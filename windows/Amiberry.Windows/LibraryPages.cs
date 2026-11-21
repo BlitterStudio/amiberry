@@ -414,6 +414,7 @@ public sealed partial class MainWindow
     {
         if (session && !await LeaveSessionAsync()) return;
         await Core.ActionAsync("quick_play", path);
+        resumedUnsavedPath = null;
         committedApply = Math.Max(committedApply, 2);
         await Core.CallAsync("start", new { apply = 2 });
         await WaitForRunningAsync();
