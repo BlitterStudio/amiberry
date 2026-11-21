@@ -18,6 +18,7 @@
 #include "disk.h"
 #include "crc32.h"
 #include "fsdb.h"
+#include "host_fs.h"
 #include "fsusage.h"
 #include "zarchive.h"
 #include "diskutil.h"
@@ -214,7 +215,7 @@ static int zfile_free (struct zfile *f)
 		f->f = NULL;
 	}
 	if (f->deleteafterclose) {
-		_wunlink (f->name);
+		host_remove (f->name);
 		write_log (_T("deleted temporary file '%s'\n"), f->name);
 	}
 	xfree (f->name);

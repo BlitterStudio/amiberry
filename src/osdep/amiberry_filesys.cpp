@@ -565,8 +565,33 @@ bool compare_nocase(const std::string& first, const std::string& second)
 	);
 }
 
+#if defined(_WIN32) && !defined(LIBRETRO)
+// Host file names are UTF-8 (the native UI, the folder dialog) or, in
+// configurations and caches older builds wrote, in the ANSI code page. Well
+// formed UTF-8 is UTF-8 and anything else is ANSI, the rule
+// my_register_mount_root() applies to mount roots; nname_to_host() output is
+// always UTF-8. The process code page is not touched.
+static std::wstring to_wide(const char* text)
+{
+	if (!text || !*text)
+		return {};
+	const UINT code_page = amiberry_valid_utf8(text) ? CP_UTF8 : CP_ACP;
+	const int length = MultiByteToWideChar(code_page, 0, text, -1, nullptr, 0);
+	if (length <= 0)
+		return {};
+	std::wstring wide(static_cast<size_t>(length), L'\0');
+	MultiByteToWideChar(code_page, 0, text, -1, wide.data(), length);
+	wide.resize(static_cast<size_t>(length) - 1);
+	return wide;
+}
+#endif
+
 std::filesystem::path host_path(const std::string& utf8)
 {
+#if defined(_WIN32) && !defined(LIBRETRO)
+	if (!amiberry_valid_utf8(utf8))
+		return std::filesystem::path(to_wide(utf8.c_str()));
+#endif
 #ifdef __cpp_char8_t
 	return std::filesystem::path(std::u8string(utf8.begin(), utf8.end()));
 #else
@@ -646,17 +671,6 @@ int my_remove(const TCHAR* nname)
 }
 
 #if defined(_WIN32) && !defined(LIBRETRO)
-static std::wstring to_wide(const char* utf8)
-{
-	const int length = MultiByteToWideChar(CP_UTF8, 0, utf8, -1, nullptr, 0);
-	if (length <= 0)
-		return {};
-	std::wstring wide(static_cast<size_t>(length), L'\0');
-	MultiByteToWideChar(CP_UTF8, 0, utf8, -1, wide.data(), length);
-	wide.resize(static_cast<size_t>(length) - 1);
-	return wide;
-}
-
 int host_stat(const char* path, STAT* st)
 {
 	struct _stat64 wide_st {};
@@ -922,7 +936,9 @@ bool my_existslink(const char* name)
 bool my_existsfile2(const char* name)
 {
 	if (!name) return false;
-	return fs::exists(name) && fs::is_regular_file(name);
+	std::error_code ec;
+	const fs::path path = host_path(name);
+	return fs::exists(path, ec) && fs::is_regular_file(path, ec);
 }
 
 bool my_existsfiledir(const char *name)
@@ -1329,7 +1345,7 @@ void my_set_time_explicit(struct my_openfile_s* mos) noexcept
 	}
 
 	try {
-		const fs::path filepath(path);
+		const fs::path filepath = host_path(path);
 
 		if (filepath.empty()) {
 			write_log("my_isfilehidden: empty path provided\n");
@@ -1338,7 +1354,7 @@ void my_set_time_explicit(struct my_openfile_s* mos) noexcept
 
 #ifdef _WIN32
 		// On Windows, check the file attributes using Win32 API
-		const DWORD attrs = GetFileAttributes(path);
+		const DWORD attrs = GetFileAttributesW(filepath.c_str());
 		if (attrs == INVALID_FILE_ATTRIBUTES) {
 			write_log("my_isfilehidden: failed to get attributes for %s\n", path);
 			return false;
@@ -1366,8 +1382,7 @@ void my_set_time_explicit(struct my_openfile_s* mos) noexcept
 
 	try {
 		// Convert to filesystem path and validate
-		const auto utf8_path = nname_to_host(path);
-		const fs::path filepath = host_path(utf8_path);
+		const fs::path filepath = host_path(path);
 
 		if (filepath.empty()) {
 			write_log("my_setfilehidden: empty path provided\n");
@@ -1663,7 +1678,129 @@ void my_set_time_explicit(struct my_openfile_s* mos) noexcept
  * already written; only crash-durability is waived. Real I/O errors fail the
  * save and leave the original file intact.
  */
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(LIBRETRO)
+[[nodiscard]] bool my_save_file_atomic(const TCHAR* filename, const void* data, size_t len) noexcept
+{
+	if (!filename || !data) {
+		write_log("my_save_file_atomic: null argument\n");
+		return false;
+	}
+
+	/* The name is a host path, UTF-8 from the native UI or the ANSI code page
+	   from older configurations: host_path() reads either, and the wide calls
+	   below never go through the process code page. */
+	std::wstring wtarget = host_path(filename).native();
+	/* Follow symlinks/reparse points like fopen("w"): resolve to the real file
+	   so the replace updates the target rather than clobbering the link. */
+	{
+		const DWORD attr = GetFileAttributesW(wtarget.c_str());
+		if (attr != INVALID_FILE_ATTRIBUTES && (attr & FILE_ATTRIBUTE_REPARSE_POINT)) {
+			const HANDLE h = CreateFileW(wtarget.c_str(), 0,
+				FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+				nullptr, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nullptr);
+			if (h != INVALID_HANDLE_VALUE) {
+				wchar_t resolved[MAX_PATH];
+				const DWORD n = GetFinalPathNameByHandleW(h, resolved, MAX_PATH,
+					FILE_NAME_NORMALIZED | VOLUME_NAME_DOS);
+				CloseHandle(h);
+				if (n > 0 && n < MAX_PATH) {
+					const wchar_t* rp = resolved;
+					if (wcsncmp(rp, L"\\\\?\\", 4) == 0)	/* strip the \\?\ prefix */
+						rp += 4;
+					wtarget.assign(rp);
+				}
+			}
+		}
+	}
+	/* Temp name unique per process, thread and call, so two concurrent saves to
+	   the same target never share a temp file. */
+	static volatile LONG s_tmpseq = 0;
+	const LONG seq = InterlockedIncrement(&s_tmpseq);
+	const std::wstring wtmp = wtarget + L".tmp."
+		+ std::to_wstring((unsigned long)GetCurrentProcessId()) + L"."
+		+ std::to_wstring((unsigned long)GetCurrentThreadId()) + L"."
+		+ std::to_wstring((unsigned long)seq);
+	const std::string target = host_path_utf8(std::filesystem::path(wtarget));
+	const std::string tmp = host_path_utf8(std::filesystem::path(wtmp));
+
+	/* Text mode ("w") matches the legacy fopen("w") path so CRLF line endings
+	   are preserved byte-for-byte on Windows. */
+	FILE* fp = _wfopen(wtmp.c_str(), L"w");
+	if (!fp) {
+		write_log("my_save_file_atomic: fopen('%s') failed: %s\n", tmp.c_str(), strerror(errno));
+		return false;
+	}
+
+	const char* p = static_cast<const char*>(data);
+	size_t written = 0;
+	while (written < len) {
+		const size_t n = fwrite(p + written, 1, len - written, fp);
+		if (n == 0) {
+			write_log("my_save_file_atomic: fwrite to '%s' failed at %zu/%zu bytes: %s\n",
+				tmp.c_str(), written, len, strerror(errno));
+			fclose(fp);
+			_wremove(wtmp.c_str());
+			return false;
+		}
+		written += n;
+	}
+
+	if (fflush(fp) != 0) {
+		write_log("my_save_file_atomic: fflush '%s' failed: %s\n", tmp.c_str(), strerror(errno));
+		fclose(fp);
+		_wremove(wtmp.c_str());
+		return false;
+	}
+	if (_commit(_fileno(fp)) != 0) {
+		const int e = errno;
+		if (e == EINVAL) {
+			write_log("my_save_file_atomic: _commit '%s' unsupported (errno=%d), continuing\n", tmp.c_str(), e);
+		} else {
+			write_log("my_save_file_atomic: _commit '%s' failed: %s\n", tmp.c_str(), strerror(e));
+			fclose(fp);
+			_wremove(wtmp.c_str());
+			return false;
+		}
+	}
+	if (fclose(fp) != 0) {
+		write_log("my_save_file_atomic: fclose '%s' failed: %s\n", tmp.c_str(), strerror(errno));
+		_wremove(wtmp.c_str());
+		return false;
+	}
+
+	/* Atomic replace. ReplaceFile preserves the original's attributes/ACLs;
+	   it requires the target to exist, so fall back to MoveFileEx for a new
+	   file. Both write through to disk for rename durability. */
+	bool ok;
+	if (GetFileAttributesW(wtarget.c_str()) != INVALID_FILE_ATTRIBUTES) {
+		ok = ReplaceFileW(wtarget.c_str(), wtmp.c_str(), nullptr,
+			REPLACEFILE_WRITE_THROUGH | REPLACEFILE_IGNORE_MERGE_ERRORS, nullptr, nullptr) != 0;
+		if (!ok) {
+			/* Target may have been deleted between the check and here, or its
+			   filesystem may not support ReplaceFile. Fall back to a plain
+			   atomic replace (loses attribute preservation, but completes). */
+			write_log("my_save_file_atomic: ReplaceFileW '%s' failed: %lu, falling back to MoveFileEx\n",
+				target.c_str(), GetLastError());
+			ok = MoveFileExW(wtmp.c_str(), wtarget.c_str(),
+				MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH) != 0;
+			if (!ok)
+				write_log("my_save_file_atomic: MoveFileEx fallback -> '%s' failed: %lu\n",
+					target.c_str(), GetLastError());
+		}
+	} else {
+		ok = MoveFileExW(wtmp.c_str(), wtarget.c_str(),
+			MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH) != 0;
+		if (!ok)
+			write_log("my_save_file_atomic: MoveFileExW -> '%s' failed: %lu\n", target.c_str(), GetLastError());
+	}
+	if (!ok) {
+		_wremove(wtmp.c_str());
+		return false;
+	}
+	return true;
+}
+#elif defined(_WIN32)
+/* libretro on Windows: narrow calls, so the core's VFS layer sees them. */
 [[nodiscard]] bool my_save_file_atomic(const TCHAR* filename, const void* data, size_t len) noexcept
 {
 	if (!filename || !data) {
@@ -1694,8 +1831,6 @@ void my_set_time_explicit(struct my_openfile_s* mos) noexcept
 			}
 		}
 	}
-	/* Temp name unique per process, thread and call, so two concurrent saves to
-	   the same target never share a temp file. */
 	static volatile LONG s_tmpseq = 0;
 	const LONG seq = InterlockedIncrement(&s_tmpseq);
 	const std::string tmp = target + ".tmp."
@@ -1703,8 +1838,6 @@ void my_set_time_explicit(struct my_openfile_s* mos) noexcept
 		+ std::to_string((unsigned long)GetCurrentThreadId()) + "."
 		+ std::to_string((unsigned long)seq);
 
-	/* Text mode ("w") matches the legacy fopen("w") path so CRLF line endings
-	   are preserved byte-for-byte on Windows. */
 	FILE* fp = fopen(tmp.c_str(), "w");
 	if (!fp) {
 		write_log("my_save_file_atomic: fopen('%s') failed: %s\n", tmp.c_str(), strerror(errno));
@@ -1748,17 +1881,11 @@ void my_set_time_explicit(struct my_openfile_s* mos) noexcept
 		return false;
 	}
 
-	/* Atomic replace. ReplaceFile preserves the original's attributes/ACLs;
-	   it requires the target to exist, so fall back to MoveFileEx for a new
-	   file. Both write through to disk for rename durability. */
 	bool ok;
 	if (GetFileAttributesA(target.c_str()) != INVALID_FILE_ATTRIBUTES) {
 		ok = ReplaceFileA(target.c_str(), tmp.c_str(), nullptr,
 			REPLACEFILE_WRITE_THROUGH | REPLACEFILE_IGNORE_MERGE_ERRORS, nullptr, nullptr) != 0;
 		if (!ok) {
-			/* Target may have been deleted between the check and here, or its
-			   filesystem may not support ReplaceFile. Fall back to a plain
-			   atomic replace (loses attribute preservation, but completes). */
 			write_log("my_save_file_atomic: ReplaceFileA '%s' failed: %lu, falling back to MoveFileEx\n",
 				target.c_str(), GetLastError());
 			ok = MoveFileExA(tmp.c_str(), target.c_str(),
@@ -1979,16 +2106,12 @@ void my_set_time_explicit(struct my_openfile_s* mos) noexcept
 	}
 
 	try {
-		// Convert path to UTF-8 using string_view for efficiency
-		const auto utf8_path = nname_to_host(name);
-		if (utf8_path.empty()) {
-			write_log("my_opentext: path conversion failed for '%s'\n", name);
-			return nullptr;
-		}
+		// zfile's text opener receives a UTF-8 host path, not a guest
+		// filesystem nname. Converting it as Latin-1 double-encodes it.
 
 		// Check if file exists and is readable before attempting to open
 		std::error_code ec;
-		const fs::path filepath = host_path(utf8_path);
+		const fs::path filepath = host_path(name);
 		if (!fs::exists(filepath, ec)) {
 			write_log("my_opentext: file '%s' does not exist\n", name);
 			return nullptr;
@@ -2003,7 +2126,7 @@ void my_set_time_explicit(struct my_openfile_s* mos) noexcept
 		errno = 0;
 
 		// Open file with binary mode and read-only access
-		FILE* file = host_fopen(utf8_path.c_str(), "rb");
+		FILE* file = host_fopen(name, "rb");
 
 		// Enhanced error reporting
 		if (file == nullptr) {
@@ -2298,12 +2421,10 @@ bool copyfile(const char* target, const char* source, const bool replace)
     }
 
     try {
-        // Convert paths to UTF-8 for filesystem operations
-        const auto source_path = nname_to_host(source);
-        const auto target_path = nname_to_host(target);
-
-        const fs::path src_fs = host_path(source_path);
-        const fs::path dst_fs = host_path(target_path);
+        // The names are host file names (the configuration and its backup),
+        // not Amiga filesystem names, so they are not nname_to_host() input.
+        const fs::path src_fs = host_path(source);
+        const fs::path dst_fs = host_path(target);
 
         // Check if source file exists
         std::error_code ec;

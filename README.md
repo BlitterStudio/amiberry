@@ -100,6 +100,8 @@ Download the [installer or portable ZIP](https://github.com/BlitterStudio/amiber
 
 > **Windows ARM64 in a VM (VMware Fusion / Parallels / Hyper-V):** the guest usually has no OpenGL ICD installed, so Amiberry's GL init fails at startup.  Drop Mesa3D's `opengl32.dll` (`mesa-llvmpipe-arm64` from [mmozeiko/build-mesa](https://github.com/mmozeiko/build-mesa/releases)) next to `Amiberry.exe` — that gives you software OpenGL 3.3+ and the GUI comes up.  Native WoA hardware doesn't need this workaround.
 
+**Experimental Windows 11 native UI:** an optional WinUI 3 frontend is available for x64 and ARM64. It is off by default; normal downloads and the existing Windows presets keep Dear ImGui. Experimental, unsigned packages are published separately by [Windows native CI](https://github.com/BlitterStudio/amiberry/actions/workflows/windows-native.yml), not as release replacements. Extract the complete package and launch `Amiberry.exe`; keep the adjacent `native-ui/` directory intact. Requires Windows 11 (build 22000 or newer). The package includes its .NET 10 and Windows App SDK runtimes; users do not need to install them separately.
+
 ### Android
 
 Currently in Closed Testing on [Google Play](https://play.google.com/store/apps/details?id=com.blitterstudio.amiberry) for [Ko-fi](https://ko-fi.com/midwan) members, who receive a 100% discount code that also covers the final release. Open Testing is planned after the next release, followed by a public paid release on Google Play. AArch64 & x86_64, with full ARM64 JIT support. See the [Android wiki page](https://github.com/BlitterStudio/amiberry/wiki/Android) for details.
@@ -158,6 +160,35 @@ cmake --build build -j$(nproc)
 See the [build guide](https://github.com/BlitterStudio/amiberry/wiki/Compile-from-source) for platform-specific instructions, dependencies, and build options.
 
 Desktop builds enable SDL3-backed genlock video and camera input by default (`USE_VIDEOGRAB`). `USE_FFMPEG` independently enables ZZ9000 and genlock media decoding when FFmpeg 5.1 or newer development files are available; it requires libavformat 59.27+, libavcodec 59.37+, libavutil 57.28+, libswresample 4.7+, and libswscale 6.7+. `USE_WEBP` enables still and animated WebP decoding when libwebp and libwebpdemux development files are available.
+
+### Experimental Windows 11 native UI
+
+Build on Windows 11 with the usual Windows dependencies (llvm-mingw, vcpkg, CMake and Ninja), plus **.NET SDK 10** on `PATH`. Set `LLVM_MINGW_ROOT` and `VCPKG_ROOT` as for the standard Windows presets.
+
+```powershell
+cmake --preset windows-native-release
+cmake --build --preset windows-native-release
+cmake --install out/build/windows-native-release --prefix out/install/windows-native-release
+```
+
+Use `windows-arm64-native-release` for ARM64, or `windows-native-debug` / `windows-arm64-native-debug` for Debug. Each inherits its existing Windows preset and enables `AMIBERRY_NATIVE_WINDOWS_UI=ON`; the option defaults to `OFF`, is Windows-only, and removes ImGui from that build. Native UI builds require `USE_VULKAN=OFF` (the default).
+
+CMake publishes `windows/Amiberry.Windows/Amiberry.Windows.csproj` as self-contained `win-x64` or `win-arm64`, including the Windows App SDK. Run `out/build/<preset>/Amiberry.exe` or `out/install/<preset>/Amiberry.exe`, not the frontend directly: the core launches `native-ui/Amiberry.Windows.exe` and owns the private settings bridge. Installation and packaging copy the full `native-ui/` directory. Existing configurations and media paths still belong to the emulator; portable packages retain the `amiberry.portable` marker. Configure a separate build directory when switching between the default and native frontends.
+
+The Library offers saved machines, model presets and Play a File. In the editor, **Ctrl+F** focuses live settings search and **Ctrl+S** saves; **Save As** remains available in Save's dropdown even without pending edits. The native Save picker starts in the current configuration's folder, or the Configurations folder for a new machine. Invalid dialog input stays editable with the error beside it.
+
+Starting or resuming emulation hides the main UI. Press **F12** in the emulation window to reopen settings; **Resume** hides them again, and **Stop** returns to the Library. The primary action names any required reset or restart and asks before discarding Amiga work. Runtime drive and save-state commands appear only while emulating. Settings rows adapt to narrow windows, with longer help available from each row's information button.
+
+The separate **Windows Native UI** workflow (`windows-native.yml`) builds experimental x64 and ARM64 portable packages; it does not replace the existing Windows CI or release installers.
+
+Focused checks against an installed build:
+
+```powershell
+./tests/windows_native_bridge.ps1 -AmiberryPath "$PWD/out/install/windows-native-release/Amiberry.exe"
+./tests/windows_native_smoke.ps1 -AmiberryPath "$PWD/out/install/windows-native-release/Amiberry.exe"
+```
+
+The UI smoke test needs an interactive Windows desktop. Both checks use isolated portable copies, not your existing configuration.
 
 ### Emulator regression checks
 

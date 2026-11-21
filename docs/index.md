@@ -164,6 +164,9 @@ sudo apt install amiberry</code></pre>
     <p class="platform-alt">
       Running ARM64 in a VM (VMware Fusion / Parallels / Hyper-V)?  Drop <code>opengl32.dll</code> from <a href="https://github.com/mmozeiko/build-mesa/releases"><code>mesa-llvmpipe-arm64</code></a> next to <code>Amiberry.exe</code> so the GUI can start — guest VMs typically lack an OpenGL ICD.
     </p>
+    <p class="platform-alt">
+      An <a href="#experimental-windows-11-native-ui">experimental Windows 11 WinUI 3 frontend</a> is available separately for x64 and ARM64. Default Windows releases still use Dear ImGui.
+    </p>
   </div>
 
   <div class="platform-card android">
@@ -175,6 +178,24 @@ sudo apt install amiberry</code></pre>
     </p>
   </div>
 </div>
+
+### Experimental Windows 11 native UI
+
+The optional WinUI 3 frontend targets **Windows 11, build 22000 or newer**, on x64 and ARM64. It is experimental and disabled by default. [Windows native CI](https://github.com/BlitterStudio/amiberry/actions/workflows/windows-native.yml) provides separate unsigned artifacts; these do not replace the standard Windows releases or their CI.
+
+Extract the complete portable package and run `Amiberry.exe`. Keep `native-ui/` beside it: this contains `Amiberry.Windows.exe` and its self-contained **.NET 10 and Windows App SDK runtimes**. No separate runtime installation is needed. The core launches and connects the frontend; do not launch the frontend directly. Portable packages keep writable data beside the emulator using `amiberry.portable`, as usual.
+
+To build, use Windows 11 with **.NET SDK 10** on `PATH`, plus the existing Windows llvm-mingw, vcpkg, CMake and Ninja setup (`LLVM_MINGW_ROOT` and `VCPKG_ROOT`):
+
+```powershell
+cmake --preset windows-native-release
+cmake --build --preset windows-native-release
+cmake --install out/build/windows-native-release --prefix out/install/windows-native-release
+```
+
+For ARM64, substitute `windows-arm64-native-release`. Debug presets are `windows-native-debug` and `windows-arm64-native-debug`. These inherit the existing Windows presets and set `AMIBERRY_NATIVE_WINDOWS_UI=ON`. The Windows-only option defaults to `OFF`; enabling it excludes ImGui and requires `USE_VULKAN=OFF` (the default). The normal presets and releases remain unchanged.
+
+The UI project is `windows/Amiberry.Windows/Amiberry.Windows.csproj`. CMake publishes it for the core's architecture (`win-x64` or `win-arm64`) to `out/build/<preset>/native-ui/`. Run `out/build/<preset>/Amiberry.exe` for development, or `out/install/<preset>/Amiberry.exe` after installation; the complete UI directory is copied with the core. Use separate build directories for native and default frontends.
 
 ---
 

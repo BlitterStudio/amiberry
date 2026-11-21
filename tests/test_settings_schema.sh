@@ -251,7 +251,7 @@ assert option_values == {
 # setting: iOS has no serial backend or desktop window, Android never
 # switches host display modes or traps its pointer, and the classic
 # settings window's own settings are the desktop GUI's alone.
-platforms = {"desktop", "macos", "ios", "android"}
+platforms = {"desktop", "macos", "ios", "android", "windows"}
 def hidden_on(entry):
     return set(entry.get("hidden_on", []))
 assert all(hidden_on(o) <= platforms for o in schema["options"] + host), "hidden_on names"
@@ -262,7 +262,7 @@ assert all("android" not in hidden_on(o) for o in schema["options"]), "an option
 # Nothing this export lists is a desktop-GUI-only machine option.
 assert all("desktop" not in hidden_on(o) for o in schema["options"]), "an option hides on the desktop"
 assert not hidden_on(by_id["use_gui"]) and not hidden_on(by_id["gfx_vsync"])
-gui_only = {"macos", "ios", "android"}
+gui_only = {"macos", "ios", "android", "windows"}
 for id in ("Quickstart", "read_config_descriptions", "gui_joystick_control",
            "disable_shutdown_button", "default_quickstart_compatibility", "gui_theme",
            "gui_layout_scale"):

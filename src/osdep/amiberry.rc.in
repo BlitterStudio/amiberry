@@ -32,4 +32,4 @@ BEGIN
 END
 
 /* Per-monitor DPI awareness v2 manifest */
-1 24 "@CMAKE_SOURCE_DIR@/src/osdep/amiberry.manifest"
+1 24 "@AMIBERRY_WINDOWS_MANIFEST@"

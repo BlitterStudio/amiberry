@@ -420,8 +420,7 @@ set(IMGUI_GUI_FILES
 		src/osdep/imgui/whdload.cpp
 )
 
-# The ImGui GUI and overlays: everywhere but the native Apple apps and the
-# Android app, whose own UI replaces them.
+# The ImGui GUI and overlays: native front ends replace them.
 if(AMIBERRY_IMGUI)
     message(STATUS "Using ImGui for GUI")
     list(APPEND SOURCE_FILES
@@ -511,12 +510,20 @@ else()
 endif()
 
 if(WIN32)
+    if(AMIBERRY_NATIVE_WINDOWS_UI)
+        set(AMIBERRY_WINDOWS_MANIFEST "${CMAKE_SOURCE_DIR}/src/osdep/windows/amiberry.manifest")
+    else()
+        set(AMIBERRY_WINDOWS_MANIFEST "${CMAKE_SOURCE_DIR}/src/osdep/amiberry.manifest")
+    endif()
     file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/generated")
     set(AMIBERRY_WINDOWS_RESOURCE "${CMAKE_CURRENT_BINARY_DIR}/generated/amiberry.rc")
     configure_file(
             "${CMAKE_SOURCE_DIR}/src/osdep/amiberry.rc.in"
             "${AMIBERRY_WINDOWS_RESOURCE}"
             @ONLY
+    )
+    set_source_files_properties("${AMIBERRY_WINDOWS_RESOURCE}" PROPERTIES
+            OBJECT_DEPENDS "${AMIBERRY_WINDOWS_MANIFEST}"
     )
     target_sources(${PROJECT_NAME} PRIVATE "${AMIBERRY_WINDOWS_RESOURCE}")
 endif()
@@ -594,7 +601,7 @@ if(CMAKE_SYSTEM_NAME MATCHES "Darwin" AND NOT IOS)
             src/osdep/macos_debugger_console.mm
             src/osdep/macos_window.mm
     )
-elseif(NOT IOS)
+elseif(NOT IOS AND AMIBERRY_IMGUI)
     target_sources(${PROJECT_NAME} PRIVATE
             src/osdep/imgui_debugger_console.cpp
     )

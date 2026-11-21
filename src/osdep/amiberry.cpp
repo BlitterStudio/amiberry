@@ -56,6 +56,9 @@
 #include "disk.h"
 #include "savestate.h"
 #include "zfile.h"
+#ifdef AMIBERRY_NATIVE_WINDOWS_UI
+#include "windows/settings_bridge.h"
+#endif
 #include "7z/Sha256.h"
 #include "zarchive.h"
 #include "rtgmodes.h"
@@ -78,6 +81,7 @@
 #include "clipboard.h"
 #include "gui_layout_scale.h"
 #include "fsdb.h"
+#include "host_fs.h"
 #include "scsidev.h"
 #ifdef FLOPPYBRIDGE
 #include "floppybridge_lib.h"
@@ -1331,9 +1335,11 @@ void set_current_config_path(const char* filename)
 		current_config_path.clear();
 		return;
 	}
+	// A host path: UTF-8 from the native UI, ANSI from older configurations.
+	// host_path() reads either and the stored path is UTF-8.
 	std::error_code ec;
-	const auto absolute = std::filesystem::absolute(std::filesystem::path(filename), ec);
-	current_config_path = ec ? std::string(filename) : absolute.lexically_normal().string();
+	const auto absolute = std::filesystem::absolute(host_path(filename), ec);
+	current_config_path = ec ? std::string(filename) : host_path_utf8(absolute.lexically_normal());
 }
 
 void forget_loaded_config()
@@ -6173,6 +6179,11 @@ void target_run()
 
 void target_quit()
 {
+#ifdef AMIBERRY_NATIVE_WINDOWS_UI
+	// Join downloads before teardown: they use the core's archive state.
+	if (!uae_restart_pending())
+		windows_native_shutdown_bridge();
+#endif
 	// A quit waits for the update check so the process exits cleanly; a
 	// restart replaces the session and must not block on the network.
 	cancel_async_update_check(!uae_restart_pending());
@@ -11528,7 +11539,7 @@ static configuration_file_path_migration_result migrate_legacy_configuration_fil
 	if (!backup_configuration_file_for_path_migration(config_file))
 		return configuration_file_path_migration_result::failed;
 
-	if (!my_save_file_atomic(config_file.string().c_str(), migrated_text.data(), migrated_text.size()))
+	if (!my_save_file_atomic(host_path_utf8(config_file).c_str(), migrated_text.data(), migrated_text.size()))
 	{
 		write_log("Configuration file path migration: failed to save %s\n",
 			config_file.string().c_str());
@@ -11546,12 +11557,15 @@ static int migrate_legacy_configuration_file_paths_in_directory(const std::strin
 	failed = false;
 	if (configuration_directory.empty() || path_pairs.empty())
 		return 0;
-	if (!my_existsdir(configuration_directory.c_str()))
+	// A host directory: UTF-8 from the native UI or ANSI from older
+	// configurations, read by host_path() either way.
+	const auto directory = host_path(configuration_directory);
+	std::error_code ec;
+	if (!std::filesystem::is_directory(directory, ec))
 		return 0;
 
 	int migrated_files = 0;
-	std::error_code ec;
-	std::filesystem::recursive_directory_iterator iterator(configuration_directory,
+	std::filesystem::recursive_directory_iterator iterator(directory,
 		std::filesystem::directory_options::none, ec);
 	if (ec)
 	{
