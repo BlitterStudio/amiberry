@@ -11,8 +11,14 @@
 # owns the window showing the experience, verified by the heading the window displays or by its image name (never a
 # shell host); closes an open Start menu with Escape only while the Start menu host owns the foreground; and then
 # requires the desktop to stay clear. It reports the foreground window explicitly (handle, process, image, session),
-# because a UWP window can be the foreground without being found by name. If the foreground stays something it may not
-# end, or anything else large holds it, the step fails with that identity instead of reporting success.
+# because a UWP window can be the foreground without being found by name. If an immersive surface it cannot identify
+# stays in the foreground, or the experience's host is one it may not end, the step fails with that identity instead of
+# reporting success.
+#
+# Only immersive or first-run shell surfaces count as obstructions. Observed on windows-11-arm: a full-screen
+# Windows.UI.Core.CoreWindow owned by WWAHost.exe, fronted by the explorer's Shell_OOBEProxy window, then the Search or
+# Start host once it is gone. An ordinary console or terminal (the hosted runner's own) never blocks activation and is
+# left alone whatever its size.
 #
 # -CheckOnly only reports what obstructs the desktop and changes nothing (it also runs outside CI).
 param(
@@ -101,6 +107,7 @@ $startHosts = @('StartMenuExperienceHost', 'SearchHost')
 # Never end these, even if one owns the window that obstructs the desktop: they are the shell itself.
 $protectedHosts = @('explorer', 'ApplicationFrameHost', 'dwm', 'winlogon', 'csrss', 'svchost', 'sihost', 'ShellExperienceHost', 'StartMenuExperienceHost', 'SearchHost', 'TextInputHost', 'LogonUI', 'wininit', 'services', 'lsass')
 $shellClasses = @('Shell_TrayWnd', 'Shell_SecondaryTrayWnd', 'Progman', 'WorkerW')
+$immersiveClasses = @('Windows.UI.Core.CoreWindow', 'ApplicationFrameWindow', 'Shell_OOBEProxy')
 
 # Identity of a process by id, from WMI so that it also works for a process Get-Process cannot describe.
 function Get-ProcessInfo([uint32]$ProcessId) {
@@ -136,12 +143,18 @@ function Get-Obstruction {
         if ($window.Class -in $shellClasses) { continue }
         $info = Get-ProcessInfo $window.ProcessId
         $name = if ($info) { $info.ProcessName } else { $null }
-        if ($info -and ($name -eq $privacyHost -or ($window.ScreenCoverage -ge 0.5 -and (Test-PrivacyExperienceWindow $window)))) {
+        # Only an immersive or first-run shell surface can hold the foreground against a desktop app. Ordinary
+        # desktop windows (a console, a terminal, another app) never block activation, whatever their size.
+        $immersive = $window.Class -in $immersiveClasses
+        if ($info -and ($name -eq $privacyHost -or ($immersive -and $window.ScreenCoverage -ge 0.5 -and (Test-PrivacyExperienceWindow $window)))) {
             $found += [pscustomobject]@{ Kind = 'privacy'; Info = $info; Window = $window }
         } elseif ($window.Foreground -and $startHosts -contains $name) {
             $found += [pscustomobject]@{ Kind = 'start'; Info = $info; Window = $window }
-        } elseif ($window.Foreground -and $window.ScreenCoverage -ge 0.5) {
-            # Something else large holds the foreground: not ours to dismiss, so it only fails the step with its identity.
+        } elseif ($window.Class -eq 'Shell_OOBEProxy' -and $window.ScreenCoverage -ge 0.5) {
+            # The shell's own full-screen first-run surface (it goes away with the experience it fronts).
+            $found += [pscustomobject]@{ Kind = 'oobe'; Info = $info; Window = $window }
+        } elseif ($window.Foreground -and $immersive -and $window.ScreenCoverage -ge 0.5) {
+            # An immersive surface this step cannot identify holds the foreground: it only fails the step, with its identity.
             $found += [pscustomobject]@{ Kind = 'unidentified'; Info = $info; Window = $window }
         }
     }
@@ -198,7 +211,7 @@ while ([DateTime]::UtcNow -lt $deadline) {
             Write-Host "Ending the first-run privacy experience host $name, pid $($item.Info.Id)."
             Stop-Process -Id $item.Info.Id -Force
             Wait-Process -Id $item.Info.Id -Timeout 10 -ErrorAction SilentlyContinue
-        } elseif ($item.Kind -in @('privacy', 'unidentified')) {
+        } elseif ($item.Kind -in @('privacy', 'unidentified', 'oobe')) {
             Write-Host "Not ending pid $($item.Window.ProcessId) ($name): this step may not end it."
         } elseif (([DateTime]::UtcNow - $lastEscape).TotalSeconds -ge 2) {
             Write-Host "Closing the open $name window with Escape."
