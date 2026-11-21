@@ -172,3 +172,12 @@ jobs:
             native-ui-smoke-${{ matrix.arch }}.png
           if-no-files-found: error
           retention-days: 7
+
+      - name: Upload native UI smoke failure screenshots
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: native-ui-smoke-failure-${{ matrix.arch }}
+          path: native-ui-smoke-${{ matrix.arch }}*.png
+          if-no-files-found: ignore
+          retention-days: 7

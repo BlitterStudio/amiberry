@@ -80,7 +80,7 @@ public static class AmiberrySmokeDesktop {
 }
 . "$PSScriptRoot/lib/windows_native_layout.ps1"
 
-function Wait-For([scriptblock]$Condition, [string]$Description, [int]$Seconds = 45) {
+function Wait-For([scriptblock]$Condition, [string]$Description, [int]$Seconds = 45, [scriptblock]$Detail = $null) {
     $deadline = [DateTime]::UtcNow.AddSeconds($Seconds)
     do {
         try { $value = & $Condition }
@@ -106,8 +106,13 @@ function Wait-For([scriptblock]$Condition, [string]$Description, [int]$Seconds =
                 Save-WindowImage $failureImage
             }
         } catch { $diagnostic += $_.Exception.Message }
+        if ($Detail) { try { $diagnostic += & $Detail } catch { $diagnostic += "detail failed: $($_.Exception.Message)" } }
     }
-    throw ("Timed out waiting for $Description.`n" + (Get-PSCallStack | Out-String) + ($diagnostic -join "`n"))
+    # PowerShell wraps and truncates a long exception message in the CI log, so the
+    # evidence goes out as plain lines before the throw.
+    Write-Host "--- diagnostics: timed out waiting for $Description ---"
+    foreach ($line in $diagnostic) { Write-Host $line }
+    throw ("Timed out waiting for $Description.`n" + (Get-PSCallStack | Out-String))
 }
 
 function Find-Control([string]$Id) {
@@ -302,9 +307,30 @@ function Wait-MainWindowHidden {
 function Save-TestMachine([string]$Path) {
     Invoke-Control 'MachineSaveButton'
     $dialog = Wait-NativePicker 'Save'
-    (Get-PickerControl $dialog '1001').GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).SetValue($Path)
+    $edit = Get-PickerControl $dialog '1001'
+    $edit.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).SetValue($Path)
+    $typed = $edit.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).Current.Value
     (Get-PickerControl $dialog '1').GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke()
-    Wait-For { (Test-Path -LiteralPath $Path) -and [IO.File]::ReadAllText($Path).Contains('cpu_model=68000') } 'machine actually saved through the native picker' | Out-Null
+    # Say what the picker saw and where any saved file landed: the UI reports a
+    # successful save, so a timeout means the file is elsewhere or its content differs.
+    $saveDetail = {
+        $lines = @("expected: $Path", "picker file name after SetValue: $typed", "expected exists: $(Test-Path -LiteralPath $Path)")
+        if (Test-Path -LiteralPath $Path) {
+            $text = [IO.File]::ReadAllText($Path)
+            $lines += "expected length: $($text.Length); cpu lines: " + (($text -split "`n" | Where-Object { $_ -match 'cpu' } | Select-Object -First 6) -join ' | ')
+        }
+        foreach ($root in @($scratch, [Environment]::GetFolderPath('MyDocuments'), $PWD.Path)) {
+            foreach ($file in @(Get-ChildItem -LiteralPath $root -Recurse -Depth 4 -Filter '*.uae' -File -ErrorAction SilentlyContinue | Select-Object -First 20)) {
+                $lines += "found .uae: $($file.FullName) ($($file.Length) bytes, $($file.LastWriteTime.ToString('HH:mm:ss')))"
+            }
+        }
+        foreach ($log in @(Get-ChildItem -LiteralPath $scratch -Filter '*.log' -File -ErrorAction SilentlyContinue)) {
+            $lines += "log $($log.Name):"
+            $lines += @(Get-Content -LiteralPath $log.FullName -Tail 15 -ErrorAction SilentlyContinue)
+        }
+        $lines
+    }
+    Wait-For { (Test-Path -LiteralPath $Path) -and [IO.File]::ReadAllText($Path).Contains('cpu_model=68000') } 'machine actually saved through the native picker' -Detail $saveDetail | Out-Null
     Wait-NativePickerClosed 'Save'
     Wait-For { Find-Control 'MachineStartButton' } 'saved editor after native Save' | Out-Null
 }
