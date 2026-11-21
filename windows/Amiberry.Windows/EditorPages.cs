@@ -186,6 +186,8 @@ public sealed partial class MainWindow
     }
     private async Task RenderEditorAsync()
     {
+        // Rebuilding drops every row; a rejected draft must be resolved while its row still shows the error.
+        if (!await FlushDraftsAsync()) return;
         overviewTitle = overviewState = overviewModel = overviewSummary = null;
         if (!EditorPages.Any(item => item.Id == currentPage)) { currentPage = "overview"; SelectNavigation(currentPage); }
         BeginPage(EditorPages.First(item => item.Id == currentPage).Title,

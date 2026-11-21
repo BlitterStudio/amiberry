@@ -435,6 +435,19 @@ try {
         Select-Control 'Page_machines'
         Wait-For { Find-Control 'NewMachineButton' } 'Library after app settings' | Out-Null
     }
+    # App Settings has the same rule: choosing a Library folder rebuilds the page, so a rejected draft must stop it
+    # before the folder picker opens or anything changes. The over-long path is refused by the backend.
+    Select-Control 'Page_app'
+    Wait-For { (Find-Control 'PageHeading').Current.Name -eq 'App Settings' } 'App Settings page' | Out-Null
+    $logfileRow = Wait-For { Find-Control 'Setting_logfile_path' } 'logfile path setting'
+    $logfileRow.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).SetValue('A:\' + ('x' * 5000) + '.log')
+    Invoke-Control 'FolderChoose_4'
+    Wait-For { Find-Control 'SettingDiscard_logfile_path' } 'rejected logfile path reported on its row by the folder action' | Out-Null
+    Start-Sleep -Seconds 1
+    if (Find-OwnedDialog) { throw 'A folder dialog opened while a rejected app setting draft was pending.' }
+    Invoke-Control 'SettingDiscard_logfile_path'
+    Wait-For { -not (Find-Control 'SettingDiscard_logfile_path') } 'discarded logfile path draft' | Out-Null
+    Select-Control 'Page_machines'
     Invoke-Control 'NewMachineButton'
     Invoke-Control 'Preset_a500'
     Invoke-Control 'CloseButton'

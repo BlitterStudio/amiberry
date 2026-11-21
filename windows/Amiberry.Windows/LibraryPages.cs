@@ -136,6 +136,7 @@ public sealed partial class MainWindow
         if (path.Length > 0 && !exists) details.Children.Add(ThemedText("This folder doesn't exist yet. It is created when you import files.", "SystemFillColorCautionBrush"));
         var choose = Button("Choose Folder…", async () =>
         {
+            if (!await FlushDraftsAsync()) return;
             if (await PickFolderAsync() is { } picked) { library = await Core.CallAsync("folder_set", new { id, path = picked }); await refresh(); }
         }, "FolderChoose_" + id);
         AutomationProperties.SetName(choose, "Choose " + label + " folder");
@@ -627,6 +628,8 @@ public sealed partial class MainWindow
 
     private async Task RenderAppSettingsAsync()
     {
+        // Rebuilding drops every row; a rejected draft must be resolved while its row still shows the error.
+        if (!await FlushDraftsAsync()) return;
         host = await Core.CallAsync("host");
         downloadStatus = downloadDetail = null; installDownload = cancelDownload = null; downloadProgress = null;
         BeginPage("App Settings", "Settings for Amiberry itself, saved to amiberry.conf as you change them. A machine's own settings are edited in that machine.", true, "Search app settings");
