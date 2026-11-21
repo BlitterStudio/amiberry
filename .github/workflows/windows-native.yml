@@ -1,0 +1,189 @@
+name: Windows native CI
+
+# Opt-in WinUI 3 builds only. Default Windows CI and signed releases stay in
+# c-cpp.yml; these unsigned experimental artifacts are never release assets.
+on:
+  workflow_dispatch:
+  push:
+    branches: [master]
+    paths-ignore:
+      - '**.md'
+      - 'wiki/**'
+      - '.github/ISSUE_TEMPLATE/**'
+  pull_request:
+    paths-ignore:
+      - '**.md'
+      - 'wiki/**'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build-windows-native:
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            runner: windows-2025
+            flavor: ucrt-x86_64
+            triplet: x64-mingw-dynamic
+            toolchain: cmake/Toolchain-x86_64-w64-mingw32.cmake
+            preset: windows-native-release
+            codecs: avcodec avformat avutil swresample swscale webp webpdemux
+          - arch: arm64
+            runner: windows-11-arm
+            flavor: ucrt-aarch64
+            triplet: arm64-mingw-dynamic
+            toolchain: cmake/Toolchain-aarch64-w64-mingw32.cmake
+            preset: windows-arm64-native-release
+            codecs: webp webpdemux
+    env:
+      LLVM_MINGW_TAG: '20260421'
+      LLVM_MINGW_FLAVOR: ${{ matrix.flavor }}
+      VCPKG_DEFAULT_TRIPLET: ${{ matrix.triplet }}
+      VCPKG_DEFAULT_HOST_TRIPLET: ${{ matrix.triplet }}
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - name: Install .NET SDK 10
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Cache llvm-mingw toolchain
+        id: cache-llvm-mingw
+        uses: actions/cache@v5
+        with:
+          path: C:/llvm-mingw
+          key: llvm-mingw-${{ env.LLVM_MINGW_TAG }}-${{ env.LLVM_MINGW_FLAVOR }}
+
+      - name: Install llvm-mingw
+        if: steps.cache-llvm-mingw.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: |
+          $base = "llvm-mingw-$env:LLVM_MINGW_TAG-$env:LLVM_MINGW_FLAVOR"
+          $url = "https://github.com/mstorsjo/llvm-mingw/releases/download/$env:LLVM_MINGW_TAG/$base.zip"
+          Invoke-WebRequest -Uri $url -OutFile "$env:RUNNER_TEMP/llvm-mingw.zip"
+          Expand-Archive -Path "$env:RUNNER_TEMP/llvm-mingw.zip" -DestinationPath "$env:RUNNER_TEMP/llvm-mingw"
+          New-Item -ItemType Directory -Force -Path C:/llvm-mingw | Out-Null
+          Move-Item "$env:RUNNER_TEMP/llvm-mingw/$base/*" C:/llvm-mingw -Force
+
+      - name: Expose llvm-mingw to subsequent steps
+        shell: pwsh
+        run: |
+          'LLVM_MINGW_ROOT=C:/llvm-mingw' | Out-File -FilePath $env:GITHUB_ENV -Append
+          'C:/llvm-mingw/bin' | Out-File -FilePath $env:GITHUB_PATH -Append
+
+      - name: Bootstrap vcpkg
+        shell: pwsh
+        run: |
+          if (-not (Test-Path 'C:/vcpkg/.git')) {
+            git clone --depth 1 https://github.com/microsoft/vcpkg.git C:/vcpkg
+            if ($LASTEXITCODE -ne 0) { throw 'vcpkg clone failed.' }
+          }
+          & C:/vcpkg/bootstrap-vcpkg.bat -disableMetrics
+          if ($LASTEXITCODE -ne 0) { throw 'vcpkg bootstrap failed.' }
+          'VCPKG_ROOT=C:/vcpkg' | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Cache vcpkg installed packages
+        uses: actions/cache@v5
+        with:
+          path: out/build/${{ matrix.preset }}/vcpkg_installed
+          key: ${{ runner.os }}-${{ matrix.arch }}-vcpkg-${{ env.LLVM_MINGW_TAG }}-${{ hashFiles('vcpkg.json', matrix.toolchain) }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.arch }}-vcpkg-${{ env.LLVM_MINGW_TAG }}-
+
+      - name: Download QEMU-UAE plugin
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: .github/scripts/download-qemu-uae-plugin.ps1 -Asset qemu-uae-windows-${{ matrix.arch }}.zip
+
+      - name: Configure native UI build
+        shell: bash
+        run: |
+          set -euo pipefail
+          cmake --preset '${{ matrix.preset }}' -DQEMU_UAE_PLUGIN="$QEMU_UAE_PLUGIN" -DQEMU_UAE_PLUGIN_DIR="$QEMU_UAE_PLUGIN_DIR"
+          test -s 'out/build/${{ matrix.preset }}/amiberry-product-version.txt'
+
+      - name: Build core and publish WinUI
+        shell: bash
+        run: |
+          set -euo pipefail
+          cmake --build --preset '${{ matrix.preset }}'
+          test -f 'out/build/${{ matrix.preset }}/native-ui/Amiberry.Windows.exe'
+          for library in ${{ matrix.codecs }}; do
+            find 'out/build/${{ matrix.preset }}' -maxdepth 1 -iname "*${library}*.dll" -print -quit | grep -q .
+          done
+
+      - name: Install portable layout
+        shell: bash
+        run: |
+          set -euo pipefail
+          cmake --install 'out/build/${{ matrix.preset }}' --prefix 'out/install/${{ matrix.preset }}'
+          test -f 'out/install/${{ matrix.preset }}/Amiberry.exe'
+          test -f 'out/install/${{ matrix.preset }}/native-ui/Amiberry.Windows.exe'
+          test -f 'out/install/${{ matrix.preset }}/native-ui/Amiberry.Windows.runtimeconfig.json'
+          test -f 'out/install/${{ matrix.preset }}/native-ui/Amiberry.Windows.pri'
+          test -f 'out/install/${{ matrix.preset }}/native-ui/App.xbf'
+          test -f 'out/install/${{ matrix.preset }}/native-ui/coreclr.dll'
+          test -f 'out/install/${{ matrix.preset }}/native-ui/Microsoft.UI.Xaml.dll'
+          for library in ${{ matrix.codecs }}; do
+            find 'out/install/${{ matrix.preset }}' -maxdepth 1 -iname "*${library}*.dll" -print -quit | grep -q .
+          done
+          : > 'out/install/${{ matrix.preset }}/amiberry.portable'
+
+      - name: Package experimental portable ZIP
+        shell: bash
+        run: |
+          set -euo pipefail
+          ZIP_NAME='amiberry-native-ui-experimental-${{ github.sha }}-windows-${{ matrix.arch }}-portable.zip'
+          PACKAGE_ROOT="out/package/${{ matrix.preset }}/${ZIP_NAME%.zip}"
+          mkdir -p "$(dirname "$PACKAGE_ROOT")"
+          cmake -E copy_directory 'out/install/${{ matrix.preset }}' "$PACKAGE_ROOT"
+          ZIP_PATH="$PWD/$ZIP_NAME"
+          (cd 'out/package/${{ matrix.preset }}' && cmake -E tar cf "$ZIP_PATH" --format=zip "${ZIP_NAME%.zip}")
+
+      - name: Check the native settings bridge
+        shell: pwsh
+        run: ./tests/windows_native_bridge.ps1 -AmiberryPath "$PWD/out/install/${{ matrix.preset }}/Amiberry.exe"
+
+      # Hosted ARM64 runners can start a job with the first sign-in privacy experience and the Start menu over the
+      # desktop, so UI automation never receives focus. Clear them (or fail) before the UI smoke.
+      - name: Prepare the interactive desktop
+        shell: pwsh
+        run: ./.github/scripts/prepare-windows-desktop.ps1
+
+      - name: Smoke-test installed native UI and bridge
+        shell: pwsh
+        run: |
+          ./tests/windows_native_smoke.ps1 -AmiberryPath "$PWD/out/install/${{ matrix.preset }}/Amiberry.exe" -ScreenshotPath "$PWD/native-ui-smoke-${{ matrix.arch }}.png"
+
+      - name: Upload experimental artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: amiberry-windows-native-experimental-${{ matrix.arch }}
+          path: |
+            amiberry-native-ui-experimental-*.zip
+            native-ui-smoke-${{ matrix.arch }}.png
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload native UI smoke failure screenshots
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: native-ui-smoke-failure-${{ matrix.arch }}
+          path: native-ui-smoke-${{ matrix.arch }}*.png
+          if-no-files-found: ignore
+          retention-days: 7

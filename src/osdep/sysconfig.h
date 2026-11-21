@@ -504,6 +504,12 @@ typedef int32_t uae_atomic;
 #include <cstdio>
 #ifdef _WIN32
 #include <cstring>
+#ifndef LIBRETRO
+/* Host file names are UTF-8 (the native UI) or ANSI (older configurations);
+ * host_fopen() (host_fs.h, amiberry_filesys.cpp) opens either through the
+ * wide API. */
+FILE* host_fopen(const char* path, const char* mode);
+#endif
 static inline FILE* uae_fopen(const char* path, const char* mode)
 {
 	char winmode[16];
@@ -513,7 +519,11 @@ static inline FILE* uae_fopen(const char* path, const char* mode)
 			winmode[j++] = mode[i];
 	}
 	winmode[j] = '\0';
+#ifndef LIBRETRO
+	return host_fopen(path, winmode);
+#else
 	return fopen(path, winmode);
+#endif
 }
 #else
 static inline FILE* uae_fopen(const char* path, const char* mode)

@@ -39,6 +39,11 @@
 #endif
 #include <windows.h>
 
+// Host file names are UTF-8 (the native UI) or ANSI (older configurations);
+// the emulator's host_open() (src/osdep/amiberry_filesys.cpp) opens either
+// through the wide API, the narrow ::open() would read them as ANSI only.
+int host_open(const char* path, int flags, int mode);
+
 
 namespace {
 
@@ -200,7 +205,7 @@ std::error_condition osd_file::open(std::string const& path, std::uint32_t openf
 	catch (...) { return std::errc::not_enough_memory; }
 
 	// attempt to open the file
-	int fd = ::open(dst.c_str(), access, 0666);
+	int fd = host_open(dst.c_str(), access, 0666);
 
 	if (fd < 0)
 	{
@@ -219,7 +224,7 @@ std::error_condition osd_file::open(std::string const& path, std::uint32_t openf
 				// attempt to reopen the file
 				if (!createrr)
 				{
-					fd = ::open(dst.c_str(), access, 0666);
+					fd = host_open(dst.c_str(), access, 0666);
 				}
 				if (fd < 0)
 				{

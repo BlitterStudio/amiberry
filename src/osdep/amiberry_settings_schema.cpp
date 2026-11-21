@@ -102,6 +102,7 @@ void json_hidden_on(std::string& out, unsigned int hidden_on)
 		{AMIBERRY_SETTINGS_HIDE_ON_MACOS, "macos"},
 		{AMIBERRY_SETTINGS_HIDE_ON_IOS, "ios"},
 		{AMIBERRY_SETTINGS_HIDE_ON_ANDROID, "android"},
+		{AMIBERRY_SETTINGS_HIDE_ON_WINDOWS, "windows"},
 	};
 	out += "[";
 	bool first = true;

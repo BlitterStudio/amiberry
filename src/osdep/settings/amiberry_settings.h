@@ -141,7 +141,8 @@ typedef struct amiberry_setting_descriptor {
 #define AMIBERRY_SETTINGS_HIDE_ON_MACOS   0x02u /* the native Mac app */
 #define AMIBERRY_SETTINGS_HIDE_ON_IOS     0x04u
 #define AMIBERRY_SETTINGS_HIDE_ON_ANDROID 0x08u
-#define AMIBERRY_SETTINGS_HIDE_ON_ALL (0x01u | 0x02u | 0x04u | 0x08u)
+#define AMIBERRY_SETTINGS_HIDE_ON_WINDOWS 0x10u /* the native Windows app */
+#define AMIBERRY_SETTINGS_HIDE_ON_ALL (0x01u | 0x02u | 0x04u | 0x08u | 0x10u)
 
 AMIBERRY_SETTINGS_API size_t amiberry_settings_count(void);
 /* NULL when index >= amiberry_settings_count(). */

@@ -8,6 +8,7 @@
 #include "sysconfig.h"
 #include "sysdeps.h"
 #include "target.h"
+#include "host_fs.h"
 #include "gui/gui_handling.h"
 #include "settings/amiberry_whdboot.h"
 
@@ -22,7 +23,7 @@ namespace
 std::filesystem::path whdboot_root()
 {
 	const std::string path = get_whdbootpath();
-	return path.empty() ? std::filesystem::path{} : std::filesystem::path(path);
+	return path.empty() ? std::filesystem::path{} : host_path(path);
 }
 
 bool whdboot_file_exists(const std::filesystem::path& root, const std::filesystem::path& relative)
@@ -55,7 +56,7 @@ void get_status(const std::filesystem::path& root, amiberry_whdboot_status* stat
 	if (!whdboot_file_exists(root, std::filesystem::path("save-data") / "Kickstarts" / "kick31034.A1000.RTB"))
 		rtb_files_installed = false;
 	status->rtb_files_installed = rtb_files_installed;
-	status->libraries_installed = whdboot_optional_libraries_installed(root.string());
+	status->libraries_installed = whdboot_optional_libraries_installed(host_path_utf8(root));
 }
 
 }
@@ -71,7 +72,7 @@ extern "C" void amiberry_whdboot_status_get_at_path(const char* path, amiberry_w
 {
 	if (status == nullptr)
 		return;
-	get_status(path ? std::filesystem::path(path) : std::filesystem::path{}, status);
+	get_status(path ? host_path(path) : std::filesystem::path{}, status);
 }
 
 extern "C" amiberry_whdboot_download_result amiberry_whdboot_download(

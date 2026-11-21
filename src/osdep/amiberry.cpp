@@ -56,6 +56,9 @@
 #include "disk.h"
 #include "savestate.h"
 #include "zfile.h"
+#ifdef AMIBERRY_NATIVE_WINDOWS_UI
+#include "windows/settings_bridge.h"
+#endif
 #include "7z/Sha256.h"
 #include "zarchive.h"
 #include "rtgmodes.h"
@@ -78,6 +81,7 @@
 #include "clipboard.h"
 #include "gui_layout_scale.h"
 #include "fsdb.h"
+#include "host_fs.h"
 #include "scsidev.h"
 #ifdef FLOPPYBRIDGE
 #include "floppybridge_lib.h"
@@ -1331,9 +1335,11 @@ void set_current_config_path(const char* filename)
 		current_config_path.clear();
 		return;
 	}
+	// A host path: UTF-8 from the native UI, ANSI from older configurations.
+	// host_path() reads either and the stored path is UTF-8.
 	std::error_code ec;
-	const auto absolute = std::filesystem::absolute(std::filesystem::path(filename), ec);
-	current_config_path = ec ? std::string(filename) : absolute.lexically_normal().string();
+	const auto absolute = std::filesystem::absolute(host_path(filename), ec);
+	current_config_path = ec ? std::string(filename) : host_path_utf8(absolute.lexically_normal());
 }
 
 void forget_loaded_config()
@@ -4887,7 +4893,7 @@ static void ensure_directory_exists(const std::string& directory_path)
 		return;
 
 	std::error_code ec;
-	std::filesystem::create_directories(directory_path, ec);
+	std::filesystem::create_directories(host_path(directory_path), ec);
 }
 
 static void ensure_parent_directory_exists(const std::string& file_path)
@@ -6173,6 +6179,11 @@ void target_run()
 
 void target_quit()
 {
+#ifdef AMIBERRY_NATIVE_WINDOWS_UI
+	// Join downloads before teardown: they use the core's archive state.
+	if (!uae_restart_pending())
+		windows_native_shutdown_bridge();
+#endif
 	// A quit waits for the update check so the process exits cleanly; a
 	// restart replaces the session and must not block on the network.
 	cancel_async_update_check(!uae_restart_pending());
@@ -8808,7 +8819,7 @@ bool file_exists(const std::string& file)
 {
 	namespace fs = std::filesystem;
 	std::error_code error;
-	return fs::exists(fs::path(file), error) && !error;
+	return fs::exists(host_path(file), error) && !error;
 }
 
 #ifdef _WIN32
@@ -9045,21 +9056,26 @@ bool set_portable_mode(bool enable)
 }
 #endif
 
+static std::string backup_path_for(const std::string& destination)
+{
+	const auto dot_pos = destination.find_last_of('.');
+	return (dot_pos != std::string::npos)
+		? destination.substr(0, dot_pos).append(".bak")
+		: destination + ".bak";
+}
+
 static bool backup_file(const std::string& destination)
 {
 	if (!file_exists(destination))
 		return false;
 
 	write_log("Backup requested, renaming destination file %s to .bak\n", destination.c_str());
-	const auto dot_pos = destination.find_last_of('.');
-	const std::string new_filename = (dot_pos != std::string::npos)
-		? destination.substr(0, dot_pos).append(".bak")
-		: destination + ".bak";
+	const std::string new_filename = backup_path_for(destination);
 
 	if (file_exists(new_filename))
-		std::remove(new_filename.c_str());
+		host_remove(new_filename.c_str());
 
-	if (std::rename(destination.c_str(), new_filename.c_str()) < 0)
+	if (host_rename(destination.c_str(), new_filename.c_str()) < 0)
 	{
 		write_log("%s\n", strerror(errno));
 		return false;
@@ -9083,6 +9099,35 @@ static void ensure_curl_initialized()
 	});
 }
 
+// Installs a finished download over destination. std::filesystem::rename replaces an existing file in one step
+// (also on Windows, where rename() refuses), so a good destination is never removed before its replacement is in
+// place. When that fails the temporary file, which only this download owns, is removed, a backup taken first is put
+// back, and the failure is reported instead of a success that left the old file behind.
+static bool install_downloaded_file(const std::string& tmp, const std::string& destination, const bool keep_backup)
+{
+	if (!file_exists(tmp))
+		return false;
+
+	const bool backed_up = keep_backup && backup_file(destination);
+
+	write_log("Renaming downloaded temporary file %s to final destination\n", tmp.c_str());
+	std::error_code error;
+	std::filesystem::rename(host_path(tmp), host_path(destination), error);
+	if (!error)
+		return true;
+
+	write_log("Could not install %s as %s: %s\n", tmp.c_str(), destination.c_str(), error.message().c_str());
+	host_remove(tmp.c_str());
+	if (backed_up)
+	{
+		std::error_code restore_error;
+		std::filesystem::rename(host_path(backup_path_for(destination)), host_path(destination), restore_error);
+		if (restore_error)
+			write_log("Could not restore %s: %s\n", destination.c_str(), restore_error.message().c_str());
+	}
+	return false;
+}
+
 bool download_file(const std::string& source, const std::string& destination, bool keep_backup)
 {
 	ensure_curl_initialized();
@@ -9093,14 +9138,14 @@ bool download_file(const std::string& source, const std::string& destination, bo
 	if (file_exists(tmp))
 	{
 		write_log("Existing file found, removing %s\n", tmp.c_str());
-		if (std::remove(tmp.c_str()) < 0)
+		if (host_remove(tmp.c_str()) < 0)
 		{
 			write_log(strerror(errno));
 			write_log("\n");
 		}
 	}
 
-	FILE* fp = fopen(tmp.c_str(), "wb");
+	FILE* fp = host_fopen(tmp.c_str(), "wb");
 	if (!fp)
 	{
 		write_log("Failed to open temporary file for writing: %s\n", tmp.c_str());
@@ -9121,7 +9166,7 @@ bool download_file(const std::string& source, const std::string& destination, bo
 		write_log("Failed to configure libcurl CA bundle: %s\n", ca_error.c_str());
 		curl_easy_cleanup(curl);
 		fclose(fp);
-		std::remove(tmp.c_str());
+		host_remove(tmp.c_str());
 		return false;
 	}
 
@@ -9144,27 +9189,11 @@ bool download_file(const std::string& source, const std::string& destination, bo
 	if (res != CURLE_OK)
 	{
 		write_log("Download failed: %s (URL: %s)\n", curl_easy_strerror(res), source.c_str());
-		std::remove(tmp.c_str());
+		host_remove(tmp.c_str());
 		return false;
 	}
 
-	if (file_exists(tmp))
-	{
-		if (file_exists(destination) && keep_backup)
-		{
-			backup_file(destination);
-		}
-
-		write_log("Renaming downloaded temporary file %s to final destination\n", tmp.c_str());
-		if (std::rename(tmp.c_str(), destination.c_str()) < 0)
-		{
-			write_log(strerror(errno));
-			write_log("\n");
-		}
-		return true;
-	}
-
-	return false;
+	return install_downloaded_file(tmp, destination, keep_backup);
 }
 
 struct download_progress_ctx
@@ -9200,14 +9229,14 @@ bool download_file(const std::string& source, const std::string& destination, bo
 	if (file_exists(tmp))
 	{
 		write_log("Existing file found, removing %s\n", tmp.c_str());
-		if (std::remove(tmp.c_str()) < 0)
+		if (host_remove(tmp.c_str()) < 0)
 		{
 			write_log(strerror(errno));
 			write_log("\n");
 		}
 	}
 
-	FILE* fp = fopen(tmp.c_str(), "wb");
+	FILE* fp = host_fopen(tmp.c_str(), "wb");
 	if (!fp)
 	{
 		write_log("Failed to open temporary file for writing: %s\n", tmp.c_str());
@@ -9228,7 +9257,7 @@ bool download_file(const std::string& source, const std::string& destination, bo
 		write_log("Failed to configure libcurl CA bundle: %s\n", ca_error.c_str());
 		curl_easy_cleanup(curl);
 		fclose(fp);
-		std::remove(tmp.c_str());
+		host_remove(tmp.c_str());
 		return false;
 	}
 
@@ -9258,27 +9287,11 @@ bool download_file(const std::string& source, const std::string& destination, bo
 	if (res != CURLE_OK)
 	{
 		write_log("Download failed: %s (URL: %s)\n", curl_easy_strerror(res), source.c_str());
-		std::remove(tmp.c_str());
+		host_remove(tmp.c_str());
 		return false;
 	}
 
-	if (file_exists(tmp))
-	{
-		if (file_exists(destination) && keep_backup)
-		{
-			backup_file(destination);
-		}
-
-		write_log("Renaming downloaded temporary file %s to final destination\n", tmp.c_str());
-		if (std::rename(tmp.c_str(), destination.c_str()) < 0)
-		{
-			write_log(strerror(errno));
-			write_log("\n");
-		}
-		return true;
-	}
-
-	return false;
+	return install_downloaded_file(tmp, destination, keep_backup);
 }
 
 // The skick346 helpers below download the RTB files from Aminet.
@@ -10919,7 +10932,7 @@ static path_case_migration_result migrate_path_case_if_needed(const std::string&
 			return path_case_migration_result::failed;
 		}
 
-		auto entry_name = it->path().filename().string();
+		auto entry_name = host_path_utf8(it->path().filename());
 		if (entry_name == basename)
 		{
 			exact_match_exists = true;
@@ -11125,7 +11138,7 @@ static bool path_entry_exists_with_exact_name(const std::string& path)
 	{
 		if (ec)
 			return false;
-		if (iterator->path().filename().string() == filename)
+		if (host_path_utf8(iterator->path().filename()) == filename)
 			return true;
 	}
 
@@ -11528,7 +11541,7 @@ static configuration_file_path_migration_result migrate_legacy_configuration_fil
 	if (!backup_configuration_file_for_path_migration(config_file))
 		return configuration_file_path_migration_result::failed;
 
-	if (!my_save_file_atomic(config_file.string().c_str(), migrated_text.data(), migrated_text.size()))
+	if (!my_save_file_atomic(host_path_utf8(config_file).c_str(), migrated_text.data(), migrated_text.size()))
 	{
 		write_log("Configuration file path migration: failed to save %s\n",
 			config_file.string().c_str());
@@ -11546,12 +11559,15 @@ static int migrate_legacy_configuration_file_paths_in_directory(const std::strin
 	failed = false;
 	if (configuration_directory.empty() || path_pairs.empty())
 		return 0;
-	if (!my_existsdir(configuration_directory.c_str()))
+	// A host directory: UTF-8 from the native UI or ANSI from older
+	// configurations, read by host_path() either way.
+	const auto directory = host_path(configuration_directory);
+	std::error_code ec;
+	if (!std::filesystem::is_directory(directory, ec))
 		return 0;
 
 	int migrated_files = 0;
-	std::error_code ec;
-	std::filesystem::recursive_directory_iterator iterator(configuration_directory,
+	std::filesystem::recursive_directory_iterator iterator(directory,
 		std::filesystem::directory_options::none, ec);
 	if (ec)
 	{
@@ -12344,7 +12360,7 @@ static bool copy_missing_directory_contents_if_exists(const std::string& source_
 
 	try
 	{
-		std::filesystem::copy(source_dir, destination_dir,
+		std::filesystem::copy(host_path(source_dir), host_path(destination_dir),
 			std::filesystem::copy_options::recursive | std::filesystem::copy_options::skip_existing);
 		return true;
 	}
@@ -12669,7 +12685,7 @@ static void whdboot_normalize_archive_name(std::string& name)
 static whdboot_lha_member whdboot_lha_lookup_member(const std::string& archive_path, const std::string& member_name)
 {
 	whdboot_lha_member info;
-	FILE* fp = fopen(archive_path.c_str(), "rb");
+	FILE* fp = host_fopen(archive_path.c_str(), "rb");
 	if (!fp)
 		return info;
 
@@ -12807,7 +12823,7 @@ static std::string whdboot_file_sha256(const std::string& path)
 	CSha256 sha;
 	Sha256_Init(&sha);
 
-	FILE* fp = fopen(path.c_str(), "rb");
+	FILE* fp = host_fopen(path.c_str(), "rb");
 	if (!fp)
 		return {};
 	unsigned char buffer[65536];
@@ -12875,7 +12891,7 @@ static bool whdboot_extract_archive_member_to_file(const std::string& archive_pa
 	if (ok)
 	{
 		const std::string temp_path = destination_path + ".new";
-		FILE* fp = fopen(temp_path.c_str(), "wb");
+		FILE* fp = host_fopen(temp_path.c_str(), "wb");
 		ok = fp != nullptr;
 		if (ok)
 		{
@@ -12894,7 +12910,7 @@ static bool whdboot_extract_archive_member_to_file(const std::string& archive_pa
 			if (ok)
 			{
 				// Verify the extracted bytes against the archive header.
-				FILE* verify = fopen(temp_path.c_str(), "rb");
+				FILE* verify = host_fopen(temp_path.c_str(), "rb");
 				ok = verify != nullptr;
 				if (ok)
 				{
@@ -12926,7 +12942,7 @@ static bool whdboot_extract_archive_member_to_file(const std::string& archive_pa
 				std::error_code rename_error;
 				// std::filesystem::rename replaces an existing destination
 				// on Windows as well.
-				std::filesystem::rename(temp_path, destination_path, rename_error);
+				std::filesystem::rename(host_path(temp_path), host_path(destination_path), rename_error);
 				if (rename_error)
 				{
 					write_log("WHDBooter - could not install %s: %s\n",
@@ -12935,7 +12951,7 @@ static bool whdboot_extract_archive_member_to_file(const std::string& archive_pa
 				}
 			}
 			if (!ok)
-				std::remove(temp_path.c_str());
+				host_remove(temp_path.c_str());
 		}
 	}
 	zfile_fclose_archive(zv); // closes the member's zfile as well
@@ -13000,7 +13016,7 @@ static bool whdboot_install_pinned_library_archive(
 			}
 		}
 	}
-	std::remove(archive.c_str());
+	host_remove(archive.c_str());
 	return ok;
 }
 
@@ -13112,7 +13128,7 @@ whdboot_download_result download_whdboot_assets(
 		{
 			any_failure = true;
 		}
-		std::remove(archive.c_str());
+		host_remove(archive.c_str());
 	}
 	if (cancelled())
 		return result;
@@ -13134,7 +13150,7 @@ whdboot_download_result download_whdboot_assets(
 		{
 			any_failure = true;
 		}
-		std::remove(archive.c_str());
+		host_remove(archive.c_str());
 	}
 	if (cancelled())
 		return result;
@@ -13191,7 +13207,7 @@ whdboot_download_result download_whdboot_assets(
 		{
 			any_failure = true;
 		}
-		std::remove(archive.c_str());
+		host_remove(archive.c_str());
 	}
 	if (cancelled())
 		return result;
@@ -13203,7 +13219,7 @@ whdboot_download_result download_whdboot_assets(
 	if (file_exists(kick33180_path) && !file_exists(kick33192_path))
 	{
 		std::error_code copy_error;
-		std::filesystem::copy_file(kick33180_path, kick33192_path, copy_error);
+		std::filesystem::copy_file(host_path(kick33180_path), host_path(kick33192_path), copy_error);
 		if (!copy_error)
 			write_log("WHDBooter - created kick33192.A500.RTB (a copy of kick33180.A500.RTB)\n");
 	}

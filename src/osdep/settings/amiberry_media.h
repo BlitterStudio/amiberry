@@ -17,9 +17,11 @@
  * calls. Strings are UTF-8 and copied into caller buffers; a buffer that is
  * too small gets AMIBERRY_SETTINGS_BUFFER_TOO_SMALL and is left empty. Files
  * whose names are not valid UTF-8 are left out of the lists. On Windows the
- * emulator opens paths through the active code page, so unless that code
- * page is UTF-8, paths beyond ASCII are refused and left out of the lists
- * (and a folder holding one reads as UNAVAILABLE).
+ * emulator opens paths through the wide file APIs, so any Unicode path works
+ * whatever the active code page; a path the core holds in the ANSI code page
+ * (older configurations) is returned as the UTF-8 of the same path, and one
+ * those bytes cannot decode to is left out of the lists (and a folder
+ * holding one reads as UNAVAILABLE).
  *
  * The API belongs to the standalone emulator: the libretro core does not
  * build it, because a libretro front end owns its folders and media.
@@ -34,7 +36,7 @@
 extern "C" {
 #endif
 
-#define AMIBERRY_MEDIA_API_VERSION 2
+#define AMIBERRY_MEDIA_API_VERSION 3
 
 typedef enum amiberry_folder {
 	AMIBERRY_FOLDER_ROMS,
@@ -193,6 +195,37 @@ AMIBERRY_SETTINGS_API void amiberry_media_add_rom_key(const char *path);
 
 AMIBERRY_SETTINGS_API amiberry_settings_status amiberry_media_configuration_info(const char *path,
 	char *description, size_t description_size, char *category, size_t category_size);
+
+/*
+ * Renames the configuration file path to new_path, as a front end's Rename
+ * does, without reading or changing the pending configuration: the file's
+ * contents are untouched. Both must name a .uae file in the same folder (a
+ * rename, not a move) and be paths the API accepts (see
+ * amiberry_folder_set: not empty, shorter than the host's path limit, no
+ * control characters or space at either end, UTF-8, and on Windows
+ * within MAX_PATH UTF-16 units); relative ones are made absolute.
+ * An existing file of the new name is never replaced, and the file is
+ * renamed in one step without copying: MoveFileExW without replacing on
+ * Windows; renameat2 with RENAME_NOREPLACE, renamex_np with RENAME_EXCL or,
+ * where those are unsupported, link then unlink elsewhere. A file system
+ * with none of them (exFAT, FAT outside Windows) gets UNAVAILABLE rather
+ * than an unsafe rename. On Windows (the system's ordinal case folding, so
+ * École to école works) and macOS (ASCII case) a new_path that differs from
+ * path only by case is renamed to that spelling; the same path is a no-op
+ * returning OK. If the pending configuration is path
+ * (amiberry_media_current_configuration), the saved association follows to
+ * new_path, with the names the title and the save name suggestion take
+ * from it, so the next save writes new_path and not path again. Main
+ * thread.
+ * UNKNOWN_ID when path does not exist; INVALID_VALUE for a path the API
+ * does not accept, another extension, different folders (or a missing
+ * folder), a path that is not a regular file, or any existing file or link
+ * of the new name other than that case-only spelling; UNAVAILABLE when the
+ * file system refuses or cannot do a no-replace rename, or cannot be
+ * examined. On any failure nothing changed.
+ */
+AMIBERRY_SETTINGS_API amiberry_settings_status amiberry_media_rename_configuration(const char *path,
+	const char *new_path);
 
 /*
  * Creates an empty hardfile of size_bytes at path, as the hard drive

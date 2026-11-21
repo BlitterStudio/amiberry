@@ -32,6 +32,7 @@ int disk_debug_track = -1;
 #include "disk.h"
 #include "gui.h"
 #include "zfile.h"
+#include "host_fs.h"
 #include "newcpu.h"
 #include "savestate.h"
 #include "cia.h"
@@ -3193,25 +3194,31 @@ int disk_getwriteprotect (struct uae_prefs *p, const TCHAR *name, int num)
 	return diskfile_iswriteprotect (p, name, num, &needwritefile, &drvtype);
 }
 
+// name is a host file name (the floppy image or its save image), not an
+// Amiga filesystem name, so it is not an nname_to_host() input: host_path()
+// reads UTF-8 and ANSI host names alike.
 static void diskfile_readonly (const TCHAR *name, bool readonly)
 {
-	struct mystat st;
-	int mode, oldmode;
-
-	if (!my_stat (name, &st)) {
+	namespace fs = std::filesystem;
+	std::error_code ec;
+	const fs::path path = host_path(name);
+	const fs::file_status status = fs::status(path, ec);
+	if (ec || !fs::exists(status)) {
 		write_log (_T("failed to access '%s'\n"), name);
 		return;
 	}
-	write_log(_T("'%s': old mode = %x\n"), name, st.mode);
-	oldmode = mode = st.mode;
-	mode &= ~FILEFLAG_WRITE;
-	if (!readonly)
-		mode |= FILEFLAG_WRITE;
-	if (mode != oldmode) {
-		if (!my_chmod (name, mode))
+	const bool oldwritable = (status.permissions() & fs::perms::owner_write) != fs::perms::none;
+	write_log(_T("'%s': old mode = %x\n"), name, oldwritable ? FILEFLAG_WRITE : 0);
+	const bool writable = !readonly;
+	if (writable != oldwritable) {
+		fs::perms perms = status.permissions() & ~(fs::perms::owner_write | fs::perms::group_write | fs::perms::others_write);
+		if (writable)
+			perms |= fs::perms::owner_write;
+		fs::permissions(path, perms, ec);
+		if (ec)
 			write_log(_T("chmod failed!\n"));
 	}
-	write_log(_T("'%s': new mode = %x\n"), name, mode);
+	write_log(_T("'%s': new mode = %x\n"), name, writable ? FILEFLAG_WRITE : 0);
 }
 
 static void setdskchangetime (drive *drv, int dsktime)
@@ -3273,7 +3280,7 @@ int disk_setwriteprotect (struct uae_prefs *p, int num, const TCHAR *fname_in, b
 			if (!_tcscmp (fname_in, floppy[i].newname))
 				drive_eject (&floppy[i]);
 		}
-		_wunlink (name2);
+		host_remove (name2);
 	}
 
 	if (!needwritefile)
