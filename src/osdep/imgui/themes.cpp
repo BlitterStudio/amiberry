@@ -48,6 +48,24 @@ static bool is_protected_preset(const std::string& name)
 	return name == "Default.theme" || name == "Dark.theme";
 }
 
+static const std::string& selected_theme_name()
+{
+	return (s_selected_theme >= 0 && s_selected_theme < static_cast<int>(s_theme_files.size()))
+		? s_theme_files[s_selected_theme] : s_theme_files[0];
+}
+
+// Fill the Save As name with "<preset> custom", numbered if that file exists.
+static void suggest_custom_theme_name(const std::string& preset)
+{
+	const std::string base = std::filesystem::path(preset).stem().string() + " custom";
+	const std::string themes_dir = get_themes_path();
+	std::string candidate = base;
+	for (int n = 2; std::filesystem::exists(themes_dir + candidate + ".theme"); n++)
+		candidate = base + " " + std::to_string(n);
+	strncpy(s_save_as_name, candidate.c_str(), sizeof(s_save_as_name) - 1);
+	s_save_as_name[sizeof(s_save_as_name) - 1] = '\0';
+}
+
 static void scan_theme_files()
 {
 	s_theme_files.clear();
@@ -80,6 +98,13 @@ const std::vector<std::string>& get_available_theme_names()
 	if (s_theme_files.empty())
 		scan_theme_files();
 	return s_theme_files;
+}
+
+// The GUI reloads the saved theme each time it opens, discarding unsaved
+// edits; make the panel re-read it instead of showing the old edit state.
+void reset_themes_panel_state()
+{
+	s_themes_initialized = false;
 }
 
 static void select_theme_by_name(const std::string& name)
@@ -287,10 +312,11 @@ void render_panel_themes()
 	ImGui::SameLine();
 	ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x * 2);
 
-	const char* current_label = (s_selected_theme >= 0 && s_selected_theme < static_cast<int>(s_theme_files.size()))
-		? s_theme_files[s_selected_theme].c_str() : "Default.theme";
+	const std::string& selected_name = selected_theme_name();
+	const std::string current_label = s_theme_modified && is_protected_preset(selected_name)
+		? selected_name + " (modified)" : selected_name;
 
-	if (ImGui::BeginCombo("##ThemeCombo", current_label))
+	if (ImGui::BeginCombo("##ThemeCombo", current_label.c_str()))
 	{
 		for (int i = 0; i < static_cast<int>(s_theme_files.size()); i++)
 		{
@@ -308,6 +334,13 @@ void render_panel_themes()
 		ImGui::EndCombo();
 	}
 	AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
+
+	if (s_theme_modified && is_protected_preset(selected_theme_name()))
+	{
+		ImGui::PushStyleColor(ImGuiCol_Text, GetWarningTextColor());
+		ImGui::TextWrapped("Built-in themes cannot be saved. These changes last until the GUI closes; use Save as... to keep them.");
+		ImGui::PopStyleColor();
+	}
 
 	EndGroupBox("Theme selection");
 
@@ -555,16 +588,16 @@ void render_panel_themes()
 	ImGui::Spacing();
 
 	// ========== Actions ==========
-	const auto& current_theme = (s_selected_theme >= 0 && s_selected_theme < static_cast<int>(s_theme_files.size()))
-		? s_theme_files[s_selected_theme] : s_theme_files[0];
+	const auto& current_theme = selected_theme_name();
 	const bool is_protected = is_protected_preset(current_theme);
 
 	if (AmigaButton(ICON_FA_CHECK " Use", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
 	{
 		if (s_theme_modified && is_protected)
 		{
-			ShowMessageBox("Save Theme",
-				"Default.theme and Dark.theme are built-in presets and cannot be overwritten.\n\nUse Save as... to keep these changes.");
+			// Built-in presets are read-only: save the edits as a new theme.
+			suggest_custom_theme_name(current_theme);
+			s_open_save_as_popup = true;
 		}
 		else if (!s_theme_modified || save_theme(current_theme))
 		{
@@ -581,7 +614,7 @@ void render_panel_themes()
 			ShowMessageBox("Save Theme", "Failed to save the theme file.\n\nCheck file permissions in the Themes directory.");
 		}
 	}
-	ShowHelpMarker("Make this the active theme and persist edited custom-theme colors and font settings.");
+	ShowHelpMarker("Make this the active theme and save its changes. Changes to a built-in theme are saved as a new theme.");
 
 	ImGui::SameLine();
 	if (is_protected) ImGui::BeginDisabled();
@@ -592,8 +625,14 @@ void render_panel_themes()
 		else
 			ShowMessageBox("Save Theme", "Failed to save the theme file.\n\nCheck file permissions in the Themes directory.");
 	}
-	if (is_protected) ImGui::EndDisabled();
-	ShowHelpMarker("Overwrite the current custom theme file");
+	if (is_protected)
+	{
+		if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+			ImGui::SetTooltip("Built-in themes are read-only. Use Save as... to keep changes.");
+		ImGui::EndDisabled();
+	}
+	else
+		ShowHelpMarker("Overwrite the current custom theme file");
 
 	ImGui::SameLine();
 	if (AmigaButton(ICON_FA_FLOPPY_DISK " Save as...", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
