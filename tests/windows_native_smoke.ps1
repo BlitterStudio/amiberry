@@ -319,10 +319,8 @@ function Save-TestMachine([string]$Path) {
             $text = [IO.File]::ReadAllText($Path)
             $lines += "expected length: $($text.Length); cpu lines: " + (($text -split "`n" | Where-Object { $_ -match 'cpu' } | Select-Object -First 6) -join ' | ')
         }
-        foreach ($root in @($scratch, [Environment]::GetFolderPath('MyDocuments'), $PWD.Path)) {
-            foreach ($file in @(Get-ChildItem -LiteralPath $root -Recurse -Depth 4 -Filter '*.uae' -File -ErrorAction SilentlyContinue | Select-Object -First 20)) {
-                $lines += "found .uae: $($file.FullName) ($($file.Length) bytes, $($file.LastWriteTime.ToString('HH:mm:ss')))"
-            }
+        foreach ($file in @(Get-ChildItem -LiteralPath $scratch -Recurse -Depth 4 -Filter '*.uae' -File -ErrorAction SilentlyContinue | Select-Object -First 20)) {
+            $lines += "found .uae: $($file.FullName) ($($file.Length) bytes, $($file.LastWriteTime.ToString('HH:mm:ss')))"
         }
         foreach ($log in @(Get-ChildItem -LiteralPath $scratch -Filter '*.log' -File -ErrorAction SilentlyContinue)) {
             $lines += "log $($log.Name):"
@@ -333,6 +331,9 @@ function Save-TestMachine([string]$Path) {
     Wait-For { (Test-Path -LiteralPath $Path) -and [IO.File]::ReadAllText($Path).Contains('cpu_model=68000') } 'machine actually saved through the native picker' -Detail $saveDetail | Out-Null
     Wait-NativePickerClosed 'Save'
     Wait-For { Find-Control 'MachineStartButton' } 'saved editor after native Save' | Out-Null
+    # The header shows the saved machine's identity in place, not the stale unsaved one.
+    $savedName = [IO.Path]::GetFileNameWithoutExtension($Path)
+    Wait-For { (Find-Control 'PageSubtitle').Current.Name -eq $savedName -and (Find-Control 'MachineIdentityName').Current.Name -eq $savedName } 'saved machine identity in the editor header after Save' | Out-Null
 }
 
 $scratch = New-NativeTestLayout -AmiberryPath $AmiberryPath -IncludeUI

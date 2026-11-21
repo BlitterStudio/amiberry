@@ -12,7 +12,7 @@ public sealed partial class MainWindow
     // The model the editor knows this machine was created from or switched to in this session.
     // Saved machine files do not record it, so it stays unknown (empty) for machines opened from the Library.
     private string modelPresetId = "", modelName = "", modelConfiguration = "";
-    private TextBlock? overviewState, overviewModel, overviewSummary;
+    private TextBlock? overviewTitle, overviewState, overviewModel, overviewSummary;
     private readonly HashSet<string> collapsedSections = [];
     private async Task OpenEditorAsync(object request, string? name = null)
     {
@@ -104,6 +104,7 @@ public sealed partial class MainWindow
             return label + ": " + item.S("reason");
         }).ToArray();
         if (adjustments.Length > 0) editStatus.Text += "\n" + string.Join("\n", adjustments);
+        RefreshEditorHeader();
         RefreshOverview();
     }
     private async Task<bool> LeaveSessionAsync()
@@ -116,7 +117,7 @@ public sealed partial class MainWindow
             if (result == ContentDialogResult.Primary && !await SaveAsync()) return false;
         }
         await Core.CallAsync("close"); session = false; dirty = false; committedNotSaved = false; resumedUnsavedPath = null; drafts.Clear(); rows.Clear(); pendingApply = 0;
-        overviewState = overviewModel = overviewSummary = null;
+        overviewTitle = overviewState = overviewModel = overviewSummary = null;
         return true;
     }
     private async Task<bool> SaveAsync(bool saveAs = false)
@@ -173,12 +174,21 @@ public sealed partial class MainWindow
         currentPage = "machines"; SetNavigation(false); await RenderLibraryAsync();
     }
     private string EditorMachineName() => currentPath.Length > 0 ? Path.GetFileNameWithoutExtension(currentPath) : newMachineName;
+    private string EditorSubtitle() => currentPath.Length > 0 ? Path.GetFileNameWithoutExtension(currentPath) : newMachineName + " · Unsaved machine";
+    // A first Save or a Save As changes the machine's identity while its page stays rendered; update the header in
+    // place rather than rebuilding the page, which would drop the user's focus and scroll position.
+    private void RefreshEditorHeader()
+    {
+        if (!session || pageSubtitle is null || !EditorPages.Any(item => item.Id == currentPage)) return;
+        pageSubtitle.Text = EditorSubtitle();
+        if (overviewTitle is not null) overviewTitle.Text = EditorMachineName();
+    }
     private async Task RenderEditorAsync()
     {
-        overviewState = overviewModel = overviewSummary = null;
+        overviewTitle = overviewState = overviewModel = overviewSummary = null;
         if (!EditorPages.Any(item => item.Id == currentPage)) { currentPage = "overview"; SelectNavigation(currentPage); }
         BeginPage(EditorPages.First(item => item.Id == currentPage).Title,
-            currentPath.Length > 0 ? Path.GetFileNameWithoutExtension(currentPath) : newMachineName + " · Unsaved machine", true);
+            EditorSubtitle(), true);
         if (query.Length > 0 || currentPage == "all")
         {
             var matching = descriptors.Values.Where(item => Matches(item, query)).ToList();
@@ -232,7 +242,7 @@ public sealed partial class MainWindow
     private void RenderOverview()
     {
         var identity = new StackPanel { Spacing = 6 };
-        var title = Styled(EditorMachineName(), "SubtitleTextBlockStyle");
+        var title = overviewTitle = Styled(EditorMachineName(), "SubtitleTextBlockStyle");
         AutomationProperties.SetAutomationId(title, "MachineIdentityName");
         identity.Children.Add(title);
         overviewState = Muted(""); overviewModel = Text(""); overviewSummary = Text("");

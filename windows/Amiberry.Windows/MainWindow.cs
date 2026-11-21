@@ -50,6 +50,8 @@ public sealed partial class MainWindow : Window
     private NativeClient Core => client ?? throw new InvalidOperationException("The emulator is not connected.");
     private bool Emulating => status.S("state") is "running" or "paused";
     private readonly Button stopButton;
+    // The current page's subtitle, so the editor can update the machine identity in place.
+    private TextBlock? pageSubtitle;
     private readonly Button startButton, revertButton;
     private readonly SplitButton saveButton;
 
@@ -462,7 +464,8 @@ public sealed partial class MainWindow : Window
         AutomationProperties.SetHeadingLevel(heading, AutomationHeadingLevel.Level1);
         AutomationProperties.SetAutomationId(heading, "PageHeading");
         page.Children.Add(heading);
-        if (!string.IsNullOrEmpty(subtitle)) page.Children.Add(new TextBlock { Text = subtitle, TextWrapping = TextWrapping.Wrap, Opacity = 0.75 });
+        pageSubtitle = string.IsNullOrEmpty(subtitle) ? null : new TextBlock { Text = subtitle, TextWrapping = TextWrapping.Wrap, Opacity = 0.75 };
+        if (pageSubtitle is not null) { AutomationProperties.SetAutomationId(pageSubtitle, "PageSubtitle"); page.Children.Add(pageSubtitle); }
         if (search)
         {
             searchBox.PlaceholderText = searchPlaceholder ?? (session ? "Search machine settings (Ctrl+F)" : "Search this page (Ctrl+F)");
