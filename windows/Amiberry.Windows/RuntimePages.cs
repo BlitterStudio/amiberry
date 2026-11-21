@@ -66,6 +66,9 @@ public sealed partial class MainWindow
         page.Children.Add(Button("Show Amiga Keyboard", async () => { await Core.CallAsync("keyboard_toggle"); }));
         UpdateRuntimeStatus();
     }
+    // Start is finished once the emulation runs, or once F12 has already paused it behind its settings loop: the
+    // core clears settingsOpen before it acknowledges a start, so settingsOpen on a paused machine is a new F12.
+    // Waiting only for "running" held the UI lock until the 60 s limit while the editor stayed hidden.
     private async Task WaitForRunningAsync()
     {
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
@@ -73,7 +76,8 @@ public sealed partial class MainWindow
         while (true)
         {
             var next = await Core.CallAsync("status", cancellation: deadline.Token);
-            if (next.S("state") == "running") { status = next; SyncWindowVisibility(); return; }
+            string state = next.S("state");
+            if (state == "running" || (state == "paused" && next.B("settingsOpen"))) { status = next; SyncWindowVisibility(); return; }
             await Task.Delay(100, deadline.Token);
         }
     }
