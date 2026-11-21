@@ -9056,16 +9056,21 @@ bool set_portable_mode(bool enable)
 }
 #endif
 
+static std::string backup_path_for(const std::string& destination)
+{
+	const auto dot_pos = destination.find_last_of('.');
+	return (dot_pos != std::string::npos)
+		? destination.substr(0, dot_pos).append(".bak")
+		: destination + ".bak";
+}
+
 static bool backup_file(const std::string& destination)
 {
 	if (!file_exists(destination))
 		return false;
 
 	write_log("Backup requested, renaming destination file %s to .bak\n", destination.c_str());
-	const auto dot_pos = destination.find_last_of('.');
-	const std::string new_filename = (dot_pos != std::string::npos)
-		? destination.substr(0, dot_pos).append(".bak")
-		: destination + ".bak";
+	const std::string new_filename = backup_path_for(destination);
 
 	if (file_exists(new_filename))
 		host_remove(new_filename.c_str());
@@ -9092,6 +9097,35 @@ static void ensure_curl_initialized()
 	std::call_once(s_curl_once, []() {
 		curl_global_init(CURL_GLOBAL_DEFAULT);
 	});
+}
+
+// Installs a finished download over destination. std::filesystem::rename replaces an existing file in one step
+// (also on Windows, where rename() refuses), so a good destination is never removed before its replacement is in
+// place. When that fails the temporary file, which only this download owns, is removed, a backup taken first is put
+// back, and the failure is reported instead of a success that left the old file behind.
+static bool install_downloaded_file(const std::string& tmp, const std::string& destination, const bool keep_backup)
+{
+	if (!file_exists(tmp))
+		return false;
+
+	const bool backed_up = keep_backup && backup_file(destination);
+
+	write_log("Renaming downloaded temporary file %s to final destination\n", tmp.c_str());
+	std::error_code error;
+	std::filesystem::rename(host_path(tmp), host_path(destination), error);
+	if (!error)
+		return true;
+
+	write_log("Could not install %s as %s: %s\n", tmp.c_str(), destination.c_str(), error.message().c_str());
+	host_remove(tmp.c_str());
+	if (backed_up)
+	{
+		std::error_code restore_error;
+		std::filesystem::rename(host_path(backup_path_for(destination)), host_path(destination), restore_error);
+		if (restore_error)
+			write_log("Could not restore %s: %s\n", destination.c_str(), restore_error.message().c_str());
+	}
+	return false;
 }
 
 bool download_file(const std::string& source, const std::string& destination, bool keep_backup)
@@ -9159,23 +9193,7 @@ bool download_file(const std::string& source, const std::string& destination, bo
 		return false;
 	}
 
-	if (file_exists(tmp))
-	{
-		if (file_exists(destination) && keep_backup)
-		{
-			backup_file(destination);
-		}
-
-		write_log("Renaming downloaded temporary file %s to final destination\n", tmp.c_str());
-		if (host_rename(tmp.c_str(), destination.c_str()) < 0)
-		{
-			write_log(strerror(errno));
-			write_log("\n");
-		}
-		return true;
-	}
-
-	return false;
+	return install_downloaded_file(tmp, destination, keep_backup);
 }
 
 struct download_progress_ctx
@@ -9273,23 +9291,7 @@ bool download_file(const std::string& source, const std::string& destination, bo
 		return false;
 	}
 
-	if (file_exists(tmp))
-	{
-		if (file_exists(destination) && keep_backup)
-		{
-			backup_file(destination);
-		}
-
-		write_log("Renaming downloaded temporary file %s to final destination\n", tmp.c_str());
-		if (host_rename(tmp.c_str(), destination.c_str()) < 0)
-		{
-			write_log(strerror(errno));
-			write_log("\n");
-		}
-		return true;
-	}
-
-	return false;
+	return install_downloaded_file(tmp, destination, keep_backup);
 }
 
 // The skick346 helpers below download the RTB files from Aminet.
