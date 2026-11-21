@@ -422,7 +422,9 @@ void native_host_run_settings()
 		Amiberry::IPC::IPCHandle();
 #endif
 		amiberry_actions_run_pending();
-		if (amiberry_actions_emulation_requests() != before) break;
+		// Servicing the pipe can close the settings (Start/Resume) or end the connection; leave before the SDL
+		// wait below, which would otherwise swallow the focus and key events that belong to the resumed machine.
+		if (amiberry_actions_emulation_requests() != before || !settings_visible || !connection().active()) break;
 		native_host_show_deferred_messages();
 		SDL_Event event;
 		if (SDL_WaitEventTimeout(&event, 8)) {
