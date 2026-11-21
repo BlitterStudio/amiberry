@@ -48,7 +48,9 @@
 #include <ws2tcpip.h>
 #include <fcntl.h>
 #else
+#include <netinet/in.h>
 #include <netinet/tcp.h>
+#include <sys/socket.h>
 #include <sys/mman.h>
 #include <fcntl.h>
 #endif
