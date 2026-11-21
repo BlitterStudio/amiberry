@@ -158,6 +158,12 @@ jobs:
         shell: pwsh
         run: ./tests/windows_native_bridge.ps1 -AmiberryPath "$PWD/out/install/${{ matrix.preset }}/Amiberry.exe"
 
+      # Hosted ARM64 runners can start a job with the first sign-in privacy experience and the Start menu over the
+      # desktop, so UI automation never receives focus. Clear them (or fail) before the UI smoke.
+      - name: Prepare the interactive desktop
+        shell: pwsh
+        run: ./.github/scripts/prepare-windows-desktop.ps1
+
       - name: Smoke-test installed native UI and bridge
         shell: pwsh
         run: |
