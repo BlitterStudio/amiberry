@@ -514,6 +514,18 @@ try {
     # Exercise a real storage dialog error: the input must survive backend
     # rejection, and cancelling must leave the machine's mounts unchanged.
     Select-Control 'Page_storage'
+    # A rejected draft must stop a mount dialog: its completion rebuilds the page, which would hide the row that
+    # reports the error while Save/Start kept retrying the invisible draft. A path longer than the core's limit is
+    # refused by the backend; set it through UIA, so no key is sent to whatever window has the foreground.
+    $imageRow = Wait-For { Find-Control 'Setting_floppy0' } 'DF0 image setting'
+    $imageRow.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).SetValue('A:\' + ('x' * 5000) + '.adf')
+    Invoke-Control 'StorageAddDrive'
+    Invoke-Control 'StorageAddCd'
+    Wait-For { Find-Control 'SettingDiscard_floppy0' } 'rejected DF0 image reported on its row by the mount action' | Out-Null
+    Start-Sleep -Seconds 1
+    if (Find-Control 'Mount_path') { throw 'A mount dialog opened while a rejected setting draft was pending.' }
+    Invoke-Control 'SettingDiscard_floppy0'
+    Wait-For { -not (Find-Control 'SettingDiscard_floppy0') } 'discarded DF0 image draft' | Out-Null
     Invoke-Control 'StorageAddDrive'
     Invoke-Control 'StorageAddCd'
     Set-ControlText 'Mount_path' 'a"b'
@@ -583,6 +595,14 @@ try {
     Open-EmulatorSettings
     Wait-EditorStatus 'All changes saved' 'clean saved machine opened with F12' | Out-Null
 
+    # Choosing Library from F12 closes the editor but the core stays paused; the runtime bar must still offer a
+    # way back to this machine's editor and its Resume action.
+    Invoke-Control 'PART_BackButton'
+    Wait-For { (Find-Control 'MachineMore_UX smoke') -and -not (Find-Control 'MachineStartButton') } 'Library chosen from F12' | Out-Null
+    Invoke-Control 'RuntimeMachineButton'
+    Wait-For { (Find-Control 'MachineStartButton').Current.IsEnabled } 'Current Machine reopens the paused machine editor' | Out-Null
+    Wait-EditorStatus 'All changes saved' 'reopened current machine is clean' | Out-Null
+
     # Edit the running saved machine and Resume without saving. Reopening with F12
     # must still report the edit as unsaved on disk, keep the save prompt, and
     # persist it once saved.
@@ -628,7 +648,7 @@ try {
     Invoke-Control 'RuntimeStopButton'
     Invoke-Control 'PrimaryButton'
     Wait-For { [AmiberrySmokeDesktop]::IsWindowVisible($uiHandle) -and (Find-Control 'NewMachineButton') } 'Library after saved-machine Play and stop' | Out-Null
-    Write-Output 'PASS: native pages -> settings/search/narrow layout -> retained dialog errors -> native Save -> hidden emulation -> physical F12 -> resume hides -> stop restores Library -> clean Save As -> safe rename -> saved-machine Play/F12/resume/stop -> unsaved edit survives Resume/F12 and Save -> core modal held past 60 s keeps the connection'
+    Write-Output 'PASS: native pages -> settings/search/narrow layout -> rejected draft blocks mount dialog -> retained dialog errors -> native Save -> hidden emulation -> physical F12 -> resume hides -> stop restores Library -> clean Save As -> safe rename -> saved-machine Play/F12 -> Library from F12 and Current Machine back to the editor -> resume/stop -> unsaved edit survives Resume/F12 and Save -> core modal held past 60 s keeps the connection'
 } catch {
     # An error that is not a Wait-For timeout (a null control, a failed pattern call) otherwise reaches the CI log
     # without its position. Report it with the failing statement, the stack and the state of the screen, then rethrow.

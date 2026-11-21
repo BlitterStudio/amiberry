@@ -185,6 +185,7 @@ public sealed partial class MainWindow
         AutomationProperties.SetHelpText(edit, "Edit " + title);
         var remove = Button("Remove", async () =>
         {
+            if (!await FlushDraftsAsync()) return;
             ApplySnapshot(await Core.CallAsync("mount_remove", new { index = mountIndex })); await RenderEditorAsync();
         }, "MountRemove_" + mountIndex);
         AutomationProperties.SetHelpText(remove, "Remove " + title + " from this machine");
@@ -287,6 +288,8 @@ public sealed partial class MainWindow
 
     private async Task EditMountAsync(JsonNode mount, int? index)
     {
+        // The page is rebuilt afterwards; a rejected draft must be resolved while its row is still visible.
+        if (!await FlushDraftsAsync()) return;
         var fields = mount["fields"]!.AsObject();
         string kind = fields.S("kind");
         var controllerList = kind == "dir" ? new List<JsonNode>() : (await Core.CallAsync("mount_controllers", new { kind })).Items().ToList();
@@ -491,6 +494,7 @@ public sealed partial class MainWindow
                 }
                 var remove = Button("Remove Board", async () =>
                 {
+                    if (!await FlushDraftsAsync()) return;
                     await Core.CallAsync("board_set", new { type = boardId, unit = unitNumber, field = "enabled", value = "false" });
                     ApplySnapshot(await Core.CallAsync("snapshot")); await RenderEditorAsync();
                 }, $"BoardRemove_{boardId}_{unitNumber}");
@@ -516,6 +520,7 @@ public sealed partial class MainWindow
             var addButton = Button("Add Board", async () =>
             {
                 if (add.SelectedItem is not ComboBoxItem selected) return;
+                if (!await FlushDraftsAsync()) return;
                 var target = (BoardTarget)selected.Tag;
                 await Core.CallAsync("board_set", new { type = target.Type, unit = target.Unit, field = "enabled", value = "true" });
                 expanded.Add($"boards:{target.Type}:{target.Unit}");

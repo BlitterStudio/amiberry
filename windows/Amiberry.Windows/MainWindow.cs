@@ -50,6 +50,8 @@ public sealed partial class MainWindow : Window
     private NativeClient Core => client ?? throw new InvalidOperationException("The emulator is not connected.");
     private bool Emulating => status.S("state") is "running" or "paused";
     private readonly Button stopButton;
+    // Reopens the running machine's editor (and its Resume button) after the Library was chosen from F12.
+    private readonly Button machineButton;
     // The current page's subtitle, so the editor can update the machine identity in place.
     private TextBlock? pageSubtitle;
     private readonly Button startButton, revertButton;
@@ -112,6 +114,7 @@ public sealed partial class MainWindow : Window
             if (!navigating && e.SelectedItem is NavigationViewItem item)
                 _ = RunAsync(() => NavigateAsync((string)item.Tag));
         };
+        machineButton = Runtime("Current Machine", Symbol.Setting, () => OpenEditorAsync(new { }), "RuntimeMachineButton");
         Runtime("Drives & States", Symbol.OpenFile, async () => { if (await FlushDraftsAsync()) RenderRuntime(); }, "RuntimeDrivesButton");
         stopButton = Runtime("Stop", Symbol.Stop, () => ConfirmActionAsync("Stop emulation?", "Unsaved work in the Amiga will be lost.", () => Core.ActionAsync("stop"), "Stop"), "RuntimeStopButton");
         RuntimeMenu("Full Screen", Symbol.FullScreen, () => Core.ActionAsync("fullscreen"));
@@ -286,51 +289,59 @@ public sealed partial class MainWindow : Window
         {
             do
             {
-                bool wasRunning = Emulating;
-                status = await Core.CallAsync("status", cancellation: lifetime.Token);
-                if (wasRunning && !Emulating) { committedApply = 0; resumedUnsavedPath = null; }
-                runtimePanel.Visibility = Emulating ? Visibility.Visible : Visibility.Collapsed;
-                string machine = status.S("description");
-                string activity = status.S("state") == "paused" ? "Paused" : $"Running · {status.D("fps"):0.0} fps";
-                runtimeStatus.Text = $"{(machine == "UAE default configuration" ? "Amiga" : machine)} · {activity}";
-                stopButton.IsEnabled = Emulating;
-                int nextSettingsEpoch = status.I("settingsEpoch"), nextLibraryEpoch = status.I("libraryEpoch"), nextDevicesEpoch = status.I("devicesEpoch");
-                bool refreshedSession = false;
-                if (statusReceived && ((wasRunning && !Emulating) || nextLibraryEpoch != libraryEpoch))
-                    await RunAsync(async () =>
-                    {
-                        if (session && !await LeaveSessionAsync()) return;
-                        currentPage = "machines"; SetNavigation(false); await RenderLibraryAsync();
-                    });
-                else if (statusReceived && nextSettingsEpoch != settingsEpoch && status.B("settingsOpen"))
-                    await RunAsync(async () =>
-                    {
-                        if (session)
-                        {
-                            ApplySnapshot(await Core.CallAsync("snapshot"));
-                            await RefreshCustomControlsAsync();
-                            if (!EditorPages.Any(item => item.Id == currentPage)) await RenderEditorAsync();
-                        }
-                        else await OpenEditorAsync(new { });
-                        refreshedSession = session;
-                    });
-                if (statusReceived && nextDevicesEpoch != devicesEpoch && session && status.B("settingsOpen") && !refreshedSession)
-                    await RunAsync(async () =>
-                    {
-                        if (!session) return;
-                        ApplySnapshot(await Core.CallAsync("snapshot"));
-                        await RefreshCustomControlsAsync();
-                    });
-                settingsEpoch = nextSettingsEpoch; libraryEpoch = nextLibraryEpoch; devicesEpoch = nextDevicesEpoch; statusReceived = true;
-                SyncWindowVisibility();
-                UpdateFooter();
-                UpdateRuntimeStatus();
-                await UpdateKeyboardAsync();
-                await RefreshDownloadAsync();
+                // A long legitimate request (creating a large hardfile) keeps the core's pipe busy past the queue
+                // limit. That only skips this poll; it must not end the connection, which a quit would follow.
+                try { await PollOnceAsync(); }
+                catch (NativeQueueTimeoutException) { }
             } while (await timer.WaitForNextTickAsync(lifetime.Token));
         }
         catch (OperationCanceledException) when (lifetime.IsCancellationRequested) { }
         catch (Exception error) { if (!closing) await ConnectionLostAsync(error); }
+    }
+
+    private async Task PollOnceAsync()
+    {
+        bool wasRunning = Emulating;
+        status = await Core.CallAsync("status", cancellation: lifetime.Token);
+        if (wasRunning && !Emulating) { committedApply = 0; resumedUnsavedPath = null; }
+        runtimePanel.Visibility = Emulating ? Visibility.Visible : Visibility.Collapsed;
+        string machine = status.S("description");
+        string activity = status.S("state") == "paused" ? "Paused" : $"Running · {status.D("fps"):0.0} fps";
+        runtimeStatus.Text = $"{(machine == "UAE default configuration" ? "Amiga" : machine)} · {activity}";
+        stopButton.IsEnabled = Emulating;
+        int nextSettingsEpoch = status.I("settingsEpoch"), nextLibraryEpoch = status.I("libraryEpoch"), nextDevicesEpoch = status.I("devicesEpoch");
+        bool refreshedSession = false;
+        if (statusReceived && ((wasRunning && !Emulating) || nextLibraryEpoch != libraryEpoch))
+            await RunAsync(async () =>
+            {
+                if (session && !await LeaveSessionAsync()) return;
+                currentPage = "machines"; SetNavigation(false); await RenderLibraryAsync();
+            });
+        else if (statusReceived && nextSettingsEpoch != settingsEpoch && status.B("settingsOpen"))
+            await RunAsync(async () =>
+            {
+                if (session)
+                {
+                    ApplySnapshot(await Core.CallAsync("snapshot"));
+                    await RefreshCustomControlsAsync();
+                    if (!EditorPages.Any(item => item.Id == currentPage)) await RenderEditorAsync();
+                }
+                else await OpenEditorAsync(new { });
+                refreshedSession = session;
+            });
+        if (statusReceived && nextDevicesEpoch != devicesEpoch && session && status.B("settingsOpen") && !refreshedSession)
+            await RunAsync(async () =>
+            {
+                if (!session) return;
+                ApplySnapshot(await Core.CallAsync("snapshot"));
+                await RefreshCustomControlsAsync();
+            });
+        settingsEpoch = nextSettingsEpoch; libraryEpoch = nextLibraryEpoch; devicesEpoch = nextDevicesEpoch; statusReceived = true;
+        SyncWindowVisibility();
+        UpdateFooter();
+        UpdateRuntimeStatus();
+        await UpdateKeyboardAsync();
+        await RefreshDownloadAsync();
     }
 
     // The Library/editor is only on screen while the core is stopped or its F12

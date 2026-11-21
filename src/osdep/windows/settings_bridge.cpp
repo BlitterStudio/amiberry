@@ -464,9 +464,13 @@ json media_list(amiberry_media_list list)
 		check(amiberry_media_entry(list, i, path.data(), path.size(), name.data(), name.size()), "Reading media");
 		json entry = {{"path", path.data()}, {"name", name.data()}};
 		if (list == AMIBERRY_MEDIA_CONFIGURATIONS) {
-			std::array<char, 256> description, category;
-			check(amiberry_media_configuration_info(path.data(), description.data(), description.size(),
-				category.data(), category.size()), "Reading machine metadata");
+			// One unreadable, locked or oversized configuration must not hide every other machine: it is listed
+			// without metadata, and opening it reports its own error.
+			std::array<char, 256> description{}, category{};
+			if (amiberry_media_configuration_info(path.data(), description.data(), description.size(),
+				category.data(), category.size()) != AMIBERRY_SETTINGS_OK) {
+				description[0] = category[0] = '\0';
+			}
 			entry["description"] = description.data();
 			entry["category"] = category.data();
 		}

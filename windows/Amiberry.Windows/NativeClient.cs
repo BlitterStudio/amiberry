@@ -30,7 +30,12 @@ internal sealed class NativeClient : IAsyncDisposable
     {
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token, cancellation);
         timeout.CancelAfter(TimeSpan.FromSeconds(60));
-        await requests.WaitAsync(timeout.Token);
+        // Only the wait for a turn is bounded. A caller that never wrote anything may fail without losing the connection.
+        try { await requests.WaitAsync(timeout.Token); }
+        catch (OperationCanceledException) when (!lifetime.IsCancellationRequested && !cancellation.IsCancellationRequested)
+        {
+            throw new NativeQueueTimeoutException();
+        }
         // The limit covers only waiting for a turn. Once a request is on the wire the core may legitimately
         // reply late (a modal file picker or confirmation blocks the thread that services the pipe), and a
         // cancelled partial exchange would drop the connection. A dead core still ends the read at once.
@@ -113,6 +118,9 @@ internal sealed class NativeClient : IAsyncDisposable
 }
 
 internal sealed class NativeRequestException(string message) : Exception(message);
+
+// An earlier request kept the core busy for the whole queue limit; nothing was sent, so the connection is intact.
+internal sealed class NativeQueueTimeoutException() : Exception("The emulator is still busy with an earlier request.");
 
 internal static class JsonValues
 {

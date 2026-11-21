@@ -90,6 +90,7 @@ public sealed partial class MainWindow
     private void UpdateFooter()
     {
         editorBar.Visibility = session ? Visibility.Visible : Visibility.Collapsed;
+        machineButton.Visibility = session ? Visibility.Collapsed : Visibility.Visible;
         int apply = Math.Max(pendingApply, committedApply);
         string action = !Emulating ? "Start Amiga" : apply >= 2 ? "Restart & Resume" : apply == 1 ? "Reset & Resume" : "Resume Amiga";
         startButton.Content = action;

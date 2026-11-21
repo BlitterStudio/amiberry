@@ -157,6 +157,22 @@ internal static class Program
             snapshot = await client.CallAsync(new { op = "set", id = "bogomem_size", value = slowOriginal });
             Check(!snapshot.GetProperty("changed").GetBoolean() && snapshot.GetProperty("apply").GetInt32() == 0, "restoring Slow RAM drops the apply class");
 
+            // One configuration the core cannot read (here: held open exclusively by another process) must not make
+            // the whole Library request fail; the machine is listed without metadata and the others stay available.
+            string locked = Path.Combine(configurations, "locked-\u00e9.uae");
+            await File.WriteAllTextAsync(locked, "config_description=locked\ncpu_model=68000\n", new UTF8Encoding(false));
+            using (var hold = new FileStream(locked, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
+            {
+                var listing = await client.ExchangeAsync(new { op = "library" });
+                Check(listing.GetProperty("ok").GetBoolean(), "Library request survives a locked configuration");
+                var machines = listing.GetProperty("data").GetProperty("machines").EnumerateArray().ToArray();
+                Check(machines.Any(machine => SamePath(machine.GetProperty("path").GetString()!, locked) &&
+                    machine.GetProperty("description").GetString() == ""), "locked configuration is listed without metadata");
+                Check(machines.Any(machine => SamePath(machine.GetProperty("path").GetString()!, unicodeSaved)),
+                    "other machines stay listed beside a locked configuration");
+            }
+            File.Delete(locked);
+
             // Old builds saved ANSI paths; the UI is UTF-8. They must display exactly and survive save and reopen.
             Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
             Encoding ansi = Encoding.GetEncoding((int)acp, EncoderFallback.ExceptionFallback, DecoderFallback.ExceptionFallback);
