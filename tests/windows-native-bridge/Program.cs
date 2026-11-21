@@ -205,6 +205,21 @@ internal static class Program
                 CheckPath(!Value(snapshot, "floppy0").Contains('\uFFFD') && SamePath(Value(snapshot, "floppy0"), disk),
                     "ANSI media path survives save and reopen as the same file", Value(snapshot, "floppy0"), disk);
             }
+
+            // The downloader opens files through narrow calls that read a path in the ANSI code page, so a UTF-8 folder
+            // name with non-ASCII characters is refused rather than installed under another name. A download is never
+            // started here: an accepted request would reach the network.
+            if (acp != 65001)
+            {
+                string whdFolder = Path.Combine(configurations, "whd-\u6a4b-\u00e4");
+                Directory.CreateDirectory(whdFolder);
+                await client.CallAsync(new { op = "host_set", id = "whdboot_path", value = whdFolder });
+                var download = await client.ExchangeAsync(new { op = "whdboot_download" });
+                Check(!download.GetProperty("ok").GetBoolean() && download.GetProperty("error").GetString()!.Contains("ASCII"),
+                    "WHDBoot download into a non-ASCII UTF-8 folder is refused with an explanation");
+                var status = await client.CallAsync(new { op = "whdboot_status" });
+                Check(!status.GetProperty("downloading").GetBoolean(), "the refused WHDBoot download never started");
+            }
         }
         catch (Exception error)
         {
