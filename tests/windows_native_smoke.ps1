@@ -629,6 +629,20 @@ try {
     Invoke-Control 'PrimaryButton'
     Wait-For { [AmiberrySmokeDesktop]::IsWindowVisible($uiHandle) -and (Find-Control 'NewMachineButton') } 'Library after saved-machine Play and stop' | Out-Null
     Write-Output 'PASS: native pages -> settings/search/narrow layout -> retained dialog errors -> native Save -> hidden emulation -> physical F12 -> resume hides -> stop restores Library -> clean Save As -> safe rename -> saved-machine Play/F12/resume/stop -> unsaved edit survives Resume/F12 and Save -> core modal held past 60 s keeps the connection'
+} catch {
+    # An error that is not a Wait-For timeout (a null control, a failed pattern call) otherwise reaches the CI log
+    # without its position. Report it with the failing statement, the stack and the state of the screen, then rethrow.
+    Write-Host '--- unexpected smoke error ---'
+    Write-Host ($_.Exception.GetType().FullName + ': ' + $_.Exception.Message)
+    Write-Host $_.InvocationInfo.PositionMessage
+    Write-Host $_.ScriptStackTrace
+    try { if ($script:Window) { Get-OwnedWindowDiagnostic | ForEach-Object { Write-Host $_ } } } catch { Write-Host "window diagnostics failed: $($_.Exception.Message)" }
+    try {
+        if ($ScreenshotPath -and $script:Window) {
+            Save-WindowImage (Join-Path (Split-Path ([IO.Path]::GetFullPath($ScreenshotPath))) ([IO.Path]::GetFileNameWithoutExtension($ScreenshotPath) + '-failure.png'))
+        }
+    } catch { Write-Host "failure image failed: $($_.Exception.Message)" }
+    throw
 } finally {
     # These PIDs belong to this smoke only; leave other Amiberry instances alone.
     if ($uiProcess) {
