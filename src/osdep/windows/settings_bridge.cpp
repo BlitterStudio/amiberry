@@ -199,7 +199,6 @@ std::vector<std::string> baseline_mounts;
 bool preset_applied = false;
 bool boards_edited = false;
 bool controls_edited = false;
-int edited_apply = AMIBERRY_APPLY_LIVE;
 
 amiberry_settings_session* active_session()
 {
@@ -328,7 +327,6 @@ void mark_clean()
 	baseline_boards = board_baseline(false);
 	baseline_controls = control_baseline(false);
 	preset_applied = boards_edited = controls_edited = false;
-	edited_apply = AMIBERRY_APPLY_LIVE;
 }
 
 void open_session()
@@ -373,6 +371,8 @@ json snapshot()
 	active_session();
 	json values = json::array();
 	bool changed = preset_applied;
+	// The apply class comes from the differences remaining now, not from the strongest intermediate edit, so
+	// restoring a baseline value returns a running machine's editor to a live Resume.
 	int strongest = preset_applied ? AMIBERRY_APPLY_RESET : AMIBERRY_APPLY_LIVE;
 	for (size_t i = 0; i < amiberry_settings_count(); ++i) {
 		const auto* descriptor = amiberry_settings_at(i);
@@ -408,8 +408,6 @@ json snapshot()
 	}
 	if (controls_edited && differs(control_baseline(true), baseline_controls))
 		changed = true;
-	if (changed)
-		edited_apply = std::max(edited_apply, strongest);
 	std::vector<amiberry_settings_adjustment> adjustments(32);
 	for (;;) {
 		const auto count = amiberry_settings_validate(session, adjustments.data(), adjustments.size());
@@ -424,7 +422,7 @@ json snapshot()
 		validation.push_back({{"id", text(adjustment.id)}, {"requested", adjustment.requested},
 			{"adjusted", adjustment.adjusted}, {"reason", text(adjustment.reason)}});
 	return {{"values", std::move(values)}, {"mounts", std::move(mounted)},
-		{"apply", edited_apply}, {"changed", changed}, {"adjustments", std::move(validation)},
+		{"apply", strongest}, {"changed", changed}, {"adjustments", std::move(validation)},
 		{"currentConfiguration", current_configuration()}};
 }
 
@@ -836,7 +834,7 @@ json dispatch(const json& request)
 		if (!descriptor || !visible(*descriptor))
 			throw std::runtime_error("Unknown or hidden host setting: " + id);
 		// The worker reads these globals throughout installation.
-		if (id == "whdboot_path" || id == "use_jst_instead_of_whd")
+		if (id == "whdboot_path" || id == "use_jst_instead_of_whd" || id == "base_content_path")
 			require_download_idle();
 		check(amiberry_host_settings_set(id.c_str(), value.c_str()), "Setting " + id);
 		if (!amiberry_host_settings_save())
@@ -912,8 +910,6 @@ json dispatch(const json& request)
 		const auto type = argument(request, "type"), field = argument(request, "field"), value = argument(request, "value");
 		check(amiberry_settings_board_set(active_session(), type.c_str(), integer(request, "unit"), field.c_str(), value.c_str()), "Setting board field");
 		boards_edited = true;
-		if (differs(board_baseline(true), baseline_boards))
-			edited_apply = AMIBERRY_APPLY_RESTART;
 		return boards();
 	}
 	if (op == "controls") return controls();
@@ -1000,7 +996,6 @@ void windows_native_close_session()
 	baseline_boards.clear();
 	baseline_controls.clear();
 	preset_applied = boards_edited = controls_edited = false;
-	edited_apply = AMIBERRY_APPLY_LIVE;
 }
 
 void windows_native_shutdown_bridge()

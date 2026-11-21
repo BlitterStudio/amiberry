@@ -143,6 +143,20 @@ internal static class Program
             Check(SamePath(Configuration(snapshot), unicodeSaved), "reopening the saved Unicode configuration keeps its association");
             Check(SamePath(Value(snapshot, "floppy0"), unicodeDisk), "Unicode media path survives save and reopen");
 
+            // A reset-class edit raises the apply class; restoring the original value drops it again, so a running
+            // machine's editor does not demand a reset for an edit that no longer differs from the saved state.
+            string slowOriginal = Value(snapshot, "bogomem_size");
+            string? slowOther = snapshot.GetProperty("values").EnumerateArray()
+                .Single(item => item.GetProperty("id").GetString() == "bogomem_size").GetProperty("choices").EnumerateArray()
+                .Where(choice => choice.GetProperty("available").GetBoolean())
+                .Select(choice => choice.GetProperty("value").GetString()).FirstOrDefault(choice => choice != slowOriginal);
+            Check(slowOther is not null, "Slow RAM offers a second available value");
+            Check(snapshot.GetProperty("apply").GetInt32() == 0 && !snapshot.GetProperty("changed").GetBoolean(), "reopened configuration starts clean");
+            snapshot = await client.CallAsync(new { op = "set", id = "bogomem_size", value = slowOther });
+            Check(snapshot.GetProperty("changed").GetBoolean() && snapshot.GetProperty("apply").GetInt32() >= 1, "changing Slow RAM requires a reset");
+            snapshot = await client.CallAsync(new { op = "set", id = "bogomem_size", value = slowOriginal });
+            Check(!snapshot.GetProperty("changed").GetBoolean() && snapshot.GetProperty("apply").GetInt32() == 0, "restoring Slow RAM drops the apply class");
+
             // Old builds saved ANSI paths; the UI is UTF-8. They must display exactly and survive save and reopen.
             Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
             Encoding ansi = Encoding.GetEncoding((int)acp, EncoderFallback.ExceptionFallback, DecoderFallback.ExceptionFallback);
