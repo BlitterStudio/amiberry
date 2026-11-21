@@ -13,12 +13,13 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE BOOL "Export compile_commands.json")
 # UI, which targets the oldest systems with Swift Observation (iOS 17.0 /
 # macOS 14.0). macOS without the native UI keeps the platform default.
 option(AMIBERRY_NATIVE_APPLE_UI "Build the native Apple UI layer (Swift) into the app; macOS and iOS only" OFF)
+option(AMIBERRY_NATIVE_WINDOWS_UI "Build the native Windows 11 UI (WinUI 3); Windows only" OFF)
 # The built-in ImGui GUI and its overlays (the on-screen keyboard, the
-# overlay frame): the native Apple apps have their own, and the Android
-# app's launcher, menus, dialogs and on-screen keyboard replace it there;
-# every other build has it.
+# overlay frame): the native Apple and Windows apps have their own, and the
+# Android app's launcher, menus, dialogs and on-screen keyboard replace it
+# there; other builds keep it.
 option(AMIBERRY_NO_IMGUI "Build without the built-in ImGui GUI; the platform's own UI takes its place" OFF)
-if(AMIBERRY_NATIVE_APPLE_UI OR AMIBERRY_NO_IMGUI)
+if(AMIBERRY_NATIVE_APPLE_UI OR AMIBERRY_NATIVE_WINDOWS_UI OR AMIBERRY_NO_IMGUI)
     set(AMIBERRY_IMGUI OFF)
 else()
     set(AMIBERRY_IMGUI ON)
@@ -96,13 +97,16 @@ option(BUNDLE_SDL        "Bundle SDL3 shared libraries into the package (for dis
 # A build without the built-in GUI has no ImGui, which the Vulkan
 # renderer's overlay needs.
 if(NOT AMIBERRY_IMGUI AND USE_VULKAN)
-    message(FATAL_ERROR "This build has no ImGui (AMIBERRY_NATIVE_APPLE_UI or AMIBERRY_NO_IMGUI), which the Vulkan renderer's overlay needs: build it with USE_VULKAN=OFF")
+    message(FATAL_ERROR "This build has no ImGui (AMIBERRY_NATIVE_APPLE_UI, AMIBERRY_NATIVE_WINDOWS_UI or AMIBERRY_NO_IMGUI), which the Vulkan renderer's overlay needs: build it with USE_VULKAN=OFF")
 endif()
 if(AMIBERRY_NO_IMGUI AND NOT ANDROID)
     message(FATAL_ERROR "AMIBERRY_NO_IMGUI needs the Android app's UI; other platforms build the built-in GUI (the Apple apps use AMIBERRY_NATIVE_APPLE_UI)")
 endif()
 if(AMIBERRY_NATIVE_APPLE_UI AND NOT APPLE)
     message(FATAL_ERROR "AMIBERRY_NATIVE_APPLE_UI requires an Apple platform (macOS or iOS)")
+endif()
+if(AMIBERRY_NATIVE_WINDOWS_UI AND NOT WIN32)
+    message(FATAL_ERROR "AMIBERRY_NATIVE_WINDOWS_UI requires Windows")
 endif()
 
 # Deployment target applied to the app target under the Xcode generator.
@@ -316,6 +320,11 @@ include(cmake/Dependencies.cmake)
 # Swift static library links into the fully-populated amiberry target.
 if(AMIBERRY_NATIVE_APPLE_UI)
     include(cmake/AppleNativeUI.cmake)
+endif()
+
+# WinUI runs as a sibling process; publish it beside the core executable.
+if(AMIBERRY_NATIVE_WINDOWS_UI)
+    include(cmake/WindowsNativeUI.cmake)
 endif()
 
 # Install rules may need dependency targets, such as SDL3 and SDL3_image,

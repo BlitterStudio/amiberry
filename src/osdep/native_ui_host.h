@@ -1,12 +1,10 @@
 /*
- * The native Apple front ends (apple/Shared/UI with apple/macOS or
- * apple/iOS, -DAMIBERRY_NATIVE_APPLE_UI=ON): where the built-in GUI would
- * show, the emulator calls these instead, so the Apple apps show no ImGui.
- * Other builds keep the built-in GUI.
+ * The native Apple and Windows front ends: where the built-in GUI would
+ * show, the emulator calls these instead. Other builds keep ImGui.
  */
 #pragma once
 
-#if defined(AMIBERRY_NATIVE_APPLE_UI) && (defined(AMIBERRY_MACOS) || defined(AMIBERRY_IOS))
+#if defined(AMIBERRY_NATIVE_WINDOWS_UI) || (defined(AMIBERRY_NATIVE_APPLE_UI) && (defined(AMIBERRY_MACOS) || defined(AMIBERRY_IOS)))
 #define AMIBERRY_NATIVE_HOST 1
 
 #include <string>
@@ -16,20 +14,19 @@
 // state load among them closes it as the built-in GUI's buttons do.
 void native_host_run_settings();
 // Installs the front end's commands once SDL has created the application:
-// the menu bar on macOS, the emulation overlay (settings and keyboard
-// buttons) on iOS.
+// the menu bar on macOS, the overlay on iOS, the WinUI process on Windows.
 void native_host_install_menus();
-// SDL has created the emulation window (macOS: its toolbar goes on;
-// nothing on iOS, where the overlay is installed once). Main thread only.
+// SDL has created the emulation window: installs the Mac toolbar or Windows
+// system-menu commands. Nothing on iOS. Main thread only.
 struct SDL_Window;
 void native_host_emulation_window_created(SDL_Window* window);
 // The native on-screen Amiga keyboard (over the emulation on iOS, in a
-// panel at the bottom of the emulation window on macOS): shown or hidden by
+// panel on desktop): shown or hidden by
 // its hotkey and the on-screen joystick's keyboard button, hidden when input
 // leaves the emulation. Main thread only.
 void native_host_toggle_keyboard();
 void native_host_hide_keyboard();
-// The autosave state (iOS; nothing on macOS): the running emulation is
+// The autosave state (iOS; nothing on desktop): the running emulation is
 // saved as the app goes to the background, where the system may end it, and
 // the settings UI offers to resume it. Requested from the lifecycle event
 // (main thread, which can be mid-frame), written by the service call at the
@@ -65,5 +62,11 @@ void native_host_message_deferred(const char* message);
 void native_host_show_deferred_messages();
 // Whether the settings window is up. Main thread only.
 bool native_host_settings_open();
+
+#ifdef AMIBERRY_NATIVE_WINDOWS_UI
+// Services the private WinUI connection on the emulator thread, including
+// while paused or stopped in the debugger. Never blocks for pipe I/O.
+void windows_native_service();
+#endif
 
 #endif

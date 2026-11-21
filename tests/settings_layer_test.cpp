@@ -3121,7 +3121,7 @@ void check_platform_visibility()
 		CHECK((amiberry_host_settings_at(i)->hidden_on & ~AMIBERRY_SETTINGS_HIDE_ON_ALL) == 0);
 
 	const unsigned int native = AMIBERRY_SETTINGS_HIDE_ON_MACOS | AMIBERRY_SETTINGS_HIDE_ON_IOS
-		| AMIBERRY_SETTINGS_HIDE_ON_ANDROID;
+		| AMIBERRY_SETTINGS_HIDE_ON_ANDROID | AMIBERRY_SETTINGS_HIDE_ON_WINDOWS;
 #ifndef AMIBERRY_NO_IMGUI
 	for (const char* id : {"Quickstart", "gui_theme"}) {
 		const amiberry_setting_descriptor* d = amiberry_host_settings_find(id);

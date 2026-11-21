@@ -1,8 +1,19 @@
+# Native builds start with the current content-folder names rather than
+# triggering the legacy casing migration on every fresh portable install.
+set(_AMIBERRY_WINDOWS_CONTROLLERS_DIR controllers)
+set(_AMIBERRY_WINDOWS_ROMS_DIR roms)
+set(_AMIBERRY_WINDOWS_WHDBOOT_DIR whdboot)
+if(AMIBERRY_NATIVE_WINDOWS_UI)
+    set(_AMIBERRY_WINDOWS_CONTROLLERS_DIR Controllers)
+    set(_AMIBERRY_WINDOWS_ROMS_DIR ROMs)
+    set(_AMIBERRY_WINDOWS_WHDBOOT_DIR WHDBoot)
+endif()
+
 # Copy dirs to the build directory so we can debug locally
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_SOURCE_DIR}/controllers
-        $<TARGET_FILE_DIR:${PROJECT_NAME}>/controllers)
+        $<TARGET_FILE_DIR:${PROJECT_NAME}>/${_AMIBERRY_WINDOWS_CONTROLLERS_DIR})
 
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory
@@ -12,12 +23,12 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_SOURCE_DIR}/roms
-        $<TARGET_FILE_DIR:${PROJECT_NAME}>/roms)
+        $<TARGET_FILE_DIR:${PROJECT_NAME}>/${_AMIBERRY_WINDOWS_ROMS_DIR})
 
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_SOURCE_DIR}/whdboot
-        $<TARGET_FILE_DIR:${PROJECT_NAME}>/whdboot)
+        $<TARGET_FILE_DIR:${PROJECT_NAME}>/${_AMIBERRY_WINDOWS_WHDBOOT_DIR})
 
 # Copy plugin DLLs to plugins/ subdirectory in build dir for local debugging
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
@@ -62,18 +73,26 @@ if(QEMU_UAE_PLUGIN)
     endif()
 endif()
 
-install(DIRECTORY ${CMAKE_SOURCE_DIR}/controllers
-        DESTINATION ${CMAKE_INSTALL_BINDIR}
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/controllers/
+        DESTINATION ${CMAKE_INSTALL_BINDIR}/${_AMIBERRY_WINDOWS_CONTROLLERS_DIR}
         ${AMIBERRY_PACKAGE_METADATA_EXCLUDES})
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/data
         DESTINATION ${CMAKE_INSTALL_BINDIR}
         ${AMIBERRY_PACKAGE_METADATA_EXCLUDES})
-install(DIRECTORY ${CMAKE_SOURCE_DIR}/roms
-        DESTINATION ${CMAKE_INSTALL_BINDIR}
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/roms/
+        DESTINATION ${CMAKE_INSTALL_BINDIR}/${_AMIBERRY_WINDOWS_ROMS_DIR}
         ${AMIBERRY_PACKAGE_METADATA_EXCLUDES})
-install(DIRECTORY ${CMAKE_SOURCE_DIR}/whdboot
-        DESTINATION ${CMAKE_INSTALL_BINDIR}
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/whdboot/
+        DESTINATION ${CMAKE_INSTALL_BINDIR}/${_AMIBERRY_WINDOWS_WHDBOOT_DIR}
         ${AMIBERRY_PACKAGE_METADATA_EXCLUDES})
+
+if(AMIBERRY_NATIVE_WINDOWS_UI)
+    # Keep the complete self-contained .NET / Windows App SDK deployment:
+    # individual DLL selection misses WinUI resources and runtime subfolders.
+    install(DIRECTORY "$<TARGET_FILE_DIR:${PROJECT_NAME}>/native-ui"
+            DESTINATION ${CMAKE_INSTALL_BINDIR}
+            ${AMIBERRY_PACKAGE_METADATA_EXCLUDES})
+endif()
 
 # Bundle vcpkg runtime DLLs beside the build and installed executables using
 # applocal.ps1. vcpkg's standard helper excludes mingw-dynamic, so invoke it

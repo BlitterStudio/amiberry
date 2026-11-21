@@ -8226,7 +8226,7 @@ void cfgfile_backup(const TCHAR *path)
 	/* Non-destructive backup: copy (not move) the current config to the backup
 	   slot so the live file survives if the subsequent atomic save fails.
 	   Best-effort -- a backup failure must never block the save. */
-	if (!my_existsfile (path))
+	if (!my_existsfile2 (path))
 		return;
 	bool hidden = my_isfilehidden (dpath);
 	if (!copyfile (dpath, path, true))

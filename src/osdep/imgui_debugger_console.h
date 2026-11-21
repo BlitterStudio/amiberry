@@ -2,7 +2,7 @@
 
 #include "sysconfig.h"
 
-#if !defined(AMIBERRY_MACOS) && !defined(__ANDROID__) && !defined(AMIBERRY_IOS)
+#if !defined(AMIBERRY_MACOS) && !defined(__ANDROID__) && !defined(AMIBERRY_IOS) && !defined(AMIBERRY_NO_IMGUI)
 bool imgui_debugger_console_supported();
 void imgui_debugger_console_open();
 void imgui_debugger_console_close();

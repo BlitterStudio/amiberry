@@ -317,7 +317,7 @@ host_setting not_on_ios(host_setting s)
 host_setting gui_only(host_setting s)
 {
 	s.hidden_on = AMIBERRY_SETTINGS_HIDE_ON_MACOS | AMIBERRY_SETTINGS_HIDE_ON_IOS
-		| AMIBERRY_SETTINGS_HIDE_ON_ANDROID;
+		| AMIBERRY_SETTINGS_HIDE_ON_ANDROID | AMIBERRY_SETTINGS_HIDE_ON_WINDOWS;
 	return s;
 }
 

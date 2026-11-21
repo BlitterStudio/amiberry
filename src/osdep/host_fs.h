@@ -4,8 +4,12 @@
 // on every host (iso_8859_1_to_utf8() turns Amiga names into host paths).
 //
 // Windows reads char paths in the ANSI code page, so the standalone Windows
-// build converts them to UTF-16 and calls the wide functions. POSIX hosts
-// take UTF-8 as it is, and the libretro core's posixemu layer (sysdeps.h)
+// build converts them to UTF-16 and calls the wide functions. A path that is
+// well-formed UTF-8 is read as UTF-8 (the native UI, folder dialogs, new
+// configurations); any other path is read in the ANSI code page, which is how
+// older builds saved host paths (configurations, caches). The process code
+// page is not changed. host_path() applies the same rule. POSIX hosts take
+// UTF-8 as it is, and the libretro core's posixemu layer (sysdeps.h)
 // already expects UTF-8, so both keep the narrow calls.
 //
 // Include after sysdeps.h (STAT).

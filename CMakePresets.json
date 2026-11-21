@@ -159,6 +159,34 @@
         "lhs": "${hostSystemName}",
         "rhs": "Windows"
       }
+    },
+    {
+      "name": "windows-native-debug",
+      "displayName": "Windows x64 Debug (experimental WinUI 3)",
+      "description": "Windows 11 native UI; requires .NET SDK 10 in addition to the Windows toolchain.",
+      "inherits": "windows-debug",
+      "cacheVariables": { "AMIBERRY_NATIVE_WINDOWS_UI": "ON" }
+    },
+    {
+      "name": "windows-native-release",
+      "displayName": "Windows x64 Release (experimental WinUI 3)",
+      "description": "Windows 11 native UI; requires .NET SDK 10 in addition to the Windows toolchain.",
+      "inherits": "windows-release",
+      "cacheVariables": { "AMIBERRY_NATIVE_WINDOWS_UI": "ON" }
+    },
+    {
+      "name": "windows-arm64-native-debug",
+      "displayName": "Windows ARM64 Debug (experimental WinUI 3)",
+      "description": "Windows 11 ARM64 native UI; requires .NET SDK 10 in addition to the Windows toolchain.",
+      "inherits": "windows-arm64-debug",
+      "cacheVariables": { "AMIBERRY_NATIVE_WINDOWS_UI": "ON" }
+    },
+    {
+      "name": "windows-arm64-native-release",
+      "displayName": "Windows ARM64 Release (experimental WinUI 3)",
+      "description": "Windows 11 ARM64 native UI; requires .NET SDK 10 in addition to the Windows toolchain.",
+      "inherits": "windows-arm64-release",
+      "cacheVariables": { "AMIBERRY_NATIVE_WINDOWS_UI": "ON" }
     }
   ],
   "buildPresets": [
@@ -219,6 +247,30 @@
     {
       "name": "windows-arm64-release",
       "configurePreset": "windows-arm64-release",
+      "jobs": 0,
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Windows" }
+    },
+    {
+      "name": "windows-native-debug",
+      "configurePreset": "windows-native-debug",
+      "jobs": 0,
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Windows" }
+    },
+    {
+      "name": "windows-native-release",
+      "configurePreset": "windows-native-release",
+      "jobs": 0,
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Windows" }
+    },
+    {
+      "name": "windows-arm64-native-debug",
+      "configurePreset": "windows-arm64-native-debug",
+      "jobs": 0,
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Windows" }
+    },
+    {
+      "name": "windows-arm64-native-release",
+      "configurePreset": "windows-arm64-native-release",
       "jobs": 0,
       "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Windows" }
     }

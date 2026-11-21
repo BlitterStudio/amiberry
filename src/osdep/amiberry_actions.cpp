@@ -11,6 +11,9 @@
 #include "settings/amiberry_actions.h"
 #include "settings/settings_actions_queue.h"
 #include "amiberry_actions_host.h"
+#ifdef AMIBERRY_NATIVE_WINDOWS_UI
+#include "native_ui_host.h"
+#endif
 
 #include "options.h"
 #include "memory.h"
@@ -879,6 +882,9 @@ amiberry_action_result amiberry_actions_poll(amiberry_action_id id,
 
 size_t amiberry_actions_run_pending(void)
 {
+#ifdef AMIBERRY_NATIVE_WINDOWS_UI
+	windows_native_service();
+#endif
 	const size_t executed = queue().run_pending(execute, nullptr);
 	publish_status();
 	return executed;

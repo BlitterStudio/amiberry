@@ -62,10 +62,20 @@ extern std::string get_version_string();
 extern std::string get_copyright_notice();
 extern std::string get_sdl_version_string();
 
+#if defined(_WIN32) && !defined(LIBRETRO)
+// Host file names are UTF-8 (the native UI) or ANSI (older configurations);
+// host_fopen() (host_fs.h) opens either through the wide API.
+extern FILE* host_fopen(const char* path, const char* mode);
+STATIC_INLINE FILE* uae_tfopen(const TCHAR* path, const TCHAR* mode)
+{
+	return host_fopen(path, mode);
+}
+#else
 STATIC_INLINE FILE* uae_tfopen(const TCHAR* path, const TCHAR* mode)
 {
 	return fopen(path, mode);
 }
+#endif
 
 // Expose prefix_with_application_directory from amiberry_filesys,
 // so we can use it to open the main configuration file on OS X
