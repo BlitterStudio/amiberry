@@ -27,6 +27,16 @@ public static class AmiberrySmokeDesktop {
         if (DwmGetWindowAttribute(window, 9, out frame, Marshal.SizeOf(typeof(Rect))) != 0) return null;
         return new int[] { frame.Left, frame.Top, frame.Right, frame.Bottom };
     }
+    [StructLayout(LayoutKind.Sequential)]
+    private struct MonitorInfo { public int Size; public Rect Monitor, Work; public uint Flags; }
+    [DllImport("user32.dll")] private static extern System.IntPtr MonitorFromWindow(System.IntPtr window, uint flags);
+    [DllImport("user32.dll")] private static extern bool GetMonitorInfo(System.IntPtr monitor, ref MonitorInfo info);
+    // The work area (monitor minus taskbar) of the monitor nearest to the window.
+    public static int[] WorkArea(System.IntPtr window) {
+        var info = new MonitorInfo { Size = Marshal.SizeOf(typeof(MonitorInfo)) };
+        if (!GetMonitorInfo(MonitorFromWindow(window, 2), ref info)) return null;
+        return new int[] { info.Work.Left, info.Work.Top, info.Work.Right, info.Work.Bottom };
+    }
     private delegate bool EnumProc(System.IntPtr window, System.IntPtr parameter);
     [DllImport("user32.dll")] private static extern bool EnumWindows(EnumProc callback, System.IntPtr parameter);
     [DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId(System.IntPtr window, out uint processId);
@@ -73,6 +83,26 @@ public static class AmiberrySmokeDesktop {
             new Input { Type = 1, Data = new InputData { Keyboard = new KeyboardInput { Key = 0x7b, Flags = 2 } } }
         };
         if (SendInput(2, inputs, Marshal.SizeOf(typeof(Input))) != 2)
+            throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error());
+    }
+    // Real keyboard input for the focused control: Ctrl+A, then each character as a Unicode key event.
+    public static void SelectAll() {
+        var inputs = new[] {
+            new Input { Type = 1, Data = new InputData { Keyboard = new KeyboardInput { Key = 0x11 } } },
+            new Input { Type = 1, Data = new InputData { Keyboard = new KeyboardInput { Key = 0x41 } } },
+            new Input { Type = 1, Data = new InputData { Keyboard = new KeyboardInput { Key = 0x41, Flags = 2 } } },
+            new Input { Type = 1, Data = new InputData { Keyboard = new KeyboardInput { Key = 0x11, Flags = 2 } } }
+        };
+        if (SendInput((uint)inputs.Length, inputs, Marshal.SizeOf(typeof(Input))) != inputs.Length)
+            throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error());
+    }
+    public static void TypeText(string text) {
+        var inputs = new Input[text.Length * 2];
+        for (int i = 0; i < text.Length; i++) {
+            inputs[2 * i] = new Input { Type = 1, Data = new InputData { Keyboard = new KeyboardInput { Scan = text[i], Flags = 4 } } };
+            inputs[2 * i + 1] = new Input { Type = 1, Data = new InputData { Keyboard = new KeyboardInput { Scan = text[i], Flags = 6 } } };
+        }
+        if (SendInput((uint)inputs.Length, inputs, Marshal.SizeOf(typeof(Input))) != inputs.Length)
             throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error());
     }
 }
@@ -280,6 +310,9 @@ function Get-PickerControl($dialog, [string]$Id) {
 function Wait-NativePicker([string]$Description) {
     $dialog = Wait-For { Find-OwnedDialog } "native $Description picker"
     Wait-For { (Get-PickerControl $dialog '1001') -and (Get-PickerControl $dialog '1') -and (Get-PickerControl $dialog '2') } "native $Description picker controls (file name 1001, Save 1, Cancel 2)" | Out-Null
+    # ARM CI saved "Amiga 500.uae" (the suggestion) instead of the typed path: wait until the dialog has filled in
+    # its suggested file name, so that typed text is not raced by the dialog's own initialisation.
+    Wait-For { (Get-PickerControl $dialog '1001').GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).Current.Value.Length -gt 0 } "native $Description picker suggested file name" | Out-Null
     return $dialog
 }
 
@@ -308,8 +341,20 @@ function Save-TestMachine([string]$Path) {
     Invoke-Control 'MachineSaveButton'
     $dialog = Wait-NativePicker 'Save'
     $edit = Get-PickerControl $dialog '1001'
-    $edit.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).SetValue($Path)
-    $typed = $edit.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).Current.Value
+    $value = $edit.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern)
+    # ARM CI showed the file name UIA reports after SetValue is not what the dialog saves (it returned its own
+    # suggestion), so type the name as a user would: only into this dialog's focused file name field.
+    $dialogHandle = [IntPtr]$dialog.Current.NativeWindowHandle
+    Wait-For {
+        if ([AmiberrySmokeDesktop]::GetForegroundWindow() -ne $dialogHandle) { [AmiberrySmokeDesktop]::SetForegroundWindow($dialogHandle) | Out-Null }
+        $edit.SetFocus()
+        [AmiberrySmokeDesktop]::GetForegroundWindow() -eq $dialogHandle -and
+            [System.Windows.Automation.AutomationElement]::FocusedElement.Current.AutomationId -eq '1001'
+    } 'native Save picker file name field focused' | Out-Null
+    [AmiberrySmokeDesktop]::SelectAll()
+    [AmiberrySmokeDesktop]::TypeText($Path)
+    Wait-For { Start-Sleep -Milliseconds 400; $value.Current.Value -eq $Path } 'picker file name holding the typed path' | Out-Null
+    $typed = $value.Current.Value
     (Get-PickerControl $dialog '1').GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke()
     # Say what the picker saw and where any saved file landed: the UI reports a
     # successful save, so a timeout means the file is elsewhere or its content differs.
@@ -366,12 +411,13 @@ try {
     } 'native Library window'
     $uiHandle = [IntPtr]$script:Window.Current.NativeWindowHandle
     Wait-For { Find-Control 'NewMachineButton' } 'Library actions' | Out-Null
-    # The default window must fit the display it opens on (a 1024x768 monitor once pushed the footer off screen).
-    # UIA bounds include the invisible resize borders, hence the tolerance.
+    # The default window must fit the work area of the monitor it opens on (a 1024x768 monitor once pushed the footer
+    # off screen). UIA bounds include the invisible resize borders, hence the tolerance.
     $initialBounds = $script:Window.Current.BoundingRectangle
-    $displayWidth = [AmiberrySmokeDesktop]::GetSystemMetrics(0); $displayHeight = [AmiberrySmokeDesktop]::GetSystemMetrics(1)
-    if ($initialBounds.X -lt -16 -or $initialBounds.Y -lt -16 -or $initialBounds.Right -gt $displayWidth + 16 -or $initialBounds.Bottom -gt $displayHeight + 16) {
-        throw "The initial editor window $($initialBounds.X),$($initialBounds.Y) $($initialBounds.Width)x$($initialBounds.Height) does not fit the ${displayWidth}x${displayHeight} display."
+    $work = [AmiberrySmokeDesktop]::WorkArea($uiHandle)
+    if (-not $work) { throw 'Could not read the work area of the monitor holding the editor window.' }
+    if ($initialBounds.X -lt $work[0] - 16 -or $initialBounds.Y -lt $work[1] - 16 -or $initialBounds.Right -gt $work[2] + 16 -or $initialBounds.Bottom -gt $work[3] + 16) {
+        throw "The initial editor window $($initialBounds.X),$($initialBounds.Y) $($initialBounds.Width)x$($initialBounds.Height) does not fit its monitor's work area $($work -join ',')."
     }
     if ($ScreenshotPath) {
         $imageDirectory = Split-Path ([IO.Path]::GetFullPath($ScreenshotPath))
