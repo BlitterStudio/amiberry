@@ -386,7 +386,9 @@ void mmu_hardware_bus_error(uaecptr addr, uae_u32 v, bool read, bool ins, int si
 	} else {
 		fc = (regs.s ? 4 : 0) | (ins ? 2 : 1);
 	}
-	mmu_bus_error(addr, v, fc, !read, size, 0, true);
+	// A bus error (TEA) on a 68060 sets RE or WE in the FSLW; without them
+	// the fault looks like an MMU fault and handlers retry the access.
+	mmu_bus_error(addr, v, fc, !read, size, read ? MMU_FSLW_RE : MMU_FSLW_WE, true);
 }
 
 bool mmu_is_super_access(bool read)
