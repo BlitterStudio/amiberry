@@ -182,7 +182,12 @@ function Save-WindowImage([string]$Path) {
     # A native picker owned by the editor disables it; failure diagnostics
     # still need an image in that state.
     if ($script:Window.Current.IsEnabled) { $script:Window.SetFocus() }
-    $script:Window.GetCurrentPattern([System.Windows.Automation.WindowPattern]::Pattern).WaitForInputIdle(5000) | Out-Null
+    # The window's UIA provider can briefly lack WindowPattern while it starts (ARM CI); the sleep and
+    # DwmFlush below still fence the frame.
+    $windowPattern = $null
+    if ($script:Window.TryGetCurrentPattern([System.Windows.Automation.WindowPattern]::Pattern, [ref]$windowPattern)) {
+        $windowPattern.WaitForInputIdle(5000) | Out-Null
+    }
     # Input idle precedes WinUI entrance/layout animations; DwmFlush alone
     # fences only the current frame, which can still be mid-transition.
     Start-Sleep -Milliseconds 750
@@ -312,7 +317,10 @@ function Wait-NativePicker([string]$Description) {
     Wait-For { (Get-PickerControl $dialog '1001') -and (Get-PickerControl $dialog '1') -and (Get-PickerControl $dialog '2') } "native $Description picker controls (file name 1001, Save 1, Cancel 2)" | Out-Null
     # ARM CI saved "Amiga 500.uae" (the suggestion) instead of the typed path: wait until the dialog has filled in
     # its suggested file name, so that typed text is not raced by the dialog's own initialisation.
-    Wait-For { (Get-PickerControl $dialog '1001').GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).Current.Value.Length -gt 0 } "native $Description picker suggested file name" | Out-Null
+    Wait-For {
+        $name = Get-PickerControl $dialog '1001'
+        $name -and $name.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).Current.Value.Length -gt 0
+    } "native $Description picker suggested file name" | Out-Null
     return $dialog
 }
 
@@ -471,10 +479,12 @@ try {
         $cpu = Find-Control 'Setting_cpu_model'
         if ($cpu -and $cpu.Current.IsEnabled -and -not $cpu.Current.IsOffscreen -and $cpu.Current.BoundingRectangle.Width -gt 0) { return $cpu }
     } 'visible editable CPU model' | Out-Null
+    # Navigation items can be missing from the UIA tree while the page rebuilds: not selected yet.
     Wait-For {
         $hardware = Find-Control 'Page_hardware'
         $overview = Find-Control 'Page_overview'
-        $hardware.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Current.IsSelected -and
+        $hardware -and $overview -and
+            $hardware.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Current.IsSelected -and
             -not $overview.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Current.IsSelected
     } 'single matching navigation selection' | Out-Null
     $ntsc = Wait-For { Find-Control 'Setting_ntsc' } 'NTSC setting'
@@ -522,7 +532,10 @@ try {
     # Return to the size the window had before narrowing. A fixed target is unreachable on a
     # hosted runner whose display is smaller than the app's default window.
     $transform.Resize($desktopBounds.Width, $desktopBounds.Height)
-    Wait-For { $script:Window.Current.BoundingRectangle.Width -ge $desktopBounds.Width - 10 -and -not (Find-Control 'Setting_cpu_model').Current.IsOffscreen } 'restored desktop layout' | Out-Null
+    Wait-For {
+        $cpu = Find-Control 'Setting_cpu_model'
+        $script:Window.Current.BoundingRectangle.Width -ge $desktopBounds.Width - 10 -and $cpu -and -not $cpu.Current.IsOffscreen
+    } 'restored desktop layout' | Out-Null
 
     # Exercise a real storage dialog error: the input must survive backend
     # rejection, and cancelling must leave the machine's mounts unchanged.

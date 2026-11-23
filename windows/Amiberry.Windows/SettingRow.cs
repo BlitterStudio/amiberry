@@ -156,11 +156,12 @@ internal sealed class SettingRow
         else
         {
             text = new TextBox { TextWrapping = TextWrapping.NoWrap, HorizontalAlignment = HorizontalAlignment.Stretch, VerticalAlignment = VerticalAlignment.Center };
-            text.TextChanged += async (_, _) =>
-            {
-                if (clearItem is not null) clearItem.IsEnabled = text.Text.Length > 0;
-                if (!updating) await MarkChangedAsync();
-            };
+            // Mark the edit from TextChanging, which runs synchronously with the change. TextChanged is raised
+            // asynchronously: an action invoked right after an edit (UI Automation SetValue, then Invoke) could
+            // flush drafts before the edit registered, and when Browse or Clear set the text and commit at once,
+            // the late TextChanged marked the committed value as a new draft.
+            text.TextChanging += async (_, _) => { if (!updating) await MarkChangedAsync(); };
+            text.TextChanged += (_, _) => { if (clearItem is not null) clearItem.IsEnabled = text.Text.Length > 0; };
             text.LostFocus += async (_, _) =>
             {
                 if (recording)
