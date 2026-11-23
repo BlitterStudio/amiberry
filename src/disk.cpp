@@ -82,7 +82,7 @@ int floppy_writemode = 0;
 #define FLOPPY_WRITE_LEN (currprefs.floppy_write_length > 256 ? currprefs.floppy_write_length / 2 : (currprefs.ntscmode ? (FLOPPY_WRITE_LEN_NTSC / 2) : (FLOPPY_WRITE_LEN_PAL / 2)))
 #define FLOPPY_WRITE_MAXLEN 0x3800
 /* This works out to 350 PAL, 408 NTSC */
-#define FLOPPY_GAP_LEN (FLOPPY_WRITE_LEN - 11 * 544)
+#define FLOPPY_GAP_LEN(ddhd) ((FLOPPY_WRITE_LEN - 11 * 544) * (ddhd))
 /* 7 CCK per bit */
 #define NORMAL_FLOPPY_SPEED (7 * 256)
 /* max supported floppy drives, for small memory systems */
@@ -670,10 +670,10 @@ static int get_floppy_speed_from_image(drive *drv)
 	l = drv->tracklen;
 	drv->fourms = false;
 	if (!drv->tracktiming[0]) {
-		m = m * l / (2 * 8 * FLOPPY_WRITE_LEN * drv->ddhd);
+		m = m * (2 * 8 * FLOPPY_WRITE_LEN * drv->ddhd) / l;
 	}
 	// 4us track?
-	if (l < (FLOPPY_WRITE_LEN_PAL * 8) * 4 / 6) {
+	if (l < (FLOPPY_WRITE_LEN_PAL * 8 * drv->ddhd) * 4 / 6) {
 		m *= 2;
 		drv->fourms = true;
 	}
@@ -2191,16 +2191,17 @@ static void decode_amigados(drive *drv, int tside)
 {
 	/* Normal AmigaDOS format track */
 	int tr = drv->cyl * 2 + tside;
+	int gap_len = FLOPPY_GAP_LEN(drv->ddhd);
 	int sec;
 	int dstmfmoffset = 0;
 	uae_u16 *dstmfmbuf = drv->bigmfmbuf;
-	int len = drv->num_secs * 544 + FLOPPY_GAP_LEN;
+	int len = drv->num_secs * 544 + gap_len;
 	int prevbit;
 
 	trackid *ti = drv->trackdata + tr;
 	memset (dstmfmbuf, 0xaa, len * 2);
-	dstmfmoffset += FLOPPY_GAP_LEN;
-	drv->skipoffset = (FLOPPY_GAP_LEN * 8) / 3 * 2;
+	dstmfmoffset += gap_len;
+	drv->skipoffset = (gap_len * 8) / 3 * 2;
 	drv->tracklen = len * 2 * 8;
 
 	prevbit = 0;
@@ -2316,12 +2317,13 @@ static void decode_diskspare(drive *drv, int tside)
 	int dstmfmoffset = 0;
 	int size = 512 + 8;
 	uae_u16 *dstmfmbuf = drv->bigmfmbuf;
-	int len = drv->num_secs * size + FLOPPY_GAP_LEN;
+	int gap_len = FLOPPY_GAP_LEN(drv->ddhd);
+	int len = drv->num_secs * size + gap_len;
 
 	trackid *ti = drv->trackdata + tr;
 	memset (dstmfmbuf, 0xaa, len * 2);
-	dstmfmoffset += FLOPPY_GAP_LEN;
-	drv->skipoffset = (FLOPPY_GAP_LEN * 8) / 3 * 2;
+	dstmfmoffset += gap_len;
+	drv->skipoffset = (gap_len * 8) / 3 * 2;
 	drv->tracklen = len * 2 * 8;
 
 	for (sec = 0; sec < drv->num_secs; sec++) {
@@ -4916,7 +4918,7 @@ static void DSKLEN_2(uae_u16 v, int hpos)
 		}
 		dskdmaen = DSKDMA_READ;
 		DISK_start();
-		weirddma = dsklength < 544 * 11 + FLOPPY_GAP_LEN;
+		weirddma = dsklength < 544 * 11 + FLOPPY_GAP_LEN(1);
 	}
 	if (!(v & 0x8000)) {
 		if (dskdmaen != DSKDMA_OFF) {
@@ -5757,7 +5759,7 @@ int DISK_examine_image(struct uae_prefs *p, int num, struct diskinfo *di, bool d
 	uae_u32 dos, crc, crc2;
 	int wasdelayed = drv->dskchange_time;
 	int sectable[MAX_SECTORS] = { 0 };
-	int oldcyl, oldside, mfmpos;
+	int oldcyl, oldside, mfmpos, oldwp, oldwp2;
 	uae_u32 v = 0;
 #ifdef FLOPPYBRIDGE
 	bool fb = DISK_isfloppybridge(p, num);
@@ -5780,6 +5782,8 @@ int DISK_examine_image(struct uae_prefs *p, int num, struct diskinfo *di, bool d
 	di->unreadable = true;
 	oldcyl = drv->cyl;
 	oldside = side;
+	oldwp2 = drv->forcedwrprot;
+	oldwp = drv->wrprot;
 	mfmpos = drv->mfmpos;
 	drv->cyl = 0;
 	side = 0;
@@ -5801,6 +5805,8 @@ int DISK_examine_image(struct uae_prefs *p, int num, struct diskinfo *di, bool d
 	di->hd = drv->ddhd == 2;
 	drv->cyl = oldcyl;
 	side = oldside;
+	drv->wrprot = oldwp;
+	drv->forcedwrprot = oldwp2;
 	if (sectable[0] == 0 || sectable[1] == 0) {
 		ret = 2;
 		di->unreadable = true;
