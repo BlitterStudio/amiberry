@@ -650,9 +650,11 @@ const definition fixed_definitions[] = {
 			"The board's boot ROM image, for boards that need one.",
 			AMIBERRY_APPLY_RESTART, "", "Only with an accelerator board."),
 		get_cpuboard_rom_file, set_cpuboard_rom_file, rom_available, nullptr, nullptr},
+	// bsdsocket.library and uaenet.device live in the UAE Boot ROM, which a
+	// hard reset rebuilds with these settings (virtualdevice_init).
 	{BOOL_OPTION("bsdsocket_emu", "expansions", "bsdsocket.library",
 			"TCP/IP networking for Amiga programs through the host's network.",
-			AMIBERRY_APPLY_RESTART, "false", nullptr),
+			AMIBERRY_APPLY_RESET, "false", nullptr),
 		get_bsdsocket_emu, set_bsdsocket_emu, bsdsocket_compiled, nullptr, nullptr},
 	{CHOICE_OPTION("scsi", "expansions", "uaescsi.device",
 			"Amiga access to host and emulated CD drives through uaescsi.device.",
@@ -661,7 +663,7 @@ const definition fixed_definitions[] = {
 		get_scsi, set_scsi, scsi_compiled, scsi_choice_available, nullptr},
 	{BOOL_OPTION("sana2", "expansions", "uaenet.device",
 			"A SANA-II network device for Amiga programs, on the host's network.",
-			AMIBERRY_APPLY_RESTART, "false", nullptr),
+			AMIBERRY_APPLY_RESET, "false", nullptr),
 		get_sana2, set_sana2, sana2_compiled, nullptr, nullptr},
 };
 

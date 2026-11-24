@@ -406,8 +406,9 @@ const definition definitions[] = {
 			AMIBERRY_APPLY_RESTART, "disabled", serial_translate_choices, "Only with a serial port."),
 		get_serial_translate, set_serial_translate, serial_selected, nullptr, nullptr},
 		serial_hidden),
+	// In the UAE Boot ROM, which a hard reset rebuilds with it (virtualdevice_init).
 	hidden_on(SERIAL_OPTION("uaeserial", "uaeserial.device", "A serial device for Amiga programs on the host's ports.",
-		AMIBERRY_APPLY_RESTART, "false", uaeserial), serial_hidden),
+		AMIBERRY_APPLY_RESET, "false", uaeserial), serial_hidden),
 	hidden_on({DYNAMIC_CHOICE_OPTION("amiberry.midiout_device_name", "io", "MIDI out",
 			"The host MIDI device the Amiga's MIDI out (through the serial port) plays on.",
 			AMIBERRY_APPLY_LIVE, "none", nullptr),
