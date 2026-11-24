@@ -237,111 +237,116 @@ internal static class Program
             Check(!idle.GetProperty("whdload").GetBoolean() && !idle.GetProperty("hostQuit").GetBoolean() &&
                 !idle.GetProperty("libraries").GetBoolean(), "status reads the empty Unicode WHDBoot folder as having no tools");
 
-            // Stale or corrupt copies of files the download replaces must end up holding the downloaded bytes.
-            byte[] stale = Encoding.ASCII.GetBytes("stale copy, not the downloaded file");
-            byte[] staleDatabase = Encoding.ASCII.GetBytes("{\"stale\":true}");
-            Directory.CreateDirectory(Path.Combine(whdFolder, "game-data"));
-            foreach (var name in new[] { "host-quit", "boot-data.zip", "WHDLoad" })
-                File.WriteAllBytes(Path.Combine(whdFolder, name), stale);
-            File.WriteAllBytes(Path.Combine(whdFolder, "game-data", "whdload_db.json"), staleDatabase);
-
-            async Task<JsonElement> WaitForDownload()
+            // The download reaches whdload.de, Aminet and GitHub. CI runners cannot always reach the third-party
+            // hosts, so the workflow sets AMIBERRY_NATIVE_TEST_SKIP_WHDBOOT_DOWNLOAD=1 and keeps only the checks above.
+            if (Environment.GetEnvironmentVariable("AMIBERRY_NATIVE_TEST_SKIP_WHDBOOT_DOWNLOAD") != "1")
             {
-                var deadline = DateTime.UtcNow.AddSeconds(150);
-                while (true)
+                // Stale or corrupt copies of files the download replaces must end up holding the downloaded bytes.
+                byte[] stale = Encoding.ASCII.GetBytes("stale copy, not the downloaded file");
+                byte[] staleDatabase = Encoding.ASCII.GetBytes("{\"stale\":true}");
+                Directory.CreateDirectory(Path.Combine(whdFolder, "game-data"));
+                foreach (var name in new[] { "host-quit", "boot-data.zip", "WHDLoad" })
+                    File.WriteAllBytes(Path.Combine(whdFolder, name), stale);
+                File.WriteAllBytes(Path.Combine(whdFolder, "game-data", "whdload_db.json"), staleDatabase);
+
+                async Task<JsonElement> WaitForDownload()
                 {
-                    var status = await client.CallAsync(new { op = "whdboot_status" });
-                    if (!status.GetProperty("downloading").GetBoolean()) return status;
-                    if (DateTime.UtcNow > deadline) throw new TimeoutException("The WHDBoot download did not finish within 150 seconds.");
-                    await Task.Delay(250);
+                    var deadline = DateTime.UtcNow.AddSeconds(150);
+                    while (true)
+                    {
+                        var status = await client.CallAsync(new { op = "whdboot_status" });
+                        if (!status.GetProperty("downloading").GetBoolean()) return status;
+                        if (DateTime.UtcNow > deadline) throw new TimeoutException("The WHDBoot download did not finish within 150 seconds.");
+                        await Task.Delay(250);
+                    }
                 }
+
+                var started = await client.CallAsync(new { op = "whdboot_download" });
+                Check(started.GetProperty("downloading").GetBoolean(), "WHDBoot download into the Unicode folder starts");
+
+                // A running download reads these settings throughout, so changing them is refused until it ends.
+                string baseFolder = Path.Combine(configurations, "base-\u6a4b-\u00e4");
+                Directory.CreateDirectory(baseFolder);
+                var refusedBase = await client.ExchangeAsync(new { op = "host_set", id = "base_content_path", value = baseFolder });
+                var whileRunning = await client.CallAsync(new { op = "whdboot_status" });
+                Check(whileRunning.GetProperty("downloading").GetBoolean(), "the download was still running when the base content change was sent");
+                Check(!refusedBase.GetProperty("ok").GetBoolean(), "base content change is refused while a WHDBoot download runs");
+                var refusedWhd = await client.ExchangeAsync(new { op = "host_set", id = "whdboot_path", value = baseFolder });
+                Check(!refusedWhd.GetProperty("ok").GetBoolean(), "WHDBoot folder change is refused while a WHDBoot download runs");
+
+                JsonElement finished = await WaitForDownload();
+                Check(finished.GetProperty("result").GetInt32() == 0, "WHDBoot download into the Unicode folder succeeds without failures");
+                foreach (var flag in new[] { "whdload", "hostQuit", "bootData", "database", "libraries" })
+                    Check(finished.GetProperty(flag).GetBoolean(), $"status reads the downloaded {flag} from the Unicode folder");
+                Check(!finished.GetProperty("jst").GetBoolean(), "JST is not installed unless selected");
+
+                // Expected bytes: members of the pinned archives, which do not change between downloads.
+                string Sha256(string relative) => Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
+                    File.ReadAllBytes(Path.Combine(whdFolder, relative.Replace('/', Path.DirectorySeparatorChar)))));
+                var expectedHashes = new Dictionary<string, string>
+                {
+                    ["save-data/Kickstarts/kick33180.A500.RTB"] = "703637372F6CFEC06DC802759BF8907C9A01BA259E0FAE5F347D13D4265B0216",
+                    ["save-data/Kickstarts/kick33192.A500.RTB"] = "703637372F6CFEC06DC802759BF8907C9A01BA259E0FAE5F347D13D4265B0216",
+                    ["save-data/Kickstarts/kick40068.A4000.RTB"] = "7CEDF931E8B30620BA69954A30F037260325FF57282833FA557B4B0F2A2689F9",
+                    ["Libs/explode.library"] = "A681BA94E29A791AE280FC8EB4592D704DDFE414CAFC414BEBE87D529559CD9A",
+                    ["Libs/medplayer.library"] = "F80334D84D9915C4CD8DFFA3AC870807CBFBDB5FD866CFFE0B1F9604C391079E",
+                    ["Libs/xpkmaster.library"] = "3E709AFEB8506A88FC8A43C05FD056825E0F06BD95CF48F81338733E7D521A39",
+                    ["Libs/Compressors/xpkSQSH.library"] = "6F399A668B7D136A29F834B425B1C226732A87F28BD35BF0F3A7C6EDCEFA64DA",
+                };
+                foreach (var (relative, hash) in expectedHashes)
+                    CheckPath(File.Exists(Path.Combine(whdFolder, relative.Replace('/', Path.DirectorySeparatorChar))) && Sha256(relative) == hash,
+                        $"{relative} in the Unicode folder has the expected bytes", relative, hash);
+                byte[] whdload = File.ReadAllBytes(Path.Combine(whdFolder, "WHDLoad"));
+                Check(whdload.Length > 100000 && whdload[0] == 0 && whdload[1] == 0 && whdload[2] == 3 && whdload[3] == 0xF3,
+                    "WHDLoad in the Unicode folder is an extracted AmigaOS executable");
+                byte[] bootData = File.ReadAllBytes(Path.Combine(whdFolder, "boot-data.zip"));
+                Check(bootData.Length > 1000 && bootData[0] == (byte)'P' && bootData[1] == (byte)'K', "boot-data.zip in the Unicode folder is a zip archive");
+                byte[] hostQuit = File.ReadAllBytes(Path.Combine(whdFolder, "host-quit"));
+                Check(hostQuit.Length > 0, "host-quit in the Unicode folder is not empty");
+                Check(!hostQuit.SequenceEqual(stale), "a stale host-quit is replaced by the download");
+                // host-quit, boot-data.zip and the database come from mutable upstream URLs: they are checked for being
+                // replaced and well-formed, not for exact bytes.
+                using (var database = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(whdFolder, "game-data", "whdload_db.json"))))
+                {
+                    Check(database.RootElement.ValueKind == JsonValueKind.Object, "the game database in the Unicode folder is valid JSON");
+                    Check(!database.RootElement.TryGetProperty("stale", out _), "a stale game database is replaced by the download");
+                }
+                Check(File.ReadAllBytes(Path.Combine(whdFolder, "game-data", "whdload_db.bak")).SequenceEqual(staleDatabase),
+                    "the replaced game database is kept as the backup");
+
+                // Nothing is left half-installed, and no folder named by misreading the UTF-8 bytes appeared beside it.
+                string[] leftovers = Directory.GetFiles(whdFolder, "*", SearchOption.AllDirectories)
+                    .Where(file => file.EndsWith(".tmp") || file.EndsWith(".new") || file.EndsWith(".download")).ToArray();
+                Check(leftovers.Length == 0, "the download leaves no temporary or scratch files in the Unicode folder");
+                string[] entriesAfter = Directory.GetFileSystemEntries(configurations).Select(Path.GetFileName).OfType<string>().ToArray();
+                string[] strayEntries = entriesAfter.Except(entriesBefore).Where(name => name != "base-\u6a4b-\u00e4").ToArray();
+                CheckPath(strayEntries.Length == 0, "no misread-name sibling of the Unicode folder was created", string.Join(", ", strayEntries), "no new entries");
+
+                // A destination that cannot be replaced (a folder stands in for boot-data.zip) fails the download and keeps
+                // what is there; the failed install removes only its own temporary file.
+                string blockedZip = Path.Combine(whdFolder, "boot-data.zip");
+                File.Delete(blockedZip);
+                Directory.CreateDirectory(blockedZip);
+                string blockedMarker = Path.Combine(blockedZip, "keep.txt");
+                File.WriteAllText(blockedMarker, "keep");
+                await client.CallAsync(new { op = "whdboot_download" });
+                var blocked = await WaitForDownload();
+                Check(blocked.GetProperty("result").GetInt32() == 1, "a download whose destination cannot be replaced reports a partial failure");
+                Check(Directory.Exists(blockedZip) && File.ReadAllText(blockedMarker) == "keep", "the blocked destination is left as it was");
+                Check(!File.Exists(blockedZip + ".tmp"), "the failed install removes its own temporary file");
+                Check(File.ReadAllBytes(Path.Combine(whdFolder, "host-quit")).Length > 0 && File.Exists(Path.Combine(whdFolder, "WHDLoad")),
+                    "the other files are still installed after the blocked destination failed");
+
+                // Once the download ended, the base content folder can change; the installed tools stay where they were put.
+                var changed = await client.CallAsync(new { op = "host_set", id = "base_content_path", value = baseFolder });
+                CheckPath(SameFolder(Value(changed, "base_content_path"), baseFolder), "base content change succeeds after the download ended",
+                    Value(changed, "base_content_path"), baseFolder);
+                CheckPath(SameFolder(Value(changed, "whdboot_path"), whdFolder), "the WHDBoot folder keeps the downloader's destination after a base content change",
+                    Value(changed, "whdboot_path"), whdFolder);
+                var kept = await client.CallAsync(new { op = "whdboot_status" });
+                Check(kept.GetProperty("whdload").GetBoolean() && kept.GetProperty("libraries").GetBoolean(),
+                    "status still reads the Unicode folder's tools after the base content change");
             }
-
-            var started = await client.CallAsync(new { op = "whdboot_download" });
-            Check(started.GetProperty("downloading").GetBoolean(), "WHDBoot download into the Unicode folder starts");
-
-            // A running download reads these settings throughout, so changing them is refused until it ends.
-            string baseFolder = Path.Combine(configurations, "base-\u6a4b-\u00e4");
-            Directory.CreateDirectory(baseFolder);
-            var refusedBase = await client.ExchangeAsync(new { op = "host_set", id = "base_content_path", value = baseFolder });
-            var whileRunning = await client.CallAsync(new { op = "whdboot_status" });
-            Check(whileRunning.GetProperty("downloading").GetBoolean(), "the download was still running when the base content change was sent");
-            Check(!refusedBase.GetProperty("ok").GetBoolean(), "base content change is refused while a WHDBoot download runs");
-            var refusedWhd = await client.ExchangeAsync(new { op = "host_set", id = "whdboot_path", value = baseFolder });
-            Check(!refusedWhd.GetProperty("ok").GetBoolean(), "WHDBoot folder change is refused while a WHDBoot download runs");
-
-            JsonElement finished = await WaitForDownload();
-            Check(finished.GetProperty("result").GetInt32() == 0, "WHDBoot download into the Unicode folder succeeds without failures");
-            foreach (var flag in new[] { "whdload", "hostQuit", "bootData", "database", "libraries" })
-                Check(finished.GetProperty(flag).GetBoolean(), $"status reads the downloaded {flag} from the Unicode folder");
-            Check(!finished.GetProperty("jst").GetBoolean(), "JST is not installed unless selected");
-
-            // Expected bytes: members of the pinned archives, which do not change between downloads.
-            string Sha256(string relative) => Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
-                File.ReadAllBytes(Path.Combine(whdFolder, relative.Replace('/', Path.DirectorySeparatorChar)))));
-            var expectedHashes = new Dictionary<string, string>
-            {
-                ["save-data/Kickstarts/kick33180.A500.RTB"] = "703637372F6CFEC06DC802759BF8907C9A01BA259E0FAE5F347D13D4265B0216",
-                ["save-data/Kickstarts/kick33192.A500.RTB"] = "703637372F6CFEC06DC802759BF8907C9A01BA259E0FAE5F347D13D4265B0216",
-                ["save-data/Kickstarts/kick40068.A4000.RTB"] = "7CEDF931E8B30620BA69954A30F037260325FF57282833FA557B4B0F2A2689F9",
-                ["Libs/explode.library"] = "A681BA94E29A791AE280FC8EB4592D704DDFE414CAFC414BEBE87D529559CD9A",
-                ["Libs/medplayer.library"] = "F80334D84D9915C4CD8DFFA3AC870807CBFBDB5FD866CFFE0B1F9604C391079E",
-                ["Libs/xpkmaster.library"] = "3E709AFEB8506A88FC8A43C05FD056825E0F06BD95CF48F81338733E7D521A39",
-                ["Libs/Compressors/xpkSQSH.library"] = "6F399A668B7D136A29F834B425B1C226732A87F28BD35BF0F3A7C6EDCEFA64DA",
-            };
-            foreach (var (relative, hash) in expectedHashes)
-                CheckPath(File.Exists(Path.Combine(whdFolder, relative.Replace('/', Path.DirectorySeparatorChar))) && Sha256(relative) == hash,
-                    $"{relative} in the Unicode folder has the expected bytes", relative, hash);
-            byte[] whdload = File.ReadAllBytes(Path.Combine(whdFolder, "WHDLoad"));
-            Check(whdload.Length > 100000 && whdload[0] == 0 && whdload[1] == 0 && whdload[2] == 3 && whdload[3] == 0xF3,
-                "WHDLoad in the Unicode folder is an extracted AmigaOS executable");
-            byte[] bootData = File.ReadAllBytes(Path.Combine(whdFolder, "boot-data.zip"));
-            Check(bootData.Length > 1000 && bootData[0] == (byte)'P' && bootData[1] == (byte)'K', "boot-data.zip in the Unicode folder is a zip archive");
-            byte[] hostQuit = File.ReadAllBytes(Path.Combine(whdFolder, "host-quit"));
-            Check(hostQuit.Length > 0, "host-quit in the Unicode folder is not empty");
-            Check(!hostQuit.SequenceEqual(stale), "a stale host-quit is replaced by the download");
-            // host-quit, boot-data.zip and the database come from mutable upstream URLs: they are checked for being
-            // replaced and well-formed, not for exact bytes.
-            using (var database = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(whdFolder, "game-data", "whdload_db.json"))))
-            {
-                Check(database.RootElement.ValueKind == JsonValueKind.Object, "the game database in the Unicode folder is valid JSON");
-                Check(!database.RootElement.TryGetProperty("stale", out _), "a stale game database is replaced by the download");
-            }
-            Check(File.ReadAllBytes(Path.Combine(whdFolder, "game-data", "whdload_db.bak")).SequenceEqual(staleDatabase),
-                "the replaced game database is kept as the backup");
-
-            // Nothing is left half-installed, and no folder named by misreading the UTF-8 bytes appeared beside it.
-            string[] leftovers = Directory.GetFiles(whdFolder, "*", SearchOption.AllDirectories)
-                .Where(file => file.EndsWith(".tmp") || file.EndsWith(".new") || file.EndsWith(".download")).ToArray();
-            Check(leftovers.Length == 0, "the download leaves no temporary or scratch files in the Unicode folder");
-            string[] entriesAfter = Directory.GetFileSystemEntries(configurations).Select(Path.GetFileName).OfType<string>().ToArray();
-            string[] strayEntries = entriesAfter.Except(entriesBefore).Where(name => name != "base-\u6a4b-\u00e4").ToArray();
-            CheckPath(strayEntries.Length == 0, "no misread-name sibling of the Unicode folder was created", string.Join(", ", strayEntries), "no new entries");
-
-            // A destination that cannot be replaced (a folder stands in for boot-data.zip) fails the download and keeps
-            // what is there; the failed install removes only its own temporary file.
-            string blockedZip = Path.Combine(whdFolder, "boot-data.zip");
-            File.Delete(blockedZip);
-            Directory.CreateDirectory(blockedZip);
-            string blockedMarker = Path.Combine(blockedZip, "keep.txt");
-            File.WriteAllText(blockedMarker, "keep");
-            await client.CallAsync(new { op = "whdboot_download" });
-            var blocked = await WaitForDownload();
-            Check(blocked.GetProperty("result").GetInt32() == 1, "a download whose destination cannot be replaced reports a partial failure");
-            Check(Directory.Exists(blockedZip) && File.ReadAllText(blockedMarker) == "keep", "the blocked destination is left as it was");
-            Check(!File.Exists(blockedZip + ".tmp"), "the failed install removes its own temporary file");
-            Check(File.ReadAllBytes(Path.Combine(whdFolder, "host-quit")).Length > 0 && File.Exists(Path.Combine(whdFolder, "WHDLoad")),
-                "the other files are still installed after the blocked destination failed");
-
-            // Once the download ended, the base content folder can change; the installed tools stay where they were put.
-            var changed = await client.CallAsync(new { op = "host_set", id = "base_content_path", value = baseFolder });
-            CheckPath(SameFolder(Value(changed, "base_content_path"), baseFolder), "base content change succeeds after the download ended",
-                Value(changed, "base_content_path"), baseFolder);
-            CheckPath(SameFolder(Value(changed, "whdboot_path"), whdFolder), "the WHDBoot folder keeps the downloader's destination after a base content change",
-                Value(changed, "whdboot_path"), whdFolder);
-            var kept = await client.CallAsync(new { op = "whdboot_status" });
-            Check(kept.GetProperty("whdload").GetBoolean() && kept.GetProperty("libraries").GetBoolean(),
-                "status still reads the Unicode folder's tools after the base content change");
         }
         catch (Exception error)
         {
