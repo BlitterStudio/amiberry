@@ -5053,7 +5053,7 @@ static uae_u8 denise_render_sprites2(uae_u8 apixel, uae_u32 vs)
 	// Visible pixel of sprites 1-7 (sprite 0 is the pointer): picture data
 	// even where no bitplane word was fetched.
 	if (vs & (0xfe << 16)) {
-		track_autoscale_picture_span(internal_pixel_cnt - (1 << RES_MAX), internal_pixel_cnt);
+		track_autoscale_picture_span(internal_pixel_cnt, internal_pixel_cnt + (1 << hresolution_inv));
 	}
 #endif
 	return denise_sprite_colour(apixel, vs);
@@ -5114,7 +5114,7 @@ static void get_shres_spr_pix(uae_u8 pf0, uae_u8 pf1, uae_u8 pf2, uae_u8 pf3, ua
 	// data even where no bitplane word was fetched. The caller's four pixels
 	// start at internal_pixel_cnt.
 	if ((sv0 | sv1) & (0x0e << 16)) {
-		track_autoscale_picture_span(internal_pixel_cnt - (1 << RES_MAX), internal_pixel_cnt);
+		track_autoscale_picture_span(internal_pixel_cnt, internal_pixel_cnt + (1 << RES_MAX));
 	}
 #endif
 	// Sprite-playfield collisions see every playfield pixel under the sprite.
