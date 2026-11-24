@@ -145,6 +145,8 @@ enum
 extern int get_autoscale_sprite_horizontal_edges(void);
 extern int get_autoscale_sprite_zero_horizontal_edges(int* left, int* right);
 extern void reset_autoscale_sprite_horizontal_edges(void);
+extern bool get_autoscale_picture_horizontal_limits(int* left, int* right);
+extern void reset_autoscale_picture_horizontal_limits(void);
 #endif
 
 /* Finally, stuff that shouldn't really be shared.  */

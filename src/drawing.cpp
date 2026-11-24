@@ -704,6 +704,21 @@ static bool autoscale_sprite_left_edge;
 static bool autoscale_sprite_right_edge;
 static int autoscale_sprite_zero_firstword = 30000;
 static int autoscale_sprite_zero_lastword;
+// Columns (internal_pixel_cnt) that showed picture data this frame: fetched
+// bitplane words and sprites 1-7. Inside a display window wider than the
+// fetch, the remaining columns show only COLOR00 and sprite 0 (the pointer).
+static int autoscale_picture_firstpixel = 30000;
+static int autoscale_picture_lastpixel;
+
+static void track_autoscale_picture_span(const int start, const int end)
+{
+	if (start < autoscale_picture_firstpixel) {
+		autoscale_picture_firstpixel = start;
+	}
+	if (end > autoscale_picture_lastpixel) {
+		autoscale_picture_lastpixel = end;
+	}
+}
 #endif
 
 static void update_diwfirstword_total(const int firstword)
@@ -794,12 +809,28 @@ int get_autoscale_sprite_zero_horizontal_edges(int* left, int* right)
 	return edges;
 }
 
+bool get_autoscale_picture_horizontal_limits(int* left, int* right)
+{
+	if (!left || !right || autoscale_picture_lastpixel <= autoscale_picture_firstpixel) {
+		return false;
+	}
+	get_autoscale_horizontal_limits(autoscale_picture_firstpixel,
+		autoscale_picture_lastpixel, left, right);
+	return *right > *left;
+}
+
 void reset_autoscale_sprite_horizontal_edges(void)
 {
 	autoscale_sprite_left_edge = false;
 	autoscale_sprite_right_edge = false;
 	autoscale_sprite_zero_firstword = 30000;
 	autoscale_sprite_zero_lastword = 0;
+}
+
+void reset_autoscale_picture_horizontal_limits(void)
+{
+	autoscale_picture_firstpixel = 30000;
+	autoscale_picture_lastpixel = 0;
 }
 #endif
 
@@ -4191,6 +4222,28 @@ static void bpldat_docopy(void)
 		bpl1dat_trigger_offset = internal_pixel_cnt;
 	}
 
+#ifdef AMIBERRY
+	{
+		// The shifters load this word at the first BPLCON1 comparator match
+		// after the copy and output it from the next lores tick on, exactly as
+		// draw_denise_bitplane_line_fast() places it.
+		int delay[2];
+		for (int i = 0; i < 2; i++) {
+			if (aga_mode) {
+				const int pos = (denise_hcounter_cmp << 2) & bplcon1_shift_mask_full;
+				delay[i] = (bplcon1_shift_full_masked[i] - pos) & bplcon1_shift_mask_full;
+			} else {
+				const int pos = denise_hcounter_cmp & bplcon1_shift_mask;
+				delay[i] = ((bplcon1_shift[i] - pos) & bplcon1_shift_mask) << 2;
+			}
+		}
+		const int start = internal_pixel_cnt + (1 << RES_MAX);
+		const int word = fetchmode_size_denise << (RES_MAX - denise_res);
+		track_autoscale_picture_span(start + std::min(delay[0], delay[1]),
+			start + std::max(delay[0], delay[1]) + word);
+	}
+#endif
+
 	if (debug_bpl_mask != 0xff) {
 		for (int i = 0; i < MAX_PLANES; i++) {
 			if (!(debug_bpl_mask & (1 << i))) {
@@ -4996,6 +5049,13 @@ static uae_u8 denise_render_sprites2(uae_u8 apixel, uae_u32 vs)
 	if (currprefs.collision_level) {
 		denise_collide_sprites(apixel, vs);
 	}
+#ifdef AMIBERRY
+	// Visible pixel of sprites 1-7 (sprite 0 is the pointer): picture data
+	// even where no bitplane word was fetched.
+	if (vs & (0xfe << 16)) {
+		track_autoscale_picture_span(internal_pixel_cnt, internal_pixel_cnt + (1 << hresolution_inv));
+	}
+#endif
 	return denise_sprite_colour(apixel, vs);
 }
 
@@ -5020,6 +5080,10 @@ static void autoscale_sprites(void)
 	if (this_line->linear_vpos > plflastline_total) {
 		plflastline_total = this_line->linear_vpos;
 	}
+#ifdef AMIBERRY
+	track_autoscale_picture_span(internal_pixel_cnt - (1 << RES_MAX),
+		internal_pixel_cnt + (1 << RES_MAX));
+#endif
 #endif
 }
 
@@ -5045,6 +5109,14 @@ static void get_shres_spr_pix(uae_u8 pf0, uae_u8 pf1, uae_u8 pf2, uae_u8 pf3, ua
 	uae_u32 *dpix0, uae_u32 *dpix1, uae_u32 *dpix2, uae_u32 *dpix3)
 {
 	uae_u16 v;
+#ifdef AMIBERRY
+	// Sprites 1-3 on an ECS super-hires line (sprite 0 is the pointer): picture
+	// data even where no bitplane word was fetched. The caller's four pixels
+	// start at internal_pixel_cnt.
+	if ((sv0 | sv1) & (0x0e << 16)) {
+		track_autoscale_picture_span(internal_pixel_cnt, internal_pixel_cnt + (1 << RES_MAX));
+	}
+#endif
 	// Sprite-playfield collisions see every playfield pixel under the sprite.
 	if (currprefs.collision_level) {
 		if (sv0) {
@@ -8491,6 +8563,29 @@ void draw_denise_bitplane_line_fast(int gfx_ypos, enum nln_how how, struct lines
 			cp = dpout;
 		}
 	}
+
+#ifdef AMIBERRY
+	{
+		int delay_min = delay1;
+		int delay_max = delay1;
+		if (dpf) {
+			int delay2 = ((ls->bplcon1 & 0xf0) >> 4) | ((ls->bplcon1 & 0xc000) >> 10);
+			delay2 = ((delay2 + delayoffset) & delaymask) << 2;
+			delay_min = std::min(delay_min, delay2);
+			delay_max = std::max(delay_max, delay2);
+		}
+		// AGA BPLCON1 subpixel scrolling shifts the rendered data right by up to
+		// three superhires pixels below, which extends the picture's right edge.
+		int subpix_shift = 0;
+		if (doubling >= 0) {
+			const int subpix = (ls->bplcon1 & 0x0300) >> 8;
+			subpix_shift = (doubling == 0 ? subpix >> hresolution_inv : subpix) << hresolution_inv;
+		}
+		const int start = ls->bpl1dat_trigger_offset + (1 << RES_MAX);
+		track_autoscale_picture_span(start + delay_min,
+			start + delay_max + subpix_shift + ((ls->bpllen * 8) << (RES_MAX - res)));
+	}
+#endif
 
 	int hbstrt_offset = ls->hbstrt_offset >> rshift;
 	int hbstop_offset = ls->hbstop_offset >> rshift;

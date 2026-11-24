@@ -959,4 +959,59 @@ static inline bool amiberry_auto_crop_expand_to_visible_content(
 	return changed;
 }
 
+// Columns that showed picture data (bitplane words, sprites 1-7) while the
+// register window stayed the same. BPLCON1 scrolling moves the span a few
+// pixels each frame; keeping the union stops the crop from following it.
+struct AmiberryAutoCropPictureSpan {
+	int base_left;
+	int base_right;
+	int left;
+	int right;
+	bool base_valid;
+	bool span_valid;
+};
+
+// Narrow the register window [left, right) to the columns that showed picture
+// data. A display window wider than the bitplane fetch shows COLOR00 in the
+// extra columns, which reads as border when it matches the border colour, so
+// the picture would otherwise sit off-centre.
+static inline void amiberry_auto_crop_limit_to_picture_span(
+	AmiberryAutoCropPictureSpan& span, int& left, int& right,
+	const bool picture_valid, const int picture_left, const int picture_right)
+{
+	if (!span.base_valid || span.base_left != left || span.base_right != right) {
+		span = {left, right, 0, 0, true, false};
+	}
+	if (picture_valid && picture_right > picture_left) {
+		span.left = span.span_valid ? std::min(span.left, picture_left) : picture_left;
+		span.right = span.span_valid ? std::max(span.right, picture_right) : picture_right;
+		span.span_valid = true;
+	}
+	if (!span.span_valid) {
+		return;
+	}
+	const int narrowed_left = std::max(left, span.left);
+	const int narrowed_right = std::min(right, span.right);
+	if (narrowed_right > narrowed_left) {
+		left = narrowed_left;
+		right = narrowed_right;
+	}
+}
+
+// The columns between the narrowed base and the register window show only
+// COLOR00 and sprite 0, the mouse pointer. A content scan that grew into them
+// without reaching past the window found the pointer: keep the base edge
+// there. Growth past the window (raster effects in the border) still counts.
+static inline void amiberry_auto_crop_ignore_growth_inside_window(
+	int& left, int& right, const int base_left, const int base_right,
+	const int window_left, const int window_right)
+{
+	if (left < base_left && left >= window_left) {
+		left = base_left;
+	}
+	if (right > base_right && right <= window_right) {
+		right = base_right;
+	}
+}
+
 #endif // AMIBERRY_AUTOCROP_HELPERS_H
