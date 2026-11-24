@@ -154,8 +154,12 @@ jobs:
           ZIP_PATH="$PWD/$ZIP_NAME"
           (cd 'out/package/${{ matrix.preset }}' && cmake -E tar cf "$ZIP_PATH" --format=zip "${ZIP_NAME%.zip}")
 
+      # The bridge check's WHDBoot download reaches whdload.de and Aminet, which hosted runners cannot always
+      # reach; the download part runs locally only (see README).
       - name: Check the native settings bridge
         shell: pwsh
+        env:
+          AMIBERRY_NATIVE_TEST_SKIP_WHDBOOT_DOWNLOAD: '1'
         run: ./tests/windows_native_bridge.ps1 -AmiberryPath "$PWD/out/install/${{ matrix.preset }}/Amiberry.exe"
 
       # Hosted ARM64 runners can start a job with the first sign-in privacy experience and the Start menu over the

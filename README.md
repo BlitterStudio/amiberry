@@ -188,7 +188,7 @@ Focused checks against an installed build:
 ./tests/windows_native_smoke.ps1 -AmiberryPath "$PWD/out/install/windows-native-release/Amiberry.exe"
 ```
 
-The UI smoke test needs an interactive Windows desktop. Both checks use isolated portable copies, not your existing configuration.
+The UI smoke test needs an interactive Windows desktop. Both checks use isolated portable copies, not your existing configuration. The bridge check downloads the WHDBoot tools from whdload.de, Aminet and GitHub; set `AMIBERRY_NATIVE_TEST_SKIP_WHDBOOT_DOWNLOAD=1` to skip that part, as the workflow does because hosted runners cannot always reach those hosts.
 
 ### Emulator regression checks
 
