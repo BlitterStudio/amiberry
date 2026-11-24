@@ -1506,6 +1506,13 @@ void VulkanRenderer::record_and_submit(uint32_t slot_index)
 
 	int destX = render_area_x, destY = render_area_y;
 	int destW = render_area_w, destH = render_area_h;
+	// The crop window sets the presentation size; manual crop offsets can move
+	// it past the texture edges, and only its part inside the texture is drawn.
+	const AmiberryGfxRect crop_window = amiberry_gfx_presented_source_rect(
+		{slot.crop.x, slot.crop.y, slot.crop.w, slot.crop.h},
+		slot.texture_width, slot.texture_height);
+	const AmiberryGfxRect crop_visible = amiberry_gfx_visible_source_rect(
+		crop_window, slot.texture_width, slot.texture_height);
 	bool use_linear_filter = slot.linear_filter;
 
 	if (drawable_w > 0 && drawable_h > 0 && slot.texture_width > 0 && slot.texture_height > 0) {
@@ -1529,11 +1536,8 @@ void VulkanRenderer::record_and_submit(uint32_t slot_index)
 		// Stretch applies to native modes only; RTG has its own scaling modes.
 		const bool stretch_to_fill = !slot.screen_is_picasso && slot.stretch_to_fill;
 
-		const bool is_cropped = (slot.crop.x != 0 || slot.crop.y != 0
-			|| slot.crop.w != slot.texture_width || slot.crop.h != slot.texture_height)
-			&& slot.crop.w > 0 && slot.crop.h > 0;
-		const int src_w = is_cropped ? slot.crop.w : slot.texture_width;
-		const int src_h = is_cropped ? slot.crop.h : slot.texture_height;
+		const int src_w = crop_window.w;
+		const int src_h = crop_window.h;
 		const int display_w = slot.native_auto_crop && slot.crop_display_width > 0
 			? slot.crop_display_width : src_w;
 		const int display_h = slot.native_auto_crop && slot.crop_display_height > 0
@@ -1607,11 +1611,17 @@ void VulkanRenderer::record_and_submit(uint32_t slot_index)
 	render_quad.w = destW;
 	render_quad.h = destH;
 
+	// render_quad is the area the whole crop window fills, which pointer
+	// mapping pairs with that window; the picture covers only its part over
+	// the texture, and the cleared background shows through the rest.
+	const AmiberryGfxRect picture_rect = amiberry_gfx_visible_dest_rect(
+		{destX, destY, destW, destH}, crop_window, crop_visible);
+
 	VkRect2D draw_scissor{};
-	draw_scissor.offset.x = std::clamp(destX, 0, drawable_w);
-	draw_scissor.offset.y = std::clamp(destY, 0, drawable_h);
-	draw_scissor.extent.width = static_cast<uint32_t>(std::clamp(destW, 0, drawable_w - draw_scissor.offset.x));
-	draw_scissor.extent.height = static_cast<uint32_t>(std::clamp(destH, 0, drawable_h - draw_scissor.offset.y));
+	draw_scissor.offset.x = std::clamp(picture_rect.x, 0, drawable_w);
+	draw_scissor.offset.y = std::clamp(picture_rect.y, 0, drawable_h);
+	draw_scissor.extent.width = static_cast<uint32_t>(std::clamp(picture_rect.w, 0, drawable_w - draw_scissor.offset.x));
+	draw_scissor.extent.height = static_cast<uint32_t>(std::clamp(picture_rect.h, 0, drawable_h - draw_scissor.offset.y));
 
 	VkViewport viewport{};
 	viewport.x = static_cast<float>(draw_scissor.offset.x);
@@ -1642,36 +1652,14 @@ void VulkanRenderer::record_and_submit(uint32_t slot_index)
 	crop_push_constants.u_max = 1.0f;
 	crop_push_constants.v_max = 1.0f;
 
-	if (slot.texture_width > 0 && slot.texture_height > 0) {
-		bool is_cropped =
-			(slot.crop.x != 0 || slot.crop.y != 0 ||
-			slot.crop.w != slot.texture_width || slot.crop.h != slot.texture_height) &&
-			(slot.crop.w > 0 && slot.crop.h > 0);
-
-		int crop_x = 0;
-		int crop_y = 0;
-		int crop_w = slot.texture_width;
-		int crop_h = slot.texture_height;
-
-		if (is_cropped) {
-			crop_x = std::max(0, slot.crop.x);
-			crop_y = std::max(0, slot.crop.y);
-			crop_w = std::min(slot.crop.w, slot.texture_width - crop_x);
-			crop_h = std::min(slot.crop.h, slot.texture_height - crop_y);
-			if (crop_w <= 0 || crop_h <= 0) {
-				crop_x = 0;
-				crop_y = 0;
-				crop_w = slot.texture_width;
-				crop_h = slot.texture_height;
-			}
-		}
-
+	if (slot.texture_width > 0 && slot.texture_height > 0
+		&& crop_visible.w > 0 && crop_visible.h > 0) {
 		const float inv_w = 1.0f / static_cast<float>(slot.texture_width);
 		const float inv_h = 1.0f / static_cast<float>(slot.texture_height);
-		crop_push_constants.u_min = std::clamp(static_cast<float>(crop_x) * inv_w, 0.0f, 1.0f);
-		crop_push_constants.v_min = std::clamp(static_cast<float>(crop_y) * inv_h, 0.0f, 1.0f);
-		crop_push_constants.u_max = std::clamp(static_cast<float>(crop_x + crop_w) * inv_w, 0.0f, 1.0f);
-		crop_push_constants.v_max = std::clamp(static_cast<float>(crop_y + crop_h) * inv_h, 0.0f, 1.0f);
+		crop_push_constants.u_min = std::clamp(static_cast<float>(crop_visible.x) * inv_w, 0.0f, 1.0f);
+		crop_push_constants.v_min = std::clamp(static_cast<float>(crop_visible.y) * inv_h, 0.0f, 1.0f);
+		crop_push_constants.u_max = std::clamp(static_cast<float>(crop_visible.x + crop_visible.w) * inv_w, 0.0f, 1.0f);
+		crop_push_constants.v_max = std::clamp(static_cast<float>(crop_visible.y + crop_visible.h) * inv_h, 0.0f, 1.0f);
 	}
 
 	// Push constants — always push the full CRT-sized struct for layout compatibility.

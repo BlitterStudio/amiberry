@@ -336,30 +336,29 @@ bool SDLRenderer::render_frame(int monid, int mode, int immediate)
         mon->dirty_rects.clear();
         mon->full_render_needed = false;
 
-        SDL_FRect f_crop = { static_cast<float>(crop_rect.x), static_cast<float>(crop_rect.y),
-            static_cast<float>(crop_rect.w), static_cast<float>(crop_rect.h) };
-        SDL_FRect f_quad = { static_cast<float>(render_quad.x), static_cast<float>(render_quad.y),
-            static_cast<float>(render_quad.w), static_cast<float>(render_quad.h) };
-
+        AmiberryGfxRect source{0, 0, surface->w, surface->h};
+        AmiberryGfxRect viewport{render_quad.x, render_quad.y, render_quad.w, render_quad.h};
         if (ad->picasso_on) {
-            f_crop = { 0.0f, 0.0f, static_cast<float>(surface->w), static_cast<float>(surface->h) };
-            f_quad = f_crop;
+            viewport = source;
 
             int lw, lh;
             SDL_GetRenderLogicalPresentation(mon->amiga_renderer, &lw, &lh, nullptr);
             if (lw != surface->w || lh != surface->h) {
 			SDL_SetRenderLogicalPresentation(mon->amiga_renderer, surface->w, surface->h, SDL_LOGICAL_PRESENTATION_LETTERBOX);
             }
+        } else {
+            // render_quad is the area the whole crop window fills. Manual crop
+            // offsets can move the window past the surface edges; draw only
+            // its part over the surface, and leave the rest black.
+            const AmiberryGfxRect window = amiberry_gfx_presented_source_rect(
+                {crop_rect.x, crop_rect.y, crop_rect.w, crop_rect.h}, surface->w, surface->h);
+            source = amiberry_gfx_visible_source_rect(window, surface->w, surface->h);
+            viewport = amiberry_gfx_visible_dest_rect(viewport, window, source);
         }
-
-		const AmiberryGfxRect source{
-			static_cast<int>(f_crop.x), static_cast<int>(f_crop.y),
-			static_cast<int>(f_crop.w), static_cast<int>(f_crop.h)
-		};
-		const AmiberryGfxRect viewport{
-			static_cast<int>(f_quad.x), static_cast<int>(f_quad.y),
-			static_cast<int>(f_quad.w), static_cast<int>(f_quad.h)
-		};
+        const SDL_FRect f_crop = { static_cast<float>(source.x), static_cast<float>(source.y),
+            static_cast<float>(source.w), static_cast<float>(source.h) };
+        const SDL_FRect f_quad = { static_cast<float>(viewport.x), static_cast<float>(viewport.y),
+            static_cast<float>(viewport.w), static_cast<float>(viewport.h) };
 		amiberry_gui_geometry_publish(monid, source, viewport,
 			AmiberryGuiViewportSpace::SdlRendererLogical, 0, 0, "sdl");
 

@@ -423,19 +423,25 @@ static void test_manual_crop_pointer_maps_to_presented_source()
 		"the bottom edge of the presented crop must map to the crop's bottom source edge");
 }
 
-static void test_presented_source_rect_matches_renderer_clamping()
+static void test_presented_source_rect_keeps_crop_window_position()
 {
 	const AmiberryGfxRect overflow = amiberry_gfx_presented_source_rect(
 		{600, 500, 400, 300}, 720, 568);
-	expect_int_eq(overflow.x, 600, "an overflowing crop keeps its in-surface origin");
-	expect_int_eq(overflow.w, 120, "an overflowing crop is clipped to the surface width");
-	expect_int_eq(overflow.h, 68, "an overflowing crop is clipped to the surface height");
+	expect_int_eq(overflow.x, 600, "an overflowing crop keeps its origin");
+	expect_int_eq(overflow.w, 400, "an overflowing crop keeps its width");
+	expect_int_eq(overflow.h, 300, "an overflowing crop keeps its height");
 
 	const AmiberryGfxRect negative = amiberry_gfx_presented_source_rect(
 		{-20, -10, 400, 300}, 720, 568);
-	expect_int_eq(negative.x, 0, "a negative crop origin is clamped to the surface");
-	expect_int_eq(negative.y, 0, "a negative vertical crop origin is clamped to the surface");
-	expect_int_eq(negative.w, 400, "a clamped crop origin keeps the presented width");
+	expect_int_eq(negative.x, -20, "a negative horizontal offset keeps the crop window left of the surface");
+	expect_int_eq(negative.y, -10, "a negative vertical offset keeps the crop window above the surface");
+	expect_int_eq(negative.w, 400, "a negative offset keeps the crop width");
+	expect_int_eq(negative.h, 300, "a negative offset keeps the crop height");
+
+	const AmiberryGfxRect oversized = amiberry_gfx_presented_source_rect(
+		{0, 0, 754, 576}, 720, 568);
+	expect_int_eq(oversized.w, 720, "a crop wider than the surface presents the surface width");
+	expect_int_eq(oversized.h, 568, "a crop taller than the surface presents the surface height");
 
 	const AmiberryGfxRect empty = amiberry_gfx_presented_source_rect({0, 0, 0, 0}, 720, 568);
 	expect_int_eq(empty.w, 720, "an unset crop presents the whole surface width");
@@ -445,6 +451,39 @@ static void test_presented_source_rect_matches_renderer_clamping()
 		{800, 0, 100, 100}, 720, 568);
 	expect_int_eq(outside.x, 0, "a crop entirely outside the surface falls back to the whole surface");
 	expect_int_eq(outside.w, 720, "a crop entirely outside the surface presents the whole width");
+	const AmiberryGfxRect above = amiberry_gfx_presented_source_rect(
+		{0, -300, 720, 300}, 720, 568);
+	expect_int_eq(above.y, 0, "a crop entirely above the surface falls back to the whole surface");
+	expect_int_eq(above.h, 568, "a crop entirely above the surface presents the whole height");
+}
+
+// Issue #2752: a negative manual crop offset must move the picture right or
+// down instead of being ignored, and an offset that pushes the window past the
+// far edge must move the picture instead of stretching what is left of it.
+static void test_crop_window_past_surface_edge_shifts_picture()
+{
+	// A 720x568 frame presented 2x into 1440x1136; the window moved 20 px up
+	// and 35 px right of the frame.
+	const AmiberryGfxRect dest{0, 0, 1440, 1136};
+	const AmiberryGfxRect window = amiberry_gfx_presented_source_rect(
+		{35, -20, 754, 576}, 720, 568);
+	const AmiberryGfxRect visible = amiberry_gfx_visible_source_rect(window, 720, 568);
+	expect_int_eq(visible.x, 35, "the visible part starts at the window's left edge");
+	expect_int_eq(visible.y, 0, "the visible part starts at the surface top");
+	expect_int_eq(visible.w, 685, "the visible part ends at the surface's right edge");
+	expect_int_eq(visible.h, 548, "the visible part loses the rows above the surface");
+
+	const AmiberryGfxRect picture = amiberry_gfx_visible_dest_rect(dest, window, visible);
+	expect_int_eq(picture.x, 0, "the picture's left edge stays at the window's left edge");
+	expect_int_eq(picture.y, 40, "the picture moves down by the negative offset, at presentation scale");
+	expect_int_eq(picture.w, 1370, "the picture keeps its scale; the right margin stays black");
+	expect_int_eq(picture.h, 1096, "the picture keeps its scale vertically");
+
+	const AmiberryGfxRect whole = amiberry_gfx_visible_dest_rect(dest,
+		{0, 0, 720, 568}, {0, 0, 720, 568});
+	expect_int_eq(whole.x, dest.x, "a window inside the surface fills the destination");
+	expect_int_eq(whole.w, dest.w, "a window inside the surface keeps the destination width");
+	expect_int_eq(whole.h, dest.h, "a window inside the surface keeps the destination height");
 }
 
 static void test_rtg_pointer_mapping_removes_letterbox()
@@ -515,7 +554,8 @@ int main()
 	test_oversized_centered_presentation_covers_drawable();
 	test_oversized_offset_presentation_leaves_drawable_uncovered();
 	test_manual_crop_pointer_maps_to_presented_source();
-	test_presented_source_rect_matches_renderer_clamping();
+	test_presented_source_rect_keeps_crop_window_position();
+	test_crop_window_past_surface_edge_shifts_picture();
 	test_rtg_pointer_mapping_removes_letterbox();
 	test_osk_dock_centres_picture_above_keyboard();
 	test_osk_dock_top_aligns_tall_picture_and_never_moves_down();

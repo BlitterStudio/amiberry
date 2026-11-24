@@ -1146,25 +1146,25 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 		has_bounded_bezel_area = true;
 	}
 
-	// Compute source dimensions early (needed for integer scaling)
-	bool is_cropped = (crop_rect.x != 0 || crop_rect.y != 0 ||
-		crop_rect.w != (surface ? surface->w : 0) ||
-		crop_rect.h != (surface ? surface->h : 0)) &&
-		(crop_rect.w > 0 && crop_rect.h > 0);
+	// Compute source dimensions early (needed for integer scaling). The crop
+	// window sets the presentation size; manual crop offsets can move it past
+	// the surface edges, and only its part inside the surface is drawn.
+	const AmiberryGfxRect crop_window = surface
+		? amiberry_gfx_presented_source_rect(
+			{crop_rect.x, crop_rect.y, crop_rect.w, crop_rect.h}, surface->w, surface->h)
+		: AmiberryGfxRect{0, 0, 0, 0};
+	const AmiberryGfxRect crop_visible = surface
+		? amiberry_gfx_visible_source_rect(crop_window, surface->w, surface->h)
+		: crop_window;
+	const bool is_cropped = surface && (crop_window.x != 0 || crop_window.y != 0
+		|| crop_window.w != surface->w || crop_window.h != surface->h);
+	const int crop_x = crop_visible.x;
+	const int crop_y = crop_visible.y;
+	const int crop_w = crop_visible.w;
+	const int crop_h = crop_visible.h;
 
-	int crop_x = 0, crop_y = 0, crop_w = 0, crop_h = 0;
-	if (is_cropped && surface) {
-		crop_x = std::max(0, crop_rect.x);
-		crop_y = std::max(0, crop_rect.y);
-		crop_w = std::min(crop_rect.w, surface->w - crop_x);
-		crop_h = std::min(crop_rect.h, surface->h - crop_y);
-		if (crop_w <= 0 || crop_h <= 0) {
-			is_cropped = false;
-		}
-	}
-
-	const int src_w = (is_cropped) ? crop_w : (surface ? surface->w : 0);
-	const int src_h = (is_cropped) ? crop_h : (surface ? surface->h : 0);
+	const int src_w = crop_window.w;
+	const int src_h = crop_window.h;
 	const bool native_auto_crop = !mon->screen_is_picasso && currprefs.gfx_auto_crop;
 	int display_w = src_w;
 	int display_h = src_w > 0
@@ -1246,6 +1246,15 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 		}
 	}
 
+	// render_quad is the area the whole crop window fills, which pointer
+	// mapping pairs with that window. The picture is drawn only where the
+	// window overlaps the surface; the rest of it stays black.
+	render_quad.x = final_rect.x;
+	render_quad.y = final_rect.y;
+	render_quad.w = final_rect.w;
+	render_quad.h = final_rect.h;
+	final_rect = amiberry_gfx_visible_dest_rect(final_rect, crop_window, crop_visible);
+
 	// Flip Y for GL viewport: OpenGL has y=0 at bottom, bezel hole Y is y=0 at top
 	const int glDestY = drawableHeight - final_rect.y - final_rect.h;
 
@@ -1259,15 +1268,7 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 
 	glViewport(final_rect.x, glDestY, final_rect.w, final_rect.h);
 
-	// Update render_quad to reflect the actual drawn area
-	render_quad.x = final_rect.x;
-	render_quad.y = final_rect.y;
-	render_quad.w = final_rect.w;
-	render_quad.h = final_rect.h;
-	const AmiberryGfxRect source_rect{
-		is_cropped ? crop_x : 0, is_cropped ? crop_y : 0, src_w, src_h
-	};
-	amiberry_gui_geometry_publish(monid, source_rect, final_rect,
+	amiberry_gui_geometry_publish(monid, crop_visible, final_rect,
 		AmiberryGuiViewportSpace::DrawablePixels,
 		drawableWidth, drawableHeight, "opengl");
 
@@ -1277,7 +1278,7 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 	int shader_viewport_w = final_rect.w;
 	int shader_viewport_h = final_rect.h;
 	amiberry_gfx_shader_render_dimensions(
-		final_rect.w, final_rect.h, src_w, src_h, shader_viewport_w, shader_viewport_h);
+		final_rect.w, final_rect.h, crop_w, crop_h, shader_viewport_w, shader_viewport_h);
 	const bool custom_shader_active = (m_shader.preset && m_shader.preset->is_valid())
 		|| (m_shader.external && m_shader.external->is_valid());
 	bool use_shader_resolve = custom_shader_active
@@ -1372,7 +1373,7 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 	} else if (!minigl_frame && m_shader.crtemu) {
 		// Native frames in a dma-buf backed surface reach the GPU without an upload.
 		const GLuint frame_texture = surface && !mon->screen_is_picasso
-			? begin_dmabuf_frame(surface, is_cropped ? crop_x : 0, is_cropped ? crop_y : 0, src_w, src_h)
+			? begin_dmabuf_frame(surface, crop_x, crop_y, crop_w, crop_h)
 			: 0;
 
 		// The final CRT pass must land in the window's framebuffer (0 on
@@ -1391,7 +1392,7 @@ void OpenGLRenderer::present_frame(int monid, int mode)
 		m_shader.crtemu->desired_aspect = desired_aspect;
 
 		if (frame_texture) {
-			crtemu_present_texture(m_shader.crtemu, time * 1000, frame_texture, src_w, src_h, 0xffffffff, 0x000000);
+			crtemu_present_texture(m_shader.crtemu, time * 1000, frame_texture, crop_w, crop_h, 0xffffffff, 0x000000);
 			end_dmabuf_frame(surface);
 		} else if (is_cropped && surface) {
 			uae_u8* crop_ptr = static_cast<uae_u8*>(surface->pixels) + (crop_y * surface->pitch) + (crop_x * m_gl_format.bpp);
