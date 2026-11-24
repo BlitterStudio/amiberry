@@ -78,11 +78,12 @@ static inline AmiberryGfxRect amiberry_gfx_lift_above_bottom_inset(
 	return { rect.x, y < rect.y ? y : rect.y, rect.w, rect.h };
 }
 
-// Region of a native surface that the renderers actually sample: the crop
-// rect when it selects a valid area (clamped to the surface exactly as the
-// OpenGL/Vulkan presenters clamp it), else the whole surface. Pointer mapping
-// must use this, not the raw surface, or manual/nominal crops scale and shift
-// the guest pointer away from the host cursor.
+// Crop window a native surface is presented through. Its size is limited to
+// the surface (a crop larger than the frame shows the whole frame), but its
+// origin is kept, so manual crop offsets can move it past any surface edge:
+// the picture then shifts and the uncovered part stays black. An unset crop,
+// or one entirely outside the surface, presents the whole surface. Pointer
+// mapping pairs this rect with render_quad, the area the window fills.
 static inline AmiberryGfxRect amiberry_gfx_presented_source_rect(
 	const AmiberryGfxRect& crop, const int surface_width, const int surface_height)
 {
@@ -90,14 +91,45 @@ static inline AmiberryGfxRect amiberry_gfx_presented_source_rect(
 	if (crop.w <= 0 || crop.h <= 0) {
 		return full;
 	}
-	const int x = crop.x > 0 ? crop.x : 0;
-	const int y = crop.y > 0 ? crop.y : 0;
-	const int w = crop.w < surface_width - x ? crop.w : surface_width - x;
-	const int h = crop.h < surface_height - y ? crop.h : surface_height - y;
-	if (w <= 0 || h <= 0) {
+	const int w = crop.w < surface_width ? crop.w : surface_width;
+	const int h = crop.h < surface_height ? crop.h : surface_height;
+	if (crop.x >= surface_width || crop.y >= surface_height
+		|| crop.x + w <= 0 || crop.y + h <= 0) {
 		return full;
 	}
-	return {x, y, w, h};
+	return {crop.x, crop.y, w, h};
+}
+
+// The part of a presented crop window that lies inside the surface: the
+// pixels the renderers actually sample.
+static inline AmiberryGfxRect amiberry_gfx_visible_source_rect(
+	const AmiberryGfxRect& window, const int surface_width, const int surface_height)
+{
+	const int left = window.x > 0 ? window.x : 0;
+	const int top = window.y > 0 ? window.y : 0;
+	const int right = window.x + window.w < surface_width ? window.x + window.w : surface_width;
+	const int bottom = window.y + window.h < surface_height ? window.y + window.h : surface_height;
+	return {left, top, right > left ? right - left : 0, bottom > top ? bottom - top : 0};
+}
+
+// Where `visible` lands when the whole crop `window` is presented into `dest`.
+// Edges are mapped separately so the picture and the black margin always tile
+// `dest` without gaps.
+static inline AmiberryGfxRect amiberry_gfx_visible_dest_rect(
+	const AmiberryGfxRect& dest, const AmiberryGfxRect& window, const AmiberryGfxRect& visible)
+{
+	if (window.w <= 0 || window.h <= 0) {
+		return dest;
+	}
+	auto map = [](const int offset, const int dest_size, const int window_size) {
+		const long long scaled = static_cast<long long>(offset) * dest_size;
+		return static_cast<int>((2 * scaled + window_size) / (2LL * window_size));
+	};
+	const int left = dest.x + map(visible.x - window.x, dest.w, window.w);
+	const int top = dest.y + map(visible.y - window.y, dest.h, window.h);
+	const int right = dest.x + map(visible.x + visible.w - window.x, dest.w, window.w);
+	const int bottom = dest.y + map(visible.y + visible.h - window.y, dest.h, window.h);
+	return {left, top, right - left, bottom - top};
 }
 
 struct AmiberryGfxInputOffset
