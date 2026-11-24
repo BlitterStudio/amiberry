@@ -282,9 +282,10 @@
                             <code>sudo curl -fsSL https://packages.amiberry.com/gpg.key -o /usr/share/keyrings/amiberry-archive-keyring.gpg</code>
                         </div>
                     </li>
-                    <li>Add the repository to your sources (replace <code>jammy</code> with your supported repository suite):
+                    <li>Add the repository to your sources (replace <code>jammy</code> with your supported repository suite), removing any DEB822 source an earlier setup left behind:
                         <div class="code-block">
-                            <code>echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/amiberry-archive-keyring.gpg] https://packages.amiberry.com/apt jammy main" | sudo tee /etc/apt/sources.list.d/amiberry.list</code>
+                            <code>echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/amiberry-archive-keyring.gpg] https://packages.amiberry.com/apt jammy main" | sudo tee /etc/apt/sources.list.d/amiberry.list
+sudo rm -f /etc/apt/sources.list.d/amiberry.sources</code>
                         </div>
                     </li>
                     <li>Update package lists and install:

@@ -38,6 +38,9 @@ Architectures: $(dpkg --print-architecture)
 Signed-By: /usr/share/keyrings/amiberry-archive-keyring.gpg" \
   | sudo tee /etc/apt/sources.list.d/amiberry.sources
 
+# Remove a legacy-format source from an earlier setup, if present
+sudo rm -f /etc/apt/sources.list.d/amiberry.list
+
 # Install
 sudo apt update && sudo apt install amiberry
 ```
@@ -53,6 +56,9 @@ curl -fsSL https://packages.amiberry.com/gpg.key \
 echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/amiberry-archive-keyring.gpg] \
   https://packages.amiberry.com/apt $(. /etc/os-release && echo $VERSION_CODENAME) main" \
   | sudo tee /etc/apt/sources.list.d/amiberry.list
+
+# Remove a DEB822-format source from an earlier setup, if present
+sudo rm -f /etc/apt/sources.list.d/amiberry.sources
 
 # Install
 sudo apt update && sudo apt install amiberry

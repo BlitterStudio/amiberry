@@ -197,10 +197,27 @@ if [ -n "$APT_SUITE" ]; then
             [ "${MAJOR:-0}" -ge 13 ] && USE_DEB822=1
             ;;
     esac
-        
+
+    # Keep exactly one Amiberry source. A file in the other format, left by
+    # an earlier run, a release upgrade or the manual steps, makes apt warn
+    # that every target is configured multiple times.
+    SOURCES_DIR=/etc/apt/sources.list.d
+    if [ "$USE_DEB822" = "1" ]; then
+        SOURCE_FILE="${SOURCES_DIR}/amiberry.sources"
+        STALE_SOURCE_FILE="${SOURCES_DIR}/amiberry.list"
+    else
+        SOURCE_FILE="${SOURCES_DIR}/amiberry.list"
+        STALE_SOURCE_FILE="${SOURCES_DIR}/amiberry.sources"
+    fi
+
+    if [ -e "$STALE_SOURCE_FILE" ]; then
+        rm -f "$STALE_SOURCE_FILE"
+        echo "Removed ${STALE_SOURCE_FILE}"
+    fi
+
     if [ "$USE_DEB822" = "1" ]; then
         # Modern DEB822 format
-        cat > /etc/apt/sources.list.d/amiberry.sources <<EOF
+        cat > "$SOURCE_FILE" <<EOF
 Types: deb
 URIs: ${REPO_BASE}/apt
 Suites: ${APT_SUITE}
@@ -208,13 +225,12 @@ Components: main
 Architectures: ${ARCH}
 Signed-By: ${GPG_KEYRING}
 EOF
-        echo "Created /etc/apt/sources.list.d/amiberry.sources"
     else
         # Legacy one-line format
         echo "deb [arch=${ARCH} signed-by=${GPG_KEYRING}] ${REPO_BASE}/apt ${APT_SUITE} main" \
-            > /etc/apt/sources.list.d/amiberry.list
-        echo "Created /etc/apt/sources.list.d/amiberry.list"
+            > "$SOURCE_FILE"
     fi
+    echo "Created ${SOURCE_FILE}"
         
     # Update and install
     echo "Updating package lists..."
