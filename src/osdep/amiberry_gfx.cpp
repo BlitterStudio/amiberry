@@ -2407,6 +2407,27 @@ void auto_crop_image()
 			1 << std::clamp(vres, 0, VRES_MAX));
 		auto_crop_source_origin_valid = cw > 0 && ch > 0;
 
+		// A display window wider than the bitplane fetch shows COLOR00 in the
+		// extra columns; with a matching border that is a border strip on one
+		// side, and the picture sits off-centre. Use the columns that showed
+		// picture data (bitplanes, sprites 1-7) as the base instead.
+		static AmiberryAutoCropPictureSpan picture_span;
+		if (!last_autocrop || force_auto_crop) {
+			picture_span = {};
+		}
+		if (raw_crop_valid && !raw_crop_provisional) {
+			int picture_left = 0;
+			int picture_right = 0;
+			const bool picture_valid = get_autoscale_picture_horizontal_limits(
+				&picture_left, &picture_right);
+			int left = cx;
+			int right = cx + cw;
+			amiberry_auto_crop_limit_to_picture_span(picture_span, left, right,
+				picture_valid, picture_left, picture_right);
+			cx = left;
+			cw = right - left;
+		}
+
 		// Detect NTSC from actual display timing — more reliable than
 		// currprefs.ntscmode which may not reflect the chipset state
 		// (e.g. WHDLoad games that switch PAL/NTSC at runtime).
@@ -2554,6 +2575,15 @@ void auto_crop_image()
 				const bool interlaced = interlace_seen > 0 && vres > VRES_NONDOUBLE;
 				expand_auto_crop_rect_to_visible_content(surface, crop_rect, interlaced,
 					scan_state);
+				{
+					int left = crop_rect.x;
+					int right = crop_rect.x + crop_rect.w;
+					amiberry_auto_crop_ignore_growth_inside_window(left, right,
+						source_crop_rect.x, source_crop_rect.x + source_crop_rect.w,
+						raw_cx, raw_cx + raw_cw);
+					crop_rect.x = left;
+					crop_rect.w = right - left;
+				}
 				preserve_auto_crop_visible_content(surface, source_crop_rect, crop_rect,
 					hres, vres, scan_state.border,
 					(sprite_horizontal_edges & AUTOSCALE_SPRITE_EDGE_LEFT) != 0,

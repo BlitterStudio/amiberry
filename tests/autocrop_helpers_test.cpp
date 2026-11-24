@@ -867,6 +867,79 @@ static void test_repeated_vertical_translation_does_not_form_a_union()
 		"A candidate that no longer covers the source must not reuse stale geometry");
 }
 
+// Issue #2752: Full Metal Planete opens a 331 pixel display window over a 320
+// pixel fetch, so the window's last 11 lores columns show only COLOR00.
+static void test_window_wider_than_fetch_narrows_to_picture()
+{
+	AmiberryAutoCropPictureSpan span{};
+	int left = 76;
+	int right = 738;
+	amiberry_auto_crop_limit_to_picture_span(span, left, right, true, 76, 716);
+	expect_eq(left, 76, "The window's left edge must stay where the fetch starts");
+	expect_eq(right, 716, "The columns past the fetch must leave the crop");
+
+	left = 76;
+	right = 738;
+	amiberry_auto_crop_limit_to_picture_span(span, left, right, false, 0, 0);
+	expect_eq(right, 716, "A frame without picture evidence must keep the narrowed crop");
+}
+
+static void test_fetch_wider_than_window_keeps_window()
+{
+	AmiberryAutoCropPictureSpan span{};
+	int left = 76;
+	int right = 716;
+	amiberry_auto_crop_limit_to_picture_span(span, left, right, true, 60, 732);
+	expect_eq(left, 76, "A scrolling fetch wider than the window must keep its left edge");
+	expect_eq(right, 716, "A scrolling fetch wider than the window must keep its right edge");
+
+	span = {};
+	left = 76;
+	right = 716;
+	amiberry_auto_crop_limit_to_picture_span(span, left, right, true, 800, 900);
+	expect_eq(left, 76, "A fetch outside the window must not move the crop");
+	expect_eq(right, 716, "A fetch outside the window must not empty the crop");
+}
+
+static void test_scrolling_fetch_does_not_move_the_crop()
+{
+	AmiberryAutoCropPictureSpan span{};
+	int left = 76;
+	int right = 738;
+	amiberry_auto_crop_limit_to_picture_span(span, left, right, true, 76, 716);
+	left = 76;
+	right = 738;
+	amiberry_auto_crop_limit_to_picture_span(span, left, right, true, 82, 722);
+	expect_eq(left, 76, "Scrolling right must not pull in the crop's left edge");
+	expect_eq(right, 722, "Scrolling right must extend the crop to the new right edge");
+	left = 76;
+	right = 738;
+	amiberry_auto_crop_limit_to_picture_span(span, left, right, true, 76, 716);
+	expect_eq(right, 722, "Scrolling back must not shrink the crop again");
+
+	left = 60;
+	right = 740;
+	amiberry_auto_crop_limit_to_picture_span(span, left, right, false, 0, 0);
+	expect_eq(left, 60, "A new display window must drop the previous window's span");
+	expect_eq(right, 740, "A new display window without picture evidence must stay whole");
+}
+
+// The pointer (sprite 0) can move into the columns between the narrowed base
+// and the display window; growing the crop over it would undo the narrowing.
+static void test_pointer_inside_window_does_not_grow_crop()
+{
+	int left = 76;
+	int right = 734;
+	amiberry_auto_crop_ignore_growth_inside_window(left, right, 76, 716, 76, 738);
+	expect_eq(right, 716, "Growth that stays inside the display window must be dropped");
+
+	left = 60;
+	right = 750;
+	amiberry_auto_crop_ignore_growth_inside_window(left, right, 76, 716, 76, 738);
+	expect_eq(left, 60, "Growth past the window's left edge must be kept");
+	expect_eq(right, 750, "Growth past the window's right edge must be kept");
+}
+
 int main()
 {
 	test_expands_to_connected_visible_content();
@@ -896,5 +969,9 @@ int main()
 	test_vertical_transition_replaces_displaced_border_without_resizing();
 	test_vertical_transition_keeps_genuine_two_edge_content();
 	test_repeated_vertical_translation_does_not_form_a_union();
+	test_window_wider_than_fetch_narrows_to_picture();
+	test_fetch_wider_than_window_keeps_window();
+	test_scrolling_fetch_does_not_move_the_crop();
+	test_pointer_inside_window_does_not_grow_crop();
 	return failures == 0 ? 0 : 1;
 }
