@@ -5109,6 +5109,14 @@ static void get_shres_spr_pix(uae_u8 pf0, uae_u8 pf1, uae_u8 pf2, uae_u8 pf3, ua
 	uae_u32 *dpix0, uae_u32 *dpix1, uae_u32 *dpix2, uae_u32 *dpix3)
 {
 	uae_u16 v;
+#ifdef AMIBERRY
+	// Sprites 1-3 on an ECS super-hires line (sprite 0 is the pointer): picture
+	// data even where no bitplane word was fetched. The caller's four pixels
+	// start at internal_pixel_cnt.
+	if ((sv0 | sv1) & (0x0e << 16)) {
+		track_autoscale_picture_span(internal_pixel_cnt - (1 << RES_MAX), internal_pixel_cnt);
+	}
+#endif
 	// Sprite-playfield collisions see every playfield pixel under the sprite.
 	if (currprefs.collision_level) {
 		if (sv0) {
@@ -8566,9 +8574,16 @@ void draw_denise_bitplane_line_fast(int gfx_ypos, enum nln_how how, struct lines
 			delay_min = std::min(delay_min, delay2);
 			delay_max = std::max(delay_max, delay2);
 		}
+		// AGA BPLCON1 subpixel scrolling shifts the rendered data right by up to
+		// three superhires pixels below, which extends the picture's right edge.
+		int subpix_shift = 0;
+		if (doubling >= 0) {
+			const int subpix = (ls->bplcon1 & 0x0300) >> 8;
+			subpix_shift = (doubling == 0 ? subpix >> hresolution_inv : subpix) << hresolution_inv;
+		}
 		const int start = ls->bpl1dat_trigger_offset + (1 << RES_MAX);
 		track_autoscale_picture_span(start + delay_min,
-			start + delay_max + ((ls->bpllen * 8) << (RES_MAX - res)));
+			start + delay_max + subpix_shift + ((ls->bpllen * 8) << (RES_MAX - res)));
 	}
 #endif
 
