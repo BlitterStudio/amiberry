@@ -2679,6 +2679,10 @@ static int fpu_timing_opmode(int opmode)
 
 static void fpu_timing_arithmetic(uae_u32 opcode, uae_u16 extra)
 {
+	// fpu_timing_end()/fpu_timing_sync() do nothing without cycle-exact timing
+	if (!currprefs.cpu_cycle_exact || currprefs.cpu_model < 68020) {
+		return;
+	}
 	int opclass = (extra >> 13) & 7;
 	int fmt = opclass ? fpu_timing_format[(extra >> 10) & 7] : 0;
 	bool dn = opclass && (opcode & 0x38) == 0;
@@ -3885,7 +3889,15 @@ static void fpuop_arith_regmem(uae_u32 opcode, uae_u16 extra, uaecptr pc, const 
 		regs.fpiar = pc;
 	}
 
+	// The exact core with no FPU exception enabled and no unimplemented
+	// instruction/data type traps: fp_exact_fast_arith() gives what
+	// fp_arithmetic() and the checks after it do (also used by the JIT helper).
+	const bool fast = fpu_softfloat_core() && !(regs.fpcr & 0xff00) && !if_no_fpu()
+		&& !(currprefs.cpu_model >= 68040 && currprefs.fpu_no_unimplemented);
+
 	if (!(extra & 0x4000)) {
+		if (fast && fp_exact_fast_arith(&regs.fp[reg], &regs.fp[(extra >> 10) & 7], extra))
+			return;
 		// FPm to FPn (as get_fp_value(), without its call)
 		if (fault_if_no_fpu (opcode, extra, 0, false, pc))
 			return;
@@ -3902,6 +3914,9 @@ static void fpuop_arith_regmem(uae_u32 opcode, uae_u16 extra, uaecptr pc, const 
 	}
 
 	if (fault_if_no_fpu (opcode, extra, ad, adset, pc))
+		return;
+
+	if (fast && !regs.fp_unimp_pend && fp_exact_fast_arith(&regs.fp[reg], &src, extra))
 		return;
 
 	dst = regs.fp[reg];
