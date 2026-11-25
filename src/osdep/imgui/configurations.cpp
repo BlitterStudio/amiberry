@@ -11,9 +11,6 @@
 #include <unordered_map>
 #include <vector>
 
-static ImVec4 rgb_to_vec4(int r, int g, int b, float a = 1.0f) { return ImVec4{ static_cast<float>(r) / 255.0f, static_cast<float>(g) / 255.0f, static_cast<float>(b) / 255.0f, a }; }
-static ImVec4 lighten(const ImVec4& c, float f) { return ImVec4{ std::min(c.x + f, 1.0f), std::min(c.y + f, 1.0f), std::min(c.z + f, 1.0f), c.w }; }
-
 static bool s_configs_initialized = false;
 
 struct ConfigGroup
@@ -250,12 +247,7 @@ void render_panel_configurations()
 
 		const bool is_selected = selected == index;
 		if (is_selected)
-		{
-			const ImVec4 col_act = rgb_to_vec4(gui_theme.selector_active.r, gui_theme.selector_active.g, gui_theme.selector_active.b);
-			ImGui::PushStyleColor(ImGuiCol_Header, col_act);
-			ImGui::PushStyleColor(ImGuiCol_HeaderHovered, lighten(col_act, 0.05f));
-			ImGui::PushStyleColor(ImGuiCol_HeaderActive, lighten(col_act, 0.10f));
-		}
+			PushSelectedItemColors();
 
 		ImGui::PushID(config->FullPath);
 		if (ImGui::Selectable(label, is_selected, ImGuiSelectableFlags_AllowDoubleClick))
@@ -276,7 +268,7 @@ void render_panel_configurations()
 		ImGui::PopID();
 
 		if (is_selected)
-			ImGui::PopStyleColor(3);
+			PopSelectedItemColors();
 	};
 
 	if (!grouped_view)

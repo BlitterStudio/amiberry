@@ -88,6 +88,12 @@ ImVec4 GetWarningTextColor();
 ImVec4 GetErrorTextColor();
 ImVec4 GetSuccessTextColor();
 
+// Accent highlight for the selected row of a persistent list or table.
+// The global Header color follows the button color, which in some themes
+// is too close to the background to show which row is selected.
+void PushSelectedItemColors();
+void PopSelectedItemColors();
+
 void render_panel_play();
 bool play_has_content_selection();
 void play_clear_content_selection();

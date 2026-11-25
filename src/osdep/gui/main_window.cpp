@@ -514,6 +514,19 @@ ImVec4 GetWarningTextColor() { return gui_color_to_vec4(gui_theme.warning_color)
 ImVec4 GetErrorTextColor() { return gui_color_to_vec4(gui_theme.error_color); }
 ImVec4 GetSuccessTextColor() { return gui_color_to_vec4(gui_theme.success_color); }
 
+void PushSelectedItemColors()
+{
+	const ImVec4 col_act = gui_color_to_vec4(gui_theme.selector_active);
+	ImGui::PushStyleColor(ImGuiCol_Header, col_act);
+	ImGui::PushStyleColor(ImGuiCol_HeaderHovered, lighten(col_act, 0.05f));
+	ImGui::PushStyleColor(ImGuiCol_HeaderActive, lighten(col_act, 0.10f));
+}
+
+void PopSelectedItemColors()
+{
+	ImGui::PopStyleColor(3);
+}
+
 void apply_imgui_theme()
 {
 	auto c = [](const amiberry_gui_color& col) { return rgb_to_vec4(col.r, col.g, col.b); };
