@@ -99,7 +99,18 @@ bool cia_cpu_thread_pra(uae_u8 *v);
 extern int do_cycles_cck(int);
 
 #define countdown pissoff
-#define do_cycles do_cycles_slow
+extern int syncline_cnt;
+
+// do_cycles_slow()'s most frequent case inline: while the CPU runs with the
+// chipset stopped (syncline), most instructions only count down syncline_cnt.
+STATIC_INLINE void do_cycles(int cycles_to_add)
+{
+	if (is_syncline && syncline_cnt > 0 && !cpu_threaded_run) {
+		syncline_cnt--;
+		return;
+	}
+	do_cycles_slow(cycles_to_add);
+}
 
 extern struct ev eventtab[ev_max];
 extern struct ev2 eventtab2[ev2_max];

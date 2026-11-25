@@ -228,7 +228,9 @@ static void mmu030_flush_cache(uaecptr addr)
 		memset(&atc_data_cache_write, 0xff, sizeof atc_data_cache_write);
 	} else {
 		uae_u32 idx = ((addr & mmu030.translation.page.imask) >> mmu030.translation.page.size3m) | 7;
-		for (int i = 0; i < MMUFASTCACHE_ENTRIES030; i++) {
+		// Direct-mapped by (page | fc): entries for this page can only live in these 8 slots.
+		uae_u32 base = idx & (MMUFASTCACHE_ENTRIES030 - 1) & ~7;
+		for (uae_u32 i = base; i < base + 8; i++) {
 			if ((atc_data_cache_read[i].log | 7) == idx)
 				atc_data_cache_read[i].log = 0xffffffff;
 			if ((atc_data_cache_write[i].log | 7) == idx)
@@ -662,7 +664,7 @@ TT_info mmu030_decode_tt(uae_u32 TT) {
  * If !(tt&TT_RMW) neither the read nor the write portion
  * of a read-modify-write cycle is transparently translated! */
 
-static int mmu030_do_match_ttr(uae_u32 tt, TT_info comp, uaecptr addr, uae_u32 fc, bool write)
+static inline int mmu030_do_match_ttr(uae_u32 tt, TT_info comp, uaecptr addr, uae_u32 fc, bool write)
 {
 	if (tt & TT_ENABLE)	{	/* transparent translation enabled */
 
@@ -723,7 +725,7 @@ static int mmu030_match_ttr(uaecptr addr, uae_u32 fc, bool write)
     return (tt0|tt1);
 }
 
-static int mmu030_match_ttr_access(uaecptr addr, uae_u32 fc, bool write)
+static inline int mmu030_match_ttr_access(uaecptr addr, uae_u32 fc, bool write)
 {
     int tt0, tt1;
 	if (!tt_enabled)
@@ -2107,7 +2109,7 @@ static int mmu030_logical_is_in_atc(uaecptr addr, uae_u32 fc, bool write) {
  * create a new ATC entry and then look up the physical address. 
  */
 
-STATIC_INLINE void cacheablecheck(uaecptr addr)
+static inline void cacheablecheck(uaecptr addr)
 {
 	if (mmu030_cache_state == CACHE_ENABLE_ALL) {
 		// MMU didn't inhibit caches, use hardware cache state
