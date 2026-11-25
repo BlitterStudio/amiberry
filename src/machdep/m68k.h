@@ -439,6 +439,27 @@ static inline int cctrue(int cc)
 			"movb %%ah,regflags+1\n\t" \
 			: : "qmi" (s), "q" (d) : "%eax","cc","memory")
 
+/* Combined CZNV updates for gencpu output: compute all four flags with one
+   host instruction and store them at once (lahf/seto produce this layout). */
+#ifdef __GNUC__
+#define X86_CZNV_OP(insn, t, s, d) do { t d_ = (t)(d); uae_u16 f_; \
+	__asm__(insn " %2,%0\n\t" ASM_LAHF "\n\tseto %%al" : "+r"(d_), "=a"(f_) : "ri"((t)(s)) : "cc"); \
+	SET_CZNV(f_); } while (0)
+#define X86_CZNV_TEST(t, v) do { uae_u16 f_; \
+	if (__builtin_constant_p(v)) { SET_CZNV((((v) == 0) << FLAGBIT_Z) | (((v) < 0) << FLAGBIT_N)); break; } \
+	__asm__("test %1,%1\n\t" ASM_LAHF "\n\tseto %%al" : "=a"(f_) : "r"((t)(v)) : "cc"); \
+	SET_CZNV(f_); } while (0)
+#define SET_CZNV_ADDB(c, z, n, v, s, d) X86_CZNV_OP("addb", uae_u8, s, d)
+#define SET_CZNV_ADDW(c, z, n, v, s, d) X86_CZNV_OP("addw", uae_u16, s, d)
+#define SET_CZNV_ADDL(c, z, n, v, s, d) X86_CZNV_OP("addl", uae_u32, s, d)
+#define SET_CZNV_SUBB(c, z, n, v, s, d) X86_CZNV_OP("subb", uae_u8, s, d)
+#define SET_CZNV_SUBW(c, z, n, v, s, d) X86_CZNV_OP("subw", uae_u16, s, d)
+#define SET_CZNV_SUBL(c, z, n, v, s, d) X86_CZNV_OP("subl", uae_u32, s, d)
+#define SET_CZNV_LOGICALB(v) X86_CZNV_TEST(uae_u8, v)
+#define SET_CZNV_LOGICALW(v) X86_CZNV_TEST(uae_u16, v)
+#define SET_CZNV_LOGICALL(v) X86_CZNV_TEST(uae_u32, v)
+#endif
+
 #endif /* SAHF_SETO_PROFITABLE */
 
 #elif defined(CPU_riscv64) || defined(CPU_loongarch64) || defined(CPU_AARCH64) || defined(CPU_powerpc)
@@ -592,5 +613,25 @@ static inline int cctrue(const int cc)
 }
 
 #endif /* OPTIMIZED_FLAGS */
+
+/* Portable combined CZNV updates (gencpu output): one store instead of four
+   read-modify-write flag updates. */
+#ifndef SET_CZNV_ADDL
+#ifdef FLAGBIT_C
+#define SET_CZNV4(c, z, n, v) SET_CZNV((((uae_u32)(c) & 1) << FLAGBIT_C) | (((uae_u32)(z) & 1) << FLAGBIT_Z) | \
+	(((uae_u32)(n) & 1) << FLAGBIT_N) | (((uae_u32)(v) & 1) << FLAGBIT_V))
+#else
+#define SET_CZNV4(c, z, n, v) do { SET_CFLG(c); SET_ZFLG(z); SET_NFLG(n); SET_VFLG(v); } while (0)
+#endif
+#define SET_CZNV_ADDB(c, z, n, v, s, d) SET_CZNV4(c, z, n, v)
+#define SET_CZNV_ADDW(c, z, n, v, s, d) SET_CZNV4(c, z, n, v)
+#define SET_CZNV_ADDL(c, z, n, v, s, d) SET_CZNV4(c, z, n, v)
+#define SET_CZNV_SUBB(c, z, n, v, s, d) SET_CZNV4(c, z, n, v)
+#define SET_CZNV_SUBW(c, z, n, v, s, d) SET_CZNV4(c, z, n, v)
+#define SET_CZNV_SUBL(c, z, n, v, s, d) SET_CZNV4(c, z, n, v)
+#define SET_CZNV_LOGICALB(v) SET_CZNV4(0, (v) == 0, (v) < 0, 0)
+#define SET_CZNV_LOGICALW(v) SET_CZNV4(0, (v) == 0, (v) < 0, 0)
+#define SET_CZNV_LOGICALL(v) SET_CZNV4(0, (v) == 0, (v) < 0, 0)
+#endif
 
 #endif /* M68K_FLAGS_H */
