@@ -1470,6 +1470,11 @@ bool get_power_led(void)
 	return led;
 }
 
+#ifdef AMAX
+// Board config only changes across a reset
+static bool cia_amax;
+#endif
+
 static void bfe001_change(void)
 {
 	uae_u8 v = cia[0].pra;
@@ -2126,7 +2131,7 @@ static void WriteCIAA(uae_u16 addr, uae_u8 val, uae_u32 *flags)
 		handle_cd32_joystick_cia(c->pra, c->dra);
 		dongle_cia_write(0, reg, c->dra, val);
 #ifdef AMAX
-		if (is_device_rom(&currprefs, ROMTYPE_AMAX, 0) > 0)
+		if (cia_amax)
 			amax_bfe001_write(val, c->dra);
 #endif
 		break;
@@ -2352,6 +2357,9 @@ void cia_set_overlay(bool overlay)
 
 void CIA_reset(int hardreset)
 {
+#ifdef AMAX
+	cia_amax = is_device_rom(&currprefs, ROMTYPE_AMAX, 0) > 0;
+#endif
 #ifdef TOD_HACK
 	tod_hack_tv = 0;
 	tod_hack_tod = 0;

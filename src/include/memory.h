@@ -822,7 +822,10 @@ int memory_valid_address(uaecptr, uae_u32);
 
 STATIC_INLINE uae_u8 *get_real_address (uaecptr addr)
 {
-	return memory_get_real_address(addr);
+	addrbank *ab = &get_mem_bank(addr);
+	if (!ab->baseaddr_direct_r)
+		return ab->xlateaddr(addr);
+	return ab->baseaddr_direct_r + ((addr - ab->startaccessmask) & ab->mask);
 }
 
 STATIC_INLINE int valid_address (uaecptr addr, uae_u32 size)

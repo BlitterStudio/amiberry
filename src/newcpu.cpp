@@ -4668,16 +4668,6 @@ void ipl_fetch_now_pre()
 	regs.ipl_evt_pre_mode = 0;
 }
 
-// ipl check was early enough, interrupt possible after current instruction
-void ipl_fetch_now()
-{
-	evt_t c = get_cycles();
-
-	regs.ipl_evt = c;
-	regs.ipl[0] = regs.ipl_pin;
-	regs.ipl[1] = 0;
-}
-
 // ipl check max 4 cycles before end of instruction.
 // interrupt starts after current instruction if IPL was changed earlier.
 // if not early enough: interrupt starts after following instruction.
@@ -8383,15 +8373,16 @@ static void m68k_run_2_000()
 			while (!exit) {
 				r->instruction_pc = m68k_getpc ();
 
-				r->opcode = get_opcode_fast();
-				count_instr (r->opcode);
+				uae_u32 op = get_opcode_fast();
+				r->opcode = op;
 #ifdef DEBUGGER
-				if (debug_opcode_watch) {
+				if (unlikely(debug_opcode_watch)) {
 					debug_trainer_match();
+					op = r->opcode;
 				}
 #endif
 
-				cpu_cycles = (*cpufunctbl[r->opcode])(r->opcode) & 0xffff;
+				cpu_cycles = (*cpufunctbl[op])(op) & 0xffff;
 				cpu_cycles = adjust_cycles (cpu_cycles);
 				do_cycles(cpu_cycles);
 
@@ -8421,16 +8412,17 @@ static void m68k_run_2_020()
 			while (!exit) {
 				r->instruction_pc = m68k_getpc();
 
-				r->opcode = get_opcode_fast();
-				count_instr(r->opcode);
+				uae_u32 op = get_opcode_fast();
+				r->opcode = op;
 
 #ifdef DEBUGGER
-				if (debug_opcode_watch) {
+				if (unlikely(debug_opcode_watch)) {
 					debug_trainer_match();
+					op = r->opcode;
 				}
 #endif
 
-				cpu_cycles = (*cpufunctbl[r->opcode])(r->opcode) >> 16;
+				cpu_cycles = (*cpufunctbl[op])(op) >> 16;
 				cpu_cycles = adjust_cycles(cpu_cycles);
 				do_cycles(cpu_cycles);
 

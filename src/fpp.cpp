@@ -3849,6 +3849,21 @@ static bool fp_arithmetic(fpdata *src, fpdata *dst, int extra)
 /* The arithmetic instructions: opclass 0 (FPm to FPn) and 2 (<ea> to FPn),
  * FMOVECR included. Called directly by the FPU entry points, so the most
  * common FPU instructions skip the large fpuop_arithmetic2() frame. */
+// Opmodes handled by fp_exact_fast_arith(), so others skip the call
+static inline bool fp_fast_arith_op(uae_u16 extra)
+{
+	static constexpr uae_u64 lo = (1ULL << 0x00) | (1ULL << 0x01) | (1ULL << 0x03) | (1ULL << 0x04)
+		| (1ULL << 0x18) | (1ULL << 0x1a) | (1ULL << 0x20) | (1ULL << 0x22) | (1ULL << 0x23)
+		| (1ULL << 0x28) | (1ULL << 0x38) | (1ULL << 0x3a);
+	static constexpr uae_u64 hi = (1ULL << (0x40 - 64)) | (1ULL << (0x41 - 64)) | (1ULL << (0x44 - 64))
+		| (1ULL << (0x45 - 64)) | (1ULL << (0x58 - 64)) | (1ULL << (0x5a - 64)) | (1ULL << (0x5c - 64))
+		| (1ULL << (0x5e - 64)) | (1ULL << (0x60 - 64)) | (1ULL << (0x62 - 64)) | (1ULL << (0x63 - 64))
+		| (1ULL << (0x64 - 64)) | (1ULL << (0x66 - 64)) | (1ULL << (0x67 - 64)) | (1ULL << (0x68 - 64))
+		| (1ULL << (0x6c - 64));
+	const unsigned op = extra & 0x7f;
+	return (((op & 0x40) ? hi : lo) >> (op & 63)) & 1;
+}
+
 static void fpuop_arith_regmem(uae_u32 opcode, uae_u16 extra, uaecptr pc, const uaecptr *jit_ea)
 {
 	int reg;
@@ -3893,7 +3908,7 @@ static void fpuop_arith_regmem(uae_u32 opcode, uae_u16 extra, uaecptr pc, const 
 	// instruction/data type traps: fp_exact_fast_arith() gives what
 	// fp_arithmetic() and the checks after it do (also used by the JIT helper).
 	const bool fast = fpu_softfloat_core() && !(regs.fpcr & 0xff00) && !if_no_fpu()
-		&& !(currprefs.cpu_model >= 68040 && currprefs.fpu_no_unimplemented);
+		&& !(currprefs.cpu_model >= 68040 && currprefs.fpu_no_unimplemented) && likely(fp_fast_arith_op(extra));
 
 	if (!(extra & 0x4000)) {
 		if (fast && fp_exact_fast_arith(&regs.fp[reg], &regs.fp[(extra >> 10) & 7], extra))
