@@ -368,9 +368,11 @@ static void RenderMountedDrives(float reserved_below)
             bool is_selected = (selected_row == row);
             
             ImGui::TableNextColumn();
+            if (is_selected) PushSelectedItemColors();
             if (ImGui::Selectable(devname_str, is_selected, ImGuiSelectableFlags_SpanAllColumns)) {
                 selected_row = row;
             }
+            if (is_selected) PopSelectedItemColors();
             
             ImGui::TableNextColumn(); ImGui::Text("%s", volname_str);
             ImGui::TableNextColumn(); ImGui::Text("%s", rootdir_str.c_str());

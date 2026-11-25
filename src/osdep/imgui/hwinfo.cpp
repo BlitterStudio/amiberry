@@ -66,9 +66,11 @@ void render_panel_hwinfo()
             
             // Selectable covers the Type column, but we want row selection behavior ideally.
             // Using SpanAllColumns flag on the first item.
+            if (is_selected) PushSelectedItemColors();
             if (ImGui::Selectable(type_str, is_selected, ImGuiSelectableFlags_SpanAllColumns)) {
                 selected_row = i;
             }
+            if (is_selected) PopSelectedItemColors();
             ImGui::PopID();
             
             ImGui::TableNextColumn();
