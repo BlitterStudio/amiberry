@@ -123,21 +123,33 @@ shorter than 2 bytes, or a flag other than `EXPECT_END` is `BAD_REQUEST`.
 A missing buffer is `BAD_HANDLE`. An output format other than S16LE or
 S16BE is `UNSUPPORTED`. A requested rate or channel count that is nonzero
 and differs from the stream is `UNSUPPORTED`: there is no resampling.
-`EXPECT_END` is accepted and does not change the decode. The card uses it
-since firmware PR 305: it answers `BAD_REQUEST` when the stream does not end
-cleanly (a cut-off last frame, bytes after the last frame that are no ID3v1
-or APEv2 tag, or fewer samples than a Xing or Info header declares) and a
-complete decode reports `bytes_consumed` equal to the source length. Amiberry
-does not check the end, so a damaged end decodes what it can and succeeds,
-as the card does without the flag. The destination
+`EXPECT_END` works as on the card since firmware PR 305
+(`mp3_expect_end_ok`): with it, a stream that does not end cleanly is
+`BAD_REQUEST` (the output is then undefined). That is a cut-off last frame,
+bytes after the last frame that are no tag, or a Xing or Info header that
+counts other frames than the stream holds. An ID3v2 tag in front and an
+ID3v1 (with `TAG+`) or APEv2 tag (with or without header) behind are not a
+fault; a Lyrics3 tag is not recognised. A damaged frame in the middle is
+skipped without the flag or with it. mpg123 does not report these, so
+Amiberry checks the end itself: it recognises the tags, walks the frame
+headers (layers I to III, resyncing over damaged bytes as the decoder does),
+and compares the frame count with a Xing or Info header's. A file cut off
+exactly between two frames is refused only when such a header declares the
+count, as on the card. Running out of output space first is not a fault, and
+skips the check. Without the flag the same input decodes what it can and
+succeeds. Once the audio is decoded `bytes_consumed` is the whole source
+length, tags and a cut-off frame included, and END is set, as on the card;
+`bytes_consumed` is short of it only when the output filled first.
+The destination
 capacity is rounded down to an even length. The reply is the 48-byte
 `SDKAudioDecodeResultPayload` the SDK decoder requires: bytes consumed,
 bytes written, sample rate, channels, the requested sample format, frames
 written, and the END flag when the input was consumed. mpg123 fills the
 destination until it is full or the input ends. It has no minimp3 parse
-cursor, so `bytes_consumed` is the fed length less what mpg123 still holds
-(`MPG123_BUFFERFILL`) and a truncated trailing frame can be counted
-differently from the card. Bit 7 is set in the
+cursor, so when the output filled first `bytes_consumed` is the fed length
+less what mpg123 still holds (`MPG123_BUFFERFILL`): on a file of a few frames
+that can read as fully consumed where the card, which does not count the
+frame its output ended in, would not. Bit 7 is set in the
 mailbox capability word, the audio service word, and the Zorro III video
 service word only in a build that can serve this op.
 

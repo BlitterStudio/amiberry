@@ -3183,6 +3183,146 @@ uint16_t Engine::scale_surface(uint32_t src_handle, uint32_t dst_handle,
 	return ok;
 }
 
+#ifdef ZZ9000_SDK_AUDIO
+namespace {
+
+// One MPEG audio frame header (layers I to III), as minimp3 accepts it.
+struct Mp3Frame {
+	uint32_t bytes = 0;
+	uint32_t samples = 0;
+	bool layer3 = false, mpeg1 = false, mono = false, crc = false;
+};
+
+bool mp3_frame_at(const uint8_t *p, size_t available, Mp3Frame &frame)
+{
+	if (available < 4 || p[0] != 0xff || (p[1] & 0xe0) != 0xe0)
+		return false;
+	const unsigned version = (p[1] >> 3) & 3, layer = (p[1] >> 1) & 3;
+	const unsigned bitrate_index = p[2] >> 4, rate_index = (p[2] >> 2) & 3;
+	if (version == 1 || layer == 0 || bitrate_index == 0 || bitrate_index == 15 ||
+	    rate_index == 3)
+		return false;
+	static const uint16_t kbps[2][3][14] = {
+		{{32, 48, 56, 64, 80, 96, 112, 128, 144, 160, 176, 192, 224, 256},   // MPEG-2/2.5 layer I
+		 {8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160},       // layer II
+		 {8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160}},      // layer III
+		{{32, 64, 96, 128, 160, 192, 224, 256, 288, 320, 352, 384, 416, 448},
+		 {32, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, 384},
+		 {32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320}}};
+	static const uint32_t hz[3] = {44100, 48000, 32000};
+	const bool mpeg1 = version == 3;
+	const unsigned layer_index = 3 - layer; // 0 = layer I
+	uint32_t rate = hz[rate_index] >> (mpeg1 ? 0 : (version == 2 ? 1 : 2));
+	const uint32_t bitrate = kbps[mpeg1 ? 1 : 0][layer_index][bitrate_index - 1] * 1000u;
+	const uint32_t padding = (p[2] >> 1) & 1;
+	frame.layer3 = layer_index == 2;
+	frame.mpeg1 = mpeg1;
+	frame.mono = (p[3] >> 6) == 3;
+	frame.crc = (p[1] & 1) == 0;
+	if (layer_index == 0) {
+		frame.bytes = (12 * bitrate / rate + padding) * 4;
+		frame.samples = 384;
+	} else if (layer_index == 1) {
+		frame.bytes = 144 * bitrate / rate + padding;
+		frame.samples = 1152;
+	} else {
+		frame.samples = mpeg1 ? 1152 : 576;
+		frame.bytes = (mpeg1 ? 144 : 72) * bitrate / rate + padding;
+	}
+	return frame.bytes >= 4 && frame.bytes <= available;
+}
+
+// A frame the decoder would sync on: its header is valid, it fits, and what
+// follows is another valid header or the end of the audio.
+bool mp3_sync_at(const uint8_t *data, size_t pos, size_t end)
+{
+	Mp3Frame frame;
+	if (!mp3_frame_at(data + pos, end - pos, frame))
+		return false;
+	const size_t next = pos + frame.bytes;
+	Mp3Frame following;
+	return next == end || mp3_frame_at(data + next, end - next, following);
+}
+
+// The card's mp3_expect_end_ok() for a stream the decoder has run to its
+// end: false when the last frame is cut off, bytes follow the last frame
+// that are not a recognised tag, or the Xing or Info header declares another
+// number of frames than the stream holds. An ID3v2 tag in front and an
+// ID3v1 (with TAG+) or APEv2 tag (with or without header) behind are not a
+// fault; a Lyrics3 tag is not recognised. A damaged frame in the middle is
+// skipped, not reported.
+bool mp3_ends_cleanly(const uint8_t *data, size_t size)
+{
+	size_t begin = 0, end = size;
+	if (size >= 10 && std::memcmp(data, "ID3", 3) == 0 && data[3] != 0xff &&
+	    data[4] != 0xff && !((data[6] | data[7] | data[8] | data[9]) & 0x80)) {
+		const size_t tag = 10 + ((static_cast<size_t>(data[6]) << 21) |
+			(static_cast<size_t>(data[7]) << 14) | (static_cast<size_t>(data[8]) << 7) |
+			data[9]) + ((data[5] & 0x10) ? 10 : 0);
+		if (tag <= size)
+			begin = tag;
+	}
+	if (end - begin >= 128 && std::memcmp(data + end - 128, "TAG", 3) == 0) {
+		end -= 128;
+		if (end - begin >= 227 && std::memcmp(data + end - 227, "TAG+", 4) == 0)
+			end -= 227;
+	}
+	if (end - begin >= 32 && std::memcmp(data + end - 32, "APETAGEX", 8) == 0) {
+		const uint8_t *footer = data + end - 32;
+		const size_t tag = static_cast<size_t>(footer[12]) | (static_cast<size_t>(footer[13]) << 8) |
+			(static_cast<size_t>(footer[14]) << 16) | (static_cast<size_t>(footer[15]) << 24);
+		const bool header = (footer[23] & 0x80) != 0;
+		const size_t total = tag + (header ? 32 : 0);
+		if (tag >= 32 && total <= end - begin)
+			end -= total;
+	}
+	size_t pos = begin;
+	while (pos < end && !mp3_sync_at(data, pos, end))
+		++pos;
+	if (pos >= end)
+		return false; // no frame at all
+	uint32_t frames = 0, declared = 0;
+	bool has_count = false;
+	bool first = true;
+	while (pos < end) {
+		Mp3Frame frame;
+		if (mp3_sync_at(data, pos, end) && mp3_frame_at(data + pos, end - pos, frame)) {
+			if (first && frame.layer3) {
+				// Xing or Info after the side information.
+				const size_t side = frame.mpeg1 ? (frame.mono ? 17 : 32) : (frame.mono ? 9 : 17);
+				const size_t at = pos + 4 + (frame.crc ? 2 : 0) + side;
+				if (at + 12 <= end &&
+				    (std::memcmp(data + at, "Xing", 4) == 0 ||
+				     std::memcmp(data + at, "Info", 4) == 0) && (data[at + 7] & 1)) {
+					has_count = true;
+					declared = (static_cast<uint32_t>(data[at + 8]) << 24) |
+						(static_cast<uint32_t>(data[at + 9]) << 16) |
+						(static_cast<uint32_t>(data[at + 10]) << 8) | data[at + 11];
+					first = false;
+					pos += frame.bytes; // the header frame carries no audio
+					continue;
+				}
+			}
+			first = false;
+			++frames;
+			pos += frame.bytes;
+			continue;
+		}
+		// Skip damaged bytes up to the next frame; none left means a cut-off
+		// last frame or trailing bytes.
+		size_t next = pos + 1;
+		while (next < end && !mp3_sync_at(data, next, end))
+			++next;
+		if (next >= end)
+			return false;
+		pos = next;
+	}
+	return !has_count || frames == declared;
+}
+
+} // namespace
+#endif
+
 uint16_t Engine::decode_mp3(const uint8_t *request, uint16_t request_length,
 	uint8_t *reply, uint16_t *reply_length)
 {
@@ -3193,10 +3333,10 @@ uint16_t Engine::decode_mp3(const uint8_t *request, uint16_t request_length,
 	(void)reply_length;
 	return unsupported;
 #else
-	// handle_decode_mp3() then mp3_decode_compute(). EXPECT_END is
-	// accepted and otherwise ignored: the card fails a stream that does
-	// not end cleanly with BAD_REQUEST when it is set (firmware PR 305),
-	// and this path does not check the end.
+	// handle_decode_mp3() then mp3_decode_compute(). EXPECT_END fails a
+	// stream that does not end cleanly with BAD_REQUEST (firmware PR 305,
+	// mp3_expect_end_ok()), unless the output filled first: then the caller
+	// asked for a partial decode.
 	if (request_length < 48)
 		return bad_request;
 	auto *src = find_buffer(be32(request));
@@ -3316,13 +3456,21 @@ uint16_t Engine::decode_mp3(const uint8_t *request, uint16_t request_length,
 	}
 	if (!accepted)
 		return bad_request;
+	if ((flags & 1u) && written < cap &&
+	    !mp3_ends_cleanly(buffer_data(src->handle) + src_offset, src_length))
+		return bad_request;
 	if (output_format == pcm_s16be)
 		for (uint32_t i = 0; i + 1 < written; i += 2)
 			std::swap(out[i], out[i + 1]);
 	long fill = 0;
 	double fill_real = 0.0;
+	// The card reports the whole source consumed once the audio is: a
+	// trailing tag or a cut-off last frame included. mpg123 holds no
+	// offset cursor, so while the output filled first the unconsumed
+	// tail is what it still buffers.
 	uint32_t consumed = src_length;
-	if (mpg123_getstate(decoder, MPG123_BUFFERFILL, &fill,
+	if (written >= cap &&
+	    mpg123_getstate(decoder, MPG123_BUFFERFILL, &fill,
 	                    &fill_real) == MPG123_OK &&
 	    fill >= 0 && static_cast<uint64_t>(fill) <= src_length)
 		consumed = src_length - static_cast<uint32_t>(fill);
