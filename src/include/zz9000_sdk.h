@@ -128,8 +128,8 @@ private:
 	                       uint32_t dx, uint32_t dy, uint32_t dw, uint32_t dh,
 	                       uint32_t cx, uint32_t cy, uint32_t cw, uint32_t ch,
 	                       uint32_t filter, uint32_t flags);
-	uint16_t decode_jpeg_to_surface(const uint8_t *request, uint8_t *reply,
-	                                uint16_t *reply_length);
+	uint16_t decode_still_to_surface(bool png, const uint8_t *request,
+	                                 uint8_t *reply, uint16_t *reply_length);
 	uint8_t *surface_pixels(uint32_t handle);
 	uint32_t surface_width(uint32_t handle) const;
 	uint32_t surface_height(uint32_t handle) const;
@@ -148,6 +148,10 @@ private:
 	                  uint32_t bytes_written = 0, uint32_t event_flags = 0);
 	void media_audio_result(uint8_t *reply, uint16_t *reply_length);
 	void pump_media_audio();
+	void pump_media_ts();
+	uint16_t media_output_config(const uint8_t *request, uint16_t request_length,
+	                             uint8_t *reply, uint16_t *reply_length);
+	uint16_t media_present_shared(uint8_t *reply, uint16_t *reply_length);
 	uint16_t dispatch_media(uint16_t opcode, const uint8_t *request,
 	                        uint16_t request_length, uint8_t *reply,
 	                        uint16_t *reply_length);

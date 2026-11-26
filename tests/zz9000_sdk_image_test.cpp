@@ -785,6 +785,228 @@ void run_one_shot_jpeg(Mailbox &mailbox, const std::vector<uint8_t> &image)
 	mailbox.call(0x0101, request, 4);
 }
 
+uint32_t png_crc(const uint8_t *data, size_t length)
+{
+	uint32_t crc = 0xffffffffu;
+	for (size_t i = 0; i < length; ++i) {
+		crc ^= data[i];
+		for (int bit = 0; bit < 8; ++bit)
+			crc = (crc & 1) ? (crc >> 1) ^ 0xedb88320u : crc >> 1;
+	}
+	return ~crc;
+}
+
+void png_chunk(std::vector<uint8_t> &out, const char *tag, const std::vector<uint8_t> &data)
+{
+	uint8_t word[4];
+	put32(word, static_cast<uint32_t>(data.size()));
+	out.insert(out.end(), word, word + 4);
+	std::vector<uint8_t> body(tag, tag + 4);
+	body.insert(body.end(), data.begin(), data.end());
+	out.insert(out.end(), body.begin(), body.end());
+	put32(word, png_crc(body.data(), body.size()));
+	out.insert(out.end(), word, word + 4);
+}
+
+std::vector<uint8_t> png_ihdr(uint32_t width, uint32_t height, uint8_t depth, uint8_t color)
+{
+	std::vector<uint8_t> ihdr(13);
+	put32(ihdr.data(), width); put32(ihdr.data() + 4, height);
+	ihdr[8] = depth; ihdr[9] = color;
+	return ihdr;
+}
+
+// A PNG with its image data stored, not compressed, so the bytes are exact.
+// `rows` holds every row with its filter byte (0) in front.
+std::vector<uint8_t> make_png(uint32_t width, uint32_t height, uint8_t depth, uint8_t color,
+	                          const std::vector<uint8_t> &rows,
+	                          const std::vector<std::pair<const char *, std::vector<uint8_t>>> &before = {})
+{
+	std::vector<uint8_t> png = {0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'};
+	png_chunk(png, "IHDR", png_ihdr(width, height, depth, color));
+	for (const auto &chunk : before)
+		png_chunk(png, chunk.first, chunk.second);
+	std::vector<uint8_t> z = {0x78, 0x01, 0x01};
+	const uint16_t length = static_cast<uint16_t>(rows.size());
+	z.insert(z.end(), {static_cast<uint8_t>(length), static_cast<uint8_t>(length >> 8),
+		static_cast<uint8_t>(~length), static_cast<uint8_t>((~length) >> 8)});
+	z.insert(z.end(), rows.begin(), rows.end());
+	uint32_t a = 1, b = 0;
+	for (uint8_t byte : rows) {
+		a = (a + byte) % 65521;
+		b = (b + a) % 65521;
+	}
+	uint8_t adler[4];
+	put32(adler, (b << 16) | a);
+	z.insert(z.end(), adler, adler + 4);
+	png_chunk(png, "IDAT", z);
+	png_chunk(png, "IEND", {});
+	return png;
+}
+
+// DECODE_PNG (0x0402), as the card's handle_decode_png(): the session
+// decoder run start to finish into the destination rectangle, in the
+// surface's format and with the picture's own alpha; never scaled.
+void run_one_shot_png(Mailbox &mailbox, const std::vector<uint8_t> &rgb_png)
+{
+	const uint32_t staging = mailbox.allocate(4096);
+	auto *staged = mailbox.sdk.buffer_data(staging);
+	uint32_t length = 0;
+	const auto load = [&](const std::vector<uint8_t> &image) {
+		assert(!image.empty() && image.size() < 4096);
+		std::copy(image.begin(), image.end(), staged);
+		length = static_cast<uint32_t>(image.size());
+	};
+	uint8_t *argb = nullptr, *bgra = nullptr, *rgba = nullptr, *rgb = nullptr;
+	const uint32_t s_argb = alloc_surface(mailbox, 4, 4, 2, 0, &argb);
+	const uint32_t s_bgra = alloc_surface(mailbox, 4, 4, 7, 0, &bgra);
+	const uint32_t s_rgba = alloc_surface(mailbox, 4, 4, 3, 0, &rgba);
+	const uint32_t s_rgb = alloc_surface(mailbox, 4, 4, 8, 0, &rgb);
+	const auto decode = [&](uint32_t surface, uint32_t format, uint32_t x, uint32_t y,
+	                        uint32_t w, uint32_t h, uint32_t flags, uint16_t status) {
+		uint8_t request[48] = {};
+		put32(request, staging);
+		put32(request + 8, length);
+		put32(request + 12, surface);
+		put32(request + 16, x); put32(request + 20, y);
+		put32(request + 24, w); put32(request + 28, h);
+		put32(request + 32, format); put32(request + 36, flags);
+		return mailbox.call(0x0402, request, 40, status);
+	};
+	const auto clear = [](uint8_t *pixels) { std::fill(pixels, pixels + 64, 0); };
+	// The 2x3 RGB picture at (1,1); 0 x 0 runs to the surface's edges. The
+	// pixels are exact, and nothing outside the rectangle is touched.
+	load(rgb_png);
+	auto *reply = decode(s_argb, 2, 1, 1, 0, 0, 0, 0);
+	assert(get32(reply) == 2 && get32(reply + 4) == 3 && get32(reply + 8) == 2 &&
+	       get32(reply + 12) == 0 && get32(reply + 16) == 24);
+	assert(mailbox.last_length == 48); // the whole SDKImageDecodeResultPayload
+	const uint8_t expected[6][3] = {{255, 0, 0}, {0, 255, 0}, {0, 0, 255},
+	                                {255, 255, 0}, {0, 255, 255}, {255, 0, 255}};
+	for (uint32_t y = 0; y < 4; ++y)
+		for (uint32_t x = 0; x < 4; ++x) {
+			const uint8_t *p = argb + (y * 4 + x) * 4;
+			if (x >= 1 && x <= 2 && y >= 1) {
+				const uint8_t *e = expected[(y - 1) * 2 + (x - 1)];
+				assert(p[0] == 255 && p[1] == e[0] && p[2] == e[1] && p[3] == e[2]);
+			} else {
+				assert(!p[0] && !p[1] && !p[2] && !p[3]);
+			}
+		}
+	// The other 4-byte and the 3-byte layouts; PRESERVE_ASPECT is accepted
+	// and changes nothing, as on the card.
+	decode(s_bgra, 7, 0, 0, 2, 3, 2, 0);
+	assert(bgra[0] == 0 && bgra[1] == 0 && bgra[2] == 255 && bgra[3] == 255);
+	reply = decode(s_rgba, 3, 0, 0, 0, 0, 0, 0);
+	assert(get32(reply + 8) == 3 && get32(reply + 16) == 24);
+	assert(rgba[0] == 255 && rgba[1] == 0 && rgba[2] == 0 && rgba[3] == 255);
+	reply = decode(s_rgb, 8, 0, 0, 0, 0, 0, 0);
+	assert(get32(reply + 8) == 8 && get32(reply + 16) == 18);
+	assert(rgb[0] == 255 && rgb[1] == 0 && rgb[2] == 0 && rgb[3] == 0 && rgb[4] == 255);
+	// Alpha stays straight, byte for byte.
+	const uint8_t pixels[12][4] = {
+		{0, 0, 0, 0}, {0x44, 0x55, 0x66, 255}, {0x77, 0x88, 0x99, 128}, {0xaa, 0xbb, 0xcc, 64},
+		{0x12, 0x34, 0x56, 255}, {0x65, 0x43, 0x21, 0}, {0xde, 0xad, 0xbe, 17}, {0xef, 0xca, 0xfe, 238},
+		{0x35, 0x79, 0xbd, 85}, {0x24, 0x68, 0xac, 170}, {0x0f, 0x1e, 0x2d, 1}, {0x3c, 0x4b, 0x5a, 254}};
+	std::vector<uint8_t> alpha_rows;
+	for (int row = 0; row < 3; ++row) {
+		alpha_rows.push_back(0);
+		for (int col = 0; col < 4; ++col)
+			alpha_rows.insert(alpha_rows.end(), pixels[row * 4 + col], pixels[row * 4 + col] + 4);
+	}
+	load(make_png(4, 3, 8, 6, alpha_rows));
+	clear(rgba); clear(argb); clear(bgra);
+	reply = decode(s_rgba, 3, 0, 0, 0, 0, 0, 0);
+	assert(get32(reply) == 4 && get32(reply + 4) == 3 && get32(reply + 16) == 48);
+	decode(s_argb, 2, 0, 0, 0, 0, 0, 0);
+	decode(s_bgra, 7, 0, 0, 0, 0, 0, 0);
+	for (int i = 0; i < 12; ++i) {
+		const uint32_t at = ((i / 4) * 4 + i % 4) * 4;
+		const uint8_t *q = pixels[i];
+		assert(std::equal(q, q + 4, rgba + at));
+		assert(argb[at] == q[3] && argb[at + 1] == q[0] && argb[at + 2] == q[1] && argb[at + 3] == q[2]);
+		assert(bgra[at] == q[2] && bgra[at + 1] == q[1] && bgra[at + 2] == q[0] && bgra[at + 3] == q[3]);
+	}
+	// A palette picture with a tRNS chunk, 16-bit samples and grayscale
+	// expand to the same 8-bit RGBA.
+	clear(rgba);
+	load(make_png(2, 1, 8, 3, {0, 0, 1},
+		{{"PLTE", {255, 0, 0, 0, 0, 255}}, {"tRNS", {128, 255}}}));
+	decode(s_rgba, 3, 0, 0, 0, 0, 0, 0);
+	assert(rgba[0] == 255 && rgba[1] == 0 && rgba[2] == 0 && rgba[3] == 128);
+	assert(rgba[4] == 0 && rgba[5] == 0 && rgba[6] == 255 && rgba[7] == 255);
+	clear(rgba);
+	load(make_png(1, 1, 16, 2, {0, 0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc}));
+	decode(s_rgba, 3, 0, 0, 0, 0, 0, 0);
+	assert(rgba[0] == 0x12 && rgba[1] == 0x56 && rgba[2] == 0x9a && rgba[3] == 255);
+	clear(rgba);
+	load(make_png(2, 1, 8, 0, {0, 0x00, 0xff}));
+	decode(s_rgba, 3, 0, 0, 0, 0, 0, 0);
+	assert(rgba[0] == 0 && rgba[1] == 0 && rgba[2] == 0 && rgba[3] == 255);
+	assert(rgba[4] == 255 && rgba[5] == 255 && rgba[6] == 255 && rgba[7] == 255);
+
+	// Refusals. The 2x3 picture again.
+	load(rgb_png);
+	decode(s_argb, 2, 0, 0, 2, 2, 0, 4);   // does not fit the rectangle: BAD_REQUEST
+	decode(s_argb, 2, 3, 0, 0, 0, 0, 4);   // one column left
+	decode(s_argb, 2, 0, 0, 5, 0, 0, 4);   // rectangle past the surface
+	decode(s_argb, 2, 5, 0, 0, 0, 0, 4);   // origin past the surface
+	decode(s_argb, 7, 0, 0, 0, 0, 0, 3);   // not the surface's format
+	decode(s_argb, 2, 0, 0, 0, 0, 1, 3);   // FIT: not available for PNG
+	decode(s_argb, 2, 0, 0, 0, 0, 3, 3);   // FIT with PRESERVE_ASPECT
+	decode(s_argb, 2, 0, 0, 0, 0, 4, 4);   // an unknown flag bit
+	decode(s_argb, 2, 0, 0, 0, 0, 0x100, 4);
+	free_surface(mailbox, s_rgb); // the card has four surfaces
+	uint8_t *narrow = nullptr;
+	const uint32_t s_565 = alloc_surface(mailbox, 4, 4, 1, 0, &narrow);
+	decode(s_565, 1, 0, 0, 0, 0, 0, 3);    // a format the decoder does not write
+	free_surface(mailbox, s_565);
+	uint8_t request[48] = {};
+	put32(request, staging); put32(request + 12, s_argb); put32(request + 32, 2);
+	mailbox.call(0x0402, request, 40, 4);  // no source bytes
+	put32(request + 8, 4090); put32(request + 4, 8);
+	mailbox.call(0x0402, request, 40, 4);  // 8 + 4090 passes the buffer
+	put32(request + 4, 0); put32(request + 8, length);
+	put32(request + 12, 0x40ffffff);
+	mailbox.call(0x0402, request, 40, 5);  // no such surface
+	put32(request, 0x7777); put32(request + 12, s_argb);
+	mailbox.call(0x0402, request, 40, 5);  // no such source buffer
+	mailbox.call(0x0402, request, 36, 4);  // payload shorter than 40
+	// Not a PNG, or one cut short, is an I/O error, as it is for a session.
+	load({'G', 'I', 'F', '8', '9', 'a', 1, 0, 1, 0, 0, 0, 0, 0x3b, 0, 0});
+	decode(s_argb, 2, 0, 0, 0, 0, 0, 9);
+	load({0x89, 'P', 'N', 'G'});
+	decode(s_argb, 2, 0, 0, 0, 0, 0, 9);
+	std::vector<uint8_t> cut(rgb_png.begin(), rgb_png.end() - 5); // into the IEND chunk
+	load(cut);
+	decode(s_argb, 2, 0, 0, 0, 0, 0, 9);
+	cut.assign(rgb_png.begin(), rgb_png.begin() + 40); // into the IDAT chunk
+	load(cut);
+	decode(s_argb, 2, 0, 0, 0, 0, 0, 9);
+	// A header that names a picture the decoder will not take is out of
+	// range (BAD_REQUEST), not corrupt: more than 8192 pixels a side, or
+	// more than 24 megapixels.
+	for (const auto &size : {std::pair<uint32_t, uint32_t>{8193, 1}, {1, 8193}, {8000, 4000}}) {
+		std::vector<uint8_t> big = {0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'};
+		png_chunk(big, "IHDR", png_ihdr(size.first, size.second, 8, 2));
+		png_chunk(big, "IEND", {});
+		load(big);
+		decode(s_argb, 2, 0, 0, 0, 0, 0, 4);
+	}
+	// Into the live framebuffer: a visible write.
+	load(rgb_png);
+	mailbox.sdk.set_framebuffer(0x110000, 4, 4, 16, 7);
+	decode(0x80000000, 7, 0, 0, 0, 0, 0, 0);
+	assert(mailbox.last_dirty);
+	const auto *fb = mailbox.board.data() + 0x110000;
+	assert(fb[0] == 0 && fb[1] == 0 && fb[2] == 255 && fb[3] == 255);
+	free_surface(mailbox, s_argb);
+	free_surface(mailbox, s_bgra);
+	free_surface(mailbox, s_rgba);
+	put32(request, staging);
+	mailbox.call(0x0101, request, 4);
+}
+
 // SCALE_IMAGE: the clipped scaler with the destination as the clip.
 void run_scale_image(Mailbox &mailbox)
 {
@@ -907,7 +1129,7 @@ void run_session_argb_surface(Mailbox &mailbox, const std::vector<uint8_t> &imag
 
 // COPY_SURFACE and QUERY_PALETTE, as handle_copy_surface(),
 // sdk_surface_copy_rect(), handle_query_palette() and sdk_palette_pack_be().
-void copy_surface_and_query_palette(Mailbox &mailbox)
+void copy_surface_and_query_palette(Mailbox &mailbox, bool z3)
 {
 	mailbox.sdk.set_framebuffer(0x110000, 4, 2, 16, 7);
 	uint8_t *src_px = nullptr, *dst_px = nullptr;
@@ -995,8 +1217,8 @@ void copy_surface_and_query_palette(Mailbox &mailbox)
 	copy(0x80000000, dst, 0, 0, 0, 1, 2, 1, 0, 0);
 	assert(!mailbox.last_dirty);
 	assert(dst_px[16] == 0x11 && dst_px[17] == 0x22);
-	// DECODE_PNG and DECODE_GIF stay unsupported, as on the card.
-	mailbox.call(0x0402, request, 40, 3);
+	// DECODE_GIF stays unsupported, as on the card (DECODE_PNG is a
+	// one-shot decode now: see run_one_shot_png).
 	mailbox.call(0x0403, request, 40, 3);
 	const uint32_t staging = mailbox.allocate(64);
 	auto *packed = mailbox.sdk.buffer_data(staging);
@@ -1012,6 +1234,28 @@ void copy_surface_and_query_palette(Mailbox &mailbox)
 		put32(request + 20, flags);
 		return mailbox.call(0x0205, request, length, status);
 	};
+	if (!z3) {
+		// Zorro II does not advertise the palette query: only the Zorro III
+		// path loads the CLUT through the DMA SET_PALETTE op the card
+		// shadows, so the card answers UNSUPPORTED before it reads the
+		// request.
+		mailbox.sdk.set_palette_entry(1, 0x11, 0x22, 0x33);
+		query(0, 2, 0, staging, 0, 3);
+		assert(mailbox.last_length == 0);
+		assert(packed[0] == 0 && packed[5] == 0); // nothing was written
+		query(1, 1, 0, staging, 0, 3);
+		query(0, 0, 0, staging, 0, 3);        // arguments are not checked
+		query(0, 1, 2, staging, 0, 3);
+		query(0, 1, 1, staging, 0, 3);
+		query(0, 1, 0, 0, 0, 3);
+		query(0, 1, 0, staging, 0, 3, 20);    // nor the payload length
+		query(0, 1, 0, staging, 0, 3, 0);
+		free_surface(mailbox, src);
+		free_surface(mailbox, dst);
+		put32(request, staging);
+		mailbox.call(0x0101, request, 4);
+		return;
+	}
 	query(0, 2, 0, staging, 0, 0);
 	assert(mailbox.last_length == 0);
 	assert(packed[0] == 0 && packed[7] == 0); // reset shadow is zero
@@ -1125,8 +1369,8 @@ int main(int argc, char **argv)
 	put32(request, 0x400);
 	const auto *reply = mailbox.call(0x0004, request, 4);
 	assert(get32(reply + 8) == ((1u << 5) | (1u << 6)));
-	assert((get32(reply + 12) & ((1u << 20) | (1u << 21) | (1u << 26))) ==
-	       ((1u << 20) | (1u << 21) | (1u << 26)));
+	assert((get32(reply + 12) & ((1u << 20) | (1u << 21) | (1u << 26) | (1u << 30))) ==
+	       ((1u << 20) | (1u << 21) | (1u << 26) | (1u << 30))); // 30: PNG_ONE_SHOT
 #ifdef AMIBERRY_WITH_WEBP
 	assert((get32(reply + 12) & ((1u << 28) | (1u << 29))) ==
 	       ((1u << 28) | (1u << 29)));
@@ -1135,7 +1379,8 @@ int main(int argc, char **argv)
 	put32(request, 0x200);
 	reply = mailbox.call(0x0004, request, 4);
 	assert(get32(reply + 20) == 6); // 0x0200..0x0205
-	assert((get32(reply + 12) & (1u << 16)) != 0); // PALETTE_QUERY
+	// PALETTE_QUERY is advertised on Zorro III only; this is a Zorro II board.
+	assert((get32(reply + 12) & (1u << 16)) == 0);
 #ifndef HAVE_MPG123
 	assert((get32(mailbox.mb + 44) & (1u << 7)) == 0);
 #endif
@@ -1160,6 +1405,7 @@ int main(int argc, char **argv)
 	check_cpu_visible_surfaces(mailbox);
 	check_alloc_surface_rules(mailbox);
 	run_one_shot_jpeg(mailbox, read_file(argv[2]));
+	run_one_shot_png(mailbox, read_file(argv[1]));
 	run_scale_image(mailbox);
 	run_session_argb_surface(mailbox, read_file(argv[2]));
 	{
@@ -1167,12 +1413,19 @@ int main(int argc, char **argv)
 		Mailbox z3(0x08000000);
 		check_cpu_visible_surfaces(z3);
 		run_one_shot_jpeg(z3, read_file(argv[2]));
+		run_one_shot_png(z3, read_file(argv[1]));
 		run_scale_image(z3);
-		copy_surface_and_query_palette(z3);
+		put32(request, 0x200);
+		reply = z3.call(0x0004, request, 4);
+		assert(get32(reply + 20) == 6 && (get32(reply + 12) & (1u << 16)) != 0);
+		put32(request, 0x400);
+		reply = z3.call(0x0004, request, 4);
+		assert((get32(reply + 12) & (1u << 30)) != 0);
+		copy_surface_and_query_palette(z3, true);
 	}
 	{
 		Mailbox z2_copy(4 * 1024 * 1024);
-		copy_surface_and_query_palette(z2_copy);
+		copy_surface_and_query_palette(z2_copy, false);
 	}
 	check_client_release(mailbox);
 	mailbox.sdk.reset();

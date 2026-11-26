@@ -23,7 +23,12 @@ switch_b="${TMPDIR:-/tmp}/zz9000_sdk_media_test.$$.switch_b.mp2"
 switch="${TMPDIR:-/tmp}/zz9000_sdk_media_test.$$.switch.vob"
 ac3_51="${TMPDIR:-/tmp}/zz9000_sdk_media_test.$$.ac3_51.vob"
 held="${TMPDIR:-/tmp}/zz9000_sdk_media_test.$$.held.vob"
-trap 'rm -f "$out" "$video" "$audio_only" "$vp8" "$vp9" "$mkv" "$ps" "$lpcm" "$audio_ac3" "$interlaced" "$large" "$large_odd_half" "$truncated" "$offset" "$mkv_pcm" "$mkv_mp3" "$mkv_pcm_big" "$switch_a" "$switch_b" "$switch" "$ac3_51" "$held"' EXIT
+ts_mpeg1="${TMPDIR:-/tmp}/zz9000_sdk_media_test.$$.mpeg1.ts"
+ts_two_audio="${TMPDIR:-/tmp}/zz9000_sdk_media_test.$$.two_audio.ts"
+mp2ps="${TMPDIR:-/tmp}/zz9000_sdk_media_test.$$.mp2.vob"
+ts_mpeg2="${TMPDIR:-/tmp}/zz9000_sdk_media_test.$$.mpeg2.ts"
+video_only="${TMPDIR:-/tmp}/zz9000_sdk_media_test.$$.video_only.mpg"
+trap 'rm -f "$out" "$video" "$audio_only" "$vp8" "$vp9" "$mkv" "$ps" "$lpcm" "$audio_ac3" "$interlaced" "$large" "$large_odd_half" "$truncated" "$offset" "$mkv_pcm" "$mkv_mp3" "$mkv_pcm_big" "$switch_a" "$switch_b" "$switch" "$ac3_51" "$held" "$ts_mpeg1" "$ts_two_audio" "$mp2ps" "$ts_mpeg2" "$video_only"' EXIT
 ffmpeg -nostdin -loglevel error -y -f lavfi -i 'testsrc2=size=160x120:rate=25:duration=1' -f lavfi -i 'sine=frequency=440:sample_rate=44100:duration=1' -c:v mpeg1video -q:v 4 -c:a mp2 -b:a 128k -f mpeg "$video"
 # FFmpeg builds without libvorbis (Homebrew 9.x) still ship the native
 # experimental Vorbis encoder; it needs stereo input and -strict -2.
@@ -64,9 +69,30 @@ dd if="$vp8" of="$truncated" bs=1 count=512 status=none
 ffmpeg -nostdin -loglevel error -y -f lavfi -i 'testsrc2=size=160x120:rate=25:duration=3' -f lavfi -i 'sine=frequency=440:sample_rate=48000:duration=3' -ac 2 -c:v libvpx -deadline realtime -cpu-used 8 -c:a $vorbis_args -output_ts_offset 5 "$offset"
 # Four seconds of VOB: the muxer interleaves audio well behind its video.
 ffmpeg -nostdin -loglevel error -y -f lavfi -i 'testsrc2=size=160x120:rate=25:duration=4' -f lavfi -i 'sine=frequency=440:sample_rate=48000:duration=4' -ac 2 -c:v mpeg2video -pix_fmt yuv420p -c:a ac3 -f vob "$held"
+# Transport Streams are the same elementary streams remuxed, so the pictures and
+# the sound must match the Program Stream's: 188-byte packets, 192-byte (M2TS)
+# ones made from them by the test, and a second audio stream that is not followed.
+ffmpeg -nostdin -loglevel error -y -i "$video" -c copy -f mpegts "$ts_mpeg1"
+ffmpeg -nostdin -loglevel error -y -i "$video" -an -c:v copy -f mpeg "$video_only"
+ffmpeg -nostdin -loglevel error -y -f lavfi -i 'testsrc2=size=160x120:rate=25:duration=1' -f lavfi -i 'sine=frequency=440:sample_rate=44100:duration=1' -f lavfi -i 'sine=frequency=880:sample_rate=44100:duration=1' -map 0:v -map 1:a -map 2:a -c:v mpeg1video -q:v 4 -c:a mp2 -b:a 128k -f mpegts "$ts_two_audio"
+ffmpeg -nostdin -loglevel error -y -f lavfi -i 'testsrc2=size=160x120:rate=25:duration=1' -f lavfi -i 'sine=frequency=440:sample_rate=44100:duration=1' -c:v mpeg2video -pix_fmt yuv420p -c:a mp2 -f vob "$mp2ps"
+ffmpeg -nostdin -loglevel error -y -i "$mp2ps" -c copy -f mpegts "$ts_mpeg2"
 . tests/lib/zz9000_sdk_build.sh
 zz9000_sdk_compile "$out" tests/zz9000_sdk_media_test.cpp
 "$out" "$video" "$audio_only"
+"$out" --protocol "$video" 160 120
+"$out" --ts "$video" "$ts_mpeg1" 1 1 160 120
+"$out" --m2ts "$video" "$ts_mpeg1" 1 1 160 120
+"$out" --ts "$video" "$ts_two_audio" 1 1 160 120
+# The same picture stream with audio not asked for: the Transport Stream's audio
+# is not followed, and the Program Stream it makes declares none.
+"$out" --ts "$video_only" "$ts_mpeg1" 1 0 160 120
+"$out" --ts "$mp2ps" "$ts_mpeg2" 2 1 160 120
+"$out" --ts "$mp2ps" "$ts_mpeg2" 2 0 160 120
+"$out" --shared "$video" 1 1 160 120
+"$out" --shared "$ts_mpeg1" 1 3 160 120
+"$out" --shared "$mp2ps" 2 1 160 120
+"$out" --shared "$ts_mpeg2" 2 3 160 120
 "$out" --av "$vp8" 3 2 5 0 1 160 120
 "$out" --av "$vp9" 4 2 4 0 1 160 120
 "$out" --av "$mkv" 2 2 1 0 1 160 120

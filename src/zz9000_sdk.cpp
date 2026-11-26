@@ -10,6 +10,8 @@
 #include "zz9000_sdk_media_av.h"
 #include "zz9000_sdk_console.h"
 #include "zz9000_sdk_webp.h"
+#include "zz9000_sdk_media_output.h"
+#include "zz9000_sdk_ts.h"
 
 #include <algorithm>
 #include <chrono>
@@ -49,7 +51,8 @@ constexpr uint32_t base_capabilities = (1u << 0) | (1u << 2) | (1u << 3) |
 constexpr uint32_t image_service_flags = 1u | (1u << 16) | (1u << 17) |
 	(1u << 18) | (1u << 19) | (1u << 20) | (1u << 21) |
 	(1u << 23) | (1u << 24) | (1u << 25) |
-	(1u << 26) | (1u << 27)
+	(1u << 26) | (1u << 27) |
+	(1u << 30) // PNG_ONE_SHOT: DECODE_PNG (0x0402)
 #ifdef AMIBERRY_WITH_WEBP
 	| (1u << 28) | (1u << 29)
 #endif
@@ -86,6 +89,10 @@ constexpr uint32_t audio_service_flags = 0;
 #endif
 // CARD_POOL_LIMIT_MEDIA_INPUT in the firmware's card_pool.h.
 constexpr uint32_t media_input_limit = 64 * 1024 * 1024;
+// The Transport Stream front end holds at most this much converted input
+// that the decoder has not taken yet, so a session that stops reading stops
+// being written to like a Program Stream session does.
+constexpr uint32_t ts_input_window = 64 * 1024;
 // Bit 7 rides in the Zorro III video service word only when DECODE_MP3
 // can be served. supported_capabilities() ORs this word in on that
 // board, so an ungated bit would advertise audio decode with no handler.
@@ -261,6 +268,33 @@ struct Engine::Media {
 	// the 0x0b08 present copy and the pl_mpeg decode and pack paths.
 	uint64_t profile_us[4] = {};
 	uint64_t profile_calls[4] = {};
+	// Container 3 (MPEG Transport Stream): the front end that turns the
+	// input into a Program Stream, the Program Stream bytes it has made
+	// that the decoder has not taken yet, and whether the decoder has been
+	// told the input ended.
+	std::unique_ptr<TsDemux> ts;
+	std::vector<uint8_t> ts_pending;
+	size_t ts_pending_offset = 0;
+	bool ts_end = false, ts_end_signalled = false;
+	// Output format 2 (SHARED_BUFFER): pictures go to a guest-readable
+	// buffer instead of the overlay, once OUTPUT_CONFIG has bound it.
+	bool shared = false;
+	struct Output {
+		bool configured = false;
+		// What the session pins: FREE_SHARED answers BUSY for them.
+		uint32_t buffer_handle = 0, palette_handle = 0;
+		uint32_t buffer_offset = 0, palette_offset = 0, slot_stride = 0;
+		media_output::Job job;
+		uint32_t picture_bytes = 0, slots = 1;
+		// The slot the next picture goes to, and the newest complete one.
+		uint32_t next_slot = 0, newest_slot = 0;
+		bool complete = false;
+		uint64_t written = 0, presented = 0;
+		uint32_t last_us = 0;
+	} output;
+	std::unique_ptr<media_output::Converter> converter;
+	// A MediaAv frame is packed YUY2; the converter reads planes.
+	std::vector<uint8_t> planes;
 };
 
 Engine::Engine(uint8_t *board_memory, uint32_t board_size)
@@ -979,6 +1013,223 @@ void Engine::pump_media_audio()
 	}
 }
 
+// Moves the Program Stream bytes a Transport Stream session has made into
+// its decoder as far as the decoder takes them, with the Program Stream
+// write's backpressure, and tells the decoder the input ended once they are
+// all in.
+void Engine::pump_media_ts()
+{
+	if (!media_ || !media_->ts)
+		return;
+	Media &media = *media_;
+	if (media.ts_pending_offset < media.ts_pending.size()) {
+		uint8_t *data = media.ts_pending.data() + media.ts_pending_offset;
+		const size_t left = media.ts_pending.size() - media.ts_pending_offset;
+		if (media.av) {
+			media.ts_pending_offset += media.av_decoder->append(data,
+				static_cast<uint32_t>(std::min<size_t>(left, UINT32_MAX)));
+		} else {
+			const bool es_backpressure =
+				(media.decoder->video_buffer &&
+				 plm_buffer_get_remaining(media.decoder->video_buffer) >
+				 256 * 1024) ||
+				(media.decoder->audio_buffer &&
+				 plm_buffer_get_remaining(media.decoder->audio_buffer) >
+				 128 * 1024);
+			if (!es_backpressure &&
+			    plm_buffer_get_remaining(media.input) < 256 * 1024) {
+				HostNearestRounding host_rounding;
+				if (plm_buffer_write(media.input, data, left) == left)
+					media.ts_pending_offset += left;
+			}
+		}
+		if (media.ts_pending_offset == media.ts_pending.size()) {
+			media.ts_pending.clear();
+			media.ts_pending_offset = 0;
+		}
+	}
+	if (media.ts_end && media.ts_pending.empty() && !media.ts_end_signalled) {
+		if (media.av)
+			media.av_decoder->finish_input();
+		else
+			plm_buffer_signal_end(media.input);
+		media.ts_end_signalled = true;
+	}
+}
+
+// OUTPUT_CONFIG (0x0b0e), as the card's handle_media_session_output_config():
+// binds the picture slots of a shared-buffer session and, for PALETTE_HOST,
+// the palette it reads. The slot buffer and the palette buffer stay pinned
+// (FREE_SHARED answers BUSY) until the output is bound again or the session
+// closes.
+uint16_t Engine::media_output_config(const uint8_t *request,
+	                                 uint16_t request_length, uint8_t *reply,
+	                                 uint16_t *reply_length)
+{
+	if (request_length != 48 || be32(request + 44))
+		return bad_request;
+	if (!media_ || media_->session != be32(request))
+		return bad_handle;
+	if (!media_->shared)
+		return unsupported;
+	const uint32_t buffer_handle = be32(request + 4);
+	media_output::Config config;
+	config.buffer_offset = be32(request + 8);
+	config.slot_stride = be32(request + 12);
+	config.width = be32(request + 16);
+	config.height = be32(request + 20);
+	config.format = be32(request + 24);
+	config.pitch = be32(request + 28);
+	config.flags = be32(request + 32);
+	const uint32_t palette_handle = be32(request + 36);
+	const uint32_t palette_offset = be32(request + 40);
+	media_output::Layout layout;
+	const uint16_t status = media_output::check(config, layout);
+	if (status != ok)
+		return status;
+	const bool host_palette = (config.flags & media_output::flag_palette_host) != 0;
+	if (host_palette) {
+		if (!palette_handle)
+			return bad_request;
+		const auto *palette = find_buffer(palette_handle);
+		if (!palette)
+			return bad_handle;
+		if (palette_offset > palette->length ||
+		    palette->length - palette_offset < media_output::palette_bytes ||
+		    (palette_offset & 3))
+			return bad_request;
+	} else if (palette_handle || palette_offset) {
+		return bad_request;
+	}
+	const auto *buffer = find_buffer(buffer_handle);
+	if (!buffer)
+		return bad_handle;
+	// The guest reads the slots, so they must be in memory it can see: not
+	// a card-only (2) or media-class (4) buffer.
+	if (buffer->flags & 6)
+		return bad_request;
+	if (config.buffer_offset > buffer->length ||
+	    layout.span_bytes > buffer->length - config.buffer_offset)
+		return bad_request;
+	if (media_->state == 5)
+		return io_error;
+	if (!media_->converter) {
+		try {
+			media_->converter = std::make_unique<media_output::Converter>();
+		} catch (...) {
+			return no_memory;
+		}
+	}
+	auto &output = media_->output;
+	output.configured = true;
+	output.buffer_handle = buffer_handle;
+	output.buffer_offset = config.buffer_offset;
+	output.slot_stride = config.slot_stride;
+	output.palette_handle = host_palette ? palette_handle : 0;
+	output.palette_offset = host_palette ? palette_offset : 0;
+	output.job.width = config.width;
+	output.job.height = config.height;
+	output.job.format = config.format;
+	output.job.pitch = config.pitch;
+	output.job.flags = config.flags;
+	output.job.depth = layout.depth;
+	output.picture_bytes = layout.picture_bytes;
+	output.slots = layout.slots;
+	// The slots hold pictures of the old layout until a new one lands.
+	output.complete = false;
+	output.newest_slot = 0;
+	output.next_slot = 0;
+	media_result(reply, reply_length, layout.picture_bytes);
+	return ok;
+}
+
+// PRESENT of a shared-buffer session: converts the held picture into the
+// next slot. The card queues the conversion on core 1 and publishes the slot
+// when it is done; here it is done before the reply, so status page 6 never
+// shows it pending.
+uint16_t Engine::media_present_shared(uint8_t *reply, uint16_t *reply_length)
+{
+	auto &output = media_->output;
+	if (!output.configured)
+		return bad_request;
+	const uint32_t slot = output.next_slot;
+	uint8_t *dst = buffer_data(output.buffer_handle);
+	if (!dst)
+		return bad_handle;
+	dst += output.buffer_offset + (slot ? output.slot_stride : 0);
+	const uint8_t *palette = nullptr;
+	if (output.palette_handle) {
+		const uint8_t *data = buffer_data(output.palette_handle);
+		if (!data)
+			return bad_handle;
+		palette = data + output.palette_offset;
+	}
+	media_output::Frame frame;
+	frame.width = media_->width;
+	frame.height = media_->height;
+	if (media_->av) {
+		// 4:2:0 pictures were packed to YUY2 with each chroma row repeated:
+		// the planes come back from every second row.
+		const uint32_t width = media_->width, height = media_->height;
+		const uint32_t chroma_width = width / 2, chroma_height = (height + 1) / 2;
+		auto &planes = media_->planes;
+		planes.resize(static_cast<size_t>(width) * height +
+			2 * static_cast<size_t>(chroma_width) * chroma_height);
+		uint8_t *luma = planes.data();
+		uint8_t *cb = luma + static_cast<size_t>(width) * height;
+		uint8_t *cr = cb + static_cast<size_t>(chroma_width) * chroma_height;
+		const uint8_t *yuy2 = media_->held_yuy2.data();
+		for (uint32_t y = 0; y < height; ++y) {
+			const uint8_t *row = yuy2 + static_cast<size_t>(y) * width * 2;
+			for (uint32_t x = 0; x < width; ++x)
+				luma[static_cast<size_t>(y) * width + x] = row[x * 2];
+			if (y & 1)
+				continue;
+			for (uint32_t x = 0; x < chroma_width; ++x) {
+				cb[static_cast<size_t>(y / 2) * chroma_width + x] = row[x * 4 + 1];
+				cr[static_cast<size_t>(y / 2) * chroma_width + x] = row[x * 4 + 3];
+			}
+		}
+		frame.y = luma;
+		frame.cb = cb;
+		frame.cr = cr;
+		frame.y_pitch = width;
+		frame.chroma_pitch = chroma_width;
+	} else {
+		const auto *held = media_->held_frame;
+		frame.y = held->y.data;
+		frame.cb = held->cb.data;
+		frame.cr = held->cr.data;
+		frame.y_pitch = held->y.width;
+		frame.chroma_pitch = held->cb.width;
+	}
+	const uint64_t start = monotonic_us();
+	const uint16_t status = media_->converter->convert(output.job, frame, dst, palette);
+	const uint64_t elapsed = monotonic_us() - start;
+	if (status != ok) {
+		media_->state = 5;
+		return io_error;
+	}
+	// The conversion is the work the card times as its pack stage.
+	media_->profile_us[1] += elapsed;
+	media_->profile_calls[1]++;
+	output.last_us = static_cast<uint32_t>(std::min<uint64_t>(elapsed, UINT32_MAX));
+	output.complete = true;
+	output.newest_slot = slot;
+	output.next_slot = output.slots == 2 ? slot ^ 1u : 0;
+	output.written++;
+	output.presented++;
+	media_->held = false;
+	media_->held_interlaced = false;
+	media_->held_frame = nullptr;
+	media_->state = 2;
+	media_->presented_frames++;
+	// PRESENTED, OUTPUT_PENDING and, for the second slot, OUTPUT_SLOT1.
+	media_result(reply, reply_length, output.picture_bytes,
+		(1u << 9) | (1u << 16) | (slot ? 1u << 15 : 0));
+	return ok;
+}
+
 uint16_t Engine::dispatch_media(uint16_t opcode, const uint8_t *request,
 	                            uint16_t request_length, uint8_t *reply,
 	                            uint16_t *reply_length)
@@ -994,9 +1245,17 @@ uint16_t Engine::dispatch_media(uint16_t opcode, const uint8_t *request,
 		const uint32_t container = be32(request + 4);
 		const uint32_t width = be32(request + 8), height = be32(request + 12);
 		const uint32_t audio_codec = be32(request + 20);
-		if (be32(request + 16) != 1 || be32(request + 40))
+		// Output format 1 shows the pictures on the overlay, 2 writes them
+		// to a shared buffer (OUTPUT_CONFIG); any other value is malformed.
+		const uint32_t output_format = be32(request + 16);
+		if (output_format != 1 && output_format != 2)
+			return bad_request;
+		if (be32(request + 40))
 			return unsupported;
-		const bool legacy_mpeg1 = video_codec == 1 && container == 1 &&
+		// MPEG-1 is decoded by pl_mpeg from a Program Stream or, through
+		// the Transport Stream front end, from container 3.
+		const bool legacy_mpeg1 = video_codec == 1 &&
+			(container == 1 || container == 3) &&
 			(audio_codec == 0 || audio_codec == 1);
 		const bool av_media =
 #ifdef AMIBERRY_WITH_FFMPEG
@@ -1004,7 +1263,9 @@ uint16_t Engine::dispatch_media(uint16_t opcode, const uint8_t *request,
 			((video_codec == 3 || video_codec == 4) && container == 2 &&
 			 (audio_codec == 0 || audio_codec == 4 || audio_codec == 5)) ||
 			((video_codec == 1 || video_codec == 2) && container == 2 &&
-			 audio_codec <= 3);
+			 audio_codec <= 3) ||
+			// MPEG-2 in a Transport Stream carries MPEG audio only.
+			(video_codec == 2 && container == 3 && audio_codec <= 1);
 #else
 			false;
 #endif
@@ -1039,7 +1300,10 @@ uint16_t Engine::dispatch_media(uint16_t opcode, const uint8_t *request,
 		media_->pcm_high_water = high;
 		if (av_media) {
 			media_->av = true;
-			media_->av_decoder = std::make_unique<MediaAv>(video_codec, container, audio_codec);
+			// For container 3 the Transport Stream front end hands FFmpeg
+			// a Program Stream.
+			media_->av_decoder = std::make_unique<MediaAv>(video_codec,
+				container, audio_codec);
 		} else {
 			HostNearestRounding host_rounding;
 			auto *input = plm_buffer_create_with_capacity(256 * 1024);
@@ -1057,9 +1321,15 @@ uint16_t Engine::dispatch_media(uint16_t opcode, const uint8_t *request,
 			// timelines report a zero origin on status page 0.
 			media_->pts_origin = 0;
 		}
+		media_->shared = output_format == 2;
+		if (container == 3)
+			media_->ts = std::make_unique<TsDemux>(media_->av ?
+				TsDemux::Form::mpeg2 : TsDemux::Form::mpeg1, audio_codec != 0);
 		media_result(reply, reply_length);
 		return ok;
 	}
+	if (opcode == 0x0b0e)
+		return media_output_config(request, request_length, reply, reply_length);
 	if (request_length < 16 || !media_ || be32(request) != media_->session)
 		return request_length < 16 ? bad_request : bad_handle;
 	if (opcode == 0x0b05) {
@@ -1075,6 +1345,39 @@ uint16_t Engine::dispatch_media(uint16_t opcode, const uint8_t *request,
 		if (offset > source->length || length > source->length - offset ||
 		    media_->eof)
 			return bad_request;
+		if (media_->ts) {
+			// Container 3: the front end turns the input into Program
+			// Stream bytes, which the decoder takes as it has room. The
+			// accepted count is of input bytes, so the guest's cursor is
+			// the one of a Program Stream.
+			pump_media_ts();
+			const size_t queued =
+				media_->ts_pending.size() - media_->ts_pending_offset;
+			const uint32_t available = queued >= ts_input_window ? 0 :
+				static_cast<uint32_t>(ts_input_window - queued);
+			const uint32_t accepted = std::min(length, available);
+			if (!accepted && length) {
+				if (media_->av && media_->av_decoder->failed())
+					return io_error;
+				media_result(reply, reply_length, 0, 1u << 8);
+				return busy;
+			}
+			if (accepted) {
+				media_->ts->feed(buffer_data(handle) + offset, accepted,
+					media_->ts_pending);
+				media_->bytes_accepted = accepted > UINT32_MAX - media_->bytes_accepted ?
+					UINT32_MAX : media_->bytes_accepted + accepted;
+			}
+			if ((flags & 1) && accepted == length) {
+				media_->ts->finish(media_->ts_pending);
+				media_->ts_end = true;
+				media_->eof = true;
+			}
+			pump_media_ts();
+			media_result(reply, reply_length, accepted,
+				accepted < length ? 1u << 8 : 0);
+			return ok;
+		}
 		if (media_->av) {
 			const uint32_t accepted = length ? media_->av_decoder->append(
 				buffer_data(handle) + offset, length) : 0;
@@ -1132,6 +1435,7 @@ uint16_t Engine::dispatch_media(uint16_t opcode, const uint8_t *request,
 		const uint32_t flags = be32(request + 12);
 		if (be32(request + 4) || be32(request + 8) || (flags & ~3u))
 			return bad_request;
+		pump_media_ts();
 		if (media_->held)
 			return busy;
 		if (media_->av) {
@@ -1264,6 +1568,8 @@ uint16_t Engine::dispatch_media(uint16_t opcode, const uint8_t *request,
 			return bad_request;
 		if (!media_->held || (!media_->av && !media_->held_frame))
 			return bad_request;
+		if (opcode == 0x0b08 && media_->shared)
+			return media_present_shared(reply, reply_length);
 		if (opcode == 0x0b08) {
 			if (!overlay_.active)
 				return busy;
@@ -1362,7 +1668,7 @@ uint16_t Engine::dispatch_media(uint16_t opcode, const uint8_t *request,
 		if (request_length < 12 || be32(request + 8))
 			return bad_request;
 		const uint32_t page = be32(request + 4);
-		if (page > 5)
+		if (page > 6)
 			return bad_request;
 		put32(reply, media_->session);
 		put32(reply + 4, media_->state);
@@ -1433,7 +1739,7 @@ uint16_t Engine::dispatch_media(uint16_t opcode, const uint8_t *request,
 			// pattern and are sign-extended by the reader.
 			put64(reply + 32, pack_pair(overlay_.dst_x, overlay_.dst_y));
 			put64(reply + 40, pack_pair(overlay_.screen_w, overlay_.screen_h));
-		} else {
+		} else if (page == 5) {
 			// Per-stage timing as (microseconds << 32) | calls, cumulative
 			// for the session. NEON_PACK never applies: the host packs in
 			// scalar C++, unlike the card's optional NEON kernel.
@@ -1447,6 +1753,23 @@ uint16_t Engine::dispatch_media(uint16_t opcode, const uint8_t *request,
 						media_->profile_us[stage] + av_us[stage])) << 32) |
 					static_cast<uint32_t>(media_->profile_calls[stage] +
 						av_calls[stage]));
+		} else {
+			// Page 6, the shared-buffer output: configured, complete (a
+			// picture of the current layout is written), in slot 1, and
+			// pending, which never shows here because PRESENT converts
+			// before it answers; then pictures written and presented, the
+			// newest conversion time in microseconds, and the flags this
+			// emulation accepts. An overlay session reports zeros.
+			if (media_->shared) {
+				const auto &output = media_->output;
+				put32(reply + 12, (output.configured ? 1u : 0u) |
+					(output.complete ? 2u : 0u) |
+					(output.complete && output.newest_slot ? 4u : 0u));
+				put64(reply + 16, output.written);
+				put64(reply + 24, output.presented);
+				put64(reply + 32, output.last_us);
+				put64(reply + 40, media_output::flags_supported);
+			}
 		}
 		*reply_length = 48;
 		return ok;
@@ -1498,7 +1821,7 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 		return bad_request;
 	if (opcode == 0x8200)
 		return dispatch_console(request, request_length, reply, reply_length);
-	if (opcode >= 0x0b04 && opcode <= 0x0b0d)
+	if (opcode >= 0x0b04 && opcode <= 0x0b0e)
 		return dispatch_media(opcode, request, request_length, reply, reply_length);
 	if (opcode == 0x0000)
 		return ok;
@@ -1579,7 +1902,7 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 			service == 0x8200 ? 0 : audio_capabilities);
 		put32(reply + 12, service == 0x100 ?
 			(1u | (board_size_ == 0x08000000 ? (1u << 16) : 0)) :
-			service == 0x200 ? (1u | (1u << 16)) : // PALETTE_QUERY
+			service == 0x200 ? (1u | (board_size_ == 0x08000000 ? (1u << 16) : 0)) : // PALETTE_QUERY, Zorro III only
 			service == 0x400 ? image_service_flags :
 			service == 0x0b00 ? video_service_flags :
 			service == 0x500 ? audio_service_flags : 1u);
@@ -1591,7 +1914,7 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 #else
 			8 :
 #endif
-			service == 0x0b00 ? 14 : service == 0x8200 ? 1 : 23);
+			service == 0x0b00 ? 15 : service == 0x8200 ? 1 : 23);
 		put32(reply + 24, 48);
 		const char *name = service == 0 ? "core" : service == 0x100 ?
 			"memory" : service == 0x200 ? "surface" : service == 0x400 ? "image" :
@@ -1679,6 +2002,10 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 		// audio stream rings are never pinned, and the media PCM ring and
 		// the image tile buffer are.
 		if (media_ && media_->pcm_handle == buffer->handle)
+			return busy;
+		if (media_ && media_->output.buffer_handle &&
+		    (media_->output.buffer_handle == buffer->handle ||
+		     media_->output.palette_handle == buffer->handle))
 			return busy;
 		*buffer = {};
 		return ok;
@@ -1882,6 +2209,12 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 		// sdk_palette_pack_be(). The surface field is accepted and
 		// ignored: the CLUT is display-global. The result is consecutive
 		// big-endian 0x00RRGGBB words in the caller's buffer.
+		// Zorro II never advertises the shadow, because only the Zorro III
+		// path loads the CLUT through the DMA SET_PALETTE op the card
+		// shadows; the card answers UNSUPPORTED before it looks at the
+		// request.
+		if (board_size_ != 0x08000000)
+			return unsupported;
 		if (request_length < 24)
 			return bad_request;
 		const uint32_t start = be32(request + 4);
@@ -2328,11 +2661,14 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 			be32(request + 20), dx, dy, dw, dh, dx, dy, dw, dh,
 			be32(request + 40), 0);
 	}
-	if (opcode == 0x0401) {
+	if (opcode == 0x0401 || opcode == 0x0402) {
 		if (request_length < 40)
 			return bad_request;
-		return decode_jpeg_to_surface(request, reply, reply_length);
+		return decode_still_to_surface(opcode == 0x0402, request, reply,
+			reply_length);
 	}
+	if (opcode == 0x0403)
+		return unsupported; // DECODE_GIF
 	if (opcode == 0x0407) {
 		if (request_length < 40)
 			return bad_request;
@@ -2643,13 +2979,19 @@ uint16_t Engine::dispatch(uint16_t opcode, const uint8_t *request,
 	return unsupported;
 }
 
-uint16_t Engine::decode_jpeg_to_surface(const uint8_t *request, uint8_t *reply,
-	                                    uint16_t *reply_length)
+uint16_t Engine::decode_still_to_surface(bool png, const uint8_t *request,
+	                                     uint8_t *reply, uint16_t *reply_length)
 {
-	// DECODE_JPEG, as the card's handle_decode_jpeg(): the whole picture
-	// at its own size, never scaled, into the destination rectangle at
-	// (dst_x, dst_y). A dst_width or dst_height of 0 runs to the surface's
-	// edge. Fitting a picture to a size is a session's job (FIT).
+	// DECODE_JPEG and DECODE_PNG, as the card's handle_decode_jpeg() and
+	// handle_decode_png(): the whole picture at its own size, never scaled,
+	// into the destination rectangle at (dst_x, dst_y). A dst_width or
+	// dst_height of 0 runs to the surface's edge. Fitting a picture to a
+	// size is a session's job (FIT). The PNG one-shot runs the session
+	// decoder start to finish, so it answers as a session does: FIT is
+	// UNSUPPORTED, any other unknown flag BAD_REQUEST, a picture that does
+	// not parse or is cut short IO_ERROR, and one that is out of range or
+	// does not fit the rectangle BAD_REQUEST. DECODE_JPEG accepts no flag
+	// at all and reports a picture that does not fit as IO_ERROR.
 	const auto *src = find_buffer(be32(request));
 	const uint32_t dst_handle = be32(request + 12);
 	auto *dst = surface_pixels(dst_handle);
@@ -2658,10 +3000,11 @@ uint16_t Engine::decode_jpeg_to_surface(const uint8_t *request, uint8_t *reply,
 	const uint32_t src_offset = be32(request + 4), src_length = be32(request + 8);
 	const uint32_t dst_x = be32(request + 16), dst_y = be32(request + 20);
 	const uint32_t format = be32(request + 32), flags = be32(request + 36);
-	if (flags)
+	const bool supported_format =
+		format == 2 || format == 3 || format == 7 || format == 8;
+	if (!png && flags)
 		return unsupported;
-	if (format != surface_format(dst_handle) ||
-	    (format != 2 && format != 3 && format != 7 && format != 8))
+	if (format != surface_format(dst_handle) || (!png && !supported_format))
 		return unsupported;
 	if (!src_length || src_offset > src->length || src_length > src->length - src_offset)
 		return bad_request;
@@ -2683,17 +3026,43 @@ uint16_t Engine::decode_jpeg_to_surface(const uint8_t *request, uint8_t *reply,
 	if (!bounds(surface_width(dst_handle), dst_x, be32(request + 24), right) ||
 	    !bounds(surface_height(dst_handle), dst_y, be32(request + 28), bottom))
 		return bad_request;
+	if (png) {
+		// The session decoder's validate_begin(), after the card's
+		// range and rectangle checks above.
+		if (flags & ~3u)
+			return bad_request;
+		if (flags & 1u)
+			return unsupported; // FIT: not available for PNG
+		if (!supported_format)
+			return unsupported;
+	}
 	const auto *data = buffer_data(src->handle) + src_offset;
-	if (src_length < 2 || data[0] != 0xff || data[1] != 0xd8)
+	const bool signature = png ?
+		src_length >= 8 && std::memcmp(data, "\x89PNG\r\n\x1a\n", 8) == 0 :
+		src_length >= 2 && data[0] == 0xff && data[1] == 0xd8;
+	if (!signature || src_length > static_cast<uint32_t>(std::numeric_limits<int>::max()))
 		return io_error;
+	if (png && src_length >= 24 && std::memcmp(data + 12, "IHDR", 4) == 0) {
+		// A picture the decoder will not take (a side above 8192, or more
+		// than 24 megapixels) is out of range, not corrupt. stb refuses
+		// the side limit with a message stbi_info() then overwrites, so
+		// the header is read here.
+		const uint32_t header_width = be32(data + 16), header_height = be32(data + 20);
+		if (header_width > 8192 || header_height > 8192 ||
+		    static_cast<uint64_t>(header_width) * header_height > max_image_pixels)
+			return bad_request;
+	}
 	HostNearestRounding host_rounding;
 	int width = 0, height = 0, channels = 0;
 	if (!stbi_info_from_memory(data, static_cast<int>(src_length), &width, &height,
-	                           &channels) || width <= 0 || height <= 0 ||
-	    static_cast<uint64_t>(width) * height > max_image_pixels ||
-	    static_cast<uint32_t>(width) > right - dst_x ||
-	    static_cast<uint32_t>(height) > bottom - dst_y)
+	                           &channels))
 		return io_error;
+	if (width <= 0 || height <= 0 ||
+	    static_cast<uint64_t>(width) * height > max_image_pixels)
+		return png ? bad_request : io_error;
+	if (static_cast<uint32_t>(width) > right - dst_x ||
+	    static_cast<uint32_t>(height) > bottom - dst_y)
+		return png ? bad_request : io_error;
 	int decoded_width = 0, decoded_height = 0;
 	auto *decoded = stbi_load_from_memory(data, static_cast<int>(src_length),
 		&decoded_width, &decoded_height, &channels, 4);
@@ -2707,7 +3076,7 @@ uint16_t Engine::decode_jpeg_to_surface(const uint8_t *request, uint8_t *reply,
 		auto *out = dst + static_cast<size_t>(dst_y + y) * pitch +
 			static_cast<size_t>(dst_x) * bpp;
 		for (uint32_t x = 0; x < static_cast<uint32_t>(width); ++x, in += 4, out += bpp)
-			write_pixel(out, format, in[0], in[1], in[2], 255);
+			write_pixel(out, format, in[0], in[1], in[2], png ? in[3] : 255);
 	}
 	stbi_image_free(decoded);
 	put32(reply, static_cast<uint32_t>(width));
@@ -2981,6 +3350,10 @@ void Engine::release_client(uint16_t client)
 			buffer.owner = image_->owner;
 		else if (media_ && media_->pcm_handle == buffer.handle)
 			buffer.owner = media_->owner;
+		else if (media_ && media_->output.buffer_handle &&
+		         (media_->output.buffer_handle == buffer.handle ||
+		          media_->output.palette_handle == buffer.handle))
+			buffer.owner = media_->owner;
 		else
 			buffer = {};
 	}
@@ -3046,7 +3419,7 @@ bool Engine::poll()
 				std::max(dx, cx) < std::min(dx + dw, cx + cw) &&
 				std::max(dy, cy) < std::min(dy + dh, cy + ch);
 		}
-		if (last_status_ == ok && opcode == 0x0401 &&
+		if (last_status_ == ok && (opcode == 0x0401 || opcode == 0x0402) &&
 		    be32(request + 16 + 12) == framebuffer_handle)
 			surface_framebuffer_write = true;
 		if (last_status_ == ok && opcode == 0x0400 &&
@@ -3054,7 +3427,8 @@ bool Engine::poll()
 			surface_framebuffer_write = true;
 		const bool image_overlay_write = opcode == 0x0409 && overlay_.active;
 		if (last_status_ == ok && (surface_framebuffer_write ||
-		    image_framebuffer_write || image_overlay_write || opcode == 0x0b08))
+		    image_framebuffer_write || image_overlay_write ||
+		    (opcode == 0x0b08 && !(media_ && media_->shared))))
 			dirty = true;
 		std::memset(reply, 0, mailbox_entry_size);
 		std::memcpy(reply, request, 4); // request id

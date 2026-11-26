@@ -62,6 +62,8 @@ set(SOURCE_FILES
         src/zz9000_sdk_webp.cpp
         src/zz9000_sdk_media_av.cpp
         src/zz9000_sdk_console.cpp
+        src/zz9000_sdk_media_output.cpp
+        src/zz9000_sdk_ts.cpp
         src/fsdb.cpp
         src/fsusage.cpp
         src/gayle.cpp
