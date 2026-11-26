@@ -52,6 +52,7 @@ static void events_fast(void)
 void events_reset_syncline(void)
 {
 	is_syncline = 0;
+	syncline_cnt = 0;
 	events_fast();
 }
 
