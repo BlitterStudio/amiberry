@@ -442,6 +442,78 @@ void check_unbounded_and_end()
 	assert(parse_mpeg1(out, a, v).empty());
 }
 
+// A PES whose first packet holds only `first` bytes of it (an adaptation
+// field takes the rest of the payload): the start code, stream id, length,
+// flags and PTS can each straddle two packets, and the stream is the same.
+void check_split_headers()
+{
+	for (bool bounded : { true, false }) {
+		for (uint8_t sid : { uint8_t(0xe0), uint8_t(0xc0) }) {
+			const bool video = sid == 0xe0;
+			const uint16_t pid = video ? 0x101 : 0x102;
+			const Bytes payload = payload_of(30, 9);
+			const Bytes whole = pes(sid, 123456, payload, bounded);
+			auto build = [&](size_t first) {
+				Bytes ts = psi({ { 0x02, 0x101 }, { 0x03, 0x102 } });
+				uint8_t cc = 0;
+				if (first == 0) {
+					append(ts, packetize(pid, whole, cc));
+				} else {
+					append(ts, ts_packet(pid, true, cc++, Bytes(whole.begin(), whole.begin() + first)));
+					append(ts, ts_packet(pid, false, cc++, Bytes(whole.begin() + first, whole.end())));
+				}
+				// The next PES ends an unbounded one.
+				append(ts, ts_packet(pid, true, cc++, pes(sid, 999999, payload_of(10, 1), bounded)));
+				return ts;
+			};
+			const Bytes reference = run(TsDemux::Form::mpeg1, build(0));
+			int a = 0, v = 0;
+			const auto expected = parse_mpeg1(reference, a, v);
+			assert(expected.size() == 2 && expected[0].payload == payload && expected[0].pts == 123456);
+			// Every split of the 14 header bytes (9 + the 5-byte PTS), and a
+			// few into the payload.
+			for (size_t first = 1; first <= 16; ++first) {
+				for (size_t chunk : { size_t(0), size_t(1), size_t(50) }) {
+					const Bytes ts = build(first);
+					TsDemux demux(TsDemux::Form::mpeg1);
+					Bytes out;
+					if (chunk == 0) {
+						demux.feed(ts.data(), ts.size(), out);
+					} else {
+						for (size_t at = 0; at < ts.size(); at += chunk)
+							demux.feed(ts.data() + at, std::min(chunk, ts.size() - at), out);
+					}
+					demux.finish(out);
+					assert(out == reference);
+					assert(demux.truncated_pes() == 0);
+				}
+			}
+		}
+	}
+	// A split header that is not a PES start code is dropped, as a whole
+	// header that is not one is.
+	Bytes ts = psi({ { 0x02, 0x101 } });
+	uint8_t cc = 0;
+	const Bytes bad = { 0, 0, 2, 0xe0, 0, 0, 0x80, 0x00, 0x00 };
+	append(ts, ts_packet(0x101, true, cc++, Bytes(bad.begin(), bad.begin() + 3)));
+	append(ts, ts_packet(0x101, false, cc++, Bytes(bad.begin() + 3, bad.end())));
+	TsDemux demux(TsDemux::Form::mpeg1);
+	Bytes out;
+	demux.feed(ts.data(), ts.size(), out);
+	demux.finish(out);
+	int a = 0, v = 0;
+	assert(parse_mpeg1(out, a, v).empty());
+	// A header cut off by the end of the input counts as a truncated PES.
+	ts = psi({ { 0x02, 0x101 } });
+	cc = 0;
+	append(ts, ts_packet(0x101, true, cc++, Bytes{ 0, 0, 1, 0xe0 }));
+	TsDemux d2(TsDemux::Form::mpeg1);
+	out.clear();
+	d2.feed(ts.data(), ts.size(), out);
+	d2.finish(out);
+	assert(d2.truncated_pes() == 1 && parse_mpeg1(out, a, v).empty());
+}
+
 void check_missing_tables()
 {
 	// No PAT or PMT: nothing is followed; the headers still come out at
@@ -489,5 +561,6 @@ int main()
 	check_errors();
 	check_unbounded_and_end();
 	check_missing_tables();
+	check_split_headers();
 	return 0;
 }

@@ -61,6 +61,8 @@ private:
 		// PES header (start code included), 0 when unbounded.
 		bool collecting = false;
 		uint32_t total = 0;
+		// The start code, stream id and length have all been read.
+		bool header_known = false;
 		// An earlier chunk of this unbounded PES already went out with
 		// the timestamps: data starts with a synthetic header.
 		bool continued = false;

@@ -81,6 +81,7 @@ void TsDemux::stream_reset(Stream &s)
 {
 	s.collecting = false;
 	s.continued = false;
+	s.header_known = false;
 	s.total = 0;
 	s.data.clear();
 }
@@ -203,25 +204,49 @@ void TsDemux::stream_packet(Stream &s, bool video, bool pusi,
 {
 	if (pusi) {
 		if (s.collecting) {
-			if (s.total == 0 && !(s.continued && s.data.size() == pes_header_bytes)) {
+			if (s.header_known && s.total == 0 &&
+			    !(s.continued && s.data.size() == pes_header_bytes)) {
 				// An unbounded PES ends where the next one starts.
 				stream_flush(s, video, true, out);
 			} else {
-				if (s.total != 0)
+				if (!s.header_known || s.total != 0)
 					++truncated_pes_;
 				stream_reset(s);
 			}
 		}
-		if (length < 6 || payload[0] != 0 || payload[1] != 0 || payload[2] != 1)
-			return;
-		if (!stream_id_ok(video, payload[3]))
-			return;
 		s.data.clear();
 		s.continued = false;
-		s.total = be16(payload + 4) != 0 ? 6u + be16(payload + 4) : 0;
+		s.header_known = false;
+		s.total = 0;
 		s.collecting = true;
 	} else if (!s.collecting) {
 		return;
+	}
+	if (!s.header_known) {
+		// The start code, stream id and length may straddle packets (an
+		// adaptation field can leave a few payload bytes): collect six
+		// bytes before reading them, checking what is there as it comes.
+		const size_t take = std::min(length, 6 - s.data.size());
+		s.data.insert(s.data.end(), payload, payload + take);
+		payload += take;
+		length -= take;
+		static const uint8_t start[3] = { 0, 0, 1 };
+		for (size_t i = 0; i < std::min<size_t>(s.data.size(), 3); ++i) {
+			if (s.data[i] != start[i]) {
+				stream_reset(s);
+				return;
+			}
+		}
+		if ((s.data.size() >= 4 && !stream_id_ok(video, s.data[3])) ) {
+			stream_reset(s);
+			return;
+		}
+		if (s.data.size() < 6)
+			return;
+		s.header_known = true;
+		s.total = be16(s.data.data() + 4) != 0 ? 6u + be16(s.data.data() + 4) : 0;
+		if (length == 0)
+			return;
 	}
 	if (s.total != 0) {
 		if (length > s.total - s.data.size())
@@ -240,6 +265,11 @@ void TsDemux::stream_end(Stream &s, bool video, std::vector<uint8_t> &out)
 {
 	if (!s.collecting)
 		return;
+	if (!s.header_known) {
+		++truncated_pes_;
+		stream_reset(s);
+		return;
+	}
 	if (s.total != 0) {
 		++truncated_pes_;
 		stream_reset(s);
