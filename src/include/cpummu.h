@@ -256,8 +256,8 @@ extern bool mmu_is_super_access(bool read);
 extern uae_u32 REGPARAM3 mmu060_get_rmw_bitfield (uae_u32 src, uae_u32 bdata[2], uae_s32 offset, int width) REGPARAM;
 extern void REGPARAM3 mmu060_put_rmw_bitfield (uae_u32 dst, uae_u32 bdata[2], uae_u32 val, uae_s32 offset, int width) REGPARAM;
 
-extern uae_u16 REGPARAM3 mmu_get_word_unaligned(uaecptr addr, bool data) REGPARAM;
-extern uae_u32 REGPARAM3 mmu_get_long_unaligned(uaecptr addr, bool data) REGPARAM;
+extern uae_u16 REGPARAM3 mmu_get_word_unaligned(uaecptr addr) REGPARAM;
+extern uae_u32 REGPARAM3 mmu_get_long_unaligned(uaecptr addr) REGPARAM;
 
 extern uae_u32 REGPARAM3 mmu_get_ilong_unaligned(uaecptr addr) REGPARAM;
 
@@ -382,67 +382,19 @@ static ALWAYS_INLINE uae_u16 mmu_get_iword(uaecptr addr, int size)
 }
 
 
-static ALWAYS_INLINE uae_u32 mmu_get_long(uaecptr addr, bool data, int size)
+static ALWAYS_INLINE uae_u32 mmu_get_long(uaecptr addr, int size)
 {
-	if (data) {
-		addr = mmu_translate_data_read(addr, size);
-		if (likely(mmu_phys_plain))
-			return phys_get_long(addr);
-		return x_phys_get_long(addr);
-	}
-	mmu_cache_state = cache_default_data;
-	if ((!mmu_ttr_enabled || mmu_match_ttr(addr,regs.s!=0,data) == TTR_NO_MATCH) && regs.mmu_enabled) {
-#if MMU_DPAGECACHE
-		uae_u32 idx1 = ((addr & mmu_pagemaski) >> mmu_pageshift1m) | regs.s;
-		uae_u32 idx2 = idx1 & (MMUFASTCACHE_ENTRIES - 1);
-		if (atc_data_cache_read[idx2].log == idx1) {
-			addr = atc_data_cache_read[idx2].phys | (addr & mmu_pagemask);
-			mmu_cache_state = atc_data_cache_read[idx2].cache_state;
-#if CACHE_HIT_COUNT
-			mmu_data_read_hit++;
-#endif
-		} else {
-#if CACHE_HIT_COUNT
-			mmu_data_read_miss++;
-#endif
-#endif
-			addr = mmu_translate(addr, 0, regs.s!=0, data, false, size);
-#if MMU_DPAGECACHE
-		}
-#endif
-	}
+	addr = mmu_translate_data_read(addr, size);
+	if (likely(mmu_phys_plain))
+		return phys_get_long(addr);
 	return x_phys_get_long(addr);
 }
 
-static ALWAYS_INLINE uae_u16 mmu_get_word(uaecptr addr, bool data, int size)
+static ALWAYS_INLINE uae_u16 mmu_get_word(uaecptr addr, int size)
 {
-	if (data) {
-		addr = mmu_translate_data_read(addr, size);
-		if (likely(mmu_phys_plain))
-			return phys_get_word(addr);
-		return x_phys_get_word(addr);
-	}
-	mmu_cache_state = cache_default_data;
-	if ((!mmu_ttr_enabled || mmu_match_ttr(addr,regs.s!=0,data) == TTR_NO_MATCH) && regs.mmu_enabled) {
-#if MMU_DPAGECACHE
-		uae_u32 idx1 = ((addr & mmu_pagemaski) >> mmu_pageshift1m) | regs.s;
-		uae_u32 idx2 = idx1 & (MMUFASTCACHE_ENTRIES - 1);
-		if (atc_data_cache_read[idx2].log == idx1) {
-			addr = atc_data_cache_read[idx2].phys | (addr & mmu_pagemask);
-			mmu_cache_state = atc_data_cache_read[idx2].cache_state;
-#if CACHE_HIT_COUNT
-			mmu_data_read_hit++;
-#endif
-		} else {
-#if CACHE_HIT_COUNT
-			mmu_data_read_miss++;
-#endif
-#endif
-			addr = mmu_translate(addr, 0, regs.s!=0, data, false, size);
-#if MMU_DPAGECACHE
-		}
-#endif
-	}
+	addr = mmu_translate_data_read(addr, size);
+	if (likely(mmu_phys_plain))
+		return phys_get_word(addr);
 	return x_phys_get_word(addr);
 }
 
@@ -454,27 +406,11 @@ static ALWAYS_INLINE uae_u8 mmu_get_byte(uaecptr addr, bool data, int size)
 			return phys_get_byte(addr);
 		return x_phys_get_byte(addr);
 	}
+	// Instruction space: the data shortcut cache can hold DTT identity
+	// entries, so use the ITT check and the ATC directly.
 	mmu_cache_state = cache_default_data;
-	if ((!mmu_ttr_enabled || mmu_match_ttr(addr,regs.s!=0,data) == TTR_NO_MATCH) && regs.mmu_enabled) {
-#if MMU_DPAGECACHE
-		uae_u32 idx1 = ((addr & mmu_pagemaski) >> mmu_pageshift1m) | regs.s;
-		uae_u32 idx2 = idx1 & (MMUFASTCACHE_ENTRIES - 1);
-		if (atc_data_cache_read[idx2].log == idx1) {
-			addr = atc_data_cache_read[idx2].phys | (addr & mmu_pagemask);
-			mmu_cache_state = atc_data_cache_read[idx2].cache_state;
-#if CACHE_HIT_COUNT
-			mmu_data_read_hit++;
-#endif
-		} else {
-#if CACHE_HIT_COUNT
-			mmu_data_read_miss++;
-#endif
-#endif
-			addr = mmu_translate(addr, 0, regs.s!=0, data, false, size);
-#if MMU_DPAGECACHE
-		}
-#endif
-}
+	if (mmu_match_ttr_ins(addr, regs.s != 0) == TTR_NO_MATCH && regs.mmu_enabled)
+		addr = mmu_translate(addr, 0, regs.s != 0, false, false, size);
 	return x_phys_get_byte(addr);
 }
 
@@ -806,14 +742,14 @@ static ALWAYS_INLINE uae_u16 uae_mmu040_get_ibyte(uaecptr addr)
 static ALWAYS_INLINE uae_u32 uae_mmu040_get_long(uaecptr addr)
 {
 	if (unlikely(is_unaligned_page(addr, 4)))
-		return mmu_get_long_unaligned(addr, true);
-	return mmu_get_long(addr, true, sz_long);
+		return mmu_get_long_unaligned(addr);
+	return mmu_get_long(addr, sz_long);
 }
 static ALWAYS_INLINE uae_u16 uae_mmu040_get_word(uaecptr addr)
 {
 	if (unlikely(is_unaligned_page(addr, 2)))
-		return mmu_get_word_unaligned(addr, true);
-	return mmu_get_word(addr, true, sz_word);
+		return mmu_get_word_unaligned(addr);
+	return mmu_get_word(addr, sz_word);
 }
 static ALWAYS_INLINE uae_u8 uae_mmu040_get_byte(uaecptr addr)
 {
@@ -857,14 +793,14 @@ static ALWAYS_INLINE uae_u16 uae_mmu060_get_ibyte(uaecptr addr)
 static ALWAYS_INLINE uae_u32 uae_mmu060_get_long(uaecptr addr)
 {
 	if (unlikely(is_unaligned_page(addr, 4)))
-		return mmu_get_long_unaligned(addr, true);
-	return mmu_get_long(addr, true, sz_long);
+		return mmu_get_long_unaligned(addr);
+	return mmu_get_long(addr, sz_long);
 }
 static ALWAYS_INLINE uae_u16 uae_mmu060_get_word(uaecptr addr)
 {
 	if (unlikely(is_unaligned_page(addr, 2)))
-		return mmu_get_word_unaligned(addr, true);
-	return mmu_get_word(addr, true, sz_word);
+		return mmu_get_word_unaligned(addr);
+	return mmu_get_word(addr, sz_word);
 }
 static ALWAYS_INLINE uae_u8 uae_mmu060_get_byte(uaecptr addr)
 {

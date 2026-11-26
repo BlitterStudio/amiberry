@@ -781,10 +781,14 @@ uaecptr REGPARAM2 mmu_translate_ins_slow(uaecptr addr, int size)
 {
 	bool super = regs.s != 0;
 	mmu_cache_state = cache_default_ins;
-	if (mmu_match_ttr_ins(addr, super) == TTR_NO_MATCH && regs.mmu_enabled)
+	int ttr = mmu_match_ttr_ins(addr, super);
+	if (ttr == TTR_NO_MATCH && regs.mmu_enabled)
 		return mmu_translate(addr, 0, super, false, false, size);
-	// TTR hit or MMU off: identity mapping
-	mmu_add_cache(addr, addr & mmu_pagemaski, super, false, false);
+	// TTR hit or MMU off: identity mapping. With MMU off the cache state comes
+	// from cache_default_*, which exceptions change temporarily, so only the
+	// plain path (which ignores the cache state) may keep it.
+	if (ttr != TTR_NO_MATCH || mmu_phys_plain)
+		mmu_add_cache(addr, addr & mmu_pagemaski, super, false, false);
 	return addr;
 }
 
@@ -792,9 +796,11 @@ uaecptr REGPARAM2 mmu_translate_data_read_slow(uaecptr addr, int size)
 {
 	bool super = regs.s != 0;
 	mmu_cache_state = cache_default_data;
-	if (mmu_match_ttr(addr, super, true) == TTR_NO_MATCH && regs.mmu_enabled)
+	int ttr = mmu_match_ttr(addr, super, true);
+	if (ttr == TTR_NO_MATCH && regs.mmu_enabled)
 		return mmu_translate(addr, 0, super, true, false, size);
-	mmu_add_cache(addr, addr & mmu_pagemaski, super, true, false);
+	if (ttr != TTR_NO_MATCH || mmu_phys_plain)
+		mmu_add_cache(addr, addr & mmu_pagemaski, super, true, false);
 	return addr;
 }
 
@@ -942,14 +948,14 @@ static void misalignednotfirstcheck(uaecptr addr)
 	misalignednotfirst (addr);
 }
 
-uae_u16 REGPARAM2 mmu_get_word_unaligned(uaecptr addr, bool data)
+uae_u16 REGPARAM2 mmu_get_word_unaligned(uaecptr addr)
 {
 	uae_u16 res;
 
-	res = (uae_u16)mmu_get_byte(addr, data, sz_word) << 8;
+	res = (uae_u16)mmu_get_byte(addr, true, sz_word) << 8;
 	SAVE_EXCEPTION;
 	TRY(prb) {
-		res |= mmu_get_byte(addr + 1, data, sz_word);
+		res |= mmu_get_byte(addr + 1, true, sz_word);
 		RESTORE_EXCEPTION;
 	}
 	CATCH(prb) {
@@ -960,15 +966,15 @@ uae_u16 REGPARAM2 mmu_get_word_unaligned(uaecptr addr, bool data)
 	return res;
 }
 
-uae_u32 REGPARAM2 mmu_get_long_unaligned(uaecptr addr, bool data)
+uae_u32 REGPARAM2 mmu_get_long_unaligned(uaecptr addr)
 {
 	uae_u32 res;
 
 	if (likely(!(addr & 1))) {
-		res = (uae_u32)mmu_get_word(addr, data, sz_long) << 16;
+		res = (uae_u32)mmu_get_word(addr, sz_long) << 16;
 		SAVE_EXCEPTION;
 		TRY(prb) {
-			res |= mmu_get_word(addr + 2, data, sz_long);
+			res |= mmu_get_word(addr + 2, sz_long);
 			RESTORE_EXCEPTION;
 		}
 		CATCH(prb) {
@@ -977,12 +983,12 @@ uae_u32 REGPARAM2 mmu_get_long_unaligned(uaecptr addr, bool data)
 			THROW_AGAIN(prb);
 		} ENDTRY
 	} else {
-		res = (uae_u32)mmu_get_byte(addr, data, sz_long) << 8;
+		res = (uae_u32)mmu_get_byte(addr, true, sz_long) << 8;
 		SAVE_EXCEPTION;
 		TRY(prb) {
-			res = (res | mmu_get_byte(addr + 1, data, sz_long)) << 8;
-			res = (res | mmu_get_byte(addr + 2, data, sz_long)) << 8;
-			res |= mmu_get_byte(addr + 3, data, sz_long);
+			res = (res | mmu_get_byte(addr + 1, true, sz_long)) << 8;
+			res = (res | mmu_get_byte(addr + 2, true, sz_long)) << 8;
+			res |= mmu_get_byte(addr + 3, true, sz_long);
 			RESTORE_EXCEPTION;
 		}
 		CATCH(prb) {
@@ -1469,7 +1475,12 @@ void REGPARAM2 mmu_set_funcs(void)
 	if (currprefs.mmu_model != 68040 && currprefs.mmu_model != 68060)
 		return;
 
-	mmu_phys_plain = !(currprefs.cpu_memory_cycle_exact || currprefs.cpu_compatible);
+	bool plain = !(currprefs.cpu_memory_cycle_exact || currprefs.cpu_compatible);
+	if (plain != mmu_phys_plain) {
+		// MMU-off identity entries are only cached in plain mode.
+		mmu_phys_plain = plain;
+		flush_shortcut_cache(0xffffffff, 0);
+	}
 
 	x_phys_get_iword = phys_get_word;
 	x_phys_get_ilong = phys_get_long;

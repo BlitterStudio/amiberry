@@ -39,8 +39,12 @@ void val_move2c2 (int regno, uae_u32 val)
 	case 0x807: regs.srp = val; break;
 	case 0x808: regs.pcr = val; break;
 	}
-	if (regno >= 4 && regno <= 7 && currprefs.mmu_model >= 68040)
-		mmu_tt_modified();
+	if (currprefs.mmu_model >= 68040) {
+		if (regno == 3)
+			regs.tcr = mmu_set_tc(regs.tcr);
+		else if (regno >= 4 && regno <= 7)
+			mmu_tt_modified();
+	}
 }
 
 uae_u32 val_move2c (int regno)
