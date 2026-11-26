@@ -105,6 +105,17 @@ installed guest drivers do not run AHI and MHI at the same time.
 `mpega.library` keeps the MP3's sample rate and channel count for its S16BE
 reads.
 
+The audio service lists 23 opcodes, `0x0500` to `0x0516`. The audio control
+plane (`0x0509` to `0x050e`), the fabric ring operations (`0x0512` to
+`0x0514`, with the `IDLE_PAUSED` acquire flag firmware PR 311 added) and the
+voice engine (`0x0518` to `0x051b`) are not emulated and answer
+`UNSUPPORTED`. That includes the card's stereo separation (scene parameter 18
+and the `audio_separation` key of `ZZ9000.CFG`, firmware PR 310), which
+crossfeeds the card's DSP output. Amiberry's own Stereo separation setting
+(`sound_stereo_separation`) mixes Paula's channels in `audio.cpp` and does not
+reach ZZ9000 audio: the AX stream of `zz9000.cpp` and the SDK output stream
+of `zz9000_sdk.cpp` are separate SDL audio streams and play unchanged.
+
 `DECODE_MP3` (`0x0500`) is the card's one-shot path (`handle_decode_mp3`,
 `mp3_decode_compute`), and only when mpg123 is compiled in. A payload
 shorter than 48 bytes, a zero source, a source above 16 MiB, a destination
@@ -112,14 +123,21 @@ shorter than 2 bytes, or a flag other than `EXPECT_END` is `BAD_REQUEST`.
 A missing buffer is `BAD_HANDLE`. An output format other than S16LE or
 S16BE is `UNSUPPORTED`. A requested rate or channel count that is nonzero
 and differs from the stream is `UNSUPPORTED`: there is no resampling.
-`EXPECT_END` is accepted and does not change the decode. The destination
+`EXPECT_END` is accepted and does not change the decode. The card uses it
+since firmware PR 305: it answers `BAD_REQUEST` when the stream does not end
+cleanly (a cut-off last frame, bytes after the last frame that are no ID3v1
+or APEv2 tag, or fewer samples than a Xing or Info header declares) and a
+complete decode reports `bytes_consumed` equal to the source length. Amiberry
+does not check the end, so a damaged end decodes what it can and succeeds,
+as the card does without the flag. The destination
 capacity is rounded down to an even length. The reply is the 48-byte
 `SDKAudioDecodeResultPayload` the SDK decoder requires: bytes consumed,
 bytes written, sample rate, channels, the requested sample format, frames
 written, and the END flag when the input was consumed. mpg123 fills the
 destination until it is full or the input ends. It has no minimp3 parse
-cursor, so a truncated trailing frame can be counted differently, and an
-ID3v1 tag the card leaves unconsumed may be skipped. Bit 7 is set in the
+cursor, so `bytes_consumed` is the fed length less what mpg123 still holds
+(`MPG123_BUFFERFILL`) and a truncated trailing frame can be counted
+differently from the card. Bit 7 is set in the
 mailbox capability word, the audio service word, and the Zorro III video
 service word only in a build that can serve this op.
 
@@ -272,9 +290,11 @@ of type `0x01` or `0x02` and the first audio stream of type `0x03` or `0x04`.
 Packets with the transport error flag, scrambled packets, packets without
 payload and other streams are skipped, a repeated packet is ignored, and a
 gap in the continuity counter of a followed stream drops the PES being
-assembled. A PES with length 0 ends where the next one starts. A stream with
-no PMT, or a PMT that names no MPEG video stream, produces no pictures: the
-session reports `IO_ERROR` at DECODE, as a Program Stream without video does.
+assembled. A PES header that an adaptation field splits over two packets is
+collected from both (firmware PR 312). A PES with length 0 ends where the next
+one starts. A stream with no PMT, or a PMT that names no MPEG video stream,
+produces no pictures: the session reports `IO_ERROR` at DECODE, as a Program
+Stream without video does.
 Audio is `NONE` or `MP2`; Begin refuses AC-3 and LPCM with `UNSUPPORTED`, as
 it does any other video codec, and a session with no audio codec ignores the
 stream's audio.

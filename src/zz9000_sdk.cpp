@@ -3194,8 +3194,9 @@ uint16_t Engine::decode_mp3(const uint8_t *request, uint16_t request_length,
 	return unsupported;
 #else
 	// handle_decode_mp3() then mp3_decode_compute(). EXPECT_END is
-	// accepted and otherwise ignored: the card's compute path does not
-	// read that flag.
+	// accepted and otherwise ignored: the card fails a stream that does
+	// not end cleanly with BAD_REQUEST when it is set (firmware PR 305),
+	// and this path does not check the end.
 	if (request_length < 48)
 		return bad_request;
 	auto *src = find_buffer(be32(request));
@@ -3255,9 +3256,10 @@ uint16_t Engine::decode_mp3(const uint8_t *request, uint16_t request_length,
 	// decode_mp3_samples() fills the destination until it is full or the
 	// input ends. mpg123 has no minimp3 offset cursor: the supplied
 	// buffer is fed, and MPG123_BUFFERFILL is the unconsumed tail. A
-	// truncated trailing frame can therefore be counted differently,
-	// and mpg123 may skip an ID3v1 tag the card's buffer decoder leaves
-	// unconsumed. Output is still native-rate S16.
+	// truncated trailing frame can therefore be counted differently from
+	// the card, which reports the whole source as consumed once the audio
+	// is decoded, a trailing ID3v1 or APEv2 tag included. Output is still
+	// native-rate S16.
 	const uint32_t cap = dst_capacity & ~1u;
 	auto *out = buffer_data(dst->handle) + dst_offset;
 	uint32_t written = 0;
