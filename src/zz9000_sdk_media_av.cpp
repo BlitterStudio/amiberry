@@ -28,6 +28,9 @@ constexpr uint32_t codec_vp8 = 3;
 constexpr uint32_t codec_vp9 = 4;
 constexpr uint32_t container_mpeg_ps = 1;
 constexpr uint32_t container_webm = 2;
+// MPEG Transport Stream: the session's front end rewrites it as a Program
+// Stream, so the demuxer is the Program Stream one.
+constexpr uint32_t container_mpeg_ts = 3;
 constexpr uint32_t audio_none = 0;
 constexpr uint32_t audio_mp2 = 1;
 constexpr uint32_t audio_lpcm = 2;
@@ -72,6 +75,9 @@ bool audio_track_matches(uint32_t codec, uint32_t container,
 
 bool expected_combination(uint32_t video, uint32_t container, uint32_t audio)
 {
+	// MPEG audio only, as the card's Transport Stream demux.
+	if (container == container_mpeg_ts)
+		return video == codec_mpeg2 && audio <= audio_mp2;
 	if (container == container_mpeg_ps)
 		return video == codec_mpeg2 && audio <= audio_ac3;
 	if (container == container_webm) {
@@ -333,12 +339,20 @@ void MediaAv::worker_loop()
 	}
 	state_->format->pb = state_->io;
 	state_->format->flags |= AVFMT_FLAG_CUSTOM_IO;
-	state_->format->probesize = 4096;
+	const bool program_stream = container_ == container_mpeg_ps ||
+		container_ == container_mpeg_ts;
+	// A Program Stream has no header that names its streams, so the probe
+	// has to see a packet of each. A Transport Stream's audio can trail the
+	// video by much more than the 4 KiB a muxed Program Stream needs: its
+	// PES packets come out when they are complete, and a picture is
+	// several KiB.
+	const int probe = container_ == container_mpeg_ts ? 512 * 1024 : 4096;
+	state_->format->probesize = probe;
 	state_->format->max_analyze_duration = 0;
-	const AVInputFormat *forced = container_ == container_mpeg_ps ?
+	const AVInputFormat *forced = program_stream ?
 		av_find_input_format("mpeg") : av_find_input_format("matroska");
 	AVDictionary *options = nullptr;
-	av_dict_set_int(&options, "probesize", 4096, 0);
+	av_dict_set_int(&options, "probesize", probe, 0);
 	av_dict_set_int(&options, "analyzeduration", 0, 0);
 	if (avformat_open_input(&state_->format, nullptr, forced, &options) < 0) {
 		av_dict_free(&options);
@@ -348,7 +362,7 @@ void MediaAv::worker_loop()
 	av_dict_free(&options);
 	/* Matroska/WebM headers name and configure every track. Do not let
 	 * find_stream_info wait for EOF on a live HTTP-style input. */
-	if (container_ == container_mpeg_ps &&
+	if (program_stream &&
 	    avformat_find_stream_info(state_->format, nullptr) < 0) {
 		fail();
 		return;

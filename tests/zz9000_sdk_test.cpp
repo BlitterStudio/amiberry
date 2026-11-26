@@ -196,6 +196,102 @@ void decode_mp3_one_shot(Mailbox &mailbox, const std::vector<uint8_t> &mp3)
 	put32(request, dst);
 	mailbox.call(0x0101, request, 4);
 }
+
+// EXPECT_END, as the card's mp3_expect_end_ok(): a stream that does not end
+// cleanly is BAD_REQUEST with the flag and decodes what it can without it.
+// The whole source is consumed once the audio is, tags included.
+void check_mp3_expect_end(Mailbox &mailbox, const std::vector<uint8_t> &clean)
+{
+	uint8_t request[48] = {};
+	const auto allocate = [&](uint32_t length) {
+		std::fill(std::begin(request), std::end(request), 0);
+		put32(request, length);
+		put32(request + 4, 16);
+		return get32(mailbox.call(0x0100, request, 12) + 16);
+	};
+	const uint32_t src = allocate(65536 + 1024);
+	const uint32_t dst = allocate(131072);
+	const auto decode = [&](const std::vector<uint8_t> &mp3, uint32_t capacity, uint32_t flags,
+	                        uint16_t status) {
+		assert(mp3.size() <= 65536 + 1024);
+		std::copy(mp3.begin(), mp3.end(), mailbox.sdk.buffer_data(src));
+		std::fill(std::begin(request), std::end(request), 0);
+		put32(request, src);
+		put32(request + 8, static_cast<uint32_t>(mp3.size()));
+		put32(request + 12, dst);
+		put32(request + 20, capacity);
+		put32(request + 32, 1);
+		put32(request + 36, flags);
+		return mailbox.call(0x0500, request, 48, status);
+	};
+	const auto with = [&](std::vector<uint8_t> mp3, const std::vector<uint8_t> &tail) {
+		mp3.insert(mp3.end(), tail.begin(), tail.end());
+		return mp3;
+	};
+	// A complete stream: the whole source is consumed and END is set.
+	const auto *reply = decode(clean, 131072, 1, 0);
+	assert(get32(reply + 16) == clean.size() && (get32(reply + 40) & 1));
+	const uint32_t clean_written = get32(reply + 20);
+	// Output space running out first is not a fault, with or without the flag.
+	// (mpg123 buffers whole frames, so on a file of a few frames the source
+	// can still count as consumed, which the card's frame cursor would not.)
+	reply = decode(clean, 4096, 1, 0);
+	assert(get32(reply + 20) == 4096 && get32(reply + 16) <= clean.size());
+	decode(clean, 4096, 0, 0);
+	// A cut-off last frame.
+	for (size_t cut : {size_t(1), size_t(50), size_t(200)}) {
+		const std::vector<uint8_t> cut_mp3(clean.begin(), clean.end() - cut);
+		decode(cut_mp3, 131072, 1, 4);
+		reply = decode(cut_mp3, 131072, 0, 0);
+		assert(get32(reply + 16) == cut_mp3.size() && (get32(reply + 40) & 1));
+		assert(get32(reply + 20) <= clean_written);
+	}
+	// Bytes after the last frame that are no tag.
+	const std::vector<uint8_t> junk(20, 0x55);
+	decode(with(clean, junk), 131072, 1, 4);
+	reply = decode(with(clean, junk), 131072, 0, 0);
+	assert(get32(reply + 16) == clean.size() + junk.size() && get32(reply + 20) == clean_written);
+	std::vector<uint8_t> lyrics = {'L', 'Y', 'R', 'I', 'C', 'S', 'B', 'E', 'G', 'I', 'N', 'x', 'y',
+		'L', 'Y', 'R', 'I', 'C', 'S', 'E', 'N', 'D'};
+	decode(with(clean, lyrics), 131072, 1, 4); // Lyrics3 is not recognised
+	// An ID3v1 tag, with or without TAG+, and an APEv2 tag are not a fault.
+	std::vector<uint8_t> id3v1(128, 0);
+	std::copy_n("TAG", 3, id3v1.begin());
+	reply = decode(with(clean, id3v1), 131072, 1, 0);
+	assert(get32(reply + 16) == clean.size() + 128 && (get32(reply + 40) & 1));
+	assert(get32(reply + 20) == clean_written);
+	std::vector<uint8_t> tag_plus(227, 0);
+	std::copy_n("TAG+", 4, tag_plus.begin());
+	decode(with(with(clean, tag_plus), id3v1), 131072, 1, 0);
+	std::vector<uint8_t> ape(32, 0);
+	std::copy_n("APETAGEX", 8, ape.begin());
+	ape[8] = 0xd0; ape[9] = 0x07; // version 2000
+	ape[12] = 32;                 // tag size: the footer only
+	decode(with(clean, ape), 131072, 1, 0);
+	decode(with(with(clean, ape), id3v1), 131072, 1, 0);
+	// An ID3v2 tag in front.
+	std::vector<uint8_t> id3v2(10 + 40, 0);
+	std::copy_n("ID3", 3, id3v2.begin());
+	id3v2[3] = 4;
+	id3v2[9] = 40;
+	decode(with(id3v2, clean), 131072, 1, 0);
+	// A Xing or Info header that counts other frames than the stream holds.
+	const auto info = std::search(clean.begin(), clean.begin() + std::min<size_t>(clean.size(), 300),
+		std::begin("Info"), std::end("Info") - 1);
+	const auto xing = std::search(clean.begin(), clean.begin() + std::min<size_t>(clean.size(), 300),
+		std::begin("Xing"), std::end("Xing") - 1);
+	const auto header = info != clean.begin() + std::min<size_t>(clean.size(), 300) ? info : xing;
+	if (header != clean.begin() + std::min<size_t>(clean.size(), 300) && (header[7] & 1)) {
+		std::vector<uint8_t> miscounted = clean;
+		miscounted[(header - clean.begin()) + 11] += 1;
+		decode(miscounted, 131072, 1, 4);
+		decode(miscounted, 131072, 0, 0);
+	}
+	put32(request, src);
+	mailbox.call(0x0101, request, 4);
+	put32(request, dst);
+	mailbox.call(0x0101, request, 4);
+}
 }
 
 namespace {
@@ -412,6 +508,9 @@ int main(int argc, char **argv)
 	assert(SDL_Init(SDL_INIT_AUDIO));
 	decode_mp3_one_shot(z2, mp3);
 	decode_mp3_one_shot(z3, mp3);
+	check_mp3_expect_end(z3, mp3);
+	check_mp3_expect_end(z3, mono_mp3);
+	check_mp3_expect_end(z3, low_mp3);
 	put32(payload, 0x500);
 	reply = z3.call(0x0004, payload, 4);
 	assert(get32(reply + 24) & (1u << 7));

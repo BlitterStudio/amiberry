@@ -13,9 +13,9 @@ they would on older firmware.
 |---|---|
 | MP3 streams and one-shot `DECODE_MP3` | mpg123 and AHI support |
 | FLAC and Ogg Vorbis audio streams | FFmpeg (`USE_FFMPEG`, default on) |
-| MPEG-2, WebM and Matroska media sessions | FFmpeg, Zorro III |
+| MPEG-2, WebM and Matroska media sessions, MPEG-2 in a Transport Stream | FFmpeg, Zorro III |
 | WebP stills and animations | libwebp with libwebpdemux (`USE_WEBP`, default on) |
-| JPEG/PNG sessions, MPEG-1 media, surfaces, console encoder | always built |
+| JPEG/PNG sessions and one-shot PNG, MPEG-1 media (Program and Transport Stream), shared-buffer output, surfaces, console encoder | always built |
 
 FFmpeg 5.1 or newer is required. It is no longer tied to `USE_VIDEOGRAB`;
 genlock video input still uses it when both are enabled. Android, iOS and
@@ -105,6 +105,17 @@ installed guest drivers do not run AHI and MHI at the same time.
 `mpega.library` keeps the MP3's sample rate and channel count for its S16BE
 reads.
 
+The audio service lists 23 opcodes, `0x0500` to `0x0516`. The audio control
+plane (`0x0509` to `0x050e`), the fabric ring operations (`0x0512` to
+`0x0514`, with the `IDLE_PAUSED` acquire flag firmware PR 311 added) and the
+voice engine (`0x0518` to `0x051b`) are not emulated and answer
+`UNSUPPORTED`. That includes the card's stereo separation (scene parameter 18
+and the `audio_separation` key of `ZZ9000.CFG`, firmware PR 310), which
+crossfeeds the card's DSP output. Amiberry's own Stereo separation setting
+(`sound_stereo_separation`) mixes Paula's channels in `audio.cpp` and does not
+reach ZZ9000 audio: the AX stream of `zz9000.cpp` and the SDK output stream
+of `zz9000_sdk.cpp` are separate SDL audio streams and play unchanged.
+
 `DECODE_MP3` (`0x0500`) is the card's one-shot path (`handle_decode_mp3`,
 `mp3_decode_compute`), and only when mpg123 is compiled in. A payload
 shorter than 48 bytes, a zero source, a source above 16 MiB, a destination
@@ -112,14 +123,33 @@ shorter than 2 bytes, or a flag other than `EXPECT_END` is `BAD_REQUEST`.
 A missing buffer is `BAD_HANDLE`. An output format other than S16LE or
 S16BE is `UNSUPPORTED`. A requested rate or channel count that is nonzero
 and differs from the stream is `UNSUPPORTED`: there is no resampling.
-`EXPECT_END` is accepted and does not change the decode. The destination
+`EXPECT_END` works as on the card since firmware PR 305
+(`mp3_expect_end_ok`): with it, a stream that does not end cleanly is
+`BAD_REQUEST` (the output is then undefined). That is a cut-off last frame,
+bytes after the last frame that are no tag, or a Xing or Info header that
+counts other frames than the stream holds. An ID3v2 tag in front and an
+ID3v1 (with `TAG+`) or APEv2 tag (with or without header) behind are not a
+fault; a Lyrics3 tag is not recognised. A damaged frame in the middle is
+skipped without the flag or with it. mpg123 does not report these, so
+Amiberry checks the end itself: it recognises the tags, walks the frame
+headers (layers I to III, resyncing over damaged bytes as the decoder does),
+and compares the frame count with a Xing or Info header's. A file cut off
+exactly between two frames is refused only when such a header declares the
+count, as on the card. Running out of output space first is not a fault, and
+skips the check. Without the flag the same input decodes what it can and
+succeeds. Once the audio is decoded `bytes_consumed` is the whole source
+length, tags and a cut-off frame included, and END is set, as on the card;
+`bytes_consumed` is short of it only when the output filled first.
+The destination
 capacity is rounded down to an even length. The reply is the 48-byte
 `SDKAudioDecodeResultPayload` the SDK decoder requires: bytes consumed,
 bytes written, sample rate, channels, the requested sample format, frames
 written, and the END flag when the input was consumed. mpg123 fills the
 destination until it is full or the input ends. It has no minimp3 parse
-cursor, so a truncated trailing frame can be counted differently, and an
-ID3v1 tag the card leaves unconsumed may be skipped. Bit 7 is set in the
+cursor, so when the output filled first `bytes_consumed` is the fed length
+less what mpg123 still holds (`MPG123_BUFFERFILL`): on a file of a few frames
+that can read as fully consumed where the card, which does not count the
+frame its output ended in, would not. Bit 7 is set in the
 mailbox capability word, the audio service word, and the Zorro III video
 service word only in a build that can serve this op.
 
@@ -169,7 +199,11 @@ The card fills its shadow from the RTG driver's DMA `SET_PALETTE`
 operation (`dma_rtg.c`); Amiberry also fills it from the register-based
 palette writes, which the card does not shadow.
 The surface service advertises `ZZ9K_SERVICE_FLAG_SURFACE_PALETTE_QUERY`
-and an opcode count of 6.
+on Zorro III only, with an opcode count of 6, as the card does since
+firmware PR 302: only the Zorro III path loads the CLUT through the DMA
+`SET_PALETTE` op the card shadows, so on Zorro II the shadow never fills.
+On a Zorro II board the flag is clear and `QUERY_PALETTE` answers
+`UNSUPPORTED` before it looks at the payload length or any argument.
 
 ## Images
 
@@ -190,8 +224,21 @@ the surface's, and must be ARGB8888, RGBA8888, BGRA8888 or RGB888. Any
 flag is `UNSUPPORTED`. A picture that is not a JPEG, or that does not fit
 the rectangle, is `IO_ERROR`. The reply is the 48-byte
 `SDKImageDecodeResultPayload`. A decode into the framebuffer is a redraw.
-`DECODE_PNG` (`0x0402`) and `DECODE_GIF` (`0x0403`) answer `UNSUPPORTED`,
-as the card does.
+`DECODE_PNG` (`0x0402`) follows `handle_decode_png`, the session decoder
+run start to finish, with the request and reply layout of `DECODE_JPEG`
+and the image service flag `ZZ9K_SERVICE_FLAG_IMAGE_PNG_ONE_SHOT` (bit 30).
+The picture keeps its own alpha: ARGB8888, RGBA8888 and BGRA8888 take it as
+it is in the PNG, RGB888 drops it. The answers are those of a PNG session:
+`FIT` is `UNSUPPORTED` (PNG has no fitting), any other flag bit than
+`PRESERVE_ASPECT`, which is accepted and changes nothing, is `BAD_REQUEST`.
+A picture that is not a PNG, or is cut short, is `IO_ERROR`; one with a side
+above 8192 pixels, more than 24 megapixels, or larger than the rectangle is
+`BAD_REQUEST` (`DECODE_JPEG` calls a picture that does not fit `IO_ERROR`).
+The checks before the decode run in the card's order: a missing buffer or
+surface, then the output format against the surface's (`UNSUPPORTED`), the
+source range and the rectangle (`BAD_REQUEST`), then the flags and whether
+the format is one of the four above. A decode into the framebuffer is a
+redraw. `DECODE_GIF` (`0x0403`) answers `UNSUPPORTED`, as the card does.
 
 Streaming JPEG, PNG and WebP sessions still feed tiles or an SDK surface
 for the picture DataTypes and SDK viewers. WebP inputs follow the firmware
@@ -205,8 +252,11 @@ present YUV422CGX frames to the Picasso96 video window.
 On Zorro III the video service plays:
 
 - MPEG-1 Program Stream with MP2 audio, decoded by pl_mpeg (always built);
+- MPEG-1 in an MPEG Transport Stream, the same decoder behind the Transport
+  Stream front end described below (always built);
 - MPEG-2 Program Stream and VOB files with AC-3, DVD LPCM or MP2 audio,
   including audio-only and video-only sessions;
+- MPEG-2 in a Transport Stream with MP2 audio or none;
 - WebM with VP8 or VP9 video and Opus or Vorbis audio;
 - Matroska with MPEG-1, MPEG-2, VP8 or VP9 video and the same audio codecs.
 
@@ -226,19 +276,104 @@ is not advertised, so ZZPlay plays the sound through guest AHI. Zorro II video
 sessions remain unadvertised because its video window aperture is not mapped
 for this path.
 
-The media status op (`0x0b0a`) answers all six card pages: timing (with the
+The media status op (`0x0b0a`) answers all seven card pages: timing (with the
 timeline origin), audio, counters (decoded, presented and discarded frames
 counted separately), audio output (zero underruns — there is no card-side
-DMA pump here to starve), the overlay presentation path, and per-stage
-profiling. The presentation page reports the PIP's flags and source,
+DMA pump here to starve), the overlay presentation path, per-stage
+profiling, and the shared-buffer output. The presentation page reports the
+PIP's flags and source,
 destination and screen geometry packed into 16-bit pairs; because the
 emulated PIP *is* the FPGA overlay plane, an active overlay always reports
 the native path, and ZZPlay names it "native 1:1" or "native scaled" rather
 than "card-local compositor". Profiling packs each stage as
 `(microseconds << 32) | calls` measured around the real FFmpeg/pl_mpeg
 decode, YUY2 pack, present copy and audio decode work; the NEON flag never
-appears because the host packs in scalar C++. Pages above five and nonzero
+appears because the host packs in scalar C++. Pages above six and nonzero
 flags are rejected exactly as on the card.
+
+### Transport Stream sessions
+
+Container id 3 (`ZZ9K_VIDEO_CONTAINER_MPEG_TS`) with MPEG-1 or MPEG-2 video
+follows the card's `sdk_dvd_ts.c`. The input is 188-byte packets or 192-byte
+M2TS packets (a 4-byte timestamp before each); the packet size is found from
+three sync bytes one packet apart, and found again after damaged bytes. The
+first program of the PAT is followed, and in its PMT the first video stream
+of type `0x01` or `0x02` and the first audio stream of type `0x03` or `0x04`.
+Packets with the transport error flag, scrambled packets, packets without
+payload and other streams are skipped, a repeated packet is ignored, and a
+gap in the continuity counter of a followed stream drops the PES being
+assembled. A PES header that an adaptation field splits over two packets is
+collected from both (firmware PR 312). A PES with length 0 ends where the next
+one starts. A stream with no PMT, or a PMT that names no MPEG video stream,
+produces no pictures: the session reports `IO_ERROR` at DECODE, as a Program
+Stream without video does.
+Audio is `NONE` or `MP2`; Begin refuses AC-3 and LPCM with `UNSUPPORTED`, as
+it does any other video codec, and a session with no audio codec ignores the
+stream's audio.
+
+pl_mpeg and FFmpeg's mpeg demuxer read Program Streams only, so the front end
+(`zz9000_sdk_ts.cpp`) reassembles the PES packets and writes a Program Stream
+of them: for MPEG-1, MPEG-1 packets with the PTS and the system header that
+counts the streams pl_mpeg reads; for MPEG-2, the PES packets as they came
+(DTS included) behind an MPEG-2 pack header. The pictures and the sound are
+those of the same elementary streams in a Program Stream, which the tests
+check. The write reply counts input bytes accepted, and accepts at most
+64 KiB that the decoder has not taken yet, so a decoder that stops reading
+stops the guest being accepted like a Program Stream session. Without FFmpeg
+MPEG-2 in a Transport Stream is `UNSUPPORTED` at Begin, as in a Program
+Stream. For MPEG-2 the FFmpeg demuxer probes 512 KiB instead of 4 KiB before
+it names the streams, because a Transport Stream's audio can come after
+several pictures of video; DECODE answers `NEED_INPUT` until it has them or
+EOF arrives.
+
+### Shared-buffer output
+
+Begin with output format 2 (`ZZ9K_VIDEO_OUTPUT_SHARED_BUFFER`) writes each
+presented picture to memory the guest reads, instead of the overlay, as the
+card does (firmware PR 309; the video service lists 15 opcodes). An output
+format other than 1 or 2 is `BAD_REQUEST`. The session never touches the
+overlay: presentation page 4 reports it as not owned, and PRESENT needs no
+overlay.
+
+`OUTPUT_CONFIG` (`0x0b0e`) binds the slots: the 48-byte payload must have a
+zero reserved word. An unknown session is `BAD_HANDLE`, an overlay session
+`UNSUPPORTED`. Formats are RGB565, RGB555, INDEX8 and PLANAR, up to
+1920x1088, with the card's checks in the card's order (`BAD_REQUEST` for a
+malformed configuration, `UNSUPPORTED` for another surface format or for
+error-diffusion dithering). The buffer must be a guest-visible one, not
+card-only or media-class, and hold the slots; a host palette must lie in its
+own buffer. The slot buffer and the palette buffer stay pinned (`FREE_SHARED`
+answers `BUSY`) until the output is bound again or the session closes. The
+reply is the main result with `bytes_written` set to the size of one picture.
+
+PRESENT before `OUTPUT_CONFIG` is `BAD_REQUEST`. The conversion is the
+card's (`sdk_media_output.c`, in `zz9000_sdk_media_output.cpp`) and gives the
+same bytes: BT.601 limited range, each plane scaled vertically then
+horizontally (bilinear, nearest, or a box average where an axis shrinks by two
+or more), a 4x4 Bayer threshold for the ordered dither, the fixed palettes of
+depths 1 to 8 or the nearest entry of a host palette. The tests compare it
+with the firmware's converter on 25 pictures. A pl_mpeg picture is converted
+from its planes. An FFmpeg picture is held as packed YUY2 with the chroma
+rows repeated, so its planes are taken back from every second row, which is
+exact for the 4:2:0 pictures FFmpeg sessions accept. Interlaced pictures are
+not blended, as in the card's converter.
+
+The card queues the conversion on core 1 and publishes the slot when it is
+done; Amiberry converts inside PRESENT, so a picture is complete when the
+reply arrives. The reply still carries `PRESENTED`, `OUTPUT_PENDING` and, for
+the second slot, `OUTPUT_SLOT1`, and status page 6 never has `PENDING` set.
+Pictures alternate slots 0, 1, 0, 1 with a nonzero stride; a new
+configuration clears `COMPLETE` and starts at slot 0 again. Page 6 reports
+the flags, the pictures written and presented, the newest conversion time in
+microseconds and, in `value[3]`, the output flags accepted (all but
+error-diffusion dithering). An overlay session reports zeros. Zorro II has no
+video service, so it has no shared-buffer output either.
+
+### Retired opcodes
+
+`0x0b00` to `0x0b03` were the experimental video-session ops (firmware PR 304).
+They answer `UNSUPPORTED` on both buses, whatever they carry, and the numbers
+stay reserved. Amiberry never implemented them; the tests keep them so.
 
 ## Console encoder
 
@@ -260,14 +395,25 @@ unadvertised and return `UNSUPPORTED`.
 `tests/test_zz9000_sdk_image.sh`, `tests/test_zz9000_sdk_media.sh` and
 `tests/test_zz9000_sdk_console.sh` build the SDK against whichever optional
 libraries `pkg-config` finds and generate their fixtures with the `ffmpeg`
-command-line tool. They cover mailbox completion, allocation, reset and
+command-line tool. `tests/test_zz9000_sdk_media_output.sh` and
+`tests/test_zz9000_sdk_ts.sh` build the shared-buffer converter and the
+Transport Stream front end alone. They cover mailbox completion, allocation, reset and
 preload buffers; MP3, FLAC and Vorbis PCM against FFmpeg-decoded references
 and chunked feeding; one-shot MP3 decode (result fields, S16BE against
 S16LE, rate and channel mismatch, a short destination); JPEG, PNG and WebP
-pixels, limits and animation stepping; surface copy (including overlap,
-bounds and a framebuffer redraw) and palette packing; streaming playback
+pixels, limits and animation stepping; the one-shot PNG decode (exact pixels
+and alpha in every format, palette, 16-bit and grayscale pictures, every
+refusal, the framebuffer redraw); surface copy (including overlap,
+bounds and a framebuffer redraw) and palette packing, with the query
+advertised and served on Zorro III and refused on Zorro II; streaming playback
 of every supported container and codec pair, truncated input, and
-close/reopen; and console tile output.
+close/reopen; Transport Stream sessions against the same streams in a Program
+Stream (188 and 192-byte packets, a second audio stream, no audio, MPEG-1 and
+MPEG-2) and the front end on synthetic streams (PAT and PMT, damaged and
+missing packets, unbounded PES packets, any input chunking); shared-buffer
+output against the card's converter, every format, both slots, a host palette
+and the whole `OUTPUT_CONFIG` protocol; the retired opcodes; and console tile
+output.
 
 ## Guest qualification
 
