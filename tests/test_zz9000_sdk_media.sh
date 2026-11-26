@@ -28,7 +28,8 @@ ts_two_audio="${TMPDIR:-/tmp}/zz9000_sdk_media_test.$$.two_audio.ts"
 mp2ps="${TMPDIR:-/tmp}/zz9000_sdk_media_test.$$.mp2.vob"
 ts_mpeg2="${TMPDIR:-/tmp}/zz9000_sdk_media_test.$$.mpeg2.ts"
 video_only="${TMPDIR:-/tmp}/zz9000_sdk_media_test.$$.video_only.mpg"
-trap 'rm -f "$out" "$video" "$audio_only" "$vp8" "$vp9" "$mkv" "$ps" "$lpcm" "$audio_ac3" "$interlaced" "$large" "$large_odd_half" "$truncated" "$offset" "$mkv_pcm" "$mkv_mp3" "$mkv_pcm_big" "$switch_a" "$switch_b" "$switch" "$ac3_51" "$held" "$ts_mpeg1" "$ts_two_audio" "$mp2ps" "$ts_mpeg2" "$video_only"' EXIT
+ts_big="${TMPDIR:-/tmp}/zz9000_sdk_media_test.$$.big.ts"
+trap 'rm -f "$out" "$video" "$audio_only" "$vp8" "$vp9" "$mkv" "$ps" "$lpcm" "$audio_ac3" "$interlaced" "$large" "$large_odd_half" "$truncated" "$offset" "$mkv_pcm" "$mkv_mp3" "$mkv_pcm_big" "$switch_a" "$switch_b" "$switch" "$ac3_51" "$held" "$ts_mpeg1" "$ts_two_audio" "$mp2ps" "$ts_mpeg2" "$video_only" "$ts_big"' EXIT
 ffmpeg -nostdin -loglevel error -y -f lavfi -i 'testsrc2=size=160x120:rate=25:duration=1' -f lavfi -i 'sine=frequency=440:sample_rate=44100:duration=1' -c:v mpeg1video -q:v 4 -c:a mp2 -b:a 128k -f mpeg "$video"
 # FFmpeg builds without libvorbis (Homebrew 9.x) still ship the native
 # experimental Vorbis encoder; it needs stereo input and -strict -2.
@@ -77,6 +78,8 @@ ffmpeg -nostdin -loglevel error -y -i "$video" -an -c:v copy -f mpeg "$video_onl
 ffmpeg -nostdin -loglevel error -y -f lavfi -i 'testsrc2=size=160x120:rate=25:duration=1' -f lavfi -i 'sine=frequency=440:sample_rate=44100:duration=1' -f lavfi -i 'sine=frequency=880:sample_rate=44100:duration=1' -map 0:v -map 1:a -map 2:a -c:v mpeg1video -q:v 4 -c:a mp2 -b:a 128k -f mpegts "$ts_two_audio"
 ffmpeg -nostdin -loglevel error -y -f lavfi -i 'testsrc2=size=160x120:rate=25:duration=1' -f lavfi -i 'sine=frequency=440:sample_rate=44100:duration=1' -c:v mpeg2video -pix_fmt yuv420p -c:a mp2 -f vob "$mp2ps"
 ffmpeg -nostdin -loglevel error -y -i "$mp2ps" -c copy -f mpegts "$ts_mpeg2"
+# About 9 MB of noisy MPEG-2, more than the FFmpeg decoder's 4 MiB input queue.
+ffmpeg -nostdin -loglevel error -y -f lavfi -i 'color=c=gray:s=320x240:r=25,noise=alls=100:allf=t+u' -t 6 -c:v mpeg2video -pix_fmt yuv420p -b:v 12M -minrate 12M -maxrate 12M -bufsize 2M -f mpegts "$ts_big"
 . tests/lib/zz9000_sdk_build.sh
 zz9000_sdk_compile "$out" tests/zz9000_sdk_media_test.cpp
 "$out" "$video" "$audio_only"
@@ -93,6 +96,7 @@ zz9000_sdk_compile "$out" tests/zz9000_sdk_media_test.cpp
 "$out" --shared "$ts_mpeg1" 1 3 160 120
 "$out" --shared "$mp2ps" 2 1 160 120
 "$out" --shared "$ts_mpeg2" 2 3 160 120
+"$out" --ts-backpressure "$ts_big"
 "$out" --av "$vp8" 3 2 5 0 1 160 120
 "$out" --av "$vp9" 4 2 4 0 1 160 120
 "$out" --av "$mkv" 2 2 1 0 1 160 120

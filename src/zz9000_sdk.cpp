@@ -560,6 +560,16 @@ uint32_t Engine::buffer_length(uint32_t handle) const
 	return buffer ? buffer->length : 0;
 }
 
+size_t Engine::media_ts_pending_bytes() const
+{
+	return media_ ? media_->ts_pending.size() : 0;
+}
+
+size_t Engine::media_ts_consumed_bytes() const
+{
+	return media_ ? media_->ts_pending_offset : 0;
+}
+
 Engine::Audio *Engine::find_audio(uint32_t session)
 {
 	if (!session)
@@ -1043,8 +1053,11 @@ void Engine::pump_media_ts()
 					media.ts_pending_offset += left;
 			}
 		}
-		if (media.ts_pending_offset == media.ts_pending.size()) {
-			media.ts_pending.clear();
+		// Drop what the decoder has taken, also after a partial write, so
+		// the vector holds only the unconsumed bytes the write window counts.
+		if (media.ts_pending_offset) {
+			media.ts_pending.erase(media.ts_pending.begin(),
+				media.ts_pending.begin() + media.ts_pending_offset);
 			media.ts_pending_offset = 0;
 		}
 	}

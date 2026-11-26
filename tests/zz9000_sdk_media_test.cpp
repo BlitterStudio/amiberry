@@ -944,6 +944,61 @@ void check_shared_protocol(const char *path, uint32_t width, uint32_t height)
 	z2.call(0x0b04, request, 44, 3);
 }
 
+#ifdef AMIBERRY_WITH_FFMPEG
+// A decoder that takes input a little at a time (the guest decodes slowly,
+// so FFmpeg's input queue stays nearly full and its append is partial) must
+// not make the front end keep the bytes it has already taken: what a
+// Transport Stream session holds stays within the write window.
+void check_ts_backpressure(const char *path)
+{
+	const auto input = read_all(path);
+	assert(input.size() > 6 * 1024 * 1024); // more than the decoder's 4 MiB queue
+	Mailbox mailbox;
+	const uint32_t staging = mailbox.allocate(65536);
+	uint8_t request[48] = {};
+	put32(request, 2); put32(request + 4, 3);
+	put32(request + 8, 320); put32(request + 12, 240); put32(request + 16, 1);
+	const uint32_t session = get32(mailbox.call(0x0b04, request, 44));
+	size_t offset = 0, peak = 0;
+	unsigned busy = 0;
+	for (unsigned guard = 0; offset < input.size() && guard < 400000; ++guard) {
+		const uint32_t bytes = static_cast<uint32_t>(std::min<size_t>(4096, input.size() - offset));
+		std::copy(input.begin() + offset, input.begin() + offset + bytes,
+			mailbox.sdk.buffer_data(staging));
+		std::fill(std::begin(request), std::end(request), 0);
+		put32(request, session); put32(request + 4, staging); put32(request + 12, bytes);
+		put32(request + 16, offset + bytes == input.size());
+		const auto *reply = mailbox.call(0x0b05, request, 20, 0xffff);
+		if (mailbox.last_status == 0)
+			offset += get32(reply + 40);
+		else {
+			assert(mailbox.last_status == 2);
+			++busy;
+			std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		}
+		peak = std::max(peak, mailbox.sdk.media_ts_pending_bytes());
+		assert(mailbox.sdk.media_ts_consumed_bytes() == 0);
+		if (guard % 32 == 31) {
+			// One picture at a time lets the worker take a little input.
+			std::fill(std::begin(request), std::end(request), 0);
+			put32(request, session);
+			reply = mailbox.call(0x0b06, request, 16, 0xffff);
+			if (mailbox.last_status == 0 && get32(reply + 4) == 3)
+				mailbox.call(0x0b09, request, 16);
+			peak = std::max(peak, mailbox.sdk.media_ts_pending_bytes());
+			assert(mailbox.sdk.media_ts_consumed_bytes() == 0);
+		}
+	}
+	assert(offset == input.size());
+	assert(busy > 0); // the decoder did push back
+	// The 64 KiB window, plus what one write of 4 KiB can complete.
+	assert(peak <= 256 * 1024);
+	std::fill(std::begin(request), std::end(request), 0);
+	put32(request, session);
+	mailbox.call(0x0b0d, request, 16, 0xffff);
+}
+#endif
+
 // 0x0b00..0x0b03 were the experimental video-session ops; they are retired
 // and answer UNSUPPORTED whatever they carry, as does an opcode past
 // OUTPUT_CONFIG.
@@ -967,6 +1022,12 @@ int main(int argc, char **argv)
 	const auto number = [&](int i) {
 		return static_cast<uint32_t>(std::strtoul(argv[i], nullptr, 10));
 	};
+	if (argc == 3 && std::strcmp(argv[1], "--ts-backpressure") == 0) {
+#ifdef AMIBERRY_WITH_FFMPEG
+		check_ts_backpressure(argv[2]);
+#endif
+		return 0;
+	}
 	if (argc == 5 && std::strcmp(argv[1], "--protocol") == 0) {
 		// A Program Stream file with MPEG-1 video: rules that need no decode.
 		check_retired_video_ops();

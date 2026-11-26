@@ -45,6 +45,11 @@ public:
 	                 bool active, const OverlayGeometry &geometry);
 	uint8_t *buffer_data(uint32_t handle);
 	uint32_t buffer_length(uint32_t handle) const;
+	// What a Transport Stream media session holds for its decoder (tests):
+	// all of its buffered bytes, and how many of them the decoder has
+	// already taken (always 0: they are dropped as soon as they are taken).
+	size_t media_ts_pending_bytes() const;
+	size_t media_ts_consumed_bytes() const;
 
 
 private:
