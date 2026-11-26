@@ -4413,123 +4413,15 @@ uaecptr strcpyha_safe (uaecptr dst, const uae_char *src)
 	return res;
 }
 
-uae_u32 memory_get_longi(uaecptr addr)
-{
-	addrbank *ab = &get_mem_bank(addr);
-	if (!ab->baseaddr_direct_r) {
-		return call_mem_get_func(ab->lgeti, addr);
-	} else {
-		uae_u8 *m;
-		addr -= ab->startaccessmask;
-		addr &= ab->mask;
-		m = ab->baseaddr_direct_r + addr;
-		return do_get_mem_long((uae_u32 *)m);
-	}
-}
-uae_u32 memory_get_wordi(uaecptr addr)
-{
-	addrbank *ab = &get_mem_bank(addr);
-	if (!ab->baseaddr_direct_r) {
-		return call_mem_get_func(ab->wgeti, addr);
-	} else {
-		uae_u8 *m;
-		addr -= ab->startaccessmask;
-		addr &= ab->mask;
-		m = ab->baseaddr_direct_r + addr;
-		return do_get_mem_word((uae_u16*)m);
-	}
-}
-uae_u32 memory_get_long(uaecptr addr)
-{
-	addrbank *ab = &get_mem_bank(addr);
-	if (!ab->baseaddr_direct_r) {
-		return call_mem_get_func(ab->lget, addr);
-	} else {
-		uae_u8 *m;
-		addr -= ab->startaccessmask;
-		addr &= ab->mask;
-		m = ab->baseaddr_direct_r + addr;
-		return do_get_mem_long((uae_u32*)m);
-	}
-}
-uae_u32 memory_get_word(uaecptr addr)
-{
-	addrbank *ab = &get_mem_bank(addr);
-	if (!ab->baseaddr_direct_r) {
-		return call_mem_get_func(ab->wget, addr);
-	} else {
-		uae_u8 *m;
-		addr -= ab->startaccessmask;
-		addr &= ab->mask;
-		m = ab->baseaddr_direct_r + addr;
-		return do_get_mem_word((uae_u16*)m);
-	}
-}
-uae_u32 memory_get_byte(uaecptr addr)
-{
-	addrbank *ab = &get_mem_bank(addr);
-	if (!ab->baseaddr_direct_r) {
-		return call_mem_get_func(ab->bget, addr);
-	} else {
-		uae_u8 *m;
-		addr -= ab->startaccessmask;
-		addr &= ab->mask;
-		m = ab->baseaddr_direct_r + addr;
-		return *m;
-	}
-}
-
-void memory_put_long(uaecptr addr, uae_u32 v)
-{
-	addrbank *ab = &get_mem_bank(addr);
-	if (!ab->baseaddr_direct_w) {
-		call_mem_put_func(ab->lput, addr, v);
-	} else {
-		uae_u8 *m;
-		addr -= ab->startaccessmask;
-		addr &= ab->mask;
-		m = ab->baseaddr_direct_w + addr;
-		do_put_mem_long((uae_u32*)m, v);
-	}
-}
-void memory_put_word(uaecptr addr, uae_u32 v)
-{
-	addrbank *ab = &get_mem_bank(addr);
-	if (!ab->baseaddr_direct_w) {
-		call_mem_put_func(ab->wput, addr, v);
-	} else {
-		uae_u8 *m;
-		addr -= ab->startaccessmask;
-		addr &= ab->mask;
-		m = ab->baseaddr_direct_w + addr;
-		do_put_mem_word((uae_u16*)m, v);
-	}
-}
-void memory_put_byte(uaecptr addr, uae_u32 v)
-{
-	addrbank *ab = &get_mem_bank(addr);
-	if (!ab->baseaddr_direct_w) {
-		call_mem_put_func(ab->bput, addr, v);
-	} else {
-		uae_u8 *m;
-		addr -= ab->startaccessmask;
-		addr &= ab->mask;
-		m = ab->baseaddr_direct_w + addr;
-		*m = (uae_u8)v;
-	}
-}
-
-uae_u8 *memory_get_real_address(uaecptr addr)
-{
-	addrbank *ab = &get_mem_bank(addr);
-	if (!ab->baseaddr_direct_r) {
-		return get_mem_bank(addr).xlateaddr(addr);
-	} else {
-		addr -= ab->startaccessmask;
-		addr &= ab->mask;
-		return ab->baseaddr_direct_r + addr;
-	}
-}
+// Out-of-line versions of the memory.h inline accessors (used by the JIT).
+uae_u32 memory_get_longi(uaecptr addr) { return get_longi(addr); }
+uae_u32 memory_get_wordi(uaecptr addr) { return get_wordi(addr); }
+uae_u32 memory_get_long(uaecptr addr) { return get_long(addr); }
+uae_u32 memory_get_word(uaecptr addr) { return get_word(addr); }
+uae_u32 memory_get_byte(uaecptr addr) { return get_byte(addr); }
+void memory_put_long(uaecptr addr, uae_u32 v) { put_long(addr, v); }
+void memory_put_word(uaecptr addr, uae_u32 v) { put_word(addr, v); }
+void memory_put_byte(uaecptr addr, uae_u32 v) { put_byte(addr, v); }
 
 int memory_valid_address(uaecptr addr, uae_u32 size)
 {

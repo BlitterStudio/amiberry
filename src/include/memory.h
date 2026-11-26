@@ -568,8 +568,7 @@ uae_u32 memory_get_byte(uaecptr);
 uae_u32 memory_get_longi(uaecptr);
 uae_u32 memory_get_wordi(uaecptr);
 
-// Inline copies of memory_get_*()/memory_put_*() for the interpreter: banks
-// with direct backing are read and written here, others go to their handlers.
+// Banks with direct backing are read and written here, others go to their handlers.
 #define MEMORY_DIRECT_GET(func, type, getter) \
 	addrbank *ab = &get_mem_bank(addr); \
 	if (ab->baseaddr_direct_r) \
@@ -817,7 +816,6 @@ STATIC_INLINE void put_pointer (uaecptr addr, void *v)
 }
 
 bool real_address_allowed(void);
-uae_u8 *memory_get_real_address(uaecptr);
 int memory_valid_address(uaecptr, uae_u32);
 
 STATIC_INLINE uae_u8 *get_real_address (uaecptr addr)
