@@ -3852,14 +3852,12 @@ static bool fp_arithmetic(fpdata *src, fpdata *dst, int extra)
 // Opmodes handled by fp_exact_fast_arith(), so others skip the call
 static inline bool fp_fast_arith_op(uae_u16 extra)
 {
-	static constexpr uae_u64 lo = (1ULL << 0x00) | (1ULL << 0x01) | (1ULL << 0x03) | (1ULL << 0x04)
-		| (1ULL << 0x18) | (1ULL << 0x1a) | (1ULL << 0x20) | (1ULL << 0x22) | (1ULL << 0x23)
-		| (1ULL << 0x28) | (1ULL << 0x38) | (1ULL << 0x3a);
-	static constexpr uae_u64 hi = (1ULL << (0x40 - 64)) | (1ULL << (0x41 - 64)) | (1ULL << (0x44 - 64))
-		| (1ULL << (0x45 - 64)) | (1ULL << (0x58 - 64)) | (1ULL << (0x5a - 64)) | (1ULL << (0x5c - 64))
-		| (1ULL << (0x5e - 64)) | (1ULL << (0x60 - 64)) | (1ULL << (0x62 - 64)) | (1ULL << (0x63 - 64))
-		| (1ULL << (0x64 - 64)) | (1ULL << (0x66 - 64)) | (1ULL << (0x67 - 64)) | (1ULL << (0x68 - 64))
-		| (1ULL << (0x6c - 64));
+#define FP_FAST_LO(mode, kind, prec) | ((mode) < 64 ? 1ULL << ((mode) & 63) : 0)
+#define FP_FAST_HI(mode, kind, prec) | ((mode) >= 64 ? 1ULL << ((mode) & 63) : 0)
+	static constexpr uae_u64 lo = 0 FP_FAST_ARITH_OPS(FP_FAST_LO);
+	static constexpr uae_u64 hi = 0 FP_FAST_ARITH_OPS(FP_FAST_HI);
+#undef FP_FAST_LO
+#undef FP_FAST_HI
 	const unsigned op = extra & 0x7f;
 	return (((op & 0x40) ? hi : lo) >> (op & 63)) & 1;
 }

@@ -183,34 +183,10 @@ bool fp_exact_fast_arith(fpdata *dst, const fpdata *src, uae_u16 extra)
 	int kind, prec = 0;
 	bool dyadic = true;
 	switch (extra & 0x7f) {
-	case 0x00: kind = FK_MOVE; dyadic = false; break;
-	case 0x40: kind = FK_MOVE; dyadic = false; prec = 32; break;
-	case 0x44: kind = FK_MOVE; dyadic = false; prec = 64; break;
-	case 0x22: kind = FK_ADD; break;
-	case 0x62: kind = FK_ADD; prec = 32; break;
-	case 0x66: kind = FK_ADD; prec = 64; break;
-	case 0x28: kind = FK_SUB; break;
-	case 0x68: kind = FK_SUB; prec = 32; break;
-	case 0x6c: kind = FK_SUB; prec = 64; break;
-	case 0x23: kind = FK_MUL; break;
-	case 0x63: kind = FK_MUL; prec = 32; break;
-	case 0x67: kind = FK_MUL; prec = 64; break;
-	case 0x20: kind = FK_DIV; break;
-	case 0x60: kind = FK_DIV; prec = 32; break;
-	case 0x64: kind = FK_DIV; prec = 64; break;
-	case 0x04: kind = FK_SQRT; dyadic = false; break;
-	case 0x41: kind = FK_SQRT; dyadic = false; prec = 32; break;
-	case 0x45: kind = FK_SQRT; dyadic = false; prec = 64; break;
-	case 0x18: kind = FK_ABS; dyadic = false; break;
-	case 0x58: kind = FK_ABS; dyadic = false; prec = 32; break;
-	case 0x5c: kind = FK_ABS; dyadic = false; prec = 64; break;
-	case 0x1a: kind = FK_NEG; dyadic = false; break;
-	case 0x5a: kind = FK_NEG; dyadic = false; prec = 32; break;
-	case 0x5e: kind = FK_NEG; dyadic = false; prec = 64; break;
-	case 0x38: kind = FK_CMP; break;
-	case 0x3a: kind = FK_TST; dyadic = false; break;
-	case 0x01: kind = FK_INT; dyadic = false; break;
-	case 0x03: kind = FK_INTRZ; dyadic = false; break;
+#define FP_FAST_CASE(mode, k, p) case mode: kind = FK_##k; prec = p; \
+		dyadic = FK_##k == FK_ADD || FK_##k == FK_SUB || FK_##k == FK_MUL || FK_##k == FK_DIV || FK_##k == FK_CMP; break;
+	FP_FAST_ARITH_OPS(FP_FAST_CASE)
+#undef FP_FAST_CASE
 	default:
 		return false;
 	}
