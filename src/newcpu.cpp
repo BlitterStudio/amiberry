@@ -11003,24 +11003,9 @@ static bool maybe_icache030(uae_u32 addr)
 	return false;
 }
 
-static void fill_icache030(uae_u32 addr)
+static NOINLINE void fill_icache030_miss(uae_u32 addr, struct cache030 *c, uae_u32 tag, int lws)
 {
-	int lws;
-	uae_u32 tag;
 	uae_u32 data;
-	struct cache030 *c;
-
-	regs.fc030 = (regs.s ? 4 : 0) | 2;
-	addr &= ~3;
-	if (regs.cacheholdingaddr020 == addr || regs.cacheholdingdata_valid == 0)
-		return;
-	c = geticache030 (icaches030, addr, &tag, &lws);
-	if ((regs.cacr & 1) && c->valid[lws] && c->tag == tag) {
-		// cache hit
-		regs.cacheholdingaddr020 = addr;
-		regs.cacheholdingdata020 = c->data[lws];
-		return;
-	}
 
 	TRY (prb2) {
 		// cache miss
@@ -11102,6 +11087,27 @@ static void fill_icache030(uae_u32 addr)
 	}
 	regs.cacheholdingaddr020 = addr;
 	regs.cacheholdingdata020 = data;
+}
+
+// Holding register and cache hits are inlined; misses go out of line.
+static inline __attribute__((always_inline)) void fill_icache030(uae_u32 addr)
+{
+	int lws;
+	uae_u32 tag;
+	struct cache030 *c;
+
+	regs.fc030 = (regs.s ? 4 : 0) | 2;
+	addr &= ~3;
+	if (regs.cacheholdingaddr020 == addr || regs.cacheholdingdata_valid == 0)
+		return;
+	c = geticache030 (icaches030, addr, &tag, &lws);
+	if ((regs.cacr & 1) && c->valid[lws] && c->tag == tag) {
+		// cache hit
+		regs.cacheholdingaddr020 = addr;
+		regs.cacheholdingdata020 = c->data[lws];
+		return;
+	}
+	fill_icache030_miss(addr, c, tag, lws);
 }
 
 #if VALIDATE_68030_DATACACHE
@@ -12330,7 +12336,7 @@ static void reset_pipeline_state()
 #endif
 }
 
-static int add_prefetch_030(int idx, uae_u16 w, uaecptr pc)
+static inline __attribute__((always_inline)) int add_prefetch_030_inline(int idx, uae_u16 w, uaecptr pc)
 {
 	regs.prefetch020[0] = regs.prefetch020[1];
 	regs.prefetch020_valid[0] = regs.prefetch020_valid[1];
@@ -12355,6 +12361,12 @@ static int add_prefetch_030(int idx, uae_u16 w, uaecptr pc)
 	return idx + 1;
 }
 
+// The 68030 refill paths force this inline; the 68020 path leaves it to the compiler.
+static int add_prefetch_030(int idx, uae_u16 w, uaecptr pc)
+{
+	return add_prefetch_030_inline(idx, w, pc);
+}
+
 void fill_prefetch_030_ntx()
 {
 	uaecptr pc = m68k_getpc ();
@@ -12370,18 +12382,18 @@ void fill_prefetch_030_ntx()
 
 	fill_icache030(pc);
 	if (pc2 & 2) {
-		idx = add_prefetch_030(idx, regs.cacheholdingdata020, pc2);
+		idx = add_prefetch_030_inline(idx, regs.cacheholdingdata020, pc2);
 	} else {
-		idx = add_prefetch_030(idx, regs.cacheholdingdata020 >>	16, pc2);
-		idx = add_prefetch_030(idx, regs.cacheholdingdata020, pc2);
+		idx = add_prefetch_030_inline(idx, regs.cacheholdingdata020 >>	16, pc2);
+		idx = add_prefetch_030_inline(idx, regs.cacheholdingdata020, pc2);
 	}
 
 	fill_icache030(pc + 4);
 	if (pc2 & 2) {
-		idx = add_prefetch_030(idx, regs.cacheholdingdata020 >>	16, pc2);
-		idx = add_prefetch_030(idx, regs.cacheholdingdata020, pc2);
+		idx = add_prefetch_030_inline(idx, regs.cacheholdingdata020 >>	16, pc2);
+		idx = add_prefetch_030_inline(idx, regs.cacheholdingdata020, pc2);
 	} else {
-		idx = add_prefetch_030(idx, regs.cacheholdingdata020 >>	16, pc2);
+		idx = add_prefetch_030_inline(idx, regs.cacheholdingdata020 >>	16, pc2);
 	}
 
 	ipl_fetch_now();
@@ -12464,21 +12476,21 @@ void fill_prefetch_030_ntx_continue ()
 
 		fill_icache030(pc);
 		if (pc2 & 2) {
-			idx = add_prefetch_030(idx, regs.cacheholdingdata020, pc_orig);
+			idx = add_prefetch_030_inline(idx, regs.cacheholdingdata020, pc_orig);
 		} else {
-			idx = add_prefetch_030(idx, regs.cacheholdingdata020 >> 16, pc_orig);
+			idx = add_prefetch_030_inline(idx, regs.cacheholdingdata020 >> 16, pc_orig);
 			if (idx < 3)
-				idx = add_prefetch_030(idx, regs.cacheholdingdata020, pc_orig);
+				idx = add_prefetch_030_inline(idx, regs.cacheholdingdata020, pc_orig);
 		}
 
 		if (idx < 3) {
 			fill_icache030(pc + 4);
 			if (pc2 & 2) {
-				idx = add_prefetch_030(idx, regs.cacheholdingdata020 >>	16, pc_orig);
+				idx = add_prefetch_030_inline(idx, regs.cacheholdingdata020 >>	16, pc_orig);
 				if (idx < 3)
-					idx = add_prefetch_030(idx, regs.cacheholdingdata020, pc_orig);
+					idx = add_prefetch_030_inline(idx, regs.cacheholdingdata020, pc_orig);
 			} else {
-				idx = add_prefetch_030(idx, regs.cacheholdingdata020 >>	16, pc_orig);
+				idx = add_prefetch_030_inline(idx, regs.cacheholdingdata020 >>	16, pc_orig);
 			}
 		}
 	}
