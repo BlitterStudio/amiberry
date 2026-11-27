@@ -57,6 +57,12 @@ extern int mmu_pageshift, mmu_pageshift1m;
 extern uae_u16 mmu_opcode;
 extern bool mmu_restart;
 extern bool mmu_ttr_enabled, mmu_ttr_enabled_ins, mmu_ttr_enabled_data;
+// Write fast path for addresses not translated by the page tables: the cache
+// state of a data write that hits a writable DTT, or that misses both DTTs with
+// translation and DWO off, indexed by (regs.s << 8) | (addr >> 24). TTRs match
+// on A31-A24 only. MMU_WRITE_REGION_SLOW sends the write to the shortcut cache.
+#define MMU_WRITE_REGION_SLOW 0xff
+extern uae_u8 mmu_write_region[512];
 extern bool rmw_cycle;
 extern uae_u8 mmu_cache_state;
 extern uae_u8 cache_default_ins, cache_default_data;
@@ -342,9 +348,12 @@ extern int mmu_data_write_hit, mmu_data_write_miss;
 extern bool mmu_phys_plain;
 extern uaecptr REGPARAM3 mmu_translate_ins_slow(uaecptr addr, int size) REGPARAM;
 extern uaecptr REGPARAM3 mmu_translate_data_read_slow(uaecptr addr, int size) REGPARAM;
+extern uaecptr REGPARAM3 mmu_translate_data_write_slow(uaecptr addr, uae_u32 val, int size) REGPARAM;
 
 // The shortcut caches also hold TTR hits and MMU-off identity mappings, so a
 // hit skips the TTR decode entirely. They are flushed on TC/TTR/ATC changes.
+// The write cache only holds writable translations: write-protected TTR hits
+// fault in mmu_translate_data_write_slow, and ATC entries are added once M is set.
 static ALWAYS_INLINE uaecptr mmu_translate_ins(uaecptr addr, int size)
 {
 	if (likely(((addr & mmu_pagemaski) | regs.s) == atc_last_ins_laddr)) {
@@ -363,6 +372,23 @@ static ALWAYS_INLINE uaecptr mmu_translate_data_read(uaecptr addr, int size)
 		return atc_data_cache_read[idx2].phys | (addr & mmu_pagemask);
 	}
 	return mmu_translate_data_read_slow(addr, size);
+}
+
+static ALWAYS_INLINE uaecptr mmu_translate_data_write(uaecptr addr, uae_u32 val, int size)
+{
+	// The address stays as it is, so the store does not wait for a table load.
+	uae_u8 cs = mmu_write_region[(regs.s << 8) | (addr >> 24)];
+	if (likely(cs != MMU_WRITE_REGION_SLOW)) {
+		mmu_cache_state = cs;
+		return addr;
+	}
+	uae_u32 idx1 = ((addr & mmu_pagemaski) >> mmu_pageshift1m) | regs.s;
+	uae_u32 idx2 = idx1 & (MMUFASTCACHE_ENTRIES - 1);
+	if (likely(atc_data_cache_write[idx2].log == idx1)) {
+		mmu_cache_state = atc_data_cache_write[idx2].cache_state;
+		return atc_data_cache_write[idx2].phys | (addr & mmu_pagemask);
+	}
+	return mmu_translate_data_write_slow(addr, val, size);
 }
 
 static ALWAYS_INLINE uae_u32 mmu_get_ilong(uaecptr addr, int size)
@@ -416,6 +442,14 @@ static ALWAYS_INLINE uae_u8 mmu_get_byte(uaecptr addr, bool data, int size)
 
 static ALWAYS_INLINE void mmu_put_long(uaecptr addr, uae_u32 val, bool data, int size)
 {
+	if (data) {
+		addr = mmu_translate_data_write(addr, val, size);
+		if (likely(mmu_phys_plain))
+			phys_put_long(addr, val);
+		else
+			x_phys_put_long(addr, val);
+		return;
+	}
 	mmu_cache_state = cache_default_data;
 	if ((!mmu_ttr_enabled || mmu_match_ttr_write(addr,regs.s!=0,data,val,size) == TTR_NO_MATCH) && regs.mmu_enabled) {
 #if MMU_DPAGECACHE
@@ -442,6 +476,14 @@ static ALWAYS_INLINE void mmu_put_long(uaecptr addr, uae_u32 val, bool data, int
 
 static ALWAYS_INLINE void mmu_put_word(uaecptr addr, uae_u16 val, bool data, int size)
 {
+	if (data) {
+		addr = mmu_translate_data_write(addr, val, size);
+		if (likely(mmu_phys_plain))
+			phys_put_word(addr, val);
+		else
+			x_phys_put_word(addr, val);
+		return;
+	}
 	mmu_cache_state = cache_default_data;
 	if ((!mmu_ttr_enabled || mmu_match_ttr_write(addr,regs.s!=0,data,val,size) == TTR_NO_MATCH) && regs.mmu_enabled) {
 #if MMU_DPAGECACHE
@@ -468,6 +510,14 @@ static ALWAYS_INLINE void mmu_put_word(uaecptr addr, uae_u16 val, bool data, int
 
 static ALWAYS_INLINE void mmu_put_byte(uaecptr addr, uae_u8 val, bool data, int size)
 {
+	if (data) {
+		addr = mmu_translate_data_write(addr, val, size);
+		if (likely(mmu_phys_plain))
+			phys_put_byte(addr, val);
+		else
+			x_phys_put_byte(addr, val);
+		return;
+	}
 	mmu_cache_state = cache_default_data;
 	if ((!mmu_ttr_enabled || mmu_match_ttr_write(addr,regs.s!=0,data,val,size) == TTR_NO_MATCH) && regs.mmu_enabled) {
 #if MMU_DPAGECACHE

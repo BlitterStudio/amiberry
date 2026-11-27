@@ -63,6 +63,7 @@ static bool locked_rmw_cycle;
 bool rmw_cycle;
 static bool ismoves;
 bool mmu_ttr_enabled, mmu_ttr_enabled_ins, mmu_ttr_enabled_data;
+uae_u8 mmu_write_region[512];
 int mmu_atc_ways[2];
 int way_random;
 
@@ -134,12 +135,37 @@ void mmu_make_transparent_region(uaecptr baseaddr, uae_u32 size, int datamode)
 
 static void flush_shortcut_cache(uaecptr addr, bool super);
 
+// Mirrors mmu_match_ttr_write() and the regs.mmu_enabled test in mmu_put_*.
+static void mmu_update_write_region(uae_u32 tc)
+{
+	uae_u8 saved = mmu_cache_state;
+	for (int super = 0; super < 2; super++) {
+		for (int r = 0; r < 256; r++) {
+			uaecptr addr = (uaecptr)r << 24;
+			uae_u8 cs = MMU_WRITE_REGION_SLOW;
+			int res = TTR_NO_MATCH;
+			if (mmu_ttr_enabled) {
+				res = mmu_do_match_ttr(regs.dtt0, addr, super != 0);
+				if (res == TTR_NO_MATCH)
+					res = mmu_do_match_ttr(regs.dtt1, addr, super != 0);
+			}
+			if (res == TTR_OK_MATCH)
+				cs = mmu_cache_state;
+			else if (res == TTR_NO_MATCH && !regs.mmu_enabled && !(tc & MMU_TCR_DWO))
+				cs = cache_default_data;
+			mmu_write_region[(super << 8) | r] = cs;
+		}
+	}
+	mmu_cache_state = saved;
+}
+
 void mmu_tt_modified (void)
 {
 	flush_shortcut_cache(0xffffffff, 0);
 	mmu_ttr_enabled_ins = ((regs.itt0 | regs.itt1) & MMU_TTR_BIT_ENABLED) != 0;
 	mmu_ttr_enabled_data = ((regs.dtt0 | regs.dtt1) & MMU_TTR_BIT_ENABLED) != 0;
 	mmu_ttr_enabled = mmu_ttr_enabled_ins || mmu_ttr_enabled_data;
+	mmu_update_write_region(regs.tcr);
 }
 
 
@@ -801,6 +827,21 @@ uaecptr REGPARAM2 mmu_translate_data_read_slow(uaecptr addr, int size)
 		return mmu_translate(addr, 0, super, true, false, size);
 	if (ttr != TTR_NO_MATCH || mmu_phys_plain)
 		mmu_add_cache(addr, addr & mmu_pagemaski, super, true, false);
+	return addr;
+}
+
+uaecptr REGPARAM2 mmu_translate_data_write_slow(uaecptr addr, uae_u32 val, int size)
+{
+	bool super = regs.s != 0;
+	mmu_cache_state = cache_default_data;
+	int ttr = TTR_NO_MATCH;
+	if (mmu_ttr_enabled)
+		ttr = mmu_match_ttr_write(addr, super, true, val, size);
+	if (ttr == TTR_NO_MATCH && regs.mmu_enabled)
+		return mmu_translate(addr, val, super, true, true, size);
+	// TTR_NO_WRITE has already faulted, so this is a writable identity mapping.
+	if (ttr != TTR_NO_MATCH || mmu_phys_plain)
+		mmu_add_cache(addr, addr & mmu_pagemaski, super, true, true);
 	return addr;
 }
 
@@ -1549,6 +1590,7 @@ uae_u16 REGPARAM2 mmu_set_tc(uae_u16 tc)
 			cache_default_data = (dc & 1) ? CACHE_ENABLE_COPYBACK | CACHE_ENABLE_ALL : CACHE_ENABLE_ALL;
 	}
 
+	mmu_update_write_region(tc);
 	mmu_flush_atc_all(true);
 
 	write_log(_T("%d MMU: TC=%04x enabled=%d page8k=%d PC=%08x\n"), currprefs.mmu_model, tc, regs.mmu_enabled, mmu_pagesize_8k, m68k_getpc());

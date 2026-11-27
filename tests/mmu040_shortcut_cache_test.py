@@ -8,7 +8,8 @@ between reads: a data TTR stops (and starts) covering the page, the MMU is
 enabled after an MMU-off read, the page size switches between 4K and 8K,
 user and supervisor see different mappings, an exception goes through the
 vector page, and a page is covered by a data TTR but not an instruction TTR.
-Checks that every read sees the physical page the hardware would.
+It also writes such pages, including through a write-protected data TTR.
+Checks that every access reaches the physical page the hardware would.
 
 Usage: mmu040_shortcut_cache_test.py <path-to-amiberry-binary>
 """
@@ -30,7 +31,8 @@ ROM_CODE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "mmu
 ROM_SIZE = 512 * 1024
 RESULTS = 0x2000
 FIELDS = ["magic", "unexp", "1a", "1b", "1c", "1d", "2a", "2b", "2c", "3a", "3b", "3c", "3d",
-          "4a", "4b", "4c", "4d", "4e", "4f", "4g", "5a", "5b", "5c", "5x", "6a", "6c", "6d", "6e"]
+          "4a", "4b", "4c", "4d", "4e", "4f", "4g", "5a", "5b", "5c", "5x", "6a", "6c", "6d", "6e",
+          "7a", "7b", "7c", "7d", "7e", "7g"]
 failures = []
 
 
@@ -204,6 +206,12 @@ def main():
                 expect(r, p, "6c", "REMP", "DTT0 only: code fetch remapped")
                 expect(r, p, "6d", "IDEN", "DTT0 and ITT0: code fetch untranslated")
                 expect(r, p, "6e", "REMP", "ITT0 disabled again: code fetch remapped")
+                expect(r, p, "7a", "W7A ", "DTT0 covering the page: write untranslated")
+                expect(r, p, "7b", "W7B ", "DTT0 disabled: page tables remap the write")
+                expect(r, p, "7c", "W7C ", "MMU off: write untranslated")
+                expect(r, p, "7d", "W7D ", "MMU enabled: page tables remap the write")
+                expect(r, p, "7e", "W7E ", "write-protected DTT0: write not performed")
+                expect(r, p, "7g", "FALT", "write-protected DTT0: write takes an access fault")
     finally:
         shutil.rmtree(work, ignore_errors=True)
     if failures:
