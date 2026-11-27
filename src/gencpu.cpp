@@ -4605,6 +4605,32 @@ static void genmovemel(uae_u16 opcode)
 	} else if (using_mmu == 68040) {
 		movem_mmu040 (getcode, size, false, table68k[opcode].dmode == Aipi, false, opcode);
 	} else {
+		bool direct = size == 4 && !strcmp(srcld, "get_long") && !needbuserror();
+		if (direct) {
+			out("uae_u32 m = mask;\n");
+			out("addrbank *ab = movem_bank(srca);\n");
+			out("uae_u8 *mp = ab ? movem_direct(ab, ab->baseaddr_direct_r, srca) : NULL;\n");
+			out("if (mp) {\n");
+			out("while (m) {\n");
+			out("regs.regs[movem_ctz(m)] = do_get_mem_long((uae_u32 *)mp);\n");
+			if (cpu_level <= 3) {
+				addcycles000_nonce(cpu_level <= 1 ? size * 2 : 4);
+			}
+			out("mp += 4;\n");
+			out("srca += 4;\n");
+			out("m &= m - 1;\n");
+			out("}\n");
+			out("} else if (ab && (ab->flags & ABFLAG_RAM)) {\n");
+			out("while (m) {\n");
+			out("regs.regs[movem_ctz(m)] = call_mem_get_func(ab->lget, srca);\n");
+			if (cpu_level <= 3) {
+				addcycles000_nonce(cpu_level <= 1 ? size * 2 : 4);
+			}
+			out("srca += 4;\n");
+			out("m &= m - 1;\n");
+			out("}\n");
+			out("} else {\n");
+		}
 		out("while (dmask) {\n");
 		out("m68k_dreg(regs, movem_index1[dmask]) = %s;\n", getcode);
 		if (cpu_level <= 3) {
@@ -4623,6 +4649,9 @@ static void genmovemel(uae_u16 opcode)
 		out("srca += %d;\n", size);
 		out("amask = movem_next[amask];\n");
 		out("}\n");
+		if (direct) {
+			out("}\n");
+		}
 		if (table68k[opcode].dmode == Aipi) {
 			out("m68k_areg(regs, dstreg) = srca;\n");
 		}
@@ -4754,10 +4783,45 @@ static void genmovemle(uae_u16 opcode)
 			movem_mmu040(putcode, size, true, false, table68k[opcode].dmode == Apdi, opcode);
 		}
 	} else {
+		bool direct = size == 4 && !strcmp(dstld, "put_long") && !needbuserror();
 		if (table68k[opcode].dmode == Apdi) {
 			out("uae_u16 amask = mask & 0xff, dmask = (mask >> 8) & 0xff;\n");
 			movem_ex3(1);
 			out("int type = %d;\n", cpu_level > 1);
+			if (direct) {
+				out("uae_u32 m = mask;\n");
+				out("addrbank *ab = movem_bank(srca - MOVEM_DIRECT_WINDOW);\n");
+				out("uae_u8 *mp = ab ? movem_direct(ab, ab->baseaddr_direct_w, srca - MOVEM_DIRECT_WINDOW) : NULL;\n");
+				for (int pass = 0; pass < 2; pass++) {
+					if (!pass) {
+						out("if (mp) {\n");
+						out("mp += MOVEM_DIRECT_WINDOW;\n");
+					} else {
+						out("} else if (ab && (ab->flags & ABFLAG_RAM)) {\n");
+					}
+					out("while (m) {\n");
+					out("int r = 15 - movem_ctz(m);\n");
+					out("uae_u32 v = regs.regs[r];\n");
+					if (cpu_level > 1) {
+						out("if (r == dstreg + 8) {\n");
+						out("v -= 4;\n");
+						out("}\n");
+					}
+					out("srca -= 4;\n");
+					if (!pass) {
+						out("mp -= 4;\n");
+						out("do_put_mem_long((uae_u32 *)mp, v);\n");
+					} else {
+						out("call_mem_put_func(ab->lput, srca, v);\n");
+					}
+					if (cpu_level <= 3) {
+						addcycles000_nonce(cpu_level <= 1 ? size * 2 : 4);
+					}
+					out("m &= m - 1;\n");
+					out("}\n");
+				}
+				out("} else {\n");
+			}
 			out("while (amask) {\n");
 			out("srca -= %d;\n", size);
 
@@ -4789,9 +4853,34 @@ static void genmovemle(uae_u16 opcode)
 			check_bus_error("src", 0, 1, table68k[opcode].size, "m68k_dreg(regs, movem_index2[dmask])", 1, 0);
 			out("dmask = movem_next[dmask];\n");
 			out("}\n");
+			if (direct) {
+				out("}\n");
+			}
 			out("m68k_areg(regs, dstreg) = srca;\n");
 		} else {
 			out("uae_u16 dmask = mask & 0xff, amask = (mask >> 8) & 0xff;\n");
+			if (direct) {
+				out("uae_u32 m = mask;\n");
+				out("addrbank *ab = movem_bank(srca);\n");
+				out("uae_u8 *mp = ab ? movem_direct(ab, ab->baseaddr_direct_w, srca) : NULL;\n");
+				for (int pass = 0; pass < 2; pass++) {
+					out(pass ? "} else if (ab && (ab->flags & ABFLAG_RAM)) {\n" : "if (mp) {\n");
+					out("while (m) {\n");
+					if (!pass) {
+						out("do_put_mem_long((uae_u32 *)mp, regs.regs[movem_ctz(m)]);\n");
+						out("mp += 4;\n");
+					} else {
+						out("call_mem_put_func(ab->lput, srca, regs.regs[movem_ctz(m)]);\n");
+						out("srca += 4;\n");
+					}
+					if (cpu_level <= 3) {
+						addcycles000_nonce(cpu_level <= 1 ? size * 2 : 4);
+					}
+					out("m &= m - 1;\n");
+					out("}\n");
+				}
+				out("} else {\n");
+			}
 			out("while (dmask) {\n");
 			out("%s, m68k_dreg(regs, movem_index1[dmask]));\n", putcode);
 			if (cpu_level <= 3) {
@@ -4810,6 +4899,9 @@ static void genmovemle(uae_u16 opcode)
 			out("srca += %d;\n", size);
 			out("amask = movem_next[amask];\n");
 			out("}\n");
+			if (direct) {
+				out("}\n");
+			}
 		}
 		if (!next_level_040_to_030())
 			next_level_020_to_010();
