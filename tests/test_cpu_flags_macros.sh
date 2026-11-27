@@ -12,8 +12,10 @@ mkdir -p "$work"
 
 # The x86-64 GCC/clang build always takes the lahf/seto asm macros, so the
 # portable fallback is checked on that layout by re-reading the header's
-# fallback block after the test drops the asm definitions.
+# fallback block after the test drops the asm definitions. CRs are stripped
+# first: a CRLF checkout would otherwise never match the bare #endif lines.
 awk '
+	{ sub(/\r$/, "") }
 	/^#ifndef SET_CZNV_ADDL/ { on = 1 }
 	on { print; if ($1 ~ /^#if/) depth++; else if ($1 == "#endif" && --depth == 0) exit }
 ' src/machdep/m68k.h > "$work/fallback.h"
