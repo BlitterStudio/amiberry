@@ -940,6 +940,103 @@ static void test_pointer_inside_window_does_not_grow_crop()
 	expect_eq(right, 750, "Growth past the window's right edge must be kept");
 }
 
+// Register window 58..716 x 38..550 on a 752-wide surface; a scroller in the
+// side borders reaches 12..748 (Disorder's Megademo 2, #2758).
+static constexpr AmiberryAutoCropRect retention_source = { 58, 38, 658, 512 };
+static constexpr AmiberryAutoCropRect retention_wide = { 12, 38, 736, 512 };
+static constexpr AmiberryAutoCropOutsideTiming retention_timing = { 25, 12, 75 };
+
+static AmiberryAutoCropRect retain(AmiberryAutoCropOutsideRetention& state,
+	AmiberryAutoCropRect fresh, const unsigned frame)
+{
+	amiberry_auto_crop_retain_outside_content(state, retention_source, fresh, frame,
+		retention_timing);
+	return fresh;
+}
+
+static bool confirm_unchanged(AmiberryAutoCropOutsideRetention& state,
+	const unsigned frame, AmiberryAutoCropRect& kept)
+{
+	return amiberry_auto_crop_retention_confirm_unchanged(state, frame,
+		retention_timing, kept);
+}
+
+// Pinball Illusions flashes full-width content for about 16 frames.
+static void test_short_effect_does_not_grow_crop()
+{
+	AmiberryAutoCropOutsideRetention state{};
+	amiberry_auto_crop_retention_reset(state, retention_source, 1);
+	AmiberryAutoCropRect kept{};
+	for (unsigned frame = 10; frame <= 26; frame++) {
+		kept = retain(state, retention_wide, frame);
+	}
+	expect_eq(kept.w, retention_source.w, "A 16-frame effect must not grow the crop");
+	kept = retain(state, retention_source, 27);
+	for (unsigned frame = 28; frame <= 60; frame++) {
+		expect_true(!confirm_unchanged(state, frame, kept),
+			"An effect gone by the last scan must leave nothing to confirm");
+	}
+	kept = retain(state, retention_wide, 60);
+	expect_eq(kept.w, retention_source.w, "A later effect must start its own count");
+}
+
+static void test_persistent_content_grows_crop()
+{
+	AmiberryAutoCropOutsideRetention state{};
+	amiberry_auto_crop_retention_reset(state, retention_source, 1);
+	AmiberryAutoCropRect kept{};
+	// Animated content: a scan after every trigger back-off.
+	for (unsigned frame = 10; frame < 37; frame += 9) {
+		kept = retain(state, retention_wide, frame);
+		expect_eq(kept.w, retention_source.w, "Content must persist before the crop grows");
+	}
+	kept = retain(state, retention_wide, 37);
+	expect_eq(kept.x, retention_wide.x, "Persistent content must grow the left edge");
+	expect_eq(kept.w, retention_wide.w, "Persistent content must grow the right edge");
+
+	amiberry_auto_crop_retention_reset(state, retention_source, 1);
+	retain(state, retention_wide, 10);
+	kept = retain(state, retention_wide, 30);
+	kept = retain(state, retention_wide, 40);
+	expect_eq(kept.w, retention_source.w, "Looks further apart than the gap must start over");
+
+	amiberry_auto_crop_retention_reset(state, retention_source, 1);
+	retain(state, { 40, 38, 676, 512 }, 10);
+	retain(state, retention_wide, 19);
+	retain(state, retention_wide, 28);
+	kept = retain(state, retention_wide, 37);
+	expect_eq(kept.x, 40, "Growth must stop where every look saw content");
+
+	// Static content: the scan sees it once, then the signature stays the same.
+	amiberry_auto_crop_retention_reset(state, retention_source, 1);
+	retain(state, retention_wide, 10);
+	for (unsigned frame = 11; frame < 35; frame++) {
+		expect_true(!confirm_unchanged(state, frame, kept),
+			"Unchanged frames must not grow the crop before the content persisted");
+	}
+	expect_true(confirm_unchanged(state, 35, kept),
+		"Unchanged outside regions must grow the crop once the content persisted");
+	expect_eq(kept.x, retention_wide.x, "A confirmation without a scan must grow the crop");
+	expect_true(!confirm_unchanged(state, 36, kept), "Kept content must leave nothing to confirm");
+}
+
+static void test_outside_content_expires_after_gaps()
+{
+	AmiberryAutoCropOutsideRetention state{};
+	amiberry_auto_crop_retention_reset(state, retention_wide, 1);
+	AmiberryAutoCropRect kept = retain(state, retention_source, 76);
+	expect_eq(kept.w, retention_wide.w, "A side must stay kept through a gap");
+	kept = retain(state, { 30, 38, 686, 512 }, 150);
+	expect_eq(kept.x, retention_wide.x,
+		"Partial content past the window must keep the side's full extent");
+	expect_eq(kept.x + kept.w, retention_source.x + retention_source.w,
+		"A side empty past the expiry must shrink");
+	kept = retain(state, retention_source, 225);
+	expect_eq(kept.x, retention_wide.x, "The expiry must count from the last sighting");
+	kept = retain(state, retention_source, 226);
+	expect_eq(kept.x, retention_source.x, "The other side must shrink after its expiry");
+}
+
 int main()
 {
 	test_expands_to_connected_visible_content();
@@ -970,6 +1067,9 @@ int main()
 	test_vertical_transition_keeps_genuine_two_edge_content();
 	test_repeated_vertical_translation_does_not_form_a_union();
 	test_window_wider_than_fetch_narrows_to_picture();
+	test_short_effect_does_not_grow_crop();
+	test_persistent_content_grows_crop();
+	test_outside_content_expires_after_gaps();
 	test_fetch_wider_than_window_keeps_window();
 	test_scrolling_fetch_does_not_move_the_crop();
 	test_pointer_inside_window_does_not_grow_crop();

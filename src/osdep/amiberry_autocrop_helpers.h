@@ -1014,4 +1014,162 @@ static inline void amiberry_auto_crop_ignore_growth_inside_window(
 	}
 }
 
+// Visible content outside the register window, kept per side (left, top,
+// right, bottom) between scans. A side grows only after looks spanning
+// persist_frames kept finding content past it, none further apart than
+// gap_frames; it grows to the extent every one of those looks reached. A look
+// is a scan, or a frame whose outside signature still matches a scan that saw
+// the content. Short effects (Pinball Illusions' 0.3 s full-width flashes)
+// therefore never resize the picture. A side shrinks back once no scan has
+// shown content past the register window on that side for expiry_frames, so
+// content that comes and goes (a scroller in the side borders, gaps and all)
+// keeps the crop still while an effect that ended releases it.
+struct AmiberryAutoCropOutsideTiming {
+	unsigned persist_frames;
+	unsigned gap_frames;
+	unsigned expiry_frames;
+};
+
+struct AmiberryAutoCropOutsideRetention {
+	int kept[4];
+	// Growth not yet persisted: the extent every look reached, and when the
+	// first and the latest look saw it.
+	int pending[4];
+	unsigned pending_first[4];
+	unsigned pending_last[4];
+	bool pending_valid[4];
+	// Last scan that showed content past the register window on a side.
+	unsigned seen_frame[4];
+	// The scan (or confirmation) whose picture the outside signature holds.
+	unsigned scan_frame;
+	bool valid;
+};
+
+static inline void amiberry_auto_crop_rect_to_edges(const AmiberryAutoCropRect& rect,
+	int edges[4])
+{
+	edges[0] = rect.x;
+	edges[1] = rect.y;
+	edges[2] = rect.x + rect.w;
+	edges[3] = rect.y + rect.h;
+}
+
+static inline AmiberryAutoCropRect amiberry_auto_crop_rect_from_edges(const int edges[4])
+{
+	return { edges[0], edges[1], edges[2] - edges[0], edges[3] - edges[1] };
+}
+
+// Left and top edges grow towards smaller values, right and bottom to larger.
+static inline bool amiberry_auto_crop_edge_beyond(const int side, const int edge,
+	const int reference)
+{
+	return side < 2 ? edge < reference : edge > reference;
+}
+
+// Start over with rect as the kept content, seen now on every side.
+static inline void amiberry_auto_crop_retention_reset(
+	AmiberryAutoCropOutsideRetention& state, const AmiberryAutoCropRect& rect,
+	const unsigned frame)
+{
+	state = {};
+	amiberry_auto_crop_rect_to_edges(rect, state.kept);
+	for (unsigned& seen : state.seen_frame) {
+		seen = frame;
+	}
+	state.scan_frame = frame;
+	state.valid = true;
+}
+
+// A look at frame saw pending growth on side again; adopt it once it has
+// persisted. Returns true when the kept edge moved.
+static inline bool amiberry_auto_crop_retention_persist(
+	AmiberryAutoCropOutsideRetention& state, const int side, const unsigned frame,
+	const AmiberryAutoCropOutsideTiming& timing)
+{
+	state.pending_last[side] = frame;
+	if (frame - state.pending_first[side] < timing.persist_frames) {
+		return false;
+	}
+	state.kept[side] = state.pending[side];
+	state.pending_valid[side] = false;
+	return true;
+}
+
+// Fold a fresh scan (visible, never inside source) into the kept rect and
+// return the kept rect in visible.
+static inline void amiberry_auto_crop_retain_outside_content(
+	AmiberryAutoCropOutsideRetention& state, const AmiberryAutoCropRect& source,
+	AmiberryAutoCropRect& visible, const unsigned frame,
+	const AmiberryAutoCropOutsideTiming& timing)
+{
+	if (!state.valid) {
+		amiberry_auto_crop_retention_reset(state, source, frame);
+	}
+	int source_edges[4];
+	int fresh[4];
+	amiberry_auto_crop_rect_to_edges(source, source_edges);
+	amiberry_auto_crop_rect_to_edges(visible, fresh);
+	for (int side = 0; side < 4; side++) {
+		int& kept = state.kept[side];
+		if (amiberry_auto_crop_edge_beyond(side, fresh[side], source_edges[side])) {
+			state.seen_frame[side] = frame;
+		}
+		const bool pending_live = state.pending_valid[side]
+			&& frame - state.pending_last[side] <= timing.gap_frames;
+		if (amiberry_auto_crop_edge_beyond(side, fresh[side], kept)) {
+			if (pending_live) {
+				if (amiberry_auto_crop_edge_beyond(side, state.pending[side], fresh[side])) {
+					state.pending[side] = fresh[side];
+				}
+			} else {
+				state.pending[side] = fresh[side];
+				state.pending_first[side] = frame;
+				state.pending_valid[side] = true;
+			}
+			amiberry_auto_crop_retention_persist(state, side, frame, timing);
+		} else {
+			if (!pending_live) {
+				state.pending_valid[side] = false;
+			}
+			if (amiberry_auto_crop_edge_beyond(side, kept, fresh[side])
+				&& frame - state.seen_frame[side] > timing.expiry_frames) {
+				kept = amiberry_auto_crop_edge_beyond(side, fresh[side],
+					source_edges[side]) ? fresh[side] : source_edges[side];
+			}
+		}
+	}
+	state.scan_frame = frame;
+	visible = amiberry_auto_crop_rect_from_edges(state.kept);
+}
+
+// A frame after a scan found the outside regions unchanged from the picture
+// the signature holds, so growth that picture showed is still there: another
+// look. Returns true when the kept rect (in kept_rect) grew; the caller then
+// re-baselines the signature on this frame.
+static inline bool amiberry_auto_crop_retention_confirm_unchanged(
+	AmiberryAutoCropOutsideRetention& state, const unsigned frame,
+	const AmiberryAutoCropOutsideTiming& timing, AmiberryAutoCropRect& kept_rect)
+{
+	if (!state.valid || frame == state.scan_frame) {
+		return false;
+	}
+	bool grew = false;
+	for (int side = 0; side < 4; side++) {
+		// Only growth the signature's picture showed counts: its latest look
+		// was at or after that picture, and the looks have not lapsed.
+		if (state.pending_valid[side]
+			&& frame - state.pending_last[side] <= frame - state.scan_frame
+			&& frame - state.pending_last[side] <= timing.gap_frames
+			&& amiberry_auto_crop_retention_persist(state, side, frame, timing)) {
+			state.seen_frame[side] = frame;
+			grew = true;
+		}
+	}
+	if (grew) {
+		state.scan_frame = frame;
+	}
+	kept_rect = amiberry_auto_crop_rect_from_edges(state.kept);
+	return grew;
+}
+
 #endif // AMIBERRY_AUTOCROP_HELPERS_H
