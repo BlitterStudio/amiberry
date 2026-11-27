@@ -141,6 +141,20 @@ constexpr int auto_crop_shrink_hold_frames = 6;
 // when the base changes or every Nth frame. Odd so that successive periodic
 // scans on interlaced content alternate field parity.
 constexpr int auto_crop_scan_interval = 25;
+// Content outside the register window (see AmiberryAutoCropOutsideRetention):
+// a side grows once looks spanning persist_frames, at most gap_frames apart,
+// kept finding content past it, so effects shorter than that (Pinball
+// Illusions' 0.3 s full-width flashes) never resize the picture; a side lets
+// go after expiry_frames without content past the register window, which
+// bridges the word gaps of a scroller in the side borders (#2758). gap_frames
+// covers the trigger back-off plus the check interval between looks at
+// animated content.
+constexpr AmiberryAutoCropOutsideTiming auto_crop_outside_timing = { 25, 15, 75 };
+// The outside-region change check runs on every third frame only. Growth waits
+// for outside content to persist and shrinking for it to stay gone, so a
+// check on every frame bought no earlier crop change, only cost. Odd, so
+// successive checks alternate interlace field parity.
+constexpr unsigned auto_crop_outside_check_interval = 3;
 
 struct AutoCropVisibleState {
 	const SDL_Surface* surface = nullptr;
@@ -154,6 +168,7 @@ struct AutoCropVisibleState {
 	bool source_left_is_sprite = false;
 	bool source_right_is_sprite = false;
 	AmiberryAutoCropHorizontalEvidence sprite_zero{};
+	AmiberryAutoCropOutsideRetention retention{};
 	bool valid = false;
 };
 
@@ -287,7 +302,7 @@ static void preserve_auto_crop_visible_content(const SDL_Surface* surface,
 	const int vres, const AmiberryAutoCropBorderColors& border,
 	const bool source_left_is_sprite, const bool source_right_is_sprite,
 	const AmiberryAutoCropHorizontalEvidence& sprite_zero,
-	AutoCropVisibleState& state, const bool reset)
+	AutoCropVisibleState& state, const bool reset, const unsigned frame)
 {
 	if (!surface || surface->w <= 0 || surface->h <= 0
 		|| source_rect.w <= 0 || source_rect.h <= 0
@@ -338,6 +353,7 @@ static void preserve_auto_crop_visible_content(const SDL_Surface* surface,
 			visible_rect = { current_rect.x, current_rect.y,
 				current_rect.w, current_rect.h };
 			state.visible_rect = visible_rect;
+			amiberry_auto_crop_retention_reset(state.retention, current_rect, frame);
 			state.source_left_is_sprite = source_left_is_sprite;
 			state.source_right_is_sprite = source_right_is_sprite;
 			state.sprite_zero = sprite_zero;
@@ -375,13 +391,23 @@ static void preserve_auto_crop_visible_content(const SDL_Surface* surface,
 		state.source_right_is_sprite = source_right_is_sprite;
 		state.sprite_zero = sprite_zero;
 		state.valid = true;
+		amiberry_auto_crop_retention_reset(state.retention,
+			{ visible_rect.x, visible_rect.y, visible_rect.w, visible_rect.h }, frame);
 		return;
 	}
 
 	// Pixel content beyond DIW/bitplane limits may be intermittent (sprites,
-	// raster effects, or blank frames between screens). Once observed, retain
-	// those bounds until the hardware geometry or border color changes.
-	visible_rect = auto_crop_rect_union(visible_rect, state.visible_rect);
+	// raster effects, scrollers in the border, blank frames between screens).
+	// Keep a side once content past it persisted, until that side has shown
+	// nothing past the register window for a while or the hardware geometry
+	// or border color changes.
+	AmiberryAutoCropRect kept = {
+		visible_rect.x, visible_rect.y, visible_rect.w, visible_rect.h
+	};
+	amiberry_auto_crop_retain_outside_content(state.retention,
+		{ source_rect.x, source_rect.y, source_rect.w, source_rect.h }, kept, frame,
+		auto_crop_outside_timing);
+	visible_rect = { kept.x, kept.y, kept.w, kept.h };
 	clamp_auto_crop_rect(surface, visible_rect);
 	state.visible_rect = visible_rect;
 	state.source_left_is_sprite = source_left_is_sprite;
@@ -2502,7 +2528,7 @@ void auto_crop_image()
 				clamp_auto_crop_rect(surface, crop_rect);
 				if (trigger_backoff > 0) {
 					trigger_backoff--;
-				} else {
+				} else if ((scan_frame % auto_crop_outside_check_interval) == 0) {
 					AmiberryAutoCropPixelBuffer outside_buffer;
 					const bool buffer_valid = get_auto_crop_pixel_buffer(
 						surface, outside_buffer);
@@ -2511,9 +2537,25 @@ void auto_crop_image()
 							{ last_scan_rect.x, last_scan_rect.y,
 								last_scan_rect.w, last_scan_rect.h },
 							scan_state.outside_signature);
+					AmiberryAutoCropRect confirmed{};
 					if (outside_changed) {
 						scan_due = true;
 						trigger_scan = true;
+					} else if (buffer_valid
+						&& amiberry_auto_crop_retention_confirm_unchanged(
+							visible_state.retention, scan_frame,
+							auto_crop_outside_timing, confirmed)) {
+						// The content a scan saw outside the crop is still
+						// there: grow without another scan, and compare the
+						// next frames against the grown rect.
+						crop_rect = { confirmed.x, confirmed.y, confirmed.w, confirmed.h };
+						clamp_auto_crop_rect(surface, crop_rect);
+						visible_state.visible_rect = crop_rect;
+						last_scan_rect = crop_rect;
+						amiberry_auto_crop_outside_regions_changed(outside_buffer,
+							{ last_scan_rect.x, last_scan_rect.y,
+								last_scan_rect.w, last_scan_rect.h },
+							scan_state.outside_signature);
 					} else {
 						// Stale-rect detector: when the held crop is too
 						// large, the perimeter band just inside it turns
@@ -2566,6 +2608,13 @@ void auto_crop_image()
 					(sprite_zero_edges & AUTOSCALE_SPRITE_EDGE_LEFT) != 0,
 					(sprite_zero_edges & AUTOSCALE_SPRITE_EDGE_RIGHT) != 0
 				};
+				// Every scan starts from the register base, including a trigger
+				// scan on a frame that already took over the last scan's rect.
+				// The visible-content state keys its retained outside content on
+				// this source; scanning from the last result would change the key
+				// on every trigger scan and drop content seen on earlier frames
+				// (a scroller in the side borders flapped the crop, #2758).
+				crop_rect = { cx, cy, cw, ch };
 				clamp_auto_crop_rect(surface, crop_rect);
 				const SDL_Rect source_crop_rect = crop_rect;
 				// DIW/bitplane limits can exclude visible sprites or raster content.
@@ -2589,7 +2638,7 @@ void auto_crop_image()
 					(sprite_horizontal_edges & AUTOSCALE_SPRITE_EDGE_LEFT) != 0,
 					(sprite_horizontal_edges & AUTOSCALE_SPRITE_EDGE_RIGHT) != 0, sprite_zero,
 					visible_state,
-					force_auto_crop || last_autocrop != currprefs.gfx_auto_crop);
+					force_auto_crop || last_autocrop != currprefs.gfx_auto_crop, scan_frame);
 				// A trigger-initiated scan that left the rect unchanged means the
 				// outside content is animated but does not affect the crop: back
 				// off the trigger for a few frames so animated borders cannot
