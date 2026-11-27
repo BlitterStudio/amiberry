@@ -32,7 +32,7 @@ int pissoff_value = 15000 * CYCLE_UNIT;
 int pissoff_nojit_value = 160 * CYCLE_UNIT;
 evt_t currcycle_cck;
 int is_syncline;
-static int syncline_cnt;
+int syncline_cnt;
 frame_time_t is_syncline_end;
 int cycles_to_next_event;
 int max_cycles_to_next_event;
@@ -52,6 +52,7 @@ static void events_fast(void)
 void events_reset_syncline(void)
 {
 	is_syncline = 0;
+	syncline_cnt = 0;
 	events_fast();
 }
 
@@ -299,7 +300,7 @@ void do_cycles_slow(int cycles_to_add)
 		// runs CPU emulation with chipset stopped
 		// when there is free time to do so.
 		if (event_check_vsync()) {
-			syncline_cnt = currprefs.cachesize ? 2 : 32;
+			syncline_cnt = currprefs.cachesize ? 2 : 256;
 			return;
 		}
 	}

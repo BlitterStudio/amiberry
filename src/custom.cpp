@@ -12567,7 +12567,7 @@ static void generate_dma_requests(void)
 	}
 }
 
-static void do_cck(bool docycles)
+static inline __attribute__((always_inline)) void do_cck_body(bool docycles)
 {
 	get_cck_clock();
 
@@ -12609,7 +12609,10 @@ static void do_cck(bool docycles)
 
 	inc_cck();
 	if (docycles) {
-		do_cycles_normal(1 * CYCLE_UNIT);
+		if (nextevent - currcycle > 1 * CYCLE_UNIT)
+			currcycle += 1 * CYCLE_UNIT;
+		else
+			do_cycles_normal(1 * CYCLE_UNIT);
 	}
 
 	dmacon_bpl = (dmacon & DMA_BITPLANE) && (dmacon & 0x200);
@@ -12621,6 +12624,26 @@ static void do_cck(bool docycles)
 	if (custom_fastmode <= 0) {
 		generate_dmal();
 	}
+}
+
+// Runs CCKs until 'cycles' is used up or fast mode starts; the only copy of do_cck_body().
+static __attribute__((noinline)) int do_cck_loop(int cycles)
+{
+	int c = 0;
+	while (cycles >= CYCLE_UNIT) {
+		do_cck_body(true);
+		c += CYCLE_UNIT;
+		cycles -= CYCLE_UNIT;
+		if (custom_fastmode > 0) {
+			return c;
+		}
+	}
+	return c;
+}
+
+static void do_cck()
+{
+	do_cck_loop(CYCLE_UNIT);
 }
 
 static uae_u16 quick_strobe(void)
@@ -12739,16 +12762,7 @@ int do_cycles_cck(int cycles)
 		}
 		return (cycles / CYCLE_UNIT) * CYCLE_UNIT;
 	}
-	int c = 0;
-	while (cycles >= CYCLE_UNIT) {
-		do_cck(true);
-		c += CYCLE_UNIT;
-		cycles -= CYCLE_UNIT;
-		if (custom_fastmode > 0) {
-			return c;
-		}
-	}
-	return c;
+	return do_cck_loop(cycles);
 #if 0
 	int c = cycles;
 	while (c >= CYCLE_UNIT) {
@@ -12795,7 +12809,7 @@ static void dma_cycle(int *ipl)
 		}
 		blt_info.nasty_cnt++;
 		*ipl = regs.ipl_pin;
-		do_cck(true);
+		do_cck();
 		/* bus was allocated to dma channel, wait for next cycle.. */
 	}
 	blt_info.nasty_cnt = 0;
@@ -13057,7 +13071,7 @@ void do_cycles_ce(int cycles)
 	}
 	cycles += extra_cycle;
 	while (cycles >= CYCLE_UNIT) {
-		do_cck(true);
+		do_cck();
 		cycles -= CYCLE_UNIT;
 	}
 	extra_cycle = cycles;
@@ -13082,7 +13096,7 @@ void do_cycles_ce020(int cycles)
 	cc = get_cycles();
 #endif
 	while (cycles >= CYCLE_UNIT) {
-		do_cck(true);
+		do_cck();
 		cycles -= CYCLE_UNIT;
 	}
 	extra += cycles;

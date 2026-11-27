@@ -29,6 +29,7 @@ BEHAVIORAL_TESTS=(
 	"test_ipc_transport.sh"
 	"test_ipc_actions.sh"
 	"test_mmu030_fault_resume.sh"
+	"test_mmu040_shortcut_cache.sh"
 	"test_board_reset.sh"
 	"test_fpu_predicates_live.sh"
 	"test_fpu_core_switch_live.sh"

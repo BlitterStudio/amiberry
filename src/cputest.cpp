@@ -918,11 +918,6 @@ void memory_put_byte(uaecptr addr, uae_u32 v)
 	put_byte_test(addr, v);
 }
 
-uae_u8 *memory_get_real_address(uaecptr addr)
-{
-	return NULL;
-}
-
 uae_u32 next_iword_test(void)
 {
 	uae_u32 v = get_word_test_prefetch(0);

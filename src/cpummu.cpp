@@ -53,6 +53,7 @@ struct mmu_atc_line mmu_atc_array[ATC_TYPE][ATC_SLOTS][ATC_WAYS];
 bool mmu_pagesize_8k;
 int mmu_pageshift, mmu_pageshift1m;
 uae_u8 mmu_cache_state;
+bool mmu_phys_plain;
 uae_u8 cache_default_ins, cache_default_data;
 
 int mmu060_state;
@@ -131,8 +132,11 @@ void mmu_make_transparent_region(uaecptr baseaddr, uae_u32 size, int datamode)
 #endif
 }
 
+static void flush_shortcut_cache(uaecptr addr, bool super);
+
 void mmu_tt_modified (void)
 {
+	flush_shortcut_cache(0xffffffff, 0);
 	mmu_ttr_enabled_ins = ((regs.itt0 | regs.itt1) & MMU_TTR_BIT_ENABLED) != 0;
 	mmu_ttr_enabled_data = ((regs.dtt0 | regs.dtt1) & MMU_TTR_BIT_ENABLED) != 0;
 	mmu_ttr_enabled = mmu_ttr_enabled_ins || mmu_ttr_enabled_data;
@@ -361,13 +365,13 @@ static void flush_shortcut_cache(uaecptr addr, bool super)
 		memset(&atc_data_cache_read, 0xff, sizeof atc_data_cache_read);
 		memset(&atc_data_cache_write, 0xff, sizeof atc_data_cache_write);
 	} else {
-		for (int i = 0; i < MMUFASTCACHE_ENTRIES; i++) {
-			uae_u32 idx = ((addr & mmu_pagemaski) >> mmu_pageshift1m) | (super ? 1 : 0);
-			if (atc_data_cache_read[i].log == idx)
-				atc_data_cache_read[i].log = 0xffffffff;
-			if (atc_data_cache_write[i].log == idx)
-				atc_data_cache_write[i].log = 0xffffffff;
-		}
+		// Direct-mapped: an entry for idx can only live in slot idx & (MMUFASTCACHE_ENTRIES - 1).
+		uae_u32 idx = ((addr & mmu_pagemaski) >> mmu_pageshift1m) | (super ? 1 : 0);
+		uae_u32 i = idx & (MMUFASTCACHE_ENTRIES - 1);
+		if (atc_data_cache_read[i].log == idx)
+			atc_data_cache_read[i].log = 0xffffffff;
+		if (atc_data_cache_write[i].log == idx)
+			atc_data_cache_write[i].log = 0xffffffff;
 	}
 #endif
 }
@@ -548,66 +552,6 @@ void mmu_bus_error(uaecptr addr, uae_u32 val, int fc, bool write, int size,uae_u
  * read from mmu with the long path (and allocate ATC entry if needed)
  */
 
-/* check if an address matches a ttr */
-static int mmu_do_match_ttr(uae_u32 ttr, uaecptr addr, bool super)
-{
-	if (ttr & MMU_TTR_BIT_ENABLED)	{	/* TTR enabled */
-		uae_u8 msb, mask;
-		
-		msb = ((addr ^ ttr) & MMU_TTR_LOGICAL_BASE) >> 24;
-		mask = (ttr & MMU_TTR_LOGICAL_MASK) >> 16;
-		
-		if (!(msb & ~mask)) {
-			
-			if ((ttr & MMU_TTR_BIT_SFIELD_ENABLED) == 0) {
-				if (((ttr & MMU_TTR_BIT_SFIELD_SUPER) == 0) != (super == 0)) {
-					return TTR_NO_MATCH;
-				}
-			}
-			if (ttr & MMU_TTR_CACHE_DISABLE) {
-				mmu_cache_state = CACHE_DISABLE_MMU;
-			} else {
-				mmu_cache_state = CACHE_ENABLE_ALL;
-				if (ttr & MMU_TTR_CACHE_MODE) {
-					mmu_cache_state |= CACHE_ENABLE_COPYBACK;
-				}
-			}
-			return (ttr & MMU_TTR_BIT_WRITE_PROTECT) ? TTR_NO_WRITE : TTR_OK_MATCH;
-		}
-	}
-	return TTR_NO_MATCH;
-}
-
-int mmu_match_ttr_ins(uaecptr addr, bool super)
-{
-	int res;
-	
-	if (!mmu_ttr_enabled_ins)
-		return TTR_NO_MATCH;
-	res = mmu_do_match_ttr(regs.itt0, addr, super);
-	if (res == TTR_NO_MATCH)
-		res = mmu_do_match_ttr(regs.itt1, addr, super);
-	return res;
-}
-
-int mmu_match_ttr(uaecptr addr, bool super, bool data)
-{
-	int res;
-	
-	if (!mmu_ttr_enabled)
-		return TTR_NO_MATCH;
-	if (data) {
-		res = mmu_do_match_ttr(regs.dtt0, addr, super);
-		if (res == TTR_NO_MATCH)
-			res = mmu_do_match_ttr(regs.dtt1, addr, super);
-	} else {
-		res = mmu_do_match_ttr(regs.itt0, addr, super);
-		if (res == TTR_NO_MATCH)
-			res = mmu_do_match_ttr(regs.itt1, addr, super);
-	}
-	return res;
-}
-
 void mmu_bus_error_ttr_write_fault(uaecptr addr, bool super, bool data, uae_u32 val, int size)
  {
 	 uae_u32 status = 0;
@@ -616,28 +560,6 @@ void mmu_bus_error_ttr_write_fault(uaecptr addr, bool super, bool data, uae_u32 
 		 status |= MMU_FSLW_TTR;
 	 }
 	mmu_bus_error(addr, val, mmu_get_fc (super, data), true, size, status, false);
-}
-
-int mmu_match_ttr_write(uaecptr addr, bool super, bool data, uae_u32 val, int size)
-{
-	int res = TTR_NO_MATCH;
-	if (mmu_ttr_enabled) {
-		res = mmu_match_ttr(addr, super, data);
-	}
-	if (res == TTR_NO_WRITE || (res == TTR_NO_MATCH && !regs.mmu_enabled && (regs.tcr & MMU_TCR_DWO)))
-		mmu_bus_error_ttr_write_fault(addr, super, data, val, size);
-	return res;
-}
-
-int mmu_match_ttr_maybe_write(uaecptr addr, bool super, bool data, int size, bool write)
-{
-	int res = TTR_NO_MATCH;
-	if (mmu_ttr_enabled) {
-		res = mmu_match_ttr(addr, super, data);
-	}
-	if (write && ((res == TTR_NO_WRITE) || (res == TTR_NO_MATCH && !regs.mmu_enabled && (regs.tcr & MMU_TCR_DWO))))
-		mmu_bus_error_ttr_write_fault(addr, super, data, 0, size);
-	return res;
 }
 
 // Descriptor read accesses can use data cache but never allocate new cache lines.
@@ -855,6 +777,33 @@ static void mmu_add_cache(uaecptr addr, uaecptr phys, bool super, bool data, boo
 	}
 }
 
+uaecptr REGPARAM2 mmu_translate_ins_slow(uaecptr addr, int size)
+{
+	bool super = regs.s != 0;
+	mmu_cache_state = cache_default_ins;
+	int ttr = mmu_match_ttr_ins(addr, super);
+	if (ttr == TTR_NO_MATCH && regs.mmu_enabled)
+		return mmu_translate(addr, 0, super, false, false, size);
+	// TTR hit or MMU off: identity mapping. With MMU off the cache state comes
+	// from cache_default_*, which exceptions change temporarily, so only the
+	// plain path (which ignores the cache state) may keep it.
+	if (ttr != TTR_NO_MATCH || mmu_phys_plain)
+		mmu_add_cache(addr, addr & mmu_pagemaski, super, false, false);
+	return addr;
+}
+
+uaecptr REGPARAM2 mmu_translate_data_read_slow(uaecptr addr, int size)
+{
+	bool super = regs.s != 0;
+	mmu_cache_state = cache_default_data;
+	int ttr = mmu_match_ttr(addr, super, true);
+	if (ttr == TTR_NO_MATCH && regs.mmu_enabled)
+		return mmu_translate(addr, 0, super, true, false, size);
+	if (ttr != TTR_NO_MATCH || mmu_phys_plain)
+		mmu_add_cache(addr, addr & mmu_pagemaski, super, true, false);
+	return addr;
+}
+
 uaecptr debug_mmu_translate(uaecptr addr, uae_u32 val, bool super, bool data, bool write, int size, struct mmu_debug_data **mdd)
 {
 	memset(&mddm, 0, sizeof(struct mmu_debug_data));
@@ -999,14 +948,14 @@ static void misalignednotfirstcheck(uaecptr addr)
 	misalignednotfirst (addr);
 }
 
-uae_u16 REGPARAM2 mmu_get_word_unaligned(uaecptr addr, bool data)
+uae_u16 REGPARAM2 mmu_get_word_unaligned(uaecptr addr)
 {
 	uae_u16 res;
 
-	res = (uae_u16)mmu_get_byte(addr, data, sz_word) << 8;
+	res = (uae_u16)mmu_get_byte(addr, true, sz_word) << 8;
 	SAVE_EXCEPTION;
 	TRY(prb) {
-		res |= mmu_get_byte(addr + 1, data, sz_word);
+		res |= mmu_get_byte(addr + 1, true, sz_word);
 		RESTORE_EXCEPTION;
 	}
 	CATCH(prb) {
@@ -1017,15 +966,15 @@ uae_u16 REGPARAM2 mmu_get_word_unaligned(uaecptr addr, bool data)
 	return res;
 }
 
-uae_u32 REGPARAM2 mmu_get_long_unaligned(uaecptr addr, bool data)
+uae_u32 REGPARAM2 mmu_get_long_unaligned(uaecptr addr)
 {
 	uae_u32 res;
 
 	if (likely(!(addr & 1))) {
-		res = (uae_u32)mmu_get_word(addr, data, sz_long) << 16;
+		res = (uae_u32)mmu_get_word(addr, sz_long) << 16;
 		SAVE_EXCEPTION;
 		TRY(prb) {
-			res |= mmu_get_word(addr + 2, data, sz_long);
+			res |= mmu_get_word(addr + 2, sz_long);
 			RESTORE_EXCEPTION;
 		}
 		CATCH(prb) {
@@ -1034,12 +983,12 @@ uae_u32 REGPARAM2 mmu_get_long_unaligned(uaecptr addr, bool data)
 			THROW_AGAIN(prb);
 		} ENDTRY
 	} else {
-		res = (uae_u32)mmu_get_byte(addr, data, sz_long) << 8;
+		res = (uae_u32)mmu_get_byte(addr, true, sz_long) << 8;
 		SAVE_EXCEPTION;
 		TRY(prb) {
-			res = (res | mmu_get_byte(addr + 1, data, sz_long)) << 8;
-			res = (res | mmu_get_byte(addr + 2, data, sz_long)) << 8;
-			res |= mmu_get_byte(addr + 3, data, sz_long);
+			res = (res | mmu_get_byte(addr + 1, true, sz_long)) << 8;
+			res = (res | mmu_get_byte(addr + 2, true, sz_long)) << 8;
+			res |= mmu_get_byte(addr + 3, true, sz_long);
 			RESTORE_EXCEPTION;
 		}
 		CATCH(prb) {
@@ -1525,6 +1474,13 @@ void REGPARAM2 mmu_set_funcs(void)
 {
 	if (currprefs.mmu_model != 68040 && currprefs.mmu_model != 68060)
 		return;
+
+	bool plain = !(currprefs.cpu_memory_cycle_exact || currprefs.cpu_compatible);
+	if (plain != mmu_phys_plain) {
+		// MMU-off identity entries are only cached in plain mode.
+		mmu_phys_plain = plain;
+		flush_shortcut_cache(0xffffffff, 0);
+	}
 
 	x_phys_get_iword = phys_get_word;
 	x_phys_get_ilong = phys_get_long;

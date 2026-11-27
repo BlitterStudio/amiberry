@@ -1948,9 +1948,7 @@ static void genflags_normal(flagtypes type, wordsizes size, const char *value, c
 
 	switch (type) {
 	case flag_logical:
-		out("CLEAR_CZNV();\n");
-		out("SET_ZFLG(%s == 0);\n", vstr);
-		out("SET_NFLG(%s < 0);\n", vstr);
+		out("SET_CZNV_LOGICAL%c(%s);\n", "BWL"[size], vstr);
 		break;
 	case flag_logical_noclobber:
 		out("SET_ZFLG(%s == 0);\n", vstr);
@@ -1970,18 +1968,12 @@ static void genflags_normal(flagtypes type, wordsizes size, const char *value, c
 		out("SET_NFLG(%s < 0);\n", vstr);
 		break;
 	case flag_add:
-		out("SET_ZFLG(%s == 0);\n", vstr);
-		out("SET_VFLG((flgs ^ flgn) & (flgo ^ flgn));\n");
-		out("SET_CFLG(%s < %s);\n", undstr, usstr);
+		out("SET_CZNV_ADD%c(%s < %s, %s == 0, flgn, (flgs ^ flgn) & (flgo ^ flgn), %s, %s);\n", "BWL"[size], undstr, usstr, vstr, sstr, dstr);
 		duplicate_carry();
-		out("SET_NFLG(flgn != 0);\n");
 		break;
 	case flag_sub:
-		out("SET_ZFLG(%s == 0);\n", vstr);
-		out("SET_VFLG((flgs ^ flgo) & (flgn ^ flgo));\n");
-		out("SET_CFLG(%s > %s);\n", usstr, udstr);
+		out("SET_CZNV_SUB%c(%s > %s, %s == 0, flgn, (flgs ^ flgo) & (flgn ^ flgo), %s, %s);\n", "BWL"[size], usstr, udstr, vstr, sstr, dstr);
 		duplicate_carry();
-		out("SET_NFLG(flgn != 0);\n");
 		break;
 	case flag_addx:
 		out("SET_VFLG((flgs ^ flgn) & (flgo ^ flgn));\n"); /* minterm SON: 0x42 */
@@ -1994,10 +1986,7 @@ static void genflags_normal(flagtypes type, wordsizes size, const char *value, c
 		duplicate_carry();
 		break;
 	case flag_cmp:
-		out("SET_ZFLG(%s == 0);\n", vstr);
-		out("SET_VFLG((flgs != flgo) && (flgn != flgo));\n");
-		out("SET_CFLG(%s > %s);\n", usstr, udstr);
-		out("SET_NFLG(flgn != 0);\n");
+		out("SET_CZNV_SUB%c(%s > %s, %s == 0, flgn, (flgs != flgo) && (flgn != flgo), %s, %s);\n", "BWL"[size], usstr, udstr, vstr, sstr, dstr);
 		break;
 	}
 }

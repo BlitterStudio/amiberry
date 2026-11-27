@@ -23,6 +23,22 @@ extern void fp_init_softfloat(int);
 extern void fp_init_softfloat_exact(int);
 // the softfloat cores' fast path for the common arithmetic instructions (fpp_softfloat.cpp)
 extern bool fp_exact_fast_arith(fpdata *dst, const fpdata *src, uae_u16 extra);
+
+// Opmodes (extra & 0x7f) handled by fp_exact_fast_arith(): X(opmode, kind, precision),
+// precision 0 = FPCR, 32 = single, 64 = double. Expands into both the caller's
+// gate in fpp.cpp and the switch in fp_exact_fast_arith(), so they can't drift apart.
+#define FP_FAST_ARITH_OPS(X) \
+	X(0x00, MOVE, 0) X(0x40, MOVE, 32) X(0x44, MOVE, 64) \
+	X(0x22, ADD, 0) X(0x62, ADD, 32) X(0x66, ADD, 64) \
+	X(0x28, SUB, 0) X(0x68, SUB, 32) X(0x6c, SUB, 64) \
+	X(0x23, MUL, 0) X(0x63, MUL, 32) X(0x67, MUL, 64) \
+	X(0x20, DIV, 0) X(0x60, DIV, 32) X(0x64, DIV, 64) \
+	X(0x04, SQRT, 0) X(0x41, SQRT, 32) X(0x45, SQRT, 64) \
+	X(0x18, ABS, 0) X(0x58, ABS, 32) X(0x5c, ABS, 64) \
+	X(0x1a, NEG, 0) X(0x5a, NEG, 32) X(0x5e, NEG, 64) \
+	X(0x38, CMP, 0) X(0x3a, TST, 0) \
+	X(0x01, INT, 0) X(0x03, INTRZ, 0)
+
 extern void fpsr_set_exception(uae_u32 exception);
 extern void fpu_modechange(void);
 extern void fpu_clearstatus(void);

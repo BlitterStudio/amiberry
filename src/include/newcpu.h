@@ -779,7 +779,13 @@ extern void checkint(void);
 extern void intlev_load(void);
 extern void ipl_fetch_now_pre(void);
 extern void ipl_fetch_next_pre(void);
-extern void ipl_fetch_now(void);
+// ipl check was early enough, interrupt possible after current instruction
+STATIC_INLINE void ipl_fetch_now(void)
+{
+	regs.ipl_evt = get_cycles();
+	regs.ipl[0] = regs.ipl_pin;
+	regs.ipl[1] = 0;
+}
 extern void ipl_fetch_next(void);
 extern void dump_counts (void);
 extern int m68k_move2c (int, uae_u32 *);

@@ -2409,10 +2409,10 @@ STATIC_INLINE void wait_memory_cycles ()
 STATIC_INLINE int adjust_cycles (int cycles)
 {
 	int mc = regs.memory_waitstate_cycles;
-	regs.memory_waitstate_cycles = 0;
-	cycles *= cycles_mult;
-	cycles /= CYCLES_DIV;
-	return cycles + mc;
+	if (unlikely(mc))
+		regs.memory_waitstate_cycles = 0;
+	// cycles is never negative: unsigned math avoids the signed division fixup
+	return (int)(((uae_u64)(uae_u32)cycles * cycles_mult) / CYCLES_DIV) + mc;
 }
 
 void m68k_cancel_idle()
@@ -4666,16 +4666,6 @@ void ipl_fetch_now_pre()
 	ipl_fetch_now();
 	regs.ipl_evt_pre = get_cycles();
 	regs.ipl_evt_pre_mode = 0;
-}
-
-// ipl check was early enough, interrupt possible after current instruction
-void ipl_fetch_now()
-{
-	evt_t c = get_cycles();
-
-	regs.ipl_evt = c;
-	regs.ipl[0] = regs.ipl_pin;
-	regs.ipl[1] = 0;
 }
 
 // ipl check max 4 cycles before end of instruction.
@@ -7691,7 +7681,7 @@ static void m68k_run_mmu060 ()
 
 				mmu_opcode = -1;
 				mmu060_state = 0;
-				mmu_opcode = regs.opcode = x_prefetch (0);
+				mmu_opcode = regs.opcode = get_iword_mmu060 (0);
 				mmu060_state = 1;
 
 				count_instr (regs.opcode);
@@ -7745,7 +7735,7 @@ static void m68k_run_mmu040 ()
 				do_cycles (cpu_cycles);
 
 				mmu_opcode = -1;
-				mmu_opcode = regs.opcode = x_prefetch (0);
+				mmu_opcode = regs.opcode = get_iword_mmu040 (0);
 				count_instr (regs.opcode);
 				cpu_cycles = (*cpufunctbl[regs.opcode])(regs.opcode);
 				cpu_cycles = adjust_cycles(cpu_cycles);
@@ -8383,15 +8373,16 @@ static void m68k_run_2_000()
 			while (!exit) {
 				r->instruction_pc = m68k_getpc ();
 
-				r->opcode = get_opcode_fast();
-				count_instr (r->opcode);
+				uae_u32 op = get_opcode_fast();
+				r->opcode = op;
 #ifdef DEBUGGER
-				if (debug_opcode_watch) {
+				if (unlikely(debug_opcode_watch)) {
 					debug_trainer_match();
+					op = r->opcode;
 				}
 #endif
 
-				cpu_cycles = (*cpufunctbl[r->opcode])(r->opcode) & 0xffff;
+				cpu_cycles = (*cpufunctbl[op])(op) & 0xffff;
 				cpu_cycles = adjust_cycles (cpu_cycles);
 				do_cycles(cpu_cycles);
 
@@ -8421,16 +8412,17 @@ static void m68k_run_2_020()
 			while (!exit) {
 				r->instruction_pc = m68k_getpc();
 
-				r->opcode = get_opcode_fast();
-				count_instr(r->opcode);
+				uae_u32 op = get_opcode_fast();
+				r->opcode = op;
 
 #ifdef DEBUGGER
-				if (debug_opcode_watch) {
+				if (unlikely(debug_opcode_watch)) {
 					debug_trainer_match();
+					op = r->opcode;
 				}
 #endif
 
-				cpu_cycles = (*cpufunctbl[r->opcode])(r->opcode) >> 16;
+				cpu_cycles = (*cpufunctbl[op])(op) >> 16;
 				cpu_cycles = adjust_cycles(cpu_cycles);
 				do_cycles(cpu_cycles);
 
@@ -10536,7 +10528,7 @@ static void fill_icache020 (uae_u32 addr, bool opcode)
 #if PIPELINE_DEBUG
 static uae_u16 pipeline_opcode;
 #endif
-static void pipeline_020(uaecptr pc)
+static inline __attribute__((always_inline)) void pipeline_020(uaecptr pc)
 {
 	uae_u16 w = regs.prefetch020[1];
 
