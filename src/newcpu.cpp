@@ -11003,24 +11003,9 @@ static bool maybe_icache030(uae_u32 addr)
 	return false;
 }
 
-static void fill_icache030(uae_u32 addr)
+static NOINLINE void fill_icache030_miss(uae_u32 addr, struct cache030 *c, uae_u32 tag, int lws)
 {
-	int lws;
-	uae_u32 tag;
 	uae_u32 data;
-	struct cache030 *c;
-
-	regs.fc030 = (regs.s ? 4 : 0) | 2;
-	addr &= ~3;
-	if (regs.cacheholdingaddr020 == addr || regs.cacheholdingdata_valid == 0)
-		return;
-	c = geticache030 (icaches030, addr, &tag, &lws);
-	if ((regs.cacr & 1) && c->valid[lws] && c->tag == tag) {
-		// cache hit
-		regs.cacheholdingaddr020 = addr;
-		regs.cacheholdingdata020 = c->data[lws];
-		return;
-	}
 
 	TRY (prb2) {
 		// cache miss
@@ -11102,6 +11087,27 @@ static void fill_icache030(uae_u32 addr)
 	}
 	regs.cacheholdingaddr020 = addr;
 	regs.cacheholdingdata020 = data;
+}
+
+// Holding register and cache hits are inlined; misses go out of line.
+static inline __attribute__((always_inline)) void fill_icache030(uae_u32 addr)
+{
+	int lws;
+	uae_u32 tag;
+	struct cache030 *c;
+
+	regs.fc030 = (regs.s ? 4 : 0) | 2;
+	addr &= ~3;
+	if (regs.cacheholdingaddr020 == addr || regs.cacheholdingdata_valid == 0)
+		return;
+	c = geticache030 (icaches030, addr, &tag, &lws);
+	if ((regs.cacr & 1) && c->valid[lws] && c->tag == tag) {
+		// cache hit
+		regs.cacheholdingaddr020 = addr;
+		regs.cacheholdingdata020 = c->data[lws];
+		return;
+	}
+	fill_icache030_miss(addr, c, tag, lws);
 }
 
 #if VALIDATE_68030_DATACACHE
@@ -11661,15 +11667,62 @@ uae_u32 get_long_icache030(uaecptr addr)
 	return v;
 }
 
-uae_u32 fill_icache040(uae_u32 addr)
+// Uncached fetch / prefetch buffer refill (also used when the cache is
+// disabled or the page is non-cachable).
+static NOINLINE uae_u32 fill_icache040_uncached(uae_u32 addr2, int lws)
 {
-	int index, lws;
-	uae_u32 tag, addr2;
-	struct cache040 *c;
+	if (regs.prefetch020addr == addr2)
+		return regs.prefetch040[lws];
+	regs.prefetch020addr = addr2;
+	regs.prefetch040[0] = icache_fetch(addr2 +  0);
+	regs.prefetch040[1] = icache_fetch(addr2 +  4);
+	regs.prefetch040[2] = icache_fetch(addr2 +  8);
+	regs.prefetch040[3] = icache_fetch(addr2 + 12);
+	return regs.prefetch040[lws];
+}
+
+static NOINLINE uae_u32 fill_icache040_miss(uae_u32 addr2, int lws, struct cache040 *c, uae_u32 tag, uae_u8 cs)
+{
 	int line;
 
-	addr2 = addr & ~15;
-	lws = (addr >> 2) & 3;
+	regs.prefetch020addr = 0xffffffff;
+	regs.prefetch040[0] = icache_fetch(addr2 +  0);
+	regs.prefetch040[1] = icache_fetch(addr2 +  4);
+	regs.prefetch040[2] = icache_fetch(addr2 +  8);
+	regs.prefetch040[3] = icache_fetch(addr2 + 12);
+	regs.prefetch020addr = addr2;
+	if (!(cs & CACHE_ENABLE_INS) || (cs & CACHE_DISABLE_MMU))
+		return regs.prefetch040[lws];
+	if (regs.cacr & 0x00004000) // 68060 NAI
+		return regs.prefetch040[lws];
+	if (c->valid[0] && c->valid[1] && c->valid[2] && c->valid[3]) {
+		line = icachelinecnt & (CACHELINES040 - 1);
+		icachehalfline = (lws & 1) ? 0 : 1;
+	} else {
+		for (line = 0; line < CACHELINES040; line++) {
+			if (c->valid[line] == false)
+				break;
+		}
+	}
+	c->tag[line] = tag;
+	c->valid[line] = true;
+	c->data[line][0] = regs.prefetch040[0];
+	c->data[line][1] = regs.prefetch040[1];
+	c->data[line][2] = regs.prefetch040[2];
+	c->data[line][3] = regs.prefetch040[3];
+	if ((lws & 1) != icachehalfline) {
+		icachehalfline ^= 1;
+		icachelinecnt++;
+	}
+	return c->data[line][lws];
+}
+
+// Hit path is inlined into the instruction fetch helpers; misses and
+// uncached fetches go out of line so the hot path needs no stack frame.
+static inline __attribute__((always_inline)) uae_u32 fill_icache040_inline(uae_u32 addr)
+{
+	uae_u32 addr2 = addr & ~15;
+	int lws = (addr >> 2) & 3;
 
 	if (regs.prefetch020addr == addr2) {
 		return regs.prefetch040[lws];
@@ -11681,15 +11734,15 @@ uae_u32 fill_icache040(uae_u32 addr)
 		if (!(ce_cachable[addr >> 16] & CACHE_ENABLE_INS))
 			cs = CACHE_DISABLE_MMU;
 
-		index = (addr >> 4) & cacheisets04060mask;
-		tag = addr & cacheitag04060mask;
-		c = &icaches040[index];
+		int index = (addr >> 4) & cacheisets04060mask;
+		uae_u32 tag = addr & cacheitag04060mask;
+		struct cache040 *c = &icaches040[index];
 		for (int i = 0; i < CACHELINES040; i++) {
 			if (c->valid[cache_lastline] && c->tag[cache_lastline] == tag) {
 				// cache hit
 				if (!(cs & CACHE_ENABLE_INS) || (cs & CACHE_DISABLE_MMU)) {
 					c->valid[cache_lastline] = false;
-					goto end;
+					return fill_icache040_uncached(addr2, lws);
 				}
 				if ((lws & 1) != icachehalfline) {
 					icachehalfline ^= 1;
@@ -11700,49 +11753,15 @@ uae_u32 fill_icache040(uae_u32 addr)
 			cache_lastline++;
 			cache_lastline &= (CACHELINES040 - 1);
 		}
-		// cache miss
-		regs.prefetch020addr = 0xffffffff;
-		regs.prefetch040[0] = icache_fetch(addr2 +  0);
-		regs.prefetch040[1] = icache_fetch(addr2 +  4);
-		regs.prefetch040[2] = icache_fetch(addr2 +  8);
-		regs.prefetch040[3] = icache_fetch(addr2 + 12);
-		regs.prefetch020addr = addr2;
-		if (!(cs & CACHE_ENABLE_INS) || (cs & CACHE_DISABLE_MMU))
-			goto end;
-		if (regs.cacr & 0x00004000) // 68060 NAI
-			goto end;
-		if (c->valid[0] && c->valid[1] && c->valid[2] && c->valid[3]) {
-			line = icachelinecnt & (CACHELINES040 - 1);
-			icachehalfline = (lws & 1) ? 0 : 1;
-		} else {
-			for (line = 0; line < CACHELINES040; line++) {
-				if (c->valid[line] == false)
-					break;
-			}
-		}
-		c->tag[line] = tag;
-		c->valid[line] = true;
-		c->data[line][0] = regs.prefetch040[0];
-		c->data[line][1] = regs.prefetch040[1];
-		c->data[line][2] = regs.prefetch040[2];
-		c->data[line][3] = regs.prefetch040[3];
-		if ((lws & 1) != icachehalfline) {
-			icachehalfline ^= 1;
-			icachelinecnt++;
-		}
-		return c->data[line][lws];
-
+		return fill_icache040_miss(addr2, lws, c, tag, cs);
 	}
 
-end:
-	if (regs.prefetch020addr == addr2)
-		return regs.prefetch040[lws];
-	regs.prefetch020addr = addr2;
-	regs.prefetch040[0] = icache_fetch(addr2 +  0);
-	regs.prefetch040[1] = icache_fetch(addr2 +  4);
-	regs.prefetch040[2] = icache_fetch(addr2 +  8);
-	regs.prefetch040[3] = icache_fetch(addr2 + 12);
-	return regs.prefetch040[lws];
+	return fill_icache040_uncached(addr2, lws);
+}
+
+uae_u32 fill_icache040(uae_u32 addr)
+{
+	return fill_icache040_inline(addr);
 }
 
 STATIC_INLINE void do_cycles_c040_mem (int clocks, uae_u32 val)
@@ -12183,16 +12202,16 @@ nocache:
 // really unoptimized
 uae_u32 get_word_icache040(uaecptr addr)
 {
-	uae_u32 v = fill_icache040(addr);
+	uae_u32 v = fill_icache040_inline(addr);
 	return v >> ((addr & 2) ? 0 : 16);
 }
 uae_u32 get_long_icache040(uaecptr addr)
 {
 	uae_u32 v1, v2;
-	v1 = fill_icache040(addr);
+	v1 = fill_icache040_inline(addr);
 	if ((addr & 2) == 0)
 		return v1;
-	v2 = fill_icache040(addr + 4);
+	v2 = fill_icache040_inline(addr + 4);
 	return (v2 >> 16) | (v1 << 16);
 }
 uae_u32 get_ilong_cache_040(int o)
@@ -12330,7 +12349,7 @@ static void reset_pipeline_state()
 #endif
 }
 
-static int add_prefetch_030(int idx, uae_u16 w, uaecptr pc)
+static inline __attribute__((always_inline)) int add_prefetch_030_inline(int idx, uae_u16 w, uaecptr pc)
 {
 	regs.prefetch020[0] = regs.prefetch020[1];
 	regs.prefetch020_valid[0] = regs.prefetch020_valid[1];
@@ -12355,6 +12374,12 @@ static int add_prefetch_030(int idx, uae_u16 w, uaecptr pc)
 	return idx + 1;
 }
 
+// The 68030 refill paths force this inline; the 68020 path leaves it to the compiler.
+static int add_prefetch_030(int idx, uae_u16 w, uaecptr pc)
+{
+	return add_prefetch_030_inline(idx, w, pc);
+}
+
 void fill_prefetch_030_ntx()
 {
 	uaecptr pc = m68k_getpc ();
@@ -12370,18 +12395,18 @@ void fill_prefetch_030_ntx()
 
 	fill_icache030(pc);
 	if (pc2 & 2) {
-		idx = add_prefetch_030(idx, regs.cacheholdingdata020, pc2);
+		idx = add_prefetch_030_inline(idx, regs.cacheholdingdata020, pc2);
 	} else {
-		idx = add_prefetch_030(idx, regs.cacheholdingdata020 >>	16, pc2);
-		idx = add_prefetch_030(idx, regs.cacheholdingdata020, pc2);
+		idx = add_prefetch_030_inline(idx, regs.cacheholdingdata020 >>	16, pc2);
+		idx = add_prefetch_030_inline(idx, regs.cacheholdingdata020, pc2);
 	}
 
 	fill_icache030(pc + 4);
 	if (pc2 & 2) {
-		idx = add_prefetch_030(idx, regs.cacheholdingdata020 >>	16, pc2);
-		idx = add_prefetch_030(idx, regs.cacheholdingdata020, pc2);
+		idx = add_prefetch_030_inline(idx, regs.cacheholdingdata020 >>	16, pc2);
+		idx = add_prefetch_030_inline(idx, regs.cacheholdingdata020, pc2);
 	} else {
-		idx = add_prefetch_030(idx, regs.cacheholdingdata020 >>	16, pc2);
+		idx = add_prefetch_030_inline(idx, regs.cacheholdingdata020 >>	16, pc2);
 	}
 
 	ipl_fetch_now();
@@ -12464,21 +12489,21 @@ void fill_prefetch_030_ntx_continue ()
 
 		fill_icache030(pc);
 		if (pc2 & 2) {
-			idx = add_prefetch_030(idx, regs.cacheholdingdata020, pc_orig);
+			idx = add_prefetch_030_inline(idx, regs.cacheholdingdata020, pc_orig);
 		} else {
-			idx = add_prefetch_030(idx, regs.cacheholdingdata020 >> 16, pc_orig);
+			idx = add_prefetch_030_inline(idx, regs.cacheholdingdata020 >> 16, pc_orig);
 			if (idx < 3)
-				idx = add_prefetch_030(idx, regs.cacheholdingdata020, pc_orig);
+				idx = add_prefetch_030_inline(idx, regs.cacheholdingdata020, pc_orig);
 		}
 
 		if (idx < 3) {
 			fill_icache030(pc + 4);
 			if (pc2 & 2) {
-				idx = add_prefetch_030(idx, regs.cacheholdingdata020 >>	16, pc_orig);
+				idx = add_prefetch_030_inline(idx, regs.cacheholdingdata020 >>	16, pc_orig);
 				if (idx < 3)
-					idx = add_prefetch_030(idx, regs.cacheholdingdata020, pc_orig);
+					idx = add_prefetch_030_inline(idx, regs.cacheholdingdata020, pc_orig);
 			} else {
-				idx = add_prefetch_030(idx, regs.cacheholdingdata020 >>	16, pc_orig);
+				idx = add_prefetch_030_inline(idx, regs.cacheholdingdata020 >>	16, pc_orig);
 			}
 		}
 	}

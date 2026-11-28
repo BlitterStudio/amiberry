@@ -15925,15 +15925,32 @@ uae_u32 REGPARAM2 op_48d0_0_ff(uae_u32 opcode)
 	uaecptr srca;
 	srca = m68k_areg(regs, dstreg);
 	uae_u16 dmask = mask & 0xff, amask = (mask >> 8) & 0xff;
-	while (dmask) {
-		put_long(srca, m68k_dreg(regs, movem_index1[dmask]));
-		srca += 4;
-		dmask = movem_next[dmask];
-	}
-	while (amask) {
-		put_long(srca, m68k_areg(regs, movem_index1[amask]));
-		srca += 4;
-		amask = movem_next[amask];
+	uae_u32 m = mask;
+	addrbank *ab = movem_bank(srca);
+	uae_u8 *mp = ab ? movem_direct(ab, ab->baseaddr_direct_w, srca) : NULL;
+	if (mp) {
+		while (m) {
+			do_put_mem_long((uae_u32 *)mp, regs.regs[movem_ctz(m)]);
+			mp += 4;
+			m &= m - 1;
+		}
+	} else if (ab && (ab->flags & ABFLAG_RAM)) {
+		while (m) {
+			call_mem_put_func(ab->lput, srca, regs.regs[movem_ctz(m)]);
+			srca += 4;
+			m &= m - 1;
+		}
+	} else {
+		while (dmask) {
+			put_long(srca, m68k_dreg(regs, movem_index1[dmask]));
+			srca += 4;
+			dmask = movem_next[dmask];
+		}
+		while (amask) {
+			put_long(srca, m68k_areg(regs, movem_index1[amask]));
+			srca += 4;
+			amask = movem_next[amask];
+		}
 	}
 	m68k_incpc(4);
 	return (8 * CYCLE_UNIT / 2 + count_cycles) | (((1 * 4 * CYCLE_UNIT / 2 + count_cycles) * 4) << 16);
@@ -15951,19 +15968,48 @@ uae_u32 REGPARAM2 op_48e0_0_ff(uae_u32 opcode)
 	srca = m68k_areg(regs, dstreg) - 0;
 	uae_u16 amask = mask & 0xff, dmask = (mask >> 8) & 0xff;
 	int type = 1;
-	while (amask) {
-		srca -= 4;
-		if (!type || movem_index2[amask] != dstreg) {
-			put_long(srca, m68k_areg(regs, movem_index2[amask]));
-		} else {
-			put_long(srca, m68k_areg(regs, movem_index2[amask]) - 4);
+	uae_u32 m = mask;
+	addrbank *ab = movem_bank(srca - MOVEM_DIRECT_WINDOW);
+	uae_u8 *mp = ab ? movem_direct(ab, ab->baseaddr_direct_w, srca - MOVEM_DIRECT_WINDOW) : NULL;
+	if (mp) {
+		mp += MOVEM_DIRECT_WINDOW;
+		while (m) {
+			int r = 15 - movem_ctz(m);
+			uae_u32 v = regs.regs[r];
+			if (r == dstreg + 8) {
+				v -= 4;
+			}
+			srca -= 4;
+			mp -= 4;
+			do_put_mem_long((uae_u32 *)mp, v);
+			m &= m - 1;
 		}
-		amask = movem_next[amask];
-	}
-	while (dmask) {
-		srca -= 4;
-		put_long(srca, m68k_dreg(regs, movem_index2[dmask]));
-		dmask = movem_next[dmask];
+	} else if (ab && (ab->flags & ABFLAG_RAM)) {
+		while (m) {
+			int r = 15 - movem_ctz(m);
+			uae_u32 v = regs.regs[r];
+			if (r == dstreg + 8) {
+				v -= 4;
+			}
+			srca -= 4;
+			call_mem_put_func(ab->lput, srca, v);
+			m &= m - 1;
+		}
+	} else {
+		while (amask) {
+			srca -= 4;
+			if (!type || movem_index2[amask] != dstreg) {
+				put_long(srca, m68k_areg(regs, movem_index2[amask]));
+			} else {
+				put_long(srca, m68k_areg(regs, movem_index2[amask]) - 4);
+			}
+			amask = movem_next[amask];
+		}
+		while (dmask) {
+			srca -= 4;
+			put_long(srca, m68k_dreg(regs, movem_index2[dmask]));
+			dmask = movem_next[dmask];
+		}
 	}
 	m68k_areg(regs, dstreg) = srca;
 	m68k_incpc(4);
@@ -15981,15 +16027,32 @@ uae_u32 REGPARAM2 op_48e8_0_ff(uae_u32 opcode)
 	uaecptr srca;
 	srca = m68k_areg(regs, dstreg) + (uae_s32)(uae_s16)get_diword(4);
 	uae_u16 dmask = mask & 0xff, amask = (mask >> 8) & 0xff;
-	while (dmask) {
-		put_long(srca, m68k_dreg(regs, movem_index1[dmask]));
-		srca += 4;
-		dmask = movem_next[dmask];
-	}
-	while (amask) {
-		put_long(srca, m68k_areg(regs, movem_index1[amask]));
-		srca += 4;
-		amask = movem_next[amask];
+	uae_u32 m = mask;
+	addrbank *ab = movem_bank(srca);
+	uae_u8 *mp = ab ? movem_direct(ab, ab->baseaddr_direct_w, srca) : NULL;
+	if (mp) {
+		while (m) {
+			do_put_mem_long((uae_u32 *)mp, regs.regs[movem_ctz(m)]);
+			mp += 4;
+			m &= m - 1;
+		}
+	} else if (ab && (ab->flags & ABFLAG_RAM)) {
+		while (m) {
+			call_mem_put_func(ab->lput, srca, regs.regs[movem_ctz(m)]);
+			srca += 4;
+			m &= m - 1;
+		}
+	} else {
+		while (dmask) {
+			put_long(srca, m68k_dreg(regs, movem_index1[dmask]));
+			srca += 4;
+			dmask = movem_next[dmask];
+		}
+		while (amask) {
+			put_long(srca, m68k_areg(regs, movem_index1[amask]));
+			srca += 4;
+			amask = movem_next[amask];
+		}
 	}
 	m68k_incpc(6);
 	return (12 * CYCLE_UNIT / 2 + count_cycles) | (((1 * 4 * CYCLE_UNIT / 2 + count_cycles) * 4) << 16);
@@ -16007,15 +16070,32 @@ uae_u32 REGPARAM2 op_48f0_0_ff(uae_u32 opcode)
 	m68k_incpc(4);
 	srca = get_disp_ea_020(m68k_areg(regs, dstreg), 0);
 	uae_u16 dmask = mask & 0xff, amask = (mask >> 8) & 0xff;
-	while (dmask) {
-		put_long(srca, m68k_dreg(regs, movem_index1[dmask]));
-		srca += 4;
-		dmask = movem_next[dmask];
-	}
-	while (amask) {
-		put_long(srca, m68k_areg(regs, movem_index1[amask]));
-		srca += 4;
-		amask = movem_next[amask];
+	uae_u32 m = mask;
+	addrbank *ab = movem_bank(srca);
+	uae_u8 *mp = ab ? movem_direct(ab, ab->baseaddr_direct_w, srca) : NULL;
+	if (mp) {
+		while (m) {
+			do_put_mem_long((uae_u32 *)mp, regs.regs[movem_ctz(m)]);
+			mp += 4;
+			m &= m - 1;
+		}
+	} else if (ab && (ab->flags & ABFLAG_RAM)) {
+		while (m) {
+			call_mem_put_func(ab->lput, srca, regs.regs[movem_ctz(m)]);
+			srca += 4;
+			m &= m - 1;
+		}
+	} else {
+		while (dmask) {
+			put_long(srca, m68k_dreg(regs, movem_index1[dmask]));
+			srca += 4;
+			dmask = movem_next[dmask];
+		}
+		while (amask) {
+			put_long(srca, m68k_areg(regs, movem_index1[amask]));
+			srca += 4;
+			amask = movem_next[amask];
+		}
 	}
 	return (12 * CYCLE_UNIT / 2 + count_cycles) | (((1 * 4 * CYCLE_UNIT / 2 + count_cycles) * 4) << 16);
 }
@@ -16029,15 +16109,32 @@ uae_u32 REGPARAM2 op_48f8_0_ff(uae_u32 opcode)
 	uaecptr srca;
 	srca = (uae_s32)(uae_s16)get_diword(4);
 	uae_u16 dmask = mask & 0xff, amask = (mask >> 8) & 0xff;
-	while (dmask) {
-		put_long(srca, m68k_dreg(regs, movem_index1[dmask]));
-		srca += 4;
-		dmask = movem_next[dmask];
-	}
-	while (amask) {
-		put_long(srca, m68k_areg(regs, movem_index1[amask]));
-		srca += 4;
-		amask = movem_next[amask];
+	uae_u32 m = mask;
+	addrbank *ab = movem_bank(srca);
+	uae_u8 *mp = ab ? movem_direct(ab, ab->baseaddr_direct_w, srca) : NULL;
+	if (mp) {
+		while (m) {
+			do_put_mem_long((uae_u32 *)mp, regs.regs[movem_ctz(m)]);
+			mp += 4;
+			m &= m - 1;
+		}
+	} else if (ab && (ab->flags & ABFLAG_RAM)) {
+		while (m) {
+			call_mem_put_func(ab->lput, srca, regs.regs[movem_ctz(m)]);
+			srca += 4;
+			m &= m - 1;
+		}
+	} else {
+		while (dmask) {
+			put_long(srca, m68k_dreg(regs, movem_index1[dmask]));
+			srca += 4;
+			dmask = movem_next[dmask];
+		}
+		while (amask) {
+			put_long(srca, m68k_areg(regs, movem_index1[amask]));
+			srca += 4;
+			amask = movem_next[amask];
+		}
 	}
 	m68k_incpc(6);
 	return (12 * CYCLE_UNIT / 2 + count_cycles) | (((1 * 4 * CYCLE_UNIT / 2 + count_cycles) * 4) << 16);
@@ -16052,15 +16149,32 @@ uae_u32 REGPARAM2 op_48f9_0_ff(uae_u32 opcode)
 	uaecptr srca;
 	srca = get_dilong(4);
 	uae_u16 dmask = mask & 0xff, amask = (mask >> 8) & 0xff;
-	while (dmask) {
-		put_long(srca, m68k_dreg(regs, movem_index1[dmask]));
-		srca += 4;
-		dmask = movem_next[dmask];
-	}
-	while (amask) {
-		put_long(srca, m68k_areg(regs, movem_index1[amask]));
-		srca += 4;
-		amask = movem_next[amask];
+	uae_u32 m = mask;
+	addrbank *ab = movem_bank(srca);
+	uae_u8 *mp = ab ? movem_direct(ab, ab->baseaddr_direct_w, srca) : NULL;
+	if (mp) {
+		while (m) {
+			do_put_mem_long((uae_u32 *)mp, regs.regs[movem_ctz(m)]);
+			mp += 4;
+			m &= m - 1;
+		}
+	} else if (ab && (ab->flags & ABFLAG_RAM)) {
+		while (m) {
+			call_mem_put_func(ab->lput, srca, regs.regs[movem_ctz(m)]);
+			srca += 4;
+			m &= m - 1;
+		}
+	} else {
+		while (dmask) {
+			put_long(srca, m68k_dreg(regs, movem_index1[dmask]));
+			srca += 4;
+			dmask = movem_next[dmask];
+		}
+		while (amask) {
+			put_long(srca, m68k_areg(regs, movem_index1[amask]));
+			srca += 4;
+			amask = movem_next[amask];
+		}
 	}
 	m68k_incpc(8);
 	return (16 * CYCLE_UNIT / 2 + count_cycles) | (((1 * 4 * CYCLE_UNIT / 2 + count_cycles) * 4) << 16);
@@ -17517,15 +17631,33 @@ uae_u32 REGPARAM2 op_4cd0_0_ff(uae_u32 opcode)
 	uae_u32 dmask = mask & 0xff, amask = (mask >> 8) & 0xff;
 	uaecptr srca;
 	srca = m68k_areg(regs, dstreg);
-	while (dmask) {
-		m68k_dreg(regs, movem_index1[dmask]) = get_long(srca);
-		srca += 4;
-		dmask = movem_next[dmask];
-	}
-	while (amask) {
-		m68k_areg(regs, movem_index1[amask]) = get_long(srca);
-		srca += 4;
-		amask = movem_next[amask];
+	uae_u32 m = mask;
+	addrbank *ab = movem_bank(srca);
+	uae_u8 *mp = ab ? movem_direct(ab, ab->baseaddr_direct_r, srca) : NULL;
+	if (mp) {
+		while (m) {
+			regs.regs[movem_ctz(m)] = do_get_mem_long((uae_u32 *)mp);
+			mp += 4;
+			srca += 4;
+			m &= m - 1;
+		}
+	} else if (ab && (ab->flags & ABFLAG_RAM)) {
+		while (m) {
+			regs.regs[movem_ctz(m)] = call_mem_get_func(ab->lget, srca);
+			srca += 4;
+			m &= m - 1;
+		}
+	} else {
+		while (dmask) {
+			m68k_dreg(regs, movem_index1[dmask]) = get_long(srca);
+			srca += 4;
+			dmask = movem_next[dmask];
+		}
+		while (amask) {
+			m68k_areg(regs, movem_index1[amask]) = get_long(srca);
+			srca += 4;
+			amask = movem_next[amask];
+		}
 	}
 	m68k_incpc(4);
 	return (8 * CYCLE_UNIT / 2 + count_cycles) | (((1 * 4 * CYCLE_UNIT / 2 + count_cycles) * 4) << 16);
@@ -17542,15 +17674,33 @@ uae_u32 REGPARAM2 op_4cd8_0_ff(uae_u32 opcode)
 	uae_u32 dmask = mask & 0xff, amask = (mask >> 8) & 0xff;
 	uaecptr srca;
 	srca = m68k_areg(regs, dstreg);
-	while (dmask) {
-		m68k_dreg(regs, movem_index1[dmask]) = get_long(srca);
-		srca += 4;
-		dmask = movem_next[dmask];
-	}
-	while (amask) {
-		m68k_areg(regs, movem_index1[amask]) = get_long(srca);
-		srca += 4;
-		amask = movem_next[amask];
+	uae_u32 m = mask;
+	addrbank *ab = movem_bank(srca);
+	uae_u8 *mp = ab ? movem_direct(ab, ab->baseaddr_direct_r, srca) : NULL;
+	if (mp) {
+		while (m) {
+			regs.regs[movem_ctz(m)] = do_get_mem_long((uae_u32 *)mp);
+			mp += 4;
+			srca += 4;
+			m &= m - 1;
+		}
+	} else if (ab && (ab->flags & ABFLAG_RAM)) {
+		while (m) {
+			regs.regs[movem_ctz(m)] = call_mem_get_func(ab->lget, srca);
+			srca += 4;
+			m &= m - 1;
+		}
+	} else {
+		while (dmask) {
+			m68k_dreg(regs, movem_index1[dmask]) = get_long(srca);
+			srca += 4;
+			dmask = movem_next[dmask];
+		}
+		while (amask) {
+			m68k_areg(regs, movem_index1[amask]) = get_long(srca);
+			srca += 4;
+			amask = movem_next[amask];
+		}
 	}
 	m68k_areg(regs, dstreg) = srca;
 	m68k_incpc(4);
@@ -17568,15 +17718,33 @@ uae_u32 REGPARAM2 op_4ce8_0_ff(uae_u32 opcode)
 	uae_u32 dmask = mask & 0xff, amask = (mask >> 8) & 0xff;
 	uaecptr srca;
 	srca = m68k_areg(regs, dstreg) + (uae_s32)(uae_s16)get_diword(4);
-	while (dmask) {
-		m68k_dreg(regs, movem_index1[dmask]) = get_long(srca);
-		srca += 4;
-		dmask = movem_next[dmask];
-	}
-	while (amask) {
-		m68k_areg(regs, movem_index1[amask]) = get_long(srca);
-		srca += 4;
-		amask = movem_next[amask];
+	uae_u32 m = mask;
+	addrbank *ab = movem_bank(srca);
+	uae_u8 *mp = ab ? movem_direct(ab, ab->baseaddr_direct_r, srca) : NULL;
+	if (mp) {
+		while (m) {
+			regs.regs[movem_ctz(m)] = do_get_mem_long((uae_u32 *)mp);
+			mp += 4;
+			srca += 4;
+			m &= m - 1;
+		}
+	} else if (ab && (ab->flags & ABFLAG_RAM)) {
+		while (m) {
+			regs.regs[movem_ctz(m)] = call_mem_get_func(ab->lget, srca);
+			srca += 4;
+			m &= m - 1;
+		}
+	} else {
+		while (dmask) {
+			m68k_dreg(regs, movem_index1[dmask]) = get_long(srca);
+			srca += 4;
+			dmask = movem_next[dmask];
+		}
+		while (amask) {
+			m68k_areg(regs, movem_index1[amask]) = get_long(srca);
+			srca += 4;
+			amask = movem_next[amask];
+		}
 	}
 	m68k_incpc(6);
 	return (12 * CYCLE_UNIT / 2 + count_cycles) | (((1 * 4 * CYCLE_UNIT / 2 + count_cycles) * 4) << 16);
@@ -17594,15 +17762,33 @@ uae_u32 REGPARAM2 op_4cf0_0_ff(uae_u32 opcode)
 	uaecptr srca;
 	m68k_incpc(4);
 	srca = get_disp_ea_020(m68k_areg(regs, dstreg), 0);
-	while (dmask) {
-		m68k_dreg(regs, movem_index1[dmask]) = get_long(srca);
-		srca += 4;
-		dmask = movem_next[dmask];
-	}
-	while (amask) {
-		m68k_areg(regs, movem_index1[amask]) = get_long(srca);
-		srca += 4;
-		amask = movem_next[amask];
+	uae_u32 m = mask;
+	addrbank *ab = movem_bank(srca);
+	uae_u8 *mp = ab ? movem_direct(ab, ab->baseaddr_direct_r, srca) : NULL;
+	if (mp) {
+		while (m) {
+			regs.regs[movem_ctz(m)] = do_get_mem_long((uae_u32 *)mp);
+			mp += 4;
+			srca += 4;
+			m &= m - 1;
+		}
+	} else if (ab && (ab->flags & ABFLAG_RAM)) {
+		while (m) {
+			regs.regs[movem_ctz(m)] = call_mem_get_func(ab->lget, srca);
+			srca += 4;
+			m &= m - 1;
+		}
+	} else {
+		while (dmask) {
+			m68k_dreg(regs, movem_index1[dmask]) = get_long(srca);
+			srca += 4;
+			dmask = movem_next[dmask];
+		}
+		while (amask) {
+			m68k_areg(regs, movem_index1[amask]) = get_long(srca);
+			srca += 4;
+			amask = movem_next[amask];
+		}
 	}
 	return (12 * CYCLE_UNIT / 2 + count_cycles) | (((1 * 4 * CYCLE_UNIT / 2 + count_cycles) * 4) << 16);
 }
@@ -17616,15 +17802,33 @@ uae_u32 REGPARAM2 op_4cf8_0_ff(uae_u32 opcode)
 	uae_u32 dmask = mask & 0xff, amask = (mask >> 8) & 0xff;
 	uaecptr srca;
 	srca = (uae_s32)(uae_s16)get_diword(4);
-	while (dmask) {
-		m68k_dreg(regs, movem_index1[dmask]) = get_long(srca);
-		srca += 4;
-		dmask = movem_next[dmask];
-	}
-	while (amask) {
-		m68k_areg(regs, movem_index1[amask]) = get_long(srca);
-		srca += 4;
-		amask = movem_next[amask];
+	uae_u32 m = mask;
+	addrbank *ab = movem_bank(srca);
+	uae_u8 *mp = ab ? movem_direct(ab, ab->baseaddr_direct_r, srca) : NULL;
+	if (mp) {
+		while (m) {
+			regs.regs[movem_ctz(m)] = do_get_mem_long((uae_u32 *)mp);
+			mp += 4;
+			srca += 4;
+			m &= m - 1;
+		}
+	} else if (ab && (ab->flags & ABFLAG_RAM)) {
+		while (m) {
+			regs.regs[movem_ctz(m)] = call_mem_get_func(ab->lget, srca);
+			srca += 4;
+			m &= m - 1;
+		}
+	} else {
+		while (dmask) {
+			m68k_dreg(regs, movem_index1[dmask]) = get_long(srca);
+			srca += 4;
+			dmask = movem_next[dmask];
+		}
+		while (amask) {
+			m68k_areg(regs, movem_index1[amask]) = get_long(srca);
+			srca += 4;
+			amask = movem_next[amask];
+		}
 	}
 	m68k_incpc(6);
 	return (12 * CYCLE_UNIT / 2 + count_cycles) | (((1 * 4 * CYCLE_UNIT / 2 + count_cycles) * 4) << 16);
@@ -17639,15 +17843,33 @@ uae_u32 REGPARAM2 op_4cf9_0_ff(uae_u32 opcode)
 	uae_u32 dmask = mask & 0xff, amask = (mask >> 8) & 0xff;
 	uaecptr srca;
 	srca = get_dilong(4);
-	while (dmask) {
-		m68k_dreg(regs, movem_index1[dmask]) = get_long(srca);
-		srca += 4;
-		dmask = movem_next[dmask];
-	}
-	while (amask) {
-		m68k_areg(regs, movem_index1[amask]) = get_long(srca);
-		srca += 4;
-		amask = movem_next[amask];
+	uae_u32 m = mask;
+	addrbank *ab = movem_bank(srca);
+	uae_u8 *mp = ab ? movem_direct(ab, ab->baseaddr_direct_r, srca) : NULL;
+	if (mp) {
+		while (m) {
+			regs.regs[movem_ctz(m)] = do_get_mem_long((uae_u32 *)mp);
+			mp += 4;
+			srca += 4;
+			m &= m - 1;
+		}
+	} else if (ab && (ab->flags & ABFLAG_RAM)) {
+		while (m) {
+			regs.regs[movem_ctz(m)] = call_mem_get_func(ab->lget, srca);
+			srca += 4;
+			m &= m - 1;
+		}
+	} else {
+		while (dmask) {
+			m68k_dreg(regs, movem_index1[dmask]) = get_long(srca);
+			srca += 4;
+			dmask = movem_next[dmask];
+		}
+		while (amask) {
+			m68k_areg(regs, movem_index1[amask]) = get_long(srca);
+			srca += 4;
+			amask = movem_next[amask];
+		}
 	}
 	m68k_incpc(8);
 	return (16 * CYCLE_UNIT / 2 + count_cycles) | (((1 * 4 * CYCLE_UNIT / 2 + count_cycles) * 4) << 16);
@@ -17664,15 +17886,33 @@ uae_u32 REGPARAM2 op_4cfa_0_ff(uae_u32 opcode)
 	uaecptr srca;
 	srca = m68k_getpc() + 4;
 	srca += (uae_s32)(uae_s16)get_diword(4);
-	while (dmask) {
-		m68k_dreg(regs, movem_index1[dmask]) = get_long(srca);
-		srca += 4;
-		dmask = movem_next[dmask];
-	}
-	while (amask) {
-		m68k_areg(regs, movem_index1[amask]) = get_long(srca);
-		srca += 4;
-		amask = movem_next[amask];
+	uae_u32 m = mask;
+	addrbank *ab = movem_bank(srca);
+	uae_u8 *mp = ab ? movem_direct(ab, ab->baseaddr_direct_r, srca) : NULL;
+	if (mp) {
+		while (m) {
+			regs.regs[movem_ctz(m)] = do_get_mem_long((uae_u32 *)mp);
+			mp += 4;
+			srca += 4;
+			m &= m - 1;
+		}
+	} else if (ab && (ab->flags & ABFLAG_RAM)) {
+		while (m) {
+			regs.regs[movem_ctz(m)] = call_mem_get_func(ab->lget, srca);
+			srca += 4;
+			m &= m - 1;
+		}
+	} else {
+		while (dmask) {
+			m68k_dreg(regs, movem_index1[dmask]) = get_long(srca);
+			srca += 4;
+			dmask = movem_next[dmask];
+		}
+		while (amask) {
+			m68k_areg(regs, movem_index1[amask]) = get_long(srca);
+			srca += 4;
+			amask = movem_next[amask];
+		}
 	}
 	m68k_incpc(6);
 	return (12 * CYCLE_UNIT / 2 + count_cycles) | (((1 * 4 * CYCLE_UNIT / 2 + count_cycles) * 4) << 16);
@@ -17690,15 +17930,33 @@ uae_u32 REGPARAM2 op_4cfb_0_ff(uae_u32 opcode)
 	m68k_incpc(4);
 	uaecptr tmppc = m68k_getpc();
 	srca = get_disp_ea_020(tmppc, 0);
-	while (dmask) {
-		m68k_dreg(regs, movem_index1[dmask]) = get_long(srca);
-		srca += 4;
-		dmask = movem_next[dmask];
-	}
-	while (amask) {
-		m68k_areg(regs, movem_index1[amask]) = get_long(srca);
-		srca += 4;
-		amask = movem_next[amask];
+	uae_u32 m = mask;
+	addrbank *ab = movem_bank(srca);
+	uae_u8 *mp = ab ? movem_direct(ab, ab->baseaddr_direct_r, srca) : NULL;
+	if (mp) {
+		while (m) {
+			regs.regs[movem_ctz(m)] = do_get_mem_long((uae_u32 *)mp);
+			mp += 4;
+			srca += 4;
+			m &= m - 1;
+		}
+	} else if (ab && (ab->flags & ABFLAG_RAM)) {
+		while (m) {
+			regs.regs[movem_ctz(m)] = call_mem_get_func(ab->lget, srca);
+			srca += 4;
+			m &= m - 1;
+		}
+	} else {
+		while (dmask) {
+			m68k_dreg(regs, movem_index1[dmask]) = get_long(srca);
+			srca += 4;
+			dmask = movem_next[dmask];
+		}
+		while (amask) {
+			m68k_areg(regs, movem_index1[amask]) = get_long(srca);
+			srca += 4;
+			amask = movem_next[amask];
+		}
 	}
 	return (12 * CYCLE_UNIT / 2 + count_cycles) | (((1 * 4 * CYCLE_UNIT / 2 + count_cycles) * 4) << 16);
 }
@@ -42173,17 +42431,36 @@ uae_u32 REGPARAM2 op_48d0_2_ff(uae_u32 opcode)
 	uaecptr srca;
 	srca = m68k_areg(regs, dstreg);
 	uae_u16 dmask = mask & 0xff, amask = (mask >> 8) & 0xff;
-	while (dmask) {
-		put_long(srca, m68k_dreg(regs, movem_index1[dmask]));
-		count_cycles += 4 * CYCLE_UNIT / 2;
-		srca += 4;
-		dmask = movem_next[dmask];
-	}
-	while (amask) {
-		put_long(srca, m68k_areg(regs, movem_index1[amask]));
-		count_cycles += 4 * CYCLE_UNIT / 2;
-		srca += 4;
-		amask = movem_next[amask];
+	uae_u32 m = mask;
+	addrbank *ab = movem_bank(srca);
+	uae_u8 *mp = ab ? movem_direct(ab, ab->baseaddr_direct_w, srca) : NULL;
+	if (mp) {
+		while (m) {
+			do_put_mem_long((uae_u32 *)mp, regs.regs[movem_ctz(m)]);
+			mp += 4;
+			count_cycles += 4 * CYCLE_UNIT / 2;
+			m &= m - 1;
+		}
+	} else if (ab && (ab->flags & ABFLAG_RAM)) {
+		while (m) {
+			call_mem_put_func(ab->lput, srca, regs.regs[movem_ctz(m)]);
+			srca += 4;
+			count_cycles += 4 * CYCLE_UNIT / 2;
+			m &= m - 1;
+		}
+	} else {
+		while (dmask) {
+			put_long(srca, m68k_dreg(regs, movem_index1[dmask]));
+			count_cycles += 4 * CYCLE_UNIT / 2;
+			srca += 4;
+			dmask = movem_next[dmask];
+		}
+		while (amask) {
+			put_long(srca, m68k_areg(regs, movem_index1[amask]));
+			count_cycles += 4 * CYCLE_UNIT / 2;
+			srca += 4;
+			amask = movem_next[amask];
+		}
 	}
 	m68k_incpc(4);
 	return (8 * CYCLE_UNIT / 2 + count_cycles) | (((1 * 4 * CYCLE_UNIT / 2 + count_cycles) * 4) << 16);
@@ -42201,22 +42478,53 @@ uae_u32 REGPARAM2 op_48e0_2_ff(uae_u32 opcode)
 	srca = m68k_areg(regs, dstreg) - 0;
 	uae_u16 amask = mask & 0xff, dmask = (mask >> 8) & 0xff;
 	int type = 1;
-	while (amask) {
-		srca -= 4;
-		if (!type || movem_index2[amask] != dstreg) {
-			put_long(srca, m68k_areg(regs, movem_index2[amask]));
+	uae_u32 m = mask;
+	addrbank *ab = movem_bank(srca - MOVEM_DIRECT_WINDOW);
+	uae_u8 *mp = ab ? movem_direct(ab, ab->baseaddr_direct_w, srca - MOVEM_DIRECT_WINDOW) : NULL;
+	if (mp) {
+		mp += MOVEM_DIRECT_WINDOW;
+		while (m) {
+			int r = 15 - movem_ctz(m);
+			uae_u32 v = regs.regs[r];
+			if (r == dstreg + 8) {
+				v -= 4;
+			}
+			srca -= 4;
+			mp -= 4;
+			do_put_mem_long((uae_u32 *)mp, v);
 			count_cycles += 4 * CYCLE_UNIT / 2;
-		} else {
-			put_long(srca, m68k_areg(regs, movem_index2[amask]) - 4);
-			count_cycles += 4 * CYCLE_UNIT / 2;
+			m &= m - 1;
 		}
-		amask = movem_next[amask];
-	}
-	while (dmask) {
-		srca -= 4;
-		put_long(srca, m68k_dreg(regs, movem_index2[dmask]));
-		count_cycles += 4 * CYCLE_UNIT / 2;
-		dmask = movem_next[dmask];
+	} else if (ab && (ab->flags & ABFLAG_RAM)) {
+		while (m) {
+			int r = 15 - movem_ctz(m);
+			uae_u32 v = regs.regs[r];
+			if (r == dstreg + 8) {
+				v -= 4;
+			}
+			srca -= 4;
+			call_mem_put_func(ab->lput, srca, v);
+			count_cycles += 4 * CYCLE_UNIT / 2;
+			m &= m - 1;
+		}
+	} else {
+		while (amask) {
+			srca -= 4;
+			if (!type || movem_index2[amask] != dstreg) {
+				put_long(srca, m68k_areg(regs, movem_index2[amask]));
+				count_cycles += 4 * CYCLE_UNIT / 2;
+			} else {
+				put_long(srca, m68k_areg(regs, movem_index2[amask]) - 4);
+				count_cycles += 4 * CYCLE_UNIT / 2;
+			}
+			amask = movem_next[amask];
+		}
+		while (dmask) {
+			srca -= 4;
+			put_long(srca, m68k_dreg(regs, movem_index2[dmask]));
+			count_cycles += 4 * CYCLE_UNIT / 2;
+			dmask = movem_next[dmask];
+		}
 	}
 	m68k_areg(regs, dstreg) = srca;
 	m68k_incpc(4);
@@ -42234,17 +42542,36 @@ uae_u32 REGPARAM2 op_48e8_2_ff(uae_u32 opcode)
 	uaecptr srca;
 	srca = m68k_areg(regs, dstreg) + (uae_s32)(uae_s16)get_diword(4);
 	uae_u16 dmask = mask & 0xff, amask = (mask >> 8) & 0xff;
-	while (dmask) {
-		put_long(srca, m68k_dreg(regs, movem_index1[dmask]));
-		count_cycles += 4 * CYCLE_UNIT / 2;
-		srca += 4;
-		dmask = movem_next[dmask];
-	}
-	while (amask) {
-		put_long(srca, m68k_areg(regs, movem_index1[amask]));
-		count_cycles += 4 * CYCLE_UNIT / 2;
-		srca += 4;
-		amask = movem_next[amask];
+	uae_u32 m = mask;
+	addrbank *ab = movem_bank(srca);
+	uae_u8 *mp = ab ? movem_direct(ab, ab->baseaddr_direct_w, srca) : NULL;
+	if (mp) {
+		while (m) {
+			do_put_mem_long((uae_u32 *)mp, regs.regs[movem_ctz(m)]);
+			mp += 4;
+			count_cycles += 4 * CYCLE_UNIT / 2;
+			m &= m - 1;
+		}
+	} else if (ab && (ab->flags & ABFLAG_RAM)) {
+		while (m) {
+			call_mem_put_func(ab->lput, srca, regs.regs[movem_ctz(m)]);
+			srca += 4;
+			count_cycles += 4 * CYCLE_UNIT / 2;
+			m &= m - 1;
+		}
+	} else {
+		while (dmask) {
+			put_long(srca, m68k_dreg(regs, movem_index1[dmask]));
+			count_cycles += 4 * CYCLE_UNIT / 2;
+			srca += 4;
+			dmask = movem_next[dmask];
+		}
+		while (amask) {
+			put_long(srca, m68k_areg(regs, movem_index1[amask]));
+			count_cycles += 4 * CYCLE_UNIT / 2;
+			srca += 4;
+			amask = movem_next[amask];
+		}
 	}
 	m68k_incpc(6);
 	return (12 * CYCLE_UNIT / 2 + count_cycles) | (((1 * 4 * CYCLE_UNIT / 2 + count_cycles) * 4) << 16);
@@ -42262,17 +42589,36 @@ uae_u32 REGPARAM2 op_48f0_2_ff(uae_u32 opcode)
 	m68k_incpc(4);
 	srca = get_disp_ea_020(m68k_areg(regs, dstreg), 0);
 	uae_u16 dmask = mask & 0xff, amask = (mask >> 8) & 0xff;
-	while (dmask) {
-		put_long(srca, m68k_dreg(regs, movem_index1[dmask]));
-		count_cycles += 4 * CYCLE_UNIT / 2;
-		srca += 4;
-		dmask = movem_next[dmask];
-	}
-	while (amask) {
-		put_long(srca, m68k_areg(regs, movem_index1[amask]));
-		count_cycles += 4 * CYCLE_UNIT / 2;
-		srca += 4;
-		amask = movem_next[amask];
+	uae_u32 m = mask;
+	addrbank *ab = movem_bank(srca);
+	uae_u8 *mp = ab ? movem_direct(ab, ab->baseaddr_direct_w, srca) : NULL;
+	if (mp) {
+		while (m) {
+			do_put_mem_long((uae_u32 *)mp, regs.regs[movem_ctz(m)]);
+			mp += 4;
+			count_cycles += 4 * CYCLE_UNIT / 2;
+			m &= m - 1;
+		}
+	} else if (ab && (ab->flags & ABFLAG_RAM)) {
+		while (m) {
+			call_mem_put_func(ab->lput, srca, regs.regs[movem_ctz(m)]);
+			srca += 4;
+			count_cycles += 4 * CYCLE_UNIT / 2;
+			m &= m - 1;
+		}
+	} else {
+		while (dmask) {
+			put_long(srca, m68k_dreg(regs, movem_index1[dmask]));
+			count_cycles += 4 * CYCLE_UNIT / 2;
+			srca += 4;
+			dmask = movem_next[dmask];
+		}
+		while (amask) {
+			put_long(srca, m68k_areg(regs, movem_index1[amask]));
+			count_cycles += 4 * CYCLE_UNIT / 2;
+			srca += 4;
+			amask = movem_next[amask];
+		}
 	}
 	return (12 * CYCLE_UNIT / 2 + count_cycles) | (((1 * 4 * CYCLE_UNIT / 2 + count_cycles) * 4) << 16);
 }
@@ -42286,17 +42632,36 @@ uae_u32 REGPARAM2 op_48f8_2_ff(uae_u32 opcode)
 	uaecptr srca;
 	srca = (uae_s32)(uae_s16)get_diword(4);
 	uae_u16 dmask = mask & 0xff, amask = (mask >> 8) & 0xff;
-	while (dmask) {
-		put_long(srca, m68k_dreg(regs, movem_index1[dmask]));
-		count_cycles += 4 * CYCLE_UNIT / 2;
-		srca += 4;
-		dmask = movem_next[dmask];
-	}
-	while (amask) {
-		put_long(srca, m68k_areg(regs, movem_index1[amask]));
-		count_cycles += 4 * CYCLE_UNIT / 2;
-		srca += 4;
-		amask = movem_next[amask];
+	uae_u32 m = mask;
+	addrbank *ab = movem_bank(srca);
+	uae_u8 *mp = ab ? movem_direct(ab, ab->baseaddr_direct_w, srca) : NULL;
+	if (mp) {
+		while (m) {
+			do_put_mem_long((uae_u32 *)mp, regs.regs[movem_ctz(m)]);
+			mp += 4;
+			count_cycles += 4 * CYCLE_UNIT / 2;
+			m &= m - 1;
+		}
+	} else if (ab && (ab->flags & ABFLAG_RAM)) {
+		while (m) {
+			call_mem_put_func(ab->lput, srca, regs.regs[movem_ctz(m)]);
+			srca += 4;
+			count_cycles += 4 * CYCLE_UNIT / 2;
+			m &= m - 1;
+		}
+	} else {
+		while (dmask) {
+			put_long(srca, m68k_dreg(regs, movem_index1[dmask]));
+			count_cycles += 4 * CYCLE_UNIT / 2;
+			srca += 4;
+			dmask = movem_next[dmask];
+		}
+		while (amask) {
+			put_long(srca, m68k_areg(regs, movem_index1[amask]));
+			count_cycles += 4 * CYCLE_UNIT / 2;
+			srca += 4;
+			amask = movem_next[amask];
+		}
 	}
 	m68k_incpc(6);
 	return (12 * CYCLE_UNIT / 2 + count_cycles) | (((1 * 4 * CYCLE_UNIT / 2 + count_cycles) * 4) << 16);
@@ -42311,17 +42676,36 @@ uae_u32 REGPARAM2 op_48f9_2_ff(uae_u32 opcode)
 	uaecptr srca;
 	srca = get_dilong(4);
 	uae_u16 dmask = mask & 0xff, amask = (mask >> 8) & 0xff;
-	while (dmask) {
-		put_long(srca, m68k_dreg(regs, movem_index1[dmask]));
-		count_cycles += 4 * CYCLE_UNIT / 2;
-		srca += 4;
-		dmask = movem_next[dmask];
-	}
-	while (amask) {
-		put_long(srca, m68k_areg(regs, movem_index1[amask]));
-		count_cycles += 4 * CYCLE_UNIT / 2;
-		srca += 4;
-		amask = movem_next[amask];
+	uae_u32 m = mask;
+	addrbank *ab = movem_bank(srca);
+	uae_u8 *mp = ab ? movem_direct(ab, ab->baseaddr_direct_w, srca) : NULL;
+	if (mp) {
+		while (m) {
+			do_put_mem_long((uae_u32 *)mp, regs.regs[movem_ctz(m)]);
+			mp += 4;
+			count_cycles += 4 * CYCLE_UNIT / 2;
+			m &= m - 1;
+		}
+	} else if (ab && (ab->flags & ABFLAG_RAM)) {
+		while (m) {
+			call_mem_put_func(ab->lput, srca, regs.regs[movem_ctz(m)]);
+			srca += 4;
+			count_cycles += 4 * CYCLE_UNIT / 2;
+			m &= m - 1;
+		}
+	} else {
+		while (dmask) {
+			put_long(srca, m68k_dreg(regs, movem_index1[dmask]));
+			count_cycles += 4 * CYCLE_UNIT / 2;
+			srca += 4;
+			dmask = movem_next[dmask];
+		}
+		while (amask) {
+			put_long(srca, m68k_areg(regs, movem_index1[amask]));
+			count_cycles += 4 * CYCLE_UNIT / 2;
+			srca += 4;
+			amask = movem_next[amask];
+		}
 	}
 	m68k_incpc(8);
 	return (16 * CYCLE_UNIT / 2 + count_cycles) | (((1 * 4 * CYCLE_UNIT / 2 + count_cycles) * 4) << 16);
@@ -42551,17 +42935,37 @@ uae_u32 REGPARAM2 op_4cd0_2_ff(uae_u32 opcode)
 	uae_u32 dmask = mask & 0xff, amask = (mask >> 8) & 0xff;
 	uaecptr srca;
 	srca = m68k_areg(regs, dstreg);
-	while (dmask) {
-		m68k_dreg(regs, movem_index1[dmask]) = get_long(srca);
-		count_cycles += 4 * CYCLE_UNIT / 2;
-		srca += 4;
-		dmask = movem_next[dmask];
-	}
-	while (amask) {
-		m68k_areg(regs, movem_index1[amask]) = get_long(srca);
-		count_cycles += 4 * CYCLE_UNIT / 2;
-		srca += 4;
-		amask = movem_next[amask];
+	uae_u32 m = mask;
+	addrbank *ab = movem_bank(srca);
+	uae_u8 *mp = ab ? movem_direct(ab, ab->baseaddr_direct_r, srca) : NULL;
+	if (mp) {
+		while (m) {
+			regs.regs[movem_ctz(m)] = do_get_mem_long((uae_u32 *)mp);
+			count_cycles += 4 * CYCLE_UNIT / 2;
+			mp += 4;
+			srca += 4;
+			m &= m - 1;
+		}
+	} else if (ab && (ab->flags & ABFLAG_RAM)) {
+		while (m) {
+			regs.regs[movem_ctz(m)] = call_mem_get_func(ab->lget, srca);
+			count_cycles += 4 * CYCLE_UNIT / 2;
+			srca += 4;
+			m &= m - 1;
+		}
+	} else {
+		while (dmask) {
+			m68k_dreg(regs, movem_index1[dmask]) = get_long(srca);
+			count_cycles += 4 * CYCLE_UNIT / 2;
+			srca += 4;
+			dmask = movem_next[dmask];
+		}
+		while (amask) {
+			m68k_areg(regs, movem_index1[amask]) = get_long(srca);
+			count_cycles += 4 * CYCLE_UNIT / 2;
+			srca += 4;
+			amask = movem_next[amask];
+		}
 	}
 	m68k_incpc(4);
 	return (8 * CYCLE_UNIT / 2 + count_cycles) | (((1 * 4 * CYCLE_UNIT / 2 + count_cycles) * 4) << 16);
@@ -42578,17 +42982,37 @@ uae_u32 REGPARAM2 op_4cd8_2_ff(uae_u32 opcode)
 	uae_u32 dmask = mask & 0xff, amask = (mask >> 8) & 0xff;
 	uaecptr srca;
 	srca = m68k_areg(regs, dstreg);
-	while (dmask) {
-		m68k_dreg(regs, movem_index1[dmask]) = get_long(srca);
-		count_cycles += 4 * CYCLE_UNIT / 2;
-		srca += 4;
-		dmask = movem_next[dmask];
-	}
-	while (amask) {
-		m68k_areg(regs, movem_index1[amask]) = get_long(srca);
-		count_cycles += 4 * CYCLE_UNIT / 2;
-		srca += 4;
-		amask = movem_next[amask];
+	uae_u32 m = mask;
+	addrbank *ab = movem_bank(srca);
+	uae_u8 *mp = ab ? movem_direct(ab, ab->baseaddr_direct_r, srca) : NULL;
+	if (mp) {
+		while (m) {
+			regs.regs[movem_ctz(m)] = do_get_mem_long((uae_u32 *)mp);
+			count_cycles += 4 * CYCLE_UNIT / 2;
+			mp += 4;
+			srca += 4;
+			m &= m - 1;
+		}
+	} else if (ab && (ab->flags & ABFLAG_RAM)) {
+		while (m) {
+			regs.regs[movem_ctz(m)] = call_mem_get_func(ab->lget, srca);
+			count_cycles += 4 * CYCLE_UNIT / 2;
+			srca += 4;
+			m &= m - 1;
+		}
+	} else {
+		while (dmask) {
+			m68k_dreg(regs, movem_index1[dmask]) = get_long(srca);
+			count_cycles += 4 * CYCLE_UNIT / 2;
+			srca += 4;
+			dmask = movem_next[dmask];
+		}
+		while (amask) {
+			m68k_areg(regs, movem_index1[amask]) = get_long(srca);
+			count_cycles += 4 * CYCLE_UNIT / 2;
+			srca += 4;
+			amask = movem_next[amask];
+		}
 	}
 	m68k_areg(regs, dstreg) = srca;
 	m68k_incpc(4);
@@ -42606,17 +43030,37 @@ uae_u32 REGPARAM2 op_4ce8_2_ff(uae_u32 opcode)
 	uae_u32 dmask = mask & 0xff, amask = (mask >> 8) & 0xff;
 	uaecptr srca;
 	srca = m68k_areg(regs, dstreg) + (uae_s32)(uae_s16)get_diword(4);
-	while (dmask) {
-		m68k_dreg(regs, movem_index1[dmask]) = get_long(srca);
-		count_cycles += 4 * CYCLE_UNIT / 2;
-		srca += 4;
-		dmask = movem_next[dmask];
-	}
-	while (amask) {
-		m68k_areg(regs, movem_index1[amask]) = get_long(srca);
-		count_cycles += 4 * CYCLE_UNIT / 2;
-		srca += 4;
-		amask = movem_next[amask];
+	uae_u32 m = mask;
+	addrbank *ab = movem_bank(srca);
+	uae_u8 *mp = ab ? movem_direct(ab, ab->baseaddr_direct_r, srca) : NULL;
+	if (mp) {
+		while (m) {
+			regs.regs[movem_ctz(m)] = do_get_mem_long((uae_u32 *)mp);
+			count_cycles += 4 * CYCLE_UNIT / 2;
+			mp += 4;
+			srca += 4;
+			m &= m - 1;
+		}
+	} else if (ab && (ab->flags & ABFLAG_RAM)) {
+		while (m) {
+			regs.regs[movem_ctz(m)] = call_mem_get_func(ab->lget, srca);
+			count_cycles += 4 * CYCLE_UNIT / 2;
+			srca += 4;
+			m &= m - 1;
+		}
+	} else {
+		while (dmask) {
+			m68k_dreg(regs, movem_index1[dmask]) = get_long(srca);
+			count_cycles += 4 * CYCLE_UNIT / 2;
+			srca += 4;
+			dmask = movem_next[dmask];
+		}
+		while (amask) {
+			m68k_areg(regs, movem_index1[amask]) = get_long(srca);
+			count_cycles += 4 * CYCLE_UNIT / 2;
+			srca += 4;
+			amask = movem_next[amask];
+		}
 	}
 	m68k_incpc(6);
 	return (12 * CYCLE_UNIT / 2 + count_cycles) | (((1 * 4 * CYCLE_UNIT / 2 + count_cycles) * 4) << 16);
@@ -42634,17 +43078,37 @@ uae_u32 REGPARAM2 op_4cf0_2_ff(uae_u32 opcode)
 	uaecptr srca;
 	m68k_incpc(4);
 	srca = get_disp_ea_020(m68k_areg(regs, dstreg), 0);
-	while (dmask) {
-		m68k_dreg(regs, movem_index1[dmask]) = get_long(srca);
-		count_cycles += 4 * CYCLE_UNIT / 2;
-		srca += 4;
-		dmask = movem_next[dmask];
-	}
-	while (amask) {
-		m68k_areg(regs, movem_index1[amask]) = get_long(srca);
-		count_cycles += 4 * CYCLE_UNIT / 2;
-		srca += 4;
-		amask = movem_next[amask];
+	uae_u32 m = mask;
+	addrbank *ab = movem_bank(srca);
+	uae_u8 *mp = ab ? movem_direct(ab, ab->baseaddr_direct_r, srca) : NULL;
+	if (mp) {
+		while (m) {
+			regs.regs[movem_ctz(m)] = do_get_mem_long((uae_u32 *)mp);
+			count_cycles += 4 * CYCLE_UNIT / 2;
+			mp += 4;
+			srca += 4;
+			m &= m - 1;
+		}
+	} else if (ab && (ab->flags & ABFLAG_RAM)) {
+		while (m) {
+			regs.regs[movem_ctz(m)] = call_mem_get_func(ab->lget, srca);
+			count_cycles += 4 * CYCLE_UNIT / 2;
+			srca += 4;
+			m &= m - 1;
+		}
+	} else {
+		while (dmask) {
+			m68k_dreg(regs, movem_index1[dmask]) = get_long(srca);
+			count_cycles += 4 * CYCLE_UNIT / 2;
+			srca += 4;
+			dmask = movem_next[dmask];
+		}
+		while (amask) {
+			m68k_areg(regs, movem_index1[amask]) = get_long(srca);
+			count_cycles += 4 * CYCLE_UNIT / 2;
+			srca += 4;
+			amask = movem_next[amask];
+		}
 	}
 	return (12 * CYCLE_UNIT / 2 + count_cycles) | (((1 * 4 * CYCLE_UNIT / 2 + count_cycles) * 4) << 16);
 }
@@ -42658,17 +43122,37 @@ uae_u32 REGPARAM2 op_4cf8_2_ff(uae_u32 opcode)
 	uae_u32 dmask = mask & 0xff, amask = (mask >> 8) & 0xff;
 	uaecptr srca;
 	srca = (uae_s32)(uae_s16)get_diword(4);
-	while (dmask) {
-		m68k_dreg(regs, movem_index1[dmask]) = get_long(srca);
-		count_cycles += 4 * CYCLE_UNIT / 2;
-		srca += 4;
-		dmask = movem_next[dmask];
-	}
-	while (amask) {
-		m68k_areg(regs, movem_index1[amask]) = get_long(srca);
-		count_cycles += 4 * CYCLE_UNIT / 2;
-		srca += 4;
-		amask = movem_next[amask];
+	uae_u32 m = mask;
+	addrbank *ab = movem_bank(srca);
+	uae_u8 *mp = ab ? movem_direct(ab, ab->baseaddr_direct_r, srca) : NULL;
+	if (mp) {
+		while (m) {
+			regs.regs[movem_ctz(m)] = do_get_mem_long((uae_u32 *)mp);
+			count_cycles += 4 * CYCLE_UNIT / 2;
+			mp += 4;
+			srca += 4;
+			m &= m - 1;
+		}
+	} else if (ab && (ab->flags & ABFLAG_RAM)) {
+		while (m) {
+			regs.regs[movem_ctz(m)] = call_mem_get_func(ab->lget, srca);
+			count_cycles += 4 * CYCLE_UNIT / 2;
+			srca += 4;
+			m &= m - 1;
+		}
+	} else {
+		while (dmask) {
+			m68k_dreg(regs, movem_index1[dmask]) = get_long(srca);
+			count_cycles += 4 * CYCLE_UNIT / 2;
+			srca += 4;
+			dmask = movem_next[dmask];
+		}
+		while (amask) {
+			m68k_areg(regs, movem_index1[amask]) = get_long(srca);
+			count_cycles += 4 * CYCLE_UNIT / 2;
+			srca += 4;
+			amask = movem_next[amask];
+		}
 	}
 	m68k_incpc(6);
 	return (12 * CYCLE_UNIT / 2 + count_cycles) | (((1 * 4 * CYCLE_UNIT / 2 + count_cycles) * 4) << 16);
@@ -42683,17 +43167,37 @@ uae_u32 REGPARAM2 op_4cf9_2_ff(uae_u32 opcode)
 	uae_u32 dmask = mask & 0xff, amask = (mask >> 8) & 0xff;
 	uaecptr srca;
 	srca = get_dilong(4);
-	while (dmask) {
-		m68k_dreg(regs, movem_index1[dmask]) = get_long(srca);
-		count_cycles += 4 * CYCLE_UNIT / 2;
-		srca += 4;
-		dmask = movem_next[dmask];
-	}
-	while (amask) {
-		m68k_areg(regs, movem_index1[amask]) = get_long(srca);
-		count_cycles += 4 * CYCLE_UNIT / 2;
-		srca += 4;
-		amask = movem_next[amask];
+	uae_u32 m = mask;
+	addrbank *ab = movem_bank(srca);
+	uae_u8 *mp = ab ? movem_direct(ab, ab->baseaddr_direct_r, srca) : NULL;
+	if (mp) {
+		while (m) {
+			regs.regs[movem_ctz(m)] = do_get_mem_long((uae_u32 *)mp);
+			count_cycles += 4 * CYCLE_UNIT / 2;
+			mp += 4;
+			srca += 4;
+			m &= m - 1;
+		}
+	} else if (ab && (ab->flags & ABFLAG_RAM)) {
+		while (m) {
+			regs.regs[movem_ctz(m)] = call_mem_get_func(ab->lget, srca);
+			count_cycles += 4 * CYCLE_UNIT / 2;
+			srca += 4;
+			m &= m - 1;
+		}
+	} else {
+		while (dmask) {
+			m68k_dreg(regs, movem_index1[dmask]) = get_long(srca);
+			count_cycles += 4 * CYCLE_UNIT / 2;
+			srca += 4;
+			dmask = movem_next[dmask];
+		}
+		while (amask) {
+			m68k_areg(regs, movem_index1[amask]) = get_long(srca);
+			count_cycles += 4 * CYCLE_UNIT / 2;
+			srca += 4;
+			amask = movem_next[amask];
+		}
 	}
 	m68k_incpc(8);
 	return (16 * CYCLE_UNIT / 2 + count_cycles) | (((1 * 4 * CYCLE_UNIT / 2 + count_cycles) * 4) << 16);
@@ -42710,17 +43214,37 @@ uae_u32 REGPARAM2 op_4cfa_2_ff(uae_u32 opcode)
 	uaecptr srca;
 	srca = m68k_getpc() + 4;
 	srca += (uae_s32)(uae_s16)get_diword(4);
-	while (dmask) {
-		m68k_dreg(regs, movem_index1[dmask]) = get_long(srca);
-		count_cycles += 4 * CYCLE_UNIT / 2;
-		srca += 4;
-		dmask = movem_next[dmask];
-	}
-	while (amask) {
-		m68k_areg(regs, movem_index1[amask]) = get_long(srca);
-		count_cycles += 4 * CYCLE_UNIT / 2;
-		srca += 4;
-		amask = movem_next[amask];
+	uae_u32 m = mask;
+	addrbank *ab = movem_bank(srca);
+	uae_u8 *mp = ab ? movem_direct(ab, ab->baseaddr_direct_r, srca) : NULL;
+	if (mp) {
+		while (m) {
+			regs.regs[movem_ctz(m)] = do_get_mem_long((uae_u32 *)mp);
+			count_cycles += 4 * CYCLE_UNIT / 2;
+			mp += 4;
+			srca += 4;
+			m &= m - 1;
+		}
+	} else if (ab && (ab->flags & ABFLAG_RAM)) {
+		while (m) {
+			regs.regs[movem_ctz(m)] = call_mem_get_func(ab->lget, srca);
+			count_cycles += 4 * CYCLE_UNIT / 2;
+			srca += 4;
+			m &= m - 1;
+		}
+	} else {
+		while (dmask) {
+			m68k_dreg(regs, movem_index1[dmask]) = get_long(srca);
+			count_cycles += 4 * CYCLE_UNIT / 2;
+			srca += 4;
+			dmask = movem_next[dmask];
+		}
+		while (amask) {
+			m68k_areg(regs, movem_index1[amask]) = get_long(srca);
+			count_cycles += 4 * CYCLE_UNIT / 2;
+			srca += 4;
+			amask = movem_next[amask];
+		}
 	}
 	m68k_incpc(6);
 	return (12 * CYCLE_UNIT / 2 + count_cycles) | (((1 * 4 * CYCLE_UNIT / 2 + count_cycles) * 4) << 16);
@@ -42738,17 +43262,37 @@ uae_u32 REGPARAM2 op_4cfb_2_ff(uae_u32 opcode)
 	m68k_incpc(4);
 	uaecptr tmppc = m68k_getpc();
 	srca = get_disp_ea_020(tmppc, 0);
-	while (dmask) {
-		m68k_dreg(regs, movem_index1[dmask]) = get_long(srca);
-		count_cycles += 4 * CYCLE_UNIT / 2;
-		srca += 4;
-		dmask = movem_next[dmask];
-	}
-	while (amask) {
-		m68k_areg(regs, movem_index1[amask]) = get_long(srca);
-		count_cycles += 4 * CYCLE_UNIT / 2;
-		srca += 4;
-		amask = movem_next[amask];
+	uae_u32 m = mask;
+	addrbank *ab = movem_bank(srca);
+	uae_u8 *mp = ab ? movem_direct(ab, ab->baseaddr_direct_r, srca) : NULL;
+	if (mp) {
+		while (m) {
+			regs.regs[movem_ctz(m)] = do_get_mem_long((uae_u32 *)mp);
+			count_cycles += 4 * CYCLE_UNIT / 2;
+			mp += 4;
+			srca += 4;
+			m &= m - 1;
+		}
+	} else if (ab && (ab->flags & ABFLAG_RAM)) {
+		while (m) {
+			regs.regs[movem_ctz(m)] = call_mem_get_func(ab->lget, srca);
+			count_cycles += 4 * CYCLE_UNIT / 2;
+			srca += 4;
+			m &= m - 1;
+		}
+	} else {
+		while (dmask) {
+			m68k_dreg(regs, movem_index1[dmask]) = get_long(srca);
+			count_cycles += 4 * CYCLE_UNIT / 2;
+			srca += 4;
+			dmask = movem_next[dmask];
+		}
+		while (amask) {
+			m68k_areg(regs, movem_index1[amask]) = get_long(srca);
+			count_cycles += 4 * CYCLE_UNIT / 2;
+			srca += 4;
+			amask = movem_next[amask];
+		}
 	}
 	return (12 * CYCLE_UNIT / 2 + count_cycles) | (((1 * 4 * CYCLE_UNIT / 2 + count_cycles) * 4) << 16);
 }
@@ -48231,17 +48775,36 @@ uae_u32 REGPARAM2 op_48d0_4_ff(uae_u32 opcode)
 	uaecptr srca;
 	srca = m68k_areg(regs, dstreg);
 	uae_u16 dmask = mask & 0xff, amask = (mask >> 8) & 0xff;
-	while (dmask) {
-		put_long(srca, m68k_dreg(regs, movem_index1[dmask]));
-		count_cycles += 8 * CYCLE_UNIT / 2;
-		srca += 4;
-		dmask = movem_next[dmask];
-	}
-	while (amask) {
-		put_long(srca, m68k_areg(regs, movem_index1[amask]));
-		count_cycles += 8 * CYCLE_UNIT / 2;
-		srca += 4;
-		amask = movem_next[amask];
+	uae_u32 m = mask;
+	addrbank *ab = movem_bank(srca);
+	uae_u8 *mp = ab ? movem_direct(ab, ab->baseaddr_direct_w, srca) : NULL;
+	if (mp) {
+		while (m) {
+			do_put_mem_long((uae_u32 *)mp, regs.regs[movem_ctz(m)]);
+			mp += 4;
+			count_cycles += 8 * CYCLE_UNIT / 2;
+			m &= m - 1;
+		}
+	} else if (ab && (ab->flags & ABFLAG_RAM)) {
+		while (m) {
+			call_mem_put_func(ab->lput, srca, regs.regs[movem_ctz(m)]);
+			srca += 4;
+			count_cycles += 8 * CYCLE_UNIT / 2;
+			m &= m - 1;
+		}
+	} else {
+		while (dmask) {
+			put_long(srca, m68k_dreg(regs, movem_index1[dmask]));
+			count_cycles += 8 * CYCLE_UNIT / 2;
+			srca += 4;
+			dmask = movem_next[dmask];
+		}
+		while (amask) {
+			put_long(srca, m68k_areg(regs, movem_index1[amask]));
+			count_cycles += 8 * CYCLE_UNIT / 2;
+			srca += 4;
+			amask = movem_next[amask];
+		}
 	}
 	m68k_incpc(4);
 	return (8 * CYCLE_UNIT / 2 + count_cycles) | (((1 * 4 * CYCLE_UNIT / 2 + count_cycles) * 4) << 16);
@@ -48259,22 +48822,47 @@ uae_u32 REGPARAM2 op_48e0_4_ff(uae_u32 opcode)
 	srca = m68k_areg(regs, dstreg) - 0;
 	uae_u16 amask = mask & 0xff, dmask = (mask >> 8) & 0xff;
 	int type = 0;
-	while (amask) {
-		srca -= 4;
-		if (!type || movem_index2[amask] != dstreg) {
-			put_long(srca, m68k_areg(regs, movem_index2[amask]));
+	uae_u32 m = mask;
+	addrbank *ab = movem_bank(srca - MOVEM_DIRECT_WINDOW);
+	uae_u8 *mp = ab ? movem_direct(ab, ab->baseaddr_direct_w, srca - MOVEM_DIRECT_WINDOW) : NULL;
+	if (mp) {
+		mp += MOVEM_DIRECT_WINDOW;
+		while (m) {
+			int r = 15 - movem_ctz(m);
+			uae_u32 v = regs.regs[r];
+			srca -= 4;
+			mp -= 4;
+			do_put_mem_long((uae_u32 *)mp, v);
 			count_cycles += 8 * CYCLE_UNIT / 2;
-		} else {
-			put_long(srca, m68k_areg(regs, movem_index2[amask]) - 4);
-			count_cycles += 8 * CYCLE_UNIT / 2;
+			m &= m - 1;
 		}
-		amask = movem_next[amask];
-	}
-	while (dmask) {
-		srca -= 4;
-		put_long(srca, m68k_dreg(regs, movem_index2[dmask]));
-		count_cycles += 8 * CYCLE_UNIT / 2;
-		dmask = movem_next[dmask];
+	} else if (ab && (ab->flags & ABFLAG_RAM)) {
+		while (m) {
+			int r = 15 - movem_ctz(m);
+			uae_u32 v = regs.regs[r];
+			srca -= 4;
+			call_mem_put_func(ab->lput, srca, v);
+			count_cycles += 8 * CYCLE_UNIT / 2;
+			m &= m - 1;
+		}
+	} else {
+		while (amask) {
+			srca -= 4;
+			if (!type || movem_index2[amask] != dstreg) {
+				put_long(srca, m68k_areg(regs, movem_index2[amask]));
+				count_cycles += 8 * CYCLE_UNIT / 2;
+			} else {
+				put_long(srca, m68k_areg(regs, movem_index2[amask]) - 4);
+				count_cycles += 8 * CYCLE_UNIT / 2;
+			}
+			amask = movem_next[amask];
+		}
+		while (dmask) {
+			srca -= 4;
+			put_long(srca, m68k_dreg(regs, movem_index2[dmask]));
+			count_cycles += 8 * CYCLE_UNIT / 2;
+			dmask = movem_next[dmask];
+		}
 	}
 	m68k_areg(regs, dstreg) = srca;
 	m68k_incpc(4);
@@ -48292,17 +48880,36 @@ uae_u32 REGPARAM2 op_48e8_4_ff(uae_u32 opcode)
 	uaecptr srca;
 	srca = m68k_areg(regs, dstreg) + (uae_s32)(uae_s16)get_diword(4);
 	uae_u16 dmask = mask & 0xff, amask = (mask >> 8) & 0xff;
-	while (dmask) {
-		put_long(srca, m68k_dreg(regs, movem_index1[dmask]));
-		count_cycles += 8 * CYCLE_UNIT / 2;
-		srca += 4;
-		dmask = movem_next[dmask];
-	}
-	while (amask) {
-		put_long(srca, m68k_areg(regs, movem_index1[amask]));
-		count_cycles += 8 * CYCLE_UNIT / 2;
-		srca += 4;
-		amask = movem_next[amask];
+	uae_u32 m = mask;
+	addrbank *ab = movem_bank(srca);
+	uae_u8 *mp = ab ? movem_direct(ab, ab->baseaddr_direct_w, srca) : NULL;
+	if (mp) {
+		while (m) {
+			do_put_mem_long((uae_u32 *)mp, regs.regs[movem_ctz(m)]);
+			mp += 4;
+			count_cycles += 8 * CYCLE_UNIT / 2;
+			m &= m - 1;
+		}
+	} else if (ab && (ab->flags & ABFLAG_RAM)) {
+		while (m) {
+			call_mem_put_func(ab->lput, srca, regs.regs[movem_ctz(m)]);
+			srca += 4;
+			count_cycles += 8 * CYCLE_UNIT / 2;
+			m &= m - 1;
+		}
+	} else {
+		while (dmask) {
+			put_long(srca, m68k_dreg(regs, movem_index1[dmask]));
+			count_cycles += 8 * CYCLE_UNIT / 2;
+			srca += 4;
+			dmask = movem_next[dmask];
+		}
+		while (amask) {
+			put_long(srca, m68k_areg(regs, movem_index1[amask]));
+			count_cycles += 8 * CYCLE_UNIT / 2;
+			srca += 4;
+			amask = movem_next[amask];
+		}
 	}
 	m68k_incpc(6);
 	return (12 * CYCLE_UNIT / 2 + count_cycles) | (((1 * 4 * CYCLE_UNIT / 2 + count_cycles) * 4) << 16);
@@ -48319,17 +48926,36 @@ uae_u32 REGPARAM2 op_48f0_4_ff(uae_u32 opcode)
 	uaecptr srca;
 	srca = get_disp_ea_000(m68k_areg(regs, dstreg), get_diword(4));
 	uae_u16 dmask = mask & 0xff, amask = (mask >> 8) & 0xff;
-	while (dmask) {
-		put_long(srca, m68k_dreg(regs, movem_index1[dmask]));
-		count_cycles += 8 * CYCLE_UNIT / 2;
-		srca += 4;
-		dmask = movem_next[dmask];
-	}
-	while (amask) {
-		put_long(srca, m68k_areg(regs, movem_index1[amask]));
-		count_cycles += 8 * CYCLE_UNIT / 2;
-		srca += 4;
-		amask = movem_next[amask];
+	uae_u32 m = mask;
+	addrbank *ab = movem_bank(srca);
+	uae_u8 *mp = ab ? movem_direct(ab, ab->baseaddr_direct_w, srca) : NULL;
+	if (mp) {
+		while (m) {
+			do_put_mem_long((uae_u32 *)mp, regs.regs[movem_ctz(m)]);
+			mp += 4;
+			count_cycles += 8 * CYCLE_UNIT / 2;
+			m &= m - 1;
+		}
+	} else if (ab && (ab->flags & ABFLAG_RAM)) {
+		while (m) {
+			call_mem_put_func(ab->lput, srca, regs.regs[movem_ctz(m)]);
+			srca += 4;
+			count_cycles += 8 * CYCLE_UNIT / 2;
+			m &= m - 1;
+		}
+	} else {
+		while (dmask) {
+			put_long(srca, m68k_dreg(regs, movem_index1[dmask]));
+			count_cycles += 8 * CYCLE_UNIT / 2;
+			srca += 4;
+			dmask = movem_next[dmask];
+		}
+		while (amask) {
+			put_long(srca, m68k_areg(regs, movem_index1[amask]));
+			count_cycles += 8 * CYCLE_UNIT / 2;
+			srca += 4;
+			amask = movem_next[amask];
+		}
 	}
 	m68k_incpc(6);
 	return (14 * CYCLE_UNIT / 2 + count_cycles) | (((1 * 4 * CYCLE_UNIT / 2 + count_cycles) * 4) << 16);
@@ -48344,17 +48970,36 @@ uae_u32 REGPARAM2 op_48f8_4_ff(uae_u32 opcode)
 	uaecptr srca;
 	srca = (uae_s32)(uae_s16)get_diword(4);
 	uae_u16 dmask = mask & 0xff, amask = (mask >> 8) & 0xff;
-	while (dmask) {
-		put_long(srca, m68k_dreg(regs, movem_index1[dmask]));
-		count_cycles += 8 * CYCLE_UNIT / 2;
-		srca += 4;
-		dmask = movem_next[dmask];
-	}
-	while (amask) {
-		put_long(srca, m68k_areg(regs, movem_index1[amask]));
-		count_cycles += 8 * CYCLE_UNIT / 2;
-		srca += 4;
-		amask = movem_next[amask];
+	uae_u32 m = mask;
+	addrbank *ab = movem_bank(srca);
+	uae_u8 *mp = ab ? movem_direct(ab, ab->baseaddr_direct_w, srca) : NULL;
+	if (mp) {
+		while (m) {
+			do_put_mem_long((uae_u32 *)mp, regs.regs[movem_ctz(m)]);
+			mp += 4;
+			count_cycles += 8 * CYCLE_UNIT / 2;
+			m &= m - 1;
+		}
+	} else if (ab && (ab->flags & ABFLAG_RAM)) {
+		while (m) {
+			call_mem_put_func(ab->lput, srca, regs.regs[movem_ctz(m)]);
+			srca += 4;
+			count_cycles += 8 * CYCLE_UNIT / 2;
+			m &= m - 1;
+		}
+	} else {
+		while (dmask) {
+			put_long(srca, m68k_dreg(regs, movem_index1[dmask]));
+			count_cycles += 8 * CYCLE_UNIT / 2;
+			srca += 4;
+			dmask = movem_next[dmask];
+		}
+		while (amask) {
+			put_long(srca, m68k_areg(regs, movem_index1[amask]));
+			count_cycles += 8 * CYCLE_UNIT / 2;
+			srca += 4;
+			amask = movem_next[amask];
+		}
 	}
 	m68k_incpc(6);
 	return (12 * CYCLE_UNIT / 2 + count_cycles) | (((1 * 4 * CYCLE_UNIT / 2 + count_cycles) * 4) << 16);
@@ -48369,17 +49014,36 @@ uae_u32 REGPARAM2 op_48f9_4_ff(uae_u32 opcode)
 	uaecptr srca;
 	srca = get_dilong(4);
 	uae_u16 dmask = mask & 0xff, amask = (mask >> 8) & 0xff;
-	while (dmask) {
-		put_long(srca, m68k_dreg(regs, movem_index1[dmask]));
-		count_cycles += 8 * CYCLE_UNIT / 2;
-		srca += 4;
-		dmask = movem_next[dmask];
-	}
-	while (amask) {
-		put_long(srca, m68k_areg(regs, movem_index1[amask]));
-		count_cycles += 8 * CYCLE_UNIT / 2;
-		srca += 4;
-		amask = movem_next[amask];
+	uae_u32 m = mask;
+	addrbank *ab = movem_bank(srca);
+	uae_u8 *mp = ab ? movem_direct(ab, ab->baseaddr_direct_w, srca) : NULL;
+	if (mp) {
+		while (m) {
+			do_put_mem_long((uae_u32 *)mp, regs.regs[movem_ctz(m)]);
+			mp += 4;
+			count_cycles += 8 * CYCLE_UNIT / 2;
+			m &= m - 1;
+		}
+	} else if (ab && (ab->flags & ABFLAG_RAM)) {
+		while (m) {
+			call_mem_put_func(ab->lput, srca, regs.regs[movem_ctz(m)]);
+			srca += 4;
+			count_cycles += 8 * CYCLE_UNIT / 2;
+			m &= m - 1;
+		}
+	} else {
+		while (dmask) {
+			put_long(srca, m68k_dreg(regs, movem_index1[dmask]));
+			count_cycles += 8 * CYCLE_UNIT / 2;
+			srca += 4;
+			dmask = movem_next[dmask];
+		}
+		while (amask) {
+			put_long(srca, m68k_areg(regs, movem_index1[amask]));
+			count_cycles += 8 * CYCLE_UNIT / 2;
+			srca += 4;
+			amask = movem_next[amask];
+		}
 	}
 	m68k_incpc(8);
 	return (16 * CYCLE_UNIT / 2 + count_cycles) | (((1 * 4 * CYCLE_UNIT / 2 + count_cycles) * 4) << 16);
@@ -48794,17 +49458,37 @@ uae_u32 REGPARAM2 op_4cd0_4_ff(uae_u32 opcode)
 	uae_u32 dmask = mask & 0xff, amask = (mask >> 8) & 0xff;
 	uaecptr srca;
 	srca = m68k_areg(regs, dstreg);
-	while (dmask) {
-		m68k_dreg(regs, movem_index1[dmask]) = get_long(srca);
-		count_cycles += 8 * CYCLE_UNIT / 2;
-		srca += 4;
-		dmask = movem_next[dmask];
-	}
-	while (amask) {
-		m68k_areg(regs, movem_index1[amask]) = get_long(srca);
-		count_cycles += 8 * CYCLE_UNIT / 2;
-		srca += 4;
-		amask = movem_next[amask];
+	uae_u32 m = mask;
+	addrbank *ab = movem_bank(srca);
+	uae_u8 *mp = ab ? movem_direct(ab, ab->baseaddr_direct_r, srca) : NULL;
+	if (mp) {
+		while (m) {
+			regs.regs[movem_ctz(m)] = do_get_mem_long((uae_u32 *)mp);
+			count_cycles += 8 * CYCLE_UNIT / 2;
+			mp += 4;
+			srca += 4;
+			m &= m - 1;
+		}
+	} else if (ab && (ab->flags & ABFLAG_RAM)) {
+		while (m) {
+			regs.regs[movem_ctz(m)] = call_mem_get_func(ab->lget, srca);
+			count_cycles += 8 * CYCLE_UNIT / 2;
+			srca += 4;
+			m &= m - 1;
+		}
+	} else {
+		while (dmask) {
+			m68k_dreg(regs, movem_index1[dmask]) = get_long(srca);
+			count_cycles += 8 * CYCLE_UNIT / 2;
+			srca += 4;
+			dmask = movem_next[dmask];
+		}
+		while (amask) {
+			m68k_areg(regs, movem_index1[amask]) = get_long(srca);
+			count_cycles += 8 * CYCLE_UNIT / 2;
+			srca += 4;
+			amask = movem_next[amask];
+		}
 	}
 	get_word(srca);
 	m68k_incpc(4);
@@ -48822,17 +49506,37 @@ uae_u32 REGPARAM2 op_4cd8_4_ff(uae_u32 opcode)
 	uae_u32 dmask = mask & 0xff, amask = (mask >> 8) & 0xff;
 	uaecptr srca;
 	srca = m68k_areg(regs, dstreg);
-	while (dmask) {
-		m68k_dreg(regs, movem_index1[dmask]) = get_long(srca);
-		count_cycles += 8 * CYCLE_UNIT / 2;
-		srca += 4;
-		dmask = movem_next[dmask];
-	}
-	while (amask) {
-		m68k_areg(regs, movem_index1[amask]) = get_long(srca);
-		count_cycles += 8 * CYCLE_UNIT / 2;
-		srca += 4;
-		amask = movem_next[amask];
+	uae_u32 m = mask;
+	addrbank *ab = movem_bank(srca);
+	uae_u8 *mp = ab ? movem_direct(ab, ab->baseaddr_direct_r, srca) : NULL;
+	if (mp) {
+		while (m) {
+			regs.regs[movem_ctz(m)] = do_get_mem_long((uae_u32 *)mp);
+			count_cycles += 8 * CYCLE_UNIT / 2;
+			mp += 4;
+			srca += 4;
+			m &= m - 1;
+		}
+	} else if (ab && (ab->flags & ABFLAG_RAM)) {
+		while (m) {
+			regs.regs[movem_ctz(m)] = call_mem_get_func(ab->lget, srca);
+			count_cycles += 8 * CYCLE_UNIT / 2;
+			srca += 4;
+			m &= m - 1;
+		}
+	} else {
+		while (dmask) {
+			m68k_dreg(regs, movem_index1[dmask]) = get_long(srca);
+			count_cycles += 8 * CYCLE_UNIT / 2;
+			srca += 4;
+			dmask = movem_next[dmask];
+		}
+		while (amask) {
+			m68k_areg(regs, movem_index1[amask]) = get_long(srca);
+			count_cycles += 8 * CYCLE_UNIT / 2;
+			srca += 4;
+			amask = movem_next[amask];
+		}
 	}
 	m68k_areg(regs, dstreg) = srca;
 	get_word(srca);
@@ -48851,17 +49555,37 @@ uae_u32 REGPARAM2 op_4ce8_4_ff(uae_u32 opcode)
 	uae_u32 dmask = mask & 0xff, amask = (mask >> 8) & 0xff;
 	uaecptr srca;
 	srca = m68k_areg(regs, dstreg) + (uae_s32)(uae_s16)get_diword(4);
-	while (dmask) {
-		m68k_dreg(regs, movem_index1[dmask]) = get_long(srca);
-		count_cycles += 8 * CYCLE_UNIT / 2;
-		srca += 4;
-		dmask = movem_next[dmask];
-	}
-	while (amask) {
-		m68k_areg(regs, movem_index1[amask]) = get_long(srca);
-		count_cycles += 8 * CYCLE_UNIT / 2;
-		srca += 4;
-		amask = movem_next[amask];
+	uae_u32 m = mask;
+	addrbank *ab = movem_bank(srca);
+	uae_u8 *mp = ab ? movem_direct(ab, ab->baseaddr_direct_r, srca) : NULL;
+	if (mp) {
+		while (m) {
+			regs.regs[movem_ctz(m)] = do_get_mem_long((uae_u32 *)mp);
+			count_cycles += 8 * CYCLE_UNIT / 2;
+			mp += 4;
+			srca += 4;
+			m &= m - 1;
+		}
+	} else if (ab && (ab->flags & ABFLAG_RAM)) {
+		while (m) {
+			regs.regs[movem_ctz(m)] = call_mem_get_func(ab->lget, srca);
+			count_cycles += 8 * CYCLE_UNIT / 2;
+			srca += 4;
+			m &= m - 1;
+		}
+	} else {
+		while (dmask) {
+			m68k_dreg(regs, movem_index1[dmask]) = get_long(srca);
+			count_cycles += 8 * CYCLE_UNIT / 2;
+			srca += 4;
+			dmask = movem_next[dmask];
+		}
+		while (amask) {
+			m68k_areg(regs, movem_index1[amask]) = get_long(srca);
+			count_cycles += 8 * CYCLE_UNIT / 2;
+			srca += 4;
+			amask = movem_next[amask];
+		}
 	}
 	get_word(srca);
 	m68k_incpc(6);
@@ -48879,17 +49603,37 @@ uae_u32 REGPARAM2 op_4cf0_4_ff(uae_u32 opcode)
 	uae_u32 dmask = mask & 0xff, amask = (mask >> 8) & 0xff;
 	uaecptr srca;
 	srca = get_disp_ea_000(m68k_areg(regs, dstreg), get_diword(4));
-	while (dmask) {
-		m68k_dreg(regs, movem_index1[dmask]) = get_long(srca);
-		count_cycles += 8 * CYCLE_UNIT / 2;
-		srca += 4;
-		dmask = movem_next[dmask];
-	}
-	while (amask) {
-		m68k_areg(regs, movem_index1[amask]) = get_long(srca);
-		count_cycles += 8 * CYCLE_UNIT / 2;
-		srca += 4;
-		amask = movem_next[amask];
+	uae_u32 m = mask;
+	addrbank *ab = movem_bank(srca);
+	uae_u8 *mp = ab ? movem_direct(ab, ab->baseaddr_direct_r, srca) : NULL;
+	if (mp) {
+		while (m) {
+			regs.regs[movem_ctz(m)] = do_get_mem_long((uae_u32 *)mp);
+			count_cycles += 8 * CYCLE_UNIT / 2;
+			mp += 4;
+			srca += 4;
+			m &= m - 1;
+		}
+	} else if (ab && (ab->flags & ABFLAG_RAM)) {
+		while (m) {
+			regs.regs[movem_ctz(m)] = call_mem_get_func(ab->lget, srca);
+			count_cycles += 8 * CYCLE_UNIT / 2;
+			srca += 4;
+			m &= m - 1;
+		}
+	} else {
+		while (dmask) {
+			m68k_dreg(regs, movem_index1[dmask]) = get_long(srca);
+			count_cycles += 8 * CYCLE_UNIT / 2;
+			srca += 4;
+			dmask = movem_next[dmask];
+		}
+		while (amask) {
+			m68k_areg(regs, movem_index1[amask]) = get_long(srca);
+			count_cycles += 8 * CYCLE_UNIT / 2;
+			srca += 4;
+			amask = movem_next[amask];
+		}
 	}
 	get_word(srca);
 	m68k_incpc(6);
@@ -48905,17 +49649,37 @@ uae_u32 REGPARAM2 op_4cf8_4_ff(uae_u32 opcode)
 	uae_u32 dmask = mask & 0xff, amask = (mask >> 8) & 0xff;
 	uaecptr srca;
 	srca = (uae_s32)(uae_s16)get_diword(4);
-	while (dmask) {
-		m68k_dreg(regs, movem_index1[dmask]) = get_long(srca);
-		count_cycles += 8 * CYCLE_UNIT / 2;
-		srca += 4;
-		dmask = movem_next[dmask];
-	}
-	while (amask) {
-		m68k_areg(regs, movem_index1[amask]) = get_long(srca);
-		count_cycles += 8 * CYCLE_UNIT / 2;
-		srca += 4;
-		amask = movem_next[amask];
+	uae_u32 m = mask;
+	addrbank *ab = movem_bank(srca);
+	uae_u8 *mp = ab ? movem_direct(ab, ab->baseaddr_direct_r, srca) : NULL;
+	if (mp) {
+		while (m) {
+			regs.regs[movem_ctz(m)] = do_get_mem_long((uae_u32 *)mp);
+			count_cycles += 8 * CYCLE_UNIT / 2;
+			mp += 4;
+			srca += 4;
+			m &= m - 1;
+		}
+	} else if (ab && (ab->flags & ABFLAG_RAM)) {
+		while (m) {
+			regs.regs[movem_ctz(m)] = call_mem_get_func(ab->lget, srca);
+			count_cycles += 8 * CYCLE_UNIT / 2;
+			srca += 4;
+			m &= m - 1;
+		}
+	} else {
+		while (dmask) {
+			m68k_dreg(regs, movem_index1[dmask]) = get_long(srca);
+			count_cycles += 8 * CYCLE_UNIT / 2;
+			srca += 4;
+			dmask = movem_next[dmask];
+		}
+		while (amask) {
+			m68k_areg(regs, movem_index1[amask]) = get_long(srca);
+			count_cycles += 8 * CYCLE_UNIT / 2;
+			srca += 4;
+			amask = movem_next[amask];
+		}
 	}
 	get_word(srca);
 	m68k_incpc(6);
@@ -48931,17 +49695,37 @@ uae_u32 REGPARAM2 op_4cf9_4_ff(uae_u32 opcode)
 	uae_u32 dmask = mask & 0xff, amask = (mask >> 8) & 0xff;
 	uaecptr srca;
 	srca = get_dilong(4);
-	while (dmask) {
-		m68k_dreg(regs, movem_index1[dmask]) = get_long(srca);
-		count_cycles += 8 * CYCLE_UNIT / 2;
-		srca += 4;
-		dmask = movem_next[dmask];
-	}
-	while (amask) {
-		m68k_areg(regs, movem_index1[amask]) = get_long(srca);
-		count_cycles += 8 * CYCLE_UNIT / 2;
-		srca += 4;
-		amask = movem_next[amask];
+	uae_u32 m = mask;
+	addrbank *ab = movem_bank(srca);
+	uae_u8 *mp = ab ? movem_direct(ab, ab->baseaddr_direct_r, srca) : NULL;
+	if (mp) {
+		while (m) {
+			regs.regs[movem_ctz(m)] = do_get_mem_long((uae_u32 *)mp);
+			count_cycles += 8 * CYCLE_UNIT / 2;
+			mp += 4;
+			srca += 4;
+			m &= m - 1;
+		}
+	} else if (ab && (ab->flags & ABFLAG_RAM)) {
+		while (m) {
+			regs.regs[movem_ctz(m)] = call_mem_get_func(ab->lget, srca);
+			count_cycles += 8 * CYCLE_UNIT / 2;
+			srca += 4;
+			m &= m - 1;
+		}
+	} else {
+		while (dmask) {
+			m68k_dreg(regs, movem_index1[dmask]) = get_long(srca);
+			count_cycles += 8 * CYCLE_UNIT / 2;
+			srca += 4;
+			dmask = movem_next[dmask];
+		}
+		while (amask) {
+			m68k_areg(regs, movem_index1[amask]) = get_long(srca);
+			count_cycles += 8 * CYCLE_UNIT / 2;
+			srca += 4;
+			amask = movem_next[amask];
+		}
 	}
 	get_word(srca);
 	m68k_incpc(8);
@@ -48959,17 +49743,37 @@ uae_u32 REGPARAM2 op_4cfa_4_ff(uae_u32 opcode)
 	uaecptr srca;
 	srca = m68k_getpc() + 4;
 	srca += (uae_s32)(uae_s16)get_diword(4);
-	while (dmask) {
-		m68k_dreg(regs, movem_index1[dmask]) = get_long(srca);
-		count_cycles += 8 * CYCLE_UNIT / 2;
-		srca += 4;
-		dmask = movem_next[dmask];
-	}
-	while (amask) {
-		m68k_areg(regs, movem_index1[amask]) = get_long(srca);
-		count_cycles += 8 * CYCLE_UNIT / 2;
-		srca += 4;
-		amask = movem_next[amask];
+	uae_u32 m = mask;
+	addrbank *ab = movem_bank(srca);
+	uae_u8 *mp = ab ? movem_direct(ab, ab->baseaddr_direct_r, srca) : NULL;
+	if (mp) {
+		while (m) {
+			regs.regs[movem_ctz(m)] = do_get_mem_long((uae_u32 *)mp);
+			count_cycles += 8 * CYCLE_UNIT / 2;
+			mp += 4;
+			srca += 4;
+			m &= m - 1;
+		}
+	} else if (ab && (ab->flags & ABFLAG_RAM)) {
+		while (m) {
+			regs.regs[movem_ctz(m)] = call_mem_get_func(ab->lget, srca);
+			count_cycles += 8 * CYCLE_UNIT / 2;
+			srca += 4;
+			m &= m - 1;
+		}
+	} else {
+		while (dmask) {
+			m68k_dreg(regs, movem_index1[dmask]) = get_long(srca);
+			count_cycles += 8 * CYCLE_UNIT / 2;
+			srca += 4;
+			dmask = movem_next[dmask];
+		}
+		while (amask) {
+			m68k_areg(regs, movem_index1[amask]) = get_long(srca);
+			count_cycles += 8 * CYCLE_UNIT / 2;
+			srca += 4;
+			amask = movem_next[amask];
+		}
 	}
 	get_word(srca);
 	m68k_incpc(6);
@@ -48987,17 +49791,37 @@ uae_u32 REGPARAM2 op_4cfb_4_ff(uae_u32 opcode)
 	uaecptr srca;
 	uaecptr tmppc = m68k_getpc() + 4;
 	srca = get_disp_ea_000(tmppc, get_diword(4));
-	while (dmask) {
-		m68k_dreg(regs, movem_index1[dmask]) = get_long(srca);
-		count_cycles += 8 * CYCLE_UNIT / 2;
-		srca += 4;
-		dmask = movem_next[dmask];
-	}
-	while (amask) {
-		m68k_areg(regs, movem_index1[amask]) = get_long(srca);
-		count_cycles += 8 * CYCLE_UNIT / 2;
-		srca += 4;
-		amask = movem_next[amask];
+	uae_u32 m = mask;
+	addrbank *ab = movem_bank(srca);
+	uae_u8 *mp = ab ? movem_direct(ab, ab->baseaddr_direct_r, srca) : NULL;
+	if (mp) {
+		while (m) {
+			regs.regs[movem_ctz(m)] = do_get_mem_long((uae_u32 *)mp);
+			count_cycles += 8 * CYCLE_UNIT / 2;
+			mp += 4;
+			srca += 4;
+			m &= m - 1;
+		}
+	} else if (ab && (ab->flags & ABFLAG_RAM)) {
+		while (m) {
+			regs.regs[movem_ctz(m)] = call_mem_get_func(ab->lget, srca);
+			count_cycles += 8 * CYCLE_UNIT / 2;
+			srca += 4;
+			m &= m - 1;
+		}
+	} else {
+		while (dmask) {
+			m68k_dreg(regs, movem_index1[dmask]) = get_long(srca);
+			count_cycles += 8 * CYCLE_UNIT / 2;
+			srca += 4;
+			dmask = movem_next[dmask];
+		}
+		while (amask) {
+			m68k_areg(regs, movem_index1[amask]) = get_long(srca);
+			count_cycles += 8 * CYCLE_UNIT / 2;
+			srca += 4;
+			amask = movem_next[amask];
+		}
 	}
 	get_word(srca);
 	m68k_incpc(6);

@@ -584,6 +584,43 @@ uae_u32 memory_get_wordi(uaecptr);
 STATIC_INLINE uae_u32 memory_get_byte_direct(uae_u8 *m) { return *m; }
 STATIC_INLINE void memory_put_byte_direct(uae_u8 *m, uae_u32 v) { *m = (uae_u8)v; }
 
+// MOVEM.L fast paths (gencpu). movem_bank() returns the bank if the 64 bytes
+// (16 longs) from addr are in one 64K bank, so every access would pick the same
+// bank; movem_direct() returns a host pointer if they are also contiguous in its
+// direct backing. Otherwise the generated code calls the bank handler (RAM banks
+// only, their handlers don't remap memory) or falls back to get_long/put_long.
+#if defined(__GNUC__)
+#define MOVEM_INLINE static inline __attribute__((always_inline))
+#else
+#define MOVEM_INLINE STATIC_INLINE
+#endif
+#define MOVEM_DIRECT_WINDOW 64
+MOVEM_INLINE addrbank *movem_bank(uaecptr addr)
+{
+	if ((addr & 0xffff) > 0x10000 - MOVEM_DIRECT_WINDOW)
+		return NULL;
+	return &get_mem_bank(addr);
+}
+MOVEM_INLINE uae_u8 *movem_direct(addrbank *ab, uae_u8 *base, uaecptr addr)
+{
+	if (!base)
+		return NULL;
+	uae_u32 off = (addr - ab->startaccessmask) & ab->mask;
+	if ((uae_u64)off + MOVEM_DIRECT_WINDOW > (uae_u64)ab->mask + 1)
+		return NULL;
+	return base + off;
+}
+MOVEM_INLINE int movem_ctz(uae_u32 v)
+{
+#ifdef _MSC_VER
+	unsigned long r;
+	_BitScanForward(&r, v);
+	return (int)r;
+#else
+	return __builtin_ctz(v);
+#endif
+}
+
 STATIC_INLINE uae_u32 get_long(uaecptr addr)
 {
 	MEMORY_DIRECT_GET(lget, uae_u32, do_get_mem_long)

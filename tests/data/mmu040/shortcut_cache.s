@@ -31,6 +31,10 @@
 ;   case 6: DTT0 covers $40000 but no ITT does: a data read is identity,
 ;           a code fetch goes through the page tables; then ITT0 covers it
 ;           too, then ITT0 is disabled again.
+;   case 7: data writes while the translation changes: DTT0 on then off,
+;           TC off then on, then a user write through a write-protected
+;           user-only DTT0 after one through a writable one must take an
+;           access fault. Read back with the MMU off.
 ; Results, one long each from $2000 (see RES_* below): magic ('DONE', or
 ; 'FAIL' after an unexpected exception), unexpected vector ($FFFF if none),
 ; then the value read by each step.
@@ -67,7 +71,13 @@ RES_6A	equ	RES+$60
 RES_6C	equ	RES+$64
 RES_6D	equ	RES+$68
 RES_6E	equ	RES+$6c
-RES_END	equ	RES+$70
+RES_7A	equ	RES+$70
+RES_7B	equ	RES+$74
+RES_7C	equ	RES+$78
+RES_7D	equ	RES+$7c
+RES_7E	equ	RES+$80
+RES_7G	equ	RES+$84
+RES_END	equ	RES+$88
 
 TC4K	equ	$8000
 TC8K	equ	$c000
@@ -115,6 +125,8 @@ start:
 	dbf	d0,.vec
 	lea	trap0(pc),a1
 	move.l	a1,32*4
+	lea	accfault(pc),a1
+	move.l	a1,2*4
 
 	; markers and code snippets
 	move.l	#'IDEN',$40100
@@ -268,6 +280,48 @@ start:
 	moveq	#0,d0
 	movec	d0,dtt0
 
+	; case 7: writes while the translation changes
+	move.l	#TREE4R,d0
+	movec	d0,urp
+	movec	d0,srp
+	move.l	#TC4K,d0
+	movec	d0,tc
+	pflusha
+	move.l	#TT_ANY,d0
+	movec	d0,dtt0
+	move.l	#'W7A ',$40200		; DTT0: untranslated
+	moveq	#0,d0
+	movec	d0,dtt0
+	move.l	#'W7B ',$40200		; page tables: $50200
+	movec	d0,tc
+	move.l	#'W7C ',$40204		; MMU off: untranslated
+	move.l	#TC4K,d0
+	movec	d0,tc
+	move.l	#'W7D ',$40204		; page tables: $50204
+	lea	$70000,a0
+	move.l	a0,usp
+	move.l	#TT_USR,d0
+	movec	d0,dtt0
+	lea	.w7a(pc),a5
+	andi.w	#$dfff,sr
+	move.l	#'W7E ',$40208		; user write, writable DTT0
+	trap	#0
+.w7a:	move.l	#TT_USR|4,d0
+	movec	d0,dtt0
+	lea	.w7(pc),a5
+	move.l	sp,a6
+	andi.w	#$dfff,sr
+	move.l	#'W7F ',$40208		; user write, write-protected DTT0: access fault
+	trap	#0
+.w7:	moveq	#0,d0
+	movec	d0,dtt0
+	movec	d0,tc
+	move.l	$40200,RES_7A
+	move.l	$50200,RES_7B
+	move.l	$40204,RES_7C
+	move.l	$50204,RES_7D
+	move.l	$40208,RES_7E
+
 	moveq	#0,d0
 	movec	d0,tc
 	move.l	#'DONE',RES
@@ -309,10 +363,16 @@ trap0:
 	move.l	a5,2(sp)
 	rte
 
+; access fault in case 7: drop the frame and continue at a5 (supervisor)
+accfault:
+	move.l	a6,sp
+	move.l	#'FALT',RES_7G
+	jmp	(a5)
+
 unexp:
 	move.w	6(sp),d0
 	and.l	#$fff,d0
 	lsr.l	#2,d0
 	move.l	d0,RES_UNEXP
 	move.l	#'FAIL',RES
-	bra.s	idle
+	bra.w	idle
