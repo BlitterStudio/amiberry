@@ -150,6 +150,15 @@ Windows release binaries are signed with a Certum open source code signing certi
 - **[Build from Source](https://github.com/BlitterStudio/amiberry/wiki/Compile-from-source)** — Compile for your platform
 - **[Troubleshooting](https://github.com/BlitterStudio/amiberry/wiki/Troubleshooting)** — Common issues and solutions
 
+### RetroArch
+
+For CD32 games, select **CD32 Pad** under **Quick Menu → Controls** for the
+controller routed to the Amiga joystick port (normally RetroArch Port 1).
+You can also load a `.uae` configuration as content. Set `cdimage0` in the
+configuration to mount a disc and `joyport1mode=cd32joy` for a CD32 pad on the
+default Amiga joystick port. An explicit **Joystick** selection in RetroArch
+uses a standard joystick instead.
+
 ## Building from Source
 
 ```bash

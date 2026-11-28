@@ -112,9 +112,12 @@ static LibretroInputOwner joypad_owner[2][kJoypadMax];
 static LibretroInputOwner analog_owner[2][SDL_CONTROLLER_AXIS_MAX];
 static int16_t last_mouse_x[2];
 static int16_t last_mouse_y[2];
+static unsigned frontend_port_device[2] = { RETRO_DEVICE_MOUSE, RETRO_DEVICE_JOYPAD };
 static unsigned libretro_port_device[2] = { RETRO_DEVICE_MOUSE, RETRO_DEVICE_JOYPAD };
 static int libretro_joyport_order[2] = { 0, 1 };
 static bool libretro_options_dirty = true;
+static bool libretro_input_ports_applied = false;
+static bool config_cd32_port[2];
 static bool last_swap_ports = false;
 static int last_deadzone = -1;
 static int last_sensitivity = -1;
@@ -3612,6 +3615,7 @@ static void apply_port_device(struct uae_prefs* prefs, unsigned port, unsigned d
 {
 	const TCHAR* name = _T("none");
 	int mode = -1;
+	TCHAR joy_name[8];
 	const unsigned base_device = device & RETRO_DEVICE_MASK;
 	if (base_device == RETRO_DEVICE_MOUSE) {
 		name = _T("mouse");
@@ -3619,10 +3623,9 @@ static void apply_port_device(struct uae_prefs* prefs, unsigned port, unsigned d
 	} else if (base_device == RETRO_DEVICE_JOYPAD || base_device == RETRO_DEVICE_ANALOG) {
 		if (joy_index < 0 || joy_index > 3)
 			joy_index = static_cast<int>(port);
-		TCHAR joy_name[8];
 		_sntprintf(joy_name, sizeof joy_name, _T("joy%d"), joy_index);
 		name = joy_name;
-		mode = JSEM_MODE_JOYSTICK;
+		mode = device == RETRO_DEVICE_AMIGA_CD32PAD ? JSEM_MODE_JOYSTICK_CD32 : JSEM_MODE_JOYSTICK;
 	}
 	inputdevice_joyport_config(prefs, name, nullptr, static_cast<int>(port), mode, -1, 0, true);
 }
@@ -3743,11 +3746,16 @@ static void apply_libretro_osk_options(void)
 }
 static void apply_libretro_input_options(void)
 {
-	unsigned desired_port_device[2] = { libretro_port_device[0], libretro_port_device[1] };
-	const unsigned port0 = device_from_option(get_option_value("amiberry_port0_device"), desired_port_device[0]);
-	const unsigned port1 = device_from_option(get_option_value("amiberry_port1_device"), desired_port_device[1]);
-	desired_port_device[0] = port0;
-	desired_port_device[1] = port1;
+	if (!libretro_input_ports_applied) {
+		const bool config_content = path_extension_lower(game_path) == "uae";
+		for (unsigned port = 0; port < 2; port++)
+			config_cd32_port[port] = config_content && currprefs.jports[port].mode == JSEM_MODE_JOYSTICK_CD32;
+	}
+
+	unsigned desired_port_device[2] = {
+		device_from_option(get_option_value("amiberry_port0_device"), frontend_port_device[0] & RETRO_DEVICE_MASK),
+		device_from_option(get_option_value("amiberry_port1_device"), frontend_port_device[1] & RETRO_DEVICE_MASK)
+	};
 
 	int desired_joyport_order[2] = { libretro_joyport_order[0], libretro_joyport_order[1] };
 	const bool joyport_order_explicit = parse_joyport_order(get_option_value("amiberry_joyport_order"), desired_joyport_order);
@@ -3786,9 +3794,23 @@ static void apply_libretro_input_options(void)
 		desired_joyport_order[1] = tmp_order;
 	}
 
-	const bool ports_changed = (desired_port_device[0] != libretro_port_device[0]) ||
-		(desired_port_device[1] != libretro_port_device[1]) ||
-		(swap_ports != last_swap_ports);
+	// Core options describe Amiga ports; the frontend subtype belongs to the
+	// controller routed to that port, not to the Amiga port with the same index.
+	for (unsigned port = 0; port < 2; port++) {
+		const unsigned base = desired_port_device[port];
+		if (base != RETRO_DEVICE_JOYPAD && base != RETRO_DEVICE_ANALOG)
+			continue;
+		const int joy = desired_joyport_order[port];
+		const unsigned frontend_device = joy < 2 ? frontend_port_device[joy] : RETRO_DEVICE_JOYPAD;
+		if (frontend_device == RETRO_DEVICE_AMIGA_CD32PAD ||
+			(config_cd32_port[port] && frontend_device != RETRO_DEVICE_AMIGA_JOYSTICK))
+			desired_port_device[port] = RETRO_DEVICE_AMIGA_CD32PAD;
+	}
+
+	const bool ports_changed = !libretro_input_ports_applied ||
+		desired_port_device[0] != libretro_port_device[0] ||
+		desired_port_device[1] != libretro_port_device[1] ||
+		swap_ports != last_swap_ports;
 	const bool order_changed = (desired_joyport_order[0] != libretro_joyport_order[0]) ||
 		(desired_joyport_order[1] != libretro_joyport_order[1]);
 	const bool deadzone_changed = deadzone != last_deadzone;
@@ -3804,6 +3826,7 @@ static void apply_libretro_input_options(void)
 	}
 
 	if (ports_changed || order_changed || deadzone_changed || sensitivity_changed || mousemap_changed || analog_changed || vsync_changed) {
+		libretro_input_ports_applied = true;
 		libretro_port_device[0] = desired_port_device[0];
 		libretro_port_device[1] = desired_port_device[1];
 		libretro_joyport_order[0] = desired_joyport_order[0];
@@ -4421,7 +4444,8 @@ static void core_entry(void)
 		game_ext = path_extension_lower(game_path);
 	const bool is_whdload = (game_ext == "lha" || game_ext == "lzh");
 	const bool is_rp9 = game_ext == "rp9";
-	const bool is_cd = content_is_cd || is_cd_extension(game_ext);
+	const bool is_config = game_ext == "uae";
+	const bool is_cd = !is_config && (content_is_cd || is_cd_extension(game_ext));
 	const bool user_kick_override = !cached_kickstart_override.empty() && cached_kickstart_override != "auto";
 	std::string deferred_rp9_kickstart;
 
@@ -4553,8 +4577,8 @@ static void core_entry(void)
 	}
 #endif
 
-	if (!is_rp9)
-		safe_strdup("-G"); // RP9 must receive this after its complete manifest config.
+	if (!is_rp9 && !is_config)
+		safe_strdup("-G");
 
 	std::string rom_path_value;
 	if (!system_dir.empty() || !save_dir.empty()) {
@@ -4643,7 +4667,11 @@ static void core_entry(void)
 
 	if (game_path[0])
 	{
-		if (is_whdload || is_rp9) {
+		if (is_config) {
+			safe_strdup("--config");
+			safe_strdup(game_path);
+			safe_strdup("-G");
+		} else if (is_whdload || is_rp9) {
 			if (log_cb)
 				log_cb(RETRO_LOG_INFO, "%s autoload: %s\n", is_rp9 ? "RP9" : "WHDLoad", game_path);
 			safe_strdup("--autoload");
@@ -4814,6 +4842,7 @@ static void reset_core_runtime_state()
 	libretro_reset_crop_policy();
 	libretro_audio_reset();
 	libretro_options_dirty = true;
+	libretro_input_ports_applied = false;
 	memset(joypad_owner, 0, sizeof joypad_owner);
 	memset(analog_owner, 0, sizeof analog_owner);
 	clear_pending_state();
@@ -4853,6 +4882,8 @@ void retro_deinit(void)
 	libretro_debug_close();
 	update_input_log_file(false);
 	last_input_log_file = false;
+	frontend_port_device[0] = RETRO_DEVICE_MOUSE;
+	frontend_port_device[1] = RETRO_DEVICE_JOYPAD;
 	reset_core_runtime_state();
 	minimum_audio_latency_requested = false;
 	content_is_cd = false;
@@ -4867,7 +4898,7 @@ unsigned retro_api_version(void)
 void retro_set_controller_port_device(unsigned port, unsigned device)
 {
 	if (port < 2) {
-		libretro_port_device[port] = device;
+		frontend_port_device[port] = device;
 		libretro_options_dirty = true;
 	}
 }
@@ -5280,6 +5311,13 @@ bool retro_load_game(const struct retro_game_info *info)
 	libretro_debug_log("retro_load_game: path='%s' ext='%s' is_whdload=%d is_rp9=%d\n",
 		path.c_str(), ext.c_str(), is_whdload ? 1 : 0, is_rp9 ? 1 : 0);
 
+	disk_images.clear();
+	disk_index = 0;
+	disk_ejected = false;
+	last_disk_index = 0;
+	last_disk_ejected = false;
+	content_is_cd = false;
+
 	if (is_whdload || is_rp9) {
 		const char* content_label = is_rp9 ? "RP9" : "WHDLoad";
 		const char* temp_prefix = is_rp9 ? "rp9_" : "whdload_";
@@ -5366,11 +5404,6 @@ bool retro_load_game(const struct retro_game_info *info)
 			content_temp_path = extracted ? package_path : std::string();
 			content_temp_directory = extracted ? package_temp_directory : std::string();
 			libretro_debug_log("%s using path: %s (extracted=%d)\n", content_label, package_path.c_str(), extracted ? 1 : 0);
-			disk_images.clear();
-			disk_index = 0;
-			disk_ejected = false;
-			last_disk_index = 0;
-			last_disk_ejected = false;
 			if (!is_rp9) {
 				DiskImage image;
 				image.path = package_path;
@@ -5384,14 +5417,12 @@ bool retro_load_game(const struct retro_game_info *info)
 		}
 	}
 
-	if (!path.empty())
-	{
-		disk_images.clear();
-		disk_index = 0;
-		disk_ejected = false;
-		last_disk_index = 0;
-		last_disk_ejected = false;
-
+	game_path[0] = '\0';
+	if (ext == "uae") {
+		const auto config_path = frontend_path_to_zfile_path(path);
+		strncpy(game_path, config_path.c_str(), sizeof(game_path) - 1);
+		game_path[sizeof(game_path) - 1] = '\0';
+	} else if (!path.empty()) {
 		std::string selected_disk;
 		const auto ext_pos = path.find_last_of('.');
 		const std::string path_ext = (ext_pos == std::string::npos) ? "" : path.substr(ext_pos);
@@ -5436,16 +5467,11 @@ bool retro_load_game(const struct retro_game_info *info)
 			strncpy(game_path, disk_images[disk_index].path.c_str(), sizeof(game_path) - 1);
 			game_path[sizeof(game_path) - 1] = '\0';
 		}
-		else
-			game_path[0] = '\0';
 	}
-	else
-		game_path[0] = '\0';
 
 	// Determine if content is CD-based (affects disc swap mechanism)
-	content_is_cd = false;
-	if (game_path[0]) {
-		const std::string gp_ext = path_extension_lower(game_path);
+	const std::string gp_ext = path_extension_lower(game_path);
+	if (game_path[0] && gp_ext != "uae") {
 		if (is_cd_extension(gp_ext)) {
 			content_is_cd = true;
 		} else {
