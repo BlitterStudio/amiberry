@@ -12147,15 +12147,18 @@ static void check_hsyncs(void)
 	}
 }
 
+// Wide DMA increments do not carry out of the low address bits.
 static void addmodfm(uae_u32 *addr, int add, int mod, int fm)
 {
 	uae_u32 pt = *addr;
 	if (fm == 1 || fm == 2) {
-		uae_u32 t = (pt & ~3) + add + mod;
-		pt = (t & ~3) | (t & 3);
+		uae_u32 t1 = (pt & ~3) + (add & ~3) + (mod & ~3);
+		uae_u32 t2 = (pt + add + mod) & 3;
+		pt = t1 | t2;
 	} else if (fm == 3) {
-		uae_u32 t = (pt & ~7) + add + mod;
-		pt = (t & ~7) | (t & 7);
+		uae_u32 t1 = (pt & ~7) + (add & ~7) + (mod & ~7);
+		uae_u32 t2 = (pt + add + mod) & 7;
+		pt = t1 | t2;
 	} else {
 		pt += add + mod;
 	}
