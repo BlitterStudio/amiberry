@@ -12147,12 +12147,22 @@ static void check_hsyncs(void)
 	}
 }
 
-// Wide (32/64-bit) fetches keep the pointer's low bits: a sprite list at a
-// longword-aligned but not quadword-aligned address in FMODE=3 reads its CTL
-// word 8 bytes after POS (Brian the Lion CD32).
-static void addmodfm(uae_u32 *addr, int add, int mod)
+// Wide DMA increments do not carry out of the low address bits.
+static void addmodfm(uae_u32 *addr, int add, int mod, int fm)
 {
-	*addr += add + mod;
+	uae_u32 pt = *addr;
+	if (fm == 1 || fm == 2) {
+		uae_u32 t1 = (pt & ~3) + (add & ~3) + (mod & ~3);
+		uae_u32 t2 = (pt + add + mod) & 3;
+		pt = t1 | t2;
+	} else if (fm == 3) {
+		uae_u32 t1 = (pt & ~7) + (add & ~7) + (mod & ~7);
+		uae_u32 t2 = (pt + add + mod) & 7;
+		pt = t1 | t2;
+	} else {
+		pt += add + mod;
+	}
+	*addr = pt;
 }
 
 static void handle_rga_out(void)
@@ -12284,7 +12294,7 @@ static void handle_rga_out(void)
 				}
 			}
 			if (!disinc) {
-				addmodfm(&r->pv, sprite_width / 8, 0);
+				addmodfm(&r->pv, sprite_width / 8, 0, fetchmode_fmode_spr);
 			}
 			regs.chipset_latch_rw = sdat;
 			s->pt = r->pv;
@@ -12292,7 +12302,7 @@ static void handle_rga_out(void)
 		} else if (r->type == CYCLE_SPRITE) {
 			int num = r->sprdat & 7;
 			struct sprite *s = &spr[num];
-			addmodfm(&r->pv, sprite_width / 8, 0);
+			addmodfm(&r->pv, sprite_width / 8, 0, fetchmode_fmode_spr);
 			s->pt = r->pv;
 		}
 
@@ -12334,7 +12344,7 @@ static void handle_rga_out(void)
 				}
 			}
 			if (!disinc) {
-				addmodfm(&r->pv, fetchmode_bytes, r->bplmod);
+				addmodfm(&r->pv, fetchmode_bytes, r->bplmod, fetchmode_fmode_bpl);
 			}
 			bplpt[num] = r->pv;
 			done = true;
@@ -12347,7 +12357,7 @@ static void handle_rga_out(void)
 
 		} else if (r->type & CYCLE_BITPLANE) {
 			int num = r->bpldat & 7;
-			addmodfm(&r->pv, fetchmode_bytes, r->bplmod);
+			addmodfm(&r->pv, fetchmode_bytes, r->bplmod, fetchmode_fmode_bpl);
 			bplpt[num] = r->pv;
 
 			if (r->type & CYCLE_SPRITE) {
